@@ -1,51 +1,52 @@
-const express = require("express");
-const cors = require("cors");
-const { AccessToken } = require("livekit-server-sdk");
+import express from "express";
+import cors from "cors";
+import dotenv from "dotenv";
+import { AccessToken } from "livekit-server-sdk";
+
+dotenv.config();
 
 const app = express();
-app.use(express.json());
 app.use(cors());
+app.use(express.json());
 
-// LiveKit dev credentials - these match livekit-server.exe --dev
-const API_KEY = "devkey";
-const API_SECRET = "secret";
-const LIVEKIT_URL = "ws://localhost:7880";
+const PORT = process.env.PORT || 3000;
 
-app.post("/getToken", async (req, res) => {
-  try {
-    const { identity, room } = req.body;
+// Debug logging
+console.log("LiveKit URL:", process.env.LIVEKIT_URL);
+console.log("API Key:", process.env.LIVEKIT_API_KEY);
+console.log("API Secret Loaded:", !!process.env.LIVEKIT_API_SECRET);
 
-    if (!identity || !room) {
-      console.error("Missing identity or room", req.body);
-      return res.status(400).json({ error: "identity and room required" });
+// --- TOKEN ENDPOINT ---
+app.get("/getToken", async (req, res) => {
+    try {
+        const identity = req.query.identity || "UnknownUser";
+        const roomName = req.query.room || "default";
+
+        const at = new AccessToken(process.env.LIVEKIT_API_KEY, process.env.LIVEKIT_API_SECRET, {
+            identity,
+        });
+
+        at.addGrant({
+            roomJoin: true,
+            room: roomName,
+            canPublish: true,
+            canSubscribe: true
+        });
+
+        const token = await at.toJwt();
+
+        res.json({ token });
+    } catch (err) {
+        console.error("Token generation error:", err);
+        res.status(500).json({ error: "Failed to generate token" });
     }
-
-    // Build access token for this user
-    const at = new AccessToken(API_KEY, API_SECRET, { identity });
-
-    at.addGrant({
-      room,
-      roomJoin: true,
-      canPublish: true,
-      canSubscribe: true,
-    });
-
-    // toJwt() is async in this SDK version
-    const jwt = await at.toJwt();
-
-    console.log("jwt typeof:", typeof jwt);
-    console.log("jwt preview:", String(jwt).slice(0, 40) + "...");
-
-    return res.json({
-      token: jwt,
-      url: LIVEKIT_URL,
-    });
-  } catch (err) {
-    console.error("Error generating token:", err);
-    return res.status(500).json({ error: "token generation failed" });
-  }
 });
 
-app.listen(3000, () => {
-  console.log("Reeder Token Server running on port 3000");
+// --- HEALTH CHECK ---
+app.get("/", (req, res) => {
+    res.send("Reeder PTT Backend is running.");
+});
+
+app.listen(PORT, () => {
+    console.log(`Reeder Token Server running on port ${PORT}`);
 });
