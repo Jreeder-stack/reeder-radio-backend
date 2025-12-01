@@ -1,77 +1,44 @@
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
-import { SignJWT } from "jose";
-
-dotenv.config();
+import { AccessToken } from "@livekit/server-sdk";
 
 const app = express();
 app.use(cors());
-app.use(express.json());
 
-// ENV VARS
 const apiKey = process.env.LIVEKIT_API_KEY;
-const apiSecret = process.env.LIVEKIT_API_SECRET;
+const apiSecret = process.env.LIVEKIT_API_SECRET; // THIS MUST BE YOUR PRIVATE KEY (LKCP...)
 const livekitUrl = process.env.LIVEKIT_URL;
 
-if (!apiKey || !apiSecret || !livekitUrl) {
-  console.error("❌ Missing LiveKit environment variables!");
-  process.exit(1);
-}
-
-// Root endpoint
-app.get("/", (req, res) => {
-  res.send("Reeder Radio Backend is running");
-});
-
-// TOKEN ENDPOINT
 app.get("/getToken", async (req, res) => {
+  const identity = req.query.identity;
+  const roomName = req.query.room;
+
+  if (!identity || !roomName) {
+    return res.status(400).json({ error: "Missing identity or room" });
+  }
+
   try {
-    const identity = req.query.identity;
-    const room = req.query.room;
+    const at = new AccessToken(apiKey, apiSecret, {
+      identity,
+    });
 
-    if (!identity || !room) {
-      return res.status(400).json({ error: "Missing identity or room" });
-    }
+    at.addGrant({
+      room: roomName,
+      roomJoin: true,
+      canPublish: true,
+      canSubscribe: true,
+    });
 
-    // JWT HEADER
-    const header = {
-      alg: "HS256",
-      typ: "JWT",
-      kid: apiKey,
-    };
+    const token = await at.toJwt();
 
-    // JWT PAYLOAD
-    const payload = {
-      iss: apiKey,
-      sub: identity,
-      exp: Math.floor(Date.now() / 1000) + 60 * 60, // 1 hour
-      video: {
-        room,
-        allow_publish: true,
-        allow_subscribe: true
-      },
-    };
-
-    const secret = new TextEncoder().encode(apiSecret);
-
-    // SIGN JWT
-    const jwt = await new SignJWT(payload)
-      .setProtectedHeader(header)
-      .sign(secret);
-
-    // LIVEKIT TOKENS REQUIRE THE lk1_ PREFIX
-    const token = `lk1_${jwt}`;
-
-    return res.json({ token });
-
+    res.json({ token });
   } catch (err) {
-    console.error("❌ Error generating token:", err);
-    return res.status(500).json({ error: "Token generation failed" });
+    console.error("Token error:", err);
+    res.status(500).json({ error: "Token creation failed" });
   }
 });
 
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
-  console.log(`🚀 Reeder Token Server running on port ${port}`);
+  console.log("LiveKit Token Server running on port", port);
 });
