@@ -491,6 +491,16 @@ export default function Dispatcher({ user, onLogout }) {
     }
   };
 
+  const handleTouchStart = (e) => {
+    e.preventDefault();
+    startDispatchPTT();
+  };
+
+  const handleTouchEnd = (e) => {
+    e.preventDefault();
+    stopDispatchPTT();
+  };
+
   const playRecording = (channel) => {
     const blob = lastRxRecordings[channel];
     if (!blob) return;
@@ -801,8 +811,9 @@ export default function Dispatcher({ user, onLogout }) {
                 onMouseDown={startDispatchPTT}
                 onMouseUp={stopDispatchPTT}
                 onMouseLeave={stopDispatchPTT}
-                onTouchStart={startDispatchPTT}
-                onTouchEnd={stopDispatchPTT}
+                onTouchStart={handleTouchStart}
+                onTouchEnd={handleTouchEnd}
+                onTouchCancel={handleTouchEnd}
                 style={{
                   padding: 20,
                   width: "100%",
@@ -814,6 +825,9 @@ export default function Dispatcher({ user, onLogout }) {
                   borderRadius: 8,
                   cursor: "pointer",
                   boxShadow: isTalking ? "0 0 20px rgba(220, 38, 38, 0.6)" : "none",
+                  touchAction: "none",
+                  userSelect: "none",
+                  WebkitUserSelect: "none",
                 }}
               >
                 {isTalking ? `TRANSMITTING ON ${selectedTxChannel}...` : "DISPATCH PTT"}

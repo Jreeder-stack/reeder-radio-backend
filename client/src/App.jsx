@@ -905,6 +905,16 @@ export default function App({ user, onLogout }) {
     }
   };
 
+  const handleTouchStart = (e) => {
+    e.preventDefault();
+    startPTT();
+  };
+
+  const handleTouchEnd = (e) => {
+    e.preventDefault();
+    stopPTT();
+  };
+
   const playLastRx = () => {
     if (!lastRxBlob) return;
     
@@ -1468,8 +1478,9 @@ export default function App({ user, onLogout }) {
             onMouseDown={startPTT}
             onMouseUp={stopPTT}
             onMouseLeave={stopPTT}
-            onTouchStart={startPTT}
-            onTouchEnd={stopPTT}
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+            onTouchCancel={handleTouchEnd}
             disabled={isEmergency}
             style={{
               padding: 30,
@@ -1484,6 +1495,9 @@ export default function App({ user, onLogout }) {
               boxShadow: isTalking ? "0 0 30px rgba(220, 38, 38, 0.6)" : "none",
               transition: "all 0.1s ease",
               opacity: isEmergency ? 0.5 : 1,
+              touchAction: "none",
+              userSelect: "none",
+              WebkitUserSelect: "none",
             }}
           >
             {isTalking ? "TRANSMITTING..." : "PUSH TO TALK"}
