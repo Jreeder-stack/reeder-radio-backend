@@ -45,7 +45,20 @@ Set these environment variables in Render:
 - `VITE_LIVEKIT_URL`
 
 ## Features
+
+### Phase 1 - Core PTT
 - Unit ID-based authentication
-- Multiple channel support (OPS1, OPS2, TAC1, TAC2)
 - Push-to-Talk audio transmission
-- Live participant tracking
+
+### Phase 2 - Talkgroup System
+- 3 Zones: Operations (OPS1, OPS2, TAC1), Fire (FIRE1-8), Secure Command
+- Channel switching within zones
+- Scan mode - monitor multiple channels, transmit on primary
+- TX/RX indicator
+
+### Phase 3 - Unit Presence
+- Real-time unit status tracking (idle/transmitting/emergency)
+- Status color indicators: Green=idle, Yellow=transmitting, Red=emergency
+- Last transmission timestamp per unit
+- LiveKit data channels for presence sync across participants
+- Online units display grouped by channel with status
