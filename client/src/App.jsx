@@ -28,7 +28,7 @@ export default function App() {
       const data = await res.json();
       const token = data.token;
 
-      if (!token || !token.startsWith("lk1_")) {
+      if (!token) {
         console.error("Invalid token:", data);
         alert("Invalid token received from backend.");
         return;
