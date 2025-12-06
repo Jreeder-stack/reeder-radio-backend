@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Room, RoomEvent, createLocalAudioTrack, DataPacket_Kind } from "livekit-client";
+import { Room, RoomEvent, Track, DataPacket_Kind } from "livekit-client";
 
 const LIVEKIT_URL = import.meta.env.VITE_LIVEKIT_URL;
 const TOKEN_SERVER = "/getToken";
@@ -38,6 +38,136 @@ function StatusDot({ status }) {
   );
 }
 
+function AudioLevelMeter({ level }) {
+  const barCount = 10;
+  const activeCount = Math.round((level / 100) * barCount);
+  
+  return (
+    <div style={{ display: "flex", gap: 2, alignItems: "flex-end", height: 20 }}>
+      {Array.from({ length: barCount }).map((_, i) => (
+        <div
+          key={i}
+          style={{
+            width: 4,
+            height: 4 + i * 1.5,
+            backgroundColor: i < activeCount 
+              ? (i >= 7 ? "#dc2626" : i >= 5 ? "#eab308" : "#22c55e")
+              : "#333",
+            borderRadius: 1,
+            transition: "background-color 0.05s",
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+function createTxDspChain(audioContext, radioEffectEnabled) {
+  const inputGain = audioContext.createGain();
+  inputGain.gain.value = 1.5;
+  
+  const agc = audioContext.createDynamicsCompressor();
+  agc.threshold.value = -30;
+  agc.knee.value = 20;
+  agc.ratio.value = 6;
+  agc.attack.value = 0.003;
+  agc.release.value = 0.1;
+  
+  const txCompressor = audioContext.createDynamicsCompressor();
+  txCompressor.threshold.value = -24;
+  txCompressor.knee.value = 10;
+  txCompressor.ratio.value = 12;
+  txCompressor.attack.value = 0.001;
+  txCompressor.release.value = 0.05;
+  
+  const outputGain = audioContext.createGain();
+  outputGain.gain.value = 1.2;
+
+  let highpass = null;
+  let lowpass = null;
+  let distortion = null;
+
+  if (radioEffectEnabled) {
+    highpass = audioContext.createBiquadFilter();
+    highpass.type = "highpass";
+    highpass.frequency.value = 300;
+    highpass.Q.value = 0.7;
+
+    lowpass = audioContext.createBiquadFilter();
+    lowpass.type = "lowpass";
+    lowpass.frequency.value = 3400;
+    lowpass.Q.value = 0.7;
+
+    distortion = audioContext.createWaveShaper();
+    const samples = 256;
+    const curve = new Float32Array(samples);
+    for (let i = 0; i < samples; i++) {
+      const x = (i * 2) / samples - 1;
+      curve[i] = Math.tanh(x * 1.5);
+    }
+    distortion.curve = curve;
+    distortion.oversample = "2x";
+  }
+
+  const destination = audioContext.createMediaStreamDestination();
+  
+  if (radioEffectEnabled && highpass && lowpass && distortion) {
+    inputGain.connect(agc);
+    agc.connect(txCompressor);
+    txCompressor.connect(highpass);
+    highpass.connect(lowpass);
+    lowpass.connect(distortion);
+    distortion.connect(outputGain);
+    outputGain.connect(destination);
+  } else {
+    inputGain.connect(agc);
+    agc.connect(txCompressor);
+    txCompressor.connect(outputGain);
+    outputGain.connect(destination);
+  }
+
+  return { inputGain, destination };
+}
+
+function createRxDspChain(audioContext, radioEffectEnabled) {
+  const inputGain = audioContext.createGain();
+  inputGain.gain.value = 1.0;
+
+  const analyser = audioContext.createAnalyser();
+  analyser.fftSize = 256;
+  analyser.smoothingTimeConstant = 0.3;
+
+  let highpass = null;
+  let lowpass = null;
+
+  if (radioEffectEnabled) {
+    highpass = audioContext.createBiquadFilter();
+    highpass.type = "highpass";
+    highpass.frequency.value = 300;
+    highpass.Q.value = 0.5;
+
+    lowpass = audioContext.createBiquadFilter();
+    lowpass.type = "lowpass";
+    lowpass.frequency.value = 3400;
+    lowpass.Q.value = 0.5;
+  }
+
+  const outputGain = audioContext.createGain();
+  outputGain.gain.value = 1.0;
+
+  if (radioEffectEnabled && highpass && lowpass) {
+    inputGain.connect(highpass);
+    highpass.connect(lowpass);
+    lowpass.connect(analyser);
+    analyser.connect(outputGain);
+  } else {
+    inputGain.connect(analyser);
+    analyser.connect(outputGain);
+  }
+
+  return { inputGain, analyser, outputGain };
+}
+
 export default function App() {
   const [connected, setConnected] = useState(false);
   const [identity, setIdentity] = useState("");
@@ -51,14 +181,45 @@ export default function App() {
   const [scanMode, setScanMode] = useState(false);
   const [scanChannels, setScanChannels] = useState([]);
   const [activeAudio, setActiveAudio] = useState(null);
+  const [radioEffect, setRadioEffect] = useState(false);
+  const [txLevel, setTxLevel] = useState(0);
+  const [rxLevel, setRxLevel] = useState(0);
+  const [lastRxBlob, setLastRxBlob] = useState(null);
+  const [isPlayingRecording, setIsPlayingRecording] = useState(false);
+  const [isEmergency, setIsEmergency] = useState(false);
+  const [emergencyLockRemaining, setEmergencyLockRemaining] = useState(0);
+  const [activeEmergencies, setActiveEmergencies] = useState({});
+  const [emergencyFlash, setEmergencyFlash] = useState(false);
 
   const audioTrackRef = useRef(null);
   const scanRoomsRef = useRef({});
   const primaryRoomRef = useRef(null);
+  const audioContextRef = useRef(null);
+  const txAnalyserRef = useRef(null);
+  const rxChainRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const recordedChunksRef = useRef([]);
+  const txAnimationRef = useRef(null);
+  const rxAnimationRef = useRef(null);
+  const micStreamRef = useRef(null);
+  const emergencyTimerRef = useRef(null);
+  const heartbeatIntervalRef = useRef(null);
+  const [userLocation, setUserLocation] = useState(null);
 
   useEffect(() => {
     scanRoomsRef.current = scanRooms;
   }, [scanRooms]);
+
+  useEffect(() => {
+    if (Object.keys(activeEmergencies).length > 0) {
+      const flashInterval = setInterval(() => {
+        setEmergencyFlash(f => !f);
+      }, 500);
+      return () => clearInterval(flashInterval);
+    } else {
+      setEmergencyFlash(false);
+    }
+  }, [activeEmergencies]);
 
   useEffect(() => {
     primaryRoomRef.current = primaryRoom;
@@ -88,6 +249,24 @@ export default function App() {
     }
   }, [scanMode]);
 
+  useEffect(() => {
+    return () => {
+      if (txAnimationRef.current) cancelAnimationFrame(txAnimationRef.current);
+      if (rxAnimationRef.current) cancelAnimationFrame(rxAnimationRef.current);
+      if (audioContextRef.current) audioContextRef.current.close();
+    };
+  }, []);
+
+  const getAudioContext = useCallback(() => {
+    if (!audioContextRef.current || audioContextRef.current.state === "closed") {
+      audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioContextRef.current.state === "suspended") {
+      audioContextRef.current.resume();
+    }
+    return audioContextRef.current;
+  }, []);
+
   const broadcastStatus = useCallback((room, status, channel) => {
     if (!room || !room.localParticipant) return;
     
@@ -102,6 +281,99 @@ export default function App() {
     const encoder = new TextEncoder();
     const data = encoder.encode(message);
     room.localParticipant.publishData(data, DataPacket_Kind.RELIABLE);
+  }, []);
+
+  const broadcastEmergency = useCallback((room, channel, active) => {
+    if (!room || !room.localParticipant) return;
+    
+    const message = JSON.stringify({
+      type: "emergency",
+      identity: room.localParticipant.identity,
+      channel,
+      active,
+      timestamp: Date.now(),
+    });
+    
+    const encoder = new TextEncoder();
+    const data = encoder.encode(message);
+    room.localParticipant.publishData(data, DataPacket_Kind.RELIABLE);
+  }, []);
+
+  const acknowledgeEmergency = useCallback((unitId, channel) => {
+    setActiveEmergencies((prev) => {
+      const updated = { ...prev };
+      delete updated[unitId];
+      return updated;
+    });
+    
+    if (primaryRoomRef.current) {
+      const message = JSON.stringify({
+        type: "emergency_ack",
+        targetUnit: unitId,
+        channel,
+        acknowledgedBy: identity,
+        timestamp: Date.now(),
+      });
+      
+      const encoder = new TextEncoder();
+      const data = encoder.encode(message);
+      primaryRoomRef.current.localParticipant.publishData(data, DataPacket_Kind.RELIABLE);
+    }
+  }, [identity]);
+
+  const broadcastHeartbeat = useCallback((room, channel) => {
+    if (!room || !room.localParticipant) return;
+    
+    const message = JSON.stringify({
+      type: "heartbeat",
+      identity: room.localParticipant.identity,
+      channel,
+      location: userLocation,
+      timestamp: Date.now(),
+    });
+    
+    const encoder = new TextEncoder();
+    const data = encoder.encode(message);
+    room.localParticipant.publishData(data, DataPacket_Kind.RELIABLE);
+  }, [userLocation]);
+
+  const startHeartbeat = useCallback((room, channel) => {
+    if (heartbeatIntervalRef.current) {
+      clearInterval(heartbeatIntervalRef.current);
+    }
+    
+    broadcastHeartbeat(room, channel);
+    
+    heartbeatIntervalRef.current = setInterval(() => {
+      broadcastHeartbeat(room, channel);
+    }, 30000);
+  }, [broadcastHeartbeat]);
+
+  const stopHeartbeat = useCallback(() => {
+    if (heartbeatIntervalRef.current) {
+      clearInterval(heartbeatIntervalRef.current);
+      heartbeatIntervalRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (navigator.geolocation) {
+      const watchId = navigator.geolocation.watchPosition(
+        (position) => {
+          setUserLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+            accuracy: position.coords.accuracy,
+          });
+        },
+        (error) => {
+          console.log("Geolocation not available:", error.message);
+        },
+        { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
+      );
+      
+      return () => navigator.geolocation.clearWatch(watchId);
+    }
   }, []);
 
   const updateUnitPresence = useCallback((channel, unitId, status, timestamp) => {
@@ -128,6 +400,27 @@ export default function App() {
     return data.token;
   };
 
+  const startRxLevelMonitor = useCallback((analyser) => {
+    const dataArray = new Uint8Array(analyser.frequencyBinCount);
+    
+    const updateLevel = () => {
+      analyser.getByteFrequencyData(dataArray);
+      const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+      setRxLevel(Math.min(100, avg * 1.5));
+      rxAnimationRef.current = requestAnimationFrame(updateLevel);
+    };
+    
+    updateLevel();
+  }, []);
+
+  const stopRxLevelMonitor = useCallback(() => {
+    if (rxAnimationRef.current) {
+      cancelAnimationFrame(rxAnimationRef.current);
+      rxAnimationRef.current = null;
+    }
+    setRxLevel(0);
+  }, []);
+
   const createRoom = useCallback((channelName) => {
     const lkRoom = new Room({
       adaptiveStream: true,
@@ -151,16 +444,55 @@ export default function App() {
 
     lkRoom.on(RoomEvent.TrackSubscribed, (track, publication, participant) => {
       if (track.kind === "audio") {
+        const audioContext = getAudioContext();
         const audioElem = track.attach();
         audioElem.dataset.channel = channelName;
         audioElem.dataset.participant = participant.identity;
-        document.body.appendChild(audioElem);
+        
+        const source = audioContext.createMediaElementSource(audioElem);
+        const rxChain = createRxDspChain(audioContext, radioEffect);
+        source.connect(rxChain.inputGain);
+        rxChain.outputGain.connect(audioContext.destination);
+        
+        rxChainRef.current = rxChain;
+        startRxLevelMonitor(rxChain.analyser);
+        
+        recordedChunksRef.current = [];
+        const destNode = audioContext.createMediaStreamDestination();
+        rxChain.outputGain.connect(destNode);
+        
+        try {
+          const recorder = new MediaRecorder(destNode.stream);
+          recorder.ondataavailable = (e) => {
+            if (e.data.size > 0) {
+              recordedChunksRef.current.push(e.data);
+            }
+          };
+          recorder.onstop = () => {
+            if (recordedChunksRef.current.length > 0) {
+              const blob = new Blob(recordedChunksRef.current, { type: "audio/webm" });
+              setLastRxBlob(blob);
+            }
+          };
+          recorder.start();
+          mediaRecorderRef.current = recorder;
+        } catch (err) {
+          console.error("MediaRecorder error:", err);
+        }
+        
         setActiveAudio({ channel: channelName, from: participant.identity });
         updateUnitPresence(channelName, participant.identity, "transmitting", Date.now());
       }
     });
 
     lkRoom.on(RoomEvent.TrackUnsubscribed, (track, publication, participant) => {
+      stopRxLevelMonitor();
+      
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+        mediaRecorderRef.current.stop();
+        mediaRecorderRef.current = null;
+      }
+      
       track.detach().forEach((el) => el.remove());
       setActiveAudio(null);
       updateUnitPresence(channelName, participant.identity, "idle", Date.now());
@@ -173,6 +505,55 @@ export default function App() {
         
         if (message.type === "status_update") {
           updateUnitPresence(message.channel, message.identity, message.status, message.timestamp);
+        } else if (message.type === "emergency") {
+          if (message.active) {
+            setActiveEmergencies((prev) => ({
+              ...prev,
+              [message.identity]: {
+                channel: message.channel,
+                timestamp: message.timestamp,
+              },
+            }));
+            updateUnitPresence(message.channel, message.identity, "emergency", message.timestamp);
+          } else {
+            setActiveEmergencies((prev) => {
+              const updated = { ...prev };
+              delete updated[message.identity];
+              return updated;
+            });
+            updateUnitPresence(message.channel, message.identity, "idle", message.timestamp);
+          }
+        } else if (message.type === "emergency_ack") {
+          if (message.targetUnit === identity) {
+            setIsEmergency(false);
+            if (emergencyTimerRef.current) {
+              clearInterval(emergencyTimerRef.current);
+              emergencyTimerRef.current = null;
+            }
+            setEmergencyLockRemaining(0);
+          }
+          setActiveEmergencies((prev) => {
+            const updated = { ...prev };
+            delete updated[message.targetUnit];
+            return updated;
+          });
+          updateUnitPresence(message.channel, message.targetUnit, "idle", Date.now());
+        } else if (message.type === "heartbeat") {
+          setUnitPresence((prev) => {
+            const channelUnits = prev[message.channel] || {};
+            const existingUnit = channelUnits[message.identity] || {};
+            return {
+              ...prev,
+              [message.channel]: {
+                ...channelUnits,
+                [message.identity]: {
+                  ...existingUnit,
+                  lastSeen: message.timestamp,
+                  location: message.location,
+                },
+              },
+            };
+          });
         }
       } catch (err) {
         console.error("Error parsing data message:", err);
@@ -180,7 +561,7 @@ export default function App() {
     });
 
     return lkRoom;
-  }, [updateUnitPresence]);
+  }, [updateUnitPresence, getAudioContext, radioEffect, startRxLevelMonitor, stopRxLevelMonitor, identity]);
 
   const initializePresence = useCallback((room, channelName) => {
     const existingParticipants = Array.from(room.remoteParticipants.values());
@@ -226,6 +607,7 @@ export default function App() {
       setConnected(true);
 
       broadcastStatus(lkRoom, "idle", selectedChannel);
+      startHeartbeat(lkRoom, selectedChannel);
 
     } catch (err) {
       console.error("Connection error:", err);
@@ -298,13 +680,47 @@ export default function App() {
 
     try {
       setIsTalking(true);
-      const micTrack = await createLocalAudioTrack({
-        echoCancellation: true,
-        noiseSuppression: true,
+      
+      const audioContext = getAudioContext();
+      
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: false,
+        },
       });
-      audioTrackRef.current = micTrack;
-
-      await primaryRoomRef.current.localParticipant.publishTrack(micTrack);
+      micStreamRef.current = stream;
+      
+      const source = audioContext.createMediaStreamSource(stream);
+      const { inputGain, destination } = createTxDspChain(audioContext, radioEffect);
+      
+      const txAnalyser = audioContext.createAnalyser();
+      txAnalyser.fftSize = 256;
+      txAnalyser.smoothingTimeConstant = 0.3;
+      source.connect(txAnalyser);
+      txAnalyser.connect(inputGain);
+      txAnalyserRef.current = txAnalyser;
+      
+      const dataArray = new Uint8Array(txAnalyser.frequencyBinCount);
+      const updateTxLevel = () => {
+        if (txAnalyserRef.current) {
+          txAnalyserRef.current.getByteFrequencyData(dataArray);
+          const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+          setTxLevel(Math.min(100, avg * 1.5));
+          txAnimationRef.current = requestAnimationFrame(updateTxLevel);
+        }
+      };
+      updateTxLevel();
+      
+      const processedTrack = destination.stream.getAudioTracks()[0];
+      
+      await primaryRoomRef.current.localParticipant.publishTrack(processedTrack, {
+        name: "microphone",
+        source: Track.Source.Microphone,
+      });
+      
+      audioTrackRef.current = processedTrack;
       broadcastStatus(primaryRoomRef.current, "transmitting", transmitChannel);
     } catch (err) {
       console.error("PTT error:", err);
@@ -313,12 +729,27 @@ export default function App() {
   };
 
   const stopPTT = async () => {
-    if (!primaryRoomRef.current || !audioTrackRef.current) return;
+    if (!primaryRoomRef.current) return;
 
     try {
-      await primaryRoomRef.current.localParticipant.unpublishTrack(audioTrackRef.current);
-      audioTrackRef.current.stop();
-      audioTrackRef.current = null;
+      if (txAnimationRef.current) {
+        cancelAnimationFrame(txAnimationRef.current);
+        txAnimationRef.current = null;
+      }
+      setTxLevel(0);
+      txAnalyserRef.current = null;
+      
+      if (audioTrackRef.current) {
+        await primaryRoomRef.current.localParticipant.unpublishTrack(audioTrackRef.current);
+        audioTrackRef.current.stop();
+        audioTrackRef.current = null;
+      }
+      
+      if (micStreamRef.current) {
+        micStreamRef.current.getTracks().forEach(track => track.stop());
+        micStreamRef.current = null;
+      }
+      
       setIsTalking(false);
       broadcastStatus(primaryRoomRef.current, "idle", transmitChannel);
     } catch (err) {
@@ -327,7 +758,66 @@ export default function App() {
     }
   };
 
+  const playLastRx = () => {
+    if (!lastRxBlob) return;
+    
+    setIsPlayingRecording(true);
+    const url = URL.createObjectURL(lastRxBlob);
+    const audio = new Audio(url);
+    audio.onended = () => {
+      setIsPlayingRecording(false);
+      URL.revokeObjectURL(url);
+    };
+    audio.play();
+  };
+
+  const triggerEmergency = async () => {
+    if (!primaryRoomRef.current || isEmergency) return;
+    
+    setIsEmergency(true);
+    setEmergencyLockRemaining(10);
+    
+    broadcastEmergency(primaryRoomRef.current, transmitChannel, true);
+    broadcastStatus(primaryRoomRef.current, "emergency", transmitChannel);
+    updateUnitPresence(transmitChannel, identity, "emergency", Date.now());
+    
+    await startPTT();
+    
+    let remaining = 10;
+    emergencyTimerRef.current = setInterval(() => {
+      remaining -= 1;
+      setEmergencyLockRemaining(remaining);
+      
+      if (remaining <= 0) {
+        clearInterval(emergencyTimerRef.current);
+        emergencyTimerRef.current = null;
+        stopPTT();
+        setIsEmergency(false);
+        setEmergencyLockRemaining(0);
+      }
+    }, 1000);
+  };
+
+  const cancelEmergency = async () => {
+    if (!primaryRoomRef.current) return;
+    
+    if (emergencyTimerRef.current) {
+      clearInterval(emergencyTimerRef.current);
+      emergencyTimerRef.current = null;
+    }
+    
+    await stopPTT();
+    setIsEmergency(false);
+    setEmergencyLockRemaining(0);
+    
+    broadcastEmergency(primaryRoomRef.current, transmitChannel, false);
+    broadcastStatus(primaryRoomRef.current, "idle", transmitChannel);
+    updateUnitPresence(transmitChannel, identity, "idle", Date.now());
+  };
+
   const disconnect = async () => {
+    stopHeartbeat();
+    
     if (primaryRoomRef.current) {
       await primaryRoomRef.current.disconnect();
     }
@@ -336,12 +826,18 @@ export default function App() {
       await room.disconnect();
     }
 
+    if (audioContextRef.current) {
+      audioContextRef.current.close();
+      audioContextRef.current = null;
+    }
+
     setPrimaryRoom(null);
     setScanRooms({});
     setScanChannels([]);
     setConnected(false);
     setUnitPresence({});
     setScanMode(false);
+    setLastRxBlob(null);
   };
 
   const currentZoneChannels = ZONES[selectedZone] || [];
@@ -477,6 +973,70 @@ export default function App() {
             marginBottom: 16
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <h3 style={{ margin: 0, fontSize: 14 }}>Audio Settings</h3>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontSize: 12 }}>Radio Effect (narrowband)</span>
+              <button
+                onClick={() => setRadioEffect(!radioEffect)}
+                style={{
+                  padding: "4px 12px",
+                  backgroundColor: radioEffect ? "#3b82f6" : "#444",
+                  color: "white",
+                  border: "none",
+                  borderRadius: 4,
+                  cursor: "pointer",
+                  fontSize: 12,
+                }}
+              >
+                {radioEffect ? "ON" : "OFF"}
+              </button>
+            </div>
+          </div>
+
+          <div style={{ 
+            background: "#1a1a1a", 
+            padding: 12, 
+            borderRadius: 8,
+            marginBottom: 16
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ fontSize: 12, width: 24 }}>TX</span>
+                <AudioLevelMeter level={txLevel} />
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ fontSize: 12, width: 24 }}>RX</span>
+                <AudioLevelMeter level={rxLevel} />
+              </div>
+            </div>
+            {lastRxBlob && (
+              <button
+                onClick={playLastRx}
+                disabled={isPlayingRecording}
+                style={{
+                  width: "100%",
+                  padding: "8px",
+                  backgroundColor: isPlayingRecording ? "#666" : "#4b5563",
+                  color: "white",
+                  border: "none",
+                  borderRadius: 4,
+                  cursor: isPlayingRecording ? "default" : "pointer",
+                  fontSize: 12,
+                }}
+              >
+                {isPlayingRecording ? "Playing..." : "Replay Last RX"}
+              </button>
+            )}
+          </div>
+
+          <div style={{ 
+            background: "#1a1a1a", 
+            padding: 12, 
+            borderRadius: 8,
+            marginBottom: 16
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
               <h3 style={{ margin: 0, fontSize: 14 }}>Scan Mode</h3>
               <button
                 onClick={() => setScanMode(!scanMode)}
@@ -599,12 +1159,112 @@ export default function App() {
             TX: {transmitChannel} | RX: {[selectedChannel, ...scanChannels].join(", ")}
           </div>
 
+          {Object.keys(activeEmergencies).length > 0 && (
+            <div style={{
+              background: emergencyFlash ? "#dc2626" : "#7f1d1d",
+              padding: 12,
+              borderRadius: 8,
+              marginBottom: 16,
+              border: "2px solid #dc2626",
+            }}>
+              <h3 style={{ margin: "0 0 8px 0", fontSize: 14, textAlign: "center" }}>
+                ACTIVE EMERGENCIES
+              </h3>
+              {Object.entries(activeEmergencies).map(([unitId, info]) => (
+                <div
+                  key={unitId}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    padding: "6px 8px",
+                    background: "rgba(0,0,0,0.3)",
+                    borderRadius: 4,
+                    marginBottom: 4,
+                  }}
+                >
+                  <span>
+                    <StatusDot status="emergency" />
+                    {unitId} on {info.channel}
+                  </span>
+                  <button
+                    onClick={() => acknowledgeEmergency(unitId, info.channel)}
+                    style={{
+                      padding: "4px 8px",
+                      backgroundColor: "#22c55e",
+                      color: "white",
+                      border: "none",
+                      borderRadius: 4,
+                      cursor: "pointer",
+                      fontSize: 11,
+                    }}
+                  >
+                    ACK
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {isEmergency && (
+            <div style={{
+              background: emergencyFlash ? "#dc2626" : "#7f1d1d",
+              padding: 16,
+              borderRadius: 8,
+              marginBottom: 16,
+              textAlign: "center",
+              border: "2px solid #dc2626",
+            }}>
+              <div style={{ fontSize: 18, fontWeight: "bold", marginBottom: 8 }}>
+                EMERGENCY ACTIVE
+              </div>
+              <div style={{ fontSize: 14, marginBottom: 12 }}>
+                TX Lock: {emergencyLockRemaining}s remaining
+              </div>
+              <button
+                onClick={cancelEmergency}
+                style={{
+                  padding: "8px 16px",
+                  backgroundColor: "#666",
+                  color: "white",
+                  border: "none",
+                  borderRadius: 4,
+                  cursor: "pointer",
+                  fontSize: 12,
+                }}
+              >
+                Cancel Emergency
+              </button>
+            </div>
+          )}
+
+          <button
+            onClick={triggerEmergency}
+            disabled={isEmergency}
+            style={{
+              padding: 16,
+              width: "100%",
+              backgroundColor: isEmergency ? "#7f1d1d" : "#f97316",
+              color: "white",
+              fontSize: 16,
+              fontWeight: "bold",
+              border: "2px solid #f97316",
+              borderRadius: 8,
+              cursor: isEmergency ? "default" : "pointer",
+              marginBottom: 12,
+              opacity: isEmergency ? 0.5 : 1,
+            }}
+          >
+            EMERGENCY
+          </button>
+
           <button
             onMouseDown={startPTT}
             onMouseUp={stopPTT}
             onMouseLeave={stopPTT}
             onTouchStart={startPTT}
             onTouchEnd={stopPTT}
+            disabled={isEmergency}
             style={{
               padding: 30,
               width: "100%",
@@ -614,9 +1274,10 @@ export default function App() {
               fontWeight: "bold",
               border: "none",
               borderRadius: 12,
-              cursor: "pointer",
+              cursor: isEmergency ? "default" : "pointer",
               boxShadow: isTalking ? "0 0 30px rgba(220, 38, 38, 0.6)" : "none",
               transition: "all 0.1s ease",
+              opacity: isEmergency ? 0.5 : 1,
             }}
           >
             {isTalking ? "TRANSMITTING..." : "PUSH TO TALK"}
