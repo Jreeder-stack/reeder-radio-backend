@@ -1,0 +1,50 @@
+2025-12-06T15:48:06Z clientIP="107.115.94.13" requestID="9a836343-6826-4ff0" responseTimeMS=3 responseBytes=358 userAgent="Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.1 Mobile/15E148 Safari/604.1"
+2025-12-06T15:48:19Z clientIP="107.115.94.13" requestID="ef64fcc9-1a2e-4d7c" responseTimeMS=346 responseBytes=462 userAgent="Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.1 Mobile/15E148 Safari/604.1"
+2025-12-06T15:48:19Z clientIP="107.115.94.13" requestID="9dd9f7a3-ed22-4b58" responseTimeMS=2 responseBytes=358 userAgent="Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.1 Mobile/15E148 Safari/604.1"
+2025-12-06T15:48:27Z clientIP="107.115.94.13" requestID="f8f4c35a-3ba4-445f" responseTimeMS=5 responseBytes=360 userAgent="Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.1 Mobile/15E148 Safari/604.1"
+2025-12-06T15:48:27Z clientIP="107.115.94.13" requestID="2d2e268e-92da-461e" responseTimeMS=6 responseBytes=360 userAgent="Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.1 Mobile/15E148 Safari/604.1"
+2025-12-06T15:48:27Z clientIP="107.115.94.13" requestID="5f309cc0-edb9-487a" responseTimeMS=7 responseBytes=360 userAgent="Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.1 Mobile/15E148 Safari/604.1"
+2025-12-06T15:48:27Z clientIP="107.115.94.13" requestID="61fc58fd-d99f-4d14" responseTimeMS=3 responseBytes=360 userAgent="Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.1 Mobile/15E148 Safari/604.1"
+2025-12-06T15:48:30Z clientIP="107.115.94.13" requestID="ac00082b-0d03-4cb6" responseTimeMS=4 responseBytes=358 userAgent="Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.1 Mobile/15E148 Safari/604.1"
+2025-12-06T15:48:32Z clientIP="107.115.94.13" requestID="c7cb51e0-787f-47b1" responseTimeMS=4 responseBytes=358 userAgent="Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.1 Mobile/15E148 Safari/604.1"
+2025-12-06T15:48:37Z clientIP="107.115.94.13" requestID="3f09218a-3eab-441e" responseTimeMS=4 responseBytes=358 userAgent="Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.1 Mobile/15E148 Safari/604.1"
+2025-12-06T15:48:45Z clientIP="107.115.94.13" requestID="aabd2126-1a41-4dcb" responseTimeMS=3 responseBytes=358 userAgent="Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.1 Mobile/15E148 Safari/604.1"
+2025-12-06T15:52:54.466251407Z ==> Detected service running on port 5000
+2025-12-06T15:52:54.652727773Z ==> Docs on specifying a port: https://render.com/docs/web-services#port-binding
+2025-12-06T15:55:47Z clientIP="107.115.94.13" requestID="5a2e4021-c5a8-4d5e" responseTimeMS=5 responseBytes=358 userAgent="Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.1 Mobile/15E148 Safari/604.1"
+2025-12-06T15:55:57Z clientIP="107.115.94.13" requestID="2ce1eb46-860e-4f78" responseTimeMS=279 responseBytes=462 userAgent="Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.1 Mobile/15E148 Safari/604.1"
+2025-12-06T15:56:06Z clientIP="107.115.94.13" requestID="83f54219-583a-4437" responseTimeMS=4 responseBytes=358 userAgent="Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.1 Mobile/15E148 Safari/604.1"
+2025-12-06T15:58:22.971538102Z ==> Deploying...
+2025-12-06T15:58:32.836755829Z ==> Running 'npm start'
+2025-12-06T15:58:33.122133799Z 
+2025-12-06T15:58:33.12216081Z > reeder-radio-backend@1.0.0 start
+2025-12-06T15:58:33.12216589Z > node server.js
+2025-12-06T15:58:33.12216862Z 
+2025-12-06T15:58:34.003424004Z === STARTUP CONFIG DEBUG ===
+2025-12-06T15:58:34.003826124Z NODE_ENV: production
+2025-12-06T15:58:34.004151961Z LIVEKIT_API_KEY exists: true
+2025-12-06T15:58:34.004252044Z LIVEKIT_API_KEY length: 15
+2025-12-06T15:58:34.004281915Z LIVEKIT_API_KEY first 8 chars: APIYpMbf...
+2025-12-06T15:58:34.004318325Z LIVEKIT_API_SECRET exists: true
+2025-12-06T15:58:34.00449306Z LIVEKIT_API_SECRET length: 44
+2025-12-06T15:58:34.004537881Z LIVEKIT_URL: wss://reeder-ptt-rcm02mdx.livekit.cloud
+2025-12-06T15:58:34.004544351Z VITE_LIVEKIT_URL: wss://reeder-ptt-rcm02mdx.livekit.cloud
+2025-12-06T15:58:34.004636023Z SESSION_SECRET exists: true
+2025-12-06T15:58:34.004667894Z === END STARTUP CONFIG ===
+2025-12-06T15:58:34.407599895Z Database initialized successfully
+2025-12-06T15:58:34.410815584Z Server running on port 5000
+2025-12-06T15:58:43.907122775Z ==> Your service is live 🎉
+2025-12-06T15:58:44.297372584Z ==> 
+2025-12-06T15:58:44.381702945Z ==> ///////////////////////////////////////////////////////////
+2025-12-06T15:58:44.464561236Z ==> 
+2025-12-06T15:58:44.553473457Z ==> Available at your primary URL https://reeder-radio-backend.onrender.com
+2025-12-06T15:58:44.934536227Z ==> 
+2025-12-06T15:58:45Z clientIP="35.197.80.206" requestID="56472040-1a73-48cb" responseTimeMS=5 responseBytes=593 userAgent="Go-http-client/2.0"
+2025-12-06T15:58:45.018557998Z ==> ///////////////////////////////////////////////////////////
+2025-12-06T15:59:11Z clientIP="107.115.94.13" requestID="8334ebf2-6f6e-4a33" responseTimeMS=10 responseBytes=593 userAgent="Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.1 Mobile/15E148 Safari/604.1"
+2025-12-06T15:59:11Z clientIP="107.115.94.13" requestID="ea8badef-08af-45b2" responseTimeMS=5 responseBytes=665 userAgent="Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.1 Mobile/15E148 Safari/604.1"
+2025-12-06T15:59:11Z clientIP="107.115.94.13" requestID="d25d6a7f-e734-4741" responseTimeMS=79 responseBytes=180027 userAgent="Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.1 Mobile/15E148 Safari/604.1"
+2025-12-06T15:59:12Z clientIP="107.115.94.13" requestID="89ed0ddc-8817-4361" responseTimeMS=3 responseBytes=358 userAgent="Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.1 Mobile/15E148 Safari/604.1"
+2025-12-06T15:59:21Z clientIP="107.115.94.13" requestID="912259f1-b14d-4e7d" responseTimeMS=270 responseBytes=462 userAgent="Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.1 Mobile/15E148 Safari/604.1"
+2025-12-06T15:59:22Z clientIP="107.115.94.13" requestID="dbe723a9-9e39-4974" responseTimeMS=2 responseBytes=358 userAgent="Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.1 Mobile/15E148 Safari/604.1"
+2025-12-06T15:59:36Z clientIP="107.115.94.13" requestID="476fe91f-10aa-4c53" responseTimeMS=5 responseBytes=358 userAgent="Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.1 Mobile/15E148 Safari/604.1"
