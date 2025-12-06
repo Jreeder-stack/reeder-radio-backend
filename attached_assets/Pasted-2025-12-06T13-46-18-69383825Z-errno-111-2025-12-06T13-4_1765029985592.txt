@@ -1,0 +1,50 @@
+2025-12-06T13:46:18.69383825Z       errno: -111,
+2025-12-06T13:46:18.693842391Z       code: 'ECONNREFUSED',
+2025-12-06T13:46:18.693846141Z       syscall: 'connect',
+2025-12-06T13:46:18.693848731Z       address: '::1',
+2025-12-06T13:46:18.693851021Z       port: 5432
+2025-12-06T13:46:18.693853171Z     },
+2025-12-06T13:46:18.693855311Z     Error: connect ECONNREFUSED 127.0.0.1:5432
+2025-12-06T13:46:18.693857511Z         at createConnectionError (node:net:1652:14)
+2025-12-06T13:46:18.693859661Z         at afterConnectMultiple (node:net:1682:16) {
+2025-12-06T13:46:18.693861811Z       errno: -111,
+2025-12-06T13:46:18.693863961Z       code: 'ECONNREFUSED',
+2025-12-06T13:46:18.693866151Z       syscall: 'connect',
+2025-12-06T13:46:18.693868211Z       address: '127.0.0.1',
+2025-12-06T13:46:18.693870331Z       port: 5432
+2025-12-06T13:46:18.693872421Z     }
+2025-12-06T13:46:18.693874561Z   ]
+2025-12-06T13:46:18.693876681Z }
+2025-12-06T13:46:22.237892243Z ==> Exited with status 1
+2025-12-06T13:46:22.301919147Z ==> Common ways to troubleshoot your deploy: https://render.com/docs/troubleshooting-deploys
+2025-12-06T13:46:22.431947326Z ==> Running 'npm start'
+2025-12-06T13:46:22.722197534Z 
+2025-12-06T13:46:22.722214325Z > reeder-radio-backend@1.0.0 start
+2025-12-06T13:46:22.722218925Z > node server.js
+2025-12-06T13:46:22.722221815Z 
+2025-12-06T13:46:23.529526086Z Failed to initialize database: AggregateError [ECONNREFUSED]: 
+2025-12-06T13:46:23.529544976Z     at /opt/render/project/src/node_modules/pg-pool/index.js:45:11
+2025-12-06T13:46:23.529548926Z     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2025-12-06T13:46:23.529551486Z     at async initializeDatabase (file:///opt/render/project/src/db.js:11:18) {
+2025-12-06T13:46:23.529554336Z   code: 'ECONNREFUSED',
+2025-12-06T13:46:23.529556846Z   [errors]: [
+2025-12-06T13:46:23.529559726Z     Error: connect ECONNREFUSED ::1:5432
+2025-12-06T13:46:23.529561916Z         at createConnectionError (node:net:1652:14)
+2025-12-06T13:46:23.529564136Z         at afterConnectMultiple (node:net:1682:16) {
+2025-12-06T13:46:23.529566336Z       errno: -111,
+2025-12-06T13:46:23.529569107Z       code: 'ECONNREFUSED',
+2025-12-06T13:46:23.529571427Z       syscall: 'connect',
+2025-12-06T13:46:23.529573727Z       address: '::1',
+2025-12-06T13:46:23.529575907Z       port: 5432
+2025-12-06T13:46:23.529578167Z     },
+2025-12-06T13:46:23.529580827Z     Error: connect ECONNREFUSED 127.0.0.1:5432
+2025-12-06T13:46:23.529583137Z         at createConnectionError (node:net:1652:14)
+2025-12-06T13:46:23.529585437Z         at afterConnectMultiple (node:net:1682:16) {
+2025-12-06T13:46:23.529587967Z       errno: -111,
+2025-12-06T13:46:23.529590197Z       code: 'ECONNREFUSED',
+2025-12-06T13:46:23.529592437Z       syscall: 'connect',
+2025-12-06T13:46:23.529594707Z       address: '127.0.0.1',
+2025-12-06T13:46:23.529596927Z       port: 5432
+2025-12-06T13:46:23.529599057Z     }
+2025-12-06T13:46:23.529601227Z   ]
+2025-12-06T13:46:23.529603497Z }
