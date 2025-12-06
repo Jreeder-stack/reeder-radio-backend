@@ -5,6 +5,66 @@ import { Room, RoomEvent, Track, DataPacket_Kind } from "livekit-client";
 const LIVEKIT_URL = import.meta.env.VITE_LIVEKIT_URL;
 const TOKEN_SERVER = "/getToken";
 
+// Track audio elements that have already been connected to a MediaElementSource
+// This prevents the "HTMLMediaElement already connected" error on reconnection
+const connectedAudioElements = new WeakMap();
+
+function clearAudioElementFromCache(audioElement) {
+  connectedAudioElements.delete(audioElement);
+}
+
+function getOrCreateMediaElementSource(audioContext, audioElement, track) {
+  // Check if this audio element already has a source
+  if (connectedAudioElements.has(audioElement)) {
+    const cachedSource = connectedAudioElements.get(audioElement);
+    // Verify the cached source's context is still the same and not closed
+    if (cachedSource.context === audioContext && audioContext.state !== "closed") {
+      return { source: cachedSource, element: audioElement };
+    }
+    // Context changed or closed - properly detach and create fresh element
+    console.log("AudioContext changed, detaching and creating fresh audio element");
+    try {
+      track.detach(audioElement);
+    } catch (e) {
+      console.warn("Could not detach old element:", e.message);
+    }
+    audioElement.remove();
+    connectedAudioElements.delete(audioElement);
+  }
+  
+  // Try to create source for the provided element first
+  try {
+    const source = audioContext.createMediaElementSource(audioElement);
+    connectedAudioElements.set(audioElement, source);
+    return { source, element: audioElement };
+  } catch (err) {
+    // Element might already be connected - try with a completely fresh Audio element
+    console.log("Element already connected, trying with fresh Audio element");
+    try {
+      track.detach(audioElement);
+    } catch (e) {
+      // Ignore detach errors
+    }
+    audioElement.remove();
+    connectedAudioElements.delete(audioElement);
+    
+    // Create a brand new Audio element
+    const freshAudio = new Audio();
+    freshAudio.autoplay = true;
+    const freshElement = track.attach(freshAudio);
+    
+    try {
+      const source = audioContext.createMediaElementSource(freshElement);
+      connectedAudioElements.set(freshElement, source);
+      return { source, element: freshElement };
+    } catch (retryErr) {
+      console.warn("Could not create MediaElementSource even with fresh element:", retryErr.message);
+      // Last resort - return null but element still plays audio
+      return { source: null, element: freshElement };
+    }
+  }
+}
+
 const ZONES = {
   "Zone 1 - Operations": ["OPS1", "OPS2", "TAC1"],
   "Zone 2 - Fire": ["FIRE1", "FIRE2", "FIRE3", "FIRE4", "FIRE5", "FIRE6", "FIRE7", "FIRE8"],
@@ -201,7 +261,22 @@ export default function Dispatcher({ user, onLogout }) {
         audioElem.dataset.participant = participant.identity;
         audioElem.muted = mutedChannels[channelName] || false;
         
-        const source = audioContext.createMediaElementSource(audioElem);
+        // Use helper to prevent duplicate MediaElementSource connections
+        const { source, element } = getOrCreateMediaElementSource(audioContext, audioElem, track);
+        element.dataset.channel = channelName;
+        element.dataset.participant = participant.identity;
+        element.muted = mutedChannels[channelName] || false;
+        
+        // If source is null, we can't do audio processing but audio still plays through element
+        if (!source) {
+          setActiveTransmissions(prev => ({
+            ...prev,
+            [channelName]: { from: participant.identity, timestamp: Date.now() },
+          }));
+          updateUnitPresence(channelName, participant.identity, "transmitting", Date.now());
+          return;
+        }
+        
         const analyser = audioContext.createAnalyser();
         analyser.fftSize = 256;
         analyser.smoothingTimeConstant = 0.3;
@@ -268,7 +343,10 @@ export default function Dispatcher({ user, onLogout }) {
         delete recordersRef.current[channelName];
       }
       
-      track.detach().forEach((el) => el.remove());
+      track.detach().forEach((el) => {
+        clearAudioElementFromCache(el);
+        el.remove();
+      });
       setActiveTransmissions(prev => {
         const updated = { ...prev };
         delete updated[channelName];
