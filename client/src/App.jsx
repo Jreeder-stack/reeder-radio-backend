@@ -1181,29 +1181,34 @@ export default function App({ user, onLogout }) {
             </div>
             
             {scanMode && (
-              <div style={{ marginTop: 8 }}>
+              <div style={{ marginTop: 8, maxHeight: 200, overflowY: "auto" }}>
                 <p style={{ fontSize: 12, opacity: 0.6, margin: "0 0 8px 0" }}>
                   Select channels to monitor (TX on {transmitChannel}):
                 </p>
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                  {currentZoneChannels.filter(ch => ch !== selectedChannel).map((ch) => (
-                    <button
-                      key={ch}
-                      onClick={() => toggleScanChannel(ch)}
-                      style={{
-                        padding: "4px 8px",
-                        backgroundColor: scanChannels.includes(ch) ? "#22c55e" : "#333",
-                        color: "white",
-                        border: "none",
-                        borderRadius: 4,
-                        cursor: "pointer",
-                        fontSize: 11,
-                      }}
-                    >
-                      {ch}
-                    </button>
-                  ))}
-                </div>
+                {Object.entries(zonesData).map(([zoneName, zoneChannels]) => (
+                  <div key={zoneName} style={{ marginBottom: 10 }}>
+                    <div style={{ fontSize: 11, opacity: 0.5, marginBottom: 4 }}>{zoneName}</div>
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                      {zoneChannels.filter(ch => ch !== selectedChannel).map((ch) => (
+                        <button
+                          key={ch}
+                          onClick={() => toggleScanChannel(ch)}
+                          style={{
+                            padding: "4px 8px",
+                            backgroundColor: scanChannels.includes(ch) ? "#22c55e" : "#333",
+                            color: "white",
+                            border: "none",
+                            borderRadius: 4,
+                            cursor: "pointer",
+                            fontSize: 11,
+                          }}
+                        >
+                          {ch}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
