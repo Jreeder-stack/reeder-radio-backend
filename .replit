@@ -62,3 +62,8 @@ externalPort = 3000
 
 [userenv.development]
 VITE_LIVEKIT_URL = "wss://reeder-ptt-rcm02mdx.livekit.cloud"
+
+[deployment]
+deploymentTarget = "autoscale"
+run = ["node", "server.js"]
+build = ["bash", "-c", "cd client && npm run build"]

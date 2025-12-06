@@ -1,13 +1,21 @@
 // server.js
 import express from "express";
 import cors from "cors";
-import { AccessToken } from "livekit-server-sdk"; // correct modern import
+import path from "path";
+import { fileURLToPath } from "url";
+import { AccessToken } from "livekit-server-sdk";
 import dotenv from "dotenv";
 
 dotenv.config();
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const app = express();
 app.use(cors());
+
+// Serve static files in production
+app.use(express.static(path.join(__dirname, "client", "dist")));
 
 const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY;
 const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET;
@@ -50,6 +58,11 @@ app.get("/getToken", async (req, res) => {
     console.error("Token Error:", err);
     return res.status(500).json({ error: "Failed to generate token" });
   }
+});
+
+// Serve index.html for any other routes (SPA fallback)
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "client", "dist", "index.html"));
 });
 
 const port = process.env.PORT || 3001;
