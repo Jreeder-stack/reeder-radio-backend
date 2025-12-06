@@ -125,7 +125,7 @@ export default function App() {
       background: "#0a0a0a",
       minHeight: "100vh"
     }}>
-      <h1>🚔 Reeder PTT Radio</h1>
+      <h1>Reeder PTT Radio</h1>
 
       {!connected ? (
         <div>
@@ -175,7 +175,7 @@ export default function App() {
             marginBottom: 20 
           }}>
             <div>
-              <h2 style={{ margin: 0 }}>📻 {roomName}</h2>
+              <h2 style={{ margin: 0 }}>{roomName}</h2>
               <p style={{ margin: "4px 0", opacity: 0.7 }}>Logged in as {identity}</p>
             </div>
             <button
@@ -231,7 +231,7 @@ export default function App() {
               transition: "all 0.1s ease",
             }}
           >
-            {isTalking ? "🎙️ TRANSMITTING..." : "🎤 PUSH TO TALK"}
+            {isTalking ? "TRANSMITTING..." : "PUSH TO TALK"}
           </button>
         </div>
       )}
