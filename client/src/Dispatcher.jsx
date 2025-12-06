@@ -493,12 +493,18 @@ export default function Dispatcher({ user, onLogout }) {
 
   const handleTouchStart = (e) => {
     e.preventDefault();
+    if (!e.isTrusted) return;
     startDispatchPTT();
   };
 
   const handleTouchEnd = (e) => {
     e.preventDefault();
     stopDispatchPTT();
+  };
+
+  const handleMouseDown = (e) => {
+    if (!e.isTrusted) return;
+    startDispatchPTT();
   };
 
   const playRecording = (channel) => {
@@ -808,7 +814,7 @@ export default function Dispatcher({ user, onLogout }) {
                 </select>
               </div>
               <button
-                onMouseDown={startDispatchPTT}
+                onMouseDown={handleMouseDown}
                 onMouseUp={stopDispatchPTT}
                 onMouseLeave={stopDispatchPTT}
                 onTouchStart={handleTouchStart}

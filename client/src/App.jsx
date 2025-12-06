@@ -907,12 +907,18 @@ export default function App({ user, onLogout }) {
 
   const handleTouchStart = (e) => {
     e.preventDefault();
+    if (!e.isTrusted) return;
     startPTT();
   };
 
   const handleTouchEnd = (e) => {
     e.preventDefault();
     stopPTT();
+  };
+
+  const handleMouseDown = (e) => {
+    if (!e.isTrusted) return;
+    startPTT();
   };
 
   const playLastRx = () => {
@@ -1475,7 +1481,7 @@ export default function App({ user, onLogout }) {
           </button>
 
           <button
-            onMouseDown={startPTT}
+            onMouseDown={handleMouseDown}
             onMouseUp={stopPTT}
             onMouseLeave={stopPTT}
             onTouchStart={handleTouchStart}
