@@ -168,9 +168,12 @@ function createRxDspChain(audioContext, radioEffectEnabled) {
   return { inputGain, analyser, outputGain };
 }
 
-export default function App() {
+import { useNavigate } from "react-router-dom";
+
+export default function App({ user, onLogout }) {
+  const navigate = useNavigate();
   const [connected, setConnected] = useState(false);
-  const [identity, setIdentity] = useState("");
+  const [identity, setIdentity] = useState(user?.unit_id || "");
   const [selectedZone, setSelectedZone] = useState("Zone 1 - Operations");
   const [selectedChannel, setSelectedChannel] = useState("OPS1");
   const [transmitChannel, setTransmitChannel] = useState("OPS1");
@@ -855,7 +858,55 @@ export default function App() {
       background: "#0a0a0a",
       minHeight: "100vh"
     }}>
-      <h1 style={{ fontSize: 24, marginBottom: 20 }}>Reeder PTT Radio</h1>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+        <h1 style={{ fontSize: 24, margin: 0 }}>Reeder PTT Radio</h1>
+        <div style={{ display: "flex", gap: 8 }}>
+          {user?.role === "admin" && (
+            <button
+              onClick={() => navigate("/admin")}
+              style={{
+                padding: "8px 16px",
+                backgroundColor: "#3b82f6",
+                color: "white",
+                border: "none",
+                borderRadius: 6,
+                cursor: "pointer",
+                fontSize: 14,
+              }}
+            >
+              Admin
+            </button>
+          )}
+          <button
+            onClick={() => navigate("/dispatcher")}
+            style={{
+              padding: "8px 16px",
+              backgroundColor: "#6366f1",
+              color: "white",
+              border: "none",
+              borderRadius: 6,
+              cursor: "pointer",
+              fontSize: 14,
+            }}
+          >
+            Dispatcher
+          </button>
+          <button
+            onClick={onLogout}
+            style={{
+              padding: "8px 16px",
+              backgroundColor: "#dc2626",
+              color: "white",
+              border: "none",
+              borderRadius: 6,
+              cursor: "pointer",
+              fontSize: 14,
+            }}
+          >
+            Logout
+          </button>
+        </div>
+      </div>
 
       {!connected ? (
         <div>

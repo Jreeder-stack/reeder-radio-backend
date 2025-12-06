@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { Room, RoomEvent, Track, DataPacket_Kind } from "livekit-client";
 
 const LIVEKIT_URL = import.meta.env.VITE_LIVEKIT_URL;
@@ -63,9 +64,10 @@ function AudioLevelMeter({ level }) {
   );
 }
 
-export default function Dispatcher() {
+export default function Dispatcher({ user, onLogout }) {
+  const navigate = useNavigate();
   const [connected, setConnected] = useState(false);
-  const [dispatcherId, setDispatcherId] = useState("DISPATCH");
+  const [dispatcherId, setDispatcherId] = useState(user?.username || "DISPATCH");
   const [channelRooms, setChannelRooms] = useState({});
   const [unitPresence, setUnitPresence] = useState({});
   const [activeEmergencies, setActiveEmergencies] = useState({});
@@ -471,50 +473,107 @@ export default function Dispatcher() {
         paddingBottom: 12,
       }}>
         <h1 style={{ fontSize: 20, margin: 0 }}>Dispatch Console</h1>
-        {connected ? (
-          <button
-            onClick={disconnect}
-            style={{
-              padding: "6px 12px",
-              backgroundColor: "#666",
-              color: "white",
-              border: "none",
-              borderRadius: 4,
-              cursor: "pointer",
-              fontSize: 12,
-            }}
-          >
-            Disconnect
-          </button>
-        ) : (
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <input
-              style={{ padding: 6, borderRadius: 4, border: "none", width: 100 }}
-              value={dispatcherId}
-              onChange={(e) => setDispatcherId(e.target.value)}
-              placeholder="Dispatcher ID"
-            />
+        <div style={{ display: "flex", gap: 8 }}>
+          {user?.role === "admin" && (
             <button
-              onClick={connectAllChannels}
+              onClick={() => navigate("/admin")}
               style={{
                 padding: "6px 12px",
-                backgroundColor: "#22c55e",
+                backgroundColor: "#3b82f6",
                 color: "white",
                 border: "none",
                 borderRadius: 4,
                 cursor: "pointer",
-                fontSize: 12,
+                fontSize: 13,
               }}
             >
-              Connect All Channels
+              Admin
             </button>
-          </div>
-        )}
+          )}
+          <button
+            onClick={() => navigate("/")}
+            style={{
+              padding: "6px 12px",
+              backgroundColor: "#4b5563",
+              color: "white",
+              border: "none",
+              borderRadius: 4,
+              cursor: "pointer",
+              fontSize: 13,
+            }}
+          >
+            Radio
+          </button>
+          {connected && (
+            <button
+              onClick={disconnect}
+              style={{
+                padding: "6px 12px",
+                backgroundColor: "#666",
+                color: "white",
+                border: "none",
+                borderRadius: 4,
+                cursor: "pointer",
+                fontSize: 13,
+              }}
+            >
+              Disconnect
+            </button>
+          )}
+          <button
+            onClick={onLogout}
+            style={{
+              padding: "6px 12px",
+              backgroundColor: "#dc2626",
+              color: "white",
+              border: "none",
+              borderRadius: 4,
+              cursor: "pointer",
+              fontSize: 13,
+            }}
+          >
+            Logout
+          </button>
+        </div>
       </div>
 
       {!connected ? (
-        <div style={{ textAlign: "center", padding: 40, opacity: 0.5 }}>
-          Enter Dispatcher ID and click Connect to monitor all channels
+        <div style={{ textAlign: "center", padding: 40 }}>
+          <div style={{ marginBottom: 20 }}>
+            <label style={{ display: "block", marginBottom: 8, fontSize: 14, opacity: 0.7 }}>
+              Dispatcher ID
+            </label>
+            <input
+              style={{ 
+                padding: "10px 14px", 
+                borderRadius: 6, 
+                border: "1px solid #444",
+                background: "#1a1a1a",
+                color: "white",
+                width: 200,
+                fontSize: 16,
+                textAlign: "center",
+              }}
+              value={dispatcherId}
+              onChange={(e) => setDispatcherId(e.target.value)}
+              placeholder="DISPATCH"
+            />
+          </div>
+          <button
+            onClick={connectAllChannels}
+            style={{
+              padding: "12px 32px",
+              backgroundColor: "#22c55e",
+              color: "white",
+              border: "none",
+              borderRadius: 8,
+              cursor: "pointer",
+              fontSize: 16,
+              fontWeight: 600,
+            }}
+          >
+            Connect All Channels
+          </button>
         </div>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 16 }}>
