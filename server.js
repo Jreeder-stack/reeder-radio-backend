@@ -53,6 +53,6 @@ app.get("/getToken", async (req, res) => {
 });
 
 const port = process.env.PORT || 3001;
-app.listen(port, () => {
-  console.log(`Reeder Token Server running on port ${port}`);
+app.listen(port, "localhost", () => {
+  console.log(`Reeder Token Server running on localhost:${port}`);
 });
