@@ -6,16 +6,20 @@ A Push-to-Talk (PTT) radio communication app using LiveKit for real-time audio s
 ## Project Structure
 ```
 /
-├── server.js          # Express backend - generates LiveKit access tokens, serves static files
-├── package.json       # Backend dependencies (express, livekit-server-sdk, cors, dotenv)
+├── server.js          # Express backend - auth, admin API, LiveKit tokens
+├── db.js              # PostgreSQL database setup and queries
+├── package.json       # Backend dependencies
 ├── client/            # React frontend (Vite)
 │   ├── src/
 │   │   ├── App.jsx        # Main PTT interface component
 │   │   ├── Dispatcher.jsx # Dispatcher console (multi-channel monitoring)
-│   │   └── main.jsx       # React entry point with routing
+│   │   ├── Login.jsx      # Login/register screen
+│   │   ├── Admin.jsx      # Admin dashboard (users, channels, logs)
+│   │   ├── AuthContext.jsx # Auth state management
+│   │   └── main.jsx       # React entry point with protected routing
 │   ├── vite.config.js # Vite configuration with proxy to backend
 │   ├── index.html     # HTML entry point
-│   └── package.json   # Frontend dependencies (react, livekit-client, react-router-dom)
+│   └── package.json   # Frontend dependencies
 ```
 
 ## Environment Variables
@@ -24,6 +28,12 @@ A Push-to-Talk (PTT) radio communication app using LiveKit for real-time audio s
 - `LIVEKIT_API_KEY` - LiveKit API key
 - `LIVEKIT_API_SECRET` - LiveKit API secret  
 - `LIVEKIT_URL` - LiveKit server URL (wss://...)
+- `SESSION_SECRET` - Required in production for secure sessions
+
+### Optional Environment Variables:
+- `ADMIN_USERNAME` - Default admin username (defaults to "admin")
+- `ADMIN_PASSWORD` - Default admin password (defaults to "admin123")
+- `NODE_ENV` - Set to "production" for secure cookie settings
 
 ### Frontend Environment (development):
 - `VITE_LIVEKIT_URL` - LiveKit server URL for browser client
@@ -35,8 +45,10 @@ Both workflows run automatically:
 2. **Frontend** - `cd client && npm run dev` (port 5000)
 
 ## Routes
-- `/` - Main PTT Radio interface for field units
-- `/dispatcher` - Dispatcher Console for multi-channel monitoring
+- `/login` - Login/register screen
+- `/` - Main PTT Radio interface for field units (protected)
+- `/dispatcher` - Dispatcher Console for multi-channel monitoring (protected)
+- `/admin` - Admin dashboard for user/channel management (admin only)
 
 ## Deploying to Render
 
@@ -99,3 +111,20 @@ Set these environment variables in Render:
 - Unit heartbeat system (30-second intervals) for online/offline detection
 - Location pings (if geolocation available)
 - Channel metadata in data messages
+
+### Phase 8 - Authentication & Admin System
+- PostgreSQL database with users, channels, activity_logs tables
+- Username/password authentication with bcrypt hashing
+- Session management with connect-pg-simple
+- Default admin account created on startup
+- Admin dashboard with three tabs:
+  - Users: View all, change roles (user/admin), block/unblock accounts
+  - Channels: Enable/disable channels by zone
+  - Activity Logs: View all user actions with timestamps
+- Protected routes with role-based access control
+- Activity logging for logins, registrations, channel joins, admin actions
+
+## Default Admin Credentials
+- Username: admin (or ADMIN_USERNAME env var)
+- Password: admin123 (or ADMIN_PASSWORD env var)
+- Change these in production!

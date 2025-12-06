@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import path from "path";
+import crypto from "crypto";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { fileURLToPath } from "url";
@@ -31,18 +32,29 @@ app.use(express.json());
 
 const PgSession = connectPgSimple(session);
 
+const isProduction = process.env.NODE_ENV === "production";
+const SESSION_SECRET = process.env.SESSION_SECRET;
+
+if (!SESSION_SECRET && isProduction) {
+  console.error("FATAL: SESSION_SECRET environment variable is required in production");
+  process.exit(1);
+}
+
+const sessionSecret = SESSION_SECRET || crypto.randomBytes(32).toString("hex");
+
 app.use(
   session({
     store: new PgSession({
       pool: pool,
       tableName: "session",
     }),
-    secret: process.env.SESSION_SECRET || "reeder-radio-secret-key-change-me",
+    secret: sessionSecret,
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: false,
+      secure: isProduction,
       httpOnly: true,
+      sameSite: "lax",
       maxAge: 24 * 60 * 60 * 1000,
     },
   })
