@@ -8,6 +8,10 @@ export default defineConfig({
     port: 5000,
     allowedHosts: true,
     proxy: {
+      "/api": {
+        target: "http://localhost:3001",
+        changeOrigin: true,
+      },
       "/getToken": {
         target: "http://localhost:3001",
         changeOrigin: true,
