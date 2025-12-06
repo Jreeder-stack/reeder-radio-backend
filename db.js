@@ -14,6 +14,7 @@ export async function initializeDatabase() {
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
         username VARCHAR(100) UNIQUE NOT NULL,
+        email VARCHAR(255),
         password_hash VARCHAR(255) NOT NULL,
         role VARCHAR(20) DEFAULT 'user',
         unit_id VARCHAR(50),
@@ -24,12 +25,39 @@ export async function initializeDatabase() {
     `);
 
     await client.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(255)
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS zones (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(100) UNIQUE NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    await client.query(`
       CREATE TABLE IF NOT EXISTS channels (
         id SERIAL PRIMARY KEY,
         name VARCHAR(50) UNIQUE NOT NULL,
         zone VARCHAR(100) NOT NULL,
+        zone_id INTEGER REFERENCES zones(id),
         enabled BOOLEAN DEFAULT true,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    await client.query(`
+      ALTER TABLE channels ADD COLUMN IF NOT EXISTS zone_id INTEGER REFERENCES zones(id)
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS user_channel_access (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        channel_id INTEGER REFERENCES channels(id) ON DELETE CASCADE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(user_id, channel_id)
       )
     `);
 
@@ -75,6 +103,19 @@ export async function initializeDatabase() {
       console.log(`Default admin account created: ${adminUsername}`);
     }
 
+    const defaultZones = [
+      "Zone 1 - Operations",
+      "Zone 2 - Fire",
+      "Zone 3 - Secure Command",
+    ];
+
+    for (const zoneName of defaultZones) {
+      await client.query(
+        `INSERT INTO zones (name) VALUES ($1) ON CONFLICT (name) DO NOTHING`,
+        [zoneName]
+      );
+    }
+
     const defaultChannels = [
       { name: "OPS1", zone: "Zone 1 - Operations" },
       { name: "OPS2", zone: "Zone 1 - Operations" },
@@ -91,10 +132,15 @@ export async function initializeDatabase() {
     ];
 
     for (const ch of defaultChannels) {
+      const zoneResult = await client.query(
+        `SELECT id FROM zones WHERE name = $1`,
+        [ch.zone]
+      );
+      const zoneId = zoneResult.rows[0]?.id;
       await client.query(
-        `INSERT INTO channels (name, zone) VALUES ($1, $2) 
-         ON CONFLICT (name) DO NOTHING`,
-        [ch.name, ch.zone]
+        `INSERT INTO channels (name, zone, zone_id) VALUES ($1, $2, $3) 
+         ON CONFLICT (name) DO UPDATE SET zone_id = EXCLUDED.zone_id`,
+        [ch.name, ch.zone, zoneId]
       );
     }
 
@@ -112,28 +158,102 @@ export async function getUser(username) {
   return result.rows[0];
 }
 
-export async function createUser(username, password, role = "user") {
+export async function createUser(username, password, role = "user", email = null, unit_id = null) {
   const hash = await bcrypt.hash(password, 10);
   const result = await pool.query(
-    "INSERT INTO users (username, password_hash, role) VALUES ($1, $2, $3) RETURNING *",
-    [username, hash, role]
+    "INSERT INTO users (username, password_hash, role, email, unit_id) VALUES ($1, $2, $3, $4, $5) RETURNING *",
+    [username, hash, role, email, unit_id]
   );
   return result.rows[0];
 }
 
+export async function createUserWithChannels(username, password, role = "user", email = null, unit_id = null, channelIds = []) {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    
+    const hash = await bcrypt.hash(password, 10);
+    const userResult = await client.query(
+      "INSERT INTO users (username, password_hash, role, email, unit_id) VALUES ($1, $2, $3, $4, $5) RETURNING *",
+      [username, hash, role, email, unit_id]
+    );
+    const user = userResult.rows[0];
+
+    for (const channelId of channelIds) {
+      await client.query(
+        "INSERT INTO user_channel_access (user_id, channel_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+        [user.id, channelId]
+      );
+    }
+
+    await client.query("COMMIT");
+    return user;
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 export async function getAllUsers() {
   const result = await pool.query(
-    "SELECT id, username, role, unit_id, status, created_at, last_login FROM users ORDER BY created_at DESC"
+    "SELECT id, username, email, role, unit_id, status, created_at, last_login FROM users ORDER BY created_at DESC"
   );
   return result.rows;
 }
 
+export async function getUserChannelAccess(userId) {
+  const result = await pool.query(
+    "SELECT channel_id FROM user_channel_access WHERE user_id = $1",
+    [userId]
+  );
+  return result.rows.map(r => r.channel_id);
+}
+
+export async function setUserChannelAccess(userId, channelIds) {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query("DELETE FROM user_channel_access WHERE user_id = $1", [userId]);
+    for (const channelId of channelIds) {
+      await client.query(
+        "INSERT INTO user_channel_access (user_id, channel_id) VALUES ($1, $2)",
+        [userId, channelId]
+      );
+    }
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+export async function deleteUser(id) {
+  const result = await pool.query(
+    "DELETE FROM users WHERE id = $1 RETURNING *",
+    [id]
+  );
+  return result.rows[0];
+}
+
 export async function updateUser(id, updates) {
-  const { role, status, unit_id } = updates;
+  const { role, status, unit_id, email } = updates;
   const result = await pool.query(
     `UPDATE users SET role = COALESCE($1, role), status = COALESCE($2, status), 
-     unit_id = COALESCE($3, unit_id) WHERE id = $4 RETURNING *`,
-    [role, status, unit_id, id]
+     unit_id = COALESCE($3, unit_id), email = COALESCE($4, email) WHERE id = $5 RETURNING *`,
+    [role, status, unit_id, email, id]
+  );
+  return result.rows[0];
+}
+
+export async function updateUserPassword(id, newPassword) {
+  const hash = await bcrypt.hash(newPassword, 10);
+  const result = await pool.query(
+    "UPDATE users SET password_hash = $1 WHERE id = $2 RETURNING *",
+    [hash, id]
   );
   return result.rows[0];
 }
@@ -180,6 +300,53 @@ export async function getActivityLogs(limit = 100) {
     [limit]
   );
   return result.rows;
+}
+
+export async function getAllZones() {
+  const result = await pool.query(
+    "SELECT * FROM zones ORDER BY name"
+  );
+  return result.rows;
+}
+
+export async function createZone(name) {
+  const result = await pool.query(
+    "INSERT INTO zones (name) VALUES ($1) RETURNING *",
+    [name]
+  );
+  return result.rows[0];
+}
+
+export async function updateZone(id, name) {
+  const result = await pool.query(
+    "UPDATE zones SET name = $1 WHERE id = $2 RETURNING *",
+    [name, id]
+  );
+  return result.rows[0];
+}
+
+export async function deleteZone(id) {
+  const result = await pool.query(
+    "DELETE FROM zones WHERE id = $1 RETURNING *",
+    [id]
+  );
+  return result.rows[0];
+}
+
+export async function createChannel(name, zoneName, zoneId = null) {
+  const result = await pool.query(
+    "INSERT INTO channels (name, zone, zone_id, enabled) VALUES ($1, $2, $3, true) RETURNING *",
+    [name, zoneName, zoneId]
+  );
+  return result.rows[0];
+}
+
+export async function deleteChannel(id) {
+  const result = await pool.query(
+    "DELETE FROM channels WHERE id = $1 RETURNING *",
+    [id]
+  );
+  return result.rows[0];
 }
 
 export default pool;

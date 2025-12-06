@@ -6,9 +6,27 @@ export default function Admin({ user, onLogout }) {
   const [activeTab, setActiveTab] = useState("users");
   const [users, setUsers] = useState([]);
   const [channels, setChannels] = useState([]);
+  const [zones, setZones] = useState([]);
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  
+  const [showAddUser, setShowAddUser] = useState(false);
+  const [showEditUser, setShowEditUser] = useState(null);
+  const [showAddZone, setShowAddZone] = useState(false);
+  const [showAddChannel, setShowAddChannel] = useState(false);
+  
+  const [newUser, setNewUser] = useState({
+    username: "",
+    email: "",
+    password: "",
+    unit_id: "",
+    role: "user",
+    channelIds: [],
+  });
+
+  const [newZone, setNewZone] = useState("");
+  const [newChannel, setNewChannel] = useState({ name: "", zoneId: "" });
 
   useEffect(() => {
     loadData();
@@ -17,29 +35,55 @@ export default function Admin({ user, onLogout }) {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [usersRes, channelsRes, logsRes] = await Promise.all([
+      const [usersRes, channelsRes, zonesRes, logsRes] = await Promise.all([
         fetch("/api/admin/users", { credentials: "include" }),
         fetch("/api/admin/channels", { credentials: "include" }),
+        fetch("/api/admin/zones", { credentials: "include" }),
         fetch("/api/admin/logs?limit=200", { credentials: "include" }),
       ]);
 
-      if (!usersRes.ok || !channelsRes.ok || !logsRes.ok) {
+      if (!usersRes.ok || !channelsRes.ok || !zonesRes.ok || !logsRes.ok) {
         throw new Error("Failed to load data");
       }
 
-      const [usersData, channelsData, logsData] = await Promise.all([
+      const [usersData, channelsData, zonesData, logsData] = await Promise.all([
         usersRes.json(),
         channelsRes.json(),
+        zonesRes.json(),
         logsRes.json(),
       ]);
 
       setUsers(usersData.users);
       setChannels(channelsData.channels);
+      setZones(zonesData.zones);
       setLogs(logsData.logs);
     } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const createUser = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(newUser),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to create user");
+      }
+
+      setShowAddUser(false);
+      setNewUser({ username: "", email: "", password: "", unit_id: "", role: "user", channelIds: [] });
+      loadData();
+    } catch (err) {
+      alert(err.message);
     }
   };
 
@@ -59,6 +103,142 @@ export default function Admin({ user, onLogout }) {
       );
     } catch (err) {
       alert("Failed to update user: " + err.message);
+    }
+  };
+
+  const deleteUser = async (userId) => {
+    if (!confirm("Are you sure you want to delete this user?")) return;
+    try {
+      const res = await fetch(`/api/admin/users/${userId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      if (!res.ok) throw new Error("Failed to delete user");
+      loadData();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const updateUserChannels = async (userId, channelIds) => {
+    try {
+      const res = await fetch(`/api/admin/users/${userId}/channels`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ channelIds }),
+      });
+
+      if (!res.ok) throw new Error("Failed to update user channels");
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const resetPassword = async (userId) => {
+    const password = prompt("Enter new password (min 4 characters):");
+    if (!password || password.length < 4) {
+      alert("Password must be at least 4 characters");
+      return;
+    }
+    try {
+      const res = await fetch(`/api/admin/users/${userId}/password`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ password }),
+      });
+
+      if (!res.ok) throw new Error("Failed to reset password");
+      alert("Password updated successfully");
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const createZoneHandler = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await fetch("/api/admin/zones", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ name: newZone }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to create zone");
+      }
+
+      setShowAddZone(false);
+      setNewZone("");
+      loadData();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const deleteZoneHandler = async (zoneId) => {
+    if (!confirm("Delete this zone? Channels in this zone will be orphaned.")) return;
+    try {
+      const res = await fetch(`/api/admin/zones/${zoneId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      if (!res.ok) throw new Error("Failed to delete zone");
+      loadData();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const createChannelHandler = async (e) => {
+    e.preventDefault();
+    const zone = zones.find((z) => z.id === parseInt(newChannel.zoneId));
+    if (!zone) {
+      alert("Please select a zone");
+      return;
+    }
+    try {
+      const res = await fetch("/api/admin/channels", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          name: newChannel.name,
+          zone: zone.name,
+          zoneId: zone.id,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to create channel");
+      }
+
+      setShowAddChannel(false);
+      setNewChannel({ name: "", zoneId: "" });
+      loadData();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const deleteChannelHandler = async (channelId) => {
+    if (!confirm("Delete this channel?")) return;
+    try {
+      const res = await fetch(`/api/admin/channels/${channelId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      if (!res.ok) throw new Error("Failed to delete channel");
+      loadData();
+    } catch (err) {
+      alert(err.message);
     }
   };
 
@@ -98,6 +278,61 @@ export default function Admin({ user, onLogout }) {
     fontWeight: 500,
     transition: "all 0.2s",
   });
+
+  const inputStyle = {
+    width: "100%",
+    padding: "10px 12px",
+    borderRadius: 6,
+    border: "1px solid #444",
+    background: "#2a2a3e",
+    color: "#fff",
+    fontSize: 14,
+    marginTop: 4,
+  };
+
+  const btnPrimary = {
+    padding: "10px 20px",
+    background: "#3b82f6",
+    color: "#fff",
+    border: "none",
+    borderRadius: 6,
+    cursor: "pointer",
+    fontSize: 14,
+    fontWeight: 500,
+  };
+
+  const btnSecondary = {
+    padding: "10px 20px",
+    background: "#333",
+    color: "#fff",
+    border: "none",
+    borderRadius: 6,
+    cursor: "pointer",
+    fontSize: 14,
+  };
+
+  const modalOverlay = {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: "rgba(0,0,0,0.7)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 1000,
+  };
+
+  const modalContent = {
+    background: "#1e1e2e",
+    borderRadius: 12,
+    padding: 24,
+    width: "100%",
+    maxWidth: 500,
+    maxHeight: "90vh",
+    overflowY: "auto",
+  };
 
   if (loading) {
     return (
@@ -144,15 +379,7 @@ export default function Admin({ user, onLogout }) {
         <div style={{ display: "flex", gap: 12 }}>
           <button
             onClick={() => navigate("/")}
-            style={{
-              padding: "8px 16px",
-              background: "#333",
-              color: "#fff",
-              border: "none",
-              borderRadius: 6,
-              cursor: "pointer",
-              fontSize: 14,
-            }}
+            style={btnSecondary}
           >
             Back to Radio
           </button>
@@ -189,7 +416,7 @@ export default function Admin({ user, onLogout }) {
             Users ({users.length})
           </button>
           <button style={tabStyle(activeTab === "channels")} onClick={() => setActiveTab("channels")}>
-            Channels ({channels.length})
+            Zones & Channels
           </button>
           <button style={tabStyle(activeTab === "logs")} onClick={() => setActiveTab("logs")}>
             Activity Logs
@@ -210,154 +437,274 @@ export default function Admin({ user, onLogout }) {
         )}
 
         {activeTab === "users" && (
-          <div
-            style={{
-              background: "#1e1e2e",
-              borderRadius: 12,
-              overflow: "hidden",
-            }}
-          >
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead>
-                <tr style={{ background: "#2a2a3e" }}>
-                  <th style={{ padding: 14, textAlign: "left", fontSize: 14 }}>Username</th>
-                  <th style={{ padding: 14, textAlign: "left", fontSize: 14 }}>Role</th>
-                  <th style={{ padding: 14, textAlign: "left", fontSize: 14 }}>Status</th>
-                  <th style={{ padding: 14, textAlign: "left", fontSize: 14 }}>Unit ID</th>
-                  <th style={{ padding: 14, textAlign: "left", fontSize: 14 }}>Created</th>
-                  <th style={{ padding: 14, textAlign: "left", fontSize: 14 }}>Last Login</th>
-                  <th style={{ padding: 14, textAlign: "left", fontSize: 14 }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((u) => (
-                  <tr key={u.id} style={{ borderBottom: "1px solid #333" }}>
-                    <td style={{ padding: 14 }}>{u.username}</td>
-                    <td style={{ padding: 14 }}>
-                      <select
-                        value={u.role}
-                        onChange={(e) => updateUser(u.id, { role: e.target.value })}
-                        disabled={u.id === user.id}
-                        style={{
-                          padding: "6px 10px",
-                          borderRadius: 6,
-                          border: "1px solid #444",
-                          background: "#2a2a3e",
-                          color: "#fff",
-                        }}
-                      >
-                        <option value="user">User</option>
-                        <option value="admin">Admin</option>
-                      </select>
-                    </td>
-                    <td style={{ padding: 14 }}>
-                      <span
-                        style={{
-                          display: "inline-block",
-                          padding: "4px 10px",
-                          borderRadius: 20,
-                          fontSize: 12,
-                          fontWeight: 500,
-                          background: u.status === "active" ? "#22c55e33" : "#dc262633",
-                          color: u.status === "active" ? "#22c55e" : "#dc2626",
-                        }}
-                      >
-                        {u.status}
-                      </span>
-                    </td>
-                    <td style={{ padding: 14, color: "#888" }}>{u.unit_id || "-"}</td>
-                    <td style={{ padding: 14, color: "#888", fontSize: 13 }}>
-                      {formatDate(u.created_at)}
-                    </td>
-                    <td style={{ padding: 14, color: "#888", fontSize: 13 }}>
-                      {formatDate(u.last_login)}
-                    </td>
-                    <td style={{ padding: 14 }}>
-                      {u.id !== user.id && (
-                        <button
-                          onClick={() =>
-                            updateUser(u.id, {
-                              status: u.status === "active" ? "blocked" : "active",
-                            })
-                          }
+          <div>
+            <div style={{ marginBottom: 16 }}>
+              <button style={btnPrimary} onClick={() => setShowAddUser(true)}>
+                + Add User
+              </button>
+            </div>
+            <div
+              style={{
+                background: "#1e1e2e",
+                borderRadius: 12,
+                overflow: "hidden",
+              }}
+            >
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ background: "#2a2a3e" }}>
+                    <th style={{ padding: 14, textAlign: "left", fontSize: 14 }}>Username</th>
+                    <th style={{ padding: 14, textAlign: "left", fontSize: 14 }}>Email</th>
+                    <th style={{ padding: 14, textAlign: "left", fontSize: 14 }}>Role</th>
+                    <th style={{ padding: 14, textAlign: "left", fontSize: 14 }}>Status</th>
+                    <th style={{ padding: 14, textAlign: "left", fontSize: 14 }}>Unit ID</th>
+                    <th style={{ padding: 14, textAlign: "left", fontSize: 14 }}>Last Login</th>
+                    <th style={{ padding: 14, textAlign: "left", fontSize: 14 }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {users.map((u) => (
+                    <tr key={u.id} style={{ borderBottom: "1px solid #333" }}>
+                      <td style={{ padding: 14 }}>{u.username}</td>
+                      <td style={{ padding: 14, color: "#888" }}>{u.email || "-"}</td>
+                      <td style={{ padding: 14 }}>
+                        <select
+                          value={u.role}
+                          onChange={(e) => updateUser(u.id, { role: e.target.value })}
+                          disabled={u.id === user.id}
                           style={{
-                            padding: "6px 12px",
+                            padding: "6px 10px",
                             borderRadius: 6,
-                            border: "none",
-                            background: u.status === "active" ? "#dc262633" : "#22c55e33",
-                            color: u.status === "active" ? "#dc2626" : "#22c55e",
-                            cursor: "pointer",
-                            fontSize: 13,
+                            border: "1px solid #444",
+                            background: "#2a2a3e",
+                            color: "#fff",
                           }}
                         >
-                          {u.status === "active" ? "Block" : "Unblock"}
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                          <option value="user">User</option>
+                          <option value="admin">Admin</option>
+                        </select>
+                      </td>
+                      <td style={{ padding: 14 }}>
+                        <span
+                          style={{
+                            display: "inline-block",
+                            padding: "4px 10px",
+                            borderRadius: 20,
+                            fontSize: 12,
+                            fontWeight: 500,
+                            background: u.status === "active" ? "#22c55e33" : "#dc262633",
+                            color: u.status === "active" ? "#22c55e" : "#dc2626",
+                          }}
+                        >
+                          {u.status}
+                        </span>
+                      </td>
+                      <td style={{ padding: 14, color: "#888" }}>{u.unit_id || "-"}</td>
+                      <td style={{ padding: 14, color: "#888", fontSize: 13 }}>
+                        {formatDate(u.last_login)}
+                      </td>
+                      <td style={{ padding: 14 }}>
+                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                          <button
+                            onClick={() => setShowEditUser(u)}
+                            style={{
+                              padding: "6px 12px",
+                              borderRadius: 6,
+                              border: "none",
+                              background: "#3b82f633",
+                              color: "#3b82f6",
+                              cursor: "pointer",
+                              fontSize: 13,
+                            }}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => resetPassword(u.id)}
+                            style={{
+                              padding: "6px 12px",
+                              borderRadius: 6,
+                              border: "none",
+                              background: "#f5940033",
+                              color: "#f59400",
+                              cursor: "pointer",
+                              fontSize: 13,
+                            }}
+                          >
+                            Reset PW
+                          </button>
+                          {u.id !== user.id && (
+                            <>
+                              <button
+                                onClick={() =>
+                                  updateUser(u.id, {
+                                    status: u.status === "active" ? "blocked" : "active",
+                                  })
+                                }
+                                style={{
+                                  padding: "6px 12px",
+                                  borderRadius: 6,
+                                  border: "none",
+                                  background: u.status === "active" ? "#dc262633" : "#22c55e33",
+                                  color: u.status === "active" ? "#dc2626" : "#22c55e",
+                                  cursor: "pointer",
+                                  fontSize: 13,
+                                }}
+                              >
+                                {u.status === "active" ? "Block" : "Unblock"}
+                              </button>
+                              <button
+                                onClick={() => deleteUser(u.id)}
+                                style={{
+                                  padding: "6px 12px",
+                                  borderRadius: 6,
+                                  border: "none",
+                                  background: "#dc262633",
+                                  color: "#dc2626",
+                                  cursor: "pointer",
+                                  fontSize: 13,
+                                }}
+                              >
+                                Delete
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 
         {activeTab === "channels" && (
-          <div
-            style={{
-              background: "#1e1e2e",
-              borderRadius: 12,
-              overflow: "hidden",
-            }}
-          >
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead>
-                <tr style={{ background: "#2a2a3e" }}>
-                  <th style={{ padding: 14, textAlign: "left", fontSize: 14 }}>Channel</th>
-                  <th style={{ padding: 14, textAlign: "left", fontSize: 14 }}>Zone</th>
-                  <th style={{ padding: 14, textAlign: "left", fontSize: 14 }}>Status</th>
-                  <th style={{ padding: 14, textAlign: "left", fontSize: 14 }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {channels.map((ch) => (
-                  <tr key={ch.id} style={{ borderBottom: "1px solid #333" }}>
-                    <td style={{ padding: 14, fontWeight: 500 }}>{ch.name}</td>
-                    <td style={{ padding: 14, color: "#888" }}>{ch.zone}</td>
-                    <td style={{ padding: 14 }}>
-                      <span
-                        style={{
-                          display: "inline-block",
-                          padding: "4px 10px",
-                          borderRadius: 20,
-                          fontSize: 12,
-                          fontWeight: 500,
-                          background: ch.enabled ? "#22c55e33" : "#dc262633",
-                          color: ch.enabled ? "#22c55e" : "#dc2626",
-                        }}
-                      >
-                        {ch.enabled ? "Enabled" : "Disabled"}
-                      </span>
-                    </td>
-                    <td style={{ padding: 14 }}>
+          <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
+            <div style={{ flex: 1, minWidth: 300 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                <h2 style={{ margin: 0, fontSize: 18 }}>Zones</h2>
+                <button style={btnPrimary} onClick={() => setShowAddZone(true)}>
+                  + Add Zone
+                </button>
+              </div>
+              <div style={{ background: "#1e1e2e", borderRadius: 12, padding: 16 }}>
+                {zones.length === 0 ? (
+                  <p style={{ color: "#888", textAlign: "center" }}>No zones yet</p>
+                ) : (
+                  zones.map((z) => (
+                    <div
+                      key={z.id}
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        padding: "12px 0",
+                        borderBottom: "1px solid #333",
+                      }}
+                    >
+                      <span>{z.name}</span>
                       <button
-                        onClick={() => updateChannel(ch.id, { enabled: !ch.enabled })}
+                        onClick={() => deleteZoneHandler(z.id)}
                         style={{
-                          padding: "6px 12px",
-                          borderRadius: 6,
+                          padding: "4px 10px",
+                          borderRadius: 4,
                           border: "none",
-                          background: ch.enabled ? "#dc262633" : "#22c55e33",
-                          color: ch.enabled ? "#dc2626" : "#22c55e",
+                          background: "#dc262633",
+                          color: "#dc2626",
                           cursor: "pointer",
-                          fontSize: 13,
+                          fontSize: 12,
                         }}
                       >
-                        {ch.enabled ? "Disable" : "Enable"}
+                        Delete
                       </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <div style={{ flex: 2, minWidth: 400 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                <h2 style={{ margin: 0, fontSize: 18 }}>Channels</h2>
+                <button style={btnPrimary} onClick={() => setShowAddChannel(true)}>
+                  + Add Channel
+                </button>
+              </div>
+              <div
+                style={{
+                  background: "#1e1e2e",
+                  borderRadius: 12,
+                  overflow: "hidden",
+                }}
+              >
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ background: "#2a2a3e" }}>
+                      <th style={{ padding: 14, textAlign: "left", fontSize: 14 }}>Channel</th>
+                      <th style={{ padding: 14, textAlign: "left", fontSize: 14 }}>Zone</th>
+                      <th style={{ padding: 14, textAlign: "left", fontSize: 14 }}>Status</th>
+                      <th style={{ padding: 14, textAlign: "left", fontSize: 14 }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {channels.map((ch) => (
+                      <tr key={ch.id} style={{ borderBottom: "1px solid #333" }}>
+                        <td style={{ padding: 14, fontWeight: 500 }}>{ch.name}</td>
+                        <td style={{ padding: 14, color: "#888" }}>{ch.zone}</td>
+                        <td style={{ padding: 14 }}>
+                          <span
+                            style={{
+                              display: "inline-block",
+                              padding: "4px 10px",
+                              borderRadius: 20,
+                              fontSize: 12,
+                              fontWeight: 500,
+                              background: ch.enabled ? "#22c55e33" : "#dc262633",
+                              color: ch.enabled ? "#22c55e" : "#dc2626",
+                            }}
+                          >
+                            {ch.enabled ? "Enabled" : "Disabled"}
+                          </span>
+                        </td>
+                        <td style={{ padding: 14 }}>
+                          <div style={{ display: "flex", gap: 8 }}>
+                            <button
+                              onClick={() => updateChannel(ch.id, { enabled: !ch.enabled })}
+                              style={{
+                                padding: "6px 12px",
+                                borderRadius: 6,
+                                border: "none",
+                                background: ch.enabled ? "#dc262633" : "#22c55e33",
+                                color: ch.enabled ? "#dc2626" : "#22c55e",
+                                cursor: "pointer",
+                                fontSize: 13,
+                              }}
+                            >
+                              {ch.enabled ? "Disable" : "Enable"}
+                            </button>
+                            <button
+                              onClick={() => deleteChannelHandler(ch.id)}
+                              style={{
+                                padding: "6px 12px",
+                                borderRadius: 6,
+                                border: "none",
+                                background: "#dc262633",
+                                color: "#dc2626",
+                                cursor: "pointer",
+                                fontSize: 13,
+                              }}
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         )}
 
@@ -421,6 +768,318 @@ export default function Admin({ user, onLogout }) {
               </tbody>
             </table>
           </div>
+        )}
+      </div>
+
+      {showAddUser && (
+        <div style={modalOverlay} onClick={() => setShowAddUser(false)}>
+          <div style={modalContent} onClick={(e) => e.stopPropagation()}>
+            <h2 style={{ margin: "0 0 20px", fontSize: 20 }}>Add New User</h2>
+            <form onSubmit={createUser}>
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ fontSize: 14, color: "#888" }}>Username *</label>
+                <input
+                  type="text"
+                  required
+                  value={newUser.username}
+                  onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
+                  style={inputStyle}
+                />
+              </div>
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ fontSize: 14, color: "#888" }}>Email</label>
+                <input
+                  type="email"
+                  value={newUser.email}
+                  onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                  style={inputStyle}
+                />
+              </div>
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ fontSize: 14, color: "#888" }}>Password *</label>
+                <input
+                  type="password"
+                  required
+                  minLength={4}
+                  value={newUser.password}
+                  onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                  style={inputStyle}
+                />
+              </div>
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ fontSize: 14, color: "#888" }}>Unit ID</label>
+                <input
+                  type="text"
+                  value={newUser.unit_id}
+                  onChange={(e) => setNewUser({ ...newUser, unit_id: e.target.value })}
+                  style={inputStyle}
+                  placeholder="e.g., UNIT-001"
+                />
+              </div>
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ fontSize: 14, color: "#888" }}>Role</label>
+                <select
+                  value={newUser.role}
+                  onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
+                  style={inputStyle}
+                >
+                  <option value="user">User</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </div>
+              <div style={{ marginBottom: 20 }}>
+                <label style={{ fontSize: 14, color: "#888", display: "block", marginBottom: 8 }}>
+                  Channel Access
+                </label>
+                <div style={{ maxHeight: 150, overflowY: "auto", background: "#2a2a3e", borderRadius: 6, padding: 10 }}>
+                  {channels.map((ch) => (
+                    <label key={ch.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0", cursor: "pointer" }}>
+                      <input
+                        type="checkbox"
+                        checked={newUser.channelIds.includes(ch.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setNewUser({ ...newUser, channelIds: [...newUser.channelIds, ch.id] });
+                          } else {
+                            setNewUser({ ...newUser, channelIds: newUser.channelIds.filter((id) => id !== ch.id) });
+                          }
+                        }}
+                      />
+                      <span>{ch.name}</span>
+                      <span style={{ color: "#666", fontSize: 12 }}>({ch.zone})</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 12 }}>
+                <button type="submit" style={btnPrimary}>Create User</button>
+                <button type="button" style={btnSecondary} onClick={() => setShowAddUser(false)}>Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showEditUser && (
+        <EditUserModal
+          user={showEditUser}
+          channels={channels}
+          onClose={() => setShowEditUser(null)}
+          onSave={async (updates, channelIds) => {
+            await updateUser(showEditUser.id, updates);
+            await updateUserChannels(showEditUser.id, channelIds);
+            setShowEditUser(null);
+            loadData();
+          }}
+        />
+      )}
+
+      {showAddZone && (
+        <div style={modalOverlay} onClick={() => setShowAddZone(false)}>
+          <div style={modalContent} onClick={(e) => e.stopPropagation()}>
+            <h2 style={{ margin: "0 0 20px", fontSize: 20 }}>Add New Zone</h2>
+            <form onSubmit={createZoneHandler}>
+              <div style={{ marginBottom: 20 }}>
+                <label style={{ fontSize: 14, color: "#888" }}>Zone Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={newZone}
+                  onChange={(e) => setNewZone(e.target.value)}
+                  style={inputStyle}
+                  placeholder="e.g., Zone 4 - Medical"
+                />
+              </div>
+              <div style={{ display: "flex", gap: 12 }}>
+                <button type="submit" style={btnPrimary}>Create Zone</button>
+                <button type="button" style={btnSecondary} onClick={() => setShowAddZone(false)}>Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showAddChannel && (
+        <div style={modalOverlay} onClick={() => setShowAddChannel(false)}>
+          <div style={modalContent} onClick={(e) => e.stopPropagation()}>
+            <h2 style={{ margin: "0 0 20px", fontSize: 20 }}>Add New Channel</h2>
+            <form onSubmit={createChannelHandler}>
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ fontSize: 14, color: "#888" }}>Channel Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={newChannel.name}
+                  onChange={(e) => setNewChannel({ ...newChannel, name: e.target.value })}
+                  style={inputStyle}
+                  placeholder="e.g., MED1"
+                />
+              </div>
+              <div style={{ marginBottom: 20 }}>
+                <label style={{ fontSize: 14, color: "#888" }}>Zone *</label>
+                <select
+                  required
+                  value={newChannel.zoneId}
+                  onChange={(e) => setNewChannel({ ...newChannel, zoneId: e.target.value })}
+                  style={inputStyle}
+                >
+                  <option value="">Select a zone...</option>
+                  {zones.map((z) => (
+                    <option key={z.id} value={z.id}>{z.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div style={{ display: "flex", gap: 12 }}>
+                <button type="submit" style={btnPrimary}>Create Channel</button>
+                <button type="button" style={btnSecondary} onClick={() => setShowAddChannel(false)}>Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function EditUserModal({ user, channels, onClose, onSave }) {
+  const [email, setEmail] = useState(user.email || "");
+  const [unitId, setUnitId] = useState(user.unit_id || "");
+  const [channelIds, setChannelIds] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`/api/admin/users/${user.id}/channels`, { credentials: "include" })
+      .then((res) => res.json())
+      .then((data) => {
+        setChannelIds(data.channelIds || []);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, [user.id]);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onSave({ email, unit_id: unitId }, channelIds);
+  };
+
+  const inputStyle = {
+    width: "100%",
+    padding: "10px 12px",
+    borderRadius: 6,
+    border: "1px solid #444",
+    background: "#2a2a3e",
+    color: "#fff",
+    fontSize: 14,
+    marginTop: 4,
+  };
+
+  const modalOverlay = {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: "rgba(0,0,0,0.7)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 1000,
+  };
+
+  const modalContent = {
+    background: "#1e1e2e",
+    borderRadius: 12,
+    padding: 24,
+    width: "100%",
+    maxWidth: 500,
+    maxHeight: "90vh",
+    overflowY: "auto",
+  };
+
+  return (
+    <div style={modalOverlay} onClick={onClose}>
+      <div style={modalContent} onClick={(e) => e.stopPropagation()}>
+        <h2 style={{ margin: "0 0 20px", fontSize: 20 }}>Edit User: {user.username}</h2>
+        {loading ? (
+          <p>Loading...</p>
+        ) : (
+          <form onSubmit={handleSubmit}>
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ fontSize: 14, color: "#888" }}>Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                style={inputStyle}
+              />
+            </div>
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ fontSize: 14, color: "#888" }}>Unit ID</label>
+              <input
+                type="text"
+                value={unitId}
+                onChange={(e) => setUnitId(e.target.value)}
+                style={inputStyle}
+                placeholder="e.g., UNIT-001"
+              />
+            </div>
+            <div style={{ marginBottom: 20 }}>
+              <label style={{ fontSize: 14, color: "#888", display: "block", marginBottom: 8 }}>
+                Channel Access
+              </label>
+              <div style={{ maxHeight: 150, overflowY: "auto", background: "#2a2a3e", borderRadius: 6, padding: 10 }}>
+                {channels.map((ch) => (
+                  <label key={ch.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0", cursor: "pointer" }}>
+                    <input
+                      type="checkbox"
+                      checked={channelIds.includes(ch.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setChannelIds([...channelIds, ch.id]);
+                        } else {
+                          setChannelIds(channelIds.filter((id) => id !== ch.id));
+                        }
+                      }}
+                    />
+                    <span>{ch.name}</span>
+                    <span style={{ color: "#666", fontSize: 12 }}>({ch.zone})</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 12 }}>
+              <button
+                type="submit"
+                style={{
+                  padding: "10px 20px",
+                  background: "#3b82f6",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 6,
+                  cursor: "pointer",
+                  fontSize: 14,
+                  fontWeight: 500,
+                }}
+              >
+                Save Changes
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                style={{
+                  padding: "10px 20px",
+                  background: "#333",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 6,
+                  cursor: "pointer",
+                  fontSize: 14,
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
         )}
       </div>
     </div>

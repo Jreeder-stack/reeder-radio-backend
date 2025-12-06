@@ -11,12 +11,23 @@ import pool, {
   initializeDatabase,
   getUser,
   createUser,
+  createUserWithChannels,
   getAllUsers,
   updateUser,
+  updateUserPassword,
+  deleteUser,
+  getUserChannelAccess,
+  setUserChannelAccess,
   updateLastLogin,
   verifyPassword,
   getAllChannels,
   updateChannel,
+  createChannel,
+  deleteChannel,
+  getAllZones,
+  createZone,
+  updateZone,
+  deleteZone,
   logActivity,
   getActivityLogs,
 } from "./db.js";
@@ -280,10 +291,272 @@ app.get("/api/channels", requireAuth, async (req, res) => {
   try {
     const channels = await getAllChannels();
     const enabledChannels = channels.filter((c) => c.enabled);
-    res.json({ channels: enabledChannels });
+    
+    // Admins see all enabled channels
+    if (req.session.user.role === "admin") {
+      return res.json({ channels: enabledChannels });
+    }
+    
+    // Regular users see only their assigned channels
+    const userChannelIds = await getUserChannelAccess(req.session.user.id);
+    
+    // If user has no assigned channels, give them access to all enabled channels (fallback)
+    if (userChannelIds.length === 0) {
+      return res.json({ channels: enabledChannels });
+    }
+    
+    // Filter to only channels the user has access to
+    const accessibleChannels = enabledChannels.filter(c => userChannelIds.includes(c.id));
+    res.json({ channels: accessibleChannels });
   } catch (error) {
     console.error("Get channels error:", error);
     res.status(500).json({ error: "Failed to get channels" });
+  }
+});
+
+app.post("/api/admin/users", requireAdmin, async (req, res) => {
+  try {
+    const { username, password, email, unit_id, role, channelIds } = req.body;
+    
+    if (!username || !password) {
+      return res.status(400).json({ error: "Username and password required" });
+    }
+
+    const existing = await getUser(username);
+    if (existing) {
+      return res.status(400).json({ error: "Username already taken" });
+    }
+
+    const user = await createUserWithChannels(
+      username,
+      password,
+      role || "user",
+      email || null,
+      unit_id || null,
+      channelIds || []
+    );
+
+    await logActivity(
+      req.session.user.id,
+      req.session.user.username,
+      "create_user",
+      { newUser: username, role: role || "user" }
+    );
+
+    res.json({ user });
+  } catch (error) {
+    console.error("Create user error:", error);
+    res.status(500).json({ error: "Failed to create user" });
+  }
+});
+
+app.delete("/api/admin/users/:id", requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    if (parseInt(id) === req.session.user.id) {
+      return res.status(400).json({ error: "Cannot delete your own account" });
+    }
+
+    const user = await deleteUser(id);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    await logActivity(
+      req.session.user.id,
+      req.session.user.username,
+      "delete_user",
+      { deletedUser: user.username }
+    );
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Delete user error:", error);
+    res.status(500).json({ error: "Failed to delete user" });
+  }
+});
+
+app.get("/api/admin/users/:id/channels", requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const channelIds = await getUserChannelAccess(id);
+    res.json({ channelIds });
+  } catch (error) {
+    console.error("Get user channels error:", error);
+    res.status(500).json({ error: "Failed to get user channels" });
+  }
+});
+
+app.put("/api/admin/users/:id/channels", requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { channelIds } = req.body;
+    
+    await setUserChannelAccess(id, channelIds || []);
+
+    await logActivity(
+      req.session.user.id,
+      req.session.user.username,
+      "update_user_channels",
+      { userId: id, channelIds }
+    );
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Update user channels error:", error);
+    res.status(500).json({ error: "Failed to update user channels" });
+  }
+});
+
+app.put("/api/admin/users/:id/password", requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { password } = req.body;
+    
+    if (!password || password.length < 4) {
+      return res.status(400).json({ error: "Password must be at least 4 characters" });
+    }
+
+    await updateUserPassword(id, password);
+
+    await logActivity(
+      req.session.user.id,
+      req.session.user.username,
+      "reset_password",
+      { userId: id }
+    );
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Reset password error:", error);
+    res.status(500).json({ error: "Failed to reset password" });
+  }
+});
+
+app.get("/api/admin/zones", requireAdmin, async (req, res) => {
+  try {
+    const zones = await getAllZones();
+    res.json({ zones });
+  } catch (error) {
+    console.error("Get zones error:", error);
+    res.status(500).json({ error: "Failed to get zones" });
+  }
+});
+
+app.post("/api/admin/zones", requireAdmin, async (req, res) => {
+  try {
+    const { name } = req.body;
+    
+    if (!name) {
+      return res.status(400).json({ error: "Zone name required" });
+    }
+
+    const zone = await createZone(name);
+
+    await logActivity(
+      req.session.user.id,
+      req.session.user.username,
+      "create_zone",
+      { zoneName: name }
+    );
+
+    res.json({ zone });
+  } catch (error) {
+    console.error("Create zone error:", error);
+    res.status(500).json({ error: "Failed to create zone" });
+  }
+});
+
+app.put("/api/admin/zones/:id", requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name } = req.body;
+    
+    const zone = await updateZone(id, name);
+    if (!zone) {
+      return res.status(404).json({ error: "Zone not found" });
+    }
+
+    await logActivity(
+      req.session.user.id,
+      req.session.user.username,
+      "update_zone",
+      { zoneId: id, name }
+    );
+
+    res.json({ zone });
+  } catch (error) {
+    console.error("Update zone error:", error);
+    res.status(500).json({ error: "Failed to update zone" });
+  }
+});
+
+app.delete("/api/admin/zones/:id", requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const zone = await deleteZone(id);
+    if (!zone) {
+      return res.status(404).json({ error: "Zone not found" });
+    }
+
+    await logActivity(
+      req.session.user.id,
+      req.session.user.username,
+      "delete_zone",
+      { zoneName: zone.name }
+    );
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Delete zone error:", error);
+    res.status(500).json({ error: "Failed to delete zone" });
+  }
+});
+
+app.post("/api/admin/channels", requireAdmin, async (req, res) => {
+  try {
+    const { name, zone, zoneId } = req.body;
+    
+    if (!name || !zone) {
+      return res.status(400).json({ error: "Channel name and zone required" });
+    }
+
+    const channel = await createChannel(name, zone, zoneId);
+
+    await logActivity(
+      req.session.user.id,
+      req.session.user.username,
+      "create_channel",
+      { channelName: name, zone }
+    );
+
+    res.json({ channel });
+  } catch (error) {
+    console.error("Create channel error:", error);
+    res.status(500).json({ error: "Failed to create channel" });
+  }
+});
+
+app.delete("/api/admin/channels/:id", requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const channel = await deleteChannel(id);
+    if (!channel) {
+      return res.status(404).json({ error: "Channel not found" });
+    }
+
+    await logActivity(
+      req.session.user.id,
+      req.session.user.username,
+      "delete_channel",
+      { channelName: channel.name }
+    );
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Delete channel error:", error);
+    res.status(500).json({ error: "Failed to delete channel" });
   }
 });
 
@@ -301,6 +574,23 @@ app.get("/getToken", requireAuth, async (req, res) => {
   }
 
   try {
+    // Verify user has access to the requested channel
+    const channels = await getAllChannels();
+    const requestedChannel = channels.find(c => c.name === room && c.enabled);
+    
+    if (!requestedChannel) {
+      return res.status(404).json({ error: "Channel not found or disabled" });
+    }
+    
+    // Only enforce permissions for non-admin users
+    if (req.session.user.role !== "admin") {
+      const userChannelIds = await getUserChannelAccess(req.session.user.id);
+      // If user has specific channel assignments, verify access
+      if (userChannelIds.length > 0 && !userChannelIds.includes(requestedChannel.id)) {
+        return res.status(403).json({ error: "Access denied to this channel" });
+      }
+    }
+    
     const at = new AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET, {
       identity: identity,
       ttl: "1h",

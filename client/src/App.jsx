@@ -4,7 +4,7 @@ import { Room, RoomEvent, Track, DataPacket_Kind } from "livekit-client";
 const LIVEKIT_URL = import.meta.env.VITE_LIVEKIT_URL;
 const TOKEN_SERVER = "/getToken";
 
-const ZONES = {
+const DEFAULT_ZONES = {
   "Zone 1 - Operations": ["OPS1", "OPS2", "TAC1"],
   "Zone 2 - Fire": ["FIRE1", "FIRE2", "FIRE3", "FIRE4", "FIRE5", "FIRE6", "FIRE7", "FIRE8"],
   "Zone 3 - Secure Command": ["SECURE_CMD"],
@@ -173,7 +173,12 @@ import { useNavigate } from "react-router-dom";
 export default function App({ user, onLogout }) {
   const navigate = useNavigate();
   const [connected, setConnected] = useState(false);
-  const [identity, setIdentity] = useState(user?.unit_id || "");
+  const [connecting, setConnecting] = useState(false);
+  const [zonesData, setZonesData] = useState(DEFAULT_ZONES);
+  const [channelsLoaded, setChannelsLoaded] = useState(false);
+  const [noChannelsAccess, setNoChannelsAccess] = useState(false);
+  const [connectionError, setConnectionError] = useState(null);
+  const identity = user?.unit_id || user?.username || "Unknown";
   const [selectedZone, setSelectedZone] = useState("Zone 1 - Operations");
   const [selectedChannel, setSelectedChannel] = useState("OPS1");
   const [transmitChannel, setTransmitChannel] = useState("OPS1");
@@ -398,8 +403,13 @@ export default function App({ user, onLogout }) {
   }, []);
 
   const getToken = async (room) => {
-    const res = await fetch(`${TOKEN_SERVER}?identity=${identity}&room=${room}`);
+    const res = await fetch(`${TOKEN_SERVER}?identity=${identity}&room=${room}`, {
+      credentials: "include"
+    });
     const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || "Failed to get token");
+    }
     return data.token;
   };
 
@@ -587,36 +597,95 @@ export default function App({ user, onLogout }) {
     }));
   }, []);
 
-  const connectToChannel = async () => {
+  const connectToChannel = async (channel = selectedChannel) => {
     try {
-      if (!identity) {
-        alert("Enter your Unit ID");
-        return;
-      }
+      setConnecting(true);
+      setConnectionError(null);
 
-      const token = await getToken(selectedChannel);
+      const token = await getToken(channel);
       if (!token) {
-        alert("Invalid token received from backend.");
+        setConnectionError("Invalid token received from backend.");
+        setConnecting(false);
         return;
       }
 
-      const lkRoom = createRoom(selectedChannel);
+      const lkRoom = createRoom(channel);
       await lkRoom.connect(LIVEKIT_URL, token);
 
-      initializePresence(lkRoom, selectedChannel);
+      initializePresence(lkRoom, channel);
 
       setPrimaryRoom(lkRoom);
-      setTransmitChannel(selectedChannel);
+      setSelectedChannel(channel);
+      setTransmitChannel(channel);
       setConnected(true);
+      setConnecting(false);
 
-      broadcastStatus(lkRoom, "idle", selectedChannel);
-      startHeartbeat(lkRoom, selectedChannel);
+      broadcastStatus(lkRoom, "idle", channel);
+      startHeartbeat(lkRoom, channel);
 
     } catch (err) {
       console.error("Connection error:", err);
-      alert("Failed to connect: " + err.message);
+      setConnectionError(err.message || "Failed to connect to channel");
+      setConnecting(false);
     }
   };
+
+  useEffect(() => {
+    const loadChannels = async () => {
+      try {
+        const res = await fetch("/api/channels", { credentials: "include" });
+        if (res.ok) {
+          const data = await res.json();
+          if (!data.channels || data.channels.length === 0) {
+            setNoChannelsAccess(true);
+            setZonesData({});
+            setSelectedChannel("");
+            setSelectedZone("");
+            setChannelsLoaded(true);
+            return;
+          }
+          const grouped = {};
+          data.channels.forEach((ch) => {
+            if (!grouped[ch.zone]) {
+              grouped[ch.zone] = [];
+            }
+            grouped[ch.zone].push(ch.name);
+          });
+          if (Object.keys(grouped).length > 0) {
+            setZonesData(grouped);
+            const firstZone = Object.keys(grouped)[0];
+            const firstChannel = grouped[firstZone][0];
+            setSelectedZone(firstZone);
+            setSelectedChannel(firstChannel);
+            setNoChannelsAccess(false);
+            setChannelsLoaded(true);
+          } else {
+            setNoChannelsAccess(true);
+            setZonesData({});
+            setSelectedChannel("");
+            setSelectedZone("");
+            setChannelsLoaded(true);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load channels:", err);
+        setConnectionError("Failed to load channels");
+        setChannelsLoaded(true);
+      }
+    };
+    loadChannels();
+  }, []);
+
+  useEffect(() => {
+    const zoneKeys = Object.keys(zonesData);
+    if (!connected && !connecting && channelsLoaded && identity && !noChannelsAccess && zoneKeys.length > 0) {
+      const firstZone = zoneKeys[0];
+      const firstChannel = zonesData[firstZone]?.[0];
+      if (firstChannel) {
+        connectToChannel(firstChannel);
+      }
+    }
+  }, [channelsLoaded, noChannelsAccess, zonesData]);
 
   const switchChannel = async (newChannel) => {
     if (!connected || newChannel === selectedChannel) return;
@@ -843,7 +912,7 @@ export default function App({ user, onLogout }) {
     setLastRxBlob(null);
   };
 
-  const currentZoneChannels = ZONES[selectedZone] || [];
+  const currentZoneChannels = zonesData[selectedZone] || [];
   
   const totalUnits = Object.values(unitPresence).reduce(
     (sum, channelUnits) => sum + Object.keys(channelUnits).length,
@@ -908,58 +977,44 @@ export default function App({ user, onLogout }) {
         </div>
       </div>
 
-      {!connected ? (
-        <div>
-          <label>Unit ID:</label>
-          <input
-            style={{ width: "100%", padding: 10, marginTop: 4, boxSizing: "border-box", borderRadius: 6 }}
-            value={identity}
-            onChange={(e) => setIdentity(e.target.value)}
-            placeholder="Unit52"
-          />
-
-          <label style={{ display: "block", marginTop: 16 }}>Zone:</label>
-          <select
-            style={{ width: "100%", padding: 10, boxSizing: "border-box", borderRadius: 6 }}
-            value={selectedZone}
-            onChange={(e) => {
-              setSelectedZone(e.target.value);
-              setSelectedChannel(ZONES[e.target.value][0]);
-            }}
-          >
-            {Object.keys(ZONES).map((zone) => (
-              <option key={zone} value={zone}>{zone}</option>
-            ))}
-          </select>
-
-          <label style={{ display: "block", marginTop: 16 }}>Channel:</label>
-          <select
-            style={{ width: "100%", padding: 10, boxSizing: "border-box", borderRadius: 6 }}
-            value={selectedChannel}
-            onChange={(e) => setSelectedChannel(e.target.value)}
-          >
-            {currentZoneChannels.map((ch) => (
-              <option key={ch} value={ch}>{ch}</option>
-            ))}
-          </select>
-
+      {noChannelsAccess ? (
+        <div style={{ textAlign: "center", padding: 40 }}>
+          <div style={{ fontSize: 18, marginBottom: 16, color: "#dc2626" }}>No Channel Access</div>
+          <div style={{ fontSize: 14, color: "#888", marginBottom: 16 }}>
+            You do not have access to any radio channels.
+          </div>
+          <div style={{ fontSize: 14, color: "#888" }}>
+            Please contact your administrator to request channel access.
+          </div>
+        </div>
+      ) : connectionError ? (
+        <div style={{ textAlign: "center", padding: 40 }}>
+          <div style={{ fontSize: 18, marginBottom: 16, color: "#dc2626" }}>Connection Error</div>
+          <div style={{ fontSize: 14, color: "#888", marginBottom: 16 }}>{connectionError}</div>
           <button
-            onClick={connectToChannel}
+            onClick={() => {
+              setConnectionError(null);
+              const firstZone = Object.keys(zonesData)[0];
+              if (firstZone && zonesData[firstZone]?.[0]) {
+                connectToChannel(zonesData[firstZone][0]);
+              }
+            }}
             style={{
-              marginTop: 24,
-              padding: 14,
-              width: "100%",
-              backgroundColor: "#22c55e",
+              padding: "10px 20px",
+              backgroundColor: "#3b82f6",
               color: "white",
               border: "none",
-              borderRadius: 8,
-              fontSize: 16,
-              fontWeight: "bold",
+              borderRadius: 6,
               cursor: "pointer",
             }}
           >
-            Connect
+            Retry Connection
           </button>
+        </div>
+      ) : !connected ? (
+        <div style={{ textAlign: "center", padding: 40 }}>
+          <div style={{ fontSize: 18, marginBottom: 16 }}>Connecting to radio network...</div>
+          <div style={{ fontSize: 14, color: "#888" }}>Unit: {identity}</div>
         </div>
       ) : (
         <div>
@@ -992,29 +1047,49 @@ export default function App({ user, onLogout }) {
             </button>
           </div>
 
-          <div style={{ 
-            display: "flex", 
-            gap: 8, 
-            marginBottom: 16,
-            flexWrap: "wrap"
-          }}>
-            {currentZoneChannels.map((ch) => (
-              <button
-                key={ch}
-                onClick={() => switchChannel(ch)}
-                style={{
-                  padding: "8px 12px",
-                  backgroundColor: ch === selectedChannel ? "#3b82f6" : "#333",
-                  color: "white",
-                  border: "none",
-                  borderRadius: 6,
-                  cursor: "pointer",
-                  fontSize: 12,
-                }}
-              >
-                {ch}
-              </button>
-            ))}
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ display: "flex", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
+              {Object.keys(zonesData).map((zone) => (
+                <button
+                  key={zone}
+                  onClick={() => {
+                    setSelectedZone(zone);
+                    const firstChannel = zonesData[zone][0];
+                    switchChannel(firstChannel);
+                  }}
+                  style={{
+                    padding: "6px 10px",
+                    backgroundColor: zone === selectedZone ? "#6366f1" : "#222",
+                    color: "white",
+                    border: "none",
+                    borderRadius: 4,
+                    cursor: "pointer",
+                    fontSize: 11,
+                  }}
+                >
+                  {zone.replace("Zone ", "Z").split(" - ")[0]}
+                </button>
+              ))}
+            </div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {currentZoneChannels.map((ch) => (
+                <button
+                  key={ch}
+                  onClick={() => switchChannel(ch)}
+                  style={{
+                    padding: "8px 12px",
+                    backgroundColor: ch === selectedChannel ? "#3b82f6" : "#333",
+                    color: "white",
+                    border: "none",
+                    borderRadius: 6,
+                    cursor: "pointer",
+                    fontSize: 12,
+                  }}
+                >
+                  {ch}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div style={{ 
