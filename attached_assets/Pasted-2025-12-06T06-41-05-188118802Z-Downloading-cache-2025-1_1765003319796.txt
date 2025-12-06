@@ -1,0 +1,47 @@
+2025-12-06T06:41:05.188118802Z ==> Downloading cache...
+2025-12-06T06:41:05.227431152Z ==> Cloning from https://github.com/Jreeder-stack/reeder-radio-backend
+2025-12-06T06:41:05.606006815Z ==> Checking out commit 7538f9c93d597fb59398570f44660a435aa04be8 in branch main
+2025-12-06T06:41:08.194253922Z ==> Downloaded 63MB in 1s. Extraction took 2s.
+2025-12-06T06:41:10.32411192Z ==> Requesting Node.js version 20.x
+2025-12-06T06:41:10.747375248Z ==> Using Node.js version 20.19.6 via /opt/render/project/src/package.json
+2025-12-06T06:41:10.774861441Z ==> Docs on specifying a Node.js version: https://render.com/docs/node-version
+2025-12-06T06:41:10.8962805Z ==> Running build command 'npm run build && npm install'...
+2025-12-06T06:41:11.023431414Z 
+2025-12-06T06:41:11.023449044Z > reeder-radio-backend@1.0.0 build
+2025-12-06T06:41:11.023453404Z > cd client && npm install && npm run build
+2025-12-06T06:41:11.023455664Z 
+2025-12-06T06:41:12.870676092Z 
+2025-12-06T06:41:12.870699623Z added 82 packages, and audited 83 packages in 2s
+2025-12-06T06:41:12.870702453Z 
+2025-12-06T06:41:12.870710863Z 9 packages are looking for funding
+2025-12-06T06:41:12.870718133Z   run `npm fund` for details
+2025-12-06T06:41:12.87956598Z 
+2025-12-06T06:41:12.87958425Z 2 moderate severity vulnerabilities
+2025-12-06T06:41:12.87958631Z 
+2025-12-06T06:41:12.87958863Z To address all issues (including breaking changes), run:
+2025-12-06T06:41:12.879591341Z   npm audit fix --force
+2025-12-06T06:41:12.87959295Z 
+2025-12-06T06:41:12.879595601Z Run `npm audit` for details.
+2025-12-06T06:41:13.016932192Z 
+2025-12-06T06:41:13.016951643Z > reeder-radio-ui@0.0.0 build
+2025-12-06T06:41:13.016954793Z > vite build
+2025-12-06T06:41:13.016956913Z 
+2025-12-06T06:41:13.217552614Z vite v5.4.21 building for production...
+2025-12-06T06:41:13.26700105Z transforming...
+2025-12-06T06:41:13.283969277Z ✓ 3 modules transformed.
+2025-12-06T06:41:13.289035216Z x Build failed in 45ms
+2025-12-06T06:41:13.289121627Z error during build:
+2025-12-06T06:41:13.289127458Z [vite]: Rollup failed to resolve import "react-router-dom" from "/opt/render/project/src/client/src/main.jsx".
+2025-12-06T06:41:13.289131758Z This is most likely unintended because it can break your application at runtime.
+2025-12-06T06:41:13.289135878Z If you do want to externalize this module explicitly add it to
+2025-12-06T06:41:13.289139868Z `build.rollupOptions.external`
+2025-12-06T06:41:13.289144108Z     at viteWarn (file:///opt/render/project/src/client/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:65855:17)
+2025-12-06T06:41:13.289147468Z     at onwarn (file:///opt/render/project/src/client/node_modules/@vitejs/plugin-react/dist/index.js:90:7)
+2025-12-06T06:41:13.289150698Z     at onRollupWarning (file:///opt/render/project/src/client/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:65885:5)
+2025-12-06T06:41:13.289154238Z     at onwarn (file:///opt/render/project/src/client/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:65550:7)
+2025-12-06T06:41:13.289157758Z     at file:///opt/render/project/src/client/node_modules/rollup/dist/es/shared/node-entry.js:20975:13
+2025-12-06T06:41:13.289160948Z     at Object.logger [as onLog] (file:///opt/render/project/src/client/node_modules/rollup/dist/es/shared/node-entry.js:22848:9)
+2025-12-06T06:41:13.289165228Z     at ModuleLoader.handleInvalidResolvedId (file:///opt/render/project/src/client/node_modules/rollup/dist/es/shared/node-entry.js:21592:26)
+2025-12-06T06:41:13.289185459Z     at file:///opt/render/project/src/client/node_modules/rollup/dist/es/shared/node-entry.js:21550:26
+2025-12-06T06:41:13.35124209Z ==> Build failed 😞
+2025-12-06T06:41:13.351262291Z ==> Common ways to troubleshoot your deploy: https://render.com/docs/troubleshooting-deploys
