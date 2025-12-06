@@ -1,0 +1,43 @@
+/api/auth/me:1  Failed to load resource: the server responded with a status of 401 ()
+/login:1 [DOM] Input elements should have autocomplete attributes (suggested: "current-password"): (More info: https://goo.gl/9p2vKq) <input type=​"password" placeholder=​"Enter password" required value=​"PASSWORD" style=​"width:​ 100%;​ padding:​ 12px 16px;​ border-radius:​ 8px;​ border:​ 1px solid rgb(51, 51, 51)​;​ background:​ rgb(42, 42, 62)​;​ color:​ rgb(255, 255, 255)​;​ font-size:​ 16px;​ box-sizing:​ border-box;​ outline:​ none;​">​
+/api/channels:1  Failed to load resource: the server responded with a status of 401 ()
+index-5aAU3eny.js:104  GET https://reeder-radio-backend.onrender.com/api/admin/channels 403 (Forbidden)
+Ce @ index-5aAU3eny.js:104
+(anonymous) @ index-5aAU3eny.js:104
+Va @ index-5aAU3eny.js:40
+Tr @ index-5aAU3eny.js:40
+kS @ index-5aAU3eny.js:40
+_i @ index-5aAU3eny.js:40
+uf @ index-5aAU3eny.js:40
+Ei @ index-5aAU3eny.js:38
+(anonymous) @ index-5aAU3eny.js:40
+index-5aAU3eny.js:104  GET https://reeder-radio-backend.onrender.com/api/admin/logs?limit=200 403 (Forbidden)
+Ce @ index-5aAU3eny.js:104
+(anonymous) @ index-5aAU3eny.js:104
+Va @ index-5aAU3eny.js:40
+Tr @ index-5aAU3eny.js:40
+kS @ index-5aAU3eny.js:40
+_i @ index-5aAU3eny.js:40
+uf @ index-5aAU3eny.js:40
+Ei @ index-5aAU3eny.js:38
+(anonymous) @ index-5aAU3eny.js:40
+index-5aAU3eny.js:104  GET https://reeder-radio-backend.onrender.com/api/admin/zones 403 (Forbidden)
+Ce @ index-5aAU3eny.js:104
+(anonymous) @ index-5aAU3eny.js:104
+Va @ index-5aAU3eny.js:40
+Tr @ index-5aAU3eny.js:40
+kS @ index-5aAU3eny.js:40
+_i @ index-5aAU3eny.js:40
+uf @ index-5aAU3eny.js:40
+Ei @ index-5aAU3eny.js:38
+(anonymous) @ index-5aAU3eny.js:40
+index-5aAU3eny.js:104  GET https://reeder-radio-backend.onrender.com/api/admin/users 403 (Forbidden)
+Ce @ index-5aAU3eny.js:104
+(anonymous) @ index-5aAU3eny.js:104
+Va @ index-5aAU3eny.js:40
+Tr @ index-5aAU3eny.js:40
+kS @ index-5aAU3eny.js:40
+_i @ index-5aAU3eny.js:40
+uf @ index-5aAU3eny.js:40
+Ei @ index-5aAU3eny.js:38
+(anonymous) @ index-5aAU3eny.js:40
