@@ -10,6 +10,7 @@ export default function Admin({ user, onLogout }) {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   
   const [showAddUser, setShowAddUser] = useState(false);
   const [showEditUser, setShowEditUser] = useState(null);
@@ -27,6 +28,12 @@ export default function Admin({ user, onLogout }) {
 
   const [newZone, setNewZone] = useState("");
   const [newChannel, setNewChannel] = useState({ name: "", zoneId: "" });
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   useEffect(() => {
     loadData();
@@ -264,19 +271,23 @@ export default function Admin({ user, onLogout }) {
   const formatDate = (dateStr) => {
     if (!dateStr) return "Never";
     const date = new Date(dateStr);
+    if (isMobile) {
+      return date.toLocaleDateString();
+    }
     return date.toLocaleString();
   };
 
   const tabStyle = (isActive) => ({
-    padding: "12px 24px",
+    padding: isMobile ? "10px 16px" : "12px 24px",
     background: isActive ? "#3b82f6" : "transparent",
     color: isActive ? "#fff" : "#888",
     border: "none",
     borderRadius: 8,
     cursor: "pointer",
-    fontSize: 14,
+    fontSize: isMobile ? 13 : 14,
     fontWeight: 500,
     transition: "all 0.2s",
+    whiteSpace: "nowrap",
   });
 
   const inputStyle = {
@@ -288,10 +299,11 @@ export default function Admin({ user, onLogout }) {
     color: "#fff",
     fontSize: 14,
     marginTop: 4,
+    boxSizing: "border-box",
   };
 
   const btnPrimary = {
-    padding: "10px 20px",
+    padding: isMobile ? "8px 16px" : "10px 20px",
     background: "#3b82f6",
     color: "#fff",
     border: "none",
@@ -302,13 +314,21 @@ export default function Admin({ user, onLogout }) {
   };
 
   const btnSecondary = {
-    padding: "10px 20px",
+    padding: isMobile ? "8px 16px" : "10px 20px",
     background: "#333",
     color: "#fff",
     border: "none",
     borderRadius: 6,
     cursor: "pointer",
     fontSize: 14,
+  };
+
+  const btnSmall = {
+    padding: "6px 12px",
+    borderRadius: 6,
+    border: "none",
+    cursor: "pointer",
+    fontSize: 13,
   };
 
   const modalOverlay = {
@@ -322,17 +342,35 @@ export default function Admin({ user, onLogout }) {
     alignItems: "center",
     justifyContent: "center",
     zIndex: 1000,
+    padding: isMobile ? 16 : 0,
   };
 
   const modalContent = {
     background: "#1e1e2e",
     borderRadius: 12,
-    padding: 24,
+    padding: isMobile ? 16 : 24,
     width: "100%",
     maxWidth: 500,
     maxHeight: "90vh",
     overflowY: "auto",
   };
+
+  const cardStyle = {
+    background: "#2a2a3e",
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 12,
+  };
+
+  const statusBadge = (isActive, activeText = "active", inactiveText = "blocked") => ({
+    display: "inline-block",
+    padding: "4px 10px",
+    borderRadius: 20,
+    fontSize: 12,
+    fontWeight: 500,
+    background: isActive ? "#22c55e33" : "#dc262633",
+    color: isActive ? "#22c55e" : "#dc2626",
+  });
 
   if (loading) {
     return (
@@ -363,23 +401,25 @@ export default function Admin({ user, onLogout }) {
       <header
         style={{
           background: "#1e1e2e",
-          padding: "16px 24px",
+          padding: isMobile ? "12px 16px" : "16px 24px",
           display: "flex",
+          flexDirection: isMobile ? "column" : "row",
           justifyContent: "space-between",
-          alignItems: "center",
+          alignItems: isMobile ? "stretch" : "center",
+          gap: isMobile ? 12 : 0,
           borderBottom: "1px solid #333",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <span style={{ fontSize: 24 }}>📻</span>
-          <h1 style={{ margin: 0, fontSize: 20, fontWeight: 600 }}>
+          <h1 style={{ margin: 0, fontSize: isMobile ? 18 : 20, fontWeight: 600 }}>
             Admin Dashboard
           </h1>
         </div>
-        <div style={{ display: "flex", gap: 12 }}>
+        <div style={{ display: "flex", gap: 8 }}>
           <button
             onClick={() => navigate("/")}
-            style={btnSecondary}
+            style={{ ...btnSecondary, flex: isMobile ? 1 : "none" }}
           >
             Back to Radio
           </button>
@@ -393,6 +433,7 @@ export default function Admin({ user, onLogout }) {
               borderRadius: 6,
               cursor: "pointer",
               fontSize: 14,
+              flex: isMobile ? 1 : "none",
             }}
           >
             Logout
@@ -400,16 +441,17 @@ export default function Admin({ user, onLogout }) {
         </div>
       </header>
 
-      <div style={{ padding: 24 }}>
+      <div style={{ padding: isMobile ? 12 : 24 }}>
         <div
           style={{
             display: "flex",
             gap: 8,
-            marginBottom: 24,
+            marginBottom: 20,
             background: "#1e1e2e",
             padding: 8,
             borderRadius: 12,
-            width: "fit-content",
+            overflowX: "auto",
+            WebkitOverflowScrolling: "touch",
           }}
         >
           <button style={tabStyle(activeTab === "users")} onClick={() => setActiveTab("users")}>
@@ -443,145 +485,165 @@ export default function Admin({ user, onLogout }) {
                 + Add User
               </button>
             </div>
-            <div
-              style={{
-                background: "#1e1e2e",
-                borderRadius: 12,
-                overflow: "hidden",
-              }}
-            >
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead>
-                  <tr style={{ background: "#2a2a3e" }}>
-                    <th style={{ padding: 14, textAlign: "left", fontSize: 14 }}>Username</th>
-                    <th style={{ padding: 14, textAlign: "left", fontSize: 14 }}>Email</th>
-                    <th style={{ padding: 14, textAlign: "left", fontSize: 14 }}>Role</th>
-                    <th style={{ padding: 14, textAlign: "left", fontSize: 14 }}>Status</th>
-                    <th style={{ padding: 14, textAlign: "left", fontSize: 14 }}>Unit ID</th>
-                    <th style={{ padding: 14, textAlign: "left", fontSize: 14 }}>Last Login</th>
-                    <th style={{ padding: 14, textAlign: "left", fontSize: 14 }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {users.map((u) => (
-                    <tr key={u.id} style={{ borderBottom: "1px solid #333" }}>
-                      <td style={{ padding: 14 }}>{u.username}</td>
-                      <td style={{ padding: 14, color: "#888" }}>{u.email || "-"}</td>
-                      <td style={{ padding: 14 }}>
-                        <select
-                          value={u.role}
-                          onChange={(e) => updateUser(u.id, { role: e.target.value })}
-                          disabled={u.id === user.id}
-                          style={{
-                            padding: "6px 10px",
-                            borderRadius: 6,
-                            border: "1px solid #444",
-                            background: "#2a2a3e",
-                            color: "#fff",
-                          }}
-                        >
-                          <option value="user">User</option>
-                          <option value="admin">Admin</option>
-                        </select>
-                      </td>
-                      <td style={{ padding: 14 }}>
-                        <span
-                          style={{
-                            display: "inline-block",
-                            padding: "4px 10px",
-                            borderRadius: 20,
-                            fontSize: 12,
-                            fontWeight: 500,
-                            background: u.status === "active" ? "#22c55e33" : "#dc262633",
-                            color: u.status === "active" ? "#22c55e" : "#dc2626",
-                          }}
-                        >
-                          {u.status}
-                        </span>
-                      </td>
-                      <td style={{ padding: 14, color: "#888" }}>{u.unit_id || "-"}</td>
-                      <td style={{ padding: 14, color: "#888", fontSize: 13 }}>
-                        {formatDate(u.last_login)}
-                      </td>
-                      <td style={{ padding: 14 }}>
-                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+
+            {isMobile ? (
+              <div>
+                {users.map((u) => (
+                  <div key={u.id} style={cardStyle}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: 16 }}>{u.username}</div>
+                        <div style={{ color: "#888", fontSize: 13 }}>{u.email || "No email"}</div>
+                      </div>
+                      <span style={statusBadge(u.status === "active")}>{u.status}</span>
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12, fontSize: 13 }}>
+                      <div><span style={{ color: "#888" }}>Role:</span> {u.role}</div>
+                      <div><span style={{ color: "#888" }}>Unit:</span> {u.unit_id || "-"}</div>
+                      <div style={{ gridColumn: "1 / -1" }}><span style={{ color: "#888" }}>Last Login:</span> {formatDate(u.last_login)}</div>
+                    </div>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      <button
+                        onClick={() => setShowEditUser(u)}
+                        style={{ ...btnSmall, background: "#3b82f633", color: "#3b82f6" }}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => resetPassword(u.id)}
+                        style={{ ...btnSmall, background: "#f5940033", color: "#f59400" }}
+                      >
+                        Reset PW
+                      </button>
+                      <select
+                        value={u.role}
+                        onChange={(e) => updateUser(u.id, { role: e.target.value })}
+                        disabled={u.id === user.id}
+                        style={{
+                          padding: "6px 10px",
+                          borderRadius: 6,
+                          border: "1px solid #444",
+                          background: "#1e1e2e",
+                          color: "#fff",
+                          fontSize: 13,
+                        }}
+                      >
+                        <option value="user">User</option>
+                        <option value="admin">Admin</option>
+                      </select>
+                      {u.id !== user.id && (
+                        <>
                           <button
-                            onClick={() => setShowEditUser(u)}
-                            style={{
-                              padding: "6px 12px",
-                              borderRadius: 6,
-                              border: "none",
-                              background: "#3b82f633",
-                              color: "#3b82f6",
-                              cursor: "pointer",
-                              fontSize: 13,
-                            }}
+                            onClick={() => updateUser(u.id, { status: u.status === "active" ? "blocked" : "active" })}
+                            style={{ ...btnSmall, background: u.status === "active" ? "#dc262633" : "#22c55e33", color: u.status === "active" ? "#dc2626" : "#22c55e" }}
                           >
-                            Edit
+                            {u.status === "active" ? "Block" : "Unblock"}
                           </button>
                           <button
-                            onClick={() => resetPassword(u.id)}
-                            style={{
-                              padding: "6px 12px",
-                              borderRadius: 6,
-                              border: "none",
-                              background: "#f5940033",
-                              color: "#f59400",
-                              cursor: "pointer",
-                              fontSize: 13,
-                            }}
+                            onClick={() => deleteUser(u.id)}
+                            style={{ ...btnSmall, background: "#dc262633", color: "#dc2626" }}
                           >
-                            Reset PW
+                            Delete
                           </button>
-                          {u.id !== user.id && (
-                            <>
-                              <button
-                                onClick={() =>
-                                  updateUser(u.id, {
-                                    status: u.status === "active" ? "blocked" : "active",
-                                  })
-                                }
-                                style={{
-                                  padding: "6px 12px",
-                                  borderRadius: 6,
-                                  border: "none",
-                                  background: u.status === "active" ? "#dc262633" : "#22c55e33",
-                                  color: u.status === "active" ? "#dc2626" : "#22c55e",
-                                  cursor: "pointer",
-                                  fontSize: 13,
-                                }}
-                              >
-                                {u.status === "active" ? "Block" : "Unblock"}
-                              </button>
-                              <button
-                                onClick={() => deleteUser(u.id)}
-                                style={{
-                                  padding: "6px 12px",
-                                  borderRadius: 6,
-                                  border: "none",
-                                  background: "#dc262633",
-                                  color: "#dc2626",
-                                  cursor: "pointer",
-                                  fontSize: 13,
-                                }}
-                              >
-                                Delete
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      </td>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div
+                style={{
+                  background: "#1e1e2e",
+                  borderRadius: 12,
+                  overflow: "auto",
+                }}
+              >
+                <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 800 }}>
+                  <thead>
+                    <tr style={{ background: "#2a2a3e" }}>
+                      <th style={{ padding: 14, textAlign: "left", fontSize: 14 }}>Username</th>
+                      <th style={{ padding: 14, textAlign: "left", fontSize: 14 }}>Email</th>
+                      <th style={{ padding: 14, textAlign: "left", fontSize: 14 }}>Role</th>
+                      <th style={{ padding: 14, textAlign: "left", fontSize: 14 }}>Status</th>
+                      <th style={{ padding: 14, textAlign: "left", fontSize: 14 }}>Unit ID</th>
+                      <th style={{ padding: 14, textAlign: "left", fontSize: 14 }}>Last Login</th>
+                      <th style={{ padding: 14, textAlign: "left", fontSize: 14 }}>Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {users.map((u) => (
+                      <tr key={u.id} style={{ borderBottom: "1px solid #333" }}>
+                        <td style={{ padding: 14 }}>{u.username}</td>
+                        <td style={{ padding: 14, color: "#888" }}>{u.email || "-"}</td>
+                        <td style={{ padding: 14 }}>
+                          <select
+                            value={u.role}
+                            onChange={(e) => updateUser(u.id, { role: e.target.value })}
+                            disabled={u.id === user.id}
+                            style={{
+                              padding: "6px 10px",
+                              borderRadius: 6,
+                              border: "1px solid #444",
+                              background: "#2a2a3e",
+                              color: "#fff",
+                            }}
+                          >
+                            <option value="user">User</option>
+                            <option value="admin">Admin</option>
+                          </select>
+                        </td>
+                        <td style={{ padding: 14 }}>
+                          <span style={statusBadge(u.status === "active")}>{u.status}</span>
+                        </td>
+                        <td style={{ padding: 14, color: "#888" }}>{u.unit_id || "-"}</td>
+                        <td style={{ padding: 14, color: "#888", fontSize: 13 }}>
+                          {formatDate(u.last_login)}
+                        </td>
+                        <td style={{ padding: 14 }}>
+                          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                            <button
+                              onClick={() => setShowEditUser(u)}
+                              style={{ ...btnSmall, background: "#3b82f633", color: "#3b82f6" }}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => resetPassword(u.id)}
+                              style={{ ...btnSmall, background: "#f5940033", color: "#f59400" }}
+                            >
+                              Reset PW
+                            </button>
+                            {u.id !== user.id && (
+                              <>
+                                <button
+                                  onClick={() => updateUser(u.id, { status: u.status === "active" ? "blocked" : "active" })}
+                                  style={{ ...btnSmall, background: u.status === "active" ? "#dc262633" : "#22c55e33", color: u.status === "active" ? "#dc2626" : "#22c55e" }}
+                                >
+                                  {u.status === "active" ? "Block" : "Unblock"}
+                                </button>
+                                <button
+                                  onClick={() => deleteUser(u.id)}
+                                  style={{ ...btnSmall, background: "#dc262633", color: "#dc2626" }}
+                                >
+                                  Delete
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
 
         {activeTab === "channels" && (
-          <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
-            <div style={{ flex: 1, minWidth: 300 }}>
+          <div style={{ display: "flex", gap: 24, flexDirection: isMobile ? "column" : "row" }}>
+            <div style={{ flex: 1 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
                 <h2 style={{ margin: 0, fontSize: 18 }}>Zones</h2>
                 <button style={btnPrimary} onClick={() => setShowAddZone(true)}>
@@ -606,15 +668,7 @@ export default function Admin({ user, onLogout }) {
                       <span>{z.name}</span>
                       <button
                         onClick={() => deleteZoneHandler(z.id)}
-                        style={{
-                          padding: "4px 10px",
-                          borderRadius: 4,
-                          border: "none",
-                          background: "#dc262633",
-                          color: "#dc2626",
-                          cursor: "pointer",
-                          fontSize: 12,
-                        }}
+                        style={{ ...btnSmall, background: "#dc262633", color: "#dc2626" }}
                       >
                         Delete
                       </button>
@@ -624,118 +678,98 @@ export default function Admin({ user, onLogout }) {
               </div>
             </div>
 
-            <div style={{ flex: 2, minWidth: 400 }}>
+            <div style={{ flex: isMobile ? 1 : 2 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
                 <h2 style={{ margin: 0, fontSize: 18 }}>Channels</h2>
                 <button style={btnPrimary} onClick={() => setShowAddChannel(true)}>
                   + Add Channel
                 </button>
               </div>
-              <div
-                style={{
-                  background: "#1e1e2e",
-                  borderRadius: 12,
-                  overflow: "hidden",
-                }}
-              >
-                <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                  <thead>
-                    <tr style={{ background: "#2a2a3e" }}>
-                      <th style={{ padding: 14, textAlign: "left", fontSize: 14 }}>Channel</th>
-                      <th style={{ padding: 14, textAlign: "left", fontSize: 14 }}>Zone</th>
-                      <th style={{ padding: 14, textAlign: "left", fontSize: 14 }}>Status</th>
-                      <th style={{ padding: 14, textAlign: "left", fontSize: 14 }}>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {channels.map((ch) => (
-                      <tr key={ch.id} style={{ borderBottom: "1px solid #333" }}>
-                        <td style={{ padding: 14, fontWeight: 500 }}>{ch.name}</td>
-                        <td style={{ padding: 14, color: "#888" }}>{ch.zone}</td>
-                        <td style={{ padding: 14 }}>
-                          <span
-                            style={{
-                              display: "inline-block",
-                              padding: "4px 10px",
-                              borderRadius: 20,
-                              fontSize: 12,
-                              fontWeight: 500,
-                              background: ch.enabled ? "#22c55e33" : "#dc262633",
-                              color: ch.enabled ? "#22c55e" : "#dc2626",
-                            }}
-                          >
-                            {ch.enabled ? "Enabled" : "Disabled"}
-                          </span>
-                        </td>
-                        <td style={{ padding: 14 }}>
-                          <div style={{ display: "flex", gap: 8 }}>
-                            <button
-                              onClick={() => updateChannel(ch.id, { enabled: !ch.enabled })}
-                              style={{
-                                padding: "6px 12px",
-                                borderRadius: 6,
-                                border: "none",
-                                background: ch.enabled ? "#dc262633" : "#22c55e33",
-                                color: ch.enabled ? "#dc2626" : "#22c55e",
-                                cursor: "pointer",
-                                fontSize: 13,
-                              }}
-                            >
-                              {ch.enabled ? "Disable" : "Enable"}
-                            </button>
-                            <button
-                              onClick={() => deleteChannelHandler(ch.id)}
-                              style={{
-                                padding: "6px 12px",
-                                borderRadius: 6,
-                                border: "none",
-                                background: "#dc262633",
-                                color: "#dc2626",
-                                cursor: "pointer",
-                                fontSize: 13,
-                              }}
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        </td>
+
+              {isMobile ? (
+                <div>
+                  {channels.map((ch) => (
+                    <div key={ch.id} style={cardStyle}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                        <div>
+                          <div style={{ fontWeight: 600 }}>{ch.name}</div>
+                          <div style={{ color: "#888", fontSize: 13 }}>{ch.zone}</div>
+                        </div>
+                        <span style={statusBadge(ch.enabled, "Enabled", "Disabled")}>
+                          {ch.enabled ? "Enabled" : "Disabled"}
+                        </span>
+                      </div>
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button
+                          onClick={() => updateChannel(ch.id, { enabled: !ch.enabled })}
+                          style={{ ...btnSmall, background: ch.enabled ? "#dc262633" : "#22c55e33", color: ch.enabled ? "#dc2626" : "#22c55e" }}
+                        >
+                          {ch.enabled ? "Disable" : "Enable"}
+                        </button>
+                        <button
+                          onClick={() => deleteChannelHandler(ch.id)}
+                          style={{ ...btnSmall, background: "#dc262633", color: "#dc2626" }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ background: "#1e1e2e", borderRadius: 12, overflow: "hidden" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <thead>
+                      <tr style={{ background: "#2a2a3e" }}>
+                        <th style={{ padding: 14, textAlign: "left", fontSize: 14 }}>Channel</th>
+                        <th style={{ padding: 14, textAlign: "left", fontSize: 14 }}>Zone</th>
+                        <th style={{ padding: 14, textAlign: "left", fontSize: 14 }}>Status</th>
+                        <th style={{ padding: 14, textAlign: "left", fontSize: 14 }}>Actions</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {channels.map((ch) => (
+                        <tr key={ch.id} style={{ borderBottom: "1px solid #333" }}>
+                          <td style={{ padding: 14, fontWeight: 500 }}>{ch.name}</td>
+                          <td style={{ padding: 14, color: "#888" }}>{ch.zone}</td>
+                          <td style={{ padding: 14 }}>
+                            <span style={statusBadge(ch.enabled, "Enabled", "Disabled")}>
+                              {ch.enabled ? "Enabled" : "Disabled"}
+                            </span>
+                          </td>
+                          <td style={{ padding: 14 }}>
+                            <div style={{ display: "flex", gap: 8 }}>
+                              <button
+                                onClick={() => updateChannel(ch.id, { enabled: !ch.enabled })}
+                                style={{ ...btnSmall, background: ch.enabled ? "#dc262633" : "#22c55e33", color: ch.enabled ? "#dc2626" : "#22c55e" }}
+                              >
+                                {ch.enabled ? "Disable" : "Enable"}
+                              </button>
+                              <button
+                                onClick={() => deleteChannelHandler(ch.id)}
+                                style={{ ...btnSmall, background: "#dc262633", color: "#dc2626" }}
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </div>
         )}
 
         {activeTab === "logs" && (
-          <div
-            style={{
-              background: "#1e1e2e",
-              borderRadius: 12,
-              overflow: "hidden",
-              maxHeight: "70vh",
-              overflowY: "auto",
-            }}
-          >
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead style={{ position: "sticky", top: 0 }}>
-                <tr style={{ background: "#2a2a3e" }}>
-                  <th style={{ padding: 14, textAlign: "left", fontSize: 14 }}>Time</th>
-                  <th style={{ padding: 14, textAlign: "left", fontSize: 14 }}>User</th>
-                  <th style={{ padding: 14, textAlign: "left", fontSize: 14 }}>Action</th>
-                  <th style={{ padding: 14, textAlign: "left", fontSize: 14 }}>Channel</th>
-                  <th style={{ padding: 14, textAlign: "left", fontSize: 14 }}>Details</th>
-                </tr>
-              </thead>
-              <tbody>
+          <div>
+            {isMobile ? (
+              <div style={{ maxHeight: "70vh", overflowY: "auto" }}>
                 {logs.map((log) => (
-                  <tr key={log.id} style={{ borderBottom: "1px solid #333" }}>
-                    <td style={{ padding: 14, color: "#888", fontSize: 13 }}>
-                      {formatDate(log.created_at)}
-                    </td>
-                    <td style={{ padding: 14 }}>{log.username || "-"}</td>
-                    <td style={{ padding: 14 }}>
+                  <div key={log.id} style={cardStyle}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
                       <span
                         style={{
                           display: "inline-block",
@@ -758,15 +792,81 @@ export default function Admin({ user, onLogout }) {
                       >
                         {log.action}
                       </span>
-                    </td>
-                    <td style={{ padding: 14, color: "#888" }}>{log.channel || "-"}</td>
-                    <td style={{ padding: 14, color: "#666", fontSize: 13 }}>
-                      {log.details ? JSON.stringify(log.details) : "-"}
-                    </td>
-                  </tr>
+                      <span style={{ color: "#888", fontSize: 12 }}>{formatDate(log.created_at)}</span>
+                    </div>
+                    <div style={{ fontSize: 14 }}>
+                      <strong>{log.username || "-"}</strong>
+                      {log.channel && <span style={{ color: "#888" }}> on {log.channel}</span>}
+                    </div>
+                    {log.details && (
+                      <div style={{ color: "#666", fontSize: 12, marginTop: 4, wordBreak: "break-all" }}>
+                        {JSON.stringify(log.details)}
+                      </div>
+                    )}
+                  </div>
                 ))}
-              </tbody>
-            </table>
+              </div>
+            ) : (
+              <div
+                style={{
+                  background: "#1e1e2e",
+                  borderRadius: 12,
+                  overflow: "hidden",
+                  maxHeight: "70vh",
+                  overflowY: "auto",
+                }}
+              >
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead style={{ position: "sticky", top: 0 }}>
+                    <tr style={{ background: "#2a2a3e" }}>
+                      <th style={{ padding: 14, textAlign: "left", fontSize: 14 }}>Time</th>
+                      <th style={{ padding: 14, textAlign: "left", fontSize: 14 }}>User</th>
+                      <th style={{ padding: 14, textAlign: "left", fontSize: 14 }}>Action</th>
+                      <th style={{ padding: 14, textAlign: "left", fontSize: 14 }}>Channel</th>
+                      <th style={{ padding: 14, textAlign: "left", fontSize: 14 }}>Details</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {logs.map((log) => (
+                      <tr key={log.id} style={{ borderBottom: "1px solid #333" }}>
+                        <td style={{ padding: 14, color: "#888", fontSize: 13 }}>
+                          {formatDate(log.created_at)}
+                        </td>
+                        <td style={{ padding: 14 }}>{log.username || "-"}</td>
+                        <td style={{ padding: 14 }}>
+                          <span
+                            style={{
+                              display: "inline-block",
+                              padding: "4px 10px",
+                              borderRadius: 20,
+                              fontSize: 12,
+                              background:
+                                log.action === "emergency"
+                                  ? "#dc262633"
+                                  : log.action === "login"
+                                  ? "#3b82f633"
+                                  : "#6b728033",
+                              color:
+                                log.action === "emergency"
+                                  ? "#dc2626"
+                                  : log.action === "login"
+                                  ? "#3b82f6"
+                                  : "#9ca3af",
+                            }}
+                          >
+                            {log.action}
+                          </span>
+                        </td>
+                        <td style={{ padding: 14, color: "#888" }}>{log.channel || "-"}</td>
+                        <td style={{ padding: 14, color: "#666", fontSize: 13 }}>
+                          {log.details ? JSON.stringify(log.details) : "-"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -864,6 +964,7 @@ export default function Admin({ user, onLogout }) {
         <EditUserModal
           user={showEditUser}
           channels={channels}
+          isMobile={isMobile}
           onClose={() => setShowEditUser(null)}
           onSave={async (updates, channelIds) => {
             await updateUser(showEditUser.id, updates);
@@ -941,7 +1042,7 @@ export default function Admin({ user, onLogout }) {
   );
 }
 
-function EditUserModal({ user, channels, onClose, onSave }) {
+function EditUserModal({ user, channels, isMobile, onClose, onSave }) {
   const [email, setEmail] = useState(user.email || "");
   const [unitId, setUnitId] = useState(user.unit_id || "");
   const [channelIds, setChannelIds] = useState([]);
@@ -971,6 +1072,7 @@ function EditUserModal({ user, channels, onClose, onSave }) {
     color: "#fff",
     fontSize: 14,
     marginTop: 4,
+    boxSizing: "border-box",
   };
 
   const modalOverlay = {
@@ -984,12 +1086,13 @@ function EditUserModal({ user, channels, onClose, onSave }) {
     alignItems: "center",
     justifyContent: "center",
     zIndex: 1000,
+    padding: isMobile ? 16 : 0,
   };
 
   const modalContent = {
     background: "#1e1e2e",
     borderRadius: 12,
-    padding: 24,
+    padding: isMobile ? 16 : 24,
     width: "100%",
     maxWidth: 500,
     maxHeight: "90vh",
@@ -1051,7 +1154,7 @@ function EditUserModal({ user, channels, onClose, onSave }) {
               <button
                 type="submit"
                 style={{
-                  padding: "10px 20px",
+                  padding: isMobile ? "8px 16px" : "10px 20px",
                   background: "#3b82f6",
                   color: "#fff",
                   border: "none",
@@ -1067,7 +1170,7 @@ function EditUserModal({ user, channels, onClose, onSave }) {
                 type="button"
                 onClick={onClose}
                 style={{
-                  padding: "10px 20px",
+                  padding: isMobile ? "8px 16px" : "10px 20px",
                   background: "#333",
                   color: "#fff",
                   border: "none",
