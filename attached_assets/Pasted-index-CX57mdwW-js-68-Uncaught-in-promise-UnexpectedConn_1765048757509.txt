@@ -1,0 +1,508 @@
+index-CX57mdwW.js:68 Uncaught (in promise) UnexpectedConnectionState: PC manager is closed
+    at index-CX57mdwW.js:104:81664
+    at Generator.next (<anonymous>)
+    at index-CX57mdwW.js:68:59820
+    at new Promise (<anonymous>)
+    at S (index-CX57mdwW.js:68:59617)
+    at rw.ensureDataTransportConnected (index-CX57mdwW.js:104:81486)
+    at rw.<anonymous> (index-CX57mdwW.js:104:82642)
+    at Generator.next (<anonymous>)
+    at index-CX57mdwW.js:68:59820
+    at new Promise (<anonymous>)
+c @ index-CX57mdwW.js:68
+Promise.then
+l @ index-CX57mdwW.js:68
+(anonymous) @ index-CX57mdwW.js:68
+S @ index-CX57mdwW.js:68
+publishData @ index-CX57mdwW.js:104
+(anonymous) @ index-CX57mdwW.js:104
+(anonymous) @ index-CX57mdwW.js:104
+index-CX57mdwW.js:68 Uncaught (in promise) UnexpectedConnectionState: PC manager is closed
+    at index-CX57mdwW.js:104:81664
+    at Generator.next (<anonymous>)
+    at index-CX57mdwW.js:68:59820
+    at new Promise (<anonymous>)
+    at S (index-CX57mdwW.js:68:59617)
+    at rw.ensureDataTransportConnected (index-CX57mdwW.js:104:81486)
+    at rw.<anonymous> (index-CX57mdwW.js:104:82642)
+    at Generator.next (<anonymous>)
+    at index-CX57mdwW.js:68:59820
+    at new Promise (<anonymous>)
+c @ index-CX57mdwW.js:68
+Promise.then
+l @ index-CX57mdwW.js:68
+(anonymous) @ index-CX57mdwW.js:68
+S @ index-CX57mdwW.js:68
+publishData @ index-CX57mdwW.js:104
+(anonymous) @ index-CX57mdwW.js:104
+(anonymous) @ index-CX57mdwW.js:104
+index-CX57mdwW.js:104 Uncaught InvalidStateError: Failed to execute 'createMediaElementSource' on 'AudioContext': HTMLMediaElement already connected previously to a different MediaElementSourceNode.
+    at Gi.<anonymous> (index-CX57mdwW.js:104:238173)
+    at s.emit (index-CX57mdwW.js:68:62648)
+    at Gi.emit (index-CX57mdwW.js:104:213368)
+    at Da.<anonymous> (index-CX57mdwW.js:104:207493)
+    at s.emit (index-CX57mdwW.js:68:62648)
+    at Da.emit (index-CX57mdwW.js:104:167817)
+    at Sw.<anonymous> (index-CX57mdwW.js:104:164137)
+    at s.emit (index-CX57mdwW.js:68:62648)
+    at Sw.setTrack (index-CX57mdwW.js:104:160658)
+    at Da.addSubscribedMediaTrack (index-CX57mdwW.js:104:165702)
+(anonymous) @ index-CX57mdwW.js:104
+s.emit @ index-CX57mdwW.js:68
+emit @ index-CX57mdwW.js:104
+(anonymous) @ index-CX57mdwW.js:104
+s.emit @ index-CX57mdwW.js:68
+emit @ index-CX57mdwW.js:104
+(anonymous) @ index-CX57mdwW.js:104
+s.emit @ index-CX57mdwW.js:68
+setTrack @ index-CX57mdwW.js:104
+addSubscribedMediaTrack @ index-CX57mdwW.js:104
+onTrackAdded @ index-CX57mdwW.js:104
+(anonymous) @ index-CX57mdwW.js:104
+s.emit @ index-CX57mdwW.js:68
+pcManager.onTrack @ index-CX57mdwW.js:104
+NE.n.subscriber.onTrack @ index-CX57mdwW.js:104
+e.ontrack @ index-CX57mdwW.js:104
+c @ index-CX57mdwW.js:68
+index-CX57mdwW.js:104 Uncaught InvalidStateError: Failed to execute 'createMediaElementSource' on 'AudioContext': HTMLMediaElement already connected previously to a different MediaElementSourceNode.
+    at Gi.<anonymous> (index-CX57mdwW.js:104:238173)
+    at s.emit (index-CX57mdwW.js:68:62648)
+    at Gi.emit (index-CX57mdwW.js:104:213368)
+    at Da.<anonymous> (index-CX57mdwW.js:104:207493)
+    at s.emit (index-CX57mdwW.js:68:62648)
+    at Da.emit (index-CX57mdwW.js:104:167817)
+    at Sw.<anonymous> (index-CX57mdwW.js:104:164137)
+    at s.emit (index-CX57mdwW.js:68:62648)
+    at Sw.setTrack (index-CX57mdwW.js:104:160658)
+    at Da.addSubscribedMediaTrack (index-CX57mdwW.js:104:165702)
+(anonymous) @ index-CX57mdwW.js:104
+s.emit @ index-CX57mdwW.js:68
+emit @ index-CX57mdwW.js:104
+(anonymous) @ index-CX57mdwW.js:104
+s.emit @ index-CX57mdwW.js:68
+emit @ index-CX57mdwW.js:104
+(anonymous) @ index-CX57mdwW.js:104
+s.emit @ index-CX57mdwW.js:68
+setTrack @ index-CX57mdwW.js:104
+addSubscribedMediaTrack @ index-CX57mdwW.js:104
+onTrackAdded @ index-CX57mdwW.js:104
+(anonymous) @ index-CX57mdwW.js:104
+s.emit @ index-CX57mdwW.js:68
+pcManager.onTrack @ index-CX57mdwW.js:104
+NE.n.subscriber.onTrack @ index-CX57mdwW.js:104
+e.ontrack @ index-CX57mdwW.js:104
+c @ index-CX57mdwW.js:68
+index-CX57mdwW.js:68 Uncaught (in promise) UnexpectedConnectionState: PC manager is closed
+    at index-CX57mdwW.js:104:81664
+    at Generator.next (<anonymous>)
+    at index-CX57mdwW.js:68:59820
+    at new Promise (<anonymous>)
+    at S (index-CX57mdwW.js:68:59617)
+    at rw.ensureDataTransportConnected (index-CX57mdwW.js:104:81486)
+    at rw.<anonymous> (index-CX57mdwW.js:104:82642)
+    at Generator.next (<anonymous>)
+    at index-CX57mdwW.js:68:59820
+    at new Promise (<anonymous>)
+c @ index-CX57mdwW.js:68
+Promise.then
+l @ index-CX57mdwW.js:68
+(anonymous) @ index-CX57mdwW.js:68
+S @ index-CX57mdwW.js:68
+publishData @ index-CX57mdwW.js:104
+(anonymous) @ index-CX57mdwW.js:104
+(anonymous) @ index-CX57mdwW.js:104
+index-CX57mdwW.js:104 Uncaught InvalidStateError: Failed to execute 'createMediaElementSource' on 'AudioContext': HTMLMediaElement already connected previously to a different MediaElementSourceNode.
+    at Gi.<anonymous> (index-CX57mdwW.js:104:238173)
+    at s.emit (index-CX57mdwW.js:68:62648)
+    at Gi.emit (index-CX57mdwW.js:104:213368)
+    at Da.<anonymous> (index-CX57mdwW.js:104:207493)
+    at s.emit (index-CX57mdwW.js:68:62648)
+    at Da.emit (index-CX57mdwW.js:104:167817)
+    at Sw.<anonymous> (index-CX57mdwW.js:104:164137)
+    at s.emit (index-CX57mdwW.js:68:62648)
+    at Sw.setTrack (index-CX57mdwW.js:104:160658)
+    at Da.addSubscribedMediaTrack (index-CX57mdwW.js:104:165702)
+(anonymous) @ index-CX57mdwW.js:104
+s.emit @ index-CX57mdwW.js:68
+emit @ index-CX57mdwW.js:104
+(anonymous) @ index-CX57mdwW.js:104
+s.emit @ index-CX57mdwW.js:68
+emit @ index-CX57mdwW.js:104
+(anonymous) @ index-CX57mdwW.js:104
+s.emit @ index-CX57mdwW.js:68
+setTrack @ index-CX57mdwW.js:104
+addSubscribedMediaTrack @ index-CX57mdwW.js:104
+onTrackAdded @ index-CX57mdwW.js:104
+(anonymous) @ index-CX57mdwW.js:104
+s.emit @ index-CX57mdwW.js:68
+pcManager.onTrack @ index-CX57mdwW.js:104
+NE.n.subscriber.onTrack @ index-CX57mdwW.js:104
+e.ontrack @ index-CX57mdwW.js:104
+c @ index-CX57mdwW.js:68
+index-CX57mdwW.js:68 Uncaught (in promise) UnexpectedConnectionState: PC manager is closed
+    at index-CX57mdwW.js:104:81664
+    at Generator.next (<anonymous>)
+    at index-CX57mdwW.js:68:59820
+    at new Promise (<anonymous>)
+    at S (index-CX57mdwW.js:68:59617)
+    at rw.ensureDataTransportConnected (index-CX57mdwW.js:104:81486)
+    at rw.<anonymous> (index-CX57mdwW.js:104:82642)
+    at Generator.next (<anonymous>)
+    at index-CX57mdwW.js:68:59820
+    at new Promise (<anonymous>)
+c @ index-CX57mdwW.js:68
+Promise.then
+l @ index-CX57mdwW.js:68
+(anonymous) @ index-CX57mdwW.js:68
+S @ index-CX57mdwW.js:68
+publishData @ index-CX57mdwW.js:104
+(anonymous) @ index-CX57mdwW.js:104
+(anonymous) @ index-CX57mdwW.js:104
+index-CX57mdwW.js:104 Uncaught InvalidStateError: Failed to execute 'createMediaElementSource' on 'AudioContext': HTMLMediaElement already connected previously to a different MediaElementSourceNode.
+    at Gi.<anonymous> (index-CX57mdwW.js:104:238173)
+    at s.emit (index-CX57mdwW.js:68:62648)
+    at Gi.emit (index-CX57mdwW.js:104:213368)
+    at Da.<anonymous> (index-CX57mdwW.js:104:207493)
+    at s.emit (index-CX57mdwW.js:68:62648)
+    at Da.emit (index-CX57mdwW.js:104:167817)
+    at Sw.<anonymous> (index-CX57mdwW.js:104:164137)
+    at s.emit (index-CX57mdwW.js:68:62648)
+    at Sw.setTrack (index-CX57mdwW.js:104:160658)
+    at Da.addSubscribedMediaTrack (index-CX57mdwW.js:104:165702)
+(anonymous) @ index-CX57mdwW.js:104
+s.emit @ index-CX57mdwW.js:68
+emit @ index-CX57mdwW.js:104
+(anonymous) @ index-CX57mdwW.js:104
+s.emit @ index-CX57mdwW.js:68
+emit @ index-CX57mdwW.js:104
+(anonymous) @ index-CX57mdwW.js:104
+s.emit @ index-CX57mdwW.js:68
+setTrack @ index-CX57mdwW.js:104
+addSubscribedMediaTrack @ index-CX57mdwW.js:104
+onTrackAdded @ index-CX57mdwW.js:104
+(anonymous) @ index-CX57mdwW.js:104
+s.emit @ index-CX57mdwW.js:68
+pcManager.onTrack @ index-CX57mdwW.js:104
+NE.n.subscriber.onTrack @ index-CX57mdwW.js:104
+e.ontrack @ index-CX57mdwW.js:104
+c @ index-CX57mdwW.js:68
+index-CX57mdwW.js:104 Uncaught InvalidStateError: Failed to execute 'createMediaElementSource' on 'AudioContext': HTMLMediaElement already connected previously to a different MediaElementSourceNode.
+    at Gi.<anonymous> (index-CX57mdwW.js:104:238173)
+    at s.emit (index-CX57mdwW.js:68:62648)
+    at Gi.emit (index-CX57mdwW.js:104:213368)
+    at Da.<anonymous> (index-CX57mdwW.js:104:207493)
+    at s.emit (index-CX57mdwW.js:68:62648)
+    at Da.emit (index-CX57mdwW.js:104:167817)
+    at Sw.<anonymous> (index-CX57mdwW.js:104:164137)
+    at s.emit (index-CX57mdwW.js:68:62648)
+    at Sw.setTrack (index-CX57mdwW.js:104:160658)
+    at Da.addSubscribedMediaTrack (index-CX57mdwW.js:104:165702)
+(anonymous) @ index-CX57mdwW.js:104
+s.emit @ index-CX57mdwW.js:68
+emit @ index-CX57mdwW.js:104
+(anonymous) @ index-CX57mdwW.js:104
+s.emit @ index-CX57mdwW.js:68
+emit @ index-CX57mdwW.js:104
+(anonymous) @ index-CX57mdwW.js:104
+s.emit @ index-CX57mdwW.js:68
+setTrack @ index-CX57mdwW.js:104
+addSubscribedMediaTrack @ index-CX57mdwW.js:104
+onTrackAdded @ index-CX57mdwW.js:104
+(anonymous) @ index-CX57mdwW.js:104
+s.emit @ index-CX57mdwW.js:68
+pcManager.onTrack @ index-CX57mdwW.js:104
+NE.n.subscriber.onTrack @ index-CX57mdwW.js:104
+e.ontrack @ index-CX57mdwW.js:104
+c @ index-CX57mdwW.js:68
+index-CX57mdwW.js:104 Uncaught InvalidStateError: Failed to execute 'createMediaElementSource' on 'AudioContext': HTMLMediaElement already connected previously to a different MediaElementSourceNode.
+    at Gi.<anonymous> (index-CX57mdwW.js:104:238173)
+    at s.emit (index-CX57mdwW.js:68:62648)
+    at Gi.emit (index-CX57mdwW.js:104:213368)
+    at Da.<anonymous> (index-CX57mdwW.js:104:207493)
+    at s.emit (index-CX57mdwW.js:68:62648)
+    at Da.emit (index-CX57mdwW.js:104:167817)
+    at Sw.<anonymous> (index-CX57mdwW.js:104:164137)
+    at s.emit (index-CX57mdwW.js:68:62648)
+    at Sw.setTrack (index-CX57mdwW.js:104:160658)
+    at Da.addSubscribedMediaTrack (index-CX57mdwW.js:104:165702)
+(anonymous) @ index-CX57mdwW.js:104
+s.emit @ index-CX57mdwW.js:68
+emit @ index-CX57mdwW.js:104
+(anonymous) @ index-CX57mdwW.js:104
+s.emit @ index-CX57mdwW.js:68
+emit @ index-CX57mdwW.js:104
+(anonymous) @ index-CX57mdwW.js:104
+s.emit @ index-CX57mdwW.js:68
+setTrack @ index-CX57mdwW.js:104
+addSubscribedMediaTrack @ index-CX57mdwW.js:104
+onTrackAdded @ index-CX57mdwW.js:104
+(anonymous) @ index-CX57mdwW.js:104
+s.emit @ index-CX57mdwW.js:68
+pcManager.onTrack @ index-CX57mdwW.js:104
+NE.n.subscriber.onTrack @ index-CX57mdwW.js:104
+e.ontrack @ index-CX57mdwW.js:104
+c @ index-CX57mdwW.js:68
+index-CX57mdwW.js:104 Uncaught InvalidStateError: Failed to execute 'createMediaElementSource' on 'AudioContext': HTMLMediaElement already connected previously to a different MediaElementSourceNode.
+    at Gi.<anonymous> (index-CX57mdwW.js:104:238173)
+    at s.emit (index-CX57mdwW.js:68:62648)
+    at Gi.emit (index-CX57mdwW.js:104:213368)
+    at Da.<anonymous> (index-CX57mdwW.js:104:207493)
+    at s.emit (index-CX57mdwW.js:68:62648)
+    at Da.emit (index-CX57mdwW.js:104:167817)
+    at Sw.<anonymous> (index-CX57mdwW.js:104:164137)
+    at s.emit (index-CX57mdwW.js:68:62648)
+    at Sw.setTrack (index-CX57mdwW.js:104:160658)
+    at Da.addSubscribedMediaTrack (index-CX57mdwW.js:104:165702)
+(anonymous) @ index-CX57mdwW.js:104
+s.emit @ index-CX57mdwW.js:68
+emit @ index-CX57mdwW.js:104
+(anonymous) @ index-CX57mdwW.js:104
+s.emit @ index-CX57mdwW.js:68
+emit @ index-CX57mdwW.js:104
+(anonymous) @ index-CX57mdwW.js:104
+s.emit @ index-CX57mdwW.js:68
+setTrack @ index-CX57mdwW.js:104
+addSubscribedMediaTrack @ index-CX57mdwW.js:104
+onTrackAdded @ index-CX57mdwW.js:104
+(anonymous) @ index-CX57mdwW.js:104
+s.emit @ index-CX57mdwW.js:68
+pcManager.onTrack @ index-CX57mdwW.js:104
+NE.n.subscriber.onTrack @ index-CX57mdwW.js:104
+e.ontrack @ index-CX57mdwW.js:104
+c @ index-CX57mdwW.js:68
+index-CX57mdwW.js:104 Uncaught InvalidStateError: Failed to execute 'createMediaElementSource' on 'AudioContext': HTMLMediaElement already connected previously to a different MediaElementSourceNode.
+    at Gi.<anonymous> (index-CX57mdwW.js:104:238173)
+    at s.emit (index-CX57mdwW.js:68:62648)
+    at Gi.emit (index-CX57mdwW.js:104:213368)
+    at Da.<anonymous> (index-CX57mdwW.js:104:207493)
+    at s.emit (index-CX57mdwW.js:68:62648)
+    at Da.emit (index-CX57mdwW.js:104:167817)
+    at Sw.<anonymous> (index-CX57mdwW.js:104:164137)
+    at s.emit (index-CX57mdwW.js:68:62648)
+    at Sw.setTrack (index-CX57mdwW.js:104:160658)
+    at Da.addSubscribedMediaTrack (index-CX57mdwW.js:104:165702)
+(anonymous) @ index-CX57mdwW.js:104
+s.emit @ index-CX57mdwW.js:68
+emit @ index-CX57mdwW.js:104
+(anonymous) @ index-CX57mdwW.js:104
+s.emit @ index-CX57mdwW.js:68
+emit @ index-CX57mdwW.js:104
+(anonymous) @ index-CX57mdwW.js:104
+s.emit @ index-CX57mdwW.js:68
+setTrack @ index-CX57mdwW.js:104
+addSubscribedMediaTrack @ index-CX57mdwW.js:104
+onTrackAdded @ index-CX57mdwW.js:104
+(anonymous) @ index-CX57mdwW.js:104
+s.emit @ index-CX57mdwW.js:68
+pcManager.onTrack @ index-CX57mdwW.js:104
+NE.n.subscriber.onTrack @ index-CX57mdwW.js:104
+e.ontrack @ index-CX57mdwW.js:104
+c @ index-CX57mdwW.js:68
+index-CX57mdwW.js:68 Uncaught (in promise) UnexpectedConnectionState: PC manager is closed
+    at index-CX57mdwW.js:104:81664
+    at Generator.next (<anonymous>)
+    at index-CX57mdwW.js:68:59820
+    at new Promise (<anonymous>)
+    at S (index-CX57mdwW.js:68:59617)
+    at rw.ensureDataTransportConnected (index-CX57mdwW.js:104:81486)
+    at rw.<anonymous> (index-CX57mdwW.js:104:82642)
+    at Generator.next (<anonymous>)
+    at index-CX57mdwW.js:68:59820
+    at new Promise (<anonymous>)
+c @ index-CX57mdwW.js:68
+Promise.then
+l @ index-CX57mdwW.js:68
+(anonymous) @ index-CX57mdwW.js:68
+S @ index-CX57mdwW.js:68
+publishData @ index-CX57mdwW.js:104
+(anonymous) @ index-CX57mdwW.js:104
+(anonymous) @ index-CX57mdwW.js:104
+index-CX57mdwW.js:104 Uncaught InvalidStateError: Failed to execute 'createMediaElementSource' on 'AudioContext': HTMLMediaElement already connected previously to a different MediaElementSourceNode.
+    at Gi.<anonymous> (index-CX57mdwW.js:104:238173)
+    at s.emit (index-CX57mdwW.js:68:62648)
+    at Gi.emit (index-CX57mdwW.js:104:213368)
+    at Da.<anonymous> (index-CX57mdwW.js:104:207493)
+    at s.emit (index-CX57mdwW.js:68:62648)
+    at Da.emit (index-CX57mdwW.js:104:167817)
+    at Sw.<anonymous> (index-CX57mdwW.js:104:164137)
+    at s.emit (index-CX57mdwW.js:68:62648)
+    at Sw.setTrack (index-CX57mdwW.js:104:160658)
+    at Da.addSubscribedMediaTrack (index-CX57mdwW.js:104:165702)
+(anonymous) @ index-CX57mdwW.js:104
+s.emit @ index-CX57mdwW.js:68
+emit @ index-CX57mdwW.js:104
+(anonymous) @ index-CX57mdwW.js:104
+s.emit @ index-CX57mdwW.js:68
+emit @ index-CX57mdwW.js:104
+(anonymous) @ index-CX57mdwW.js:104
+s.emit @ index-CX57mdwW.js:68
+setTrack @ index-CX57mdwW.js:104
+addSubscribedMediaTrack @ index-CX57mdwW.js:104
+onTrackAdded @ index-CX57mdwW.js:104
+(anonymous) @ index-CX57mdwW.js:104
+s.emit @ index-CX57mdwW.js:68
+pcManager.onTrack @ index-CX57mdwW.js:104
+NE.n.subscriber.onTrack @ index-CX57mdwW.js:104
+e.ontrack @ index-CX57mdwW.js:104
+c @ index-CX57mdwW.js:68
+index-CX57mdwW.js:104 Uncaught InvalidStateError: Failed to execute 'createMediaElementSource' on 'AudioContext': HTMLMediaElement already connected previously to a different MediaElementSourceNode.
+    at Gi.<anonymous> (index-CX57mdwW.js:104:238173)
+    at s.emit (index-CX57mdwW.js:68:62648)
+    at Gi.emit (index-CX57mdwW.js:104:213368)
+    at Da.<anonymous> (index-CX57mdwW.js:104:207493)
+    at s.emit (index-CX57mdwW.js:68:62648)
+    at Da.emit (index-CX57mdwW.js:104:167817)
+    at Sw.<anonymous> (index-CX57mdwW.js:104:164137)
+    at s.emit (index-CX57mdwW.js:68:62648)
+    at Sw.setTrack (index-CX57mdwW.js:104:160658)
+    at Da.addSubscribedMediaTrack (index-CX57mdwW.js:104:165702)
+(anonymous) @ index-CX57mdwW.js:104
+s.emit @ index-CX57mdwW.js:68
+emit @ index-CX57mdwW.js:104
+(anonymous) @ index-CX57mdwW.js:104
+s.emit @ index-CX57mdwW.js:68
+emit @ index-CX57mdwW.js:104
+(anonymous) @ index-CX57mdwW.js:104
+s.emit @ index-CX57mdwW.js:68
+setTrack @ index-CX57mdwW.js:104
+addSubscribedMediaTrack @ index-CX57mdwW.js:104
+onTrackAdded @ index-CX57mdwW.js:104
+(anonymous) @ index-CX57mdwW.js:104
+s.emit @ index-CX57mdwW.js:68
+pcManager.onTrack @ index-CX57mdwW.js:104
+NE.n.subscriber.onTrack @ index-CX57mdwW.js:104
+e.ontrack @ index-CX57mdwW.js:104
+c @ index-CX57mdwW.js:68
+index-CX57mdwW.js:68 Uncaught (in promise) UnexpectedConnectionState: PC manager is closed
+    at index-CX57mdwW.js:104:81664
+    at Generator.next (<anonymous>)
+    at index-CX57mdwW.js:68:59820
+    at new Promise (<anonymous>)
+    at S (index-CX57mdwW.js:68:59617)
+    at rw.ensureDataTransportConnected (index-CX57mdwW.js:104:81486)
+    at rw.<anonymous> (index-CX57mdwW.js:104:82642)
+    at Generator.next (<anonymous>)
+    at index-CX57mdwW.js:68:59820
+    at new Promise (<anonymous>)
+c @ index-CX57mdwW.js:68
+Promise.then
+l @ index-CX57mdwW.js:68
+(anonymous) @ index-CX57mdwW.js:68
+S @ index-CX57mdwW.js:68
+publishData @ index-CX57mdwW.js:104
+(anonymous) @ index-CX57mdwW.js:104
+(anonymous) @ index-CX57mdwW.js:104
+index-CX57mdwW.js:68 MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 11 rtpVideoPayloadTypes listeners added. Use emitter.setMaxListeners() to increase limit
+    at l (index-CX57mdwW.js:68:63107)
+    at s.addListener (index-CX57mdwW.js:68:63390)
+    at s.once (index-CX57mdwW.js:68:63874)
+    at rw.<anonymous> (index-CX57mdwW.js:104:83421)
+    at Generator.next (<anonymous>)
+    at index-CX57mdwW.js:68:59820
+    at new Promise (<anonymous>)
+    at S (index-CX57mdwW.js:68:59617)
+    at index-CX57mdwW.js:104:82946
+    at new Promise (<anonymous>)
+i @ index-CX57mdwW.js:68
+l @ index-CX57mdwW.js:68
+s.addListener @ index-CX57mdwW.js:68
+s.once @ index-CX57mdwW.js:68
+(anonymous) @ index-CX57mdwW.js:104
+(anonymous) @ index-CX57mdwW.js:68
+S @ index-CX57mdwW.js:68
+(anonymous) @ index-CX57mdwW.js:104
+(anonymous) @ index-CX57mdwW.js:104
+(anonymous) @ index-CX57mdwW.js:68
+S @ index-CX57mdwW.js:68
+negotiate @ index-CX57mdwW.js:104
+(anonymous) @ index-CX57mdwW.js:104
+(anonymous) @ index-CX57mdwW.js:68
+S @ index-CX57mdwW.js:68
+unpublishTrack @ index-CX57mdwW.js:104
+qr @ index-CX57mdwW.js:104
+U0 @ index-CX57mdwW.js:37
+B0 @ index-CX57mdwW.js:37
+z0 @ index-CX57mdwW.js:37
+Dh @ index-CX57mdwW.js:37
+Bm @ index-CX57mdwW.js:37
+(anonymous) @ index-CX57mdwW.js:37
+md @ index-CX57mdwW.js:40
+um @ index-CX57mdwW.js:37
+Pc @ index-CX57mdwW.js:37
+Wu @ index-CX57mdwW.js:37
+ik @ index-CX57mdwW.js:37
+index-CX57mdwW.js:104 Uncaught InvalidStateError: Failed to execute 'createMediaElementSource' on 'AudioContext': HTMLMediaElement already connected previously to a different MediaElementSourceNode.
+    at Gi.<anonymous> (index-CX57mdwW.js:104:238173)
+    at s.emit (index-CX57mdwW.js:68:62648)
+    at Gi.emit (index-CX57mdwW.js:104:213368)
+    at Da.<anonymous> (index-CX57mdwW.js:104:207493)
+    at s.emit (index-CX57mdwW.js:68:62648)
+    at Da.emit (index-CX57mdwW.js:104:167817)
+    at Sw.<anonymous> (index-CX57mdwW.js:104:164137)
+    at s.emit (index-CX57mdwW.js:68:62648)
+    at Sw.setTrack (index-CX57mdwW.js:104:160658)
+    at Da.addSubscribedMediaTrack (index-CX57mdwW.js:104:165702)
+(anonymous) @ index-CX57mdwW.js:104
+s.emit @ index-CX57mdwW.js:68
+emit @ index-CX57mdwW.js:104
+(anonymous) @ index-CX57mdwW.js:104
+s.emit @ index-CX57mdwW.js:68
+emit @ index-CX57mdwW.js:104
+(anonymous) @ index-CX57mdwW.js:104
+s.emit @ index-CX57mdwW.js:68
+setTrack @ index-CX57mdwW.js:104
+addSubscribedMediaTrack @ index-CX57mdwW.js:104
+onTrackAdded @ index-CX57mdwW.js:104
+(anonymous) @ index-CX57mdwW.js:104
+s.emit @ index-CX57mdwW.js:68
+pcManager.onTrack @ index-CX57mdwW.js:104
+NE.n.subscriber.onTrack @ index-CX57mdwW.js:104
+e.ontrack @ index-CX57mdwW.js:104
+c @ index-CX57mdwW.js:68
+index-CX57mdwW.js:104 Uncaught InvalidStateError: Failed to execute 'createMediaElementSource' on 'AudioContext': HTMLMediaElement already connected previously to a different MediaElementSourceNode.
+    at Gi.<anonymous> (index-CX57mdwW.js:104:238173)
+    at s.emit (index-CX57mdwW.js:68:62648)
+    at Gi.emit (index-CX57mdwW.js:104:213368)
+    at Da.<anonymous> (index-CX57mdwW.js:104:207493)
+    at s.emit (index-CX57mdwW.js:68:62648)
+    at Da.emit (index-CX57mdwW.js:104:167817)
+    at Sw.<anonymous> (index-CX57mdwW.js:104:164137)
+    at s.emit (index-CX57mdwW.js:68:62648)
+    at Sw.setTrack (index-CX57mdwW.js:104:160658)
+    at Da.addSubscribedMediaTrack (index-CX57mdwW.js:104:165702)
+(anonymous) @ index-CX57mdwW.js:104
+s.emit @ index-CX57mdwW.js:68
+emit @ index-CX57mdwW.js:104
+(anonymous) @ index-CX57mdwW.js:104
+s.emit @ index-CX57mdwW.js:68
+emit @ index-CX57mdwW.js:104
+(anonymous) @ index-CX57mdwW.js:104
+s.emit @ index-CX57mdwW.js:68
+setTrack @ index-CX57mdwW.js:104
+addSubscribedMediaTrack @ index-CX57mdwW.js:104
+onTrackAdded @ index-CX57mdwW.js:104
+(anonymous) @ index-CX57mdwW.js:104
+s.emit @ index-CX57mdwW.js:68
+pcManager.onTrack @ index-CX57mdwW.js:104
+NE.n.subscriber.onTrack @ index-CX57mdwW.js:104
+e.ontrack @ index-CX57mdwW.js:104
+c @ index-CX57mdwW.js:68
+index-CX57mdwW.js:68 Uncaught (in promise) UnexpectedConnectionState: PC manager is closed
+    at index-CX57mdwW.js:104:81664
+    at Generator.next (<anonymous>)
+    at index-CX57mdwW.js:68:59820
+    at new Promise (<anonymous>)
+    at S (index-CX57mdwW.js:68:59617)
+    at rw.ensureDataTransportConnected (index-CX57mdwW.js:104:81486)
+    at rw.<anonymous> (index-CX57mdwW.js:104:82642)
+    at Generator.next (<anonymous>)
+    at index-CX57mdwW.js:68:59820
+    at new Promise (<anonymous>)
+c @ index-CX57mdwW.js:68
+Promise.then
+l @ index-CX57mdwW.js:68
+(anonymous) @ index-CX57mdwW.js:68
+S @ index-CX57mdwW.js:68
+publishData @ index-CX57mdwW.js:104
+(anonymous) @ index-CX57mdwW.js:104
+(anonymous) @ index-CX57mdwW.js:104

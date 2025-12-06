@@ -1,0 +1,354 @@
+/api/auth/me:1  Failed to load resource: the server responded with a status of 401 ()
+/login:1 [DOM] Input elements should have autocomplete attributes (suggested: "current-password"): (More info: https://goo.gl/9p2vKq) null
+/admin:1 [DOM] Input elements should have autocomplete attributes (suggested: "current-password"): (More info: https://goo.gl/9p2vKq) <input type=​"password" required minlength=​"4" value=​"Constable-0702" style=​"width:​ 100%;​ padding:​ 10px 12px;​ border-radius:​ 6px;​ border:​ 1px solid rgb(68, 68, 68)​;​ background:​ rgb(42, 42, 62)​;​ color:​ rgb(255, 255, 255)​;​ font-size:​ 14px;​ margin-top:​ 4px;​ box-sizing:​ border-box;​">​
+index-CX57mdwW.js:104 Uncaught (in promise) UnexpectedConnectionState: PC manager is closed
+    at index-CX57mdwW.js:104:81664
+    at Generator.next (<anonymous>)
+    at index-CX57mdwW.js:68:59820
+    at new Promise (<anonymous>)
+    at S (index-CX57mdwW.js:68:59617)
+    at rw.ensureDataTransportConnected (index-CX57mdwW.js:104:81486)
+    at rw.<anonymous> (index-CX57mdwW.js:104:82642)
+    at Generator.next (<anonymous>)
+    at index-CX57mdwW.js:68:59820
+    at new Promise (<anonymous>)
+index-CX57mdwW.js:104 Initial connection failed with ConnectionError: could not establish pc connection. Retrying with another region: https://reeder-ptt-rcm02mdx.ochicago1b.production.livekit.cloud Object
+index-CX57mdwW.js:104 abort transport connection Object
+u @ index-CX57mdwW.js:104
+index-CX57mdwW.js:104 Unknown DataChannel error on lossy Object
+handleDataError @ index-CX57mdwW.js:104
+index-CX57mdwW.js:104 Unknown DataChannel error on reliable Object
+handleDataError @ index-CX57mdwW.js:104
+index-CX57mdwW.js:104 Uncaught (in promise) UnexpectedConnectionState: PC manager is closed
+    at index-CX57mdwW.js:104:81664
+    at Generator.next (<anonymous>)
+    at index-CX57mdwW.js:68:59820
+    at new Promise (<anonymous>)
+    at S (index-CX57mdwW.js:68:59617)
+    at rw.ensureDataTransportConnected (index-CX57mdwW.js:104:81486)
+    at rw.<anonymous> (index-CX57mdwW.js:104:82642)
+    at Generator.next (<anonymous>)
+    at index-CX57mdwW.js:68:59820
+    at new Promise (<anonymous>)
+index-CX57mdwW.js:104 Uncaught (in promise) UnexpectedConnectionState: PC manager is closed
+    at index-CX57mdwW.js:104:81664
+    at Generator.next (<anonymous>)
+    at index-CX57mdwW.js:68:59820
+    at new Promise (<anonymous>)
+    at S (index-CX57mdwW.js:68:59617)
+    at rw.ensureDataTransportConnected (index-CX57mdwW.js:104:81486)
+    at rw.<anonymous> (index-CX57mdwW.js:104:82642)
+    at Generator.next (<anonymous>)
+    at index-CX57mdwW.js:68:59820
+    at new Promise (<anonymous>)
+index-CX57mdwW.js:104 Uncaught (in promise) UnexpectedConnectionState: PC manager is closed
+    at index-CX57mdwW.js:104:81664
+    at Generator.next (<anonymous>)
+    at index-CX57mdwW.js:68:59820
+    at new Promise (<anonymous>)
+    at S (index-CX57mdwW.js:68:59617)
+    at rw.ensureDataTransportConnected (index-CX57mdwW.js:104:81486)
+    at rw.<anonymous> (index-CX57mdwW.js:104:82642)
+    at Generator.next (<anonymous>)
+    at index-CX57mdwW.js:68:59820
+    at new Promise (<anonymous>)
+index-CX57mdwW.js:104 Uncaught (in promise) UnexpectedConnectionState: PC manager is closed
+    at index-CX57mdwW.js:104:81664
+    at Generator.next (<anonymous>)
+    at index-CX57mdwW.js:68:59820
+    at new Promise (<anonymous>)
+    at S (index-CX57mdwW.js:68:59617)
+    at rw.ensureDataTransportConnected (index-CX57mdwW.js:104:81486)
+    at rw.<anonymous> (index-CX57mdwW.js:104:82642)
+    at Generator.next (<anonymous>)
+    at index-CX57mdwW.js:68:59820
+    at new Promise (<anonymous>)
+index-CX57mdwW.js:104 Uncaught (in promise) UnexpectedConnectionState: PC manager is closed
+    at index-CX57mdwW.js:104:81664
+    at Generator.next (<anonymous>)
+    at index-CX57mdwW.js:68:59820
+    at new Promise (<anonymous>)
+    at S (index-CX57mdwW.js:68:59617)
+    at rw.ensureDataTransportConnected (index-CX57mdwW.js:104:81486)
+    at rw.<anonymous> (index-CX57mdwW.js:104:82642)
+    at Generator.next (<anonymous>)
+    at index-CX57mdwW.js:68:59820
+    at new Promise (<anonymous>)
+index-CX57mdwW.js:104 Uncaught (in promise) UnexpectedConnectionState: PC manager is closed
+    at index-CX57mdwW.js:104:81664
+    at Generator.next (<anonymous>)
+    at index-CX57mdwW.js:68:59820
+    at new Promise (<anonymous>)
+    at S (index-CX57mdwW.js:68:59617)
+    at rw.ensureDataTransportConnected (index-CX57mdwW.js:104:81486)
+    at rw.<anonymous> (index-CX57mdwW.js:104:82642)
+    at Generator.next (<anonymous>)
+    at index-CX57mdwW.js:68:59820
+    at new Promise (<anonymous>)
+index-CX57mdwW.js:104 Uncaught (in promise) UnexpectedConnectionState: PC manager is closed
+    at index-CX57mdwW.js:104:81664
+    at Generator.next (<anonymous>)
+    at index-CX57mdwW.js:68:59820
+    at new Promise (<anonymous>)
+    at S (index-CX57mdwW.js:68:59617)
+    at rw.ensureDataTransportConnected (index-CX57mdwW.js:104:81486)
+    at rw.<anonymous> (index-CX57mdwW.js:104:82642)
+    at Generator.next (<anonymous>)
+    at index-CX57mdwW.js:68:59820
+    at new Promise (<anonymous>)
+index-CX57mdwW.js:104 Uncaught (in promise) UnexpectedConnectionState: PC manager is closed
+    at index-CX57mdwW.js:104:81664
+    at Generator.next (<anonymous>)
+    at index-CX57mdwW.js:68:59820
+    at new Promise (<anonymous>)
+    at S (index-CX57mdwW.js:68:59617)
+    at rw.ensureDataTransportConnected (index-CX57mdwW.js:104:81486)
+    at rw.<anonymous> (index-CX57mdwW.js:104:82642)
+    at Generator.next (<anonymous>)
+    at index-CX57mdwW.js:68:59820
+    at new Promise (<anonymous>)
+index-CX57mdwW.js:104 Uncaught (in promise) UnexpectedConnectionState: PC manager is closed
+    at index-CX57mdwW.js:104:81664
+    at Generator.next (<anonymous>)
+    at index-CX57mdwW.js:68:59820
+    at new Promise (<anonymous>)
+    at S (index-CX57mdwW.js:68:59617)
+    at rw.ensureDataTransportConnected (index-CX57mdwW.js:104:81486)
+    at rw.<anonymous> (index-CX57mdwW.js:104:82642)
+    at Generator.next (<anonymous>)
+    at index-CX57mdwW.js:68:59820
+    at new Promise (<anonymous>)
+index-CX57mdwW.js:104 Uncaught (in promise) UnexpectedConnectionState: PC manager is closed
+    at index-CX57mdwW.js:104:81664
+    at Generator.next (<anonymous>)
+    at index-CX57mdwW.js:68:59820
+    at new Promise (<anonymous>)
+    at S (index-CX57mdwW.js:68:59617)
+    at rw.ensureDataTransportConnected (index-CX57mdwW.js:104:81486)
+    at rw.<anonymous> (index-CX57mdwW.js:104:82642)
+    at Generator.next (<anonymous>)
+    at index-CX57mdwW.js:68:59820
+    at new Promise (<anonymous>)
+index-CX57mdwW.js:104 Uncaught (in promise) UnexpectedConnectionState: PC manager is closed
+    at index-CX57mdwW.js:104:81664
+    at Generator.next (<anonymous>)
+    at index-CX57mdwW.js:68:59820
+    at new Promise (<anonymous>)
+    at S (index-CX57mdwW.js:68:59617)
+    at rw.ensureDataTransportConnected (index-CX57mdwW.js:104:81486)
+    at rw.<anonymous> (index-CX57mdwW.js:104:82642)
+    at Generator.next (<anonymous>)
+    at index-CX57mdwW.js:68:59820
+    at new Promise (<anonymous>)
+index-CX57mdwW.js:104 Uncaught (in promise) UnexpectedConnectionState: PC manager is closed
+    at index-CX57mdwW.js:104:81664
+    at Generator.next (<anonymous>)
+    at index-CX57mdwW.js:68:59820
+    at new Promise (<anonymous>)
+    at S (index-CX57mdwW.js:68:59617)
+    at rw.ensureDataTransportConnected (index-CX57mdwW.js:104:81486)
+    at rw.<anonymous> (index-CX57mdwW.js:104:82642)
+    at Generator.next (<anonymous>)
+    at index-CX57mdwW.js:68:59820
+    at new Promise (<anonymous>)
+index-CX57mdwW.js:104 Uncaught (in promise) UnexpectedConnectionState: PC manager is closed
+    at index-CX57mdwW.js:104:81664
+    at Generator.next (<anonymous>)
+    at index-CX57mdwW.js:68:59820
+    at new Promise (<anonymous>)
+    at S (index-CX57mdwW.js:68:59617)
+    at rw.ensureDataTransportConnected (index-CX57mdwW.js:104:81486)
+    at rw.<anonymous> (index-CX57mdwW.js:104:82642)
+    at Generator.next (<anonymous>)
+    at index-CX57mdwW.js:68:59820
+    at new Promise (<anonymous>)
+index-CX57mdwW.js:104 Uncaught (in promise) UnexpectedConnectionState: PC manager is closed
+    at index-CX57mdwW.js:104:81664
+    at Generator.next (<anonymous>)
+    at index-CX57mdwW.js:68:59820
+    at new Promise (<anonymous>)
+    at S (index-CX57mdwW.js:68:59617)
+    at rw.ensureDataTransportConnected (index-CX57mdwW.js:104:81486)
+    at rw.<anonymous> (index-CX57mdwW.js:104:82642)
+    at Generator.next (<anonymous>)
+    at index-CX57mdwW.js:68:59820
+    at new Promise (<anonymous>)
+index-CX57mdwW.js:104 Uncaught (in promise) UnexpectedConnectionState: PC manager is closed
+    at index-CX57mdwW.js:104:81664
+    at Generator.next (<anonymous>)
+    at index-CX57mdwW.js:68:59820
+    at new Promise (<anonymous>)
+    at S (index-CX57mdwW.js:68:59617)
+    at rw.ensureDataTransportConnected (index-CX57mdwW.js:104:81486)
+    at rw.<anonymous> (index-CX57mdwW.js:104:82642)
+    at Generator.next (<anonymous>)
+    at index-CX57mdwW.js:68:59820
+    at new Promise (<anonymous>)
+index-CX57mdwW.js:104 Uncaught (in promise) UnexpectedConnectionState: PC manager is closed
+    at index-CX57mdwW.js:104:81664
+    at Generator.next (<anonymous>)
+    at index-CX57mdwW.js:68:59820
+    at new Promise (<anonymous>)
+    at S (index-CX57mdwW.js:68:59617)
+    at rw.ensureDataTransportConnected (index-CX57mdwW.js:104:81486)
+    at rw.<anonymous> (index-CX57mdwW.js:104:82642)
+    at Generator.next (<anonymous>)
+    at index-CX57mdwW.js:68:59820
+    at new Promise (<anonymous>)
+index-CX57mdwW.js:104 Uncaught (in promise) UnexpectedConnectionState: PC manager is closed
+    at index-CX57mdwW.js:104:81664
+    at Generator.next (<anonymous>)
+    at index-CX57mdwW.js:68:59820
+    at new Promise (<anonymous>)
+    at S (index-CX57mdwW.js:68:59617)
+    at rw.ensureDataTransportConnected (index-CX57mdwW.js:104:81486)
+    at rw.<anonymous> (index-CX57mdwW.js:104:82642)
+    at Generator.next (<anonymous>)
+    at index-CX57mdwW.js:68:59820
+    at new Promise (<anonymous>)
+index-CX57mdwW.js:104 Uncaught (in promise) UnexpectedConnectionState: PC manager is closed
+    at index-CX57mdwW.js:104:81664
+    at Generator.next (<anonymous>)
+    at index-CX57mdwW.js:68:59820
+    at new Promise (<anonymous>)
+    at S (index-CX57mdwW.js:68:59617)
+    at rw.ensureDataTransportConnected (index-CX57mdwW.js:104:81486)
+    at rw.<anonymous> (index-CX57mdwW.js:104:82642)
+    at Generator.next (<anonymous>)
+    at index-CX57mdwW.js:68:59820
+    at new Promise (<anonymous>)
+index-CX57mdwW.js:104 Uncaught InvalidStateError: Failed to execute 'createMediaElementSource' on 'AudioContext': HTMLMediaElement already connected previously to a different MediaElementSourceNode.
+    at Gi.<anonymous> (index-CX57mdwW.js:104:256041)
+    at s.emit (index-CX57mdwW.js:68:62648)
+    at Gi.emit (index-CX57mdwW.js:104:213368)
+    at Da.<anonymous> (index-CX57mdwW.js:104:207493)
+    at s.emit (index-CX57mdwW.js:68:62648)
+    at Da.emit (index-CX57mdwW.js:104:167817)
+    at Sw.<anonymous> (index-CX57mdwW.js:104:164137)
+    at s.emit (index-CX57mdwW.js:68:62648)
+    at Sw.setTrack (index-CX57mdwW.js:104:160658)
+    at Da.addSubscribedMediaTrack (index-CX57mdwW.js:104:165702)
+index-CX57mdwW.js:104 Uncaught (in promise) UnexpectedConnectionState: PC manager is closed
+    at index-CX57mdwW.js:104:81664
+    at Generator.next (<anonymous>)
+    at index-CX57mdwW.js:68:59820
+    at new Promise (<anonymous>)
+    at S (index-CX57mdwW.js:68:59617)
+    at rw.ensureDataTransportConnected (index-CX57mdwW.js:104:81486)
+    at rw.<anonymous> (index-CX57mdwW.js:104:82642)
+    at Generator.next (<anonymous>)
+    at index-CX57mdwW.js:68:59820
+    at new Promise (<anonymous>)
+index-CX57mdwW.js:104 Uncaught InvalidStateError: Failed to execute 'createMediaElementSource' on 'AudioContext': HTMLMediaElement already connected previously to a different MediaElementSourceNode.
+    at Gi.<anonymous> (index-CX57mdwW.js:104:256041)
+    at s.emit (index-CX57mdwW.js:68:62648)
+    at Gi.emit (index-CX57mdwW.js:104:213368)
+    at Da.<anonymous> (index-CX57mdwW.js:104:207493)
+    at s.emit (index-CX57mdwW.js:68:62648)
+    at Da.emit (index-CX57mdwW.js:104:167817)
+    at Sw.<anonymous> (index-CX57mdwW.js:104:164137)
+    at s.emit (index-CX57mdwW.js:68:62648)
+    at Sw.setTrack (index-CX57mdwW.js:104:160658)
+    at Da.addSubscribedMediaTrack (index-CX57mdwW.js:104:165702)
+index-CX57mdwW.js:104 Uncaught InvalidStateError: Failed to execute 'createMediaElementSource' on 'AudioContext': HTMLMediaElement already connected previously to a different MediaElementSourceNode.
+    at Gi.<anonymous> (index-CX57mdwW.js:104:256041)
+    at s.emit (index-CX57mdwW.js:68:62648)
+    at Gi.emit (index-CX57mdwW.js:104:213368)
+    at Da.<anonymous> (index-CX57mdwW.js:104:207493)
+    at s.emit (index-CX57mdwW.js:68:62648)
+    at Da.emit (index-CX57mdwW.js:104:167817)
+    at Sw.<anonymous> (index-CX57mdwW.js:104:164137)
+    at s.emit (index-CX57mdwW.js:68:62648)
+    at Sw.setTrack (index-CX57mdwW.js:104:160658)
+    at Da.addSubscribedMediaTrack (index-CX57mdwW.js:104:165702)
+index-CX57mdwW.js:104 Uncaught (in promise) UnexpectedConnectionState: PC manager is closed
+    at index-CX57mdwW.js:104:81664
+    at Generator.next (<anonymous>)
+    at index-CX57mdwW.js:68:59820
+    at new Promise (<anonymous>)
+    at S (index-CX57mdwW.js:68:59617)
+    at rw.ensureDataTransportConnected (index-CX57mdwW.js:104:81486)
+    at rw.<anonymous> (index-CX57mdwW.js:104:82642)
+    at Generator.next (<anonymous>)
+    at index-CX57mdwW.js:68:59820
+    at new Promise (<anonymous>)
+index-CX57mdwW.js:104 Connection error: InvalidStateError: Failed to execute 'createMediaElementSource' on 'AudioContext': HTMLMediaElement already connected previously to a different MediaElementSourceNode.
+    at Gi.<anonymous> (index-CX57mdwW.js:104:238173)
+    at s.emit (index-CX57mdwW.js:68:62648)
+    at Gi.emit (index-CX57mdwW.js:104:213368)
+    at Da.<anonymous> (index-CX57mdwW.js:104:207493)
+    at s.emit (index-CX57mdwW.js:68:62648)
+    at Da.emit (index-CX57mdwW.js:104:167817)
+    at Sw.<anonymous> (index-CX57mdwW.js:104:164137)
+    at s.emit (index-CX57mdwW.js:68:62648)
+    at Sw.setTrack (index-CX57mdwW.js:104:160658)
+    at Da.addSubscribedMediaTrack (index-CX57mdwW.js:104:165702)
+th @ index-CX57mdwW.js:104
+index-CX57mdwW.js:104 Connection error: InvalidStateError: Failed to execute 'createMediaElementSource' on 'AudioContext': HTMLMediaElement already connected previously to a different MediaElementSourceNode.
+    at Gi.<anonymous> (index-CX57mdwW.js:104:238173)
+    at s.emit (index-CX57mdwW.js:68:62648)
+    at Gi.emit (index-CX57mdwW.js:104:213368)
+    at Da.<anonymous> (index-CX57mdwW.js:104:207493)
+    at s.emit (index-CX57mdwW.js:68:62648)
+    at Da.emit (index-CX57mdwW.js:104:167817)
+    at Sw.<anonymous> (index-CX57mdwW.js:104:164137)
+    at s.emit (index-CX57mdwW.js:68:62648)
+    at Sw.setTrack (index-CX57mdwW.js:104:160658)
+    at Da.addSubscribedMediaTrack (index-CX57mdwW.js:104:165702)
+th @ index-CX57mdwW.js:104
+index-CX57mdwW.js:104 Connection error: InvalidStateError: Failed to execute 'createMediaElementSource' on 'AudioContext': HTMLMediaElement already connected previously to a different MediaElementSourceNode.
+    at Gi.<anonymous> (index-CX57mdwW.js:104:238173)
+    at s.emit (index-CX57mdwW.js:68:62648)
+    at Gi.emit (index-CX57mdwW.js:104:213368)
+    at Da.<anonymous> (index-CX57mdwW.js:104:207493)
+    at s.emit (index-CX57mdwW.js:68:62648)
+    at Da.emit (index-CX57mdwW.js:104:167817)
+    at Sw.<anonymous> (index-CX57mdwW.js:104:164137)
+    at s.emit (index-CX57mdwW.js:68:62648)
+    at Sw.setTrack (index-CX57mdwW.js:104:160658)
+    at Da.addSubscribedMediaTrack (index-CX57mdwW.js:104:165702)
+th @ index-CX57mdwW.js:104
+index-CX57mdwW.js:104 Connection error: InvalidStateError: Failed to execute 'createMediaElementSource' on 'AudioContext': HTMLMediaElement already connected previously to a different MediaElementSourceNode.
+    at Gi.<anonymous> (index-CX57mdwW.js:104:238173)
+    at s.emit (index-CX57mdwW.js:68:62648)
+    at Gi.emit (index-CX57mdwW.js:104:213368)
+    at Da.<anonymous> (index-CX57mdwW.js:104:207493)
+    at s.emit (index-CX57mdwW.js:68:62648)
+    at Da.emit (index-CX57mdwW.js:104:167817)
+    at Sw.<anonymous> (index-CX57mdwW.js:104:164137)
+    at s.emit (index-CX57mdwW.js:68:62648)
+    at Sw.setTrack (index-CX57mdwW.js:104:160658)
+    at Da.addSubscribedMediaTrack (index-CX57mdwW.js:104:165702)
+th @ index-CX57mdwW.js:104
+index-CX57mdwW.js:104 skipping incoming track after Room disconnected Object
+onTrackAdded @ index-CX57mdwW.js:104
+index-CX57mdwW.js:104 Uncaught (in promise) UnexpectedConnectionState: PC manager is closed
+    at index-CX57mdwW.js:104:81664
+    at Generator.next (<anonymous>)
+    at index-CX57mdwW.js:68:59820
+    at new Promise (<anonymous>)
+    at S (index-CX57mdwW.js:68:59617)
+    at rw.ensureDataTransportConnected (index-CX57mdwW.js:104:81486)
+    at rw.<anonymous> (index-CX57mdwW.js:104:82642)
+    at Generator.next (<anonymous>)
+    at index-CX57mdwW.js:68:59820
+    at new Promise (<anonymous>)
+index-CX57mdwW.js:68 Uncaught (in promise) UnexpectedConnectionState: PC manager is closed
+    at index-CX57mdwW.js:104:81664
+    at Generator.next (<anonymous>)
+    at index-CX57mdwW.js:68:59820
+    at new Promise (<anonymous>)
+    at S (index-CX57mdwW.js:68:59617)
+    at rw.ensureDataTransportConnected (index-CX57mdwW.js:104:81486)
+    at rw.<anonymous> (index-CX57mdwW.js:104:82642)
+    at Generator.next (<anonymous>)
+    at index-CX57mdwW.js:68:59820
+    at new Promise (<anonymous>)
+c @ index-CX57mdwW.js:68
+Promise.then
+l @ index-CX57mdwW.js:68
+(anonymous) @ index-CX57mdwW.js:68
+S @ index-CX57mdwW.js:68
+publishData @ index-CX57mdwW.js:104
+(anonymous) @ index-CX57mdwW.js:104
+(anonymous) @ index-CX57mdwW.js:104
