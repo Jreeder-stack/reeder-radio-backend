@@ -1,48 +1,48 @@
 # Reeder Radio PTT
 
 ## Overview
-A Push-to-Talk (PTT) radio communication app using LiveKit for real-time audio streaming. This is a fullstack application with a React frontend and Express backend.
+A Push-to-Talk (PTT) radio communication app using LiveKit for real-time audio streaming. Fullstack application with React frontend and Express backend.
 
 ## Project Structure
 ```
 /
-├── server.js          # Express backend - generates LiveKit access tokens
-├── package.json       # Backend dependencies
+├── server.js          # Express backend - generates LiveKit access tokens, serves static files
+├── package.json       # Backend dependencies (express, livekit-server-sdk, cors, dotenv)
 ├── client/            # React frontend (Vite)
 │   ├── src/
 │   │   ├── App.jsx    # Main PTT interface component
 │   │   └── main.jsx   # React entry point
 │   ├── vite.config.js # Vite configuration with proxy to backend
-│   └── package.json   # Frontend dependencies
+│   ├── index.html     # HTML entry point
+│   └── package.json   # Frontend dependencies (react, livekit-client)
 ```
-
-## Architecture
-
-### Backend (Express - Port 3001)
-- Provides `/getToken` endpoint for LiveKit access token generation
-- Uses `livekit-server-sdk` to create JWT tokens for room access
-- Runs on port 3001, proxied through the frontend
-
-### Frontend (React/Vite - Port 5000)
-- React app with LiveKit client integration
-- Push-to-Talk interface with channel selection
-- Vite dev server proxies `/getToken` requests to backend
 
 ## Environment Variables
 
-### Required Secrets (already configured):
+### Required Secrets:
 - `LIVEKIT_API_KEY` - LiveKit API key
 - `LIVEKIT_API_SECRET` - LiveKit API secret  
 - `LIVEKIT_URL` - LiveKit server URL (wss://...)
 
-### Frontend Environment:
+### Frontend Environment (development):
 - `VITE_LIVEKIT_URL` - LiveKit server URL for browser client
 
-## Running the App
+## Running Locally (Replit)
 
 Both workflows run automatically:
 1. **Backend API** - `npm start` (port 3001)
 2. **Frontend** - `cd client && npm run dev` (port 5000)
+
+## Deploying to Render
+
+Build command: `cd client && npm install && npm run build && cd .. && npm install`
+Start command: `node server.js`
+
+Set these environment variables in Render:
+- `LIVEKIT_API_KEY`
+- `LIVEKIT_API_SECRET`
+- `LIVEKIT_URL`
+- `VITE_LIVEKIT_URL`
 
 ## Features
 - Unit ID-based authentication
