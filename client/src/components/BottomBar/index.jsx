@@ -9,8 +9,10 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit }) {
   const { isTalking, setTalking, clearAirEnabled, toggleClearAir } = useDispatcherStore();
   const [disabledTones, setDisabledTones] = useState({});
   const [toneTransmitting, setToneTransmitting] = useState(false);
+  const [channelBusy, setChannelBusy] = useState(false);
   const pttRef = useRef(null);
   const pttActiveRef = useRef(false);
+  const busyModeRef = useRef(false);
 
   const selectedChannelNames = selectedTxChannels
     .map(id => channels.find(c => c.id === id)?.name)
@@ -32,7 +34,18 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit }) {
   const startTransmission = useCallback(async () => {
     if (selectedChannelNames.length === 0) return false;
     
+    const isBusy = livekitEngine.areAnyChannelsBusy(selectedChannelNames);
+    
+    if (isBusy) {
+      busyModeRef.current = true;
+      setChannelBusy(true);
+      toneEngine.startBusyTone();
+      return false;
+    }
+    
     try {
+      livekitEngine.muteChannelsForTx(selectedChannelNames);
+      
       await livekitEngine.publishAudioToChannels(selectedChannelNames);
       
       const txContext = livekitEngine.getTxContext();
@@ -42,19 +55,31 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit }) {
         toneEngine.setTxMode(txContext, toneDestination);
       }
       
+      toneEngine.playAuthorizationTone();
+      
       return true;
     } catch (err) {
       console.error('Failed to start transmission:', err);
+      livekitEngine.unmuteChannelsForTx(selectedChannelNames);
       return false;
     }
   }, [selectedChannelNames]);
 
   const stopTransmission = useCallback(async () => {
+    if (busyModeRef.current) {
+      busyModeRef.current = false;
+      setChannelBusy(false);
+      toneEngine.stopBusyTone();
+      return;
+    }
+    
     try {
       toneEngine.clearTxMode();
       await livekitEngine.unpublishAudioFromChannels(selectedChannelNames);
     } catch (err) {
       console.error('Failed to stop transmission:', err);
+    } finally {
+      livekitEngine.unmuteChannelsForTx(selectedChannelNames);
     }
   }, [selectedChannelNames]);
 
@@ -64,11 +89,13 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit }) {
     if (pttActiveRef.current) return;
     
     pttActiveRef.current = true;
-    setTalking(true);
     
-    await startTransmission();
+    const success = await startTransmission();
     
-    if (onPTTStart) onPTTStart(selectedChannelNames);
+    if (success) {
+      setTalking(true);
+      if (onPTTStart) onPTTStart(selectedChannelNames);
+    }
   }, [selectedTxChannels, selectedChannelNames, setTalking, onPTTStart, startTransmission]);
 
   const handlePTTUp = useCallback(async () => {
@@ -97,12 +124,28 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit }) {
       }
     };
 
+    const handleGlobalRelease = () => {
+      if (pttActiveRef.current) {
+        handlePTTUp();
+      }
+    };
+
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener('pointerup', handleGlobalRelease);
+    window.addEventListener('pointercancel', handleGlobalRelease);
+    window.addEventListener('touchend', handleGlobalRelease);
+    window.addEventListener('touchcancel', handleGlobalRelease);
+    window.addEventListener('blur', handleGlobalRelease);
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('pointerup', handleGlobalRelease);
+      window.removeEventListener('pointercancel', handleGlobalRelease);
+      window.removeEventListener('touchend', handleGlobalRelease);
+      window.removeEventListener('touchcancel', handleGlobalRelease);
+      window.removeEventListener('blur', handleGlobalRelease);
     };
   }, [handlePTTDown, handlePTTUp]);
 
@@ -237,7 +280,7 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit }) {
           MDC
         </button>
         <button
-          onClick={() => playToneWithTransmit('C', 2500)}
+          onClick={() => playToneWithTransmit('C', 3000)}
           disabled={disabledTones['C'] || !hasTxChannels || toneTransmitting}
           className={`px-3 py-1.5 text-sm rounded transition-colors ${
             disabledTones['C'] || !hasTxChannels || toneTransmitting

@@ -19,6 +19,8 @@ class LiveKitEngine {
     
     this.txGraph = null;
     this.publishedTracks = {};
+    this.channelGainNodes = {};
+    this.mutedTxChannels = new Set();
   }
 
   getAudioContext() {
@@ -143,7 +145,9 @@ class LiveKitEngine {
     analyser.smoothingTimeConstant = 0.3;
     
     const gainNode = audioContext.createGain();
-    gainNode.gain.value = 1;
+    gainNode.gain.value = this.mutedTxChannels.has(channelName) ? 0 : 1;
+    
+    this.channelGainNodes[channelName] = gainNode;
     
     source.connect(analyser);
     analyser.connect(gainNode);
@@ -159,6 +163,55 @@ class LiveKitEngine {
       this.levelAnimations[channelName] = requestAnimationFrame(updateLevel);
     };
     updateLevel();
+  }
+
+  muteChannelPlayback(channelName) {
+    this.mutedTxChannels.add(channelName);
+    if (this.channelGainNodes[channelName]) {
+      this.channelGainNodes[channelName].gain.value = 0;
+    }
+  }
+
+  unmuteChannelPlayback(channelName) {
+    this.mutedTxChannels.delete(channelName);
+    if (this.channelGainNodes[channelName]) {
+      this.channelGainNodes[channelName].gain.value = 1;
+    }
+  }
+
+  muteChannelsForTx(channelNames) {
+    for (const channelName of channelNames) {
+      this.muteChannelPlayback(channelName);
+    }
+  }
+
+  unmuteChannelsForTx(channelNames) {
+    for (const channelName of channelNames) {
+      this.unmuteChannelPlayback(channelName);
+    }
+  }
+
+  isChannelBusy(channelName) {
+    const room = this.rooms[channelName];
+    if (!room) return false;
+    
+    for (const [, participant] of room.remoteParticipants) {
+      for (const [, pub] of participant.audioTrackPublications) {
+        if (pub.track && !pub.isMuted) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  areAnyChannelsBusy(channelNames) {
+    for (const channelName of channelNames) {
+      if (this.isChannelBusy(channelName)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   handleTrackUnsubscribed(channelName, track, participant) {

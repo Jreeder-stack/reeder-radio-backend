@@ -8,6 +8,8 @@ class ToneEngine {
     this.onToneEnd = null;
     this.customDestination = null;
     this.externalContext = null;
+    this.busyToneOscillator = null;
+    this.busyToneGain = null;
   }
 
   getContext() {
@@ -146,20 +148,21 @@ class ToneEngine {
     return oscillator;
   }
 
-  playToneC(duration = 2500) {
+  playToneC(duration = 3000) {
     if (this.isTonePlaying('C')) return null;
     
     const ctx = this.getContext();
     const beepDuration = 0.30;
     const gapDuration = 0.20;
     const frequency = 1000;
+    const beepCount = 4;
     
     this.playingTones.add('C');
     if (this.onToneStart) this.onToneStart('C');
     
     const oscillators = [];
     
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < beepCount; i++) {
       const oscillator = ctx.createOscillator();
       const gainNode = ctx.createGain();
       
@@ -192,12 +195,79 @@ class ToneEngine {
       oscillators.push(oscillator);
     }
     
-    oscillators[2].onended = () => {
+    oscillators[beepCount - 1].onended = () => {
       this.playingTones.delete('C');
       if (this.onToneEnd) this.onToneEnd('C');
     };
     
     return true;
+  }
+
+  playAuthorizationTone() {
+    const ctx = this.getContext();
+    const beepDuration = 0.05;
+    const gapDuration = 0.05;
+    const frequency = 1200;
+    
+    for (let i = 0; i < 2; i++) {
+      const oscillator = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+      
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(frequency, ctx.currentTime);
+      
+      const startTime = ctx.currentTime + i * (beepDuration + gapDuration);
+      const stopTime = startTime + beepDuration;
+      
+      gainNode.gain.setValueAtTime(0, startTime - 0.001);
+      gainNode.gain.setValueAtTime(0.4, startTime);
+      gainNode.gain.setValueAtTime(0.4, stopTime - 0.001);
+      gainNode.gain.setValueAtTime(0, stopTime);
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(this.getDestinationNode());
+      
+      if (this.customDestination) {
+        const localGain = ctx.createGain();
+        localGain.gain.setValueAtTime(0, startTime - 0.001);
+        localGain.gain.setValueAtTime(0.4, startTime);
+        localGain.gain.setValueAtTime(0.4, stopTime - 0.001);
+        localGain.gain.setValueAtTime(0, stopTime);
+        oscillator.connect(localGain);
+        localGain.connect(ctx.destination);
+      }
+      
+      oscillator.start(startTime);
+      oscillator.stop(stopTime);
+    }
+  }
+
+  startBusyTone() {
+    if (this.busyToneOscillator) return;
+    
+    const ctx = this.getContext();
+    this.busyToneOscillator = ctx.createOscillator();
+    this.busyToneGain = ctx.createGain();
+    
+    this.busyToneOscillator.type = 'sine';
+    this.busyToneOscillator.frequency.setValueAtTime(480, ctx.currentTime);
+    
+    this.busyToneGain.gain.setValueAtTime(0.4, ctx.currentTime);
+    
+    this.busyToneOscillator.connect(this.busyToneGain);
+    this.busyToneGain.connect(ctx.destination);
+    
+    this.busyToneOscillator.start();
+  }
+
+  stopBusyTone() {
+    if (this.busyToneOscillator) {
+      try {
+        this.busyToneOscillator.stop();
+      } catch (e) {}
+      this.busyToneOscillator = null;
+      this.busyToneGain = null;
+    }
   }
 
   playContinuousTone(duration = 5000) {
