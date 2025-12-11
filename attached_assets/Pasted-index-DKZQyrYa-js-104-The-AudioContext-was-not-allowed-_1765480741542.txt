@@ -1,0 +1,46 @@
+index-DKZQyrYa.js:104 The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio
+(anonymous) @ index-DKZQyrYa.js:104
+index-DKZQyrYa.js:104 [Radio PTT] Starting transmission
+index-DKZQyrYa.js:104 [Radio PTT] Microphone acquired
+index-DKZQyrYa.js:104 [Radio PTT] Track published successfully
+index-DKZQyrYa.js:104 [Radio PTT] Stopping transmission
+index-DKZQyrYa.js:104 [Radio PTT] Track unpublished
+index-DKZQyrYa.js:104 [Radio PTT] Track stopped, readyState: ended
+index-DKZQyrYa.js:104 [Radio PTT] Mic track stopped, readyState: ended
+index-DKZQyrYa.js:104 [Radio PTT] Transmission stopped successfully
+index-DKZQyrYa.js:104 [Radio PTT] === PTT DOWN ===
+index-DKZQyrYa.js:104 [Radio PTT] Starting transmission
+index-DKZQyrYa.js:104 [Radio PTT] Microphone acquired
+index-DKZQyrYa.js:104 [Radio PTT] Track published successfully
+index-DKZQyrYa.js:104 [Radio PTT] Global release detected
+index-DKZQyrYa.js:104 [Radio PTT] Stopping transmission
+index-DKZQyrYa.js:104 [Radio PTT] Stopping transmission
+index-DKZQyrYa.js:104 track was not unpublished because no publication was found {room: 'DISPATCH', roomID: '', participant: 'INDIANA-1', pID: 'PA_2iRJ4ZLnEMQ4'}
+(anonymous) @ index-DKZQyrYa.js:104
+(anonymous) @ index-DKZQyrYa.js:68
+x @ index-DKZQyrYa.js:68
+unpublishTrack @ index-DKZQyrYa.js:104
+rt @ index-DKZQyrYa.js:104
+jk @ index-DKZQyrYa.js:37
+Fk @ index-DKZQyrYa.js:37
+Bk @ index-DKZQyrYa.js:37
+np @ index-DKZQyrYa.js:37
+Tv @ index-DKZQyrYa.js:37
+(anonymous) @ index-DKZQyrYa.js:37
+Nh @ index-DKZQyrYa.js:40
+Hg @ index-DKZQyrYa.js:37
+Ll @ index-DKZQyrYa.js:37
+ah @ index-DKZQyrYa.js:37
+nS @ index-DKZQyrYa.js:37
+index-DKZQyrYa.js:104 [Radio PTT] Track unpublished
+index-DKZQyrYa.js:104 [Radio PTT] Track stopped, readyState: ended
+index-DKZQyrYa.js:104 [Radio PTT] Mic track stopped, readyState: ended
+index-DKZQyrYa.js:104 [Radio PTT] Transmission stopped successfully
+index-DKZQyrYa.js:104 [Radio PTT] Track unpublished
+index-DKZQyrYa.js:104 [Radio PTT] Stop error: TypeError: Cannot set properties of null (setting 'enabled')
+    at rt (index-DKZQyrYa.js:104:244525)
+rt @ index-DKZQyrYa.js:104
+await in rt
+I @ index-DKZQyrYa.js:104
+index-DKZQyrYa.js:104 [Radio PTT] Stopping transmission
+index-DKZQyrYa.js:104 [Radio PTT] Transmission stopped successfully
