@@ -230,8 +230,13 @@ class LiveKitEngine {
     });
   }
 
-  async createTxGraph() {
-    console.log('[LiveKit] Creating TX graph - requesting microphone');
+  async initPersistentMic() {
+    if (this.txGraph) {
+      console.log('[LiveKit] Persistent mic already initialized');
+      return this.txGraph;
+    }
+    
+    console.log('[LiveKit] Initializing persistent microphone');
     const ctx = this.getAudioContext();
     
     const stream = await navigator.mediaDevices.getUserMedia({
@@ -241,7 +246,7 @@ class LiveKitEngine {
       },
     });
     
-    console.log('[LiveKit] Microphone acquired, track ID:', stream.getAudioTracks()[0]?.id);
+    console.log('[LiveKit] Persistent mic acquired, track ID:', stream.getAudioTracks()[0]?.id);
     
     const micSource = ctx.createMediaStreamSource(stream);
     const micGain = ctx.createGain();
@@ -266,8 +271,22 @@ class LiveKitEngine {
       outputStream: destination.stream,
     };
     
-    console.log('[LiveKit] TX graph created successfully');
+    console.log('[LiveKit] Persistent mic initialized successfully');
     return this.txGraph;
+  }
+
+  async createTxGraph() {
+    if (this.txGraph) {
+      const sourceTrack = this.txGraph.outputStream.getAudioTracks()[0];
+      if (sourceTrack && sourceTrack.readyState !== 'ended') {
+        console.log('[LiveKit] Reusing existing TX graph');
+        return this.txGraph;
+      }
+      console.log('[LiveKit] Existing TX graph has ended track, recreating');
+      this.destroyTxGraph();
+    }
+    
+    return this.initPersistentMic();
   }
 
   getTxContext() {

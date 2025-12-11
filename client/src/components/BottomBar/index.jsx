@@ -83,9 +83,7 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit }) {
       toneEngine.clearTxMode();
       console.log('[PTT] Unpublishing all audio tracks...');
       await livekitEngine.unpublishAudioFromChannels();
-      console.log('[PTT] Destroying TX graph...');
-      livekitEngine.destroyTxGraph();
-      console.log('[PTT] Transmission stopped successfully');
+      console.log('[PTT] Transmission stopped successfully (persistent mic kept alive)');
     } catch (err) {
       console.error('[PTT] Failed to stop transmission:', err);
     } finally {

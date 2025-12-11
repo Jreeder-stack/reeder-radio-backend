@@ -177,6 +177,13 @@ export default function DispatchConsole({ user, onLogout }) {
         }
       }
       
+      try {
+        await livekitEngine.initPersistentMic();
+        console.log('[DispatchConsole] Persistent mic initialized');
+      } catch (err) {
+        console.error('[DispatchConsole] Failed to initialize persistent mic:', err);
+      }
+      
       setConnected(true);
     } catch (error) {
       console.error('Connection error:', error);
