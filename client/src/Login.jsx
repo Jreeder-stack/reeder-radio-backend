@@ -1,7 +1,6 @@
 import { useState } from "react";
 
 export default function Login({ onLogin }) {
-  const [isRegister, setIsRegister] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -13,8 +12,7 @@ export default function Login({ onLogin }) {
     setLoading(true);
 
     try {
-      const endpoint = isRegister ? "/api/auth/register" : "/api/auth/login";
-      const res = await fetch(endpoint, {
+      const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -76,7 +74,7 @@ export default function Login({ onLogin }) {
             Reeder Radio
           </h1>
           <p style={{ color: "#888", margin: "8px 0 0", fontSize: 14 }}>
-            {isRegister ? "Create your account" : "Sign in to continue"}
+            Sign in to continue
           </p>
         </div>
 
@@ -174,29 +172,9 @@ export default function Login({ onLogin }) {
               transition: "background 0.2s",
             }}
           >
-            {loading ? "Please wait..." : isRegister ? "Create Account" : "Sign In"}
+            {loading ? "Please wait..." : "Sign In"}
           </button>
         </form>
-
-        <div style={{ marginTop: 24, textAlign: "center" }}>
-          <button
-            onClick={() => {
-              setIsRegister(!isRegister);
-              setError("");
-            }}
-            style={{
-              background: "none",
-              border: "none",
-              color: "#3b82f6",
-              cursor: "pointer",
-              fontSize: 14,
-            }}
-          >
-            {isRegister
-              ? "Already have an account? Sign in"
-              : "Don't have an account? Register"}
-          </button>
-        </div>
 
         <div
           style={{
