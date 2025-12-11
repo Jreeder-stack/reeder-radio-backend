@@ -231,6 +231,7 @@ class LiveKitEngine {
   }
 
   async createTxGraph() {
+    console.log('[LiveKit] Creating TX graph - requesting microphone');
     const ctx = this.getAudioContext();
     
     const stream = await navigator.mediaDevices.getUserMedia({
@@ -239,6 +240,8 @@ class LiveKitEngine {
         noiseSuppression: true,
       },
     });
+    
+    console.log('[LiveKit] Microphone acquired, track ID:', stream.getAudioTracks()[0]?.id);
     
     const micSource = ctx.createMediaStreamSource(stream);
     const micGain = ctx.createGain();
@@ -263,6 +266,7 @@ class LiveKitEngine {
       outputStream: destination.stream,
     };
     
+    console.log('[LiveKit] TX graph created successfully');
     return this.txGraph;
   }
 
@@ -302,6 +306,8 @@ class LiveKitEngine {
   }
 
   async publishAudioToChannels(channelNames) {
+    console.log('[LiveKit] PTT DOWN - publishing to channels:', channelNames);
+    
     if (!this.txGraph) {
       await this.createTxGraph();
     }
@@ -310,6 +316,7 @@ class LiveKitEngine {
     const sourceTrack = outputStream.getAudioTracks()[0];
     
     if (sourceTrack.readyState === 'ended') {
+      console.log('[LiveKit] Source track ended, recreating TX graph');
       this.destroyTxGraph();
       await this.createTxGraph();
     }
@@ -321,12 +328,14 @@ class LiveKitEngine {
       if (!room) continue;
       
       if (this.publishedTracks[channelName]) {
+        console.log(`[LiveKit] Already published to ${channelName}`);
         publishedChannels.push(channelName);
         continue;
       }
       
       try {
         const clonedTrack = this.txGraph.outputStream.getAudioTracks()[0].clone();
+        console.log(`[LiveKit] Publishing cloned track to ${channelName}, track ID:`, clonedTrack.id);
         
         await room.localParticipant.publishTrack(clonedTrack, {
           name: 'dispatch-audio',
@@ -335,16 +344,19 @@ class LiveKitEngine {
         
         this.publishedTracks[channelName] = clonedTrack;
         publishedChannels.push(channelName);
+        console.log(`[LiveKit] Successfully published to ${channelName}`);
       } catch (err) {
-        console.error(`Failed to publish to ${channelName}:`, err);
+        console.error(`[LiveKit] Failed to publish to ${channelName}:`, err);
       }
     }
     
+    console.log('[LiveKit] Active published tracks:', Object.keys(this.publishedTracks));
     return publishedChannels;
   }
 
   async unpublishAudioFromChannels(channelNames) {
     const channelsToUnpublish = channelNames || Object.keys(this.publishedTracks);
+    console.log('[LiveKit] PTT UP - unpublishing from channels:', channelsToUnpublish);
     
     for (const channelName of channelsToUnpublish) {
       const room = this.rooms[channelName];
@@ -353,40 +365,77 @@ class LiveKitEngine {
       if (!room || !track) continue;
       
       try {
+        console.log(`[LiveKit] Unpublishing track from ${channelName}, track ID:`, track.id);
         await room.localParticipant.unpublishTrack(track);
+        
+        if (typeof track.enabled !== 'undefined') {
+          track.enabled = false;
+          console.log(`[LiveKit] Disabled track on ${channelName}`);
+        }
+        
         track.stop();
+        console.log(`[LiveKit] Stopped track on ${channelName}, readyState:`, track.readyState);
+        
         delete this.publishedTracks[channelName];
       } catch (err) {
-        console.error(`Failed to unpublish from ${channelName}:`, err);
+        console.error(`[LiveKit] Failed to unpublish from ${channelName}:`, err);
         try {
+          track.enabled = false;
           track.stop();
         } catch (e) {}
         delete this.publishedTracks[channelName];
       }
     }
+    
+    console.log('[LiveKit] Active published tracks after unpublish:', Object.keys(this.publishedTracks));
   }
 
   destroyTxGraph() {
     if (!this.txGraph) return;
     
-    const { micStream, micSource } = this.txGraph;
+    console.log('[LiveKit] Destroying TX graph');
+    
+    const { micStream, micSource, micGain, toneGain, destination } = this.txGraph;
     
     for (const track of Object.values(this.publishedTracks)) {
       try {
         track.stop();
+        console.log('[LiveKit] Stopped orphaned published track');
       } catch (e) {}
     }
     this.publishedTracks = {};
     
     try {
       micSource.disconnect();
+      console.log('[LiveKit] Disconnected micSource');
     } catch (e) {}
     
+    try {
+      micGain.disconnect();
+      console.log('[LiveKit] Disconnected micGain');
+    } catch (e) {}
+    
+    try {
+      toneGain.disconnect();
+      console.log('[LiveKit] Disconnected toneGain');
+    } catch (e) {}
+    
+    if (destination && destination.stream) {
+      destination.stream.getTracks().forEach(track => {
+        track.stop();
+        console.log('[LiveKit] Stopped destination stream track');
+      });
+    }
+    
     if (micStream) {
-      micStream.getTracks().forEach(track => track.stop());
+      micStream.getTracks().forEach(track => {
+        track.stop();
+        console.log('[LiveKit] Stopped mic stream track, readyState:', track.readyState);
+      });
     }
     
     this.txGraph = null;
+    console.log('[LiveKit] TX graph destroyed');
   }
 
   async unpublishAudio(channelName, audioTrack, stream) {

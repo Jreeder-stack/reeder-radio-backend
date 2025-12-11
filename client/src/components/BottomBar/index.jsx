@@ -33,11 +33,13 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit }) {
   }, []);
 
   const startTransmission = useCallback(async () => {
+    console.log('[PTT] startTransmission called, channels:', selectedChannelNames);
     if (selectedChannelNames.length === 0) return false;
     
     const isBusy = livekitEngine.areAnyChannelsBusy(selectedChannelNames);
     
     if (isBusy) {
+      console.log('[PTT] Channel busy, playing busy tone');
       busyModeRef.current = true;
       setChannelBusy(true);
       toneEngine.startBusyTone();
@@ -57,17 +59,20 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit }) {
       }
       
       toneEngine.playAuthorizationTone();
+      console.log('[PTT] Transmission started successfully');
       
       return true;
     } catch (err) {
-      console.error('Failed to start transmission:', err);
+      console.error('[PTT] Failed to start transmission:', err);
       livekitEngine.unmuteChannelsForTx(selectedChannelNames);
       return false;
     }
   }, [selectedChannelNames]);
 
   const stopTransmission = useCallback(async () => {
+    console.log('[PTT] stopTransmission called');
     if (busyModeRef.current) {
+      console.log('[PTT] Was in busy mode, clearing');
       busyModeRef.current = false;
       setChannelBusy(false);
       toneEngine.stopBusyTone();
@@ -76,10 +81,13 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit }) {
     
     try {
       toneEngine.clearTxMode();
+      console.log('[PTT] Unpublishing all audio tracks...');
       await livekitEngine.unpublishAudioFromChannels();
+      console.log('[PTT] Destroying TX graph...');
       livekitEngine.destroyTxGraph();
+      console.log('[PTT] Transmission stopped successfully');
     } catch (err) {
-      console.error('Failed to stop transmission:', err);
+      console.error('[PTT] Failed to stop transmission:', err);
     } finally {
       livekitEngine.unmuteChannelsForTx(selectedChannelNames);
     }
@@ -90,12 +98,14 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit }) {
     if (selectedTxChannels.length === 0) return;
     if (pttActiveRef.current) return;
     
+    console.log('[PTT] === PTT DOWN ===');
     pttActiveRef.current = true;
     stopCalledRef.current = false;
     
     const success = await startTransmission();
     
     if (!pttActiveRef.current) {
+      console.log('[PTT] PTT released during setup, calling stop');
       if (!stopCalledRef.current) {
         stopCalledRef.current = true;
         await stopTransmission();
@@ -110,6 +120,7 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit }) {
   }, [selectedTxChannels, selectedChannelNames, setTalking, onPTTStart, startTransmission, stopTransmission]);
 
   const handlePTTUp = useCallback(async () => {
+    console.log('[PTT] === PTT UP ===, pttActive:', pttActiveRef.current, 'stopCalled:', stopCalledRef.current);
     if (!pttActiveRef.current) return;
     
     pttActiveRef.current = false;
