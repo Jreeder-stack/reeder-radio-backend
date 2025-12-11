@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Room, RoomEvent, Track, DataPacket_Kind } from "livekit-client";
-import { toneEngine } from "./audio/toneEngine";
 
 const LIVEKIT_URL = import.meta.env.VITE_LIVEKIT_URL;
 const TOKEN_SERVER = "/getToken";
@@ -118,73 +117,6 @@ function AudioLevelMeter({ level }) {
   );
 }
 
-function createTxDspChain(audioContext, radioEffectEnabled) {
-  const inputGain = audioContext.createGain();
-  inputGain.gain.value = 1.5;
-  
-  const agc = audioContext.createDynamicsCompressor();
-  agc.threshold.value = -30;
-  agc.knee.value = 20;
-  agc.ratio.value = 6;
-  agc.attack.value = 0.003;
-  agc.release.value = 0.1;
-  
-  const txCompressor = audioContext.createDynamicsCompressor();
-  txCompressor.threshold.value = -24;
-  txCompressor.knee.value = 10;
-  txCompressor.ratio.value = 12;
-  txCompressor.attack.value = 0.001;
-  txCompressor.release.value = 0.05;
-  
-  const outputGain = audioContext.createGain();
-  outputGain.gain.value = 1.2;
-
-  let highpass = null;
-  let lowpass = null;
-  let distortion = null;
-
-  if (radioEffectEnabled) {
-    highpass = audioContext.createBiquadFilter();
-    highpass.type = "highpass";
-    highpass.frequency.value = 300;
-    highpass.Q.value = 0.7;
-
-    lowpass = audioContext.createBiquadFilter();
-    lowpass.type = "lowpass";
-    lowpass.frequency.value = 3400;
-    lowpass.Q.value = 0.7;
-
-    distortion = audioContext.createWaveShaper();
-    const samples = 256;
-    const curve = new Float32Array(samples);
-    for (let i = 0; i < samples; i++) {
-      const x = (i * 2) / samples - 1;
-      curve[i] = Math.tanh(x * 1.5);
-    }
-    distortion.curve = curve;
-    distortion.oversample = "2x";
-  }
-
-  const destination = audioContext.createMediaStreamDestination();
-  
-  if (radioEffectEnabled && highpass && lowpass && distortion) {
-    inputGain.connect(agc);
-    agc.connect(txCompressor);
-    txCompressor.connect(highpass);
-    highpass.connect(lowpass);
-    lowpass.connect(distortion);
-    distortion.connect(outputGain);
-    outputGain.connect(destination);
-  } else {
-    inputGain.connect(agc);
-    agc.connect(txCompressor);
-    txCompressor.connect(outputGain);
-    outputGain.connect(destination);
-  }
-
-  return { inputGain, destination };
-}
-
 function createRxDspChain(audioContext, radioEffectEnabled) {
   const inputGain = audioContext.createGain();
   inputGain.gain.value = 1.0;
@@ -280,43 +212,14 @@ export default function App({ user, onLogout }) {
   );
 
   // Force release all mic tracks - called synchronously to ensure cleanup
-  // Returns true if there was something to stop
+  // Only stops tracks, does NOT clear refs - stopPTT needs them for unpublishing
   const forceMicRelease = () => {
-    const hadActiveStreams = !!(audioTrackRef.current || micStreamRef.current);
-    
-    if (!hadActiveStreams) {
-      return false; // Nothing to stop
-    }
-    
-    console.log('[Radio PTT] Force mic release called');
-    
-    // Stop the published track
     if (audioTrackRef.current) {
-      try {
-        audioTrackRef.current.enabled = false;
-        audioTrackRef.current.stop();
-        console.log('[Radio PTT] Force stopped audioTrack, state:', audioTrackRef.current.readyState);
-      } catch (e) {
-        console.warn('[Radio PTT] Force stop audioTrack error:', e);
-      }
-      audioTrackRef.current = null;
+      audioTrackRef.current.stop();
     }
-    
-    // Stop the mic stream tracks
     if (micStreamRef.current) {
-      try {
-        micStreamRef.current.getTracks().forEach(track => {
-          track.enabled = false;
-          track.stop();
-          console.log('[Radio PTT] Force stopped mic track, state:', track.readyState);
-        });
-      } catch (e) {
-        console.warn('[Radio PTT] Force stop mic stream error:', e);
-      }
-      micStreamRef.current = null;
+      micStreamRef.current.getTracks().forEach(t => t.stop());
     }
-    
-    return true;
   };
 
   useEffect(() => {
@@ -912,87 +815,25 @@ export default function App({ user, onLogout }) {
     try {
       setIsTalking(true);
       
-      // Play authorization tone (talk permit beep)
-      try {
-        toneEngine.playAuthorizationTone();
-      } catch (e) {
-        console.warn('[Radio PTT] Authorization tone error:', e);
-      }
-      
-      // Detect iOS Safari - use raw mic track to avoid MediaStreamDestination issues
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
-                    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-      
+      // Simple: grab mic, publish raw track - no DSP, no metering
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
-          autoGainControl: false,
+          autoGainControl: true,
         },
       });
       micStreamRef.current = stream;
-      console.log('[Radio PTT] Microphone acquired, iOS mode:', isIOS);
       
-      let trackToPublish;
-      const audioContext = getAudioContext();
+      const track = stream.getAudioTracks()[0];
+      console.log('[Radio PTT] Microphone acquired, publishing...');
       
-      if (isIOS) {
-        // iOS: Publish raw mic track directly - MediaStreamDestination has issues on Safari
-        // Clone the stream for metering so we don't interfere with the original track
-        trackToPublish = stream.getAudioTracks()[0];
-        console.log('[Radio PTT] Using raw mic track for iOS');
-        
-        // Create a cloned stream for metering only (doesn't affect the published track)
-        const meterStream = stream.clone();
-        const meterSource = audioContext.createMediaStreamSource(meterStream);
-        const txAnalyser = audioContext.createAnalyser();
-        txAnalyser.fftSize = 256;
-        txAnalyser.smoothingTimeConstant = 0.3;
-        meterSource.connect(txAnalyser);
-        txAnalyserRef.current = txAnalyser;
-        
-        const dataArray = new Uint8Array(txAnalyser.frequencyBinCount);
-        const updateTxLevel = () => {
-          if (txAnalyserRef.current) {
-            txAnalyserRef.current.getByteFrequencyData(dataArray);
-            const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
-            setTxLevel(Math.min(100, avg * 1.5));
-            txAnimationRef.current = requestAnimationFrame(updateTxLevel);
-          }
-        };
-        updateTxLevel();
-      } else {
-        // Desktop: Use DSP chain with MediaStreamDestination for audio processing
-        const source = audioContext.createMediaStreamSource(stream);
-        const { inputGain, destination } = createTxDspChain(audioContext, radioEffect);
-        
-        const txAnalyser = audioContext.createAnalyser();
-        txAnalyser.fftSize = 256;
-        txAnalyser.smoothingTimeConstant = 0.3;
-        source.connect(txAnalyser);
-        txAnalyser.connect(inputGain);
-        txAnalyserRef.current = txAnalyser;
-        
-        const dataArray = new Uint8Array(txAnalyser.frequencyBinCount);
-        const updateTxLevel = () => {
-          if (txAnalyserRef.current) {
-            txAnalyserRef.current.getByteFrequencyData(dataArray);
-            const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
-            setTxLevel(Math.min(100, avg * 1.5));
-            txAnimationRef.current = requestAnimationFrame(updateTxLevel);
-          }
-        };
-        updateTxLevel();
-        
-        trackToPublish = destination.stream.getAudioTracks()[0];
-      }
-      
-      await primaryRoomRef.current.localParticipant.publishTrack(trackToPublish, {
+      await primaryRoomRef.current.localParticipant.publishTrack(track, {
         name: "microphone",
         source: Track.Source.Microphone,
       });
       
-      audioTrackRef.current = trackToPublish;
+      audioTrackRef.current = track;
       console.log('[Radio PTT] Track published successfully');
       broadcastStatus(primaryRoomRef.current, "transmitting", transmitChannel);
       return true;
@@ -1006,65 +847,38 @@ export default function App({ user, onLogout }) {
   const stopPTT = async () => {
     console.log('[Radio PTT] Stopping transmission');
     
-    // IMMEDIATELY stop mic tracks synchronously - critical for iOS
-    // Do this FIRST before any async operations
-    const trackToStop = audioTrackRef.current;
-    const streamToStop = micStreamRef.current;
+    // Grab refs before clearing
+    const track = audioTrackRef.current;
+    const stream = micStreamRef.current;
     
-    // Synchronously disable and stop all tracks RIGHT NOW
-    if (trackToStop) {
-      try {
-        trackToStop.enabled = false;
-        trackToStop.stop();
-        console.log('[Radio PTT] Immediate track stop, readyState:', trackToStop.readyState);
-      } catch (e) {
-        console.warn('[Radio PTT] Immediate track stop error:', e);
-      }
-    }
-    
-    if (streamToStop) {
-      try {
-        streamToStop.getTracks().forEach(track => {
-          track.enabled = false;
-          track.stop();
-          console.log('[Radio PTT] Immediate stream track stop, readyState:', track.readyState);
-        });
-      } catch (e) {
-        console.warn('[Radio PTT] Immediate stream stop error:', e);
-      }
-    }
-    
-    // Clear refs after stopping
+    // Clear refs immediately
     audioTrackRef.current = null;
     micStreamRef.current = null;
     
-    // Now handle UI and LiveKit cleanup (can be async)
-    try {
-      if (txAnimationRef.current) {
-        cancelAnimationFrame(txAnimationRef.current);
-        txAnimationRef.current = null;
+    // Stop the track synchronously - critical for iOS mic release
+    if (track) {
+      track.stop();
+      console.log('[Radio PTT] Track stopped');
+    }
+    
+    // Stop all stream tracks
+    if (stream) {
+      stream.getTracks().forEach(t => t.stop());
+    }
+    
+    // Unpublish from LiveKit
+    if (track && primaryRoomRef.current) {
+      try {
+        await primaryRoomRef.current.localParticipant.unpublishTrack(track);
+        console.log('[Radio PTT] Track unpublished');
+      } catch (e) {
+        // Ignore - track may already be unpublished
       }
-      setTxLevel(0);
-      txAnalyserRef.current = null;
-      
-      // Unpublish from LiveKit (async is fine here, mic is already stopped)
-      if (trackToStop && primaryRoomRef.current) {
-        try {
-          await primaryRoomRef.current.localParticipant.unpublishTrack(trackToStop);
-          console.log('[Radio PTT] Track unpublished from LiveKit');
-        } catch (e) {
-          console.warn('[Radio PTT] Unpublish warning:', e.message);
-        }
-      }
-      
-      setIsTalking(false);
-      if (primaryRoomRef.current) {
-        broadcastStatus(primaryRoomRef.current, "idle", transmitChannel);
-      }
-      console.log('[Radio PTT] Transmission stopped successfully');
-    } catch (err) {
-      console.error("[Radio PTT] Stop error:", err);
-      setIsTalking(false);
+    }
+    
+    setIsTalking(false);
+    if (primaryRoomRef.current) {
+      broadcastStatus(primaryRoomRef.current, "idle", transmitChannel);
     }
   };
 
