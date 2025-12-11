@@ -11,12 +11,16 @@ A Push-to-Talk (PTT) radio communication app using LiveKit for real-time audio s
 ├── package.json       # Backend dependencies
 ├── client/            # React frontend (Vite)
 │   ├── src/
-│   │   ├── App.jsx        # Main PTT interface component
-│   │   ├── Dispatcher.jsx # Dispatcher console (multi-channel monitoring)
+│   │   ├── App.jsx        # Main PTT interface component for field units
 │   │   ├── Login.jsx      # Login/register screen
 │   │   ├── Admin.jsx      # Admin dashboard (users, channels, logs)
 │   │   ├── AuthContext.jsx # Auth state management
-│   │   └── main.jsx       # React entry point with protected routing
+│   │   ├── main.jsx       # React entry point with protected routing
+│   │   ├── pages/
+│   │   │   └── DispatchConsole.jsx # Dispatcher console UI
+│   │   ├── components/    # Reusable UI components
+│   │   ├── state/         # Zustand stores
+│   │   └── audio/         # Audio engines (toneEngine, livekitEngine)
 │   ├── vite.config.js # Vite configuration with proxy to backend
 │   ├── index.html     # HTML entry point
 │   └── package.json   # Frontend dependencies
@@ -177,8 +181,7 @@ Set these environment variables in Render:
   - Continuous: Aggressive 5-second alarm with 800/850Hz + LFO modulation
 - State management via Zustand with localStorage persistence (uses arrays for JSON serialization)
 - Routes:
-  - `/dispatcher` - New Dispatch Console (replaces legacy)
-  - `/dispatcher-legacy` - Original dispatcher view
+  - `/dispatcher` - Dispatch Console
 - Tone transmission: Tones are broadcast over LiveKit to all field units when a tone button is pressed. The system automatically keys up, transmits the tone, and releases.
 
 ## Default Admin Credentials
