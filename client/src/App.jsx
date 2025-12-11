@@ -321,6 +321,42 @@ export default function App({ user, onLogout }) {
     return audioContextRef.current;
   }, []);
 
+  // iOS audio unlock - must happen on user gesture before audio can play
+  const audioUnlockedRef = useRef(false);
+  useEffect(() => {
+    const unlockAudio = () => {
+      if (audioUnlockedRef.current) return;
+      audioUnlockedRef.current = true;
+      
+      // Create and resume AudioContext
+      const ctx = getAudioContext();
+      
+      // Play a silent buffer to fully unlock iOS audio
+      const buffer = ctx.createBuffer(1, 1, 22050);
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(ctx.destination);
+      source.start(0);
+      
+      console.log('[Radio PTT] Audio unlocked via user gesture');
+      
+      // Remove listeners after unlock
+      document.removeEventListener('touchstart', unlockAudio);
+      document.removeEventListener('touchend', unlockAudio);
+      document.removeEventListener('click', unlockAudio);
+    };
+    
+    document.addEventListener('touchstart', unlockAudio, { passive: true });
+    document.addEventListener('touchend', unlockAudio, { passive: true });
+    document.addEventListener('click', unlockAudio, { passive: true });
+    
+    return () => {
+      document.removeEventListener('touchstart', unlockAudio);
+      document.removeEventListener('touchend', unlockAudio);
+      document.removeEventListener('click', unlockAudio);
+    };
+  }, [getAudioContext]);
+
   const broadcastStatus = useCallback((room, status, channel) => {
     if (!room || !room.localParticipant) return;
     
