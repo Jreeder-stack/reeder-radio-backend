@@ -1,0 +1,50 @@
+2025-12-11T13:38:07Z clientIP="166.137.146.170" requestID="ea458641-93fb-440c" responseTimeMS=102 responseBytes=320 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
+2025-12-11T13:38:07Z clientIP="166.137.146.170" requestID="15160719-ac70-49c0" responseTimeMS=30 responseBytes=234 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
+2025-12-11T13:38:07Z clientIP="166.137.146.170" requestID="35da3b93-bb97-4561" responseTimeMS=39 responseBytes=554 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
+2025-12-11T13:38:07.902550088Z LIVEKIT_API_KEY length: 15
+2025-12-11T13:38:07.902555098Z LIVEKIT_API_KEY first 8 chars: APIYpMbf...
+2025-12-11T13:38:07.902600179Z LIVEKIT_API_SECRET exists: true
+2025-12-11T13:38:07.9026059Z LIVEKIT_API_SECRET length: 44
+2025-12-11T13:38:07.9026123Z LIVEKIT_URL: wss://reeder-ptt-rcm02mdx.livekit.cloud
+2025-12-11T13:38:07.909330019Z Total channels from DB: 12
+2025-12-11T13:38:07.90935127Z Requested channel found: { id: 1, name: 'OPS1' }
+2025-12-11T13:38:07.916157261Z User channel access IDs: [
+2025-12-11T13:38:07.916205082Z    1,  2, 3, 4,  5,
+2025-12-11T13:38:07.916212192Z    7,  6, 8, 9, 10,
+2025-12-11T13:38:07.916215043Z   11, 12
+2025-12-11T13:38:07.916218072Z ]
+2025-12-11T13:38:07.916221313Z Creating AccessToken with identity: INDIANA-1 room: OPS1
+2025-12-11T13:38:07.916235133Z Generating JWT token...
+2025-12-11T13:38:07.916519359Z Token generated successfully, length: 260
+2025-12-11T13:38:07.91652799Z Token first 50 chars: eyJhbGciOiJIUzI1NiJ9.eyJ2aWRlbyI6eyJyb29tSm9pbiI6d...
+2025-12-11T13:38:07.924864885Z === /getToken DEBUG END - SUCCESS ===
+2025-12-11T13:38:25Z clientIP="166.137.146.170" requestID="b056a547-475b-4c55" responseTimeMS=12 responseBytes=320 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
+2025-12-11T13:38:25Z clientIP="166.137.146.170" requestID="81662a12-f12a-4a66" responseTimeMS=114 responseBytes=417 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
+2025-12-11T13:38:38Z clientIP="166.137.146.170" requestID="3916ec64-99e7-40ca" responseTimeMS=276 responseBytes=651 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
+2025-12-11T13:38:39Z clientIP="166.137.146.170" requestID="1ec84eb2-d1b0-4172" responseTimeMS=38 responseBytes=547 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
+2025-12-11T13:38:39Z clientIP="166.137.146.170" requestID="f9cae1fb-db23-4594" responseTimeMS=113 responseBytes=234 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
+2025-12-11T13:38:39Z clientIP="166.137.146.170" requestID="0f00ad62-2d96-4ae3" responseTimeMS=18 responseBytes=320 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
+2025-12-11T13:38:39.206392262Z === /getToken DEBUG START ===
+2025-12-11T13:38:39.206426373Z Request query params: { identity: 'ADMIN', room: 'OPS1' }
+2025-12-11T13:38:39.206432033Z Session user: { id: 1, username: 'ADMIN', role: 'admin' }
+2025-12-11T13:38:39.206575357Z LIVEKIT_API_KEY exists: true
+2025-12-11T13:38:39.206594147Z LIVEKIT_API_KEY length: 15
+2025-12-11T13:38:39.206600237Z LIVEKIT_API_KEY first 8 chars: APIYpMbf...
+2025-12-11T13:38:39.206652488Z LIVEKIT_API_SECRET exists: true
+2025-12-11T13:38:39.206759051Z LIVEKIT_API_SECRET length: 44
+2025-12-11T13:38:39.206818372Z LIVEKIT_URL: wss://reeder-ptt-rcm02mdx.livekit.cloud
+2025-12-11T13:38:39.214304249Z Total channels from DB: 12
+2025-12-11T13:38:39.21433737Z Requested channel found: { id: 1, name: 'OPS1' }
+2025-12-11T13:38:39.214342999Z User is admin - bypassing channel permission check
+2025-12-11T13:38:39.21434729Z Creating AccessToken with identity: ADMIN room: OPS1
+2025-12-11T13:38:39.214386651Z Generating JWT token...
+2025-12-11T13:38:39.214787329Z Token generated successfully, length: 255
+2025-12-11T13:38:39.21480452Z Token first 50 chars: eyJhbGciOiJIUzI1NiJ9.eyJ2aWRlbyI6eyJyb29tSm9pbiI6d...
+2025-12-11T13:38:39.226438729Z === /getToken DEBUG END - SUCCESS ===
+2025-12-11T13:38:44Z clientIP="166.137.146.170" requestID="4002bb8b-b8cb-41d0" responseTimeMS=26 responseBytes=579 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
+2025-12-11T13:38:44Z clientIP="166.137.146.170" requestID="8bc35493-e0c9-49d6" responseTimeMS=132 responseBytes=453 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
+2025-12-11T13:38:44Z clientIP="166.137.146.170" requestID="e93ca863-4713-4a5f" responseTimeMS=48 responseBytes=1395 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
+2025-12-11T13:38:44Z clientIP="166.137.146.170" requestID="2b7722f2-4bbb-41a3" responseTimeMS=24 responseBytes=574 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
+2025-12-11T13:38:44Z clientIP="166.137.146.170" requestID="be0ec461-b7ce-4527" responseTimeMS=122 responseBytes=320 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
+2025-12-11T13:38:48Z clientIP="166.137.146.170" requestID="78b6600c-fdac-4b46" responseTimeMS=26 responseBytes=369 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
+2025-12-11T13:38:58Z clientIP="166.137.146.170" requestID="3dc7b43f-fd39-49fb" responseTimeMS=235 responseBytes=434 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
