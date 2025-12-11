@@ -122,6 +122,32 @@ export async function initializeDatabase() {
       )
     `);
 
+    await client.query(`
+      ALTER TABLE dispatch_monitor_sets ADD COLUMN IF NOT EXISTS primary_tx_channel_id INTEGER
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS radio_channels (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        livekit_room_name VARCHAR(100),
+        is_emergency_only BOOLEAN DEFAULT false,
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS channel_patches (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(100),
+        source_channel_id INTEGER REFERENCES radio_channels(id),
+        target_channel_id INTEGER REFERENCES radio_channels(id),
+        is_enabled BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
     const adminUsername = process.env.ADMIN_USERNAME || "admin";
     const adminPassword = process.env.ADMIN_PASSWORD || "admin123";
     
@@ -438,15 +464,80 @@ export async function getMonitorSet(dispatcherId) {
   return result.rows[0];
 }
 
-export async function setMonitorSet(dispatcherId, primary, monitored) {
+export async function setMonitorSet(dispatcherId, primary, monitored, primaryTxChannelId = null) {
   const result = await pool.query(
-    `INSERT INTO dispatch_monitor_sets (dispatcher_id, primary_tx_channel, monitored_channels)
-     VALUES ($1, $2, $3)
+    `INSERT INTO dispatch_monitor_sets (dispatcher_id, primary_tx_channel, monitored_channels, primary_tx_channel_id)
+     VALUES ($1, $2, $3, $4)
      ON CONFLICT (dispatcher_id)
      DO UPDATE SET primary_tx_channel = EXCLUDED.primary_tx_channel,
-                   monitored_channels = EXCLUDED.monitored_channels
+                   monitored_channels = EXCLUDED.monitored_channels,
+                   primary_tx_channel_id = EXCLUDED.primary_tx_channel_id
      RETURNING *`,
-    [dispatcherId, primary, JSON.stringify(monitored)]
+    [dispatcherId, primary, JSON.stringify(monitored), primaryTxChannelId]
+  );
+  return result.rows[0];
+}
+
+export async function setUnitEmergency(unitId, active) {
+  const result = await pool.query(
+    `UPDATE units SET is_emergency = $1, last_seen = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *`,
+    [active, unitId]
+  );
+  return result.rows[0];
+}
+
+export async function getAllRadioChannels() {
+  const result = await pool.query(`SELECT * FROM radio_channels ORDER BY name`);
+  return result.rows;
+}
+
+export async function createRadioChannel(name, livekitRoomName, isEmergencyOnly = false, isActive = true) {
+  const result = await pool.query(
+    `INSERT INTO radio_channels (name, livekit_room_name, is_emergency_only, is_active)
+     VALUES ($1, $2, $3, $4) RETURNING *`,
+    [name, livekitRoomName, isEmergencyOnly, isActive]
+  );
+  return result.rows[0];
+}
+
+export async function updateRadioChannel(id, updates) {
+  const { name, livekit_room_name, is_emergency_only, is_active } = updates;
+  const result = await pool.query(
+    `UPDATE radio_channels SET 
+       name = COALESCE($1, name),
+       livekit_room_name = COALESCE($2, livekit_room_name),
+       is_emergency_only = COALESCE($3, is_emergency_only),
+       is_active = COALESCE($4, is_active)
+     WHERE id = $5 RETURNING *`,
+    [name, livekit_room_name, is_emergency_only, is_active, id]
+  );
+  return result.rows[0];
+}
+
+export async function getAllChannelPatches() {
+  const result = await pool.query(`SELECT * FROM channel_patches ORDER BY name`);
+  return result.rows;
+}
+
+export async function createChannelPatch(name, sourceChannelId, targetChannelId, isEnabled = true) {
+  const result = await pool.query(
+    `INSERT INTO channel_patches (name, source_channel_id, target_channel_id, is_enabled)
+     VALUES ($1, $2, $3, $4) RETURNING *`,
+    [name, sourceChannelId, targetChannelId, isEnabled]
+  );
+  return result.rows[0];
+}
+
+export async function updateChannelPatch(id, updates) {
+  const { name, source_channel_id, target_channel_id, is_enabled } = updates;
+  const result = await pool.query(
+    `UPDATE channel_patches SET 
+       name = COALESCE($1, name),
+       source_channel_id = COALESCE($2, source_channel_id),
+       target_channel_id = COALESCE($3, target_channel_id),
+       is_enabled = COALESCE($4, is_enabled)
+     WHERE id = $5 RETURNING *`,
+    [name, source_channel_id, target_channel_id, is_enabled, id]
   );
   return result.rows[0];
 }

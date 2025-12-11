@@ -112,6 +112,20 @@ Set these environment variables in Render:
 - Location pings (if geolocation available)
 - Channel metadata in data messages
 
+### Phase 9 - Dispatch Radio Module (Backend)
+- Database tables: units, radio_events, dispatch_monitor_sets, radio_channels, channel_patches
+- Persistent unit presence tracking with emergency status
+- Radio event logging for auditing
+- Dispatcher monitor configuration (primary TX channel, monitored channels)
+- API endpoints at /api/dispatch:
+  - GET/POST /units - Unit presence management
+  - POST /units/:id/emergency - Toggle emergency status
+  - POST /emergency/ack - Acknowledge emergencies
+  - GET/POST/PATCH /channels - Radio channel management
+  - GET/POST/PATCH /patches - Channel patch management
+  - GET/POST /monitor/:dispatcherId - Dispatcher monitor config
+- LiveKit helper stubs in src/livekit/radioRooms.js
+
 ### Phase 8 - Authentication & Admin System
 - PostgreSQL database with users, channels, activity_logs tables
 - Username/password authentication with bcrypt hashing
