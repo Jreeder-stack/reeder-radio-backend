@@ -267,6 +267,8 @@ export default function App({ user, onLogout }) {
   const micStreamRef = useRef(null);
   const emergencyTimerRef = useRef(null);
   const heartbeatIntervalRef = useRef(null);
+  const pttActiveRef = useRef(false);
+  const stopCalledRef = useRef(false);
   const [userLocation, setUserLocation] = useState(null);
 
   useEffect(() => {
@@ -317,6 +319,31 @@ export default function App({ user, onLogout }) {
       if (txAnimationRef.current) cancelAnimationFrame(txAnimationRef.current);
       if (rxAnimationRef.current) cancelAnimationFrame(rxAnimationRef.current);
       if (audioContextRef.current) audioContextRef.current.close();
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleGlobalRelease = () => {
+      if (pttActiveRef.current && !stopCalledRef.current) {
+        console.log('[Radio PTT] Global release detected');
+        pttActiveRef.current = false;
+        stopCalledRef.current = true;
+        stopPTT();
+      }
+    };
+
+    window.addEventListener('pointerup', handleGlobalRelease);
+    window.addEventListener('pointercancel', handleGlobalRelease);
+    window.addEventListener('touchend', handleGlobalRelease);
+    window.addEventListener('touchcancel', handleGlobalRelease);
+    window.addEventListener('blur', handleGlobalRelease);
+
+    return () => {
+      window.removeEventListener('pointerup', handleGlobalRelease);
+      window.removeEventListener('pointercancel', handleGlobalRelease);
+      window.removeEventListener('touchend', handleGlobalRelease);
+      window.removeEventListener('touchcancel', handleGlobalRelease);
+      window.removeEventListener('blur', handleGlobalRelease);
     };
   }, []);
 
@@ -818,8 +845,9 @@ export default function App({ user, onLogout }) {
   };
 
   const startPTT = async () => {
-    if (!primaryRoomRef.current) return;
+    if (!primaryRoomRef.current) return false;
 
+    console.log('[Radio PTT] Starting transmission');
     try {
       setIsTalking(true);
       
@@ -833,6 +861,7 @@ export default function App({ user, onLogout }) {
         },
       });
       micStreamRef.current = stream;
+      console.log('[Radio PTT] Microphone acquired');
       
       const source = audioContext.createMediaStreamSource(stream);
       const { inputGain, destination } = createTxDspChain(audioContext, radioEffect);
@@ -863,16 +892,19 @@ export default function App({ user, onLogout }) {
       });
       
       audioTrackRef.current = processedTrack;
+      console.log('[Radio PTT] Track published successfully');
       broadcastStatus(primaryRoomRef.current, "transmitting", transmitChannel);
+      return true;
     } catch (err) {
-      console.error("PTT error:", err);
+      console.error("[Radio PTT] Error:", err);
       setIsTalking(false);
+      return false;
     }
   };
 
   const stopPTT = async () => {
-    if (!primaryRoomRef.current) return;
-
+    console.log('[Radio PTT] Stopping transmission');
+    
     try {
       if (txAnimationRef.current) {
         cancelAnimationFrame(txAnimationRef.current);
@@ -882,38 +914,85 @@ export default function App({ user, onLogout }) {
       txAnalyserRef.current = null;
       
       if (audioTrackRef.current) {
-        await primaryRoomRef.current.localParticipant.unpublishTrack(audioTrackRef.current);
+        if (primaryRoomRef.current) {
+          try {
+            await primaryRoomRef.current.localParticipant.unpublishTrack(audioTrackRef.current);
+            console.log('[Radio PTT] Track unpublished');
+          } catch (e) {
+            console.error('[Radio PTT] Failed to unpublish:', e);
+          }
+        }
+        audioTrackRef.current.enabled = false;
         audioTrackRef.current.stop();
+        console.log('[Radio PTT] Track stopped, readyState:', audioTrackRef.current.readyState);
         audioTrackRef.current = null;
       }
       
       if (micStreamRef.current) {
-        micStreamRef.current.getTracks().forEach(track => track.stop());
+        micStreamRef.current.getTracks().forEach(track => {
+          track.enabled = false;
+          track.stop();
+          console.log('[Radio PTT] Mic track stopped, readyState:', track.readyState);
+        });
         micStreamRef.current = null;
       }
       
       setIsTalking(false);
-      broadcastStatus(primaryRoomRef.current, "idle", transmitChannel);
+      if (primaryRoomRef.current) {
+        broadcastStatus(primaryRoomRef.current, "idle", transmitChannel);
+      }
+      console.log('[Radio PTT] Transmission stopped successfully');
     } catch (err) {
-      console.error("Stop PTT error:", err);
+      console.error("[Radio PTT] Stop error:", err);
       setIsTalking(false);
+    }
+  };
+
+  const handlePTTDown = async (e) => {
+    if (e && e.type === 'keydown' && e.repeat) return;
+    if (pttActiveRef.current) return;
+    
+    console.log('[Radio PTT] === PTT DOWN ===');
+    pttActiveRef.current = true;
+    stopCalledRef.current = false;
+    
+    const success = await startPTT();
+    
+    if (!pttActiveRef.current) {
+      console.log('[Radio PTT] Released during setup, calling stop');
+      if (!stopCalledRef.current) {
+        stopCalledRef.current = true;
+        await stopPTT();
+      }
+    }
+  };
+
+  const handlePTTUp = async () => {
+    console.log('[Radio PTT] === PTT UP ===, pttActive:', pttActiveRef.current);
+    if (!pttActiveRef.current) return;
+    
+    pttActiveRef.current = false;
+    
+    if (!stopCalledRef.current) {
+      stopCalledRef.current = true;
+      await stopPTT();
     }
   };
 
   const handleTouchStart = (e) => {
     e.preventDefault();
     if (!e.isTrusted) return;
-    startPTT();
+    handlePTTDown(e);
   };
 
   const handleTouchEnd = (e) => {
     e.preventDefault();
-    stopPTT();
+    handlePTTUp();
   };
 
   const handleMouseDown = (e) => {
     if (!e.isTrusted) return;
-    startPTT();
+    handlePTTDown(e);
   };
 
   const playLastRx = () => {

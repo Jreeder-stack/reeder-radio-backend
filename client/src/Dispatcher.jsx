@@ -145,6 +145,8 @@ export default function Dispatcher({ user, onLogout }) {
   const levelAnimationsRef = useRef({});
   const recordersRef = useRef({});
   const recordedChunksRef = useRef({});
+  const pttActiveRef = useRef(false);
+  const stopCalledRef = useRef(false);
 
   useEffect(() => {
     channelRoomsRef.current = channelRooms;
@@ -165,6 +167,31 @@ export default function Dispatcher({ user, onLogout }) {
     return () => {
       Object.values(levelAnimationsRef.current).forEach(id => cancelAnimationFrame(id));
       if (audioContextRef.current) audioContextRef.current.close();
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleGlobalRelease = () => {
+      if (pttActiveRef.current && !stopCalledRef.current) {
+        console.log('[Dispatcher PTT] Global release detected');
+        pttActiveRef.current = false;
+        stopCalledRef.current = true;
+        stopDispatchPTT();
+      }
+    };
+
+    window.addEventListener('pointerup', handleGlobalRelease);
+    window.addEventListener('pointercancel', handleGlobalRelease);
+    window.addEventListener('touchend', handleGlobalRelease);
+    window.addEventListener('touchcancel', handleGlobalRelease);
+    window.addEventListener('blur', handleGlobalRelease);
+
+    return () => {
+      window.removeEventListener('pointerup', handleGlobalRelease);
+      window.removeEventListener('pointercancel', handleGlobalRelease);
+      window.removeEventListener('touchend', handleGlobalRelease);
+      window.removeEventListener('touchcancel', handleGlobalRelease);
+      window.removeEventListener('blur', handleGlobalRelease);
     };
   }, []);
 
@@ -474,8 +501,9 @@ export default function Dispatcher({ user, onLogout }) {
 
   const startDispatchPTT = async () => {
     const room = channelRoomsRef.current[selectedTxChannel];
-    if (!room) return;
+    if (!room) return false;
 
+    console.log('[Dispatcher PTT] Starting transmission on', selectedTxChannel);
     try {
       setIsTalking(true);
       
@@ -486,6 +514,7 @@ export default function Dispatcher({ user, onLogout }) {
         },
       });
       micStreamRef.current = stream;
+      console.log('[Dispatcher PTT] Microphone acquired');
       
       const audioTrack = stream.getAudioTracks()[0];
       
@@ -495,49 +524,97 @@ export default function Dispatcher({ user, onLogout }) {
       });
       
       audioTrackRef.current = audioTrack;
+      console.log('[Dispatcher PTT] Track published successfully');
+      return true;
     } catch (err) {
-      console.error("PTT error:", err);
+      console.error("[Dispatcher PTT] Error:", err);
       setIsTalking(false);
+      return false;
     }
   };
 
   const stopDispatchPTT = async () => {
+    console.log('[Dispatcher PTT] Stopping transmission');
     const room = channelRoomsRef.current[selectedTxChannel];
-    if (!room) return;
 
     try {
       if (audioTrackRef.current) {
-        await room.localParticipant.unpublishTrack(audioTrackRef.current);
+        if (room) {
+          try {
+            await room.localParticipant.unpublishTrack(audioTrackRef.current);
+            console.log('[Dispatcher PTT] Track unpublished');
+          } catch (e) {
+            console.error('[Dispatcher PTT] Failed to unpublish:', e);
+          }
+        }
+        audioTrackRef.current.enabled = false;
         audioTrackRef.current.stop();
+        console.log('[Dispatcher PTT] Track stopped, readyState:', audioTrackRef.current.readyState);
         audioTrackRef.current = null;
       }
       
       if (micStreamRef.current) {
-        micStreamRef.current.getTracks().forEach(track => track.stop());
+        micStreamRef.current.getTracks().forEach(track => {
+          track.enabled = false;
+          track.stop();
+          console.log('[Dispatcher PTT] Mic track stopped, readyState:', track.readyState);
+        });
         micStreamRef.current = null;
       }
       
       setIsTalking(false);
+      console.log('[Dispatcher PTT] Transmission stopped successfully');
     } catch (err) {
-      console.error("Stop PTT error:", err);
+      console.error("[Dispatcher PTT] Stop error:", err);
       setIsTalking(false);
+    }
+  };
+
+  const handlePTTDown = async (e) => {
+    if (e && e.type === 'keydown' && e.repeat) return;
+    if (pttActiveRef.current) return;
+    
+    console.log('[Dispatcher PTT] === PTT DOWN ===');
+    pttActiveRef.current = true;
+    stopCalledRef.current = false;
+    
+    const success = await startDispatchPTT();
+    
+    if (!pttActiveRef.current) {
+      console.log('[Dispatcher PTT] Released during setup, calling stop');
+      if (!stopCalledRef.current) {
+        stopCalledRef.current = true;
+        await stopDispatchPTT();
+      }
+    }
+  };
+
+  const handlePTTUp = async () => {
+    console.log('[Dispatcher PTT] === PTT UP ===, pttActive:', pttActiveRef.current);
+    if (!pttActiveRef.current) return;
+    
+    pttActiveRef.current = false;
+    
+    if (!stopCalledRef.current) {
+      stopCalledRef.current = true;
+      await stopDispatchPTT();
     }
   };
 
   const handleTouchStart = (e) => {
     e.preventDefault();
     if (!e.isTrusted) return;
-    startDispatchPTT();
+    handlePTTDown(e);
   };
 
   const handleTouchEnd = (e) => {
     e.preventDefault();
-    stopDispatchPTT();
+    handlePTTUp();
   };
 
   const handleMouseDown = (e) => {
     if (!e.isTrusted) return;
-    startDispatchPTT();
+    handlePTTDown(e);
   };
 
   const playRecording = (channel) => {
