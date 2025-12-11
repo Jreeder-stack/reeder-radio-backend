@@ -903,7 +903,18 @@ export default function App({ user, onLogout }) {
   };
 
   const stopPTT = async () => {
+    if (!audioTrackRef.current && !micStreamRef.current) {
+      console.log('[Radio PTT] Stop called but nothing to stop');
+      setIsTalking(false);
+      return;
+    }
+    
     console.log('[Radio PTT] Stopping transmission');
+    
+    const trackToStop = audioTrackRef.current;
+    const streamToStop = micStreamRef.current;
+    audioTrackRef.current = null;
+    micStreamRef.current = null;
     
     try {
       if (txAnimationRef.current) {
@@ -913,28 +924,34 @@ export default function App({ user, onLogout }) {
       setTxLevel(0);
       txAnalyserRef.current = null;
       
-      if (audioTrackRef.current) {
+      if (trackToStop) {
         if (primaryRoomRef.current) {
           try {
-            await primaryRoomRef.current.localParticipant.unpublishTrack(audioTrackRef.current);
+            await primaryRoomRef.current.localParticipant.unpublishTrack(trackToStop);
             console.log('[Radio PTT] Track unpublished');
           } catch (e) {
-            console.error('[Radio PTT] Failed to unpublish:', e);
+            console.warn('[Radio PTT] Unpublish warning:', e.message);
           }
         }
-        audioTrackRef.current.enabled = false;
-        audioTrackRef.current.stop();
-        console.log('[Radio PTT] Track stopped, readyState:', audioTrackRef.current.readyState);
-        audioTrackRef.current = null;
+        try {
+          trackToStop.enabled = false;
+          trackToStop.stop();
+          console.log('[Radio PTT] Track stopped, readyState:', trackToStop.readyState);
+        } catch (e) {
+          console.warn('[Radio PTT] Track stop warning:', e.message);
+        }
       }
       
-      if (micStreamRef.current) {
-        micStreamRef.current.getTracks().forEach(track => {
-          track.enabled = false;
-          track.stop();
-          console.log('[Radio PTT] Mic track stopped, readyState:', track.readyState);
+      if (streamToStop) {
+        streamToStop.getTracks().forEach(track => {
+          try {
+            track.enabled = false;
+            track.stop();
+            console.log('[Radio PTT] Mic track stopped, readyState:', track.readyState);
+          } catch (e) {
+            console.warn('[Radio PTT] Mic track stop warning:', e.message);
+          }
         });
-        micStreamRef.current = null;
       }
       
       setIsTalking(false);

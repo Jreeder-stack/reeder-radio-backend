@@ -1,0 +1,254 @@
+index-DKZQyrYa.js:104 Uncaught (in promise) UnexpectedConnectionState: PC manager is closed
+    at index-DKZQyrYa.js:104:81664
+    at Generator.next (<anonymous>)
+    at index-DKZQyrYa.js:68:59814
+    at new Promise (<anonymous>)
+    at x (index-DKZQyrYa.js:68:59611)
+    at n1.ensureDataTransportConnected (index-DKZQyrYa.js:104:81486)
+    at n1.<anonymous> (index-DKZQyrYa.js:104:82642)
+    at Generator.next (<anonymous>)
+    at index-DKZQyrYa.js:68:59814
+    at new Promise (<anonymous>)
+(anonymous) @ index-DKZQyrYa.js:104
+(anonymous) @ index-DKZQyrYa.js:68
+x @ index-DKZQyrYa.js:68
+ensureDataTransportConnected @ index-DKZQyrYa.js:104
+(anonymous) @ index-DKZQyrYa.js:104
+(anonymous) @ index-DKZQyrYa.js:68
+x @ index-DKZQyrYa.js:68
+ensurePublisherConnected @ index-DKZQyrYa.js:104
+(anonymous) @ index-DKZQyrYa.js:104
+(anonymous) @ index-DKZQyrYa.js:68
+x @ index-DKZQyrYa.js:68
+sendDataPacket @ index-DKZQyrYa.js:104
+(anonymous) @ index-DKZQyrYa.js:104
+(anonymous) @ index-DKZQyrYa.js:68
+x @ index-DKZQyrYa.js:68
+publishData @ index-DKZQyrYa.js:104
+(anonymous) @ index-DKZQyrYa.js:104
+(anonymous) @ index-DKZQyrYa.js:104
+index-DKZQyrYa.js:108 [PTT] === PTT DOWN ===
+index-DKZQyrYa.js:108 [PTT] startTransmission called, channels: ['DISPATCH']
+index-DKZQyrYa.js:108 [LiveKit] PTT DOWN - publishing to channels: ['DISPATCH']
+index-DKZQyrYa.js:108 [LiveKit] Initializing persistent microphone
+index-DKZQyrYa.js:104 Uncaught (in promise) UnexpectedConnectionState: PC manager is closed
+    at index-DKZQyrYa.js:104:81664
+    at Generator.next (<anonymous>)
+    at index-DKZQyrYa.js:68:59814
+    at new Promise (<anonymous>)
+    at x (index-DKZQyrYa.js:68:59611)
+    at n1.ensureDataTransportConnected (index-DKZQyrYa.js:104:81486)
+    at n1.<anonymous> (index-DKZQyrYa.js:104:82642)
+    at Generator.next (<anonymous>)
+    at index-DKZQyrYa.js:68:59814
+    at new Promise (<anonymous>)
+(anonymous) @ index-DKZQyrYa.js:104
+(anonymous) @ index-DKZQyrYa.js:68
+x @ index-DKZQyrYa.js:68
+ensureDataTransportConnected @ index-DKZQyrYa.js:104
+(anonymous) @ index-DKZQyrYa.js:104
+(anonymous) @ index-DKZQyrYa.js:68
+x @ index-DKZQyrYa.js:68
+ensurePublisherConnected @ index-DKZQyrYa.js:104
+(anonymous) @ index-DKZQyrYa.js:104
+(anonymous) @ index-DKZQyrYa.js:68
+x @ index-DKZQyrYa.js:68
+sendDataPacket @ index-DKZQyrYa.js:104
+(anonymous) @ index-DKZQyrYa.js:104
+(anonymous) @ index-DKZQyrYa.js:68
+x @ index-DKZQyrYa.js:68
+publishData @ index-DKZQyrYa.js:104
+(anonymous) @ index-DKZQyrYa.js:104
+(anonymous) @ index-DKZQyrYa.js:104
+index-DKZQyrYa.js:108 [LiveKit] Persistent mic acquired, track ID: 207fc9b9-7a13-42b8-a1dd-d637e6ab697d
+index-DKZQyrYa.js:108 [LiveKit] Persistent mic initialized successfully
+index-DKZQyrYa.js:108 [LiveKit] Active published tracks: []
+index-DKZQyrYa.js:108 [PTT] Transmission started successfully
+index-DKZQyrYa.js:108 [PTT] === PTT UP ===, pttActive: true stopCalled: false
+index-DKZQyrYa.js:108 [PTT] stopTransmission called
+index-DKZQyrYa.js:108 [PTT] Unpublishing all audio tracks...
+index-DKZQyrYa.js:108 [LiveKit] PTT UP - unpublishing from channels: []
+index-DKZQyrYa.js:108 [LiveKit] Active published tracks after unpublish: []
+index-DKZQyrYa.js:108 [PTT] Transmission stopped successfully (persistent mic kept alive)
+index-DKZQyrYa.js:108 [PTT] === PTT DOWN ===
+index-DKZQyrYa.js:108 [PTT] startTransmission called, channels: ['DISPATCH']
+index-DKZQyrYa.js:108 [LiveKit] PTT DOWN - publishing to channels: ['DISPATCH']
+index-DKZQyrYa.js:108 [LiveKit] Active published tracks: []
+index-DKZQyrYa.js:108 [PTT] Transmission started successfully
+index-DKZQyrYa.js:108 [PTT] === PTT UP ===, pttActive: true stopCalled: false
+index-DKZQyrYa.js:108 [PTT] stopTransmission called
+index-DKZQyrYa.js:108 [PTT] Unpublishing all audio tracks...
+index-DKZQyrYa.js:108 [LiveKit] PTT UP - unpublishing from channels: []
+index-DKZQyrYa.js:108 [LiveKit] Active published tracks after unpublish: []
+index-DKZQyrYa.js:108 [PTT] Transmission stopped successfully (persistent mic kept alive)
+index-DKZQyrYa.js:104 Uncaught (in promise) UnexpectedConnectionState: PC manager is closed
+    at index-DKZQyrYa.js:104:81664
+    at Generator.next (<anonymous>)
+    at index-DKZQyrYa.js:68:59814
+    at new Promise (<anonymous>)
+    at x (index-DKZQyrYa.js:68:59611)
+    at n1.ensureDataTransportConnected (index-DKZQyrYa.js:104:81486)
+    at n1.<anonymous> (index-DKZQyrYa.js:104:82642)
+    at Generator.next (<anonymous>)
+    at index-DKZQyrYa.js:68:59814
+    at new Promise (<anonymous>)
+(anonymous) @ index-DKZQyrYa.js:104
+(anonymous) @ index-DKZQyrYa.js:68
+x @ index-DKZQyrYa.js:68
+ensureDataTransportConnected @ index-DKZQyrYa.js:104
+(anonymous) @ index-DKZQyrYa.js:104
+(anonymous) @ index-DKZQyrYa.js:68
+x @ index-DKZQyrYa.js:68
+ensurePublisherConnected @ index-DKZQyrYa.js:104
+(anonymous) @ index-DKZQyrYa.js:104
+(anonymous) @ index-DKZQyrYa.js:68
+x @ index-DKZQyrYa.js:68
+sendDataPacket @ index-DKZQyrYa.js:104
+(anonymous) @ index-DKZQyrYa.js:104
+(anonymous) @ index-DKZQyrYa.js:68
+x @ index-DKZQyrYa.js:68
+publishData @ index-DKZQyrYa.js:104
+(anonymous) @ index-DKZQyrYa.js:104
+(anonymous) @ index-DKZQyrYa.js:104
+index-DKZQyrYa.js:108 [PTT] === PTT DOWN ===
+index-DKZQyrYa.js:108 [PTT] startTransmission called, channels: ['DISPATCH']
+index-DKZQyrYa.js:108 [LiveKit] PTT DOWN - publishing to channels: ['DISPATCH']
+index-DKZQyrYa.js:108 [LiveKit] Active published tracks: []
+index-DKZQyrYa.js:108 [PTT] Transmission started successfully
+index-DKZQyrYa.js:104 Uncaught (in promise) UnexpectedConnectionState: PC manager is closed
+    at index-DKZQyrYa.js:104:81664
+    at Generator.next (<anonymous>)
+    at index-DKZQyrYa.js:68:59814
+    at new Promise (<anonymous>)
+    at x (index-DKZQyrYa.js:68:59611)
+    at n1.ensureDataTransportConnected (index-DKZQyrYa.js:104:81486)
+    at n1.<anonymous> (index-DKZQyrYa.js:104:82642)
+    at Generator.next (<anonymous>)
+    at index-DKZQyrYa.js:68:59814
+    at new Promise (<anonymous>)
+(anonymous) @ index-DKZQyrYa.js:104
+(anonymous) @ index-DKZQyrYa.js:68
+x @ index-DKZQyrYa.js:68
+ensureDataTransportConnected @ index-DKZQyrYa.js:104
+(anonymous) @ index-DKZQyrYa.js:104
+(anonymous) @ index-DKZQyrYa.js:68
+x @ index-DKZQyrYa.js:68
+ensurePublisherConnected @ index-DKZQyrYa.js:104
+(anonymous) @ index-DKZQyrYa.js:104
+(anonymous) @ index-DKZQyrYa.js:68
+x @ index-DKZQyrYa.js:68
+sendDataPacket @ index-DKZQyrYa.js:104
+(anonymous) @ index-DKZQyrYa.js:104
+(anonymous) @ index-DKZQyrYa.js:68
+x @ index-DKZQyrYa.js:68
+publishData @ index-DKZQyrYa.js:104
+(anonymous) @ index-DKZQyrYa.js:104
+(anonymous) @ index-DKZQyrYa.js:104
+setInterval
+(anonymous) @ index-DKZQyrYa.js:104
+Qt @ index-DKZQyrYa.js:104
+await in Qt
+(anonymous) @ index-DKZQyrYa.js:104
+$c @ index-DKZQyrYa.js:40
+ns @ index-DKZQyrYa.js:40
+(anonymous) @ index-DKZQyrYa.js:40
+C @ index-DKZQyrYa.js:25
+K @ index-DKZQyrYa.js:25
+index-DKZQyrYa.js:108 [PTT] === PTT UP ===, pttActive: true stopCalled: false
+index-DKZQyrYa.js:108 [PTT] stopTransmission called
+index-DKZQyrYa.js:108 [PTT] Unpublishing all audio tracks...
+index-DKZQyrYa.js:108 [LiveKit] PTT UP - unpublishing from channels: []
+index-DKZQyrYa.js:108 [LiveKit] Active published tracks after unpublish: []
+index-DKZQyrYa.js:108 [PTT] Transmission stopped successfully (persistent mic kept alive)
+index-DKZQyrYa.js:108 [PTT] === PTT DOWN ===
+index-DKZQyrYa.js:108 [PTT] startTransmission called, channels: ['DISPATCH']
+index-DKZQyrYa.js:108 [LiveKit] PTT DOWN - publishing to channels: ['DISPATCH']
+index-DKZQyrYa.js:108 [LiveKit] Active published tracks: []
+index-DKZQyrYa.js:108 [PTT] Transmission started successfully
+index-DKZQyrYa.js:108 [PTT] === PTT UP ===, pttActive: true stopCalled: false
+index-DKZQyrYa.js:108 [PTT] stopTransmission called
+index-DKZQyrYa.js:108 [PTT] Unpublishing all audio tracks...
+index-DKZQyrYa.js:108 [LiveKit] PTT UP - unpublishing from channels: []
+index-DKZQyrYa.js:108 [LiveKit] Active published tracks after unpublish: []
+index-DKZQyrYa.js:108 [PTT] Transmission stopped successfully (persistent mic kept alive)
+index-DKZQyrYa.js:108 [PTT] === PTT UP ===, pttActive: false stopCalled: true
+index-DKZQyrYa.js:108 [PTT] === PTT DOWN ===
+index-DKZQyrYa.js:108 [PTT] startTransmission called, channels: ['DISPATCH']
+index-DKZQyrYa.js:108 [LiveKit] PTT DOWN - publishing to channels: ['DISPATCH']
+index-DKZQyrYa.js:108 [LiveKit] Active published tracks: []
+index-DKZQyrYa.js:108 [PTT] Transmission started successfully
+index-DKZQyrYa.js:108 [PTT] === PTT UP ===, pttActive: true stopCalled: false
+index-DKZQyrYa.js:108 [PTT] stopTransmission called
+index-DKZQyrYa.js:108 [PTT] Unpublishing all audio tracks...
+index-DKZQyrYa.js:108 [LiveKit] PTT UP - unpublishing from channels: []
+index-DKZQyrYa.js:108 [LiveKit] Active published tracks after unpublish: []
+index-DKZQyrYa.js:108 [PTT] Transmission stopped successfully (persistent mic kept alive)
+index-DKZQyrYa.js:108 [PTT] === PTT UP ===, pttActive: false stopCalled: true
+index-DKZQyrYa.js:104 Uncaught (in promise) UnexpectedConnectionState: PC manager is closed
+    at index-DKZQyrYa.js:104:81664
+    at Generator.next (<anonymous>)
+    at index-DKZQyrYa.js:68:59814
+    at new Promise (<anonymous>)
+    at x (index-DKZQyrYa.js:68:59611)
+    at n1.ensureDataTransportConnected (index-DKZQyrYa.js:104:81486)
+    at n1.<anonymous> (index-DKZQyrYa.js:104:82642)
+    at Generator.next (<anonymous>)
+    at index-DKZQyrYa.js:68:59814
+    at new Promise (<anonymous>)
+(anonymous) @ index-DKZQyrYa.js:104
+(anonymous) @ index-DKZQyrYa.js:68
+x @ index-DKZQyrYa.js:68
+ensureDataTransportConnected @ index-DKZQyrYa.js:104
+(anonymous) @ index-DKZQyrYa.js:104
+(anonymous) @ index-DKZQyrYa.js:68
+x @ index-DKZQyrYa.js:68
+ensurePublisherConnected @ index-DKZQyrYa.js:104
+(anonymous) @ index-DKZQyrYa.js:104
+(anonymous) @ index-DKZQyrYa.js:68
+x @ index-DKZQyrYa.js:68
+sendDataPacket @ index-DKZQyrYa.js:104
+(anonymous) @ index-DKZQyrYa.js:104
+(anonymous) @ index-DKZQyrYa.js:68
+x @ index-DKZQyrYa.js:68
+publishData @ index-DKZQyrYa.js:104
+(anonymous) @ index-DKZQyrYa.js:104
+(anonymous) @ index-DKZQyrYa.js:104
+index-DKZQyrYa.js:104 Uncaught (in promise) UnexpectedConnectionState: PC manager is closed
+    at index-DKZQyrYa.js:104:81664
+    at Generator.next (<anonymous>)
+    at index-DKZQyrYa.js:68:59814
+    at new Promise (<anonymous>)
+    at x (index-DKZQyrYa.js:68:59611)
+    at n1.ensureDataTransportConnected (index-DKZQyrYa.js:104:81486)
+    at n1.<anonymous> (index-DKZQyrYa.js:104:82642)
+    at Generator.next (<anonymous>)
+    at index-DKZQyrYa.js:68:59814
+    at new Promise (<anonymous>)
+(anonymous) @ index-DKZQyrYa.js:104
+(anonymous) @ index-DKZQyrYa.js:68
+x @ index-DKZQyrYa.js:68
+ensureDataTransportConnected @ index-DKZQyrYa.js:104
+(anonymous) @ index-DKZQyrYa.js:104
+(anonymous) @ index-DKZQyrYa.js:68
+x @ index-DKZQyrYa.js:68
+ensurePublisherConnected @ index-DKZQyrYa.js:104
+(anonymous) @ index-DKZQyrYa.js:104
+(anonymous) @ index-DKZQyrYa.js:68
+x @ index-DKZQyrYa.js:68
+sendDataPacket @ index-DKZQyrYa.js:104
+(anonymous) @ index-DKZQyrYa.js:104
+(anonymous) @ index-DKZQyrYa.js:68
+x @ index-DKZQyrYa.js:68
+publishData @ index-DKZQyrYa.js:104
+(anonymous) @ index-DKZQyrYa.js:104
+(anonymous) @ index-DKZQyrYa.js:104
+setInterval
+(anonymous) @ index-DKZQyrYa.js:104
+Qt @ index-DKZQyrYa.js:104
+await in Qt
+(anonymous) @ index-DKZQyrYa.js:104
+$c @ index-DKZQyrYa.js:40
+ns @ index-DKZQyrYa.js:40
+(anonymous) @ index-DKZQyrYa.js:40
+C @ index-DKZQyrYa.js:25
+K @ index-DKZQyrYa.js:25
