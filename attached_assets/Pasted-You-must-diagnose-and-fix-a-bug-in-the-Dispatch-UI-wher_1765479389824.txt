@@ -1,0 +1,113 @@
+You must diagnose and fix a bug in the Dispatch UI where audio continues transmitting after releasing PTT, even though the UI shows "not transmitting."
+
+Investigate the following issues in the frontend codebase. Do NOT rewrite unrelated logic, and do NOT change backend code — only fix frontend audio/transmit logic.
+
+----------------------------------------------------
+STEP 1 — SEARCH FOR PTT LOGIC
+----------------------------------------------------
+Find:
+- Any function that begins or ends transmission
+- Any use of createLocalAudioTrack()
+- Any call to localParticipant.publishTrack()
+- Any call to localParticipant.unpublishTrack()
+
+List where each of these happens.
+
+----------------------------------------------------
+STEP 2 — CHECK FOR MULTIPLE TRACK CREATION
+----------------------------------------------------
+Verify whether mic audio tracks are being created INSIDE the PTT key-down handler.
+
+If you find code like:
+
+    const track = await createLocalAudioTrack(...)
+
+inside a PTT press function, this is incorrect.
+
+Fix:
+- Create ONE persistent micTrack when the dispatcher logs in or loads the console.
+- Store it in global state (Zustand or a module-level variable).
+- PTT should ONLY publish/unpublish the existing track, NOT create new ones.
+
+----------------------------------------------------
+STEP 3 — FIX UNPUBLISHING LOGIC
+----------------------------------------------------
+Verify that unpublishing is stopping the track.
+
+Correct behavior on PTT RELEASE must be:
+
+    room.localParticipant.unpublishTrack(micTrack, { stop: false });
+    micTrack.disable();
+    micTrack.stop();
+    micTrack.mediaStreamTrack.stop();
+
+Implement all three actions:
+1. unpublishTrack()
+2. disable()
+3. stop()
+
+This ensures the mic fully stops sending frames.
+
+Add console.log statements on PTT down and up:
+- "PTT DOWN – publishing track"
+- "PTT UP – stopping track"
+
+----------------------------------------------------
+STEP 4 — CHECK WEB AUDIO MIXER (if used)
+----------------------------------------------------
+Search for nodes like:
+
+    micNode.connect(...)
+    micGain.connect(...)
+    audioContext.createMediaStreamSource(...)
+
+If any micNode or gainNode is connected to a mixer bus, ensure that on PTT release you call:
+
+    micNode.disconnect();
+    micGain.disconnect();
+
+If these nodes remain connected, audio will continue leaking even after LiveKit stops publishing.
+
+----------------------------------------------------
+STEP 5 — ADD DIAGNOSTIC LOGS
+----------------------------------------------------
+Add logs to show:
+
+- When micTrack is created
+- When micTrack is published
+- When micTrack is unpublished
+- When micTrack.stop() is called
+- Track IDs and states before/after publishing
+
+Add:
+
+    console.log("Active local tracks:", room.localParticipant.audioTracks);
+
+on every PTT up/down event.
+
+----------------------------------------------------
+STEP 6 — VALIDATE FIX
+----------------------------------------------------
+After changes:
+1. Start dev server
+2. Press PTT and speak
+3. Release PTT
+4. Confirm:
+    • No audio events received by backend
+    • localParticipant.audioTracks becomes empty
+    • micTrack.readyState === "ended"
+
+If any track remains active, identify where it is kept alive and fix that location.
+
+----------------------------------------------------
+IMPORTANT RULES
+----------------------------------------------------
+- Do NOT modify any backend files.
+- Do NOT modify unrelated React components.
+- Only change audio engine, PTT handling, track lifecycle, mixer logic, and logging.
+- Keep code readable and modular.
+
+When finished, show me:
+- The diff of changes made
+- The final PTT down/up functions
+- The final mic track initialization logic
