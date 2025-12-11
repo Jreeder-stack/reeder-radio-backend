@@ -279,7 +279,14 @@ export default function App({ user, onLogout }) {
   );
 
   // Force release all mic tracks - called synchronously to ensure cleanup
+  // Returns true if there was something to stop
   const forceMicRelease = () => {
+    const hadActiveStreams = !!(audioTrackRef.current || micStreamRef.current);
+    
+    if (!hadActiveStreams) {
+      return false; // Nothing to stop
+    }
+    
     console.log('[Radio PTT] Force mic release called');
     
     // Stop the published track
@@ -308,19 +315,7 @@ export default function App({ user, onLogout }) {
       micStreamRef.current = null;
     }
     
-    // On iOS, also try to enumerate and stop any lingering mic tracks
-    if (isIOSRef.current && navigator.mediaDevices) {
-      navigator.mediaDevices.getUserMedia({ audio: true })
-        .then(tempStream => {
-          // Immediately stop this temporary stream - this can help iOS release resources
-          tempStream.getTracks().forEach(t => {
-            t.stop();
-          });
-        })
-        .catch(() => {
-          // Ignore - just trying to force iOS to re-evaluate permissions
-        });
-    }
+    return true;
   };
 
   useEffect(() => {
@@ -378,14 +373,18 @@ export default function App({ user, onLogout }) {
 
   useEffect(() => {
     const handleGlobalRelease = (e) => {
-      // ALWAYS force mic release on any touch/pointer end - iOS safety measure
-      forceMicRelease();
-      
-      if (pttActiveRef.current && !stopCalledRef.current) {
+      // Only handle if PTT was active
+      if (pttActiveRef.current) {
         console.log('[Radio PTT] Global release detected, event:', e.type);
+        // Force immediate mic stop on iOS (may be null if getUserMedia still pending)
+        forceMicRelease();
         pttActiveRef.current = false;
-        stopCalledRef.current = true;
-        stopPTT();
+        
+        // Always call stopPTT to ensure cleanup, even if mic wasn't acquired yet
+        if (!stopCalledRef.current) {
+          stopCalledRef.current = true;
+          stopPTT();
+        }
       }
     };
 
