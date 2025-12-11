@@ -45,9 +45,9 @@ Both workflows run automatically:
 2. **Frontend** - `cd client && npm run dev` (port 5000)
 
 ## Routes
-- `/login` - Login/register screen
+- `/login` - Login screen (no self-registration, admin creates accounts)
 - `/` - Main PTT Radio interface for field units (protected)
-- `/dispatcher` - Dispatcher Console for multi-channel monitoring (protected)
+- `/dispatcher` - Dispatcher Console for multi-channel monitoring (requires dispatcher permission)
 - `/admin` - Admin dashboard for user/channel management (admin only)
 
 ## Deploying to Render
@@ -117,11 +117,13 @@ Set these environment variables in Render:
 - Username/password authentication with bcrypt hashing
 - Session management with connect-pg-simple
 - Default admin account created on startup
+- No self-registration - admin creates all user accounts
 - Admin dashboard with three tabs:
-  - Users: View all, change roles (user/admin), block/unblock accounts
+  - Users: View all, change roles (user/admin), block/unblock accounts, set dispatcher access
   - Channels: Enable/disable channels by zone
   - Activity Logs: View all user actions with timestamps
 - Protected routes with role-based access control
+- Dispatcher permission: Users need "Dispatcher Access" checkbox enabled to access Dispatcher Console
 - Activity logging for logins, registrations, channel joins, admin actions
 
 ## Default Admin Credentials

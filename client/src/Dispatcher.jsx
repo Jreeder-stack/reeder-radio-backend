@@ -127,7 +127,9 @@ function AudioLevelMeter({ level }) {
 export default function Dispatcher({ user, onLogout }) {
   const navigate = useNavigate();
   const [connected, setConnected] = useState(false);
-  const [dispatcherId, setDispatcherId] = useState(user?.username || "DISPATCH");
+  const [connecting, setConnecting] = useState(false);
+  const [connectionError, setConnectionError] = useState(null);
+  const [dispatcherId] = useState(user?.username || "DISPATCH");
   const [channelRooms, setChannelRooms] = useState({});
   const [unitPresence, setUnitPresence] = useState({});
   const [activeEmergencies, setActiveEmergencies] = useState({});
@@ -139,6 +141,7 @@ export default function Dispatcher({ user, onLogout }) {
   const [isTalking, setIsTalking] = useState(false);
   const [lastRxRecordings, setLastRxRecordings] = useState({});
   const [playingChannel, setPlayingChannel] = useState(null);
+  const hasAutoConnected = useRef(false);
 
   const channelRoomsRef = useRef({});
   const audioContextRef = useRef(null);
@@ -405,7 +408,12 @@ export default function Dispatcher({ user, onLogout }) {
     return lkRoom;
   }, [dispatcherId, getAudioContext, mutedChannels, updateUnitPresence]);
 
-  const connectAllChannels = async () => {
+  const connectAllChannels = useCallback(async () => {
+    if (connecting || connected) return;
+    
+    setConnecting(true);
+    setConnectionError(null);
+    
     try {
       const rooms = {};
       
@@ -431,9 +439,18 @@ export default function Dispatcher({ user, onLogout }) {
       setConnected(true);
     } catch (err) {
       console.error("Connection error:", err);
-      alert("Failed to connect: " + err.message);
+      setConnectionError(err.message);
+    } finally {
+      setConnecting(false);
     }
-  };
+  }, [connecting, connected, createChannelRoom, dispatcherId, getToken, updateUnitPresence]);
+
+  useEffect(() => {
+    if (!hasAutoConnected.current && !connected && !connecting) {
+      hasAutoConnected.current = true;
+      connectAllChannels();
+    }
+  }, [connected, connecting, connectAllChannels]);
 
   const toggleMute = (channel) => {
     setMutedChannels(prev => ({ ...prev, [channel]: !prev[channel] }));
@@ -633,41 +650,38 @@ export default function Dispatcher({ user, onLogout }) {
 
       {!connected ? (
         <div style={{ textAlign: "center", padding: 40 }}>
-          <div style={{ marginBottom: 20 }}>
-            <label style={{ display: "block", marginBottom: 8, fontSize: 14, opacity: 0.7 }}>
-              Dispatcher ID
-            </label>
-            <input
-              style={{ 
-                padding: "10px 14px", 
-                borderRadius: 6, 
-                border: "1px solid #444",
-                background: "#1a1a1a",
-                color: "white",
-                width: 200,
-                fontSize: 16,
-                textAlign: "center",
-              }}
-              value={dispatcherId}
-              onChange={(e) => setDispatcherId(e.target.value)}
-              placeholder="DISPATCH"
-            />
-          </div>
-          <button
-            onClick={connectAllChannels}
-            style={{
-              padding: "12px 32px",
-              backgroundColor: "#22c55e",
-              color: "white",
-              border: "none",
-              borderRadius: 8,
-              cursor: "pointer",
-              fontSize: 16,
-              fontWeight: 600,
-            }}
-          >
-            Connect All Channels
-          </button>
+          {connecting ? (
+            <div>
+              <div style={{ fontSize: 18, marginBottom: 16 }}>Connecting to all channels...</div>
+              <div style={{ fontSize: 14, color: "#888" }}>Please wait</div>
+            </div>
+          ) : connectionError ? (
+            <div>
+              <div style={{ fontSize: 18, marginBottom: 16, color: "#dc2626" }}>Connection Failed</div>
+              <div style={{ fontSize: 14, color: "#888", marginBottom: 20 }}>{connectionError}</div>
+              <button
+                onClick={() => {
+                  hasAutoConnected.current = false;
+                  setConnectionError(null);
+                  connectAllChannels();
+                }}
+                style={{
+                  padding: "12px 32px",
+                  backgroundColor: "#22c55e",
+                  color: "white",
+                  border: "none",
+                  borderRadius: 8,
+                  cursor: "pointer",
+                  fontSize: 16,
+                  fontWeight: 600,
+                }}
+              >
+                Retry Connection
+              </button>
+            </div>
+          ) : (
+            <div style={{ fontSize: 14, color: "#888" }}>Initializing...</div>
+          )}
         </div>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 16 }}>
