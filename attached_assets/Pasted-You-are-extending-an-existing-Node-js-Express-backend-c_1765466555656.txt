@@ -1,0 +1,183 @@
+You are extending an existing Node.js + Express backend called "reeder-radio-backend".
+
+⚠️ CRITICAL RULES — DO NOT BREAK:
+- DO NOT modify or delete any existing routes.
+- DO NOT rewrite server.js.
+- DO NOT refactor code.
+- DO NOT change any existing logic.
+- ONLY ADD new tables, helpers, files, and routes exactly as instructed.
+- Do not break authentication, admin, or /getToken functionality.
+
+Your job is to ADD a Dispatch Radio Module that supports:
+- Persistent radio unit presence
+- Emergency tracking
+- Radio event logging
+- Dispatcher monitor configuration
+
+The frontend dispatcher.jsx already handles LiveKit.  
+We are NOT changing anything in the frontend.  
+We are simply adding backend state + APIs.
+
+-----------------------------------------------------------------------
+# 1. UPDATE db.js — ADD NEW TABLES INSIDE initializeDatabase()
+Add these CREATE TABLE statements inside initializeDatabase(), near the end,
+WITHOUT removing or altering existing tables:
+
+CREATE TABLE IF NOT EXISTS units (
+  id SERIAL PRIMARY KEY,
+  unit_identity VARCHAR(100) UNIQUE NOT NULL,
+  channel VARCHAR(50),
+  status VARCHAR(20) DEFAULT 'idle',
+  last_seen TIMESTAMP,
+  location JSONB,
+  is_emergency BOOLEAN DEFAULT false
+);
+
+CREATE TABLE IF NOT EXISTS radio_events (
+  id SERIAL PRIMARY KEY,
+  unit_identity VARCHAR(100),
+  channel VARCHAR(50),
+  event_type VARCHAR(50),
+  timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  metadata JSONB
+);
+
+CREATE TABLE IF NOT EXISTS dispatch_monitor_sets (
+  id SERIAL PRIMARY KEY,
+  dispatcher_id INTEGER REFERENCES users(id),
+  primary_tx_channel VARCHAR(50),
+  monitored_channels JSONB DEFAULT '[]'
+);
+
+-----------------------------------------------------------------------
+# 2. UPDATE db.js — ADD NEW HELPERS AT THE BOTTOM OF THE FILE
+Append these BEFORE the final "export default pool;":
+
+export async function upsertUnitPresence(identity, channel, status, location = null, isEmergency = false) {
+  const result = await pool.query(
+    `INSERT INTO units (unit_identity, channel, status, last_seen, location, is_emergency)
+     VALUES ($1, $2, $3, CURRENT_TIMESTAMP, $4, $5)
+     ON CONFLICT (unit_identity)
+     DO UPDATE SET channel = EXCLUDED.channel,
+                   status = EXCLUDED.status,
+                   last_seen = CURRENT_TIMESTAMP,
+                   location = EXCLUDED.location,
+                   is_emergency = EXCLUDED.is_emergency
+     RETURNING *`,
+    [identity, channel, status, location, isEmergency]
+  );
+  return result.rows[0];
+}
+
+export async function getAllUnitPresence() {
+  const result = await pool.query(`SELECT * FROM units ORDER BY unit_identity`);
+  return result.rows;
+}
+
+export async function logRadioEvent(identity, channel, eventType, metadata = {}) {
+  await pool.query(
+    `INSERT INTO radio_events (unit_identity, channel, event_type, metadata)
+     VALUES ($1, $2, $3, $4)`,
+    [identity, channel, eventType, metadata]
+  );
+}
+
+export async function getMonitorSet(dispatcherId) {
+  const result = await pool.query(
+    `SELECT * FROM dispatch_monitor_sets WHERE dispatcher_id = $1`,
+    [dispatcherId]
+  );
+  return result.rows[0];
+}
+
+export async function setMonitorSet(dispatcherId, primary, monitored) {
+  const result = await pool.query(
+    `INSERT INTO dispatch_monitor_sets (dispatcher_id, primary_tx_channel, monitored_channels)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (dispatcher_id)
+     DO UPDATE SET primary_tx_channel = EXCLUDED.primary_tx_channel,
+                   monitored_channels = EXCLUDED.monitored_channels
+     RETURNING *`,
+    [dispatcherId, primary, JSON.stringify(monitored)]
+  );
+  return result.rows[0];
+}
+
+-----------------------------------------------------------------------
+# 3. CREATE NEW FOLDER:  dispatch/
+Add a new folder named "dispatch" in the project root.
+
+Inside it, create ONE file:
+
+-----------------------------------------------------------------------
+# dispatch/dispatchRouter.js
+
+import express from "express";
+import {
+  upsertUnitPresence,
+  getAllUnitPresence,
+  logRadioEvent,
+  getMonitorSet,
+  setMonitorSet
+} from "../db.js";
+
+const router = express.Router();
+
+// GET all unit presence
+router.get("/units", async (req, res) => {
+  const units = await getAllUnitPresence();
+  res.json({ units });
+});
+
+// POST update heartbeat/status
+router.post("/unit/update", async (req, res) => {
+  const { identity, channel, status, location, isEmergency } = req.body;
+  const unit = await upsertUnitPresence(identity, channel, status, location, isEmergency);
+  await logRadioEvent(identity, channel, "status_update", { status });
+  res.json({ unit });
+});
+
+// POST emergency acknowledge (logged)
+router.post("/emergency/ack", async (req, res) => {
+  const { identity, channel, acknowledgedBy } = req.body;
+  await logRadioEvent(identity, channel, "emergency_ack", { acknowledgedBy });
+  res.json({ success: true });
+});
+
+// GET dispatcher monitor config
+router.get("/monitor/:dispatcherId", async (req, res) => {
+  const data = await getMonitorSet(req.params.dispatcherId);
+  res.json({ monitor: data });
+});
+
+// POST save dispatcher monitor config
+router.post("/monitor/:dispatcherId", async (req, res) => {
+  const { primary, monitored } = req.body;
+  const result = await setMonitorSet(req.params.dispatcherId, primary, monitored);
+  res.json({ monitor: result });
+});
+
+export default router;
+
+-----------------------------------------------------------------------
+# 4. MODIFY server.js — ADD EXACTLY TWO LINES
+DO NOT edit anything else in server.js.
+
+A) Add this import near the top:
+import dispatchRouter from "./dispatch/dispatchRouter.js";
+
+B) Add this route AFTER your other app.use() routes but BEFORE static file serving:
+app.use("/api/dispatch", requireAuth, dispatchRouter);
+
+-----------------------------------------------------------------------
+# 5. DO NOT MODIFY ANY OTHER FILES.
+Do not touch existing routes.
+Do not refactor anything.
+Do not optimize anything.
+
+This is an ADD-ONLY update.
+
+-----------------------------------------------------------------------
+
+When finished, respond only with: 
+"Dispatch backend added without modifying existing logic."

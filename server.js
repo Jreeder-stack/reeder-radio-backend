@@ -31,6 +31,7 @@ import pool, {
   logActivity,
   getActivityLogs,
 } from "./db.js";
+import dispatchRouter from "./dispatch/dispatchRouter.js";
 
 dotenv.config();
 
@@ -579,6 +580,8 @@ app.delete("/api/admin/channels/:id", requireAdmin, async (req, res) => {
     res.status(500).json({ error: "Failed to delete channel" });
   }
 });
+
+app.use("/api/dispatch", requireAuth, dispatchRouter);
 
 app.use(express.static(path.join(__dirname, "client", "dist")));
 

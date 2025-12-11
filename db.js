@@ -90,6 +90,38 @@ export async function initializeDatabase() {
       CREATE INDEX IF NOT EXISTS IDX_session_expire ON session (expire)
     `);
 
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS units (
+        id SERIAL PRIMARY KEY,
+        unit_identity VARCHAR(100) UNIQUE NOT NULL,
+        channel VARCHAR(50),
+        status VARCHAR(20) DEFAULT 'idle',
+        last_seen TIMESTAMP,
+        location JSONB,
+        is_emergency BOOLEAN DEFAULT false
+      )
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS radio_events (
+        id SERIAL PRIMARY KEY,
+        unit_identity VARCHAR(100),
+        channel VARCHAR(50),
+        event_type VARCHAR(50),
+        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        metadata JSONB
+      )
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS dispatch_monitor_sets (
+        id SERIAL PRIMARY KEY,
+        dispatcher_id INTEGER REFERENCES users(id) UNIQUE,
+        primary_tx_channel VARCHAR(50),
+        monitored_channels JSONB DEFAULT '[]'
+      )
+    `);
+
     const adminUsername = process.env.ADMIN_USERNAME || "admin";
     const adminPassword = process.env.ADMIN_PASSWORD || "admin123";
     
@@ -365,6 +397,56 @@ export async function deleteChannel(id) {
   const result = await pool.query(
     "DELETE FROM channels WHERE id = $1 RETURNING *",
     [id]
+  );
+  return result.rows[0];
+}
+
+export async function upsertUnitPresence(identity, channel, status, location = null, isEmergency = false) {
+  const result = await pool.query(
+    `INSERT INTO units (unit_identity, channel, status, last_seen, location, is_emergency)
+     VALUES ($1, $2, $3, CURRENT_TIMESTAMP, $4, $5)
+     ON CONFLICT (unit_identity)
+     DO UPDATE SET channel = EXCLUDED.channel,
+                   status = EXCLUDED.status,
+                   last_seen = CURRENT_TIMESTAMP,
+                   location = EXCLUDED.location,
+                   is_emergency = EXCLUDED.is_emergency
+     RETURNING *`,
+    [identity, channel, status, location, isEmergency]
+  );
+  return result.rows[0];
+}
+
+export async function getAllUnitPresence() {
+  const result = await pool.query(`SELECT * FROM units ORDER BY unit_identity`);
+  return result.rows;
+}
+
+export async function logRadioEvent(identity, channel, eventType, metadata = {}) {
+  await pool.query(
+    `INSERT INTO radio_events (unit_identity, channel, event_type, metadata)
+     VALUES ($1, $2, $3, $4)`,
+    [identity, channel, eventType, metadata]
+  );
+}
+
+export async function getMonitorSet(dispatcherId) {
+  const result = await pool.query(
+    `SELECT * FROM dispatch_monitor_sets WHERE dispatcher_id = $1`,
+    [dispatcherId]
+  );
+  return result.rows[0];
+}
+
+export async function setMonitorSet(dispatcherId, primary, monitored) {
+  const result = await pool.query(
+    `INSERT INTO dispatch_monitor_sets (dispatcher_id, primary_tx_channel, monitored_channels)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (dispatcher_id)
+     DO UPDATE SET primary_tx_channel = EXCLUDED.primary_tx_channel,
+                   monitored_channels = EXCLUDED.monitored_channels
+     RETURNING *`,
+    [dispatcherId, primary, JSON.stringify(monitored)]
   );
   return result.rows[0];
 }
