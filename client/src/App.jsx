@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Room, RoomEvent, Track, DataPacket_Kind } from "livekit-client";
+import { toneEngine } from "./audio/toneEngine";
 
 const LIVEKIT_URL = import.meta.env.VITE_LIVEKIT_URL;
 const TOKEN_SERVER = "/getToken";
@@ -911,6 +912,13 @@ export default function App({ user, onLogout }) {
     try {
       setIsTalking(true);
       
+      // Play authorization tone (talk permit beep)
+      try {
+        toneEngine.playAuthorizationTone();
+      } catch (e) {
+        console.warn('[Radio PTT] Authorization tone error:', e);
+      }
+      
       // Detect iOS Safari - use raw mic track to avoid MediaStreamDestination issues
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
                     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -926,14 +934,35 @@ export default function App({ user, onLogout }) {
       console.log('[Radio PTT] Microphone acquired, iOS mode:', isIOS);
       
       let trackToPublish;
+      const audioContext = getAudioContext();
       
       if (isIOS) {
         // iOS: Publish raw mic track directly - MediaStreamDestination has issues on Safari
+        // Clone the stream for metering so we don't interfere with the original track
         trackToPublish = stream.getAudioTracks()[0];
         console.log('[Radio PTT] Using raw mic track for iOS');
+        
+        // Create a cloned stream for metering only (doesn't affect the published track)
+        const meterStream = stream.clone();
+        const meterSource = audioContext.createMediaStreamSource(meterStream);
+        const txAnalyser = audioContext.createAnalyser();
+        txAnalyser.fftSize = 256;
+        txAnalyser.smoothingTimeConstant = 0.3;
+        meterSource.connect(txAnalyser);
+        txAnalyserRef.current = txAnalyser;
+        
+        const dataArray = new Uint8Array(txAnalyser.frequencyBinCount);
+        const updateTxLevel = () => {
+          if (txAnalyserRef.current) {
+            txAnalyserRef.current.getByteFrequencyData(dataArray);
+            const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+            setTxLevel(Math.min(100, avg * 1.5));
+            txAnimationRef.current = requestAnimationFrame(updateTxLevel);
+          }
+        };
+        updateTxLevel();
       } else {
-        // Desktop: Use DSP chain with MediaStreamDestination
-        const audioContext = getAudioContext();
+        // Desktop: Use DSP chain with MediaStreamDestination for audio processing
         const source = audioContext.createMediaStreamSource(stream);
         const { inputGain, destination } = createTxDspChain(audioContext, radioEffect);
         
