@@ -1,0 +1,50 @@
+2025-12-11T16:27:44.21289754Z ==> Downloaded 76MB in 2s. Extraction took 2s.
+2025-12-11T16:27:46.436010034Z ==> Requesting Node.js version 20.x
+2025-12-11T16:27:46.865916761Z ==> Using Node.js version 20.19.6 via /opt/render/project/src/package.json
+2025-12-11T16:27:46.891489897Z ==> Docs on specifying a Node.js version: https://render.com/docs/node-version
+2025-12-11T16:27:47.01900146Z ==> Running build command 'npm run build && npm install'...
+2025-12-11T16:27:47.134769249Z 
+2025-12-11T16:27:47.134790289Z > reeder-radio-backend@1.0.0 build
+2025-12-11T16:27:47.134795009Z > cd client && npm install && npm run build
+2025-12-11T16:27:47.134796529Z 
+2025-12-11T16:27:49.969546953Z 
+2025-12-11T16:27:49.969565744Z added 85 packages, and audited 86 packages in 3s
+2025-12-11T16:27:49.969666356Z 
+2025-12-11T16:27:49.969674556Z 9 packages are looking for funding
+2025-12-11T16:27:49.969696256Z   run `npm fund` for details
+2025-12-11T16:27:49.977221399Z 
+2025-12-11T16:27:49.977234459Z 2 moderate severity vulnerabilities
+2025-12-11T16:27:49.977236179Z 
+2025-12-11T16:27:49.977238459Z To address all issues (including breaking changes), run:
+2025-12-11T16:27:49.97724076Z   npm audit fix --force
+2025-12-11T16:27:49.977242249Z 
+2025-12-11T16:27:49.9772448Z Run `npm audit` for details.
+2025-12-11T16:27:50.114066379Z 
+2025-12-11T16:27:50.114080469Z > reeder-radio-ui@0.0.0 build
+2025-12-11T16:27:50.114082979Z > vite build
+2025-12-11T16:27:50.114084779Z 
+2025-12-11T16:27:50.307883551Z vite v5.4.21 building for production...
+2025-12-11T16:27:50.347789959Z node:internal/process/promises:391
+2025-12-11T16:27:50.347805029Z     triggerUncaughtException(err, true /* fromPromise */);
+2025-12-11T16:27:50.347807699Z     ^
+2025-12-11T16:27:50.347809989Z 
+2025-12-11T16:27:50.347817809Z [Failed to load PostCSS config: Failed to load PostCSS config (searchPath: /opt/render/project/src/client): [Error] Loading PostCSS Plugin failed: Cannot find module '@tailwindcss/postcss'
+2025-12-11T16:27:50.34782011Z Require stack:
+2025-12-11T16:27:50.34782245Z - /opt/render/project/src/client/postcss.config.js
+2025-12-11T16:27:50.34782443Z 
+2025-12-11T16:27:50.34782654Z (@/opt/render/project/src/client/postcss.config.js)
+2025-12-11T16:27:50.34782939Z Error: Loading PostCSS Plugin failed: Cannot find module '@tailwindcss/postcss'
+2025-12-11T16:27:50.34783164Z Require stack:
+2025-12-11T16:27:50.34783403Z - /opt/render/project/src/client/postcss.config.js
+2025-12-11T16:27:50.347836Z 
+2025-12-11T16:27:50.34783815Z (@/opt/render/project/src/client/postcss.config.js)
+2025-12-11T16:27:50.34784128Z     at load (file:///opt/render/project/src/client/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:33632:11)
+2025-12-11T16:27:50.34784343Z     at file:///opt/render/project/src/client/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:33657:16
+2025-12-11T16:27:50.34784639Z     at Array.map (<anonymous>)
+2025-12-11T16:27:50.3478491Z     at plugins (file:///opt/render/project/src/client/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:33656:8)
+2025-12-11T16:27:50.34785137Z     at processResult (file:///opt/render/project/src/client/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:33726:14)
+2025-12-11T16:27:50.34786995Z     at file:///opt/render/project/src/client/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:33856:14]
+2025-12-11T16:27:50.347872161Z 
+2025-12-11T16:27:50.347874371Z Node.js v20.19.6
+2025-12-11T16:27:50.409800487Z ==> Build failed 😞
+2025-12-11T16:27:50.409836528Z ==> Common ways to troubleshoot your deploy: https://render.com/docs/troubleshooting-deploys
