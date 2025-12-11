@@ -539,52 +539,23 @@ export default function App({ user, onLogout }) {
 
     lkRoom.on(RoomEvent.TrackSubscribed, (track, publication, participant) => {
       if (track.kind === "audio") {
-        const audioContext = getAudioContext();
+        // Attach track to get audio element - LiveKit handles playback
         const audioElem = track.attach();
         audioElem.dataset.channel = channelName;
         audioElem.dataset.participant = participant.identity;
         
-        // Use helper to prevent duplicate MediaElementSource connections
-        const { source, element } = getOrCreateMediaElementSource(audioContext, audioElem, track);
-        element.dataset.channel = channelName;
-        element.dataset.participant = participant.identity;
+        // Ensure it can autoplay on iOS
+        audioElem.playsInline = true;
+        audioElem.autoplay = true;
         
-        // If source is null, we can't do audio processing but audio still plays through element
-        if (!source) {
-          setActiveAudio({ channel: channelName, from: participant.identity });
-          updateUnitPresence(channelName, participant.identity, "transmitting", Date.now());
-          return;
-        }
+        // Try to play (may need user gesture on some browsers)
+        audioElem.play().catch(() => {
+          console.log('[Radio PTT] Audio autoplay blocked, will play on user gesture');
+        });
         
-        const rxChain = createRxDspChain(audioContext, radioEffect);
-        source.connect(rxChain.inputGain);
-        rxChain.outputGain.connect(audioContext.destination);
-        
-        rxChainRef.current = rxChain;
-        startRxLevelMonitor(rxChain.analyser);
-        
-        recordedChunksRef.current = [];
-        const destNode = audioContext.createMediaStreamDestination();
-        rxChain.outputGain.connect(destNode);
-        
-        try {
-          const recorder = new MediaRecorder(destNode.stream);
-          recorder.ondataavailable = (e) => {
-            if (e.data.size > 0) {
-              recordedChunksRef.current.push(e.data);
-            }
-          };
-          recorder.onstop = () => {
-            if (recordedChunksRef.current.length > 0) {
-              const blob = new Blob(recordedChunksRef.current, { type: "audio/webm" });
-              setLastRxBlob(blob);
-            }
-          };
-          recorder.start();
-          mediaRecorderRef.current = recorder;
-        } catch (err) {
-          console.error("MediaRecorder error:", err);
-        }
+        // Simple approach: just let the audio element play directly
+        // Skip Web Audio processing for maximum compatibility
+        console.log('[Radio PTT] Receiving audio from', participant.identity);
         
         setActiveAudio({ channel: channelName, from: participant.identity });
         updateUnitPresence(channelName, participant.identity, "transmitting", Date.now());
@@ -592,20 +563,11 @@ export default function App({ user, onLogout }) {
     });
 
     lkRoom.on(RoomEvent.TrackUnsubscribed, (track, publication, participant) => {
-      stopRxLevelMonitor();
-      
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-        mediaRecorderRef.current.stop();
-        mediaRecorderRef.current = null;
-      }
-      
-      // Clear audio elements from cache before detaching
-      track.detach().forEach((el) => {
-        clearAudioElementFromCache(el);
-        el.remove();
-      });
+      // Detach and clean up audio elements
+      track.detach().forEach((el) => el.remove());
       setActiveAudio(null);
       updateUnitPresence(channelName, participant.identity, "idle", Date.now());
+      console.log('[Radio PTT] Transmission ended from', participant.identity);
     });
 
     lkRoom.on(RoomEvent.DataReceived, (payload, participant) => {
