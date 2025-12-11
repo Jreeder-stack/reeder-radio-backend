@@ -277,14 +277,37 @@ class LiveKitEngine {
   }
 
   async createTxGraph() {
+    const ctx = this.getAudioContext();
+    
+    // Resume AudioContext if suspended
+    if (ctx.state === 'suspended') {
+      console.log('[LiveKit] Resuming suspended AudioContext');
+      await ctx.resume();
+    }
+    
+    // If we have a txGraph with working destination, just refresh the mic
     if (this.txGraph) {
-      const sourceTrack = this.txGraph.outputStream.getAudioTracks()[0];
+      const sourceTrack = this.txGraph.outputStream?.getAudioTracks()[0];
+      
       if (sourceTrack && sourceTrack.readyState !== 'ended') {
+        // Check if mic needs refresh
+        if (!this.txGraph.micSource || !this.txGraph.micStream) {
+          console.log('[LiveKit] Refreshing mic for existing TX graph');
+          const stream = await navigator.mediaDevices.getUserMedia({
+            audio: { echoCancellation: true, noiseSuppression: true },
+          });
+          console.log('[LiveKit] Mic acquired for refresh, track ID:', stream.getAudioTracks()[0]?.id);
+          
+          const micSource = ctx.createMediaStreamSource(stream);
+          micSource.connect(this.txGraph.micGain);
+          
+          this.txGraph.micStream = stream;
+          this.txGraph.micSource = micSource;
+        }
         console.log('[LiveKit] Reusing existing TX graph');
         return this.txGraph;
       }
-      console.log('[LiveKit] Existing TX graph has ended track, recreating');
-      this.destroyTxGraph();
+      console.log('[LiveKit] Existing TX graph has ended track, recreating fully');
     }
     
     return this.initPersistentMic();
@@ -328,25 +351,11 @@ class LiveKitEngine {
   async publishAudioToChannels(channelNames) {
     console.log('[LiveKit] PTT DOWN - publishing to channels:', channelNames);
     
-    if (!this.txGraph) {
-      await this.createTxGraph();
-    }
+    // createTxGraph handles AudioContext resume and mic refresh
+    await this.createTxGraph();
     
-    const ctx = this.getAudioContext();
-    if (ctx.state === 'suspended') {
-      console.log('[LiveKit] Resuming suspended AudioContext');
-      await ctx.resume();
-    }
-    console.log('[LiveKit] AudioContext state:', ctx.state);
-    
-    const { outputStream } = this.txGraph;
-    const sourceTrack = outputStream.getAudioTracks()[0];
-    
-    if (!sourceTrack || sourceTrack.readyState === 'ended') {
-      console.log('[LiveKit] Source track ended or missing, recreating TX graph');
-      this.destroyTxGraph();
-      await this.createTxGraph();
-    }
+    console.log('[LiveKit] AudioContext state:', this.audioContext?.state);
+    console.log('[LiveKit] Output track readyState:', this.txGraph.outputStream?.getAudioTracks()[0]?.readyState);
     
     const publishedChannels = [];
     
@@ -398,22 +407,12 @@ class LiveKitEngine {
       try {
         console.log(`[LiveKit] Unpublishing track from ${channelName}, track ID:`, track.id);
         await room.localParticipant.unpublishTrack(track);
-        
-        if (typeof track.enabled !== 'undefined') {
-          track.enabled = false;
-          console.log(`[LiveKit] Disabled track on ${channelName}`);
-        }
-        
-        track.stop();
-        console.log(`[LiveKit] Stopped track on ${channelName}, readyState:`, track.readyState);
-        
+        // Don't stop the track - it's the shared MediaStreamDestination track
+        // that we need to reuse for the next PTT
         delete this.publishedTracks[channelName];
+        console.log(`[LiveKit] Unpublished from ${channelName}`);
       } catch (err) {
         console.error(`[LiveKit] Failed to unpublish from ${channelName}:`, err);
-        try {
-          track.enabled = false;
-          track.stop();
-        } catch (e) {}
         delete this.publishedTracks[channelName];
       }
     }
@@ -433,46 +432,33 @@ class LiveKitEngine {
   }
 
   destroyTxGraph() {
-    console.log('[LiveKit] Destroying TX graph');
+    console.log('[LiveKit] Cleaning up TX graph (keeping AudioContext alive for RX)');
     
-    for (const track of Object.values(this.publishedTracks)) {
-      try {
-        track.stop();
-        console.log('[LiveKit] Stopped orphaned published track');
-      } catch (e) {}
-    }
+    // Clear published tracks reference but don't stop them
     this.publishedTracks = {};
     
+    // Release mic stream only (not the destination)
     this.releaseMicStream();
     
     if (this.txGraph) {
-      const { micStream, micSource, micGain, toneGain, destination } = this.txGraph;
+      const { micStream, micSource } = this.txGraph;
       
+      // Disconnect mic source but keep destination and gains for reuse
       try {
         micSource?.disconnect();
       } catch (e) {}
       
-      try {
-        micGain?.disconnect();
-      } catch (e) {}
-      
-      try {
-        toneGain?.disconnect();
-      } catch (e) {}
-      
-      if (destination && destination.stream) {
-        destination.stream.getTracks().forEach(track => {
-          track.stop();
-        });
-      }
-      
+      // Stop mic stream tracks
       if (micStream) {
         micStream.getTracks().forEach(track => {
           track.stop();
         });
       }
       
-      this.txGraph = null;
+      // Keep txGraph partially alive - don't null it out completely
+      // Just mark mic as needing refresh
+      this.txGraph.micStream = null;
+      this.txGraph.micSource = null;
     }
     
     console.log('[LiveKit] TX graph destroyed');
