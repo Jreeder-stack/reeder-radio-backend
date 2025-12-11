@@ -323,26 +323,30 @@ export default function App({ user, onLogout }) {
   }, []);
 
   useEffect(() => {
-    const handleGlobalRelease = () => {
+    const handleGlobalRelease = (e) => {
       if (pttActiveRef.current && !stopCalledRef.current) {
-        console.log('[Radio PTT] Global release detected');
+        console.log('[Radio PTT] Global release detected, event:', e.type);
         pttActiveRef.current = false;
         stopCalledRef.current = true;
         stopPTT();
       }
     };
 
-    window.addEventListener('pointerup', handleGlobalRelease);
-    window.addEventListener('pointercancel', handleGlobalRelease);
-    window.addEventListener('touchend', handleGlobalRelease);
-    window.addEventListener('touchcancel', handleGlobalRelease);
+    // Use capture phase and non-passive for iOS Safari compatibility
+    // Safari can suppress events if the gesture is cancelled - capture ensures we see them
+    const captureOptions = { capture: true, passive: false };
+    
+    document.addEventListener('touchend', handleGlobalRelease, captureOptions);
+    document.addEventListener('touchcancel', handleGlobalRelease, captureOptions);
+    document.addEventListener('pointerup', handleGlobalRelease, captureOptions);
+    document.addEventListener('pointercancel', handleGlobalRelease, captureOptions);
     window.addEventListener('blur', handleGlobalRelease);
 
     return () => {
-      window.removeEventListener('pointerup', handleGlobalRelease);
-      window.removeEventListener('pointercancel', handleGlobalRelease);
-      window.removeEventListener('touchend', handleGlobalRelease);
-      window.removeEventListener('touchcancel', handleGlobalRelease);
+      document.removeEventListener('touchend', handleGlobalRelease, captureOptions);
+      document.removeEventListener('touchcancel', handleGlobalRelease, captureOptions);
+      document.removeEventListener('pointerup', handleGlobalRelease, captureOptions);
+      document.removeEventListener('pointercancel', handleGlobalRelease, captureOptions);
       window.removeEventListener('blur', handleGlobalRelease);
     };
   }, []);
@@ -851,7 +855,9 @@ export default function App({ user, onLogout }) {
     try {
       setIsTalking(true);
       
-      const audioContext = getAudioContext();
+      // Detect iOS Safari - use raw mic track to avoid MediaStreamDestination issues
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
       
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
@@ -861,37 +867,47 @@ export default function App({ user, onLogout }) {
         },
       });
       micStreamRef.current = stream;
-      console.log('[Radio PTT] Microphone acquired');
+      console.log('[Radio PTT] Microphone acquired, iOS mode:', isIOS);
       
-      const source = audioContext.createMediaStreamSource(stream);
-      const { inputGain, destination } = createTxDspChain(audioContext, radioEffect);
+      let trackToPublish;
       
-      const txAnalyser = audioContext.createAnalyser();
-      txAnalyser.fftSize = 256;
-      txAnalyser.smoothingTimeConstant = 0.3;
-      source.connect(txAnalyser);
-      txAnalyser.connect(inputGain);
-      txAnalyserRef.current = txAnalyser;
+      if (isIOS) {
+        // iOS: Publish raw mic track directly - MediaStreamDestination has issues on Safari
+        trackToPublish = stream.getAudioTracks()[0];
+        console.log('[Radio PTT] Using raw mic track for iOS');
+      } else {
+        // Desktop: Use DSP chain with MediaStreamDestination
+        const audioContext = getAudioContext();
+        const source = audioContext.createMediaStreamSource(stream);
+        const { inputGain, destination } = createTxDspChain(audioContext, radioEffect);
+        
+        const txAnalyser = audioContext.createAnalyser();
+        txAnalyser.fftSize = 256;
+        txAnalyser.smoothingTimeConstant = 0.3;
+        source.connect(txAnalyser);
+        txAnalyser.connect(inputGain);
+        txAnalyserRef.current = txAnalyser;
+        
+        const dataArray = new Uint8Array(txAnalyser.frequencyBinCount);
+        const updateTxLevel = () => {
+          if (txAnalyserRef.current) {
+            txAnalyserRef.current.getByteFrequencyData(dataArray);
+            const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+            setTxLevel(Math.min(100, avg * 1.5));
+            txAnimationRef.current = requestAnimationFrame(updateTxLevel);
+          }
+        };
+        updateTxLevel();
+        
+        trackToPublish = destination.stream.getAudioTracks()[0];
+      }
       
-      const dataArray = new Uint8Array(txAnalyser.frequencyBinCount);
-      const updateTxLevel = () => {
-        if (txAnalyserRef.current) {
-          txAnalyserRef.current.getByteFrequencyData(dataArray);
-          const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
-          setTxLevel(Math.min(100, avg * 1.5));
-          txAnimationRef.current = requestAnimationFrame(updateTxLevel);
-        }
-      };
-      updateTxLevel();
-      
-      const processedTrack = destination.stream.getAudioTracks()[0];
-      
-      await primaryRoomRef.current.localParticipant.publishTrack(processedTrack, {
+      await primaryRoomRef.current.localParticipant.publishTrack(trackToPublish, {
         name: "microphone",
         source: Track.Source.Microphone,
       });
       
-      audioTrackRef.current = processedTrack;
+      audioTrackRef.current = trackToPublish;
       console.log('[Radio PTT] Track published successfully');
       broadcastStatus(primaryRoomRef.current, "transmitting", transmitChannel);
       return true;
@@ -924,17 +940,19 @@ export default function App({ user, onLogout }) {
       setTxLevel(0);
       txAnalyserRef.current = null;
       
+      // Disable track BEFORE unpublishing - critical for iOS to stop audio
       if (trackToStop) {
-        if (primaryRoomRef.current) {
-          try {
-            await primaryRoomRef.current.localParticipant.unpublishTrack(trackToStop);
-            console.log('[Radio PTT] Track unpublished');
-          } catch (e) {
-            console.warn('[Radio PTT] Unpublish warning:', e.message);
-          }
+        trackToStop.enabled = false;
+      }
+      
+      if (trackToStop && primaryRoomRef.current) {
+        try {
+          await primaryRoomRef.current.localParticipant.unpublishTrack(trackToStop);
+          console.log('[Radio PTT] Track unpublished');
+        } catch (e) {
+          console.warn('[Radio PTT] Unpublish warning:', e.message);
         }
         try {
-          trackToStop.enabled = false;
           trackToStop.stop();
           console.log('[Radio PTT] Track stopped, readyState:', trackToStop.readyState);
         } catch (e) {
