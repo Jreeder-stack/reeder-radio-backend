@@ -88,6 +88,11 @@ Set these environment variables in Render:
 - "Radio effect" toggle with narrowband filter (300Hz-3400Hz)
 - Per-channel audio level meters (TX and RX)
 - Recording last RX with playback capability
+- PTT Release Reliability: Global window listeners (pointerup, pointercancel, touchend, touchcancel, blur) ensure transmission stops reliably on mobile and desktop
+- Feedback Loop Prevention: TX channels are automatically muted during transmission to prevent audio feedback
+- Authorization Tone: Motorola-style quick double beep (2x 50ms at 1200Hz) plays when PTT engages on clear channel
+- Busy Tone: Sustained 480Hz tone plays while PTT is held on an occupied channel
+- Pre-Alert Tone: 4 beeps at 1000Hz (0.30s beep, 0.20s gap)
 
 ### Phase 5 - Emergency Button (E-Button)
 - Emergency button on UI
