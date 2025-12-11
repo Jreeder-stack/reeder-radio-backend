@@ -354,9 +354,14 @@ class LiveKitEngine {
       
       try {
         await room.localParticipant.unpublishTrack(track);
+        track.stop();
         delete this.publishedTracks[channelName];
       } catch (err) {
         console.error(`Failed to unpublish from ${channelName}:`, err);
+        try {
+          track.stop();
+        } catch (e) {}
+        delete this.publishedTracks[channelName];
       }
     }
   }
