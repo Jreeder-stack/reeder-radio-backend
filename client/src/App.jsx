@@ -64,11 +64,6 @@ function getOrCreateMediaElementSource(audioContext, audioElement, track) {
   }
 }
 
-const DEFAULT_ZONES = {
-  "Zone 1 - Operations": ["OPS1", "OPS2", "TAC1"],
-  "Zone 2 - Fire": ["FIRE1", "FIRE2", "FIRE3", "FIRE4", "FIRE5", "FIRE6", "FIRE7", "FIRE8"],
-  "Zone 3 - Secure Command": ["SECURE_CMD"],
-};
 
 const STATUS_COLORS = {
   idle: "#22c55e",
@@ -234,14 +229,14 @@ export default function App({ user, onLogout }) {
   const navigate = useNavigate();
   const [connected, setConnected] = useState(false);
   const [connecting, setConnecting] = useState(false);
-  const [zonesData, setZonesData] = useState(DEFAULT_ZONES);
+  const [zonesData, setZonesData] = useState({});
   const [channelsLoaded, setChannelsLoaded] = useState(false);
   const [noChannelsAccess, setNoChannelsAccess] = useState(false);
   const [connectionError, setConnectionError] = useState(null);
   const identity = user?.unit_id || user?.username || "Unknown";
-  const [selectedZone, setSelectedZone] = useState("Zone 1 - Operations");
-  const [selectedChannel, setSelectedChannel] = useState("OPS1");
-  const [transmitChannel, setTransmitChannel] = useState("OPS1");
+  const [selectedZone, setSelectedZone] = useState("");
+  const [selectedChannel, setSelectedChannel] = useState("");
+  const [transmitChannel, setTransmitChannel] = useState("");
   const [primaryRoom, setPrimaryRoom] = useState(null);
   const [scanRooms, setScanRooms] = useState({});
   const [unitPresence, setUnitPresence] = useState({});

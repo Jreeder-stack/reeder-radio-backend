@@ -65,13 +65,6 @@ function getOrCreateMediaElementSource(audioContext, audioElement, track) {
   }
 }
 
-const ZONES = {
-  "Zone 1 - Operations": ["OPS1", "OPS2", "TAC1"],
-  "Zone 2 - Fire": ["FIRE1", "FIRE2", "FIRE3", "FIRE4", "FIRE5", "FIRE6", "FIRE7", "FIRE8"],
-  "Zone 3 - Secure Command": ["SECURE_CMD"],
-};
-
-const ALL_CHANNELS = Object.values(ZONES).flat();
 
 const STATUS_COLORS = {
   idle: "#22c55e",
@@ -137,7 +130,9 @@ export default function Dispatcher({ user, onLogout }) {
   const [mutedChannels, setMutedChannels] = useState({});
   const [channelLevels, setChannelLevels] = useState({});
   const [activeTransmissions, setActiveTransmissions] = useState({});
-  const [selectedTxChannel, setSelectedTxChannel] = useState("OPS1");
+  const [selectedTxChannel, setSelectedTxChannel] = useState("");
+  const [allChannels, setAllChannels] = useState([]);
+  const [channelsLoaded, setChannelsLoaded] = useState(false);
   const [isTalking, setIsTalking] = useState(false);
   const [lastRxRecordings, setLastRxRecordings] = useState({});
   const [playingChannel, setPlayingChannel] = useState(null);
@@ -408,8 +403,29 @@ export default function Dispatcher({ user, onLogout }) {
     return lkRoom;
   }, [dispatcherId, getAudioContext, mutedChannels, updateUnitPresence]);
 
+  useEffect(() => {
+    const loadChannels = async () => {
+      try {
+        const res = await fetch("/api/channels", { credentials: "include" });
+        if (res.ok) {
+          const data = await res.json();
+          const channelNames = (data.channels || []).map(c => c.name);
+          setAllChannels(channelNames);
+          if (channelNames.length > 0) {
+            setSelectedTxChannel(prev => prev || channelNames[0]);
+          }
+          setChannelsLoaded(true);
+        }
+      } catch (err) {
+        console.error("Failed to load channels:", err);
+        setChannelsLoaded(true);
+      }
+    };
+    loadChannels();
+  }, []);
+
   const connectAllChannels = useCallback(async () => {
-    if (connecting || connected) return;
+    if (connecting || connected || allChannels.length === 0) return;
     
     setConnecting(true);
     setConnectionError(null);
@@ -417,7 +433,7 @@ export default function Dispatcher({ user, onLogout }) {
     try {
       const rooms = {};
       
-      for (const channel of ALL_CHANNELS) {
+      for (const channel of allChannels) {
         const token = await getToken(channel);
         const lkRoom = createChannelRoom(channel);
         await lkRoom.connect(LIVEKIT_URL, token);
@@ -443,14 +459,14 @@ export default function Dispatcher({ user, onLogout }) {
     } finally {
       setConnecting(false);
     }
-  }, [connecting, connected, createChannelRoom, dispatcherId, getToken, updateUnitPresence]);
+  }, [connecting, connected, allChannels, createChannelRoom, dispatcherId, getToken, updateUnitPresence]);
 
   useEffect(() => {
-    if (!hasAutoConnected.current && !connected && !connecting) {
+    if (!hasAutoConnected.current && !connected && !connecting && channelsLoaded && allChannels.length > 0) {
       hasAutoConnected.current = true;
       connectAllChannels();
     }
-  }, [connected, connecting, connectAllChannels]);
+  }, [connected, connecting, channelsLoaded, allChannels, connectAllChannels]);
 
   const toggleMute = (channel) => {
     setMutedChannels(prev => ({ ...prev, [channel]: !prev[channel] }));
@@ -736,7 +752,7 @@ export default function Dispatcher({ user, onLogout }) {
               gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", 
               gap: 12 
             }}>
-              {ALL_CHANNELS.map((channel) => (
+              {allChannels.map((channel) => (
                 <div
                   key={channel}
                   style={{
@@ -822,7 +838,7 @@ export default function Dispatcher({ user, onLogout }) {
                   onChange={(e) => setSelectedTxChannel(e.target.value)}
                   style={{ padding: 4, borderRadius: 4 }}
                 >
-                  {ALL_CHANNELS.map(ch => (
+                  {allChannels.map(ch => (
                     <option key={ch} value={ch}>{ch}</option>
                   ))}
                 </select>

@@ -61,14 +61,22 @@ export default function ChannelTile({ channel, onRemove }) {
   const unitsInChannel = unitsByChannel[channel.name] || [];
   const hasEmergency = emergencyUnits.some(u => u.channel === channel.name);
 
+  const handleRemoveClick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (onRemove) {
+      onRemove(channel.id);
+    }
+  };
+
   return (
     <div
       ref={setNodeRef}
       style={style}
       className={`channel-tile ${hasEmergency ? 'emergency' : ''} ${isTxSelected ? 'selected' : ''} ${isDragging ? 'z-50' : ''}`}
     >
-      <div className="flex items-center justify-between mb-2" {...attributes} {...listeners}>
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2" {...attributes} {...listeners}>
           <span className="text-xs text-gray-500 cursor-grab">⋮⋮</span>
           <h3 className="font-bold text-white">{channel.name}</h3>
         </div>
@@ -76,10 +84,9 @@ export default function ChannelTile({ channel, onRemove }) {
           <AudioLevelMeter level={level} />
           {onRemove && (
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onRemove(channel.id);
-              }}
+              type="button"
+              onMouseDown={handleRemoveClick}
+              onPointerDown={(e) => e.stopPropagation()}
               className="w-5 h-5 flex items-center justify-center text-gray-500 hover:text-red-500 hover:bg-red-900/30 rounded text-xs"
               title="Remove from grid"
             >

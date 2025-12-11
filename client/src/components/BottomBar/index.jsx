@@ -237,7 +237,7 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit }) {
           MDC
         </button>
         <button
-          onClick={() => playToneWithTransmit('C', 1500)}
+          onClick={() => playToneWithTransmit('C', 2500)}
           disabled={disabledTones['C'] || !hasTxChannels || toneTransmitting}
           className={`px-3 py-1.5 text-sm rounded transition-colors ${
             disabledTones['C'] || !hasTxChannels || toneTransmitting

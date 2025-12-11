@@ -146,12 +146,12 @@ class ToneEngine {
     return oscillator;
   }
 
-  playToneC(duration = 1500) {
+  playToneC(duration = 2500) {
     if (this.isTonePlaying('C')) return null;
     
     const ctx = this.getContext();
-    const beepDuration = 0.15;
-    const gapDuration = 0.15;
+    const beepDuration = 0.30;
+    const gapDuration = 0.20;
     const frequency = 1000;
     
     this.playingTones.add('C');
