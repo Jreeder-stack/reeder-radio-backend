@@ -232,11 +232,26 @@ export async function setUserChannelAccess(userId, channelIds) {
 }
 
 export async function deleteUser(id) {
-  const result = await pool.query(
-    "DELETE FROM users WHERE id = $1 RETURNING *",
-    [id]
-  );
-  return result.rows[0];
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    
+    await client.query("DELETE FROM user_channel_access WHERE user_id = $1", [id]);
+    await client.query("DELETE FROM activity_logs WHERE user_id = $1", [id]);
+    
+    const result = await client.query(
+      "DELETE FROM users WHERE id = $1 RETURNING *",
+      [id]
+    );
+    
+    await client.query("COMMIT");
+    return result.rows[0];
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 export async function updateUser(id, updates) {
