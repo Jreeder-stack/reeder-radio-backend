@@ -24,6 +24,7 @@ export default function Admin({ user, onLogout }) {
     unit_id: "",
     role: "user",
     channelIds: [],
+    is_dispatcher: false,
   });
 
   const [newZone, setNewZone] = useState("");
@@ -87,7 +88,7 @@ export default function Admin({ user, onLogout }) {
       }
 
       setShowAddUser(false);
-      setNewUser({ username: "", email: "", password: "", unit_id: "", role: "user", channelIds: [] });
+      setNewUser({ username: "", email: "", password: "", unit_id: "", role: "user", channelIds: [], is_dispatcher: false });
       loadData();
     } catch (err) {
       alert(err.message);
@@ -927,6 +928,17 @@ export default function Admin({ user, onLogout }) {
                   <option value="admin">Admin</option>
                 </select>
               </div>
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
+                  <input
+                    type="checkbox"
+                    checked={newUser.is_dispatcher}
+                    onChange={(e) => setNewUser({ ...newUser, is_dispatcher: e.target.checked })}
+                  />
+                  <span style={{ fontSize: 14, color: "#fff" }}>Dispatcher Access</span>
+                  <span style={{ fontSize: 12, color: "#888" }}>(Can use Dispatcher Console)</span>
+                </label>
+              </div>
               <div style={{ marginBottom: 20 }}>
                 <label style={{ fontSize: 14, color: "#888", display: "block", marginBottom: 8 }}>
                   Channel Access
@@ -1045,6 +1057,7 @@ export default function Admin({ user, onLogout }) {
 function EditUserModal({ user, channels, isMobile, onClose, onSave }) {
   const [email, setEmail] = useState(user.email || "");
   const [unitId, setUnitId] = useState(user.unit_id || "");
+  const [isDispatcher, setIsDispatcher] = useState(user.is_dispatcher || false);
   const [channelIds, setChannelIds] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -1060,7 +1073,7 @@ function EditUserModal({ user, channels, isMobile, onClose, onSave }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSave({ email, unit_id: unitId }, channelIds);
+    onSave({ email, unit_id: unitId, is_dispatcher: isDispatcher }, channelIds);
   };
 
   const inputStyle = {
@@ -1125,6 +1138,17 @@ function EditUserModal({ user, channels, isMobile, onClose, onSave }) {
                 style={inputStyle}
                 placeholder="e.g., UNIT-001"
               />
+            </div>
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={isDispatcher}
+                  onChange={(e) => setIsDispatcher(e.target.checked)}
+                />
+                <span style={{ fontSize: 14, color: "#fff" }}>Dispatcher Access</span>
+                <span style={{ fontSize: 12, color: "#888" }}>(Can use Dispatcher Console)</span>
+              </label>
             </div>
             <div style={{ marginBottom: 20 }}>
               <label style={{ fontSize: 14, color: "#888", display: "block", marginBottom: 8 }}>
