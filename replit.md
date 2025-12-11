@@ -93,6 +93,8 @@ Set these environment variables in Render:
 - Authorization Tone: Motorola-style quick double beep (2x 50ms at 1200Hz) plays when PTT engages on clear channel
 - Busy Tone: Sustained 480Hz tone plays while PTT is held on an occupied channel
 - Pre-Alert Tone: 4 beeps at 1000Hz (0.30s beep, 0.20s gap)
+- Race Condition Prevention: stopCalledRef ensures stopTransmission only executes once per PTT cycle, preventing double-unpublish on rapid release
+- Stale Channel Cleanup: Persisted gridChannelIds/channelOrder are validated against database on load, removing deleted channel references
 
 ### Phase 5 - Emergency Button (E-Button)
 - Emergency button on UI
