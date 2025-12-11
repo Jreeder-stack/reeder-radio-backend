@@ -6,6 +6,8 @@ import Login from "./Login.jsx";
 import App from "./App.jsx";
 import Dispatcher from "./Dispatcher.jsx";
 import Admin from "./Admin.jsx";
+import DispatchConsole from "./pages/DispatchConsole.jsx";
+import "./index.css";
 
 function ProtectedRoute({ children, adminOnly = false, dispatcherOnly = false }) {
   const { user, loading } = useAuth();
@@ -81,6 +83,11 @@ function DispatcherWrapper() {
   return <Dispatcher user={user} onLogout={logout} />;
 }
 
+function DispatchConsoleWrapper() {
+  const { user, logout } = useAuth();
+  return <DispatchConsole user={user} onLogout={logout} />;
+}
+
 function AdminWrapper() {
   const { user, logout } = useAuth();
   return <Admin user={user} onLogout={logout} />;
@@ -102,6 +109,14 @@ ReactDOM.createRoot(document.getElementById("root")).render(
           />
           <Route
             path="/dispatcher"
+            element={
+              <ProtectedRoute dispatcherOnly>
+                <DispatchConsoleWrapper />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dispatcher-legacy"
             element={
               <ProtectedRoute dispatcherOnly>
                 <DispatcherWrapper />

@@ -1,0 +1,179 @@
+Build a state-of-the-art Dispatch Console UI for the existing Dispatch Radio Module backend.
+
+Use:
+- React
+- Vite
+- TailwindCSS
+- react-beautiful-dnd or dnd-kit for drag-and-drop
+- LiveKit React SDK for audio
+- Zustand or Redux for UI state
+- Web Audio API for tone generation
+
+------------------------------------------------
+HIGH-LEVEL GOALS
+------------------------------------------------
+
+Create a modern, professional dispatch console UI similar to Motorola MCC7500 or Avtec Scout, with:
+
+1. A drag-and-drop channel monitor grid
+2. Multi-channel audio monitoring via LiveKit
+3. Emergency tones (3 types)
+4. Continuous intermittent "clear-air" beep system
+5. Dispatch PTT (transmit to selected channel)
+6. Unit list with statuses
+7. Emergency management panel
+8. Event log panel
+9. Patch configuration UI
+10. Persisted layout for each dispatcher
+
+All UI must communicate with existing backend routes under /api/dispatch.
+
+------------------------------------------------
+SCREEN LAYOUT
+------------------------------------------------
+
+Divide the UI into the following sections:
+
+TOP BAR
+- Agency name
+- Clock
+- Dispatcher ID
+- TX indicator (shows when dispatcher is transmitting)
+
+LEFT PANEL (20%)
+- Unit list (callsign, status, channel, emergency flag)
+- Filters: Online, Emergency, By Channel
+- Ability to reassign a unit's channel via backend
+
+CENTER PANEL (60%) - MAIN GRID
+- Drag-and-drop grid of channel tiles
+- Uses react-beautiful-dnd or dnd-kit
+- Layout stored in localStorage
+- Each tile must include:
+    • Channel name
+    • Volume slider
+    • Monitor toggle (subscribe/unsubscribe)
+    • TX select button (set primaryTxChannel)
+    • Audio VU meter (LiveKit audio level)
+    • Active speaker highlight
+    • Emergency banner if any unit in channel is in emergency
+    • Drag handle
+
+RIGHT PANEL (20%)
+- Emergency List (units with emergency active)
+    • Shows channel, time, callsign
+    • Acknowledge button → POST /api/dispatch/units/:id/emergency { active: false }
+- Event Log
+    • Streams events: PTT, emergency, status changes, patches
+- Patch Control
+    • Source channel dropdown
+    • Target channel dropdown
+    • Enable/disable patch
+    • Lists existing patches from GET /api/dispatch/patches
+
+BOTTOM BAR
+- Shows selected transmit channel
+- PTT button + spacebar PTT
+- Buttons: Play Tone A / Tone B / Tone C
+- Clear-Air toggle button (activates intermittent beep on that channel)
+
+------------------------------------------------
+AUDIO ENGINE REQUIREMENTS
+------------------------------------------------
+
+Implement a multi-channel audio engine:
+
+- Subscribe to LiveKit rooms for ALL monitored channels simultaneously
+- Mix audio locally
+- Route dispatcher microphone ONLY to the selected primaryTxChannelId
+- Show VU meters for each channel
+- Prevent audio overlap when emergency lockout occurs (logic can be UI-only for now)
+
+------------------------------------------------
+TONE SYSTEM REQUIREMENTS
+------------------------------------------------
+
+Implement a tone generator module using Web Audio API.
+
+Tones required:
+
+1. Emergency Tone A: steady single-frequency beep
+2. Emergency Tone B: high-low alternating tone
+3. Emergency Tone C: warble tone (fast frequency modulation)
+4. Clear-Air Beep:
+   - Plays a short beep every X seconds
+   - Only active when clear-air mode is on for that channel
+   - Stops if channel becomes busy
+
+All tones must mix with monitored audio.
+
+------------------------------------------------
+BACKEND INTEGRATION REQUIREMENTS
+------------------------------------------------
+
+Use these backend endpoints from the Dispatch Radio Module:
+
+CHANNELS
+- GET /api/dispatch/channels
+- POST /api/dispatch/channels
+- PATCH /api/dispatch/channels/:id
+
+PATCHES
+- GET /api/dispatch/patches
+- POST /api/dispatch/patches
+- PATCH /api/dispatch/patches/:id
+
+UNITS
+- GET /api/dispatch/units
+- PATCH /api/dispatch/units/:id/status
+- POST /api/dispatch/units/:id/heartbeat
+- POST /api/dispatch/units/:id/emergency
+
+DISPATCH MONITOR SETTINGS
+- GET /api/dispatch/monitor/:dispatcherId
+- POST /api/dispatch/monitor/:dispatcherId
+
+------------------------------------------------
+TECHNICAL REQUIREMENTS
+------------------------------------------------
+
+• Use Zustand or Redux for channel + monitor state
+• Use SWR or React Query for backend polling
+• Use Tailwind grid for tile layout
+• Support light/dark theme
+• Save channel grid order in localStorage
+• Spacebar should activate PTT when the app is focused
+• Provide a modular folder structure:
+
+src/
+  components/
+    ChannelTile/
+    UnitList/
+    PatchPanel/
+    EventLog/
+    EmergencyPanel/
+    TopBar/
+    BottomBar/
+  audio/
+    livekitEngine.js
+    toneEngine.js
+  state/
+    channels.js
+    units.js
+    dispatcher.js
+  pages/
+    DispatchConsole.jsx
+  utils/
+    api.js
+
+------------------------------------------------
+EXPECTED DELIVERABLES
+------------------------------------------------
+
+1. Fully functional UI with working drag-and-drop grid
+2. LiveKit audio monitoring for multiple channels
+3. Tone generator that supports Tone A, B, C, and clear-air mode
+4. Full integration with backend endpoints
+5. Clean modular React code, tailwind-styled
+6. Ready-to-run UI with "npm run dev"
+
