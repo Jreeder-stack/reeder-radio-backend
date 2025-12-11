@@ -1,27 +1,43 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useChannelStore } from '../../state/channels.js';
 import { useDispatcherStore } from '../../state/dispatcher.js';
 import toneEngine from '../../audio/toneEngine.js';
 
-export default function BottomBar({ onPTTStart, onPTTEnd }) {
-  const { channels, primaryTxChannelId, setPrimaryTxChannel } = useChannelStore();
+export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit }) {
+  const { channels, selectedTxChannels } = useChannelStore();
   const { isTalking, setTalking, clearAirEnabled, toggleClearAir } = useDispatcherStore();
+  const [disabledTones, setDisabledTones] = useState({});
   const pttRef = useRef(null);
 
-  const primaryChannel = channels.find(c => c.id === primaryTxChannelId);
+  const selectedChannelNames = selectedTxChannels
+    .map(id => channels.find(c => c.id === id)?.name)
+    .filter(Boolean);
+
+  useEffect(() => {
+    toneEngine.onToneStart = (type) => {
+      setDisabledTones(prev => ({ ...prev, [type]: true }));
+    };
+    toneEngine.onToneEnd = (type) => {
+      setDisabledTones(prev => ({ ...prev, [type]: false }));
+    };
+    return () => {
+      toneEngine.onToneStart = null;
+      toneEngine.onToneEnd = null;
+    };
+  }, []);
 
   const handlePTTDown = useCallback((e) => {
     if (e.type === 'keydown' && e.repeat) return;
-    if (!primaryTxChannelId) return;
+    if (selectedTxChannels.length === 0) return;
     
     setTalking(true);
-    if (onPTTStart) onPTTStart(primaryChannel?.name || primaryTxChannelId);
-  }, [primaryTxChannelId, primaryChannel, setTalking, onPTTStart]);
+    if (onPTTStart) onPTTStart(selectedChannelNames);
+  }, [selectedTxChannels, selectedChannelNames, setTalking, onPTTStart]);
 
   const handlePTTUp = useCallback(() => {
     setTalking(false);
-    if (onPTTEnd) onPTTEnd();
-  }, [setTalking, onPTTEnd]);
+    if (onPTTEnd) onPTTEnd(selectedChannelNames);
+  }, [selectedChannelNames, setTalking, onPTTEnd]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -47,43 +63,53 @@ export default function BottomBar({ onPTTStart, onPTTEnd }) {
     };
   }, [handlePTTDown, handlePTTUp]);
 
-  const playTone = (type) => {
-    toneEngine.playEmergencyTone(type, 2000);
+  const playTone = async (type, duration) => {
+    if (disabledTones[type] || selectedTxChannels.length === 0) return;
+    
+    if (onToneTransmit) {
+      await onToneTransmit(selectedChannelNames, type, duration);
+    }
+    
+    toneEngine.playEmergencyTone(type, duration);
   };
 
   const handleClearAirToggle = () => {
-    if (primaryTxChannelId) {
-      toggleClearAir(primaryTxChannelId);
-      if (!clearAirEnabled[primaryTxChannelId]) {
-        toneEngine.startClearAir(primaryTxChannelId);
+    if (selectedTxChannels.length > 0) {
+      const channelId = selectedTxChannels[0];
+      toggleClearAir(channelId);
+      if (!clearAirEnabled[channelId]) {
+        toneEngine.startClearAir(channelId);
       } else {
-        toneEngine.stopClearAir(primaryTxChannelId);
+        toneEngine.stopClearAir(channelId);
       }
     }
   };
+
+  const hasTxChannels = selectedTxChannels.length > 0;
+  const firstTxChannelId = selectedTxChannels[0];
 
   return (
     <div className="flex items-center justify-between px-4 py-3 bg-dispatch-panel border-t border-dispatch-border">
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-400">TX Channel:</span>
-          <select
-            value={primaryTxChannelId || ''}
-            onChange={(e) => setPrimaryTxChannel(e.target.value ? parseInt(e.target.value) : null)}
-            className="px-3 py-1.5 bg-gray-800 border border-gray-600 rounded text-white text-sm focus:outline-none focus:border-blue-500"
-          >
-            <option value="">Select Channel</option>
-            {channels.map(ch => (
-              <option key={ch.id} value={ch.id}>{ch.name}</option>
-            ))}
-          </select>
+          <span className="text-sm text-gray-400">TX Channels:</span>
+          {selectedTxChannels.length > 0 ? (
+            <div className="flex flex-wrap gap-1 max-w-xs">
+              {selectedChannelNames.slice(0, 4).map(name => (
+                <span key={name} className="px-2 py-0.5 bg-blue-900 rounded text-blue-200 text-xs font-medium">
+                  {name}
+                </span>
+              ))}
+              {selectedChannelNames.length > 4 && (
+                <span className="px-2 py-0.5 bg-gray-700 rounded text-gray-300 text-xs">
+                  +{selectedChannelNames.length - 4} more
+                </span>
+              )}
+            </div>
+          ) : (
+            <span className="text-xs text-gray-500">None selected</span>
+          )}
         </div>
-
-        {primaryChannel && (
-          <div className="px-3 py-1 bg-blue-900 rounded text-blue-200 text-sm font-medium">
-            {primaryChannel.name}
-          </div>
-        )}
       </div>
 
       <div className="flex items-center gap-3">
@@ -94,11 +120,11 @@ export default function BottomBar({ onPTTStart, onPTTEnd }) {
           onMouseLeave={handlePTTUp}
           onTouchStart={handlePTTDown}
           onTouchEnd={handlePTTUp}
-          disabled={!primaryTxChannelId}
+          disabled={!hasTxChannels}
           className={`px-8 py-3 rounded-lg font-bold text-lg transition-all select-none ${
             isTalking 
               ? 'bg-red-600 text-white ring-4 ring-red-400' 
-              : primaryTxChannelId 
+              : hasTxChannels 
                 ? 'bg-green-600 hover:bg-green-700 text-white' 
                 : 'bg-gray-600 text-gray-400 cursor-not-allowed'
           }`}
@@ -109,33 +135,59 @@ export default function BottomBar({ onPTTStart, onPTTEnd }) {
 
       <div className="flex items-center gap-2">
         <button
-          onClick={() => playTone('A')}
-          className="px-3 py-1.5 bg-yellow-600 hover:bg-yellow-700 text-white text-sm rounded transition-colors"
+          onClick={() => playTone('A', 1000)}
+          disabled={disabledTones['A'] || !hasTxChannels}
+          className={`px-3 py-1.5 text-sm rounded transition-colors ${
+            disabledTones['A'] || !hasTxChannels
+              ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+              : 'bg-yellow-600 hover:bg-yellow-700 text-white'
+          }`}
         >
-          Tone A
+          Alert
         </button>
         <button
-          onClick={() => playTone('B')}
-          className="px-3 py-1.5 bg-orange-600 hover:bg-orange-700 text-white text-sm rounded transition-colors"
+          onClick={() => playTone('B', 2000)}
+          disabled={disabledTones['B'] || !hasTxChannels}
+          className={`px-3 py-1.5 text-sm rounded transition-colors ${
+            disabledTones['B'] || !hasTxChannels
+              ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+              : 'bg-orange-600 hover:bg-orange-700 text-white'
+          }`}
         >
-          Tone B
+          MDC
         </button>
         <button
-          onClick={() => playTone('C')}
-          className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-sm rounded transition-colors"
+          onClick={() => playTone('C', 1500)}
+          disabled={disabledTones['C'] || !hasTxChannels}
+          className={`px-3 py-1.5 text-sm rounded transition-colors ${
+            disabledTones['C'] || !hasTxChannels
+              ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+              : 'bg-amber-600 hover:bg-amber-700 text-white'
+          }`}
         >
-          Tone C
+          Pre-Alert
+        </button>
+        <button
+          onClick={() => playTone('CONTINUOUS', 5000)}
+          disabled={disabledTones['CONTINUOUS'] || !hasTxChannels}
+          className={`px-3 py-1.5 text-sm rounded transition-colors ${
+            disabledTones['CONTINUOUS'] || !hasTxChannels
+              ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+              : 'bg-red-600 hover:bg-red-700 text-white'
+          }`}
+        >
+          Continuous
         </button>
         <button
           onClick={handleClearAirToggle}
-          disabled={!primaryTxChannelId}
+          disabled={!hasTxChannels}
           className={`px-3 py-1.5 text-sm rounded transition-colors ${
-            clearAirEnabled[primaryTxChannelId]
+            clearAirEnabled[firstTxChannelId]
               ? 'bg-blue-600 text-white'
               : 'bg-gray-600 hover:bg-gray-700 text-white'
-          } ${!primaryTxChannelId ? 'opacity-50 cursor-not-allowed' : ''}`}
+          } ${!hasTxChannels ? 'opacity-50 cursor-not-allowed' : ''}`}
         >
-          Clear-Air {clearAirEnabled[primaryTxChannelId] ? 'ON' : 'OFF'}
+          Clear-Air {clearAirEnabled[firstTxChannelId] ? 'ON' : 'OFF'}
         </button>
       </div>
     </div>

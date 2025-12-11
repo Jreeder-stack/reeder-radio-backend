@@ -28,29 +28,25 @@ import { useDispatcherStore } from '../state/dispatcher.js';
 
 import livekitEngine from '../audio/livekitEngine.js';
 import toneEngine from '../audio/toneEngine.js';
-import { getChannels, getUnits } from '../utils/api.js';
-
-const ZONES = {
-  "Zone 1 - Operations": ["OPS1", "OPS2", "TAC1"],
-  "Zone 2 - Fire": ["FIRE1", "FIRE2", "FIRE3", "FIRE4", "FIRE5", "FIRE6", "FIRE7", "FIRE8"],
-  "Zone 3 - Secure Command": ["SECURE_CMD"],
-};
-
-const ALL_CHANNEL_NAMES = Object.values(ZONES).flat();
+import { getUnits } from '../utils/api.js';
 
 export default function DispatchConsole({ user, onLogout }) {
   const [rightTab, setRightTab] = useState('emergency');
+  const [showChannelPicker, setShowChannelPicker] = useState(false);
   
   const {
     channels,
     setChannels,
     channelOrder,
     setChannelOrder,
-    primaryTxChannelId,
+    gridChannelIds,
+    setGridChannelIds,
+    addChannelToGrid,
+    removeChannelFromGrid,
+    selectedTxChannels,
     setChannelLevel,
     setActiveTransmission,
     clearActiveTransmission,
-    monitoredChannels,
   } = useChannelStore();
 
   const { setUnits, updateUnit } = useUnitStore();
@@ -75,31 +71,35 @@ export default function DispatchConsole({ user, onLogout }) {
 
   const fetchChannelsAndUnits = useCallback(async () => {
     try {
-      const [channelData, unitData] = await Promise.all([
-        getChannels(),
+      const [channelRes, unitData] = await Promise.all([
+        fetch('/api/channels', { credentials: 'include' }),
         getUnits(),
       ]);
       
-      const radioChannels = channelData.channels || [];
+      if (!channelRes.ok) {
+        console.error('Failed to fetch channels');
+        return;
+      }
       
-      const simulatedChannels = ALL_CHANNEL_NAMES.map((name, index) => {
-        const existing = radioChannels.find(c => c.name === name);
-        return existing || { id: index + 1000, name, is_active: true };
-      });
+      const channelData = await channelRes.json();
+      const dbChannels = channelData.channels || [];
       
-      setChannels(simulatedChannels);
+      setChannels(dbChannels);
       setUnits(unitData.units || []);
       
-      if (channelOrder.length === 0) {
-        setChannelOrder(simulatedChannels.map(c => c.id.toString()));
+      if (gridChannelIds.length === 0 && dbChannels.length > 0) {
+        const initialIds = dbChannels.map(c => c.id);
+        setGridChannelIds(initialIds);
+        setChannelOrder(initialIds.map(id => id.toString()));
       }
     } catch (error) {
       console.error('Failed to fetch data:', error);
     }
-  }, [setChannels, setUnits, channelOrder, setChannelOrder]);
+  }, [setChannels, setUnits, gridChannelIds, setGridChannelIds, setChannelOrder]);
 
-  const connectToAllChannels = useCallback(async () => {
+  const connectToChannels = useCallback(async () => {
     if (isConnecting || isConnected) return;
+    if (channels.length === 0) return;
     
     setConnecting(true);
     setConnectionError(null);
@@ -143,7 +143,6 @@ export default function DispatchConsole({ user, onLogout }) {
       
       livekitEngine.onDataReceived = (channelName, message, participant) => {
         if (message.type === 'emergency') {
-          const channel = channels.find(c => c.name === channelName);
           if (message.active) {
             toneEngine.playEmergencyTone('B', 3000);
             addEvent({
@@ -155,15 +154,16 @@ export default function DispatchConsole({ user, onLogout }) {
         }
       };
       
-      for (const channelName of ALL_CHANNEL_NAMES) {
+      const enabledChannels = channels.filter(c => c.enabled);
+      for (const channel of enabledChannels) {
         try {
-          await livekitEngine.connectToChannel(channelName, user?.username || 'DISPATCH');
+          await livekitEngine.connectToChannel(channel.name, user?.username || 'DISPATCH');
           addEvent({
             type: 'connect',
-            channel: channelName,
+            channel: channel.name,
           });
         } catch (err) {
-          console.error(`Failed to connect to ${channelName}:`, err);
+          console.error(`Failed to connect to ${channel.name}:`, err);
         }
       }
       
@@ -195,9 +195,9 @@ export default function DispatchConsole({ user, onLogout }) {
 
   useEffect(() => {
     if (channels.length > 0 && !isConnected && !isConnecting) {
-      connectToAllChannels();
+      connectToChannels();
     }
-  }, [channels, isConnected, isConnecting, connectToAllChannels]);
+  }, [channels, isConnected, isConnecting, connectToChannels]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -227,30 +227,31 @@ export default function DispatchConsole({ user, onLogout }) {
     }
   };
 
-  const handlePTTStart = async (channelName) => {
-    try {
-      const result = await livekitEngine.publishAudio(channelName);
-      if (result) {
-        addEvent({
-          type: 'ptt_start',
-          unit: user?.username || 'DISPATCH',
-          channel: channelName,
-        });
+  const handlePTTStart = async (channelNames) => {
+    for (const channelName of channelNames) {
+      try {
+        const result = await livekitEngine.publishAudio(channelName);
+        if (result) {
+          addEvent({
+            type: 'ptt_start',
+            unit: user?.username || 'DISPATCH',
+            channel: channelName,
+          });
+        }
+      } catch (error) {
+        console.error('PTT start error:', error);
       }
-    } catch (error) {
-      console.error('PTT start error:', error);
     }
   };
 
-  const handlePTTEnd = async () => {
-    const primaryChannel = channels.find(c => c.id === primaryTxChannelId);
-    if (primaryChannel) {
+  const handlePTTEnd = async (channelNames) => {
+    for (const channelName of channelNames) {
       try {
-        await livekitEngine.unpublishAudio(primaryChannel.name, null, null);
+        await livekitEngine.unpublishAudio(channelName, null, null);
         addEvent({
           type: 'ptt_end',
           unit: user?.username || 'DISPATCH',
-          channel: primaryChannel.name,
+          channel: channelName,
         });
       } catch (error) {
         console.error('PTT end error:', error);
@@ -258,9 +259,24 @@ export default function DispatchConsole({ user, onLogout }) {
     }
   };
 
+  const handleToneTransmit = async (channelNames, toneType, duration) => {
+    addEvent({
+      type: 'tone',
+      unit: user?.username || 'DISPATCH',
+      channel: channelNames.join(', '),
+      data: { toneType, duration },
+    });
+  };
+
+  const handleRemoveChannel = (channelId) => {
+    removeChannelFromGrid(channelId);
+  };
+
   const orderedChannels = channelOrder
     .map(id => channels.find(c => c.id.toString() === id))
     .filter(Boolean);
+
+  const availableChannels = channels.filter(c => !gridChannelIds.includes(c.id));
 
   if (!isConnected && !isConnecting && connectionError) {
     return (
@@ -271,7 +287,7 @@ export default function DispatchConsole({ user, onLogout }) {
             <h2 className="text-xl text-red-500 mb-4">Connection Failed</h2>
             <p className="text-gray-400 mb-6">{connectionError}</p>
             <button
-              onClick={connectToAllChannels}
+              onClick={connectToChannels}
               className="btn-primary"
             >
               Retry Connection
@@ -306,6 +322,39 @@ export default function DispatchConsole({ user, onLogout }) {
         </div>
 
         <div className="flex-1 p-4 overflow-y-auto scrollbar-thin">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-bold text-white">Channel Grid</h2>
+            <button
+              onClick={() => setShowChannelPicker(!showChannelPicker)}
+              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded transition-colors"
+            >
+              {showChannelPicker ? 'Close' : 'Add Channel'}
+            </button>
+          </div>
+
+          {showChannelPicker && (
+            <div className="mb-4 p-3 bg-dispatch-panel border border-dispatch-border rounded-lg">
+              <h3 className="text-sm font-medium text-gray-300 mb-2">Available Channels</h3>
+              {availableChannels.length === 0 ? (
+                <p className="text-sm text-gray-500">All channels are already in the grid</p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {availableChannels.map(channel => (
+                    <button
+                      key={channel.id}
+                      onClick={() => {
+                        addChannelToGrid(channel.id);
+                      }}
+                      className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded transition-colors"
+                    >
+                      + {channel.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
@@ -320,12 +369,26 @@ export default function DispatchConsole({ user, onLogout }) {
                   <ChannelTile
                     key={channel.id}
                     channel={channel}
-                    isSelected={primaryTxChannelId === channel.id}
+                    onRemove={handleRemoveChannel}
                   />
                 ))}
               </div>
             </SortableContext>
           </DndContext>
+
+          {orderedChannels.length === 0 && (
+            <div className="flex items-center justify-center h-48 text-gray-500">
+              <div className="text-center">
+                <p className="mb-2">No channels in grid</p>
+                <button
+                  onClick={() => setShowChannelPicker(true)}
+                  className="text-blue-400 hover:text-blue-300"
+                >
+                  Add channels to get started
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="w-72 border-l border-dispatch-border flex flex-col">
@@ -369,7 +432,11 @@ export default function DispatchConsole({ user, onLogout }) {
         </div>
       </div>
 
-      <BottomBar onPTTStart={handlePTTStart} onPTTEnd={handlePTTEnd} />
+      <BottomBar 
+        onPTTStart={handlePTTStart} 
+        onPTTEnd={handlePTTEnd} 
+        onToneTransmit={handleToneTransmit}
+      />
     </div>
   );
 }

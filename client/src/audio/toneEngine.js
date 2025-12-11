@@ -3,6 +3,9 @@ class ToneEngine {
     this.audioContext = null;
     this.activeTones = {};
     this.clearAirIntervals = {};
+    this.playingTones = new Set();
+    this.onToneStart = null;
+    this.onToneEnd = null;
   }
 
   getContext() {
@@ -15,7 +18,33 @@ class ToneEngine {
     return this.audioContext;
   }
 
+  getDestinationNode() {
+    const ctx = this.getContext();
+    if (this.customDestination) {
+      return this.customDestination;
+    }
+    return ctx.destination;
+  }
+
+  setCustomDestination(node) {
+    this.customDestination = node;
+  }
+
+  clearCustomDestination() {
+    this.customDestination = null;
+  }
+
+  isTonePlaying(type) {
+    return this.playingTones.has(type);
+  }
+
+  isAnyTonePlaying() {
+    return this.playingTones.size > 0;
+  }
+
   playToneA(duration = 1000) {
+    if (this.isTonePlaying('A')) return null;
+    
     const ctx = this.getContext();
     const oscillator = ctx.createOscillator();
     const gainNode = ctx.createGain();
@@ -23,25 +52,36 @@ class ToneEngine {
     oscillator.type = 'sine';
     oscillator.frequency.setValueAtTime(1000, ctx.currentTime);
     
-    gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration / 1000);
+    gainNode.gain.setValueAtTime(0.5, ctx.currentTime);
+    gainNode.gain.setValueAtTime(0.5, ctx.currentTime + duration / 1000 - 0.001);
+    gainNode.gain.setValueAtTime(0, ctx.currentTime + duration / 1000);
     
     oscillator.connect(gainNode);
-    gainNode.connect(ctx.destination);
+    gainNode.connect(this.getDestinationNode());
+    
+    this.playingTones.add('A');
+    if (this.onToneStart) this.onToneStart('A');
     
     oscillator.start();
     oscillator.stop(ctx.currentTime + duration / 1000);
+    
+    oscillator.onended = () => {
+      this.playingTones.delete('A');
+      if (this.onToneEnd) this.onToneEnd('A');
+    };
     
     return oscillator;
   }
 
   playToneB(duration = 2000) {
+    if (this.isTonePlaying('B')) return null;
+    
     const ctx = this.getContext();
     const oscillator = ctx.createOscillator();
     const gainNode = ctx.createGain();
     
     oscillator.type = 'square';
-    gainNode.gain.setValueAtTime(0.2, ctx.currentTime);
+    gainNode.gain.setValueAtTime(0.4, ctx.currentTime);
     
     const endTime = ctx.currentTime + duration / 1000;
     let time = ctx.currentTime;
@@ -53,54 +93,121 @@ class ToneEngine {
       high = !high;
     }
     
-    gainNode.gain.setValueAtTime(0.2, endTime - 0.1);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, endTime);
+    gainNode.gain.setValueAtTime(0.4, endTime - 0.001);
+    gainNode.gain.setValueAtTime(0, endTime);
     
     oscillator.connect(gainNode);
-    gainNode.connect(ctx.destination);
+    gainNode.connect(this.getDestinationNode());
+    
+    this.playingTones.add('B');
+    if (this.onToneStart) this.onToneStart('B');
     
     oscillator.start();
     oscillator.stop(endTime);
+    
+    oscillator.onended = () => {
+      this.playingTones.delete('B');
+      if (this.onToneEnd) this.onToneEnd('B');
+    };
     
     return oscillator;
   }
 
-  playToneC(duration = 2000) {
+  playToneC(duration = 1500) {
+    if (this.isTonePlaying('C')) return null;
+    
     const ctx = this.getContext();
-    const oscillator = ctx.createOscillator();
+    const beepDuration = 0.15;
+    const gapDuration = 0.15;
+    const frequency = 1000;
+    
+    this.playingTones.add('C');
+    if (this.onToneStart) this.onToneStart('C');
+    
+    const oscillators = [];
+    
+    for (let i = 0; i < 3; i++) {
+      const oscillator = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+      
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(frequency, ctx.currentTime);
+      
+      const startTime = ctx.currentTime + i * (beepDuration + gapDuration);
+      const stopTime = startTime + beepDuration;
+      
+      gainNode.gain.setValueAtTime(0, startTime - 0.001);
+      gainNode.gain.setValueAtTime(0.5, startTime);
+      gainNode.gain.setValueAtTime(0.5, stopTime - 0.001);
+      gainNode.gain.setValueAtTime(0, stopTime);
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(this.getDestinationNode());
+      
+      oscillator.start(startTime);
+      oscillator.stop(stopTime);
+      oscillators.push(oscillator);
+    }
+    
+    oscillators[2].onended = () => {
+      this.playingTones.delete('C');
+      if (this.onToneEnd) this.onToneEnd('C');
+    };
+    
+    return true;
+  }
+
+  playContinuousTone(duration = 5000) {
+    if (this.isTonePlaying('CONTINUOUS')) return null;
+    
+    const ctx = this.getContext();
+    const oscillator1 = ctx.createOscillator();
+    const oscillator2 = ctx.createOscillator();
     const gainNode = ctx.createGain();
     
-    oscillator.type = 'sine';
-    gainNode.gain.setValueAtTime(0.25, ctx.currentTime);
+    oscillator1.type = 'sawtooth';
+    oscillator1.frequency.setValueAtTime(800, ctx.currentTime);
     
-    const endTime = ctx.currentTime + duration / 1000;
-    const lfoFreq = 15;
-    
-    oscillator.frequency.setValueAtTime(1000, ctx.currentTime);
+    oscillator2.type = 'square';
+    oscillator2.frequency.setValueAtTime(850, ctx.currentTime);
     
     const lfo = ctx.createOscillator();
     const lfoGain = ctx.createGain();
-    
-    lfo.type = 'sine';
-    lfo.frequency.setValueAtTime(lfoFreq, ctx.currentTime);
-    lfoGain.gain.setValueAtTime(300, ctx.currentTime);
+    lfo.type = 'square';
+    lfo.frequency.setValueAtTime(8, ctx.currentTime);
+    lfoGain.gain.setValueAtTime(0.3, ctx.currentTime);
     
     lfo.connect(lfoGain);
-    lfoGain.connect(oscillator.frequency);
+    lfoGain.connect(gainNode.gain);
     
-    oscillator.connect(gainNode);
-    gainNode.connect(ctx.destination);
+    gainNode.gain.setValueAtTime(0.6, ctx.currentTime);
+    
+    const endTime = ctx.currentTime + duration / 1000;
+    
+    gainNode.gain.setValueAtTime(0.6, endTime - 0.001);
+    gainNode.gain.setValueAtTime(0, endTime);
+    
+    oscillator1.connect(gainNode);
+    oscillator2.connect(gainNode);
+    gainNode.connect(this.getDestinationNode());
+    
+    this.playingTones.add('CONTINUOUS');
+    if (this.onToneStart) this.onToneStart('CONTINUOUS');
     
     lfo.start();
-    oscillator.start();
+    oscillator1.start();
+    oscillator2.start();
     
-    gainNode.gain.setValueAtTime(0.25, endTime - 0.1);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, endTime);
-    
-    oscillator.stop(endTime);
+    oscillator1.stop(endTime);
+    oscillator2.stop(endTime);
     lfo.stop(endTime);
     
-    return oscillator;
+    oscillator1.onended = () => {
+      this.playingTones.delete('CONTINUOUS');
+      if (this.onToneEnd) this.onToneEnd('CONTINUOUS');
+    };
+    
+    return oscillator1;
   }
 
   playEmergencyTone(type = 'A', duration = 2000) {
@@ -111,6 +218,8 @@ class ToneEngine {
         return this.playToneB(duration);
       case 'C':
         return this.playToneC(duration);
+      case 'CONTINUOUS':
+        return this.playContinuousTone(duration);
       default:
         return this.playToneA(duration);
     }
@@ -124,11 +233,12 @@ class ToneEngine {
     oscillator.type = 'sine';
     oscillator.frequency.setValueAtTime(600, ctx.currentTime);
     
-    gainNode.gain.setValueAtTime(0.15, ctx.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+    gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
+    gainNode.gain.setValueAtTime(0.3, ctx.currentTime + 0.099);
+    gainNode.gain.setValueAtTime(0, ctx.currentTime + 0.1);
     
     oscillator.connect(gainNode);
-    gainNode.connect(ctx.destination);
+    gainNode.connect(this.getDestinationNode());
     
     oscillator.start();
     oscillator.stop(ctx.currentTime + 0.1);
@@ -163,6 +273,7 @@ class ToneEngine {
 
   destroy() {
     this.stopAllClearAir();
+    this.playingTones.clear();
     if (this.audioContext && this.audioContext.state !== 'closed') {
       this.audioContext.close();
     }

@@ -24,15 +24,16 @@ function AudioLevelMeter({ level }) {
   );
 }
 
-export default function ChannelTile({ channel, isSelected }) {
+export default function ChannelTile({ channel, onRemove }) {
   const { 
     monitoredChannels, 
     mutedChannels, 
+    selectedTxChannels,
     channelLevels, 
     activeTransmissions,
     toggleMonitor, 
-    toggleMute, 
-    setPrimaryTxChannel 
+    toggleMute,
+    toggleTxChannel,
   } = useChannelStore();
   
   const { unitsByChannel, emergencyUnits } = useUnitStore();
@@ -54,6 +55,7 @@ export default function ChannelTile({ channel, isSelected }) {
 
   const isMonitored = monitoredChannels.includes(channel.id);
   const isMuted = mutedChannels.includes(channel.id);
+  const isTxSelected = selectedTxChannels.includes(channel.id);
   const level = channelLevels[channel.id] || 0;
   const activeTransmission = activeTransmissions[channel.id];
   const unitsInChannel = unitsByChannel[channel.name] || [];
@@ -63,14 +65,28 @@ export default function ChannelTile({ channel, isSelected }) {
     <div
       ref={setNodeRef}
       style={style}
-      className={`channel-tile ${hasEmergency ? 'emergency' : ''} ${isSelected ? 'selected' : ''} ${isDragging ? 'z-50' : ''}`}
+      className={`channel-tile ${hasEmergency ? 'emergency' : ''} ${isTxSelected ? 'selected' : ''} ${isDragging ? 'z-50' : ''}`}
     >
       <div className="flex items-center justify-between mb-2" {...attributes} {...listeners}>
         <div className="flex items-center gap-2">
           <span className="text-xs text-gray-500 cursor-grab">⋮⋮</span>
           <h3 className="font-bold text-white">{channel.name}</h3>
         </div>
-        <AudioLevelMeter level={level} />
+        <div className="flex items-center gap-2">
+          <AudioLevelMeter level={level} />
+          {onRemove && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onRemove(channel.id);
+              }}
+              className="w-5 h-5 flex items-center justify-center text-gray-500 hover:text-red-500 hover:bg-red-900/30 rounded text-xs"
+              title="Remove from grid"
+            >
+              ×
+            </button>
+          )}
+        </div>
       </div>
 
       {hasEmergency && (
@@ -115,14 +131,14 @@ export default function ChannelTile({ channel, isSelected }) {
         </button>
         
         <button
-          onClick={() => setPrimaryTxChannel(channel.id)}
+          onClick={() => toggleTxChannel(channel.id)}
           className={`px-2 py-1 text-xs rounded transition-colors ${
-            isSelected 
-              ? 'bg-blue-600 text-white' 
+            isTxSelected 
+              ? 'bg-blue-600 text-white ring-2 ring-blue-400' 
               : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
           }`}
         >
-          TX
+          TX {isTxSelected ? '✓' : ''}
         </button>
       </div>
 

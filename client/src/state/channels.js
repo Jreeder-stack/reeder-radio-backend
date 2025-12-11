@@ -6,15 +6,40 @@ export const useChannelStore = create(
     (set, get) => ({
       channels: [],
       channelOrder: [],
+      gridChannelIds: [],
       monitoredChannels: [],
       mutedChannels: [],
+      selectedTxChannels: [],
       channelLevels: {},
       activeTransmissions: {},
-      primaryTxChannelId: null,
       
       setChannels: (channels) => set({ channels }),
       
       setChannelOrder: (order) => set({ channelOrder: order }),
+      
+      setGridChannelIds: (ids) => set({ gridChannelIds: ids }),
+      
+      addChannelToGrid: (channelId) => set((state) => {
+        if (state.gridChannelIds.includes(channelId)) return state;
+        const newIds = [...state.gridChannelIds, channelId];
+        const newOrder = [...state.channelOrder, channelId.toString()];
+        return { gridChannelIds: newIds, channelOrder: newOrder };
+      }),
+      
+      removeChannelFromGrid: (channelId) => set((state) => {
+        const newIds = state.gridChannelIds.filter(id => id !== channelId);
+        const newOrder = state.channelOrder.filter(id => id !== channelId.toString());
+        const newTx = state.selectedTxChannels.filter(id => id !== channelId);
+        const newMonitored = state.monitoredChannels.filter(id => id !== channelId);
+        const newMuted = state.mutedChannels.filter(id => id !== channelId);
+        return { 
+          gridChannelIds: newIds, 
+          channelOrder: newOrder,
+          selectedTxChannels: newTx,
+          monitoredChannels: newMonitored,
+          mutedChannels: newMuted,
+        };
+      }),
       
       toggleMonitor: (channelId) => set((state) => {
         const monitored = [...state.monitoredChannels];
@@ -38,9 +63,24 @@ export const useChannelStore = create(
         return { mutedChannels: muted };
       }),
       
+      toggleTxChannel: (channelId) => set((state) => {
+        const selected = [...state.selectedTxChannels];
+        const idx = selected.indexOf(channelId);
+        if (idx >= 0) {
+          selected.splice(idx, 1);
+        } else {
+          selected.push(channelId);
+        }
+        return { selectedTxChannels: selected };
+      }),
+      
+      setSelectedTxChannels: (channels) => set({ selectedTxChannels: channels }),
+      
       isMonitored: (channelId) => get().monitoredChannels.includes(channelId),
       
       isMuted: (channelId) => get().mutedChannels.includes(channelId),
+      
+      isTxSelected: (channelId) => get().selectedTxChannels.includes(channelId),
       
       setChannelLevel: (channelId, level) => set((state) => ({
         channelLevels: { ...state.channelLevels, [channelId]: level }
@@ -56,18 +96,24 @@ export const useChannelStore = create(
         return { activeTransmissions: updated };
       }),
       
-      setPrimaryTxChannel: (channelId) => set({ primaryTxChannelId: channelId }),
-      
       getChannelById: (id) => get().channels.find(c => c.id === id),
       getChannelByName: (name) => get().channels.find(c => c.name === name),
+      
+      getGridChannels: () => {
+        const state = get();
+        return state.channelOrder
+          .map(id => state.channels.find(c => c.id.toString() === id))
+          .filter(Boolean);
+      },
     }),
     {
       name: 'dispatch-channels',
       partialize: (state) => ({
         channelOrder: state.channelOrder,
+        gridChannelIds: state.gridChannelIds,
         monitoredChannels: state.monitoredChannels,
         mutedChannels: state.mutedChannels,
-        primaryTxChannelId: state.primaryTxChannelId,
+        selectedTxChannels: state.selectedTxChannels,
       }),
     }
   )
