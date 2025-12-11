@@ -16,6 +16,9 @@ class LiveKitEngine {
     this.onParticipantDisconnected = null;
     this.onDataReceived = null;
     this.onLevelUpdate = null;
+    
+    this.txGraph = null;
+    this.publishedTracks = {};
   }
 
   getAudioContext() {
@@ -174,6 +177,56 @@ class LiveKitEngine {
     });
   }
 
+  async createTxGraph() {
+    const ctx = this.getAudioContext();
+    
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+      },
+    });
+    
+    const micSource = ctx.createMediaStreamSource(stream);
+    const micGain = ctx.createGain();
+    micGain.gain.value = 1.0;
+    
+    const toneGain = ctx.createGain();
+    toneGain.gain.value = 1.0;
+    
+    const destination = ctx.createMediaStreamDestination();
+    
+    micSource.connect(micGain);
+    micGain.connect(destination);
+    toneGain.connect(destination);
+    
+    this.txGraph = {
+      ctx,
+      micStream: stream,
+      micSource,
+      micGain,
+      toneGain,
+      destination,
+      outputStream: destination.stream,
+    };
+    
+    return this.txGraph;
+  }
+
+  getTxContext() {
+    if (this.txGraph) {
+      return this.txGraph.ctx;
+    }
+    return null;
+  }
+
+  getToneDestination() {
+    if (this.txGraph) {
+      return this.txGraph.toneGain;
+    }
+    return null;
+  }
+
   async publishAudio(channelName) {
     const room = this.rooms[channelName];
     if (!room) return null;
@@ -193,6 +246,89 @@ class LiveKitEngine {
     });
 
     return { track: audioTrack, stream };
+  }
+
+  async publishAudioToChannels(channelNames) {
+    if (!this.txGraph) {
+      await this.createTxGraph();
+    }
+    
+    const { outputStream } = this.txGraph;
+    const sourceTrack = outputStream.getAudioTracks()[0];
+    
+    if (sourceTrack.readyState === 'ended') {
+      this.destroyTxGraph();
+      await this.createTxGraph();
+    }
+    
+    const publishedChannels = [];
+    
+    for (const channelName of channelNames) {
+      const room = this.rooms[channelName];
+      if (!room) continue;
+      
+      if (this.publishedTracks[channelName]) {
+        publishedChannels.push(channelName);
+        continue;
+      }
+      
+      try {
+        const clonedTrack = this.txGraph.outputStream.getAudioTracks()[0].clone();
+        
+        await room.localParticipant.publishTrack(clonedTrack, {
+          name: 'dispatch-audio',
+          source: Track.Source.Microphone,
+        });
+        
+        this.publishedTracks[channelName] = clonedTrack;
+        publishedChannels.push(channelName);
+      } catch (err) {
+        console.error(`Failed to publish to ${channelName}:`, err);
+      }
+    }
+    
+    return publishedChannels;
+  }
+
+  async unpublishAudioFromChannels(channelNames) {
+    const channelsToUnpublish = channelNames || Object.keys(this.publishedTracks);
+    
+    for (const channelName of channelsToUnpublish) {
+      const room = this.rooms[channelName];
+      const track = this.publishedTracks[channelName];
+      
+      if (!room || !track) continue;
+      
+      try {
+        await room.localParticipant.unpublishTrack(track);
+        delete this.publishedTracks[channelName];
+      } catch (err) {
+        console.error(`Failed to unpublish from ${channelName}:`, err);
+      }
+    }
+  }
+
+  destroyTxGraph() {
+    if (!this.txGraph) return;
+    
+    const { micStream, micSource } = this.txGraph;
+    
+    for (const track of Object.values(this.publishedTracks)) {
+      try {
+        track.stop();
+      } catch (e) {}
+    }
+    this.publishedTracks = {};
+    
+    try {
+      micSource.disconnect();
+    } catch (e) {}
+    
+    if (micStream) {
+      micStream.getTracks().forEach(track => track.stop());
+    }
+    
+    this.txGraph = null;
   }
 
   async unpublishAudio(channelName, audioTrack, stream) {
@@ -227,6 +363,13 @@ class LiveKitEngine {
       delete this.levelAnimations[channelName];
     }
 
+    if (this.publishedTracks[channelName]) {
+      try {
+        this.publishedTracks[channelName].stop();
+      } catch (e) {}
+      delete this.publishedTracks[channelName];
+    }
+
     await room.disconnect();
     delete this.rooms[channelName];
   }
@@ -234,6 +377,8 @@ class LiveKitEngine {
   async disconnectAll() {
     Object.values(this.levelAnimations).forEach(id => cancelAnimationFrame(id));
     this.levelAnimations = {};
+    
+    this.destroyTxGraph();
     
     for (const channelName of Object.keys(this.rooms)) {
       await this.rooms[channelName].disconnect();

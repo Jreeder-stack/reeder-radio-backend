@@ -2,12 +2,15 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useChannelStore } from '../../state/channels.js';
 import { useDispatcherStore } from '../../state/dispatcher.js';
 import toneEngine from '../../audio/toneEngine.js';
+import livekitEngine from '../../audio/livekitEngine.js';
 
 export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit }) {
   const { channels, selectedTxChannels } = useChannelStore();
   const { isTalking, setTalking, clearAirEnabled, toggleClearAir } = useDispatcherStore();
   const [disabledTones, setDisabledTones] = useState({});
+  const [toneTransmitting, setToneTransmitting] = useState(false);
   const pttRef = useRef(null);
+  const pttActiveRef = useRef(false);
 
   const selectedChannelNames = selectedTxChannels
     .map(id => channels.find(c => c.id === id)?.name)
@@ -26,18 +29,58 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit }) {
     };
   }, []);
 
-  const handlePTTDown = useCallback((e) => {
+  const startTransmission = useCallback(async () => {
+    if (selectedChannelNames.length === 0) return false;
+    
+    try {
+      await livekitEngine.publishAudioToChannels(selectedChannelNames);
+      
+      const txContext = livekitEngine.getTxContext();
+      const toneDestination = livekitEngine.getToneDestination();
+      
+      if (txContext && toneDestination) {
+        toneEngine.setTxMode(txContext, toneDestination);
+      }
+      
+      return true;
+    } catch (err) {
+      console.error('Failed to start transmission:', err);
+      return false;
+    }
+  }, [selectedChannelNames]);
+
+  const stopTransmission = useCallback(async () => {
+    try {
+      toneEngine.clearTxMode();
+      await livekitEngine.unpublishAudioFromChannels(selectedChannelNames);
+    } catch (err) {
+      console.error('Failed to stop transmission:', err);
+    }
+  }, [selectedChannelNames]);
+
+  const handlePTTDown = useCallback(async (e) => {
     if (e.type === 'keydown' && e.repeat) return;
     if (selectedTxChannels.length === 0) return;
+    if (pttActiveRef.current) return;
     
+    pttActiveRef.current = true;
     setTalking(true);
+    
+    await startTransmission();
+    
     if (onPTTStart) onPTTStart(selectedChannelNames);
-  }, [selectedTxChannels, selectedChannelNames, setTalking, onPTTStart]);
+  }, [selectedTxChannels, selectedChannelNames, setTalking, onPTTStart, startTransmission]);
 
-  const handlePTTUp = useCallback(() => {
+  const handlePTTUp = useCallback(async () => {
+    if (!pttActiveRef.current) return;
+    
+    pttActiveRef.current = false;
     setTalking(false);
+    
+    await stopTransmission();
+    
     if (onPTTEnd) onPTTEnd(selectedChannelNames);
-  }, [selectedChannelNames, setTalking, onPTTEnd]);
+  }, [selectedChannelNames, setTalking, onPTTEnd, stopTransmission]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -63,14 +106,50 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit }) {
     };
   }, [handlePTTDown, handlePTTUp]);
 
-  const playTone = async (type, duration) => {
+  const playToneWithTransmit = async (type, duration) => {
     if (disabledTones[type] || selectedTxChannels.length === 0) return;
     
+    setToneTransmitting(true);
+    
+    const wasAlreadyTransmitting = pttActiveRef.current;
+    
+    if (!wasAlreadyTransmitting) {
+      pttActiveRef.current = true;
+      setTalking(true);
+      await startTransmission();
+    }
+    
     if (onToneTransmit) {
-      await onToneTransmit(selectedChannelNames, type, duration);
+      onToneTransmit(selectedChannelNames, type, duration);
     }
     
     toneEngine.playEmergencyTone(type, duration);
+    
+    const waitForTone = () => {
+      return new Promise((resolve) => {
+        const checkInterval = setInterval(() => {
+          if (!toneEngine.isTonePlaying(type)) {
+            clearInterval(checkInterval);
+            resolve();
+          }
+        }, 50);
+        
+        setTimeout(() => {
+          clearInterval(checkInterval);
+          resolve();
+        }, duration + 500);
+      });
+    };
+    
+    await waitForTone();
+    
+    if (!wasAlreadyTransmitting) {
+      pttActiveRef.current = false;
+      setTalking(false);
+      await stopTransmission();
+    }
+    
+    setToneTransmitting(false);
   };
 
   const handleClearAirToggle = () => {
@@ -87,6 +166,7 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit }) {
 
   const hasTxChannels = selectedTxChannels.length > 0;
   const firstTxChannelId = selectedTxChannels[0];
+  const isTransmitting = isTalking || toneTransmitting;
 
   return (
     <div className="flex items-center justify-between px-4 py-3 bg-dispatch-panel border-t border-dispatch-border">
@@ -120,25 +200,25 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit }) {
           onMouseLeave={handlePTTUp}
           onTouchStart={handlePTTDown}
           onTouchEnd={handlePTTUp}
-          disabled={!hasTxChannels}
+          disabled={!hasTxChannels || toneTransmitting}
           className={`px-8 py-3 rounded-lg font-bold text-lg transition-all select-none ${
-            isTalking 
+            isTransmitting
               ? 'bg-red-600 text-white ring-4 ring-red-400' 
               : hasTxChannels 
                 ? 'bg-green-600 hover:bg-green-700 text-white' 
                 : 'bg-gray-600 text-gray-400 cursor-not-allowed'
           }`}
         >
-          {isTalking ? 'TRANSMITTING' : 'PTT (SPACE)'}
+          {isTransmitting ? 'TRANSMITTING' : 'PTT (SPACE)'}
         </button>
       </div>
 
       <div className="flex items-center gap-2">
         <button
-          onClick={() => playTone('A', 1000)}
-          disabled={disabledTones['A'] || !hasTxChannels}
+          onClick={() => playToneWithTransmit('A', 1000)}
+          disabled={disabledTones['A'] || !hasTxChannels || toneTransmitting}
           className={`px-3 py-1.5 text-sm rounded transition-colors ${
-            disabledTones['A'] || !hasTxChannels
+            disabledTones['A'] || !hasTxChannels || toneTransmitting
               ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
               : 'bg-yellow-600 hover:bg-yellow-700 text-white'
           }`}
@@ -146,10 +226,10 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit }) {
           Alert
         </button>
         <button
-          onClick={() => playTone('B', 2000)}
-          disabled={disabledTones['B'] || !hasTxChannels}
+          onClick={() => playToneWithTransmit('B', 2000)}
+          disabled={disabledTones['B'] || !hasTxChannels || toneTransmitting}
           className={`px-3 py-1.5 text-sm rounded transition-colors ${
-            disabledTones['B'] || !hasTxChannels
+            disabledTones['B'] || !hasTxChannels || toneTransmitting
               ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
               : 'bg-orange-600 hover:bg-orange-700 text-white'
           }`}
@@ -157,10 +237,10 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit }) {
           MDC
         </button>
         <button
-          onClick={() => playTone('C', 1500)}
-          disabled={disabledTones['C'] || !hasTxChannels}
+          onClick={() => playToneWithTransmit('C', 1500)}
+          disabled={disabledTones['C'] || !hasTxChannels || toneTransmitting}
           className={`px-3 py-1.5 text-sm rounded transition-colors ${
-            disabledTones['C'] || !hasTxChannels
+            disabledTones['C'] || !hasTxChannels || toneTransmitting
               ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
               : 'bg-amber-600 hover:bg-amber-700 text-white'
           }`}
@@ -168,10 +248,10 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit }) {
           Pre-Alert
         </button>
         <button
-          onClick={() => playTone('CONTINUOUS', 5000)}
-          disabled={disabledTones['CONTINUOUS'] || !hasTxChannels}
+          onClick={() => playToneWithTransmit('CONTINUOUS', 5000)}
+          disabled={disabledTones['CONTINUOUS'] || !hasTxChannels || toneTransmitting}
           className={`px-3 py-1.5 text-sm rounded transition-colors ${
-            disabledTones['CONTINUOUS'] || !hasTxChannels
+            disabledTones['CONTINUOUS'] || !hasTxChannels || toneTransmitting
               ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
               : 'bg-red-600 hover:bg-red-700 text-white'
           }`}

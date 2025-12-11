@@ -6,9 +6,18 @@ class ToneEngine {
     this.playingTones = new Set();
     this.onToneStart = null;
     this.onToneEnd = null;
+    this.customDestination = null;
+    this.externalContext = null;
   }
 
   getContext() {
+    if (this.externalContext) {
+      if (this.externalContext.state === 'suspended') {
+        this.externalContext.resume();
+      }
+      return this.externalContext;
+    }
+    
     if (!this.audioContext || this.audioContext.state === 'closed') {
       this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
     }
@@ -24,6 +33,16 @@ class ToneEngine {
       return this.customDestination;
     }
     return ctx.destination;
+  }
+
+  setTxMode(externalContext, destinationNode) {
+    this.externalContext = externalContext;
+    this.customDestination = destinationNode;
+  }
+
+  clearTxMode() {
+    this.externalContext = null;
+    this.customDestination = null;
   }
 
   setCustomDestination(node) {
@@ -58,6 +77,13 @@ class ToneEngine {
     
     oscillator.connect(gainNode);
     gainNode.connect(this.getDestinationNode());
+    
+    if (this.customDestination) {
+      const localGain = ctx.createGain();
+      localGain.gain.value = 0.5;
+      oscillator.connect(localGain);
+      localGain.connect(ctx.destination);
+    }
     
     this.playingTones.add('A');
     if (this.onToneStart) this.onToneStart('A');
@@ -98,6 +124,13 @@ class ToneEngine {
     
     oscillator.connect(gainNode);
     gainNode.connect(this.getDestinationNode());
+    
+    if (this.customDestination) {
+      const localGain = ctx.createGain();
+      localGain.gain.value = 0.4;
+      oscillator.connect(localGain);
+      localGain.connect(ctx.destination);
+    }
     
     this.playingTones.add('B');
     if (this.onToneStart) this.onToneStart('B');
@@ -143,6 +176,16 @@ class ToneEngine {
       
       oscillator.connect(gainNode);
       gainNode.connect(this.getDestinationNode());
+      
+      if (this.customDestination) {
+        const localGain = ctx.createGain();
+        localGain.gain.setValueAtTime(0, startTime - 0.001);
+        localGain.gain.setValueAtTime(0.5, startTime);
+        localGain.gain.setValueAtTime(0.5, stopTime - 0.001);
+        localGain.gain.setValueAtTime(0, stopTime);
+        oscillator.connect(localGain);
+        localGain.connect(ctx.destination);
+      }
       
       oscillator.start(startTime);
       oscillator.stop(stopTime);
@@ -190,6 +233,13 @@ class ToneEngine {
     oscillator1.connect(gainNode);
     oscillator2.connect(gainNode);
     gainNode.connect(this.getDestinationNode());
+    
+    if (this.customDestination) {
+      const localGain = ctx.createGain();
+      localGain.gain.value = 0.6;
+      gainNode.connect(localGain);
+      localGain.connect(ctx.destination);
+    }
     
     this.playingTones.add('CONTINUOUS');
     if (this.onToneStart) this.onToneStart('CONTINUOUS');
@@ -240,6 +290,13 @@ class ToneEngine {
     oscillator.connect(gainNode);
     gainNode.connect(this.getDestinationNode());
     
+    if (this.customDestination) {
+      const localGain = ctx.createGain();
+      localGain.gain.value = 0.3;
+      oscillator.connect(localGain);
+      localGain.connect(ctx.destination);
+    }
+    
     oscillator.start();
     oscillator.stop(ctx.currentTime + 0.1);
     
@@ -274,6 +331,8 @@ class ToneEngine {
   destroy() {
     this.stopAllClearAir();
     this.playingTones.clear();
+    this.customDestination = null;
+    this.externalContext = null;
     if (this.audioContext && this.audioContext.state !== 'closed') {
       this.audioContext.close();
     }

@@ -172,7 +172,7 @@ Set these environment variables in Render:
 - Routes:
   - `/dispatcher` - New Dispatch Console (replaces legacy)
   - `/dispatcher-legacy` - Original dispatcher view
-- Known limitation: Tones play locally on dispatcher console. Broadcasting tones over LiveKit requires WebRTC MediaStream routing which is not yet implemented.
+- Tone transmission: Tones are broadcast over LiveKit to all field units when a tone button is pressed. The system automatically keys up, transmits the tone, and releases.
 
 ## Default Admin Credentials
 - Username: admin (or ADMIN_USERNAME env var)
