@@ -18,6 +18,7 @@ class LiveKitEngine {
     this.onLevelUpdate = null;
     
     this.txGraph = null;
+    this.micStream = null;
     this.publishedTracks = {};
     this.channelGainNodes = {};
     this.mutedTxChannels = new Set();
@@ -331,11 +332,18 @@ class LiveKitEngine {
       await this.createTxGraph();
     }
     
+    const ctx = this.getAudioContext();
+    if (ctx.state === 'suspended') {
+      console.log('[LiveKit] Resuming suspended AudioContext');
+      await ctx.resume();
+    }
+    console.log('[LiveKit] AudioContext state:', ctx.state);
+    
     const { outputStream } = this.txGraph;
     const sourceTrack = outputStream.getAudioTracks()[0];
     
-    if (sourceTrack.readyState === 'ended') {
-      console.log('[LiveKit] Source track ended, recreating TX graph');
+    if (!sourceTrack || sourceTrack.readyState === 'ended') {
+      console.log('[LiveKit] Source track ended or missing, recreating TX graph');
       this.destroyTxGraph();
       await this.createTxGraph();
     }
@@ -356,17 +364,18 @@ class LiveKitEngine {
       }
       
       try {
-        const clonedTrack = this.txGraph.outputStream.getAudioTracks()[0].clone();
-        console.log(`[LiveKit] Publishing cloned track to ${channelName}, track ID:`, clonedTrack.id);
+        const trackToPublish = this.txGraph.outputStream.getAudioTracks()[0];
+        console.log(`[LiveKit] Publishing track to ${channelName}, track ID:`, trackToPublish.id, 'readyState:', trackToPublish.readyState);
         
-        await room.localParticipant.publishTrack(clonedTrack, {
+        await room.localParticipant.publishTrack(trackToPublish, {
           name: 'dispatch-audio',
           source: Track.Source.Microphone,
         });
         
-        this.publishedTracks[channelName] = clonedTrack;
+        this.publishedTracks[channelName] = trackToPublish;
         publishedChannels.push(channelName);
         console.log(`[LiveKit] Successfully published to ${channelName}`);
+        break;
       } catch (err) {
         console.error(`[LiveKit] Failed to publish to ${channelName}:`, err);
       }
@@ -412,12 +421,19 @@ class LiveKitEngine {
     console.log('[LiveKit] Active published tracks after unpublish:', Object.keys(this.publishedTracks));
   }
 
+  releaseMicStream() {
+    if (this.micStream) {
+      this.micStream.getTracks().forEach(track => {
+        track.stop();
+        console.log('[LiveKit] Stopped mic stream track, readyState:', track.readyState);
+      });
+      this.micStream = null;
+      console.log('[LiveKit] Mic stream released');
+    }
+  }
+
   destroyTxGraph() {
-    if (!this.txGraph) return;
-    
     console.log('[LiveKit] Destroying TX graph');
-    
-    const { micStream, micSource, micGain, toneGain, destination } = this.txGraph;
     
     for (const track of Object.values(this.publishedTracks)) {
       try {
@@ -427,36 +443,38 @@ class LiveKitEngine {
     }
     this.publishedTracks = {};
     
-    try {
-      micSource.disconnect();
-      console.log('[LiveKit] Disconnected micSource');
-    } catch (e) {}
+    this.releaseMicStream();
     
-    try {
-      micGain.disconnect();
-      console.log('[LiveKit] Disconnected micGain');
-    } catch (e) {}
-    
-    try {
-      toneGain.disconnect();
-      console.log('[LiveKit] Disconnected toneGain');
-    } catch (e) {}
-    
-    if (destination && destination.stream) {
-      destination.stream.getTracks().forEach(track => {
-        track.stop();
-        console.log('[LiveKit] Stopped destination stream track');
-      });
+    if (this.txGraph) {
+      const { micStream, micSource, micGain, toneGain, destination } = this.txGraph;
+      
+      try {
+        micSource?.disconnect();
+      } catch (e) {}
+      
+      try {
+        micGain?.disconnect();
+      } catch (e) {}
+      
+      try {
+        toneGain?.disconnect();
+      } catch (e) {}
+      
+      if (destination && destination.stream) {
+        destination.stream.getTracks().forEach(track => {
+          track.stop();
+        });
+      }
+      
+      if (micStream) {
+        micStream.getTracks().forEach(track => {
+          track.stop();
+        });
+      }
+      
+      this.txGraph = null;
     }
     
-    if (micStream) {
-      micStream.getTracks().forEach(track => {
-        track.stop();
-        console.log('[LiveKit] Stopped mic stream track, readyState:', track.readyState);
-      });
-    }
-    
-    this.txGraph = null;
     console.log('[LiveKit] TX graph destroyed');
   }
 

@@ -1,0 +1,373 @@
+index-D2DkO9QA.js:108 [DispatchConsole] Connecting to channels: (15) ['DISPATCH', 'OPS-1', 'OPS-2', 'OPS1', 'OPS2', 'TAC1', 'FIRE1', 'FIRE2', 'FIRE3', 'FIRE4', 'FIRE5', 'FIRE6', 'FIRE7', 'FIRE8', 'SECURE_CMD']
+The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. <URL>
+The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. <URL>
+The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. <URL>
+The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. <URL>
+The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. <URL>
+The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. <URL>
+The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. <URL>
+The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. <URL>
+The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. <URL>
+The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. <URL>
+The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. <URL>
+The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. <URL>
+The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. <URL>
+The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. <URL>
+The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. <URL>
+index-D2DkO9QA.js:108 [DispatchConsole] Connected to DISPATCH
+index-D2DkO9QA.js:108 [DispatchConsole] Connected to OPS-1
+index-D2DkO9QA.js:108 [DispatchConsole] Connected to OPS-2
+index-D2DkO9QA.js:108 [DispatchConsole] Connected to OPS1
+index-D2DkO9QA.js:108 [DispatchConsole] Connected to OPS2
+index-D2DkO9QA.js:108 [DispatchConsole] Connected to TAC1
+index-D2DkO9QA.js:108 [DispatchConsole] Connected to FIRE1
+index-D2DkO9QA.js:108 [DispatchConsole] Connected to FIRE2
+index-D2DkO9QA.js:108 [DispatchConsole] Connected to FIRE3
+index-D2DkO9QA.js:108 [DispatchConsole] Connected to FIRE4
+index-D2DkO9QA.js:108 [DispatchConsole] Connected to FIRE5
+index-D2DkO9QA.js:108 [DispatchConsole] Connected to FIRE6
+index-D2DkO9QA.js:108 [DispatchConsole] Connected to FIRE7
+index-D2DkO9QA.js:108 [DispatchConsole] Connected to FIRE8
+index-D2DkO9QA.js:108 [DispatchConsole] Connected to SECURE_CMD
+index-D2DkO9QA.js:108 [DispatchConsole] All connections complete. Connected rooms: (15) ['DISPATCH', 'OPS-1', 'OPS-2', 'OPS1', 'OPS2', 'TAC1', 'FIRE1', 'FIRE2', 'FIRE3', 'FIRE4', 'FIRE5', 'FIRE6', 'FIRE7', 'FIRE8', 'SECURE_CMD']
+index-D2DkO9QA.js:108 [PTT] === PTT DOWN ===
+index-D2DkO9QA.js:108 [PTT] startTransmission called, channels: ['DISPATCH']
+index-D2DkO9QA.js:108 [LiveKit] PTT DOWN - publishing to channels: ['DISPATCH']
+index-D2DkO9QA.js:108 [LiveKit] Initializing persistent microphone
+index-D2DkO9QA.js:108 [LiveKit] Persistent mic acquired, track ID: a1417d21-7255-4ad3-89d9-a6939f035420
+index-D2DkO9QA.js:108 [LiveKit] Persistent mic initialized successfully
+index-D2DkO9QA.js:108 [LiveKit] Publishing cloned track to DISPATCH, track ID: b0a48667-bea5-4465-925f-a0d83d37a08c
+index-D2DkO9QA.js:108 [LiveKit] Successfully published to DISPATCH
+index-D2DkO9QA.js:108 [LiveKit] Active published tracks: ['DISPATCH']
+index-D2DkO9QA.js:108 [PTT] Transmission started successfully
+index-D2DkO9QA.js:108 [PTT] === PTT UP ===, pttActive: true stopCalled: false
+index-D2DkO9QA.js:108 [PTT] stopTransmission called
+index-D2DkO9QA.js:108 [PTT] Unpublishing all audio tracks...
+index-D2DkO9QA.js:108 [LiveKit] PTT UP - unpublishing from channels: ['DISPATCH']
+index-D2DkO9QA.js:108 [LiveKit] Unpublishing track from DISPATCH, track ID: b0a48667-bea5-4465-925f-a0d83d37a08c
+index-D2DkO9QA.js:108 [LiveKit] Disabled track on DISPATCH
+index-D2DkO9QA.js:108 [LiveKit] Stopped track on DISPATCH, readyState: ended
+index-D2DkO9QA.js:108 [LiveKit] Active published tracks after unpublish: []
+index-D2DkO9QA.js:108 [LiveKit] Destroying TX graph
+index-D2DkO9QA.js:108 [LiveKit] Disconnected micSource
+index-D2DkO9QA.js:108 [LiveKit] Disconnected micGain
+index-D2DkO9QA.js:108 [LiveKit] Disconnected toneGain
+index-D2DkO9QA.js:108 [LiveKit] Stopped destination stream track
+index-D2DkO9QA.js:108 [LiveKit] Stopped mic stream track, readyState: ended
+index-D2DkO9QA.js:108 [LiveKit] TX graph destroyed
+index-D2DkO9QA.js:108 [PTT] Transmission stopped, mic released
+index-D2DkO9QA.js:108 [PTT] === PTT DOWN ===
+index-D2DkO9QA.js:108 [PTT] startTransmission called, channels: ['DISPATCH']
+index-D2DkO9QA.js:108 [LiveKit] PTT DOWN - publishing to channels: ['DISPATCH']
+index-D2DkO9QA.js:108 [LiveKit] Initializing persistent microphone
+index-D2DkO9QA.js:108 [LiveKit] Persistent mic acquired, track ID: 7209fdcc-e365-4e5c-89ac-1fefac1f71b6
+index-D2DkO9QA.js:108 [LiveKit] Persistent mic initialized successfully
+index-D2DkO9QA.js:108 [LiveKit] Publishing cloned track to DISPATCH, track ID: b08cc47c-0580-439a-b784-e5732bc37087
+index-D2DkO9QA.js:108 [LiveKit] Successfully published to DISPATCH
+index-D2DkO9QA.js:108 [LiveKit] Active published tracks: ['DISPATCH']
+index-D2DkO9QA.js:108 [PTT] Transmission started successfully
+index-D2DkO9QA.js:108 [PTT] === PTT UP ===, pttActive: true stopCalled: false
+index-D2DkO9QA.js:108 [PTT] stopTransmission called
+index-D2DkO9QA.js:108 [PTT] Unpublishing all audio tracks...
+index-D2DkO9QA.js:108 [LiveKit] PTT UP - unpublishing from channels: ['DISPATCH']
+index-D2DkO9QA.js:108 [LiveKit] Unpublishing track from DISPATCH, track ID: b08cc47c-0580-439a-b784-e5732bc37087
+index-D2DkO9QA.js:108 [LiveKit] Disabled track on DISPATCH
+index-D2DkO9QA.js:108 [LiveKit] Stopped track on DISPATCH, readyState: ended
+index-D2DkO9QA.js:108 [LiveKit] Active published tracks after unpublish: []
+index-D2DkO9QA.js:108 [LiveKit] Destroying TX graph
+index-D2DkO9QA.js:108 [LiveKit] Disconnected micSource
+index-D2DkO9QA.js:108 [LiveKit] Disconnected micGain
+index-D2DkO9QA.js:108 [LiveKit] Disconnected toneGain
+index-D2DkO9QA.js:108 [LiveKit] Stopped destination stream track
+index-D2DkO9QA.js:108 [LiveKit] Stopped mic stream track, readyState: ended
+index-D2DkO9QA.js:108 [LiveKit] TX graph destroyed
+index-D2DkO9QA.js:108 [PTT] Transmission stopped, mic released
+index-D2DkO9QA.js:108 [PTT] === PTT DOWN ===
+index-D2DkO9QA.js:108 [PTT] startTransmission called, channels: ['DISPATCH']
+index-D2DkO9QA.js:108 [LiveKit] PTT DOWN - publishing to channels: ['DISPATCH']
+index-D2DkO9QA.js:108 [LiveKit] Initializing persistent microphone
+index-D2DkO9QA.js:108 [LiveKit] Persistent mic acquired, track ID: f11f67a2-7e02-4af8-9381-83fd471efe1c
+index-D2DkO9QA.js:108 [LiveKit] Persistent mic initialized successfully
+index-D2DkO9QA.js:108 [LiveKit] Publishing cloned track to DISPATCH, track ID: d4c9ebd7-f7c8-4ab7-b84d-f81406a4b71e
+index-D2DkO9QA.js:108 [LiveKit] Successfully published to DISPATCH
+index-D2DkO9QA.js:108 [LiveKit] Active published tracks: ['DISPATCH']
+index-D2DkO9QA.js:108 [PTT] Transmission started successfully
+index-D2DkO9QA.js:108 [PTT] === PTT UP ===, pttActive: true stopCalled: false
+index-D2DkO9QA.js:108 [PTT] stopTransmission called
+index-D2DkO9QA.js:108 [PTT] Unpublishing all audio tracks...
+index-D2DkO9QA.js:108 [LiveKit] PTT UP - unpublishing from channels: ['DISPATCH']
+index-D2DkO9QA.js:108 [LiveKit] Unpublishing track from DISPATCH, track ID: d4c9ebd7-f7c8-4ab7-b84d-f81406a4b71e
+index-D2DkO9QA.js:108 [LiveKit] Disabled track on DISPATCH
+index-D2DkO9QA.js:108 [LiveKit] Stopped track on DISPATCH, readyState: ended
+index-D2DkO9QA.js:108 [LiveKit] Active published tracks after unpublish: []
+index-D2DkO9QA.js:108 [LiveKit] Destroying TX graph
+index-D2DkO9QA.js:108 [LiveKit] Disconnected micSource
+index-D2DkO9QA.js:108 [LiveKit] Disconnected micGain
+index-D2DkO9QA.js:108 [LiveKit] Disconnected toneGain
+index-D2DkO9QA.js:108 [LiveKit] Stopped destination stream track
+index-D2DkO9QA.js:108 [LiveKit] Stopped mic stream track, readyState: ended
+index-D2DkO9QA.js:108 [LiveKit] TX graph destroyed
+index-D2DkO9QA.js:108 [PTT] Transmission stopped, mic released
+index-D2DkO9QA.js:108 [PTT] === PTT DOWN ===
+index-D2DkO9QA.js:108 [PTT] startTransmission called, channels: ['DISPATCH']
+index-D2DkO9QA.js:108 [LiveKit] PTT DOWN - publishing to channels: ['DISPATCH']
+index-D2DkO9QA.js:108 [LiveKit] Initializing persistent microphone
+index-D2DkO9QA.js:108 [LiveKit] Persistent mic acquired, track ID: 0be005de-bc27-431e-a359-3ea9ae250794
+index-D2DkO9QA.js:108 [LiveKit] Persistent mic initialized successfully
+index-D2DkO9QA.js:108 [LiveKit] Publishing cloned track to DISPATCH, track ID: 2e548a2b-4d69-466f-852b-5a764392a07f
+index-D2DkO9QA.js:108 [LiveKit] Successfully published to DISPATCH
+index-D2DkO9QA.js:108 [LiveKit] Active published tracks: ['DISPATCH']
+index-D2DkO9QA.js:108 [PTT] Transmission started successfully
+index-D2DkO9QA.js:108 [PTT] === PTT UP ===, pttActive: true stopCalled: false
+index-D2DkO9QA.js:108 [PTT] stopTransmission called
+index-D2DkO9QA.js:108 [PTT] Unpublishing all audio tracks...
+index-D2DkO9QA.js:108 [LiveKit] PTT UP - unpublishing from channels: ['DISPATCH']
+index-D2DkO9QA.js:108 [LiveKit] Unpublishing track from DISPATCH, track ID: 2e548a2b-4d69-466f-852b-5a764392a07f
+index-D2DkO9QA.js:108 [LiveKit] Disabled track on DISPATCH
+index-D2DkO9QA.js:108 [LiveKit] Stopped track on DISPATCH, readyState: ended
+index-D2DkO9QA.js:108 [LiveKit] Active published tracks after unpublish: []
+index-D2DkO9QA.js:108 [LiveKit] Destroying TX graph
+index-D2DkO9QA.js:108 [LiveKit] Disconnected micSource
+index-D2DkO9QA.js:108 [LiveKit] Disconnected micGain
+index-D2DkO9QA.js:108 [LiveKit] Disconnected toneGain
+index-D2DkO9QA.js:108 [LiveKit] Stopped destination stream track
+index-D2DkO9QA.js:108 [LiveKit] Stopped mic stream track, readyState: ended
+index-D2DkO9QA.js:108 [LiveKit] TX graph destroyed
+index-D2DkO9QA.js:108 [PTT] Transmission stopped, mic released
+index-D2DkO9QA.js:108 [PTT] === PTT UP ===, pttActive: false stopCalled: true
+index-D2DkO9QA.js:108 [PTT] === PTT DOWN ===
+index-D2DkO9QA.js:108 [PTT] startTransmission called, channels: ['DISPATCH']
+index-D2DkO9QA.js:108 [LiveKit] PTT DOWN - publishing to channels: ['DISPATCH']
+index-D2DkO9QA.js:108 [LiveKit] Initializing persistent microphone
+index-D2DkO9QA.js:108 [LiveKit] Persistent mic acquired, track ID: 803256e2-0842-43fc-9058-eb5b9d93a1b9
+index-D2DkO9QA.js:108 [LiveKit] Persistent mic initialized successfully
+index-D2DkO9QA.js:108 [LiveKit] Publishing cloned track to DISPATCH, track ID: 8ec6e60c-2ea8-4917-9e30-27e543a2ca67
+index-D2DkO9QA.js:108 [LiveKit] Successfully published to DISPATCH
+index-D2DkO9QA.js:108 [LiveKit] Active published tracks: ['DISPATCH']
+index-D2DkO9QA.js:108 [PTT] Transmission started successfully
+index-D2DkO9QA.js:108 [PTT] === PTT UP ===, pttActive: true stopCalled: false
+index-D2DkO9QA.js:108 [PTT] stopTransmission called
+index-D2DkO9QA.js:108 [PTT] Unpublishing all audio tracks...
+index-D2DkO9QA.js:108 [LiveKit] PTT UP - unpublishing from channels: ['DISPATCH']
+index-D2DkO9QA.js:108 [LiveKit] Unpublishing track from DISPATCH, track ID: 8ec6e60c-2ea8-4917-9e30-27e543a2ca67
+index-D2DkO9QA.js:68 MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 11 rtpVideoPayloadTypes listeners added. Use emitter.setMaxListeners() to increase limit
+    at l (index-D2DkO9QA.js:68:63096)
+    at s.addListener (index-D2DkO9QA.js:68:63379)
+    at s.once (index-D2DkO9QA.js:68:63863)
+    at n1.<anonymous> (index-D2DkO9QA.js:104:83421)
+    at Generator.next (<anonymous>)
+    at index-D2DkO9QA.js:68:59814
+    at new Promise (<anonymous>)
+    at x (index-D2DkO9QA.js:68:59611)
+    at index-D2DkO9QA.js:104:82946
+    at new Promise (<anonymous>)
+i @ index-D2DkO9QA.js:68
+l @ index-D2DkO9QA.js:68
+s.addListener @ index-D2DkO9QA.js:68
+s.once @ index-D2DkO9QA.js:68
+(anonymous) @ index-D2DkO9QA.js:104
+(anonymous) @ index-D2DkO9QA.js:68
+x @ index-D2DkO9QA.js:68
+(anonymous) @ index-D2DkO9QA.js:104
+(anonymous) @ index-D2DkO9QA.js:104
+(anonymous) @ index-D2DkO9QA.js:68
+x @ index-D2DkO9QA.js:68
+negotiate @ index-D2DkO9QA.js:104
+(anonymous) @ index-D2DkO9QA.js:104
+(anonymous) @ index-D2DkO9QA.js:68
+x @ index-D2DkO9QA.js:68
+unpublishTrack @ index-D2DkO9QA.js:104
+unpublishAudioFromChannels @ index-D2DkO9QA.js:108
+(anonymous) @ index-D2DkO9QA.js:108
+(anonymous) @ index-D2DkO9QA.js:108
+X @ index-D2DkO9QA.js:108
+index-D2DkO9QA.js:108 [LiveKit] Disabled track on DISPATCH
+index-D2DkO9QA.js:108 [LiveKit] Stopped track on DISPATCH, readyState: ended
+index-D2DkO9QA.js:108 [LiveKit] Active published tracks after unpublish: []
+index-D2DkO9QA.js:108 [LiveKit] Destroying TX graph
+index-D2DkO9QA.js:108 [LiveKit] Disconnected micSource
+index-D2DkO9QA.js:108 [LiveKit] Disconnected micGain
+index-D2DkO9QA.js:108 [LiveKit] Disconnected toneGain
+index-D2DkO9QA.js:108 [LiveKit] Stopped destination stream track
+index-D2DkO9QA.js:108 [LiveKit] Stopped mic stream track, readyState: ended
+index-D2DkO9QA.js:108 [LiveKit] TX graph destroyed
+index-D2DkO9QA.js:108 [PTT] Transmission stopped, mic released
+index-D2DkO9QA.js:108 [PTT] === PTT DOWN ===
+index-D2DkO9QA.js:108 [PTT] startTransmission called, channels: ['DISPATCH']
+index-D2DkO9QA.js:108 [LiveKit] PTT DOWN - publishing to channels: ['DISPATCH']
+index-D2DkO9QA.js:108 [LiveKit] Initializing persistent microphone
+index-D2DkO9QA.js:108 [LiveKit] Persistent mic acquired, track ID: 6fb253e5-b66b-4ce3-89d8-c4e2afd8f4af
+index-D2DkO9QA.js:108 [LiveKit] Persistent mic initialized successfully
+index-D2DkO9QA.js:108 [LiveKit] Publishing cloned track to DISPATCH, track ID: c694792b-b5f3-4c2c-bd88-a5e4e1aa0ce5
+index-D2DkO9QA.js:108 [LiveKit] Successfully published to DISPATCH
+index-D2DkO9QA.js:108 [LiveKit] Active published tracks: ['DISPATCH']
+index-D2DkO9QA.js:108 [PTT] Transmission started successfully
+index-D2DkO9QA.js:108 [PTT] === PTT UP ===, pttActive: true stopCalled: false
+index-D2DkO9QA.js:108 [PTT] stopTransmission called
+index-D2DkO9QA.js:108 [PTT] Unpublishing all audio tracks...
+index-D2DkO9QA.js:108 [LiveKit] PTT UP - unpublishing from channels: ['DISPATCH']
+index-D2DkO9QA.js:108 [LiveKit] Unpublishing track from DISPATCH, track ID: c694792b-b5f3-4c2c-bd88-a5e4e1aa0ce5
+index-D2DkO9QA.js:108 [LiveKit] Disabled track on DISPATCH
+index-D2DkO9QA.js:108 [LiveKit] Stopped track on DISPATCH, readyState: ended
+index-D2DkO9QA.js:108 [LiveKit] Active published tracks after unpublish: []
+index-D2DkO9QA.js:108 [LiveKit] Destroying TX graph
+index-D2DkO9QA.js:108 [LiveKit] Disconnected micSource
+index-D2DkO9QA.js:108 [LiveKit] Disconnected micGain
+index-D2DkO9QA.js:108 [LiveKit] Disconnected toneGain
+index-D2DkO9QA.js:108 [LiveKit] Stopped destination stream track
+index-D2DkO9QA.js:108 [LiveKit] Stopped mic stream track, readyState: ended
+index-D2DkO9QA.js:108 [LiveKit] TX graph destroyed
+index-D2DkO9QA.js:108 [PTT] Transmission stopped, mic released
+index-D2DkO9QA.js:108 [PTT] === PTT DOWN ===
+index-D2DkO9QA.js:108 [PTT] startTransmission called, channels: ['DISPATCH']
+index-D2DkO9QA.js:108 [LiveKit] PTT DOWN - publishing to channels: ['DISPATCH']
+index-D2DkO9QA.js:108 [LiveKit] Initializing persistent microphone
+index-D2DkO9QA.js:108 [LiveKit] Persistent mic acquired, track ID: 1725065b-5274-4fc5-816e-6bbda7ea0fe0
+index-D2DkO9QA.js:108 [LiveKit] Persistent mic initialized successfully
+index-D2DkO9QA.js:108 [LiveKit] Publishing cloned track to DISPATCH, track ID: b7076cca-6ae9-4c33-95e2-1440a86de6c8
+index-D2DkO9QA.js:108 [LiveKit] Successfully published to DISPATCH
+index-D2DkO9QA.js:108 [LiveKit] Active published tracks: ['DISPATCH']
+index-D2DkO9QA.js:108 [PTT] Transmission started successfully
+index-D2DkO9QA.js:108 [PTT] === PTT UP ===, pttActive: true stopCalled: false
+index-D2DkO9QA.js:108 [PTT] stopTransmission called
+index-D2DkO9QA.js:108 [PTT] Unpublishing all audio tracks...
+index-D2DkO9QA.js:108 [LiveKit] PTT UP - unpublishing from channels: ['DISPATCH']
+index-D2DkO9QA.js:108 [LiveKit] Unpublishing track from DISPATCH, track ID: b7076cca-6ae9-4c33-95e2-1440a86de6c8
+index-D2DkO9QA.js:108 [PTT] === PTT DOWN ===
+index-D2DkO9QA.js:108 [PTT] startTransmission called, channels: ['DISPATCH']
+index-D2DkO9QA.js:108 [LiveKit] PTT DOWN - publishing to channels: ['DISPATCH']
+index-D2DkO9QA.js:108 [LiveKit] Already published to DISPATCH
+index-D2DkO9QA.js:108 [LiveKit] Active published tracks: ['DISPATCH']
+index-D2DkO9QA.js:108 [PTT] Transmission started successfully
+index-D2DkO9QA.js:108 [LiveKit] Disabled track on DISPATCH
+index-D2DkO9QA.js:108 [LiveKit] Stopped track on DISPATCH, readyState: ended
+index-D2DkO9QA.js:108 [LiveKit] Active published tracks after unpublish: []
+index-D2DkO9QA.js:108 [LiveKit] Destroying TX graph
+index-D2DkO9QA.js:108 [LiveKit] Disconnected micSource
+index-D2DkO9QA.js:108 [LiveKit] Disconnected micGain
+index-D2DkO9QA.js:108 [LiveKit] Disconnected toneGain
+index-D2DkO9QA.js:108 [LiveKit] Stopped destination stream track
+index-D2DkO9QA.js:108 [LiveKit] Stopped mic stream track, readyState: ended
+index-D2DkO9QA.js:108 [LiveKit] TX graph destroyed
+index-D2DkO9QA.js:108 [PTT] Transmission stopped, mic released
+index-D2DkO9QA.js:108 [PTT] === PTT UP ===, pttActive: true stopCalled: false
+index-D2DkO9QA.js:108 [PTT] stopTransmission called
+index-D2DkO9QA.js:108 [PTT] Unpublishing all audio tracks...
+index-D2DkO9QA.js:108 [LiveKit] PTT UP - unpublishing from channels: []
+index-D2DkO9QA.js:108 [LiveKit] Active published tracks after unpublish: []
+index-D2DkO9QA.js:108 [PTT] Transmission stopped, mic released
+index-D2DkO9QA.js:108 [PTT] === PTT DOWN ===
+index-D2DkO9QA.js:108 [PTT] startTransmission called, channels: ['DISPATCH']
+index-D2DkO9QA.js:108 [LiveKit] PTT DOWN - publishing to channels: ['DISPATCH']
+index-D2DkO9QA.js:108 [LiveKit] Initializing persistent microphone
+index-D2DkO9QA.js:108 [LiveKit] Persistent mic acquired, track ID: 7e0e3f3b-792a-4566-8a81-c47854d9e277
+index-D2DkO9QA.js:108 [LiveKit] Persistent mic initialized successfully
+index-D2DkO9QA.js:108 [LiveKit] Publishing cloned track to DISPATCH, track ID: 52b0b5a7-a43c-4c33-a3a7-6848c6b3ed2c
+index-D2DkO9QA.js:108 [LiveKit] Successfully published to DISPATCH
+index-D2DkO9QA.js:108 [LiveKit] Active published tracks: ['DISPATCH']
+index-D2DkO9QA.js:108 [PTT] Transmission started successfully
+index-D2DkO9QA.js:108 [PTT] === PTT UP ===, pttActive: true stopCalled: false
+index-D2DkO9QA.js:108 [PTT] stopTransmission called
+index-D2DkO9QA.js:108 [PTT] Unpublishing all audio tracks...
+index-D2DkO9QA.js:108 [LiveKit] PTT UP - unpublishing from channels: ['DISPATCH']
+index-D2DkO9QA.js:108 [LiveKit] Unpublishing track from DISPATCH, track ID: 52b0b5a7-a43c-4c33-a3a7-6848c6b3ed2c
+index-D2DkO9QA.js:108 [LiveKit] Disabled track on DISPATCH
+index-D2DkO9QA.js:108 [LiveKit] Stopped track on DISPATCH, readyState: ended
+index-D2DkO9QA.js:108 [LiveKit] Active published tracks after unpublish: []
+index-D2DkO9QA.js:108 [LiveKit] Destroying TX graph
+index-D2DkO9QA.js:108 [LiveKit] Disconnected micSource
+index-D2DkO9QA.js:108 [LiveKit] Disconnected micGain
+index-D2DkO9QA.js:108 [LiveKit] Disconnected toneGain
+index-D2DkO9QA.js:108 [LiveKit] Stopped destination stream track
+index-D2DkO9QA.js:108 [LiveKit] Stopped mic stream track, readyState: ended
+index-D2DkO9QA.js:108 [LiveKit] TX graph destroyed
+index-D2DkO9QA.js:108 [PTT] Transmission stopped, mic released
+index-D2DkO9QA.js:108 [PTT] === PTT DOWN ===
+index-D2DkO9QA.js:108 [PTT] startTransmission called, channels: ['DISPATCH']
+index-D2DkO9QA.js:108 [LiveKit] PTT DOWN - publishing to channels: ['DISPATCH']
+index-D2DkO9QA.js:108 [LiveKit] Initializing persistent microphone
+index-D2DkO9QA.js:108 [LiveKit] Persistent mic acquired, track ID: e790c3f6-606a-4d76-abb6-93e31951b7b2
+index-D2DkO9QA.js:108 [LiveKit] Persistent mic initialized successfully
+index-D2DkO9QA.js:108 [LiveKit] Publishing cloned track to DISPATCH, track ID: a636632e-ed38-41a1-af5b-3fda37adee17
+index-D2DkO9QA.js:108 [LiveKit] Successfully published to DISPATCH
+index-D2DkO9QA.js:108 [LiveKit] Active published tracks: ['DISPATCH']
+index-D2DkO9QA.js:108 [PTT] Transmission started successfully
+[Violation] Forced reflow while executing JavaScript took 46ms
+index-D2DkO9QA.js:108 [PTT] === PTT UP ===, pttActive: true stopCalled: false
+index-D2DkO9QA.js:108 [PTT] stopTransmission called
+index-D2DkO9QA.js:108 [PTT] Unpublishing all audio tracks...
+index-D2DkO9QA.js:108 [LiveKit] PTT UP - unpublishing from channels: ['DISPATCH']
+index-D2DkO9QA.js:108 [LiveKit] Unpublishing track from DISPATCH, track ID: a636632e-ed38-41a1-af5b-3fda37adee17
+index-D2DkO9QA.js:108 [LiveKit] Disabled track on DISPATCH
+index-D2DkO9QA.js:108 [LiveKit] Stopped track on DISPATCH, readyState: ended
+index-D2DkO9QA.js:108 [LiveKit] Active published tracks after unpublish: []
+index-D2DkO9QA.js:108 [LiveKit] Destroying TX graph
+index-D2DkO9QA.js:108 [LiveKit] Disconnected micSource
+index-D2DkO9QA.js:108 [LiveKit] Disconnected micGain
+index-D2DkO9QA.js:108 [LiveKit] Disconnected toneGain
+index-D2DkO9QA.js:108 [LiveKit] Stopped destination stream track
+index-D2DkO9QA.js:108 [LiveKit] Stopped mic stream track, readyState: ended
+index-D2DkO9QA.js:108 [LiveKit] TX graph destroyed
+index-D2DkO9QA.js:108 [PTT] Transmission stopped, mic released
+[Violation] 'setInterval' handler took <N>ms
+[Violation] 'setInterval' handler took <N>ms
+[Violation] 'setInterval' handler took <N>ms
+[Violation] 'setInterval' handler took <N>ms
+[Violation] 'setInterval' handler took <N>ms
+[Violation] 'setInterval' handler took <N>ms
+index-D2DkO9QA.js:108 [PTT] === PTT DOWN ===
+index-D2DkO9QA.js:108 [PTT] startTransmission called, channels: ['DISPATCH']
+index-D2DkO9QA.js:108 [LiveKit] PTT DOWN - publishing to channels: ['DISPATCH']
+index-D2DkO9QA.js:108 [LiveKit] Initializing persistent microphone
+index-D2DkO9QA.js:108 [LiveKit] Persistent mic acquired, track ID: 2ba7d463-fddd-436d-9156-203372f14a3a
+index-D2DkO9QA.js:108 [LiveKit] Persistent mic initialized successfully
+index-D2DkO9QA.js:108 [LiveKit] Publishing cloned track to DISPATCH, track ID: caaac5f7-7bb3-482e-af95-2a54403aa3ff
+index-D2DkO9QA.js:108 [PTT] === PTT UP ===, pttActive: true stopCalled: false
+index-D2DkO9QA.js:108 [PTT] stopTransmission called
+index-D2DkO9QA.js:108 [PTT] Unpublishing all audio tracks...
+index-D2DkO9QA.js:108 [LiveKit] PTT UP - unpublishing from channels: []
+index-D2DkO9QA.js:108 [LiveKit] Active published tracks after unpublish: []
+index-D2DkO9QA.js:108 [LiveKit] Destroying TX graph
+index-D2DkO9QA.js:108 [LiveKit] Disconnected micSource
+index-D2DkO9QA.js:108 [LiveKit] Disconnected micGain
+index-D2DkO9QA.js:108 [LiveKit] Disconnected toneGain
+index-D2DkO9QA.js:108 [LiveKit] Stopped destination stream track
+index-D2DkO9QA.js:108 [LiveKit] Stopped mic stream track, readyState: ended
+index-D2DkO9QA.js:108 [LiveKit] TX graph destroyed
+index-D2DkO9QA.js:108 [PTT] Transmission stopped, mic released
+index-D2DkO9QA.js:108 [LiveKit] Successfully published to DISPATCH
+index-D2DkO9QA.js:108 [LiveKit] Active published tracks: ['DISPATCH']
+index-D2DkO9QA.js:108 [PTT] Failed to start transmission: RangeError: Failed to execute 'setValueAtTime' on 'AudioParam': Time must be a finite non-negative number: -0.001
+    at GP.playAuthorizationTone (index-D2DkO9QA.js:108:51962)
+    at index-D2DkO9QA.js:108:66101
+    at async index-D2DkO9QA.js:108:66922
+(anonymous) @ index-D2DkO9QA.js:108
+await in (anonymous)
+(anonymous) @ index-D2DkO9QA.js:108
+G @ index-D2DkO9QA.js:108
+index-D2DkO9QA.js:108 [PTT] PTT released during setup, calling stop
+index-D2DkO9QA.js:108 [PTT] === PTT DOWN ===
+index-D2DkO9QA.js:108 [PTT] startTransmission called, channels: ['DISPATCH']
+index-D2DkO9QA.js:108 [LiveKit] PTT DOWN - publishing to channels: ['DISPATCH']
+index-D2DkO9QA.js:108 [LiveKit] Initializing persistent microphone
+index-D2DkO9QA.js:108 [LiveKit] Persistent mic acquired, track ID: 35224670-315d-4fec-996f-0ce83019e513
+index-D2DkO9QA.js:108 [LiveKit] Persistent mic initialized successfully
+index-D2DkO9QA.js:108 [LiveKit] Already published to DISPATCH
+index-D2DkO9QA.js:108 [LiveKit] Active published tracks: ['DISPATCH']
+index-D2DkO9QA.js:108 [PTT] Transmission started successfully
+index-D2DkO9QA.js:108 [PTT] === PTT UP ===, pttActive: true stopCalled: false
+index-D2DkO9QA.js:108 [PTT] stopTransmission called
+index-D2DkO9QA.js:108 [PTT] Unpublishing all audio tracks...
+index-D2DkO9QA.js:108 [LiveKit] PTT UP - unpublishing from channels: ['DISPATCH']
+index-D2DkO9QA.js:108 [LiveKit] Unpublishing track from DISPATCH, track ID: caaac5f7-7bb3-482e-af95-2a54403aa3ff
+index-D2DkO9QA.js:108 [LiveKit] Disabled track on DISPATCH
+index-D2DkO9QA.js:108 [LiveKit] Stopped track on DISPATCH, readyState: ended
+index-D2DkO9QA.js:108 [LiveKit] Active published tracks after unpublish: []
+index-D2DkO9QA.js:108 [LiveKit] Destroying TX graph
+index-D2DkO9QA.js:108 [LiveKit] Disconnected micSource
+index-D2DkO9QA.js:108 [LiveKit] Disconnected micGain
+index-D2DkO9QA.js:108 [LiveKit] Disconnected toneGain
+index-D2DkO9QA.js:108 [LiveKit] Stopped destination stream track
+index-D2DkO9QA.js:108 [LiveKit] Stopped mic stream track, readyState: ended
+index-D2DkO9QA.js:108 [LiveKit] TX graph destroyed
+index-D2DkO9QA.js:108 [PTT] Transmission stopped, mic released
