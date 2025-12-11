@@ -271,6 +271,57 @@ export default function App({ user, onLogout }) {
   const pttActiveRef = useRef(false);
   const stopCalledRef = useRef(false);
   const [userLocation, setUserLocation] = useState(null);
+  
+  // iOS detection for special handling
+  const isIOSRef = useRef(
+    /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  );
+
+  // Force release all mic tracks - called synchronously to ensure cleanup
+  const forceMicRelease = () => {
+    console.log('[Radio PTT] Force mic release called');
+    
+    // Stop the published track
+    if (audioTrackRef.current) {
+      try {
+        audioTrackRef.current.enabled = false;
+        audioTrackRef.current.stop();
+        console.log('[Radio PTT] Force stopped audioTrack, state:', audioTrackRef.current.readyState);
+      } catch (e) {
+        console.warn('[Radio PTT] Force stop audioTrack error:', e);
+      }
+      audioTrackRef.current = null;
+    }
+    
+    // Stop the mic stream tracks
+    if (micStreamRef.current) {
+      try {
+        micStreamRef.current.getTracks().forEach(track => {
+          track.enabled = false;
+          track.stop();
+          console.log('[Radio PTT] Force stopped mic track, state:', track.readyState);
+        });
+      } catch (e) {
+        console.warn('[Radio PTT] Force stop mic stream error:', e);
+      }
+      micStreamRef.current = null;
+    }
+    
+    // On iOS, also try to enumerate and stop any lingering mic tracks
+    if (isIOSRef.current && navigator.mediaDevices) {
+      navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(tempStream => {
+          // Immediately stop this temporary stream - this can help iOS release resources
+          tempStream.getTracks().forEach(t => {
+            t.stop();
+          });
+        })
+        .catch(() => {
+          // Ignore - just trying to force iOS to re-evaluate permissions
+        });
+    }
+  };
 
   useEffect(() => {
     scanRoomsRef.current = scanRooms;
@@ -320,11 +371,16 @@ export default function App({ user, onLogout }) {
       if (txAnimationRef.current) cancelAnimationFrame(txAnimationRef.current);
       if (rxAnimationRef.current) cancelAnimationFrame(rxAnimationRef.current);
       if (audioContextRef.current) audioContextRef.current.close();
+      // Ensure mic is released on component unmount
+      forceMicRelease();
     };
   }, []);
 
   useEffect(() => {
     const handleGlobalRelease = (e) => {
+      // ALWAYS force mic release on any touch/pointer end - iOS safety measure
+      forceMicRelease();
+      
       if (pttActiveRef.current && !stopCalledRef.current) {
         console.log('[Radio PTT] Global release detected, event:', e.type);
         pttActiveRef.current = false;
@@ -920,19 +976,41 @@ export default function App({ user, onLogout }) {
   };
 
   const stopPTT = async () => {
-    if (!audioTrackRef.current && !micStreamRef.current) {
-      console.log('[Radio PTT] Stop called but nothing to stop');
-      setIsTalking(false);
-      return;
-    }
-    
     console.log('[Radio PTT] Stopping transmission');
     
+    // IMMEDIATELY stop mic tracks synchronously - critical for iOS
+    // Do this FIRST before any async operations
     const trackToStop = audioTrackRef.current;
     const streamToStop = micStreamRef.current;
+    
+    // Synchronously disable and stop all tracks RIGHT NOW
+    if (trackToStop) {
+      try {
+        trackToStop.enabled = false;
+        trackToStop.stop();
+        console.log('[Radio PTT] Immediate track stop, readyState:', trackToStop.readyState);
+      } catch (e) {
+        console.warn('[Radio PTT] Immediate track stop error:', e);
+      }
+    }
+    
+    if (streamToStop) {
+      try {
+        streamToStop.getTracks().forEach(track => {
+          track.enabled = false;
+          track.stop();
+          console.log('[Radio PTT] Immediate stream track stop, readyState:', track.readyState);
+        });
+      } catch (e) {
+        console.warn('[Radio PTT] Immediate stream stop error:', e);
+      }
+    }
+    
+    // Clear refs after stopping
     audioTrackRef.current = null;
     micStreamRef.current = null;
     
+    // Now handle UI and LiveKit cleanup (can be async)
     try {
       if (txAnimationRef.current) {
         cancelAnimationFrame(txAnimationRef.current);
@@ -941,36 +1019,14 @@ export default function App({ user, onLogout }) {
       setTxLevel(0);
       txAnalyserRef.current = null;
       
-      // Disable track BEFORE unpublishing - critical for iOS to stop audio
-      if (trackToStop) {
-        trackToStop.enabled = false;
-      }
-      
+      // Unpublish from LiveKit (async is fine here, mic is already stopped)
       if (trackToStop && primaryRoomRef.current) {
         try {
           await primaryRoomRef.current.localParticipant.unpublishTrack(trackToStop);
-          console.log('[Radio PTT] Track unpublished');
+          console.log('[Radio PTT] Track unpublished from LiveKit');
         } catch (e) {
           console.warn('[Radio PTT] Unpublish warning:', e.message);
         }
-        try {
-          trackToStop.stop();
-          console.log('[Radio PTT] Track stopped, readyState:', trackToStop.readyState);
-        } catch (e) {
-          console.warn('[Radio PTT] Track stop warning:', e.message);
-        }
-      }
-      
-      if (streamToStop) {
-        streamToStop.getTracks().forEach(track => {
-          try {
-            track.enabled = false;
-            track.stop();
-            console.log('[Radio PTT] Mic track stopped, readyState:', track.readyState);
-          } catch (e) {
-            console.warn('[Radio PTT] Mic track stop warning:', e.message);
-          }
-        });
       }
       
       setIsTalking(false);
@@ -1010,13 +1066,21 @@ export default function App({ user, onLogout }) {
     // Clear pressed visual state immediately
     setPttPressed(false);
     
+    // CRITICAL FOR iOS: Force synchronous mic release FIRST, before any checks
+    // This ensures iOS Safari sees the track.stop() call immediately on touch release
+    forceMicRelease();
+    
     if (!pttActiveRef.current) return;
     
     pttActiveRef.current = false;
     
     if (!stopCalledRef.current) {
       stopCalledRef.current = true;
+      // stopPTT will handle LiveKit unpublish and UI state (tracks already stopped)
       await stopPTT();
+    } else {
+      // If stopPTT was already called (race condition), just update UI
+      setIsTalking(false);
     }
   };
 
