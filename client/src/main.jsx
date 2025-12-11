@@ -7,7 +7,7 @@ import App from "./App.jsx";
 import Dispatcher from "./Dispatcher.jsx";
 import Admin from "./Admin.jsx";
 
-function ProtectedRoute({ children, adminOnly = false }) {
+function ProtectedRoute({ children, adminOnly = false, dispatcherOnly = false }) {
   const { user, loading } = useAuth();
 
   if (loading) {
@@ -33,6 +33,10 @@ function ProtectedRoute({ children, adminOnly = false }) {
   }
 
   if (adminOnly && user.role !== "admin") {
+    return <Navigate to="/" replace />;
+  }
+
+  if (dispatcherOnly && !user.is_dispatcher && user.role !== "admin") {
     return <Navigate to="/" replace />;
   }
 
@@ -99,7 +103,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
           <Route
             path="/dispatcher"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute dispatcherOnly>
                 <DispatcherWrapper />
               </ProtectedRoute>
             }
