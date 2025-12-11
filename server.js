@@ -135,6 +135,7 @@ app.post("/api/auth/login", async (req, res) => {
       username: user.username,
       role: user.role,
       unit_id: user.unit_id,
+      is_dispatcher: user.is_dispatcher || false,
     };
 
     res.json({
@@ -143,6 +144,7 @@ app.post("/api/auth/login", async (req, res) => {
         username: user.username,
         role: user.role,
         unit_id: user.unit_id,
+        is_dispatcher: user.is_dispatcher || false,
       },
     });
   } catch (error) {
@@ -333,7 +335,7 @@ app.get("/api/channels", requireAuth, async (req, res) => {
 
 app.post("/api/admin/users", requireAdmin, async (req, res) => {
   try {
-    const { username, password, email, unit_id, role, channelIds } = req.body;
+    const { username, password, email, unit_id, role, channelIds, is_dispatcher } = req.body;
     
     if (!username || !password) {
       return res.status(400).json({ error: "Username and password required" });
@@ -350,14 +352,15 @@ app.post("/api/admin/users", requireAdmin, async (req, res) => {
       role || "user",
       email || null,
       unit_id || null,
-      channelIds || []
+      channelIds || [],
+      is_dispatcher || false
     );
 
     await logActivity(
       req.session.user.id,
       req.session.user.username,
       "create_user",
-      { newUser: username, role: role || "user" }
+      { newUser: username, role: role || "user", is_dispatcher: is_dispatcher || false }
     );
 
     res.json({ user });

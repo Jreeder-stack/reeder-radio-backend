@@ -29,6 +29,10 @@ export async function initializeDatabase() {
     `);
 
     await client.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS is_dispatcher BOOLEAN DEFAULT false
+    `);
+
+    await client.query(`
       CREATE TABLE IF NOT EXISTS zones (
         id SERIAL PRIMARY KEY,
         name VARCHAR(100) UNIQUE NOT NULL,
@@ -167,15 +171,15 @@ export async function createUser(username, password, role = "user", email = null
   return result.rows[0];
 }
 
-export async function createUserWithChannels(username, password, role = "user", email = null, unit_id = null, channelIds = []) {
+export async function createUserWithChannels(username, password, role = "user", email = null, unit_id = null, channelIds = [], is_dispatcher = false) {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
     
     const hash = await bcrypt.hash(password, 10);
     const userResult = await client.query(
-      "INSERT INTO users (username, password_hash, role, email, unit_id) VALUES ($1, $2, $3, $4, $5) RETURNING *",
-      [username, hash, role, email, unit_id]
+      "INSERT INTO users (username, password_hash, role, email, unit_id, is_dispatcher) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *",
+      [username, hash, role, email, unit_id, is_dispatcher]
     );
     const user = userResult.rows[0];
 
@@ -198,7 +202,7 @@ export async function createUserWithChannels(username, password, role = "user", 
 
 export async function getAllUsers() {
   const result = await pool.query(
-    "SELECT id, username, email, role, unit_id, status, created_at, last_login FROM users ORDER BY created_at DESC"
+    "SELECT id, username, email, role, unit_id, status, is_dispatcher, created_at, last_login FROM users ORDER BY created_at DESC"
   );
   return result.rows;
 }
@@ -255,11 +259,12 @@ export async function deleteUser(id) {
 }
 
 export async function updateUser(id, updates) {
-  const { role, status, unit_id, email } = updates;
+  const { role, status, unit_id, email, is_dispatcher } = updates;
   const result = await pool.query(
     `UPDATE users SET role = COALESCE($1, role), status = COALESCE($2, status), 
-     unit_id = COALESCE($3, unit_id), email = COALESCE($4, email) WHERE id = $5 RETURNING *`,
-    [role, status, unit_id, email, id]
+     unit_id = COALESCE($3, unit_id), email = COALESCE($4, email), 
+     is_dispatcher = COALESCE($5, is_dispatcher) WHERE id = $6 RETURNING *`,
+    [role, status, unit_id, email, is_dispatcher, id]
   );
   return result.rows[0];
 }
