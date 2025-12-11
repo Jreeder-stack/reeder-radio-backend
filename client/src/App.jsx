@@ -188,7 +188,8 @@ export default function App({ user, onLogout }) {
   const [activeEmergencies, setActiveEmergencies] = useState({});
   const [emergencyFlash, setEmergencyFlash] = useState(false);
 
-  const audioTrackRef = useRef(null);
+  const audioTrackRef = useRef(null);  // The raw MediaStreamTrack from getUserMedia
+  const publicationRef = useRef(null);  // The LocalTrackPublication from LiveKit
   const scanRoomsRef = useRef({});
   const primaryRoomRef = useRef(null);
   const audioContextRef = useRef(null);
@@ -788,15 +789,17 @@ export default function App({ user, onLogout }) {
       micStreamRef.current = stream;
       
       const track = stream.getAudioTracks()[0];
+      audioTrackRef.current = track;
       console.log('[Radio PTT] Microphone acquired, publishing...');
       
-      await primaryRoomRef.current.localParticipant.publishTrack(track, {
+      // CRITICAL: Store the publication so we can properly unpublish later
+      const publication = await primaryRoomRef.current.localParticipant.publishTrack(track, {
         name: "microphone",
         source: Track.Source.Microphone,
       });
+      publicationRef.current = publication;
       
-      audioTrackRef.current = track;
-      console.log('[Radio PTT] Track published successfully');
+      console.log('[Radio PTT] Track published successfully, publication:', publication?.trackSid);
       broadcastStatus(primaryRoomRef.current, "transmitting", transmitChannel);
       return true;
     } catch (err) {
@@ -810,32 +813,35 @@ export default function App({ user, onLogout }) {
     console.log('[Radio PTT] Stopping transmission');
     
     // Grab refs before clearing
+    const publication = publicationRef.current;
     const track = audioTrackRef.current;
     const stream = micStreamRef.current;
     
     // Clear refs immediately
+    publicationRef.current = null;
     audioTrackRef.current = null;
     micStreamRef.current = null;
     
-    // Stop the track synchronously - critical for iOS mic release
+    // CRITICAL: Unpublish from LiveKit FIRST using the publication
+    // This is what actually stops the LiveKit session
+    if (publication && primaryRoomRef.current) {
+      try {
+        await primaryRoomRef.current.localParticipant.unpublishTrack(publication.track || publication);
+        console.log('[Radio PTT] Track unpublished from LiveKit');
+      } catch (e) {
+        console.warn('[Radio PTT] Unpublish error:', e.message);
+      }
+    }
+    
+    // THEN stop the browser mic track
     if (track) {
       track.stop();
-      console.log('[Radio PTT] Track stopped');
+      console.log('[Radio PTT] Browser track stopped');
     }
     
     // Stop all stream tracks
     if (stream) {
       stream.getTracks().forEach(t => t.stop());
-    }
-    
-    // Unpublish from LiveKit
-    if (track && primaryRoomRef.current) {
-      try {
-        await primaryRoomRef.current.localParticipant.unpublishTrack(track);
-        console.log('[Radio PTT] Track unpublished');
-      } catch (e) {
-        // Ignore - track may already be unpublished
-      }
     }
     
     setIsTalking(false);
