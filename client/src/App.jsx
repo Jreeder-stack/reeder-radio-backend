@@ -1016,17 +1016,27 @@ export default function App({ user, onLogout }) {
 
   const handleTouchStart = (e) => {
     e.preventDefault();
+    e.stopPropagation();
     if (!e.isTrusted) return;
+    // Immediate visual feedback before async operations
+    if (!pttActiveRef.current && !isEmergency) {
+      setIsTalking(true);
+    }
     handlePTTDown(e);
   };
 
   const handleTouchEnd = (e) => {
     e.preventDefault();
+    e.stopPropagation();
     handlePTTUp();
   };
 
   const handleMouseDown = (e) => {
     if (!e.isTrusted) return;
+    // Immediate visual feedback before async operations
+    if (!pttActiveRef.current && !isEmergency) {
+      setIsTalking(true);
+    }
     handlePTTDown(e);
   };
 
@@ -1612,10 +1622,11 @@ export default function App({ user, onLogout }) {
               boxShadow: isTalking ? "0 0 30px rgba(220, 38, 38, 0.6)" : "none",
               transition: "all 0.1s ease",
               opacity: isEmergency ? 0.5 : 1,
-              touchAction: "none",
+              touchAction: "manipulation",
               userSelect: "none",
               WebkitUserSelect: "none",
               WebkitTouchCallout: "none",
+              WebkitTapHighlightColor: "transparent",
             }}
           >
             {isTalking ? "TRANSMITTING..." : "PUSH TO TALK"}
