@@ -241,6 +241,7 @@ export default function App({ user, onLogout }) {
   const [scanRooms, setScanRooms] = useState({});
   const [unitPresence, setUnitPresence] = useState({});
   const [isTalking, setIsTalking] = useState(false);
+  const [pttPressed, setPttPressed] = useState(false); // Visual feedback only - doesn't change button text
   const [scanMode, setScanMode] = useState(false);
   const [scanChannels, setScanChannels] = useState([]);
   const [activeAudio, setActiveAudio] = useState(null);
@@ -993,17 +994,22 @@ export default function App({ user, onLogout }) {
     
     const success = await startPTT();
     
+    // CRITICAL: After async startPTT completes, check if user already released
+    // If so, we MUST call stopPTT regardless of stopCalledRef to clean up the late-published track
     if (!pttActiveRef.current) {
-      console.log('[Radio PTT] Released during setup, calling stop');
-      if (!stopCalledRef.current) {
-        stopCalledRef.current = true;
-        await stopPTT();
-      }
+      console.log('[Radio PTT] Released during setup, forcing cleanup');
+      // Reset the flag and force cleanup - don't check stopCalledRef here
+      stopCalledRef.current = true;
+      await stopPTT();
     }
   };
 
   const handlePTTUp = async () => {
     console.log('[Radio PTT] === PTT UP ===, pttActive:', pttActiveRef.current);
+    
+    // Clear pressed visual state immediately
+    setPttPressed(false);
+    
     if (!pttActiveRef.current) return;
     
     pttActiveRef.current = false;
@@ -1018,10 +1024,11 @@ export default function App({ user, onLogout }) {
     e.preventDefault();
     e.stopPropagation();
     if (!e.isTrusted) return;
-    // Immediate visual feedback before async operations
-    if (!pttActiveRef.current && !isEmergency) {
-      setIsTalking(true);
-    }
+    if (isEmergency) return;
+    
+    // Immediate visual feedback - pttPressed only changes color, not text
+    // This avoids Safari treating DOM change as losing touch target
+    setPttPressed(true);
     handlePTTDown(e);
   };
 
@@ -1033,10 +1040,10 @@ export default function App({ user, onLogout }) {
 
   const handleMouseDown = (e) => {
     if (!e.isTrusted) return;
-    // Immediate visual feedback before async operations
-    if (!pttActiveRef.current && !isEmergency) {
-      setIsTalking(true);
-    }
+    if (isEmergency) return;
+    
+    // Immediate visual feedback - pttPressed only changes color, not text
+    setPttPressed(true);
     handlePTTDown(e);
   };
 
@@ -1603,8 +1610,8 @@ export default function App({ user, onLogout }) {
 
           <button
             onMouseDown={handleMouseDown}
-            onMouseUp={stopPTT}
-            onMouseLeave={stopPTT}
+            onMouseUp={handlePTTUp}
+            onMouseLeave={handlePTTUp}
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
             onTouchCancel={handleTouchEnd}
@@ -1612,15 +1619,16 @@ export default function App({ user, onLogout }) {
             style={{
               padding: 30,
               width: "100%",
-              backgroundColor: isTalking ? "#dc2626" : "#b91c1c",
+              // pttPressed gives instant visual feedback, isTalking shows actual TX state
+              backgroundColor: (pttPressed || isTalking) ? "#dc2626" : "#b91c1c",
               color: "white",
               fontSize: 22,
               fontWeight: "bold",
               border: "none",
               borderRadius: 12,
               cursor: isEmergency ? "default" : "pointer",
-              boxShadow: isTalking ? "0 0 30px rgba(220, 38, 38, 0.6)" : "none",
-              transition: "all 0.1s ease",
+              boxShadow: (pttPressed || isTalking) ? "0 0 30px rgba(220, 38, 38, 0.6)" : "none",
+              transition: "background-color 0.05s, box-shadow 0.05s",
               opacity: isEmergency ? 0.5 : 1,
               touchAction: "manipulation",
               userSelect: "none",
