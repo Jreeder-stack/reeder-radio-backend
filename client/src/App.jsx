@@ -1615,6 +1615,7 @@ export default function App({ user, onLogout }) {
               touchAction: "none",
               userSelect: "none",
               WebkitUserSelect: "none",
+              WebkitTouchCallout: "none",
             }}
           >
             {isTalking ? "TRANSMITTING..." : "PUSH TO TALK"}
