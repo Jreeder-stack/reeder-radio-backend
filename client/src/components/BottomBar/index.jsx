@@ -77,6 +77,7 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit }) {
     try {
       toneEngine.clearTxMode();
       await livekitEngine.unpublishAudioFromChannels();
+      livekitEngine.destroyTxGraph();
     } catch (err) {
       console.error('Failed to stop transmission:', err);
     } finally {
