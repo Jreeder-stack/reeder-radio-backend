@@ -44,7 +44,14 @@ const app = express();
 // This is required for secure cookies to work behind a proxy
 app.set("trust proxy", 1);
 
-app.use(cors({ origin: true, credentials: true }));
+// CORS configuration - restrict to trusted origins in production
+const corsOptions = {
+  origin: process.env.NODE_ENV === 'production' 
+    ? (process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : false)
+    : true, // Allow all origins in development
+  credentials: true,
+};
+app.use(cors(corsOptions));
 app.use(express.json());
 
 const PgSession = connectPgSimple(session);
@@ -71,7 +78,7 @@ app.use(
     cookie: {
       secure: isProduction,
       httpOnly: true,
-      sameSite: "lax",
+      sameSite: isProduction ? "strict" : "lax", // Strict in production for CSRF protection
       maxAge: 24 * 60 * 60 * 1000,
     },
   })
@@ -79,6 +86,52 @@ app.use(
 
 const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY;
 const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET;
+
+// Simple in-memory rate limiter for auth endpoints
+const rateLimitStore = new Map();
+const RATE_LIMIT_WINDOW = 15 * 60 * 1000; // 15 minutes
+const MAX_AUTH_ATTEMPTS = 10; // Max attempts per window
+
+function rateLimitAuth(req, res, next) {
+  const ip = req.ip || req.connection.remoteAddress;
+  const now = Date.now();
+  
+  if (!rateLimitStore.has(ip)) {
+    rateLimitStore.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW });
+    return next();
+  }
+  
+  const entry = rateLimitStore.get(ip);
+  
+  // Reset if window expired
+  if (now > entry.resetAt) {
+    rateLimitStore.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW });
+    return next();
+  }
+  
+  // Check if over limit
+  if (entry.count >= MAX_AUTH_ATTEMPTS) {
+    const retryAfter = Math.ceil((entry.resetAt - now) / 1000);
+    res.set('Retry-After', retryAfter);
+    return res.status(429).json({ 
+      error: "Too many attempts. Please try again later.",
+      retryAfter 
+    });
+  }
+  
+  entry.count++;
+  next();
+}
+
+// Clean up old rate limit entries periodically
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, entry] of rateLimitStore.entries()) {
+    if (now > entry.resetAt) {
+      rateLimitStore.delete(ip);
+    }
+  }
+}, 60 * 1000); // Clean every minute
 
 console.log("=== STARTUP CONFIG DEBUG ===");
 console.log("NODE_ENV:", process.env.NODE_ENV || "not set");
@@ -106,7 +159,7 @@ function requireAdmin(req, res, next) {
   next();
 }
 
-app.post("/api/auth/login", async (req, res) => {
+app.post("/api/auth/login", rateLimitAuth, async (req, res) => {
   try {
     const { username, password } = req.body;
     
@@ -154,7 +207,7 @@ app.post("/api/auth/login", async (req, res) => {
   }
 });
 
-app.post("/api/auth/register", async (req, res) => {
+app.post("/api/auth/register", rateLimitAuth, async (req, res) => {
   try {
     const { username, password } = req.body;
     

@@ -40,4 +40,16 @@ export const useDispatcherStore = create((set, get) => ({
   toggleTheme: () => set((state) => ({
     theme: state.theme === 'dark' ? 'light' : 'dark'
   })),
+  
+  // Reset all state (call on logout)
+  resetStore: () => set({
+    dispatcherId: null,
+    dispatcherName: '',
+    isConnected: false,
+    isConnecting: false,
+    connectionError: null,
+    isTalking: false,
+    clearAirEnabled: {},
+    events: [],
+  }),
 }));

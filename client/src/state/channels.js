@@ -105,6 +105,18 @@ export const useChannelStore = create(
           .map(id => state.channels.find(c => c.id.toString() === id))
           .filter(Boolean);
       },
+      
+      // Reset all persisted state (call on logout)
+      resetStore: () => set({
+        channels: [],
+        channelOrder: [],
+        gridChannelIds: [],
+        monitoredChannels: [],
+        mutedChannels: [],
+        selectedTxChannels: [],
+        channelLevels: {},
+        activeTransmissions: {},
+      }),
     }),
     {
       name: 'dispatch-channels',

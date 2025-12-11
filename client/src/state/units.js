@@ -67,4 +67,12 @@ export const useUnitStore = create((set, get) => ({
   },
   
   getUnitsByChannel: (channel) => get().unitsByChannel[channel] || [],
+  
+  // Reset all state (call on logout)
+  resetStore: () => set({
+    units: [],
+    unitsByChannel: {},
+    emergencyUnits: [],
+    filter: 'all',
+  }),
 }));

@@ -1,4 +1,7 @@
 import { createContext, useContext, useState, useEffect } from "react";
+import { useChannelStore } from "./state/channels";
+import { useUnitStore } from "./state/units";
+import { useDispatcherStore } from "./state/dispatcher";
 
 const AuthContext = createContext(null);
 
@@ -37,6 +40,15 @@ export function AuthProvider({ children }) {
     } catch (err) {
       console.error("Logout error:", err);
     }
+    
+    // Reset all Zustand stores on logout
+    useChannelStore.getState().resetStore();
+    useUnitStore.getState().resetStore();
+    useDispatcherStore.getState().resetStore();
+    
+    // Clear localStorage for dispatch-channels persistence
+    localStorage.removeItem('dispatch-channels');
+    
     setUser(null);
   };
 

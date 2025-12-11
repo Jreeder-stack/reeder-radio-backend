@@ -137,7 +137,12 @@ class LiveKitEngine {
     
     const { source, element } = this.getOrCreateMediaElementSource(audioElem, track);
     
+    // Even if we can't create a MediaElementSource for Web Audio processing,
+    // ensure the audio element plays directly as a fallback
     if (!source) {
+      console.log(`[LiveKit] Using direct audio playback fallback for ${channelName}`);
+      element.volume = this.mutedTxChannels.has(channelName) ? 0 : 1;
+      element.play().catch(err => console.warn('[LiveKit] Audio play failed:', err));
       return;
     }
     
@@ -355,39 +360,46 @@ class LiveKitEngine {
     await this.createTxGraph();
     
     console.log('[LiveKit] AudioContext state:', this.audioContext?.state);
-    console.log('[LiveKit] Output track readyState:', this.txGraph.outputStream?.getAudioTracks()[0]?.readyState);
+    
+    // Get the source track from the destination
+    const sourceTrack = this.txGraph.outputStream?.getAudioTracks()[0];
+    if (!sourceTrack || sourceTrack.readyState === 'ended') {
+      console.error('[LiveKit] Source track is ended or missing');
+      return [];
+    }
+    console.log('[LiveKit] Source track readyState:', sourceTrack.readyState);
     
     const publishedChannels = [];
     
-    for (const channelName of channelNames) {
-      const room = this.rooms[channelName];
-      if (!room) {
-        console.warn(`[LiveKit] Room not found for channel: ${channelName}. Connected rooms:`, Object.keys(this.rooms));
-        continue;
-      }
+    // For single-channel TX, publish to first available channel
+    const targetChannel = channelNames[0];
+    const room = this.rooms[targetChannel];
+    
+    if (!room) {
+      console.warn(`[LiveKit] Room not found for channel: ${targetChannel}. Connected rooms:`, Object.keys(this.rooms));
+      return [];
+    }
+    
+    if (this.publishedTracks[targetChannel]) {
+      console.log(`[LiveKit] Already published to ${targetChannel}`);
+      return [targetChannel];
+    }
+    
+    try {
+      // Use the destination stream directly - LiveKit needs a MediaStreamTrack
+      // The destination stream stays live as long as the AudioContext is running
+      console.log(`[LiveKit] Publishing destination track to ${targetChannel}, track ID:`, sourceTrack.id, 'readyState:', sourceTrack.readyState);
       
-      if (this.publishedTracks[channelName]) {
-        console.log(`[LiveKit] Already published to ${channelName}`);
-        publishedChannels.push(channelName);
-        continue;
-      }
+      await room.localParticipant.publishTrack(sourceTrack, {
+        name: 'dispatch-audio',
+        source: Track.Source.Microphone,
+      });
       
-      try {
-        const trackToPublish = this.txGraph.outputStream.getAudioTracks()[0];
-        console.log(`[LiveKit] Publishing track to ${channelName}, track ID:`, trackToPublish.id, 'readyState:', trackToPublish.readyState);
-        
-        await room.localParticipant.publishTrack(trackToPublish, {
-          name: 'dispatch-audio',
-          source: Track.Source.Microphone,
-        });
-        
-        this.publishedTracks[channelName] = trackToPublish;
-        publishedChannels.push(channelName);
-        console.log(`[LiveKit] Successfully published to ${channelName}`);
-        break;
-      } catch (err) {
-        console.error(`[LiveKit] Failed to publish to ${channelName}:`, err);
-      }
+      this.publishedTracks[targetChannel] = sourceTrack;
+      publishedChannels.push(targetChannel);
+      console.log(`[LiveKit] Successfully published to ${targetChannel}`);
+    } catch (err) {
+      console.error(`[LiveKit] Failed to publish to ${targetChannel}:`, err);
     }
     
     console.log('[LiveKit] Active published tracks:', Object.keys(this.publishedTracks));
@@ -407,8 +419,7 @@ class LiveKitEngine {
       try {
         console.log(`[LiveKit] Unpublishing track from ${channelName}, track ID:`, track.id);
         await room.localParticipant.unpublishTrack(track);
-        // Don't stop the track - it's the shared MediaStreamDestination track
-        // that we need to reuse for the next PTT
+        // Don't stop the source track - it's the MediaStreamDestination track we need to reuse
         delete this.publishedTracks[channelName];
         console.log(`[LiveKit] Unpublished from ${channelName}`);
       } catch (err) {
