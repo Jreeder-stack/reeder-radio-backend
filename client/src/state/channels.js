@@ -6,8 +6,8 @@ export const useChannelStore = create(
     (set, get) => ({
       channels: [],
       channelOrder: [],
-      monitoredChannels: new Set(),
-      mutedChannels: new Set(),
+      monitoredChannels: [],
+      mutedChannels: [],
       channelLevels: {},
       activeTransmissions: {},
       primaryTxChannelId: null,
@@ -17,24 +17,30 @@ export const useChannelStore = create(
       setChannelOrder: (order) => set({ channelOrder: order }),
       
       toggleMonitor: (channelId) => set((state) => {
-        const monitored = new Set(state.monitoredChannels);
-        if (monitored.has(channelId)) {
-          monitored.delete(channelId);
+        const monitored = [...state.monitoredChannels];
+        const idx = monitored.indexOf(channelId);
+        if (idx >= 0) {
+          monitored.splice(idx, 1);
         } else {
-          monitored.add(channelId);
+          monitored.push(channelId);
         }
         return { monitoredChannels: monitored };
       }),
       
       toggleMute: (channelId) => set((state) => {
-        const muted = new Set(state.mutedChannels);
-        if (muted.has(channelId)) {
-          muted.delete(channelId);
+        const muted = [...state.mutedChannels];
+        const idx = muted.indexOf(channelId);
+        if (idx >= 0) {
+          muted.splice(idx, 1);
         } else {
-          muted.add(channelId);
+          muted.push(channelId);
         }
         return { mutedChannels: muted };
       }),
+      
+      isMonitored: (channelId) => get().monitoredChannels.includes(channelId),
+      
+      isMuted: (channelId) => get().mutedChannels.includes(channelId),
       
       setChannelLevel: (channelId, level) => set((state) => ({
         channelLevels: { ...state.channelLevels, [channelId]: level }
@@ -59,16 +65,10 @@ export const useChannelStore = create(
       name: 'dispatch-channels',
       partialize: (state) => ({
         channelOrder: state.channelOrder,
-        monitoredChannels: Array.from(state.monitoredChannels),
-        mutedChannels: Array.from(state.mutedChannels),
+        monitoredChannels: state.monitoredChannels,
+        mutedChannels: state.mutedChannels,
         primaryTxChannelId: state.primaryTxChannelId,
       }),
-      onRehydrateStorage: () => (state) => {
-        if (state) {
-          state.monitoredChannels = new Set(state.monitoredChannels || []);
-          state.mutedChannels = new Set(state.mutedChannels || []);
-        }
-      },
     }
   )
 );

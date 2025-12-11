@@ -140,6 +140,31 @@ Set these environment variables in Render:
 - Dispatcher permission: Users need "Dispatcher Access" checkbox enabled to access Dispatcher Console
 - Activity logging for logins, registrations, channel joins, admin actions
 
+### Phase 10 - State-of-the-Art Dispatch Console UI
+- Modern React architecture with TailwindCSS v4
+- Modular component structure:
+  - `client/src/state/` - Zustand stores (channels.js, units.js, dispatcher.js)
+  - `client/src/api/` - Backend API integration (dispatch.js)
+  - `client/src/audio/` - Audio engines (toneEngine.js, livekitEngine.js)
+  - `client/src/components/` - Reusable UI components
+  - `client/src/pages/` - Page components (DispatchConsole.jsx)
+- Drag-and-drop channel grid using dnd-kit
+- Features:
+  - ChannelTile with audio level meters, monitor/mute/TX controls
+  - TopBar with time, PTT status, patch indicators
+  - BottomBar with PTT button, tone buttons, emergency controls
+  - UnitList showing online units by channel with status
+  - EmergencyPanel for active emergencies and acknowledgement
+  - EventLog for recent radio events
+  - PatchPanel for channel patching configuration
+- Audio engines:
+  - toneEngine.js: Dispatch tones (alert, MDC knock, TIA, custom frequency)
+  - livekitEngine.js: Multi-room LiveKit connections for channel audio
+- State management via Zustand with localStorage persistence
+- Routes:
+  - `/dispatcher` - New Dispatch Console (replaces legacy)
+  - `/dispatcher-legacy` - Original dispatcher view
+
 ## Default Admin Credentials
 - Username: admin (or ADMIN_USERNAME env var)
 - Password: admin123 (or ADMIN_PASSWORD env var)

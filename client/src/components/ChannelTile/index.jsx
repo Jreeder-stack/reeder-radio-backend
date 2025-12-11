@@ -52,8 +52,8 @@ export default function ChannelTile({ channel, isSelected }) {
     opacity: isDragging ? 0.5 : 1,
   };
 
-  const isMonitored = monitoredChannels.has(channel.id);
-  const isMuted = mutedChannels.has(channel.id);
+  const isMonitored = monitoredChannels.includes(channel.id);
+  const isMuted = mutedChannels.includes(channel.id);
   const level = channelLevels[channel.id] || 0;
   const activeTransmission = activeTransmissions[channel.id];
   const unitsInChannel = unitsByChannel[channel.name] || [];
