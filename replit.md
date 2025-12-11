@@ -157,13 +157,22 @@ Set these environment variables in Render:
   - EmergencyPanel for active emergencies and acknowledgement
   - EventLog for recent radio events
   - PatchPanel for channel patching configuration
+  - Multi-channel TX: Select multiple channels for simultaneous transmission
+  - Channel picker UI to add/remove channels from dispatch grid
+  - Per-tone button locking (each tone locks independently during playback)
 - Audio engines:
-  - toneEngine.js: Dispatch tones (alert, MDC knock, TIA, custom frequency)
+  - toneEngine.js: Dispatch tones (alert, MDC knock, 3-beep pre-alert, continuous) with hard start/stop
   - livekitEngine.js: Multi-room LiveKit connections for channel audio
-- State management via Zustand with localStorage persistence
+- Tone types:
+  - Alert (Tone A): 1-second 1000Hz sine wave
+  - MDC (Tone B): 2-second alternating 1200/800Hz square wave
+  - Pre-Alert (Tone C): 3-beep 1000Hz pattern for pre-alerting
+  - Continuous: Aggressive 5-second alarm with 800/850Hz + LFO modulation
+- State management via Zustand with localStorage persistence (uses arrays for JSON serialization)
 - Routes:
   - `/dispatcher` - New Dispatch Console (replaces legacy)
   - `/dispatcher-legacy` - Original dispatcher view
+- Known limitation: Tones play locally on dispatcher console. Broadcasting tones over LiveKit requires WebRTC MediaStream routing which is not yet implemented.
 
 ## Default Admin Credentials
 - Username: admin (or ADMIN_USERNAME env var)
