@@ -344,7 +344,10 @@ class LiveKitEngine {
     
     for (const channelName of channelNames) {
       const room = this.rooms[channelName];
-      if (!room) continue;
+      if (!room) {
+        console.warn(`[LiveKit] Room not found for channel: ${channelName}. Connected rooms:`, Object.keys(this.rooms));
+        continue;
+      }
       
       if (this.publishedTracks[channelName]) {
         console.log(`[LiveKit] Already published to ${channelName}`);
@@ -474,10 +477,19 @@ class LiveKitEngine {
   sendData(channelName, message) {
     const room = this.rooms[channelName];
     if (!room) return;
+    
+    if (room.state !== 'connected') {
+      console.warn(`[LiveKit] Cannot send data to ${channelName}: room state is ${room.state}`);
+      return;
+    }
 
-    const encoder = new TextEncoder();
-    const data = encoder.encode(JSON.stringify(message));
-    room.localParticipant.publishData(data, DataPacket_Kind.RELIABLE);
+    try {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(JSON.stringify(message));
+      room.localParticipant.publishData(data, DataPacket_Kind.RELIABLE);
+    } catch (err) {
+      console.warn(`[LiveKit] Failed to send data to ${channelName}:`, err.message);
+    }
   }
 
   async disconnectChannel(channelName) {

@@ -165,9 +165,11 @@ export default function DispatchConsole({ user, onLogout }) {
       };
       
       const enabledChannels = channels.filter(c => c.enabled);
+      console.log('[DispatchConsole] Connecting to channels:', enabledChannels.map(c => c.name));
       for (const channel of enabledChannels) {
         try {
           await livekitEngine.connectToChannel(channel.name, user?.username || 'DISPATCH');
+          console.log(`[DispatchConsole] Connected to ${channel.name}`);
           addEvent({
             type: 'connect',
             channel: channel.name,
@@ -177,13 +179,7 @@ export default function DispatchConsole({ user, onLogout }) {
         }
       }
       
-      try {
-        await livekitEngine.initPersistentMic();
-        console.log('[DispatchConsole] Persistent mic initialized');
-      } catch (err) {
-        console.error('[DispatchConsole] Failed to initialize persistent mic:', err);
-      }
-      
+      console.log('[DispatchConsole] All connections complete. Connected rooms:', livekitEngine.getConnectedChannels());
       setConnected(true);
     } catch (error) {
       console.error('Connection error:', error);
@@ -244,35 +240,23 @@ export default function DispatchConsole({ user, onLogout }) {
     }
   };
 
-  const handlePTTStart = async (channelNames) => {
+  const handlePTTStart = (channelNames) => {
     for (const channelName of channelNames) {
-      try {
-        const result = await livekitEngine.publishAudio(channelName);
-        if (result) {
-          addEvent({
-            type: 'ptt_start',
-            unit: user?.username || 'DISPATCH',
-            channel: channelName,
-          });
-        }
-      } catch (error) {
-        console.error('PTT start error:', error);
-      }
+      addEvent({
+        type: 'ptt_start',
+        unit: user?.username || 'DISPATCH',
+        channel: channelName,
+      });
     }
   };
 
-  const handlePTTEnd = async (channelNames) => {
+  const handlePTTEnd = (channelNames) => {
     for (const channelName of channelNames) {
-      try {
-        await livekitEngine.unpublishAudio(channelName, null, null);
-        addEvent({
-          type: 'ptt_end',
-          unit: user?.username || 'DISPATCH',
-          channel: channelName,
-        });
-      } catch (error) {
-        console.error('PTT end error:', error);
-      }
+      addEvent({
+        type: 'ptt_end',
+        unit: user?.username || 'DISPATCH',
+        channel: channelName,
+      });
     }
   };
 
