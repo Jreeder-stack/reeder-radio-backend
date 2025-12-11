@@ -1037,20 +1037,22 @@ export default function App({ user, onLogout }) {
               Admin
             </button>
           )}
-          <button
-            onClick={() => navigate("/dispatcher")}
-            style={{
-              padding: "8px 16px",
-              backgroundColor: "#6366f1",
-              color: "white",
-              border: "none",
-              borderRadius: 6,
-              cursor: "pointer",
-              fontSize: 14,
-            }}
-          >
-            Dispatcher
-          </button>
+          {(user?.is_dispatcher || user?.role === "admin") && (
+            <button
+              onClick={() => navigate("/dispatcher")}
+              style={{
+                padding: "8px 16px",
+                backgroundColor: "#6366f1",
+                color: "white",
+                border: "none",
+                borderRadius: 6,
+                cursor: "pointer",
+                fontSize: 14,
+              }}
+            >
+              Dispatcher
+            </button>
+          )}
           <button
             onClick={onLogout}
             style={{
