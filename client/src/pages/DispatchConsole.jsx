@@ -87,15 +87,25 @@ export default function DispatchConsole({ user, onLogout }) {
       setChannels(dbChannels);
       setUnits(unitData.units || []);
       
+      const validDbIds = new Set(dbChannels.map(c => c.id));
+      
       if (gridChannelIds.length === 0 && dbChannels.length > 0) {
         const initialIds = dbChannels.map(c => c.id);
         setGridChannelIds(initialIds);
         setChannelOrder(initialIds.map(id => id.toString()));
+      } else if (gridChannelIds.length > 0) {
+        const validGridIds = gridChannelIds.filter(id => validDbIds.has(id));
+        const validOrderIds = channelOrder.filter(id => validDbIds.has(parseInt(id, 10)));
+        
+        if (validGridIds.length !== gridChannelIds.length) {
+          setGridChannelIds(validGridIds);
+          setChannelOrder(validOrderIds);
+        }
       }
     } catch (error) {
       console.error('Failed to fetch data:', error);
     }
-  }, [setChannels, setUnits, gridChannelIds, setGridChannelIds, setChannelOrder]);
+  }, [setChannels, setUnits, gridChannelIds, channelOrder, setGridChannelIds, setChannelOrder]);
 
   const connectToChannels = useCallback(async () => {
     if (isConnecting || isConnected) return;

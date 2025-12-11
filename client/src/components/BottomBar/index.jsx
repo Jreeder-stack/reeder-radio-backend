@@ -13,6 +13,7 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit }) {
   const pttRef = useRef(null);
   const pttActiveRef = useRef(false);
   const busyModeRef = useRef(false);
+  const stopCalledRef = useRef(false);
 
   const selectedChannelNames = selectedTxChannels
     .map(id => channels.find(c => c.id === id)?.name)
@@ -89,14 +90,23 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit }) {
     if (pttActiveRef.current) return;
     
     pttActiveRef.current = true;
+    stopCalledRef.current = false;
     
     const success = await startTransmission();
+    
+    if (!pttActiveRef.current) {
+      if (!stopCalledRef.current) {
+        stopCalledRef.current = true;
+        await stopTransmission();
+      }
+      return;
+    }
     
     if (success) {
       setTalking(true);
       if (onPTTStart) onPTTStart(selectedChannelNames);
     }
-  }, [selectedTxChannels, selectedChannelNames, setTalking, onPTTStart, startTransmission]);
+  }, [selectedTxChannels, selectedChannelNames, setTalking, onPTTStart, startTransmission, stopTransmission]);
 
   const handlePTTUp = useCallback(async () => {
     if (!pttActiveRef.current) return;
@@ -104,7 +114,10 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit }) {
     pttActiveRef.current = false;
     setTalking(false);
     
-    await stopTransmission();
+    if (!stopCalledRef.current) {
+      stopCalledRef.current = true;
+      await stopTransmission();
+    }
     
     if (onPTTEnd) onPTTEnd(selectedChannelNames);
   }, [selectedChannelNames, setTalking, onPTTEnd, stopTransmission]);
