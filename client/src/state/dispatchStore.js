@@ -1,6 +1,13 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+const PTT_STATES = {
+  IDLE: 'idle',
+  ARMING: 'arming',
+  TRANSMITTING: 'transmitting',
+  COOLDOWN: 'cooldown'
+};
+
 const useDispatchStore = create(
   persist(
     (set, get) => ({
@@ -10,15 +17,26 @@ const useDispatchStore = create(
       txChannelIds: [],
       mutedChannelIds: [],
       monitoredChannelIds: [],
+      channelLevels: {},
+      activeTransmissions: {},
       
       units: [],
+      unitsByChannel: {},
       emergencies: [],
       events: [],
       patches: [],
       
-      pttState: 'idle',
-      activeTxChannel: null,
+      dispatcherId: null,
+      dispatcherName: '',
+      isConnected: false,
+      isConnecting: false,
+      connectionError: null,
       
+      pttState: PTT_STATES.IDLE,
+      activeTxChannelId: null,
+      toneState: null,
+      clearAirEnabled: {},
+
       setChannels: (newChannels) => {
         const validIds = new Set(newChannels.map(ch => ch.id));
         const state = get();
@@ -67,14 +85,62 @@ const useDispatchStore = create(
           ? state.monitoredChannelIds.filter(id => id !== channelId)
           : [...state.monitoredChannelIds, channelId]
       })),
-      
-      setUnits: (units) => set({ units }),
-      
-      updateUnit: (identity, updates) => set((state) => ({
-        units: state.units.map(u => 
-          u.unit_identity === identity ? { ...u, ...updates } : u
-        )
+
+      setChannelLevel: (channelId, level) => set((state) => ({
+        channelLevels: { ...state.channelLevels, [channelId]: level }
       })),
+
+      setActiveTransmission: (channelId, tx) => set((state) => ({
+        activeTransmissions: { ...state.activeTransmissions, [channelId]: tx }
+      })),
+
+      clearActiveTransmission: (channelId) => set((state) => {
+        const updated = { ...state.activeTransmissions };
+        delete updated[channelId];
+        return { activeTransmissions: updated };
+      }),
+      
+      setUnits: (units) => {
+        const unitsByChannel = {};
+        const emergencies = [];
+        
+        units.forEach(unit => {
+          const channel = unit.channel || 'unknown';
+          if (!unitsByChannel[channel]) {
+            unitsByChannel[channel] = [];
+          }
+          unitsByChannel[channel].push(unit);
+          
+          if (unit.is_emergency) {
+            emergencies.push({
+              id: `emergency-${unit.id}`,
+              unitId: unit.id,
+              unitIdentity: unit.unit_identity,
+              channel: unit.channel,
+              timestamp: unit.last_seen
+            });
+          }
+        });
+        
+        set({ units, unitsByChannel, emergencies });
+      },
+      
+      updateUnit: (identity, updates) => set((state) => {
+        const units = state.units.map(u => 
+          u.unit_identity === identity ? { ...u, ...updates } : u
+        );
+        
+        const unitsByChannel = {};
+        units.forEach(unit => {
+          const channel = unit.channel || 'unknown';
+          if (!unitsByChannel[channel]) {
+            unitsByChannel[channel] = [];
+          }
+          unitsByChannel[channel].push(unit);
+        });
+        
+        return { units, unitsByChannel };
+      }),
       
       addEmergency: (emergency) => set((state) => ({
         emergencies: [...state.emergencies.filter(e => e.id !== emergency.id), emergency]
@@ -89,17 +155,51 @@ const useDispatchStore = create(
       setEvents: (events) => set({ events }),
       
       addEvent: (event) => set((state) => ({
-        events: [event, ...state.events].slice(0, 100)
+        events: [
+          { ...event, id: Date.now(), timestamp: new Date().toISOString() },
+          ...state.events
+        ].slice(0, 100)
       })),
       
       setPatches: (patches) => set({ patches }),
+
+      setDispatcher: (id, name) => set({ dispatcherId: id, dispatcherName: name }),
+      
+      setConnected: (connected) => set({ 
+        isConnected: connected, 
+        isConnecting: false, 
+        connectionError: null 
+      }),
+      
+      setConnecting: (connecting) => set({ isConnecting: connecting }),
+      
+      setConnectionError: (error) => set({ 
+        connectionError: error, 
+        isConnecting: false 
+      }),
       
       setPttState: (pttState) => set({ pttState }),
       
-      setActiveTxChannel: (channelId) => set({ activeTxChannel: channelId }),
+      setActiveTxChannel: (channelId) => set({ activeTxChannelId: channelId }),
+
+      setToneState: (tone) => set({ toneState: tone }),
+
+      toggleClearAir: (channelId) => set((state) => ({
+        clearAirEnabled: {
+          ...state.clearAirEnabled,
+          [channelId]: !state.clearAirEnabled[channelId]
+        }
+      })),
       
-      getChannelById: (id) => {
-        return get().channels.find(ch => ch.id === id);
+      getChannelById: (id) => get().channels.find(ch => ch.id === id),
+      
+      getChannelByName: (name) => get().channels.find(ch => ch.name === name),
+      
+      getTxChannelNames: () => {
+        const state = get();
+        return state.txChannelIds
+          .map(id => state.channels.find(ch => ch.id === id)?.name)
+          .filter(Boolean);
       },
       
       getGridChannels: () => {
@@ -108,6 +208,8 @@ const useDispatchStore = create(
           .map(id => state.channels.find(ch => ch.id === id))
           .filter(Boolean);
       },
+
+      getUnitsByChannel: (channelName) => get().unitsByChannel[channelName] || [],
       
       reset: () => set({
         channels: [],
@@ -116,12 +218,22 @@ const useDispatchStore = create(
         txChannelIds: [],
         mutedChannelIds: [],
         monitoredChannelIds: [],
+        channelLevels: {},
+        activeTransmissions: {},
         units: [],
+        unitsByChannel: {},
         emergencies: [],
         events: [],
         patches: [],
-        pttState: 'idle',
-        activeTxChannel: null
+        dispatcherId: null,
+        dispatcherName: '',
+        isConnected: false,
+        isConnecting: false,
+        connectionError: null,
+        pttState: PTT_STATES.IDLE,
+        activeTxChannelId: null,
+        toneState: null,
+        clearAirEnabled: {}
       })
     }),
     {
@@ -131,10 +243,12 @@ const useDispatchStore = create(
         gridChannelIds: state.gridChannelIds,
         txChannelIds: state.txChannelIds,
         mutedChannelIds: state.mutedChannelIds,
-        monitoredChannelIds: state.monitoredChannelIds
+        monitoredChannelIds: state.monitoredChannelIds,
+        clearAirEnabled: state.clearAirEnabled
       })
     }
   )
 );
 
+export { PTT_STATES };
 export default useDispatchStore;

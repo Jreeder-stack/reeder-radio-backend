@@ -22,11 +22,9 @@ import EmergencyPanel from '../components/EmergencyPanel/index.jsx';
 import EventLog from '../components/EventLog/index.jsx';
 import PatchPanel from '../components/PatchPanel/index.jsx';
 
-import { useChannelStore } from '../state/channels.js';
-import { useUnitStore } from '../state/units.js';
-import { useDispatcherStore } from '../state/dispatcher.js';
-
-import livekitEngine from '../audio/livekitEngine.js';
+import useDispatchStore from '../state/dispatchStore.js';
+import livekitManager from '../audio/LiveKitManager.js';
+import { micPTTManager } from '../audio/MicPTTManager.js';
 import toneEngine from '../audio/toneEngine.js';
 import { getUnits } from '../utils/api.js';
 
@@ -40,18 +38,14 @@ export default function DispatchConsole({ user, onLogout }) {
     channelOrder,
     setChannelOrder,
     gridChannelIds,
-    setGridChannelIds,
-    addChannelToGrid,
-    removeChannelFromGrid,
-    selectedTxChannels,
+    addToGrid,
+    removeFromGrid,
     setChannelLevel,
     setActiveTransmission,
     clearActiveTransmission,
-  } = useChannelStore();
-
-  const { setUnits, updateUnit } = useUnitStore();
-  
-  const {
+    setUnits,
+    addEvent,
+    addEmergency,
     setDispatcher,
     isConnected,
     setConnected,
@@ -59,8 +53,7 @@ export default function DispatchConsole({ user, onLogout }) {
     setConnecting,
     connectionError,
     setConnectionError,
-    addEvent,
-  } = useDispatcherStore();
+  } = useDispatchStore();
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -87,25 +80,15 @@ export default function DispatchConsole({ user, onLogout }) {
       setChannels(dbChannels);
       setUnits(unitData.units || []);
       
-      const validDbIds = new Set(dbChannels.map(c => c.id));
-      
       if (gridChannelIds.length === 0 && dbChannels.length > 0) {
         const initialIds = dbChannels.map(c => c.id);
-        setGridChannelIds(initialIds);
-        setChannelOrder(initialIds.map(id => id.toString()));
-      } else if (gridChannelIds.length > 0) {
-        const validGridIds = gridChannelIds.filter(id => validDbIds.has(id));
-        const validOrderIds = channelOrder.filter(id => validDbIds.has(parseInt(id, 10)));
-        
-        if (validGridIds.length !== gridChannelIds.length) {
-          setGridChannelIds(validGridIds);
-          setChannelOrder(validOrderIds);
-        }
+        initialIds.forEach(id => addToGrid(id));
+        setChannelOrder(initialIds);
       }
     } catch (error) {
       console.error('Failed to fetch data:', error);
     }
-  }, [setChannels, setUnits, gridChannelIds, channelOrder, setGridChannelIds, setChannelOrder]);
+  }, [setChannels, setUnits, gridChannelIds, addToGrid, setChannelOrder]);
 
   const connectToChannels = useCallback(async () => {
     if (isConnecting || isConnected) return;
@@ -117,14 +100,14 @@ export default function DispatchConsole({ user, onLogout }) {
     try {
       setDispatcher(user?.id, user?.username || 'DISPATCH');
       
-      livekitEngine.onLevelUpdate = (channelName, level) => {
+      livekitManager.onLevelUpdate = (channelName, level) => {
         const channel = channels.find(c => c.name === channelName);
         if (channel) {
           setChannelLevel(channel.id, level);
         }
       };
       
-      livekitEngine.onTrackSubscribed = (channelName, track, participant) => {
+      livekitManager.onTrackSubscribed = (channelName, track, participant) => {
         const channel = channels.find(c => c.name === channelName);
         if (channel) {
           setActiveTransmission(channel.id, {
@@ -139,7 +122,7 @@ export default function DispatchConsole({ user, onLogout }) {
         });
       };
       
-      livekitEngine.onTrackUnsubscribed = (channelName, track, participant) => {
+      livekitManager.onTrackUnsubscribed = (channelName, track, participant) => {
         const channel = channels.find(c => c.name === channelName);
         if (channel) {
           clearActiveTransmission(channel.id);
@@ -151,10 +134,16 @@ export default function DispatchConsole({ user, onLogout }) {
         });
       };
       
-      livekitEngine.onDataReceived = (channelName, message, participant) => {
+      livekitManager.onDataReceived = (channelName, message, participant) => {
         if (message.type === 'emergency') {
           if (message.active) {
             toneEngine.playEmergencyTone('B', 3000);
+            addEmergency({
+              id: `emergency-${participant.identity}-${Date.now()}`,
+              unitIdentity: message.identity,
+              channel: channelName,
+              timestamp: new Date().toISOString(),
+            });
             addEvent({
               type: 'emergency_activated',
               unit: message.identity,
@@ -166,9 +155,10 @@ export default function DispatchConsole({ user, onLogout }) {
       
       const enabledChannels = channels.filter(c => c.enabled);
       console.log('[DispatchConsole] Connecting to channels:', enabledChannels.map(c => c.name));
+      
       for (const channel of enabledChannels) {
         try {
-          await livekitEngine.connectToChannel(channel.name, user?.username || 'DISPATCH');
+          await livekitManager.connect(channel.name, user?.username || 'DISPATCH');
           console.log(`[DispatchConsole] Connected to ${channel.name}`);
           addEvent({
             type: 'connect',
@@ -179,7 +169,7 @@ export default function DispatchConsole({ user, onLogout }) {
         }
       }
       
-      console.log('[DispatchConsole] All connections complete. Connected rooms:', livekitEngine.getConnectedChannels());
+      console.log('[DispatchConsole] All connections complete. Connected rooms:', livekitManager.getConnectedChannels());
       setConnected(true);
     } catch (error) {
       console.error('Connection error:', error);
@@ -200,6 +190,7 @@ export default function DispatchConsole({ user, onLogout }) {
     setActiveTransmission,
     clearActiveTransmission,
     addEvent,
+    addEmergency,
   ]);
 
   useEffect(() => {
@@ -224,7 +215,8 @@ export default function DispatchConsole({ user, onLogout }) {
 
   useEffect(() => {
     return () => {
-      livekitEngine.disconnectAll();
+      micPTTManager.disconnect();
+      livekitManager.disconnectAll();
       toneEngine.destroy();
     };
   }, []);
@@ -233,10 +225,13 @@ export default function DispatchConsole({ user, onLogout }) {
     const { active, over } = event;
     
     if (active.id !== over?.id) {
-      const oldIndex = channelOrder.indexOf(active.id);
-      const newIndex = channelOrder.indexOf(over.id);
+      const currentOrder = channelOrder.length > 0 ? channelOrder : gridChannelIds;
+      const oldIndex = currentOrder.indexOf(Number(active.id));
+      const newIndex = currentOrder.indexOf(Number(over.id));
       
-      setChannelOrder(arrayMove(channelOrder, oldIndex, newIndex));
+      if (oldIndex !== -1 && newIndex !== -1) {
+        setChannelOrder(arrayMove(currentOrder, oldIndex, newIndex));
+      }
     }
   };
 
@@ -270,11 +265,20 @@ export default function DispatchConsole({ user, onLogout }) {
   };
 
   const handleRemoveChannel = (channelId) => {
-    removeChannelFromGrid(channelId);
+    removeFromGrid(channelId);
   };
 
-  const orderedChannels = channelOrder
-    .map(id => channels.find(c => c.id.toString() === id))
+  const handleAddChannel = (channelId) => {
+    addToGrid(channelId);
+    if (!channelOrder.includes(channelId)) {
+      setChannelOrder([...channelOrder, channelId]);
+    }
+    setShowChannelPicker(false);
+  };
+
+  const displayOrder = channelOrder.length > 0 ? channelOrder : gridChannelIds;
+  const orderedChannels = displayOrder
+    .map(id => channels.find(c => c.id === id))
     .filter(Boolean);
 
   const availableChannels = channels.filter(c => !gridChannelIds.includes(c.id));
@@ -321,123 +325,126 @@ export default function DispatchConsole({ user, onLogout }) {
         <div className="w-64 p-3 border-r border-dispatch-border overflow-y-auto scrollbar-thin">
           <UnitList />
         </div>
-
-        <div className="flex-1 p-4 overflow-y-auto scrollbar-thin">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-white">Channel Grid</h2>
+        
+        <div className="flex-1 p-3 overflow-y-auto scrollbar-thin">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-semibold text-white">Channels</h2>
             <button
-              onClick={() => setShowChannelPicker(!showChannelPicker)}
-              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded transition-colors"
+              onClick={() => setShowChannelPicker(true)}
+              className="px-3 py-1 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded"
             >
-              {showChannelPicker ? 'Close' : 'Add Channel'}
+              + Add Channel
             </button>
           </div>
-
-          {showChannelPicker && (
-            <div className="mb-4 p-3 bg-dispatch-panel border border-dispatch-border rounded-lg">
-              <h3 className="text-sm font-medium text-gray-300 mb-2">Available Channels</h3>
-              {availableChannels.length === 0 ? (
-                <p className="text-sm text-gray-500">All channels are already in the grid</p>
-              ) : (
-                <div className="flex flex-wrap gap-2">
-                  {availableChannels.map(channel => (
-                    <button
-                      key={channel.id}
-                      onClick={() => {
-                        addChannelToGrid(channel.id);
-                      }}
-                      className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded transition-colors"
-                    >
-                      + {channel.name}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
+          
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
             onDragEnd={handleDragEnd}
           >
             <SortableContext
-              items={channelOrder}
+              items={orderedChannels.map(c => c.id)}
               strategy={rectSortingStrategy}
             >
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+              <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                 {orderedChannels.map(channel => (
                   <ChannelTile
                     key={channel.id}
                     channel={channel}
-                    onRemove={handleRemoveChannel}
+                    onRemove={() => handleRemoveChannel(channel.id)}
                   />
                 ))}
               </div>
             </SortableContext>
           </DndContext>
-
+          
           {orderedChannels.length === 0 && (
-            <div className="flex items-center justify-center h-48 text-gray-500">
-              <div className="text-center">
-                <p className="mb-2">No channels in grid</p>
-                <button
-                  onClick={() => setShowChannelPicker(true)}
-                  className="text-blue-400 hover:text-blue-300"
-                >
-                  Add channels to get started
-                </button>
-              </div>
+            <div className="text-center text-gray-500 py-8">
+              No channels in grid. Click "Add Channel" to add channels.
             </div>
           )}
         </div>
-
-        <div className="w-72 border-l border-dispatch-border flex flex-col">
+        
+        <div className="w-80 border-l border-dispatch-border flex flex-col">
           <div className="flex border-b border-dispatch-border">
             <button
               onClick={() => setRightTab('emergency')}
-              className={`flex-1 py-2 text-xs font-medium transition-colors ${
-                rightTab === 'emergency' 
-                  ? 'bg-red-900/50 text-red-300 border-b-2 border-red-500' 
+              className={`flex-1 px-4 py-2 text-sm ${
+                rightTab === 'emergency'
+                  ? 'bg-dispatch-panel text-white border-b-2 border-red-500'
                   : 'text-gray-400 hover:text-white'
               }`}
             >
               Emergency
             </button>
             <button
-              onClick={() => setRightTab('events')}
-              className={`flex-1 py-2 text-xs font-medium transition-colors ${
-                rightTab === 'events' 
-                  ? 'bg-blue-900/50 text-blue-300 border-b-2 border-blue-500' 
-                  : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              Events
-            </button>
-            <button
               onClick={() => setRightTab('patches')}
-              className={`flex-1 py-2 text-xs font-medium transition-colors ${
-                rightTab === 'patches' 
-                  ? 'bg-purple-900/50 text-purple-300 border-b-2 border-purple-500' 
+              className={`flex-1 px-4 py-2 text-sm ${
+                rightTab === 'patches'
+                  ? 'bg-dispatch-panel text-white border-b-2 border-blue-500'
                   : 'text-gray-400 hover:text-white'
               }`}
             >
               Patches
             </button>
+            <button
+              onClick={() => setRightTab('events')}
+              className={`flex-1 px-4 py-2 text-sm ${
+                rightTab === 'events'
+                  ? 'bg-dispatch-panel text-white border-b-2 border-green-500'
+                  : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              Events
+            </button>
           </div>
-          <div className="flex-1 p-3 overflow-hidden">
+          
+          <div className="flex-1 overflow-y-auto scrollbar-thin">
             {rightTab === 'emergency' && <EmergencyPanel />}
-            {rightTab === 'events' && <EventLog />}
             {rightTab === 'patches' && <PatchPanel />}
+            {rightTab === 'events' && <EventLog />}
           </div>
         </div>
       </div>
-
-      <BottomBar 
-        onPTTStart={handlePTTStart} 
-        onPTTEnd={handlePTTEnd} 
+      
+      <BottomBar
+        onPTTStart={handlePTTStart}
+        onPTTEnd={handlePTTEnd}
         onToneTransmit={handleToneTransmit}
       />
+      
+      {showChannelPicker && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-dispatch-panel rounded-lg p-4 w-80 max-h-96 overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-white">Add Channel</h3>
+              <button
+                onClick={() => setShowChannelPicker(false)}
+                className="text-gray-400 hover:text-white"
+              >
+                &times;
+              </button>
+            </div>
+            
+            {availableChannels.length === 0 ? (
+              <p className="text-gray-400 text-center py-4">All channels added</p>
+            ) : (
+              <div className="space-y-2">
+                {availableChannels.map(channel => (
+                  <button
+                    key={channel.id}
+                    onClick={() => handleAddChannel(channel.id)}
+                    className="w-full px-3 py-2 text-left bg-dispatch-bg hover:bg-gray-700 rounded text-white"
+                  >
+                    {channel.name}
+                    <span className="text-xs text-gray-400 ml-2">{channel.zone}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,30 +1,31 @@
-import { Room, Track, RoomEvent } from 'livekit-client';
+import { Track } from 'livekit-client';
 
 const PTT_STATES = {
   IDLE: 'idle',
-  ACQUIRING: 'acquiring',
-  PUBLISHING: 'publishing',
+  ARMING: 'arming',
   TRANSMITTING: 'transmitting',
-  STOPPING: 'stopping'
+  COOLDOWN: 'cooldown'
 };
 
-export class MicPTTManager {
+const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+class MicPTTManager {
   constructor() {
     this.state = PTT_STATES.IDLE;
-    this.room = null;
-    this.localTrack = null;
-    this.browserTrack = null;
+    this.audioContext = null;
     this.stream = null;
+    this.browserTrack = null;
+    this.localTrack = null;
+    this.room = null;
     this.onStateChange = null;
-    this.transitionPromise = null;
+    this.onError = null;
+    this.pendingStop = false;
+    this.transitionLock = false;
   }
 
-  setState(newState) {
-    console.log(`[MicPTT] State: ${this.state} → ${newState}`);
-    this.state = newState;
-    if (this.onStateChange) {
-      this.onStateChange(newState);
-    }
+  getState() {
+    return this.state;
   }
 
   isTransmitting() {
@@ -32,22 +33,40 @@ export class MicPTTManager {
   }
 
   canStart() {
-    return this.state === PTT_STATES.IDLE;
+    return this.state === PTT_STATES.IDLE && !this.transitionLock;
   }
 
   canStop() {
     return this.state === PTT_STATES.TRANSMITTING || 
-           this.state === PTT_STATES.ACQUIRING || 
-           this.state === PTT_STATES.PUBLISHING;
+           this.state === PTT_STATES.ARMING;
+  }
+
+  _setState(newState) {
+    const oldState = this.state;
+    this.state = newState;
+    console.log(`[MicPTT] State: ${oldState} → ${newState}`);
+    if (this.onStateChange) {
+      this.onStateChange(newState, oldState);
+    }
+  }
+
+  _ensureAudioContext() {
+    if (!this.audioContext || this.audioContext.state === 'closed') {
+      this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (this.audioContext.state === 'suspended') {
+      this.audioContext.resume().catch(e => console.warn('[MicPTT] AudioContext resume failed:', e));
+    }
+    return this.audioContext;
   }
 
   setRoom(room) {
     this.room = room;
   }
 
-  async startTransmission() {
+  async start() {
     if (!this.canStart()) {
-      console.log(`[MicPTT] Cannot start, current state: ${this.state}`);
+      console.log(`[MicPTT] Cannot start - state: ${this.state}, lock: ${this.transitionLock}`);
       return false;
     }
 
@@ -56,13 +75,12 @@ export class MicPTTManager {
       return false;
     }
 
-    this.transitionPromise = this._doStart();
-    return this.transitionPromise;
-  }
+    this.transitionLock = true;
+    this.pendingStop = false;
 
-  async _doStart() {
     try {
-      this.setState(PTT_STATES.ACQUIRING);
+      this._setState(PTT_STATES.ARMING);
+      this._ensureAudioContext();
 
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
@@ -71,17 +89,19 @@ export class MicPTTManager {
           autoGainControl: true
         }
       });
-      this.stream = stream;
-      this.browserTrack = stream.getAudioTracks()[0];
 
-      if (this.state !== PTT_STATES.ACQUIRING) {
-        console.log('[MicPTT] State changed during acquisition, aborting');
-        this._cleanup();
+      if (this.pendingStop) {
+        console.log('[MicPTT] Stop requested during mic acquisition - aborting');
+        this._stopTracks(stream);
+        this._setState(PTT_STATES.IDLE);
+        this.transitionLock = false;
         return false;
       }
 
-      this.setState(PTT_STATES.PUBLISHING);
+      this.stream = stream;
+      this.browserTrack = stream.getAudioTracks()[0];
 
+      console.log('[MicPTT] Publishing track to room...');
       const publication = await this.room.localParticipant.publishTrack(
         this.browserTrack,
         {
@@ -91,74 +111,93 @@ export class MicPTTManager {
       );
       this.localTrack = publication.track;
 
-      if (this.state !== PTT_STATES.PUBLISHING) {
-        console.log('[MicPTT] State changed during publishing, aborting');
-        await this._unpublish();
-        this._cleanup();
+      if (this.pendingStop) {
+        console.log('[MicPTT] Stop requested during publish - cleaning up');
+        await this._doStop();
         return false;
       }
 
-      this.setState(PTT_STATES.TRANSMITTING);
-      console.log('[MicPTT] Transmission started');
+      this._setState(PTT_STATES.TRANSMITTING);
+      this.transitionLock = false;
+      console.log('[MicPTT] Transmission active');
       return true;
+
     } catch (err) {
-      console.error('[MicPTT] Start error:', err);
-      this._cleanup();
-      this.setState(PTT_STATES.IDLE);
+      console.error('[MicPTT] Start failed:', err);
+      await this._cleanup();
+      this._setState(PTT_STATES.IDLE);
+      this.transitionLock = false;
+      if (this.onError) {
+        this.onError(err);
+      }
       return false;
     }
   }
 
-  async stopTransmission() {
-    if (!this.canStop()) {
-      console.log(`[MicPTT] Cannot stop, current state: ${this.state}`);
+  async stop() {
+    console.log(`[MicPTT] Stop requested - state: ${this.state}`);
+
+    if (this.state === PTT_STATES.IDLE) {
       return;
     }
 
-    if (this.transitionPromise) {
-      this.setState(PTT_STATES.STOPPING);
-      await this.transitionPromise;
+    if (this.state === PTT_STATES.ARMING) {
+      console.log('[MicPTT] Setting pendingStop flag');
+      this.pendingStop = true;
+      return;
+    }
+
+    if (this.state === PTT_STATES.COOLDOWN) {
+      return;
     }
 
     await this._doStop();
   }
 
   async _doStop() {
-    this.setState(PTT_STATES.STOPPING);
+    this._setState(PTT_STATES.COOLDOWN);
 
     try {
-      await this._unpublish();
-    } catch (err) {
-      console.warn('[MicPTT] Unpublish error:', err);
-    }
-
-    this._cleanup();
-    this.setState(PTT_STATES.IDLE);
-    console.log('[MicPTT] Transmission stopped');
-  }
-
-  async _unpublish() {
-    if (this.localTrack && this.room) {
-      try {
-        this.localTrack.stop();
-        await this.room.localParticipant.unpublishTrack(this.localTrack);
-      } catch (err) {
-        console.warn('[MicPTT] Unpublish error:', err.message);
+      if (this.localTrack && this.room) {
+        console.log('[MicPTT] Unpublishing track...');
+        try {
+          this.localTrack.stop();
+        } catch (e) {
+          console.warn('[MicPTT] LocalTrack stop warning:', e.message);
+        }
+        try {
+          await this.room.localParticipant.unpublishTrack(this.localTrack);
+        } catch (e) {
+          console.warn('[MicPTT] Unpublish warning:', e.message);
+        }
       }
+
+      this._cleanup();
+
+    } catch (err) {
+      console.error('[MicPTT] Stop error:', err);
+    } finally {
+      this.pendingStop = false;
+      this.transitionLock = false;
+      this._setState(PTT_STATES.IDLE);
+      console.log('[MicPTT] Transmission ended, state reset to IDLE');
     }
   }
 
-  _cleanup() {
+  async _cleanup() {
     if (this.browserTrack) {
       try {
         this.browserTrack.stop();
+        console.log('[MicPTT] Browser track stopped');
       } catch (e) {}
       this.browserTrack = null;
     }
 
     if (this.stream) {
       this.stream.getTracks().forEach(t => {
-        try { t.stop(); } catch (e) {}
+        try { 
+          t.stop(); 
+        } catch (e) {}
       });
       this.stream = null;
     }
@@ -166,21 +205,43 @@ export class MicPTTManager {
     this.localTrack = null;
   }
 
+  _stopTracks(stream) {
+    if (stream) {
+      stream.getTracks().forEach(t => {
+        try { t.stop(); } catch (e) {}
+      });
+    }
+  }
+
   forceRelease() {
     console.log('[MicPTT] Force release');
+    
     if (this.localTrack) {
       try { this.localTrack.stop(); } catch (e) {}
     }
+    
     this._cleanup();
+    this.pendingStop = false;
+    this.transitionLock = false;
+    
     if (this.state !== PTT_STATES.IDLE) {
-      this.setState(PTT_STATES.IDLE);
+      this._setState(PTT_STATES.IDLE);
     }
   }
 
   disconnect() {
     this.forceRelease();
     this.room = null;
+    
+    if (this.audioContext && this.audioContext.state !== 'closed') {
+      try {
+        this.audioContext.close();
+      } catch (e) {}
+      this.audioContext = null;
+    }
   }
 }
 
-export default MicPTTManager;
+export const micPTTManager = new MicPTTManager();
+export { PTT_STATES };
+export default micPTTManager;

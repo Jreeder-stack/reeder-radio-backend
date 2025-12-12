@@ -1,4 +1,4 @@
-import { useDispatcherStore } from '../../state/dispatcher.js';
+import useDispatchStore from '../../state/dispatchStore.js';
 
 function formatTime(timestamp) {
   if (!timestamp) return '';
@@ -24,6 +24,8 @@ function getEventColor(type) {
       return 'text-orange-400';
     case 'patch_enabled':
       return 'text-purple-400';
+    case 'tone':
+      return 'text-amber-400';
     default:
       return 'text-gray-300';
   }
@@ -47,16 +49,20 @@ function getEventIcon(type) {
       return '⛓️‍💥';
     case 'patch_enabled':
       return '🔀';
+    case 'tone':
+      return '🔔';
     default:
       return '📋';
   }
 }
 
 export default function EventLog() {
-  const { events, clearEvents } = useDispatcherStore();
+  const { events, setEvents } = useDispatchStore();
+  
+  const clearEvents = () => setEvents([]);
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full p-3">
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-sm font-bold text-white uppercase tracking-wide">Event Log</h2>
         <button

@@ -1,6 +1,5 @@
-import { useUnitStore } from '../../state/units.js';
+import useDispatchStore from '../../state/dispatchStore.js';
 import { toggleUnitEmergency } from '../../utils/api.js';
-import { useDispatcherStore } from '../../state/dispatcher.js';
 
 function formatTime(timestamp) {
   if (!timestamp) return '';
@@ -9,18 +8,20 @@ function formatTime(timestamp) {
 }
 
 export default function EmergencyPanel() {
-  const { emergencyUnits, updateUnit } = useUnitStore();
-  const { addEvent, dispatcherName } = useDispatcherStore();
+  const { emergencies, removeEmergency, updateUnit, addEvent, dispatcherName } = useDispatchStore();
 
-  const handleAcknowledge = async (unit) => {
+  const handleAcknowledge = async (emergency) => {
     try {
-      await toggleUnitEmergency(unit.id, false);
-      updateUnit(unit.id, { is_emergency: false, status: 'idle' });
+      if (emergency.unitId) {
+        await toggleUnitEmergency(emergency.unitId, false);
+        updateUnit(emergency.unitIdentity, { is_emergency: false, status: 'idle' });
+      }
+      removeEmergency(emergency.id);
       addEvent({
         type: 'emergency_ack',
-        unit: unit.unit_identity,
-        channel: unit.channel,
-        acknowledgedBy: dispatcherName,
+        unit: emergency.unitIdentity,
+        channel: emergency.channel,
+        acknowledgedBy: dispatcherName || 'DISPATCH',
       });
     } catch (error) {
       console.error('Failed to acknowledge emergency:', error);
@@ -28,38 +29,38 @@ export default function EmergencyPanel() {
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full p-3">
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-sm font-bold text-white uppercase tracking-wide">
           Emergencies
         </h2>
-        {emergencyUnits.length > 0 && (
+        {emergencies.length > 0 && (
           <span className="px-2 py-0.5 text-xs font-bold text-white bg-red-600 rounded-full animate-pulse">
-            {emergencyUnits.length}
+            {emergencies.length}
           </span>
         )}
       </div>
 
       <div className="flex-1 overflow-y-auto space-y-2 scrollbar-thin">
-        {emergencyUnits.length === 0 ? (
+        {emergencies.length === 0 ? (
           <div className="text-xs text-gray-500 text-center py-4">
             No active emergencies
           </div>
         ) : (
-          emergencyUnits.map(unit => (
+          emergencies.map(emergency => (
             <div
-              key={unit.id}
+              key={emergency.id}
               className="p-3 bg-red-900/50 border border-red-600 rounded animate-pulse"
             >
               <div className="flex items-center justify-between mb-2">
-                <span className="font-bold text-white">{unit.unit_identity}</span>
-                <span className="text-xs text-red-300">{formatTime(unit.last_seen)}</span>
+                <span className="font-bold text-white">{emergency.unitIdentity}</span>
+                <span className="text-xs text-red-300">{formatTime(emergency.timestamp)}</span>
               </div>
               <div className="text-xs text-red-200 mb-2">
-                Channel: {unit.channel || 'Unknown'}
+                Channel: {emergency.channel || 'Unknown'}
               </div>
               <button
-                onClick={() => handleAcknowledge(unit)}
+                onClick={() => handleAcknowledge(emergency)}
                 className="w-full px-3 py-1.5 text-sm font-bold bg-green-600 hover:bg-green-700 text-white rounded transition-colors"
               >
                 ACKNOWLEDGE

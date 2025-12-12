@@ -1,7 +1,7 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { useChannelStore } from '../../state/channels.js';
-import { useUnitStore } from '../../state/units.js';
+import useDispatchStore from '../../state/dispatchStore.js';
+import livekitManager from '../../audio/LiveKitManager.js';
 
 function AudioLevelMeter({ level }) {
   const barCount = 8;
@@ -26,17 +26,17 @@ function AudioLevelMeter({ level }) {
 
 export default function ChannelTile({ channel, onRemove }) {
   const { 
-    monitoredChannels, 
-    mutedChannels, 
-    selectedTxChannels,
+    monitoredChannelIds, 
+    mutedChannelIds, 
+    txChannelIds,
     channelLevels, 
     activeTransmissions,
+    unitsByChannel,
+    emergencies,
     toggleMonitor, 
     toggleMute,
-    toggleTxChannel,
-  } = useChannelStore();
-  
-  const { unitsByChannel, emergencyUnits } = useUnitStore();
+    toggleTx,
+  } = useDispatchStore();
 
   const {
     attributes,
@@ -45,7 +45,7 @@ export default function ChannelTile({ channel, onRemove }) {
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: channel.id.toString() });
+  } = useSortable({ id: channel.id });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -53,19 +53,28 @@ export default function ChannelTile({ channel, onRemove }) {
     opacity: isDragging ? 0.5 : 1,
   };
 
-  const isMonitored = monitoredChannels.includes(channel.id);
-  const isMuted = mutedChannels.includes(channel.id);
-  const isTxSelected = selectedTxChannels.includes(channel.id);
+  const isMonitored = monitoredChannelIds.includes(channel.id);
+  const isMuted = mutedChannelIds.includes(channel.id);
+  const isTxSelected = txChannelIds.includes(channel.id);
   const level = channelLevels[channel.id] || 0;
   const activeTransmission = activeTransmissions[channel.id];
   const unitsInChannel = unitsByChannel[channel.name] || [];
-  const hasEmergency = emergencyUnits.some(u => u.channel === channel.name);
+  const hasEmergency = emergencies.some(e => e.channel === channel.name);
 
   const handleRemoveClick = (e) => {
     e.preventDefault();
     e.stopPropagation();
     if (onRemove) {
       onRemove(channel.id);
+    }
+  };
+
+  const handleMuteToggle = () => {
+    toggleMute(channel.id);
+    if (mutedChannelIds.includes(channel.id)) {
+      livekitManager.unmuteChannel(channel.name);
+    } else {
+      livekitManager.muteChannel(channel.name);
     }
   };
 
@@ -126,7 +135,7 @@ export default function ChannelTile({ channel, onRemove }) {
         </button>
         
         <button
-          onClick={() => toggleMute(channel.id)}
+          onClick={handleMuteToggle}
           disabled={!isMonitored}
           className={`px-2 py-1 text-xs rounded transition-colors ${
             isMuted 
@@ -138,7 +147,7 @@ export default function ChannelTile({ channel, onRemove }) {
         </button>
         
         <button
-          onClick={() => toggleTxChannel(channel.id)}
+          onClick={() => toggleTx(channel.id)}
           className={`px-2 py-1 text-xs rounded transition-colors ${
             isTxSelected 
               ? 'bg-blue-600 text-white ring-2 ring-blue-400' 

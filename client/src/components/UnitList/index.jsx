@@ -1,4 +1,5 @@
-import { useUnitStore } from '../../state/units.js';
+import { useState } from 'react';
+import useDispatchStore from '../../state/dispatchStore.js';
 
 function StatusDot({ status, isEmergency }) {
   const color = isEmergency 
@@ -19,8 +20,26 @@ function formatTime(timestamp) {
 }
 
 export default function UnitList() {
-  const { units, filter, setFilter, getFilteredUnits, emergencyUnits } = useUnitStore();
+  const { units, emergencies } = useDispatchStore();
+  const [filter, setFilter] = useState('all');
+  
+  const getFilteredUnits = () => {
+    switch (filter) {
+      case 'online':
+        return units.filter(u => {
+          const lastSeen = new Date(u.last_seen);
+          const now = new Date();
+          return (now - lastSeen) < 60000;
+        });
+      case 'emergency':
+        return units.filter(u => u.is_emergency);
+      default:
+        return units;
+    }
+  };
+  
   const filteredUnits = getFilteredUnits();
+  const emergencyCount = units.filter(u => u.is_emergency).length;
 
   return (
     <div className="flex flex-col h-full">
@@ -52,7 +71,7 @@ export default function UnitList() {
             filter === 'emergency' ? 'bg-red-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
           }`}
         >
-          Emergency ({emergencyUnits.length})
+          Emergency ({emergencyCount})
         </button>
       </div>
 
