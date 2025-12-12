@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Room, RoomEvent, Track, DataPacket_Kind } from "livekit-client";
-import { micPTTManager, PTT_STATES } from "./audio/MicPTTManager";
+import { micPTTManager } from "./audio/MicPTTManager";
+import { PTT_STATES } from "./constants/pttStates";
 
 const LIVEKIT_URL = import.meta.env.VITE_LIVEKIT_URL;
 const TOKEN_SERVER = "/getToken";

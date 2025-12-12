@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import useDispatchStore from '../../state/dispatchStore.js';
-import { micPTTManager, PTT_STATES } from '../../audio/MicPTTManager.js';
+import { micPTTManager } from '../../audio/MicPTTManager.js';
+import { PTT_STATES } from '../../constants/pttStates.js';
 import livekitManager from '../../audio/LiveKitManager.js';
 import toneEngine from '../../audio/toneEngine.js';
 

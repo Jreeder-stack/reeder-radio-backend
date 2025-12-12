@@ -1,11 +1,5 @@
 import { Track } from 'livekit-client';
-
-const PTT_STATES = {
-  IDLE: 'idle',
-  ARMING: 'arming',
-  TRANSMITTING: 'transmitting',
-  COOLDOWN: 'cooldown'
-};
+import { PTT_STATES } from '../constants/pttStates.js';
 
 const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || 
   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
