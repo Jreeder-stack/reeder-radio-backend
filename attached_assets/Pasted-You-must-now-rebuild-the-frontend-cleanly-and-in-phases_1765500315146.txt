@@ -1,0 +1,105 @@
+You must now rebuild the frontend cleanly and in phases, using the same structured approach used for the backend.
+
+IMPORTANT RULES:
+- Do NOT reuse the old frontend architecture.
+- Do NOT copy old audio or PTT logic. We are replacing it entirely.
+- Preserve the backend API shapes and existing dispatch behaviors.
+- Build the frontend in a clean, layered, modular system.
+
+====================================================
+PHASE 0 — FRONTEND AUDIT (NO CODE CHANGES)
+====================================================
+Before writing any code, produce a full audit of the existing frontend:
+
+- List all current files and components
+- Identify where:
+    • PTT logic exists
+    • LiveKit rooms are joined
+    • LocalAudioTrack is created
+    • Tracks are published/unpublished
+    • Drag-and-drop (if any) is implemented
+    • Tone playback exists (if any)
+- Identify all major problems or places where track/mic handling is broken
+
+DO NOT write code yet. Only produce the audit.
+
+====================================================
+PHASE 1 — FRONTEND ARCHITECTURE PLAN
+====================================================
+Design a modern, stable frontend architecture.
+
+The design MUST include:
+
+------------------------------------
+CORE MODULES (NO UI INSIDE)
+------------------------------------
+src/audio/MicPTTManager.js
+  - Single source of truth for microphone
+  - Creates ONE mic track at startup
+  - publish() and unpublish() functions
+  - stop() ALWAYS stops the mediaStreamTrack
+  - Guarantees no ghost-transmissions
+
+src/audio/LiveKitManager.js
+  - Handles joining multiple channels
+  - Leaving channels
+  - Managing subscriptions
+  - Sending audio to correct room
+  - Getting VU meter data
+
+src/audio/ToneEngine.js
+  - Emergency Tone A
+  - Emergency Tone B
+  - Emergency Tone C
+  - Clear-air intermittent beep
+  - Uses Web Audio API only
+
+src/state/dispatchStore.js
+  - Zustand store for:
+      monitoredChannels
+      primaryTxChannelId
+      units
+      emergencies
+      patches
+      channelLayout
+  - Actions for updating each category
+
+------------------------------------
+UI LAYER
+------------------------------------
+src/pages/DispatchConsole.jsx
+  - Defines layout:
+      Left: units
+      Center: drag-and-drop channel grid
+      Right: emergencies, patches, events
+      Bottom: PTT + tones
+
+src/components/
+  ChannelTile.jsx
+  UnitPanel.jsx
+  EmergencyPanel.jsx
+  PatchPanel.jsx
+  EventLog.jsx
+  TopBar.jsx
+  BottomBar.jsx
+
+------------------------------------
+STATE FLOW
+------------------------------------
+- UI → dispatchStore → LiveKitManager → MicPTTManager → ToneEngine
+- No component should directly manipulate audio objects.
+- All mic, tone, and room logic lives in the core modules.
+
+------------------------------------
+GRID SYSTEM
+------------------------------------
+- Use react-beautiful-dnd or dnd-kit
+- Channel tiles must be draggable
+- Layout must save to localStorage
+
+------------------------------------
+VALIDATION REQUIREMENTS
+------------------------------------
+- UI remains responsive even while monitoring multiple channels
+- PTT cannot get stuck “on”
+- Tracks must stop immediately on PTT releas
