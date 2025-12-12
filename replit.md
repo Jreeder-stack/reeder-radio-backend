@@ -6,24 +6,46 @@ A Push-to-Talk (PTT) radio communication app using LiveKit for real-time audio s
 ## Project Structure
 ```
 /
-├── server.js          # Express backend - auth, admin API, LiveKit tokens
-├── db.js              # PostgreSQL database setup and queries
-├── package.json       # Backend dependencies
-├── client/            # React frontend (Vite)
+├── src/                   # Backend source (Express)
+│   ├── app.js             # Express app setup with middleware
+│   ├── server.js          # Server entry point
+│   ├── config/
+│   │   └── index.js       # Environment configuration
+│   ├── db/
+│   │   └── index.js       # PostgreSQL database queries
+│   ├── routes/
+│   │   ├── index.js       # Route aggregation
+│   │   ├── auth.js        # Auth routes (/api/login, /api/logout, etc.)
+│   │   ├── admin.js       # Admin routes (/api/admin/*)
+│   │   ├── channels.js    # Channel routes (/api/channels)
+│   │   ├── livekit.js     # LiveKit token route (/api/livekit-token)
+│   │   └── dispatch.js    # Dispatch routes (/api/dispatch/*)
+│   ├── controllers/
+│   │   └── dispatchController.js
+│   ├── services/
+│   │   ├── dispatchService.js
+│   │   └── livekitService.js
+│   └── middleware/
+│       ├── auth.js        # requireAuth, requireAdmin, requireDispatcher
+│       └── session.js     # Session configuration
+├── server.js              # Legacy entry point (imports src/server.js)
+├── db.js                  # Legacy DB (imports src/db/index.js)
+├── package.json           # Backend dependencies
+├── client/                # React frontend (Vite)
 │   ├── src/
-│   │   ├── App.jsx        # Main PTT interface component for field units
-│   │   ├── Login.jsx      # Login/register screen
-│   │   ├── Admin.jsx      # Admin dashboard (users, channels, logs)
+│   │   ├── App.jsx        # Main PTT interface (state machine pattern)
+│   │   ├── Login.jsx      # Login screen
+│   │   ├── Admin.jsx      # Admin dashboard
 │   │   ├── AuthContext.jsx # Auth state management
-│   │   ├── main.jsx       # React entry point with protected routing
+│   │   ├── main.jsx       # React entry with protected routing
 │   │   ├── pages/
 │   │   │   └── DispatchConsole.jsx # Dispatcher console UI
 │   │   ├── components/    # Reusable UI components
-│   │   ├── state/         # Zustand stores
+│   │   ├── state/         # Zustand stores (channels.js, units.js, dispatcher.js)
 │   │   └── audio/         # Audio engines (toneEngine, livekitEngine)
-│   ├── vite.config.js # Vite configuration with proxy to backend
-│   ├── index.html     # HTML entry point
-│   └── package.json   # Frontend dependencies
+│   ├── vite.config.js     # Vite config with proxy to backend
+│   ├── index.html         # HTML entry point
+│   └── package.json       # Frontend dependencies
 ```
 
 ## Environment Variables
