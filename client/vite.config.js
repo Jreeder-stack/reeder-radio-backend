@@ -1,15 +1,8 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
-import circleDependency from "vite-plugin-circular-dependency";
 
 export default defineConfig({
-  plugins: [
-    react(),
-    circleDependency({
-      circleImportThrowErr: false,
-      outputFilePath: './circulars.txt'
-    })
-  ],
+  plugins: [react()],
   build: {
     sourcemap: true,
     minify: false

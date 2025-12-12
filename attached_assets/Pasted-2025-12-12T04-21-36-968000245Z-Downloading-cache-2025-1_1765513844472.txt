@@ -1,0 +1,37 @@
+2025-12-12T04:21:36.968000245Z ==> Downloading cache...
+2025-12-12T04:21:37.015939782Z ==> Cloning from https://github.com/Jreeder-stack/reeder-radio-backend
+2025-12-12T04:21:37.457765419Z ==> Checking out commit 2141ea0e20078be54950852bd38befb66fda68db in branch main
+2025-12-12T04:21:44.005694978Z ==> Downloaded 104MB in 5s. Extraction took 2s.
+2025-12-12T04:21:46.205929866Z ==> Requesting Node.js version 20.x
+2025-12-12T04:21:46.52410827Z ==> Using Node.js version 20.19.6 via /opt/render/project/src/package.json
+2025-12-12T04:21:46.55105345Z ==> Docs on specifying a Node.js version: https://render.com/docs/node-version
+2025-12-12T04:21:46.681495545Z ==> Running build command 'cd client && npm install && npm run build && cd .. && npm install'...
+2025-12-12T04:21:49.15156072Z 
+2025-12-12T04:21:49.151591501Z added 111 packages, and audited 112 packages in 2s
+2025-12-12T04:21:49.151595321Z 
+2025-12-12T04:21:49.151599171Z 16 packages are looking for funding
+2025-12-12T04:21:49.151602611Z   run `npm fund` for details
+2025-12-12T04:21:49.162122405Z 
+2025-12-12T04:21:49.162145016Z 2 moderate severity vulnerabilities
+2025-12-12T04:21:49.162147416Z 
+2025-12-12T04:21:49.162150026Z To address all issues (including breaking changes), run:
+2025-12-12T04:21:49.162152746Z   npm audit fix --force
+2025-12-12T04:21:49.162154496Z 
+2025-12-12T04:21:49.162156916Z Run `npm audit` for details.
+2025-12-12T04:21:49.337005969Z 
+2025-12-12T04:21:49.33702965Z > reeder-radio-ui@0.0.0 build
+2025-12-12T04:21:49.33703327Z > vite build
+2025-12-12T04:21:49.3370358Z 
+2025-12-12T04:21:49.518477349Z failed to load config from /opt/render/project/src/client/vite.config.js
+2025-12-12T04:21:49.518745625Z error during build:
+2025-12-12T04:21:49.518750325Z Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'vite-plugin-circular-dependency' imported from /opt/render/project/src/client/vite.config.js.timestamp-1765513309515-ccba834648255.mjs
+2025-12-12T04:21:49.518753605Z     at packageResolve (node:internal/modules/esm/resolve:873:9)
+2025-12-12T04:21:49.518755996Z     at moduleResolve (node:internal/modules/esm/resolve:946:18)
+2025-12-12T04:21:49.518758866Z     at defaultResolve (node:internal/modules/esm/resolve:1188:11)
+2025-12-12T04:21:49.518761066Z     at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:708:12)
+2025-12-12T04:21:49.518763146Z     at #cachedDefaultResolve (node:internal/modules/esm/loader:657:25)
+2025-12-12T04:21:49.518765186Z     at ModuleLoader.resolve (node:internal/modules/esm/loader:640:38)
+2025-12-12T04:21:49.518767976Z     at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:264:38)
+2025-12-12T04:21:49.518770046Z     at ModuleJob._link (node:internal/modules/esm/module_job:168:49)
+2025-12-12T04:21:49.571124362Z ==> Build failed 😞
+2025-12-12T04:21:49.571139482Z ==> Common ways to troubleshoot your deploy: https://render.com/docs/troubleshooting-deploys
