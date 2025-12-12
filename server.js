@@ -365,21 +365,28 @@ app.get("/api/channels", requireAuth, async (req, res) => {
     const channels = await getAllChannels();
     const enabledChannels = channels.filter((c) => c.enabled);
     
+    console.log('[API /channels] User:', req.session.user.username, 'Role:', req.session.user.role);
+    console.log('[API /channels] Total channels:', channels.length, 'Enabled:', enabledChannels.length);
+    
     // Admins see all enabled channels
     if (req.session.user.role === "admin") {
+      console.log('[API /channels] Admin - returning all enabled channels');
       return res.json({ channels: enabledChannels });
     }
     
     // Regular users see only their assigned channels
     const userChannelIds = await getUserChannelAccess(req.session.user.id);
+    console.log('[API /channels] User channel IDs:', userChannelIds);
     
     // If user has no assigned channels, give them access to all enabled channels (fallback)
     if (userChannelIds.length === 0) {
+      console.log('[API /channels] No assignments, falling back to all enabled');
       return res.json({ channels: enabledChannels });
     }
     
     // Filter to only channels the user has access to
     const accessibleChannels = enabledChannels.filter(c => userChannelIds.includes(c.id));
+    console.log('[API /channels] Accessible channels:', accessibleChannels.length);
     res.json({ channels: accessibleChannels });
   } catch (error) {
     console.error("Get channels error:", error);
