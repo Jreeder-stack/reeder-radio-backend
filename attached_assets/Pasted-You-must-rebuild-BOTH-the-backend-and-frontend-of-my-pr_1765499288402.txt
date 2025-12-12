@@ -1,0 +1,239 @@
+You must rebuild BOTH the backend and frontend of my project cleanly and in the correct order, starting with the backend.
+
+IMPORTANT RULES:
+- Do NOT delete or modify the database schema or migrations.
+- Do NOT change environment variable names.
+- Do NOT remove core API functionality (especially /api/dispatch).
+- You ARE allowed to restructure and rewrite backend and frontend code completely.
+- You MUST work in phases and show the plan before making any changes.
+
+====================================================
+PHASE 0 — SYSTEM AUDIT (BACKEND + FRONTEND)
+====================================================
+Before writing any code, produce a full audit of the current project:
+
+BACKEND:
+- List the current file structure
+- Identify all Express routes
+- Identify where LiveKit logic is located
+- Identify all database interaction points
+- Identify dispatch-related files
+
+FRONTEND:
+- List all components, routes, major files
+- Identify all LiveKit usage
+- Identify all PTT logic
+- Identify drag-and-drop grid implementation
+- Identify audio mixing code
+
+Output this audit so we know what exists. DO NOT CHANGE ANY CODE YET.
+
+====================================================
+PHASE 1 — BACKEND REBUILD PLAN (REQUIRED BEFORE ANY CODE)
+====================================================
+Create a full architecture plan for a clean backend rewrite with:
+
+NEW FILE STRUCTURE:
+src/
+  app.js
+  server.js
+  config/
+      env.js
+      livekit.js
+  db/
+      index.js
+  routes/
+      index.js
+      dispatchRouter.js
+      channelsRouter.js
+      unitsRouter.js
+      patchesRouter.js
+      eventsRouter.js
+  controllers/
+      dispatchController.js
+      channelsController.js
+      unitsController.js
+      patchesController.js
+      eventsController.js
+  services/
+      dispatchService.js
+      channelsService.js
+      unitsService.js
+      patchesService.js
+      eventsService.js
+      livekitService.js
+  middleware/
+      errorHandler.js
+      notFound.js
+  utils/
+      response.js
+      validation.js
+
+The plan MUST include:
+- How each router maps to controllers
+- How each controller uses services
+- How services use db/index.js
+- How LiveKit token creation and room logic is centralized
+- How the API shape stays consistent for the frontend UI
+
+DO NOT WRITE CODE YET — only output the plan.
+
+====================================================
+PHASE 2 — IMPLEMENT BACKEND FOUNDATION
+====================================================
+Implement ONLY:
+- src/app.js
+- src/server.js
+- src/config/env.js
+- src/db/index.js
+- src/routes/index.js
+- src/middleware/errorHandler.js
+- src/middleware/notFound.js
+
+Ensure the server boots successfully before doing anything else.
+
+====================================================
+PHASE 3 — IMPLEMENT DISPATCH DOMAIN (BACKEND)
+====================================================
+Rebuild all dispatch-related modules using the new architecture:
+
+Implement new routes, controllers, and services for:
+- Channels
+- Patches
+- Units
+- Monitor sets
+- Emergencies
+- Events
+
+For every endpoint under /api/dispatch, preserve:
+- The HTTP method
+- The request shape
+- The response shape
+
+Move ALL LiveKit logic into a new livekitService.js.
+
+DO NOT modify or recreate database tables.
+
+====================================================
+PHASE 4 — VALIDATE BACKEND
+====================================================
+Test each endpoint:
+- Channels CRUD
+- Patches CRUD
+- Units (status, heartbeat, emergency)
+- Monitor sets
+- Events
+
+Confirm:
+- No runtime errors
+- LiveKit tokens still issue correctly
+- Database reads/writes work
+- Routes respond consistently
+
+Only after backend passes validation, proceed.
+
+====================================================
+PHASE 5 — FRONTEND REBUILD PLAN (REQUIRED BEFORE ANY CODE)
+====================================================
+Now produce a full architecture plan for a clean frontend rebuild.
+
+The plan MUST include:
+
+CORE MODULES:
+- MicPTTManager (WebRTC mic control)
+- LiveKitManager (multi-room audio)
+- ToneEngine (Web Audio API)
+- dispatchStore (Zustand state manager)
+
+FILE STRUCTURE:
+src/
+  pages/
+    DispatchConsole.jsx
+  components/
+    ChannelTile.jsx
+    UnitPanel.jsx
+    EmergencyPanel.jsx
+    PatchPanel.jsx
+    EventLog.jsx
+    TopBar.jsx
+    BottomBar.jsx
+  audio/
+    MicPTTManager.js
+    LiveKitManager.js
+    ToneEngine.js
+  state/
+    dispatchStore.js
+  utils/
+    api.js
+
+UI REQUIREMENTS:
+- Drag-and-drop channel grid
+- Multi-channel LiveKit monitoring
+- Reliable PTT (no stuck transmission)
+- 3 emergency tones + clear-air beep
+- Unit list
+- Emergency list
+- Patch panel
+- Event log
+- Bottom PTT + tone controls
+
+DO NOT WRITE FRONTEND CODE YET — only produce the architecture plan.
+
+====================================================
+PHASE 6 — FRONTEND FOUNDATION
+====================================================
+Implement:
+- dispatchStore.js
+- MicPTTManager.js
+- LiveKitManager.js
+- ToneEngine.js
+- Basic DispatchConsole.jsx layout
+
+No advanced UI yet.
+
+====================================================
+PHASE 7 — FRONTEND UI COMPONENTS
+====================================================
+Implement clean, modular React components:
+- ChannelTile.jsx
+- UnitPanel.jsx
+- EmergencyPanel.jsx
+- PatchPanel.jsx
+- EventLog.jsx
+- TopBar.jsx
+- BottomBar.jsx
+
+Ensure:
+- No audio logic in components
+- All state comes from dispatchStore
+- All audio comes from MicPTTManager + LiveKitManager
+
+====================================================
+PHASE 8 — FRONTEND AUDIO + PTT INTEGRATION
+====================================================
+Wire up:
+- PTT button (UI + keyboard)
+- Publish/unpublish mic track
+- LiveKit monitoring
+- Tone buttons (Tone A/B/C, Clear-Air)
+- Emergency badges
+- VU meters
+- Channel grid interaction
+
+====================================================
+PHASE 9 — FINAL VALIDATION
+====================================================
+Confirm:
+- No ghost transmissions
+- No audio leaks
+- All LiveKit rooms behave predictably
+- All backend endpoints integrate correctly
+- Layout persists
+- Drag-and-drop works
+- Tones work without freezing audio
+
+====================================================
+FINAL RULE:
+Follow these phases in exact order.
+Do not skip steps.
+Do not generate code before producing the required planning output.
