@@ -205,6 +205,21 @@ export default function App({ user, onLogout }) {
   const [userLocation, setUserLocation] = useState(null);
   const [pttState, setPttState] = useState(PTT_STATES.IDLE);
 
+  const broadcastStatus = useCallback((room, status, channel) => {
+    if (!room || !room.localParticipant) return;
+    
+    const message = JSON.stringify({
+      type: "status_update",
+      identity: room.localParticipant.identity,
+      status,
+      channel,
+      timestamp: Date.now(),
+    });
+    
+    const encoder = new TextEncoder();
+    const data = encoder.encode(message);
+    room.localParticipant.publishData(data, DataPacket_Kind.RELIABLE);
+  }, []);
 
   useEffect(() => {
     scanRoomsRef.current = scanRooms;
@@ -313,22 +328,6 @@ export default function App({ user, onLogout }) {
       audioContextRef.current.resume();
     }
     return audioContextRef.current;
-  }, []);
-
-  const broadcastStatus = useCallback((room, status, channel) => {
-    if (!room || !room.localParticipant) return;
-    
-    const message = JSON.stringify({
-      type: "status_update",
-      identity: room.localParticipant.identity,
-      status,
-      channel,
-      timestamp: Date.now(),
-    });
-    
-    const encoder = new TextEncoder();
-    const data = encoder.encode(message);
-    room.localParticipant.publishData(data, DataPacket_Kind.RELIABLE);
   }, []);
 
   const broadcastEmergency = useCallback((room, channel, active) => {
