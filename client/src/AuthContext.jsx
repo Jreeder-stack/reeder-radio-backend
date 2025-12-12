@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from "react";
-import { useDispatchStore } from "./state/dispatchStore";
+import useDispatchStore from "./state/dispatchStore";
 
 const AuthContext = createContext(null);
 

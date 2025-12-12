@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useDispatchStore } from '../../state/dispatchStore.js';
+import useDispatchStore from '../../state/dispatchStore.js';
 import { getPatches, createPatch, updatePatch } from '../../utils/api.js';
 
 export default function PatchPanel() {

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useDispatchStore } from '../../state/dispatchStore.js';
+import useDispatchStore from '../../state/dispatchStore.js';
 
 export default function TopBar({ user, onLogout, agencyName = "Reeder Radio" }) {
   const navigate = useNavigate();

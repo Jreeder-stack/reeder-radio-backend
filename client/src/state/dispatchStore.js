@@ -247,5 +247,4 @@ const useDispatchStore = create(
   )
 );
 
-export { useDispatchStore };
 export default useDispatchStore;
