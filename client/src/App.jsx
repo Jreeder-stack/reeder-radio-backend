@@ -189,7 +189,7 @@ export default function App({ user, onLogout }) {
   const [emergencyFlash, setEmergencyFlash] = useState(false);
 
   const audioTrackRef = useRef(null);  // The raw MediaStreamTrack from getUserMedia
-  const publicationRef = useRef(null);  // The LocalTrackPublication from LiveKit
+  const localTrackRef = useRef(null);  // The LocalAudioTrack from LiveKit (publication.track)
   const scanRoomsRef = useRef({});
   const primaryRoomRef = useRef(null);
   const audioContextRef = useRef(null);
@@ -212,14 +212,26 @@ export default function App({ user, onLogout }) {
     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
   );
 
-  // Force release all mic tracks - called synchronously to ensure cleanup
-  // Only stops tracks, does NOT clear refs - stopPTT needs them for unpublishing
+  // Force release all tracks - called synchronously to ensure cleanup on iOS
+  // Stops both the LiveKit LocalTrack and browser tracks
   const forceMicRelease = () => {
+    // Stop the LiveKit LocalTrack first (this is what matters for LiveKit)
+    if (localTrackRef.current) {
+      try {
+        localTrackRef.current.stop();
+        console.log('[Radio PTT] forceMicRelease: LocalTrack stopped');
+      } catch (e) {}
+    }
+    // Then stop the browser track
     if (audioTrackRef.current) {
-      audioTrackRef.current.stop();
+      try {
+        audioTrackRef.current.stop();
+      } catch (e) {}
     }
     if (micStreamRef.current) {
-      micStreamRef.current.getTracks().forEach(t => t.stop());
+      micStreamRef.current.getTracks().forEach(t => {
+        try { t.stop(); } catch (e) {}
+      });
     }
   };
 
@@ -792,14 +804,15 @@ export default function App({ user, onLogout }) {
       audioTrackRef.current = track;
       console.log('[Radio PTT] Microphone acquired, publishing...');
       
-      // CRITICAL: Store the publication so we can properly unpublish later
+      // CRITICAL: Store the LocalAudioTrack so we can properly unpublish later
       const publication = await primaryRoomRef.current.localParticipant.publishTrack(track, {
         name: "microphone",
         source: Track.Source.Microphone,
       });
-      publicationRef.current = publication;
+      // Store the LocalTrack - this is what LiveKit uses to unpublish
+      localTrackRef.current = publication.track;
       
-      console.log('[Radio PTT] Track published successfully, publication:', publication?.trackSid);
+      console.log('[Radio PTT] Track published, trackSid:', publication?.trackSid, 'localTrack:', !!publication?.track);
       broadcastStatus(primaryRoomRef.current, "transmitting", transmitChannel);
       return true;
     } catch (err) {
@@ -813,35 +826,46 @@ export default function App({ user, onLogout }) {
     console.log('[Radio PTT] Stopping transmission');
     
     // Grab refs before clearing
-    const publication = publicationRef.current;
-    const track = audioTrackRef.current;
+    const localTrack = localTrackRef.current;
+    const browserTrack = audioTrackRef.current;
     const stream = micStreamRef.current;
     
     // Clear refs immediately
-    publicationRef.current = null;
+    localTrackRef.current = null;
     audioTrackRef.current = null;
     micStreamRef.current = null;
     
-    // CRITICAL: Unpublish from LiveKit FIRST using the publication
+    // CRITICAL: Stop and unpublish the LocalAudioTrack from LiveKit FIRST
     // This is what actually stops the LiveKit session
-    if (publication && primaryRoomRef.current) {
+    if (localTrack && primaryRoomRef.current) {
       try {
-        await primaryRoomRef.current.localParticipant.unpublishTrack(publication.track || publication);
-        console.log('[Radio PTT] Track unpublished from LiveKit');
+        // Stop the LocalTrack first
+        localTrack.stop();
+        console.log('[Radio PTT] LocalTrack stopped');
+        
+        // Then unpublish it
+        await primaryRoomRef.current.localParticipant.unpublishTrack(localTrack);
+        console.log('[Radio PTT] LocalTrack unpublished from LiveKit');
       } catch (e) {
         console.warn('[Radio PTT] Unpublish error:', e.message);
       }
     }
     
-    // THEN stop the browser mic track
-    if (track) {
-      track.stop();
-      console.log('[Radio PTT] Browser track stopped');
+    // THEN stop the browser mic track (may already be stopped by LiveKit)
+    if (browserTrack) {
+      try {
+        browserTrack.stop();
+        console.log('[Radio PTT] Browser track stopped');
+      } catch (e) {
+        // May already be stopped
+      }
     }
     
     // Stop all stream tracks
     if (stream) {
-      stream.getTracks().forEach(t => t.stop());
+      stream.getTracks().forEach(t => {
+        try { t.stop(); } catch (e) {}
+      });
     }
     
     setIsTalking(false);
