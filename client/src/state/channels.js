@@ -13,7 +13,18 @@ export const useChannelStore = create(
       channelLevels: {},
       activeTransmissions: {},
       
-      setChannels: (channels) => set({ channels }),
+      setChannels: (channels) => set((state) => {
+        const validIds = new Set(channels.map(c => c.id));
+        const validIdStrings = new Set(channels.map(c => c.id.toString()));
+        return {
+          channels,
+          channelOrder: state.channelOrder.filter(id => validIdStrings.has(id)),
+          gridChannelIds: state.gridChannelIds.filter(id => validIds.has(id)),
+          monitoredChannels: state.monitoredChannels.filter(id => validIds.has(id)),
+          mutedChannels: state.mutedChannels.filter(id => validIds.has(id)),
+          selectedTxChannels: state.selectedTxChannels.filter(id => validIds.has(id)),
+        };
+      }),
       
       setChannelOrder: (order) => set({ channelOrder: order }),
       

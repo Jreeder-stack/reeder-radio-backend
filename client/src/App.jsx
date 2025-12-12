@@ -202,9 +202,11 @@ export default function App({ user, onLogout }) {
   const micStreamRef = useRef(null);
   const emergencyTimerRef = useRef(null);
   const heartbeatIntervalRef = useRef(null);
-  const pttActiveRef = useRef(false);
-  const stopCalledRef = useRef(false);
   const [userLocation, setUserLocation] = useState(null);
+  
+  // PTT State Machine: idle -> acquiring -> publishing -> transmitting -> stopping -> idle
+  const pttStateRef = useRef('idle');
+  const pttTransitionPromise = useRef(null);
   
   // iOS detection for special handling
   const isIOSRef = useRef(
@@ -212,28 +214,6 @@ export default function App({ user, onLogout }) {
     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
   );
 
-  // Force release all tracks - called synchronously to ensure cleanup on iOS
-  // Stops both the LiveKit LocalTrack and browser tracks
-  const forceMicRelease = () => {
-    // Stop the LiveKit LocalTrack first (this is what matters for LiveKit)
-    if (localTrackRef.current) {
-      try {
-        localTrackRef.current.stop();
-        console.log('[Radio PTT] forceMicRelease: LocalTrack stopped');
-      } catch (e) {}
-    }
-    // Then stop the browser track
-    if (audioTrackRef.current) {
-      try {
-        audioTrackRef.current.stop();
-      } catch (e) {}
-    }
-    if (micStreamRef.current) {
-      micStreamRef.current.getTracks().forEach(t => {
-        try { t.stop(); } catch (e) {}
-      });
-    }
-  };
 
   useEffect(() => {
     scanRoomsRef.current = scanRooms;
@@ -283,30 +263,19 @@ export default function App({ user, onLogout }) {
       if (txAnimationRef.current) cancelAnimationFrame(txAnimationRef.current);
       if (rxAnimationRef.current) cancelAnimationFrame(rxAnimationRef.current);
       if (audioContextRef.current) audioContextRef.current.close();
-      // Ensure mic is released on component unmount
-      forceMicRelease();
+      cleanupPttResources();
     };
   }, []);
 
   useEffect(() => {
     const handleGlobalRelease = (e) => {
-      // Only handle if PTT was active
-      if (pttActiveRef.current) {
-        console.log('[Radio PTT] Global release detected, event:', e.type);
-        // Force immediate mic stop on iOS (may be null if getUserMedia still pending)
-        forceMicRelease();
-        pttActiveRef.current = false;
-        
-        // Always call stopPTT to ensure cleanup, even if mic wasn't acquired yet
-        if (!stopCalledRef.current) {
-          stopCalledRef.current = true;
-          stopPTT();
-        }
+      const state = pttStateRef.current;
+      if (state !== 'idle') {
+        console.log('[Radio PTT] Global release detected, state:', state, 'event:', e.type);
+        stopPTT();
       }
     };
 
-    // Use capture phase and non-passive for iOS Safari compatibility
-    // Safari can suppress events if the gesture is cancelled - capture ensures we see them
     const captureOptions = { capture: true, passive: false };
     
     document.addEventListener('touchend', handleGlobalRelease, captureOptions);
@@ -783,92 +752,143 @@ export default function App({ user, onLogout }) {
     }
   };
 
-  const startPTT = async () => {
-    if (!primaryRoomRef.current) return false;
+  const setPttState = (newState) => {
+    console.log(`[Radio PTT] State: ${pttStateRef.current} → ${newState}`);
+    pttStateRef.current = newState;
+  };
 
-    console.log('[Radio PTT] Starting transmission');
-    try {
-      setIsTalking(true);
-      
-      // Simple: grab mic, publish raw track - no DSP, no metering
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        },
+  const cleanupPttResources = () => {
+    if (localTrackRef.current) {
+      try { localTrackRef.current.stop(); } catch (e) {}
+      localTrackRef.current = null;
+    }
+    if (audioTrackRef.current) {
+      try { audioTrackRef.current.stop(); } catch (e) {}
+      audioTrackRef.current = null;
+    }
+    if (micStreamRef.current) {
+      micStreamRef.current.getTracks().forEach(t => {
+        try { t.stop(); } catch (e) {}
       });
-      micStreamRef.current = stream;
-      
-      const track = stream.getAudioTracks()[0];
-      audioTrackRef.current = track;
-      console.log('[Radio PTT] Microphone acquired, publishing...');
-      
-      // CRITICAL: Store the LocalAudioTrack so we can properly unpublish later
-      const publication = await primaryRoomRef.current.localParticipant.publishTrack(track, {
-        name: "microphone",
-        source: Track.Source.Microphone,
-      });
-      // Store the LocalTrack - this is what LiveKit uses to unpublish
-      localTrackRef.current = publication.track;
-      
-      console.log('[Radio PTT] Track published, trackSid:', publication?.trackSid, 'localTrack:', !!publication?.track);
-      broadcastStatus(primaryRoomRef.current, "transmitting", transmitChannel);
-      return true;
-    } catch (err) {
-      console.error("[Radio PTT] Error:", err);
-      setIsTalking(false);
-      return false;
+      micStreamRef.current = null;
     }
   };
 
-  const stopPTT = async () => {
-    console.log('[Radio PTT] Stopping transmission');
+  const startPTT = async () => {
+    if (pttStateRef.current !== 'idle') {
+      console.log(`[Radio PTT] Cannot start, state is: ${pttStateRef.current}`);
+      return false;
+    }
     
-    // Grab refs before clearing
+    if (!primaryRoomRef.current) {
+      console.log('[Radio PTT] No room connected');
+      return false;
+    }
+
+    const doStart = async () => {
+      try {
+        setPttState('acquiring');
+        setIsTalking(true);
+        
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          },
+        });
+        
+        if (pttStateRef.current !== 'acquiring') {
+          console.log('[Radio PTT] State changed during acquisition, aborting');
+          stream.getTracks().forEach(t => t.stop());
+          return false;
+        }
+        
+        micStreamRef.current = stream;
+        const track = stream.getAudioTracks()[0];
+        audioTrackRef.current = track;
+        
+        setPttState('publishing');
+        console.log('[Radio PTT] Microphone acquired, publishing...');
+        
+        const publication = await primaryRoomRef.current.localParticipant.publishTrack(track, {
+          name: "microphone",
+          source: Track.Source.Microphone,
+        });
+        localTrackRef.current = publication.track;
+        
+        if (pttStateRef.current !== 'publishing') {
+          console.log('[Radio PTT] State changed during publishing, cleaning up');
+          await stopPTT();
+          return false;
+        }
+        
+        setPttState('transmitting');
+        console.log('[Radio PTT] Transmission started, trackSid:', publication?.trackSid);
+        broadcastStatus(primaryRoomRef.current, "transmitting", transmitChannel);
+        return true;
+      } catch (err) {
+        console.error("[Radio PTT] Start error:", err);
+        cleanupPttResources();
+        setPttState('idle');
+        setIsTalking(false);
+        return false;
+      }
+    };
+    
+    pttTransitionPromise.current = doStart();
+    return pttTransitionPromise.current;
+  };
+
+  const stopPTT = async () => {
+    const currentState = pttStateRef.current;
+    if (currentState === 'idle' || currentState === 'stopping') {
+      console.log(`[Radio PTT] Cannot stop, state is: ${currentState}`);
+      return;
+    }
+    
+    setPttState('stopping');
+    
+    if (pttTransitionPromise.current) {
+      try {
+        await pttTransitionPromise.current;
+      } catch (e) {}
+      pttTransitionPromise.current = null;
+    }
+    
     const localTrack = localTrackRef.current;
     const browserTrack = audioTrackRef.current;
     const stream = micStreamRef.current;
     
-    // Clear refs immediately
     localTrackRef.current = null;
     audioTrackRef.current = null;
     micStreamRef.current = null;
     
-    // CRITICAL: Stop and unpublish the LocalAudioTrack from LiveKit FIRST
-    // This is what actually stops the LiveKit session
     if (localTrack && primaryRoomRef.current) {
       try {
-        // Stop the LocalTrack first
         localTrack.stop();
         console.log('[Radio PTT] LocalTrack stopped');
-        
-        // Then unpublish it
         await primaryRoomRef.current.localParticipant.unpublishTrack(localTrack);
-        console.log('[Radio PTT] LocalTrack unpublished from LiveKit');
+        console.log('[Radio PTT] LocalTrack unpublished');
       } catch (e) {
         console.warn('[Radio PTT] Unpublish error:', e.message);
       }
     }
     
-    // THEN stop the browser mic track (may already be stopped by LiveKit)
     if (browserTrack) {
-      try {
-        browserTrack.stop();
-        console.log('[Radio PTT] Browser track stopped');
-      } catch (e) {
-        // May already be stopped
-      }
+      try { browserTrack.stop(); } catch (e) {}
     }
     
-    // Stop all stream tracks
     if (stream) {
       stream.getTracks().forEach(t => {
         try { t.stop(); } catch (e) {}
       });
     }
     
+    setPttState('idle');
     setIsTalking(false);
+    console.log('[Radio PTT] Transmission stopped');
+    
     if (primaryRoomRef.current) {
       broadcastStatus(primaryRoomRef.current, "idle", transmitChannel);
     }
@@ -876,46 +896,27 @@ export default function App({ user, onLogout }) {
 
   const handlePTTDown = async (e) => {
     if (e && e.type === 'keydown' && e.repeat) return;
-    if (pttActiveRef.current) return;
     
-    console.log('[Radio PTT] === PTT DOWN ===');
-    pttActiveRef.current = true;
-    stopCalledRef.current = false;
+    console.log('[Radio PTT] === PTT DOWN ===, state:', pttStateRef.current);
     
-    const success = await startPTT();
-    
-    // CRITICAL: After async startPTT completes, check if user already released
-    // If so, we MUST call stopPTT regardless of stopCalledRef to clean up the late-published track
-    if (!pttActiveRef.current) {
-      console.log('[Radio PTT] Released during setup, forcing cleanup');
-      // Reset the flag and force cleanup - don't check stopCalledRef here
-      stopCalledRef.current = true;
-      await stopPTT();
+    if (pttStateRef.current !== 'idle') {
+      console.log('[Radio PTT] Ignoring PTT down, not idle');
+      return;
     }
+    
+    await startPTT();
   };
 
   const handlePTTUp = async () => {
-    console.log('[Radio PTT] === PTT UP ===, pttActive:', pttActiveRef.current);
+    console.log('[Radio PTT] === PTT UP ===, state:', pttStateRef.current);
     
-    // Clear pressed visual state immediately
     setPttPressed(false);
     
-    // CRITICAL FOR iOS: Force synchronous mic release FIRST, before any checks
-    // This ensures iOS Safari sees the track.stop() call immediately on touch release
-    forceMicRelease();
-    
-    if (!pttActiveRef.current) return;
-    
-    pttActiveRef.current = false;
-    
-    if (!stopCalledRef.current) {
-      stopCalledRef.current = true;
-      // stopPTT will handle LiveKit unpublish and UI state (tracks already stopped)
-      await stopPTT();
-    } else {
-      // If stopPTT was already called (race condition), just update UI
-      setIsTalking(false);
+    if (pttStateRef.current === 'idle') {
+      return;
     }
+    
+    await stopPTT();
   };
 
   const handleTouchStart = (e) => {
