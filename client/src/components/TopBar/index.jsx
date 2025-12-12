@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useDispatcherStore } from '../../state/dispatcher.js';
+import { useDispatchStore } from '../../state/dispatchStore.js';
 
 export default function TopBar({ user, onLogout, agencyName = "Reeder Radio" }) {
   const navigate = useNavigate();
   const [time, setTime] = useState(new Date());
-  const { dispatcherName, isTalking, isConnected } = useDispatcherStore();
+  const { dispatcherName, isTalking, isConnected } = useDispatchStore();
 
   useEffect(() => {
     const interval = setInterval(() => setTime(new Date()), 1000);

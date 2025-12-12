@@ -33,6 +33,7 @@ const useDispatchStore = create(
       connectionError: null,
       
       pttState: PTT_STATES.IDLE,
+      isTalking: false,
       activeTxChannelId: null,
       toneState: null,
       clearAirEnabled: {},
@@ -180,6 +181,8 @@ const useDispatchStore = create(
       
       setPttState: (pttState) => set({ pttState }),
       
+      setTalking: (isTalking) => set({ isTalking }),
+      
       setActiveTxChannel: (channelId) => set({ activeTxChannelId: channelId }),
 
       setToneState: (tone) => set({ toneState: tone }),
@@ -211,7 +214,7 @@ const useDispatchStore = create(
 
       getUnitsByChannel: (channelName) => get().unitsByChannel[channelName] || [],
       
-      reset: () => set({
+      resetStore: () => set({
         channels: [],
         channelOrder: [],
         gridChannelIds: [],
@@ -231,6 +234,7 @@ const useDispatchStore = create(
         isConnecting: false,
         connectionError: null,
         pttState: PTT_STATES.IDLE,
+        isTalking: false,
         activeTxChannelId: null,
         toneState: null,
         clearAirEnabled: {}
@@ -250,5 +254,5 @@ const useDispatchStore = create(
   )
 );
 
-export { PTT_STATES };
+export { PTT_STATES, useDispatchStore };
 export default useDispatchStore;

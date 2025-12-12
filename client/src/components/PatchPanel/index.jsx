@@ -1,11 +1,9 @@
 import { useState, useEffect } from 'react';
-import { useChannelStore } from '../../state/channels.js';
-import { useDispatcherStore } from '../../state/dispatcher.js';
+import { useDispatchStore } from '../../state/dispatchStore.js';
 import { getPatches, createPatch, updatePatch } from '../../utils/api.js';
 
 export default function PatchPanel() {
-  const { channels } = useChannelStore();
-  const { addEvent } = useDispatcherStore();
+  const { channels, addEvent } = useDispatchStore();
   const [patches, setPatches] = useState([]);
   const [loading, setLoading] = useState(false);
   const [sourceChannel, setSourceChannel] = useState('');

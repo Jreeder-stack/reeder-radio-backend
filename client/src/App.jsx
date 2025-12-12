@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Room, RoomEvent, Track, DataPacket_Kind } from "livekit-client";
+import { micPTTManager, PTT_STATES } from "./audio/MicPTTManager";
 
 const LIVEKIT_URL = import.meta.env.VITE_LIVEKIT_URL;
 const TOKEN_SERVER = "/getToken";
@@ -188,8 +189,6 @@ export default function App({ user, onLogout }) {
   const [activeEmergencies, setActiveEmergencies] = useState({});
   const [emergencyFlash, setEmergencyFlash] = useState(false);
 
-  const audioTrackRef = useRef(null);  // The raw MediaStreamTrack from getUserMedia
-  const localTrackRef = useRef(null);  // The LocalAudioTrack from LiveKit (publication.track)
   const scanRoomsRef = useRef({});
   const primaryRoomRef = useRef(null);
   const audioContextRef = useRef(null);
@@ -199,20 +198,11 @@ export default function App({ user, onLogout }) {
   const recordedChunksRef = useRef([]);
   const txAnimationRef = useRef(null);
   const rxAnimationRef = useRef(null);
-  const micStreamRef = useRef(null);
   const emergencyTimerRef = useRef(null);
   const heartbeatIntervalRef = useRef(null);
+  const isEmergencyRef = useRef(false);
   const [userLocation, setUserLocation] = useState(null);
-  
-  // PTT State Machine: idle -> acquiring -> publishing -> transmitting -> stopping -> idle
-  const pttStateRef = useRef('idle');
-  const pttTransitionPromise = useRef(null);
-  
-  // iOS detection for special handling
-  const isIOSRef = useRef(
-    /iPad|iPhone|iPod/.test(navigator.userAgent) || 
-    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
-  );
+  const [pttState, setPttState] = useState(PTT_STATES.IDLE);
 
 
   useEffect(() => {
@@ -233,6 +223,10 @@ export default function App({ user, onLogout }) {
   useEffect(() => {
     primaryRoomRef.current = primaryRoom;
   }, [primaryRoom]);
+
+  useEffect(() => {
+    isEmergencyRef.current = isEmergency;
+  }, [isEmergency]);
 
   useEffect(() => {
     if (!scanMode && Object.keys(scanRoomsRef.current).length > 0) {
@@ -259,21 +253,38 @@ export default function App({ user, onLogout }) {
   }, [scanMode]);
 
   useEffect(() => {
+    micPTTManager.onStateChange = (newState) => {
+      setPttState(newState);
+      if (newState === PTT_STATES.TRANSMITTING) {
+        setIsTalking(true);
+        if (primaryRoomRef.current) {
+          broadcastStatus(primaryRoomRef.current, "transmitting", transmitChannel);
+        }
+      } else if (newState === PTT_STATES.IDLE) {
+        setIsTalking(false);
+        if (primaryRoomRef.current) {
+          broadcastStatus(primaryRoomRef.current, "idle", transmitChannel);
+        }
+      }
+    };
+    
     return () => {
       if (txAnimationRef.current) cancelAnimationFrame(txAnimationRef.current);
       if (rxAnimationRef.current) cancelAnimationFrame(rxAnimationRef.current);
       if (audioContextRef.current) audioContextRef.current.close();
-      cleanupPttResources();
+      micPTTManager.disconnect();
     };
-  }, []);
+  }, [broadcastStatus, transmitChannel]);
 
   useEffect(() => {
     const handleGlobalRelease = (e) => {
-      const state = pttStateRef.current;
-      if (state !== 'idle') {
-        console.log('[Radio PTT] Global release detected, state:', state, 'event:', e.type);
-        stopPTT();
+      if (isEmergencyRef.current) {
+        console.log('[Radio PTT] Global release ignored during emergency');
+        return;
       }
+      if (!micPTTManager.canStop()) return;
+      console.log('[Radio PTT] Global release detected, event:', e.type);
+      micPTTManager.stop();
     };
 
     const captureOptions = { capture: true, passive: false };
@@ -752,31 +763,9 @@ export default function App({ user, onLogout }) {
     }
   };
 
-  const setPttState = (newState) => {
-    console.log(`[Radio PTT] State: ${pttStateRef.current} → ${newState}`);
-    pttStateRef.current = newState;
-  };
-
-  const cleanupPttResources = () => {
-    if (localTrackRef.current) {
-      try { localTrackRef.current.stop(); } catch (e) {}
-      localTrackRef.current = null;
-    }
-    if (audioTrackRef.current) {
-      try { audioTrackRef.current.stop(); } catch (e) {}
-      audioTrackRef.current = null;
-    }
-    if (micStreamRef.current) {
-      micStreamRef.current.getTracks().forEach(t => {
-        try { t.stop(); } catch (e) {}
-      });
-      micStreamRef.current = null;
-    }
-  };
-
-  const startPTT = async () => {
-    if (pttStateRef.current !== 'idle') {
-      console.log(`[Radio PTT] Cannot start, state is: ${pttStateRef.current}`);
+  const startPTT = useCallback(async () => {
+    if (!micPTTManager.canStart()) {
+      console.log('[Radio PTT] Cannot start, manager not ready');
       return false;
     }
     
@@ -785,166 +774,65 @@ export default function App({ user, onLogout }) {
       return false;
     }
 
-    const doStart = async () => {
-      try {
-        setPttState('acquiring');
-        setIsTalking(true);
-        
-        const stream = await navigator.mediaDevices.getUserMedia({
-          audio: {
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true,
-          },
-        });
-        
-        if (pttStateRef.current !== 'acquiring') {
-          console.log('[Radio PTT] State changed during acquisition, aborting');
-          stream.getTracks().forEach(t => t.stop());
-          return false;
-        }
-        
-        micStreamRef.current = stream;
-        const track = stream.getAudioTracks()[0];
-        audioTrackRef.current = track;
-        
-        setPttState('publishing');
-        console.log('[Radio PTT] Microphone acquired, publishing...');
-        
-        const publication = await primaryRoomRef.current.localParticipant.publishTrack(track, {
-          name: "microphone",
-          source: Track.Source.Microphone,
-        });
-        localTrackRef.current = publication.track;
-        
-        if (pttStateRef.current !== 'publishing') {
-          console.log('[Radio PTT] State changed during publishing, cleaning up');
-          await stopPTT();
-          return false;
-        }
-        
-        setPttState('transmitting');
-        console.log('[Radio PTT] Transmission started, trackSid:', publication?.trackSid);
-        broadcastStatus(primaryRoomRef.current, "transmitting", transmitChannel);
-        return true;
-      } catch (err) {
-        console.error("[Radio PTT] Start error:", err);
-        cleanupPttResources();
-        setPttState('idle');
-        setIsTalking(false);
-        return false;
-      }
-    };
-    
-    pttTransitionPromise.current = doStart();
-    return pttTransitionPromise.current;
-  };
+    micPTTManager.setRoom(primaryRoomRef.current);
+    return await micPTTManager.start();
+  }, []);
 
-  const stopPTT = async () => {
-    const currentState = pttStateRef.current;
-    if (currentState === 'idle' || currentState === 'stopping') {
-      console.log(`[Radio PTT] Cannot stop, state is: ${currentState}`);
+  const stopPTT = useCallback(async () => {
+    if (!micPTTManager.canStop()) {
       return;
     }
-    
-    setPttState('stopping');
-    
-    if (pttTransitionPromise.current) {
-      try {
-        await pttTransitionPromise.current;
-      } catch (e) {}
-      pttTransitionPromise.current = null;
-    }
-    
-    const localTrack = localTrackRef.current;
-    const browserTrack = audioTrackRef.current;
-    const stream = micStreamRef.current;
-    
-    localTrackRef.current = null;
-    audioTrackRef.current = null;
-    micStreamRef.current = null;
-    
-    if (localTrack && primaryRoomRef.current) {
-      try {
-        localTrack.stop();
-        console.log('[Radio PTT] LocalTrack stopped');
-        await primaryRoomRef.current.localParticipant.unpublishTrack(localTrack);
-        console.log('[Radio PTT] LocalTrack unpublished');
-      } catch (e) {
-        console.warn('[Radio PTT] Unpublish error:', e.message);
-      }
-    }
-    
-    if (browserTrack) {
-      try { browserTrack.stop(); } catch (e) {}
-    }
-    
-    if (stream) {
-      stream.getTracks().forEach(t => {
-        try { t.stop(); } catch (e) {}
-      });
-    }
-    
-    setPttState('idle');
-    setIsTalking(false);
-    console.log('[Radio PTT] Transmission stopped');
-    
-    if (primaryRoomRef.current) {
-      broadcastStatus(primaryRoomRef.current, "idle", transmitChannel);
-    }
-  };
+    await micPTTManager.stop();
+  }, []);
 
-  const handlePTTDown = async (e) => {
+  const handlePTTDown = useCallback(async (e) => {
     if (e && e.type === 'keydown' && e.repeat) return;
     
-    console.log('[Radio PTT] === PTT DOWN ===, state:', pttStateRef.current);
+    console.log('[Radio PTT] === PTT DOWN ===, state:', pttState);
     
-    if (pttStateRef.current !== 'idle') {
+    if (!micPTTManager.canStart()) {
       console.log('[Radio PTT] Ignoring PTT down, not idle');
       return;
     }
     
     await startPTT();
-  };
+  }, [pttState, startPTT]);
 
-  const handlePTTUp = async () => {
-    console.log('[Radio PTT] === PTT UP ===, state:', pttStateRef.current);
+  const handlePTTUp = useCallback(async () => {
+    console.log('[Radio PTT] === PTT UP ===, state:', pttState);
     
     setPttPressed(false);
     
-    if (pttStateRef.current === 'idle') {
+    if (pttState === PTT_STATES.IDLE) {
       return;
     }
     
     await stopPTT();
-  };
+  }, [pttState, stopPTT]);
 
-  const handleTouchStart = (e) => {
+  const handleTouchStart = useCallback((e) => {
     e.preventDefault();
     e.stopPropagation();
     if (!e.isTrusted) return;
     if (isEmergency) return;
     
-    // Immediate visual feedback - pttPressed only changes color, not text
-    // This avoids Safari treating DOM change as losing touch target
     setPttPressed(true);
     handlePTTDown(e);
-  };
+  }, [isEmergency, handlePTTDown]);
 
-  const handleTouchEnd = (e) => {
+  const handleTouchEnd = useCallback((e) => {
     e.preventDefault();
     e.stopPropagation();
     handlePTTUp();
-  };
+  }, [handlePTTUp]);
 
-  const handleMouseDown = (e) => {
+  const handleMouseDown = useCallback((e) => {
     if (!e.isTrusted) return;
     if (isEmergency) return;
     
-    // Immediate visual feedback - pttPressed only changes color, not text
     setPttPressed(true);
     handlePTTDown(e);
-  };
+  }, [isEmergency, handlePTTDown]);
 
   const playLastRx = () => {
     if (!lastRxBlob) return;
@@ -1005,6 +893,7 @@ export default function App({ user, onLogout }) {
 
   const disconnect = async () => {
     stopHeartbeat();
+    micPTTManager.disconnect();
     
     if (primaryRoomRef.current) {
       await primaryRoomRef.current.disconnect();
