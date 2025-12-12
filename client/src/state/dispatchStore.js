@@ -1,13 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-const PTT_STATES = {
-  IDLE: 'idle',
-  ARMING: 'arming',
-  TRANSMITTING: 'transmitting',
-  COOLDOWN: 'cooldown'
-};
-
 const useDispatchStore = create(
   persist(
     (set, get) => ({
@@ -32,7 +25,7 @@ const useDispatchStore = create(
       isConnecting: false,
       connectionError: null,
       
-      pttState: PTT_STATES.IDLE,
+      pttState: 'idle',
       isTalking: false,
       activeTxChannelId: null,
       toneState: null,
@@ -233,7 +226,7 @@ const useDispatchStore = create(
         isConnected: false,
         isConnecting: false,
         connectionError: null,
-        pttState: PTT_STATES.IDLE,
+        pttState: 'idle',
         isTalking: false,
         activeTxChannelId: null,
         toneState: null,
@@ -254,5 +247,5 @@ const useDispatchStore = create(
   )
 );
 
-export { PTT_STATES, useDispatchStore };
+export { useDispatchStore };
 export default useDispatchStore;
