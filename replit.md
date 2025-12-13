@@ -42,7 +42,7 @@ A Push-to-Talk (PTT) radio communication app using LiveKit for real-time audio s
 │   │   │   └── DispatchConsole.jsx # Dispatcher console UI
 │   │   ├── components/    # Reusable UI components
 │   │   ├── state/         # Zustand stores (channels.js, units.js, dispatcher.js)
-│   │   └── audio/         # Audio engines (toneEngine, livekitEngine)
+│   │   └── audio/         # Audio engines (toneEngine, livekitEngine, ToneTransmitter)
 │   ├── vite.config.js     # Vite config with proxy to backend
 │   ├── index.html         # HTML entry point
 │   └── package.json       # Frontend dependencies
