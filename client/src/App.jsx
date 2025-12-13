@@ -203,6 +203,7 @@ export default function App({ user, onLogout }) {
   const emergencyTimerRef = useRef(null);
   const heartbeatIntervalRef = useRef(null);
   const isEmergencyRef = useRef(false);
+  const rxAudioElementsRef = useRef(new Set());
   const [userLocation, setUserLocation] = useState(null);
   const [pttState, setPttState] = useState(PTT_STATES.IDLE);
 
@@ -274,11 +275,17 @@ export default function App({ user, onLogout }) {
       setPttState(newState);
       if (newState === PTT_STATES.TRANSMITTING) {
         setIsTalking(true);
+        rxAudioElementsRef.current.forEach(el => {
+          el.muted = true;
+        });
         if (primaryRoomRef.current) {
           broadcastStatus(primaryRoomRef.current, "transmitting", transmitChannel);
         }
       } else if (newState === PTT_STATES.IDLE) {
         setIsTalking(false);
+        rxAudioElementsRef.current.forEach(el => {
+          el.muted = false;
+        });
         if (primaryRoomRef.current) {
           broadcastStatus(primaryRoomRef.current, "idle", transmitChannel);
         }
@@ -371,6 +378,10 @@ export default function App({ user, onLogout }) {
 
   const broadcastHeartbeat = useCallback((room, channel) => {
     if (!room || !room.localParticipant) return;
+    if (room.state !== 'connected') {
+      console.log('[Radio] Skipping heartbeat - room not connected, state:', room.state);
+      return;
+    }
     
     const message = JSON.stringify({
       type: "heartbeat",
@@ -497,22 +508,23 @@ export default function App({ user, onLogout }) {
 
     lkRoom.on(RoomEvent.TrackSubscribed, (track, publication, participant) => {
       if (track.kind === "audio") {
-        // Attach track to get audio element - LiveKit handles playback
         const audioElem = track.attach();
         audioElem.dataset.channel = channelName;
         audioElem.dataset.participant = participant.identity;
         
-        // Ensure it can autoplay on iOS
         audioElem.playsInline = true;
         audioElem.autoplay = true;
         
-        // Try to play (may need user gesture on some browsers)
+        rxAudioElementsRef.current.add(audioElem);
+        
+        if (micPTTManager.isTransmitting()) {
+          audioElem.muted = true;
+        }
+        
         audioElem.play().catch(() => {
           console.log('[Radio PTT] Audio autoplay blocked, will play on user gesture');
         });
         
-        // Simple approach: just let the audio element play directly
-        // Skip Web Audio processing for maximum compatibility
         console.log('[Radio PTT] Receiving audio from', participant.identity);
         
         setActiveAudio({ channel: channelName, from: participant.identity });
@@ -521,8 +533,11 @@ export default function App({ user, onLogout }) {
     });
 
     lkRoom.on(RoomEvent.TrackUnsubscribed, (track, publication, participant) => {
-      // Detach and clean up audio elements
-      track.detach().forEach((el) => el.remove());
+      const detachedElements = track.detach();
+      detachedElements.forEach((el) => {
+        rxAudioElementsRef.current.delete(el);
+        el.remove();
+      });
       setActiveAudio(null);
       updateUnitPresence(channelName, participant.identity, "idle", Date.now());
       console.log('[Radio PTT] Transmission ended from', participant.identity);

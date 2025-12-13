@@ -194,22 +194,27 @@ export default function DispatchConsole({ user, onLogout }) {
       };
       
       const enabledChannels = channels.filter(c => c.enabled);
-      console.log('[DispatchConsole] Connecting to channels:', enabledChannels.map(c => c.name));
+      console.log('[DispatchConsole] Connecting to channels in parallel:', enabledChannels.map(c => c.name));
       
-      for (const channel of enabledChannels) {
-        try {
-          await livekitManager.connect(channel.name, user?.username || 'DISPATCH');
-          console.log(`[DispatchConsole] Connected to ${channel.name}`);
-          addEvent({
-            type: 'connect',
-            channel: channel.name,
-          });
-        } catch (err) {
-          console.error(`Failed to connect to ${channel.name}:`, err);
-        }
-      }
+      const connectionResults = await Promise.allSettled(
+        enabledChannels.map(async (channel) => {
+          try {
+            await livekitManager.connect(channel.name, user?.username || 'DISPATCH');
+            console.log(`[DispatchConsole] Connected to ${channel.name}`);
+            addEvent({
+              type: 'connect',
+              channel: channel.name,
+            });
+            return { channel: channel.name, success: true };
+          } catch (err) {
+            console.error(`Failed to connect to ${channel.name}:`, err);
+            return { channel: channel.name, success: false, error: err };
+          }
+        })
+      );
       
-      console.log('[DispatchConsole] All connections complete. Connected rooms:', livekitManager.getConnectedChannels());
+      const successCount = connectionResults.filter(r => r.status === 'fulfilled' && r.value?.success).length;
+      console.log(`[DispatchConsole] All connections complete. ${successCount}/${enabledChannels.length} successful. Connected rooms:`, livekitManager.getConnectedChannels());
       setConnected(true);
     } catch (error) {
       console.error('Connection error:', error);
