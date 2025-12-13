@@ -4,6 +4,7 @@ import { micPTTManager } from '../../audio/MicPTTManager.js';
 import { PTT_STATES } from '../../constants/pttStates.js';
 import livekitManager from '../../audio/LiveKitManager.js';
 import toneEngine from '../../audio/toneEngine.js';
+import toneTransmitter from '../../audio/ToneTransmitter.js';
 
 export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit }) {
   const { 
@@ -21,6 +22,7 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit }) {
   const [channelBusy, setChannelBusy] = useState(false);
   const pttRef = useRef(null);
   const gestureActiveRef = useRef(false);
+  const mutedChannelsRef = useRef([]);
 
   const selectedChannelNames = getTxChannelNames();
 
@@ -57,14 +59,16 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit }) {
     }
     
     try {
-      livekitManager.muteChannels(selectedChannelNames);
+      mutedChannelsRef.current = [...selectedChannelNames];
+      livekitManager.muteChannels(mutedChannelsRef.current);
       
       const primaryChannel = selectedChannelNames[0];
       const room = livekitManager.getRoom(primaryChannel);
       
       if (!room) {
         console.error('[PTT] No room for primary channel:', primaryChannel);
-        livekitManager.unmuteChannels(selectedChannelNames);
+        livekitManager.unmuteChannels(mutedChannelsRef.current);
+        mutedChannelsRef.current = [];
         return false;
       }
 
@@ -72,7 +76,8 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit }) {
       const success = await micPTTManager.start();
       
       if (!success) {
-        livekitManager.unmuteChannels(selectedChannelNames);
+        livekitManager.unmuteChannels(mutedChannelsRef.current);
+        mutedChannelsRef.current = [];
         return false;
       }
       
@@ -82,7 +87,8 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit }) {
       return true;
     } catch (err) {
       console.error('[PTT] Failed to start transmission:', err);
-      livekitManager.unmuteChannels(selectedChannelNames);
+      livekitManager.unmuteChannels(mutedChannelsRef.current);
+      mutedChannelsRef.current = [];
       return false;
     }
   }, [selectedChannelNames]);
@@ -97,6 +103,8 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit }) {
       return;
     }
     
+    const channelsToUnmute = [...mutedChannelsRef.current];
+    
     try {
       await micPTTManager.stop();
       console.log('[PTT] Transmission stopped');
@@ -104,9 +112,13 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit }) {
       console.error('[PTT] Failed to stop transmission:', err);
       micPTTManager.forceRelease();
     } finally {
-      livekitManager.unmuteChannels(selectedChannelNames);
+      if (channelsToUnmute.length > 0) {
+        livekitManager.unmuteChannels(channelsToUnmute);
+        console.log('[PTT] Unmuted channels:', channelsToUnmute);
+      }
+      mutedChannelsRef.current = [];
     }
-  }, [selectedChannelNames, channelBusy]);
+  }, [channelBusy]);
 
   const handlePTTDown = useCallback(async (e) => {
     if (e.type === 'keydown' && e.repeat) return;
@@ -189,37 +201,29 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit }) {
     
     setToneTransmitting(true);
     
-    const wasAlreadyTransmitting = pttState === PTT_STATES.TRANSMITTING;
+    const primaryChannel = selectedChannelNames[0];
+    const room = livekitManager.getRoom(primaryChannel);
     
-    if (!wasAlreadyTransmitting) {
-      gestureActiveRef.current = true;
-      await startTransmission();
+    if (!room) {
+      console.error('[BottomBar] No room for tone transmission on channel:', primaryChannel);
+      toneEngine.playEmergencyTone(type, duration);
+      await new Promise(resolve => setTimeout(resolve, duration + 100));
+      setToneTransmitting(false);
+      return;
     }
+    
+    mutedChannelsRef.current = [...selectedChannelNames];
+    livekitManager.muteChannels(mutedChannelsRef.current);
     
     if (onToneTransmit) {
       onToneTransmit(selectedChannelNames, type, duration);
     }
     
-    toneEngine.playEmergencyTone(type, duration);
+    toneTransmitter.setRoom(room);
+    await toneTransmitter.transmitTone(type, duration);
     
-    await new Promise((resolve) => {
-      const checkInterval = setInterval(() => {
-        if (!toneEngine.isTonePlaying(type)) {
-          clearInterval(checkInterval);
-          resolve();
-        }
-      }, 50);
-      
-      setTimeout(() => {
-        clearInterval(checkInterval);
-        resolve();
-      }, duration + 500);
-    });
-    
-    if (!wasAlreadyTransmitting) {
-      gestureActiveRef.current = false;
-      await stopTransmission();
-    }
+    livekitManager.unmuteChannels(mutedChannelsRef.current);
+    mutedChannelsRef.current = [];
     
     setToneTransmitting(false);
   };

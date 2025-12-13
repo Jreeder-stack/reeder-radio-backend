@@ -880,6 +880,10 @@ export default function App({ user, onLogout }) {
     setIsEmergency(true);
     setEmergencyLockRemaining(10);
     
+    rxAudioElementsRef.current.forEach(el => {
+      el.muted = true;
+    });
+    
     broadcastEmergency(primaryRoomRef.current, transmitChannel, true);
     broadcastStatus(primaryRoomRef.current, "emergency", transmitChannel);
     updateUnitPresence(transmitChannel, identity, "emergency", Date.now());
@@ -897,6 +901,9 @@ export default function App({ user, onLogout }) {
         stopPTT();
         setIsEmergency(false);
         setEmergencyLockRemaining(0);
+        rxAudioElementsRef.current.forEach(el => {
+          el.muted = false;
+        });
       }
     }, 1000);
   };
@@ -912,6 +919,10 @@ export default function App({ user, onLogout }) {
     await stopPTT();
     setIsEmergency(false);
     setEmergencyLockRemaining(0);
+    
+    rxAudioElementsRef.current.forEach(el => {
+      el.muted = false;
+    });
     
     broadcastEmergency(primaryRoomRef.current, transmitChannel, false);
     broadcastStatus(primaryRoomRef.current, "idle", transmitChannel);
