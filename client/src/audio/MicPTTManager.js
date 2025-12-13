@@ -5,6 +5,8 @@ import { playPermitTone, startBonkLoop, stopBonkLoop } from './talkPermitTone.js
 const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || 
   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
+const PERMIT_TONE_DURATION = 150;
+
 class MicPTTManager {
   constructor() {
     this.state = PTT_STATES.IDLE;
@@ -17,6 +19,8 @@ class MicPTTManager {
     this.onError = null;
     this.pendingStop = false;
     this.transitionLock = false;
+    this.permitDeadlineTimer = null;
+    this.publishComplete = false;
   }
 
   getState() {
@@ -60,6 +64,13 @@ class MicPTTManager {
     this.room = room;
   }
 
+  _clearPermitDeadline() {
+    if (this.permitDeadlineTimer) {
+      clearTimeout(this.permitDeadlineTimer);
+      this.permitDeadlineTimer = null;
+    }
+  }
+
   async start() {
     if (!this.canStart()) {
       console.log(`[MicPTT] Cannot start - state: ${this.state}, lock: ${this.transitionLock}`);
@@ -98,7 +109,15 @@ class MicPTTManager {
       this.browserTrack = stream.getAudioTracks()[0];
 
       playPermitTone();
+      this.publishComplete = false;
       console.log('[MicPTT] Mic acquired, permit tone played, publishing track...');
+      
+      this.permitDeadlineTimer = setTimeout(() => {
+        if (!this.publishComplete && this.state === PTT_STATES.ARMING && !this.pendingStop) {
+          console.log('[MicPTT] Publish not complete after permit tone, starting bonk');
+          startBonkLoop();
+        }
+      }, PERMIT_TONE_DURATION);
       
       try {
         const publication = await this.room.localParticipant.publishTrack(
@@ -109,8 +128,12 @@ class MicPTTManager {
           }
         );
         this.localTrack = publication.track;
+        this.publishComplete = true;
+        this._clearPermitDeadline();
+        stopBonkLoop();
       } catch (publishErr) {
         console.error('[MicPTT] Publish failed:', publishErr);
+        this._clearPermitDeadline();
         startBonkLoop();
         await this._cleanup();
         this._setState(PTT_STATES.BUSY);
@@ -203,6 +226,10 @@ class MicPTTManager {
   }
 
   async _cleanup() {
+    this._clearPermitDeadline();
+    this.publishComplete = false;
+    stopBonkLoop();
+    
     if (this.browserTrack) {
       try {
         this.browserTrack.stop();
@@ -233,6 +260,9 @@ class MicPTTManager {
 
   forceRelease() {
     console.log('[MicPTT] Force release');
+    
+    this._clearPermitDeadline();
+    stopBonkLoop();
     
     if (this.localTrack) {
       try { this.localTrack.stop(); } catch (e) {}
