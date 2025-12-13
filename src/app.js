@@ -19,6 +19,9 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
+// Trust proxy for Render/production (needed for rate limiting and secure cookies)
+app.set('trust proxy', 1);
+
 app.use(cors({
   origin: true,
   credentials: true
@@ -38,6 +41,7 @@ app.use(session({
   cookie: {
     secure: config.nodeEnv === 'production',
     httpOnly: true,
+    sameSite: config.nodeEnv === 'production' ? 'none' : 'lax',
     maxAge: 24 * 60 * 60 * 1000
   }
 }));

@@ -78,7 +78,7 @@ app.use(
     cookie: {
       secure: isProduction,
       httpOnly: true,
-      sameSite: isProduction ? "strict" : "lax", // Strict in production for CSRF protection
+      sameSite: isProduction ? "none" : "lax", // None in production for cross-origin requests
       maxAge: 24 * 60 * 60 * 1000,
     },
   })
