@@ -163,23 +163,29 @@ class ToneEngine {
       
       oscillator.type = 'sine';
       oscillator.frequency.value = frequency;
-      gainNode.gain.value = 0.5;
       
       const startTime = ctx.currentTime + i * (beepDuration + gapDuration);
       const stopTime = startTime + beepDuration;
+      
+      // Abrupt gain: 0 until start, full volume, then 0 at stop
+      gainNode.gain.setValueAtTime(0, 0);
+      gainNode.gain.setValueAtTime(0.5, startTime);
+      gainNode.gain.setValueAtTime(0, stopTime);
       
       oscillator.connect(gainNode);
       gainNode.connect(this.getDestinationNode());
       
       if (this.customDestination) {
         const localGain = ctx.createGain();
-        localGain.gain.value = 0.5;
+        localGain.gain.setValueAtTime(0, 0);
+        localGain.gain.setValueAtTime(0.5, startTime);
+        localGain.gain.setValueAtTime(0, stopTime);
         oscillator.connect(localGain);
         localGain.connect(ctx.destination);
       }
       
       oscillator.start(startTime);
-      oscillator.stop(stopTime);
+      oscillator.stop(stopTime + 0.01);
       
       if (i === beepCount - 1) {
         oscillator.onended = () => {
