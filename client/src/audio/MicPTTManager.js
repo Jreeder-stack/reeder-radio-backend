@@ -97,15 +97,29 @@ class MicPTTManager {
       this.stream = stream;
       this.browserTrack = stream.getAudioTracks()[0];
 
-      console.log('[MicPTT] Publishing track to room...');
-      const publication = await this.room.localParticipant.publishTrack(
-        this.browserTrack,
-        {
-          name: 'microphone',
-          source: Track.Source.Microphone
+      playPermitTone();
+      console.log('[MicPTT] Mic acquired, permit tone played, publishing track...');
+      
+      try {
+        const publication = await this.room.localParticipant.publishTrack(
+          this.browserTrack,
+          {
+            name: 'microphone',
+            source: Track.Source.Microphone
+          }
+        );
+        this.localTrack = publication.track;
+      } catch (publishErr) {
+        console.error('[MicPTT] Publish failed:', publishErr);
+        startBonkLoop();
+        await this._cleanup();
+        this._setState(PTT_STATES.BUSY);
+        this.transitionLock = false;
+        if (this.onError) {
+          this.onError(publishErr);
         }
-      );
-      this.localTrack = publication.track;
+        return false;
+      }
 
       if (this.pendingStop) {
         console.log('[MicPTT] Stop requested during publish - cleaning up');
@@ -116,11 +130,10 @@ class MicPTTManager {
       this._setState(PTT_STATES.TRANSMITTING);
       this.transitionLock = false;
       console.log('[MicPTT] Transmission active');
-      playPermitTone();
       return true;
 
     } catch (err) {
-      console.error('[MicPTT] Start failed:', err);
+      console.error('[MicPTT] Start failed (mic access):', err);
       startBonkLoop();
       await this._cleanup();
       this._setState(PTT_STATES.BUSY);
