@@ -1403,19 +1403,26 @@ export default function App({ user, onLogout }) {
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
             onTouchCancel={handleTouchEnd}
-            disabled={isEmergency}
+            disabled={isEmergency || activeAudio}
             style={{
               padding: 30,
               width: "100%",
-              // pttPressed gives instant visual feedback, isTalking shows actual TX state
-              backgroundColor: (pttPressed || isTalking) ? "#dc2626" : "#b91c1c",
+              backgroundColor: (pttPressed || isTalking) 
+                ? "#f97316"
+                : activeAudio 
+                  ? "#dc2626"
+                  : "#22c55e",
               color: "white",
               fontSize: 22,
               fontWeight: "bold",
               border: "none",
               borderRadius: 12,
-              cursor: isEmergency ? "default" : "pointer",
-              boxShadow: (pttPressed || isTalking) ? "0 0 30px rgba(220, 38, 38, 0.6)" : "none",
+              cursor: (isEmergency || activeAudio) ? "default" : "pointer",
+              boxShadow: (pttPressed || isTalking) 
+                ? "0 0 30px rgba(249, 115, 22, 0.6)"
+                : activeAudio 
+                  ? "0 0 30px rgba(220, 38, 38, 0.6)" 
+                  : "0 0 20px rgba(34, 197, 94, 0.4)",
               transition: "background-color 0.05s, box-shadow 0.05s",
               opacity: isEmergency ? 0.5 : 1,
               touchAction: "manipulation",
@@ -1425,7 +1432,7 @@ export default function App({ user, onLogout }) {
               WebkitTapHighlightColor: "transparent",
             }}
           >
-            {isTalking ? "TRANSMITTING..." : "PUSH TO TALK"}
+            {isTalking ? "TRANSMITTING..." : activeAudio ? `RX: ${activeAudio.from}` : "PUSH TO TALK"}
           </button>
         </div>
       )}
