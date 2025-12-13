@@ -1106,20 +1106,6 @@ export default function App({ user, onLogout }) {
               >
                 👥 {totalUnits}
               </button>
-              <button
-                onClick={disconnect}
-                style={{
-                  padding: "6px 8px",
-                  backgroundColor: theme.textMuted,
-                  color: theme.text,
-                  border: "none",
-                  borderRadius: 4,
-                  cursor: "pointer",
-                  fontSize: 11,
-                }}
-              >
-                ✕
-              </button>
             </div>
           </div>
 
