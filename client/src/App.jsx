@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { Room, RoomEvent, Track, DataPacket_Kind } from "livekit-client";
 import { micPTTManager } from "./audio/MicPTTManager";
 import { PTT_STATES } from "./constants/pttStates";
+import { updateUnitStatus } from "./utils/api.js";
 
 const LIVEKIT_URL = import.meta.env.VITE_LIVEKIT_URL;
 const TOKEN_SERVER = "/getToken";
@@ -280,6 +281,9 @@ export default function App({ user, onLogout }) {
         });
         if (primaryRoomRef.current) {
           broadcastStatus(primaryRoomRef.current, "transmitting", transmitChannel);
+          updateUnitStatus(identity, transmitChannel, 'transmitting', userLocation, isEmergencyRef.current).catch(err => {
+            console.log('[Radio] Failed to update transmitting status:', err.message);
+          });
         }
       } else if (newState === PTT_STATES.IDLE) {
         setIsTalking(false);
@@ -288,6 +292,9 @@ export default function App({ user, onLogout }) {
         });
         if (primaryRoomRef.current) {
           broadcastStatus(primaryRoomRef.current, "idle", transmitChannel);
+          updateUnitStatus(identity, transmitChannel, 'idle', userLocation, isEmergencyRef.current).catch(err => {
+            console.log('[Radio] Failed to update idle status:', err.message);
+          });
         }
       }
     };
@@ -298,7 +305,7 @@ export default function App({ user, onLogout }) {
       if (audioContextRef.current) audioContextRef.current.close();
       micPTTManager.disconnect();
     };
-  }, [broadcastStatus, transmitChannel]);
+  }, [broadcastStatus, transmitChannel, identity, userLocation]);
 
   useEffect(() => {
     const handleGlobalRelease = (e) => {
@@ -654,6 +661,10 @@ export default function App({ user, onLogout }) {
 
       broadcastStatus(lkRoom, "idle", channel);
       startHeartbeat(lkRoom, channel);
+      
+      updateUnitStatus(identity, channel, 'idle', userLocation, false).catch(err => {
+        console.log('[Radio] Failed to register unit:', err.message);
+      });
 
     } catch (err) {
       console.error("Connection error:", err);

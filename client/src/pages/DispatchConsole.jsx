@@ -249,6 +249,14 @@ export default function DispatchConsole({ user, onLogout }) {
   }, [channels, isConnected, isConnecting, connectToChannels]);
 
   useEffect(() => {
+    const connectedRooms = livekitManager.getConnectedChannels();
+    if (isConnected && connectedRooms.length === 0 && channels.length > 0) {
+      console.log('[DispatchConsole] State shows connected but no rooms exist, resetting connection state...');
+      setConnected(false);
+    }
+  }, [isConnected, channels, setConnected]);
+
+  useEffect(() => {
     const interval = setInterval(() => {
       getUnits().then(data => {
         setUnits(data.units || []);
