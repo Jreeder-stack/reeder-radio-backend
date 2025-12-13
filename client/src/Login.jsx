@@ -181,7 +181,7 @@ export default function Login({ onLogin }) {
             fontSize: 12,
           }}
         >
-          Command Communications by Reeder - Systems
+          Access by approved personnel only
         </div>
       </div>
     </div>
