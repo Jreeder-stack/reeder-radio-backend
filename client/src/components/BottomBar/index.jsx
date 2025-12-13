@@ -81,7 +81,7 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit }) {
         return false;
       }
       
-      toneEngine.playAuthorizationTone();
+      // Note: MicPTTManager already plays permit tone - don't play duplicate
       console.log('[PTT] Transmission started successfully');
       
       return true;
