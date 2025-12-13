@@ -22,12 +22,6 @@ export function LiveKitConnectionProvider({ children, user }) {
     setConnected,
     setConnecting,
     setConnectionError,
-    setChannelLevel,
-    setActiveTransmission,
-    clearActiveTransmission,
-    addEvent,
-    addEmergency,
-    channels: storeChannels,
   } = useDispatchStore();
 
   const clearReconnectTimer = useCallback((channelName) => {
@@ -83,21 +77,23 @@ export function LiveKitConnectionProvider({ children, user }) {
 
   const setupEventHandlers = useCallback((identity) => {
     livekitManager.onLevelUpdate = (channelName, level) => {
-      const channel = storeChannels.find(c => c.name === channelName);
+      const channels = useDispatchStore.getState().channels;
+      const channel = channels.find(c => c.name === channelName);
       if (channel) {
-        setChannelLevel(channel.id, level);
+        useDispatchStore.getState().setChannelLevel(channel.id, level);
       }
     };
     
     livekitManager.onTrackSubscribed = (channelName, track, participant) => {
-      const channel = storeChannels.find(c => c.name === channelName);
+      const state = useDispatchStore.getState();
+      const channel = state.channels.find(c => c.name === channelName);
       if (channel) {
-        setActiveTransmission(channel.id, {
+        state.setActiveTransmission(channel.id, {
           from: participant.identity,
           timestamp: Date.now(),
         });
       }
-      addEvent({
+      state.addEvent({
         type: 'ptt_start',
         unit: participant.identity,
         channel: channelName,
@@ -105,11 +101,12 @@ export function LiveKitConnectionProvider({ children, user }) {
     };
     
     livekitManager.onTrackUnsubscribed = (channelName, track, participant) => {
-      const channel = storeChannels.find(c => c.name === channelName);
+      const state = useDispatchStore.getState();
+      const channel = state.channels.find(c => c.name === channelName);
       if (channel) {
-        clearActiveTransmission(channel.id);
+        state.clearActiveTransmission(channel.id);
       }
-      addEvent({
+      state.addEvent({
         type: 'ptt_end',
         unit: participant.identity,
         channel: channelName,
@@ -117,7 +114,7 @@ export function LiveKitConnectionProvider({ children, user }) {
     };
     
     livekitManager.onParticipantConnected = (channelName, participant) => {
-      addEvent({
+      useDispatchStore.getState().addEvent({
         type: 'unit_joined',
         unit: participant.identity,
         channel: channelName,
@@ -125,7 +122,7 @@ export function LiveKitConnectionProvider({ children, user }) {
     };
     
     livekitManager.onParticipantDisconnected = (channelName, participant) => {
-      addEvent({
+      useDispatchStore.getState().addEvent({
         type: 'unit_left',
         unit: participant.identity,
         channel: channelName,
@@ -135,7 +132,7 @@ export function LiveKitConnectionProvider({ children, user }) {
     livekitManager.onDataReceived = (channelName, message, participant) => {
       if (message.type === 'emergency') {
         if (message.active) {
-          addEmergency({
+          useDispatchStore.getState().addEmergency({
             id: `emergency-${participant?.identity || message.identity}-${Date.now()}`,
             unitIdentity: message.identity,
             channel: channelName,
@@ -152,7 +149,7 @@ export function LiveKitConnectionProvider({ children, user }) {
         scheduleReconnect(channelName, identity);
       }
     };
-  }, [storeChannels, setChannelLevel, setActiveTransmission, clearActiveTransmission, addEvent, addEmergency, scheduleReconnect]);
+  }, [scheduleReconnect]);
 
   const initializeConnections = useCallback(async (identity, channelsToConnect) => {
     if (initializingRef.current) {
@@ -168,7 +165,7 @@ export function LiveKitConnectionProvider({ children, user }) {
     try {
       setupEventHandlers(identity);
       
-      const enabledChannels = channelsToConnect.filter(ch => ch.is_active);
+      const enabledChannels = channelsToConnect.filter(ch => ch.enabled);
       console.log(`[LiveKitConnection] Connecting to ${enabledChannels.length} channels as ${identity}`);
       
       const results = await Promise.allSettled(
