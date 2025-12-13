@@ -7,6 +7,8 @@ const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) ||
 
 const PERMIT_TONE_DURATION = 150;
 
+const PTT_COOLDOWN_MS = 500;
+
 class MicPTTManager {
   constructor() {
     this.state = PTT_STATES.IDLE;
@@ -21,6 +23,7 @@ class MicPTTManager {
     this.transitionLock = false;
     this.permitDeadlineTimer = null;
     this.publishComplete = false;
+    this.lastPttEndTime = 0;
   }
 
   getState() {
@@ -32,7 +35,15 @@ class MicPTTManager {
   }
 
   canStart() {
-    return this.state === PTT_STATES.IDLE && !this.transitionLock;
+    if (this.state !== PTT_STATES.IDLE || this.transitionLock) {
+      return false;
+    }
+    const timeSinceLastEnd = Date.now() - this.lastPttEndTime;
+    if (timeSinceLastEnd < PTT_COOLDOWN_MS) {
+      console.log(`[MicPTT] Cooldown active - ${PTT_COOLDOWN_MS - timeSinceLastEnd}ms remaining`);
+      return false;
+    }
+    return true;
   }
 
   canStop() {
@@ -232,6 +243,7 @@ class MicPTTManager {
     } finally {
       this.pendingStop = false;
       this.transitionLock = false;
+      this.lastPttEndTime = Date.now();
       this._setState(PTT_STATES.IDLE);
       console.log('[MicPTT] Transmission ended, state reset to IDLE');
     }

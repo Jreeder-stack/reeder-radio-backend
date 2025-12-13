@@ -15,6 +15,8 @@ class LiveKitManager {
     this.mutedChannels = new Set();
     this.audioElements = new WeakMap();
     this.fallbackAudioElements = new Map();
+    this.disconnectPromise = null;
+    this.pendingConnections = new Map();
     
     this.onTrackSubscribed = null;
     this.onTrackUnsubscribed = null;
@@ -36,11 +38,33 @@ class LiveKitManager {
   }
 
   async connect(channelName, identity) {
+    if (this.disconnectPromise) {
+      console.log(`[LiveKit] Waiting for disconnect to complete before connecting to ${channelName}`);
+      await this.disconnectPromise;
+    }
+    
     if (this.rooms.has(channelName)) {
       console.log(`[LiveKit] Already connected to ${channelName}`);
       return this.rooms.get(channelName);
     }
-
+    
+    if (this.pendingConnections.has(channelName)) {
+      console.log(`[LiveKit] Awaiting existing connection for ${channelName}`);
+      return this.pendingConnections.get(channelName);
+    }
+    
+    const connectionPromise = this._doConnect(channelName, identity);
+    this.pendingConnections.set(channelName, connectionPromise);
+    
+    try {
+      const room = await connectionPromise;
+      return room;
+    } finally {
+      this.pendingConnections.delete(channelName);
+    }
+  }
+  
+  async _doConnect(channelName, identity) {
     console.log(`[LiveKit] Connecting to ${channelName} as ${identity}...`);
 
     const room = new Room({
@@ -334,6 +358,17 @@ class LiveKitManager {
   }
 
   async disconnectAll() {
+    if (this.disconnectPromise) {
+      console.log('[LiveKit] Disconnect already in progress, awaiting');
+      return this.disconnectPromise;
+    }
+    
+    this.disconnectPromise = this._doDisconnectAll();
+    await this.disconnectPromise;
+    this.disconnectPromise = null;
+  }
+  
+  async _doDisconnectAll() {
     console.log('[LiveKit] Disconnecting all rooms');
     
     for (const [channelName] of this.rooms) {
@@ -358,6 +393,7 @@ class LiveKitManager {
     this.mutedChannels.clear();
     this.levelAnimations.clear();
     this.fallbackAudioElements.clear();
+    this.pendingConnections.clear();
     
     if (this.audioContext && this.audioContext.state !== 'closed') {
       try {
