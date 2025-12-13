@@ -149,52 +149,44 @@ class ToneEngine {
     if (this.isTonePlaying('C')) return null;
     
     const ctx = this.getContext();
-    const beepDuration = 300;
-    const gapDuration = 200;
+    const beepDuration = 0.30;
+    const gapDuration = 0.20;
     const frequency = 1000;
     const beepCount = 4;
     
     this.playingTones.add('C');
     if (this.onToneStart) this.onToneStart('C');
     
-    let beepsCompleted = 0;
-    
     for (let i = 0; i < beepCount; i++) {
-      const delay = i * (beepDuration + gapDuration);
+      const oscillator = ctx.createOscillator();
+      const gainNode = ctx.createGain();
       
-      setTimeout(() => {
-        const oscillator = ctx.createOscillator();
-        const gainNode = ctx.createGain();
-        
-        oscillator.type = 'sine';
-        oscillator.frequency.value = frequency;
-        gainNode.gain.value = 0.5;
-        
-        oscillator.connect(gainNode);
-        gainNode.connect(this.getDestinationNode());
-        
-        let localGain = null;
-        if (this.customDestination) {
-          localGain = ctx.createGain();
-          localGain.gain.value = 0.5;
-          oscillator.connect(localGain);
-          localGain.connect(ctx.destination);
-        }
-        
-        oscillator.start();
-        
-        setTimeout(() => {
-          oscillator.stop();
-          gainNode.disconnect();
-          if (localGain) localGain.disconnect();
-          
-          beepsCompleted++;
-          if (beepsCompleted === beepCount) {
-            this.playingTones.delete('C');
-            if (this.onToneEnd) this.onToneEnd('C');
-          }
-        }, beepDuration);
-      }, delay);
+      oscillator.type = 'sine';
+      oscillator.frequency.value = frequency;
+      gainNode.gain.value = 0.5;
+      
+      const startTime = ctx.currentTime + i * (beepDuration + gapDuration);
+      const stopTime = startTime + beepDuration;
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(this.getDestinationNode());
+      
+      if (this.customDestination) {
+        const localGain = ctx.createGain();
+        localGain.gain.value = 0.5;
+        oscillator.connect(localGain);
+        localGain.connect(ctx.destination);
+      }
+      
+      oscillator.start(startTime);
+      oscillator.stop(stopTime);
+      
+      if (i === beepCount - 1) {
+        oscillator.onended = () => {
+          this.playingTones.delete('C');
+          if (this.onToneEnd) this.onToneEnd('C');
+        };
+      }
     }
     
     return true;
