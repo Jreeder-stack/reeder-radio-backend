@@ -14,6 +14,7 @@ class LiveKitManager {
     this.levelAnimations = new Map();
     this.mutedChannels = new Set();
     this.audioElements = new WeakMap();
+    this.fallbackAudioElements = new Map();
     
     this.onTrackSubscribed = null;
     this.onTrackUnsubscribed = null;
@@ -167,6 +168,11 @@ class LiveKitManager {
       console.warn('[LiveKit] Using direct audio playback for', channelName);
       audioElem.volume = this.mutedChannels.has(channelName) ? 0 : 1;
       audioElem.play().catch(e => console.warn('[LiveKit] Autoplay blocked:', e));
+      
+      if (!this.fallbackAudioElements.has(channelName)) {
+        this.fallbackAudioElements.set(channelName, new Set());
+      }
+      this.fallbackAudioElements.get(channelName).add(audioElem);
     }
   }
 
@@ -206,6 +212,13 @@ class LiveKitManager {
         if (cached) {
           this.audioElements.delete(el);
         }
+        const fallbackSet = this.fallbackAudioElements.get(channelName);
+        if (fallbackSet) {
+          fallbackSet.delete(el);
+          if (fallbackSet.size === 0) {
+            this.fallbackAudioElements.delete(channelName);
+          }
+        }
         el.remove();
       });
     } catch (e) {}
@@ -215,6 +228,7 @@ class LiveKitManager {
     this.rooms.delete(channelName);
     this.channelGainNodes.delete(channelName);
     this.mutedChannels.delete(channelName);
+    this.fallbackAudioElements.delete(channelName);
     
     const animationId = this.levelAnimations.get(channelName);
     if (animationId) {
@@ -259,6 +273,10 @@ class LiveKitManager {
     if (gainNode) {
       gainNode.gain.value = 0;
     }
+    const fallbackElements = this.fallbackAudioElements.get(channelName);
+    if (fallbackElements) {
+      fallbackElements.forEach(el => { el.volume = 0; });
+    }
   }
 
   unmuteChannel(channelName) {
@@ -266,6 +284,10 @@ class LiveKitManager {
     const gainNode = this.channelGainNodes.get(channelName);
     if (gainNode) {
       gainNode.gain.value = 1;
+    }
+    const fallbackElements = this.fallbackAudioElements.get(channelName);
+    if (fallbackElements) {
+      fallbackElements.forEach(el => { el.volume = 1; });
     }
   }
 
@@ -335,6 +357,7 @@ class LiveKitManager {
     this.channelGainNodes.clear();
     this.mutedChannels.clear();
     this.levelAnimations.clear();
+    this.fallbackAudioElements.clear();
     
     if (this.audioContext && this.audioContext.state !== 'closed') {
       try {

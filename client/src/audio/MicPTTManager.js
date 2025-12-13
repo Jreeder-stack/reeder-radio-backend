@@ -136,8 +136,14 @@ class MicPTTManager {
         this._clearPermitDeadline();
         startBonkLoop();
         await this._cleanup();
-        this._setState(PTT_STATES.BUSY);
         this.transitionLock = false;
+        if (this.pendingStop) {
+          stopBonkLoop();
+          this.pendingStop = false;
+          this._setState(PTT_STATES.IDLE);
+        } else {
+          this._setState(PTT_STATES.BUSY);
+        }
         if (this.onError) {
           this.onError(publishErr);
         }
@@ -159,8 +165,14 @@ class MicPTTManager {
       console.error('[MicPTT] Start failed (mic access):', err);
       startBonkLoop();
       await this._cleanup();
-      this._setState(PTT_STATES.BUSY);
       this.transitionLock = false;
+      if (this.pendingStop) {
+        stopBonkLoop();
+        this.pendingStop = false;
+        this._setState(PTT_STATES.IDLE);
+      } else {
+        this._setState(PTT_STATES.BUSY);
+      }
       if (this.onError) {
         this.onError(err);
       }

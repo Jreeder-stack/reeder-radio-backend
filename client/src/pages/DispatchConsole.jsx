@@ -156,6 +156,24 @@ export default function DispatchConsole({ user, onLogout }) {
         });
       };
       
+      livekitManager.onParticipantConnected = (channelName, participant) => {
+        addEvent({
+          type: 'unit_joined',
+          unit: participant.identity,
+          channel: channelName,
+        });
+        getUnits().then(data => setUnits(data.units || [])).catch(console.error);
+      };
+      
+      livekitManager.onParticipantDisconnected = (channelName, participant) => {
+        addEvent({
+          type: 'unit_left',
+          unit: participant.identity,
+          channel: channelName,
+        });
+        getUnits().then(data => setUnits(data.units || [])).catch(console.error);
+      };
+      
       livekitManager.onDataReceived = (channelName, message, participant) => {
         if (message.type === 'emergency') {
           if (message.active) {

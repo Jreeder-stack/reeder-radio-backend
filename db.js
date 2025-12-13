@@ -165,47 +165,6 @@ export async function initializeDatabase() {
       console.log(`Default admin account created: ${adminUsername}`);
     }
 
-    const defaultZones = [
-      "Zone 1 - Operations",
-      "Zone 2 - Fire",
-      "Zone 3 - Secure Command",
-    ];
-
-    for (const zoneName of defaultZones) {
-      await client.query(
-        `INSERT INTO zones (name) VALUES ($1) ON CONFLICT (name) DO NOTHING`,
-        [zoneName]
-      );
-    }
-
-    const defaultChannels = [
-      { name: "OPS1", zone: "Zone 1 - Operations" },
-      { name: "OPS2", zone: "Zone 1 - Operations" },
-      { name: "TAC1", zone: "Zone 1 - Operations" },
-      { name: "FIRE1", zone: "Zone 2 - Fire" },
-      { name: "FIRE2", zone: "Zone 2 - Fire" },
-      { name: "FIRE3", zone: "Zone 2 - Fire" },
-      { name: "FIRE4", zone: "Zone 2 - Fire" },
-      { name: "FIRE5", zone: "Zone 2 - Fire" },
-      { name: "FIRE6", zone: "Zone 2 - Fire" },
-      { name: "FIRE7", zone: "Zone 2 - Fire" },
-      { name: "FIRE8", zone: "Zone 2 - Fire" },
-      { name: "SECURE_CMD", zone: "Zone 3 - Secure Command" },
-    ];
-
-    for (const ch of defaultChannels) {
-      const zoneResult = await client.query(
-        `SELECT id FROM zones WHERE name = $1`,
-        [ch.zone]
-      );
-      const zoneId = zoneResult.rows[0]?.id;
-      await client.query(
-        `INSERT INTO channels (name, zone, zone_id) VALUES ($1, $2, $3) 
-         ON CONFLICT (name) DO UPDATE SET zone_id = EXCLUDED.zone_id`,
-        [ch.name, ch.zone, zoneId]
-      );
-    }
-
     console.log("Database initialized successfully");
   } finally {
     client.release();
