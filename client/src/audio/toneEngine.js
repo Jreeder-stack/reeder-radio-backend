@@ -263,6 +263,47 @@ class ToneEngine {
     }
   }
 
+  // Error tone - 3 descending beeps (800Hz, 600Hz, 400Hz) for connection issues
+  playErrorTone() {
+    if (this.isTonePlaying('ERROR')) return;
+    
+    const ctx = this.getContext();
+    const beepDuration = 0.1;
+    const gapDuration = 0.05;
+    const frequencies = [800, 600, 400];
+    
+    this.playingTones.add('ERROR');
+    
+    // Use single oscillator with frequency scheduling
+    const oscillator = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+    
+    oscillator.type = 'square';
+    gainNode.gain.value = 0;
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(ctx.destination);
+    
+    // Schedule all beeps with gain gating
+    for (let i = 0; i < frequencies.length; i++) {
+      const startTime = ctx.currentTime + i * (beepDuration + gapDuration);
+      const stopTime = startTime + beepDuration;
+      
+      oscillator.frequency.setValueAtTime(frequencies[i], startTime);
+      gainNode.gain.setValueAtTime(0.4, startTime);
+      gainNode.gain.setValueAtTime(0, stopTime);
+    }
+    
+    const totalDuration = frequencies.length * (beepDuration + gapDuration);
+    
+    oscillator.start();
+    oscillator.stop(ctx.currentTime + totalDuration);
+    
+    oscillator.onended = () => {
+      this.playingTones.delete('ERROR');
+    };
+  }
+
   // Continuous alarm - 5 second aggressive 800/850Hz + LFO, abrupt start/stop
   playContinuousTone(duration = 5000) {
     if (this.isTonePlaying('CONTINUOUS')) return null;

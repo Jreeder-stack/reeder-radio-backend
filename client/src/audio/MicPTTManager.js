@@ -1,4 +1,4 @@
-import { Track } from 'livekit-client';
+import { Track, RoomEvent } from 'livekit-client';
 import { PTT_STATES } from '../constants/pttStates.js';
 import { playPermitTone, startBonkLoop, stopBonkLoop } from './talkPermitTone.js';
 
@@ -19,12 +19,15 @@ class MicPTTManager {
     this.room = null;
     this.onStateChange = null;
     this.onError = null;
+    this.onDisconnectDuringTx = null; // Callback for disconnect during transmission
     this.pendingStop = false;
     this.transitionLock = false;
     this.permitDeadlineTimer = null;
     this.publishComplete = false;
     this.lastPttEndTime = 0;
     this.stateListeners = new Set();
+    this._roomDisconnectHandler = null;
+    this._roomReconnectingHandler = null;
   }
 
   addStateListener(callback) {
@@ -89,7 +92,53 @@ class MicPTTManager {
   }
 
   setRoom(room) {
+    // Remove listeners from old room if any
+    this._removeRoomListeners();
     this.room = room;
+  }
+
+  _setupRoomListeners() {
+    if (!this.room) return;
+    
+    this._roomDisconnectHandler = () => {
+      console.warn('[MicPTT] Room disconnected during transmission!');
+      this._handleDisconnectDuringTx();
+    };
+    
+    this._roomReconnectingHandler = () => {
+      console.warn('[MicPTT] Room reconnecting during transmission');
+    };
+    
+    this.room.on(RoomEvent.Disconnected, this._roomDisconnectHandler);
+    this.room.on(RoomEvent.Reconnecting, this._roomReconnectingHandler);
+  }
+
+  _removeRoomListeners() {
+    if (this.room) {
+      if (this._roomDisconnectHandler) {
+        this.room.off(RoomEvent.Disconnected, this._roomDisconnectHandler);
+      }
+      if (this._roomReconnectingHandler) {
+        this.room.off(RoomEvent.Reconnecting, this._roomReconnectingHandler);
+      }
+    }
+    this._roomDisconnectHandler = null;
+    this._roomReconnectingHandler = null;
+  }
+
+  _handleDisconnectDuringTx() {
+    // If we're transmitting, clean up immediately
+    if (this.state === PTT_STATES.TRANSMITTING || this.state === PTT_STATES.ARMING) {
+      console.error('[MicPTT] Disconnected during active transmission - forcing cleanup');
+      
+      // Play error tone to alert user
+      if (this.onDisconnectDuringTx) {
+        this.onDisconnectDuringTx();
+      }
+      
+      // Force cleanup
+      this.forceRelease();
+    }
   }
 
   _clearPermitDeadline() {
@@ -112,6 +161,9 @@ class MicPTTManager {
 
     this.transitionLock = true;
     this.pendingStop = false;
+
+    // Setup room disconnect detection
+    this._setupRoomListeners();
 
     try {
       this._setState(PTT_STATES.ARMING);
@@ -238,6 +290,9 @@ class MicPTTManager {
   async _doStop() {
     this._setState(PTT_STATES.COOLDOWN);
 
+    // Remove room listeners immediately to prevent duplicate cleanup
+    this._removeRoomListeners();
+
     try {
       if (this.localTrack && this.room) {
         console.log('[MicPTT] Unpublishing track...');
@@ -303,6 +358,7 @@ class MicPTTManager {
     console.log('[MicPTT] Force release');
     
     this._clearPermitDeadline();
+    this._removeRoomListeners();
     stopBonkLoop();
     
     if (this.localTrack) {

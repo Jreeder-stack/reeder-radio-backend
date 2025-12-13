@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useDispatchStore from '../../state/dispatchStore.js';
+import ConnectionIndicator from '../ConnectionIndicator.jsx';
 
 export default function TopBar({ user, onLogout, agencyName = "Reeder Radio", darkMode, onToggleTheme }) {
   const navigate = useNavigate();
   const [time, setTime] = useState(new Date());
-  const { dispatcherName, isTalking, isConnected } = useDispatchStore();
+  const { dispatcherName, isTalking } = useDispatchStore();
 
   useEffect(() => {
     const interval = setInterval(() => setTime(new Date()), 1000);
@@ -21,12 +22,7 @@ export default function TopBar({ user, onLogout, agencyName = "Reeder Radio", da
       </div>
 
       <div className="flex items-center gap-6">
-        <div className="flex items-center gap-2">
-          <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
-          <span className="text-sm text-dispatch-secondary">
-            {isConnected ? 'Connected' : 'Disconnected'}
-          </span>
-        </div>
+        <ConnectionIndicator />
 
         {isTalking && (
           <div className="flex items-center gap-2 px-3 py-1 bg-red-600 rounded animate-pulse">

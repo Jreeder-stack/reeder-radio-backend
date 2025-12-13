@@ -38,16 +38,40 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit }) {
       setPttState(newState);
     };
 
+    // Handle disconnect during transmission
+    micPTTManager.onDisconnectDuringTx = () => {
+      console.warn('[BottomBar] Disconnect during transmission detected');
+      toneEngine.playErrorTone();
+      // Reset gesture state since transmission was force-released
+      gestureActiveRef.current = false;
+      // Unmute channels
+      if (mutedChannelsRef.current.length > 0) {
+        livekitManager.unmuteChannels(mutedChannelsRef.current);
+        mutedChannelsRef.current = [];
+      }
+    };
+
     return () => {
       toneEngine.onToneStart = null;
       toneEngine.onToneEnd = null;
       micPTTManager.onStateChange = null;
+      micPTTManager.onDisconnectDuringTx = null;
     };
   }, [setPttState]);
 
   const startTransmission = useCallback(async () => {
     console.log('[PTT] startTransmission called, channels:', selectedChannelNames);
     if (selectedChannelNames.length === 0) return false;
+    
+    // Check connection health before starting transmission
+    if (!livekitManager.areChannelsHealthy(selectedChannelNames)) {
+      console.warn('[PTT] Connection not healthy, blocking transmission');
+      const status = livekitManager.getConnectionStatus();
+      console.log('[PTT] Connection status:', status);
+      // Play error tone to indicate connection issue
+      toneEngine.playErrorTone?.() || console.log('[PTT] No error tone available');
+      return false;
+    }
     
     const isBusy = livekitManager.areAnyChannelsBusy(selectedChannelNames);
     

@@ -22,6 +22,12 @@ class LiveKitManager {
     this.pttMuted = false;
     this.pttListenerRemover = null;
     
+    // Connection health tracking
+    this.connectionHealth = new Map(); // channelName -> { lastPing, connected, quality }
+    this.healthCheckInterval = null;
+    this.HEALTH_CHECK_INTERVAL = 5000; // Check every 5 seconds
+    this.CONNECTION_TIMEOUT = 15000; // Consider stale after 15 seconds
+    
     this.onTrackSubscribed = null;
     this.onTrackUnsubscribed = null;
     this.onParticipantConnected = null;
@@ -29,8 +35,135 @@ class LiveKitManager {
     this.onDataReceived = null;
     this.onLevelUpdate = null;
     this.onConnectionStateChange = null;
+    this.onHealthChange = null; // New: for UI to show connection quality
     
     this._initPTTListener();
+    this._startHealthCheck();
+  }
+
+  _startHealthCheck() {
+    if (this.healthCheckInterval) return;
+    
+    this.healthCheckInterval = setInterval(() => {
+      this._checkAllConnections();
+    }, this.HEALTH_CHECK_INTERVAL);
+  }
+
+  _checkAllConnections() {
+    const now = Date.now();
+    
+    // Prune stale health entries for rooms that no longer exist
+    for (const [channelName] of this.connectionHealth) {
+      if (!this.rooms.has(channelName)) {
+        this.connectionHealth.delete(channelName);
+      }
+    }
+    
+    // Stop health check if no rooms
+    if (this.rooms.size === 0) {
+      this._stopHealthCheck();
+      return;
+    }
+    
+    for (const [channelName, room] of this.rooms) {
+      const health = this.connectionHealth.get(channelName) || { 
+        lastPing: now, 
+        connected: true, 
+        quality: 'good' 
+      };
+      
+      // Check room state
+      const roomConnected = room.state === 'connected';
+      const wasConnected = health.connected;
+      const oldQuality = health.quality;
+      
+      // Update health status
+      health.connected = roomConnected;
+      health.lastCheck = now;
+      
+      if (roomConnected) {
+        health.lastPing = now;
+        health.quality = 'good';
+      } else {
+        // Calculate quality based on how long disconnected
+        const disconnectedTime = now - health.lastPing;
+        if (disconnectedTime > this.CONNECTION_TIMEOUT) {
+          health.quality = 'poor';
+        } else if (disconnectedTime > this.HEALTH_CHECK_INTERVAL * 2) {
+          health.quality = 'degraded';
+        }
+      }
+      
+      this.connectionHealth.set(channelName, health);
+      
+      // Notify if state OR quality changed
+      const stateChanged = wasConnected !== roomConnected;
+      const qualityChanged = oldQuality !== health.quality;
+      
+      if (stateChanged || qualityChanged) {
+        console.log(`[LiveKit] Connection health changed for ${channelName}: connected=${roomConnected}, quality=${health.quality}`);
+        if (this.onHealthChange) {
+          this.onHealthChange(channelName, health);
+        }
+        if (!roomConnected && stateChanged && this.onConnectionStateChange) {
+          this.onConnectionStateChange(channelName, 'disconnected');
+        }
+      }
+    }
+  }
+
+  _stopHealthCheck() {
+    if (this.healthCheckInterval) {
+      clearInterval(this.healthCheckInterval);
+      this.healthCheckInterval = null;
+    }
+  }
+
+  // Check if a channel is healthy enough for transmission
+  isChannelHealthy(channelName) {
+    const room = this.rooms.get(channelName);
+    if (!room) return false;
+    
+    if (room.state !== 'connected') {
+      console.log(`[LiveKit] Channel ${channelName} not healthy: room state is ${room.state}`);
+      return false;
+    }
+    
+    const health = this.connectionHealth.get(channelName);
+    if (health && health.quality === 'poor') {
+      console.log(`[LiveKit] Channel ${channelName} not healthy: quality is poor`);
+      return false;
+    }
+    
+    return true;
+  }
+
+  // Check if any of the given channels are healthy for transmission
+  areChannelsHealthy(channelNames) {
+    return channelNames.every(name => this.isChannelHealthy(name));
+  }
+
+  // Get overall connection status for UI
+  getConnectionStatus() {
+    const channels = Array.from(this.rooms.keys());
+    if (channels.length === 0) return { status: 'disconnected', healthy: 0, total: 0 };
+    
+    let healthy = 0;
+    for (const channelName of channels) {
+      if (this.isChannelHealthy(channelName)) healthy++;
+    }
+    
+    return {
+      status: healthy === channels.length ? 'connected' : 
+              healthy > 0 ? 'partial' : 'disconnected',
+      healthy,
+      total: channels.length,
+      channels: channels.map(name => ({
+        name,
+        healthy: this.isChannelHealthy(name),
+        state: this.rooms.get(name)?.state || 'unknown'
+      }))
+    };
   }
 
   _initPTTListener() {
@@ -335,11 +468,17 @@ class LiveKitManager {
     this.channelGainNodes.delete(channelName);
     this.mutedChannels.delete(channelName);
     this.fallbackAudioElements.delete(channelName);
+    this.connectionHealth.delete(channelName);
     
     const animationId = this.levelAnimations.get(channelName);
     if (animationId) {
       cancelAnimationFrame(animationId);
       this.levelAnimations.delete(channelName);
+    }
+    
+    // Stop health check if no more rooms
+    if (this.rooms.size === 0) {
+      this._stopHealthCheck();
     }
   }
 

@@ -5,12 +5,14 @@ import useDispatchStore from '../state/dispatchStore.js';
 
 const LiveKitConnectionContext = createContext(null);
 
-const RECONNECT_BASE_DELAY = 1000;
-const RECONNECT_MAX_DELAY = 30000;
-const RECONNECT_MAX_ATTEMPTS = 10;
+// Faster reconnection for critical radio operations
+const RECONNECT_BASE_DELAY = 500; // Start at 500ms instead of 1000ms
+const RECONNECT_MAX_DELAY = 15000; // Cap at 15s instead of 30s
+const RECONNECT_MAX_ATTEMPTS = 15; // More attempts with faster backoff
 
 export function LiveKitConnectionProvider({ children, user }) {
   const [connectionStatus, setConnectionStatus] = useState('idle');
+  const [connectionHealth, setConnectionHealth] = useState({ status: 'disconnected', healthy: 0, total: 0 });
   const reconnectAttempts = useRef(new Map());
   const reconnectTimers = useRef(new Map());
   const mountedRef = useRef(true);
@@ -146,8 +148,21 @@ export function LiveKitConnectionProvider({ children, user }) {
     livekitManager.onConnectionStateChange = (channelName, state, error) => {
       console.log(`[LiveKitConnection] ${channelName} state: ${state}`);
       
+      // Update connection health state for UI
+      if (mountedRef.current) {
+        setConnectionHealth(livekitManager.getConnectionStatus());
+      }
+      
       if (state === 'disconnected' && mountedRef.current) {
         scheduleReconnect(channelName, identity);
+      }
+    };
+    
+    // Health change handler for more granular updates
+    livekitManager.onHealthChange = (channelName, health) => {
+      console.log(`[LiveKitConnection] Health change for ${channelName}:`, health);
+      if (mountedRef.current) {
+        setConnectionHealth(livekitManager.getConnectionStatus());
       }
     };
   }, [scheduleReconnect]);
@@ -296,6 +311,7 @@ export function LiveKitConnectionProvider({ children, user }) {
 
   const value = {
     connectionStatus,
+    connectionHealth,
     disconnectAll,
     retryConnection,
     livekitManager,
