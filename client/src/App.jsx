@@ -1315,13 +1315,17 @@ export default function App({ user, onLogout }) {
               style={{
                 padding: 24,
                 width: "100%",
+                minHeight: "45vh",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
                 backgroundColor: (pttPressed || isTalking) 
                   ? "#f97316"
                   : activeAudio 
                     ? "#dc2626"
                     : "#22c55e",
                 color: "white",
-                fontSize: 20,
+                fontSize: 24,
                 fontWeight: "bold",
                 border: "none",
                 borderRadius: 12,
