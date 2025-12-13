@@ -55,65 +55,6 @@ export default function Login({ onLogin }) {
         }}
       >
         <div style={{ textAlign: "center", marginBottom: 30 }}>
-          <div style={{ marginBottom: 10, display: "flex", justifyContent: "center" }}>
-            <svg
-              width="64"
-              height="64"
-              viewBox="0 0 100 100"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              {/* Signal waves */}
-              <path
-                d="M30 25 C30 25, 35 15, 50 15 C65 15, 70 25, 70 25"
-                stroke="#3b82f6"
-                strokeWidth="4"
-                strokeLinecap="round"
-                fill="none"
-              />
-              <path
-                d="M22 32 C22 32, 30 18, 50 18 C70 18, 78 32, 78 32"
-                stroke="#3b82f6"
-                strokeWidth="4"
-                strokeLinecap="round"
-                fill="none"
-              />
-              <path
-                d="M14 40 C14 40, 25 22, 50 22 C75 22, 86 40, 86 40"
-                stroke="#3b82f6"
-                strokeWidth="4"
-                strokeLinecap="round"
-                fill="none"
-              />
-              {/* Tower head */}
-              <circle cx="50" cy="30" r="5" fill="#3b82f6" />
-              {/* Tower body */}
-              <path
-                d="M50 35 L50 45 M42 95 L50 45 L58 95"
-                stroke="#3b82f6"
-                strokeWidth="4"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                fill="none"
-              />
-              {/* Tower cross beams */}
-              <path
-                d="M44 55 L56 55 M45 65 L55 65 M46 75 L54 75 M47 85 L53 85"
-                stroke="#3b82f6"
-                strokeWidth="3"
-                strokeLinecap="round"
-                fill="none"
-              />
-              {/* Tower diagonal beams */}
-              <path
-                d="M44 55 L55 65 M56 55 L45 65 M45 65 L54 75 M55 65 L46 75 M46 75 L53 85 M54 75 L47 85"
-                stroke="#3b82f6"
-                strokeWidth="2"
-                strokeLinecap="round"
-                fill="none"
-              />
-            </svg>
-          </div>
           <h1
             style={{
               color: "#fff",
