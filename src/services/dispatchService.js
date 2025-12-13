@@ -36,7 +36,7 @@ export async function setMonitorSet(dispatcherId, primary, monitored, primaryTxC
 }
 
 export async function getRadioChannels() {
-  return db.getAllRadioChannels();
+  return db.getAllChannels();
 }
 
 export async function createRadioChannel(name, livekitRoomName, isEmergencyOnly, isActive) {

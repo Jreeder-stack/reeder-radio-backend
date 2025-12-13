@@ -10,14 +10,15 @@ const RECONNECT_MAX_DELAY = 30000;
 const RECONNECT_MAX_ATTEMPTS = 10;
 
 export function LiveKitConnectionProvider({ children, user }) {
-  const [isInitialized, setIsInitialized] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState('idle');
   const reconnectAttempts = useRef(new Map());
   const reconnectTimers = useRef(new Map());
   const mountedRef = useRef(true);
   const initializingRef = useRef(false);
+  const lastUserRef = useRef(null);
   
   const {
+    channels: storeChannels,
     setChannels,
     setConnected,
     setConnecting,
@@ -193,11 +194,9 @@ export function LiveKitConnectionProvider({ children, user }) {
         setConnectionStatus('failed');
       }
       
-      setIsInitialized(true);
-      
     } catch (err) {
       console.error('[LiveKitConnection] Initialization failed:', err);
-      setConnectionError(err.message);
+      setConnectionError(err.message || 'Connection failed');
       setConnectionStatus('failed');
     } finally {
       initializingRef.current = false;
@@ -210,24 +209,30 @@ export function LiveKitConnectionProvider({ children, user }) {
     clearAllReconnectTimers();
     await livekitManager.disconnectAll();
     setConnected(false);
-    setIsInitialized(false);
     setConnectionStatus('idle');
+    initializingRef.current = false;
+    lastUserRef.current = null;
   }, [clearAllReconnectTimers, setConnected]);
 
   const retryConnection = useCallback(async () => {
     if (!user) return;
     
+    console.log('[LiveKitConnection] Retrying connection...');
     clearAllReconnectTimers();
+    initializingRef.current = false;
+    lastUserRef.current = null;
     await livekitManager.disconnectAll();
     
     try {
       const data = await getChannels();
       const fetchedChannels = data.channels || [];
       setChannels(fetchedChannels);
+      lastUserRef.current = user.username;
       await initializeConnections(user.username, fetchedChannels);
     } catch (err) {
       console.error('[LiveKitConnection] Retry failed:', err);
       setConnectionError(err.message);
+      lastUserRef.current = null;
     }
   }, [user, clearAllReconnectTimers, setChannels, initializeConnections, setConnectionError]);
 
@@ -235,19 +240,43 @@ export function LiveKitConnectionProvider({ children, user }) {
     mountedRef.current = true;
     
     const init = async () => {
-      if (!user || isInitialized || initializingRef.current) return;
+      console.log('[LiveKitConnection] Init check - user:', user?.username, 'lastUser:', lastUserRef.current, 'initializing:', initializingRef.current);
+      
+      if (!user) {
+        console.log('[LiveKitConnection] No user, skipping init');
+        return;
+      }
+      
+      if (initializingRef.current) {
+        console.log('[LiveKitConnection] Already initializing, skipping');
+        return;
+      }
+      
+      if (lastUserRef.current === user.username) {
+        console.log('[LiveKitConnection] Already initialized for this user, skipping');
+        return;
+      }
+      
+      lastUserRef.current = user.username;
       
       try {
+        console.log('[LiveKitConnection] Fetching channels...');
         const data = await getChannels();
         const fetchedChannels = data.channels || [];
+        console.log('[LiveKitConnection] Fetched', fetchedChannels.length, 'channels');
         setChannels(fetchedChannels);
         
         if (fetchedChannels.length > 0) {
           await initializeConnections(user.username, fetchedChannels);
+        } else {
+          console.log('[LiveKitConnection] No channels to connect to');
+          setConnected(false);
+          setConnectionStatus('idle');
         }
       } catch (err) {
         console.error('[LiveKitConnection] Failed to fetch channels:', err);
         setConnectionError(err.message);
+        lastUserRef.current = null;
       }
     };
     
@@ -256,7 +285,7 @@ export function LiveKitConnectionProvider({ children, user }) {
     return () => {
       mountedRef.current = false;
     };
-  }, [user, isInitialized, setChannels, initializeConnections, setConnectionError]);
+  }, [user, setChannels, initializeConnections, setConnectionError, setConnected]);
 
   useEffect(() => {
     return () => {
@@ -266,11 +295,11 @@ export function LiveKitConnectionProvider({ children, user }) {
   }, [clearAllReconnectTimers]);
 
   const value = {
-    isInitialized,
     connectionStatus,
     disconnectAll,
     retryConnection,
     livekitManager,
+    channels: storeChannels,
   };
 
   return (
