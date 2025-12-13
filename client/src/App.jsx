@@ -274,8 +274,16 @@ export default function App({ user, onLogout }) {
   useEffect(() => {
     micPTTManager.onStateChange = (newState) => {
       setPttState(newState);
-      if (newState === PTT_STATES.TRANSMITTING) {
+      
+      // Mute RX audio as soon as PTT is pressed (ARMING state)
+      if (newState === PTT_STATES.ARMING) {
+        console.log('[Radio PTT] ARMING - muting all RX audio');
+        rxAudioElementsRef.current.forEach(el => {
+          el.muted = true;
+        });
+      } else if (newState === PTT_STATES.TRANSMITTING) {
         setIsTalking(true);
+        // Ensure all RX audio stays muted during transmission
         rxAudioElementsRef.current.forEach(el => {
           el.muted = true;
         });
@@ -515,6 +523,12 @@ export default function App({ user, onLogout }) {
 
     lkRoom.on(RoomEvent.TrackSubscribed, (track, publication, participant) => {
       if (track.kind === "audio") {
+        // Skip audio from ourselves - we don't want to hear our own transmission
+        if (participant.identity === lkRoom.localParticipant?.identity) {
+          console.log('[Radio PTT] Skipping self-audio from', participant.identity);
+          return;
+        }
+        
         const audioElem = track.attach();
         audioElem.dataset.channel = channelName;
         audioElem.dataset.participant = participant.identity;
@@ -524,8 +538,11 @@ export default function App({ user, onLogout }) {
         
         rxAudioElementsRef.current.add(audioElem);
         
-        if (micPTTManager.isTransmitting()) {
+        // Mute if we're transmitting OR about to transmit (ARMING state)
+        const currentState = micPTTManager.getState();
+        if (currentState === PTT_STATES.TRANSMITTING || currentState === PTT_STATES.ARMING) {
           audioElem.muted = true;
+          console.log('[Radio PTT] Muting incoming audio - we are transmitting');
         }
         
         audioElem.play().catch(() => {
