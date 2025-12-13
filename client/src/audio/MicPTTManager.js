@@ -1,5 +1,6 @@
 import { Track } from 'livekit-client';
 import { PTT_STATES } from '../constants/pttStates.js';
+import { playPermitTone, startBonkLoop, stopBonkLoop } from './talkPermitTone.js';
 
 const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || 
   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -32,7 +33,8 @@ class MicPTTManager {
 
   canStop() {
     return this.state === PTT_STATES.TRANSMITTING || 
-           this.state === PTT_STATES.ARMING;
+           this.state === PTT_STATES.ARMING ||
+           this.state === PTT_STATES.BUSY;
   }
 
   _setState(newState) {
@@ -114,12 +116,14 @@ class MicPTTManager {
       this._setState(PTT_STATES.TRANSMITTING);
       this.transitionLock = false;
       console.log('[MicPTT] Transmission active');
+      playPermitTone();
       return true;
 
     } catch (err) {
       console.error('[MicPTT] Start failed:', err);
+      startBonkLoop();
       await this._cleanup();
-      this._setState(PTT_STATES.IDLE);
+      this._setState(PTT_STATES.BUSY);
       this.transitionLock = false;
       if (this.onError) {
         this.onError(err);
@@ -131,7 +135,14 @@ class MicPTTManager {
   async stop() {
     console.log(`[MicPTT] Stop requested - state: ${this.state}`);
 
+    stopBonkLoop();
+
     if (this.state === PTT_STATES.IDLE) {
+      return;
+    }
+
+    if (this.state === PTT_STATES.BUSY) {
+      this._setState(PTT_STATES.IDLE);
       return;
     }
 
