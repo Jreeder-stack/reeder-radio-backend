@@ -4,17 +4,13 @@ import { success, error } from '../utils/response.js';
 export async function getAccessibleChannels(req, res) {
   try {
     const userId = req.session.user.id;
-    const channels = await channelsService.getAccessibleChannels(userId);
+    const userRole = req.session.user.role;
+    const channels = await channelsService.getAccessibleChannels(userId, userRole);
     
-    const grouped = {};
-    for (const ch of channels) {
-      if (!grouped[ch.zone]) {
-        grouped[ch.zone] = [];
-      }
-      grouped[ch.zone].push(ch);
-    }
+    console.log('[API /channels] User:', req.session.user.username, 'Role:', userRole);
+    console.log('[API /channels] Returning', channels.length, 'channels');
     
-    success(res, { zones: grouped });
+    success(res, { channels });
   } catch (err) {
     console.error('Get channels error:', err);
     error(res, 'Failed to get channels', 500);
