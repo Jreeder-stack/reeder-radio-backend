@@ -1333,7 +1333,7 @@ export default function App({ user, onLogout }) {
                     : "0 0 20px rgba(34, 197, 94, 0.4)",
                 transition: "background-color 0.05s, box-shadow 0.05s",
                 opacity: isEmergency ? 0.5 : 1,
-                touchAction: "manipulation",
+                touchAction: "none",
                 userSelect: "none",
                 WebkitUserSelect: "none",
                 WebkitTouchCallout: "none",
