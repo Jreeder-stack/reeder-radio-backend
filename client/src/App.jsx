@@ -1110,12 +1110,6 @@ export default function App({ user, onLogout }) {
               marginBottom: 8,
               flexShrink: 0,
             }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                <span style={{ fontSize: 11 }}>TX</span>
-                <AudioLevelMeter level={txLevel} />
-                <span style={{ fontSize: 11, marginLeft: 8 }}>RX</span>
-                <AudioLevelMeter level={rxLevel} />
-              </div>
               <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
                 <button
                   onClick={() => setScanMode(!scanMode)}
