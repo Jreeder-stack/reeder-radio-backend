@@ -158,6 +158,14 @@ Set these environment variables in Render:
   - GET/POST /monitor/:dispatcherId - Dispatcher monitor config
 - LiveKit helper stubs in src/livekit/radioRooms.js
 
+### Phase 7.5 - Dark/Light Theme Toggle
+- Theme toggle button (sun/moon emoji) in radio screen header
+- Persistent theme preference via localStorage
+- THEMES object with dark and light color schemes
+- Applied to all UI elements: buttons, panels, text, backgrounds
+- Dark mode: dark grays (#111, #1a1a1a, #222) with white text
+- Light mode: light grays (#f5f5f5, #fff, #e5e5e5) with dark text
+
 ### Phase 8 - Authentication & Admin System
 - PostgreSQL database with users, channels, activity_logs tables
 - Username/password authentication with bcrypt hashing

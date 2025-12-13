@@ -121,8 +121,39 @@ function AudioLevelMeter({ level }) {
 
 import { useNavigate } from "react-router-dom";
 
+const THEMES = {
+  dark: {
+    bg: "#111",
+    bgSecondary: "#1a1a1a",
+    bgTertiary: "#222",
+    text: "#fff",
+    textSecondary: "#aaa",
+    textMuted: "#666",
+    border: "#333",
+    buttonBg: "#333",
+    buttonBgActive: "#3b82f6",
+  },
+  light: {
+    bg: "#f5f5f5",
+    bgSecondary: "#fff",
+    bgTertiary: "#e5e5e5",
+    text: "#111",
+    textSecondary: "#444",
+    textMuted: "#888",
+    border: "#ccc",
+    buttonBg: "#ddd",
+    buttonBgActive: "#3b82f6",
+  }
+};
+
 export default function App({ user, onLogout }) {
   const navigate = useNavigate();
+  const [darkMode, setDarkMode] = useState(() => {
+    const saved = localStorage.getItem('darkMode');
+    return saved !== null ? JSON.parse(saved) : true;
+  });
+  const theme = darkMode ? THEMES.dark : THEMES.light;
+  
   const [connected, setConnected] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [zonesData, setZonesData] = useState({});
@@ -151,6 +182,14 @@ export default function App({ user, onLogout }) {
   const [emergencyFlash, setEmergencyFlash] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showUnits, setShowUnits] = useState(false);
+
+  const toggleDarkMode = () => {
+    setDarkMode(prev => {
+      const next = !prev;
+      localStorage.setItem('darkMode', JSON.stringify(next));
+      return next;
+    });
+  };
 
   const scanRoomsRef = useRef({});
   const primaryRoomRef = useRef(null);
@@ -890,8 +929,8 @@ export default function App({ user, onLogout }) {
     <div style={{
       padding: "12px 12px 0 12px",
       fontFamily: "sans-serif",
-      color: "white",
-      background: "#0a0a0a",
+      color: theme.text,
+      background: theme.bg,
       height: "100dvh",
       maxHeight: "100dvh",
       overflow: "hidden",
@@ -900,8 +939,22 @@ export default function App({ user, onLogout }) {
       boxSizing: "border-box",
     }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, flexShrink: 0 }}>
-        <h1 style={{ fontSize: 18, margin: 0 }}>Reeder PTT</h1>
+        <h1 style={{ fontSize: 18, margin: 0, color: theme.text }}>Reeder PTT</h1>
         <div style={{ display: "flex", gap: 4 }}>
+          <button
+            onClick={toggleDarkMode}
+            style={{
+              padding: "6px 10px",
+              backgroundColor: theme.buttonBg,
+              color: theme.text,
+              border: `1px solid ${theme.border}`,
+              borderRadius: 4,
+              cursor: "pointer",
+              fontSize: 12,
+            }}
+          >
+            {darkMode ? "☀️" : "🌙"}
+          </button>
           {user?.role === "admin" && (
             <button
               onClick={() => navigate("/admin")}
@@ -954,17 +1007,17 @@ export default function App({ user, onLogout }) {
       {noChannelsAccess ? (
         <div style={{ textAlign: "center", padding: 40 }}>
           <div style={{ fontSize: 18, marginBottom: 16, color: "#dc2626" }}>No Channel Access</div>
-          <div style={{ fontSize: 14, color: "#888", marginBottom: 16 }}>
+          <div style={{ fontSize: 14, color: theme.textSecondary, marginBottom: 16 }}>
             You do not have access to any radio channels.
           </div>
-          <div style={{ fontSize: 14, color: "#888" }}>
+          <div style={{ fontSize: 14, color: theme.textSecondary }}>
             Please contact your administrator to request channel access.
           </div>
         </div>
       ) : connectionError ? (
         <div style={{ textAlign: "center", padding: 40 }}>
           <div style={{ fontSize: 18, marginBottom: 16, color: "#dc2626" }}>Connection Error</div>
-          <div style={{ fontSize: 14, color: "#888", marginBottom: 16 }}>{connectionError}</div>
+          <div style={{ fontSize: 14, color: theme.textSecondary, marginBottom: 16 }}>{connectionError}</div>
           <button
             onClick={() => {
               setConnectionError(null);
@@ -988,7 +1041,7 @@ export default function App({ user, onLogout }) {
       ) : !connected ? (
         <div style={{ textAlign: "center", padding: 40, flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" }}>
           <div style={{ fontSize: 18, marginBottom: 16 }}>Connecting to radio network...</div>
-          <div style={{ fontSize: 14, color: "#888" }}>Unit: {identity}</div>
+          <div style={{ fontSize: 14, color: theme.textSecondary }}>Unit: {identity}</div>
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" }}>
@@ -1014,8 +1067,8 @@ export default function App({ user, onLogout }) {
                 onClick={() => setShowSettings(!showSettings)}
                 style={{
                   padding: "6px 8px",
-                  backgroundColor: showSettings ? "#3b82f6" : "#333",
-                  color: "white",
+                  backgroundColor: showSettings ? "#3b82f6" : theme.buttonBg,
+                  color: theme.text,
                   border: "none",
                   borderRadius: 4,
                   cursor: "pointer",
@@ -1028,8 +1081,8 @@ export default function App({ user, onLogout }) {
                 onClick={() => setShowUnits(!showUnits)}
                 style={{
                   padding: "6px 8px",
-                  backgroundColor: showUnits ? "#3b82f6" : "#333",
-                  color: "white",
+                  backgroundColor: showUnits ? "#3b82f6" : theme.buttonBg,
+                  color: theme.text,
                   border: "none",
                   borderRadius: 4,
                   cursor: "pointer",
@@ -1042,8 +1095,8 @@ export default function App({ user, onLogout }) {
                 onClick={disconnect}
                 style={{
                   padding: "6px 8px",
-                  backgroundColor: "#666",
-                  color: "white",
+                  backgroundColor: theme.textMuted,
+                  color: theme.text,
                   border: "none",
                   borderRadius: 4,
                   cursor: "pointer",
@@ -1068,8 +1121,8 @@ export default function App({ user, onLogout }) {
                   }}
                   style={{
                     padding: "4px 8px",
-                    backgroundColor: zone === selectedZone ? "#6366f1" : "#222",
-                    color: "white",
+                    backgroundColor: zone === selectedZone ? "#6366f1" : theme.bgTertiary,
+                    color: theme.text,
                     border: "none",
                     borderRadius: 4,
                     cursor: "pointer",
@@ -1087,8 +1140,8 @@ export default function App({ user, onLogout }) {
                   onClick={() => switchChannel(ch)}
                   style={{
                     padding: "6px 10px",
-                    backgroundColor: ch === selectedChannel ? "#3b82f6" : "#333",
-                    color: "white",
+                    backgroundColor: ch === selectedChannel ? "#3b82f6" : theme.buttonBg,
+                    color: theme.text,
                     border: "none",
                     borderRadius: 4,
                     cursor: "pointer",
@@ -1104,7 +1157,7 @@ export default function App({ user, onLogout }) {
           {/* Collapsible Settings Panel */}
           {showSettings && (
             <div style={{ 
-              background: "#1a1a1a", 
+              background: theme.bgSecondary, 
               padding: 8, 
               borderRadius: 6,
               marginBottom: 8,
@@ -1115,8 +1168,8 @@ export default function App({ user, onLogout }) {
                   onClick={() => setScanMode(!scanMode)}
                   style={{
                     padding: "3px 8px",
-                    backgroundColor: scanMode ? "#f59e0b" : "#444",
-                    color: "white",
+                    backgroundColor: scanMode ? "#f59e0b" : theme.buttonBg,
+                    color: theme.text,
                     border: "none",
                     borderRadius: 3,
                     cursor: "pointer",
@@ -1131,8 +1184,8 @@ export default function App({ user, onLogout }) {
                     disabled={isPlayingRecording}
                     style={{
                       padding: "3px 8px",
-                      backgroundColor: isPlayingRecording ? "#666" : "#4b5563",
-                      color: "white",
+                      backgroundColor: isPlayingRecording ? theme.textMuted : theme.buttonBg,
+                      color: theme.text,
                       border: "none",
                       borderRadius: 3,
                       cursor: isPlayingRecording ? "default" : "pointer",
@@ -1152,8 +1205,8 @@ export default function App({ user, onLogout }) {
                         onClick={() => toggleScanChannel(ch)}
                         style={{
                           padding: "2px 6px",
-                          backgroundColor: scanChannels.includes(ch) ? "#22c55e" : "#333",
-                          color: "white",
+                          backgroundColor: scanChannels.includes(ch) ? "#22c55e" : theme.buttonBg,
+                          color: theme.text,
                           border: "none",
                           borderRadius: 3,
                           cursor: "pointer",
@@ -1172,7 +1225,7 @@ export default function App({ user, onLogout }) {
           {/* Collapsible Units Panel */}
           {showUnits && (
             <div style={{ 
-              background: "#1a1a1a", 
+              background: theme.bgSecondary, 
               padding: 8, 
               borderRadius: 6,
               marginBottom: 8,
@@ -1253,7 +1306,7 @@ export default function App({ user, onLogout }) {
               <div style={{ fontSize: 14, fontWeight: "bold" }}>EMERGENCY - {emergencyLockRemaining}s</div>
               <button
                 onClick={cancelEmergency}
-                style={{ marginTop: 6, padding: "4px 12px", backgroundColor: "#666", color: "white", border: "none", borderRadius: 4, fontSize: 11 }}
+                style={{ marginTop: 6, padding: "4px 12px", backgroundColor: theme.textMuted, color: theme.text, border: "none", borderRadius: 4, fontSize: 11 }}
               >
                 Cancel
               </button>
@@ -1265,7 +1318,7 @@ export default function App({ user, onLogout }) {
 
           {/* TX/RX indicator */}
           <div style={{ 
-            background: "#1a1a1a", 
+            background: theme.bgSecondary, 
             padding: 6, 
             borderRadius: 6,
             marginBottom: 8,
