@@ -24,6 +24,16 @@ class MicPTTManager {
     this.permitDeadlineTimer = null;
     this.publishComplete = false;
     this.lastPttEndTime = 0;
+    this.stateListeners = new Set();
+  }
+
+  addStateListener(callback) {
+    this.stateListeners.add(callback);
+    return () => this.stateListeners.delete(callback);
+  }
+
+  removeStateListener(callback) {
+    this.stateListeners.delete(callback);
   }
 
   getState() {
@@ -59,6 +69,13 @@ class MicPTTManager {
     if (this.onStateChange) {
       this.onStateChange(newState, oldState);
     }
+    this.stateListeners.forEach(listener => {
+      try {
+        listener(newState, oldState);
+      } catch (e) {
+        console.error('[MicPTT] State listener error:', e);
+      }
+    });
   }
 
   _ensureAudioContext() {

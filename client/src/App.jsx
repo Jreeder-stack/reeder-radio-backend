@@ -3,6 +3,7 @@ import { Room, RoomEvent, Track, DataPacket_Kind } from "livekit-client";
 import { micPTTManager } from "./audio/MicPTTManager";
 import { PTT_STATES } from "./constants/pttStates";
 import { updateUnitStatus } from "./utils/api.js";
+import { livekitManager } from "./audio/LiveKitManager.js";
 
 const LIVEKIT_URL = import.meta.env.VITE_LIVEKIT_URL;
 const TOKEN_SERVER = "/getToken";
@@ -207,6 +208,16 @@ export default function App({ user, onLogout }) {
   const rxAudioElementsRef = useRef(new Set());
   const [userLocation, setUserLocation] = useState(null);
   const [pttState, setPttState] = useState(PTT_STATES.IDLE);
+
+  useEffect(() => {
+    console.log('[Radio] Disabling LiveKitManager auto-playback - radio handles its own audio');
+    livekitManager.setAutoPlayback(false);
+    
+    return () => {
+      console.log('[Radio] Re-enabling LiveKitManager auto-playback');
+      livekitManager.setAutoPlayback(true);
+    };
+  }, []);
 
   const broadcastStatus = useCallback((room, status, channel) => {
     if (!room || !room.localParticipant) return;

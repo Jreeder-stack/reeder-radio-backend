@@ -18,6 +18,9 @@ class LiveKitManager {
     this.fallbackAudioElements = new Map();
     this.disconnectPromise = null;
     this.pendingConnections = new Map();
+    this.autoPlaybackEnabled = true;
+    this.pttMuted = false;
+    this.pttListenerRemover = null;
     
     this.onTrackSubscribed = null;
     this.onTrackUnsubscribed = null;
@@ -26,6 +29,67 @@ class LiveKitManager {
     this.onDataReceived = null;
     this.onLevelUpdate = null;
     this.onConnectionStateChange = null;
+    
+    this._initPTTListener();
+  }
+
+  _initPTTListener() {
+    this.pttListenerRemover = micPTTManager.addStateListener((newState, oldState) => {
+      const shouldMute = newState === PTT_STATES.ARMING || newState === PTT_STATES.TRANSMITTING;
+      
+      if (shouldMute && !this.pttMuted) {
+        console.log('[LiveKit] PTT active - muting all RX audio');
+        this.pttMuted = true;
+        this._muteAllForPTT();
+      } else if (!shouldMute && this.pttMuted) {
+        console.log('[LiveKit] PTT released - unmuting RX audio');
+        this.pttMuted = false;
+        this._unmuteAllAfterPTT();
+      }
+    });
+  }
+
+  _muteAllForPTT() {
+    for (const [channelName, gainNode] of this.channelGainNodes) {
+      gainNode.gain.value = 0;
+    }
+    for (const [channelName, elements] of this.fallbackAudioElements) {
+      elements.forEach(el => { el.volume = 0; });
+    }
+  }
+
+  _unmuteAllAfterPTT() {
+    for (const [channelName, gainNode] of this.channelGainNodes) {
+      if (!this.mutedChannels.has(channelName)) {
+        gainNode.gain.value = 1;
+      }
+    }
+    for (const [channelName, elements] of this.fallbackAudioElements) {
+      if (!this.mutedChannels.has(channelName)) {
+        elements.forEach(el => { el.volume = 1; });
+      }
+    }
+  }
+
+  setAutoPlayback(enabled) {
+    this.autoPlaybackEnabled = enabled;
+    console.log(`[LiveKit] Auto playback ${enabled ? 'enabled' : 'disabled'}`);
+    
+    if (!enabled) {
+      this._muteAllExistingAudio();
+    } else if (!this.pttMuted) {
+      this._unmuteAllAfterPTT();
+    }
+  }
+
+  _muteAllExistingAudio() {
+    console.log('[LiveKit] Muting all existing audio nodes for radio screen takeover');
+    for (const [channelName, gainNode] of this.channelGainNodes) {
+      gainNode.gain.value = 0;
+    }
+    for (const [channelName, elements] of this.fallbackAudioElements) {
+      elements.forEach(el => { el.volume = 0; el.muted = true; });
+    }
   }
 
   _getAudioContext() {
@@ -174,15 +238,18 @@ class LiveKitManager {
   }
 
   _handleAudioTrack(track, participant, channelName, room) {
+    if (!this.autoPlaybackEnabled) {
+      console.log(`[LiveKit] Auto playback disabled - skipping audio attachment for ${participant.identity} on ${channelName}`);
+      return;
+    }
+    
     const ctx = this._getAudioContext();
     const audioElem = track.attach();
     
-    // Check if we're currently transmitting - mute RX audio to prevent feedback
-    const pttState = micPTTManager.getState();
-    const isTransmitting = pttState === PTT_STATES.TRANSMITTING || pttState === PTT_STATES.ARMING;
+    const shouldMute = this.mutedChannels.has(channelName) || this.pttMuted;
     
-    if (isTransmitting) {
-      console.log(`[LiveKit] Muting incoming audio from ${participant.identity} - we are transmitting`);
+    if (this.pttMuted) {
+      console.log(`[LiveKit] Muting incoming audio from ${participant.identity} - PTT active`);
     }
     
     try {
@@ -192,8 +259,7 @@ class LiveKitManager {
       analyser.smoothingTimeConstant = 0.3;
       
       const gainNode = ctx.createGain();
-      // Mute if channel is muted OR if we're transmitting
-      gainNode.gain.value = (this.mutedChannels.has(channelName) || isTransmitting) ? 0 : 1;
+      gainNode.gain.value = shouldMute ? 0 : 1;
       
       source.connect(analyser);
       analyser.connect(gainNode);
@@ -206,8 +272,7 @@ class LiveKitManager {
       
     } catch (err) {
       console.warn('[LiveKit] Using direct audio playback for', channelName);
-      // Mute if channel is muted OR if we're transmitting
-      audioElem.volume = (this.mutedChannels.has(channelName) || isTransmitting) ? 0 : 1;
+      audioElem.volume = shouldMute ? 0 : 1;
       audioElem.play().catch(e => console.warn('[LiveKit] Autoplay blocked:', e));
       
       if (!this.fallbackAudioElements.has(channelName)) {
