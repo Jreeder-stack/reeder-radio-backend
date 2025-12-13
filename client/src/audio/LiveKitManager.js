@@ -1,5 +1,6 @@
 import { Room, RoomEvent, Track, DataPacket_Kind } from 'livekit-client';
 import { getToken } from '../utils/api.js';
+import { micPTTManager, PTT_STATES } from './MicPTTManager.js';
 
 const LIVEKIT_URL = import.meta.env.VITE_LIVEKIT_URL;
 
@@ -113,8 +114,14 @@ class LiveKitManager {
     room.on(RoomEvent.TrackSubscribed, (track, publication, participant) => {
       console.log(`[LiveKit] Track subscribed: ${track.kind} from ${participant.identity} on ${channelName}`);
       
+      // Skip audio from ourselves - we don't want to hear our own transmission
+      if (track.kind === Track.Kind.Audio && participant.identity === room.localParticipant?.identity) {
+        console.log(`[LiveKit] Skipping self-audio from ${participant.identity}`);
+        return;
+      }
+      
       if (track.kind === Track.Kind.Audio) {
-        this._handleAudioTrack(track, participant, channelName);
+        this._handleAudioTrack(track, participant, channelName, room);
       }
       
       if (this.onTrackSubscribed) {
@@ -166,9 +173,17 @@ class LiveKitManager {
     });
   }
 
-  _handleAudioTrack(track, participant, channelName) {
+  _handleAudioTrack(track, participant, channelName, room) {
     const ctx = this._getAudioContext();
     const audioElem = track.attach();
+    
+    // Check if we're currently transmitting - mute RX audio to prevent feedback
+    const pttState = micPTTManager.getState();
+    const isTransmitting = pttState === PTT_STATES.TRANSMITTING || pttState === PTT_STATES.ARMING;
+    
+    if (isTransmitting) {
+      console.log(`[LiveKit] Muting incoming audio from ${participant.identity} - we are transmitting`);
+    }
     
     try {
       const source = ctx.createMediaElementSource(audioElem);
@@ -177,7 +192,8 @@ class LiveKitManager {
       analyser.smoothingTimeConstant = 0.3;
       
       const gainNode = ctx.createGain();
-      gainNode.gain.value = this.mutedChannels.has(channelName) ? 0 : 1;
+      // Mute if channel is muted OR if we're transmitting
+      gainNode.gain.value = (this.mutedChannels.has(channelName) || isTransmitting) ? 0 : 1;
       
       source.connect(analyser);
       analyser.connect(gainNode);
@@ -190,7 +206,8 @@ class LiveKitManager {
       
     } catch (err) {
       console.warn('[LiveKit] Using direct audio playback for', channelName);
-      audioElem.volume = this.mutedChannels.has(channelName) ? 0 : 1;
+      // Mute if channel is muted OR if we're transmitting
+      audioElem.volume = (this.mutedChannels.has(channelName) || isTransmitting) ? 0 : 1;
       audioElem.play().catch(e => console.warn('[LiveKit] Autoplay blocked:', e));
       
       if (!this.fallbackAudioElements.has(channelName)) {
