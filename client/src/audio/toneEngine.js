@@ -63,7 +63,8 @@ class ToneEngine {
     return this.playingTones.size > 0;
   }
 
-  playToneA(duration = 1000) {
+  // Alert tone - 1.5 second 1000Hz sine, abrupt start/stop
+  playToneA(duration = 1500) {
     if (this.isTonePlaying('A')) return null;
     
     const ctx = this.getContext();
@@ -71,11 +72,8 @@ class ToneEngine {
     const gainNode = ctx.createGain();
     
     oscillator.type = 'sine';
-    oscillator.frequency.setValueAtTime(1000, ctx.currentTime);
-    
-    gainNode.gain.setValueAtTime(0.5, ctx.currentTime);
-    gainNode.gain.setValueAtTime(0.5, ctx.currentTime + duration / 1000 - 0.001);
-    gainNode.gain.setValueAtTime(0, ctx.currentTime + duration / 1000);
+    oscillator.frequency.value = 1000;
+    gainNode.gain.value = 0.5;
     
     oscillator.connect(gainNode);
     gainNode.connect(this.getDestinationNode());
@@ -101,6 +99,7 @@ class ToneEngine {
     return oscillator;
   }
 
+  // MDC tone - 2 second alternating 1200/800Hz square wave, abrupt start/stop
   playToneB(duration = 2000) {
     if (this.isTonePlaying('B')) return null;
     
@@ -109,7 +108,7 @@ class ToneEngine {
     const gainNode = ctx.createGain();
     
     oscillator.type = 'square';
-    gainNode.gain.setValueAtTime(0.4, ctx.currentTime);
+    gainNode.gain.value = 0.4;
     
     const endTime = ctx.currentTime + duration / 1000;
     let time = ctx.currentTime;
@@ -120,9 +119,6 @@ class ToneEngine {
       time += 0.25;
       high = !high;
     }
-    
-    gainNode.gain.setValueAtTime(0.4, endTime - 0.001);
-    gainNode.gain.setValueAtTime(0, endTime);
     
     oscillator.connect(gainNode);
     gainNode.connect(this.getDestinationNode());
@@ -148,6 +144,7 @@ class ToneEngine {
     return oscillator;
   }
 
+  // Pre-alert tone - 4 beeps at 1000Hz, abrupt start/stop each beep
   playToneC(duration = 3000) {
     if (this.isTonePlaying('C')) return null;
     
@@ -160,49 +157,42 @@ class ToneEngine {
     this.playingTones.add('C');
     if (this.onToneStart) this.onToneStart('C');
     
-    const oscillators = [];
-    
     for (let i = 0; i < beepCount; i++) {
       const oscillator = ctx.createOscillator();
       const gainNode = ctx.createGain();
       
       oscillator.type = 'sine';
-      oscillator.frequency.setValueAtTime(frequency, ctx.currentTime);
+      oscillator.frequency.value = frequency;
+      gainNode.gain.value = 0.5;
       
       const startTime = ctx.currentTime + i * (beepDuration + gapDuration);
       const stopTime = startTime + beepDuration;
-      
-      gainNode.gain.setValueAtTime(0, startTime - 0.001);
-      gainNode.gain.setValueAtTime(0.5, startTime);
-      gainNode.gain.setValueAtTime(0.5, stopTime - 0.001);
-      gainNode.gain.setValueAtTime(0, stopTime);
       
       oscillator.connect(gainNode);
       gainNode.connect(this.getDestinationNode());
       
       if (this.customDestination) {
         const localGain = ctx.createGain();
-        localGain.gain.setValueAtTime(0, startTime - 0.001);
-        localGain.gain.setValueAtTime(0.5, startTime);
-        localGain.gain.setValueAtTime(0.5, stopTime - 0.001);
-        localGain.gain.setValueAtTime(0, stopTime);
+        localGain.gain.value = 0.5;
         oscillator.connect(localGain);
         localGain.connect(ctx.destination);
       }
       
       oscillator.start(startTime);
       oscillator.stop(stopTime);
-      oscillators.push(oscillator);
+      
+      if (i === beepCount - 1) {
+        oscillator.onended = () => {
+          this.playingTones.delete('C');
+          if (this.onToneEnd) this.onToneEnd('C');
+        };
+      }
     }
-    
-    oscillators[beepCount - 1].onended = () => {
-      this.playingTones.delete('C');
-      if (this.onToneEnd) this.onToneEnd('C');
-    };
     
     return true;
   }
 
+  // Authorization tone - 2 quick beeps at 1200Hz, abrupt
   playAuthorizationTone() {
     const ctx = this.getContext();
     const beepDuration = 0.05;
@@ -214,25 +204,18 @@ class ToneEngine {
       const gainNode = ctx.createGain();
       
       oscillator.type = 'sine';
-      oscillator.frequency.setValueAtTime(frequency, ctx.currentTime);
+      oscillator.frequency.value = frequency;
+      gainNode.gain.value = 0.4;
       
       const startTime = ctx.currentTime + i * (beepDuration + gapDuration);
       const stopTime = startTime + beepDuration;
-      
-      gainNode.gain.setValueAtTime(0, startTime - 0.001);
-      gainNode.gain.setValueAtTime(0.4, startTime);
-      gainNode.gain.setValueAtTime(0.4, stopTime - 0.001);
-      gainNode.gain.setValueAtTime(0, stopTime);
       
       oscillator.connect(gainNode);
       gainNode.connect(this.getDestinationNode());
       
       if (this.customDestination) {
         const localGain = ctx.createGain();
-        localGain.gain.setValueAtTime(0, startTime - 0.001);
-        localGain.gain.setValueAtTime(0.4, startTime);
-        localGain.gain.setValueAtTime(0.4, stopTime - 0.001);
-        localGain.gain.setValueAtTime(0, stopTime);
+        localGain.gain.value = 0.4;
         oscillator.connect(localGain);
         localGain.connect(ctx.destination);
       }
@@ -250,9 +233,8 @@ class ToneEngine {
     this.busyToneGain = ctx.createGain();
     
     this.busyToneOscillator.type = 'sine';
-    this.busyToneOscillator.frequency.setValueAtTime(480, ctx.currentTime);
-    
-    this.busyToneGain.gain.setValueAtTime(0.4, ctx.currentTime);
+    this.busyToneOscillator.frequency.value = 480;
+    this.busyToneGain.gain.value = 0.4;
     
     this.busyToneOscillator.connect(this.busyToneGain);
     this.busyToneGain.connect(ctx.destination);
@@ -270,6 +252,7 @@ class ToneEngine {
     }
   }
 
+  // Continuous alarm - 5 second aggressive 800/850Hz + LFO, abrupt start/stop
   playContinuousTone(duration = 5000) {
     if (this.isTonePlaying('CONTINUOUS')) return null;
     
@@ -279,26 +262,23 @@ class ToneEngine {
     const gainNode = ctx.createGain();
     
     oscillator1.type = 'sawtooth';
-    oscillator1.frequency.setValueAtTime(800, ctx.currentTime);
+    oscillator1.frequency.value = 800;
     
     oscillator2.type = 'square';
-    oscillator2.frequency.setValueAtTime(850, ctx.currentTime);
+    oscillator2.frequency.value = 850;
     
     const lfo = ctx.createOscillator();
     const lfoGain = ctx.createGain();
     lfo.type = 'square';
-    lfo.frequency.setValueAtTime(8, ctx.currentTime);
-    lfoGain.gain.setValueAtTime(0.3, ctx.currentTime);
+    lfo.frequency.value = 8;
+    lfoGain.gain.value = 0.3;
     
     lfo.connect(lfoGain);
     lfoGain.connect(gainNode.gain);
     
-    gainNode.gain.setValueAtTime(0.6, ctx.currentTime);
+    gainNode.gain.value = 0.6;
     
     const endTime = ctx.currentTime + duration / 1000;
-    
-    gainNode.gain.setValueAtTime(0.6, endTime - 0.001);
-    gainNode.gain.setValueAtTime(0, endTime);
     
     oscillator1.connect(gainNode);
     oscillator2.connect(gainNode);
@@ -345,17 +325,15 @@ class ToneEngine {
     }
   }
 
+  // Clear air beep - 100ms 600Hz, abrupt
   playClearAirBeep() {
     const ctx = this.getContext();
     const oscillator = ctx.createOscillator();
     const gainNode = ctx.createGain();
     
     oscillator.type = 'sine';
-    oscillator.frequency.setValueAtTime(600, ctx.currentTime);
-    
-    gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
-    gainNode.gain.setValueAtTime(0.3, ctx.currentTime + 0.099);
-    gainNode.gain.setValueAtTime(0, ctx.currentTime + 0.1);
+    oscillator.frequency.value = 600;
+    gainNode.gain.value = 0.3;
     
     oscillator.connect(gainNode);
     gainNode.connect(this.getDestinationNode());
