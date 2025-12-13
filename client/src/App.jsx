@@ -119,45 +119,6 @@ function AudioLevelMeter({ level }) {
   );
 }
 
-function createRxDspChain(audioContext, radioEffectEnabled) {
-  const inputGain = audioContext.createGain();
-  inputGain.gain.value = 1.0;
-
-  const analyser = audioContext.createAnalyser();
-  analyser.fftSize = 256;
-  analyser.smoothingTimeConstant = 0.3;
-
-  let highpass = null;
-  let lowpass = null;
-
-  if (radioEffectEnabled) {
-    highpass = audioContext.createBiquadFilter();
-    highpass.type = "highpass";
-    highpass.frequency.value = 300;
-    highpass.Q.value = 0.5;
-
-    lowpass = audioContext.createBiquadFilter();
-    lowpass.type = "lowpass";
-    lowpass.frequency.value = 3400;
-    lowpass.Q.value = 0.5;
-  }
-
-  const outputGain = audioContext.createGain();
-  outputGain.gain.value = 1.0;
-
-  if (radioEffectEnabled && highpass && lowpass) {
-    inputGain.connect(highpass);
-    highpass.connect(lowpass);
-    lowpass.connect(analyser);
-    analyser.connect(outputGain);
-  } else {
-    inputGain.connect(analyser);
-    analyser.connect(outputGain);
-  }
-
-  return { inputGain, analyser, outputGain };
-}
-
 import { useNavigate } from "react-router-dom";
 
 export default function App({ user, onLogout }) {
@@ -180,7 +141,6 @@ export default function App({ user, onLogout }) {
   const [scanMode, setScanMode] = useState(false);
   const [scanChannels, setScanChannels] = useState([]);
   const [activeAudio, setActiveAudio] = useState(null);
-  const [radioEffect, setRadioEffect] = useState(false);
   const [txLevel, setTxLevel] = useState(0);
   const [rxLevel, setRxLevel] = useState(0);
   const [lastRxBlob, setLastRxBlob] = useState(null);
@@ -592,7 +552,7 @@ export default function App({ user, onLogout }) {
     });
 
     return lkRoom;
-  }, [updateUnitPresence, getAudioContext, radioEffect, startRxLevelMonitor, stopRxLevelMonitor, identity]);
+  }, [updateUnitPresence, getAudioContext, startRxLevelMonitor, stopRxLevelMonitor, identity]);
 
   const initializePresence = useCallback((room, channelName) => {
     const existingParticipants = Array.from(room.remoteParticipants.values());
@@ -1150,27 +1110,11 @@ export default function App({ user, onLogout }) {
               marginBottom: 8,
               flexShrink: 0,
             }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ fontSize: 11 }}>TX</span>
-                  <AudioLevelMeter level={txLevel} />
-                  <span style={{ fontSize: 11, marginLeft: 8 }}>RX</span>
-                  <AudioLevelMeter level={rxLevel} />
-                </div>
-                <button
-                  onClick={() => setRadioEffect(!radioEffect)}
-                  style={{
-                    padding: "3px 8px",
-                    backgroundColor: radioEffect ? "#3b82f6" : "#444",
-                    color: "white",
-                    border: "none",
-                    borderRadius: 3,
-                    cursor: "pointer",
-                    fontSize: 10,
-                  }}
-                >
-                  Radio FX {radioEffect ? "ON" : "OFF"}
-                </button>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                <span style={{ fontSize: 11 }}>TX</span>
+                <AudioLevelMeter level={txLevel} />
+                <span style={{ fontSize: 11, marginLeft: 8 }}>RX</span>
+                <AudioLevelMeter level={rxLevel} />
               </div>
               <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
                 <button
