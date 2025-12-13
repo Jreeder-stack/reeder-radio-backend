@@ -1,4 +1,4 @@
-# Reeder Radio PTT
+# Command Communications by Reeder - Systems
 
 ## Overview
 A Push-to-Talk (PTT) radio communication app using LiveKit for real-time audio streaming. Fullstack application with React frontend and Express backend.
