@@ -293,7 +293,7 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit }) {
 
       <div className="flex items-center gap-2">
         <button
-          onClick={() => playToneWithTransmit('A', 4000)}
+          onClick={() => playToneWithTransmit('A', 2500)}
           disabled={disabledTones['A'] || !hasTxChannels || toneTransmitting}
           className={`px-3 py-1.5 text-sm rounded transition-colors ${
             disabledTones['A'] || !hasTxChannels || toneTransmitting
