@@ -63,8 +63,8 @@ class ToneEngine {
     return this.playingTones.size > 0;
   }
 
-  // Alert tone - 2.5 second 1000Hz sine, abrupt start/stop
-  playToneA(duration = 2500) {
+  // Alert tone - 4 second 1000Hz sine, abrupt start/stop
+  playToneA(duration = 4000) {
     if (this.isTonePlaying('A')) return null;
     
     const ctx = this.getContext();
