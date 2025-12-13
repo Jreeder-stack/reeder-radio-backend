@@ -56,22 +56,15 @@ export default function Login({ onLogin }) {
       >
         <div style={{ textAlign: "center", marginBottom: 30 }}>
           <div style={{ marginBottom: 10 }}>
-            <svg
-              width="64"
-              height="64"
-              viewBox="0 0 64 64"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M32 8V56M32 8L20 20M32 8L44 20M24 16L32 8L40 16M16 24C16 24 24 16 32 16C40 16 48 24 48 24M12 32C12 32 20 20 32 20C44 20 52 32 52 32M8 40C8 40 16 24 32 24C48 24 56 40 56 40"
-                stroke="#3b82f6"
-                strokeWidth="3"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <circle cx="32" cy="56" r="4" fill="#3b82f6" />
-            </svg>
+            <img 
+              src="/antenna-icon.png" 
+              alt="Radio Tower" 
+              style={{ 
+                width: 64, 
+                height: 64, 
+                filter: "invert(1) sepia(1) saturate(5) hue-rotate(200deg)",
+              }} 
+            />
           </div>
           <h1
             style={{
