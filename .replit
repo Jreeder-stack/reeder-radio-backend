@@ -67,6 +67,9 @@ externalPort = 5173
 [userenv.development]
 VITE_LIVEKIT_URL = "wss://reeder-ptt-rcm02mdx.livekit.cloud"
 
+[userenv.shared]
+AZURE_SPEECH_REGION = "eastus"
+
 [deployment]
 deploymentTarget = "autoscale"
 run = ["node", "server.js"]
