@@ -246,22 +246,22 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit }) {
     <div className="flex items-center justify-between px-4 py-3 bg-dispatch-panel border-t border-dispatch-border">
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-400">TX Channels:</span>
+          <span className="text-sm text-dispatch-secondary">TX Channels:</span>
           {txChannelIds.length > 0 ? (
             <div className="flex flex-wrap gap-1 max-w-xs">
               {selectedChannelNames.slice(0, 4).map(name => (
-                <span key={name} className="px-2 py-0.5 bg-blue-900 rounded text-blue-200 text-xs font-medium">
+                <span key={name} className="px-2 py-0.5 bg-blue-600 rounded text-white text-xs font-medium">
                   {name}
                 </span>
               ))}
               {selectedChannelNames.length > 4 && (
-                <span className="px-2 py-0.5 bg-gray-700 rounded text-gray-300 text-xs">
+                <span className="px-2 py-0.5 bg-dispatch-border rounded text-dispatch-secondary text-xs">
                   +{selectedChannelNames.length - 4} more
                 </span>
               )}
             </div>
           ) : (
-            <span className="text-xs text-gray-500">None selected</span>
+            <span className="text-xs text-dispatch-secondary">None selected</span>
           )}
         </div>
       </div>
@@ -280,7 +280,7 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit }) {
               ? 'bg-red-600 text-white ring-4 ring-red-400' 
               : hasTxChannels 
                 ? 'bg-green-600 hover:bg-green-700 text-white' 
-                : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                : 'bg-dispatch-border text-dispatch-secondary cursor-not-allowed'
           }`}
         >
           {isTransmitting ? 'TRANSMITTING' : 'PTT (SPACE)'}
@@ -293,7 +293,7 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit }) {
           disabled={disabledTones['A'] || !hasTxChannels || toneTransmitting}
           className={`px-3 py-1.5 text-sm rounded transition-colors ${
             disabledTones['A'] || !hasTxChannels || toneTransmitting
-              ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+              ? 'bg-dispatch-border text-dispatch-secondary cursor-not-allowed'
               : 'bg-yellow-600 hover:bg-yellow-700 text-white'
           }`}
         >
@@ -304,7 +304,7 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit }) {
           disabled={disabledTones['B'] || !hasTxChannels || toneTransmitting}
           className={`px-3 py-1.5 text-sm rounded transition-colors ${
             disabledTones['B'] || !hasTxChannels || toneTransmitting
-              ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+              ? 'bg-dispatch-border text-dispatch-secondary cursor-not-allowed'
               : 'bg-orange-600 hover:bg-orange-700 text-white'
           }`}
         >
@@ -315,7 +315,7 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit }) {
           disabled={disabledTones['C'] || !hasTxChannels || toneTransmitting}
           className={`px-3 py-1.5 text-sm rounded transition-colors ${
             disabledTones['C'] || !hasTxChannels || toneTransmitting
-              ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+              ? 'bg-dispatch-border text-dispatch-secondary cursor-not-allowed'
               : 'bg-amber-600 hover:bg-amber-700 text-white'
           }`}
         >
@@ -326,7 +326,7 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit }) {
           disabled={disabledTones['CONTINUOUS'] || !hasTxChannels || toneTransmitting}
           className={`px-3 py-1.5 text-sm rounded transition-colors ${
             disabledTones['CONTINUOUS'] || !hasTxChannels || toneTransmitting
-              ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+              ? 'bg-dispatch-border text-dispatch-secondary cursor-not-allowed'
               : 'bg-red-600 hover:bg-red-700 text-white'
           }`}
         >
@@ -338,7 +338,7 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit }) {
           className={`px-3 py-1.5 text-sm rounded transition-colors ${
             clearAirEnabled[firstTxChannelId]
               ? 'bg-blue-600 text-white'
-              : 'bg-gray-600 hover:bg-gray-700 text-white'
+              : 'bg-dispatch-border hover:bg-dispatch-panel text-dispatch-text'
           } ${!hasTxChannels ? 'opacity-50 cursor-not-allowed' : ''}`}
         >
           Clear-Air {clearAirEnabled[firstTxChannelId] ? 'ON' : 'OFF'}

@@ -17,7 +17,7 @@ function getEventColor(type) {
     case 'transmitting':
       return 'text-yellow-400';
     case 'ptt_end':
-      return 'text-gray-400';
+      return 'text-dispatch-tertiary';
     case 'connect':
       return 'text-blue-400';
     case 'disconnect':
@@ -27,7 +27,7 @@ function getEventColor(type) {
     case 'tone':
       return 'text-amber-400';
     default:
-      return 'text-gray-300';
+      return 'text-dispatch-secondary';
   }
 }
 
@@ -64,10 +64,10 @@ export default function EventLog() {
   return (
     <div className="flex flex-col h-full p-3">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm font-bold text-white uppercase tracking-wide">Event Log</h2>
+        <h2 className="text-sm font-bold text-dispatch-text uppercase tracking-wide">Event Log</h2>
         <button
           onClick={clearEvents}
-          className="text-xs text-gray-400 hover:text-white transition-colors"
+          className="text-xs text-dispatch-secondary hover:text-dispatch-text transition-colors"
         >
           Clear
         </button>
@@ -75,24 +75,24 @@ export default function EventLog() {
 
       <div className="flex-1 overflow-y-auto space-y-1 scrollbar-thin">
         {events.length === 0 ? (
-          <div className="text-xs text-gray-500 text-center py-4">
+          <div className="text-xs text-dispatch-secondary text-center py-4">
             No events yet
           </div>
         ) : (
           events.map(event => (
             <div
               key={event.id}
-              className="p-2 bg-gray-800 rounded text-xs"
+              className="p-2 bg-dispatch-panel rounded text-xs"
             >
               <div className="flex items-center gap-2">
                 <span>{getEventIcon(event.type)}</span>
                 <span className={`font-medium ${getEventColor(event.type)}`}>
                   {event.type.replace(/_/g, ' ').toUpperCase()}
                 </span>
-                <span className="text-gray-500 ml-auto">{formatTime(event.timestamp)}</span>
+                <span className="text-dispatch-secondary ml-auto">{formatTime(event.timestamp)}</span>
               </div>
               {event.unit && (
-                <div className="text-gray-400 mt-1">
+                <div className="text-dispatch-secondary mt-1">
                   Unit: {event.unit} {event.channel && `| Channel: ${event.channel}`}
                 </div>
               )}

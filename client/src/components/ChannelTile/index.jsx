@@ -15,7 +15,7 @@ function AudioLevelMeter({ level }) {
           className={`w-1 rounded-sm transition-all ${
             i < activeCount 
               ? i >= 6 ? 'bg-red-500' : i >= 4 ? 'bg-yellow-500' : 'bg-green-500'
-              : 'bg-gray-700'
+              : 'bg-dispatch-border'
           }`}
           style={{ height: `${25 + i * 10}%` }}
         />
@@ -86,8 +86,8 @@ export default function ChannelTile({ channel, onRemove }) {
     >
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2" {...attributes} {...listeners}>
-          <span className="text-xs text-gray-500 cursor-grab">⋮⋮</span>
-          <h3 className="font-bold text-white">{channel.name}</h3>
+          <span className="text-xs text-dispatch-secondary cursor-grab">⋮⋮</span>
+          <h3 className="font-bold text-dispatch-text">{channel.name}</h3>
         </div>
         <div className="flex items-center gap-2">
           <AudioLevelMeter level={level} />
@@ -96,7 +96,7 @@ export default function ChannelTile({ channel, onRemove }) {
               type="button"
               onMouseDown={handleRemoveClick}
               onPointerDown={(e) => e.stopPropagation()}
-              className="w-5 h-5 flex items-center justify-center text-gray-500 hover:text-red-500 hover:bg-red-900/30 rounded text-xs"
+              className="w-5 h-5 flex items-center justify-center text-dispatch-secondary hover:text-red-500 hover:bg-red-900/30 rounded text-xs"
               title="Remove from grid"
             >
               ×
@@ -118,8 +118,8 @@ export default function ChannelTile({ channel, onRemove }) {
       )}
 
       <div className="flex items-center gap-1 mb-2">
-        <span className="text-xs text-gray-400">Units:</span>
-        <span className="text-xs text-white">{unitsInChannel.length}</span>
+        <span className="text-xs text-dispatch-secondary">Units:</span>
+        <span className="text-xs text-dispatch-text">{unitsInChannel.length}</span>
       </div>
 
       <div className="flex flex-wrap gap-1.5 mt-2">
@@ -128,7 +128,7 @@ export default function ChannelTile({ channel, onRemove }) {
           className={`px-2 py-1 text-xs rounded transition-colors ${
             isMonitored 
               ? 'bg-green-600 text-white' 
-              : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+              : 'bg-dispatch-border text-dispatch-secondary hover:bg-dispatch-panel'
           }`}
         >
           {isMonitored ? 'Monitoring' : 'Monitor'}
@@ -140,7 +140,7 @@ export default function ChannelTile({ channel, onRemove }) {
           className={`px-2 py-1 text-xs rounded transition-colors ${
             isMuted 
               ? 'bg-red-600 text-white' 
-              : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+              : 'bg-dispatch-border text-dispatch-secondary hover:bg-dispatch-panel'
           } ${!isMonitored ? 'opacity-50 cursor-not-allowed' : ''}`}
         >
           {isMuted ? 'Muted' : 'Mute'}
@@ -151,7 +151,7 @@ export default function ChannelTile({ channel, onRemove }) {
           className={`px-2 py-1 text-xs rounded transition-colors ${
             isTxSelected 
               ? 'bg-blue-600 text-white ring-2 ring-blue-400' 
-              : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+              : 'bg-dispatch-border text-dispatch-secondary hover:bg-dispatch-panel'
           }`}
         >
           TX {isTxSelected ? '✓' : ''}
@@ -164,7 +164,7 @@ export default function ChannelTile({ channel, onRemove }) {
           min="0"
           max="100"
           defaultValue="100"
-          className="w-full h-1 bg-gray-700 rounded appearance-none cursor-pointer"
+          className="w-full h-1 bg-dispatch-border rounded appearance-none cursor-pointer"
           title="Volume"
         />
       </div>

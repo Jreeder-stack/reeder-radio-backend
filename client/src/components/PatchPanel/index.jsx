@@ -66,11 +66,11 @@ export default function PatchPanel() {
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm font-bold text-white uppercase tracking-wide">Patches</h2>
+        <h2 className="text-sm font-bold text-dispatch-text uppercase tracking-wide">Patches</h2>
         <button
           onClick={fetchPatches}
           disabled={loading}
-          className="text-xs text-gray-400 hover:text-white transition-colors"
+          className="text-xs text-dispatch-secondary hover:text-dispatch-text transition-colors"
         >
           {loading ? '...' : 'Refresh'}
         </button>
@@ -82,12 +82,12 @@ export default function PatchPanel() {
           value={patchName}
           onChange={(e) => setPatchName(e.target.value)}
           placeholder="Patch name (optional)"
-          className="w-full px-2 py-1.5 text-xs bg-gray-800 border border-gray-600 rounded text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+          className="w-full px-2 py-1.5 text-xs bg-dispatch-panel border border-dispatch-border rounded text-dispatch-text placeholder-dispatch-secondary focus:outline-none focus:border-blue-500"
         />
         <select
           value={sourceChannel}
           onChange={(e) => setSourceChannel(e.target.value)}
-          className="w-full px-2 py-1.5 text-xs bg-gray-800 border border-gray-600 rounded text-white focus:outline-none focus:border-blue-500"
+          className="w-full px-2 py-1.5 text-xs bg-dispatch-panel border border-dispatch-border rounded text-dispatch-text focus:outline-none focus:border-blue-500"
         >
           <option value="">Source Channel</option>
           {channels.map(ch => (
@@ -97,7 +97,7 @@ export default function PatchPanel() {
         <select
           value={targetChannel}
           onChange={(e) => setTargetChannel(e.target.value)}
-          className="w-full px-2 py-1.5 text-xs bg-gray-800 border border-gray-600 rounded text-white focus:outline-none focus:border-blue-500"
+          className="w-full px-2 py-1.5 text-xs bg-dispatch-panel border border-dispatch-border rounded text-dispatch-text focus:outline-none focus:border-blue-500"
         >
           <option value="">Target Channel</option>
           {channels.map(ch => (
@@ -115,7 +115,7 @@ export default function PatchPanel() {
 
       <div className="flex-1 overflow-y-auto space-y-2 scrollbar-thin">
         {patches.length === 0 ? (
-          <div className="text-xs text-gray-500 text-center py-4">
+          <div className="text-xs text-dispatch-secondary text-center py-4">
             No patches configured
           </div>
         ) : (
@@ -125,23 +125,23 @@ export default function PatchPanel() {
               className={`p-2 rounded text-sm ${
                 patch.is_enabled 
                   ? 'bg-purple-900/50 border border-purple-600' 
-                  : 'bg-gray-800'
+                  : 'bg-dispatch-panel'
               }`}
             >
               <div className="flex items-center justify-between mb-1">
-                <span className="font-medium text-white text-xs">{patch.name}</span>
+                <span className="font-medium text-dispatch-text text-xs">{patch.name}</span>
                 <button
                   onClick={() => handleTogglePatch(patch)}
                   className={`px-2 py-0.5 text-xs rounded ${
                     patch.is_enabled 
                       ? 'bg-green-600 text-white' 
-                      : 'bg-gray-600 text-gray-300'
+                      : 'bg-dispatch-border text-dispatch-secondary'
                   }`}
                 >
                   {patch.is_enabled ? 'ON' : 'OFF'}
                 </button>
               </div>
-              <div className="text-xs text-gray-400">
+              <div className="text-xs text-dispatch-secondary">
                 {getChannelName(patch.source_channel_id)} → {getChannelName(patch.target_channel_id)}
               </div>
             </div>

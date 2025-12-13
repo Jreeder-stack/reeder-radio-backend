@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useDispatchStore from '../../state/dispatchStore.js';
 
-export default function TopBar({ user, onLogout, agencyName = "Reeder Radio" }) {
+export default function TopBar({ user, onLogout, agencyName = "Reeder Radio", darkMode, onToggleTheme }) {
   const navigate = useNavigate();
   const [time, setTime] = useState(new Date());
   const { dispatcherName, isTalking, isConnected } = useDispatchStore();
@@ -15,15 +15,15 @@ export default function TopBar({ user, onLogout, agencyName = "Reeder Radio" }) 
   return (
     <div className="flex items-center justify-between px-4 py-2 bg-dispatch-panel border-b border-dispatch-border">
       <div className="flex items-center gap-4">
-        <h1 className="text-lg font-bold text-white">{agencyName}</h1>
-        <span className="text-gray-400">|</span>
-        <span className="text-sm text-gray-300">Dispatch Console</span>
+        <h1 className="text-lg font-bold text-dispatch-text">{agencyName}</h1>
+        <span className="text-dispatch-secondary">|</span>
+        <span className="text-sm text-dispatch-secondary">Dispatch Console</span>
       </div>
 
       <div className="flex items-center gap-6">
         <div className="flex items-center gap-2">
           <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
-          <span className="text-sm text-gray-300">
+          <span className="text-sm text-dispatch-secondary">
             {isConnected ? 'Connected' : 'Disconnected'}
           </span>
         </div>
@@ -34,16 +34,25 @@ export default function TopBar({ user, onLogout, agencyName = "Reeder Radio" }) 
           </div>
         )}
 
-        <div className="text-xl font-mono text-white">
+        <div className="text-xl font-mono text-dispatch-text">
           {time.toLocaleTimeString()}
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-400">Dispatcher:</span>
-          <span className="text-sm font-medium text-white">{dispatcherName || user?.username}</span>
+          <span className="text-sm text-dispatch-secondary">Dispatcher:</span>
+          <span className="text-sm font-medium text-dispatch-text">{dispatcherName || user?.username}</span>
         </div>
 
         <div className="flex items-center gap-2">
+          {onToggleTheme && (
+            <button
+              onClick={onToggleTheme}
+              className="px-3 py-1.5 text-sm bg-dispatch-border hover:bg-dispatch-panel text-dispatch-text rounded transition-colors"
+              title={darkMode ? "Switch to light mode" : "Switch to dark mode"}
+            >
+              {darkMode ? "☀️" : "🌙"}
+            </button>
+          )}
           {user?.role === 'admin' && (
             <button
               onClick={() => navigate('/admin')}
@@ -54,7 +63,7 @@ export default function TopBar({ user, onLogout, agencyName = "Reeder Radio" }) 
           )}
           <button
             onClick={() => navigate('/')}
-            className="px-3 py-1.5 text-sm bg-gray-600 hover:bg-gray-700 rounded transition-colors"
+            className="px-3 py-1.5 text-sm bg-dispatch-border hover:bg-dispatch-panel text-dispatch-text rounded transition-colors"
           >
             Radio
           </button>

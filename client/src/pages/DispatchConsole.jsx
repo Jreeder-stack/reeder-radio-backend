@@ -31,6 +31,26 @@ import { getUnits } from '../utils/api.js';
 export default function DispatchConsole({ user, onLogout }) {
   const [rightTab, setRightTab] = useState('emergency');
   const [showChannelPicker, setShowChannelPicker] = useState(false);
+  const [darkMode, setDarkMode] = useState(() => {
+    const saved = localStorage.getItem('dispatchDarkMode');
+    return saved !== null ? JSON.parse(saved) : true;
+  });
+
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.remove('light-theme');
+    } else {
+      document.documentElement.classList.add('light-theme');
+    }
+  }, [darkMode]);
+
+  const toggleTheme = () => {
+    setDarkMode(prev => {
+      const next = !prev;
+      localStorage.setItem('dispatchDarkMode', JSON.stringify(next));
+      return next;
+    });
+  };
   
   const {
     channels,
@@ -98,6 +118,8 @@ export default function DispatchConsole({ user, onLogout }) {
     setConnectionError(null);
     
     try {
+      await livekitManager.disconnectAll();
+      
       setDispatcher(user?.id, user?.username || 'DISPATCH');
       
       livekitManager.onLevelUpdate = (channelName, level) => {
@@ -286,11 +308,11 @@ export default function DispatchConsole({ user, onLogout }) {
   if (!isConnected && !isConnecting && connectionError) {
     return (
       <div className="flex flex-col h-screen bg-dispatch-bg">
-        <TopBar user={user} onLogout={onLogout} />
+        <TopBar user={user} onLogout={onLogout} darkMode={darkMode} onToggleTheme={toggleTheme} />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <h2 className="text-xl text-red-500 mb-4">Connection Failed</h2>
-            <p className="text-gray-400 mb-6">{connectionError}</p>
+            <p className="text-dispatch-secondary mb-6">{connectionError}</p>
             <button
               onClick={connectToChannels}
               className="btn-primary"
@@ -306,11 +328,11 @@ export default function DispatchConsole({ user, onLogout }) {
   if (isConnecting) {
     return (
       <div className="flex flex-col h-screen bg-dispatch-bg">
-        <TopBar user={user} onLogout={onLogout} />
+        <TopBar user={user} onLogout={onLogout} darkMode={darkMode} onToggleTheme={toggleTheme} />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
-            <div className="text-xl text-white mb-4">Connecting to channels...</div>
-            <div className="text-gray-400">Please wait</div>
+            <div className="text-xl text-dispatch-text mb-4">Connecting to channels...</div>
+            <div className="text-dispatch-secondary">Please wait</div>
           </div>
         </div>
       </div>
@@ -319,7 +341,7 @@ export default function DispatchConsole({ user, onLogout }) {
 
   return (
     <div className="flex flex-col h-screen bg-dispatch-bg">
-      <TopBar user={user} onLogout={onLogout} />
+      <TopBar user={user} onLogout={onLogout} darkMode={darkMode} onToggleTheme={toggleTheme} />
       
       <div className="flex flex-1 overflow-hidden">
         <div className="w-64 p-3 border-r border-dispatch-border overflow-y-auto scrollbar-thin">
@@ -328,7 +350,7 @@ export default function DispatchConsole({ user, onLogout }) {
         
         <div className="flex-1 p-3 overflow-y-auto scrollbar-thin">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-semibold text-white">Channels</h2>
+            <h2 className="text-lg font-semibold text-dispatch-text">Channels</h2>
             <button
               onClick={() => setShowChannelPicker(true)}
               className="px-3 py-1 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded"
@@ -359,7 +381,7 @@ export default function DispatchConsole({ user, onLogout }) {
           </DndContext>
           
           {orderedChannels.length === 0 && (
-            <div className="text-center text-gray-500 py-8">
+            <div className="text-center text-dispatch-secondary py-8">
               No channels in grid. Click "Add Channel" to add channels.
             </div>
           )}
@@ -371,8 +393,8 @@ export default function DispatchConsole({ user, onLogout }) {
               onClick={() => setRightTab('emergency')}
               className={`flex-1 px-4 py-2 text-sm ${
                 rightTab === 'emergency'
-                  ? 'bg-dispatch-panel text-white border-b-2 border-red-500'
-                  : 'text-gray-400 hover:text-white'
+                  ? 'bg-dispatch-panel text-dispatch-text border-b-2 border-red-500'
+                  : 'text-dispatch-secondary hover:text-dispatch-text'
               }`}
             >
               Emergency
@@ -381,8 +403,8 @@ export default function DispatchConsole({ user, onLogout }) {
               onClick={() => setRightTab('patches')}
               className={`flex-1 px-4 py-2 text-sm ${
                 rightTab === 'patches'
-                  ? 'bg-dispatch-panel text-white border-b-2 border-blue-500'
-                  : 'text-gray-400 hover:text-white'
+                  ? 'bg-dispatch-panel text-dispatch-text border-b-2 border-blue-500'
+                  : 'text-dispatch-secondary hover:text-dispatch-text'
               }`}
             >
               Patches
@@ -391,8 +413,8 @@ export default function DispatchConsole({ user, onLogout }) {
               onClick={() => setRightTab('events')}
               className={`flex-1 px-4 py-2 text-sm ${
                 rightTab === 'events'
-                  ? 'bg-dispatch-panel text-white border-b-2 border-green-500'
-                  : 'text-gray-400 hover:text-white'
+                  ? 'bg-dispatch-panel text-dispatch-text border-b-2 border-green-500'
+                  : 'text-dispatch-secondary hover:text-dispatch-text'
               }`}
             >
               Events
@@ -417,27 +439,27 @@ export default function DispatchConsole({ user, onLogout }) {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-dispatch-panel rounded-lg p-4 w-80 max-h-96 overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-white">Add Channel</h3>
+              <h3 className="text-lg font-semibold text-dispatch-text">Add Channel</h3>
               <button
                 onClick={() => setShowChannelPicker(false)}
-                className="text-gray-400 hover:text-white"
+                className="text-dispatch-secondary hover:text-dispatch-text"
               >
                 &times;
               </button>
             </div>
             
             {availableChannels.length === 0 ? (
-              <p className="text-gray-400 text-center py-4">All channels added</p>
+              <p className="text-dispatch-secondary text-center py-4">All channels added</p>
             ) : (
               <div className="space-y-2">
                 {availableChannels.map(channel => (
                   <button
                     key={channel.id}
                     onClick={() => handleAddChannel(channel.id)}
-                    className="w-full px-3 py-2 text-left bg-dispatch-bg hover:bg-gray-700 rounded text-white"
+                    className="w-full px-3 py-2 text-left bg-dispatch-bg hover:bg-dispatch-border rounded text-dispatch-text"
                   >
                     {channel.name}
-                    <span className="text-xs text-gray-400 ml-2">{channel.zone}</span>
+                    <span className="text-xs text-dispatch-secondary ml-2">{channel.zone}</span>
                   </button>
                 ))}
               </div>

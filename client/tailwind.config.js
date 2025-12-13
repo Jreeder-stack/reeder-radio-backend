@@ -9,9 +9,12 @@ export default {
     extend: {
       colors: {
         dispatch: {
-          bg: '#0a0a0f',
-          panel: '#13131a',
-          border: '#2a2a35',
+          bg: 'var(--dispatch-bg)',
+          panel: 'var(--dispatch-panel)',
+          border: 'var(--dispatch-border)',
+          text: 'var(--dispatch-text)',
+          secondary: 'var(--dispatch-text-secondary)',
+          tertiary: 'var(--dispatch-text-tertiary)',
           accent: '#3b82f6',
           emergency: '#dc2626',
           warning: '#eab308',

@@ -68,6 +68,15 @@ class LiveKitManager {
       return room;
     } catch (err) {
       console.error(`[LiveKit] Failed to connect to ${channelName}:`, err);
+      
+      try {
+        room.disconnect();
+      } catch (disconnectErr) {
+        console.warn(`[LiveKit] Cleanup disconnect failed for ${channelName}:`, disconnectErr.message);
+      }
+      
+      this._cleanupChannel(channelName);
+      
       if (this.onConnectionStateChange) {
         this.onConnectionStateChange(channelName, 'failed', err);
       }
