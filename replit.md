@@ -111,7 +111,6 @@ Set these environment variables in Render:
   - Automatic Gain Control (AGC)
   - Noise suppression
   - Transmit compressor (APX-style curve)
-- "Radio effect" toggle with narrowband filter (300Hz-3400Hz)
 - Per-channel audio level meters (TX and RX)
 - Recording last RX with playback capability
 - PTT Release Reliability: Global window listeners (pointerup, pointercancel, touchend, touchcancel, blur) ensure transmission stops reliably on mobile and desktop
