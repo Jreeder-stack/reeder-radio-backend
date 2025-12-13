@@ -80,13 +80,6 @@ export default function DispatchConsole({ user, onLogout }) {
     setDispatcher(user?.id, user?.username || 'DISPATCH');
   }, [user, setDispatcher]);
 
-  useEffect(() => {
-    if (gridChannelIds.length === 0 && channels.length > 0) {
-      const initialIds = channels.map(c => c.id);
-      initialIds.forEach(id => addToGrid(id));
-      setChannelOrder(initialIds);
-    }
-  }, [channels, gridChannelIds, addToGrid, setChannelOrder]);
 
   useEffect(() => {
     const fetchUnits = async () => {
