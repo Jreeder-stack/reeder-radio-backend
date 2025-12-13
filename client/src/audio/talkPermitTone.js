@@ -1,5 +1,6 @@
 let audioContext = null;
-let bonkInterval = null;
+let bonkOscillator = null;
+let bonkGain = null;
 
 function getAudioContext() {
   if (!audioContext || audioContext.state === 'closed') {
@@ -46,38 +47,37 @@ export function playPermitTone() {
   osc2.stop(now + 0.15);
 }
 
-export function playBonk() {
-  const ctx = getAudioContext();
-  const now = ctx.currentTime;
-  
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-  
-  osc.type = 'sine';
-  osc.frequency.setValueAtTime(480, now);
-  osc.frequency.exponentialRampToValueAtTime(320, now + 0.15);
-  
-  gain.gain.setValueAtTime(0.35, now);
-  gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
-  
-  osc.connect(gain);
-  gain.connect(ctx.destination);
-  
-  osc.start(now);
-  osc.stop(now + 0.2);
-}
-
 export function startBonkLoop() {
   stopBonkLoop();
-  playBonk();
-  bonkInterval = setInterval(() => {
-    playBonk();
-  }, 400);
+  
+  const ctx = getAudioContext();
+  
+  bonkOscillator = ctx.createOscillator();
+  bonkGain = ctx.createGain();
+  
+  bonkOscillator.type = 'sine';
+  bonkOscillator.frequency.value = 400;
+  
+  bonkGain.gain.value = 0.3;
+  
+  bonkOscillator.connect(bonkGain);
+  bonkGain.connect(ctx.destination);
+  
+  bonkOscillator.start();
 }
 
 export function stopBonkLoop() {
-  if (bonkInterval) {
-    clearInterval(bonkInterval);
-    bonkInterval = null;
+  if (bonkOscillator) {
+    try {
+      bonkOscillator.stop();
+      bonkOscillator.disconnect();
+    } catch (e) {}
+    bonkOscillator = null;
+  }
+  if (bonkGain) {
+    try {
+      bonkGain.disconnect();
+    } catch (e) {}
+    bonkGain = null;
   }
 }
