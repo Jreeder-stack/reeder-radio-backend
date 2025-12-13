@@ -66,7 +66,7 @@ class LiveKitManager {
     }
     for (const [channelName, elements] of this.fallbackAudioElements) {
       if (!this.mutedChannels.has(channelName)) {
-        elements.forEach(el => { el.volume = 1; });
+        elements.forEach(el => { el.muted = false; el.volume = 1; });
       }
     }
   }
