@@ -2,6 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./AuthContext.jsx";
+import { LiveKitConnectionProvider, useLiveKitConnection } from "./context/LiveKitConnectionContext.jsx";
 import Login from "./Login.jsx";
 import App from "./App.jsx";
 import Admin from "./Admin.jsx";
@@ -74,50 +75,81 @@ function LoginRoute() {
 
 function AppWrapper() {
   const { user, logout } = useAuth();
-  return <App user={user} onLogout={logout} />;
+  const { disconnectAll } = useLiveKitConnection();
+  
+  const handleLogout = async () => {
+    await disconnectAll();
+    logout();
+  };
+  
+  return <App user={user} onLogout={handleLogout} />;
 }
 
 function DispatchConsoleWrapper() {
   const { user, logout } = useAuth();
-  return <DispatchConsole user={user} onLogout={logout} />;
+  const { disconnectAll } = useLiveKitConnection();
+  
+  const handleLogout = async () => {
+    await disconnectAll();
+    logout();
+  };
+  
+  return <DispatchConsole user={user} onLogout={handleLogout} />;
 }
 
 function AdminWrapper() {
   const { user, logout } = useAuth();
-  return <Admin user={user} onLogout={logout} />;
+  const { disconnectAll } = useLiveKitConnection();
+  
+  const handleLogout = async () => {
+    await disconnectAll();
+    logout();
+  };
+  
+  return <Admin user={user} onLogout={handleLogout} />;
+}
+
+function ConnectedRoutes() {
+  const { user } = useAuth();
+  
+  return (
+    <LiveKitConnectionProvider user={user}>
+      <Routes>
+        <Route path="/login" element={<LoginRoute />} />
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <AppWrapper />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dispatcher"
+          element={
+            <ProtectedRoute dispatcherOnly>
+              <DispatchConsoleWrapper />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute adminOnly>
+              <AdminWrapper />
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
+    </LiveKitConnectionProvider>
+  );
 }
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <BrowserRouter>
       <AuthProvider>
-        <Routes>
-          <Route path="/login" element={<LoginRoute />} />
-          <Route
-            path="/"
-            element={
-              <ProtectedRoute>
-                <AppWrapper />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/dispatcher"
-            element={
-              <ProtectedRoute dispatcherOnly>
-                <DispatchConsoleWrapper />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute adminOnly>
-                <AdminWrapper />
-              </ProtectedRoute>
-            }
-          />
-        </Routes>
+        <ConnectedRoutes />
       </AuthProvider>
     </BrowserRouter>
   </React.StrictMode>

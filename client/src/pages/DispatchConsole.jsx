@@ -23,10 +23,10 @@ import EventLog from '../components/EventLog/index.jsx';
 import PatchPanel from '../components/PatchPanel/index.jsx';
 
 import useDispatchStore from '../state/dispatchStore.js';
-import livekitManager from '../audio/LiveKitManager.js';
 import { micPTTManager } from '../audio/MicPTTManager.js';
 import toneEngine from '../audio/toneEngine.js';
 import { getUnits } from '../utils/api.js';
+import { useLiveKitConnection } from '../context/LiveKitConnectionContext.jsx';
 
 export default function DispatchConsole({ user, onLogout }) {
   const [rightTab, setRightTab] = useState('emergency');
@@ -35,6 +35,8 @@ export default function DispatchConsole({ user, onLogout }) {
     const saved = localStorage.getItem('dispatchDarkMode');
     return saved !== null ? JSON.parse(saved) : true;
   });
+
+  const { retryConnection } = useLiveKitConnection();
 
   useEffect(() => {
     if (darkMode) {
@@ -54,25 +56,17 @@ export default function DispatchConsole({ user, onLogout }) {
   
   const {
     channels,
-    setChannels,
     channelOrder,
     setChannelOrder,
     gridChannelIds,
     addToGrid,
     removeFromGrid,
-    setChannelLevel,
-    setActiveTransmission,
-    clearActiveTransmission,
     setUnits,
     addEvent,
-    addEmergency,
     setDispatcher,
     isConnected,
-    setConnected,
     isConnecting,
-    setConnecting,
     connectionError,
-    setConnectionError,
   } = useDispatchStore();
 
   const sensors = useSensors(
@@ -82,186 +76,30 @@ export default function DispatchConsole({ user, onLogout }) {
     })
   );
 
-  const fetchChannelsAndUnits = useCallback(async () => {
-    try {
-      const [channelRes, unitData] = await Promise.all([
-        fetch('/api/channels', { credentials: 'include' }),
-        getUnits(),
-      ]);
-      
-      if (!channelRes.ok) {
-        console.error('Failed to fetch channels');
-        return;
-      }
-      
-      const channelData = await channelRes.json();
-      const dbChannels = channelData.channels || [];
-      
-      setChannels(dbChannels);
-      setUnits(unitData.units || []);
-      
-      if (gridChannelIds.length === 0 && dbChannels.length > 0) {
-        const initialIds = dbChannels.map(c => c.id);
-        initialIds.forEach(id => addToGrid(id));
-        setChannelOrder(initialIds);
-      }
-    } catch (error) {
-      console.error('Failed to fetch data:', error);
-    }
-  }, [setChannels, setUnits, gridChannelIds, addToGrid, setChannelOrder]);
-
-  const connectToChannels = useCallback(async () => {
-    if (isConnecting || isConnected) return;
-    if (channels.length === 0) return;
-    
-    setConnecting(true);
-    setConnectionError(null);
-    
-    try {
-      await livekitManager.disconnectAll();
-      
-      setDispatcher(user?.id, user?.username || 'DISPATCH');
-      
-      livekitManager.onLevelUpdate = (channelName, level) => {
-        const channel = channels.find(c => c.name === channelName);
-        if (channel) {
-          setChannelLevel(channel.id, level);
-        }
-      };
-      
-      livekitManager.onTrackSubscribed = (channelName, track, participant) => {
-        const channel = channels.find(c => c.name === channelName);
-        if (channel) {
-          setActiveTransmission(channel.id, {
-            from: participant.identity,
-            timestamp: Date.now(),
-          });
-        }
-        addEvent({
-          type: 'ptt_start',
-          unit: participant.identity,
-          channel: channelName,
-        });
-      };
-      
-      livekitManager.onTrackUnsubscribed = (channelName, track, participant) => {
-        const channel = channels.find(c => c.name === channelName);
-        if (channel) {
-          clearActiveTransmission(channel.id);
-        }
-        addEvent({
-          type: 'ptt_end',
-          unit: participant.identity,
-          channel: channelName,
-        });
-      };
-      
-      livekitManager.onParticipantConnected = (channelName, participant) => {
-        addEvent({
-          type: 'unit_joined',
-          unit: participant.identity,
-          channel: channelName,
-        });
-        getUnits().then(data => setUnits(data.units || [])).catch(console.error);
-      };
-      
-      livekitManager.onParticipantDisconnected = (channelName, participant) => {
-        addEvent({
-          type: 'unit_left',
-          unit: participant.identity,
-          channel: channelName,
-        });
-        getUnits().then(data => setUnits(data.units || [])).catch(console.error);
-      };
-      
-      livekitManager.onDataReceived = (channelName, message, participant) => {
-        if (message.type === 'emergency') {
-          if (message.active) {
-            toneEngine.playEmergencyTone('B', 3000);
-            addEmergency({
-              id: `emergency-${participant.identity}-${Date.now()}`,
-              unitIdentity: message.identity,
-              channel: channelName,
-              timestamp: new Date().toISOString(),
-            });
-            addEvent({
-              type: 'emergency_activated',
-              unit: message.identity,
-              channel: channelName,
-            });
-          }
-        }
-      };
-      
-      const enabledChannels = channels.filter(c => c.enabled);
-      console.log('[DispatchConsole] Connecting to channels in parallel:', enabledChannels.map(c => c.name));
-      
-      const connectionResults = await Promise.allSettled(
-        enabledChannels.map(async (channel) => {
-          try {
-            await livekitManager.connect(channel.name, user?.username || 'DISPATCH');
-            console.log(`[DispatchConsole] Connected to ${channel.name}`);
-            addEvent({
-              type: 'connect',
-              channel: channel.name,
-            });
-            return { channel: channel.name, success: true };
-          } catch (err) {
-            console.error(`Failed to connect to ${channel.name}:`, err);
-            return { channel: channel.name, success: false, error: err };
-          }
-        })
-      );
-      
-      const successCount = connectionResults.filter(r => r.status === 'fulfilled' && r.value?.success).length;
-      console.log(`[DispatchConsole] All connections complete. ${successCount}/${enabledChannels.length} successful. Connected rooms:`, livekitManager.getConnectedChannels());
-      setConnected(true);
-    } catch (error) {
-      console.error('Connection error:', error);
-      setConnectionError(error.message);
-    } finally {
-      setConnecting(false);
-    }
-  }, [
-    isConnecting, 
-    isConnected, 
-    user, 
-    channels, 
-    setDispatcher, 
-    setConnecting, 
-    setConnectionError, 
-    setConnected,
-    setChannelLevel,
-    setActiveTransmission,
-    clearActiveTransmission,
-    addEvent,
-    addEmergency,
-  ]);
+  useEffect(() => {
+    setDispatcher(user?.id, user?.username || 'DISPATCH');
+  }, [user, setDispatcher]);
 
   useEffect(() => {
-    fetchChannelsAndUnits();
-  }, [fetchChannelsAndUnits]);
-
-  useEffect(() => {
-    if (channels.length > 0 && !isConnected && !isConnecting) {
-      connectToChannels();
+    if (gridChannelIds.length === 0 && channels.length > 0) {
+      const initialIds = channels.map(c => c.id);
+      initialIds.forEach(id => addToGrid(id));
+      setChannelOrder(initialIds);
     }
-  }, [channels, isConnected, isConnecting, connectToChannels]);
+  }, [channels, gridChannelIds, addToGrid, setChannelOrder]);
 
   useEffect(() => {
-    const connectedRooms = livekitManager.getConnectedChannels();
-    if (isConnected && connectedRooms.length === 0 && channels.length > 0) {
-      console.log('[DispatchConsole] State shows connected but no rooms exist, resetting connection state...');
-      setConnected(false);
-    }
-  }, [isConnected, channels, setConnected]);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      getUnits().then(data => {
+    const fetchUnits = async () => {
+      try {
+        const data = await getUnits();
         setUnits(data.units || []);
-      }).catch(console.error);
-    }, 5000);
+      } catch (err) {
+        console.error('Failed to fetch units:', err);
+      }
+    };
+    
+    fetchUnits();
+    const interval = setInterval(fetchUnits, 5000);
     
     return () => clearInterval(interval);
   }, [setUnits]);
@@ -269,7 +107,6 @@ export default function DispatchConsole({ user, onLogout }) {
   useEffect(() => {
     return () => {
       micPTTManager.disconnect();
-      livekitManager.disconnectAll();
       toneEngine.destroy();
     };
   }, []);
@@ -345,7 +182,7 @@ export default function DispatchConsole({ user, onLogout }) {
             <h2 className="text-xl text-red-500 mb-4">Connection Failed</h2>
             <p className="text-dispatch-secondary mb-6">{connectionError}</p>
             <button
-              onClick={connectToChannels}
+              onClick={retryConnection}
               className="btn-primary"
             >
               Retry Connection
