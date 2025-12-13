@@ -189,6 +189,8 @@ export default function App({ user, onLogout }) {
   const [emergencyLockRemaining, setEmergencyLockRemaining] = useState(0);
   const [activeEmergencies, setActiveEmergencies] = useState({});
   const [emergencyFlash, setEmergencyFlash] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showUnits, setShowUnits] = useState(false);
 
   const scanRoomsRef = useRef({});
   const primaryRoomRef = useRef(null);
@@ -926,26 +928,31 @@ export default function App({ user, onLogout }) {
 
   return (
     <div style={{
-      padding: 20,
+      padding: "12px 12px 0 12px",
       fontFamily: "sans-serif",
       color: "white",
       background: "#0a0a0a",
-      minHeight: "100vh"
+      height: "100dvh",
+      maxHeight: "100dvh",
+      overflow: "hidden",
+      display: "flex",
+      flexDirection: "column",
+      boxSizing: "border-box",
     }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-        <h1 style={{ fontSize: 24, margin: 0 }}>Reeder PTT Radio</h1>
-        <div style={{ display: "flex", gap: 8 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, flexShrink: 0 }}>
+        <h1 style={{ fontSize: 18, margin: 0 }}>Reeder PTT</h1>
+        <div style={{ display: "flex", gap: 4 }}>
           {user?.role === "admin" && (
             <button
               onClick={() => navigate("/admin")}
               style={{
-                padding: "8px 16px",
+                padding: "6px 10px",
                 backgroundColor: "#3b82f6",
                 color: "white",
                 border: "none",
-                borderRadius: 6,
+                borderRadius: 4,
                 cursor: "pointer",
-                fontSize: 14,
+                fontSize: 12,
               }}
             >
               Admin
@@ -955,28 +962,28 @@ export default function App({ user, onLogout }) {
             <button
               onClick={() => navigate("/dispatcher")}
               style={{
-                padding: "8px 16px",
+                padding: "6px 10px",
                 backgroundColor: "#6366f1",
                 color: "white",
                 border: "none",
-                borderRadius: 6,
+                borderRadius: 4,
                 cursor: "pointer",
-                fontSize: 14,
+                fontSize: 12,
               }}
             >
-              Dispatcher
+              Dispatch
             </button>
           )}
           <button
             onClick={onLogout}
             style={{
-              padding: "8px 16px",
+              padding: "6px 10px",
               backgroundColor: "#dc2626",
               color: "white",
               border: "none",
-              borderRadius: 6,
+              borderRadius: 4,
               cursor: "pointer",
-              fontSize: 14,
+              fontSize: 12,
             }}
           >
             Logout
@@ -1019,43 +1026,78 @@ export default function App({ user, onLogout }) {
           </button>
         </div>
       ) : !connected ? (
-        <div style={{ textAlign: "center", padding: 40 }}>
+        <div style={{ textAlign: "center", padding: 40, flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" }}>
           <div style={{ fontSize: 18, marginBottom: 16 }}>Connecting to radio network...</div>
           <div style={{ fontSize: 14, color: "#888" }}>Unit: {identity}</div>
         </div>
       ) : (
-        <div>
+        <div style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" }}>
+          {/* Compact channel info header */}
           <div style={{ 
             display: "flex", 
             justifyContent: "space-between", 
             alignItems: "center",
-            marginBottom: 16
+            marginBottom: 8,
+            flexShrink: 0,
           }}>
-            <div>
-              <div style={{ fontSize: 12, opacity: 0.6 }}>{selectedZone}</div>
-              <h2 style={{ margin: 0, fontSize: 22 }}>{selectedChannel}</h2>
-              <p style={{ margin: "4px 0", opacity: 0.7, fontSize: 14 }}>
-                <StatusDot status={isTalking ? "transmitting" : "idle"} />
-                Unit: {identity}
-              </p>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div>
+                <div style={{ fontSize: 10, opacity: 0.5 }}>{selectedZone.split(" - ")[1] || selectedZone}</div>
+                <h2 style={{ margin: 0, fontSize: 18, display: "flex", alignItems: "center", gap: 6 }}>
+                  <StatusDot status={isTalking ? "transmitting" : activeAudio ? "transmitting" : "idle"} />
+                  {selectedChannel}
+                </h2>
+              </div>
             </div>
-            <button
-              onClick={disconnect}
-              style={{
-                padding: "8px 16px",
-                backgroundColor: "#666",
-                color: "white",
-                border: "none",
-                borderRadius: 6,
-                cursor: "pointer",
-              }}
-            >
-              Disconnect
-            </button>
+            <div style={{ display: "flex", gap: 4 }}>
+              <button
+                onClick={() => setShowSettings(!showSettings)}
+                style={{
+                  padding: "6px 8px",
+                  backgroundColor: showSettings ? "#3b82f6" : "#333",
+                  color: "white",
+                  border: "none",
+                  borderRadius: 4,
+                  cursor: "pointer",
+                  fontSize: 11,
+                }}
+              >
+                ⚙️
+              </button>
+              <button
+                onClick={() => setShowUnits(!showUnits)}
+                style={{
+                  padding: "6px 8px",
+                  backgroundColor: showUnits ? "#3b82f6" : "#333",
+                  color: "white",
+                  border: "none",
+                  borderRadius: 4,
+                  cursor: "pointer",
+                  fontSize: 11,
+                }}
+              >
+                👥 {totalUnits}
+              </button>
+              <button
+                onClick={disconnect}
+                style={{
+                  padding: "6px 8px",
+                  backgroundColor: "#666",
+                  color: "white",
+                  border: "none",
+                  borderRadius: 4,
+                  cursor: "pointer",
+                  fontSize: 11,
+                }}
+              >
+                ✕
+              </button>
+            </div>
           </div>
 
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ display: "flex", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
+          {/* Zone and channel selection - compact */}
+          <div style={{ marginBottom: 8, flexShrink: 0 }}>
+            <div style={{ display: "flex", gap: 4, marginBottom: 4, flexWrap: "wrap" }}>
               {Object.keys(zonesData).map((zone) => (
                 <button
                   key={zone}
@@ -1065,32 +1107,32 @@ export default function App({ user, onLogout }) {
                     switchChannel(firstChannel);
                   }}
                   style={{
-                    padding: "6px 10px",
+                    padding: "4px 8px",
                     backgroundColor: zone === selectedZone ? "#6366f1" : "#222",
                     color: "white",
                     border: "none",
                     borderRadius: 4,
                     cursor: "pointer",
-                    fontSize: 11,
+                    fontSize: 10,
                   }}
                 >
                   {zone.replace("Zone ", "Z").split(" - ")[0]}
                 </button>
               ))}
             </div>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
               {currentZoneChannels.map((ch) => (
                 <button
                   key={ch}
                   onClick={() => switchChannel(ch)}
                   style={{
-                    padding: "8px 12px",
+                    padding: "6px 10px",
                     backgroundColor: ch === selectedChannel ? "#3b82f6" : "#333",
                     color: "white",
                     border: "none",
-                    borderRadius: 6,
+                    borderRadius: 4,
                     cursor: "pointer",
-                    fontSize: 12,
+                    fontSize: 11,
                   }}
                 >
                   {ch}
@@ -1099,243 +1141,159 @@ export default function App({ user, onLogout }) {
             </div>
           </div>
 
-          <div style={{ 
-            background: "#1a1a1a", 
-            padding: 12, 
-            borderRadius: 8,
-            marginBottom: 16
-          }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-              <h3 style={{ margin: 0, fontSize: 14 }}>Audio Settings</h3>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontSize: 12 }}>Radio Effect (narrowband)</span>
-              <button
-                onClick={() => setRadioEffect(!radioEffect)}
-                style={{
-                  padding: "4px 12px",
-                  backgroundColor: radioEffect ? "#3b82f6" : "#444",
-                  color: "white",
-                  border: "none",
-                  borderRadius: 4,
-                  cursor: "pointer",
-                  fontSize: 12,
-                }}
-              >
-                {radioEffect ? "ON" : "OFF"}
-              </button>
-            </div>
-          </div>
-
-          <div style={{ 
-            background: "#1a1a1a", 
-            padding: 12, 
-            borderRadius: 8,
-            marginBottom: 16
-          }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <span style={{ fontSize: 12, width: 24 }}>TX</span>
-                <AudioLevelMeter level={txLevel} />
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <span style={{ fontSize: 12, width: 24 }}>RX</span>
-                <AudioLevelMeter level={rxLevel} />
-              </div>
-            </div>
-            {lastRxBlob && (
-              <button
-                onClick={playLastRx}
-                disabled={isPlayingRecording}
-                style={{
-                  width: "100%",
-                  padding: "8px",
-                  backgroundColor: isPlayingRecording ? "#666" : "#4b5563",
-                  color: "white",
-                  border: "none",
-                  borderRadius: 4,
-                  cursor: isPlayingRecording ? "default" : "pointer",
-                  fontSize: 12,
-                }}
-              >
-                {isPlayingRecording ? "Playing..." : "Replay Last RX"}
-              </button>
-            )}
-          </div>
-
-          <div style={{ 
-            background: "#1a1a1a", 
-            padding: 12, 
-            borderRadius: 8,
-            marginBottom: 16
-          }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-              <h3 style={{ margin: 0, fontSize: 14 }}>Scan Mode</h3>
-              <button
-                onClick={() => setScanMode(!scanMode)}
-                style={{
-                  padding: "4px 12px",
-                  backgroundColor: scanMode ? "#f59e0b" : "#444",
-                  color: "white",
-                  border: "none",
-                  borderRadius: 4,
-                  cursor: "pointer",
-                  fontSize: 12,
-                }}
-              >
-                {scanMode ? "ON" : "OFF"}
-              </button>
-            </div>
-            
-            {scanMode && (
-              <div style={{ marginTop: 8, maxHeight: 200, overflowY: "auto" }}>
-                <p style={{ fontSize: 12, opacity: 0.6, margin: "0 0 8px 0" }}>
-                  Select channels to monitor (TX on {transmitChannel}):
-                </p>
-                {Object.entries(zonesData).map(([zoneName, zoneChannels]) => (
-                  <div key={zoneName} style={{ marginBottom: 10 }}>
-                    <div style={{ fontSize: 11, opacity: 0.5, marginBottom: 4 }}>{zoneName}</div>
-                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                      {zoneChannels.filter(ch => ch !== selectedChannel).map((ch) => (
-                        <button
-                          key={ch}
-                          onClick={() => toggleScanChannel(ch)}
-                          style={{
-                            padding: "4px 8px",
-                            backgroundColor: scanChannels.includes(ch) ? "#22c55e" : "#333",
-                            color: "white",
-                            border: "none",
-                            borderRadius: 4,
-                            cursor: "pointer",
-                            fontSize: 11,
-                          }}
-                        >
-                          {ch}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {activeAudio && (
-            <div style={{
-              background: "#1e40af",
-              padding: 10,
-              borderRadius: 8,
-              marginBottom: 16,
-              textAlign: "center",
-              fontSize: 14,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
+          {/* Collapsible Settings Panel */}
+          {showSettings && (
+            <div style={{ 
+              background: "#1a1a1a", 
+              padding: 8, 
+              borderRadius: 6,
+              marginBottom: 8,
+              flexShrink: 0,
             }}>
-              <StatusDot status="transmitting" />
-              Receiving: {activeAudio.from} on {activeAudio.channel}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 11 }}>TX</span>
+                  <AudioLevelMeter level={txLevel} />
+                  <span style={{ fontSize: 11, marginLeft: 8 }}>RX</span>
+                  <AudioLevelMeter level={rxLevel} />
+                </div>
+                <button
+                  onClick={() => setRadioEffect(!radioEffect)}
+                  style={{
+                    padding: "3px 8px",
+                    backgroundColor: radioEffect ? "#3b82f6" : "#444",
+                    color: "white",
+                    border: "none",
+                    borderRadius: 3,
+                    cursor: "pointer",
+                    fontSize: 10,
+                  }}
+                >
+                  Radio FX {radioEffect ? "ON" : "OFF"}
+                </button>
+              </div>
+              <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                <button
+                  onClick={() => setScanMode(!scanMode)}
+                  style={{
+                    padding: "3px 8px",
+                    backgroundColor: scanMode ? "#f59e0b" : "#444",
+                    color: "white",
+                    border: "none",
+                    borderRadius: 3,
+                    cursor: "pointer",
+                    fontSize: 10,
+                  }}
+                >
+                  Scan {scanMode ? "ON" : "OFF"}
+                </button>
+                {lastRxBlob && (
+                  <button
+                    onClick={playLastRx}
+                    disabled={isPlayingRecording}
+                    style={{
+                      padding: "3px 8px",
+                      backgroundColor: isPlayingRecording ? "#666" : "#4b5563",
+                      color: "white",
+                      border: "none",
+                      borderRadius: 3,
+                      cursor: isPlayingRecording ? "default" : "pointer",
+                      fontSize: 10,
+                    }}
+                  >
+                    {isPlayingRecording ? "Playing..." : "Replay RX"}
+                  </button>
+                )}
+              </div>
+              {scanMode && (
+                <div style={{ marginTop: 6, maxHeight: 80, overflowY: "auto" }}>
+                  <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                    {Object.values(zonesData).flat().filter(ch => ch !== selectedChannel).map((ch) => (
+                      <button
+                        key={ch}
+                        onClick={() => toggleScanChannel(ch)}
+                        style={{
+                          padding: "2px 6px",
+                          backgroundColor: scanChannels.includes(ch) ? "#22c55e" : "#333",
+                          color: "white",
+                          border: "none",
+                          borderRadius: 3,
+                          cursor: "pointer",
+                          fontSize: 9,
+                        }}
+                      >
+                        {ch}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
-          <div style={{ 
-            background: "#1a1a1a", 
-            padding: 12, 
-            borderRadius: 8,
-            marginBottom: 16,
-            maxHeight: 180,
-            overflowY: "auto",
-          }}>
-            <h3 style={{ margin: "0 0 8px 0", fontSize: 14 }}>
-              Online Units ({totalUnits})
-            </h3>
-            {Object.entries(unitPresence).map(([channel, units]) => (
-              Object.keys(units).length > 0 && (
-                <div key={channel} style={{ marginBottom: 8 }}>
-                  <div style={{ fontSize: 11, opacity: 0.5, marginBottom: 4 }}>{channel}</div>
-                  {Object.entries(units).map(([unitId, info]) => (
-                    <div 
-                      key={unitId} 
-                      style={{ 
-                        fontSize: 12, 
-                        marginBottom: 2,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        padding: "4px 8px",
-                        background: info.status === "transmitting" ? "rgba(234, 179, 8, 0.1)" : "transparent",
-                        borderRadius: 4,
-                      }}
-                    >
-                      <span style={{ display: "flex", alignItems: "center" }}>
+          {/* Collapsible Units Panel */}
+          {showUnits && (
+            <div style={{ 
+              background: "#1a1a1a", 
+              padding: 8, 
+              borderRadius: 6,
+              marginBottom: 8,
+              maxHeight: 100,
+              overflowY: "auto",
+              flexShrink: 0,
+            }}>
+              {Object.entries(unitPresence).map(([channel, units]) => (
+                Object.keys(units).length > 0 && (
+                  <div key={channel} style={{ marginBottom: 4 }}>
+                    <div style={{ fontSize: 9, opacity: 0.5 }}>{channel}</div>
+                    {Object.entries(units).map(([unitId, info]) => (
+                      <div key={unitId} style={{ fontSize: 11, display: "flex", alignItems: "center", gap: 4 }}>
                         <StatusDot status={info.status} />
                         {unitId}
-                      </span>
-                      {info.lastTransmission && (
-                        <span style={{ fontSize: 10, opacity: 0.5 }}>
-                          TX: {formatTimestamp(info.lastTransmission)}
-                        </span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )
-            ))}
-            {totalUnits === 0 && (
-              <p style={{ opacity: 0.5, margin: 0, fontSize: 12 }}>No other units online</p>
-            )}
-          </div>
+                      </div>
+                    ))}
+                  </div>
+                )
+              ))}
+              {totalUnits === 0 && <p style={{ opacity: 0.5, margin: 0, fontSize: 11 }}>No other units online</p>}
+            </div>
+          )}
 
-          <div style={{ 
-            background: "#1a1a1a", 
-            padding: 8, 
-            borderRadius: 8,
-            marginBottom: 16,
-            textAlign: "center",
-            fontSize: 12,
-          }}>
-            TX: {transmitChannel} | RX: {[selectedChannel, ...scanChannels].join(", ")}
-          </div>
+          {/* Active audio indicator */}
+          {activeAudio && (
+            <div style={{
+              background: "#1e40af",
+              padding: 8,
+              borderRadius: 6,
+              marginBottom: 8,
+              textAlign: "center",
+              fontSize: 12,
+              flexShrink: 0,
+            }}>
+              <StatusDot status="transmitting" />
+              RX: {activeAudio.from} on {activeAudio.channel}
+            </div>
+          )}
 
+          {/* Emergency alerts */}
           {Object.keys(activeEmergencies).length > 0 && (
             <div style={{
               background: emergencyFlash ? "#dc2626" : "#7f1d1d",
-              padding: 12,
-              borderRadius: 8,
-              marginBottom: 16,
+              padding: 8,
+              borderRadius: 6,
+              marginBottom: 8,
               border: "2px solid #dc2626",
+              flexShrink: 0,
             }}>
-              <h3 style={{ margin: "0 0 8px 0", fontSize: 14, textAlign: "center" }}>
-                ACTIVE EMERGENCIES
-              </h3>
               {Object.entries(activeEmergencies).map(([unitId, info]) => (
-                <div
-                  key={unitId}
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    padding: "6px 8px",
-                    background: "rgba(0,0,0,0.3)",
-                    borderRadius: 4,
-                    marginBottom: 4,
-                  }}
-                >
-                  <span>
+                <div key={unitId} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: 12 }}>
                     <StatusDot status="emergency" />
-                    {unitId} on {info.channel}
+                    {unitId} EMERGENCY
                   </span>
                   <button
                     onClick={() => acknowledgeEmergency(unitId, info.channel)}
-                    style={{
-                      padding: "4px 8px",
-                      backgroundColor: "#22c55e",
-                      color: "white",
-                      border: "none",
-                      borderRadius: 4,
-                      cursor: "pointer",
-                      fontSize: 11,
-                    }}
+                    style={{ padding: "3px 8px", backgroundColor: "#22c55e", color: "white", border: "none", borderRadius: 3, fontSize: 10 }}
                   >
                     ACK
                   </button>
@@ -1347,93 +1305,100 @@ export default function App({ user, onLogout }) {
           {isEmergency && (
             <div style={{
               background: emergencyFlash ? "#dc2626" : "#7f1d1d",
-              padding: 16,
-              borderRadius: 8,
-              marginBottom: 16,
+              padding: 10,
+              borderRadius: 6,
+              marginBottom: 8,
               textAlign: "center",
               border: "2px solid #dc2626",
+              flexShrink: 0,
             }}>
-              <div style={{ fontSize: 18, fontWeight: "bold", marginBottom: 8 }}>
-                EMERGENCY ACTIVE
-              </div>
-              <div style={{ fontSize: 14, marginBottom: 12 }}>
-                TX Lock: {emergencyLockRemaining}s remaining
-              </div>
+              <div style={{ fontSize: 14, fontWeight: "bold" }}>EMERGENCY - {emergencyLockRemaining}s</div>
               <button
                 onClick={cancelEmergency}
-                style={{
-                  padding: "8px 16px",
-                  backgroundColor: "#666",
-                  color: "white",
-                  border: "none",
-                  borderRadius: 4,
-                  cursor: "pointer",
-                  fontSize: 12,
-                }}
+                style={{ marginTop: 6, padding: "4px 12px", backgroundColor: "#666", color: "white", border: "none", borderRadius: 4, fontSize: 11 }}
               >
-                Cancel Emergency
+                Cancel
               </button>
             </div>
           )}
 
-          <button
-            onClick={triggerEmergency}
-            disabled={isEmergency}
-            style={{
-              padding: 16,
-              width: "100%",
-              backgroundColor: isEmergency ? "#7f1d1d" : "#f97316",
-              color: "white",
-              fontSize: 16,
-              fontWeight: "bold",
-              border: "2px solid #f97316",
-              borderRadius: 8,
-              cursor: isEmergency ? "default" : "pointer",
-              marginBottom: 12,
-              opacity: isEmergency ? 0.5 : 1,
-            }}
-          >
-            EMERGENCY
-          </button>
+          {/* Spacer */}
+          <div style={{ flex: 1 }} />
 
-          <button
-            onMouseDown={handleMouseDown}
-            onMouseUp={handlePTTUp}
-            onMouseLeave={handlePTTUp}
-            onTouchStart={handleTouchStart}
-            onTouchEnd={handleTouchEnd}
-            onTouchCancel={handleTouchEnd}
-            disabled={isEmergency || activeAudio}
-            style={{
-              padding: 30,
-              width: "100%",
-              backgroundColor: (pttPressed || isTalking) 
-                ? "#f97316"
-                : activeAudio 
-                  ? "#dc2626"
-                  : "#22c55e",
-              color: "white",
-              fontSize: 22,
-              fontWeight: "bold",
-              border: "none",
-              borderRadius: 12,
-              cursor: (isEmergency || activeAudio) ? "default" : "pointer",
-              boxShadow: (pttPressed || isTalking) 
-                ? "0 0 30px rgba(249, 115, 22, 0.6)"
-                : activeAudio 
-                  ? "0 0 30px rgba(220, 38, 38, 0.6)" 
-                  : "0 0 20px rgba(34, 197, 94, 0.4)",
-              transition: "background-color 0.05s, box-shadow 0.05s",
-              opacity: isEmergency ? 0.5 : 1,
-              touchAction: "manipulation",
-              userSelect: "none",
-              WebkitUserSelect: "none",
-              WebkitTouchCallout: "none",
-              WebkitTapHighlightColor: "transparent",
-            }}
-          >
-            {isTalking ? "TRANSMITTING..." : activeAudio ? `RX: ${activeAudio.from}` : "PUSH TO TALK"}
-          </button>
+          {/* TX/RX indicator */}
+          <div style={{ 
+            background: "#1a1a1a", 
+            padding: 6, 
+            borderRadius: 6,
+            marginBottom: 8,
+            textAlign: "center",
+            fontSize: 11,
+            flexShrink: 0,
+          }}>
+            TX: {transmitChannel} | RX: {[selectedChannel, ...scanChannels].join(", ")}
+          </div>
+
+          {/* Fixed bottom buttons */}
+          <div style={{ flexShrink: 0, paddingBottom: 12 }}>
+            <button
+              onClick={triggerEmergency}
+              disabled={isEmergency}
+              style={{
+                padding: 12,
+                width: "100%",
+                backgroundColor: isEmergency ? "#7f1d1d" : "#f97316",
+                color: "white",
+                fontSize: 14,
+                fontWeight: "bold",
+                border: "2px solid #f97316",
+                borderRadius: 8,
+                cursor: isEmergency ? "default" : "pointer",
+                marginBottom: 8,
+                opacity: isEmergency ? 0.5 : 1,
+              }}
+            >
+              EMERGENCY
+            </button>
+
+            <button
+              onMouseDown={handleMouseDown}
+              onMouseUp={handlePTTUp}
+              onMouseLeave={handlePTTUp}
+              onTouchStart={handleTouchStart}
+              onTouchEnd={handleTouchEnd}
+              onTouchCancel={handleTouchEnd}
+              disabled={isEmergency || activeAudio}
+              style={{
+                padding: 24,
+                width: "100%",
+                backgroundColor: (pttPressed || isTalking) 
+                  ? "#f97316"
+                  : activeAudio 
+                    ? "#dc2626"
+                    : "#22c55e",
+                color: "white",
+                fontSize: 20,
+                fontWeight: "bold",
+                border: "none",
+                borderRadius: 12,
+                cursor: (isEmergency || activeAudio) ? "default" : "pointer",
+                boxShadow: (pttPressed || isTalking) 
+                  ? "0 0 30px rgba(249, 115, 22, 0.6)"
+                  : activeAudio 
+                    ? "0 0 30px rgba(220, 38, 38, 0.6)" 
+                    : "0 0 20px rgba(34, 197, 94, 0.4)",
+                transition: "background-color 0.05s, box-shadow 0.05s",
+                opacity: isEmergency ? 0.5 : 1,
+                touchAction: "manipulation",
+                userSelect: "none",
+                WebkitUserSelect: "none",
+                WebkitTouchCallout: "none",
+                WebkitTapHighlightColor: "transparent",
+              }}
+            >
+              {isTalking ? "TRANSMITTING..." : activeAudio ? `RX: ${activeAudio.from}` : "PUSH TO TALK"}
+            </button>
+          </div>
         </div>
       )}
     </div>
