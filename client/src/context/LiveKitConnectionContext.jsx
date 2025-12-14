@@ -213,32 +213,31 @@ export function LiveKitConnectionProvider({ children, user }) {
     );
   }, [scheduleReconnect, recordActivity]);
 
-  const preCaptureForSafari = useCallback(async () => {
-    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent) ||
-      (/iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream);
+  const preCaptureForMobile = useCallback(async () => {
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
     
-    if (!isSafari) return;
+    if (!isMobile) return;
     
     if (micStreamRef.current) {
-      console.log('[LiveKitConnection] Safari mic already captured');
+      console.log('[LiveKitConnection] Mobile mic already captured');
       return;
     }
     
     try {
-      console.log('[LiveKitConnection] Safari detected - pre-capturing mic for RX audio');
+      console.log('[LiveKitConnection] Mobile detected - pre-capturing mic for RX audio');
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       micStreamRef.current = stream;
-      console.log('[LiveKitConnection] Safari mic pre-capture successful');
+      console.log('[LiveKitConnection] Mobile mic pre-capture successful');
     } catch (err) {
-      console.warn('[LiveKitConnection] Safari mic pre-capture failed:', err.message);
+      console.warn('[LiveKitConnection] Mobile mic pre-capture failed:', err.message);
     }
   }, []);
 
-  const releaseSafariMic = useCallback(() => {
+  const releaseMobileMic = useCallback(() => {
     if (micStreamRef.current) {
       micStreamRef.current.getTracks().forEach(track => track.stop());
       micStreamRef.current = null;
-      console.log('[LiveKitConnection] Safari mic released');
+      console.log('[LiveKitConnection] Mobile mic released');
     }
   }, []);
 
@@ -248,7 +247,7 @@ export function LiveKitConnectionProvider({ children, user }) {
     recordActivity();
     
     try {
-      await preCaptureForSafari();
+      await preCaptureForMobile();
       await livekitManager.connect(channelName, identity);
       connectionStartTimes.current.set(channelName, Date.now());
       console.log(`[LiveKitConnection] Connected to ${channelName}`);
@@ -258,7 +257,7 @@ export function LiveKitConnectionProvider({ children, user }) {
       scheduleReconnect(channelName, identity);
       return false;
     }
-  }, [recordActivity, preCaptureForSafari, scheduleReconnect]);
+  }, [recordActivity, preCaptureForMobile, scheduleReconnect]);
 
   const disconnectFromChannel = useCallback(async (channelName) => {
     clearReconnectTimer(channelName);
@@ -410,14 +409,14 @@ export function LiveKitConnectionProvider({ children, user }) {
   const disconnectAll = useCallback(async () => {
     console.log('[LiveKitConnection] Disconnecting all');
     clearAllReconnectTimers();
-    releaseSafariMic();
+    releaseMobileMic();
     await livekitManager.disconnectAll();
     setConnected(false);
     setConnectionStatus('idle');
     setActiveChannel(null);
     initializingRef.current = false;
     lastUserRef.current = null;
-  }, [clearAllReconnectTimers, setConnected, releaseSafariMic]);
+  }, [clearAllReconnectTimers, setConnected, releaseMobileMic]);
 
   const retryConnection = useCallback(async () => {
     if (!user) return;
@@ -479,7 +478,7 @@ export function LiveKitConnectionProvider({ children, user }) {
           livekitManager.disconnect(ch);
         });
         
-        releaseSafariMic();
+        releaseMobileMic();
         setConnectionStatus('idle');
         setConnected(false);
       }
@@ -490,7 +489,7 @@ export function LiveKitConnectionProvider({ children, user }) {
         clearInterval(idleTimerRef.current);
       }
     };
-  }, [location.pathname, setConnected, releaseSafariMic]);
+  }, [location.pathname, setConnected, releaseMobileMic]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -555,12 +554,12 @@ export function LiveKitConnectionProvider({ children, user }) {
     return () => {
       mountedRef.current = false;
       clearAllReconnectTimers();
-      releaseSafariMic();
+      releaseMobileMic();
       if (idleTimerRef.current) {
         clearInterval(idleTimerRef.current);
       }
     };
-  }, [clearAllReconnectTimers, releaseSafariMic]);
+  }, [clearAllReconnectTimers, releaseMobileMic]);
 
   const value = {
     connectionStatus,
