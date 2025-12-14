@@ -401,7 +401,20 @@ export async function upsertUnitPresence(identity, channel, status, location = n
 }
 
 export async function getAllUnitPresence() {
-  const result = await pool.query(`SELECT * FROM units ORDER BY unit_identity`);
+  // Only return units seen in the last 5 minutes
+  const result = await pool.query(
+    `SELECT * FROM units 
+     WHERE last_seen > NOW() - INTERVAL '5 minutes'
+     ORDER BY unit_identity`
+  );
+  return result.rows;
+}
+
+export async function cleanupStaleUnits() {
+  // Remove units not seen in 10 minutes
+  const result = await pool.query(
+    `DELETE FROM units WHERE last_seen < NOW() - INTERVAL '10 minutes' RETURNING *`
+  );
   return result.rows;
 }
 
