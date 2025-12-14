@@ -546,7 +546,9 @@ export default function App({ user, onLogout }) {
         
         audioElem.playsInline = true;
         audioElem.autoplay = true;
+        audioElem.style.display = 'none';
         
+        document.body.appendChild(audioElem);
         rxAudioElementsRef.current.add(audioElem);
         
         // Mute if we're transmitting OR about to transmit (ARMING state)
@@ -554,13 +556,16 @@ export default function App({ user, onLogout }) {
         if (currentState === PTT_STATES.TRANSMITTING || currentState === PTT_STATES.ARMING) {
           audioElem.muted = true;
           console.log('[Radio PTT] Muting incoming audio - we are transmitting');
+        } else {
+          audioElem.muted = false;
+          audioElem.volume = 1.0;
         }
         
-        audioElem.play().catch(() => {
-          console.log('[Radio PTT] Audio autoplay blocked, will play on user gesture');
+        audioElem.play().catch((e) => {
+          console.log('[Radio PTT] Audio autoplay blocked:', e.message);
         });
         
-        console.log('[Radio PTT] Receiving audio from', participant.identity);
+        console.log('[Radio PTT] Receiving audio from', participant.identity, 'muted:', audioElem.muted, 'volume:', audioElem.volume);
         
         setActiveAudio({ channel: channelName, from: participant.identity });
         updateUnitPresence(channelName, participant.identity, "transmitting", Date.now());

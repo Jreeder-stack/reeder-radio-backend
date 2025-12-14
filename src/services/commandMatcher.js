@@ -1,9 +1,9 @@
 const COMMAND_TABLE = [
-  { phrases: ['radio check', 'radio chek', 'radio czech', 'radiocheck', 'radio sheck'], response: 'Loud and clear.' },
-  { phrases: ['status check', 'status chek', 'statuscheck'], response: 'Go ahead.' },
-  { phrases: ['traffic stop', 'trafficstop'], response: 'Copy traffic stop.' },
-  { phrases: ['clear', 'i am clear', "i'm clear", 'all clear'], response: 'Copy, clear.' },
-  { phrases: ['need assistance', 'requesting assistance', 'request assistance', 'need backup', 'requesting backup'], response: 'Copy. Assistance requested.' },
+  { phrases: ['radio check', 'radio chek', 'radio czech', 'radiocheck', 'radio sheck', 'radio cook', 'radiothek', 'radio tech', 'radio tek', 'radio deck', 'radio chuck', 'radio chick', 'radio shake', 'radio shack', 'radio jack', 'radio jeck', 'ready check', 'ready o check', 'radio cheque', 'redio check', 'radio chack'], response: 'Loud and clear.' },
+  { phrases: ['status check', 'status chek', 'statuscheck', 'status chuck', 'status sheck', 'state is check'], response: 'Go ahead.' },
+  { phrases: ['traffic stop', 'trafficstop', 'traffic stock', 'traffic stuck'], response: 'Copy traffic stop.' },
+  { phrases: ['clear', 'i am clear', "i'm clear", 'all clear', 'im clear', 'i clear'], response: 'Copy, clear.' },
+  { phrases: ['need assistance', 'requesting assistance', 'request assistance', 'need backup', 'requesting backup', 'need a distance', 'need a sister', 'need assist'], response: 'Copy. Assistance requested.' },
 ];
 
 function normalizeText(text) {
