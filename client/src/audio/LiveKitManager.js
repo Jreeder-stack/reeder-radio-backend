@@ -324,7 +324,11 @@ class LiveKitManager {
       
       console.log(`[LiveKit] Calling onTrackSubscribed callback: ${!!this.onTrackSubscribed}`);
       if (this.onTrackSubscribed) {
-        this.onTrackSubscribed(channelName, track, participant);
+        try {
+          this.onTrackSubscribed(channelName, track, participant);
+        } catch (err) {
+          console.error('[LiveKit] onTrackSubscribed callback error:', err);
+        }
       }
     });
 
