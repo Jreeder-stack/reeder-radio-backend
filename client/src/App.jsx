@@ -153,7 +153,11 @@ export default function App({ user, onLogout }) {
     livekitManager, 
     connectionStatus, 
     connectionHealth, 
-    channels: contextChannels 
+    channels: contextChannels,
+    switchChannel: contextSwitchChannel,
+    ensureConnected,
+    recordActivity,
+    toggleScanMode: contextToggleScanMode,
   } = useLiveKitConnection();
   
   const [darkMode, setDarkMode] = useState(() => {
@@ -686,11 +690,13 @@ export default function App({ user, onLogout }) {
     }
   }, [connected, transmitChannel, livekitManager, broadcastStatus, startHeartbeat, identity, userLocation, initializePresence]);
 
-  const switchChannel = useCallback((newChannel) => {
+  const switchChannel = useCallback(async (newChannel) => {
     if (!connected || newChannel === selectedChannel) return;
     
     setSelectedChannel(newChannel);
     setTransmitChannel(newChannel);
+    
+    await contextSwitchChannel(newChannel, identity);
     
     if (livekitManager) {
       livekitManager.setPrimaryTxChannel(newChannel);
@@ -701,20 +707,23 @@ export default function App({ user, onLogout }) {
         initializePresence(room, newChannel);
       }
     }
-  }, [connected, selectedChannel, livekitManager, broadcastStatus, initializePresence]);
+  }, [connected, selectedChannel, livekitManager, broadcastStatus, initializePresence, contextSwitchChannel, identity]);
 
-  const toggleScanChannel = useCallback((channel) => {
+  const toggleScanChannel = useCallback(async (channel) => {
     if (channel === selectedChannel) return;
 
+    let newScanChannels;
     if (scanChannels.includes(channel)) {
-      setScanChannels((prev) => prev.filter((c) => c !== channel));
+      newScanChannels = scanChannels.filter((c) => c !== channel);
+      setScanChannels(newScanChannels);
       setUnitPresence((prev) => {
         const updated = { ...prev };
         delete updated[channel];
         return updated;
       });
     } else {
-      setScanChannels((prev) => [...prev, channel]);
+      newScanChannels = [...scanChannels, channel];
+      setScanChannels(newScanChannels);
       
       if (livekitManager) {
         const room = livekitManager.getRoom(channel);
@@ -723,7 +732,11 @@ export default function App({ user, onLogout }) {
         }
       }
     }
-  }, [selectedChannel, scanChannels, livekitManager, initializePresence]);
+    
+    if (scanMode) {
+      await contextToggleScanMode(true, newScanChannels, identity);
+    }
+  }, [selectedChannel, scanChannels, scanMode, livekitManager, initializePresence, contextToggleScanMode, identity]);
 
   const startPTT = useCallback(async () => {
     if (!livekitManager) {
@@ -748,6 +761,7 @@ export default function App({ user, onLogout }) {
     if (e && e.type === 'keydown' && e.repeat) return;
     
     unlockAudio();
+    recordActivity();
     
     console.log('[Radio PTT] === PTT DOWN ===, state:', pttState);
     
@@ -756,8 +770,14 @@ export default function App({ user, onLogout }) {
       return;
     }
     
+    const isConnected = await ensureConnected(transmitChannel);
+    if (!isConnected) {
+      console.log('[Radio PTT] Cannot transmit - not connected');
+      return;
+    }
+    
     await startPTT();
-  }, [pttState, startPTT]);
+  }, [pttState, startPTT, recordActivity, ensureConnected, transmitChannel]);
 
   const handlePTTUp = useCallback(async () => {
     console.log('[Radio PTT] === PTT UP ===, state:', pttState);
@@ -864,6 +884,12 @@ export default function App({ user, onLogout }) {
     broadcastStatus("idle", transmitChannel);
     updateUnitPresence(transmitChannel, identity, "idle", Date.now());
   };
+
+  const handleToggleScanMode = useCallback(async () => {
+    const newScanMode = !scanMode;
+    setScanMode(newScanMode);
+    await contextToggleScanMode(newScanMode, scanChannels, identity);
+  }, [scanMode, scanChannels, identity, contextToggleScanMode]);
 
   const currentZoneChannels = zonesData[selectedZone] || [];
   
@@ -1098,7 +1124,7 @@ export default function App({ user, onLogout }) {
             }}>
               <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
                 <button
-                  onClick={() => setScanMode(!scanMode)}
+                  onClick={handleToggleScanMode}
                   style={{
                     padding: "3px 8px",
                     backgroundColor: scanMode ? "#f59e0b" : theme.buttonBg,

@@ -6,23 +6,30 @@ import useDispatchStore from '../state/dispatchStore.js';
 
 const LiveKitConnectionContext = createContext(null);
 
-// Reconnection with stability detection to prevent infinite loops
-const RECONNECT_BASE_DELAY = 2000; // Start at 2 seconds
-const RECONNECT_MAX_DELAY = 30000; // Cap at 30s
-const RECONNECT_MAX_ATTEMPTS = 10; // Fewer attempts with longer delays
-const STABILITY_THRESHOLD = 5000; // Connection must stay stable for 5s before resetting attempts
+const RECONNECT_BASE_DELAY = 2000;
+const RECONNECT_MAX_DELAY = 30000;
+const RECONNECT_MAX_ATTEMPTS = 10;
+const STABILITY_THRESHOLD = 5000;
+const IDLE_TIMEOUT = 5 * 60 * 1000; // 5 minutes
 
 export function LiveKitConnectionProvider({ children, user }) {
   const location = useLocation();
   const [connectionStatus, setConnectionStatus] = useState('idle');
   const [connectionHealth, setConnectionHealth] = useState({ status: 'disconnected', healthy: 0, total: 0 });
+  const [activeChannel, setActiveChannel] = useState(null);
+  const [scanMode, setScanMode] = useState(false);
+  const [scanChannels, setScanChannels] = useState([]);
+  
   const reconnectAttempts = useRef(new Map());
   const reconnectTimers = useRef(new Map());
-  const connectionStartTimes = useRef(new Map()); // Track when connections started
+  const connectionStartTimes = useRef(new Map());
   const mountedRef = useRef(true);
   const initializingRef = useRef(false);
   const lastUserRef = useRef(null);
   const lastPathRef = useRef(null);
+  const idleTimerRef = useRef(null);
+  const lastActivityRef = useRef(Date.now());
+  const micStreamRef = useRef(null);
   
   const {
     channels: storeChannels,
@@ -48,17 +55,19 @@ export function LiveKitConnectionProvider({ children, user }) {
     connectionStartTimes.current.clear();
   }, [clearReconnectTimer]);
 
+  const recordActivity = useCallback(() => {
+    lastActivityRef.current = Date.now();
+  }, []);
+
   const scheduleReconnect = useCallback((channelName, identity) => {
     if (!mountedRef.current) return;
     
-    // Check if the last connection was stable (lasted > STABILITY_THRESHOLD)
     const startTime = connectionStartTimes.current.get(channelName);
     const wasStable = startTime && (Date.now() - startTime) > STABILITY_THRESHOLD;
     
-    // Only reset attempts if the connection was stable, and clear start time so this only triggers once
     if (wasStable) {
       reconnectAttempts.current.delete(channelName);
-      connectionStartTimes.current.delete(channelName); // Clear so next failures increment properly
+      connectionStartTimes.current.delete(channelName);
       console.log(`[LiveKitConnection] Connection to ${channelName} was stable, resetting attempts`);
     }
     
@@ -68,9 +77,8 @@ export function LiveKitConnectionProvider({ children, user }) {
       return;
     }
     
-    // Exponential backoff with jitter to prevent thundering herd
     const baseDelay = RECONNECT_BASE_DELAY * Math.pow(2, attempts);
-    const jitter = Math.random() * 1000; // 0-1 second jitter
+    const jitter = Math.random() * 1000;
     const delay = Math.min(baseDelay + jitter, RECONNECT_MAX_DELAY);
     
     console.log(`[LiveKitConnection] Scheduling reconnect for ${channelName} in ${Math.round(delay)}ms (attempt ${attempts + 1})`);
@@ -86,7 +94,6 @@ export function LiveKitConnectionProvider({ children, user }) {
         await livekitManager.connect(channelName, identity);
         connectionStartTimes.current.set(channelName, Date.now());
         console.log(`[LiveKitConnection] Reconnected to ${channelName}`);
-        // Don't clear attempts here - let stability detection handle it
       } catch (err) {
         console.error(`[LiveKitConnection] Reconnect failed for ${channelName}:`, err);
         scheduleReconnect(channelName, identity);
@@ -99,11 +106,9 @@ export function LiveKitConnectionProvider({ children, user }) {
   const listenerRemoversRef = useRef([]);
   
   const setupEventHandlers = useCallback((identity) => {
-    // Clean up any existing listeners first
     listenerRemoversRef.current.forEach(remove => remove());
     listenerRemoversRef.current = [];
     
-    // Use new listener pattern that supports multiple listeners
     listenerRemoversRef.current.push(
       livekitManager.addLevelUpdateListener((channelName, level) => {
         const channels = useDispatchStore.getState().channels;
@@ -116,6 +121,7 @@ export function LiveKitConnectionProvider({ children, user }) {
     
     listenerRemoversRef.current.push(
       livekitManager.addTrackSubscribedListener((channelName, track, participant) => {
+        recordActivity();
         const state = useDispatchStore.getState();
         const channel = state.channels.find(c => c.name === channelName);
         if (channel) {
@@ -169,6 +175,7 @@ export function LiveKitConnectionProvider({ children, user }) {
     
     listenerRemoversRef.current.push(
       livekitManager.addDataReceivedListener((channelName, message, participant) => {
+        recordActivity();
         if (message.type === 'emergency') {
           if (message.active) {
             useDispatchStore.getState().addEmergency({
@@ -186,7 +193,6 @@ export function LiveKitConnectionProvider({ children, user }) {
       livekitManager.addConnectionStateChangeListener((channelName, state, error) => {
         console.log(`[LiveKitConnection] ${channelName} state: ${state}`);
         
-        // Update connection health state for UI
         if (mountedRef.current) {
           setConnectionHealth(livekitManager.getConnectionStatus());
         }
@@ -205,9 +211,130 @@ export function LiveKitConnectionProvider({ children, user }) {
         }
       })
     );
-  }, [scheduleReconnect]);
+  }, [scheduleReconnect, recordActivity]);
 
-  const initializeConnections = useCallback(async (identity, channelsToConnect) => {
+  const preCaptureForSafari = useCallback(async () => {
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent) ||
+      (/iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream);
+    
+    if (!isSafari) return;
+    
+    if (micStreamRef.current) {
+      console.log('[LiveKitConnection] Safari mic already captured');
+      return;
+    }
+    
+    try {
+      console.log('[LiveKitConnection] Safari detected - pre-capturing mic for RX audio');
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      micStreamRef.current = stream;
+      console.log('[LiveKitConnection] Safari mic pre-capture successful');
+    } catch (err) {
+      console.warn('[LiveKitConnection] Safari mic pre-capture failed:', err.message);
+    }
+  }, []);
+
+  const releaseSafariMic = useCallback(() => {
+    if (micStreamRef.current) {
+      micStreamRef.current.getTracks().forEach(track => track.stop());
+      micStreamRef.current = null;
+      console.log('[LiveKitConnection] Safari mic released');
+    }
+  }, []);
+
+  const connectToChannel = useCallback(async (channelName, identity) => {
+    if (!channelName || !identity) return false;
+    
+    recordActivity();
+    
+    try {
+      await preCaptureForSafari();
+      await livekitManager.connect(channelName, identity);
+      connectionStartTimes.current.set(channelName, Date.now());
+      console.log(`[LiveKitConnection] Connected to ${channelName}`);
+      return true;
+    } catch (err) {
+      console.error(`[LiveKitConnection] Failed to connect to ${channelName}:`, err);
+      scheduleReconnect(channelName, identity);
+      return false;
+    }
+  }, [recordActivity, preCaptureForSafari, scheduleReconnect]);
+
+  const disconnectFromChannel = useCallback(async (channelName) => {
+    clearReconnectTimer(channelName);
+    await livekitManager.disconnect(channelName);
+    console.log(`[LiveKitConnection] Disconnected from ${channelName}`);
+  }, [clearReconnectTimer]);
+
+  const switchChannel = useCallback(async (newChannelName, identity, isDispatcher = false) => {
+    if (!newChannelName || !identity) return;
+    
+    recordActivity();
+    
+    const currentPath = location.pathname;
+    const isDispatcherRoute = currentPath === '/dispatcher';
+    
+    if (isDispatcherRoute || isDispatcher) {
+      await connectToChannel(newChannelName, identity);
+      return;
+    }
+    
+    const currentChannels = livekitManager.getConnectedChannels();
+    const channelsToKeep = scanMode 
+      ? [newChannelName, ...scanChannels.filter(ch => ch !== newChannelName)]
+      : [newChannelName];
+    
+    for (const ch of currentChannels) {
+      if (!channelsToKeep.includes(ch)) {
+        await disconnectFromChannel(ch);
+      }
+    }
+    
+    if (!currentChannels.includes(newChannelName)) {
+      await connectToChannel(newChannelName, identity);
+    }
+    
+    setActiveChannel(newChannelName);
+    setConnectionHealth(livekitManager.getConnectionStatus());
+    
+    const connectedCount = livekitManager.getConnectedChannels().length;
+    if (connectedCount > 0) {
+      setConnected(true);
+      setConnectionStatus('connected');
+    }
+  }, [recordActivity, connectToChannel, disconnectFromChannel, scanMode, scanChannels, location.pathname, setConnected]);
+
+  const toggleScanMode = useCallback(async (enabled, channelsToScan, identity) => {
+    recordActivity();
+    setScanMode(enabled);
+    const newScanChannels = channelsToScan || [];
+    setScanChannels(newScanChannels);
+    
+    const currentChannels = livekitManager.getConnectedChannels();
+    const channelsToKeep = enabled 
+      ? [activeChannel, ...newScanChannels].filter(Boolean)
+      : [activeChannel].filter(Boolean);
+    
+    for (const ch of currentChannels) {
+      if (!channelsToKeep.includes(ch)) {
+        console.log(`[LiveKitConnection] Disconnecting from ${ch} (not in keep list)`);
+        await disconnectFromChannel(ch);
+      }
+    }
+    
+    if (enabled && newScanChannels.length > 0) {
+      console.log(`[LiveKitConnection] Scan mode ON - connecting to ${newScanChannels.length} channels`);
+      for (const ch of newScanChannels) {
+        if (!livekitManager.isConnected(ch)) {
+          await connectToChannel(ch, identity);
+        }
+      }
+    }
+    
+    setConnectionHealth(livekitManager.getConnectionStatus());
+  }, [recordActivity, connectToChannel, disconnectFromChannel, activeChannel]);
+
+  const initializeConnections = useCallback(async (identity, channelsData, initialChannel = null) => {
     if (initializingRef.current) {
       console.log('[LiveKitConnection] Already initializing, skipping');
       return;
@@ -221,34 +348,54 @@ export function LiveKitConnectionProvider({ children, user }) {
     try {
       setupEventHandlers(identity);
       
-      const enabledChannels = channelsToConnect.filter(ch => ch.enabled);
-      console.log(`[LiveKitConnection] Connecting to ${enabledChannels.length} channels as ${identity}`);
+      const enabledChannels = channelsData.filter(ch => ch.enabled);
       
-      const results = await Promise.allSettled(
-        enabledChannels.map(async (channel) => {
-          try {
-            await livekitManager.connect(channel.name, identity);
-            connectionStartTimes.current.set(channel.name, Date.now());
-            console.log(`[LiveKitConnection] Connected to ${channel.name}`);
-            return { channel: channel.name, success: true };
-          } catch (err) {
-            console.error(`[LiveKitConnection] Failed to connect to ${channel.name}:`, err);
-            scheduleReconnect(channel.name, identity);
-            return { channel: channel.name, success: false, error: err };
-          }
-        })
-      );
-      
-      const successCount = results.filter(r => r.status === 'fulfilled' && r.value.success).length;
-      console.log(`[LiveKitConnection] Connected to ${successCount}/${enabledChannels.length} channels`);
-      
-      if (successCount > 0) {
-        setConnected(true);
-        setConnectionStatus('connected');
-      } else {
-        setConnectionError('Failed to connect to any channels');
-        setConnectionStatus('failed');
+      if (enabledChannels.length === 0) {
+        console.log('[LiveKitConnection] No enabled channels available');
+        setConnected(false);
+        setConnectionStatus('idle');
+        return;
       }
+      
+      const currentPath = location.pathname;
+      const isDispatcher = currentPath === '/dispatcher';
+      
+      if (isDispatcher) {
+        console.log(`[LiveKitConnection] Dispatcher mode - connecting to all ${enabledChannels.length} channels`);
+        
+        const results = await Promise.allSettled(
+          enabledChannels.map(channel => connectToChannel(channel.name, identity))
+        );
+        
+        const successCount = results.filter(r => r.status === 'fulfilled' && r.value).length;
+        console.log(`[LiveKitConnection] Connected to ${successCount}/${enabledChannels.length} channels`);
+        
+        if (successCount > 0) {
+          setConnected(true);
+          setConnectionStatus('connected');
+        } else {
+          setConnectionError('Failed to connect to any channels');
+          setConnectionStatus('failed');
+        }
+      } else {
+        const firstChannel = initialChannel || enabledChannels[0]?.name;
+        if (firstChannel) {
+          console.log(`[LiveKitConnection] Radio mode - connecting only to ${firstChannel}`);
+          
+          const success = await connectToChannel(firstChannel, identity);
+          setActiveChannel(firstChannel);
+          
+          if (success) {
+            setConnected(true);
+            setConnectionStatus('connected');
+          } else {
+            setConnectionError(`Failed to connect to ${firstChannel}`);
+            setConnectionStatus('failed');
+          }
+        }
+      }
+      
+      setConnectionHealth(livekitManager.getConnectionStatus());
       
     } catch (err) {
       console.error('[LiveKitConnection] Initialization failed:', err);
@@ -258,22 +405,25 @@ export function LiveKitConnectionProvider({ children, user }) {
       initializingRef.current = false;
       setConnecting(false);
     }
-  }, [setupEventHandlers, setConnected, setConnecting, setConnectionError, scheduleReconnect]);
+  }, [setupEventHandlers, setConnected, setConnecting, setConnectionError, connectToChannel, location.pathname]);
 
   const disconnectAll = useCallback(async () => {
     console.log('[LiveKitConnection] Disconnecting all');
     clearAllReconnectTimers();
+    releaseSafariMic();
     await livekitManager.disconnectAll();
     setConnected(false);
     setConnectionStatus('idle');
+    setActiveChannel(null);
     initializingRef.current = false;
     lastUserRef.current = null;
-  }, [clearAllReconnectTimers, setConnected]);
+  }, [clearAllReconnectTimers, setConnected, releaseSafariMic]);
 
   const retryConnection = useCallback(async () => {
     if (!user) return;
     
     console.log('[LiveKitConnection] Retrying connection...');
+    recordActivity();
     clearAllReconnectTimers();
     initializingRef.current = false;
     lastUserRef.current = null;
@@ -290,7 +440,57 @@ export function LiveKitConnectionProvider({ children, user }) {
       setConnectionError(err.message);
       lastUserRef.current = null;
     }
-  }, [user, clearAllReconnectTimers, setChannels, initializeConnections, setConnectionError]);
+  }, [user, recordActivity, clearAllReconnectTimers, setChannels, initializeConnections, setConnectionError]);
+
+  const ensureConnected = useCallback(async (channelName) => {
+    if (!user) return false;
+    
+    recordActivity();
+    
+    if (livekitManager.isConnected(channelName)) {
+      return true;
+    }
+    
+    console.log(`[LiveKitConnection] Reconnecting to ${channelName} after idle...`);
+    return await connectToChannel(channelName, user.username);
+  }, [user, recordActivity, connectToChannel]);
+
+  useEffect(() => {
+    if (idleTimerRef.current) {
+      clearInterval(idleTimerRef.current);
+    }
+    
+    const currentPath = location.pathname;
+    const isDispatcher = currentPath === '/dispatcher';
+    
+    if (isDispatcher) {
+      console.log('[LiveKitConnection] Dispatcher mode - idle timeout disabled');
+      return;
+    }
+    
+    idleTimerRef.current = setInterval(() => {
+      const idleTime = Date.now() - lastActivityRef.current;
+      
+      if (idleTime >= IDLE_TIMEOUT) {
+        console.log(`[LiveKitConnection] Idle for ${Math.round(idleTime / 1000)}s - disconnecting to save costs`);
+        
+        const connectedChannels = livekitManager.getConnectedChannels();
+        connectedChannels.forEach(ch => {
+          livekitManager.disconnect(ch);
+        });
+        
+        releaseSafariMic();
+        setConnectionStatus('idle');
+        setConnected(false);
+      }
+    }, 30000);
+    
+    return () => {
+      if (idleTimerRef.current) {
+        clearInterval(idleTimerRef.current);
+      }
+    };
+  }, [location.pathname, setConnected, releaseSafariMic]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -299,7 +499,6 @@ export function LiveKitConnectionProvider({ children, user }) {
     const init = async () => {
       console.log('[LiveKitConnection] Init check - user:', user?.username, 'lastUser:', lastUserRef.current, 'initializing:', initializingRef.current, 'path:', currentPath);
       
-      // Auto-connect on both radio (/) and dispatcher (/dispatcher) routes
       const shouldConnect = currentPath === '/' || currentPath === '/dispatcher';
       if (!shouldConnect) {
         console.log('[LiveKitConnection] Not on radio or dispatcher route, skipping auto-connect');
@@ -316,7 +515,6 @@ export function LiveKitConnectionProvider({ children, user }) {
         return;
       }
       
-      // Check if already initialized for this user on this path
       if (lastUserRef.current === user.username && lastPathRef.current === currentPath) {
         console.log('[LiveKitConnection] Already initialized for this user on this path, skipping');
         return;
@@ -357,16 +555,27 @@ export function LiveKitConnectionProvider({ children, user }) {
     return () => {
       mountedRef.current = false;
       clearAllReconnectTimers();
+      releaseSafariMic();
+      if (idleTimerRef.current) {
+        clearInterval(idleTimerRef.current);
+      }
     };
-  }, [clearAllReconnectTimers]);
+  }, [clearAllReconnectTimers, releaseSafariMic]);
 
   const value = {
     connectionStatus,
     connectionHealth,
+    activeChannel,
+    scanMode,
+    scanChannels,
     disconnectAll,
     retryConnection,
     livekitManager,
     channels: storeChannels,
+    switchChannel,
+    toggleScanMode,
+    ensureConnected,
+    recordActivity,
   };
 
   return (
