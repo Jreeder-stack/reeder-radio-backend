@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useRef, useCallback, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { livekitManager } from '../audio/LiveKitManager.js';
 import { getChannels } from '../utils/api.js';
 import useDispatchStore from '../state/dispatchStore.js';
@@ -12,6 +13,7 @@ const RECONNECT_MAX_ATTEMPTS = 10; // Fewer attempts with longer delays
 const STABILITY_THRESHOLD = 5000; // Connection must stay stable for 5s before resetting attempts
 
 export function LiveKitConnectionProvider({ children, user }) {
+  const location = useLocation();
   const [connectionStatus, setConnectionStatus] = useState('idle');
   const [connectionHealth, setConnectionHealth] = useState({ status: 'disconnected', healthy: 0, total: 0 });
   const reconnectAttempts = useRef(new Map());
@@ -20,6 +22,7 @@ export function LiveKitConnectionProvider({ children, user }) {
   const mountedRef = useRef(true);
   const initializingRef = useRef(false);
   const lastUserRef = useRef(null);
+  const lastPathRef = useRef(null);
   
   const {
     channels: storeChannels,
@@ -269,12 +272,13 @@ export function LiveKitConnectionProvider({ children, user }) {
 
   useEffect(() => {
     mountedRef.current = true;
+    const currentPath = location.pathname;
     
     const init = async () => {
-      console.log('[LiveKitConnection] Init check - user:', user?.username, 'lastUser:', lastUserRef.current, 'initializing:', initializingRef.current, 'path:', window.location.pathname);
+      console.log('[LiveKitConnection] Init check - user:', user?.username, 'lastUser:', lastUserRef.current, 'initializing:', initializingRef.current, 'path:', currentPath);
       
       // Only auto-connect on dispatcher route - Radio screen manages its own connections
-      if (window.location.pathname !== '/dispatcher') {
+      if (currentPath !== '/dispatcher') {
         console.log('[LiveKitConnection] Not on dispatcher route, skipping auto-connect');
         return;
       }
@@ -289,12 +293,14 @@ export function LiveKitConnectionProvider({ children, user }) {
         return;
       }
       
-      if (lastUserRef.current === user.username) {
-        console.log('[LiveKitConnection] Already initialized for this user, skipping');
+      // Check if already initialized for this user on this path
+      if (lastUserRef.current === user.username && lastPathRef.current === currentPath) {
+        console.log('[LiveKitConnection] Already initialized for this user on this path, skipping');
         return;
       }
       
       lastUserRef.current = user.username;
+      lastPathRef.current = currentPath;
       
       try {
         console.log('[LiveKitConnection] Fetching channels...');
@@ -322,7 +328,7 @@ export function LiveKitConnectionProvider({ children, user }) {
     return () => {
       mountedRef.current = false;
     };
-  }, [user, setChannels, initializeConnections, setConnectionError, setConnected]);
+  }, [user, location.pathname, setChannels, initializeConnections, setConnectionError, setConnected]);
 
   useEffect(() => {
     return () => {
