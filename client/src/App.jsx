@@ -238,164 +238,134 @@ export default function App({ user, onLogout }) {
     console.log('[Radio] Disabling LiveKitManager auto-playback - radio handles its own audio');
     livekitManager.setAutoPlayback(false);
     
-    // Save existing callbacks from context to chain with them
-    const existingTrackSubscribed = livekitManager.onTrackSubscribed;
-    const existingTrackUnsubscribed = livekitManager.onTrackUnsubscribed;
-    const existingParticipantConnected = livekitManager.onParticipantConnected;
-    const existingParticipantDisconnected = livekitManager.onParticipantDisconnected;
-    const existingDataReceived = livekitManager.onDataReceived;
+    const listenerRemovers = [];
     
-    const handleTrackSubscribed = (channelName, track, participant) => {
-      console.log(`[Radio] Track received: kind=${track.kind}, from ${participant.identity} on ${channelName}`);
-      if (track.kind !== 'audio') return;
-      
-      console.log(`[Radio] Audio track subscribed from ${participant.identity} on ${channelName}`);
-      
-      const audioElem = track.attach();
-      audioElem.dataset.channel = channelName;
-      audioElem.dataset.participant = participant.identity;
-      audioElem.playsInline = true;
-      audioElem.autoplay = true;
-      audioElem.style.display = 'none';
-      
-      document.body.appendChild(audioElem);
-      rxAudioElementsRef.current.add(audioElem);
-      
-      const currentState = micPTTManager.getState();
-      if (currentState === PTT_STATES.TRANSMITTING || currentState === PTT_STATES.ARMING) {
-        audioElem.muted = true;
-        console.log('[Radio] Muting incoming audio - we are transmitting');
-      } else {
-        audioElem.muted = false;
-        audioElem.volume = 1.0;
-      }
-      
-      audioElem.play().catch((e) => {
-        console.log('[Radio] Audio autoplay blocked:', e.message);
-      });
-      
-      setActiveAudio({ channel: channelName, from: participant.identity });
-      updateUnitPresence(channelName, participant.identity, "transmitting", Date.now());
-    };
-    
-    const handleTrackUnsubscribed = (channelName, track, participant) => {
-      console.log(`[Radio] Audio track unsubscribed from ${participant.identity} on ${channelName}`);
-      const detachedElements = track.detach();
-      detachedElements.forEach((el) => {
-        rxAudioElementsRef.current.delete(el);
-        el.remove();
-      });
-      setActiveAudio(null);
-      updateUnitPresence(channelName, participant.identity, "idle", Date.now());
-    };
-    
-    const handleParticipantConnected = (channelName, participant) => {
-      updateUnitPresence(channelName, participant.identity, "idle", Date.now());
-    };
-    
-    const handleParticipantDisconnected = (channelName, participant) => {
-      setUnitPresence((prev) => {
-        const channelUnits = { ...(prev[channelName] || {}) };
-        delete channelUnits[participant.identity];
-        return { ...prev, [channelName]: channelUnits };
-      });
-    };
-    
-    const handleDataReceived = (channelName, message, participant) => {
-      if (message.type === "status_update") {
-        updateUnitPresence(message.channel, message.identity, message.status, message.timestamp);
-      } else if (message.type === "emergency") {
-        if (message.active) {
-          setActiveEmergencies((prev) => ({
-            ...prev,
-            [message.identity]: { channel: message.channel, timestamp: message.timestamp },
-          }));
-          updateUnitPresence(message.channel, message.identity, "emergency", message.timestamp);
+    // Use new listener pattern - these get added alongside context listeners
+    listenerRemovers.push(
+      livekitManager.addTrackSubscribedListener((channelName, track, participant) => {
+        console.log(`[Radio] Track received: kind=${track.kind}, from ${participant.identity} on ${channelName}`);
+        if (track.kind !== 'audio') return;
+        
+        console.log(`[Radio] Audio track subscribed from ${participant.identity} on ${channelName}`);
+        
+        const audioElem = track.attach();
+        audioElem.dataset.channel = channelName;
+        audioElem.dataset.participant = participant.identity;
+        audioElem.playsInline = true;
+        audioElem.autoplay = true;
+        audioElem.style.display = 'none';
+        
+        document.body.appendChild(audioElem);
+        rxAudioElementsRef.current.add(audioElem);
+        
+        const currentState = micPTTManager.getState();
+        if (currentState === PTT_STATES.TRANSMITTING || currentState === PTT_STATES.ARMING) {
+          audioElem.muted = true;
+          console.log('[Radio] Muting incoming audio - we are transmitting');
         } else {
+          audioElem.muted = false;
+          audioElem.volume = 1.0;
+        }
+        
+        audioElem.play().catch((e) => {
+          console.log('[Radio] Audio autoplay blocked:', e.message);
+        });
+        
+        setActiveAudio({ channel: channelName, from: participant.identity });
+        updateUnitPresence(channelName, participant.identity, "transmitting", Date.now());
+      })
+    );
+    
+    listenerRemovers.push(
+      livekitManager.addTrackUnsubscribedListener((channelName, track, participant) => {
+        console.log(`[Radio] Audio track unsubscribed from ${participant.identity} on ${channelName}`);
+        const detachedElements = track.detach();
+        detachedElements.forEach((el) => {
+          rxAudioElementsRef.current.delete(el);
+          el.remove();
+        });
+        setActiveAudio(null);
+        updateUnitPresence(channelName, participant.identity, "idle", Date.now());
+      })
+    );
+    
+    listenerRemovers.push(
+      livekitManager.addParticipantConnectedListener((channelName, participant) => {
+        updateUnitPresence(channelName, participant.identity, "idle", Date.now());
+      })
+    );
+    
+    listenerRemovers.push(
+      livekitManager.addParticipantDisconnectedListener((channelName, participant) => {
+        setUnitPresence((prev) => {
+          const channelUnits = { ...(prev[channelName] || {}) };
+          delete channelUnits[participant.identity];
+          return { ...prev, [channelName]: channelUnits };
+        });
+      })
+    );
+    
+    listenerRemovers.push(
+      livekitManager.addDataReceivedListener((channelName, message, participant) => {
+        if (message.type === "status_update") {
+          updateUnitPresence(message.channel, message.identity, message.status, message.timestamp);
+        } else if (message.type === "emergency") {
+          if (message.active) {
+            setActiveEmergencies((prev) => ({
+              ...prev,
+              [message.identity]: { channel: message.channel, timestamp: message.timestamp },
+            }));
+            updateUnitPresence(message.channel, message.identity, "emergency", message.timestamp);
+          } else {
+            setActiveEmergencies((prev) => {
+              const updated = { ...prev };
+              delete updated[message.identity];
+              return updated;
+            });
+            updateUnitPresence(message.channel, message.identity, "idle", message.timestamp);
+          }
+        } else if (message.type === "emergency_ack") {
+          if (message.targetUnit === identity) {
+            setIsEmergency(false);
+            if (emergencyTimerRef.current) {
+              clearInterval(emergencyTimerRef.current);
+              emergencyTimerRef.current = null;
+            }
+            setEmergencyLockRemaining(0);
+          }
           setActiveEmergencies((prev) => {
             const updated = { ...prev };
-            delete updated[message.identity];
+            delete updated[message.targetUnit];
             return updated;
           });
-          updateUnitPresence(message.channel, message.identity, "idle", message.timestamp);
-        }
-      } else if (message.type === "emergency_ack") {
-        if (message.targetUnit === identity) {
-          setIsEmergency(false);
-          if (emergencyTimerRef.current) {
-            clearInterval(emergencyTimerRef.current);
-            emergencyTimerRef.current = null;
-          }
-          setEmergencyLockRemaining(0);
-        }
-        setActiveEmergencies((prev) => {
-          const updated = { ...prev };
-          delete updated[message.targetUnit];
-          return updated;
-        });
-        updateUnitPresence(message.channel, message.targetUnit, "idle", Date.now());
-      } else if (message.type === "heartbeat") {
-        setUnitPresence((prev) => {
-          const channelUnits = prev[message.channel] || {};
-          const existingUnit = channelUnits[message.identity] || {};
-          return {
-            ...prev,
-            [message.channel]: {
-              ...channelUnits,
-              [message.identity]: {
-                ...existingUnit,
-                lastSeen: message.timestamp,
-                location: message.location,
+          updateUnitPresence(message.channel, message.targetUnit, "idle", Date.now());
+        } else if (message.type === "heartbeat") {
+          setUnitPresence((prev) => {
+            const channelUnits = prev[message.channel] || {};
+            const existingUnit = channelUnits[message.identity] || {};
+            return {
+              ...prev,
+              [message.channel]: {
+                ...channelUnits,
+                [message.identity]: {
+                  ...existingUnit,
+                  lastSeen: message.timestamp,
+                  location: message.location,
+                },
               },
-            },
-          };
-        });
-      }
-    };
-    
-    // Set chained callbacks that call both our handler AND any existing context handlers
-    livekitManager.onTrackSubscribed = (channelName, track, participant) => {
-      handleTrackSubscribed(channelName, track, participant);
-      if (existingTrackSubscribed) {
-        try { existingTrackSubscribed(channelName, track, participant); } catch (e) { console.warn('[Radio] Context callback error:', e); }
-      }
-    };
-    livekitManager.onTrackUnsubscribed = (channelName, track, participant) => {
-      handleTrackUnsubscribed(channelName, track, participant);
-      if (existingTrackUnsubscribed) {
-        try { existingTrackUnsubscribed(channelName, track, participant); } catch (e) { console.warn('[Radio] Context callback error:', e); }
-      }
-    };
-    livekitManager.onParticipantConnected = (channelName, participant) => {
-      handleParticipantConnected(channelName, participant);
-      if (existingParticipantConnected) {
-        try { existingParticipantConnected(channelName, participant); } catch (e) { console.warn('[Radio] Context callback error:', e); }
-      }
-    };
-    livekitManager.onParticipantDisconnected = (channelName, participant) => {
-      handleParticipantDisconnected(channelName, participant);
-      if (existingParticipantDisconnected) {
-        try { existingParticipantDisconnected(channelName, participant); } catch (e) { console.warn('[Radio] Context callback error:', e); }
-      }
-    };
-    livekitManager.onDataReceived = (channelName, message, participant) => {
-      handleDataReceived(channelName, message, participant);
-      if (existingDataReceived) {
-        try { existingDataReceived(channelName, message, participant); } catch (e) { console.warn('[Radio] Context callback error:', e); }
-      }
-    };
+            };
+          });
+        }
+      })
+    );
     
     return () => {
-      console.log('[Radio] Cleanup - re-enabling LiveKitManager auto-playback and restoring callbacks');
+      console.log('[Radio] Cleanup - re-enabling LiveKitManager auto-playback and removing listeners');
       if (livekitManager) {
         livekitManager.setAutoPlayback(true);
-        // Restore the original context callbacks
-        livekitManager.onTrackSubscribed = existingTrackSubscribed;
-        livekitManager.onTrackUnsubscribed = existingTrackUnsubscribed;
-        livekitManager.onParticipantConnected = existingParticipantConnected;
-        livekitManager.onParticipantDisconnected = existingParticipantDisconnected;
-        livekitManager.onDataReceived = existingDataReceived;
       }
+      // Remove all our listeners
+      listenerRemovers.forEach(remove => remove());
     };
   }, [livekitManager, updateUnitPresence, identity]);
 
