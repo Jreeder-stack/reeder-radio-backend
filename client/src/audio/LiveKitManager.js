@@ -322,6 +322,7 @@ class LiveKitManager {
         this._handleAudioTrack(track, participant, channelName, room);
       }
       
+      console.log(`[LiveKit] Calling onTrackSubscribed callback: ${!!this.onTrackSubscribed}`);
       if (this.onTrackSubscribed) {
         this.onTrackSubscribed(channelName, track, participant);
       }

@@ -353,13 +353,10 @@ export default function App({ user, onLogout }) {
     livekitManager.onDataReceived = handleDataReceived;
     
     return () => {
-      console.log('[Radio] Re-enabling LiveKitManager auto-playback');
-      livekitManager.setAutoPlayback(true);
-      livekitManager.onTrackSubscribed = null;
-      livekitManager.onTrackUnsubscribed = null;
-      livekitManager.onParticipantConnected = null;
-      livekitManager.onParticipantDisconnected = null;
-      livekitManager.onDataReceived = null;
+      console.log('[Radio] Cleanup - re-enabling LiveKitManager auto-playback');
+      if (livekitManager) {
+        livekitManager.setAutoPlayback(true);
+      }
     };
   }, [livekitManager, updateUnitPresence, identity]);
 
