@@ -9,6 +9,8 @@ const LIVEKIT_SAMPLE_RATE = 48000;
 const AZURE_SAMPLE_RATE = 24000;
 const CHANNELS = 1;
 const SAMPLES_PER_CHANNEL = 480;
+// Calculate correct frame duration in ms: samples / sampleRate * 1000
+const FRAME_DURATION_MS = Math.floor((SAMPLES_PER_CHANNEL / AZURE_SAMPLE_RATE) * 1000);
 
 function resampleAudio(inputBuffer, fromRate, toRate) {
   const inputSamples = new Int16Array(inputBuffer.buffer, inputBuffer.byteOffset, inputBuffer.length / 2);
@@ -277,10 +279,12 @@ class AIDispatcher {
         );
 
         await audioSource.captureFrame(frame);
-        await new Promise(resolve => setTimeout(resolve, 30));
+        // Use calculated frame duration for proper timing (20ms for 480 samples at 24kHz)
+        await new Promise(resolve => setTimeout(resolve, FRAME_DURATION_MS));
       }
 
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Wait for audio to finish playing before unpublishing
+      await new Promise(resolve => setTimeout(resolve, 300));
       await room.localParticipant.unpublishTrack(publication.sid);
 
       console.log('AI Dispatcher: Published response audio');
