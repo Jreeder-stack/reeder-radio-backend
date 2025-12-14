@@ -215,6 +215,14 @@ Set these environment variables in Render:
   - `/dispatcher` - Dispatch Console
 - Tone transmission: Tones are broadcast over LiveKit to all field units when a tone button is pressed. The system automatically keys up, transmits the tone, and releases.
 
+### Phase 12 - LiveKit Cost Optimization
+- Radio mode connects only to active/selected channel (not all channels)
+- Dispatcher mode still connects to all channels (multi-channel monitoring)
+- Scan mode: when enabled, connects to scanned channels list
+- Idle timeout: 5 min inactivity disconnects from rooms to save costs
+- Auto-reconnect on PTT press or channel change after idle disconnect
+- Safari audio fix: mic pre-capture on connect enables RX audio playback (Safari autoplay policy workaround)
+
 ### Phase 11 - AI Voice Dispatcher
 - Automated radio acknowledgement system using Azure Speech Services
 - LiveKit bot that joins all enabled channels and listens for transmissions
