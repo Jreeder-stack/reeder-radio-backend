@@ -100,34 +100,65 @@ class AIDispatcher {
     const bufferKey = `${roomName}:${participantId}`;
     const chunks = [];
     let silenceCount = 0;
+    let frameCount = 0;
     const SILENCE_THRESHOLD = 10;
+    const MIN_AUDIO_BYTES = SAMPLE_RATE * 2 * 0.3;
 
     const stream = track.stream;
-    if (!stream) return;
+    if (!stream) {
+      console.log(`AI Dispatcher: No stream available for ${participantId} in ${roomName}`);
+      return;
+    }
 
-    for await (const frame of stream) {
-      const enabled = await isAiDispatchEnabled();
-      if (!enabled || !this.isRunning) {
-        return;
+    console.log(`AI Dispatcher: Starting to buffer audio from ${participantId} in ${roomName}`);
+
+    try {
+      for await (const frame of stream) {
+        const enabled = await isAiDispatchEnabled();
+        if (!enabled || !this.isRunning) {
+          console.log(`AI Dispatcher: Disabled during buffering, discarding audio`);
+          return;
+        }
+
+        chunks.push(Buffer.from(frame.data.buffer));
+        frameCount++;
+        
+        const isLikelySilence = this.isFrameSilent(frame);
+        if (isLikelySilence) {
+          silenceCount++;
+        } else {
+          silenceCount = 0;
+        }
+
+        if (silenceCount >= SILENCE_THRESHOLD && chunks.length > SILENCE_THRESHOLD) {
+          const audioBuffer = Buffer.concat(chunks.slice(0, -SILENCE_THRESHOLD));
+          console.log(`AI Dispatcher: Silence detected after ${frameCount} frames, ${audioBuffer.length} bytes`);
+          chunks.length = 0;
+          silenceCount = 0;
+          frameCount = 0;
+
+          if (audioBuffer.length > MIN_AUDIO_BYTES) {
+            await this.processAudio(audioBuffer, roomName, room);
+          } else {
+            console.log(`AI Dispatcher: Audio too short (${audioBuffer.length} bytes), skipping`);
+          }
+        }
       }
+    } catch (error) {
+      console.log(`AI Dispatcher: Stream ended or error: ${error.message}`);
+    }
 
-      chunks.push(Buffer.from(frame.data.buffer));
+    if (chunks.length > 0) {
+      const audioBuffer = Buffer.concat(chunks);
+      console.log(`AI Dispatcher: Stream ended with ${frameCount} frames, ${audioBuffer.length} bytes buffered`);
       
-      const isLikelySilence = this.isFrameSilent(frame);
-      if (isLikelySilence) {
-        silenceCount++;
-      } else {
-        silenceCount = 0;
-      }
-
-      if (silenceCount >= SILENCE_THRESHOLD && chunks.length > SILENCE_THRESHOLD) {
-        const audioBuffer = Buffer.concat(chunks.slice(0, -SILENCE_THRESHOLD));
-        chunks.length = 0;
-        silenceCount = 0;
-
-        if (audioBuffer.length > SAMPLE_RATE * 2 * 0.5) {
+      if (audioBuffer.length > MIN_AUDIO_BYTES) {
+        const enabled = await isAiDispatchEnabled();
+        if (enabled && this.isRunning) {
           await this.processAudio(audioBuffer, roomName, room);
         }
+      } else {
+        console.log(`AI Dispatcher: Audio too short (${audioBuffer.length} bytes), skipping`);
       }
     }
   }
