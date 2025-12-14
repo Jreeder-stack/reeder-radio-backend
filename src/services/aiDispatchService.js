@@ -1,4 +1,4 @@
-import { Room, RoomEvent, TrackKind, AudioFrame, AudioSource, LocalAudioTrack } from '@livekit/rtc-node';
+import { Room, RoomEvent, TrackKind, AudioFrame, AudioSource, LocalAudioTrack, AudioStream } from '@livekit/rtc-node';
 import { createLiveKitToken, getLiveKitUrl } from '../config/livekit.js';
 import { speechToText, textToSpeech, isConfigured as isAzureConfigured } from './azureSpeechService.js';
 import { matchCommand } from './commandMatcher.js';
@@ -104,16 +104,11 @@ class AIDispatcher {
     const SILENCE_THRESHOLD = 10;
     const MIN_AUDIO_BYTES = SAMPLE_RATE * 2 * 0.3;
 
-    const stream = track.stream;
-    if (!stream) {
-      console.log(`AI Dispatcher: No stream available for ${participantId} in ${roomName}`);
-      return;
-    }
-
+    const audioStream = new AudioStream(track, SAMPLE_RATE, CHANNELS);
     console.log(`AI Dispatcher: Starting to buffer audio from ${participantId} in ${roomName}`);
 
     try {
-      for await (const frame of stream) {
+      for await (const frame of audioStream) {
         const enabled = await isAiDispatchEnabled();
         if (!enabled || !this.isRunning) {
           console.log(`AI Dispatcher: Disabled during buffering, discarding audio`);
