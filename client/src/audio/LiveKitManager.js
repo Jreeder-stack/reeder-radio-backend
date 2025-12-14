@@ -352,9 +352,13 @@ class LiveKitManager {
   _getAudioContext() {
     if (!this.audioContext || this.audioContext.state === 'closed') {
       this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      console.log(`[LiveKit] Created new AudioContext, state: ${this.audioContext.state}`);
     }
     if (this.audioContext.state === 'suspended') {
-      this.audioContext.resume().catch(e => console.warn('[LiveKit] AudioContext resume failed:', e));
+      console.log('[LiveKit] AudioContext is suspended, attempting resume...');
+      this.audioContext.resume().then(() => {
+        console.log(`[LiveKit] AudioContext resumed successfully, state: ${this.audioContext.state}`);
+      }).catch(e => console.warn('[LiveKit] AudioContext resume failed:', e));
     }
     return this.audioContext;
   }
@@ -495,6 +499,12 @@ class LiveKitManager {
       console.log(`[LiveKit] Muting incoming audio from ${participant.identity} - PTT active`);
     }
     
+    audioElem.play().then(() => {
+      console.log(`[LiveKit] Audio element playing for ${participant.identity} on ${channelName}`);
+    }).catch(e => {
+      console.warn(`[LiveKit] Audio autoplay blocked for ${channelName}:`, e.message);
+    });
+    
     try {
       const source = ctx.createMediaElementSource(audioElem);
       const analyser = ctx.createAnalyser();
@@ -512,11 +522,11 @@ class LiveKitManager {
       this.audioElements.set(audioElem, { source, track, channelName });
       
       this._startLevelMonitor(channelName, analyser);
+      console.log(`[LiveKit] Web Audio chain created for ${channelName}, AudioContext state: ${ctx.state}`);
       
     } catch (err) {
       console.warn('[LiveKit] Using direct audio playback for', channelName);
       audioElem.volume = shouldMute ? 0 : 1;
-      audioElem.play().catch(e => console.warn('[LiveKit] Autoplay blocked:', e));
       
       if (!this.fallbackAudioElements.has(channelName)) {
         this.fallbackAudioElements.set(channelName, new Set());

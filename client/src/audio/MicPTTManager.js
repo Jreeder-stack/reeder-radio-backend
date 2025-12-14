@@ -1,6 +1,7 @@
 import { Track, RoomEvent } from 'livekit-client';
 import { PTT_STATES } from '../constants/pttStates.js';
 import { playPermitTone, startBonkLoop, stopBonkLoop } from './talkPermitTone.js';
+import { unlockAudio } from './iosAudioUnlock.js';
 
 const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || 
   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -158,6 +159,8 @@ class MicPTTManager {
       console.error('[MicPTT] No room connected');
       return false;
     }
+
+    unlockAudio();
 
     this.transitionLock = true;
     this.pendingStop = false;
