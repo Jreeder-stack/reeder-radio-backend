@@ -898,8 +898,15 @@ export default function App({ user, onLogout }) {
     0
   );
 
+  const handleFirstInteraction = useCallback(() => {
+    unlockAudio();
+  }, []);
+
   return (
-    <div style={{
+    <div 
+      onClick={handleFirstInteraction}
+      onTouchStart={handleFirstInteraction}
+      style={{
       padding: "12px 12px 0 12px",
       fontFamily: "sans-serif",
       color: theme.text,
