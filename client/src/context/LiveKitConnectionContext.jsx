@@ -93,6 +93,7 @@ export function LiveKitConnectionProvider({ children, user }) {
       try {
         await livekitManager.connect(channelName, identity);
         connectionStartTimes.current.set(channelName, Date.now());
+        lastActivityRef.current = Date.now(); // Reset idle timer on reconnect
         console.log(`[LiveKitConnection] Reconnected to ${channelName}`);
       } catch (err) {
         console.error(`[LiveKitConnection] Reconnect failed for ${channelName}:`, err);
