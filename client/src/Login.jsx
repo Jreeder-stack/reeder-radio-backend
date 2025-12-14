@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { unlockAudio } from "./audio/iosAudioUnlock";
 
 export default function Login({ onLogin }) {
   const [username, setUsername] = useState("");
@@ -10,6 +11,8 @@ export default function Login({ onLogin }) {
     e.preventDefault();
     setError("");
     setLoading(true);
+
+    unlockAudio();
 
     try {
       const res = await fetch("/api/auth/login", {

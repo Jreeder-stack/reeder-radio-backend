@@ -4,6 +4,7 @@ import { micPTTManager } from "./audio/MicPTTManager";
 import { PTT_STATES } from "./constants/pttStates";
 import { updateUnitStatus } from "./utils/api.js";
 import { useLiveKitConnection } from "./context/LiveKitConnectionContext.jsx";
+import { unlockAudio } from "./audio/iosAudioUnlock";
 
 // Track audio elements that have already been connected to a MediaElementSource
 // This prevents the "HTMLMediaElement already connected" error on reconnection
@@ -745,6 +746,8 @@ export default function App({ user, onLogout }) {
 
   const handlePTTDown = useCallback(async (e) => {
     if (e && e.type === 'keydown' && e.repeat) return;
+    
+    unlockAudio();
     
     console.log('[Radio PTT] === PTT DOWN ===, state:', pttState);
     
