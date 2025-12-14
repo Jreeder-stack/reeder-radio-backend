@@ -72,6 +72,19 @@ Both workflows run automatically:
 1. **Backend API** - `npm start` (port 3001)
 2. **Frontend** - `cd client && npm run dev` (port 5000)
 
+## PWA (Progressive Web App)
+
+The app is installable as a PWA on Android and iOS:
+- **Manifest**: `client/public/manifest.json` - App name, icons, theme colors
+- **Icons**: `client/public/icons/` - 192x192 and 512x512 PNG icons
+- **Service Worker**: `client/public/sw.js` - Network-first caching with offline fallback
+- **Mobile Audio Fix**: Pre-captures microphone on first connection to unlock audio autoplay on mobile browsers
+
+### Installing on Android:
+1. Open the app in Chrome
+2. Tap the three-dot menu → "Add to Home Screen"
+3. The app will run in standalone mode with no browser UI
+
 ## Routes
 - `/login` - Login screen (no self-registration, admin creates accounts)
 - `/` - Main PTT Radio interface for field units (protected)
