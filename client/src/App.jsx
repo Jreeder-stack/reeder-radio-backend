@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { DataPacket_Kind } from "livekit-client";
+import { DataPacket_Kind, Track } from "livekit-client";
 import { micPTTManager } from "./audio/MicPTTManager";
 import { PTT_STATES } from "./constants/pttStates";
 import { updateUnitStatus } from "./utils/api.js";
@@ -239,7 +239,8 @@ export default function App({ user, onLogout }) {
     livekitManager.setAutoPlayback(false);
     
     const handleTrackSubscribed = (channelName, track, participant) => {
-      if (track.kind !== 'audio') return;
+      console.log(`[Radio] Track received: kind=${track.kind}, from ${participant.identity} on ${channelName}`);
+      if (track.kind !== 'audio' && track.kind !== Track.Kind?.Audio) return;
       
       console.log(`[Radio] Audio track subscribed from ${participant.identity} on ${channelName}`);
       
