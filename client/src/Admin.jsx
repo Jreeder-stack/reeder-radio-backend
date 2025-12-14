@@ -901,7 +901,7 @@ export default function Admin({ user, onLogout }) {
         )}
 
         {activeTab === "settings" && (
-          <div style={{ maxWidth: 600 }}>
+          <div style={{ maxWidth: 600, maxHeight: isMobile ? "calc(100vh - 200px)" : "none", overflowY: isMobile ? "auto" : "visible", WebkitOverflowScrolling: "touch" }}>
             <h2 style={{ margin: "0 0 24px", fontSize: 20 }}>System Settings</h2>
             
             <div style={{ background: "#1e1e2e", borderRadius: 12, padding: 24 }}>
