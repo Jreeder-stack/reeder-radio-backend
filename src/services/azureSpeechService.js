@@ -57,7 +57,7 @@ export async function textToSpeech(text) {
     try {
       const speechConfig = sdk.SpeechConfig.fromSubscription(AZURE_SPEECH_KEY, AZURE_SPEECH_REGION);
       speechConfig.speechSynthesisVoiceName = 'en-US-GuyNeural';
-      speechConfig.speechSynthesisOutputFormat = sdk.SpeechSynthesisOutputFormat.Raw16Khz16BitMonoPcm;
+      speechConfig.speechSynthesisOutputFormat = sdk.SpeechSynthesisOutputFormat.Raw24Khz16BitMonoPcm;
 
       const synthesizer = new sdk.SpeechSynthesizer(speechConfig, null);
 
