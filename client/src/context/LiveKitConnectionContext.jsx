@@ -5,16 +5,18 @@ import useDispatchStore from '../state/dispatchStore.js';
 
 const LiveKitConnectionContext = createContext(null);
 
-// Faster reconnection for critical radio operations
-const RECONNECT_BASE_DELAY = 500; // Start at 500ms instead of 1000ms
-const RECONNECT_MAX_DELAY = 15000; // Cap at 15s instead of 30s
-const RECONNECT_MAX_ATTEMPTS = 15; // More attempts with faster backoff
+// Reconnection with stability detection to prevent infinite loops
+const RECONNECT_BASE_DELAY = 2000; // Start at 2 seconds
+const RECONNECT_MAX_DELAY = 30000; // Cap at 30s
+const RECONNECT_MAX_ATTEMPTS = 10; // Fewer attempts with longer delays
+const STABILITY_THRESHOLD = 5000; // Connection must stay stable for 5s before resetting attempts
 
 export function LiveKitConnectionProvider({ children, user }) {
   const [connectionStatus, setConnectionStatus] = useState('idle');
   const [connectionHealth, setConnectionHealth] = useState({ status: 'disconnected', healthy: 0, total: 0 });
   const reconnectAttempts = useRef(new Map());
   const reconnectTimers = useRef(new Map());
+  const connectionStartTimes = useRef(new Map()); // Track when connections started
   const mountedRef = useRef(true);
   const initializingRef = useRef(false);
   const lastUserRef = useRef(null);
@@ -40,10 +42,22 @@ export function LiveKitConnectionProvider({ children, user }) {
       clearReconnectTimer(channelName);
     }
     reconnectAttempts.current.clear();
+    connectionStartTimes.current.clear();
   }, [clearReconnectTimer]);
 
   const scheduleReconnect = useCallback((channelName, identity) => {
     if (!mountedRef.current) return;
+    
+    // Check if the last connection was stable (lasted > STABILITY_THRESHOLD)
+    const startTime = connectionStartTimes.current.get(channelName);
+    const wasStable = startTime && (Date.now() - startTime) > STABILITY_THRESHOLD;
+    
+    // Only reset attempts if the connection was stable, and clear start time so this only triggers once
+    if (wasStable) {
+      reconnectAttempts.current.delete(channelName);
+      connectionStartTimes.current.delete(channelName); // Clear so next failures increment properly
+      console.log(`[LiveKitConnection] Connection to ${channelName} was stable, resetting attempts`);
+    }
     
     const attempts = reconnectAttempts.current.get(channelName) || 0;
     if (attempts >= RECONNECT_MAX_ATTEMPTS) {
@@ -51,12 +65,12 @@ export function LiveKitConnectionProvider({ children, user }) {
       return;
     }
     
-    const delay = Math.min(
-      RECONNECT_BASE_DELAY * Math.pow(2, attempts),
-      RECONNECT_MAX_DELAY
-    );
+    // Exponential backoff with jitter to prevent thundering herd
+    const baseDelay = RECONNECT_BASE_DELAY * Math.pow(2, attempts);
+    const jitter = Math.random() * 1000; // 0-1 second jitter
+    const delay = Math.min(baseDelay + jitter, RECONNECT_MAX_DELAY);
     
-    console.log(`[LiveKitConnection] Scheduling reconnect for ${channelName} in ${delay}ms (attempt ${attempts + 1})`);
+    console.log(`[LiveKitConnection] Scheduling reconnect for ${channelName} in ${Math.round(delay)}ms (attempt ${attempts + 1})`);
     
     clearReconnectTimer(channelName);
     
@@ -67,8 +81,9 @@ export function LiveKitConnectionProvider({ children, user }) {
       
       try {
         await livekitManager.connect(channelName, identity);
+        connectionStartTimes.current.set(channelName, Date.now());
         console.log(`[LiveKitConnection] Reconnected to ${channelName}`);
-        reconnectAttempts.current.delete(channelName);
+        // Don't clear attempts here - let stability detection handle it
       } catch (err) {
         console.error(`[LiveKitConnection] Reconnect failed for ${channelName}:`, err);
         scheduleReconnect(channelName, identity);
@@ -188,6 +203,7 @@ export function LiveKitConnectionProvider({ children, user }) {
         enabledChannels.map(async (channel) => {
           try {
             await livekitManager.connect(channel.name, identity);
+            connectionStartTimes.current.set(channel.name, Date.now());
             console.log(`[LiveKitConnection] Connected to ${channel.name}`);
             return { channel: channel.name, success: true };
           } catch (err) {
