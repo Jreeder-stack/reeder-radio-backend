@@ -1,12 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Room, RoomEvent, Track, DataPacket_Kind } from "livekit-client";
+import { DataPacket_Kind } from "livekit-client";
 import { micPTTManager } from "./audio/MicPTTManager";
 import { PTT_STATES } from "./constants/pttStates";
 import { updateUnitStatus } from "./utils/api.js";
-import { livekitManager } from "./audio/LiveKitManager.js";
-
-const LIVEKIT_URL = import.meta.env.VITE_LIVEKIT_URL;
-const TOKEN_SERVER = "/getToken";
+import { useLiveKitConnection } from "./context/LiveKitConnectionContext.jsx";
 
 // Track audio elements that have already been connected to a MediaElementSource
 // This prevents the "HTMLMediaElement already connected" error on reconnection
@@ -150,14 +147,22 @@ const THEMES = {
 
 export default function App({ user, onLogout }) {
   const navigate = useNavigate();
+  
+  const { 
+    livekitManager, 
+    connectionStatus, 
+    connectionHealth, 
+    channels: contextChannels 
+  } = useLiveKitConnection();
+  
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem('darkMode');
     return saved !== null ? JSON.parse(saved) : true;
   });
   const theme = darkMode ? THEMES.dark : THEMES.light;
   
-  const [connected, setConnected] = useState(false);
-  const [connecting, setConnecting] = useState(false);
+  const connected = connectionStatus === 'connected';
+  const connecting = connectionStatus === 'connecting';
   const [zonesData, setZonesData] = useState({});
   const [channelsLoaded, setChannelsLoaded] = useState(false);
   const [noChannelsAccess, setNoChannelsAccess] = useState(false);
@@ -166,8 +171,6 @@ export default function App({ user, onLogout }) {
   const [selectedZone, setSelectedZone] = useState("");
   const [selectedChannel, setSelectedChannel] = useState("");
   const [transmitChannel, setTransmitChannel] = useState("");
-  const [primaryRoom, setPrimaryRoom] = useState(null);
-  const [scanRooms, setScanRooms] = useState({});
   const [unitPresence, setUnitPresence] = useState({});
   const [isTalking, setIsTalking] = useState(false);
   const [pttPressed, setPttPressed] = useState(false); // Visual feedback only - doesn't change button text
@@ -193,8 +196,6 @@ export default function App({ user, onLogout }) {
     });
   };
 
-  const scanRoomsRef = useRef({});
-  const primaryRoomRef = useRef(null);
   const audioContextRef = useRef(null);
   const txAnalyserRef = useRef(null);
   const rxChainRef = useRef(null);
@@ -206,20 +207,168 @@ export default function App({ user, onLogout }) {
   const heartbeatIntervalRef = useRef(null);
   const isEmergencyRef = useRef(false);
   const rxAudioElementsRef = useRef(new Set());
+  const transmitChannelRef = useRef("");
   const [userLocation, setUserLocation] = useState(null);
   const [pttState, setPttState] = useState(PTT_STATES.IDLE);
 
+  const updateUnitPresence = useCallback((channel, unitId, status, timestamp) => {
+    setUnitPresence((prev) => {
+      const channelUnits = prev[channel] || {};
+      const existingUnit = channelUnits[unitId] || {};
+      return {
+        ...prev,
+        [channel]: {
+          ...channelUnits,
+          [unitId]: {
+            status,
+            lastTransmission: status === "transmitting" ? timestamp : existingUnit.lastTransmission,
+            lastSeen: timestamp,
+          },
+        },
+      };
+    });
+  }, []);
+
   useEffect(() => {
+    transmitChannelRef.current = transmitChannel;
+  }, [transmitChannel]);
+
+  useEffect(() => {
+    if (!livekitManager) return;
     console.log('[Radio] Disabling LiveKitManager auto-playback - radio handles its own audio');
     livekitManager.setAutoPlayback(false);
+    
+    const handleTrackSubscribed = (channelName, track, participant) => {
+      if (track.kind !== 'audio') return;
+      
+      console.log(`[Radio] Audio track subscribed from ${participant.identity} on ${channelName}`);
+      
+      const audioElem = track.attach();
+      audioElem.dataset.channel = channelName;
+      audioElem.dataset.participant = participant.identity;
+      audioElem.playsInline = true;
+      audioElem.autoplay = true;
+      audioElem.style.display = 'none';
+      
+      document.body.appendChild(audioElem);
+      rxAudioElementsRef.current.add(audioElem);
+      
+      const currentState = micPTTManager.getState();
+      if (currentState === PTT_STATES.TRANSMITTING || currentState === PTT_STATES.ARMING) {
+        audioElem.muted = true;
+        console.log('[Radio] Muting incoming audio - we are transmitting');
+      } else {
+        audioElem.muted = false;
+        audioElem.volume = 1.0;
+      }
+      
+      audioElem.play().catch((e) => {
+        console.log('[Radio] Audio autoplay blocked:', e.message);
+      });
+      
+      setActiveAudio({ channel: channelName, from: participant.identity });
+      updateUnitPresence(channelName, participant.identity, "transmitting", Date.now());
+    };
+    
+    const handleTrackUnsubscribed = (channelName, track, participant) => {
+      console.log(`[Radio] Audio track unsubscribed from ${participant.identity} on ${channelName}`);
+      const detachedElements = track.detach();
+      detachedElements.forEach((el) => {
+        rxAudioElementsRef.current.delete(el);
+        el.remove();
+      });
+      setActiveAudio(null);
+      updateUnitPresence(channelName, participant.identity, "idle", Date.now());
+    };
+    
+    const handleParticipantConnected = (channelName, participant) => {
+      updateUnitPresence(channelName, participant.identity, "idle", Date.now());
+    };
+    
+    const handleParticipantDisconnected = (channelName, participant) => {
+      setUnitPresence((prev) => {
+        const channelUnits = { ...(prev[channelName] || {}) };
+        delete channelUnits[participant.identity];
+        return { ...prev, [channelName]: channelUnits };
+      });
+    };
+    
+    const handleDataReceived = (channelName, message, participant) => {
+      if (message.type === "status_update") {
+        updateUnitPresence(message.channel, message.identity, message.status, message.timestamp);
+      } else if (message.type === "emergency") {
+        if (message.active) {
+          setActiveEmergencies((prev) => ({
+            ...prev,
+            [message.identity]: { channel: message.channel, timestamp: message.timestamp },
+          }));
+          updateUnitPresence(message.channel, message.identity, "emergency", message.timestamp);
+        } else {
+          setActiveEmergencies((prev) => {
+            const updated = { ...prev };
+            delete updated[message.identity];
+            return updated;
+          });
+          updateUnitPresence(message.channel, message.identity, "idle", message.timestamp);
+        }
+      } else if (message.type === "emergency_ack") {
+        if (message.targetUnit === identity) {
+          setIsEmergency(false);
+          if (emergencyTimerRef.current) {
+            clearInterval(emergencyTimerRef.current);
+            emergencyTimerRef.current = null;
+          }
+          setEmergencyLockRemaining(0);
+        }
+        setActiveEmergencies((prev) => {
+          const updated = { ...prev };
+          delete updated[message.targetUnit];
+          return updated;
+        });
+        updateUnitPresence(message.channel, message.targetUnit, "idle", Date.now());
+      } else if (message.type === "heartbeat") {
+        setUnitPresence((prev) => {
+          const channelUnits = prev[message.channel] || {};
+          const existingUnit = channelUnits[message.identity] || {};
+          return {
+            ...prev,
+            [message.channel]: {
+              ...channelUnits,
+              [message.identity]: {
+                ...existingUnit,
+                lastSeen: message.timestamp,
+                location: message.location,
+              },
+            },
+          };
+        });
+      }
+    };
+    
+    livekitManager.onTrackSubscribed = handleTrackSubscribed;
+    livekitManager.onTrackUnsubscribed = handleTrackUnsubscribed;
+    livekitManager.onParticipantConnected = handleParticipantConnected;
+    livekitManager.onParticipantDisconnected = handleParticipantDisconnected;
+    livekitManager.onDataReceived = handleDataReceived;
     
     return () => {
       console.log('[Radio] Re-enabling LiveKitManager auto-playback');
       livekitManager.setAutoPlayback(true);
+      livekitManager.onTrackSubscribed = null;
+      livekitManager.onTrackUnsubscribed = null;
+      livekitManager.onParticipantConnected = null;
+      livekitManager.onParticipantDisconnected = null;
+      livekitManager.onDataReceived = null;
     };
-  }, []);
+  }, [livekitManager, updateUnitPresence, identity]);
 
-  const broadcastStatus = useCallback((room, status, channel) => {
+  const getCurrentRoom = useCallback(() => {
+    if (!livekitManager || !transmitChannelRef.current) return null;
+    return livekitManager.getRoom(transmitChannelRef.current);
+  }, [livekitManager]);
+
+  const broadcastStatus = useCallback((status, channel) => {
+    const room = livekitManager?.getRoom(channel);
     if (!room || !room.localParticipant) return;
     
     const message = JSON.stringify({
@@ -233,11 +382,7 @@ export default function App({ user, onLogout }) {
     const encoder = new TextEncoder();
     const data = encoder.encode(message);
     room.localParticipant.publishData(data, DataPacket_Kind.RELIABLE);
-  }, []);
-
-  useEffect(() => {
-    scanRoomsRef.current = scanRooms;
-  }, [scanRooms]);
+  }, [livekitManager]);
 
   useEffect(() => {
     if (Object.keys(activeEmergencies).length > 0) {
@@ -251,42 +396,14 @@ export default function App({ user, onLogout }) {
   }, [activeEmergencies]);
 
   useEffect(() => {
-    primaryRoomRef.current = primaryRoom;
-  }, [primaryRoom]);
-
-  useEffect(() => {
     isEmergencyRef.current = isEmergency;
   }, [isEmergency]);
 
   useEffect(() => {
-    if (!scanMode && Object.keys(scanRoomsRef.current).length > 0) {
-      const disconnectAll = async () => {
-        for (const [channel, room] of Object.entries(scanRoomsRef.current)) {
-          try {
-            await room.disconnect();
-          } catch (err) {
-            console.error("Error disconnecting scan room:", err);
-          }
-        }
-        setScanRooms({});
-        setScanChannels([]);
-        setUnitPresence((prev) => {
-          const updated = { ...prev };
-          for (const channel of Object.keys(scanRoomsRef.current)) {
-            delete updated[channel];
-          }
-          return updated;
-        });
-      };
-      disconnectAll();
-    }
-  }, [scanMode]);
-
-  useEffect(() => {
     micPTTManager.onStateChange = (newState) => {
       setPttState(newState);
+      const txChannel = transmitChannelRef.current;
       
-      // Mute RX audio as soon as PTT is pressed (ARMING state)
       if (newState === PTT_STATES.ARMING) {
         console.log('[Radio PTT] ARMING - muting all RX audio');
         rxAudioElementsRef.current.forEach(el => {
@@ -294,13 +411,12 @@ export default function App({ user, onLogout }) {
         });
       } else if (newState === PTT_STATES.TRANSMITTING) {
         setIsTalking(true);
-        // Ensure all RX audio stays muted during transmission
         rxAudioElementsRef.current.forEach(el => {
           el.muted = true;
         });
-        if (primaryRoomRef.current) {
-          broadcastStatus(primaryRoomRef.current, "transmitting", transmitChannel);
-          updateUnitStatus(identity, transmitChannel, 'transmitting', userLocation, isEmergencyRef.current).catch(err => {
+        if (txChannel) {
+          broadcastStatus("transmitting", txChannel);
+          updateUnitStatus(identity, txChannel, 'transmitting', userLocation, isEmergencyRef.current).catch(err => {
             console.log('[Radio] Failed to update transmitting status:', err.message);
           });
         }
@@ -309,9 +425,9 @@ export default function App({ user, onLogout }) {
         rxAudioElementsRef.current.forEach(el => {
           el.muted = false;
         });
-        if (primaryRoomRef.current) {
-          broadcastStatus(primaryRoomRef.current, "idle", transmitChannel);
-          updateUnitStatus(identity, transmitChannel, 'idle', userLocation, isEmergencyRef.current).catch(err => {
+        if (txChannel) {
+          broadcastStatus("idle", txChannel);
+          updateUnitStatus(identity, txChannel, 'idle', userLocation, isEmergencyRef.current).catch(err => {
             console.log('[Radio] Failed to update idle status:', err.message);
           });
         }
@@ -324,7 +440,7 @@ export default function App({ user, onLogout }) {
       if (audioContextRef.current) audioContextRef.current.close();
       micPTTManager.disconnect();
     };
-  }, [broadcastStatus, transmitChannel, identity, userLocation]);
+  }, [broadcastStatus, identity, userLocation]);
 
   useEffect(() => {
     const handleGlobalRelease = (e) => {
@@ -364,7 +480,8 @@ export default function App({ user, onLogout }) {
     return audioContextRef.current;
   }, []);
 
-  const broadcastEmergency = useCallback((room, channel, active) => {
+  const broadcastEmergency = useCallback((channel, active) => {
+    const room = livekitManager?.getRoom(channel);
     if (!room || !room.localParticipant) return;
     
     const message = JSON.stringify({
@@ -378,7 +495,7 @@ export default function App({ user, onLogout }) {
     const encoder = new TextEncoder();
     const data = encoder.encode(message);
     room.localParticipant.publishData(data, DataPacket_Kind.RELIABLE);
-  }, []);
+  }, [livekitManager]);
 
   const acknowledgeEmergency = useCallback((unitId, channel) => {
     setActiveEmergencies((prev) => {
@@ -387,7 +504,8 @@ export default function App({ user, onLogout }) {
       return updated;
     });
     
-    if (primaryRoomRef.current) {
+    const room = livekitManager?.getRoom(channel || transmitChannelRef.current);
+    if (room && room.localParticipant) {
       const message = JSON.stringify({
         type: "emergency_ack",
         targetUnit: unitId,
@@ -398,11 +516,12 @@ export default function App({ user, onLogout }) {
       
       const encoder = new TextEncoder();
       const data = encoder.encode(message);
-      primaryRoomRef.current.localParticipant.publishData(data, DataPacket_Kind.RELIABLE);
+      room.localParticipant.publishData(data, DataPacket_Kind.RELIABLE);
     }
-  }, [identity]);
+  }, [identity, livekitManager]);
 
-  const broadcastHeartbeat = useCallback((room, channel) => {
+  const broadcastHeartbeat = useCallback((channel) => {
+    const room = livekitManager?.getRoom(channel);
     if (!room || !room.localParticipant) return;
     if (room.state !== 'connected') {
       console.log('[Radio] Skipping heartbeat - room not connected, state:', room.state);
@@ -420,17 +539,17 @@ export default function App({ user, onLogout }) {
     const encoder = new TextEncoder();
     const data = encoder.encode(message);
     room.localParticipant.publishData(data, DataPacket_Kind.RELIABLE);
-  }, [userLocation]);
+  }, [userLocation, livekitManager]);
 
-  const startHeartbeat = useCallback((room, channel) => {
+  const startHeartbeat = useCallback((channel) => {
     if (heartbeatIntervalRef.current) {
       clearInterval(heartbeatIntervalRef.current);
     }
     
-    broadcastHeartbeat(room, channel);
+    broadcastHeartbeat(channel);
     
     heartbeatIntervalRef.current = setInterval(() => {
-      broadcastHeartbeat(room, channel);
+      broadcastHeartbeat(channel);
     }, 30000);
   }, [broadcastHeartbeat]);
 
@@ -461,35 +580,6 @@ export default function App({ user, onLogout }) {
     }
   }, []);
 
-  const updateUnitPresence = useCallback((channel, unitId, status, timestamp) => {
-    setUnitPresence((prev) => {
-      const channelUnits = prev[channel] || {};
-      const existingUnit = channelUnits[unitId] || {};
-      return {
-        ...prev,
-        [channel]: {
-          ...channelUnits,
-          [unitId]: {
-            status,
-            lastTransmission: status === "transmitting" ? timestamp : existingUnit.lastTransmission,
-            lastSeen: timestamp,
-          },
-        },
-      };
-    });
-  }, []);
-
-  const getToken = async (room) => {
-    const res = await fetch(`${TOKEN_SERVER}?identity=${identity}&room=${room}`, {
-      credentials: "include"
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      throw new Error(data.error || "Failed to get token");
-    }
-    return data.token;
-  };
-
   const startRxLevelMonitor = useCallback((analyser) => {
     const dataArray = new Uint8Array(analyser.frequencyBinCount);
     
@@ -511,142 +601,6 @@ export default function App({ user, onLogout }) {
     setRxLevel(0);
   }, []);
 
-  const createRoom = useCallback((channelName) => {
-    const lkRoom = new Room({
-      adaptiveStream: true,
-      dynacast: true,
-    });
-
-    lkRoom.on(RoomEvent.ParticipantConnected, (participant) => {
-      updateUnitPresence(channelName, participant.identity, "idle", Date.now());
-    });
-
-    lkRoom.on(RoomEvent.ParticipantDisconnected, (participant) => {
-      setUnitPresence((prev) => {
-        const channelUnits = { ...(prev[channelName] || {}) };
-        delete channelUnits[participant.identity];
-        return {
-          ...prev,
-          [channelName]: channelUnits,
-        };
-      });
-    });
-
-    lkRoom.on(RoomEvent.TrackSubscribed, (track, publication, participant) => {
-      if (track.kind === "audio") {
-        // Skip audio from ourselves - we don't want to hear our own transmission
-        if (participant.identity === lkRoom.localParticipant?.identity) {
-          console.log('[Radio PTT] Skipping self-audio from', participant.identity);
-          return;
-        }
-        
-        const audioElem = track.attach();
-        audioElem.dataset.channel = channelName;
-        audioElem.dataset.participant = participant.identity;
-        
-        audioElem.playsInline = true;
-        audioElem.autoplay = true;
-        audioElem.style.display = 'none';
-        
-        document.body.appendChild(audioElem);
-        rxAudioElementsRef.current.add(audioElem);
-        
-        // Mute if we're transmitting OR about to transmit (ARMING state)
-        const currentState = micPTTManager.getState();
-        if (currentState === PTT_STATES.TRANSMITTING || currentState === PTT_STATES.ARMING) {
-          audioElem.muted = true;
-          console.log('[Radio PTT] Muting incoming audio - we are transmitting');
-        } else {
-          audioElem.muted = false;
-          audioElem.volume = 1.0;
-        }
-        
-        audioElem.play().catch((e) => {
-          console.log('[Radio PTT] Audio autoplay blocked:', e.message);
-        });
-        
-        console.log('[Radio PTT] Receiving audio from', participant.identity, 'muted:', audioElem.muted, 'volume:', audioElem.volume);
-        
-        setActiveAudio({ channel: channelName, from: participant.identity });
-        updateUnitPresence(channelName, participant.identity, "transmitting", Date.now());
-      }
-    });
-
-    lkRoom.on(RoomEvent.TrackUnsubscribed, (track, publication, participant) => {
-      const detachedElements = track.detach();
-      detachedElements.forEach((el) => {
-        rxAudioElementsRef.current.delete(el);
-        el.remove();
-      });
-      setActiveAudio(null);
-      updateUnitPresence(channelName, participant.identity, "idle", Date.now());
-      console.log('[Radio PTT] Transmission ended from', participant.identity);
-    });
-
-    lkRoom.on(RoomEvent.DataReceived, (payload, participant) => {
-      try {
-        const decoder = new TextDecoder();
-        const message = JSON.parse(decoder.decode(payload));
-        
-        if (message.type === "status_update") {
-          updateUnitPresence(message.channel, message.identity, message.status, message.timestamp);
-        } else if (message.type === "emergency") {
-          if (message.active) {
-            setActiveEmergencies((prev) => ({
-              ...prev,
-              [message.identity]: {
-                channel: message.channel,
-                timestamp: message.timestamp,
-              },
-            }));
-            updateUnitPresence(message.channel, message.identity, "emergency", message.timestamp);
-          } else {
-            setActiveEmergencies((prev) => {
-              const updated = { ...prev };
-              delete updated[message.identity];
-              return updated;
-            });
-            updateUnitPresence(message.channel, message.identity, "idle", message.timestamp);
-          }
-        } else if (message.type === "emergency_ack") {
-          if (message.targetUnit === identity) {
-            setIsEmergency(false);
-            if (emergencyTimerRef.current) {
-              clearInterval(emergencyTimerRef.current);
-              emergencyTimerRef.current = null;
-            }
-            setEmergencyLockRemaining(0);
-          }
-          setActiveEmergencies((prev) => {
-            const updated = { ...prev };
-            delete updated[message.targetUnit];
-            return updated;
-          });
-          updateUnitPresence(message.channel, message.targetUnit, "idle", Date.now());
-        } else if (message.type === "heartbeat") {
-          setUnitPresence((prev) => {
-            const channelUnits = prev[message.channel] || {};
-            const existingUnit = channelUnits[message.identity] || {};
-            return {
-              ...prev,
-              [message.channel]: {
-                ...channelUnits,
-                [message.identity]: {
-                  ...existingUnit,
-                  lastSeen: message.timestamp,
-                  location: message.location,
-                },
-              },
-            };
-          });
-        }
-      } catch (err) {
-        console.error("Error parsing data message:", err);
-      }
-    });
-
-    return lkRoom;
-  }, [updateUnitPresence, getAudioContext, startRxLevelMonitor, stopRxLevelMonitor, identity]);
 
   const initializePresence = useCallback((room, channelName) => {
     const existingParticipants = Array.from(room.remoteParticipants.values());
@@ -669,138 +623,82 @@ export default function App({ user, onLogout }) {
     }));
   }, []);
 
-  const connectToChannel = async (channel = selectedChannel) => {
-    try {
-      setConnecting(true);
-      setConnectionError(null);
-
-      const token = await getToken(channel);
-      if (!token) {
-        setConnectionError("Invalid token received from backend.");
-        setConnecting(false);
-        return;
+  useEffect(() => {
+    if (!contextChannels || contextChannels.length === 0) {
+      setNoChannelsAccess(true);
+      setZonesData({});
+      setSelectedChannel("");
+      setSelectedZone("");
+      setChannelsLoaded(true);
+      return;
+    }
+    
+    const grouped = {};
+    contextChannels.forEach((ch) => {
+      if (!grouped[ch.zone]) {
+        grouped[ch.zone] = [];
       }
+      grouped[ch.zone].push(ch.name);
+    });
+    
+    if (Object.keys(grouped).length > 0) {
+      setZonesData(grouped);
+      const firstZone = Object.keys(grouped)[0];
+      const firstChannel = grouped[firstZone][0];
+      setSelectedZone(firstZone);
+      if (!selectedChannel) {
+        setSelectedChannel(firstChannel);
+        setTransmitChannel(firstChannel);
+      }
+      setNoChannelsAccess(false);
+      setChannelsLoaded(true);
+    } else {
+      setNoChannelsAccess(true);
+      setZonesData({});
+      setSelectedChannel("");
+      setSelectedZone("");
+      setChannelsLoaded(true);
+    }
+  }, [contextChannels]);
 
-      const lkRoom = createRoom(channel);
-      await lkRoom.connect(LIVEKIT_URL, token);
-
-      initializePresence(lkRoom, channel);
-
-      setPrimaryRoom(lkRoom);
-      setSelectedChannel(channel);
-      setTransmitChannel(channel);
-      setConnected(true);
-      setConnecting(false);
-
-      broadcastStatus(lkRoom, "idle", channel);
-      startHeartbeat(lkRoom, channel);
+  useEffect(() => {
+    if (connected && transmitChannel && livekitManager) {
+      livekitManager.setPrimaryTxChannel(transmitChannel);
+      broadcastStatus("idle", transmitChannel);
+      startHeartbeat(transmitChannel);
       
-      updateUnitStatus(identity, channel, 'idle', userLocation, false).catch(err => {
+      const room = livekitManager.getRoom(transmitChannel);
+      if (room) {
+        initializePresence(room, transmitChannel);
+      }
+      
+      updateUnitStatus(identity, transmitChannel, 'idle', userLocation, false).catch(err => {
         console.log('[Radio] Failed to register unit:', err.message);
       });
-
-    } catch (err) {
-      console.error("Connection error:", err);
-      setConnectionError(err.message || "Failed to connect to channel");
-      setConnecting(false);
     }
-  };
+  }, [connected, transmitChannel, livekitManager, broadcastStatus, startHeartbeat, identity, userLocation, initializePresence]);
 
-  useEffect(() => {
-    const loadChannels = async () => {
-      try {
-        const res = await fetch("/api/channels", { credentials: "include" });
-        if (res.ok) {
-          const data = await res.json();
-          if (!data.channels || data.channels.length === 0) {
-            setNoChannelsAccess(true);
-            setZonesData({});
-            setSelectedChannel("");
-            setSelectedZone("");
-            setChannelsLoaded(true);
-            return;
-          }
-          const grouped = {};
-          data.channels.forEach((ch) => {
-            if (!grouped[ch.zone]) {
-              grouped[ch.zone] = [];
-            }
-            grouped[ch.zone].push(ch.name);
-          });
-          if (Object.keys(grouped).length > 0) {
-            setZonesData(grouped);
-            const firstZone = Object.keys(grouped)[0];
-            const firstChannel = grouped[firstZone][0];
-            setSelectedZone(firstZone);
-            setSelectedChannel(firstChannel);
-            setNoChannelsAccess(false);
-            setChannelsLoaded(true);
-          } else {
-            setNoChannelsAccess(true);
-            setZonesData({});
-            setSelectedChannel("");
-            setSelectedZone("");
-            setChannelsLoaded(true);
-          }
-        }
-      } catch (err) {
-        console.error("Failed to load channels:", err);
-        setConnectionError("Failed to load channels");
-        setChannelsLoaded(true);
-      }
-    };
-    loadChannels();
-  }, []);
-
-  useEffect(() => {
-    const zoneKeys = Object.keys(zonesData);
-    if (!connected && !connecting && channelsLoaded && identity && !noChannelsAccess && zoneKeys.length > 0) {
-      const firstZone = zoneKeys[0];
-      const firstChannel = zonesData[firstZone]?.[0];
-      if (firstChannel) {
-        connectToChannel(firstChannel);
-      }
-    }
-  }, [channelsLoaded, noChannelsAccess, zonesData]);
-
-  const switchChannel = async (newChannel) => {
+  const switchChannel = useCallback((newChannel) => {
     if (!connected || newChannel === selectedChannel) return;
-
-    try {
-      if (primaryRoomRef.current) {
-        await primaryRoomRef.current.disconnect();
+    
+    setSelectedChannel(newChannel);
+    setTransmitChannel(newChannel);
+    
+    if (livekitManager) {
+      livekitManager.setPrimaryTxChannel(newChannel);
+      broadcastStatus("idle", newChannel);
+      
+      const room = livekitManager.getRoom(newChannel);
+      if (room) {
+        initializePresence(room, newChannel);
       }
-
-      const token = await getToken(newChannel);
-      const lkRoom = createRoom(newChannel);
-      await lkRoom.connect(LIVEKIT_URL, token);
-
-      initializePresence(lkRoom, newChannel);
-
-      setPrimaryRoom(lkRoom);
-      setSelectedChannel(newChannel);
-      setTransmitChannel(newChannel);
-
-      broadcastStatus(lkRoom, "idle", newChannel);
-
-    } catch (err) {
-      console.error("Switch channel error:", err);
-      alert("Failed to switch channel: " + err.message);
     }
-  };
+  }, [connected, selectedChannel, livekitManager, broadcastStatus, initializePresence]);
 
-  const toggleScanChannel = async (channel) => {
+  const toggleScanChannel = useCallback((channel) => {
     if (channel === selectedChannel) return;
 
     if (scanChannels.includes(channel)) {
-      if (scanRooms[channel]) {
-        await scanRooms[channel].disconnect();
-        setScanRooms((prev) => {
-          const updated = { ...prev };
-          delete updated[channel];
-          return updated;
-        });
-      }
       setScanChannels((prev) => prev.filter((c) => c !== channel));
       setUnitPresence((prev) => {
         const updated = { ...prev };
@@ -808,42 +706,35 @@ export default function App({ user, onLogout }) {
         return updated;
       });
     } else {
-      try {
-        const token = await getToken(channel);
-        const lkRoom = createRoom(channel);
-        await lkRoom.connect(LIVEKIT_URL, token);
-
-        initializePresence(lkRoom, channel);
-
-        setScanRooms((prev) => ({ ...prev, [channel]: lkRoom }));
-        setScanChannels((prev) => [...prev, channel]);
-      } catch (err) {
-        console.error("Scan channel error:", err);
+      setScanChannels((prev) => [...prev, channel]);
+      
+      if (livekitManager) {
+        const room = livekitManager.getRoom(channel);
+        if (room) {
+          initializePresence(room, channel);
+        }
       }
     }
-  };
+  }, [selectedChannel, scanChannels, livekitManager, initializePresence]);
 
   const startPTT = useCallback(async () => {
-    if (!micPTTManager.canStart()) {
-      console.log('[Radio PTT] Cannot start, manager not ready');
+    if (!livekitManager) {
+      console.log('[Radio PTT] No livekitManager');
       return false;
     }
     
-    if (!primaryRoomRef.current) {
-      console.log('[Radio PTT] No room connected');
+    if (!livekitManager.canStartTransmit()) {
+      console.log('[Radio PTT] Cannot start, manager not ready or channel not healthy');
       return false;
     }
-
-    micPTTManager.setRoom(primaryRoomRef.current);
-    return await micPTTManager.start();
-  }, []);
+    
+    return await livekitManager.startTransmit();
+  }, [livekitManager]);
 
   const stopPTT = useCallback(async () => {
-    if (!micPTTManager.canStop()) {
-      return;
-    }
-    await micPTTManager.stop();
-  }, []);
+    if (!livekitManager) return;
+    await livekitManager.stopTransmit();
+  }, [livekitManager]);
 
   const handlePTTDown = useCallback(async (e) => {
     if (e && e.type === 'keydown' && e.repeat) return;
@@ -908,7 +799,8 @@ export default function App({ user, onLogout }) {
   };
 
   const triggerEmergency = async () => {
-    if (!primaryRoomRef.current || isEmergency) return;
+    const room = getCurrentRoom();
+    if (!room || isEmergency) return;
     
     setIsEmergency(true);
     setEmergencyLockRemaining(10);
@@ -917,8 +809,8 @@ export default function App({ user, onLogout }) {
       el.muted = true;
     });
     
-    broadcastEmergency(primaryRoomRef.current, transmitChannel, true);
-    broadcastStatus(primaryRoomRef.current, "emergency", transmitChannel);
+    broadcastEmergency(transmitChannel, true);
+    broadcastStatus("emergency", transmitChannel);
     updateUnitPresence(transmitChannel, identity, "emergency", Date.now());
     
     await startPTT();
@@ -942,7 +834,8 @@ export default function App({ user, onLogout }) {
   };
 
   const cancelEmergency = async () => {
-    if (!primaryRoomRef.current) return;
+    const room = getCurrentRoom();
+    if (!room) return;
     
     if (emergencyTimerRef.current) {
       clearInterval(emergencyTimerRef.current);
@@ -957,35 +850,9 @@ export default function App({ user, onLogout }) {
       el.muted = false;
     });
     
-    broadcastEmergency(primaryRoomRef.current, transmitChannel, false);
-    broadcastStatus(primaryRoomRef.current, "idle", transmitChannel);
+    broadcastEmergency(transmitChannel, false);
+    broadcastStatus("idle", transmitChannel);
     updateUnitPresence(transmitChannel, identity, "idle", Date.now());
-  };
-
-  const disconnect = async () => {
-    stopHeartbeat();
-    micPTTManager.disconnect();
-    
-    if (primaryRoomRef.current) {
-      await primaryRoomRef.current.disconnect();
-    }
-
-    for (const room of Object.values(scanRoomsRef.current)) {
-      await room.disconnect();
-    }
-
-    if (audioContextRef.current) {
-      audioContextRef.current.close();
-      audioContextRef.current = null;
-    }
-
-    setPrimaryRoom(null);
-    setScanRooms({});
-    setScanChannels([]);
-    setConnected(false);
-    setUnitPresence({});
-    setScanMode(false);
-    setLastRxBlob(null);
   };
 
   const currentZoneChannels = zonesData[selectedZone] || [];

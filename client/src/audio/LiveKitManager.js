@@ -21,6 +21,7 @@ class LiveKitManager {
     this.autoPlaybackEnabled = true;
     this.pttMuted = false;
     this.pttListenerRemover = null;
+    this.primaryTxChannel = null;
     
     // Connection health tracking
     this.connectionHealth = new Map(); // channelName -> { lastPing, connected, quality }
@@ -554,6 +555,88 @@ class LiveKitManager {
     } catch (err) {
       console.warn(`[LiveKit] Failed to send data to ${channelName}:`, err.message);
     }
+  }
+
+  // ========== PTT CAPABILITIES ==========
+  
+  // Set the primary TX channel for PTT
+  setPrimaryTxChannel(channelName) {
+    const room = this.rooms.get(channelName);
+    if (!room) {
+      console.warn(`[LiveKit] Cannot set TX channel ${channelName} - not connected`);
+      return false;
+    }
+    
+    console.log(`[LiveKit] Setting primary TX channel to ${channelName}`);
+    micPTTManager.setRoom(room);
+    this.primaryTxChannel = channelName;
+    return true;
+  }
+  
+  getPrimaryTxChannel() {
+    return this.primaryTxChannel || null;
+  }
+  
+  // Start PTT transmission on the primary TX channel
+  async startTransmit() {
+    if (!this.primaryTxChannel) {
+      console.error('[LiveKit] No primary TX channel set');
+      return false;
+    }
+    
+    const room = this.rooms.get(this.primaryTxChannel);
+    if (!room || room.state !== 'connected') {
+      console.error(`[LiveKit] TX channel ${this.primaryTxChannel} not connected`);
+      return false;
+    }
+    
+    // Ensure MicPTTManager has the correct room
+    micPTTManager.setRoom(room);
+    
+    console.log(`[LiveKit] Starting transmission on ${this.primaryTxChannel}`);
+    return await micPTTManager.start();
+  }
+  
+  // Stop PTT transmission
+  async stopTransmit() {
+    console.log('[LiveKit] Stopping transmission');
+    await micPTTManager.stop();
+  }
+  
+  // Force release PTT (emergency stop)
+  forceReleaseTransmit() {
+    console.log('[LiveKit] Force releasing transmission');
+    micPTTManager.forceRelease();
+  }
+  
+  // Check if currently transmitting
+  isTransmitting() {
+    return micPTTManager.isTransmitting();
+  }
+  
+  // Check if PTT can start
+  canStartTransmit() {
+    return micPTTManager.canStart() && this.primaryTxChannel && this.isChannelHealthy(this.primaryTxChannel);
+  }
+  
+  // Get current PTT state
+  getPttState() {
+    return micPTTManager.getState();
+  }
+  
+  // Register callbacks for PTT state changes
+  onPttStateChange(callback) {
+    return micPTTManager.addStateListener(callback);
+  }
+  
+  // Register callback for PTT errors
+  setPttErrorHandler(callback) {
+    micPTTManager.onError = callback;
+  }
+  
+  // Register callback for disconnect during transmission
+  setPttDisconnectHandler(callback) {
+    micPTTManager.onDisconnectDuringTx = callback;
   }
 
   broadcastData(data) {
