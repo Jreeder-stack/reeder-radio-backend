@@ -96,93 +96,115 @@ export function LiveKitConnectionProvider({ children, user }) {
     reconnectTimers.current.set(channelName, timer);
   }, [clearReconnectTimer]);
 
+  const listenerRemoversRef = useRef([]);
+  
   const setupEventHandlers = useCallback((identity) => {
-    livekitManager.onLevelUpdate = (channelName, level) => {
-      const channels = useDispatchStore.getState().channels;
-      const channel = channels.find(c => c.name === channelName);
-      if (channel) {
-        useDispatchStore.getState().setChannelLevel(channel.id, level);
-      }
-    };
+    // Clean up any existing listeners first
+    listenerRemoversRef.current.forEach(remove => remove());
+    listenerRemoversRef.current = [];
     
-    livekitManager.onTrackSubscribed = (channelName, track, participant) => {
-      const state = useDispatchStore.getState();
-      const channel = state.channels.find(c => c.name === channelName);
-      if (channel) {
-        state.setActiveTransmission(channel.id, {
-          from: participant.identity,
-          timestamp: Date.now(),
-        });
-      }
-      state.addEvent({
-        type: 'ptt_start',
-        unit: participant.identity,
-        channel: channelName,
-      });
-    };
+    // Use new listener pattern that supports multiple listeners
+    listenerRemoversRef.current.push(
+      livekitManager.addLevelUpdateListener((channelName, level) => {
+        const channels = useDispatchStore.getState().channels;
+        const channel = channels.find(c => c.name === channelName);
+        if (channel) {
+          useDispatchStore.getState().setChannelLevel(channel.id, level);
+        }
+      })
+    );
     
-    livekitManager.onTrackUnsubscribed = (channelName, track, participant) => {
-      const state = useDispatchStore.getState();
-      const channel = state.channels.find(c => c.name === channelName);
-      if (channel) {
-        state.clearActiveTransmission(channel.id);
-      }
-      state.addEvent({
-        type: 'ptt_end',
-        unit: participant.identity,
-        channel: channelName,
-      });
-    };
-    
-    livekitManager.onParticipantConnected = (channelName, participant) => {
-      useDispatchStore.getState().addEvent({
-        type: 'unit_joined',
-        unit: participant.identity,
-        channel: channelName,
-      });
-    };
-    
-    livekitManager.onParticipantDisconnected = (channelName, participant) => {
-      useDispatchStore.getState().addEvent({
-        type: 'unit_left',
-        unit: participant.identity,
-        channel: channelName,
-      });
-    };
-    
-    livekitManager.onDataReceived = (channelName, message, participant) => {
-      if (message.type === 'emergency') {
-        if (message.active) {
-          useDispatchStore.getState().addEmergency({
-            id: `emergency-${participant?.identity || message.identity}-${Date.now()}`,
-            unitIdentity: message.identity,
-            channel: channelName,
-            timestamp: new Date().toISOString(),
+    listenerRemoversRef.current.push(
+      livekitManager.addTrackSubscribedListener((channelName, track, participant) => {
+        const state = useDispatchStore.getState();
+        const channel = state.channels.find(c => c.name === channelName);
+        if (channel) {
+          state.setActiveTransmission(channel.id, {
+            from: participant.identity,
+            timestamp: Date.now(),
           });
         }
-      }
-    };
+        state.addEvent({
+          type: 'ptt_start',
+          unit: participant.identity,
+          channel: channelName,
+        });
+      })
+    );
     
-    livekitManager.onConnectionStateChange = (channelName, state, error) => {
-      console.log(`[LiveKitConnection] ${channelName} state: ${state}`);
-      
-      // Update connection health state for UI
-      if (mountedRef.current) {
-        setConnectionHealth(livekitManager.getConnectionStatus());
-      }
-      
-      if (state === 'disconnected' && mountedRef.current) {
-        scheduleReconnect(channelName, identity);
-      }
-    };
+    listenerRemoversRef.current.push(
+      livekitManager.addTrackUnsubscribedListener((channelName, track, participant) => {
+        const state = useDispatchStore.getState();
+        const channel = state.channels.find(c => c.name === channelName);
+        if (channel) {
+          state.clearActiveTransmission(channel.id);
+        }
+        state.addEvent({
+          type: 'ptt_end',
+          unit: participant.identity,
+          channel: channelName,
+        });
+      })
+    );
     
-    // Health change handler for more granular updates
-    livekitManager.onHealthChange = (channelName, health) => {
-      console.log(`[LiveKitConnection] Health change for ${channelName}:`, health);
-      if (mountedRef.current) {
-        setConnectionHealth(livekitManager.getConnectionStatus());
-      }
-    };
+    listenerRemoversRef.current.push(
+      livekitManager.addParticipantConnectedListener((channelName, participant) => {
+        useDispatchStore.getState().addEvent({
+          type: 'unit_joined',
+          unit: participant.identity,
+          channel: channelName,
+        });
+      })
+    );
+    
+    listenerRemoversRef.current.push(
+      livekitManager.addParticipantDisconnectedListener((channelName, participant) => {
+        useDispatchStore.getState().addEvent({
+          type: 'unit_left',
+          unit: participant.identity,
+          channel: channelName,
+        });
+      })
+    );
+    
+    listenerRemoversRef.current.push(
+      livekitManager.addDataReceivedListener((channelName, message, participant) => {
+        if (message.type === 'emergency') {
+          if (message.active) {
+            useDispatchStore.getState().addEmergency({
+              id: `emergency-${participant?.identity || message.identity}-${Date.now()}`,
+              unitIdentity: message.identity,
+              channel: channelName,
+              timestamp: new Date().toISOString(),
+            });
+          }
+        }
+      })
+    );
+    
+    listenerRemoversRef.current.push(
+      livekitManager.addConnectionStateChangeListener((channelName, state, error) => {
+        console.log(`[LiveKitConnection] ${channelName} state: ${state}`);
+        
+        // Update connection health state for UI
+        if (mountedRef.current) {
+          setConnectionHealth(livekitManager.getConnectionStatus());
+        }
+        
+        if (state === 'disconnected' && mountedRef.current) {
+          scheduleReconnect(channelName, identity);
+        }
+      })
+    );
+    
+    listenerRemoversRef.current.push(
+      livekitManager.addHealthChangeListener((channelName, health) => {
+        console.log(`[LiveKitConnection] Health change for ${channelName}:`, health);
+        if (mountedRef.current) {
+          setConnectionHealth(livekitManager.getConnectionStatus());
+        }
+      })
+    );
   }, [scheduleReconnect]);
 
   const initializeConnections = useCallback(async (identity, channelsToConnect) => {
