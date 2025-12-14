@@ -117,22 +117,42 @@ class AIDispatcher {
     const chunks = [];
     let frameCount = 0;
     const MIN_AUDIO_BYTES = LIVEKIT_SAMPLE_RATE * 2 * 0.5;
+    let trackEnded = false;
+
+    const trackEndPromise = new Promise((resolve) => {
+      const onTrackUnsubscribed = (unsubTrack, publication, participant) => {
+        if (unsubTrack === track) {
+          console.log(`AI Dispatcher: Track unsubscribed from ${participant.identity} in ${roomName}`);
+          trackEnded = true;
+          room.off(RoomEvent.TrackUnsubscribed, onTrackUnsubscribed);
+          resolve();
+        }
+      };
+      room.on(RoomEvent.TrackUnsubscribed, onTrackUnsubscribed);
+    });
 
     const audioStream = new AudioStream(track, LIVEKIT_SAMPLE_RATE, CHANNELS);
     console.log(`AI Dispatcher: Buffering transmission from ${participantId} in ${roomName}...`);
 
-    try {
-      for await (const frame of audioStream) {
-        if (!this.isRunning) {
-          console.log(`AI Dispatcher: Stopped during buffering, discarding`);
-          return;
+    const bufferAudio = async () => {
+      try {
+        for await (const frame of audioStream) {
+          if (!this.isRunning || trackEnded) {
+            break;
+          }
+          chunks.push(Buffer.from(frame.data.buffer));
+          frameCount++;
         }
-
-        chunks.push(Buffer.from(frame.data.buffer));
-        frameCount++;
+      } catch (error) {
+        console.log(`AI Dispatcher: Stream error: ${error.message}`);
       }
-    } catch (error) {
-      console.log(`AI Dispatcher: Stream ended: ${error.message}`);
+    };
+
+    await Promise.race([bufferAudio(), trackEndPromise]);
+
+    if (!this.isRunning) {
+      console.log(`AI Dispatcher: Stopped during buffering, discarding`);
+      return;
     }
 
     if (chunks.length === 0) {
