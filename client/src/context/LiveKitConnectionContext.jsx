@@ -271,7 +271,13 @@ export function LiveKitConnectionProvider({ children, user }) {
     mountedRef.current = true;
     
     const init = async () => {
-      console.log('[LiveKitConnection] Init check - user:', user?.username, 'lastUser:', lastUserRef.current, 'initializing:', initializingRef.current);
+      console.log('[LiveKitConnection] Init check - user:', user?.username, 'lastUser:', lastUserRef.current, 'initializing:', initializingRef.current, 'path:', window.location.pathname);
+      
+      // Only auto-connect on dispatcher route - Radio screen manages its own connections
+      if (window.location.pathname !== '/dispatcher') {
+        console.log('[LiveKitConnection] Not on dispatcher route, skipping auto-connect');
+        return;
+      }
       
       if (!user) {
         console.log('[LiveKitConnection] No user, skipping init');
