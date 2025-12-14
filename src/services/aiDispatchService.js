@@ -5,9 +5,26 @@ import { matchCommand } from './commandMatcher.js';
 import { isAiDispatchEnabled } from '../db/index.js';
 
 const AI_IDENTITY = 'AI-Dispatcher';
-const SAMPLE_RATE = 16000;
+const LIVEKIT_SAMPLE_RATE = 48000;
+const AZURE_SAMPLE_RATE = 16000;
 const CHANNELS = 1;
 const SAMPLES_PER_CHANNEL = 480;
+
+function resampleAudio(inputBuffer, fromRate, toRate) {
+  const inputSamples = new Int16Array(inputBuffer.buffer, inputBuffer.byteOffset, inputBuffer.length / 2);
+  const ratio = fromRate / toRate;
+  const outputLength = Math.floor(inputSamples.length / ratio);
+  const outputSamples = new Int16Array(outputLength);
+  
+  for (let i = 0; i < outputLength; i++) {
+    const srcIndex = Math.floor(i * ratio);
+    const nextIndex = Math.min(srcIndex + 1, inputSamples.length - 1);
+    const frac = (i * ratio) - srcIndex;
+    outputSamples[i] = Math.round(inputSamples[srcIndex] * (1 - frac) + inputSamples[nextIndex] * frac);
+  }
+  
+  return Buffer.from(outputSamples.buffer);
+}
 
 class AIDispatcher {
   constructor() {
@@ -102,9 +119,9 @@ class AIDispatcher {
     let silenceCount = 0;
     let frameCount = 0;
     const SILENCE_THRESHOLD = 10;
-    const MIN_AUDIO_BYTES = SAMPLE_RATE * 2 * 0.3;
+    const MIN_AUDIO_BYTES = LIVEKIT_SAMPLE_RATE * 2 * 0.5;
 
-    const audioStream = new AudioStream(track, SAMPLE_RATE, CHANNELS);
+    const audioStream = new AudioStream(track, LIVEKIT_SAMPLE_RATE, CHANNELS);
     console.log(`AI Dispatcher: Starting to buffer audio from ${participantId} in ${roomName}`);
 
     try {
@@ -194,7 +211,10 @@ class AIDispatcher {
 
       console.log(`AI Dispatcher: Processing ${audioBuffer.length} bytes from ${roomName}`);
 
-      const transcript = await speechToText(audioBuffer);
+      const resampledAudio = resampleAudio(audioBuffer, LIVEKIT_SAMPLE_RATE, AZURE_SAMPLE_RATE);
+      console.log(`AI Dispatcher: Resampled to ${resampledAudio.length} bytes at ${AZURE_SAMPLE_RATE}Hz`);
+
+      const transcript = await speechToText(resampledAudio);
       if (!transcript) {
         console.log('AI Dispatcher: No speech detected');
         return;
@@ -238,7 +258,7 @@ class AIDispatcher {
         return;
       }
 
-      const audioSource = new AudioSource(SAMPLE_RATE, CHANNELS);
+      const audioSource = new AudioSource(AZURE_SAMPLE_RATE, CHANNELS);
       const track = LocalAudioTrack.createAudioTrack('ai-response', audioSource);
       
       const publishOptions = new TrackPublishOptions();
@@ -262,7 +282,7 @@ class AIDispatcher {
 
         const frame = new AudioFrame(
           Buffer.from(frameData.buffer),
-          SAMPLE_RATE,
+          AZURE_SAMPLE_RATE,
           CHANNELS,
           frameData.length
         );
