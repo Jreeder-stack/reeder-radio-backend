@@ -29,6 +29,17 @@ class LiveKitManager {
     this.HEALTH_CHECK_INTERVAL = 5000; // Check every 5 seconds
     this.CONNECTION_TIMEOUT = 15000; // Consider stale after 15 seconds
     
+    // Event listener arrays - allows multiple listeners
+    this._trackSubscribedListeners = new Set();
+    this._trackUnsubscribedListeners = new Set();
+    this._participantConnectedListeners = new Set();
+    this._participantDisconnectedListeners = new Set();
+    this._dataReceivedListeners = new Set();
+    this._levelUpdateListeners = new Set();
+    this._connectionStateChangeListeners = new Set();
+    this._healthChangeListeners = new Set();
+    
+    // Legacy single callbacks (deprecated but kept for backwards compatibility)
     this.onTrackSubscribed = null;
     this.onTrackUnsubscribed = null;
     this.onParticipantConnected = null;
@@ -36,10 +47,124 @@ class LiveKitManager {
     this.onDataReceived = null;
     this.onLevelUpdate = null;
     this.onConnectionStateChange = null;
-    this.onHealthChange = null; // New: for UI to show connection quality
+    this.onHealthChange = null;
     
     this._initPTTListener();
     this._startHealthCheck();
+  }
+  
+  // Event listener registration methods
+  addTrackSubscribedListener(callback) {
+    this._trackSubscribedListeners.add(callback);
+    return () => this._trackSubscribedListeners.delete(callback);
+  }
+  
+  addTrackUnsubscribedListener(callback) {
+    this._trackUnsubscribedListeners.add(callback);
+    return () => this._trackUnsubscribedListeners.delete(callback);
+  }
+  
+  addParticipantConnectedListener(callback) {
+    this._participantConnectedListeners.add(callback);
+    return () => this._participantConnectedListeners.delete(callback);
+  }
+  
+  addParticipantDisconnectedListener(callback) {
+    this._participantDisconnectedListeners.add(callback);
+    return () => this._participantDisconnectedListeners.delete(callback);
+  }
+  
+  addDataReceivedListener(callback) {
+    this._dataReceivedListeners.add(callback);
+    return () => this._dataReceivedListeners.delete(callback);
+  }
+  
+  addLevelUpdateListener(callback) {
+    this._levelUpdateListeners.add(callback);
+    return () => this._levelUpdateListeners.delete(callback);
+  }
+  
+  addConnectionStateChangeListener(callback) {
+    this._connectionStateChangeListeners.add(callback);
+    return () => this._connectionStateChangeListeners.delete(callback);
+  }
+  
+  addHealthChangeListener(callback) {
+    this._healthChangeListeners.add(callback);
+    return () => this._healthChangeListeners.delete(callback);
+  }
+  
+  // Internal method to emit events to all listeners
+  _emitTrackSubscribed(channelName, track, participant) {
+    for (const listener of this._trackSubscribedListeners) {
+      try { listener(channelName, track, participant); } catch (e) { console.warn('[LiveKit] Listener error:', e); }
+    }
+    if (this.onTrackSubscribed) {
+      try { this.onTrackSubscribed(channelName, track, participant); } catch (e) { console.warn('[LiveKit] Legacy callback error:', e); }
+    }
+  }
+  
+  _emitTrackUnsubscribed(channelName, track, participant) {
+    for (const listener of this._trackUnsubscribedListeners) {
+      try { listener(channelName, track, participant); } catch (e) { console.warn('[LiveKit] Listener error:', e); }
+    }
+    if (this.onTrackUnsubscribed) {
+      try { this.onTrackUnsubscribed(channelName, track, participant); } catch (e) { console.warn('[LiveKit] Legacy callback error:', e); }
+    }
+  }
+  
+  _emitParticipantConnected(channelName, participant) {
+    for (const listener of this._participantConnectedListeners) {
+      try { listener(channelName, participant); } catch (e) { console.warn('[LiveKit] Listener error:', e); }
+    }
+    if (this.onParticipantConnected) {
+      try { this.onParticipantConnected(channelName, participant); } catch (e) { console.warn('[LiveKit] Legacy callback error:', e); }
+    }
+  }
+  
+  _emitParticipantDisconnected(channelName, participant) {
+    for (const listener of this._participantDisconnectedListeners) {
+      try { listener(channelName, participant); } catch (e) { console.warn('[LiveKit] Listener error:', e); }
+    }
+    if (this.onParticipantDisconnected) {
+      try { this.onParticipantDisconnected(channelName, participant); } catch (e) { console.warn('[LiveKit] Legacy callback error:', e); }
+    }
+  }
+  
+  _emitDataReceived(channelName, data, participant) {
+    for (const listener of this._dataReceivedListeners) {
+      try { listener(channelName, data, participant); } catch (e) { console.warn('[LiveKit] Listener error:', e); }
+    }
+    if (this.onDataReceived) {
+      try { this.onDataReceived(channelName, data, participant); } catch (e) { console.warn('[LiveKit] Legacy callback error:', e); }
+    }
+  }
+  
+  _emitLevelUpdate(channelName, level) {
+    for (const listener of this._levelUpdateListeners) {
+      try { listener(channelName, level); } catch (e) { console.warn('[LiveKit] Listener error:', e); }
+    }
+    if (this.onLevelUpdate) {
+      try { this.onLevelUpdate(channelName, level); } catch (e) { console.warn('[LiveKit] Legacy callback error:', e); }
+    }
+  }
+  
+  _emitConnectionStateChange(channelName, state, error) {
+    for (const listener of this._connectionStateChangeListeners) {
+      try { listener(channelName, state, error); } catch (e) { console.warn('[LiveKit] Listener error:', e); }
+    }
+    if (this.onConnectionStateChange) {
+      try { this.onConnectionStateChange(channelName, state, error); } catch (e) { console.warn('[LiveKit] Legacy callback error:', e); }
+    }
+  }
+  
+  _emitHealthChange(channelName, health) {
+    for (const listener of this._healthChangeListeners) {
+      try { listener(channelName, health); } catch (e) { console.warn('[LiveKit] Listener error:', e); }
+    }
+    if (this.onHealthChange) {
+      try { this.onHealthChange(channelName, health); } catch (e) { console.warn('[LiveKit] Legacy callback error:', e); }
+    }
   }
 
   _startHealthCheck() {
@@ -103,11 +228,9 @@ class LiveKitManager {
       
       if (stateChanged || qualityChanged) {
         console.log(`[LiveKit] Connection health changed for ${channelName}: connected=${roomConnected}, quality=${health.quality}`);
-        if (this.onHealthChange) {
-          this.onHealthChange(channelName, health);
-        }
-        if (!roomConnected && stateChanged && this.onConnectionStateChange) {
-          this.onConnectionStateChange(channelName, 'disconnected');
+        this._emitHealthChange(channelName, health);
+        if (!roomConnected && stateChanged) {
+          this._emitConnectionStateChange(channelName, 'disconnected');
         }
       }
     }
@@ -285,9 +408,7 @@ class LiveKitManager {
       this.rooms.set(channelName, room);
       console.log(`[LiveKit] Connected to ${channelName}`);
       
-      if (this.onConnectionStateChange) {
-        this.onConnectionStateChange(channelName, 'connected');
-      }
+      this._emitConnectionStateChange(channelName, 'connected');
 
       return room;
     } catch (err) {
@@ -301,9 +422,7 @@ class LiveKitManager {
       
       this._cleanupChannel(channelName);
       
-      if (this.onConnectionStateChange) {
-        this.onConnectionStateChange(channelName, 'failed', err);
-      }
+      this._emitConnectionStateChange(channelName, 'failed', err);
       throw err;
     }
   }
@@ -322,45 +441,32 @@ class LiveKitManager {
         this._handleAudioTrack(track, participant, channelName, room);
       }
       
-      console.log(`[LiveKit] Calling onTrackSubscribed callback: ${!!this.onTrackSubscribed}`);
-      if (this.onTrackSubscribed) {
-        try {
-          this.onTrackSubscribed(channelName, track, participant);
-        } catch (err) {
-          console.error('[LiveKit] onTrackSubscribed callback error:', err);
-        }
-      }
+      // Emit to all listeners (new pattern)
+      console.log(`[LiveKit] Emitting TrackSubscribed to ${this._trackSubscribedListeners.size} listeners`);
+      this._emitTrackSubscribed(channelName, track, participant);
     });
 
     room.on(RoomEvent.TrackUnsubscribed, (track, publication, participant) => {
       console.log(`[LiveKit] Track unsubscribed from ${participant.identity} on ${channelName}`);
       this._handleTrackUnsubscribed(channelName, track, participant);
       
-      if (this.onTrackUnsubscribed) {
-        this.onTrackUnsubscribed(channelName, track, participant);
-      }
+      this._emitTrackUnsubscribed(channelName, track, participant);
     });
 
     room.on(RoomEvent.ParticipantConnected, (participant) => {
       console.log(`[LiveKit] Participant joined ${channelName}: ${participant.identity}`);
-      if (this.onParticipantConnected) {
-        this.onParticipantConnected(channelName, participant);
-      }
+      this._emitParticipantConnected(channelName, participant);
     });
 
     room.on(RoomEvent.ParticipantDisconnected, (participant) => {
       console.log(`[LiveKit] Participant left ${channelName}: ${participant.identity}`);
-      if (this.onParticipantDisconnected) {
-        this.onParticipantDisconnected(channelName, participant);
-      }
+      this._emitParticipantDisconnected(channelName, participant);
     });
 
     room.on(RoomEvent.DataReceived, (payload, participant, kind) => {
       try {
         const data = JSON.parse(new TextDecoder().decode(payload));
-        if (this.onDataReceived) {
-          this.onDataReceived(channelName, data, participant);
-        }
+        this._emitDataReceived(channelName, data, participant);
       } catch (e) {
         console.warn('[LiveKit] Failed to parse data message:', e);
       }
@@ -370,9 +476,7 @@ class LiveKitManager {
       console.log(`[LiveKit] Disconnected from ${channelName}`);
       this._cleanupChannel(channelName);
       
-      if (this.onConnectionStateChange) {
-        this.onConnectionStateChange(channelName, 'disconnected');
-      }
+      this._emitConnectionStateChange(channelName, 'disconnected');
     });
   }
 
@@ -430,9 +534,7 @@ class LiveKitManager {
       analyser.getByteFrequencyData(dataArray);
       const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
       
-      if (this.onLevelUpdate) {
-        this.onLevelUpdate(channelName, Math.min(100, avg * 1.5));
-      }
+      this._emitLevelUpdate(channelName, Math.min(100, avg * 1.5));
       
       this.levelAnimations.set(channelName, requestAnimationFrame(update));
     };
@@ -447,9 +549,7 @@ class LiveKitManager {
       this.levelAnimations.delete(channelName);
     }
     
-    if (this.onLevelUpdate) {
-      this.onLevelUpdate(channelName, 0);
-    }
+    this._emitLevelUpdate(channelName, 0);
     
     try {
       track.detach().forEach(el => {
