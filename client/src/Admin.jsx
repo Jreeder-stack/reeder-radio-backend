@@ -12,6 +12,7 @@ export default function Admin({ user, onLogout }) {
   const [error, setError] = useState("");
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [aiDispatchEnabled, setAiDispatchEnabled] = useState(false);
+  const [aiDispatchChannel, setAiDispatchChannel] = useState("");
   const [aiDispatchLoading, setAiDispatchLoading] = useState(false);
   
   const [showAddUser, setShowAddUser] = useState(false);
@@ -70,6 +71,7 @@ export default function Admin({ user, onLogout }) {
       setZones(zonesData.zones);
       setLogs(logsData.logs);
       setAiDispatchEnabled(aiDispatchData.enabled);
+      setAiDispatchChannel(aiDispatchData.channel || "");
     } catch (err) {
       setError(err.message);
     } finally {
@@ -275,23 +277,50 @@ export default function Admin({ user, onLogout }) {
   };
 
   const toggleAiDispatch = async () => {
+    if (!aiDispatchEnabled && !aiDispatchChannel) {
+      alert("Please select a dispatch channel first");
+      return;
+    }
     setAiDispatchLoading(true);
     try {
       const res = await fetch("/api/admin/ai-dispatch", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ enabled: !aiDispatchEnabled }),
+        body: JSON.stringify({ enabled: !aiDispatchEnabled, channel: aiDispatchChannel }),
       });
 
       if (!res.ok) throw new Error("Failed to toggle AI Dispatch");
 
       const data = await res.json();
       setAiDispatchEnabled(data.enabled);
+      setAiDispatchChannel(data.channel || "");
     } catch (err) {
       alert("Failed to toggle AI Dispatch: " + err.message);
     } finally {
       setAiDispatchLoading(false);
+    }
+  };
+
+  const updateAiDispatchChannel = async (channelName) => {
+    setAiDispatchChannel(channelName);
+    if (aiDispatchEnabled) {
+      setAiDispatchLoading(true);
+      try {
+        const res = await fetch("/api/admin/ai-dispatch", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ enabled: true, channel: channelName }),
+        });
+        if (!res.ok) throw new Error("Failed to update channel");
+        const data = await res.json();
+        setAiDispatchChannel(data.channel || "");
+      } catch (err) {
+        alert("Failed to update dispatch channel: " + err.message);
+      } finally {
+        setAiDispatchLoading(false);
+      }
     }
   };
 
@@ -933,10 +962,35 @@ export default function Admin({ user, onLogout }) {
                 </button>
               </div>
               
-              {aiDispatchEnabled && (
+              <div style={{ marginTop: 16 }}>
+                <label style={{ display: "block", fontSize: 14, color: "#888", marginBottom: 8 }}>
+                  Dispatch Channel (AI will only monitor this channel)
+                </label>
+                <select
+                  value={aiDispatchChannel}
+                  onChange={(e) => updateAiDispatchChannel(e.target.value)}
+                  disabled={aiDispatchLoading}
+                  style={{
+                    width: "100%",
+                    padding: "10px 12px",
+                    borderRadius: 6,
+                    border: "1px solid #444",
+                    background: "#2a2a3e",
+                    color: "#fff",
+                    fontSize: 14,
+                  }}
+                >
+                  <option value="">Select a channel...</option>
+                  {channels.filter(c => c.enabled).map((c) => (
+                    <option key={c.id} value={c.name}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {aiDispatchEnabled && aiDispatchChannel && (
                 <div style={{ marginTop: 16, padding: 12, background: "#22c55e22", borderRadius: 8, border: "1px solid #22c55e44" }}>
                   <p style={{ margin: 0, color: "#22c55e", fontSize: 13 }}>
-                    AI Dispatcher is active. It will respond to radio commands on all channels.
+                    AI Dispatcher is active on channel: <strong>{aiDispatchChannel}</strong>
                   </p>
                 </div>
               )}

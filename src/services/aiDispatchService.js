@@ -2,15 +2,15 @@ import { Room, RoomEvent, TrackKind, AudioFrame, AudioSource, LocalAudioTrack, A
 import { createLiveKitToken, getLiveKitUrl } from '../config/livekit.js';
 import { speechToText, textToSpeech, isConfigured as isAzureConfigured } from './azureSpeechService.js';
 import { matchCommand } from './commandMatcher.js';
-import { isAiDispatchEnabled } from '../db/index.js';
+import { isAiDispatchEnabled, getAiDispatchChannel } from '../db/index.js';
 
 const AI_IDENTITY = 'AI-Dispatcher';
 const LIVEKIT_SAMPLE_RATE = 48000;
 const AZURE_SAMPLE_RATE = 16000;
 const CHANNELS = 1;
 const SAMPLES_PER_CHANNEL = 480;
-// Calculate correct frame duration in ms: samples / sampleRate * 1000
 const FRAME_DURATION_MS = Math.floor((SAMPLES_PER_CHANNEL / AZURE_SAMPLE_RATE) * 1000);
+const DISCONNECT_GRACE_PERIOD_MS = 30000;
 
 function resampleAudio(inputBuffer, fromRate, toRate) {
   const inputSamples = new Int16Array(inputBuffer.buffer, inputBuffer.byteOffset, inputBuffer.length / 2);
@@ -30,58 +30,163 @@ function resampleAudio(inputBuffer, fromRate, toRate) {
 
 class AIDispatcher {
   constructor() {
-    this.rooms = new Map();
-    this.audioBuffers = new Map();
+    this.room = null;
+    this.roomName = null;
     this.isRunning = false;
     this.isMuted = false;
+    this.humanParticipantCount = 0;
+    this.disconnectTimer = null;
+    this.configuredChannel = null;
   }
 
-  async start(channelNames) {
+  log(action, details = {}) {
+    const timestamp = new Date().toISOString();
+    console.log(`[AI-Dispatcher] ${timestamp} | ${action}`, JSON.stringify(details));
+  }
+
+  async start(channelName) {
+    if (!channelName) {
+      this.log('START_SKIPPED', { reason: 'No channel configured' });
+      return;
+    }
+
     if (!isAzureConfigured()) {
-      console.log('AI Dispatcher: Azure Speech not configured, skipping start');
+      this.log('START_SKIPPED', { reason: 'Azure Speech not configured' });
       return;
     }
 
     const enabled = await isAiDispatchEnabled();
     if (!enabled) {
-      console.log('AI Dispatcher: Disabled in settings');
+      this.log('START_SKIPPED', { reason: 'AI Dispatch disabled in settings' });
       return;
     }
 
-    console.log(`AI Dispatcher: Starting for channels: ${channelNames.join(', ')}`);
+    if (this.room) {
+      this.log('CHANNEL_SWITCH', { from: this.roomName, to: channelName });
+      await this.leaveCurrentRoom();
+    }
+
+    this.configuredChannel = channelName;
+    this.log('STARTING', { channel: channelName });
     this.isRunning = true;
     this.isMuted = false;
 
-    for (const channelName of channelNames) {
-      try {
-        await this.joinRoom(channelName);
-      } catch (error) {
-        console.error(`AI Dispatcher: Failed to join ${channelName}:`, error.message);
-      }
-    }
-
-    if (this.rooms.size === 0) {
-      console.error('AI Dispatcher: Failed to join any rooms, stopping');
+    try {
+      await this.joinRoom(channelName);
+    } catch (error) {
+      this.log('START_FAILED', { channel: channelName, error: error.message });
       this.isMuted = true;
       await this.stop();
     }
   }
 
-  async stop() {
-    console.log('AI Dispatcher: Stopping...');
-    this.isRunning = false;
-
-    for (const [roomName, room] of this.rooms) {
+  async leaveCurrentRoom() {
+    this.clearDisconnectTimer();
+    
+    if (this.room) {
       try {
-        await room.disconnect();
-        console.log(`AI Dispatcher: Left room ${roomName}`);
+        await this.room.disconnect();
+        this.log('ROOM_LEFT', { room: this.roomName });
       } catch (error) {
-        console.error(`AI Dispatcher: Error leaving ${roomName}:`, error.message);
+        this.log('ROOM_LEAVE_ERROR', { room: this.roomName, error: error.message });
       }
+      this.room = null;
+      this.roomName = null;
+      this.humanParticipantCount = 0;
+    }
+  }
+
+  async stop() {
+    this.log('STOPPING', { room: this.roomName });
+    this.isRunning = false;
+    this.clearDisconnectTimer();
+
+    if (this.room) {
+      try {
+        await this.room.disconnect();
+        this.log('ROOM_LEFT', { room: this.roomName });
+      } catch (error) {
+        this.log('ROOM_LEAVE_ERROR', { room: this.roomName, error: error.message });
+      }
+      this.room = null;
+      this.roomName = null;
     }
 
-    this.rooms.clear();
-    this.audioBuffers.clear();
+    this.humanParticipantCount = 0;
+  }
+
+  clearDisconnectTimer() {
+    if (this.disconnectTimer) {
+      clearTimeout(this.disconnectTimer);
+      this.disconnectTimer = null;
+      this.log('DISCONNECT_TIMER_CLEARED');
+    }
+  }
+
+  startDisconnectTimer() {
+    this.clearDisconnectTimer();
+    this.log('DISCONNECT_TIMER_STARTED', { graceMs: DISCONNECT_GRACE_PERIOD_MS });
+    
+    this.disconnectTimer = setTimeout(async () => {
+      if (this.humanParticipantCount === 0 && this.room) {
+        this.log('DISCONNECT_TIMER_EXPIRED', { reason: 'No humans in room' });
+        await this.leaveRoom();
+      }
+    }, DISCONNECT_GRACE_PERIOD_MS);
+  }
+
+  async leaveRoom() {
+    if (!this.room) return;
+    
+    this.log('ROOM_LEAVING', { room: this.roomName, reason: 'No humans present' });
+    
+    try {
+      await this.room.disconnect();
+      this.log('ROOM_LEFT', { room: this.roomName });
+    } catch (error) {
+      this.log('ROOM_LEAVE_ERROR', { room: this.roomName, error: error.message });
+    }
+    
+    this.room = null;
+    this.roomName = null;
+    this.humanParticipantCount = 0;
+  }
+
+  async rejoinIfNeeded() {
+    if (this.room || !this.isRunning || !this.configuredChannel) {
+      return;
+    }
+
+    const enabled = await isAiDispatchEnabled();
+    if (!enabled) {
+      return;
+    }
+
+    this.log('REJOIN_TRIGGERED', { channel: this.configuredChannel });
+    await this.joinRoom(this.configuredChannel);
+  }
+
+  isHumanParticipant(identity) {
+    if (!identity) return false;
+    if (identity === AI_IDENTITY) return false;
+    if (identity.startsWith('AI-')) return false;
+    if (identity.startsWith('SIP-')) return false;
+    if (identity.startsWith('sip_')) return false;
+    if (identity.startsWith('Bot-')) return false;
+    if (identity.startsWith('bot_')) return false;
+    if (identity.startsWith('PIPELINE_')) return false;
+    if (identity.startsWith('pipeline-')) return false;
+    return true;
+  }
+
+  countHumanParticipants(room) {
+    let count = 0;
+    for (const [, participant] of room.remoteParticipants) {
+      if (this.isHumanParticipant(participant.identity)) {
+        count++;
+      }
+    }
+    return count;
   }
 
   async joinRoom(roomName) {
@@ -98,21 +203,68 @@ class AIDispatcher {
 
     const room = new Room();
     
+    room.on(RoomEvent.ParticipantConnected, (participant) => {
+      if (this.isHumanParticipant(participant.identity)) {
+        this.humanParticipantCount++;
+        this.log('PARTICIPANT_JOINED', { 
+          identity: participant.identity, 
+          room: roomName,
+          humanCount: this.humanParticipantCount 
+        });
+        this.clearDisconnectTimer();
+      } else {
+        this.log('NON_HUMAN_JOINED', { identity: participant.identity, room: roomName });
+      }
+    });
+
+    room.on(RoomEvent.ParticipantDisconnected, (participant) => {
+      if (this.isHumanParticipant(participant.identity)) {
+        this.humanParticipantCount = Math.max(0, this.humanParticipantCount - 1);
+        this.log('PARTICIPANT_LEFT', { 
+          identity: participant.identity, 
+          room: roomName,
+          humanCount: this.humanParticipantCount 
+        });
+        
+        if (this.humanParticipantCount === 0) {
+          this.startDisconnectTimer();
+        }
+      } else {
+        this.log('NON_HUMAN_LEFT', { identity: participant.identity, room: roomName });
+      }
+    });
+
     room.on(RoomEvent.TrackSubscribed, async (track, publication, participant) => {
       if (track.kind === TrackKind.KIND_AUDIO && participant.identity !== AI_IDENTITY) {
-        console.log(`AI Dispatcher: Audio track from ${participant.identity} in ${roomName}`);
+        this.log('TRACK_SUBSCRIBED', { 
+          participant: participant.identity, 
+          room: roomName,
+          trackSid: publication.sid 
+        });
         await this.handleAudioTrack(track, participant.identity, roomName, room);
       }
     });
 
     room.on(RoomEvent.Disconnected, () => {
-      console.log(`AI Dispatcher: Disconnected from ${roomName}`);
-      this.rooms.delete(roomName);
+      this.log('ROOM_DISCONNECTED', { room: roomName });
+      this.room = null;
+      this.roomName = null;
+      this.humanParticipantCount = 0;
     });
 
     await room.connect(url, token);
-    this.rooms.set(roomName, room);
-    console.log(`AI Dispatcher: Joined room ${roomName}`);
+    this.room = room;
+    this.roomName = roomName;
+    
+    this.humanParticipantCount = this.countHumanParticipants(room);
+    this.log('ROOM_JOINED', { 
+      room: roomName, 
+      humanCount: this.humanParticipantCount 
+    });
+
+    if (this.humanParticipantCount === 0) {
+      this.startDisconnectTimer();
+    }
   }
 
   async handleAudioTrack(track, participantId, roomName, room) {
@@ -124,7 +276,10 @@ class AIDispatcher {
     const trackEndPromise = new Promise((resolve) => {
       const onTrackUnsubscribed = (unsubTrack, publication, participant) => {
         if (unsubTrack === track) {
-          console.log(`AI Dispatcher: Track unsubscribed from ${participant.identity} in ${roomName}`);
+          this.log('TRACK_UNSUBSCRIBED', { 
+            participant: participant.identity, 
+            room: roomName 
+          });
           trackEnded = true;
           room.off(RoomEvent.TrackUnsubscribed, onTrackUnsubscribed);
           resolve();
@@ -134,7 +289,7 @@ class AIDispatcher {
     });
 
     const audioStream = new AudioStream(track, LIVEKIT_SAMPLE_RATE, CHANNELS);
-    console.log(`AI Dispatcher: Buffering transmission from ${participantId} in ${roomName}...`);
+    this.log('AUDIO_BUFFERING_START', { participant: participantId, room: roomName });
 
     const bufferAudio = async () => {
       try {
@@ -146,27 +301,31 @@ class AIDispatcher {
           frameCount++;
         }
       } catch (error) {
-        console.log(`AI Dispatcher: Stream error: ${error.message}`);
+        this.log('AUDIO_STREAM_ERROR', { error: error.message });
       }
     };
 
     await Promise.race([bufferAudio(), trackEndPromise]);
 
     if (!this.isRunning) {
-      console.log(`AI Dispatcher: Stopped during buffering, discarding`);
+      this.log('AUDIO_DISCARDED', { reason: 'Dispatcher stopped during buffering' });
       return;
     }
 
     if (chunks.length === 0) {
-      console.log(`AI Dispatcher: No audio received from ${participantId}`);
+      this.log('AUDIO_EMPTY', { participant: participantId });
       return;
     }
 
     const audioBuffer = Buffer.concat(chunks);
-    console.log(`AI Dispatcher: Transmission complete from ${participantId} - ${frameCount} frames, ${audioBuffer.length} bytes`);
+    this.log('AUDIO_BUFFERING_COMPLETE', { 
+      participant: participantId, 
+      frames: frameCount, 
+      bytes: audioBuffer.length 
+    });
 
     if (audioBuffer.length < MIN_AUDIO_BYTES) {
-      console.log(`AI Dispatcher: Transmission too short (${audioBuffer.length} bytes), skipping`);
+      this.log('AUDIO_TOO_SHORT', { bytes: audioBuffer.length, minBytes: MIN_AUDIO_BYTES });
       return;
     }
 
@@ -177,17 +336,12 @@ class AIDispatcher {
   }
 
   async shouldRespond() {
-    if (this.isMuted) {
-      return false;
-    }
-    if (!this.isRunning) {
-      return false;
-    }
+    if (this.isMuted) return false;
+    if (!this.isRunning) return false;
     try {
-      const enabled = await isAiDispatchEnabled();
-      return enabled;
+      return await isAiDispatchEnabled();
     } catch (error) {
-      console.error('AI Dispatcher: Error checking toggle, muting:', error.message);
+      this.log('TOGGLE_CHECK_ERROR', { error: error.message });
       this.isMuted = true;
       return false;
     }
@@ -196,75 +350,78 @@ class AIDispatcher {
   async processAudio(audioBuffer, roomName, room) {
     try {
       if (!await this.shouldRespond()) {
-        console.log('AI Dispatcher: Disabled or muted, skipping processing');
+        this.log('PROCESS_SKIPPED', { reason: 'Disabled or muted' });
         return;
       }
 
-      console.log(`AI Dispatcher: Processing ${audioBuffer.length} bytes from ${roomName}`);
+      this.log('AUDIO_PROCESSING', { bytes: audioBuffer.length, room: roomName });
 
       const resampledAudio = resampleAudio(audioBuffer, LIVEKIT_SAMPLE_RATE, AZURE_SAMPLE_RATE);
-      console.log(`AI Dispatcher: Resampled to ${resampledAudio.length} bytes at ${AZURE_SAMPLE_RATE}Hz`);
 
       const transcript = await speechToText(resampledAudio);
       if (!transcript) {
-        console.log('AI Dispatcher: No speech detected');
+        this.log('STT_NO_SPEECH');
         return;
       }
 
-      console.log(`AI Dispatcher: Transcript: "${transcript}"`);
+      this.log('STT_RESULT', { transcript });
 
       const response = matchCommand(transcript);
       if (!response) {
-        console.log('AI Dispatcher: No matching command');
+        this.log('COMMAND_NO_MATCH', { transcript });
         return;
       }
 
-      console.log(`AI Dispatcher: Matched command, responding: "${response}"`);
+      this.log('COMMAND_MATCHED', { transcript, response });
 
       if (!await this.shouldRespond()) {
-        console.log('AI Dispatcher: Disabled before TTS, aborting');
+        this.log('TTS_ABORTED', { reason: 'Disabled before TTS' });
         return;
       }
 
       const responseAudio = await textToSpeech(response);
 
       if (!await this.shouldRespond()) {
-        console.log('AI Dispatcher: Disabled before publish, aborting');
+        this.log('PUBLISH_ABORTED', { reason: 'Disabled before publish' });
         return;
       }
 
-      await this.publishAudio(responseAudio, room);
+      await this.publishAudio(responseAudio, room, roomName);
 
     } catch (error) {
-      console.error('AI Dispatcher: Error processing audio, muting:', error.message);
+      this.log('PROCESS_ERROR', { error: error.message });
       this.isMuted = true;
       await this.stop();
     }
   }
 
-  async publishAudio(audioBuffer, room) {
+  async publishAudio(audioBuffer, room, roomName) {
+    let audioSource = null;
+    let track = null;
+    let publication = null;
+
     try {
       if (!await this.shouldRespond()) {
-        console.log('AI Dispatcher: Disabled, not publishing');
+        this.log('PUBLISH_SKIPPED', { reason: 'Disabled' });
         return;
       }
 
-      const audioSource = new AudioSource(AZURE_SAMPLE_RATE, CHANNELS);
-      const track = LocalAudioTrack.createAudioTrack('ai-response', audioSource);
+      audioSource = new AudioSource(AZURE_SAMPLE_RATE, CHANNELS);
+      track = LocalAudioTrack.createAudioTrack('ai-response', audioSource);
       
       const publishOptions = new TrackPublishOptions();
       publishOptions.source = TrackSource.SOURCE_MICROPHONE;
       
-      const publication = await room.localParticipant.publishTrack(track, publishOptions);
+      publication = await room.localParticipant.publishTrack(track, publishOptions);
+      this.log('TRACK_PUBLISHED', { room: roomName, trackSid: publication.sid });
 
       const samples = new Int16Array(audioBuffer.buffer);
       const framesCount = Math.ceil(samples.length / SAMPLES_PER_CHANNEL);
 
       for (let i = 0; i < framesCount; i++) {
         if (!await this.shouldRespond()) {
-          console.log('AI Dispatcher: Disabled mid-publish, stopping');
-          await room.localParticipant.unpublishTrack(publication.sid);
-          return;
+          this.log('PUBLISH_INTERRUPTED', { reason: 'Disabled mid-publish' });
+          break;
         }
 
         const start = i * SAMPLES_PER_CHANNEL;
@@ -279,19 +436,34 @@ class AIDispatcher {
         );
 
         await audioSource.captureFrame(frame);
-        // Use calculated frame duration for proper timing (20ms for 480 samples at 24kHz)
         await new Promise(resolve => setTimeout(resolve, FRAME_DURATION_MS));
       }
 
-      // Wait for audio to finish playing before unpublishing
       await new Promise(resolve => setTimeout(resolve, 300));
-      await room.localParticipant.unpublishTrack(publication.sid);
 
-      console.log('AI Dispatcher: Published response audio');
     } catch (error) {
-      console.error('AI Dispatcher: Error publishing audio, muting:', error.message);
+      this.log('PUBLISH_ERROR', { error: error.message });
       this.isMuted = true;
-      await this.stop();
+    } finally {
+      if (publication && room.localParticipant) {
+        try {
+          await room.localParticipant.unpublishTrack(publication.sid);
+          this.log('TRACK_UNPUBLISHED', { room: roomName, trackSid: publication.sid });
+        } catch (e) {
+          this.log('TRACK_UNPUBLISH_ERROR', { error: e.message });
+        }
+      }
+      
+      if (track) {
+        try {
+          track.stop();
+          this.log('TRACK_STOPPED', { room: roomName });
+        } catch (e) {
+        }
+      }
+      
+      audioSource = null;
+      track = null;
     }
   }
 }
@@ -305,9 +477,9 @@ export function getDispatcher() {
   return dispatcherInstance;
 }
 
-export async function startDispatcher(channelNames) {
+export async function startDispatcher(channelName) {
   const dispatcher = getDispatcher();
-  await dispatcher.start(channelNames);
+  await dispatcher.start(channelName);
 }
 
 export async function stopDispatcher() {
@@ -315,7 +487,7 @@ export async function stopDispatcher() {
   await dispatcher.stop();
 }
 
-export async function restartDispatcher(channelNames) {
+export async function restartDispatcher(channelName) {
   await stopDispatcher();
-  await startDispatcher(channelNames);
+  await startDispatcher(channelName);
 }

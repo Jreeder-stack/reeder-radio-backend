@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import app from './app.js';
 import { config, validateEnv } from './config/env.js';
-import { initializeDatabase, isAiDispatchEnabled, getAllChannels } from './db/index.js';
+import { initializeDatabase, isAiDispatchEnabled, getAiDispatchChannel } from './db/index.js';
 import { startDispatcher, getDispatcher } from './services/aiDispatchService.js';
 import { isConfigured as isAzureConfigured } from './services/azureSpeechService.js';
 
@@ -26,13 +26,12 @@ async function start() {
       } else {
         const aiEnabled = await isAiDispatchEnabled();
         if (aiEnabled) {
-          const channels = await getAllChannels();
-          const enabledChannelNames = channels.filter(c => c.enabled).map(c => c.name);
-          if (enabledChannelNames.length > 0) {
-            console.log('Auto-starting AI Dispatcher...');
-            await startDispatcher(enabledChannelNames);
+          const dispatchChannel = await getAiDispatchChannel();
+          if (dispatchChannel) {
+            console.log(`Auto-starting AI Dispatcher on channel: ${dispatchChannel}`);
+            await startDispatcher(dispatchChannel);
           } else {
-            console.log('AI Dispatcher: No enabled channels, skipping auto-start');
+            console.log('AI Dispatcher: No dispatch channel configured, skipping auto-start');
           }
         } else {
           console.log('AI Dispatcher: Disabled in settings, skipping auto-start');

@@ -534,4 +534,13 @@ export async function setAiDispatchEnabled(enabled) {
   return setAiSetting('ai_dispatch_enabled', enabled ? 'true' : 'false');
 }
 
+export async function getAiDispatchChannel() {
+  const value = await getAiSetting('ai_dispatch_channel');
+  return value || null;
+}
+
+export async function setAiDispatchChannel(channelName) {
+  return setAiSetting('ai_dispatch_channel', channelName || '');
+}
+
 export default pool;

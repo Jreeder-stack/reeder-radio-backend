@@ -2,7 +2,7 @@ import * as adminService from '../services/adminService.js';
 import * as authService from '../services/authService.js';
 import { success, error, created } from '../utils/response.js';
 import { startDispatcher, stopDispatcher } from '../services/aiDispatchService.js';
-import { getAllChannels } from '../db/index.js';
+import { getAiDispatchChannel, setAiDispatchChannel } from '../db/index.js';
 
 export async function listUsers(req, res) {
   try {
@@ -233,7 +233,8 @@ export async function listLogs(req, res) {
 export async function getAiDispatch(req, res) {
   try {
     const enabled = await adminService.getAiDispatchEnabled();
-    success(res, { enabled });
+    const channel = await getAiDispatchChannel();
+    success(res, { enabled, channel });
   } catch (err) {
     console.error('Get AI dispatch error:', err);
     error(res, 'Failed to get AI dispatch status', 500);
@@ -242,31 +243,38 @@ export async function getAiDispatch(req, res) {
 
 export async function setAiDispatch(req, res) {
   try {
-    const { enabled } = req.body;
+    const { enabled, channel } = req.body;
     if (typeof enabled !== 'boolean') {
       return error(res, 'enabled must be a boolean', 400);
     }
-    await adminService.setAiDispatchEnabled(enabled);
-
+    
     if (enabled) {
-      const channels = await getAllChannels();
-      const channelNames = channels.filter(c => c.enabled).map(c => c.name);
-      startDispatcher(channelNames).catch(err => {
+      const targetChannel = channel !== undefined ? channel : await getAiDispatchChannel();
+      if (!targetChannel) {
+        return error(res, 'Dispatch channel is required to enable AI', 400);
+      }
+      await setAiDispatchChannel(targetChannel);
+      await adminService.setAiDispatchEnabled(true);
+      startDispatcher(targetChannel).catch(err => {
         console.error('Failed to start AI dispatcher:', err.message);
       });
     } else {
+      await adminService.setAiDispatchEnabled(false);
+      await setAiDispatchChannel('');
       stopDispatcher().catch(err => {
         console.error('Failed to stop AI dispatcher:', err.message);
       });
     }
 
+    const dispatchChannel = await getAiDispatchChannel();
+
     await authService.logUserActivity(
       req.session.user.id,
       req.session.user.username,
       'admin_toggle_ai_dispatch',
-      { enabled }
+      { enabled, channel: dispatchChannel }
     );
-    success(res, { enabled });
+    success(res, { enabled, channel: dispatchChannel });
   } catch (err) {
     console.error('Set AI dispatch error:', err);
     error(res, 'Failed to set AI dispatch status', 500);
