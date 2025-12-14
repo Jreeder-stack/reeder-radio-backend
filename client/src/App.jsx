@@ -238,9 +238,16 @@ export default function App({ user, onLogout }) {
     console.log('[Radio] Disabling LiveKitManager auto-playback - radio handles its own audio');
     livekitManager.setAutoPlayback(false);
     
+    // Save existing callbacks from context to chain with them
+    const existingTrackSubscribed = livekitManager.onTrackSubscribed;
+    const existingTrackUnsubscribed = livekitManager.onTrackUnsubscribed;
+    const existingParticipantConnected = livekitManager.onParticipantConnected;
+    const existingParticipantDisconnected = livekitManager.onParticipantDisconnected;
+    const existingDataReceived = livekitManager.onDataReceived;
+    
     const handleTrackSubscribed = (channelName, track, participant) => {
       console.log(`[Radio] Track received: kind=${track.kind}, from ${participant.identity} on ${channelName}`);
-      if (track.kind !== 'audio' && track.kind !== Track.Kind?.Audio) return;
+      if (track.kind !== 'audio') return;
       
       console.log(`[Radio] Audio track subscribed from ${participant.identity} on ${channelName}`);
       
@@ -346,16 +353,48 @@ export default function App({ user, onLogout }) {
       }
     };
     
-    livekitManager.onTrackSubscribed = handleTrackSubscribed;
-    livekitManager.onTrackUnsubscribed = handleTrackUnsubscribed;
-    livekitManager.onParticipantConnected = handleParticipantConnected;
-    livekitManager.onParticipantDisconnected = handleParticipantDisconnected;
-    livekitManager.onDataReceived = handleDataReceived;
+    // Set chained callbacks that call both our handler AND any existing context handlers
+    livekitManager.onTrackSubscribed = (channelName, track, participant) => {
+      handleTrackSubscribed(channelName, track, participant);
+      if (existingTrackSubscribed) {
+        try { existingTrackSubscribed(channelName, track, participant); } catch (e) { console.warn('[Radio] Context callback error:', e); }
+      }
+    };
+    livekitManager.onTrackUnsubscribed = (channelName, track, participant) => {
+      handleTrackUnsubscribed(channelName, track, participant);
+      if (existingTrackUnsubscribed) {
+        try { existingTrackUnsubscribed(channelName, track, participant); } catch (e) { console.warn('[Radio] Context callback error:', e); }
+      }
+    };
+    livekitManager.onParticipantConnected = (channelName, participant) => {
+      handleParticipantConnected(channelName, participant);
+      if (existingParticipantConnected) {
+        try { existingParticipantConnected(channelName, participant); } catch (e) { console.warn('[Radio] Context callback error:', e); }
+      }
+    };
+    livekitManager.onParticipantDisconnected = (channelName, participant) => {
+      handleParticipantDisconnected(channelName, participant);
+      if (existingParticipantDisconnected) {
+        try { existingParticipantDisconnected(channelName, participant); } catch (e) { console.warn('[Radio] Context callback error:', e); }
+      }
+    };
+    livekitManager.onDataReceived = (channelName, message, participant) => {
+      handleDataReceived(channelName, message, participant);
+      if (existingDataReceived) {
+        try { existingDataReceived(channelName, message, participant); } catch (e) { console.warn('[Radio] Context callback error:', e); }
+      }
+    };
     
     return () => {
-      console.log('[Radio] Cleanup - re-enabling LiveKitManager auto-playback');
+      console.log('[Radio] Cleanup - re-enabling LiveKitManager auto-playback and restoring callbacks');
       if (livekitManager) {
         livekitManager.setAutoPlayback(true);
+        // Restore the original context callbacks
+        livekitManager.onTrackSubscribed = existingTrackSubscribed;
+        livekitManager.onTrackUnsubscribed = existingTrackUnsubscribed;
+        livekitManager.onParticipantConnected = existingParticipantConnected;
+        livekitManager.onParticipantDisconnected = existingParticipantDisconnected;
+        livekitManager.onDataReceived = existingDataReceived;
       }
     };
   }, [livekitManager, updateUnitPresence, identity]);
