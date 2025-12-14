@@ -1,4 +1,4 @@
-import { Room, RoomEvent, TrackKind, AudioFrame, AudioSource, LocalAudioTrack, AudioStream } from '@livekit/rtc-node';
+import { Room, RoomEvent, TrackKind, AudioFrame, AudioSource, LocalAudioTrack, AudioStream, TrackPublishOptions, TrackSource } from '@livekit/rtc-node';
 import { createLiveKitToken, getLiveKitUrl } from '../config/livekit.js';
 import { speechToText, textToSpeech, isConfigured as isAzureConfigured } from './azureSpeechService.js';
 import { matchCommand } from './commandMatcher.js';
@@ -238,10 +238,13 @@ class AIDispatcher {
         return;
       }
 
-      const source = new AudioSource(SAMPLE_RATE, CHANNELS);
-      const track = LocalAudioTrack.createAudioTrack('ai-response', source);
+      const audioSource = new AudioSource(SAMPLE_RATE, CHANNELS);
+      const track = LocalAudioTrack.createAudioTrack('ai-response', audioSource);
       
-      const publication = await room.localParticipant.publishTrack(track);
+      const publishOptions = new TrackPublishOptions();
+      publishOptions.source = TrackSource.SOURCE_MICROPHONE;
+      
+      const publication = await room.localParticipant.publishTrack(track, publishOptions);
 
       const samples = new Int16Array(audioBuffer.buffer);
       const framesCount = Math.ceil(samples.length / SAMPLES_PER_CHANNEL);
@@ -264,7 +267,7 @@ class AIDispatcher {
           frameData.length
         );
 
-        await source.captureFrame(frame);
+        await audioSource.captureFrame(frame);
         await new Promise(resolve => setTimeout(resolve, 30));
       }
 
