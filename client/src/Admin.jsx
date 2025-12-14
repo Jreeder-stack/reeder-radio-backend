@@ -11,6 +11,8 @@ export default function Admin({ user, onLogout }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [aiDispatchEnabled, setAiDispatchEnabled] = useState(false);
+  const [aiDispatchLoading, setAiDispatchLoading] = useState(false);
   
   const [showAddUser, setShowAddUser] = useState(false);
   const [showEditUser, setShowEditUser] = useState(null);
@@ -43,28 +45,31 @@ export default function Admin({ user, onLogout }) {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [usersRes, channelsRes, zonesRes, logsRes] = await Promise.all([
+      const [usersRes, channelsRes, zonesRes, logsRes, aiDispatchRes] = await Promise.all([
         fetch("/api/admin/users", { credentials: "include" }),
         fetch("/api/admin/channels", { credentials: "include" }),
         fetch("/api/admin/zones", { credentials: "include" }),
         fetch("/api/admin/logs?limit=200", { credentials: "include" }),
+        fetch("/api/admin/ai-dispatch", { credentials: "include" }),
       ]);
 
       if (!usersRes.ok || !channelsRes.ok || !zonesRes.ok || !logsRes.ok) {
         throw new Error("Failed to load data");
       }
 
-      const [usersData, channelsData, zonesData, logsData] = await Promise.all([
+      const [usersData, channelsData, zonesData, logsData, aiDispatchData] = await Promise.all([
         usersRes.json(),
         channelsRes.json(),
         zonesRes.json(),
         logsRes.json(),
+        aiDispatchRes.ok ? aiDispatchRes.json() : { enabled: false },
       ]);
 
       setUsers(usersData.users);
       setChannels(channelsData.channels);
       setZones(zonesData.zones);
       setLogs(logsData.logs);
+      setAiDispatchEnabled(aiDispatchData.enabled);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -269,6 +274,27 @@ export default function Admin({ user, onLogout }) {
     }
   };
 
+  const toggleAiDispatch = async () => {
+    setAiDispatchLoading(true);
+    try {
+      const res = await fetch("/api/admin/ai-dispatch", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ enabled: !aiDispatchEnabled }),
+      });
+
+      if (!res.ok) throw new Error("Failed to toggle AI Dispatch");
+
+      const data = await res.json();
+      setAiDispatchEnabled(data.enabled);
+    } catch (err) {
+      alert("Failed to toggle AI Dispatch: " + err.message);
+    } finally {
+      setAiDispatchLoading(false);
+    }
+  };
+
   const formatDate = (dateStr) => {
     if (!dateStr) return "Never";
     const date = new Date(dateStr);
@@ -463,6 +489,9 @@ export default function Admin({ user, onLogout }) {
           </button>
           <button style={tabStyle(activeTab === "logs")} onClick={() => setActiveTab("logs")}>
             Activity Logs
+          </button>
+          <button style={tabStyle(activeTab === "settings")} onClick={() => setActiveTab("settings")}>
+            Settings
           </button>
         </div>
 
@@ -868,6 +897,78 @@ export default function Admin({ user, onLogout }) {
                 </table>
               </div>
             )}
+          </div>
+        )}
+
+        {activeTab === "settings" && (
+          <div style={{ maxWidth: 600 }}>
+            <h2 style={{ margin: "0 0 24px", fontSize: 20 }}>System Settings</h2>
+            
+            <div style={{ background: "#1e1e2e", borderRadius: 12, padding: 24 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>AI Voice Dispatcher</h3>
+                  <p style={{ margin: "8px 0 0", color: "#888", fontSize: 14 }}>
+                    When enabled, the AI dispatcher listens to radio traffic and responds to common commands like "radio check", "status check", and "traffic stop".
+                  </p>
+                </div>
+                <button
+                  onClick={toggleAiDispatch}
+                  disabled={aiDispatchLoading}
+                  style={{
+                    padding: "12px 24px",
+                    borderRadius: 8,
+                    border: "none",
+                    cursor: aiDispatchLoading ? "not-allowed" : "pointer",
+                    fontSize: 14,
+                    fontWeight: 600,
+                    minWidth: 100,
+                    background: aiDispatchEnabled ? "#22c55e" : "#444",
+                    color: "#fff",
+                    transition: "all 0.2s",
+                    opacity: aiDispatchLoading ? 0.6 : 1,
+                  }}
+                >
+                  {aiDispatchLoading ? "..." : aiDispatchEnabled ? "ON" : "OFF"}
+                </button>
+              </div>
+              
+              {aiDispatchEnabled && (
+                <div style={{ marginTop: 16, padding: 12, background: "#22c55e22", borderRadius: 8, border: "1px solid #22c55e44" }}>
+                  <p style={{ margin: 0, color: "#22c55e", fontSize: 13 }}>
+                    AI Dispatcher is active. It will respond to radio commands on all channels.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div style={{ marginTop: 24, background: "#1e1e2e", borderRadius: 12, padding: 24 }}>
+              <h3 style={{ margin: "0 0 12px", fontSize: 16, fontWeight: 600 }}>Supported Commands</h3>
+              <div style={{ color: "#888", fontSize: 14 }}>
+                <div style={{ display: "grid", gap: 8 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #333" }}>
+                    <span>"radio check"</span>
+                    <span style={{ color: "#22c55e" }}>"Loud and clear."</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #333" }}>
+                    <span>"status check"</span>
+                    <span style={{ color: "#22c55e" }}>"Go ahead."</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #333" }}>
+                    <span>"traffic stop"</span>
+                    <span style={{ color: "#22c55e" }}>"Copy traffic stop."</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #333" }}>
+                    <span>"clear"</span>
+                    <span style={{ color: "#22c55e" }}>"Copy, clear."</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0" }}>
+                    <span>"need assistance"</span>
+                    <span style={{ color: "#22c55e" }}>"Copy. Assistance requested."</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </div>

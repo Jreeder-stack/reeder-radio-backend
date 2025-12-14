@@ -26,4 +26,7 @@ router.delete('/zones/:id', adminController.deleteZone);
 
 router.get('/logs', adminController.listLogs);
 
+router.get('/ai-dispatch', adminController.getAiDispatch);
+router.put('/ai-dispatch', adminController.setAiDispatch);
+
 export default router;

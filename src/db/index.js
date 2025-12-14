@@ -138,6 +138,20 @@ export async function initializeDatabase() {
       )
     `);
 
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS ai_settings (
+        id SERIAL PRIMARY KEY,
+        key VARCHAR(255) UNIQUE NOT NULL,
+        value TEXT,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    await client.query(`
+      INSERT INTO ai_settings (key, value) VALUES ('ai_dispatch_enabled', 'false')
+      ON CONFLICT (key) DO NOTHING
+    `);
+
     const existingAdmin = await client.query(
       'SELECT id FROM users WHERE username = $1',
       [config.adminUsername]
@@ -491,6 +505,33 @@ export async function updateChannelPatch(id, updates) {
     [name, source_channel_id, target_channel_id, is_enabled, id]
   );
   return result.rows[0];
+}
+
+export async function getAiSetting(key) {
+  const result = await pool.query(
+    'SELECT value FROM ai_settings WHERE key = $1',
+    [key]
+  );
+  return result.rows[0]?.value;
+}
+
+export async function setAiSetting(key, value) {
+  const result = await pool.query(
+    `INSERT INTO ai_settings (key, value, updated_at) VALUES ($1, $2, CURRENT_TIMESTAMP)
+     ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = CURRENT_TIMESTAMP
+     RETURNING *`,
+    [key, value]
+  );
+  return result.rows[0];
+}
+
+export async function isAiDispatchEnabled() {
+  const value = await getAiSetting('ai_dispatch_enabled');
+  return value === 'true';
+}
+
+export async function setAiDispatchEnabled(enabled) {
+  return setAiSetting('ai_dispatch_enabled', enabled ? 'true' : 'false');
 }
 
 export default pool;

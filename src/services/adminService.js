@@ -63,3 +63,11 @@ export async function deleteChannel(id) {
 export async function getActivityLogs(limit = 100) {
   return db.getActivityLogs(limit);
 }
+
+export async function getAiDispatchEnabled() {
+  return db.isAiDispatchEnabled();
+}
+
+export async function setAiDispatchEnabled(enabled) {
+  return db.setAiDispatchEnabled(enabled);
+}

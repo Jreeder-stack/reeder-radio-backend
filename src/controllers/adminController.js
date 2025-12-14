@@ -1,6 +1,8 @@
 import * as adminService from '../services/adminService.js';
 import * as authService from '../services/authService.js';
 import { success, error, created } from '../utils/response.js';
+import { startDispatcher, stopDispatcher } from '../services/aiDispatchService.js';
+import { getAllChannels } from '../db/index.js';
 
 export async function listUsers(req, res) {
   try {
@@ -225,5 +227,48 @@ export async function listLogs(req, res) {
   } catch (err) {
     console.error('List logs error:', err);
     error(res, 'Failed to list logs', 500);
+  }
+}
+
+export async function getAiDispatch(req, res) {
+  try {
+    const enabled = await adminService.getAiDispatchEnabled();
+    success(res, { enabled });
+  } catch (err) {
+    console.error('Get AI dispatch error:', err);
+    error(res, 'Failed to get AI dispatch status', 500);
+  }
+}
+
+export async function setAiDispatch(req, res) {
+  try {
+    const { enabled } = req.body;
+    if (typeof enabled !== 'boolean') {
+      return error(res, 'enabled must be a boolean', 400);
+    }
+    await adminService.setAiDispatchEnabled(enabled);
+
+    if (enabled) {
+      const channels = await getAllChannels();
+      const channelNames = channels.filter(c => c.enabled).map(c => c.name);
+      startDispatcher(channelNames).catch(err => {
+        console.error('Failed to start AI dispatcher:', err.message);
+      });
+    } else {
+      stopDispatcher().catch(err => {
+        console.error('Failed to stop AI dispatcher:', err.message);
+      });
+    }
+
+    await authService.logUserActivity(
+      req.session.user.id,
+      req.session.user.username,
+      'admin_toggle_ai_dispatch',
+      { enabled }
+    );
+    success(res, { enabled });
+  } catch (err) {
+    console.error('Set AI dispatch error:', err);
+    error(res, 'Failed to set AI dispatch status', 500);
   }
 }
