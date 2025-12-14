@@ -6,7 +6,7 @@ import { isAiDispatchEnabled } from '../db/index.js';
 
 const AI_IDENTITY = 'AI-Dispatcher';
 const LIVEKIT_SAMPLE_RATE = 48000;
-const AZURE_SAMPLE_RATE = 24000;
+const AZURE_SAMPLE_RATE = 16000;
 const CHANNELS = 1;
 const SAMPLES_PER_CHANNEL = 480;
 // Calculate correct frame duration in ms: samples / sampleRate * 1000
