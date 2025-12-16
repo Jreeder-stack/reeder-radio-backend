@@ -1,0 +1,90 @@
+UPGRADE THE EXISTING AI DISPATCHER LOGIC AS FOLLOWS. DO NOT ADD FEATURES, UI, LOGGING, OR AUTONOMOUS BEHAVIOR. ONLY MODIFY COMMAND RECOGNITION AND VOICE RESPONSES.
+
+CALL SIGN REQUIREMENT:
+- The AI dispatcher call sign is "Central"
+- The AI must only respond when explicitly addressed as "Central"
+- If "Central" is not spoken, the AI must remain silent
+
+WAKE PHRASE FORMAT:
+"Central, <UnitID>"
+"Central <UnitID>"
+
+WHEN WAKE PHRASE IS DETECTED, RESPOND WITH:
+"<UnitID>, go ahead."
+
+NO TIMESTAMP ON THIS RESPONSE.
+
+INTERACTION MODEL:
+- Two-state system only
+
+STATE A: IDLE
+- Listen only for the wake phrase
+- No other responses allowed
+
+STATE B: AWAITING STATUS
+- After "go ahead", listen for one valid status command
+- After receiving a valid status, respond and reset to IDLE
+- If no valid status is received within 15 seconds, reset to IDLE silently
+
+SUPPORTED STATUS COMMANDS (WHITELIST ONLY):
+- on duty
+- en route
+- on scene
+- on location
+- available
+- off duty
+- out of service
+- clear
+
+IF SPOKEN PHRASE DOES NOT MATCH THIS LIST, REMAIN SILENT.
+
+FINAL RESPONSE FORMAT (DO NOT SAY "COPY"):
+"<UnitID>, <status>, <HHMM> hours."
+
+EXAMPLES:
+"Indiana-1, on duty, 0712 hours."
+"Indiana-1, en route, 1438 hours."
+"Indiana-1, off duty, 2355 hours."
+
+TIMESTAMP RULES:
+- Use local system time
+- 24-hour format only
+- Speak time as HHMM hours (no colon)
+- Timestamp only on the final status confirmation
+- Timestamp reflects when Central transmits the confirmation
+
+SILENCE IS REQUIRED WHEN:
+- AI dispatcher feature toggle is OFF
+- "Central" is not spoken
+- Wake phrase is malformed
+- Status command is not recognized
+- Any error occurs
+
+SAFETY CONSTRAINTS:
+- No freeform AI responses
+- No improvisation
+- No additional radio traffic
+- No autonomous prompts
+- No escalation logic
+- No learning or memory beyond the two-step interaction
+
+IMPLEMENTATION NOTES:
+- Use deterministic matching (regex / phrase matching)
+- Do not introduce LLM creativity
+- Keep logic predictable and auditable
+- Reset state cleanly after each interaction
+
+EXPECTED RADIO FLOW:
+Officer: "Central, Indiana-1"
+Central: "Indiana-1, go ahead."
+Officer: "On duty"
+Central: "Indiana-1, on duty, 2355 hours."
+
+DO NOT ADD:
+- CAD features
+- Logging changes
+- UI changes
+- Status prompts
+- Multiple unit tracking
+- Error voice messages
+- Any wording not specified above
