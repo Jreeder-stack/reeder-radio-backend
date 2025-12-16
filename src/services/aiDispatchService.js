@@ -8,8 +8,8 @@ const AI_IDENTITY = 'AI-Dispatcher';
 const LIVEKIT_SAMPLE_RATE = 48000;
 const AZURE_SAMPLE_RATE = 16000;
 const CHANNELS = 1;
-const SAMPLES_PER_CHANNEL = 480;
-const FRAME_DURATION_MS = Math.floor((SAMPLES_PER_CHANNEL / AZURE_SAMPLE_RATE) * 1000);
+const SAMPLES_PER_FRAME = 960; // 60ms frames at 16kHz for smoother playback
+const FRAME_DURATION_MS = Math.floor((SAMPLES_PER_FRAME / AZURE_SAMPLE_RATE) * 1000);
 const DISCONNECT_GRACE_PERIOD_MS = 30000;
 
 function resampleAudio(inputBuffer, fromRate, toRate) {
@@ -415,31 +415,53 @@ class AIDispatcher {
       publication = await room.localParticipant.publishTrack(track, publishOptions);
       this.log('TRACK_PUBLISHED', { room: roomName, trackSid: publication.sid });
 
+      // Pre-buffer a few frames before starting playback for smoother audio
       const samples = new Int16Array(audioBuffer.buffer);
-      const framesCount = Math.ceil(samples.length / SAMPLES_PER_CHANNEL);
+      const framesCount = Math.ceil(samples.length / SAMPLES_PER_FRAME);
+      
+      this.log('AUDIO_STREAMING', { totalSamples: samples.length, frames: framesCount, frameDurationMs: FRAME_DURATION_MS });
 
+      // Send all frames with precise timing using a single continuous stream
+      const startTime = Date.now();
+      
       for (let i = 0; i < framesCount; i++) {
-        if (!await this.shouldRespond()) {
-          this.log('PUBLISH_INTERRUPTED', { reason: 'Disabled mid-publish' });
+        // Only check enabled status every 10 frames to avoid database latency
+        if (i % 10 === 0 && !this.isRunning) {
+          this.log('PUBLISH_INTERRUPTED', { reason: 'Dispatcher stopped mid-publish' });
           break;
         }
 
-        const start = i * SAMPLES_PER_CHANNEL;
-        const end = Math.min(start + SAMPLES_PER_CHANNEL, samples.length);
+        const start = i * SAMPLES_PER_FRAME;
+        const end = Math.min(start + SAMPLES_PER_FRAME, samples.length);
         const frameData = samples.slice(start, end);
+        
+        // Pad last frame if needed
+        let paddedData = frameData;
+        if (frameData.length < SAMPLES_PER_FRAME) {
+          paddedData = new Int16Array(SAMPLES_PER_FRAME);
+          paddedData.set(frameData);
+        }
 
         const frame = new AudioFrame(
-          Buffer.from(frameData.buffer),
+          Buffer.from(paddedData.buffer),
           AZURE_SAMPLE_RATE,
           CHANNELS,
-          frameData.length
+          SAMPLES_PER_FRAME
         );
 
         await audioSource.captureFrame(frame);
-        await new Promise(resolve => setTimeout(resolve, FRAME_DURATION_MS));
+        
+        // Calculate precise sleep time based on elapsed time to maintain accurate timing
+        const expectedTime = (i + 1) * FRAME_DURATION_MS;
+        const elapsed = Date.now() - startTime;
+        const sleepTime = Math.max(0, expectedTime - elapsed);
+        if (sleepTime > 0) {
+          await new Promise(resolve => setTimeout(resolve, sleepTime));
+        }
       }
 
-      await new Promise(resolve => setTimeout(resolve, 300));
+      // Brief pause to allow final frames to transmit
+      await new Promise(resolve => setTimeout(resolve, 200));
 
     } catch (error) {
       this.log('PUBLISH_ERROR', { error: error.message });

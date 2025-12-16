@@ -482,6 +482,40 @@ export default function App({ user, onLogout }) {
     };
   }, []);
 
+  // Spacebar PTT keyboard shortcut
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.code === 'Space' && !e.repeat) {
+        // Don't trigger if user is typing in an input field
+        const tagName = e.target?.tagName?.toLowerCase?.() ?? '';
+        if (tagName === 'input' || tagName === 'textarea' || e.target?.isContentEditable) {
+          return;
+        }
+        e.preventDefault();
+        handlePTTDown(e);
+      }
+    };
+
+    const handleKeyUp = (e) => {
+      if (e.code === 'Space') {
+        const tagName = e.target?.tagName?.toLowerCase?.() ?? '';
+        if (tagName === 'input' || tagName === 'textarea' || e.target?.isContentEditable) {
+          return;
+        }
+        e.preventDefault();
+        handlePTTUp();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [handlePTTDown, handlePTTUp]);
+
   const getAudioContext = useCallback(() => {
     if (!audioContextRef.current || audioContextRef.current.state === "closed") {
       audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
