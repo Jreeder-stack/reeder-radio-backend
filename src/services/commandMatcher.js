@@ -1,10 +1,22 @@
-const COMMAND_TABLE = [
-  { phrases: ['radio check', 'radio chek', 'radio czech', 'radiocheck', 'radio sheck', 'radio cook', 'radiothek', 'radio tech', 'radio tek', 'radio deck', 'radio chuck', 'radio chick', 'radio shake', 'radio shack', 'radioshack', 'radio jack', 'radio jeck', 'ready check', 'ready o check', 'radio cheque', 'redio check', 'radio chack'], response: 'Loud and clear.' },
-  { phrases: ['status check', 'status chek', 'statuscheck', 'status chuck', 'status sheck', 'state is check'], response: 'Go ahead.' },
-  { phrases: ['traffic stop', 'trafficstop', 'traffic stock', 'traffic stuck'], response: 'Copy traffic stop.' },
-  { phrases: ['clear', 'i am clear', "i'm clear", 'all clear', 'im clear', 'i clear'], response: 'Copy, clear.' },
-  { phrases: ['need assistance', 'requesting assistance', 'request assistance', 'need backup', 'requesting backup', 'need a distance', 'need a sister', 'need assist'], response: 'Copy. Assistance requested.' },
+const DISPATCHER_STATE = {
+  IDLE: 'IDLE',
+  AWAITING_STATUS: 'AWAITING_STATUS'
+};
+
+const STATUS_COMMANDS = [
+  { phrases: ['on duty', 'on-duty', 'onduty'], status: 'on duty' },
+  { phrases: ['en route', 'enroute', 'in route', 'inroute'], status: 'en route' },
+  { phrases: ['on scene', 'onscene', 'on-scene'], status: 'on scene' },
+  { phrases: ['on location', 'onlocation', 'on-location'], status: 'on location' },
+  { phrases: ['available'], status: 'available' },
+  { phrases: ['off duty', 'off-duty', 'offduty'], status: 'off duty' },
+  { phrases: ['out of service', 'outofservice', 'out-of-service'], status: 'out of service' },
+  { phrases: ['clear', 'i am clear', "i'm clear", 'im clear'], status: 'clear' }
 ];
+
+let currentState = DISPATCHER_STATE.IDLE;
+let currentUnitId = null;
+let stateTimeout = null;
 
 function normalizeText(text) {
   return text
@@ -14,28 +26,102 @@ function normalizeText(text) {
     .trim();
 }
 
+function formatTimestamp() {
+  const now = new Date();
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  return `${hours}${minutes} hours`;
+}
+
+function parseWakePhrase(transcript) {
+  const normalized = normalizeText(transcript);
+  const wakePattern = /^central[,\s]+(.+)$/;
+  const match = normalized.match(wakePattern);
+  
+  if (match && match[1]) {
+    const unitId = match[1].trim();
+    if (unitId && unitId.length > 0) {
+      return unitId;
+    }
+  }
+  return null;
+}
+
+function matchStatusCommand(transcript) {
+  const normalized = normalizeText(transcript);
+  
+  for (const cmd of STATUS_COMMANDS) {
+    for (const phrase of cmd.phrases) {
+      if (normalized.includes(phrase) || normalized === phrase) {
+        return cmd.status;
+      }
+    }
+  }
+  return null;
+}
+
+function resetState() {
+  currentState = DISPATCHER_STATE.IDLE;
+  currentUnitId = null;
+  if (stateTimeout) {
+    clearTimeout(stateTimeout);
+    stateTimeout = null;
+  }
+}
+
+function startStateTimeout() {
+  if (stateTimeout) {
+    clearTimeout(stateTimeout);
+  }
+  stateTimeout = setTimeout(() => {
+    resetState();
+  }, 15000);
+}
+
 export function matchCommand(transcript) {
   if (!transcript || typeof transcript !== 'string') {
     return null;
   }
 
-  const normalizedText = normalizeText(transcript);
-  
-  for (const command of COMMAND_TABLE) {
-    for (const phrase of command.phrases) {
-      const normalizedPhrase = normalizeText(phrase);
-      if (normalizedText.includes(normalizedPhrase)) {
-        return command.response;
-      }
+  if (currentState === DISPATCHER_STATE.IDLE) {
+    const unitId = parseWakePhrase(transcript);
+    if (unitId) {
+      currentUnitId = unitId;
+      currentState = DISPATCHER_STATE.AWAITING_STATUS;
+      startStateTimeout();
+      return `${unitId}, go ahead.`;
     }
+    return null;
+  }
+
+  if (currentState === DISPATCHER_STATE.AWAITING_STATUS) {
+    const status = matchStatusCommand(transcript);
+    if (status) {
+      const unitId = currentUnitId;
+      const timestamp = formatTimestamp();
+      resetState();
+      return `${unitId}, ${status}, ${timestamp}.`;
+    }
+    return null;
   }
 
   return null;
 }
 
+export function resetDispatcherState() {
+  resetState();
+}
+
+export function getDispatcherState() {
+  return {
+    state: currentState,
+    unitId: currentUnitId
+  };
+}
+
 export function getCommandTable() {
-  return COMMAND_TABLE.map(c => ({
+  return STATUS_COMMANDS.map(c => ({
     phrase: c.phrases[0],
-    response: c.response
+    response: c.status
   }));
 }

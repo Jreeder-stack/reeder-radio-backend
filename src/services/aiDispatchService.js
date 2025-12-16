@@ -1,7 +1,7 @@
 import { Room, RoomEvent, TrackKind, AudioFrame, AudioSource, LocalAudioTrack, AudioStream, TrackPublishOptions, TrackSource } from '@livekit/rtc-node';
 import { createLiveKitToken, getLiveKitUrl } from '../config/livekit.js';
 import { speechToText, textToSpeech, isConfigured as isAzureConfigured } from './azureSpeechService.js';
-import { matchCommand } from './commandMatcher.js';
+import { matchCommand, resetDispatcherState } from './commandMatcher.js';
 import { isAiDispatchEnabled, getAiDispatchChannel } from '../db/index.js';
 
 const AI_IDENTITY = 'AI-Dispatcher';
@@ -100,6 +100,7 @@ class AIDispatcher {
     this.log('STOPPING', { room: this.roomName });
     this.isRunning = false;
     this.clearDisconnectTimer();
+    resetDispatcherState();
 
     if (this.room) {
       try {
