@@ -4,14 +4,64 @@ const DISPATCHER_STATE = {
 };
 
 const STATUS_COMMANDS = [
-  { phrases: ['on duty', 'on-duty', 'onduty'], status: 'on duty' },
-  { phrases: ['en route', 'enroute', 'in route', 'inroute'], status: 'en route' },
-  { phrases: ['on scene', 'onscene', 'on-scene'], status: 'on scene' },
-  { phrases: ['on location', 'onlocation', 'on-location'], status: 'on location' },
-  { phrases: ['available'], status: 'available' },
-  { phrases: ['off duty', 'off-duty', 'offduty'], status: 'off duty' },
-  { phrases: ['out of service', 'outofservice', 'out-of-service'], status: 'out of service' },
-  { phrases: ['clear', 'i am clear', "i'm clear", 'im clear'], status: 'clear' }
+  { 
+    phrases: [
+      'on duty', 'on-duty', 'onduty', 'on doody', 'on dudy', 'on duety',
+      'in service', 'signed on', 'clocked in', 'starting shift',
+      '10-8', '10 8', 'ten eight', 'ten-eight'
+    ], 
+    status: 'on duty' 
+  },
+  { 
+    phrases: [
+      'available', 'avail', 'a vailable', 'clear and available',
+      'back in service', 'ready', 'free',
+      '10-8 available', 'ten eight available'
+    ], 
+    status: 'available' 
+  },
+  { 
+    phrases: [
+      'en route', 'enroute', 'on route', 'in route', 'inroute', 'in rout',
+      'on my way', 'heading that way', 'rolling',
+      '10-76', '10 76', 'ten seventy six', 'ten-seventy-six', '1076'
+    ], 
+    status: 'en route' 
+  },
+  { 
+    phrases: [
+      'on scene', 'on seen', 'onscene', 'on-scene', 'on scn', 'on sene', 'at scene',
+      'on location', 'onlocation', 'on-location', 'at location', 'arrived',
+      '10-97', '10 97', 'ten ninety seven', 'ten-ninety-seven', '1097'
+    ], 
+    status: 'on scene' 
+  },
+  { 
+    phrases: [
+      'off duty', 'off-duty', 'offduty', 'off doody', 'off dudy',
+      'end of shift', 'signed off', 'clocked out', 'going off duty',
+      '10-7', '10 7', 'ten seven', 'ten-seven', '107'
+    ], 
+    status: 'off duty' 
+  },
+  { 
+    phrases: [
+      'out of service', 'outta service', 'out of svc', 'out of sirvice',
+      'outofservice', 'out-of-service', 'out of service for now',
+      'unavailable', 'not available', 'down', 'busy',
+      '10-6', '10 6', 'ten six', 'ten-six', '106'
+    ], 
+    status: 'out of service' 
+  },
+  { 
+    phrases: [
+      'clear', 'clear call', 'clear of call', 'clear the call',
+      'i am clear', "i'm clear", 'im clear',
+      'done', 'finished',
+      '10-98', '10 98', 'ten ninety eight', 'ten-ninety-eight', '1098'
+    ], 
+    status: 'clear' 
+  }
 ];
 
 let currentState = DISPATCHER_STATE.IDLE;
@@ -45,8 +95,19 @@ function containsWakePhrase(transcript) {
   return normalized.includes('central');
 }
 
+const CANCEL_PHRASES = ['cancel', 'never mind', 'nevermind', 'disregard'];
+
+function containsCancelPhrase(transcript) {
+  const normalized = normalizeText(transcript);
+  return CANCEL_PHRASES.some(phrase => normalized.includes(phrase));
+}
+
 function matchStatusCommand(transcript) {
   const normalized = normalizeText(transcript);
+  
+  if (containsCancelPhrase(normalized)) {
+    return 'CANCEL';
+  }
   
   for (const cmd of STATUS_COMMANDS) {
     for (const phrase of cmd.phrases) {
@@ -99,6 +160,10 @@ export function matchCommand(transcript, participantId = null) {
     }
     
     const status = matchStatusCommand(transcript);
+    if (status === 'CANCEL') {
+      resetState();
+      return null;
+    }
     if (status) {
       const unitId = currentUnitId;
       const timestamp = formatTimestamp();

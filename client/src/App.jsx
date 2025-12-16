@@ -172,7 +172,7 @@ export default function App({ user, onLogout }) {
   const [channelsLoaded, setChannelsLoaded] = useState(false);
   const [noChannelsAccess, setNoChannelsAccess] = useState(false);
   const [connectionError, setConnectionError] = useState(null);
-  const identity = user?.unit_id || user?.username || "Unknown";
+  const identity = (user?.unit_id && user.unit_id.trim()) || user?.username || "Unknown";
   const [selectedZone, setSelectedZone] = useState("");
   const [selectedChannel, setSelectedChannel] = useState("");
   const [transmitChannel, setTransmitChannel] = useState("");

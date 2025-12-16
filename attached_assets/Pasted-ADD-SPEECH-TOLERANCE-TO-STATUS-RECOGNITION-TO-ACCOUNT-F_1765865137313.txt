@@ -1,0 +1,114 @@
+ADD SPEECH TOLERANCE TO STATUS RECOGNITION TO ACCOUNT FOR STT ERRORS, MISPRONUNCIATION, AND RADIO CLIPPING.
+
+THE SYSTEM MUST STILL MATCH ONLY TO EXISTING STATUS TYPES.
+NO NEW STATUS TYPES MAY BE CREATED.
+
+GENERAL TOLERANCE RULES:
+- Matching must be case-insensitive
+- Ignore filler words (uh, um, ah, standby)
+- Ignore leading or trailing words
+- Ignore punctuation
+- Ignore pluralization
+- Ignore minor word breaks or merges
+- First valid status match wins
+- If confidence is low or ambiguous, remain silent
+
+PHONETIC / STT ERROR TOLERANCE BY STATUS:
+
+STATUS: ON DUTY
+Accept if transcript contains:
+- "on duty"
+- "onduty"
+- "on doody"
+- "on dudy"
+- "on duety"
+- "10 8"
+- "ten eight"
+- "in service"
+- "starting shift"
+
+STATUS: AVAILABLE
+Accept if transcript contains:
+- "available"
+- "avail"
+- "a vailable"
+- "clear and available"
+- "ready"
+- "back in service"
+- "ten eight available"
+
+STATUS: EN ROUTE
+Accept if transcript contains:
+- "en route"
+- "enroute"
+- "on route"
+- "in route"
+- "in rout"
+- "on my way"
+- "heading that way"
+- "rolling"
+- "ten ninety seven"
+- "1097"
+
+STATUS: ON SCENE
+Accept if transcript contains:
+- "on scene"
+- "on seen"
+- "onscene"
+- "on scn"
+- "on sene"
+- "at scene"
+- "at location"
+- "arrived"
+- "on location"
+
+STATUS: OFF DUTY
+Accept if transcript contains:
+- "off duty"
+- "offduty"
+- "off doody"
+- "off dudy"
+- "clocked out"
+- "signed off"
+- "end of shift"
+- "ten seven"
+- "107"
+
+STATUS: OUT OF SERVICE
+Accept if transcript contains:
+- "out of service"
+- "outta service"
+- "out of svc"
+- "out of sirvice"
+- "unavailable"
+- "not available"
+- "down"
+- "busy"
+- "ten six"
+- "106"
+
+STATUS: CLEAR
+Accept if transcript contains:
+- "clear"
+- "clear call"
+- "clear of call"
+- "clear the call"
+- "done"
+- "finished"
+- "ten ninety eight"
+- "1098"
+
+ANTI-FALSE-POSITIVE RULES:
+- Do NOT match if phrase is part of a longer unrelated sentence
+- Do NOT match if multiple statuses appear in the same phrase
+- Do NOT infer intent
+- If transcript contains "cancel", "never mind", or "disregard", reset silently
+
+TIME WINDOW RULE:
+- Tolerance matching is ONLY active after:
+  "Central, <UnitID>" → "go ahead"
+- Outside that window, ignore all phrases
+
+FAILURE BEHAVIOR:
+- On uncertainty, ambiguity, or low confidence → remain silent
+- Silence is correct behavior
