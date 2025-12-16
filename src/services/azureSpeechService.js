@@ -3,6 +3,23 @@ import * as sdk from 'microsoft-cognitiveservices-speech-sdk';
 const AZURE_SPEECH_KEY = process.env.AZURE_SPEECH_KEY;
 const AZURE_SPEECH_REGION = process.env.AZURE_SPEECH_REGION || 'eastus';
 
+const PHRASE_LIST = [
+  'Central',
+  'Indiana',
+  'Snyder',
+  'Lancaster',
+  'Bedford',
+  'Chester',
+  'on duty',
+  'en route',
+  'on scene',
+  'on location',
+  'available',
+  'off duty',
+  'out of service',
+  'clear'
+];
+
 export function isConfigured() {
   return !!(AZURE_SPEECH_KEY && AZURE_SPEECH_REGION);
 }
@@ -25,6 +42,11 @@ export async function speechToText(audioBuffer) {
 
       const audioConfig = sdk.AudioConfig.fromStreamInput(pushStream);
       const recognizer = new sdk.SpeechRecognizer(speechConfig, audioConfig);
+
+      const phraseList = sdk.PhraseListGrammar.fromRecognizer(recognizer);
+      for (const phrase of PHRASE_LIST) {
+        phraseList.addPhrase(phrase);
+      }
 
       recognizer.recognizeOnceAsync(
         (result) => {

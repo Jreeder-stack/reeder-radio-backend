@@ -27,24 +27,22 @@ function normalizeText(text) {
 }
 
 function formatTimestamp() {
-  const now = new Date();
-  const hours = String(now.getHours()).padStart(2, '0');
-  const minutes = String(now.getMinutes()).padStart(2, '0');
-  return `${hours}${minutes} hours`;
+  const options = {
+    timeZone: 'America/New_York',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  };
+  const formatter = new Intl.DateTimeFormat('en-US', options);
+  const parts = formatter.formatToParts(new Date());
+  const hour = parts.find(p => p.type === 'hour').value;
+  const minute = parts.find(p => p.type === 'minute').value;
+  return `${hour}${minute} hours`;
 }
 
-function parseWakePhrase(transcript) {
+function containsWakePhrase(transcript) {
   const normalized = normalizeText(transcript);
-  const wakePattern = /^central[,\s]+(.+)$/;
-  const match = normalized.match(wakePattern);
-  
-  if (match && match[1]) {
-    const unitId = match[1].trim();
-    if (unitId && unitId.length > 0) {
-      return unitId;
-    }
-  }
-  return null;
+  return normalized.includes('central');
 }
 
 function matchStatusCommand(transcript) {
@@ -75,21 +73,20 @@ function startStateTimeout() {
   }
   stateTimeout = setTimeout(() => {
     resetState();
-  }, 15000);
+  }, 30000);
 }
 
-export function matchCommand(transcript) {
+export function matchCommand(transcript, participantId = null) {
   if (!transcript || typeof transcript !== 'string') {
     return null;
   }
 
   if (currentState === DISPATCHER_STATE.IDLE) {
-    const unitId = parseWakePhrase(transcript);
-    if (unitId) {
-      currentUnitId = unitId;
+    if (containsWakePhrase(transcript)) {
+      currentUnitId = participantId || 'Unknown Unit';
       currentState = DISPATCHER_STATE.AWAITING_STATUS;
       startStateTimeout();
-      return `${unitId}, go ahead.`;
+      return `${currentUnitId}, go ahead.`;
     }
     return null;
   }

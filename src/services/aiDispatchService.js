@@ -332,7 +332,7 @@ class AIDispatcher {
 
     const enabled = await isAiDispatchEnabled();
     if (enabled && this.isRunning) {
-      await this.processAudio(audioBuffer, roomName, room);
+      await this.processAudio(audioBuffer, roomName, room, participantId);
     }
   }
 
@@ -348,14 +348,14 @@ class AIDispatcher {
     }
   }
 
-  async processAudio(audioBuffer, roomName, room) {
+  async processAudio(audioBuffer, roomName, room, participantId) {
     try {
       if (!await this.shouldRespond()) {
         this.log('PROCESS_SKIPPED', { reason: 'Disabled or muted' });
         return;
       }
 
-      this.log('AUDIO_PROCESSING', { bytes: audioBuffer.length, room: roomName });
+      this.log('AUDIO_PROCESSING', { bytes: audioBuffer.length, room: roomName, participant: participantId });
 
       const resampledAudio = resampleAudio(audioBuffer, LIVEKIT_SAMPLE_RATE, AZURE_SAMPLE_RATE);
 
@@ -365,9 +365,9 @@ class AIDispatcher {
         return;
       }
 
-      this.log('STT_RESULT', { transcript });
+      this.log('STT_RESULT', { transcript, participant: participantId });
 
-      const response = matchCommand(transcript);
+      const response = matchCommand(transcript, participantId);
       if (!response) {
         this.log('COMMAND_NO_MATCH', { transcript });
         return;
