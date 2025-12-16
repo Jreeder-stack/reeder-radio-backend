@@ -14,6 +14,7 @@ const IDLE_TIMEOUT = 5 * 60 * 1000; // 5 minutes
 
 export function LiveKitConnectionProvider({ children, user }) {
   const location = useLocation();
+  const identity = (user?.unit_id && user.unit_id.trim()) || user?.username || "Unknown";
   const [connectionStatus, setConnectionStatus] = useState('idle');
   const [connectionHealth, setConnectionHealth] = useState({ status: 'disconnected', healthy: 0, total: 0 });
   const [activeChannel, setActiveChannel] = useState(null);
@@ -433,8 +434,8 @@ export function LiveKitConnectionProvider({ children, user }) {
       const data = await getChannels();
       const fetchedChannels = data.channels || [];
       setChannels(fetchedChannels);
-      lastUserRef.current = user.username;
-      await initializeConnections(user.username, fetchedChannels);
+      lastUserRef.current = identity;
+      await initializeConnections(identity, fetchedChannels);
     } catch (err) {
       console.error('[LiveKitConnection] Retry failed:', err);
       setConnectionError(err.message);
@@ -452,8 +453,8 @@ export function LiveKitConnectionProvider({ children, user }) {
     }
     
     console.log(`[LiveKitConnection] Reconnecting to ${channelName} after idle...`);
-    return await connectToChannel(channelName, user.username);
-  }, [user, recordActivity, connectToChannel]);
+    return await connectToChannel(channelName, identity);
+  }, [identity, recordActivity, connectToChannel]);
 
   useEffect(() => {
     if (idleTimerRef.current) {
@@ -515,12 +516,12 @@ export function LiveKitConnectionProvider({ children, user }) {
         return;
       }
       
-      if (lastUserRef.current === user.username && lastPathRef.current === currentPath) {
+      if (lastUserRef.current === identity && lastPathRef.current === currentPath) {
         console.log('[LiveKitConnection] Already initialized for this user on this path, skipping');
         return;
       }
       
-      lastUserRef.current = user.username;
+      lastUserRef.current = identity;
       lastPathRef.current = currentPath;
       
       try {
@@ -531,7 +532,7 @@ export function LiveKitConnectionProvider({ children, user }) {
         setChannels(fetchedChannels);
         
         if (fetchedChannels.length > 0) {
-          await initializeConnections(user.username, fetchedChannels);
+          await initializeConnections(identity, fetchedChannels);
         } else {
           console.log('[LiveKitConnection] No channels to connect to');
           setConnected(false);
