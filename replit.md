@@ -241,19 +241,22 @@ Set these environment variables in Render:
 - LiveKit bot that joins configured channel and listens for transmissions
 - Call sign: "Central" - AI only responds when explicitly addressed
 - Two-state interaction model:
-  - STATE A (IDLE): Listens for wake phrase "Central, <UnitID>"
-  - STATE B (AWAITING STATUS): After wake phrase, waits for valid status command
-- Wake phrase detection: "Central, Indiana-1" → "Indiana-1, go ahead."
+  - STATE A (IDLE): Listens for wake phrase containing "Central"
+  - STATE B (AWAITING STATUS): After wake phrase, waits for valid status command (30-second timeout)
+- Unit ID from system: Uses LiveKit participant identity (logged-in unit ID) for responses instead of parsing from speech
+- Wake phrase detection: Officer says "Central, Indiana-1" → AI responds "Indiana-1, go ahead." (using system unit ID)
+- Phrase list for improved STT accuracy: Indiana, Snyder, Lancaster, Bedford, Chester, Central
 - Supported status commands (whitelist only):
   - on duty, en route, on scene, on location
   - available, off duty, out of service, clear
 - Response format: "<UnitID>, <status>, HHMM hours." (e.g., "Indiana-1, on duty, 0712 hours.")
-- 15-second timeout: Resets to IDLE silently if no valid status received
+- Timestamp uses Eastern Time (America/New_York) in 24-hour format
+- 30-second timeout: Resets to IDLE silently if no valid status received
 - Silence required when:
-  - Toggle OFF, "Central" not spoken, malformed wake phrase
+  - Toggle OFF, "Central" not spoken
   - Status command not recognized, any error occurs
-- Speech-to-Text (STT) transcribes incoming audio using Azure Speech SDK
-- Text-to-Speech (TTS) generates audio responses via Azure Speech
+- Speech-to-Text (STT) transcribes incoming audio using Azure Speech SDK with phrase list boost
+- Text-to-Speech (TTS) generates audio responses via Azure Speech (en-US-GuyNeural)
 - Safety guards:
   - Toggle OFF = zero transmissions (checked before every action)
   - Any error = silence + full shutdown (muted flag + disconnect)
@@ -263,8 +266,8 @@ Set these environment variables in Render:
 - Admin UI toggle in Settings tab for immediate enable/disable
 - Requires AZURE_SPEECH_KEY and AZURE_SPEECH_REGION secrets
 - Backend services:
-  - src/services/azureSpeechService.js - STT/TTS wrapper
-  - src/services/commandMatcher.js - Two-state command matching with wake phrase detection
+  - src/services/azureSpeechService.js - STT/TTS wrapper with phrase list
+  - src/services/commandMatcher.js - Two-state command matching with system unit ID
   - src/services/aiDispatchService.js - Main AI dispatcher with safety guards
 - Database: ai_settings table with ai_dispatch_enabled flag
 
