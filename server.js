@@ -32,6 +32,7 @@ import pool, {
   getActivityLogs,
 } from "./db.js";
 import dispatchRouter from "./dispatch/dispatchRouter.js";
+import { getDispatcher } from "./src/services/aiDispatchService.js";
 
 dotenv.config();
 
@@ -718,6 +719,19 @@ app.get("/getToken", requireAuth, async (req, res) => {
       { identity, room },
       room
     );
+
+    // Trigger AI Dispatcher to rejoin if it had disconnected due to no humans
+    try {
+      const dispatcher = getDispatcher();
+      if (dispatcher.configuredChannel === room) {
+        dispatcher.rejoinIfNeeded().catch(err => {
+          console.log('[AI-Dispatcher] Rejoin error (non-fatal):', err.message);
+        });
+      }
+    } catch (err) {
+      // Non-fatal - AI dispatcher features are optional
+      console.log('[AI-Dispatcher] Could not trigger rejoin:', err.message);
+    }
 
     console.log("=== /getToken DEBUG END - SUCCESS ===");
     res.json({ token });
