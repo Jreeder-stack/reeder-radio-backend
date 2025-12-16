@@ -416,7 +416,9 @@ class AIDispatcher {
       publication = await room.localParticipant.publishTrack(track, publishOptions);
       this.log('TRACK_PUBLISHED', { room: roomName, trackSid: publication.sid });
 
-      // Pre-buffer a few frames before starting playback for smoother audio
+      // Wait for clients to subscribe before sending audio
+      await new Promise(resolve => setTimeout(resolve, 300));
+
       const samples = new Int16Array(audioBuffer.buffer);
       const framesCount = Math.ceil(samples.length / SAMPLES_PER_FRAME);
       
