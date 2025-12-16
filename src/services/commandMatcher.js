@@ -92,6 +92,12 @@ export function matchCommand(transcript, participantId = null) {
   }
 
   if (currentState === DISPATCHER_STATE.AWAITING_STATUS) {
+    if (containsWakePhrase(transcript)) {
+      currentUnitId = participantId || 'Unknown Unit';
+      startStateTimeout();
+      return `${currentUnitId}, go ahead.`;
+    }
+    
     const status = matchStatusCommand(transcript);
     if (status) {
       const unitId = currentUnitId;
