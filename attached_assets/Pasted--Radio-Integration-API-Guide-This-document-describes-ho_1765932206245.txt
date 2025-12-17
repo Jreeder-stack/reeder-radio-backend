@@ -1,0 +1,402 @@
+# Radio Integration API Guide
+
+This document describes how to integrate with the PA Constable CAD System's Radio API. Use this to build your radio application's integration.
+
+## Base URL
+Replace `YOUR_CAD_URL` with your deployed CAD system URL (e.g., `https://your-app.replit.app`)
+
+## Authentication
+All requests require the `X-API-Key` header:
+```
+X-API-Key: YOUR_RADIO_API_KEY
+```
+
+---
+
+## UNIT STATUS MANAGEMENT
+
+### Update Unit Status
+**POST** `/api/radio/status`
+
+Updates a unit's current status. This also handles call assignments automatically (sets arrival times, clears units from calls when going off-duty, etc.)
+
+```json
+{
+  "unit_id": "UNIT-1",
+  "status": "available"
+}
+```
+
+**Valid statuses:**
+- `on_duty` - Unit is on duty
+- `off_duty` - Unit is off duty
+- `busy` - Unit is busy
+- `en_route` - Unit is en route to a call
+- `on_scene` - Unit has arrived on scene
+- `available` - Unit is available for dispatch
+- `out_of_service` - Unit is out of service
+- `lunch` - Unit is on lunch break
+- `fueling` - Unit is fueling
+- `administrative` - Administrative duties
+- `training` - In training
+- `court` - At court
+- `transport` - Transporting
+- `meal_break` - On meal break
+- `ondispatched` - On dispatched call
+
+**Response:**
+```json
+{
+  "success": true,
+  "unit_id": "UNIT-1",
+  "status": "available",
+  "timestamp": "1430",
+  "channel": null
+}
+```
+
+---
+
+### Update Unit Zone
+**POST** `/api/radio/zone`
+
+Assigns a unit to a zone/beat.
+
+```json
+{
+  "unit_id": "UNIT-1",
+  "zone": "ZONE-A"
+}
+```
+
+---
+
+### Get All Unit Status
+**GET** `/api/radio/status-check`
+
+Returns all units with their current status and GPS location.
+
+**Response:**
+```json
+{
+  "success": true,
+  "count": 2,
+  "units": [
+    {
+      "unit_id": "UNIT-1",
+      "name": "Officer Name",
+      "status": "available",
+      "zone": "ZONE-A",
+      "current_location": "123 Main St",
+      "latitude": "40.0055828",
+      "longitude": "-75.2122088",
+      "last_update": "12/17/2025, 14:30",
+      "agency": "Agency Name"
+    }
+  ],
+  "timestamp": "2025-12-17T19:30:00.000Z"
+}
+```
+
+---
+
+## CALL MANAGEMENT
+
+### Create New Call
+**POST** `/api/radio/call`
+
+Creates a new call for service.
+
+```json
+{
+  "type": "DISTURBANCE",
+  "priority": 2,
+  "location": "123 MAIN ST",
+  "municipality": "SPRINGFIELD",
+  "notes": "Initial call notes"
+}
+```
+
+**Priority levels:** 1 (highest) to 5 (lowest)
+
+**Response:**
+```json
+{
+  "success": true,
+  "call_id": 123,
+  "call_number": "2025-001234",
+  "timestamp": "2025-12-17T19:30:00.000Z"
+}
+```
+
+---
+
+### Get Active Calls
+**GET** `/api/radio/calls`
+
+Returns list of active calls. Optional query parameter: `?status=pending`
+
+---
+
+### Get Call Details
+**GET** `/api/radio/call/:id`
+
+Returns details of a specific call including notes and assigned units.
+
+---
+
+### Update Call
+**PATCH** `/api/radio/call/:id`
+
+Updates call details.
+
+```json
+{
+  "priority": 1,
+  "location": "456 OAK ST",
+  "type": "DOMESTIC"
+}
+```
+
+---
+
+### Assign Unit to Call
+**POST** `/api/radio/assign`
+
+Assigns a unit to an existing call.
+
+```json
+{
+  "unit_id": "UNIT-1",
+  "call_id": 123
+}
+```
+
+---
+
+### Clear Unit from Call
+**POST** `/api/radio/clear`
+
+Clears a unit from their current call assignment.
+
+```json
+{
+  "unit_id": "UNIT-1"
+}
+```
+
+---
+
+### Dispose/Close Call
+**POST** `/api/radio/dispose`
+
+Closes a call with a disposition code.
+
+```json
+{
+  "call_id": 123,
+  "disposition": "REPORT TAKEN"
+}
+```
+
+---
+
+### Add Note to Call
+**POST** `/api/radio/note`
+
+Adds a timestamped note to a call.
+
+```json
+{
+  "call_id": 123,
+  "note": "Additional information from caller"
+}
+```
+
+---
+
+## QUERY ENDPOINTS
+
+### Person Query
+**POST** `/api/radio/query/person`
+
+Searches person records (Master Name Index) by name and/or date of birth.
+
+```json
+{
+  "first_name": "JOHN",
+  "last_name": "DOE",
+  "dob": "1990-01-15"
+}
+```
+
+**Response includes:** Matching records with wanted status, warrant information, and alerts.
+
+---
+
+### Vehicle Query
+**POST** `/api/radio/query/vehicle`
+
+Searches vehicle records by plate number or VIN.
+
+```json
+{
+  "plate": "ABC1234",
+  "state": "PA"
+}
+```
+
+**Response includes:** Matching vehicles with stolen/wanted status.
+
+---
+
+### Warrant Check
+**POST** `/api/radio/query/warrant`
+
+Searches for active warrants by name.
+
+```json
+{
+  "first_name": "JOHN",
+  "last_name": "DOE"
+}
+```
+
+---
+
+## COMMUNICATION
+
+### Send Broadcast
+**POST** `/api/radio/broadcast`
+
+Sends a broadcast message to all connected CAD dispatchers.
+
+```json
+{
+  "message": "All units be advised, suspect vehicle heading northbound on Main St",
+  "priority": "urgent"
+}
+```
+
+**Priority levels:**
+- `routine` - Standard broadcast
+- `urgent` - Urgent broadcast
+- `emergency` - Emergency broadcast (triggers audio alert)
+
+---
+
+### Get Pending Status Checks
+**GET** `/api/radio/pending-checks`
+
+Returns any pending status check requests for units.
+
+---
+
+### Respond to Status Check
+**POST** `/api/radio/respond-check`
+
+Responds to or clears a status check request.
+
+```json
+{
+  "unit_id": "UNIT-1",
+  "status": "available"
+}
+```
+
+---
+
+## ERROR RESPONSES
+
+All endpoints return consistent error responses:
+
+```json
+{
+  "success": false,
+  "error": "Error description"
+}
+```
+
+**HTTP Status Codes:**
+- `400 Bad Request` - Missing required fields or invalid data
+- `401 Unauthorized` - Invalid or missing API key
+- `404 Not Found` - Resource not found (unit, call, etc.)
+- `500 Internal Server Error` - Server error
+
+---
+
+## EXAMPLE INTEGRATION CODE (JavaScript)
+
+```javascript
+const CAD_URL = 'https://your-cad-app.replit.app';
+const API_KEY = 'your-radio-api-key';
+
+async function updateUnitStatus(unitId, status) {
+  const response = await fetch(`${CAD_URL}/api/radio/status`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-API-Key': API_KEY
+    },
+    body: JSON.stringify({ unit_id: unitId, status: status })
+  });
+  return response.json();
+}
+
+async function createCall(type, priority, location, municipality, notes) {
+  const response = await fetch(`${CAD_URL}/api/radio/call`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-API-Key': API_KEY
+    },
+    body: JSON.stringify({ type, priority, location, municipality, notes })
+  });
+  return response.json();
+}
+
+async function queryPerson(firstName, lastName, dob) {
+  const response = await fetch(`${CAD_URL}/api/radio/query/person`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-API-Key': API_KEY
+    },
+    body: JSON.stringify({ first_name: firstName, last_name: lastName, dob })
+  });
+  return response.json();
+}
+
+async function sendBroadcast(message, priority = 'routine') {
+  const response = await fetch(`${CAD_URL}/api/radio/broadcast`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-API-Key': API_KEY
+    },
+    body: JSON.stringify({ message, priority })
+  });
+  return response.json();
+}
+```
+
+---
+
+## REAL-TIME UPDATES
+
+All Radio API actions automatically broadcast updates to connected CAD clients via WebSocket. This means:
+- When you update a unit's status, dispatchers see it immediately
+- When you create or update a call, it appears on CAD screens instantly
+- Broadcasts are pushed to all active dispatcher terminals
+
+No polling required - the CAD system handles real-time synchronization.
+
+---
+
+## NOTES FOR IMPLEMENTATION
+
+1. **Unit IDs** - Use the exact unit identifier as configured in the CAD system
+2. **Uppercase** - Location and municipality fields should be uppercase
+3. **Authentication** - Store the API key securely, never expose in client-side code
+4. **Error Handling** - Always check the `success` field in responses
+5. **Rate Limiting** - Be mindful of request frequency for status updates
