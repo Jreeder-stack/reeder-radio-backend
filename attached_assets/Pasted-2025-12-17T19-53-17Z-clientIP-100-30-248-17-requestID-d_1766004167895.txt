@@ -1,0 +1,116 @@
+2025-12-17T19:53:17Z clientIP="100.30.248.17" requestID="d51c5045-67cb-4b1e" responseTimeMS=4 responseBytes=861 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36 clst-pab"
+2025-12-17T19:54:40Z clientIP="166.137.146.238" requestID="f76bbe2b-78b7-436c" responseTimeMS=107 responseBytes=644 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
+2025-12-17T19:54:38.116891157Z [AI-Dispatcher] 2025-12-17T19:54:38.116Z | PARTICIPANT_LEFT {"identity":"INDIANA-1","room":"DISPATCH","humanCount":0}
+2025-12-17T19:54:38.116943488Z [AI-Dispatcher] 2025-12-17T19:54:38.116Z | DISCONNECT_TIMER_STARTED {"graceMs":30000}
+2025-12-17T19:54:40.599197806Z [AI-Dispatcher] 2025-12-17T19:54:40.598Z | PARTICIPANT_JOINED {"identity":"INDIANA-1","room":"DISPATCH","humanCount":1}
+2025-12-17T19:54:40.599243737Z [AI-Dispatcher] 2025-12-17T19:54:40.599Z | DISCONNECT_TIMER_CLEARED {}
+2025-12-17T20:00:10Z clientIP="166.137.146.238" requestID="319594b6-bd28-40f8" responseTimeMS=112 responseBytes=643 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
+2025-12-17T20:00:08.117792021Z [AI-Dispatcher] 2025-12-17T20:00:08.117Z | PARTICIPANT_LEFT {"identity":"INDIANA-1","room":"DISPATCH","humanCount":0}
+2025-12-17T20:00:08.117823781Z [AI-Dispatcher] 2025-12-17T20:00:08.117Z | DISCONNECT_TIMER_STARTED {"graceMs":30000}
+2025-12-17T20:00:10.591040329Z [AI-Dispatcher] 2025-12-17T20:00:10.590Z | PARTICIPANT_JOINED {"identity":"INDIANA-1","room":"DISPATCH","humanCount":1}
+2025-12-17T20:00:10.591351357Z [AI-Dispatcher] 2025-12-17T20:00:10.590Z | DISCONNECT_TIMER_CLEARED {}
+2025-12-17T20:05:40Z clientIP="166.137.146.238" requestID="2e34cb49-8e56-45b9" responseTimeMS=114 responseBytes=650 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
+2025-12-17T20:05:38.116871036Z [AI-Dispatcher] 2025-12-17T20:05:38.116Z | PARTICIPANT_LEFT {"identity":"INDIANA-1","room":"DISPATCH","humanCount":0}
+2025-12-17T20:05:38.117072081Z [AI-Dispatcher] 2025-12-17T20:05:38.116Z | DISCONNECT_TIMER_STARTED {"graceMs":30000}
+2025-12-17T20:05:40.612342903Z [AI-Dispatcher] 2025-12-17T20:05:40.612Z | PARTICIPANT_JOINED {"identity":"INDIANA-1","room":"DISPATCH","humanCount":1}
+2025-12-17T20:05:40.612369484Z [AI-Dispatcher] 2025-12-17T20:05:40.612Z | DISCONNECT_TIMER_CLEARED {}
+2025-12-17T20:11:10Z clientIP="166.137.146.238" requestID="ad274f48-cfd5-44e4" responseTimeMS=114 responseBytes=646 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
+2025-12-17T20:11:08.117158008Z [AI-Dispatcher] 2025-12-17T20:11:08.116Z | PARTICIPANT_LEFT {"identity":"INDIANA-1","room":"DISPATCH","humanCount":0}
+2025-12-17T20:11:08.117211959Z [AI-Dispatcher] 2025-12-17T20:11:08.117Z | DISCONNECT_TIMER_STARTED {"graceMs":30000}
+2025-12-17T20:11:10.69396346Z [AI-Dispatcher] 2025-12-17T20:11:10.693Z | PARTICIPANT_JOINED {"identity":"INDIANA-1","room":"DISPATCH","humanCount":1}
+2025-12-17T20:11:10.694000211Z [AI-Dispatcher] 2025-12-17T20:11:10.693Z | DISCONNECT_TIMER_CLEARED {}
+2025-12-17T20:16:40Z clientIP="166.137.146.238" requestID="e493bd25-f3c2-4dda" responseTimeMS=116 responseBytes=644 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
+2025-12-17T20:16:38.117081087Z [AI-Dispatcher] 2025-12-17T20:16:38.116Z | PARTICIPANT_LEFT {"identity":"INDIANA-1","room":"DISPATCH","humanCount":0}
+2025-12-17T20:16:38.117109358Z [AI-Dispatcher] 2025-12-17T20:16:38.117Z | DISCONNECT_TIMER_STARTED {"graceMs":30000}
+2025-12-17T20:16:40.636054456Z [AI-Dispatcher] 2025-12-17T20:16:40.635Z | PARTICIPANT_JOINED {"identity":"INDIANA-1","room":"DISPATCH","humanCount":1}
+2025-12-17T20:16:40.636091257Z [AI-Dispatcher] 2025-12-17T20:16:40.636Z | DISCONNECT_TIMER_CLEARED {}
+2025-12-17T20:22:10Z clientIP="166.137.146.238" requestID="4732c4a2-fae3-4568" responseTimeMS=110 responseBytes=645 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
+2025-12-17T20:22:08.116790395Z [AI-Dispatcher] 2025-12-17T20:22:08.116Z | PARTICIPANT_LEFT {"identity":"INDIANA-1","room":"DISPATCH","humanCount":0}
+2025-12-17T20:22:08.116833376Z [AI-Dispatcher] 2025-12-17T20:22:08.116Z | DISCONNECT_TIMER_STARTED {"graceMs":30000}
+2025-12-17T20:22:10.645890921Z [AI-Dispatcher] 2025-12-17T20:22:10.645Z | PARTICIPANT_JOINED {"identity":"INDIANA-1","room":"DISPATCH","humanCount":1}
+2025-12-17T20:22:10.645926331Z [AI-Dispatcher] 2025-12-17T20:22:10.645Z | DISCONNECT_TIMER_CLEARED {}
+2025-12-17T20:23:04.151998274Z ==> Deploying...
+2025-12-17T20:23:21.649478045Z ==> Running 'npm start'
+2025-12-17T20:23:22.020958428Z 
+2025-12-17T20:23:22.021065451Z > reeder-radio-backend@1.0.0 start
+2025-12-17T20:23:22.021072541Z > node src/server.js
+2025-12-17T20:23:22.021075341Z 
+2025-12-17T20:23:23.907950799Z Database initialized successfully
+2025-12-17T20:23:23.90797982Z Database ready
+2025-12-17T20:23:23.919396875Z Auto-starting AI Dispatcher on channel: DISPATCH
+2025-12-17T20:23:23.926083349Z [AI-Dispatcher] 2025-12-17T20:23:23.925Z | STARTING {"channel":"DISPATCH"}
+2025-12-17T20:23:24.107631611Z [AI-Dispatcher] 2025-12-17T20:23:24.107Z | ROOM_JOINED {"room":"DISPATCH","humanCount":1}
+2025-12-17T20:23:24.109713565Z Server running on port 5000
+2025-12-17T20:23:24.019021862Z [AI-Dispatcher] 2025-12-17T20:23:24.018Z | ROOM_DISCONNECTED {"room":"DISPATCH"}
+2025-12-17T20:23:27.229337585Z ==> Your service is live 🎉
+2025-12-17T20:23:27.347126774Z ==> 
+2025-12-17T20:23:27.430156987Z ==> ///////////////////////////////////////////////////////////
+2025-12-17T20:23:27.51196439Z ==> 
+2025-12-17T20:23:27.595544643Z ==> Available at your primary URL https://comms.reeder-systems.com + 1 more domain
+2025-12-17T20:23:27.685681535Z ==> 
+2025-12-17T20:23:27.769180738Z ==> ///////////////////////////////////////////////////////////
+2025-12-17T20:23:28Z clientIP="35.230.74.10" requestID="b6d0ea92-956c-455b" responseTimeMS=5 responseBytes=861 userAgent="Go-http-client/2.0"
+2025-12-17T20:24:13.315810043Z ==> Detected a new open port UDP:51140
+2025-12-17T20:27:40Z clientIP="166.137.146.238" requestID="66aafc7f-dfa2-4d8e" responseTimeMS=128 responseBytes=644 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
+2025-12-17T20:27:38.11670229Z [AI-Dispatcher] 2025-12-17T20:27:38.116Z | PARTICIPANT_LEFT {"identity":"INDIANA-1","room":"DISPATCH","humanCount":0}
+2025-12-17T20:27:38.116865604Z [AI-Dispatcher] 2025-12-17T20:27:38.116Z | DISCONNECT_TIMER_STARTED {"graceMs":30000}
+2025-12-17T20:27:40.681458018Z [AI-Dispatcher] 2025-12-17T20:27:40.681Z | PARTICIPANT_JOINED {"identity":"INDIANA-1","room":"DISPATCH","humanCount":1}
+2025-12-17T20:27:40.681504219Z [AI-Dispatcher] 2025-12-17T20:27:40.681Z | DISCONNECT_TIMER_CLEARED {}
+2025-12-17T20:28:29.041726772Z ==> Detected service running on port 5000 with additional ports UDP:51140
+2025-12-17T20:28:29.233164692Z ==> Docs on specifying a port: https://render.com/docs/web-services#port-binding
+2025-12-17T20:32:42Z clientIP="44.197.205.108" requestID="26965444-5fd9-43b0" responseTimeMS=8 responseBytes=860 userAgent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/76.0.3809.100 Safari/537.36"
+2025-12-17T20:33:10Z clientIP="166.137.146.238" requestID="00128586-beaa-43cf" responseTimeMS=109 responseBytes=644 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
+2025-12-17T20:33:08.116553413Z [AI-Dispatcher] 2025-12-17T20:33:08.116Z | PARTICIPANT_LEFT {"identity":"INDIANA-1","room":"DISPATCH","humanCount":0}
+2025-12-17T20:33:08.116580474Z [AI-Dispatcher] 2025-12-17T20:33:08.116Z | DISCONNECT_TIMER_STARTED {"graceMs":30000}
+2025-12-17T20:33:10.600652002Z [AI-Dispatcher] 2025-12-17T20:33:10.600Z | PARTICIPANT_JOINED {"identity":"INDIANA-1","room":"DISPATCH","humanCount":1}
+2025-12-17T20:33:10.600741914Z [AI-Dispatcher] 2025-12-17T20:33:10.600Z | DISCONNECT_TIMER_CLEARED {}
+2025-12-17T20:33:47Z clientIP="44.197.205.108" requestID="1594197b-b2d3-4900" responseTimeMS=52 responseBytes=300560 userAgent="Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:25.0) Gecko/20100101 Firefox/25.0"
+2025-12-17T20:38:40Z clientIP="166.137.146.238" requestID="2e22a0d2-bda3-4da0" responseTimeMS=131 responseBytes=650 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
+2025-12-17T20:38:38.122648432Z [AI-Dispatcher] 2025-12-17T20:38:38.118Z | PARTICIPANT_LEFT {"identity":"INDIANA-1","room":"DISPATCH","humanCount":0}
+2025-12-17T20:38:38.122681843Z [AI-Dispatcher] 2025-12-17T20:38:38.118Z | DISCONNECT_TIMER_STARTED {"graceMs":30000}
+2025-12-17T20:38:40.709109738Z [AI-Dispatcher] 2025-12-17T20:38:40.708Z | PARTICIPANT_JOINED {"identity":"INDIANA-1","room":"DISPATCH","humanCount":1}
+2025-12-17T20:38:40.709215081Z [AI-Dispatcher] 2025-12-17T20:38:40.709Z | DISCONNECT_TIMER_CLEARED {}
+2025-12-17T20:41:55Z clientIP="166.137.146.238" requestID="fa811690-9aca-495a" responseTimeMS=90 responseBytes=860 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
+2025-12-17T20:41:56Z clientIP="166.137.146.238" requestID="cf07d26e-d43f-4110" responseTimeMS=14 responseBytes=5753 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
+2025-12-17T20:41:56Z clientIP="166.137.146.238" requestID="98b87f6d-bcb4-4498" responseTimeMS=5 responseBytes=667 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
+2025-12-17T20:41:56.116357081Z [AI-Dispatcher] 2025-12-17T20:41:56.116Z | PARTICIPANT_LEFT {"identity":"INDIANA-1","room":"DISPATCH","humanCount":0}
+2025-12-17T20:41:56.116533825Z [AI-Dispatcher] 2025-12-17T20:41:56.116Z | DISCONNECT_TIMER_STARTED {"graceMs":30000}
+2025-12-17T20:41:56Z clientIP="166.137.146.238" requestID="235dfe93-9126-4e25" responseTimeMS=13 responseBytes=860 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
+2025-12-17T20:41:56Z clientIP="166.137.146.238" requestID="52e6aaf0-93bc-45be" responseTimeMS=155 responseBytes=300623 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
+2025-12-17T20:41:56Z clientIP="166.137.146.238" requestID="8fd53562-b404-4aab" responseTimeMS=24 responseBytes=233 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
+2025-12-17T20:41:57.011274893Z [AI-Dispatcher] 2025-12-17T20:41:57.011Z | PARTICIPANT_JOINED {"identity":"INDIANA-1","room":"DISPATCH","humanCount":1}
+2025-12-17T20:41:57.011309383Z [AI-Dispatcher] 2025-12-17T20:41:57.011Z | DISCONNECT_TIMER_CLEARED {}
+2025-12-17T20:41:56Z clientIP="166.137.146.238" requestID="54fe0249-f7ab-48d5" responseTimeMS=23 responseBytes=691318 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
+2025-12-17T20:41:56Z clientIP="166.137.146.238" requestID="28eb8716-150b-4621" responseTimeMS=27 responseBytes=315 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
+2025-12-17T20:41:56Z clientIP="166.137.146.238" requestID="c3b31049-9736-410f" responseTimeMS=17 responseBytes=648 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
+2025-12-17T20:41:57Z clientIP="166.137.146.238" requestID="74089a46-a038-4f5a" responseTimeMS=57 responseBytes=559 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
+2025-12-17T20:41:58Z clientIP="166.137.146.238" requestID="ba2cf097-117b-4692" responseTimeMS=38 responseBytes=559 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
+2025-12-17T20:42:12Z clientIP="166.137.146.238" requestID="99e5e925-74e9-4185" responseTimeMS=120 responseBytes=566 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
+2025-12-17T20:42:12Z clientIP="166.137.146.238" requestID="dcd1e0d1-2cf9-4f64" responseTimeMS=108 responseBytes=320 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
+2025-12-17T20:42:12Z clientIP="166.137.146.238" requestID="5ece07cc-b023-438c" responseTimeMS=17 responseBytes=320 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
+2025-12-17T20:42:14Z clientIP="166.137.146.238" requestID="c824460b-8dd3-4a13" responseTimeMS=38 responseBytes=557 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
+2025-12-17T20:42:11.863854365Z [AI-Dispatcher] 2025-12-17T20:42:11.863Z | TRACK_SUBSCRIBED {"participant":"INDIANA-1","room":"DISPATCH","trackSid":"TR_AMjuegxLgFvyme"}
+2025-12-17T20:42:11.866946846Z [AI-Dispatcher] 2025-12-17T20:42:11.866Z | AUDIO_BUFFERING_START {"participant":"INDIANA-1","room":"DISPATCH"}
+2025-12-17T20:42:14.238972986Z [AI-Dispatcher] 2025-12-17T20:42:14.238Z | TRACK_UNSUBSCRIBED {"participant":"INDIANA-1","room":"DISPATCH"}
+2025-12-17T20:42:14.239350856Z [AI-Dispatcher] 2025-12-17T20:42:14.239Z | AUDIO_BUFFERING_COMPLETE {"participant":"INDIANA-1","frames":238,"bytes":228480}
+2025-12-17T20:42:14.253576327Z [AI-Dispatcher] 2025-12-17T20:42:14.253Z | AUDIO_PROCESSING {"bytes":228480,"room":"DISPATCH","participant":"INDIANA-1"}
+2025-12-17T20:42:15.275054063Z [AI-Dispatcher] 2025-12-17T20:42:15.274Z | STT_RESULT {"transcript":"Central Indiana 1.","participant":"INDIANA-1"}
+2025-12-17T20:42:15.275437782Z [AI-Dispatcher] 2025-12-17T20:42:15.275Z | COMMAND_MATCHED {"transcript":"Central Indiana 1.","response":"INDIANA-1, go ahead.","cadStatus":null}
+2025-12-17T20:42:15.651804377Z [AI-Dispatcher] 2025-12-17T20:42:15.651Z | TRACK_PUBLISHED {"room":"DISPATCH","trackSid":"TR_AMKTk6itPARmgT"}
+2025-12-17T20:42:15.952665231Z [AI-Dispatcher] 2025-12-17T20:42:15.952Z | AUDIO_STREAMING {"totalSamples":41400,"frames":44,"frameDurationMs":60}
+2025-12-17T20:42:18.845130277Z [AI-Dispatcher] 2025-12-17T20:42:18.844Z | TRACK_UNPUBLISHED {"room":"DISPATCH","trackSid":"TR_AMKTk6itPARmgT"}
+2025-12-17T20:42:18.894458245Z [AI-Dispatcher] 2025-12-17T20:42:18.894Z | TRACK_SUBSCRIBED {"participant":"INDIANA-1","room":"DISPATCH","trackSid":"TR_AMZEpXenyaG85N"}
+2025-12-17T20:42:18.894903376Z [AI-Dispatcher] 2025-12-17T20:42:18.894Z | AUDIO_BUFFERING_START {"participant":"INDIANA-1","room":"DISPATCH"}
+2025-12-17T20:42:18Z clientIP="166.137.146.238" requestID="f9cacbfa-55f9-49da" responseTimeMS=45 responseBytes=568 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
+2025-12-17T20:42:20.800127091Z [AI-Dispatcher] 2025-12-17T20:42:20.799Z | TRACK_UNSUBSCRIBED {"participant":"INDIANA-1","room":"DISPATCH"}
+2025-12-17T20:42:20.800160152Z [AI-Dispatcher] 2025-12-17T20:42:20.799Z | AUDIO_BUFFERING_COMPLETE {"participant":"INDIANA-1","frames":191,"bytes":183360}
+2025-12-17T20:42:20.814980948Z [AI-Dispatcher] 2025-12-17T20:42:20.814Z | AUDIO_PROCESSING {"bytes":183360,"room":"DISPATCH","participant":"INDIANA-1"}
+2025-12-17T20:42:21.577638427Z [AI-Dispatcher] 2025-12-17T20:42:21.577Z | STT_RESULT {"transcript":"Off duty.","participant":"INDIANA-1"}
+2025-12-17T20:42:21.68847746Z [AI-Dispatcher] 2025-12-17T20:42:21.688Z | COMMAND_MATCHED {"transcript":"Off duty.","response":"INDIANA-1, off duty, 1542 hours.","cadStatus":"off_duty"}
+2025-12-17T20:42:21.688617624Z [CAD] Updating status: INDIANA-1 -> off_duty
+2025-12-17T20:42:21.689096137Z [CAD] Integration not configured - missing CAD_URL or CAD_API_KEY
+2025-12-17T20:42:21.689405454Z [AI-Dispatcher] 2025-12-17T20:42:21.689Z | CAD_STATUS_UPDATE {"unitId":"INDIANA-1","status":"off_duty","success":false,"error":"CAD integration not configured"}
+2025-12-17T20:42:20Z clientIP="166.137.146.238" requestID="f655cbd6-6f34-4ccb" responseTimeMS=38 responseBytes=559 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
+2025-12-17T20:42:21.929278246Z [AI-Dispatcher] 2025-12-17T20:42:21.929Z | TRACK_PUBLISHED {"room":"DISPATCH","trackSid":"TR_AMWEcWPD8cbkpE"}
+2025-12-17T20:42:22.22974309Z [AI-Dispatcher] 2025-12-17T20:42:22.229Z | AUDIO_STREAMING {"totalSamples":76000,"frames":80,"frameDurationMs":60}
+2025-12-17T20:42:27.282749594Z [AI-Dispatcher] 2025-12-17T20:42:27.282Z | TRACK_UNPUBLISHED {"room":"DISPATCH","trackSid":"TR_AMWEcWPD8cbkpE"}
