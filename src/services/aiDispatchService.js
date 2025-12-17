@@ -3,6 +3,7 @@ import { createLiveKitToken, getLiveKitUrl } from '../config/livekit.js';
 import { speechToText, textToSpeech, isConfigured as isAzureConfigured } from './azureSpeechService.js';
 import { matchCommand, resetDispatcherState } from './commandMatcher.js';
 import { isAiDispatchEnabled, getAiDispatchChannel } from '../db/index.js';
+import * as cadService from './cadService.js';
 
 const AI_IDENTITY = 'AI-Dispatcher';
 const LIVEKIT_SAMPLE_RATE = 48000;
@@ -367,20 +368,34 @@ class AIDispatcher {
 
       this.log('STT_RESULT', { transcript, participant: participantId });
 
-      const response = matchCommand(transcript, participantId);
-      if (!response) {
+      const commandResult = matchCommand(transcript, participantId);
+      if (!commandResult) {
         this.log('COMMAND_NO_MATCH', { transcript });
         return;
       }
 
-      this.log('COMMAND_MATCHED', { transcript, response });
+      this.log('COMMAND_MATCHED', { transcript, response: commandResult.response, cadStatus: commandResult.cadStatus });
+
+      if (commandResult.cadStatus && commandResult.unitId) {
+        try {
+          const cadResult = await cadService.updateUnitStatus(commandResult.unitId, commandResult.cadStatus);
+          this.log('CAD_STATUS_UPDATE', { 
+            unitId: commandResult.unitId, 
+            status: commandResult.cadStatus, 
+            success: cadResult.success,
+            error: cadResult.error
+          });
+        } catch (cadError) {
+          this.log('CAD_ERROR', { error: cadError.message });
+        }
+      }
 
       if (!await this.shouldRespond()) {
         this.log('TTS_ABORTED', { reason: 'Disabled before TTS' });
         return;
       }
 
-      const responseAudio = await textToSpeech(response);
+      const responseAudio = await textToSpeech(commandResult.response);
 
       if (!await this.shouldRespond()) {
         this.log('PUBLISH_ABORTED', { reason: 'Disabled before publish' });

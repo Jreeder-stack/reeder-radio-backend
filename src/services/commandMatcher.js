@@ -10,7 +10,8 @@ const STATUS_COMMANDS = [
       'in service', 'signed on', 'clocked in', 'starting shift',
       '10-8', '10 8', 'ten eight', 'ten-eight'
     ], 
-    status: 'on duty' 
+    status: 'on duty',
+    cadStatus: 'on_duty'
   },
   { 
     phrases: [
@@ -18,7 +19,8 @@ const STATUS_COMMANDS = [
       'back in service', 'ready', 'free',
       '10-8 available', 'ten eight available'
     ], 
-    status: 'available' 
+    status: 'available',
+    cadStatus: 'available'
   },
   { 
     phrases: [
@@ -26,7 +28,8 @@ const STATUS_COMMANDS = [
       'on my way', 'heading that way', 'rolling',
       '10-76', '10 76', 'ten seventy six', 'ten-seventy-six', '1076'
     ], 
-    status: 'en route' 
+    status: 'en route',
+    cadStatus: 'en_route'
   },
   { 
     phrases: [
@@ -34,7 +37,8 @@ const STATUS_COMMANDS = [
       'on location', 'onlocation', 'on-location', 'at location', 'arrived',
       '10-97', '10 97', 'ten ninety seven', 'ten-ninety-seven', '1097'
     ], 
-    status: 'on scene' 
+    status: 'on scene',
+    cadStatus: 'on_scene'
   },
   { 
     phrases: [
@@ -42,7 +46,8 @@ const STATUS_COMMANDS = [
       'end of shift', 'signed off', 'clocked out', 'going off duty',
       '10-7', '10 7', 'ten seven', 'ten-seven', '107'
     ], 
-    status: 'off duty' 
+    status: 'off duty',
+    cadStatus: 'off_duty'
   },
   { 
     phrases: [
@@ -51,7 +56,8 @@ const STATUS_COMMANDS = [
       'unavailable', 'not available', 'down', 'busy',
       '10-6', '10 6', 'ten six', 'ten-six', '106'
     ], 
-    status: 'out of service' 
+    status: 'out of service',
+    cadStatus: 'out_of_service'
   },
   { 
     phrases: [
@@ -60,7 +66,8 @@ const STATUS_COMMANDS = [
       'done', 'finished',
       '10-98', '10 98', 'ten ninety eight', 'ten-ninety-eight', '1098'
     ], 
-    status: 'clear' 
+    status: 'clear',
+    cadStatus: 'available'
   }
 ];
 
@@ -106,13 +113,13 @@ function matchStatusCommand(transcript) {
   const normalized = normalizeText(transcript);
   
   if (containsCancelPhrase(normalized)) {
-    return 'CANCEL';
+    return { status: 'CANCEL', cadStatus: null };
   }
   
   for (const cmd of STATUS_COMMANDS) {
     for (const phrase of cmd.phrases) {
       if (normalized.includes(phrase) || normalized === phrase) {
-        return cmd.status;
+        return { status: cmd.status, cadStatus: cmd.cadStatus };
       }
     }
   }
@@ -147,7 +154,7 @@ export function matchCommand(transcript, participantId = null) {
       currentUnitId = participantId || 'Unknown Unit';
       currentState = DISPATCHER_STATE.AWAITING_STATUS;
       startStateTimeout();
-      return `${currentUnitId}, go ahead.`;
+      return { response: `${currentUnitId}, go ahead.`, unitId: currentUnitId, cadStatus: null };
     }
     return null;
   }
@@ -156,19 +163,23 @@ export function matchCommand(transcript, participantId = null) {
     if (containsWakePhrase(transcript)) {
       currentUnitId = participantId || 'Unknown Unit';
       startStateTimeout();
-      return `${currentUnitId}, go ahead.`;
+      return { response: `${currentUnitId}, go ahead.`, unitId: currentUnitId, cadStatus: null };
     }
     
-    const status = matchStatusCommand(transcript);
-    if (status === 'CANCEL') {
+    const result = matchStatusCommand(transcript);
+    if (result && result.status === 'CANCEL') {
       resetState();
       return null;
     }
-    if (status) {
+    if (result) {
       const unitId = currentUnitId;
       const timestamp = formatTimestamp();
       resetState();
-      return `${unitId}, ${status}, ${timestamp}.`;
+      return { 
+        response: `${unitId}, ${result.status}, ${timestamp}.`, 
+        unitId: unitId, 
+        cadStatus: result.cadStatus 
+      };
     }
     return null;
   }

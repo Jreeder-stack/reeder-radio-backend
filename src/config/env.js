@@ -9,7 +9,9 @@ export const config = {
     apiKey: process.env.LIVEKIT_API_KEY,
     apiSecret: process.env.LIVEKIT_API_SECRET,
     url: process.env.LIVEKIT_URL,
-  }
+  },
+  cadUrl: process.env.CAD_URL,
+  cadApiKey: process.env.CAD_API_KEY,
 };
 
 export function validateEnv() {
