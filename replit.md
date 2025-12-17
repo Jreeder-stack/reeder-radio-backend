@@ -21,7 +21,13 @@ Not specified.
 - **Audio Processing:** The Web Audio API is used for advanced Digital Signal Processing (DSP) including Automatic Gain Control (AGC), noise suppression, and a transmit compressor. Features like PTT Release Reliability, Feedback Loop Prevention, and Authorization/Busy Tones enhance the audio experience.
 - **Authentication & Authorization:** Username/password authentication with bcrypt hashing and session management. Role-based access control protects routes for users, dispatchers, and administrators. Default admin credentials are provided for initial setup.
 - **State Management:** Zustand stores manage application state for channels, units, and dispatcher settings on the frontend.
-- **AI Voice Dispatcher:** Integrates Azure Speech Services (Speech-to-Text and Text-to-Speech) for automated radio acknowledgments. A LiveKit bot listens for wake phrases and specific status commands, responding with system-generated unit IDs and timestamps. Safety guards are in place to prevent unintended transmissions and errors.
+- **AI Voice Dispatcher:** Integrates Azure Speech Services (Speech-to-Text and Text-to-Speech) for automated radio acknowledgments. Uses an intent-driven state machine with per-unit conversation sessions. Supports comprehensive dispatcher functions including:
+  - **Status Commands:** on duty, available, en route, on scene, off duty, out of service, clear (with 10-codes)
+  - **Immediate Commands:** radio check, time check, backup request, welfare check, tow/wrecker request, supervisor request, EMS/fire request, K9 request, subject in custody, negative contact, meal break
+  - **Multi-Step Commands:** traffic stop (prompts for location), run plate (queries CAD), warrant check (queries CAD), BOLO broadcast, vehicle pursuit
+  - **Emergency Commands:** Signal 100 (emergency traffic only), Signal 100 clear
+  - **CAD Integration:** Automatic status updates, broadcast messages, vehicle/person/warrant queries via external CAD API
+  - Safety guards prevent unintended transmissions and errors. Time format uses 24-hour with colon (e.g., "15:46 hours").
 - **Cost Optimization:** LiveKit connections are optimized by connecting units only to active/selected channels (or scanned channels). An idle timeout feature disconnects users from rooms after inactivity, with automatic re-connection on activity.
 
 ### Feature Specifications

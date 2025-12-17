@@ -374,14 +374,35 @@ class AIDispatcher {
         return;
       }
 
-      this.log('COMMAND_MATCHED', { transcript, response: commandResult.response, cadStatus: commandResult.cadStatus });
+      let finalResponse = commandResult.response;
+      let finalCadStatus = commandResult.cadStatus;
+      let finalCadAction = commandResult.cadAction;
+      let finalCadData = commandResult.cadData;
 
-      if (commandResult.cadStatus && commandResult.unitId) {
+      if (commandResult.asyncCompletion) {
         try {
-          const cadResult = await cadService.updateUnitStatus(commandResult.unitId, commandResult.cadStatus);
+          const cadServiceArg = cadService.isConfigured() ? cadService : null;
+          const asyncResult = await commandResult.asyncCompletion(cadServiceArg);
+          if (asyncResult) {
+            finalResponse = asyncResult.response;
+            finalCadStatus = asyncResult.cadStatus;
+            finalCadAction = asyncResult.cadAction;
+            finalCadData = asyncResult.cadData;
+          }
+        } catch (asyncError) {
+          this.log('ASYNC_COMPLETION_ERROR', { error: asyncError.message });
+          finalResponse = `${commandResult.unitId}, standby. System error.`;
+        }
+      }
+
+      this.log('COMMAND_MATCHED', { transcript, response: finalResponse, cadStatus: finalCadStatus, cadAction: finalCadAction });
+
+      if (finalCadStatus && commandResult.unitId) {
+        try {
+          const cadResult = await cadService.updateUnitStatus(commandResult.unitId, finalCadStatus);
           this.log('CAD_STATUS_UPDATE', { 
             unitId: commandResult.unitId, 
-            status: commandResult.cadStatus, 
+            status: finalCadStatus, 
             success: cadResult.success,
             error: cadResult.error
           });
@@ -390,12 +411,31 @@ class AIDispatcher {
         }
       }
 
+      if (finalCadAction === 'broadcast' && finalCadData && cadService.isConfigured()) {
+        try {
+          const broadcastResult = await cadService.sendBroadcast(finalCadData.message, finalCadData.priority);
+          this.log('CAD_BROADCAST', { 
+            message: finalCadData.message,
+            priority: finalCadData.priority,
+            success: broadcastResult.success,
+            error: broadcastResult.error
+          });
+        } catch (cadError) {
+          this.log('CAD_BROADCAST_ERROR', { error: cadError.message });
+        }
+      }
+
+      if (!finalResponse) {
+        this.log('NO_RESPONSE_NEEDED');
+        return;
+      }
+
       if (!await this.shouldRespond()) {
         this.log('TTS_ABORTED', { reason: 'Disabled before TTS' });
         return;
       }
 
-      const responseAudio = await textToSpeech(commandResult.response);
+      const responseAudio = await textToSpeech(finalResponse);
 
       if (!await this.shouldRespond()) {
         this.log('PUBLISH_ABORTED', { reason: 'Disabled before publish' });
