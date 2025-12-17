@@ -1,9 +1,7 @@
-import { config } from '../config/env.js';
-
-const CAD_URL = config.cadUrl;
-const CAD_API_KEY = config.cadApiKey;
-
 async function cadRequest(endpoint, method = 'GET', body = null) {
+  const CAD_URL = process.env.CAD_URL;
+  const CAD_API_KEY = process.env.CAD_API_KEY;
+  
   if (!CAD_URL || !CAD_API_KEY) {
     console.warn('[CAD] Integration not configured - missing CAD_URL or CAD_API_KEY');
     return { success: false, error: 'CAD integration not configured' };
