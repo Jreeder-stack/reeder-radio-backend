@@ -158,5 +158,5 @@ export async function respondToStatusCheck(unitId, status) {
 }
 
 export function isConfigured() {
-  return !!(CAD_URL && CAD_API_KEY);
+  return !!(process.env.CAD_URL && process.env.CAD_API_KEY);
 }
