@@ -1,0 +1,30 @@
+2025-12-17T20:45:49Z clientIP="166.137.146.238" requestID="55883806-2561-49c9" responseTimeMS=124 responseBytes=315 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
+2025-12-17T20:45:50Z clientIP="166.137.146.238" requestID="1483667c-82bf-4b60" responseTimeMS=140 responseBytes=549 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
+2025-12-17T20:45:51Z clientIP="166.137.146.238" requestID="203b2e82-d1c2-4ca5" responseTimeMS=36 responseBytes=549 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
+2025-12-17T20:45:53Z clientIP="166.137.146.238" requestID="8676829a-2cbf-4775" responseTimeMS=33 responseBytes=558 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
+2025-12-17T20:45:56Z clientIP="166.137.146.238" requestID="ca42476c-f549-4d7a" responseTimeMS=36 responseBytes=549 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
+2025-12-17T20:45:53.197565825Z [AI-Dispatcher] 2025-12-17T20:45:53.197Z | TRACK_SUBSCRIBED {"participant":"INDIANA-1","room":"DISPATCH","trackSid":"TR_AMgoUmRESVf8mP"}
+2025-12-17T20:45:53.198167121Z [AI-Dispatcher] 2025-12-17T20:45:53.198Z | AUDIO_BUFFERING_START {"participant":"INDIANA-1","room":"DISPATCH"}
+2025-12-17T20:45:56.150812378Z [AI-Dispatcher] 2025-12-17T20:45:56.150Z | TRACK_UNSUBSCRIBED {"participant":"INDIANA-1","room":"DISPATCH"}
+2025-12-17T20:45:56.151686161Z [AI-Dispatcher] 2025-12-17T20:45:56.151Z | AUDIO_BUFFERING_COMPLETE {"participant":"INDIANA-1","frames":296,"bytes":284160}
+2025-12-17T20:45:56.164708081Z [AI-Dispatcher] 2025-12-17T20:45:56.164Z | AUDIO_PROCESSING {"bytes":284160,"room":"DISPATCH","participant":"INDIANA-1"}
+2025-12-17T20:45:57.340729843Z [AI-Dispatcher] 2025-12-17T20:45:57.340Z | STT_RESULT {"transcript":"Central off duty.","participant":"INDIANA-1"}
+2025-12-17T20:45:57.340843566Z [AI-Dispatcher] 2025-12-17T20:45:57.340Z | COMMAND_MATCHED {"transcript":"Central off duty.","response":"INDIANA-1, go ahead.","cadStatus":null}
+2025-12-17T20:45:57.571749952Z [AI-Dispatcher] 2025-12-17T20:45:57.571Z | TRACK_PUBLISHED {"room":"DISPATCH","trackSid":"TR_AMxCiYWMCZRCm7"}
+2025-12-17T20:45:57.871492484Z [AI-Dispatcher] 2025-12-17T20:45:57.871Z | AUDIO_STREAMING {"totalSamples":41400,"frames":44,"frameDurationMs":60}
+2025-12-17T20:46:00.763617612Z [AI-Dispatcher] 2025-12-17T20:46:00.763Z | TRACK_UNPUBLISHED {"room":"DISPATCH","trackSid":"TR_AMxCiYWMCZRCm7"}
+2025-12-17T20:46:01.291663802Z [AI-Dispatcher] 2025-12-17T20:46:01.291Z | TRACK_SUBSCRIBED {"participant":"INDIANA-1","room":"DISPATCH","trackSid":"TR_AM6WCpMrQbb9D4"}
+2025-12-17T20:46:01.293825309Z [AI-Dispatcher] 2025-12-17T20:46:01.293Z | AUDIO_BUFFERING_START {"participant":"INDIANA-1","room":"DISPATCH"}
+2025-12-17T20:46:01Z clientIP="166.137.146.238" requestID="300b7a92-e7a4-4eef" responseTimeMS=38 responseBytes=558 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
+2025-12-17T20:46:03Z clientIP="166.137.146.238" requestID="144a243d-c4bd-4c48" responseTimeMS=35 responseBytes=549 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
+2025-12-17T20:46:03.53470644Z [AI-Dispatcher] 2025-12-17T20:46:03.534Z | TRACK_UNSUBSCRIBED {"participant":"INDIANA-1","room":"DISPATCH"}
+2025-12-17T20:46:03.534727861Z [AI-Dispatcher] 2025-12-17T20:46:03.534Z | AUDIO_BUFFERING_COMPLETE {"participant":"INDIANA-1","frames":224,"bytes":215040}
+2025-12-17T20:46:03.550536664Z [AI-Dispatcher] 2025-12-17T20:46:03.550Z | AUDIO_PROCESSING {"bytes":215040,"room":"DISPATCH","participant":"INDIANA-1"}
+2025-12-17T20:46:04.458604632Z [AI-Dispatcher] 2025-12-17T20:46:04.456Z | STT_RESULT {"transcript":"Off duty.","participant":"INDIANA-1"}
+2025-12-17T20:46:04.458628963Z [AI-Dispatcher] 2025-12-17T20:46:04.457Z | COMMAND_MATCHED {"transcript":"Off duty.","response":"INDIANA-1, off duty, 1546 hours.","cadStatus":"off_duty"}
+2025-12-17T20:46:04.458632743Z [CAD] Updating status: INDIANA-1 -> off_duty
+2025-12-17T20:46:04.458635533Z [AI-Dispatcher] 2025-12-17T20:46:04.457Z | CAD_STATUS_UPDATE {"unitId":"INDIANA-1","status":"off_duty","success":false,"error":"CAD integration not configured"}
+2025-12-17T20:46:04.458655273Z [CAD] Integration not configured - missing CAD_URL or CAD_API_KEY
+2025-12-17T20:46:04.649445982Z [AI-Dispatcher] 2025-12-17T20:46:04.648Z | TRACK_PUBLISHED {"room":"DISPATCH","trackSid":"TR_AM4AHVm3LKRk7G"}
+2025-12-17T20:46:04.951507385Z [AI-Dispatcher] 2025-12-17T20:46:04.950Z | AUDIO_STREAMING {"totalSamples":77000,"frames":81,"frameDurationMs":60}
+2025-12-17T20:46:10.064746697Z [AI-Dispatcher] 2025-12-17T20:46:10.064Z | TRACK_UNPUBLISHED {"room":"DISPATCH","trackSid":"TR_AM4AHVm3LKRk7G"}
