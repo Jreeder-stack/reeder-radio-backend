@@ -89,6 +89,12 @@ app.get('/getToken', requireAuth, async (req, res) => {
 });
 
 const clientDistPath = path.join(__dirname, '..', 'client', 'dist');
+
+app.get('/.well-known/assetlinks.json', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.sendFile(path.join(clientDistPath, '.well-known', 'assetlinks.json'));
+});
+
 app.use(express.static(clientDistPath));
 
 app.get('*', (req, res) => {
