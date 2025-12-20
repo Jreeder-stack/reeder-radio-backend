@@ -1,0 +1,154 @@
+2025-12-20T02:35:02Z clientIP="34.41.160.123" requestID="e908543c-118b-4fdc" responseTimeMS=113 responseBytes=362 userAgent="node"
+2025-12-20T02:35:02Z clientIP="34.41.160.123" requestID="c273a59c-d111-40e7" responseTimeMS=109 responseBytes=362 userAgent="node"
+2025-12-20T02:35:02.16753829Z     at async Module.upsertUnitPresence (file:///opt/render/project/src/src/db/index.js:388:18)
+2025-12-20T02:35:02.16754051Z     at async Module.upsertUnit (file:///opt/render/project/src/src/services/dispatchService.js:8:16)
+2025-12-20T02:35:02.16754384Z     at async updateUnit (file:///opt/render/project/src/src/controllers/dispatchController.js:19:18) {
+2025-12-20T02:35:02.16754743Z   length: 275,
+2025-12-20T02:35:02.16755215Z   severity: 'ERROR',
+2025-12-20T02:35:02.16755552Z   code: '23502',
+2025-12-20T02:35:02.16755928Z   detail: 'Failing row contains (1491, null, DISPATCH, transmitting, 2025-12-20 02:35:02.160979, null, f).',
+2025-12-20T02:35:02.16756268Z   hint: undefined,
+2025-12-20T02:35:02.167566031Z   position: undefined,
+2025-12-20T02:35:02.167569761Z   internalPosition: undefined,
+2025-12-20T02:35:02.167573321Z   internalQuery: undefined,
+2025-12-20T02:35:02.167576821Z   where: undefined,
+2025-12-20T02:35:02.167580251Z   schema: 'public',
+2025-12-20T02:35:02.167582371Z   table: 'units',
+2025-12-20T02:35:02.167584521Z   column: 'unit_identity',
+2025-12-20T02:35:02.167586891Z   dataType: undefined,
+2025-12-20T02:35:02.167588961Z   constraint: undefined,
+2025-12-20T02:35:02.167591021Z   file: 'execMain.c',
+2025-12-20T02:35:02.167593141Z   line: '1981',
+2025-12-20T02:35:02.167595231Z   routine: 'ExecConstraints'
+2025-12-20T02:35:02.167597381Z }
+2025-12-20T02:35:02.655619738Z Update unit error: error: null value in column "unit_identity" of relation "units" violates not-null constraint
+2025-12-20T02:35:02.655678719Z     at /opt/render/project/src/node_modules/pg-pool/index.js:45:11
+2025-12-20T02:35:02.65568302Z     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2025-12-20T02:35:02.6556856Z     at async Module.upsertUnitPresence (file:///opt/render/project/src/src/db/index.js:388:18)
+2025-12-20T02:35:02.65568783Z     at async Module.upsertUnit (file:///opt/render/project/src/src/services/dispatchService.js:8:16)
+2025-12-20T02:35:02.65568994Z     at async updateUnit (file:///opt/render/project/src/src/controllers/dispatchController.js:19:18) {
+2025-12-20T02:35:02.65569236Z   length: 267,
+2025-12-20T02:35:02.65569519Z   severity: 'ERROR',
+2025-12-20T02:35:02.65569744Z   code: '23502',
+2025-12-20T02:35:02.65569967Z   detail: 'Failing row contains (1492, null, DISPATCH, idle, 2025-12-20 02:35:02.650102, null, f).',
+2025-12-20T02:35:02.6557018Z   hint: undefined,
+2025-12-20T02:35:02.655704Z   position: undefined,
+2025-12-20T02:35:02.65570726Z   internalPosition: undefined,
+2025-12-20T02:35:02.65570943Z   internalQuery: undefined,
+2025-12-20T02:35:02.65571154Z   where: undefined,
+2025-12-20T02:35:02.65571363Z   schema: 'public',
+2025-12-20T02:35:02.65571666Z   table: 'units',
+2025-12-20T02:35:02.65572043Z   column: 'unit_identity',
+2025-12-20T02:35:02.65572422Z   dataType: undefined,
+2025-12-20T02:35:02.655760601Z   constraint: undefined,
+2025-12-20T02:35:02.655764241Z   file: 'execMain.c',
+2025-12-20T02:35:02.655767591Z   line: '1981',
+2025-12-20T02:35:02.655771071Z   routine: 'ExecConstraints'
+2025-12-20T02:35:02.655774671Z }
+2025-12-20T02:35:03Z clientIP="34.41.160.123" requestID="615a5456-5ccd-41ce" responseTimeMS=27 responseBytes=497 userAgent="node"
+2025-12-20T02:35:07.493470659Z [AI-Dispatcher] 2025-12-20T02:35:07.493Z | DATA_MESSAGE_PARSE_ERROR {"error":"Unexpected non-whitespace character after JSON at position 3"}
+2025-12-20T02:35:09Z clientIP="34.41.160.123" requestID="23787420-e771-4e8a" responseTimeMS=30 responseBytes=497 userAgent="node"
+2025-12-20T02:35:15Z clientIP="34.41.160.123" requestID="7f7ad8d5-fbae-4873" responseTimeMS=27 responseBytes=497 userAgent="node"
+2025-12-20T02:35:19Z clientIP="34.41.160.123" requestID="1665bbc0-f94a-4af3" responseTimeMS=109 responseBytes=362 userAgent="node"
+2025-12-20T02:35:18Z clientIP="34.41.160.123" requestID="91c150ae-5024-434b" responseTimeMS=107 responseBytes=362 userAgent="node"
+2025-12-20T02:35:20Z clientIP="34.41.160.123" requestID="e00b0618-d707-4be4" responseTimeMS=27 responseBytes=497 userAgent="node"
+2025-12-20T02:35:26Z clientIP="34.41.160.123" requestID="ed563e2b-09a3-47bd" responseTimeMS=114 responseBytes=362 userAgent="node"
+2025-12-20T02:35:26Z clientIP="34.41.160.123" requestID="415b1783-01a8-4602" responseTimeMS=109 responseBytes=497 userAgent="node"
+2025-12-20T02:35:18.886363503Z Update unit error: error: null value in column "unit_identity" of relation "units" violates not-null constraint
+2025-12-20T02:35:18.886390824Z     at /opt/render/project/src/node_modules/pg-pool/index.js:45:11
+2025-12-20T02:35:18.886396264Z     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2025-12-20T02:35:18.886400114Z     at async Module.upsertUnitPresence (file:///opt/render/project/src/src/db/index.js:388:18)
+2025-12-20T02:35:18.886403804Z     at async Module.upsertUnit (file:///opt/render/project/src/src/services/dispatchService.js:8:16)
+2025-12-20T02:35:18.886408094Z     at async updateUnit (file:///opt/render/project/src/src/controllers/dispatchController.js:19:18) {
+2025-12-20T02:35:18.886411664Z   length: 267,
+2025-12-20T02:35:18.886416134Z   severity: 'ERROR',
+2025-12-20T02:35:18.886419675Z   code: '23502',
+2025-12-20T02:35:18.886423564Z   detail: 'Failing row contains (1493, null, DISPATCH, idle, 2025-12-20 02:35:18.880906, null, f).',
+2025-12-20T02:35:18.886427224Z   hint: undefined,
+2025-12-20T02:35:18.886430745Z   position: undefined,
+2025-12-20T02:35:18.886435085Z   internalPosition: undefined,
+2025-12-20T02:35:18.886438675Z   internalQuery: undefined,
+2025-12-20T02:35:18.886442195Z   where: undefined,
+2025-12-20T02:35:18.886445775Z   schema: 'public',
+2025-12-20T02:35:18.886449285Z   table: 'units',
+2025-12-20T02:35:18.886452845Z   column: 'unit_identity',
+2025-12-20T02:35:18.886456345Z   dataType: undefined,
+2025-12-20T02:35:18.886459845Z   constraint: undefined,
+2025-12-20T02:35:18.886463335Z   file: 'execMain.c',
+2025-12-20T02:35:18.886466855Z   line: '1981',
+2025-12-20T02:35:18.886470405Z   routine: 'ExecConstraints'
+2025-12-20T02:35:18.886473985Z }
+2025-12-20T02:35:19.115520448Z Update unit error: error: null value in column "unit_identity" of relation "units" violates not-null constraint
+2025-12-20T02:35:19.115560549Z     at /opt/render/project/src/node_modules/pg-pool/index.js:45:11
+2025-12-20T02:35:19.115564379Z     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2025-12-20T02:35:19.115566299Z     at async Module.upsertUnitPresence (file:///opt/render/project/src/src/db/index.js:388:18)
+2025-12-20T02:35:19.115568139Z     at async Module.upsertUnit (file:///opt/render/project/src/src/services/dispatchService.js:8:16)
+2025-12-20T02:35:19.115569899Z     at async updateUnit (file:///opt/render/project/src/src/controllers/dispatchController.js:19:18) {
+2025-12-20T02:35:19.115571689Z   length: 275,
+2025-12-20T02:35:19.115574009Z   severity: 'ERROR',
+2025-12-20T02:35:19.115575669Z   code: '23502',
+2025-12-20T02:35:19.11557736Z   detail: 'Failing row contains (1494, null, DISPATCH, transmitting, 2025-12-20 02:35:19.110551, null, f).',
+2025-12-20T02:35:19.115579089Z   hint: undefined,
+2025-12-20T02:35:19.115580729Z   position: undefined,
+2025-12-20T02:35:19.115583009Z   internalPosition: undefined,
+2025-12-20T02:35:19.11558467Z   internalQuery: undefined,
+2025-12-20T02:35:19.11558635Z   where: undefined,
+2025-12-20T02:35:19.11558807Z   schema: 'public',
+2025-12-20T02:35:19.11558973Z   table: 'units',
+2025-12-20T02:35:19.11559139Z   column: 'unit_identity',
+2025-12-20T02:35:19.11559338Z   dataType: undefined,
+2025-12-20T02:35:19.11559504Z   constraint: undefined,
+2025-12-20T02:35:19.11559669Z   file: 'execMain.c',
+2025-12-20T02:35:19.11560062Z   line: '1981',
+2025-12-20T02:35:19.11560248Z   routine: 'ExecConstraints'
+2025-12-20T02:35:19.11560421Z }
+2025-12-20T02:35:25.995762189Z Update unit error: error: null value in column "unit_identity" of relation "units" violates not-null constraint
+2025-12-20T02:35:25.995786779Z     at /opt/render/project/src/node_modules/pg-pool/index.js:45:11
+2025-12-20T02:35:25.99579125Z     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2025-12-20T02:35:25.99579522Z     at async Module.upsertUnitPresence (file:///opt/render/project/src/src/db/index.js:388:18)
+2025-12-20T02:35:25.99579934Z     at async Module.upsertUnit (file:///opt/render/project/src/src/services/dispatchService.js:8:16)
+2025-12-20T02:35:25.99580347Z     at async updateUnit (file:///opt/render/project/src/src/controllers/dispatchController.js:19:18) {
+2025-12-20T02:35:25.9958073Z   length: 275,
+2025-12-20T02:35:25.9958119Z   severity: 'ERROR',
+2025-12-20T02:35:25.99581558Z   code: '23502',
+2025-12-20T02:35:25.99581968Z   detail: 'Failing row contains (1495, null, DISPATCH, transmitting, 2025-12-20 02:35:25.990242, null, f).',
+2025-12-20T02:35:25.99582341Z   hint: undefined,
+2025-12-20T02:35:25.99582728Z   position: undefined,
+2025-12-20T02:35:25.99583145Z   internalPosition: undefined,
+2025-12-20T02:35:25.995835391Z   internalQuery: undefined,
+2025-12-20T02:35:25.995839331Z   where: undefined,
+2025-12-20T02:35:25.99584302Z   schema: 'public',
+2025-12-20T02:35:25.995846721Z   table: 'units',
+2025-12-20T02:35:25.995850411Z   column: 'unit_identity',
+2025-12-20T02:35:25.995854141Z   dataType: undefined,
+2025-12-20T02:35:25.995857941Z   constraint: undefined,
+2025-12-20T02:35:25.995861701Z   file: 'execMain.c',
+2025-12-20T02:35:25.995865431Z   line: '1981',
+2025-12-20T02:35:25.995869261Z   routine: 'ExecConstraints'
+2025-12-20T02:35:25.995875841Z }
+2025-12-20T02:35:26.696541341Z Update unit error: error: null value in column "unit_identity" of relation "units" violates not-null constraint
+2025-12-20T02:35:26.696572211Z     at /opt/render/project/src/node_modules/pg-pool/index.js:45:11
+2025-12-20T02:35:26.696592811Z     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2025-12-20T02:35:26.696596261Z     at async Module.upsertUnitPresence (file:///opt/render/project/src/src/db/index.js:388:18)
+2025-12-20T02:35:26.696599722Z     at async Module.upsertUnit (file:///opt/render/project/src/src/services/dispatchService.js:8:16)
+2025-12-20T02:35:26.696602622Z     at async updateUnit (file:///opt/render/project/src/src/controllers/dispatchController.js:19:18) {
+2025-12-20T02:35:26.696605851Z   length: 267,
+2025-12-20T02:35:26.696609632Z   severity: 'ERROR',
+2025-12-20T02:35:26.696612462Z   code: '23502',
+2025-12-20T02:35:26.696615242Z   detail: 'Failing row contains (1496, null, DISPATCH, idle, 2025-12-20 02:35:26.691178, null, f).',
+2025-12-20T02:35:26.696618062Z   hint: undefined,
+2025-12-20T02:35:26.696620582Z   position: undefined,
+2025-12-20T02:35:26.696623712Z   internalPosition: undefined,
+2025-12-20T02:35:26.696626602Z   internalQuery: undefined,
+2025-12-20T02:35:26.696629202Z   where: undefined,
+2025-12-20T02:35:26.696631882Z   schema: 'public',
+2025-12-20T02:35:26.696634362Z   table: 'units',
+2025-12-20T02:35:26.696637262Z   column: 'unit_identity',
+2025-12-20T02:35:26.696639942Z   dataType: undefined,
+2025-12-20T02:35:26.696642502Z   constraint: undefined,
+2025-12-20T02:35:26.696645472Z   file: 'execMain.c',
+2025-12-20T02:35:26.696647862Z   line: '1981',
+2025-12-20T02:35:26.696650252Z   routine: 'ExecConstraints'
+2025-12-20T02:35:26.696652662Z }
+2025-12-20T02:35:26Z clientIP="34.41.160.123" requestID="ba71442e-d56c-4bea" responseTimeMS=27 responseBytes=362 userAgent="node"
+2025-12-20T02:35:31Z clientIP="34.41.160.123" requestID="58a68b3f-0a58-40e7" responseTimeMS=26 responseBytes=497 userAgent="node"

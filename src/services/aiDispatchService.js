@@ -836,7 +836,18 @@ class AIDispatcher {
 
   handleDataMessage(data, participant) {
     try {
-      const message = JSON.parse(data.toString());
+      let jsonStr;
+      if (data instanceof Uint8Array || Buffer.isBuffer(data)) {
+        jsonStr = new TextDecoder().decode(data);
+      } else if (typeof data === 'string') {
+        jsonStr = data;
+      } else {
+        jsonStr = data.toString();
+      }
+      
+      this.log('DATA_MESSAGE_RAW', { raw: jsonStr.substring(0, 200), participant: participant?.identity });
+      
+      const message = JSON.parse(jsonStr);
       
       if (message.type === 'emergency' && message.active === true) {
         const unitId = participant.identity;
