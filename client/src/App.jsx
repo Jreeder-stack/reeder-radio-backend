@@ -947,39 +947,50 @@ export default function App({ user, onLogout }) {
     audio.play();
   };
 
+  const playEmergencyAlertSound = () => {
+    try {
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      
+      const playTone = (startTime, frequency, duration) => {
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.type = 'square';
+        oscillator.frequency.setValueAtTime(frequency, startTime);
+        
+        gainNode.gain.setValueAtTime(0.6, startTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
+        
+        oscillator.start(startTime);
+        oscillator.stop(startTime + duration);
+      };
+      
+      const now = audioContext.currentTime;
+      playTone(now, 1800, 0.1);
+      playTone(now + 0.12, 2200, 0.1);
+      playTone(now + 0.24, 1800, 0.1);
+      
+      setTimeout(() => audioContext.close(), 500);
+    } catch (e) {
+      console.error('Failed to play emergency alert sound:', e);
+    }
+  };
+
   const triggerEmergency = async () => {
     const room = getCurrentRoom();
     if (!room || isEmergency) return;
     
     setIsEmergency(true);
-    setEmergencyLockRemaining(10);
+    isEmergencyRef.current = true;
     
-    rxAudioElementsRef.current.forEach(el => {
-      el.muted = true;
-    });
+    playEmergencyAlertSound();
     
     broadcastEmergency(transmitChannel, true);
     broadcastStatus("emergency", transmitChannel);
     updateUnitPresence(transmitChannel, identity, "emergency", Date.now());
-    
-    await startPTT();
-    
-    let remaining = 10;
-    emergencyTimerRef.current = setInterval(() => {
-      remaining -= 1;
-      setEmergencyLockRemaining(remaining);
-      
-      if (remaining <= 0) {
-        clearInterval(emergencyTimerRef.current);
-        emergencyTimerRef.current = null;
-        stopPTT();
-        setIsEmergency(false);
-        setEmergencyLockRemaining(0);
-        rxAudioElementsRef.current.forEach(el => {
-          el.muted = false;
-        });
-      }
-    }, 1000);
   };
 
   const cancelEmergency = async () => {
@@ -997,11 +1008,12 @@ export default function App({ user, onLogout }) {
       emergencyResponseTimeoutRef.current = null;
     }
     setEmergencyResponseWindow(false);
+    emergencyResponseWindowRef.current = false;
     emergencyPausedForAIRef.current = false;
     
     await stopPTT();
     setIsEmergency(false);
-    setEmergencyLockRemaining(0);
+    isEmergencyRef.current = false;
     
     rxAudioElementsRef.current.forEach(el => {
       el.muted = false;
@@ -1396,7 +1408,7 @@ export default function App({ user, onLogout }) {
               border: "2px solid #dc2626",
               flexShrink: 0,
             }}>
-              <div style={{ fontSize: 14, fontWeight: "bold" }}>EMERGENCY - {emergencyLockRemaining}s</div>
+              <div style={{ fontSize: 14, fontWeight: "bold" }}>EMERGENCY ACTIVE</div>
               <button
                 onClick={cancelEmergency}
                 style={{ marginTop: 6, padding: "4px 12px", backgroundColor: theme.textMuted, color: theme.text, border: "none", borderRadius: 4, fontSize: 11 }}
