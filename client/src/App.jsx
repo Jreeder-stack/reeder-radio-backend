@@ -213,6 +213,12 @@ export default function App({ user, onLogout }) {
   const isEmergencyRef = useRef(false);
   const rxAudioElementsRef = useRef(new Set());
   const transmitChannelRef = useRef("");
+  const aiPlaybackActiveRef = useRef(false);
+  const emergencyPausedForAIRef = useRef(false);
+  const emergencyRemainingWhenPausedRef = useRef(0);
+  const [emergencyResponseWindow, setEmergencyResponseWindow] = useState(false);
+  const emergencyResponseTimeoutRef = useRef(null);
+  const emergencyResponseWindowRef = useRef(false);
   const [userLocation, setUserLocation] = useState(null);
   const [pttState, setPttState] = useState(PTT_STATES.IDLE);
 
@@ -331,12 +337,24 @@ export default function App({ user, onLogout }) {
           }
         } else if (message.type === "emergency_ack") {
           if (message.targetUnit === identity) {
+            console.log('[Radio] Emergency ACK received - clearing emergency state');
             setIsEmergency(false);
             if (emergencyTimerRef.current) {
               clearInterval(emergencyTimerRef.current);
               emergencyTimerRef.current = null;
             }
+            if (emergencyResponseTimeoutRef.current) {
+              clearTimeout(emergencyResponseTimeoutRef.current);
+              emergencyResponseTimeoutRef.current = null;
+            }
             setEmergencyLockRemaining(0);
+            setEmergencyResponseWindow(false);
+            emergencyPausedForAIRef.current = false;
+            
+            // Unmute receive audio
+            rxAudioElementsRef.current.forEach(el => {
+              el.muted = false;
+            });
           }
           setActiveEmergencies((prev) => {
             const updated = { ...prev };
@@ -360,6 +378,58 @@ export default function App({ user, onLogout }) {
               },
             };
           });
+        } else if (message.type === "ai-playback-start") {
+          console.log('[Radio] AI playback starting - pausing emergency if active');
+          aiPlaybackActiveRef.current = true;
+          
+          // Clear any existing response timeout
+          if (emergencyResponseTimeoutRef.current) {
+            clearTimeout(emergencyResponseTimeoutRef.current);
+            emergencyResponseTimeoutRef.current = null;
+          }
+          setEmergencyResponseWindow(false);
+          
+          // If in emergency mode, pause to let AI speak
+          if (isEmergencyRef.current) {
+            console.log('[Radio] Pausing emergency PTT for AI playback');
+            emergencyPausedForAIRef.current = true;
+            
+            // Stop the emergency timer
+            if (emergencyTimerRef.current) {
+              clearInterval(emergencyTimerRef.current);
+              emergencyTimerRef.current = null;
+            }
+            
+            // Stop PTT to let AI be heard
+            micPTTManager.forceRelease();
+            
+            // Unmute receive audio
+            rxAudioElementsRef.current.forEach(el => {
+              el.muted = false;
+            });
+          }
+        } else if (message.type === "ai-playback-end") {
+          console.log('[Radio] AI playback ended');
+          aiPlaybackActiveRef.current = false;
+          
+          // If we paused emergency for AI, open a response window
+          if (emergencyPausedForAIRef.current && isEmergencyRef.current) {
+            console.log('[Radio] Opening 5-second response window after AI playback');
+            emergencyPausedForAIRef.current = false;
+            
+            // Open response window - allows manual PTT during emergency
+            setEmergencyResponseWindow(true);
+            
+            // Close response window after 5 seconds and wait for next AI check
+            // (Emergency remains active - AI will do another status check if no response)
+            emergencyResponseTimeoutRef.current = setTimeout(() => {
+              console.log('[Radio] Response window closed, emergency remains active');
+              setEmergencyResponseWindow(false);
+              emergencyResponseTimeoutRef.current = null;
+              // Don't restart hot mic - just wait for next AI status check
+              // The AI escalation controller will repeat or escalate as needed
+            }, 5000);
+          }
         }
       })
     );
@@ -410,6 +480,10 @@ export default function App({ user, onLogout }) {
   useEffect(() => {
     isEmergencyRef.current = isEmergency;
   }, [isEmergency]);
+
+  useEffect(() => {
+    emergencyResponseWindowRef.current = emergencyResponseWindow;
+  }, [emergencyResponseWindow]);
 
   useEffect(() => {
     micPTTManager.onStateChange = (newState) => {
@@ -760,6 +834,12 @@ export default function App({ user, onLogout }) {
   const handlePTTDown = useCallback(async (e) => {
     if (e && e.type === 'keydown' && e.repeat) return;
     
+    // Block PTT during emergency UNLESS in response window (using refs for proper closure)
+    if (isEmergencyRef.current && !emergencyResponseWindowRef.current) {
+      console.log('[Radio PTT] Blocked - emergency active, not in response window');
+      return;
+    }
+    
     unlockAudio();
     recordActivity();
     
@@ -799,6 +879,10 @@ export default function App({ user, onLogout }) {
         if (tagName === 'input' || tagName === 'textarea' || e.target?.isContentEditable) {
           return;
         }
+        // Block PTT during emergency UNLESS in response window
+        if (isEmergencyRef.current && !emergencyResponseWindowRef.current) {
+          return;
+        }
         e.preventDefault();
         handlePTTDown(e);
       }
@@ -828,11 +912,12 @@ export default function App({ user, onLogout }) {
     e.preventDefault();
     e.stopPropagation();
     if (!e.isTrusted) return;
-    if (isEmergency) return;
+    // Block PTT during emergency UNLESS in response window (waiting for user to respond to AI)
+    if (isEmergency && !emergencyResponseWindow) return;
     
     setPttPressed(true);
     handlePTTDown(e);
-  }, [isEmergency, handlePTTDown]);
+  }, [isEmergency, emergencyResponseWindow, handlePTTDown]);
 
   const handleTouchEnd = useCallback((e) => {
     e.preventDefault();
@@ -842,11 +927,12 @@ export default function App({ user, onLogout }) {
 
   const handleMouseDown = useCallback((e) => {
     if (!e.isTrusted) return;
-    if (isEmergency) return;
+    // Block PTT during emergency UNLESS in response window (waiting for user to respond to AI)
+    if (isEmergency && !emergencyResponseWindow) return;
     
     setPttPressed(true);
     handlePTTDown(e);
-  }, [isEmergency, handlePTTDown]);
+  }, [isEmergency, emergencyResponseWindow, handlePTTDown]);
 
   const playLastRx = () => {
     if (!lastRxBlob) return;
@@ -904,6 +990,14 @@ export default function App({ user, onLogout }) {
       clearInterval(emergencyTimerRef.current);
       emergencyTimerRef.current = null;
     }
+    
+    // Clear response window state
+    if (emergencyResponseTimeoutRef.current) {
+      clearTimeout(emergencyResponseTimeoutRef.current);
+      emergencyResponseTimeoutRef.current = null;
+    }
+    setEmergencyResponseWindow(false);
+    emergencyPausedForAIRef.current = false;
     
     await stopPTT();
     setIsEmergency(false);

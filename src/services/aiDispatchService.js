@@ -107,7 +107,35 @@ class EmergencyEscalationController {
     
     await this.sendCadBroadcast(unitId, `EMERGENCY: ${unitId} pressed emergency key with NO RESPONSE`, 'emergency');
 
+    // Notify the unit to clear their local emergency state
+    await this.sendEmergencyAck(unitId, 'escalation_complete');
+    
     this.clearEscalation(unitId);
+  }
+  
+  async sendEmergencyAck(targetUnit, reason) {
+    const escalation = this.activeEscalations.get(targetUnit);
+    if (!escalation) return;
+    
+    // Ensure room is connected before sending
+    if (!this.dispatcher.room || !this.dispatcher.room.localParticipant) {
+      this.log('EMERGENCY_ACK_SKIPPED', { targetUnit, reason: 'Room not connected' });
+      return;
+    }
+    
+    try {
+      const data = new TextEncoder().encode(JSON.stringify({
+        type: 'emergency_ack',
+        targetUnit,
+        channel: escalation.channel,
+        timestamp: Date.now(),
+        reason
+      }));
+      await this.dispatcher.room.localParticipant.publishData(data, { reliable: true });
+      this.log('EMERGENCY_ACK_SENT', { targetUnit, reason });
+    } catch (error) {
+      this.log('EMERGENCY_ACK_ERROR', { error: error.message });
+    }
   }
 
   async sendCadBroadcast(unitId, message, priority) {
@@ -134,6 +162,9 @@ class EmergencyEscalationController {
     this.log('UNIT_RESPONDED', { unitId, responseType, details });
 
     if (responseType === 'OK') {
+      // Notify the unit to clear their local emergency state
+      await this.sendEmergencyAck(unitId, 'acknowledged');
+      
       this.clearEscalation(unitId);
       return {
         response: `${unitId}, copy. Clear emergency.`,
@@ -807,6 +838,17 @@ class AIDispatcher {
     return Buffer.from(samples.buffer);
   }
 
+  async sendDataMessage(messageObj) {
+    if (!this.room) return;
+    try {
+      const data = new TextEncoder().encode(JSON.stringify(messageObj));
+      await this.room.localParticipant.publishData(data, { reliable: true });
+      this.log('DATA_MESSAGE_SENT', messageObj);
+    } catch (error) {
+      this.log('DATA_MESSAGE_SEND_ERROR', { error: error.message });
+    }
+  }
+
   async playToneAndSpeak(toneType, message) {
     if (!this.room || !this.isRunning) {
       this.log('TONE_SPEAK_SKIPPED', { reason: 'Not connected or not running' });
@@ -816,6 +858,12 @@ class AIDispatcher {
     this.log('TONE_SPEAK_START', { toneType, message });
 
     try {
+      // Signal clients to release PTT so they can hear the AI
+      await this.sendDataMessage({ type: 'ai-playback-start' });
+      
+      // Small delay to let clients process the signal
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
       const toneDuration = toneType === 'CONTINUOUS' ? 3000 : 2500;
       const toneAudio = this.generateTone(toneType, toneDuration);
       
@@ -828,9 +876,17 @@ class AIDispatcher {
         await this.publishAudio(speechAudio, this.room, this.roomName);
       }
       
+      // Small delay after audio completes
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      // Signal clients that AI playback is done
+      await this.sendDataMessage({ type: 'ai-playback-end' });
+      
       this.log('TONE_SPEAK_COMPLETE', { toneType, message });
     } catch (error) {
       this.log('TONE_SPEAK_ERROR', { error: error.message });
+      // Still send end signal on error
+      await this.sendDataMessage({ type: 'ai-playback-end' });
     }
   }
 
