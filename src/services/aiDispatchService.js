@@ -451,6 +451,9 @@ class AIDispatcher {
     let frameCount = 0;
     const MIN_AUDIO_BYTES = LIVEKIT_SAMPLE_RATE * 2 * 0.5;
     let trackEnded = false;
+    let lastFrameTime = Date.now();
+    const IDLE_TIMEOUT_MS = 1500;
+    let idleTimeoutTriggered = false;
 
     const trackEndPromise = new Promise((resolve) => {
       const onTrackUnsubscribed = (unsubTrack, publication, participant) => {
@@ -467,6 +470,27 @@ class AIDispatcher {
       room.on(RoomEvent.TrackUnsubscribed, onTrackUnsubscribed);
     });
 
+    const idleTimeoutPromise = new Promise((resolve) => {
+      const checkIdle = setInterval(() => {
+        if (trackEnded || idleTimeoutTriggered) {
+          clearInterval(checkIdle);
+          return;
+        }
+        const timeSinceLastFrame = Date.now() - lastFrameTime;
+        if (frameCount > 0 && timeSinceLastFrame > IDLE_TIMEOUT_MS) {
+          this.log('AUDIO_IDLE_TIMEOUT', { 
+            participant: participantId,
+            timeSinceLastFrame,
+            frameCount
+          });
+          idleTimeoutTriggered = true;
+          trackEnded = true;
+          clearInterval(checkIdle);
+          resolve();
+        }
+      }, 200);
+    });
+
     const audioStream = new AudioStream(track, LIVEKIT_SAMPLE_RATE, CHANNELS);
     this.log('AUDIO_BUFFERING_START', { participant: participantId, room: roomName });
 
@@ -478,13 +502,14 @@ class AIDispatcher {
           }
           chunks.push(Buffer.from(frame.data.buffer));
           frameCount++;
+          lastFrameTime = Date.now();
         }
       } catch (error) {
         this.log('AUDIO_STREAM_ERROR', { error: error.message });
       }
     };
 
-    await Promise.race([bufferAudio(), trackEndPromise]);
+    await Promise.race([bufferAudio(), trackEndPromise, idleTimeoutPromise]);
 
     if (!this.isRunning) {
       this.log('AUDIO_DISCARDED', { reason: 'Dispatcher stopped during buffering' });
