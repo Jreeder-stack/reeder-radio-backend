@@ -29,6 +29,7 @@ Not specified.
   - **CAD Integration:** Automatic status updates, broadcast messages, vehicle/person/warrant queries via external CAD API
   - Safety guards prevent unintended transmissions and errors. Time format uses 24-hour with colon (e.g., "15:46 hours").
 - **Cost Optimization:** LiveKit connections are optimized by connecting units only to active/selected channels (or scanned channels). An idle timeout feature disconnects users from rooms after inactivity, with automatic re-connection on activity.
+- **PTT Release Reliability:** The AI Dispatcher includes a 1.5-second audio idle timeout safeguard. If no audio frames arrive for 1.5 seconds after transmission starts, the buffered audio is automatically processed. This ensures the AI responds even if the client fails to properly signal end-of-transmission.
 
 ### Feature Specifications
 - **Core PTT:** Unit ID-based authentication and Push-to-Talk audio transmission.
