@@ -24,4 +24,6 @@ router.patch('/patches/:id', dispatchController.updatePatch);
 
 router.get('/events', dispatchController.getEvents);
 
+router.post('/notify-join', dispatchController.notifyJoin);
+
 export default router;

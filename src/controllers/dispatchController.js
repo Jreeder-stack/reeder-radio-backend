@@ -1,5 +1,7 @@
 import * as dispatchService from '../services/dispatchService.js';
 import { success, error, created } from '../utils/response.js';
+import { getDispatcher, startDispatcher } from '../services/aiDispatchService.js';
+import { isAiDispatchEnabled, getAiDispatchChannel } from '../db/index.js';
 
 export async function getUnits(req, res) {
   try {
@@ -158,5 +160,63 @@ export async function getEvents(req, res) {
   } catch (err) {
     console.error('Get radio events error:', err);
     error(res, 'Failed to get radio events', 500);
+  }
+}
+
+export async function notifyJoin(req, res) {
+  try {
+    const { channel, identity } = req.body;
+    
+    if (!channel || !identity) {
+      return error(res, 'Channel and identity required', 400);
+    }
+    
+    const enabled = await isAiDispatchEnabled();
+    if (!enabled) {
+      return success(res, { 
+        triggered: false, 
+        reason: 'AI Dispatch is disabled' 
+      });
+    }
+    
+    const configuredChannel = await getAiDispatchChannel();
+    
+    if (configuredChannel !== channel) {
+      return success(res, { 
+        triggered: false, 
+        reason: `Channel ${channel} is not the configured dispatch channel (${configuredChannel})` 
+      });
+    }
+    
+    console.log(`[AI-Dispatcher] Notify join received: ${identity} on ${channel}`);
+    
+    const dispatcher = getDispatcher();
+    
+    if (dispatcher && dispatcher.room) {
+      return success(res, { 
+        triggered: false, 
+        reason: 'AI Dispatcher is already connected',
+        channel 
+      });
+    }
+    
+    if (dispatcher && dispatcher.isRunning) {
+      await dispatcher.rejoinIfNeeded();
+      return success(res, { 
+        triggered: true, 
+        channel,
+        message: 'AI Dispatcher rejoin triggered' 
+      });
+    }
+    
+    await startDispatcher(channel);
+    success(res, { 
+      triggered: true, 
+      channel,
+      message: 'AI Dispatcher started' 
+    });
+  } catch (err) {
+    console.error('Notify join error:', err);
+    error(res, 'Failed to process notify join', 500);
   }
 }
