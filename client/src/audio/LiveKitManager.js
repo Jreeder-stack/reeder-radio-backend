@@ -1,5 +1,5 @@
 import { Room, RoomEvent, Track, DataPacket_Kind } from 'livekit-client';
-import { getToken } from '../utils/api.js';
+import { getToken, notifyChannelJoin } from '../utils/api.js';
 import { micPTTManager, PTT_STATES } from './MicPTTManager.js';
 
 const LIVEKIT_URL = import.meta.env.VITE_LIVEKIT_URL;
@@ -411,6 +411,8 @@ class LiveKitManager {
       
       this.rooms.set(channelName, room);
       console.log(`[LiveKit] Connected to ${channelName}`);
+      
+      notifyChannelJoin(channelName, identity);
       
       this._emitConnectionStateChange(channelName, 'connected');
 

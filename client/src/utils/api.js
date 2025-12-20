@@ -113,3 +113,14 @@ export async function getToken(identity, room) {
   const data = await response.json();
   return data.token;
 }
+
+export async function notifyChannelJoin(channel, identity) {
+  try {
+    await fetchAPI('/notify-join', {
+      method: 'POST',
+      body: JSON.stringify({ channel, identity }),
+    });
+  } catch (error) {
+    console.warn('[API] Failed to notify channel join:', error.message);
+  }
+}
