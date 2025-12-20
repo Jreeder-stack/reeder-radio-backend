@@ -220,3 +220,50 @@ export async function notifyJoin(req, res) {
     error(res, 'Failed to process notify join', 500);
   }
 }
+
+export async function notifyEmergency(req, res) {
+  try {
+    const { channel, identity, active } = req.body;
+    
+    if (!channel || !identity) {
+      return error(res, 'Channel and identity required', 400);
+    }
+    
+    console.log(`[AI-Dispatcher] Emergency notification: ${identity} on ${channel}, active: ${active}`);
+    
+    const enabled = await isAiDispatchEnabled();
+    if (!enabled) {
+      return success(res, { 
+        triggered: false, 
+        reason: 'AI Dispatch is disabled' 
+      });
+    }
+    
+    const dispatcher = getDispatcher();
+    
+    if (!dispatcher || !dispatcher.room) {
+      console.log('[AI-Dispatcher] Dispatcher not connected, starting...');
+      await startDispatcher(channel);
+    }
+    
+    const activeDispatcher = getDispatcher();
+    
+    if (activeDispatcher && activeDispatcher.aiService && active) {
+      activeDispatcher.aiService.handleEmergencySignal(identity, channel);
+      return success(res, { 
+        triggered: true, 
+        channel,
+        message: 'Emergency escalation started' 
+      });
+    }
+    
+    success(res, { 
+      triggered: false, 
+      reason: 'AI Dispatcher not available or emergency cancelled',
+      channel 
+    });
+  } catch (err) {
+    console.error('Notify emergency error:', err);
+    error(res, 'Failed to process emergency notification', 500);
+  }
+}
