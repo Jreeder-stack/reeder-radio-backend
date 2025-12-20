@@ -34,7 +34,13 @@ Not specified.
 - **Core PTT:** Unit ID-based authentication and Push-to-Talk audio transmission.
 - **Talkgroup System:** Organized into zones (Operations, Fire, Secure Command) with channel switching and scan mode capabilities.
 - **Unit Presence:** Real-time unit status (idle, transmitting, emergency) with visual indicators and last transmission timestamps, synced via LiveKit data channels.
-- **Emergency Button (E-Button):** Activates a 10-second transmit lock, broadcasts an emergency flag, displays flashing alarms, and allows acknowledgment/cancellation by dispatchers/units.
+- **Emergency Button (E-Button):** Activates a 10-second transmit lock, broadcasts an emergency flag, displays flashing alarms, and allows acknowledgment/cancellation by dispatchers/units. 
+- **AI-Powered Emergency Escalation:** When a unit presses the emergency button, the AI Dispatcher automatically initiates a 2-attempt status check flow:
+  1. Plays Alert A tone (1200Hz) + "Unit, status check" message
+  2. Waits 5 seconds for response
+  3. If no response, repeats once more
+  4. If still no response, plays Continuous alert tone + broadcasts "no response" message to all units and CAD
+  5. Unit can respond with "10-4"/"I'm OK" to clear emergency, or distress phrases ("shots fired", "needs backup") to trigger emergency broadcast
 - **Dispatcher Console:** A dedicated interface for multi-channel monitoring, unit lists, per-channel audio controls (mute, level meters, TX selector), last transmission recall, emergency acknowledgment, and channel patching. Supports multi-channel TX and tone broadcasting.
 - **Admin System:** Dashboard for user management (roles, blocking, dispatcher access), channel management (enable/disable), and activity logging.
 
