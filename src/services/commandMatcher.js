@@ -414,6 +414,36 @@ const EMERGENCY_COMMANDS = [
 
 const CANCEL_PHRASES = ['cancel', 'never mind', 'nevermind', 'disregard', 'negative', 'scratch that'];
 
+const EMERGENCY_OK_PHRASES = [
+  '10-4', 'ten four', 'ten-four',
+  "i'm 10-4", 'im 10-4', "i am 10-4",
+  "i'm okay", 'im okay', "i am okay",
+  "i'm ok", 'im ok', "i am ok",
+  "i'm fine", 'im fine', "i am fine",
+  "i'm good", 'im good', "i am good",
+  'all good', 'all clear', 'code 4', 'code four'
+];
+
+const EMERGENCY_DISTRESS_PHRASES = [
+  { phrase: 'needs assistance', distressType: 'requesting assistance' },
+  { phrase: 'need assistance', distressType: 'requesting assistance' },
+  { phrase: 'requesting assistance', distressType: 'requesting assistance' },
+  { phrase: 'need backup', distressType: 'requesting backup' },
+  { phrase: 'needs backup', distressType: 'requesting backup' },
+  { phrase: 'requesting backup', distressType: 'requesting backup' },
+  { phrase: 'shots fired', distressType: 'reporting shots fired' },
+  { phrase: 'shot fired', distressType: 'reporting shots fired' },
+  { phrase: 'officer down', distressType: 'reporting officer down' },
+  { phrase: 'officer needs help', distressType: 'requesting emergency backup' },
+  { phrase: 'under fire', distressType: 'under fire' },
+  { phrase: 'taking fire', distressType: 'taking fire' },
+  { phrase: 'hostile', distressType: 'reporting hostile subject' },
+  { phrase: 'weapon', distressType: 'reporting armed subject' },
+  { phrase: 'armed subject', distressType: 'reporting armed subject' },
+  { phrase: 'help', distressType: 'requesting immediate assistance' },
+  { phrase: 'ambush', distressType: 'reporting ambush' }
+];
+
 let signal100Active = false;
 let signal100Unit = null;
 let signal100Timeout = null;
@@ -448,6 +478,24 @@ function containsWakePhrase(transcript) {
 function containsCancelPhrase(transcript) {
   const normalized = normalizeText(transcript);
   return CANCEL_PHRASES.some(phrase => normalized.includes(phrase));
+}
+
+export function matchEmergencyResponse(transcript) {
+  const normalized = normalizeText(transcript);
+  
+  for (const phrase of EMERGENCY_OK_PHRASES) {
+    if (normalized.includes(phrase)) {
+      return { type: 'OK' };
+    }
+  }
+  
+  for (const distress of EMERGENCY_DISTRESS_PHRASES) {
+    if (normalized.includes(distress.phrase)) {
+      return { type: 'DISTRESS', distressType: distress.distressType };
+    }
+  }
+  
+  return null;
 }
 
 function extractPlate(transcript) {
