@@ -666,6 +666,8 @@ export function matchCommand(transcript, participantId = null) {
   const unitId = participantId || 'Unknown Unit';
   const session = getUnitSession(unitId);
   const normalized = normalizeText(transcript);
+  
+  console.log(`[CommandMatcher] Unit: ${unitId}, State: ${session.state}, Transcript: "${transcript}"`);
 
   if (containsCancelPhrase(transcript)) {
     resetUnitSession(unitId);
