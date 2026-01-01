@@ -58,6 +58,40 @@ const SPOKEN_NUMBERS = {
   'ninety': 90
 };
 
+const SPOKEN_ORDINALS = {
+  'first': 1, '1st': 1,
+  'second': 2, '2nd': 2,
+  'third': 3, '3rd': 3,
+  'fourth': 4, '4th': 4,
+  'fifth': 5, '5th': 5,
+  'sixth': 6, '6th': 6,
+  'seventh': 7, '7th': 7,
+  'eighth': 8, '8th': 8,
+  'ninth': 9, '9th': 9,
+  'tenth': 10, '10th': 10,
+  'eleventh': 11, '11th': 11,
+  'twelfth': 12, '12th': 12,
+  'thirteenth': 13, '13th': 13,
+  'fourteenth': 14, '14th': 14,
+  'fifteenth': 15, '15th': 15,
+  'sixteenth': 16, '16th': 16,
+  'seventeenth': 17, '17th': 17,
+  'eighteenth': 18, '18th': 18,
+  'nineteenth': 19, '19th': 19,
+  'twentieth': 20, '20th': 20,
+  'twenty-first': 21, 'twentyfirst': 21, '21st': 21,
+  'twenty-second': 22, 'twentysecond': 22, '22nd': 22,
+  'twenty-third': 23, 'twentythird': 23, '23rd': 23,
+  'twenty-fourth': 24, 'twentyfourth': 24, '24th': 24,
+  'twenty-fifth': 25, 'twentyfifth': 25, '25th': 25,
+  'twenty-sixth': 26, 'twentysixth': 26, '26th': 26,
+  'twenty-seventh': 27, 'twentyseventh': 27, '27th': 27,
+  'twenty-eighth': 28, 'twentyeighth': 28, '28th': 28,
+  'twenty-ninth': 29, 'twentyninth': 29, '29th': 29,
+  'thirtieth': 30, '30th': 30,
+  'thirty-first': 31, 'thirtyfirst': 31, '31st': 31
+};
+
 const SPOKEN_MONTHS = {
   'january': 1, 'jan': 1,
   'february': 2, 'feb': 2,
@@ -81,7 +115,7 @@ export function parseSpokenNumber(text) {
   if (!text) return null;
   
   const cleaned = text.toLowerCase()
-    .replace(/[,\-]/g, ' ')
+    .replace(/[,]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
   
@@ -90,7 +124,33 @@ export function parseSpokenNumber(text) {
     return parseInt(numericMatch[0], 10);
   }
   
-  const words = cleaned.split(/\s+/);
+  if (SPOKEN_ORDINALS[cleaned] !== undefined) {
+    return SPOKEN_ORDINALS[cleaned];
+  }
+  
+  const hyphenated = cleaned.replace(/\s+/g, '-');
+  if (SPOKEN_ORDINALS[hyphenated] !== undefined) {
+    return SPOKEN_ORDINALS[hyphenated];
+  }
+  
+  const words = cleaned.split(/[\s\-]+/);
+  
+  if (words.length === 2) {
+    const first = SPOKEN_NUMBERS[words[0]];
+    const second = SPOKEN_ORDINALS[words[1]];
+    if (first !== undefined && first >= 20 && second !== undefined && second < 10) {
+      return first + second;
+    }
+    
+    const firstNum = SPOKEN_NUMBERS[words[0]];
+    const secondNum = SPOKEN_NUMBERS[words[1]];
+    if (firstNum !== undefined && secondNum !== undefined) {
+      if (firstNum >= 20 && secondNum < 10) {
+        return firstNum + secondNum;
+      }
+    }
+  }
+  
   let result = 0;
   let currentNumber = 0;
   let hasNumber = false;
@@ -104,26 +164,13 @@ export function parseSpokenNumber(text) {
       continue;
     }
     
-    let ordinalBase = cleanWord;
-    for (const suffix of ORDINAL_SUFFIXES) {
-      if (cleanWord.endsWith(suffix)) {
-        ordinalBase = cleanWord.slice(0, -suffix.length);
-        break;
-      }
+    if (SPOKEN_ORDINALS[cleanWord] !== undefined) {
+      currentNumber += SPOKEN_ORDINALS[cleanWord];
+      hasNumber = true;
+      continue;
     }
     
-    if (SPOKEN_NUMBERS[ordinalBase] !== undefined) {
-      const num = SPOKEN_NUMBERS[ordinalBase];
-      if (num >= 100) {
-        if (currentNumber === 0) currentNumber = 1;
-        currentNumber *= num;
-      } else if (num >= 20) {
-        currentNumber += num;
-      } else {
-        currentNumber += num;
-      }
-      hasNumber = true;
-    } else if (SPOKEN_NUMBERS[cleanWord] !== undefined) {
+    if (SPOKEN_NUMBERS[cleanWord] !== undefined) {
       const num = SPOKEN_NUMBERS[cleanWord];
       if (num >= 100) {
         if (currentNumber === 0) currentNumber = 1;
@@ -321,39 +368,43 @@ export function parseDOB(text) {
       }
     }
     
-    const words = rest.split(/\s+/);
+    const words = rest.split(/\s+/).map(w => w.replace(/[,\.]/g, ''));
     let day = null;
     let year = null;
-    let dayIdx = -1;
+    let dayEndIdx = -1;
     
     for (let i = 0; i < words.length; i++) {
-      const word = words[i].replace(/[,\.]/g, '');
+      if (day !== null) break;
       
-      let ordinalBase = word;
-      for (const suffix of ORDINAL_SUFFIXES) {
-        if (word.endsWith(suffix)) {
-          ordinalBase = word.slice(0, -suffix.length);
-          break;
-        }
-      }
+      const word = words[i];
       
       const numMatch = word.match(/^(\d{1,2})(?:st|nd|rd|th)?$/);
-      if (numMatch && day === null) {
+      if (numMatch) {
         day = parseInt(numMatch[1]);
-        dayIdx = i;
+        dayEndIdx = i;
         continue;
       }
       
-      const spokenDay = parseSpokenNumber(ordinalBase);
-      if (spokenDay !== null && spokenDay >= 1 && spokenDay <= 31 && day === null) {
+      if (i + 1 < words.length) {
+        const twoWordPhrase = word + ' ' + words[i + 1];
+        const twoWordDay = parseSpokenNumber(twoWordPhrase);
+        if (twoWordDay !== null && twoWordDay >= 1 && twoWordDay <= 31) {
+          day = twoWordDay;
+          dayEndIdx = i + 1;
+          continue;
+        }
+      }
+      
+      const spokenDay = parseSpokenNumber(word);
+      if (spokenDay !== null && spokenDay >= 1 && spokenDay <= 31) {
         day = spokenDay;
-        dayIdx = i;
+        dayEndIdx = i;
         continue;
       }
     }
     
-    if (day !== null && dayIdx < words.length - 1) {
-      const yearWords = words.slice(dayIdx + 1).join(' ');
+    if (day !== null && dayEndIdx < words.length - 1) {
+      const yearWords = words.slice(dayEndIdx + 1).join(' ');
       year = parseSpokenYear(yearWords);
     }
     
