@@ -57,7 +57,7 @@ const STATUS_COMMANDS = [
     phrases: [
       'on duty', 'on-duty', 'onduty', 'on doody', 'on dudy', 'on duety',
       'in service', 'signed on', 'clocked in', 'starting shift',
-      '10-8', '10 8', 'ten eight', 'ten-eight'
+      '10-8', '10/8', '10 8', 'ten eight', 'ten-eight'
     ], 
     status: 'on duty',
     cadStatus: 'on_duty',
@@ -67,7 +67,7 @@ const STATUS_COMMANDS = [
     phrases: [
       'available', 'avail', 'a vailable', 'clear and available',
       'back in service', 'ready', 'free',
-      '10-8 available', 'ten eight available'
+      '10-8 available', '10/8 available', 'ten eight available'
     ], 
     status: 'available',
     cadStatus: 'available',
@@ -77,7 +77,7 @@ const STATUS_COMMANDS = [
     phrases: [
       'en route', 'enroute', 'on route', 'in route', 'inroute', 'in rout',
       'on my way', 'heading that way', 'rolling',
-      '10-76', '10 76', 'ten seventy six', 'ten-seventy-six', '1076'
+      '10-76', '10/76', '10 76', 'ten seventy six', 'ten-seventy-six', '1076'
     ], 
     status: 'en route',
     cadStatus: 'en_route',
@@ -87,7 +87,7 @@ const STATUS_COMMANDS = [
     phrases: [
       'on scene', 'on seen', 'onscene', 'on-scene', 'on scn', 'on sene', 'at scene',
       'on location', 'onlocation', 'on-location', 'at location', 'arrived',
-      '10-97', '10 97', 'ten ninety seven', 'ten-ninety-seven', '1097'
+      '10-97', '10/97', '10 97', 'ten ninety seven', 'ten-ninety-seven', '1097'
     ], 
     status: 'on scene',
     cadStatus: 'on_scene',
@@ -97,7 +97,7 @@ const STATUS_COMMANDS = [
     phrases: [
       'off duty', 'off-duty', 'offduty', 'off doody', 'off dudy',
       'end of shift', 'signed off', 'clocked out', 'going off duty',
-      '10-7', '10 7', 'ten seven', 'ten-seven', '107'
+      '10-7', '10/7', '10 7', 'ten seven', 'ten-seven', '107'
     ], 
     status: 'off duty',
     cadStatus: 'off_duty',
@@ -108,7 +108,7 @@ const STATUS_COMMANDS = [
       'out of service', 'outta service', 'out of svc', 'out of sirvice',
       'outofservice', 'out-of-service', 'out of service for now',
       'unavailable', 'not available', 'down', 'busy',
-      '10-6', '10 6', 'ten six', 'ten-six', '106'
+      '10-6', '10/6', '10 6', 'ten six', 'ten-six', '106'
     ], 
     status: 'out of service',
     cadStatus: 'out_of_service',
@@ -119,7 +119,7 @@ const STATUS_COMMANDS = [
       'clear', 'clear call', 'clear of call', 'clear the call',
       'i am clear', "i'm clear", 'im clear',
       'done', 'finished',
-      '10-98', '10 98', 'ten ninety eight', 'ten-ninety-eight', '1098'
+      '10-98', '10/98', '10 98', 'ten ninety eight', 'ten-ninety-eight', '1098'
     ], 
     status: 'clear',
     cadStatus: 'available',
@@ -142,7 +142,7 @@ const IMMEDIATE_COMMANDS = [
   },
   {
     intent: 'REQUEST_BACKUP',
-    phrases: ['need backup', 'requesting backup', 'send backup', 'need another unit', 'send another unit', 'request additional unit', 'need assistance', 'requesting assistance', '10-78', 'ten seventy eight'],
+    phrases: ['need backup', 'requesting backup', 'send backup', 'need another unit', 'send another unit', 'request additional unit', 'need assistance', 'requesting assistance', '10-78', '10/78', 'ten seventy eight'],
     response: (unitId) => `${unitId}, copy backup request. Dispatching additional units.`,
     cadAction: 'broadcast',
     cadData: (unitId) => ({ message: `${unitId} requesting backup`, priority: 'high' }),
@@ -150,7 +150,7 @@ const IMMEDIATE_COMMANDS = [
   },
   {
     intent: 'EMERGENCY_BACKUP',
-    phrases: ['officer needs assistance', 'officer down', 'shots fired', 'code 3 backup', 'emergency backup', '10-33', 'ten thirty three'],
+    phrases: ['officer needs assistance', 'officer down', 'shots fired', 'code 3 backup', 'emergency backup', '10-33', '10/33', 'ten thirty three'],
     response: (unitId) => `All units, ${unitId} emergency. All available units respond.`,
     cadAction: 'broadcast',
     cadData: (unitId) => ({ message: `EMERGENCY: ${unitId} needs immediate assistance`, priority: 'emergency' }),
@@ -174,7 +174,7 @@ const IMMEDIATE_COMMANDS = [
   },
   {
     intent: 'AT_HOSPITAL',
-    phrases: ['at hospital', 'arrived hospital', 'at the hospital', 'at er', 'arrived er', 'at the er', '10-85'],
+    phrases: ['at hospital', 'arrived hospital', 'at the hospital', 'at er', 'arrived er', 'at the er', '10-85', '10/85'],
     response: (unitId) => `${unitId}, copy at hospital. ${formatTimestamp()}.`,
     cadAction: 'status',
     cadStatus: 'on_scene',
@@ -198,7 +198,7 @@ const IMMEDIATE_COMMANDS = [
   },
   {
     intent: 'REQUEST_SUPERVISOR',
-    phrases: ['requesting supervisor', 'need a supervisor', 'send a supervisor', 'request supervisor', '10-25', 'ten twenty five'],
+    phrases: ['requesting supervisor', 'need a supervisor', 'send a supervisor', 'request supervisor', '10-25', '10/25', 'ten twenty five'],
     response: (unitId) => `${unitId}, copy supervisor request.`,
     cadAction: 'broadcast',
     cadData: (unitId) => ({ message: `${unitId} requests supervisor`, priority: 'routine' }),
@@ -230,7 +230,7 @@ const IMMEDIATE_COMMANDS = [
   },
   {
     intent: 'FOOT_PURSUIT',
-    phrases: ['foot pursuit', 'on foot', 'subject running', 'in foot pursuit', 'pursuing on foot', '10-80 foot'],
+    phrases: ['foot pursuit', 'on foot', 'subject running', 'in foot pursuit', 'pursuing on foot', '10-80 foot', '10/80 foot'],
     response: (unitId) => `All units, ${unitId} in foot pursuit. Additional units respond.`,
     cadAction: 'broadcast',
     cadData: (unitId) => ({ message: `${unitId} in FOOT PURSUIT`, priority: 'high' }),
@@ -246,7 +246,7 @@ const IMMEDIATE_COMMANDS = [
   },
   {
     intent: 'SUBJECT_IN_CUSTODY',
-    phrases: ['subject in custody', 'one in custody', 'suspect in custody', 'subject detained', '10-15', 'ten fifteen', 'have one'],
+    phrases: ['subject in custody', 'one in custody', 'suspect in custody', 'subject detained', '10-15', '10/15', 'ten fifteen', 'have one'],
     response: (unitId) => `${unitId}, copy one in custody. ${formatTimestamp()}.`,
     cadAction: 'status',
     cadStatus: 'on_scene',
@@ -254,25 +254,25 @@ const IMMEDIATE_COMMANDS = [
   },
   {
     intent: 'NEGATIVE_CONTACT',
-    phrases: ['negative contact', 'no contact', 'unable to locate', 'utl', 'gone on arrival', 'goa', '10-91 negative'],
+    phrases: ['negative contact', 'no contact', 'unable to locate', 'utl', 'gone on arrival', 'goa', '10-91 negative', '10/91 negative'],
     response: (unitId) => `${unitId}, copy negative contact. ${formatTimestamp()}.`,
     isEmergency: false
   },
   {
     intent: 'REPEAT_LAST',
-    phrases: ['say again', 'repeat', 'repeat that', 'did not copy', 'didnt copy', "didn't copy", '10-9', 'ten nine'],
+    phrases: ['say again', 'repeat', 'repeat that', 'did not copy', 'didnt copy', "didn't copy", '10-9', '10/9', 'ten nine'],
     response: (unitId) => `${unitId}, standby.`,
     isEmergency: false
   },
   {
     intent: 'ACKNOWLEDGED',
-    phrases: ['10-4', 'ten four', 'copy', 'copy that', 'roger', 'roger that', 'understood', 'received'],
+    phrases: ['10-4', '10/4', 'ten four', 'copy', 'copy that', 'roger', 'roger that', 'understood', 'received'],
     response: null,
     isEmergency: false
   },
   {
     intent: 'MEAL_BREAK',
-    phrases: ['10-7 meal', 'out for meal', 'code 7', 'taking meal', 'meal break', 'lunch break'],
+    phrases: ['10-7 meal', '10/7 meal', 'out for meal', 'code 7', 'taking meal', 'meal break', 'lunch break'],
     response: (unitId) => `${unitId}, 10-7 meal. ${formatTimestamp()}.`,
     cadAction: 'status',
     cadStatus: 'out_of_service',
@@ -297,7 +297,7 @@ const IMMEDIATE_COMMANDS = [
 const MULTI_STEP_COMMANDS = [
   {
     intent: 'TRAFFIC_STOP',
-    phrases: ['traffic stop', 'traffic', 'out on a stop', 'vehicle stop', 'making a stop', '10-38'],
+    phrases: ['traffic stop', 'traffic', 'out on a stop', 'vehicle stop', 'making a stop', '10-38', '10/38'],
     nextState: DISPATCHER_STATE.AWAITING_LOCATION,
     prompt: (unitId) => `${unitId}, go ahead with location.`,
     slotName: 'location',
@@ -310,7 +310,7 @@ const MULTI_STEP_COMMANDS = [
   },
   {
     intent: 'RUN_PLATE',
-    phrases: ['run a plate', 'run plate', 'plate check', 'registration check', 'run registration', 'check plate', 'run tag', 'check tag', '10-28', 'ten twenty eight'],
+    phrases: ['run a plate', 'run plate', 'plate check', 'registration check', 'run registration', 'check plate', 'run tag', 'check tag', '10-28', '10/28', 'ten twenty eight'],
     nextState: DISPATCHER_STATE.AWAITING_PLATE,
     prompt: (unitId) => `${unitId}, go ahead with plate.`,
     slotName: 'plate',
@@ -339,7 +339,7 @@ const MULTI_STEP_COMMANDS = [
   },
   {
     intent: 'WARRANT_CHECK',
-    phrases: ['warrant check', 'check for warrants', 'wants and warrants', 'run a name', 'check name', '10-29', 'ten twenty nine'],
+    phrases: ['warrant check', 'check for warrants', 'wants and warrants', 'run a name', 'check name', '10-29', '10/29', 'ten twenty nine'],
     nextState: DISPATCHER_STATE.AWAITING_NAME,
     prompt: (unitId) => `${unitId}, go ahead with name.`,
     slotName: 'name',
@@ -382,7 +382,7 @@ const MULTI_STEP_COMMANDS = [
   },
   {
     intent: 'VEHICLE_PURSUIT',
-    phrases: ['vehicle pursuit', 'in pursuit', 'starting pursuit', '10-80', 'ten eighty'],
+    phrases: ['vehicle pursuit', 'in pursuit', 'starting pursuit', '10-80', '10/80', 'ten eighty'],
     nextState: DISPATCHER_STATE.AWAITING_DESCRIPTION,
     prompt: (unitId) => `${unitId}, go ahead with vehicle and direction.`,
     slotName: 'description',
@@ -396,7 +396,7 @@ const MULTI_STEP_COMMANDS = [
   {
     intent: 'PERSON_CHECK',
     phrases: [
-      '10-27', 'ten twenty seven', 'ten-twenty-seven', '1027',
+      '10-27', '10/27', 'ten twenty seven', 'ten-twenty-seven', '1027',
       'records check', 'record check', 'check one by name', 'check by name',
       'can you search', 'search by name', 'search someone', 'run a subject',
       'name and dob', 'name and date of birth', 'subject check'
@@ -432,7 +432,7 @@ const CANCEL_PHRASES = ['cancel', 'never mind', 'nevermind', 'disregard', 'negat
 
 const SECURE_CONFIRM_PHRASES = [
   'yes', 'yeah', 'yep', 'affirmative', 'secure', 'go ahead',
-  '10-4', 'ten four', 'ten-four', 'copy', 'roger'
+  '10-4', '10/4', 'ten four', 'ten-four', 'copy', 'roger'
 ];
 
 const SECURE_DENY_PHRASES = [
@@ -440,8 +440,8 @@ const SECURE_DENY_PHRASES = [
 ];
 
 const EMERGENCY_OK_PHRASES = [
-  '10-4', 'ten four', 'ten-four',
-  "i'm 10-4", 'im 10-4', "i am 10-4",
+  '10-4', '10/4', 'ten four', 'ten-four',
+  "i'm 10-4", "i'm 10/4", 'im 10-4', 'im 10/4', "i am 10-4", "i am 10/4",
   "i'm okay", 'im okay', "i am okay",
   "i'm ok", 'im ok', "i am ok",
   "i'm fine", 'im fine', "i am fine",
