@@ -785,6 +785,26 @@ export function matchCommand(transcript, participantId = null) {
     return null;
   }
 
+  if (session.state === DISPATCHER_STATE.AWAITING_PERSON_DETAILS) {
+    return {
+      response: null,
+      unitId,
+      intent: 'PERSON_CHECK_DETAILS',
+      rawTranscript: transcript,
+      pendingIntent: session.pendingIntent
+    };
+  }
+
+  if (session.state === DISPATCHER_STATE.AWAITING_SECURE_CONFIRM) {
+    return {
+      response: null,
+      unitId,
+      intent: 'SECURE_CONFIRM_RESPONSE',
+      rawTranscript: transcript,
+      slots: session.slots
+    };
+  }
+
   if (session.state === DISPATCHER_STATE.IDLE) {
     if (containsWakePhrase(transcript)) {
       const emergencyCmd = matchEmergencyCommand(transcript);

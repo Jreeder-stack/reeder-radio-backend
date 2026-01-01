@@ -1,7 +1,8 @@
 import { Room, RoomEvent, TrackKind, AudioFrame, AudioSource, LocalAudioTrack, AudioStream, TrackPublishOptions, TrackSource } from '@livekit/rtc-node';
 import { createLiveKitToken, getLiveKitUrl } from '../config/livekit.js';
 import { speechToText, textToSpeech, isConfigured as isAzureConfigured } from './azureSpeechService.js';
-import { matchCommand, resetDispatcherState, matchEmergencyResponse } from './commandMatcher.js';
+import { matchCommand, resetDispatcherState, matchEmergencyResponse, matchSecureConfirmation, getUnitSessionState, setUnitSessionState, DISPATCHER_STATE } from './commandMatcher.js';
+import { parsePersonDetails } from './phoneticParser.js';
 import { isAiDispatchEnabled, getAiDispatchChannel } from '../db/index.js';
 import * as cadService from './cadService.js';
 
@@ -639,6 +640,16 @@ class AIDispatcher {
         return;
       }
 
+      if (commandResult.intent === 'PERSON_CHECK_DETAILS') {
+        await this.handlePersonCheckDetails(participantId, commandResult.rawTranscript, room, roomName);
+        return;
+      }
+
+      if (commandResult.intent === 'SECURE_CONFIRM_RESPONSE') {
+        await this.handleSecureConfirmResponse(participantId, commandResult.rawTranscript, commandResult.slots, room, roomName);
+        return;
+      }
+
       let finalResponse = commandResult.response;
       let finalCadStatus = commandResult.cadStatus;
       let finalCadAction = commandResult.cadAction;
@@ -713,6 +724,143 @@ class AIDispatcher {
       this.log('PROCESS_ERROR', { error: error.message });
       this.isMuted = true;
       await this.stop();
+    }
+  }
+
+  async handlePersonCheckDetails(participantId, rawTranscript, room, roomName) {
+    this.log('PERSON_CHECK_DETAILS', { participant: participantId, transcript: rawTranscript });
+    
+    const personDetails = parsePersonDetails(rawTranscript);
+    this.log('PERSON_DETAILS_PARSED', personDetails);
+    
+    if (!personDetails.lastName) {
+      const response = `${participantId}, did not copy last name. Go ahead with last name.`;
+      const responseAudio = await textToSpeech(response);
+      await this.publishAudio(responseAudio, room, roomName);
+      return;
+    }
+    
+    const lastName = personDetails.lastName;
+    const firstName = personDetails.firstName || 'unknown';
+    const dob = personDetails.dob ? personDetails.dob.formatted : 'unknown';
+    
+    const confirmResponse = `${participantId}, confirming. Last ${lastName}, first ${firstName}, date of birth ${dob}. Standby.`;
+    const confirmAudio = await textToSpeech(confirmResponse);
+    await this.publishAudio(confirmAudio, room, roomName);
+    
+    try {
+      if (!cadService.isConfigured()) {
+        const noConfigResponse = `${participantId}, CAD system not available. Standby.`;
+        const noConfigAudio = await textToSpeech(noConfigResponse);
+        await this.publishAudio(noConfigAudio, room, roomName);
+        setUnitSessionState(participantId, DISPATCHER_STATE.IDLE);
+        return;
+      }
+      
+      const cadResult = await cadService.queryPerson(firstName, lastName, personDetails.dob?.formatted);
+      this.log('CAD_PERSON_QUERY_RESULT', { participantId, result: cadResult });
+      
+      if (!cadResult.success) {
+        const errorResponse = `${participantId}, Central. Unable to complete records check. Try again.`;
+        const errorAudio = await textToSpeech(errorResponse);
+        await this.publishAudio(errorAudio, room, roomName);
+        setUnitSessionState(participantId, DISPATCHER_STATE.IDLE);
+        return;
+      }
+      
+      const person = cadResult.person || cadResult.data || {};
+      const hasFlags = person.wanted || person.warrant || person.bolo || 
+                       (person.warrants && person.warrants.length > 0) ||
+                       (person.flags && person.flags.length > 0);
+      
+      if (hasFlags) {
+        setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_SECURE_CONFIRM, null, {
+          lastName,
+          firstName,
+          dob,
+          personData: person
+        });
+        
+        const securePrompt = `${participantId}, Central. Is your mic secure?`;
+        const secureAudio = await textToSpeech(securePrompt);
+        await this.publishAudio(secureAudio, room, roomName);
+      } else {
+        const clearResponse = `${participantId}, Central. No wants or warrants.`;
+        const clearAudio = await textToSpeech(clearResponse);
+        await this.publishAudio(clearAudio, room, roomName);
+        
+        await this.logToCallNotes(participantId, `Records check: ${lastName}, ${firstName}, DOB ${dob} - Clear`);
+        setUnitSessionState(participantId, DISPATCHER_STATE.IDLE);
+      }
+      
+    } catch (error) {
+      this.log('PERSON_CHECK_ERROR', { error: error.message });
+      const errorResponse = `${participantId}, Central. System error on records check.`;
+      const errorAudio = await textToSpeech(errorResponse);
+      await this.publishAudio(errorAudio, room, roomName);
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE);
+    }
+  }
+
+  async handleSecureConfirmResponse(participantId, rawTranscript, slots, room, roomName) {
+    this.log('SECURE_CONFIRM_RESPONSE', { participant: participantId, transcript: rawTranscript, slots });
+    
+    const secureResult = matchSecureConfirmation(rawTranscript);
+    
+    if (!secureResult) {
+      const repeatPrompt = `${participantId}, Central. Confirm, is your mic secure?`;
+      const repeatAudio = await textToSpeech(repeatPrompt);
+      await this.publishAudio(repeatAudio, room, roomName);
+      return;
+    }
+    
+    if (!secureResult.confirmed) {
+      const standbyResponse = `${participantId}, Central. Copy. Contact dispatch on secure line.`;
+      const standbyAudio = await textToSpeech(standbyResponse);
+      await this.publishAudio(standbyAudio, room, roomName);
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE);
+      return;
+    }
+    
+    const { lastName, firstName, dob, personData } = slots;
+    
+    let flagDetails = [];
+    if (personData.wanted) flagDetails.push(`wanted out of ${personData.wanted_county || 'unknown county'}`);
+    if (personData.warrant) flagDetails.push(`active warrant out of ${personData.warrant_county || 'unknown county'}`);
+    if (personData.warrants && personData.warrants.length > 0) {
+      personData.warrants.forEach(w => {
+        flagDetails.push(`${w.type || 'warrant'} out of ${w.county || 'unknown county'}`);
+      });
+    }
+    if (personData.bolo) flagDetails.push('active BOLO');
+    if (personData.flags && personData.flags.length > 0) {
+      personData.flags.forEach(f => flagDetails.push(f.description || f.type || 'flag on file'));
+    }
+    
+    const flagText = flagDetails.length > 0 ? flagDetails.join(', ') : 'flag on file';
+    const flagResponse = `${participantId}, Central. ${lastName}, ${firstName}, date of birth ${dob} returns ${flagText}. Use caution.`;
+    const flagAudio = await textToSpeech(flagResponse);
+    await this.publishAudio(flagAudio, room, roomName);
+    
+    await this.logToCallNotes(participantId, `Records check: ${lastName}, ${firstName}, DOB ${dob} - ${flagText}`);
+    
+    setUnitSessionState(participantId, DISPATCHER_STATE.IDLE);
+  }
+
+  async logToCallNotes(unitId, note) {
+    try {
+      if (!cadService.isConfigured()) return;
+      
+      const statusCheck = await cadService.getStatusCheck();
+      if (statusCheck.success && statusCheck.units) {
+        const unitData = statusCheck.units.find(u => u.unit_id === unitId || u.id === unitId);
+        if (unitData && unitData.call_id) {
+          await cadService.addCallNote(unitData.call_id, note);
+          this.log('CALL_NOTE_ADDED', { unitId, callId: unitData.call_id, note });
+        }
+      }
+    } catch (error) {
+      this.log('CALL_NOTE_ERROR', { error: error.message });
     }
   }
 
