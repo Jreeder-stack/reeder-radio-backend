@@ -113,13 +113,15 @@ export async function addCallNote(callId, note) {
 }
 
 export async function queryPerson(firstName, lastName, dob = null) {
-  console.log(`[CAD] Person query: ${firstName} ${lastName}`);
   const body = {
     first_name: firstName.toUpperCase(),
     last_name: lastName.toUpperCase()
   };
   if (dob) body.dob = dob;
-  return cadRequest('/api/radio/query/person', 'POST', body);
+  console.log(`[CAD] Person query request:`, JSON.stringify(body));
+  const result = await cadRequest('/api/radio/query/person', 'POST', body);
+  console.log(`[CAD] Person query response:`, JSON.stringify(result));
+  return result;
 }
 
 export async function queryVehicle(plate, state = 'PA') {
