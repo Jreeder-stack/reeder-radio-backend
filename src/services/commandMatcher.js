@@ -6,6 +6,7 @@ const DISPATCHER_STATE = {
   AWAITING_LOCATION: 'AWAITING_LOCATION',
   AWAITING_DESCRIPTION: 'AWAITING_DESCRIPTION',
   AWAITING_PERSON_DETAILS: 'AWAITING_PERSON_DETAILS',
+  AWAITING_PERSON_DOB: 'AWAITING_PERSON_DOB',
   AWAITING_SECURE_CONFIRM: 'AWAITING_SECURE_CONFIRM',
   SIGNAL_100_ACTIVE: 'SIGNAL_100_ACTIVE'
 };
@@ -792,6 +793,16 @@ export function matchCommand(transcript, participantId = null) {
       intent: 'PERSON_CHECK_DETAILS',
       rawTranscript: transcript,
       pendingIntent: session.pendingIntent
+    };
+  }
+
+  if (session.state === DISPATCHER_STATE.AWAITING_PERSON_DOB) {
+    return {
+      response: null,
+      unitId,
+      intent: 'PERSON_CHECK_DOB',
+      rawTranscript: transcript,
+      slots: session.slots
     };
   }
 

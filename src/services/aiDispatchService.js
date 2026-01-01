@@ -2,7 +2,7 @@ import { Room, RoomEvent, TrackKind, AudioFrame, AudioSource, LocalAudioTrack, A
 import { createLiveKitToken, getLiveKitUrl } from '../config/livekit.js';
 import { speechToText, textToSpeech, isConfigured as isAzureConfigured } from './azureSpeechService.js';
 import { matchCommand, resetDispatcherState, matchEmergencyResponse, matchSecureConfirmation, getUnitSessionState, setUnitSessionState, DISPATCHER_STATE } from './commandMatcher.js';
-import { parsePersonDetails } from './phoneticParser.js';
+import { parsePersonDetails, parseDOB } from './phoneticParser.js';
 import { isAiDispatchEnabled, getAiDispatchChannel } from '../db/index.js';
 import * as cadService from './cadService.js';
 
@@ -645,6 +645,11 @@ class AIDispatcher {
         return;
       }
 
+      if (commandResult.intent === 'PERSON_CHECK_DOB') {
+        await this.handlePersonCheckDOB(participantId, commandResult.rawTranscript, commandResult.slots, room, roomName);
+        return;
+      }
+
       if (commandResult.intent === 'SECURE_CONFIRM_RESPONSE') {
         await this.handleSecureConfirmResponse(participantId, commandResult.rawTranscript, commandResult.slots, room, roomName);
         return;
@@ -740,9 +745,20 @@ class AIDispatcher {
       return;
     }
     
+    if (!personDetails.dob) {
+      setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_PERSON_DOB, null, {
+        lastName: personDetails.lastName,
+        firstName: personDetails.firstName || 'unknown'
+      });
+      const response = `${participantId}, did not copy date of birth. Go ahead with date of birth.`;
+      const responseAudio = await textToSpeech(response);
+      await this.publishAudio(responseAudio, room, roomName);
+      return;
+    }
+    
     const lastName = personDetails.lastName;
     const firstName = personDetails.firstName || 'unknown';
-    const dob = personDetails.dob ? personDetails.dob.formatted : 'unknown';
+    const dob = personDetails.dob.formatted;
     
     const confirmResponse = `${participantId}, confirming. Last ${lastName}, first ${firstName}, date of birth ${dob}. Standby.`;
     const confirmAudio = await textToSpeech(confirmResponse);
@@ -768,7 +784,8 @@ class AIDispatcher {
         return;
       }
       
-      const person = cadResult.person || cadResult.data || {};
+      const hasRecord = (cadResult.count > 0) || (cadResult.results && cadResult.results.length > 0);
+      const person = (cadResult.results && cadResult.results.length > 0) ? cadResult.results[0] : (cadResult.person || cadResult.data || {});
       const hasFlags = person.wanted || person.warrant || person.bolo || 
                        (person.warrants && person.warrants.length > 0) ||
                        (person.flags && person.flags.length > 0);
@@ -784,17 +801,106 @@ class AIDispatcher {
         const securePrompt = `${participantId}, Central. Is your mic secure?`;
         const secureAudio = await textToSpeech(securePrompt);
         await this.publishAudio(secureAudio, room, roomName);
-      } else {
-        const clearResponse = `${participantId}, Central. No wants or warrants.`;
+      } else if (hasRecord) {
+        const clearResponse = `${participantId}, Central. Local file, no wants or warrants.`;
         const clearAudio = await textToSpeech(clearResponse);
         await this.publishAudio(clearAudio, room, roomName);
         
-        await this.logToCallNotes(participantId, `Records check: ${lastName}, ${firstName}, DOB ${dob} - Clear`);
+        await this.logToCallNotes(participantId, `Records check: ${lastName}, ${firstName}, DOB ${dob} - Local file, no wants or warrants`);
+        setUnitSessionState(participantId, DISPATCHER_STATE.IDLE);
+      } else {
+        const noRecordResponse = `${participantId}, Central. No record on file.`;
+        const noRecordAudio = await textToSpeech(noRecordResponse);
+        await this.publishAudio(noRecordAudio, room, roomName);
+        
+        await this.logToCallNotes(participantId, `Records check: ${lastName}, ${firstName}, DOB ${dob} - No record on file`);
         setUnitSessionState(participantId, DISPATCHER_STATE.IDLE);
       }
       
     } catch (error) {
       this.log('PERSON_CHECK_ERROR', { error: error.message });
+      const errorResponse = `${participantId}, Central. System error on records check.`;
+      const errorAudio = await textToSpeech(errorResponse);
+      await this.publishAudio(errorAudio, room, roomName);
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE);
+    }
+  }
+
+  async handlePersonCheckDOB(participantId, rawTranscript, savedSlots, room, roomName) {
+    this.log('PERSON_CHECK_DOB', { participant: participantId, transcript: rawTranscript, savedSlots });
+    
+    const dob = parseDOB(rawTranscript);
+    
+    if (!dob) {
+      const response = `${participantId}, did not copy date of birth. Go ahead with date of birth.`;
+      const responseAudio = await textToSpeech(response);
+      await this.publishAudio(responseAudio, room, roomName);
+      return;
+    }
+    
+    const lastName = savedSlots.lastName;
+    const firstName = savedSlots.firstName || 'unknown';
+    const dobFormatted = dob.formatted;
+    
+    const confirmResponse = `${participantId}, confirming. Last ${lastName}, first ${firstName}, date of birth ${dobFormatted}. Standby.`;
+    const confirmAudio = await textToSpeech(confirmResponse);
+    await this.publishAudio(confirmAudio, room, roomName);
+    
+    try {
+      if (!cadService.isConfigured()) {
+        const noConfigResponse = `${participantId}, CAD system not available. Standby.`;
+        const noConfigAudio = await textToSpeech(noConfigResponse);
+        await this.publishAudio(noConfigAudio, room, roomName);
+        setUnitSessionState(participantId, DISPATCHER_STATE.IDLE);
+        return;
+      }
+      
+      const cadResult = await cadService.queryPerson(firstName, lastName, dobFormatted);
+      this.log('CAD_PERSON_QUERY_RESULT', { participantId, result: cadResult });
+      
+      if (!cadResult.success) {
+        const errorResponse = `${participantId}, Central. Unable to complete records check. Try again.`;
+        const errorAudio = await textToSpeech(errorResponse);
+        await this.publishAudio(errorAudio, room, roomName);
+        setUnitSessionState(participantId, DISPATCHER_STATE.IDLE);
+        return;
+      }
+      
+      const hasRecord = (cadResult.count > 0) || (cadResult.results && cadResult.results.length > 0);
+      const person = (cadResult.results && cadResult.results.length > 0) ? cadResult.results[0] : (cadResult.person || cadResult.data || {});
+      const hasFlags = person.wanted || person.warrant || person.bolo || 
+                       (person.warrants && person.warrants.length > 0) ||
+                       (person.flags && person.flags.length > 0);
+      
+      if (hasFlags) {
+        setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_SECURE_CONFIRM, null, {
+          lastName,
+          firstName,
+          dob: dobFormatted,
+          personData: person
+        });
+        
+        const securePrompt = `${participantId}, Central. Is your mic secure?`;
+        const secureAudio = await textToSpeech(securePrompt);
+        await this.publishAudio(secureAudio, room, roomName);
+      } else if (hasRecord) {
+        const clearResponse = `${participantId}, Central. Local file, no wants or warrants.`;
+        const clearAudio = await textToSpeech(clearResponse);
+        await this.publishAudio(clearAudio, room, roomName);
+        
+        await this.logToCallNotes(participantId, `Records check: ${lastName}, ${firstName}, DOB ${dobFormatted} - Local file, no wants or warrants`);
+        setUnitSessionState(participantId, DISPATCHER_STATE.IDLE);
+      } else {
+        const noRecordResponse = `${participantId}, Central. No record on file.`;
+        const noRecordAudio = await textToSpeech(noRecordResponse);
+        await this.publishAudio(noRecordAudio, room, roomName);
+        
+        await this.logToCallNotes(participantId, `Records check: ${lastName}, ${firstName}, DOB ${dobFormatted} - No record on file`);
+        setUnitSessionState(participantId, DISPATCHER_STATE.IDLE);
+      }
+      
+    } catch (error) {
+      this.log('PERSON_CHECK_DOB_ERROR', { error: error.message });
       const errorResponse = `${participantId}, Central. System error on records check.`;
       const errorAudio = await textToSpeech(errorResponse);
       await this.publishAudio(errorAudio, room, roomName);
