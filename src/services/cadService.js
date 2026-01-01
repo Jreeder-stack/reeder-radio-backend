@@ -12,7 +12,7 @@ async function cadRequest(endpoint, method = 'GET', body = null) {
     method,
     headers: {
       'Content-Type': 'application/json',
-      'X-API-Key': CAD_API_KEY
+      'X-Radio-API-Key': CAD_API_KEY
     }
   };
 
