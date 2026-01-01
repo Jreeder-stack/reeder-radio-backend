@@ -1159,7 +1159,15 @@ class AIDispatcher {
       
       const message = JSON.parse(jsonStr);
       
-      if (message.type === 'emergency' && message.active === true) {
+      if (message.type === 'heartbeat' && message.location) {
+        const unitId = message.identity || participant?.identity;
+        const { lat, lng, accuracy } = message.location;
+        if (unitId && typeof lat === 'number' && typeof lng === 'number') {
+          import('../services/locationService.js').then(mod => {
+            mod.default.updateLocation(unitId, lat, lng, accuracy, message.channel);
+          });
+        }
+      } else if (message.type === 'emergency' && message.active === true) {
         const unitId = participant.identity;
         this.log('EMERGENCY_BUTTON_PRESSED', { unitId, channel: this.roomName });
         

@@ -44,6 +44,7 @@ Not specified.
   4. If still no response, plays Continuous alert tone + broadcasts "no response" message to all units and CAD
   5. Unit can respond with "10-4"/"I'm OK" to clear emergency, or distress phrases ("shots fired", "needs backup") to trigger emergency broadcast
 - **Dispatcher Console:** A dedicated interface for multi-channel monitoring, unit lists, per-channel audio controls (mute, level meters, TX selector), last transmission recall, emergency acknowledgment, and channel patching. Supports multi-channel TX and tone broadcasting.
+- **Dispatcher Map:** Standalone real-time map at `/map` showing unit locations. Uses Leaflet with OpenStreetMap tiles. Unit positions updated via LiveKit heartbeats with 2-minute TTL. Includes SSE streaming for live updates, unit markers with ID/status colors, and auto-fit bounds. Accessible via "Map" button in Dispatcher Console (opens in new window).
 - **Admin System:** Dashboard for user management (roles, blocking, dispatcher access), channel management (enable/disable), and activity logging.
 
 ## External Dependencies
@@ -55,3 +56,4 @@ Not specified.
 - **`connect-pg-simple`:** For PostgreSQL-backed session management.
 - **TailwindCSS v4:** Frontend styling and utility-first CSS framework.
 - **Zustand:** Frontend state management library.
+- **Leaflet/react-leaflet:** For the Dispatcher Map component with real-time unit markers.

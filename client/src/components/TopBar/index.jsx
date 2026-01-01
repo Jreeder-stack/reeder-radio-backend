@@ -49,6 +49,12 @@ export default function TopBar({ user, onLogout, agencyName = "Reeder Radio", da
               {darkMode ? "☀️" : "🌙"}
             </button>
           )}
+          <button
+            onClick={() => window.open('/map', '_blank', 'noopener,noreferrer')}
+            className="px-3 py-1.5 text-sm bg-green-600 hover:bg-green-700 rounded transition-colors"
+          >
+            Map
+          </button>
           {user?.role === 'admin' && (
             <button
               onClick={() => navigate('/admin')}

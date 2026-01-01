@@ -7,6 +7,7 @@ import Login from "./Login.jsx";
 import App from "./App.jsx";
 import Admin from "./Admin.jsx";
 import DispatchConsole from "./pages/DispatchConsole.jsx";
+import DispatcherMap from "./pages/DispatcherMap.jsx";
 import "./index.css";
 
 function ProtectedRoute({ children, adminOnly = false, dispatcherOnly = false }) {
@@ -137,6 +138,14 @@ function ConnectedRoutes() {
           element={
             <ProtectedRoute adminOnly>
               <AdminWrapper />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/map"
+          element={
+            <ProtectedRoute dispatcherOnly>
+              <DispatcherMap />
             </ProtectedRoute>
           }
         />
