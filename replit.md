@@ -24,7 +24,8 @@ Not specified.
 - **AI Voice Dispatcher:** Integrates Azure Speech Services (Speech-to-Text and Text-to-Speech) for automated radio acknowledgments. Uses an intent-driven state machine with per-unit conversation sessions. Supports comprehensive dispatcher functions including:
   - **Status Commands:** on duty, available, en route, on scene, off duty, out of service, clear (with 10-codes)
   - **Immediate Commands:** radio check, time check, backup request, welfare check, tow/wrecker request, supervisor request, EMS/fire request, K9 request, subject in custody, negative contact, meal break
-  - **Multi-Step Commands:** traffic stop (prompts for location), run plate (queries CAD), warrant check (queries CAD), BOLO broadcast, vehicle pursuit
+  - **Multi-Step Commands:** traffic stop (prompts for location), run plate (queries CAD), warrant check (queries CAD), BOLO broadcast, vehicle pursuit, records check (10-27) with phonetic name spelling support
+  - **Records Check (10-27):** Multi-step person query flow with phonetic alphabet support (police: Adam/Boy/Charles, NATO: Alpha/Bravo/Charlie, or plain spelling). AI confirms name/DOB back, queries CAD, and if flags/warrants found, prompts "is your mic secure?" before delivering sensitive details. Results auto-logged to call notes.
   - **Emergency Commands:** Signal 100 (emergency traffic only), Signal 100 clear
   - **CAD Integration:** Automatic status updates, broadcast messages, vehicle/person/warrant queries via external CAD API
   - Safety guards prevent unintended transmissions and errors. Time format uses 24-hour with colon (e.g., "15:46 hours").
