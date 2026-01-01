@@ -5,6 +5,8 @@ const DISPATCHER_STATE = {
   AWAITING_NAME: 'AWAITING_NAME',
   AWAITING_LOCATION: 'AWAITING_LOCATION',
   AWAITING_DESCRIPTION: 'AWAITING_DESCRIPTION',
+  AWAITING_PERSON_DETAILS: 'AWAITING_PERSON_DETAILS',
+  AWAITING_SECURE_CONFIRM: 'AWAITING_SECURE_CONFIRM',
   SIGNAL_100_ACTIVE: 'SIGNAL_100_ACTIVE'
 };
 
@@ -390,6 +392,20 @@ const MULTI_STEP_COMMANDS = [
       cadAction: 'broadcast',
       cadData: { message: `VEHICLE PURSUIT: ${unitId} - ${slots.description}`, priority: 'emergency' }
     })
+  },
+  {
+    intent: 'PERSON_CHECK',
+    phrases: [
+      '10-27', 'ten twenty seven', 'ten-twenty-seven', '1027',
+      'records check', 'record check', 'check one by name', 'check by name',
+      'can you search', 'search by name', 'search someone', 'run a subject',
+      'name and dob', 'name and date of birth', 'subject check'
+    ],
+    nextState: DISPATCHER_STATE.AWAITING_PERSON_DETAILS,
+    prompt: (unitId) => `${unitId}, go ahead.`,
+    slotName: 'personDetails',
+    isEmergency: false,
+    requiresSecureCheck: true
   }
 ];
 
@@ -413,6 +429,15 @@ const EMERGENCY_COMMANDS = [
 ];
 
 const CANCEL_PHRASES = ['cancel', 'never mind', 'nevermind', 'disregard', 'negative', 'scratch that'];
+
+const SECURE_CONFIRM_PHRASES = [
+  'yes', 'yeah', 'yep', 'affirmative', 'secure', 'go ahead',
+  '10-4', 'ten four', 'ten-four', 'copy', 'roger'
+];
+
+const SECURE_DENY_PHRASES = [
+  'no', 'negative', 'not secure', 'standby', 'hold'
+];
 
 const EMERGENCY_OK_PHRASES = [
   '10-4', 'ten four', 'ten-four',
@@ -497,6 +522,44 @@ export function matchEmergencyResponse(transcript) {
   
   return null;
 }
+
+export function matchSecureConfirmation(transcript) {
+  const normalized = normalizeText(transcript);
+  
+  for (const phrase of SECURE_CONFIRM_PHRASES) {
+    if (normalized.includes(phrase)) {
+      return { confirmed: true };
+    }
+  }
+  
+  for (const phrase of SECURE_DENY_PHRASES) {
+    if (normalized.includes(phrase)) {
+      return { confirmed: false };
+    }
+  }
+  
+  return null;
+}
+
+export function getUnitSessionState(unitId) {
+  const session = getUnitSession(unitId);
+  return {
+    state: session.state,
+    pendingIntent: session.pendingIntent,
+    slots: session.slots
+  };
+}
+
+export function setUnitSessionState(unitId, state, pendingIntent = null, slots = {}) {
+  const session = getUnitSession(unitId);
+  session.state = state;
+  session.pendingIntent = pendingIntent;
+  session.slots = { ...session.slots, ...slots };
+  session.lastActivity = Date.now();
+  startSessionTimeout(unitId);
+}
+
+export { DISPATCHER_STATE };
 
 function extractPlate(transcript) {
   const normalized = normalizeText(transcript);
