@@ -4,6 +4,7 @@ import adminRouter from './adminRouter.js';
 import channelsRouter from './channelsRouter.js';
 import dispatchRouter from './dispatchRouter.js';
 import locationRouter from './locationRouter.js';
+import messagesRouter from './messagesRouter.js';
 
 export function setupRoutes(app) {
   app.use('/api/auth', authRouter);
@@ -11,4 +12,5 @@ export function setupRoutes(app) {
   app.use('/api/channels', channelsRouter);
   app.use('/api/dispatch', dispatchRouter);
   app.use('/api/location', locationRouter);
+  app.use('/api/messages', messagesRouter);
 }

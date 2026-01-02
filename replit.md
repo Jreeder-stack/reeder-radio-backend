@@ -45,6 +45,14 @@ Not specified.
   5. Unit can respond with "10-4"/"I'm OK" to clear emergency, or distress phrases ("shots fired", "needs backup") to trigger emergency broadcast
 - **Dispatcher Console:** A dedicated interface for multi-channel monitoring, unit lists, per-channel audio controls (mute, level meters, TX selector), last transmission recall, emergency acknowledgment, and channel patching. Supports multi-channel TX and tone broadcasting.
 - **Dispatcher Map:** Standalone real-time map at `/map` showing unit locations. Uses Leaflet with OpenStreetMap tiles. Unit positions updated via LiveKit heartbeats with 2-minute TTL. Includes SSE streaming for live updates, unit markers with ID/status colors, and auto-fit bounds. Accessible via "Map" button in Dispatcher Console (opens in new window).
+- **Channel Chat (Zello-style):** Each channel has a chat tab in the Dispatcher Console showing both text messages and voice messages. Voice messages are automatically recorded from PTT transmissions and appear as playable audio bubbles with:
+  - Inline play/pause button with progress bar
+  - Duration display
+  - On-demand transcription button using Azure Speech-to-Text
+  - Real-time sync via LiveKit data channel for the AI dispatcher's active channel (OPS1 by default); other channels use 10-second polling fallback
+  - Channel selector dropdown to view different channels' chat history
+  - Text messaging support for dispatchers to send typed messages
+  - Audio files stored in `uploads/audio/` directory (excluded from git)
 - **Admin System:** Dashboard for user management (roles, blocking, dispatcher access), channel management (enable/disable), and activity logging.
 
 ## External Dependencies

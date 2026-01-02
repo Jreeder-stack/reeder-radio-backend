@@ -1,4 +1,5 @@
 const API_BASE = '/api/dispatch';
+const MESSAGES_API_BASE = '/api/messages';
 
 async function fetchAPI(endpoint, options = {}) {
   const response = await fetch(`${API_BASE}${endpoint}`, {
@@ -123,4 +124,47 @@ export async function notifyChannelJoin(channel, identity) {
   } catch (error) {
     console.warn('[API] Failed to notify channel join:', error.message);
   }
+}
+
+export async function getChannelMessages(channel, limit = 50, offset = 0) {
+  const response = await fetch(`${MESSAGES_API_BASE}/${encodeURIComponent(channel)}?limit=${limit}&offset=${offset}`, {
+    credentials: 'include',
+  });
+  
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Request failed' }));
+    throw new Error(error.error || 'Request failed');
+  }
+  
+  return response.json();
+}
+
+export async function sendTextMessage(channel, content) {
+  const response = await fetch(`${MESSAGES_API_BASE}/${encodeURIComponent(channel)}/text`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ content }),
+  });
+  
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Request failed' }));
+    throw new Error(error.error || 'Request failed');
+  }
+  
+  return response.json();
+}
+
+export async function transcribeMessage(messageId) {
+  const response = await fetch(`${MESSAGES_API_BASE}/transcribe/${messageId}`, {
+    method: 'POST',
+    credentials: 'include',
+  });
+  
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Request failed' }));
+    throw new Error(error.error || 'Request failed');
+  }
+  
+  return response.json();
 }

@@ -152,6 +152,23 @@ export async function initializeDatabase() {
       ON CONFLICT (key) DO NOTHING
     `);
 
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS channel_messages (
+        id SERIAL PRIMARY KEY,
+        channel VARCHAR(50) NOT NULL,
+        sender VARCHAR(100) NOT NULL,
+        message_type VARCHAR(20) NOT NULL DEFAULT 'text',
+        content TEXT,
+        audio_url VARCHAR(500),
+        audio_duration INTEGER,
+        transcription TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_channel_messages_channel ON channel_messages (channel)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_channel_messages_created ON channel_messages (created_at DESC)`);
+
     const existingAdmin = await client.query(
       'SELECT id FROM users WHERE username = $1',
       [config.adminUsername]
@@ -554,6 +571,47 @@ export async function getAiDispatchChannel() {
 
 export async function setAiDispatchChannel(channelName) {
   return setAiSetting('ai_dispatch_channel', channelName || '');
+}
+
+export async function createChannelMessage(channel, sender, messageType, content = null, audioUrl = null, audioDuration = null) {
+  const result = await pool.query(
+    `INSERT INTO channel_messages (channel, sender, message_type, content, audio_url, audio_duration)
+     VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+    [channel, sender, messageType, content, audioUrl, audioDuration]
+  );
+  return result.rows[0];
+}
+
+export async function getChannelMessages(channel, limit = 50, offset = 0) {
+  const result = await pool.query(
+    `SELECT * FROM channel_messages WHERE channel = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`,
+    [channel, limit, offset]
+  );
+  return result.rows.reverse();
+}
+
+export async function updateMessageTranscription(messageId, transcription) {
+  const result = await pool.query(
+    `UPDATE channel_messages SET transcription = $1 WHERE id = $2 RETURNING *`,
+    [transcription, messageId]
+  );
+  return result.rows[0];
+}
+
+export async function getMessageById(messageId) {
+  const result = await pool.query(
+    `SELECT * FROM channel_messages WHERE id = $1`,
+    [messageId]
+  );
+  return result.rows[0];
+}
+
+export async function deleteChannelMessages(channel, olderThanDays = 30) {
+  const result = await pool.query(
+    `DELETE FROM channel_messages WHERE channel = $1 AND created_at < NOW() - INTERVAL '1 day' * $2 RETURNING *`,
+    [channel, olderThanDays]
+  );
+  return result.rows;
 }
 
 export default pool;

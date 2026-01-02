@@ -21,6 +21,7 @@ import UnitList from '../components/UnitList/index.jsx';
 import EmergencyPanel from '../components/EmergencyPanel/index.jsx';
 import EventLog from '../components/EventLog/index.jsx';
 import PatchPanel from '../components/PatchPanel/index.jsx';
+import ChannelChat from '../components/ChannelChat/index.jsx';
 
 import useDispatchStore from '../state/dispatchStore.js';
 import { micPTTManager } from '../audio/MicPTTManager.js';
@@ -31,6 +32,7 @@ import { useLiveKitConnection } from '../context/LiveKitConnectionContext.jsx';
 export default function DispatchConsole({ user, onLogout }) {
   const [rightTab, setRightTab] = useState('emergency');
   const [showChannelPicker, setShowChannelPicker] = useState(false);
+  const [selectedChatChannel, setSelectedChatChannel] = useState(null);
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem('dispatchDarkMode');
     return saved !== null ? JSON.parse(saved) : true;
@@ -280,12 +282,43 @@ export default function DispatchConsole({ user, onLogout }) {
             >
               Events
             </button>
+            <button
+              onClick={() => setRightTab('chat')}
+              className={`flex-1 px-4 py-2 text-sm ${
+                rightTab === 'chat'
+                  ? 'bg-dispatch-panel text-dispatch-text border-b-2 border-purple-500'
+                  : 'text-dispatch-secondary hover:text-dispatch-text'
+              }`}
+            >
+              Chat
+            </button>
           </div>
           
           <div className="flex-1 overflow-y-auto scrollbar-thin">
             {rightTab === 'emergency' && <EmergencyPanel />}
             {rightTab === 'patches' && <PatchPanel />}
             {rightTab === 'events' && <EventLog />}
+            {rightTab === 'chat' && (
+              <div className="flex flex-col h-full">
+                <div className="px-3 py-2 border-b border-dispatch-border">
+                  <select
+                    value={selectedChatChannel || orderedChannels[0]?.name || ''}
+                    onChange={(e) => setSelectedChatChannel(e.target.value)}
+                    className="w-full px-2 py-1 text-sm bg-dispatch-bg text-dispatch-text border border-dispatch-border rounded"
+                  >
+                    {orderedChannels.map(ch => (
+                      <option key={ch.id} value={ch.name}>{ch.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex-1 overflow-hidden">
+                  <ChannelChat 
+                    channel={selectedChatChannel || orderedChannels[0]?.name} 
+                    currentUser={user}
+                  />
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

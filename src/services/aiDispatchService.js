@@ -3,8 +3,38 @@ import { createLiveKitToken, getLiveKitUrl } from '../config/livekit.js';
 import { speechToText, textToSpeech, isConfigured as isAzureConfigured } from './azureSpeechService.js';
 import { matchCommand, resetDispatcherState, matchEmergencyResponse, matchSecureConfirmation, getUnitSessionState, setUnitSessionState, DISPATCHER_STATE } from './commandMatcher.js';
 import { parsePersonDetails, parseDOB } from './phoneticParser.js';
-import { isAiDispatchEnabled, getAiDispatchChannel } from '../db/index.js';
+import { isAiDispatchEnabled, getAiDispatchChannel, createChannelMessage } from '../db/index.js';
 import * as cadService from './cadService.js';
+import fs from 'fs';
+import path from 'path';
+
+const AUDIO_DIR = path.join(process.cwd(), 'uploads', 'audio');
+if (!fs.existsSync(AUDIO_DIR)) {
+  fs.mkdirSync(AUDIO_DIR, { recursive: true });
+}
+
+function createWavHeader(dataLength, sampleRate, channels, bitsPerSample) {
+  const buffer = Buffer.alloc(44);
+  buffer.write('RIFF', 0);
+  buffer.writeUInt32LE(36 + dataLength, 4);
+  buffer.write('WAVE', 8);
+  buffer.write('fmt ', 12);
+  buffer.writeUInt32LE(16, 16);
+  buffer.writeUInt16LE(1, 20);
+  buffer.writeUInt16LE(channels, 22);
+  buffer.writeUInt32LE(sampleRate, 24);
+  buffer.writeUInt32LE(sampleRate * channels * (bitsPerSample / 8), 28);
+  buffer.writeUInt16LE(channels * (bitsPerSample / 8), 32);
+  buffer.writeUInt16LE(bitsPerSample, 34);
+  buffer.write('data', 36);
+  buffer.writeUInt32LE(dataLength, 40);
+  return buffer;
+}
+
+function pcmToWav(pcmBuffer, sampleRate = 48000, channels = 1, bitsPerSample = 16) {
+  const wavHeader = createWavHeader(pcmBuffer.length, sampleRate, channels, bitsPerSample);
+  return Buffer.concat([wavHeader, pcmBuffer]);
+}
 
 const AI_IDENTITY = 'AI-Dispatcher';
 const LIVEKIT_SAMPLE_RATE = 48000;
@@ -565,9 +595,50 @@ class AIDispatcher {
       return;
     }
 
+    this.saveAudioAsMessage(audioBuffer, roomName, participantId);
+
     const enabled = await isAiDispatchEnabled();
     if (enabled && this.isRunning) {
       await this.processAudio(audioBuffer, roomName, room, participantId);
+    }
+  }
+
+  async saveAudioAsMessage(audioBuffer, channelName, sender) {
+    try {
+      const wavBuffer = pcmToWav(audioBuffer, LIVEKIT_SAMPLE_RATE, CHANNELS, 16);
+      const filename = `${channelName}_${Date.now()}_${sender.replace(/[^a-zA-Z0-9]/g, '_')}.wav`;
+      const filepath = path.join(AUDIO_DIR, filename);
+      
+      fs.writeFileSync(filepath, wavBuffer);
+      
+      const audioUrl = `/api/messages/audio/${filename}`;
+      const durationSecs = Math.round(audioBuffer.length / (LIVEKIT_SAMPLE_RATE * 2));
+      
+      const message = await createChannelMessage(channelName, sender, 'audio', null, audioUrl, durationSecs);
+      this.log('VOICE_MESSAGE_SAVED', { channel: channelName, sender, filename, duration: durationSecs });
+      
+      if (this.room && this.roomName === channelName && this.room.localParticipant) {
+        try {
+          const broadcastData = new TextEncoder().encode(JSON.stringify({
+            type: 'new_message',
+            message: {
+              id: message.id,
+              channel: channelName,
+              sender,
+              message_type: 'audio',
+              audio_url: audioUrl,
+              audio_duration: durationSecs,
+              created_at: message.created_at
+            }
+          }));
+          await this.room.localParticipant.publishData(broadcastData, { reliable: true });
+          this.log('MESSAGE_BROADCAST', { channel: channelName, messageId: message.id });
+        } catch (broadcastErr) {
+          this.log('MESSAGE_BROADCAST_ERROR', { error: broadcastErr.message });
+        }
+      }
+    } catch (error) {
+      this.log('VOICE_MESSAGE_SAVE_ERROR', { error: error.message, channel: channelName, sender });
     }
   }
 
@@ -1206,4 +1277,24 @@ export async function stopDispatcher() {
 export async function restartDispatcher(channelName) {
   await stopDispatcher();
   await startDispatcher(channelName);
+}
+
+export async function broadcastMessage(channelName, message) {
+  const dispatcher = getDispatcher();
+  if (dispatcher.room && dispatcher.roomName === channelName && dispatcher.room.localParticipant) {
+    try {
+      const data = new TextEncoder().encode(JSON.stringify({
+        type: 'new_message',
+        message
+      }));
+      await dispatcher.room.localParticipant.publishData(data, { reliable: true });
+      console.log(`[AI-Dispatcher] Broadcast message to ${channelName}:`, message.id);
+      return true;
+    } catch (error) {
+      console.error(`[AI-Dispatcher] Failed to broadcast to ${channelName}:`, error.message);
+      return false;
+    }
+  }
+  console.log(`[AI-Dispatcher] Cannot broadcast to ${channelName}: dispatcher is on ${dispatcher.roomName || 'no room'}`);
+  return false;
 }
