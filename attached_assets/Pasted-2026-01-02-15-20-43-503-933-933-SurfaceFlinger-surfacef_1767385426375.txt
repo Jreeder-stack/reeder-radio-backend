@@ -1,0 +1,631 @@
+2026-01-02 15:20:43.503   933-933   SurfaceFlinger          surfaceflinger                       E  alpha changed 1.000 -> 0.000 - ActivityRecord{185268292 u0 com.samsung.android.samsungpassautofill/.authentication.AuthActivity t271}#10459
+2026-01-02 15:20:43.510  2990-2990  pageboostd              pageboostd                           E  Received HALT command code 2
+2026-01-02 15:20:43.516   933-933   SurfaceFlinger          surfaceflinger                       E  alpha changed 0.000 -> 1.000 - ActivityRecord{185268292 u0 com.samsung.android.samsungpassautofill/.authentication.AuthActivity t271}#10459
+2026-01-02 15:20:43.518   933-933   RefreshRateSelector     surfaceflinger                       E  Can't find HRR max refresh rate by policy with the same group 0
+2026-01-02 15:20:43.813  1230-1230  (FPLOG)                 ven...iometrics.fingerprint-service  E  2.0.36.0 DeviceSetClock 1
+2026-01-02 15:20:43.999  1230-19402 bauth_FPBA...iceStorage ven...iometrics.fingerprint-service  E  isValidTemplFormat fopen is null : 2
+2026-01-02 15:20:43.999  1230-19402 bauth_FPBA...iceStorage ven...iometrics.fingerprint-service  E  isValidTemplFormat fopen is null : 2
+2026-01-02 15:20:44.035 19235-19235 ThemeUtils              com...g.android.samsungpassautofill  E  View class com.samsung.android.samsungpass.base.common.ui.view.MaxSizeTextView is an AppCompat widget that can only be used with a Theme.AppCompat theme (or descendant).
+2026-01-02 15:20:44.291 19235-19235 ImeBackDispatcher       com...g.android.samsungpassautofill  E  Ime callback not found. Ignoring unregisterReceivedCallback. callbackId: 171645397
+2026-01-02 15:20:44.477 14980-14989 ActivityThread          com.samsung.android.samsungpass      E  Failed to find provider info for com.samsung.android.spay.swalletsdk
+2026-01-02 15:20:44.489 14980-14989 WalletSDK               com.samsung.android.samsungpass      E  [SWalletSdk] 
+2026-01-02 15:20:44.490 14980-14989 WalletSDK               com.samsung.android.samsungpass      E  vg.b: Wallet not installed / or installed but not support (cursor is null)
+                                                                                                    	at ug.a.h(Unknown Source:71)
+                                                                                                    	at ug.a.j(Unknown Source:25)
+                                                                                                    	at com.samsung.android.spay.swalletsdk.SWalletSdk.isWalletWithoutPayment(Unknown Source:0)
+                                                                                                    	at com.samsung.android.samsungpass.wallet.provider.WalletCompanionProvider.call(Unknown Source:342)
+                                                                                                    	at android.content.ContentProvider.call(ContentProvider.java:2749)
+                                                                                                    	at android.content.ContentProvider$Transport.call(ContentProvider.java:642)
+                                                                                                    	at android.content.ContentProviderNative.onTransact(ContentProviderNative.java:307)
+                                                                                                    	at android.os.Binder.execTransactInternal(Binder.java:1462)
+                                                                                                    	at android.os.Binder.execTransact(Binder.java:1401)
+2026-01-02 15:20:44.503   933-933   SurfaceFlinger          surfaceflinger                       E  alpha changed 1.000 -> 0.000 - Surface(name=2910def Sys2038:com.samsung.android.samsungpassautofill/com.samsung.android.samsungpassautofill.authentication.AuthActivity)/@0x8e067f5 - animation-leash of window_animation#10472
+2026-01-02 15:20:44.503   933-933   SurfaceFlinger          surfaceflinger                       E  alpha changed 0.000 -> 0.000 - Surface(name=2910def Sys2038:com.samsung.android.samsungpassautofill/com.samsung.android.samsungpassautofill.authentication.AuthActivity)/@0x8e067f5 - animation-leash of window_animation#10472
+2026-01-02 15:20:44.503   933-933   SurfaceFlinger          surfaceflinger                       E  alpha changed 1.000 -> 0.000 - Dim Layer for - Display 0 name="Built-in Screen"#10473
+2026-01-02 15:20:44.514   933-933   SurfaceFlinger          surfaceflinger                       E  alpha changed 0.000 -> 0.125 - Surface(name=2910def Sys2038:com.samsung.android.samsungpassautofill/com.samsung.android.samsungpassautofill.authentication.AuthActivity)/@0x8e067f5 - animation-leash of window_animation#10472
+2026-01-02 15:20:44.525   933-933   SurfaceFlinger          surfaceflinger                       E  alpha changed 0.000 -> 0.007 - Dim Layer for - Display 0 name="Built-in Screen"#10473
+2026-01-02 15:20:44.572  1439-3995  WindowManager           system_server                        E  win=Window{535d037 u0 InputMethod} destroySurfaces: appStopped=true cleanupOnResume=false win.mWindowRemovalAllowed=false win.mRemoveOnExit=false win.mViewVisibility=8 caller=com.android.server.wm.WindowManagerService.tryStartExitingAnimation:134 com.android.server.wm.WindowManagerService.relayoutWindow:1138 com.android.server.wm.Session.relayout:27 android.view.IWindowSession$Stub.onTransact:829 com.android.server.wm.Session.onTransact:1 android.os.Binder.execTransactInternal:1457 android.os.Binder.execTransact:1401 
+2026-01-02 15:20:44.604   933-933   SurfaceFlinger          surfaceflinger                       E  alpha changed 1.000 -> 0.000 - Surface(name=535d037 InputMethod)/@0xda3ac10 - animation-leash of insets_animation#10474
+2026-01-02 15:20:44.828   933-933   RefreshRateSelector     surfaceflinger                       E  Can't find HRR max refresh rate by policy with the same group 0
+2026-01-02 15:20:44.846 14980-14989 ActivityThread          com.samsung.android.samsungpass      E  Failed to find provider info for com.samsung.android.spay.swalletsdk
+2026-01-02 15:20:44.846 14980-14989 WalletSDK               com.samsung.android.samsungpass      E  [SWalletSdk] 
+2026-01-02 15:20:44.847 14980-14989 WalletSDK               com.samsung.android.samsungpass      E  vg.b: Wallet not installed / or installed but not support (cursor is null)
+                                                                                                    	at ug.a.h(Unknown Source:71)
+                                                                                                    	at ug.a.a(Unknown Source:25)
+                                                                                                    	at com.samsung.android.spay.swalletsdk.SWalletSdk.getCountryCode(Unknown Source:0)
+                                                                                                    	at com.samsung.android.samsungpass.passservice.common.stats.SamsungPassStatsCommonPayload.addCommon(Unknown Source:109)
+                                                                                                    	at com.samsung.android.samsungpass.passservice.common.stats.SamsungPassStatsCommonPayload.<init>(Unknown Source:32)
+                                                                                                    	at com.samsung.android.samsungpass.passservice.common.stats.SamsungPassStatsOfflinePayload.<init>(Unknown Source:0)
+                                                                                                    	at com.samsung.android.samsungpass.passservice.statistics.HistoryRecorder.doVasLogging(SourceFile:7)
+                                                                                                    	at com.samsung.android.samsungpass.passservice.statistics.HistoryRecorder.addAutofillUsageLog(SourceFile:30)
+                                                                                                    	at com.samsung.android.samsungpass.websignin.signindb.EasySigninProvider.call(Unknown Source:790)
+                                                                                                    	at android.content.ContentProvider.call(ContentProvider.java:2749)
+                                                                                                    	at android.content.ContentProvider$Transport.call(ContentProvider.java:642)
+                                                                                                    	at android.content.ContentProviderNative.onTransact(ContentProviderNative.java:307)
+                                                                                                    	at android.os.Binder.execTransactInternal(Binder.java:1462)
+                                                                                                    	at android.os.Binder.execTransact(Binder.java:1401)
+2026-01-02 15:20:44.882 14980-14989 ActivityThread          com.samsung.android.samsungpass      E  Failed to find provider info for com.samsung.android.spay.swalletsdk
+2026-01-02 15:20:44.883 14980-14989 WalletSDK               com.samsung.android.samsungpass      E  [SWalletSdk] 
+2026-01-02 15:20:44.883 14980-14989 WalletSDK               com.samsung.android.samsungpass      E  vg.b: Wallet not installed / or installed but not support (cursor is null)
+                                                                                                    	at ug.a.h(Unknown Source:71)
+                                                                                                    	at ug.a.a(Unknown Source:25)
+                                                                                                    	at com.samsung.android.spay.swalletsdk.SWalletSdk.getCountryCode(Unknown Source:0)
+                                                                                                    	at com.samsung.android.samsungpass.passservice.common.stats.SamsungPassStats.<init>(Unknown Source:12)
+                                                                                                    	at com.samsung.android.samsungpass.passservice.common.stats.SamsungPassStats.getInstance(Unknown Source:20)
+                                                                                                    	at com.samsung.android.samsungpass.passservice.statistics.HistoryRecorder.doVasLogging(SourceFile:15)
+                                                                                                    	at com.samsung.android.samsungpass.passservice.statistics.HistoryRecorder.addAutofillUsageLog(SourceFile:30)
+                                                                                                    	at com.samsung.android.samsungpass.websignin.signindb.EasySigninProvider.call(Unknown Source:790)
+                                                                                                    	at android.content.ContentProvider.call(ContentProvider.java:2749)
+                                                                                                    	at android.content.ContentProvider$Transport.call(ContentProvider.java:642)
+                                                                                                    	at android.content.ContentProviderNative.onTransact(ContentProviderNative.java:307)
+                                                                                                    	at android.os.Binder.execTransactInternal(Binder.java:1462)
+                                                                                                    	at android.os.Binder.execTransact(Binder.java:1401)
+2026-01-02 15:20:44.923 14980-14989 ActivityThread          com.samsung.android.samsungpass      E  Failed to find provider info for com.samsung.android.spay.swalletsdk
+2026-01-02 15:20:44.924 14980-14989 WalletSDK               com.samsung.android.samsungpass      E  [SWalletSdk] 
+2026-01-02 15:20:44.924 14980-14989 WalletSDK               com.samsung.android.samsungpass      E  vg.b: Wallet not installed / or installed but not support (cursor is null)
+                                                                                                    	at ug.a.h(Unknown Source:71)
+                                                                                                    	at ug.a.b(Unknown Source:25)
+                                                                                                    	at com.samsung.android.spay.swalletsdk.SWalletSdk.getDeviceIdForLogging(Unknown Source:0)
+                                                                                                    	at com.samsung.android.samsungpass.passservice.common.stats.SamsungPassStats.<init>(Unknown Source:22)
+                                                                                                    	at com.samsung.android.samsungpass.passservice.common.stats.SamsungPassStats.getInstance(Unknown Source:20)
+                                                                                                    	at com.samsung.android.samsungpass.passservice.statistics.HistoryRecorder.doVasLogging(SourceFile:15)
+                                                                                                    	at com.samsung.android.samsungpass.passservice.statistics.HistoryRecorder.addAutofillUsageLog(SourceFile:30)
+                                                                                                    	at com.samsung.android.samsungpass.websignin.signindb.EasySigninProvider.call(Unknown Source:790)
+                                                                                                    	at android.content.ContentProvider.call(ContentProvider.java:2749)
+                                                                                                    	at android.content.ContentProvider$Transport.call(ContentProvider.java:642)
+                                                                                                    	at android.content.ContentProviderNative.onTransact(ContentProviderNative.java:307)
+                                                                                                    	at android.os.Binder.execTransactInternal(Binder.java:1462)
+                                                                                                    	at android.os.Binder.execTransact(Binder.java:1401)
+2026-01-02 15:20:44.946  1439-1804  AidlResponseHandler     system_server                        E  Client monitor is not an instance of com.android.server.biometrics.sensors.AcquisitionClient
+2026-01-02 15:20:44.960   889-922   mtkpower@impl           ven...hardware.mtkpower@1.0-service  E  [setMode] unknown type
+2026-01-02 15:20:45.021  1230-1340  (FPLOG)                 ven...iometrics.fingerprint-service  E  2.0.36.0 DeviceSetClock 0
+2026-01-02 15:20:45.039   889-922   mtkpower@impl           ven...hardware.mtkpower@1.0-service  E  [setMode] unknown type
+2026-01-02 15:20:45.099  1230-1230  (FPLOG)                 ven...iometrics.fingerprint-service  E  2.0.36.0 DeviceSetClock 1
+2026-01-02 15:20:45.216   889-922   mtkpower@impl           ven...hardware.mtkpower@1.0-service  E  [setMode] unknown type
+2026-01-02 15:20:45.291   889-922   mtkpower@impl           ven...hardware.mtkpower@1.0-service  E  [setMode] unknown type
+2026-01-02 15:20:45.460   889-922   mtkpower@impl           ven...hardware.mtkpower@1.0-service  E  [setMode] unknown type
+2026-01-02 15:20:45.500   889-922   mtkpower@impl           ven...hardware.mtkpower@1.0-service  E  [setMode] unknown type
+2026-01-02 15:20:45.501   933-1004  SfCpu                   surfaceflinger                       E   sched_setaffinity return fail 878
+2026-01-02 15:20:45.514   933-933   SurfaceFlinger          surfaceflinger                       E  alpha changed 1.000 -> 0.000 - Surface(name=535d037 InputMethod)/@0xda3ac10 - animation-leash of insets_animation#10475
+2026-01-02 15:20:45.614   933-933   SurfaceFlinger          surfaceflinger                       E  alpha changed 0.030 -> 0.000 - Surface(name=2910def Sys2038:com.samsung.android.samsungpassautofill/com.samsung.android.samsungpassautofill.authentication.AuthActivity)/@0x8e067f5 - animation-leash of window_animation#10476
+2026-01-02 15:20:45.625   933-933   SurfaceFlinger          surfaceflinger                       E  alpha changed 1.000 -> 0.000 - Surface(name=535d037 InputMethod)/@0xda3ac10 - animation-leash of insets_animation#10482
+2026-01-02 15:20:45.735  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:45.736  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:45.756  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:45.757  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:45.771  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:45.772  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:45.797  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:45.798  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:45.814  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:45.814   933-933   SurfaceFlinger          surfaceflinger                       E  alpha changed 0.007 -> 0.000 - Dim Layer for - Display 0 name="Built-in Screen"#10473
+2026-01-02 15:20:45.814  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:45.834  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:45.834  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:45.858  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:45.859  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:45.860   933-933   RefreshRateSelector     surfaceflinger                       E  Can't find HRR max refresh rate by policy with the same group 0
+2026-01-02 15:20:45.880   933-933   SurfaceFlinger          surfaceflinger                       E  alpha changed 0.000 -> 1.000 - Surface(name=535d037 InputMethod)/@0xda3ac10 - animation-leash of insets_animation#10482
+2026-01-02 15:20:45.890  1439-1733  PocketModeEvent         system_server                        E  MSG_TYPE_STOP_SENSING
+2026-01-02 15:20:45.890  1439-1733  PocketModeEvent         system_server                        E  unregisterSensor L : -1 P : 0
+2026-01-02 15:20:46.298  1230-1340  (FPLOG)                 ven...iometrics.fingerprint-service  E  2.0.36.0 DeviceSetClock 0
+2026-01-02 15:20:46.607  1081-1492  md_thermal              thermal_core                         E  interval=40 temp: 46900 36800 34800 36800
+2026-01-02 15:20:46.758   933-933   SfCpu                   surfaceflinger                       E   sched_setaffinity return fail 933
+2026-01-02 15:20:46.758   933-933   SfCpu                   surfaceflinger                       E   sched_setaffinity return fail 1006
+2026-01-02 15:20:46.758   933-933   SfCpu                   surfaceflinger                       E   sched_setaffinity return fail 1004
+2026-01-02 15:20:46.927  1439-1788  SemSoftApManager        system_server                        E  NET_CAPABILITY_VALIDATED175 valid:true nc:[ Transports: CELLULAR Capabilities: SUPL&DUN&INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VPN&VALIDATED&NOT_ROAMING&FOREGROUND&NOT_CONGESTED&NOT_SUSPENDED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED LinkUpBandwidth>=46146Kbps LinkDnBandwidth>=46146Kbps Specifier: <TelephonyNetworkSpecifier [mSubId = 1]> AdminUids: [10061, 10301, 10327] SubscriptionIds: {1} UnderlyingNetworks: Null]
+2026-01-02 15:20:47.024  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.025  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.025  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.026  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.027  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.028  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.028  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.029  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.029  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.030  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.030  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.059  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.059  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.069  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.069  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.124  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.124  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.124  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.125  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.125  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.125  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.127  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.127  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.128  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.128  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.128  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.134  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.135  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.135  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.157  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.157  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.157  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.158  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.158  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.158  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.181  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.181  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.182  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.182  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.182  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.182  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.190  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.191  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.191  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.191  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.210  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.211  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.211  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.211  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.226  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.226  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.226  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.226  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.234  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.234  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.264  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.264  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.265  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.270  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.290  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.301  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.317  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.349  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.360  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.367  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.377  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:47.689  1439-3973  WindowManager           system_server                        E  win=Window{535d037 u0 InputMethod} destroySurfaces: appStopped=true cleanupOnResume=false win.mWindowRemovalAllowed=false win.mRemoveOnExit=false win.mViewVisibility=8 caller=com.android.server.wm.WindowManagerService.tryStartExitingAnimation:134 com.android.server.wm.WindowManagerService.relayoutWindow:1138 com.android.server.wm.Session.relayout:27 android.view.IWindowSession$Stub.onTransact:829 com.android.server.wm.Session.onTransact:1 android.os.Binder.execTransactInternal:1457 android.os.Binder.execTransact:1401 
+2026-01-02 15:20:47.715   933-933   SurfaceFlinger          surfaceflinger                       E  alpha changed 1.000 -> 0.000 - Surface(name=535d037 InputMethod)/@0xda3ac10 - animation-leash of insets_animation#10486
+2026-01-02 15:20:49.939   933-933   RefreshRateSelector     surfaceflinger                       E  Can't find HRR max refresh rate by policy with the same group 0
+2026-01-02 15:20:51.017  1155-1168  vendor.sam...ss-service ven...samsung.hardware.gnss-service  E  gpsinf_inject_best_location: flags:51, speed:0.000000, bearing:0.000000, h_accuracy:100.000000, v_accuracy:10.828450, s_accuracy:0.000000, b_accuracy:0.000000, timestamp:-2141274943 
+2026-01-02 15:20:51.019  1082-1118  mnl2hal                 mnld                                 E  hal2mnl_hdlr: HAL2MNL_GPS_INJECT_BEST_LOCATION h_accuracy:100.000000, timestamp:-2141274943 
+2026-01-02 15:20:51.024  1439-2497  SLocation               system_server                        E  GeopointLastLocation - Last location is more well than current Location.
+2026-01-02 15:20:52.973  1439-1788  SemSoftApManager        system_server                        E  NET_CAPABILITY_VALIDATED175 valid:true nc:[ Transports: CELLULAR Capabilities: SUPL&DUN&INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VPN&VALIDATED&NOT_ROAMING&FOREGROUND&NOT_CONGESTED&NOT_SUSPENDED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED LinkUpBandwidth>=32775Kbps LinkDnBandwidth>=32775Kbps Specifier: <TelephonyNetworkSpecifier [mSubId = 1]> AdminUids: [10061, 10301, 10327] SubscriptionIds: {1} UnderlyingNetworks: Null]
+2026-01-02 15:20:53.669  1081-1491  thermal_core            thermal_core                         E  Failed to read /sys/class/thermal/thermal_zone24/temp: Invalid argument
+2026-01-02 15:20:54.650  1439-1501  Watchdog                system_server                        E  !@Sync: 9770 heap(MB): 129 / 132 FD: 1150 [2026-01-02 15:20:54.650]
+2026-01-02 15:20:56.013  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:56.013  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:56.019  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:56.019  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:56.059  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:56.060  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:56.068  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:56.068  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:56.087  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:56.088  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:56.099  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:56.101  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:56.117  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:56.117  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:56.123  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:56.123  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:56.130  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:56.130  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:56.149  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:56.149  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:56.156  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:56.156  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:56.164  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:56.164  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:56.174  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:56.174  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:56.184  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:56.184  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.002  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.002  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.002  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.002  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.002  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.002  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.002  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.002  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.003  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.003  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.003  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.003  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.109  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.109  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.109  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.110  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.110  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.110  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.110  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.110  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.110  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.116  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.122  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.137  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.138  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.138  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.139  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.151  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.152  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.152  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.152  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.161  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.161  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.161  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.161  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.173  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.173  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.174  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.174  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.180  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.180  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.181  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.181  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.190  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.190  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.190  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.191  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.196  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.197  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.197  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.197  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.207  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.207  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.207  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.207  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.220  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.220  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.220  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.220  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.238  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.238  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.238  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.239  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.252  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.252  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.252  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.258  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.271  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.282  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.294  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.304  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.318  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.327  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.352  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.359  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.371  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.386  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:20:57.400 29678-10809 BluetoothDevice         com.google.android.gms.persistent    E  BT not enabled. Cannot get Remote Device name
+2026-01-02 15:20:58.917   894-930   BatteryDump             ven...msung.hardware.health-service  E  !@new_battery_dump : 4314,-4,475,550,100,284,285,343,0,0,311,343,0,Full,NO_CHARGING,None,Good,USB,1,Normal,0,0,9488,0x0,0x10000,0x0,0,0,0000,0000,00000000,0,0,0,0,38,4314000,1000,0,0,
+2026-01-02 15:20:59.945   933-933   RefreshRateSelector     surfaceflinger                       E  Can't find HRR max refresh rate by policy with the same group 0
+2026-01-02 15:21:02.773  2303-2496  Tile.MobileDataTile     com.android.systemui                 E  onCallStatesChanged: CallStateList = []
+2026-01-02 15:21:04.788 29678-10809 BluetoothDevice         com.google.android.gms.persistent    E  BT not enabled. Cannot get Remote Device name
+2026-01-02 15:21:05.053  1439-1788  SemSoftApManager        system_server                        E  NET_CAPABILITY_VALIDATED175 valid:true nc:[ Transports: CELLULAR Capabilities: SUPL&DUN&INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VPN&VALIDATED&NOT_ROAMING&FOREGROUND&NOT_CONGESTED&NOT_SUSPENDED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED LinkUpBandwidth>=46146Kbps LinkDnBandwidth>=46146Kbps Specifier: <TelephonyNetworkSpecifier [mSubId = 1]> AdminUids: [10061, 10301, 10327] SubscriptionIds: {1} UnderlyingNetworks: Null]
+2026-01-02 15:21:05.675  1081-1491  thermal_core            thermal_core                         E  Failed to read /sys/class/thermal/thermal_zone24/temp: Invalid argument
+2026-01-02 15:21:07.725   880-880   SensorsGrip             and....sensors@2.0-service.multihal  E  [grip_sensor] enable: mEnabled : 0, first_grip_event : 1
+2026-01-02 15:21:07.753   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn/TS25/3 not exist(2)
+2026-01-02 15:21:07.754   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn/TS25 not exist(2)
+2026-01-02 15:21:07.754   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn not exist(2)
+2026-01-02 15:21:07.760   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn/TS25/3 not exist(2)
+2026-01-02 15:21:07.760   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn/TS25 not exist(2)
+2026-01-02 15:21:07.760   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn not exist(2)
+2026-01-02 15:21:07.762   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn/TS25/3 not exist(2)
+2026-01-02 15:21:07.762   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn/TS25 not exist(2)
+2026-01-02 15:21:07.762   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn not exist(2)
+2026-01-02 15:21:07.837  2213-2248  RegiMgr-Utils           com.sec.imsservice                   E  getPendingRegistrationInternal : Invalid phoneId : 1
+2026-01-02 15:21:07.837  2213-2248  RegiMgr                 com.sec.imsservice                   E  getPendingRegistration : no task return null
+2026-01-02 15:21:07.837  2213-2248  CmcAccountManager<1>    com.sec.imsservice                   E  getCmcRegisterTask: rtl is null
+2026-01-02 15:21:07.837  1917-1917  SatelliteController     com.android.phone                    E  registerForSatelliteModemStateChanged: mSatelliteSessionController is not initialized yet
+2026-01-02 15:21:07.844  1917-1917  SatelliteController     com.android.phone                    E  registerForSatelliteModemStateChanged: mSatelliteSessionController is not initialized yet
+2026-01-02 15:21:07.852  1917-2019  SatelliteController     com.android.phone                    E  notifyNtnEligibility: mSatellitePhone is null
+2026-01-02 15:21:11.350   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn/TS25/3 not exist(2)
+2026-01-02 15:21:11.350   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn/TS25 not exist(2)
+2026-01-02 15:21:11.350   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn not exist(2)
+2026-01-02 15:21:11.356   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn/TS25/3 not exist(2)
+2026-01-02 15:21:11.356   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn/TS25 not exist(2)
+2026-01-02 15:21:11.356   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn not exist(2)
+2026-01-02 15:21:11.364   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn/TS25/3 not exist(2)
+2026-01-02 15:21:11.364   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn/TS25 not exist(2)
+2026-01-02 15:21:11.364   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn not exist(2)
+2026-01-02 15:21:11.364  1917-2019  SatelliteController     com.android.phone                    E  notifyNtnEligibility: mSatellitePhone is null
+2026-01-02 15:21:11.467  1917-1917  SatelliteController     com.android.phone                    E  registerForSatelliteModemStateChanged: mSatelliteSessionController is not initialized yet
+2026-01-02 15:21:11.476  1917-1917  SatelliteController     com.android.phone                    E  registerForSatelliteModemStateChanged: mSatelliteSessionController is not initialized yet
+2026-01-02 15:21:11.486  1917-2019  SatelliteController     com.android.phone                    E  notifyNtnEligibility: mSatellitePhone is null
+2026-01-02 15:21:12.588  1439-1788  SemSoftApManager        system_server                        E  NET_CAPABILITY_VALIDATED175 valid:true nc:[ Transports: CELLULAR Capabilities: SUPL&DUN&INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VPN&VALIDATED&NOT_ROAMING&FOREGROUND&NOT_CONGESTED&NOT_SUSPENDED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED LinkUpBandwidth>=9819Kbps LinkDnBandwidth>=13128Kbps Specifier: <TelephonyNetworkSpecifier [mSubId = 1]> AdminUids: [10061, 10301, 10327] SubscriptionIds: {1} UnderlyingNetworks: Null]
+2026-01-02 15:21:17.203   880-880   SensorsGrip             and....sensors@2.0-service.multihal  E  [grip_sensor] enable: mEnabled : 1, first_grip_event : 1
+2026-01-02 15:21:17.257   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn/TS25/3 not exist(2)
+2026-01-02 15:21:17.257   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn/TS25 not exist(2)
+2026-01-02 15:21:17.257   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn not exist(2)
+2026-01-02 15:21:17.260  1917-2019  SatelliteController     com.android.phone                    E  notifyNtnEligibility: mSatellitePhone is null
+2026-01-02 15:21:17.279  1917-2019  SatelliteController     com.android.phone                    E  notifyNtnEligibility: mSatellitePhone is null
+2026-01-02 15:21:17.347  2213-2248  RegiMgr-Utils           com.sec.imsservice                   E  getPendingRegistrationInternal : Invalid phoneId : 1
+2026-01-02 15:21:17.347  2213-2248  RegiMgr                 com.sec.imsservice                   E  getPendingRegistration : no task return null
+2026-01-02 15:21:17.347  2213-2248  CmcAccountManager<1>    com.sec.imsservice                   E  getCmcRegisterTask: rtl is null
+2026-01-02 15:21:17.354  1917-1917  SatelliteController     com.android.phone                    E  registerForSatelliteModemStateChanged: mSatelliteSessionController is not initialized yet
+2026-01-02 15:21:17.357  1917-1917  SatelliteController     com.android.phone                    E  registerForSatelliteModemStateChanged: mSatelliteSessionController is not initialized yet
+2026-01-02 15:21:17.362  1917-2019  SatelliteController     com.android.phone                    E  notifyNtnEligibility: mSatellitePhone is null
+2026-01-02 15:21:17.679  1081-1491  thermal_core            thermal_core                         E  Failed to read /sys/class/thermal/thermal_zone24/temp: Invalid argument
+2026-01-02 15:21:24.656  1439-1501  Watchdog                system_server                        E  !@Sync: 9771 heap(MB): 101 / 118 FD: 1147 [2026-01-02 15:21:24.655]
+2026-01-02 15:21:26.616  1081-1492  md_thermal              thermal_core                         E  interval=40 temp: 35400 33200 33400 33600
+2026-01-02 15:21:27.917   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn/TS25/3 not exist(2)
+2026-01-02 15:21:27.918   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn/TS25 not exist(2)
+2026-01-02 15:21:27.918   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn not exist(2)
+2026-01-02 15:21:27.936   880-880   SensorsGrip             and....sensors@2.0-service.multihal  E  [grip_sensor] enable: mEnabled : 0, first_grip_event : 1
+2026-01-02 15:21:27.940  1917-2019  SatelliteController     com.android.phone                    E  notifyNtnEligibility: mSatellitePhone is null
+2026-01-02 15:21:27.974   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn/TS25/3 not exist(2)
+2026-01-02 15:21:27.974   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn/TS25 not exist(2)
+2026-01-02 15:21:27.974   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn not exist(2)
+2026-01-02 15:21:27.975   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn/TS25/3 not exist(2)
+2026-01-02 15:21:27.975   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn/TS25 not exist(2)
+2026-01-02 15:21:27.975   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn not exist(2)
+2026-01-02 15:21:27.976   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn/TS25/3 not exist(2)
+2026-01-02 15:21:27.976   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn/TS25 not exist(2)
+2026-01-02 15:21:27.976   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn not exist(2)
+2026-01-02 15:21:28.047  1917-1917  SatelliteController     com.android.phone                    E  registerForSatelliteModemStateChanged: mSatelliteSessionController is not initialized yet
+2026-01-02 15:21:28.057  1917-1917  SatelliteController     com.android.phone                    E  registerForSatelliteModemStateChanged: mSatelliteSessionController is not initialized yet
+2026-01-02 15:21:28.959   894-930   BatteryDump             ven...msung.hardware.health-service  E  !@new_battery_dump : 4316,0,475,550,100,287,287,329,0,0,320,329,0,Full,NO_CHARGING,None,Good,USB,1,Normal,0,0,9488,0x0,0x10000,0x0,0,0,0000,0000,00000000,0,0,0,0,38,4316000,1000,0,0,
+2026-01-02 15:21:29.685  1081-1491  thermal_core            thermal_core                         E  Failed to read /sys/class/thermal/thermal_zone24/temp: Invalid argument
+2026-01-02 15:21:39.804 19473-19473 t_app_installer         zygote64                             E  Not starting debugger since process cannot load the jdwp agent.
+2026-01-02 15:21:40.326 19473-19488 ashmem                  com...vending:instant_app_installer  E  Pinning is deprecated since Android Q. Please use trim or other methods.
+2026-01-02 15:21:40.459   880-880   SensorsGrip             and....sensors@2.0-service.multihal  E  [grip_sensor] enable: mEnabled : 1, first_grip_event : 1
+2026-01-02 15:21:40.513   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn/TS25/3 not exist(2)
+2026-01-02 15:21:40.514   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn/TS25 not exist(2)
+2026-01-02 15:21:40.514   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn not exist(2)
+2026-01-02 15:21:40.520  1917-2019  SatelliteController     com.android.phone                    E  notifyNtnEligibility: mSatellitePhone is null
+2026-01-02 15:21:40.591  1917-1917  SatelliteController     com.android.phone                    E  registerForSatelliteModemStateChanged: mSatelliteSessionController is not initialized yet
+2026-01-02 15:21:40.600  1917-1917  SatelliteController     com.android.phone                    E  registerForSatelliteModemStateChanged: mSatelliteSessionController is not initialized yet
+2026-01-02 15:21:41.691  1081-1491  thermal_core            thermal_core                         E  Failed to read /sys/class/thermal/thermal_zone24/temp: Invalid argument
+2026-01-02 15:21:42.274  1439-1788  SemSoftApManager        system_server                        E  NET_CAPABILITY_VALIDATED175 valid:true nc:[ Transports: CELLULAR Capabilities: SUPL&DUN&INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VPN&VALIDATED&NOT_ROAMING&FOREGROUND&NOT_CONGESTED&NOT_SUSPENDED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED LinkUpBandwidth>=1125Kbps LinkDnBandwidth>=2993Kbps Specifier: <TelephonyNetworkSpecifier [mSubId = 1]> AdminUids: [10061, 10301, 10327] SubscriptionIds: {1} UnderlyingNetworks: Null]
+2026-01-02 15:21:53.697  1081-1491  thermal_core            thermal_core                         E  Failed to read /sys/class/thermal/thermal_zone24/temp: Invalid argument
+2026-01-02 15:21:54.665  1439-1501  Watchdog                system_server                        E  !@Sync: 9772 heap(MB): 97 / 119 FD: 1148 [2026-01-02 15:21:54.664]
+2026-01-02 15:21:56.694   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn/TS25/3 not exist(2)
+2026-01-02 15:21:56.694   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn/TS25 not exist(2)
+2026-01-02 15:21:56.694   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn not exist(2)
+2026-01-02 15:21:56.707   880-880   SensorsGrip             and....sensors@2.0-service.multihal  E  [grip_sensor] enable: mEnabled : 0, first_grip_event : 1
+2026-01-02 15:21:56.712  1917-2019  SatelliteController     com.android.phone                    E  notifyNtnEligibility: mSatellitePhone is null
+2026-01-02 15:21:56.754   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn/TS25/3 not exist(2)
+2026-01-02 15:21:56.754   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn/TS25 not exist(2)
+2026-01-02 15:21:56.754   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn not exist(2)
+2026-01-02 15:21:56.758   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn/TS25/3 not exist(2)
+2026-01-02 15:21:56.758   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn/TS25 not exist(2)
+2026-01-02 15:21:56.758   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn not exist(2)
+2026-01-02 15:21:56.759   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn/TS25/3 not exist(2)
+2026-01-02 15:21:56.759   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn/TS25 not exist(2)
+2026-01-02 15:21:56.759   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn not exist(2)
+2026-01-02 15:21:56.860  1917-1917  SatelliteController     com.android.phone                    E  registerForSatelliteModemStateChanged: mSatelliteSessionController is not initialized yet
+2026-01-02 15:21:56.869  1917-1917  SatelliteController     com.android.phone                    E  registerForSatelliteModemStateChanged: mSatelliteSessionController is not initialized yet
+2026-01-02 15:21:59.019   894-930   BatteryDump             ven...msung.hardware.health-service  E  !@new_battery_dump : 4317,0,475,550,100,288,288,326,0,0,314,326,0,Full,NO_CHARGING,None,Good,USB,1,Normal,0,0,9488,0x0,0x10000,0x0,0,0,0000,0000,00000000,0,0,0,0,38,4317000,1000,0,0,
+2026-01-02 15:22:00.380  1439-1788  SemSoftApManager        system_server                        E  NET_CAPABILITY_VALIDATED175 valid:true nc:[ Transports: CELLULAR Capabilities: SUPL&DUN&INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VPN&VALIDATED&NOT_ROAMING&FOREGROUND&NOT_CONGESTED&NOT_SUSPENDED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED LinkUpBandwidth>=9819Kbps LinkDnBandwidth>=13128Kbps Specifier: <TelephonyNetworkSpecifier [mSubId = 1]> AdminUids: [10061, 10301, 10327] SubscriptionIds: {1} UnderlyingNetworks: Null]
+2026-01-02 15:22:04.885  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:04.885  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:04.886  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:04.886  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:04.886  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:04.886  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:04.886  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:04.913  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:04.914  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:04.914  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:04.945  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:04.945  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:04.945  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:04.974  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:04.974  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:04.974  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:04.975  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:04.983  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:04.983  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:04.984  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:04.984  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:04.984  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:04.984  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:04.984  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:04.984  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:04.999  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:05.000  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:05.000  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:05.034   880-880   SensorsGrip             and....sensors@2.0-service.multihal  E  [grip_sensor] enable: mEnabled : 1, first_grip_event : 1
+2026-01-02 15:22:05.038  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:05.038  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:05.039  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:05.055  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:05.055  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:05.055  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:05.062  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:05.070  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:05.070  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:05.080  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:05.081  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:05.091  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:05.091  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:05.092   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn/TS25/3 not exist(2)
+2026-01-02 15:22:05.092   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn/TS25 not exist(2)
+2026-01-02 15:22:05.092   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn not exist(2)
+2026-01-02 15:22:05.092  1917-2019  SatelliteController     com.android.phone                    E  notifyNtnEligibility: mSatellitePhone is null
+2026-01-02 15:22:05.106  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:05.106  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:05.123  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:05.123  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:05.131  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:05.140  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:05.140  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:05.191  1917-1917  SatelliteController     com.android.phone                    E  registerForSatelliteModemStateChanged: mSatelliteSessionController is not initialized yet
+2026-01-02 15:22:05.194  1917-1917  SatelliteController     com.android.phone                    E  registerForSatelliteModemStateChanged: mSatelliteSessionController is not initialized yet
+2026-01-02 15:22:05.703  1081-1491  thermal_core            thermal_core                         E  Failed to read /sys/class/thermal/thermal_zone24/temp: Invalid argument
+2026-01-02 15:22:06.624  1081-1492  md_thermal              thermal_core                         E  interval=40 temp: 41000 33200 33100 33300
+2026-01-02 15:22:07.905   933-933   RefreshRateSelector     surfaceflinger                       E  Can't find HRR max refresh rate by policy with the same group 0
+2026-01-02 15:22:11.840  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:11.840  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:11.840  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:11.840  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:11.841  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:11.841  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:11.841  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:11.841  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:11.842  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:11.842  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:11.843  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:11.843  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:11.858  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:11.858  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:11.859  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:11.867  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:11.867  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:11.867  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:11.867  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:11.889  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:11.889  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:11.889  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:11.889  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:11.907  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:11.907  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:11.907  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:11.907  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:11.916  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:11.916  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:11.916  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:11.916  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:11.928  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:11.929  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:11.929  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:11.929  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:11.937  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:11.938  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:11.938  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:11.938  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:11.945  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:11.945  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:11.945  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:11.945  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:11.967  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:11.968  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:11.968  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:11.968  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:12.451  1439-1788  SemSoftApManager        system_server                        E  NET_CAPABILITY_VALIDATED175 valid:true nc:[ Transports: CELLULAR Capabilities: SUPL&DUN&INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VPN&VALIDATED&NOT_ROAMING&FOREGROUND&NOT_CONGESTED&NOT_SUSPENDED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED LinkUpBandwidth>=1125Kbps LinkDnBandwidth>=2993Kbps Specifier: <TelephonyNetworkSpecifier [mSubId = 1]> AdminUids: [10061, 10301, 10327] SubscriptionIds: {1} UnderlyingNetworks: Null]
+2026-01-02 15:22:16.868  1439-4671  ClipboardService        system_server                        E  Denying clipboard access to com.tracfone.straighttalk.myaccount, application is not in focus nor is it a system service for user 0
+2026-01-02 15:22:16.998  4763-12123 IceCone                 com.samsung.android.honeyboard       E  b mimetype = text/plain 
+2026-01-02 15:22:17.039  1439-1872  ClipboardService        system_server                        E  Denying clipboard access to com.tracfone.straighttalk.myaccount, application is not in focus nor is it a system service for user 0
+2026-01-02 15:22:17.498  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:17.505  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:17.536  9213-9250  GPUAUX                  com.reedersystems.commandcomms       E  [AUX]GuiExtAuxCheckAuxPath:682: Null anb
+2026-01-02 15:22:17.707  1081-1491  thermal_core            thermal_core                         E  Failed to read /sys/class/thermal/thermal_zone24/temp: Invalid argument
+2026-01-02 15:22:18.484  1439-1788  SemSoftApManager        system_server                        E  NET_CAPABILITY_VALIDATED175 valid:true nc:[ Transports: CELLULAR Capabilities: SUPL&DUN&INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VPN&VALIDATED&NOT_ROAMING&FOREGROUND&NOT_CONGESTED&NOT_SUSPENDED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED LinkUpBandwidth>=9819Kbps LinkDnBandwidth>=13128Kbps Specifier: <TelephonyNetworkSpecifier [mSubId = 1]> AdminUids: [10061, 10301, 10327] SubscriptionIds: {1} UnderlyingNetworks: Null]
+2026-01-02 15:22:24.673  1439-1501  Watchdog                system_server                        E  !@Sync: 9773 heap(MB): 103 / 119 FD: 1147 [2026-01-02 15:22:24.673]
+2026-01-02 15:22:28.313   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn/TS25/3 not exist(2)
+2026-01-02 15:22:28.314   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn/TS25 not exist(2)
+2026-01-02 15:22:28.314   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn not exist(2)
+2026-01-02 15:22:28.334   880-880   SensorsGrip             and....sensors@2.0-service.multihal  E  [grip_sensor] enable: mEnabled : 0, first_grip_event : 1
+2026-01-02 15:22:28.344  1917-2019  SatelliteController     com.android.phone                    E  notifyNtnEligibility: mSatellitePhone is null
+2026-01-02 15:22:28.373   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn/TS25/3 not exist(2)
+2026-01-02 15:22:28.373   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn/TS25 not exist(2)
+2026-01-02 15:22:28.373   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn not exist(2)
+2026-01-02 15:22:28.377   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn/TS25/3 not exist(2)
+2026-01-02 15:22:28.377   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn/TS25 not exist(2)
+2026-01-02 15:22:28.377   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn not exist(2)
+2026-01-02 15:22:28.378   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn/TS25/3 not exist(2)
+2026-01-02 15:22:28.378   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn/TS25 not exist(2)
+2026-01-02 15:22:28.378   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn not exist(2)
+2026-01-02 15:22:28.436  1917-1917  SatelliteController     com.android.phone                    E  registerForSatelliteModemStateChanged: mSatelliteSessionController is not initialized yet
+2026-01-02 15:22:28.441  1917-1917  SatelliteController     com.android.phone                    E  registerForSatelliteModemStateChanged: mSatelliteSessionController is not initialized yet
+2026-01-02 15:22:29.079   894-930   BatteryDump             ven...msung.hardware.health-service  E  !@new_battery_dump : 4316,0,475,550,100,289,290,330,0,0,311,330,0,Full,NO_CHARGING,None,Good,USB,1,Normal,0,0,9488,0x0,0x10000,0x0,0,0,0000,0000,00000000,0,0,0,0,38,4316000,1000,0,0,
+2026-01-02 15:22:29.712  1081-1491  thermal_core            thermal_core                         E  Failed to read /sys/class/thermal/thermal_zone24/temp: Invalid argument
+2026-01-02 15:22:40.550  1439-2116  SemBattery...tsProvider system_server                        E  Receive crashed battery data, request the stats once again.
+2026-01-02 15:22:40.979   880-880   SensorsGrip             and....sensors@2.0-service.multihal  E  [grip_sensor] enable: mEnabled : 1, first_grip_event : 1
+2026-01-02 15:22:41.003   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn/TS25/3 not exist(2)
+2026-01-02 15:22:41.003   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn/TS25 not exist(2)
+2026-01-02 15:22:41.003   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn not exist(2)
+2026-01-02 15:22:41.006  1917-2019  SatelliteController     com.android.phone                    E  notifyNtnEligibility: mSatellitePhone is null
+2026-01-02 15:22:41.073  1917-1917  SatelliteController     com.android.phone                    E  registerForSatelliteModemStateChanged: mSatelliteSessionController is not initialized yet
+2026-01-02 15:22:41.076  1917-1917  SatelliteController     com.android.phone                    E  registerForSatelliteModemStateChanged: mSatelliteSessionController is not initialized yet
+2026-01-02 15:22:41.395  1439-1516  BluetoothP...sCollector system_server                        E  Cannot acquire BluetoothActivityEnergyInfo
+                                                                                                    java.util.concurrent.ExecutionException: java.lang.RuntimeException: error: 11
+                                                                                                    	at java.util.concurrent.CompletableFuture.reportGet(CompletableFuture.java:372)
+                                                                                                    	at java.util.concurrent.CompletableFuture.get(CompletableFuture.java:2072)
+                                                                                                    	at com.android.server.power.stats.BluetoothPowerStatsCollector.collectStats(qb/102708081 9a8b16df9aeae134959f48248e34791bb9008466d4c2bd2ac7f5311f65dca557:202)
+                                                                                                    	at com.android.server.power.stats.PowerStatsCollector$$ExternalSyntheticLambda0.run(qb/102708081 9a8b16df9aeae134959f48248e34791bb9008466d4c2bd2ac7f5311f65dca557:3)
+                                                                                                    	at android.os.Handler.handleCallback(Handler.java:995)
+                                                                                                    	at android.os.Handler.dispatchMessage(Handler.java:103)
+                                                                                                    	at android.os.Looper.loopOnce(Looper.java:273)
+                                                                                                    	at android.os.Looper.loop(Looper.java:363)
+                                                                                                    	at android.os.HandlerThread.run(HandlerThread.java:85)
+                                                                                                    Caused by: java.lang.RuntimeException: error: 11
+                                                                                                    	at com.android.server.power.stats.BluetoothPowerStatsCollector$1.onBluetoothActivityEnergyInfoError(qb/102708081 9a8b16df9aeae134959f48248e34791bb9008466d4c2bd2ac7f5311f65dca557:12)
+                                                                                                    	at android.bluetooth.BluetoothAdapter$OnBluetoothActivityEnergyInfoProxy.lambda$onBluetoothActivityEnergyInfoAvailable$0(BluetoothAdapter.java:1226)
+                                                                                                    	at android.bluetooth.BluetoothAdapter$OnBluetoothActivityEnergyInfoProxy$$ExternalSyntheticLambda1.run(D8$$SyntheticClass:0)
+                                                                                                    	at android.bluetooth.BluetoothUtils.lambda$executeFromBinder$0(BluetoothUtils.java:343)
+                                                                                                    	at android.bluetooth.BluetoothUtils$$ExternalSyntheticLambda1.run(D8$$SyntheticClass:0)
+                                                                                                    	at com.android.server.SystemServerInitThreadPool$$ExternalSyntheticLambda0.execute(qb/102708081 9a8b16df9aeae134959f48248e34791bb9008466d4c2bd2ac7f5311f65dca557:1)
+                                                                                                    	at android.bluetooth.BluetoothUtils.executeFromBinder(BluetoothUtils.java:343)
+                                                                                                    	at android.bluetooth.BluetoothAdapter$OnBluetoothActivityEnergyInfoProxy.onBluetoothActivityEnergyInfoAvailable(BluetoothAdapter.java:1224)
+                                                                                                    	at android.bluetooth.IBluetoothActivityEnergyInfoListener$Stub.onTransact(IBluetoothActivityEnergyInfoListener.java:98)
+                                                                                                    	at android.os.Binder.execTransactInternal(Binder.java:1462)
+                                                                                                    	at android.os.Binder.execTransact(Binder.java:1401)
+2026-01-02 15:22:41.557  1439-1516  BluetoothP...sCollector system_server                        E  Cannot acquire BluetoothActivityEnergyInfo
+                                                                                                    java.util.concurrent.ExecutionException: java.lang.RuntimeException: error: 11
+                                                                                                    	at java.util.concurrent.CompletableFuture.reportGet(CompletableFuture.java:372)
+                                                                                                    	at java.util.concurrent.CompletableFuture.get(CompletableFuture.java:2072)
+                                                                                                    	at com.android.server.power.stats.BluetoothPowerStatsCollector.collectStats(qb/102708081 9a8b16df9aeae134959f48248e34791bb9008466d4c2bd2ac7f5311f65dca557:202)
+                                                                                                    	at com.android.server.power.stats.PowerStatsCollector$$ExternalSyntheticLambda0.run(qb/102708081 9a8b16df9aeae134959f48248e34791bb9008466d4c2bd2ac7f5311f65dca557:3)
+                                                                                                    	at android.os.Handler.handleCallback(Handler.java:995)
+                                                                                                    	at android.os.Handler.dispatchMessage(Handler.java:103)
+                                                                                                    	at android.os.Looper.loopOnce(Looper.java:273)
+                                                                                                    	at android.os.Looper.loop(Looper.java:363)
+                                                                                                    	at android.os.HandlerThread.run(HandlerThread.java:85)
+                                                                                                    Caused by: java.lang.RuntimeException: error: 11
+                                                                                                    	at com.android.server.power.stats.BluetoothPowerStatsCollector$1.onBluetoothActivityEnergyInfoError(qb/102708081 9a8b16df9aeae134959f48248e34791bb9008466d4c2bd2ac7f5311f65dca557:12)
+                                                                                                    	at android.bluetooth.BluetoothAdapter$OnBluetoothActivityEnergyInfoProxy.lambda$onBluetoothActivityEnergyInfoAvailable$0(BluetoothAdapter.java:1226)
+                                                                                                    	at android.bluetooth.BluetoothAdapter$OnBluetoothActivityEnergyInfoProxy$$ExternalSyntheticLambda1.run(D8$$SyntheticClass:0)
+                                                                                                    	at android.bluetooth.BluetoothUtils.lambda$executeFromBinder$0(BluetoothUtils.java:343)
+                                                                                                    	at android.bluetooth.BluetoothUtils$$ExternalSyntheticLambda1.run(D8$$SyntheticClass:0)
+                                                                                                    	at com.android.server.SystemServerInitThreadPool$$ExternalSyntheticLambda0.execute(qb/102708081 9a8b16df9aeae134959f48248e34791bb9008466d4c2bd2ac7f5311f65dca557:1)
+                                                                                                    	at android.bluetooth.BluetoothUtils.executeFromBinder(BluetoothUtils.java:343)
+                                                                                                    	at android.bluetooth.BluetoothAdapter$OnBluetoothActivityEnergyInfoProxy.onBluetoothActivityEnergyInfoAvailable(BluetoothAdapter.java:1224)
+                                                                                                    	at android.bluetooth.IBluetoothActivityEnergyInfoListener$Stub.onTransact(IBluetoothActivityEnergyInfoListener.java:98)
+                                                                                                    	at android.os.Binder.execTransactInternal(Binder.java:1462)
+                                                                                                    	at android.os.Binder.execTransact(Binder.java:1401)
+2026-01-02 15:22:41.560  1439-1516  BluetoothP...sCollector system_server                        E  Cannot acquire BluetoothActivityEnergyInfo
+                                                                                                    java.util.concurrent.ExecutionException: java.lang.RuntimeException: error: 11
+                                                                                                    	at java.util.concurrent.CompletableFuture.reportGet(CompletableFuture.java:372)
+                                                                                                    	at java.util.concurrent.CompletableFuture.get(CompletableFuture.java:2072)
+                                                                                                    	at com.android.server.power.stats.BluetoothPowerStatsCollector.collectStats(qb/102708081 9a8b16df9aeae134959f48248e34791bb9008466d4c2bd2ac7f5311f65dca557:202)
+                                                                                                    	at com.android.server.power.stats.PowerStatsCollector$$ExternalSyntheticLambda0.run(qb/102708081 9a8b16df9aeae134959f48248e34791bb9008466d4c2bd2ac7f5311f65dca557:3)
+                                                                                                    	at android.os.Handler.handleCallback(Handler.java:995)
+                                                                                                    	at android.os.Handler.dispatchMessage(Handler.java:103)
+                                                                                                    	at android.os.Looper.loopOnce(Looper.java:273)
+                                                                                                    	at android.os.Looper.loop(Looper.java:363)
+                                                                                                    	at android.os.HandlerThread.run(HandlerThread.java:85)
+                                                                                                    Caused by: java.lang.RuntimeException: error: 11
+                                                                                                    	at com.android.server.power.stats.BluetoothPowerStatsCollector$1.onBluetoothActivityEnergyInfoError(qb/102708081 9a8b16df9aeae134959f48248e34791bb9008466d4c2bd2ac7f5311f65dca557:12)
+                                                                                                    	at android.bluetooth.BluetoothAdapter$OnBluetoothActivityEnergyInfoProxy.lambda$onBluetoothActivityEnergyInfoAvailable$0(BluetoothAdapter.java:1226)
+                                                                                                    	at android.bluetooth.BluetoothAdapter$OnBluetoothActivityEnergyInfoProxy$$ExternalSyntheticLambda1.run(D8$$SyntheticClass:0)
+                                                                                                    	at android.bluetooth.BluetoothUtils.lambda$executeFromBinder$0(BluetoothUtils.java:343)
+                                                                                                    	at android.bluetooth.BluetoothUtils$$ExternalSyntheticLambda1.run(D8$$SyntheticClass:0)
+                                                                                                    	at com.android.server.SystemServerInitThreadPool$$ExternalSyntheticLambda0.execute(qb/102708081 9a8b16df9aeae134959f48248e34791bb9008466d4c2bd2ac7f5311f65dca557:1)
+                                                                                                    	at android.bluetooth.BluetoothUtils.executeFromBinder(BluetoothUtils.java:343)
+                                                                                                    	at android.bluetooth.BluetoothAdapter$OnBluetoothActivityEnergyInfoProxy.onBluetoothActivityEnergyInfoAvailable(BluetoothAdapter.java:1224)
+                                                                                                    	at android.bluetooth.IBluetoothActivityEnergyInfoListener$Stub.onTransact(IBluetoothActivityEnergyInfoListener.java:98)
+                                                                                                    	at android.os.Binder.execTransactInternal(Binder.java:1462)
+                                                                                                    	at android.os.Binder.execTransact(Binder.java:1401)
+2026-01-02 15:22:41.717  1081-1491  thermal_core            thermal_core                         E  Failed to read /sys/class/thermal/thermal_zone24/temp: Invalid argument
+2026-01-02 15:22:46.627  1081-1492  md_thermal              thermal_core                         E  interval=40 temp: 36300 33300 33100 33600
+2026-01-02 15:22:48.667  1439-1788  SemSoftApManager        system_server                        E  NET_CAPABILITY_VALIDATED175 valid:true nc:[ Transports: CELLULAR Capabilities: SUPL&DUN&INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VPN&VALIDATED&NOT_ROAMING&FOREGROUND&NOT_CONGESTED&NOT_SUSPENDED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED LinkUpBandwidth>=1125Kbps LinkDnBandwidth>=2993Kbps Specifier: <TelephonyNetworkSpecifier [mSubId = 1]> AdminUids: [10061, 10301, 10327] SubscriptionIds: {1} UnderlyingNetworks: Null]
+2026-01-02 15:22:51.946   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn/TS25/3 not exist(2)
+2026-01-02 15:22:51.946   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn/TS25 not exist(2)
+2026-01-02 15:22:51.946   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn not exist(2)
+2026-01-02 15:22:51.963   880-880   SensorsGrip             and....sensors@2.0-service.multihal  E  [grip_sensor] enable: mEnabled : 0, first_grip_event : 1
+2026-01-02 15:22:51.974  1917-2019  SatelliteController     com.android.phone                    E  notifyNtnEligibility: mSatellitePhone is null
+2026-01-02 15:22:51.992   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn/TS25/3 not exist(2)
+2026-01-02 15:22:51.992   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn/TS25 not exist(2)
+2026-01-02 15:22:51.992   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn not exist(2)
+2026-01-02 15:22:51.997   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn/TS25/3 not exist(2)
+2026-01-02 15:22:51.997   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn/TS25 not exist(2)
+2026-01-02 15:22:51.997   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn not exist(2)
+2026-01-02 15:22:51.998   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn/TS25/3 not exist(2)
+2026-01-02 15:22:51.998   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn/TS25 not exist(2)
+2026-01-02 15:22:51.998   944-951   ccci_fsd(1)             ccci_mdinit                          E  Open: [error]the path /vendor/etc/mdota/misc_data/plmn not exist(2)
+2026-01-02 15:22:52.085  1917-1917  SatelliteController     com.android.phone                    E  registerForSatelliteModemStateChanged: mSatelliteSessionController is not initialized yet
+2026-01-02 15:22:52.093  1917-1917  SatelliteController     com.android.phone                    E  registerForSatelliteModemStateChanged: mSatelliteSessionController is not initialized yet
+2026-01-02 15:22:53.723  1081-1491  thermal_core            thermal_core                         E  Failed to read /sys/class/thermal/thermal_zone24/temp: Invalid argument
+2026-01-02 15:22:54.682  1439-1501  Watchdog                system_server                        E  !@Sync: 9774 heap(MB): 99 / 120 FD: 1145 [2026-01-02 15:22:54.682]
+2026-01-02 15:22:54.706  1439-1788  SemSoftApManager        system_server                        E  NET_CAPABILITY_VALIDATED175 valid:true nc:[ Transports: CELLULAR Capabilities: SUPL&DUN&INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VPN&VALIDATED&NOT_ROAMING&FOREGROUND&NOT_CONGESTED&NOT_SUSPENDED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED LinkUpBandwidth>=9819Kbps LinkDnBandwidth>=13128Kbps Specifier: <TelephonyNetworkSpecifier [mSubId = 1]> AdminUids: [10061, 10301, 10327] SubscriptionIds: {1} UnderlyingNetworks: Null]
+2026-01-02 15:22:59.143   894-930   BatteryDump             ven...msung.hardware.health-service  E  !@new_battery_dump : 4317,1,475,550,100,290,291,326,0,0,312,326,0,Full,NO_CHARGING,None,Good,USB,1,Normal,0,0,9488,0x0,0x10000,0x0,0,0,0000,0000,00000000,0,0,0,0,38,4317000,1000,0,0,
+2026-01-02 15:23:05.728  1081-1491  thermal_core            thermal_core                         E  Failed to read /sys/class/thermal/thermal_zone24/temp: Invalid argument

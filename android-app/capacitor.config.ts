@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: 'COMMAND COMMS',
   webDir: 'dist/public',
   server: {
-    url: 'https://command-radio.onrender.com',
+    url: 'https://comms.reeder-systems.com',
     androidScheme: 'https',
     cleartext: true,
   },
