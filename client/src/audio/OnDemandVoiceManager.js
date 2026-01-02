@@ -427,6 +427,25 @@ class OnDemandVoiceManager {
       const duration = Date.now() - startTime;
       this.connectionTimes.delete(channelId);
       console.log(`[OnDemandVoice] Connection time for ${channelId}: ${duration}ms`);
+      
+      this._reportConnectionTime(channelId, duration);
+    }
+  }
+
+  async _reportConnectionTime(channelId, durationMs) {
+    try {
+      await fetch('/api/dispatch/connection-time', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          unitId: signalingManager.unitId,
+          channelId,
+          durationMs,
+        }),
+      });
+    } catch (err) {
+      console.warn('[OnDemandVoice] Failed to report connection time:', err.message);
     }
   }
 

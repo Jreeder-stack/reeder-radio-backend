@@ -533,12 +533,52 @@ class SignalingService {
     console.log(`[Signaling] Connection time recorded: ${unitId} on ${channelId} = ${durationMs}ms (total: ${existing.total}ms)`);
   }
 
-  getConnectionStats() {
-    const stats = {};
+  getConnectionStats(unitId) {
+    const stats = [];
     for (const [key, data] of this.connectionTimes) {
-      stats[key] = { ...data };
+      if (key.startsWith(`${unitId}:`)) {
+        const channelId = key.split(':')[1];
+        stats.push({
+          channelId,
+          totalMs: data.total,
+          connectionCount: data.count,
+          lastConnection: data.lastConnection,
+        });
+      }
     }
     return stats;
+  }
+
+  getAllConnectionStats() {
+    const stats = [];
+    for (const [key, data] of this.connectionTimes) {
+      const [unitId, channelId] = key.split(':');
+      stats.push({
+        unitId,
+        channelId,
+        totalMs: data.total,
+        connectionCount: data.count,
+        lastConnection: data.lastConnection,
+        avgConnectionMs: Math.round(data.total / data.count),
+      });
+    }
+    return stats;
+  }
+
+  getSystemHealth() {
+    return {
+      signalingConnected: this.io?.engine?.clientsCount > 0,
+      livekitAvailable: this.livekitAvailable,
+      activeTransmissions: this.activeTransmissions.size,
+      activeEmergencies: this.emergencyStates.size,
+      connectedUnits: this.unitPresence.size,
+      channelCount: this.channelMembers.size,
+      timestamp: Date.now(),
+    };
+  }
+
+  isLivekitAllowed() {
+    return this.livekitAvailable && this.io?.engine?.clientsCount > 0;
   }
 }
 

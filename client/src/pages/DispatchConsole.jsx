@@ -28,6 +28,7 @@ import { micPTTManager } from '../audio/MicPTTManager.js';
 import toneEngine from '../audio/toneEngine.js';
 import { getUnits } from '../utils/api.js';
 import { useLiveKitConnection } from '../context/LiveKitConnectionContext.jsx';
+import { useSignalingContext } from '../context/SignalingContext.jsx';
 
 export default function DispatchConsole({ user, onLogout }) {
   const [rightTab, setRightTab] = useState('emergency');
@@ -39,6 +40,17 @@ export default function DispatchConsole({ user, onLogout }) {
   });
 
   const { retryConnection } = useLiveKitConnection();
+  const { 
+    connected: signalingConnected, 
+    channelMembers, 
+    activeTransmissions,
+    emergencyChannels,
+    joinChannel,
+    leaveChannel,
+    isTransmitting,
+    getTransmittingUnit,
+    isEmergencyActive,
+  } = useSignalingContext();
 
   useEffect(() => {
     if (darkMode) {
@@ -105,6 +117,24 @@ export default function DispatchConsole({ user, onLogout }) {
       toneEngine.destroy();
     };
   }, []);
+
+  useEffect(() => {
+    if (!signalingConnected || !channels.length) return;
+    
+    const channelNames = gridChannelIds
+      .map(id => channels.find(c => c.id === id)?.name)
+      .filter(Boolean);
+    
+    channelNames.forEach(channelName => {
+      joinChannel(channelName);
+    });
+    
+    return () => {
+      channelNames.forEach(channelName => {
+        leaveChannel(channelName);
+      });
+    };
+  }, [signalingConnected, gridChannelIds, channels, joinChannel, leaveChannel]);
 
   const handleDragEnd = (event) => {
     const { active, over } = event;
