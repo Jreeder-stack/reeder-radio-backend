@@ -66,6 +66,34 @@ Not specified.
   - Text messaging support for dispatchers to send typed messages
   - Audio files stored in `uploads/audio/` directory (excluded from git)
 - **Admin System:** Dashboard for user management (roles, blocking, dispatcher access), channel management (enable/disable), and activity logging.
+- **Radio App Tab:** Admin-only tab that provides development info and build instructions for the Android app.
+
+## Native Android App (Capacitor)
+
+The Android radio app source code is located in the `android-app/` folder. It uses Capacitor to wrap the web UI into a native Android application.
+
+### Configuration
+- **App ID:** `com.reedersystems.commandcomms`
+- **App Name:** COMMAND COMMS
+- **Backend:** Connects to this server via environment variables (`BACKEND_URL`, `CAD_URL`)
+
+### Native Plugins (`android-app/android-config/`)
+- `LiveKitPlugin.kt` - Native LiveKit SDK wrapper for reliable PTT audio
+- `HardwarePttPlugin.java` - Volume/Bluetooth PTT key support
+- `BackgroundAudioService.java` - Foreground service for background audio/GPS
+- `DndOverridePlugin.java` - Do Not Disturb override for emergency alerts
+
+### Building the APK
+1. `cd android-app && npm install`
+2. `npm run build`
+3. `npx cap add android` (first time only)
+4. `npx cap sync android`
+5. Copy files from `android-config/` to the Android project
+6. Open in Android Studio: `npx cap open android`
+7. Build APK from Android Studio
+
+### Play Store Release
+When ready for production, build a signed APK/AAB in Android Studio and upload to Google Play Console. The app launches directly to the radio login screen.
 
 ## External Dependencies
 - **LiveKit:** Real-time audio streaming and data channel communication.
