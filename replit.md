@@ -84,13 +84,16 @@ The Android radio app source code is located in the `android-app/` folder. It us
 - `DndOverridePlugin.java` - Do Not Disturb override for emergency alerts
 
 ### Building the APK
+**Prerequisites:** Android Studio, JDK 21+, Gradle 8.9+
+
 1. `cd android-app && npm install`
 2. `npm run build`
 3. `npx cap add android` (first time only)
 4. `npx cap sync android`
-5. Copy files from `android-config/` to the Android project
-6. Open in Android Studio: `npx cap open android`
-7. Build APK from Android Studio
+5. Fix Gradle version if prompted (update to 8.9 in Android Studio)
+6. Copy files from `android-config/` to the Android project
+7. Open in Android Studio: `npx cap open android`
+8. Build APK from Android Studio
 
 ### Play Store Release
 When ready for production, build a signed APK/AAB in Android Studio and upload to Google Play Console. The app launches directly to the radio login screen.

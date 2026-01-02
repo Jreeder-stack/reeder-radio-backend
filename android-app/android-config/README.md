@@ -4,9 +4,11 @@ This directory contains configuration and instructions for building the native A
 
 ## Prerequisites
 
-1. Android Studio installed
+1. Android Studio installed (latest version recommended)
 2. Android SDK (API 33+)
 3. Node.js 18+
+4. JDK 21+ (required for Gradle 8.9+)
+5. Gradle 8.9+ (Android Studio will prompt to update if needed)
 
 ## Build Steps
 
@@ -29,6 +31,19 @@ npx cap sync android
 ```bash
 npx cap open android
 ```
+
+### 5. Fix Gradle Version (if prompted)
+
+If Android Studio shows "Minimum supported Gradle version is 8.9":
+
+**Option A:** Click the "Gradle Settings" link and let Android Studio update automatically
+
+**Option B:** Manually edit `android/gradle/wrapper/gradle-wrapper.properties`:
+```properties
+distributionUrl=https\://services.gradle.org/distributions/gradle-8.9-bin.zip
+```
+
+**Note:** Gradle 8.9+ requires JDK 21. If you see JDK compatibility errors, update your JDK or set `JAVA_HOME` to a JDK 21 installation.
 
 ## Required Android Permissions
 
@@ -139,7 +154,7 @@ android {
     // ... existing config
     
     kotlinOptions {
-        jvmTarget = '17'
+        jvmTarget = '21'
     }
 }
 
