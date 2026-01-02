@@ -243,7 +243,7 @@ export function LiveKitConnectionProvider({ children, user }) {
     }
   }, []);
 
-  const connectToChannel = useCallback(async (channelName, identity) => {
+  const connectToChannel = useCallback(async (channelName, identity, markActive = true) => {
     if (!channelName || !identity) return false;
     
     recordActivity();
@@ -252,6 +252,11 @@ export function LiveKitConnectionProvider({ children, user }) {
       await preCaptureForMobile();
       await livekitManager.connect(channelName, identity);
       connectionStartTimes.current.set(channelName, Date.now());
+      
+      if (markActive) {
+        livekitManager.setChannelActive(channelName);
+      }
+      
       console.log(`[LiveKitConnection] Connected to ${channelName}`);
       return true;
     } catch (err) {
@@ -263,6 +268,7 @@ export function LiveKitConnectionProvider({ children, user }) {
 
   const disconnectFromChannel = useCallback(async (channelName) => {
     clearReconnectTimer(channelName);
+    livekitManager.setChannelInactive(channelName);
     await livekitManager.disconnect(channelName);
     console.log(`[LiveKitConnection] Disconnected from ${channelName}`);
   }, [clearReconnectTimer]);

@@ -29,6 +29,13 @@ class LiveKitManager {
     this.HEALTH_CHECK_INTERVAL = 5000; // Check every 5 seconds
     this.CONNECTION_TIMEOUT = 15000; // Consider stale after 15 seconds
     
+    // Idle timeout tracking - disconnect from rooms with no activity
+    this.channelLastActivity = new Map(); // channelName -> timestamp
+    this.activeChannels = new Set(); // Channels that should stay connected (UI visible/selected)
+    this.idleTimeoutTimers = new Map(); // channelName -> timeoutId
+    this.IDLE_TIMEOUT_MS = 60000; // Disconnect after 60 seconds of inactivity
+    this.idleCheckInterval = null;
+    
     // Event listener arrays - allows multiple listeners
     this._trackSubscribedListeners = new Set();
     this._trackUnsubscribedListeners = new Set();
@@ -290,6 +297,67 @@ class LiveKitManager {
     };
   }
 
+  // Mark a channel as actively monitored (should stay connected)
+  setChannelActive(channelName) {
+    this.activeChannels.add(channelName);
+    this._clearIdleTimer(channelName);
+    this._recordActivity(channelName);
+    console.log(`[LiveKit] Channel ${channelName} marked active`);
+  }
+
+  // Mark a channel as inactive (can be disconnected after idle timeout)
+  setChannelInactive(channelName) {
+    this.activeChannels.delete(channelName);
+    this._startIdleTimer(channelName);
+    console.log(`[LiveKit] Channel ${channelName} marked inactive, idle timer started`);
+  }
+
+  // Record activity on a channel (resets idle timer)
+  _recordActivity(channelName) {
+    this.channelLastActivity.set(channelName, Date.now());
+    if (!this.activeChannels.has(channelName)) {
+      this._restartIdleTimer(channelName);
+    }
+  }
+
+  // Start idle timer for a channel
+  _startIdleTimer(channelName) {
+    this._clearIdleTimer(channelName);
+    
+    if (this.activeChannels.has(channelName)) return;
+    if (!this.rooms.has(channelName)) return;
+    
+    const timerId = setTimeout(() => {
+      if (!this.activeChannels.has(channelName) && this.rooms.has(channelName)) {
+        console.log(`[LiveKit] Idle timeout - disconnecting from ${channelName}`);
+        this.disconnect(channelName);
+      }
+    }, this.IDLE_TIMEOUT_MS);
+    
+    this.idleTimeoutTimers.set(channelName, timerId);
+  }
+
+  // Clear idle timer for a channel
+  _clearIdleTimer(channelName) {
+    const timerId = this.idleTimeoutTimers.get(channelName);
+    if (timerId) {
+      clearTimeout(timerId);
+      this.idleTimeoutTimers.delete(channelName);
+    }
+  }
+
+  // Restart idle timer (on activity)
+  _restartIdleTimer(channelName) {
+    if (this.activeChannels.has(channelName)) return;
+    this._startIdleTimer(channelName);
+  }
+
+  // Set the idle timeout duration
+  setIdleTimeout(ms) {
+    this.IDLE_TIMEOUT_MS = ms;
+    console.log(`[LiveKit] Idle timeout set to ${ms}ms`);
+  }
+
   _initPTTListener() {
     this.pttListenerRemover = micPTTManager.addStateListener((newState, oldState) => {
       const shouldMute = newState === PTT_STATES.ARMING || newState === PTT_STATES.TRANSMITTING;
@@ -414,6 +482,7 @@ class LiveKitManager {
       
       notifyChannelJoin(channelName, identity);
       
+      this._recordActivity(channelName);
       this._emitConnectionStateChange(channelName, 'connected');
 
       return room;
@@ -436,6 +505,9 @@ class LiveKitManager {
   _setupRoomEventHandlers(room, channelName) {
     room.on(RoomEvent.TrackSubscribed, (track, publication, participant) => {
       console.log(`[LiveKit] Track subscribed: ${track.kind} from ${participant.identity} on ${channelName}`);
+      
+      // Record activity for idle timeout
+      this._recordActivity(channelName);
       
       // Skip audio from ourselves - we don't want to hear our own transmission
       if (track.kind === Track.Kind.Audio && participant.identity === room.localParticipant?.identity) {
@@ -587,6 +659,11 @@ class LiveKitManager {
     this.mutedChannels.delete(channelName);
     this.fallbackAudioElements.delete(channelName);
     this.connectionHealth.delete(channelName);
+    
+    // Clean up idle timeout tracking
+    this._clearIdleTimer(channelName);
+    this.activeChannels.delete(channelName);
+    this.channelLastActivity.delete(channelName);
     
     const animationId = this.levelAnimations.get(channelName);
     if (animationId) {
