@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./AuthContext.jsx";
 import { LiveKitConnectionProvider, useLiveKitConnection } from "./context/LiveKitConnectionContext.jsx";
+import { SignalingProvider } from "./context/SignalingContext.jsx";
 import Login from "./Login.jsx";
 import App from "./App.jsx";
 import Admin from "./Admin.jsx";
@@ -114,43 +115,45 @@ function ConnectedRoutes() {
   const { user } = useAuth();
   
   return (
-    <LiveKitConnectionProvider user={user}>
-      <Routes>
-        <Route path="/login" element={<LoginRoute />} />
-        <Route
-          path="/"
-          element={
-            <ProtectedRoute>
-              <AppWrapper />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/dispatcher"
-          element={
-            <ProtectedRoute dispatcherOnly>
-              <DispatchConsoleWrapper />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin"
-          element={
-            <ProtectedRoute adminOnly>
-              <AdminWrapper />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/map"
-          element={
-            <ProtectedRoute dispatcherOnly>
-              <DispatcherMap />
-            </ProtectedRoute>
-          }
-        />
-      </Routes>
-    </LiveKitConnectionProvider>
+    <SignalingProvider>
+      <LiveKitConnectionProvider user={user}>
+        <Routes>
+          <Route path="/login" element={<LoginRoute />} />
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <AppWrapper />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dispatcher"
+            element={
+              <ProtectedRoute dispatcherOnly>
+                <DispatchConsoleWrapper />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute adminOnly>
+                <AdminWrapper />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/map"
+            element={
+              <ProtectedRoute dispatcherOnly>
+                <DispatcherMap />
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </LiveKitConnectionProvider>
+    </SignalingProvider>
   );
 }
 

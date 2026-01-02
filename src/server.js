@@ -1,9 +1,11 @@
 import 'dotenv/config';
+import { createServer } from 'http';
 import app from './app.js';
 import { config, validateEnv } from './config/env.js';
 import { initializeDatabase, isAiDispatchEnabled, getAiDispatchChannel } from './db/index.js';
 import { startDispatcher, getDispatcher } from './services/aiDispatchService.js';
 import { isConfigured as isAzureConfigured } from './services/azureSpeechService.js';
+import { signalingService } from './services/signalingService.js';
 
 async function start() {
   validateEnv();
@@ -15,6 +17,11 @@ async function start() {
     console.error('Database initialization failed:', err);
     process.exit(1);
   }
+
+  const httpServer = createServer(app);
+  
+  signalingService.initialize(httpServer);
+  console.log('Signaling service initialized');
 
   try {
     if (!isAzureConfigured()) {
@@ -42,8 +49,9 @@ async function start() {
     console.error('AI Dispatcher auto-start failed:', err.message);
   }
   
-  app.listen(config.port, '0.0.0.0', () => {
+  httpServer.listen(config.port, '0.0.0.0', () => {
     console.log(`Server running on port ${config.port}`);
+    console.log(`Signaling endpoint: ws://0.0.0.0:${config.port}/signaling`);
   });
 }
 

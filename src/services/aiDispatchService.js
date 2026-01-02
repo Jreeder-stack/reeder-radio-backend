@@ -277,7 +277,9 @@ class AIDispatcher {
     console.log(`[AI-Dispatcher] ${timestamp} | ${action}`, JSON.stringify(details));
   }
 
-  async start(channelName) {
+  async start(channelName, options = {}) {
+    const { connectImmediately = false } = options;
+    
     if (!channelName) {
       this.log('START_SKIPPED', { reason: 'No channel configured' });
       return;
@@ -300,17 +302,10 @@ class AIDispatcher {
     }
 
     this.configuredChannel = channelName;
-    this.log('STARTING', { channel: channelName });
     this.isRunning = true;
     this.isMuted = false;
-
-    try {
-      await this.joinRoom(channelName);
-    } catch (error) {
-      this.log('START_FAILED', { channel: channelName, error: error.message });
-      this.isMuted = true;
-      await this.stop();
-    }
+    
+    this.log('STARTED_STANDBY', { channel: channelName, mode: 'on-demand' });
   }
 
   async leaveCurrentRoom() {
@@ -1256,6 +1251,7 @@ class AIDispatcher {
 }
 
 let dispatcherInstance = null;
+let signalingUnsubscribers = [];
 
 export function getDispatcher() {
   if (!dispatcherInstance) {
@@ -1264,13 +1260,77 @@ export function getDispatcher() {
   return dispatcherInstance;
 }
 
+async function setupSignalingIntegration(channelName) {
+  try {
+    const { signalingService } = await import('./signalingService.js');
+    const { aiDispatcherSignaling } = await import('./aiDispatcherSignaling.js');
+    
+    signalingUnsubscribers.forEach(unsub => unsub());
+    signalingUnsubscribers = [];
+    
+    const dispatcher = getDispatcher();
+    aiDispatcherSignaling.initialize(dispatcher);
+    aiDispatcherSignaling.setActiveChannel(channelName);
+    
+    signalingUnsubscribers.push(
+      signalingService.onPttStart(async (data) => {
+        if (data.channelId === channelName) {
+          await aiDispatcherSignaling.handlePttStart(data.channelId, data.unitId, data.isEmergency);
+        }
+      })
+    );
+    
+    signalingUnsubscribers.push(
+      signalingService.onPttEnd(async (data) => {
+        if (data.channelId === channelName) {
+          await aiDispatcherSignaling.handlePttEnd(data.channelId, data.unitId, data.gracePeriodMs);
+        }
+      })
+    );
+    
+    signalingUnsubscribers.push(
+      signalingService.onEmergencyStart(async (data) => {
+        if (data.channelId === channelName) {
+          await aiDispatcherSignaling.handleEmergencyStart(data.channelId, data.unitId);
+        }
+      })
+    );
+    
+    signalingUnsubscribers.push(
+      signalingService.onEmergencyEnd(async (data) => {
+        if (data.channelId === channelName) {
+          await aiDispatcherSignaling.handleEmergencyEnd(data.channelId, data.unitId);
+        }
+      })
+    );
+    
+    console.log(`[AI-Dispatcher] Signaling integration setup for channel: ${channelName}`);
+  } catch (err) {
+    console.error('[AI-Dispatcher] Failed to setup signaling integration:', err.message);
+  }
+}
+
 export async function startDispatcher(channelName) {
   const dispatcher = getDispatcher();
   await dispatcher.start(channelName);
+  await setupSignalingIntegration(channelName);
 }
 
 export async function stopDispatcher() {
   const dispatcher = getDispatcher();
+  
+  signalingUnsubscribers.forEach(unsub => unsub());
+  signalingUnsubscribers = [];
+  
+  try {
+    const { aiDispatcherSignaling } = await import('./aiDispatcherSignaling.js');
+    if (dispatcher.configuredChannel) {
+      aiDispatcherSignaling.removeActiveChannel(dispatcher.configuredChannel);
+    }
+  } catch (err) {
+    console.error('[AI-Dispatcher] Failed to cleanup signaling:', err.message);
+  }
+  
   await dispatcher.stop();
 }
 
