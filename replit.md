@@ -17,11 +17,23 @@ Not specified.
 ### Technical Implementations
 - **Frontend (React/Vite):** Utilizes React for dynamic UI, Vite for fast development, and Zustand for state management with localStorage persistence. Audio engines (`toneEngine.js`, `livekitEngine.js`) manage various audio functionalities and LiveKit connections.
 - **Backend (Express.js):** Provides API endpoints for authentication, user/channel management, LiveKit token generation, and dispatch services. PostgreSQL is used for data persistence with `connect-pg-simple` for session management.
-- **Real-time Communication:** LiveKit is central for real-time audio streaming and data channel communication, enabling features like unit presence, emergency signals, and tone broadcasting.
+- **Zello-Style Connect-on-Transmit Architecture (NEW):**
+  - **Signaling Layer:** Socket.IO-based lightweight signaling for presence, status, location, and PTT events. Standardized events include: CHANNEL_JOIN, CHANNEL_LEAVE, PTT_START, PTT_END, EMERGENCY_START, EMERGENCY_END, EMERGENCY_FORCE_CONNECT, UNIT_STATUS_UPDATE, LOCATION_UPDATE, SYSTEM_STATUS.
+  - **On-Demand LiveKit Connections:** Units connect to LiveKit rooms only during active voice transmissions, reducing monthly usage from ~240 hours to ~2 hours.
+  - **Client Components:**
+    - `SignalingManager` (client/src/signaling/SignalingManager.js): Manages Socket.IO connection, authentication, and event handling.
+    - `SignalingContext` (client/src/context/SignalingContext.jsx): React context for automatic connection/authentication when user logs in.
+    - `OnDemandVoiceManager` (client/src/audio/OnDemandVoiceManager.js): Implements connect-on-transmit pattern with 3-second grace period for late-join support.
+  - **Server Components:**
+    - `signalingService` (src/services/signalingService.js): Socket.IO signaling server with channel membership, presence tracking, and event callbacks.
+    - `aiDispatcherSignaling` (src/services/aiDispatcherSignaling.js): Bridges AI dispatcher with signaling events for on-demand connections.
+  - **Grace Period:** 3-second window after PTT_END for late-join support and rapid follow-up transmissions.
+  - **Emergency Override:** Force-connect broadcasts to all channel members with 60-second extended room lifetime, grace timer suppression during active emergencies.
+- **Real-time Communication:** LiveKit for real-time audio streaming (on-demand only), Socket.IO signaling for presence/status/location (always-on, lightweight).
 - **Audio Processing:** The Web Audio API is used for advanced Digital Signal Processing (DSP) including Automatic Gain Control (AGC), noise suppression, and a transmit compressor. Features like PTT Release Reliability, Feedback Loop Prevention, and Authorization/Busy Tones enhance the audio experience.
 - **Authentication & Authorization:** Username/password authentication with bcrypt hashing and session management. Role-based access control protects routes for users, dispatchers, and administrators. Default admin credentials are provided for initial setup.
 - **State Management:** Zustand stores manage application state for channels, units, and dispatcher settings on the frontend.
-- **AI Voice Dispatcher:** Integrates Azure Speech Services (Speech-to-Text and Text-to-Speech) for automated radio acknowledgments. Uses an intent-driven state machine with per-unit conversation sessions. Supports comprehensive dispatcher functions including:
+- **AI Voice Dispatcher:** Integrates Azure Speech Services (Speech-to-Text and Text-to-Speech) for automated radio acknowledgments. Now operates in standby mode by default, connecting to LiveKit only when signaling events trigger on-demand connections. Uses an intent-driven state machine with per-unit conversation sessions. Supports comprehensive dispatcher functions including:
   - **Status Commands:** on duty, available, en route, on scene, off duty, out of service, clear (with 10-codes)
   - **Immediate Commands:** radio check, time check, backup request, welfare check, tow/wrecker request, supervisor request, EMS/fire request, K9 request, subject in custody, negative contact, meal break
   - **Multi-Step Commands:** traffic stop (prompts for location), run plate (queries CAD), warrant check (queries CAD), BOLO broadcast, vehicle pursuit, records check (10-27) with phonetic name spelling support
@@ -35,7 +47,7 @@ Not specified.
 ### Feature Specifications
 - **Core PTT:** Unit ID-based authentication and Push-to-Talk audio transmission.
 - **Talkgroup System:** Organized into zones (Operations, Fire, Secure Command) with channel switching and scan mode capabilities.
-- **Unit Presence:** Real-time unit status (idle, transmitting, emergency) with visual indicators and last transmission timestamps, synced via LiveKit data channels.
+- **Unit Presence:** Real-time unit status (idle, transmitting, emergency) with visual indicators and last transmission timestamps, synced via Socket.IO signaling layer (lightweight, always-on).
 - **Emergency Button (E-Button):** Activates a 10-second transmit lock, broadcasts an emergency flag, displays flashing alarms, and allows acknowledgment/cancellation by dispatchers/units. 
 - **AI-Powered Emergency Escalation:** When a unit presses the emergency button, the AI Dispatcher automatically initiates a 2-attempt status check flow:
   1. Plays Alert A tone (1200Hz) + "Unit, status check" message
