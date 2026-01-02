@@ -1,0 +1,74 @@
+ADDITIONAL ARCHITECTURE REQUIREMENTS & RECOMMENDATIONS
+
+1. LIVEKIT PRE-CONNECT OPTIMIZATION (LATENCY CONTROL)
+- When a user presses PTT, generate LiveKit access tokens immediately
+- Initiate LiveKit room join on PTT DOWN, not on first audio packet
+- This reduces perceived PTT latency by 150–300ms
+- Audio capture may begin after room join completes
+- Tokens should expire quickly (30–60 seconds)
+
+2. EMERGENCY / PANIC OVERRIDE FLOW (MANDATORY)
+- Emergency button bypasses normal signaling delays
+- On emergency activation:
+  - Force-connect all channel members to LiveKit
+  - Extend room lifetime (minimum 30–60 seconds)
+  - Prevent early disconnects during emergency state
+  - Notify AI dispatcher immediately and pin connection
+  - Mark transmission as EMERGENCY in all logs
+- Emergency state must not depend on client-side timing alone
+- Server must enforce emergency priority handling
+
+3. SIGNALING EVENT SCHEMA STANDARDIZATION
+- Define explicit signaling events, including:
+  - CHANNEL_JOIN
+  - CHANNEL_LEAVE
+  - PTT_START
+  - PTT_END
+  - EMERGENCY_START
+  - EMERGENCY_END
+  - UNIT_STATUS_UPDATE
+  - LOCATION_UPDATE
+- All events must include:
+  - unitId
+  - agencyId
+  - channelId
+  - timestamp (server-generated)
+- Signaling layer is authoritative for presence and status
+
+4. GRACE PERIOD & LATE-JOIN HANDLING
+- Maintain a 2–3 second post-PTT grace window before disconnect
+- Allow late joiners to connect during grace window
+- Prevent room teardown if a new PTT_START occurs during grace window
+- Ensure multiple rapid transmissions reuse the same room when possible
+
+5. AI DISPATCHER SAFETY & AUDIT CONTROLS
+- AI dispatcher connects only when explicitly signaled
+- AI session must:
+  - Log join time, leave time, and channel
+  - Log which transmissions were processed
+- AI must disconnect immediately after response is complete
+- No passive or background listening allowed
+
+6. DISPATCHER CONSOLE BEHAVIOR
+- Dispatcher console remains connected ONLY to signaling layer by default
+- Console connects to LiveKit audio only during active transmissions
+- Visual indicators driven by signaling, not LiveKit presence
+- Console must handle:
+  - Live PTT indicators
+  - Emergency indicators
+  - Late join audio playback
+
+7. FAULT TOLERANCE & DEGRADED MODE
+- If LiveKit is unavailable:
+  - Signaling layer must remain operational
+  - Presence, status, and emergency alerts must still function
+- If signaling is unavailable:
+  - Block LiveKit joins (no orphan voice rooms)
+  - Surface system status clearly to users
+
+8. SECURITY & COST CONTROLS
+- Never allow persistent LiveKit connections
+- Enforce server-side disconnects after inactivity
+- Validate all PTT and emergency events server-side
+- Prevent clients from self-extending room lifetimes
+- Log total LiveKit connection time per unit for cost auditing
