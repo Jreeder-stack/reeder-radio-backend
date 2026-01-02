@@ -20,9 +20,12 @@ class OnDemandVoiceManager {
     this.pendingConnections = new Map();
     this.graceTimers = new Map();
     this.connectionTimes = new Map();
+    this.activeEmergencies = new Map();
+    this.emergencyTimers = new Map();
     
     this.GRACE_PERIOD_MS = 3000;
     this.TOKEN_TTL_MS = 60000;
+    this.EMERGENCY_ROOM_LIFETIME_MS = 60000;
     
     this._listeners = {
       stateChange: new Set(),
@@ -53,12 +56,45 @@ class OnDemandVoiceManager {
 
     signalingManager.on('emergencyStart', (data) => {
       console.log(`[OnDemandVoice] Emergency started by ${data.unitId} on ${data.channelId}`);
+      this._setEmergencyActive(data.channelId, data);
       this._handleEmergencyStart(data.channelId);
     });
 
     signalingManager.on('emergencyEnd', (data) => {
       console.log(`[OnDemandVoice] Emergency ended on ${data.channelId}`);
+      this._clearEmergencyActive(data.channelId);
     });
+
+    signalingManager.on('emergency:force_connect', (data) => {
+      console.log(`[OnDemandVoice] Emergency force-connect received for ${data.channelId}`);
+      this._handleEmergencyForceConnect(data);
+    });
+  }
+
+  async _handleEmergencyForceConnect(data) {
+    const { channelId, roomLifetimeMs, bypassGracePeriod } = data;
+    
+    this._clearGraceTimer(channelId);
+    
+    if (this.rooms.has(channelId)) {
+      console.log(`[OnDemandVoice] Already connected to ${channelId}, extending lifetime for emergency`);
+      if (bypassGracePeriod) {
+        this._clearGraceTimer(channelId);
+      }
+      return;
+    }
+    
+    console.log(`[OnDemandVoice] Force-connecting to ${channelId} for emergency`);
+    
+    try {
+      await this.connectForReceiving(channelId, {
+        isEmergency: true,
+        extendedLifetime: roomLifetimeMs,
+        bypassGracePeriod,
+      });
+    } catch (err) {
+      console.error(`[OnDemandVoice] Emergency force-connect failed:`, err.message);
+    }
   }
 
   _getAudioContext() {
@@ -93,8 +129,53 @@ class OnDemandVoiceManager {
   }
 
   async _handleRemotePttEnd(channelId, gracePeriodMs) {
+    if (this.activeEmergencies.has(channelId)) {
+      console.log(`[OnDemandVoice] Skipping grace timer for ${channelId} - emergency active`);
+      return;
+    }
+    
     console.log(`[OnDemandVoice] Starting grace period for ${channelId}: ${gracePeriodMs}ms`);
     this._startGraceTimer(channelId, gracePeriodMs);
+  }
+  
+  _setEmergencyActive(channelId, emergencyData) {
+    this.activeEmergencies.set(channelId, {
+      ...emergencyData,
+      activatedAt: Date.now(),
+    });
+    
+    this._clearGraceTimer(channelId);
+    
+    this._clearEmergencyTimer(channelId);
+    const timerId = setTimeout(() => {
+      console.log(`[OnDemandVoice] Emergency timer expired for ${channelId}`);
+      this._clearEmergencyActive(channelId);
+    }, emergencyData.expiresAt ? (emergencyData.expiresAt - Date.now()) : this.EMERGENCY_ROOM_LIFETIME_MS);
+    this.emergencyTimers.set(channelId, timerId);
+    
+    console.log(`[OnDemandVoice] Emergency activated for ${channelId}`);
+  }
+  
+  _clearEmergencyActive(channelId) {
+    this.activeEmergencies.delete(channelId);
+    this._clearEmergencyTimer(channelId);
+    
+    if (this.rooms.has(channelId)) {
+      console.log(`[OnDemandVoice] Emergency cleared for ${channelId}, starting grace period`);
+      this._startGraceTimer(channelId, this.GRACE_PERIOD_MS);
+    }
+  }
+  
+  _clearEmergencyTimer(channelId) {
+    const timerId = this.emergencyTimers.get(channelId);
+    if (timerId) {
+      clearTimeout(timerId);
+      this.emergencyTimers.delete(channelId);
+    }
+  }
+  
+  isEmergencyActive(channelId) {
+    return this.activeEmergencies.has(channelId);
   }
 
   async _handleEmergencyStart(channelId) {
@@ -110,10 +191,21 @@ class OnDemandVoiceManager {
   }
 
   _startGraceTimer(channelId, gracePeriodMs) {
+    if (this.activeEmergencies.has(channelId)) {
+      console.log(`[OnDemandVoice] Grace timer blocked for ${channelId} - emergency active`);
+      return;
+    }
+    
     this._clearGraceTimer(channelId);
     
     const timerId = setTimeout(() => {
       this.graceTimers.delete(channelId);
+      
+      if (this.activeEmergencies.has(channelId)) {
+        console.log(`[OnDemandVoice] Grace period skip for ${channelId} - emergency became active`);
+        return;
+      }
+      
       const state = this.roomStates.get(channelId);
       
       if (state === VOICE_STATE.RECEIVING) {

@@ -7,6 +7,7 @@ const SIGNALING_EVENTS = {
   PTT_END: 'ptt:end',
   EMERGENCY_START: 'emergency:start',
   EMERGENCY_END: 'emergency:end',
+  EMERGENCY_FORCE_CONNECT: 'emergency:force_connect',
   UNIT_STATUS_UPDATE: 'unit:status',
   LOCATION_UPDATE: 'unit:location',
   SYSTEM_STATUS: 'system:status',
@@ -34,6 +35,7 @@ class SignalingManager {
       pttBusy: new Set(),
       emergencyStart: new Set(),
       emergencyEnd: new Set(),
+      'emergency:force_connect': new Set(),
       unitStatus: new Set(),
       locationUpdate: new Set(),
       channelMembers: new Set(),
@@ -133,6 +135,10 @@ class SignalingManager {
 
     this.socket.on(SIGNALING_EVENTS.EMERGENCY_END, (data) => {
       this._emit('emergencyEnd', data);
+    });
+
+    this.socket.on(SIGNALING_EVENTS.EMERGENCY_FORCE_CONNECT, (data) => {
+      this._emit('emergency:force_connect', data);
     });
 
     this.socket.on(SIGNALING_EVENTS.UNIT_STATUS_UPDATE, (data) => {

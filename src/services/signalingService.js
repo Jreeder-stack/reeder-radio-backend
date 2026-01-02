@@ -7,6 +7,7 @@ const SIGNALING_EVENTS = {
   PTT_END: 'ptt:end',
   EMERGENCY_START: 'emergency:start',
   EMERGENCY_END: 'emergency:end',
+  EMERGENCY_FORCE_CONNECT: 'emergency:force_connect',
   UNIT_STATUS_UPDATE: 'unit:status',
   LOCATION_UPDATE: 'unit:location',
   SYSTEM_STATUS: 'system:status',
@@ -326,6 +327,16 @@ class SignalingService {
     
     this.io.to(`channel:${channelId}`).emit(SIGNALING_EVENTS.EMERGENCY_START, emergencyData);
     
+    this.io.to(`channel:${channelId}`).emit(SIGNALING_EVENTS.EMERGENCY_FORCE_CONNECT, {
+      channelId,
+      unitId: socket.unitId,
+      agencyId: socket.agencyId,
+      timestamp: Date.now(),
+      roomLifetimeMs: this.EMERGENCY_ROOM_LIFETIME_MS,
+      bypassGracePeriod: true,
+      priority: 'emergency',
+    });
+    
     this._emitCallback('emergencyStart', emergencyData);
     
     this.io.emit('emergency:alert', {
@@ -333,7 +344,7 @@ class SignalingService {
       message: `EMERGENCY: Unit ${socket.unitId} activated emergency on ${channelId}`,
     });
     
-    console.log(`[Signaling] EMERGENCY START: ${socket.unitId} on ${channelId}`);
+    console.log(`[Signaling] EMERGENCY START: ${socket.unitId} on ${channelId} - Force connect broadcast sent`);
   }
 
   _handleEmergencyEnd(socket, data) {
