@@ -9,6 +9,7 @@ import App from "./App.jsx";
 import Admin from "./Admin.jsx";
 import DispatchConsole from "./pages/DispatchConsole.jsx";
 import DispatcherMap from "./pages/DispatcherMap.jsx";
+import RadioApp from "./pages/RadioApp.jsx";
 import "./index.css";
 
 function ProtectedRoute({ children, adminOnly = false, dispatcherOnly = false }) {
@@ -111,6 +112,18 @@ function AdminWrapper() {
   return <Admin user={user} onLogout={handleLogout} />;
 }
 
+function RadioAppWrapper() {
+  const { user, logout } = useAuth();
+  const { disconnectAll } = useLiveKitConnection();
+  
+  const handleLogout = async () => {
+    await disconnectAll();
+    logout();
+  };
+  
+  return <RadioApp user={user} onLogout={handleLogout} />;
+}
+
 function ConnectedRoutes() {
   const { user } = useAuth();
   
@@ -148,6 +161,14 @@ function ConnectedRoutes() {
             element={
               <ProtectedRoute dispatcherOnly>
                 <DispatcherMap />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/radio-app"
+            element={
+              <ProtectedRoute adminOnly>
+                <RadioAppWrapper />
               </ProtectedRoute>
             }
           />

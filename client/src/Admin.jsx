@@ -522,6 +522,12 @@ export default function Admin({ user, onLogout }) {
           <button style={tabStyle(activeTab === "settings")} onClick={() => setActiveTab("settings")}>
             Settings
           </button>
+          <button 
+            style={tabStyle(false)} 
+            onClick={() => navigate("/radio-app")}
+          >
+            Radio App
+          </button>
         </div>
 
         {error && (
