@@ -756,13 +756,13 @@ export function RadioDeckView({ user, onLogout }) {
           <button
             onClick={toggleScanning}
             className={cn(
-              "w-8 h-8 rounded border flex items-center justify-center text-xs font-bold font-mono active:scale-95 transition-all self-center",
+              "w-10 h-8 rounded border flex items-center justify-center text-xs font-bold font-mono active:scale-95 transition-all self-center",
               isScanning 
                 ? "bg-green-500 border-green-600 text-white" 
                 : "bg-gray-100 border-gray-300 text-gray-600"
             )}
           >
-            Z
+            ◀Z▶
           </button>
 
           <div className="flex flex-col items-center gap-1">
