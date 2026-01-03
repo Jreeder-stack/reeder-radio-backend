@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./AuthContext.jsx";
@@ -10,6 +10,8 @@ import Admin from "./Admin.jsx";
 import DispatchConsole from "./pages/DispatchConsole.jsx";
 import DispatcherMap from "./pages/DispatcherMap.jsx";
 import RadioApp from "./pages/RadioApp.jsx";
+import MobileRadioView from "./components/MobileRadio/index.jsx";
+import { useMobile } from "./hooks/useMobile.js";
 import "./index.css";
 
 function ProtectedRoute({ children, adminOnly = false, dispatcherOnly = false }) {
@@ -79,11 +81,36 @@ function LoginRoute() {
 function AppWrapper() {
   const { user, logout } = useAuth();
   const { disconnectAll } = useLiveKitConnection();
+  const isMobile = useMobile();
+  
+  const [darkMode, setDarkMode] = useState(() => {
+    const saved = localStorage.getItem('darkMode');
+    return saved !== null ? JSON.parse(saved) : true;
+  });
+  
+  const toggleDarkMode = () => {
+    setDarkMode(prev => {
+      const next = !prev;
+      localStorage.setItem('darkMode', JSON.stringify(next));
+      return next;
+    });
+  };
   
   const handleLogout = async () => {
     await disconnectAll();
     logout();
   };
+  
+  if (isMobile) {
+    return (
+      <MobileRadioView 
+        user={user} 
+        onLogout={handleLogout} 
+        darkMode={darkMode}
+        toggleDarkMode={toggleDarkMode}
+      />
+    );
+  }
   
   return <App user={user} onLogout={handleLogout} />;
 }
