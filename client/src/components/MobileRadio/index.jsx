@@ -81,12 +81,13 @@ export default function MobileRadioView({ user, onLogout, darkMode, toggleDarkMo
               const channelName = firstZoneChannels[0].name || firstZoneChannels[0];
               setSelectedChannel(channelName);
               setTransmitChannel(channelName);
+              contextSwitchChannel(channelName);
             }
           }
         }
       })
       .catch(err => console.error('Failed to load zones:', err));
-  }, [selectedZone]);
+  }, [selectedZone, contextSwitchChannel]);
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -231,6 +232,7 @@ export default function MobileRadioView({ user, onLogout, darkMode, toggleDarkMo
       const channelName = zoneChannels[0].name || zoneChannels[0];
       setSelectedChannel(channelName);
       setTransmitChannel(channelName);
+      contextSwitchChannel(channelName);
     }
   };
 
