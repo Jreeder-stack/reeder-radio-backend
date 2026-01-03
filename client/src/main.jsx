@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./AuthContext.jsx";
 import { LiveKitConnectionProvider, useLiveKitConnection } from "./context/LiveKitConnectionContext.jsx";
 import { SignalingProvider } from "./context/SignalingContext.jsx";
+import { MobileRadioProvider } from "./context/MobileRadioContext.jsx";
 import Login from "./Login.jsx";
 import App from "./App.jsx";
 import Admin from "./Admin.jsx";
@@ -11,6 +12,9 @@ import DispatchConsole from "./pages/DispatchConsole.jsx";
 import DispatcherMap from "./pages/DispatcherMap.jsx";
 import RadioApp from "./pages/RadioApp.jsx";
 import MobileRadioView from "./components/MobileRadio/index.jsx";
+import { MobileLogin } from "./components/MobileRadio/MobileLogin.jsx";
+import { MobileSettings } from "./components/MobileRadio/MobileSettings.jsx";
+import { MobileScanMonitor } from "./components/MobileRadio/MobileScanMonitor.jsx";
 import { useMobile } from "./hooks/useMobile.js";
 import "./index.css";
 
@@ -52,6 +56,7 @@ function ProtectedRoute({ children, adminOnly = false, dispatcherOnly = false })
 
 function LoginRoute() {
   const { user, loading, login } = useAuth();
+  const isMobile = useMobile();
 
   if (loading) {
     return (
@@ -73,6 +78,10 @@ function LoginRoute() {
 
   if (user) {
     return <Navigate to="/" replace />;
+  }
+
+  if (isMobile) {
+    return <MobileLogin onLogin={login} />;
   }
 
   return <Login onLogin={login} />;
@@ -151,55 +160,85 @@ function RadioAppWrapper() {
   return <RadioApp user={user} onLogout={handleLogout} />;
 }
 
+function MobileSettingsWrapper() {
+  const { logout } = useAuth();
+  const { disconnectAll } = useLiveKitConnection();
+  
+  const handleLogout = async () => {
+    await disconnectAll();
+    logout();
+  };
+  
+  return <MobileSettings onLogout={handleLogout} />;
+}
+
 function ConnectedRoutes() {
   const { user } = useAuth();
   
   return (
     <SignalingProvider>
       <LiveKitConnectionProvider user={user}>
-        <Routes>
-          <Route path="/login" element={<LoginRoute />} />
-          <Route
-            path="/"
-            element={
-              <ProtectedRoute>
-                <AppWrapper />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/dispatcher"
-            element={
-              <ProtectedRoute dispatcherOnly>
-                <DispatchConsoleWrapper />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute adminOnly>
-                <AdminWrapper />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/map"
-            element={
-              <ProtectedRoute dispatcherOnly>
-                <DispatcherMap />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/radio-app"
-            element={
-              <ProtectedRoute adminOnly>
-                <RadioAppWrapper />
-              </ProtectedRoute>
-            }
-          />
-        </Routes>
+        <MobileRadioProvider>
+          <Routes>
+            <Route path="/login" element={<LoginRoute />} />
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute>
+                  <AppWrapper />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <ProtectedRoute>
+                  <MobileSettingsWrapper />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/scan"
+              element={
+                <ProtectedRoute>
+                  <MobileScanMonitor />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dispatcher"
+              element={
+                <ProtectedRoute dispatcherOnly>
+                  <DispatchConsoleWrapper />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute adminOnly>
+                  <AdminWrapper />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/map"
+              element={
+                <ProtectedRoute dispatcherOnly>
+                  <DispatcherMap />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/radio-app"
+              element={
+                <ProtectedRoute adminOnly>
+                  <RadioAppWrapper />
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </MobileRadioProvider>
       </LiveKitConnectionProvider>
     </SignalingProvider>
   );
