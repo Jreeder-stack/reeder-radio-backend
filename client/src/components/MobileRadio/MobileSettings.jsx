@@ -51,6 +51,15 @@ export function MobileSettings({ onLogout }) {
   const [capturingPtt, setCapturingPtt] = useState(false);
   const [showFreqPicker, setShowFreqPicker] = useState(false);
   const [dndPermissionGranted, setDndPermissionGranted] = useState(false);
+  const [interfaceMode, setInterfaceMode] = useState(() => {
+    return localStorage.getItem('interface_mode') || 'phone';
+  });
+
+  const handleInterfaceModeChange = (mode) => {
+    setInterfaceMode(mode);
+    localStorage.setItem('interface_mode', mode);
+    window.location.reload();
+  };
 
   useEffect(() => {
     dndStateSetters = { setDndPermissionGranted, setSettings };
@@ -181,6 +190,39 @@ export function MobileSettings({ onLogout }) {
             <p className="text-sm text-zinc-300">
               {isNative ? `Native Android (${platform})` : 'Web Browser'}
             </p>
+          </div>
+        </section>
+
+        <section className="space-y-3">
+          <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest px-2">Interface Style</h3>
+          <div className="bg-zinc-900/50 rounded-xl border border-white/5 p-4">
+            <p className="text-[10px] text-zinc-500 mb-3">Choose your preferred radio interface</p>
+            <div className="flex rounded-lg border border-zinc-700 overflow-hidden">
+              <button
+                type="button"
+                onClick={() => handleInterfaceModeChange('phone')}
+                className={cn(
+                  "flex-1 py-3 px-4 text-xs font-mono uppercase tracking-wider transition-all",
+                  interfaceMode === 'phone' 
+                    ? "bg-primary text-black font-bold" 
+                    : "bg-zinc-800 text-zinc-500 hover:text-zinc-300"
+                )}
+              >
+                Phone
+              </button>
+              <button
+                type="button"
+                onClick={() => handleInterfaceModeChange('radio')}
+                className={cn(
+                  "flex-1 py-3 px-4 text-xs font-mono uppercase tracking-wider transition-all",
+                  interfaceMode === 'radio' 
+                    ? "bg-white text-black font-bold" 
+                    : "bg-zinc-800 text-zinc-500 hover:text-zinc-300"
+                )}
+              >
+                Radio
+              </button>
+            </div>
           </div>
         </section>
 
