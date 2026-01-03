@@ -100,10 +100,11 @@ export function RadioDeckView({ user, onLogout }) {
     fetch('/api/channels', { credentials: 'include' })
       .then(res => res.json())
       .then(data => {
-        if (Array.isArray(data)) {
-          setChannels(data);
+        const channelList = Array.isArray(data) ? data : (data?.channels || []);
+        if (channelList.length > 0) {
+          setChannels(channelList);
           if (scanChannels.length === 0) {
-            setScanChannels(data.map(ch => ({ id: ch.id, name: ch.name, enabled: true })));
+            setScanChannels(channelList.map(ch => ({ id: ch.id, name: ch.name, enabled: true })));
           }
         }
         setChannelsLoading(false);
