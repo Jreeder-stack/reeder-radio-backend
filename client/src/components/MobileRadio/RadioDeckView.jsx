@@ -79,6 +79,7 @@ export function RadioDeckView({ user, onLogout }) {
   const [unitStatus, setUnitStatus] = useState('off_duty');
   const [hasActiveCall, setHasActiveCall] = useState(false);
   const [statusLoading, setStatusLoading] = useState(false);
+  const [cadConnected, setCadConnected] = useState(null);
   const [showPersonQuery, setShowPersonQuery] = useState(false);
   const [showVehicleQuery, setShowVehicleQuery] = useState(false);
   const [showContacts, setShowContacts] = useState(false);
@@ -267,15 +268,20 @@ export function RadioDeckView({ user, onLogout }) {
         const response = await fetch('/api/cad/status-check', { credentials: 'include' });
         const data = await response.json();
         
-        if (data.success && data.units && Array.isArray(data.units)) {
+        if (response.ok && data.success && data.units && Array.isArray(data.units)) {
+          setCadConnected(true);
           const myUnit = data.units.find(u => u.unit_id === identity);
           if (myUnit?.status) {
             console.log('[Status] Initial status from CAD:', myUnit.status);
             setUnitStatus(myUnit.status);
           }
+        } else {
+          console.log('[Status] CAD not connected');
+          setCadConnected(false);
         }
       } catch (err) {
         console.error('[Status] Failed to fetch initial status:', err);
+        setCadConnected(false);
       }
     };
     
@@ -581,20 +587,21 @@ export function RadioDeckView({ user, onLogout }) {
       <div 
         className={cn(
           "bg-white rounded-lg p-3 shadow-sm border border-gray-200 cursor-pointer active:bg-gray-50 transition-all",
-          statusLoading && "opacity-60"
+          statusLoading && "opacity-60",
+          cadConnected === false && "border-red-300 bg-red-50"
         )}
-        onClick={handleCycleStatus}
+        onClick={cadConnected === false ? undefined : handleCycleStatus}
       >
         <div className="flex items-center justify-between">
           <div>
             <div className="text-xs text-gray-500 font-medium mb-1">
               My Status {hasActiveCall && <span className="text-orange-600">(CALL ACTIVE)</span>}
             </div>
-            <div className="text-xl font-bold text-black">
-              {statusLoading ? "..." : formatStatus(unitStatus)}
+            <div className={cn("text-xl font-bold", cadConnected === false ? "text-red-600" : "text-black")}>
+              {statusLoading ? "..." : cadConnected === false ? "CAD DISCONNECTED" : formatStatus(unitStatus)}
             </div>
           </div>
-          <div className="text-xs text-gray-400">Tap to cycle</div>
+          <div className="text-xs text-gray-400">{cadConnected === false ? "No CAD connection" : "Tap to cycle"}</div>
         </div>
       </div>
 
@@ -615,12 +622,12 @@ export function RadioDeckView({ user, onLogout }) {
             <div className="flex items-center gap-2 text-xs mt-auto">
               {isScanning && <span className="text-green-600 font-bold">SCAN</span>}
               {isEmergency && <span className="text-red-600 font-bold animate-pulse">EMERG</span>}
-              {connected ? (
+              {cadConnected ? (
                 <span className="text-green-600 flex items-center gap-0.5">
                   <Wifi className="w-3 h-3" />CAD
                 </span>
               ) : (
-                <span className="text-gray-400 flex items-center gap-0.5">
+                <span className="text-red-500 flex items-center gap-0.5">
                   <WifiOff className="w-3 h-3" />CAD
                 </span>
               )}
