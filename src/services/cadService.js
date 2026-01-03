@@ -360,3 +360,21 @@ export async function getUnreadCount(user) {
   }
   return result;
 }
+
+export async function getSystemConfig() {
+  console.log('[CAD] Getting system config');
+  const result = await cadRequest('/api/radio/system/config', 'GET');
+  if (result.success === false) {
+    return {
+      counties: [],
+      sexOptions: ['Male', 'Female', 'Unknown'],
+      raceOptions: ['White', 'Black', 'Hispanic', 'Asian', 'Native American', 'Pacific Islander', 'Other', 'Unknown'],
+      eyeColors: ['Brown', 'Blue', 'Green', 'Hazel', 'Gray', 'Black', 'Unknown'],
+      hairColors: ['Black', 'Brown', 'Blonde', 'Red', 'Gray', 'White', 'Bald', 'Unknown'],
+      vehicleTypes: ['Sedan', 'SUV', 'Truck', 'Van', 'Motorcycle', 'Other'],
+      vehicleStyles: ['2-Door', '4-Door', 'Hatchback', 'Convertible', 'Pickup', 'Other'],
+      vehicleColors: ['Black', 'White', 'Silver', 'Gray', 'Red', 'Blue', 'Green', 'Brown', 'Tan', 'Gold', 'Orange', 'Yellow', 'Purple', 'Other']
+    };
+  }
+  return result;
+}

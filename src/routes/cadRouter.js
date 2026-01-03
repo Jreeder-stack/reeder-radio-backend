@@ -370,6 +370,25 @@ router.get('/pending-checks', async (req, res) => {
   }
 });
 
+router.get('/system/config', async (req, res) => {
+  try {
+    const result = await cadService.getSystemConfig();
+    res.json(result);
+  } catch (error) {
+    console.error('[CAD Router] System config error:', error);
+    res.json({
+      counties: [],
+      sexOptions: ['Male', 'Female', 'Unknown'],
+      raceOptions: ['White', 'Black', 'Hispanic', 'Asian', 'Native American', 'Pacific Islander', 'Other', 'Unknown'],
+      eyeColors: ['Brown', 'Blue', 'Green', 'Hazel', 'Gray', 'Black', 'Unknown'],
+      hairColors: ['Black', 'Brown', 'Blonde', 'Red', 'Gray', 'White', 'Bald', 'Unknown'],
+      vehicleTypes: ['Sedan', 'SUV', 'Truck', 'Van', 'Motorcycle', 'Other'],
+      vehicleStyles: ['2-Door', '4-Door', 'Hatchback', 'Convertible', 'Pickup', 'Other'],
+      vehicleColors: ['Black', 'White', 'Silver', 'Gray', 'Red', 'Blue', 'Green', 'Brown', 'Tan', 'Gold', 'Orange', 'Yellow', 'Purple', 'Other']
+    });
+  }
+});
+
 router.post('/respond-check', async (req, res) => {
   try {
     const { unitId, status } = req.body;

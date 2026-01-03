@@ -1,15 +1,20 @@
 import { useState, useEffect } from 'react';
 import { X, Save, Loader2 } from 'lucide-react';
+import { useAuth } from '../../../AuthContext';
 
 const STATES = ['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY'];
-const SEX_OPTIONS = ['Male', 'Female', 'Unknown'];
-const RACE_OPTIONS = ['White', 'Black', 'Hispanic', 'Asian', 'Native American', 'Pacific Islander', 'Other', 'Unknown'];
-const EYE_COLORS = ['Brown', 'Blue', 'Green', 'Hazel', 'Gray', 'Black', 'Unknown'];
-const HAIR_COLORS = ['Black', 'Brown', 'Blonde', 'Red', 'Gray', 'White', 'Bald', 'Unknown'];
-const VEHICLE_TYPES = ['Sedan', 'SUV', 'Truck', 'Van', 'Motorcycle', 'Other'];
-const VEHICLE_STYLES = ['2-Door', '4-Door', 'Hatchback', 'Convertible', 'Pickup', 'Other'];
-const VEHICLE_COLORS = ['Black', 'White', 'Silver', 'Gray', 'Red', 'Blue', 'Green', 'Brown', 'Tan', 'Gold', 'Orange', 'Yellow', 'Purple', 'Other'];
 const TRESPASS_TYPES = ['Business', 'Residential'];
+
+const DEFAULT_CONFIG = {
+  counties: [],
+  sexOptions: ['Male', 'Female', 'Unknown'],
+  raceOptions: ['White', 'Black', 'Hispanic', 'Asian', 'Native American', 'Pacific Islander', 'Other', 'Unknown'],
+  eyeColors: ['Brown', 'Blue', 'Green', 'Hazel', 'Gray', 'Black', 'Unknown'],
+  hairColors: ['Black', 'Brown', 'Blonde', 'Red', 'Gray', 'White', 'Bald', 'Unknown'],
+  vehicleTypes: ['Sedan', 'SUV', 'Truck', 'Van', 'Motorcycle', 'Other'],
+  vehicleStyles: ['2-Door', '4-Door', 'Hatchback', 'Convertible', 'Pickup', 'Other'],
+  vehicleColors: ['Black', 'White', 'Silver', 'Gray', 'Red', 'Blue', 'Green', 'Brown', 'Tan', 'Gold', 'Orange', 'Yellow', 'Purple', 'Other']
+};
 
 const initialForm = {
   fiNumber: 'NEW',
@@ -81,7 +86,7 @@ function FieldLabel({ children }) {
   return <label className="text-xs text-gray-500 uppercase font-medium">{children}</label>;
 }
 
-function InputField({ label, value, onChange, type = 'text', placeholder = '' }) {
+function InputField({ label, value, onChange, type = 'text', placeholder = '', disabled = false }) {
   return (
     <div className="flex flex-col gap-1">
       <FieldLabel>{label}</FieldLabel>
@@ -90,20 +95,22 @@ function InputField({ label, value, onChange, type = 'text', placeholder = '' })
         value={value}
         onChange={onChange}
         placeholder={placeholder}
-        className="p-2 border border-gray-300 rounded text-black text-sm bg-white"
+        disabled={disabled}
+        className={`p-2 border border-gray-300 rounded text-black text-sm ${disabled ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white'}`}
       />
     </div>
   );
 }
 
-function SelectField({ label, value, onChange, options, placeholder = 'Select...' }) {
+function SelectField({ label, value, onChange, options, placeholder = 'Select...', disabled = false }) {
   return (
     <div className="flex flex-col gap-1">
       <FieldLabel>{label}</FieldLabel>
       <select
         value={value}
         onChange={onChange}
-        className="p-2 border border-gray-300 rounded text-black text-sm bg-white"
+        disabled={disabled}
+        className={`p-2 border border-gray-300 rounded text-black text-sm ${disabled ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white'}`}
       >
         <option value="">{placeholder}</option>
         {options.map(opt => (
@@ -114,7 +121,7 @@ function SelectField({ label, value, onChange, options, placeholder = 'Select...
   );
 }
 
-function TextAreaField({ label, value, onChange, placeholder = '' }) {
+function TextAreaField({ label, value, onChange, placeholder = '', disabled = false }) {
   return (
     <div className="flex flex-col gap-1">
       <FieldLabel>{label}</FieldLabel>
@@ -122,21 +129,42 @@ function TextAreaField({ label, value, onChange, placeholder = '' }) {
         value={value}
         onChange={onChange}
         placeholder={placeholder}
-        className="p-2 border border-gray-300 rounded text-black text-sm bg-white h-20 resize-none"
+        disabled={disabled}
+        className={`p-2 border border-gray-300 rounded text-black text-sm h-20 resize-none ${disabled ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white'}`}
       />
     </div>
   );
 }
 
 export function FieldInterviewModal({ show, onClose }) {
+  const { user } = useAuth();
   const [form, setForm] = useState(initialForm);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [savedFiNumber, setSavedFiNumber] = useState(null);
   const [error, setError] = useState(null);
+  const [config, setConfig] = useState(DEFAULT_CONFIG);
 
   useEffect(() => {
     if (show) {
+      fetch('/api/cad/system/config', { credentials: 'include' })
+        .then(res => res.json())
+        .then(data => {
+          setConfig({
+            counties: data.counties || DEFAULT_CONFIG.counties,
+            sexOptions: data.sexOptions || data.sex_options || DEFAULT_CONFIG.sexOptions,
+            raceOptions: data.raceOptions || data.race_options || DEFAULT_CONFIG.raceOptions,
+            eyeColors: data.eyeColors || data.eye_colors || DEFAULT_CONFIG.eyeColors,
+            hairColors: data.hairColors || data.hair_colors || DEFAULT_CONFIG.hairColors,
+            vehicleTypes: data.vehicleTypes || data.vehicle_types || DEFAULT_CONFIG.vehicleTypes,
+            vehicleStyles: data.vehicleStyles || data.vehicle_styles || DEFAULT_CONFIG.vehicleStyles,
+            vehicleColors: data.vehicleColors || data.vehicle_colors || DEFAULT_CONFIG.vehicleColors,
+          });
+        })
+        .catch(() => {
+          setConfig(DEFAULT_CONFIG);
+        });
+
       fetch('/api/cad/unit/current-call', { credentials: 'include' })
         .then(res => res.json())
         .then(data => {
@@ -145,12 +173,29 @@ export function FieldInterviewModal({ show, onClose }) {
           }
         })
         .catch(() => {});
+
+      const officer = user?.unit_id || user?.username || '';
+      const agency = user?.agency || '';
+      setForm(p => ({ ...p, officer, agency }));
     }
-  }, [show]);
+  }, [show, user]);
 
   const updateField = (field) => (e) => {
     const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
-    setForm(p => ({ ...p, [field]: value }));
+    setForm(p => {
+      const updated = { ...p, [field]: value };
+      if (field === 'wasTrespassed' && !value) {
+        updated.trespassExpires = '';
+        updated.indefiniteTrespass = false;
+        updated.trespassType = '';
+        updated.businessName = '';
+        updated.trespassAddress = '';
+        updated.trespassCity = '';
+        updated.trespassState = '';
+        updated.trespassReason = '';
+      }
+      return updated;
+    });
   };
 
   const handleSubmit = async () => {
@@ -190,6 +235,8 @@ export function FieldInterviewModal({ show, onClose }) {
 
   if (!show) return null;
 
+  const trespassDisabled = !form.wasTrespassed;
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-white w-full h-full md:rounded-xl md:max-w-lg md:max-h-[90vh] flex flex-col">
@@ -227,8 +274,18 @@ export function FieldInterviewModal({ show, onClose }) {
                   <InputField label="Time" value={form.time} onChange={updateField('time')} type="time" />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
-                  <InputField label="Officer" value={form.officer} onChange={updateField('officer')} />
-                  <InputField label="Agency" value={form.agency} onChange={updateField('agency')} />
+                  <div className="flex flex-col gap-1">
+                    <FieldLabel>Officer</FieldLabel>
+                    <div className="p-2 border border-gray-300 rounded text-gray-700 text-sm bg-gray-100">
+                      {form.officer || 'Not logged in'}
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <FieldLabel>Agency</FieldLabel>
+                    <div className="p-2 border border-gray-300 rounded text-gray-700 text-sm bg-gray-100">
+                      {form.agency || 'N/A'}
+                    </div>
+                  </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <InputField label="Location" value={form.location} onChange={updateField('location')} />
@@ -238,7 +295,11 @@ export function FieldInterviewModal({ show, onClose }) {
                   <InputField label="City" value={form.city} onChange={updateField('city')} />
                   <SelectField label="State" value={form.state} onChange={updateField('state')} options={STATES} />
                   <InputField label="Zip" value={form.zip} onChange={updateField('zip')} />
-                  <InputField label="County" value={form.county} onChange={updateField('county')} />
+                  {config.counties.length > 0 ? (
+                    <SelectField label="County" value={form.county} onChange={updateField('county')} options={config.counties} />
+                  ) : (
+                    <InputField label="County" value={form.county} onChange={updateField('county')} />
+                  )}
                 </div>
                 <TextAreaField label="Reason" value={form.reason} onChange={updateField('reason')} />
               </div>
@@ -252,8 +313,8 @@ export function FieldInterviewModal({ show, onClose }) {
                 </div>
                 <div className="grid grid-cols-4 gap-2">
                   <InputField label="D.O.B." value={form.dob} onChange={updateField('dob')} type="date" />
-                  <SelectField label="Sex" value={form.sex} onChange={updateField('sex')} options={SEX_OPTIONS} />
-                  <SelectField label="Race" value={form.race} onChange={updateField('race')} options={RACE_OPTIONS} />
+                  <SelectField label="Sex" value={form.sex} onChange={updateField('sex')} options={config.sexOptions} />
+                  <SelectField label="Race" value={form.race} onChange={updateField('race')} options={config.raceOptions} />
                   <div className="flex flex-col gap-1">
                     <FieldLabel>Height</FieldLabel>
                     <div className="flex gap-1">
@@ -276,8 +337,8 @@ export function FieldInterviewModal({ show, onClose }) {
                 </div>
                 <div className="grid grid-cols-4 gap-2">
                   <InputField label="Weight (lbs)" value={form.weight} onChange={updateField('weight')} type="number" />
-                  <SelectField label="Eyes" value={form.eyes} onChange={updateField('eyes')} options={EYE_COLORS} />
-                  <SelectField label="Hair" value={form.hair} onChange={updateField('hair')} options={HAIR_COLORS} />
+                  <SelectField label="Eyes" value={form.eyes} onChange={updateField('eyes')} options={config.eyeColors} />
+                  <SelectField label="Hair" value={form.hair} onChange={updateField('hair')} options={config.hairColors} />
                   <div />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
@@ -312,14 +373,14 @@ export function FieldInterviewModal({ show, onClose }) {
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <InputField label="VIN #" value={form.vehVin} onChange={updateField('vehVin')} />
-                  <SelectField label="Type" value={form.vehType} onChange={updateField('vehType')} options={VEHICLE_TYPES} />
+                  <SelectField label="Type" value={form.vehType} onChange={updateField('vehType')} options={config.vehicleTypes} />
                 </div>
                 <div className="grid grid-cols-3 gap-2">
                   <InputField label="Make" value={form.vehMake} onChange={updateField('vehMake')} />
                   <InputField label="Model" value={form.vehModel} onChange={updateField('vehModel')} />
-                  <SelectField label="Style" value={form.vehStyle} onChange={updateField('vehStyle')} options={VEHICLE_STYLES} />
+                  <SelectField label="Style" value={form.vehStyle} onChange={updateField('vehStyle')} options={config.vehicleStyles} />
                 </div>
-                <SelectField label="Color" value={form.vehColor} onChange={updateField('vehColor')} options={VEHICLE_COLORS} />
+                <SelectField label="Color" value={form.vehColor} onChange={updateField('vehColor')} options={config.vehicleColors} />
                 <TextAreaField label="Comment" value={form.vehComment} onChange={updateField('vehComment')} />
               </div>
 
@@ -336,35 +397,71 @@ export function FieldInterviewModal({ show, onClose }) {
                 </label>
                 
                 <div className="grid grid-cols-2 gap-2">
-                  <InputField label="Trespass Expires Date" value={form.trespassExpires} onChange={updateField('trespassExpires')} type="date" />
+                  <InputField 
+                    label="Trespass Expires Date" 
+                    value={form.trespassExpires} 
+                    onChange={updateField('trespassExpires')} 
+                    type="date"
+                    disabled={trespassDisabled}
+                  />
                   <div className="flex items-end pb-2">
-                    <label className="flex items-center gap-2">
+                    <label className={`flex items-center gap-2 ${trespassDisabled ? 'opacity-50' : ''}`}>
                       <input
                         type="checkbox"
                         checked={form.indefiniteTrespass}
                         onChange={updateField('indefiniteTrespass')}
                         className="w-5 h-5"
+                        disabled={trespassDisabled}
                       />
                       <span className="text-sm text-black font-medium">Indefinite Trespass</span>
                     </label>
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-1">
-                  <FieldLabel>Trespassed From</FieldLabel>
-                  <SelectField label="Business or Residential" value={form.trespassType} onChange={updateField('trespassType')} options={TRESPASS_TYPES} />
-                </div>
+                <SelectField 
+                  label="Trespassed From (Business or Residential)" 
+                  value={form.trespassType} 
+                  onChange={updateField('trespassType')} 
+                  options={TRESPASS_TYPES}
+                  disabled={trespassDisabled}
+                />
 
-                {form.trespassType === 'Business' && (
-                  <InputField label="Business Name" value={form.businessName} onChange={updateField('businessName')} />
+                {form.trespassType === 'Business' && !trespassDisabled && (
+                  <InputField 
+                    label="Business Name" 
+                    value={form.businessName} 
+                    onChange={updateField('businessName')}
+                    disabled={trespassDisabled}
+                  />
                 )}
 
-                <InputField label="Address" value={form.trespassAddress} onChange={updateField('trespassAddress')} />
+                <InputField 
+                  label="Address" 
+                  value={form.trespassAddress} 
+                  onChange={updateField('trespassAddress')}
+                  disabled={trespassDisabled}
+                />
                 <div className="grid grid-cols-2 gap-2">
-                  <InputField label="City" value={form.trespassCity} onChange={updateField('trespassCity')} />
-                  <SelectField label="State" value={form.trespassState} onChange={updateField('trespassState')} options={STATES} />
+                  <InputField 
+                    label="City" 
+                    value={form.trespassCity} 
+                    onChange={updateField('trespassCity')}
+                    disabled={trespassDisabled}
+                  />
+                  <SelectField 
+                    label="State" 
+                    value={form.trespassState} 
+                    onChange={updateField('trespassState')} 
+                    options={STATES}
+                    disabled={trespassDisabled}
+                  />
                 </div>
-                <TextAreaField label="Reason for Trespass" value={form.trespassReason} onChange={updateField('trespassReason')} />
+                <TextAreaField 
+                  label="Reason for Trespass" 
+                  value={form.trespassReason} 
+                  onChange={updateField('trespassReason')}
+                  disabled={trespassDisabled}
+                />
               </div>
 
               {error && <p className="text-red-600 text-sm mt-4">{error}</p>}
