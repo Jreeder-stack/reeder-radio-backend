@@ -771,9 +771,9 @@ export function RadioDeckView({ user, onLogout }) {
               strokeLinecap="round" 
               strokeLinejoin="round"
             >
-              <path d="M6 5 L3 8 L6 11" />
+              <path d="M6 3 L3 6 L6 9" />
               <path d="M7 6 H17 L7 18 H17" />
-              <path d="M18 13 L21 16 L18 19" />
+              <path d="M18 15 L21 18 L18 21" />
             </svg>
           </button>
 
