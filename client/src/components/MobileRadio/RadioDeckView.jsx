@@ -756,13 +756,25 @@ export function RadioDeckView({ user, onLogout }) {
           <button
             onClick={toggleScanning}
             className={cn(
-              "w-10 h-8 rounded border flex items-center justify-center text-xs font-bold font-mono active:scale-95 transition-all self-center",
+              "w-8 h-8 rounded border flex items-center justify-center active:scale-95 transition-all self-center",
               isScanning 
-                ? "bg-green-500 border-green-600 text-white" 
-                : "bg-gray-100 border-gray-300 text-gray-600"
+                ? "bg-green-500 border-green-600" 
+                : "bg-gray-100 border-gray-300"
             )}
           >
-            ◀Z▶
+            <svg 
+              viewBox="0 0 24 24" 
+              className={cn("w-5 h-5", isScanning ? "text-white" : "text-gray-700")}
+              fill="none" 
+              stroke="currentColor" 
+              strokeWidth="2.5"
+              strokeLinecap="round" 
+              strokeLinejoin="round"
+            >
+              <path d="M6 6 L18 6 L6 18 L18 18" />
+              <path d="M4 4 L7 6 L5 7" />
+              <path d="M20 20 L17 18 L19 17" />
+            </svg>
           </button>
 
           <div className="flex flex-col items-center gap-1">
