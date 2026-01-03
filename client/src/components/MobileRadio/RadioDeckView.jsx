@@ -9,6 +9,16 @@ import { PTT_STATES } from '../../constants/pttStates';
 import { updateUnitStatus } from '../../utils/api';
 import { DataPacket_Kind } from 'livekit-client';
 import { PTTButton } from './PTTButton';
+import { 
+  AnimalSearchModal, 
+  CitationModal, 
+  CadMapModal, 
+  FieldInterviewModal, 
+  FleetModal, 
+  WeatherWidget, 
+  BoloWidget,
+  MessagesWidget 
+} from './widgets';
 
 const STATUS_LABELS = {
   'off_duty': 'OFF DUTY',
@@ -37,6 +47,20 @@ const defaultButtons = [
   { id: 'f3', label: 'Custom', sublabel: 'F3' },
   { id: 'f4', label: 'Custom', sublabel: 'F4' },
   { id: 'widget', label: 'Widget', sublabel: '' },
+];
+
+const F3F4_WIDGET_OPTIONS = [
+  { value: 'none', label: 'None' },
+  { value: 'animal', label: 'Animal Search' },
+  { value: 'citation', label: 'Citation/Warning' },
+  { value: 'map', label: 'CAD Map' },
+  { value: 'fi', label: 'Field Interview' },
+  { value: 'fleet', label: 'Fleet' },
+];
+
+const MAIN_WIDGET_OPTIONS = [
+  { value: 'weather', label: 'Weather' },
+  { value: 'bolo', label: 'Recent BOLOs' },
 ];
 
 export function RadioDeckView({ user, onLogout }) {
@@ -83,6 +107,15 @@ export function RadioDeckView({ user, onLogout }) {
   const [showPersonQuery, setShowPersonQuery] = useState(false);
   const [showVehicleQuery, setShowVehicleQuery] = useState(false);
   const [showContacts, setShowContacts] = useState(false);
+  const [showAnimalSearch, setShowAnimalSearch] = useState(false);
+  const [showCitation, setShowCitation] = useState(false);
+  const [showCadMap, setShowCadMap] = useState(false);
+  const [showFI, setShowFI] = useState(false);
+  const [showFleet, setShowFleet] = useState(false);
+  const [showWeather, setShowWeather] = useState(false);
+  const [showBolo, setShowBolo] = useState(false);
+  const [showMessages, setShowMessages] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [contacts, setContacts] = useState([]);
   const [contactsLoading, setContactsLoading] = useState(false);
   const [personQueryForm, setPersonQueryForm] = useState({ firstName: '', lastName: '', dob: '' });
@@ -93,6 +126,10 @@ export function RadioDeckView({ user, onLogout }) {
   const [functionButtons, setFunctionButtons] = useState(() => {
     const saved = localStorage.getItem('radio_function_buttons');
     return saved ? JSON.parse(saved) : defaultButtons;
+  });
+  const [widgetConfig, setWidgetConfig] = useState(() => {
+    const saved = localStorage.getItem('radio_widget_config');
+    return saved ? JSON.parse(saved) : { f3: 'none', f4: 'none', widget: 'weather' };
   });
   const [draggedItem, setDraggedItem] = useState(null);
   const [isTransmitting, setIsTransmitting] = useState(false);
@@ -289,6 +326,24 @@ export function RadioDeckView({ user, onLogout }) {
       fetchInitialStatus();
     }
   }, [identity]);
+
+  useEffect(() => {
+    const fetchUnreadCount = async () => {
+      try {
+        const response = await fetch('/api/cad/messages/unread', { credentials: 'include' });
+        const data = await response.json();
+        if (response.ok && typeof data.count === 'number') {
+          setUnreadCount(data.count);
+        }
+      } catch (err) {
+        console.error('[Messages] Failed to fetch unread count:', err);
+      }
+    };
+
+    fetchUnreadCount();
+    const interval = setInterval(fetchUnreadCount, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleCycleStatus = async () => {
     if (statusLoading) return;
@@ -557,6 +612,34 @@ export function RadioDeckView({ user, onLogout }) {
     fetchContacts();
   };
 
+  const openWidgetByType = (widgetType) => {
+    switch (widgetType) {
+      case 'animal':
+        setShowAnimalSearch(true);
+        break;
+      case 'citation':
+        setShowCitation(true);
+        break;
+      case 'map':
+        setShowCadMap(true);
+        break;
+      case 'fi':
+        setShowFI(true);
+        break;
+      case 'fleet':
+        setShowFleet(true);
+        break;
+      case 'weather':
+        setShowWeather(true);
+        break;
+      case 'bolo':
+        setShowBolo(true);
+        break;
+      default:
+        break;
+    }
+  };
+
   const handleFunctionButtonClick = (btnId) => {
     if (btnId === 'f1') {
       setQueryResult(null);
@@ -566,6 +649,12 @@ export function RadioDeckView({ user, onLogout }) {
       setQueryResult(null);
       setQueryError(null);
       setShowVehicleQuery(true);
+    } else if (btnId === 'f3') {
+      openWidgetByType(widgetConfig.f3);
+    } else if (btnId === 'f4') {
+      openWidgetByType(widgetConfig.f4);
+    } else if (btnId === 'widget') {
+      openWidgetByType(widgetConfig.widget);
     }
   };
 
@@ -573,6 +662,30 @@ export function RadioDeckView({ user, onLogout }) {
     const newValue = !showPTT;
     setShowPTT(newValue);
     localStorage.setItem('radio_show_ptt', String(newValue));
+  };
+
+  const handleWidgetConfigChange = (key, value) => {
+    const newConfig = { ...widgetConfig, [key]: value };
+    setWidgetConfig(newConfig);
+    localStorage.setItem('radio_widget_config', JSON.stringify(newConfig));
+  };
+
+  const getButtonDisplay = (btnId) => {
+    if (btnId === 'f1') return { label: 'Person', sublabel: 'Query' };
+    if (btnId === 'f2') return { label: 'Vehicle', sublabel: 'Query' };
+    if (btnId === 'f3') {
+      const opt = F3F4_WIDGET_OPTIONS.find(o => o.value === widgetConfig.f3);
+      return { label: opt?.label || 'F3', sublabel: 'F3' };
+    }
+    if (btnId === 'f4') {
+      const opt = F3F4_WIDGET_OPTIONS.find(o => o.value === widgetConfig.f4);
+      return { label: opt?.label || 'F4', sublabel: 'F4' };
+    }
+    if (btnId === 'widget') {
+      const opt = MAIN_WIDGET_OPTIONS.find(o => o.value === widgetConfig.widget);
+      return { label: opt?.label || 'Widget', sublabel: '' };
+    }
+    return { label: btnId, sublabel: '' };
   };
 
   const isReceiving = !!activeAudio;
@@ -640,6 +753,18 @@ export function RadioDeckView({ user, onLogout }) {
             </div>
           </div>
 
+          <button
+            onClick={toggleScanning}
+            className={cn(
+              "w-8 h-8 rounded border flex items-center justify-center text-xs font-bold font-mono active:scale-95 transition-all self-center",
+              isScanning 
+                ? "bg-green-500 border-green-600 text-white" 
+                : "bg-gray-100 border-gray-300 text-gray-600"
+            )}
+          >
+            Z
+          </button>
+
           <div className="flex flex-col items-center gap-1">
             <button
               onClick={handleZoneUp}
@@ -703,24 +828,27 @@ export function RadioDeckView({ user, onLogout }) {
         </button>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        <div className="p-3 border-b border-gray-100">
-          <div className="flex items-center gap-2">
-            <MessageSquare className="w-5 h-5 text-cyan-600" />
-            <span className="font-bold text-black">Messages</span>
+      <div 
+        className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden cursor-pointer active:bg-gray-50"
+        onClick={() => setShowMessages(true)}
+      >
+        <div className="p-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <MessageSquare className="w-5 h-5 text-cyan-600" />
+              <span className="font-bold text-black">Messages</span>
+            </div>
+            {unreadCount > 0 && (
+              <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full font-bold">
+                {unreadCount}
+              </span>
+            )}
           </div>
-          <div className="text-sm text-gray-600 mt-1">No new messages</div>
-        </div>
-        
-        <div className="flex border-t border-gray-100">
-          <button className="flex-1 py-3 flex items-center justify-center gap-2 text-cyan-600 font-medium text-sm border-r border-gray-100 active:bg-gray-50">
-            <Plus className="w-4 h-4" />
-            New Conversation
-          </button>
-          <button className="flex-1 py-3 flex items-center justify-center gap-2 text-cyan-600 font-medium text-sm active:bg-gray-50">
-            <Mail className="w-4 h-4" />
-            All Messages
-          </button>
+          <div className="text-sm text-gray-600 mt-1">
+            {unreadCount > 0 
+              ? `${unreadCount} unread message${unreadCount > 1 ? 's' : ''}`
+              : 'No new messages'}
+          </div>
         </div>
       </div>
 
@@ -750,27 +878,30 @@ export function RadioDeckView({ user, onLogout }) {
       )}
 
       <div className="grid grid-cols-2 gap-2 flex-1 auto-rows-[4rem]">
-        {functionButtons.map((btn) => (
-          <div
-            key={btn.id}
-            draggable
-            onDragStart={() => handleDragStart(btn.id)}
-            onDragOver={(e) => handleDragOver(e, btn.id)}
-            onDragEnd={handleDragEnd}
-            onClick={() => handleFunctionButtonClick(btn.id)}
-            className={cn(
-              "bg-white rounded-xl border border-gray-200 flex items-center justify-center text-gray-700 shadow-sm active:bg-gray-50 transition-all cursor-pointer relative",
-              btn.id === 'widget' ? "col-span-2 row-span-2 flex-1" : "h-16",
-              draggedItem === btn.id && "opacity-50 scale-95"
-            )}
-          >
-            <GripVertical className="w-4 h-4 text-gray-300 absolute left-2" />
-            <div className="flex flex-col items-center">
-              <span className="font-bold text-sm">{btn.label}</span>
-              {btn.sublabel && <span className="text-xs text-gray-500">{btn.sublabel}</span>}
+        {functionButtons.map((btn) => {
+          const display = getButtonDisplay(btn.id);
+          return (
+            <div
+              key={btn.id}
+              draggable
+              onDragStart={() => handleDragStart(btn.id)}
+              onDragOver={(e) => handleDragOver(e, btn.id)}
+              onDragEnd={handleDragEnd}
+              onClick={() => handleFunctionButtonClick(btn.id)}
+              className={cn(
+                "bg-white rounded-xl border border-gray-200 flex items-center justify-center text-gray-700 shadow-sm active:bg-gray-50 transition-all cursor-pointer relative",
+                btn.id === 'widget' ? "col-span-2 row-span-2 flex-1" : "h-16",
+                draggedItem === btn.id && "opacity-50 scale-95"
+              )}
+            >
+              <GripVertical className="w-4 h-4 text-gray-300 absolute left-2" />
+              <div className="flex flex-col items-center">
+                <span className="font-bold text-sm">{display.label}</span>
+                {display.sublabel && <span className="text-xs text-gray-500">{display.sublabel}</span>}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {showScanList && (
@@ -819,7 +950,7 @@ export function RadioDeckView({ user, onLogout }) {
             <div className="p-4 border-b border-black">
               <h2 className="text-black font-mono font-bold uppercase tracking-wider">Settings</h2>
             </div>
-            <div className="p-4 space-y-4">
+            <div className="p-4 space-y-4 max-h-[60vh] overflow-y-auto">
               <label className="flex items-center justify-between">
                 <span className="text-black font-medium">Show PTT Button</span>
                 <input
@@ -830,19 +961,50 @@ export function RadioDeckView({ user, onLogout }) {
                 />
               </label>
               
-              <div className="pt-4 border-t border-gray-200 space-y-2">
-                <button
-                  onClick={() => {
-                    setUnitStatus('off_duty');
-                    if (currentChannelName) {
-                      broadcastStatus('off_duty', currentChannelName);
-                    }
-                    setShowSettings(false);
-                  }}
-                  className="w-full py-2 bg-orange-500 text-white font-mono uppercase rounded font-bold"
-                >
-                  Sign Off (Go Off Duty)
-                </button>
+              <div className="pt-4 border-t border-gray-200 space-y-3">
+                <h3 className="text-sm font-bold text-gray-700 uppercase">Widget Configuration</h3>
+                
+                <div className="flex items-center justify-between">
+                  <span className="text-black font-medium text-sm">F3 Button</span>
+                  <select
+                    value={widgetConfig.f3}
+                    onChange={(e) => handleWidgetConfigChange('f3', e.target.value)}
+                    className="border border-gray-300 rounded px-2 py-1 text-sm text-black bg-white"
+                  >
+                    {F3F4_WIDGET_OPTIONS.map(opt => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <span className="text-black font-medium text-sm">F4 Button</span>
+                  <select
+                    value={widgetConfig.f4}
+                    onChange={(e) => handleWidgetConfigChange('f4', e.target.value)}
+                    className="border border-gray-300 rounded px-2 py-1 text-sm text-black bg-white"
+                  >
+                    {F3F4_WIDGET_OPTIONS.map(opt => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <span className="text-black font-medium text-sm">Large Widget</span>
+                  <select
+                    value={widgetConfig.widget}
+                    onChange={(e) => handleWidgetConfigChange('widget', e.target.value)}
+                    className="border border-gray-300 rounded px-2 py-1 text-sm text-black bg-white"
+                  >
+                    {MAIN_WIDGET_OPTIONS.map(opt => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              
+              <div className="pt-4 border-t border-gray-200">
                 <button
                   onClick={() => {
                     setShowSettings(false);
@@ -996,6 +1158,15 @@ export function RadioDeckView({ user, onLogout }) {
           </div>
         </div>
       )}
+
+      <AnimalSearchModal show={showAnimalSearch} onClose={() => setShowAnimalSearch(false)} />
+      <CitationModal show={showCitation} onClose={() => setShowCitation(false)} />
+      <CadMapModal show={showCadMap} onClose={() => setShowCadMap(false)} />
+      <FieldInterviewModal show={showFI} onClose={() => setShowFI(false)} />
+      <FleetModal show={showFleet} onClose={() => setShowFleet(false)} identity={identity} />
+      <WeatherWidget show={showWeather} onClose={() => setShowWeather(false)} />
+      <BoloWidget show={showBolo} onClose={() => setShowBolo(false)} />
+      <MessagesWidget show={showMessages} onClose={() => setShowMessages(false)} />
     </div>
   );
 }

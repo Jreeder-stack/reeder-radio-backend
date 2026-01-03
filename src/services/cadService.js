@@ -167,3 +167,112 @@ export async function respondToStatusCheck(unitId, status) {
 export function isConfigured() {
   return !!(process.env.CAD_URL && process.env.CAD_API_KEY);
 }
+
+export async function getAnimalTypes() {
+  const result = await cadRequest('/api/radio/animal/types', 'GET');
+  if (result.success === false) {
+    return { types: ['Dog', 'Cat', 'Horse', 'Bird', 'Livestock', 'Wildlife', 'Other'] };
+  }
+  return result;
+}
+
+export async function searchAnimal(searchParams) {
+  console.log('[CAD] Animal search:', searchParams);
+  return cadRequest('/api/radio/animal/search', 'POST', {
+    tag: searchParams.tag?.toUpperCase() || '',
+    owner_last: searchParams.ownerLast?.toUpperCase() || '',
+    owner_first: searchParams.ownerFirst?.toUpperCase() || '',
+    microchip: searchParams.microchip || '',
+    name: searchParams.name?.toUpperCase() || '',
+    animal_type: searchParams.animalType || ''
+  });
+}
+
+export async function createCitation(type, populateFrom, user) {
+  console.log(`[CAD] Creating ${type} from ${populateFrom}`);
+  return cadRequest('/api/radio/citation/new', 'POST', {
+    type,
+    populate_from: populateFrom,
+    unit_id: user?.unit_id || user?.username
+  });
+}
+
+export async function getMapUrl() {
+  const CAD_URL = process.env.CAD_URL;
+  if (!CAD_URL) return null;
+  return `${CAD_URL}/map`;
+}
+
+export async function createFieldInterview(fiData, user) {
+  console.log('[CAD] Creating FI:', fiData);
+  return cadRequest('/api/radio/fi/create', 'POST', {
+    first_name: fiData.firstName?.toUpperCase() || '',
+    last_name: fiData.lastName?.toUpperCase() || '',
+    dob: fiData.dob || '',
+    location: fiData.location?.toUpperCase() || '',
+    description: fiData.description || '',
+    notes: fiData.notes || '',
+    officer: user?.unit_id || user?.username
+  });
+}
+
+export async function getFleetUnits(user) {
+  const result = await cadRequest('/api/radio/fleet/units', 'GET');
+  if (result.success === false) {
+    return { 
+      units: [{ id: user?.unit_id || 'UNIT1', name: user?.unit_id || 'UNIT1' }],
+      statusOptions: ['In Service', 'Out of Service', 'Available', 'En Route', 'On Scene']
+    };
+  }
+  return result;
+}
+
+export async function updateFleetUnitStatus(unitId, status) {
+  console.log(`[CAD] Fleet status update: ${unitId} -> ${status}`);
+  return cadRequest(`/api/radio/fleet/unit/${encodeURIComponent(unitId)}/status`, 'POST', { status });
+}
+
+export async function addFuelEntry(unitId, fuelData) {
+  console.log(`[CAD] Fuel entry for ${unitId}:`, fuelData);
+  return cadRequest(`/api/radio/fleet/unit/${encodeURIComponent(unitId)}/fuel`, 'POST', {
+    miles: parseFloat(fuelData.miles) || 0,
+    gallons: parseFloat(fuelData.gallons) || 0,
+    cost: parseFloat(fuelData.cost) || 0,
+    station: fuelData.station || ''
+  });
+}
+
+export async function getRecentBolos() {
+  const result = await cadRequest('/api/radio/bolo/recent', 'GET');
+  if (result.success === false) {
+    return { bolos: [] };
+  }
+  return result;
+}
+
+export async function getMessages(user) {
+  const unitId = user?.unit_id || user?.username;
+  return cadRequest(`/api/radio/messages?unit_id=${encodeURIComponent(unitId)}`, 'GET');
+}
+
+export async function getUnreadCount(user) {
+  const unitId = user?.unit_id || user?.username;
+  const result = await cadRequest(`/api/radio/messages/unread?unit_id=${encodeURIComponent(unitId)}`, 'GET');
+  if (result.success === false) {
+    return { count: 0 };
+  }
+  return result;
+}
+
+export async function getConversation(conversationId, user) {
+  return cadRequest(`/api/radio/messages/conversation/${conversationId}`, 'GET');
+}
+
+export async function sendMessage(conversationId, message, user) {
+  console.log(`[CAD] Sending message to ${conversationId}`);
+  return cadRequest('/api/radio/messages/reply', 'POST', {
+    conversation_id: conversationId,
+    message,
+    sender: user?.unit_id || user?.username
+  });
+}

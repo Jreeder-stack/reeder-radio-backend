@@ -153,4 +153,162 @@ router.post('/broadcast', async (req, res) => {
   }
 });
 
+router.get('/animal/types', async (req, res) => {
+  try {
+    const result = await cadService.getAnimalTypes();
+    res.json(result);
+  } catch (error) {
+    console.error('[CAD Router] Animal types error:', error);
+    res.json({ types: ['Dog', 'Cat', 'Horse', 'Bird', 'Livestock', 'Wildlife', 'Other'] });
+  }
+});
+
+router.post('/animal/search', async (req, res) => {
+  try {
+    const result = await cadService.searchAnimal(req.body);
+    if (result.success === false) {
+      return res.status(500).json({ success: false, message: result.error });
+    }
+    res.json(result);
+  } catch (error) {
+    console.error('[CAD Router] Animal search error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.post('/citation/new', async (req, res) => {
+  try {
+    const { type, populateFrom } = req.body;
+    const result = await cadService.createCitation(type, populateFrom, req.user);
+    if (result.success === false) {
+      return res.status(500).json({ success: false, message: result.error });
+    }
+    res.json(result);
+  } catch (error) {
+    console.error('[CAD Router] Citation create error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.get('/map/redirect', async (req, res) => {
+  try {
+    const mapUrl = await cadService.getMapUrl();
+    if (mapUrl) {
+      res.redirect(mapUrl);
+    } else {
+      res.status(404).json({ success: false, message: 'Map URL not configured' });
+    }
+  } catch (error) {
+    console.error('[CAD Router] Map redirect error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.post('/fi/create', async (req, res) => {
+  try {
+    const result = await cadService.createFieldInterview(req.body, req.user);
+    if (result.success === false) {
+      return res.status(500).json({ success: false, message: result.error });
+    }
+    res.json(result);
+  } catch (error) {
+    console.error('[CAD Router] FI create error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.get('/fleet/units', async (req, res) => {
+  try {
+    const result = await cadService.getFleetUnits(req.user);
+    res.json(result);
+  } catch (error) {
+    console.error('[CAD Router] Fleet units error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.post('/fleet/unit/:unitId/status', async (req, res) => {
+  try {
+    const { unitId } = req.params;
+    const { status } = req.body;
+    const result = await cadService.updateFleetUnitStatus(unitId, status);
+    if (result.success === false) {
+      return res.status(500).json({ success: false, message: result.error });
+    }
+    res.json(result);
+  } catch (error) {
+    console.error('[CAD Router] Fleet status error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.post('/fleet/unit/:unitId/fuel', async (req, res) => {
+  try {
+    const { unitId } = req.params;
+    const result = await cadService.addFuelEntry(unitId, req.body);
+    if (result.success === false) {
+      return res.status(500).json({ success: false, message: result.error });
+    }
+    res.json(result);
+  } catch (error) {
+    console.error('[CAD Router] Fuel entry error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.get('/bolo/recent', async (req, res) => {
+  try {
+    const result = await cadService.getRecentBolos();
+    res.json(result);
+  } catch (error) {
+    console.error('[CAD Router] BOLO error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.get('/messages', async (req, res) => {
+  try {
+    const result = await cadService.getMessages(req.user);
+    res.json(result);
+  } catch (error) {
+    console.error('[CAD Router] Messages error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.get('/messages/unread', async (req, res) => {
+  try {
+    const result = await cadService.getUnreadCount(req.user);
+    res.json(result);
+  } catch (error) {
+    console.error('[CAD Router] Unread count error:', error);
+    res.json({ count: 0 });
+  }
+});
+
+router.get('/messages/conversation/:conversationId', async (req, res) => {
+  try {
+    const { conversationId } = req.params;
+    const result = await cadService.getConversation(conversationId, req.user);
+    res.json(result);
+  } catch (error) {
+    console.error('[CAD Router] Conversation error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.post('/messages/reply', async (req, res) => {
+  try {
+    const { conversationId, message } = req.body;
+    const result = await cadService.sendMessage(conversationId, message, req.user);
+    if (result.success === false) {
+      return res.status(500).json({ success: false, message: result.error });
+    }
+    res.json(result);
+  } catch (error) {
+    console.error('[CAD Router] Send message error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 export default router;
