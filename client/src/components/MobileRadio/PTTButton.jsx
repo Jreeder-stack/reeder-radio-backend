@@ -1,7 +1,7 @@
 import { Mic, MicOff, Ban, Volume2 } from "lucide-react";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { cn } from "../../lib/utils";
-import { playTalkPermitTone, playEndOfTransmissionTone } from "../../lib/audioTones";
+import { playTalkPermitTone } from "../../lib/audioTones";
 
 export function PTTButton({ 
   onTransmitStart, 
@@ -142,7 +142,6 @@ export function PTTButton({
     } else if (status === 'error') {
       setIsDenying(false);
     } else {
-      playEndOfTransmissionTone();
       if (setTransmitting) setTransmitting(false);
       onTransmitEndRef.current?.();
     }
@@ -241,39 +240,32 @@ export function PTTButton({
           userSelect: 'none',
         }}
         className={cn(
-          "relative w-48 h-48 rounded-full flex flex-col items-center justify-center transition-all duration-200 shadow-2xl z-10",
+          "relative w-full h-32 rounded-lg flex flex-col items-center justify-center transition-all duration-200 shadow-lg z-10",
           disabled || !isConnected
-            ? "bg-zinc-800 border-4 border-zinc-700 cursor-not-allowed opacity-50" 
+            ? "bg-gray-300 border-2 border-gray-400 cursor-not-allowed opacity-50" 
             : isTransmitting
-              ? "bg-cyan-500 border-4 border-cyan-300 shadow-[0_0_50px_rgba(6,182,212,0.6)]"
+              ? "bg-cyan-500 border-2 border-cyan-300 shadow-[0_0_30px_rgba(6,182,212,0.6)]"
               : isReceiving
-                ? "bg-red-600 border-4 border-red-400 shadow-[0_0_50px_rgba(239,68,68,0.6)]"
+                ? "bg-red-500 border-2 border-red-400 shadow-[0_0_30px_rgba(239,68,68,0.6)]"
                 : isDenying
-                  ? "bg-red-900/20 border-4 border-red-500 shadow-[0_0_50px_rgba(239,68,68,0.4)]"
-                  : "bg-zinc-800 border-4 border-zinc-700 hover:border-cyan-500/50 hover:bg-zinc-750"
+                  ? "bg-red-200 border-2 border-red-400"
+                  : "bg-gray-200 border-2 border-gray-400 active:bg-gray-300"
         )}
         data-testid="button-ptt"
       >
-        <div className={cn(
-          "p-4 rounded-full border-2 transition-colors duration-200",
-          isTransmitting ? "bg-white/20 border-white/50" : 
-          isReceiving ? "bg-white/20 border-white/50" :
-          isDenying ? "bg-red-500/20 border-red-500/50" : "bg-black/20 border-white/10"
-        )}>
-          {isTransmitting ? (
-            <Mic className="w-12 h-12 text-white animate-pulse" />
-          ) : isReceiving ? (
-            <Volume2 className="w-12 h-12 text-white animate-pulse" />
-          ) : isDenying ? (
-            <Ban className="w-12 h-12 text-red-500" />
-          ) : (
-            <MicOff className="w-12 h-12 text-zinc-500" />
-          )}
-        </div>
+        {isTransmitting ? (
+          <Mic className="w-10 h-10 text-white" />
+        ) : isReceiving ? (
+          <Volume2 className="w-10 h-10 text-white animate-pulse" />
+        ) : isDenying ? (
+          <Ban className="w-10 h-10 text-red-600" />
+        ) : (
+          <Mic className="w-10 h-10 text-gray-600" />
+        )}
         
         <span className={cn(
-          "mt-4 font-bold tracking-widest text-lg uppercase",
-          isTransmitting ? "text-white" : isReceiving ? "text-white" : isDenying ? "text-red-500" : "text-zinc-500"
+          "mt-2 font-bold tracking-wide text-base uppercase",
+          isTransmitting ? "text-white" : isReceiving ? "text-white" : isDenying ? "text-red-600" : "text-gray-700"
         )}>
           {getButtonLabel()}
         </span>
