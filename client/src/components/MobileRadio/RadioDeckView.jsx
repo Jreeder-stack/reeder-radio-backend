@@ -732,17 +732,15 @@ export function RadioDeckView({ user, onLogout }) {
       </button>
 
       {showPTT && (
-        <div className="flex justify-center">
-          <PTTButton
-            onTransmitStart={handleTransmitStart}
-            onTransmitEnd={handleTransmitEnd}
-            isConnected={signalingConnected}
-            isTransmitting={isTransmitting}
-            isReceiving={isReceiving}
-            activeSpeaker={transmittingUnitId}
-            setTransmitting={setIsTransmitting}
-          />
-        </div>
+        <PTTButton
+          onTransmitStart={handleTransmitStart}
+          onTransmitEnd={handleTransmitEnd}
+          isConnected={signalingConnected}
+          isTransmitting={isTransmitting}
+          isReceiving={isReceiving}
+          activeSpeaker={transmittingUnitId}
+          setTransmitting={setIsTransmitting}
+        />
       )}
 
       <div className="grid grid-cols-2 gap-2 flex-1 auto-rows-[4rem]">

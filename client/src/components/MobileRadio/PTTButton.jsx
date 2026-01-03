@@ -198,78 +198,70 @@ export function PTTButton({
   };
 
   return (
-    <div className="relative flex items-center justify-center select-none">
-      <button
-        ref={buttonRef}
-        onPointerDown={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          activePointerIdRef.current = e.pointerId;
-          try {
-            buttonRef.current?.setPointerCapture(e.pointerId);
-          } catch (err) {}
-          startTransmit();
-        }}
-        onPointerUp={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
+    <button
+      ref={buttonRef}
+      onPointerDown={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        activePointerIdRef.current = e.pointerId;
+        try {
+          buttonRef.current?.setPointerCapture(e.pointerId);
+        } catch (err) {}
+        startTransmit();
+      }}
+      onPointerUp={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        stopTransmit();
+      }}
+      onPointerCancel={(e) => {
+        stopTransmit();
+      }}
+      onLostPointerCapture={(e) => {
+        if (isActiveRef.current) {
           stopTransmit();
-        }}
-        onPointerCancel={(e) => {
-          stopTransmit();
-        }}
-        onLostPointerCapture={(e) => {
-          if (isActiveRef.current) {
-            stopTransmit();
-          }
-        }}
-        onContextMenu={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-        }}
-        onTouchStart={(e) => {
-          e.preventDefault();
-        }}
-        onTouchMove={(e) => {
-          e.preventDefault();
-        }}
-        style={{
-          touchAction: 'none',
-          WebkitTouchCallout: 'none',
-          WebkitUserSelect: 'none',
-          userSelect: 'none',
-        }}
-        className={cn(
-          "relative w-full h-32 rounded-lg flex flex-col items-center justify-center transition-all duration-200 shadow-lg z-10",
-          disabled || !isConnected
-            ? "bg-gray-300 border-2 border-gray-400 cursor-not-allowed opacity-50" 
-            : isTransmitting
-              ? "bg-cyan-500 border-2 border-cyan-300 shadow-[0_0_30px_rgba(6,182,212,0.6)]"
-              : isReceiving
-                ? "bg-red-500 border-2 border-red-400 shadow-[0_0_30px_rgba(239,68,68,0.6)]"
-                : isDenying
-                  ? "bg-red-200 border-2 border-red-400"
-                  : "bg-gray-200 border-2 border-gray-400 active:bg-gray-300"
-        )}
-        data-testid="button-ptt"
-      >
-        {isTransmitting ? (
-          <Mic className="w-10 h-10 text-white" />
-        ) : isReceiving ? (
-          <Volume2 className="w-10 h-10 text-white animate-pulse" />
-        ) : isDenying ? (
-          <Ban className="w-10 h-10 text-red-600" />
-        ) : (
-          <Mic className="w-10 h-10 text-gray-600" />
-        )}
-        
-        <span className={cn(
-          "mt-2 font-bold tracking-wide text-base uppercase",
-          isTransmitting ? "text-white" : isReceiving ? "text-white" : isDenying ? "text-red-600" : "text-gray-700"
-        )}>
-          {getButtonLabel()}
-        </span>
-      </button>
-    </div>
+        }
+      }}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }}
+      onTouchStart={(e) => {
+        e.preventDefault();
+      }}
+      onTouchMove={(e) => {
+        e.preventDefault();
+      }}
+      style={{
+        touchAction: 'none',
+        WebkitTouchCallout: 'none',
+        WebkitUserSelect: 'none',
+        userSelect: 'none',
+      }}
+      className={cn(
+        "w-full rounded-lg p-4 flex items-center justify-center gap-2 font-bold text-sm uppercase tracking-wider transition-all active:scale-98 select-none",
+        disabled || !isConnected
+          ? "bg-gray-200 border border-gray-300 text-gray-400 cursor-not-allowed" 
+          : isTransmitting
+            ? "bg-cyan-500 text-white shadow-lg"
+            : isReceiving
+              ? "bg-red-500 text-white shadow-lg"
+              : isDenying
+                ? "bg-red-200 border border-red-400 text-red-600"
+                : "bg-white border border-gray-200 text-cyan-600 shadow-sm"
+      )}
+      data-testid="button-ptt"
+    >
+      {isTransmitting ? (
+        <Mic className="w-5 h-5" />
+      ) : isReceiving ? (
+        <Volume2 className="w-5 h-5 animate-pulse" />
+      ) : isDenying ? (
+        <Ban className="w-5 h-5" />
+      ) : (
+        <Mic className="w-5 h-5" />
+      )}
+      {getButtonLabel()}
+    </button>
   );
 }
