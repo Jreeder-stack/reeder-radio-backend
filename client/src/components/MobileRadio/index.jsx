@@ -1,38 +1,16 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import MobilePTTButton from './MobilePTTButton';
+import { MobileFrame } from './MobileFrame';
+import { PTTButton } from './PTTButton';
+import { PresenceList } from './PresenceList';
+import { AlertTriangle, Activity, Loader2, Wifi, WifiOff, MapPin } from 'lucide-react';
+import { cn } from '../../lib/utils';
 import { useLiveKitConnection } from '../../context/LiveKitConnectionContext';
 import { micPTTManager } from '../../audio/MicPTTManager';
 import { PTT_STATES } from '../../constants/pttStates';
 import { updateUnitStatus } from '../../utils/api';
 import { DataPacket_Kind } from 'livekit-client';
 
-const THEMES = {
-  dark: {
-    bg: '#000',
-    bgSecondary: '#18181b',
-    bgTertiary: '#27272a',
-    text: '#fff',
-    textSecondary: '#a1a1aa',
-    textMuted: '#71717a',
-    border: '#3f3f46',
-    accent: '#22c55e',
-    danger: '#dc2626',
-  },
-  light: {
-    bg: '#f4f4f5',
-    bgSecondary: '#fff',
-    bgTertiary: '#e4e4e7',
-    text: '#18181b',
-    textSecondary: '#52525b',
-    textMuted: '#a1a1aa',
-    border: '#d4d4d8',
-    accent: '#22c55e',
-    danger: '#dc2626',
-  }
-};
-
-export default function MobileRadioView({ user, onLogout, darkMode, toggleDarkMode }) {
-  const theme = darkMode ? THEMES.dark : THEMES.light;
+export default function MobileRadioView({ user, onLogout }) {
   const identity = (user?.unit_id && user.unit_id.trim()) || user?.username || 'Unknown';
   
   const {
@@ -46,48 +24,58 @@ export default function MobileRadioView({ user, onLogout, darkMode, toggleDarkMo
   const connected = connectionStatus === 'connected';
   const connecting = connectionStatus === 'connecting';
   
-  const [zonesData, setZonesData] = useState({});
-  const [selectedZone, setSelectedZone] = useState('');
-  const [selectedChannel, setSelectedChannel] = useState('');
-  const [transmitChannel, setTransmitChannel] = useState('');
+  const [channels, setChannels] = useState([]);
+  const [channelsLoading, setChannelsLoading] = useState(true);
+  const [currentChannel, setCurrentChannel] = useState('');
+  const [isScanning, setIsScanning] = useState(false);
   const [isEmergency, setIsEmergency] = useState(false);
+  const [isTransmitting, setIsTransmitting] = useState(false);
   const [pttState, setPttState] = useState(PTT_STATES.IDLE);
   const [activeAudio, setActiveAudio] = useState(null);
   const [userLocation, setUserLocation] = useState(null);
+  const [unitPresence, setUnitPresence] = useState([]);
   
   const transmitChannelRef = useRef('');
   const isEmergencyRef = useRef(false);
   const rxAudioElementsRef = useRef(new Set());
+  const hasJoinedRef = useRef(false);
   
   useEffect(() => {
-    transmitChannelRef.current = transmitChannel;
-  }, [transmitChannel]);
+    transmitChannelRef.current = currentChannel ? 
+      channels.find(ch => String(ch.id) === currentChannel)?.name || '' : '';
+  }, [currentChannel, channels]);
   
   useEffect(() => {
     isEmergencyRef.current = isEmergency;
   }, [isEmergency]);
 
   useEffect(() => {
-    fetch('/api/zones')
+    fetch('/api/channels')
       .then(res => res.json())
       .then(data => {
-        if (data && typeof data === 'object') {
-          setZonesData(data);
-          const zoneNames = Object.keys(data);
-          if (zoneNames.length > 0 && !selectedZone) {
-            setSelectedZone(zoneNames[0]);
-            const firstZoneChannels = data[zoneNames[0]] || [];
-            if (firstZoneChannels.length > 0) {
-              const channelName = firstZoneChannels[0].name || firstZoneChannels[0];
-              setSelectedChannel(channelName);
-              setTransmitChannel(channelName);
-              contextSwitchChannel(channelName);
-            }
+        if (Array.isArray(data)) {
+          setChannels(data);
+          if (data.length > 0) {
+            setCurrentChannel(String(data[0].id));
           }
         }
+        setChannelsLoading(false);
       })
-      .catch(err => console.error('Failed to load zones:', err));
-  }, [selectedZone, contextSwitchChannel]);
+      .catch(err => {
+        console.error('Failed to load channels:', err);
+        setChannelsLoading(false);
+      });
+  }, []);
+
+  useEffect(() => {
+    if (currentChannel && !hasJoinedRef.current && channels.length > 0) {
+      hasJoinedRef.current = true;
+      const channel = channels.find(ch => String(ch.id) === currentChannel);
+      if (channel) {
+        contextSwitchChannel(channel.name);
+      }
+    }
+  }, [currentChannel, channels, contextSwitchChannel]);
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -182,12 +170,14 @@ export default function MobileRadioView({ user, onLogout, darkMode, toggleDarkMo
       if (newState === PTT_STATES.ARMING) {
         rxAudioElementsRef.current.forEach(el => { el.muted = true; });
       } else if (newState === PTT_STATES.TRANSMITTING) {
+        setIsTransmitting(true);
         rxAudioElementsRef.current.forEach(el => { el.muted = true; });
         if (txChannel) {
           broadcastStatus('transmitting', txChannel);
           updateUnitStatus(identity, txChannel, 'transmitting', userLocation, isEmergencyRef.current).catch(() => {});
         }
       } else if (newState === PTT_STATES.IDLE) {
+        setIsTransmitting(false);
         rxAudioElementsRef.current.forEach(el => { el.muted = false; });
         if (txChannel) {
           broadcastStatus('idle', txChannel);
@@ -201,272 +191,225 @@ export default function MobileRadioView({ user, onLogout, darkMode, toggleDarkMo
     };
   }, [broadcastStatus, identity, userLocation]);
 
-  const handlePTTStart = useCallback(async () => {
-    if (!transmitChannel) return;
+  const handleTransmitStart = useCallback(async () => {
+    const channelName = transmitChannelRef.current;
+    if (!channelName) return;
     
     await ensureConnected();
-    const room = livekitManager?.getRoom(transmitChannel);
+    const room = livekitManager?.getRoom(channelName);
     if (!room) return;
     
     micPTTManager.start(room);
-  }, [transmitChannel, ensureConnected, livekitManager]);
+  }, [ensureConnected, livekitManager]);
 
-  const handlePTTEnd = useCallback(() => {
+  const handleTransmitEnd = useCallback(() => {
     if (!isEmergencyRef.current && micPTTManager.canStop()) {
       micPTTManager.stop();
     }
   }, []);
 
-  const handleChannelChange = (e) => {
-    const channelName = e.target.value;
-    setSelectedChannel(channelName);
-    setTransmitChannel(channelName);
-    contextSwitchChannel(channelName);
-  };
-
-  const handleZoneChange = (e) => {
-    const zoneName = e.target.value;
-    setSelectedZone(zoneName);
-    const zoneChannels = zonesData[zoneName] || [];
-    if (zoneChannels.length > 0) {
-      const channelName = zoneChannels[0].name || zoneChannels[0];
-      setSelectedChannel(channelName);
-      setTransmitChannel(channelName);
-      contextSwitchChannel(channelName);
+  const handleChannelChange = (channelId) => {
+    setCurrentChannel(channelId);
+    const channel = channels.find(ch => String(ch.id) === channelId);
+    if (channel) {
+      contextSwitchChannel(channel.name);
     }
   };
 
-  const handleEmergencyToggle = () => {
+  const toggleScanning = () => {
+    setIsScanning(prev => !prev);
+  };
+
+  const playEmergencyTone = () => {
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const now = audioContext.currentTime;
+    const volume = 0.7;
+    const beepDuration = 0.1;
+    const beepGap = 0.05;
+    
+    const frequencies = [1800, 2200, 1800];
+    
+    frequencies.forEach((freq, index) => {
+      const startTime = now + index * (beepDuration + beepGap);
+      
+      const osc = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      
+      osc.connect(gain);
+      gain.connect(audioContext.destination);
+      
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(freq, startTime);
+      
+      gain.gain.setValueAtTime(volume, startTime);
+      gain.gain.setValueAtTime(0, startTime + beepDuration);
+      
+      osc.start(startTime);
+      osc.stop(startTime + beepDuration);
+    });
+  };
+
+  const handleEmergencyToggle = async () => {
+    const channelName = transmitChannelRef.current || 'DISPATCH';
+    
     if (isEmergency) {
       setIsEmergency(false);
+      try {
+        await fetch('/api/dispatch/emergency', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ channel: channelName, active: false }),
+        });
+        console.log('[Emergency] Cancelled and notified dispatcher');
+      } catch (err) {
+        console.error('[Emergency] Failed to notify dispatcher of cancellation:', err);
+      }
     } else {
       setIsEmergency(true);
-      if (transmitChannel) {
-        handlePTTStart();
+      playEmergencyTone();
+      try {
+        await fetch('/api/dispatch/emergency', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ channel: channelName, active: true }),
+        });
+        console.log('[Emergency] Triggered and notified dispatcher');
+      } catch (err) {
+        console.error('[Emergency] Failed to notify dispatcher:', err);
       }
     }
   };
 
-  const currentZoneChannels = zonesData[selectedZone] || [];
-  const isTransmitting = pttState === PTT_STATES.TRANSMITTING;
+  const currentChannelName = channels.find(ch => String(ch.id) === currentChannel)?.name || null;
   const isReceiving = !!activeAudio;
+  const liveKitParticipants = [];
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      backgroundColor: theme.bg,
-      color: theme.text,
-      display: 'flex',
-      flexDirection: 'column',
-    }}>
-      <header style={{
-        backgroundColor: theme.bgSecondary,
-        borderBottom: `1px solid ${theme.border}`,
-        padding: '12px 16px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontWeight: 'bold', fontSize: '16px', letterSpacing: '0.05em' }}>
-            COMMAND COMMS
-          </span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-          }}>
-            <div style={{
-              width: '8px',
-              height: '8px',
-              borderRadius: '50%',
-              backgroundColor: connected ? theme.accent : connecting ? '#eab308' : theme.danger,
-            }} />
-            <span style={{ fontSize: '10px', fontWeight: 'bold', letterSpacing: '0.1em', color: theme.textSecondary }}>
-              {connected ? 'ONLINE' : connecting ? 'CONNECTING' : 'OFFLINE'}
-            </span>
-          </div>
-          <button
-            onClick={toggleDarkMode}
-            style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              fontSize: '18px',
-            }}
-          >
-            {darkMode ? '☀️' : '🌙'}
-          </button>
-          <button
-            onClick={onLogout}
-            style={{
-              backgroundColor: theme.danger,
-              color: '#fff',
-              border: 'none',
-              padding: '6px 12px',
-              borderRadius: '6px',
-              fontSize: '12px',
-              fontWeight: 'bold',
-              cursor: 'pointer',
-            }}
-          >
-            Logout
-          </button>
-        </div>
-      </header>
-
-      <div style={{
-        padding: '16px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '12px',
-      }}>
-        <div style={{
-          display: 'flex',
-          gap: '8px',
-        }}>
-          <select
-            value={selectedZone}
-            onChange={handleZoneChange}
-            style={{
-              flex: 1,
-              backgroundColor: theme.bgTertiary,
-              color: theme.text,
-              border: `1px solid ${theme.border}`,
-              borderRadius: '8px',
-              padding: '12px',
-              fontSize: '14px',
-              fontWeight: 'bold',
-            }}
-          >
-            {Object.keys(zonesData).map(zoneName => (
-              <option key={zoneName} value={zoneName}>{zoneName}</option>
-            ))}
-          </select>
-          <select
-            value={selectedChannel}
-            onChange={handleChannelChange}
-            style={{
-              flex: 1,
-              backgroundColor: theme.bgTertiary,
-              color: theme.text,
-              border: `1px solid ${theme.border}`,
-              borderRadius: '8px',
-              padding: '12px',
-              fontSize: '14px',
-              fontWeight: 'bold',
-            }}
-          >
-            {currentZoneChannels.map((ch, idx) => {
-              const channelName = ch.name || ch;
-              return (
-                <option key={idx} value={channelName}>{channelName}</option>
-              );
-            })}
-          </select>
-        </div>
-
-        <div style={{
-          textAlign: 'center',
-          padding: '8px',
-          backgroundColor: theme.bgSecondary,
-          borderRadius: '8px',
-          border: `1px solid ${theme.border}`,
-        }}>
-          <span style={{ fontSize: '12px', color: theme.textMuted }}>TX: </span>
-          <span style={{ fontSize: '14px', fontWeight: 'bold' }}>{transmitChannel || 'None'}</span>
-          <span style={{ fontSize: '12px', color: theme.textMuted }}> | RX: </span>
-          <span style={{ fontSize: '14px', fontWeight: 'bold' }}>{selectedChannel || 'None'}</span>
-        </div>
-      </div>
-
-      <button
-        onClick={handleEmergencyToggle}
-        style={{
-          margin: '0 16px',
-          padding: '14px',
-          backgroundColor: isEmergency ? theme.danger : '#7f1d1d',
-          color: '#fff',
-          border: 'none',
-          borderRadius: '8px',
-          fontSize: '16px',
-          fontWeight: 'bold',
-          letterSpacing: '0.1em',
-          cursor: 'pointer',
-          animation: isEmergency ? 'pulse 1s infinite' : 'none',
-        }}
-      >
-        {isEmergency ? '🚨 EMERGENCY ACTIVE' : 'EMERGENCY'}
-      </button>
-
-      <div style={{
-        flex: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '24px',
-        minHeight: '300px',
-      }}>
-        <MobilePTTButton
-          onTransmitStart={handlePTTStart}
-          onTransmitEnd={handlePTTEnd}
-          disabled={!connected || !transmitChannel}
-          isTransmitting={isTransmitting}
-          isReceiving={isReceiving}
-          activeSpeaker={activeAudio?.from}
-          theme={theme}
-        />
+    <MobileFrame title="COMMUNICATIONS" connectionStatus={connectionStatus}>
+      <div className="h-full flex flex-col p-4 gap-4">
         
-        <div style={{
-          marginTop: '24px',
-          textAlign: 'center',
-        }}>
-          <p style={{
-            fontSize: '12px',
-            color: isEmergency ? theme.danger : theme.textMuted,
-            fontWeight: isEmergency ? 'bold' : 'normal',
-            letterSpacing: '0.1em',
-          }}>
-            {isEmergency ? 'EMERGENCY DECLARED' : 
-             connected ? 'Press and hold to transmit' : 
-             connecting ? 'Connecting...' : 'Waiting for connection'}
-          </p>
+        <div className="flex gap-2">
+          <div className="flex-1 bg-zinc-900/50 p-4 rounded-xl border border-white/5 flex flex-col gap-2 relative overflow-hidden">
+            <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Active Channel</label>
+            <select 
+              value={currentChannel} 
+              onChange={(e) => handleChannelChange(e.target.value)}
+              disabled={channelsLoading}
+              className="h-12 bg-black/40 border border-zinc-700 text-white font-mono font-bold text-lg tracking-wider rounded-md px-3 focus:ring-primary/50 focus:border-primary/50 focus:outline-none"
+            >
+              {channelsLoading ? (
+                <option>Loading...</option>
+              ) : (
+                channels.map((ch) => (
+                  <option key={String(ch.id)} value={String(ch.id)} className="bg-zinc-900">
+                    {ch.name}
+                  </option>
+                ))
+              )}
+            </select>
+          </div>
+
+          <button
+            onClick={toggleScanning}
+            className={cn(
+              "w-20 rounded-xl border flex flex-col items-center justify-center gap-2 transition-all active:scale-95 shadow-lg",
+              isScanning 
+                ? "bg-emerald-500/10 border-emerald-500/50 text-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.2)]" 
+                : "bg-zinc-900/50 border-white/5 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900"
+            )}
+          >
+            {isScanning ? (
+              <>
+                <div className="relative">
+                  <Activity className="w-8 h-8 animate-pulse" />
+                  <div className="absolute inset-0 bg-emerald-500/20 blur-md rounded-full animate-pulse" />
+                </div>
+                <span className="text-[10px] font-bold tracking-wider">SCANNING</span>
+              </>
+            ) : (
+              <>
+                <Activity className="w-8 h-8" />
+                <span className="text-[10px] font-bold tracking-wider">SCAN</span>
+              </>
+            )}
+          </button>
+        </div>
+
+        <div className="flex-1 flex flex-col items-center justify-center min-h-[250px] relative">
+          <button
+            onClick={handleEmergencyToggle}
+            className={cn(
+              "absolute top-0 right-0 z-20 transition-all duration-300 font-bold tracking-widest px-3 py-2 rounded-md flex items-center gap-2 text-sm",
+              isEmergency 
+                ? "animate-pulse shadow-[0_0_20px_rgba(239,68,68,0.6)] bg-red-600 hover:bg-red-700 text-white" 
+                : "opacity-80 hover:opacity-100 bg-red-900/50 text-red-400 border border-red-500/30"
+            )}
+          >
+            <AlertTriangle className="h-4 w-4" />
+            {isEmergency ? "EMERGENCY ACTIVE" : "EMERGENCY"}
+          </button>
+
+          <PTTButton 
+            channelStatus={connected ? "clear" : connecting ? "busy" : "error"}
+            onTransmitStart={handleTransmitStart}
+            onTransmitEnd={handleTransmitEnd}
+            disabled={!connected}
+            isReceiving={isReceiving}
+            activeSpeaker={activeAudio?.from}
+            isTransmitting={isTransmitting}
+            setTransmitting={setIsTransmitting}
+          />
           
-          {userLocation && (
-            <p style={{
-              marginTop: '8px',
-              fontSize: '10px',
-              color: theme.accent,
-            }}>
-              📍 GPS Active
+          <div className="mt-8 text-center space-y-3">
+            <div className="flex items-center justify-center gap-2">
+              {connecting ? (
+                <Loader2 className="w-4 h-4 text-yellow-500 animate-spin" />
+              ) : connected ? (
+                <Wifi className="w-4 h-4 text-emerald-500" />
+              ) : (
+                <WifiOff className="w-4 h-4 text-red-500" />
+              )}
+              <p className={cn(
+                "text-xs font-mono uppercase tracking-widest transition-colors",
+                isEmergency ? "text-red-500 font-bold animate-pulse" : 
+                connected ? "text-emerald-500" : 
+                connecting ? "text-yellow-500" : "text-zinc-500"
+              )}>
+                {isEmergency ? "EMERGENCY DECLARED" : 
+                 connected ? "CONNECTED" : 
+                 connecting ? "CONNECTING..." : "STANDING BY"}
+              </p>
+            </div>
+
+            <p className="text-[10px] text-zinc-600">
+              {connected ? "Press and hold to transmit" : "Waiting for connection..."}
             </p>
-          )}
+            
+            {liveKitParticipants.length > 0 && (
+              <p className="text-[10px] text-cyan-500/70">
+                {liveKitParticipants.length} unit{liveKitParticipants.length !== 1 ? 's' : ''} on channel
+              </p>
+            )}
+            
+            <div className="flex items-center justify-center gap-1">
+              <MapPin className={cn(
+                "w-3 h-3",
+                userLocation ? "text-emerald-500" : "text-zinc-600"
+              )} />
+              <p className="text-[10px] text-zinc-600">
+                {userLocation ? "GPS Active" : "GPS Initializing..."}
+              </p>
+            </div>
+          </div>
         </div>
-      </div>
 
-      <div style={{
-        backgroundColor: theme.bgSecondary,
-        borderTop: `1px solid ${theme.border}`,
-        padding: '16px',
-      }}>
-        <div style={{
-          fontSize: '12px',
-          color: theme.textMuted,
-          textAlign: 'center',
-        }}>
-          Unit: <span style={{ fontWeight: 'bold', color: theme.text }}>{identity}</span>
+        <div className="h-48 shrink-0">
+          <PresenceList units={unitPresence} isLoading={false} />
         </div>
-      </div>
 
-      <style>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.7; }
-        }
-      `}</style>
-    </div>
+      </div>
+    </MobileFrame>
   );
 }
