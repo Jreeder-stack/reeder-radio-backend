@@ -1,10 +1,11 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { MobileFrame } from './MobileFrame';
 import { PTTButton } from './PTTButton';
 import { PresenceList } from './PresenceList';
 import { AlertTriangle, Activity, Loader2, Wifi, WifiOff, MapPin } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useLiveKitConnection } from '../../context/LiveKitConnectionContext';
+import { useSignalingContext } from '../../context/SignalingContext';
 import { micPTTManager } from '../../audio/MicPTTManager';
 import { PTT_STATES } from '../../constants/pttStates';
 import { updateUnitStatus } from '../../utils/api';
@@ -21,6 +22,17 @@ export default function MobileRadioView({ user, onLogout }) {
     ensureConnected,
   } = useLiveKitConnection();
   
+  const {
+    channelMembers,
+    activeTransmissions,
+    isTransmitting: isChannelTransmitting,
+    getTransmittingUnit,
+    joinChannel: signalingJoinChannel,
+    leaveChannel: signalingLeaveChannel,
+    signalPttStart,
+    signalPttEnd,
+  } = useSignalingContext();
+  
   const connected = connectionStatus === 'connected';
   const connecting = connectionStatus === 'connecting';
   
@@ -33,7 +45,6 @@ export default function MobileRadioView({ user, onLogout }) {
   const [pttState, setPttState] = useState(PTT_STATES.IDLE);
   const [activeAudio, setActiveAudio] = useState(null);
   const [userLocation, setUserLocation] = useState(null);
-  const [unitPresence, setUnitPresence] = useState([]);
   
   const transmitChannelRef = useRef('');
   const isEmergencyRef = useRef(false);
@@ -73,9 +84,10 @@ export default function MobileRadioView({ user, onLogout }) {
       const channel = channels.find(ch => String(ch.id) === currentChannel);
       if (channel) {
         contextSwitchChannel(channel.name);
+        signalingJoinChannel(channel.name);
       }
     }
-  }, [currentChannel, channels, contextSwitchChannel]);
+  }, [currentChannel, channels, contextSwitchChannel, signalingJoinChannel]);
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -199,20 +211,31 @@ export default function MobileRadioView({ user, onLogout }) {
     const room = livekitManager?.getRoom(channelName);
     if (!room) return;
     
+    signalPttStart(channelName);
     micPTTManager.start(room);
-  }, [ensureConnected, livekitManager]);
+  }, [ensureConnected, livekitManager, signalPttStart]);
 
   const handleTransmitEnd = useCallback(() => {
+    const channelName = transmitChannelRef.current;
     if (!isEmergencyRef.current && micPTTManager.canStop()) {
       micPTTManager.stop();
+      if (channelName) {
+        signalPttEnd(channelName);
+      }
     }
-  }, []);
+  }, [signalPttEnd]);
 
   const handleChannelChange = (channelId) => {
+    const oldChannel = channels.find(ch => String(ch.id) === currentChannel);
+    if (oldChannel) {
+      signalingLeaveChannel(oldChannel.name);
+    }
+    
     setCurrentChannel(channelId);
     const channel = channels.find(ch => String(ch.id) === channelId);
     if (channel) {
       contextSwitchChannel(channel.name);
+      signalingJoinChannel(channel.name);
     }
   };
 
@@ -284,7 +307,39 @@ export default function MobileRadioView({ user, onLogout }) {
 
   const currentChannelName = channels.find(ch => String(ch.id) === currentChannel)?.name || null;
   const isReceiving = !!activeAudio;
-  const liveKitParticipants = [];
+  
+  const channelIsBusy = useMemo(() => {
+    if (!currentChannelName) return false;
+    return isChannelTransmitting(currentChannelName);
+  }, [currentChannelName, isChannelTransmitting, activeTransmissions]);
+  
+  const transmittingUnitId = useMemo(() => {
+    if (!currentChannelName) return null;
+    return getTransmittingUnit(currentChannelName);
+  }, [currentChannelName, getTransmittingUnit, activeTransmissions]);
+  
+  const channelStatus = useMemo(() => {
+    if (!connected && !connecting) return 'error';
+    if (connecting) return 'busy';
+    if (isTransmitting) return 'clear';
+    if (channelIsBusy && transmittingUnitId !== identity) return 'busy';
+    return 'clear';
+  }, [connected, connecting, channelIsBusy, transmittingUnitId, identity, isTransmitting]);
+  
+  const unitPresence = useMemo(() => {
+    if (!currentChannelName) return [];
+    const members = channelMembers[currentChannelName] || [];
+    return members.map(m => ({
+      id: m.unitId,
+      unit_identity: m.unitId,
+      displayName: m.displayName || m.callsign || m.unitId,
+      status: m.status || 'online',
+      channel: currentChannelName,
+      isTalking: m.status === 'transmitting',
+    }));
+  }, [currentChannelName, channelMembers]);
+  
+  const liveKitParticipants = unitPresence;
 
   return (
     <MobileFrame title="COMMUNICATIONS" connectionStatus={connectionStatus}>
@@ -352,12 +407,12 @@ export default function MobileRadioView({ user, onLogout }) {
           </button>
 
           <PTTButton 
-            channelStatus={connected ? "clear" : connecting ? "busy" : "error"}
+            channelStatus={channelStatus}
             onTransmitStart={handleTransmitStart}
             onTransmitEnd={handleTransmitEnd}
             disabled={!connected}
             isReceiving={isReceiving}
-            activeSpeaker={activeAudio?.from}
+            activeSpeaker={transmittingUnitId || activeAudio?.from}
             isTransmitting={isTransmitting}
             setTransmitting={setIsTransmitting}
           />
