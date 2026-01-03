@@ -104,8 +104,9 @@ export default function ChannelTile({ channel, onRemove }) {
               onPointerDown={(e) => e.stopPropagation()}
               className="channel-remove-btn"
               title="Remove from grid"
+              aria-label={`Remove ${channel.name} from grid`}
             >
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>

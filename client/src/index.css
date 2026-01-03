@@ -100,15 +100,15 @@
 }
 
 :root.light-theme {
-  /* Premium Light Theme - Day Mode */
+  /* Premium Light Theme - Day Mode (WCAG AA compliant) */
   --dispatch-bg: #f6f8fa;
   --dispatch-panel: #ffffff;
   --dispatch-panel-elevated: #ffffff;
-  --dispatch-border: #d0d7de;
-  --dispatch-border-accent: #afb8c1;
+  --dispatch-border: #e1e4e8;
+  --dispatch-border-accent: #c9cdd5;
   --dispatch-text: #1f2328;
-  --dispatch-text-secondary: #57606a;
-  --dispatch-text-tertiary: #8c959f;
+  --dispatch-text-secondary: #3d4852;
+  --dispatch-text-tertiary: #656d76;
   --dispatch-accent: #0969da;
   --dispatch-accent-glow: rgba(9, 105, 218, 0.1);
   --dispatch-success: #1a7f37;
@@ -492,6 +492,19 @@ html, body {
 .topbar-btn-danger:hover {
   filter: brightness(1.1);
   box-shadow: 0 2px 8px rgba(248, 81, 73, 0.3);
+}
+
+/* Focus States for Accessibility */
+.topbar-btn:focus-visible,
+.tile-btn:focus-visible {
+  outline: 2px solid var(--dispatch-accent);
+  outline-offset: 2px;
+}
+
+.channel-remove-btn:focus-visible {
+  outline: 2px solid var(--dispatch-danger);
+  outline-offset: 1px;
+  border-radius: 0.25rem;
 }
 
 .channel-tile {
