@@ -479,7 +479,7 @@ export function RadioDeckView({ user, onLogout }) {
   const fetchContacts = async () => {
     setContactsLoading(true);
     try {
-      const response = await fetch('/api/contacts', { credentials: 'include' });
+      const response = await fetch('/api/unit/contacts', { credentials: 'include' });
       const data = await response.json();
       if (Array.isArray(data)) {
         setContacts(data);
