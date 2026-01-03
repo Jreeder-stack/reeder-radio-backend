@@ -12,7 +12,7 @@ async function cadRequest(endpoint, method = 'GET', body = null) {
     method,
     headers: {
       'Content-Type': 'application/json',
-      'X-Radio-API-Key': CAD_API_KEY
+      'X-API-Key': CAD_API_KEY
     }
   };
 
@@ -361,20 +361,78 @@ export async function getUnreadCount(user) {
   return result;
 }
 
+const DROPDOWN_DESCRIPTION_MAP = {
+  'Pennsylvania counties': 'counties',
+  'Biological sex options': 'sexOptions',
+  'Sex/gender codes': 'sexOptions',
+  'Race/ethnicity options': 'raceOptions',
+  'Race classification codes': 'raceOptions',
+  'Eye color options': 'eyeColors',
+  'Eye Color dropdown options': 'eyeColors',
+  'Hair color options': 'hairColors',
+  'Hair Color dropdown options': 'hairColors',
+  'Standard vehicle colors': 'vehicleColors',
+  'Vehicle body style types': 'vehicleTypes',
+  'Vehicle Styles dropdown options': 'vehicleStyles',
+  'Body styles for vehicles': 'vehicleStyles'
+};
+
+const DEFAULT_CONFIG = {
+  counties: [],
+  sexOptions: ['Male', 'Female', 'Unknown'],
+  raceOptions: ['White', 'Black', 'Hispanic', 'Asian', 'Native American', 'Pacific Islander', 'Other', 'Unknown'],
+  eyeColors: ['Brown', 'Blue', 'Green', 'Hazel', 'Gray', 'Black', 'Unknown'],
+  hairColors: ['Black', 'Brown', 'Blonde', 'Red', 'Gray', 'White', 'Bald', 'Unknown'],
+  vehicleTypes: ['Sedan', 'SUV', 'Truck', 'Van', 'Motorcycle', 'Other'],
+  vehicleStyles: ['2-Door', '4-Door', 'Hatchback', 'Convertible', 'Pickup', 'Other'],
+  vehicleColors: ['Black', 'White', 'Silver', 'Gray', 'Red', 'Blue', 'Green', 'Brown', 'Tan', 'Gold', 'Orange', 'Yellow', 'Purple', 'Other']
+};
+
 export async function getSystemConfig() {
-  console.log('[CAD] Getting system config');
-  const result = await cadRequest('/api/radio/system/config', 'GET');
-  if (result.success === false) {
-    return {
-      counties: [],
-      sexOptions: ['Male', 'Female', 'Unknown'],
-      raceOptions: ['White', 'Black', 'Hispanic', 'Asian', 'Native American', 'Pacific Islander', 'Other', 'Unknown'],
-      eyeColors: ['Brown', 'Blue', 'Green', 'Hazel', 'Gray', 'Black', 'Unknown'],
-      hairColors: ['Black', 'Brown', 'Blonde', 'Red', 'Gray', 'White', 'Bald', 'Unknown'],
-      vehicleTypes: ['Sedan', 'SUV', 'Truck', 'Van', 'Motorcycle', 'Other'],
-      vehicleStyles: ['2-Door', '4-Door', 'Hatchback', 'Convertible', 'Pickup', 'Other'],
-      vehicleColors: ['Black', 'White', 'Silver', 'Gray', 'Red', 'Blue', 'Green', 'Brown', 'Tan', 'Gold', 'Orange', 'Yellow', 'Purple', 'Other']
-    };
+  console.log('[CAD] Getting system config via dropdown API');
+  
+  try {
+    const categoriesResult = await cadRequest('/api/radio/dropdowns', 'GET');
+    
+    if (!categoriesResult.success || !categoriesResult.categories) {
+      console.log('[CAD] Failed to fetch dropdown categories, using defaults');
+      return DEFAULT_CONFIG;
+    }
+    
+    const categoryMap = {};
+    for (const cat of categoriesResult.categories) {
+      if (cat.description && DROPDOWN_DESCRIPTION_MAP[cat.description]) {
+        const fieldName = DROPDOWN_DESCRIPTION_MAP[cat.description];
+        if (!categoryMap[fieldName]) {
+          categoryMap[fieldName] = cat.id;
+        }
+      }
+    }
+    
+    console.log('[CAD] Found category mappings:', Object.keys(categoryMap));
+    
+    const config = { ...DEFAULT_CONFIG };
+    
+    const fetchPromises = Object.entries(categoryMap).map(async ([fieldName, categoryId]) => {
+      try {
+        const result = await cadRequest(`/api/radio/dropdowns/${categoryId}`, 'GET');
+        if (result.success && result.options && Array.isArray(result.options)) {
+          const values = result.options.map(opt => opt.value || opt.label || opt.name || opt);
+          if (values.length > 0) {
+            config[fieldName] = values;
+            console.log(`[CAD] Loaded ${values.length} options for ${fieldName}`);
+          }
+        }
+      } catch (err) {
+        console.log(`[CAD] Failed to fetch ${fieldName} options:`, err.message);
+      }
+    });
+    
+    await Promise.all(fetchPromises);
+    
+    return config;
+  } catch (err) {
+    console.log('[CAD] Error fetching system config:', err.message);
+    return DEFAULT_CONFIG;
   }
-  return result;
 }
