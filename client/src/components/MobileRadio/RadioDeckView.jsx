@@ -19,8 +19,16 @@ const STATUS_LABELS = {
   'out_of_service': 'OOS',
 };
 
+const STATUS_CYCLE = ['off_duty', 'on_duty', 'en_route', 'arrived', 'oos'];
+
 function formatStatus(status) {
   return STATUS_LABELS[status?.toLowerCase()] || status?.toUpperCase()?.replace(/_/g, ' ') || 'UNKNOWN';
+}
+
+function getNextStatus(currentStatus) {
+  const currentIndex = STATUS_CYCLE.indexOf(currentStatus?.toLowerCase());
+  const nextIndex = (currentIndex + 1) % STATUS_CYCLE.length;
+  return STATUS_CYCLE[nextIndex];
 }
 
 const defaultButtons = [
@@ -280,6 +288,8 @@ export function RadioDeckView({ user, onLogout }) {
     if (statusLoading) return;
     setStatusLoading(true);
     
+    const nextStatus = getNextStatus(unitStatus);
+    
     try {
       const response = await fetch(`/api/cad/unit/${encodeURIComponent(identity)}/status/cycle`, {
         method: 'POST',
@@ -298,12 +308,25 @@ export function RadioDeckView({ user, onLogout }) {
           if (currentChannelName) {
             broadcastStatus(newStatus, currentChannelName);
           }
+        } else {
+          setUnitStatus(nextStatus);
+          if (currentChannelName) {
+            broadcastStatus(nextStatus, currentChannelName);
+          }
         }
       } else {
-        console.error('[Status] Cycle failed:', data.message || data.error);
+        console.log('[Status] CAD unavailable, using local cycle:', nextStatus);
+        setUnitStatus(nextStatus);
+        if (currentChannelName) {
+          broadcastStatus(nextStatus, currentChannelName);
+        }
       }
     } catch (err) {
-      console.error('Failed to cycle status:', err);
+      console.error('Failed to cycle status, using local fallback:', err);
+      setUnitStatus(nextStatus);
+      if (currentChannelName) {
+        broadcastStatus(nextStatus, currentChannelName);
+      }
     } finally {
       setStatusLoading(false);
     }
