@@ -843,33 +843,35 @@ export function RadioDeckView({ user, onLogout }) {
       </div>
 
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        <div className="px-3 py-2 flex items-center gap-3">
-          <div className="flex items-center gap-2 min-w-0 flex-1">
-            <MessageSquare className="w-5 h-5 text-cyan-600 flex-shrink-0" />
-            <span className="font-bold text-black text-sm truncate">Messages</span>
+        <div className="p-3 border-b border-gray-100">
+          <div className="flex items-center gap-2">
+            <MessageSquare className="w-5 h-5 text-cyan-600" />
+            <span className="font-bold text-black">Messages</span>
             {unreadCount > 0 && (
-              <span className="bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full font-bold flex-shrink-0">
+              <span className="bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full font-bold ml-1">
                 {unreadCount}
               </span>
             )}
-            <span className="text-xs text-gray-500 truncate">
-              {unreadCount > 0 ? `${unreadCount} unread` : 'No new'}
-            </span>
           </div>
-          <div className="flex gap-1.5 flex-shrink-0">
-            <button
-              onClick={() => setShowMessages(true)}
-              className="px-3 py-1.5 bg-cyan-600 text-white text-xs font-medium rounded active:bg-cyan-700"
-            >
-              View
-            </button>
-            <button
-              onClick={() => setShowNewMessage(true)}
-              className="px-3 py-1.5 bg-gray-200 text-gray-700 text-xs font-medium rounded active:bg-gray-300"
-            >
-              New
-            </button>
+          <div className="text-sm text-gray-600 mt-1">
+            {unreadCount > 0 ? `${unreadCount} unread message${unreadCount > 1 ? 's' : ''}` : 'No new messages'}
           </div>
+        </div>
+        <div className="flex border-t border-gray-100">
+          <button 
+            onClick={() => setShowNewMessage(true)}
+            className="flex-1 py-3 flex items-center justify-center gap-2 text-cyan-600 font-medium text-sm border-r border-gray-100 active:bg-gray-50"
+          >
+            <Plus className="w-4 h-4" />
+            New Conversation
+          </button>
+          <button 
+            onClick={() => setShowMessages(true)}
+            className="flex-1 py-3 flex items-center justify-center gap-2 text-cyan-600 font-medium text-sm active:bg-gray-50"
+          >
+            <Mail className="w-4 h-4" />
+            All Messages
+          </button>
         </div>
       </div>
 
