@@ -21,10 +21,10 @@ export function MessagesWidget({ show, onClose }) {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('/api/cad/messages', { credentials: 'include' });
+      const response = await fetch('/api/cad/chats', { credentials: 'include' });
       const data = await response.json();
       if (response.ok) {
-        setConversations(data.conversations || []);
+        setConversations(data.chats || []);
       } else {
         setError(data.message || 'Failed to load messages');
       }
@@ -39,7 +39,7 @@ export function MessagesWidget({ show, onClose }) {
     setSelectedConversation(conversation);
     setMessagesLoading(true);
     try {
-      const response = await fetch(`/api/cad/messages/conversation/${conversation.id}`, { credentials: 'include' });
+      const response = await fetch(`/api/cad/chats/${conversation.id}/messages`, { credentials: 'include' });
       const data = await response.json();
       if (response.ok) {
         setMessages(data.messages || []);
@@ -55,12 +55,11 @@ export function MessagesWidget({ show, onClose }) {
     if (!replyText.trim() || !selectedConversation) return;
     setSending(true);
     try {
-      const response = await fetch('/api/cad/messages/reply', {
+      const response = await fetch(`/api/cad/chats/${selectedConversation.id}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          conversationId: selectedConversation.id,
           message: replyText.trim(),
         }),
       });

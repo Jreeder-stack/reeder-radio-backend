@@ -307,9 +307,49 @@ export async function getRecentBolos() {
   return result;
 }
 
-export async function getMessages(user) {
-  const unitId = user?.unit_id || user?.username;
-  return cadRequest(`/api/radio/messages?unit_id=${encodeURIComponent(unitId)}`, 'GET');
+export async function getContacts(user) {
+  console.log('[CAD] Getting contacts');
+  const result = await cadRequest('/api/radio/contacts', 'GET');
+  if (result.success === false) {
+    return { contacts: [] };
+  }
+  return result;
+}
+
+export async function getChats(user) {
+  console.log('[CAD] Getting chat threads');
+  const result = await cadRequest('/api/radio/chats', 'GET');
+  if (result.success === false) {
+    return { chats: [] };
+  }
+  return result;
+}
+
+export async function createChat(recipientId, message, user) {
+  console.log(`[CAD] Creating new chat with ${recipientId}`);
+  return cadRequest('/api/radio/chats', 'POST', {
+    recipient_id: recipientId,
+    message,
+    sender: user?.unit_id || user?.username
+  });
+}
+
+export async function deleteChat(chatId) {
+  console.log(`[CAD] Deleting chat ${chatId}`);
+  return cadRequest(`/api/radio/chats/${chatId}`, 'DELETE');
+}
+
+export async function getChatMessages(chatId, user) {
+  console.log(`[CAD] Getting messages for chat ${chatId}`);
+  return cadRequest(`/api/radio/chats/${chatId}/messages`, 'GET');
+}
+
+export async function sendChatMessage(chatId, message, user) {
+  console.log(`[CAD] Sending message to chat ${chatId}`);
+  return cadRequest(`/api/radio/chats/${chatId}/messages`, 'POST', {
+    message,
+    sender: user?.unit_id || user?.username
+  });
 }
 
 export async function getUnreadCount(user) {
@@ -319,35 +359,4 @@ export async function getUnreadCount(user) {
     return { count: 0 };
   }
   return result;
-}
-
-export async function getConversation(conversationId, user) {
-  return cadRequest(`/api/radio/messages/conversation/${conversationId}`, 'GET');
-}
-
-export async function sendMessage(conversationId, message, user) {
-  console.log(`[CAD] Sending message to ${conversationId}`);
-  return cadRequest('/api/radio/messages/reply', 'POST', {
-    conversation_id: conversationId,
-    message,
-    sender: user?.unit_id || user?.username
-  });
-}
-
-export async function getChatUnits(user) {
-  console.log('[CAD] Getting chat units');
-  const result = await cadRequest('/api/radio/messages/units', 'GET');
-  if (result.success === false) {
-    return { units: [] };
-  }
-  return result;
-}
-
-export async function startNewChat(recipientId, message, user) {
-  console.log(`[CAD] Starting new chat with ${recipientId}`);
-  return cadRequest('/api/radio/messages/new', 'POST', {
-    recipient_id: recipientId,
-    message,
-    sender: user?.unit_id || user?.username
-  });
 }

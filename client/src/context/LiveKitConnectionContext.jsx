@@ -368,22 +368,9 @@ export function LiveKitConnectionProvider({ children, user }) {
       const isDispatcher = currentPath === '/dispatcher';
       
       if (isDispatcher) {
-        console.log(`[LiveKitConnection] Dispatcher mode - connecting to all ${enabledChannels.length} channels`);
-        
-        const results = await Promise.allSettled(
-          enabledChannels.map(channel => connectToChannel(channel.name, identity))
-        );
-        
-        const successCount = results.filter(r => r.status === 'fulfilled' && r.value).length;
-        console.log(`[LiveKitConnection] Connected to ${successCount}/${enabledChannels.length} channels`);
-        
-        if (successCount > 0) {
-          setConnected(true);
-          setConnectionStatus('connected');
-        } else {
-          setConnectionError('Failed to connect to any channels');
-          setConnectionStatus('failed');
-        }
+        console.log(`[LiveKitConnection] Dispatcher mode - NO auto-connect (on-demand only)`);
+        setConnected(true);
+        setConnectionStatus('connected');
       } else {
         const firstChannel = initialChannel || enabledChannels[0]?.name;
         if (firstChannel) {

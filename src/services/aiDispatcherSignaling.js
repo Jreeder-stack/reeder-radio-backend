@@ -2,6 +2,7 @@ import { signalingService, SIGNALING_EVENTS } from './signalingService.js';
 
 const AI_UNIT_ID = 'AI-Dispatcher';
 const CONNECTION_GRACE_MS = 5000;
+const FALLBACK_IDLE_DISCONNECT_MS = 60000;
 
 class AIDispatcherSignaling {
   constructor() {
@@ -10,6 +11,8 @@ class AIDispatcherSignaling {
     this.connectionTimers = new Map();
     this.transmissionLogs = [];
     this.initialized = false;
+    this.fallbackIdleTimer = null;
+    this.lastActivityTime = null;
   }
 
   log(action, details = {}) {
@@ -23,7 +26,53 @@ class AIDispatcherSignaling {
     this.dispatcher = dispatcher;
     this.initialized = true;
     
+    this._startFallbackIdleCheck();
+    
     this.log('INITIALIZED', { channels: Array.from(this.activeChannels) });
+  }
+
+  _recordActivity() {
+    this.lastActivityTime = Date.now();
+  }
+
+  _startFallbackIdleCheck() {
+    if (this.fallbackIdleTimer) {
+      clearInterval(this.fallbackIdleTimer);
+    }
+
+    this.fallbackIdleTimer = setInterval(async () => {
+      if (!this.dispatcher || !this.dispatcher.room) {
+        return;
+      }
+
+      const now = Date.now();
+      const idleTime = this.lastActivityTime ? now - this.lastActivityTime : 0;
+
+      if (idleTime >= FALLBACK_IDLE_DISCONNECT_MS) {
+        const hasActiveTransmission = Array.from(this.activeChannels).some(
+          ch => signalingService.getActiveTransmission(ch)
+        );
+        const hasEmergency = Array.from(this.activeChannels).some(
+          ch => signalingService.isEmergencyActive(ch)
+        );
+
+        if (!hasActiveTransmission && !hasEmergency) {
+          this.log('FALLBACK_IDLE_DISCONNECT', { idleMs: idleTime });
+          try {
+            await this.dispatcher.leaveRoom();
+          } catch (err) {
+            this.log('FALLBACK_DISCONNECT_ERROR', { error: err.message });
+          }
+        }
+      }
+    }, 15000);
+  }
+
+  _stopFallbackIdleCheck() {
+    if (this.fallbackIdleTimer) {
+      clearInterval(this.fallbackIdleTimer);
+      this.fallbackIdleTimer = null;
+    }
   }
 
   setActiveChannel(channelId) {
@@ -52,6 +101,7 @@ class AIDispatcherSignaling {
       return;
     }
 
+    this._recordActivity();
     this._clearConnectionTimer(channelId);
 
     this.log('PTT_START_DETECTED', { channelId, unitId, isEmergency });
@@ -96,6 +146,7 @@ class AIDispatcherSignaling {
     if (!this.dispatcher) return;
     if (!this.activeChannels.has(channelId)) return;
 
+    this._recordActivity();
     this.log('EMERGENCY_START_DETECTED', { channelId, unitId });
 
     this._clearConnectionTimer(channelId);

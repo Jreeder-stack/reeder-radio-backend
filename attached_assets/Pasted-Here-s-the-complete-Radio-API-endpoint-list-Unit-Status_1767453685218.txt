@@ -1,0 +1,51 @@
+Here's the complete Radio API endpoint list:
+
+Unit Status & Zone Management:
+
+POST /api/radio/status - Update unit status
+POST /api/radio/unit/:unitId/status/cycle - Cycle through unit statuses
+POST /api/radio/zone - Set unit zone
+GET /api/radio/status-check - Get all active units with status
+Call Management:
+
+POST /api/radio/call - Create new call
+GET /api/radio/calls - Get active calls
+GET /api/radio/call/:id - Get call details
+PATCH /api/radio/call/:id - Update call
+POST /api/radio/assign - Assign unit to call
+POST /api/radio/clear - Clear unit from call
+POST /api/radio/dispose - Dispose/close call
+POST /api/radio/note - Add note to call
+GET /api/radio/unit/:unitId/call - Get unit's current call assignment
+Queries:
+
+POST /api/radio/query/person - Query person by name/DOB
+POST /api/radio/query/vehicle - Query vehicle by plate
+POST /api/radio/query/warrant - Query warrants
+POST /api/radio/animal/search - Search animals
+GET /api/radio/animal/types - Get animal types
+Broadcasts & Checks:
+
+POST /api/radio/broadcast - Send broadcast to units
+GET /api/radio/pending-checks - Get pending welfare checks
+POST /api/radio/respond-check - Respond to welfare check
+Messaging (radio app needs to adapt to /chats pattern):
+
+GET /api/radio/contacts - Get available contacts
+GET /api/radio/chats - Get chat threads
+POST /api/radio/chats - Create new chat
+DELETE /api/radio/chats/:id - Delete chat
+GET /api/radio/chats/:id/messages - Get messages in chat
+POST /api/radio/chats/:id/messages - Send message in chat
+GET /api/radio/messages/unread - Get unread message count
+Record Creation:
+
+POST /api/radio/citation/new - Create citation/warning
+POST /api/radio/fi/create - Create field interview
+Fleet:
+
+GET /api/radio/fleet/units - Get all fleet vehicles
+POST /api/radio/fleet/unit/:id/status - Update vehicle status
+POST /api/radio/fleet/unit/:id/fuel - Add fuel log
+All endpoints require X-API-Key header. BOLOs broadcast via WebSocket when created.
+

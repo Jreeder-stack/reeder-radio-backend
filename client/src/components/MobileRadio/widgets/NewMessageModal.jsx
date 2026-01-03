@@ -13,20 +13,20 @@ export function NewMessageModal({ show, onClose, onMessageSent }) {
     if (show) {
       setLoading(true);
       setError(null);
-      fetch('/api/cad/messages/units', { credentials: 'include' })
+      fetch('/api/cad/contacts', { credentials: 'include' })
         .then(async (res) => {
           const data = await res.json();
           if (!res.ok) {
-            throw new Error(data.message || 'Failed to load units');
+            throw new Error(data.message || 'Failed to load contacts');
           }
           return data;
         })
         .then(data => {
-          setUnits(data.units || []);
+          setUnits(data.contacts || []);
           setLoading(false);
         })
         .catch((err) => {
-          setError(err.message || 'Failed to load units');
+          setError(err.message || 'Failed to load contacts');
           setLoading(false);
         });
     }
@@ -46,7 +46,7 @@ export function NewMessageModal({ show, onClose, onMessageSent }) {
     setError(null);
 
     try {
-      const response = await fetch('/api/cad/messages/new', {
+      const response = await fetch('/api/cad/chats', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

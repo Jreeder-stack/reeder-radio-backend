@@ -276,12 +276,76 @@ router.get('/bolo/recent', async (req, res) => {
   }
 });
 
-router.get('/messages', async (req, res) => {
+router.get('/contacts', async (req, res) => {
   try {
-    const result = await cadService.getMessages(req.user);
+    const result = await cadService.getContacts(req.user);
     res.json(result);
   } catch (error) {
-    console.error('[CAD Router] Messages error:', error);
+    console.error('[CAD Router] Contacts error:', error);
+    res.json({ contacts: [] });
+  }
+});
+
+router.get('/chats', async (req, res) => {
+  try {
+    const result = await cadService.getChats(req.user);
+    res.json(result);
+  } catch (error) {
+    console.error('[CAD Router] Chats error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.post('/chats', async (req, res) => {
+  try {
+    const { recipientId, message } = req.body;
+    const result = await cadService.createChat(recipientId, message, req.user);
+    if (result.success === false) {
+      return res.status(500).json({ success: false, message: result.error });
+    }
+    res.json(result);
+  } catch (error) {
+    console.error('[CAD Router] Create chat error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.delete('/chats/:chatId', async (req, res) => {
+  try {
+    const { chatId } = req.params;
+    const result = await cadService.deleteChat(chatId);
+    if (result.success === false) {
+      return res.status(500).json({ success: false, message: result.error });
+    }
+    res.json(result);
+  } catch (error) {
+    console.error('[CAD Router] Delete chat error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.get('/chats/:chatId/messages', async (req, res) => {
+  try {
+    const { chatId } = req.params;
+    const result = await cadService.getChatMessages(chatId, req.user);
+    res.json(result);
+  } catch (error) {
+    console.error('[CAD Router] Chat messages error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.post('/chats/:chatId/messages', async (req, res) => {
+  try {
+    const { chatId } = req.params;
+    const { message } = req.body;
+    const result = await cadService.sendChatMessage(chatId, message, req.user);
+    if (result.success === false) {
+      return res.status(500).json({ success: false, message: result.error });
+    }
+    res.json(result);
+  } catch (error) {
+    console.error('[CAD Router] Send message error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
@@ -296,51 +360,26 @@ router.get('/messages/unread', async (req, res) => {
   }
 });
 
-router.get('/messages/conversation/:conversationId', async (req, res) => {
+router.get('/pending-checks', async (req, res) => {
   try {
-    const { conversationId } = req.params;
-    const result = await cadService.getConversation(conversationId, req.user);
+    const result = await cadService.getPendingChecks();
     res.json(result);
   } catch (error) {
-    console.error('[CAD Router] Conversation error:', error);
-    res.status(500).json({ success: false, message: error.message });
+    console.error('[CAD Router] Pending checks error:', error);
+    res.json({ checks: [] });
   }
 });
 
-router.post('/messages/reply', async (req, res) => {
+router.post('/respond-check', async (req, res) => {
   try {
-    const { conversationId, message } = req.body;
-    const result = await cadService.sendMessage(conversationId, message, req.user);
+    const { unitId, status } = req.body;
+    const result = await cadService.respondToStatusCheck(unitId, status);
     if (result.success === false) {
       return res.status(500).json({ success: false, message: result.error });
     }
     res.json(result);
   } catch (error) {
-    console.error('[CAD Router] Send message error:', error);
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-router.get('/messages/units', async (req, res) => {
-  try {
-    const result = await cadService.getChatUnits(req.user);
-    res.json(result);
-  } catch (error) {
-    console.error('[CAD Router] Chat units error:', error);
-    res.json({ units: [] });
-  }
-});
-
-router.post('/messages/new', async (req, res) => {
-  try {
-    const { recipientId, message } = req.body;
-    const result = await cadService.startNewChat(recipientId, message, req.user);
-    if (result.success === false) {
-      return res.status(500).json({ success: false, message: result.error });
-    }
-    res.json(result);
-  } catch (error) {
-    console.error('[CAD Router] New chat error:', error);
+    console.error('[CAD Router] Respond check error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
