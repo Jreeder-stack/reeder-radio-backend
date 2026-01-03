@@ -17,7 +17,8 @@ import {
   FleetModal, 
   WeatherWidget, 
   BoloWidget,
-  MessagesWidget 
+  MessagesWidget,
+  NewMessageModal 
 } from './widgets';
 
 const STATUS_LABELS = {
@@ -115,6 +116,7 @@ export function RadioDeckView({ user, onLogout }) {
   const [showWeather, setShowWeather] = useState(false);
   const [showBolo, setShowBolo] = useState(false);
   const [showMessages, setShowMessages] = useState(false);
+  const [showNewMessage, setShowNewMessage] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [contacts, setContacts] = useState([]);
   const [contactsLoading, setContactsLoading] = useState(false);
@@ -841,25 +843,28 @@ export function RadioDeckView({ user, onLogout }) {
       </div>
 
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        <div className="p-2 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <MessageSquare className="w-5 h-5 text-cyan-600" />
-            <span className="font-bold text-black text-sm">Messages</span>
+        <div className="px-3 py-2 flex items-center gap-3">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <MessageSquare className="w-5 h-5 text-cyan-600 flex-shrink-0" />
+            <span className="font-bold text-black text-sm truncate">Messages</span>
             {unreadCount > 0 && (
-              <span className="bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full font-bold">
+              <span className="bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full font-bold flex-shrink-0">
                 {unreadCount}
               </span>
             )}
+            <span className="text-xs text-gray-500 truncate">
+              {unreadCount > 0 ? `${unreadCount} unread` : 'No new'}
+            </span>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-1.5 flex-shrink-0">
             <button
               onClick={() => setShowMessages(true)}
               className="px-3 py-1.5 bg-cyan-600 text-white text-xs font-medium rounded active:bg-cyan-700"
             >
-              View Chats
+              View
             </button>
             <button
-              onClick={() => setShowMessages(true)}
+              onClick={() => setShowNewMessage(true)}
               className="px-3 py-1.5 bg-gray-200 text-gray-700 text-xs font-medium rounded active:bg-gray-300"
             >
               New
@@ -1183,6 +1188,7 @@ export function RadioDeckView({ user, onLogout }) {
       <WeatherWidget show={showWeather} onClose={() => setShowWeather(false)} />
       <BoloWidget show={showBolo} onClose={() => setShowBolo(false)} />
       <MessagesWidget show={showMessages} onClose={() => setShowMessages(false)} />
+      <NewMessageModal show={showNewMessage} onClose={() => setShowNewMessage(false)} />
     </div>
   );
 }

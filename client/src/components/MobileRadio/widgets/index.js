@@ -6,3 +6,4 @@ export { FleetModal } from './FleetModal';
 export { WeatherWidget } from './WeatherWidget';
 export { BoloWidget } from './BoloWidget';
 export { MessagesWidget } from './MessagesWidget';
+export { NewMessageModal } from './NewMessageModal';

@@ -321,4 +321,28 @@ router.post('/messages/reply', async (req, res) => {
   }
 });
 
+router.get('/messages/units', async (req, res) => {
+  try {
+    const result = await cadService.getChatUnits(req.user);
+    res.json(result);
+  } catch (error) {
+    console.error('[CAD Router] Chat units error:', error);
+    res.json({ units: [] });
+  }
+});
+
+router.post('/messages/new', async (req, res) => {
+  try {
+    const { recipientId, message } = req.body;
+    const result = await cadService.startNewChat(recipientId, message, req.user);
+    if (result.success === false) {
+      return res.status(500).json({ success: false, message: result.error });
+    }
+    res.json(result);
+  } catch (error) {
+    console.error('[CAD Router] New chat error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 export default router;

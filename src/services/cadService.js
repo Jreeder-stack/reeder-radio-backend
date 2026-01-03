@@ -333,3 +333,21 @@ export async function sendMessage(conversationId, message, user) {
     sender: user?.unit_id || user?.username
   });
 }
+
+export async function getChatUnits(user) {
+  console.log('[CAD] Getting chat units');
+  const result = await cadRequest('/api/radio/messages/units', 'GET');
+  if (result.success === false) {
+    return { units: [] };
+  }
+  return result;
+}
+
+export async function startNewChat(recipientId, message, user) {
+  console.log(`[CAD] Starting new chat with ${recipientId}`);
+  return cadRequest('/api/radio/messages/new', 'POST', {
+    recipient_id: recipientId,
+    message,
+    sender: user?.unit_id || user?.username
+  });
+}
