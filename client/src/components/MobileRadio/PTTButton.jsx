@@ -125,12 +125,14 @@ export function PTTButton({
     
     console.log('[PTT] stopTransmit called');
     isActiveRef.current = false;
-    activePointerIdRef.current = null;
     lastActionTimeRef.current = Date.now();
     
-    if (buttonRef.current) {
+    const pointerId = activePointerIdRef.current;
+    activePointerIdRef.current = null;
+    
+    if (buttonRef.current && pointerId !== null) {
       try {
-        buttonRef.current.releasePointerCapture(-1);
+        buttonRef.current.releasePointerCapture(pointerId);
       } catch (e) {}
     }
     
