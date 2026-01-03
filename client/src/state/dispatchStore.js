@@ -241,6 +241,7 @@ const useDispatchStore = create(
         txChannelIds: state.txChannelIds,
         mutedChannelIds: state.mutedChannelIds,
         monitoredChannelIds: state.monitoredChannelIds,
+        channelLevels: state.channelLevels,
         clearAirEnabled: state.clearAirEnabled
       })
     }

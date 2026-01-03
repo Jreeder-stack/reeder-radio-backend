@@ -248,9 +248,12 @@ export default function DispatchConsole({ user, onLogout }) {
             <h2 className="text-lg font-semibold text-dispatch-text">Channels</h2>
             <button
               onClick={() => setShowChannelPicker(true)}
-              className="px-3 py-1 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded"
+              className="add-channel-btn"
             >
-              + Add Channel
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Add Channel
             </button>
           </div>
           
@@ -282,45 +285,29 @@ export default function DispatchConsole({ user, onLogout }) {
           )}
         </div>
         
-        <div className="w-80 border-l border-dispatch-border flex flex-col">
+        <div className="w-80 border-l border-dispatch-border flex flex-col dispatch-sidebar">
           <div className="flex border-b border-dispatch-border">
             <button
               onClick={() => setRightTab('emergency')}
-              className={`flex-1 px-4 py-2 text-sm ${
-                rightTab === 'emergency'
-                  ? 'bg-dispatch-panel text-dispatch-text border-b-2 border-red-500'
-                  : 'text-dispatch-secondary hover:text-dispatch-text'
-              }`}
+              className={`dispatch-tab ${rightTab === 'emergency' ? 'active active-emergency' : ''}`}
             >
               Emergency
             </button>
             <button
               onClick={() => setRightTab('patches')}
-              className={`flex-1 px-4 py-2 text-sm ${
-                rightTab === 'patches'
-                  ? 'bg-dispatch-panel text-dispatch-text border-b-2 border-blue-500'
-                  : 'text-dispatch-secondary hover:text-dispatch-text'
-              }`}
+              className={`dispatch-tab ${rightTab === 'patches' ? 'active active-patches' : ''}`}
             >
               Patches
             </button>
             <button
               onClick={() => setRightTab('events')}
-              className={`flex-1 px-4 py-2 text-sm ${
-                rightTab === 'events'
-                  ? 'bg-dispatch-panel text-dispatch-text border-b-2 border-green-500'
-                  : 'text-dispatch-secondary hover:text-dispatch-text'
-              }`}
+              className={`dispatch-tab ${rightTab === 'events' ? 'active active-events' : ''}`}
             >
               Events
             </button>
             <button
               onClick={() => setRightTab('chat')}
-              className={`flex-1 px-4 py-2 text-sm ${
-                rightTab === 'chat'
-                  ? 'bg-dispatch-panel text-dispatch-text border-b-2 border-purple-500'
-                  : 'text-dispatch-secondary hover:text-dispatch-text'
-              }`}
+              className={`dispatch-tab ${rightTab === 'chat' ? 'active active-chat' : ''}`}
             >
               Chat
             </button>
@@ -336,7 +323,7 @@ export default function DispatchConsole({ user, onLogout }) {
                   <select
                     value={selectedChatChannel || orderedChannels[0]?.name || ''}
                     onChange={(e) => setSelectedChatChannel(e.target.value)}
-                    className="w-full px-2 py-1 text-sm bg-dispatch-bg text-dispatch-text border border-dispatch-border rounded"
+                    className="dispatch-select"
                   >
                     {orderedChannels.map(ch => (
                       <option key={ch.id} value={ch.name}>{ch.name}</option>
@@ -365,30 +352,32 @@ export default function DispatchConsole({ user, onLogout }) {
       />
       
       {showChannelPicker && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-dispatch-panel rounded-lg p-4 w-80 max-h-96 overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-dispatch-text">Add Channel</h3>
+        <div className="dispatch-modal-overlay">
+          <div className="dispatch-modal w-80">
+            <div className="dispatch-modal-header">
+              <h3 className="dispatch-modal-title">Add Channel</h3>
               <button
                 onClick={() => setShowChannelPicker(false)}
-                className="text-dispatch-secondary hover:text-dispatch-text"
+                className="dispatch-modal-close"
               >
-                &times;
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
             </div>
             
             {availableChannels.length === 0 ? (
               <p className="text-dispatch-secondary text-center py-4">All channels added</p>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 {availableChannels.map(channel => (
                   <button
                     key={channel.id}
                     onClick={() => handleAddChannel(channel.id)}
-                    className="w-full px-3 py-2 text-left bg-dispatch-bg hover:bg-dispatch-border rounded text-dispatch-text"
+                    className="w-full px-3 py-2.5 text-left bg-dispatch-panel-elevated hover:bg-dispatch-border rounded-md text-dispatch-text transition-colors flex items-center justify-between group"
                   >
-                    {channel.name}
-                    <span className="text-xs text-dispatch-secondary ml-2">{channel.zone}</span>
+                    <span className="font-medium">{channel.name}</span>
+                    <span className="text-xs text-dispatch-secondary group-hover:text-dispatch-text">{channel.zone}</span>
                   </button>
                 ))}
               </div>

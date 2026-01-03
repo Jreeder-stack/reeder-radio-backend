@@ -29,7 +29,8 @@ export default function ChannelTile({ channel, onRemove }) {
     monitoredChannelIds, 
     mutedChannelIds, 
     txChannelIds,
-    channelLevels, 
+    channelLevels,
+    setChannelLevel,
     activeTransmissions,
     unitsByChannel,
     emergencies,
@@ -57,9 +58,14 @@ export default function ChannelTile({ channel, onRemove }) {
   const isMuted = mutedChannelIds.includes(channel.id);
   const isTxSelected = txChannelIds.includes(channel.id);
   const level = channelLevels[channel.id] || 0;
+  const volumeLevel = channelLevels[`volume_${channel.id}`] ?? 100;
   const activeTransmission = activeTransmissions[channel.id];
   const unitsInChannel = unitsByChannel[channel.name] || [];
   const hasEmergency = emergencies.some(e => e.channel === channel.name);
+
+  const handleVolumeChange = (e) => {
+    setChannelLevel(`volume_${channel.id}`, parseInt(e.target.value, 10));
+  };
 
   const handleRemoveClick = (e) => {
     e.preventDefault();
@@ -89,17 +95,19 @@ export default function ChannelTile({ channel, onRemove }) {
           <span className="text-xs text-dispatch-secondary cursor-grab">⋮⋮</span>
           <h3 className="font-bold text-dispatch-text">{channel.name}</h3>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-shrink-0">
           <AudioLevelMeter level={level} />
           {onRemove && (
             <button
               type="button"
               onMouseDown={handleRemoveClick}
               onPointerDown={(e) => e.stopPropagation()}
-              className="w-5 h-5 flex items-center justify-center text-dispatch-secondary hover:text-red-500 hover:bg-red-900/30 rounded text-xs"
+              className="channel-remove-btn"
               title="Remove from grid"
             >
-              ×
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
             </button>
           )}
         </div>
@@ -125,48 +133,76 @@ export default function ChannelTile({ channel, onRemove }) {
       <div className="flex flex-wrap gap-1.5 mt-2">
         <button
           onClick={() => toggleMonitor(channel.id)}
-          className={`px-2 py-1 text-xs rounded transition-colors ${
+          className={`tile-btn ${
             isMonitored 
-              ? 'bg-green-600 text-white' 
-              : 'bg-dispatch-border text-dispatch-secondary hover:bg-dispatch-panel'
+              ? 'tile-btn-active tile-btn-monitor' 
+              : 'tile-btn-default'
           }`}
         >
-          {isMonitored ? 'Monitoring' : 'Monitor'}
+          <span className="flex items-center gap-1">
+            {isMonitored && (
+              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
+            )}
+            Monitor
+          </span>
         </button>
         
         <button
           onClick={handleMuteToggle}
           disabled={!isMonitored}
-          className={`px-2 py-1 text-xs rounded transition-colors ${
+          className={`tile-btn ${
             isMuted 
-              ? 'bg-red-600 text-white' 
-              : 'bg-dispatch-border text-dispatch-secondary hover:bg-dispatch-panel'
-          } ${!isMonitored ? 'opacity-50 cursor-not-allowed' : ''}`}
+              ? 'tile-btn-active tile-btn-mute' 
+              : 'tile-btn-default'
+          } ${!isMonitored ? 'opacity-40 cursor-not-allowed' : ''}`}
         >
-          {isMuted ? 'Muted' : 'Mute'}
+          <span className="flex items-center gap-1">
+            {isMuted && (
+              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM12.293 7.293a1 1 0 011.414 0L15 8.586l1.293-1.293a1 1 0 111.414 1.414L16.414 10l1.293 1.293a1 1 0 01-1.414 1.414L15 11.414l-1.293 1.293a1 1 0 01-1.414-1.414L13.586 10l-1.293-1.293a1 1 0 010-1.414z" clipRule="evenodd" />
+              </svg>
+            )}
+            {isMuted ? 'Muted' : 'Mute'}
+          </span>
         </button>
         
         <button
           onClick={() => toggleTx(channel.id)}
-          className={`px-2 py-1 text-xs rounded transition-colors ${
+          className={`tile-btn ${
             isTxSelected 
-              ? 'bg-blue-600 text-white ring-2 ring-blue-400' 
-              : 'bg-dispatch-border text-dispatch-secondary hover:bg-dispatch-panel'
+              ? 'tile-btn-active tile-btn-tx' 
+              : 'tile-btn-default'
           }`}
         >
-          TX {isTxSelected ? '✓' : ''}
+          <span className="flex items-center gap-1">
+            {isTxSelected && (
+              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
+            )}
+            TX
+          </span>
         </button>
       </div>
 
-      <div className="mt-2">
+      <div className="mt-3 flex items-center gap-2">
+        <svg className="w-3 h-3 text-dispatch-secondary flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+          <path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217z" clipRule="evenodd" />
+        </svg>
         <input
           type="range"
           min="0"
           max="100"
-          defaultValue="100"
-          className="w-full h-1 bg-dispatch-border rounded appearance-none cursor-pointer"
-          title="Volume"
+          value={volumeLevel}
+          onChange={handleVolumeChange}
+          className="volume-slider flex-1"
+          title={`Volume: ${volumeLevel}%`}
         />
+        <svg className="w-4 h-4 text-dispatch-secondary flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+          <path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM14.657 2.929a1 1 0 011.414 0A9.972 9.972 0 0119 10a9.972 9.972 0 01-2.929 7.071 1 1 0 01-1.414-1.414A7.971 7.971 0 0017 10c0-2.21-.894-4.208-2.343-5.657a1 1 0 010-1.414zm-2.829 2.828a1 1 0 011.415 0A5.983 5.983 0 0115 10a5.984 5.984 0 01-1.757 4.243 1 1 0 01-1.415-1.415A3.984 3.984 0 0013 10a3.983 3.983 0 00-1.172-2.828 1 1 0 010-1.415z" clipRule="evenodd" />
+        </svg>
       </div>
     </div>
   );
