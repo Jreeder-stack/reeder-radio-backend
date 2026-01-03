@@ -498,9 +498,12 @@ export function RadioDeckView({ user, onLogout }) {
     const room = livekitManager?.getRoom(channelName);
     if (!room) return;
     
+    micPTTManager.setCurrentChannel(channelName);
+    micPTTManager.setCurrentUnit(identity);
+    micPTTManager.setRoom(room);
     signalPttStart(channelName);
-    micPTTManager.start(room);
-  }, [ensureConnected, livekitManager, signalPttStart]);
+    micPTTManager.start();
+  }, [ensureConnected, livekitManager, signalPttStart, identity]);
 
   const handleTransmitEnd = useCallback(() => {
     const channelName = transmitChannelRef.current;

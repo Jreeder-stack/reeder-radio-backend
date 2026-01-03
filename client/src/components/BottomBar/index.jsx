@@ -6,7 +6,7 @@ import livekitManager from '../../audio/LiveKitManager.js';
 import toneEngine from '../../audio/toneEngine.js';
 import toneTransmitter from '../../audio/ToneTransmitter.js';
 
-export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit }) {
+export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identity = 'Dispatch', signalPttStart, signalPttEnd }) {
   const { 
     channels, 
     txChannelIds, 
@@ -96,7 +96,14 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit }) {
         return false;
       }
 
+      micPTTManager.setCurrentChannel(primaryChannel);
+      micPTTManager.setCurrentUnit(identity);
       micPTTManager.setRoom(room);
+      
+      if (signalPttStart) {
+        signalPttStart(primaryChannel);
+      }
+      
       const success = await micPTTManager.start();
       
       if (!success) {
@@ -115,7 +122,7 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit }) {
       mutedChannelsRef.current = [];
       return false;
     }
-  }, [selectedChannelNames]);
+  }, [selectedChannelNames, identity, signalPttStart]);
 
   const stopTransmission = useCallback(async () => {
     console.log('[PTT] stopTransmission called');
@@ -128,10 +135,15 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit }) {
     }
     
     const channelsToUnmute = [...mutedChannelsRef.current];
+    const primaryChannel = selectedChannelNames[0];
     
     try {
       await micPTTManager.stop();
       console.log('[PTT] Transmission stopped');
+      
+      if (signalPttEnd && primaryChannel) {
+        signalPttEnd(primaryChannel);
+      }
     } catch (err) {
       console.error('[PTT] Failed to stop transmission:', err);
       micPTTManager.forceRelease();
@@ -142,7 +154,7 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit }) {
       }
       mutedChannelsRef.current = [];
     }
-  }, [channelBusy]);
+  }, [channelBusy, selectedChannelNames, signalPttEnd]);
 
   const handlePTTDown = useCallback(async (e) => {
     if (e.type === 'keydown' && e.repeat) return;

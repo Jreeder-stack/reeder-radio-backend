@@ -50,6 +50,8 @@ export default function DispatchConsole({ user, onLogout }) {
     isTransmitting,
     getTransmittingUnit,
     isEmergencyActive,
+    signalPttStart,
+    signalPttEnd,
   } = useSignalingContext();
 
   useEffect(() => {
@@ -357,6 +359,9 @@ export default function DispatchConsole({ user, onLogout }) {
         onPTTStart={handlePTTStart}
         onPTTEnd={handlePTTEnd}
         onToneTransmit={handleToneTransmit}
+        identity={user?.unit_id || user?.username || 'Dispatch'}
+        signalPttStart={signalPttStart}
+        signalPttEnd={signalPttEnd}
       />
       
       {showChannelPicker && (

@@ -1,7 +1,7 @@
 import { signalingService, SIGNALING_EVENTS } from './signalingService.js';
 
 const AI_UNIT_ID = 'AI-Dispatcher';
-const CONNECTION_GRACE_MS = 5000;
+const CONNECTION_GRACE_MS = 15000;
 const FALLBACK_IDLE_DISCONNECT_MS = 60000;
 
 class AIDispatcherSignaling {
@@ -114,14 +114,20 @@ class AIDispatcherSignaling {
     };
     this.transmissionLogs.push(transmissionLog);
 
-    if (!this.dispatcher.room) {
+    const wasAlreadyConnected = !!this.dispatcher.room;
+
+    if (!wasAlreadyConnected) {
       this.log('CONNECTING_FOR_PTT', { channelId, unitId });
       try {
         await this.dispatcher.rejoinIfNeeded();
+        this.log('CONNECTED_FOR_PTT', { channelId, unitId });
       } catch (err) {
         this.log('CONNECTION_FAILED', { channelId, error: err.message });
       }
     }
+
+    signalingService.sendPttReady(channelId, unitId);
+    this.log('PTT_READY_SENT', { channelId, unitId, wasAlreadyConnected });
   }
 
   async handlePttEnd(channelId, unitId, gracePeriodMs = CONNECTION_GRACE_MS) {

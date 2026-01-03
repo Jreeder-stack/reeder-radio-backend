@@ -5,6 +5,7 @@ const SIGNALING_EVENTS = {
   CHANNEL_LEAVE: 'channel:leave',
   PTT_START: 'ptt:start',
   PTT_END: 'ptt:end',
+  PTT_READY: 'ptt:ready',
   EMERGENCY_START: 'emergency:start',
   EMERGENCY_END: 'emergency:end',
   EMERGENCY_FORCE_CONNECT: 'emergency:force_connect',
@@ -32,6 +33,7 @@ class SignalingManager {
       channelLeave: new Set(),
       pttStart: new Set(),
       pttEnd: new Set(),
+      pttReady: new Set(),
       pttBusy: new Set(),
       emergencyStart: new Set(),
       emergencyEnd: new Set(),
@@ -123,6 +125,10 @@ class SignalingManager {
 
     this.socket.on(SIGNALING_EVENTS.PTT_END, (data) => {
       this._emit('pttEnd', data);
+    });
+
+    this.socket.on(SIGNALING_EVENTS.PTT_READY, (data) => {
+      this._emit('pttReady', data);
     });
 
     this.socket.on('ptt:busy', (data) => {

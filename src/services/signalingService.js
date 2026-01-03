@@ -5,6 +5,7 @@ const SIGNALING_EVENTS = {
   CHANNEL_LEAVE: 'channel:leave',
   PTT_START: 'ptt:start',
   PTT_END: 'ptt:end',
+  PTT_READY: 'ptt:ready',
   EMERGENCY_START: 'emergency:start',
   EMERGENCY_END: 'emergency:end',
   EMERGENCY_FORCE_CONNECT: 'emergency:force_connect',
@@ -493,6 +494,19 @@ class SignalingService {
 
   notifyAiDispatcher(channelId, event, data) {
     this.io?.emit(`ai:${event}`, { channelId, ...data, timestamp: Date.now() });
+  }
+
+  sendPttReady(channelId, targetUnitId) {
+    if (!this.io) return;
+    
+    const readyData = {
+      channelId,
+      unitId: targetUnitId,
+      timestamp: Date.now(),
+    };
+    
+    this.io.to(`channel:${channelId}`).emit(SIGNALING_EVENTS.PTT_READY, readyData);
+    console.log(`[Signaling] PTT_READY sent for ${targetUnitId} on ${channelId}`);
   }
 
   getChannelMembers(channelId) {

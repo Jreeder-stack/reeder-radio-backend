@@ -9,6 +9,7 @@ const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) ||
 const PERMIT_TONE_DURATION = 150;
 
 const PTT_COOLDOWN_MS = 500;
+const PTT_READY_TIMEOUT_MS = 3000;
 
 class MicPTTManager {
   constructor() {
@@ -20,7 +21,7 @@ class MicPTTManager {
     this.room = null;
     this.onStateChange = null;
     this.onError = null;
-    this.onDisconnectDuringTx = null; // Callback for disconnect during transmission
+    this.onDisconnectDuringTx = null;
     this.pendingStop = false;
     this.transitionLock = false;
     this.permitDeadlineTimer = null;
@@ -29,6 +30,67 @@ class MicPTTManager {
     this.stateListeners = new Set();
     this._roomDisconnectHandler = null;
     this._roomReconnectingHandler = null;
+    this._signalingManager = null;
+    this._pttReadyResolver = null;
+    this._currentChannelId = null;
+    this._currentUnitId = null;
+  }
+
+  setSignalingManager(signalingManager) {
+    this._signalingManager = signalingManager;
+  }
+
+  setCurrentChannel(channelId) {
+    this._currentChannelId = channelId;
+  }
+
+  setCurrentUnit(unitId) {
+    this._currentUnitId = unitId;
+  }
+
+  _waitForPttReady() {
+    return new Promise((resolve) => {
+      if (!this._signalingManager) {
+        console.log('[MicPTT] No signaling manager - proceeding immediately');
+        resolve(false);
+        return;
+      }
+
+      let timeout = null;
+      let unsubscribe = null;
+
+      const onReady = (data) => {
+        const channelMatch = !this._currentChannelId || data.channelId === this._currentChannelId;
+        const unitMatch = !this._currentUnitId || data.unitId === this._currentUnitId;
+        
+        if (channelMatch && unitMatch) {
+          console.log(`[MicPTT] PTT_READY received for ${data.unitId} on ${data.channelId}`);
+          if (timeout) clearTimeout(timeout);
+          if (unsubscribe) unsubscribe();
+          this._pttReadyResolver = null;
+          resolve(true);
+        }
+      };
+
+      unsubscribe = this._signalingManager.on('pttReady', onReady);
+
+      timeout = setTimeout(() => {
+        console.log('[MicPTT] PTT_READY timeout - proceeding anyway');
+        if (unsubscribe) unsubscribe();
+        this._pttReadyResolver = null;
+        resolve(false);
+      }, PTT_READY_TIMEOUT_MS);
+
+      this._pttReadyResolver = { resolve, timeout, unsubscribe };
+    });
+  }
+
+  _cancelPttReadyWait() {
+    if (this._pttReadyResolver) {
+      if (this._pttReadyResolver.timeout) clearTimeout(this._pttReadyResolver.timeout);
+      if (this._pttReadyResolver.unsubscribe) this._pttReadyResolver.unsubscribe();
+      this._pttReadyResolver = null;
+    }
   }
 
   addStateListener(callback) {
@@ -191,9 +253,20 @@ class MicPTTManager {
       this.stream = stream;
       this.browserTrack = stream.getAudioTracks()[0];
 
+      console.log('[MicPTT] Mic acquired, waiting for PTT_READY...');
+      const gotPttReady = await this._waitForPttReady();
+      
+      if (this.pendingStop) {
+        console.log('[MicPTT] Stop requested during PTT_READY wait - aborting');
+        this._stopTracks(stream);
+        this._setState(PTT_STATES.IDLE);
+        this.transitionLock = false;
+        return false;
+      }
+
       playPermitTone();
       this.publishComplete = false;
-      console.log('[MicPTT] Mic acquired, permit tone played, publishing track...');
+      console.log(`[MicPTT] PTT_READY ${gotPttReady ? 'received' : 'timeout'}, permit tone played, publishing track...`);
       
       this.permitDeadlineTimer = setTimeout(() => {
         if (!this.publishComplete && this.state === PTT_STATES.ARMING && !this.pendingStop) {
@@ -280,6 +353,7 @@ class MicPTTManager {
     if (this.state === PTT_STATES.ARMING) {
       console.log('[MicPTT] Setting pendingStop flag');
       this.pendingStop = true;
+      this._cancelPttReadyWait();
       return;
     }
 

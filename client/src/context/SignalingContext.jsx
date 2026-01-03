@@ -1,6 +1,9 @@
 import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { signalingManager } from '../signaling/SignalingManager.js';
 import { useAuth } from '../AuthContext.jsx';
+import { micPTTManager } from '../audio/MicPTTManager.js';
+
+micPTTManager.setSignalingManager(signalingManager);
 
 const SignalingContext = createContext(null);
 
