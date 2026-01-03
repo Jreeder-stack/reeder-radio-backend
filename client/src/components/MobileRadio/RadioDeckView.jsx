@@ -764,20 +764,16 @@ export function RadioDeckView({ user, onLogout }) {
           >
             <svg 
               viewBox="0 0 24 24" 
-              className={cn("w-5 h-5", isScanning ? "text-white" : "text-gray-700")}
+              className={cn("w-6 h-6", isScanning ? "text-white" : "text-gray-700")}
               fill="none" 
               stroke="currentColor" 
-              strokeWidth="2.2"
+              strokeWidth="2"
               strokeLinecap="round" 
               strokeLinejoin="round"
             >
-              <path d="M6 6 H18 L6 18 H18" />
-              <path d="M6 6 L3.5 3.5" />
-              <path d="M3.5 3.5 L4.5 5.5" />
-              <path d="M3.5 3.5 L5.5 4.5" />
-              <path d="M18 18 L20.5 20.5" />
-              <path d="M20.5 20.5 L19.5 18.5" />
-              <path d="M20.5 20.5 L18.5 19.5" />
+              <path d="M3 5 L6 8 L3 11" />
+              <path d="M7 6 H17 L7 18 H17" />
+              <path d="M21 13 L18 16 L21 19" />
             </svg>
           </button>
 
