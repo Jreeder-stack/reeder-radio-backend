@@ -204,6 +204,16 @@ router.get('/map/redirect', async (req, res) => {
   }
 });
 
+router.get('/unit/current-call', async (req, res) => {
+  try {
+    const result = await cadService.getUnitCurrentCall(req.user);
+    res.json(result);
+  } catch (error) {
+    console.error('[CAD Router] Get current call error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 router.post('/fi/create', async (req, res) => {
   try {
     const result = await cadService.createFieldInterview(req.body, req.user);

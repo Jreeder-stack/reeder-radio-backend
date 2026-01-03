@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Save, Loader2 } from 'lucide-react';
 
 const STATES = ['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY'];
@@ -132,7 +132,21 @@ export function FieldInterviewModal({ show, onClose }) {
   const [form, setForm] = useState(initialForm);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [savedFiNumber, setSavedFiNumber] = useState(null);
   const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (show) {
+      fetch('/api/cad/unit/current-call', { credentials: 'include' })
+        .then(res => res.json())
+        .then(data => {
+          if (data.callNumber) {
+            setForm(p => ({ ...p, callNumber: data.callNumber }));
+          }
+        })
+        .catch(() => {});
+    }
+  }, [show]);
 
   const updateField = (field) => (e) => {
     const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
@@ -151,10 +165,11 @@ export function FieldInterviewModal({ show, onClose }) {
       });
       const data = await response.json();
       if (response.ok) {
+        setSavedFiNumber(data.fiNumber || data.fi_number || null);
         setSuccess(true);
         setTimeout(() => {
           handleClose();
-        }, 1500);
+        }, 2000);
       } else {
         setError(data.message || 'Failed to save FI');
       }
@@ -168,6 +183,7 @@ export function FieldInterviewModal({ show, onClose }) {
   const handleClose = () => {
     setForm(initialForm);
     setSuccess(false);
+    setSavedFiNumber(null);
     setError(null);
     onClose();
   };
@@ -188,13 +204,21 @@ export function FieldInterviewModal({ show, onClose }) {
           {success ? (
             <div className="py-16 text-center">
               <p className="text-green-600 font-bold text-xl">FI Saved Successfully!</p>
+              {savedFiNumber && (
+                <p className="text-gray-700 mt-2">FI # <span className="font-bold">{savedFiNumber}</span></p>
+              )}
             </div>
           ) : (
             <>
               <SectionHeader title="General Information" />
               <div className="space-y-3 mt-3">
                 <div className="grid grid-cols-3 gap-2">
-                  <InputField label="FI #" value={form.fiNumber} onChange={updateField('fiNumber')} />
+                  <div className="flex flex-col gap-1">
+                    <FieldLabel>FI #</FieldLabel>
+                    <div className="p-2 border border-gray-300 rounded text-gray-500 text-sm bg-gray-100">
+                      {form.fiNumber}
+                    </div>
+                  </div>
                   <InputField label="Call #" value={form.callNumber} onChange={updateField('callNumber')} />
                   <InputField label="Other #" value={form.otherNumber} onChange={updateField('otherNumber')} />
                 </div>

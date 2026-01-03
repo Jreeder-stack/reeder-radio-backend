@@ -203,16 +203,73 @@ export async function getMapUrl() {
   return `${CAD_URL}/map`;
 }
 
+export async function getUnitCurrentCall(user) {
+  const unitId = user?.unit_id || user?.username;
+  console.log(`[CAD] Getting current call for ${unitId}`);
+  const result = await cadRequest(`/api/radio/unit/${encodeURIComponent(unitId)}/call`, 'GET');
+  if (result.success === false) {
+    return { callNumber: null };
+  }
+  return result;
+}
+
 export async function createFieldInterview(fiData, user) {
   console.log('[CAD] Creating FI:', fiData);
   return cadRequest('/api/radio/fi/create', 'POST', {
-    first_name: fiData.firstName?.toUpperCase() || '',
-    last_name: fiData.lastName?.toUpperCase() || '',
-    dob: fiData.dob || '',
+    call_number: fiData.callNumber || '',
+    other_number: fiData.otherNumber || '',
+    date: fiData.date || '',
+    time: fiData.time || '',
+    officer: fiData.officer || user?.unit_id || user?.username,
+    agency: fiData.agency || '',
     location: fiData.location?.toUpperCase() || '',
-    description: fiData.description || '',
-    notes: fiData.notes || '',
-    officer: user?.unit_id || user?.username
+    x_street: fiData.xStreet?.toUpperCase() || '',
+    city: fiData.city?.toUpperCase() || '',
+    state: fiData.state || '',
+    zip: fiData.zip || '',
+    county: fiData.county?.toUpperCase() || '',
+    reason: fiData.reason || '',
+    last_name: fiData.lastName?.toUpperCase() || '',
+    first_name: fiData.firstName?.toUpperCase() || '',
+    middle_name: fiData.middleName?.toUpperCase() || '',
+    dob: fiData.dob || '',
+    sex: fiData.sex || '',
+    race: fiData.race || '',
+    height_ft: fiData.heightFt || '',
+    height_in: fiData.heightIn || '',
+    weight: fiData.weight || '',
+    eyes: fiData.eyes || '',
+    hair: fiData.hair || '',
+    dl_number: fiData.dlNumber || '',
+    dl_state: fiData.dlState || '',
+    phone: fiData.phone || '',
+    work_phone: fiData.workPhone || '',
+    street_address: fiData.streetAddress?.toUpperCase() || '',
+    unit: fiData.unit || '',
+    person_city: fiData.personCity?.toUpperCase() || '',
+    person_state: fiData.personState || '',
+    person_zip: fiData.personZip || '',
+    clothing: fiData.clothing || '',
+    veh_license: fiData.vehLicense?.toUpperCase() || '',
+    veh_state: fiData.vehState || '',
+    veh_tag: fiData.vehTag || '',
+    veh_year: fiData.vehYear || '',
+    veh_vin: fiData.vehVin?.toUpperCase() || '',
+    veh_type: fiData.vehType || '',
+    veh_make: fiData.vehMake?.toUpperCase() || '',
+    veh_model: fiData.vehModel?.toUpperCase() || '',
+    veh_style: fiData.vehStyle || '',
+    veh_color: fiData.vehColor || '',
+    veh_comment: fiData.vehComment || '',
+    was_trespassed: fiData.wasTrespassed || false,
+    trespass_expires: fiData.trespassExpires || '',
+    indefinite_trespass: fiData.indefiniteTrespass || false,
+    trespass_type: fiData.trespassType || '',
+    business_name: fiData.businessName?.toUpperCase() || '',
+    trespass_address: fiData.trespassAddress?.toUpperCase() || '',
+    trespass_city: fiData.trespassCity?.toUpperCase() || '',
+    trespass_state: fiData.trespassState || '',
+    trespass_reason: fiData.trespassReason || ''
   });
 }
 
