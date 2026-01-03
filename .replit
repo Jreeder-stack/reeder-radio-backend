@@ -66,13 +66,12 @@ externalPort = 5173
 
 [userenv.development]
 VITE_LIVEKIT_URL = "wss://reeder-ptt-rcm02mdx.livekit.cloud"
-CAD_URL = "https://d6a6688f-3b7a-4b61-89a7-60fd65e2cbb5-00-1pafxgsywyu8q.spock.replit.dev"
 
 [userenv.shared]
 AZURE_SPEECH_REGION = "eastus"
+CAD_URL = "https://cad.reeder-systems.com"
 
 [userenv.production]
-CAD_URL = "https://cad.reeder-systems.com"
 
 [deployment]
 deploymentTarget = "autoscale"
