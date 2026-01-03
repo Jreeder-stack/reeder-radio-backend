@@ -840,26 +840,30 @@ export function RadioDeckView({ user, onLogout }) {
         </button>
       </div>
 
-      <div 
-        className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden cursor-pointer active:bg-gray-50"
-        onClick={() => setShowMessages(true)}
-      >
-        <div className="p-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <MessageSquare className="w-5 h-5 text-cyan-600" />
-              <span className="font-bold text-black">Messages</span>
-            </div>
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div className="p-2 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <MessageSquare className="w-5 h-5 text-cyan-600" />
+            <span className="font-bold text-black text-sm">Messages</span>
             {unreadCount > 0 && (
-              <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full font-bold">
+              <span className="bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full font-bold">
                 {unreadCount}
               </span>
             )}
           </div>
-          <div className="text-sm text-gray-600 mt-1">
-            {unreadCount > 0 
-              ? `${unreadCount} unread message${unreadCount > 1 ? 's' : ''}`
-              : 'No new messages'}
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowMessages(true)}
+              className="px-3 py-1.5 bg-cyan-600 text-white text-xs font-medium rounded active:bg-cyan-700"
+            >
+              View Chats
+            </button>
+            <button
+              onClick={() => setShowMessages(true)}
+              className="px-3 py-1.5 bg-gray-200 text-gray-700 text-xs font-medium rounded active:bg-gray-300"
+            >
+              New
+            </button>
           </div>
         </div>
       </div>
