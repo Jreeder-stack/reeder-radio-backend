@@ -41,19 +41,23 @@ export default function Login({ onLogin }) {
     <div
       style={{
         minHeight: "100vh",
+        minHeight: "100dvh",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)",
         fontFamily: "system-ui, -apple-system, sans-serif",
+        padding: "16px",
+        boxSizing: "border-box",
       }}
     >
       <div
         style={{
           background: "#1e1e2e",
           borderRadius: 16,
-          padding: 40,
-          width: 360,
+          padding: "clamp(24px, 5vw, 40px)",
+          width: "100%",
+          maxWidth: 360,
           boxShadow: "0 10px 40px rgba(0,0,0,0.5)",
         }}
       >
