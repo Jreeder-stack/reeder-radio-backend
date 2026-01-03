@@ -58,6 +58,11 @@ export async function getStatusCheck() {
   return cadRequest('/api/radio/status-check', 'GET');
 }
 
+export async function cycleUnitStatus(unitId) {
+  console.log(`[CAD] Cycling status for ${unitId}`);
+  return cadRequest(`/api/radio/unit/${encodeURIComponent(unitId)}/status/cycle`, 'POST');
+}
+
 export async function createCall(type, priority, location, municipality, notes = '') {
   console.log(`[CAD] Creating call: ${type} at ${location}`);
   return cadRequest('/api/radio/call', 'POST', {

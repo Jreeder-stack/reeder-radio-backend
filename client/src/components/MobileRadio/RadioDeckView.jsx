@@ -19,8 +19,6 @@ const STATUS_LABELS = {
   'out_of_service': 'OOS',
 };
 
-const STATUS_CYCLE = ['off_duty', 'on_duty', 'en_route', 'arrived', 'oos'];
-
 function formatStatus(status) {
   return STATUS_LABELS[status?.toLowerCase()] || status?.toUpperCase()?.replace(/_/g, ' ') || 'UNKNOWN';
 }
@@ -255,31 +253,57 @@ export function RadioDeckView({ user, onLogout }) {
     };
   }, [broadcastStatus, identity]);
 
+  useEffect(() => {
+    const fetchInitialStatus = async () => {
+      try {
+        const response = await fetch('/api/cad/status-check', { credentials: 'include' });
+        const data = await response.json();
+        
+        if (data.success && data.units && Array.isArray(data.units)) {
+          const myUnit = data.units.find(u => u.unit_id === identity);
+          if (myUnit?.status) {
+            console.log('[Status] Initial status from CAD:', myUnit.status);
+            setUnitStatus(myUnit.status);
+          }
+        }
+      } catch (err) {
+        console.error('[Status] Failed to fetch initial status:', err);
+      }
+    };
+    
+    if (identity) {
+      fetchInitialStatus();
+    }
+  }, [identity]);
+
   const handleCycleStatus = async () => {
     if (statusLoading) return;
     setStatusLoading(true);
     
-    const currentIndex = STATUS_CYCLE.indexOf(unitStatus.toLowerCase());
-    const nextIndex = (currentIndex + 1) % STATUS_CYCLE.length;
-    const nextStatus = STATUS_CYCLE[nextIndex];
-    
     try {
-      const response = await fetch('/api/unit/status', {
+      const response = await fetch(`/api/cad/unit/${encodeURIComponent(identity)}/status/cycle`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ status: nextStatus }),
       });
       
-      if (response.ok) {
-        setUnitStatus(nextStatus);
-        if (currentChannelName) {
-          broadcastStatus(nextStatus, currentChannelName);
+      const data = await response.json();
+      
+      if (response.ok && data.success !== false) {
+        const newStatus = data.newStatus || data.status;
+        if (newStatus) {
+          setUnitStatus(newStatus);
+          setHasActiveCall(data.hasActiveCall || false);
+          console.log('[Status] Cycled to:', newStatus, 'hasActiveCall:', data.hasActiveCall);
+          if (currentChannelName) {
+            broadcastStatus(newStatus, currentChannelName);
+          }
         }
+      } else {
+        console.error('[Status] Cycle failed:', data.message || data.error);
       }
     } catch (err) {
-      console.error('Failed to update status:', err);
-      setUnitStatus(nextStatus);
+      console.error('Failed to cycle status:', err);
     } finally {
       setStatusLoading(false);
     }

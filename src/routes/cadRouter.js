@@ -101,6 +101,37 @@ router.get('/call/:callId', async (req, res) => {
   }
 });
 
+router.get('/status-check', async (req, res) => {
+  try {
+    const result = await cadService.getStatusCheck();
+    
+    if (result.success === false) {
+      return res.status(500).json({ success: false, message: result.error });
+    }
+    
+    res.json(result);
+  } catch (error) {
+    console.error('[CAD Router] Status check error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.post('/unit/:unitId/status/cycle', async (req, res) => {
+  try {
+    const { unitId } = req.params;
+    const result = await cadService.cycleUnitStatus(unitId);
+    
+    if (result.success === false) {
+      return res.status(500).json({ success: false, message: result.error || 'Cycle status failed' });
+    }
+    
+    res.json(result);
+  } catch (error) {
+    console.error('[CAD Router] Cycle status error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 router.post('/broadcast', async (req, res) => {
   try {
     const { message, priority } = req.body;
