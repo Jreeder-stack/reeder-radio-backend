@@ -829,6 +829,30 @@ export function RadioDeckView({ user, onLogout }) {
                   className="w-5 h-5"
                 />
               </label>
+              
+              <div className="pt-4 border-t border-gray-200 space-y-2">
+                <button
+                  onClick={() => {
+                    setUnitStatus('off_duty');
+                    if (currentChannelName) {
+                      broadcastStatus('off_duty', currentChannelName);
+                    }
+                    setShowSettings(false);
+                  }}
+                  className="w-full py-2 bg-orange-500 text-white font-mono uppercase rounded font-bold"
+                >
+                  Sign Off (Go Off Duty)
+                </button>
+                <button
+                  onClick={() => {
+                    setShowSettings(false);
+                    if (onLogout) onLogout();
+                  }}
+                  className="w-full py-2 bg-red-600 text-white font-mono uppercase rounded font-bold"
+                >
+                  Log Out
+                </button>
+              </div>
             </div>
             <div className="p-4 border-t border-black">
               <button
