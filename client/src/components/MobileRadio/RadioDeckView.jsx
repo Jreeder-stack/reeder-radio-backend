@@ -8,6 +8,7 @@ import { micPTTManager } from '../../audio/MicPTTManager';
 import { PTT_STATES } from '../../constants/pttStates';
 import { updateUnitStatus } from '../../utils/api';
 import { DataPacket_Kind } from 'livekit-client';
+import { PTTButton } from './PTTButton';
 
 const STATUS_LABELS = {
   'off_duty': 'OFF DUTY',
@@ -677,26 +678,17 @@ export function RadioDeckView({ user, onLogout }) {
       </button>
 
       {showPTT && (
-        <button
-          onMouseDown={() => handleTransmitStart()}
-          onMouseUp={() => handleTransmitEnd()}
-          onMouseLeave={() => handleTransmitEnd()}
-          onTouchStart={(e) => { e.preventDefault(); handleTransmitStart(); }}
-          onTouchEnd={(e) => { e.preventDefault(); handleTransmitEnd(); }}
-          onTouchCancel={() => handleTransmitEnd()}
-          onContextMenu={(e) => { e.preventDefault(); handleTransmitEnd(); }}
-          disabled={!connected}
-          className={cn(
-            "w-full h-16 rounded-xl flex items-center justify-center font-bold text-lg uppercase tracking-widest transition-all active:scale-95 shadow-lg",
-            !connected 
-              ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-              : isReceiving
-                ? "bg-red-600 text-white"
-                : "bg-cyan-600 text-white"
-          )}
-        >
-          {!connected ? "CONNECTING..." : isReceiving ? `RX: ${transmittingUnitId || 'RECEIVING'}` : "PUSH TO TALK"}
-        </button>
+        <div className="flex justify-center">
+          <PTTButton
+            onTransmitStart={handleTransmitStart}
+            onTransmitEnd={handleTransmitEnd}
+            isConnected={signalingConnected}
+            isTransmitting={isTransmitting}
+            isReceiving={isReceiving}
+            activeSpeaker={transmittingUnitId}
+            setTransmitting={setIsTransmitting}
+          />
+        </div>
       )}
 
       <div className="grid grid-cols-2 gap-2 flex-1 auto-rows-[4rem]">
