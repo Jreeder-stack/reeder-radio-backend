@@ -51,11 +51,12 @@ export function RadioDeckView({ user, onLogout }) {
     leaveChannel: signalingLeaveChannel,
     signalPttStart,
     signalPttEnd,
+    connected: signalingConnected,
   } = useSignalingContext();
   
   const { isScanning, toggleScanning, isEmergency, triggerEmergency, cancelEmergency, scanChannels, setScanChannels, toggleScanChannel } = useMobileRadioContext();
   
-  const connected = connectionStatus === 'connected';
+  const connected = signalingConnected;
   const connecting = connectionStatus === 'connecting';
   
   const [channels, setChannels] = useState([]);
@@ -101,6 +102,9 @@ export function RadioDeckView({ user, onLogout }) {
       .then(data => {
         if (Array.isArray(data)) {
           setChannels(data);
+          if (scanChannels.length === 0) {
+            setScanChannels(data.map(ch => ({ id: ch.id, name: ch.name, enabled: true })));
+          }
         }
         setChannelsLoading(false);
       })
@@ -108,7 +112,7 @@ export function RadioDeckView({ user, onLogout }) {
         console.error('Failed to load channels:', err);
         setChannelsLoading(false);
       });
-  }, []);
+  }, [scanChannels.length, setScanChannels]);
 
   const zones = useMemo(() => {
     const zoneSet = new Set();
