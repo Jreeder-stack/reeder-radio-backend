@@ -188,32 +188,12 @@ export async function notifyJoin(req, res) {
       });
     }
     
-    console.log(`[AI-Dispatcher] Notify join received: ${identity} on ${channel}`);
+    console.log(`[AI-Dispatcher] Notify join received: ${identity} on ${channel} (standby mode - no LiveKit connection)`);
     
-    const dispatcher = getDispatcher();
-    
-    if (dispatcher && dispatcher.room) {
-      return success(res, { 
-        triggered: false, 
-        reason: 'AI Dispatcher is already connected',
-        channel 
-      });
-    }
-    
-    if (dispatcher && dispatcher.isRunning) {
-      await dispatcher.rejoinIfNeeded();
-      return success(res, { 
-        triggered: true, 
-        channel,
-        message: 'AI Dispatcher rejoin triggered' 
-      });
-    }
-    
-    await startDispatcher(channel);
     success(res, { 
-      triggered: true, 
+      triggered: false, 
       channel,
-      message: 'AI Dispatcher started' 
+      message: 'AI Dispatcher notified (standby mode - connects on PTT only)' 
     });
   } catch (err) {
     console.error('Notify join error:', err);
