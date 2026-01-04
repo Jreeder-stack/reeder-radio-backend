@@ -23,7 +23,7 @@ class OnDemandVoiceManager {
     this.activeEmergencies = new Map();
     this.emergencyTimers = new Map();
     
-    this.GRACE_PERIOD_MS = 3000;
+    this.GRACE_PERIOD_MS = 15000;
     this.TOKEN_TTL_MS = 60000;
     this.EMERGENCY_ROOM_LIFETIME_MS = 60000;
     

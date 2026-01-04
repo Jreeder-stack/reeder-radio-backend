@@ -26,7 +26,7 @@ class SignalingService {
     this.connectionTimes = new Map();
     this.livekitAvailable = true;
     
-    this.GRACE_PERIOD_MS = 3000;
+    this.GRACE_PERIOD_MS = 15000;
     this.EMERGENCY_ROOM_LIFETIME_MS = 60000;
     
     this._eventCallbacks = {

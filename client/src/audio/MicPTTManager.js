@@ -2,6 +2,7 @@ import { Track, RoomEvent } from 'livekit-client';
 import { PTT_STATES } from '../constants/pttStates.js';
 import { playPermitTone, startBonkLoop, stopBonkLoop } from './talkPermitTone.js';
 import { unlockAudio } from './iosAudioUnlock.js';
+import { processRadioVoice, cleanup as cleanupRadioDSP } from './radioVoiceDSP.js';
 
 const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || 
   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -9,7 +10,7 @@ const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) ||
 const PERMIT_TONE_DURATION = 150;
 
 const PTT_COOLDOWN_MS = 500;
-const PTT_READY_TIMEOUT_MS = 3000;
+const PTT_READY_TIMEOUT_MS = 5000;
 
 class MicPTTManager {
   constructor() {
@@ -34,6 +35,12 @@ class MicPTTManager {
     this._pttReadyResolver = null;
     this._currentChannelId = null;
     this._currentUnitId = null;
+    
+    this._audioBuffer = [];
+    this._isBuffering = false;
+    this._mediaRecorder = null;
+    this._roomResolver = null;
+    this._waitingForRoom = false;
   }
 
   setSignalingManager(signalingManager) {
@@ -89,6 +96,7 @@ class MicPTTManager {
     if (this._pttReadyResolver) {
       if (this._pttReadyResolver.timeout) clearTimeout(this._pttReadyResolver.timeout);
       if (this._pttReadyResolver.unsubscribe) this._pttReadyResolver.unsubscribe();
+      if (this._pttReadyResolver.resolve) this._pttReadyResolver.resolve(false);
       this._pttReadyResolver = null;
     }
   }
@@ -155,9 +163,59 @@ class MicPTTManager {
   }
 
   setRoom(room) {
-    // Remove listeners from old room if any
     this._removeRoomListeners();
     this.room = room;
+    
+    if (this._waitingForRoom && this._roomResolver) {
+      console.log('[MicPTT] Room received while waiting - resolving promise');
+      this._roomResolver(room);
+      this._roomResolver = null;
+      this._waitingForRoom = false;
+    }
+  }
+  
+  _waitForRoom(timeoutMs = 5000) {
+    if (this.room && this.room.state === 'connected') {
+      return Promise.resolve(this.room);
+    }
+    
+    this._waitingForRoom = true;
+    
+    return new Promise((resolve, reject) => {
+      this._roomRejecter = reject;
+      
+      this._roomWaitTimeout = setTimeout(() => {
+        if (this._waitingForRoom) {
+          this._waitingForRoom = false;
+          this._roomResolver = null;
+          this._roomRejecter = null;
+          this._roomWaitTimeout = null;
+          reject(new Error('Room connection timeout'));
+        }
+      }, timeoutMs);
+      
+      this._roomResolver = (room) => {
+        if (this._roomWaitTimeout) {
+          clearTimeout(this._roomWaitTimeout);
+          this._roomWaitTimeout = null;
+        }
+        this._roomRejecter = null;
+        resolve(room);
+      };
+    });
+  }
+  
+  _cancelRoomWait() {
+    if (this._roomWaitTimeout) {
+      clearTimeout(this._roomWaitTimeout);
+      this._roomWaitTimeout = null;
+    }
+    if (this._roomRejecter) {
+      this._roomRejecter(new Error('Room wait cancelled'));
+      this._roomRejecter = null;
+    }
+    this._waitingForRoom = false;
+    this._roomResolver = null;
   }
 
   _setupRoomListeners() {
@@ -217,22 +275,17 @@ class MicPTTManager {
       return false;
     }
 
-    if (!this.room) {
-      console.error('[MicPTT] No room connected');
-      return false;
-    }
-
     unlockAudio();
 
     this.transitionLock = true;
     this.pendingStop = false;
 
-    // Setup room disconnect detection
-    this._setupRoomListeners();
-
     try {
       this._setState(PTT_STATES.ARMING);
       this._ensureAudioContext();
+      
+      playPermitTone();
+      console.log('[MicPTT] Permit tone played immediately');
 
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
@@ -251,29 +304,54 @@ class MicPTTManager {
       }
 
       this.stream = stream;
-      this.browserTrack = stream.getAudioTracks()[0];
-
-      console.log('[MicPTT] Mic acquired, waiting for PTT_READY...');
-      const gotPttReady = await this._waitForPttReady();
       
+      const processedStream = processRadioVoice(stream);
+      this.browserTrack = processedStream.getAudioTracks()[0];
+      console.log('[MicPTT] Mic acquired with radio voice DSP');
+
+      let room = this.room;
+      if (!room || room.state !== 'connected') {
+        console.log('[MicPTT] Waiting for room connection...');
+        try {
+          room = await this._waitForRoom(PTT_READY_TIMEOUT_MS);
+          this.room = room;
+        } catch (roomErr) {
+          console.error('[MicPTT] Room connection failed:', roomErr);
+          startBonkLoop();
+          await this._cleanup();
+          this.transitionLock = false;
+          if (this.pendingStop) {
+            stopBonkLoop();
+            this.pendingStop = false;
+            this._setState(PTT_STATES.IDLE);
+          } else {
+            this._setState(PTT_STATES.BUSY);
+          }
+          if (this.onError) {
+            this.onError(roomErr);
+          }
+          return false;
+        }
+      }
+
       if (this.pendingStop) {
-        console.log('[MicPTT] Stop requested during PTT_READY wait - aborting');
+        console.log('[MicPTT] Stop requested during room wait - aborting');
         this._stopTracks(stream);
         this._setState(PTT_STATES.IDLE);
         this.transitionLock = false;
         return false;
       }
 
-      playPermitTone();
+      this._setupRoomListeners();
       this.publishComplete = false;
-      console.log(`[MicPTT] PTT_READY ${gotPttReady ? 'received' : 'timeout'}, permit tone played, publishing track...`);
+      console.log('[MicPTT] Room ready, publishing track...');
       
       this.permitDeadlineTimer = setTimeout(() => {
         if (!this.publishComplete && this.state === PTT_STATES.ARMING && !this.pendingStop) {
-          console.log('[MicPTT] Publish not complete after permit tone, starting bonk');
+          console.log('[MicPTT] Publish taking too long, starting bonk');
           startBonkLoop();
         }
-      }, PERMIT_TONE_DURATION);
+      }, 2000);
       
       try {
         const publication = await this.room.localParticipant.publishTrack(
@@ -354,6 +432,7 @@ class MicPTTManager {
       console.log('[MicPTT] Setting pendingStop flag');
       this.pendingStop = true;
       this._cancelPttReadyWait();
+      this._cancelRoomWait();
       return;
     }
 
@@ -400,8 +479,10 @@ class MicPTTManager {
 
   async _cleanup() {
     this._clearPermitDeadline();
+    this._cancelRoomWait();
     this.publishComplete = false;
     stopBonkLoop();
+    cleanupRadioDSP();
     
     if (this.browserTrack) {
       try {
@@ -436,6 +517,8 @@ class MicPTTManager {
     
     this._clearPermitDeadline();
     this._removeRoomListeners();
+    this._cancelRoomWait();
+    this._cancelPttReadyWait();
     stopBonkLoop();
     
     if (this.localTrack) {
