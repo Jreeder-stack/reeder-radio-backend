@@ -1,0 +1,43 @@
+2026-01-04T14:30:17.940271245Z ==> Downloading cache...
+2026-01-04T14:30:17.98303457Z ==> Cloning from https://github.com/Jreeder-stack/reeder-radio-backend
+2026-01-04T14:30:19.129473122Z ==> Checking out commit 2a96ff7fa5fd23aca8f472f63c3830577cb7c0c8 in branch main
+2026-01-04T14:30:24.319162092Z ==> Downloaded 143MB in 4s. Extraction took 3s.
+2026-01-04T14:30:28.192666419Z ==> Requesting Node.js version 20.x
+2026-01-04T14:30:28.61222801Z ==> Using Node.js version 20.19.6 via /opt/render/project/src/package.json
+2026-01-04T14:30:28.638468499Z ==> Docs on specifying a Node.js version: https://render.com/docs/node-version
+2026-01-04T14:30:28.777829389Z ==> Running build command 'cd client && npm install && npm run build && cd .. && npm install'...
+2026-01-04T14:30:31.162652513Z 
+2026-01-04T14:30:31.162673943Z added 121 packages, and audited 122 packages in 2s
+2026-01-04T14:30:31.162689154Z 
+2026-01-04T14:30:31.162700234Z 16 packages are looking for funding
+2026-01-04T14:30:31.162707224Z   run `npm fund` for details
+2026-01-04T14:30:31.170513097Z 
+2026-01-04T14:30:31.170540757Z 2 moderate severity vulnerabilities
+2026-01-04T14:30:31.170543847Z 
+2026-01-04T14:30:31.170547007Z To address all issues (including breaking changes), run:
+2026-01-04T14:30:31.170550107Z   npm audit fix --force
+2026-01-04T14:30:31.170552397Z 
+2026-01-04T14:30:31.170555707Z Run `npm audit` for details.
+2026-01-04T14:30:31.32408446Z 
+2026-01-04T14:30:31.32410147Z > reeder-radio-ui@0.0.0 build
+2026-01-04T14:30:31.32410434Z > vite build
+2026-01-04T14:30:31.32410647Z 
+2026-01-04T14:30:31.550468552Z vite v5.4.21 building for production...
+2026-01-04T14:30:31.699202268Z transforming...
+2026-01-04T14:30:31.881159719Z ✓ 20 modules transformed.
+2026-01-04T14:30:31.88573882Z x Build failed in 309ms
+2026-01-04T14:30:31.885775541Z error during build:
+2026-01-04T14:30:31.885783191Z [vite]: Rollup failed to resolve import "lucide-react" from "/opt/render/project/src/client/src/components/MobileRadio/MobileScanMonitor.jsx".
+2026-01-04T14:30:31.885786581Z This is most likely unintended because it can break your application at runtime.
+2026-01-04T14:30:31.885789501Z If you do want to externalize this module explicitly add it to
+2026-01-04T14:30:31.885792231Z `build.rollupOptions.external`
+2026-01-04T14:30:31.885794841Z     at viteWarn (file:///opt/render/project/src/client/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:65855:17)
+2026-01-04T14:30:31.885797571Z     at onwarn (file:///opt/render/project/src/client/node_modules/@vitejs/plugin-react/dist/index.js:90:7)
+2026-01-04T14:30:31.885799851Z     at onRollupWarning (file:///opt/render/project/src/client/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:65885:5)
+2026-01-04T14:30:31.885802221Z     at onwarn (file:///opt/render/project/src/client/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:65550:7)
+2026-01-04T14:30:31.885804531Z     at file:///opt/render/project/src/client/node_modules/rollup/dist/es/shared/node-entry.js:20975:13
+2026-01-04T14:30:31.885806811Z     at Object.logger [as onLog] (file:///opt/render/project/src/client/node_modules/rollup/dist/es/shared/node-entry.js:22848:9)
+2026-01-04T14:30:31.885809021Z     at ModuleLoader.handleInvalidResolvedId (file:///opt/render/project/src/client/node_modules/rollup/dist/es/shared/node-entry.js:21592:26)
+2026-01-04T14:30:31.885811351Z     at file:///opt/render/project/src/client/node_modules/rollup/dist/es/shared/node-entry.js:21550:26
+2026-01-04T14:30:31.947049324Z ==> Build failed 😞
+2026-01-04T14:30:31.947065445Z ==> Common ways to troubleshoot your deploy: https://render.com/docs/troubleshooting-deploys
