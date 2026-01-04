@@ -1,3 +1,7 @@
+function getUnitId(user) {
+  return user?.unit_id || user?.username || null;
+}
+
 async function cadRequest(endpoint, method = 'GET', body = null) {
   const CAD_URL = process.env.CAD_URL;
   const CAD_API_KEY = process.env.CAD_API_KEY;
@@ -37,6 +41,10 @@ async function cadRequest(endpoint, method = 'GET', body = null) {
 }
 
 export async function updateUnitStatus(unitId, status, channel = null) {
+  if (!unitId) {
+    console.warn('[CAD] updateUnitStatus: No unit ID provided');
+    return { success: false, error: 'No unit ID' };
+  }
   console.log(`[CAD] Updating status: ${unitId} -> ${status}`);
   return cadRequest('/api/radio/status', 'POST', {
     unit_id: unitId,
@@ -46,6 +54,10 @@ export async function updateUnitStatus(unitId, status, channel = null) {
 }
 
 export async function updateUnitZone(unitId, zone) {
+  if (!unitId) {
+    console.warn('[CAD] updateUnitZone: No unit ID provided');
+    return { success: false, error: 'No unit ID' };
+  }
   console.log(`[CAD] Updating zone: ${unitId} -> ${zone}`);
   return cadRequest('/api/radio/zone', 'POST', {
     unit_id: unitId,
@@ -59,6 +71,10 @@ export async function getStatusCheck() {
 }
 
 export async function cycleUnitStatus(unitId) {
+  if (!unitId) {
+    console.warn('[CAD] cycleUnitStatus: No unit ID provided');
+    return { success: false, error: 'No unit ID' };
+  }
   console.log(`[CAD] Cycling status for ${unitId}`);
   return cadRequest(`/api/radio/unit/${encodeURIComponent(unitId)}/status/cycle`, 'POST');
 }
@@ -88,6 +104,10 @@ export async function updateCall(callId, updates) {
 }
 
 export async function assignUnitToCall(unitId, callId) {
+  if (!unitId) {
+    console.warn('[CAD] assignUnitToCall: No unit ID provided');
+    return { success: false, error: 'No unit ID' };
+  }
   console.log(`[CAD] Assigning ${unitId} to call ${callId}`);
   return cadRequest('/api/radio/assign', 'POST', {
     unit_id: unitId,
@@ -96,6 +116,10 @@ export async function assignUnitToCall(unitId, callId) {
 }
 
 export async function clearUnit(unitId) {
+  if (!unitId) {
+    console.warn('[CAD] clearUnit: No unit ID provided');
+    return { success: false, error: 'No unit ID' };
+  }
   console.log(`[CAD] Clearing ${unitId} from call`);
   return cadRequest('/api/radio/clear', 'POST', {
     unit_id: unitId
@@ -158,6 +182,10 @@ export async function getPendingChecks() {
 }
 
 export async function respondToStatusCheck(unitId, status) {
+  if (!unitId) {
+    console.warn('[CAD] respondToStatusCheck: No unit ID provided');
+    return { success: false, error: 'No unit ID' };
+  }
   return cadRequest('/api/radio/respond-check', 'POST', {
     unit_id: unitId,
     status
@@ -189,11 +217,16 @@ export async function searchAnimal(searchParams) {
 }
 
 export async function createCitation(type, populateFrom, user) {
+  const unitId = getUnitId(user);
+  if (!unitId) {
+    console.warn('[CAD] createCitation: No unit ID available');
+    return { success: false, error: 'No unit ID' };
+  }
   console.log(`[CAD] Creating ${type} from ${populateFrom}`);
   return cadRequest('/api/radio/citation/new', 'POST', {
     type,
     populate_from: populateFrom,
-    unit_id: user?.unit_id || user?.username
+    unit_id: unitId
   });
 }
 
@@ -204,7 +237,11 @@ export async function getMapUrl() {
 }
 
 export async function getUnitCurrentCall(user) {
-  const unitId = user?.unit_id || user?.username;
+  const unitId = getUnitId(user);
+  if (!unitId) {
+    console.warn('[CAD] getUnitCurrentCall: No unit ID available');
+    return { callNumber: null };
+  }
   console.log(`[CAD] Getting current call for ${unitId}`);
   const result = await cadRequest(`/api/radio/unit/${encodeURIComponent(unitId)}/call`, 'GET');
   if (result.success === false) {
@@ -214,13 +251,14 @@ export async function getUnitCurrentCall(user) {
 }
 
 export async function createFieldInterview(fiData, user) {
+  const officerId = fiData.officer || getUnitId(user) || 'UNKNOWN';
   console.log('[CAD] Creating FI:', fiData);
   return cadRequest('/api/radio/fi/create', 'POST', {
     call_number: fiData.callNumber || '',
     other_number: fiData.otherNumber || '',
     date: fiData.date || '',
     time: fiData.time || '',
-    officer: fiData.officer || user?.unit_id || user?.username,
+    officer: officerId,
     agency: fiData.agency || '',
     location: fiData.location?.toUpperCase() || '',
     x_street: fiData.xStreet?.toUpperCase() || '',
@@ -285,11 +323,19 @@ export async function getFleetUnits(user) {
 }
 
 export async function updateFleetUnitStatus(unitId, status) {
+  if (!unitId) {
+    console.warn('[CAD] updateFleetUnitStatus: No unit ID provided');
+    return { success: false, error: 'No unit ID' };
+  }
   console.log(`[CAD] Fleet status update: ${unitId} -> ${status}`);
   return cadRequest(`/api/radio/fleet/unit/${encodeURIComponent(unitId)}/status`, 'POST', { status });
 }
 
 export async function addFuelEntry(unitId, fuelData) {
+  if (!unitId) {
+    console.warn('[CAD] addFuelEntry: No unit ID provided');
+    return { success: false, error: 'No unit ID' };
+  }
   console.log(`[CAD] Fuel entry for ${unitId}:`, fuelData);
   return cadRequest(`/api/radio/fleet/unit/${encodeURIComponent(unitId)}/fuel`, 'POST', {
     miles: parseFloat(fuelData.miles) || 0,
@@ -326,11 +372,16 @@ export async function getChats(user) {
 }
 
 export async function createChat(recipientId, message, user) {
+  const senderId = getUnitId(user);
+  if (!senderId) {
+    console.warn('[CAD] createChat: No sender ID available');
+    return { success: false, error: 'No sender ID' };
+  }
   console.log(`[CAD] Creating new chat with ${recipientId}`);
   return cadRequest('/api/radio/chats', 'POST', {
     recipient_id: recipientId,
     message,
-    sender: user?.unit_id || user?.username
+    sender: senderId
   });
 }
 
@@ -345,15 +396,24 @@ export async function getChatMessages(chatId, user) {
 }
 
 export async function sendChatMessage(chatId, message, user) {
+  const senderId = getUnitId(user);
+  if (!senderId) {
+    console.warn('[CAD] sendChatMessage: No sender ID available');
+    return { success: false, error: 'No sender ID' };
+  }
   console.log(`[CAD] Sending message to chat ${chatId}`);
   return cadRequest(`/api/radio/chats/${chatId}/messages`, 'POST', {
     message,
-    sender: user?.unit_id || user?.username
+    sender: senderId
   });
 }
 
 export async function getUnreadCount(user) {
-  const unitId = user?.unit_id || user?.username;
+  const unitId = getUnitId(user);
+  if (!unitId) {
+    console.warn('[CAD] getUnreadCount: No unit ID available');
+    return { count: 0 };
+  }
   const result = await cadRequest(`/api/radio/messages/unread?unit_id=${encodeURIComponent(unitId)}`, 'GET');
   if (result.success === false) {
     return { count: 0 };
