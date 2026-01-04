@@ -8,7 +8,6 @@ import android.util.Log
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
-import kotlin.math.tanh
 
 class RadioVoiceDSP(private val sampleRate: Int = 48000) {
     
@@ -50,8 +49,8 @@ class RadioVoiceDSP(private val sampleRate: Int = 48000) {
     
     private fun calculateBiquadCoeffs() {
         val omega = 2.0 * Math.PI * HIGHPASS_FREQ / sampleRate
-        val sinOmega = kotlin.math.sin(omega)
-        val cosOmega = kotlin.math.cos(omega)
+        val sinOmega = Math.sin(omega)
+        val cosOmega = Math.cos(omega)
         val alpha = sinOmega / (2.0 * 0.707)
         
         val a0 = 1.0 + alpha
@@ -62,8 +61,8 @@ class RadioVoiceDSP(private val sampleRate: Int = 48000) {
         highpassCoeffs[4] = (1.0 - alpha) / a0
         
         val omegaLp = 2.0 * Math.PI * LOWPASS_FREQ / sampleRate
-        val sinOmegaLp = kotlin.math.sin(omegaLp)
-        val cosOmegaLp = kotlin.math.cos(omegaLp)
+        val sinOmegaLp = Math.sin(omegaLp)
+        val cosOmegaLp = Math.cos(omegaLp)
         val alphaLp = sinOmegaLp / (2.0 * 0.707)
         
         val a0Lp = 1.0 + alphaLp
@@ -75,8 +74,8 @@ class RadioVoiceDSP(private val sampleRate: Int = 48000) {
     }
     
     private fun calculateCompressorCoeffs() {
-        attackCoeff = kotlin.math.exp(-1.0 / (COMPRESSOR_ATTACK_MS * sampleRate / 1000.0))
-        releaseCoeff = kotlin.math.exp(-1.0 / (COMPRESSOR_RELEASE_MS * sampleRate / 1000.0))
+        attackCoeff = Math.exp(-1.0 / (COMPRESSOR_ATTACK_MS * sampleRate / 1000.0))
+        releaseCoeff = Math.exp(-1.0 / (COMPRESSOR_RELEASE_MS * sampleRate / 1000.0))
     }
     
     fun attachToAudioRecord(audioRecord: AudioRecord) {
@@ -156,14 +155,14 @@ class RadioVoiceDSP(private val sampleRate: Int = 48000) {
     
     private fun applyCompressor(input: Double): Double {
         val inputLevel = abs(input)
-        val inputDb = if (inputLevel > 0.0001) 20.0 * kotlin.math.log10(inputLevel) else -80.0
+        val inputDb = if (inputLevel > 0.0001) 20.0 * Math.log10(inputLevel) else -80.0
         
         val coeff = if (inputLevel > compressorEnvelope) attackCoeff else releaseCoeff
         compressorEnvelope = coeff * compressorEnvelope + (1.0 - coeff) * inputLevel
         
         if (inputDb > COMPRESSOR_THRESHOLD) {
             val gainReduction = (inputDb - COMPRESSOR_THRESHOLD) * (1.0 - 1.0 / COMPRESSOR_RATIO)
-            val gainLinear = kotlin.math.pow(10.0, -gainReduction / 20.0)
+            val gainLinear = Math.pow(10.0, -gainReduction / 20.0)
             return input * gainLinear
         }
         
