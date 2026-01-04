@@ -178,8 +178,26 @@ repositories {
 
 Copy these files to `android/app/src/main/java/com/reedersystems/commandcomms/`:
 - `LiveKitPlugin.kt` - Native LiveKit wrapper (Kotlin)
+- `RadioVoiceDSP.kt` - Radio voice audio processing (band-pass filter, compression, saturation)
 
 **Note:** Delete the old `LiveKitPlugin.java` if it exists.
+
+### Radio Voice DSP Effect
+
+The `RadioVoiceDSP.kt` class provides authentic radio voice processing with:
+- **Band-pass filter**: 300Hz - 3400Hz (standard voice radio frequencies)
+- **Dynamic compression**: 8:1 ratio with -24dB threshold for consistent levels
+- **Soft saturation**: Light harmonic distortion for radio character
+- **Output gain**: 1.4x boost for presence
+
+The DSP class also enables Android's built-in AGC (Automatic Gain Control) and noise 
+suppression when attached to an AudioRecord session.
+
+**Note on Integration:** The DSP effect is primarily applied on the web client side via 
+the Web Audio API. The Android native app uses LiveKit's SDK which handles audio capture 
+internally. Android's built-in AGC and noise suppression provide similar audio quality 
+improvements. The `RadioVoiceDSP.kt` class is provided for future custom audio capture 
+implementations if needed.
 
 ### Register the LiveKit Plugin
 
