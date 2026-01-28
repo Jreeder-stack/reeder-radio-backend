@@ -22,6 +22,7 @@ class SignalingService {
     this.channelMembers = new Map();
     this.unitPresence = new Map();
     this.activeTransmissions = new Map();
+    this.graceChannels = new Map();
     this.emergencyStates = new Map();
     this.connectionTimes = new Map();
     this.livekitAvailable = true;
@@ -242,6 +243,20 @@ class SignalingService {
       return;
     }
     
+    const graceState = this.graceChannels.get(channelId);
+    if (graceState && graceState.unitId !== socket.unitId) {
+      socket.emit('ptt:busy', { 
+        channelId, 
+        transmittingUnit: graceState.unitId,
+        inGracePeriod: true,
+      });
+      return;
+    }
+    
+    if (graceState && graceState.unitId === socket.unitId) {
+      this.graceChannels.delete(channelId);
+    }
+    
     const transmissionData = {
       unitId: socket.unitId,
       agencyId: socket.agencyId,
@@ -283,6 +298,21 @@ class SignalingService {
       gracePeriodMs: this.GRACE_PERIOD_MS,
     };
     
+    this.activeTransmissions.delete(channelId);
+    
+    this.graceChannels.set(channelId, {
+      unitId: socket.unitId,
+      expiresAt: Date.now() + this.GRACE_PERIOD_MS,
+    });
+    
+    setTimeout(() => {
+      const grace = this.graceChannels.get(channelId);
+      if (grace && grace.unitId === socket.unitId) {
+        this.graceChannels.delete(channelId);
+        console.log(`[Signaling] Grace period ended for ${channelId}`);
+      }
+    }, this.GRACE_PERIOD_MS);
+    
     const presence = this.unitPresence.get(socket.unitId);
     if (presence) {
       presence.status = 'online';
@@ -291,14 +321,6 @@ class SignalingService {
     this.io.to(`channel:${channelId}`).emit(SIGNALING_EVENTS.PTT_END, endData);
     
     this._emitCallback('pttEnd', endData);
-    
-    setTimeout(() => {
-      const currentTransmission = this.activeTransmissions.get(channelId);
-      if (currentTransmission && currentTransmission.timestamp === transmission.timestamp) {
-        this.activeTransmissions.delete(channelId);
-        console.log(`[Signaling] Transmission cleared for ${channelId} after grace period`);
-      }
-    }, this.GRACE_PERIOD_MS);
     
     console.log(`[Signaling] PTT END: ${socket.unitId} on ${channelId} (${endData.duration}ms)`);
   }
