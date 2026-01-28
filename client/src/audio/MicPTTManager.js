@@ -3,6 +3,7 @@ import { PTT_STATES } from '../constants/pttStates.js';
 import { playPermitTone, startBonkLoop, stopBonkLoop } from './talkPermitTone.js';
 import { unlockAudio } from './iosAudioUnlock.js';
 import { processRadioVoice, cleanup as cleanupRadioDSP } from './radioVoiceDSP.js';
+import { acquireWakeLock, releaseWakeLock } from '../plugins/backgroundService.js';
 
 const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || 
   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -276,6 +277,8 @@ class MicPTTManager {
     }
 
     unlockAudio();
+    
+    acquireWakeLock().catch(e => console.warn('[MicPTT] Wake lock acquire failed:', e));
 
     this.transitionLock = true;
     this.pendingStop = false;
@@ -473,6 +476,7 @@ class MicPTTManager {
       this.transitionLock = false;
       this.lastPttEndTime = Date.now();
       this._setState(PTT_STATES.IDLE);
+      releaseWakeLock().catch(e => console.warn('[MicPTT] Wake lock release failed:', e));
       console.log('[MicPTT] Transmission ended, state reset to IDLE');
     }
   }

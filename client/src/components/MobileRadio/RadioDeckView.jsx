@@ -8,6 +8,7 @@ import { micPTTManager } from '../../audio/MicPTTManager';
 import { PTT_STATES } from '../../constants/pttStates';
 import { updateUnitStatus } from '../../utils/api';
 import { DataPacket_Kind } from 'livekit-client';
+import { startBackgroundService, stopBackgroundService } from '../../plugins/backgroundService';
 import { PTTButton } from './PTTButton';
 import { 
   AnimalSearchModal, 
@@ -142,6 +143,22 @@ export function RadioDeckView({ user, onLogout }) {
   const transmitChannelRef = useRef('');
   const isEmergencyRef = useRef(false);
   const rxAudioElementsRef = useRef(new Set());
+
+  useEffect(() => {
+    startBackgroundService().then(result => {
+      if (result.success) {
+        console.log('[RadioDeck] Background service started');
+      }
+    }).catch(err => {
+      console.warn('[RadioDeck] Failed to start background service:', err);
+    });
+    
+    return () => {
+      stopBackgroundService().catch(err => {
+        console.warn('[RadioDeck] Failed to stop background service:', err);
+      });
+    };
+  }, []);
 
   useEffect(() => {
     fetch('/api/channels', { credentials: 'include' })

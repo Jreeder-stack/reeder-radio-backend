@@ -82,7 +82,9 @@ The Android radio app source code is located in the `android-app/` folder. It us
 - `LiveKitPlugin.kt` - Native LiveKit SDK wrapper for reliable PTT audio
 - `HardwarePttPlugin.java` - Volume/Bluetooth PTT key support
 - `BackgroundAudioService.java` - Foreground service for background audio/GPS
+- `BackgroundServicePlugin.java` - Capacitor plugin to control background service and wake locks from JavaScript
 - `DndOverridePlugin.java` - Do Not Disturb override for emergency alerts
+- `RadioVoiceDSP.kt` - Radio voice DSP processing (reference implementation)
 
 ### Building the APK
 **Prerequisites:** Android Studio, JDK 21+, Gradle 8.9+

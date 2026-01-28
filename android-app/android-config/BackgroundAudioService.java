@@ -28,11 +28,20 @@ public class BackgroundAudioService extends Service {
 
     private static final String CHANNEL_ID = "command_comms_channel";
     private static final int NOTIFICATION_ID = 1001;
+    
+    public static boolean isRunning = false;
 
     @Override
     public void onCreate() {
         super.onCreate();
         createNotificationChannel();
+        isRunning = true;
+    }
+    
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        isRunning = false;
     }
 
     @Override
@@ -52,10 +61,15 @@ public class BackgroundAudioService extends Service {
             PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
 
+        int iconId = getResources().getIdentifier("ic_stat_icon", "drawable", getPackageName());
+        if (iconId == 0) {
+            iconId = android.R.drawable.ic_media_play;
+        }
+        
         Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("COMMAND COMMS Active")
             .setContentText("Radio communications enabled")
-            .setSmallIcon(R.drawable.ic_stat_icon) // Create this icon
+            .setSmallIcon(iconId)
             .setContentIntent(pendingIntent)
             .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
