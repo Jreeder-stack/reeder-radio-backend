@@ -1,28 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { MobileFrame } from "./MobileFrame";
 import { Shield, Lock, ArrowRight, Radio, AlertCircle } from "lucide-react";
-import { cn } from "../../lib/utils";
 
 export function MobileLogin({ onLogin }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [interfaceMode, setInterfaceMode] = useState('phone');
   const navigate = useNavigate();
-
-  useEffect(() => {
-    const savedMode = localStorage.getItem('interface_mode');
-    if (savedMode === 'phone' || savedMode === 'radio') {
-      setInterfaceMode(savedMode);
-    }
-  }, []);
-
-  const handleInterfaceModeChange = (mode) => {
-    setInterfaceMode(mode);
-    localStorage.setItem('interface_mode', mode);
-  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -128,38 +114,6 @@ export function MobileLogin({ onLogin }) {
               )}
             </button>
           </form>
-
-          <div className="w-full mt-6">
-            <label className="text-[10px] text-zinc-500 font-mono uppercase tracking-widest block text-center mb-3">
-              Interface Style
-            </label>
-            <div className="flex rounded-lg border border-zinc-800 overflow-hidden">
-              <button
-                type="button"
-                onClick={() => handleInterfaceModeChange('phone')}
-                className={cn(
-                  "flex-1 py-3 px-4 text-xs font-mono uppercase tracking-wider transition-all",
-                  interfaceMode === 'phone' 
-                    ? "bg-primary text-black font-bold" 
-                    : "bg-zinc-900 text-zinc-500 hover:text-zinc-300"
-                )}
-              >
-                Phone
-              </button>
-              <button
-                type="button"
-                onClick={() => handleInterfaceModeChange('radio')}
-                className={cn(
-                  "flex-1 py-3 px-4 text-xs font-mono uppercase tracking-wider transition-all",
-                  interfaceMode === 'radio' 
-                    ? "bg-white text-black font-bold" 
-                    : "bg-zinc-900 text-zinc-500 hover:text-zinc-300"
-                )}
-              >
-                Radio
-              </button>
-            </div>
-          </div>
 
           <div className="mt-8 pt-8 border-t border-white/5 w-full flex justify-between text-[10px] text-zinc-600 font-mono uppercase">
             <span>Ver: 2.4.1-RC</span>

@@ -10,7 +10,7 @@ Not specified.
 
 ### UI/UX Decisions
 - The application is designed as a Progressive Web App (PWA) for installability on mobile devices, ensuring a native-like experience with offline capabilities.
-- **Responsive Design:** A single codebase serves both mobile and desktop users. The `useMobile` hook uses `useSyncExternalStore` for synchronous mobile detection (768px breakpoint). On mobile screens, `MobileRadioView` component provides a simplified PTT interface optimized for touch. On desktop, the full `App` component with complete controls is displayed.
+- **Responsive Design:** A single codebase serves both mobile and desktop users. The `useMobile` hook uses `useSyncExternalStore` for synchronous mobile detection (768px breakpoint). On mobile screens, `RadioDeckView` provides a professional radio deck interface optimized for touch. On desktop, the full `App` component with complete controls is displayed. **Note:** Phone interface option removed - mobile always uses radio-style interface.
 - A dark/light theme toggle is implemented with persistent preference storage, applying consistent styling across all UI elements using a predefined `THEMES` object.
 - The Dispatcher Console features a modern React architecture with TailwindCSS v4, utilizing a modular component structure for maintainability and scalability.
 - Drag-and-drop functionality for channel grids is implemented using `dnd-kit`.

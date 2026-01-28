@@ -11,7 +11,6 @@ import Admin from "./Admin.jsx";
 import DispatchConsole from "./pages/DispatchConsole.jsx";
 import DispatcherMap from "./pages/DispatcherMap.jsx";
 import RadioApp from "./pages/RadioApp.jsx";
-import MobileRadioView from "./components/MobileRadio/index.jsx";
 import { RadioDeckView } from "./components/MobileRadio/RadioDeckView.jsx";
 import { MobileLogin } from "./components/MobileRadio/MobileLogin.jsx";
 import { MobileSettings } from "./components/MobileRadio/MobileSettings.jsx";
@@ -93,9 +92,9 @@ function AppWrapper() {
   const { disconnectAll } = useLiveKitConnection();
   const isMobile = useMobile();
   
-  const [interfaceMode, setInterfaceMode] = useState(() => {
-    return localStorage.getItem('interface_mode') || 'phone';
-  });
+  useEffect(() => {
+    localStorage.removeItem('interface_mode');
+  }, []);
   
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem('darkMode');
@@ -116,20 +115,10 @@ function AppWrapper() {
   };
   
   if (isMobile) {
-    if (interfaceMode === 'radio') {
-      return (
-        <RadioDeckView 
-          user={user} 
-          onLogout={handleLogout}
-        />
-      );
-    }
     return (
-      <MobileRadioView 
+      <RadioDeckView 
         user={user} 
-        onLogout={handleLogout} 
-        darkMode={darkMode}
-        toggleDarkMode={toggleDarkMode}
+        onLogout={handleLogout}
       />
     );
   }
