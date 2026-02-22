@@ -74,6 +74,6 @@ CAD_URL = "https://cad.reeder-systems.com"
 [userenv.production]
 
 [deployment]
-deploymentTarget = "autoscale"
-run = ["node", "server.js"]
+deploymentTarget = "vm"
+run = ["node", "src/server.js"]
 build = ["bash", "-c", "cd client && npm run build"]
