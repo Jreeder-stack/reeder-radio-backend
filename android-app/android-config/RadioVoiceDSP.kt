@@ -8,6 +8,7 @@ import android.util.Log
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.pow
 
 class RadioVoiceDSP(private val sampleRate: Int = 48000) {
     
@@ -162,7 +163,7 @@ class RadioVoiceDSP(private val sampleRate: Int = 48000) {
         
         if (inputDb > COMPRESSOR_THRESHOLD) {
             val gainReduction = (inputDb - COMPRESSOR_THRESHOLD) * (1.0 - 1.0 / COMPRESSOR_RATIO)
-            val gainLinear = Math.pow(10.0, -gainReduction / 20.0)
+            val gainLinear = 10.0.pow(-gainReduction / 20.0)
             return input * gainLinear
         }
         
