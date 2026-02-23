@@ -18,6 +18,7 @@
     "@livekit/rtc-node": "^0.13.22",
     "@tailwindcss/postcss": "^4.1.17",
     "@tailwindcss/vite": "^4.1.17",
+    "@vitejs/plugin-legacy": "^7.2.1",
     "autoprefixer": "^10.4.22",
     "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
