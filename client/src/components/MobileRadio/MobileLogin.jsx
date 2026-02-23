@@ -1,7 +1,16 @@
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { useNavigate } from "react-router-dom";
 import { MobileFrame } from "./MobileFrame";
 import { Shield, Lock, ArrowRight, Radio, AlertCircle } from "lucide-react";
+
+function useIsT320() {
+  var val = useSyncExternalStore(
+    function(cb) { window.addEventListener('resize', cb); return function() { window.removeEventListener('resize', cb); }; },
+    function() { return typeof window !== 'undefined' && window.innerWidth <= 280; },
+    function() { return false; }
+  );
+  return val;
+}
 
 export function MobileLogin({ onLogin }) {
   const [username, setUsername] = useState("");
@@ -9,6 +18,7 @@ export function MobileLogin({ onLogin }) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
+  const isT320 = useIsT320();
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -37,6 +47,167 @@ export function MobileLogin({ onLogin }) {
       setIsLoading(false);
     }
   };
+
+  if (isT320) {
+    var accent = '#00e5ff';
+    return (
+      <div style={{
+        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+        backgroundColor: '#0a0a0a',
+        color: '#ffffff',
+        fontFamily: "'Courier New', Courier, monospace",
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+        userSelect: 'none',
+        WebkitUserSelect: 'none',
+      }}>
+        <div style={{
+          display: 'flex', flexDirection: 'column',
+          height: '100%',
+          padding: '6px 8px',
+          justifyContent: 'center',
+        }}>
+          <div style={{ textAlign: 'center', marginBottom: '8px' }}>
+            <div style={{
+              color: accent,
+              fontSize: '14px',
+              fontWeight: 'bold',
+              letterSpacing: '1px',
+              lineHeight: '1.2',
+            }}>
+              COMMAND
+            </div>
+            <div style={{
+              color: '#ffffff',
+              fontSize: '14px',
+              fontWeight: 'bold',
+              letterSpacing: '1px',
+              lineHeight: '1.2',
+            }}>
+              COMMS
+            </div>
+            <div style={{
+              color: '#666666',
+              fontSize: '8px',
+              letterSpacing: '2px',
+              marginTop: '2px',
+            }}>
+              REEDER SYSTEMS
+            </div>
+          </div>
+
+          {error && (
+            <div style={{
+              backgroundColor: '#330000',
+              border: '1px solid #660000',
+              color: '#ff4444',
+              fontSize: '9px',
+              padding: '3px 6px',
+              marginBottom: '4px',
+              textAlign: 'center',
+            }}>
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleLogin}>
+            <div style={{ marginBottom: '4px' }}>
+              <div style={{
+                color: '#888888',
+                fontSize: '9px',
+                letterSpacing: '2px',
+                marginBottom: '1px',
+              }}>
+                UNIT ID
+              </div>
+              <input
+                type="text"
+                value={username}
+                onChange={function(e) { setUsername(e.target.value); }}
+                style={{
+                  width: '100%',
+                  backgroundColor: '#111111',
+                  border: '1px solid #333333',
+                  color: '#ffffff',
+                  fontFamily: "'Courier New', Courier, monospace",
+                  fontSize: '14px',
+                  padding: '6px 8px',
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                  letterSpacing: '1px',
+                }}
+                required
+                disabled={isLoading}
+                autoComplete="username"
+              />
+            </div>
+
+            <div style={{ marginBottom: '6px' }}>
+              <div style={{
+                color: '#888888',
+                fontSize: '9px',
+                letterSpacing: '2px',
+                marginBottom: '1px',
+              }}>
+                ACCESS CODE
+              </div>
+              <input
+                type="password"
+                value={password}
+                onChange={function(e) { setPassword(e.target.value); }}
+                style={{
+                  width: '100%',
+                  backgroundColor: '#111111',
+                  border: '1px solid #333333',
+                  color: '#ffffff',
+                  fontFamily: "'Courier New', Courier, monospace",
+                  fontSize: '14px',
+                  padding: '6px 8px',
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                  letterSpacing: '1px',
+                }}
+                required
+                disabled={isLoading}
+                autoComplete="current-password"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={isLoading}
+              style={{
+                width: '100%',
+                backgroundColor: accent,
+                color: '#000000',
+                fontFamily: "'Courier New', Courier, monospace",
+                fontSize: '13px',
+                fontWeight: 'bold',
+                letterSpacing: '2px',
+                padding: '8px',
+                border: 'none',
+                cursor: 'pointer',
+                opacity: isLoading ? 0.5 : 1,
+              }}
+            >
+              {isLoading ? 'CONNECTING...' : 'LOGIN'}
+            </button>
+          </form>
+
+          <div style={{
+            textAlign: 'center',
+            color: '#444444',
+            fontSize: '8px',
+            letterSpacing: '1px',
+            marginTop: '8px',
+          }}>
+            V2.4.1 // AES-256
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <MobileFrame hideNav connectionStatus="connected">
