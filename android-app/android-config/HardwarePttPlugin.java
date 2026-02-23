@@ -25,7 +25,7 @@ import com.getcapacitor.JSObject;
 public class HardwarePttPlugin extends Plugin {
 
     private static HardwarePttPlugin instance;
-    private int pttKeyCode = KeyEvent.KEYCODE_VOLUME_UP; // Default to volume up
+    private int pttKeyCode = KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE; // Inrico T320 PTT = keycode 142
     private boolean isPttPressed = false;
 
     @Override

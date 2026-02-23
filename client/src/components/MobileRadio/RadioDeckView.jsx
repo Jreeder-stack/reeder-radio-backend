@@ -22,6 +22,21 @@ import {
   NewMessageModal 
 } from './widgets';
 
+function useIsT320() {
+  var getVal = function() {
+    return typeof window !== 'undefined' && window.innerWidth <= 280;
+  };
+  var val = useState(getVal);
+  var isT320 = val[0];
+  var setIsT320 = val[1];
+  useEffect(function() {
+    var handler = function() { setIsT320(getVal()); };
+    window.addEventListener('resize', handler);
+    return function() { window.removeEventListener('resize', handler); };
+  }, []);
+  return isT320;
+}
+
 const STATUS_LABELS = {
   'off_duty': 'OFF DUTY',
   'on_duty': 'ON DUTY',
@@ -715,6 +730,246 @@ export function RadioDeckView({ user, onLogout }) {
     if (!currentChannelName) return null;
     return getTransmittingUnit(currentChannelName);
   }, [currentChannelName, getTransmittingUnit, activeTransmissions]);
+
+  const isT320 = useIsT320();
+
+  var handleTransmitStartRef = useRef(handleTransmitStart);
+  var handleTransmitEndRef = useRef(handleTransmitEnd);
+  var handleChannelUpRef = useRef(handleChannelUp);
+  var handleChannelDownRef = useRef(handleChannelDown);
+  var handleZoneUpRef = useRef(handleZoneUp);
+  useEffect(function() {
+    handleTransmitStartRef.current = handleTransmitStart;
+    handleTransmitEndRef.current = handleTransmitEnd;
+    handleChannelUpRef.current = handleChannelUp;
+    handleChannelDownRef.current = handleChannelDown;
+    handleZoneUpRef.current = handleZoneUp;
+  }, [handleTransmitStart, handleTransmitEnd, handleChannelUp, handleChannelDown, handleZoneUp]);
+
+  useEffect(function() {
+    var pttDown = false;
+    var KEY_PTT = 142;
+    var KEY_VOL_UP = 24;
+    var KEY_VOL_DOWN = 25;
+    var KEY_STAR = 56;
+
+    var onKeyDown = function(e) {
+      var code = e.keyCode || e.which;
+      if (code === KEY_PTT && !pttDown) {
+        e.preventDefault();
+        e.stopPropagation();
+        pttDown = true;
+        handleTransmitStartRef.current();
+      } else if (code === KEY_VOL_UP) {
+        e.preventDefault();
+        e.stopPropagation();
+        handleChannelUpRef.current();
+      } else if (code === KEY_VOL_DOWN) {
+        e.preventDefault();
+        e.stopPropagation();
+        handleChannelDownRef.current();
+      } else if (code === KEY_STAR) {
+        e.preventDefault();
+        e.stopPropagation();
+        handleZoneUpRef.current();
+      }
+    };
+
+    var onKeyUp = function(e) {
+      var code = e.keyCode || e.which;
+      if (code === KEY_PTT && pttDown) {
+        e.preventDefault();
+        e.stopPropagation();
+        pttDown = false;
+        handleTransmitEndRef.current();
+      }
+    };
+
+    document.addEventListener('keydown', onKeyDown, true);
+    document.addEventListener('keyup', onKeyUp, true);
+    return function() {
+      document.removeEventListener('keydown', onKeyDown, true);
+      document.removeEventListener('keyup', onKeyUp, true);
+    };
+  }, []);
+
+  if (isT320) {
+    var t320Bg = '#0a0a0a';
+    var t320Accent = '#00e5ff';
+    var t320EmergBg = isEmergency ? '#ff0000' : t320Bg;
+    var t320EmergText = isEmergency ? '#ffffff' : t320Accent;
+
+    return (
+      <div style={{
+        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+        backgroundColor: t320EmergBg,
+        color: '#ffffff',
+        fontFamily: "'Courier New', Courier, monospace",
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+        userSelect: 'none',
+        WebkitUserSelect: 'none',
+      }}>
+        {isEmergency && (
+          <div style={{
+            position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: '#ff0000',
+            animation: 'emergFlash 0.5s infinite alternate',
+            zIndex: 0,
+          }} />
+        )}
+
+        <div style={{
+          position: 'relative', zIndex: 1,
+          display: 'flex', flexDirection: 'column',
+          height: '100%',
+          padding: '4px 6px',
+        }}>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            borderBottom: '1px solid #333',
+            paddingBottom: '3px',
+            marginBottom: '2px',
+            fontSize: '11px',
+          }}>
+            <span style={{ color: t320Accent, fontWeight: 'bold', letterSpacing: '1px' }}>
+              {identity}
+            </span>
+            <span style={{
+              color: signalingConnected ? '#00ff88' : '#ff4444',
+              fontSize: '10px',
+            }}>
+              {signalingConnected ? 'ONLINE' : 'OFFLINE'}
+            </span>
+          </div>
+
+          <div style={{
+            borderBottom: '1px solid #333',
+            paddingBottom: '4px',
+            marginBottom: '4px',
+          }}>
+            <div style={{
+              color: '#888888',
+              fontSize: '10px',
+              letterSpacing: '2px',
+              textTransform: 'uppercase',
+            }}>
+              {currentZone}
+            </div>
+            <div style={{
+              color: '#ffffff',
+              fontSize: '28px',
+              fontWeight: 'bold',
+              letterSpacing: '1px',
+              lineHeight: '1.1',
+              textShadow: '0 0 8px ' + t320Accent + '40',
+            }}>
+              {channelsLoading ? '---' : (currentChannel ? currentChannel.name : 'NO CH')}
+            </div>
+          </div>
+
+          <div style={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            minHeight: '80px',
+          }}>
+            {isTransmitting ? (
+              <div style={{ textAlign: 'center' }}>
+                <div style={{
+                  fontSize: '36px',
+                  fontWeight: 'bold',
+                  color: '#ff4444',
+                  letterSpacing: '4px',
+                  textShadow: '0 0 20px #ff4444',
+                  animation: 'txPulse 1s infinite',
+                }}>
+                  TX
+                </div>
+                <div style={{
+                  fontSize: '11px',
+                  color: '#ff8888',
+                  marginTop: '4px',
+                  letterSpacing: '1px',
+                }}>
+                  TRANSMITTING
+                </div>
+              </div>
+            ) : isReceiving && transmittingUnitId ? (
+              <div style={{ textAlign: 'center' }}>
+                <div style={{
+                  fontSize: '24px',
+                  fontWeight: 'bold',
+                  color: '#00ff88',
+                  letterSpacing: '3px',
+                  textShadow: '0 0 15px #00ff88',
+                  animation: 'rxPulse 1.5s infinite',
+                }}>
+                  RX
+                </div>
+                <div style={{
+                  fontSize: '16px',
+                  color: '#00ff88',
+                  marginTop: '6px',
+                  fontWeight: 'bold',
+                  letterSpacing: '1px',
+                }}>
+                  {transmittingUnitId}
+                </div>
+              </div>
+            ) : isEmergency ? (
+              <div style={{ textAlign: 'center' }}>
+                <div style={{
+                  fontSize: '28px',
+                  fontWeight: 'bold',
+                  color: '#ffffff',
+                  letterSpacing: '4px',
+                  animation: 'emergText 0.3s infinite alternate',
+                }}>
+                  EMERGENCY
+                </div>
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center' }}>
+                <div style={{
+                  fontSize: '14px',
+                  color: '#555555',
+                  letterSpacing: '2px',
+                }}>
+                  READY
+                </div>
+              </div>
+            )}
+          </div>
+
+          {isScanning && (
+            <div style={{
+              textAlign: 'center',
+              fontSize: '10px',
+              color: '#00ff88',
+              letterSpacing: '2px',
+              paddingTop: '2px',
+              borderTop: '1px solid #333',
+            }}>
+              SCAN ACTIVE
+            </div>
+          )}
+        </div>
+
+        <style dangerouslySetInnerHTML={{ __html: '\
+          @keyframes txPulse { 0%,100%{opacity:1} 50%{opacity:0.5} }\
+          @keyframes rxPulse { 0%,100%{opacity:1} 50%{opacity:0.7} }\
+          @keyframes emergFlash { 0%{opacity:1} 100%{opacity:0.4} }\
+          @keyframes emergText { 0%{opacity:1} 100%{opacity:0.3} }\
+        '}} />
+      </div>
+    );
+  }
 
   return (
     <div 
