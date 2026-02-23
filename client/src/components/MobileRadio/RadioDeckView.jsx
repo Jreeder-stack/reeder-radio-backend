@@ -738,20 +738,29 @@ export function RadioDeckView({ user, onLogout }) {
   var handleChannelUpRef = useRef(handleChannelUp);
   var handleChannelDownRef = useRef(handleChannelDown);
   var handleZoneUpRef = useRef(handleZoneUp);
+  var handleZoneDownRef = useRef(handleZoneDown);
+  var handleEmergencyToggleRef = useRef(handleEmergencyToggle);
+  var toggleScanningRef = useRef(toggleScanning);
   useEffect(function() {
     handleTransmitStartRef.current = handleTransmitStart;
     handleTransmitEndRef.current = handleTransmitEnd;
     handleChannelUpRef.current = handleChannelUp;
     handleChannelDownRef.current = handleChannelDown;
     handleZoneUpRef.current = handleZoneUp;
-  }, [handleTransmitStart, handleTransmitEnd, handleChannelUp, handleChannelDown, handleZoneUp]);
+    handleZoneDownRef.current = handleZoneDown;
+    handleEmergencyToggleRef.current = handleEmergencyToggle;
+    toggleScanningRef.current = toggleScanning;
+  }, [handleTransmitStart, handleTransmitEnd, handleChannelUp, handleChannelDown, handleZoneUp, handleZoneDown, handleEmergencyToggle, toggleScanning]);
 
   useEffect(function() {
     var pttDown = false;
-    var KEY_PTT = 142;
-    var KEY_VOL_UP = 24;
-    var KEY_VOL_DOWN = 25;
-    var KEY_STAR = 56;
+    var KEY_PTT = 230;
+    var KEY_ACC = 231;
+    var KEY_EMERGENCY = 233;
+    var KEY_DPAD_UP = 19;
+    var KEY_DPAD_DOWN = 20;
+    var KEY_DPAD_LEFT = 21;
+    var KEY_DPAD_RIGHT = 22;
 
     var onKeyDown = function(e) {
       var code = e.keyCode || e.which;
@@ -760,18 +769,30 @@ export function RadioDeckView({ user, onLogout }) {
         e.stopPropagation();
         pttDown = true;
         handleTransmitStartRef.current();
-      } else if (code === KEY_VOL_UP) {
+      } else if (code === KEY_DPAD_UP) {
         e.preventDefault();
         e.stopPropagation();
         handleChannelUpRef.current();
-      } else if (code === KEY_VOL_DOWN) {
+      } else if (code === KEY_DPAD_DOWN) {
         e.preventDefault();
         e.stopPropagation();
         handleChannelDownRef.current();
-      } else if (code === KEY_STAR) {
+      } else if (code === KEY_DPAD_LEFT) {
+        e.preventDefault();
+        e.stopPropagation();
+        handleZoneDownRef.current();
+      } else if (code === KEY_DPAD_RIGHT) {
         e.preventDefault();
         e.stopPropagation();
         handleZoneUpRef.current();
+      } else if (code === KEY_EMERGENCY) {
+        e.preventDefault();
+        e.stopPropagation();
+        handleEmergencyToggleRef.current();
+      } else if (code === KEY_ACC) {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleScanningRef.current();
       }
     };
 
