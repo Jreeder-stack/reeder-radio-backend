@@ -26,7 +26,7 @@ export function MobileLogin({ onLogin }) {
       const data = await response.json();
       
       if (response.ok && data.user) {
-        onLogin(data.user);
+        onLogin(data.user, { username: username, password: password });
         navigate('/');
       } else {
         setError(data.message || "Login failed");

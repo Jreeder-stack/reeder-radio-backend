@@ -153,6 +153,7 @@ export function RadioDeckView({ user, onLogout }) {
   const [isTransmitting, setIsTransmitting] = useState(false);
   const [pttState, setPttState] = useState(PTT_STATES.IDLE);
   const [activeAudio, setActiveAudio] = useState(null);
+  const [keysLocked, setKeysLocked] = useState(false);
   
   const hasJoinedRef = useRef(false);
   const transmitChannelRef = useRef('');
@@ -752,6 +753,9 @@ export function RadioDeckView({ user, onLogout }) {
     toggleScanningRef.current = toggleScanning;
   }, [handleTransmitStart, handleTransmitEnd, handleChannelUp, handleChannelDown, handleZoneUp, handleZoneDown, handleEmergencyToggle, toggleScanning]);
 
+  var keysLockedRef = useRef(false);
+  useEffect(function() { keysLockedRef.current = keysLocked; }, [keysLocked]);
+
   useEffect(function() {
     var pttDown = false;
     var KEY_PTT = 230;
@@ -761,9 +765,33 @@ export function RadioDeckView({ user, onLogout }) {
     var KEY_DPAD_DOWN = 20;
     var KEY_DPAD_LEFT = 21;
     var KEY_DPAD_RIGHT = 22;
+    var KEY_STAR = 17;
+
+    var starDownTime = 0;
+    var starLongPressTimer = null;
+    var LONG_PRESS_MS = 1000;
 
     var onKeyDown = function(e) {
       var code = e.keyCode || e.which;
+
+      if (code === KEY_STAR) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!starDownTime) {
+          starDownTime = Date.now();
+          starLongPressTimer = setTimeout(function() {
+            setKeysLocked(function(prev) {
+              var next = !prev;
+              keysLockedRef.current = next;
+              return next;
+            });
+          }, LONG_PRESS_MS);
+        }
+        return;
+      }
+
+      if (keysLockedRef.current) return;
+
       if (code === KEY_PTT && !pttDown) {
         e.preventDefault();
         e.stopPropagation();
@@ -798,6 +826,20 @@ export function RadioDeckView({ user, onLogout }) {
 
     var onKeyUp = function(e) {
       var code = e.keyCode || e.which;
+
+      if (code === KEY_STAR) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (starLongPressTimer) {
+          clearTimeout(starLongPressTimer);
+          starLongPressTimer = null;
+        }
+        starDownTime = 0;
+        return;
+      }
+
+      if (keysLockedRef.current) return;
+
       if (code === KEY_PTT && pttDown) {
         e.preventDefault();
         e.stopPropagation();
@@ -811,6 +853,7 @@ export function RadioDeckView({ user, onLogout }) {
     return function() {
       document.removeEventListener('keydown', onKeyDown, true);
       document.removeEventListener('keyup', onKeyUp, true);
+      if (starLongPressTimer) clearTimeout(starLongPressTimer);
     };
   }, []);
 
@@ -859,11 +902,21 @@ export function RadioDeckView({ user, onLogout }) {
             <span style={{ color: t320Accent, fontWeight: 'bold', letterSpacing: '1px' }}>
               {identity}
             </span>
-            <span style={{
-              color: signalingConnected ? '#00ff88' : '#ff4444',
-              fontSize: '10px',
-            }}>
-              {signalingConnected ? 'ONLINE' : 'OFFLINE'}
+            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              {keysLocked && (
+                <span style={{
+                  color: '#ffaa00',
+                  fontSize: '10px',
+                  fontWeight: 'bold',
+                  animation: 'lockBlink 2s infinite',
+                }}>LOCKED</span>
+              )}
+              <span style={{
+                color: signalingConnected ? '#00ff88' : '#ff4444',
+                fontSize: '10px',
+              }}>
+                {signalingConnected ? 'ONLINE' : 'OFFLINE'}
+              </span>
             </span>
           </div>
 
@@ -987,6 +1040,7 @@ export function RadioDeckView({ user, onLogout }) {
           @keyframes rxPulse { 0%,100%{opacity:1} 50%{opacity:0.7} }\
           @keyframes emergFlash { 0%{opacity:1} 100%{opacity:0.4} }\
           @keyframes emergText { 0%{opacity:1} 100%{opacity:0.3} }\
+          @keyframes lockBlink { 0%,100%{opacity:1} 50%{opacity:0.3} }\
         '}} />
       </div>
     );

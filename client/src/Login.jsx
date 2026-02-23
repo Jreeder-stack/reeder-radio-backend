@@ -29,7 +29,7 @@ export default function Login({ onLogin }) {
         return;
       }
 
-      onLogin(data.user);
+      onLogin(data.user, { username: username, password: password });
     } catch (err) {
       setError("Connection error. Please try again.");
     } finally {
