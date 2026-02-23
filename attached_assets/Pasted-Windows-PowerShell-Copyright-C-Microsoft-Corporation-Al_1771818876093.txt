@@ -1,0 +1,39 @@
+Windows PowerShell
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+Install the latest PowerShell for new features and improvements! https://aka.ms/PSWindows
+
+PS C:\Users\Justin> cd android-app
+cd : Cannot find path 'C:\Users\Justin\android-app' because it does not exist.
+At line:1 char:1
++ cd android-app
++ ~~~~~~~~~~~~~~
+    + CategoryInfo          : ObjectNotFound: (C:\Users\Justin\android-app:String) [Set-Location], ItemNotFoundExcepti
+   on
+    + FullyQualifiedErrorId : PathNotFound,Microsoft.PowerShell.Commands.SetLocationCommand
+
+PS C:\Users\Justin> npm install
+npm error code ENOENT
+npm error syscall open
+npm error path C:\Users\Justin\package.json
+npm error errno -4058
+npm error enoent Could not read package.json: Error: ENOENT: no such file or directory, open 'C:\Users\Justin\package.json'
+npm error enoent This is related to npm not being able to find a file.
+npm error enoent
+npm error A complete log of this run can be found in: C:\Users\Justin\AppData\Local\npm-cache\_logs\2026-02-23T03_54_07_290Z-debug-0.log
+PS C:\Users\Justin> npm run build
+npm error code ENOENT
+npm error syscall open
+npm error path C:\Users\Justin\package.json
+npm error errno -4058
+npm error enoent Could not read package.json: Error: ENOENT: no such file or directory, open 'C:\Users\Justin\package.json'
+npm error enoent This is related to npm not being able to find a file.
+npm error enoent
+npm error A complete log of this run can be found in: C:\Users\Justin\AppData\Local\npm-cache\_logs\2026-02-23T03_54_09_958Z-debug-0.log
+PS C:\Users\Justin> npx cap sync android
+npm error could not determine executable to run
+npm error A complete log of this run can be found in: C:\Users\Justin\AppData\Local\npm-cache\_logs\2026-02-23T03_54_10_520Z-debug-0.log
+PS C:\Users\Justin> npx cap open android
+npm error could not determine executable to run
+npm error A complete log of this run can be found in: C:\Users\Justin\AppData\Local\npm-cache\_logs\2026-02-23T03_54_18_786Z-debug-0.log
+PS C:\Users\Justin>

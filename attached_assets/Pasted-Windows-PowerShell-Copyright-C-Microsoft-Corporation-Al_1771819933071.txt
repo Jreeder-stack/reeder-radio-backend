@@ -1,0 +1,61 @@
+Windows PowerShell
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+Install the latest PowerShell for new features and improvements! https://aka.ms/PSWindows
+
+PS C:\Users\Justin> cd C:\Users\Justin\StudioProjects\reeder-radio-backend
+>> git pull
+>> cd android-app
+>> npm install
+>> npm run build
+>> npx cap sync android
+Already up to date.
+npm warn deprecated @esbuild-kit/esm-loader@2.6.5: Merged into tsx: https://tsx.is
+npm warn deprecated @esbuild-kit/core-utils@3.3.2: Merged into tsx: https://tsx.is
+
+added 547 packages, and audited 548 packages in 31s
+
+53 packages are looking for funding
+  run `npm fund` for details
+
+14 vulnerabilities (2 low, 5 moderate, 7 high)
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+
+Run `npm audit` for details.
+
+> rest-express@1.0.0 build
+> tsx script/build.ts
+
+building client...
+vite v7.1.12 building for production...
+✓ 2259 modules transformed.
+[plugin vite:reporter]
+(!) C:/Users/Justin/StudioProjects/reeder-radio-backend/android-app/node_modules/@capacitor/core/dist/index.js is dynamically imported by C:/Users/Justin/StudioProjects/reeder-radio-backend/android-app/client/src/lib/capacitor.ts, C:/Users/Justin/StudioProjects/reeder-radio-backend/android-app/client/src/lib/capacitor.ts, C:/Users/Justin/StudioProjects/reeder-radio-backend/android-app/client/src/lib/capacitor.ts, C:/Users/Justin/StudioProjects/reeder-radio-backend/android-app/client/src/lib/capacitor.ts, C:/Users/Justin/StudioProjects/reeder-radio-backend/android-app/client/src/lib/capacitor.ts but also statically imported by C:/Users/Justin/StudioProjects/reeder-radio-backend/android-app/client/src/hooks/use-livekit-combined.ts, C:/Users/Justin/StudioProjects/reeder-radio-backend/android-app/client/src/lib/capacitor.ts, C:/Users/Justin/StudioProjects/reeder-radio-backend/android-app/client/src/lib/native-livekit.ts, C:/Users/Justin/StudioProjects/reeder-radio-backend/android-app/node_modules/@capacitor/app/dist/esm/index.js, C:/Users/Justin/StudioProjects/reeder-radio-backend/android-app/node_modules/@capacitor/app/dist/esm/web.js, C:/Users/Justin/StudioProjects/reeder-radio-backend/android-app/node_modules/@capacitor/geolocation/dist/esm/index.js, C:/Users/Justin/StudioProjects/reeder-radio-backend/android-app/node_modules/@capacitor/geolocation/dist/esm/web.js, C:/Users/Justin/StudioProjects/reeder-radio-backend/android-app/node_modules/@capacitor/local-notifications/dist/esm/index.js, C:/Users/Justin/StudioProjects/reeder-radio-backend/android-app/node_modules/@capacitor/local-notifications/dist/esm/web.js, C:/Users/Justin/StudioProjects/reeder-radio-backend/android-app/node_modules/@capacitor/preferences/dist/esm/index.js, C:/Users/Justin/StudioProjects/reeder-radio-backend/android-app/node_modules/@capacitor/preferences/dist/esm/web.js, dynamic import will not move module into another chunk.
+
+rendering chunks (5)...[meta-images] no Replit deployment domain found, skipping meta tag updates
+../dist/public/index.html                     1.45 kB │ gzip:   0.59 kB
+../dist/public/assets/index-RbKz-sC_.css    113.46 kB │ gzip:  18.60 kB
+../dist/public/assets/web-9Hn2U8bp.js         0.76 kB │ gzip:   0.36 kB
+../dist/public/assets/web-lvnktlsY.js         0.90 kB │ gzip:   0.47 kB
+../dist/public/assets/web-BJMv26m4.js         1.25 kB │ gzip:   0.59 kB
+../dist/public/assets/web-BSgFUij3.js         3.45 kB │ gzip:   1.11 kB
+../dist/public/assets/index-D5j5_06E.js   1,062.22 kB │ gzip: 306.55 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 12.40s
+building server...
+
+  dist\index.cjs  885.2kb
+
+Done in 158ms
+[error] android platform has not been added yet.
+        See the docs for adding the android platform: https://capacitorjs.com/docs/android#adding-the-android-platform
+PS C:\Users\Justin\StudioProjects\reeder-radio-backend\android-app>
