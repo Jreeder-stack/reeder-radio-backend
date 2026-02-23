@@ -1,9 +1,22 @@
-const CACHE_NAME = 'command-comms-v1';
+const CACHE_NAME = 'command-comms-v3';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json'
 ];
+
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+  if (event.data && event.data.type === 'UNREGISTER') {
+    self.registration.unregister().then(() => {
+      caches.keys().then((names) => {
+        return Promise.all(names.map((name) => caches.delete(name)));
+      });
+    });
+  }
+});
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -32,7 +45,25 @@ self.addEventListener('fetch', (event) => {
   
   const url = new URL(event.request.url);
   
-  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/livekit')) {
+  if (url.pathname.startsWith('/api/') || 
+      url.pathname.startsWith('/livekit') ||
+      url.pathname.startsWith('/socket.io')) {
+    return;
+  }
+
+  if (url.pathname.startsWith('/assets/')) {
+    event.respondWith(
+      caches.match(event.request).then((cached) => {
+        if (cached) return cached;
+        return fetch(event.request).then((response) => {
+          if (response.status === 200) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          }
+          return response;
+        });
+      })
+    );
     return;
   }
   

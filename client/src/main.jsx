@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from "./AuthContext.jsx";
 import { LiveKitConnectionProvider, useLiveKitConnection } from "./context/LiveKitConnectionContext.jsx";
 import { SignalingProvider } from "./context/SignalingContext.jsx";
 import { MobileRadioProvider } from "./context/MobileRadioContext.jsx";
+import { ErrorBoundary } from "./components/ErrorBoundary.jsx";
 import Login from "./Login.jsx";
 import App from "./App.jsx";
 import Admin from "./Admin.jsx";
@@ -17,6 +18,64 @@ import { MobileSettings } from "./components/MobileRadio/MobileSettings.jsx";
 import { MobileScanMonitor } from "./components/MobileRadio/MobileScanMonitor.jsx";
 import { useMobile } from "./hooks/useMobile.js";
 import "./index.css";
+
+const isCapacitorNative = typeof window !== 'undefined' && 
+  window.Capacitor?.isNativePlatform?.() === true;
+
+if (isCapacitorNative && 'serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then((registrations) => {
+    registrations.forEach((reg) => {
+      reg.unregister();
+      console.log('[Capacitor] Unregistered service worker');
+    });
+  });
+  if ('caches' in window) {
+    caches.keys().then((names) => {
+      names.forEach((name) => caches.delete(name));
+      if (names.length > 0) console.log('[Capacitor] Cleared', names.length, 'caches');
+    });
+  }
+}
+
+window.__APP_BOOT = { start: Date.now(), steps: [] };
+window.__APP_BOOT.steps.push('module_loaded');
+window.addEventListener('error', (e) => {
+  console.error('[GLOBAL ERROR]', e.message, e.filename, e.lineno);
+});
+window.addEventListener('unhandledrejection', (e) => {
+  console.error('[UNHANDLED REJECTION]', e.reason);
+});
+
+function CapacitorDiagOverlay() {
+  const [visible, setVisible] = useState(isCapacitorNative);
+  const [info, setInfo] = useState('');
+  
+  useEffect(() => {
+    if (!isCapacitorNative) return;
+    const lines = [
+      `Platform: Capacitor Native`,
+      `Origin: ${window.location.origin}`,
+      `Boot: ${window.__APP_BOOT?.steps?.join(' > ') || 'unknown'}`,
+      `UA: ${navigator.userAgent?.substring(0, 60)}`,
+    ];
+    setInfo(lines.join('\n'));
+    const timer = setTimeout(() => setVisible(false), 8000);
+    return () => clearTimeout(timer);
+  }, []);
+  
+  if (!visible) return null;
+  
+  return (
+    <div style={{
+      position: 'fixed', top: 0, left: 0, right: 0, zIndex: 99999,
+      background: 'rgba(0,0,0,0.85)', color: '#0f0', fontSize: '10px',
+      fontFamily: 'monospace', padding: '8px', whiteSpace: 'pre-wrap',
+    }} onClick={() => setVisible(false)}>
+      {info}
+      <div style={{ color: '#888', marginTop: '4px' }}>tap to dismiss</div>
+    </div>
+  );
+}
 
 function ProtectedRoute({ children, adminOnly = false, dispatcherOnly = false }) {
   const { user, loading } = useAuth();
@@ -246,12 +305,17 @@ function ConnectedRoutes() {
   );
 }
 
+window.__APP_BOOT.steps.push('rendering');
+
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <BrowserRouter>
-      <AuthProvider>
-        <ConnectedRoutes />
-      </AuthProvider>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <CapacitorDiagOverlay />
+      <BrowserRouter>
+        <AuthProvider>
+          <ConnectedRoutes />
+        </AuthProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   </React.StrictMode>
 );

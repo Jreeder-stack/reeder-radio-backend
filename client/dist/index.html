@@ -10,13 +10,13 @@
     <link rel="manifest" href="/manifest.json" />
     <link rel="apple-touch-icon" href="/icons/icon-192.png" />
     <title>Command Communications by Reeder - Systems</title>
-    <script type="module" crossorigin src="/assets/index-BltZOtaO.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-B0c2qHHb.css">
+    <script type="module" crossorigin src="/assets/index-BKasbxjV.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-CMdp8vwV.css">
   </head>
   <body>
     <div id="root"></div>
     <script>
-      if ('serviceWorker' in navigator) {
+      if ('serviceWorker' in navigator && !(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform())) {
         window.addEventListener('load', () => {
           navigator.serviceWorker.register('/sw.js').catch(() => {});
         });

@@ -95,10 +95,21 @@ app.get('/.well-known/assetlinks.json', (req, res) => {
   res.sendFile(path.join(clientDistPath, '.well-known', 'assetlinks.json'));
 });
 
-app.use(express.static(clientDistPath));
+app.use(express.static(clientDistPath, {
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+    }
+  }
+}));
 
 app.get('*', (req, res) => {
   const indexPath = path.join(clientDistPath, 'index.html');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
   res.sendFile(indexPath, (err) => {
     if (err) {
       res.status(404).json({ error: 'Not found' });
