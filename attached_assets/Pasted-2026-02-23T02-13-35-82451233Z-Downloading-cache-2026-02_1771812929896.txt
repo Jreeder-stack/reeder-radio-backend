@@ -1,0 +1,40 @@
+2026-02-23T02:13:35.82451233Z ==> Downloading cache...
+2026-02-23T02:13:35.884130194Z ==> Cloning from https://github.com/Jreeder-stack/reeder-radio-backend
+2026-02-23T02:13:37.530918196Z ==> Checking out commit 28bfedcd66def6b94037a1581c7e4357809953b4 in branch main
+2026-02-23T02:13:44.294680695Z ==> Downloaded 156MB in 5s. Extraction took 4s.
+2026-02-23T02:13:49.082693382Z ==> Requesting Node.js version 20.x
+2026-02-23T02:13:49.366198754Z ==> Using Node.js version 20.20.0 via /opt/render/project/src/package.json
+2026-02-23T02:13:49.39578915Z ==> Docs on specifying a Node.js version: https://render.com/docs/node-version
+2026-02-23T02:13:49.545037705Z ==> Running build command 'cd client && npm install && npm run build && cd .. && npm install'...
+2026-02-23T02:13:53.276556763Z 
+2026-02-23T02:13:53.276576773Z added 124 packages, and audited 125 packages in 4s
+2026-02-23T02:13:53.276643005Z 
+2026-02-23T02:13:53.276650775Z 17 packages are looking for funding
+2026-02-23T02:13:53.276776589Z   run `npm fund` for details
+2026-02-23T02:13:53.313535005Z 
+2026-02-23T02:13:53.313550226Z 5 vulnerabilities (2 moderate, 3 high)
+2026-02-23T02:13:53.313552376Z 
+2026-02-23T02:13:53.313554756Z To address issues that do not require attention, run:
+2026-02-23T02:13:53.313556546Z   npm audit fix
+2026-02-23T02:13:53.313558136Z 
+2026-02-23T02:13:53.313560066Z To address all issues (including breaking changes), run:
+2026-02-23T02:13:53.313562706Z   npm audit fix --force
+2026-02-23T02:13:53.313564246Z 
+2026-02-23T02:13:53.313566506Z Run `npm audit` for details.
+2026-02-23T02:13:53.494725919Z 
+2026-02-23T02:13:53.4947481Z > reeder-radio-ui@0.0.0 build
+2026-02-23T02:13:53.49475142Z > vite build
+2026-02-23T02:13:53.49475363Z 
+2026-02-23T02:13:53.710964574Z failed to load config from /opt/render/project/src/client/vite.config.js
+2026-02-23T02:13:53.711321113Z error during build:
+2026-02-23T02:13:53.711464007Z Error [ERR_MODULE_NOT_FOUND]: Cannot find package '@vitejs/plugin-legacy' imported from /opt/render/project/src/client/vite.config.js.timestamp-1771812833706-a394df891150c.mjs
+2026-02-23T02:13:53.711468227Z     at packageResolve (node:internal/modules/esm/resolve:873:9)
+2026-02-23T02:13:53.711470547Z     at moduleResolve (node:internal/modules/esm/resolve:946:18)
+2026-02-23T02:13:53.711473137Z     at defaultResolve (node:internal/modules/esm/resolve:1188:11)
+2026-02-23T02:13:53.711475607Z     at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:708:12)
+2026-02-23T02:13:53.711477818Z     at #cachedDefaultResolve (node:internal/modules/esm/loader:657:25)
+2026-02-23T02:13:53.711480118Z     at ModuleLoader.resolve (node:internal/modules/esm/loader:640:38)
+2026-02-23T02:13:53.711482448Z     at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:264:38)
+2026-02-23T02:13:53.711484488Z     at ModuleJob._link (node:internal/modules/esm/module_job:168:49)
+2026-02-23T02:13:53.779940666Z ==> Build failed 😞
+2026-02-23T02:13:53.779956677Z ==> Common ways to troubleshoot your deploy: https://render.com/docs/troubleshooting-deploys
