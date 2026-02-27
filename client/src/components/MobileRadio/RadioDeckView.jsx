@@ -106,6 +106,8 @@ export function RadioDeckView({ user, onLogout }) {
     leaveChannel: signalingLeaveChannel,
     signalPttStart,
     signalPttEnd,
+    signalEmergencyStart,
+    signalEmergencyEnd,
     connected: signalingConnected,
   } = useSignalingContext();
   
@@ -161,6 +163,9 @@ export function RadioDeckView({ user, onLogout }) {
   const [pttState, setPttState] = useState(PTT_STATES.IDLE);
   const [activeAudio, setActiveAudio] = useState(null);
   const [keysLocked, setKeysLocked] = useState(false);
+  const [emergencyHoldProgress, setEmergencyHoldProgress] = useState(null);
+  const [batteryLevel, setBatteryLevel] = useState(null);
+  const [clockTime, setClockTime] = useState('');
   
   const hasJoinedRef = useRef(false);
   const transmitChannelRef = useRef('');
@@ -500,35 +505,54 @@ export function RadioDeckView({ user, onLogout }) {
     }
   };
 
-  const handleEmergencyToggle = async () => {
+  const handleEmergencyActivate = async () => {
+    if (isEmergency) return;
     const channel = currentChannelName || 'DISPATCH';
-    
-    if (isEmergency) {
-      await cancelEmergency();
-      try {
-        await fetch('/api/dispatch/emergency', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ channel, active: false }),
-        });
-      } catch (err) {
-        console.error('[Emergency] Failed to notify dispatcher of cancellation:', err);
-      }
-    } else {
-      await triggerEmergency();
-      try {
-        await fetch('/api/dispatch/emergency', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ channel, active: true }),
-        });
-      } catch (err) {
-        console.error('[Emergency] Failed to notify dispatcher:', err);
-      }
+    await triggerEmergency();
+    try {
+      signalEmergencyStart(channel);
+    } catch (err) {
+      console.error('[Emergency] Signaling broadcast failed:', err);
+    }
+    try {
+      await fetch('/api/dispatch/emergency', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ channel, active: true, unitId: identity }),
+      });
+    } catch (err) {
+      console.error('[Emergency] Failed to notify dispatcher:', err);
     }
   };
+
+  const handleEmergencyDeactivate = async () => {
+    if (!isEmergency) return;
+    const channel = currentChannelName || 'DISPATCH';
+    await cancelEmergency();
+    try {
+      signalEmergencyEnd(channel);
+    } catch (err) {
+      console.error('[Emergency] Signaling end broadcast failed:', err);
+    }
+    try {
+      await fetch('/api/dispatch/emergency', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ channel, active: false, unitId: identity }),
+      });
+    } catch (err) {
+      console.error('[Emergency] Failed to notify dispatcher of cancellation:', err);
+    }
+  };
+
+  const handleEmergencyActivateRef = useRef(handleEmergencyActivate);
+  const handleEmergencyDeactivateRef = useRef(handleEmergencyDeactivate);
+  useEffect(() => {
+    handleEmergencyActivateRef.current = handleEmergencyActivate;
+    handleEmergencyDeactivateRef.current = handleEmergencyDeactivate;
+  }, [isEmergency, currentChannelName, identity]);
 
   const handleTransmitStart = useCallback(async () => {
     const channelName = transmitChannelRef.current;
@@ -747,7 +771,6 @@ export function RadioDeckView({ user, onLogout }) {
   var handleChannelDownRef = useRef(handleChannelDown);
   var handleZoneUpRef = useRef(handleZoneUp);
   var handleZoneDownRef = useRef(handleZoneDown);
-  var handleEmergencyToggleRef = useRef(handleEmergencyToggle);
   var toggleScanningRef = useRef(toggleScanning);
   useEffect(function() {
     handleTransmitStartRef.current = handleTransmitStart;
@@ -756,9 +779,8 @@ export function RadioDeckView({ user, onLogout }) {
     handleChannelDownRef.current = handleChannelDown;
     handleZoneUpRef.current = handleZoneUp;
     handleZoneDownRef.current = handleZoneDown;
-    handleEmergencyToggleRef.current = handleEmergencyToggle;
     toggleScanningRef.current = toggleScanning;
-  }, [handleTransmitStart, handleTransmitEnd, handleChannelUp, handleChannelDown, handleZoneUp, handleZoneDown, handleEmergencyToggle, toggleScanning]);
+  }, [handleTransmitStart, handleTransmitEnd, handleChannelUp, handleChannelDown, handleZoneUp, handleZoneDown, toggleScanning]);
 
   var keysLockedRef = useRef(false);
   useEffect(function() { keysLockedRef.current = keysLocked; }, [keysLocked]);
@@ -777,6 +799,19 @@ export function RadioDeckView({ user, onLogout }) {
     var starDownTime = 0;
     var starLongPressTimer = null;
     var LONG_PRESS_MS = 1000;
+
+    var emergencyDownTime = 0;
+    var emergencyLongPressTimer = null;
+    var emergencyProgressInterval = null;
+    var EMERGENCY_ACTIVATE_MS = 2000;
+    var EMERGENCY_DEACTIVATE_MS = 3000;
+
+    function clearEmergencyTimers() {
+      if (emergencyLongPressTimer) { clearTimeout(emergencyLongPressTimer); emergencyLongPressTimer = null; }
+      if (emergencyProgressInterval) { clearInterval(emergencyProgressInterval); emergencyProgressInterval = null; }
+      emergencyDownTime = 0;
+      setEmergencyHoldProgress(null);
+    }
 
     var onKeyDown = function(e) {
       var code = e.keyCode || e.which;
@@ -823,7 +858,25 @@ export function RadioDeckView({ user, onLogout }) {
       } else if (code === KEY_EMERGENCY) {
         e.preventDefault();
         e.stopPropagation();
-        handleEmergencyToggleRef.current();
+        if (!emergencyDownTime) {
+          emergencyDownTime = Date.now();
+          var holdMs = isEmergencyRef.current ? EMERGENCY_DEACTIVATE_MS : EMERGENCY_ACTIVATE_MS;
+          var label = isEmergencyRef.current ? 'CANCEL' : 'EMERG';
+          setEmergencyHoldProgress({ label: label, percent: 0 });
+          emergencyProgressInterval = setInterval(function() {
+            var elapsed = Date.now() - emergencyDownTime;
+            var pct = Math.min(100, Math.round((elapsed / holdMs) * 100));
+            setEmergencyHoldProgress({ label: label, percent: pct });
+          }, 100);
+          emergencyLongPressTimer = setTimeout(function() {
+            clearEmergencyTimers();
+            if (isEmergencyRef.current) {
+              handleEmergencyDeactivateRef.current();
+            } else {
+              handleEmergencyActivateRef.current();
+            }
+          }, holdMs);
+        }
       } else if (code === KEY_ACC) {
         e.preventDefault();
         e.stopPropagation();
@@ -842,6 +895,13 @@ export function RadioDeckView({ user, onLogout }) {
           starLongPressTimer = null;
         }
         starDownTime = 0;
+        return;
+      }
+
+      if (code === KEY_EMERGENCY) {
+        e.preventDefault();
+        e.stopPropagation();
+        clearEmergencyTimers();
         return;
       }
 
@@ -891,22 +951,58 @@ export function RadioDeckView({ user, onLogout }) {
       document.removeEventListener('keydown', onKeyDown, true);
       document.removeEventListener('keyup', onKeyUp, true);
       if (starLongPressTimer) clearTimeout(starLongPressTimer);
+      clearEmergencyTimers();
       if (capCleanup) capCleanup();
     };
   }, []);
 
+  useEffect(function() {
+    function updateClock() {
+      var now = new Date();
+      var h = String(now.getHours()).padStart(2, '0');
+      var m = String(now.getMinutes()).padStart(2, '0');
+      setClockTime(h + ':' + m);
+    }
+    updateClock();
+    var interval = setInterval(updateClock, 10000);
+    return function() { clearInterval(interval); };
+  }, []);
+
+  useEffect(function() {
+    if (navigator.getBattery) {
+      navigator.getBattery().then(function(batt) {
+        setBatteryLevel(Math.round(batt.level * 100));
+        batt.addEventListener('levelchange', function() {
+          setBatteryLevel(Math.round(batt.level * 100));
+        });
+      }).catch(function() {});
+    }
+  }, []);
+
+  var displayZone = currentZone;
+  var displayChannel = channelsLoading ? '---' : (currentChannel ? currentChannel.name : 'NO CH');
+  var displayUnitId = null;
+
+  if (isScanning && isReceiving && activeAudio) {
+    var rxChannel = channels.find(function(ch) { return ch.name === activeAudio.channel; });
+    if (rxChannel) {
+      displayZone = rxChannel.zone || currentZone;
+      displayChannel = rxChannel.name;
+    }
+    displayUnitId = activeAudio.from || transmittingUnitId;
+  } else if (isReceiving && transmittingUnitId) {
+    displayUnitId = transmittingUnitId;
+  }
+
   if (isT320) {
     var t320Bg = '#ffffff';
-    var t320Accent = '#0077aa';
     var t320Border = '#cccccc';
     var t320TextPrimary = '#111111';
-    var t320TextSecondary = '#555555';
-    var t320EmergBg = isEmergency ? '#ff0000' : t320Bg;
 
     return (
       <div style={{
         position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-        backgroundColor: t320EmergBg,
+        backgroundColor: isEmergency ? '#ff0000' : t320Bg,
         color: t320TextPrimary,
         fontFamily: "'Courier New', Courier, monospace",
         display: 'flex',
@@ -928,87 +1024,42 @@ export function RadioDeckView({ user, onLogout }) {
           position: 'relative', zIndex: 1,
           display: 'flex', flexDirection: 'column',
           height: '100%',
-          padding: '6px 8px',
         }}>
+
           <div style={{
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            borderBottom: '2px solid ' + t320Border,
-            paddingBottom: '4px',
-            marginBottom: '4px',
-            fontSize: '12px',
+            padding: '4px 8px',
+            borderBottom: '1px solid ' + t320Border,
+            fontSize: '11px',
+            color: '#555555',
+            backgroundColor: isEmergency ? 'transparent' : '#f0f0f0',
           }}>
-            <span style={{ color: t320Accent, fontWeight: 'bold', letterSpacing: '1px' }}>
-              {identity}
-            </span>
+            <span style={{ fontWeight: 'bold' }}>{clockTime}</span>
             <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               {keysLocked && (
                 <span style={{
                   color: '#cc8800',
-                  fontSize: '11px',
                   fontWeight: 'bold',
                   animation: 'lockBlink 2s infinite',
-                }}>LOCKED</span>
+                }}>LCK</span>
+              )}
+              {isScanning && (
+                <span style={{ color: '#008844', fontWeight: 'bold' }}>SCN</span>
               )}
               <span style={{
                 color: signalingConnected ? '#008844' : '#cc0000',
-                fontSize: '11px',
                 fontWeight: 'bold',
               }}>
-                {signalingConnected ? 'ONLINE' : 'OFFLINE'}
+                {signalingConnected ? '●' : '○'}
               </span>
+              {batteryLevel !== null && (
+                <span style={{ fontWeight: 'bold' }}>
+                  {batteryLevel + '%'}
+                </span>
+              )}
             </span>
-          </div>
-
-          <div style={{
-            borderBottom: '2px solid ' + t320Border,
-            paddingBottom: '6px',
-            marginBottom: '4px',
-          }}>
-            <div style={{
-              color: t320Accent,
-              fontSize: '9px',
-              fontWeight: 'bold',
-              letterSpacing: '3px',
-              textTransform: 'uppercase',
-            }}>
-              ZONE
-            </div>
-            <div style={{
-              color: t320TextPrimary,
-              fontSize: '14px',
-              fontWeight: 'bold',
-              letterSpacing: '1px',
-              textTransform: 'uppercase',
-            }}>
-              {currentZone}
-            </div>
-          </div>
-
-          <div style={{
-            borderBottom: '2px solid ' + t320Border,
-            paddingBottom: '6px',
-            marginBottom: '6px',
-          }}>
-            <div style={{
-              color: t320Accent,
-              fontSize: '9px',
-              fontWeight: 'bold',
-              letterSpacing: '3px',
-              textTransform: 'uppercase',
-            }}>
-              CHANNEL
-            </div>
-            <div style={{
-              color: t320TextPrimary,
-              fontSize: '30px',
-              fontWeight: 'bold',
-              letterSpacing: '1px',
-              lineHeight: '1.2',
-            }}>
-              {channelsLoading ? '---' : (currentChannel ? currentChannel.name : 'NO CH')}
-            </div>
           </div>
 
           <div style={{
@@ -1017,87 +1068,114 @@ export function RadioDeckView({ user, onLogout }) {
             flexDirection: 'column',
             justifyContent: 'center',
             alignItems: 'center',
-            minHeight: '80px',
+            padding: '8px 12px',
           }}>
-            {isTransmitting ? (
-              <div style={{ textAlign: 'center' }}>
+
+            {emergencyHoldProgress && (
+              <div style={{
+                position: 'absolute', top: '30px', left: '10px', right: '10px',
+                textAlign: 'center', zIndex: 10,
+              }}>
                 <div style={{
-                  fontSize: '40px',
-                  fontWeight: 'bold',
-                  color: '#cc0000',
-                  letterSpacing: '6px',
-                  animation: 'txPulse 1s infinite',
-                }}>
-                  TX
-                </div>
-                <div style={{
-                  fontSize: '12px',
-                  color: '#cc0000',
-                  marginTop: '6px',
+                  fontSize: '11px', fontWeight: 'bold',
+                  color: emergencyHoldProgress.label === 'EMERG' ? '#cc0000' : '#008844',
+                  marginBottom: '3px',
                   letterSpacing: '2px',
                 }}>
-                  TRANSMITTING
-                </div>
-              </div>
-            ) : isReceiving && transmittingUnitId ? (
-              <div style={{ textAlign: 'center' }}>
-                <div style={{
-                  fontSize: '28px',
-                  fontWeight: 'bold',
-                  color: '#008844',
-                  letterSpacing: '4px',
-                  animation: 'rxPulse 1.5s infinite',
-                }}>
-                  RX
+                  {'HOLD... ' + emergencyHoldProgress.label + ' ' + emergencyHoldProgress.percent + '%'}
                 </div>
                 <div style={{
-                  fontSize: '18px',
-                  color: '#006633',
-                  marginTop: '8px',
-                  fontWeight: 'bold',
-                  letterSpacing: '1px',
+                  height: '4px', backgroundColor: '#ddd', borderRadius: '2px',
                 }}>
-                  {transmittingUnitId}
-                </div>
-              </div>
-            ) : isEmergency ? (
-              <div style={{ textAlign: 'center' }}>
-                <div style={{
-                  fontSize: '28px',
-                  fontWeight: 'bold',
-                  color: '#ffffff',
-                  letterSpacing: '4px',
-                  animation: 'emergText 0.3s infinite alternate',
-                }}>
-                  EMERGENCY
-                </div>
-              </div>
-            ) : (
-              <div style={{ textAlign: 'center' }}>
-                <div style={{
-                  fontSize: '16px',
-                  color: '#999999',
-                  letterSpacing: '3px',
-                }}>
-                  READY
+                  <div style={{
+                    height: '100%', borderRadius: '2px',
+                    width: emergencyHoldProgress.percent + '%',
+                    backgroundColor: emergencyHoldProgress.label === 'EMERG' ? '#cc0000' : '#008844',
+                    transition: 'width 0.1s linear',
+                  }} />
                 </div>
               </div>
             )}
+
+            {isTransmitting ? (
+              <div style={{ textAlign: 'center' }}>
+                <div style={{
+                  fontSize: '36px', fontWeight: 'bold', color: '#cc0000',
+                  letterSpacing: '6px', animation: 'txPulse 1s infinite',
+                }}>TX</div>
+              </div>
+            ) : isEmergency && !isReceiving ? (
+              <div style={{ textAlign: 'center' }}>
+                <div style={{
+                  fontSize: '24px', fontWeight: 'bold', color: '#ffffff',
+                  letterSpacing: '4px', animation: 'emergText 0.3s infinite alternate',
+                }}>EMERGENCY</div>
+              </div>
+            ) : (
+              <>
+                <div style={{
+                  fontSize: '16px', fontWeight: 'bold',
+                  color: isEmergency ? '#ffffff' : t320TextPrimary,
+                  letterSpacing: '2px', textTransform: 'uppercase',
+                  textAlign: 'center', marginBottom: '6px',
+                }}>
+                  {displayZone}
+                </div>
+
+                <div style={{
+                  fontSize: '32px', fontWeight: 'bold',
+                  color: isEmergency ? '#ffffff' : t320TextPrimary,
+                  letterSpacing: '1px', lineHeight: '1.1',
+                  textAlign: 'center',
+                }}>
+                  {displayChannel}
+                </div>
+
+                {displayUnitId && (
+                  <div style={{
+                    fontSize: '14px',
+                    color: isEmergency ? '#ffffff' : '#006633',
+                    fontWeight: 'bold', marginTop: '10px',
+                    textAlign: 'center', letterSpacing: '1px',
+                  }}>
+                    {'ID: ' + displayUnitId}
+                  </div>
+                )}
+
+                {isReceiving && !displayUnitId && (
+                  <div style={{
+                    fontSize: '12px', color: '#008844', fontWeight: 'bold',
+                    marginTop: '8px', animation: 'rxPulse 1.5s infinite',
+                    letterSpacing: '2px',
+                  }}>RX</div>
+                )}
+              </>
+            )}
           </div>
 
-          {isScanning && (
-            <div style={{
-              textAlign: 'center',
-              fontSize: '11px',
-              color: '#008844',
-              fontWeight: 'bold',
-              letterSpacing: '2px',
-              paddingTop: '4px',
-              borderTop: '2px solid ' + t320Border,
-            }}>
-              SCAN ACTIVE
-            </div>
-          )}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-around',
+            alignItems: 'center',
+            backgroundColor: '#1a1a1a',
+            padding: '6px 4px',
+            borderTop: '2px solid #333333',
+          }}>
+            <span style={{
+              color: isScanning ? '#00cc66' : '#888888',
+              fontSize: '12px', fontWeight: 'bold',
+              letterSpacing: '1px',
+            }}>SCNL</span>
+            <span style={{
+              color: '#cccccc', fontSize: '12px', fontWeight: 'bold',
+              letterSpacing: '1px',
+            }}>{clockTime}</span>
+            <span style={{
+              color: batteryLevel !== null && batteryLevel <= 20 ? '#cc0000' : '#cccccc',
+              fontSize: '12px', fontWeight: 'bold',
+              letterSpacing: '1px',
+            }}>{batteryLevel !== null ? batteryLevel + '%' : 'N/A'}</span>
+          </div>
         </div>
 
         <style dangerouslySetInnerHTML={{ __html: '\
@@ -1107,13 +1185,6 @@ export function RadioDeckView({ user, onLogout }) {
           @keyframes emergText { 0%{opacity:1} 100%{opacity:0.3} }\
           @keyframes lockBlink { 0%,100%{opacity:1} 50%{opacity:0.3} }\
         '}} />
-        <div style={{
-          position: 'absolute', bottom: '2px', left: '4px', right: '4px',
-          color: '#aaa', fontSize: '7px', fontFamily: 'monospace',
-          textAlign: 'center',
-        }}>
-          {'iw:' + (window.innerWidth||0) + ' sw:' + (window.screen?window.screen.width:0) + ' dpr:' + (window.devicePixelRatio||1) + ' cap:' + (!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform()))}
-        </div>
       </div>
     );
   }
@@ -1298,7 +1369,7 @@ export function RadioDeckView({ user, onLogout }) {
       </div>
 
       <button
-        onClick={handleEmergencyToggle}
+        onClick={() => isEmergency ? handleEmergencyDeactivate() : handleEmergencyActivate()}
         className={cn(
           "w-full rounded-lg p-3 flex items-center justify-center gap-2 font-bold text-sm uppercase tracking-wider transition-all active:scale-98",
           isEmergency 

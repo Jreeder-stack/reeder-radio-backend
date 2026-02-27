@@ -7,41 +7,65 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
 import android.os.Build;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
+import android.os.PowerManager;
+import android.util.Log;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 
-/**
- * Foreground service to keep audio and GPS running in background.
- * 
- * This service displays a persistent notification while the app is active,
- * allowing audio streaming and location updates to continue when the app
- * is minimized.
- * 
- * Installation:
- * 1. Copy to android/app/src/main/java/com/reedersystems/commandcomms/
- * 2. Register in AndroidManifest.xml (see README.md)
- * 3. Start service when user logs in
- * 4. Stop service on logout
- */
 public class BackgroundAudioService extends Service {
 
+    private static final String TAG = "CommandComms.BgService";
     private static final String CHANNEL_ID = "command_comms_channel";
     private static final int NOTIFICATION_ID = 1001;
+    private static final long KEEPALIVE_INTERVAL_MS = 30000;
     
     public static boolean isRunning = false;
+
+    private PowerManager.WakeLock cpuWakeLock;
+    private Handler keepAliveHandler;
+    private Runnable keepAliveRunnable;
 
     @Override
     public void onCreate() {
         super.onCreate();
         createNotificationChannel();
         isRunning = true;
+
+        PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
+        if (pm != null) {
+            cpuWakeLock = pm.newWakeLock(
+                PowerManager.PARTIAL_WAKE_LOCK,
+                "CommandComms::BackgroundCPU"
+            );
+            cpuWakeLock.acquire();
+            Log.d(TAG, "CPU wake lock acquired");
+        }
+
+        keepAliveHandler = new Handler(Looper.getMainLooper());
+        keepAliveRunnable = new Runnable() {
+            @Override
+            public void run() {
+                Log.d(TAG, "Keep-alive ping");
+                keepAliveHandler.postDelayed(this, KEEPALIVE_INTERVAL_MS);
+            }
+        };
+        keepAliveHandler.postDelayed(keepAliveRunnable, KEEPALIVE_INTERVAL_MS);
     }
     
     @Override
     public void onDestroy() {
-        super.onDestroy();
+        if (keepAliveHandler != null && keepAliveRunnable != null) {
+            keepAliveHandler.removeCallbacks(keepAliveRunnable);
+        }
+        if (cpuWakeLock != null && cpuWakeLock.isHeld()) {
+            cpuWakeLock.release();
+            Log.d(TAG, "CPU wake lock released");
+        }
         isRunning = false;
+        super.onDestroy();
     }
 
     @Override
@@ -54,8 +78,8 @@ public class BackgroundAudioService extends Service {
             return START_NOT_STICKY;
         }
         
-        // Build persistent notification
         Intent notificationIntent = new Intent(this, MainActivity.class);
+        notificationIntent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
         PendingIntent pendingIntent = PendingIntent.getActivity(
             this, 0, notificationIntent, 
             PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE

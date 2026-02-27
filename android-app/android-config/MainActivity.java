@@ -1,11 +1,15 @@
 package com.reedersystems.commandcomms;
 
 import android.Manifest;
+import android.app.KeyguardManager;
+import android.content.Context;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.PowerManager;
 import android.util.Log;
 import android.view.KeyEvent;
+import android.view.WindowManager;
 import android.webkit.PermissionRequest;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
@@ -31,6 +35,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(HardwarePttPlugin.class);
         registerPlugin(DndOverridePlugin.class);
         registerPlugin(LiveKitPlugin.class);
+        registerPlugin(BackgroundServicePlugin.class);
         
         super.onCreate(savedInstanceState);
         
@@ -128,11 +133,50 @@ public class MainActivity extends BridgeActivity {
     private static final int KEY_DPAD_RIGHT = 22;
     private static final int KEY_STAR = 17;
 
+    private PowerManager.WakeLock screenWakeLock;
+
     private boolean isT320Key(int keyCode) {
         return keyCode == KEY_PTT || keyCode == KEY_ACC || keyCode == KEY_EMERGENCY
             || keyCode == KEY_DPAD_UP || keyCode == KEY_DPAD_DOWN
             || keyCode == KEY_DPAD_LEFT || keyCode == KEY_DPAD_RIGHT
             || keyCode == KEY_STAR;
+    }
+
+    private void wakeScreen() {
+        try {
+            PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+            if (pm != null && !pm.isInteractive()) {
+                if (screenWakeLock != null && screenWakeLock.isHeld()) {
+                    screenWakeLock.release();
+                }
+                screenWakeLock = pm.newWakeLock(
+                    PowerManager.FULL_WAKE_LOCK
+                    | PowerManager.ACQUIRE_CAUSES_WAKEUP
+                    | PowerManager.ON_AFTER_RELEASE,
+                    "CommandComms::ScreenWake"
+                );
+                screenWakeLock.acquire(10 * 1000L);
+                Log.d(TAG, "Screen woken by hardware key");
+            }
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                setShowWhenLocked(true);
+                setTurnScreenOn(true);
+                KeyguardManager km = (KeyguardManager) getSystemService(Context.KEYGUARD_SERVICE);
+                if (km != null) {
+                    km.requestDismissKeyguard(this, null);
+                }
+            } else {
+                getWindow().addFlags(
+                    WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED
+                    | WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD
+                    | WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
+                    | WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
+                );
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to wake screen: " + e.getMessage());
+        }
     }
 
     private void injectJsKeyEvent(int keyCode, String eventType) {
@@ -151,6 +195,10 @@ public class MainActivity extends BridgeActivity {
     public boolean dispatchKeyEvent(KeyEvent event) {
         int keyCode = event.getKeyCode();
         int action = event.getAction();
+
+        if (isT320Key(keyCode) && action == KeyEvent.ACTION_DOWN) {
+            wakeScreen();
+        }
 
         HardwarePttPlugin pttPlugin = HardwarePttPlugin.getInstance();
         if (pttPlugin != null && keyCode == KEY_PTT) {
@@ -183,5 +231,13 @@ public class MainActivity extends BridgeActivity {
             return true;
         }
         return super.onKeyUp(keyCode, event);
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (screenWakeLock != null && screenWakeLock.isHeld()) {
+            screenWakeLock.release();
+        }
+        super.onDestroy();
     }
 }
