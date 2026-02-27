@@ -1,0 +1,50 @@
+Please set the JAVA_HOME variable in your environment to match the 
+location of your Java installation. 
+PS C:\Users\Justin\StudioProjects\reeder-radio-backend\android-app\android> $env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
+PS C:\Users\Justin\StudioProjects\reeder-radio-backend\android-app\android> .\gradlew assembleDebug --no-daemon
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.11.1/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+
+> Configure project :app
+WARNING: Using flatDir should be avoided because it doesn't support any meta-data formats.
+
+> Configure project :capacitor-cordova-android-plugins
+WARNING: Using flatDir should be avoided because it doesn't support any meta-data formats.
+
+> Task :app:compileDebugJavaWithJavac
+C:\Users\Justin\StudioProjects\reeder-radio-backend\android-app\android\app\src\main\java\com\reedersystems\commandcomms\MainActivity.java:33: error: cannot find symbol
+        registerPlugin(LiveKitPlugin.class);
+                       ^
+  symbol:   class LiveKitPlugin
+  location: class MainActivity
+1 error
+
+> Task :app:compileDebugJavaWithJavac FAILED
+[Incubating] Problems report is available at: file:///C:/Users/Justin/StudioProjects/reeder-radio-backend/android-app/android/build/reports/problems/problems-report.html
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':app:compileDebugJavaWithJavac'.
+> Compilation failed; see the compiler output below.
+  C:\Users\Justin\StudioProjects\reeder-radio-backend\android-app\android\app\src\main\java\com\reedersystems\commandcomms\MainActivity.java:33: error: cannot find symbol
+          registerPlugin(LiveKitPlugin.class);
+                         ^
+    symbol:   class LiveKitPlugin
+    location: class MainActivity
+  1 error
+
+* Try:
+> Check your code and dependencies to fix the compilation error(s)
+> Run with --scan to get full insights.
+
+BUILD FAILED in 49s
+105 actionable tasks: 5 executed, 100 up-to-date
+PS C:\Users\Justin\StudioProjects\reeder-radio-backend\android-app\android> $env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jre"
+PS C:\Users\Justin\StudioProjects\reeder-radio-backend\android-app\android> .\gradlew assembleDebug --no-daemon
+ 
+ERROR: JAVA_HOME is set to an invalid directory: C:\Program Files\Android\Android Studio\jre 
+ 
+Please set the JAVA_HOME variable in your environment to match the 
+location of your Java installation. 
+PS C:\Users\Justin\StudioProjects\reeder-radio-backend\android-app\android> 
