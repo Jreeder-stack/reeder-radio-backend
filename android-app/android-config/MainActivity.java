@@ -39,9 +39,9 @@ public class MainActivity extends BridgeActivity {
         
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         
-        requestAllPermissions();
-        
-        configureWebViewForWebRTC();
+        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+            requestAllPermissions();
+        }, 500);
     }
     
     private void requestAllPermissions() {
@@ -49,6 +49,7 @@ public class MainActivity extends BridgeActivity {
 
         String[] basePermissions = {
             Manifest.permission.RECORD_AUDIO,
+            Manifest.permission.CAMERA,
             Manifest.permission.MODIFY_AUDIO_SETTINGS,
             Manifest.permission.ACCESS_FINE_LOCATION,
             Manifest.permission.ACCESS_COARSE_LOCATION
@@ -80,6 +81,7 @@ public class MainActivity extends BridgeActivity {
             ActivityCompat.requestPermissions(this, permissionsNeeded.toArray(new String[0]), PERMISSION_REQUEST_CODE);
         } else {
             Log.d(TAG, "All permissions already granted");
+            configureWebViewForWebRTC();
             requestBackgroundLocationIfNeeded();
         }
     }
@@ -104,6 +106,7 @@ public class MainActivity extends BridgeActivity {
                 boolean granted = grantResults[i] == PackageManager.PERMISSION_GRANTED;
                 Log.d(TAG, "Permission " + permission + " granted: " + granted);
             }
+            configureWebViewForWebRTC();
             requestBackgroundLocationIfNeeded();
         } else if (requestCode == BACKGROUND_LOCATION_REQUEST_CODE) {
             boolean granted = grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
@@ -177,10 +180,10 @@ public class MainActivity extends BridgeActivity {
                 if (isScreenOff) {
                     keepWebViewAlive();
                 }
-                jsKeepaliveHandler.postDelayed(this, 5000);
+                jsKeepaliveHandler.postDelayed(this, 3000);
             }
         };
-        jsKeepaliveHandler.postDelayed(jsKeepaliveRunnable, 5000);
+        jsKeepaliveHandler.postDelayed(jsKeepaliveRunnable, 3000);
     }
 
     private void stopJsKeepalive() {
@@ -320,6 +323,12 @@ public class MainActivity extends BridgeActivity {
             if (webView != null) {
                 webView.onResume();
                 webView.resumeTimers();
+                webView.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        webView.evaluateJavascript("1", null);
+                    }
+                });
                 Log.d(TAG, "WebView kept alive after lifecycle pause");
             }
         } catch (Exception e) {

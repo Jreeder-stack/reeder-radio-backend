@@ -727,10 +727,11 @@ export default function App({ user, onLogout }) {
     
     const grouped = {};
     contextChannels.forEach((ch) => {
-      if (!grouped[ch.zone]) {
-        grouped[ch.zone] = [];
+      const zoneName = ch.zone || 'Default';
+      if (!grouped[zoneName]) {
+        grouped[zoneName] = [];
       }
-      grouped[ch.zone].push(ch.name);
+      grouped[zoneName].push(ch.name);
     });
     
     if (Object.keys(grouped).length > 0) {

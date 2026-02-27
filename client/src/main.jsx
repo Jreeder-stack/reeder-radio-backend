@@ -17,7 +17,8 @@ import { MobileLogin } from "./components/MobileRadio/MobileLogin.jsx";
 import { MobileSettings } from "./components/MobileRadio/MobileSettings.jsx";
 import { MobileScanMonitor } from "./components/MobileRadio/MobileScanMonitor.jsx";
 import { useMobile } from "./hooks/useMobile.js";
-import { overrideVisibilityAPI } from "./lib/capacitor.js";
+import { overrideVisibilityAPI, isNative } from "./lib/capacitor.js";
+import { startBackgroundService } from "./plugins/backgroundService.js";
 import "./index.css";
 
 const isCapacitorNative = typeof window !== 'undefined' && 
@@ -159,6 +160,18 @@ function AppWrapper() {
   useEffect(() => {
     localStorage.removeItem('interface_mode');
   }, []);
+
+  useEffect(() => {
+    if (isNative && user) {
+      startBackgroundService().then(result => {
+        if (result.success) {
+          console.log('[AppWrapper] Background service started on login');
+        }
+      }).catch(err => {
+        console.warn('[AppWrapper] Failed to start background service:', err);
+      });
+    }
+  }, [user]);
   
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem('darkMode');

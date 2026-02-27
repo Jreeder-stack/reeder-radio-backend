@@ -414,17 +414,14 @@ export function LiveKitConnectionProvider({ children, user }) {
       } else {
         const firstChannel = initialChannel || enabledChannels[0]?.name;
         if (firstChannel) {
-          console.log(`[LiveKitConnection] Radio mode - connecting only to ${firstChannel}`);
+          console.log(`[LiveKitConnection] Radio mode - setting active channel to ${firstChannel}`);
+          setActiveChannel(firstChannel);
+          setConnected(true);
+          setConnectionStatus('connected');
           
           const success = await connectToChannel(firstChannel, identity);
-          setActiveChannel(firstChannel);
-          
-          if (success) {
-            setConnected(true);
-            setConnectionStatus('connected');
-          } else {
-            setConnectionError(`Failed to connect to ${firstChannel}`);
-            setConnectionStatus('failed');
+          if (!success) {
+            console.warn(`[LiveKitConnection] Initial LiveKit connect to ${firstChannel} failed - will retry on transmit`);
           }
         }
       }
