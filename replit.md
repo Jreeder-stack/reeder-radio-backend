@@ -42,3 +42,41 @@ The application is designed as a Progressive Web App (PWA) with a single codebas
 - **TailwindCSS v4:** Frontend styling framework.
 - **Zustand:** Frontend state management library.
 - **Leaflet/react-leaflet:** For the Dispatcher Map component.
+
+## Native Android App (Capacitor)
+
+The Android radio app source code is located in the `android-app/` folder. It uses Capacitor to wrap the web UI into a native Android application.
+
+### Configuration
+- **App ID:** `com.reedersystems.commandcomms`
+- **App Name:** COMMAND COMMS
+- **Backend:** Connects to this server via environment variables (`BACKEND_URL`, `CAD_URL`)
+
+### Native Plugins (`android-app/android-config/`)
+- `LiveKitPlugin.kt` - Native LiveKit SDK wrapper for reliable PTT audio
+- `HardwarePttPlugin.java` - Volume/Bluetooth PTT key support
+- `BackgroundAudioService.java` - Foreground service for background audio/GPS with CPU wake lock
+- `BackgroundServicePlugin.java` - Capacitor plugin to control background service and wake locks from JavaScript
+- `DndOverridePlugin.java` - Do Not Disturb override for emergency alerts
+- `RadioVoiceDSP.kt` - Radio voice DSP processing (reference implementation)
+
+### Background PTT Operation
+When the app goes off-screen (screen off or backgrounded), Android pauses the WebView's JavaScript engine. `MainActivity.java` overrides `onPause()` and `onStop()` to immediately call `webView.onResume()` and `webView.resumeTimers()`, keeping JS execution alive. A periodic JS keepalive timer runs every 5 seconds while the screen is off. On the JS side, `capacitor.js` overrides `document.hidden` and `document.visibilityState` to always report "visible" on native platforms, preventing Socket.IO and WebRTC from throttling when the page appears hidden. Combined with `BackgroundAudioService` (foreground service with CPU wake lock) and `FLAG_KEEP_SCREEN_ON`, this ensures PTT works reliably even when the screen is off.
+
+### Talk Permit Tone
+Uses a Motorola APX MP3 file at `client/public/sounds/talk-permit.mp3`. Played via `playPermitTone()` in `talkPermitTone.js` and `playTalkPermitTone()` in `audioTones.js`.
+
+### Signaling Architecture
+All views (App.jsx, RadioDeckView.jsx, DispatchConsole.jsx) must join/leave signaling channels via `useSignalingContext` for presence, PTT events, and emergency alerts to work. Emergency alerts use two paths: channel-scoped `emergency:start` (to channel members) and global `emergency:alert` (to all clients). The dispatch console listens for both via `LiveKitConnectionContext.jsx`.
+
+### Building the APK
+**Prerequisites:** Android Studio, JDK 21+, Gradle 8.9+
+
+1. `cd android-app && npm install`
+2. `npm run build`
+3. `npx cap add android` (first time only)
+4. `npx cap sync android`
+5. Fix Gradle version if prompted (update to 8.9 in Android Studio)
+6. Copy files from `android-config/` to the Android project
+7. Open in Android Studio: `npx cap open android`
+8. Build APK from Android Studio

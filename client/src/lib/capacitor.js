@@ -132,3 +132,30 @@ export function setupAppLifecycle(onResume, onPause) {
     document.removeEventListener('visibilitychange', handleVisibilityChange);
   };
 }
+
+export function overrideVisibilityAPI() {
+  if (!isNative) return;
+
+  try {
+    Object.defineProperty(document, 'hidden', {
+      get: function() { return false; },
+      configurable: true,
+    });
+    Object.defineProperty(document, 'visibilityState', {
+      get: function() { return 'visible'; },
+      configurable: true,
+    });
+
+    var origAddEventListener = document.addEventListener.bind(document);
+    document.addEventListener = function(type, listener, options) {
+      if (type === 'visibilitychange') {
+        return;
+      }
+      return origAddEventListener(type, listener, options);
+    };
+
+    console.log('[Capacitor] Visibility API overridden - app will always report visible');
+  } catch (e) {
+    console.warn('[Capacitor] Failed to override visibility API:', e.message);
+  }
+}

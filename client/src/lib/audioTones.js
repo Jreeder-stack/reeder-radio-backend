@@ -1,4 +1,5 @@
 let audioContext = null;
+let permitAudio = null;
 
 function getAudioContext() {
   if (!audioContext) {
@@ -9,34 +10,17 @@ function getAudioContext() {
 
 export function playTalkPermitTone() {
   try {
-    const context = getAudioContext();
-    
-    if (context.state === 'suspended') {
-      context.resume();
+    if (permitAudio) {
+      permitAudio.pause();
+      permitAudio.currentTime = 0;
     }
-
-    const now = context.currentTime;
-    const frequency = 800;
-    const beepDuration = 0.040;
-    const gap = 0.030;
-
-    for (let i = 0; i < 3; i++) {
-      const osc = context.createOscillator();
-      osc.type = 'sine';
-      osc.frequency.value = frequency;
-      
-      const gain = context.createGain();
-      const startTime = now + i * (beepDuration + gap);
-      gain.gain.setValueAtTime(0.4, startTime);
-      gain.gain.setValueAtTime(0, startTime + beepDuration);
-      
-      osc.connect(gain);
-      gain.connect(context.destination);
-      osc.start(startTime);
-      osc.stop(startTime + beepDuration);
-    }
-  } catch (error) {
-    console.error('[Audio] Failed to play talk permit tone:', error);
+    permitAudio = new Audio('/sounds/talk-permit.mp3');
+    permitAudio.volume = 0.6;
+    permitAudio.play().catch(function(e) {
+      console.warn('[AudioTones] Talk permit playback failed:', e.message);
+    });
+  } catch (e) {
+    console.error('[Audio] Failed to play talk permit tone:', e);
   }
 }
 

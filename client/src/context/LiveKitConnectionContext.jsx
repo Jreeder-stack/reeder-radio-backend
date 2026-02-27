@@ -192,16 +192,28 @@ export function LiveKitConnectionProvider({ children, user }) {
       })
     );
     
-    const removeSignalingEmergency = signalingManager.on('emergencyStart', (data) => {
-      console.log('[LiveKitConnection] Emergency via signaling:', data);
-      useDispatchStore.getState().addEmergency({
+    const addEmergencyIfNew = (data, source) => {
+      const store = useDispatchStore.getState();
+      const already = store.emergencies.some(e => e.unitIdentity === data.unitId);
+      if (already) return;
+      console.log('[LiveKitConnection] Emergency via ' + source + ':', data);
+      store.addEmergency({
         id: 'sig-emergency-' + (data.unitId || 'unknown') + '-' + Date.now(),
         unitIdentity: data.unitId,
         channel: data.channelId,
         timestamp: new Date().toISOString(),
       });
+    };
+
+    const removeSignalingEmergency = signalingManager.on('emergencyStart', (data) => {
+      addEmergencyIfNew(data, 'emergencyStart');
     });
     listenerRemoversRef.current.push(removeSignalingEmergency);
+
+    const removeSignalingAlert = signalingManager.on('emergencyAlert', (data) => {
+      addEmergencyIfNew(data, 'emergencyAlert');
+    });
+    listenerRemoversRef.current.push(removeSignalingAlert);
 
     const removeSignalingEmergencyEnd = signalingManager.on('emergencyEnd', (data) => {
       console.log('[LiveKitConnection] Emergency END via signaling:', data);

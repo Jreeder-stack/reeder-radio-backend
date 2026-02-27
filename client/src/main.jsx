@@ -17,10 +17,15 @@ import { MobileLogin } from "./components/MobileRadio/MobileLogin.jsx";
 import { MobileSettings } from "./components/MobileRadio/MobileSettings.jsx";
 import { MobileScanMonitor } from "./components/MobileRadio/MobileScanMonitor.jsx";
 import { useMobile } from "./hooks/useMobile.js";
+import { overrideVisibilityAPI } from "./lib/capacitor.js";
 import "./index.css";
 
 const isCapacitorNative = typeof window !== 'undefined' && 
   window.Capacitor?.isNativePlatform?.() === true;
+
+if (isCapacitorNative) {
+  overrideVisibilityAPI();
+}
 
 if (isCapacitorNative && 'serviceWorker' in navigator) {
   navigator.serviceWorker.getRegistrations().then((registrations) => {

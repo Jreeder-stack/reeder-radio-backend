@@ -4,6 +4,7 @@ import { micPTTManager } from "./audio/MicPTTManager";
 import { PTT_STATES } from "./constants/pttStates";
 import { updateUnitStatus } from "./utils/api.js";
 import { useLiveKitConnection } from "./context/LiveKitConnectionContext.jsx";
+import { useSignalingContext } from "./context/SignalingContext.jsx";
 import { unlockAudio } from "./audio/iosAudioUnlock";
 
 // Track audio elements that have already been connected to a MediaElementSource
@@ -159,6 +160,11 @@ export default function App({ user, onLogout }) {
     recordActivity,
     toggleScanMode: contextToggleScanMode,
   } = useLiveKitConnection();
+
+  const {
+    joinChannel: signalingJoinChannel,
+    leaveChannel: signalingLeaveChannel,
+  } = useSignalingContext();
   
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem('darkMode');
@@ -747,8 +753,16 @@ export default function App({ user, onLogout }) {
     }
   }, [contextChannels]);
 
+  const prevSignalingChannelRef = useRef(null);
+
   useEffect(() => {
     if (connected && transmitChannel && livekitManager) {
+      if (prevSignalingChannelRef.current && prevSignalingChannelRef.current !== transmitChannel) {
+        signalingLeaveChannel(prevSignalingChannelRef.current);
+      }
+      signalingJoinChannel(transmitChannel);
+      prevSignalingChannelRef.current = transmitChannel;
+
       livekitManager.setPrimaryTxChannel(transmitChannel);
       broadcastStatus("idle", transmitChannel);
       startHeartbeat(transmitChannel);
@@ -762,13 +776,20 @@ export default function App({ user, onLogout }) {
         console.log('[Radio] Failed to register unit:', err.message);
       });
     }
-  }, [connected, transmitChannel, livekitManager, broadcastStatus, startHeartbeat, identity, userLocation, initializePresence]);
+  }, [connected, transmitChannel, livekitManager, broadcastStatus, startHeartbeat, identity, userLocation, initializePresence, signalingJoinChannel, signalingLeaveChannel]);
 
   const switchChannel = useCallback(async (newChannel) => {
     if (!connected || newChannel === selectedChannel) return;
     
+    if (selectedChannel) {
+      signalingLeaveChannel(selectedChannel);
+    }
+    
+    prevSignalingChannelRef.current = newChannel;
     setSelectedChannel(newChannel);
     setTransmitChannel(newChannel);
+    
+    signalingJoinChannel(newChannel);
     
     await contextSwitchChannel(newChannel, identity);
     
@@ -781,7 +802,7 @@ export default function App({ user, onLogout }) {
         initializePresence(room, newChannel);
       }
     }
-  }, [connected, selectedChannel, livekitManager, broadcastStatus, initializePresence, contextSwitchChannel, identity]);
+  }, [connected, selectedChannel, livekitManager, broadcastStatus, initializePresence, contextSwitchChannel, identity, signalingJoinChannel, signalingLeaveChannel]);
 
   const toggleScanChannel = useCallback(async (channel) => {
     if (channel === selectedChannel) return;

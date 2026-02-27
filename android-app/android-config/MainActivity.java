@@ -6,6 +6,8 @@ import android.content.Context;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.PowerManager;
 import android.util.Log;
 import android.view.KeyEvent;
@@ -162,6 +164,32 @@ public class MainActivity extends BridgeActivity {
     private static final int KEY_STAR = 17;
 
     private PowerManager.WakeLock screenWakeLock;
+    private Handler jsKeepaliveHandler;
+    private Runnable jsKeepaliveRunnable;
+    private boolean isScreenOff = false;
+
+    private void startJsKeepalive() {
+        if (jsKeepaliveHandler != null) return;
+        jsKeepaliveHandler = new Handler(Looper.getMainLooper());
+        jsKeepaliveRunnable = new Runnable() {
+            @Override
+            public void run() {
+                if (isScreenOff) {
+                    keepWebViewAlive();
+                }
+                jsKeepaliveHandler.postDelayed(this, 5000);
+            }
+        };
+        jsKeepaliveHandler.postDelayed(jsKeepaliveRunnable, 5000);
+    }
+
+    private void stopJsKeepalive() {
+        if (jsKeepaliveHandler != null && jsKeepaliveRunnable != null) {
+            jsKeepaliveHandler.removeCallbacks(jsKeepaliveRunnable);
+        }
+        jsKeepaliveHandler = null;
+        jsKeepaliveRunnable = null;
+    }
 
     private boolean isT320Key(int keyCode) {
         return keyCode == KEY_PTT || keyCode == KEY_ACC || keyCode == KEY_EMERGENCY
@@ -267,12 +295,22 @@ public class MainActivity extends BridgeActivity {
     @Override
     public void onPause() {
         super.onPause();
+        isScreenOff = true;
         keepWebViewAlive();
+        startJsKeepalive();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        isScreenOff = false;
+        stopJsKeepalive();
     }
 
     @Override
     public void onStop() {
         super.onStop();
+        isScreenOff = true;
         keepWebViewAlive();
     }
 
@@ -291,6 +329,7 @@ public class MainActivity extends BridgeActivity {
 
     @Override
     protected void onDestroy() {
+        stopJsKeepalive();
         if (screenWakeLock != null && screenWakeLock.isHeld()) {
             screenWakeLock.release();
         }
