@@ -59,12 +59,12 @@ export function MobileLogin({ onLogin }) {
   };
 
   if (isT320) {
-    var accent = '#00e5ff';
+    var accent = '#0077aa';
     return (
       <div style={{
         position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-        backgroundColor: '#0a0a0a',
-        color: '#ffffff',
+        backgroundColor: '#ffffff',
+        color: '#111111',
         fontFamily: "'Courier New', Courier, monospace",
         display: 'flex',
         flexDirection: 'column',
@@ -89,7 +89,7 @@ export function MobileLogin({ onLogin }) {
               COMMAND
             </div>
             <div style={{
-              color: '#ffffff',
+              color: '#111111',
               fontSize: '14px',
               fontWeight: 'bold',
               letterSpacing: '1px',
@@ -98,7 +98,7 @@ export function MobileLogin({ onLogin }) {
               COMMS
             </div>
             <div style={{
-              color: '#666666',
+              color: '#888888',
               fontSize: '8px',
               letterSpacing: '2px',
               marginTop: '2px',
@@ -109,9 +109,9 @@ export function MobileLogin({ onLogin }) {
 
           {error && (
             <div style={{
-              backgroundColor: '#330000',
-              border: '1px solid #660000',
-              color: '#ff4444',
+              backgroundColor: '#fff0f0',
+              border: '1px solid #cc0000',
+              color: '#cc0000',
               fontSize: '9px',
               padding: '3px 6px',
               marginBottom: '4px',
@@ -124,8 +124,9 @@ export function MobileLogin({ onLogin }) {
           <form onSubmit={handleLogin}>
             <div style={{ marginBottom: '4px' }}>
               <div style={{
-                color: '#888888',
+                color: '#555555',
                 fontSize: '9px',
+                fontWeight: 'bold',
                 letterSpacing: '2px',
                 marginBottom: '1px',
               }}>
@@ -137,9 +138,9 @@ export function MobileLogin({ onLogin }) {
                 onChange={function(e) { setUsername(e.target.value); }}
                 style={{
                   width: '100%',
-                  backgroundColor: '#111111',
-                  border: '1px solid #333333',
-                  color: '#ffffff',
+                  backgroundColor: '#f5f5f5',
+                  border: '2px solid #cccccc',
+                  color: '#111111',
                   fontFamily: "'Courier New', Courier, monospace",
                   fontSize: '14px',
                   padding: '6px 8px',
@@ -155,8 +156,9 @@ export function MobileLogin({ onLogin }) {
 
             <div style={{ marginBottom: '6px' }}>
               <div style={{
-                color: '#888888',
+                color: '#555555',
                 fontSize: '9px',
+                fontWeight: 'bold',
                 letterSpacing: '2px',
                 marginBottom: '1px',
               }}>
@@ -168,9 +170,9 @@ export function MobileLogin({ onLogin }) {
                 onChange={function(e) { setPassword(e.target.value); }}
                 style={{
                   width: '100%',
-                  backgroundColor: '#111111',
-                  border: '1px solid #333333',
-                  color: '#ffffff',
+                  backgroundColor: '#f5f5f5',
+                  border: '2px solid #cccccc',
+                  color: '#111111',
                   fontFamily: "'Courier New', Courier, monospace",
                   fontSize: '14px',
                   padding: '6px 8px',
@@ -190,7 +192,7 @@ export function MobileLogin({ onLogin }) {
               style={{
                 width: '100%',
                 backgroundColor: accent,
-                color: '#000000',
+                color: '#ffffff',
                 fontFamily: "'Courier New', Courier, monospace",
                 fontSize: '13px',
                 fontWeight: 'bold',
@@ -207,7 +209,7 @@ export function MobileLogin({ onLogin }) {
 
           <div style={{
             textAlign: 'center',
-            color: '#444444',
+            color: '#999999',
             fontSize: '8px',
             letterSpacing: '1px',
             marginTop: '8px',

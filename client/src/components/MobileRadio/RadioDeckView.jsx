@@ -896,11 +896,11 @@ export function RadioDeckView({ user, onLogout }) {
   }, []);
 
   if (isT320) {
-    var t320Bg = '#111118';
-    var t320Accent = '#00e5ff';
-    var t320Border = '#2a2a3a';
-    var t320TextPrimary = '#f0f0f0';
-    var t320TextSecondary = '#aaaacc';
+    var t320Bg = '#ffffff';
+    var t320Accent = '#0077aa';
+    var t320Border = '#cccccc';
+    var t320TextPrimary = '#111111';
+    var t320TextSecondary = '#555555';
     var t320EmergBg = isEmergency ? '#ff0000' : t320Bg;
 
     return (
@@ -934,7 +934,7 @@ export function RadioDeckView({ user, onLogout }) {
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            borderBottom: '1px solid ' + t320Border,
+            borderBottom: '2px solid ' + t320Border,
             paddingBottom: '4px',
             marginBottom: '4px',
             fontSize: '12px',
@@ -945,14 +945,14 @@ export function RadioDeckView({ user, onLogout }) {
             <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               {keysLocked && (
                 <span style={{
-                  color: '#ffcc00',
+                  color: '#cc8800',
                   fontSize: '11px',
                   fontWeight: 'bold',
                   animation: 'lockBlink 2s infinite',
                 }}>LOCKED</span>
               )}
               <span style={{
-                color: signalingConnected ? '#44ff88' : '#ff5555',
+                color: signalingConnected ? '#008844' : '#cc0000',
                 fontSize: '11px',
                 fontWeight: 'bold',
               }}>
@@ -962,7 +962,7 @@ export function RadioDeckView({ user, onLogout }) {
           </div>
 
           <div style={{
-            borderBottom: '1px solid ' + t320Border,
+            borderBottom: '2px solid ' + t320Border,
             paddingBottom: '6px',
             marginBottom: '6px',
           }}>
@@ -976,12 +976,11 @@ export function RadioDeckView({ user, onLogout }) {
               {currentZone}
             </div>
             <div style={{
-              color: '#ffffff',
+              color: t320TextPrimary,
               fontSize: '26px',
               fontWeight: 'bold',
               letterSpacing: '1px',
               lineHeight: '1.2',
-              textShadow: '0 0 10px ' + t320Accent + '60',
             }}>
               {channelsLoading ? '---' : (currentChannel ? currentChannel.name : 'NO CH')}
             </div>
@@ -1000,16 +999,15 @@ export function RadioDeckView({ user, onLogout }) {
                 <div style={{
                   fontSize: '40px',
                   fontWeight: 'bold',
-                  color: '#ff4444',
+                  color: '#cc0000',
                   letterSpacing: '6px',
-                  textShadow: '0 0 25px #ff4444, 0 0 50px #ff000066',
                   animation: 'txPulse 1s infinite',
                 }}>
                   TX
                 </div>
                 <div style={{
                   fontSize: '12px',
-                  color: '#ff9999',
+                  color: '#cc0000',
                   marginTop: '6px',
                   letterSpacing: '2px',
                 }}>
@@ -1021,16 +1019,15 @@ export function RadioDeckView({ user, onLogout }) {
                 <div style={{
                   fontSize: '28px',
                   fontWeight: 'bold',
-                  color: '#44ff88',
+                  color: '#008844',
                   letterSpacing: '4px',
-                  textShadow: '0 0 20px #44ff88, 0 0 40px #00ff0044',
                   animation: 'rxPulse 1.5s infinite',
                 }}>
                   RX
                 </div>
                 <div style={{
                   fontSize: '18px',
-                  color: '#66ffaa',
+                  color: '#006633',
                   marginTop: '8px',
                   fontWeight: 'bold',
                   letterSpacing: '1px',
@@ -1054,7 +1051,7 @@ export function RadioDeckView({ user, onLogout }) {
               <div style={{ textAlign: 'center' }}>
                 <div style={{
                   fontSize: '16px',
-                  color: t320TextSecondary,
+                  color: '#999999',
                   letterSpacing: '3px',
                 }}>
                   READY
@@ -1067,11 +1064,11 @@ export function RadioDeckView({ user, onLogout }) {
             <div style={{
               textAlign: 'center',
               fontSize: '11px',
-              color: '#44ff88',
+              color: '#008844',
               fontWeight: 'bold',
               letterSpacing: '2px',
               paddingTop: '4px',
-              borderTop: '1px solid ' + t320Border,
+              borderTop: '2px solid ' + t320Border,
             }}>
               SCAN ACTIVE
             </div>
@@ -1087,7 +1084,7 @@ export function RadioDeckView({ user, onLogout }) {
         '}} />
         <div style={{
           position: 'absolute', bottom: '2px', left: '4px', right: '4px',
-          color: '#555', fontSize: '7px', fontFamily: 'monospace',
+          color: '#aaa', fontSize: '7px', fontFamily: 'monospace',
           textAlign: 'center',
         }}>
           {'iw:' + (window.innerWidth||0) + ' sw:' + (window.screen?window.screen.width:0) + ' dpr:' + (window.devicePixelRatio||1) + ' cap:' + (!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform()))}
