@@ -35,6 +35,8 @@ public class MainActivity extends BridgeActivity {
         
         super.onCreate(savedInstanceState);
         
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        
         requestAllPermissions();
         
         configureWebViewForWebRTC();
@@ -222,8 +224,11 @@ public class MainActivity extends BridgeActivity {
         int keyCode = event.getKeyCode();
         int action = event.getAction();
 
-        if (isT320Key(keyCode) && action == KeyEvent.ACTION_DOWN) {
-            wakeScreen();
+        if (isT320Key(keyCode)) {
+            if (action == KeyEvent.ACTION_DOWN) {
+                wakeScreen();
+            }
+            keepWebViewAlive();
         }
 
         HardwarePttPlugin pttPlugin = HardwarePttPlugin.getInstance();
@@ -257,6 +262,31 @@ public class MainActivity extends BridgeActivity {
             return true;
         }
         return super.onKeyUp(keyCode, event);
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        keepWebViewAlive();
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+        keepWebViewAlive();
+    }
+
+    private void keepWebViewAlive() {
+        try {
+            WebView webView = this.bridge.getWebView();
+            if (webView != null) {
+                webView.onResume();
+                webView.resumeTimers();
+                Log.d(TAG, "WebView kept alive after lifecycle pause");
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to keep WebView alive: " + e.getMessage());
+        }
     }
 
     @Override
