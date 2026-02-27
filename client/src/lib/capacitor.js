@@ -118,19 +118,22 @@ export function setupAppLifecycle(onResume, onPause) {
     return () => {};
   }
   
-  const handleVisibilityChange = () => {
-    if (document.visibilityState === 'visible') {
-      onResume?.();
-    } else {
-      onPause?.();
-    }
-  };
+  if (window.Capacitor?.Plugins?.App) {
+    const appPlugin = window.Capacitor.Plugins.App;
+    const stateHandler = (state) => {
+      if (state.isActive) {
+        onResume?.();
+      } else {
+        onPause?.();
+      }
+    };
+    appPlugin.addListener('appStateChange', stateHandler);
+    return () => {
+      appPlugin.removeAllListeners?.();
+    };
+  }
   
-  document.addEventListener('visibilitychange', handleVisibilityChange);
-  
-  return () => {
-    document.removeEventListener('visibilitychange', handleVisibilityChange);
-  };
+  return () => {};
 }
 
 export function overrideVisibilityAPI() {
@@ -146,13 +149,30 @@ export function overrideVisibilityAPI() {
       configurable: true,
     });
 
-    var origAddEventListener = document.addEventListener.bind(document);
+    var origDocAddEventListener = document.addEventListener.bind(document);
     document.addEventListener = function(type, listener, options) {
       if (type === 'visibilitychange') {
         return;
       }
-      return origAddEventListener(type, listener, options);
+      return origDocAddEventListener(type, listener, options);
     };
+
+    var origWinAddEventListener = window.addEventListener.bind(window);
+    window.addEventListener = function(type, listener, options) {
+      if (type === 'visibilitychange') {
+        return;
+      }
+      return origWinAddEventListener(type, listener, options);
+    };
+
+    if (typeof Page !== 'undefined' && Page.prototype) {
+      try {
+        Object.defineProperty(Page.prototype, 'hidden', {
+          get: function() { return false; },
+          configurable: true,
+        });
+      } catch (e) {}
+    }
 
     console.log('[Capacitor] Visibility API overridden - app will always report visible');
   } catch (e) {

@@ -309,8 +309,12 @@ export function LiveKitConnectionProvider({ children, user }) {
     console.log(`[LiveKitConnection] Disconnected from ${channelName}`);
   }, [clearReconnectTimer]);
 
-  const switchChannel = useCallback(async (newChannelName, identity, isDispatcher = false) => {
-    if (!newChannelName || !identity) return;
+  const switchChannel = useCallback(async (newChannelName, callerIdentity, isDispatcher = false) => {
+    const resolvedIdentity = callerIdentity || identity;
+    if (!newChannelName || !resolvedIdentity) {
+      console.warn('[LiveKitConnection] switchChannel called without channelName or identity', { newChannelName, resolvedIdentity });
+      return;
+    }
     
     recordActivity();
     
@@ -318,7 +322,7 @@ export function LiveKitConnectionProvider({ children, user }) {
     const isDispatcherRoute = currentPath === '/dispatcher';
     
     if (isDispatcherRoute || isDispatcher) {
-      await connectToChannel(newChannelName, identity);
+      await connectToChannel(newChannelName, resolvedIdentity);
       return;
     }
     
@@ -334,7 +338,7 @@ export function LiveKitConnectionProvider({ children, user }) {
     }
     
     if (!currentChannels.includes(newChannelName)) {
-      await connectToChannel(newChannelName, identity);
+      await connectToChannel(newChannelName, resolvedIdentity);
     }
     
     setActiveChannel(newChannelName);
@@ -345,7 +349,7 @@ export function LiveKitConnectionProvider({ children, user }) {
       setConnected(true);
       setConnectionStatus('connected');
     }
-  }, [recordActivity, connectToChannel, disconnectFromChannel, scanMode, scanChannels, location.pathname, setConnected]);
+  }, [identity, recordActivity, connectToChannel, disconnectFromChannel, scanMode, scanChannels, location.pathname, setConnected]);
 
   const toggleScanMode = useCallback(async (enabled, channelsToScan, identity) => {
     recordActivity();

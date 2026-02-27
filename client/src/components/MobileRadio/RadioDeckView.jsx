@@ -300,10 +300,10 @@ export function RadioDeckView({ user, onLogout }) {
   useEffect(() => {
     if (currentChannel && !hasJoinedRef.current) {
       hasJoinedRef.current = true;
-      contextSwitchChannel(currentChannel.name);
+      contextSwitchChannel(currentChannel.name, identity);
       signalingJoinChannel(currentChannel.name);
     }
-  }, [currentChannel, contextSwitchChannel, signalingJoinChannel]);
+  }, [currentChannel, contextSwitchChannel, signalingJoinChannel, identity]);
 
 
   useEffect(() => {
@@ -525,11 +525,11 @@ export function RadioDeckView({ user, onLogout }) {
       const channel = filteredChannels[currentChannelIndex];
       if (channel) {
         hasJoinedRef.current = true;
-        contextSwitchChannel(channel.name);
+        contextSwitchChannel(channel.name, identity);
         signalingJoinChannel(channel.name);
       }
     }
-  }, [currentZoneIndex, filteredChannels, currentChannelIndex, contextSwitchChannel, signalingJoinChannel]);
+  }, [currentZoneIndex, filteredChannels, currentChannelIndex, contextSwitchChannel, signalingJoinChannel, identity]);
 
   const handleChannelUp = () => {
     if (filteredChannels.length === 0) return;
@@ -542,7 +542,7 @@ export function RadioDeckView({ user, onLogout }) {
     setCurrentChannelIndex(newIndex);
     const channel = filteredChannels[newIndex];
     if (channel) {
-      contextSwitchChannel(channel.name);
+      contextSwitchChannel(channel.name, identity);
       signalingJoinChannel(channel.name);
     }
   };
@@ -558,7 +558,7 @@ export function RadioDeckView({ user, onLogout }) {
     setCurrentChannelIndex(newIndex);
     const channel = filteredChannels[newIndex];
     if (channel) {
-      contextSwitchChannel(channel.name);
+      contextSwitchChannel(channel.name, identity);
       signalingJoinChannel(channel.name);
     }
   };
@@ -616,7 +616,10 @@ export function RadioDeckView({ user, onLogout }) {
     const channelName = transmitChannelRef.current;
     if (!channelName) return;
     
-    await ensureConnected();
+    const isConn = await ensureConnected(channelName);
+    if (!isConn) {
+      console.warn('[RadioDeck PTT] ensureConnected failed for', channelName);
+    }
     const room = livekitManager?.getRoom(channelName);
     if (!room) return;
     

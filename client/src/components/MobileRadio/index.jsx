@@ -83,11 +83,11 @@ export default function MobileRadioView({ user, onLogout }) {
       hasJoinedRef.current = true;
       const channel = channels.find(ch => String(ch.id) === currentChannel);
       if (channel) {
-        contextSwitchChannel(channel.name);
+        contextSwitchChannel(channel.name, identity);
         signalingJoinChannel(channel.name);
       }
     }
-  }, [currentChannel, channels, contextSwitchChannel, signalingJoinChannel]);
+  }, [currentChannel, channels, contextSwitchChannel, signalingJoinChannel, identity]);
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -237,7 +237,7 @@ export default function MobileRadioView({ user, onLogout }) {
     setCurrentChannel(channelId);
     const channel = channels.find(ch => String(ch.id) === channelId);
     if (channel) {
-      contextSwitchChannel(channel.name);
+      contextSwitchChannel(channel.name, identity);
       signalingJoinChannel(channel.name);
     }
   };
