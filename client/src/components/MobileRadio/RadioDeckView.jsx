@@ -125,6 +125,7 @@ export function RadioDeckView({ user, onLogout }) {
     return saved !== 'false';
   });
   const [showScanList, setShowScanList] = useState(false);
+  const [showT320Menu, setShowT320Menu] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
   const [unitStatus, setUnitStatus] = useState('off_duty');
   const [hasActiveCall, setHasActiveCall] = useState(false);
@@ -1161,22 +1162,143 @@ export function RadioDeckView({ user, onLogout }) {
             padding: '6px 4px',
             borderTop: '2px solid #333333',
           }}>
-            <span style={{
-              color: isScanning ? '#00cc66' : '#888888',
-              fontSize: '12px', fontWeight: 'bold',
-              letterSpacing: '1px',
-            }}>SCNL</span>
-            <span style={{
-              color: '#cccccc', fontSize: '12px', fontWeight: 'bold',
-              letterSpacing: '1px',
-            }}>{clockTime}</span>
-            <span style={{
-              color: batteryLevel !== null && batteryLevel <= 20 ? '#cc0000' : '#cccccc',
-              fontSize: '12px', fontWeight: 'bold',
-              letterSpacing: '1px',
-            }}>{batteryLevel !== null ? batteryLevel + '%' : 'N/A'}</span>
+            <button
+              onClick={() => setShowT320Menu(showT320Menu === 'scan' ? null : 'scan')}
+              style={{
+                background: 'none', border: 'none', padding: '4px 8px',
+                color: isScanning ? '#00cc66' : '#888888',
+                fontSize: '12px', fontWeight: 'bold',
+                letterSpacing: '1px', cursor: 'pointer',
+                fontFamily: 'inherit',
+              }}
+            >SCNL</button>
+            <button
+              onClick={() => setShowT320Menu(showT320Menu === 'clock' ? null : 'clock')}
+              style={{
+                background: 'none', border: 'none', padding: '4px 8px',
+                color: '#cccccc', fontSize: '12px', fontWeight: 'bold',
+                letterSpacing: '1px', cursor: 'pointer',
+                fontFamily: 'inherit',
+              }}
+            >{clockTime}</button>
+            <button
+              onClick={() => setShowT320Menu(showT320Menu === 'batt' ? null : 'batt')}
+              style={{
+                background: 'none', border: 'none', padding: '4px 8px',
+                color: batteryLevel !== null && batteryLevel <= 20 ? '#cc0000' : '#cccccc',
+                fontSize: '12px', fontWeight: 'bold',
+                letterSpacing: '1px', cursor: 'pointer',
+                fontFamily: 'inherit',
+              }}
+            >{batteryLevel !== null ? batteryLevel + '%' : 'N/A'}</button>
           </div>
         </div>
+
+        {showT320Menu === 'scan' && (
+          <div style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: '#ffffff',
+            fontFamily: "'Courier New', Courier, monospace",
+            display: 'flex', flexDirection: 'column',
+            zIndex: 100,
+            color: '#111111',
+          }}>
+            <div style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              padding: '6px 10px',
+              borderBottom: '2px solid #333333',
+              backgroundColor: '#f0f0f0',
+            }}>
+              <span style={{ fontSize: '13px', fontWeight: 'bold', letterSpacing: '2px' }}>SCAN LIST</span>
+              <button
+                onClick={toggleScanning}
+                style={{
+                  background: isScanning ? '#00cc66' : '#888888',
+                  color: '#ffffff', border: 'none',
+                  padding: '3px 10px', fontSize: '11px',
+                  fontWeight: 'bold', letterSpacing: '1px',
+                  fontFamily: 'inherit', cursor: 'pointer',
+                }}
+              >{isScanning ? 'ON' : 'OFF'}</button>
+            </div>
+
+            <div style={{
+              flex: 1, overflowY: 'auto', padding: '4px 6px',
+            }}>
+              {scanChannels.map(function(ch) {
+                return (
+                  <div
+                    key={ch.id}
+                    onClick={function() { toggleScanChannel(ch.id); }}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '8px',
+                      padding: '8px 6px',
+                      borderBottom: '1px solid #dddddd',
+                      cursor: 'pointer',
+                      backgroundColor: ch.enabled ? '#e6f7e6' : 'transparent',
+                    }}
+                  >
+                    <span style={{
+                      width: '18px', height: '18px',
+                      border: '2px solid #333333',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '14px', fontWeight: 'bold',
+                      backgroundColor: ch.enabled ? '#00aa44' : '#ffffff',
+                      color: ch.enabled ? '#ffffff' : 'transparent',
+                      flexShrink: 0,
+                    }}>{ch.enabled ? '\u2713' : ''}</span>
+                    <span style={{
+                      fontSize: '13px', fontWeight: ch.enabled ? 'bold' : 'normal',
+                      color: '#111111',
+                    }}>{ch.name}</span>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div style={{
+              display: 'flex', justifyContent: 'space-around', alignItems: 'center',
+              backgroundColor: '#1a1a1a', padding: '6px 4px',
+              borderTop: '2px solid #333333',
+            }}>
+              <button
+                onClick={function() { setShowT320Menu(null); }}
+                style={{
+                  background: 'none', border: 'none', padding: '4px 8px',
+                  color: '#00cc66', fontSize: '12px', fontWeight: 'bold',
+                  letterSpacing: '1px', cursor: 'pointer',
+                  fontFamily: 'inherit',
+                }}
+              >BACK</button>
+              <button
+                onClick={function() {
+                  scanChannels.forEach(function(ch) {
+                    if (!ch.enabled) toggleScanChannel(ch.id);
+                  });
+                }}
+                style={{
+                  background: 'none', border: 'none', padding: '4px 8px',
+                  color: '#cccccc', fontSize: '12px', fontWeight: 'bold',
+                  letterSpacing: '1px', cursor: 'pointer',
+                  fontFamily: 'inherit',
+                }}
+              >ALL</button>
+              <button
+                onClick={function() {
+                  scanChannels.forEach(function(ch) {
+                    if (ch.enabled) toggleScanChannel(ch.id);
+                  });
+                }}
+                style={{
+                  background: 'none', border: 'none', padding: '4px 8px',
+                  color: '#cccccc', fontSize: '12px', fontWeight: 'bold',
+                  letterSpacing: '1px', cursor: 'pointer',
+                  fontFamily: 'inherit',
+                }}
+              >NONE</button>
+            </div>
+          </div>
+        )}
 
         <style dangerouslySetInnerHTML={{ __html: '\
           @keyframes txPulse { 0%,100%{opacity:1} 50%{opacity:0.5} }\
