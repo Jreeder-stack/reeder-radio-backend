@@ -194,7 +194,10 @@ const useDispatchStore = create(
       getTxChannelNames: () => {
         const state = get();
         return state.txChannelIds
-          .map(id => state.channels.find(ch => ch.id === id)?.name)
+          .map(id => {
+            const ch = state.channels.find(c => c.id === id);
+            return ch ? (ch.room_key || ((ch.zone || 'Default') + '__' + ch.name)) : null;
+          })
           .filter(Boolean);
       },
       

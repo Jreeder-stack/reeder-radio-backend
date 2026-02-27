@@ -60,8 +60,9 @@ export default function ChannelTile({ channel, onRemove }) {
   const level = channelLevels[channel.id] || 0;
   const volumeLevel = channelLevels[`volume_${channel.id}`] ?? 100;
   const activeTransmission = activeTransmissions[channel.id];
-  const unitsInChannel = unitsByChannel[channel.name] || [];
-  const hasEmergency = emergencies.some(e => e.channel === channel.name);
+  const roomKey = channel.room_key || ((channel.zone || 'Default') + '__' + channel.name);
+  const unitsInChannel = unitsByChannel[roomKey] || [];
+  const hasEmergency = emergencies.some(e => e.channel === roomKey);
 
   const handleVolumeChange = (e) => {
     setChannelLevel(`volume_${channel.id}`, parseInt(e.target.value, 10));
@@ -78,9 +79,9 @@ export default function ChannelTile({ channel, onRemove }) {
   const handleMuteToggle = () => {
     toggleMute(channel.id);
     if (mutedChannelIds.includes(channel.id)) {
-      livekitManager.unmuteChannel(channel.name);
+      livekitManager.unmuteChannel(roomKey);
     } else {
-      livekitManager.muteChannel(channel.name);
+      livekitManager.muteChannel(roomKey);
     }
   };
 

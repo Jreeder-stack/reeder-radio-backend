@@ -278,7 +278,7 @@ class AIDispatcher {
   }
 
   async start(channelName, options = {}) {
-    const { connectImmediately = false } = options;
+    const { connectImmediately = false, roomKey = null } = options;
     
     if (!channelName) {
       this.log('START_SKIPPED', { reason: 'No channel configured' });
@@ -301,11 +301,12 @@ class AIDispatcher {
       await this.leaveCurrentRoom();
     }
 
-    this.configuredChannel = channelName;
+    this.configuredChannel = roomKey || channelName;
+    this.displayChannel = channelName;
     this.isRunning = true;
     this.isMuted = false;
     
-    this.log('STARTED_STANDBY', { channel: channelName, mode: 'on-demand' });
+    this.log('STARTED_STANDBY', { channel: channelName, roomKey: this.configuredChannel, mode: 'on-demand' });
   }
 
   async leaveCurrentRoom() {
@@ -1310,10 +1311,11 @@ async function setupSignalingIntegration(channelName) {
   }
 }
 
-export async function startDispatcher(channelName) {
+export async function startDispatcher(channelName, roomKey = null) {
   const dispatcher = getDispatcher();
-  await dispatcher.start(channelName);
-  await setupSignalingIntegration(channelName);
+  const resolvedRoomKey = roomKey || channelName;
+  await dispatcher.start(channelName, { roomKey: resolvedRoomKey });
+  await setupSignalingIntegration(resolvedRoomKey);
 }
 
 export async function stopDispatcher() {
@@ -1334,9 +1336,9 @@ export async function stopDispatcher() {
   await dispatcher.stop();
 }
 
-export async function restartDispatcher(channelName) {
+export async function restartDispatcher(channelName, roomKey = null) {
   await stopDispatcher();
-  await startDispatcher(channelName);
+  await startDispatcher(channelName, roomKey);
 }
 
 export async function broadcastMessage(channelName, message) {

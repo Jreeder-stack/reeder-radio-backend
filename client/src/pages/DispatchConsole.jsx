@@ -123,17 +123,20 @@ export default function DispatchConsole({ user, onLogout }) {
   useEffect(() => {
     if (!signalingConnected || !channels.length) return;
     
-    const channelNames = gridChannelIds
-      .map(id => channels.find(c => c.id === id)?.name)
+    const roomKeys = gridChannelIds
+      .map(id => {
+        const ch = channels.find(c => c.id === id);
+        return ch ? (ch.room_key || ((ch.zone || 'Default') + '__' + ch.name)) : null;
+      })
       .filter(Boolean);
     
-    channelNames.forEach(channelName => {
-      joinChannel(channelName);
+    roomKeys.forEach(rk => {
+      joinChannel(rk);
     });
     
     return () => {
-      channelNames.forEach(channelName => {
-        leaveChannel(channelName);
+      roomKeys.forEach(rk => {
+        leaveChannel(rk);
       });
     };
   }, [signalingConnected, gridChannelIds, channels, joinChannel, leaveChannel]);
@@ -321,18 +324,18 @@ export default function DispatchConsole({ user, onLogout }) {
               <div className="flex flex-col h-full">
                 <div className="px-3 py-2 border-b border-dispatch-border">
                   <select
-                    value={selectedChatChannel || orderedChannels[0]?.name || ''}
+                    value={selectedChatChannel || (orderedChannels[0] ? (orderedChannels[0].room_key || ((orderedChannels[0].zone || 'Default') + '__' + orderedChannels[0].name)) : '')}
                     onChange={(e) => setSelectedChatChannel(e.target.value)}
                     className="dispatch-select"
                   >
                     {orderedChannels.map(ch => (
-                      <option key={ch.id} value={ch.name}>{ch.name}</option>
+                      <option key={ch.id} value={ch.room_key || ((ch.zone || 'Default') + '__' + ch.name)}>{ch.zone ? `${ch.zone} - ${ch.name}` : ch.name}</option>
                     ))}
                   </select>
                 </div>
                 <div className="flex-1 overflow-hidden">
                   <ChannelChat 
-                    channel={selectedChatChannel || orderedChannels[0]?.name} 
+                    channel={selectedChatChannel || (orderedChannels[0] ? (orderedChannels[0].room_key || ((orderedChannels[0].zone || 'Default') + '__' + orderedChannels[0].name)) : null)} 
                     currentUser={user}
                   />
                 </div>

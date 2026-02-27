@@ -175,6 +175,7 @@ export default function App({ user, onLogout }) {
   const connected = connectionStatus === 'connected';
   const connecting = connectionStatus === 'connecting';
   const [zonesData, setZonesData] = useState({});
+  const [channelDisplayNames, setChannelDisplayNames] = useState({});
   const [channelsLoaded, setChannelsLoaded] = useState(false);
   const [noChannelsAccess, setNoChannelsAccess] = useState(false);
   const [connectionError, setConnectionError] = useState(null);
@@ -182,6 +183,7 @@ export default function App({ user, onLogout }) {
   const [selectedZone, setSelectedZone] = useState("");
   const [selectedChannel, setSelectedChannel] = useState("");
   const [transmitChannel, setTransmitChannel] = useState("");
+  const getDisplayName = useCallback((roomKey) => channelDisplayNames[roomKey] || roomKey, [channelDisplayNames]);
   const [unitPresence, setUnitPresence] = useState({});
   const [isTalking, setIsTalking] = useState(false);
   const [pttPressed, setPttPressed] = useState(false); // Visual feedback only - doesn't change button text
@@ -726,13 +728,17 @@ export default function App({ user, onLogout }) {
     }
     
     const grouped = {};
+    const displayNames = {};
     contextChannels.forEach((ch) => {
       const zoneName = ch.zone || 'Default';
+      const roomKey = ch.room_key || (zoneName + '__' + ch.name);
+      displayNames[roomKey] = ch.name;
       if (!grouped[zoneName]) {
         grouped[zoneName] = [];
       }
-      grouped[zoneName].push(ch.name);
+      grouped[zoneName].push(roomKey);
     });
+    setChannelDisplayNames(displayNames);
     
     if (Object.keys(grouped).length > 0) {
       setZonesData(grouped);
@@ -1199,7 +1205,7 @@ export default function App({ user, onLogout }) {
                 <div style={{ fontSize: 10, opacity: 0.5 }}>{selectedZone.split(" - ")[1] || selectedZone}</div>
                 <h2 style={{ margin: 0, fontSize: 18, display: "flex", alignItems: "center", gap: 6 }}>
                   <StatusDot status={isTalking ? "transmitting" : activeAudio ? "transmitting" : "idle"} />
-                  {selectedChannel}
+                  {getDisplayName(selectedChannel)}
                 </h2>
               </div>
             </div>
@@ -1275,7 +1281,7 @@ export default function App({ user, onLogout }) {
                     fontSize: 11,
                   }}
                 >
-                  {ch}
+                  {getDisplayName(ch)}
                 </button>
               ))}
             </div>
@@ -1340,7 +1346,7 @@ export default function App({ user, onLogout }) {
                           fontSize: 9,
                         }}
                       >
-                        {ch}
+                        {getDisplayName(ch)}
                       </button>
                     ))}
                   </div>
@@ -1363,7 +1369,7 @@ export default function App({ user, onLogout }) {
               {Object.entries(unitPresence).map(([channel, units]) => (
                 Object.keys(units).length > 0 && (
                   <div key={channel} style={{ marginBottom: 4 }}>
-                    <div style={{ fontSize: 9, opacity: 0.5 }}>{channel}</div>
+                    <div style={{ fontSize: 9, opacity: 0.5 }}>{getDisplayName(channel)}</div>
                     {Object.entries(units).map(([unitId, info]) => (
                       <div key={unitId} style={{ fontSize: 11, display: "flex", alignItems: "center", gap: 4 }}>
                         <StatusDot status={info.status} />
@@ -1389,7 +1395,7 @@ export default function App({ user, onLogout }) {
               flexShrink: 0,
             }}>
               <StatusDot status="transmitting" />
-              RX: {activeAudio.from} on {activeAudio.channel}
+              RX: {activeAudio.from} on {getDisplayName(activeAudio.channel)}
             </div>
           )}
 
@@ -1453,7 +1459,7 @@ export default function App({ user, onLogout }) {
             fontSize: 11,
             flexShrink: 0,
           }}>
-            TX: {transmitChannel} | RX: {[selectedChannel, ...scanChannels].join(", ")}
+            TX: {getDisplayName(transmitChannel)} | RX: {[selectedChannel, ...scanChannels].map(getDisplayName).join(", ")}
           </div>
 
           {/* Fixed bottom buttons */}

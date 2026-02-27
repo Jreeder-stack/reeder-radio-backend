@@ -2,7 +2,7 @@ import 'dotenv/config';
 import { createServer } from 'http';
 import app from './app.js';
 import { config, validateEnv } from './config/env.js';
-import { initializeDatabase, isAiDispatchEnabled, getAiDispatchChannel } from './db/index.js';
+import { initializeDatabase, isAiDispatchEnabled, getAiDispatchChannel, getAllChannels } from './db/index.js';
 import { startDispatcher, getDispatcher } from './services/aiDispatchService.js';
 import { isConfigured as isAzureConfigured } from './services/azureSpeechService.js';
 import { signalingService } from './services/signalingService.js';
@@ -35,8 +35,11 @@ async function start() {
         if (aiEnabled) {
           const dispatchChannel = await getAiDispatchChannel();
           if (dispatchChannel) {
-            console.log(`Auto-starting AI Dispatcher on channel: ${dispatchChannel}`);
-            await startDispatcher(dispatchChannel);
+            const allChannels = await getAllChannels();
+            const channelData = allChannels.find(ch => ch.room_key === dispatchChannel || ch.name === dispatchChannel);
+            const roomKey = channelData?.room_key || dispatchChannel;
+            console.log(`Auto-starting AI Dispatcher on channel: ${dispatchChannel} (room: ${roomKey})`);
+            await startDispatcher(dispatchChannel, roomKey);
           } else {
             console.log('AI Dispatcher: No dispatch channel configured, skipping auto-start');
           }

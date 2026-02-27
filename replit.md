@@ -31,6 +31,7 @@ The application is designed as a Progressive Web App (PWA) with a single codebas
 - **Dispatcher Map:** A real-time map displaying unit locations using Leaflet with OpenStreetMap tiles, updated via LiveKit heartbeats.
 - **Channel Chat:** Each channel has a chat tab in the Dispatcher Console, displaying text messages and playable voice messages from PTT transmissions with transcription capabilities.
 - **Admin System:** Provides user and channel management, role assignment, and activity logging. The Zones & Channels screen uses an accordion layout where zones are expandable cards showing their channels. Channel names are unique per-zone (not globally), allowing the same channel name in different zones. The database enforces `UNIQUE(name, zone_id)`.
+- **Zone-Scoped Channel Identity (`room_key`):** Each channel has a unique `room_key` computed as `COALESCE(zone, 'Default') || '__' || name` (double underscore separator). This `room_key` is used as the LiveKit room name, Socket.IO signaling channel ID, presence tracking key, and unit status identifier. The raw channel `name` is used only for display. This ensures channels with the same name in different zones (e.g., "OPS-1" in "PHILA" and "OPS-1" in "OPS") use separate rooms and don't cross-talk. The AI Dispatcher config also stores `room_key` (not channel name). Backend returns `room_key` from `GET /api/channels`.
 
 ## External Dependencies
 - **LiveKit:** Real-time audio streaming and data channel communication.

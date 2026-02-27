@@ -51,10 +51,16 @@ export default function MobileRadioView({ user, onLogout }) {
   const rxAudioElementsRef = useRef(new Set());
   const hasJoinedRef = useRef(false);
   
+  const getRoomKey = useCallback((ch) => {
+    if (!ch) return '';
+    return ch.room_key || ((ch.zone || 'Default') + '__' + ch.name);
+  }, []);
+
   useEffect(() => {
-    transmitChannelRef.current = currentChannel ? 
-      channels.find(ch => String(ch.id) === currentChannel)?.name || '' : '';
-  }, [currentChannel, channels]);
+    if (!currentChannel) { transmitChannelRef.current = ''; return; }
+    const ch = channels.find(c => String(c.id) === currentChannel);
+    transmitChannelRef.current = ch ? getRoomKey(ch) : '';
+  }, [currentChannel, channels, getRoomKey]);
   
   useEffect(() => {
     isEmergencyRef.current = isEmergency;
@@ -83,11 +89,12 @@ export default function MobileRadioView({ user, onLogout }) {
       hasJoinedRef.current = true;
       const channel = channels.find(ch => String(ch.id) === currentChannel);
       if (channel) {
-        contextSwitchChannel(channel.name, identity);
-        signalingJoinChannel(channel.name);
+        const rk = getRoomKey(channel);
+        contextSwitchChannel(rk, identity);
+        signalingJoinChannel(rk);
       }
     }
-  }, [currentChannel, channels, contextSwitchChannel, signalingJoinChannel, identity]);
+  }, [currentChannel, channels, contextSwitchChannel, signalingJoinChannel, identity, getRoomKey]);
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -231,14 +238,15 @@ export default function MobileRadioView({ user, onLogout }) {
   const handleChannelChange = (channelId) => {
     const oldChannel = channels.find(ch => String(ch.id) === currentChannel);
     if (oldChannel) {
-      signalingLeaveChannel(oldChannel.name);
+      signalingLeaveChannel(getRoomKey(oldChannel));
     }
     
     setCurrentChannel(channelId);
     const channel = channels.find(ch => String(ch.id) === channelId);
     if (channel) {
-      contextSwitchChannel(channel.name, identity);
-      signalingJoinChannel(channel.name);
+      const rk = getRoomKey(channel);
+      contextSwitchChannel(rk, identity);
+      signalingJoinChannel(rk);
     }
   };
 
@@ -308,18 +316,20 @@ export default function MobileRadioView({ user, onLogout }) {
     }
   };
 
-  const currentChannelName = channels.find(ch => String(ch.id) === currentChannel)?.name || null;
+  const currentChannelObj = channels.find(ch => String(ch.id) === currentChannel);
+  const currentChannelName = currentChannelObj?.name || null;
+  const currentRoomKey = currentChannelObj ? getRoomKey(currentChannelObj) : null;
   const isReceiving = !!activeAudio;
   
   const channelIsBusy = useMemo(() => {
-    if (!currentChannelName) return false;
-    return isChannelTransmitting(currentChannelName);
-  }, [currentChannelName, isChannelTransmitting, activeTransmissions]);
+    if (!currentRoomKey) return false;
+    return isChannelTransmitting(currentRoomKey);
+  }, [currentRoomKey, isChannelTransmitting, activeTransmissions]);
   
   const transmittingUnitId = useMemo(() => {
-    if (!currentChannelName) return null;
-    return getTransmittingUnit(currentChannelName);
-  }, [currentChannelName, getTransmittingUnit, activeTransmissions]);
+    if (!currentRoomKey) return null;
+    return getTransmittingUnit(currentRoomKey);
+  }, [currentRoomKey, getTransmittingUnit, activeTransmissions]);
   
   const channelStatus = useMemo(() => {
     if (!connected && !connecting) return 'error';
@@ -330,8 +340,8 @@ export default function MobileRadioView({ user, onLogout }) {
   }, [connected, connecting, channelIsBusy, transmittingUnitId, identity, isTransmitting]);
   
   const unitPresence = useMemo(() => {
-    if (!currentChannelName) return [];
-    const members = channelMembers[currentChannelName] || [];
+    if (!currentRoomKey) return [];
+    const members = channelMembers[currentRoomKey] || [];
     return members.map(m => ({
       id: m.unitId,
       unit_identity: m.unitId,
@@ -340,7 +350,7 @@ export default function MobileRadioView({ user, onLogout }) {
       channel: currentChannelName,
       isTalking: m.status === 'transmitting',
     }));
-  }, [currentChannelName, channelMembers]);
+  }, [currentRoomKey, currentChannelName, channelMembers]);
   
   const liveKitParticipants = unitPresence;
 

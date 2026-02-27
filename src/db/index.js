@@ -350,7 +350,7 @@ export async function verifyPassword(user, password) {
 
 export async function getAllChannels() {
   const result = await pool.query(
-    'SELECT * FROM channels ORDER BY zone, name'
+    "SELECT *, COALESCE(zone, 'Default') || '__' || name AS room_key FROM channels ORDER BY zone, name"
   );
   return result.rows;
 }
@@ -359,7 +359,7 @@ export async function updateChannel(id, updates) {
   const { enabled, zone } = updates;
   const result = await pool.query(
     `UPDATE channels SET enabled = COALESCE($1, enabled), 
-     zone = COALESCE($2, zone) WHERE id = $3 RETURNING *`,
+     zone = COALESCE($2, zone) WHERE id = $3 RETURNING *, COALESCE(zone, 'Default') || '__' || name AS room_key`,
     [enabled, zone, id]
   );
   return result.rows[0];
@@ -413,9 +413,10 @@ export async function deleteZone(id) {
 }
 
 export async function createChannel(name, zoneName, zoneId = null) {
+  const resolvedZone = zoneName || 'Default';
   const result = await pool.query(
-    'INSERT INTO channels (name, zone, zone_id, enabled) VALUES ($1, $2, $3, true) RETURNING *',
-    [name, zoneName, zoneId]
+    "INSERT INTO channels (name, zone, zone_id, enabled) VALUES ($1, $2, $3, true) RETURNING *, $2 || '__' || $1 AS room_key",
+    [name, resolvedZone, zoneId]
   );
   return result.rows[0];
 }

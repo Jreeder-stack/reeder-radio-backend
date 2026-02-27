@@ -115,7 +115,7 @@ export function LiveKitConnectionProvider({ children, user }) {
     listenerRemoversRef.current.push(
       livekitManager.addLevelUpdateListener((channelName, level) => {
         const channels = useDispatchStore.getState().channels;
-        const channel = channels.find(c => c.name === channelName);
+        const channel = channels.find(c => (c.room_key || ((c.zone || 'Default') + '__' + c.name)) === channelName);
         if (channel) {
           useDispatchStore.getState().setChannelLevel(channel.id, level);
         }
@@ -126,7 +126,7 @@ export function LiveKitConnectionProvider({ children, user }) {
       livekitManager.addTrackSubscribedListener((channelName, track, participant) => {
         recordActivity();
         const state = useDispatchStore.getState();
-        const channel = state.channels.find(c => c.name === channelName);
+        const channel = state.channels.find(c => (c.room_key || ((c.zone || 'Default') + '__' + c.name)) === channelName);
         if (channel) {
           state.setActiveTransmission(channel.id, {
             from: participant.identity,
@@ -144,7 +144,7 @@ export function LiveKitConnectionProvider({ children, user }) {
     listenerRemoversRef.current.push(
       livekitManager.addTrackUnsubscribedListener((channelName, track, participant) => {
         const state = useDispatchStore.getState();
-        const channel = state.channels.find(c => c.name === channelName);
+        const channel = state.channels.find(c => (c.room_key || ((c.zone || 'Default') + '__' + c.name)) === channelName);
         if (channel) {
           state.clearActiveTransmission(channel.id);
         }
@@ -412,7 +412,7 @@ export function LiveKitConnectionProvider({ children, user }) {
         setConnected(true);
         setConnectionStatus('connected');
       } else {
-        const firstChannel = initialChannel || enabledChannels[0]?.name;
+        const firstChannel = initialChannel || enabledChannels[0]?.room_key || enabledChannels[0]?.name;
         if (firstChannel) {
           console.log(`[LiveKitConnection] Radio mode - setting active channel to ${firstChannel}`);
           setActiveChannel(firstChannel);

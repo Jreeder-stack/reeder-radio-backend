@@ -2,7 +2,7 @@ import * as adminService from '../services/adminService.js';
 import * as authService from '../services/authService.js';
 import { success, error, created } from '../utils/response.js';
 import { startDispatcher, stopDispatcher } from '../services/aiDispatchService.js';
-import { getAiDispatchChannel, setAiDispatchChannel } from '../db/index.js';
+import { getAiDispatchChannel, setAiDispatchChannel, getAllChannels } from '../db/index.js';
 
 export async function listUsers(req, res) {
   try {
@@ -254,9 +254,12 @@ export async function setAiDispatch(req, res) {
       if (!targetChannel) {
         return error(res, 'Dispatch channel is required to enable AI', 400);
       }
-      await setAiDispatchChannel(targetChannel);
+      const allChannels = await getAllChannels();
+      const channelData = allChannels.find(ch => ch.room_key === targetChannel || ch.name === targetChannel);
+      const roomKey = channelData?.room_key || targetChannel;
+      await setAiDispatchChannel(roomKey);
       await adminService.setAiDispatchEnabled(true);
-      startDispatcher(targetChannel).catch(err => {
+      startDispatcher(channelData?.name || targetChannel, roomKey).catch(err => {
         console.error('Failed to start AI dispatcher:', err.message);
       });
     } else {

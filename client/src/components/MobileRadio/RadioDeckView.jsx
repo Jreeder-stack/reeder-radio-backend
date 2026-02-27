@@ -288,22 +288,23 @@ export function RadioDeckView({ user, onLogout }) {
   
   const currentChannel = filteredChannels[currentChannelIndex];
   const currentChannelName = currentChannel?.name || null;
+  const currentRoomKey = currentChannel?.room_key || (currentChannel ? ((currentChannel.zone || 'Default') + '__' + currentChannel.name) : null);
 
   useEffect(() => {
-    transmitChannelRef.current = currentChannelName || '';
-  }, [currentChannelName]);
+    transmitChannelRef.current = currentRoomKey || '';
+  }, [currentRoomKey]);
   
   useEffect(() => {
     isEmergencyRef.current = isEmergency;
   }, [isEmergency]);
 
   useEffect(() => {
-    if (currentChannel && !hasJoinedRef.current) {
+    if (currentChannel && currentRoomKey && !hasJoinedRef.current) {
       hasJoinedRef.current = true;
-      contextSwitchChannel(currentChannel.name, identity);
-      signalingJoinChannel(currentChannel.name);
+      contextSwitchChannel(currentRoomKey, identity);
+      signalingJoinChannel(currentRoomKey);
     }
-  }, [currentChannel, contextSwitchChannel, signalingJoinChannel, identity]);
+  }, [currentChannel, currentRoomKey, contextSwitchChannel, signalingJoinChannel, identity]);
 
 
   useEffect(() => {
@@ -357,6 +358,11 @@ export function RadioDeckView({ user, onLogout }) {
       listenerRemovers.forEach(remove => remove());
     };
   }, [livekitManager]);
+
+  const getRoomKey = useCallback((ch) => {
+    if (!ch) return null;
+    return ch.room_key || ((ch.zone || 'Default') + '__' + ch.name);
+  }, []);
 
   const broadcastStatus = useCallback((status, channel) => {
     const room = livekitManager?.getRoom(channel);
@@ -471,27 +477,27 @@ export function RadioDeckView({ user, onLogout }) {
           setUnitStatus(newStatus);
           setHasActiveCall(data.hasActiveCall || false);
           console.log('[Status] Cycled to:', newStatus, 'hasActiveCall:', data.hasActiveCall);
-          if (currentChannelName) {
-            broadcastStatus(newStatus, currentChannelName);
+          if (currentRoomKey) {
+            broadcastStatus(newStatus, currentRoomKey);
           }
         } else {
           setUnitStatus(nextStatus);
-          if (currentChannelName) {
-            broadcastStatus(nextStatus, currentChannelName);
+          if (currentRoomKey) {
+            broadcastStatus(nextStatus, currentRoomKey);
           }
         }
       } else {
         console.log('[Status] CAD unavailable, using local cycle:', nextStatus);
         setUnitStatus(nextStatus);
-        if (currentChannelName) {
-          broadcastStatus(nextStatus, currentChannelName);
+        if (currentRoomKey) {
+          broadcastStatus(nextStatus, currentRoomKey);
         }
       }
     } catch (err) {
       console.error('Failed to cycle status, using local fallback:', err);
       setUnitStatus(nextStatus);
-      if (currentChannelName) {
-        broadcastStatus(nextStatus, currentChannelName);
+      if (currentRoomKey) {
+        broadcastStatus(nextStatus, currentRoomKey);
       }
     } finally {
       setStatusLoading(false);
@@ -501,7 +507,7 @@ export function RadioDeckView({ user, onLogout }) {
   const handleZoneUp = () => {
     const oldChannel = filteredChannels[currentChannelIndex];
     if (oldChannel) {
-      signalingLeaveChannel(oldChannel.name);
+      signalingLeaveChannel(getRoomKey(oldChannel));
     }
     
     setCurrentZoneIndex(prev => (prev + 1) % zones.length);
@@ -512,7 +518,7 @@ export function RadioDeckView({ user, onLogout }) {
   const handleZoneDown = () => {
     const oldChannel = filteredChannels[currentChannelIndex];
     if (oldChannel) {
-      signalingLeaveChannel(oldChannel.name);
+      signalingLeaveChannel(getRoomKey(oldChannel));
     }
     
     setCurrentZoneIndex(prev => prev === 0 ? zones.length - 1 : prev - 1);
@@ -525,25 +531,27 @@ export function RadioDeckView({ user, onLogout }) {
       const channel = filteredChannels[currentChannelIndex];
       if (channel) {
         hasJoinedRef.current = true;
-        contextSwitchChannel(channel.name, identity);
-        signalingJoinChannel(channel.name);
+        const rk = getRoomKey(channel);
+        contextSwitchChannel(rk, identity);
+        signalingJoinChannel(rk);
       }
     }
-  }, [currentZoneIndex, filteredChannels, currentChannelIndex, contextSwitchChannel, signalingJoinChannel, identity]);
+  }, [currentZoneIndex, filteredChannels, currentChannelIndex, contextSwitchChannel, signalingJoinChannel, identity, getRoomKey]);
 
   const handleChannelUp = () => {
     if (filteredChannels.length === 0) return;
     const oldChannel = filteredChannels[currentChannelIndex];
     if (oldChannel) {
-      signalingLeaveChannel(oldChannel.name);
+      signalingLeaveChannel(getRoomKey(oldChannel));
     }
     
     const newIndex = (currentChannelIndex + 1) % filteredChannels.length;
     setCurrentChannelIndex(newIndex);
     const channel = filteredChannels[newIndex];
     if (channel) {
-      contextSwitchChannel(channel.name, identity);
-      signalingJoinChannel(channel.name);
+      const rk = getRoomKey(channel);
+      contextSwitchChannel(rk, identity);
+      signalingJoinChannel(rk);
     }
   };
 
@@ -551,21 +559,22 @@ export function RadioDeckView({ user, onLogout }) {
     if (filteredChannels.length === 0) return;
     const oldChannel = filteredChannels[currentChannelIndex];
     if (oldChannel) {
-      signalingLeaveChannel(oldChannel.name);
+      signalingLeaveChannel(getRoomKey(oldChannel));
     }
     
     const newIndex = currentChannelIndex === 0 ? filteredChannels.length - 1 : currentChannelIndex - 1;
     setCurrentChannelIndex(newIndex);
     const channel = filteredChannels[newIndex];
     if (channel) {
-      contextSwitchChannel(channel.name, identity);
-      signalingJoinChannel(channel.name);
+      const rk = getRoomKey(channel);
+      contextSwitchChannel(rk, identity);
+      signalingJoinChannel(rk);
     }
   };
 
   const handleEmergencyActivate = async () => {
     if (isEmergency) return;
-    const channel = currentChannelName || 'DISPATCH';
+    const channel = currentRoomKey || 'DISPATCH';
     await triggerEmergency();
     try {
       signalEmergencyStart(channel);
@@ -586,7 +595,7 @@ export function RadioDeckView({ user, onLogout }) {
 
   const handleEmergencyDeactivate = async () => {
     if (!isEmergency) return;
-    const channel = currentChannelName || 'DISPATCH';
+    const channel = currentRoomKey || 'DISPATCH';
     await cancelEmergency();
     try {
       signalEmergencyEnd(channel);
@@ -610,7 +619,7 @@ export function RadioDeckView({ user, onLogout }) {
   useEffect(() => {
     handleEmergencyActivateRef.current = handleEmergencyActivate;
     handleEmergencyDeactivateRef.current = handleEmergencyDeactivate;
-  }, [isEmergency, currentChannelName, identity]);
+  }, [isEmergency, currentRoomKey, identity]);
 
   const handleTransmitStart = useCallback(async () => {
     const channelName = transmitChannelRef.current;
@@ -820,9 +829,9 @@ export function RadioDeckView({ user, onLogout }) {
 
   const isReceiving = !!activeAudio;
   const transmittingUnitId = useMemo(() => {
-    if (!currentChannelName) return null;
-    return getTransmittingUnit(currentChannelName);
-  }, [currentChannelName, getTransmittingUnit, activeTransmissions]);
+    if (!currentRoomKey) return null;
+    return getTransmittingUnit(currentRoomKey);
+  }, [currentRoomKey, getTransmittingUnit, activeTransmissions]);
 
   const isT320 = useIsT320();
 

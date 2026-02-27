@@ -1,7 +1,7 @@
 import * as dispatchService from '../services/dispatchService.js';
 import { success, error, created } from '../utils/response.js';
 import { getDispatcher, startDispatcher } from '../services/aiDispatchService.js';
-import { isAiDispatchEnabled, getAiDispatchChannel } from '../db/index.js';
+import { isAiDispatchEnabled, getAiDispatchChannel, getAllChannels } from '../db/index.js';
 
 export async function getUnits(req, res) {
   try {
@@ -223,7 +223,10 @@ export async function notifyEmergency(req, res) {
     
     if (!dispatcher || !dispatcher.room) {
       console.log('[AI-Dispatcher] Dispatcher not connected, starting...');
-      await startDispatcher(channel);
+      const allChannels = await getAllChannels();
+      const channelData = allChannels.find(ch => ch.room_key === channel || ch.name === channel);
+      const roomKey = channelData?.room_key || channel;
+      await startDispatcher(channelData?.name || channel, roomKey);
     }
     
     const activeDispatcher = getDispatcher();
