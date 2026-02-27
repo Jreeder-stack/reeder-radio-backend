@@ -167,6 +167,8 @@ class AIDispatcherSignaling {
 
     if (this.dispatcher.emergencyEscalation) {
       try {
+        this.log('EMERGENCY_ESCALATION_WAITING', { channelId, unitId, delayMs: 3000 });
+        await new Promise(resolve => setTimeout(resolve, 3000));
         await this.dispatcher.emergencyEscalation.startEscalation(unitId, channelId);
         this.log('EMERGENCY_ESCALATION_TRIGGERED', { channelId, unitId });
       } catch (err) {
