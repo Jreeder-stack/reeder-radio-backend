@@ -119,24 +119,59 @@ public class MainActivity extends BridgeActivity {
         });
     }
 
+    private static final int KEY_PTT = 230;
+    private static final int KEY_ACC = 231;
+    private static final int KEY_EMERGENCY = 233;
+    private static final int KEY_DPAD_UP = 19;
+    private static final int KEY_DPAD_DOWN = 20;
+    private static final int KEY_DPAD_LEFT = 21;
+    private static final int KEY_DPAD_RIGHT = 22;
+    private static final int KEY_STAR = 17;
+
+    private boolean isT320Key(int keyCode) {
+        return keyCode == KEY_PTT || keyCode == KEY_ACC || keyCode == KEY_EMERGENCY
+            || keyCode == KEY_DPAD_UP || keyCode == KEY_DPAD_DOWN
+            || keyCode == KEY_DPAD_LEFT || keyCode == KEY_DPAD_RIGHT
+            || keyCode == KEY_STAR;
+    }
+
+    private void injectJsKeyEvent(int keyCode, String eventType) {
+        WebView webView = this.bridge.getWebView();
+        if (webView == null) return;
+        String js = "document.dispatchEvent(new KeyboardEvent('" + eventType + "',{keyCode:" + keyCode + ",which:" + keyCode + ",bubbles:true,cancelable:true}));";
+        webView.post(new Runnable() {
+            @Override
+            public void run() {
+                webView.evaluateJavascript(js, null);
+            }
+        });
+    }
+
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
-        // Try to handle as PTT key first
+        int keyCode = event.getKeyCode();
+        int action = event.getAction();
+
         HardwarePttPlugin pttPlugin = HardwarePttPlugin.getInstance();
-        if (pttPlugin != null && pttPlugin.handleKeyEvent(event)) {
-            // PTT plugin handled the key, don't pass to system
+        if (pttPlugin != null && keyCode == KEY_PTT) {
+            pttPlugin.handleKeyEvent(event);
+        }
+
+        if (isT320Key(keyCode)) {
+            if (action == KeyEvent.ACTION_DOWN) {
+                injectJsKeyEvent(keyCode, "keydown");
+            } else if (action == KeyEvent.ACTION_UP) {
+                injectJsKeyEvent(keyCode, "keyup");
+            }
             return true;
         }
-        
-        // Not a PTT key, let system handle it
+
         return super.dispatchKeyEvent(event);
     }
 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
-        // Intercept volume keys if configured as PTT
-        HardwarePttPlugin pttPlugin = HardwarePttPlugin.getInstance();
-        if (pttPlugin != null && pttPlugin.handleKeyEvent(event)) {
+        if (isT320Key(keyCode)) {
             return true;
         }
         return super.onKeyDown(keyCode, event);
@@ -144,9 +179,7 @@ public class MainActivity extends BridgeActivity {
 
     @Override
     public boolean onKeyUp(int keyCode, KeyEvent event) {
-        // Intercept volume keys if configured as PTT
-        HardwarePttPlugin pttPlugin = HardwarePttPlugin.getInstance();
-        if (pttPlugin != null && pttPlugin.handleKeyEvent(event)) {
+        if (isT320Key(keyCode)) {
             return true;
         }
         return super.onKeyUp(keyCode, event);

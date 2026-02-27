@@ -964,20 +964,45 @@ export function RadioDeckView({ user, onLogout }) {
           <div style={{
             borderBottom: '2px solid ' + t320Border,
             paddingBottom: '6px',
-            marginBottom: '6px',
+            marginBottom: '4px',
           }}>
             <div style={{
-              color: t320TextSecondary,
-              fontSize: '11px',
-              letterSpacing: '2px',
+              color: t320Accent,
+              fontSize: '9px',
+              fontWeight: 'bold',
+              letterSpacing: '3px',
               textTransform: 'uppercase',
-              marginBottom: '2px',
             }}>
-              {currentZone}
+              ZONE
             </div>
             <div style={{
               color: t320TextPrimary,
-              fontSize: '26px',
+              fontSize: '14px',
+              fontWeight: 'bold',
+              letterSpacing: '1px',
+              textTransform: 'uppercase',
+            }}>
+              {currentZone}
+            </div>
+          </div>
+
+          <div style={{
+            borderBottom: '2px solid ' + t320Border,
+            paddingBottom: '6px',
+            marginBottom: '6px',
+          }}>
+            <div style={{
+              color: t320Accent,
+              fontSize: '9px',
+              fontWeight: 'bold',
+              letterSpacing: '3px',
+              textTransform: 'uppercase',
+            }}>
+              CHANNEL
+            </div>
+            <div style={{
+              color: t320TextPrimary,
+              fontSize: '30px',
               fontWeight: 'bold',
               letterSpacing: '1px',
               lineHeight: '1.2',
