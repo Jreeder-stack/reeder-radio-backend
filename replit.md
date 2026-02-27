@@ -30,7 +30,7 @@ The application is designed as a Progressive Web App (PWA) with a single codebas
 - **Dispatcher Console:** A dedicated interface for multi-channel monitoring, unit management, audio controls, last transmission recall, emergency acknowledgment, and channel patching. Supports multi-channel TX and tone broadcasting.
 - **Dispatcher Map:** A real-time map displaying unit locations using Leaflet with OpenStreetMap tiles, updated via LiveKit heartbeats.
 - **Channel Chat:** Each channel has a chat tab in the Dispatcher Console, displaying text messages and playable voice messages from PTT transmissions with transcription capabilities.
-- **Admin System:** Provides user and channel management, role assignment, and activity logging.
+- **Admin System:** Provides user and channel management, role assignment, and activity logging. The Zones & Channels screen uses an accordion layout where zones are expandable cards showing their channels. Channel names are unique per-zone (not globally), allowing the same channel name in different zones. The database enforces `UNIQUE(name, zone_id)`.
 
 ## External Dependencies
 - **LiveKit:** Real-time audio streaming and data channel communication.

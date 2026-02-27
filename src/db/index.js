@@ -39,15 +39,42 @@ export async function initializeDatabase() {
     await client.query(`
       CREATE TABLE IF NOT EXISTS channels (
         id SERIAL PRIMARY KEY,
-        name VARCHAR(50) UNIQUE NOT NULL,
+        name VARCHAR(50) NOT NULL,
         zone VARCHAR(100) NOT NULL,
         zone_id INTEGER REFERENCES zones(id),
         enabled BOOLEAN DEFAULT true,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT channels_name_zone_id_unique UNIQUE (name, zone_id)
       )
     `);
 
     await client.query(`ALTER TABLE channels ADD COLUMN IF NOT EXISTS zone_id INTEGER REFERENCES zones(id)`);
+
+    try {
+      await client.query(`ALTER TABLE channels DROP CONSTRAINT IF EXISTS channels_name_key`);
+    } catch (e) {}
+    try {
+      await client.query(`ALTER TABLE channels DROP CONSTRAINT IF EXISTS channels_name_unique`);
+    } catch (e) {}
+    try {
+      await client.query(`
+        DO $$ BEGIN
+          IF NOT EXISTS (
+            SELECT 1 FROM pg_constraint WHERE conname = 'channels_name_zone_id_unique'
+          ) THEN
+            ALTER TABLE channels ADD CONSTRAINT channels_name_zone_id_unique UNIQUE (name, zone_id);
+          END IF;
+        END $$
+      `);
+    } catch (e) {
+      console.log('Note: per-zone unique constraint may already exist');
+    }
+
+    await client.query(`
+      UPDATE channels SET zone_id = z.id
+      FROM zones z
+      WHERE channels.zone = z.name AND channels.zone_id IS NULL
+    `);
 
     await client.query(`
       CREATE TABLE IF NOT EXISTS user_channel_access (

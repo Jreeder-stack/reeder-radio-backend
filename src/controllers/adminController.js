@@ -132,15 +132,16 @@ export async function updateChannel(req, res) {
 
 export async function createChannel(req, res) {
   try {
-    const { name, zone, zone_id } = req.body;
+    const { name, zone, zone_id, zoneId } = req.body;
+    const resolvedZoneId = zone_id || zoneId || null;
     if (!name || !zone) {
       return error(res, 'Name and zone required', 400);
     }
-    const channel = await adminService.createChannel(name, zone, zone_id);
+    const channel = await adminService.createChannel(name, zone, resolvedZoneId);
     created(res, { channel });
   } catch (err) {
     if (err.code === '23505') {
-      return error(res, 'Channel name already exists', 400);
+      return error(res, 'Channel name already exists in this zone', 400);
     }
     console.error('Create channel error:', err);
     error(res, 'Failed to create channel', 500);

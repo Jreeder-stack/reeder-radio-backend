@@ -19,6 +19,8 @@ export default function Admin({ user, onLogout }) {
   const [showEditUser, setShowEditUser] = useState(null);
   const [showAddZone, setShowAddZone] = useState(false);
   const [showAddChannel, setShowAddChannel] = useState(false);
+  const [expandedZones, setExpandedZones] = useState({});
+  const [addChannelForZoneId, setAddChannelForZoneId] = useState(null);
   
   const [newUser, setNewUser] = useState({
     username: "",
@@ -235,6 +237,7 @@ export default function Admin({ user, onLogout }) {
       }
 
       setShowAddChannel(false);
+      setAddChannelForZoneId(null);
       setNewChannel({ name: "", zoneId: "" });
       loadData();
     } catch (err) {
@@ -707,124 +710,140 @@ export default function Admin({ user, onLogout }) {
         )}
 
         {activeTab === "channels" && (
-          <div style={{ display: "flex", gap: 24, flexDirection: isMobile ? "column" : "row" }}>
-            <div style={{ flex: 1 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-                <h2 style={{ margin: 0, fontSize: 18 }}>Zones</h2>
-                <button style={btnPrimary} onClick={() => setShowAddZone(true)}>
-                  + Add Zone
-                </button>
+          <div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <h2 style={{ margin: 0, fontSize: 18 }}>Zones & Channels</h2>
+              <button style={btnPrimary} onClick={() => setShowAddZone(true)}>
+                + Add Zone
+              </button>
+            </div>
+
+            {zones.length === 0 ? (
+              <div style={{ background: "#1e1e2e", borderRadius: 12, padding: 32, textAlign: "center" }}>
+                <p style={{ color: "#888", margin: 0 }}>No zones yet. Create a zone to get started.</p>
               </div>
-              <div style={{ background: "#1e1e2e", borderRadius: 12, padding: 16 }}>
-                {zones.length === 0 ? (
-                  <p style={{ color: "#888", textAlign: "center" }}>No zones yet</p>
-                ) : (
-                  zones.map((z) => (
-                    <div
-                      key={z.id}
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        padding: "12px 0",
-                        borderBottom: "1px solid #333",
-                      }}
-                    >
-                      <span>{z.name}</span>
-                      <button
-                        onClick={() => deleteZoneHandler(z.id)}
-                        style={{ ...btnSmall, background: "#dc262633", color: "#dc2626" }}
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {zones.map((z) => {
+                  const zoneChannels = channels.filter((ch) => ch.zone_id === z.id || ch.zone === z.name);
+                  const isExpanded = !!expandedZones[z.id];
+                  return (
+                    <div key={z.id} style={{ background: "#1e1e2e", borderRadius: 12, overflow: "hidden" }}>
+                      <div
+                        onClick={() => setExpandedZones((prev) => ({ ...prev, [z.id]: !prev[z.id] }))}
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          padding: "14px 16px",
+                          cursor: "pointer",
+                          userSelect: "none",
+                          background: isExpanded ? "#2a2a3e" : "transparent",
+                          transition: "background 0.15s",
+                        }}
                       >
-                        Delete
-                      </button>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-
-            <div style={{ flex: isMobile ? 1 : 2 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-                <h2 style={{ margin: 0, fontSize: 18 }}>Channels</h2>
-                <button style={btnPrimary} onClick={() => setShowAddChannel(true)}>
-                  + Add Channel
-                </button>
-              </div>
-
-              {isMobile ? (
-                <div>
-                  {channels.map((ch) => (
-                    <div key={ch.id} style={cardStyle}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
-                        <div>
-                          <div style={{ fontWeight: 600 }}>{ch.name}</div>
-                          <div style={{ color: "#888", fontSize: 13 }}>{ch.zone}</div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <span style={{ fontSize: 14, color: "#888", transition: "transform 0.2s", transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)", display: "inline-block" }}>&#9654;</span>
+                          <span style={{ fontWeight: 600, fontSize: 16 }}>{z.name}</span>
+                          <span style={{ background: "#333", color: "#aaa", borderRadius: 10, padding: "2px 8px", fontSize: 12, marginLeft: 4 }}>
+                            {zoneChannels.length} {zoneChannels.length === 1 ? "channel" : "channels"}
+                          </span>
                         </div>
-                        <span style={statusBadge(ch.enabled, "Enabled", "Disabled")}>
-                          {ch.enabled ? "Enabled" : "Disabled"}
-                        </span>
+                        <div style={{ display: "flex", gap: 8, alignItems: "center" }} onClick={(e) => e.stopPropagation()}>
+                          <button
+                            onClick={() => { setAddChannelForZoneId(z.id); setNewChannel({ name: "", zoneId: String(z.id) }); setShowAddChannel(true); }}
+                            style={{ ...btnSmall, background: "#3b82f633", color: "#3b82f6" }}
+                          >
+                            + Channel
+                          </button>
+                          <button
+                            onClick={() => deleteZoneHandler(z.id)}
+                            style={{ ...btnSmall, background: "#dc262633", color: "#dc2626" }}
+                          >
+                            Delete
+                          </button>
+                        </div>
                       </div>
-                      <div style={{ display: "flex", gap: 8 }}>
-                        <button
-                          onClick={() => updateChannel(ch.id, { enabled: !ch.enabled })}
-                          style={{ ...btnSmall, background: ch.enabled ? "#dc262633" : "#22c55e33", color: ch.enabled ? "#dc2626" : "#22c55e" }}
-                        >
-                          {ch.enabled ? "Disable" : "Enable"}
-                        </button>
-                        <button
-                          onClick={() => deleteChannelHandler(ch.id)}
-                          style={{ ...btnSmall, background: "#dc262633", color: "#dc2626" }}
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div style={{ background: "#1e1e2e", borderRadius: 12, overflow: "hidden" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                    <thead>
-                      <tr style={{ background: "#2a2a3e" }}>
-                        <th style={{ padding: 14, textAlign: "left", fontSize: 14 }}>Channel</th>
-                        <th style={{ padding: 14, textAlign: "left", fontSize: 14 }}>Zone</th>
-                        <th style={{ padding: 14, textAlign: "left", fontSize: 14 }}>Status</th>
-                        <th style={{ padding: 14, textAlign: "left", fontSize: 14 }}>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {channels.map((ch) => (
-                        <tr key={ch.id} style={{ borderBottom: "1px solid #333" }}>
-                          <td style={{ padding: 14, fontWeight: 500 }}>{ch.name}</td>
-                          <td style={{ padding: 14, color: "#888" }}>{ch.zone}</td>
-                          <td style={{ padding: 14 }}>
-                            <span style={statusBadge(ch.enabled, "Enabled", "Disabled")}>
-                              {ch.enabled ? "Enabled" : "Disabled"}
-                            </span>
-                          </td>
-                          <td style={{ padding: 14 }}>
-                            <div style={{ display: "flex", gap: 8 }}>
-                              <button
-                                onClick={() => updateChannel(ch.id, { enabled: !ch.enabled })}
-                                style={{ ...btnSmall, background: ch.enabled ? "#dc262633" : "#22c55e33", color: ch.enabled ? "#dc2626" : "#22c55e" }}
-                              >
-                                {ch.enabled ? "Disable" : "Enable"}
-                              </button>
-                              <button
-                                onClick={() => deleteChannelHandler(ch.id)}
-                                style={{ ...btnSmall, background: "#dc262633", color: "#dc2626" }}
-                              >
-                                Delete
-                              </button>
+
+                      {isExpanded && (
+                        <div style={{ borderTop: "1px solid #333" }}>
+                          {zoneChannels.length === 0 ? (
+                            <div style={{ padding: "16px 20px", color: "#666", fontSize: 14, textAlign: "center" }}>
+                              No channels in this zone
                             </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
+                          ) : isMobile ? (
+                            <div style={{ padding: "8px 12px" }}>
+                              {zoneChannels.map((ch) => (
+                                <div key={ch.id} style={{ ...cardStyle, margin: "6px 0" }}>
+                                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                                    <span style={{ fontWeight: 500 }}>{ch.name}</span>
+                                    <span style={statusBadge(ch.enabled, "Enabled", "Disabled")}>
+                                      {ch.enabled ? "Enabled" : "Disabled"}
+                                    </span>
+                                  </div>
+                                  <div style={{ display: "flex", gap: 8 }}>
+                                    <button
+                                      onClick={() => updateChannel(ch.id, { enabled: !ch.enabled })}
+                                      style={{ ...btnSmall, background: ch.enabled ? "#dc262633" : "#22c55e33", color: ch.enabled ? "#dc2626" : "#22c55e" }}
+                                    >
+                                      {ch.enabled ? "Disable" : "Enable"}
+                                    </button>
+                                    <button
+                                      onClick={() => deleteChannelHandler(ch.id)}
+                                      style={{ ...btnSmall, background: "#dc262633", color: "#dc2626" }}
+                                    >
+                                      Delete
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                              <thead>
+                                <tr style={{ background: "#252538" }}>
+                                  <th style={{ padding: "10px 16px", textAlign: "left", fontSize: 13, color: "#888", fontWeight: 500 }}>Channel</th>
+                                  <th style={{ padding: "10px 16px", textAlign: "left", fontSize: 13, color: "#888", fontWeight: 500 }}>Status</th>
+                                  <th style={{ padding: "10px 16px", textAlign: "right", fontSize: 13, color: "#888", fontWeight: 500 }}>Actions</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {zoneChannels.map((ch) => (
+                                  <tr key={ch.id} style={{ borderBottom: "1px solid #2a2a3e" }}>
+                                    <td style={{ padding: "10px 16px", fontWeight: 500 }}>{ch.name}</td>
+                                    <td style={{ padding: "10px 16px" }}>
+                                      <span style={statusBadge(ch.enabled, "Enabled", "Disabled")}>
+                                        {ch.enabled ? "Enabled" : "Disabled"}
+                                      </span>
+                                    </td>
+                                    <td style={{ padding: "10px 16px", textAlign: "right" }}>
+                                      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                                        <button
+                                          onClick={() => updateChannel(ch.id, { enabled: !ch.enabled })}
+                                          style={{ ...btnSmall, background: ch.enabled ? "#dc262633" : "#22c55e33", color: ch.enabled ? "#dc2626" : "#22c55e" }}
+                                        >
+                                          {ch.enabled ? "Disable" : "Enable"}
+                                        </button>
+                                        <button
+                                          onClick={() => deleteChannelHandler(ch.id)}
+                                          style={{ ...btnSmall, background: "#dc262633", color: "#dc2626" }}
+                                        >
+                                          Delete
+                                        </button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
@@ -1174,9 +1193,11 @@ export default function Admin({ user, onLogout }) {
       )}
 
       {showAddChannel && (
-        <div style={modalOverlay} onClick={() => setShowAddChannel(false)}>
+        <div style={modalOverlay} onClick={() => { setShowAddChannel(false); setAddChannelForZoneId(null); }}>
           <div style={modalContent} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ margin: "0 0 20px", fontSize: 20 }}>Add New Channel</h2>
+            <h2 style={{ margin: "0 0 20px", fontSize: 20 }}>
+              {addChannelForZoneId ? `Add Channel to ${(zones.find((z) => z.id === addChannelForZoneId) || {}).name || "Zone"}` : "Add New Channel"}
+            </h2>
             <form onSubmit={createChannelHandler}>
               <div style={{ marginBottom: 16 }}>
                 <label style={{ fontSize: 14, color: "#888" }}>Channel Name *</label>
@@ -1187,25 +1208,28 @@ export default function Admin({ user, onLogout }) {
                   onChange={(e) => setNewChannel({ ...newChannel, name: e.target.value })}
                   style={inputStyle}
                   placeholder="e.g., MED1"
+                  autoFocus
                 />
               </div>
-              <div style={{ marginBottom: 20 }}>
-                <label style={{ fontSize: 14, color: "#888" }}>Zone *</label>
-                <select
-                  required
-                  value={newChannel.zoneId}
-                  onChange={(e) => setNewChannel({ ...newChannel, zoneId: e.target.value })}
-                  style={inputStyle}
-                >
-                  <option value="">Select a zone...</option>
-                  {zones.map((z) => (
-                    <option key={z.id} value={z.id}>{z.name}</option>
-                  ))}
-                </select>
-              </div>
+              {!addChannelForZoneId && (
+                <div style={{ marginBottom: 20 }}>
+                  <label style={{ fontSize: 14, color: "#888" }}>Zone *</label>
+                  <select
+                    required
+                    value={newChannel.zoneId}
+                    onChange={(e) => setNewChannel({ ...newChannel, zoneId: e.target.value })}
+                    style={inputStyle}
+                  >
+                    <option value="">Select a zone...</option>
+                    {zones.map((z) => (
+                      <option key={z.id} value={z.id}>{z.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <div style={{ display: "flex", gap: 12 }}>
                 <button type="submit" style={btnPrimary}>Create Channel</button>
-                <button type="button" style={btnSecondary} onClick={() => setShowAddChannel(false)}>Cancel</button>
+                <button type="button" style={btnSecondary} onClick={() => { setShowAddChannel(false); setAddChannelForZoneId(null); }}>Cancel</button>
               </div>
             </form>
           </div>
