@@ -174,6 +174,14 @@ repositories {
 }
 ```
 
+### Copy the App Icon
+
+Copy the `res/` folder contents to replace the default icons:
+```
+cp -r android-config/res/* android/app/src/main/res/
+```
+This replaces the default Capacitor icon with the Command Comms radio tower logo at all required Android densities (mdpi through xxxhdpi).
+
 ### Copy the Plugin Files
 
 Copy these files to `android/app/src/main/java/com/reedersystems/commandcomms/`:
