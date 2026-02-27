@@ -6,7 +6,7 @@ export function playPermitTone() {
       permitAudio.pause();
       permitAudio.currentTime = 0;
     }
-    permitAudio = new Audio('/sounds/talk-permit.mp3');
+    permitAudio = new Audio('/sounds/talk-permit.wav');
     permitAudio.volume = 0.6;
     permitAudio.play().catch(function(e) {
       console.warn('[TalkPermit] Playback failed:', e.message);
