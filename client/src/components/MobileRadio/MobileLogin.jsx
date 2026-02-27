@@ -3,10 +3,20 @@ import { useNavigate } from "react-router-dom";
 import { MobileFrame } from "./MobileFrame";
 import { Shield, Lock, ArrowRight, Radio, AlertCircle } from "lucide-react";
 
+function checkIsT320() {
+  if (typeof window === 'undefined') return false;
+  var iw = window.innerWidth || 0;
+  var sw = window.screen ? window.screen.width : 0;
+  var isCapacitor = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+  if (iw <= 280 || sw <= 280) return true;
+  if (isCapacitor && (iw <= 480 || sw <= 480)) return true;
+  return false;
+}
+
 function useIsT320() {
   var val = useSyncExternalStore(
     function(cb) { window.addEventListener('resize', cb); return function() { window.removeEventListener('resize', cb); }; },
-    function() { return typeof window !== 'undefined' && window.innerWidth <= 280; },
+    checkIsT320,
     function() { return false; }
   );
   return val;

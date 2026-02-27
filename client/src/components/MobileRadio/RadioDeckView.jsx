@@ -22,15 +22,22 @@ import {
   NewMessageModal 
 } from './widgets';
 
+function checkIsT320() {
+  if (typeof window === 'undefined') return false;
+  var iw = window.innerWidth || 0;
+  var sw = window.screen ? window.screen.width : 0;
+  var isCapacitor = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+  if (iw <= 280 || sw <= 280) return true;
+  if (isCapacitor && (iw <= 480 || sw <= 480)) return true;
+  return false;
+}
+
 function useIsT320() {
-  var getVal = function() {
-    return typeof window !== 'undefined' && window.innerWidth <= 280;
-  };
-  var val = useState(getVal);
+  var val = useState(checkIsT320);
   var isT320 = val[0];
   var setIsT320 = val[1];
   useEffect(function() {
-    var handler = function() { setIsT320(getVal()); };
+    var handler = function() { setIsT320(checkIsT320()); };
     window.addEventListener('resize', handler);
     return function() { window.removeEventListener('resize', handler); };
   }, []);
@@ -1042,6 +1049,13 @@ export function RadioDeckView({ user, onLogout }) {
           @keyframes emergText { 0%{opacity:1} 100%{opacity:0.3} }\
           @keyframes lockBlink { 0%,100%{opacity:1} 50%{opacity:0.3} }\
         '}} />
+        <div style={{
+          position: 'absolute', bottom: '2px', left: '4px', right: '4px',
+          color: '#444', fontSize: '7px', fontFamily: 'monospace',
+          textAlign: 'center',
+        }}>
+          {'iw:' + (window.innerWidth||0) + ' sw:' + (window.screen?window.screen.width:0) + ' dpr:' + (window.devicePixelRatio||1) + ' cap:' + (!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform()))}
+        </div>
       </div>
     );
   }
