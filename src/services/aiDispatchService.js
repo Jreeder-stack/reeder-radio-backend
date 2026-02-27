@@ -1104,8 +1104,19 @@ class AIDispatcher {
         }
       }
 
-      // Brief pause to allow final frames to transmit
-      await new Promise(resolve => setTimeout(resolve, 200));
+      const TRAILING_SILENT_FRAMES = 4;
+      for (let s = 0; s < TRAILING_SILENT_FRAMES; s++) {
+        const silentFrame = new AudioFrame(
+          Buffer.alloc(SAMPLES_PER_FRAME * 2),
+          AZURE_SAMPLE_RATE,
+          CHANNELS,
+          SAMPLES_PER_FRAME
+        );
+        await audioSource.captureFrame(silentFrame);
+        await new Promise(resolve => setTimeout(resolve, FRAME_DURATION_MS));
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 800));
 
     } catch (error) {
       this.log('PUBLISH_ERROR', { error: error.message });
