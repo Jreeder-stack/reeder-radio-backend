@@ -94,11 +94,14 @@ export function SignalingProvider({ children }) {
       }));
     });
 
+    const localIdentity = user?.unit_id || user?.username;
     const removePttStartListener = signalingManager.on('pttStart', (data) => {
-      setActiveTransmissions(prev => ({
-        ...prev,
-        [data.channelId]: data,
-      }));
+      if (data.unitId !== localIdentity && data.unitId !== user?.username) {
+        setActiveTransmissions(prev => ({
+          ...prev,
+          [data.channelId]: data,
+        }));
+      }
       setChannelMembers(prev => ({
         ...prev,
         [data.channelId]: (prev[data.channelId] || []).map(m =>
@@ -123,6 +126,18 @@ export function SignalingProvider({ children }) {
 
     const removeEmergencyStartListener = signalingManager.on('emergencyStart', (data) => {
       setEmergencyChannels(prev => new Set([...prev, data.channelId]));
+      setEmergencyAlerts(prev => {
+        const existing = prev.find(a => a.unitId === data.unitId && a.channelId === data.channelId);
+        if (existing) return prev;
+        return [...prev, {
+          id: 'sig-emerg-' + data.unitId + '-' + Date.now(),
+          unitId: data.unitId,
+          unitIdentity: data.unitId,
+          channelId: data.channelId,
+          channel: data.channelId,
+          timestamp: new Date().toISOString(),
+        }];
+      });
       setChannelMembers(prev => ({
         ...prev,
         [data.channelId]: (prev[data.channelId] || []).map(m =>
@@ -137,6 +152,7 @@ export function SignalingProvider({ children }) {
         next.delete(data.channelId);
         return next;
       });
+      setEmergencyAlerts(prev => prev.filter(a => !(a.unitId === data.unitId && a.channelId === data.channelId)));
     });
 
     const removeAlertListener = signalingManager.on('emergencyAlert', (data) => {

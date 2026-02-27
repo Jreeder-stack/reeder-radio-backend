@@ -220,7 +220,7 @@ export default function MobileRadioView({ user, onLogout }) {
 
   const handleTransmitEnd = useCallback(() => {
     const channelName = transmitChannelRef.current;
-    if (!isEmergencyRef.current && micPTTManager.canStop()) {
+    if (micPTTManager.canStop()) {
       micPTTManager.stop();
       if (channelName) {
         signalPttEnd(channelName);

@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useCallback, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { livekitManager } from '../audio/LiveKitManager.js';
+import { signalingManager } from '../signaling/SignalingManager.js';
 import { getChannels } from '../utils/api.js';
 import useDispatchStore from '../state/dispatchStore.js';
 
@@ -191,6 +192,29 @@ export function LiveKitConnectionProvider({ children, user }) {
       })
     );
     
+    const removeSignalingEmergency = signalingManager.on('emergencyStart', (data) => {
+      console.log('[LiveKitConnection] Emergency via signaling:', data);
+      useDispatchStore.getState().addEmergency({
+        id: 'sig-emergency-' + (data.unitId || 'unknown') + '-' + Date.now(),
+        unitIdentity: data.unitId,
+        channel: data.channelId,
+        timestamp: new Date().toISOString(),
+      });
+    });
+    listenerRemoversRef.current.push(removeSignalingEmergency);
+
+    const removeSignalingEmergencyEnd = signalingManager.on('emergencyEnd', (data) => {
+      console.log('[LiveKitConnection] Emergency END via signaling:', data);
+      const store = useDispatchStore.getState();
+      const match = store.emergencies.find(e =>
+        e.unitIdentity === data.unitId && e.id.startsWith('sig-emergency-')
+      );
+      if (match) {
+        store.removeEmergency(match.id);
+      }
+    });
+    listenerRemoversRef.current.push(removeSignalingEmergencyEnd);
+
     listenerRemoversRef.current.push(
       livekitManager.addConnectionStateChangeListener((channelName, state, error) => {
         console.log(`[LiveKitConnection] ${channelName} state: ${state}`);

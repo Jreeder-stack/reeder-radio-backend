@@ -164,12 +164,26 @@ class AIDispatcherSignaling {
         this.log('EMERGENCY_CONNECTION_FAILED', { channelId, error: err.message });
       }
     }
+
+    if (this.dispatcher.emergencyEscalation) {
+      try {
+        await this.dispatcher.emergencyEscalation.startEscalation(unitId, channelId);
+        this.log('EMERGENCY_ESCALATION_TRIGGERED', { channelId, unitId });
+      } catch (err) {
+        this.log('EMERGENCY_ESCALATION_ERROR', { channelId, unitId, error: err.message });
+      }
+    }
   }
 
   async handleEmergencyEnd(channelId, unitId) {
     if (!this.dispatcher) return;
 
     this.log('EMERGENCY_END_DETECTED', { channelId, unitId });
+
+    if (this.dispatcher.emergencyEscalation) {
+      this.dispatcher.emergencyEscalation.clearEscalation(unitId);
+      this.log('EMERGENCY_ESCALATION_CLEARED', { channelId, unitId });
+    }
   }
 
   _clearConnectionTimer(channelId) {

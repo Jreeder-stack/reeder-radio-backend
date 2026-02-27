@@ -109,6 +109,7 @@ export function RadioDeckView({ user, onLogout }) {
     signalEmergencyStart,
     signalEmergencyEnd,
     connected: signalingConnected,
+    emergencyAlerts,
   } = useSignalingContext();
   
   const { isScanning, toggleScanning, isEmergency, triggerEmergency, cancelEmergency, scanChannels, setScanChannels, toggleScanChannel } = useMobileRadioContext();
@@ -172,6 +173,59 @@ export function RadioDeckView({ user, onLogout }) {
   const transmitChannelRef = useRef('');
   const isEmergencyRef = useRef(false);
   const rxAudioElementsRef = useRef(new Set());
+  const emergencyAlarmRef = useRef(null);
+
+  useEffect(() => {
+    if (emergencyAlerts && emergencyAlerts.length > 0 && !isEmergency && !emergencyAlarmRef.current) {
+      try {
+        var ctx = new (window.AudioContext || window.webkitAudioContext)();
+        var gain = ctx.createGain();
+        gain.gain.value = 0.5;
+        gain.connect(ctx.destination);
+        var osc1 = ctx.createOscillator();
+        osc1.type = 'square';
+        osc1.frequency.value = 1200;
+        var g1 = ctx.createGain();
+        g1.gain.value = 0;
+        osc1.connect(g1);
+        g1.connect(gain);
+        var osc2 = ctx.createOscillator();
+        osc2.type = 'square';
+        osc2.frequency.value = 1800;
+        var g2 = ctx.createGain();
+        g2.gain.value = 0;
+        osc2.connect(g2);
+        g2.connect(gain);
+        osc1.start();
+        osc2.start();
+        var toggle = true;
+        var iv = setInterval(function() {
+          g1.gain.value = toggle ? 0.5 : 0;
+          g2.gain.value = toggle ? 0 : 0.5;
+          toggle = !toggle;
+        }, 500);
+        emergencyAlarmRef.current = function() {
+          clearInterval(iv);
+          try { osc1.stop(); osc2.stop(); ctx.close(); } catch(e) {}
+        };
+        setTimeout(function() {
+          if (emergencyAlarmRef.current) {
+            emergencyAlarmRef.current();
+            emergencyAlarmRef.current = null;
+          }
+        }, 10000);
+      } catch(e) {}
+    } else if ((!emergencyAlerts || emergencyAlerts.length === 0) && emergencyAlarmRef.current) {
+      emergencyAlarmRef.current();
+      emergencyAlarmRef.current = null;
+    }
+    return () => {
+      if (emergencyAlarmRef.current) {
+        emergencyAlarmRef.current();
+        emergencyAlarmRef.current = null;
+      }
+    };
+  }, [emergencyAlerts, isEmergency]);
 
   useEffect(() => {
     startBackgroundService().then(result => {
@@ -575,7 +629,7 @@ export function RadioDeckView({ user, onLogout }) {
 
   const handleTransmitEnd = useCallback(() => {
     const channelName = transmitChannelRef.current;
-    if (!isEmergencyRef.current && micPTTManager.canStop()) {
+    if (micPTTManager.canStop()) {
       micPTTManager.stop();
       if (channelName) {
         signalPttEnd(channelName);
@@ -1162,15 +1216,15 @@ export function RadioDeckView({ user, onLogout }) {
             justifyContent: 'space-around',
             alignItems: 'center',
             backgroundColor: '#1a1a1a',
-            padding: '6px 4px',
+            padding: '10px 4px',
             borderTop: '2px solid #333333',
           }}>
             <button
               onClick={() => setShowT320Menu(showT320Menu === 'scan' ? null : 'scan')}
               style={{
-                background: 'none', border: 'none', padding: '4px 8px',
-                color: isScanning ? '#00cc66' : '#888888',
-                fontSize: '12px', fontWeight: 'bold',
+                background: 'none', border: 'none', padding: '6px 12px',
+                color: isScanning ? '#00ff77' : '#e0e0e0',
+                fontSize: '14px', fontWeight: 'bold',
                 letterSpacing: '1px', cursor: 'pointer',
                 fontFamily: 'inherit',
               }}
@@ -1178,8 +1232,8 @@ export function RadioDeckView({ user, onLogout }) {
             <button
               onClick={() => setShowT320Menu(showT320Menu === 'clock' ? null : 'clock')}
               style={{
-                background: 'none', border: 'none', padding: '4px 8px',
-                color: '#cccccc', fontSize: '12px', fontWeight: 'bold',
+                background: 'none', border: 'none', padding: '6px 12px',
+                color: '#ffffff', fontSize: '14px', fontWeight: 'bold',
                 letterSpacing: '1px', cursor: 'pointer',
                 fontFamily: 'inherit',
               }}
@@ -1187,9 +1241,9 @@ export function RadioDeckView({ user, onLogout }) {
             <button
               onClick={() => setShowT320Menu(showT320Menu === 'batt' ? null : 'batt')}
               style={{
-                background: 'none', border: 'none', padding: '4px 8px',
-                color: batteryLevel !== null && batteryLevel <= 20 ? '#cc0000' : '#cccccc',
-                fontSize: '12px', fontWeight: 'bold',
+                background: 'none', border: 'none', padding: '6px 12px',
+                color: batteryLevel !== null && batteryLevel <= 20 ? '#ff3333' : '#ffffff',
+                fontSize: '14px', fontWeight: 'bold',
                 letterSpacing: '1px', cursor: 'pointer',
                 fontFamily: 'inherit',
               }}

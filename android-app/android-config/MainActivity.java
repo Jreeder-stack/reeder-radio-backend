@@ -17,21 +17,17 @@ import android.webkit.WebView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import com.getcapacitor.BridgeActivity;
+import java.util.ArrayList;
+import java.util.List;
 
-/**
- * Main activity for COMMAND COMMS Android app.
- * 
- * Replace the auto-generated MainActivity.java with this file.
- * Location: android/app/src/main/java/com/reedersystems/commandcomms/MainActivity.java
- */
 public class MainActivity extends BridgeActivity {
     
     private static final String TAG = "CommandComms";
     private static final int PERMISSION_REQUEST_CODE = 1001;
+    private static final int BACKGROUND_LOCATION_REQUEST_CODE = 1002;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
-        // Register custom Capacitor plugins
         registerPlugin(HardwarePttPlugin.class);
         registerPlugin(DndOverridePlugin.class);
         registerPlugin(LiveKitPlugin.class);
@@ -39,35 +35,61 @@ public class MainActivity extends BridgeActivity {
         
         super.onCreate(savedInstanceState);
         
-        // Request microphone permission at runtime BEFORE WebView needs it
-        requestAudioPermissions();
+        requestAllPermissions();
         
-        // Configure WebView settings for WebRTC/LiveKit
         configureWebViewForWebRTC();
     }
     
-    private void requestAudioPermissions() {
-        String[] permissions = {
+    private void requestAllPermissions() {
+        List<String> permissionsNeeded = new ArrayList<>();
+
+        String[] basePermissions = {
             Manifest.permission.RECORD_AUDIO,
-            Manifest.permission.MODIFY_AUDIO_SETTINGS
+            Manifest.permission.MODIFY_AUDIO_SETTINGS,
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION
         };
-        
-        boolean needsPermission = false;
-        for (String permission : permissions) {
+
+        for (String permission : basePermissions) {
             if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
-                needsPermission = true;
-                break;
+                permissionsNeeded.add(permission);
             }
         }
-        
-        if (needsPermission) {
-            Log.d(TAG, "Requesting audio permissions...");
-            ActivityCompat.requestPermissions(this, permissions, PERMISSION_REQUEST_CODE);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                permissionsNeeded.add(Manifest.permission.BLUETOOTH_CONNECT);
+            }
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
+                permissionsNeeded.add(Manifest.permission.BLUETOOTH_SCAN);
+            }
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                permissionsNeeded.add(Manifest.permission.POST_NOTIFICATIONS);
+            }
+        }
+
+        if (!permissionsNeeded.isEmpty()) {
+            Log.d(TAG, "Requesting permissions: " + permissionsNeeded.toString());
+            ActivityCompat.requestPermissions(this, permissionsNeeded.toArray(new String[0]), PERMISSION_REQUEST_CODE);
         } else {
-            Log.d(TAG, "Audio permissions already granted");
+            Log.d(TAG, "All permissions already granted");
+            requestBackgroundLocationIfNeeded();
         }
     }
     
+    private void requestBackgroundLocationIfNeeded() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                && ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_BACKGROUND_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                Log.d(TAG, "Requesting background location permission...");
+                ActivityCompat.requestPermissions(this, new String[]{ Manifest.permission.ACCESS_BACKGROUND_LOCATION }, BACKGROUND_LOCATION_REQUEST_CODE);
+            }
+        }
+    }
+
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
@@ -78,6 +100,10 @@ public class MainActivity extends BridgeActivity {
                 boolean granted = grantResults[i] == PackageManager.PERMISSION_GRANTED;
                 Log.d(TAG, "Permission " + permission + " granted: " + granted);
             }
+            requestBackgroundLocationIfNeeded();
+        } else if (requestCode == BACKGROUND_LOCATION_REQUEST_CODE) {
+            boolean granted = grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
+            Log.d(TAG, "Background location permission granted: " + granted);
         }
     }
     
