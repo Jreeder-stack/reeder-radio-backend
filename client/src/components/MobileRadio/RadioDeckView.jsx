@@ -196,9 +196,17 @@ export function RadioDeckView({ user, onLogout }) {
         const channelList = Array.isArray(data) ? data : (data?.channels || []);
         if (channelList.length > 0) {
           setChannels(channelList);
-          if (scanChannels.length === 0) {
-            setScanChannels(channelList.map(ch => ({ id: ch.id, name: ch.name, enabled: true })));
-          }
+          setScanChannels(prev => {
+            const savedMap = {};
+            prev.forEach(function(ch) { savedMap[ch.id] = ch.enabled; });
+            return channelList.map(function(ch) {
+              return {
+                id: ch.id,
+                name: ch.name,
+                enabled: savedMap[ch.id] !== undefined ? savedMap[ch.id] : (prev.length === 0),
+              };
+            });
+          });
         }
         setChannelsLoading(false);
       })
@@ -206,7 +214,7 @@ export function RadioDeckView({ user, onLogout }) {
         console.error('Failed to load channels:', err);
         setChannelsLoading(false);
       });
-  }, [scanChannels.length, setScanChannels]);
+  }, [setScanChannels]);
 
   const zones = useMemo(() => {
     const zoneSet = new Set();
@@ -243,11 +251,6 @@ export function RadioDeckView({ user, onLogout }) {
     }
   }, [currentChannel, contextSwitchChannel, signalingJoinChannel]);
 
-  useEffect(() => {
-    if (channels.length > 0 && scanChannels.length === 0) {
-      setScanChannels(channels.map(ch => ({ id: ch.id, name: ch.name, enabled: false })));
-    }
-  }, [channels, scanChannels.length, setScanChannels]);
 
   useEffect(() => {
     if (!livekitManager) return;
@@ -1270,19 +1273,6 @@ export function RadioDeckView({ user, onLogout }) {
                   fontFamily: 'inherit',
                 }}
               >BACK</button>
-              <button
-                onClick={function() {
-                  scanChannels.forEach(function(ch) {
-                    if (!ch.enabled) toggleScanChannel(ch.id);
-                  });
-                }}
-                style={{
-                  background: 'none', border: 'none', padding: '4px 8px',
-                  color: '#cccccc', fontSize: '12px', fontWeight: 'bold',
-                  letterSpacing: '1px', cursor: 'pointer',
-                  fontFamily: 'inherit',
-                }}
-              >ALL</button>
               <button
                 onClick={function() {
                   scanChannels.forEach(function(ch) {

@@ -1,11 +1,23 @@
-import { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect } from 'react';
+
+const SCAN_CHANNELS_KEY = 'radio_scan_channels';
+const SCAN_ACTIVE_KEY = 'radio_scan_active';
 
 const MobileRadioContext = createContext(null);
 
 export function MobileRadioProvider({ children }) {
-  const [isScanning, setIsScanning] = useState(false);
+  const [isScanning, setIsScanning] = useState(() => {
+    try {
+      return localStorage.getItem(SCAN_ACTIVE_KEY) === 'true';
+    } catch { return false; }
+  });
   const [isEmergency, setIsEmergency] = useState(false);
-  const [scanChannels, setScanChannels] = useState([]);
+  const [scanChannels, setScanChannels] = useState(() => {
+    try {
+      const saved = localStorage.getItem(SCAN_CHANNELS_KEY);
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
 
   const toggleScanning = useCallback(() => {
     setIsScanning(prev => !prev);
@@ -45,6 +57,18 @@ export function MobileRadioProvider({ children }) {
   const cancelEmergency = useCallback(async () => {
     setIsEmergency(false);
   }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(SCAN_CHANNELS_KEY, JSON.stringify(scanChannels));
+    } catch {}
+  }, [scanChannels]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(SCAN_ACTIVE_KEY, isScanning ? 'true' : 'false');
+    } catch {}
+  }, [isScanning]);
 
   const toggleScanChannel = useCallback((channelId) => {
     setScanChannels(prev => 
