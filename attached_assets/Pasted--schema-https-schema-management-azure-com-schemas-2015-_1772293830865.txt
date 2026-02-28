@@ -1,0 +1,149 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "name": {
+            "value": "RADIOAIREEDERSYSTEMS"
+        },
+        "location": {
+            "value": "eastus"
+        },
+        "tagValues": {
+            "value": {}
+        },
+        "allowProjectManagement": {
+            "value": true
+        },
+        "virtualNetworkType": {
+            "value": "None"
+        },
+        "vnet": {
+            "value": {}
+        },
+        "ipRules": {
+            "value": []
+        },
+        "privateEndpoints": {
+            "value": []
+        },
+        "privateDnsZone": {
+            "value": "privatelink.aiservices.azure.com"
+        },
+        "resourceGroupName": {
+            "value": "COMMAND_WAVE_PTT"
+        },
+        "resourceGroupId": {
+            "value": "/subscriptions/0f5f18e5-6321-4105-b993-23ba43cd3a4d/resourceGroups/COMMAND_WAVE_PTT"
+        },
+        "uniqueId": {
+            "value": "6249a953-a031-4824-908b-7dbcf0a9120f"
+        },
+        "defaultProjectName": {
+            "value": "RADIO-AI"
+        },
+        "identity": {
+            "value": {
+                "type": "SystemAssigned"
+            }
+        },
+        "userAssignedIdentityName": {
+            "value": ""
+        },
+        "userIdentityResourceGroupName": {
+            "value": ""
+        },
+        "identityType": {
+            "value": "SystemAssigned"
+        },
+        "encryption_status": {
+            "value": " "
+        },
+        "cmk_keyvault": {
+            "value": ""
+        },
+        "resource_cmk_uri": {
+            "value": ""
+        },
+        "userAssignedIdentityId": {
+            "value": ""
+        },
+        "keyVaultName": {
+            "value": ""
+        },
+        "keyVaultLocation": {
+            "value": ""
+        },
+        "keyVaultResourceGroupName": {
+            "value": ""
+        },
+        "keyVersion": {
+            "value": ""
+        },
+        "keyName": {
+            "value": ""
+        },
+        "hasRoleAssignment": {
+            "value": true
+        },
+        "roleDefinitionId": {
+            "value": "/subscriptions/0f5f18e5-6321-4105-b993-23ba43cd3a4d/providers/Microsoft.Authorization/roleDefinitions/53ca6127-db72-4b80-b1b0-d745d6d5456d"
+        },
+        "enableRbac": {
+            "value": false
+        },
+        "cryptoUserRoleAssignmentName": {
+            "value": "8e7698d3-1ed3-55c0-adca-9fe5525ac5ad"
+        },
+        "skipRbacValidation": {
+            "value": false
+        },
+        "applicationInsightsName": {
+            "value": ""
+        },
+        "applicationInsightsResourceId": {
+            "value": ""
+        },
+        "applicationInsightsLocation": {
+            "value": ""
+        },
+        "applicationInsightsStatus": {
+            "value": ""
+        },
+        "gridSelectorData": {
+            "value": []
+        },
+        "storageAccountName": {
+            "value": ""
+        },
+        "storageAccountResourceId": {
+            "value": ""
+        },
+        "storageAccountLocation": {
+            "value": ""
+        },
+        "storageAccountStatus": {
+            "value": ""
+        },
+        "keyVaultConnectionName": {
+            "value": "kvcommandwaveptt0f5f18"
+        },
+        "keyVaultConnectionResourceId": {
+            "value": "/subscriptions/0f5f18e5-6321-4105-b993-23ba43cd3a4d/resourceGroups/COMMAND_WAVE_PTT/providers/Microsoft.KeyVault/vaults/kvcommandwaveptt0f5f18"
+        },
+        "keyVaultConnectionLocation": {
+            "value": "eastus"
+        },
+        "keyVaultConnectionStatus": {
+            "value": "new"
+        },
+        "storedCompletionsDisabled": {
+            "value": false
+        },
+        "enableAdvancedFeatures": {
+            "value": false
+        },
+        "allowDataCollection": {
+            "value": true
+        }
+    }
+}
