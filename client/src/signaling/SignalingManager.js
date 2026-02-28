@@ -27,6 +27,8 @@ class SignalingManager {
     this.subscribedChannels = new Set();
     this.channelMembers = new Map();
     this.livekitAvailable = true;
+    this._keepaliveInterval = null;
+    this._pongTimeout = null;
     
     this._listeners = {
       channelJoin: new Set(),
@@ -47,7 +49,7 @@ class SignalingManager {
     };
     
     this.reconnectAttempts = 0;
-    this.maxReconnectAttempts = 10;
+    this.maxReconnectAttempts = 999;
   }
 
   connect(options = {}) {
@@ -73,12 +75,25 @@ class SignalingManager {
         console.log('[Signaling] Connected to signaling server');
         this.reconnectAttempts = 0;
         this._emit('connectionChange', { connected: true });
+
+        if (this.unitId) {
+          console.log('[Signaling] Re-authenticating as', this.unitId);
+          this.socket.emit('authenticate', {
+            unitId: this.unitId,
+            username: this.username,
+            agencyId: this.agencyId,
+            isDispatcher: this.isDispatcher,
+          });
+        }
+
+        this._startKeepalive();
         resolve();
       });
 
       this.socket.on('disconnect', (reason) => {
         console.log('[Signaling] Disconnected:', reason);
         this.authenticated = false;
+        this._stopKeepalive();
         this._emit('connectionChange', { connected: false, reason });
       });
 
@@ -94,6 +109,13 @@ class SignalingManager {
         console.log('[Signaling] Authenticated as', data.unitId);
         this.authenticated = true;
         this.livekitAvailable = data.livekitAvailable !== false;
+
+        if (this.subscribedChannels.size > 0) {
+          console.log('[Signaling] Re-joining', this.subscribedChannels.size, 'channels');
+          for (const channelId of this.subscribedChannels) {
+            this.socket.emit(SIGNALING_EVENTS.CHANNEL_JOIN, { channelId });
+          }
+        }
       });
 
       this.socket.on('error', (error) => {
@@ -305,7 +327,49 @@ class SignalingManager {
     }
   }
 
+  _startKeepalive() {
+    this._stopKeepalive();
+
+    if (!this._pongHandler) {
+      this._pongHandler = () => {
+        if (this._pongTimeout) {
+          clearTimeout(this._pongTimeout);
+          this._pongTimeout = null;
+        }
+      };
+    }
+
+    if (this.socket) {
+      this.socket.off('pong', this._pongHandler);
+      this.socket.on('pong', this._pongHandler);
+    }
+
+    this._keepaliveInterval = setInterval(() => {
+      if (!this.socket?.connected) {
+        this._stopKeepalive();
+        return;
+      }
+      this.socket.emit('ping');
+      this._pongTimeout = setTimeout(() => {
+        console.warn('[Signaling] Keepalive pong timeout — forcing reconnect');
+        this.socket.disconnect();
+      }, 5000);
+    }, 30000);
+  }
+
+  _stopKeepalive() {
+    if (this._keepaliveInterval) {
+      clearInterval(this._keepaliveInterval);
+      this._keepaliveInterval = null;
+    }
+    if (this._pongTimeout) {
+      clearTimeout(this._pongTimeout);
+      this._pongTimeout = null;
+    }
+  }
+
   disconnect() {
+    this._stopKeepalive();
     if (this.socket) {
       this.socket.disconnect();
       this.socket = null;
@@ -317,6 +381,41 @@ class SignalingManager {
 
   isConnected() {
     return this.socket?.connected && this.authenticated;
+  }
+
+  async verifyConnection() {
+    if (this.socket?.connected && this.authenticated) {
+      console.log('[Signaling] Connection verified — alive and authenticated');
+      return true;
+    }
+
+    if (this.socket?.connected && !this.authenticated && this.unitId) {
+      console.log('[Signaling] Socket connected but not authenticated — re-authenticating');
+      this.socket.emit('authenticate', {
+        unitId: this.unitId,
+        username: this.username,
+        agencyId: this.agencyId,
+        isDispatcher: this.isDispatcher,
+      });
+      return true;
+    }
+
+    if (!this.socket?.connected && this.unitId) {
+      console.log('[Signaling] Socket disconnected — forcing reconnect');
+      try {
+        if (this.socket) {
+          this.socket.connect();
+        } else {
+          await this.connect();
+        }
+        return true;
+      } catch (err) {
+        console.error('[Signaling] Reconnect failed:', err.message);
+        return false;
+      }
+    }
+
+    return false;
   }
 }
 

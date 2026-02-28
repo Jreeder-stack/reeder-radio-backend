@@ -66,6 +66,14 @@ The Android radio app source code is located in the `android-app/` folder. It us
 - `DndOverridePlugin.java` - Do Not Disturb override for emergency alerts
 - `RadioVoiceDSP.kt` - Radio voice DSP processing (reference implementation)
 
+### Signaling Connection Resilience
+The `SignalingManager.js` implements multiple layers of connection resilience for the lightweight Socket.IO signaling (NOT LiveKit — LiveKit stays on-demand):
+- **Auto re-auth on reconnect**: When Socket.IO reconnects, the `connect` handler automatically re-authenticates with stored credentials and re-joins all subscribed channels. `subscribedChannels` is preserved across disconnects.
+- **30-second keepalive ping/pong**: Client emits `ping` every 30s, server responds with `pong`. If no pong within 5s, forces disconnect (triggering Socket.IO's built-in reconnect with the auto re-auth flow).
+- **999 max reconnect attempts**: Radio system never gives up trying to reconnect.
+- **`verifyConnection()` method**: Called on app resume (screen-on) as a safety net — checks socket state, forces reconnect or re-auth as needed.
+- **App resume handler**: Both `RadioDeckView.jsx` and `App.jsx` use `setupAppLifecycle` to call `verifyConnection()` and resume AudioContext on screen-on.
+
 ### Background PTT Operation
 When the app goes off-screen (screen off or backgrounded), Android pauses the WebView's JavaScript engine. `MainActivity.java` overrides `onPause()` and `onStop()` to immediately call `webView.onResume()` and `webView.resumeTimers()`, keeping JS execution alive. A periodic JS keepalive timer runs every 3 seconds while the screen is off, and executes `evaluateJavascript("1", null)` to force the JS engine to stay warm for Capacitor plugin callbacks. On the JS side, `capacitor.js` overrides `document.hidden` and `document.visibilityState` to always report "visible" on native platforms, preventing Socket.IO and WebRTC from throttling when the page appears hidden. Both `document.addEventListener` and `window.addEventListener` are intercepted to block `visibilitychange` event registration. `setupAppLifecycle` uses the Capacitor App plugin's `appStateChange` event instead of `visibilitychange`. The `BackgroundAudioService` foreground service is started early in `AppWrapper` (main.jsx) as soon as the user logs in on native, ensuring the CPU wake lock is active before the radio view mounts. Combined with `FLAG_KEEP_SCREEN_ON`, this ensures PTT works reliably even when the screen is off.
 

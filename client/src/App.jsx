@@ -6,6 +6,8 @@ import { updateUnitStatus } from "./utils/api.js";
 import { useLiveKitConnection } from "./context/LiveKitConnectionContext.jsx";
 import { useSignalingContext } from "./context/SignalingContext.jsx";
 import { unlockAudio } from "./audio/iosAudioUnlock";
+import { setupAppLifecycle } from "./lib/capacitor";
+import { signalingManager } from "./signaling/SignalingManager";
 
 // Track audio elements that have already been connected to a MediaElementSource
 // This prevents the "HTMLMediaElement already connected" error on reconnection
@@ -251,6 +253,28 @@ export default function App({ user, onLogout }) {
   useEffect(() => {
     transmitChannelRef.current = transmitChannel;
   }, [transmitChannel]);
+
+  useEffect(() => {
+    const cleanup = setupAppLifecycle(
+      () => {
+        console.log('[App] App resumed — verifying connections');
+        signalingManager.verifyConnection().then(ok => {
+          if (ok) {
+            console.log('[App] Signaling connection verified');
+          } else {
+            console.warn('[App] Signaling connection could not be restored');
+          }
+        });
+        if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
+          audioContextRef.current.resume().then(() => console.log('[App] AudioContext resumed'));
+        }
+      },
+      () => {
+        console.log('[App] App paused — keeping connections alive');
+      }
+    );
+    return cleanup;
+  }, []);
 
   useEffect(() => {
     if (!livekitManager) return;

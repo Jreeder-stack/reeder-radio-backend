@@ -898,11 +898,11 @@ class AIDispatcher {
 
         case 'PERSON_DETAILS': {
           if (state === DISPATCHER_STATE.AWAITING_PERSON_DOB) {
-            await this.handlePersonCheckDOB(participantId, transcript, slots, room, roomName);
+            await this.handlePersonCheckDOB(participantId, transcript, slots, room, roomName, result.slots);
           } else if (state === DISPATCHER_STATE.AWAITING_PERSON_FIRSTNAME) {
             await this.handlePersonFirstName(participantId, transcript, slots, room, roomName);
           } else {
-            await this.handlePersonCheckDetails(participantId, transcript, room, roomName);
+            await this.handlePersonCheckDetails(participantId, transcript, room, roomName, result.slots);
           }
           break;
         }
@@ -1133,11 +1133,27 @@ class AIDispatcher {
     await this.publishAudio(responseAudio, room, roomName);
   }
 
-  async handlePersonCheckDetails(participantId, rawTranscript, room, roomName) {
-    this.log('PERSON_CHECK_DETAILS', { participant: participantId, transcript: rawTranscript });
+  async handlePersonCheckDetails(participantId, rawTranscript, room, roomName, llmSlots) {
+    this.log('PERSON_CHECK_DETAILS', { participant: participantId, transcript: rawTranscript, llmSlots });
     
     const personDetails = parsePersonDetails(rawTranscript);
     this.log('PERSON_DETAILS_PARSED', personDetails);
+    
+    if (!personDetails.lastName && llmSlots?.lastName) {
+      personDetails.lastName = llmSlots.lastName;
+      this.log('PERSON_DETAILS_LLM_FALLBACK', { field: 'lastName', value: llmSlots.lastName });
+    }
+    if (!personDetails.firstName && llmSlots?.firstName) {
+      personDetails.firstName = llmSlots.firstName;
+      this.log('PERSON_DETAILS_LLM_FALLBACK', { field: 'firstName', value: llmSlots.firstName });
+    }
+    if (!personDetails.dob && llmSlots?.dob) {
+      const llmDob = parseDOB(llmSlots.dob);
+      if (llmDob) {
+        personDetails.dob = llmDob;
+        this.log('PERSON_DETAILS_LLM_FALLBACK', { field: 'dob', value: llmSlots.dob, parsed: llmDob.formatted });
+      }
+    }
     
     if (!personDetails.lastName) {
       const response = `${participantId}, did not copy last name. Go ahead with last name.`;
@@ -1182,10 +1198,19 @@ class AIDispatcher {
     await this.publishAudio(confirmAudio, room, roomName);
   }
 
-  async handlePersonCheckDOB(participantId, rawTranscript, savedSlots, room, roomName) {
-    this.log('PERSON_CHECK_DOB', { participant: participantId, transcript: rawTranscript, savedSlots });
+  async handlePersonCheckDOB(participantId, rawTranscript, savedSlots, room, roomName, llmSlots) {
+    this.log('PERSON_CHECK_DOB', { participant: participantId, transcript: rawTranscript, savedSlots, llmSlots });
     
-    const dob = parseDOB(rawTranscript);
+    let dob = null;
+    if (llmSlots?.dob) {
+      dob = parseDOB(llmSlots.dob);
+      if (dob) {
+        this.log('PERSON_DOB_LLM_SLOT_USED', { llmDob: llmSlots.dob, parsed: dob.formatted });
+      }
+    }
+    if (!dob) {
+      dob = parseDOB(rawTranscript);
+    }
     
     if (!dob) {
       const response = `${participantId}, did not copy date of birth. Go ahead with date of birth.`;

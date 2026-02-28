@@ -101,6 +101,7 @@ class SignalingService {
       socket.on(SIGNALING_EVENTS.UNIT_STATUS_UPDATE, (data) => this._handleStatusUpdate(socket, data));
       socket.on(SIGNALING_EVENTS.LOCATION_UPDATE, (data) => this._handleLocationUpdate(socket, data));
       socket.on(SIGNALING_EVENTS.TOKEN_REQUEST, (data) => this._handleTokenRequest(socket, data));
+      socket.on('ping', () => socket.emit('pong'));
       socket.on('disconnect', () => this._handleDisconnect(socket));
     });
 

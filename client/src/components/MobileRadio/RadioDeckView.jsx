@@ -9,6 +9,8 @@ import { PTT_STATES } from '../../constants/pttStates';
 import { updateUnitStatus } from '../../utils/api';
 import { DataPacket_Kind } from 'livekit-client';
 import { startBackgroundService, stopBackgroundService } from '../../plugins/backgroundService';
+import { setupAppLifecycle } from '../../lib/capacitor';
+import { signalingManager } from '../../signaling/SignalingManager';
 import { PTTButton } from './PTTButton';
 import { 
   AnimalSearchModal, 
@@ -241,6 +243,33 @@ export function RadioDeckView({ user, onLogout }) {
         console.warn('[RadioDeck] Failed to stop background service:', err);
       });
     };
+  }, []);
+
+  useEffect(() => {
+    const cleanup = setupAppLifecycle(
+      () => {
+        console.log('[RadioDeck] App resumed — verifying connections');
+        signalingManager.verifyConnection().then(ok => {
+          if (ok) {
+            console.log('[RadioDeck] Signaling connection verified');
+          } else {
+            console.warn('[RadioDeck] Signaling connection could not be restored');
+          }
+        });
+        try {
+          const ac = window._sharedAudioContext || (typeof AudioContext !== 'undefined' && new AudioContext());
+          if (ac && ac.state === 'suspended') {
+            ac.resume().then(() => console.log('[RadioDeck] AudioContext resumed'));
+          }
+        } catch (e) {
+          console.warn('[RadioDeck] AudioContext resume failed:', e.message);
+        }
+      },
+      () => {
+        console.log('[RadioDeck] App paused — keeping connections alive');
+      }
+    );
+    return cleanup;
   }, []);
 
   useEffect(() => {
