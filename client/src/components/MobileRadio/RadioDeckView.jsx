@@ -857,6 +857,8 @@ export function RadioDeckView({ user, onLogout }) {
 
   useEffect(function() {
     var pttDown = false;
+    var accDown = false;
+    var emergencyDown = false;
     var KEY_PTT = 230;
     var KEY_ACC = 231;
     var KEY_EMERGENCY = 233;
@@ -928,7 +930,8 @@ export function RadioDeckView({ user, onLogout }) {
       } else if (code === KEY_EMERGENCY) {
         e.preventDefault();
         e.stopPropagation();
-        if (!emergencyDownTime) {
+        if (!emergencyDown) {
+          emergencyDown = true;
           emergencyDownTime = Date.now();
           var holdMs = isEmergencyRef.current ? EMERGENCY_DEACTIVATE_MS : EMERGENCY_ACTIVATE_MS;
           var label = isEmergencyRef.current ? 'CANCEL' : 'EMERG';
@@ -950,7 +953,10 @@ export function RadioDeckView({ user, onLogout }) {
       } else if (code === KEY_ACC) {
         e.preventDefault();
         e.stopPropagation();
-        toggleScanningRef.current();
+        if (!accDown) {
+          accDown = true;
+          toggleScanningRef.current();
+        }
       }
     };
 
@@ -971,7 +977,15 @@ export function RadioDeckView({ user, onLogout }) {
       if (code === KEY_EMERGENCY) {
         e.preventDefault();
         e.stopPropagation();
+        emergencyDown = false;
         clearEmergencyTimers();
+        return;
+      }
+
+      if (code === KEY_ACC) {
+        e.preventDefault();
+        e.stopPropagation();
+        accDown = false;
         return;
       }
 

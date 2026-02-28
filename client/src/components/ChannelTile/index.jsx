@@ -92,17 +92,23 @@ export default function ChannelTile({ channel, onRemove }) {
       className={`channel-tile ${hasEmergency ? 'emergency' : ''} ${isTxSelected ? 'selected' : ''} ${isDragging ? 'z-50' : ''}`}
     >
       <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2" {...attributes} {...listeners}>
+        <div className="flex items-center gap-2 min-w-0" {...attributes} {...listeners}>
           <span className="text-xs text-dispatch-secondary cursor-grab">⋮⋮</span>
-          <h3 className="font-bold text-dispatch-text">{channel.name}</h3>
+          <div className="min-w-0">
+            {channel.zone && (
+              <span className="block text-[10px] uppercase tracking-wider text-dispatch-secondary leading-tight truncate">{channel.zone}</span>
+            )}
+            <h3 className="font-bold text-dispatch-text leading-tight truncate">{channel.name}</h3>
+          </div>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           <AudioLevelMeter level={level} />
           {onRemove && (
             <button
               type="button"
-              onMouseDown={handleRemoveClick}
+              onClick={handleRemoveClick}
               onPointerDown={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
               className="channel-remove-btn"
               title="Remove from grid"
               aria-label={`Remove ${channel.name} from grid`}
