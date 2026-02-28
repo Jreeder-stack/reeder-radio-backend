@@ -959,7 +959,7 @@ class AIDispatcher {
     
     setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_ZONE_CONFIRM, null, { zone });
     
-    const confirmResponse = `${participantId}, just to confirm, you want a zone change to ${zone}. 10-4?`;
+    const confirmResponse = `${participantId}, just to confirm, you want a zone change to ${zone}?`;
     const confirmAudio = await textToSpeech(confirmResponse);
     await this.publishAudio(confirmAudio, room, roomName);
   }
@@ -1048,7 +1048,7 @@ class AIDispatcher {
     
     setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_DETAIL_CONFIRM, null, { location });
     
-    const confirmResponse = `${participantId}, just to confirm, detail at ${location}. 10-4?`;
+    const confirmResponse = `${participantId}, just to confirm, detail at ${location}?`;
     const confirmAudio = await textToSpeech(confirmResponse);
     await this.publishAudio(confirmAudio, room, roomName);
   }
