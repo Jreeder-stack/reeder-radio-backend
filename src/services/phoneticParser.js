@@ -276,14 +276,21 @@ export function extractNameFromTranscript(transcript) {
     }
   }
   
-  const dashMatch = normalized.match(/(\w+)\s*[-–]\s*(.+)/);
-  if (dashMatch) {
-    const baseName = dashMatch[1];
-    const spelling = parsePhoneticSpelling(dashMatch[2]);
-    if (spelling.length >= 2) {
-      return capitalizeFirst(spelling);
+  const dashLetterPattern = /^[a-z](?:[-–\s.][a-z])+$/i;
+  const dashLetterMatch = normalized.match(/^(\w{2,})\s+([a-z][-–][a-z](?:[-–][a-z])+)$/i);
+  if (dashLetterMatch) {
+    const letters = dashLetterMatch[2].split(/[-–]/).join('');
+    if (letters.length >= 2) {
+      return capitalizeFirst(letters);
     }
-    return capitalizeFirst(baseName);
+    return capitalizeFirst(dashLetterMatch[1]);
+  }
+  
+  if (dashLetterPattern.test(normalized.replace(/\s+/g, '-'))) {
+    const letters = normalized.replace(/[-–\s.]+/g, '');
+    if (letters.length >= 2) {
+      return capitalizeFirst(letters);
+    }
   }
   
   const words = normalized.split(/\s+/);

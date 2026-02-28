@@ -1015,6 +1015,7 @@ class AIDispatcher {
         return;
       }
       
+      this.log('CAD_PERSON_QUERY_SENDING', { participantId, firstName, lastName, dob });
       const cadResult = await cadService.queryPerson(firstName, lastName, dob);
       this.log('CAD_PERSON_QUERY_RESULT', { participantId, result: cadResult });
       
