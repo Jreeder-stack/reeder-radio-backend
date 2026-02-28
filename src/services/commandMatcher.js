@@ -12,6 +12,8 @@ const DISPATCHER_STATE = {
   AWAITING_PERSON_FIRSTNAME: 'AWAITING_PERSON_FIRSTNAME',
   AWAITING_ZONE: 'AWAITING_ZONE',
   AWAITING_ZONE_CONFIRM: 'AWAITING_ZONE_CONFIRM',
+  AWAITING_DETAIL_LOCATION: 'AWAITING_DETAIL_LOCATION',
+  AWAITING_DETAIL_CONFIRM: 'AWAITING_DETAIL_CONFIRM',
   SIGNAL_100_ACTIVE: 'SIGNAL_100_ACTIVE'
 };
 
@@ -435,6 +437,22 @@ const EMERGENCY_COMMANDS = [
 
 const CANCEL_PHRASES = ['cancel', 'never mind', 'nevermind', 'disregard', 'negative', 'scratch that'];
 
+const DETAIL_COMMAND_PATTERNS = [
+  { regex: /(?:show\s+me\s+out\s+on\s+(?:a\s+)?detail\s+at|out\s+on\s+(?:a\s+)?detail\s+at|on\s+(?:a\s+)?detail\s+at|detail\s+at)\s+(.+)/i, hasLocation: true },
+  { regex: /(?:show\s+me\s+out\s+on\s+(?:a\s+)?detail|out\s+on\s+(?:a\s+)?detail|on\s+(?:a\s+)?detail)\b/i, hasLocation: false },
+];
+
+function matchDetailCommand(transcript) {
+  for (const pattern of DETAIL_COMMAND_PATTERNS) {
+    const match = transcript.match(pattern.regex);
+    if (match) {
+      const location = pattern.hasLocation && match[1] ? match[1].trim() : null;
+      return { location };
+    }
+  }
+  return null;
+}
+
 const ZONE_CHANGE_PATTERNS = [
   { regex: /(?:change\s+(?:my\s+)?zone\s+to|zone\s+change\s+to)\s+(.+)/i, hasZone: true },
   { regex: /(?:show\s+me\s+out\s+at|out\s+at)\s+(.+)/i, hasZone: true },
@@ -695,7 +713,8 @@ export function matchCommand(transcript, participantId = null) {
   const confirmStates = [
     DISPATCHER_STATE.AWAITING_PERSON_CONFIRM,
     DISPATCHER_STATE.AWAITING_SECURE_CONFIRM,
-    DISPATCHER_STATE.AWAITING_ZONE_CONFIRM
+    DISPATCHER_STATE.AWAITING_ZONE_CONFIRM,
+    DISPATCHER_STATE.AWAITING_DETAIL_CONFIRM
   ];
   if (containsCancelPhrase(transcript) && !confirmStates.includes(session.state)) {
     resetUnitSession(unitId);
@@ -876,6 +895,26 @@ export function matchCommand(transcript, participantId = null) {
     };
   }
 
+  if (session.state === DISPATCHER_STATE.AWAITING_DETAIL_LOCATION) {
+    return {
+      response: null,
+      unitId,
+      intent: 'DETAIL_LOCATION',
+      rawTranscript: transcript,
+      slots: session.slots
+    };
+  }
+
+  if (session.state === DISPATCHER_STATE.AWAITING_DETAIL_CONFIRM) {
+    return {
+      response: null,
+      unitId,
+      intent: 'DETAIL_CONFIRM',
+      rawTranscript: transcript,
+      slots: session.slots
+    };
+  }
+
   if (session.state === DISPATCHER_STATE.AWAITING_SECURE_CONFIRM) {
     return {
       response: null,
@@ -912,6 +951,31 @@ export function matchCommand(transcript, participantId = null) {
           cadAction: emergencyCmd.cadAction,
           cadData: typeof emergencyCmd.cadData === 'function' ? emergencyCmd.cadData(unitId) : emergencyCmd.cadData
         };
+      }
+
+      const detailResult = matchDetailCommand(transcript);
+      if (detailResult) {
+        if (detailResult.location) {
+          session.state = DISPATCHER_STATE.AWAITING_DETAIL_CONFIRM;
+          session.slots = { location: detailResult.location };
+          startSessionTimeout(unitId);
+          return {
+            response: null,
+            unitId,
+            intent: 'DETAIL_WITH_LOCATION',
+            rawTranscript: transcript,
+            slots: { location: detailResult.location }
+          };
+        } else {
+          session.state = DISPATCHER_STATE.AWAITING_DETAIL_LOCATION;
+          session.slots = {};
+          startSessionTimeout(unitId);
+          return {
+            response: `${unitId}, go ahead with location.`,
+            unitId,
+            cadStatus: null
+          };
+        }
       }
 
       const zoneResult = matchZoneChange(transcript);
@@ -1014,6 +1078,31 @@ export function matchCommand(transcript, participantId = null) {
         cadAction: emergencyCmd.cadAction,
         cadData: typeof emergencyCmd.cadData === 'function' ? emergencyCmd.cadData(unitId) : emergencyCmd.cadData
       };
+    }
+
+    const detailResult2 = matchDetailCommand(transcript);
+    if (detailResult2) {
+      if (detailResult2.location) {
+        session.state = DISPATCHER_STATE.AWAITING_DETAIL_CONFIRM;
+        session.slots = { location: detailResult2.location };
+        startSessionTimeout(unitId);
+        return {
+          response: null,
+          unitId,
+          intent: 'DETAIL_WITH_LOCATION',
+          rawTranscript: transcript,
+          slots: { location: detailResult2.location }
+        };
+      } else {
+        session.state = DISPATCHER_STATE.AWAITING_DETAIL_LOCATION;
+        session.slots = {};
+        startSessionTimeout(unitId);
+        return {
+          response: `${unitId}, go ahead with location.`,
+          unitId,
+          cadStatus: null
+        };
+      }
     }
 
     const zoneResult2 = matchZoneChange(transcript);

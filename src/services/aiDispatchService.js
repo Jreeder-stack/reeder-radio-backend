@@ -767,6 +767,21 @@ class AIDispatcher {
         return;
       }
 
+      if (commandResult.intent === 'DETAIL_WITH_LOCATION') {
+        await this.handleDetailConfirmPrompt(participantId, commandResult.slots.location, room, roomName);
+        return;
+      }
+
+      if (commandResult.intent === 'DETAIL_LOCATION') {
+        await this.handleDetailLocation(participantId, commandResult.rawTranscript, room, roomName);
+        return;
+      }
+
+      if (commandResult.intent === 'DETAIL_CONFIRM') {
+        await this.handleDetailConfirm(participantId, commandResult.rawTranscript, commandResult.slots, room, roomName);
+        return;
+      }
+
       if (commandResult.intent === 'SECURE_CONFIRM_RESPONSE') {
         await this.handleSecureConfirmResponse(participantId, commandResult.rawTranscript, commandResult.slots, room, roomName);
         return;
@@ -1025,6 +1040,98 @@ class AIDispatcher {
     await this.publishAudio(confirmAudio, room, roomName);
     
     await this.logToCallNotes(participantId, `Zone change: ${zone}`);
+    setUnitSessionState(participantId, DISPATCHER_STATE.IDLE);
+  }
+
+  async handleDetailConfirmPrompt(participantId, location, room, roomName) {
+    this.log('DETAIL_CONFIRM_PROMPT', { participant: participantId, location });
+    
+    setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_DETAIL_CONFIRM, null, { location });
+    
+    const confirmResponse = `${participantId}, just to confirm, detail at ${location}. 10-4?`;
+    const confirmAudio = await textToSpeech(confirmResponse);
+    await this.publishAudio(confirmAudio, room, roomName);
+  }
+
+  async handleDetailLocation(participantId, rawTranscript, room, roomName) {
+    this.log('DETAIL_LOCATION', { participant: participantId, transcript: rawTranscript });
+    
+    const location = rawTranscript.trim();
+    
+    if (!location || location.length < 2) {
+      const response = `${participantId}, did not copy location. Go ahead with location.`;
+      const responseAudio = await textToSpeech(response);
+      await this.publishAudio(responseAudio, room, roomName);
+      return;
+    }
+    
+    await this.handleDetailConfirmPrompt(participantId, location, room, roomName);
+  }
+
+  async handleDetailConfirm(participantId, rawTranscript, slots, room, roomName) {
+    this.log('DETAIL_CONFIRM', { participant: participantId, transcript: rawTranscript, slots });
+    
+    const normalized = rawTranscript.toLowerCase().trim();
+    
+    const confirmPhrases = [
+      '10-4', '10/4', 'ten four', 'ten-four', 'tenfour',
+      'affirmative', 'yes', 'yeah', 'yep', 'correct', 'that is correct',
+      'copy', 'roger', 'roger that', 'copy that',
+      'confirmed', 'confirm', 'thats right', "that's right", "that's correct"
+    ];
+    const denyPhrases = [
+      'negative', 'neg', 'no', 'nope', 'incorrect', 'wrong',
+      'not correct', 'that is wrong', "that's wrong", 'thats wrong',
+      'repeat', 'say again', 'try again'
+    ];
+    
+    let isConfirmed = false;
+    let isDenied = false;
+    
+    for (const phrase of confirmPhrases) {
+      if (normalized.includes(phrase)) { isConfirmed = true; break; }
+    }
+    if (!isConfirmed) {
+      for (const phrase of denyPhrases) {
+        if (normalized.includes(phrase)) { isDenied = true; break; }
+      }
+    }
+    
+    if (isDenied) {
+      setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_DETAIL_LOCATION);
+      const retryResponse = `${participantId}, can you repeat the location?`;
+      const retryAudio = await textToSpeech(retryResponse);
+      await this.publishAudio(retryAudio, room, roomName);
+      return;
+    }
+    
+    if (!isConfirmed) {
+      const askAgainResponse = `${participantId}, confirm detail, 10-4 or negative?`;
+      const askAgainAudio = await textToSpeech(askAgainResponse);
+      await this.publishAudio(askAgainAudio, room, roomName);
+      return;
+    }
+    
+    const location = slots.location;
+    
+    try {
+      if (cadService.isConfigured()) {
+        await cadService.updateUnitStatus(participantId, 'detail');
+        this.log('CAD_DETAIL_STATUS_UPDATED', { participantId, status: 'detail' });
+        
+        await cadService.updateUnitZone(participantId, location);
+        this.log('CAD_DETAIL_ZONE_UPDATED', { participantId, location });
+      }
+    } catch (error) {
+      this.log('CAD_DETAIL_UPDATE_ERROR', { error: error.message });
+    }
+    
+    const timeStr = this.formatMilitaryTime();
+    const confirmResponse = `${participantId}, 10-4. ${timeStr}.`;
+    const confirmAudio = await textToSpeech(confirmResponse);
+    await this.publishAudio(confirmAudio, room, roomName);
+    
+    await this.logToCallNotes(participantId, `Detail at: ${location}`);
     setUnitSessionState(participantId, DISPATCHER_STATE.IDLE);
   }
 
