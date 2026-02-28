@@ -1026,11 +1026,17 @@ class AIDispatcher {
         return;
       }
       
-      const hasRecord = (cadResult.count > 0) || (cadResult.results && cadResult.results.length > 0);
-      const person = (cadResult.results && cadResult.results.length > 0) ? cadResult.results[0] : (cadResult.person || cadResult.data || {});
-      const hasFlags = person.wanted || person.warrant || person.bolo || 
+      const person = (cadResult.results && cadResult.results.length > 0) ? cadResult.results[0] 
+                   : (cadResult.person || cadResult.record || cadResult.data || null);
+      const hasRecord = !!(cadResult.count > 0) || 
+                        !!(cadResult.results && cadResult.results.length > 0) ||
+                        !!(cadResult.found) ||
+                        !!(person && Object.keys(person).length > 0);
+      const hasFlags = person && (person.wanted || person.warrant || person.bolo || 
                        (person.warrants && person.warrants.length > 0) ||
-                       (person.flags && person.flags.length > 0);
+                       (person.flags && person.flags.length > 0));
+      
+      this.log('PERSON_CHECK_ANALYSIS', { hasRecord, hasFlags, personKeys: person ? Object.keys(person) : [] });
       
       if (hasFlags) {
         setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_SECURE_CONFIRM, null, {
