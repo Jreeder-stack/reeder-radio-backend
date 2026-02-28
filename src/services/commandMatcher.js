@@ -8,6 +8,7 @@ const DISPATCHER_STATE = {
   AWAITING_PERSON_DETAILS: 'AWAITING_PERSON_DETAILS',
   AWAITING_PERSON_DOB: 'AWAITING_PERSON_DOB',
   AWAITING_SECURE_CONFIRM: 'AWAITING_SECURE_CONFIRM',
+  AWAITING_PERSON_CONFIRM: 'AWAITING_PERSON_CONFIRM',
   SIGNAL_100_ACTIVE: 'SIGNAL_100_ACTIVE'
 };
 
@@ -403,7 +404,7 @@ const MULTI_STEP_COMMANDS = [
       'name and dob', 'name and date of birth', 'subject check'
     ],
     nextState: DISPATCHER_STATE.AWAITING_PERSON_DETAILS,
-    prompt: (unitId) => `${unitId}, go ahead.`,
+    prompt: (unitId) => `${unitId}, 10-27 go ahead.`,
     slotName: 'personDetails',
     isEmergency: false,
     requiresSecureCheck: true
@@ -803,6 +804,16 @@ export function matchCommand(transcript, participantId = null) {
       response: null,
       unitId,
       intent: 'PERSON_CHECK_DOB',
+      rawTranscript: transcript,
+      slots: session.slots
+    };
+  }
+
+  if (session.state === DISPATCHER_STATE.AWAITING_PERSON_CONFIRM) {
+    return {
+      response: null,
+      unitId,
+      intent: 'PERSON_CHECK_CONFIRM',
       rawTranscript: transcript,
       slots: session.slots
     };

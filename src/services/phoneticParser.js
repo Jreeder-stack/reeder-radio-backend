@@ -302,6 +302,63 @@ export function extractNameFromTranscript(transcript) {
   return '';
 }
 
+function makeDOBResult(month, day, year) {
+  if (year < 100) {
+    year = year > 30 ? 1900 + year : 2000 + year;
+  }
+  if (month >= 1 && month <= 12 && day >= 1 && day <= 31 && year >= 1900 && year <= 2100) {
+    return {
+      month: month.toString().padStart(2, '0'),
+      day: day.toString().padStart(2, '0'),
+      year: year.toString(),
+      formatted: `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`
+    };
+  }
+  return null;
+}
+
+function spokenWordsToDigits(text) {
+  const words = text.split(/\s+/);
+  const result = [];
+  let i = 0;
+  while (i < words.length) {
+    const word = words[i].replace(/[,\.]/g, '');
+    if (/^\d+$/.test(word)) {
+      result.push(word);
+      i++;
+      continue;
+    }
+    if (SPOKEN_ORDINALS[word] !== undefined) {
+      result.push(SPOKEN_ORDINALS[word].toString());
+      i++;
+      continue;
+    }
+    const hyphenated = i + 1 < words.length ? word + '-' + words[i + 1].replace(/[,\.]/g, '') : null;
+    if (hyphenated && SPOKEN_ORDINALS[hyphenated] !== undefined) {
+      result.push(SPOKEN_ORDINALS[hyphenated].toString());
+      i += 2;
+      continue;
+    }
+    if (i + 1 < words.length) {
+      const twoWord = word + ' ' + words[i + 1].replace(/[,\.]/g, '');
+      const twoNum = parseSpokenNumber(twoWord);
+      if (twoNum !== null && twoNum >= 1 && twoNum <= 99) {
+        result.push(twoNum.toString());
+        i += 2;
+        continue;
+      }
+    }
+    if (SPOKEN_NUMBERS[word] !== undefined) {
+      result.push(SPOKEN_NUMBERS[word].toString());
+      i++;
+      continue;
+    }
+    result.push(word);
+    i++;
+  }
+  return result.join(' ');
+}
+
 export function parseDOB(text) {
   if (!text) return null;
   
@@ -312,60 +369,58 @@ export function parseDOB(text) {
     .replace(/\bdob\b/g, ' ')
     .replace(/\bdate of birth\b/g, ' ')
     .replace(/\bis\b/g, ' ')
+    .replace(/\bon\b/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
   
   const numericPatterns = [
     /(\d{1,2})\s*[-\/]\s*(\d{1,2})\s*[-\/]\s*(\d{2,4})/,
     /(\d{1,2})\s+(\d{1,2})\s+(\d{2,4})/,
-    /(\d{1,2})\s*(\d{1,2})\s*(\d{4})/
+    /\b(\d{2})(\d{2})(\d{4})\b/
   ];
   
   for (const pattern of numericPatterns) {
     const match = normalized.match(pattern);
     if (match) {
-      let [_, month, day, year] = match;
-      month = parseInt(month);
-      day = parseInt(day);
-      year = parseInt(year);
-      
-      if (year < 100) {
-        year = year > 30 ? 1900 + year : 2000 + year;
-      }
-      
-      if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
-        return {
-          month: month.toString().padStart(2, '0'),
-          day: day.toString().padStart(2, '0'),
-          year: year.toString(),
-          formatted: `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`
-        };
-      }
+      let [_, m, d, y] = match;
+      const r = makeDOBResult(parseInt(m), parseInt(d), parseInt(y));
+      if (r) return r;
     }
   }
   
-  const monthNames = Object.keys(SPOKEN_MONTHS).join('|');
+  const DOB_MONTH_NAMES = {
+    'january': 1, 'jan': 1,
+    'february': 2, 'feb': 2,
+    'march': 3, 'mar': 3,
+    'april': 4, 'apr': 4,
+    'may': 5,
+    'june': 6, 'jun': 6,
+    'july': 7, 'jul': 7,
+    'august': 8, 'aug': 8,
+    'september': 9, 'sept': 9, 'sep': 9,
+    'october': 10, 'oct': 10,
+    'november': 11, 'nov': 11,
+    'december': 12, 'dec': 12
+  };
+  
+  const monthNames = Object.keys(DOB_MONTH_NAMES).join('|');
   const spokenMonthPattern = new RegExp(`(${monthNames})\\s+(.+)`, 'i');
   const monthMatch = normalized.match(spokenMonthPattern);
   
   if (monthMatch) {
-    const month = SPOKEN_MONTHS[monthMatch[1].toLowerCase()];
+    const month = DOB_MONTH_NAMES[monthMatch[1].toLowerCase()];
     const rest = monthMatch[2];
     
-    const dayYearNumeric = rest.match(/(\d{1,2})\s*,?\s*(\d{2,4})/);
+    const dayYearNumeric = rest.match(/^(\d{1,2})(?:st|nd|rd|th)?\s*,?\s+(\d{2,4})$/);
     if (dayYearNumeric) {
-      let day = parseInt(dayYearNumeric[1]);
-      let year = parseInt(dayYearNumeric[2]);
-      if (year < 100) year = year > 30 ? 1900 + year : 2000 + year;
-      
-      if (day >= 1 && day <= 31) {
-        return {
-          month: month.toString().padStart(2, '0'),
-          day: day.toString().padStart(2, '0'),
-          year: year.toString(),
-          formatted: `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`
-        };
-      }
+      const r = makeDOBResult(month, parseInt(dayYearNumeric[1]), parseInt(dayYearNumeric[2]));
+      if (r) return r;
+    }
+    
+    const dayYearSep = rest.match(/^(\d{1,2})(?:st|nd|rd|th)?\s*,?\s+(\d{2,4})\b/);
+    if (dayYearSep) {
+      const r = makeDOBResult(month, parseInt(dayYearSep[1]), parseInt(dayYearSep[2]));
+      if (r) return r;
     }
     
     const words = rest.split(/\s+/).map(w => w.replace(/[,\.]/g, ''));
@@ -385,7 +440,19 @@ export function parseDOB(text) {
         continue;
       }
       
+      if (SPOKEN_ORDINALS[word] !== undefined) {
+        day = SPOKEN_ORDINALS[word];
+        dayEndIdx = i;
+        continue;
+      }
+      
       if (i + 1 < words.length) {
+        const hyphenated = word + '-' + words[i + 1];
+        if (SPOKEN_ORDINALS[hyphenated] !== undefined) {
+          day = SPOKEN_ORDINALS[hyphenated];
+          dayEndIdx = i + 1;
+          continue;
+        }
         const twoWordPhrase = word + ' ' + words[i + 1];
         const twoWordDay = parseSpokenNumber(twoWordPhrase);
         if (twoWordDay !== null && twoWordDay >= 1 && twoWordDay <= 31) {
@@ -412,13 +479,114 @@ export function parseDOB(text) {
       if (year === null || year < 1900 || year > 2100) {
         year = 1990;
       }
+      const r = makeDOBResult(month, day, year);
+      if (r) return r;
+    }
+  }
+  
+  const allWords = normalized.split(/\s+/).filter(w => w.length > 0);
+  
+  let monthNum = null;
+  let dayNum = null;
+  let yearNum = null;
+  let parseIdx = 0;
+  
+  if (allWords.length >= 1) {
+    const w = allWords[0].replace(/[,\.]/g, '');
+    const asNum = /^\d+$/.test(w) ? parseInt(w) : (SPOKEN_NUMBERS[w] !== undefined ? SPOKEN_NUMBERS[w] : null);
+    if (asNum !== null && asNum >= 1 && asNum <= 12) {
+      monthNum = asNum;
+      parseIdx = 1;
+    } else if (asNum === 0 && allWords.length >= 2) {
+      const w2 = allWords[1].replace(/[,\.]/g, '');
+      const asNum2 = /^\d+$/.test(w2) ? parseInt(w2) : (SPOKEN_NUMBERS[w2] !== undefined ? SPOKEN_NUMBERS[w2] : null);
+      if (asNum2 !== null && asNum2 >= 1 && asNum2 <= 12) {
+        monthNum = asNum2;
+        parseIdx = 2;
+      }
+    }
+  }
+  
+  if (monthNum !== null && parseIdx < allWords.length) {
+    for (let i = parseIdx; i < allWords.length; i++) {
+      if (dayNum !== null) break;
+      const w = allWords[i].replace(/[,\.]/g, '');
       
-      return {
-        month: month.toString().padStart(2, '0'),
-        day: day.toString().padStart(2, '0'),
-        year: year.toString(),
-        formatted: `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`
-      };
+      if (SPOKEN_ORDINALS[w] !== undefined && SPOKEN_ORDINALS[w] <= 31) {
+        dayNum = SPOKEN_ORDINALS[w];
+        parseIdx = i + 1;
+        continue;
+      }
+      if (i + 1 < allWords.length) {
+        const w2 = allWords[i + 1].replace(/[,\.]/g, '');
+        const hyp = w + '-' + w2;
+        if (SPOKEN_ORDINALS[hyp] !== undefined && SPOKEN_ORDINALS[hyp] <= 31) {
+          dayNum = SPOKEN_ORDINALS[hyp];
+          parseIdx = i + 2;
+          continue;
+        }
+        const isTensPrefix = ['twenty', 'thirty'].includes(w);
+        if (isTensPrefix) {
+          const tw = w + ' ' + w2;
+          const twn = parseSpokenNumber(tw);
+          if (twn !== null && twn >= 1 && twn <= 31) {
+            dayNum = twn;
+            parseIdx = i + 2;
+            continue;
+          }
+        }
+      }
+      const sn = /^\d+$/.test(w) ? parseInt(w) : (SPOKEN_NUMBERS[w] !== undefined ? SPOKEN_NUMBERS[w] : parseSpokenNumber(w));
+      if (sn !== null && sn >= 1 && sn <= 31) {
+        dayNum = sn;
+        parseIdx = i + 1;
+        continue;
+      }
+      break;
+    }
+  }
+  
+  if (monthNum !== null && dayNum !== null && parseIdx < allWords.length) {
+    const yearText = allWords.slice(parseIdx).join(' ');
+    yearNum = parseSpokenYear(yearText);
+  }
+  
+  if (monthNum !== null && dayNum !== null) {
+    if (yearNum === null || yearNum < 1900 || yearNum > 2100) {
+      yearNum = 1990;
+    }
+    const r = makeDOBResult(monthNum, dayNum, yearNum);
+    if (r) return r;
+  }
+  
+  const digitized = spokenWordsToDigits(normalized);
+  const digitWords = digitized.split(/\s+/).filter(w => /^\d+$/.test(w));
+  
+  if (digitWords.length >= 3) {
+    const m = parseInt(digitWords[0]);
+    const d = parseInt(digitWords[1]);
+    const remainingDigits = digitWords.slice(2);
+    let y;
+    
+    if (remainingDigits.length === 1) {
+      y = parseInt(remainingDigits[0]);
+    } else {
+      const yearText = remainingDigits.join(' ');
+      y = parseSpokenYear(yearText);
+      if (y === null) y = parseInt(remainingDigits[remainingDigits.length - 1]);
+    }
+    
+    if (y !== null && y !== undefined) {
+      const r = makeDOBResult(m, d, y);
+      if (r) return r;
+    }
+  }
+  
+  if (digitWords.length === 2) {
+    const m = parseInt(digitWords[0]);
+    const d = parseInt(digitWords[1]);
+    if (m >= 1 && m <= 12 && d >= 1 && d <= 31) {
+      return makeDOBResult(m, d, 1990);
     }
   }
   

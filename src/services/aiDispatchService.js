@@ -742,6 +742,11 @@ class AIDispatcher {
         return;
       }
 
+      if (commandResult.intent === 'PERSON_CHECK_CONFIRM') {
+        await this.handlePersonCheckConfirm(participantId, commandResult.rawTranscript, commandResult.slots, room, roomName);
+        return;
+      }
+
       if (commandResult.intent === 'SECURE_CONFIRM_RESPONSE') {
         await this.handleSecureConfirmResponse(participantId, commandResult.rawTranscript, commandResult.slots, room, roomName);
         return;
@@ -852,10 +857,98 @@ class AIDispatcher {
     const firstName = personDetails.firstName || 'unknown';
     const dob = personDetails.dob.formatted;
     
-    const confirmResponse = `${participantId}, confirming. Last ${lastName}, first ${firstName}, date of birth ${dob}. Standby.`;
+    setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_PERSON_CONFIRM, null, {
+      lastName,
+      firstName,
+      dob
+    });
+    
+    const confirmResponse = `${participantId}, confirming. Last ${lastName}, first ${firstName}, date of birth ${dob}. 10-4?`;
     const confirmAudio = await textToSpeech(confirmResponse);
     await this.publishAudio(confirmAudio, room, roomName);
+  }
+
+  async handlePersonCheckDOB(participantId, rawTranscript, savedSlots, room, roomName) {
+    this.log('PERSON_CHECK_DOB', { participant: participantId, transcript: rawTranscript, savedSlots });
     
+    const dob = parseDOB(rawTranscript);
+    
+    if (!dob) {
+      const response = `${participantId}, did not copy date of birth. Go ahead with date of birth.`;
+      const responseAudio = await textToSpeech(response);
+      await this.publishAudio(responseAudio, room, roomName);
+      return;
+    }
+    
+    const lastName = savedSlots.lastName;
+    const firstName = savedSlots.firstName || 'unknown';
+    const dobFormatted = dob.formatted;
+    
+    setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_PERSON_CONFIRM, null, {
+      lastName,
+      firstName,
+      dob: dobFormatted
+    });
+    
+    const confirmResponse = `${participantId}, confirming. Last ${lastName}, first ${firstName}, date of birth ${dobFormatted}. 10-4?`;
+    const confirmAudio = await textToSpeech(confirmResponse);
+    await this.publishAudio(confirmAudio, room, roomName);
+  }
+
+  async handlePersonCheckConfirm(participantId, rawTranscript, slots, room, roomName) {
+    this.log('PERSON_CHECK_CONFIRM', { participant: participantId, transcript: rawTranscript, slots });
+    
+    const normalized = rawTranscript.toLowerCase().trim();
+    
+    const confirmPhrases = [
+      '10-4', '10/4', 'ten four', 'ten-four', 'tenfour',
+      'affirmative', 'yes', 'yeah', 'yep', 'correct', 'that is correct',
+      'copy', 'roger', 'roger that', 'copy that', 'go ahead',
+      'confirmed', 'confirm', 'thats right', "that's right", "that's correct"
+    ];
+    const denyPhrases = [
+      'negative', 'neg', 'no', 'nope', 'incorrect', 'wrong',
+      'not correct', 'that is wrong', "that's wrong", 'thats wrong',
+      'repeat', 'say again', 'try again', 'start over', 'redo'
+    ];
+    
+    let isConfirmed = false;
+    let isDenied = false;
+    
+    for (const phrase of confirmPhrases) {
+      if (normalized.includes(phrase)) { isConfirmed = true; break; }
+    }
+    if (!isConfirmed) {
+      for (const phrase of denyPhrases) {
+        if (normalized.includes(phrase)) { isDenied = true; break; }
+      }
+    }
+    
+    if (isDenied) {
+      setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_PERSON_DETAILS);
+      const retryResponse = `${participantId}, go ahead with details again.`;
+      const retryAudio = await textToSpeech(retryResponse);
+      await this.publishAudio(retryAudio, room, roomName);
+      return;
+    }
+    
+    if (!isConfirmed) {
+      const askAgainResponse = `${participantId}, confirm details, 10-4 or negative?`;
+      const askAgainAudio = await textToSpeech(askAgainResponse);
+      await this.publishAudio(askAgainAudio, room, roomName);
+      return;
+    }
+    
+    const { lastName, firstName, dob } = slots;
+    
+    const standbyResponse = `${participantId}, 10-4. Standby.`;
+    const standbyAudio = await textToSpeech(standbyResponse);
+    await this.publishAudio(standbyAudio, room, roomName);
+    
+    await this.executePersonCheck(participantId, lastName, firstName, dob, room, roomName);
+  }
+
+  async executePersonCheck(participantId, lastName, firstName, dob, room, roomName) {
     try {
       if (!cadService.isConfigured()) {
         const noConfigResponse = `${participantId}, CAD system not available. Standby.`;
@@ -865,7 +958,7 @@ class AIDispatcher {
         return;
       }
       
-      const cadResult = await cadService.queryPerson(firstName, lastName, personDetails.dob?.formatted);
+      const cadResult = await cadService.queryPerson(firstName, lastName, dob);
       this.log('CAD_PERSON_QUERY_RESULT', { participantId, result: cadResult });
       
       if (!cadResult.success) {
@@ -911,88 +1004,6 @@ class AIDispatcher {
       
     } catch (error) {
       this.log('PERSON_CHECK_ERROR', { error: error.message });
-      const errorResponse = `${participantId}, Central. System error on records check.`;
-      const errorAudio = await textToSpeech(errorResponse);
-      await this.publishAudio(errorAudio, room, roomName);
-      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE);
-    }
-  }
-
-  async handlePersonCheckDOB(participantId, rawTranscript, savedSlots, room, roomName) {
-    this.log('PERSON_CHECK_DOB', { participant: participantId, transcript: rawTranscript, savedSlots });
-    
-    const dob = parseDOB(rawTranscript);
-    
-    if (!dob) {
-      const response = `${participantId}, did not copy date of birth. Go ahead with date of birth.`;
-      const responseAudio = await textToSpeech(response);
-      await this.publishAudio(responseAudio, room, roomName);
-      return;
-    }
-    
-    const lastName = savedSlots.lastName;
-    const firstName = savedSlots.firstName || 'unknown';
-    const dobFormatted = dob.formatted;
-    
-    const confirmResponse = `${participantId}, confirming. Last ${lastName}, first ${firstName}, date of birth ${dobFormatted}. Standby.`;
-    const confirmAudio = await textToSpeech(confirmResponse);
-    await this.publishAudio(confirmAudio, room, roomName);
-    
-    try {
-      if (!cadService.isConfigured()) {
-        const noConfigResponse = `${participantId}, CAD system not available. Standby.`;
-        const noConfigAudio = await textToSpeech(noConfigResponse);
-        await this.publishAudio(noConfigAudio, room, roomName);
-        setUnitSessionState(participantId, DISPATCHER_STATE.IDLE);
-        return;
-      }
-      
-      const cadResult = await cadService.queryPerson(firstName, lastName, dobFormatted);
-      this.log('CAD_PERSON_QUERY_RESULT', { participantId, result: cadResult });
-      
-      if (!cadResult.success) {
-        const errorResponse = `${participantId}, Central. Unable to complete records check. Try again.`;
-        const errorAudio = await textToSpeech(errorResponse);
-        await this.publishAudio(errorAudio, room, roomName);
-        setUnitSessionState(participantId, DISPATCHER_STATE.IDLE);
-        return;
-      }
-      
-      const hasRecord = (cadResult.count > 0) || (cadResult.results && cadResult.results.length > 0);
-      const person = (cadResult.results && cadResult.results.length > 0) ? cadResult.results[0] : (cadResult.person || cadResult.data || {});
-      const hasFlags = person.wanted || person.warrant || person.bolo || 
-                       (person.warrants && person.warrants.length > 0) ||
-                       (person.flags && person.flags.length > 0);
-      
-      if (hasFlags) {
-        setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_SECURE_CONFIRM, null, {
-          lastName,
-          firstName,
-          dob: dobFormatted,
-          personData: person
-        });
-        
-        const securePrompt = `${participantId}, Central. Is your mic secure?`;
-        const secureAudio = await textToSpeech(securePrompt);
-        await this.publishAudio(secureAudio, room, roomName);
-      } else if (hasRecord) {
-        const clearResponse = `${participantId}, Central. Local file, no wants or warrants.`;
-        const clearAudio = await textToSpeech(clearResponse);
-        await this.publishAudio(clearAudio, room, roomName);
-        
-        await this.logToCallNotes(participantId, `Records check: ${lastName}, ${firstName}, DOB ${dobFormatted} - Local file, no wants or warrants`);
-        setUnitSessionState(participantId, DISPATCHER_STATE.IDLE);
-      } else {
-        const noRecordResponse = `${participantId}, Central. No record on file.`;
-        const noRecordAudio = await textToSpeech(noRecordResponse);
-        await this.publishAudio(noRecordAudio, room, roomName);
-        
-        await this.logToCallNotes(participantId, `Records check: ${lastName}, ${firstName}, DOB ${dobFormatted} - No record on file`);
-        setUnitSessionState(participantId, DISPATCHER_STATE.IDLE);
-      }
-      
-    } catch (error) {
-      this.log('PERSON_CHECK_DOB_ERROR', { error: error.message });
       const errorResponse = `${participantId}, Central. System error on records check.`;
       const errorAudio = await textToSpeech(errorResponse);
       await this.publishAudio(errorAudio, room, roomName);
