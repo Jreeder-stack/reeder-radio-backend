@@ -107,7 +107,13 @@ public class HardwarePttPlugin extends Plugin {
         JSObject data = new JSObject();
         data.put("pressed", pressed);
         data.put("keyCode", pttKeyCode);
-        
-        notifyListeners(pressed ? "pttDown" : "pttUp", data);
+
+        if (getActivity() != null) {
+            getActivity().runOnUiThread(() -> {
+                notifyListeners(pressed ? "pttDown" : "pttUp", data);
+            });
+        } else {
+            notifyListeners(pressed ? "pttDown" : "pttUp", data);
+        }
     }
 }

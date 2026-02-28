@@ -270,6 +270,7 @@ class AIDispatcher {
     this.disconnectTimer = null;
     this.configuredChannel = null;
     this.emergencyEscalation = new EmergencyEscalationController(this);
+    this.handledTrackSids = new Set();
   }
 
   log(action, details = {}) {
@@ -481,6 +482,7 @@ class AIDispatcher {
       this.room = null;
       this.roomName = null;
       this.humanParticipantCount = 0;
+      this.handledTrackSids.clear();
     });
 
     room.on(RoomEvent.DataReceived, (payload, participant) => {
@@ -499,12 +501,35 @@ class AIDispatcher {
       humanCount: this.humanParticipantCount 
     });
 
+    for (const [, participant] of room.remoteParticipants) {
+      if (participant.identity === AI_IDENTITY) continue;
+      if (!this.isHumanParticipant(participant.identity)) continue;
+      
+      for (const [, publication] of participant.trackPublications) {
+        if (publication.track && publication.track.kind === TrackKind.KIND_AUDIO) {
+          this.log('LATE_TRACK_PICKUP', {
+            participant: participant.identity,
+            room: roomName,
+            trackSid: publication.sid
+          });
+          this.handleAudioTrack(publication.track, participant.identity, roomName, room);
+        }
+      }
+    }
+
     if (this.humanParticipantCount === 0) {
       this.startDisconnectTimer();
     }
   }
 
   async handleAudioTrack(track, participantId, roomName, room) {
+    const trackSid = track.sid || track.mediaStreamID || `${participantId}_${Date.now()}`;
+    if (this.handledTrackSids.has(trackSid)) {
+      this.log('TRACK_ALREADY_HANDLED', { participant: participantId, trackSid });
+      return;
+    }
+    this.handledTrackSids.add(trackSid);
+
     const chunks = [];
     let frameCount = 0;
     const MIN_AUDIO_BYTES = LIVEKIT_SAMPLE_RATE * 2 * 0.5;

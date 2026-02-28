@@ -250,6 +250,18 @@ public class MainActivity extends BridgeActivity {
         });
     }
 
+    private void injectJsKeyEventDelayed(int keyCode, String eventType, long delayMs) {
+        WebView webView = this.bridge.getWebView();
+        if (webView == null) return;
+        String js = "document.dispatchEvent(new KeyboardEvent('" + eventType + "',{keyCode:" + keyCode + ",which:" + keyCode + ",bubbles:true,cancelable:true}));";
+        webView.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                webView.evaluateJavascript(js, null);
+            }
+        }, delayMs);
+    }
+
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
         int keyCode = event.getKeyCode();
@@ -264,14 +276,29 @@ public class MainActivity extends BridgeActivity {
 
         HardwarePttPlugin pttPlugin = HardwarePttPlugin.getInstance();
         if (pttPlugin != null && keyCode == KEY_PTT) {
-            pttPlugin.handleKeyEvent(event);
+            if (isScreenOff) {
+                WebView webView = this.bridge.getWebView();
+                if (webView != null) {
+                    webView.postDelayed(() -> pttPlugin.handleKeyEvent(event), 50);
+                }
+            } else {
+                pttPlugin.handleKeyEvent(event);
+            }
         }
 
         if (isT320Key(keyCode)) {
-            if (action == KeyEvent.ACTION_DOWN) {
-                injectJsKeyEvent(keyCode, "keydown");
-            } else if (action == KeyEvent.ACTION_UP) {
-                injectJsKeyEvent(keyCode, "keyup");
+            if (isScreenOff) {
+                if (action == KeyEvent.ACTION_DOWN) {
+                    injectJsKeyEventDelayed(keyCode, "keydown", 50);
+                } else if (action == KeyEvent.ACTION_UP) {
+                    injectJsKeyEventDelayed(keyCode, "keyup", 50);
+                }
+            } else {
+                if (action == KeyEvent.ACTION_DOWN) {
+                    injectJsKeyEvent(keyCode, "keydown");
+                } else if (action == KeyEvent.ACTION_UP) {
+                    injectJsKeyEvent(keyCode, "keyup");
+                }
             }
             return true;
         }
@@ -323,6 +350,7 @@ public class MainActivity extends BridgeActivity {
             if (webView != null) {
                 webView.onResume();
                 webView.resumeTimers();
+                webView.dispatchWindowVisibilityChanged(android.view.View.VISIBLE);
                 webView.post(new Runnable() {
                     @Override
                     public void run() {
