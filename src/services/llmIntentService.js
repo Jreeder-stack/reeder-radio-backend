@@ -119,6 +119,16 @@ Return: { "intent": "DETAIL", "response": null, "slots": { "location": "[extract
 Unit wants to go on a detail but did NOT provide the location. Phrases like "put me on a detail", "show me on a detail".
 Return: { "intent": "DETAIL_PROMPT", "response": "[unit], go ahead with location." }
 
+### CREATE_CALL
+Unit wants to create/start a CAD call or be shown out on a call. Phrases like "show me out on a [nature] at [address]", "start me a call for [nature] at [address]", "start a call for a [nature] at [address]", "I need a call started for [nature] at [address]", "create a call for [nature]".
+IMPORTANT: "show me out on a detail at [location]" is a DETAIL, NOT a CREATE_CALL. CREATE_CALL is for actual incident types like theft, domestic, burglary, disturbance, assault, etc. — NOT for "detail".
+Extract the call nature (incident type) and address. If the unit mentions other units to add, extract those too.
+Return: { "intent": "CREATE_CALL", "response": null, "slots": { "nature": "[extracted call nature]", "address": "[extracted address or null]", "additionalUnits": ["[unit IDs if mentioned]"], "priority": "[if mentioned: low/medium/high, default medium]" } }
+
+### CREATE_CALL_PROMPT
+Unit wants a call created but is missing both the nature AND address, or just one of them. Phrases like "start me a call", "create a call", "I need a call started".
+Return: { "intent": "CREATE_CALL_PROMPT", "response": "[unit], go ahead with [nature/address as needed].", "slots": { "nature": "[if heard]", "address": "[if heard]" } }
+
 ### DISREGARD
 Unit is cancelling, disregarding, or abandoning their current request. Phrases like "disregard", "cancel", "cancel that", "nevermind", "never mind", "scratch that", "forget it", "10-22", "disregard that".
 Return: { "intent": "DISREGARD", "response": "[unit], 10-4, disregard." }
@@ -187,6 +197,9 @@ You will be told the current conversation state. Use it to interpret ambiguous i
 - AWAITING_PERSON_FIRSTNAME: Unit is providing first name → return PERSON_DETAILS with firstName slot.
 - AWAITING_PERSON_CONFIRM: Unit is confirming or denying person details → return CONFIRM or DENY.
 - AWAITING_SECURE_CONFIRM: Unit is confirming if their mic is secure → return CONFIRM or DENY.
+- AWAITING_CALL_NATURE: Unit is providing the call nature/incident type. Treat their entire transcript as the nature → return CREATE_CALL with nature slot.
+- AWAITING_CALL_ADDRESS: Unit is providing the address for the call. Treat their entire transcript as the address → return CREATE_CALL with address slot.
+- AWAITING_CALL_CONFIRM: Unit is confirming or denying call creation details → return CONFIRM or DENY.
 
 IMPORTANT: In AWAITING_* states, "10-4", "copy", "roger" mean CONFIRM (the unit is answering your question). In IDLE state, they mean SILENCE (the unit is just acknowledging, not talking to you).
 

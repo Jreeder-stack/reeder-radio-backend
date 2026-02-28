@@ -196,6 +196,90 @@ export function isConfigured() {
   return !!(process.env.CAD_URL && process.env.CAD_API_KEY);
 }
 
+let cachedCallNatures = [];
+let naturesLastFetched = 0;
+const NATURES_CACHE_TTL_MS = 30 * 60 * 1000;
+
+export async function getCallNatures(forceRefresh = false) {
+  const now = Date.now();
+  if (!forceRefresh && cachedCallNatures.length > 0 && (now - naturesLastFetched) < NATURES_CACHE_TTL_MS) {
+    return cachedCallNatures;
+  }
+
+  try {
+    const result = await cadRequest('/api/radio/call-natures', 'GET');
+    if (result.success && Array.isArray(result.call_natures) && result.call_natures.length > 0) {
+      cachedCallNatures = result.call_natures.map(n => n.key || n.name).filter(Boolean);
+      naturesLastFetched = now;
+      console.log(`[CAD] Loaded ${cachedCallNatures.length} call natures from CAD`);
+      return cachedCallNatures;
+    }
+  } catch (error) {
+    console.error('[CAD] Failed to fetch call natures:', error.message);
+  }
+
+  if (cachedCallNatures.length > 0) {
+    console.log('[CAD] Using previously cached call natures');
+    return cachedCallNatures;
+  }
+
+  cachedCallNatures = [
+    'ASSAULT', 'BURGLARY', 'DOMESTIC', 'DISTURBANCE', 'DUI', 'DRUG ACTIVITY',
+    'FIRE', 'EMS', 'HARASSMENT', 'MISSING PERSON', 'NOISE COMPLAINT',
+    'ROBBERY', 'SHOTS FIRED', 'SUSPICIOUS PERSON', 'SUSPICIOUS VEHICLE',
+    'THEFT', 'THEFT - RETAIL', 'TRESPASS', 'VANDALISM', 'WARRANT SERVICE',
+    'WELFARE CHECK', 'ACCIDENT', 'ACCIDENT - INJURY', 'ACCIDENT - HIT AND RUN',
+    'ALARM', 'CIVIL STANDBY', 'ANIMAL COMPLAINT', 'PURSUIT', 'UNKNOWN TYPE'
+  ];
+  naturesLastFetched = now;
+  console.log('[CAD] Using default call natures fallback list');
+  return cachedCallNatures;
+}
+
+export async function findBestNature(spokenNature) {
+  if (!spokenNature) return 'UNKNOWN TYPE';
+  const spoken = spokenNature.toUpperCase().trim();
+  if (!spoken) return 'UNKNOWN TYPE';
+
+  if (cachedCallNatures.length === 0) {
+    await getCallNatures();
+  }
+
+  const natures = cachedCallNatures.length > 0 ? cachedCallNatures : [];
+  if (natures.length === 0) return spoken;
+
+  const exactMatch = natures.find(n => n === spoken);
+  if (exactMatch) return exactMatch;
+
+  const startsWithMatch = natures.find(n => n.startsWith(spoken) || spoken.startsWith(n));
+  if (startsWithMatch) return startsWithMatch;
+
+  const containsMatch = natures.find(n => n.includes(spoken) || spoken.includes(n));
+  if (containsMatch) return containsMatch;
+
+  const spokenWords = spoken.split(/[\s\-]+/).filter(w => w.length > 1);
+  let bestMatch = null;
+  let bestScore = 0;
+  for (const nature of natures) {
+    const natureWords = nature.split(/[\s\-]+/).filter(w => w.length > 1);
+    let score = 0;
+    for (const sw of spokenWords) {
+      for (const nw of natureWords) {
+        if (nw === sw) score += 3;
+        else if (nw.includes(sw) || sw.includes(nw)) score += 1;
+      }
+    }
+    if (score > bestScore) {
+      bestScore = score;
+      bestMatch = nature;
+    }
+  }
+
+  if (bestMatch && bestScore >= 1) return bestMatch;
+
+  return spoken;
+}
+
 export async function getAnimalTypes() {
   const result = await cadRequest('/api/radio/animal/types', 'GET');
   if (result.success === false) {

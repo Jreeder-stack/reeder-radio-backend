@@ -308,6 +308,12 @@ class AIDispatcher {
     this.isRunning = true;
     this.isMuted = false;
     
+    if (cadService.isConfigured()) {
+      cadService.getCallNatures().catch(err => {
+        this.log('CALL_NATURES_PRELOAD_ERROR', { error: err.message });
+      });
+    }
+
     this.log('STARTED_STANDBY', { channel: channelName, roomKey: this.configuredChannel, mode: 'on-demand' });
   }
 
@@ -774,6 +780,18 @@ class AIDispatcher {
         return;
       }
 
+      if (state === DISPATCHER_STATE.AWAITING_CALL_NATURE) {
+        this.log('CALL_NATURE_FAST_PATH', { participant: participantId, transcript });
+        await this.handleCallNatureInput(participantId, transcript, slots, room, roomName);
+        return;
+      }
+
+      if (state === DISPATCHER_STATE.AWAITING_CALL_ADDRESS) {
+        this.log('CALL_ADDRESS_FAST_PATH', { participant: participantId, transcript });
+        await this.handleCallAddressInput(participantId, transcript, slots, room, roomName);
+        return;
+      }
+
       this.log('LLM_CLASSIFY_START', { participant: participantId, state, transcript });
 
       const result = await classifyIntent(transcript, participantId, state, slots);
@@ -863,6 +881,8 @@ class AIDispatcher {
             await this.handlePersonCheckConfirm(participantId, transcript, slots, room, roomName);
           } else if (state === DISPATCHER_STATE.AWAITING_SECURE_CONFIRM) {
             await this.handleSecureConfirmResponse(participantId, transcript, slots, room, roomName);
+          } else if (state === DISPATCHER_STATE.AWAITING_CALL_CONFIRM) {
+            await this.handleCallConfirm(participantId, transcript, slots, room, roomName);
           } else {
             const resp = result.response || `${participantId}, 10-4.`;
             const audio = await textToSpeech(resp);
@@ -880,6 +900,8 @@ class AIDispatcher {
             await this.handlePersonCheckConfirm(participantId, transcript, slots, room, roomName);
           } else if (state === DISPATCHER_STATE.AWAITING_SECURE_CONFIRM) {
             await this.handleSecureConfirmResponse(participantId, transcript, slots, room, roomName);
+          } else if (state === DISPATCHER_STATE.AWAITING_CALL_CONFIRM) {
+            await this.handleCallDeny(participantId, room, roomName);
           } else {
             const resp = result.response || `${participantId}, 10-4. Disregard.`;
             const audio = await textToSpeech(resp);
@@ -960,6 +982,85 @@ class AIDispatcher {
           } else {
             setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_PLATE);
             const resp = result.response || `${participantId}, go ahead with plate.`;
+            const audio = await textToSpeech(resp);
+            await this.publishAudio(audio, room, roomName);
+          }
+          break;
+        }
+
+        case 'CREATE_CALL': {
+          const nature = result.slots?.nature;
+          const address = result.slots?.address;
+          const additionalUnits = result.slots?.additionalUnits || [];
+          const priority = result.slots?.priority || 'medium';
+
+          if (nature && address) {
+            const matchedNature = await cadService.findBestNature(nature);
+            this.log('CREATE_CALL_MATCHED', { spoken: nature, matched: matchedNature, address, additionalUnits });
+            setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_CALL_CONFIRM, null, {
+              nature: matchedNature,
+              address,
+              additionalUnits,
+              priority
+            });
+            const confirmResp = `${participantId}, confirm, ${matchedNature.toLowerCase()} at ${address}?`;
+            const confirmAudio = await textToSpeech(confirmResp);
+            await this.publishAudio(confirmAudio, room, roomName);
+          } else if (nature && !address) {
+            const matchedNature = await cadService.findBestNature(nature);
+            setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_CALL_ADDRESS, null, {
+              nature: matchedNature,
+              additionalUnits,
+              priority
+            });
+            const resp = `${participantId}, go ahead with address.`;
+            const audio = await textToSpeech(resp);
+            await this.publishAudio(audio, room, roomName);
+          } else {
+            setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_CALL_NATURE, null, {
+              address: address || null,
+              additionalUnits,
+              priority
+            });
+            const resp = `${participantId}, go ahead with call nature.`;
+            const audio = await textToSpeech(resp);
+            await this.publishAudio(audio, room, roomName);
+          }
+          break;
+        }
+
+        case 'CREATE_CALL_PROMPT': {
+          const promptNature = result.slots?.nature;
+          const promptAddress = result.slots?.address;
+          const promptUnits = result.slots?.additionalUnits || [];
+          const promptPriority = result.slots?.priority || 'medium';
+
+          if (promptNature && !promptAddress) {
+            const matchedNature = await cadService.findBestNature(promptNature);
+            setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_CALL_ADDRESS, null, {
+              nature: matchedNature,
+              additionalUnits: promptUnits,
+              priority: promptPriority
+            });
+            const resp = `${participantId}, go ahead with address for ${matchedNature.toLowerCase()}.`;
+            const audio = await textToSpeech(resp);
+            await this.publishAudio(audio, room, roomName);
+          } else if (!promptNature && promptAddress) {
+            setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_CALL_NATURE, null, {
+              address: promptAddress,
+              additionalUnits: promptUnits,
+              priority: promptPriority
+            });
+            const resp = `${participantId}, go ahead with call nature.`;
+            const audio = await textToSpeech(resp);
+            await this.publishAudio(audio, room, roomName);
+          } else {
+            setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_CALL_NATURE, null, {
+              address: null,
+              additionalUnits: promptUnits,
+              priority: promptPriority
+            });
+            const resp = result.response || `${participantId}, go ahead with call nature and address.`;
             const audio = await textToSpeech(resp);
             await this.publishAudio(audio, room, roomName);
           }
@@ -1427,6 +1528,206 @@ class AIDispatcher {
     
     await this.logToCallNotes(participantId, `Detail at: ${location}`);
     setUnitSessionState(participantId, DISPATCHER_STATE.IDLE);
+  }
+
+  async handleCallNatureInput(participantId, transcript, savedSlots, room, roomName) {
+    this.log('CALL_NATURE_INPUT', { participant: participantId, transcript, savedSlots });
+
+    const normalized = transcript.toLowerCase().trim();
+    const disregardPhrases = ['disregard', 'cancel', 'cancel that', 'nevermind', 'never mind', '10-22', 'scratch that'];
+    if (disregardPhrases.some(p => normalized.includes(p))) {
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE);
+      const resp = `${participantId}, 10-4, disregard.`;
+      const audio = await textToSpeech(resp);
+      await this.publishAudio(audio, room, roomName);
+      return;
+    }
+
+    const nature = transcript.trim();
+    if (!nature || nature.length < 2) {
+      const resp = `${participantId}, did not copy call nature. Go ahead with call nature.`;
+      const audio = await textToSpeech(resp);
+      await this.publishAudio(audio, room, roomName);
+      return;
+    }
+
+    const matchedNature = await cadService.findBestNature(nature);
+    this.log('CALL_NATURE_MATCHED', { spoken: nature, matched: matchedNature });
+
+    const address = savedSlots?.address;
+    if (address) {
+      setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_CALL_CONFIRM, null, {
+        nature: matchedNature,
+        address,
+        additionalUnits: savedSlots?.additionalUnits || [],
+        priority: savedSlots?.priority || 'medium'
+      });
+      const confirmResp = `${participantId}, confirm, ${matchedNature.toLowerCase()} at ${address}?`;
+      const confirmAudio = await textToSpeech(confirmResp);
+      await this.publishAudio(confirmAudio, room, roomName);
+    } else {
+      setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_CALL_ADDRESS, null, {
+        nature: matchedNature,
+        additionalUnits: savedSlots?.additionalUnits || [],
+        priority: savedSlots?.priority || 'medium'
+      });
+      const resp = `${participantId}, go ahead with address.`;
+      const audio = await textToSpeech(resp);
+      await this.publishAudio(audio, room, roomName);
+    }
+  }
+
+  async handleCallAddressInput(participantId, transcript, savedSlots, room, roomName) {
+    this.log('CALL_ADDRESS_INPUT', { participant: participantId, transcript, savedSlots });
+
+    const normalized = transcript.toLowerCase().trim();
+    const disregardPhrases = ['disregard', 'cancel', 'cancel that', 'nevermind', 'never mind', '10-22', 'scratch that'];
+    if (disregardPhrases.some(p => normalized.includes(p))) {
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE);
+      const resp = `${participantId}, 10-4, disregard.`;
+      const audio = await textToSpeech(resp);
+      await this.publishAudio(audio, room, roomName);
+      return;
+    }
+
+    const address = transcript.trim();
+    if (!address || address.length < 2) {
+      const resp = `${participantId}, did not copy address. Go ahead with address.`;
+      const audio = await textToSpeech(resp);
+      await this.publishAudio(audio, room, roomName);
+      return;
+    }
+
+    const nature = savedSlots?.nature || 'UNKNOWN TYPE';
+    setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_CALL_CONFIRM, null, {
+      nature,
+      address,
+      additionalUnits: savedSlots?.additionalUnits || [],
+      priority: savedSlots?.priority || 'medium'
+    });
+    const confirmResp = `${participantId}, confirm, ${nature.toLowerCase()} at ${address}?`;
+    const confirmAudio = await textToSpeech(confirmResp);
+    await this.publishAudio(confirmAudio, room, roomName);
+  }
+
+  async handleCallConfirm(participantId, transcript, slots, room, roomName) {
+    this.log('CALL_CONFIRM', { participant: participantId, transcript, slots });
+
+    const normalized = transcript.toLowerCase().trim();
+
+    const confirmPhrases = [
+      '10-4', '10/4', 'ten four', 'ten-four', 'tenfour',
+      'affirmative', 'yes', 'yeah', 'yep', 'correct', 'that is correct',
+      'copy', 'roger', 'roger that', 'copy that',
+      'confirmed', 'confirm', 'thats right', "that's right", "that's correct"
+    ];
+    const denyPhrases = [
+      'negative', 'neg', 'no', 'nope', 'incorrect', 'wrong',
+      'not correct', 'that is wrong', "that's wrong", 'thats wrong',
+      'repeat', 'say again', 'try again'
+    ];
+
+    let isConfirmed = false;
+    let isDenied = false;
+
+    for (const phrase of confirmPhrases) {
+      if (normalized.includes(phrase)) { isConfirmed = true; break; }
+    }
+    if (!isConfirmed) {
+      for (const phrase of denyPhrases) {
+        if (normalized.includes(phrase)) { isDenied = true; break; }
+      }
+    }
+
+    if (isDenied) {
+      await this.handleCallDeny(participantId, room, roomName);
+      return;
+    }
+
+    if (!isConfirmed) {
+      const askResp = `${participantId}, confirm call, 10-4 or negative?`;
+      const askAudio = await textToSpeech(askResp);
+      await this.publishAudio(askAudio, room, roomName);
+      return;
+    }
+
+    await this.executeCallCreation(participantId, slots, room, roomName);
+  }
+
+  async handleCallDeny(participantId, room, roomName) {
+    this.log('CALL_DENY', { participant: participantId });
+    setUnitSessionState(participantId, DISPATCHER_STATE.IDLE);
+    const resp = `${participantId}, 10-4, disregard.`;
+    const audio = await textToSpeech(resp);
+    await this.publishAudio(audio, room, roomName);
+  }
+
+  async executeCallCreation(participantId, slots, room, roomName) {
+    const { nature, address, additionalUnits, priority } = slots;
+    this.log('CALL_CREATION_EXECUTING', { participantId, nature, address, priority, additionalUnits });
+
+    try {
+      if (!cadService.isConfigured()) {
+        this.log('CALL_CREATION_SKIPPED', { reason: 'CAD not configured' });
+        setUnitSessionState(participantId, DISPATCHER_STATE.IDLE);
+        const timeStr = this.formatMilitaryTime();
+        const resp = `${participantId}, 10-4. ${nature.toLowerCase()} at ${address}. ${timeStr}.`;
+        const audio = await textToSpeech(resp);
+        await this.publishAudio(audio, room, roomName);
+        return;
+      }
+
+      const callResult = await cadService.createCall(nature, priority || 'medium', address, '', `Created by AI Dispatcher for ${participantId}`);
+      this.log('CAD_CALL_CREATED', { success: callResult.success, callId: callResult.call_id, error: callResult.error });
+
+      if (!callResult.success) {
+        setUnitSessionState(participantId, DISPATCHER_STATE.IDLE);
+        const resp = `${participantId}, unable to create call. System error.`;
+        const audio = await textToSpeech(resp);
+        await this.publishAudio(audio, room, roomName);
+        return;
+      }
+
+      const callId = callResult.call_id;
+
+      try {
+        await cadService.assignUnitToCall(participantId, callId);
+        this.log('CAD_UNIT_ASSIGNED', { unitId: participantId, callId });
+      } catch (assignError) {
+        this.log('CAD_UNIT_ASSIGN_ERROR', { unitId: participantId, callId, error: assignError.message });
+      }
+
+      if (additionalUnits && additionalUnits.length > 0) {
+        for (const unitId of additionalUnits) {
+          try {
+            await cadService.assignUnitToCall(unitId, callId);
+            this.log('CAD_ADDITIONAL_UNIT_ASSIGNED', { unitId, callId });
+          } catch (assignError) {
+            this.log('CAD_ADDITIONAL_UNIT_ASSIGN_ERROR', { unitId, callId, error: assignError.message });
+          }
+        }
+      }
+
+      try {
+        await cadService.updateUnitStatus(participantId, 'en_route');
+        this.log('CAD_STATUS_UPDATED_EN_ROUTE', { unitId: participantId });
+      } catch (statusError) {
+        this.log('CAD_STATUS_UPDATE_ERROR', { unitId: participantId, error: statusError.message });
+      }
+
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE);
+      const timeStr = this.formatMilitaryTime();
+      const resp = `${participantId}, 10-4. Call created, ${nature.toLowerCase()} at ${address}. ${timeStr}.`;
+      const audio = await textToSpeech(resp);
+      await this.publishAudio(audio, room, roomName);
+
+    } catch (error) {
+      this.log('CALL_CREATION_ERROR', { error: error.message });
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE);
+      const resp = `${participantId}, unable to create call. System error.`;
+      const audio = await textToSpeech(resp);
+      await this.publishAudio(audio, room, roomName);
+    }
   }
 
   async handlePersonFirstName(participantId, rawTranscript, savedSlots, room, roomName) {
