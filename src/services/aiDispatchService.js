@@ -781,6 +781,20 @@ class AIDispatcher {
       this.log('LLM_CLASSIFY_RESULT', { participant: participantId, intent: result.intent, response: result.response });
 
       switch (result.intent) {
+        case 'SILENCE': {
+          this.log('LLM_SILENCE', { participant: participantId, transcript });
+          break;
+        }
+
+        case 'DISREGARD': {
+          this.log('LLM_DISREGARD', { participant: participantId, state });
+          setUnitSessionState(participantId, DISPATCHER_STATE.IDLE);
+          const resp = result.response || `${participantId}, 10-4, disregard.`;
+          const audio = await textToSpeech(resp);
+          await this.publishAudio(audio, room, roomName);
+          break;
+        }
+
         case 'STATUS_CHANGE': {
           if (result.cadStatus && cadService.isConfigured()) {
             try {
