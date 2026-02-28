@@ -2,6 +2,7 @@ import { Room, RoomEvent, TrackKind, AudioFrame, AudioSource, LocalAudioTrack, A
 import { createLiveKitToken, getLiveKitUrl } from '../config/livekit.js';
 import { speechToText, textToSpeech, isConfigured as isAzureConfigured } from './azureSpeechService.js';
 import { matchCommand, resetDispatcherState, matchEmergencyResponse, matchSecureConfirmation, getUnitSessionState, setUnitSessionState, DISPATCHER_STATE } from './commandMatcher.js';
+import { isConfigured as isLlmConfigured, classifyIntent } from './llmIntentService.js';
 import { parsePersonDetails, parseDOB, extractNameFromTranscript } from './phoneticParser.js';
 import { isAiDispatchEnabled, getAiDispatchChannel, createChannelMessage } from '../db/index.js';
 import * as cadService from './cadService.js';
@@ -726,142 +727,396 @@ class AIDispatcher {
         }
       }
 
-      const commandResult = matchCommand(transcript, participantId);
-      if (!commandResult) {
-        this.log('COMMAND_NO_MATCH', { transcript });
-        return;
+      if (isLlmConfigured()) {
+        await this.processTranscriptWithLLM(transcript, participantId, room, roomName);
+      } else {
+        await this.processTranscriptWithRegex(transcript, participantId, room, roomName);
       }
-
-      if (commandResult.intent === 'PERSON_CHECK_DETAILS') {
-        await this.handlePersonCheckDetails(participantId, commandResult.rawTranscript, room, roomName);
-        return;
-      }
-
-      if (commandResult.intent === 'PERSON_CHECK_DOB') {
-        await this.handlePersonCheckDOB(participantId, commandResult.rawTranscript, commandResult.slots, room, roomName);
-        return;
-      }
-
-      if (commandResult.intent === 'PERSON_CHECK_FIRSTNAME') {
-        await this.handlePersonFirstName(participantId, commandResult.rawTranscript, commandResult.slots, room, roomName);
-        return;
-      }
-
-      if (commandResult.intent === 'PERSON_CHECK_CONFIRM') {
-        await this.handlePersonCheckConfirm(participantId, commandResult.rawTranscript, commandResult.slots, room, roomName);
-        return;
-      }
-
-      if (commandResult.intent === 'ZONE_DETAILS_WITH_ZONE') {
-        await this.handleZoneConfirmPrompt(participantId, commandResult.slots.zone, room, roomName);
-        return;
-      }
-
-      if (commandResult.intent === 'ZONE_DETAILS') {
-        await this.handleZoneDetails(participantId, commandResult.rawTranscript, room, roomName);
-        return;
-      }
-
-      if (commandResult.intent === 'ZONE_CONFIRM') {
-        await this.handleZoneConfirm(participantId, commandResult.rawTranscript, commandResult.slots, room, roomName);
-        return;
-      }
-
-      if (commandResult.intent === 'DETAIL_WITH_LOCATION') {
-        await this.handleDetailConfirmPrompt(participantId, commandResult.slots.location, room, roomName);
-        return;
-      }
-
-      if (commandResult.intent === 'DETAIL_LOCATION') {
-        await this.handleDetailLocation(participantId, commandResult.rawTranscript, room, roomName);
-        return;
-      }
-
-      if (commandResult.intent === 'DETAIL_CONFIRM') {
-        await this.handleDetailConfirm(participantId, commandResult.rawTranscript, commandResult.slots, room, roomName);
-        return;
-      }
-
-      if (commandResult.intent === 'SECURE_CONFIRM_RESPONSE') {
-        await this.handleSecureConfirmResponse(participantId, commandResult.rawTranscript, commandResult.slots, room, roomName);
-        return;
-      }
-
-      let finalResponse = commandResult.response;
-      let finalCadStatus = commandResult.cadStatus;
-      let finalCadAction = commandResult.cadAction;
-      let finalCadData = commandResult.cadData;
-
-      if (commandResult.asyncCompletion) {
-        try {
-          const cadServiceArg = cadService.isConfigured() ? cadService : null;
-          const asyncResult = await commandResult.asyncCompletion(cadServiceArg);
-          if (asyncResult) {
-            finalResponse = asyncResult.response;
-            finalCadStatus = asyncResult.cadStatus;
-            finalCadAction = asyncResult.cadAction;
-            finalCadData = asyncResult.cadData;
-          }
-        } catch (asyncError) {
-          this.log('ASYNC_COMPLETION_ERROR', { error: asyncError.message });
-          finalResponse = `${commandResult.unitId}, standby. System error.`;
-        }
-      }
-
-      this.log('COMMAND_MATCHED', { transcript, response: finalResponse, cadStatus: finalCadStatus, cadAction: finalCadAction });
-
-      if (finalCadStatus && commandResult.unitId) {
-        try {
-          const cadResult = await cadService.updateUnitStatus(commandResult.unitId, finalCadStatus);
-          this.log('CAD_STATUS_UPDATE', { 
-            unitId: commandResult.unitId, 
-            status: finalCadStatus, 
-            success: cadResult.success,
-            error: cadResult.error
-          });
-        } catch (cadError) {
-          this.log('CAD_ERROR', { error: cadError.message });
-        }
-      }
-
-      if (finalCadAction === 'broadcast' && finalCadData && cadService.isConfigured()) {
-        try {
-          const broadcastResult = await cadService.sendBroadcast(finalCadData.message, finalCadData.priority);
-          this.log('CAD_BROADCAST', { 
-            message: finalCadData.message,
-            priority: finalCadData.priority,
-            success: broadcastResult.success,
-            error: broadcastResult.error
-          });
-        } catch (cadError) {
-          this.log('CAD_BROADCAST_ERROR', { error: cadError.message });
-        }
-      }
-
-      if (!finalResponse) {
-        this.log('NO_RESPONSE_NEEDED');
-        return;
-      }
-
-      if (!await this.shouldRespond()) {
-        this.log('TTS_ABORTED', { reason: 'Disabled before TTS' });
-        return;
-      }
-
-      const responseAudio = await textToSpeech(finalResponse);
-
-      if (!await this.shouldRespond()) {
-        this.log('PUBLISH_ABORTED', { reason: 'Disabled before publish' });
-        return;
-      }
-
-      await this.publishAudio(responseAudio, room, roomName);
 
     } catch (error) {
       this.log('PROCESS_ERROR', { error: error.message });
       this.isMuted = true;
       await this.stop();
     }
+  }
+
+  async processTranscriptWithLLM(transcript, participantId, room, roomName) {
+    try {
+      const sessionState = getUnitSessionState(participantId);
+      const { state, slots } = sessionState;
+
+      const normalized = transcript.toLowerCase();
+      const emergencyPhrases = [
+        'officer needs assistance', 'officer down', 'shots fired',
+        'code 3 backup', 'emergency backup', '10-33', '10/33', 'ten thirty three',
+        'foot pursuit', 'in foot pursuit', 'pursuing on foot',
+        'need ems', 'request ems', 'send ems', 'need an ambulance',
+        'need fire', 'request fire', 'send fire'
+      ];
+      const isEmergencyCommand = emergencyPhrases.some(p => normalized.includes(p));
+
+      if (isEmergencyCommand) {
+        this.log('EMERGENCY_FAST_PATH', { participant: participantId, transcript });
+        await this.processTranscriptWithRegex(transcript, participantId, room, roomName);
+        return;
+      }
+
+      if (state === DISPATCHER_STATE.AWAITING_SECURE_CONFIRM) {
+        this.log('SECURE_CONFIRM_FAST_PATH', { participant: participantId });
+        await this.handleSecureConfirmResponse(participantId, transcript, slots, room, roomName);
+        return;
+      }
+
+      if ([DISPATCHER_STATE.AWAITING_PLATE, DISPATCHER_STATE.AWAITING_NAME,
+           DISPATCHER_STATE.AWAITING_LOCATION, DISPATCHER_STATE.AWAITING_DESCRIPTION].includes(state)) {
+        this.log('REGEX_ONLY_STATE_FALLBACK', { participant: participantId, state });
+        await this.processTranscriptWithRegex(transcript, participantId, room, roomName);
+        return;
+      }
+
+      this.log('LLM_CLASSIFY_START', { participant: participantId, state, transcript });
+
+      const result = await classifyIntent(transcript, participantId, state, slots);
+
+      this.log('LLM_CLASSIFY_RESULT', { participant: participantId, intent: result.intent, response: result.response });
+
+      switch (result.intent) {
+        case 'STATUS_CHANGE': {
+          if (result.cadStatus && cadService.isConfigured()) {
+            try {
+              const cadResult = await cadService.updateUnitStatus(participantId, result.cadStatus);
+              this.log('CAD_STATUS_UPDATE', { unitId: participantId, status: result.cadStatus, success: cadResult.success });
+            } catch (cadError) {
+              this.log('CAD_ERROR', { error: cadError.message });
+            }
+          }
+          setUnitSessionState(participantId, DISPATCHER_STATE.IDLE);
+          if (result.response) {
+            const responseAudio = await textToSpeech(result.response);
+            await this.publishAudio(responseAudio, room, roomName);
+          }
+          break;
+        }
+
+        case 'ZONE_CHANGE': {
+          const zone = result.slots?.zone;
+          if (zone) {
+            await this.handleZoneConfirmPrompt(participantId, zone, room, roomName);
+          } else {
+            setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_ZONE);
+            const resp = result.response || `${participantId}, go ahead with zone.`;
+            const audio = await textToSpeech(resp);
+            await this.publishAudio(audio, room, roomName);
+          }
+          break;
+        }
+
+        case 'ZONE_PROMPT': {
+          setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_ZONE);
+          const resp = result.response || `${participantId}, go ahead with zone.`;
+          const audio = await textToSpeech(resp);
+          await this.publishAudio(audio, room, roomName);
+          break;
+        }
+
+        case 'DETAIL': {
+          const location = result.slots?.location;
+          if (location) {
+            await this.handleDetailConfirmPrompt(participantId, location, room, roomName);
+          } else {
+            setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_DETAIL_LOCATION);
+            const resp = result.response || `${participantId}, go ahead with location.`;
+            const audio = await textToSpeech(resp);
+            await this.publishAudio(audio, room, roomName);
+          }
+          break;
+        }
+
+        case 'DETAIL_PROMPT': {
+          setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_DETAIL_LOCATION);
+          const resp = result.response || `${participantId}, go ahead with location.`;
+          const audio = await textToSpeech(resp);
+          await this.publishAudio(audio, room, roomName);
+          break;
+        }
+
+        case 'CONFIRM': {
+          if (state === DISPATCHER_STATE.AWAITING_ZONE_CONFIRM) {
+            await this.handleZoneConfirm(participantId, transcript, slots, room, roomName);
+          } else if (state === DISPATCHER_STATE.AWAITING_DETAIL_CONFIRM) {
+            await this.handleDetailConfirm(participantId, transcript, slots, room, roomName);
+          } else if (state === DISPATCHER_STATE.AWAITING_PERSON_CONFIRM) {
+            await this.handlePersonCheckConfirm(participantId, transcript, slots, room, roomName);
+          } else if (state === DISPATCHER_STATE.AWAITING_SECURE_CONFIRM) {
+            await this.handleSecureConfirmResponse(participantId, transcript, slots, room, roomName);
+          } else {
+            const resp = result.response || `${participantId}, 10-4.`;
+            const audio = await textToSpeech(resp);
+            await this.publishAudio(audio, room, roomName);
+          }
+          break;
+        }
+
+        case 'DENY': {
+          if (state === DISPATCHER_STATE.AWAITING_ZONE_CONFIRM) {
+            await this.handleZoneConfirm(participantId, transcript, slots, room, roomName);
+          } else if (state === DISPATCHER_STATE.AWAITING_DETAIL_CONFIRM) {
+            await this.handleDetailConfirm(participantId, transcript, slots, room, roomName);
+          } else if (state === DISPATCHER_STATE.AWAITING_PERSON_CONFIRM) {
+            await this.handlePersonCheckConfirm(participantId, transcript, slots, room, roomName);
+          } else if (state === DISPATCHER_STATE.AWAITING_SECURE_CONFIRM) {
+            await this.handleSecureConfirmResponse(participantId, transcript, slots, room, roomName);
+          } else {
+            const resp = result.response || `${participantId}, 10-4. Disregard.`;
+            const audio = await textToSpeech(resp);
+            await this.publishAudio(audio, room, roomName);
+          }
+          break;
+        }
+
+        case 'PERSON_CHECK_START': {
+          setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_PERSON_DETAILS);
+          const resp = result.response || `${participantId}, 10-27, go ahead.`;
+          const audio = await textToSpeech(resp);
+          await this.publishAudio(audio, room, roomName);
+          break;
+        }
+
+        case 'PERSON_DETAILS': {
+          if (state === DISPATCHER_STATE.AWAITING_PERSON_DOB) {
+            await this.handlePersonCheckDOB(participantId, transcript, slots, room, roomName);
+          } else if (state === DISPATCHER_STATE.AWAITING_PERSON_FIRSTNAME) {
+            await this.handlePersonFirstName(participantId, transcript, slots, room, roomName);
+          } else {
+            await this.handlePersonCheckDetails(participantId, transcript, room, roomName);
+          }
+          break;
+        }
+
+        case 'RADIO_CHECK':
+        case 'TIME_CHECK':
+        case 'WAKE_ONLY':
+        case 'UNKNOWN': {
+          if (result.response) {
+            const audio = await textToSpeech(result.response);
+            await this.publishAudio(audio, room, roomName);
+          }
+          break;
+        }
+
+        case 'REQUEST_BACKUP': {
+          if (result.cadAction === 'broadcast' && result.cadData && cadService.isConfigured()) {
+            try {
+              await cadService.sendBroadcast(result.cadData.message, result.cadData.priority);
+              this.log('CAD_BROADCAST', { message: result.cadData.message, priority: result.cadData.priority });
+            } catch (cadError) {
+              this.log('CAD_BROADCAST_ERROR', { error: cadError.message });
+            }
+          }
+          if (result.response) {
+            const audio = await textToSpeech(result.response);
+            await this.publishAudio(audio, room, roomName);
+          }
+          break;
+        }
+
+        case 'TRAFFIC_STOP': {
+          if (result.cadStatus && cadService.isConfigured()) {
+            try {
+              await cadService.updateUnitStatus(participantId, result.cadStatus);
+              this.log('CAD_STATUS_UPDATE', { unitId: participantId, status: result.cadStatus });
+            } catch (cadError) {
+              this.log('CAD_ERROR', { error: cadError.message });
+            }
+          }
+          setUnitSessionState(participantId, DISPATCHER_STATE.IDLE);
+          if (result.response) {
+            const audio = await textToSpeech(result.response);
+            await this.publishAudio(audio, room, roomName);
+          }
+          break;
+        }
+
+        case 'RUN_PLATE': {
+          if (result.slots?.plate) {
+            setUnitSessionState(participantId, DISPATCHER_STATE.IDLE);
+            const resp = result.response || `${participantId}, standby on plate.`;
+            const audio = await textToSpeech(resp);
+            await this.publishAudio(audio, room, roomName);
+          } else {
+            setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_PLATE);
+            const resp = result.response || `${participantId}, go ahead with plate.`;
+            const audio = await textToSpeech(resp);
+            await this.publishAudio(audio, room, roomName);
+          }
+          break;
+        }
+
+        case 'SIGNAL_100': {
+          setUnitSessionState(participantId, DISPATCHER_STATE.SIGNAL_100_ACTIVE);
+          if (result.response) {
+            const audio = await textToSpeech(result.response);
+            await this.publishAudio(audio, room, roomName);
+          }
+          break;
+        }
+
+        case 'SIGNAL_100_CLEAR': {
+          setUnitSessionState(participantId, DISPATCHER_STATE.IDLE);
+          if (result.response) {
+            const audio = await textToSpeech(result.response);
+            await this.publishAudio(audio, room, roomName);
+          }
+          break;
+        }
+
+        default: {
+          this.log('LLM_UNKNOWN_INTENT', { intent: result.intent });
+          if (result.response) {
+            const audio = await textToSpeech(result.response);
+            await this.publishAudio(audio, room, roomName);
+          }
+          break;
+        }
+      }
+    } catch (llmError) {
+      this.log('LLM_ERROR', { error: llmError.message });
+      this.log('LLM_FALLBACK_TO_REGEX', { participant: participantId });
+      await this.processTranscriptWithRegex(transcript, participantId, room, roomName);
+    }
+  }
+
+  async processTranscriptWithRegex(transcript, participantId, room, roomName) {
+    const commandResult = matchCommand(transcript, participantId);
+    if (!commandResult) {
+      this.log('COMMAND_NO_MATCH', { transcript });
+      return;
+    }
+
+    if (commandResult.intent === 'PERSON_CHECK_DETAILS') {
+      await this.handlePersonCheckDetails(participantId, commandResult.rawTranscript, room, roomName);
+      return;
+    }
+
+    if (commandResult.intent === 'PERSON_CHECK_DOB') {
+      await this.handlePersonCheckDOB(participantId, commandResult.rawTranscript, commandResult.slots, room, roomName);
+      return;
+    }
+
+    if (commandResult.intent === 'PERSON_CHECK_FIRSTNAME') {
+      await this.handlePersonFirstName(participantId, commandResult.rawTranscript, commandResult.slots, room, roomName);
+      return;
+    }
+
+    if (commandResult.intent === 'PERSON_CHECK_CONFIRM') {
+      await this.handlePersonCheckConfirm(participantId, commandResult.rawTranscript, commandResult.slots, room, roomName);
+      return;
+    }
+
+    if (commandResult.intent === 'ZONE_DETAILS_WITH_ZONE') {
+      await this.handleZoneConfirmPrompt(participantId, commandResult.slots.zone, room, roomName);
+      return;
+    }
+
+    if (commandResult.intent === 'ZONE_DETAILS') {
+      await this.handleZoneDetails(participantId, commandResult.rawTranscript, room, roomName);
+      return;
+    }
+
+    if (commandResult.intent === 'ZONE_CONFIRM') {
+      await this.handleZoneConfirm(participantId, commandResult.rawTranscript, commandResult.slots, room, roomName);
+      return;
+    }
+
+    if (commandResult.intent === 'DETAIL_WITH_LOCATION') {
+      await this.handleDetailConfirmPrompt(participantId, commandResult.slots.location, room, roomName);
+      return;
+    }
+
+    if (commandResult.intent === 'DETAIL_LOCATION') {
+      await this.handleDetailLocation(participantId, commandResult.rawTranscript, room, roomName);
+      return;
+    }
+
+    if (commandResult.intent === 'DETAIL_CONFIRM') {
+      await this.handleDetailConfirm(participantId, commandResult.rawTranscript, commandResult.slots, room, roomName);
+      return;
+    }
+
+    if (commandResult.intent === 'SECURE_CONFIRM_RESPONSE') {
+      await this.handleSecureConfirmResponse(participantId, commandResult.rawTranscript, commandResult.slots, room, roomName);
+      return;
+    }
+
+    let finalResponse = commandResult.response;
+    let finalCadStatus = commandResult.cadStatus;
+    let finalCadAction = commandResult.cadAction;
+    let finalCadData = commandResult.cadData;
+
+    if (commandResult.asyncCompletion) {
+      try {
+        const cadServiceArg = cadService.isConfigured() ? cadService : null;
+        const asyncResult = await commandResult.asyncCompletion(cadServiceArg);
+        if (asyncResult) {
+          finalResponse = asyncResult.response;
+          finalCadStatus = asyncResult.cadStatus;
+          finalCadAction = asyncResult.cadAction;
+          finalCadData = asyncResult.cadData;
+        }
+      } catch (asyncError) {
+        this.log('ASYNC_COMPLETION_ERROR', { error: asyncError.message });
+        finalResponse = `${commandResult.unitId}, standby. System error.`;
+      }
+    }
+
+    this.log('COMMAND_MATCHED', { transcript, response: finalResponse, cadStatus: finalCadStatus, cadAction: finalCadAction });
+
+    if (finalCadStatus && commandResult.unitId) {
+      try {
+        const cadResult = await cadService.updateUnitStatus(commandResult.unitId, finalCadStatus);
+        this.log('CAD_STATUS_UPDATE', { 
+          unitId: commandResult.unitId, 
+          status: finalCadStatus, 
+          success: cadResult.success,
+          error: cadResult.error
+        });
+      } catch (cadError) {
+        this.log('CAD_ERROR', { error: cadError.message });
+      }
+    }
+
+    if (finalCadAction === 'broadcast' && finalCadData && cadService.isConfigured()) {
+      try {
+        const broadcastResult = await cadService.sendBroadcast(finalCadData.message, finalCadData.priority);
+        this.log('CAD_BROADCAST', { 
+          message: finalCadData.message,
+          priority: finalCadData.priority,
+          success: broadcastResult.success,
+          error: broadcastResult.error
+        });
+      } catch (cadError) {
+        this.log('CAD_BROADCAST_ERROR', { error: cadError.message });
+      }
+    }
+
+    if (!finalResponse) {
+      this.log('NO_RESPONSE_NEEDED');
+      return;
+    }
+
+    if (!await this.shouldRespond()) {
+      this.log('TTS_ABORTED', { reason: 'Disabled before TTS' });
+      return;
+    }
+
+    const responseAudio = await textToSpeech(finalResponse);
+
+    if (!await this.shouldRespond()) {
+      this.log('PUBLISH_ABORTED', { reason: 'Disabled before publish' });
+      return;
+    }
+
+    await this.publishAudio(responseAudio, room, roomName);
   }
 
   async handlePersonCheckDetails(participantId, rawTranscript, room, roomName) {
