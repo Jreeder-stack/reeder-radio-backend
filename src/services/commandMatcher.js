@@ -10,6 +10,8 @@ const DISPATCHER_STATE = {
   AWAITING_SECURE_CONFIRM: 'AWAITING_SECURE_CONFIRM',
   AWAITING_PERSON_CONFIRM: 'AWAITING_PERSON_CONFIRM',
   AWAITING_PERSON_FIRSTNAME: 'AWAITING_PERSON_FIRSTNAME',
+  AWAITING_ZONE: 'AWAITING_ZONE',
+  AWAITING_ZONE_CONFIRM: 'AWAITING_ZONE_CONFIRM',
   SIGNAL_100_ACTIVE: 'SIGNAL_100_ACTIVE'
 };
 
@@ -433,6 +435,25 @@ const EMERGENCY_COMMANDS = [
 
 const CANCEL_PHRASES = ['cancel', 'never mind', 'nevermind', 'disregard', 'negative', 'scratch that'];
 
+const ZONE_CHANGE_PATTERNS = [
+  { regex: /(?:change\s+(?:my\s+)?zone\s+to|zone\s+change\s+to)\s+(.+)/i, hasZone: true },
+  { regex: /(?:show\s+me\s+out\s+at|out\s+at)\s+(.+)/i, hasZone: true },
+  { regex: /(?:relocating\s+to|moving\s+to(?:\s+zone)?)\s+(.+)/i, hasZone: true },
+  { regex: /(?:change\s+(?:my\s+)?zone|zone\s+change)/i, hasZone: false },
+  { regex: /(?:show\s+me\s+out)\b/i, hasZone: false },
+];
+
+function matchZoneChange(transcript) {
+  for (const pattern of ZONE_CHANGE_PATTERNS) {
+    const match = transcript.match(pattern.regex);
+    if (match) {
+      const zone = pattern.hasZone && match[1] ? match[1].trim() : null;
+      return { zone };
+    }
+  }
+  return null;
+}
+
 const SECURE_CONFIRM_PHRASES = [
   'yes', 'yeah', 'yep', 'affirmative', 'secure', 'go ahead',
   '10-4', '10/4', 'ten four', 'ten-four', 'copy', 'roger'
@@ -673,7 +694,8 @@ export function matchCommand(transcript, participantId = null) {
 
   const confirmStates = [
     DISPATCHER_STATE.AWAITING_PERSON_CONFIRM,
-    DISPATCHER_STATE.AWAITING_SECURE_CONFIRM
+    DISPATCHER_STATE.AWAITING_SECURE_CONFIRM,
+    DISPATCHER_STATE.AWAITING_ZONE_CONFIRM
   ];
   if (containsCancelPhrase(transcript) && !confirmStates.includes(session.state)) {
     resetUnitSession(unitId);
@@ -834,6 +856,26 @@ export function matchCommand(transcript, participantId = null) {
     };
   }
 
+  if (session.state === DISPATCHER_STATE.AWAITING_ZONE) {
+    return {
+      response: null,
+      unitId,
+      intent: 'ZONE_DETAILS',
+      rawTranscript: transcript,
+      slots: session.slots
+    };
+  }
+
+  if (session.state === DISPATCHER_STATE.AWAITING_ZONE_CONFIRM) {
+    return {
+      response: null,
+      unitId,
+      intent: 'ZONE_CONFIRM',
+      rawTranscript: transcript,
+      slots: session.slots
+    };
+  }
+
   if (session.state === DISPATCHER_STATE.AWAITING_SECURE_CONFIRM) {
     return {
       response: null,
@@ -870,6 +912,31 @@ export function matchCommand(transcript, participantId = null) {
           cadAction: emergencyCmd.cadAction,
           cadData: typeof emergencyCmd.cadData === 'function' ? emergencyCmd.cadData(unitId) : emergencyCmd.cadData
         };
+      }
+
+      const zoneResult = matchZoneChange(transcript);
+      if (zoneResult) {
+        if (zoneResult.zone) {
+          session.state = DISPATCHER_STATE.AWAITING_ZONE_CONFIRM;
+          session.slots = { zone: zoneResult.zone };
+          startSessionTimeout(unitId);
+          return {
+            response: null,
+            unitId,
+            intent: 'ZONE_DETAILS_WITH_ZONE',
+            rawTranscript: transcript,
+            slots: { zone: zoneResult.zone }
+          };
+        } else {
+          session.state = DISPATCHER_STATE.AWAITING_ZONE;
+          session.slots = {};
+          startSessionTimeout(unitId);
+          return {
+            response: `${unitId}, go ahead with zone.`,
+            unitId,
+            cadStatus: null
+          };
+        }
       }
 
       const statusResult = matchStatusCommand(transcript);
@@ -947,6 +1014,31 @@ export function matchCommand(transcript, participantId = null) {
         cadAction: emergencyCmd.cadAction,
         cadData: typeof emergencyCmd.cadData === 'function' ? emergencyCmd.cadData(unitId) : emergencyCmd.cadData
       };
+    }
+
+    const zoneResult2 = matchZoneChange(transcript);
+    if (zoneResult2) {
+      if (zoneResult2.zone) {
+        session.state = DISPATCHER_STATE.AWAITING_ZONE_CONFIRM;
+        session.slots = { zone: zoneResult2.zone };
+        startSessionTimeout(unitId);
+        return {
+          response: null,
+          unitId,
+          intent: 'ZONE_DETAILS_WITH_ZONE',
+          rawTranscript: transcript,
+          slots: { zone: zoneResult2.zone }
+        };
+      } else {
+        session.state = DISPATCHER_STATE.AWAITING_ZONE;
+        session.slots = {};
+        startSessionTimeout(unitId);
+        return {
+          response: `${unitId}, go ahead with zone.`,
+          unitId,
+          cadStatus: null
+        };
+      }
     }
 
     const statusResult = matchStatusCommand(transcript);

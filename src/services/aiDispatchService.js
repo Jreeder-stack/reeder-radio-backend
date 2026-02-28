@@ -752,6 +752,21 @@ class AIDispatcher {
         return;
       }
 
+      if (commandResult.intent === 'ZONE_DETAILS_WITH_ZONE') {
+        await this.handleZoneConfirmPrompt(participantId, commandResult.slots.zone, room, roomName);
+        return;
+      }
+
+      if (commandResult.intent === 'ZONE_DETAILS') {
+        await this.handleZoneDetails(participantId, commandResult.rawTranscript, room, roomName);
+        return;
+      }
+
+      if (commandResult.intent === 'ZONE_CONFIRM') {
+        await this.handleZoneConfirm(participantId, commandResult.rawTranscript, commandResult.slots, room, roomName);
+        return;
+      }
+
       if (commandResult.intent === 'SECURE_CONFIRM_RESPONSE') {
         await this.handleSecureConfirmResponse(participantId, commandResult.rawTranscript, commandResult.slots, room, roomName);
         return;
@@ -908,6 +923,109 @@ class AIDispatcher {
     const confirmResponse = `${participantId}, confirming. Last ${lastName}, first ${firstName}, date of birth ${dobFormatted}. 10-4?`;
     const confirmAudio = await textToSpeech(confirmResponse);
     await this.publishAudio(confirmAudio, room, roomName);
+  }
+
+  formatMilitaryTime() {
+    const options = {
+      timeZone: 'America/New_York',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    };
+    const formatter = new Intl.DateTimeFormat('en-US', options);
+    const parts = formatter.formatToParts(new Date());
+    const hour = parts.find(p => p.type === 'hour').value;
+    const minute = parts.find(p => p.type === 'minute').value;
+    return `${hour}${minute} hours`;
+  }
+
+  async handleZoneConfirmPrompt(participantId, zone, room, roomName) {
+    this.log('ZONE_CONFIRM_PROMPT', { participant: participantId, zone });
+    
+    setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_ZONE_CONFIRM, null, { zone });
+    
+    const confirmResponse = `${participantId}, just to confirm, you want a zone change to ${zone}. 10-4?`;
+    const confirmAudio = await textToSpeech(confirmResponse);
+    await this.publishAudio(confirmAudio, room, roomName);
+  }
+
+  async handleZoneDetails(participantId, rawTranscript, room, roomName) {
+    this.log('ZONE_DETAILS', { participant: participantId, transcript: rawTranscript });
+    
+    const zone = rawTranscript.trim();
+    
+    if (!zone || zone.length < 2) {
+      const response = `${participantId}, did not copy zone. Go ahead with zone.`;
+      const responseAudio = await textToSpeech(response);
+      await this.publishAudio(responseAudio, room, roomName);
+      return;
+    }
+    
+    await this.handleZoneConfirmPrompt(participantId, zone, room, roomName);
+  }
+
+  async handleZoneConfirm(participantId, rawTranscript, slots, room, roomName) {
+    this.log('ZONE_CONFIRM', { participant: participantId, transcript: rawTranscript, slots });
+    
+    const normalized = rawTranscript.toLowerCase().trim();
+    
+    const confirmPhrases = [
+      '10-4', '10/4', 'ten four', 'ten-four', 'tenfour',
+      'affirmative', 'yes', 'yeah', 'yep', 'correct', 'that is correct',
+      'copy', 'roger', 'roger that', 'copy that',
+      'confirmed', 'confirm', 'thats right', "that's right", "that's correct"
+    ];
+    const denyPhrases = [
+      'negative', 'neg', 'no', 'nope', 'incorrect', 'wrong',
+      'not correct', 'that is wrong', "that's wrong", 'thats wrong',
+      'repeat', 'say again', 'try again'
+    ];
+    
+    let isConfirmed = false;
+    let isDenied = false;
+    
+    for (const phrase of confirmPhrases) {
+      if (normalized.includes(phrase)) { isConfirmed = true; break; }
+    }
+    if (!isConfirmed) {
+      for (const phrase of denyPhrases) {
+        if (normalized.includes(phrase)) { isDenied = true; break; }
+      }
+    }
+    
+    if (isDenied) {
+      setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_ZONE);
+      const retryResponse = `${participantId}, can you repeat the zone for me again?`;
+      const retryAudio = await textToSpeech(retryResponse);
+      await this.publishAudio(retryAudio, room, roomName);
+      return;
+    }
+    
+    if (!isConfirmed) {
+      const askAgainResponse = `${participantId}, confirm zone change, 10-4 or negative?`;
+      const askAgainAudio = await textToSpeech(askAgainResponse);
+      await this.publishAudio(askAgainAudio, room, roomName);
+      return;
+    }
+    
+    const zone = slots.zone;
+    
+    try {
+      if (cadService.isConfigured()) {
+        await cadService.updateUnitZone(participantId, zone);
+        this.log('CAD_ZONE_UPDATED', { participantId, zone });
+      }
+    } catch (error) {
+      this.log('CAD_ZONE_UPDATE_ERROR', { error: error.message });
+    }
+    
+    const timeStr = this.formatMilitaryTime();
+    const confirmResponse = `${participantId}, 10-4. ${timeStr}.`;
+    const confirmAudio = await textToSpeech(confirmResponse);
+    await this.publishAudio(confirmAudio, room, roomName);
+    
+    await this.logToCallNotes(participantId, `Zone change: ${zone}`);
+    setUnitSessionState(participantId, DISPATCHER_STATE.IDLE);
   }
 
   async handlePersonFirstName(participantId, rawTranscript, savedSlots, room, roomName) {
