@@ -2,7 +2,7 @@ import { Room, RoomEvent, TrackKind, AudioFrame, AudioSource, LocalAudioTrack, A
 import { createLiveKitToken, getLiveKitUrl } from '../config/livekit.js';
 import { speechToText, textToSpeech, isConfigured as isAzureConfigured } from './azureSpeechService.js';
 import { matchCommand, resetDispatcherState, matchEmergencyResponse, matchSecureConfirmation, getUnitSessionState, setUnitSessionState, DISPATCHER_STATE } from './commandMatcher.js';
-import { parsePersonDetails, parseDOB } from './phoneticParser.js';
+import { parsePersonDetails, parseDOB, extractNameFromTranscript } from './phoneticParser.js';
 import { isAiDispatchEnabled, getAiDispatchChannel, createChannelMessage } from '../db/index.js';
 import * as cadService from './cadService.js';
 import fs from 'fs';
@@ -742,6 +742,11 @@ class AIDispatcher {
         return;
       }
 
+      if (commandResult.intent === 'PERSON_CHECK_FIRSTNAME') {
+        await this.handlePersonFirstName(participantId, commandResult.rawTranscript, commandResult.slots, room, roomName);
+        return;
+      }
+
       if (commandResult.intent === 'PERSON_CHECK_CONFIRM') {
         await this.handlePersonCheckConfirm(participantId, commandResult.rawTranscript, commandResult.slots, room, roomName);
         return;
@@ -842,10 +847,20 @@ class AIDispatcher {
       return;
     }
     
+    if (!personDetails.firstName) {
+      const slots = { lastName: personDetails.lastName };
+      if (personDetails.dob) slots.dob = personDetails.dob.formatted;
+      setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_PERSON_FIRSTNAME, null, slots);
+      const response = `${participantId}, did not copy first name. Go ahead with first name.`;
+      const responseAudio = await textToSpeech(response);
+      await this.publishAudio(responseAudio, room, roomName);
+      return;
+    }
+    
     if (!personDetails.dob) {
       setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_PERSON_DOB, null, {
         lastName: personDetails.lastName,
-        firstName: personDetails.firstName || 'unknown'
+        firstName: personDetails.firstName
       });
       const response = `${participantId}, did not copy date of birth. Go ahead with date of birth.`;
       const responseAudio = await textToSpeech(response);
@@ -854,7 +869,7 @@ class AIDispatcher {
     }
     
     const lastName = personDetails.lastName;
-    const firstName = personDetails.firstName || 'unknown';
+    const firstName = personDetails.firstName;
     const dob = personDetails.dob.formatted;
     
     setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_PERSON_CONFIRM, null, {
@@ -881,7 +896,7 @@ class AIDispatcher {
     }
     
     const lastName = savedSlots.lastName;
-    const firstName = savedSlots.firstName || 'unknown';
+    const firstName = savedSlots.firstName;
     const dobFormatted = dob.formatted;
     
     setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_PERSON_CONFIRM, null, {
@@ -891,6 +906,48 @@ class AIDispatcher {
     });
     
     const confirmResponse = `${participantId}, confirming. Last ${lastName}, first ${firstName}, date of birth ${dobFormatted}. 10-4?`;
+    const confirmAudio = await textToSpeech(confirmResponse);
+    await this.publishAudio(confirmAudio, room, roomName);
+  }
+
+  async handlePersonFirstName(participantId, rawTranscript, savedSlots, room, roomName) {
+    this.log('PERSON_CHECK_FIRSTNAME', { participant: participantId, transcript: rawTranscript, savedSlots });
+    
+    const cleaned = rawTranscript
+      .replace(/[,\.]/g, ' ')
+      .split(/\s+/)
+      .filter(p => p.length > 1 && !['and', 'the', 'is', 'a', 'an', 'my', 'its', "it's"].includes(p.toLowerCase()));
+    
+    const firstName = cleaned.length > 0 ? extractNameFromTranscript(cleaned[0]) : null;
+    
+    if (!firstName) {
+      const response = `${participantId}, did not copy first name. Go ahead with first name.`;
+      const responseAudio = await textToSpeech(response);
+      await this.publishAudio(responseAudio, room, roomName);
+      return;
+    }
+    
+    const lastName = savedSlots.lastName;
+    const dob = savedSlots.dob || null;
+    
+    if (!dob) {
+      setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_PERSON_DOB, null, {
+        lastName,
+        firstName
+      });
+      const response = `${participantId}, did not copy date of birth. Go ahead with date of birth.`;
+      const responseAudio = await textToSpeech(response);
+      await this.publishAudio(responseAudio, room, roomName);
+      return;
+    }
+    
+    setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_PERSON_CONFIRM, null, {
+      lastName,
+      firstName,
+      dob
+    });
+    
+    const confirmResponse = `${participantId}, confirming. Last ${lastName}, first ${firstName}, date of birth ${dob}. 10-4?`;
     const confirmAudio = await textToSpeech(confirmResponse);
     await this.publishAudio(confirmAudio, room, roomName);
   }

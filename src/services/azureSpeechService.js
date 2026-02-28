@@ -70,10 +70,28 @@ export async function speechToText(audioBuffer) {
   });
 }
 
+const ONES = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine',
+  'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
+const TENS = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
+
+function numberToWords(n) {
+  if (n < 20) return ONES[n];
+  if (n < 100) return TENS[Math.floor(n / 10)] + (n % 10 ? ' ' + ONES[n % 10] : '');
+  return String(n);
+}
+
+function prepareForTTS(text) {
+  return text.replace(/\b10[-\/](\d{1,3})\b/g, (match, num) => {
+    return 'ten ' + numberToWords(parseInt(num, 10));
+  });
+}
+
 export async function textToSpeech(text) {
   if (!isConfigured()) {
     throw new Error('Azure Speech not configured');
   }
+
+  const ttsText = prepareForTTS(text);
 
   return new Promise((resolve, reject) => {
     try {
@@ -84,7 +102,7 @@ export async function textToSpeech(text) {
       const synthesizer = new sdk.SpeechSynthesizer(speechConfig, null);
 
       synthesizer.speakTextAsync(
-        text,
+        ttsText,
         (result) => {
           synthesizer.close();
           if (result.reason === sdk.ResultReason.SynthesizingAudioCompleted) {

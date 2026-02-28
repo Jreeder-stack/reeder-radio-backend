@@ -186,6 +186,7 @@ export default function DispatchConsole({ user, onLogout }) {
 
   const handleRemoveChannel = (channelId) => {
     removeFromGrid(channelId);
+    setChannelOrder(channelOrder.filter(id => id !== channelId));
   };
 
   const handleAddChannel = (channelId) => {

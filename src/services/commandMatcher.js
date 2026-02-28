@@ -9,6 +9,7 @@ const DISPATCHER_STATE = {
   AWAITING_PERSON_DOB: 'AWAITING_PERSON_DOB',
   AWAITING_SECURE_CONFIRM: 'AWAITING_SECURE_CONFIRM',
   AWAITING_PERSON_CONFIRM: 'AWAITING_PERSON_CONFIRM',
+  AWAITING_PERSON_FIRSTNAME: 'AWAITING_PERSON_FIRSTNAME',
   SIGNAL_100_ACTIVE: 'SIGNAL_100_ACTIVE'
 };
 
@@ -670,7 +671,11 @@ export function matchCommand(transcript, participantId = null) {
   
   console.log(`[CommandMatcher] Unit: ${unitId}, State: ${session.state}, Transcript: "${transcript}"`);
 
-  if (containsCancelPhrase(transcript)) {
+  const confirmStates = [
+    DISPATCHER_STATE.AWAITING_PERSON_CONFIRM,
+    DISPATCHER_STATE.AWAITING_SECURE_CONFIRM
+  ];
+  if (containsCancelPhrase(transcript) && !confirmStates.includes(session.state)) {
     resetUnitSession(unitId);
     return null;
   }
@@ -814,6 +819,16 @@ export function matchCommand(transcript, participantId = null) {
       response: null,
       unitId,
       intent: 'PERSON_CHECK_CONFIRM',
+      rawTranscript: transcript,
+      slots: session.slots
+    };
+  }
+
+  if (session.state === DISPATCHER_STATE.AWAITING_PERSON_FIRSTNAME) {
+    return {
+      response: null,
+      unitId,
+      intent: 'PERSON_CHECK_FIRSTNAME',
       rawTranscript: transcript,
       slots: session.slots
     };
