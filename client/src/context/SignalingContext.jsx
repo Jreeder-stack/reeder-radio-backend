@@ -17,6 +17,7 @@ export function SignalingProvider({ children }) {
   const [emergencyChannels, setEmergencyChannels] = useState(new Set());
   const [emergencyAlerts, setEmergencyAlerts] = useState([]);
   const [unitLocations, setUnitLocations] = useState({});
+  const [trackedUnits, setTrackedUnits] = useState(new Set());
   const locationIntervalRef = useRef(null);
   const joinedChannelsRef = useRef(new Set());
 
@@ -174,6 +175,21 @@ export function SignalingProvider({ children }) {
       }));
     });
 
+    const removeGpsLocationListener = signalingManager.on('location:update', (data) => {
+      setUnitLocations(prev => ({
+        ...prev,
+        [data.unitId]: {
+          latitude: data.lat,
+          longitude: data.lng,
+          accuracy: data.accuracy,
+          heading: data.heading,
+          speed: data.speed,
+          timestamp: data.timestamp,
+        },
+      }));
+      setTrackedUnits(prev => new Set([...prev, data.unitId]));
+    });
+
     const removeStatusListener = signalingManager.on('unitStatus', (data) => {
       setChannelMembers(prev => ({
         ...prev,
@@ -195,6 +211,7 @@ export function SignalingProvider({ children }) {
       removeEmergencyEndListener();
       removeAlertListener();
       removeLocationListener();
+      removeGpsLocationListener();
       removeStatusListener();
       
       if (locationIntervalRef.current) {
@@ -275,6 +292,29 @@ export function SignalingProvider({ children }) {
     }
   }, []);
 
+  const emitTrackStart = useCallback((unitId) => {
+    if (!signalingManager.socket?.connected) return false;
+    signalingManager.socket.emit('location:track_start', { unitId });
+    setTrackedUnits(prev => new Set([...prev, unitId]));
+    return true;
+  }, []);
+
+  const emitTrackStop = useCallback((unitId) => {
+    if (!signalingManager.socket?.connected) return false;
+    signalingManager.socket.emit('location:track_stop', { unitId });
+    setTrackedUnits(prev => {
+      const next = new Set(prev);
+      next.delete(unitId);
+      return next;
+    });
+    setUnitLocations(prev => {
+      const next = { ...prev };
+      delete next[unitId];
+      return next;
+    });
+    return true;
+  }, []);
+
   const clearEmergencyAlert = useCallback((index) => {
     setEmergencyAlerts(prev => prev.filter((_, i) => i !== index));
   }, []);
@@ -304,6 +344,7 @@ export function SignalingProvider({ children }) {
     emergencyChannels: Array.from(emergencyChannels),
     emergencyAlerts,
     unitLocations,
+    trackedUnits: Array.from(trackedUnits),
     joinChannel,
     leaveChannel,
     signalPttStart,
@@ -314,6 +355,8 @@ export function SignalingProvider({ children }) {
     updateLocation,
     startLocationTracking,
     stopLocationTracking,
+    emitTrackStart,
+    emitTrackStop,
     clearEmergencyAlert,
     getChannelMembers,
     isTransmitting,

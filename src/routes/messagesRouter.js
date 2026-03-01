@@ -1,7 +1,60 @@
 import { Router } from 'express';
 import { sendTextMessage, sendAudioMessage, getMessages, transcribeMessage, getAudioFilePath } from '../services/messagesService.js';
+import { getMessagesByDateRange } from '../db/index.js';
+import { requireDispatcher } from '../middleware/auth.js';
+import archiver from 'archiver';
+import fs from 'fs';
+import path from 'path';
 
 const router = Router();
+
+const AUDIO_DIR = path.join(process.cwd(), 'uploads', 'audio');
+
+router.get('/export/audio', requireDispatcher, async (req, res) => {
+  try {
+    const { channel, from, to } = req.query;
+    if (!channel || !from || !to) {
+      return res.status(400).json({ success: false, error: 'channel, from, and to query parameters are required' });
+    }
+
+    const messages = await getMessagesByDateRange(channel, from, to, 'audio');
+    if (messages.length === 0) {
+      return res.status(404).json({ success: false, error: 'No audio messages found in the specified range' });
+    }
+
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="${channel}_audio_export_${Date.now()}.zip"`);
+
+    const archive = archiver('zip', { zlib: { level: 5 } });
+    archive.pipe(res);
+
+    const manifest = [];
+
+    for (const msg of messages) {
+      if (!msg.audio_url) continue;
+      const filename = msg.audio_url.split('/').pop();
+      const filepath = path.join(AUDIO_DIR, filename);
+      if (fs.existsSync(filepath)) {
+        archive.file(filepath, { name: filename });
+        manifest.push({
+          file: filename,
+          sender: msg.sender,
+          timestamp: msg.created_at,
+          duration_ms: msg.audio_duration,
+          transcription: msg.transcription || null
+        });
+      }
+    }
+
+    archive.append(JSON.stringify(manifest, null, 2), { name: 'manifest.json' });
+    await archive.finalize();
+  } catch (error) {
+    console.error('Error exporting audio:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  }
+});
 
 router.get('/:channel', async (req, res) => {
   try {

@@ -11,6 +11,7 @@ import { DataPacket_Kind } from 'livekit-client';
 import { startBackgroundService, stopBackgroundService } from '../../plugins/backgroundService';
 import { setupAppLifecycle } from '../../lib/capacitor';
 import { signalingManager } from '../../signaling/SignalingManager';
+import { startTracking as gpsStartTracking, stopTracking as gpsStopTracking } from '../../services/gpsService.js';
 import { PTTButton } from './PTTButton';
 import { 
   AnimalSearchModal, 
@@ -230,6 +231,24 @@ export function RadioDeckView({ user, onLogout }) {
   }, [emergencyAlerts, isEmergency]);
 
   useEffect(() => {
+    const removeTrackStartListener = signalingManager.on('location:track_start', () => {
+      console.log('[RadioDeck] GPS track_start received');
+      gpsStartTracking();
+    });
+
+    const removeTrackStopListener = signalingManager.on('location:track_stop', () => {
+      console.log('[RadioDeck] GPS track_stop received');
+      gpsStopTracking();
+    });
+
+    return () => {
+      removeTrackStartListener();
+      removeTrackStopListener();
+      gpsStopTracking();
+    };
+  }, []);
+
+  useEffect(() => {
     startBackgroundService().then(result => {
       if (result.success) {
         console.log('[RadioDeck] Background service started');
@@ -305,13 +324,12 @@ export function RadioDeckView({ user, onLogout }) {
       if (ch.zone) zoneSet.add(ch.zone);
     });
     const uniqueZones = Array.from(zoneSet).sort();
-    return uniqueZones.length > 0 ? ['ALL', ...uniqueZones] : ['ALL'];
+    return uniqueZones;
   }, [channels]);
   
-  const currentZone = zones[currentZoneIndex] || 'ALL';
+  const currentZone = zones[currentZoneIndex] || (zones.length > 0 ? zones[0] : '');
   
   const filteredChannels = useMemo(() => {
-    if (currentZone === 'ALL') return channels;
     return channels.filter(ch => ch.zone === currentZone);
   }, [channels, currentZone]);
   
@@ -605,6 +623,7 @@ export function RadioDeckView({ user, onLogout }) {
     if (isEmergency) return;
     const channel = currentRoomKey || 'DISPATCH';
     await triggerEmergency();
+    gpsStartTracking();
     try {
       signalEmergencyStart(channel);
     } catch (err) {
@@ -626,6 +645,7 @@ export function RadioDeckView({ user, onLogout }) {
     if (!isEmergency) return;
     const channel = currentRoomKey || 'DISPATCH';
     await cancelEmergency();
+    gpsStopTracking();
     try {
       signalEmergencyEnd(channel);
     } catch (err) {

@@ -6,6 +6,7 @@ import { LiveKitConnectionProvider, useLiveKitConnection } from "./context/LiveK
 import { SignalingProvider } from "./context/SignalingContext.jsx";
 import { MobileRadioProvider } from "./context/MobileRadioContext.jsx";
 import { ErrorBoundary } from "./components/ErrorBoundary.jsx";
+import { GlobalEmergencyOverlay } from "./components/EmergencyPanel/index.jsx";
 import Login from "./Login.jsx";
 import App from "./App.jsx";
 import Admin from "./Admin.jsx";
@@ -199,6 +200,10 @@ function AppWrapper() {
       />
     );
   }
+
+  if (user && (user.is_dispatcher || user.role === 'admin') && !isMobile) {
+    return <Navigate to="/dispatcher" replace />;
+  }
   
   return <App user={user} onLogout={handleLogout} />;
 }
@@ -258,6 +263,7 @@ function ConnectedRoutes() {
     <SignalingProvider>
       <LiveKitConnectionProvider user={user}>
         <MobileRadioProvider>
+          <GlobalEmergencyOverlay />
           <Routes>
             <Route path="/login" element={<LoginRoute />} />
             <Route

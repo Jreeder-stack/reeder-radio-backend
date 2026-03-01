@@ -22,7 +22,7 @@ const DISPATCHER_STATE = {
 
 const unitSessions = new Map();
 
-const SESSION_TIMEOUT_MS = 45000;
+const SESSION_TIMEOUT_MS = 300000;
 const SIGNAL_100_TIMEOUT_MS = 300000;
 
 function getUnitSession(unitId) {

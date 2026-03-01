@@ -25,6 +25,7 @@ class SignalingService {
     this.graceChannels = new Map();
     this.emergencyStates = new Map();
     this.connectionTimes = new Map();
+    this.trackedUnitLocations = new Map();
     this.livekitAvailable = true;
     
     this.GRACE_PERIOD_MS = 15000;
@@ -101,6 +102,9 @@ class SignalingService {
       socket.on(SIGNALING_EVENTS.UNIT_STATUS_UPDATE, (data) => this._handleStatusUpdate(socket, data));
       socket.on(SIGNALING_EVENTS.LOCATION_UPDATE, (data) => this._handleLocationUpdate(socket, data));
       socket.on(SIGNALING_EVENTS.TOKEN_REQUEST, (data) => this._handleTokenRequest(socket, data));
+      socket.on('location:track_start', (data) => this._handleLocationTrackStart(socket, data));
+      socket.on('location:track_stop', (data) => this._handleLocationTrackStop(socket, data));
+      socket.on('location:update', (data) => this._handleGpsLocationUpdate(socket, data));
       socket.on('ping', () => socket.emit('pong'));
       socket.on('disconnect', () => this._handleDisconnect(socket));
     });
@@ -367,6 +371,9 @@ class SignalingService {
       ...emergencyData,
       message: `EMERGENCY: Unit ${socket.unitId} activated emergency on ${channelId}`,
     });
+
+    socket.emit('location:track_start', { requestedBy: 'emergency', emergency: true });
+    console.log(`[Signaling] Auto GPS track_start for emergency unit ${socket.unitId}`);
     
     console.log(`[Signaling] EMERGENCY START: ${socket.unitId} on ${channelId} - Force connect broadcast sent`);
   }
@@ -401,6 +408,13 @@ class SignalingService {
     this.io.to(`channel:${channelId}`).emit(SIGNALING_EVENTS.EMERGENCY_END, endData);
     this._emitCallback('emergencyEnd', endData);
     this.io.emit('emergency:cleared', endData);
+
+    const emergencyUnitSocket = this._findSocketByUnitId(emergency.unitId);
+    if (emergencyUnitSocket) {
+      emergencyUnitSocket.emit('location:track_stop', { requestedBy: 'emergency_ack' });
+      this.trackedUnitLocations.delete(emergency.unitId);
+      console.log(`[Signaling] Auto GPS track_stop for emergency unit ${emergency.unitId}`);
+    }
     
     console.log(`[Signaling] EMERGENCY END: ${channelId} cleared by ${socket.unitId}`);
   }
@@ -451,6 +465,83 @@ class SignalingService {
         timestamp: Date.now(),
       });
     }
+  }
+
+  _handleLocationTrackStart(socket, data) {
+    const { unitId } = data;
+    if (!socket.isDispatcher) {
+      socket.emit('error', { message: 'Only dispatchers can request tracking' });
+      return;
+    }
+    if (!unitId) return;
+
+    const targetSocket = this._findSocketByUnitId(unitId);
+    if (targetSocket) {
+      targetSocket.emit('location:track_start', { requestedBy: socket.unitId });
+      console.log(`[Signaling] GPS track_start sent to ${unitId} by ${socket.unitId}`);
+    }
+  }
+
+  _handleLocationTrackStop(socket, data) {
+    const { unitId } = data;
+    if (!socket.isDispatcher) {
+      socket.emit('error', { message: 'Only dispatchers can stop tracking' });
+      return;
+    }
+    if (!unitId) return;
+
+    const targetSocket = this._findSocketByUnitId(unitId);
+    if (targetSocket) {
+      targetSocket.emit('location:track_stop', { requestedBy: socket.unitId });
+      console.log(`[Signaling] GPS track_stop sent to ${unitId} by ${socket.unitId}`);
+    }
+
+    this.trackedUnitLocations.delete(unitId);
+  }
+
+  _handleGpsLocationUpdate(socket, data) {
+    if (!socket.unitId) return;
+
+    const locationEntry = {
+      unitId: socket.unitId,
+      lat: data.lat,
+      lng: data.lng,
+      accuracy: data.accuracy,
+      heading: data.heading,
+      speed: data.speed,
+      timestamp: data.timestamp || Date.now(),
+    };
+
+    this.trackedUnitLocations.set(socket.unitId, locationEntry);
+
+    try {
+      import('../services/locationService.js').then(mod => {
+        const locationService = mod.default;
+        if (locationService && locationService.updateLocation) {
+          locationService.updateLocation(socket.unitId, data.lat, data.lng, data.accuracy);
+        }
+      }).catch(() => {});
+    } catch (e) {}
+
+    if (this.io) {
+      this.io.sockets.sockets.forEach((s) => {
+        if (s.isDispatcher && s.id !== socket.id) {
+          s.emit('location:update', locationEntry);
+        }
+      });
+    }
+  }
+
+  _findSocketByUnitId(unitId) {
+    if (!this.io) return null;
+    for (const [, s] of this.io.sockets.sockets) {
+      if (s.unitId === unitId) return s;
+    }
+    return null;
+  }
+
+  getTrackedLocations() {
+    return Array.from(this.trackedUnitLocations.values());
   }
 
   _handleTokenRequest(socket, data) {

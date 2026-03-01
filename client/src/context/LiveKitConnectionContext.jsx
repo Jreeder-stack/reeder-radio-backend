@@ -181,12 +181,17 @@ export function LiveKitConnectionProvider({ children, user }) {
         recordActivity();
         if (message.type === 'emergency') {
           if (message.active) {
-            useDispatchStore.getState().addEmergency({
-              id: `emergency-${participant?.identity || message.identity}-${Date.now()}`,
-              unitIdentity: message.identity,
-              channel: channelName,
-              timestamp: new Date().toISOString(),
-            });
+            const store = useDispatchStore.getState();
+            const unitId = participant?.identity || message.identity;
+            const already = store.emergencies.some(e => e.unitIdentity === unitId);
+            if (!already) {
+              store.addEmergency({
+                id: `emergency-${unitId}-${Date.now()}`,
+                unitIdentity: unitId,
+                channel: channelName,
+                timestamp: new Date().toISOString(),
+              });
+            }
           }
         }
       })
@@ -607,6 +612,8 @@ export function LiveKitConnectionProvider({ children, user }) {
     toggleScanMode,
     ensureConnected,
     recordActivity,
+    connectToChannel,
+    disconnectFromChannel,
   };
 
   return (

@@ -1,6 +1,5 @@
 import { createChannelMessage, getChannelMessages, updateMessageTranscription, getMessageById } from '../db/index.js';
 import * as sdk from 'microsoft-cognitiveservices-speech-sdk';
-import { config } from '../config/env.js';
 import { broadcastMessage } from './aiDispatchService.js';
 import fs from 'fs';
 import path from 'path';
@@ -72,8 +71,8 @@ export async function transcribeMessage(messageId) {
 }
 
 async function transcribeAudioFile(filepath) {
-  const speechKey = config.azureSpeechKey;
-  const speechRegion = config.azureSpeechRegion;
+  const speechKey = process.env.AZURE_SPEECH_KEY;
+  const speechRegion = process.env.AZURE_SPEECH_REGION || 'eastus';
   
   if (!speechKey || !speechRegion) {
     throw new Error('Azure Speech credentials not configured');

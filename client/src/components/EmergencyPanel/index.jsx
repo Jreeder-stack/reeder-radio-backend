@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import useDispatchStore from '../../state/dispatchStore.js';
 import { toggleUnitEmergency } from '../../utils/api.js';
+import { useAuth } from '../../AuthContext.jsx';
 
 function formatTime(timestamp) {
   if (!timestamp) return '';
@@ -73,22 +74,6 @@ function startAlarmTone() {
 
 export default function EmergencyPanel() {
   const { emergencies, removeEmergency, updateUnit, addEvent, dispatcherName } = useDispatchStore();
-  const alarmStopRef = useRef(null);
-
-  useEffect(() => {
-    if (emergencies.length > 0 && !alarmStopRef.current) {
-      alarmStopRef.current = startAlarmTone();
-    } else if (emergencies.length === 0 && alarmStopRef.current) {
-      alarmStopRef.current();
-      alarmStopRef.current = null;
-    }
-    return () => {
-      if (alarmStopRef.current) {
-        alarmStopRef.current();
-        alarmStopRef.current = null;
-      }
-    };
-  }, [emergencies.length]);
 
   const handleAcknowledge = async (emergency) => {
     try {
@@ -148,6 +133,108 @@ export default function EmergencyPanel() {
             </div>
           ))
         )}
+      </div>
+    </div>
+  );
+}
+
+export function GlobalEmergencyOverlay() {
+  const { user } = useAuth();
+  const { emergencies, removeEmergency, updateUnit, addEvent, dispatcherName } = useDispatchStore();
+  const alarmStopRef = useRef(null);
+
+  useEffect(() => {
+    if (!user) return;
+    if (emergencies.length > 0 && !alarmStopRef.current) {
+      alarmStopRef.current = startAlarmTone();
+    } else if (emergencies.length === 0 && alarmStopRef.current) {
+      alarmStopRef.current();
+      alarmStopRef.current = null;
+    }
+    return () => {
+      if (alarmStopRef.current) {
+        alarmStopRef.current();
+        alarmStopRef.current = null;
+      }
+    };
+  }, [emergencies.length, user]);
+
+  if (!user || emergencies.length === 0) return null;
+
+  const handleAcknowledge = async (emergency) => {
+    try {
+      if (emergency.unitId) {
+        await toggleUnitEmergency(emergency.unitId, false);
+        updateUnit(emergency.unitIdentity, { is_emergency: false, status: 'idle' });
+      }
+      removeEmergency(emergency.id);
+      addEvent({
+        type: 'emergency_ack',
+        unit: emergency.unitIdentity,
+        channel: emergency.channel,
+        acknowledgedBy: dispatcherName || 'DISPATCH',
+      });
+    } catch (error) {
+      console.error('Failed to acknowledge emergency:', error);
+    }
+  };
+
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      zIndex: 99998,
+      pointerEvents: 'none',
+    }}>
+      <div style={{
+        margin: '16px auto',
+        maxWidth: '480px',
+        pointerEvents: 'auto',
+      }}>
+        {emergencies.map(emergency => (
+          <div
+            key={emergency.id}
+            style={{
+              background: 'rgba(127, 29, 29, 0.95)',
+              border: '2px solid #dc2626',
+              borderRadius: '8px',
+              padding: '12px 16px',
+              marginBottom: '8px',
+              animation: 'pulse 1s ease-in-out infinite',
+              boxShadow: '0 4px 20px rgba(220, 38, 38, 0.5)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <span style={{ fontWeight: 'bold', color: '#fff', fontSize: '16px' }}>
+                ⚠ EMERGENCY — {emergency.unitIdentity}
+              </span>
+              <span style={{ fontSize: '11px', color: '#fca5a5' }}>
+                {formatTime(emergency.timestamp)}
+              </span>
+            </div>
+            <div style={{ fontSize: '12px', color: '#fecaca', marginBottom: '8px' }}>
+              Channel: {emergency.channel || 'Unknown'}
+            </div>
+            <button
+              onClick={() => handleAcknowledge(emergency)}
+              style={{
+                width: '100%',
+                padding: '8px',
+                fontSize: '14px',
+                fontWeight: 'bold',
+                background: '#16a34a',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+              }}
+            >
+              ACKNOWLEDGE
+            </button>
+          </div>
+        ))}
       </div>
     </div>
   );

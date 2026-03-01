@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback, useState, useRef } from 'react';
 import {
   DndContext,
   closestCenter,
@@ -39,7 +39,7 @@ export default function DispatchConsole({ user, onLogout }) {
     return saved !== null ? JSON.parse(saved) : true;
   });
 
-  const { retryConnection } = useLiveKitConnection();
+  const { retryConnection, connectToChannel, disconnectFromChannel } = useLiveKitConnection();
   const { 
     connected: signalingConnected, 
     channelMembers, 
@@ -83,6 +83,7 @@ export default function DispatchConsole({ user, onLogout }) {
     isConnected,
     isConnecting,
     connectionError,
+    monitoredChannelIds,
   } = useDispatchStore();
 
   const sensors = useSensors(
@@ -140,6 +141,35 @@ export default function DispatchConsole({ user, onLogout }) {
       });
     };
   }, [signalingConnected, gridChannelIds, channels, joinChannel, leaveChannel]);
+
+  const prevMonitoredRef = useRef([]);
+  useEffect(() => {
+    if (!channels.length) return;
+
+    const identity = user?.username || user?.id || 'Dispatch';
+
+    const monitoredRoomKeys = monitoredChannelIds
+      .map(id => {
+        const ch = channels.find(c => c.id === id);
+        return ch ? (ch.room_key || ((ch.zone || 'Default') + '__' + ch.name)) : null;
+      })
+      .filter(Boolean);
+
+    const prevRoomKeys = prevMonitoredRef.current;
+
+    const toConnect = monitoredRoomKeys.filter(rk => !prevRoomKeys.includes(rk));
+    const toDisconnect = prevRoomKeys.filter(rk => !monitoredRoomKeys.includes(rk));
+
+    toConnect.forEach(rk => {
+      connectToChannel(rk, identity, true);
+    });
+
+    toDisconnect.forEach(rk => {
+      disconnectFromChannel(rk);
+    });
+
+    prevMonitoredRef.current = monitoredRoomKeys;
+  }, [monitoredChannelIds, channels, user, connectToChannel, disconnectFromChannel]);
 
   const handleDragEnd = (event) => {
     const { active, over } = event;

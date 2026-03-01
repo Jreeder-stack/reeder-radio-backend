@@ -634,6 +634,18 @@ export async function getMessageById(messageId) {
   return result.rows[0];
 }
 
+export async function getMessagesByDateRange(channel, from, to, type = null) {
+  let query = `SELECT * FROM channel_messages WHERE channel = $1 AND created_at >= $2 AND created_at <= $3`;
+  const params = [channel, new Date(from), new Date(to)];
+  if (type) {
+    query += ` AND message_type = $4`;
+    params.push(type);
+  }
+  query += ` ORDER BY created_at ASC`;
+  const result = await pool.query(query, params);
+  return result.rows;
+}
+
 export async function deleteChannelMessages(channel, olderThanDays = 30) {
   const result = await pool.query(
     `DELETE FROM channel_messages WHERE channel = $1 AND created_at < NOW() - INTERVAL '1 day' * $2 RETURNING *`,

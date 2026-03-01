@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import useDispatchStore from '../../state/dispatchStore.js';
+import { useSignalingContext } from '../../context/SignalingContext.jsx';
 
 function StatusDot({ status, isEmergency }) {
   const color = isEmergency 
@@ -19,8 +20,23 @@ function formatTime(timestamp) {
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
+function LocationIcon({ tracking }) {
+  return (
+    <svg
+      className={`w-3.5 h-3.5 ${tracking ? 'text-green-400 animate-pulse' : 'text-dispatch-secondary'}`}
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+    </svg>
+  );
+}
+
 export default function UnitList() {
   const { units, emergencies } = useDispatchStore();
+  const { trackedUnits, emitTrackStart, emitTrackStop } = useSignalingContext();
   const [filter, setFilter] = useState('all');
   
   const getFilteredUnits = () => {
@@ -40,6 +56,14 @@ export default function UnitList() {
   
   const filteredUnits = getFilteredUnits();
   const emergencyCount = units.filter(u => u.is_emergency).length;
+
+  const handleToggleTracking = (unitIdentity) => {
+    if (trackedUnits.includes(unitIdentity)) {
+      emitTrackStop(unitIdentity);
+    } else {
+      emitTrackStart(unitIdentity);
+    }
+  };
 
   return (
     <div className="flex flex-col h-full">
@@ -75,28 +99,46 @@ export default function UnitList() {
             No units found
           </div>
         ) : (
-          filteredUnits.map(unit => (
-            <div
-              key={unit.id}
-              className={`unit-card p-2.5 rounded-md text-sm transition-all ${
-                unit.is_emergency 
-                  ? 'unit-card-emergency' 
-                  : ''
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <StatusDot status={unit.status} isEmergency={unit.is_emergency} />
-                  <span className="font-medium text-dispatch-text">{unit.unit_identity}</span>
+          filteredUnits.map(unit => {
+            const isTracking = trackedUnits.includes(unit.unit_identity);
+            return (
+              <div
+                key={unit.id}
+                className={`unit-card p-2.5 rounded-md text-sm transition-all ${
+                  unit.is_emergency 
+                    ? 'unit-card-emergency' 
+                    : ''
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <StatusDot status={unit.status} isEmergency={unit.is_emergency} />
+                    <span className="font-medium text-dispatch-text">{unit.unit_identity}</span>
+                    {isTracking && <LocationIcon tracking={true} />}
+                  </div>
+                  <span className="text-xs text-dispatch-tertiary font-mono">{formatTime(unit.last_seen)}</span>
                 </div>
-                <span className="text-xs text-dispatch-tertiary font-mono">{formatTime(unit.last_seen)}</span>
+                <div className="flex items-center justify-between mt-1.5">
+                  <span className="text-xs text-dispatch-secondary">{unit.channel || 'Unknown'}</span>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => handleToggleTracking(unit.unit_identity)}
+                      className={`text-xs px-1.5 py-0.5 rounded transition-colors flex items-center gap-1 ${
+                        isTracking 
+                          ? 'bg-green-600/30 text-green-400 hover:bg-green-600/50' 
+                          : 'bg-dispatch-border text-dispatch-secondary hover:text-dispatch-text'
+                      }`}
+                      title={isTracking ? 'Stop Tracking' : 'Track Location'}
+                    >
+                      <LocationIcon tracking={isTracking} />
+                      {isTracking ? 'Stop' : 'Track'}
+                    </button>
+                    <span className="text-xs px-1.5 py-0.5 rounded bg-dispatch-border text-dispatch-secondary">{unit.status}</span>
+                  </div>
+                </div>
               </div>
-              <div className="flex items-center justify-between mt-1.5">
-                <span className="text-xs text-dispatch-secondary">{unit.channel || 'Unknown'}</span>
-                <span className="text-xs px-1.5 py-0.5 rounded bg-dispatch-border text-dispatch-secondary">{unit.status}</span>
-              </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
     </div>

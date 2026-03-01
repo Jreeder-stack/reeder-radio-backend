@@ -59,4 +59,9 @@ router.get('/events', dispatchController.getEvents);
 router.post('/notify-join', dispatchController.notifyJoin);
 router.post('/notify-emergency', dispatchController.notifyEmergency);
 
+router.get('/unit-locations', (req, res) => {
+  const locations = signalingService.getTrackedLocations();
+  res.json({ locations });
+});
+
 export default router;

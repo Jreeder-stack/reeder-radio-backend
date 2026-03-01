@@ -42,6 +42,9 @@ class SignalingManager {
       'emergency:force_connect': new Set(),
       unitStatus: new Set(),
       locationUpdate: new Set(),
+      'location:track_start': new Set(),
+      'location:track_stop': new Set(),
+      'location:update': new Set(),
       channelMembers: new Set(),
       systemStatus: new Set(),
       connectionChange: new Set(),
@@ -193,6 +196,18 @@ class SignalingManager {
 
     this.socket.on('emergency:cleared', (data) => {
       this._emit('emergencyEnd', data);
+    });
+
+    this.socket.on('location:track_start', (data) => {
+      this._emit('location:track_start', data);
+    });
+
+    this.socket.on('location:track_stop', (data) => {
+      this._emit('location:track_stop', data);
+    });
+
+    this.socket.on('location:update', (data) => {
+      this._emit('location:update', data);
     });
   }
 
