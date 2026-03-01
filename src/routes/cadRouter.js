@@ -350,8 +350,14 @@ router.post('/chats/:chatId/messages', async (req, res) => {
   }
 });
 
+let unreadLogCounter = 0;
 router.get('/messages/unread', async (req, res) => {
   try {
+    const sessionUser = req.session?.user;
+    unreadLogCounter++;
+    if (unreadLogCounter % 60 === 1) {
+      console.log(`[CAD Router] /messages/unread: session.user=${sessionUser ? sessionUser.username : 'NONE'} unit_id=${sessionUser?.unit_id || 'NONE'} req.user=${req.user || 'NONE'} (logged 1/60)`);
+    }
     const result = await cadService.getUnreadCount(req.user);
     res.json(result);
   } catch (error) {

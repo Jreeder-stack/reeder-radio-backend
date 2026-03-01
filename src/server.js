@@ -12,7 +12,35 @@ async function start() {
   
   try {
     await initializeDatabase();
-    console.log('Database ready');
+    console.log('[STARTUP] Database schema initialized');
+    
+    const pool = (await import('./db/index.js')).default;
+    try {
+      const [usersResult, channelsResult, zonesResult, sessionsResult] = await Promise.all([
+        pool.query('SELECT COUNT(*) as count FROM users'),
+        pool.query('SELECT COUNT(*) as total, COUNT(*) FILTER (WHERE enabled = true) as enabled FROM channels'),
+        pool.query('SELECT COUNT(*) as count FROM zones'),
+        pool.query('SELECT COUNT(*) as count FROM session')
+      ]);
+      console.log(`[STARTUP] DB State: ${usersResult.rows[0].count} users, ${channelsResult.rows[0].total} channels (${channelsResult.rows[0].enabled} enabled), ${zonesResult.rows[0].count} zones, ${sessionsResult.rows[0].count} active sessions`);
+      
+      if (parseInt(channelsResult.rows[0].total) === 0) {
+        console.log('[STARTUP] WARNING: No channels in database! Users will see "No channels available"');
+      }
+      if (parseInt(usersResult.rows[0].count) === 0) {
+        console.log('[STARTUP] WARNING: No users in database! Nobody can log in');
+      }
+      
+      const channelsList = await pool.query('SELECT id, name, zone, enabled, COALESCE(zone, \'Default\') || \'__\' || name AS room_key FROM channels ORDER BY zone, name');
+      if (channelsList.rows.length > 0) {
+        console.log(`[STARTUP] Channels list:`);
+        channelsList.rows.forEach(ch => {
+          console.log(`  [${ch.enabled ? 'ON ' : 'OFF'}] id=${ch.id} "${ch.name}" zone="${ch.zone}" room_key="${ch.room_key}"`);
+        });
+      }
+    } catch (countErr) {
+      console.error('[STARTUP] Could not query DB state:', countErr.message);
+    }
   } catch (err) {
     console.error('Database initialization failed:', err);
     process.exit(1);

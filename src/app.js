@@ -54,6 +54,32 @@ const rateLimitAuth = rateLimit({
 
 app.use('/api/auth', rateLimitAuth);
 
+const NOISY_ENDPOINTS = new Set(['/api/dispatch/units', '/api/cad/messages/unread', '/api/cad/pending-checks']);
+const noisyCounters = {};
+
+app.use('/api', (req, res, next) => {
+  const start = Date.now();
+  const sessionUser = req.session?.user;
+  const sessionId = req.sessionID ? req.sessionID.substring(0, 8) + '...' : 'none';
+  const cleanUrl = req.originalUrl?.split('?')[0];
+  const isNoisy = NOISY_ENDPOINTS.has(cleanUrl);
+
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    const userInfo = sessionUser ? `user=${sessionUser.username}(id:${sessionUser.id})` : 'session=none';
+
+    if (isNoisy) {
+      noisyCounters[cleanUrl] = (noisyCounters[cleanUrl] || 0) + 1;
+      if (noisyCounters[cleanUrl] % 60 === 1) {
+        console.log(`[API] ${req.method} ${req.originalUrl} | ${userInfo} | sid=${sessionId} | ${res.statusCode} | ${duration}ms (logged 1/60)`);
+      }
+    } else {
+      console.log(`[API] ${req.method} ${req.originalUrl} | ${userInfo} | sid=${sessionId} | ${res.statusCode} | ${duration}ms`);
+    }
+  });
+  next();
+});
+
 setupRoutes(app);
 
 app.post('/api/activity/log', requireAuth, async (req, res) => {

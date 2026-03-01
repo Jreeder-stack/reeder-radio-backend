@@ -3,12 +3,18 @@ import { success, error, created } from '../utils/response.js';
 import { getDispatcher, startDispatcher } from '../services/aiDispatchService.js';
 import { isAiDispatchEnabled, getAiDispatchChannel, getAllChannels } from '../db/index.js';
 
+let unitsLogCounter = 0;
 export async function getUnits(req, res) {
   try {
     const units = await dispatchService.getAllUnits();
+    unitsLogCounter++;
+    if (unitsLogCounter % 60 === 1) {
+      const user = req.session?.user;
+      console.log(`[DISPATCH] getUnits: ${units.length} units returned | user=${user?.username || 'unknown'} | sessionID=${req.sessionID?.substring(0, 8) || 'none'}... (logged 1/60)`);
+    }
     success(res, { units });
   } catch (err) {
-    console.error('Get units error:', err);
+    console.error('[DISPATCH] Get units error:', err);
     error(res, 'Failed to get units', 500);
   }
 }
@@ -76,9 +82,10 @@ export async function setMonitorSet(req, res) {
 export async function getChannels(req, res) {
   try {
     const channels = await dispatchService.getRadioChannels();
+    console.log(`[DISPATCH] getChannels: ${channels.length} radio channels returned`);
     success(res, { channels });
   } catch (err) {
-    console.error('Get radio channels error:', err);
+    console.error('[DISPATCH] Get radio channels error:', err);
     error(res, 'Failed to get radio channels', 500);
   }
 }
