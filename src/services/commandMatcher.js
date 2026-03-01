@@ -595,13 +595,21 @@ export function getUnitSessionState(unitId) {
   };
 }
 
-export function setUnitSessionState(unitId, state, pendingIntent = null, slots = {}) {
+export function setUnitSessionState(unitId, state, pendingIntent = null, slots = {}, replaceSlots = false) {
   const session = getUnitSession(unitId);
+  const oldState = session.state;
+  const oldSlots = { ...session.slots };
   session.state = state;
   session.pendingIntent = pendingIntent;
-  session.slots = { ...session.slots, ...slots };
+  if (replaceSlots) {
+    session.slots = slots;
+  } else {
+    session.slots = { ...session.slots, ...slots };
+  }
   session.lastActivity = Date.now();
   startSessionTimeout(unitId);
+  const slotKeys = (obj) => Object.keys(obj).length > 0 ? Object.keys(obj).join(',') : 'empty';
+  console.log(`[SESSION] ${unitId}: ${oldState} → ${state} | oldSlotKeys=[${slotKeys(oldSlots)}] | newSlotKeys=[${slotKeys(session.slots)}] | replace=${replaceSlots}`);
 }
 
 export { DISPATCHER_STATE };
