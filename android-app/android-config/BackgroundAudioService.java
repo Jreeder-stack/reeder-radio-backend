@@ -6,6 +6,7 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
@@ -27,6 +28,7 @@ public class BackgroundAudioService extends Service {
     private PowerManager.WakeLock cpuWakeLock;
     private Handler keepAliveHandler;
     private Runnable keepAliveRunnable;
+    private PttBroadcastReceiver pttReceiver;
 
     @Override
     public void onCreate() {
@@ -44,6 +46,13 @@ public class BackgroundAudioService extends Service {
             Log.d(TAG, "CPU wake lock acquired");
         }
 
+        pttReceiver = new PttBroadcastReceiver();
+        IntentFilter pttFilter = new IntentFilter();
+        pttFilter.addAction("android.intent.action.PTT.down");
+        pttFilter.addAction("android.intent.action.PTT.up");
+        registerReceiver(pttReceiver, pttFilter);
+        Log.d(TAG, "PTT broadcast receiver registered dynamically");
+
         keepAliveHandler = new Handler(Looper.getMainLooper());
         keepAliveRunnable = new Runnable() {
             @Override
@@ -57,6 +66,14 @@ public class BackgroundAudioService extends Service {
     
     @Override
     public void onDestroy() {
+        if (pttReceiver != null) {
+            try {
+                unregisterReceiver(pttReceiver);
+                Log.d(TAG, "PTT broadcast receiver unregistered");
+            } catch (Exception e) {
+                Log.w(TAG, "Failed to unregister PTT receiver: " + e.getMessage());
+            }
+        }
         if (keepAliveHandler != null && keepAliveRunnable != null) {
             keepAliveHandler.removeCallbacks(keepAliveRunnable);
         }

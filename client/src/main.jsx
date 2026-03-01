@@ -18,7 +18,7 @@ import { MobileLogin } from "./components/MobileRadio/MobileLogin.jsx";
 import { MobileSettings } from "./components/MobileRadio/MobileSettings.jsx";
 import { MobileScanMonitor } from "./components/MobileRadio/MobileScanMonitor.jsx";
 import { useMobile } from "./hooks/useMobile.js";
-import { overrideVisibilityAPI, isNative } from "./lib/capacitor.js";
+import { overrideVisibilityAPI, isNative, requestAllPermissions } from "./lib/capacitor.js";
 import { startBackgroundService } from "./plugins/backgroundService.js";
 import "./index.css";
 
@@ -171,6 +171,16 @@ function AppWrapper() {
       }).catch(err => {
         console.warn('[AppWrapper] Failed to start background service:', err);
       });
+
+      const permKey = 'permissions_initialized';
+      if (!localStorage.getItem(permKey)) {
+        requestAllPermissions().then(results => {
+          console.log('[AppWrapper] First-login permissions granted:', results);
+          localStorage.setItem(permKey, 'true');
+        }).catch(err => {
+          console.warn('[AppWrapper] Permission request error:', err);
+        });
+      }
     }
   }, [user]);
   

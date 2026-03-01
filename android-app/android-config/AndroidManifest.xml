@@ -34,6 +34,9 @@
     <!-- Do Not Disturb Override -->
     <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
 
+    <!-- Battery optimization exemption (allows prompting user to disable Doze for this app) -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
     <!-- Bluetooth for hardware PTT accessories (Android 12+) -->
     <uses-permission android:name="android.permission.BLUETOOTH" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
@@ -90,6 +93,17 @@
             android:exported="false"
             android:foregroundServiceType="mediaPlayback|location|microphone">
         </service>
+
+        <!-- PTT Broadcast Receiver for screen-off PTT button capture (Inrico T320) -->
+        <receiver
+            android:name=".PttBroadcastReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.PTT.down" />
+                <action android:name="android.intent.action.PTT.up" />
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>

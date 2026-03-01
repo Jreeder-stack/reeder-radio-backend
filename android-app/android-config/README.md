@@ -224,6 +224,56 @@ For release builds, create a keystore:
 keytool -genkey -v -keystore command-comms.keystore -alias command-comms -keyalg RSA -keysize 2048 -validity 10000
 ```
 
+## Inrico T320 — Screen-Off PTT Setup
+
+### How It Works
+
+The T320 firmware broadcasts system-wide intents when the hardware PTT button (keycode 230) is pressed:
+- `android.intent.action.PTT.down` — button pressed
+- `android.intent.action.PTT.up` — button released
+
+This is the same mechanism Zello uses for PTT with the screen off. `PttBroadcastReceiver.java` listens for these broadcasts and:
+1. Wakes the screen via a FULL_WAKE_LOCK with ACQUIRE_CAUSES_WAKEUP
+2. Brings MainActivity to the foreground
+3. Forwards the key event to HardwarePttPlugin which triggers PTT in the WebView
+
+The receiver is registered in two ways for maximum reliability:
+- **Static** (AndroidManifest.xml `<receiver>`) — works even if the app process has been killed
+- **Dynamic** (BackgroundAudioService.java) — higher priority delivery while service is running
+
+### Required T320 Device Settings
+
+1. **Duraspeed must be OFF**
+   - Go to: Settings → Battery → Duraspeed
+   - Toggle OFF, or whitelist Command Comms
+   - If Duraspeed is ON, Android kills the app when the screen turns off
+
+2. **Battery Optimization disabled for Command Comms**
+   - The app prompts for this automatically on first launch
+   - If missed: Settings → Battery → Battery Optimization → All Apps → Command Comms → Don't optimize
+
+3. **PTT Button Mode** (if available in T320 settings)
+   - Set to "Open" or "Broadcast" mode, not "Zello-only"
+   - Some T320 firmware versions lock PTT to Zello — update firmware if needed
+
+### Files Added for T320 Support
+
+| File | Purpose |
+|---|---|
+| `PttBroadcastReceiver.java` | Catches PTT.down/PTT.up broadcasts even with screen off |
+| `BackgroundAudioService.java` | Dynamically registers the receiver + CPU wake lock |
+| `AndroidManifest.xml` | Static receiver declaration + `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` permission |
+| `MainActivity.java` | Battery optimization exemption prompt on first launch |
+
+### Copy Commands
+
+```bash
+cp android-app/android-config/PttBroadcastReceiver.java android/app/src/main/java/com/reedersystems/commandcomms/
+cp android-app/android-config/BackgroundAudioService.java android/app/src/main/java/com/reedersystems/commandcomms/
+cp android-app/android-config/MainActivity.java android/app/src/main/java/com/reedersystems/commandcomms/
+cp android-app/android-config/AndroidManifest.xml android/app/src/main/AndroidManifest.xml
+```
+
 ## Testing on Device
 
 1. Enable USB debugging on Android device

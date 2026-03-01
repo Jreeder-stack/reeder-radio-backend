@@ -3,12 +3,15 @@ package com.reedersystems.commandcomms;
 import android.Manifest;
 import android.app.KeyguardManager;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.PowerManager;
+import android.provider.Settings;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.WindowManager;
@@ -83,6 +86,7 @@ public class MainActivity extends BridgeActivity {
             Log.d(TAG, "All permissions already granted");
             configureWebViewForWebRTC();
             requestBackgroundLocationIfNeeded();
+            requestBatteryOptimizationExemption();
         }
     }
     
@@ -108,9 +112,28 @@ public class MainActivity extends BridgeActivity {
             }
             configureWebViewForWebRTC();
             requestBackgroundLocationIfNeeded();
+            requestBatteryOptimizationExemption();
         } else if (requestCode == BACKGROUND_LOCATION_REQUEST_CODE) {
             boolean granted = grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
             Log.d(TAG, "Background location permission granted: " + granted);
+        }
+    }
+
+    private void requestBatteryOptimizationExemption() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+            if (pm != null && !pm.isIgnoringBatteryOptimizations(getPackageName())) {
+                Log.d(TAG, "Requesting battery optimization exemption...");
+                try {
+                    Intent intent = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+                    intent.setData(Uri.parse("package:" + getPackageName()));
+                    startActivity(intent);
+                } catch (Exception e) {
+                    Log.e(TAG, "Failed to request battery optimization exemption: " + e.getMessage());
+                }
+            } else {
+                Log.d(TAG, "Battery optimization already exempted");
+            }
         }
     }
     

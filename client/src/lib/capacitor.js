@@ -7,11 +7,11 @@ export const platform = isNative ? 'android' : 'web';
 const DEFAULT_SETTINGS = {
   pttKeyCode: null,
   pttKeyLabel: 'Screen Button',
-  backgroundGpsEnabled: false,
+  backgroundGpsEnabled: true,
   gpsUpdateFrequency: 30,
   backgroundAudioEnabled: true,
   alertSoundsEnabled: true,
-  dndOverrideEnabled: false,
+  dndOverrideEnabled: true,
   dndOverrideEmergency: true,
   dndOverrideCadPriority: true,
   dndOverrideOfficerDown: true,
@@ -111,6 +111,25 @@ export async function setHardwarePttKeyCode(keyCode) {
     console.error('Failed to set PTT key:', e);
   }
   return false;
+}
+
+export async function requestAllPermissions() {
+  console.log('[Capacitor] Requesting all permissions...');
+  const results = {};
+
+  results.location = await requestLocationPermissions();
+  console.log('[Capacitor] Location permission:', results.location);
+
+  results.notifications = await requestNotificationPermissions();
+  console.log('[Capacitor] Notification permission:', results.notifications);
+
+  if (isNative) {
+    results.dndOverride = await requestDndOverridePermission();
+    console.log('[Capacitor] DND override permission:', results.dndOverride);
+  }
+
+  console.log('[Capacitor] All permissions requested:', results);
+  return results;
 }
 
 export function setupAppLifecycle(onResume, onPause) {
