@@ -727,7 +727,7 @@ class AIDispatcher {
           );
           
           if (result && result.response) {
-            await this.speak(result.response, room, roomName);
+            await this.speak(result.response, room, roomName, participantId);
           }
           
           if (result && result.cadAction === 'broadcast' && result.cadData && cadService.isConfigured()) {
@@ -803,7 +803,8 @@ class AIDispatcher {
 
       this.log('LLM_CLASSIFY_START', { participant: participantId, state, transcript });
 
-      const result = await classifyIntent(transcript, participantId, state, slots);
+      const conversationHistory = slots?.conversationHistory || [];
+      const result = await classifyIntent(transcript, participantId, state, slots, conversationHistory);
 
       this.log('LLM_CLASSIFY_RESULT', { participant: participantId, intent: result.intent, response: result.response });
 
@@ -817,7 +818,8 @@ class AIDispatcher {
           this.log('LLM_DISREGARD', { participant: participantId, state });
           setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
           const resp = result.response || `${participantId}, 10-4, disregard.`;
-          await this.speak(resp, room, roomName);
+          await this.speak(resp, room, roomName, participantId);
+          this.addConversationExchange(participantId, transcript, resp);
           break;
         }
 
@@ -831,9 +833,9 @@ class AIDispatcher {
             }
           }
           setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
-          if (result.response) {
-            await this.speak(result.response, room, roomName);
-          }
+          const statusResp = result.response || `${participantId}, 10-4.`;
+          await this.speak(statusResp, room, roomName, participantId);
+          this.addConversationExchange(participantId, transcript, statusResp);
           break;
         }
 
@@ -844,7 +846,8 @@ class AIDispatcher {
           } else {
             setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_ZONE, null, {}, true);
             const resp = result.response || `${participantId}, go ahead with zone.`;
-            await this.speak(resp, room, roomName);
+            await this.speak(resp, room, roomName, participantId);
+            this.addConversationExchange(participantId, transcript, resp);
           }
           break;
         }
@@ -852,7 +855,8 @@ class AIDispatcher {
         case 'ZONE_PROMPT': {
           setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_ZONE, null, {}, true);
           const resp = result.response || `${participantId}, go ahead with zone.`;
-          await this.speak(resp, room, roomName);
+          await this.speak(resp, room, roomName, participantId);
+          this.addConversationExchange(participantId, transcript, resp);
           break;
         }
 
@@ -863,7 +867,8 @@ class AIDispatcher {
           } else {
             setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_DETAIL_LOCATION, null, {}, true);
             const resp = result.response || `${participantId}, go ahead with location.`;
-            await this.speak(resp, room, roomName);
+            await this.speak(resp, room, roomName, participantId);
+            this.addConversationExchange(participantId, transcript, resp);
           }
           break;
         }
@@ -871,7 +876,8 @@ class AIDispatcher {
         case 'DETAIL_PROMPT': {
           setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_DETAIL_LOCATION, null, {}, true);
           const resp = result.response || `${participantId}, go ahead with location.`;
-          await this.speak(resp, room, roomName);
+          await this.speak(resp, room, roomName, participantId);
+          this.addConversationExchange(participantId, transcript, resp);
           break;
         }
 
@@ -888,7 +894,8 @@ class AIDispatcher {
             await this.handleCallConfirm(participantId, transcript, slots, room, roomName);
           } else {
             const resp = result.response || `${participantId}, 10-4.`;
-            await this.speak(resp, room, roomName);
+            await this.speak(resp, room, roomName, participantId);
+            this.addConversationExchange(participantId, transcript, resp);
           }
           break;
         }
@@ -906,7 +913,8 @@ class AIDispatcher {
             await this.handleCallDeny(participantId, room, roomName);
           } else {
             const resp = result.response || `${participantId}, 10-4. Disregard.`;
-            await this.speak(resp, room, roomName);
+            await this.speak(resp, room, roomName, participantId);
+            this.addConversationExchange(participantId, transcript, resp);
           }
           break;
         }
@@ -914,7 +922,8 @@ class AIDispatcher {
         case 'PERSON_CHECK_START': {
           setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_PERSON_DETAILS, null, {}, true);
           const resp = result.response || `${participantId}, 10-27, go ahead.`;
-          await this.speak(resp, room, roomName);
+          await this.speak(resp, room, roomName, participantId);
+          this.addConversationExchange(participantId, transcript, resp);
           break;
         }
 
@@ -933,9 +942,9 @@ class AIDispatcher {
         case 'TIME_CHECK':
         case 'WAKE_ONLY':
         case 'UNKNOWN': {
-          if (result.response) {
-            await this.speak(result.response, room, roomName);
-          }
+          const genResp = result.response || `${participantId}, Central, say again?`;
+          await this.speak(genResp, room, roomName, participantId);
+          this.addConversationExchange(participantId, transcript, genResp);
           break;
         }
 
@@ -948,9 +957,9 @@ class AIDispatcher {
               this.log('CAD_BROADCAST_ERROR', { error: cadError.message });
             }
           }
-          if (result.response) {
-            await this.speak(result.response, room, roomName);
-          }
+          const backupResp = result.response || `${participantId}, 10-4. Dispatching backup.`;
+          await this.speak(backupResp, room, roomName, participantId);
+          this.addConversationExchange(participantId, transcript, backupResp);
           break;
         }
 
@@ -964,9 +973,9 @@ class AIDispatcher {
             }
           }
           setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
-          if (result.response) {
-            await this.speak(result.response, room, roomName);
-          }
+          const stopResp = result.response || `${participantId}, 10-4.`;
+          await this.speak(stopResp, room, roomName, participantId);
+          this.addConversationExchange(participantId, transcript, stopResp);
           break;
         }
 
@@ -974,11 +983,13 @@ class AIDispatcher {
           if (result.slots?.plate) {
             setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
             const resp = result.response || `${participantId}, standby on plate.`;
-            await this.speak(resp, room, roomName);
+            await this.speak(resp, room, roomName, participantId);
+            this.addConversationExchange(participantId, transcript, resp);
           } else {
             setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_PLATE, null, {}, true);
             const resp = result.response || `${participantId}, go ahead with plate.`;
-            await this.speak(resp, room, roomName);
+            await this.speak(resp, room, roomName, participantId);
+            this.addConversationExchange(participantId, transcript, resp);
           }
           break;
         }
@@ -999,7 +1010,8 @@ class AIDispatcher {
               priority
             }, true);
             const confirmResp = `${participantId}, confirm, ${matchedNature.toLowerCase()} at ${address}?`;
-            await this.speak(confirmResp, room, roomName);
+            await this.speak(confirmResp, room, roomName, participantId);
+            this.addConversationExchange(participantId, transcript, confirmResp);
           } else if (nature && !address) {
             const matchedNature = await cadService.findBestNature(nature);
             setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_CALL_ADDRESS, null, {
@@ -1007,16 +1019,18 @@ class AIDispatcher {
               additionalUnits,
               priority
             }, true);
-            const resp = `${participantId}, go ahead with address.`;
-            await this.speak(resp, room, roomName);
+            const resp = result.response || `${participantId}, go ahead with address.`;
+            await this.speak(resp, room, roomName, participantId);
+            this.addConversationExchange(participantId, transcript, resp);
           } else {
             setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_CALL_NATURE, null, {
               address: address || null,
               additionalUnits,
               priority
             }, true);
-            const resp = `${participantId}, go ahead with call nature.`;
-            await this.speak(resp, room, roomName);
+            const resp = result.response || `${participantId}, go ahead with call nature.`;
+            await this.speak(resp, room, roomName, participantId);
+            this.addConversationExchange(participantId, transcript, resp);
           }
           break;
         }
@@ -1034,16 +1048,18 @@ class AIDispatcher {
               additionalUnits: promptUnits,
               priority: promptPriority
             }, true);
-            const resp = `${participantId}, go ahead with address for ${matchedNature.toLowerCase()}.`;
-            await this.speak(resp, room, roomName);
+            const resp = result.response || `${participantId}, go ahead with address for ${matchedNature.toLowerCase()}.`;
+            await this.speak(resp, room, roomName, participantId);
+            this.addConversationExchange(participantId, transcript, resp);
           } else if (!promptNature && promptAddress) {
             setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_CALL_NATURE, null, {
               address: promptAddress,
               additionalUnits: promptUnits,
               priority: promptPriority
             }, true);
-            const resp = `${participantId}, go ahead with call nature.`;
-            await this.speak(resp, room, roomName);
+            const resp = result.response || `${participantId}, go ahead with call nature.`;
+            await this.speak(resp, room, roomName, participantId);
+            this.addConversationExchange(participantId, transcript, resp);
           } else {
             setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_CALL_NATURE, null, {
               address: null,
@@ -1051,60 +1067,75 @@ class AIDispatcher {
               priority: promptPriority
             }, true);
             const resp = result.response || `${participantId}, go ahead with call nature and address.`;
-            await this.speak(resp, room, roomName);
+            await this.speak(resp, room, roomName, participantId);
+            this.addConversationExchange(participantId, transcript, resp);
           }
           break;
         }
 
         case 'SIGNAL_100': {
           setUnitSessionState(participantId, DISPATCHER_STATE.SIGNAL_100_ACTIVE, null, {}, true);
-          if (result.response) {
-            await this.speak(result.response, room, roomName);
-          }
+          const sig100Resp = result.response || 'All units, Signal 100. Emergency traffic only.';
+          await this.speak(sig100Resp, room, roomName, participantId);
+          this.addConversationExchange(participantId, transcript, sig100Resp);
           break;
         }
 
         case 'SIGNAL_100_CLEAR': {
           setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
-          if (result.response) {
-            await this.speak(result.response, room, roomName);
-          }
+          const sigClearResp = result.response || 'All units, Signal 100 clear. Resume normal traffic.';
+          await this.speak(sigClearResp, room, roomName, participantId);
+          this.addConversationExchange(participantId, transcript, sigClearResp);
           break;
         }
 
         case 'SPELL_NAME': {
-          const session = getUnitSessionState(participantId);
-          const lastResult = session?.slots?.lastSearchResult;
+          const spellSession = getUnitSessionState(participantId);
+          const lastResult = spellSession?.slots?.lastSearchResult;
           if (lastResult?.lastName) {
             const spelled = lastResult.lastName.toUpperCase().split('').join(', ');
-            await this.speak(`${participantId}, last name spelling: ${spelled}.`, room, roomName);
+            const spellResp = `${participantId}, last name spelling: ${spelled}.`;
+            await this.speak(spellResp, room, roomName, participantId);
+            this.addConversationExchange(participantId, transcript, spellResp);
           } else {
-            await this.speak(`${participantId}, no name on file to spell.`, room, roomName);
+            const noNameResp = `${participantId}, no name on file to spell.`;
+            await this.speak(noNameResp, room, roomName, participantId);
+            this.addConversationExchange(participantId, transcript, noNameResp);
           }
           break;
         }
 
+        case 'REPEAT':
         case 'REPEAT_RESULTS': {
           const repeatSession = getUnitSessionState(participantId);
           const repeatResult = repeatSession?.slots?.lastSearchResult;
+          const lastSpoken = repeatSession?.slots?.lastSpokenText;
           if (repeatResult) {
             const parts = [];
             if (repeatResult.lastName) parts.push(`Last name ${repeatResult.lastName}`);
             if (repeatResult.firstName) parts.push(`first ${repeatResult.firstName}`);
             if (repeatResult.dob) parts.push(`date of birth ${repeatResult.dob}`);
             if (repeatResult.status) parts.push(`status ${repeatResult.status}`);
-            await this.speak(`${participantId}, repeating: ${parts.join(', ')}.`, room, roomName);
+            const repeatResp = `${participantId}, repeating: ${parts.join(', ')}.`;
+            await this.speak(repeatResp, room, roomName, participantId);
+            this.addConversationExchange(participantId, transcript, repeatResp);
+          } else if (lastSpoken) {
+            const repeatResp = `${participantId}, repeating: ${lastSpoken}`;
+            await this.speak(repeatResp, room, roomName, participantId);
+            this.addConversationExchange(participantId, transcript, repeatResp);
           } else {
-            await this.speak(`${participantId}, no previous results to repeat.`, room, roomName);
+            const noRepeatResp = `${participantId}, nothing to repeat.`;
+            await this.speak(noRepeatResp, room, roomName, participantId);
+            this.addConversationExchange(participantId, transcript, noRepeatResp);
           }
           break;
         }
 
         default: {
           this.log('LLM_UNKNOWN_INTENT', { intent: result.intent });
-          if (result.response) {
-            await this.speak(result.response, room, roomName);
-          }
+          const defaultResp = result.response || `${participantId}, Central, say again?`;
+          await this.speak(defaultResp, room, roomName, participantId);
+          this.addConversationExchange(participantId, transcript, defaultResp);
           break;
         }
       }
@@ -1272,7 +1303,7 @@ class AIDispatcher {
     
     if (!personDetails.lastName) {
       const response = `${participantId}, did not copy last name. Go ahead with last name.`;
-      await this.speak(response, room, roomName);
+      await this.speak(response, room, roomName, participantId);
       return;
     }
     
@@ -1281,7 +1312,7 @@ class AIDispatcher {
       if (personDetails.dob) newSlots.dob = personDetails.dob.formatted;
       setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_PERSON_FIRSTNAME, null, newSlots, true);
       const response = `${participantId}, did not copy first name. Go ahead with first name.`;
-      await this.speak(response, room, roomName);
+      await this.speak(response, room, roomName, participantId);
       return;
     }
     
@@ -1291,7 +1322,7 @@ class AIDispatcher {
         firstName: personDetails.firstName
       }, true);
       const response = `${participantId}, did not copy date of birth. Go ahead with date of birth.`;
-      await this.speak(response, room, roomName);
+      await this.speak(response, room, roomName, participantId);
       return;
     }
     
@@ -1306,7 +1337,7 @@ class AIDispatcher {
     }, true);
     
     const confirmResponse = `${participantId}, confirming. Last ${lastName}, first ${firstName}, date of birth ${dob}. 10-4?`;
-    await this.speak(confirmResponse, room, roomName);
+    await this.speak(confirmResponse, room, roomName, participantId);
   }
 
   async handlePersonCheckDOB(participantId, rawTranscript, savedSlots, room, roomName, llmSlots) {
@@ -1325,7 +1356,7 @@ class AIDispatcher {
     
     if (!dob) {
       const response = `${participantId}, did not copy date of birth. Go ahead with date of birth.`;
-      await this.speak(response, room, roomName);
+      await this.speak(response, room, roomName, participantId);
       return;
     }
     
@@ -1340,7 +1371,7 @@ class AIDispatcher {
     }, true);
     
     const confirmResponse = `${participantId}, confirming. Last ${lastName}, first ${firstName}, date of birth ${dobFormatted}. 10-4?`;
-    await this.speak(confirmResponse, room, roomName);
+    await this.speak(confirmResponse, room, roomName, participantId);
   }
 
   formatMilitaryTime() {
@@ -1363,7 +1394,7 @@ class AIDispatcher {
     setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_ZONE_CONFIRM, null, { zone }, true);
     
     const confirmResponse = `${participantId}, just to confirm, you want a zone change to ${zone}?`;
-    await this.speak(confirmResponse, room, roomName);
+    await this.speak(confirmResponse, room, roomName, participantId);
   }
 
   async handleZoneDetails(participantId, rawTranscript, room, roomName) {
@@ -1373,7 +1404,7 @@ class AIDispatcher {
     
     if (!zone || zone.length < 2) {
       const response = `${participantId}, did not copy zone. Go ahead with zone.`;
-      await this.speak(response, room, roomName);
+      await this.speak(response, room, roomName, participantId);
       return;
     }
     
@@ -1412,13 +1443,13 @@ class AIDispatcher {
     if (isDenied) {
       setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_ZONE, null, {}, true);
       const retryResponse = `${participantId}, can you repeat the zone for me again?`;
-      await this.speak(retryResponse, room, roomName);
+      await this.speak(retryResponse, room, roomName, participantId);
       return;
     }
     
     if (!isConfirmed) {
       const askAgainResponse = `${participantId}, confirm zone change, 10-4 or negative?`;
-      await this.speak(askAgainResponse, room, roomName);
+      await this.speak(askAgainResponse, room, roomName, participantId);
       return;
     }
     
@@ -1435,7 +1466,7 @@ class AIDispatcher {
     
     const timeStr = this.formatMilitaryTime();
     const confirmResponse = `${participantId}, 10-4. ${timeStr}.`;
-    await this.speak(confirmResponse, room, roomName);
+    await this.speak(confirmResponse, room, roomName, participantId);
     
     await this.logToCallNotes(participantId, `Zone change: ${zone}`);
     setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
@@ -1447,7 +1478,7 @@ class AIDispatcher {
     setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_DETAIL_CONFIRM, null, { location }, true);
     
     const confirmResponse = `${participantId}, just to confirm, detail at ${location}?`;
-    await this.speak(confirmResponse, room, roomName);
+    await this.speak(confirmResponse, room, roomName, participantId);
   }
 
   async handleDetailLocation(participantId, rawTranscript, room, roomName) {
@@ -1457,7 +1488,7 @@ class AIDispatcher {
     
     if (!location || location.length < 2) {
       const response = `${participantId}, did not copy location. Go ahead with location.`;
-      await this.speak(response, room, roomName);
+      await this.speak(response, room, roomName, participantId);
       return;
     }
     
@@ -1496,13 +1527,13 @@ class AIDispatcher {
     if (isDenied) {
       setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_DETAIL_LOCATION, null, {}, true);
       const retryResponse = `${participantId}, can you repeat the location?`;
-      await this.speak(retryResponse, room, roomName);
+      await this.speak(retryResponse, room, roomName, participantId);
       return;
     }
     
     if (!isConfirmed) {
       const askAgainResponse = `${participantId}, confirm detail, 10-4 or negative?`;
-      await this.speak(askAgainResponse, room, roomName);
+      await this.speak(askAgainResponse, room, roomName, participantId);
       return;
     }
     
@@ -1522,7 +1553,7 @@ class AIDispatcher {
     
     const timeStr = this.formatMilitaryTime();
     const confirmResponse = `${participantId}, 10-4. ${timeStr}.`;
-    await this.speak(confirmResponse, room, roomName);
+    await this.speak(confirmResponse, room, roomName, participantId);
     
     await this.logToCallNotes(participantId, `Detail at: ${location}`);
     setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
@@ -1536,14 +1567,14 @@ class AIDispatcher {
     if (disregardPhrases.some(p => normalized.includes(p))) {
       setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
       const resp = `${participantId}, 10-4, disregard.`;
-      await this.speak(resp, room, roomName);
+      await this.speak(resp, room, roomName, participantId);
       return;
     }
 
     const nature = transcript.trim();
     if (!nature || nature.length < 2) {
       const resp = `${participantId}, did not copy call nature. Go ahead with call nature.`;
-      await this.speak(resp, room, roomName);
+      await this.speak(resp, room, roomName, participantId);
       return;
     }
 
@@ -1559,7 +1590,7 @@ class AIDispatcher {
         priority: savedSlots?.priority || 'medium'
       }, true);
       const confirmResp = `${participantId}, confirm, ${matchedNature.toLowerCase()} at ${address}?`;
-      await this.speak(confirmResp, room, roomName);
+      await this.speak(confirmResp, room, roomName, participantId);
     } else {
       setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_CALL_ADDRESS, null, {
         nature: matchedNature,
@@ -1567,7 +1598,7 @@ class AIDispatcher {
         priority: savedSlots?.priority || 'medium'
       }, true);
       const resp = `${participantId}, go ahead with address.`;
-      await this.speak(resp, room, roomName);
+      await this.speak(resp, room, roomName, participantId);
     }
   }
 
@@ -1579,14 +1610,14 @@ class AIDispatcher {
     if (disregardPhrases.some(p => normalized.includes(p))) {
       setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
       const resp = `${participantId}, 10-4, disregard.`;
-      await this.speak(resp, room, roomName);
+      await this.speak(resp, room, roomName, participantId);
       return;
     }
 
     const address = normalizeAddress(transcript.trim());
     if (!address || address.length < 2) {
       const resp = `${participantId}, did not copy address. Go ahead with address.`;
-      await this.speak(resp, room, roomName);
+      await this.speak(resp, room, roomName, participantId);
       return;
     }
 
@@ -1598,7 +1629,7 @@ class AIDispatcher {
       priority: savedSlots?.priority || 'medium'
     }, true);
     const confirmResp = `${participantId}, confirm, ${nature.toLowerCase()} at ${address}?`;
-    await this.speak(confirmResp, room, roomName);
+    await this.speak(confirmResp, room, roomName, participantId);
   }
 
   async handleCallConfirm(participantId, transcript, slots, room, roomName) {
@@ -1637,7 +1668,7 @@ class AIDispatcher {
 
     if (!isConfirmed) {
       const askResp = `${participantId}, confirm call, 10-4 or negative?`;
-      await this.speak(askResp, room, roomName);
+      await this.speak(askResp, room, roomName, participantId);
       return;
     }
 
@@ -1648,7 +1679,7 @@ class AIDispatcher {
     this.log('CALL_DENY', { participant: participantId });
     setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
     const resp = `${participantId}, 10-4, disregard.`;
-    await this.speak(resp, room, roomName);
+    await this.speak(resp, room, roomName, participantId);
   }
 
   async executeCallCreation(participantId, slots, room, roomName) {
@@ -1661,7 +1692,7 @@ class AIDispatcher {
         setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
         const timeStr = this.formatMilitaryTime();
         const resp = `${participantId}, 10-4. ${nature.toLowerCase()} at ${address}. ${timeStr}.`;
-        await this.speak(resp, room, roomName);
+        await this.speak(resp, room, roomName, participantId);
         return;
       }
 
@@ -1671,7 +1702,7 @@ class AIDispatcher {
       if (!callResult.success) {
         setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
         const resp = `${participantId}, unable to create call. System error.`;
-        await this.speak(resp, room, roomName);
+        await this.speak(resp, room, roomName, participantId);
         return;
       }
 
@@ -1705,13 +1736,13 @@ class AIDispatcher {
       setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
       const timeStr = this.formatMilitaryTime();
       const resp = `${participantId}, 10-4. Call created, ${nature.toLowerCase()} at ${address}. ${timeStr}.`;
-      await this.speak(resp, room, roomName);
+      await this.speak(resp, room, roomName, participantId);
 
     } catch (error) {
       this.log('CALL_CREATION_ERROR', { error: error.message });
       setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
       const resp = `${participantId}, unable to create call. System error.`;
-      await this.speak(resp, room, roomName);
+      await this.speak(resp, room, roomName, participantId);
     }
   }
 
@@ -1727,7 +1758,7 @@ class AIDispatcher {
     
     if (!firstName) {
       const response = `${participantId}, did not copy first name. Go ahead with first name.`;
-      await this.speak(response, room, roomName);
+      await this.speak(response, room, roomName, participantId);
       return;
     }
     
@@ -1740,7 +1771,7 @@ class AIDispatcher {
         firstName
       }, true);
       const response = `${participantId}, did not copy date of birth. Go ahead with date of birth.`;
-      await this.speak(response, room, roomName);
+      await this.speak(response, room, roomName, participantId);
       return;
     }
     
@@ -1751,7 +1782,7 @@ class AIDispatcher {
     }, true);
     
     const confirmResponse = `${participantId}, confirming. Last ${lastName}, first ${firstName}, date of birth ${dob}. 10-4?`;
-    await this.speak(confirmResponse, room, roomName);
+    await this.speak(confirmResponse, room, roomName, participantId);
   }
 
   async handlePersonCheckConfirm(participantId, rawTranscript, slots, room, roomName) {
@@ -1786,20 +1817,20 @@ class AIDispatcher {
     if (isDenied) {
       setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_PERSON_DETAILS, null, {}, true);
       const retryResponse = `${participantId}, go ahead with details again.`;
-      await this.speak(retryResponse, room, roomName);
+      await this.speak(retryResponse, room, roomName, participantId);
       return;
     }
     
     if (!isConfirmed) {
       const askAgainResponse = `${participantId}, confirm details, 10-4 or negative?`;
-      await this.speak(askAgainResponse, room, roomName);
+      await this.speak(askAgainResponse, room, roomName, participantId);
       return;
     }
     
     const { lastName, firstName, dob } = slots;
     
     const standbyResponse = `${participantId}, 10-4. Standby.`;
-    await this.speak(standbyResponse, room, roomName);
+    await this.speak(standbyResponse, room, roomName, participantId);
     
     await this.executePersonCheck(participantId, lastName, firstName, dob, room, roomName);
   }
@@ -1808,7 +1839,7 @@ class AIDispatcher {
     try {
       if (!cadService.isConfigured()) {
         const noConfigResponse = `${participantId}, CAD system not available. Standby.`;
-        await this.speak(noConfigResponse, room, roomName);
+        await this.speak(noConfigResponse, room, roomName, participantId);
         setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
         return;
       }
@@ -1819,7 +1850,7 @@ class AIDispatcher {
       
       if (!cadResult.success) {
         const errorResponse = `${participantId}, Central. Unable to complete records check. Try again.`;
-        await this.speak(errorResponse, room, roomName);
+        await this.speak(errorResponse, room, roomName, participantId);
         setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
         return;
       }
@@ -1848,16 +1879,16 @@ class AIDispatcher {
         }, true);
         
         const securePrompt = `${participantId}, Central. Is your mic secure?`;
-        await this.speak(securePrompt, room, roomName);
+        await this.speak(securePrompt, room, roomName, participantId);
       } else if (hasRecord) {
         const clearResponse = `${participantId}, Central. Local file, no wants or warrants.`;
-        await this.speak(clearResponse, room, roomName);
+        await this.speak(clearResponse, room, roomName, participantId);
         
         await this.logToCallNotes(participantId, `Records check: ${lastName}, ${firstName}, DOB ${dob} - Local file, no wants or warrants`);
         setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, { lastSearchResult }, true);
       } else {
         const noRecordResponse = `${participantId}, Central. No record on file.`;
-        await this.speak(noRecordResponse, room, roomName);
+        await this.speak(noRecordResponse, room, roomName, participantId);
         
         await this.logToCallNotes(participantId, `Records check: ${lastName}, ${firstName}, DOB ${dob} - No record on file`);
         setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, { lastSearchResult }, true);
@@ -1866,7 +1897,7 @@ class AIDispatcher {
     } catch (error) {
       this.log('PERSON_CHECK_ERROR', { error: error.message });
       const errorResponse = `${participantId}, Central. System error on records check.`;
-      await this.speak(errorResponse, room, roomName);
+      await this.speak(errorResponse, room, roomName, participantId);
       setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
     }
   }
@@ -1878,13 +1909,13 @@ class AIDispatcher {
     
     if (!secureResult) {
       const repeatPrompt = `${participantId}, Central. Confirm, is your mic secure?`;
-      await this.speak(repeatPrompt, room, roomName);
+      await this.speak(repeatPrompt, room, roomName, participantId);
       return;
     }
     
     if (!secureResult.confirmed) {
       const standbyResponse = `${participantId}, Central. Copy. Contact dispatch on secure line.`;
-      await this.speak(standbyResponse, room, roomName);
+      await this.speak(standbyResponse, room, roomName, participantId);
       setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
       return;
     }
@@ -1906,7 +1937,7 @@ class AIDispatcher {
     
     const flagText = flagDetails.length > 0 ? flagDetails.join(', ') : 'flag on file';
     const flagResponse = `${participantId}, Central. ${lastName}, ${firstName}, date of birth ${dob} returns ${flagText}. Use caution.`;
-    await this.speak(flagResponse, room, roomName);
+    await this.speak(flagResponse, room, roomName, participantId);
     
     await this.logToCallNotes(participantId, `Records check: ${lastName}, ${firstName}, DOB ${dob} - ${flagText}`);
     
@@ -1930,9 +1961,26 @@ class AIDispatcher {
     }
   }
 
-  async speak(text, room, roomName) {
+  async speak(text, room, roomName, participantId = null) {
     const audio = await textToSpeech(text);
     await this.publishAudio(audio, room, roomName, text);
+    if (participantId) {
+      const session = getUnitSessionState(participantId);
+      const history = session?.slots?.conversationHistory || [];
+      setUnitSessionState(participantId, session?.state || 'IDLE', null, {
+        lastSpokenText: text
+      }, false);
+    }
+  }
+
+  addConversationExchange(participantId, unitText, dispatchText) {
+    const session = getUnitSessionState(participantId);
+    const history = session?.slots?.conversationHistory || [];
+    history.push({ unit: unitText, dispatch: dispatchText });
+    if (history.length > 4) history.shift();
+    setUnitSessionState(participantId, session?.state || 'IDLE', null, {
+      conversationHistory: history
+    }, false);
   }
 
   async publishAudio(audioBuffer, room, roomName, responseText = null) {

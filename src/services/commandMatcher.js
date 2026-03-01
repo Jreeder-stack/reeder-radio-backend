@@ -43,10 +43,15 @@ function resetUnitSession(unitId) {
   if (session?.timeout) {
     clearTimeout(session.timeout);
   }
+  const preservedHistory = session?.slots?.conversationHistory || [];
+  const preservedLastSpoken = session?.slots?.lastSpokenText || null;
   unitSessions.set(unitId, {
     state: DISPATCHER_STATE.IDLE,
     pendingIntent: null,
-    slots: {},
+    slots: {
+      ...(preservedLastSpoken ? { lastSpokenText: preservedLastSpoken } : {}),
+      ...(preservedHistory.length > 0 ? { conversationHistory: preservedHistory } : {})
+    },
     timeout: null,
     lastActivity: Date.now()
   });
@@ -602,7 +607,11 @@ export function setUnitSessionState(unitId, state, pendingIntent = null, slots =
   session.state = state;
   session.pendingIntent = pendingIntent;
   if (replaceSlots) {
-    session.slots = slots;
+    const preserved = {};
+    if (oldSlots.lastSpokenText) preserved.lastSpokenText = oldSlots.lastSpokenText;
+    if (oldSlots.conversationHistory) preserved.conversationHistory = oldSlots.conversationHistory;
+    if (oldSlots.lastSearchResult) preserved.lastSearchResult = oldSlots.lastSearchResult;
+    session.slots = { ...preserved, ...slots };
   } else {
     session.slots = { ...session.slots, ...slots };
   }
