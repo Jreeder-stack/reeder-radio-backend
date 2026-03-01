@@ -174,13 +174,16 @@ repositories {
 }
 ```
 
-### Copy the App Icon
+### Copy the App Icon and Splash Screen
 
-Copy the `res/` folder contents to replace the default icons:
+Copy the `res/` folder contents to replace the default icons and splash screen:
 ```
 cp -r android-config/res/* android/app/src/main/res/
 ```
-This replaces the default Capacitor icon with the Command Comms radio tower logo at all required Android densities (mdpi through xxxhdpi).
+This replaces:
+- **Launcher icons** (`mipmap-*/ic_launcher*.png`): The default Capacitor icon with the Command Comms radio tower logo at all required Android densities (mdpi through xxxhdpi)
+- **Splash screen** (`drawable/splash.xml` + `drawable/ic_splash.png`): The default blue X Capacitor splash with a dark background (#111111) and centered radio tower icon
+- **Colors** (`values/colors.xml`): Splash background color resource
 
 ### Copy the Plugin Files
 

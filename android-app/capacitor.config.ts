@@ -10,6 +10,14 @@ const config: CapacitorConfig = {
     cleartext: true,
   },
   plugins: {
+    SplashScreen: {
+      launchShowDuration: 2000,
+      launchAutoHide: true,
+      backgroundColor: '#111111',
+      androidSplashResourceName: 'splash',
+      showSpinner: false,
+      launchFadeOutDuration: 300,
+    },
     LocalNotifications: {
       smallIcon: 'ic_stat_icon',
       iconColor: '#00FFFF',
