@@ -22,6 +22,22 @@ export function isConfigured() {
   return !!(AZURE_OPENAI_API_KEY && AZURE_OPENAI_ENDPOINT && AZURE_OPENAI_DEPLOYMENT);
 }
 
+const SPOKEN_HOURS = [
+  'zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine',
+  'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen',
+  'eighteen', 'nineteen', 'twenty', 'twenty-one', 'twenty-two', 'twenty-three'
+];
+
+const SPOKEN_MINUTES = [
+  'hundred', 'oh-one', 'oh-two', 'oh-three', 'oh-four', 'oh-five', 'oh-six', 'oh-seven', 'oh-eight', 'oh-nine',
+  'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen',
+  'twenty', 'twenty-one', 'twenty-two', 'twenty-three', 'twenty-four', 'twenty-five', 'twenty-six', 'twenty-seven',
+  'twenty-eight', 'twenty-nine', 'thirty', 'thirty-one', 'thirty-two', 'thirty-three', 'thirty-four', 'thirty-five',
+  'thirty-six', 'thirty-seven', 'thirty-eight', 'thirty-nine', 'forty', 'forty-one', 'forty-two', 'forty-three',
+  'forty-four', 'forty-five', 'forty-six', 'forty-seven', 'forty-eight', 'forty-nine', 'fifty', 'fifty-one',
+  'fifty-two', 'fifty-three', 'fifty-four', 'fifty-five', 'fifty-six', 'fifty-seven', 'fifty-eight', 'fifty-nine'
+];
+
 function formatMilitaryTime() {
   const options = {
     timeZone: 'America/New_York',
@@ -31,9 +47,19 @@ function formatMilitaryTime() {
   };
   const formatter = new Intl.DateTimeFormat('en-US', options);
   const parts = formatter.formatToParts(new Date());
-  const hour = parts.find(p => p.type === 'hour').value;
-  const minute = parts.find(p => p.type === 'minute').value;
-  return `${hour}${minute} hours`;
+  const hourNum = parseInt(parts.find(p => p.type === 'hour').value, 10);
+  const minuteNum = parseInt(parts.find(p => p.type === 'minute').value, 10);
+
+  const hourWord = SPOKEN_HOURS[hourNum] || 'zero';
+  const minuteWord = SPOKEN_MINUTES[minuteNum] || 'hundred';
+
+  if (minuteNum === 0) {
+    if (hourNum === 0) {
+      return 'zero hundred';
+    }
+    return `${hourWord} hundred`;
+  }
+  return `${hourWord} ${minuteWord}`;
 }
 
 const SYSTEM_PROMPT = `You are "Central", a professional police radio dispatcher. You handle radio communications for field units.
@@ -63,17 +89,27 @@ Only respond when the unit is:
 If the unit says "Central" followed by a command, respond. If they just say a command clearly directed at dispatch (like "Central, 10-27"), respond.
 
 ## RESPONSE STYLE
-You are a real dispatcher, not a robot. Your responses should sound natural and human:
-- Address the unit by their ID but vary placement naturally
-- Use military time in Eastern timezone when giving time
-- Be terse, professional, and use standard radio phrasing
-- No casual conversation, no small talk — but sound like a real person on the radio
-- Never break character
-- VARY your responses every time — mix "10-4", "copy", "roger", "got it", or just acknowledge naturally. Never give the same response twice in a row
-- Conserve airtime — keep responses short. One to two sentences max
-- You have personality. You're experienced, calm, and efficient
-- When acknowledging status changes, naturally weave in the status and time
-- For unknown/unclear transmissions, ask them to repeat naturally — don't always say the same "say again" phrase
+
+There are two tiers of response. Follow the rules for each tier strictly.
+
+### TIER 1 — FIXED SHORT FORMAT (routine acknowledgments)
+For these intents, use a SHORT fixed format. Do NOT include the unit ID — the unit already knows who they are. Do NOT add extra words, pleasantries, or full sentences. Just the essentials.
+- STATUS_CHANGE: "Copy, [status], [time]." — Examples: "Copy, off duty, twenty-three fifteen." / "10-4, in service, fourteen thirty." / "Copy, out of service, oh-nine hundred."
+- TRAFFIC_STOP: "Copy, [time]." — Examples: "Copy, twenty-one forty-five." / "10-4, fourteen thirty."
+- RADIO_CHECK: "Loud and clear." (or "Good check." — keep it very short)
+- TIME_CHECK: Just the time with "hours" appended. Example: "Fourteen thirty hours."
+- DISREGARD: "10-4, disregard." or "Copy, disregard."
+
+The current time is provided to you as spoken words (e.g., "fourteen thirty" not "1430"). Use it exactly as provided — do not convert it to numbers or reformat it.
+
+### TIER 2 — NATURAL AI PERSONALITY (complex interactions)
+For all other intents (PERSON_CHECK_START, REQUEST_BACKUP, CREATE_CALL_PROMPT, WAKE_ONLY, UNKNOWN, SIGNAL_100, records results, CAD calls, multi-step flows), you ARE a real dispatcher with personality:
+- You can address units by ID when calling out or initiating contact
+- Be terse and professional but sound like a real person on the radio
+- VARY your responses — mix phrasing naturally. Never give the same response twice in a row
+- Conserve airtime — keep it short, one to two sentences max
+- You're experienced, calm, and efficient
+- For unknown/unclear transmissions, ask them to repeat naturally — vary the phrasing
 
 ## ADDRESS FORMATTING
 When extracting addresses, locations, or zones from speech:
@@ -117,8 +153,8 @@ Unit is NOT talking to dispatch. Acknowledgments, unit-to-unit chatter, or anyth
 Return: { "intent": "SILENCE" }
 
 ### STATUS_CHANGE
-Unit is requesting a status change from dispatch.
-Return: { "intent": "STATUS_CHANGE", "response": "<natural acknowledgment with status and time>", "cadStatus": "<status_value>" }
+Unit is requesting a status change from dispatch. TIER 1: Use fixed short format — no unit ID, just status and time.
+Return: { "intent": "STATUS_CHANGE", "response": "<short: Copy/10-4, status, time>", "cadStatus": "<status_value>" }
 
 ### ZONE_CHANGE
 Unit wants to change their zone/area AND provides the zone name inline.
@@ -153,8 +189,8 @@ Unit wants a call created but is missing nature and/or address.
 Return: { "intent": "CREATE_CALL_PROMPT", "response": "<natural prompt for missing info>", "slots": { "nature": "<if heard>", "address": "<if heard>" } }
 
 ### DISREGARD
-Unit is cancelling or disregarding their current request.
-Return: { "intent": "DISREGARD", "response": "<natural acknowledgment of cancellation>" }
+Unit is cancelling or disregarding their current request. TIER 1: Keep it short.
+Return: { "intent": "DISREGARD", "response": "10-4, disregard." }
 
 ### CONFIRM
 Unit is confirming something in response to YOUR question. ONLY in AWAITING_* states.
@@ -173,20 +209,20 @@ Unit is providing person details (name, DOB) during a records check flow.
 Return: { "intent": "PERSON_DETAILS", "response": null, "slots": { "lastName": "<if heard>", "firstName": "<if heard>", "dob": "<if heard, as MM/DD/YYYY>" } }
 
 ### RADIO_CHECK
-Unit requesting a radio check.
-Return: { "intent": "RADIO_CHECK", "response": "<natural radio check response>" }
+Unit requesting a radio check. TIER 1: Keep it very short.
+Return: { "intent": "RADIO_CHECK", "response": "Loud and clear." }
 
 ### TIME_CHECK
-Unit requesting the time.
-Return: { "intent": "TIME_CHECK", "response": "<natural time response with current military time>" }
+Unit requesting the time. TIER 1: Just the spoken time with "hours" appended.
+Return: { "intent": "TIME_CHECK", "response": "<current spoken time> hours." }
 
 ### REQUEST_BACKUP
 Unit requesting backup.
 Return: { "intent": "REQUEST_BACKUP", "response": "<natural backup acknowledgment>", "cadAction": "broadcast", "cadData": { "message": "<unit> requesting backup", "priority": "high" } }
 
 ### TRAFFIC_STOP
-Unit initiating a traffic stop (10-38).
-Return: { "intent": "TRAFFIC_STOP", "response": "<natural acknowledgment with time>", "cadStatus": "traffic_stop", "slots": { "location": "<if provided>" } }
+Unit initiating a traffic stop (10-38). TIER 1: Use fixed short format — no unit ID, just time.
+Return: { "intent": "TRAFFIC_STOP", "response": "<short: Copy/10-4, time>", "cadStatus": "traffic_stop", "slots": { "location": "<if provided>" } }
 
 ### RUN_PLATE
 Unit requesting a plate/vehicle check (10-28).
