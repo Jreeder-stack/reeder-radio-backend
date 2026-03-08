@@ -59,6 +59,10 @@ fi
 echo ""
 echo "[3/5] Copying splash and foreground drawables..."
 mkdir -p "$RES_DIR/drawable"
+if [ -f "$RES_DIR/drawable/splash.png" ]; then
+    rm -f "$RES_DIR/drawable/splash.png"
+    echo "  -> Removed default splash.png (conflicts with splash.xml)"
+fi
 for f in ic_splash.png splash.xml ic_launcher_foreground.png; do
     if [ -f "$CONFIG_DIR/res/drawable/$f" ]; then
         cp "$CONFIG_DIR/res/drawable/$f" "$RES_DIR/drawable/$f"
