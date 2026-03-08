@@ -1,0 +1,118 @@
+We have a major Android hardware key handling issue in this PoC radio app that must be diagnosed and fixed inside this project.
+
+PROBLEM:
+On the Inrico T320, the app continues to receive audio in the background, but the physical side keys stop working when the screen is off or when the app is not the active foreground screen.
+
+If the app is open and frontmost, the physical buttons work.
+If the screen is off, blacked out, or the app is not in front, the physical buttons do not trigger the app.
+Background receive still works.
+
+This means:
+- background service / connection is alive
+- hardware key handling is failing outside the foreground UI
+
+I do NOT need generic Android advice.
+I need you to inspect this actual codebase, find the exact cause, and make code-level fixes.
+
+YOUR TASK:
+1. Inspect the project and find exactly where physical key input is currently handled.
+2. Determine whether key handling is currently tied to:
+   - Activity.onKeyDown
+   - Activity.onKeyUp
+   - dispatchKeyEvent
+   - focused View handlers
+   - Compose UI handlers
+   - any other foreground-only input path
+3. Determine whether radio TX logic is incorrectly tied to the visible UI instead of a foreground service.
+4. Refactor as needed so the app is structured correctly for a radio-style device.
+
+EXPECTED ARCHITECTURE:
+A. MainActivity
+- UI only
+- status display only
+- should not be the only place hardware keys are handled
+- should not own TX/RX state
+
+B. RadioForegroundService
+- persistent foreground service
+- owns connection/session/channel state
+- owns transmit/receive state
+- owns audio routing
+- owns startTransmit() and stopTransmit()
+- remains alive when app is backgrounded
+
+C. PttInputManager or equivalent
+- central place for hardware button handling
+- logs all key events
+- handles PTT press/release
+- forwards TX start/stop to RadioForegroundService
+
+DIAGNOSTIC WORK REQUIRED:
+Add detailed logs so we can pinpoint the failure.
+
+Log all of the following:
+- any physical key press detected
+- keyCode
+- scanCode
+- action down/up
+- repeat count
+- whether MainActivity is active
+- whether app is foreground or background
+- whether screen is on or off
+- whether RadioForegroundService is running
+- whether startTransmit() was called
+- whether stopTransmit() was called
+- whether audio focus was granted
+- whether mic open succeeded
+- whether connection/session/channel is active
+
+SEARCH THE ENTIRE PROJECT FOR:
+- onKeyDown
+- onKeyUp
+- dispatchKeyEvent
+- KeyEvent
+- MediaSession
+- AccessibilityService
+- BroadcastReceiver
+- foreground service
+- WakeLock / PowerManager
+- battery optimization handling
+- screen on/off receivers
+- startForeground
+- audio focus
+- transmit functions
+- push-to-talk functions
+
+THEN DO THIS:
+1. Show me exactly where the current hardware key path is.
+2. Explain exactly why it only works when the app is foregrounded.
+3. Show me the exact files that need changes.
+4. Make the code changes.
+5. Add logging for testing.
+6. Tell me honestly if true background key capture is impossible on this device without vendor APIs, system privileges, or firmware-level support.
+
+IMPORTANT:
+Do not stop at diagnosis.
+Actually implement the refactor and diagnostic logging.
+
+ALSO VERIFY:
+- foreground service is correctly declared in the manifest
+- service type is appropriate
+- battery optimization handling exists
+- wake lock use is appropriate
+- app is not losing input because it depends on Activity focus
+- screen-off behavior is being handled or at least logged
+- boot/restart handling exists if needed
+
+TEMPORARY TEST MODE:
+If needed, create a diagnostic mode that displays or logs every detected hardware key event and screen state so I can test:
+- app open and foreground
+- app backgrounded
+- screen off
+- screen on
+- app reopened after backgrounding
+
+GOAL:
+Make this app behave as close as possible to a dedicated radio appliance.
+If hardware keys can work in background on this device, implement it.
+If they cannot under normal Android app permissions, tell me the exact limitation and implement the best possible workaround.

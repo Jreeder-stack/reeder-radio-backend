@@ -1,0 +1,84 @@
+Do this exactly:
+
+1. Stop routing physical PTT through MainActivity, WebView, or JS as the required control path.
+PTT must work even if the screen is off, the app is backgrounded, or the activity is destroyed.
+
+2. Make BackgroundAudioService the real radio service.
+It must own:
+- PTT state
+- TX start
+- TX stop
+- mic enable/disable
+- connection state checks
+
+3. Refactor LiveKitPlugin so native code can call it directly without PluginCall, WebView, or Capacitor bridge dependence.
+Add native methods for:
+- startTransmit()
+- stopTransmit()
+- isConnected()
+- isMicEnabled()
+
+If LiveKitPlugin still depends on Activity or bridge objects, move the core LiveKit logic into a separate native manager class that both the plugin and the service can use.
+
+4. Rewire PttBroadcastReceiver so it forwards PTT DOWN and PTT UP directly to BackgroundAudioService.
+Do not send PTT through HardwarePttPlugin as the primary path.
+Do not depend on bringing MainActivity to the front.
+Do not depend on waking the WebView just to transmit.
+
+5. In BackgroundAudioService, implement:
+- handlePttDown()
+- handlePttUp()
+
+Behavior:
+- if state is IDLE and PTT DOWN arrives, start native TX
+- if state is TRANSMITTING and PTT UP arrives, stop native TX
+- ignore duplicate DOWN while already transmitting
+- ignore duplicate UP while already idle
+
+6. Support cold-start handling.
+If the receiver cannot reach a live service instance, start the service with intent extras:
+- ptt_action=down
+- ptt_action=up
+
+Then in onStartCommand(), process those extras and call handlePttDown() / handlePttUp().
+
+7. Treat backend /api/ptt/start and /api/ptt/end as status signaling only.
+Native audio TX must still work even if those HTTP calls fail.
+Do not make backend signaling a requirement for transmit audio to begin.
+
+8. Keep MainActivity/WebView notification only as optional UI sync.
+After native TX starts/stops, you may notify JS/UI if available.
+If UI sync fails, do nothing. TX must still continue normally.
+
+9. Add full diagnostic logging with [PTT-DIAG] on every step:
+- receiver got event
+- action down/up
+- keyCode / scanCode if available
+- service available or cold-started
+- handlePttDown called
+- handlePttUp called
+- TX state changed
+- LiveKit connected state
+- startTransmit result
+- stopTransmit result
+- audio focus result
+- mic enable/disable result
+- backend signaling result
+- UI sync attempted/result
+
+10. Verify there are no hidden dependencies on:
+- MainActivity focus
+- dispatchKeyEvent as the only key path
+- WebView being awake
+- Capacitor bridge being active
+- PluginCall objects
+- background activity launch
+- JS injection as a required fallback
+
+End goal:
+physical PTT button -> PttBroadcastReceiver -> BackgroundAudioService -> native LiveKit TX start/stop
+
+That must be the primary architecture.
+
+Do not give me more planning only.
+Inspect the existing code, identify the exact files that need changes, make the changes, and summarize exactly what was changed.
