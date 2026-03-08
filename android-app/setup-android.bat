@@ -51,19 +51,14 @@ if not exist "%RES_DIR%\mipmap-anydpi-v26" mkdir "%RES_DIR%\mipmap-anydpi-v26"
 if exist "%CONFIG_DIR%\res\mipmap-anydpi-v26\ic_launcher.xml" (
     copy /Y "%CONFIG_DIR%\res\mipmap-anydpi-v26\ic_launcher.xml" "%RES_DIR%\mipmap-anydpi-v26\ic_launcher.xml" >nul
     copy /Y "%CONFIG_DIR%\res\mipmap-anydpi-v26\ic_launcher_round.xml" "%RES_DIR%\mipmap-anydpi-v26\ic_launcher_round.xml" >nul
-    echo   -^> mipmap-anydpi-v26 (adaptive icons)
+    echo   -^> mipmap-anydpi-v26 (adaptive icons^)
 )
 
 echo.
 echo [3/6] Copying splash and foreground drawables...
 if not exist "%RES_DIR%\drawable" mkdir "%RES_DIR%\drawable"
 del /F /Q "%RES_DIR%\drawable\splash.png" 2>nul
-if not exist "%RES_DIR%\drawable\splash.png" (
-    echo   -^> Removed default splash.png (conflicts with splash.xml)
-) else (
-    echo   WARNING: Could not delete splash.png - delete it manually!
-    echo   Path: %RES_DIR%\drawable\splash.png
-)
+echo   -^> Cleaned default splash.png
 if exist "%CONFIG_DIR%\res\drawable\ic_splash.png" (
     copy /Y "%CONFIG_DIR%\res\drawable\ic_splash.png" "%RES_DIR%\drawable\ic_splash.png" >nul
     echo   -^> drawable\ic_splash.png
@@ -108,28 +103,9 @@ echo.
 echo [6/6] Verifying icon files...
 set "VERIFY_OK=1"
 for %%d in (mdpi hdpi xhdpi xxhdpi xxxhdpi) do (
-    if exist "%RES_DIR%\mipmap-%%d\ic_launcher.png" (
-        for %%F in ("%RES_DIR%\mipmap-%%d\ic_launcher.png") do (
-            if %%~zF LSS 1000 (
-                echo   WARNING: mipmap-%%d\ic_launcher.png is too small (%%~zF bytes) - may be default!
-                set "VERIFY_OK=0"
-            ) else (
-                echo   OK: mipmap-%%d\ic_launcher.png (%%~zF bytes)
-            )
-        )
-    ) else (
-        echo   MISSING: mipmap-%%d\ic_launcher.png
-        set "VERIFY_OK=0"
-    )
+    call :checkIcon "%%d"
 )
-if exist "%RES_DIR%\drawable\ic_launcher_foreground.png" (
-    for %%F in ("%RES_DIR%\drawable\ic_launcher_foreground.png") do (
-        echo   OK: drawable\ic_launcher_foreground.png (%%~zF bytes)
-    )
-) else (
-    echo   MISSING: drawable\ic_launcher_foreground.png
-    set "VERIFY_OK=0"
-)
+call :checkForeground
 if "!VERIFY_OK!"=="1" (
     echo   All icons verified successfully.
 ) else (
@@ -147,3 +123,32 @@ echo Open in Android Studio: npx cap open android
 echo Build APK: Build ^> Build Bundle(s) / APK(s) ^> Build APK(s)
 
 endlocal
+goto :eof
+
+:checkIcon
+set "DENSITY=%~1"
+set "ICON_PATH=%RES_DIR%\mipmap-%DENSITY%\ic_launcher.png"
+if exist "%ICON_PATH%" (
+    for %%F in ("%ICON_PATH%") do set "FSIZE=%%~zF"
+    if !FSIZE! LSS 1000 (
+        echo   WARNING: mipmap-%DENSITY%\ic_launcher.png too small (!FSIZE! bytes^)
+        set "VERIFY_OK=0"
+    ) else (
+        echo   OK: mipmap-%DENSITY%\ic_launcher.png (!FSIZE! bytes^)
+    )
+) else (
+    echo   MISSING: mipmap-%DENSITY%\ic_launcher.png
+    set "VERIFY_OK=0"
+)
+goto :eof
+
+:checkForeground
+set "FG_PATH=%RES_DIR%\drawable\ic_launcher_foreground.png"
+if exist "%FG_PATH%" (
+    for %%F in ("%FG_PATH%") do set "FSIZE=%%~zF"
+    echo   OK: drawable\ic_launcher_foreground.png (!FSIZE! bytes^)
+) else (
+    echo   MISSING: drawable\ic_launcher_foreground.png
+    set "VERIFY_OK=0"
+)
+goto :eof
