@@ -210,12 +210,12 @@ class LiveKitPlugin : Plugin() {
             return
         }
         
-        Log.d(TAG, "Connecting to LiveKit room: $channelName")
+        Log.d(DIAG_TAG, "connect() called via Capacitor bridge — channel=$channelName url=$url")
         
         pluginScope.launch {
             try {
                 room?.let {
-                    Log.d(TAG, "Disconnecting from previous room")
+                    Log.d(DIAG_TAG, "connect() — disconnecting from previous room")
                     it.disconnect()
                 }
                 room = null
@@ -229,15 +229,14 @@ class LiveKitPlugin : Plugin() {
                     setupRoomListeners(newRoom)
                 }
                 
-                Log.d(TAG, "Calling room.connect()...")
+                Log.d(DIAG_TAG, "connect() — calling room.connect()...")
                 newRoom.connect(url, token)
-                Log.d(TAG, "room.connect() completed successfully")
+                Log.d(DIAG_TAG, "connect() — room.connect() completed successfully")
                 
                 room = newRoom
                 isConnectedState = true
                 
-                Log.d(TAG, "Connected to LiveKit room: $channelName")
-                Log.d(DIAG_TAG, "LiveKit CONNECTED to room: $channelName")
+                Log.d(DIAG_TAG, "connect() SUCCESS — LiveKit CONNECTED to room: $channelName")
                 
                 val result = JSObject().apply {
                     put("success", true)
@@ -248,7 +247,7 @@ class LiveKitPlugin : Plugin() {
                 notifyListeners("connected", result)
                 
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to connect to LiveKit", e)
+                Log.e(DIAG_TAG, "connect() FAILED — ${e.message}", e)
                 isConnectedState = false
                 call.reject("Failed to connect: ${e.message}")
             }
@@ -257,16 +256,16 @@ class LiveKitPlugin : Plugin() {
     
     @PluginMethod
     fun disconnect(call: PluginCall) {
-        Log.d(TAG, "Disconnecting from LiveKit room")
+        Log.d(DIAG_TAG, "disconnect() called via Capacitor bridge — channel=$currentChannelName connected=$isConnectedState")
         
         pluginScope.launch {
             try {
                 localAudioTrack?.let { track ->
-                    Log.d(TAG, "Cleaning up audio track before disconnect")
+                    Log.d(DIAG_TAG, "disconnect() — cleaning up audio track before disconnect")
                     try {
                         room?.localParticipant?.unpublishTrack(track, stopOnUnpublish = true)
                     } catch (e: Exception) {
-                        Log.w(TAG, "Error unpublishing track on disconnect: ${e.message}")
+                        Log.w(DIAG_TAG, "disconnect() — error unpublishing track: ${e.message}")
                     }
                     localAudioTrack = null
                 }
@@ -290,7 +289,7 @@ class LiveKitPlugin : Plugin() {
                 notifyListeners("disconnected", result)
                 
             } catch (e: Exception) {
-                Log.e(TAG, "Error disconnecting", e)
+                Log.e(DIAG_TAG, "disconnect() FAILED — ${e.message}", e)
                 call.reject("Failed to disconnect: ${e.message}")
             }
         }
@@ -298,10 +297,11 @@ class LiveKitPlugin : Plugin() {
     
     @PluginMethod
     fun enableMicrophone(call: PluginCall) {
-        Log.d(TAG, "Enabling microphone - creating and publishing audio track")
+        Log.d(DIAG_TAG, "enableMicrophone() called via Capacitor bridge — connected=$isConnectedState channel=$currentChannelName")
         
         val currentRoom = room
         if (!isConnectedState || currentRoom == null) {
+            Log.w(DIAG_TAG, "enableMicrophone() REJECTED — not connected to a room")
             call.reject("Not connected to a room")
             return
         }
@@ -309,11 +309,11 @@ class LiveKitPlugin : Plugin() {
         pluginScope.launch {
             try {
                 localAudioTrack?.let { track ->
-                    Log.d(TAG, "Cleaning up existing audio track before creating new one")
+                    Log.d(DIAG_TAG, "enableMicrophone() — cleaning up existing audio track")
                     try {
                         currentRoom.localParticipant.unpublishTrack(track, stopOnUnpublish = true)
                     } catch (e: Exception) {
-                        Log.w(TAG, "Error unpublishing existing track: ${e.message}")
+                        Log.w(DIAG_TAG, "enableMicrophone() — error unpublishing existing track: ${e.message}")
                     }
                     localAudioTrack = null
                 }
@@ -324,7 +324,7 @@ class LiveKitPlugin : Plugin() {
                 
                 isMicEnabledState = true
                 
-                Log.d(TAG, "Audio track created and published successfully")
+                Log.d(DIAG_TAG, "enableMicrophone() SUCCESS — audio track published to $currentChannelName")
                 
                 val result = JSObject().apply {
                     put("success", true)
@@ -335,7 +335,7 @@ class LiveKitPlugin : Plugin() {
                 notifyListeners("microphoneEnabled", result)
                 
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to enable microphone", e)
+                Log.e(DIAG_TAG, "enableMicrophone() FAILED — ${e.message}", e)
                 call.reject("Failed to enable microphone: ${e.message}")
             }
         }
@@ -343,10 +343,11 @@ class LiveKitPlugin : Plugin() {
     
     @PluginMethod
     fun disableMicrophone(call: PluginCall) {
-        Log.d(TAG, "Disabling microphone - unpublishing audio track")
+        Log.d(DIAG_TAG, "disableMicrophone() called via Capacitor bridge — connected=$isConnectedState mic=$isMicEnabledState channel=$currentChannelName")
         
         val currentRoom = room
         if (!isConnectedState || currentRoom == null) {
+            Log.w(DIAG_TAG, "disableMicrophone() REJECTED — not connected to a room")
             call.reject("Not connected to a room")
             return
         }
@@ -354,13 +355,13 @@ class LiveKitPlugin : Plugin() {
         pluginScope.launch {
             try {
                 localAudioTrack?.let { track ->
-                    Log.d(TAG, "Unpublishing audio track with stopOnUnpublish=true")
+                    Log.d(DIAG_TAG, "disableMicrophone() — unpublishing audio track")
                     currentRoom.localParticipant.unpublishTrack(track, stopOnUnpublish = true)
                     
                     localAudioTrack = null
-                    Log.d(TAG, "Audio track unpublished and stopped")
+                    Log.d(DIAG_TAG, "disableMicrophone() SUCCESS — audio track unpublished")
                 } ?: run {
-                    Log.w(TAG, "No audio track to unpublish")
+                    Log.w(DIAG_TAG, "disableMicrophone() — no audio track to unpublish")
                 }
                 
                 isMicEnabledState = false
@@ -374,7 +375,7 @@ class LiveKitPlugin : Plugin() {
                 notifyListeners("microphoneDisabled", result)
                 
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to disable microphone", e)
+                Log.e(DIAG_TAG, "disableMicrophone() FAILED — ${e.message}", e)
                 call.reject("Failed to disable microphone: ${e.message}")
             }
         }

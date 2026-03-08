@@ -194,7 +194,9 @@ public class BackgroundAudioService extends Service {
     }
 
     public synchronized void handlePttDown() {
-        Log.d(DIAG_TAG, "handlePttDown() — currentState=" + pttState);
+        Log.d(DIAG_TAG, "========== SERVICE handlePttDown() ==========");
+        Log.d(DIAG_TAG, "handlePttDown() — currentState=" + pttState
+            + " serverUrl=" + serverBaseUrl + " unitId=" + currentUnitId + " channelId=" + currentChannelId);
 
         if (pttState == PttState.TRANSMITTING) {
             Log.d(DIAG_TAG, "handlePttDown() — already TRANSMITTING, ignoring duplicate DOWN");
@@ -203,10 +205,14 @@ public class BackgroundAudioService extends Service {
 
         LiveKitPlugin lkPlugin = LiveKitPlugin.getInstance();
         boolean lkConnected = lkPlugin != null && lkPlugin.isRoomConnected();
-        Log.d(DIAG_TAG, "handlePttDown() — LiveKitPlugin=" + (lkPlugin != null) + " connected=" + lkConnected);
+        String lkChannel = lkPlugin != null ? lkPlugin.getActiveChannel() : "null";
+        boolean lkMic = lkPlugin != null && lkPlugin.isMicTransmitting();
+        Log.d(DIAG_TAG, "handlePttDown() — LiveKitPlugin=" + (lkPlugin != null)
+            + " connected=" + lkConnected + " channel=" + lkChannel + " micActive=" + lkMic);
 
         if (!lkConnected) {
-            Log.w(DIAG_TAG, "handlePttDown() — LiveKit not connected, cannot start TX");
+            Log.w(DIAG_TAG, "handlePttDown() BLOCKED — LiveKit not connected, cannot start TX");
+            Log.w(DIAG_TAG, "handlePttDown() — This means NativeLiveKit.connect() was never called from JS, or the connection dropped");
             return;
         }
 
@@ -219,9 +225,11 @@ public class BackgroundAudioService extends Service {
         sendPttSignaling("start");
 
         notifyUiPttState(true);
+        Log.d(DIAG_TAG, "handlePttDown() — COMPLETE (tx=" + txResult + ")");
     }
 
     public synchronized void handlePttUp() {
+        Log.d(DIAG_TAG, "========== SERVICE handlePttUp() ==========");
         Log.d(DIAG_TAG, "handlePttUp() — currentState=" + pttState);
 
         if (pttState == PttState.IDLE) {
@@ -243,6 +251,7 @@ public class BackgroundAudioService extends Service {
         sendPttSignaling("end");
 
         notifyUiPttState(false);
+        Log.d(DIAG_TAG, "handlePttUp() — COMPLETE");
     }
 
     public PttState getPttState() {

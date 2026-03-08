@@ -32,6 +32,8 @@ public class MainActivity extends BridgeActivity {
     private static final int PERMISSION_REQUEST_CODE = 1001;
     private static final int BACKGROUND_LOCATION_REQUEST_CODE = 1002;
 
+    private boolean batteryExemptionPrompted = false;
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(HardwarePttPlugin.class);
@@ -41,11 +43,28 @@ public class MainActivity extends BridgeActivity {
 
         super.onCreate(savedInstanceState);
 
+        Log.d(DIAG_TAG, "MainActivity.onCreate() — starting BackgroundAudioService immediately");
+        startBackgroundAudioServiceNow();
+
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
         new Handler(Looper.getMainLooper()).postDelayed(() -> {
             requestAllPermissions();
         }, 500);
+    }
+
+    private void startBackgroundAudioServiceNow() {
+        try {
+            Intent serviceIntent = new Intent(this, BackgroundAudioService.class);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(serviceIntent);
+            } else {
+                startService(serviceIntent);
+            }
+            Log.d(DIAG_TAG, "BackgroundAudioService start intent sent from MainActivity");
+        } catch (Exception e) {
+            Log.e(DIAG_TAG, "Failed to start BackgroundAudioService from MainActivity: " + e.getMessage());
+        }
     }
 
     private void requestAllPermissions() {
@@ -280,6 +299,17 @@ public class MainActivity extends BridgeActivity {
         }, delayMs);
     }
 
+    private String getPttStateSummary() {
+        BackgroundAudioService svc = BackgroundAudioService.getInstance();
+        LiveKitPlugin lk = LiveKitPlugin.getInstance();
+        return "STATE_SUMMARY: screen=" + (isScreenOff ? "OFF" : "ON")
+            + " service=" + (BackgroundAudioService.isRunning ? "RUNNING" : "STOPPED")
+            + " svcInstance=" + (svc != null ? "YES" : "NULL")
+            + " livekit=" + (lk != null && lk.isRoomConnected() ? "CONNECTED" : "DISCONNECTED")
+            + " lkChannel=" + (lk != null ? lk.getActiveChannel() : "null")
+            + " pttState=" + (svc != null ? (svc.isTransmitting() ? "TRANSMITTING" : "IDLE") : "N/A");
+    }
+
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
         int keyCode = event.getKeyCode();
@@ -289,6 +319,7 @@ public class MainActivity extends BridgeActivity {
             Log.d(DIAG_TAG, "MainActivity.dispatchKeyEvent() — keyCode=" + keyCode
                 + " action=" + (action == KeyEvent.ACTION_DOWN ? "DOWN" : "UP")
                 + " screenOff=" + isScreenOff);
+            Log.d(DIAG_TAG, getPttStateSummary());
 
             if (action == KeyEvent.ACTION_DOWN) {
                 wakeScreen();
@@ -297,18 +328,20 @@ public class MainActivity extends BridgeActivity {
         }
 
         if (keyCode == KEY_PTT) {
-            Log.d(DIAG_TAG, "MainActivity — PTT key detected, forwarding to service+plugin");
+            Log.d(DIAG_TAG, "MainActivity — PTT key (230) detected, action=" + (action == KeyEvent.ACTION_DOWN ? "DOWN" : "UP"));
 
             BackgroundAudioService service = BackgroundAudioService.getInstance();
             if (service != null) {
                 if (action == KeyEvent.ACTION_DOWN) {
+                    Log.d(DIAG_TAG, "MainActivity — calling service.handlePttDown()");
                     service.handlePttDown();
                 } else if (action == KeyEvent.ACTION_UP) {
+                    Log.d(DIAG_TAG, "MainActivity — calling service.handlePttUp()");
                     service.handlePttUp();
                 }
-                Log.d(DIAG_TAG, "MainActivity — PTT forwarded to BackgroundAudioService");
+                Log.d(DIAG_TAG, "MainActivity — PTT forwarded to BackgroundAudioService OK");
             } else {
-                Log.d(DIAG_TAG, "MainActivity — BackgroundAudioService not available");
+                Log.w(DIAG_TAG, "MainActivity — BackgroundAudioService instance is NULL, cannot forward PTT");
             }
 
             HardwarePttPlugin pttPlugin = HardwarePttPlugin.getInstance();
@@ -322,6 +355,8 @@ public class MainActivity extends BridgeActivity {
                     pttPlugin.handleKeyEvent(event);
                 }
                 Log.d(DIAG_TAG, "MainActivity — PTT forwarded to HardwarePttPlugin (UI sync)");
+            } else {
+                Log.d(DIAG_TAG, "MainActivity — HardwarePttPlugin instance is NULL");
             }
         }
 
@@ -367,6 +402,7 @@ public class MainActivity extends BridgeActivity {
     public void onPause() {
         super.onPause();
         isScreenOff = true;
+        Log.d(DIAG_TAG, "MainActivity.onPause() — isScreenOff=true, service running=" + BackgroundAudioService.isRunning);
         keepWebViewAlive();
         startJsKeepalive();
     }
@@ -376,12 +412,23 @@ public class MainActivity extends BridgeActivity {
         super.onResume();
         isScreenOff = false;
         stopJsKeepalive();
+        Log.d(DIAG_TAG, "MainActivity.onResume() — screen ON, isScreenOff=false");
+
+        startBackgroundAudioServiceNow();
+
+        if (!batteryExemptionPrompted) {
+            new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                requestBatteryOptimizationExemption();
+                batteryExemptionPrompted = true;
+            }, 1500);
+        }
     }
 
     @Override
     public void onStop() {
         super.onStop();
         isScreenOff = true;
+        Log.d(DIAG_TAG, "MainActivity.onStop() — isScreenOff=true, service running=" + BackgroundAudioService.isRunning);
         keepWebViewAlive();
     }
 

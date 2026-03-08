@@ -275,11 +275,14 @@ class MicPTTManager {
 
   async start() {
     if (!this.canStart()) {
-      console.log(`[MicPTT] Cannot start - state: ${this.state}, lock: ${this.transitionLock}`);
+      console.log(`[PTT-DIAG] [JS] MicPTTManager.start() — BLOCKED, state=${this.state} lock=${this.transitionLock}`);
       return false;
     }
 
-    if (isNativeAndroid()) {
+    const native = isNativeAndroid();
+    console.log(`[PTT-DIAG] [JS] MicPTTManager.start() — path=${native ? 'NATIVE' : 'WEB'} channel=${this.currentChannel} unit=${this.currentUnit}`);
+
+    if (native) {
       return this._startNative();
     }
 
@@ -425,7 +428,8 @@ class MicPTTManager {
   }
 
   async _startNative() {
-    acquireWakeLock().catch(e => console.warn('[MicPTT] Native wake lock acquire failed:', e));
+    console.log('[PTT-DIAG] [JS] MicPTTManager._startNative() — BEGIN');
+    acquireWakeLock().catch(e => console.warn('[PTT-DIAG] [JS] Native wake lock acquire failed:', e));
 
     this.transitionLock = true;
     this.pendingStop = false;
@@ -433,11 +437,12 @@ class MicPTTManager {
     try {
       this._setState(PTT_STATES.ARMING);
       playPermitTone();
-      console.log('[MicPTT] Native PTT: enabling mic via native plugin');
+      console.log('[PTT-DIAG] [JS] _startNative() — calling nativeEnableMic()');
 
       const success = await nativeEnableMic();
+      console.log('[PTT-DIAG] [JS] _startNative() — nativeEnableMic() result=' + success);
       if (!success) {
-        console.error('[MicPTT] Native enableMicrophone failed');
+        console.error('[PTT-DIAG] [JS] _startNative() — nativeEnableMic FAILED');
         startBonkLoop();
         this.transitionLock = false;
         this._setState(PTT_STATES.BUSY);
@@ -445,7 +450,7 @@ class MicPTTManager {
       }
 
       if (this.pendingStop) {
-        console.log('[MicPTT] Native: stop requested during enable - disabling');
+        console.log('[PTT-DIAG] [JS] _startNative() — pendingStop, disabling mic');
         await nativeDisableMic();
         this._setState(PTT_STATES.IDLE);
         this.transitionLock = false;
@@ -455,11 +460,11 @@ class MicPTTManager {
       stopBonkLoop();
       this._setState(PTT_STATES.TRANSMITTING);
       this.transitionLock = false;
-      console.log('[MicPTT] Native transmission active');
+      console.log('[PTT-DIAG] [JS] _startNative() — TRANSMITTING');
       return true;
 
     } catch (err) {
-      console.error('[MicPTT] Native start error:', err);
+      console.error('[PTT-DIAG] [JS] _startNative() — ERROR:', err);
       this.transitionLock = false;
       this._setState(PTT_STATES.IDLE);
       return false;
@@ -467,7 +472,8 @@ class MicPTTManager {
   }
 
   async stop() {
-    console.log(`[MicPTT] Stop requested - state: ${this.state}`);
+    const native = isNativeAndroid();
+    console.log(`[PTT-DIAG] [JS] MicPTTManager.stop() — state=${this.state} path=${native ? 'NATIVE' : 'WEB'}`);
 
     stopBonkLoop();
 
@@ -500,20 +506,22 @@ class MicPTTManager {
   }
 
   async _doStopNative() {
+    console.log('[PTT-DIAG] [JS] MicPTTManager._doStopNative() — BEGIN');
     this._setState(PTT_STATES.COOLDOWN);
 
     try {
-      console.log('[MicPTT] Native PTT: disabling mic');
+      console.log('[PTT-DIAG] [JS] _doStopNative() — calling nativeDisableMic()');
       await nativeDisableMic();
+      console.log('[PTT-DIAG] [JS] _doStopNative() — nativeDisableMic() OK');
     } catch (err) {
-      console.error('[MicPTT] Native stop error:', err);
+      console.error('[PTT-DIAG] [JS] _doStopNative() — ERROR:', err);
     } finally {
       this.pendingStop = false;
       this.transitionLock = false;
       this.lastPttEndTime = Date.now();
       this._setState(PTT_STATES.IDLE);
-      releaseWakeLock().catch(e => console.warn('[MicPTT] Native wake lock release failed:', e));
-      console.log('[MicPTT] Native transmission ended');
+      releaseWakeLock().catch(e => console.warn('[PTT-DIAG] [JS] Native wake lock release failed:', e));
+      console.log('[PTT-DIAG] [JS] _doStopNative() — COMPLETE, state=IDLE');
     }
   }
 

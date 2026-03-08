@@ -37,6 +37,9 @@
     <!-- Battery optimization exemption (allows prompting user to disable Doze for this app) -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
+    <!-- Auto-start service on device boot -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
     <!-- Bluetooth for hardware PTT accessories (Android 12+) -->
     <uses-permission android:name="android.permission.BLUETOOTH" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
@@ -102,6 +105,18 @@
             <intent-filter>
                 <action android:name="android.intent.action.PTT.down" />
                 <action android:name="android.intent.action.PTT.up" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Boot Receiver to auto-start background service on device boot -->
+        <receiver
+            android:name=".BootReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON" />
             </intent-filter>
         </receiver>
     </application>

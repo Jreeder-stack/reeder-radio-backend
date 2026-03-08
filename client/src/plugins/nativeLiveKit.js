@@ -12,13 +12,17 @@ export function isNativeLiveKitAvailable() {
 }
 
 export async function nativeConnect(url, token, channelName) {
-  if (!NativeLiveKit) return false;
+  if (!NativeLiveKit) {
+    console.log('[PTT-DIAG] [JS] nativeLiveKit.nativeConnect() — plugin NOT available (web platform)');
+    return false;
+  }
   try {
+    console.log('[PTT-DIAG] [JS] nativeLiveKit.nativeConnect() — url=' + url + ' channel=' + channelName);
     const result = await NativeLiveKit.connect({ url, token, channelName });
-    console.log('[NativeLiveKit] Connected to', channelName);
+    console.log('[PTT-DIAG] [JS] nativeLiveKit.nativeConnect() — result=' + JSON.stringify(result));
     return result?.success === true;
   } catch (e) {
-    console.error('[NativeLiveKit] Connect failed:', e);
+    console.error('[PTT-DIAG] [JS] nativeLiveKit.nativeConnect() — FAILED:', e);
     return false;
   }
 }
@@ -26,23 +30,28 @@ export async function nativeConnect(url, token, channelName) {
 export async function nativeDisconnect() {
   if (!NativeLiveKit) return false;
   try {
+    console.log('[PTT-DIAG] [JS] nativeLiveKit.nativeDisconnect()');
     const result = await NativeLiveKit.disconnect({});
-    console.log('[NativeLiveKit] Disconnected');
+    console.log('[PTT-DIAG] [JS] nativeLiveKit.nativeDisconnect() — result=' + JSON.stringify(result));
     return result?.success === true;
   } catch (e) {
-    console.error('[NativeLiveKit] Disconnect failed:', e);
+    console.error('[PTT-DIAG] [JS] nativeLiveKit.nativeDisconnect() — FAILED:', e);
     return false;
   }
 }
 
 export async function nativeEnableMic() {
-  if (!NativeLiveKit) return false;
+  if (!NativeLiveKit) {
+    console.log('[PTT-DIAG] [JS] nativeLiveKit.nativeEnableMic() — plugin NOT available (web platform)');
+    return false;
+  }
   try {
+    console.log('[PTT-DIAG] [JS] nativeLiveKit.nativeEnableMic() — calling plugin');
     const result = await NativeLiveKit.enableMicrophone({});
-    console.log('[NativeLiveKit] Mic enabled');
+    console.log('[PTT-DIAG] [JS] nativeLiveKit.nativeEnableMic() — result=' + JSON.stringify(result));
     return result?.success === true;
   } catch (e) {
-    console.error('[NativeLiveKit] Enable mic failed:', e);
+    console.error('[PTT-DIAG] [JS] nativeLiveKit.nativeEnableMic() — FAILED:', e);
     return false;
   }
 }
@@ -50,11 +59,12 @@ export async function nativeEnableMic() {
 export async function nativeDisableMic() {
   if (!NativeLiveKit) return false;
   try {
+    console.log('[PTT-DIAG] [JS] nativeLiveKit.nativeDisableMic() — calling plugin');
     const result = await NativeLiveKit.disableMicrophone({});
-    console.log('[NativeLiveKit] Mic disabled');
+    console.log('[PTT-DIAG] [JS] nativeLiveKit.nativeDisableMic() — result=' + JSON.stringify(result));
     return result?.success === true;
   } catch (e) {
-    console.error('[NativeLiveKit] Disable mic failed:', e);
+    console.error('[PTT-DIAG] [JS] nativeLiveKit.nativeDisableMic() — FAILED:', e);
     return false;
   }
 }

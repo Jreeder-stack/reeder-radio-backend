@@ -19,14 +19,23 @@ public class PttBroadcastReceiver extends BroadcastReceiver {
         if (action == null) return;
 
         boolean isScreenOn = isScreenInteractive(context);
+        boolean serviceRunning = BackgroundAudioService.isRunning;
+        BackgroundAudioService svcInstance = BackgroundAudioService.getInstance();
+        LiveKitPlugin lk = LiveKitPlugin.getInstance();
+
+        Log.d(TAG, "========== PTT BROADCAST RECEIVED ==========");
         Log.d(TAG, "PttBroadcastReceiver.onReceive() — action=" + action + " screenOn=" + isScreenOn);
+        Log.d(TAG, "PttBroadcastReceiver STATE: serviceRunning=" + serviceRunning
+            + " svcInstance=" + (svcInstance != null ? "YES" : "NULL")
+            + " livekit=" + (lk != null && lk.isRoomConnected() ? "CONNECTED" : "DISCONNECTED")
+            + " lkChannel=" + (lk != null ? lk.getActiveChannel() : "null"));
 
         if (ACTION_PTT_DOWN.equals(action)) {
-            Log.d(TAG, "PTT DOWN broadcast received");
+            Log.d(TAG, "PTT DOWN broadcast — acquiring wake lock and forwarding to service");
             acquireCpuWakeLock(context);
             forwardToService(context, BackgroundAudioService.PTT_ACTION_DOWN);
         } else if (ACTION_PTT_UP.equals(action)) {
-            Log.d(TAG, "PTT UP broadcast received");
+            Log.d(TAG, "PTT UP broadcast — forwarding to service");
             forwardToService(context, BackgroundAudioService.PTT_ACTION_UP);
         }
     }

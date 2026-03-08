@@ -462,9 +462,10 @@ class LiveKitManager {
   }
   
   async _doConnect(channelName, identity) {
-    console.log(`[LiveKit] Connecting to ${channelName} as ${identity}...`);
+    const native = isNativeAndroid();
+    console.log(`[PTT-DIAG] [JS] LiveKitManager._doConnect() — channel=${channelName} identity=${identity} path=${native ? 'NATIVE' : 'WEB'}`);
 
-    if (isNativeAndroid()) {
+    if (native) {
       return this._doConnectNative(channelName, identity);
     }
 
@@ -510,23 +511,27 @@ class LiveKitManager {
   }
 
   async _doConnectNative(channelName, identity) {
-    console.log(`[LiveKit] Native Android connect to ${channelName} as ${identity}`);
+    console.log(`[PTT-DIAG] [JS] _doConnectNative() — channel=${channelName} identity=${identity} livekitUrl=${LIVEKIT_URL}`);
 
     try {
+      console.log('[PTT-DIAG] [JS] _doConnectNative() — fetching token from server');
       const token = await getToken(identity, channelName);
+      console.log('[PTT-DIAG] [JS] _doConnectNative() — token received, calling NativeLiveKit.connect()');
 
       const success = await nativeConnect(LIVEKIT_URL, token, channelName);
+      console.log('[PTT-DIAG] [JS] _doConnectNative() — NativeLiveKit.connect() result=' + success);
       if (!success) {
         throw new Error('Native LiveKit connect returned false');
       }
 
       const serverBaseUrl = window.location.origin;
+      console.log('[PTT-DIAG] [JS] _doConnectNative() — updating service connection info: server=' + serverBaseUrl + ' unit=' + identity + ' channel=' + channelName);
       updateServiceConnectionInfo(serverBaseUrl, identity, channelName);
 
       const nativeRoom = this._createNativeRoomProxy(channelName, identity);
       this.rooms.set(channelName, nativeRoom);
 
-      console.log(`[LiveKit] Native connected to ${channelName}`);
+      console.log(`[PTT-DIAG] [JS] _doConnectNative() — CONNECTED to ${channelName}`);
 
       notifyChannelJoin(channelName, identity);
       this._recordActivity(channelName);
@@ -534,7 +539,7 @@ class LiveKitManager {
 
       return nativeRoom;
     } catch (err) {
-      console.error(`[LiveKit] Native connect failed for ${channelName}:`, err);
+      console.error(`[PTT-DIAG] [JS] _doConnectNative() — FAILED for ${channelName}:`, err);
       this._cleanupChannel(channelName);
       this._emitConnectionStateChange(channelName, 'failed', err);
       throw err;

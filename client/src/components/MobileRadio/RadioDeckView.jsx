@@ -9,6 +9,7 @@ import { PTT_STATES } from '../../constants/pttStates';
 import { updateUnitStatus } from '../../utils/api';
 import { DataPacket_Kind } from 'livekit-client';
 import { startBackgroundService, stopBackgroundService } from '../../plugins/backgroundService';
+import { updateServiceConnectionInfo } from '../../plugins/nativeLiveKit';
 import { setupAppLifecycle } from '../../lib/capacitor';
 import { signalingManager } from '../../signaling/SignalingManager';
 import { startTracking as gpsStartTracking, stopTracking as gpsStopTracking } from '../../services/gpsService.js';
@@ -251,15 +252,20 @@ export function RadioDeckView({ user, onLogout }) {
   useEffect(() => {
     startBackgroundService().then(result => {
       if (result.success) {
-        console.log('[RadioDeck] Background service started');
+        console.log('[PTT-DIAG] [JS] Background service started');
       }
     }).catch(err => {
-      console.warn('[RadioDeck] Failed to start background service:', err);
+      console.warn('[PTT-DIAG] [JS] Failed to start background service:', err);
     });
+
+    const serverBaseUrl = window.location.origin;
+    const txChannel = transmitChannelRef.current;
+    console.log('[PTT-DIAG] [JS] Passing early connection info to service: unit=' + identity + ' channel=' + txChannel + ' server=' + serverBaseUrl);
+    updateServiceConnectionInfo(serverBaseUrl, identity, txChannel || '');
     
     return () => {
       stopBackgroundService().catch(err => {
-        console.warn('[RadioDeck] Failed to stop background service:', err);
+        console.warn('[PTT-DIAG] [JS] Failed to stop background service:', err);
       });
     };
   }, []);
@@ -672,24 +678,35 @@ export function RadioDeckView({ user, onLogout }) {
 
   const handleTransmitStart = useCallback(async () => {
     const channelName = transmitChannelRef.current;
-    if (!channelName) return;
+    console.log('[PTT-DIAG] [JS] handleTransmitStart() — channel=' + channelName + ' identity=' + identity);
+    if (!channelName) {
+      console.warn('[PTT-DIAG] [JS] handleTransmitStart() — NO CHANNEL, aborting');
+      return;
+    }
     
     const isConn = await ensureConnected(channelName);
+    console.log('[PTT-DIAG] [JS] handleTransmitStart() — ensureConnected=' + isConn);
     if (!isConn) {
-      console.warn('[RadioDeck PTT] ensureConnected failed for', channelName);
+      console.warn('[PTT-DIAG] [JS] handleTransmitStart() — ensureConnected FAILED for', channelName);
     }
     const room = livekitManager?.getRoom(channelName);
-    if (!room) return;
+    console.log('[PTT-DIAG] [JS] handleTransmitStart() — room=' + (room ? (room._isNativeProxy ? 'NATIVE_PROXY' : 'WEB_SDK') : 'NULL') + ' state=' + (room?.state || 'N/A'));
+    if (!room) {
+      console.warn('[PTT-DIAG] [JS] handleTransmitStart() — NO ROOM, aborting');
+      return;
+    }
     
     micPTTManager.setCurrentChannel(channelName);
     micPTTManager.setCurrentUnit(identity);
     micPTTManager.setRoom(room);
     signalPttStart(channelName);
+    console.log('[PTT-DIAG] [JS] handleTransmitStart() — calling micPTTManager.start()');
     micPTTManager.start();
   }, [ensureConnected, livekitManager, signalPttStart, identity]);
 
   const handleTransmitEnd = useCallback(() => {
     const channelName = transmitChannelRef.current;
+    console.log('[PTT-DIAG] [JS] handleTransmitEnd() — channel=' + channelName + ' canStop=' + micPTTManager.canStop());
     if (micPTTManager.canStop()) {
       micPTTManager.stop();
       if (channelName) {
@@ -959,6 +976,7 @@ export function RadioDeckView({ user, onLogout }) {
         e.preventDefault();
         e.stopPropagation();
         pttDown = true;
+        console.log('[PTT-DIAG] [JS] keydown PTT (230) — calling handleTransmitStart');
         handleTransmitStartRef.current();
       } else if (code === KEY_DPAD_UP) {
         e.preventDefault();
@@ -1044,6 +1062,7 @@ export function RadioDeckView({ user, onLogout }) {
         e.preventDefault();
         e.stopPropagation();
         pttDown = false;
+        console.log('[PTT-DIAG] [JS] keyup PTT (230) — calling handleTransmitEnd');
         handleTransmitEndRef.current();
       }
     };
@@ -1056,18 +1075,23 @@ export function RadioDeckView({ user, onLogout }) {
       var plugin = window.Capacitor.Plugins.HardwarePtt;
       var pttDownListener = null;
       var pttUpListener = null;
+      console.log('[PTT-DIAG] [JS] Setting up Capacitor HardwarePtt listeners');
       try {
         pttDownListener = plugin.addListener('pttDown', function() {
+          console.log('[PTT-DIAG] [JS] Capacitor pttDown event received, keysLocked=' + keysLockedRef.current);
           if (keysLockedRef.current) return;
           if (!pttDown) {
             pttDown = true;
+            console.log('[PTT-DIAG] [JS] Capacitor pttDown — calling handleTransmitStart');
             handleTransmitStartRef.current();
           }
         });
         pttUpListener = plugin.addListener('pttUp', function() {
+          console.log('[PTT-DIAG] [JS] Capacitor pttUp event received');
           if (keysLockedRef.current) return;
           if (pttDown) {
             pttDown = false;
+            console.log('[PTT-DIAG] [JS] Capacitor pttUp — calling handleTransmitEnd');
             handleTransmitEndRef.current();
           }
         });
