@@ -122,7 +122,12 @@ Run the setup script to copy all native source files, icons, splash screen, noti
 
 ```bash
 # From the android-app directory:
+
+# On Mac/Linux:
 ./setup-android.sh
+
+# On Windows (PowerShell or CMD):
+setup-android.bat
 ```
 
 This script copies:
