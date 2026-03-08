@@ -408,7 +408,7 @@ public class MainActivity extends BridgeActivity {
     }
 
     @Override
-    protected void onResume() {
+    public void onResume() {
         super.onResume();
         isScreenOff = false;
         stopJsKeepalive();
@@ -453,7 +453,7 @@ public class MainActivity extends BridgeActivity {
     }
 
     @Override
-    protected void onDestroy() {
+    public void onDestroy() {
         stopJsKeepalive();
         if (screenWakeLock != null && screenWakeLock.isHeld()) {
             screenWakeLock.release();
