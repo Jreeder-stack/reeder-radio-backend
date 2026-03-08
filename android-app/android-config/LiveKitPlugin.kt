@@ -20,20 +20,6 @@ import io.livekit.android.util.LoggingLevel
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collectLatest
 
-/**
- * Native LiveKit Capacitor Plugin for COMMAND COMMS
- * 
- * This plugin wraps the LiveKit Android SDK to bypass WebView WebRTC limitations.
- * Written in Kotlin to properly handle LiveKit's suspend functions via coroutines.
- * 
- * Installation:
- * 1. Copy to android/app/src/main/java/com/reedersystems/commandcomms/
- * 2. Add LiveKit SDK to android/app/build.gradle:
- *    implementation "io.livekit:livekit-android:2.5.0"
- * 3. Enable Kotlin in the Android project
- * 4. Register plugin in MainActivity.java:
- *    registerPlugin(LiveKitPlugin.class);
- */
 @CapacitorPlugin(
     name = "NativeLiveKit",
     permissions = [
@@ -51,13 +37,20 @@ class LiveKitPlugin : Plugin() {
     
     companion object {
         private const val TAG = "LiveKitPlugin"
+        private const val DIAG_TAG = "PTT-DIAG"
+
+        @Volatile
+        private var instance: LiveKitPlugin? = null
+
+        @JvmStatic
+        fun getInstance(): LiveKitPlugin? = instance
     }
     
     private var room: Room? = null
     private val pluginScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
-    private var isConnected = false
-    private var isMicEnabled = false
-    private var currentChannel: String? = null
+    private var isConnectedState = false
+    private var isMicEnabledState = false
+    private var currentChannelName: String? = null
     private var audioManager: AudioManager? = null
     private var previousAudioMode: Int = AudioManager.MODE_NORMAL
     private var wasSpeakerphoneOn: Boolean = false
@@ -65,36 +58,129 @@ class LiveKitPlugin : Plugin() {
     
     override fun load() {
         super.load()
-        Log.d(TAG, "LiveKitPlugin loaded")
+        instance = this
+        Log.d(TAG, "LiveKitPlugin loaded (instance set)")
+        Log.d(DIAG_TAG, "LiveKitPlugin instance registered")
         LiveKit.loggingLevel = LoggingLevel.DEBUG
         
-        // Get audio manager for speaker control
         audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
     }
-    
-    /**
-     * Configure audio for speakerphone output at maximum volume
-     */
+
+    fun isRoomConnected(): Boolean = isConnectedState
+    fun isMicTransmitting(): Boolean = isMicEnabledState
+    fun getActiveChannel(): String? = currentChannelName
+
+    fun startTransmit(): Boolean {
+        val currentRoom = room
+        Log.d(DIAG_TAG, "startTransmit() called — connected=$isConnectedState, room=${currentRoom != null}, channel=$currentChannelName")
+        
+        if (!isConnectedState || currentRoom == null) {
+            Log.w(DIAG_TAG, "startTransmit() FAILED — not connected to a room")
+            return false
+        }
+        
+        if (isMicEnabledState) {
+            Log.d(DIAG_TAG, "startTransmit() — already transmitting, ignoring")
+            return true
+        }
+        
+        pluginScope.launch {
+            try {
+                localAudioTrack?.let { track ->
+                    Log.d(DIAG_TAG, "startTransmit() — cleaning up existing track")
+                    try {
+                        currentRoom.localParticipant.unpublishTrack(track, stopOnUnpublish = true)
+                    } catch (e: Exception) {
+                        Log.w(DIAG_TAG, "startTransmit() — error unpublishing old track: ${e.message}")
+                    }
+                    localAudioTrack = null
+                }
+                
+                val track = currentRoom.localParticipant.createAudioTrack("microphone")
+                localAudioTrack = track
+                currentRoom.localParticipant.publishAudioTrack(track)
+                
+                isMicEnabledState = true
+                Log.d(DIAG_TAG, "startTransmit() SUCCESS — audio track published to $currentChannelName")
+                
+                try {
+                    val result = JSObject().apply {
+                        put("success", true)
+                        put("enabled", true)
+                    }
+                    notifyListeners("microphoneEnabled", result)
+                } catch (e: Exception) {
+                    Log.d(DIAG_TAG, "startTransmit() — UI notify skipped (bridge unavailable): ${e.message}")
+                }
+                
+            } catch (e: Exception) {
+                Log.e(DIAG_TAG, "startTransmit() FAILED — ${e.message}", e)
+            }
+        }
+        
+        return true
+    }
+
+    fun stopTransmit(): Boolean {
+        val currentRoom = room
+        Log.d(DIAG_TAG, "stopTransmit() called — connected=$isConnectedState, mic=$isMicEnabledState")
+        
+        if (!isConnectedState || currentRoom == null) {
+            Log.w(DIAG_TAG, "stopTransmit() — not connected, clearing mic state")
+            isMicEnabledState = false
+            return false
+        }
+        
+        if (!isMicEnabledState) {
+            Log.d(DIAG_TAG, "stopTransmit() — not transmitting, ignoring")
+            return true
+        }
+        
+        pluginScope.launch {
+            try {
+                localAudioTrack?.let { track ->
+                    Log.d(DIAG_TAG, "stopTransmit() — unpublishing audio track")
+                    currentRoom.localParticipant.unpublishTrack(track, stopOnUnpublish = true)
+                    localAudioTrack = null
+                    Log.d(DIAG_TAG, "stopTransmit() SUCCESS — audio track unpublished")
+                } ?: run {
+                    Log.w(DIAG_TAG, "stopTransmit() — no audio track to unpublish")
+                }
+                
+                isMicEnabledState = false
+                
+                try {
+                    val result = JSObject().apply {
+                        put("success", true)
+                        put("enabled", false)
+                    }
+                    notifyListeners("microphoneDisabled", result)
+                } catch (e: Exception) {
+                    Log.d(DIAG_TAG, "stopTransmit() — UI notify skipped (bridge unavailable): ${e.message}")
+                }
+                
+            } catch (e: Exception) {
+                Log.e(DIAG_TAG, "stopTransmit() FAILED — ${e.message}", e)
+            }
+        }
+        
+        return true
+    }
+
     private fun configureAudioForSpeaker() {
         audioManager?.let { am ->
             Log.d(TAG, "Configuring audio for speakerphone")
             
-            // Save current state to restore later
             previousAudioMode = am.mode
             wasSpeakerphoneOn = am.isSpeakerphoneOn
             
-            // Set mode to communication for voice
             am.mode = AudioManager.MODE_IN_COMMUNICATION
-            
-            // Enable speakerphone for louder output
             am.isSpeakerphoneOn = true
             
-            // Set media volume to max for louder playback
             val maxVolume = am.getStreamMaxVolume(AudioManager.STREAM_VOICE_CALL)
             val currentVolume = am.getStreamVolume(AudioManager.STREAM_VOICE_CALL)
             Log.d(TAG, "Voice call volume: $currentVolume / $maxVolume")
             
-            // Boost to at least 80% volume if lower
             val targetVolume = (maxVolume * 0.8).toInt()
             if (currentVolume < targetVolume) {
                 am.setStreamVolume(AudioManager.STREAM_VOICE_CALL, targetVolume, 0)
@@ -105,9 +191,6 @@ class LiveKitPlugin : Plugin() {
         }
     }
     
-    /**
-     * Restore audio settings when disconnecting
-     */
     private fun restoreAudioSettings() {
         audioManager?.let { am ->
             Log.d(TAG, "Restoring audio settings")
@@ -116,13 +199,6 @@ class LiveKitPlugin : Plugin() {
         }
     }
     
-    /**
-     * Connect to a LiveKit room
-     * 
-     * @param url - LiveKit server WebSocket URL (wss://...)
-     * @param token - JWT token for authentication
-     * @param channelName - Name of the channel (for logging/events)
-     */
     @PluginMethod
     fun connect(call: PluginCall) {
         val url = call.getString("url")
@@ -138,34 +214,30 @@ class LiveKitPlugin : Plugin() {
         
         pluginScope.launch {
             try {
-                // Disconnect from previous room if any
                 room?.let {
                     Log.d(TAG, "Disconnecting from previous room")
                     it.disconnect()
                 }
                 room = null
                 
-                // Configure audio for speakerphone before connecting
                 configureAudioForSpeaker()
                 
-                // Create new room
                 val newRoom = LiveKit.create(context)
-                currentChannel = channelName
+                currentChannelName = channelName
                 
-                // Set up event collection in a separate coroutine
                 launch {
                     setupRoomListeners(newRoom)
                 }
                 
-                // Connect to room (this is a suspend function)
                 Log.d(TAG, "Calling room.connect()...")
                 newRoom.connect(url, token)
                 Log.d(TAG, "room.connect() completed successfully")
                 
                 room = newRoom
-                isConnected = true
+                isConnectedState = true
                 
                 Log.d(TAG, "Connected to LiveKit room: $channelName")
+                Log.d(DIAG_TAG, "LiveKit CONNECTED to room: $channelName")
                 
                 val result = JSObject().apply {
                     put("success", true)
@@ -177,22 +249,18 @@ class LiveKitPlugin : Plugin() {
                 
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to connect to LiveKit", e)
-                isConnected = false
+                isConnectedState = false
                 call.reject("Failed to connect: ${e.message}")
             }
         }
     }
     
-    /**
-     * Disconnect from the current room
-     */
     @PluginMethod
     fun disconnect(call: PluginCall) {
         Log.d(TAG, "Disconnecting from LiveKit room")
         
         pluginScope.launch {
             try {
-                // Clean up audio track first
                 localAudioTrack?.let { track ->
                     Log.d(TAG, "Cleaning up audio track before disconnect")
                     try {
@@ -206,12 +274,13 @@ class LiveKitPlugin : Plugin() {
                 room?.disconnect()
                 room = null
                 
-                isConnected = false
-                isMicEnabled = false
-                currentChannel = null
+                isConnectedState = false
+                isMicEnabledState = false
+                currentChannelName = null
                 
-                // Restore audio settings
                 restoreAudioSettings()
+                
+                Log.d(DIAG_TAG, "LiveKit DISCONNECTED")
                 
                 val result = JSObject().apply {
                     put("success", true)
@@ -227,26 +296,21 @@ class LiveKitPlugin : Plugin() {
         }
     }
     
-    /**
-     * Enable microphone (start transmitting) - creates and publishes a fresh audio track
-     */
     @PluginMethod
     fun enableMicrophone(call: PluginCall) {
         Log.d(TAG, "Enabling microphone - creating and publishing audio track")
         
         val currentRoom = room
-        if (!isConnected || currentRoom == null) {
+        if (!isConnectedState || currentRoom == null) {
             call.reject("Not connected to a room")
             return
         }
         
         pluginScope.launch {
             try {
-                // Clean up any existing track first
                 localAudioTrack?.let { track ->
                     Log.d(TAG, "Cleaning up existing audio track before creating new one")
                     try {
-                        // unpublishTrack with stopOnUnpublish=true handles stopping
                         currentRoom.localParticipant.unpublishTrack(track, stopOnUnpublish = true)
                     } catch (e: Exception) {
                         Log.w(TAG, "Error unpublishing existing track: ${e.message}")
@@ -254,14 +318,11 @@ class LiveKitPlugin : Plugin() {
                     localAudioTrack = null
                 }
                 
-                // Create a fresh audio track via LocalParticipant
                 val track = currentRoom.localParticipant.createAudioTrack("microphone")
                 localAudioTrack = track
-                
-                // Publish the track to the room
                 currentRoom.localParticipant.publishAudioTrack(track)
                 
-                isMicEnabled = true
+                isMicEnabledState = true
                 
                 Log.d(TAG, "Audio track created and published successfully")
                 
@@ -280,22 +341,18 @@ class LiveKitPlugin : Plugin() {
         }
     }
     
-    /**
-     * Disable microphone (stop transmitting) - unpublishes and stops the audio track
-     */
     @PluginMethod
     fun disableMicrophone(call: PluginCall) {
         Log.d(TAG, "Disabling microphone - unpublishing audio track")
         
         val currentRoom = room
-        if (!isConnected || currentRoom == null) {
+        if (!isConnectedState || currentRoom == null) {
             call.reject("Not connected to a room")
             return
         }
         
         pluginScope.launch {
             try {
-                // Unpublish and stop the audio track (stopOnUnpublish=true handles cleanup)
                 localAudioTrack?.let { track ->
                     Log.d(TAG, "Unpublishing audio track with stopOnUnpublish=true")
                     currentRoom.localParticipant.unpublishTrack(track, stopOnUnpublish = true)
@@ -306,7 +363,7 @@ class LiveKitPlugin : Plugin() {
                     Log.w(TAG, "No audio track to unpublish")
                 }
                 
-                isMicEnabled = false
+                isMicEnabledState = false
                 
                 val result = JSObject().apply {
                     put("success", true)
@@ -323,15 +380,12 @@ class LiveKitPlugin : Plugin() {
         }
     }
     
-    /**
-     * Get current connection state
-     */
     @PluginMethod
     fun getState(call: PluginCall) {
         val result = JSObject().apply {
-            put("isConnected", isConnected)
-            put("isMicEnabled", isMicEnabled)
-            put("currentChannel", currentChannel)
+            put("isConnected", isConnectedState)
+            put("isMicEnabled", isMicEnabledState)
+            put("currentChannel", currentChannelName)
             room?.let {
                 put("roomState", it.state.name)
             }
@@ -339,9 +393,6 @@ class LiveKitPlugin : Plugin() {
         call.resolve(result)
     }
     
-    /**
-     * Check if native LiveKit is available
-     */
     @PluginMethod
     fun isAvailable(call: PluginCall) {
         val result = JSObject().apply {
@@ -356,8 +407,9 @@ class LiveKitPlugin : Plugin() {
             when (event) {
                 is RoomEvent.Disconnected -> {
                     Log.d(TAG, "Room disconnected: ${event.reason}")
-                    isConnected = false
-                    isMicEnabled = false
+                    Log.d(DIAG_TAG, "LiveKit room DISCONNECTED: ${event.reason}")
+                    isConnectedState = false
+                    isMicEnabledState = false
                     notifyListeners("disconnected", JSObject().apply {
                         put("reason", event.reason?.name ?: "unknown")
                     })
@@ -368,7 +420,8 @@ class LiveKitPlugin : Plugin() {
                 }
                 is RoomEvent.Reconnected -> {
                     Log.d(TAG, "Room reconnected")
-                    isConnected = true
+                    Log.d(DIAG_TAG, "LiveKit room RECONNECTED")
+                    isConnectedState = true
                     notifyListeners("reconnected", JSObject())
                 }
                 is RoomEvent.ParticipantConnected -> {
@@ -392,12 +445,10 @@ class LiveKitPlugin : Plugin() {
                     if (event.track.kind == io.livekit.android.room.track.Track.Kind.AUDIO) {
                         val identity = event.participant.identity?.value ?: "unknown"
                         Log.d(TAG, "Audio track unsubscribed from: $identity - clearing receiving state")
-                        // Emit event to clear receiving state as fallback when ActiveSpeakersChanged doesn't fire
                         notifyListeners("trackUnsubscribed", JSObject().apply {
                             put("identity", identity)
                             put("kind", "audio")
                         })
-                        // Also emit activeSpeakerChanged with speaking=false as immediate fallback
                         notifyListeners("activeSpeakerChanged", JSObject().apply {
                             put("identity", "")
                             put("speaking", false)
@@ -408,7 +459,6 @@ class LiveKitPlugin : Plugin() {
                     if (event.publication.kind == io.livekit.android.room.track.Track.Kind.AUDIO) {
                         val identity = event.participant.identity?.value ?: "unknown"
                         Log.d(TAG, "Audio track muted from: $identity")
-                        // When someone mutes, they're no longer speaking
                         notifyListeners("activeSpeakerChanged", JSObject().apply {
                             put("identity", "")
                             put("speaking", false)
@@ -416,19 +466,16 @@ class LiveKitPlugin : Plugin() {
                     }
                 }
                 is RoomEvent.ActiveSpeakersChanged -> {
-                    // This is the key event - it fires when someone starts/stops speaking
                     val speakers = event.speakers.filter { it.identity?.value != room.localParticipant.identity?.value }
                     Log.d(TAG, "Active speakers changed: ${speakers.map { it.identity?.value }}")
                     
                     if (speakers.isNotEmpty()) {
-                        // Someone is speaking
                         val speaker = speakers.first()
                         notifyListeners("activeSpeakerChanged", JSObject().apply {
                             put("identity", speaker.identity?.value ?: "unknown")
                             put("speaking", true)
                         })
                     } else {
-                        // No one is speaking
                         notifyListeners("activeSpeakerChanged", JSObject().apply {
                             put("identity", "")
                             put("speaking", false)
@@ -436,15 +483,11 @@ class LiveKitPlugin : Plugin() {
                     }
                 }
                 else -> {
-                    // Handle other events as needed
                 }
             }
         }
     }
     
-    /**
-     * Set speakerphone on or off
-     */
     @PluginMethod
     fun setSpeakerphone(call: PluginCall) {
         val enabled = call.getBoolean("enabled", true) ?: true
@@ -466,7 +509,6 @@ class LiveKitPlugin : Plugin() {
     override fun handleOnDestroy() {
         super.handleOnDestroy()
         
-        // Clean up audio track
         localAudioTrack?.let { track ->
             try {
                 room?.localParticipant?.unpublishTrack(track, stopOnUnpublish = true)
@@ -476,7 +518,6 @@ class LiveKitPlugin : Plugin() {
             localAudioTrack = null
         }
         
-        // Restore audio settings
         restoreAudioSettings()
         
         pluginScope.launch {
@@ -484,10 +525,12 @@ class LiveKitPlugin : Plugin() {
             room = null
         }
         
-        // Cancel the scope after a small delay to let disconnect complete
         pluginScope.launch {
             delay(500)
             pluginScope.cancel()
         }
+        
+        instance = null
+        Log.d(DIAG_TAG, "LiveKitPlugin instance cleared (destroyed)")
     }
 }

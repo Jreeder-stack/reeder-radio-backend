@@ -2,6 +2,95 @@
 
 This directory contains configuration and instructions for building the native Android app with Capacitor.
 
+## PTT Architecture
+
+### Primary Path (Service-Level — works with screen off, app backgrounded, activity destroyed)
+
+```
+PTT button press
+  → android.intent.action.PTT.down/up (firmware broadcast)
+  → PttBroadcastReceiver.onReceive()
+  → BackgroundAudioService.getInstance().handlePttDown() / handlePttUp()
+  → LiveKitPlugin.getInstance().startTransmit() / stopTransmit()
+  → LiveKit audio track published / unpublished (native SDK)
+  → HTTP POST /api/ptt/start or /api/ptt/end (non-blocking signaling)
+```
+
+### Foreground Bonus Path (redundant zero-latency when app is in foreground)
+
+```
+PTT key event
+  → MainActivity.dispatchKeyEvent()
+  → BackgroundAudioService.handlePttDown() / handlePttUp() (same as above)
+  → HardwarePttPlugin.handleKeyEvent() (UI sync only)
+  → JS notifyListeners pttDown/pttUp (WebView UI update)
+```
+
+### Key Design Principles
+
+1. **PTT does NOT depend on MainActivity, WebView, or JS bridge**
+   - BackgroundAudioService owns PTT state (IDLE / TRANSMITTING)
+   - LiveKitPlugin exposes native `startTransmit()` / `stopTransmit()` without PluginCall
+   - PttBroadcastReceiver calls service directly, never brings activity to front
+
+2. **Cold-start handling**
+   - If BackgroundAudioService instance is null, PttBroadcastReceiver starts the service via intent with `ptt_action` extra
+   - `onStartCommand()` processes PTT intent extras and calls `handlePttDown()` / `handlePttUp()`
+
+3. **Backend signaling is fire-and-forget**
+   - HTTP POST to `/api/ptt/start` and `/api/ptt/end` bridges into Socket.IO
+   - If these calls fail, native audio TX still works normally
+
+4. **UI sync is optional**
+   - After native TX starts/stops, `notifyPttStateFromService()` updates HardwarePttPlugin → JS
+   - If WebView/Activity is unavailable, sync is silently skipped
+
+### Diagnostic Logging
+
+All PTT chain events are logged with the `PTT-DIAG` tag.
+
+```bash
+adb logcat -s PTT-DIAG
+```
+
+**Expected output — Screen-off PTT press:**
+```
+PTT-DIAG: PttBroadcastReceiver.onReceive() — action=android.intent.action.PTT.down screenOn=false
+PTT-DIAG: PTT DOWN broadcast received
+PTT-DIAG: CPU wake lock acquired for PTT broadcast
+PTT-DIAG: Service instance AVAILABLE — calling handle directly, action=down
+PTT-DIAG: handlePttDown() — currentState=IDLE
+PTT-DIAG: handlePttDown() — LiveKitPlugin=true connected=true
+PTT-DIAG: handlePttDown() — state → TRANSMITTING
+PTT-DIAG: startTransmit() called — connected=true, room=true, channel=...
+PTT-DIAG: startTransmit() SUCCESS — audio track published to ...
+PTT-DIAG: handlePttDown() — startTransmit() result=true
+PTT-DIAG: sendPttSignaling(start) — HTTP 200
+PTT-DIAG: notifyUiPttState(true) — HardwarePttPlugin not available, UI sync skipped
+```
+
+**Expected output — PTT release:**
+```
+PTT-DIAG: PttBroadcastReceiver.onReceive() — action=android.intent.action.PTT.up screenOn=false
+PTT-DIAG: PTT UP broadcast received
+PTT-DIAG: Service instance AVAILABLE — calling handle directly, action=up
+PTT-DIAG: handlePttUp() — currentState=TRANSMITTING
+PTT-DIAG: handlePttUp() — state → IDLE
+PTT-DIAG: stopTransmit() called — connected=true, mic=true
+PTT-DIAG: stopTransmit() SUCCESS — audio track unpublished
+PTT-DIAG: handlePttUp() — stopTransmit() result=true
+PTT-DIAG: sendPttSignaling(end) — HTTP 200
+```
+
+**Expected output — Cold-start (service killed):**
+```
+PTT-DIAG: PttBroadcastReceiver.onReceive() — action=android.intent.action.PTT.down screenOn=false
+PTT-DIAG: Service instance NULL — cold-starting service with intent extra, action=down
+PTT-DIAG: BackgroundAudioService CREATED — instance set, isRunning=true
+PTT-DIAG: Service received PTT via intent extra: action=down
+PTT-DIAG: handlePttDown() — currentState=IDLE
+```
+
 ## Prerequisites
 
 1. Android Studio installed (latest version recommended)
@@ -107,25 +196,17 @@ The app requires a foreground service to keep audio playing when minimized. Add 
 </service>
 ```
 
-## Hardware PTT Key Mapping
+## Files
 
-To capture volume buttons and Bluetooth PTT:
+| File | Role |
+|------|------|
+| `PttBroadcastReceiver.java` | Catches firmware PTT broadcasts, forwards to BackgroundAudioService |
+| `BackgroundAudioService.java` | Foreground service: owns PTT state machine, calls LiveKit TX, HTTP signaling |
+| `LiveKitPlugin.kt` | Native LiveKit SDK wrapper: static `startTransmit()` / `stopTransmit()` |
+| `HardwarePttPlugin.java` | Capacitor plugin for UI sync (JS notifyListeners), not control path |
+| `MainActivity.java` | Foreground key dispatch (redundant path), WebView keepalive |
 
-1. Override `dispatchKeyEvent` in MainActivity
-2. Send events to WebView via JavaScript interface
-3. See `HardwarePttPlugin.java` in this directory
-
-The app already has JavaScript event listeners for:
-- `ptt-key-down` - Hardware PTT pressed
-- `ptt-key-up` - Hardware PTT released
-
-Volume button key codes:
-- KEYCODE_VOLUME_UP: 24
-- KEYCODE_VOLUME_DOWN: 25
-- KEYCODE_HEADSETHOOK: 79 (Bluetooth headset button)
-- KEYCODE_MEDIA_PLAY_PAUSE: 85 (Media button)
-
-## Native LiveKit SDK (Recommended for PTT)
+## Native LiveKit SDK
 
 The app uses a native LiveKit plugin to bypass WebView WebRTC limitations. This provides
 more reliable audio connections than the web SDK.
@@ -224,46 +305,12 @@ For release builds, create a keystore:
 keytool -genkey -v -keystore command-comms.keystore -alias command-comms -keyalg RSA -keysize 2048 -validity 10000
 ```
 
-## Inrico T320 — Screen-Off PTT Setup
+## Inrico T320 — Device Setup
 
-### How It Works
-
-The T320 firmware broadcasts system-wide intents when the hardware PTT button (keycode 230) is pressed:
-- `android.intent.action.PTT.down` — button pressed
-- `android.intent.action.PTT.up` — button released
-
-This is the same mechanism Zello uses for PTT with the screen off. `PttBroadcastReceiver.java` listens for these broadcasts and:
-1. Wakes the screen via a FULL_WAKE_LOCK with ACQUIRE_CAUSES_WAKEUP
-2. Brings MainActivity to the foreground
-3. Forwards the key event to HardwarePttPlugin which triggers PTT in the WebView
-
-The receiver is registered in two ways for maximum reliability:
-- **Static** (AndroidManifest.xml `<receiver>`) — works even if the app process has been killed
-- **Dynamic** (BackgroundAudioService.java) — higher priority delivery while service is running
-
-### Required T320 Device Settings
-
-1. **Duraspeed must be OFF**
-   - Go to: Settings → Battery → Duraspeed
-   - Toggle OFF, or whitelist Command Comms
-   - If Duraspeed is ON, Android kills the app when the screen turns off
-
-2. **Battery Optimization disabled for Command Comms**
-   - The app prompts for this automatically on first launch
-   - If missed: Settings → Battery → Battery Optimization → All Apps → Command Comms → Don't optimize
-
-3. **PTT Button Mode** (if available in T320 settings)
-   - Set to "Open" or "Broadcast" mode, not "Zello-only"
-   - Some T320 firmware versions lock PTT to Zello — update firmware if needed
-
-### Files Added for T320 Support
-
-| File | Purpose |
-|---|---|
-| `PttBroadcastReceiver.java` | Catches PTT.down/PTT.up broadcasts even with screen off |
-| `BackgroundAudioService.java` | Dynamically registers the receiver + CPU wake lock |
-| `AndroidManifest.xml` | Static receiver declaration + `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` permission |
-| `MainActivity.java` | Battery optimization exemption prompt on first launch |
+1. **Duraspeed must be OFF** — Settings → Battery → Duraspeed → disable for COMMAND COMMS
+2. **Battery optimization exempt** — Requested automatically on first launch
+3. **PTT key code**: 230 (Inrico T320 hardware PTT button)
+4. **Firmware broadcasts**: `android.intent.action.PTT.down` / `android.intent.action.PTT.up`
 
 ### Copy Commands
 
@@ -271,6 +318,8 @@ The receiver is registered in two ways for maximum reliability:
 cp android-app/android-config/PttBroadcastReceiver.java android/app/src/main/java/com/reedersystems/commandcomms/
 cp android-app/android-config/BackgroundAudioService.java android/app/src/main/java/com/reedersystems/commandcomms/
 cp android-app/android-config/MainActivity.java android/app/src/main/java/com/reedersystems/commandcomms/
+cp android-app/android-config/HardwarePttPlugin.java android/app/src/main/java/com/reedersystems/commandcomms/
+cp android-app/android-config/LiveKitPlugin.kt android/app/src/main/java/com/reedersystems/commandcomms/
 cp android-app/android-config/AndroidManifest.xml android/app/src/main/AndroidManifest.xml
 ```
 
@@ -279,3 +328,4 @@ cp android-app/android-config/AndroidManifest.xml android/app/src/main/AndroidMa
 1. Enable USB debugging on Android device
 2. Connect via USB
 3. Run `npx cap run android` or build APK in Android Studio
+4. Use `adb logcat -s PTT-DIAG` to verify PTT chain

@@ -26,8 +26,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class MainActivity extends BridgeActivity {
-    
+
     private static final String TAG = "CommandComms";
+    private static final String DIAG_TAG = "PTT-DIAG";
     private static final int PERMISSION_REQUEST_CODE = 1001;
     private static final int BACKGROUND_LOCATION_REQUEST_CODE = 1002;
 
@@ -37,16 +38,16 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(DndOverridePlugin.class);
         registerPlugin(LiveKitPlugin.class);
         registerPlugin(BackgroundServicePlugin.class);
-        
+
         super.onCreate(savedInstanceState);
-        
+
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        
+
         new Handler(Looper.getMainLooper()).postDelayed(() -> {
             requestAllPermissions();
         }, 500);
     }
-    
+
     private void requestAllPermissions() {
         List<String> permissionsNeeded = new ArrayList<>();
 
@@ -89,7 +90,7 @@ public class MainActivity extends BridgeActivity {
             requestBatteryOptimizationExemption();
         }
     }
-    
+
     private void requestBackgroundLocationIfNeeded() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
@@ -103,7 +104,7 @@ public class MainActivity extends BridgeActivity {
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        
+
         if (requestCode == PERMISSION_REQUEST_CODE) {
             for (int i = 0; i < permissions.length; i++) {
                 String permission = permissions[i];
@@ -136,43 +137,37 @@ public class MainActivity extends BridgeActivity {
             }
         }
     }
-    
+
     private void configureWebViewForWebRTC() {
         WebView webView = this.bridge.getWebView();
         WebSettings settings = webView.getSettings();
-        
-        // CRITICAL: Allow media playback without user gesture (required for LiveKit audio)
+
         settings.setMediaPlaybackRequiresUserGesture(false);
-        
-        // Enable JavaScript and DOM storage (should already be enabled by Capacitor, but explicit)
+
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
-        
-        // Allow mixed content (http in https) if needed
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
         }
-        
+
         Log.d(TAG, "WebView configured for WebRTC: mediaPlaybackRequiresUserGesture=false");
-        
-        // Configure WebChromeClient to grant WebRTC permissions
+
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
             public void onPermissionRequest(final PermissionRequest request) {
                 Log.d(TAG, "WebView permission request received");
-                // Grant audio and video capture permissions for WebRTC
                 runOnUiThread(() -> {
                     String[] requestedResources = request.getResources();
                     for (String resource : requestedResources) {
                         Log.d(TAG, "Requested resource: " + resource);
-                        if (resource.equals(PermissionRequest.RESOURCE_AUDIO_CAPTURE) || 
+                        if (resource.equals(PermissionRequest.RESOURCE_AUDIO_CAPTURE) ||
                             resource.equals(PermissionRequest.RESOURCE_VIDEO_CAPTURE)) {
                             Log.d(TAG, "Granting WebRTC permission");
                             request.grant(request.getResources());
                             return;
                         }
                     }
-                    // If not audio/video, deny the request
                     Log.d(TAG, "Denying non-audio/video permission request");
                     request.deny();
                 });
@@ -291,36 +286,59 @@ public class MainActivity extends BridgeActivity {
         int action = event.getAction();
 
         if (isT320Key(keyCode)) {
+            Log.d(DIAG_TAG, "MainActivity.dispatchKeyEvent() — keyCode=" + keyCode
+                + " action=" + (action == KeyEvent.ACTION_DOWN ? "DOWN" : "UP")
+                + " screenOff=" + isScreenOff);
+
             if (action == KeyEvent.ACTION_DOWN) {
                 wakeScreen();
             }
             keepWebViewAlive();
         }
 
-        HardwarePttPlugin pttPlugin = HardwarePttPlugin.getInstance();
-        if (pttPlugin != null && keyCode == KEY_PTT) {
-            if (isScreenOff) {
-                WebView webView = this.bridge.getWebView();
-                if (webView != null) {
-                    webView.postDelayed(() -> pttPlugin.handleKeyEvent(event), 50);
+        if (keyCode == KEY_PTT) {
+            Log.d(DIAG_TAG, "MainActivity — PTT key detected, forwarding to service+plugin");
+
+            BackgroundAudioService service = BackgroundAudioService.getInstance();
+            if (service != null) {
+                if (action == KeyEvent.ACTION_DOWN) {
+                    service.handlePttDown();
+                } else if (action == KeyEvent.ACTION_UP) {
+                    service.handlePttUp();
                 }
+                Log.d(DIAG_TAG, "MainActivity — PTT forwarded to BackgroundAudioService");
             } else {
-                pttPlugin.handleKeyEvent(event);
+                Log.d(DIAG_TAG, "MainActivity — BackgroundAudioService not available");
+            }
+
+            HardwarePttPlugin pttPlugin = HardwarePttPlugin.getInstance();
+            if (pttPlugin != null) {
+                if (isScreenOff) {
+                    WebView webView = this.bridge.getWebView();
+                    if (webView != null) {
+                        webView.postDelayed(() -> pttPlugin.handleKeyEvent(event), 50);
+                    }
+                } else {
+                    pttPlugin.handleKeyEvent(event);
+                }
+                Log.d(DIAG_TAG, "MainActivity — PTT forwarded to HardwarePttPlugin (UI sync)");
             }
         }
 
         if (isT320Key(keyCode)) {
-            if (isScreenOff) {
-                if (action == KeyEvent.ACTION_DOWN) {
-                    injectJsKeyEventDelayed(keyCode, "keydown", 50);
-                } else if (action == KeyEvent.ACTION_UP) {
-                    injectJsKeyEventDelayed(keyCode, "keyup", 50);
-                }
-            } else {
-                if (action == KeyEvent.ACTION_DOWN) {
-                    injectJsKeyEvent(keyCode, "keydown");
-                } else if (action == KeyEvent.ACTION_UP) {
-                    injectJsKeyEvent(keyCode, "keyup");
+            if (keyCode != KEY_PTT) {
+                if (isScreenOff) {
+                    if (action == KeyEvent.ACTION_DOWN) {
+                        injectJsKeyEventDelayed(keyCode, "keydown", 50);
+                    } else if (action == KeyEvent.ACTION_UP) {
+                        injectJsKeyEventDelayed(keyCode, "keyup", 50);
+                    }
+                } else {
+                    if (action == KeyEvent.ACTION_DOWN) {
+                        injectJsKeyEvent(keyCode, "keydown");
+                    } else if (action == KeyEvent.ACTION_UP) {
+                        injectJsKeyEvent(keyCode, "keyup");
+                    }
                 }
             }
             return true;

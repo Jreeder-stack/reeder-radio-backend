@@ -7,6 +7,7 @@ import locationRouter from './locationRouter.js';
 import messagesRouter from './messagesRouter.js';
 import cadRouter from './cadRouter.js';
 import unitRouter from './unitRouter.js';
+import pttRouter from './pttRoutes.js';
 
 export function setupRoutes(app) {
   app.use('/api/auth', authRouter);
@@ -17,4 +18,5 @@ export function setupRoutes(app) {
   app.use('/api/messages', messagesRouter);
   app.use('/api/cad', cadRouter);
   app.use('/api/unit', unitRouter);
+  app.use('/api/ptt', pttRouter);
 }

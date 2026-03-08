@@ -1,47 +1,32 @@
 package com.reedersystems.commandcomms;
 
 import android.view.KeyEvent;
-import android.webkit.WebView;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 import com.getcapacitor.JSObject;
+import android.util.Log;
 
-/**
- * Capacitor plugin for hardware PTT key capture.
- * 
- * This plugin allows the web app to receive hardware key events from:
- * - Volume buttons
- * - Bluetooth PTT accessories  
- * - Media buttons on headsets
- * 
- * Installation:
- * 1. Copy this file to android/app/src/main/java/com/reedersystems/commandcomms/
- * 2. Register plugin in MainActivity.java
- * 3. Configure key codes in app settings
- */
 @CapacitorPlugin(name = "HardwarePtt")
 public class HardwarePttPlugin extends Plugin {
 
+    private static final String TAG = "PTT-DIAG";
     private static HardwarePttPlugin instance;
-    private int pttKeyCode = 230; // Inrico T320 PTT button = keycode 230
+    private int pttKeyCode = 230;
     private boolean isPttPressed = false;
 
     @Override
     public void load() {
         instance = this;
         super.load();
+        Log.d(TAG, "HardwarePttPlugin loaded (instance set)");
     }
 
     public static HardwarePttPlugin getInstance() {
         return instance;
     }
 
-    /**
-     * Set the key code to use for PTT
-     * Called from JavaScript when user configures PTT key in settings
-     */
     @PluginMethod
     public void setPttKeyCode(PluginCall call) {
         Integer keyCode = call.getInt("keyCode");
@@ -56,9 +41,6 @@ public class HardwarePttPlugin extends Plugin {
         }
     }
 
-    /**
-     * Get current PTT key code
-     */
     @PluginMethod
     public void getPttKeyCode(PluginCall call) {
         JSObject ret = new JSObject();
@@ -66,9 +48,6 @@ public class HardwarePttPlugin extends Plugin {
         call.resolve(ret);
     }
 
-    /**
-     * Check if PTT is currently pressed
-     */
     @PluginMethod
     public void isPttPressed(PluginCall call) {
         JSObject ret = new JSObject();
@@ -76,44 +55,73 @@ public class HardwarePttPlugin extends Plugin {
         call.resolve(ret);
     }
 
-    /**
-     * Called from MainActivity when a key event occurs
-     * Returns true if the key was handled (is PTT key)
-     */
     public boolean handleKeyEvent(KeyEvent event) {
         if (event.getKeyCode() != pttKeyCode) {
             return false;
         }
 
         int action = event.getAction();
-        
+        Log.d(TAG, "HardwarePttPlugin.handleKeyEvent() — keyCode=" + event.getKeyCode()
+            + " action=" + (action == KeyEvent.ACTION_DOWN ? "DOWN" : "UP")
+            + " isPttPressed=" + isPttPressed);
+
         if (action == KeyEvent.ACTION_DOWN && !isPttPressed) {
             isPttPressed = true;
-            notifyPttState(true);
+
+            BackgroundAudioService service = BackgroundAudioService.getInstance();
+            if (service != null) {
+                Log.d(TAG, "HardwarePttPlugin — forwarding DOWN to BackgroundAudioService");
+                service.handlePttDown();
+            } else {
+                Log.d(TAG, "HardwarePttPlugin — BackgroundAudioService not available, notifying JS only");
+            }
+
+            notifyPttStateToJs(true);
             return true;
         } else if (action == KeyEvent.ACTION_UP && isPttPressed) {
             isPttPressed = false;
-            notifyPttState(false);
+
+            BackgroundAudioService service = BackgroundAudioService.getInstance();
+            if (service != null) {
+                Log.d(TAG, "HardwarePttPlugin — forwarding UP to BackgroundAudioService");
+                service.handlePttUp();
+            } else {
+                Log.d(TAG, "HardwarePttPlugin — BackgroundAudioService not available, notifying JS only");
+            }
+
+            notifyPttStateToJs(false);
             return true;
         }
-        
-        return true; // Consume the event even if no state change
+
+        return true;
     }
 
-    /**
-     * Notify the web app of PTT state change
-     */
-    private void notifyPttState(boolean pressed) {
-        JSObject data = new JSObject();
-        data.put("pressed", pressed);
-        data.put("keyCode", pttKeyCode);
+    public void notifyPttStateFromService(boolean pressed) {
+        isPttPressed = pressed;
+        Log.d(TAG, "HardwarePttPlugin.notifyPttStateFromService(" + pressed + ") — syncing UI");
+        notifyPttStateToJs(pressed);
+    }
 
-        if (getActivity() != null) {
-            getActivity().runOnUiThread(() -> {
-                notifyListeners(pressed ? "pttDown" : "pttUp", data);
-            });
-        } else {
-            notifyListeners(pressed ? "pttDown" : "pttUp", data);
+    private void notifyPttStateToJs(boolean pressed) {
+        try {
+            JSObject data = new JSObject();
+            data.put("pressed", pressed);
+            data.put("keyCode", pttKeyCode);
+
+            if (getActivity() != null) {
+                getActivity().runOnUiThread(() -> {
+                    try {
+                        notifyListeners(pressed ? "pttDown" : "pttUp", data);
+                        Log.d(TAG, "HardwarePttPlugin — JS notified: " + (pressed ? "pttDown" : "pttUp"));
+                    } catch (Exception e) {
+                        Log.d(TAG, "HardwarePttPlugin — JS notify failed (non-blocking): " + e.getMessage());
+                    }
+                });
+            } else {
+                Log.d(TAG, "HardwarePttPlugin — no Activity, JS notify skipped");
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "HardwarePttPlugin — notifyPttStateToJs failed (non-blocking): " + e.getMessage());
         }
     }
 }
