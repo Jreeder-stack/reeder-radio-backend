@@ -56,9 +56,12 @@ if exist "%CONFIG_DIR%\res\mipmap-anydpi-v26\ic_launcher.xml" (
 echo.
 echo [3/5] Copying splash and foreground drawables...
 if not exist "%RES_DIR%\drawable" mkdir "%RES_DIR%\drawable"
-if exist "%RES_DIR%\drawable\splash.png" (
-    del /Q "%RES_DIR%\drawable\splash.png"
+del /F /Q "%RES_DIR%\drawable\splash.png" 2>nul
+if not exist "%RES_DIR%\drawable\splash.png" (
     echo   -^> Removed default splash.png (conflicts with splash.xml)
+) else (
+    echo   WARNING: Could not delete splash.png - delete it manually!
+    echo   Path: %RES_DIR%\drawable\splash.png
 )
 for %%f in (ic_splash.png splash.xml ic_launcher_foreground.png) do (
     if exist "%CONFIG_DIR%\res\drawable\%%f" (
