@@ -116,48 +116,24 @@ npx cap add android
 npx cap sync android
 ```
 
-### 4. Copy custom icons and splash resources (IMPORTANT)
+### 4. Apply native configuration (IMPORTANT — run after every `cap sync`)
 
-After `cap sync`, the `android/app/src/main/res/` directory contains **default Capacitor icons** (orange squares). You must overwrite them with the custom Command Comms icons:
+Run the setup script to copy all native source files, icons, splash screen, notification icons, adaptive icons, and the manifest into the Android project:
 
 ```bash
 # From the android-app directory:
-
-# Copy launcher icons (app icon on home screen and app drawer)
-cp android-config/res/mipmap-mdpi/ic_launcher.png android/app/src/main/res/mipmap-mdpi/ic_launcher.png
-cp android-config/res/mipmap-mdpi/ic_launcher_round.png android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png
-cp android-config/res/mipmap-hdpi/ic_launcher.png android/app/src/main/res/mipmap-hdpi/ic_launcher.png
-cp android-config/res/mipmap-hdpi/ic_launcher_round.png android/app/src/main/res/mipmap-hdpi/ic_launcher_round.png
-cp android-config/res/mipmap-xhdpi/ic_launcher.png android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
-cp android-config/res/mipmap-xhdpi/ic_launcher_round.png android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png
-cp android-config/res/mipmap-xxhdpi/ic_launcher.png android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
-cp android-config/res/mipmap-xxhdpi/ic_launcher_round.png android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
-cp android-config/res/mipmap-xxxhdpi/ic_launcher.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
-cp android-config/res/mipmap-xxxhdpi/ic_launcher_round.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
-
-# Copy splash screen icon
-cp android-config/res/drawable/ic_splash.png android/app/src/main/res/drawable/ic_splash.png
-cp android-config/res/drawable/splash.xml android/app/src/main/res/drawable/splash.xml
-
-# Copy notification icons (for foreground service)
-mkdir -p android/app/src/main/res/drawable-mdpi
-mkdir -p android/app/src/main/res/drawable-hdpi
-mkdir -p android/app/src/main/res/drawable-xhdpi
-mkdir -p android/app/src/main/res/drawable-xxhdpi
-cp android-config/res/drawable-mdpi/ic_stat_icon.png android/app/src/main/res/drawable-mdpi/ic_stat_icon.png
-cp android-config/res/drawable-hdpi/ic_stat_icon.png android/app/src/main/res/drawable-hdpi/ic_stat_icon.png
-cp android-config/res/drawable-xhdpi/ic_stat_icon.png android/app/src/main/res/drawable-xhdpi/ic_stat_icon.png
-cp android-config/res/drawable-xxhdpi/ic_stat_icon.png android/app/src/main/res/drawable-xxhdpi/ic_stat_icon.png
-
-# Copy adaptive icon resources (Android 8+ / API 26+)
-mkdir -p android/app/src/main/res/mipmap-anydpi-v26
-cp android-config/res/mipmap-anydpi-v26/ic_launcher.xml android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
-cp android-config/res/mipmap-anydpi-v26/ic_launcher_round.xml android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
-cp android-config/res/drawable/ic_launcher_foreground.png android/app/src/main/res/drawable/ic_launcher_foreground.png
-cp android-config/res/values/ic_launcher_background.xml android/app/src/main/res/values/ic_launcher_background.xml
+./setup-android.sh
 ```
 
-**If you skip this step, the APK will show the default Capacitor orange icon instead of the Command Comms shield icon.**
+This script copies:
+- All Java/Kotlin native plugins (BackgroundAudioService, LiveKitPlugin, HardwarePttPlugin, etc.)
+- Custom launcher icons (shield design) replacing default Capacitor icons
+- Adaptive icon resources for Android 8+
+- Splash screen drawable
+- Foreground service notification icons
+- AndroidManifest.xml with all required permissions and service declarations
+
+**If you skip this step, the APK will use default Capacitor icons and lack native PTT functionality.**
 
 ### 5. Open in Android Studio
 ```bash
