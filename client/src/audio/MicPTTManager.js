@@ -4,9 +4,12 @@ import { playPermitTone, startBonkLoop, stopBonkLoop } from './talkPermitTone.js
 import { unlockAudio } from './iosAudioUnlock.js';
 import { processRadioVoice, cleanup as cleanupRadioDSP } from './radioVoiceDSP.js';
 import { acquireWakeLock, releaseWakeLock } from '../plugins/backgroundService.js';
+import { isNativeLiveKitAvailable, nativeEnableMic, nativeDisableMic } from '../plugins/nativeLiveKit.js';
 
 const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || 
   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+const isNativeAndroid = () => isNativeLiveKitAvailable();
 
 const PERMIT_TONE_DURATION = 150;
 
@@ -276,6 +279,10 @@ class MicPTTManager {
       return false;
     }
 
+    if (isNativeAndroid()) {
+      return this._startNative();
+    }
+
     unlockAudio();
     
     acquireWakeLock().catch(e => console.warn('[MicPTT] Wake lock acquire failed:', e));
@@ -417,6 +424,48 @@ class MicPTTManager {
     }
   }
 
+  async _startNative() {
+    acquireWakeLock().catch(e => console.warn('[MicPTT] Native wake lock acquire failed:', e));
+
+    this.transitionLock = true;
+    this.pendingStop = false;
+
+    try {
+      this._setState(PTT_STATES.ARMING);
+      playPermitTone();
+      console.log('[MicPTT] Native PTT: enabling mic via native plugin');
+
+      const success = await nativeEnableMic();
+      if (!success) {
+        console.error('[MicPTT] Native enableMicrophone failed');
+        startBonkLoop();
+        this.transitionLock = false;
+        this._setState(PTT_STATES.BUSY);
+        return false;
+      }
+
+      if (this.pendingStop) {
+        console.log('[MicPTT] Native: stop requested during enable - disabling');
+        await nativeDisableMic();
+        this._setState(PTT_STATES.IDLE);
+        this.transitionLock = false;
+        return false;
+      }
+
+      stopBonkLoop();
+      this._setState(PTT_STATES.TRANSMITTING);
+      this.transitionLock = false;
+      console.log('[MicPTT] Native transmission active');
+      return true;
+
+    } catch (err) {
+      console.error('[MicPTT] Native start error:', err);
+      this.transitionLock = false;
+      this._setState(PTT_STATES.IDLE);
+      return false;
+    }
+  }
+
   async stop() {
     console.log(`[MicPTT] Stop requested - state: ${this.state}`);
 
@@ -443,13 +492,34 @@ class MicPTTManager {
       return;
     }
 
+    if (isNativeAndroid()) {
+      return this._doStopNative();
+    }
+
     await this._doStop();
+  }
+
+  async _doStopNative() {
+    this._setState(PTT_STATES.COOLDOWN);
+
+    try {
+      console.log('[MicPTT] Native PTT: disabling mic');
+      await nativeDisableMic();
+    } catch (err) {
+      console.error('[MicPTT] Native stop error:', err);
+    } finally {
+      this.pendingStop = false;
+      this.transitionLock = false;
+      this.lastPttEndTime = Date.now();
+      this._setState(PTT_STATES.IDLE);
+      releaseWakeLock().catch(e => console.warn('[MicPTT] Native wake lock release failed:', e));
+      console.log('[MicPTT] Native transmission ended');
+    }
   }
 
   async _doStop() {
     this._setState(PTT_STATES.COOLDOWN);
 
-    // Remove room listeners immediately to prevent duplicate cleanup
     this._removeRoomListeners();
 
     try {

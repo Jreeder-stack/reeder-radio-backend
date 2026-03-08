@@ -1,11 +1,14 @@
 import { Room, RoomEvent, Track, DataPacket_Kind } from 'livekit-client';
 import { getToken, notifyChannelJoin } from '../utils/api.js';
 import { micPTTManager, PTT_STATES } from './MicPTTManager.js';
+import { isNativeLiveKitAvailable, nativeConnect, nativeDisconnect, updateServiceConnectionInfo } from '../plugins/nativeLiveKit.js';
 
 const LIVEKIT_URL = import.meta.env.VITE_LIVEKIT_URL;
 
 const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || 
   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+const isNativeAndroid = () => isNativeLiveKitAvailable();
 
 class LiveKitManager {
   constructor() {
@@ -461,6 +464,10 @@ class LiveKitManager {
   async _doConnect(channelName, identity) {
     console.log(`[LiveKit] Connecting to ${channelName} as ${identity}...`);
 
+    if (isNativeAndroid()) {
+      return this._doConnectNative(channelName, identity);
+    }
+
     const room = new Room({
       adaptiveStream: true,
       dynacast: true,
@@ -500,6 +507,70 @@ class LiveKitManager {
       this._emitConnectionStateChange(channelName, 'failed', err);
       throw err;
     }
+  }
+
+  async _doConnectNative(channelName, identity) {
+    console.log(`[LiveKit] Native Android connect to ${channelName} as ${identity}`);
+
+    try {
+      const token = await getToken(identity, channelName);
+
+      const success = await nativeConnect(LIVEKIT_URL, token, channelName);
+      if (!success) {
+        throw new Error('Native LiveKit connect returned false');
+      }
+
+      const serverBaseUrl = window.location.origin;
+      updateServiceConnectionInfo(serverBaseUrl, identity, channelName);
+
+      const nativeRoom = this._createNativeRoomProxy(channelName, identity);
+      this.rooms.set(channelName, nativeRoom);
+
+      console.log(`[LiveKit] Native connected to ${channelName}`);
+
+      notifyChannelJoin(channelName, identity);
+      this._recordActivity(channelName);
+      this._emitConnectionStateChange(channelName, 'connected');
+
+      return nativeRoom;
+    } catch (err) {
+      console.error(`[LiveKit] Native connect failed for ${channelName}:`, err);
+      this._cleanupChannel(channelName);
+      this._emitConnectionStateChange(channelName, 'failed', err);
+      throw err;
+    }
+  }
+
+  _createNativeRoomProxy(channelName, identity) {
+    const self = this;
+    const proxy = {
+      _isNativeProxy: true,
+      _channelName: channelName,
+      state: 'connected',
+      localParticipant: {
+        identity: identity,
+        publishTrack: async () => {
+          console.log('[LiveKit] Native proxy: publishTrack called (handled natively)');
+          return { track: { sid: 'native-track' } };
+        },
+        unpublishTrack: async () => {
+          console.log('[LiveKit] Native proxy: unpublishTrack called (handled natively)');
+        }
+      },
+      on: () => {},
+      off: () => {},
+      disconnect: async () => {
+        console.log(`[LiveKit] Native proxy: disconnect ${channelName}`);
+        proxy.state = 'disconnected';
+        await nativeDisconnect();
+        self._cleanupChannel(channelName);
+        self._emitConnectionStateChange(channelName, 'disconnected');
+      },
+      removeAllListeners: () => {},
+      participants: new Map(),
+      numParticipants: 0
+    };
+    return proxy;
   }
 
   _setupRoomEventHandlers(room, channelName) {

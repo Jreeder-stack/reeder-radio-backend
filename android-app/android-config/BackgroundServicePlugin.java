@@ -120,4 +120,20 @@ public class BackgroundServicePlugin extends Plugin {
         ret.put("running", BackgroundAudioService.isRunning);
         call.resolve(ret);
     }
+
+    @PluginMethod
+    public void updateConnectionInfo(PluginCall call) {
+        String serverBaseUrl = call.getString("serverBaseUrl");
+        String unitId = call.getString("unitId");
+        String channelId = call.getString("channelId");
+
+        BackgroundAudioService service = BackgroundAudioService.getInstance();
+        if (service != null) {
+            service.setConnectionInfo(serverBaseUrl, unitId, channelId);
+        }
+
+        JSObject ret = new JSObject();
+        ret.put("success", true);
+        call.resolve(ret);
+    }
 }
