@@ -1,5 +1,9 @@
 import { Router } from 'express';
+import { AccessToken } from 'livekit-server-sdk';
 import { signalingService } from '../services/signalingService.js';
+
+const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY;
+const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET;
 
 const router = Router();
 
@@ -118,6 +122,50 @@ router.post('/end', (req, res) => {
   } catch (err) {
     console.error('[PTT-HTTP] Error on ptt/end:', err);
     res.status(500).json({ error: 'Internal error' });
+  }
+});
+
+router.get('/token', async (req, res) => {
+  const { identity, room } = req.query;
+
+  if (!identity || !room) {
+    return res.status(400).json({ error: 'identity and room are required' });
+  }
+
+  const presence = signalingService.unitPresence?.get(identity);
+  if (!presence) {
+    console.warn(`[PTT-HTTP] Token request rejected: unknown unit "${identity}"`);
+    return res.status(403).json({ error: 'Unit not authenticated with signaling' });
+  }
+
+  if (presence.channel !== room) {
+    console.warn(`[PTT-HTTP] Token request rejected: unit "${identity}" on channel "${presence.channel}" but requested "${room}"`);
+    return res.status(403).json({ error: 'Unit not assigned to requested channel' });
+  }
+
+  if (!LIVEKIT_API_KEY || !LIVEKIT_API_SECRET) {
+    return res.status(500).json({ error: 'LiveKit credentials not configured' });
+  }
+
+  try {
+    const at = new AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET, {
+      identity: identity,
+      ttl: '1h',
+    });
+
+    at.addGrant({
+      roomJoin: true,
+      room: room,
+      canPublish: true,
+      canSubscribe: true,
+    });
+
+    const token = await at.toJwt();
+    console.log(`[PTT-HTTP] Service token issued for ${identity} on ${room}`);
+    res.json({ token });
+  } catch (err) {
+    console.error('[PTT-HTTP] Token generation failed:', err);
+    res.status(500).json({ error: 'Failed to generate token' });
   }
 });
 

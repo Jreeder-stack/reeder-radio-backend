@@ -70,6 +70,61 @@ class LiveKitPlugin : Plugin() {
     fun isMicTransmitting(): Boolean = isMicEnabledState
     fun getActiveChannel(): String? = currentChannelName
 
+    fun connectFromService(url: String, token: String, channelName: String): Boolean {
+        Log.d(DIAG_TAG, "connectFromService() — url=$url channel=$channelName")
+        
+        if (isConnectedState && room != null) {
+            Log.d(DIAG_TAG, "connectFromService() — already connected to ${currentChannelName}, skipping")
+            return true
+        }
+
+        try {
+            val appContext = try {
+                context
+            } catch (e: Exception) {
+                Log.e(DIAG_TAG, "connectFromService() — context not available: ${e.message}")
+                return false
+            }
+            
+            pluginScope.launch {
+                try {
+                    room?.let {
+                        Log.d(DIAG_TAG, "connectFromService() — disconnecting from previous room")
+                        it.disconnect()
+                    }
+                    room = null
+
+                    configureAudioForSpeaker()
+
+                    val newRoom = LiveKit.create(appContext)
+                    currentChannelName = channelName
+
+                    launch {
+                        setupRoomListeners(newRoom)
+                    }
+
+                    Log.d(DIAG_TAG, "connectFromService() — calling room.connect()...")
+                    newRoom.connect(url, token)
+                    Log.d(DIAG_TAG, "connectFromService() — room.connect() completed successfully")
+
+                    room = newRoom
+                    isConnectedState = true
+
+                    Log.d(DIAG_TAG, "connectFromService() SUCCESS — LiveKit CONNECTED to room: $channelName")
+
+                } catch (e: Exception) {
+                    Log.e(DIAG_TAG, "connectFromService() FAILED — ${e.message}", e)
+                    isConnectedState = false
+                }
+            }
+
+            return true
+        } catch (e: Exception) {
+            Log.e(DIAG_TAG, "connectFromService() — error launching coroutine: ${e.message}", e)
+            return false
+        }
+    }
+
     fun startTransmit(): Boolean {
         val currentRoom = room
         Log.d(DIAG_TAG, "startTransmit() called — connected=$isConnectedState, room=${currentRoom != null}, channel=$currentChannelName")

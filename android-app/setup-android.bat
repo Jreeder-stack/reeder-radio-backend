@@ -1,5 +1,5 @@
 @echo off
-setlocal
+setlocal enabledelayedexpansion
 
 set "ANDROID_DIR=%~dp0android"
 set "CONFIG_DIR=%~dp0android-config"
@@ -20,7 +20,7 @@ echo.
 
 if not exist "%JAVA_DIR%" mkdir "%JAVA_DIR%"
 
-echo [1/5] Copying native source files...
+echo [1/6] Copying native source files...
 for %%f in (BackgroundAudioService.java BackgroundServicePlugin.java BootReceiver.java DndOverridePlugin.java HardwarePttPlugin.java PttBroadcastReceiver.java MainActivity.java) do (
     if exist "%CONFIG_DIR%\%%f" (
         copy /Y "%CONFIG_DIR%\%%f" "%JAVA_DIR%\%%f" >nul
@@ -35,13 +35,14 @@ for %%f in (LiveKitPlugin.kt RadioVoiceDSP.kt) do (
 )
 
 echo.
-echo [2/5] Copying launcher icons...
+echo [2/6] Copying launcher icons...
 for %%d in (mdpi hdpi xhdpi xxhdpi xxxhdpi) do (
     if not exist "%RES_DIR%\mipmap-%%d" mkdir "%RES_DIR%\mipmap-%%d"
-    for %%i in (ic_launcher.png ic_launcher_round.png) do (
-        if exist "%CONFIG_DIR%\res\mipmap-%%d\%%i" (
-            copy /Y "%CONFIG_DIR%\res\mipmap-%%d\%%i" "%RES_DIR%\mipmap-%%d\%%i" >nul
-        )
+    if exist "%CONFIG_DIR%\res\mipmap-%%d\ic_launcher.png" (
+        copy /Y "%CONFIG_DIR%\res\mipmap-%%d\ic_launcher.png" "%RES_DIR%\mipmap-%%d\ic_launcher.png" >nul
+    )
+    if exist "%CONFIG_DIR%\res\mipmap-%%d\ic_launcher_round.png" (
+        copy /Y "%CONFIG_DIR%\res\mipmap-%%d\ic_launcher_round.png" "%RES_DIR%\mipmap-%%d\ic_launcher_round.png" >nul
     )
     echo   -^> mipmap-%%d
 )
@@ -54,7 +55,7 @@ if exist "%CONFIG_DIR%\res\mipmap-anydpi-v26\ic_launcher.xml" (
 )
 
 echo.
-echo [3/5] Copying splash and foreground drawables...
+echo [3/6] Copying splash and foreground drawables...
 if not exist "%RES_DIR%\drawable" mkdir "%RES_DIR%\drawable"
 del /F /Q "%RES_DIR%\drawable\splash.png" 2>nul
 if not exist "%RES_DIR%\drawable\splash.png" (
@@ -63,15 +64,21 @@ if not exist "%RES_DIR%\drawable\splash.png" (
     echo   WARNING: Could not delete splash.png - delete it manually!
     echo   Path: %RES_DIR%\drawable\splash.png
 )
-for %%f in (ic_splash.png splash.xml ic_launcher_foreground.png) do (
-    if exist "%CONFIG_DIR%\res\drawable\%%f" (
-        copy /Y "%CONFIG_DIR%\res\drawable\%%f" "%RES_DIR%\drawable\%%f" >nul
-        echo   -^> drawable\%%f
-    )
+if exist "%CONFIG_DIR%\res\drawable\ic_splash.png" (
+    copy /Y "%CONFIG_DIR%\res\drawable\ic_splash.png" "%RES_DIR%\drawable\ic_splash.png" >nul
+    echo   -^> drawable\ic_splash.png
+)
+if exist "%CONFIG_DIR%\res\drawable\splash.xml" (
+    copy /Y "%CONFIG_DIR%\res\drawable\splash.xml" "%RES_DIR%\drawable\splash.xml" >nul
+    echo   -^> drawable\splash.xml
+)
+if exist "%CONFIG_DIR%\res\drawable\ic_launcher_foreground.png" (
+    copy /Y "%CONFIG_DIR%\res\drawable\ic_launcher_foreground.png" "%RES_DIR%\drawable\ic_launcher_foreground.png" >nul
+    echo   -^> drawable\ic_launcher_foreground.png
 )
 
 echo.
-echo [4/5] Copying notification icons...
+echo [4/6] Copying notification icons...
 for %%d in (mdpi hdpi xhdpi xxhdpi) do (
     if not exist "%RES_DIR%\drawable-%%d" mkdir "%RES_DIR%\drawable-%%d"
     if exist "%CONFIG_DIR%\res\drawable-%%d\ic_stat_icon.png" (
@@ -81,13 +88,15 @@ for %%d in (mdpi hdpi xhdpi xxhdpi) do (
 )
 
 echo.
-echo [5/5] Copying values and manifest...
+echo [5/6] Copying values and manifest...
 if not exist "%RES_DIR%\values" mkdir "%RES_DIR%\values"
-for %%f in (ic_launcher_background.xml colors.xml) do (
-    if exist "%CONFIG_DIR%\res\values\%%f" (
-        copy /Y "%CONFIG_DIR%\res\values\%%f" "%RES_DIR%\values\%%f" >nul
-        echo   -^> values\%%f
-    )
+if exist "%CONFIG_DIR%\res\values\ic_launcher_background.xml" (
+    copy /Y "%CONFIG_DIR%\res\values\ic_launcher_background.xml" "%RES_DIR%\values\ic_launcher_background.xml" >nul
+    echo   -^> values\ic_launcher_background.xml
+)
+if exist "%CONFIG_DIR%\res\values\colors.xml" (
+    copy /Y "%CONFIG_DIR%\res\values\colors.xml" "%RES_DIR%\values\colors.xml" >nul
+    echo   -^> values\colors.xml
 )
 
 if exist "%CONFIG_DIR%\AndroidManifest.xml" (
@@ -96,7 +105,44 @@ if exist "%CONFIG_DIR%\AndroidManifest.xml" (
 )
 
 echo.
+echo [6/6] Verifying icon files...
+set "VERIFY_OK=1"
+for %%d in (mdpi hdpi xhdpi xxhdpi xxxhdpi) do (
+    if exist "%RES_DIR%\mipmap-%%d\ic_launcher.png" (
+        for %%F in ("%RES_DIR%\mipmap-%%d\ic_launcher.png") do (
+            if %%~zF LSS 1000 (
+                echo   WARNING: mipmap-%%d\ic_launcher.png is too small (%%~zF bytes) - may be default!
+                set "VERIFY_OK=0"
+            ) else (
+                echo   OK: mipmap-%%d\ic_launcher.png (%%~zF bytes)
+            )
+        )
+    ) else (
+        echo   MISSING: mipmap-%%d\ic_launcher.png
+        set "VERIFY_OK=0"
+    )
+)
+if exist "%RES_DIR%\drawable\ic_launcher_foreground.png" (
+    for %%F in ("%RES_DIR%\drawable\ic_launcher_foreground.png") do (
+        echo   OK: drawable\ic_launcher_foreground.png (%%~zF bytes)
+    )
+) else (
+    echo   MISSING: drawable\ic_launcher_foreground.png
+    set "VERIFY_OK=0"
+)
+if "!VERIFY_OK!"=="1" (
+    echo   All icons verified successfully.
+) else (
+    echo   WARNING: Some icons may not have been copied correctly!
+)
+
+echo.
 echo === Setup complete ===
+echo.
+echo IMPORTANT: If updating an existing install on the device,
+echo UNINSTALL the old app first to clear the cached icon.
+echo   adb uninstall com.reedersystems.commandcomms
+echo.
 echo Open in Android Studio: npx cap open android
 echo Build APK: Build ^> Build Bundle(s) / APK(s) ^> Build APK(s)
 

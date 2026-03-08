@@ -7,6 +7,7 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
@@ -16,9 +17,13 @@ import android.util.Log;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+
+import org.json.JSONObject;
 
 public class BackgroundAudioService extends Service {
 
@@ -27,6 +32,12 @@ public class BackgroundAudioService extends Service {
     private static final String CHANNEL_ID = "command_comms_channel";
     private static final int NOTIFICATION_ID = 1001;
     private static final long KEEPALIVE_INTERVAL_MS = 30000;
+    private static final String PREFS_NAME = "CommandCommsServicePrefs";
+    private static final String PREF_SERVER_URL = "server_base_url";
+    private static final String PREF_UNIT_ID = "unit_id";
+    private static final String PREF_CHANNEL_ID = "channel_id";
+    private static final String PREF_LIVEKIT_URL = "livekit_url";
+    private static final String PREF_CHANNEL_NAME = "channel_name";
 
     public static final String EXTRA_PTT_ACTION = "ptt_action";
     public static final String PTT_ACTION_DOWN = "down";
@@ -51,6 +62,10 @@ public class BackgroundAudioService extends Service {
     private String serverBaseUrl = null;
     private String currentUnitId = null;
     private String currentChannelId = null;
+    private String livekitUrl = null;
+    private String currentChannelName = null;
+
+    private volatile boolean isReconnecting = false;
 
     @Override
     public void onCreate() {
@@ -59,6 +74,8 @@ public class BackgroundAudioService extends Service {
         createNotificationChannel();
         isRunning = true;
         Log.d(DIAG_TAG, "BackgroundAudioService CREATED — instance set, isRunning=true");
+
+        restoreConnectionInfo();
 
         PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
         if (pm != null) {
@@ -190,7 +207,51 @@ public class BackgroundAudioService extends Service {
         this.serverBaseUrl = baseUrl;
         this.currentUnitId = unitId;
         this.currentChannelId = channelId;
-        Log.d(DIAG_TAG, "Connection info set: url=" + baseUrl + " unit=" + unitId + " channel=" + channelId);
+        persistConnectionInfo();
+        Log.d(DIAG_TAG, "Connection info set and persisted: url=" + baseUrl + " unit=" + unitId + " channel=" + channelId);
+    }
+
+    public void setLiveKitInfo(String lkUrl, String channelName) {
+        this.livekitUrl = lkUrl;
+        this.currentChannelName = channelName;
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        prefs.edit()
+            .putString(PREF_LIVEKIT_URL, lkUrl)
+            .putString(PREF_CHANNEL_NAME, channelName)
+            .apply();
+        Log.d(DIAG_TAG, "LiveKit info persisted: lkUrl=" + lkUrl + " channelName=" + channelName);
+    }
+
+    private void persistConnectionInfo() {
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        SharedPreferences.Editor editor = prefs.edit();
+        if (serverBaseUrl != null) editor.putString(PREF_SERVER_URL, serverBaseUrl);
+        if (currentUnitId != null) editor.putString(PREF_UNIT_ID, currentUnitId);
+        if (currentChannelId != null) editor.putString(PREF_CHANNEL_ID, currentChannelId);
+        editor.apply();
+        Log.d(DIAG_TAG, "Connection info persisted to SharedPreferences");
+    }
+
+    private void restoreConnectionInfo() {
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        if (serverBaseUrl == null) {
+            serverBaseUrl = prefs.getString(PREF_SERVER_URL, null);
+        }
+        if (currentUnitId == null) {
+            currentUnitId = prefs.getString(PREF_UNIT_ID, null);
+        }
+        if (currentChannelId == null) {
+            currentChannelId = prefs.getString(PREF_CHANNEL_ID, null);
+        }
+        if (livekitUrl == null) {
+            livekitUrl = prefs.getString(PREF_LIVEKIT_URL, null);
+        }
+        if (currentChannelName == null) {
+            currentChannelName = prefs.getString(PREF_CHANNEL_NAME, null);
+        }
+        Log.d(DIAG_TAG, "Connection info restored from SharedPreferences: url=" + serverBaseUrl
+            + " unit=" + currentUnitId + " channel=" + currentChannelId
+            + " lkUrl=" + livekitUrl + " channelName=" + currentChannelName);
     }
 
     public synchronized void handlePttDown() {
@@ -211,8 +272,25 @@ public class BackgroundAudioService extends Service {
             + " connected=" + lkConnected + " channel=" + lkChannel + " micActive=" + lkMic);
 
         if (!lkConnected) {
-            Log.w(DIAG_TAG, "handlePttDown() BLOCKED — LiveKit not connected, cannot start TX");
-            Log.w(DIAG_TAG, "handlePttDown() — This means NativeLiveKit.connect() was never called from JS, or the connection dropped");
+            Log.w(DIAG_TAG, "handlePttDown() — LiveKit not connected, launching async auto-reconnect...");
+            final LiveKitPlugin finalLkPlugin = lkPlugin;
+            pttState = PttState.TRANSMITTING;
+            sendPttSignaling("start");
+            new Thread(() -> {
+                boolean reconnected = attemptAutoReconnect(finalLkPlugin);
+                if (reconnected) {
+                    LiveKitPlugin reconnectedPlugin = LiveKitPlugin.getInstance();
+                    if (reconnectedPlugin != null && reconnectedPlugin.isRoomConnected()) {
+                        boolean txResult = reconnectedPlugin.startTransmit();
+                        Log.d(DIAG_TAG, "handlePttDown() async-reconnect — startTransmit() result=" + txResult);
+                        notifyUiPttState(true);
+                    } else {
+                        Log.w(DIAG_TAG, "handlePttDown() async-reconnect — still not connected after attempt");
+                    }
+                } else {
+                    Log.w(DIAG_TAG, "handlePttDown() async-reconnect — reconnect failed");
+                }
+            }).start();
             return;
         }
 
@@ -226,6 +304,99 @@ public class BackgroundAudioService extends Service {
 
         notifyUiPttState(true);
         Log.d(DIAG_TAG, "handlePttDown() — COMPLETE (tx=" + txResult + ")");
+    }
+
+    private boolean attemptAutoReconnect(LiveKitPlugin lkPlugin) {
+        if (isReconnecting) {
+            Log.d(DIAG_TAG, "attemptAutoReconnect() — already in progress, skipping");
+            return false;
+        }
+
+        if (livekitUrl == null || serverBaseUrl == null || currentUnitId == null || currentChannelName == null) {
+            Log.w(DIAG_TAG, "attemptAutoReconnect() — missing info: lkUrl=" + livekitUrl
+                + " serverUrl=" + serverBaseUrl + " unitId=" + currentUnitId + " channelName=" + currentChannelName);
+            return false;
+        }
+
+        if (lkPlugin == null) {
+            Log.w(DIAG_TAG, "attemptAutoReconnect() — LiveKitPlugin instance is null, cannot reconnect");
+            return false;
+        }
+
+        isReconnecting = true;
+        Log.d(DIAG_TAG, "attemptAutoReconnect() — fetching token from server for unit=" + currentUnitId + " channel=" + currentChannelName);
+
+        try {
+            String token = fetchTokenFromServer(currentUnitId, currentChannelName);
+            if (token == null) {
+                Log.w(DIAG_TAG, "attemptAutoReconnect() — failed to fetch token from server");
+                isReconnecting = false;
+                return false;
+            }
+
+            Log.d(DIAG_TAG, "attemptAutoReconnect() — token received, calling connectFromService()");
+            boolean connected = lkPlugin.connectFromService(livekitUrl, token, currentChannelName);
+            Log.d(DIAG_TAG, "attemptAutoReconnect() — connectFromService() result=" + connected);
+
+            if (connected) {
+                int waitAttempts = 0;
+                while (!lkPlugin.isRoomConnected() && waitAttempts < 30) {
+                    Thread.sleep(100);
+                    waitAttempts++;
+                }
+                boolean finalConnected = lkPlugin.isRoomConnected();
+                Log.d(DIAG_TAG, "attemptAutoReconnect() — waited " + (waitAttempts * 100) + "ms, connected=" + finalConnected);
+                isReconnecting = false;
+                return finalConnected;
+            }
+
+            isReconnecting = false;
+            return false;
+
+        } catch (Exception e) {
+            Log.e(DIAG_TAG, "attemptAutoReconnect() FAILED: " + e.getMessage(), e);
+            isReconnecting = false;
+            return false;
+        }
+    }
+
+    private String fetchTokenFromServer(String identity, String channelName) {
+        try {
+            String endpoint = serverBaseUrl + "/api/ptt/token?identity=" +
+                java.net.URLEncoder.encode(identity, "UTF-8") +
+                "&room=" + java.net.URLEncoder.encode(channelName, "UTF-8");
+            URL url = new URL(endpoint);
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+            conn.setConnectTimeout(5000);
+            conn.setReadTimeout(5000);
+
+            int responseCode = conn.getResponseCode();
+            Log.d(DIAG_TAG, "fetchTokenFromServer() — HTTP " + responseCode);
+
+            if (responseCode == 200) {
+                BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                StringBuilder response = new StringBuilder();
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    response.append(line);
+                }
+                reader.close();
+                conn.disconnect();
+
+                JSONObject json = new JSONObject(response.toString());
+                String token = json.optString("token", null);
+                Log.d(DIAG_TAG, "fetchTokenFromServer() — token " + (token != null ? "received" : "MISSING from response"));
+                return token;
+            } else {
+                Log.w(DIAG_TAG, "fetchTokenFromServer() — HTTP error " + responseCode);
+                conn.disconnect();
+                return null;
+            }
+        } catch (Exception e) {
+            Log.e(DIAG_TAG, "fetchTokenFromServer() FAILED: " + e.getMessage());
+            return null;
+        }
     }
 
     public synchronized void handlePttUp() {

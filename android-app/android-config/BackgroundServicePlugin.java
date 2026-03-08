@@ -2,8 +2,10 @@ package com.reedersystems.commandcomms;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.PowerManager;
+import android.util.Log;
 
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
@@ -11,29 +13,11 @@ import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 
-/**
- * Capacitor plugin to control background service and wake locks.
- * 
- * This plugin allows JavaScript to:
- * - Start/stop the foreground service for background audio
- * - Acquire/release wake locks to prevent CPU sleep during PTT
- * 
- * Installation:
- * 1. Copy to android/app/src/main/java/com/reedersystems/commandcomms/
- * 2. Register in MainActivity.java (see README.md)
- * 
- * JavaScript usage:
- *   import { Plugins } from '@capacitor/core';
- *   const { BackgroundService } = Plugins;
- *   
- *   await BackgroundService.startService();
- *   await BackgroundService.stopService();
- *   await BackgroundService.acquireWakeLock();
- *   await BackgroundService.releaseWakeLock();
- */
 @CapacitorPlugin(name = "BackgroundService")
 public class BackgroundServicePlugin extends Plugin {
 
+    private static final String TAG = "PTT-DIAG";
+    private static final String PREFS_NAME = "CommandCommsServicePrefs";
     private PowerManager.WakeLock wakeLock;
     private static final String WAKE_LOCK_TAG = "CommandComms::PTTWakeLock";
 
@@ -86,7 +70,7 @@ public class BackgroundServicePlugin extends Plugin {
             }
             
             if (!wakeLock.isHeld()) {
-                wakeLock.acquire(10 * 60 * 1000L); // 10 minutes max
+                wakeLock.acquire(10 * 60 * 1000L);
             }
             
             JSObject ret = new JSObject();
@@ -126,10 +110,30 @@ public class BackgroundServicePlugin extends Plugin {
         String serverBaseUrl = call.getString("serverBaseUrl");
         String unitId = call.getString("unitId");
         String channelId = call.getString("channelId");
+        String livekitUrl = call.getString("livekitUrl");
+        String channelName = call.getString("channelName");
+
+        Log.d(TAG, "updateConnectionInfo() — serverUrl=" + serverBaseUrl + " unit=" + unitId
+            + " channel=" + channelId + " lkUrl=" + livekitUrl + " channelName=" + channelName);
+
+        SharedPreferences prefs = getContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = prefs.edit();
+        if (serverBaseUrl != null) editor.putString("server_base_url", serverBaseUrl);
+        if (unitId != null) editor.putString("unit_id", unitId);
+        if (channelId != null) editor.putString("channel_id", channelId);
+        if (livekitUrl != null) editor.putString("livekit_url", livekitUrl);
+        if (channelName != null) editor.putString("channel_name", channelName);
+        editor.apply();
+        Log.d(TAG, "updateConnectionInfo() — persisted to SharedPreferences");
 
         BackgroundAudioService service = BackgroundAudioService.getInstance();
         if (service != null) {
             service.setConnectionInfo(serverBaseUrl, unitId, channelId);
+            if (livekitUrl != null && channelName != null) {
+                service.setLiveKitInfo(livekitUrl, channelName);
+            }
+        } else {
+            Log.d(TAG, "updateConnectionInfo() — service not running, info saved to prefs only");
         }
 
         JSObject ret = new JSObject();

@@ -116,7 +116,7 @@ function getBackgroundService() {
   return _BackgroundService;
 }
 
-export async function updateServiceConnectionInfo(serverBaseUrl, unitId, channelId) {
+export async function updateServiceConnectionInfo(serverBaseUrl, unitId, channelId, livekitUrl, channelName) {
   if (!isNative) return;
   const svc = getBackgroundService();
   if (!svc) return;
@@ -132,8 +132,8 @@ export async function updateServiceConnectionInfo(serverBaseUrl, unitId, channel
       await svc.startService();
     }
 
-    await svc.updateConnectionInfo({ serverBaseUrl, unitId, channelId });
-    console.log('[NativeLiveKit] Service connection info updated:', { serverBaseUrl, unitId, channelId });
+    await svc.updateConnectionInfo({ serverBaseUrl, unitId, channelId, livekitUrl, channelName });
+    console.log('[PTT-DIAG] [JS] Service connection info updated:', { serverBaseUrl, unitId, channelId, livekitUrl, channelName });
   } catch (e) {
     console.warn('[NativeLiveKit] Failed to update service connection info:', e);
   }

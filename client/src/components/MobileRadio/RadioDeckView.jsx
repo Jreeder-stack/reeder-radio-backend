@@ -260,8 +260,9 @@ export function RadioDeckView({ user, onLogout }) {
 
     const serverBaseUrl = window.location.origin;
     const txChannel = transmitChannelRef.current;
-    console.log('[PTT-DIAG] [JS] Passing early connection info to service: unit=' + identity + ' channel=' + txChannel + ' server=' + serverBaseUrl);
-    updateServiceConnectionInfo(serverBaseUrl, identity, txChannel || '');
+    const livekitUrl = import.meta.env.VITE_LIVEKIT_URL || '';
+    console.log('[PTT-DIAG] [JS] Passing early connection info to service: unit=' + identity + ' channel=' + txChannel + ' server=' + serverBaseUrl + ' lkUrl=' + livekitUrl);
+    updateServiceConnectionInfo(serverBaseUrl, identity, txChannel || '', livekitUrl, txChannel || '');
     
     return () => {
       stopBackgroundService().catch(err => {

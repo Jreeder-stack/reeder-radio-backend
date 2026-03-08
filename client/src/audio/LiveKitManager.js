@@ -525,8 +525,8 @@ class LiveKitManager {
       }
 
       const serverBaseUrl = window.location.origin;
-      console.log('[PTT-DIAG] [JS] _doConnectNative() — updating service connection info: server=' + serverBaseUrl + ' unit=' + identity + ' channel=' + channelName);
-      updateServiceConnectionInfo(serverBaseUrl, identity, channelName);
+      console.log('[PTT-DIAG] [JS] _doConnectNative() — updating service connection info: server=' + serverBaseUrl + ' unit=' + identity + ' channel=' + channelName + ' lkUrl=' + LIVEKIT_URL);
+      updateServiceConnectionInfo(serverBaseUrl, identity, channelName, LIVEKIT_URL, channelName);
 
       const nativeRoom = this._createNativeRoomProxy(channelName, identity);
       this.rooms.set(channelName, nativeRoom);
