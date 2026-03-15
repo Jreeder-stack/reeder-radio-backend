@@ -276,12 +276,13 @@ class AIDispatcher {
     this.room = null;
     this.roomName = null;
     this.isRunning = false;
-    this.isMuted = false;
     this.humanParticipantCount = 0;
     this.disconnectTimer = null;
     this.configuredChannel = null;
     this.emergencyEscalation = new EmergencyEscalationController(this);
     this.handledTrackSids = new Set();
+    this.errorCounts = new Map();
+    this.errorCooldowns = new Map();
   }
 
   log(action, details = {}) {
@@ -316,7 +317,8 @@ class AIDispatcher {
     this.configuredChannel = roomKey || channelName;
     this.displayChannel = channelName;
     this.isRunning = true;
-    this.isMuted = false;
+    this.errorCounts.clear();
+    this.errorCooldowns.clear();
     
     if (cadService.isConfigured()) {
       cadService.getCallNatures().catch(err => {
@@ -467,6 +469,8 @@ class AIDispatcher {
     });
 
     room.on(RoomEvent.ParticipantDisconnected, (participant) => {
+      this.errorCounts.delete(participant.identity);
+      this.errorCooldowns.delete(participant.identity);
       if (this.isHumanParticipant(participant.identity)) {
         this.humanParticipantCount = Math.max(0, this.humanParticipantCount - 1);
         this.log('PARTICIPANT_LEFT', { 
@@ -681,13 +685,11 @@ class AIDispatcher {
   }
 
   async shouldRespond() {
-    if (this.isMuted) return false;
     if (!this.isRunning) return false;
     try {
       return await isAiDispatchEnabled();
     } catch (error) {
       this.log('TOGGLE_CHECK_ERROR', { error: error.message });
-      this.isMuted = true;
       return false;
     }
   }
@@ -695,8 +697,19 @@ class AIDispatcher {
   async processAudio(audioBuffer, roomName, room, participantId) {
     try {
       if (!await this.shouldRespond()) {
-        this.log('PROCESS_SKIPPED', { reason: 'Disabled or muted' });
+        this.log('PROCESS_SKIPPED', { reason: 'Disabled' });
         return;
+      }
+
+      const consecutiveErrors = this.errorCounts.get(participantId) || 0;
+      if (consecutiveErrors >= 5) {
+        const cooldownUntil = this.errorCooldowns.get(participantId) || 0;
+        const now = Date.now();
+        if (now < cooldownUntil) {
+          this.log('PROCESS_SKIPPED', { reason: 'Error cooldown active', participant: participantId, consecutiveErrors, cooldownRemainingMs: cooldownUntil - now });
+          return;
+        }
+        this.log('PROCESS_RETRY', { reason: 'Cooldown expired, retrying', participant: participantId, consecutiveErrors });
       }
 
       this.log('AUDIO_PROCESSING', { bytes: audioBuffer.length, room: roomName, participant: participantId });
@@ -710,6 +723,10 @@ class AIDispatcher {
       }
 
       this.log('STT_RESULT', { transcript, participant: participantId });
+
+      if (this.errorCounts.has(participantId)) {
+        this.errorCounts.delete(participantId);
+      }
 
       if (this.emergencyEscalation.hasActiveEscalation(participantId)) {
         const emergencyResponse = matchEmergencyResponse(transcript);
@@ -749,9 +766,14 @@ class AIDispatcher {
       }
 
     } catch (error) {
-      this.log('PROCESS_ERROR', { error: error.message });
-      this.isMuted = true;
-      await this.stop();
+      const count = (this.errorCounts.get(participantId) || 0) + 1;
+      this.errorCounts.set(participantId, count);
+      this.log('PROCESS_ERROR', { error: error.message, participant: participantId, consecutiveErrors: count });
+      if (count >= 5) {
+        const cooldownMs = Math.min(30000, 10000 * Math.floor(count / 5));
+        this.errorCooldowns.set(participantId, Date.now() + cooldownMs);
+        this.log('PROCESS_ERROR_COOLDOWN', { participant: participantId, cooldownMs, consecutiveErrors: count });
+      }
     }
   }
 
@@ -2086,7 +2108,6 @@ class AIDispatcher {
 
     } catch (error) {
       this.log('PUBLISH_ERROR', { error: error.message });
-      this.isMuted = true;
     } finally {
       if (publication && room.localParticipant) {
         try {
