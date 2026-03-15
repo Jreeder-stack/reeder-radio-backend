@@ -283,6 +283,7 @@ class AIDispatcher {
     this.handledTrackSids = new Set();
     this.errorCounts = new Map();
     this.errorCooldowns = new Map();
+    this.stoppedByUser = false;
   }
 
   log(action, details = {}) {
@@ -317,6 +318,7 @@ class AIDispatcher {
     this.configuredChannel = roomKey || channelName;
     this.displayChannel = channelName;
     this.isRunning = true;
+    this.stoppedByUser = false;
     this.errorCounts.clear();
     this.errorCooldowns.clear();
     
@@ -348,6 +350,7 @@ class AIDispatcher {
   async stop() {
     this.log('STOPPING', { room: this.roomName });
     this.isRunning = false;
+    this.stoppedByUser = true;
     this.clearDisconnectTimer();
     this.emergencyEscalation.clearAllEscalations();
     resetDispatcherState();
@@ -404,7 +407,7 @@ class AIDispatcher {
   }
 
   async rejoinIfNeeded() {
-    if (this.room || !this.isRunning || !this.configuredChannel) {
+    if (this.room || !this.isRunning || this.stoppedByUser || !this.configuredChannel) {
       return;
     }
 
