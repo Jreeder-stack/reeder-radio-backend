@@ -102,6 +102,37 @@ public class HardwarePttPlugin extends Plugin {
         notifyPttStateToJs(pressed);
     }
 
+    public void notifySideButton1FromService(boolean pressed) {
+        Log.d(TAG, "HardwarePttPlugin.notifySideButton1FromService(" + pressed + ")");
+        notifyButtonEventToJs(pressed ? "sideButton1Down" : "sideButton1Up");
+    }
+
+    public void notifySideButton2FromService(boolean pressed) {
+        Log.d(TAG, "HardwarePttPlugin.notifySideButton2FromService(" + pressed + ")");
+        notifyButtonEventToJs(pressed ? "sideButton2Down" : "sideButton2Up");
+    }
+
+    private void notifyButtonEventToJs(String eventName) {
+        try {
+            JSObject data = new JSObject();
+            data.put("event", eventName);
+            if (getActivity() != null) {
+                getActivity().runOnUiThread(() -> {
+                    try {
+                        notifyListeners(eventName, data);
+                        Log.d(TAG, "HardwarePttPlugin — JS notified: " + eventName);
+                    } catch (Exception e) {
+                        Log.d(TAG, "HardwarePttPlugin — JS notify failed (non-blocking): " + e.getMessage());
+                    }
+                });
+            } else {
+                Log.d(TAG, "HardwarePttPlugin — no Activity, JS notify skipped for: " + eventName);
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "HardwarePttPlugin — notifyButtonEventToJs failed (non-blocking): " + e.getMessage());
+        }
+    }
+
     private void notifyPttStateToJs(boolean pressed) {
         try {
             JSObject data = new JSObject();

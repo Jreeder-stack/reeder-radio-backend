@@ -1,0 +1,143 @@
+1. Change the wording about AccessibilityService
+
+Do not describe AccessibilityService as the “only valid” background-capable interception path. That is too absolute and may not hold across all devices or Android builds.
+
+Replace that language with:
+
+PttAccessibilityService is the preferred stock-Android background-capable key interception path to try first on the Inrico T320. It must be implemented as the primary capture path for this device, but the app should log whether key events are actually received there and not assume universal support without verification.
+
+2. Make service communication lifecycle-safe
+
+Do not directly call instance methods on BackgroundAudioService from PttAccessibilityService unless the service is properly bound and the lifecycle is guaranteed safe.
+
+Revise the plan so PttAccessibilityService communicates button events to BackgroundAudioService through a lifecycle-safe command path, preferably:
+
+explicit Intent actions sent to the foreground service, or
+
+another safe IPC pattern already used in the app
+
+Add this requirement:
+
+PttAccessibilityService must not assume direct in-memory access to a live BackgroundAudioService instance unless the service is explicitly bound and reference management is safe. Prefer command-style Intents for button DOWN and UP events.
+
+3. Add duplicate-event suppression across sources
+
+We will now have at least two possible capture sources:
+
+MainActivity.dispatchKeyEvent()
+
+PttAccessibilityService.onKeyEvent()
+
+If both fire while the app is visible, the same press could be processed twice. Add a required duplicate suppression rule.
+
+Add this requirement:
+
+When PttAccessibilityService is enabled, it is the primary key capture source. MainActivity dispatchKeyEvent remains as a fallback. The app must suppress duplicate processing of the same key press/release across sources using source tagging, held-state tracking, and a short duplicate window.
+
+Acceptance criteria must include:
+
+no double PTT DOWN
+
+no double PTT UP
+
+no duplicate side-button events when both Activity and AccessibilityService observe the same press
+
+4. Make orange-button mapping observation-based
+
+Do not assume the final Android framework keycode for the orange side button purely from the Linux getevent name KEY_SELECT.
+
+Revise this part to say:
+
+The orange side button was observed at the Linux input layer as KEY_SELECT. In PttAccessibilityService, log the actual Android framework keycode received on this exact device and use that observed code as primary. Keep alternate mappings such as KEYCODE_BUTTON_SELECT and KEYCODE_DPAD_CENTER only as fallbacks until device verification is complete.
+
+5. Strengthen press/release state handling
+
+The plan currently mentions ignoring repeated DOWN while held. Expand that and make it explicit.
+
+Add this requirement:
+
+Implement per-button held-state booleans for PTT, side button 1, and side button 2. Process only the first DOWN when a button transitions from released to pressed, and only the first UP when it transitions from pressed to released. Ignore duplicate DOWN events, duplicate UP events, and repeated key events while held. Also inspect event.getRepeatCount() where applicable and do not retrigger actions from repeat events.
+
+6. Make notification spam debug-only or configurable
+
+Do not require the persistent foreground notification to change on every key event in normal production behavior.
+
+Revise this requirement to:
+
+In debug mode or when a diagnostic flag is enabled, the persistent notification may include the last captured event source and action for field testing. In normal production mode, keep notification updates minimal and stable.
+
+7. Add startup and resume diagnostics
+
+Add required diagnostic logging on startup and resume.
+
+Add this requirement:
+
+At app startup and on Activity resume, log:
+
+whether PttAccessibilityService is enabled
+
+whether BackgroundAudioService is running
+
+which key capture source is active
+
+the last key event received
+
+the current PTT held-state
+
+This is required for field troubleshooting.
+
+8. Make the accessibility prompt one-time and non-spammy
+
+The current plan says to prompt on onResume() if the service is not enabled. That is fine, but it must not nag repeatedly.
+
+Revise that task to require:
+
+the prompt is shown only once per install, or until the service is enabled
+
+it must not display every time onResume fires
+
+if the user later enables the service, future prompts must stop automatically
+
+9. Update task wording for service/event flow
+
+Revise the PttAccessibilityService task so it no longer implies direct service method calls.
+
+Replace the task language with something like:
+
+Create PttAccessibilityService.java — AccessibilityService requesting FLAG_REQUEST_FILTER_KEY_EVENTS. On each onKeyEvent() callback, log the raw framework keycode, action, source, repeat count, and timestamp. For PTT and side-button keycodes, implement per-button press/release state tracking and forward lifecycle-safe command Intents to BackgroundAudioService for DOWN and UP events. Consume handled keys by returning true. Track last-seen button event for diagnostics.
+
+10. Add acceptance criteria for source priority and duplicate suppression
+
+Add the following acceptance criteria:
+
+When AccessibilityService is enabled, it becomes the primary key input source.
+
+Activity-level handling remains available as fallback only.
+
+The same button press is never processed twice when both sources are active.
+
+Logs clearly indicate which source captured each processed event and whether any duplicate event was ignored.
+
+11. Preserve the confirmed device facts
+
+Keep these device facts in the plan and do not re-diagnose them:
+
+Inrico T320 generates real key events at the Android input layer
+
+PTT was observed as KEY_F11 at the Linux input layer
+
+Black side button was observed as KEY_F1
+
+Orange side button was observed as KEY_SELECT
+
+These events were observed when the app was not visible
+
+These events were observed when the screen was off
+
+Therefore the hardware/kernel path is working and the bug is in app-level event handling
+
+12. Revised implementation intent
+
+Please update the plan summary to reflect this exact intent:
+
+We are not fixing firmware. We are not fixing LiveKit. We are fixing app-level hardware key capture by moving radio button handling out of the focused Activity/UI path and into a native background-capable capture path, with AccessibilityService as the preferred primary source and the foreground audio/PTT service as the owner of button state.

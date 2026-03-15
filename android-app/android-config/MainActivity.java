@@ -1,9 +1,13 @@
 package com.reedersystems.commandcomms;
 
 import android.Manifest;
+import android.accessibilityservice.AccessibilityServiceInfo;
+import android.app.AlertDialog;
 import android.app.KeyguardManager;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
@@ -15,6 +19,7 @@ import android.provider.Settings;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.WindowManager;
+import android.view.accessibility.AccessibilityManager;
 import android.webkit.PermissionRequest;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
@@ -194,6 +199,7 @@ public class MainActivity extends BridgeActivity {
         });
     }
 
+    // Legacy T320 keycodes (original mappings, kept as fallback)
     private static final int KEY_PTT = 230;
     private static final int KEY_ACC = 231;
     private static final int KEY_EMERGENCY = 233;
@@ -202,6 +208,20 @@ public class MainActivity extends BridgeActivity {
     private static final int KEY_DPAD_LEFT = 21;
     private static final int KEY_DPAD_RIGHT = 22;
     private static final int KEY_STAR = 17;
+
+    // Confirmed Linux-to-Android keycode mappings from adb getevent -l on T320
+    private static final int KEY_PTT_F11         = KeyEvent.KEYCODE_F11;           // 141 — PTT primary
+    private static final int KEY_SIDE1_F1        = KeyEvent.KEYCODE_F1;            // 131 — black side button
+    private static final int KEY_SIDE2_SELECT    = KeyEvent.KEYCODE_BUTTON_SELECT; // 109 — orange side button (verify on device)
+    private static final int KEY_SIDE2_DPAD_CTR  = KeyEvent.KEYCODE_DPAD_CENTER;   // 23  — orange fallback
+
+    private static final String PREFS_MAIN = "CommandCommsMainPrefs";
+    private static final String PREF_ACCESSIBILITY_PROMPTED = "accessibility_prompted";
+
+    // Per-button held-state for Activity-side handling (fallback when AccessibilityService is off)
+    private boolean activityPttHeld   = false;
+    private boolean activitySide1Held = false;
+    private boolean activitySide2Held = false;
 
     private PowerManager.WakeLock screenWakeLock;
     private Handler jsKeepaliveHandler;
@@ -232,10 +252,105 @@ public class MainActivity extends BridgeActivity {
     }
 
     private boolean isT320Key(int keyCode) {
-        return keyCode == KEY_PTT || keyCode == KEY_ACC || keyCode == KEY_EMERGENCY
+        return keyCode == KEY_PTT || keyCode == KEY_PTT_F11
+            || keyCode == KEY_ACC || keyCode == KEY_EMERGENCY
+            || keyCode == KEY_SIDE1_F1
+            || keyCode == KEY_SIDE2_SELECT || keyCode == KEY_SIDE2_DPAD_CTR
             || keyCode == KEY_DPAD_UP || keyCode == KEY_DPAD_DOWN
             || keyCode == KEY_DPAD_LEFT || keyCode == KEY_DPAD_RIGHT
             || keyCode == KEY_STAR;
+    }
+
+    private boolean isPttKey(int keyCode) {
+        return keyCode == KEY_PTT || keyCode == KEY_PTT_F11;
+    }
+
+    private boolean isSide1Key(int keyCode) {
+        return keyCode == KEY_SIDE1_F1;
+    }
+
+    private boolean isSide2Key(int keyCode) {
+        return keyCode == KEY_SIDE2_SELECT || keyCode == KEY_SIDE2_DPAD_CTR;
+    }
+
+    private boolean isAccessibilityServiceEnabled() {
+        try {
+            AccessibilityManager am = (AccessibilityManager) getSystemService(Context.ACCESSIBILITY_SERVICE);
+            if (am == null) return false;
+            List<AccessibilityServiceInfo> enabled =
+                am.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_ALL_MASK);
+            String targetClass = PttAccessibilityService.class.getName();
+            for (AccessibilityServiceInfo info : enabled) {
+                if (info.getResolveInfo() != null) {
+                    String svcClass = info.getResolveInfo().serviceInfo.name;
+                    if (targetClass.equals(svcClass)) return true;
+                }
+            }
+        } catch (Exception e) {
+            Log.w(DIAG_TAG, "isAccessibilityServiceEnabled check failed: " + e.getMessage());
+        }
+        return false;
+    }
+
+    private void logResumeDiagnostics() {
+        boolean a11yEnabled = isAccessibilityServiceEnabled();
+        boolean svcRunning  = BackgroundAudioService.isRunning;
+        BackgroundAudioService svc = BackgroundAudioService.getInstance();
+        PttAccessibilityService a11ySvc = PttAccessibilityService.getInstance();
+
+        Log.d(DIAG_TAG, "=== RESUME DIAGNOSTICS ===");
+        Log.d(DIAG_TAG, "  AccessibilityService enabled : " + a11yEnabled);
+        Log.d(DIAG_TAG, "  BackgroundAudioService running: " + svcRunning);
+        Log.d(DIAG_TAG, "  Active capture source        : " + (a11yEnabled ? "AccessibilityService (primary)" : "Activity (fallback)"));
+        if (svc != null) {
+            Log.d(DIAG_TAG, "  Service debug               : " + svc.getDebugSummary());
+        }
+        if (a11ySvc != null) {
+            Log.d(DIAG_TAG, "  A11y last code/action       : " + a11ySvc.getLastCode() + "/" + a11ySvc.getLastAction());
+            Log.d(DIAG_TAG, "  A11y PTT held               : " + a11ySvc.isPttHeld());
+        }
+        Log.d(DIAG_TAG, "  Activity PTT held           : " + activityPttHeld);
+        Log.d(DIAG_TAG, "==========================");
+    }
+
+    private void promptAccessibilityServiceIfNeeded() {
+        SharedPreferences prefs = getSharedPreferences(PREFS_MAIN, Context.MODE_PRIVATE);
+        boolean prompted = prefs.getBoolean(PREF_ACCESSIBILITY_PROMPTED, false);
+
+        if (isAccessibilityServiceEnabled()) {
+            // Service is enabled — clear the flag so prompt resets if user later disables it
+            if (prompted) {
+                prefs.edit().putBoolean(PREF_ACCESSIBILITY_PROMPTED, false).apply();
+            }
+            return;
+        }
+
+        if (prompted) {
+            // Already shown once, do not spam
+            return;
+        }
+
+        // Show once per install (until enabled)
+        prefs.edit().putBoolean(PREF_ACCESSIBILITY_PROMPTED, true).apply();
+
+        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+            try {
+                new AlertDialog.Builder(this)
+                    .setTitle("Enable Background PTT")
+                    .setMessage("To use the PTT button when Command Comms is in the background or the screen is off, enable the \"Command Comms PTT\" accessibility service.\n\nSettings > Accessibility > Command Comms PTT")
+                    .setPositiveButton("Open Settings", (dialog, which) -> {
+                        try {
+                            startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
+                        } catch (Exception e) {
+                            Log.w(TAG, "Could not open accessibility settings: " + e.getMessage());
+                        }
+                    })
+                    .setNegativeButton("Not Now", null)
+                    .show();
+            } catch (Exception e) {
+                Log.w(TAG, "Could not show accessibility dialog: " + e.getMessage());
+            }
+        }, 1500);
     }
 
     private void wakeScreen() {
@@ -312,12 +427,15 @@ public class MainActivity extends BridgeActivity {
 
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
-        int keyCode = event.getKeyCode();
-        int action = event.getAction();
+        int    keyCode    = event.getKeyCode();
+        int    action     = event.getAction();
+        int    repeat     = event.getRepeatCount();
+        String actionStr  = (action == KeyEvent.ACTION_DOWN) ? "DOWN" : "UP";
 
         if (isT320Key(keyCode)) {
             Log.d(DIAG_TAG, "MainActivity.dispatchKeyEvent() — keyCode=" + keyCode
-                + " action=" + (action == KeyEvent.ACTION_DOWN ? "DOWN" : "UP")
+                + " action=" + actionStr
+                + " repeat=" + repeat
                 + " screenOff=" + isScreenOff);
             Log.d(DIAG_TAG, getPttStateSummary());
 
@@ -327,54 +445,111 @@ public class MainActivity extends BridgeActivity {
             keepWebViewAlive();
         }
 
-        if (keyCode == KEY_PTT) {
-            Log.d(DIAG_TAG, "MainActivity — PTT key (230) detected, action=" + (action == KeyEvent.ACTION_DOWN ? "DOWN" : "UP"));
+        // --- PTT key handling ---
+        if (isPttKey(keyCode)) {
+            boolean a11yActive = PttAccessibilityService.isRunning();
 
-            BackgroundAudioService service = BackgroundAudioService.getInstance();
-            if (service != null) {
-                if (action == KeyEvent.ACTION_DOWN) {
-                    Log.d(DIAG_TAG, "MainActivity — calling service.handlePttDown()");
-                    service.handlePttDown();
-                } else if (action == KeyEvent.ACTION_UP) {
-                    Log.d(DIAG_TAG, "MainActivity — calling service.handlePttUp()");
-                    service.handlePttUp();
-                }
-                Log.d(DIAG_TAG, "MainActivity — PTT forwarded to BackgroundAudioService OK");
-            } else {
-                Log.w(DIAG_TAG, "MainActivity — BackgroundAudioService instance is NULL, cannot forward PTT");
-            }
-
-            HardwarePttPlugin pttPlugin = HardwarePttPlugin.getInstance();
-            if (pttPlugin != null) {
-                if (isScreenOff) {
-                    WebView webView = this.bridge.getWebView();
-                    if (webView != null) {
-                        webView.postDelayed(() -> pttPlugin.handleKeyEvent(event), 50);
-                    }
-                } else {
+            if (a11yActive) {
+                // AccessibilityService is primary — Activity is fallback only.
+                // Skip processing here to avoid duplicate PTT events.
+                Log.d(DIAG_TAG, "MainActivity — PTT key=" + keyCode + " action=" + actionStr
+                    + " SUPPRESSED (AccessibilityService is primary)");
+                // Still sync UI via HardwarePttPlugin so React display stays consistent
+                HardwarePttPlugin pttPlugin = HardwarePttPlugin.getInstance();
+                if (pttPlugin != null) {
                     pttPlugin.handleKeyEvent(event);
                 }
-                Log.d(DIAG_TAG, "MainActivity — PTT forwarded to HardwarePttPlugin (UI sync)");
-            } else {
-                Log.d(DIAG_TAG, "MainActivity — HardwarePttPlugin instance is NULL");
+                return true;
             }
+
+            // AccessibilityService not active — Activity handles PTT as fallback
+            Log.d(DIAG_TAG, "MainActivity — PTT key=" + keyCode + " action=" + actionStr
+                + " FALLBACK (AccessibilityService not running)");
+
+            if (action == KeyEvent.ACTION_DOWN) {
+                if (repeat > 0 || activityPttHeld) {
+                    Log.d(DIAG_TAG, "MainActivity — PTT DOWN suppressed: repeat=" + repeat + " held=" + activityPttHeld);
+                } else {
+                    activityPttHeld = true;
+                    BackgroundAudioService service = BackgroundAudioService.getInstance();
+                    if (service != null) {
+                        service.handlePttDown();
+                        Log.d(DIAG_TAG, "MainActivity — PTT DOWN forwarded to BackgroundAudioService");
+                    } else {
+                        Log.w(DIAG_TAG, "MainActivity — BackgroundAudioService NULL, cannot forward PTT DOWN");
+                    }
+                    HardwarePttPlugin pttPlugin = HardwarePttPlugin.getInstance();
+                    if (pttPlugin != null) pttPlugin.handleKeyEvent(event);
+                }
+            } else if (action == KeyEvent.ACTION_UP) {
+                if (!activityPttHeld) {
+                    Log.d(DIAG_TAG, "MainActivity — PTT UP suppressed: not held");
+                } else {
+                    activityPttHeld = false;
+                    BackgroundAudioService service = BackgroundAudioService.getInstance();
+                    if (service != null) {
+                        service.handlePttUp();
+                        Log.d(DIAG_TAG, "MainActivity — PTT UP forwarded to BackgroundAudioService");
+                    } else {
+                        Log.w(DIAG_TAG, "MainActivity — BackgroundAudioService NULL, cannot forward PTT UP");
+                    }
+                    HardwarePttPlugin pttPlugin = HardwarePttPlugin.getInstance();
+                    if (pttPlugin != null) pttPlugin.handleKeyEvent(event);
+                }
+            }
+            return true;
         }
 
-        if (isT320Key(keyCode)) {
-            if (keyCode != KEY_PTT) {
-                if (isScreenOff) {
-                    if (action == KeyEvent.ACTION_DOWN) {
-                        injectJsKeyEventDelayed(keyCode, "keydown", 50);
-                    } else if (action == KeyEvent.ACTION_UP) {
-                        injectJsKeyEventDelayed(keyCode, "keyup", 50);
-                    }
-                } else {
-                    if (action == KeyEvent.ACTION_DOWN) {
-                        injectJsKeyEvent(keyCode, "keydown");
-                    } else if (action == KeyEvent.ACTION_UP) {
-                        injectJsKeyEvent(keyCode, "keyup");
-                    }
+        // --- Side button 1 (black, KEY_F1) ---
+        if (isSide1Key(keyCode)) {
+            boolean a11yActive = PttAccessibilityService.isRunning();
+            if (a11yActive) {
+                Log.d(DIAG_TAG, "MainActivity — SIDE1 key=" + keyCode + " SUPPRESSED (AccessibilityService primary)");
+            } else {
+                if (action == KeyEvent.ACTION_DOWN && repeat == 0 && !activitySide1Held) {
+                    activitySide1Held = true;
+                    BackgroundAudioService svc = BackgroundAudioService.getInstance();
+                    if (svc != null) svc.handleSideButton1Down();
+                } else if (action == KeyEvent.ACTION_UP && activitySide1Held) {
+                    activitySide1Held = false;
+                    BackgroundAudioService svc = BackgroundAudioService.getInstance();
+                    if (svc != null) svc.handleSideButton1Up();
                 }
+            }
+            if (!isScreenOff) injectJsKeyEvent(keyCode, action == KeyEvent.ACTION_DOWN ? "keydown" : "keyup");
+            else injectJsKeyEventDelayed(keyCode, action == KeyEvent.ACTION_DOWN ? "keydown" : "keyup", 50);
+            return true;
+        }
+
+        // --- Side button 2 (orange, KEY_SELECT) ---
+        if (isSide2Key(keyCode)) {
+            boolean a11yActive = PttAccessibilityService.isRunning();
+            Log.d(DIAG_TAG, "MainActivity — SIDE2 key=" + keyCode + " action=" + actionStr
+                + " a11yActive=" + a11yActive);
+            if (a11yActive) {
+                Log.d(DIAG_TAG, "MainActivity — SIDE2 SUPPRESSED (AccessibilityService primary)");
+            } else {
+                if (action == KeyEvent.ACTION_DOWN && repeat == 0 && !activitySide2Held) {
+                    activitySide2Held = true;
+                    BackgroundAudioService svc = BackgroundAudioService.getInstance();
+                    if (svc != null) svc.handleSideButton2Down();
+                } else if (action == KeyEvent.ACTION_UP && activitySide2Held) {
+                    activitySide2Held = false;
+                    BackgroundAudioService svc = BackgroundAudioService.getInstance();
+                    if (svc != null) svc.handleSideButton2Up();
+                }
+            }
+            if (!isScreenOff) injectJsKeyEvent(keyCode, action == KeyEvent.ACTION_DOWN ? "keydown" : "keyup");
+            else injectJsKeyEventDelayed(keyCode, action == KeyEvent.ACTION_DOWN ? "keydown" : "keyup", 50);
+            return true;
+        }
+
+        // --- Other T320 keys — inject into JS only ---
+        if (isT320Key(keyCode)) {
+            if (isScreenOff) {
+                injectJsKeyEventDelayed(keyCode, action == KeyEvent.ACTION_DOWN ? "keydown" : "keyup", 50);
+            } else {
+                injectJsKeyEvent(keyCode, action == KeyEvent.ACTION_DOWN ? "keydown" : "keyup");
             }
             return true;
         }
@@ -415,6 +590,8 @@ public class MainActivity extends BridgeActivity {
         Log.d(DIAG_TAG, "MainActivity.onResume() — screen ON, isScreenOff=false");
 
         startBackgroundAudioServiceNow();
+        logResumeDiagnostics();
+        promptAccessibilityServiceIfNeeded();
 
         if (!batteryExemptionPrompted) {
             new Handler(Looper.getMainLooper()).postDelayed(() -> {

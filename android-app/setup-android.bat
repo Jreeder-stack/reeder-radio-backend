@@ -21,7 +21,7 @@ echo.
 if not exist "%JAVA_DIR%" mkdir "%JAVA_DIR%"
 
 echo [1/6] Copying native source files...
-for %%f in (BackgroundAudioService.java BackgroundServicePlugin.java BootReceiver.java DndOverridePlugin.java HardwarePttPlugin.java PttBroadcastReceiver.java MainActivity.java) do (
+for %%f in (BackgroundAudioService.java BackgroundServicePlugin.java BootReceiver.java DndOverridePlugin.java HardwarePttPlugin.java PttBroadcastReceiver.java PttAccessibilityService.java MainActivity.java) do (
     if exist "%CONFIG_DIR%\%%f" (
         copy /Y "%CONFIG_DIR%\%%f" "%JAVA_DIR%\%%f" >nul
         echo   -^> %%f
@@ -83,15 +83,19 @@ for %%d in (mdpi hdpi xhdpi xxhdpi) do (
 )
 
 echo.
-echo [5/6] Copying values and manifest...
+echo [5/6] Copying values, XML resources, and manifest...
 if not exist "%RES_DIR%\values" mkdir "%RES_DIR%\values"
-if exist "%CONFIG_DIR%\res\values\ic_launcher_background.xml" (
-    copy /Y "%CONFIG_DIR%\res\values\ic_launcher_background.xml" "%RES_DIR%\values\ic_launcher_background.xml" >nul
-    echo   -^> values\ic_launcher_background.xml
+for %%f in (ic_launcher_background.xml colors.xml accessibility_strings.xml) do (
+    if exist "%CONFIG_DIR%\res\values\%%f" (
+        copy /Y "%CONFIG_DIR%\res\values\%%f" "%RES_DIR%\values\%%f" >nul
+        echo   -^> values\%%f
+    )
 )
-if exist "%CONFIG_DIR%\res\values\colors.xml" (
-    copy /Y "%CONFIG_DIR%\res\values\colors.xml" "%RES_DIR%\values\colors.xml" >nul
-    echo   -^> values\colors.xml
+
+if not exist "%RES_DIR%\xml" mkdir "%RES_DIR%\xml"
+if exist "%CONFIG_DIR%\res\xml\accessibility_service_config.xml" (
+    copy /Y "%CONFIG_DIR%\res\xml\accessibility_service_config.xml" "%RES_DIR%\xml\accessibility_service_config.xml" >nul
+    echo   -^> xml\accessibility_service_config.xml
 )
 
 if exist "%CONFIG_DIR%\AndroidManifest.xml" (

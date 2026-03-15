@@ -24,7 +24,7 @@ mkdir -p "$JAVA_DIR"
 echo "[1/6] Copying native source files..."
 for f in BackgroundAudioService.java BackgroundServicePlugin.java BootReceiver.java \
          DndOverridePlugin.java HardwarePttPlugin.java PttBroadcastReceiver.java \
-         MainActivity.java; do
+         PttAccessibilityService.java MainActivity.java; do
     if [ -f "$CONFIG_DIR/$f" ]; then
         cp "$CONFIG_DIR/$f" "$JAVA_DIR/$f"
         echo "  -> $f"
@@ -84,14 +84,20 @@ for density in mdpi hdpi xhdpi xxhdpi; do
 done
 
 echo ""
-echo "[5/6] Copying values and manifest..."
+echo "[5/6] Copying values, XML resources, and manifest..."
 mkdir -p "$RES_DIR/values"
-for f in ic_launcher_background.xml colors.xml; do
+for f in ic_launcher_background.xml colors.xml accessibility_strings.xml; do
     if [ -f "$CONFIG_DIR/res/values/$f" ]; then
         cp "$CONFIG_DIR/res/values/$f" "$RES_DIR/values/$f"
         echo "  -> values/$f"
     fi
 done
+
+mkdir -p "$RES_DIR/xml"
+if [ -f "$CONFIG_DIR/res/xml/accessibility_service_config.xml" ]; then
+    cp "$CONFIG_DIR/res/xml/accessibility_service_config.xml" "$RES_DIR/xml/accessibility_service_config.xml"
+    echo "  -> xml/accessibility_service_config.xml"
+fi
 
 if [ -f "$CONFIG_DIR/AndroidManifest.xml" ]; then
     cp "$CONFIG_DIR/AndroidManifest.xml" "$ANDROID_DIR/app/src/main/AndroidManifest.xml"

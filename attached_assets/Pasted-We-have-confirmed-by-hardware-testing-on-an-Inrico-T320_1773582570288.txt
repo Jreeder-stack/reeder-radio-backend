@@ -1,0 +1,224 @@
+We have confirmed by hardware testing on an Inrico T320 using adb shell getevent -l that the device is generating real Android key events even when the app is not visible and even when the screen is off. This is not a firmware problem and not a LiveKit problem. The bug is in our app architecture.
+
+Known hardware mappings confirmed on this device:
+
+PTT = KEY_F11
+
+Black side button = KEY_F1
+
+Orange side button = KEY_SELECT
+
+Volume knob = KEY_PREVIOUS and KEY_NEXT
+
+Menu = KEY_MENU
+
+Green = KEY_SEND
+
+Back = KEY_BACK
+
+The current issue is that our app only responds to PTT when the app screen is visibly open. That means key handling is currently happening in the visible UI layer, such as the Activity, WebView, React layer, or focused screen callbacks. That is the wrong architecture for a radio app.
+
+Objective
+
+Refactor the Android app so the hardware buttons work correctly from native Android code even when:
+
+the app UI is not the visible screen
+
+the app is in the background
+
+the screen is off, as long as Android is still delivering the key events
+
+Required outcome
+
+At minimum:
+
+PTT button must trigger transmit start on press and transmit stop on release without requiring the radio screen to be visible
+
+Black side and orange side buttons must also be capturable natively for future mapping
+
+React/WebView must not be the source of truth for button handling
+
+Hardware key capture must be owned by native Android code
+
+What to do
+1. Stop handling radio buttons in React, WebView, or UI-only code
+
+Find and remove any logic that depends on:
+
+React keyboard listeners
+
+WebView key listeners
+
+Activity-only onKeyDown / onKeyUp as the sole solution
+
+focused screen callbacks
+
+visible-page logic for PTT
+
+Those may remain for UI display if needed, but they must not be the real radio control path.
+
+2. Move hardware button handling into native Android code
+
+Implement native key handling for these mappings:
+
+KEYCODE_F11 for PTT
+
+KEYCODE_F1 for black side button
+
+KEYCODE_DPAD_CENTER or the Android constant that corresponds to the observed KEY_SELECT event for the orange side button
+
+optionally support KEYCODE_MEDIA_PREVIOUS and KEYCODE_MEDIA_NEXT if the volume knob needs app-level use later
+
+Important:
+
+use the actual Android keycode constants that correspond to the observed Linux input events
+
+verify the correct Android mapping for KEY_SELECT on this device before hardcoding it
+
+3. Create or refactor a native Android foreground service that owns radio button state
+
+Create a dedicated native service such as PttService or refactor the existing background service.
+
+This service must:
+
+run as a foreground service
+
+stay alive independently of the visible app screen
+
+receive and process native hardware button events
+
+expose button state and transmit state to the UI if needed
+
+not depend on React/WebView being active
+
+4. Implement a proper native press/release state machine
+
+We need exact button behavior, not hacks.
+
+For PTT:
+
+on button DOWN, if not already active, trigger pttPressed
+
+ignore repeated DOWN events while button is held
+
+on button UP, trigger pttReleased
+
+if UP is received while already idle, ignore it
+
+include logging for every DOWN and UP event captured
+
+This is important because some devices repeat key events or deliver noisy input.
+
+5. Add a native key interception path that works outside the visible UI
+
+Do not assume Activity callbacks are enough.
+
+Implement the strongest valid background-capable interception path available for this device, in this order:
+
+Preferred approach
+
+Implement an AccessibilityService configured to filter hardware key events, and forward matching button events to the foreground radio service.
+
+Requirements:
+
+request key filtering capability
+
+log all received keys
+
+forward only the mapped radio keys to the service
+
+ensure both DOWN and UP are handled
+
+Fallback approach
+
+If the device does not permit AccessibilityService key filtering for these buttons, then implement the best native interception path available in the host Android layer and document the limitation clearly.
+
+But do not fall back to React or WebView.
+
+6. Add structured native logging
+
+Add logs for:
+
+raw key received
+
+key code
+
+action DOWN or UP
+
+which component received it
+
+whether it was accepted or ignored
+
+current PTT state before and after processing
+
+This is required so we can prove the fix works on the real device.
+
+7. Add a simple native debug screen or debug overlay
+
+Add a test mode that shows:
+
+last button received
+
+whether it was DOWN or UP
+
+timestamp
+
+whether it came from Activity, AccessibilityService, or service
+
+current PTT state
+
+This should be native-side and not depend on React for correctness.
+
+What not to do
+
+Do not fix this in React.
+
+Do not fix this in WebView JavaScript.
+
+Do not rely only on the visible Activity.
+
+Do not call it fixed just because it works when the app screen is open.
+
+Do not recommend keeping the radio screen open as the solution.
+
+Do not modify firmware, root the device, or patch keylayout files unless native Android handling truly fails after proper implementation.
+
+Do not use polling or timer hacks to guess button state.
+
+Do not hardcode assumptions about LiveKit or room lifecycle into button capture logic.
+
+Acceptance criteria
+
+The work is not complete unless all of these are true:
+
+Pressing the PTT button triggers the native PTT press handler even when the app screen is not visible.
+
+Releasing the PTT button triggers the native PTT release handler even when the app screen is not visible.
+
+Black side and orange side buttons are also captured natively.
+
+Button handling continues to work if React/WebView is hidden, reloaded, or not focused.
+
+Logs clearly show raw key events being captured in native Android code.
+
+The solution does not depend on the radio screen being visibly open.
+
+The implementation is native-first, with UI only observing state.
+
+Device-specific facts already confirmed by testing
+
+Use these confirmed results and do not re-diagnose the hardware:
+
+The T320 generates KEY_F11 for PTT
+
+The T320 generates KEY_F1 for the black side button
+
+The T320 generates KEY_SELECT for the orange side button
+
+These events were observed even with the app not visible
+
+These events were also observed with the screen off
+
+Therefore the hardware and kernel are already delivering the button events
+
+This means the current bug is in app-level handling, not device firmware.

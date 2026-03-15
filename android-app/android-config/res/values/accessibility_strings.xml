@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="accessibility_service_description">Command Comms PTT Service — enables push-to-talk radio button capture when the app is in the background or the screen is off.</string>
+</resources>

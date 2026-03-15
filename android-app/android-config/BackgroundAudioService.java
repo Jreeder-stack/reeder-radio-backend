@@ -43,6 +43,15 @@ public class BackgroundAudioService extends Service {
     public static final String PTT_ACTION_DOWN = "down";
     public static final String PTT_ACTION_UP = "up";
 
+    // Intent action constants for AccessibilityService → Service communication (lifecycle-safe)
+    public static final String ACTION_BTN_PTT_DOWN  = "com.reedersystems.commandcomms.action.PTT_DOWN";
+    public static final String ACTION_BTN_PTT_UP    = "com.reedersystems.commandcomms.action.PTT_UP";
+    public static final String ACTION_BTN_SIDE1_DOWN = "com.reedersystems.commandcomms.action.SIDE1_DOWN";
+    public static final String ACTION_BTN_SIDE1_UP   = "com.reedersystems.commandcomms.action.SIDE1_UP";
+    public static final String ACTION_BTN_SIDE2_DOWN = "com.reedersystems.commandcomms.action.SIDE2_DOWN";
+    public static final String ACTION_BTN_SIDE2_UP   = "com.reedersystems.commandcomms.action.SIDE2_UP";
+    public static final String EXTRA_EVENT_SOURCE   = "event_source";
+
     private static volatile BackgroundAudioService instance = null;
 
     public static BackgroundAudioService getInstance() {
@@ -66,6 +75,12 @@ public class BackgroundAudioService extends Service {
     private String currentChannelName = null;
 
     private volatile boolean isReconnecting = false;
+
+    // Debug state — last captured button event
+    private volatile String lastEventSource    = "none";
+    private volatile int    lastEventCode      = -1;
+    private volatile String lastEventAction    = "none";
+    private volatile long   lastEventTimestamp = 0;
 
     @Override
     public void onCreate() {
@@ -145,6 +160,44 @@ public class BackgroundAudioService extends Service {
         }
 
         if (intent != null) {
+            String intentAction = intent.getAction();
+            String source = intent.getStringExtra(EXTRA_EVENT_SOURCE);
+            if (source == null) source = "unknown";
+
+            // Handle Intent-based button commands from PttAccessibilityService (lifecycle-safe IPC)
+            if (ACTION_BTN_PTT_DOWN.equals(intentAction)) {
+                Log.d(DIAG_TAG, "[Service] ACTION_BTN_PTT_DOWN from source=" + source);
+                recordEventDebug(source, 141, "DOWN");
+                handlePttDown();
+                return START_STICKY;
+            } else if (ACTION_BTN_PTT_UP.equals(intentAction)) {
+                Log.d(DIAG_TAG, "[Service] ACTION_BTN_PTT_UP from source=" + source);
+                recordEventDebug(source, 141, "UP");
+                handlePttUp();
+                return START_STICKY;
+            } else if (ACTION_BTN_SIDE1_DOWN.equals(intentAction)) {
+                Log.d(DIAG_TAG, "[Service] ACTION_BTN_SIDE1_DOWN from source=" + source);
+                recordEventDebug(source, 131, "DOWN");
+                handleSideButton1Down();
+                return START_STICKY;
+            } else if (ACTION_BTN_SIDE1_UP.equals(intentAction)) {
+                Log.d(DIAG_TAG, "[Service] ACTION_BTN_SIDE1_UP from source=" + source);
+                recordEventDebug(source, 131, "UP");
+                handleSideButton1Up();
+                return START_STICKY;
+            } else if (ACTION_BTN_SIDE2_DOWN.equals(intentAction)) {
+                Log.d(DIAG_TAG, "[Service] ACTION_BTN_SIDE2_DOWN from source=" + source);
+                recordEventDebug(source, 109, "DOWN");
+                handleSideButton2Down();
+                return START_STICKY;
+            } else if (ACTION_BTN_SIDE2_UP.equals(intentAction)) {
+                Log.d(DIAG_TAG, "[Service] ACTION_BTN_SIDE2_UP from source=" + source);
+                recordEventDebug(source, 109, "UP");
+                handleSideButton2Up();
+                return START_STICKY;
+            }
+
+            // Legacy PTT via intent extra (PttBroadcastReceiver / cold-start path)
             String pttAction = intent.getStringExtra(EXTRA_PTT_ACTION);
             if (pttAction != null) {
                 Log.d(DIAG_TAG, "Service received PTT via intent extra: action=" + pttAction);
@@ -423,6 +476,58 @@ public class BackgroundAudioService extends Service {
 
         notifyUiPttState(false);
         Log.d(DIAG_TAG, "handlePttUp() — COMPLETE");
+    }
+
+    // --- Side button handlers ---
+
+    public void handleSideButton1Down() {
+        Log.d(DIAG_TAG, "[Service] handleSideButton1Down() — black side button pressed");
+        HardwarePttPlugin plugin = HardwarePttPlugin.getInstance();
+        if (plugin != null) {
+            plugin.notifySideButton1FromService(true);
+        }
+    }
+
+    public void handleSideButton1Up() {
+        Log.d(DIAG_TAG, "[Service] handleSideButton1Up() — black side button released");
+        HardwarePttPlugin plugin = HardwarePttPlugin.getInstance();
+        if (plugin != null) {
+            plugin.notifySideButton1FromService(false);
+        }
+    }
+
+    public void handleSideButton2Down() {
+        Log.d(DIAG_TAG, "[Service] handleSideButton2Down() — orange side button pressed");
+        HardwarePttPlugin plugin = HardwarePttPlugin.getInstance();
+        if (plugin != null) {
+            plugin.notifySideButton2FromService(true);
+        }
+    }
+
+    public void handleSideButton2Up() {
+        Log.d(DIAG_TAG, "[Service] handleSideButton2Up() — orange side button released");
+        HardwarePttPlugin plugin = HardwarePttPlugin.getInstance();
+        if (plugin != null) {
+            plugin.notifySideButton2FromService(false);
+        }
+    }
+
+    // --- Debug state ---
+
+    private void recordEventDebug(String source, int code, String action) {
+        lastEventSource    = source;
+        lastEventCode      = code;
+        lastEventAction    = action;
+        lastEventTimestamp = System.currentTimeMillis();
+    }
+
+    public String getDebugSummary() {
+        return "pttState=" + pttState
+            + " lastSrc=" + lastEventSource
+            + " lastCode=" + lastEventCode
+            + " lastAction=" + lastEventAction
+            + " lastTs=" + lastEventTimestamp
+            + " svcRunning=" + isRunning;
     }
 
     public PttState getPttState() {
