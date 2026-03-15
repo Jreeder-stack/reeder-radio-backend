@@ -1,0 +1,83 @@
+2026-03-15T11:36:03Z clientIP="107.115.48.44" requestID="012bc169-499d-4871" responseTimeMS=338 responseBytes=2760 userAgent="Mozilla/5.0 (Linux; Android 8.1.0; T320 Build/O11019; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/138.0.7204.179 Mobile Safari/537.36"
+2026-03-15T11:36:03Z clientIP="107.115.48.44" requestID="dc44750c-cd64-4610" responseTimeMS=42 responseBytes=315 userAgent="Mozilla/5.0 (Linux; Android 8.1.0; T320 Build/O11019; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/138.0.7204.179 Mobile Safari/537.36"
+2026-03-15T11:36:03Z clientIP="107.115.48.44" requestID="8ac3a8a3-ad01-425f" responseTimeMS=19 responseBytes=232 userAgent="Mozilla/5.0 (Linux; Android 8.1.0; T320 Build/O11019; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/138.0.7204.179 Mobile Safari/537.36"
+2026-03-15T11:36:03Z clientIP="107.115.48.44" requestID="71ddbc22-287c-4c01" responseTimeMS=22 responseBytes=1371 userAgent="Mozilla/5.0 (Linux; Android 8.1.0; T320 Build/O11019; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/138.0.7204.179 Mobile Safari/537.36"
+2026-03-15T11:36:03Z clientIP="107.115.48.44" requestID="b0c50aa1-115b-4eca" responseTimeMS=130 responseBytes=234 userAgent="Mozilla/5.0 (Linux; Android 8.1.0; T320 Build/O11019; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/138.0.7204.179 Mobile Safari/537.36"
+2026-03-15T11:36:03.580610632Z [Signaling] Client connected: Ly9FQDCZdO2iOwS7AAAp
+2026-03-15T11:36:03.648740442Z [Signaling] Unit authenticated: INDIANA-1 (Jreeder5029)
+2026-03-15T11:36:04Z clientIP="107.115.48.44" requestID="7f22167c-d410-48b8" responseTimeMS=19 responseBytes=663 userAgent="Mozilla/5.0 (Linux; Android 8.1.0; T320 Build/O11019; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/138.0.7204.179 Mobile Safari/537.36"
+2026-03-15T11:36:08Z clientIP="107.115.48.44" requestID="f17b366f-686d-45d6" responseTimeMS=35 responseBytes=483 userAgent="Mozilla/5.0 (Linux; Android 8.1.0; T320 Build/O11019; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/138.0.7204.179 Mobile Safari/537.36"
+2026-03-15T11:36:08.211182175Z [API] POST /api/dispatch/notify-join | user=Jreeder5029(id:2) | sid=R7k9peGk... | 200 | 26ms
+2026-03-15T11:36:16Z clientIP="107.115.48.44" requestID="b261acb9-eb7b-460c" responseTimeMS=19 responseBytes=321 userAgent="Mozilla/5.0 (Linux; Android 8.1.0; T320 Build/O11019; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/138.0.7204.179 Mobile Safari/537.36"
+2026-03-15T11:36:16.374219802Z [AI-Dispatcher-Signaling] 2026-03-15T11:36:16.374Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+2026-03-15T11:36:16.374248893Z [AI-Dispatcher-Signaling] 2026-03-15T11:36:16.374Z | CONNECTING_FOR_PTT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1"}
+2026-03-15T11:36:16.374286163Z [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+2026-03-15T11:36:16.381409948Z [AI-Dispatcher] 2026-03-15T11:36:16.381Z | REJOIN_TRIGGERED {"channel":"DISPATCH__DISPATCH"}
+2026-03-15T11:36:16.712597559Z [AI-Dispatcher] 2026-03-15T11:36:16.712Z | ROOM_JOINED {"room":"DISPATCH__DISPATCH","humanCount":1}
+2026-03-15T11:36:16.712620719Z [AI-Dispatcher-Signaling] 2026-03-15T11:36:16.712Z | CONNECTED_FOR_PTT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1"}
+2026-03-15T11:36:16.712736571Z [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+2026-03-15T11:36:16.712748522Z [AI-Dispatcher-Signaling] 2026-03-15T11:36:16.712Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":false}
+2026-03-15T11:36:17Z clientIP="107.115.48.44" requestID="dff0126c-248a-40e4" responseTimeMS=52 responseBytes=531 userAgent="Mozilla/5.0 (Linux; Android 8.1.0; T320 Build/O11019; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/138.0.7204.179 Mobile Safari/537.36"
+2026-03-15T11:36:17.00580016Z [AI-Dispatcher] 2026-03-15T11:36:17.005Z | TRACK_SUBSCRIBED {"participant":"INDIANA-1","room":"DISPATCH__DISPATCH","trackSid":"TR_AMkhLKERYaAeMP"}
+2026-03-15T11:36:17.00630358Z [AI-Dispatcher] 2026-03-15T11:36:17.006Z | AUDIO_BUFFERING_START {"participant":"INDIANA-1","room":"DISPATCH__DISPATCH"}
+2026-03-15T11:36:17.752211453Z [AI-Dispatcher] 2026-03-15T11:36:17.752Z | DATA_MESSAGE_RAW {"raw":"{\"type\":\"status_update\",\"identity\":\"INDIANA-1\",\"status\":\"transmitting\",\"channel\":\"DISPATCH__DISPATCH\",\"timestamp\":1773574577681}","participant":"INDIANA-1"}
+2026-03-15T11:36:17.904555617Z [API] POST /api/dispatch/unit/update | user=Jreeder5029(id:2) | sid=R7k9peGk... | 200 | 42ms
+2026-03-15T11:36:20.231097068Z [AI-Dispatcher-Signaling] 2026-03-15T11:36:20.230Z | PTT_END_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","gracePeriodMs":15000}
+2026-03-15T11:36:20.231132119Z [Signaling] PTT END: INDIANA-1 on DISPATCH__DISPATCH (3857ms)
+2026-03-15T11:36:20.290399641Z [AI-Dispatcher-Signaling] 2026-03-15T11:36:20.290Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+2026-03-15T11:36:20.290434911Z [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+2026-03-15T11:36:20.290441192Z [AI-Dispatcher-Signaling] 2026-03-15T11:36:20.290Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+2026-03-15T11:36:20.290445992Z [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+2026-03-15T11:36:20.670359455Z [AI-Dispatcher] 2026-03-15T11:36:20.670Z | TRACK_UNSUBSCRIBED {"participant":"INDIANA-1","room":"DISPATCH__DISPATCH"}
+2026-03-15T11:36:20.670650321Z [AI-Dispatcher] 2026-03-15T11:36:20.670Z | AUDIO_BUFFERING_COMPLETE {"participant":"INDIANA-1","frames":366,"bytes":351360}
+2026-03-15T11:36:20.693642096Z [AI-Dispatcher] 2026-03-15T11:36:20.693Z | VOICE_MESSAGE_SAVED {"channel":"DISPATCH__DISPATCH","sender":"INDIANA-1","filename":"DISPATCH__DISPATCH_1773574580670_INDIANA_1.wav","duration":4}
+2026-03-15T11:36:20.777863771Z [AI-Dispatcher] 2026-03-15T11:36:20.777Z | AUDIO_PROCESSING {"bytes":351360,"room":"DISPATCH__DISPATCH","participant":"INDIANA-1"}
+2026-03-15T11:36:20.796106446Z [AI-Dispatcher] 2026-03-15T11:36:20.795Z | MESSAGE_BROADCAST {"channel":"DISPATCH__DISPATCH","messageId":676}
+2026-03-15T11:36:20.809999849Z [AI-Dispatcher] 2026-03-15T11:36:20.809Z | DATA_MESSAGE_RAW {"raw":"{\"type\":\"status_update\",\"identity\":\"INDIANA-1\",\"status\":\"idle\",\"channel\":\"DISPATCH__DISPATCH\",\"timestamp\":1773574580707}","participant":"INDIANA-1"}
+2026-03-15T11:36:21Z clientIP="107.115.48.44" requestID="76c3c2b0-3b38-4b3d" responseTimeMS=42 responseBytes=521 userAgent="Mozilla/5.0 (Linux; Android 8.1.0; T320 Build/O11019; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/138.0.7204.179 Mobile Safari/537.36"
+2026-03-15T11:36:21.002941492Z [API] POST /api/dispatch/unit/update | user=Jreeder5029(id:2) | sid=R7k9peGk... | 200 | 31ms
+2026-03-15T11:36:22.077988997Z [AI-Dispatcher] 2026-03-15T11:36:22.077Z | STT_RESULT {"transcript":"Central Indiana 1.","participant":"INDIANA-1"}
+2026-03-15T11:36:22.078273923Z [AI-Dispatcher] 2026-03-15T11:36:22.078Z | LLM_CLASSIFY_START {"participant":"INDIANA-1","state":"IDLE","transcript":"Central Indiana 1."}
+2026-03-15T11:36:22.107870553Z [LLM-Intent] Classifying: unit=INDIANA-1, state=IDLE, transcript="Central Indiana 1."
+2026-03-15T11:36:23.247743776Z [LLM-Intent] Result (1140ms): intent=SILENCE, response="null"
+2026-03-15T11:36:23.247842947Z [AI-Dispatcher] 2026-03-15T11:36:23.247Z | LLM_CLASSIFY_RESULT {"participant":"INDIANA-1","intent":"SILENCE"}
+2026-03-15T11:36:23.247848267Z [AI-Dispatcher] 2026-03-15T11:36:23.247Z | LLM_SILENCE {"participant":"INDIANA-1","transcript":"Central Indiana 1."}
+2026-03-15T11:36:33Z clientIP="107.115.48.44" requestID="205894e9-32a3-428d" responseTimeMS=110 responseBytes=232 userAgent="Mozilla/5.0 (Linux; Android 8.1.0; T320 Build/O11019; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/138.0.7204.179 Mobile Safari/537.36"
+2026-03-15T11:36:33.033517782Z [CAD] getUnreadCount: No unit ID available
+2026-03-15T11:37:03Z clientIP="107.115.48.44" requestID="6c9186ae-c638-4660" responseTimeMS=127 responseBytes=232 userAgent="Mozilla/5.0 (Linux; Android 8.1.0; T320 Build/O11019; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/138.0.7204.179 Mobile Safari/537.36"
+2026-03-15T11:37:03.10472767Z [CAD] getUnreadCount: No unit ID available
+2026-03-15T11:37:24Z clientIP="107.115.48.44" requestID="1dea3b3a-86eb-4f2b" responseTimeMS=42 responseBytes=531 userAgent="Mozilla/5.0 (Linux; Android 8.1.0; T320 Build/O11019; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/138.0.7204.179 Mobile Safari/537.36"
+2026-03-15T11:37:24Z clientIP="107.115.48.44" requestID="975db20e-8001-44b4" responseTimeMS=101 responseBytes=321 userAgent="Mozilla/5.0 (Linux; Android 8.1.0; T320 Build/O11019; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/138.0.7204.179 Mobile Safari/537.36"
+2026-03-15T11:37:28Z clientIP="107.115.48.44" requestID="9c34d4fc-4c48-4a61" responseTimeMS=36 responseBytes=521 userAgent="Mozilla/5.0 (Linux; Android 8.1.0; T320 Build/O11019; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/138.0.7204.179 Mobile Safari/537.36"
+2026-03-15T11:37:24.472594499Z [AI-Dispatcher-Signaling] 2026-03-15T11:37:24.472Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+2026-03-15T11:37:24.472619109Z [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+2026-03-15T11:37:24.47262985Z [AI-Dispatcher-Signaling] 2026-03-15T11:37:24.472Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+2026-03-15T11:37:24.47263468Z [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+2026-03-15T11:37:24.690578457Z [AI-Dispatcher] 2026-03-15T11:37:24.690Z | TRACK_SUBSCRIBED {"participant":"INDIANA-1","room":"DISPATCH__DISPATCH","trackSid":"TR_AMYW9BxNJ8LU9E"}
+2026-03-15T11:37:24.691092366Z [AI-Dispatcher] 2026-03-15T11:37:24.690Z | AUDIO_BUFFERING_START {"participant":"INDIANA-1","room":"DISPATCH__DISPATCH"}
+2026-03-15T11:37:24.772305524Z [AI-Dispatcher] 2026-03-15T11:37:24.772Z | DATA_MESSAGE_RAW {"raw":"{\"type\":\"status_update\",\"identity\":\"INDIANA-1\",\"status\":\"transmitting\",\"channel\":\"DISPATCH__DISPATCH\",\"timestamp\":1773574644743}","participant":"INDIANA-1"}
+2026-03-15T11:37:24.859943474Z [API] POST /api/dispatch/unit/update | user=Jreeder5029(id:2) | sid=R7k9peGk... | 200 | 29ms
+2026-03-15T11:37:28.197733369Z [AI-Dispatcher-Signaling] 2026-03-15T11:37:28.197Z | PTT_END_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","gracePeriodMs":15000}
+2026-03-15T11:37:28.19774964Z [Signaling] PTT END: INDIANA-1 on DISPATCH__DISPATCH (3725ms)
+2026-03-15T11:37:28.431571007Z [AI-Dispatcher] 2026-03-15T11:37:28.431Z | DATA_MESSAGE_RAW {"raw":"{\"type\":\"status_update\",\"identity\":\"INDIANA-1\",\"status\":\"idle\",\"channel\":\"DISPATCH__DISPATCH\",\"timestamp\":1773574648390}","participant":"INDIANA-1"}
+2026-03-15T11:37:28.496269653Z [API] POST /api/dispatch/unit/update | user=Jreeder5029(id:2) | sid=R7k9peGk... | 200 | 27ms
+2026-03-15T11:37:28.502520021Z [AI-Dispatcher] 2026-03-15T11:37:28.502Z | TRACK_UNSUBSCRIBED {"participant":"INDIANA-1","room":"DISPATCH__DISPATCH"}
+2026-03-15T11:37:28.502678664Z [AI-Dispatcher] 2026-03-15T11:37:28.502Z | AUDIO_BUFFERING_COMPLETE {"participant":"INDIANA-1","frames":381,"bytes":365760}
+2026-03-15T11:37:28.513239954Z [AI-Dispatcher] 2026-03-15T11:37:28.512Z | VOICE_MESSAGE_SAVED {"channel":"DISPATCH__DISPATCH","sender":"INDIANA-1","filename":"DISPATCH__DISPATCH_1773574648502_INDIANA_1.wav","duration":4}
+2026-03-15T11:37:28.517313301Z [AI-Dispatcher] 2026-03-15T11:37:28.517Z | MESSAGE_BROADCAST {"channel":"DISPATCH__DISPATCH","messageId":677}
+2026-03-15T11:37:28.604943711Z [AI-Dispatcher] 2026-03-15T11:37:28.604Z | AUDIO_PROCESSING {"bytes":365760,"room":"DISPATCH__DISPATCH","participant":"INDIANA-1"}
+2026-03-15T11:37:30.017216174Z [AI-Dispatcher] 2026-03-15T11:37:30.017Z | STT_RESULT {"transcript":"Central Indiana 1.","participant":"INDIANA-1"}
+2026-03-15T11:37:30.017258924Z [AI-Dispatcher] 2026-03-15T11:37:30.017Z | LLM_CLASSIFY_START {"participant":"INDIANA-1","state":"IDLE","transcript":"Central Indiana 1."}
+2026-03-15T11:37:30.017676742Z [LLM-Intent] Classifying: unit=INDIANA-1, state=IDLE, transcript="Central Indiana 1."
+2026-03-15T11:37:31.108763264Z [LLM-Intent] Result (1091ms): intent=SILENCE, response="null"
+2026-03-15T11:37:31.108778654Z [AI-Dispatcher] 2026-03-15T11:37:31.108Z | LLM_CLASSIFY_RESULT {"participant":"INDIANA-1","intent":"SILENCE"}
+2026-03-15T11:37:31.108783974Z [AI-Dispatcher] 2026-03-15T11:37:31.108Z | LLM_SILENCE {"participant":"INDIANA-1","transcript":"Central Indiana 1."}
+2026-03-15T11:37:32.902376868Z [CAD] getUnreadCount: No unit ID available
+2026-03-15T11:37:32Z clientIP="107.115.48.44" requestID="a2eb8749-b875-497b" responseTimeMS=22 responseBytes=232 userAgent="Mozilla/5.0 (Linux; Android 8.1.0; T320 Build/O11019; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/138.0.7204.179 Mobile Safari/537.36"
+2026-03-15T11:37:43.197781278Z [Signaling] Grace period ended for DISPATCH__DISPATCH
+2026-03-15T11:37:43.197810669Z [AI-Dispatcher-Signaling] 2026-03-15T11:37:43.197Z | DISCONNECTING_IDLE {"channelId":"DISPATCH__DISPATCH"}
+2026-03-15T11:37:43.19788196Z [AI-Dispatcher] 2026-03-15T11:37:43.197Z | ROOM_LEAVING {"room":"DISPATCH__DISPATCH","reason":"No humans present"}
+2026-03-15T11:37:43.235259628Z [AI-Dispatcher] 2026-03-15T11:37:43.235Z | ROOM_LEFT {"room":"DISPATCH__DISPATCH"}
+2026-03-15T11:38:03.003938371Z [CAD] getUnreadCount: No unit ID available
+2026-03-15T11:38:03.013026433Z [API] GET /api/cad/messages/unread | user=Jreeder5029(id:2) | sid=R7k9peGk... | 304 | 9ms (logged 1/60)
+2026-03-15T11:38:03Z clientIP="107.115.48.44" requestID="b3b92ef5-a641-45dd" responseTimeMS=107 responseBytes=232 userAgent="Mozilla/5.0 (Linux; Android 8.1.0; T320 Build/O11019; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/138.0.7204.179 Mobile Safari/537.36"
