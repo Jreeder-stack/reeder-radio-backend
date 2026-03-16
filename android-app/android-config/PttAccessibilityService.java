@@ -30,8 +30,6 @@ public class PttAccessibilityService extends AccessibilityService {
     private static final String TAG = "PttAccessibility";
 
     // Confirmed Linux-to-Android mappings
-    private static final int KEYCODE_PTT_PRIMARY  = KeyEvent.KEYCODE_F11;          // 141
-    private static final int KEYCODE_PTT_FALLBACK = 230;                            // existing fallback
     private static final int KEYCODE_SIDE1        = KeyEvent.KEYCODE_F1;            // 131
     private static final int KEYCODE_SIDE2_A      = KeyEvent.KEYCODE_BUTTON_SELECT; // 109 — verify on device
     private static final int KEYCODE_SIDE2_B      = KeyEvent.KEYCODE_DPAD_CENTER;   // 23  — fallback
@@ -120,8 +118,11 @@ public class PttAccessibilityService extends AccessibilityService {
         lastTimestamp = eventTime;
 
         // PTT — KEYCODE_F11 (141) primary, 230 fallback
-        if (keyCode == KEYCODE_PTT_PRIMARY || keyCode == KEYCODE_PTT_FALLBACK) {
-            return handlePtt(action, repeatCount);
+        if (PttKeyMapping.isPttKey(keyCode)) {
+            Log.d(DIAG_TAG, "[AccessibilitySvc] PTT matched keyCode=" + keyCode
+                    + " (primary=" + PttKeyMapping.KEYCODE_PTT_PRIMARY
+                    + ", fallback=" + PttKeyMapping.KEYCODE_PTT_FALLBACK + ")");
+            return handlePtt(keyCode, action, repeatCount);
         }
 
         // Black side button — KEYCODE_F1 (131)
@@ -143,29 +144,29 @@ public class PttAccessibilityService extends AccessibilityService {
 
     // --- PTT press/release state machine ---
 
-    private boolean handlePtt(int action, int repeatCount) {
+    private boolean handlePtt(int keyCode, int action, int repeatCount) {
         if (action == KeyEvent.ACTION_DOWN) {
             if (repeatCount > 0) {
-                Log.d(DIAG_TAG, "[AccessibilitySvc] PTT DOWN repeat=" + repeatCount + " — ignored (held)");
+                Log.d(DIAG_TAG, "[AccessibilitySvc] PTT DOWN keyCode=" + keyCode + " repeat=" + repeatCount + " — ignored (held)");
                 return true; // consume but do not retrigger
             }
             if (pttHeld) {
-                Log.d(DIAG_TAG, "[AccessibilitySvc] PTT DOWN — already held, duplicate suppressed");
+                Log.d(DIAG_TAG, "[AccessibilitySvc] PTT DOWN keyCode=" + keyCode + " — already held, duplicate suppressed");
                 return true;
             }
             pttHeld = true;
-            Log.d(DIAG_TAG, "[AccessibilitySvc] PTT DOWN — first press, forwarding to service");
+            Log.d(DIAG_TAG, "[AccessibilitySvc] PTT DOWN keyCode=" + keyCode + " — first press, forwarding to service");
             acquireCpuWakeLock();
             sendButtonIntent(BackgroundAudioService.ACTION_BTN_PTT_DOWN, "AccessibilitySvc");
             return true;
 
         } else if (action == KeyEvent.ACTION_UP) {
             if (!pttHeld) {
-                Log.d(DIAG_TAG, "[AccessibilitySvc] PTT UP — not held, duplicate suppressed");
+                Log.d(DIAG_TAG, "[AccessibilitySvc] PTT UP keyCode=" + keyCode + " — not held, duplicate suppressed");
                 return true;
             }
             pttHeld = false;
-            Log.d(DIAG_TAG, "[AccessibilitySvc] PTT UP — forwarding to service");
+            Log.d(DIAG_TAG, "[AccessibilitySvc] PTT UP keyCode=" + keyCode + " — forwarding to service");
             sendButtonIntent(BackgroundAudioService.ACTION_BTN_PTT_UP, "AccessibilitySvc");
             return true;
         }

@@ -13,7 +13,7 @@ public class HardwarePttPlugin extends Plugin {
 
     private static final String TAG = "PTT-DIAG";
     private static HardwarePttPlugin instance;
-    private int pttKeyCode = 230;
+    private int pttKeyCode = PttKeyMapping.KEYCODE_PTT_PRIMARY;
     private boolean isPttPressed = false;
 
     @Override
@@ -56,12 +56,13 @@ public class HardwarePttPlugin extends Plugin {
     }
 
     public boolean handleKeyEvent(KeyEvent event) {
-        if (event.getKeyCode() != pttKeyCode) {
+        int triggeredKeyCode = event.getKeyCode();
+        if (triggeredKeyCode != pttKeyCode && !PttKeyMapping.isPttKey(triggeredKeyCode)) {
             return false;
         }
 
         int action = event.getAction();
-        Log.d(TAG, "HardwarePttPlugin.handleKeyEvent() — keyCode=" + event.getKeyCode()
+        Log.d(TAG, "HardwarePttPlugin.handleKeyEvent() — keyCode=" + triggeredKeyCode
             + " action=" + (action == KeyEvent.ACTION_DOWN ? "DOWN" : "UP")
             + " isPttPressed=" + isPttPressed);
 
@@ -70,26 +71,26 @@ public class HardwarePttPlugin extends Plugin {
 
             BackgroundAudioService service = BackgroundAudioService.getInstance();
             if (service != null) {
-                Log.d(TAG, "HardwarePttPlugin — forwarding DOWN to BackgroundAudioService");
+                Log.d(TAG, "HardwarePttPlugin — forwarding DOWN to BackgroundAudioService (triggerKeyCode=" + triggeredKeyCode + ")");
                 service.handlePttDown();
             } else {
-                Log.d(TAG, "HardwarePttPlugin — BackgroundAudioService not available, notifying JS only");
+                Log.d(TAG, "HardwarePttPlugin — BackgroundAudioService not available, notifying JS only (triggerKeyCode=" + triggeredKeyCode + ")");
             }
 
-            notifyPttStateToJs(true);
+            notifyPttStateToJs(true, triggeredKeyCode);
             return true;
         } else if (action == KeyEvent.ACTION_UP && isPttPressed) {
             isPttPressed = false;
 
             BackgroundAudioService service = BackgroundAudioService.getInstance();
             if (service != null) {
-                Log.d(TAG, "HardwarePttPlugin — forwarding UP to BackgroundAudioService");
+                Log.d(TAG, "HardwarePttPlugin — forwarding UP to BackgroundAudioService (triggerKeyCode=" + triggeredKeyCode + ")");
                 service.handlePttUp();
             } else {
-                Log.d(TAG, "HardwarePttPlugin — BackgroundAudioService not available, notifying JS only");
+                Log.d(TAG, "HardwarePttPlugin — BackgroundAudioService not available, notifying JS only (triggerKeyCode=" + triggeredKeyCode + ")");
             }
 
-            notifyPttStateToJs(false);
+            notifyPttStateToJs(false, triggeredKeyCode);
             return true;
         }
 
@@ -99,7 +100,7 @@ public class HardwarePttPlugin extends Plugin {
     public void notifyPttStateFromService(boolean pressed) {
         isPttPressed = pressed;
         Log.d(TAG, "HardwarePttPlugin.notifyPttStateFromService(" + pressed + ") — syncing UI");
-        notifyPttStateToJs(pressed);
+        notifyPttStateToJs(pressed, pttKeyCode);
     }
 
     public void notifySideButton1FromService(boolean pressed) {
@@ -133,11 +134,12 @@ public class HardwarePttPlugin extends Plugin {
         }
     }
 
-    private void notifyPttStateToJs(boolean pressed) {
+    private void notifyPttStateToJs(boolean pressed, int triggerKeyCode) {
         try {
             JSObject data = new JSObject();
             data.put("pressed", pressed);
             data.put("keyCode", pttKeyCode);
+            data.put("triggerKeyCode", triggerKeyCode);
 
             if (getActivity() != null) {
                 getActivity().runOnUiThread(() -> {
