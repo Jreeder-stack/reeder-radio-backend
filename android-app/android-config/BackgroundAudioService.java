@@ -317,24 +317,24 @@ public class BackgroundAudioService extends Service {
             return;
         }
 
-        LiveKitPlugin lkPlugin = LiveKitPlugin.getInstance();
-        boolean lkConnected = lkPlugin != null && lkPlugin.isRoomConnected();
-        String lkChannel = lkPlugin != null ? lkPlugin.getActiveChannel() : "null";
-        boolean lkMic = lkPlugin != null && lkPlugin.isMicTransmitting();
-        Log.d(DIAG_TAG, "handlePttDown() — LiveKitPlugin=" + (lkPlugin != null)
+        NativeRadioEngine engine = NativeRadioEngine.getInstance(getApplicationContext());
+        boolean engineAvailable = engine != null;
+        boolean lkConnected = engineAvailable && engine.isConnected();
+        String lkChannel = engineAvailable ? engine.getActiveChannel() : "null";
+        boolean lkMic = engineAvailable && engine.isMicEnabled();
+        Log.d(DIAG_TAG, "handlePttDown() — engineAvailable=" + engineAvailable
             + " connected=" + lkConnected + " channel=" + lkChannel + " micActive=" + lkMic);
 
         if (!lkConnected) {
             Log.w(DIAG_TAG, "handlePttDown() — LiveKit not connected, launching async auto-reconnect...");
-            final LiveKitPlugin finalLkPlugin = lkPlugin;
             pttState = PttState.TRANSMITTING;
             sendPttSignaling("start");
             new Thread(() -> {
-                boolean reconnected = attemptAutoReconnect(finalLkPlugin);
+                boolean reconnected = attemptAutoReconnect();
                 if (reconnected) {
-                    LiveKitPlugin reconnectedPlugin = LiveKitPlugin.getInstance();
-                    if (reconnectedPlugin != null && reconnectedPlugin.isRoomConnected()) {
-                        boolean txResult = reconnectedPlugin.startTransmit();
+                    NativeRadioEngine reconnectEngine = NativeRadioEngine.getInstance(getApplicationContext());
+                    if (reconnectEngine.isConnected()) {
+                        boolean txResult = reconnectEngine.startTransmit();
                         Log.d(DIAG_TAG, "handlePttDown() async-reconnect — startTransmit() result=" + txResult);
                         notifyUiPttState(true);
                     } else {
@@ -350,7 +350,7 @@ public class BackgroundAudioService extends Service {
         pttState = PttState.TRANSMITTING;
         Log.d(DIAG_TAG, "handlePttDown() — state → TRANSMITTING");
 
-        boolean txResult = lkPlugin.startTransmit();
+        boolean txResult = engine.startTransmit();
         Log.d(DIAG_TAG, "handlePttDown() — startTransmit() result=" + txResult);
 
         sendPttSignaling("start");
@@ -359,7 +359,7 @@ public class BackgroundAudioService extends Service {
         Log.d(DIAG_TAG, "handlePttDown() — COMPLETE (tx=" + txResult + ")");
     }
 
-    private boolean attemptAutoReconnect(LiveKitPlugin lkPlugin) {
+    private boolean attemptAutoReconnect() {
         if (isReconnecting) {
             Log.d(DIAG_TAG, "attemptAutoReconnect() — already in progress, skipping");
             return false;
@@ -371,10 +371,7 @@ public class BackgroundAudioService extends Service {
             return false;
         }
 
-        if (lkPlugin == null) {
-            Log.w(DIAG_TAG, "attemptAutoReconnect() — LiveKitPlugin instance is null, cannot reconnect");
-            return false;
-        }
+        NativeRadioEngine engine = NativeRadioEngine.getInstance(getApplicationContext());
 
         isReconnecting = true;
         Log.d(DIAG_TAG, "attemptAutoReconnect() — fetching token from server for unit=" + currentUnitId + " channel=" + currentChannelName);
@@ -388,16 +385,16 @@ public class BackgroundAudioService extends Service {
             }
 
             Log.d(DIAG_TAG, "attemptAutoReconnect() — token received, calling connectFromService()");
-            boolean connected = lkPlugin.connectFromService(livekitUrl, token, currentChannelName);
+            boolean connected = engine.connect(livekitUrl, token, currentChannelName);
             Log.d(DIAG_TAG, "attemptAutoReconnect() — connectFromService() result=" + connected);
 
             if (connected) {
                 int waitAttempts = 0;
-                while (!lkPlugin.isRoomConnected() && waitAttempts < 30) {
+                while (!engine.isConnected() && waitAttempts < 30) {
                     Thread.sleep(100);
                     waitAttempts++;
                 }
-                boolean finalConnected = lkPlugin.isRoomConnected();
+                boolean finalConnected = engine.isConnected();
                 Log.d(DIAG_TAG, "attemptAutoReconnect() — waited " + (waitAttempts * 100) + "ms, connected=" + finalConnected);
                 isReconnecting = false;
                 return finalConnected;
@@ -464,13 +461,16 @@ public class BackgroundAudioService extends Service {
         pttState = PttState.IDLE;
         Log.d(DIAG_TAG, "handlePttUp() — state → IDLE");
 
-        LiveKitPlugin lkPlugin = LiveKitPlugin.getInstance();
-        if (lkPlugin != null) {
-            boolean txResult = lkPlugin.stopTransmit();
-            Log.d(DIAG_TAG, "handlePttUp() — stopTransmit() result=" + txResult);
-        } else {
-            Log.w(DIAG_TAG, "handlePttUp() — LiveKitPlugin not available for stopTransmit");
-        }
+        NativeRadioEngine engine = NativeRadioEngine.getInstance(getApplicationContext());
+        boolean engineAvailable = engine != null;
+        boolean lkConnected = engineAvailable && engine.isConnected();
+        String lkChannel = engineAvailable ? engine.getActiveChannel() : "null";
+        boolean lkMic = engineAvailable && engine.isMicEnabled();
+        Log.d(DIAG_TAG, "handlePttUp() — engineAvailable=" + engineAvailable
+            + " connected=" + lkConnected + " channel=" + lkChannel + " micActive=" + lkMic);
+
+        boolean txResult = engine.stopTransmit();
+        Log.d(DIAG_TAG, "handlePttUp() — stopTransmit() result=" + txResult);
 
         sendPttSignaling("end");
 
