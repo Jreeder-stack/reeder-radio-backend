@@ -1,0 +1,220 @@
+Executing tasks: [:app:assembleDebug] in project C:\Users\Justin\StudioProjects\reeder-radio-backend\android-app\android
+
+
+> Configure project :app
+AGPBI: {"kind":"warning","text":"Using flatDir should be avoided because it doesn't support any meta-data formats.","sources":[{}]}
+
+> Configure project :capacitor-cordova-android-plugins
+AGPBI: {"kind":"warning","text":"Using flatDir should be avoided because it doesn't support any meta-data formats.","sources":[{}]}
+
+> Task :capacitor-cordova-android-plugins:preBuild UP-TO-DATE
+> Task :capacitor-cordova-android-plugins:preDebugBuild UP-TO-DATE
+> Task :capacitor-app:preBuild UP-TO-DATE
+> Task :capacitor-app:preDebugBuild UP-TO-DATE
+> Task :capacitor-cordova-android-plugins:writeDebugAarMetadata UP-TO-DATE
+> Task :capacitor-geolocation:preBuild UP-TO-DATE
+> Task :capacitor-geolocation:preDebugBuild UP-TO-DATE
+> Task :capacitor-android:preBuild UP-TO-DATE
+> Task :capacitor-android:preDebugBuild UP-TO-DATE
+> Task :capacitor-app:writeDebugAarMetadata UP-TO-DATE
+> Task :capacitor-local-notifications:preBuild UP-TO-DATE
+> Task :capacitor-local-notifications:preDebugBuild UP-TO-DATE
+> Task :capacitor-geolocation:writeDebugAarMetadata UP-TO-DATE
+> Task :capacitor-preferences:preBuild UP-TO-DATE
+> Task :capacitor-preferences:preDebugBuild UP-TO-DATE
+> Task :capacitor-android:writeDebugAarMetadata UP-TO-DATE
+> Task :capacitor-local-notifications:writeDebugAarMetadata UP-TO-DATE
+> Task :capacitor-preferences:writeDebugAarMetadata UP-TO-DATE
+> Task :capacitor-android:generateDebugResValues UP-TO-DATE
+> Task :capacitor-app:generateDebugResValues UP-TO-DATE
+> Task :capacitor-cordova-android-plugins:generateDebugResValues UP-TO-DATE
+> Task :capacitor-android:generateDebugResources UP-TO-DATE
+> Task :capacitor-app:generateDebugResources UP-TO-DATE
+> Task :capacitor-cordova-android-plugins:generateDebugResources UP-TO-DATE
+> Task :capacitor-android:packageDebugResources UP-TO-DATE
+> Task :capacitor-app:packageDebugResources UP-TO-DATE
+> Task :capacitor-geolocation:generateDebugResValues UP-TO-DATE
+> Task :capacitor-cordova-android-plugins:packageDebugResources UP-TO-DATE
+> Task :capacitor-local-notifications:generateDebugResValues UP-TO-DATE
+> Task :capacitor-geolocation:generateDebugResources UP-TO-DATE
+> Task :capacitor-local-notifications:generateDebugResources UP-TO-DATE
+> Task :capacitor-preferences:generateDebugResValues UP-TO-DATE
+> Task :capacitor-local-notifications:packageDebugResources UP-TO-DATE
+> Task :capacitor-geolocation:packageDebugResources UP-TO-DATE
+> Task :capacitor-preferences:generateDebugResources UP-TO-DATE
+> Task :capacitor-android:extractDeepLinksDebug UP-TO-DATE
+> Task :capacitor-app:extractDeepLinksDebug UP-TO-DATE
+> Task :capacitor-preferences:packageDebugResources UP-TO-DATE
+> Task :capacitor-cordova-android-plugins:extractDeepLinksDebug UP-TO-DATE
+> Task :capacitor-android:processDebugManifest UP-TO-DATE
+> Task :capacitor-app:processDebugManifest UP-TO-DATE
+> Task :capacitor-geolocation:extractDeepLinksDebug UP-TO-DATE
+> Task :capacitor-local-notifications:extractDeepLinksDebug UP-TO-DATE
+> Task :capacitor-cordova-android-plugins:processDebugManifest UP-TO-DATE
+> Task :capacitor-preferences:extractDeepLinksDebug UP-TO-DATE
+> Task :capacitor-geolocation:processDebugManifest UP-TO-DATE
+> Task :capacitor-local-notifications:processDebugManifest UP-TO-DATE
+> Task :capacitor-android:compileDebugLibraryResources UP-TO-DATE
+> Task :capacitor-app:compileDebugLibraryResources UP-TO-DATE
+> Task :capacitor-preferences:processDebugManifest UP-TO-DATE
+> Task :capacitor-cordova-android-plugins:compileDebugLibraryResources UP-TO-DATE
+> Task :capacitor-cordova-android-plugins:parseDebugLocalResources UP-TO-DATE
+> Task :capacitor-cordova-android-plugins:generateDebugRFile UP-TO-DATE
+> Task :capacitor-geolocation:compileDebugLibraryResources UP-TO-DATE
+> Task :capacitor-android:parseDebugLocalResources UP-TO-DATE
+> Task :capacitor-android:generateDebugRFile UP-TO-DATE
+> Task :capacitor-local-notifications:compileDebugLibraryResources UP-TO-DATE
+> Task :capacitor-app:parseDebugLocalResources UP-TO-DATE
+> Task :capacitor-geolocation:parseDebugLocalResources UP-TO-DATE
+> Task :capacitor-geolocation:generateDebugRFile UP-TO-DATE
+> Task :capacitor-app:generateDebugRFile UP-TO-DATE
+> Task :capacitor-android:javaPreCompileDebug UP-TO-DATE
+> Task :capacitor-preferences:compileDebugLibraryResources UP-TO-DATE
+> Task :capacitor-preferences:parseDebugLocalResources UP-TO-DATE
+> Task :capacitor-preferences:generateDebugRFile UP-TO-DATE
+> Task :capacitor-app:javaPreCompileDebug UP-TO-DATE
+> Task :capacitor-cordova-android-plugins:javaPreCompileDebug UP-TO-DATE
+> Task :capacitor-cordova-android-plugins:compileDebugJavaWithJavac NO-SOURCE
+> Task :capacitor-local-notifications:parseDebugLocalResources UP-TO-DATE
+> Task :capacitor-local-notifications:generateDebugRFile UP-TO-DATE
+> Task :capacitor-geolocation:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :capacitor-cordova-android-plugins:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :capacitor-local-notifications:javaPreCompileDebug UP-TO-DATE
+> Task :capacitor-preferences:javaPreCompileDebug UP-TO-DATE
+> Task :capacitor-app:mergeDebugShaders UP-TO-DATE
+> Task :capacitor-app:compileDebugShaders NO-SOURCE
+> Task :capacitor-app:generateDebugAssets UP-TO-DATE
+> Task :capacitor-app:packageDebugAssets UP-TO-DATE
+> Task :capacitor-cordova-android-plugins:mergeDebugShaders UP-TO-DATE
+> Task :capacitor-geolocation:javaPreCompileDebug UP-TO-DATE
+> Task :capacitor-cordova-android-plugins:compileDebugShaders NO-SOURCE
+> Task :capacitor-cordova-android-plugins:generateDebugAssets UP-TO-DATE
+> Task :capacitor-geolocation:mergeDebugShaders UP-TO-DATE
+> Task :capacitor-geolocation:compileDebugShaders NO-SOURCE
+> Task :capacitor-geolocation:generateDebugAssets UP-TO-DATE
+> Task :capacitor-cordova-android-plugins:packageDebugAssets UP-TO-DATE
+> Task :capacitor-geolocation:packageDebugAssets UP-TO-DATE
+> Task :capacitor-local-notifications:mergeDebugShaders UP-TO-DATE
+> Task :capacitor-local-notifications:compileDebugShaders NO-SOURCE
+> Task :capacitor-local-notifications:generateDebugAssets UP-TO-DATE
+> Task :capacitor-preferences:mergeDebugShaders UP-TO-DATE
+> Task :capacitor-preferences:compileDebugShaders NO-SOURCE
+> Task :capacitor-preferences:generateDebugAssets UP-TO-DATE
+> Task :capacitor-local-notifications:packageDebugAssets UP-TO-DATE
+> Task :capacitor-preferences:packageDebugAssets UP-TO-DATE
+> Task :capacitor-app:processDebugJavaRes NO-SOURCE
+> Task :capacitor-cordova-android-plugins:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :capacitor-local-notifications:processDebugJavaRes NO-SOURCE
+> Task :capacitor-cordova-android-plugins:processDebugJavaRes NO-SOURCE
+> Task :capacitor-app:mergeDebugJniLibFolders UP-TO-DATE
+> Task :capacitor-preferences:processDebugJavaRes NO-SOURCE
+> Task :capacitor-cordova-android-plugins:mergeDebugJniLibFolders UP-TO-DATE
+> Task :capacitor-app:mergeDebugNativeLibs NO-SOURCE
+> Task :capacitor-cordova-android-plugins:mergeDebugNativeLibs NO-SOURCE
+> Task :capacitor-app:copyDebugJniLibsProjectOnly UP-TO-DATE
+> Task :capacitor-cordova-android-plugins:copyDebugJniLibsProjectOnly UP-TO-DATE
+> Task :capacitor-local-notifications:mergeDebugJniLibFolders UP-TO-DATE
+> Task :capacitor-local-notifications:mergeDebugNativeLibs NO-SOURCE
+> Task :capacitor-geolocation:mergeDebugJniLibFolders UP-TO-DATE
+> Task :capacitor-local-notifications:copyDebugJniLibsProjectOnly UP-TO-DATE
+> Task :capacitor-geolocation:mergeDebugNativeLibs NO-SOURCE
+> Task :capacitor-preferences:mergeDebugJniLibFolders UP-TO-DATE
+> Task :capacitor-preferences:mergeDebugNativeLibs NO-SOURCE
+> Task :capacitor-preferences:copyDebugJniLibsProjectOnly UP-TO-DATE
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
+> Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:checkDebugAarMetadata UP-TO-DATE
+> Task :app:generateDebugResValues UP-TO-DATE
+> Task :app:mapDebugSourceSetPaths UP-TO-DATE
+> Task :app:generateDebugResources UP-TO-DATE
+> Task :app:mergeDebugResources UP-TO-DATE
+> Task :capacitor-geolocation:copyDebugJniLibsProjectOnly UP-TO-DATE
+> Task :app:packageDebugResources UP-TO-DATE
+> Task :app:parseDebugLocalResources UP-TO-DATE
+> Task :app:createDebugCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksDebug UP-TO-DATE
+> Task :capacitor-android:compileDebugJavaWithJavac UP-TO-DATE
+> Task :capacitor-android:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :capacitor-local-notifications:compileDebugJavaWithJavac UP-TO-DATE
+> Task :capacitor-local-notifications:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :capacitor-geolocation:compileDebugKotlin UP-TO-DATE
+> Task :capacitor-geolocation:compileDebugJavaWithJavac NO-SOURCE
+> Task :capacitor-geolocation:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :capacitor-android:mergeDebugShaders UP-TO-DATE
+> Task :capacitor-android:compileDebugShaders NO-SOURCE
+> Task :capacitor-android:generateDebugAssets UP-TO-DATE
+> Task :capacitor-android:packageDebugAssets UP-TO-DATE
+> Task :capacitor-android:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :capacitor-geolocation:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :capacitor-app:compileDebugJavaWithJavac UP-TO-DATE
+> Task :capacitor-app:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :capacitor-app:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :capacitor-android:processDebugJavaRes NO-SOURCE
+> Task :capacitor-preferences:compileDebugJavaWithJavac UP-TO-DATE
+> Task :capacitor-preferences:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :capacitor-preferences:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :capacitor-local-notifications:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :capacitor-android:mergeDebugJniLibFolders UP-TO-DATE
+> Task :capacitor-android:mergeDebugNativeLibs NO-SOURCE
+> Task :capacitor-android:copyDebugJniLibsProjectOnly UP-TO-DATE
+> Task :capacitor-geolocation:processDebugJavaRes UP-TO-DATE
+> Task :app:processDebugMainManifest
+> Task :app:processDebugManifest
+> Task :app:javaPreCompileDebug UP-TO-DATE
+> Task :app:mergeDebugShaders UP-TO-DATE
+> Task :app:compileDebugShaders NO-SOURCE
+> Task :app:generateDebugAssets UP-TO-DATE
+> Task :app:mergeDebugAssets UP-TO-DATE
+> Task :app:compressDebugAssets UP-TO-DATE
+> Task :app:desugarDebugFileDependencies
+> Task :app:processDebugManifestForPackage
+> Task :app:checkDebugDuplicateClasses UP-TO-DATE
+> Task :app:mergeDebugJniLibFolders UP-TO-DATE
+> Task :app:mergeDebugNativeLibs UP-TO-DATE
+> Task :app:stripDebugDebugSymbols UP-TO-DATE
+> Task :app:validateSigningDebug UP-TO-DATE
+> Task :app:writeDebugAppMetadata UP-TO-DATE
+> Task :app:writeDebugSigningConfigVersions
+> Task :app:mergeLibDexDebug
+> Task :app:processDebugResources
+
+> Task :app:compileDebugKotlin FAILED
+e: file:///C:/Users/Justin/StudioProjects/reeder-radio-backend/android-app/android/app/src/main/java/com/reedersystems/commandcomms/LiveKitPlugin.kt:26:33 Unresolved reference 'NativeRadioEngine'.
+e: file:///C:/Users/Justin/StudioProjects/reeder-radio-backend/android-app/android/app/src/main/java/com/reedersystems/commandcomms/LiveKitPlugin.kt:41:25 Unresolved reference 'NativeRadioEngine'.
+e: file:///C:/Users/Justin/StudioProjects/reeder-radio-backend/android-app/android/app/src/main/java/com/reedersystems/commandcomms/LiveKitPlugin.kt:42:17 Unresolved reference 'NativeRadioEngine'.
+e: file:///C:/Users/Justin/StudioProjects/reeder-radio-backend/android-app/android/app/src/main/java/com/reedersystems/commandcomms/LiveKitPlugin.kt:48:16 Unresolved reference 'addListener'.
+e: file:///C:/Users/Justin/StudioProjects/reeder-radio-backend/android-app/android/app/src/main/java/com/reedersystems/commandcomms/LiveKitPlugin.kt:52:45 Unresolved reference 'isConnected'.
+e: file:///C:/Users/Justin/StudioProjects/reeder-radio-backend/android-app/android/app/src/main/java/com/reedersystems/commandcomms/LiveKitPlugin.kt:53:47 Unresolved reference 'isMicEnabled'.
+e: file:///C:/Users/Justin/StudioProjects/reeder-radio-backend/android-app/android/app/src/main/java/com/reedersystems/commandcomms/LiveKitPlugin.kt:54:46 Unresolved reference 'getActiveChannel'.
+e: file:///C:/Users/Justin/StudioProjects/reeder-radio-backend/android-app/android/app/src/main/java/com/reedersystems/commandcomms/LiveKitPlugin.kt:55:95 Unresolved reference 'connect'.
+e: file:///C:/Users/Justin/StudioProjects/reeder-radio-backend/android-app/android/app/src/main/java/com/reedersystems/commandcomms/LiveKitPlugin.kt:56:43 Unresolved reference 'startTransmit'.
+e: file:///C:/Users/Justin/StudioProjects/reeder-radio-backend/android-app/android/app/src/main/java/com/reedersystems/commandcomms/LiveKitPlugin.kt:57:42 Unresolved reference 'stopTransmit'.
+e: file:///C:/Users/Justin/StudioProjects/reeder-radio-backend/android-app/android/app/src/main/java/com/reedersystems/commandcomms/LiveKitPlugin.kt:71:36 Unresolved reference 'connectSuspend'.
+e: file:///C:/Users/Justin/StudioProjects/reeder-radio-backend/android-app/android/app/src/main/java/com/reedersystems/commandcomms/LiveKitPlugin.kt:86:39 Unresolved reference 'disconnectSuspend'.
+e: file:///C:/Users/Justin/StudioProjects/reeder-radio-backend/android-app/android/app/src/main/java/com/reedersystems/commandcomms/LiveKitPlugin.kt:98:29 Unresolved reference 'startTransmitSuspend'.
+e: file:///C:/Users/Justin/StudioProjects/reeder-radio-backend/android-app/android/app/src/main/java/com/reedersystems/commandcomms/LiveKitPlugin.kt:113:29 Unresolved reference 'stopTransmitSuspend'.
+e: file:///C:/Users/Justin/StudioProjects/reeder-radio-backend/android-app/android/app/src/main/java/com/reedersystems/commandcomms/LiveKitPlugin.kt:128:39 Unresolved reference 'isConnected'.
+e: file:///C:/Users/Justin/StudioProjects/reeder-radio-backend/android-app/android/app/src/main/java/com/reedersystems/commandcomms/LiveKitPlugin.kt:129:40 Unresolved reference 'isMicEnabled'.
+e: file:///C:/Users/Justin/StudioProjects/reeder-radio-backend/android-app/android/app/src/main/java/com/reedersystems/commandcomms/LiveKitPlugin.kt:130:42 Unresolved reference 'getActiveChannel'.
+e: file:///C:/Users/Justin/StudioProjects/reeder-radio-backend/android-app/android/app/src/main/java/com/reedersystems/commandcomms/LiveKitPlugin.kt:154:5 'onEngineEvent' overrides nothing.
+e: file:///C:/Users/Justin/StudioProjects/reeder-radio-backend/android-app/android/app/src/main/java/com/reedersystems/commandcomms/LiveKitPlugin.kt:162:16 Unresolved reference 'removeListener'.
+
+> Task :app:mergeExtDexDebug
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':app:compileDebugKotlin'.
+> A failure occurred while executing org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction
+   > Compilation error. See log for more details
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 8s
+130 actionable tasks: 9 executed, 121 up-to-date
