@@ -24,13 +24,13 @@ mkdir -p "$JAVA_DIR"
 echo "[1/6] Copying native source files..."
 for f in BackgroundAudioService.java BackgroundServicePlugin.java BootReceiver.java \
          DndOverridePlugin.java HardwarePttPlugin.java PttBroadcastReceiver.java \
-         PttAccessibilityService.java MainActivity.java; do
+         PttAccessibilityService.java PttKeyMapping.java MainActivity.java; do
     if [ -f "$CONFIG_DIR/$f" ]; then
         cp "$CONFIG_DIR/$f" "$JAVA_DIR/$f"
         echo "  -> $f"
     fi
 done
-for f in LiveKitPlugin.kt RadioVoiceDSP.kt; do
+for f in LiveKitPlugin.kt NativeRadioEngine.kt RadioVoiceDSP.kt; do
     if [ -f "$CONFIG_DIR/$f" ]; then
         cp "$CONFIG_DIR/$f" "$JAVA_DIR/$f"
         echo "  -> $f"

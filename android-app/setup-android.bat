@@ -21,13 +21,13 @@ echo.
 if not exist "%JAVA_DIR%" mkdir "%JAVA_DIR%"
 
 echo [1/6] Copying native source files...
-for %%f in (BackgroundAudioService.java BackgroundServicePlugin.java BootReceiver.java DndOverridePlugin.java HardwarePttPlugin.java PttBroadcastReceiver.java PttAccessibilityService.java MainActivity.java) do (
+for %%f in (BackgroundAudioService.java BackgroundServicePlugin.java BootReceiver.java DndOverridePlugin.java HardwarePttPlugin.java PttBroadcastReceiver.java PttAccessibilityService.java PttKeyMapping.java MainActivity.java) do (
     if exist "%CONFIG_DIR%\%%f" (
         copy /Y "%CONFIG_DIR%\%%f" "%JAVA_DIR%\%%f" >nul
         echo   -^> %%f
     )
 )
-for %%f in (LiveKitPlugin.kt RadioVoiceDSP.kt) do (
+for %%f in (LiveKitPlugin.kt NativeRadioEngine.kt RadioVoiceDSP.kt) do (
     if exist "%CONFIG_DIR%\%%f" (
         copy /Y "%CONFIG_DIR%\%%f" "%JAVA_DIR%\%%f" >nul
         echo   -^> %%f
