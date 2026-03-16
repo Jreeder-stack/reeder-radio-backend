@@ -34,6 +34,15 @@ for %%f in (LiveKitPlugin.kt RadioVoiceDSP.kt) do (
     )
 )
 
+REM Capacitor BridgeActivity lifecycle methods are public in newer versions.
+REM If a stale local MainActivity uses protected overrides, javac fails with:
+REM "attempting to assign weaker access privileges; was public".
+set "MAIN_ACTIVITY=%JAVA_DIR%\MainActivity.java"
+if exist "%MAIN_ACTIVITY%" (
+    powershell -NoProfile -Command "(Get-Content -Raw '%MAIN_ACTIVITY%').Replace('protected void onResume()', 'public void onResume()').Replace('protected void onDestroy()', 'public void onDestroy()') | Set-Content -NoNewline '%MAIN_ACTIVITY%'"
+)
+
+
 echo.
 echo [2/6] Copying launcher icons...
 for %%d in (mdpi hdpi xhdpi xxhdpi xxxhdpi) do (

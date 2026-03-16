@@ -131,3 +131,30 @@ Ensure all plugins are:
 ### Notification not showing
 
 The foreground service requires a notification. If the custom icon is missing, a default icon will be used. Check logcat for any notification errors.
+
+
+### `attempting to assign weaker access privileges; was public`
+
+If Android build fails with errors like:
+
+- `onResume() in MainActivity cannot override onResume() in BridgeActivity`
+- `onDestroy() in MainActivity cannot override onDestroy() in BridgeActivity`
+
+then your local `MainActivity.java` still has `protected` lifecycle overrides.
+
+Fix by re-running the setup script so `android-config/MainActivity.java` is copied and normalized:
+
+```bash
+./setup-android.sh
+```
+
+On Windows:
+
+```bat
+setup-android.bat
+```
+
+Or manually change these signatures in `android/app/src/main/java/com/reedersystems/commandcomms/MainActivity.java`:
+
+- `protected void onResume()` -> `public void onResume()`
+- `protected void onDestroy()` -> `public void onDestroy()`

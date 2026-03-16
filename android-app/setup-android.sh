@@ -37,6 +37,15 @@ for f in LiveKitPlugin.kt RadioVoiceDSP.kt; do
     fi
 done
 
+# Capacitor BridgeActivity lifecycle methods are public in newer versions.
+# If a stale local MainActivity uses protected overrides, javac fails with:
+# "attempting to assign weaker access privileges; was public".
+MAIN_ACTIVITY="$JAVA_DIR/MainActivity.java"
+if [ -f "$MAIN_ACTIVITY" ]; then
+    sed -i 's/protected void onResume()/public void onResume()/g' "$MAIN_ACTIVITY"
+    sed -i 's/protected void onDestroy()/public void onDestroy()/g' "$MAIN_ACTIVITY"
+fi
+
 echo ""
 echo "[2/6] Copying launcher icons..."
 for density in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
