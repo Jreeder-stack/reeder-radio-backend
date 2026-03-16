@@ -25,6 +25,8 @@ task applyCcNativeConfig {
             "PttAccessibilityService.java",
             "MainActivity.java",
             "LiveKitPlugin.kt",
+            "NativeRadioEngine.kt",
+            "PttKeyMapping.java",
             "RadioVoiceDSP.kt",
         ]
         javaSources.each { name ->
