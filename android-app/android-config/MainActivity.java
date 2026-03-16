@@ -7,7 +7,6 @@ import android.app.KeyguardManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
@@ -17,13 +16,21 @@ import android.os.Looper;
 import android.os.PowerManager;
 import android.provider.Settings;
 import android.util.Log;
+import android.util.TypedValue;
+import android.view.Gravity;
 import android.view.KeyEvent;
+import android.view.View;
+import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.view.accessibility.AccessibilityManager;
 import android.webkit.PermissionRequest;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
+import android.widget.Button;
+import android.widget.FrameLayout;
+import android.widget.LinearLayout;
+import android.widget.TextView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import com.getcapacitor.BridgeActivity;
@@ -52,6 +59,8 @@ public class MainActivity extends BridgeActivity {
         startBackgroundAudioServiceNow();
 
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+
+        setupNativeStatusUi();
 
         new Handler(Looper.getMainLooper()).postDelayed(() -> {
             requestAllPermissions();
@@ -215,13 +224,13 @@ public class MainActivity extends BridgeActivity {
     private static final int KEY_SIDE2_SELECT    = KeyEvent.KEYCODE_BUTTON_SELECT; // 109 — orange side button (verify on device)
     private static final int KEY_SIDE2_DPAD_CTR  = KeyEvent.KEYCODE_DPAD_CENTER;   // 23  — orange fallback
 
-    private static final String PREFS_MAIN = "CommandCommsMainPrefs";
-    private static final String PREF_ACCESSIBILITY_PROMPTED = "accessibility_prompted";
-
     // Per-button held-state for Activity-side handling (fallback when AccessibilityService is off)
     private boolean activityPttHeld   = false;
     private boolean activitySide1Held = false;
     private boolean activitySide2Held = false;
+
+    private LinearLayout accessibilityBanner;
+    private TextView debugStatusText;
 
     private PowerManager.WakeLock screenWakeLock;
     private Handler jsKeepaliveHandler;
@@ -301,7 +310,7 @@ public class MainActivity extends BridgeActivity {
         Log.d(DIAG_TAG, "=== RESUME DIAGNOSTICS ===");
         Log.d(DIAG_TAG, "  AccessibilityService enabled : " + a11yEnabled);
         Log.d(DIAG_TAG, "  BackgroundAudioService running: " + svcRunning);
-        Log.d(DIAG_TAG, "  Active capture source        : " + (a11yEnabled ? "AccessibilityService (primary)" : "Activity (fallback)"));
+        Log.d(DIAG_TAG, "  Active capture source        : " + getActiveCaptureSource(a11yEnabled));
         if (svc != null) {
             Log.d(DIAG_TAG, "  Service debug               : " + svc.getDebugSummary());
         }
@@ -311,46 +320,113 @@ public class MainActivity extends BridgeActivity {
         }
         Log.d(DIAG_TAG, "  Activity PTT held           : " + activityPttHeld);
         Log.d(DIAG_TAG, "==========================");
+
+        updateDebugStatus(a11yEnabled);
     }
 
-    private void promptAccessibilityServiceIfNeeded() {
-        SharedPreferences prefs = getSharedPreferences(PREFS_MAIN, Context.MODE_PRIVATE);
-        boolean prompted = prefs.getBoolean(PREF_ACCESSIBILITY_PROMPTED, false);
+    private String getActiveCaptureSource(boolean a11yEnabled) {
+        return a11yEnabled ? "AccessibilityService (primary)" : "Activity (fallback)";
+    }
 
-        if (isAccessibilityServiceEnabled()) {
-            // Service is enabled — clear the flag so prompt resets if user later disables it
-            if (prompted) {
-                prefs.edit().putBoolean(PREF_ACCESSIBILITY_PROMPTED, false).apply();
-            }
+    private void updateAccessibilityWarningUi(boolean a11yEnabled) {
+        if (accessibilityBanner == null) return;
+        accessibilityBanner.setVisibility(a11yEnabled ? View.GONE : View.VISIBLE);
+    }
+
+    private void setupNativeStatusUi() {
+        FrameLayout root = findViewById(android.R.id.content);
+        if (root == null) {
+            Log.w(DIAG_TAG, "setupNativeStatusUi(): root content not found");
             return;
         }
 
-        if (prompted) {
-            // Already shown once, do not spam
-            return;
-        }
+        FrameLayout.LayoutParams topParams = new FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        );
 
-        // Show once per install (until enabled)
-        prefs.edit().putBoolean(PREF_ACCESSIBILITY_PROMPTED, true).apply();
+        accessibilityBanner = new LinearLayout(this);
+        accessibilityBanner.setOrientation(LinearLayout.VERTICAL);
+        accessibilityBanner.setPadding(dp(12), dp(10), dp(12), dp(10));
+        accessibilityBanner.setBackgroundColor(0xCCB00020);
 
-        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+        TextView warningTitle = new TextView(this);
+        warningTitle.setText("Accessibility service disabled");
+        warningTitle.setTextColor(0xFFFFFFFF);
+        warningTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
+
+        TextView warningBody = new TextView(this);
+        warningBody.setText("Background key capture needs \"Command Comms PTT\" accessibility service.");
+        warningBody.setTextColor(0xFFFFFFFF);
+        warningBody.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+
+        Button openSettingsButton = new Button(this);
+        openSettingsButton.setText("Open Accessibility Settings");
+        openSettingsButton.setOnClickListener(v -> {
+            Log.d(DIAG_TAG, "Accessibility banner action tapped: open settings");
             try {
-                new AlertDialog.Builder(this)
-                    .setTitle("Enable Background PTT")
-                    .setMessage("To use the PTT button when Command Comms is in the background or the screen is off, enable the \"Command Comms PTT\" accessibility service.\n\nSettings > Accessibility > Command Comms PTT")
-                    .setPositiveButton("Open Settings", (dialog, which) -> {
-                        try {
-                            startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
-                        } catch (Exception e) {
-                            Log.w(TAG, "Could not open accessibility settings: " + e.getMessage());
-                        }
-                    })
-                    .setNegativeButton("Not Now", null)
-                    .show();
+                startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
             } catch (Exception e) {
-                Log.w(TAG, "Could not show accessibility dialog: " + e.getMessage());
+                Log.w(TAG, "Could not open accessibility settings: " + e.getMessage());
+                showAccessibilitySettingsFallbackDialog();
             }
-        }, 1500);
+        });
+
+        accessibilityBanner.addView(warningTitle);
+        accessibilityBanner.addView(warningBody);
+        accessibilityBanner.addView(openSettingsButton);
+        accessibilityBanner.setVisibility(View.GONE);
+        root.addView(accessibilityBanner, topParams);
+
+        LinearLayout debugPanel = new LinearLayout(this);
+        debugPanel.setOrientation(LinearLayout.VERTICAL);
+        debugPanel.setPadding(dp(12), dp(10), dp(12), dp(10));
+        debugPanel.setBackgroundColor(0xCC111111);
+
+        TextView debugTitle = new TextView(this);
+        debugTitle.setText("Native Debug Status");
+        debugTitle.setTextColor(0xFFFFFFFF);
+        debugTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+
+        debugStatusText = new TextView(this);
+        debugStatusText.setTextColor(0xFFFFFFFF);
+        debugStatusText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        debugStatusText.setText("Accessibility service enabled: ...\nBackgroundAudioService running: ...\nActive key capture source: ...");
+
+        debugPanel.addView(debugTitle);
+        debugPanel.addView(debugStatusText);
+
+        FrameLayout.LayoutParams bottomParams = new FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        );
+        bottomParams.gravity = Gravity.BOTTOM;
+        root.addView(debugPanel, bottomParams);
+    }
+
+    private int dp(int value) {
+        float density = getResources().getDisplayMetrics().density;
+        return Math.round(value * density);
+    }
+
+    private void updateDebugStatus(boolean a11yEnabled) {
+        if (debugStatusText == null) return;
+        String status = "Accessibility service enabled: " + a11yEnabled
+            + "\nBackgroundAudioService running: " + BackgroundAudioService.isRunning
+            + "\nActive key capture source: " + getActiveCaptureSource(a11yEnabled);
+        debugStatusText.setText(status);
+    }
+
+    private void showAccessibilitySettingsFallbackDialog() {
+        try {
+            new AlertDialog.Builder(this)
+                .setTitle("Accessibility Settings")
+                .setMessage("Open Settings > Accessibility > Command Comms PTT")
+                .setPositiveButton("OK", null)
+                .show();
+        } catch (Exception e) {
+            Log.w(TAG, "Could not show accessibility fallback dialog: " + e.getMessage());
+        }
     }
 
     private void wakeScreen() {
@@ -447,7 +523,12 @@ public class MainActivity extends BridgeActivity {
 
         // --- PTT key handling ---
         if (isPttKey(keyCode)) {
+            boolean a11yEnabled = isAccessibilityServiceEnabled();
             boolean a11yActive = PttAccessibilityService.isRunning();
+            Log.d(DIAG_TAG, "MainActivity — PTT decision path: a11yEnabled=" + a11yEnabled
+                + " a11yRunning=" + a11yActive
+                + " source=" + getActiveCaptureSource(a11yEnabled));
+            updateDebugStatus(a11yEnabled);
 
             if (a11yActive) {
                 // AccessibilityService is primary — Activity is fallback only.
@@ -502,7 +583,12 @@ public class MainActivity extends BridgeActivity {
 
         // --- Side button 1 (black, KEY_F1) ---
         if (isSide1Key(keyCode)) {
+            boolean a11yEnabled = isAccessibilityServiceEnabled();
             boolean a11yActive = PttAccessibilityService.isRunning();
+            Log.d(DIAG_TAG, "MainActivity — SIDE1 decision path: a11yEnabled=" + a11yEnabled
+                + " a11yRunning=" + a11yActive
+                + " source=" + getActiveCaptureSource(a11yEnabled));
+            updateDebugStatus(a11yEnabled);
             if (a11yActive) {
                 Log.d(DIAG_TAG, "MainActivity — SIDE1 key=" + keyCode + " SUPPRESSED (AccessibilityService primary)");
             } else {
@@ -523,9 +609,13 @@ public class MainActivity extends BridgeActivity {
 
         // --- Side button 2 (orange, KEY_SELECT) ---
         if (isSide2Key(keyCode)) {
+            boolean a11yEnabled = isAccessibilityServiceEnabled();
             boolean a11yActive = PttAccessibilityService.isRunning();
             Log.d(DIAG_TAG, "MainActivity — SIDE2 key=" + keyCode + " action=" + actionStr
-                + " a11yActive=" + a11yActive);
+                + " a11yEnabled=" + a11yEnabled
+                + " a11yActive=" + a11yActive
+                + " source=" + getActiveCaptureSource(a11yEnabled));
+            updateDebugStatus(a11yEnabled);
             if (a11yActive) {
                 Log.d(DIAG_TAG, "MainActivity — SIDE2 SUPPRESSED (AccessibilityService primary)");
             } else {
@@ -590,8 +680,11 @@ public class MainActivity extends BridgeActivity {
         Log.d(DIAG_TAG, "MainActivity.onResume() — screen ON, isScreenOff=false");
 
         startBackgroundAudioServiceNow();
+        boolean a11yEnabled = isAccessibilityServiceEnabled();
+        Log.d(DIAG_TAG, "MainActivity.onResume() — accessibility enabled=" + a11yEnabled);
         logResumeDiagnostics();
-        promptAccessibilityServiceIfNeeded();
+        updateAccessibilityWarningUi(a11yEnabled);
+        updateDebugStatus(a11yEnabled);
 
         if (!batteryExemptionPrompted) {
             new Handler(Looper.getMainLooper()).postDelayed(() -> {
