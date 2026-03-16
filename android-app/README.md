@@ -10,93 +10,79 @@ Native Android wrapper for the PTT radio application using Capacitor.
 
 ## Build Steps
 
-### 1. Install Dependencies
+### First-time setup
 
 ```bash
 cd android-app
 npm install
-```
-
-### 2. Build Web Assets
-
-```bash
 npm run build
-```
-
-### 3. Initialize Capacitor (first time only)
-
-```bash
 npx cap add android
-```
-
-### 4. Sync Web Assets
-
-```bash
 npx cap sync android
 ```
 
-### 5. Copy Native Plugins
+Then run the setup script **once** from the `android-app/` directory:
 
-Copy the following files from `android-config/` to `android/app/src/main/java/com/reedersystems/commandcomms/`:
-
-- `BackgroundAudioService.java` - Foreground service for background audio
-- `BackgroundServicePlugin.java` - Capacitor plugin to control the service
-- `HardwarePttPlugin.java` - Volume/Bluetooth PTT key support
-- `DndOverridePlugin.java` - Do Not Disturb override for emergencies
-- `LiveKitPlugin.kt` - Native LiveKit SDK wrapper (optional)
-- `RadioVoiceDSP.kt` - Radio voice processing (reference only)
-
-### 6. Register Plugins in MainActivity
-
-Edit `android/app/src/main/java/com/reedersystems/commandcomms/MainActivity.java`:
-
-```java
-package com.reedersystems.commandcomms;
-
-import android.os.Bundle;
-import com.getcapacitor.BridgeActivity;
-
-public class MainActivity extends BridgeActivity {
-    @Override
-    public void onCreate(Bundle savedInstanceState) {
-        registerPlugin(BackgroundServicePlugin.class);
-        registerPlugin(HardwarePttPlugin.class);
-        registerPlugin(DndOverridePlugin.class);
-        super.onCreate(savedInstanceState);
-    }
-}
+**Windows:**
+```bat
+setup-android.bat
 ```
 
-### 7. Merge AndroidManifest.xml
+**Mac / Linux:**
+```bash
+./setup-android.sh
+```
 
-Copy the permissions and service declaration from `android-config/AndroidManifest.xml` into `android/app/src/main/AndroidManifest.xml`.
+The setup script:
+- Copies all native Java/Kotlin source files into the Android project
+- Copies all icons, splash screen, and resource files
+- Copies the AndroidManifest.xml
+- **Hooks Gradle** so that every subsequent build automatically re-copies everything from `android-config/` before compiling — no manual steps needed after this point
 
-Key additions:
-- `FOREGROUND_SERVICE` permissions
-- `WAKE_LOCK` permission
-- `BackgroundAudioService` service declaration
-
-### 8. Add Notification Icon (Optional)
-
-For a custom notification icon, add `ic_stat_icon.png` to:
-- `android/app/src/main/res/drawable-mdpi/`
-- `android/app/src/main/res/drawable-hdpi/`
-- `android/app/src/main/res/drawable-xhdpi/`
-- `android/app/src/main/res/drawable-xxhdpi/`
-
-If not provided, a default system icon will be used.
-
-### 9. Open in Android Studio
-
+Then open in Android Studio and build:
 ```bash
 npx cap open android
 ```
+`Build → Build Bundle(s) / APK(s) → Build APK(s)`
 
-### 10. Build APK
+APK output: `android/app/build/outputs/apk/debug/app-debug.apk`
 
-In Android Studio:
-1. Build > Build Bundle(s) / APK(s) > Build APK(s)
-2. Find APK in `android/app/build/outputs/apk/debug/`
+---
+
+### After updating web assets (`npx cap sync android`)
+
+Re-run the setup script once to re-copy any changed native files and keep the Gradle hook in place:
+
+```bat
+setup-android.bat
+```
+
+Then build normally in Android Studio. The Gradle hook ensures all `android-config/` files are applied automatically on every build.
+
+---
+
+### Installing on device
+
+```bash
+# Uninstall old version first (required to clear cached icon)
+adb uninstall com.reedersystems.commandcomms
+
+# Install new APK
+adb install android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+---
+
+## How the Gradle hook works
+
+`setup-android.bat` appends this line to `android/app/build.gradle`:
+
+```groovy
+apply from: '../../android-config/commandcomms.gradle'
+```
+
+`commandcomms.gradle` defines a `applyCcNativeConfig` task that copies all files from `android-config/` into the right Android project locations, then runs it via `preBuild.dependsOn`. This means every Android Studio build — including incremental builds — automatically syncs the native config.
+
+---
 
 ## Background Service
 
@@ -107,11 +93,11 @@ The `BackgroundAudioService` keeps the app running when the screen is off:
 - Maintains audio streaming capability
 - Uses `FOREGROUND_SERVICE_MICROPHONE` for Android 14+
 
-The service is automatically started when the user enters the radio interface and stopped when they leave.
-
 ## Wake Lock
 
-During active PTT transmission, a partial wake lock is acquired to prevent CPU sleep. This ensures reliable audio transmission even when the screen is off.
+During active PTT transmission, a partial wake lock is acquired to prevent CPU sleep.
+
+---
 
 ## Troubleshooting
 
@@ -120,41 +106,31 @@ During active PTT transmission, a partial wake lock is acquired to prevent CPU s
 1. Verify `BackgroundAudioService` is registered in AndroidManifest.xml
 2. Check that `BackgroundServicePlugin` is registered in MainActivity
 3. Ensure FOREGROUND_SERVICE permissions are granted
-4. Check device battery optimization settings - disable for this app
+4. Disable battery optimization for this app in device settings
 
 ### Plugin not found errors
 
-Ensure all plugins are:
-1. Copied to the correct package directory
-2. Registered in MainActivity.onCreate() BEFORE super.onCreate()
+Ensure all plugins are registered in `MainActivity.onCreate()` **before** `super.onCreate()`.
 
 ### Notification not showing
 
-The foreground service requires a notification. If the custom icon is missing, a default icon will be used. Check logcat for any notification errors.
-
+The foreground service requires a notification. If the custom icon is missing, a default system icon will be used. Check logcat for errors.
 
 ### `attempting to assign weaker access privileges; was public`
 
-If Android build fails with errors like:
-
+If Android build fails with:
 - `onResume() in MainActivity cannot override onResume() in BridgeActivity`
 - `onDestroy() in MainActivity cannot override onDestroy() in BridgeActivity`
 
-then your local `MainActivity.java` still has `protected` lifecycle overrides.
+Re-run `setup-android.bat` — it normalizes the lifecycle method access modifiers automatically.
 
-Fix by re-running the setup script so `android-config/MainActivity.java` is copied and normalized:
+### Accessibility service not appearing in Settings
 
+Re-run `setup-android.bat` to ensure `res/xml/accessibility_service_config.xml` is in place, then rebuild. The Gradle hook keeps this in sync automatically on every subsequent build.
+
+### Icon still showing old design after rebuild
+
+Uninstall the old app from the device before installing — Android caches launcher icons aggressively:
 ```bash
-./setup-android.sh
+adb uninstall com.reedersystems.commandcomms
 ```
-
-On Windows:
-
-```bat
-setup-android.bat
-```
-
-Or manually change these signatures in `android/app/src/main/java/com/reedersystems/commandcomms/MainActivity.java`:
-
-- `protected void onResume()` -> `public void onResume()`
-- `protected void onDestroy()` -> `public void onDestroy()`

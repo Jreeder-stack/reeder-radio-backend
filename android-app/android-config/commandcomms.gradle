@@ -1,0 +1,105 @@
+// commandcomms.gradle
+// Auto-copies all native config files from android-config/ into the Android project before every build.
+// Applied via: apply from: '../../android-config/commandcomms.gradle'  (in android/app/build.gradle)
+// Run setup-android.bat / setup-android.sh once to inject that line; every subsequent build is automatic.
+
+def configDir = rootProject.projectDir.parentFile.toPath().resolve("android-config")
+def javaDir   = project.file("src/main/java/com/reedersystems/commandcomms")
+def resDir    = project.file("src/main/res")
+def mainDir   = project.file("src/main")
+
+task applyCcNativeConfig {
+    group = "Command Comms"
+    description = "Copies native source files, resources, and manifest from android-config/ before each build."
+
+    doLast {
+        // ── Java / Kotlin source files ──────────────────────────────────────
+        javaDir.mkdirs()
+        def javaSources = [
+            "BackgroundAudioService.java",
+            "BackgroundServicePlugin.java",
+            "BootReceiver.java",
+            "DndOverridePlugin.java",
+            "HardwarePttPlugin.java",
+            "PttBroadcastReceiver.java",
+            "PttAccessibilityService.java",
+            "MainActivity.java",
+            "LiveKitPlugin.kt",
+            "RadioVoiceDSP.kt",
+        ]
+        javaSources.each { name ->
+            def src = configDir.resolve(name).toFile()
+            if (src.exists()) {
+                def dst = new File(javaDir, name)
+                dst.bytes = src.bytes
+            }
+        }
+
+        // Fix Capacitor lifecycle access modifier (protected → public)
+        def mainActivity = new File(javaDir, "MainActivity.java")
+        if (mainActivity.exists()) {
+            def text = mainActivity.text
+            text = text.replace("protected void onResume()", "public void onResume()")
+            text = text.replace("protected void onDestroy()", "public void onDestroy()")
+            mainActivity.text = text
+        }
+
+        // ── Launcher icons (mipmap densities) ──────────────────────────────
+        ["mdpi", "hdpi", "xhdpi", "xxhdpi", "xxxhdpi"].each { density ->
+            def dstDir = new File(resDir, "mipmap-${density}")
+            dstDir.mkdirs()
+            ["ic_launcher.png", "ic_launcher_round.png"].each { icon ->
+                def src = configDir.resolve("res/mipmap-${density}/${icon}").toFile()
+                if (src.exists()) new File(dstDir, icon).bytes = src.bytes
+            }
+        }
+
+        // Adaptive icon XML (Android 8+)
+        def anydpiDir = new File(resDir, "mipmap-anydpi-v26")
+        anydpiDir.mkdirs()
+        ["ic_launcher.xml", "ic_launcher_round.xml"].each { xml ->
+            def src = configDir.resolve("res/mipmap-anydpi-v26/${xml}").toFile()
+            if (src.exists()) new File(anydpiDir, xml).bytes = src.bytes
+        }
+
+        // ── Splash + adaptive foreground drawables ──────────────────────────
+        def drawableDir = new File(resDir, "drawable")
+        drawableDir.mkdirs()
+        def defaultSplash = new File(drawableDir, "splash.png")
+        if (defaultSplash.exists()) defaultSplash.delete()
+        ["ic_splash.png", "splash.xml", "ic_launcher_foreground.png"].each { f ->
+            def src = configDir.resolve("res/drawable/${f}").toFile()
+            if (src.exists()) new File(drawableDir, f).bytes = src.bytes
+        }
+
+        // ── Notification icons ──────────────────────────────────────────────
+        ["mdpi", "hdpi", "xhdpi", "xxhdpi"].each { density ->
+            def dstDir = new File(resDir, "drawable-${density}")
+            dstDir.mkdirs()
+            def src = configDir.resolve("res/drawable-${density}/ic_stat_icon.png").toFile()
+            if (src.exists()) new File(dstDir, "ic_stat_icon.png").bytes = src.bytes
+        }
+
+        // ── Values resources ────────────────────────────────────────────────
+        def valuesDir = new File(resDir, "values")
+        valuesDir.mkdirs()
+        ["ic_launcher_background.xml", "colors.xml", "accessibility_strings.xml"].each { f ->
+            def src = configDir.resolve("res/values/${f}").toFile()
+            if (src.exists()) new File(valuesDir, f).bytes = src.bytes
+        }
+
+        // ── Accessibility service XML ────────────────────────────────────────
+        def xmlDir = new File(resDir, "xml")
+        xmlDir.mkdirs()
+        def accessXml = configDir.resolve("res/xml/accessibility_service_config.xml").toFile()
+        if (accessXml.exists()) new File(xmlDir, "accessibility_service_config.xml").bytes = accessXml.bytes
+
+        // ── AndroidManifest.xml ──────────────────────────────────────────────
+        def manifest = configDir.resolve("AndroidManifest.xml").toFile()
+        if (manifest.exists()) new File(mainDir, "AndroidManifest.xml").bytes = manifest.bytes
+
+        println "[CC] applyCcNativeConfig: all files copied from android-config/"
+    }
+}
+
+preBuild.dependsOn applyCcNativeConfig

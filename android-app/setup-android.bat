@@ -113,7 +113,23 @@ if exist "%CONFIG_DIR%\AndroidManifest.xml" (
 )
 
 echo.
-echo [6/6] Verifying icon files...
+echo [6/7] Hooking Gradle auto-copy into app\build.gradle...
+set "BUILD_GRADLE=%ANDROID_DIR%\app\build.gradle"
+if exist "%BUILD_GRADLE%" (
+    findstr /C:"commandcomms.gradle" "%BUILD_GRADLE%" >nul 2>&1
+    if errorlevel 1 (
+        echo. >> "%BUILD_GRADLE%"
+        echo apply from: '../../android-config/commandcomms.gradle' >> "%BUILD_GRADLE%"
+        echo   -^> Injected apply from: commandcomms.gradle
+    ) else (
+        echo   -^> Already present, skipping
+    )
+) else (
+    echo   WARNING: app\build.gradle not found - Gradle hook not added
+)
+
+echo.
+echo [7/7] Verifying icon files...
 set "VERIFY_OK=1"
 for %%d in (mdpi hdpi xhdpi xxhdpi xxxhdpi) do (
     call :checkIcon "%%d"
@@ -127,6 +143,10 @@ if "!VERIFY_OK!"=="1" (
 
 echo.
 echo === Setup complete ===
+echo.
+echo Gradle hook is now active. Every subsequent Android Studio build will
+echo automatically re-copy all files from android-config/ before compiling.
+echo You only need to re-run this script after: npx cap sync android
 echo.
 echo IMPORTANT: If updating an existing install on the device,
 echo UNINSTALL the old app first to clear the cached icon.

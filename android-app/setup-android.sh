@@ -114,7 +114,22 @@ if [ -f "$CONFIG_DIR/AndroidManifest.xml" ]; then
 fi
 
 echo ""
-echo "[6/6] Verifying icon files..."
+echo "[6/7] Hooking Gradle auto-copy into app/build.gradle..."
+BUILD_GRADLE="$ANDROID_DIR/app/build.gradle"
+if [ -f "$BUILD_GRADLE" ]; then
+    if ! grep -q "commandcomms.gradle" "$BUILD_GRADLE"; then
+        echo "" >> "$BUILD_GRADLE"
+        echo "apply from: '../../android-config/commandcomms.gradle'" >> "$BUILD_GRADLE"
+        echo "  -> Injected apply from: commandcomms.gradle"
+    else
+        echo "  -> Already present, skipping"
+    fi
+else
+    echo "  WARNING: app/build.gradle not found - Gradle hook not added"
+fi
+
+echo ""
+echo "[7/7] Verifying icon files..."
 VERIFY_OK=1
 for density in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
     ICON_FILE="$RES_DIR/mipmap-$density/ic_launcher.png"
@@ -147,6 +162,10 @@ fi
 
 echo ""
 echo "=== Setup complete ==="
+echo ""
+echo "Gradle hook is now active. Every subsequent Android Studio build will"
+echo "automatically re-copy all files from android-config/ before compiling."
+echo "You only need to re-run this script after: npx cap sync android"
 echo ""
 echo "IMPORTANT: If updating an existing install on the device,"
 echo "UNINSTALL the old app first to clear the cached icon."
