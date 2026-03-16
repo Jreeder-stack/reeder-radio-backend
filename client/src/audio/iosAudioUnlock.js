@@ -1,3 +1,5 @@
+import { preloadPermitBuffer } from './talkPermitTone.js';
+
 let unlocked = false;
 let audioContext = null;
 let unlockAttempts = 0;
@@ -46,12 +48,14 @@ export async function unlockAudio() {
       await silentAudio.play();
       console.log('[iOS Audio] Silent audio element played - audio unlocked');
       unlocked = true;
+      preloadPermitBuffer();
       return true;
     } catch (e) {
       console.log('[iOS Audio] Silent audio play failed:', e.message);
       if (audioContext && audioContext.state === 'running') {
         console.log('[iOS Audio] AudioContext is running, marking as unlocked');
         unlocked = true;
+        preloadPermitBuffer();
         return true;
       }
       return false;
