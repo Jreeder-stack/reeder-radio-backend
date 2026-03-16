@@ -42,8 +42,14 @@ done
 # "attempting to assign weaker access privileges; was public".
 MAIN_ACTIVITY="$JAVA_DIR/MainActivity.java"
 if [ -f "$MAIN_ACTIVITY" ]; then
-    sed -i 's/protected void onResume()/public void onResume()/g' "$MAIN_ACTIVITY"
-    sed -i 's/protected void onDestroy()/public void onDestroy()/g' "$MAIN_ACTIVITY"
+    if sed --version >/dev/null 2>&1; then
+        SED_IN_PLACE=(-i)
+    else
+        SED_IN_PLACE=(-i '')
+    fi
+
+    sed "${SED_IN_PLACE[@]}" 's/protected void onResume()/public void onResume()/g' "$MAIN_ACTIVITY"
+    sed "${SED_IN_PLACE[@]}" 's/protected void onDestroy()/public void onDestroy()/g' "$MAIN_ACTIVITY"
 fi
 
 echo ""
