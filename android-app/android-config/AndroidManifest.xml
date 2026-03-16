@@ -105,6 +105,12 @@
             <intent-filter>
                 <action android:name="android.intent.action.PTT.down" />
                 <action android:name="android.intent.action.PTT.up" />
+                <action android:name="android.intent.action.PTT_DOWN" />
+                <action android:name="android.intent.action.PTT_UP" />
+                <action android:name="com.inrico.ptt.down" />
+                <action android:name="com.inrico.ptt.up" />
+                <action android:name="com.inrico.intent.action.PTT_DOWN" />
+                <action android:name="com.inrico.intent.action.PTT_UP" />
             </intent-filter>
         </receiver>
 
