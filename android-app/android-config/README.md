@@ -329,12 +329,36 @@ For release builds, create a keystore:
 keytool -genkey -v -keystore command-comms.keystore -alias command-comms -keyalg RSA -keysize 2048 -validity 10000
 ```
 
+
+### PTT Broadcast Action Configuration
+
+`PttBroadcastReceiver` supports configurable action allowlists via SharedPreferences file `CommandCommsPttConfig`:
+
+- `ptt_down_actions` — comma-separated broadcast action names treated as **PTT down**
+- `ptt_up_actions` — comma-separated broadcast action names treated as **PTT up**
+- `ptt_diag_log_unmatched` — boolean diagnostic mode; when `true`, logs unmatched broadcast actions/extras without forwarding to TX
+
+If these keys are unset, build-time defaults are used.
+
+#### Example (set from adb shell using app sandbox)
+
+```bash
+adb shell run-as com.reedersystems.commandcomms sh -c 'cat > shared_prefs/CommandCommsPttConfig.xml <<"EOF"
+<?xml version='1.0' encoding='utf-8' standalone='yes' ?>
+<map>
+    <string name="ptt_down_actions">android.intent.action.PTT.down,android.intent.action.PTT_DOWN,com.inrico.ptt.down</string>
+    <string name="ptt_up_actions">android.intent.action.PTT.up,android.intent.action.PTT_UP,com.inrico.ptt.up</string>
+    <boolean name="ptt_diag_log_unmatched" value="true" />
+</map>
+EOF'
+```
+
 ## Inrico T320 — Device Setup
 
 1. **Duraspeed must be OFF** — Settings → Battery → Duraspeed → disable for COMMAND COMMS
 2. **Battery optimization exempt** — Requested automatically on first launch
 3. **PTT key code**: 230 (Inrico T320 hardware PTT button)
-4. **Firmware broadcasts**: `android.intent.action.PTT.down` / `android.intent.action.PTT.up`
+4. **Firmware broadcasts**: vary by firmware; default allowlist includes `android.intent.action.PTT.down/up`, `android.intent.action.PTT_DOWN/UP`, and `com.inrico.ptt.down/up`
 
 ### Copy Commands
 
@@ -353,3 +377,43 @@ cp android-app/android-config/AndroidManifest.xml android/app/src/main/AndroidMa
 2. Connect via USB
 3. Run `npx cap run android` or build APK in Android Studio
 4. Use `adb logcat -s PTT-DIAG` to verify PTT chain
+
+
+### Exact adb verification steps (Inrico firmware action discovery)
+
+Use this sequence to confirm exactly which broadcast action strings your device emits when pressing/releasing PTT:
+
+1. Install/start the app and keep it running in background.
+2. Enable diagnostic unmatched logging:
+   ```bash
+   adb shell run-as com.reedersystems.commandcomms sed -i 's/value="false"/value="true"/' shared_prefs/CommandCommsPttConfig.xml
+   ```
+   (Or re-push the XML snippet above with `ptt_diag_log_unmatched=true`.)
+3. Start a focused logcat capture:
+   ```bash
+   adb logcat -c
+   adb logcat -v time -s PTT-DIAG
+   ```
+4. With screen on, press/release hardware PTT 5–10 times.
+5. Turn screen off, press/release hardware PTT 5–10 times again.
+6. Record every `action=...` shown in:
+   - `PttBroadcastReceiver.onReceive() — action=... extras=...`
+   - `[DIAG-ONLY] Unmatched PTT broadcast action observed: action=... extras=...`
+7. Update allowlists to include discovered OEM-specific strings, then retest:
+   ```bash
+   adb shell run-as com.reedersystems.commandcomms cat shared_prefs/CommandCommsPttConfig.xml
+   ```
+8. Validate forwarding by confirming logs:
+   - `PTT DOWN broadcast — acquiring wake lock and forwarding to service`
+   - `PTT UP broadcast — forwarding to service`
+
+Optional: manually inject candidate actions to verify mapping quickly:
+
+```bash
+adb shell am broadcast -a android.intent.action.PTT.down
+adb shell am broadcast -a android.intent.action.PTT.up
+adb shell am broadcast -a android.intent.action.PTT_DOWN
+adb shell am broadcast -a android.intent.action.PTT_UP
+adb shell am broadcast -a com.inrico.ptt.down
+adb shell am broadcast -a com.inrico.ptt.up
+```
