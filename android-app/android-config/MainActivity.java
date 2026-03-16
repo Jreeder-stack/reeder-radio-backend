@@ -209,7 +209,7 @@ public class MainActivity extends BridgeActivity {
     }
 
     // Legacy T320 keycodes (original mappings, kept as fallback)
-    private static final int KEY_PTT = 230;
+    private static final int KEY_PTT = PttKeyMapping.KEYCODE_PTT_FALLBACK;
     private static final int KEY_ACC = 231;
     private static final int KEY_EMERGENCY = 233;
     private static final int KEY_DPAD_UP = 19;
@@ -219,7 +219,7 @@ public class MainActivity extends BridgeActivity {
     private static final int KEY_STAR = 17;
 
     // Confirmed Linux-to-Android keycode mappings from adb getevent -l on T320
-    private static final int KEY_PTT_F11         = KeyEvent.KEYCODE_F11;           // 141 — PTT primary
+    private static final int KEY_PTT_F11         = PttKeyMapping.KEYCODE_PTT_PRIMARY; // 141 — PTT primary
     private static final int KEY_SIDE1_F1        = KeyEvent.KEYCODE_F1;            // 131 — black side button
     private static final int KEY_SIDE2_SELECT    = KeyEvent.KEYCODE_BUTTON_SELECT; // 109 — orange side button (verify on device)
     private static final int KEY_SIDE2_DPAD_CTR  = KeyEvent.KEYCODE_DPAD_CENTER;   // 23  — orange fallback
@@ -271,7 +271,7 @@ public class MainActivity extends BridgeActivity {
     }
 
     private boolean isPttKey(int keyCode) {
-        return keyCode == KEY_PTT || keyCode == KEY_PTT_F11;
+        return PttKeyMapping.isPttKey(keyCode);
     }
 
     private boolean isSide1Key(int keyCode) {
@@ -534,7 +534,7 @@ public class MainActivity extends BridgeActivity {
                 // AccessibilityService is primary — Activity is fallback only.
                 // Skip processing here to avoid duplicate PTT events.
                 Log.d(DIAG_TAG, "MainActivity — PTT key=" + keyCode + " action=" + actionStr
-                    + " SUPPRESSED (AccessibilityService is primary)");
+                    + " SUPPRESSED (AccessibilityService is primary, matched F11/230 mapping)");
                 // Still sync UI via HardwarePttPlugin so React display stays consistent
                 HardwarePttPlugin pttPlugin = HardwarePttPlugin.getInstance();
                 if (pttPlugin != null) {
@@ -545,7 +545,7 @@ public class MainActivity extends BridgeActivity {
 
             // AccessibilityService not active — Activity handles PTT as fallback
             Log.d(DIAG_TAG, "MainActivity — PTT key=" + keyCode + " action=" + actionStr
-                + " FALLBACK (AccessibilityService not running)");
+                + " FALLBACK (AccessibilityService not running, matched F11/230 mapping)");
 
             if (action == KeyEvent.ACTION_DOWN) {
                 if (repeat > 0 || activityPttHeld) {
