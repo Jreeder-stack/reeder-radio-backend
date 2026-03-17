@@ -9,6 +9,8 @@ const SIGNALING_EVENTS = {
   EMERGENCY_START: 'emergency:start',
   EMERGENCY_END: 'emergency:end',
   EMERGENCY_FORCE_CONNECT: 'emergency:force_connect',
+  CLEAR_AIR_START: 'clear_air:start',
+  CLEAR_AIR_END: 'clear_air:end',
   UNIT_STATUS_UPDATE: 'unit:status',
   LOCATION_UPDATE: 'unit:location',
   SYSTEM_STATUS: 'system:status',
@@ -24,6 +26,7 @@ class SignalingService {
     this.activeTransmissions = new Map();
     this.graceChannels = new Map();
     this.emergencyStates = new Map();
+    this.clearAirStates = new Map();
     this.connectionTimes = new Map();
     this.trackedUnitLocations = new Map();
     this.livekitAvailable = true;
@@ -99,6 +102,8 @@ class SignalingService {
       socket.on(SIGNALING_EVENTS.PTT_END, (data) => this._handlePttEnd(socket, data));
       socket.on(SIGNALING_EVENTS.EMERGENCY_START, (data) => this._handleEmergencyStart(socket, data));
       socket.on(SIGNALING_EVENTS.EMERGENCY_END, (data) => this._handleEmergencyEnd(socket, data));
+      socket.on(SIGNALING_EVENTS.CLEAR_AIR_START, (data) => this._handleClearAirStart(socket, data));
+      socket.on(SIGNALING_EVENTS.CLEAR_AIR_END, (data) => this._handleClearAirEnd(socket, data));
       socket.on(SIGNALING_EVENTS.UNIT_STATUS_UPDATE, (data) => this._handleStatusUpdate(socket, data));
       socket.on(SIGNALING_EVENTS.LOCATION_UPDATE, (data) => this._handleLocationUpdate(socket, data));
       socket.on(SIGNALING_EVENTS.TOKEN_REQUEST, (data) => this._handleTokenRequest(socket, data));
@@ -144,6 +149,15 @@ class SignalingService {
       timestamp: Date.now(),
       livekitAvailable: this.livekitAvailable,
     });
+
+    if (this.clearAirStates.size > 0) {
+      for (const clearAirData of this.clearAirStates.values()) {
+        socket.emit('clear_air:alert', {
+          ...clearAirData,
+          message: `CLEAR AIR active on ${clearAirData.channelId}`,
+        });
+      }
+    }
     
     console.log(`[Signaling] Unit authenticated: ${unitId} (${username})`);
   }
@@ -190,6 +204,11 @@ class SignalingService {
     const emergencyState = this.emergencyStates.get(channelId);
     if (emergencyState) {
       socket.emit(SIGNALING_EVENTS.EMERGENCY_START, emergencyState);
+    }
+    
+    const clearAirState = this.clearAirStates.get(channelId);
+    if (clearAirState) {
+      socket.emit(SIGNALING_EVENTS.CLEAR_AIR_START, clearAirState);
     }
     
     console.log(`[Signaling] ${socket.unitId} joined channel ${channelId}`);
@@ -417,6 +436,62 @@ class SignalingService {
     }
     
     console.log(`[Signaling] EMERGENCY END: ${channelId} cleared by ${socket.unitId}`);
+  }
+
+  _handleClearAirStart(socket, data) {
+    const { channelId } = data;
+    
+    if (!socket.unitId || !socket.isDispatcher) {
+      socket.emit('error', { message: 'Only dispatchers can activate Clear Air' });
+      return;
+    }
+    
+    const channelNamePart = channelId.includes('__') ? channelId.split('__').slice(1).join('__') : channelId;
+    const clearAirData = {
+      channelId,
+      channelName: channelNamePart,
+      dispatcherId: socket.unitId,
+      agencyId: socket.agencyId,
+      timestamp: Date.now(),
+    };
+    
+    this.clearAirStates.set(channelId, clearAirData);
+    
+    this.io.to(`channel:${channelId}`).emit(SIGNALING_EVENTS.CLEAR_AIR_START, clearAirData);
+    
+    this.io.emit('clear_air:alert', {
+      ...clearAirData,
+      message: `CLEAR AIR: Dispatcher ${socket.unitId} activated Clear Air on ${channelId}`,
+    });
+    
+    console.log(`[Signaling] CLEAR AIR START: dispatcher ${socket.unitId} on ${channelId}`);
+  }
+
+  _handleClearAirEnd(socket, data) {
+    const { channelId } = data;
+    
+    const clearAir = this.clearAirStates.get(channelId);
+    if (!clearAir) return;
+    
+    if (!socket.isDispatcher && socket.unitId !== clearAir.dispatcherId) {
+      socket.emit('error', { message: 'Only the dispatcher can release Clear Air' });
+      return;
+    }
+    
+    this.clearAirStates.delete(channelId);
+    
+    const endData = {
+      channelId,
+      dispatcherId: clearAir.dispatcherId,
+      agencyId: clearAir.agencyId,
+      timestamp: Date.now(),
+      duration: Date.now() - clearAir.timestamp,
+    };
+    
+    this.io.to(`channel:${channelId}`).emit(SIGNALING_EVENTS.CLEAR_AIR_END, endData);
+    this.io.emit('clear_air:cleared', endData);
+    
+    console.log(`[Signaling] CLEAR AIR END: ${channelId} released by ${socket.unitId}`);
   }
 
   _handleStatusUpdate(socket, data) {

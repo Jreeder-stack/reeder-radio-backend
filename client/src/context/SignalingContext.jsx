@@ -251,6 +251,14 @@ export function SignalingProvider({ children }) {
     return signalingManager.signalEmergencyEnd(channelId);
   }, []);
 
+  const signalClearAirStart = useCallback((channelId) => {
+    return signalingManager.signalClearAirStart(channelId);
+  }, []);
+
+  const signalClearAirEnd = useCallback((channelId) => {
+    return signalingManager.signalClearAirEnd(channelId);
+  }, []);
+
   const updateStatus = useCallback((status) => {
     return signalingManager.updateStatus(status);
   }, []);
@@ -351,6 +359,8 @@ export function SignalingProvider({ children }) {
     signalPttEnd,
     signalEmergencyStart,
     signalEmergencyEnd,
+    signalClearAirStart,
+    signalClearAirEnd,
     updateStatus,
     updateLocation,
     startLocationTracking,

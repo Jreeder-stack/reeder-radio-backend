@@ -38,6 +38,7 @@ The application is a Progressive Web App (PWA) with a responsive design, support
 - **Channel Chat:** Each channel includes a chat tab in the Dispatcher Console, showing text messages and playable voice messages with transcription.
 - **Admin System:** Provides user and channel management, role assignment, and activity logging. Zones and channels are structured with unique channel names per zone, enforced by a `room_key` (`COALESCE(zone, 'Default') || '__' || name`) used for LiveKit rooms and signaling.
 - **Audio Export System:** Allows exporting channel audio messages within a specified date range as a ZIP file including a `manifest.json`.
+- **Clear Air:** Dispatcher selects a channel and activates Clear Air mode (with persistent beep alert). Server broadcasts `clear_air:start` to all connected units via Socket.IO; units on that channel or in their scan list are force-connected and shown a prominent animated "CLEAR AIR — EMERGENCY TRAFFIC ONLY" banner. Releasing Clear Air requires a confirmation dialog and broadcasts `clear_air:end`. Late-joining units receive immediate Clear Air state on channel join.
 
 ## External Dependencies
 - **LiveKit:** Real-time audio streaming and data communication.

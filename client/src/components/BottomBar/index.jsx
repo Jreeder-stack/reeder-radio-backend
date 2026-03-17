@@ -5,6 +5,7 @@ import { PTT_STATES } from '../../constants/pttStates.js';
 import livekitManager from '../../audio/LiveKitManager.js';
 import toneEngine from '../../audio/toneEngine.js';
 import toneTransmitter from '../../audio/ToneTransmitter.js';
+import { useSignalingContext } from '../../context/SignalingContext.jsx';
 
 export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identity = 'Dispatch', signalPttStart, signalPttEnd }) {
   const { 
@@ -12,14 +13,21 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
     txChannelIds, 
     pttState, 
     setPttState,
-    clearAirEnabled, 
     toggleClearAir,
+    clearAirChannel,
+    setClearAirChannel,
     getTxChannelNames 
   } = useDispatchStore();
+
+  const { signalClearAirStart, signalClearAirEnd } = useSignalingContext();
   
   const [disabledTones, setDisabledTones] = useState({});
   const [toneTransmitting, setToneTransmitting] = useState(false);
   const [channelBusy, setChannelBusy] = useState(false);
+  const [showClearAirModal, setShowClearAirModal] = useState(false);
+  const [showClearAirConfirm, setShowClearAirConfirm] = useState(false);
+  const [selectedClearAirChannelId, setSelectedClearAirChannelId] = useState(null);
+  const clearAirLiveKitRoomRef = useRef(null);
   const pttRef = useRef(null);
   const gestureActiveRef = useRef(false);
   const mutedChannelsRef = useRef([]);
@@ -264,20 +272,92 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
     setToneTransmitting(false);
   };
 
+  const isClearAirActive = !!clearAirChannel;
+
   const handleClearAirToggle = () => {
-    if (txChannelIds.length > 0) {
-      const channelId = txChannelIds[0];
-      toggleClearAir(channelId);
-      if (!clearAirEnabled[channelId]) {
-        toneEngine.startClearAir(channelId);
+    if (isClearAirActive) {
+      setShowClearAirConfirm(true);
+    } else {
+      const firstTxId = txChannelIds[0] || null;
+      setSelectedClearAirChannelId(firstTxId);
+      setShowClearAirModal(true);
+    }
+  };
+
+  const handleClearAirConfirmStart = () => {
+    if (!selectedClearAirChannelId) return;
+    const channelId = String(selectedClearAirChannelId);
+    const channel = channels.find(ch => String(ch.id) === channelId);
+    const roomKey = channel ? (channel.room_key || ((channel.zone || 'Default') + '__' + channel.name)) : null;
+    
+    toggleClearAir(channelId);
+    setClearAirChannel(channelId);
+    setShowClearAirModal(false);
+    
+    if (roomKey) {
+      const wasAlreadyConnected = livekitManager.isConnected(roomKey);
+      if (!wasAlreadyConnected) {
+        clearAirLiveKitRoomRef.current = roomKey;
+        livekitManager.connect(roomKey, identity).catch(err => {
+          console.warn('[BottomBar] ClearAir LiveKit connect failed:', err);
+        });
       } else {
-        toneEngine.stopClearAir(channelId);
+        clearAirLiveKitRoomRef.current = null;
+      }
+
+      const startClearAirTone = async () => {
+        const room = livekitManager.getRoom(roomKey);
+        if (room) {
+          toneTransmitter.setRoom(room);
+          const started = await toneTransmitter.startToneTransmission();
+          if (started) {
+            console.log('[BottomBar] Clear Air tone broadcasting over air on', roomKey);
+          }
+        }
+        toneEngine.startClearAir(channelId);
+      };
+
+      if (!wasAlreadyConnected) {
+        setTimeout(() => startClearAirTone(), 1500);
+      } else {
+        startClearAirTone();
+      }
+
+      signalClearAirStart(roomKey);
+    }
+  };
+
+  const handleClearAirConfirmEnd = () => {
+    if (!clearAirChannel) return;
+    const channelId = String(clearAirChannel);
+    const channel = channels.find(ch => String(ch.id) === channelId);
+    const roomKey = channel ? (channel.room_key || ((channel.zone || 'Default') + '__' + channel.name)) : null;
+    
+    toggleClearAir(channelId);
+    setClearAirChannel(null);
+    setShowClearAirConfirm(false);
+    
+    if (roomKey) {
+      toneEngine.stopClearAir(channelId);
+      toneTransmitter.stopToneTransmission().catch(err => {
+        console.warn('[BottomBar] ClearAir tone stop failed:', err);
+      });
+      signalClearAirEnd(roomKey);
+      const ownedRoom = clearAirLiveKitRoomRef.current;
+      if (ownedRoom === roomKey) {
+        clearAirLiveKitRoomRef.current = null;
+        livekitManager.disconnect(roomKey).catch(err => {
+          console.warn('[BottomBar] ClearAir LiveKit disconnect failed:', err);
+        });
       }
     }
   };
 
+  const activeClearAirChannelName = clearAirChannel
+    ? (channels.find(ch => String(ch.id) === String(clearAirChannel))?.name || '')
+    : '';
+
   const hasTxChannels = txChannelIds.length > 0;
-  const firstTxChannelId = txChannelIds[0];
   const isTransmitting = pttState === PTT_STATES.TRANSMITTING || 
                          pttState === PTT_STATES.ARMING || 
                          toneTransmitting;
@@ -374,16 +454,77 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
         </button>
         <button
           onClick={handleClearAirToggle}
-          disabled={!hasTxChannels}
-          className={`px-3 py-1.5 text-sm rounded transition-colors ${
-            clearAirEnabled[firstTxChannelId]
-              ? 'bg-blue-600 text-white'
+          disabled={!hasTxChannels && !isClearAirActive}
+          className={`px-3 py-1.5 text-sm rounded transition-colors font-medium ${
+            isClearAirActive
+              ? 'bg-blue-600 text-white animate-pulse'
               : 'bg-dispatch-border hover:bg-dispatch-panel text-dispatch-text'
-          } ${!hasTxChannels ? 'opacity-50 cursor-not-allowed' : ''}`}
+          } ${(!hasTxChannels && !isClearAirActive) ? 'opacity-50 cursor-not-allowed' : ''}`}
         >
-          Clear-Air {clearAirEnabled[firstTxChannelId] ? 'ON' : 'OFF'}
+          {isClearAirActive
+            ? `CLEAR AIR: ${activeClearAirChannelName}`
+            : 'Clear-Air OFF'}
         </button>
       </div>
+
+      {showClearAirModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={() => setShowClearAirModal(false)}>
+          <div className="bg-dispatch-panel border border-dispatch-border rounded-lg p-6 w-80 shadow-xl" onClick={e => e.stopPropagation()}>
+            <h2 className="text-white font-bold text-lg mb-1">Activate Clear Air</h2>
+            <p className="text-dispatch-secondary text-sm mb-4">Select channel to clear for emergency traffic only.</p>
+            <label className="text-xs text-dispatch-secondary uppercase tracking-wider mb-1 block">Channel</label>
+            <select
+              value={selectedClearAirChannelId || ''}
+              onChange={e => setSelectedClearAirChannelId(e.target.value || null)}
+              className="w-full bg-dispatch-bg border border-dispatch-border text-white rounded px-3 py-2 mb-4 text-sm"
+            >
+              {channels.map(ch => (
+                <option key={ch.id} value={ch.id}>{ch.name}{ch.zone ? ` (${ch.zone})` : ''}</option>
+              ))}
+            </select>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowClearAirModal(false)}
+                className="px-4 py-2 rounded text-sm text-dispatch-secondary hover:text-white transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleClearAirConfirmStart}
+                disabled={!selectedClearAirChannelId}
+                className="px-4 py-2 rounded text-sm bg-blue-600 hover:bg-blue-700 text-white font-semibold disabled:opacity-50"
+              >
+                Activate Clear Air
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showClearAirConfirm && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={() => setShowClearAirConfirm(false)}>
+          <div className="bg-dispatch-panel border border-dispatch-border rounded-lg p-6 w-80 shadow-xl" onClick={e => e.stopPropagation()}>
+            <h2 className="text-white font-bold text-lg mb-2">Release Emergency Traffic?</h2>
+            <p className="text-dispatch-secondary text-sm mb-4">
+              Are you sure you want to release emergency traffic on <strong className="text-white">{activeClearAirChannelName}</strong>? Units will be disconnected from the forced channel.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowClearAirConfirm(false)}
+                className="px-4 py-2 rounded text-sm text-dispatch-secondary hover:text-white transition-colors"
+              >
+                Keep Active
+              </button>
+              <button
+                onClick={handleClearAirConfirmEnd}
+                className="px-4 py-2 rounded text-sm bg-red-600 hover:bg-red-700 text-white font-semibold"
+              >
+                Release
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

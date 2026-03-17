@@ -10,6 +10,7 @@ import { micPTTManager } from '../../audio/MicPTTManager';
 import { PTT_STATES } from '../../constants/pttStates';
 import { updateUnitStatus } from '../../utils/api';
 import { DataPacket_Kind } from 'livekit-client';
+import { useClearAir } from './useClearAir';
 
 export default function MobileRadioView({ user, onLogout }) {
   const identity = (user?.unit_id && user.unit_id.trim()) || user?.username || 'Unknown';
@@ -50,6 +51,13 @@ export default function MobileRadioView({ user, onLogout }) {
   const isEmergencyRef = useRef(false);
   const rxAudioElementsRef = useRef(new Set());
   const hasJoinedRef = useRef(false);
+
+  const { clearAirActive, clearAirChannelName } = useClearAir({
+    identity,
+    channels,
+    isScanning,
+    scanChannels: [],
+  });
   
   const getRoomKey = useCallback((ch) => {
     if (!ch) return '';
@@ -357,6 +365,12 @@ export default function MobileRadioView({ user, onLogout }) {
   return (
     <MobileFrame title="COMMUNICATIONS" connectionStatus={connectionStatus}>
       <div className="h-full flex flex-col p-4 gap-4">
+
+        {clearAirActive && (
+          <div className="w-full bg-blue-700 text-white text-center font-bold py-2 px-3 rounded-lg shadow-lg animate-pulse text-xs tracking-widest uppercase">
+            CLEAR AIR — EMERGENCY TRAFFIC ONLY{clearAirChannelName ? ` (${clearAirChannelName})` : ''}
+          </div>
+        )}
         
         <div className="flex gap-2">
           <div className="flex-1 bg-zinc-900/50 p-4 rounded-xl border border-white/5 flex flex-col gap-2 relative overflow-hidden">

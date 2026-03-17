@@ -30,6 +30,7 @@ const useDispatchStore = create(
       activeTxChannelId: null,
       toneState: null,
       clearAirEnabled: {},
+      clearAirChannel: null,
 
       setChannels: (newChannels) => {
         const validIds = new Set(newChannels.map(ch => ch.id));
@@ -186,6 +187,8 @@ const useDispatchStore = create(
           [channelId]: !state.clearAirEnabled[channelId]
         }
       })),
+
+      setClearAirChannel: (channelId) => set({ clearAirChannel: channelId }),
       
       getChannelById: (id) => get().channels.find(ch => ch.id === id),
       
@@ -233,7 +236,8 @@ const useDispatchStore = create(
         isTalking: false,
         activeTxChannelId: null,
         toneState: null,
-        clearAirEnabled: {}
+        clearAirEnabled: {},
+        clearAirChannel: null
       })
     }),
     {

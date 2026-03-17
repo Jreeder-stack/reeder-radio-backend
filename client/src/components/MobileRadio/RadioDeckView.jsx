@@ -12,6 +12,7 @@ import { startBackgroundService, stopBackgroundService } from '../../plugins/bac
 import { updateServiceConnectionInfo } from '../../plugins/nativeLiveKit';
 import { setupAppLifecycle } from '../../lib/capacitor';
 import { signalingManager } from '../../signaling/SignalingManager';
+import { useClearAir } from './useClearAir';
 import { startTracking as gpsStartTracking, stopTracking as gpsStopTracking } from '../../services/gpsService.js';
 import { PTTButton } from './PTTButton';
 import { 
@@ -122,6 +123,13 @@ export function RadioDeckView({ user, onLogout }) {
   const connecting = connectionStatus === 'connecting';
   
   const [channels, setChannels] = useState([]);
+
+  const { clearAirActive, clearAirChannelName } = useClearAir({
+    identity,
+    channels,
+    isScanning,
+    scanChannels,
+  });
   const [channelsLoading, setChannelsLoading] = useState(true);
   const [currentChannelIndex, setCurrentChannelIndex] = useState(0);
   const [currentZoneIndex, setCurrentZoneIndex] = useState(0);
@@ -249,6 +257,7 @@ export function RadioDeckView({ user, onLogout }) {
     };
   }, []);
 
+
   useEffect(() => {
     startBackgroundService().then(result => {
       if (result.success) {
@@ -347,6 +356,7 @@ export function RadioDeckView({ user, onLogout }) {
   useEffect(() => {
     transmitChannelRef.current = currentRoomKey || '';
   }, [currentRoomKey]);
+
   
   useEffect(() => {
     isEmergencyRef.current = isEmergency;
@@ -1464,6 +1474,12 @@ export function RadioDeckView({ user, onLogout }) {
       }}
     >
       
+      {clearAirActive && (
+        <div className="w-full bg-blue-700 text-white text-center font-bold py-2 px-4 rounded-lg shadow-lg animate-pulse text-sm tracking-widest uppercase">
+          CLEAR AIR — EMERGENCY TRAFFIC ONLY{clearAirChannelName ? ` (${clearAirChannelName})` : ''}
+        </div>
+      )}
+
       <div 
         className={cn(
           "bg-white rounded-lg p-3 shadow-sm border border-gray-200 cursor-pointer active:bg-gray-50 transition-all",

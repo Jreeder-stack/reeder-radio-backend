@@ -9,6 +9,8 @@ const SIGNALING_EVENTS = {
   EMERGENCY_START: 'emergency:start',
   EMERGENCY_END: 'emergency:end',
   EMERGENCY_FORCE_CONNECT: 'emergency:force_connect',
+  CLEAR_AIR_START: 'clear_air:start',
+  CLEAR_AIR_END: 'clear_air:end',
   UNIT_STATUS_UPDATE: 'unit:status',
   LOCATION_UPDATE: 'unit:location',
   SYSTEM_STATUS: 'system:status',
@@ -40,6 +42,10 @@ class SignalingManager {
       emergencyStart: new Set(),
       emergencyEnd: new Set(),
       'emergency:force_connect': new Set(),
+      clearAirStart: new Set(),
+      clearAirEnd: new Set(),
+      'clear_air:alert': new Set(),
+      'clear_air:cleared': new Set(),
       unitStatus: new Set(),
       locationUpdate: new Set(),
       'location:track_start': new Set(),
@@ -198,6 +204,23 @@ class SignalingManager {
       this._emit('emergencyEnd', data);
     });
 
+    this.socket.on(SIGNALING_EVENTS.CLEAR_AIR_START, (data) => {
+      this._emit('clearAirStart', data);
+    });
+
+    this.socket.on(SIGNALING_EVENTS.CLEAR_AIR_END, (data) => {
+      this._emit('clearAirEnd', data);
+    });
+
+    this.socket.on('clear_air:alert', (data) => {
+      this._emit('clear_air:alert', data);
+    });
+
+    this.socket.on('clear_air:cleared', (data) => {
+      this._emit('clear_air:cleared', data);
+      this._emit('clearAirEnd', data);
+    });
+
     this.socket.on('location:track_start', (data) => {
       this._emit('location:track_start', data);
     });
@@ -285,6 +308,20 @@ class SignalingManager {
     if (!this.socket?.connected) return false;
 
     this.socket.emit(SIGNALING_EVENTS.EMERGENCY_END, { channelId });
+    return true;
+  }
+
+  signalClearAirStart(channelId) {
+    if (!this.socket?.connected || !this.authenticated) return false;
+
+    this.socket.emit(SIGNALING_EVENTS.CLEAR_AIR_START, { channelId });
+    return true;
+  }
+
+  signalClearAirEnd(channelId) {
+    if (!this.socket?.connected) return false;
+
+    this.socket.emit(SIGNALING_EVENTS.CLEAR_AIR_END, { channelId });
     return true;
   }
 
