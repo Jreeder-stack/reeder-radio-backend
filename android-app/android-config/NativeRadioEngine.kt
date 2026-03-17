@@ -6,7 +6,6 @@ import android.util.Log
 import io.livekit.android.LiveKit
 import io.livekit.android.events.RoomEvent
 import io.livekit.android.room.Room
-import io.livekit.android.room.track.LocalAudioTrack
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -54,7 +53,6 @@ class NativeRadioEngine private constructor(context: Context) {
     @Volatile private var currentChannelName: String? = null
     private var previousAudioMode: Int = AudioManager.MODE_NORMAL
     private var wasSpeakerphoneOn: Boolean = false
-    private var localAudioTrack: LocalAudioTrack? = null
 
     fun addListener(listener: Listener) {
         synchronized(listeners) { listeners.add(listener) }
@@ -74,7 +72,7 @@ class NativeRadioEngine private constructor(context: Context) {
     }
 
     suspend fun connectSuspend(url: String, token: String, channelName: String): Boolean {
-        Log.d(DIAG_TAG, "engine.connect() — url=$url channel=$channelName")
+        Log.d(DIAG_TAG, "engine.connectSuspend() — url=$url channel=$channelName")
         return try {
             room?.disconnect()
             room = null
@@ -82,16 +80,16 @@ class NativeRadioEngine private constructor(context: Context) {
 
             val newRoom = LiveKit.create(appContext)
             currentChannelName = channelName
-            setupRoomListeners(newRoom)
             newRoom.connect(url, token)
             room = newRoom
             isConnectedState = true
+            setupRoomListeners(newRoom)
             emit("connected", mapOf("success" to true, "channelName" to channelName))
-            Log.d(DIAG_TAG, "engine.connect() SUCCESS — channel=$channelName")
+            Log.d(DIAG_TAG, "engine.connectSuspend() SUCCESS — channel=$channelName")
             true
         } catch (e: Exception) {
             isConnectedState = false
-            Log.e(DIAG_TAG, "engine.connect() FAILED — ${e.message}", e)
+            Log.e(DIAG_TAG, "engine.connectSuspend() FAILED — ${e.javaClass.simpleName}: ${e.message}", e)
             false
         }
     }
@@ -103,25 +101,25 @@ class NativeRadioEngine private constructor(context: Context) {
 
     suspend fun disconnectSuspend(): Boolean {
         return try {
-            localAudioTrack?.let { track ->
+            val currentRoom = room
+            if (isMicEnabledState && currentRoom != null) {
                 try {
-                    room?.localParticipant?.unpublishTrack(track, stopOnUnpublish = true)
+                    currentRoom.localParticipant.setMicrophoneEnabled(false)
                 } catch (e: Exception) {
-                    Log.w(DIAG_TAG, "engine.disconnect() — unpublish error: ${e.message}")
+                    Log.w(DIAG_TAG, "engine.disconnectSuspend() — mic disable error: ${e.message}")
                 }
             }
-            localAudioTrack = null
+            isMicEnabledState = false
             room?.disconnect()
             room = null
             isConnectedState = false
-            isMicEnabledState = false
             currentChannelName = null
             restoreAudioSettings()
             emit("disconnected", mapOf("success" to true))
-            Log.d(DIAG_TAG, "engine.disconnect() SUCCESS")
+            Log.d(DIAG_TAG, "engine.disconnectSuspend() SUCCESS")
             true
         } catch (e: Exception) {
-            Log.e(DIAG_TAG, "engine.disconnect() FAILED — ${e.message}", e)
+            Log.e(DIAG_TAG, "engine.disconnectSuspend() FAILED — ${e.message}", e)
             false
         }
     }
@@ -134,30 +132,23 @@ class NativeRadioEngine private constructor(context: Context) {
     suspend fun startTransmitSuspend(): Boolean {
         val currentRoom = room
         if (!isConnectedState || currentRoom == null) {
-            Log.w(DIAG_TAG, "engine.startTransmit() FAILED — not connected")
+            Log.w(DIAG_TAG, "engine.startTransmitSuspend() FAILED — not connected (isConnected=$isConnectedState room=${currentRoom != null})")
             return false
         }
         if (isMicEnabledState) {
+            Log.d(DIAG_TAG, "engine.startTransmitSuspend() — already transmitting")
             return true
         }
 
         return try {
-            localAudioTrack?.let { track ->
-                try {
-                    currentRoom.localParticipant.unpublishTrack(track, stopOnUnpublish = true)
-                } catch (e: Exception) {
-                    Log.w(DIAG_TAG, "engine.startTransmit() — old track cleanup failed: ${e.message}")
-                }
-            }
-            val track = currentRoom.localParticipant.createAudioTrack("microphone")
-            localAudioTrack = track
-            currentRoom.localParticipant.publishAudioTrack(track)
+            Log.d(DIAG_TAG, "engine.startTransmitSuspend() — calling setMicrophoneEnabled(true)")
+            currentRoom.localParticipant.setMicrophoneEnabled(true)
             isMicEnabledState = true
             emit("microphoneEnabled", mapOf("success" to true, "enabled" to true))
-            Log.d(DIAG_TAG, "engine.startTransmit() SUCCESS")
+            Log.d(DIAG_TAG, "engine.startTransmitSuspend() SUCCESS")
             true
         } catch (e: Exception) {
-            Log.e(DIAG_TAG, "engine.startTransmit() FAILED — ${e.message}", e)
+            Log.e(DIAG_TAG, "engine.startTransmitSuspend() FAILED — ${e.javaClass.simpleName}: ${e.message}", e)
             false
         }
     }
@@ -171,24 +162,23 @@ class NativeRadioEngine private constructor(context: Context) {
         val currentRoom = room
         if (!isConnectedState || currentRoom == null) {
             isMicEnabledState = false
-            Log.w(DIAG_TAG, "engine.stopTransmit() — not connected")
+            Log.w(DIAG_TAG, "engine.stopTransmitSuspend() — not connected, resetting state")
             return false
         }
         if (!isMicEnabledState) {
+            Log.d(DIAG_TAG, "engine.stopTransmitSuspend() — not transmitting")
             return true
         }
 
         return try {
-            localAudioTrack?.let { track ->
-                currentRoom.localParticipant.unpublishTrack(track, stopOnUnpublish = true)
-            }
-            localAudioTrack = null
+            Log.d(DIAG_TAG, "engine.stopTransmitSuspend() — calling setMicrophoneEnabled(false)")
+            currentRoom.localParticipant.setMicrophoneEnabled(false)
             isMicEnabledState = false
             emit("microphoneDisabled", mapOf("success" to true, "enabled" to false))
-            Log.d(DIAG_TAG, "engine.stopTransmit() SUCCESS")
+            Log.d(DIAG_TAG, "engine.stopTransmitSuspend() SUCCESS")
             true
         } catch (e: Exception) {
-            Log.e(DIAG_TAG, "engine.stopTransmit() FAILED — ${e.message}", e)
+            Log.e(DIAG_TAG, "engine.stopTransmitSuspend() FAILED — ${e.javaClass.simpleName}: ${e.message}", e)
             false
         }
     }
@@ -228,11 +218,16 @@ class NativeRadioEngine private constructor(context: Context) {
                     isConnectedState = false
                     isMicEnabledState = false
                     emit("disconnected", mapOf("reason" to (event.reason?.name ?: "unknown")))
+                    Log.d(DIAG_TAG, "engine — room disconnected: reason=${event.reason?.name}")
                 }
-                is RoomEvent.Reconnecting -> emit("reconnecting")
+                is RoomEvent.Reconnecting -> {
+                    emit("reconnecting")
+                    Log.d(DIAG_TAG, "engine — room reconnecting")
+                }
                 is RoomEvent.Reconnected -> {
                     isConnectedState = true
                     emit("reconnected")
+                    Log.d(DIAG_TAG, "engine — room reconnected")
                 }
                 is RoomEvent.ParticipantConnected -> emit(
                     "participantConnected",
