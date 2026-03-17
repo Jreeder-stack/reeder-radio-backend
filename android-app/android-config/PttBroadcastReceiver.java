@@ -23,16 +23,18 @@ public class PttBroadcastReceiver extends BroadcastReceiver {
     private static final String PREF_DIAG_LOG_UNMATCHED = "ptt_diag_log_unmatched";
 
     // Build-time defaults (can be overridden at runtime via SharedPreferences).
-    private static final boolean DEFAULT_DIAG_LOG_UNMATCHED = false;
+    private static final boolean DEFAULT_DIAG_LOG_UNMATCHED = true;
     private static final Set<String> DEFAULT_DOWN_ACTIONS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
         "android.intent.action.PTT.down",
         "android.intent.action.PTT_DOWN",
-        "com.inrico.ptt.down"
+        "com.inrico.ptt.down",
+        "com.inrico.intent.action.PTT_DOWN"
     )));
     private static final Set<String> DEFAULT_UP_ACTIONS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
         "android.intent.action.PTT.up",
         "android.intent.action.PTT_UP",
-        "com.inrico.ptt.up"
+        "com.inrico.ptt.up",
+        "com.inrico.intent.action.PTT_UP"
     )));
 
     @Override
@@ -64,13 +66,16 @@ public class PttBroadcastReceiver extends BroadcastReceiver {
             + " diagLogUnmatched=" + diagLogUnmatched);
 
         if (allowedDownActions.contains(action)) {
+            Log.d(TAG, "PTT ROUTE: broadcast action matched DOWN allowlist -> BackgroundAudioService.handlePttDown()");
             Log.d(TAG, "PTT DOWN broadcast — acquiring wake lock and forwarding to service");
             acquireCpuWakeLock(context);
             forwardToService(context, BackgroundAudioService.PTT_ACTION_DOWN);
         } else if (allowedUpActions.contains(action)) {
+            Log.d(TAG, "PTT ROUTE: broadcast action matched UP allowlist -> BackgroundAudioService.handlePttUp()");
             Log.d(TAG, "PTT UP broadcast — forwarding to service");
             forwardToService(context, BackgroundAudioService.PTT_ACTION_UP);
         } else if (diagLogUnmatched) {
+            Log.d(TAG, "PTT ROUTE: broadcast action UNMATCHED (ignored by receiver allowlist)");
             Log.d(TAG, "[DIAG-ONLY] Unmatched PTT broadcast action observed: action=" + action
                 + " extras=" + extrasSummary);
         }
