@@ -212,58 +212,60 @@ class NativeRadioEngine private constructor(context: Context) {
     }
 
     private fun setupRoomListeners(room: Room) {
-        room.events.collect(engineScope) { event: RoomEvent ->
-            when (event) {
-                is RoomEvent.Disconnected -> {
-                    isConnectedState = false
-                    isMicEnabledState = false
-                    emit("disconnected", mapOf("reason" to (event.reason?.name ?: "unknown")))
-                    Log.d(DIAG_TAG, "engine — room disconnected: reason=${event.reason?.name}")
-                }
-                is RoomEvent.Reconnecting -> {
-                    emit("reconnecting")
-                    Log.d(DIAG_TAG, "engine — room reconnecting")
-                }
-                is RoomEvent.Reconnected -> {
-                    isConnectedState = true
-                    emit("reconnected")
-                    Log.d(DIAG_TAG, "engine — room reconnected")
-                }
-                is RoomEvent.ParticipantConnected -> emit(
-                    "participantConnected",
-                    mapOf("identity" to (event.participant.identity?.value ?: "unknown"))
-                )
-                is RoomEvent.ParticipantDisconnected -> emit(
-                    "participantDisconnected",
-                    mapOf("identity" to (event.participant.identity?.value ?: "unknown"))
-                )
-                is RoomEvent.TrackUnsubscribed -> {
-                    if (event.track.kind == io.livekit.android.room.track.Track.Kind.AUDIO) {
-                        val identity = event.participant.identity?.value ?: "unknown"
-                        emit("trackUnsubscribed", mapOf("identity" to identity, "kind" to "audio"))
-                        emit("activeSpeakerChanged", mapOf("identity" to "", "speaking" to false))
+        engineScope.launch {
+            room.events.collect { event: RoomEvent ->
+                when (event) {
+                    is RoomEvent.Disconnected -> {
+                        isConnectedState = false
+                        isMicEnabledState = false
+                        emit("disconnected", mapOf("reason" to (event.reason?.name ?: "unknown")))
+                        Log.d(DIAG_TAG, "engine — room disconnected: reason=${event.reason?.name}")
                     }
-                }
-                is RoomEvent.TrackMuted -> {
-                    if (event.publication.kind == io.livekit.android.room.track.Track.Kind.AUDIO) {
-                        emit("activeSpeakerChanged", mapOf("identity" to "", "speaking" to false))
+                    is RoomEvent.Reconnecting -> {
+                        emit("reconnecting")
+                        Log.d(DIAG_TAG, "engine — room reconnecting")
                     }
-                }
-                is RoomEvent.ActiveSpeakersChanged -> {
-                    val speakers = event.speakers.filter {
-                        it.identity?.value != room.localParticipant.identity?.value
+                    is RoomEvent.Reconnected -> {
+                        isConnectedState = true
+                        emit("reconnected")
+                        Log.d(DIAG_TAG, "engine — room reconnected")
                     }
-                    if (speakers.isNotEmpty()) {
-                        val speaker = speakers.first()
-                        emit(
-                            "activeSpeakerChanged",
-                            mapOf("identity" to (speaker.identity?.value ?: "unknown"), "speaking" to true)
-                        )
-                    } else {
-                        emit("activeSpeakerChanged", mapOf("identity" to "", "speaking" to false))
+                    is RoomEvent.ParticipantConnected -> emit(
+                        "participantConnected",
+                        mapOf("identity" to (event.participant.identity?.value ?: "unknown"))
+                    )
+                    is RoomEvent.ParticipantDisconnected -> emit(
+                        "participantDisconnected",
+                        mapOf("identity" to (event.participant.identity?.value ?: "unknown"))
+                    )
+                    is RoomEvent.TrackUnsubscribed -> {
+                        if (event.track.kind == io.livekit.android.room.track.Track.Kind.AUDIO) {
+                            val identity = event.participant.identity?.value ?: "unknown"
+                            emit("trackUnsubscribed", mapOf("identity" to identity, "kind" to "audio"))
+                            emit("activeSpeakerChanged", mapOf("identity" to "", "speaking" to false))
+                        }
                     }
+                    is RoomEvent.TrackMuted -> {
+                        if (event.publication.kind == io.livekit.android.room.track.Track.Kind.AUDIO) {
+                            emit("activeSpeakerChanged", mapOf("identity" to "", "speaking" to false))
+                        }
+                    }
+                    is RoomEvent.ActiveSpeakersChanged -> {
+                        val speakers = event.speakers.filter {
+                            it.identity?.value != room.localParticipant.identity?.value
+                        }
+                        if (speakers.isNotEmpty()) {
+                            val speaker = speakers.first()
+                            emit(
+                                "activeSpeakerChanged",
+                                mapOf("identity" to (speaker.identity?.value ?: "unknown"), "speaking" to true)
+                            )
+                        } else {
+                            emit("activeSpeakerChanged", mapOf("identity" to "", "speaking" to false))
+                        }
+                    }
+                    else -> Unit
                 }
-                else -> Unit
             }
         }
     }
