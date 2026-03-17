@@ -1,0 +1,25 @@
+e: file:///C:/Users/Justin/StudioProjects/reeder-radio-backend/android-app/android/app/src/main/java/com/reedersystems/commandcomms/NativeRadioEngine.kt:226:61 Cannot infer type for this parameter. Please specify it explicitly.
+WorkerExecutor Queue: reuse connection
+WorkerExecutor Queue: name = "org.jetbrains.kotlin.daemon.common.CompileService$CallResult$Good", codebase = "", defaultLoader = InstrumentingVisitableURLClassLoader(ClassLoaderScopeIdentifier.Id{coreAndPlugins:settings[:]:buildSrc[:]:root-project[:](export)})
+WorkerExecutor Queue: name = "org.jetbrains.kotlin.daemon.common.CompileService$CallResult", codebase = "", defaultLoader = InstrumentingVisitableURLClassLoader(ClassLoaderScopeIdentifier.Id{coreAndPlugins:settings[:]:buildSrc[:]:root-project[:](export)})
+WorkerExecutor Queue: name = "java.lang.Long", codebase = "", defaultLoader = InstrumentingVisitableURLClassLoader(ClassLoaderScopeIdentifier.Id{coreAndPlugins:settings[:]:buildSrc[:]:root-project[:](export)})
+WorkerExecutor Queue: name = "java.lang.Number", codebase = "", defaultLoader = InstrumentingVisitableURLClassLoader(ClassLoaderScopeIdentifier.Id{coreAndPlugins:settings[:]:buildSrc[:]:root-project[:](export)})
+WorkerExecutor Queue: free connection (reuse = true)
+WorkerExecutor Queue: reuse connection
+WorkerExecutor Queue: reuse connection
+WorkerExecutor Queue: name = "org.jetbrains.kotlin.daemon.common.CompileService$CallResult$Ok", codebase = "", defaultLoader = InstrumentingVisitableURLClassLoader(ClassLoaderScopeIdentifier.Id{coreAndPlugins:settings[:]:buildSrc[:]:root-project[:](export)})
+WorkerExecutor Queue: name = "org.jetbrains.kotlin.daemon.common.CompileService$CallResult", codebase = "", defaultLoader = InstrumentingVisitableURLClassLoader(ClassLoaderScopeIdentifier.Id{coreAndPlugins:settings[:]:buildSrc[:]:root-project[:](export)})
+WorkerExecutor Queue: free connection (reuse = true)
+WorkerExecutor Queue: reuse connection
+Finished executing kotlin compiler using DAEMON strategy
+Restoring task outputs to pre-compilation state
+included builds: acquired lock on worker lease
+Build operation 'Execute execute for :app:compileDebugKotlin' completed
+Build operation 'Executing task ':app:compileDebugKotlin'' completed
+
+Build operation 'Snapshot outputs after executing task ':app:compileDebugKotlin'' completed
+Removed task artifact state for task ':app:compileDebugKotlin' from context.
+Completing Build operation 'Task :app:compileDebugKotlin'
+Build operation 'Task :app:compileDebugKotlin' completed
+Node :app:compileDebugKotlin completed, executed: true
+Explain with AI
