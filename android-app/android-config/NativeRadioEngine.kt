@@ -217,8 +217,8 @@ class NativeRadioEngine private constructor(context: Context) {
         audioManager.isSpeakerphoneOn = wasSpeakerphoneOn
     }
 
-    private fun setupRoomListeners(room: Room): Job {
-        return engineScope.launch {
+    private fun setupRoomListeners(room: Room) {
+        engineScope.launch {
             room.events.collect { event: RoomEvent ->
                 when (event) {
                     is RoomEvent.Disconnected -> {
