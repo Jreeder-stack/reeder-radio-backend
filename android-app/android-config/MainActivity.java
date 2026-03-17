@@ -17,7 +17,6 @@ import android.os.PowerManager;
 import android.provider.Settings;
 import android.util.Log;
 import android.util.TypedValue;
-import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup;
@@ -230,7 +229,6 @@ public class MainActivity extends BridgeActivity {
     private boolean activitySide2Held = false;
 
     private LinearLayout accessibilityBanner;
-    private TextView debugStatusText;
 
     private PowerManager.WakeLock screenWakeLock;
     private Handler jsKeepaliveHandler;
@@ -321,7 +319,6 @@ public class MainActivity extends BridgeActivity {
         Log.d(DIAG_TAG, "  Activity PTT held           : " + activityPttHeld);
         Log.d(DIAG_TAG, "==========================");
 
-        updateDebugStatus(a11yEnabled);
     }
 
     private String getActiveCaptureSource(boolean a11yEnabled) {
@@ -378,43 +375,11 @@ public class MainActivity extends BridgeActivity {
         accessibilityBanner.setVisibility(View.GONE);
         root.addView(accessibilityBanner, topParams);
 
-        LinearLayout debugPanel = new LinearLayout(this);
-        debugPanel.setOrientation(LinearLayout.VERTICAL);
-        debugPanel.setPadding(dp(12), dp(10), dp(12), dp(10));
-        debugPanel.setBackgroundColor(0xCC111111);
-
-        TextView debugTitle = new TextView(this);
-        debugTitle.setText("Native Debug Status");
-        debugTitle.setTextColor(0xFFFFFFFF);
-        debugTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
-
-        debugStatusText = new TextView(this);
-        debugStatusText.setTextColor(0xFFFFFFFF);
-        debugStatusText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
-        debugStatusText.setText("Accessibility service enabled: ...\nBackgroundAudioService running: ...\nActive key capture source: ...");
-
-        debugPanel.addView(debugTitle);
-        debugPanel.addView(debugStatusText);
-
-        FrameLayout.LayoutParams bottomParams = new FrameLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT
-        );
-        bottomParams.gravity = Gravity.BOTTOM;
-        root.addView(debugPanel, bottomParams);
     }
 
     private int dp(int value) {
         float density = getResources().getDisplayMetrics().density;
         return Math.round(value * density);
-    }
-
-    private void updateDebugStatus(boolean a11yEnabled) {
-        if (debugStatusText == null) return;
-        String status = "Accessibility service enabled: " + a11yEnabled
-            + "\nBackgroundAudioService running: " + BackgroundAudioService.isRunning
-            + "\nActive key capture source: " + getActiveCaptureSource(a11yEnabled);
-        debugStatusText.setText(status);
     }
 
     private void showAccessibilitySettingsFallbackDialog() {
@@ -528,7 +493,6 @@ public class MainActivity extends BridgeActivity {
             Log.d(DIAG_TAG, "MainActivity — PTT decision path: a11yEnabled=" + a11yEnabled
                 + " a11yRunning=" + a11yActive
                 + " source=" + getActiveCaptureSource(a11yEnabled));
-            updateDebugStatus(a11yEnabled);
 
             if (a11yActive) {
                 // AccessibilityService is primary — Activity is fallback only.
@@ -588,7 +552,6 @@ public class MainActivity extends BridgeActivity {
             Log.d(DIAG_TAG, "MainActivity — SIDE1 decision path: a11yEnabled=" + a11yEnabled
                 + " a11yRunning=" + a11yActive
                 + " source=" + getActiveCaptureSource(a11yEnabled));
-            updateDebugStatus(a11yEnabled);
             if (a11yActive) {
                 Log.d(DIAG_TAG, "MainActivity — SIDE1 key=" + keyCode + " SUPPRESSED (AccessibilityService primary)");
             } else {
@@ -615,7 +578,6 @@ public class MainActivity extends BridgeActivity {
                 + " a11yEnabled=" + a11yEnabled
                 + " a11yActive=" + a11yActive
                 + " source=" + getActiveCaptureSource(a11yEnabled));
-            updateDebugStatus(a11yEnabled);
             if (a11yActive) {
                 Log.d(DIAG_TAG, "MainActivity — SIDE2 SUPPRESSED (AccessibilityService primary)");
             } else {
@@ -684,7 +646,6 @@ public class MainActivity extends BridgeActivity {
         Log.d(DIAG_TAG, "MainActivity.onResume() — accessibility enabled=" + a11yEnabled);
         logResumeDiagnostics();
         updateAccessibilityWarningUi(a11yEnabled);
-        updateDebugStatus(a11yEnabled);
 
         if (!batteryExemptionPrompted) {
             new Handler(Looper.getMainLooper()).postDelayed(() -> {
