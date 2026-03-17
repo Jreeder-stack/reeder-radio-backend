@@ -480,7 +480,9 @@ public class MainActivity extends BridgeActivity {
                 + " screenOff=" + isScreenOff);
             Log.d(DIAG_TAG, getPttStateSummary());
 
-            if (action == KeyEvent.ACTION_DOWN) {
+            // Keep radio behavior: PTT must transmit in background without forcing UI foreground.
+            // Only wake the screen for non-PTT hardware keys (e.g., menu/navigation usage).
+            if (action == KeyEvent.ACTION_DOWN && !isPttKey(keyCode)) {
                 wakeScreen();
             }
             keepWebViewAlive();
@@ -498,9 +500,11 @@ public class MainActivity extends BridgeActivity {
                 // Keep foreground Activity handling enabled even when AccessibilityService is running.
                 // Some T320 firmware paths do not consistently deliver PTT through Accessibility on all states,
                 // so suppressing here can make physical PTT appear dead.
+                Log.d(DIAG_TAG, "PTT ROUTE: MainActivity key event path active (Accessibility also running)");
                 Log.d(DIAG_TAG, "MainActivity — PTT key=" + keyCode + " action=" + actionStr
                     + " HANDLED_IN_ACTIVITY (a11y also running; dedupe is enforced in service state machine)");
             } else {
+                Log.d(DIAG_TAG, "PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)");
                 Log.d(DIAG_TAG, "MainActivity — PTT key=" + keyCode + " action=" + actionStr
                     + " FALLBACK (AccessibilityService not running, matched F11/230 mapping)");
             }
