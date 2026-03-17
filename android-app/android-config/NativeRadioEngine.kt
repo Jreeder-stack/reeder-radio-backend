@@ -11,8 +11,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.launch
 
 class NativeRadioEngine private constructor(context: Context) {
@@ -223,7 +221,7 @@ class NativeRadioEngine private constructor(context: Context) {
     }
 
     private suspend fun setupRoomListeners(room: Room) {
-        room.events.filterIsInstance<RoomEvent>().collect { event ->
+        room.events.flow.collect { event ->
             when (event) {
                 is RoomEvent.Disconnected -> {
                     isConnectedState = false
