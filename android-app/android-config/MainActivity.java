@@ -495,21 +495,15 @@ public class MainActivity extends BridgeActivity {
                 + " source=" + getActiveCaptureSource(a11yEnabled));
 
             if (a11yActive) {
-                // AccessibilityService is primary — Activity is fallback only.
-                // Skip processing here to avoid duplicate PTT events.
+                // Keep foreground Activity handling enabled even when AccessibilityService is running.
+                // Some T320 firmware paths do not consistently deliver PTT through Accessibility on all states,
+                // so suppressing here can make physical PTT appear dead.
                 Log.d(DIAG_TAG, "MainActivity — PTT key=" + keyCode + " action=" + actionStr
-                    + " SUPPRESSED (AccessibilityService is primary, matched F11/230 mapping)");
-                // Still sync UI via HardwarePttPlugin so React display stays consistent
-                HardwarePttPlugin pttPlugin = HardwarePttPlugin.getInstance();
-                if (pttPlugin != null) {
-                    pttPlugin.handleKeyEvent(event);
-                }
-                return true;
+                    + " HANDLED_IN_ACTIVITY (a11y also running; dedupe is enforced in service state machine)");
+            } else {
+                Log.d(DIAG_TAG, "MainActivity — PTT key=" + keyCode + " action=" + actionStr
+                    + " FALLBACK (AccessibilityService not running, matched F11/230 mapping)");
             }
-
-            // AccessibilityService not active — Activity handles PTT as fallback
-            Log.d(DIAG_TAG, "MainActivity — PTT key=" + keyCode + " action=" + actionStr
-                + " FALLBACK (AccessibilityService not running, matched F11/230 mapping)");
 
             if (action == KeyEvent.ACTION_DOWN) {
                 if (repeat > 0 || activityPttHeld) {
