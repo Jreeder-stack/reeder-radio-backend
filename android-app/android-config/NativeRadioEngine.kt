@@ -11,7 +11,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.collect
+import io.livekit.android.events.collect
 import kotlinx.coroutines.launch
 
 class NativeRadioEngine private constructor(context: Context) {
@@ -82,7 +82,7 @@ class NativeRadioEngine private constructor(context: Context) {
 
             val newRoom = LiveKit.create(appContext)
             currentChannelName = channelName
-            engineScope.launch { setupRoomListeners(newRoom) }
+            setupRoomListeners(newRoom)
             newRoom.connect(url, token)
             room = newRoom
             isConnectedState = true
@@ -221,8 +221,8 @@ class NativeRadioEngine private constructor(context: Context) {
         audioManager.isSpeakerphoneOn = wasSpeakerphoneOn
     }
 
-    private suspend fun setupRoomListeners(room: Room) {
-        room.events.flow.collect { event ->
+    private fun setupRoomListeners(room: Room) {
+        room.events.collect(engineScope) { event: RoomEvent ->
             when (event) {
                 is RoomEvent.Disconnected -> {
                     isConnectedState = false
