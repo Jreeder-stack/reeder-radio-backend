@@ -73,3 +73,7 @@ CAD_URL = "https://cad.reeder-systems.com"
 deploymentTarget = "vm"
 run = ["node", "src/server.js"]
 build = ["bash", "-c", "cd client && npm run build"]
+
+[postMerge]
+path = "scripts/post-merge.sh"
+timeoutMs = 120000
