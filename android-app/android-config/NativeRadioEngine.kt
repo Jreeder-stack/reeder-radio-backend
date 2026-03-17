@@ -11,6 +11,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import io.livekit.android.events.collect
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 class NativeRadioEngine private constructor(context: Context) {
@@ -48,6 +49,7 @@ class NativeRadioEngine private constructor(context: Context) {
         appContext.getSystemService(Context.AUDIO_SERVICE) as AudioManager
 
     private var room: Room? = null
+    private var roomEventsJob: Job? = null
     @Volatile private var isConnectedState = false
     @Volatile private var isMicEnabledState = false
     @Volatile private var currentChannelName: String? = null
@@ -74,6 +76,8 @@ class NativeRadioEngine private constructor(context: Context) {
     suspend fun connectSuspend(url: String, token: String, channelName: String): Boolean {
         Log.d(DIAG_TAG, "engine.connectSuspend() — url=$url channel=$channelName")
         return try {
+            roomEventsJob?.cancel()
+            roomEventsJob = null
             room?.disconnect()
             room = null
             configureAudioForSpeaker()
@@ -83,7 +87,7 @@ class NativeRadioEngine private constructor(context: Context) {
             newRoom.connect(url, token)
             room = newRoom
             isConnectedState = true
-            setupRoomListeners(newRoom)
+            roomEventsJob = setupRoomListeners(newRoom)
             emit("connected", mapOf("success" to true, "channelName" to channelName))
             Log.d(DIAG_TAG, "engine.connectSuspend() SUCCESS — channel=$channelName")
             true
@@ -110,6 +114,8 @@ class NativeRadioEngine private constructor(context: Context) {
                 }
             }
             isMicEnabledState = false
+            roomEventsJob?.cancel()
+            roomEventsJob = null
             room?.disconnect()
             room = null
             isConnectedState = false
