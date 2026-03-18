@@ -281,19 +281,40 @@ public class MainActivity extends BridgeActivity {
     }
 
     private boolean isAccessibilityServiceEnabled() {
+        try {
+            AccessibilityManager am = (AccessibilityManager) getSystemService(Context.ACCESSIBILITY_SERVICE);
+            if (am == null) return false;
+            List<AccessibilityServiceInfo> enabled =
+                am.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_ALL_MASK);
+            String targetClass = PttAccessibilityService.class.getName();
+            for (AccessibilityServiceInfo info : enabled) {
+                if (info.getResolveInfo() != null) {
+                    String svcClass = info.getResolveInfo().serviceInfo.name;
+                    if (targetClass.equals(svcClass)) return true;
+                }
+            }
+        } catch (Exception e) {
+            Log.w(DIAG_TAG, "isAccessibilityServiceEnabled check failed: " + e.getMessage());
+        }
         return false;
     }
 
     private void logResumeDiagnostics() {
-        boolean svcRunning = BackgroundAudioService.isRunning;
+        boolean a11yEnabled = isAccessibilityServiceEnabled();
+        boolean svcRunning  = BackgroundAudioService.isRunning;
         BackgroundAudioService svc = BackgroundAudioService.getInstance();
+        PttAccessibilityService a11ySvc = PttAccessibilityService.getInstance();
 
         Log.d(DIAG_TAG, "=== RESUME DIAGNOSTICS ===");
-        Log.d(DIAG_TAG, "  AccessibilityService enabled : false (disabled by app config)");
+        Log.d(DIAG_TAG, "  AccessibilityService enabled : " + a11yEnabled);
         Log.d(DIAG_TAG, "  BackgroundAudioService running: " + svcRunning);
-        Log.d(DIAG_TAG, "  Active capture source        : Activity/Broadcast only");
+        Log.d(DIAG_TAG, "  Active capture source        : " + getActiveCaptureSource(a11yEnabled));
         if (svc != null) {
             Log.d(DIAG_TAG, "  Service debug               : " + svc.getDebugSummary());
+        }
+        if (a11ySvc != null) {
+            Log.d(DIAG_TAG, "  A11y last code/action       : " + a11ySvc.getLastCode() + "/" + a11ySvc.getLastAction());
+            Log.d(DIAG_TAG, "  A11y PTT held               : " + a11ySvc.isPttHeld());
         }
         Log.d(DIAG_TAG, "  Activity PTT held           : " + activityPttHeld);
         Log.d(DIAG_TAG, "==========================");
@@ -301,15 +322,59 @@ public class MainActivity extends BridgeActivity {
     }
 
     private String getActiveCaptureSource(boolean a11yEnabled) {
-        return "Activity/Broadcast";
+        return a11yEnabled ? "AccessibilityService (primary)" : "Activity (fallback)";
     }
 
     private void updateAccessibilityWarningUi(boolean a11yEnabled) {
-        // Accessibility path intentionally disabled.
+        if (accessibilityBanner == null) return;
+        accessibilityBanner.setVisibility(a11yEnabled ? View.GONE : View.VISIBLE);
     }
 
     private void setupNativeStatusUi() {
-        // Accessibility warning banner removed.
+        FrameLayout root = findViewById(android.R.id.content);
+        if (root == null) {
+            Log.w(DIAG_TAG, "setupNativeStatusUi(): root content not found");
+            return;
+        }
+
+        FrameLayout.LayoutParams topParams = new FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        );
+
+        accessibilityBanner = new LinearLayout(this);
+        accessibilityBanner.setOrientation(LinearLayout.VERTICAL);
+        accessibilityBanner.setPadding(dp(12), dp(10), dp(12), dp(10));
+        accessibilityBanner.setBackgroundColor(0xCCB00020);
+
+        TextView warningTitle = new TextView(this);
+        warningTitle.setText("Accessibility service disabled");
+        warningTitle.setTextColor(0xFFFFFFFF);
+        warningTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
+
+        TextView warningBody = new TextView(this);
+        warningBody.setText("Background key capture needs \"Command Comms PTT\" accessibility service.");
+        warningBody.setTextColor(0xFFFFFFFF);
+        warningBody.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+
+        Button openSettingsButton = new Button(this);
+        openSettingsButton.setText("Open Accessibility Settings");
+        openSettingsButton.setOnClickListener(v -> {
+            Log.d(DIAG_TAG, "Accessibility banner action tapped: open settings");
+            try {
+                startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
+            } catch (Exception e) {
+                Log.w(TAG, "Could not open accessibility settings: " + e.getMessage());
+                showAccessibilitySettingsFallbackDialog();
+            }
+        });
+
+        accessibilityBanner.addView(warningTitle);
+        accessibilityBanner.addView(warningBody);
+        accessibilityBanner.addView(openSettingsButton);
+        accessibilityBanner.setVisibility(View.GONE);
+        root.addView(accessibilityBanner, topParams);
+
     }
 
     private int dp(int value) {
@@ -556,7 +621,10 @@ public class MainActivity extends BridgeActivity {
         Log.d(DIAG_TAG, "MainActivity.onResume() — screen ON, isScreenOff=false");
 
         startBackgroundAudioServiceNow();
+        boolean a11yEnabled = isAccessibilityServiceEnabled();
+        Log.d(DIAG_TAG, "MainActivity.onResume() — accessibility enabled=" + a11yEnabled);
         logResumeDiagnostics();
+        updateAccessibilityWarningUi(a11yEnabled);
 
         if (!batteryExemptionPrompted) {
             new Handler(Looper.getMainLooper()).postDelayed(() -> {
