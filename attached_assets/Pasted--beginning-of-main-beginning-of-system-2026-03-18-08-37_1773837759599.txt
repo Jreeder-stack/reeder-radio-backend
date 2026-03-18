@@ -1,0 +1,879 @@
+--------- beginning of main
+--------- beginning of system
+2026-03-18 08:37:00.429 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  ========== PTT BROADCAST RECEIVED ==========
+2026-03-18 08:37:00.429 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PttBroadcastReceiver.onReceive() — action=android.intent.action.PTT.down screenOn=false extras={}
+2026-03-18 08:37:00.429 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PttBroadcastReceiver STATE: serviceRunning=true svcInstance=YES livekit=DISCONNECTED lkChannel=null
+2026-03-18 08:37:00.430 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT action allowlist: down=[android.intent.action.PTT_DOWN, com.inrico.intent.action.PTT_DOWN, android.intent.action.PTT.down, com.inrico.ptt.down] up=[com.inrico.intent.action.PTT_UP, android.intent.action.PTT.up, android.intent.action.PTT_UP, com.inrico.ptt.up] diagLogUnmatched=true
+2026-03-18 08:37:00.430 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: broadcast action matched DOWN allowlist -> BackgroundAudioService.handlePttDown()
+2026-03-18 08:37:00.431 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT DOWN broadcast — acquiring wake lock and forwarding to service
+2026-03-18 08:37:00.433 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  CPU wake lock acquired for PTT broadcast
+2026-03-18 08:37:00.439 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT-DIAG: screen wake lock acquired (FULL_WAKE_LOCK | ACQUIRE_CAUSES_WAKEUP)
+2026-03-18 08:37:00.495 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT-DIAG: MainActivity launched for PTT_WAKE
+2026-03-18 08:37:00.495 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  Service instance AVAILABLE — calling handle directly, action=down
+2026-03-18 08:37:00.495 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  ========== SERVICE handlePttDown() ==========
+2026-03-18 08:37:00.495 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttDown() — currentState=IDLE serverUrl=null unitId=null channelId=null
+2026-03-18 08:37:00.496 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttDown() — engineAvailable=true connected=false channel=null micActive=false
+2026-03-18 08:37:00.496 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       W  handlePttDown() — LiveKit not connected, launching async auto-reconnect...
+2026-03-18 08:37:00.496 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  sendPttSignaling(start) — skipped, missing connection info url=null unit=null channel=null
+2026-03-18 08:37:00.504 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  Direct service call completed for action=down
+2026-03-18 08:37:00.565 31972-710   PTT-DIAG                com.reedersystems.commandcomms       W  attemptAutoReconnect() — missing info: lkUrl=null serverUrl=null unitId=null channelName=null
+2026-03-18 08:37:00.565 31972-710   PTT-DIAG                com.reedersystems.commandcomms       W  handlePttDown() async-reconnect — reconnect failed
+2026-03-18 08:37:00.584 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.onResume() — screen ON, isScreenOff=false
+2026-03-18 08:37:00.586 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  BackgroundAudioService start intent sent from MainActivity
+2026-03-18 08:37:00.586 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  === RESUME DIAGNOSTICS ===
+2026-03-18 08:37:00.586 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D    AccessibilityService enabled : false (disabled by app config)
+2026-03-18 08:37:00.586 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D    BackgroundAudioService running: true
+2026-03-18 08:37:00.586 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D    Active capture source        : Activity/Broadcast only
+2026-03-18 08:37:00.586 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D    Service debug               : pttState=TRANSMITTING lastSrc=none lastCode=-1 lastAction=none lastTs=0 svcRunning=true
+2026-03-18 08:37:00.586 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D    Activity PTT held           : false
+2026-03-18 08:37:00.586 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  ==========================
+2026-03-18 08:37:00.597 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.onPause() — isScreenOff=true, service running=true
+2026-03-18 08:37:00.602 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.onNewIntent() — PTT_WAKE received, waking screen
+2026-03-18 08:37:00.620 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.onResume() — screen ON, isScreenOff=false
+2026-03-18 08:37:00.623 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  BackgroundAudioService start intent sent from MainActivity
+2026-03-18 08:37:00.623 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  === RESUME DIAGNOSTICS ===
+2026-03-18 08:37:00.623 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D    AccessibilityService enabled : false (disabled by app config)
+2026-03-18 08:37:00.623 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D    BackgroundAudioService running: true
+2026-03-18 08:37:00.623 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D    Active capture source        : Activity/Broadcast only
+2026-03-18 08:37:00.624 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D    Service debug               : pttState=TRANSMITTING lastSrc=none lastCode=-1 lastAction=none lastTs=0 svcRunning=true
+2026-03-18 08:37:00.624 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D    Activity PTT held           : false
+2026-03-18 08:37:00.624 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  ==========================
+2026-03-18 08:37:01.011 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  ========== PTT BROADCAST RECEIVED ==========
+2026-03-18 08:37:01.011 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PttBroadcastReceiver.onReceive() — action=android.intent.action.PTT.up screenOn=true extras={}
+2026-03-18 08:37:01.011 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PttBroadcastReceiver STATE: serviceRunning=true svcInstance=YES livekit=DISCONNECTED lkChannel=null
+2026-03-18 08:37:01.012 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT action allowlist: down=[android.intent.action.PTT_DOWN, com.inrico.intent.action.PTT_DOWN, android.intent.action.PTT.down, com.inrico.ptt.down] up=[com.inrico.intent.action.PTT_UP, android.intent.action.PTT.up, android.intent.action.PTT_UP, com.inrico.ptt.up] diagLogUnmatched=true
+2026-03-18 08:37:01.012 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: broadcast action matched UP allowlist -> BackgroundAudioService.handlePttUp()
+2026-03-18 08:37:01.012 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT UP broadcast — forwarding to service
+2026-03-18 08:37:01.012 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  Service instance AVAILABLE — calling handle directly, action=up
+2026-03-18 08:37:01.012 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  ========== SERVICE handlePttUp() ==========
+2026-03-18 08:37:01.012 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttUp() — currentState=TRANSMITTING
+2026-03-18 08:37:01.012 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttUp() — state → IDLE
+2026-03-18 08:37:01.012 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttUp() — engineAvailable=true connected=false channel=null micActive=false
+2026-03-18 08:37:01.013 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttUp() — stopTransmit() result=true
+2026-03-18 08:37:01.013 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  sendPttSignaling(end) — skipped, missing connection info url=null unit=null channel=null
+2026-03-18 08:37:01.013 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  HardwarePttPlugin.notifyPttStateFromService(false) — syncing UI
+2026-03-18 08:37:01.016 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  HardwarePttPlugin — JS notified: pttUp
+2026-03-18 08:37:01.017 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  notifyUiPttState(false) — HardwarePttPlugin notified
+2026-03-18 08:37:01.017 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttUp() — COMPLETE
+2026-03-18 08:37:01.017 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  Direct service call completed for action=up
+2026-03-18 08:37:01.017 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=UP repeat=0 screenOff=false
+2026-03-18 08:37:01.018 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=IDLE
+2026-03-18 08:37:01.020 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:01.020 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:01.021 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=UP FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:01.021 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT UP suppressed: not held
+2026-03-18 08:37:01.022 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       W  engine.stopTransmitSuspend() — not connected, resetting state
+2026-03-18 08:37:01.028 31972-31972 chromium                com.reedersystems.commandcomms       I  [INFO:CONSOLE(298)] "[PTT-DIAG] [JS] Capacitor pttUp event received", source: https://comms.reeder-systems.com/assets/index-CZT9Ml-C.js (298)
+2026-03-18 08:37:02.892 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=0 screenOff=false
+2026-03-18 08:37:02.892 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=IDLE
+2026-03-18 08:37:02.898 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:02.898 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:02.898 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:02.898 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  ========== SERVICE handlePttDown() ==========
+2026-03-18 08:37:02.899 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttDown() — currentState=IDLE serverUrl=null unitId=null channelId=null
+2026-03-18 08:37:02.899 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttDown() — engineAvailable=true connected=false channel=null micActive=false
+2026-03-18 08:37:02.899 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       W  handlePttDown() — LiveKit not connected, launching async auto-reconnect...
+2026-03-18 08:37:02.899 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  sendPttSignaling(start) — skipped, missing connection info url=null unit=null channel=null
+2026-03-18 08:37:02.900 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN forwarded to BackgroundAudioService
+2026-03-18 08:37:02.900 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  HardwarePttPlugin.handleKeyEvent() — keyCode=230 action=DOWN isPttPressed=false
+2026-03-18 08:37:02.900 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  HardwarePttPlugin — forwarding DOWN to BackgroundAudioService (triggerKeyCode=230)
+2026-03-18 08:37:02.900 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  ========== SERVICE handlePttDown() ==========
+2026-03-18 08:37:02.900 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttDown() — currentState=TRANSMITTING serverUrl=null unitId=null channelId=null
+2026-03-18 08:37:02.900 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttDown() — already TRANSMITTING, ignoring duplicate DOWN
+2026-03-18 08:37:02.900 31972-739   PTT-DIAG                com.reedersystems.commandcomms       W  attemptAutoReconnect() — missing info: lkUrl=null serverUrl=null unitId=null channelName=null
+2026-03-18 08:37:02.901 31972-739   PTT-DIAG                com.reedersystems.commandcomms       W  handlePttDown() async-reconnect — reconnect failed
+2026-03-18 08:37:02.904 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  HardwarePttPlugin — JS notified: pttDown
+2026-03-18 08:37:02.909 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  ========== PTT BROADCAST RECEIVED ==========
+2026-03-18 08:37:02.909 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PttBroadcastReceiver.onReceive() — action=android.intent.action.PTT.down screenOn=true extras={}
+2026-03-18 08:37:02.909 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PttBroadcastReceiver STATE: serviceRunning=true svcInstance=YES livekit=DISCONNECTED lkChannel=null
+2026-03-18 08:37:02.909 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT action allowlist: down=[android.intent.action.PTT_DOWN, com.inrico.intent.action.PTT_DOWN, android.intent.action.PTT.down, com.inrico.ptt.down] up=[com.inrico.intent.action.PTT_UP, android.intent.action.PTT.up, android.intent.action.PTT_UP, com.inrico.ptt.up] diagLogUnmatched=true
+2026-03-18 08:37:02.909 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: broadcast action matched DOWN allowlist -> BackgroundAudioService.handlePttDown()
+2026-03-18 08:37:02.909 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT DOWN broadcast — acquiring wake lock and forwarding to service
+2026-03-18 08:37:02.912 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  CPU wake lock acquired for PTT broadcast
+2026-03-18 08:37:02.913 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  Service instance AVAILABLE — calling handle directly, action=down
+2026-03-18 08:37:02.913 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  ========== SERVICE handlePttDown() ==========
+2026-03-18 08:37:02.914 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttDown() — currentState=TRANSMITTING serverUrl=null unitId=null channelId=null
+2026-03-18 08:37:02.914 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttDown() — already TRANSMITTING, ignoring duplicate DOWN
+2026-03-18 08:37:02.914 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  Direct service call completed for action=down
+2026-03-18 08:37:02.926 31972-31972 chromium                com.reedersystems.commandcomms       I  [INFO:CONSOLE(298)] "[PTT-DIAG] [JS] Capacitor pttDown event received, keysLocked=false", source: https://comms.reeder-systems.com/assets/index-CZT9Ml-C.js (298)
+2026-03-18 08:37:02.927 31972-31972 chromium                com.reedersystems.commandcomms       I  [INFO:CONSOLE(298)] "[PTT-DIAG] [JS] Capacitor pttDown — calling handleTransmitStart", source: https://comms.reeder-systems.com/assets/index-CZT9Ml-C.js (298)
+2026-03-18 08:37:02.927 31972-31972 chromium                com.reedersystems.commandcomms       I  [INFO:CONSOLE(298)] "[PTT-DIAG] [JS] handleTransmitStart() — channel=DISPATCH__DISPATCH identity=INDIANA-1", source: https://comms.reeder-systems.com/assets/index-CZT9Ml-C.js (298)
+2026-03-18 08:37:02.927 31972-31972 chromium                com.reedersystems.commandcomms       I  [INFO:CONSOLE(298)] "[PTT-DIAG] [JS] handleTransmitStart() — ensureConnected=true", source: https://comms.reeder-systems.com/assets/index-CZT9Ml-C.js (298)
+2026-03-18 08:37:02.927 31972-31972 chromium                com.reedersystems.commandcomms       I  [INFO:CONSOLE(298)] "[PTT-DIAG] [JS] handleTransmitStart() — room=WEB_SDK state=connected", source: https://comms.reeder-systems.com/assets/index-CZT9Ml-C.js (298)
+2026-03-18 08:37:02.928 31972-31972 chromium                com.reedersystems.commandcomms       I  [INFO:CONSOLE(298)] "[PTT-DIAG] [JS] handleTransmitStart() — calling micPTTManager.start()", source: https://comms.reeder-systems.com/assets/index-CZT9Ml-C.js (298)
+2026-03-18 08:37:02.928 31972-31972 chromium                com.reedersystems.commandcomms       I  [INFO:CONSOLE(60)] "[PTT-DIAG] [JS] MicPTTManager.start() — path=WEB channel=undefined unit=undefined", source: https://comms.reeder-systems.com/assets/index-CZT9Ml-C.js (60)
+2026-03-18 08:37:03.357 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=1 screenOff=false
+2026-03-18 08:37:03.357 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:03.365 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:03.365 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:03.365 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:03.365 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=1 held=true
+2026-03-18 08:37:03.398 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=2 screenOff=false
+2026-03-18 08:37:03.399 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:03.407 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:03.407 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:03.407 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:03.407 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=2 held=true
+2026-03-18 08:37:03.463 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=3 screenOff=false
+2026-03-18 08:37:03.464 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:03.477 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:03.477 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:03.477 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:03.477 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=3 held=true
+2026-03-18 08:37:03.550 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=4 screenOff=false
+2026-03-18 08:37:03.550 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:03.559 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:03.559 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:03.559 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:03.559 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=4 held=true
+2026-03-18 08:37:03.573 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=5 screenOff=false
+2026-03-18 08:37:03.573 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:03.582 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:03.582 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:03.582 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:03.582 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=5 held=true
+2026-03-18 08:37:03.610 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=6 screenOff=false
+2026-03-18 08:37:03.610 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:03.617 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:03.617 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:03.617 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:03.617 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=6 held=true
+2026-03-18 08:37:03.680 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=7 screenOff=false
+2026-03-18 08:37:03.680 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:03.690 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:03.690 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:03.690 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:03.691 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=7 held=true
+2026-03-18 08:37:03.706 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=8 screenOff=false
+2026-03-18 08:37:03.707 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:03.718 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:03.718 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:03.718 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:03.723 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=8 held=true
+2026-03-18 08:37:03.756 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=9 screenOff=false
+2026-03-18 08:37:03.756 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:03.767 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:03.767 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:03.767 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:03.767 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=9 held=true
+2026-03-18 08:37:03.818 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=10 screenOff=false
+2026-03-18 08:37:03.818 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:03.823 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:03.824 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:03.824 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:03.824 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=10 held=true
+2026-03-18 08:37:03.858 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=11 screenOff=false
+2026-03-18 08:37:03.858 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:03.865 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:03.865 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:03.865 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:03.865 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=11 held=true
+2026-03-18 08:37:03.913 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=12 screenOff=false
+2026-03-18 08:37:03.913 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:03.922 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:03.922 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:03.922 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:03.922 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=12 held=true
+2026-03-18 08:37:03.969 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=13 screenOff=false
+2026-03-18 08:37:03.969 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:03.977 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:03.978 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:03.978 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:03.978 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=13 held=true
+2026-03-18 08:37:04.016 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=14 screenOff=false
+2026-03-18 08:37:04.016 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:04.026 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:04.027 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:04.027 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:04.027 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=14 held=true
+2026-03-18 08:37:04.067 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=15 screenOff=false
+2026-03-18 08:37:04.067 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:04.073 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:04.073 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:04.073 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:04.073 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=15 held=true
+2026-03-18 08:37:04.119 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=16 screenOff=false
+2026-03-18 08:37:04.120 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:04.126 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:04.126 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:04.126 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:04.126 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=16 held=true
+2026-03-18 08:37:04.170 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=17 screenOff=false
+2026-03-18 08:37:04.170 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:04.180 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:04.180 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:04.181 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:04.181 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=17 held=true
+2026-03-18 08:37:04.219 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  ========== PTT BROADCAST RECEIVED ==========
+2026-03-18 08:37:04.219 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PttBroadcastReceiver.onReceive() — action=android.intent.action.PTT.up screenOn=true extras={}
+2026-03-18 08:37:04.219 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PttBroadcastReceiver STATE: serviceRunning=true svcInstance=YES livekit=DISCONNECTED lkChannel=null
+2026-03-18 08:37:04.221 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT action allowlist: down=[android.intent.action.PTT_DOWN, com.inrico.intent.action.PTT_DOWN, android.intent.action.PTT.down, com.inrico.ptt.down] up=[com.inrico.intent.action.PTT_UP, android.intent.action.PTT.up, android.intent.action.PTT_UP, com.inrico.ptt.up] diagLogUnmatched=true
+2026-03-18 08:37:04.221 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: broadcast action matched UP allowlist -> BackgroundAudioService.handlePttUp()
+2026-03-18 08:37:04.221 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT UP broadcast — forwarding to service
+2026-03-18 08:37:04.221 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  Service instance AVAILABLE — calling handle directly, action=up
+2026-03-18 08:37:04.221 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  ========== SERVICE handlePttUp() ==========
+2026-03-18 08:37:04.223 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttUp() — currentState=TRANSMITTING
+2026-03-18 08:37:04.223 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttUp() — state → IDLE
+2026-03-18 08:37:04.223 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttUp() — engineAvailable=true connected=false channel=null micActive=false
+2026-03-18 08:37:04.224 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttUp() — stopTransmit() result=true
+2026-03-18 08:37:04.224 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  sendPttSignaling(end) — skipped, missing connection info url=null unit=null channel=null
+2026-03-18 08:37:04.224 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  HardwarePttPlugin.notifyPttStateFromService(false) — syncing UI
+2026-03-18 08:37:04.229 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  HardwarePttPlugin — JS notified: pttUp
+2026-03-18 08:37:04.229 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  notifyUiPttState(false) — HardwarePttPlugin notified
+2026-03-18 08:37:04.236 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttUp() — COMPLETE
+2026-03-18 08:37:04.236 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  Direct service call completed for action=up
+2026-03-18 08:37:04.237 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=18 screenOff=false
+2026-03-18 08:37:04.237 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=IDLE
+2026-03-18 08:37:04.249 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:04.249 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:04.249 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:04.249 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=18 held=true
+2026-03-18 08:37:04.257 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=UP repeat=0 screenOff=false
+2026-03-18 08:37:04.258 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=IDLE
+2026-03-18 08:37:04.258 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:04.258 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:04.259 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=UP FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:04.259 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  ========== SERVICE handlePttUp() ==========
+2026-03-18 08:37:04.259 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttUp() — currentState=IDLE
+2026-03-18 08:37:04.259 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttUp() — already IDLE, ignoring duplicate UP
+2026-03-18 08:37:04.259 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT UP forwarded to BackgroundAudioService
+2026-03-18 08:37:04.259 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  HardwarePttPlugin.handleKeyEvent() — keyCode=230 action=UP isPttPressed=false
+2026-03-18 08:37:04.260 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       W  engine.stopTransmitSuspend() — not connected, resetting state
+2026-03-18 08:37:04.274 31972-31972 chromium                com.reedersystems.commandcomms       I  [INFO:CONSOLE(298)] "[PTT-DIAG] [JS] Capacitor pttUp event received", source: https://comms.reeder-systems.com/assets/index-CZT9Ml-C.js (298)
+2026-03-18 08:37:04.275 31972-31972 chromium                com.reedersystems.commandcomms       I  [INFO:CONSOLE(298)] "[PTT-DIAG] [JS] Capacitor pttUp — calling handleTransmitEnd", source: https://comms.reeder-systems.com/assets/index-CZT9Ml-C.js (298)
+2026-03-18 08:37:04.275 31972-31972 chromium                com.reedersystems.commandcomms       I  [INFO:CONSOLE(298)] "[PTT-DIAG] [JS] handleTransmitEnd() — channel=DISPATCH__DISPATCH canStop=true", source: https://comms.reeder-systems.com/assets/index-CZT9Ml-C.js (298)
+2026-03-18 08:37:04.275 31972-31972 chromium                com.reedersystems.commandcomms       I  [INFO:CONSOLE(60)] "[PTT-DIAG] [JS] MicPTTManager.stop() — state=transmitting path=WEB", source: https://comms.reeder-systems.com/assets/index-CZT9Ml-C.js (60)
+2026-03-18 08:37:05.809 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.onPause() — isScreenOff=true, service running=true
+2026-03-18 08:37:05.909 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.onStop() — isScreenOff=true, service running=true
+2026-03-18 08:37:06.499 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  ========== PTT BROADCAST RECEIVED ==========
+2026-03-18 08:37:06.499 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PttBroadcastReceiver.onReceive() — action=android.intent.action.PTT.down screenOn=false extras={}
+2026-03-18 08:37:06.499 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PttBroadcastReceiver STATE: serviceRunning=true svcInstance=YES livekit=DISCONNECTED lkChannel=null
+2026-03-18 08:37:06.500 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT action allowlist: down=[android.intent.action.PTT_DOWN, com.inrico.intent.action.PTT_DOWN, android.intent.action.PTT.down, com.inrico.ptt.down] up=[com.inrico.intent.action.PTT_UP, android.intent.action.PTT.up, android.intent.action.PTT_UP, com.inrico.ptt.up] diagLogUnmatched=true
+2026-03-18 08:37:06.500 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: broadcast action matched DOWN allowlist -> BackgroundAudioService.handlePttDown()
+2026-03-18 08:37:06.500 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT DOWN broadcast — acquiring wake lock and forwarding to service
+2026-03-18 08:37:06.504 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  CPU wake lock acquired for PTT broadcast
+2026-03-18 08:37:06.510 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT-DIAG: screen wake lock acquired (FULL_WAKE_LOCK | ACQUIRE_CAUSES_WAKEUP)
+2026-03-18 08:37:06.580 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT-DIAG: MainActivity launched for PTT_WAKE
+2026-03-18 08:37:06.580 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  Service instance AVAILABLE — calling handle directly, action=down
+2026-03-18 08:37:06.580 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  ========== SERVICE handlePttDown() ==========
+2026-03-18 08:37:06.580 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttDown() — currentState=IDLE serverUrl=null unitId=null channelId=null
+2026-03-18 08:37:06.581 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttDown() — engineAvailable=true connected=false channel=null micActive=false
+2026-03-18 08:37:06.581 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       W  handlePttDown() — LiveKit not connected, launching async auto-reconnect...
+2026-03-18 08:37:06.581 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  sendPttSignaling(start) — skipped, missing connection info url=null unit=null channel=null
+2026-03-18 08:37:06.582 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  Direct service call completed for action=down
+2026-03-18 08:37:06.594 31972-772   PTT-DIAG                com.reedersystems.commandcomms       W  attemptAutoReconnect() — missing info: lkUrl=null serverUrl=null unitId=null channelName=null
+2026-03-18 08:37:06.610 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.onResume() — screen ON, isScreenOff=false
+2026-03-18 08:37:06.619 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  BackgroundAudioService start intent sent from MainActivity
+2026-03-18 08:37:06.619 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  === RESUME DIAGNOSTICS ===
+2026-03-18 08:37:06.619 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D    AccessibilityService enabled : false (disabled by app config)
+2026-03-18 08:37:06.619 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D    BackgroundAudioService running: true
+2026-03-18 08:37:06.619 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D    Active capture source        : Activity/Broadcast only
+2026-03-18 08:37:06.619 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D    Service debug               : pttState=TRANSMITTING lastSrc=none lastCode=-1 lastAction=none lastTs=0 svcRunning=true
+2026-03-18 08:37:06.620 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D    Activity PTT held           : false
+2026-03-18 08:37:06.620 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  ==========================
+2026-03-18 08:37:06.630 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.onPause() — isScreenOff=true, service running=true
+2026-03-18 08:37:06.632 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.onNewIntent() — PTT_WAKE received, waking screen
+2026-03-18 08:37:06.642 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.onResume() — screen ON, isScreenOff=false
+2026-03-18 08:37:06.644 31972-772   PTT-DIAG                com.reedersystems.commandcomms       W  handlePttDown() async-reconnect — reconnect failed
+2026-03-18 08:37:06.650 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  BackgroundAudioService start intent sent from MainActivity
+2026-03-18 08:37:06.650 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  === RESUME DIAGNOSTICS ===
+2026-03-18 08:37:06.651 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D    AccessibilityService enabled : false (disabled by app config)
+2026-03-18 08:37:06.651 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D    BackgroundAudioService running: true
+2026-03-18 08:37:06.651 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D    Active capture source        : Activity/Broadcast only
+2026-03-18 08:37:06.651 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D    Service debug               : pttState=TRANSMITTING lastSrc=none lastCode=-1 lastAction=none lastTs=0 svcRunning=true
+2026-03-18 08:37:06.651 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D    Activity PTT held           : false
+2026-03-18 08:37:06.651 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  ==========================
+2026-03-18 08:37:08.897 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  ========== PTT BROADCAST RECEIVED ==========
+2026-03-18 08:37:08.897 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PttBroadcastReceiver.onReceive() — action=android.intent.action.PTT.up screenOn=true extras={}
+2026-03-18 08:37:08.897 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PttBroadcastReceiver STATE: serviceRunning=true svcInstance=YES livekit=DISCONNECTED lkChannel=null
+2026-03-18 08:37:08.898 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT action allowlist: down=[android.intent.action.PTT_DOWN, com.inrico.intent.action.PTT_DOWN, android.intent.action.PTT.down, com.inrico.ptt.down] up=[com.inrico.intent.action.PTT_UP, android.intent.action.PTT.up, android.intent.action.PTT_UP, com.inrico.ptt.up] diagLogUnmatched=true
+2026-03-18 08:37:08.898 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: broadcast action matched UP allowlist -> BackgroundAudioService.handlePttUp()
+2026-03-18 08:37:08.898 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT UP broadcast — forwarding to service
+2026-03-18 08:37:08.898 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  Service instance AVAILABLE — calling handle directly, action=up
+2026-03-18 08:37:08.898 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  ========== SERVICE handlePttUp() ==========
+2026-03-18 08:37:08.898 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttUp() — currentState=TRANSMITTING
+2026-03-18 08:37:08.898 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttUp() — state → IDLE
+2026-03-18 08:37:08.898 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttUp() — engineAvailable=true connected=false channel=null micActive=false
+2026-03-18 08:37:08.899 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttUp() — stopTransmit() result=true
+2026-03-18 08:37:08.900 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  sendPttSignaling(end) — skipped, missing connection info url=null unit=null channel=null
+2026-03-18 08:37:08.900 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  HardwarePttPlugin.notifyPttStateFromService(false) — syncing UI
+2026-03-18 08:37:08.901 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  HardwarePttPlugin — JS notified: pttUp
+2026-03-18 08:37:08.902 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  notifyUiPttState(false) — HardwarePttPlugin notified
+2026-03-18 08:37:08.902 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttUp() — COMPLETE
+2026-03-18 08:37:08.902 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  Direct service call completed for action=up
+2026-03-18 08:37:08.904 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       W  engine.stopTransmitSuspend() — not connected, resetting state
+2026-03-18 08:37:08.905 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=UP repeat=0 screenOff=false
+2026-03-18 08:37:08.905 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=IDLE
+2026-03-18 08:37:08.906 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:08.906 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:08.906 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=UP FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:08.906 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT UP suppressed: not held
+2026-03-18 08:37:08.911 31972-31972 chromium                com.reedersystems.commandcomms       I  [INFO:CONSOLE(298)] "[PTT-DIAG] [JS] Capacitor pttUp event received", source: https://comms.reeder-systems.com/assets/index-CZT9Ml-C.js (298)
+2026-03-18 08:37:13.401 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  ========== PTT BROADCAST RECEIVED ==========
+2026-03-18 08:37:13.401 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PttBroadcastReceiver.onReceive() — action=android.intent.action.PTT.down screenOn=true extras={}
+2026-03-18 08:37:13.401 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PttBroadcastReceiver STATE: serviceRunning=true svcInstance=YES livekit=DISCONNECTED lkChannel=null
+2026-03-18 08:37:13.401 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT action allowlist: down=[android.intent.action.PTT_DOWN, com.inrico.intent.action.PTT_DOWN, android.intent.action.PTT.down, com.inrico.ptt.down] up=[com.inrico.intent.action.PTT_UP, android.intent.action.PTT.up, android.intent.action.PTT_UP, com.inrico.ptt.up] diagLogUnmatched=true
+2026-03-18 08:37:13.401 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: broadcast action matched DOWN allowlist -> BackgroundAudioService.handlePttDown()
+2026-03-18 08:37:13.401 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT DOWN broadcast — acquiring wake lock and forwarding to service
+2026-03-18 08:37:13.404 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  CPU wake lock acquired for PTT broadcast
+2026-03-18 08:37:13.404 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  Service instance AVAILABLE — calling handle directly, action=down
+2026-03-18 08:37:13.404 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  ========== SERVICE handlePttDown() ==========
+2026-03-18 08:37:13.404 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttDown() — currentState=IDLE serverUrl=null unitId=null channelId=null
+2026-03-18 08:37:13.405 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttDown() — engineAvailable=true connected=false channel=null micActive=false
+2026-03-18 08:37:13.405 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       W  handlePttDown() — LiveKit not connected, launching async auto-reconnect...
+2026-03-18 08:37:13.405 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  sendPttSignaling(start) — skipped, missing connection info url=null unit=null channel=null
+2026-03-18 08:37:13.405 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  Direct service call completed for action=down
+2026-03-18 08:37:13.406 31972-897   PTT-DIAG                com.reedersystems.commandcomms       W  attemptAutoReconnect() — missing info: lkUrl=null serverUrl=null unitId=null channelName=null
+2026-03-18 08:37:13.406 31972-897   PTT-DIAG                com.reedersystems.commandcomms       W  handlePttDown() async-reconnect — reconnect failed
+2026-03-18 08:37:13.406 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=0 screenOff=false
+2026-03-18 08:37:13.406 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:13.412 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:13.412 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:13.412 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:13.412 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  ========== SERVICE handlePttDown() ==========
+2026-03-18 08:37:13.412 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttDown() — currentState=TRANSMITTING serverUrl=null unitId=null channelId=null
+2026-03-18 08:37:13.412 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttDown() — already TRANSMITTING, ignoring duplicate DOWN
+2026-03-18 08:37:13.412 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN forwarded to BackgroundAudioService
+2026-03-18 08:37:13.412 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  HardwarePttPlugin.handleKeyEvent() — keyCode=230 action=DOWN isPttPressed=false
+2026-03-18 08:37:13.412 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  HardwarePttPlugin — forwarding DOWN to BackgroundAudioService (triggerKeyCode=230)
+2026-03-18 08:37:13.412 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  ========== SERVICE handlePttDown() ==========
+2026-03-18 08:37:13.412 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttDown() — currentState=TRANSMITTING serverUrl=null unitId=null channelId=null
+2026-03-18 08:37:13.412 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttDown() — already TRANSMITTING, ignoring duplicate DOWN
+2026-03-18 08:37:13.415 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  HardwarePttPlugin — JS notified: pttDown
+2026-03-18 08:37:13.421 31972-31972 chromium                com.reedersystems.commandcomms       I  [INFO:CONSOLE(298)] "[PTT-DIAG] [JS] Capacitor pttDown event received, keysLocked=false", source: https://comms.reeder-systems.com/assets/index-CZT9Ml-C.js (298)
+2026-03-18 08:37:13.421 31972-31972 chromium                com.reedersystems.commandcomms       I  [INFO:CONSOLE(298)] "[PTT-DIAG] [JS] Capacitor pttDown — calling handleTransmitStart", source: https://comms.reeder-systems.com/assets/index-CZT9Ml-C.js (298)
+2026-03-18 08:37:13.421 31972-31972 chromium                com.reedersystems.commandcomms       I  [INFO:CONSOLE(298)] "[PTT-DIAG] [JS] handleTransmitStart() — channel=DISPATCH__DISPATCH identity=INDIANA-1", source: https://comms.reeder-systems.com/assets/index-CZT9Ml-C.js (298)
+2026-03-18 08:37:13.432 31972-31972 chromium                com.reedersystems.commandcomms       I  [INFO:CONSOLE(298)] "[PTT-DIAG] [JS] handleTransmitStart() — ensureConnected=true", source: https://comms.reeder-systems.com/assets/index-CZT9Ml-C.js (298)
+2026-03-18 08:37:13.432 31972-31972 chromium                com.reedersystems.commandcomms       I  [INFO:CONSOLE(298)] "[PTT-DIAG] [JS] handleTransmitStart() — room=WEB_SDK state=connected", source: https://comms.reeder-systems.com/assets/index-CZT9Ml-C.js (298)
+2026-03-18 08:37:13.433 31972-31972 chromium                com.reedersystems.commandcomms       I  [INFO:CONSOLE(298)] "[PTT-DIAG] [JS] handleTransmitStart() — calling micPTTManager.start()", source: https://comms.reeder-systems.com/assets/index-CZT9Ml-C.js (298)
+2026-03-18 08:37:13.433 31972-31972 chromium                com.reedersystems.commandcomms       I  [INFO:CONSOLE(60)] "[PTT-DIAG] [JS] MicPTTManager.start() — path=WEB channel=undefined unit=undefined", source: https://comms.reeder-systems.com/assets/index-CZT9Ml-C.js (60)
+2026-03-18 08:37:13.866 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=1 screenOff=false
+2026-03-18 08:37:13.866 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:13.898 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:13.898 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:13.899 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:13.899 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=1 held=true
+2026-03-18 08:37:13.919 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=2 screenOff=false
+2026-03-18 08:37:13.919 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:13.928 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:13.928 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:13.928 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:13.928 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=2 held=true
+2026-03-18 08:37:14.085 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=3 screenOff=false
+2026-03-18 08:37:14.085 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:14.099 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:14.099 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:14.099 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:14.099 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=3 held=true
+2026-03-18 08:37:14.115 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=4 screenOff=false
+2026-03-18 08:37:14.115 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:14.120 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:14.120 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:14.121 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:14.121 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=4 held=true
+2026-03-18 08:37:14.151 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=5 screenOff=false
+2026-03-18 08:37:14.151 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:14.157 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:14.157 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:14.157 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:14.157 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=5 held=true
+2026-03-18 08:37:14.181 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=6 screenOff=false
+2026-03-18 08:37:14.181 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:14.188 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:14.188 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:14.191 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:14.191 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=6 held=true
+2026-03-18 08:37:14.222 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=7 screenOff=false
+2026-03-18 08:37:14.222 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:14.232 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:14.232 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:14.232 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:14.232 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=7 held=true
+2026-03-18 08:37:14.281 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=8 screenOff=false
+2026-03-18 08:37:14.281 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:14.291 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:14.291 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:14.291 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:14.291 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=8 held=true
+2026-03-18 08:37:14.338 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=9 screenOff=false
+2026-03-18 08:37:14.339 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:14.352 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:14.352 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:14.352 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:14.352 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=9 held=true
+2026-03-18 08:37:14.372 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=10 screenOff=false
+2026-03-18 08:37:14.372 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:14.380 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:14.381 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:14.381 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:14.381 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=10 held=true
+2026-03-18 08:37:14.418 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=11 screenOff=false
+2026-03-18 08:37:14.418 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:14.424 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:14.424 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:14.424 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:14.424 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=11 held=true
+2026-03-18 08:37:14.462 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=12 screenOff=false
+2026-03-18 08:37:14.468 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:14.474 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:14.474 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:14.474 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:14.474 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=12 held=true
+2026-03-18 08:37:14.519 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=13 screenOff=false
+2026-03-18 08:37:14.520 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:14.532 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:14.532 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:14.532 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:14.532 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=13 held=true
+2026-03-18 08:37:14.570 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=14 screenOff=false
+2026-03-18 08:37:14.571 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:14.618 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:14.618 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:14.618 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:14.619 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=14 held=true
+2026-03-18 08:37:14.622 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  ========== PTT BROADCAST RECEIVED ==========
+2026-03-18 08:37:14.622 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PttBroadcastReceiver.onReceive() — action=android.intent.action.PTT.up screenOn=true extras={}
+2026-03-18 08:37:14.622 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PttBroadcastReceiver STATE: serviceRunning=true svcInstance=YES livekit=DISCONNECTED lkChannel=null
+2026-03-18 08:37:14.622 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT action allowlist: down=[android.intent.action.PTT_DOWN, com.inrico.intent.action.PTT_DOWN, android.intent.action.PTT.down, com.inrico.ptt.down] up=[com.inrico.intent.action.PTT_UP, android.intent.action.PTT.up, android.intent.action.PTT_UP, com.inrico.ptt.up] diagLogUnmatched=true
+2026-03-18 08:37:14.622 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: broadcast action matched UP allowlist -> BackgroundAudioService.handlePttUp()
+2026-03-18 08:37:14.622 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT UP broadcast — forwarding to service
+2026-03-18 08:37:14.622 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  Service instance AVAILABLE — calling handle directly, action=up
+2026-03-18 08:37:14.622 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  ========== SERVICE handlePttUp() ==========
+2026-03-18 08:37:14.622 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttUp() — currentState=TRANSMITTING
+2026-03-18 08:37:14.622 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttUp() — state → IDLE
+2026-03-18 08:37:14.622 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttUp() — engineAvailable=true connected=false channel=null micActive=false
+2026-03-18 08:37:14.628 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttUp() — stopTransmit() result=true
+2026-03-18 08:37:14.628 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  sendPttSignaling(end) — skipped, missing connection info url=null unit=null channel=null
+2026-03-18 08:37:14.629 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  HardwarePttPlugin.notifyPttStateFromService(false) — syncing UI
+2026-03-18 08:37:14.631 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  HardwarePttPlugin — JS notified: pttUp
+2026-03-18 08:37:14.631 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  notifyUiPttState(false) — HardwarePttPlugin notified
+2026-03-18 08:37:14.631 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttUp() — COMPLETE
+2026-03-18 08:37:14.631 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  Direct service call completed for action=up
+2026-03-18 08:37:14.637 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=UP repeat=0 screenOff=false
+2026-03-18 08:37:14.637 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=IDLE
+2026-03-18 08:37:14.638 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:14.638 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:14.638 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=UP FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:14.638 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  ========== SERVICE handlePttUp() ==========
+2026-03-18 08:37:14.638 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttUp() — currentState=IDLE
+2026-03-18 08:37:14.639 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttUp() — already IDLE, ignoring duplicate UP
+2026-03-18 08:37:14.639 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT UP forwarded to BackgroundAudioService
+2026-03-18 08:37:14.639 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  HardwarePttPlugin.handleKeyEvent() — keyCode=230 action=UP isPttPressed=false
+2026-03-18 08:37:14.643 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       W  engine.stopTransmitSuspend() — not connected, resetting state
+2026-03-18 08:37:14.654 31972-31972 chromium                com.reedersystems.commandcomms       I  [INFO:CONSOLE(298)] "[PTT-DIAG] [JS] Capacitor pttUp event received", source: https://comms.reeder-systems.com/assets/index-CZT9Ml-C.js (298)
+2026-03-18 08:37:14.654 31972-31972 chromium                com.reedersystems.commandcomms       I  [INFO:CONSOLE(298)] "[PTT-DIAG] [JS] Capacitor pttUp — calling handleTransmitEnd", source: https://comms.reeder-systems.com/assets/index-CZT9Ml-C.js (298)
+2026-03-18 08:37:14.654 31972-31972 chromium                com.reedersystems.commandcomms       I  [INFO:CONSOLE(298)] "[PTT-DIAG] [JS] handleTransmitEnd() — channel=DISPATCH__DISPATCH canStop=true", source: https://comms.reeder-systems.com/assets/index-CZT9Ml-C.js (298)
+2026-03-18 08:37:14.655 31972-31972 chromium                com.reedersystems.commandcomms       I  [INFO:CONSOLE(60)] "[PTT-DIAG] [JS] MicPTTManager.stop() — state=transmitting path=WEB", source: https://comms.reeder-systems.com/assets/index-CZT9Ml-C.js (60)
+2026-03-18 08:37:20.781 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  ========== PTT BROADCAST RECEIVED ==========
+2026-03-18 08:37:20.781 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PttBroadcastReceiver.onReceive() — action=android.intent.action.PTT.down screenOn=true extras={}
+2026-03-18 08:37:20.781 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PttBroadcastReceiver STATE: serviceRunning=true svcInstance=YES livekit=DISCONNECTED lkChannel=null
+2026-03-18 08:37:20.781 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT action allowlist: down=[android.intent.action.PTT_DOWN, com.inrico.intent.action.PTT_DOWN, android.intent.action.PTT.down, com.inrico.ptt.down] up=[com.inrico.intent.action.PTT_UP, android.intent.action.PTT.up, android.intent.action.PTT_UP, com.inrico.ptt.up] diagLogUnmatched=true
+2026-03-18 08:37:20.781 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: broadcast action matched DOWN allowlist -> BackgroundAudioService.handlePttDown()
+2026-03-18 08:37:20.782 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT DOWN broadcast — acquiring wake lock and forwarding to service
+2026-03-18 08:37:20.783 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  CPU wake lock acquired for PTT broadcast
+2026-03-18 08:37:20.784 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  Service instance AVAILABLE — calling handle directly, action=down
+2026-03-18 08:37:20.784 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  ========== SERVICE handlePttDown() ==========
+2026-03-18 08:37:20.784 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttDown() — currentState=IDLE serverUrl=null unitId=null channelId=null
+2026-03-18 08:37:20.784 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttDown() — engineAvailable=true connected=false channel=null micActive=false
+2026-03-18 08:37:20.784 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       W  handlePttDown() — LiveKit not connected, launching async auto-reconnect...
+2026-03-18 08:37:20.784 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  sendPttSignaling(start) — skipped, missing connection info url=null unit=null channel=null
+2026-03-18 08:37:20.785 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  Direct service call completed for action=down
+2026-03-18 08:37:20.787 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=0 screenOff=false
+2026-03-18 08:37:20.787 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:20.788 31972-1022  PTT-DIAG                com.reedersystems.commandcomms       W  attemptAutoReconnect() — missing info: lkUrl=null serverUrl=null unitId=null channelName=null
+2026-03-18 08:37:20.788 31972-1022  PTT-DIAG                com.reedersystems.commandcomms       W  handlePttDown() async-reconnect — reconnect failed
+2026-03-18 08:37:20.792 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:20.792 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:20.792 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:20.792 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  ========== SERVICE handlePttDown() ==========
+2026-03-18 08:37:20.792 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttDown() — currentState=TRANSMITTING serverUrl=null unitId=null channelId=null
+2026-03-18 08:37:20.792 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttDown() — already TRANSMITTING, ignoring duplicate DOWN
+2026-03-18 08:37:20.792 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN forwarded to BackgroundAudioService
+2026-03-18 08:37:20.792 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  HardwarePttPlugin.handleKeyEvent() — keyCode=230 action=DOWN isPttPressed=false
+2026-03-18 08:37:20.792 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  HardwarePttPlugin — forwarding DOWN to BackgroundAudioService (triggerKeyCode=230)
+2026-03-18 08:37:20.792 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  ========== SERVICE handlePttDown() ==========
+2026-03-18 08:37:20.792 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttDown() — currentState=TRANSMITTING serverUrl=null unitId=null channelId=null
+2026-03-18 08:37:20.792 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttDown() — already TRANSMITTING, ignoring duplicate DOWN
+2026-03-18 08:37:20.794 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  HardwarePttPlugin — JS notified: pttDown
+2026-03-18 08:37:20.798 31972-31972 chromium                com.reedersystems.commandcomms       I  [INFO:CONSOLE(298)] "[PTT-DIAG] [JS] Capacitor pttDown event received, keysLocked=false", source: https://comms.reeder-systems.com/assets/index-CZT9Ml-C.js (298)
+2026-03-18 08:37:20.799 31972-31972 chromium                com.reedersystems.commandcomms       I  [INFO:CONSOLE(298)] "[PTT-DIAG] [JS] Capacitor pttDown — calling handleTransmitStart", source: https://comms.reeder-systems.com/assets/index-CZT9Ml-C.js (298)
+2026-03-18 08:37:20.800 31972-31972 chromium                com.reedersystems.commandcomms       I  [INFO:CONSOLE(298)] "[PTT-DIAG] [JS] handleTransmitStart() — channel=DISPATCH__DISPATCH identity=INDIANA-1", source: https://comms.reeder-systems.com/assets/index-CZT9Ml-C.js (298)
+2026-03-18 08:37:20.800 31972-31972 chromium                com.reedersystems.commandcomms       I  [INFO:CONSOLE(298)] "[PTT-DIAG] [JS] handleTransmitStart() — ensureConnected=true", source: https://comms.reeder-systems.com/assets/index-CZT9Ml-C.js (298)
+2026-03-18 08:37:20.800 31972-31972 chromium                com.reedersystems.commandcomms       I  [INFO:CONSOLE(298)] "[PTT-DIAG] [JS] handleTransmitStart() — room=WEB_SDK state=connected", source: https://comms.reeder-systems.com/assets/index-CZT9Ml-C.js (298)
+2026-03-18 08:37:20.802 31972-31972 chromium                com.reedersystems.commandcomms       I  [INFO:CONSOLE(298)] "[PTT-DIAG] [JS] handleTransmitStart() — calling micPTTManager.start()", source: https://comms.reeder-systems.com/assets/index-CZT9Ml-C.js (298)
+2026-03-18 08:37:20.804 31972-31972 chromium                com.reedersystems.commandcomms       I  [INFO:CONSOLE(60)] "[PTT-DIAG] [JS] MicPTTManager.start() — path=WEB channel=undefined unit=undefined", source: https://comms.reeder-systems.com/assets/index-CZT9Ml-C.js (60)
+2026-03-18 08:37:21.328 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=1 screenOff=false
+2026-03-18 08:37:21.330 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:21.343 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:21.343 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:21.343 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:21.343 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=1 held=true
+2026-03-18 08:37:21.381 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=2 screenOff=false
+2026-03-18 08:37:21.381 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:21.396 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:21.396 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:21.396 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:21.396 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=2 held=true
+2026-03-18 08:37:21.414 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=3 screenOff=false
+2026-03-18 08:37:21.415 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:21.424 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:21.424 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:21.424 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:21.424 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=3 held=true
+2026-03-18 08:37:21.432 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=4 screenOff=false
+2026-03-18 08:37:21.432 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:21.440 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:21.440 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:21.442 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:21.442 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=4 held=true
+2026-03-18 08:37:21.504 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=5 screenOff=false
+2026-03-18 08:37:21.504 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:21.514 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:21.514 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:21.514 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:21.514 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=5 held=true
+2026-03-18 08:37:21.551 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=6 screenOff=false
+2026-03-18 08:37:21.552 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:21.560 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:21.560 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:21.560 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:21.560 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=6 held=true
+2026-03-18 08:37:21.615 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=7 screenOff=false
+2026-03-18 08:37:21.615 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:21.621 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:21.621 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:21.621 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:21.621 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=7 held=true
+2026-03-18 08:37:21.642 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=8 screenOff=false
+2026-03-18 08:37:21.642 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:21.655 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:21.655 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:21.655 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:21.655 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=8 held=true
+2026-03-18 08:37:21.709 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=9 screenOff=false
+2026-03-18 08:37:21.709 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:21.724 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:21.725 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:21.725 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:21.725 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=9 held=true
+2026-03-18 08:37:21.736 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=10 screenOff=false
+2026-03-18 08:37:21.736 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:21.749 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:21.749 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:21.749 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:21.749 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=10 held=true
+2026-03-18 08:37:21.897 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=11 screenOff=false
+2026-03-18 08:37:21.897 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:21.919 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:21.919 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:21.919 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:21.919 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=11 held=true
+2026-03-18 08:37:21.945 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=12 screenOff=false
+2026-03-18 08:37:21.945 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:21.950 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:21.951 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:21.951 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:21.951 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=12 held=true
+2026-03-18 08:37:21.959 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=13 screenOff=false
+2026-03-18 08:37:21.960 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:21.976 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:21.976 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:21.976 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:21.976 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=13 held=true
+2026-03-18 08:37:21.984 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=14 screenOff=false
+2026-03-18 08:37:21.984 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:21.997 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:21.997 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:21.997 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:21.997 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=14 held=true
+2026-03-18 08:37:22.041 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=15 screenOff=false
+2026-03-18 08:37:22.042 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:22.053 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:22.053 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:22.053 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:22.053 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=15 held=true
+2026-03-18 08:37:22.108 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=16 screenOff=false
+2026-03-18 08:37:22.108 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:22.118 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:22.118 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:22.119 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:22.119 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=16 held=true
+2026-03-18 08:37:22.156 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=17 screenOff=false
+2026-03-18 08:37:22.156 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:22.170 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:22.170 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:22.170 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:22.170 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=17 held=true
+2026-03-18 08:37:22.182 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=18 screenOff=false
+2026-03-18 08:37:22.183 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:22.197 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:22.198 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:22.198 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:22.198 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=18 held=true
+2026-03-18 08:37:22.233 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=19 screenOff=false
+2026-03-18 08:37:22.233 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:22.238 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:22.239 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:22.239 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:22.239 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=19 held=true
+2026-03-18 08:37:22.293 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=20 screenOff=false
+2026-03-18 08:37:22.294 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:22.317 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:22.317 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:22.317 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:22.317 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=20 held=true
+2026-03-18 08:37:22.335 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=21 screenOff=false
+2026-03-18 08:37:22.335 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:22.348 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:22.348 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:22.348 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:22.348 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=21 held=true
+2026-03-18 08:37:22.387 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=22 screenOff=false
+2026-03-18 08:37:22.387 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:22.400 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:22.400 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:22.400 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:22.400 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=22 held=true
+2026-03-18 08:37:22.436 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=23 screenOff=false
+2026-03-18 08:37:22.436 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:22.445 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:22.445 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:22.445 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:22.445 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=23 held=true
+2026-03-18 08:37:22.490 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=24 screenOff=false
+2026-03-18 08:37:22.490 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:22.499 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:22.499 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:22.499 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:22.499 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=24 held=true
+2026-03-18 08:37:22.541 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=25 screenOff=false
+2026-03-18 08:37:22.541 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:22.552 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:22.552 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:22.552 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:22.552 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=25 held=true
+2026-03-18 08:37:22.596 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=26 screenOff=false
+2026-03-18 08:37:22.598 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:22.612 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:22.612 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:22.612 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:22.612 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=26 held=true
+2026-03-18 08:37:22.655 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=27 screenOff=false
+2026-03-18 08:37:22.656 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:22.669 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:22.669 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:22.669 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:22.669 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=27 held=true
+2026-03-18 08:37:22.687 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=28 screenOff=false
+2026-03-18 08:37:22.688 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:22.696 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:22.696 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:22.696 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:22.697 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=28 held=true
+2026-03-18 08:37:22.775 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=29 screenOff=false
+2026-03-18 08:37:22.776 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:22.796 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:22.796 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:22.796 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:22.796 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=29 held=true
+2026-03-18 08:37:22.803 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=30 screenOff=false
+2026-03-18 08:37:22.803 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:22.829 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:22.830 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:22.830 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:22.831 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=30 held=true
+2026-03-18 08:37:22.882 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=31 screenOff=false
+2026-03-18 08:37:22.883 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:22.888 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:22.888 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:22.888 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:22.888 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=31 held=true
+2026-03-18 08:37:22.901 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=32 screenOff=false
+2026-03-18 08:37:22.901 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:22.906 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:22.906 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:22.906 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:22.906 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=32 held=true
+2026-03-18 08:37:22.974 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=33 screenOff=false
+2026-03-18 08:37:22.974 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:22.980 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:22.980 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:22.980 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:22.981 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=33 held=true
+2026-03-18 08:37:23.001 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=34 screenOff=false
+2026-03-18 08:37:23.001 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:23.022 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:23.022 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:23.022 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:23.022 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=34 held=true
+2026-03-18 08:37:23.071 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=35 screenOff=false
+2026-03-18 08:37:23.072 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:23.082 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:23.082 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:23.082 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:23.082 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=35 held=true
+2026-03-18 08:37:23.101 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=36 screenOff=false
+2026-03-18 08:37:23.101 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:23.118 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:23.119 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:23.119 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:23.119 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=36 held=true
+2026-03-18 08:37:23.152 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=37 screenOff=false
+2026-03-18 08:37:23.152 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:23.157 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:23.157 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:23.157 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:23.157 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=37 held=true
+2026-03-18 08:37:23.246 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=38 screenOff=false
+2026-03-18 08:37:23.247 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:23.255 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:23.255 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:23.258 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:23.258 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=38 held=true
+2026-03-18 08:37:23.268 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=39 screenOff=false
+2026-03-18 08:37:23.268 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:23.282 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:23.282 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:23.282 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:23.282 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=39 held=true
+2026-03-18 08:37:23.309 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=40 screenOff=false
+2026-03-18 08:37:23.309 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:23.315 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:23.316 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:23.316 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:23.316 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=40 held=true
+2026-03-18 08:37:23.353 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=41 screenOff=false
+2026-03-18 08:37:23.353 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:23.360 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:23.360 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:23.360 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:23.360 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=41 held=true
+2026-03-18 08:37:23.406 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=42 screenOff=false
+2026-03-18 08:37:23.406 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:23.418 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:23.418 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:23.418 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:23.418 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=42 held=true
+2026-03-18 08:37:23.458 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=43 screenOff=false
+2026-03-18 08:37:23.458 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:23.470 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:23.470 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:23.470 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:23.470 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=43 held=true
+2026-03-18 08:37:23.521 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=44 screenOff=false
+2026-03-18 08:37:23.521 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:23.530 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:23.530 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:23.530 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:23.530 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=44 held=true
+2026-03-18 08:37:23.566 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=45 screenOff=false
+2026-03-18 08:37:23.566 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:23.570 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:23.570 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:23.570 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:23.581 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=45 held=true
+2026-03-18 08:37:23.640 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=46 screenOff=false
+2026-03-18 08:37:23.641 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:23.646 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:23.646 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:23.646 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:23.646 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=46 held=true
+2026-03-18 08:37:23.663 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=47 screenOff=false
+2026-03-18 08:37:23.664 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:23.674 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:23.674 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:23.674 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:23.674 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=47 held=true
+2026-03-18 08:37:23.717 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=48 screenOff=false
+2026-03-18 08:37:23.717 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:23.725 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:23.725 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:23.725 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:23.725 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=48 held=true
+2026-03-18 08:37:23.770 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=49 screenOff=false
+2026-03-18 08:37:23.770 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:23.775 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:23.775 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:23.775 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:23.775 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=49 held=true
+2026-03-18 08:37:23.818 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=50 screenOff=false
+2026-03-18 08:37:23.818 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:23.827 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:23.827 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:23.827 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:23.827 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=50 held=true
+2026-03-18 08:37:23.874 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=51 screenOff=false
+2026-03-18 08:37:23.874 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:23.882 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:23.882 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:23.882 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:23.882 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=51 held=true
+2026-03-18 08:37:23.932 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=52 screenOff=false
+2026-03-18 08:37:23.932 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:23.947 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:23.948 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:23.948 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:23.948 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=52 held=true
+2026-03-18 08:37:23.978 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=53 screenOff=false
+2026-03-18 08:37:23.978 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:23.983 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:23.983 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:23.983 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:23.983 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=53 held=true
+2026-03-18 08:37:24.020 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=54 screenOff=false
+2026-03-18 08:37:24.020 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:24.030 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:24.030 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:24.030 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:24.030 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=54 held=true
+2026-03-18 08:37:24.080 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=55 screenOff=false
+2026-03-18 08:37:24.082 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:24.089 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:24.089 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:24.089 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:24.089 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=55 held=true
+2026-03-18 08:37:24.150 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=56 screenOff=false
+2026-03-18 08:37:24.151 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=TRANSMITTING
+2026-03-18 08:37:24.208 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:24.208 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:24.208 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:24.208 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=56 held=true
+2026-03-18 08:37:24.218 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  ========== PTT BROADCAST RECEIVED ==========
+2026-03-18 08:37:24.218 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PttBroadcastReceiver.onReceive() — action=android.intent.action.PTT.up screenOn=true extras={}
+2026-03-18 08:37:24.218 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PttBroadcastReceiver STATE: serviceRunning=true svcInstance=YES livekit=DISCONNECTED lkChannel=null
+2026-03-18 08:37:24.218 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT action allowlist: down=[android.intent.action.PTT_DOWN, com.inrico.intent.action.PTT_DOWN, android.intent.action.PTT.down, com.inrico.ptt.down] up=[com.inrico.intent.action.PTT_UP, android.intent.action.PTT.up, android.intent.action.PTT_UP, com.inrico.ptt.up] diagLogUnmatched=true
+2026-03-18 08:37:24.218 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: broadcast action matched UP allowlist -> BackgroundAudioService.handlePttUp()
+2026-03-18 08:37:24.219 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT UP broadcast — forwarding to service
+2026-03-18 08:37:24.219 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  Service instance AVAILABLE — calling handle directly, action=up
+2026-03-18 08:37:24.219 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  ========== SERVICE handlePttUp() ==========
+2026-03-18 08:37:24.219 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttUp() — currentState=TRANSMITTING
+2026-03-18 08:37:24.219 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttUp() — state → IDLE
+2026-03-18 08:37:24.220 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttUp() — engineAvailable=true connected=false channel=null micActive=false
+2026-03-18 08:37:24.223 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttUp() — stopTransmit() result=true
+2026-03-18 08:37:24.223 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  sendPttSignaling(end) — skipped, missing connection info url=null unit=null channel=null
+2026-03-18 08:37:24.223 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  HardwarePttPlugin.notifyPttStateFromService(false) — syncing UI
+2026-03-18 08:37:24.227 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  HardwarePttPlugin — JS notified: pttUp
+2026-03-18 08:37:24.227 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  notifyUiPttState(false) — HardwarePttPlugin notified
+2026-03-18 08:37:24.227 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttUp() — COMPLETE
+2026-03-18 08:37:24.227 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  Direct service call completed for action=up
+2026-03-18 08:37:24.228 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=DOWN repeat=57 screenOff=false
+2026-03-18 08:37:24.228 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=IDLE
+2026-03-18 08:37:24.232 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:24.233 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:24.233 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=DOWN FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:24.233 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT DOWN suppressed: repeat=57 held=true
+2026-03-18 08:37:24.241 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity.dispatchKeyEvent() — keyCode=230 action=UP repeat=0 screenOff=false
+2026-03-18 08:37:24.242 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  STATE_SUMMARY: screen=ON service=RUNNING svcInstance=YES livekit=DISCONNECTED lkChannel=null pttState=IDLE
+2026-03-18 08:37:24.242 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT decision path: a11yEnabled=false a11yRunning=false source=Activity/Broadcast
+2026-03-18 08:37:24.242 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)
+2026-03-18 08:37:24.242 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT key=230 action=UP FALLBACK (AccessibilityService not running, matched F11/230 mapping)
+2026-03-18 08:37:24.242 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  ========== SERVICE handlePttUp() ==========
+2026-03-18 08:37:24.242 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttUp() — currentState=IDLE
+2026-03-18 08:37:24.242 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttUp() — already IDLE, ignoring duplicate UP
+2026-03-18 08:37:24.242 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  MainActivity — PTT UP forwarded to BackgroundAudioService
+2026-03-18 08:37:24.243 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       D  HardwarePttPlugin.handleKeyEvent() — keyCode=230 action=UP isPttPressed=false
+2026-03-18 08:37:24.243 31972-31972 PTT-DIAG                com.reedersystems.commandcomms       W  engine.stopTransmitSuspend() — not connected, resetting state
+2026-03-18 08:37:24.263 31972-31972 chromium                com.reedersystems.commandcomms       I  [INFO:CONSOLE(298)] "[PTT-DIAG] [JS] Capacitor pttUp event received", source: https://comms.reeder-systems.com/assets/index-CZT9Ml-C.js (298)
+2026-03-18 08:37:24.263 31972-31972 chromium                com.reedersystems.commandcomms       I  [INFO:CONSOLE(298)] "[PTT-DIAG] [JS] Capacitor pttUp — calling handleTransmitEnd", source: https://comms.reeder-systems.com/assets/index-CZT9Ml-C.js (298)
+2026-03-18 08:37:24.264 31972-31972 chromium                com.reedersystems.commandcomms       I  [INFO:CONSOLE(298)] "[PTT-DIAG] [JS] handleTransmitEnd() — channel=DISPATCH__DISPATCH canStop=true", source: https://comms.reeder-systems.com/assets/index-CZT9Ml-C.js (298)
+2026-03-18 08:37:24.264 31972-31972 chromium                com.reedersystems.commandcomms       I  [INFO:CONSOLE(60)] "[PTT-DIAG] [JS] MicPTTManager.stop() — state=transmitting path=WEB", source: https://comms.reeder-systems.com/assets/index-CZT9Ml-C.js (60)

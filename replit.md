@@ -8,8 +8,12 @@ Not specified.
 
 ## System Architecture
 
+### Client Architecture Split
+- **Dispatch Console:** Web app (React/Vite) used by dispatchers on desktop browsers. Stays web.
+- **Radio Client (Field Units / T320):** Native Kotlin Android app (`android-native/`). Replaces the previous Capacitor WebView APK. Uses the LiveKit Android SDK directly (no WebView), native PTT hardware key handling, and a foreground service for screen-off PTT. Connects to the same backend as the web app.
+
 ### UI/UX Decisions
-The application is a Progressive Web App (PWA) with a responsive design, supporting both mobile and desktop environments from a single codebase. It features specific layouts for devices like the Inrico T320, including hardware key mapping. Key UI/UX elements include auto-login, dark/light theme toggles, and a Dispatcher Console built with React and TailwindCSS v4, utilizing `dnd-kit` for channel grid management.
+The dispatch console is a Progressive Web App (PWA) with a responsive design for desktop. Key UI/UX elements include auto-login, dark/light theme toggles, and a Dispatcher Console built with React and TailwindCSS v4, utilizing `dnd-kit` for channel grid management. The native Android radio client uses Jetpack Compose with a dark cyan theme matching the web radio interface.
 
 ### Technical Implementations
 - **Frontend:** Developed with React/Vite, using Zustand for state management and `localStorage` for persistence. Audio and LiveKit connections are managed by dedicated audio engines.

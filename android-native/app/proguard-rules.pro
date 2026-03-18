@@ -1,0 +1,1 @@
+-keep class com.reedersystems.commandcomms.data.model.** { *; }
