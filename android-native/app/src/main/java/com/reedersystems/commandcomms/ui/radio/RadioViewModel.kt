@@ -280,9 +280,9 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun startCancelHold() {
-        val wasArming = armingJob != null
         cancelJob = viewModelScope.launch {
-            Log.d(TAG, "EMERGENCY CANCEL HOLD: started (wasArming=$wasArming)")
+            Log.d(TAG, "EMERGENCY CANCEL HOLD: started")
+            app.toneEngine.startCountdownBeep()
             _uiState.update { it.copy(isEmergencyCancelling = true, emergencyHoldProgress = 0f) }
             var elapsed = 0L
             while (elapsed < 3000L) {
@@ -293,11 +293,11 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
             cancelJob = null
             app.toneEngine.stopCountdownBeep()
             _uiState.update { it.copy(isEmergencyCancelling = false, emergencyHoldProgress = null) }
-            if (wasArming) {
+            if (armingJob != null) {
                 armingJob?.cancel()
                 armingJob = null
                 Log.d(TAG, "EMERGENCY ARMING: cancelled by hold")
-            } else {
+            } else if (_uiState.value.myEmergencyActive) {
                 onEmergencyClear()
             }
         }
@@ -307,7 +307,8 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         if (cancelJob == null) return
         cancelJob?.cancel()
         cancelJob = null
-        _uiState.update { it.copy(isEmergencyCancelling = false) }
+        app.toneEngine.stopCountdownBeep()
+        _uiState.update { it.copy(isEmergencyCancelling = false, emergencyHoldProgress = null) }
         Log.d(TAG, "EMERGENCY CANCEL HOLD: aborted (key released early)")
     }
 
