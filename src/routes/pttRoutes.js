@@ -162,7 +162,7 @@ router.get('/token', async (req, res) => {
 
     const token = await at.toJwt();
     console.log(`[PTT-HTTP] Service token issued for ${identity} on ${room}`);
-    res.json({ token });
+    res.json({ token, livekitUrl: process.env.LIVEKIT_URL });
   } catch (err) {
     console.error('[PTT-HTTP] Token generation failed:', err);
     res.status(500).json({ error: 'Failed to generate token' });

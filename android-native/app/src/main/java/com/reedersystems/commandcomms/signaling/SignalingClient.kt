@@ -1,0 +1,248 @@
+package com.reedersystems.commandcomms.signaling
+
+import android.util.Log
+import io.socket.client.IO
+import io.socket.client.Socket
+import io.socket.engineio.client.transports.WebSocket
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import org.json.JSONObject
+
+private const val TAG = "[PTT-DIAG]"
+
+enum class ConnectionState { DISCONNECTED, CONNECTING, CONNECTED, AUTHENTICATED }
+
+class SignalingClient(private val serverUrl: String) {
+
+    private var socket: Socket? = null
+
+    private val _connectionState = MutableStateFlow(ConnectionState.DISCONNECTED)
+    val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()
+
+    private val _events = MutableSharedFlow<SignalingEvent>(extraBufferCapacity = 32)
+    val events: SharedFlow<SignalingEvent> = _events.asSharedFlow()
+
+    private var unitId: String = ""
+    private var username: String = ""
+
+    fun connect(unitId: String, username: String) {
+        if (_connectionState.value != ConnectionState.DISCONNECTED) return
+        this.unitId = unitId
+        this.username = username
+
+        Log.d(TAG, "SignalingClient connecting to $serverUrl")
+        _connectionState.value = ConnectionState.CONNECTING
+
+        val options = IO.Options.builder()
+            .setPath("/signaling")
+            .setTransports(arrayOf(WebSocket.NAME))
+            .setReconnection(true)
+            .setReconnectionDelay(2_000)
+            .setReconnectionAttempts(10)
+            .build()
+
+        val s = IO.socket(serverUrl, options)
+        socket = s
+
+        s.on(Socket.EVENT_CONNECT) {
+            Log.d(TAG, "Socket connected, authenticating as $unitId")
+            _connectionState.value = ConnectionState.CONNECTED
+            val auth = JSONObject().apply {
+                put("unitId", unitId)
+                put("username", username)
+                put("agencyId", "default")
+                put("isDispatcher", false)
+            }
+            s.emit("authenticate", auth)
+        }
+
+        s.on("authenticated") { _ ->
+            Log.d(TAG, "Signaling authenticated: $unitId")
+            _connectionState.value = ConnectionState.AUTHENTICATED
+        }
+
+        s.on(Socket.EVENT_DISCONNECT) { _ ->
+            Log.d(TAG, "Socket disconnected")
+            _connectionState.value = ConnectionState.DISCONNECTED
+        }
+
+        s.on(Socket.EVENT_CONNECT_ERROR) { args ->
+            Log.w(TAG, "Socket connect error: ${args.firstOrNull()}")
+            _connectionState.value = ConnectionState.DISCONNECTED
+        }
+
+        s.on("ptt:start") { args -> parseAndEmit(args) { json ->
+            SignalingEvent.PttStart(
+                unitId = json.optString("unitId"),
+                channelId = json.optInt("channelId")
+            )
+        }}
+
+        s.on("ptt:end") { args -> parseAndEmit(args) { json ->
+            SignalingEvent.PttEnd(
+                unitId = json.optString("unitId"),
+                channelId = json.optInt("channelId")
+            )
+        }}
+
+        s.on("ptt:busy") { args -> parseAndEmit(args) { json ->
+            SignalingEvent.PttBusy(
+                channelId = json.optInt("channelId"),
+                transmittingUnit = json.optString("transmittingUnit")
+            )
+        }}
+
+        s.on("channel:join") { args -> parseAndEmit(args) { json ->
+            SignalingEvent.UnitJoined(
+                unitId = json.optString("unitId"),
+                channelId = json.optInt("channelId")
+            )
+        }}
+
+        s.on("channel:leave") { args -> parseAndEmit(args) { json ->
+            SignalingEvent.UnitLeft(
+                unitId = json.optString("unitId"),
+                channelId = json.optInt("channelId")
+            )
+        }}
+
+        s.on("emergency:start") { args -> parseAndEmit(args) { json ->
+            SignalingEvent.EmergencyStart(
+                unitId = json.optString("unitId"),
+                channelId = json.optInt("channelId")
+            )
+        }}
+
+        s.on("emergency:end") { args -> parseAndEmit(args) { json ->
+            SignalingEvent.EmergencyEnd(
+                unitId = json.optString("unitId"),
+                channelId = json.optInt("channelId")
+            )
+        }}
+
+        s.on("clear_air:start") { args -> parseAndEmit(args) { json ->
+            SignalingEvent.ClearAirStart(channelId = json.optInt("channelId"))
+        }}
+
+        s.on("clear_air:alert") { args -> parseAndEmit(args) { json ->
+            SignalingEvent.ClearAirStart(channelId = json.optInt("channelId"))
+        }}
+
+        s.on("clear_air:end") { args -> parseAndEmit(args) { json ->
+            SignalingEvent.ClearAirEnd(channelId = json.optInt("channelId"))
+        }}
+
+        s.on("unit:status") { args -> parseAndEmit(args) { json ->
+            SignalingEvent.UnitStatusChanged(
+                unitId = json.optString("unitId"),
+                status = json.optString("status")
+            )
+        }}
+
+        s.on("location:track_start") { args ->
+            try {
+                val json = args.firstOrNull() as? JSONObject
+                val event = SignalingEvent.LocationTrackStart(
+                    requestedBy = json?.optString("requestedBy") ?: "dispatch",
+                    emergency = json?.optBoolean("emergency", false) ?: false
+                )
+                _events.tryEmit(event)
+            } catch (e: Exception) { Log.w(TAG, "location:track_start parse error") }
+        }
+
+        s.on("location:track_stop") { _ ->
+            _events.tryEmit(SignalingEvent.LocationTrackStop)
+        }
+
+        s.on("ping") { s.emit("pong") }
+
+        s.connect()
+    }
+
+    fun disconnect() {
+        socket?.disconnect()
+        socket?.off()
+        socket = null
+        _connectionState.value = ConnectionState.DISCONNECTED
+    }
+
+    fun joinChannel(channelId: Int) {
+        if (!isReady()) return
+        Log.d(TAG, "joinChannel $channelId")
+        socket?.emit("channel:join", JSONObject().put("channelId", channelId))
+    }
+
+    fun leaveChannel(channelId: Int) {
+        if (socket?.connected() != true) return
+        Log.d(TAG, "leaveChannel $channelId")
+        socket?.emit("channel:leave", JSONObject().put("channelId", channelId))
+    }
+
+    fun emitPttStart(channelId: Int) {
+        if (!isReady()) return
+        Log.d(TAG, "emitPttStart $channelId")
+        socket?.emit("ptt:start", JSONObject().apply {
+            put("channelId", channelId)
+            put("unitId", unitId)
+        })
+    }
+
+    fun emitPttEnd(channelId: Int) {
+        if (!isReady()) return
+        Log.d(TAG, "emitPttEnd $channelId")
+        socket?.emit("ptt:end", JSONObject().apply {
+            put("channelId", channelId)
+            put("unitId", unitId)
+        })
+    }
+
+    fun emitStatusUpdate(status: String) {
+        if (!isReady()) return
+        socket?.emit("unit:status", JSONObject().apply {
+            put("unitId", unitId)
+            put("status", status)
+        })
+    }
+
+    fun emitEmergencyStart(channelId: Int) {
+        if (!isReady()) return
+        Log.d(TAG, "emitEmergencyStart $channelId")
+        socket?.emit("emergency:start", JSONObject().put("channelId", channelId))
+    }
+
+    fun emitEmergencyEnd(channelId: Int) {
+        if (!isReady()) return
+        Log.d(TAG, "emitEmergencyEnd $channelId")
+        socket?.emit("emergency:end", JSONObject().put("channelId", channelId))
+    }
+
+    fun emitLocationUpdate(lat: Double, lon: Double, accuracy: Float, heading: Float?, speed: Float?) {
+        if (socket?.connected() != true) return
+        socket?.emit("location:update", JSONObject().apply {
+            put("latitude", lat)
+            put("longitude", lon)
+            put("accuracy", accuracy)
+            if (heading != null) put("heading", heading)
+            if (speed != null) put("speed", speed)
+        })
+    }
+
+    private fun isReady() = _connectionState.value == ConnectionState.AUTHENTICATED
+
+    private inline fun parseAndEmit(
+        args: Array<Any>,
+        crossinline mapper: (JSONObject) -> SignalingEvent
+    ) {
+        try {
+            val json = args.firstOrNull() as? JSONObject ?: return
+            val event = mapper(json)
+            _events.tryEmit(event)
+        } catch (e: Exception) {
+            Log.w(TAG, "parseAndEmit error: ${e.message}")
+        }
+    }
+}
