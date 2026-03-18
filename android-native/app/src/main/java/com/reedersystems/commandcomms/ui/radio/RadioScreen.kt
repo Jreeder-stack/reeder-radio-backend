@@ -87,7 +87,7 @@ fun RadioScreen(
             TopStatusBar(state)
 
             state.emergencyHoldProgress?.let { progress ->
-                EmergencyHoldBar(progress, state.myEmergencyActive)
+                EmergencyHoldBar(progress, state.isEmergencyCancelling)
             }
 
             if (state.isClearAir) {
@@ -164,9 +164,9 @@ private fun TopStatusBar(state: RadioUiState) {
 }
 
 @Composable
-private fun EmergencyHoldBar(progress: Float, isEmergency: Boolean) {
-    val label = if (isEmergency) "CANCEL" else "EMERG"
-    val barColor = if (isEmergency) Green else Red
+private fun EmergencyHoldBar(progress: Float, isCancelling: Boolean) {
+    val label = if (isCancelling) "CANCEL" else "EMERGENCY"
+    val barColor = if (isCancelling) Green else Red
     Column(
         modifier = Modifier
             .fillMaxWidth()

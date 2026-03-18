@@ -88,6 +88,23 @@ class ToneEngine(private val context: Context) {
         busyTrack = null
     }
 
+    private var countdownBeepJob: Job? = null
+
+    fun startCountdownBeep() {
+        if (countdownBeepJob?.isActive == true) return
+        countdownBeepJob = scope.launch {
+            while (isActive) {
+                playBeeps(880f, count = 1, durationMs = 80, gapMs = 0, volume = 0.6f)
+                delay(420L)
+            }
+        }
+    }
+
+    fun stopCountdownBeep() {
+        countdownBeepJob?.cancel()
+        countdownBeepJob = null
+    }
+
     private suspend fun playBeeps(
         freqHz: Float,
         count: Int,
@@ -143,6 +160,7 @@ class ToneEngine(private val context: Context) {
 
     fun release() {
         stopBusyTone()
+        stopCountdownBeep()
         scope.cancel()
     }
 }
