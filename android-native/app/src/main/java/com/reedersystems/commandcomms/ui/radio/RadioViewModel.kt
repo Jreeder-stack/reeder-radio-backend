@@ -322,7 +322,16 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { it.copy(myEmergencyActive = true, channelEmergencyActive = true) }
         app.signalingRepository.emergencyStart(channelId)
         locationTracker.startTracking()
-        onPttDown()
+        startEmergencyTx(channelId)
+    }
+
+    private fun startEmergencyTx(channelId: Int) {
+        if (_uiState.value.pttState != PttState.IDLE) return
+        Log.d(TAG, "EMERGENCY TX START channelId=$channelId (key-lock bypassed)")
+        app.toneEngine.playTalkPermitTone()
+        _uiState.update { it.copy(pttState = PttState.TRANSMITTING) }
+        app.signalingRepository.transmitStart(channelId)
+        sendServiceIntent(BackgroundAudioService.ACTION_PTT_DOWN)
     }
 
     private fun onEmergencyClear() {
