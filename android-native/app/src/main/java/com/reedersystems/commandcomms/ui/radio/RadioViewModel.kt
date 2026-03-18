@@ -2,17 +2,21 @@ package com.reedersystems.commandcomms.ui.radio
 
 import android.app.Application
 import android.content.Intent
+import android.content.IntentFilter
+import android.os.BatteryManager
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.reedersystems.commandcomms.CommandCommsApp
+import com.reedersystems.commandcomms.KeyAction
 import com.reedersystems.commandcomms.audio.BackgroundAudioService
 import com.reedersystems.commandcomms.data.model.Channel
 import com.reedersystems.commandcomms.data.model.PttState
 import com.reedersystems.commandcomms.data.model.Zone
-import com.reedersystems.commandcomms.field.LocationTracker
 import com.reedersystems.commandcomms.signaling.ConnectionState
 import com.reedersystems.commandcomms.signaling.SignalingEvent
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,6 +24,17 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 private const val TAG = "[PTT-DIAG]"
+
+val STATUS_CYCLE = listOf("off_duty", "on_duty", "en_route", "arrived", "oos")
+val STATUS_LABELS = mapOf(
+    "off_duty" to "OFF DUTY",
+    "on_duty" to "ON DUTY",
+    "en_route" to "EN ROUTE",
+    "arrived" to "ARRIVED",
+    "oos" to "OOS"
+)
+
+data class ScanChannelItem(val id: Int, val name: String, val enabled: Boolean)
 
 data class RadioUiState(
     val username: String = "",
@@ -35,7 +50,14 @@ data class RadioUiState(
     val myEmergencyActive: Boolean = false,
     val channelEmergencyActive: Boolean = false,
     val isClearAir: Boolean = false,
-    val currentStatus: String = "online"
+    val currentStatus: String = "off_duty",
+    val isKeyLocked: Boolean = false,
+    val isScanning: Boolean = false,
+    val scanChannels: List<ScanChannelItem> = emptyList(),
+    val emergencyHoldProgress: Float? = null,
+    val showScanOverlay: Boolean = false,
+    val clockTime: String = "",
+    val batteryLevel: Int? = null,
 ) {
     val currentZone: Zone? get() = zones.getOrNull(currentZoneIndex)
     val currentChannel: Channel? get() = currentZone?.channels?.getOrNull(currentChannelIndex)
@@ -43,23 +65,19 @@ data class RadioUiState(
     val isConnected: Boolean get() = signalingState == ConnectionState.AUTHENTICATED
 }
 
-val UNIT_STATUSES = listOf(
-    "online" to "On Duty",
-    "available" to "Available",
-    "busy" to "Unavailable",
-    "on-scene" to "On Scene",
-    "out-of-service" to "Out of Service"
-)
-
 class RadioViewModel(application: Application) : AndroidViewModel(application) {
 
     private val app get() = getApplication<CommandCommsApp>()
-    private val locationTracker: LocationTracker by lazy {
-        LocationTracker(getApplication(), app.signalingRepository)
+    private val scanPrefs = application.getSharedPreferences("ScanPrefs", android.content.Context.MODE_PRIVATE)
+
+    private val locationTracker by lazy {
+        com.reedersystems.commandcomms.field.LocationTracker(getApplication(), app.signalingRepository)
     }
 
     private val _uiState = MutableStateFlow(RadioUiState())
     val uiState: StateFlow<RadioUiState> = _uiState.asStateFlow()
+
+    private var emergencyHoldJob: Job? = null
 
     init {
         val prefs = app.sessionPrefs
@@ -69,8 +87,34 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                 unitId = prefs.unitId ?: prefs.username ?: ""
             )
         }
+        updateClock()
+        updateBattery()
+        viewModelScope.launch {
+            while (true) {
+                delay(10_000)
+                updateClock()
+                updateBattery()
+            }
+        }
         loadChannels()
         observeSignaling()
+        collectKeyEvents()
+    }
+
+    private fun updateClock() {
+        val cal = java.util.Calendar.getInstance()
+        val h = "%02d".format(cal.get(java.util.Calendar.HOUR_OF_DAY))
+        val m = "%02d".format(cal.get(java.util.Calendar.MINUTE))
+        _uiState.update { it.copy(clockTime = "$h:$m") }
+    }
+
+    private fun updateBattery() {
+        val intent = getApplication<Application>()
+            .registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        val level = intent?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
+        val scale = intent?.getIntExtra(BatteryManager.EXTRA_SCALE, -1) ?: -1
+        val pct = if (level >= 0 && scale > 0) level * 100 / scale else null
+        _uiState.update { it.copy(batteryLevel = pct) }
     }
 
     private fun loadChannels() {
@@ -79,11 +123,15 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
             val result = app.channelRepository.getZones()
             if (result.isSuccess) {
                 val zones = result.getOrThrow()
-                _uiState.update { it.copy(zones = zones, isLoading = false) }
+                val allChannels = zones.flatMap { it.channels }
+                val scanChannels = allChannels.map { ch ->
+                    ScanChannelItem(ch.id, ch.name, loadScanEnabled(ch.id))
+                }
+                _uiState.update { it.copy(zones = zones, isLoading = false, scanChannels = scanChannels) }
                 connectSignaling()
             } else {
                 _uiState.update {
-                    it.copy(isLoading = false, error = result.exceptionOrNull()?.message)
+                    it.copy(isLoading = false, error = result.exceptionOrNull()?.message ?: "Failed to load channels")
                 }
             }
         }
@@ -127,10 +175,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                         _uiState.update { it.copy(channelEmergencyActive = true) }
                     }
                     is SignalingEvent.EmergencyEnd -> {
-                        _uiState.update { it.copy(channelEmergencyActive = false) }
-                        if (_uiState.value.myEmergencyActive) {
-                            _uiState.update { it.copy(myEmergencyActive = false) }
-                        }
+                        _uiState.update { it.copy(channelEmergencyActive = false, myEmergencyActive = false) }
                     }
                     is SignalingEvent.ClearAirStart -> {
                         _uiState.update { it.copy(isClearAir = true) }
@@ -139,7 +184,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                         _uiState.update { it.copy(isClearAir = false) }
                     }
                     is SignalingEvent.LocationTrackStart -> {
-                        Log.d(TAG, "Location tracking requested (emergency=${event.emergency})")
+                        Log.d(TAG, "Location tracking requested")
                         locationTracker.startTracking()
                     }
                     is SignalingEvent.LocationTrackStop -> {
@@ -151,15 +196,40 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    private fun collectKeyEvents() {
+        viewModelScope.launch {
+            app.keyEventFlow.collect { action ->
+                val locked = _uiState.value.isKeyLocked
+                when (action) {
+                    is KeyAction.StarLongPress -> toggleKeyLock()
+                    is KeyAction.EmergencyDown -> holdEmergencyStart()
+                    is KeyAction.EmergencyUp -> holdEmergencyCancel()
+                    else -> {
+                        if (!locked) when (action) {
+                            is KeyAction.DpadUp -> nextChannel()
+                            is KeyAction.DpadDown -> prevChannel()
+                            is KeyAction.DpadLeft -> prevZone()
+                            is KeyAction.DpadRight -> nextZone()
+                            is KeyAction.AccToggle -> toggleScanning()
+                            else -> {}
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     fun onPttDown() {
         val state = _uiState.value
+        if (state.isKeyLocked) return
         if (state.pttState != PttState.IDLE) return
         val channelId = state.currentChannel?.id ?: run {
             Log.w(TAG, "PTT DOWN: no channel selected")
             return
         }
         Log.d(TAG, "onPttDown channelId=$channelId")
-        _uiState.update { it.copy(pttState = PttState.CONNECTING) }
+        app.toneEngine.playTalkPermitTone()
+        _uiState.update { it.copy(pttState = PttState.TRANSMITTING) }
         app.signalingRepository.transmitStart(channelId)
         sendServiceIntent(BackgroundAudioService.ACTION_PTT_DOWN)
     }
@@ -169,21 +239,45 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         if (state.pttState == PttState.IDLE) return
         val channelId = state.currentChannel?.id ?: return
         Log.d(TAG, "onPttUp channelId=$channelId")
+        app.toneEngine.playEndOfTxTone()
         _uiState.update { it.copy(pttState = PttState.IDLE) }
         app.signalingRepository.transmitEnd(channelId)
         sendServiceIntent(BackgroundAudioService.ACTION_PTT_UP)
     }
 
-    fun onEmergencyActivate() {
+    fun holdEmergencyStart() {
+        emergencyHoldJob?.cancel()
+        val isCurrentlyEmergency = _uiState.value.myEmergencyActive
+        emergencyHoldJob = viewModelScope.launch {
+            val totalMs = 3000L
+            val tickMs = 50L
+            var elapsed = 0L
+            while (elapsed < totalMs) {
+                delay(tickMs)
+                elapsed += tickMs
+                _uiState.update { it.copy(emergencyHoldProgress = elapsed.toFloat() / totalMs) }
+            }
+            _uiState.update { it.copy(emergencyHoldProgress = null) }
+            if (isCurrentlyEmergency) onEmergencyClear() else onEmergencyActivate()
+        }
+    }
+
+    fun holdEmergencyCancel() {
+        emergencyHoldJob?.cancel()
+        emergencyHoldJob = null
+        _uiState.update { it.copy(emergencyHoldProgress = null) }
+    }
+
+    private fun onEmergencyActivate() {
         val channelId = _uiState.value.currentChannel?.id ?: return
         Log.d(TAG, "EMERGENCY ACTIVATE channelId=$channelId")
-        _uiState.update { it.copy(myEmergencyActive = true) }
+        _uiState.update { it.copy(myEmergencyActive = true, channelEmergencyActive = true) }
         app.signalingRepository.emergencyStart(channelId)
         locationTracker.startTracking()
         onPttDown()
     }
 
-    fun onEmergencyClear() {
+    private fun onEmergencyClear() {
         val channelId = _uiState.value.currentChannel?.id ?: return
         Log.d(TAG, "EMERGENCY CLEAR channelId=$channelId")
         _uiState.update { it.copy(myEmergencyActive = false) }
@@ -192,9 +286,40 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         if (_uiState.value.pttState != PttState.IDLE) onPttUp()
     }
 
-    fun setStatus(statusKey: String) {
-        _uiState.update { it.copy(currentStatus = statusKey) }
-        app.signalingRepository.setStatus(statusKey)
+    fun cycleStatus() {
+        val current = _uiState.value.currentStatus
+        val idx = STATUS_CYCLE.indexOf(current)
+        val next = STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.size]
+        _uiState.update { it.copy(currentStatus = next) }
+        app.signalingRepository.setStatus(next)
+    }
+
+    fun toggleKeyLock() {
+        _uiState.update { it.copy(isKeyLocked = !it.isKeyLocked) }
+    }
+
+    fun toggleScanning() {
+        _uiState.update { it.copy(isScanning = !it.isScanning) }
+    }
+
+    fun setShowScanOverlay(show: Boolean) {
+        _uiState.update { it.copy(showScanOverlay = show) }
+    }
+
+    fun toggleScanChannel(channelId: Int) {
+        val updated = _uiState.value.scanChannels.map { ch ->
+            if (ch.id == channelId) ch.copy(enabled = !ch.enabled).also {
+                saveScanEnabled(channelId, !ch.enabled)
+            } else ch
+        }
+        _uiState.update { it.copy(scanChannels = updated) }
+    }
+
+    private fun loadScanEnabled(channelId: Int): Boolean =
+        scanPrefs.getBoolean("scan_$channelId", true)
+
+    private fun saveScanEnabled(channelId: Int, enabled: Boolean) {
+        scanPrefs.edit().putBoolean("scan_$channelId", enabled).apply()
     }
 
     private fun updateServiceChannel() {
@@ -204,7 +329,6 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         app.serviceConnectionPrefs.channelName = channel.name
         app.serviceConnectionPrefs.unitId = _uiState.value.unitId
         app.serviceConnectionPrefs.serverUrl = app.apiClient.baseUrl
-
         val intent = Intent(getApplication(), BackgroundAudioService::class.java).apply {
             action = BackgroundAudioService.ACTION_UPDATE_CHANNEL
             putExtra(BackgroundAudioService.EXTRA_CHANNEL_ID, channel.id)
@@ -259,11 +383,9 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun onChannelChanged(prevChannelId: Int?) {
         val newChannel = _uiState.value.currentChannel ?: return
-        if (prevChannelId != null && prevChannelId != newChannel.id) {
-            if (_uiState.value.isConnected) {
-                app.signalingRepository.leaveChannel(prevChannelId)
-                app.signalingRepository.joinChannel(newChannel.id)
-            }
+        if (prevChannelId != null && prevChannelId != newChannel.id && _uiState.value.isConnected) {
+            app.signalingRepository.leaveChannel(prevChannelId)
+            app.signalingRepository.joinChannel(newChannel.id)
         }
         updateServiceChannel()
     }

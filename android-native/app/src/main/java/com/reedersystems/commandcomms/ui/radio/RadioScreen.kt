@@ -1,23 +1,21 @@
 package com.reedersystems.commandcomms.ui.radio
 
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontFamily
@@ -29,577 +27,507 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.reedersystems.commandcomms.data.model.PttState
 import com.reedersystems.commandcomms.signaling.ConnectionState
-import com.reedersystems.commandcomms.ui.theme.*
 
-@OptIn(ExperimentalMaterial3Api::class)
+private val BgWhite   = Color(0xFFFFFFFF)
+private val BgTopBar  = Color(0xFFF0F0F0)
+private val BgBottom  = Color(0xFF1A1A1A)
+private val BgEmerg   = Color(0xFFFF0000)
+private val TextMain  = Color(0xFF111111)
+private val TextMuted = Color(0xFF555555)
+private val Green     = Color(0xFF008844)
+private val Red       = Color(0xFFCC0000)
+private val Amber     = Color(0xFFCC8800)
+private val White     = Color.White
+
 @Composable
 fun RadioScreen(
     onLogout: () -> Unit,
     viewModel: RadioViewModel = viewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    var showLogoutDialog by remember { mutableStateOf(false) }
 
-    var showEmergencyDialog by remember { mutableStateOf(false) }
-    var showClearEmergencyDialog by remember { mutableStateOf(false) }
-    var showStatusSheet by remember { mutableStateOf(false) }
+    val infiniteTransition = rememberInfiniteTransition(label = "main")
+    val flashAlpha by infiniteTransition.animateFloat(
+        initialValue = 1f, targetValue = 0.35f,
+        animationSpec = infiniteRepeatable(tween(500), RepeatMode.Reverse),
+        label = "flash"
+    )
+
+    val bgColor = if (state.myEmergencyActive)
+        BgEmerg.copy(alpha = flashAlpha)
+    else BgWhite
+
+    if (showLogoutDialog) {
+        AlertDialog(
+            onDismissRequest = { showLogoutDialog = false },
+            title = { androidx.compose.material3.Text("Sign Out") },
+            text = { androidx.compose.material3.Text("Sign out of Command Comms?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showLogoutDialog = false
+                    viewModel.logout(onLogout)
+                }) { androidx.compose.material3.Text("Sign Out") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLogoutDialog = false }) {
+                    androidx.compose.material3.Text("Cancel")
+                }
+            }
+        )
+    }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(ColorBackground)
+            .background(bgColor)
     ) {
-        if (uiState.isClearAir) {
-            ClearAirBanner(modifier = Modifier.align(Alignment.TopCenter))
-        }
+        Column(modifier = Modifier.fillMaxSize()) {
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .statusBarsPadding()
-                .navigationBarsPadding()
-                .padding(horizontal = 16.dp, vertical = 12.dp)
-                .let { if (uiState.isClearAir) it.padding(top = 32.dp) else it },
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            RadioHeader(
-                unitId = uiState.unitId,
-                signalingState = uiState.signalingState,
-                currentStatus = uiState.currentStatus,
-                onStatusClick = { showStatusSheet = true },
-                onLogout = { viewModel.logout(onLogout) }
+            TopStatusBar(state)
+
+            state.emergencyHoldProgress?.let { progress ->
+                EmergencyHoldBar(progress, state.myEmergencyActive)
+            }
+
+            if (state.isClearAir) {
+                ClearAirBanner()
+            }
+
+            CenterDisplay(
+                state = state,
+                onPttDown = viewModel::onPttDown,
+                onPttUp = viewModel::onPttUp,
+                modifier = Modifier.weight(1f)
             )
 
-            if (uiState.isLoading) {
-                Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = ColorCyan)
-                }
-            } else if (uiState.error != null) {
-                Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(text = uiState.error ?: "", color = ColorRed, textAlign = TextAlign.Center)
-                        Spacer(Modifier.height(8.dp))
-                        Text("Check connection and try again", color = ColorTextSecondary, fontSize = 11.sp)
-                    }
-                }
-            } else {
-                ZoneChannelDisplay(
-                    zoneName = uiState.currentZone?.name ?: "NO ZONE",
-                    channelName = uiState.currentChannel?.name ?: "NO CHANNEL",
-                    onPrevZone = viewModel::prevZone,
-                    onNextZone = viewModel::nextZone,
-                    onPrevChannel = viewModel::prevChannel,
-                    onNextChannel = viewModel::nextChannel
-                )
+            EmergencyTouchButton(
+                myEmergencyActive = state.myEmergencyActive,
+                onHoldStart = viewModel::holdEmergencyStart,
+                onHoldCancel = viewModel::holdEmergencyCancel
+            )
 
-                if (uiState.activeTransmittingUnit != null) {
-                    ActiveTransmitBanner(unitId = uiState.activeTransmittingUnit!!)
-                }
-
-                if (uiState.channelEmergencyActive) {
-                    EmergencyBanner(isMyEmergency = uiState.myEmergencyActive)
-                }
-
-                Spacer(modifier = Modifier.weight(1f))
-
-                PttButton(
-                    pttState = uiState.pttState,
-                    enabled = uiState.isConnected && uiState.currentChannel != null &&
-                        !uiState.myEmergencyActive,
-                    onPttDown = viewModel::onPttDown,
-                    onPttUp = viewModel::onPttUp
-                )
-
-                Spacer(Modifier.height(12.dp))
-
-                EmergencyButton(
-                    myEmergencyActive = uiState.myEmergencyActive,
-                    onActivate = { showEmergencyDialog = true },
-                    onClear = { showClearEmergencyDialog = true }
-                )
-
-                Spacer(Modifier.height(8.dp))
-            }
+            BottomBar(
+                state = state,
+                onScnl = { viewModel.setShowScanOverlay(true) },
+                onCycleStatus = viewModel::cycleStatus,
+                onLogoutRequest = { showLogoutDialog = true }
+            )
         }
-    }
 
-    if (showEmergencyDialog) {
-        EmergencyConfirmDialog(
-            onConfirm = {
-                showEmergencyDialog = false
-                viewModel.onEmergencyActivate()
-            },
-            onDismiss = { showEmergencyDialog = false }
-        )
-    }
-
-    if (showClearEmergencyDialog) {
-        AlertDialog(
-            onDismissRequest = { showClearEmergencyDialog = false },
-            title = { Text("Clear Emergency?", color = ColorTextPrimary) },
-            text = { Text("This will notify dispatch that the emergency has been cleared.", color = ColorTextSecondary) },
-            confirmButton = {
-                TextButton(onClick = { showClearEmergencyDialog = false; viewModel.onEmergencyClear() }) {
-                    Text("CLEAR", color = ColorGreen, fontFamily = FontFamily.Monospace)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showClearEmergencyDialog = false }) {
-                    Text("Cancel", color = ColorTextSecondary)
-                }
-            },
-            containerColor = ColorSurface
-        )
-    }
-
-    if (showStatusSheet) {
-        StatusBottomSheet(
-            currentStatus = uiState.currentStatus,
-            onStatusSelected = { key -> viewModel.setStatus(key); showStatusSheet = false },
-            onDismiss = { showStatusSheet = false }
-        )
+        if (state.showScanOverlay) {
+            ScanOverlay(
+                state = state,
+                onToggleScanning = viewModel::toggleScanning,
+                onToggleChannel = viewModel::toggleScanChannel,
+                onDismiss = { viewModel.setShowScanOverlay(false) }
+            )
+        }
     }
 }
 
 @Composable
-private fun RadioHeader(
-    unitId: String,
-    signalingState: ConnectionState,
-    currentStatus: String,
-    onStatusClick: () -> Unit,
-    onLogout: () -> Unit
-) {
+private fun TopStatusBar(state: RadioUiState) {
+    val isEmergency = state.myEmergencyActive
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(if (isEmergency) Color.Transparent else BgTopBar)
+            .padding(horizontal = 8.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = "COMMAND COMMS",
-            color = ColorCyan,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Bold,
-            fontFamily = FontFamily.Monospace,
-            letterSpacing = 2.sp
-        )
+        T320Text(state.clockTime, color = if (isEmergency) White else TextMuted, bold = true, size = 11)
+
         Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            SignalingIndicator(state = signalingState)
-            Box(
-                modifier = Modifier
-                    .border(1.dp, Color(0xFF444444), RoundedCornerShape(4.dp))
-                    .clickable(onClick = onStatusClick)
-                    .padding(horizontal = 6.dp, vertical = 2.dp)
-            ) {
-                Text(
-                    text = UNIT_STATUSES.find { it.first == currentStatus }?.second ?: currentStatus,
-                    color = ColorTextSecondary,
-                    fontSize = 9.sp,
-                    fontFamily = FontFamily.Monospace
-                )
+            if (state.isKeyLocked) {
+                T320Text("LCK", color = if (isEmergency) White else Amber, bold = true, size = 11)
             }
-            Text(
-                text = unitId.ifBlank { "UNIT" },
-                color = ColorTextSecondary,
-                fontSize = 11.sp,
-                fontFamily = FontFamily.Monospace
+            if (state.isScanning) {
+                T320Text("SCN", color = if (isEmergency) White else Green, bold = true, size = 11)
+            }
+            val dotColor = when {
+                isEmergency -> White
+                state.signalingState == ConnectionState.AUTHENTICATED -> Green
+                else -> Red
+            }
+            T320Text(
+                if (state.signalingState == ConnectionState.AUTHENTICATED) "●" else "○",
+                color = dotColor, bold = true, size = 13
             )
-            IconButton(onClick = onLogout, modifier = Modifier.size(32.dp)) {
-                Icon(Icons.Default.Logout, contentDescription = "Logout", tint = ColorTextSecondary, modifier = Modifier.size(18.dp))
+            state.batteryLevel?.let { bat ->
+                val batColor = when {
+                    isEmergency -> White
+                    bat <= 20 -> Red
+                    else -> TextMuted
+                }
+                T320Text("$bat%", color = batColor, bold = true, size = 11)
             }
         }
     }
-    HorizontalDivider(color = Color(0xFF333333))
 }
 
 @Composable
-private fun SignalingIndicator(state: ConnectionState) {
-    val color = when (state) {
-        ConnectionState.AUTHENTICATED -> ColorGreen
-        ConnectionState.CONNECTED, ConnectionState.CONNECTING -> ColorAmber
-        ConnectionState.DISCONNECTED -> ColorRed
-    }
-    val label = when (state) {
-        ConnectionState.AUTHENTICATED -> "SIG"
-        ConnectionState.CONNECTING -> "..."
-        ConnectionState.CONNECTED -> "AUTH"
-        ConnectionState.DISCONNECTED -> "OFF"
-    }
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-        Box(modifier = Modifier.size(6.dp).background(color, CircleShape))
-        Text(text = label, color = color, fontSize = 9.sp, fontFamily = FontFamily.Monospace)
-    }
-}
-
-@Composable
-private fun ZoneChannelDisplay(
-    zoneName: String,
-    channelName: String,
-    onPrevZone: () -> Unit,
-    onNextZone: () -> Unit,
-    onPrevChannel: () -> Unit,
-    onNextChannel: () -> Unit
-) {
+private fun EmergencyHoldBar(progress: Float, isEmergency: Boolean) {
+    val label = if (isEmergency) "CANCEL" else "EMERG"
+    val barColor = if (isEmergency) Green else Red
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .border(1.dp, Color(0xFF333333), RoundedCornerShape(8.dp))
-            .background(ColorSurface, RoundedCornerShape(8.dp))
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+            .padding(horizontal = 10.dp, vertical = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text("ZONE", color = ColorTextSecondary, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onPrevZone, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Default.ChevronLeft, contentDescription = null, tint = ColorCyan)
-                }
-                Text(
-                    text = zoneName,
-                    color = ColorCyan,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    fontFamily = FontFamily.Monospace,
-                    modifier = Modifier.widthIn(min = 100.dp),
-                    textAlign = TextAlign.Center
-                )
-                IconButton(onClick = onNextZone, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Default.ChevronRight, contentDescription = null, tint = ColorCyan)
-                }
-            }
-        }
-        HorizontalDivider(color = Color(0xFF333333))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text("CH", color = ColorTextSecondary, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onPrevChannel, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Default.KeyboardArrowUp, contentDescription = null, tint = ColorCyan)
-                }
-                Text(
-                    text = channelName,
-                    color = ColorTextPrimary,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    fontFamily = FontFamily.Monospace,
-                    modifier = Modifier.widthIn(min = 100.dp),
-                    textAlign = TextAlign.Center
-                )
-                IconButton(onClick = onNextChannel, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Default.KeyboardArrowDown, contentDescription = null, tint = ColorCyan)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun PttButton(
-    pttState: PttState,
-    enabled: Boolean,
-    onPttDown: () -> Unit,
-    onPttUp: () -> Unit
-) {
-    val isActive = pttState == PttState.TRANSMITTING || pttState == PttState.CONNECTING
-    val isConnecting = pttState == PttState.CONNECTING
-
-    val buttonColor by animateColorAsState(
-        targetValue = when {
-            isConnecting -> ColorAmber
-            isActive -> ColorRed
-            enabled -> Color(0xFF1A1A1A)
-            else -> Color(0xFF0F0F0F)
-        },
-        animationSpec = tween(150),
-        label = "pttColor"
-    )
-    val borderColor by animateColorAsState(
-        targetValue = when {
-            isConnecting -> ColorAmber
-            isActive -> ColorRed
-            enabled -> ColorCyan
-            else -> Color(0xFF333333)
-        },
-        animationSpec = tween(150),
-        label = "pttBorder"
-    )
-    val scale by animateFloatAsState(
-        targetValue = if (isActive) 0.94f else 1.0f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
-        label = "pttScale"
-    )
-
-    val labelText = when (pttState) {
-        PttState.CONNECTING -> "CONNECTING…"
-        PttState.TRANSMITTING -> "TRANSMITTING"
-        PttState.IDLE -> if (enabled) "PUSH TO TALK" else "SELECT CHANNEL"
-    }
-    val labelColor = when {
-        isConnecting -> ColorAmber
-        isActive -> ColorRed
-        enabled -> ColorCyan
-        else -> ColorTextSecondary
-    }
-
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Text(
-            text = labelText,
-            color = labelColor,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Bold,
-            fontFamily = FontFamily.Monospace,
-            letterSpacing = 3.sp
+        T320Text(
+            "HOLD... $label ${(progress * 100).toInt()}%",
+            color = barColor, bold = true, size = 11
         )
+        Spacer(Modifier.height(3.dp))
         Box(
             modifier = Modifier
-                .size(160.dp)
-                .scale(scale)
-                .clip(CircleShape)
-                .background(buttonColor)
-                .border(3.dp, borderColor, CircleShape)
-                .pointerInput(enabled) {
-                    awaitEachGesture {
-                        val down = awaitFirstDown()
-                        if (enabled) { down.consume(); onPttDown() }
-                        do {
-                            val event = awaitPointerEvent()
-                            val up = event.changes.all { !it.pressed }
-                            if (up) {
-                                event.changes.forEach { it.consume() }
-                                if (enabled) onPttUp()
-                                break
-                            }
-                        } while (true)
-                    }
-                },
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Default.Mic,
-                contentDescription = "Push to Talk",
-                tint = if (enabled) labelColor else ColorTextSecondary,
-                modifier = Modifier.size(64.dp)
-            )
-        }
-        if (isActive) {
-            Text("RELEASE TO END", color = ColorTextSecondary, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
-        }
-    }
-}
-
-@Composable
-private fun EmergencyButton(
-    myEmergencyActive: Boolean,
-    onActivate: () -> Unit,
-    onClear: () -> Unit
-) {
-    val infiniteTransition = rememberInfiniteTransition(label = "eBtnPulse")
-    val pulseAlpha by infiniteTransition.animateFloat(
-        initialValue = 1f, targetValue = if (myEmergencyActive) 0.5f else 1f,
-        animationSpec = infiniteRepeatable(tween(700, easing = LinearEasing), RepeatMode.Reverse),
-        label = "eBtnAlpha"
-    )
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(52.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(if (myEmergencyActive) ColorRed.copy(alpha = pulseAlpha * 0.85f) else Color(0xFF1A0000))
-            .border(2.dp, ColorRed.copy(alpha = if (myEmergencyActive) pulseAlpha else 0.6f), RoundedCornerShape(8.dp))
-            .clickable(onClick = if (myEmergencyActive) onClear else onActivate),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center
-    ) {
-        Icon(
-            Icons.Default.Warning,
-            contentDescription = null,
-            tint = if (myEmergencyActive) Color.White else ColorRed,
-            modifier = Modifier.size(20.dp)
-        )
-        Spacer(Modifier.width(8.dp))
-        Text(
-            text = if (myEmergencyActive) "CLEAR EMERGENCY" else "EMERGENCY",
-            color = if (myEmergencyActive) Color.White else ColorRed,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Black,
-            fontFamily = FontFamily.Monospace,
-            letterSpacing = 3.sp
-        )
-    }
-}
-
-@Composable
-private fun EmergencyConfirmDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        icon = { Icon(Icons.Default.Warning, contentDescription = null, tint = ColorRed, modifier = Modifier.size(32.dp)) },
-        title = { Text("ACTIVATE EMERGENCY?", color = ColorRed, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Black, letterSpacing = 2.sp) },
-        text = {
-            Text(
-                "This will broadcast an emergency alert to dispatch and all units on this channel. " +
-                    "GPS tracking will begin immediately.",
-                color = ColorTextSecondary,
-                textAlign = TextAlign.Center
-            )
-        },
-        confirmButton = {
-            Button(
-                onClick = onConfirm,
-                colors = ButtonDefaults.buttonColors(containerColor = ColorRed)
-            ) {
-                Text("ACTIVATE", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, color = Color.White)
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel", color = ColorTextSecondary)
-            }
-        },
-        containerColor = ColorSurface
-    )
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun StatusBottomSheet(
-    currentStatus: String,
-    onStatusSelected: (String) -> Unit,
-    onDismiss: () -> Unit
-) {
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        containerColor = ColorSurface
-    ) {
-        Column(
-            modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .padding(bottom = 32.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+                .height(4.dp)
+                .background(Color(0xFFDDDDDD))
         ) {
-            Text(
-                "STATUS",
-                color = ColorTextSecondary,
-                fontSize = 11.sp,
-                fontFamily = FontFamily.Monospace,
-                letterSpacing = 3.sp,
-                modifier = Modifier.padding(bottom = 8.dp)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(progress)
+                    .fillMaxHeight()
+                    .background(barColor)
             )
-            UNIT_STATUSES.forEach { (key, label) ->
-                val isSelected = key == currentStatus
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(if (isSelected) ColorCyan.copy(alpha = 0.12f) else Color.Transparent)
-                        .clickable { onStatusSelected(key) }
-                        .padding(horizontal = 12.dp, vertical = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = label,
-                        color = if (isSelected) ColorCyan else ColorTextPrimary,
-                        fontSize = 15.sp,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                    )
-                    if (isSelected) {
-                        Icon(Icons.Default.Check, contentDescription = null, tint = ColorCyan, modifier = Modifier.size(18.dp))
-                    }
-                }
-            }
         }
     }
 }
 
 @Composable
-private fun ActiveTransmitBanner(unitId: String) {
-    Row(
+private fun ClearAirBanner() {
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(ColorAmber.copy(alpha = 0.12f), RoundedCornerShape(6.dp))
-            .border(1.dp, ColorAmber.copy(alpha = 0.4f), RoundedCornerShape(6.dp))
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+            .background(Color(0xFF0044CC))
+            .padding(vertical = 4.dp),
+        contentAlignment = Alignment.Center
     ) {
-        Icon(Icons.Default.Radio, contentDescription = null, tint = ColorAmber, modifier = Modifier.size(16.dp))
-        Text(
-            text = "$unitId TRANSMITTING",
-            color = ColorAmber,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Bold,
-            fontFamily = FontFamily.Monospace,
-            letterSpacing = 1.sp
-        )
+        T320Text("CLEAR AIR — EMERGENCY TRAFFIC ONLY", color = White, bold = true, size = 10)
     }
 }
 
 @Composable
-private fun EmergencyBanner(isMyEmergency: Boolean) {
-    val infiniteTransition = rememberInfiniteTransition(label = "emergency")
-    val alpha by infiniteTransition.animateFloat(
-        initialValue = 1f, targetValue = 0.3f,
-        animationSpec = infiniteRepeatable(tween(600), RepeatMode.Reverse),
-        label = "emergencyAlpha"
-    )
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(ColorRed.copy(alpha = alpha * 0.2f), RoundedCornerShape(6.dp))
-            .border(1.dp, ColorRed.copy(alpha = alpha), RoundedCornerShape(6.dp))
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center
-    ) {
-        Icon(Icons.Default.Warning, contentDescription = null, tint = ColorRed, modifier = Modifier.size(16.dp))
-        Spacer(Modifier.width(8.dp))
-        Text(
-            text = if (isMyEmergency) "YOUR EMERGENCY ACTIVE" else "EMERGENCY ACTIVE",
-            color = ColorRed,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Black,
-            fontFamily = FontFamily.Monospace,
-            letterSpacing = 2.sp
-        )
-    }
-}
-
-@Composable
-private fun ClearAirBanner(modifier: Modifier = Modifier) {
-    val infiniteTransition = rememberInfiniteTransition(label = "clearAir")
-    val alpha by infiniteTransition.animateFloat(
+private fun CenterDisplay(
+    state: RadioUiState,
+    onPttDown: () -> Unit,
+    onPttUp: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "center")
+    val txAlpha by infiniteTransition.animateFloat(
         initialValue = 1f, targetValue = 0.5f,
-        animationSpec = infiniteRepeatable(tween(800), RepeatMode.Reverse),
-        label = "clearAirAlpha"
+        animationSpec = infiniteRepeatable(tween(600), RepeatMode.Reverse),
+        label = "txAlpha"
     )
+    val rxAlpha by infiniteTransition.animateFloat(
+        initialValue = 1f, targetValue = 0.65f,
+        animationSpec = infiniteRepeatable(tween(900), RepeatMode.Reverse),
+        label = "rxAlpha"
+    )
+
+    val isEmergency = state.myEmergencyActive
+    val textColor = if (isEmergency) White else TextMain
+    val pttEnabled = state.isConnected && state.currentChannel != null && !state.isKeyLocked
+
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .background(ColorAmber.copy(alpha = alpha * 0.9f))
-            .padding(vertical = 8.dp),
+            .pointerInput(pttEnabled) {
+                awaitEachGesture {
+                    val down = awaitFirstDown()
+                    down.consume()
+                    if (pttEnabled) onPttDown()
+                    do {
+                        val event = awaitPointerEvent()
+                        if (event.changes.all { !it.pressed }) {
+                            event.changes.forEach { it.consume() }
+                            if (pttEnabled) onPttUp()
+                            break
+                        }
+                    } while (true)
+                }
+            },
         contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = "CLEAR AIR — EMERGENCY TRAFFIC ONLY",
-            color = Color.Black,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Black,
-            fontFamily = FontFamily.Monospace,
-            letterSpacing = 2.sp
-        )
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            when {
+                state.isLoading -> {
+                    T320Text("---", color = textColor, bold = true, size = 20)
+                }
+                state.error != null -> {
+                    T320Text("ERROR", color = Red, bold = true, size = 16)
+                    T320Text(state.error, color = if (isEmergency) White else TextMuted, size = 10)
+                }
+                state.pttState == PttState.TRANSMITTING -> {
+                    T320Text(
+                        "TX",
+                        color = Red.copy(alpha = txAlpha),
+                        bold = true, size = 36
+                    )
+                }
+                isEmergency && state.activeTransmittingUnit == null -> {
+                    T320Text(
+                        "EMERGENCY",
+                        color = White.copy(alpha = txAlpha),
+                        bold = true, size = 22
+                    )
+                }
+                else -> {
+                    T320Text(
+                        state.currentZone?.name?.uppercase() ?: "NO ZONE",
+                        color = textColor.copy(alpha = 0.7f),
+                        bold = true, size = 14
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    T320Text(
+                        state.currentChannel?.name ?: if (state.isLoading) "---" else "NO CH",
+                        color = textColor,
+                        bold = true, size = 30
+                    )
+                    state.activeTransmittingUnit?.let { unitId ->
+                        Spacer(Modifier.height(8.dp))
+                        T320Text(
+                            "ID: $unitId",
+                            color = if (isEmergency) White else Green,
+                            bold = true, size = 14
+                        )
+                        T320Text(
+                            "RX",
+                            color = (if (isEmergency) White else Green).copy(alpha = rxAlpha),
+                            bold = true, size = 12
+                        )
+                    }
+                }
+            }
+
+            if (state.pttState == PttState.IDLE && !isEmergency && state.activeTransmittingUnit == null) {
+                Spacer(Modifier.height(16.dp))
+                T320Text(
+                    if (!pttEnabled) "SELECT CHANNEL" else "▼  HOLD TO TALK  ▼",
+                    color = TextMuted,
+                    size = 10
+                )
+            }
+
+            if (state.isKeyLocked) {
+                Spacer(Modifier.height(4.dp))
+                T320Text("KEYS LOCKED", color = if (isEmergency) White else Amber, bold = true, size = 10)
+            }
+        }
     }
+}
+
+@Composable
+private fun EmergencyTouchButton(
+    myEmergencyActive: Boolean,
+    onHoldStart: () -> Unit,
+    onHoldCancel: () -> Unit
+) {
+    val label = if (myEmergencyActive) "HOLD TO CANCEL EMERGENCY" else "HOLD TO ACTIVATE EMERGENCY"
+    val color = if (myEmergencyActive) Green else Red
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(44.dp)
+            .background(color.copy(alpha = 0.12f))
+            .border(1.dp, color.copy(alpha = 0.5f))
+            .pointerInput(Unit) {
+                awaitEachGesture {
+                    awaitFirstDown().consume()
+                    onHoldStart()
+                    do {
+                        val event = awaitPointerEvent()
+                        if (event.changes.all { !it.pressed }) {
+                            event.changes.forEach { it.consume() }
+                            onHoldCancel()
+                            break
+                        }
+                    } while (true)
+                }
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        T320Text(label, color = color, bold = true, size = 11)
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun BottomBar(
+    state: RadioUiState,
+    onScnl: () -> Unit,
+    onCycleStatus: () -> Unit,
+    onLogoutRequest: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(48.dp)
+            .background(BgBottom)
+            .padding(horizontal = 4.dp),
+        horizontalArrangement = Arrangement.SpaceAround,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        BottomBarButton(
+            text = "SCNL",
+            color = if (state.isScanning) Color(0xFF00FF77) else Color(0xFFE0E0E0),
+            onClick = onScnl
+        )
+        Box(
+            modifier = Modifier
+                .combinedClickable(
+                    onClick = {},
+                    onLongClick = onLogoutRequest
+                )
+                .padding(horizontal = 8.dp, vertical = 6.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            T320Text(state.clockTime, color = White, bold = true, size = 12)
+        }
+        BottomBarButton(
+            text = STATUS_LABELS[state.currentStatus] ?: state.currentStatus.uppercase(),
+            color = Color(0xFF00BBFF),
+            onClick = onCycleStatus
+        )
+        state.batteryLevel?.let { bat ->
+            BottomBarButton(
+                text = "$bat%",
+                color = if (bat <= 20) Color(0xFFFF3333) else White,
+                onClick = {}
+            )
+        }
+    }
+}
+
+@Composable
+private fun BottomBarButton(text: String, color: Color, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .clickable(onClick = onClick)
+            .padding(horizontal = 8.dp, vertical = 6.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        T320Text(text, color = color, bold = true, size = 12)
+    }
+}
+
+@Composable
+private fun ScanOverlay(
+    state: RadioUiState,
+    onToggleScanning: () -> Unit,
+    onToggleChannel: (Int) -> Unit,
+    onDismiss: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(BgWhite)
+    ) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(BgTopBar)
+                    .padding(horizontal = 10.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                T320Text("SCAN LIST", bold = true, size = 13)
+                Box(
+                    modifier = Modifier
+                        .background(if (state.isScanning) Green else Color(0xFF888888))
+                        .clickable(onClick = onToggleScanning)
+                        .padding(horizontal = 10.dp, vertical = 3.dp)
+                ) {
+                    T320Text(if (state.isScanning) "ON" else "OFF", color = White, bold = true, size = 11)
+                }
+            }
+
+            LazyColumn(modifier = Modifier.weight(1f)) {
+                items(state.scanChannels) { ch ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onToggleChannel(ch.id) }
+                            .background(if (ch.enabled) Color(0xFFE6F7E6) else Color.Transparent)
+                            .padding(horizontal = 6.dp, vertical = 10.dp)
+                            .border(0.dp, Color.Transparent),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(18.dp)
+                                .background(if (ch.enabled) Color(0xFF00AA44) else Color.White)
+                                .border(1.dp, Color(0xFF333333)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (ch.enabled) {
+                                T320Text("✓", color = White, bold = true, size = 12)
+                            }
+                        }
+                        T320Text(
+                            ch.name,
+                            color = TextMain,
+                            bold = ch.enabled,
+                            size = 13
+                        )
+                    }
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(1.dp)
+                            .background(Color(0xFFDDDDDD))
+                    )
+                }
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(BgBottom)
+                    .padding(vertical = 6.dp, horizontal = 4.dp),
+                horizontalArrangement = Arrangement.SpaceAround
+            ) {
+                BottomBarButton("BACK", color = Color(0xFF00CC66), onClick = onDismiss)
+                BottomBarButton(
+                    "NONE",
+                    color = Color(0xFFCCCCCC),
+                    onClick = {
+                        state.scanChannels.filter { it.enabled }
+                            .forEach { onToggleChannel(it.id) }
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun T320Text(
+    text: String,
+    color: Color = TextMain,
+    bold: Boolean = false,
+    size: Int = 12
+) {
+    androidx.compose.material3.Text(
+        text = text,
+        color = color,
+        fontSize = size.sp,
+        fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal,
+        fontFamily = FontFamily.Monospace,
+        textAlign = TextAlign.Center
+    )
 }
