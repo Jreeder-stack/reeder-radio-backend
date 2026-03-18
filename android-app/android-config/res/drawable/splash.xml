@@ -3,7 +3,5 @@
     <item android:drawable="@color/splash_background" />
     <item
         android:drawable="@drawable/ic_splash"
-        android:gravity="center"
-        android:width="128dp"
-        android:height="128dp" />
+        android:gravity="center" />
 </layer-list>
