@@ -95,7 +95,7 @@ class ToneEngine(private val context: Context) {
         countdownBeepJob = scope.launch {
             while (isActive) {
                 playBeeps(880f, count = 1, durationMs = 80, gapMs = 0, volume = 0.6f)
-                delay(420L)
+                delay(400L)
             }
         }
     }
