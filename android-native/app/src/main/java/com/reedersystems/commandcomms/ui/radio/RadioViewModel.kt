@@ -78,8 +78,8 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
     private val _uiState = MutableStateFlow(RadioUiState())
     val uiState: StateFlow<RadioUiState> = _uiState.asStateFlow()
 
-    private var armingJob: Job? = null
-    private var cancelJob: Job? = null
+    private var emergencyJob: Job? = null
+    private var armingElapsedMs = 0L
 
     init {
         val prefs = app.sessionPrefs
@@ -250,29 +250,39 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
     private fun onEmergencyDown() {
         val state = _uiState.value
         when {
-            armingJob == null && !state.myEmergencyActive -> startArming()
-            cancelJob == null -> startCancelHold()
+            emergencyJob == null && !state.myEmergencyActive -> startArming()
+            !state.isEmergencyCancelling -> startCancelHold()
         }
     }
 
     private fun onEmergencyUp() {
-        abortCancelHold()
+        if (!_uiState.value.isEmergencyCancelling) return
+        emergencyJob?.cancel()
+        emergencyJob = null
+        app.toneEngine.stopCountdownBeep()
+        _uiState.update { it.copy(isEmergencyCancelling = false, emergencyHoldProgress = null) }
+        Log.d(TAG, "CANCEL HOLD: aborted early")
+        if (!_uiState.value.myEmergencyActive) {
+            resumeArming()
+        }
     }
 
     private fun startArming() {
-        armingJob?.cancel()
-        armingJob = viewModelScope.launch {
-            Log.d(TAG, "EMERGENCY ARMING: countdown started")
-            app.toneEngine.startCountdownBeep()
-            var elapsed = 0L
-            while (elapsed < 3000L) {
+        armingElapsedMs = 0L
+        resumeArming()
+    }
+
+    private fun resumeArming() {
+        app.toneEngine.startCountdownBeep()
+        emergencyJob = viewModelScope.launch {
+            Log.d(TAG, "ARMING: countdown started from ${armingElapsedMs}ms")
+            while (armingElapsedMs < 3000L) {
                 delay(50)
-                elapsed += 50
-                if (!_uiState.value.isEmergencyCancelling) {
-                    _uiState.update { it.copy(emergencyHoldProgress = elapsed / 3000f) }
-                }
+                armingElapsedMs += 50
+                _uiState.update { it.copy(emergencyHoldProgress = armingElapsedMs / 3000f) }
             }
-            armingJob = null
+            emergencyJob = null
+            armingElapsedMs = 0L
             app.toneEngine.stopCountdownBeep()
             _uiState.update { it.copy(emergencyHoldProgress = null) }
             onEmergencyActivate()
@@ -280,8 +290,13 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun startCancelHold() {
-        cancelJob = viewModelScope.launch {
-            Log.d(TAG, "EMERGENCY CANCEL HOLD: started")
+        val wasArming = emergencyJob != null && !_uiState.value.myEmergencyActive
+        if (wasArming) {
+            emergencyJob?.cancel()
+            emergencyJob = null
+        }
+        emergencyJob = viewModelScope.launch {
+            Log.d(TAG, "CANCEL HOLD: started (wasArming=$wasArming)")
             app.toneEngine.startCountdownBeep()
             _uiState.update { it.copy(isEmergencyCancelling = true, emergencyHoldProgress = 0f) }
             var elapsed = 0L
@@ -290,26 +305,15 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                 elapsed += 50
                 _uiState.update { it.copy(emergencyHoldProgress = elapsed / 3000f) }
             }
-            cancelJob = null
+            emergencyJob = null
+            armingElapsedMs = 0L
             app.toneEngine.stopCountdownBeep()
             _uiState.update { it.copy(isEmergencyCancelling = false, emergencyHoldProgress = null) }
-            if (armingJob != null) {
-                armingJob?.cancel()
-                armingJob = null
-                Log.d(TAG, "EMERGENCY ARMING: cancelled by hold")
-            } else if (_uiState.value.myEmergencyActive) {
+            if (_uiState.value.myEmergencyActive) {
                 onEmergencyClear()
             }
+            Log.d(TAG, "CANCEL HOLD: completed (wasArming=$wasArming)")
         }
-    }
-
-    private fun abortCancelHold() {
-        if (cancelJob == null) return
-        cancelJob?.cancel()
-        cancelJob = null
-        app.toneEngine.stopCountdownBeep()
-        _uiState.update { it.copy(isEmergencyCancelling = false, emergencyHoldProgress = null) }
-        Log.d(TAG, "EMERGENCY CANCEL HOLD: aborted (key released early)")
     }
 
     private fun onEmergencyActivate() {
@@ -448,8 +452,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     override fun onCleared() {
-        armingJob?.cancel()
-        cancelJob?.cancel()
+        emergencyJob?.cancel()
         app.toneEngine.stopCountdownBeep()
         locationTracker.stopTracking()
         super.onCleared()
