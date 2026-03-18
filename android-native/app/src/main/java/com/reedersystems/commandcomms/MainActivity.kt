@@ -42,7 +42,6 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun isPttKey(keyCode: Int): Boolean =
-        keyCode == KeyEvent.KEYCODE_PTT ||
         keyCode == 233 ||
         keyCode == 288
 
