@@ -281,40 +281,19 @@ public class MainActivity extends BridgeActivity {
     }
 
     private boolean isAccessibilityServiceEnabled() {
-        try {
-            AccessibilityManager am = (AccessibilityManager) getSystemService(Context.ACCESSIBILITY_SERVICE);
-            if (am == null) return false;
-            List<AccessibilityServiceInfo> enabled =
-                am.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_ALL_MASK);
-            String targetClass = PttAccessibilityService.class.getName();
-            for (AccessibilityServiceInfo info : enabled) {
-                if (info.getResolveInfo() != null) {
-                    String svcClass = info.getResolveInfo().serviceInfo.name;
-                    if (targetClass.equals(svcClass)) return true;
-                }
-            }
-        } catch (Exception e) {
-            Log.w(DIAG_TAG, "isAccessibilityServiceEnabled check failed: " + e.getMessage());
-        }
         return false;
     }
 
     private void logResumeDiagnostics() {
-        boolean a11yEnabled = isAccessibilityServiceEnabled();
-        boolean svcRunning  = BackgroundAudioService.isRunning;
+        boolean svcRunning = BackgroundAudioService.isRunning;
         BackgroundAudioService svc = BackgroundAudioService.getInstance();
-        PttAccessibilityService a11ySvc = PttAccessibilityService.getInstance();
 
         Log.d(DIAG_TAG, "=== RESUME DIAGNOSTICS ===");
-        Log.d(DIAG_TAG, "  AccessibilityService enabled : " + a11yEnabled);
+        Log.d(DIAG_TAG, "  AccessibilityService enabled : false (disabled by app config)");
         Log.d(DIAG_TAG, "  BackgroundAudioService running: " + svcRunning);
-        Log.d(DIAG_TAG, "  Active capture source        : " + getActiveCaptureSource(a11yEnabled));
+        Log.d(DIAG_TAG, "  Active capture source        : Activity/Broadcast only");
         if (svc != null) {
             Log.d(DIAG_TAG, "  Service debug               : " + svc.getDebugSummary());
-        }
-        if (a11ySvc != null) {
-            Log.d(DIAG_TAG, "  A11y last code/action       : " + a11ySvc.getLastCode() + "/" + a11ySvc.getLastAction());
-            Log.d(DIAG_TAG, "  A11y PTT held               : " + a11ySvc.isPttHeld());
         }
         Log.d(DIAG_TAG, "  Activity PTT held           : " + activityPttHeld);
         Log.d(DIAG_TAG, "==========================");
@@ -322,59 +301,15 @@ public class MainActivity extends BridgeActivity {
     }
 
     private String getActiveCaptureSource(boolean a11yEnabled) {
-        return a11yEnabled ? "AccessibilityService (primary)" : "Activity (fallback)";
+        return "Activity/Broadcast";
     }
 
     private void updateAccessibilityWarningUi(boolean a11yEnabled) {
-        if (accessibilityBanner == null) return;
-        accessibilityBanner.setVisibility(a11yEnabled ? View.GONE : View.VISIBLE);
+        // Accessibility path intentionally disabled.
     }
 
     private void setupNativeStatusUi() {
-        FrameLayout root = findViewById(android.R.id.content);
-        if (root == null) {
-            Log.w(DIAG_TAG, "setupNativeStatusUi(): root content not found");
-            return;
-        }
-
-        FrameLayout.LayoutParams topParams = new FrameLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT
-        );
-
-        accessibilityBanner = new LinearLayout(this);
-        accessibilityBanner.setOrientation(LinearLayout.VERTICAL);
-        accessibilityBanner.setPadding(dp(12), dp(10), dp(12), dp(10));
-        accessibilityBanner.setBackgroundColor(0xCCB00020);
-
-        TextView warningTitle = new TextView(this);
-        warningTitle.setText("Accessibility service disabled");
-        warningTitle.setTextColor(0xFFFFFFFF);
-        warningTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
-
-        TextView warningBody = new TextView(this);
-        warningBody.setText("Background key capture needs \"Command Comms PTT\" accessibility service.");
-        warningBody.setTextColor(0xFFFFFFFF);
-        warningBody.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
-
-        Button openSettingsButton = new Button(this);
-        openSettingsButton.setText("Open Accessibility Settings");
-        openSettingsButton.setOnClickListener(v -> {
-            Log.d(DIAG_TAG, "Accessibility banner action tapped: open settings");
-            try {
-                startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
-            } catch (Exception e) {
-                Log.w(TAG, "Could not open accessibility settings: " + e.getMessage());
-                showAccessibilitySettingsFallbackDialog();
-            }
-        });
-
-        accessibilityBanner.addView(warningTitle);
-        accessibilityBanner.addView(warningBody);
-        accessibilityBanner.addView(openSettingsButton);
-        accessibilityBanner.setVisibility(View.GONE);
-        root.addView(accessibilityBanner, topParams);
-
+        // Accessibility warning banner removed.
     }
 
     private int dp(int value) {
@@ -545,23 +480,14 @@ public class MainActivity extends BridgeActivity {
 
         // --- Side button 1 (black, KEY_F1) ---
         if (isSide1Key(keyCode)) {
-            boolean a11yEnabled = isAccessibilityServiceEnabled();
-            boolean a11yActive = PttAccessibilityService.isRunning();
-            Log.d(DIAG_TAG, "MainActivity — SIDE1 decision path: a11yEnabled=" + a11yEnabled
-                + " a11yRunning=" + a11yActive
-                + " source=" + getActiveCaptureSource(a11yEnabled));
-            if (a11yActive) {
-                Log.d(DIAG_TAG, "MainActivity — SIDE1 key=" + keyCode + " SUPPRESSED (AccessibilityService primary)");
-            } else {
-                if (action == KeyEvent.ACTION_DOWN && repeat == 0 && !activitySide1Held) {
-                    activitySide1Held = true;
-                    BackgroundAudioService svc = BackgroundAudioService.getInstance();
-                    if (svc != null) svc.handleSideButton1Down();
-                } else if (action == KeyEvent.ACTION_UP && activitySide1Held) {
-                    activitySide1Held = false;
-                    BackgroundAudioService svc = BackgroundAudioService.getInstance();
-                    if (svc != null) svc.handleSideButton1Up();
-                }
+            if (action == KeyEvent.ACTION_DOWN && repeat == 0 && !activitySide1Held) {
+                activitySide1Held = true;
+                BackgroundAudioService svc = BackgroundAudioService.getInstance();
+                if (svc != null) svc.handleSideButton1Down();
+            } else if (action == KeyEvent.ACTION_UP && activitySide1Held) {
+                activitySide1Held = false;
+                BackgroundAudioService svc = BackgroundAudioService.getInstance();
+                if (svc != null) svc.handleSideButton1Up();
             }
             if (!isScreenOff) injectJsKeyEvent(keyCode, action == KeyEvent.ACTION_DOWN ? "keydown" : "keyup");
             else injectJsKeyEventDelayed(keyCode, action == KeyEvent.ACTION_DOWN ? "keydown" : "keyup", 50);
@@ -570,24 +496,14 @@ public class MainActivity extends BridgeActivity {
 
         // --- Side button 2 (orange, KEY_SELECT) ---
         if (isSide2Key(keyCode)) {
-            boolean a11yEnabled = isAccessibilityServiceEnabled();
-            boolean a11yActive = PttAccessibilityService.isRunning();
-            Log.d(DIAG_TAG, "MainActivity — SIDE2 key=" + keyCode + " action=" + actionStr
-                + " a11yEnabled=" + a11yEnabled
-                + " a11yActive=" + a11yActive
-                + " source=" + getActiveCaptureSource(a11yEnabled));
-            if (a11yActive) {
-                Log.d(DIAG_TAG, "MainActivity — SIDE2 SUPPRESSED (AccessibilityService primary)");
-            } else {
-                if (action == KeyEvent.ACTION_DOWN && repeat == 0 && !activitySide2Held) {
-                    activitySide2Held = true;
-                    BackgroundAudioService svc = BackgroundAudioService.getInstance();
-                    if (svc != null) svc.handleSideButton2Down();
-                } else if (action == KeyEvent.ACTION_UP && activitySide2Held) {
-                    activitySide2Held = false;
-                    BackgroundAudioService svc = BackgroundAudioService.getInstance();
-                    if (svc != null) svc.handleSideButton2Up();
-                }
+            if (action == KeyEvent.ACTION_DOWN && repeat == 0 && !activitySide2Held) {
+                activitySide2Held = true;
+                BackgroundAudioService svc = BackgroundAudioService.getInstance();
+                if (svc != null) svc.handleSideButton2Down();
+            } else if (action == KeyEvent.ACTION_UP && activitySide2Held) {
+                activitySide2Held = false;
+                BackgroundAudioService svc = BackgroundAudioService.getInstance();
+                if (svc != null) svc.handleSideButton2Up();
             }
             if (!isScreenOff) injectJsKeyEvent(keyCode, action == KeyEvent.ACTION_DOWN ? "keydown" : "keyup");
             else injectJsKeyEventDelayed(keyCode, action == KeyEvent.ACTION_DOWN ? "keydown" : "keyup", 50);
@@ -640,10 +556,7 @@ public class MainActivity extends BridgeActivity {
         Log.d(DIAG_TAG, "MainActivity.onResume() — screen ON, isScreenOff=false");
 
         startBackgroundAudioServiceNow();
-        boolean a11yEnabled = isAccessibilityServiceEnabled();
-        Log.d(DIAG_TAG, "MainActivity.onResume() — accessibility enabled=" + a11yEnabled);
         logResumeDiagnostics();
-        updateAccessibilityWarningUi(a11yEnabled);
 
         if (!batteryExemptionPrompted) {
             new Handler(Looper.getMainLooper()).postDelayed(() -> {
