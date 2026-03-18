@@ -1,0 +1,70 @@
+2026-03-17 23:33:52.286 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       D  ========== PTT BROADCAST RECEIVED ==========
+2026-03-17 23:33:52.286 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       D  PttBroadcastReceiver.onReceive() — action=android.intent.action.PTT.down screenOn=false extras={}
+2026-03-17 23:33:52.287 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       D  PttBroadcastReceiver STATE: serviceRunning=true svcInstance=YES livekit=DISCONNECTED lkChannel=null
+2026-03-17 23:33:52.287 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       D  PTT action allowlist: down=[android.intent.action.PTT_DOWN, com.inrico.intent.action.PTT_DOWN, android.intent.action.PTT.down, com.inrico.ptt.down] up=[com.inrico.intent.action.PTT_UP, android.intent.action.PTT.up, android.intent.action.PTT_UP, com.inrico.ptt.up] diagLogUnmatched=true
+2026-03-17 23:33:52.287 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: broadcast action matched DOWN allowlist -> BackgroundAudioService.handlePttDown()
+2026-03-17 23:33:52.287 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       D  PTT DOWN broadcast — acquiring wake lock and forwarding to service
+2026-03-17 23:33:52.290 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       D  CPU wake lock acquired for PTT broadcast
+2026-03-17 23:33:52.290 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       D  Service instance AVAILABLE — calling handle directly, action=down
+2026-03-17 23:33:52.291 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       D  ========== SERVICE handlePttDown() ==========
+2026-03-17 23:33:52.292 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttDown() — currentState=IDLE serverUrl=null unitId=null channelId=null
+2026-03-17 23:33:52.292 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttDown() — engineAvailable=true connected=false channel=null micActive=false
+2026-03-17 23:33:52.292 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       W  handlePttDown() — LiveKit not connected, launching async auto-reconnect...
+2026-03-17 23:33:52.292 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       D  sendPttSignaling(start) — skipped, missing connection info url=null unit=null channel=null
+2026-03-17 23:33:52.296 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       D  Direct service call completed for action=down
+2026-03-17 23:33:52.299 32568-2104  PTT-DIAG                com.reedersystems.commandcomms       W  attemptAutoReconnect() — missing info: lkUrl=null serverUrl=null unitId=null channelName=null
+2026-03-17 23:33:52.299 32568-2104  PTT-DIAG                com.reedersystems.commandcomms       W  handlePttDown() async-reconnect — reconnect failed
+2026-03-17 23:33:52.416 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       D  ========== PTT BROADCAST RECEIVED ==========
+2026-03-17 23:33:52.416 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       D  PttBroadcastReceiver.onReceive() — action=android.intent.action.PTT.up screenOn=false extras={}
+2026-03-17 23:33:52.417 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       D  PttBroadcastReceiver STATE: serviceRunning=true svcInstance=YES livekit=DISCONNECTED lkChannel=null
+2026-03-17 23:33:52.417 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       D  PTT action allowlist: down=[android.intent.action.PTT_DOWN, com.inrico.intent.action.PTT_DOWN, android.intent.action.PTT.down, com.inrico.ptt.down] up=[com.inrico.intent.action.PTT_UP, android.intent.action.PTT.up, android.intent.action.PTT_UP, com.inrico.ptt.up] diagLogUnmatched=true
+2026-03-17 23:33:52.417 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: broadcast action matched UP allowlist -> BackgroundAudioService.handlePttUp()
+2026-03-17 23:33:52.417 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       D  PTT UP broadcast — forwarding to service
+2026-03-17 23:33:52.417 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       D  Service instance AVAILABLE — calling handle directly, action=up
+2026-03-17 23:33:52.417 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       D  ========== SERVICE handlePttUp() ==========
+2026-03-17 23:33:52.417 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttUp() — currentState=TRANSMITTING
+2026-03-17 23:33:52.417 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttUp() — state → IDLE
+2026-03-17 23:33:52.418 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttUp() — engineAvailable=true connected=false channel=null micActive=false
+2026-03-17 23:33:52.419 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttUp() — stopTransmit() result=true
+2026-03-17 23:33:52.419 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       D  sendPttSignaling(end) — skipped, missing connection info url=null unit=null channel=null
+2026-03-17 23:33:52.420 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       D  HardwarePttPlugin.notifyPttStateFromService(false) — syncing UI
+2026-03-17 23:33:52.422 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       D  HardwarePttPlugin — JS notified: pttUp
+2026-03-17 23:33:52.422 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       D  notifyUiPttState(false) — HardwarePttPlugin notified
+2026-03-17 23:33:52.422 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttUp() — COMPLETE
+2026-03-17 23:33:52.422 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       D  Direct service call completed for action=up
+2026-03-17 23:33:52.423 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       W  engine.stopTransmitSuspend() — not connected, resetting state
+2026-03-17 23:34:08.665 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       D  ========== PTT BROADCAST RECEIVED ==========
+2026-03-17 23:34:08.666 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       D  PttBroadcastReceiver.onReceive() — action=android.intent.action.PTT.down screenOn=false extras={}
+2026-03-17 23:34:08.666 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       D  PttBroadcastReceiver STATE: serviceRunning=true svcInstance=YES livekit=DISCONNECTED lkChannel=null
+2026-03-17 23:34:08.666 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       D  PTT action allowlist: down=[android.intent.action.PTT_DOWN, com.inrico.intent.action.PTT_DOWN, android.intent.action.PTT.down, com.inrico.ptt.down] up=[com.inrico.intent.action.PTT_UP, android.intent.action.PTT.up, android.intent.action.PTT_UP, com.inrico.ptt.up] diagLogUnmatched=true
+2026-03-17 23:34:08.666 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: broadcast action matched DOWN allowlist -> BackgroundAudioService.handlePttDown()
+2026-03-17 23:34:08.666 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       D  PTT DOWN broadcast — acquiring wake lock and forwarding to service
+2026-03-17 23:34:08.669 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       D  CPU wake lock acquired for PTT broadcast
+2026-03-17 23:34:08.670 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       D  Service instance AVAILABLE — calling handle directly, action=down
+2026-03-17 23:34:08.670 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       D  ========== SERVICE handlePttDown() ==========
+2026-03-17 23:34:08.671 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttDown() — currentState=IDLE serverUrl=null unitId=null channelId=null
+2026-03-17 23:34:08.671 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttDown() — engineAvailable=true connected=false channel=null micActive=false
+2026-03-17 23:34:08.671 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       W  handlePttDown() — LiveKit not connected, launching async auto-reconnect...
+2026-03-17 23:34:08.671 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       D  sendPttSignaling(start) — skipped, missing connection info url=null unit=null channel=null
+2026-03-17 23:34:08.673 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       D  Direct service call completed for action=down
+2026-03-17 23:34:08.677 32568-2176  PTT-DIAG                com.reedersystems.commandcomms       W  attemptAutoReconnect() — missing info: lkUrl=null serverUrl=null unitId=null channelName=null
+2026-03-17 23:34:08.677 32568-2176  PTT-DIAG                com.reedersystems.commandcomms       W  handlePttDown() async-reconnect — reconnect failed
+2026-03-17 23:34:10.627 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       D  ========== PTT BROADCAST RECEIVED ==========
+2026-03-17 23:34:10.627 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       D  PttBroadcastReceiver.onReceive() — action=android.intent.action.PTT.up screenOn=false extras={}
+2026-03-17 23:34:10.628 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       D  PttBroadcastReceiver STATE: serviceRunning=true svcInstance=YES livekit=DISCONNECTED lkChannel=null
+2026-03-17 23:34:10.628 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       D  PTT action allowlist: down=[android.intent.action.PTT_DOWN, com.inrico.intent.action.PTT_DOWN, android.intent.action.PTT.down, com.inrico.ptt.down] up=[com.inrico.intent.action.PTT_UP, android.intent.action.PTT.up, android.intent.action.PTT_UP, com.inrico.ptt.up] diagLogUnmatched=true
+2026-03-17 23:34:10.628 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       D  PTT ROUTE: broadcast action matched UP allowlist -> BackgroundAudioService.handlePttUp()
+2026-03-17 23:34:10.628 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       D  PTT UP broadcast — forwarding to service
+2026-03-17 23:34:10.629 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       D  Service instance AVAILABLE — calling handle directly, action=up
+2026-03-17 23:34:10.629 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       D  ========== SERVICE handlePttUp() ==========
+2026-03-17 23:34:10.629 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttUp() — currentState=TRANSMITTING
+2026-03-17 23:34:10.629 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttUp() — state → IDLE
+2026-03-17 23:34:10.629 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttUp() — engineAvailable=true connected=false channel=null micActive=false
+2026-03-17 23:34:10.632 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttUp() — stopTransmit() result=true
+2026-03-17 23:34:10.632 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       D  sendPttSignaling(end) — skipped, missing connection info url=null unit=null channel=null
+2026-03-17 23:34:10.633 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       D  HardwarePttPlugin.notifyPttStateFromService(false) — syncing UI
+2026-03-17 23:34:10.636 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       D  HardwarePttPlugin — JS notified: pttUp
+2026-03-17 23:34:10.636 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       D  notifyUiPttState(false) — HardwarePttPlugin notified
+2026-03-17 23:34:10.636 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       D  handlePttUp() — COMPLETE
+2026-03-17 23:34:10.636 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       D  Direct service call completed for action=up
+2026-03-17 23:34:10.637 32568-32568 PTT-DIAG                com.reedersystems.commandcomms       W  engine.stopTransmitSuspend() — not connected, resetting state
