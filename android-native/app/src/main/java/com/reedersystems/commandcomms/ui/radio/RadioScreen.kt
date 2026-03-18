@@ -101,16 +101,9 @@ fun RadioScreen(
                 modifier = Modifier.weight(1f)
             )
 
-            EmergencyTouchButton(
-                myEmergencyActive = state.myEmergencyActive,
-                onHoldStart = viewModel::holdEmergencyStart,
-                onHoldCancel = viewModel::holdEmergencyCancel
-            )
-
             BottomBar(
                 state = state,
                 onScnl = { viewModel.setShowScanOverlay(true) },
-                onCycleStatus = viewModel::cycleStatus,
                 onLogoutRequest = { showLogoutDialog = true }
             )
         }
@@ -328,47 +321,11 @@ private fun CenterDisplay(
     }
 }
 
-@Composable
-private fun EmergencyTouchButton(
-    myEmergencyActive: Boolean,
-    onHoldStart: () -> Unit,
-    onHoldCancel: () -> Unit
-) {
-    val label = if (myEmergencyActive) "HOLD TO CANCEL EMERGENCY" else "HOLD TO ACTIVATE EMERGENCY"
-    val color = if (myEmergencyActive) Green else Red
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(44.dp)
-            .background(color.copy(alpha = 0.12f))
-            .border(1.dp, color.copy(alpha = 0.5f))
-            .pointerInput(Unit) {
-                awaitEachGesture {
-                    awaitFirstDown().consume()
-                    onHoldStart()
-                    do {
-                        val event = awaitPointerEvent()
-                        if (event.changes.all { !it.pressed }) {
-                            event.changes.forEach { it.consume() }
-                            onHoldCancel()
-                            break
-                        }
-                    } while (true)
-                }
-            },
-        contentAlignment = Alignment.Center
-    ) {
-        T320Text(label, color = color, bold = true, size = 11)
-    }
-}
-
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun BottomBar(
     state: RadioUiState,
     onScnl: () -> Unit,
-    onCycleStatus: () -> Unit,
     onLogoutRequest: () -> Unit
 ) {
     Row(
@@ -396,11 +353,6 @@ private fun BottomBar(
         ) {
             T320Text(state.clockTime, color = White, bold = true, size = 12)
         }
-        BottomBarButton(
-            text = STATUS_LABELS[state.currentStatus] ?: state.currentStatus.uppercase(),
-            color = Color(0xFF00BBFF),
-            onClick = onCycleStatus
-        )
         state.batteryLevel?.let { bat ->
             BottomBarButton(
                 text = "$bat%",
