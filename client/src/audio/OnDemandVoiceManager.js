@@ -288,8 +288,8 @@ class OnDemandVoiceManager {
       this._setupRoomHandlers(room, channelId);
       
       try {
-        const token = await getToken(identity, channelId);
-        await room.connect(LIVEKIT_URL, token);
+        const { token, url: livekitUrl } = await getToken(identity, channelId);
+        await room.connect(livekitUrl || LIVEKIT_URL, token);
         
         this.rooms.set(channelId, room);
         this._setState(channelId, VOICE_STATE.CONNECTED);

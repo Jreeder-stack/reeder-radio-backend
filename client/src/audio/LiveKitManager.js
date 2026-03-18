@@ -482,8 +482,8 @@ class LiveKitManager {
     this._setupRoomEventHandlers(room, channelName);
 
     try {
-      const token = await getToken(identity, channelName);
-      await room.connect(LIVEKIT_URL, token);
+      const { token, url: livekitUrl } = await getToken(identity, channelName);
+      await room.connect(livekitUrl || LIVEKIT_URL, token);
       
       this.rooms.set(channelName, room);
       console.log(`[LiveKit] Connected to ${channelName}`);
@@ -511,22 +511,24 @@ class LiveKitManager {
   }
 
   async _doConnectNative(channelName, identity) {
-    console.log(`[PTT-DIAG] [JS] _doConnectNative() — channel=${channelName} identity=${identity} livekitUrl=${LIVEKIT_URL}`);
+    console.log(`[PTT-DIAG] [JS] _doConnectNative() — channel=${channelName} identity=${identity}`);
 
     try {
       console.log('[PTT-DIAG] [JS] _doConnectNative() — fetching token from server');
-      const token = await getToken(identity, channelName);
-      console.log('[PTT-DIAG] [JS] _doConnectNative() — token received, calling NativeLiveKit.connect()');
+      const { token, url: livekitUrl } = await getToken(identity, channelName);
+      const resolvedUrl = livekitUrl || LIVEKIT_URL;
+      console.log('[PTT-DIAG] [JS] _doConnectNative() — token received, livekitUrl=' + resolvedUrl);
 
-      const success = await nativeConnect(LIVEKIT_URL, token, channelName);
+      const serverBaseUrl = window.location.origin;
+      console.log('[PTT-DIAG] [JS] _doConnectNative() — pre-saving service connection info: server=' + serverBaseUrl + ' unit=' + identity + ' channel=' + channelName + ' lkUrl=' + resolvedUrl);
+      updateServiceConnectionInfo(serverBaseUrl, identity, channelName, resolvedUrl, channelName);
+
+      console.log('[PTT-DIAG] [JS] _doConnectNative() — calling NativeLiveKit.connect()');
+      const success = await nativeConnect(resolvedUrl, token, channelName);
       console.log('[PTT-DIAG] [JS] _doConnectNative() — NativeLiveKit.connect() result=' + success);
       if (!success) {
         throw new Error('Native LiveKit connect returned false');
       }
-
-      const serverBaseUrl = window.location.origin;
-      console.log('[PTT-DIAG] [JS] _doConnectNative() — updating service connection info: server=' + serverBaseUrl + ' unit=' + identity + ' channel=' + channelName + ' lkUrl=' + LIVEKIT_URL);
-      updateServiceConnectionInfo(serverBaseUrl, identity, channelName, LIVEKIT_URL, channelName);
 
       const nativeRoom = this._createNativeRoomProxy(channelName, identity);
       this.rooms.set(channelName, nativeRoom);

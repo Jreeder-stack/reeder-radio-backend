@@ -112,7 +112,7 @@ export async function getToken(identity, room) {
   }
   
   const data = await response.json();
-  return data.token;
+  return { token: data.token, url: data.url };
 }
 
 export async function notifyChannelJoin(channel, identity) {
