@@ -96,6 +96,17 @@ task applyCcNativeConfig {
         def accessXml = configDir.resolve("res/xml/accessibility_service_config.xml").toFile()
         if (accessXml.exists()) new File(xmlDir, "accessibility_service_config.xml").bytes = accessXml.bytes
 
+        // ── Raw audio resources (talk permit tone, etc.) ─────────────────────
+        def rawDir = new File(resDir, "raw")
+        rawDir.mkdirs()
+        def rawSrcDir = configDir.resolve("res/raw").toFile()
+        if (rawSrcDir.exists()) {
+            rawSrcDir.listFiles()?.each { f ->
+                new File(rawDir, f.name).bytes = f.bytes
+            }
+            println "[CC] applyCcNativeConfig: copied raw audio from res/raw/"
+        }
+
         // ── AndroidManifest.xml ──────────────────────────────────────────────
         def manifest = configDir.resolve("AndroidManifest.xml").toFile()
         if (manifest.exists()) new File(mainDir, "AndroidManifest.xml").bytes = manifest.bytes

@@ -8,6 +8,11 @@ import android.app.Service;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.media.AudioAttributes;
+import android.media.AudioFormat;
+import android.media.AudioManager;
+import android.media.AudioTrack;
+import android.media.SoundPool;
 import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
@@ -38,12 +43,12 @@ public class BackgroundAudioService extends Service {
     private static final String PREF_CHANNEL_ID = "channel_id";
     private static final String PREF_LIVEKIT_URL = "livekit_url";
     private static final String PREF_CHANNEL_NAME = "channel_name";
+    private static final String FALLBACK_SERVER_URL = "https://comms.reeder-systems.com";
 
     public static final String EXTRA_PTT_ACTION = "ptt_action";
     public static final String PTT_ACTION_DOWN = "down";
     public static final String PTT_ACTION_UP = "up";
 
-    // Intent action constants for AccessibilityService → Service communication (lifecycle-safe)
     public static final String ACTION_BTN_PTT_DOWN  = "com.reedersystems.commandcomms.action.PTT_DOWN";
     public static final String ACTION_BTN_PTT_UP    = "com.reedersystems.commandcomms.action.PTT_UP";
     public static final String ACTION_BTN_SIDE1_DOWN = "com.reedersystems.commandcomms.action.SIDE1_DOWN";
@@ -65,6 +70,10 @@ public class BackgroundAudioService extends Service {
     private Runnable keepAliveRunnable;
     private PttBroadcastReceiver pttReceiver;
 
+    private SoundPool soundPool;
+    private int talkPermitSoundId = -1;
+    private volatile boolean isBonking = false;
+
     private enum PttState { IDLE, TRANSMITTING }
     private volatile PttState pttState = PttState.IDLE;
 
@@ -76,7 +85,6 @@ public class BackgroundAudioService extends Service {
 
     private volatile boolean isReconnecting = false;
 
-    // Debug state — last captured button event
     private volatile String lastEventSource    = "none";
     private volatile int    lastEventCode      = -1;
     private volatile String lastEventAction    = "none";
@@ -91,6 +99,7 @@ public class BackgroundAudioService extends Service {
         Log.d(DIAG_TAG, "BackgroundAudioService CREATED — instance set, isRunning=true");
 
         restoreConnectionInfo();
+        initSoundPool();
 
         PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
         if (pm != null) {
@@ -120,11 +129,39 @@ public class BackgroundAudioService extends Service {
         keepAliveHandler.postDelayed(keepAliveRunnable, KEEPALIVE_INTERVAL_MS);
     }
 
+    private void initSoundPool() {
+        try {
+            AudioAttributes audioAttrs = new AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build();
+            soundPool = new SoundPool.Builder()
+                .setMaxStreams(2)
+                .setAudioAttributes(audioAttrs)
+                .build();
+            int rawId = getResources().getIdentifier("talk_permit", "raw", getPackageName());
+            if (rawId != 0) {
+                talkPermitSoundId = soundPool.load(this, rawId, 1);
+                Log.d(DIAG_TAG, "SoundPool: talk_permit loaded, soundId=" + talkPermitSoundId);
+            } else {
+                Log.w(DIAG_TAG, "SoundPool: talk_permit raw resource not found");
+            }
+        } catch (Exception e) {
+            Log.e(DIAG_TAG, "SoundPool init failed: " + e.getMessage());
+        }
+    }
+
     @Override
     public void onDestroy() {
         Log.d(DIAG_TAG, "BackgroundAudioService DESTROYING");
+        isBonking = false;
         if (pttState == PttState.TRANSMITTING) {
             handlePttUp();
+        }
+
+        if (soundPool != null) {
+            soundPool.release();
+            soundPool = null;
         }
 
         if (pttReceiver != null) {
@@ -164,7 +201,6 @@ public class BackgroundAudioService extends Service {
             String source = intent.getStringExtra(EXTRA_EVENT_SOURCE);
             if (source == null) source = "unknown";
 
-            // Handle Intent-based button commands from PttAccessibilityService (lifecycle-safe IPC)
             if (ACTION_BTN_PTT_DOWN.equals(intentAction)) {
                 Log.d(DIAG_TAG, "[Service] ACTION_BTN_PTT_DOWN from source=" + source);
                 recordEventDebug(source, 141, "DOWN");
@@ -197,7 +233,6 @@ public class BackgroundAudioService extends Service {
                 return START_STICKY;
             }
 
-            // Legacy PTT via intent extra (PttBroadcastReceiver / cold-start path)
             String pttAction = intent.getStringExtra(EXTRA_PTT_ACTION);
             if (pttAction != null) {
                 Log.d(DIAG_TAG, "Service received PTT via intent extra: action=" + pttAction);
@@ -307,6 +342,81 @@ public class BackgroundAudioService extends Service {
             + " lkUrl=" + livekitUrl + " channelName=" + currentChannelName);
     }
 
+    // ── Talk permit tone ──────────────────────────────────────────────────────
+
+    private void playTalkPermitTone() {
+        if (soundPool != null && talkPermitSoundId > 0) {
+            soundPool.play(talkPermitSoundId, 1.0f, 1.0f, 1, 0, 1.0f);
+            Log.d(DIAG_TAG, "Talk permit tone played");
+            try { Thread.sleep(350); } catch (InterruptedException ignored) {}
+        } else {
+            Log.w(DIAG_TAG, "Talk permit tone: SoundPool not ready (id=" + talkPermitSoundId + ")");
+        }
+    }
+
+    // ── Bonk tone loop (plays while not connected / rejected) ────────────────
+
+    private void runBonkLoop() {
+        final int SAMPLE_RATE = 44100;
+        final int TONE_DURATION_MS = 220;
+        final int SILENCE_DURATION_MS = 120;
+        final double FREQ_HZ = 290.0;
+        final int toneSamples = (SAMPLE_RATE * TONE_DURATION_MS) / 1000;
+        final int silenceSamples = (SAMPLE_RATE * SILENCE_DURATION_MS) / 1000;
+
+        short[] toneBuffer = new short[toneSamples];
+        for (int i = 0; i < toneSamples; i++) {
+            double angle = 2 * Math.PI * FREQ_HZ * i / SAMPLE_RATE;
+            double envelope = 1.0;
+            int fadeIn = SAMPLE_RATE / 100;
+            int fadeOut = SAMPLE_RATE / 80;
+            if (i < fadeIn) envelope = (double) i / fadeIn;
+            else if (i > toneSamples - fadeOut) envelope = (double) (toneSamples - i) / fadeOut;
+            toneBuffer[i] = (short) (Short.MAX_VALUE * 0.75 * envelope * Math.sin(angle));
+        }
+        short[] silenceBuffer = new short[silenceSamples];
+
+        AudioTrack audioTrack = null;
+        try {
+            AudioAttributes attrs = new AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build();
+            AudioFormat format = new AudioFormat.Builder()
+                .setSampleRate(SAMPLE_RATE)
+                .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                .build();
+            int minBuf = AudioTrack.getMinBufferSize(SAMPLE_RATE,
+                AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT);
+            audioTrack = new AudioTrack.Builder()
+                .setAudioAttributes(attrs)
+                .setAudioFormat(format)
+                .setBufferSizeInBytes(Math.max(minBuf, (toneSamples + silenceSamples) * 2))
+                .setTransferMode(AudioTrack.MODE_STREAM)
+                .build();
+            audioTrack.play();
+            Log.d(DIAG_TAG, "Bonk tone loop started at " + FREQ_HZ + "Hz");
+
+            while (isBonking) {
+                audioTrack.write(toneBuffer, 0, toneSamples);
+                audioTrack.write(silenceBuffer, 0, silenceSamples);
+            }
+        } catch (Exception e) {
+            Log.e(DIAG_TAG, "Bonk tone error: " + e.getMessage());
+        } finally {
+            if (audioTrack != null) {
+                try {
+                    audioTrack.stop();
+                    audioTrack.release();
+                } catch (Exception ignored) {}
+            }
+            Log.d(DIAG_TAG, "Bonk tone loop stopped");
+        }
+    }
+
+    // ── PTT handlers ─────────────────────────────────────────────────────────
+
     public synchronized void handlePttDown() {
         Log.d(DIAG_TAG, "========== SERVICE handlePttDown() ==========");
         Log.d(DIAG_TAG, "handlePttDown() — currentState=" + pttState
@@ -326,22 +436,35 @@ public class BackgroundAudioService extends Service {
             + " connected=" + lkConnected + " channel=" + lkChannel + " micActive=" + lkMic);
 
         if (!lkConnected) {
-            Log.w(DIAG_TAG, "handlePttDown() — LiveKit not connected, launching async auto-reconnect...");
+            Log.w(DIAG_TAG, "handlePttDown() — LiveKit not connected, starting bonk + async reconnect");
             pttState = PttState.TRANSMITTING;
             sendPttSignaling("start");
+
+            isBonking = true;
+            Thread bonkThread = new Thread(this::runBonkLoop);
+            bonkThread.setDaemon(true);
+            bonkThread.start();
+
             new Thread(() -> {
                 boolean reconnected = attemptAutoReconnect();
+                isBonking = false;
                 if (reconnected) {
                     NativeRadioEngine reconnectEngine = NativeRadioEngine.getInstance(getApplicationContext());
-                    if (reconnectEngine.isConnected()) {
+                    if (reconnectEngine != null && reconnectEngine.isConnected()
+                            && pttState == PttState.TRANSMITTING) {
+                        playTalkPermitTone();
                         boolean txResult = reconnectEngine.startTransmit();
                         Log.d(DIAG_TAG, "handlePttDown() async-reconnect — startTransmit() result=" + txResult);
                         notifyUiPttState(true);
                     } else {
-                        Log.w(DIAG_TAG, "handlePttDown() async-reconnect — still not connected after attempt");
+                        Log.w(DIAG_TAG, "handlePttDown() async-reconnect — connected but PTT released or engine gone");
+                        pttState = PttState.IDLE;
+                        notifyUiPttState(false);
                     }
                 } else {
                     Log.w(DIAG_TAG, "handlePttDown() async-reconnect — reconnect failed");
+                    pttState = PttState.IDLE;
+                    notifyUiPttState(false);
                 }
             }).start();
             return;
@@ -350,11 +473,12 @@ public class BackgroundAudioService extends Service {
         pttState = PttState.TRANSMITTING;
         Log.d(DIAG_TAG, "handlePttDown() — state → TRANSMITTING");
 
+        playTalkPermitTone();
+
         boolean txResult = engine.startTransmit();
         Log.d(DIAG_TAG, "handlePttDown() — startTransmit() result=" + txResult);
 
         sendPttSignaling("start");
-
         notifyUiPttState(true);
         Log.d(DIAG_TAG, "handlePttDown() — COMPLETE (tx=" + txResult + ")");
     }
@@ -365,7 +489,14 @@ public class BackgroundAudioService extends Service {
             return false;
         }
 
-        if (livekitUrl == null || serverBaseUrl == null || currentUnitId == null || currentChannelName == null) {
+        restoreConnectionInfo();
+
+        if (serverBaseUrl == null) {
+            serverBaseUrl = FALLBACK_SERVER_URL;
+            Log.w(DIAG_TAG, "attemptAutoReconnect() — serverUrl null, using fallback: " + serverBaseUrl);
+        }
+
+        if (livekitUrl == null || currentUnitId == null || currentChannelName == null) {
             Log.w(DIAG_TAG, "attemptAutoReconnect() — missing info: lkUrl=" + livekitUrl
                 + " serverUrl=" + serverBaseUrl + " unitId=" + currentUnitId + " channelName=" + currentChannelName);
             return false;
@@ -374,7 +505,8 @@ public class BackgroundAudioService extends Service {
         NativeRadioEngine engine = NativeRadioEngine.getInstance(getApplicationContext());
 
         isReconnecting = true;
-        Log.d(DIAG_TAG, "attemptAutoReconnect() — fetching token from server for unit=" + currentUnitId + " channel=" + currentChannelName);
+        Log.d(DIAG_TAG, "attemptAutoReconnect() — fetching token from server for unit="
+            + currentUnitId + " channel=" + currentChannelName);
 
         try {
             String token = fetchTokenFromServer(currentUnitId, currentChannelName);
@@ -395,7 +527,8 @@ public class BackgroundAudioService extends Service {
                     waitAttempts++;
                 }
                 boolean finalConnected = engine.isConnected();
-                Log.d(DIAG_TAG, "attemptAutoReconnect() — waited " + (waitAttempts * 100) + "ms, connected=" + finalConnected);
+                Log.d(DIAG_TAG, "attemptAutoReconnect() — waited " + (waitAttempts * 100)
+                    + "ms, connected=" + finalConnected);
                 isReconnecting = false;
                 return finalConnected;
             }
@@ -412,7 +545,8 @@ public class BackgroundAudioService extends Service {
 
     private String fetchTokenFromServer(String identity, String channelName) {
         try {
-            String endpoint = serverBaseUrl + "/api/ptt/token?identity=" +
+            String effectiveUrl = serverBaseUrl != null ? serverBaseUrl : FALLBACK_SERVER_URL;
+            String endpoint = effectiveUrl + "/api/ptt/token?identity=" +
                 java.net.URLEncoder.encode(identity, "UTF-8") +
                 "&room=" + java.net.URLEncoder.encode(channelName, "UTF-8");
             URL url = new URL(endpoint);
@@ -458,8 +592,9 @@ public class BackgroundAudioService extends Service {
             return;
         }
 
+        isBonking = false;
         pttState = PttState.IDLE;
-        Log.d(DIAG_TAG, "handlePttUp() — state → IDLE");
+        Log.d(DIAG_TAG, "handlePttUp() — isBonking=false, state → IDLE");
 
         NativeRadioEngine engine = NativeRadioEngine.getInstance(getApplicationContext());
         boolean engineAvailable = engine != null;
@@ -473,7 +608,6 @@ public class BackgroundAudioService extends Service {
         Log.d(DIAG_TAG, "handlePttUp() — stopTransmit() result=" + txResult);
 
         sendPttSignaling("end");
-
         notifyUiPttState(false);
         Log.d(DIAG_TAG, "handlePttUp() — COMPLETE");
     }
@@ -557,31 +691,42 @@ public class BackgroundAudioService extends Service {
                 conn.setReadTimeout(3000);
 
                 String body = "{\"channelId\":\"" + currentChannelId + "\",\"unitId\":\"" + currentUnitId + "\"}";
-                OutputStream os = conn.getOutputStream();
-                os.write(body.getBytes("UTF-8"));
-                os.flush();
-                os.close();
+                try (OutputStream os = conn.getOutputStream()) {
+                    os.write(body.getBytes("UTF-8"));
+                }
 
                 int responseCode = conn.getResponseCode();
                 Log.d(DIAG_TAG, "sendPttSignaling(" + action + ") — HTTP " + responseCode);
                 conn.disconnect();
             } catch (Exception e) {
-                Log.w(DIAG_TAG, "sendPttSignaling(" + action + ") — FAILED (non-blocking): " + e.getMessage());
+                Log.w(DIAG_TAG, "sendPttSignaling(" + action + ") FAILED: " + e.getMessage());
             }
         }).start();
     }
 
-    private void notifyUiPttState(boolean pressed) {
-        try {
-            HardwarePttPlugin pttPlugin = HardwarePttPlugin.getInstance();
-            if (pttPlugin != null) {
-                pttPlugin.notifyPttStateFromService(pressed);
-                Log.d(DIAG_TAG, "notifyUiPttState(" + pressed + ") — HardwarePttPlugin notified");
-            } else {
-                Log.d(DIAG_TAG, "notifyUiPttState(" + pressed + ") — HardwarePttPlugin not available, UI sync skipped");
+    private void notifyUiPttState(boolean transmitting) {
+        HardwarePttPlugin plugin = HardwarePttPlugin.getInstance();
+        if (plugin != null) {
+            plugin.notifyPttStateFromService(transmitting);
+            Log.d(DIAG_TAG, "notifyUiPttState(" + transmitting + ") — HardwarePttPlugin notified");
+        } else {
+            Log.d(DIAG_TAG, "notifyUiPttState(" + transmitting + ") — HardwarePttPlugin not available");
+        }
+    }
+
+    private void createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel(
+                CHANNEL_ID,
+                "Command Comms Service",
+                NotificationManager.IMPORTANCE_LOW
+            );
+            channel.setDescription("Background radio communication service");
+            channel.setShowBadge(false);
+            NotificationManager manager = getSystemService(NotificationManager.class);
+            if (manager != null) {
+                manager.createNotificationChannel(channel);
             }
-        } catch (Exception e) {
-            Log.d(DIAG_TAG, "notifyUiPttState(" + pressed + ") — UI sync failed (non-blocking): " + e.getMessage());
         }
     }
 
@@ -589,22 +734,5 @@ public class BackgroundAudioService extends Service {
     @Override
     public IBinder onBind(Intent intent) {
         return null;
-    }
-
-    private void createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel channel = new NotificationChannel(
-                CHANNEL_ID,
-                "COMMAND COMMS",
-                NotificationManager.IMPORTANCE_LOW
-            );
-            channel.setDescription("Background radio communications");
-            channel.setShowBadge(false);
-
-            NotificationManager manager = getSystemService(NotificationManager.class);
-            if (manager != null) {
-                manager.createNotificationChannel(channel);
-            }
-        }
     }
 }

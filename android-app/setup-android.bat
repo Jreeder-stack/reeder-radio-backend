@@ -113,7 +113,19 @@ if exist "%CONFIG_DIR%\AndroidManifest.xml" (
 )
 
 echo.
-echo [6/7] Hooking Gradle auto-copy into app\build.gradle...
+echo [6/8] Copying raw audio resources...
+if not exist "%RES_DIR%\raw" mkdir "%RES_DIR%\raw"
+if exist "%CONFIG_DIR%\res\raw\" (
+    for %%f in ("%CONFIG_DIR%\res\raw\*") do (
+        copy /Y "%%f" "%RES_DIR%\raw\%%~nxf" >nul
+        echo   -^> raw\%%~nxf
+    )
+) else (
+    echo   -^> No res\raw\ directory found in android-config (skipping^)
+)
+
+echo.
+echo [7/8] Hooking Gradle auto-copy into app\build.gradle...
 set "BUILD_GRADLE=%ANDROID_DIR%\app\build.gradle"
 if exist "%BUILD_GRADLE%" (
     findstr /C:"commandcomms.gradle" "%BUILD_GRADLE%" >nul 2>&1
@@ -124,12 +136,17 @@ if exist "%BUILD_GRADLE%" (
     ) else (
         echo   -^> Already present, skipping
     )
+    set "ROOT_BUILD_GRADLE=%ANDROID_DIR%\build.gradle"
+    if exist "!ROOT_BUILD_GRADLE!" (
+        powershell -NoProfile -Command "$f='!ROOT_BUILD_GRADLE!'; (Get-Content -Raw $f) -replace '(?s)\s+flatDir \{[^}]+\}','' | Set-Content -NoNewline $f"
+        echo   -^> Removed flatDir block from root build.gradle
+    )
 ) else (
     echo   WARNING: app\build.gradle not found - Gradle hook not added
 )
 
 echo.
-echo [7/7] Verifying icon files...
+echo [8/8] Verifying icon files...
 set "VERIFY_OK=1"
 for %%d in (mdpi hdpi xhdpi xxhdpi xxxhdpi) do (
     call :checkIcon "%%d"

@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import useDispatchStore from "./state/dispatchStore";
+import { updateServiceConnectionInfo } from "./plugins/nativeLiveKit";
 
 const AuthContext = createContext(null);
 
@@ -159,6 +160,18 @@ export function AuthProvider({ children }) {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [user, checkAuth]);
+
+  useEffect(() => {
+    if (user && user.username) {
+      try {
+        const serverBaseUrl = window.location.origin;
+        updateServiceConnectionInfo(serverBaseUrl, user.username, '', '', '');
+        console.log('[PTT-DIAG] [JS] Auth: pushed early connection info to service: server=' + serverBaseUrl + ' unit=' + user.username);
+      } catch (e) {
+        console.warn('[PTT-DIAG] [JS] Auth: failed to push early connection info:', e);
+      }
+    }
+  }, [user]);
 
   const login = (userData, credentials) => {
     setUser(userData);

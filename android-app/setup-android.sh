@@ -120,7 +120,18 @@ if [ -f "$CONFIG_DIR/AndroidManifest.xml" ]; then
 fi
 
 echo ""
-echo "[6/7] Hooking Gradle auto-copy into app/build.gradle..."
+echo "[6/8] Copying raw audio resources..."
+mkdir -p "$RES_DIR/raw"
+if [ -d "$CONFIG_DIR/res/raw" ]; then
+    for f in "$CONFIG_DIR/res/raw/"*; do
+        [ -f "$f" ] && cp "$f" "$RES_DIR/raw/$(basename "$f")" && echo "  -> raw/$(basename "$f")"
+    done
+else
+    echo "  -> No res/raw/ directory found in android-config (skipping)"
+fi
+
+echo ""
+echo "[7/8] Hooking Gradle auto-copy into app/build.gradle..."
 BUILD_GRADLE="$ANDROID_DIR/app/build.gradle"
 if [ -f "$BUILD_GRADLE" ]; then
     if ! grep -q "commandcomms.gradle" "$BUILD_GRADLE"; then
@@ -130,12 +141,21 @@ if [ -f "$BUILD_GRADLE" ]; then
     else
         echo "  -> Already present, skipping"
     fi
+
+    ROOT_BUILD_GRADLE="$ANDROID_DIR/build.gradle"
+    if [ -f "$ROOT_BUILD_GRADLE" ]; then
+        if perl -i -0pe 's/\s+flatDir \{[^}]+\}//g' "$ROOT_BUILD_GRADLE" 2>/dev/null; then
+            echo "  -> Removed flatDir block from root build.gradle"
+        else
+            echo "  -> flatDir patch skipped (perl not available)"
+        fi
+    fi
 else
     echo "  WARNING: app/build.gradle not found - Gradle hook not added"
 fi
 
 echo ""
-echo "[7/7] Verifying icon files..."
+echo "[8/8] Verifying icon files..."
 VERIFY_OK=1
 for density in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
     ICON_FILE="$RES_DIR/mipmap-$density/ic_launcher.png"
