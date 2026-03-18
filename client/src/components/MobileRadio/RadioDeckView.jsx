@@ -184,6 +184,7 @@ export function RadioDeckView({ user, onLogout }) {
   const hasJoinedRef = useRef(false);
   const transmitChannelRef = useRef('');
   const isEmergencyRef = useRef(false);
+  const livekitUrlRef = useRef('');
   const rxAudioElementsRef = useRef(new Set());
   const emergencyAlarmRef = useRef(null);
 
@@ -269,9 +270,18 @@ export function RadioDeckView({ user, onLogout }) {
 
     const serverBaseUrl = window.location.origin;
     const txChannel = transmitChannelRef.current;
-    const livekitUrl = import.meta.env.VITE_LIVEKIT_URL || '';
-    console.log('[PTT-DIAG] [JS] Passing early connection info to service: unit=' + identity + ' channel=' + txChannel + ' server=' + serverBaseUrl + ' lkUrl=' + livekitUrl);
-    updateServiceConnectionInfo(serverBaseUrl, identity, txChannel || '', livekitUrl, txChannel || '');
+    fetch('/api/livekit-url')
+      .then(r => r.json())
+      .then(data => {
+        const livekitUrl = data.url || '';
+        livekitUrlRef.current = livekitUrl;
+        console.log('[PTT-DIAG] [JS] Passing early connection info to service: unit=' + identity + ' channel=' + txChannel + ' server=' + serverBaseUrl + ' lkUrl=' + livekitUrl);
+        updateServiceConnectionInfo(serverBaseUrl, identity, txChannel || '', livekitUrl, txChannel || '');
+      })
+      .catch(err => {
+        console.warn('[PTT-DIAG] [JS] Failed to fetch livekit-url, passing without lkUrl:', err);
+        updateServiceConnectionInfo(serverBaseUrl, identity, txChannel || '', '', txChannel || '');
+      });
     
     return () => {
       stopBackgroundService().catch(err => {
@@ -355,7 +365,13 @@ export function RadioDeckView({ user, onLogout }) {
 
   useEffect(() => {
     transmitChannelRef.current = currentRoomKey || '';
-  }, [currentRoomKey]);
+    if (currentRoomKey && identity) {
+      const serverBaseUrl = window.location.origin;
+      const livekitUrl = livekitUrlRef.current;
+      console.log('[PTT-DIAG] [JS] Channel changed — updating service connection info: channel=' + currentRoomKey + ' lkUrl=' + livekitUrl);
+      updateServiceConnectionInfo(serverBaseUrl, identity, currentRoomKey, livekitUrl, currentRoomKey);
+    }
+  }, [currentRoomKey, identity]);
 
   
   useEffect(() => {

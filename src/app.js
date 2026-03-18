@@ -12,6 +12,7 @@ import { setupRoutes } from './routes/index.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { requireAuth } from './middleware/auth.js';
 import * as livekitService from './services/livekitService.js';
+import { getLiveKitUrl } from './config/livekit.js';
 import * as authService from './services/authService.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -97,6 +98,10 @@ app.post('/api/activity/log', requireAuth, async (req, res) => {
     console.error('Activity log error:', err);
     res.status(500).json({ error: 'Failed to log activity' });
   }
+});
+
+app.get('/api/livekit-url', (req, res) => {
+  res.json({ url: getLiveKitUrl() });
 });
 
 app.get('/getToken', requireAuth, async (req, res) => {
