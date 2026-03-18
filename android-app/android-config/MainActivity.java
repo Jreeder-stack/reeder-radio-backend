@@ -425,7 +425,24 @@ public class MainActivity extends BridgeActivity {
 
         // --- PTT key handling ---
         if (isPttKey(keyCode)) {
-            Log.d(DIAG_TAG, "MainActivity — PTT key=" + keyCode + " action=" + actionStr + " HANDLED_IN_ACTIVITY");
+            boolean a11yEnabled = isAccessibilityServiceEnabled();
+            boolean a11yActive = PttAccessibilityService.isRunning();
+            Log.d(DIAG_TAG, "MainActivity — PTT decision path: a11yEnabled=" + a11yEnabled
+                + " a11yRunning=" + a11yActive
+                + " source=" + getActiveCaptureSource(a11yEnabled));
+
+            if (a11yActive) {
+                // Keep foreground Activity handling enabled even when AccessibilityService is running.
+                // Some T320 firmware paths do not consistently deliver PTT through Accessibility on all states,
+                // so suppressing here can make physical PTT appear dead.
+                Log.d(DIAG_TAG, "PTT ROUTE: MainActivity key event path active (Accessibility also running)");
+                Log.d(DIAG_TAG, "MainActivity — PTT key=" + keyCode + " action=" + actionStr
+                    + " HANDLED_IN_ACTIVITY (a11y also running; dedupe is enforced in service state machine)");
+            } else {
+                Log.d(DIAG_TAG, "PTT ROUTE: MainActivity fallback key event path active (Accessibility inactive)");
+                Log.d(DIAG_TAG, "MainActivity — PTT key=" + keyCode + " action=" + actionStr
+                    + " FALLBACK (AccessibilityService not running, matched F11/230 mapping)");
+            }
 
             if (action == KeyEvent.ACTION_DOWN) {
                 if (repeat > 0 || activityPttHeld) {
