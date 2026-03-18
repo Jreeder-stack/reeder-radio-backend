@@ -415,9 +415,7 @@ public class MainActivity extends BridgeActivity {
                 + " screenOff=" + isScreenOff);
             Log.d(DIAG_TAG, getPttStateSummary());
 
-            // Keep radio behavior: PTT must transmit in background without forcing UI foreground.
-            // Only wake the screen for non-PTT hardware keys (e.g., menu/navigation usage).
-            if (action == KeyEvent.ACTION_DOWN && !isPttKey(keyCode)) {
+            if (action == KeyEvent.ACTION_DOWN) {
                 wakeScreen();
             }
             keepWebViewAlive();
@@ -546,6 +544,16 @@ public class MainActivity extends BridgeActivity {
         Log.d(DIAG_TAG, "MainActivity.onPause() — isScreenOff=true, service running=" + BackgroundAudioService.isRunning);
         keepWebViewAlive();
         startJsKeepalive();
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        if (intent != null && "com.reedersystems.commandcomms.PTT_WAKE".equals(intent.getAction())) {
+            Log.d(DIAG_TAG, "MainActivity.onNewIntent() — PTT_WAKE received, waking screen");
+            wakeScreen();
+        }
     }
 
     @Override

@@ -69,6 +69,9 @@ public class PttBroadcastReceiver extends BroadcastReceiver {
             Log.d(TAG, "PTT ROUTE: broadcast action matched DOWN allowlist -> BackgroundAudioService.handlePttDown()");
             Log.d(TAG, "PTT DOWN broadcast — acquiring wake lock and forwarding to service");
             acquireCpuWakeLock(context);
+            if (!isScreenOn) {
+                wakeScreenAndLaunchActivity(context);
+            }
             forwardToService(context, BackgroundAudioService.PTT_ACTION_DOWN);
         } else if (allowedUpActions.contains(action)) {
             Log.d(TAG, "PTT ROUTE: broadcast action matched UP allowlist -> BackgroundAudioService.handlePttUp()");
@@ -147,6 +150,42 @@ public class PttBroadcastReceiver extends BroadcastReceiver {
             } catch (Exception e) {
                 Log.e(TAG, "Failed to cold-start service: " + e.getMessage());
             }
+        }
+    }
+
+    private void wakeScreenAndLaunchActivity(Context context) {
+        try {
+            PowerManager pm = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
+            if (pm != null && !pm.isInteractive()) {
+                @SuppressWarnings("deprecation")
+                PowerManager.WakeLock screenWl = pm.newWakeLock(
+                    PowerManager.FULL_WAKE_LOCK
+                    | PowerManager.ACQUIRE_CAUSES_WAKEUP
+                    | PowerManager.ON_AFTER_RELEASE,
+                    "CommandComms::PTTScreenWake"
+                );
+                screenWl.acquire(10 * 1000L);
+                Log.d(TAG, "PTT-DIAG: screen wake lock acquired (FULL_WAKE_LOCK | ACQUIRE_CAUSES_WAKEUP)");
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "PTT-DIAG: failed to acquire screen wake lock: " + e.getMessage());
+        }
+
+        try {
+            Intent launchIntent = context.getPackageManager()
+                .getLaunchIntentForPackage(context.getPackageName());
+            if (launchIntent != null) {
+                launchIntent.setAction("com.reedersystems.commandcomms.PTT_WAKE");
+                launchIntent.addFlags(
+                    Intent.FLAG_ACTIVITY_NEW_TASK
+                    | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+                    | Intent.FLAG_ACTIVITY_SINGLE_TOP
+                );
+                context.startActivity(launchIntent);
+                Log.d(TAG, "PTT-DIAG: MainActivity launched for PTT_WAKE");
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "PTT-DIAG: failed to launch MainActivity on PTT wake: " + e.getMessage());
         }
     }
 
