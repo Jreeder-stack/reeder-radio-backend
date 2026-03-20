@@ -271,6 +271,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         val state = _uiState.value
         when {
             emergencyJob == null && !state.myEmergencyActive -> startArming()
+            !state.myEmergencyActive -> abortArming()
             !state.isEmergencyCancelling -> startCancelHold()
         }
     }
@@ -287,8 +288,29 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun startArming() {
-        Log.d(TAG, "EMERGENCY ARMING: activating immediately")
-        onEmergencyActivate()
+        emergencyJob = viewModelScope.launch {
+            Log.d(TAG, "EMERGENCY ARMING: countdown started")
+            app.toneEngine.startCountdownBeep()
+            _uiState.update { it.copy(emergencyHoldProgress = 0f) }
+            var elapsed = 0L
+            while (elapsed < 3000L) {
+                delay(50)
+                elapsed += 50
+                _uiState.update { it.copy(emergencyHoldProgress = elapsed / 3000f) }
+            }
+            emergencyJob = null
+            app.toneEngine.stopCountdownBeep()
+            _uiState.update { it.copy(emergencyHoldProgress = null) }
+            onEmergencyActivate()
+        }
+    }
+
+    private fun abortArming() {
+        emergencyJob?.cancel()
+        emergencyJob = null
+        app.toneEngine.stopCountdownBeep()
+        _uiState.update { it.copy(emergencyHoldProgress = null) }
+        Log.d(TAG, "EMERGENCY ARMING: aborted by second press")
     }
 
     private fun startCancelHold() {
