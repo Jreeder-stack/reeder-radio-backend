@@ -8,6 +8,12 @@ const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET;
 
 const router = Router();
 
+/**
+ * Resolve auth for PTT start/end requests.
+ * Primary: unit must be in the live presence map (Socket.IO authenticated).
+ * Fallback: valid session cookie whose unit_id or username matches the requested unitId.
+ * Returns { channelId, unitId } on success, null (+ response already sent) on failure.
+ */
 function validatePttRequest(req, res) {
   const { channelId, unitId } = req.body;
 
@@ -16,14 +22,22 @@ function validatePttRequest(req, res) {
     return null;
   }
 
+  // Primary: live Socket.IO presence
   const presence = signalingService.unitPresence?.get(unitId);
-  if (!presence) {
-    console.warn(`[PTT-HTTP] Rejected: unknown unitId "${unitId}"`);
-    res.status(403).json({ error: 'Unit not authenticated with signaling' });
-    return null;
+  if (presence) {
+    return { channelId, unitId };
   }
 
-  return { channelId, unitId };
+  // Fallback: session cookie auth (handles Doze-dropped socket reconnects)
+  const sessionUser = req.session?.user;
+  if (sessionUser && (sessionUser.unit_id === unitId || sessionUser.username === unitId)) {
+    console.log(`[PTT-HTTP] Session fallback auth: unit "${unitId}" not in presence — accepted via session cookie`);
+    return { channelId, unitId };
+  }
+
+  console.warn(`[PTT-HTTP] Rejected: unit "${unitId}" not in presence and no valid session (cookie=${!!req.headers.cookie})`);
+  res.status(403).json({ error: 'Unit not authenticated' });
+  return null;
 }
 
 router.post('/start', (req, res) => {
@@ -133,30 +147,48 @@ router.get('/token', async (req, res) => {
     return res.status(400).json({ error: 'identity and room are required' });
   }
 
+  // Primary: live Socket.IO presence
   const presence = signalingService.unitPresence?.get(identity);
+
+  // Fallback: session cookie auth (handles Doze-dropped socket reconnects)
   if (!presence) {
-    console.warn(`[PTT-HTTP] Token request rejected: unknown unit "${identity}"`);
-    return res.status(403).json({ error: 'Unit not authenticated with signaling' });
+    const sessionUser = req.session?.user;
+    const sessionMatchesIdentity = sessionUser &&
+      (sessionUser.unit_id === identity || sessionUser.username === identity);
+
+    if (!sessionMatchesIdentity) {
+      console.warn(`[PTT-HTTP] Token rejected: unit "${identity}" not in presence and no valid session (cookie=${!!req.headers.cookie})`);
+      return res.status(403).json({ error: 'Unit not authenticated' });
+    }
+
+    console.log(`[PTT-HTTP] Token session fallback: unit "${identity}" not in presence — accepted via session cookie`);
+    // Fall through to channel lookup + token generation below
   }
 
-  // presence.channels stores numeric IDs (from Android channel:join).
-  // The token request uses a room key string. Look up the channel ID from the DB.
+  // Channel existence + access check
   try {
     const result = await pool.query(
       `SELECT id FROM channels WHERE COALESCE(zone, 'Default') || '__' || name = $1 AND enabled = true LIMIT 1`,
       [room]
     );
     if (!result.rows.length) {
-      console.warn(`[PTT-HTTP] Token request rejected: unknown room key "${room}"`);
+      console.warn(`[PTT-HTTP] Token rejected: unknown room key "${room}"`);
       return res.status(400).json({ error: 'Unknown room' });
     }
-    const channelNumericId = result.rows[0].id;
-    const unitChannels = presence.channels ?? [];
-    const onChannel = unitChannels.some(c => Number(c) === channelNumericId);
-    if (!onChannel) {
-      console.warn(`[PTT-HTTP] Token request rejected: unit "${identity}" channels=[${unitChannels.join(',')}] not on channel ${channelNumericId} ("${room}")`);
-      return res.status(403).json({ error: 'Unit not assigned to requested channel' });
+
+    // When presence is live, verify the unit is actually on this channel
+    if (presence) {
+      const channelNumericId = result.rows[0].id;
+      const unitChannels = presence.channels ?? [];
+      const onChannel = unitChannels.some(c => Number(c) === channelNumericId);
+      if (!onChannel) {
+        console.warn(`[PTT-HTTP] Token rejected: unit "${identity}" channels=[${unitChannels.join(',')}] not on channel ${channelNumericId} ("${room}")`);
+        return res.status(403).json({ error: 'Unit not assigned to requested channel' });
+      }
     }
+    // Session fallback: channel existence is sufficient — the unit authenticated
+    // previously and the session proves identity; channel assignment is not re-checked
+    // since presence (which holds channel list) is temporarily unavailable.
   } catch (dbErr) {
     console.error('[PTT-HTTP] DB lookup failed during token auth:', dbErr.message);
     return res.status(500).json({ error: 'Internal error during channel lookup' });
@@ -180,7 +212,7 @@ router.get('/token', async (req, res) => {
     });
 
     const token = await at.toJwt();
-    console.log(`[PTT-HTTP] Service token issued for ${identity} on ${room}`);
+    console.log(`[PTT-HTTP] Service token issued for ${identity} on ${room} (via ${presence ? 'presence' : 'session fallback'})`);
     res.json({ token, livekitUrl: process.env.LIVEKIT_URL });
   } catch (err) {
     console.error('[PTT-HTTP] Token generation failed:', err);

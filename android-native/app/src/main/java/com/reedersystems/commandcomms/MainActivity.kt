@@ -5,8 +5,10 @@ import android.accessibilityservice.AccessibilityServiceInfo
 import android.app.AlertDialog
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
 import android.os.SystemClock
 import android.provider.Settings
 import android.view.KeyEvent
@@ -36,6 +38,7 @@ private const val KEY_DPAD_RIGHT = 22
 
 private const val PREFS_NAME = "commandcomms_ui_prefs"
 private const val KEY_ACCESSIBILITY_PROMPT_SHOWN = "accessibility_prompt_shown"
+private const val KEY_BATTERY_OPT_PROMPT_SHOWN = "battery_opt_prompt_shown"
 private const val PTT_DEDUP_WINDOW_MS = 150L
 
 class MainActivity : ComponentActivity() {
@@ -97,6 +100,7 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         logDiagnostics()
         promptForAccessibilityServiceIfNeeded()
+        requestBatteryOptimizationExemptionIfNeeded()
     }
 
     private fun requestAppPermissions() {
@@ -150,6 +154,23 @@ class MainActivity : ComponentActivity() {
             }
             .setNegativeButton("Later", null)
             .show()
+    }
+
+    private fun requestBatteryOptimizationExemptionIfNeeded() {
+        val pm = getSystemService(POWER_SERVICE) as PowerManager
+        if (pm.isIgnoringBatteryOptimizations(packageName)) return
+
+        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+        if (prefs.getBoolean(KEY_BATTERY_OPT_PROMPT_SHOWN, false)) return
+
+        prefs.edit().putBoolean(KEY_BATTERY_OPT_PROMPT_SHOWN, true).apply()
+
+        Log.d(TAG, "Requesting battery optimization exemption")
+        startActivity(
+            Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                data = Uri.parse("package:$packageName")
+            }
+        )
     }
 
     private fun logDiagnostics() {
