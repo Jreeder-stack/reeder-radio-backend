@@ -2,6 +2,7 @@ package com.reedersystems.commandcomms;
 
 import android.accessibilityservice.AccessibilityService;
 import android.accessibilityservice.AccessibilityServiceInfo;
+import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
 import android.os.PowerManager;
@@ -157,6 +158,7 @@ public class PttAccessibilityService extends AccessibilityService {
             pttHeld = true;
             Log.d(DIAG_TAG, "[AccessibilitySvc] PTT DOWN keyCode=" + keyCode + " — first press, forwarding to service");
             acquireCpuWakeLock();
+            wakeScreenAndLaunchActivity();
             sendButtonIntent(BackgroundAudioService.ACTION_BTN_PTT_DOWN, "AccessibilitySvc");
             return true;
 
@@ -258,6 +260,41 @@ public class PttAccessibilityService extends AccessibilityService {
             }
         } catch (Exception e) {
             Log.w(DIAG_TAG, "[AccessibilitySvc] Wake lock failed: " + e.getMessage());
+        }
+    }
+
+    private void wakeScreenAndLaunchActivity() {
+        try {
+            PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+            if (pm != null && !pm.isInteractive()) {
+                @SuppressWarnings("deprecation")
+                PowerManager.WakeLock screenWl = pm.newWakeLock(
+                    PowerManager.FULL_WAKE_LOCK
+                        | PowerManager.ACQUIRE_CAUSES_WAKEUP
+                        | PowerManager.ON_AFTER_RELEASE,
+                    "CommandComms::AccessibilityScreenWake"
+                );
+                screenWl.acquire(10_000L);
+                Log.d(DIAG_TAG, "[AccessibilitySvc] screen wake lock acquired");
+            }
+        } catch (Exception e) {
+            Log.w(DIAG_TAG, "[AccessibilitySvc] screen wake failed: " + e.getMessage());
+        }
+
+        try {
+            Intent launchIntent = getPackageManager().getLaunchIntentForPackage(getPackageName());
+            if (launchIntent != null) {
+                launchIntent.setAction("com.reedersystems.commandcomms.PTT_WAKE");
+                launchIntent.addFlags(
+                    Intent.FLAG_ACTIVITY_NEW_TASK
+                        | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+                        | Intent.FLAG_ACTIVITY_SINGLE_TOP
+                );
+                startActivity(launchIntent);
+                Log.d(DIAG_TAG, "[AccessibilitySvc] MainActivity launched for PTT_WAKE");
+            }
+        } catch (Exception e) {
+            Log.w(DIAG_TAG, "[AccessibilitySvc] activity launch on PTT wake failed: " + e.getMessage());
         }
     }
 }

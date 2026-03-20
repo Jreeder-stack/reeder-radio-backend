@@ -10,6 +10,7 @@ export interface BackgroundServicePlugin {
     livekitUrl?: string;
     channelName?: string;
   }): Promise<{ success: boolean }>;
+  clearConnectionInfo(): Promise<{ success: boolean }>;
 }
 
 const BackgroundService = registerPlugin<BackgroundServicePlugin>('BackgroundService');
@@ -27,24 +28,32 @@ export async function syncBackgroundConnectionInfo(options: {
     return;
   }
 
-  const payload = {
-    serverBaseUrl: options.serverBaseUrl ?? undefined,
-    unitId: options.unitId ?? undefined,
-    channelId: options.channelId ?? undefined,
-    livekitUrl: options.livekitUrl ?? undefined,
-    channelName: options.channelName ?? undefined,
-  };
-
   try {
     await BackgroundService.startService();
   } catch (error) {
     console.warn('[BackgroundService] startService failed before sync:', error);
   }
 
+  const shouldClear = Object.values(options).every((value) => value == null);
+
   try {
+    if (shouldClear) {
+      await BackgroundService.clearConnectionInfo();
+      console.log('[BackgroundService] Connection info cleared');
+      return;
+    }
+
+    const payload = {
+      serverBaseUrl: options.serverBaseUrl ?? undefined,
+      unitId: options.unitId ?? undefined,
+      channelId: options.channelId ?? undefined,
+      livekitUrl: options.livekitUrl ?? undefined,
+      channelName: options.channelName ?? undefined,
+    };
+
     await BackgroundService.updateConnectionInfo(payload);
     console.log('[BackgroundService] Connection info synced:', payload);
   } catch (error) {
-    console.warn('[BackgroundService] updateConnectionInfo failed:', error, payload);
+    console.warn('[BackgroundService] connection info sync failed:', error, options);
   }
 }

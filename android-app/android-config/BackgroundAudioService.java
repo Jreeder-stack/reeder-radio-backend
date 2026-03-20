@@ -310,12 +310,43 @@ public class BackgroundAudioService extends Service {
         Log.d(DIAG_TAG, "LiveKit info persisted: lkUrl=" + lkUrl + " channelName=" + channelName);
     }
 
+    public void clearConnectionInfo() {
+        serverBaseUrl = null;
+        currentUnitId = null;
+        currentChannelId = null;
+        livekitUrl = null;
+        currentChannelName = null;
+
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        prefs.edit()
+            .remove(PREF_SERVER_URL)
+            .remove(PREF_UNIT_ID)
+            .remove(PREF_CHANNEL_ID)
+            .remove(PREF_LIVEKIT_URL)
+            .remove(PREF_CHANNEL_NAME)
+            .apply();
+
+        Log.d(DIAG_TAG, "Connection info cleared from memory and SharedPreferences");
+    }
+
     private void persistConnectionInfo() {
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         SharedPreferences.Editor editor = prefs.edit();
-        if (serverBaseUrl != null) editor.putString(PREF_SERVER_URL, serverBaseUrl);
-        if (currentUnitId != null) editor.putString(PREF_UNIT_ID, currentUnitId);
-        if (currentChannelId != null) editor.putString(PREF_CHANNEL_ID, currentChannelId);
+        if (serverBaseUrl != null) {
+            editor.putString(PREF_SERVER_URL, serverBaseUrl);
+        } else {
+            editor.remove(PREF_SERVER_URL);
+        }
+        if (currentUnitId != null) {
+            editor.putString(PREF_UNIT_ID, currentUnitId);
+        } else {
+            editor.remove(PREF_UNIT_ID);
+        }
+        if (currentChannelId != null) {
+            editor.putString(PREF_CHANNEL_ID, currentChannelId);
+        } else {
+            editor.remove(PREF_CHANNEL_ID);
+        }
         editor.apply();
         Log.d(DIAG_TAG, "Connection info persisted to SharedPreferences");
     }
