@@ -39,6 +39,14 @@ private val Red       = Color(0xFFCC0000)
 private val Amber     = Color(0xFFCC8800)
 private val White     = Color.White
 
+private val STATUS_COLORS = mapOf(
+    "off_duty"  to Color(0xFFAAAAAA),
+    "on_duty"   to Color(0xFF00AA44),
+    "en_route"  to Color(0xFF0088CC),
+    "arrived"   to Color(0xFF8800CC),
+    "oos"       to Color(0xFFCC4400),
+)
+
 @Composable
 fun RadioScreen(
     onLogout: () -> Unit,
@@ -104,7 +112,8 @@ fun RadioScreen(
             BottomBar(
                 state = state,
                 onScnl = { viewModel.setShowScanOverlay(true) },
-                onLogoutRequest = { showLogoutDialog = true }
+                onLogoutRequest = { showLogoutDialog = true },
+                onCycleStatus = viewModel::cycleStatus
             )
         }
 
@@ -326,8 +335,12 @@ private fun CenterDisplay(
 private fun BottomBar(
     state: RadioUiState,
     onScnl: () -> Unit,
-    onLogoutRequest: () -> Unit
+    onLogoutRequest: () -> Unit,
+    onCycleStatus: () -> Unit
 ) {
+    val statusLabel = STATUS_LABELS[state.currentStatus] ?: state.currentStatus.uppercase()
+    val statusColor = STATUS_COLORS[state.currentStatus] ?: White
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -360,6 +373,11 @@ private fun BottomBar(
                 onClick = {}
             )
         }
+        BottomBarButton(
+            text = statusLabel,
+            color = statusColor,
+            onClick = onCycleStatus
+        )
     }
 }
 
