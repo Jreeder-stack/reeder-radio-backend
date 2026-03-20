@@ -167,7 +167,7 @@ class MainActivity : ComponentActivity() {
         if (isOurKey(event.keyCode)) {
             return when (event.action) {
                 KeyEvent.ACTION_DOWN -> handleKeyDown(event.keyCode, event)
-                KeyEvent.ACTION_UP   -> handleKeyUp(event.keyCode, event)
+                KeyEvent.ACTION_UP   -> { handleKeyUp(event.keyCode, event); true }
                 else                 -> false
             }
         }
