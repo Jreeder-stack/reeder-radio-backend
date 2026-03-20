@@ -151,7 +151,40 @@ class MainActivity : ComponentActivity() {
 
     private fun isPttKey(keyCode: Int) = keyCode == KEY_PTT_F11 || keyCode == KEY_PTT
 
+    private fun isOurKey(keyCode: Int) = isPttKey(keyCode) ||
+        keyCode == KEY_EMERGENCY ||
+        keyCode == KEY_DPAD_UP || keyCode == KEY_DPAD_DOWN ||
+        keyCode == KEY_DPAD_LEFT || keyCode == KEY_DPAD_RIGHT ||
+        keyCode == KEY_ACC || keyCode == KEY_STAR
+
+    /**
+     * Intercept our hardware keys before the Compose view hierarchy can consume them for
+     * focus traversal. Without this override, Compose's clickable/combinedClickable elements
+     * absorb D-pad events to move UI focus, meaning onKeyDown is only called after all
+     * focusable elements have been exhausted — requiring 3+ presses to change a zone/channel.
+     */
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (isOurKey(event.keyCode)) {
+            return when (event.action) {
+                KeyEvent.ACTION_DOWN -> handleKeyDown(event.keyCode, event)
+                KeyEvent.ACTION_UP   -> handleKeyUp(event.keyCode, event)
+                else                 -> false
+            }
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        if (isOurKey(keyCode)) return handleKeyDown(keyCode, event)
+        return super.onKeyDown(keyCode, event)
+    }
+
+    override fun onKeyUp(keyCode: Int, event: KeyEvent?): Boolean {
+        if (isOurKey(keyCode)) return handleKeyUp(keyCode, event)
+        return super.onKeyUp(keyCode, event)
+    }
+
+    private fun handleKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         when {
             isPttKey(keyCode) -> {
                 if (event?.repeatCount == 0) {
@@ -208,10 +241,10 @@ class MainActivity : ComponentActivity() {
                 return true
             }
         }
-        return super.onKeyDown(keyCode, event)
+        return false
     }
 
-    override fun onKeyUp(keyCode: Int, event: KeyEvent?): Boolean {
+    private fun handleKeyUp(keyCode: Int, event: KeyEvent?): Boolean {
         when {
             isPttKey(keyCode) -> {
                 val now = System.currentTimeMillis()
@@ -238,7 +271,7 @@ class MainActivity : ComponentActivity() {
                 return true
             }
         }
-        return super.onKeyUp(keyCode, event)
+        return false
     }
 
 }
