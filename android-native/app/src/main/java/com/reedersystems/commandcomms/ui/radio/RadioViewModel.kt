@@ -71,6 +71,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
 
     private val app get() = getApplication<CommandCommsApp>()
     private val scanPrefs = application.getSharedPreferences("ScanPrefs", android.content.Context.MODE_PRIVATE)
+    private val KEY_SCAN_ACTIVE = "scan_active"
 
     private val locationTracker by lazy {
         com.reedersystems.commandcomms.field.LocationTracker(getApplication(), app.signalingRepository)
@@ -131,7 +132,8 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                 val scanChannels = allChannels.map { ch ->
                     ScanChannelItem(ch.id, ch.name, loadScanEnabled(ch.id))
                 }
-                _uiState.update { it.copy(zones = zones, isLoading = false, scanChannels = scanChannels) }
+                val savedScanning = scanPrefs.getBoolean(KEY_SCAN_ACTIVE, false)
+                _uiState.update { it.copy(zones = zones, isLoading = false, scanChannels = scanChannels, isScanning = savedScanning) }
                 connectSignaling()
             } else {
                 _uiState.update {
@@ -381,7 +383,9 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun toggleScanning() {
-        _uiState.update { it.copy(isScanning = !it.isScanning) }
+        val next = !_uiState.value.isScanning
+        scanPrefs.edit().putBoolean(KEY_SCAN_ACTIVE, next).apply()
+        _uiState.update { it.copy(isScanning = next) }
     }
 
     fun setShowScanOverlay(show: Boolean) {
