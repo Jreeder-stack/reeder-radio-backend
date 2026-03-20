@@ -32,6 +32,14 @@ class BackgroundAudioService : Service() {
     private var pttState = PttState.IDLE
     private var gracePeriodJob: Job? = null
 
+    /**
+     * Set to true as soon as ACTION_PTT_UP is received, regardless of pttState.
+     * Checked after the async connect completes in handlePttDown() to abort TX
+     * if the user released PTT before the connection finished (race condition fix).
+     * Always reset to false at the start of handlePttDown().
+     */
+    @Volatile private var pttUpWhileConnecting = false
+
     override fun onCreate() {
         super.onCreate()
         Log.d(TAG, "BackgroundAudioService created")
@@ -68,6 +76,8 @@ class BackgroundAudioService : Service() {
     private fun handlePttDown() {
         Log.d(TAG, "handlePttDown pttState=$pttState")
 
+        pttUpWhileConnecting = false
+
         if (!app.sessionPrefs.micPermissionGranted) {
             Log.w(TAG, "PTT DOWN service: mic permission denied — blocked")
             app.toneEngine.playErrorTone()
@@ -81,17 +91,17 @@ class BackgroundAudioService : Service() {
 
         val unitId = servicePrefs.unitId ?: app.sessionPrefs.unitId ?: run {
             Log.w(TAG, "PTT DOWN ignored: no unit ID")
-            app.toneEngine.playErrorTone()
+            sendPttTxFailed()
             return
         }
         val channelId = servicePrefs.channelId.takeIf { it >= 0 } ?: run {
             Log.w(TAG, "PTT DOWN ignored: no channel selected")
-            app.toneEngine.playErrorTone()
+            sendPttTxFailed()
             return
         }
         val roomKey = servicePrefs.channelRoomKey ?: run {
             Log.w(TAG, "PTT DOWN ignored: no room key")
-            app.toneEngine.playErrorTone()
+            sendPttTxFailed()
             return
         }
         val serverUrl = servicePrefs.serverUrl ?: app.apiClient.baseUrl
@@ -103,9 +113,9 @@ class BackgroundAudioService : Service() {
             val tokenResult = app.liveKitTokenRepository.getToken(identity = unitId, room = roomKey)
             if (tokenResult.isFailure) {
                 Log.e(TAG, "Token fetch failed: ${tokenResult.exceptionOrNull()?.message}")
-                app.toneEngine.playErrorTone()
                 pttState = PttState.IDLE
                 updateNotification("Radio — Standby")
+                sendPttTxFailed()
                 return@launch
             }
             val (token, livekitUrl) = tokenResult.getOrThrow()
@@ -116,21 +126,29 @@ class BackgroundAudioService : Service() {
 
             if (!connected) {
                 Log.e(TAG, "LiveKit connect failed")
-                app.toneEngine.playErrorTone()
                 pttState = PttState.IDLE
                 updateNotification("Radio — Standby")
+                sendPttTxFailed()
+                return@launch
+            }
+
+            if (pttUpWhileConnecting) {
+                Log.d(TAG, "PTT_UP received during connect — aborting TX (race condition avoided)")
+                pttState = PttState.IDLE
+                updateNotification("Radio — Standby")
+                scheduleGracePeriod()
                 return@launch
             }
 
             val txStarted = audioEngine.startTransmit()
             if (!txStarted) {
                 Log.e(TAG, "TX start failed after connect")
-                app.toneEngine.playErrorTone()
                 pttState = PttState.IDLE
                 updateNotification("Radio — Standby")
+                sendPttTxFailed()
                 return@launch
             }
-            app.toneEngine.playTalkPermitTone()
+
             pttState = PttState.TRANSMITTING
             updateNotification("TRANSMITTING")
             httpPttStart(serverUrl, channelId, unitId)
@@ -139,28 +157,44 @@ class BackgroundAudioService : Service() {
 
     private fun handlePttUp() {
         Log.d(TAG, "handlePttUp pttState=$pttState")
+
+        pttUpWhileConnecting = true
+
         if (pttState != PttState.TRANSMITTING) return
 
         val unitId = servicePrefs.unitId ?: app.sessionPrefs.unitId ?: return
         val channelId = servicePrefs.channelId.takeIf { it >= 0 } ?: return
         val serverUrl = servicePrefs.serverUrl ?: app.apiClient.baseUrl
 
-        app.toneEngine.playEndOfTxTone()
         pttState = PttState.IDLE
         updateNotification("Radio — Standby")
 
         scope.launch {
             audioEngine.stopTransmit()
             httpPttEnd(serverUrl, channelId, unitId)
+            scheduleGracePeriod()
+        }
+    }
 
-            gracePeriodJob = launch {
-                delay(GRACE_PERIOD_MS)
-                if (pttState == PttState.IDLE) {
-                    Log.d(TAG, "Grace period expired, disconnecting LiveKit")
-                    audioEngine.disconnect()
-                }
+    private fun scheduleGracePeriod() {
+        gracePeriodJob?.cancel()
+        gracePeriodJob = scope.launch {
+            delay(GRACE_PERIOD_MS)
+            if (pttState == PttState.IDLE) {
+                Log.d(TAG, "Grace period expired, disconnecting LiveKit")
+                audioEngine.disconnect()
             }
         }
+    }
+
+    /**
+     * Broadcast a PTT failure back to the ViewModel so it can reset pttState = IDLE
+     * and play an error tone. Only sent on real failures, not on race-condition cancellations.
+     */
+    private fun sendPttTxFailed() {
+        Log.d(TAG, "Sending PTT_TX_FAILED broadcast")
+        val intent = Intent(ACTION_PTT_TX_FAILED).apply { setPackage(packageName) }
+        sendBroadcast(intent)
     }
 
     private fun httpPttStart(serverUrl: String, channelId: Int, unitId: String) {
@@ -240,6 +274,7 @@ class BackgroundAudioService : Service() {
         const val ACTION_PTT_UP = "com.reedersystems.commandcomms.SVC_PTT_UP"
         const val ACTION_UPDATE_CHANNEL = "com.reedersystems.commandcomms.UPDATE_CHANNEL"
         const val ACTION_STOP = "com.reedersystems.commandcomms.STOP"
+        const val ACTION_PTT_TX_FAILED = "com.reedersystems.commandcomms.PTT_TX_FAILED"
         const val EXTRA_CHANNEL_ID = "channel_id"
         const val EXTRA_ROOM_KEY = "room_key"
         const val EXTRA_CHANNEL_NAME = "channel_name"

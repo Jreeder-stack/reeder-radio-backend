@@ -3,6 +3,7 @@ package com.reedersystems.commandcomms.audio
 import android.content.Context
 import android.media.AudioAttributes
 import android.media.AudioFormat
+import android.media.AudioManager
 import android.media.AudioTrack
 import android.media.MediaPlayer
 import android.util.Log
@@ -23,7 +24,12 @@ class ToneEngine(private val context: Context) {
     fun playTalkPermitTone() {
         scope.launch {
             try {
-                val mp = MediaPlayer.create(context, R.raw.talk_permit)
+                val mp = MediaPlayer.create(
+                    context,
+                    R.raw.talk_permit,
+                    audioAttribs(),
+                    AudioManager.AUDIO_SESSION_ID_GENERATE
+                )
                 if (mp != null) {
                     mp.setOnCompletionListener { it.release() }
                     mp.start()
@@ -159,7 +165,7 @@ class ToneEngine(private val context: Context) {
     }
 
     private fun audioAttribs() = AudioAttributes.Builder()
-        .setUsage(AudioAttributes.USAGE_MEDIA)
+        .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION_SIGNALLING)
         .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
         .build()
 

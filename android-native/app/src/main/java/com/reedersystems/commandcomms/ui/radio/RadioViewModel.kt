@@ -1,10 +1,13 @@
 package com.reedersystems.commandcomms.ui.radio
 
 import android.app.Application
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.BatteryManager
 import android.util.Log
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.reedersystems.commandcomms.CommandCommsApp
@@ -83,6 +86,24 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
     private var emergencyJob: Job? = null
     private var cancelArmingJob: Job? = null
 
+    /**
+     * Receives PTT_TX_FAILED broadcasts from BackgroundAudioService.
+     * Resets pttState to IDLE and plays an error tone so the user knows the TX failed
+     * and the next PTT press will not be silently blocked.
+     */
+    private val pttTxFailedReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (intent.action != BackgroundAudioService.ACTION_PTT_TX_FAILED) return
+            Log.d(TAG, "PTT_TX_FAILED received — resetting to IDLE")
+            app.toneEngine.playErrorTone()
+            val s = _uiState.value
+            if (s.pttState == PttState.TRANSMITTING) {
+                s.currentChannel?.id?.let { app.signalingRepository.transmitEnd(it) }
+            }
+            _uiState.update { it.copy(pttState = PttState.IDLE) }
+        }
+    }
+
     init {
         val prefs = app.sessionPrefs
         _uiState.update {
@@ -104,6 +125,18 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         loadChannels()
         observeSignaling()
         collectKeyEvents()
+        registerPttFailureReceiver()
+    }
+
+    private fun registerPttFailureReceiver() {
+        val filter = IntentFilter(BackgroundAudioService.ACTION_PTT_TX_FAILED)
+        ContextCompat.registerReceiver(
+            getApplication(),
+            pttTxFailedReceiver,
+            filter,
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
+        Log.d(TAG, "PTT_TX_FAILED receiver registered")
     }
 
     private fun updateClock() {
@@ -522,6 +555,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         cancelArmingJob?.cancel()
         app.toneEngine.stopCountdownBeep()
         locationTracker.stopTracking()
+        runCatching { getApplication<Application>().unregisterReceiver(pttTxFailedReceiver) }
         super.onCleared()
     }
 }

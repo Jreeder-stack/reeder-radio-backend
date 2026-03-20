@@ -1,6 +1,7 @@
 package com.reedersystems.commandcomms.audio
 
 import android.content.Context
+import android.media.AudioManager
 import android.util.Log
 import io.livekit.android.LiveKit
 import io.livekit.android.events.RoomEvent
@@ -17,6 +18,7 @@ class PttAudioEngine(private val context: Context) {
     private var isTransmitting = false
     private var eventJob: Job? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
 
     val isConnected: Boolean
         get() = room?.state == Room.State.CONNECTED
@@ -35,7 +37,8 @@ class PttAudioEngine(private val context: Context) {
                 if (connected == true) {
                     room = newRoom
                     observeRoomEvents(newRoom)
-                    Log.d(TAG, "PttAudioEngine connected")
+                    enableSpeakerphone()
+                    Log.d(TAG, "PttAudioEngine connected — speakerphone enabled")
                     true
                 } else {
                     Log.w(TAG, "PttAudioEngine connect timed out")
@@ -48,6 +51,18 @@ class PttAudioEngine(private val context: Context) {
             }
         }
 
+    private fun enableSpeakerphone() {
+        audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
+        audioManager.isSpeakerphoneOn = true
+        Log.d(TAG, "AudioManager: mode=IN_COMMUNICATION speakerphone=ON")
+    }
+
+    private fun restoreAudio() {
+        audioManager.isSpeakerphoneOn = false
+        audioManager.mode = AudioManager.MODE_NORMAL
+        Log.d(TAG, "AudioManager: mode=NORMAL speakerphone=OFF")
+    }
+
     private fun observeRoomEvents(room: Room) {
         eventJob?.cancel()
         eventJob = scope.launch {
@@ -56,6 +71,7 @@ class PttAudioEngine(private val context: Context) {
                     is RoomEvent.Disconnected -> {
                         Log.d(TAG, "Room disconnected: ${event.error?.message}")
                         isTransmitting = false
+                        restoreAudio()
                     }
                     else -> {}
                 }
@@ -99,6 +115,7 @@ class PttAudioEngine(private val context: Context) {
             eventJob = null
             room?.disconnect()
             room = null
+            restoreAudio()
             Log.d(TAG, "PttAudioEngine disconnected")
         }.onFailure { Log.e(TAG, "disconnect error: ${it.message}", it) }
     }
