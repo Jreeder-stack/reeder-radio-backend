@@ -63,18 +63,22 @@ class PttAudioEngine(private val context: Context) {
         }
     }
 
-    suspend fun startTransmit() =
+    suspend fun startTransmit(): Boolean =
         withContext(Dispatchers.Main) {
             val r = room ?: run {
                 Log.w(TAG, "startTransmit: no room connected")
-                return@withContext
+                return@withContext false
             }
-            if (isTransmitting) return@withContext
+            if (isTransmitting) return@withContext true
             runCatching {
                 r.localParticipant.setMicrophoneEnabled(true)
                 isTransmitting = true
                 Log.d(TAG, "PttAudioEngine TX START")
-            }.onFailure { Log.e(TAG, "startTransmit error: ${it.message}", it) }
+                true
+            }.getOrElse {
+                Log.e(TAG, "startTransmit error: ${it.message}", it)
+                false
+            }
         }
 
     suspend fun stopTransmit() =

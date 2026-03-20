@@ -122,8 +122,15 @@ class BackgroundAudioService : Service() {
                 return@launch
             }
 
+            val txStarted = audioEngine.startTransmit()
+            if (!txStarted) {
+                Log.e(TAG, "TX start failed after connect")
+                app.toneEngine.playErrorTone()
+                pttState = PttState.IDLE
+                updateNotification("Radio — Standby")
+                return@launch
+            }
             app.toneEngine.playTalkPermitTone()
-            audioEngine.startTransmit()
             pttState = PttState.TRANSMITTING
             updateNotification("TRANSMITTING")
             httpPttStart(serverUrl, channelId, unitId)
