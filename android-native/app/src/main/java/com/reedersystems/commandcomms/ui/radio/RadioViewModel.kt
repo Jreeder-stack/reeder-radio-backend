@@ -480,13 +480,6 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         app.serviceConnectionPrefs.channelName = channel.name
         app.serviceConnectionPrefs.unitId = _uiState.value.unitId
         app.serviceConnectionPrefs.serverUrl = app.apiClient.baseUrl
-        val intent = Intent(getApplication(), BackgroundAudioService::class.java).apply {
-            action = BackgroundAudioService.ACTION_UPDATE_CHANNEL
-            putExtra(BackgroundAudioService.EXTRA_CHANNEL_ID, channel.id)
-            putExtra(BackgroundAudioService.EXTRA_ROOM_KEY, channel.roomKey)
-            putExtra(BackgroundAudioService.EXTRA_CHANNEL_NAME, channel.name)
-        }
-        getApplication<Application>().startForegroundService(intent)
     }
 
     private fun sendServiceIntent(action: String) {
@@ -499,45 +492,36 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
     fun nextZone() {
         val zones = _uiState.value.zones
         if (zones.isEmpty()) return
-        val prevId = _uiState.value.currentChannel?.id
         val next = (_uiState.value.currentZoneIndex + 1) % zones.size
         _uiState.update { it.copy(currentZoneIndex = next, currentChannelIndex = 0) }
-        onChannelChanged(prevId)
+        onChannelChanged()
     }
 
     fun prevZone() {
         val zones = _uiState.value.zones
         if (zones.isEmpty()) return
-        val prevId = _uiState.value.currentChannel?.id
         val p = (_uiState.value.currentZoneIndex - 1 + zones.size) % zones.size
         _uiState.update { it.copy(currentZoneIndex = p, currentChannelIndex = 0) }
-        onChannelChanged(prevId)
+        onChannelChanged()
     }
 
     fun nextChannel() {
         val channels = _uiState.value.currentZone?.channels ?: return
         if (channels.isEmpty()) return
-        val prevId = _uiState.value.currentChannel?.id
         val next = (_uiState.value.currentChannelIndex + 1) % channels.size
         _uiState.update { it.copy(currentChannelIndex = next) }
-        onChannelChanged(prevId)
+        onChannelChanged()
     }
 
     fun prevChannel() {
         val channels = _uiState.value.currentZone?.channels ?: return
         if (channels.isEmpty()) return
-        val prevId = _uiState.value.currentChannel?.id
         val p = (_uiState.value.currentChannelIndex - 1 + channels.size) % channels.size
         _uiState.update { it.copy(currentChannelIndex = p) }
-        onChannelChanged(prevId)
+        onChannelChanged()
     }
 
-    private fun onChannelChanged(prevChannelId: Int?) {
-        val newChannel = _uiState.value.currentChannel ?: return
-        if (prevChannelId != null && prevChannelId != newChannel.id && _uiState.value.isConnected) {
-            app.signalingRepository.leaveChannel(prevChannelId)
-            app.signalingRepository.joinChannel(newChannel.id)
-        }
+    private fun onChannelChanged() {
         updateServiceChannel()
     }
 
