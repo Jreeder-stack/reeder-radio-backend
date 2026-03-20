@@ -9,6 +9,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.media.AudioAttributes;
+import android.media.AudioFocusRequest;
 import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioTrack;
@@ -21,6 +22,8 @@ import android.os.PowerManager;
 import android.util.Log;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
+import android.support.v4.media.session.MediaSessionCompat;
+import android.support.v4.media.session.PlaybackStateCompat;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -30,7 +33,7 @@ import java.net.URL;
 
 import org.json.JSONObject;
 
-public class BackgroundAudioService extends Service {
+public class BackgroundAudioService extends Service implements NativeRadioEngine.Listener {
 
     private static final String TAG = "CommandComms.BgService";
     private static final String DIAG_TAG = "PTT-DIAG";
@@ -90,6 +93,34 @@ public class BackgroundAudioService extends Service {
     private volatile String lastEventAction    = "none";
     private volatile long   lastEventTimestamp = 0;
 
+    private AudioManager audioManager;
+    private AudioFocusRequest audioFocusRequest;
+    private AudioManager.OnAudioFocusChangeListener audioFocusChangeListener;
+
+    private MediaSessionCompat mediaSession;
+
+    @Override
+    public void onEngineEvent(String event, java.util.Map<String, Object> data) {
+        switch (event) {
+            case "connected":
+            case "reconnected":
+                Log.d(DIAG_TAG, "Engine event: " + event + " — MediaSession STATE_PLAYING");
+                updateMediaSessionPlaybackState(true);
+                break;
+            case "disconnected":
+                Log.d(DIAG_TAG, "Engine event: disconnected — MediaSession STATE_STOPPED");
+                updateMediaSessionPlaybackState(false);
+                if (pttState == PttState.TRANSMITTING) {
+                    pttState = PttState.IDLE;
+                    abandonAudioFocus();
+                    notifyUiPttState(false);
+                }
+                break;
+            default:
+                break;
+        }
+    }
+
     @Override
     public void onCreate() {
         super.onCreate();
@@ -111,12 +142,35 @@ public class BackgroundAudioService extends Service {
             Log.d(DIAG_TAG, "CPU wake lock acquired");
         }
 
+        audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
+        initAudioFocusListener();
+
         pttReceiver = new PttBroadcastReceiver();
         IntentFilter pttFilter = new IntentFilter();
         pttFilter.addAction("android.intent.action.PTT.down");
         pttFilter.addAction("android.intent.action.PTT.up");
+        pttFilter.addAction("android.intent.action.PTT_DOWN");
+        pttFilter.addAction("android.intent.action.PTT_UP");
+        pttFilter.addAction("com.inrico.ptt.down");
+        pttFilter.addAction("com.inrico.ptt.up");
+        pttFilter.addAction("com.inrico.intent.action.PTT_DOWN");
+        pttFilter.addAction("com.inrico.intent.action.PTT_UP");
+        pttFilter.addAction(ACTION_BTN_PTT_DOWN);
+        pttFilter.addAction(ACTION_BTN_PTT_UP);
+        pttFilter.addAction(ACTION_BTN_SIDE1_DOWN);
+        pttFilter.addAction(ACTION_BTN_SIDE1_UP);
+        pttFilter.addAction(ACTION_BTN_SIDE2_DOWN);
+        pttFilter.addAction(ACTION_BTN_SIDE2_UP);
         registerReceiver(pttReceiver, pttFilter);
-        Log.d(DIAG_TAG, "PTT broadcast receiver registered dynamically");
+        Log.d(DIAG_TAG, "PTT broadcast receiver registered dynamically (full action set)");
+
+        initMediaSession();
+
+        NativeRadioEngine engineInstance = NativeRadioEngine.peekInstance();
+        if (engineInstance != null) {
+            engineInstance.addListener(this);
+            Log.d(DIAG_TAG, "Registered as NativeRadioEngine listener");
+        }
 
         keepAliveHandler = new Handler(Looper.getMainLooper());
         keepAliveRunnable = new Runnable() {
@@ -127,6 +181,101 @@ public class BackgroundAudioService extends Service {
             }
         };
         keepAliveHandler.postDelayed(keepAliveRunnable, KEEPALIVE_INTERVAL_MS);
+    }
+
+    private void initAudioFocusListener() {
+        audioFocusChangeListener = focusChange -> {
+            Log.d(DIAG_TAG, "AudioFocus change: focusChange=" + focusChange);
+            if (focusChange == AudioManager.AUDIOFOCUS_LOSS) {
+                Log.w(DIAG_TAG, "AudioFocus LOSS — stopping TX to release mic");
+                if (pttState == PttState.TRANSMITTING) {
+                    handlePttUp();
+                }
+            } else if (focusChange == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT) {
+                Log.w(DIAG_TAG, "AudioFocus LOSS_TRANSIENT — stopping TX");
+                if (pttState == PttState.TRANSMITTING) {
+                    handlePttUp();
+                }
+            }
+        };
+    }
+
+    private boolean requestAudioFocus() {
+        if (audioManager == null) return false;
+        int result;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            AudioAttributes audioAttributes = new AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                .build();
+            audioFocusRequest = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
+                .setAudioAttributes(audioAttributes)
+                .setAcceptsDelayedFocusGain(false)
+                .setOnAudioFocusChangeListener(audioFocusChangeListener)
+                .build();
+            result = audioManager.requestAudioFocus(audioFocusRequest);
+        } else {
+            result = audioManager.requestAudioFocus(
+                audioFocusChangeListener,
+                AudioManager.STREAM_VOICE_CALL,
+                AudioManager.AUDIOFOCUS_GAIN_TRANSIENT
+            );
+        }
+        boolean granted = result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED;
+        Log.d(DIAG_TAG, "requestAudioFocus() — result=" + result + " granted=" + granted);
+        return granted;
+    }
+
+    private void abandonAudioFocus() {
+        if (audioManager == null) return;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            if (audioFocusRequest != null) {
+                audioManager.abandonAudioFocusRequest(audioFocusRequest);
+                audioFocusRequest = null;
+                Log.d(DIAG_TAG, "abandonAudioFocus() — AudioFocusRequest abandoned");
+            }
+        } else {
+            audioManager.abandonAudioFocus(audioFocusChangeListener);
+            Log.d(DIAG_TAG, "abandonAudioFocus() — legacy abandonAudioFocus called");
+        }
+    }
+
+    private void initMediaSession() {
+        try {
+            mediaSession = new MediaSessionCompat(this, "CommandComms.PTT");
+            mediaSession.setFlags(
+                MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS |
+                MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS
+            );
+            updateMediaSessionPlaybackState(false);
+            mediaSession.setActive(true);
+            Log.d(DIAG_TAG, "MediaSessionCompat created and activated");
+        } catch (Exception e) {
+            Log.e(DIAG_TAG, "MediaSession init failed: " + e.getMessage());
+        }
+    }
+
+    private void updateMediaSessionPlaybackState(boolean playing) {
+        if (mediaSession == null) return;
+        try {
+            PlaybackStateCompat.Builder stateBuilder = new PlaybackStateCompat.Builder();
+            if (playing) {
+                stateBuilder.setState(
+                    PlaybackStateCompat.STATE_PLAYING,
+                    PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN,
+                    1.0f
+                );
+            } else {
+                stateBuilder.setState(
+                    PlaybackStateCompat.STATE_STOPPED,
+                    PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN,
+                    0f
+                );
+            }
+            mediaSession.setPlaybackState(stateBuilder.build());
+        } catch (Exception e) {
+            Log.w(DIAG_TAG, "updateMediaSessionPlaybackState failed: " + e.getMessage());
+        }
     }
 
     private void initSoundPool() {
@@ -159,6 +308,26 @@ public class BackgroundAudioService extends Service {
             handlePttUp();
         }
 
+        NativeRadioEngine engineInstance = NativeRadioEngine.peekInstance();
+        if (engineInstance != null) {
+            engineInstance.removeListener(this);
+            Log.d(DIAG_TAG, "Unregistered as NativeRadioEngine listener");
+        }
+
+        if (mediaSession != null) {
+            try {
+                updateMediaSessionPlaybackState(false);
+                mediaSession.setActive(false);
+                mediaSession.release();
+                Log.d(DIAG_TAG, "MediaSession released");
+            } catch (Exception e) {
+                Log.w(DIAG_TAG, "MediaSession release failed: " + e.getMessage());
+            }
+            mediaSession = null;
+        }
+
+        abandonAudioFocus();
+
         if (soundPool != null) {
             soundPool.release();
             soundPool = null;
@@ -185,8 +354,38 @@ public class BackgroundAudioService extends Service {
         super.onDestroy();
     }
 
+    private Notification buildForegroundNotification() {
+        Intent notificationIntent = new Intent(this, MainActivity.class);
+        notificationIntent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        PendingIntent pendingIntent = PendingIntent.getActivity(
+            this, 0, notificationIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
+
+        int iconId = getResources().getIdentifier("ic_stat_icon", "drawable", getPackageName());
+        if (iconId == 0) {
+            iconId = android.R.drawable.ic_media_play;
+        }
+
+        String contentText = pttState == PttState.TRANSMITTING
+            ? "TRANSMITTING"
+            : "Radio communications enabled";
+
+        return new NotificationCompat.Builder(this, CHANNEL_ID)
+            .setContentTitle("COMMAND COMMS Active")
+            .setContentText(contentText)
+            .setSmallIcon(iconId)
+            .setContentIntent(pendingIntent)
+            .setOngoing(true)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setCategory(NotificationCompat.CATEGORY_SERVICE)
+            .build();
+    }
+
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        startForeground(NOTIFICATION_ID, buildForegroundNotification());
+
         String action = intent != null ? intent.getAction() : null;
 
         if ("STOP".equals(action)) {
@@ -260,34 +459,6 @@ public class BackgroundAudioService extends Service {
             }
         }
 
-        Intent notificationIntent = new Intent(this, MainActivity.class);
-        notificationIntent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
-        PendingIntent pendingIntent = PendingIntent.getActivity(
-            this, 0, notificationIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
-        );
-
-        int iconId = getResources().getIdentifier("ic_stat_icon", "drawable", getPackageName());
-        if (iconId == 0) {
-            iconId = android.R.drawable.ic_media_play;
-        }
-
-        String contentText = pttState == PttState.TRANSMITTING
-            ? "TRANSMITTING"
-            : "Radio communications enabled";
-
-        Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("COMMAND COMMS Active")
-            .setContentText(contentText)
-            .setSmallIcon(iconId)
-            .setContentIntent(pendingIntent)
-            .setOngoing(true)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
-            .setCategory(NotificationCompat.CATEGORY_SERVICE)
-            .build();
-
-        startForeground(NOTIFICATION_ID, notification);
-
         return START_STICKY;
     }
 
@@ -308,6 +479,7 @@ public class BackgroundAudioService extends Service {
             .putString(PREF_CHANNEL_NAME, channelName)
             .apply();
         Log.d(DIAG_TAG, "LiveKit info persisted: lkUrl=" + lkUrl + " channelName=" + channelName);
+        updateMediaSessionPlaybackState(true);
     }
 
     private void persistConnectionInfo() {
@@ -452,9 +624,17 @@ public class BackgroundAudioService extends Service {
                     NativeRadioEngine reconnectEngine = NativeRadioEngine.getInstance(getApplicationContext());
                     if (reconnectEngine != null && reconnectEngine.isConnected()
                             && pttState == PttState.TRANSMITTING) {
+                        boolean focused = requestAudioFocus();
+                        if (!focused) {
+                            Log.w(DIAG_TAG, "handlePttDown() async-reconnect — audio focus denied, aborting TX");
+                            pttState = PttState.IDLE;
+                            notifyUiPttState(false);
+                            return;
+                        }
                         playTalkPermitTone();
                         boolean txResult = reconnectEngine.startTransmit();
                         Log.d(DIAG_TAG, "handlePttDown() async-reconnect — startTransmit() result=" + txResult);
+                        updateMediaSessionPlaybackState(true);
                         notifyUiPttState(true);
                     } else {
                         Log.w(DIAG_TAG, "handlePttDown() async-reconnect — connected but PTT released or engine gone");
@@ -473,11 +653,20 @@ public class BackgroundAudioService extends Service {
         pttState = PttState.TRANSMITTING;
         Log.d(DIAG_TAG, "handlePttDown() — state → TRANSMITTING");
 
+        boolean focused = requestAudioFocus();
+        if (!focused) {
+            Log.w(DIAG_TAG, "handlePttDown() — audio focus denied, aborting TX");
+            pttState = PttState.IDLE;
+            notifyUiPttState(false);
+            return;
+        }
+
         playTalkPermitTone();
 
         boolean txResult = engine.startTransmit();
         Log.d(DIAG_TAG, "handlePttDown() — startTransmit() result=" + txResult);
 
+        updateMediaSessionPlaybackState(true);
         sendPttSignaling("start");
         notifyUiPttState(true);
         Log.d(DIAG_TAG, "handlePttDown() — COMPLETE (tx=" + txResult + ")");
@@ -606,6 +795,9 @@ public class BackgroundAudioService extends Service {
 
         boolean txResult = engine.stopTransmit();
         Log.d(DIAG_TAG, "handlePttUp() — stopTransmit() result=" + txResult);
+
+        abandonAudioFocus();
+        updateMediaSessionPlaybackState(false);
 
         sendPttSignaling("end");
         notifyUiPttState(false);

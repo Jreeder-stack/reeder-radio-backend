@@ -43,6 +43,9 @@ public class MainActivity extends BridgeActivity {
     private static final int PERMISSION_REQUEST_CODE = 1001;
     private static final int BACKGROUND_LOCATION_REQUEST_CODE = 1002;
 
+    private static final String PREFS_MAIN = "CommandCommsMainPrefs";
+    private static final String PREF_BATTERY_EXEMPTION_PROMPTED = "battery_exemption_prompted";
+
     private boolean batteryExemptionPrompted = false;
 
     @Override
@@ -156,13 +159,31 @@ public class MainActivity extends BridgeActivity {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
             if (pm != null && !pm.isIgnoringBatteryOptimizations(getPackageName())) {
-                Log.d(TAG, "Requesting battery optimization exemption...");
+                android.content.SharedPreferences prefs = getSharedPreferences(PREFS_MAIN, Context.MODE_PRIVATE);
+                boolean alreadyPrompted = prefs.getBoolean(PREF_BATTERY_EXEMPTION_PROMPTED, false);
+                if (alreadyPrompted) {
+                    Log.d(TAG, "Battery optimization exemption: prompt already shown once, skipping dialog");
+                    return;
+                }
+                Log.d(TAG, "Requesting battery optimization exemption (first launch)...");
+                prefs.edit().putBoolean(PREF_BATTERY_EXEMPTION_PROMPTED, true).apply();
                 try {
-                    Intent intent = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
-                    intent.setData(Uri.parse("package:" + getPackageName()));
-                    startActivity(intent);
+                    new AlertDialog.Builder(this)
+                        .setTitle("Keep PTT Reliable in Background")
+                        .setMessage("To ensure Push-to-Talk works reliably when the screen is off, please allow COMMAND COMMS to run without battery restrictions.")
+                        .setPositiveButton("Allow", (dialog, which) -> {
+                            try {
+                                Intent intent = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+                                intent.setData(Uri.parse("package:" + getPackageName()));
+                                startActivity(intent);
+                            } catch (Exception e) {
+                                Log.e(TAG, "Failed to open battery optimization settings: " + e.getMessage());
+                            }
+                        })
+                        .setNegativeButton("Skip", null)
+                        .show();
                 } catch (Exception e) {
-                    Log.e(TAG, "Failed to request battery optimization exemption: " + e.getMessage());
+                    Log.e(TAG, "Failed to show battery optimization dialog: " + e.getMessage());
                 }
             } else {
                 Log.d(TAG, "Battery optimization already exempted");
@@ -542,6 +563,17 @@ public class MainActivity extends BridgeActivity {
         super.onPause();
         isScreenOff = true;
         Log.d(DIAG_TAG, "MainActivity.onPause() — isScreenOff=true, service running=" + BackgroundAudioService.isRunning);
+        if (BackgroundAudioService.isRunning) {
+            try {
+                WebView webView = this.bridge.getWebView();
+                if (webView != null) {
+                    webView.onResume();
+                    Log.d(DIAG_TAG, "MainActivity.onPause() — WebView.onResume() called to keep JS alive while service running");
+                }
+            } catch (Exception e) {
+                Log.w(DIAG_TAG, "MainActivity.onPause() — failed to call WebView.onResume(): " + e.getMessage());
+            }
+        }
         keepWebViewAlive();
         startJsKeepalive();
     }
