@@ -52,6 +52,7 @@ data class RadioUiState(
     val activeTransmittingUnit: String? = null,
     val myEmergencyActive: Boolean = false,
     val channelEmergencyActive: Boolean = false,
+    val channelEmergencyUnitId: String? = null,
     val isClearAir: Boolean = false,
     val currentStatus: String = "off_duty",
     val isKeyLocked: Boolean = false,
@@ -229,10 +230,10 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                         }
                     }
                     is SignalingEvent.EmergencyStart -> {
-                        _uiState.update { it.copy(channelEmergencyActive = true) }
+                        _uiState.update { it.copy(channelEmergencyActive = true, channelEmergencyUnitId = event.unitId) }
                     }
                     is SignalingEvent.EmergencyEnd -> {
-                        _uiState.update { it.copy(channelEmergencyActive = false, myEmergencyActive = false) }
+                        _uiState.update { it.copy(channelEmergencyActive = false, myEmergencyActive = false, channelEmergencyUnitId = null) }
                     }
                     is SignalingEvent.ClearAirStart -> {
                         _uiState.update { it.copy(isClearAir = true) }

@@ -36,6 +36,7 @@ private val BgEmerg   = Color(0xFFFF0000)
 private val TextMain  = Color(0xFF111111)
 private val TextMuted = Color(0xFF555555)
 private val Green     = Color(0xFF008844)
+private val Orange    = Color(0xFFFF7700)
 private val Red       = Color(0xFFCC0000)
 private val Amber     = Color(0xFFCC8800)
 private val White     = Color.White
@@ -100,6 +101,10 @@ fun RadioScreen(
 
             if (state.isClearAir) {
                 ClearAirBanner()
+            }
+
+            if (state.channelEmergencyActive && !state.myEmergencyActive && state.channelEmergencyUnitId != null) {
+                OtherUnitEmergencyBanner(unitId = state.channelEmergencyUnitId)
             }
 
             CenterDisplay(
@@ -170,6 +175,19 @@ private fun ClearAirBanner() {
 }
 
 @Composable
+private fun OtherUnitEmergencyBanner(unitId: String) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Red)
+            .padding(vertical = 12.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        T320Text(unitId, color = White, bold = true, size = 18)
+    }
+}
+
+@Composable
 private fun CenterDisplay(
     state: RadioUiState,
     modifier: Modifier = Modifier
@@ -179,11 +197,6 @@ private fun CenterDisplay(
         initialValue = 1f, targetValue = 0.5f,
         animationSpec = infiniteRepeatable(tween(600), RepeatMode.Reverse),
         label = "txAlpha"
-    )
-    val rxAlpha by infiniteTransition.animateFloat(
-        initialValue = 1f, targetValue = 0.65f,
-        animationSpec = infiniteRepeatable(tween(900), RepeatMode.Reverse),
-        label = "rxAlpha"
     )
 
     val isEmergency = state.myEmergencyActive
@@ -228,27 +241,13 @@ private fun CenterDisplay(
                 when {
                     state.pttState == PttState.TRANSMITTING -> {
                         Spacer(Modifier.height(6.dp))
-                        T320Text(
-                            "TX",
-                            color = Red.copy(alpha = txAlpha),
-                            bold = true, size = 18
-                        )
-                        T320Text(
-                            "ID: ${state.unitId}",
-                            color = if (isEmergency) White else Red,
-                            bold = true, size = 14
-                        )
+                        T320Text("TX", color = Green, bold = true, size = 18)
                     }
                     state.activeTransmittingUnit != null -> {
                         Spacer(Modifier.height(6.dp))
                         T320Text(
-                            "ID: ${state.activeTransmittingUnit}",
-                            color = if (isEmergency) White else Green,
-                            bold = true, size = 14
-                        )
-                        T320Text(
-                            "RX",
-                            color = (if (isEmergency) White else Green).copy(alpha = rxAlpha),
+                            state.activeTransmittingUnit,
+                            color = Orange,
                             bold = true, size = 14
                         )
                     }
