@@ -82,6 +82,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
 
     private var emergencyJob: Job? = null
     private var cancelArmingJob: Job? = null
+    private var armingElapsedMs = 0L
 
     init {
         val prefs = app.sessionPrefs
@@ -271,7 +272,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
     private fun onEmergencyDown() {
         val state = _uiState.value
         when {
-            emergencyJob == null && !state.myEmergencyActive -> startArming()
+            emergencyJob == null && !state.myEmergencyActive -> startArming(fromMs = 0L)
             !state.myEmergencyActive && !state.isEmergencyCancelling && cancelArmingJob == null -> startCancelArming()
             state.myEmergencyActive && !state.isEmergencyCancelling -> startCancelHold()
         }
@@ -281,19 +282,18 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         val state = _uiState.value
         when {
             cancelArmingJob != null && !state.isEmergencyCancelling -> {
-                // Quick release within debounce window — arming completely unaffected
                 cancelArmingJob?.cancel()
                 cancelArmingJob = null
                 Log.d(TAG, "CANCEL ARMING: quick release in debounce — arming unaffected")
             }
             cancelArmingJob != null && state.isEmergencyCancelling -> {
-                // Released after debounce threshold — restore arming audio and progress
                 cancelArmingJob?.cancel()
                 cancelArmingJob = null
+                val resumeFrom = armingElapsedMs
                 app.toneEngine.stopCountdownBeep()
-                app.toneEngine.startCountdownBeep()
-                _uiState.update { it.copy(isEmergencyCancelling = false, emergencyHoldProgress = null) }
-                Log.d(TAG, "CANCEL ARMING: aborted after debounce — arming resumes")
+                _uiState.update { it.copy(isEmergencyCancelling = false) }
+                Log.d(TAG, "CANCEL ARMING: aborted — resuming arming from ${resumeFrom}ms")
+                startArming(fromMs = resumeFrom)
             }
             state.isEmergencyCancelling && state.myEmergencyActive -> {
                 emergencyJob?.cancel()
@@ -305,53 +305,50 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private fun startArming() {
+    private fun startArming(fromMs: Long) {
+        armingElapsedMs = fromMs
         emergencyJob = viewModelScope.launch {
-            Log.d(TAG, "EMERGENCY ARMING: countdown started")
+            Log.d(TAG, "EMERGENCY ARMING: countdown started/resumed from ${armingElapsedMs}ms")
             app.toneEngine.startCountdownBeep()
-            _uiState.update { it.copy(emergencyHoldProgress = 0f) }
-            var elapsed = 0L
-            while (elapsed < 3000L) {
+            _uiState.update { it.copy(emergencyHoldProgress = armingElapsedMs / 3000f) }
+            while (armingElapsedMs < 3000L) {
                 delay(50)
-                elapsed += 50
-                if (!_uiState.value.isEmergencyCancelling) {
-                    _uiState.update { it.copy(emergencyHoldProgress = elapsed / 3000f) }
-                }
+                armingElapsedMs += 50
+                _uiState.update { it.copy(emergencyHoldProgress = armingElapsedMs / 3000f) }
             }
             emergencyJob = null
-            if (!_uiState.value.isEmergencyCancelling) {
-                app.toneEngine.stopCountdownBeep()
-                _uiState.update { it.copy(emergencyHoldProgress = null) }
-                onEmergencyActivate()
-            }
+            armingElapsedMs = 0L
+            app.toneEngine.stopCountdownBeep()
+            _uiState.update { it.copy(emergencyHoldProgress = null) }
+            onEmergencyActivate()
         }
     }
 
     private fun startCancelArming() {
         cancelArmingJob = viewModelScope.launch {
             Log.d(TAG, "CANCEL ARMING: hold started — debouncing")
-            // Silent debounce window: quick press/release has zero effect on arming
-            var elapsed = 0L
-            while (elapsed < 150L) {
+            var debounceElapsed = 0L
+            while (debounceElapsed < 150L) {
                 delay(50)
-                elapsed += 50
+                debounceElapsed += 50
             }
-            // Debounce cleared — commit to cancel-arming UI and audio
-            Log.d(TAG, "CANCEL ARMING: debounce cleared — showing cancel bar")
-            app.toneEngine.stopCountdownBeep()
-            app.toneEngine.startCountdownBeep()
-            _uiState.update { it.copy(isEmergencyCancelling = true, emergencyHoldProgress = 0f) }
-            while (elapsed < 3000L) {
-                delay(50)
-                elapsed += 50
-                _uiState.update { it.copy(emergencyHoldProgress = elapsed / 3000f) }
-            }
-            cancelArmingJob = null
+            Log.d(TAG, "CANCEL ARMING: debounce cleared — pausing arming at ${armingElapsedMs}ms")
             emergencyJob?.cancel()
             emergencyJob = null
             app.toneEngine.stopCountdownBeep()
+            app.toneEngine.startCountdownBeep()
+            _uiState.update { it.copy(isEmergencyCancelling = true, emergencyHoldProgress = 0f) }
+            var cancelElapsed = 0L
+            while (cancelElapsed < 3000L) {
+                delay(50)
+                cancelElapsed += 50
+                _uiState.update { it.copy(emergencyHoldProgress = cancelElapsed / 3000f) }
+            }
+            cancelArmingJob = null
+            armingElapsedMs = 0L
+            app.toneEngine.stopCountdownBeep()
             _uiState.update { it.copy(isEmergencyCancelling = false, emergencyHoldProgress = null) }
-            Log.d(TAG, "CANCEL ARMING: completed — arming cancelled")
+            Log.d(TAG, "CANCEL ARMING: completed — arming permanently cancelled")
         }
     }
 
