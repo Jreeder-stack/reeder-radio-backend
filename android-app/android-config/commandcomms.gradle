@@ -28,6 +28,7 @@ task applyCcNativeConfig {
             "NativeRadioEngine.kt",
             "PttKeyMapping.java",
             "RadioVoiceDSP.kt",
+            "SignalingConnection.java",
         ]
         javaSources.each { name ->
             def src = configDir.resolve(name).toFile()
@@ -116,3 +117,11 @@ task applyCcNativeConfig {
 }
 
 preBuild.dependsOn applyCcNativeConfig
+
+// ── Runtime dependencies required by Command Comms native code ───────────────
+// This block runs at configuration time when commandcomms.gradle is applied
+// to the Android app module, injecting the Socket.IO client needed by
+// SignalingConnection.java for real-time ptt:start / ptt:end events.
+dependencies {
+    implementation "io.socket:socket.io-client:2.1.0"
+}

@@ -33,13 +33,17 @@ import java.net.URL;
 
 import org.json.JSONObject;
 
-public class BackgroundAudioService extends Service implements NativeRadioEngine.Listener {
+public class BackgroundAudioService extends Service
+        implements NativeRadioEngine.Listener,
+                   SignalingConnection.PttStartListener,
+                   SignalingConnection.PttEndListener {
 
     private static final String TAG = "CommandComms.BgService";
     private static final String DIAG_TAG = "PTT-DIAG";
     private static final String CHANNEL_ID = "command_comms_channel";
     private static final int NOTIFICATION_ID = 1001;
     private static final long KEEPALIVE_INTERVAL_MS = 30000;
+    private static final long RX_GRACE_PERIOD_MS = 15000L;
     private static final String PREFS_NAME = "CommandCommsServicePrefs";
     private static final String PREF_SERVER_URL = "server_base_url";
     private static final String PREF_UNIT_ID = "unit_id";
@@ -88,6 +92,10 @@ public class BackgroundAudioService extends Service implements NativeRadioEngine
 
     private volatile boolean isReconnecting = false;
 
+    private SignalingConnection signalingConnection = null;
+    private Handler             rxGraceHandler      = null;
+    private Runnable            rxGraceRunnable     = null;
+
     private volatile String lastEventSource    = "none";
     private volatile int    lastEventCode      = -1;
     private volatile String lastEventAction    = "none";
@@ -131,6 +139,7 @@ public class BackgroundAudioService extends Service implements NativeRadioEngine
 
         restoreConnectionInfo();
         initSoundPool();
+        initSignalingConnection();
 
         PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
         if (pm != null) {
@@ -308,6 +317,12 @@ public class BackgroundAudioService extends Service implements NativeRadioEngine
             handlePttUp();
         }
 
+        cancelRxGraceTimer();
+        if (signalingConnection != null) {
+            signalingConnection.destroy();
+            signalingConnection = null;
+        }
+
         NativeRadioEngine engineInstance = NativeRadioEngine.peekInstance();
         if (engineInstance != null) {
             engineInstance.removeListener(this);
@@ -463,11 +478,51 @@ public class BackgroundAudioService extends Service implements NativeRadioEngine
     }
 
     public void setConnectionInfo(String baseUrl, String unitId, String channelId) {
-        this.serverBaseUrl = baseUrl;
-        this.currentUnitId = unitId;
+        String oldBaseUrl   = this.serverBaseUrl;
+        String oldUnitId    = this.currentUnitId;
+        String oldChannelId = this.currentChannelId;
+
+        this.serverBaseUrl    = baseUrl;
+        this.currentUnitId    = unitId;
         this.currentChannelId = channelId;
         persistConnectionInfo();
         Log.d(DIAG_TAG, "Connection info set and persisted: url=" + baseUrl + " unit=" + unitId + " channel=" + channelId);
+
+        boolean channelChanged = channelId != null && !channelId.equals(oldChannelId);
+        boolean serverChanged  = baseUrl   != null && !baseUrl.equals(oldBaseUrl);
+        boolean unitChanged    = unitId    != null && !unitId.equals(oldUnitId);
+
+        if (signalingConnection == null || serverChanged || unitChanged) {
+            initSignalingConnection();
+        } else if (channelChanged) {
+            if (oldChannelId != null) signalingConnection.leaveChannel(oldChannelId);
+            signalingConnection.joinChannel(channelId);
+            Log.d(DIAG_TAG, "SignalingConnection: switched channel " + oldChannelId + " → " + channelId);
+        }
+
+        if (channelChanged) {
+            NativeRadioEngine engine = NativeRadioEngine.peekInstance();
+            if (engine != null && engine.isConnected()) {
+                Log.d(DIAG_TAG, "setConnectionInfo() — channel changed while LiveKit connected; reconnecting to new channel");
+                new Thread(() -> {
+                    restoreConnectionInfo();
+                    if (livekitUrl == null || currentChannelName == null || currentUnitId == null) {
+                        Log.w(DIAG_TAG, "setConnectionInfo() — channel reconnect skipped, missing LiveKit info");
+                        return;
+                    }
+                    String token = fetchTokenFromServer(currentUnitId, currentChannelName);
+                    if (token == null) {
+                        Log.w(DIAG_TAG, "setConnectionInfo() — channel reconnect failed: no token");
+                        return;
+                    }
+                    NativeRadioEngine eng = NativeRadioEngine.getInstance(getApplicationContext());
+                    if (eng != null) {
+                        eng.connect(livekitUrl, token, currentChannelName);
+                        Log.d(DIAG_TAG, "setConnectionInfo() — LiveKit reconnected to channel=" + currentChannelName);
+                    }
+                }).start();
+            }
+        }
     }
 
     public void setLiveKitInfo(String lkUrl, String channelName) {
@@ -512,6 +567,103 @@ public class BackgroundAudioService extends Service implements NativeRadioEngine
         Log.d(DIAG_TAG, "Connection info restored from SharedPreferences: url=" + serverBaseUrl
             + " unit=" + currentUnitId + " channel=" + currentChannelId
             + " lkUrl=" + livekitUrl + " channelName=" + currentChannelName);
+    }
+
+    // ── SignalingConnection lifecycle ─────────────────────────────────────────
+
+    private void initSignalingConnection() {
+        if (serverBaseUrl == null || currentUnitId == null) {
+            Log.d(DIAG_TAG, "initSignalingConnection() — deferred (missing serverUrl or unitId)");
+            return;
+        }
+        if (signalingConnection != null) {
+            signalingConnection.destroy();
+            signalingConnection = null;
+        }
+        rxGraceHandler = new Handler(Looper.getMainLooper());
+        signalingConnection = new SignalingConnection(
+                serverBaseUrl,
+                currentUnitId,
+                currentUnitId,
+                currentChannelId,
+                this,
+                this
+        );
+        signalingConnection.connect();
+        Log.d(DIAG_TAG, "initSignalingConnection() — created and connecting, unit=" + currentUnitId
+                + " channel=" + currentChannelId);
+    }
+
+    @Override
+    public void onPttStart(String fromUnitId, String channelId) {
+        if (fromUnitId != null && fromUnitId.equals(currentUnitId)) {
+            Log.d(DIAG_TAG, "[Signaling] ptt:start — ignoring own transmission");
+            return;
+        }
+        Log.d(DIAG_TAG, "[Signaling] ptt:start from=" + fromUnitId + " channel=" + channelId
+                + " — cancelling RX grace timer and pre-connecting LiveKit");
+
+        cancelRxGraceTimer();
+
+        NativeRadioEngine engine = NativeRadioEngine.getInstance(getApplicationContext());
+        if (engine != null && engine.isConnected()) {
+            Log.d(DIAG_TAG, "[Signaling] ptt:start — LiveKit already connected, nothing to do");
+            return;
+        }
+
+        new Thread(() -> {
+            Log.d(DIAG_TAG, "[Signaling] ptt:start — fetching token for pre-connect");
+            restoreConnectionInfo();
+            if (livekitUrl == null || currentChannelName == null || currentUnitId == null) {
+                Log.w(DIAG_TAG, "[Signaling] ptt:start — pre-connect skipped, missing info: "
+                        + "lkUrl=" + livekitUrl + " channelName=" + currentChannelName
+                        + " unitId=" + currentUnitId);
+                return;
+            }
+            NativeRadioEngine eng = NativeRadioEngine.getInstance(getApplicationContext());
+            if (eng == null) return;
+
+            String token = fetchTokenFromServer(currentUnitId, currentChannelName);
+            if (token == null) {
+                Log.w(DIAG_TAG, "[Signaling] ptt:start — pre-connect failed: no token");
+                return;
+            }
+            eng.connect(livekitUrl, token, currentChannelName);
+            Log.d(DIAG_TAG, "[Signaling] ptt:start — pre-connect initiated to channel=" + currentChannelName);
+        }).start();
+    }
+
+    @Override
+    public void onPttEnd(String fromUnitId, String channelId) {
+        Log.d(DIAG_TAG, "[Signaling] ptt:end from=" + fromUnitId + " channel=" + channelId
+                + " — scheduling RX grace disconnect in " + RX_GRACE_PERIOD_MS + "ms");
+        scheduleRxGraceDisconnect();
+    }
+
+    private void scheduleRxGraceDisconnect() {
+        cancelRxGraceTimer();
+        if (rxGraceHandler == null) {
+            rxGraceHandler = new Handler(Looper.getMainLooper());
+        }
+        rxGraceRunnable = () -> {
+            if (pttState == PttState.TRANSMITTING) {
+                Log.d(DIAG_TAG, "[Signaling] RX grace — we are TX, skipping LiveKit disconnect");
+                return;
+            }
+            NativeRadioEngine engine = NativeRadioEngine.getInstance(getApplicationContext());
+            if (engine != null && engine.isConnected()) {
+                Log.d(DIAG_TAG, "[Signaling] RX grace expired — disconnecting LiveKit to save resources");
+                engine.disconnect();
+            }
+        };
+        rxGraceHandler.postDelayed(rxGraceRunnable, RX_GRACE_PERIOD_MS);
+    }
+
+    private void cancelRxGraceTimer() {
+        if (rxGraceHandler != null && rxGraceRunnable != null) {
+            rxGraceHandler.removeCallbacks(rxGraceRunnable);
+            rxGraceRunnable = null;
+        }
     }
 
     // ── Talk permit tone ──────────────────────────────────────────────────────

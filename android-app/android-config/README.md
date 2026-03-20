@@ -226,6 +226,7 @@ The app requires a foreground service to keep audio playing when minimized. Add 
 |------|------|
 | `PttBroadcastReceiver.java` | Catches firmware PTT broadcasts, forwards to BackgroundAudioService |
 | `BackgroundAudioService.java` | Foreground service: owns PTT state machine, calls LiveKit TX, HTTP signaling |
+| `SignalingConnection.java` | Socket.IO client wrapper: authenticates, joins channel room, delivers ptt:start/ptt:end for RX pre-connect |
 | `LiveKitPlugin.kt` | Native LiveKit SDK wrapper: static `startTransmit()` / `stopTransmit()` |
 | `HardwarePttPlugin.java` | Capacitor plugin for UI sync (JS notifyListeners), not control path |
 | `MainActivity.java` | Foreground key dispatch (redundant path), WebView keepalive |
@@ -270,6 +271,9 @@ dependencies {
     
     // LiveKit Native SDK
     implementation "io.livekit:livekit-android:2.5.0"
+
+    // Socket.IO client — required for SignalingConnection (RX pre-connect on ptt:start)
+    implementation "io.socket:socket.io-client:2.1.0"
 }
 
 repositories {
