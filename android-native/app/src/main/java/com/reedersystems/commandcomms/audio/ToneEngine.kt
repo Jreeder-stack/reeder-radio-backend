@@ -50,6 +50,15 @@ class ToneEngine(private val context: Context) {
         }
     }
 
+    fun playBusyTone() {
+        scope.launch {
+            repeat(3) {
+                playBeeps(480f, count = 1, durationMs = 200, gapMs = 0, volume = 0.45f)
+                delay(200L)
+            }
+        }
+    }
+
     fun startBusyTone() {
         stopBusyTone()
         busyJob = scope.launch {

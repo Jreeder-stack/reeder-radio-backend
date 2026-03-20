@@ -24,6 +24,10 @@ class SessionPrefs(context: Context) {
         get() = prefs.getInt(KEY_USER_ID, -1)
         set(value) = prefs.edit().putInt(KEY_USER_ID, value).apply()
 
+    var micPermissionGranted: Boolean
+        get() = prefs.getBoolean(KEY_MIC_GRANTED, false)
+        set(value) = prefs.edit().putBoolean(KEY_MIC_GRANTED, value).apply()
+
     fun clear() {
         prefs.edit().clear().apply()
     }
@@ -34,5 +38,6 @@ class SessionPrefs(context: Context) {
         private const val KEY_UNIT_ID = "unit_id"
         private const val KEY_ROLE = "role"
         private const val KEY_USER_ID = "user_id"
+        private const val KEY_MIC_GRANTED = "mic_granted"
     }
 }

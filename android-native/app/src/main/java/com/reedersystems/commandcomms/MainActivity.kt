@@ -2,6 +2,7 @@ package com.reedersystems.commandcomms
 
 import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
@@ -11,6 +12,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import com.reedersystems.commandcomms.audio.BackgroundAudioService
 import com.reedersystems.commandcomms.navigation.AppNavigation
 import com.reedersystems.commandcomms.ui.theme.CommandCommsTheme
@@ -32,11 +34,39 @@ class MainActivity : ComponentActivity() {
 
     private var starDownTime = 0L
 
-    private val permissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) { results ->
-        results.forEach { (perm, granted) ->
-            Log.d(TAG, "Permission $perm granted=$granted")
+    private val requestNotificationsLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        Log.d(TAG, "POST_NOTIFICATIONS granted=$granted")
+    }
+
+    private val requestLocationLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        Log.d(TAG, "ACCESS_FINE_LOCATION granted=$granted")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED
+            ) {
+                requestNotificationsLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+    }
+
+    private val requestMicLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        Log.d(TAG, "RECORD_AUDIO granted=$granted")
+        app.sessionPrefs.micPermissionGranted = granted
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            requestLocationLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            requestNotificationsLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
     }
 
@@ -52,14 +82,23 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun requestAppPermissions() {
-        val perms = buildList {
-            add(Manifest.permission.RECORD_AUDIO)
-            add(Manifest.permission.ACCESS_FINE_LOCATION)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                add(Manifest.permission.POST_NOTIFICATIONS)
+        val micGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) ==
+            PackageManager.PERMISSION_GRANTED
+        app.sessionPrefs.micPermissionGranted = micGranted
+        if (!micGranted) {
+            requestMicLauncher.launch(Manifest.permission.RECORD_AUDIO)
+        } else {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED
+            ) {
+                requestLocationLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED
+            ) {
+                requestNotificationsLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
         }
-        permissionLauncher.launch(perms.toTypedArray())
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
@@ -67,7 +106,12 @@ class MainActivity : ComponentActivity() {
             KEY_PTT -> {
                 if (event?.repeatCount == 0) {
                     Log.d(TAG, "MainActivity PTT DOWN keyCode=$keyCode")
-                    sendPttIntent(BackgroundAudioService.ACTION_PTT_DOWN)
+                    if (app.sessionPrefs.micPermissionGranted) {
+                        sendPttIntent(BackgroundAudioService.ACTION_PTT_DOWN)
+                    } else {
+                        Log.w(TAG, "PTT DOWN hardware key: mic permission denied — blocked")
+                        app.toneEngine.playErrorTone()
+                    }
                 }
                 return true
             }

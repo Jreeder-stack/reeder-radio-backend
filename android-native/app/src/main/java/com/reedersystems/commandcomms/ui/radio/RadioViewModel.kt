@@ -59,6 +59,7 @@ data class RadioUiState(
     val showScanOverlay: Boolean = false,
     val clockTime: String = "",
     val batteryLevel: Int? = null,
+    val micPermissionGranted: Boolean = false,
 ) {
     val currentZone: Zone? get() = zones.getOrNull(currentZoneIndex)
     val currentChannel: Channel? get() = currentZone?.channels?.getOrNull(currentChannelIndex)
@@ -86,7 +87,8 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update {
             it.copy(
                 username = prefs.username ?: "",
-                unitId = prefs.unitId ?: prefs.username ?: ""
+                unitId = prefs.unitId ?: prefs.username ?: "",
+                micPermissionGranted = prefs.micPermissionGranted
             )
         }
         updateClock()
@@ -221,12 +223,29 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun setMicPermissionGranted(granted: Boolean) {
+        app.sessionPrefs.micPermissionGranted = granted
+        _uiState.update { it.copy(micPermissionGranted = granted) }
+        Log.d(TAG, "Mic permission granted=$granted")
+    }
+
     fun onPttDown() {
         val state = _uiState.value
         if (state.isKeyLocked) return
         if (state.pttState != PttState.IDLE) return
+        if (!state.micPermissionGranted) {
+            Log.w(TAG, "PTT DOWN: mic permission denied — blocked")
+            app.toneEngine.playErrorTone()
+            return
+        }
         val channelId = state.currentChannel?.id ?: run {
             Log.w(TAG, "PTT DOWN: no channel selected")
+            app.toneEngine.playErrorTone()
+            return
+        }
+        if (state.activeTransmittingUnit != null && state.activeTransmittingUnit != state.unitId) {
+            Log.w(TAG, "PTT DOWN: channel busy — unit=${state.activeTransmittingUnit}")
+            app.toneEngine.playBusyTone()
             return
         }
         Log.d(TAG, "onPttDown channelId=$channelId")
@@ -256,14 +275,20 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun onEmergencyUp() {
-        if (!_uiState.value.isEmergencyCancelling) return
-        emergencyJob?.cancel()
-        emergencyJob = null
-        app.toneEngine.stopCountdownBeep()
-        _uiState.update { it.copy(isEmergencyCancelling = false, emergencyHoldProgress = null) }
-        Log.d(TAG, "CANCEL HOLD: aborted early")
-        if (!_uiState.value.myEmergencyActive) {
-            resumeArming()
+        val state = _uiState.value
+        if (state.isEmergencyCancelling) {
+            emergencyJob?.cancel()
+            emergencyJob = null
+            app.toneEngine.stopCountdownBeep()
+            _uiState.update { it.copy(isEmergencyCancelling = false, emergencyHoldProgress = null) }
+            Log.d(TAG, "CANCEL HOLD: aborted early")
+        } else if (emergencyJob != null && !state.myEmergencyActive) {
+            emergencyJob?.cancel()
+            emergencyJob = null
+            app.toneEngine.stopCountdownBeep()
+            _uiState.update { it.copy(emergencyHoldProgress = null) }
+            armingElapsedMs = 0L
+            Log.d(TAG, "ARMING: aborted by key-up before 3s")
         }
     }
 
