@@ -1,0 +1,127 @@
+2026-03-20T15:00:34.849849215Z [Signaling] INDIANA-1 left channel 534
+2026-03-20T15:00:35.005153925Z [Signaling] INDIANA-1 joined channel 169
+2026-03-20T15:00:35.173511757Z [Signaling] INDIANA-1 left channel 169
+2026-03-20T15:00:35.238886249Z [Signaling] INDIANA-1 joined channel 170
+2026-03-20T15:00:35.428508852Z [Signaling] INDIANA-1 left channel 170
+2026-03-20T15:00:35.508266514Z [Signaling] INDIANA-1 joined channel 534
+2026-03-20T15:00:35.718884361Z [Signaling] INDIANA-1 left channel 534
+2026-03-20T15:00:35.789595088Z [Signaling] INDIANA-1 joined channel 169
+2026-03-20T15:00:36.008002403Z [Signaling] INDIANA-1 left channel 169
+2026-03-20T15:00:36.069410509Z [Signaling] INDIANA-1 joined channel 170
+2026-03-20T15:00:36.288516434Z [Signaling] INDIANA-1 left channel 170
+2026-03-20T15:00:36.364394482Z [Signaling] INDIANA-1 joined channel 534
+2026-03-20T15:00:36.582964422Z [Signaling] INDIANA-1 left channel 534
+2026-03-20T15:00:36.648421816Z [Signaling] INDIANA-1 joined channel 169
+2026-03-20T15:00:37.235313003Z [Signaling] INDIANA-1 left channel 169
+2026-03-20T15:00:37.305425643Z [Signaling] INDIANA-1 joined channel 170
+2026-03-20T15:00:40.903723397Z [Signaling] INDIANA-1 left channel 170
+2026-03-20T15:00:40.97531245Z [Signaling] INDIANA-1 joined channel 169
+2026-03-20T15:00:41.016548886Z [Signaling] INDIANA-1 left channel 169
+2026-03-20T15:00:41.016734211Z [Signaling] INDIANA-1 joined channel 534
+2026-03-20T15:00:41.059361407Z [Signaling] INDIANA-1 left channel 534
+2026-03-20T15:00:41.059386838Z [Signaling] INDIANA-1 joined channel 170
+2026-03-20T15:00:41.096459222Z [Signaling] INDIANA-1 left channel 170
+2026-03-20T15:00:41.17710277Z [Signaling] INDIANA-1 joined channel 169
+2026-03-20T15:00:41.17713816Z [Signaling] INDIANA-1 left channel 169
+2026-03-20T15:00:41.177142001Z [Signaling] INDIANA-1 joined channel 534
+2026-03-20T15:00:41.228408699Z [Signaling] INDIANA-1 left channel 534
+2026-03-20T15:00:41.308437789Z [Signaling] INDIANA-1 joined channel 170
+2026-03-20T15:00:41.308758758Z [Signaling] INDIANA-1 left channel 170
+2026-03-20T15:00:41.308929043Z [Signaling] INDIANA-1 joined channel 169
+2026-03-20T15:00:41.308967974Z [Signaling] INDIANA-1 left channel 169
+2026-03-20T15:00:41.361103519Z [Signaling] INDIANA-1 joined channel 534
+2026-03-20T15:00:41.398329967Z [Signaling] INDIANA-1 left channel 534
+2026-03-20T15:00:41.398507962Z [Signaling] INDIANA-1 joined channel 170
+2026-03-20T15:00:41.454609772Z [Signaling] INDIANA-1 left channel 170
+2026-03-20T15:00:41.52772718Z [Signaling] INDIANA-1 joined channel 169
+2026-03-20T15:00:41.527814472Z [Signaling] INDIANA-1 left channel 169
+2026-03-20T15:00:41.528250065Z [Signaling] INDIANA-1 joined channel 534
+2026-03-20T15:00:41.529003017Z [Signaling] INDIANA-1 left channel 534
+2026-03-20T15:00:41.529562083Z [Signaling] INDIANA-1 joined channel 170
+2026-03-20T15:00:45Z clientIP="166.137.175.27" requestID="854a6e8f-ef1b-4b3c" responseTimeMS=126 responseBytes=376 userAgent="okhttp/4.12.0"
+2026-03-20T15:00:45.511639046Z [PTT-HTTP] Token request rejected: unit "INDIANA-1" channels=[170] but requested "OPS__OPS-1"
+2026-03-20T15:00:45.523097741Z [API] GET /api/ptt/token?identity=INDIANA-1&room=OPS__OPS-1 | user=Jreeder5029(id:2) | sid=zc-ccbAW... | 403 | 12ms
+2026-03-20T15:00:46Z clientIP="166.137.175.27" requestID="b73d3f71-2dc7-416c" responseTimeMS=21 responseBytes=376 userAgent="okhttp/4.12.0"
+2026-03-20T15:00:46.934687918Z [PTT-HTTP] Token request rejected: unit "INDIANA-1" channels=[170] but requested "OPS__OPS-1"
+2026-03-20T15:00:46.94501134Z [API] GET /api/ptt/token?identity=INDIANA-1&room=OPS__OPS-1 | user=Jreeder5029(id:2) | sid=zc-ccbAW... | 403 | 10ms
+2026-03-20T15:01:44.178107701Z [Signaling] INDIANA-1 left channel 170
+2026-03-20T15:01:44.254173175Z [Signaling] INDIANA-1 joined channel 534
+2026-03-20T15:01:44.665688954Z [Signaling] INDIANA-1 left channel 534
+2026-03-20T15:01:44.729125368Z [Signaling] INDIANA-1 joined channel 169
+2026-03-20T15:02:07Z clientIP="166.137.175.27" requestID="15978df3-81d0-4a89" responseTimeMS=122 responseBytes=376 userAgent="okhttp/4.12.0"
+2026-03-20T15:02:07.90364512Z [PTT-HTTP] Token request rejected: unit "INDIANA-1" channels=[169] but requested "DISPATCH__DISPATCH"
+2026-03-20T15:02:07.914060624Z [API] GET /api/ptt/token?identity=INDIANA-1&room=DISPATCH__DISPATCH | user=Jreeder5029(id:2) | sid=zc-ccbAW... | 403 | 10ms
+2026-03-20T15:02:19Z clientIP="166.137.146.4" requestID="3f738ba1-2821-46e6" responseTimeMS=7 responseBytes=705 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+2026-03-20T15:02:19.306155356Z [AUTH] /me check: hasSession=false sessionID=7yw8VATj... cookie=true
+2026-03-20T15:02:19.306178887Z [AUTH] /me: no session user, returning 401
+2026-03-20T15:02:19.312579324Z [API] GET /api/auth/me | session=none | sid=7yw8VATj... | 401 | 7ms
+2026-03-20T15:02:19.334921567Z [AUTH-MW] Blocked: GET /api/dispatch/channels — no session user | sessionID=Et76lNKN... | cookie=true | ip=162.158.158.82
+2026-03-20T15:02:19.334938327Z [API] GET /api/dispatch/channels | session=none | sid=Et76lNKN... | 401 | 1ms
+2026-03-20T15:02:19.442078939Z [Signaling] Client connected: d9mXe2eGQE3TK6FZAAAF
+2026-03-20T15:02:19.47873874Z [AUTH] Login attempt: username="DISPATCH-1"
+2026-03-20T15:02:19.487253229Z [Signaling] Unit authenticated: DISPATCH-1 (DISPATCH-1)
+2026-03-20T15:02:19.524200449Z [AUTH-MW] Blocked: GET /api/dispatch/channels — no session user | sessionID=BxShNF9I... | cookie=true | ip=162.158.63.61
+2026-03-20T15:02:19.524318293Z [API] GET /api/dispatch/channels | session=none | sid=BxShNF9I... | 401 | 3ms
+2026-03-20T15:02:19.543754941Z [AUTH-MW] Blocked: GET /api/dispatch/units — no session user | sessionID=JiDnjNf9... | cookie=true | ip=162.158.63.61
+2026-03-20T15:02:19.54441021Z [API] GET /api/dispatch/units | session=none | sid=JiDnjNf9... | 401 | 1ms (logged 1/60)
+2026-03-20T15:02:19.745076845Z [AUTH] Login success: username="DISPATCH-1" id=7 role=admin unit_id=DISPATCH-1 is_dispatcher=true sessionID=0xjyMCNA...
+2026-03-20T15:02:19.745098436Z [API] POST /api/auth/login | session=none | sid=0xjyMCNA... | 200 | 263ms
+2026-03-20T15:02:19Z clientIP="166.137.146.4" requestID="31686097-8d26-4d66" responseTimeMS=22 responseBytes=1375 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+2026-03-20T15:02:19.792746349Z [Signaling] Unit authenticated: DISPATCH-1 (DISPATCH-1)
+2026-03-20T15:02:19.855098932Z [DISPATCH] getChannels: 3 radio channels returned
+2026-03-20T15:02:19.866576367Z [API] GET /api/dispatch/channels | user=DISPATCH-1(id:7) | sid=0xjyMCNA... | 200 | 20ms
+2026-03-20T15:02:19.92622454Z [Signaling] DISPATCH-1 joined channel DISPATCH__DISPATCH
+2026-03-20T15:02:19Z clientIP="166.137.146.4" requestID="56de1b8a-5ca2-4d40" responseTimeMS=268 responseBytes=749 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+2026-03-20T15:02:19Z clientIP="166.137.175.27" requestID="23551f5a-c37b-427d" responseTimeMS=4 responseBytes=358 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+2026-03-20T15:02:19Z clientIP="166.137.146.4" requestID="fe954a6d-195c-47c2" responseTimeMS=6 responseBytes=27111 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+2026-03-20T15:02:18Z clientIP="166.137.175.27" requestID="4113fb7f-913c-40b5" responseTimeMS=32 responseBytes=1375 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+2026-03-20T15:02:19Z clientIP="166.137.175.27" requestID="b1100b8a-82b7-4531" responseTimeMS=11 responseBytes=440 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+2026-03-20T15:02:19Z clientIP="166.137.175.27" requestID="3562abd0-ce71-4d4d" responseTimeMS=7 responseBytes=1375 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+2026-03-20T15:02:19Z clientIP="166.137.146.4" requestID="546eae65-b87b-45f4" responseTimeMS=3 responseBytes=358 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+2026-03-20T15:02:19Z clientIP="166.137.146.4" requestID="38af11c7-1d9d-4279" responseTimeMS=11 responseBytes=358 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+2026-03-20T15:02:19Z clientIP="166.137.146.4" requestID="09da7325-fc8d-413e" responseTimeMS=31 responseBytes=526 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+2026-03-20T15:02:19Z clientIP="166.137.146.4" requestID="6ffa2e68-1a16-443f" responseTimeMS=30 responseBytes=663 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+2026-03-20T15:02:21.102119271Z [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=0xjyMCNA... | 200 | 25ms
+2026-03-20T15:02:21Z clientIP="166.137.146.4" requestID="a56482e4-6f6e-4bff" responseTimeMS=38 responseBytes=483 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+2026-03-20T15:02:21Z clientIP="166.137.146.4" requestID="1b770bc3-14cc-4957" responseTimeMS=14 responseBytes=1113 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+2026-03-20T15:02:22.784374674Z [PTT-HTTP] Token request rejected: unit "INDIANA-1" channels=[169] but requested "DISPATCH__DISPATCH"
+2026-03-20T15:02:22.794008175Z [API] GET /api/ptt/token?identity=INDIANA-1&room=DISPATCH__DISPATCH | user=Jreeder5029(id:2) | sid=zc-ccbAW... | 403 | 10ms
+2026-03-20T15:02:22Z clientIP="166.137.175.27" requestID="82bd4349-073b-4fee" responseTimeMS=22 responseBytes=376 userAgent="okhttp/4.12.0"
+2026-03-20T15:02:24Z clientIP="166.137.146.4" requestID="fc90b0ea-1468-41ca" responseTimeMS=35 responseBytes=232 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+2026-03-20T15:02:24.47124382Z [DISPATCH] getUnits: 0 units returned | user=DISPATCH-1 | sessionID=0xjyMCNA... (logged 1/60)
+2026-03-20T15:02:25.779611193Z [AI-Dispatcher-Signaling] 2026-03-20T15:02:25.779Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"DISPATCH-1","isEmergency":false}
+2026-03-20T15:02:25.779644414Z [AI-Dispatcher-Signaling] 2026-03-20T15:02:25.779Z | CONNECTING_FOR_PTT {"channelId":"DISPATCH__DISPATCH","unitId":"DISPATCH-1"}
+2026-03-20T15:02:25.779762717Z [Signaling] PTT START: DISPATCH-1 on DISPATCH__DISPATCH
+2026-03-20T15:02:25.787317488Z [AI-Dispatcher] 2026-03-20T15:02:25.787Z | REJOIN_TRIGGERED {"channel":"DISPATCH__DISPATCH"}
+2026-03-20T15:02:25Z clientIP="166.137.146.4" requestID="806d2d82-89f2-46a3" responseTimeMS=45 responseBytes=24301 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+2026-03-20T15:02:26.598250841Z [AI-Dispatcher] 2026-03-20T15:02:26.598Z | ROOM_JOINED {"room":"DISPATCH__DISPATCH","humanCount":1}
+2026-03-20T15:02:26.598272182Z [AI-Dispatcher-Signaling] 2026-03-20T15:02:26.598Z | CONNECTED_FOR_PTT {"channelId":"DISPATCH__DISPATCH","unitId":"DISPATCH-1"}
+2026-03-20T15:02:26.598587851Z [Signaling] PTT_READY sent for DISPATCH-1 on DISPATCH__DISPATCH
+2026-03-20T15:02:26.598638903Z [AI-Dispatcher-Signaling] 2026-03-20T15:02:26.598Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"DISPATCH-1","wasAlreadyConnected":false}
+2026-03-20T15:02:26.602111104Z [AI-Dispatcher] 2026-03-20T15:02:26.601Z | TRACK_SUBSCRIBED {"participant":"DISPATCH-1","room":"DISPATCH__DISPATCH","trackSid":"TR_AMwpoqCsSqAYoq"}
+2026-03-20T15:02:26.608749218Z [AI-Dispatcher] 2026-03-20T15:02:26.608Z | AUDIO_BUFFERING_START {"participant":"DISPATCH-1","room":"DISPATCH__DISPATCH"}
+2026-03-20T15:02:25Z clientIP="166.137.146.4" requestID="efdf1bfb-643d-4055" responseTimeMS=12 responseBytes=1375 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+2026-03-20T15:02:27.171103956Z [AI-Dispatcher-Signaling] 2026-03-20T15:02:27.170Z | PTT_END_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"DISPATCH-1","gracePeriodMs":15000}
+2026-03-20T15:02:27.171140747Z [Signaling] PTT END: DISPATCH-1 on DISPATCH__DISPATCH (1392ms)
+2026-03-20T15:02:27.332865864Z [AI-Dispatcher] 2026-03-20T15:02:27.332Z | TRACK_UNSUBSCRIBED {"participant":"DISPATCH-1","room":"DISPATCH__DISPATCH"}
+2026-03-20T15:02:27.332986077Z [AI-Dispatcher] 2026-03-20T15:02:27.332Z | AUDIO_BUFFERING_COMPLETE {"participant":"DISPATCH-1","frames":73,"bytes":70080}
+2026-03-20T15:02:27.348674496Z [AI-Dispatcher] 2026-03-20T15:02:27.348Z | VOICE_MESSAGE_SAVED {"channel":"DISPATCH__DISPATCH","sender":"DISPATCH-1","filename":"DISPATCH__DISPATCH_1774018947333_DISPATCH_1.wav","duration":1}
+2026-03-20T15:02:27.432713712Z [AI-Dispatcher] 2026-03-20T15:02:27.432Z | AUDIO_PROCESSING {"bytes":70080,"room":"DISPATCH__DISPATCH","participant":"DISPATCH-1"}
+2026-03-20T15:02:27.452068508Z [AI-Dispatcher] 2026-03-20T15:02:27.451Z | MESSAGE_BROADCAST {"channel":"DISPATCH__DISPATCH","messageId":836}
+2026-03-20T15:02:27.856906001Z [AI-Dispatcher] 2026-03-20T15:02:27.856Z | STT_NO_SPEECH {}
+2026-03-20T15:02:29Z clientIP="166.137.146.4" requestID="3b17315f-3b63-4b91" responseTimeMS=27 responseBytes=232 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+2026-03-20T15:02:34Z clientIP="166.137.146.4" requestID="1aee46c7-8542-4501" responseTimeMS=29 responseBytes=232 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+2026-03-20T15:02:36.71134492Z [AUTH] /me check: hasSession=true sessionID=0xjyMCNA... cookie=true
+2026-03-20T15:02:36.71135974Z [AUTH] /me: session has user="DISPATCH-1" id=7, refreshing from DB...
+2026-03-20T15:02:36.71886703Z [AUTH] /me: returning fresh user data for "DISPATCH-1" role=admin unit_id=DISPATCH-1
+2026-03-20T15:02:36.72878598Z [API] GET /api/auth/me | user=DISPATCH-1(id:7) | sid=0xjyMCNA... | 304 | 17ms
+2026-03-20T15:02:36.773831126Z [Signaling] Unit authenticated: DISPATCH-1 (DISPATCH-1)
+2026-03-20T15:02:36.820890062Z [Signaling] DISPATCH-1 joined channel DISPATCH__DISPATCH
+2026-03-20T15:02:36Z clientIP="166.137.146.4" requestID="f5b637e0-adbb-461a" responseTimeMS=27 responseBytes=315 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+2026-03-20T15:02:39Z clientIP="166.137.146.4" requestID="a3e4aac5-309d-49f2" responseTimeMS=27 responseBytes=232 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+2026-03-20T15:02:42.17101581Z [Signaling] Grace period ended for DISPATCH__DISPATCH
+2026-03-20T15:02:42.172471153Z [AI-Dispatcher-Signaling] 2026-03-20T15:02:42.172Z | DISCONNECTING_IDLE {"channelId":"DISPATCH__DISPATCH"}
+2026-03-20T15:02:42.172598846Z [AI-Dispatcher] 2026-03-20T15:02:42.172Z | ROOM_LEAVING {"room":"DISPATCH__DISPATCH","reason":"No humans present"}
+2026-03-20T15:02:42.181178057Z [AI-Dispatcher] 2026-03-20T15:02:42.179Z | ROOM_LEFT {"room":"DISPATCH__DISPATCH"}
+2026-03-20T15:02:44Z clientIP="166.137.146.4" requestID="d09fae75-7554-4a1a" responseTimeMS=27 responseBytes=232 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+2026-03-20T15:02:49Z clientIP="166.137.146.4" requestID="47dfbec5-7bd3-4acf" responseTimeMS=27 responseBytes=232 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
