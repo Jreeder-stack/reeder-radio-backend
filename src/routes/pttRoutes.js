@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { AccessToken } from 'livekit-server-sdk';
 import { signalingService } from '../services/signalingService.js';
+import pool from '../db/index.js';
 
 const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY;
 const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET;
@@ -138,9 +139,27 @@ router.get('/token', async (req, res) => {
     return res.status(403).json({ error: 'Unit not authenticated with signaling' });
   }
 
-  if (!presence.channels?.includes(room)) {
-    console.warn(`[PTT-HTTP] Token request rejected: unit "${identity}" channels=[${presence.channels?.join(',')}] but requested "${room}"`);
-    return res.status(403).json({ error: 'Unit not assigned to requested channel' });
+  // presence.channels stores numeric IDs (from Android channel:join).
+  // The token request uses a room key string. Look up the channel ID from the DB.
+  try {
+    const result = await pool.query(
+      `SELECT id FROM channels WHERE COALESCE(zone, 'Default') || '__' || name = $1 AND enabled = true LIMIT 1`,
+      [room]
+    );
+    if (!result.rows.length) {
+      console.warn(`[PTT-HTTP] Token request rejected: unknown room key "${room}"`);
+      return res.status(400).json({ error: 'Unknown room' });
+    }
+    const channelNumericId = result.rows[0].id;
+    const unitChannels = presence.channels ?? [];
+    const onChannel = unitChannels.some(c => Number(c) === channelNumericId);
+    if (!onChannel) {
+      console.warn(`[PTT-HTTP] Token request rejected: unit "${identity}" channels=[${unitChannels.join(',')}] not on channel ${channelNumericId} ("${room}")`);
+      return res.status(403).json({ error: 'Unit not assigned to requested channel' });
+    }
+  } catch (dbErr) {
+    console.error('[PTT-HTTP] DB lookup failed during token auth:', dbErr.message);
+    return res.status(500).json({ error: 'Internal error during channel lookup' });
   }
 
   if (!LIVEKIT_API_KEY || !LIVEKIT_API_SECRET) {
