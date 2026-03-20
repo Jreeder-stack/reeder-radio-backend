@@ -40,12 +40,36 @@
             android:exported="false"
             android:foregroundServiceType="microphone|location" />
 
+        <!--
+            Exported so Inrico T320 firmware broadcasts reach this receiver regardless of
+            screen state or app lifecycle. No accessibility service required for screen-off PTT.
+        -->
         <receiver
             android:name=".audio.PttHardwareReceiver"
-            android:exported="false">
+            android:exported="true">
+            <!-- Internal self-sent actions (foreground / legacy callers) -->
             <intent-filter>
                 <action android:name="com.reedersystems.commandcomms.PTT_DOWN" />
                 <action android:name="com.reedersystems.commandcomms.PTT_UP" />
+            </intent-filter>
+            <!-- Generic Android PTT broadcast (pttKeyState extra) -->
+            <intent-filter>
+                <action android:name="android.intent.action.PTT" />
+            </intent-filter>
+            <!-- Inrico T320 firmware — standard Android namespace -->
+            <intent-filter>
+                <action android:name="android.intent.action.PTT_KEY_DOWN" />
+                <action android:name="android.intent.action.PTT_KEY_UP" />
+            </intent-filter>
+            <!-- Inrico T320 firmware — vendor namespace -->
+            <intent-filter>
+                <action android:name="com.inrico.ptt.PTT_KEY_DOWN" />
+                <action android:name="com.inrico.ptt.PTT_KEY_UP" />
+            </intent-filter>
+            <!-- Inrico T320 firmware — telecom namespace (some ROM versions) -->
+            <intent-filter>
+                <action android:name="com.android.server.telecom.PushToTalk.action.PTT_KEY_DOWN" />
+                <action android:name="com.android.server.telecom.PushToTalk.action.PTT_KEY_UP" />
             </intent-filter>
         </receiver>
 

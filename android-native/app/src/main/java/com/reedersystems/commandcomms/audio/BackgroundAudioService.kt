@@ -6,6 +6,7 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
 import android.os.IBinder
+import android.os.PowerManager
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.reedersystems.commandcomms.CommandCommsApp
@@ -29,6 +30,12 @@ class BackgroundAudioService : Service() {
     private lateinit var audioEngine: PttAudioEngine
     private lateinit var servicePrefs: ServiceConnectionPrefs
     private val app get() = application as CommandCommsApp
+
+    /**
+     * Held for the entire service lifetime so the CPU stays awake during screen-off PTT.
+     * Prevents Doze from interrupting audio or HTTP PTT calls mid-transmission.
+     */
+    private lateinit var serviceWakeLock: PowerManager.WakeLock
 
     private var pttState = PttState.IDLE
     private var gracePeriodJob: Job? = null
@@ -57,6 +64,15 @@ class BackgroundAudioService : Service() {
     override fun onCreate() {
         super.onCreate()
         Log.d(TAG, "BackgroundAudioService created")
+
+        val pm = getSystemService(POWER_SERVICE) as PowerManager
+        serviceWakeLock = pm.newWakeLock(
+            PowerManager.PARTIAL_WAKE_LOCK,
+            WAKE_LOCK_TAG
+        ).apply { setReferenceCounted(false) }
+        serviceWakeLock.acquire()
+        Log.d(TAG, "BackgroundAudioService: service-lifetime WakeLock acquired")
+
         audioEngine = PttAudioEngine(applicationContext)
         servicePrefs = ServiceConnectionPrefs(applicationContext)
         createNotificationChannel()
@@ -401,6 +417,10 @@ class BackgroundAudioService : Service() {
         scope.launch { audioEngine.stopTransmit() }
         scope.cancel()
         audioEngine.release()
+        if (serviceWakeLock.isHeld) {
+            serviceWakeLock.release()
+            Log.d(TAG, "BackgroundAudioService: service-lifetime WakeLock released")
+        }
         super.onDestroy()
     }
 
@@ -415,5 +435,7 @@ class BackgroundAudioService : Service() {
         const val EXTRA_CHANNEL_ID = "channel_id"
         const val EXTRA_ROOM_KEY = "room_key"
         const val EXTRA_CHANNEL_NAME = "channel_name"
+
+        private const val WAKE_LOCK_TAG = "CommandComms:PttService"
     }
 }

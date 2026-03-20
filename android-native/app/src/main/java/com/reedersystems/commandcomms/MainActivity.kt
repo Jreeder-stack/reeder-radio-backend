@@ -152,15 +152,17 @@ class MainActivity : ComponentActivity() {
         prefs.edit().putBoolean(KEY_ACCESSIBILITY_PROMPT_SHOWN, true).apply()
 
         AlertDialog.Builder(this)
-            .setTitle("Enable Background PTT")
+            .setTitle("Optional: Accessibility PTT Fallback")
             .setMessage(
-                "To use the PTT button when the app is in the background or the screen is off, " +
-                "enable \"Command Comms\" in Accessibility Settings."
+                "On Inrico T320 devices the PTT button works screen-off automatically " +
+                "without any extra setup.\n\n" +
+                "On other devices you can enable \"Command Comms\" in Accessibility Settings " +
+                "to allow the PTT button to work while the app is in the foreground."
             )
             .setPositiveButton("Open Settings") { _, _ ->
                 startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
             }
-            .setNegativeButton("Later", null)
+            .setNegativeButton("Skip", null)
             .show()
     }
 

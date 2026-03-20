@@ -9,13 +9,32 @@ import com.reedersystems.commandcomms.audio.BackgroundAudioService
 
 private const val TAG = "[PTT-DIAG]"
 
+/**
+ * FOREGROUND-ONLY FALLBACK — OPTIONAL.
+ *
+ * This service intercepts hardware PTT key events while the app is in the foreground.
+ * It is NOT the primary path for background or screen-off PTT on the Inrico T320.
+ *
+ * Primary screen-off PTT path (T320):
+ *   PttHardwareReceiver (exported BroadcastReceiver) catches vendor firmware broadcasts
+ *   directly — no accessibility service required, works with screen off, not revocable
+ *   by battery savers.
+ *
+ * When this service is useful:
+ *   - Devices where vendor firmware broadcasts are not available (non-Inrico hardware).
+ *   - As a secondary deduplication layer when the app is in the foreground.
+ *
+ * Android does NOT guarantee key event delivery to accessibility services when the
+ * screen is off, and the service can be disabled by battery-saver policies. Do not
+ * rely on it as the background PTT mechanism.
+ */
 class PttAccessibilityService : AccessibilityService() {
 
     private var pttHeld = false
 
     override fun onServiceConnected() {
         super.onServiceConnected()
-        Log.d(TAG, "PttAccessibilityService connected — intercepting hardware keys globally")
+        Log.d(TAG, "PttAccessibilityService connected — foreground-only fallback (optional)")
     }
 
     override fun onKeyEvent(event: KeyEvent): Boolean {
@@ -41,7 +60,7 @@ class PttAccessibilityService : AccessibilityService() {
                     lastPttDownMs = ts
                     startForegroundService(
                         Intent(this, BackgroundAudioService::class.java).apply {
-                            action = BackgroundAudioService.ACTION_PTT_DOWN
+                            this.action = BackgroundAudioService.ACTION_PTT_DOWN
                         }
                     )
                     true
@@ -57,7 +76,7 @@ class PttAccessibilityService : AccessibilityService() {
                     lastPttUpMs = ts
                     startForegroundService(
                         Intent(this, BackgroundAudioService::class.java).apply {
-                            action = BackgroundAudioService.ACTION_PTT_UP
+                            this.action = BackgroundAudioService.ACTION_PTT_UP
                         }
                     )
                     true
