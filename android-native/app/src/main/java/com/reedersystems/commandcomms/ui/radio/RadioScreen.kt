@@ -28,7 +28,6 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.reedersystems.commandcomms.data.model.PttState
-import com.reedersystems.commandcomms.signaling.ConnectionState
 
 private val BgWhite   = Color(0xFFFFFFFF)
 private val BgTopBar  = Color(0xFFF0F0F0)
@@ -40,14 +39,6 @@ private val Green     = Color(0xFF008844)
 private val Red       = Color(0xFFCC0000)
 private val Amber     = Color(0xFFCC8800)
 private val White     = Color.White
-
-private val STATUS_COLORS = mapOf(
-    "off_duty"  to Color(0xFFAAAAAA),
-    "on_duty"   to Color(0xFF00AA44),
-    "en_route"  to Color(0xFF0088CC),
-    "arrived"   to Color(0xFF8800CC),
-    "oos"       to Color(0xFFCC4400),
-)
 
 @Composable
 fun RadioScreen(
@@ -103,8 +94,6 @@ fun RadioScreen(
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
 
-            TopStatusBar(state)
-
             state.emergencyHoldProgress?.let { progress ->
                 EmergencyHoldBar(progress, state.isEmergencyCancelling)
             }
@@ -121,8 +110,7 @@ fun RadioScreen(
             BottomBar(
                 state = state,
                 onScnl = { viewModel.setShowScanOverlay(true) },
-                onLogoutRequest = { showLogoutDialog = true },
-                onCycleStatus = viewModel::cycleStatus
+                onLogoutRequest = { showLogoutDialog = true }
             )
         }
 
@@ -133,50 +121,6 @@ fun RadioScreen(
                 onToggleChannel = viewModel::toggleScanChannel,
                 onDismiss = { viewModel.setShowScanOverlay(false) }
             )
-        }
-    }
-}
-
-@Composable
-private fun TopStatusBar(state: RadioUiState) {
-    val isEmergency = state.myEmergencyActive
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(if (isEmergency) Color.Transparent else BgTopBar)
-            .padding(horizontal = 8.dp, vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        T320Text(state.clockTime, color = if (isEmergency) White else TextMuted, bold = true, size = 11)
-
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            if (state.isKeyLocked) {
-                T320Text("LCK", color = if (isEmergency) White else Amber, bold = true, size = 11)
-            }
-            if (state.isScanning) {
-                T320Text("SCN", color = if (isEmergency) White else Green, bold = true, size = 11)
-            }
-            val dotColor = when {
-                isEmergency -> White
-                state.signalingState == ConnectionState.AUTHENTICATED -> Green
-                else -> Red
-            }
-            T320Text(
-                if (state.signalingState == ConnectionState.AUTHENTICATED) "●" else "○",
-                color = dotColor, bold = true, size = 13
-            )
-            state.batteryLevel?.let { bat ->
-                val batColor = when {
-                    isEmergency -> White
-                    bat <= 20 -> Red
-                    else -> TextMuted
-                }
-                T320Text("$bat%", color = batColor, bold = true, size = 11)
-            }
         }
     }
 }
@@ -251,65 +195,72 @@ private fun CenterDisplay(
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            when {
-                state.isLoading -> {
-                    T320Text("---", color = textColor, bold = true, size = 20)
-                }
-                state.error != null -> {
-                    T320Text("ERROR", color = Red, bold = true, size = 16)
-                    T320Text(state.error, color = if (isEmergency) White else TextMuted, size = 10)
-                }
-                state.pttState == PttState.TRANSMITTING -> {
-                    T320Text(
-                        "TX",
-                        color = Red.copy(alpha = txAlpha),
-                        bold = true, size = 36
-                    )
-                }
-                isEmergency && state.activeTransmittingUnit == null -> {
-                    T320Text(
-                        "EMERGENCY",
-                        color = White.copy(alpha = txAlpha),
-                        bold = true, size = 22
-                    )
-                }
-                else -> {
-                    T320Text(
-                        "ZONE",
-                        color = textColor.copy(alpha = 0.5f),
-                        bold = false, size = 9
-                    )
-                    T320Text(
-                        state.currentZone?.name?.uppercase() ?: "NO ZONE",
-                        color = textColor.copy(alpha = 0.7f),
-                        bold = true, size = 14
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    T320Text(
-                        "CH",
-                        color = textColor.copy(alpha = 0.5f),
-                        bold = false, size = 9
-                    )
-                    T320Text(
-                        state.currentChannel?.name ?: if (state.isLoading) "---" else "NO CH",
-                        color = textColor,
-                        bold = true, size = 30
-                    )
-                    state.activeTransmittingUnit?.let { unitId ->
-                        Spacer(Modifier.height(8.dp))
+            if (state.isLoading) {
+                T320Text("---", color = textColor, bold = true, size = 24)
+            } else if (state.error != null) {
+                T320Text("ERROR", color = Red, bold = true, size = 16)
+                T320Text(state.error, color = if (isEmergency) White else TextMuted, size = 10)
+            } else {
+                T320Text(
+                    "ZONE",
+                    color = textColor.copy(alpha = 0.5f),
+                    bold = false, size = 9
+                )
+                T320Text(
+                    state.currentZone?.name?.uppercase() ?: "NO ZONE",
+                    color = textColor.copy(alpha = 0.7f),
+                    bold = true, size = 18
+                )
+                Spacer(Modifier.height(6.dp))
+                T320Text(
+                    "CH",
+                    color = textColor.copy(alpha = 0.5f),
+                    bold = false, size = 9
+                )
+                T320Text(
+                    state.currentChannel?.name ?: "NO CH",
+                    color = textColor,
+                    bold = true, size = 40
+                )
+
+                when {
+                    state.pttState == PttState.TRANSMITTING -> {
+                        Spacer(Modifier.height(6.dp))
                         T320Text(
-                            "ID: $unitId",
+                            "TX",
+                            color = Red.copy(alpha = txAlpha),
+                            bold = true, size = 18
+                        )
+                        T320Text(
+                            "ID: ${state.unitId}",
+                            color = if (isEmergency) White else Red,
+                            bold = true, size = 14
+                        )
+                    }
+                    state.activeTransmittingUnit != null -> {
+                        Spacer(Modifier.height(6.dp))
+                        T320Text(
+                            "ID: ${state.activeTransmittingUnit}",
                             color = if (isEmergency) White else Green,
                             bold = true, size = 14
                         )
                         T320Text(
                             "RX",
                             color = (if (isEmergency) White else Green).copy(alpha = rxAlpha),
-                            bold = true, size = 12
+                            bold = true, size = 14
                         )
                     }
+                    isEmergency -> {
+                        Spacer(Modifier.height(6.dp))
+                        T320Text(
+                            "EMERGENCY",
+                            color = White.copy(alpha = txAlpha),
+                            bold = true, size = 16
+                        )
+                    }
+                    else -> {}
                 }
             }
 
@@ -326,12 +277,8 @@ private fun CenterDisplay(
 private fun BottomBar(
     state: RadioUiState,
     onScnl: () -> Unit,
-    onLogoutRequest: () -> Unit,
-    onCycleStatus: () -> Unit
+    onLogoutRequest: () -> Unit
 ) {
-    val statusLabel = STATUS_LABELS[state.currentStatus] ?: state.currentStatus.uppercase()
-    val statusColor = STATUS_COLORS[state.currentStatus] ?: White
-
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -364,11 +311,6 @@ private fun BottomBar(
                 onClick = {}
             )
         }
-        BottomBarButton(
-            text = statusLabel,
-            color = statusColor,
-            onClick = onCycleStatus
-        )
     }
 }
 
