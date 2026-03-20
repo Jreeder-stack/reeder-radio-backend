@@ -224,7 +224,7 @@ private fun CenterDisplay(
                 T320Text(
                     state.currentZone?.name?.uppercase() ?: "NO ZONE",
                     color = textColor.copy(alpha = 0.7f),
-                    bold = true, size = 22
+                    bold = true, size = 18
                 )
                 Spacer(Modifier.height(6.dp))
                 T320Text(
@@ -241,15 +241,17 @@ private fun CenterDisplay(
                 when {
                     state.pttState == PttState.TRANSMITTING -> {
                         Spacer(Modifier.height(6.dp))
-                        T320Text("TX", color = Green, bold = true, size = 18)
+                        T320Text("TX", color = Red.copy(alpha = txAlpha), bold = true, size = 18)
+                        T320Text("ID: ${state.unitId}", color = textColor, bold = true, size = 14)
                     }
                     state.activeTransmittingUnit != null -> {
                         Spacer(Modifier.height(6.dp))
                         T320Text(
-                            state.activeTransmittingUnit,
-                            color = Orange,
+                            "ID: ${state.activeTransmittingUnit}",
+                            color = Green,
                             bold = true, size = 14
                         )
+                        T320Text("RX", color = Green.copy(alpha = txAlpha), bold = true, size = 18)
                     }
                     isEmergency -> {
                         Spacer(Modifier.height(6.dp))
