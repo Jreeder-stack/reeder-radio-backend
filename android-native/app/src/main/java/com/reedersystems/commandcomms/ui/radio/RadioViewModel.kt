@@ -204,14 +204,21 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             app.signalingRepository.events.collect { event ->
                 when (event) {
+                    is SignalingEvent.PttPre -> {
+                        if (event.unitId != _uiState.value.unitId) {
+                            sendServiceRxIntent(BackgroundAudioService.ACTION_RX_CONNECT, event.channelId)
+                        }
+                    }
                     is SignalingEvent.PttStart -> {
                         if (event.unitId != _uiState.value.unitId) {
                             _uiState.update { it.copy(activeTransmittingUnit = event.unitId) }
+                            sendServiceRxIntent(BackgroundAudioService.ACTION_RX_CONNECT, event.channelId)
                         }
                     }
                     is SignalingEvent.PttEnd -> {
                         if (event.unitId == _uiState.value.activeTransmittingUnit) {
                             _uiState.update { it.copy(activeTransmittingUnit = null) }
+                            sendServiceRxIntent(BackgroundAudioService.ACTION_RX_END, event.channelId)
                         }
                     }
                     is SignalingEvent.EmergencyStart -> {
@@ -247,6 +254,8 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                     is KeyAction.StarLongPress -> toggleKeyLock()
                     is KeyAction.EmergencyDown -> onEmergencyDown()
                     is KeyAction.EmergencyUp -> onEmergencyUp()
+                    is KeyAction.PttDown -> onPttDown()
+                    is KeyAction.PttUp -> onPttUp()
                     else -> {
                         if (!locked) when (action) {
                             is KeyAction.DpadUp -> nextChannel()
@@ -270,7 +279,6 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
 
     fun onPttDown() {
         val state = _uiState.value
-        if (state.isKeyLocked) return
         if (state.pttState != PttState.IDLE) return
         if (!state.micPermissionGranted) {
             Log.w(TAG, "PTT DOWN: mic permission denied — blocked")
@@ -288,6 +296,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
         Log.d(TAG, "onPttDown channelId=$channelId")
+        app.signalingRepository.transmitPre(channelId)
         app.toneEngine.playTalkPermitTone()
         _uiState.update { it.copy(pttState = PttState.TRANSMITTING) }
         app.signalingRepository.transmitStart(channelId)
@@ -485,6 +494,14 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
     private fun sendServiceIntent(action: String) {
         val intent = Intent(getApplication(), BackgroundAudioService::class.java).apply {
             this.action = action
+        }
+        getApplication<Application>().startForegroundService(intent)
+    }
+
+    private fun sendServiceRxIntent(action: String, channelId: Int) {
+        val intent = Intent(getApplication(), BackgroundAudioService::class.java).apply {
+            this.action = action
+            putExtra(BackgroundAudioService.EXTRA_CHANNEL_ID, channelId)
         }
         getApplication<Application>().startForegroundService(intent)
     }

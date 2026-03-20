@@ -75,6 +75,13 @@ class SignalingClient(private val serverUrl: String) {
             _connectionState.value = ConnectionState.DISCONNECTED
         }
 
+        s.on("ptt:pre") { args -> parseAndEmit(args) { json ->
+            SignalingEvent.PttPre(
+                unitId = json.optString("unitId"),
+                channelId = json.optInt("channelId")
+            )
+        }}
+
         s.on("ptt:start") { args -> parseAndEmit(args) { json ->
             SignalingEvent.PttStart(
                 unitId = json.optString("unitId"),
@@ -180,6 +187,15 @@ class SignalingClient(private val serverUrl: String) {
         if (socket?.connected() != true) return
         Log.d(TAG, "leaveChannel $channelId")
         socket?.emit("channel:leave", JSONObject().put("channelId", channelId))
+    }
+
+    fun emitPttPre(channelId: Int) {
+        if (!isReady()) return
+        Log.d(TAG, "emitPttPre $channelId")
+        socket?.emit("ptt:pre", JSONObject().apply {
+            put("channelId", channelId)
+            put("unitId", unitId)
+        })
     }
 
     fun emitPttStart(channelId: Int) {

@@ -1,7 +1,6 @@
 package com.reedersystems.commandcomms
 
 import android.Manifest
-import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -13,7 +12,6 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
-import com.reedersystems.commandcomms.audio.BackgroundAudioService
 import com.reedersystems.commandcomms.navigation.AppNavigation
 import com.reedersystems.commandcomms.ui.theme.CommandCommsTheme
 
@@ -110,13 +108,8 @@ class MainActivity : ComponentActivity() {
         when (keyCode) {
             KEY_PTT -> {
                 if (event?.repeatCount == 0) {
-                    Log.d(TAG, "MainActivity PTT DOWN keyCode=$keyCode")
-                    if (app.sessionPrefs.micPermissionGranted) {
-                        sendPttIntent(BackgroundAudioService.ACTION_PTT_DOWN)
-                    } else {
-                        Log.w(TAG, "PTT DOWN hardware key: mic permission denied — blocked")
-                        app.toneEngine.playErrorTone()
-                    }
+                    Log.d(TAG, "MainActivity PTT DOWN keyCode=$keyCode — routing through keyEventFlow")
+                    app.keyEventFlow.tryEmit(KeyAction.PttDown)
                 }
                 return true
             }
@@ -162,8 +155,8 @@ class MainActivity : ComponentActivity() {
     override fun onKeyUp(keyCode: Int, event: KeyEvent?): Boolean {
         when (keyCode) {
             KEY_PTT -> {
-                Log.d(TAG, "MainActivity PTT UP keyCode=$keyCode")
-                sendPttIntent(BackgroundAudioService.ACTION_PTT_UP)
+                Log.d(TAG, "MainActivity PTT UP keyCode=$keyCode — routing through keyEventFlow")
+                app.keyEventFlow.tryEmit(KeyAction.PttUp)
                 return true
             }
             KEY_EMERGENCY -> {
@@ -183,10 +176,4 @@ class MainActivity : ComponentActivity() {
         return super.onKeyUp(keyCode, event)
     }
 
-    private fun sendPttIntent(action: String) {
-        val intent = Intent(this, BackgroundAudioService::class.java).apply {
-            this.action = action
-        }
-        startForegroundService(intent)
-    }
 }

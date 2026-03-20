@@ -14,6 +14,7 @@ class SignalingRepository(private val client: SignalingClient) {
     fun joinChannel(channelId: Int) = client.joinChannel(channelId)
     fun leaveChannel(channelId: Int) = client.leaveChannel(channelId)
 
+    fun transmitPre(channelId: Int) = client.emitPttPre(channelId)
     fun transmitStart(channelId: Int) = client.emitPttStart(channelId)
     fun transmitEnd(channelId: Int) = client.emitPttEnd(channelId)
 

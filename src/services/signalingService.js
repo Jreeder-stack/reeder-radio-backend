@@ -98,6 +98,7 @@ class SignalingService {
       socket.on('authenticate', (data) => this._handleAuthenticate(socket, data));
       socket.on(SIGNALING_EVENTS.CHANNEL_JOIN, (data) => this._handleChannelJoin(socket, data));
       socket.on(SIGNALING_EVENTS.CHANNEL_LEAVE, (data) => this._handleChannelLeave(socket, data));
+      socket.on('ptt:pre', (data) => this._handlePttPre(socket, data));
       socket.on(SIGNALING_EVENTS.PTT_START, (data) => this._handlePttStart(socket, data));
       socket.on(SIGNALING_EVENTS.PTT_END, (data) => this._handlePttEnd(socket, data));
       socket.on(SIGNALING_EVENTS.EMERGENCY_START, (data) => this._handleEmergencyStart(socket, data));
@@ -243,6 +244,15 @@ class SignalingService {
     });
     
     console.log(`[Signaling] ${socket.unitId} left channel ${channelId}`);
+  }
+
+  _handlePttPre(socket, data) {
+    const { channelId } = data;
+    if (!socket.unitId) return;
+    socket.to(`channel:${channelId}`).emit('ptt:pre', {
+      unitId: socket.unitId,
+      channelId,
+    });
   }
 
   _handlePttStart(socket, data) {

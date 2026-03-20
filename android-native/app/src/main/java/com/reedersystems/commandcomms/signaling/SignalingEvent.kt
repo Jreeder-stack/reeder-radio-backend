@@ -1,6 +1,7 @@
 package com.reedersystems.commandcomms.signaling
 
 sealed class SignalingEvent {
+    data class PttPre(val unitId: String, val channelId: Int) : SignalingEvent()
     data class PttStart(val unitId: String, val channelId: Int) : SignalingEvent()
     data class PttEnd(val unitId: String, val channelId: Int) : SignalingEvent()
     data class UnitJoined(val unitId: String, val channelId: Int) : SignalingEvent()

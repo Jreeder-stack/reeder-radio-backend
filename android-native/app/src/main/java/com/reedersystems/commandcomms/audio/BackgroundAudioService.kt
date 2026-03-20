@@ -21,6 +21,7 @@ private const val TAG = "[PTT-DIAG]"
 private const val NOTIFICATION_ID = 1001
 private const val CHANNEL_ID = "ptt_service"
 private const val GRACE_PERIOD_MS = 59_000L
+private const val ACTIVITY_WINDOW_MS = 10_000L
 
 class BackgroundAudioService : Service() {
 
@@ -31,6 +32,19 @@ class BackgroundAudioService : Service() {
 
     private var pttState = PttState.IDLE
     private var gracePeriodJob: Job? = null
+
+    /**
+     * Absolute time (System.currentTimeMillis) when the LiveKit session should disconnect.
+     * Set once on first connect, extended only if activity in last ACTIVITY_WINDOW_MS.
+     * -1 = no active session.
+     */
+    @Volatile private var sessionDeadlineMs: Long = -1L
+
+    /**
+     * Last time any TX or RX activity occurred. Used by onGracePeriodExpired() to decide
+     * whether to extend the session deadline.
+     */
+    @Volatile private var lastActivityMs: Long = 0L
 
     /**
      * Set to true as soon as ACTION_PTT_UP is received, regardless of pttState.
@@ -53,6 +67,11 @@ class BackgroundAudioService : Service() {
         when (intent?.action) {
             ACTION_PTT_DOWN -> handlePttDown()
             ACTION_PTT_UP -> handlePttUp()
+            ACTION_RX_CONNECT -> {
+                val channelId = intent.getIntExtra(EXTRA_CHANNEL_ID, -1)
+                if (channelId >= 0) handleRxConnect(channelId)
+            }
+            ACTION_RX_END -> handleRxEnd()
             ACTION_UPDATE_CHANNEL -> {
                 val channelId = intent.getIntExtra(EXTRA_CHANNEL_ID, -1)
                 val roomKey = intent.getStringExtra(EXTRA_ROOM_KEY)
@@ -123,7 +142,8 @@ class BackgroundAudioService : Service() {
             val (token, livekitUrl) = tokenResult.getOrThrow()
             servicePrefs.livekitUrl = livekitUrl
 
-            val connected = if (audioEngine.isConnected) true
+            val wasAlreadyConnected = audioEngine.isConnected
+            val connected = if (wasAlreadyConnected) true
             else audioEngine.connect(livekitUrl, token)
 
             if (!connected) {
@@ -134,11 +154,14 @@ class BackgroundAudioService : Service() {
                 return@launch
             }
 
+            lastActivityMs = System.currentTimeMillis()
+            if (!wasAlreadyConnected) startSessionTimer()
+
             if (pttUpWhileConnecting) {
                 Log.d(TAG, "PTT_UP received during connect — aborting TX (race condition avoided)")
                 pttState = PttState.IDLE
                 updateNotification("Radio — Standby")
-                scheduleGracePeriod()
+                rescheduleGracePeriod()
                 sendPttTxFailed()
                 return@launch
             }
@@ -175,19 +198,113 @@ class BackgroundAudioService : Service() {
         scope.launch {
             audioEngine.stopTransmit()
             httpPttEnd(serverUrl, channelId, unitId)
-            scheduleGracePeriod()
+            rescheduleGracePeriod()
         }
     }
 
-    private fun scheduleGracePeriod() {
-        gracePeriodJob?.cancel()
-        gracePeriodJob = scope.launch {
-            delay(GRACE_PERIOD_MS)
-            if (pttState == PttState.IDLE) {
-                Log.d(TAG, "Grace period expired, disconnecting LiveKit")
-                audioEngine.disconnect()
+    /**
+     * Called when a remote unit starts transmitting (ptt:pre or ptt:start from ViewModel).
+     * Ensures we are connected to LiveKit to receive the incoming audio.
+     */
+    private fun handleRxConnect(channelId: Int) {
+        Log.d(TAG, "handleRxConnect channelId=$channelId pttState=$pttState connected=${audioEngine.isConnected}")
+        lastActivityMs = System.currentTimeMillis()
+
+        if (pttState == PttState.TRANSMITTING || pttState == PttState.CONNECTING) {
+            return
+        }
+
+        if (audioEngine.isConnected) {
+            gracePeriodJob?.cancel()
+            return
+        }
+
+        val unitId = servicePrefs.unitId ?: app.sessionPrefs.unitId ?: run {
+            Log.w(TAG, "RX connect: no unit ID")
+            return
+        }
+        val roomKey = servicePrefs.channelRoomKey ?: run {
+            Log.w(TAG, "RX connect: no room key")
+            return
+        }
+
+        scope.launch {
+            if (audioEngine.isConnected) return@launch
+            val tokenResult = app.liveKitTokenRepository.getToken(identity = unitId, room = roomKey)
+            if (tokenResult.isFailure) {
+                Log.w(TAG, "RX connect: token fetch failed — ${tokenResult.exceptionOrNull()?.message}")
+                return@launch
+            }
+            val (token, livekitUrl) = tokenResult.getOrThrow()
+            servicePrefs.livekitUrl = livekitUrl
+            val connected = audioEngine.connect(livekitUrl, token)
+            if (connected) {
+                Log.d(TAG, "RX connect: LiveKit connected for receive")
+                startSessionTimer()
             }
         }
+    }
+
+    /**
+     * Called when the remote unit's transmission ends (ptt:end from ViewModel).
+     * Resumes the grace period countdown so the session can expire naturally.
+     */
+    private fun handleRxEnd() {
+        Log.d(TAG, "handleRxEnd pttState=$pttState connected=${audioEngine.isConnected}")
+        if (audioEngine.isConnected && pttState == PttState.IDLE && sessionDeadlineMs > 0L) {
+            rescheduleGracePeriod()
+        }
+    }
+
+    /**
+     * Set the session deadline once on first LiveKit connect for this session.
+     * Launches the grace-period countdown.
+     */
+    private fun startSessionTimer() {
+        sessionDeadlineMs = System.currentTimeMillis() + GRACE_PERIOD_MS
+        Log.d(TAG, "Session timer started, deadline in ${GRACE_PERIOD_MS}ms")
+        rescheduleGracePeriod()
+    }
+
+    /**
+     * Schedule (or reschedule) the grace-period job to fire at sessionDeadlineMs.
+     * Does NOT reset the deadline — it resumes the countdown from wherever it is.
+     */
+    private fun rescheduleGracePeriod() {
+        gracePeriodJob?.cancel()
+        val remaining = sessionDeadlineMs - System.currentTimeMillis()
+        if (remaining <= 0L) {
+            onGracePeriodExpired()
+            return
+        }
+        gracePeriodJob = scope.launch {
+            delay(remaining)
+            onGracePeriodExpired()
+        }
+        Log.d(TAG, "Grace period rescheduled, ${remaining}ms remaining until deadline")
+    }
+
+    /**
+     * Deadline reached. Extend if there was activity in the last ACTIVITY_WINDOW_MS,
+     * otherwise disconnect. Never interrupts an active TX.
+     */
+    private fun onGracePeriodExpired() {
+        val now = System.currentTimeMillis()
+        if (pttState != PttState.IDLE) {
+            Log.d(TAG, "Grace period expired but PTT active — extending deadline")
+            sessionDeadlineMs = now + GRACE_PERIOD_MS
+            rescheduleGracePeriod()
+            return
+        }
+        if (now - lastActivityMs < ACTIVITY_WINDOW_MS) {
+            Log.d(TAG, "Grace period extended due to recent activity (${now - lastActivityMs}ms ago)")
+            sessionDeadlineMs = now + GRACE_PERIOD_MS
+            rescheduleGracePeriod()
+            return
+        }
+        Log.d(TAG, "Grace period expired — disconnecting LiveKit")
+        sessionDeadlineMs = -1L
+        scope.launch { audioEngine.disconnect() }
     }
 
     /**
@@ -278,6 +395,8 @@ class BackgroundAudioService : Service() {
     companion object {
         const val ACTION_PTT_DOWN = "com.reedersystems.commandcomms.SVC_PTT_DOWN"
         const val ACTION_PTT_UP = "com.reedersystems.commandcomms.SVC_PTT_UP"
+        const val ACTION_RX_CONNECT = "com.reedersystems.commandcomms.RX_CONNECT"
+        const val ACTION_RX_END = "com.reedersystems.commandcomms.RX_END"
         const val ACTION_UPDATE_CHANNEL = "com.reedersystems.commandcomms.UPDATE_CHANNEL"
         const val ACTION_STOP = "com.reedersystems.commandcomms.STOP"
         const val ACTION_PTT_TX_FAILED = "com.reedersystems.commandcomms.PTT_TX_FAILED"

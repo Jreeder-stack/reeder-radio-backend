@@ -204,20 +204,20 @@ private fun CenterDisplay(
                 T320Text(state.error, color = if (isEmergency) White else TextMuted, size = 10)
             } else {
                 T320Text(
-                    "ZONE",
+                    "ZN",
                     color = textColor.copy(alpha = 0.5f),
-                    bold = false, size = 9
+                    bold = false, size = 11
                 )
                 T320Text(
                     state.currentZone?.name?.uppercase() ?: "NO ZONE",
                     color = textColor.copy(alpha = 0.7f),
-                    bold = true, size = 18
+                    bold = true, size = 22
                 )
                 Spacer(Modifier.height(6.dp))
                 T320Text(
                     "CH",
                     color = textColor.copy(alpha = 0.5f),
-                    bold = false, size = 9
+                    bold = false, size = 11
                 )
                 T320Text(
                     state.currentChannel?.name ?: "NO CH",
