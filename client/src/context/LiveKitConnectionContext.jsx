@@ -125,34 +125,11 @@ export function LiveKitConnectionProvider({ children, user }) {
     listenerRemoversRef.current.push(
       livekitManager.addTrackSubscribedListener((channelName, track, participant) => {
         recordActivity();
-        const state = useDispatchStore.getState();
-        const channel = state.channels.find(c => (c.room_key || ((c.zone || 'Default') + '__' + c.name)) === channelName);
-        if (channel) {
-          state.setActiveTransmission(channel.id, {
-            from: participant.identity,
-            timestamp: Date.now(),
-          });
-        }
-        state.addEvent({
-          type: 'ptt_start',
-          unit: participant.identity,
-          channel: channelName,
-        });
       })
     );
     
     listenerRemoversRef.current.push(
       livekitManager.addTrackUnsubscribedListener((channelName, track, participant) => {
-        const state = useDispatchStore.getState();
-        const channel = state.channels.find(c => (c.room_key || ((c.zone || 'Default') + '__' + c.name)) === channelName);
-        if (channel) {
-          state.clearActiveTransmission(channel.id);
-        }
-        state.addEvent({
-          type: 'ptt_end',
-          unit: participant.identity,
-          channel: channelName,
-        });
       })
     );
     
@@ -231,6 +208,31 @@ export function LiveKitConnectionProvider({ children, user }) {
       }
     });
     listenerRemoversRef.current.push(removeSignalingEmergencyEnd);
+
+    const removeSignalingPttStart = signalingManager.on('pttStart', (data) => {
+      const store = useDispatchStore.getState();
+      store.setActiveTransmission(data.channelId, {
+        from: data.unitId,
+        timestamp: Date.now(),
+      });
+      store.addEvent({
+        type: 'ptt_start',
+        unit: data.unitId,
+        channel: data.channelId,
+      });
+    });
+    listenerRemoversRef.current.push(removeSignalingPttStart);
+
+    const removeSignalingPttEnd = signalingManager.on('pttEnd', (data) => {
+      const store = useDispatchStore.getState();
+      store.clearActiveTransmission(data.channelId);
+      store.addEvent({
+        type: 'ptt_end',
+        unit: data.unitId,
+        channel: data.channelId,
+      });
+    });
+    listenerRemoversRef.current.push(removeSignalingPttEnd);
 
     listenerRemoversRef.current.push(
       livekitManager.addConnectionStateChangeListener((channelName, state, error) => {

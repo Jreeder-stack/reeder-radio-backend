@@ -109,7 +109,12 @@ class MainActivity : ComponentActivity() {
             KEY_PTT -> {
                 if (event?.repeatCount == 0) {
                     Log.d(TAG, "MainActivity PTT DOWN keyCode=$keyCode — routing through keyEventFlow")
-                    app.keyEventFlow.tryEmit(KeyAction.PttDown)
+                    if (app.sessionPrefs.micPermissionGranted) {
+                        app.keyEventFlow.tryEmit(KeyAction.PttDown)
+                    } else {
+                        Log.w(TAG, "PTT DOWN hardware key: mic permission denied — blocked")
+                        app.toneEngine.playErrorTone()
+                    }
                 }
                 return true
             }
