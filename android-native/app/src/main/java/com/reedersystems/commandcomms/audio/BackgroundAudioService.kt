@@ -20,7 +20,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 private const val TAG = "[PTT-DIAG]"
 private const val NOTIFICATION_ID = 1001
 private const val CHANNEL_ID = "ptt_service"
-private const val GRACE_PERIOD_MS = 15_000L
+private const val GRACE_PERIOD_MS = 59_000L
 
 class BackgroundAudioService : Service() {
 
