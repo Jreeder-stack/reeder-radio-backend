@@ -8,8 +8,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -19,7 +17,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -118,8 +115,6 @@ fun RadioScreen(
 
             CenterDisplay(
                 state = state,
-                onPttDown = viewModel::onPttDown,
-                onPttUp = viewModel::onPttUp,
                 modifier = Modifier.weight(1f)
             )
 
@@ -233,8 +228,6 @@ private fun ClearAirBanner() {
 @Composable
 private fun CenterDisplay(
     state: RadioUiState,
-    onPttDown: () -> Unit,
-    onPttUp: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "center")
@@ -251,26 +244,9 @@ private fun CenterDisplay(
 
     val isEmergency = state.myEmergencyActive
     val textColor = if (isEmergency) White else TextMain
-    val pttEnabled = state.isConnected && state.currentChannel != null && !state.isKeyLocked
 
     Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .pointerInput(pttEnabled) {
-                awaitEachGesture {
-                    val down = awaitFirstDown()
-                    down.consume()
-                    if (pttEnabled) onPttDown()
-                    do {
-                        val event = awaitPointerEvent()
-                        if (event.changes.all { !it.pressed }) {
-                            event.changes.forEach { it.consume() }
-                            if (pttEnabled) onPttUp()
-                            break
-                        }
-                    } while (true)
-                }
-            },
+        modifier = modifier.fillMaxWidth(),
         contentAlignment = Alignment.Center
     ) {
         Column(
@@ -301,11 +277,21 @@ private fun CenterDisplay(
                 }
                 else -> {
                     T320Text(
+                        "ZONE",
+                        color = textColor.copy(alpha = 0.5f),
+                        bold = false, size = 9
+                    )
+                    T320Text(
                         state.currentZone?.name?.uppercase() ?: "NO ZONE",
                         color = textColor.copy(alpha = 0.7f),
                         bold = true, size = 14
                     )
-                    Spacer(Modifier.height(4.dp))
+                    Spacer(Modifier.height(8.dp))
+                    T320Text(
+                        "CH",
+                        color = textColor.copy(alpha = 0.5f),
+                        bold = false, size = 9
+                    )
                     T320Text(
                         state.currentChannel?.name ?: if (state.isLoading) "---" else "NO CH",
                         color = textColor,
@@ -325,15 +311,6 @@ private fun CenterDisplay(
                         )
                     }
                 }
-            }
-
-            if (state.pttState == PttState.IDLE && !isEmergency && state.activeTransmittingUnit == null) {
-                Spacer(Modifier.height(16.dp))
-                T320Text(
-                    if (!pttEnabled) "SELECT CHANNEL" else "▼  HOLD TO TALK  ▼",
-                    color = TextMuted,
-                    size = 10
-                )
             }
 
             if (state.isKeyLocked) {

@@ -138,8 +138,8 @@ router.get('/token', async (req, res) => {
     return res.status(403).json({ error: 'Unit not authenticated with signaling' });
   }
 
-  if (presence.channel !== room) {
-    console.warn(`[PTT-HTTP] Token request rejected: unit "${identity}" on channel "${presence.channel}" but requested "${room}"`);
+  if (!presence.channels?.includes(room)) {
+    console.warn(`[PTT-HTTP] Token request rejected: unit "${identity}" channels=[${presence.channels?.join(',')}] but requested "${room}"`);
     return res.status(403).json({ error: 'Unit not assigned to requested channel' });
   }
 

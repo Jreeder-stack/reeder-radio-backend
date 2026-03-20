@@ -96,7 +96,6 @@ class BackgroundAudioService : Service() {
         }
         val serverUrl = servicePrefs.serverUrl ?: app.apiClient.baseUrl
 
-        app.toneEngine.playTalkPermitTone()
         pttState = PttState.CONNECTING
         updateNotification("Connecting…")
 
@@ -123,6 +122,7 @@ class BackgroundAudioService : Service() {
                 return@launch
             }
 
+            app.toneEngine.playTalkPermitTone()
             audioEngine.startTransmit()
             pttState = PttState.TRANSMITTING
             updateNotification("TRANSMITTING")
