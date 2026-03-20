@@ -191,8 +191,11 @@ class BackgroundAudioService : Service() {
     }
 
     /**
-     * Broadcast a PTT failure back to the ViewModel so it can reset pttState = IDLE
-     * and play an error tone. Only sent on real failures, not on race-condition cancellations.
+     * Broadcast PTT_TX_FAILED back to the ViewModel so it can reset pttState = IDLE.
+     * Sent on all non-transmitting exits: token error, connect error, TX error, and
+     * PTT_UP-during-connect cancellation. The ViewModel receiver only plays an error
+     * tone when its own pttState is TRANSMITTING, so the cancellation path is a silent
+     * no-op on the ViewModel side (pttState was already reset by onPttUp()).
      */
     private fun sendPttTxFailed() {
         Log.d(TAG, "Sending PTT_TX_FAILED broadcast")
