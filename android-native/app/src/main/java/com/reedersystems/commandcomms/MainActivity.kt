@@ -166,12 +166,15 @@ class MainActivity : ComponentActivity() {
             isPttKey(keyCode) -> {
                 if (event?.repeatCount == 0) {
                     val now = System.currentTimeMillis()
-                    val accessSvcHandledRecently = (now - PttAccessibilityService.lastPttDownMs) < PTT_DEDUP_WINDOW_MS
-                    if (accessSvcHandledRecently) {
-                        Log.d(TAG, "MainActivity PTT DOWN suppressed — AccessibilityService handled ${now - PttAccessibilityService.lastPttDownMs}ms ago (code=$keyCode)")
-                        return true
+                    val repeat = event?.repeatCount ?: 0
+                    if (isPttAccessibilityServiceEnabled()) {
+                        val delta = now - PttAccessibilityService.lastPttDownMs
+                        if (delta < PTT_DEDUP_WINDOW_MS) {
+                            Log.d(TAG, "MainActivity PTT DOWN suppressed source=MainActivity code=$keyCode action=DOWN repeat=$repeat ts=$now (AccessSvc handled ${delta}ms ago)")
+                            return true
+                        }
                     }
-                    Log.d(TAG, "MainActivity PTT DOWN keyCode=$keyCode — dual-path: keyEventFlow + service")
+                    Log.d(TAG, "MainActivity PTT DOWN source=MainActivity code=$keyCode action=DOWN repeat=$repeat ts=$now — dual-path")
                     if (app.sessionPrefs.micPermissionGranted) {
                         app.keyEventFlow.tryEmit(KeyAction.PttDown)
                         startForegroundService(
@@ -180,7 +183,7 @@ class MainActivity : ComponentActivity() {
                             }
                         )
                     } else {
-                        Log.w(TAG, "PTT DOWN hardware key: mic permission denied — blocked")
+                        Log.w(TAG, "PTT DOWN source=MainActivity code=$keyCode: mic permission denied")
                         app.toneEngine.playErrorTone()
                     }
                 }
@@ -229,12 +232,14 @@ class MainActivity : ComponentActivity() {
         when {
             isPttKey(keyCode) -> {
                 val now = System.currentTimeMillis()
-                val accessSvcHandledRecently = (now - PttAccessibilityService.lastPttUpMs) < PTT_DEDUP_WINDOW_MS
-                if (accessSvcHandledRecently) {
-                    Log.d(TAG, "MainActivity PTT UP suppressed — AccessibilityService handled ${now - PttAccessibilityService.lastPttUpMs}ms ago (code=$keyCode)")
-                    return true
+                if (isPttAccessibilityServiceEnabled()) {
+                    val delta = now - PttAccessibilityService.lastPttUpMs
+                    if (delta < PTT_DEDUP_WINDOW_MS) {
+                        Log.d(TAG, "MainActivity PTT UP suppressed source=MainActivity code=$keyCode action=UP ts=$now (AccessSvc handled ${delta}ms ago)")
+                        return true
+                    }
                 }
-                Log.d(TAG, "MainActivity PTT UP keyCode=$keyCode — dual-path: keyEventFlow + service")
+                Log.d(TAG, "MainActivity PTT UP source=MainActivity code=$keyCode action=UP ts=$now — dual-path")
                 app.keyEventFlow.tryEmit(KeyAction.PttUp)
                 startForegroundService(
                     Intent(this, BackgroundAudioService::class.java).apply {

@@ -21,10 +21,11 @@ class PttAccessibilityService : AccessibilityService() {
     override fun onKeyEvent(event: KeyEvent): Boolean {
         val code = event.keyCode
         val action = event.action
+        val actionLabel = if (action == KeyEvent.ACTION_DOWN) "DOWN" else if (action == KeyEvent.ACTION_UP) "UP" else "OTHER"
         val repeat = event.repeatCount
         val ts = System.currentTimeMillis()
 
-        Log.d(TAG, "AccessSvc onKeyEvent code=$code action=$action repeat=$repeat ts=$ts pttHeld=$pttHeld")
+        Log.d(TAG, "AccessSvc onKeyEvent source=AccessibilityService code=$code action=$actionLabel repeat=$repeat ts=$ts pttHeld=$pttHeld")
 
         val isPtt = code == KEYCODE_F11 || code == KEY_PTT_LEGACY
         if (!isPtt) return false
@@ -32,10 +33,10 @@ class PttAccessibilityService : AccessibilityService() {
         return when (action) {
             KeyEvent.ACTION_DOWN -> {
                 if (repeat > 0 || pttHeld) {
-                    Log.d(TAG, "AccessSvc PTT DOWN suppressed (repeat=$repeat pttHeld=$pttHeld)")
+                    Log.d(TAG, "AccessSvc PTT DOWN suppressed source=AccessibilityService code=$code repeat=$repeat pttHeld=$pttHeld ts=$ts")
                     true
                 } else {
-                    Log.d(TAG, "AccessSvc PTT DOWN — forwarding to BackgroundAudioService (code=$code)")
+                    Log.d(TAG, "AccessSvc PTT DOWN forwarding source=AccessibilityService code=$code repeat=$repeat ts=$ts")
                     pttHeld = true
                     lastPttDownMs = ts
                     startForegroundService(
@@ -48,10 +49,10 @@ class PttAccessibilityService : AccessibilityService() {
             }
             KeyEvent.ACTION_UP -> {
                 if (!pttHeld) {
-                    Log.d(TAG, "AccessSvc PTT UP suppressed (not held)")
+                    Log.d(TAG, "AccessSvc PTT UP suppressed source=AccessibilityService code=$code ts=$ts (not held)")
                     true
                 } else {
-                    Log.d(TAG, "AccessSvc PTT UP — forwarding to BackgroundAudioService (code=$code)")
+                    Log.d(TAG, "AccessSvc PTT UP forwarding source=AccessibilityService code=$code ts=$ts")
                     pttHeld = false
                     lastPttUpMs = ts
                     startForegroundService(
