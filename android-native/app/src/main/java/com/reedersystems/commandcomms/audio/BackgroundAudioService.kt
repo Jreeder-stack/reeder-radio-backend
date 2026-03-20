@@ -215,11 +215,18 @@ class BackgroundAudioService : Service() {
         }
 
         if (audioEngine.isConnected) {
-            // Always extend session on RX activity, even if sessionDeadlineMs is -1
-            // (race: onGracePeriodExpired set deadline=-1 but disconnect is still in-flight)
-            sessionDeadlineMs = System.currentTimeMillis() + GRACE_PERIOD_MS
-            rescheduleGracePeriod()
-            return
+            if (sessionDeadlineMs > 0L) {
+                // Active session — extend deadline on RX activity
+                sessionDeadlineMs = System.currentTimeMillis() + GRACE_PERIOD_MS
+                rescheduleGracePeriod()
+                return
+            }
+            // sessionDeadlineMs == -1L but engine still shows connected: thread-race between
+            // onGracePeriodExpired (IO) and this handler (main). Force-disconnect so the
+            // reconnect path below can establish a clean new session.
+            Log.w(TAG, "RX connect: stale isConnected after session expiry — forcing disconnect")
+            audioEngine.disconnect()
+            // Fall through to the reconnect path below
         }
 
         val unitId = servicePrefs.unitId ?: app.sessionPrefs.unitId ?: run {
@@ -306,8 +313,8 @@ class BackgroundAudioService : Service() {
             return
         }
         Log.d(TAG, "Grace period expired — disconnecting LiveKit")
-        sessionDeadlineMs = -1L
         audioEngine.disconnect()
+        sessionDeadlineMs = -1L
     }
 
     /**
