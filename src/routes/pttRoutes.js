@@ -46,7 +46,9 @@ async function validatePttRequest(req, res) {
   // Primary: live Socket.IO presence
   const presence = signalingService.unitPresence?.get(unitId);
   if (presence) {
-    return { channelId, unitId, presenceSynthesized: false };
+    // Pass through whether this presence was synthesized by a prior fallback /start.
+    // This ensures /end will still trigger cleanup even though presence now exists.
+    return { channelId, unitId, presenceSynthesized: !!presence.synthesized };
   }
 
   // Fallback: session cookie identity match
