@@ -76,8 +76,6 @@ class BackgroundAudioService : Service() {
     private fun handlePttDown() {
         Log.d(TAG, "handlePttDown pttState=$pttState")
 
-        pttUpWhileConnecting = false
-
         if (!app.sessionPrefs.micPermissionGranted) {
             Log.w(TAG, "PTT DOWN service: mic permission denied — blocked")
             app.toneEngine.playErrorTone()
@@ -85,6 +83,10 @@ class BackgroundAudioService : Service() {
         }
 
         if (pttState == PttState.TRANSMITTING || pttState == PttState.CONNECTING) return
+
+        // Reset AFTER all early-return guards so a second DOWN while still CONNECTING
+        // cannot clear the flag set by an intervening UP (race condition fix).
+        pttUpWhileConnecting = false
 
         gracePeriodJob?.cancel()
         gracePeriodJob = null
@@ -137,6 +139,7 @@ class BackgroundAudioService : Service() {
                 pttState = PttState.IDLE
                 updateNotification("Radio — Standby")
                 scheduleGracePeriod()
+                sendPttTxFailed()
                 return@launch
             }
 

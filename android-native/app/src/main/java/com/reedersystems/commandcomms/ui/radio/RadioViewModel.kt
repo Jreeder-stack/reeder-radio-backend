@@ -95,12 +95,16 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         override fun onReceive(context: Context, intent: Intent) {
             if (intent.action != BackgroundAudioService.ACTION_PTT_TX_FAILED) return
             Log.d(TAG, "PTT_TX_FAILED received — resetting to IDLE")
-            app.toneEngine.playErrorTone()
             val s = _uiState.value
             if (s.pttState == PttState.TRANSMITTING) {
+                // Real failure: ViewModel believes TX is active. Play error tone,
+                // clean up server signaling, then reset. If pttState is already IDLE
+                // (race-condition cancellation path), no error tone and no duplicate
+                // transmitEnd — the UP handler already cleaned both up.
+                app.toneEngine.playErrorTone()
                 s.currentChannel?.id?.let { app.signalingRepository.transmitEnd(it) }
+                _uiState.update { it.copy(pttState = PttState.IDLE) }
             }
-            _uiState.update { it.copy(pttState = PttState.IDLE) }
         }
     }
 
