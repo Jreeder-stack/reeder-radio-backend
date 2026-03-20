@@ -307,7 +307,7 @@ class BackgroundAudioService : Service() {
         }
         Log.d(TAG, "Grace period expired — disconnecting LiveKit")
         sessionDeadlineMs = -1L
-        scope.launch { audioEngine.disconnect() }
+        audioEngine.disconnect()
     }
 
     /**
