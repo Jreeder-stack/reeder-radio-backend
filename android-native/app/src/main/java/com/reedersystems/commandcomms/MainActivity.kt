@@ -1,7 +1,6 @@
 package com.reedersystems.commandcomms
 
 import android.Manifest
-import android.accessibilityservice.AccessibilityServiceInfo
 import android.app.AlertDialog
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -12,14 +11,12 @@ import android.os.PowerManager
 import android.os.SystemClock
 import android.provider.Settings
 import android.view.KeyEvent
-import android.view.accessibility.AccessibilityManager
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
-import com.reedersystems.commandcomms.accessibility.PttAccessibilityService
 import com.reedersystems.commandcomms.audio.BackgroundAudioService
 import com.reedersystems.commandcomms.navigation.AppNavigation
 import com.reedersystems.commandcomms.ui.theme.CommandCommsTheme
@@ -37,9 +34,7 @@ private const val KEY_DPAD_LEFT = 21
 private const val KEY_DPAD_RIGHT = 22
 
 private const val PREFS_NAME = "commandcomms_ui_prefs"
-private const val KEY_ACCESSIBILITY_PROMPT_SHOWN = "accessibility_prompt_shown"
 private const val KEY_BATTERY_OPT_PROMPT_SHOWN = "battery_opt_prompt_shown"
-private const val PTT_DEDUP_WINDOW_MS = 150L
 
 class MainActivity : ComponentActivity() {
 
@@ -106,7 +101,6 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         logDiagnostics()
-        promptForAccessibilityServiceIfNeeded()
     }
 
     private fun requestAppPermissions() {
@@ -134,38 +128,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun isPttAccessibilityServiceEnabled(): Boolean {
-        val am = getSystemService(ACCESSIBILITY_SERVICE) as AccessibilityManager
-        val enabled = am.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_ALL_MASK)
-        return enabled.any {
-            it.resolveInfo.serviceInfo.packageName == packageName &&
-                it.resolveInfo.serviceInfo.name.contains("PttAccessibilityService")
-        }
-    }
-
-    private fun promptForAccessibilityServiceIfNeeded() {
-        if (isPttAccessibilityServiceEnabled()) return
-
-        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-        if (prefs.getBoolean(KEY_ACCESSIBILITY_PROMPT_SHOWN, false)) return
-
-        prefs.edit().putBoolean(KEY_ACCESSIBILITY_PROMPT_SHOWN, true).apply()
-
-        AlertDialog.Builder(this)
-            .setTitle("Optional: Accessibility PTT Fallback")
-            .setMessage(
-                "On Inrico T320 devices the PTT button works screen-off automatically " +
-                "without any extra setup.\n\n" +
-                "On other devices you can enable \"Command Comms\" in Accessibility Settings " +
-                "to allow the PTT button to work while the app is in the foreground."
-            )
-            .setPositiveButton("Open Settings") { _, _ ->
-                startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-            }
-            .setNegativeButton("Skip", null)
-            .show()
-    }
-
     private fun requestBatteryOptimizationExemptionIfNeeded() {
         val pm = getSystemService(POWER_SERVICE) as PowerManager
         if (pm.isIgnoringBatteryOptimizations(packageName)) return
@@ -184,10 +146,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun logDiagnostics() {
-        val accessEnabled = isPttAccessibilityServiceEnabled()
-        Log.d(TAG, "Diagnostics: AccessibilityService=${if (accessEnabled) "ENABLED" else "DISABLED"} " +
-            "lastPttDownMs=${PttAccessibilityService.lastPttDownMs} " +
-            "lastPttUpMs=${PttAccessibilityService.lastPttUpMs}")
+        Log.d(TAG, "Diagnostics: PTT via PttHardwareReceiver (T320 vendor broadcasts)")
     }
 
     private fun isPttKey(keyCode: Int) = keyCode == KEY_PTT_F11 || keyCode == KEY_PTT
@@ -198,14 +157,7 @@ class MainActivity : ComponentActivity() {
                 if (event?.repeatCount == 0) {
                     val now = System.currentTimeMillis()
                     val repeat = event?.repeatCount ?: 0
-                    if (isPttAccessibilityServiceEnabled()) {
-                        val delta = now - PttAccessibilityService.lastPttDownMs
-                        if (delta < PTT_DEDUP_WINDOW_MS) {
-                            Log.d(TAG, "MainActivity PTT DOWN suppressed source=MainActivity code=$keyCode action=DOWN repeat=$repeat ts=$now (AccessSvc handled ${delta}ms ago)")
-                            return true
-                        }
-                    }
-                    Log.d(TAG, "MainActivity PTT DOWN source=MainActivity code=$keyCode action=DOWN repeat=$repeat ts=$now — dual-path")
+                    Log.d(TAG, "MainActivity PTT DOWN source=MainActivity code=$keyCode action=DOWN repeat=$repeat ts=$now")
                     if (app.sessionPrefs.micPermissionGranted) {
                         app.keyEventFlow.tryEmit(KeyAction.PttDown)
                         startForegroundService(
@@ -263,14 +215,7 @@ class MainActivity : ComponentActivity() {
         when {
             isPttKey(keyCode) -> {
                 val now = System.currentTimeMillis()
-                if (isPttAccessibilityServiceEnabled()) {
-                    val delta = now - PttAccessibilityService.lastPttUpMs
-                    if (delta < PTT_DEDUP_WINDOW_MS) {
-                        Log.d(TAG, "MainActivity PTT UP suppressed source=MainActivity code=$keyCode action=UP ts=$now (AccessSvc handled ${delta}ms ago)")
-                        return true
-                    }
-                }
-                Log.d(TAG, "MainActivity PTT UP source=MainActivity code=$keyCode action=UP ts=$now — dual-path")
+                Log.d(TAG, "MainActivity PTT UP source=MainActivity code=$keyCode action=UP ts=$now")
                 app.keyEventFlow.tryEmit(KeyAction.PttUp)
                 startForegroundService(
                     Intent(this, BackgroundAudioService::class.java).apply {
