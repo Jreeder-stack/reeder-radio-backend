@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">COMMAND COMMS</string>
+    <string name="accessibility_service_description">Command Comms PTT — allows the PTT button to transmit even when the app is in the background or the screen is off</string>
 </resources>

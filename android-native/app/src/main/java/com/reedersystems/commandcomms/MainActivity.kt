@@ -1,24 +1,30 @@
 package com.reedersystems.commandcomms
 
 import android.Manifest
+import android.accessibilityservice.AccessibilityServiceInfo
+import android.app.AlertDialog
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
+import android.provider.Settings
 import android.view.KeyEvent
+import android.view.accessibility.AccessibilityManager
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
+import com.reedersystems.commandcomms.accessibility.PttAccessibilityService
 import com.reedersystems.commandcomms.audio.BackgroundAudioService
 import com.reedersystems.commandcomms.navigation.AppNavigation
 import com.reedersystems.commandcomms.ui.theme.CommandCommsTheme
 
 private const val TAG = "[PTT-DIAG]"
 
+private const val KEY_PTT_F11   = 141
 private const val KEY_PTT       = 230
 private const val KEY_EMERGENCY = 233
 private const val KEY_ACC       = 231
@@ -27,6 +33,10 @@ private const val KEY_DPAD_UP   = 19
 private const val KEY_DPAD_DOWN = 20
 private const val KEY_DPAD_LEFT = 21
 private const val KEY_DPAD_RIGHT = 22
+
+private const val PREFS_NAME = "commandcomms_ui_prefs"
+private const val KEY_ACCESSIBILITY_PROMPT_SHOWN = "accessibility_prompt_shown"
+private const val PTT_DEDUP_WINDOW_MS = 150L
 
 class MainActivity : ComponentActivity() {
 
@@ -83,6 +93,12 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        logDiagnostics()
+        promptForAccessibilityServiceIfNeeded()
+    }
+
     private fun requestAppPermissions() {
         val micGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) ==
             PackageManager.PERMISSION_GRANTED
@@ -106,10 +122,55 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun isPttAccessibilityServiceEnabled(): Boolean {
+        val am = getSystemService(ACCESSIBILITY_SERVICE) as AccessibilityManager
+        val enabled = am.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_ALL_MASK)
+        return enabled.any {
+            it.resolveInfo.serviceInfo.packageName == packageName &&
+                it.resolveInfo.serviceInfo.name.contains("PttAccessibilityService")
+        }
+    }
+
+    private fun promptForAccessibilityServiceIfNeeded() {
+        if (isPttAccessibilityServiceEnabled()) return
+
+        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+        if (prefs.getBoolean(KEY_ACCESSIBILITY_PROMPT_SHOWN, false)) return
+
+        prefs.edit().putBoolean(KEY_ACCESSIBILITY_PROMPT_SHOWN, true).apply()
+
+        AlertDialog.Builder(this)
+            .setTitle("Enable Background PTT")
+            .setMessage(
+                "To use the PTT button when the app is in the background or the screen is off, " +
+                "enable \"Command Comms\" in Accessibility Settings."
+            )
+            .setPositiveButton("Open Settings") { _, _ ->
+                startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+            }
+            .setNegativeButton("Later", null)
+            .show()
+    }
+
+    private fun logDiagnostics() {
+        val accessEnabled = isPttAccessibilityServiceEnabled()
+        Log.d(TAG, "Diagnostics: AccessibilityService=${if (accessEnabled) "ENABLED" else "DISABLED"} " +
+            "lastPttDownMs=${PttAccessibilityService.lastPttDownMs} " +
+            "lastPttUpMs=${PttAccessibilityService.lastPttUpMs}")
+    }
+
+    private fun isPttKey(keyCode: Int) = keyCode == KEY_PTT_F11 || keyCode == KEY_PTT
+
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
-        when (keyCode) {
-            KEY_PTT -> {
+        when {
+            isPttKey(keyCode) -> {
                 if (event?.repeatCount == 0) {
+                    val now = System.currentTimeMillis()
+                    val accessSvcHandledRecently = (now - PttAccessibilityService.lastPttDownMs) < PTT_DEDUP_WINDOW_MS
+                    if (accessSvcHandledRecently) {
+                        Log.d(TAG, "MainActivity PTT DOWN suppressed — AccessibilityService handled ${now - PttAccessibilityService.lastPttDownMs}ms ago (code=$keyCode)")
+                        return true
+                    }
                     Log.d(TAG, "MainActivity PTT DOWN keyCode=$keyCode — dual-path: keyEventFlow + service")
                     if (app.sessionPrefs.micPermissionGranted) {
                         app.keyEventFlow.tryEmit(KeyAction.PttDown)
@@ -125,36 +186,36 @@ class MainActivity : ComponentActivity() {
                 }
                 return true
             }
-            KEY_EMERGENCY -> {
+            keyCode == KEY_EMERGENCY -> {
                 if (event?.repeatCount == 0) {
                     Log.d(TAG, "MainActivity EMERGENCY DOWN")
                     app.keyEventFlow.tryEmit(KeyAction.EmergencyDown)
                 }
                 return true
             }
-            KEY_DPAD_UP -> {
+            keyCode == KEY_DPAD_UP -> {
                 if (event?.repeatCount == 0) app.keyEventFlow.tryEmit(KeyAction.DpadUp)
                 return true
             }
-            KEY_DPAD_DOWN -> {
+            keyCode == KEY_DPAD_DOWN -> {
                 if (event?.repeatCount == 0) app.keyEventFlow.tryEmit(KeyAction.DpadDown)
                 return true
             }
-            KEY_DPAD_LEFT -> {
+            keyCode == KEY_DPAD_LEFT -> {
                 if (event?.repeatCount == 0) app.keyEventFlow.tryEmit(KeyAction.DpadLeft)
                 return true
             }
-            KEY_DPAD_RIGHT -> {
+            keyCode == KEY_DPAD_RIGHT -> {
                 if (event?.repeatCount == 0) app.keyEventFlow.tryEmit(KeyAction.DpadRight)
                 return true
             }
-            KEY_ACC -> {
+            keyCode == KEY_ACC -> {
                 if (event?.repeatCount == 0) {
                     app.keyEventFlow.tryEmit(KeyAction.AccToggle)
                 }
                 return true
             }
-            KEY_STAR -> {
+            keyCode == KEY_STAR -> {
                 if (event?.repeatCount == 0) {
                     starDownTime = SystemClock.uptimeMillis()
                 }
@@ -165,8 +226,14 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent?): Boolean {
-        when (keyCode) {
-            KEY_PTT -> {
+        when {
+            isPttKey(keyCode) -> {
+                val now = System.currentTimeMillis()
+                val accessSvcHandledRecently = (now - PttAccessibilityService.lastPttUpMs) < PTT_DEDUP_WINDOW_MS
+                if (accessSvcHandledRecently) {
+                    Log.d(TAG, "MainActivity PTT UP suppressed — AccessibilityService handled ${now - PttAccessibilityService.lastPttUpMs}ms ago (code=$keyCode)")
+                    return true
+                }
                 Log.d(TAG, "MainActivity PTT UP keyCode=$keyCode — dual-path: keyEventFlow + service")
                 app.keyEventFlow.tryEmit(KeyAction.PttUp)
                 startForegroundService(
@@ -176,12 +243,12 @@ class MainActivity : ComponentActivity() {
                 )
                 return true
             }
-            KEY_EMERGENCY -> {
+            keyCode == KEY_EMERGENCY -> {
                 Log.d(TAG, "MainActivity EMERGENCY UP")
                 app.keyEventFlow.tryEmit(KeyAction.EmergencyUp)
                 return true
             }
-            KEY_STAR -> {
+            keyCode == KEY_STAR -> {
                 val held = SystemClock.uptimeMillis() - starDownTime
                 if (held >= 1000L) {
                     Log.d(TAG, "Star long press — toggling key lock")
