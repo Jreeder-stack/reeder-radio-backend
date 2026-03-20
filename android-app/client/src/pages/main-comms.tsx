@@ -42,6 +42,7 @@ export default function MainCommsPage() {
     participants: liveKitParticipants,
     isNative: isNativeLiveKit
   } = useLiveKitCombined({ 
+    channelId: currentChannel,
     channelName: currentChannelName,
     identity: unitId,
     enabled: !!currentChannel 

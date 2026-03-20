@@ -8,6 +8,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { NativeLiveKit, isNativeLiveKitAvailable } from '@/lib/native-livekit';
+import { syncBackgroundConnectionInfo } from '@/lib/background-service';
 import { apiClient } from '@/lib/api-client';
 import { playTalkPermitTone, playEndOfTransmissionTone } from '@/lib/audio-tones';
 import { requestMicrophonePermission } from '@/lib/capacitor';
@@ -21,6 +22,7 @@ import {
 } from 'livekit-client';
 
 interface UseLiveKitOptions {
+  channelId?: string | null;
   channelName: string | null;
   identity?: string | null;
   enabled?: boolean;
@@ -41,7 +43,7 @@ interface UseLiveKitReturn {
   disconnect: () => Promise<void>;
 }
 
-export function useLiveKitCombined({ channelName, identity, enabled = true }: UseLiveKitOptions): UseLiveKitReturn {
+export function useLiveKitCombined({ channelId, channelName, identity, enabled = true }: UseLiveKitOptions): UseLiveKitReturn {
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
@@ -158,6 +160,14 @@ export function useLiveKitCombined({ channelName, identity, enabled = true }: Us
       if (!token || !url) {
         throw new Error('Invalid token response from server');
       }
+
+      await syncBackgroundConnectionInfo({
+        serverBaseUrl: window.location.origin,
+        unitId: userIdentity || identity || apiClient.getUnitId(),
+        channelId,
+        livekitUrl: url,
+        channelName: channel,
+      });
       
       console.log('[LiveKit Native] Got token, connecting to:', url);
       
@@ -183,7 +193,7 @@ export function useLiveKitCombined({ channelName, identity, enabled = true }: Us
     } finally {
       setIsConnecting(false);
     }
-  }, []);
+  }, [channelId, identity]);
 
   // ============= WEB SDK CONNECT =============
   const connectWeb = useCallback(async (channel: string, userIdentity?: string | null) => {
@@ -220,6 +230,14 @@ export function useLiveKitCombined({ channelName, identity, enabled = true }: Us
       if (!token || !url) {
         throw new Error('Invalid token response from server');
       }
+
+      await syncBackgroundConnectionInfo({
+        serverBaseUrl: window.location.origin,
+        unitId: userIdentity || identity || apiClient.getUnitId(),
+        channelId,
+        livekitUrl: url,
+        channelName: channel,
+      });
 
       const room = new Room({
         adaptiveStream: true,
@@ -291,7 +309,7 @@ export function useLiveKitCombined({ channelName, identity, enabled = true }: Us
     } finally {
       setIsConnecting(false);
     }
-  }, [handleTrackSubscribed, handleTrackUnsubscribed, handleParticipantConnected, handleParticipantDisconnected, updateParticipants]);
+  }, [channelId, handleTrackSubscribed, handleTrackUnsubscribed, handleParticipantConnected, handleParticipantDisconnected, identity, updateParticipants]);
 
   // ============= UNIFIED CONNECT =============
   const connect = useCallback(async (channel: string, userIdentity?: string | null) => {
