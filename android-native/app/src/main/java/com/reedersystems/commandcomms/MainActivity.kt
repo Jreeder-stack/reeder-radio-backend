@@ -17,7 +17,6 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
-import com.reedersystems.commandcomms.audio.BackgroundAudioService
 import com.reedersystems.commandcomms.navigation.AppNavigation
 import com.reedersystems.commandcomms.ui.theme.CommandCommsTheme
 
@@ -193,11 +192,6 @@ class MainActivity : ComponentActivity() {
                     Log.d(TAG, "MainActivity PTT DOWN source=MainActivity code=$keyCode action=DOWN repeat=$repeat ts=$now")
                     if (app.sessionPrefs.micPermissionGranted) {
                         app.keyEventFlow.tryEmit(KeyAction.PttDown)
-                        startForegroundService(
-                            Intent(this, BackgroundAudioService::class.java).apply {
-                                action = BackgroundAudioService.ACTION_PTT_DOWN
-                            }
-                        )
                     } else {
                         Log.w(TAG, "PTT DOWN source=MainActivity code=$keyCode: mic permission denied")
                         app.toneEngine.playErrorTone()
@@ -250,11 +244,6 @@ class MainActivity : ComponentActivity() {
                 val now = System.currentTimeMillis()
                 Log.d(TAG, "MainActivity PTT UP source=MainActivity code=$keyCode action=UP ts=$now")
                 app.keyEventFlow.tryEmit(KeyAction.PttUp)
-                startForegroundService(
-                    Intent(this, BackgroundAudioService::class.java).apply {
-                        action = BackgroundAudioService.ACTION_PTT_UP
-                    }
-                )
                 return true
             }
             keyCode == KEY_EMERGENCY -> {

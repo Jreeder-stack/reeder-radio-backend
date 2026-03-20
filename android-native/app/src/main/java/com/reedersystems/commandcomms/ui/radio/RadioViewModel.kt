@@ -88,23 +88,35 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
     private var cancelArmingJob: Job? = null
 
     /**
-     * Receives PTT_TX_FAILED broadcasts from BackgroundAudioService.
-     * Resets pttState to IDLE and plays an error tone so the user knows the TX failed
-     * and the next PTT press will not be silently blocked.
+     * Receives PTT_TX_FAILED and PTT_TX_ABORTED broadcasts from BackgroundAudioService.
+     * PTT_TX_FAILED is a real connection/TX error — plays an error tone and resets.
+     * PTT_TX_ABORTED is a deliberate user-release during connect — resets silently, no tone.
      */
     private val pttTxFailedReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            if (intent.action != BackgroundAudioService.ACTION_PTT_TX_FAILED) return
-            Log.d(TAG, "PTT_TX_FAILED received — resetting to IDLE")
-            val s = _uiState.value
-            if (s.pttState == PttState.TRANSMITTING) {
-                // Real failure: ViewModel believes TX is active. Play error tone,
-                // clean up server signaling, then reset. If pttState is already IDLE
-                // (race-condition cancellation path), no error tone and no duplicate
-                // transmitEnd — the UP handler already cleaned both up.
-                app.toneEngine.playErrorTone()
-                s.currentChannel?.id?.let { app.signalingRepository.transmitEnd(it) }
-                _uiState.update { it.copy(pttState = PttState.IDLE) }
+            when (intent.action) {
+                BackgroundAudioService.ACTION_PTT_TX_FAILED -> {
+                    Log.d(TAG, "PTT_TX_FAILED received — resetting to IDLE")
+                    val s = _uiState.value
+                    if (s.pttState == PttState.TRANSMITTING) {
+                        // Real failure: ViewModel believes TX is active. Play error tone,
+                        // clean up server signaling, then reset. If pttState is already IDLE
+                        // (race-condition cancellation path), no error tone and no duplicate
+                        // transmitEnd — the UP handler already cleaned both up.
+                        app.toneEngine.playErrorTone()
+                        s.currentChannel?.id?.let { app.signalingRepository.transmitEnd(it) }
+                        _uiState.update { it.copy(pttState = PttState.IDLE) }
+                    }
+                }
+                BackgroundAudioService.ACTION_PTT_TX_ABORTED -> {
+                    Log.d(TAG, "PTT_TX_ABORTED received — resetting to IDLE (no error tone)")
+                    // Only reset if not actively TRANSMITTING — a rapid re-press may have
+                    // already started a new TX before this delayed abort broadcast arrived.
+                    val s = _uiState.value
+                    if (s.pttState != PttState.TRANSMITTING) {
+                        _uiState.update { it.copy(pttState = PttState.IDLE) }
+                    }
+                }
             }
         }
     }
@@ -134,14 +146,16 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun registerPttFailureReceiver() {
-        val filter = IntentFilter(BackgroundAudioService.ACTION_PTT_TX_FAILED)
+        val filter = IntentFilter(BackgroundAudioService.ACTION_PTT_TX_FAILED).apply {
+            addAction(BackgroundAudioService.ACTION_PTT_TX_ABORTED)
+        }
         ContextCompat.registerReceiver(
             getApplication(),
             pttTxFailedReceiver,
             filter,
             ContextCompat.RECEIVER_NOT_EXPORTED
         )
-        Log.d(TAG, "PTT_TX_FAILED receiver registered")
+        Log.d(TAG, "PTT_TX_FAILED/ABORTED receiver registered")
     }
 
     private fun updateClock() {

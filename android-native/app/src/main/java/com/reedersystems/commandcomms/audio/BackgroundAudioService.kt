@@ -178,7 +178,7 @@ class BackgroundAudioService : Service() {
                 pttState = PttState.IDLE
                 updateNotification("Radio — Standby")
                 rescheduleGracePeriod()
-                sendPttTxFailed()
+                sendPttTxAborted()
                 return@launch
             }
 
@@ -336,15 +336,22 @@ class BackgroundAudioService : Service() {
     }
 
     /**
-     * Broadcast PTT_TX_FAILED back to the ViewModel so it can reset pttState = IDLE.
-     * Sent on all non-transmitting exits: token error, connect error, TX error, and
-     * PTT_UP-during-connect cancellation. The ViewModel receiver only plays an error
-     * tone when its own pttState is TRANSMITTING, so the cancellation path is a silent
-     * no-op on the ViewModel side (pttState was already reset by onPttUp()).
+     * Broadcast PTT_TX_FAILED back to the ViewModel so it can reset pttState = IDLE
+     * and play an error tone. Sent on real failures: token error, connect error, TX error.
      */
     private fun sendPttTxFailed() {
         Log.d(TAG, "Sending PTT_TX_FAILED broadcast")
         val intent = Intent(ACTION_PTT_TX_FAILED).apply { setPackage(packageName) }
+        sendBroadcast(intent)
+    }
+
+    /**
+     * Broadcast PTT_TX_ABORTED back to the ViewModel when the user released PTT before
+     * the connection completed (deliberate early release). No error tone should play.
+     */
+    private fun sendPttTxAborted() {
+        Log.d(TAG, "Sending PTT_TX_ABORTED broadcast")
+        val intent = Intent(ACTION_PTT_TX_ABORTED).apply { setPackage(packageName) }
         sendBroadcast(intent)
     }
 
@@ -432,6 +439,7 @@ class BackgroundAudioService : Service() {
         const val ACTION_UPDATE_CHANNEL = "com.reedersystems.commandcomms.UPDATE_CHANNEL"
         const val ACTION_STOP = "com.reedersystems.commandcomms.STOP"
         const val ACTION_PTT_TX_FAILED = "com.reedersystems.commandcomms.PTT_TX_FAILED"
+        const val ACTION_PTT_TX_ABORTED = "com.reedersystems.commandcomms.PTT_TX_ABORTED"
         const val EXTRA_CHANNEL_ID = "channel_id"
         const val EXTRA_ROOM_KEY = "room_key"
         const val EXTRA_CHANNEL_NAME = "channel_name"
