@@ -14,7 +14,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontFamily
@@ -46,16 +45,12 @@ fun LoginScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(Color(0xFF0A0A0A), ColorBackground, Color(0xFF0D1A1A))
-                )
-            ),
+            .background(ColorBackground),
         contentAlignment = Alignment.Center
     ) {
         when (uiState) {
             is LoginUiState.CheckingSession -> {
-                CircularProgressIndicator(color = ColorCyan)
+                CircularProgressIndicator(color = ColorPrimary)
             }
             else -> {
                 LoginForm(
@@ -90,7 +85,7 @@ private fun LoginForm(
     ) {
         Text(
             text = "COMMAND",
-            color = ColorCyan,
+            color = ColorPrimary,
             fontSize = 32.sp,
             fontWeight = FontWeight.Black,
             fontFamily = FontFamily.Monospace,
@@ -98,7 +93,7 @@ private fun LoginForm(
         )
         Text(
             text = "COMMS",
-            color = ColorCyan,
+            color = ColorPrimary,
             fontSize = 32.sp,
             fontWeight = FontWeight.Black,
             fontFamily = FontFamily.Monospace,
@@ -191,15 +186,15 @@ private fun LoginForm(
                 .fillMaxWidth()
                 .height(52.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = ColorCyan,
-                contentColor = Color.Black,
-                disabledContainerColor = ColorCyanDim.copy(alpha = 0.4f),
-                disabledContentColor = Color.Black.copy(alpha = 0.4f)
+                containerColor = ColorPrimary,
+                contentColor = Color.White,
+                disabledContainerColor = ColorPrimaryVariant.copy(alpha = 0.4f),
+                disabledContentColor = Color.White.copy(alpha = 0.4f)
             )
         ) {
             if (isLoading) {
                 CircularProgressIndicator(
-                    color = Color.Black,
+                    color = Color.White,
                     modifier = Modifier.size(20.dp),
                     strokeWidth = 2.dp
                 )
@@ -217,13 +212,13 @@ private fun LoginForm(
 
 @Composable
 private fun radioTextFieldColors() = OutlinedTextFieldDefaults.colors(
-    focusedBorderColor = ColorCyan,
-    unfocusedBorderColor = Color(0xFF444444),
-    focusedLabelColor = ColorCyan,
+    focusedBorderColor = ColorPrimary,
+    unfocusedBorderColor = Color(0xFFAAAAAA),
+    focusedLabelColor = ColorPrimary,
     unfocusedLabelColor = ColorTextSecondary,
-    focusedLeadingIconColor = ColorCyan,
+    focusedLeadingIconColor = ColorPrimary,
     unfocusedLeadingIconColor = ColorTextSecondary,
-    cursorColor = ColorCyan,
+    cursorColor = ColorPrimary,
     focusedTextColor = ColorTextPrimary,
     unfocusedTextColor = ColorTextPrimary
 )
