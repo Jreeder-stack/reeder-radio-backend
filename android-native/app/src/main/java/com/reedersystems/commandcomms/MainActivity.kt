@@ -1,6 +1,7 @@
 package com.reedersystems.commandcomms
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -12,6 +13,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
+import com.reedersystems.commandcomms.audio.BackgroundAudioService
 import com.reedersystems.commandcomms.navigation.AppNavigation
 import com.reedersystems.commandcomms.ui.theme.CommandCommsTheme
 
@@ -108,9 +110,14 @@ class MainActivity : ComponentActivity() {
         when (keyCode) {
             KEY_PTT -> {
                 if (event?.repeatCount == 0) {
-                    Log.d(TAG, "MainActivity PTT DOWN keyCode=$keyCode — routing through keyEventFlow")
+                    Log.d(TAG, "MainActivity PTT DOWN keyCode=$keyCode — dual-path: keyEventFlow + service")
                     if (app.sessionPrefs.micPermissionGranted) {
                         app.keyEventFlow.tryEmit(KeyAction.PttDown)
+                        startForegroundService(
+                            Intent(this, BackgroundAudioService::class.java).apply {
+                                action = BackgroundAudioService.ACTION_PTT_DOWN
+                            }
+                        )
                     } else {
                         Log.w(TAG, "PTT DOWN hardware key: mic permission denied — blocked")
                         app.toneEngine.playErrorTone()
@@ -126,19 +133,19 @@ class MainActivity : ComponentActivity() {
                 return true
             }
             KEY_DPAD_UP -> {
-                app.keyEventFlow.tryEmit(KeyAction.DpadUp)
+                if (event?.repeatCount == 0) app.keyEventFlow.tryEmit(KeyAction.DpadUp)
                 return true
             }
             KEY_DPAD_DOWN -> {
-                app.keyEventFlow.tryEmit(KeyAction.DpadDown)
+                if (event?.repeatCount == 0) app.keyEventFlow.tryEmit(KeyAction.DpadDown)
                 return true
             }
             KEY_DPAD_LEFT -> {
-                app.keyEventFlow.tryEmit(KeyAction.DpadLeft)
+                if (event?.repeatCount == 0) app.keyEventFlow.tryEmit(KeyAction.DpadLeft)
                 return true
             }
             KEY_DPAD_RIGHT -> {
-                app.keyEventFlow.tryEmit(KeyAction.DpadRight)
+                if (event?.repeatCount == 0) app.keyEventFlow.tryEmit(KeyAction.DpadRight)
                 return true
             }
             KEY_ACC -> {
@@ -160,8 +167,13 @@ class MainActivity : ComponentActivity() {
     override fun onKeyUp(keyCode: Int, event: KeyEvent?): Boolean {
         when (keyCode) {
             KEY_PTT -> {
-                Log.d(TAG, "MainActivity PTT UP keyCode=$keyCode — routing through keyEventFlow")
+                Log.d(TAG, "MainActivity PTT UP keyCode=$keyCode — dual-path: keyEventFlow + service")
                 app.keyEventFlow.tryEmit(KeyAction.PttUp)
+                startForegroundService(
+                    Intent(this, BackgroundAudioService::class.java).apply {
+                        action = BackgroundAudioService.ACTION_PTT_UP
+                    }
+                )
                 return true
             }
             KEY_EMERGENCY -> {

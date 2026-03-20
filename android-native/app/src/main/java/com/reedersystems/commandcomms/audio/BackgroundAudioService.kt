@@ -207,7 +207,7 @@ class BackgroundAudioService : Service() {
      * Ensures we are connected to LiveKit to receive the incoming audio.
      */
     private fun handleRxConnect(channelId: Int) {
-        Log.d(TAG, "handleRxConnect channelId=$channelId pttState=$pttState connected=${audioEngine.isConnected}")
+        Log.d(TAG, "handleRxConnect channelId=$channelId pttState=$pttState connected=${audioEngine.isConnected} deadline=$sessionDeadlineMs")
         lastActivityMs = System.currentTimeMillis()
 
         if (pttState == PttState.TRANSMITTING || pttState == PttState.CONNECTING) {
@@ -215,10 +215,10 @@ class BackgroundAudioService : Service() {
         }
 
         if (audioEngine.isConnected) {
-            if (sessionDeadlineMs > 0L) {
-                sessionDeadlineMs = System.currentTimeMillis() + GRACE_PERIOD_MS
-                rescheduleGracePeriod()
-            }
+            // Always extend session on RX activity, even if sessionDeadlineMs is -1
+            // (race: onGracePeriodExpired set deadline=-1 but disconnect is still in-flight)
+            sessionDeadlineMs = System.currentTimeMillis() + GRACE_PERIOD_MS
+            rescheduleGracePeriod()
             return
         }
 
