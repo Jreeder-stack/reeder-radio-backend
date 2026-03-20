@@ -235,7 +235,7 @@ private fun CenterDisplay(
                 T320Text(
                     state.currentChannel?.name ?: "NO CH",
                     color = textColor,
-                    bold = true, size = 40
+                    bold = true, size = 50
                 )
 
                 when {
