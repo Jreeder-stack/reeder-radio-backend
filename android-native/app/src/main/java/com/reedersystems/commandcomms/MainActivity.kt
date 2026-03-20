@@ -38,12 +38,14 @@ class MainActivity : ComponentActivity() {
         ActivityResultContracts.RequestPermission()
     ) { granted ->
         Log.d(TAG, "POST_NOTIFICATIONS granted=$granted")
+        app.sessionPrefs.notificationPermissionGranted = granted
     }
 
     private val requestLocationLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
         Log.d(TAG, "ACCESS_FINE_LOCATION granted=$granted")
+        app.sessionPrefs.locationPermissionGranted = granted
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
                 != PackageManager.PERMISSION_GRANTED
@@ -84,20 +86,23 @@ class MainActivity : ComponentActivity() {
     private fun requestAppPermissions() {
         val micGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) ==
             PackageManager.PERMISSION_GRANTED
+        val locationGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) ==
+            PackageManager.PERMISSION_GRANTED
+        val notifGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) ==
+                PackageManager.PERMISSION_GRANTED
+        else true
+
         app.sessionPrefs.micPermissionGranted = micGranted
+        app.sessionPrefs.locationPermissionGranted = locationGranted
+        app.sessionPrefs.notificationPermissionGranted = notifGranted
+
         if (!micGranted) {
             requestMicLauncher.launch(Manifest.permission.RECORD_AUDIO)
-        } else {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-                != PackageManager.PERMISSION_GRANTED
-            ) {
-                requestLocationLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
-            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-                ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
-                != PackageManager.PERMISSION_GRANTED
-            ) {
-                requestNotificationsLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-            }
+        } else if (!locationGranted) {
+            requestLocationLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+        } else if (!notifGranted && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            requestNotificationsLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
     }
 

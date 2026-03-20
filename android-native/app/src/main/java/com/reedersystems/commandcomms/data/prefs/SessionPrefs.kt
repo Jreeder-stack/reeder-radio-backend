@@ -28,6 +28,14 @@ class SessionPrefs(context: Context) {
         get() = prefs.getBoolean(KEY_MIC_GRANTED, false)
         set(value) = prefs.edit().putBoolean(KEY_MIC_GRANTED, value).apply()
 
+    var locationPermissionGranted: Boolean
+        get() = prefs.getBoolean(KEY_LOCATION_GRANTED, false)
+        set(value) = prefs.edit().putBoolean(KEY_LOCATION_GRANTED, value).apply()
+
+    var notificationPermissionGranted: Boolean
+        get() = prefs.getBoolean(KEY_NOTIFICATION_GRANTED, false)
+        set(value) = prefs.edit().putBoolean(KEY_NOTIFICATION_GRANTED, value).apply()
+
     fun clear() {
         prefs.edit().clear().apply()
     }
@@ -39,5 +47,7 @@ class SessionPrefs(context: Context) {
         private const val KEY_ROLE = "role"
         private const val KEY_USER_ID = "user_id"
         private const val KEY_MIC_GRANTED = "mic_granted"
+        private const val KEY_LOCATION_GRANTED = "location_granted"
+        private const val KEY_NOTIFICATION_GRANTED = "notification_granted"
     }
 }

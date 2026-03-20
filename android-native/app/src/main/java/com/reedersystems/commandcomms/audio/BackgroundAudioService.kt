@@ -67,6 +67,13 @@ class BackgroundAudioService : Service() {
 
     private fun handlePttDown() {
         Log.d(TAG, "handlePttDown pttState=$pttState")
+
+        if (!app.sessionPrefs.micPermissionGranted) {
+            Log.w(TAG, "PTT DOWN service: mic permission denied — blocked")
+            app.toneEngine.playErrorTone()
+            return
+        }
+
         if (pttState == PttState.TRANSMITTING || pttState == PttState.CONNECTING) return
 
         gracePeriodJob?.cancel()
@@ -74,18 +81,22 @@ class BackgroundAudioService : Service() {
 
         val unitId = servicePrefs.unitId ?: app.sessionPrefs.unitId ?: run {
             Log.w(TAG, "PTT DOWN ignored: no unit ID")
+            app.toneEngine.playErrorTone()
             return
         }
         val channelId = servicePrefs.channelId.takeIf { it >= 0 } ?: run {
             Log.w(TAG, "PTT DOWN ignored: no channel selected")
+            app.toneEngine.playErrorTone()
             return
         }
         val roomKey = servicePrefs.channelRoomKey ?: run {
             Log.w(TAG, "PTT DOWN ignored: no room key")
+            app.toneEngine.playErrorTone()
             return
         }
         val serverUrl = servicePrefs.serverUrl ?: app.apiClient.baseUrl
 
+        app.toneEngine.playTalkPermitTone()
         pttState = PttState.CONNECTING
         updateNotification("Connecting…")
 
@@ -93,6 +104,7 @@ class BackgroundAudioService : Service() {
             val tokenResult = app.liveKitTokenRepository.getToken(identity = unitId, room = roomKey)
             if (tokenResult.isFailure) {
                 Log.e(TAG, "Token fetch failed: ${tokenResult.exceptionOrNull()?.message}")
+                app.toneEngine.playErrorTone()
                 pttState = PttState.IDLE
                 updateNotification("Radio — Standby")
                 return@launch
@@ -105,6 +117,7 @@ class BackgroundAudioService : Service() {
 
             if (!connected) {
                 Log.e(TAG, "LiveKit connect failed")
+                app.toneEngine.playErrorTone()
                 pttState = PttState.IDLE
                 updateNotification("Radio — Standby")
                 return@launch
@@ -125,6 +138,7 @@ class BackgroundAudioService : Service() {
         val channelId = servicePrefs.channelId.takeIf { it >= 0 } ?: return
         val serverUrl = servicePrefs.serverUrl ?: app.apiClient.baseUrl
 
+        app.toneEngine.playEndOfTxTone()
         pttState = PttState.IDLE
         updateNotification("Radio — Standby")
 
