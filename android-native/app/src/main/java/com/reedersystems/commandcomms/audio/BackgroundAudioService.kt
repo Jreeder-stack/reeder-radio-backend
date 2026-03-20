@@ -239,6 +239,8 @@ class BackgroundAudioService : Service() {
         }
 
         scope.launch {
+            // Brief delay to allow any in-progress disconnect to complete before re-checking state
+            delay(100L)
             if (audioEngine.isConnected) return@launch
             val tokenResult = app.liveKitTokenRepository.getToken(identity = unitId, room = roomKey)
             if (tokenResult.isFailure) {
