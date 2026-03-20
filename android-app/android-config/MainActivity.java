@@ -44,6 +44,7 @@ public class MainActivity extends BridgeActivity {
     private static final int BACKGROUND_LOCATION_REQUEST_CODE = 1002;
 
     private boolean batteryExemptionPrompted = false;
+    private boolean accessibilityPrompted = false;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -281,17 +282,41 @@ public class MainActivity extends BridgeActivity {
     }
 
     private boolean isAccessibilityServiceEnabled() {
+        try {
+            AccessibilityManager accessibilityManager =
+                (AccessibilityManager) getSystemService(Context.ACCESSIBILITY_SERVICE);
+            if (accessibilityManager == null) {
+                return false;
+            }
+
+            ComponentName serviceName = new ComponentName(this, PttAccessibilityService.class);
+            String expectedId = serviceName.flattenToString();
+
+            for (AccessibilityServiceInfo serviceInfo :
+                    accessibilityManager.getEnabledAccessibilityServiceList(
+                        AccessibilityServiceInfo.FEEDBACK_ALL_MASK
+                    )) {
+                String actualId = serviceInfo.getId();
+                if (expectedId.equals(actualId)) {
+                    return true;
+                }
+            }
+        } catch (Exception e) {
+            Log.w(DIAG_TAG, "Failed to query accessibility state: " + e.getMessage());
+        }
+
         return false;
     }
 
     private void logResumeDiagnostics() {
+        boolean a11yEnabled = isAccessibilityServiceEnabled();
         boolean svcRunning = BackgroundAudioService.isRunning;
         BackgroundAudioService svc = BackgroundAudioService.getInstance();
 
         Log.d(DIAG_TAG, "=== RESUME DIAGNOSTICS ===");
-        Log.d(DIAG_TAG, "  AccessibilityService enabled : false (disabled by app config)");
+        Log.d(DIAG_TAG, "  AccessibilityService enabled : " + a11yEnabled);
         Log.d(DIAG_TAG, "  BackgroundAudioService running: " + svcRunning);
-        Log.d(DIAG_TAG, "  Active capture source        : Activity/Broadcast only");
+        Log.d(DIAG_TAG, "  Active capture source        : " + getActiveCaptureSource(a11yEnabled));
         if (svc != null) {
             Log.d(DIAG_TAG, "  Service debug               : " + svc.getDebugSummary());
         }
@@ -301,7 +326,7 @@ public class MainActivity extends BridgeActivity {
     }
 
     private String getActiveCaptureSource(boolean a11yEnabled) {
-        return "Activity/Broadcast";
+        return a11yEnabled ? "Accessibility/Activity/Broadcast" : "Activity/Broadcast";
     }
 
     private void updateAccessibilityWarningUi(boolean a11yEnabled) {
@@ -320,9 +345,18 @@ public class MainActivity extends BridgeActivity {
     private void showAccessibilitySettingsFallbackDialog() {
         try {
             new AlertDialog.Builder(this)
-                .setTitle("Accessibility Settings")
-                .setMessage("Open Settings > Accessibility > Command Comms PTT")
-                .setPositiveButton("OK", null)
+                .setTitle("Enable background PTT")
+                .setMessage("Turn on Command Comms PTT in Accessibility settings so hardware PTT works while the screen is locked or the app is in the background.")
+                .setPositiveButton("Open Settings", (dialog, which) -> {
+                    try {
+                        Intent intent = new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS);
+                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                        startActivity(intent);
+                    } catch (Exception e) {
+                        Log.w(TAG, "Could not open accessibility settings: " + e.getMessage());
+                    }
+                })
+                .setNegativeButton("Not now", null)
                 .show();
         } catch (Exception e) {
             Log.w(TAG, "Could not show accessibility fallback dialog: " + e.getMessage());
@@ -565,6 +599,11 @@ public class MainActivity extends BridgeActivity {
 
         startBackgroundAudioServiceNow();
         logResumeDiagnostics();
+
+        if (!accessibilityPrompted && !isAccessibilityServiceEnabled()) {
+            showAccessibilitySettingsFallbackDialog();
+            accessibilityPrompted = true;
+        }
 
         if (!batteryExemptionPrompted) {
             new Handler(Looper.getMainLooper()).postDelayed(() -> {
