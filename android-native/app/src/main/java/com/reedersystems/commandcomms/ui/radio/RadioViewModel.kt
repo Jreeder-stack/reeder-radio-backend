@@ -205,20 +205,27 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
             app.signalingRepository.events.collect { event ->
                 when (event) {
                     is SignalingEvent.PttPre -> {
-                        if (event.unitId != _uiState.value.unitId) {
+                        val state = _uiState.value
+                        if (event.unitId != state.unitId && event.channelId == state.currentChannel?.id) {
                             sendServiceRxIntent(BackgroundAudioService.ACTION_RX_CONNECT, event.channelId)
                         }
                     }
                     is SignalingEvent.PttStart -> {
-                        if (event.unitId != _uiState.value.unitId) {
+                        val state = _uiState.value
+                        if (event.unitId != state.unitId) {
                             _uiState.update { it.copy(activeTransmittingUnit = event.unitId) }
-                            sendServiceRxIntent(BackgroundAudioService.ACTION_RX_CONNECT, event.channelId)
+                            if (event.channelId == state.currentChannel?.id) {
+                                sendServiceRxIntent(BackgroundAudioService.ACTION_RX_CONNECT, event.channelId)
+                            }
                         }
                     }
                     is SignalingEvent.PttEnd -> {
-                        if (event.unitId == _uiState.value.activeTransmittingUnit) {
+                        val state = _uiState.value
+                        if (event.unitId == state.activeTransmittingUnit) {
                             _uiState.update { it.copy(activeTransmittingUnit = null) }
-                            sendServiceRxIntent(BackgroundAudioService.ACTION_RX_END, event.channelId)
+                            if (event.channelId == state.currentChannel?.id) {
+                                sendServiceRxIntent(BackgroundAudioService.ACTION_RX_END, event.channelId)
+                            }
                         }
                     }
                     is SignalingEvent.EmergencyStart -> {

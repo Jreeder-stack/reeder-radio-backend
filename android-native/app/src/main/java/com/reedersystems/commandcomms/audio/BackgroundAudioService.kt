@@ -215,7 +215,10 @@ class BackgroundAudioService : Service() {
         }
 
         if (audioEngine.isConnected) {
-            gracePeriodJob?.cancel()
+            if (sessionDeadlineMs > 0L) {
+                sessionDeadlineMs = System.currentTimeMillis() + GRACE_PERIOD_MS
+                rescheduleGracePeriod()
+            }
             return
         }
 
