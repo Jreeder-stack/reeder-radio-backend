@@ -328,28 +328,27 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun startCancelArming() {
         cancelArmingJob = viewModelScope.launch {
-            Log.d(TAG, "CANCEL ARMING: hold started — debouncing")
-            var debounceElapsed = 0L
-            while (debounceElapsed < 150L) {
+            Log.d(TAG, "CANCEL ARMING: hold started")
+            var elapsed = 0L
+            while (elapsed < 150L) {
                 delay(50)
-                debounceElapsed += 50
+                elapsed += 50
             }
-            Log.d(TAG, "CANCEL ARMING: debounce cleared — arming continues in parallel")
+            Log.d(TAG, "CANCEL ARMING: debounce cleared — showing cancel bar")
             app.toneEngine.stopCountdownBeep()
             app.toneEngine.startCountdownBeep()
-            _uiState.update { it.copy(isEmergencyCancelling = true, emergencyHoldProgress = 0f) }
-            var cancelElapsed = 0L
-            while (cancelElapsed < 3000L) {
+            _uiState.update { it.copy(isEmergencyCancelling = true, emergencyHoldProgress = elapsed / 3000f) }
+            while (elapsed < 3000L) {
                 delay(50)
-                cancelElapsed += 50
-                _uiState.update { it.copy(emergencyHoldProgress = cancelElapsed / 3000f) }
+                elapsed += 50
+                _uiState.update { it.copy(emergencyHoldProgress = elapsed / 3000f) }
             }
             cancelArmingJob = null
             emergencyJob?.cancel()
             emergencyJob = null
             app.toneEngine.stopCountdownBeep()
             _uiState.update { it.copy(isEmergencyCancelling = false, emergencyHoldProgress = null) }
-            Log.d(TAG, "CANCEL ARMING: completed — arming cancelled")
+            Log.d(TAG, "CANCEL ARMING: completed at ${elapsed}ms — arming cancelled")
         }
     }
 
