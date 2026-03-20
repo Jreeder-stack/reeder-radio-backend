@@ -103,8 +103,9 @@ fun RadioScreen(
                 ClearAirBanner()
             }
 
-            if (state.channelEmergencyActive && !state.myEmergencyActive && state.channelEmergencyUnitId != null) {
-                OtherUnitEmergencyBanner(unitId = state.channelEmergencyUnitId)
+            val otherEmergencyUnitId = state.channelEmergencyUnitId
+            if (state.channelEmergencyActive && !state.myEmergencyActive && otherEmergencyUnitId != null) {
+                OtherUnitEmergencyBanner(unitId = otherEmergencyUnitId)
             }
 
             CenterDisplay(
