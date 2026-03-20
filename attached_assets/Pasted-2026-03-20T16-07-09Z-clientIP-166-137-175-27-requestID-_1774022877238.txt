@@ -1,0 +1,50 @@
+2026-03-20T16:07:09Z clientIP="166.137.175.27" requestID="93d2367b-998d-4e26" responseTimeMS=30 responseBytes=611 userAgent="okhttp/4.12.0"
+2026-03-20T16:07:09Z clientIP="166.137.175.27" requestID="8f9269fd-4e67-4c4c" responseTimeMS=20 responseBytes=345 userAgent="okhttp/4.12.0"
+2026-03-20T16:07:09.998417121Z [AI-Dispatcher] 2026-03-20T16:07:09.998Z | LLM_SILENCE {"participant":"DISPATCH-1","transcript":"Progress."}
+2026-03-20T16:07:12Z clientIP="166.137.175.27" requestID="e8339cdd-5d5d-4838" responseTimeMS=21 responseBytes=345 userAgent="okhttp/4.12.0"
+2026-03-20T16:07:12.613951829Z [PTT-HTTP] PTT END: INDIANA-1 on 169 (2786ms)
+2026-03-20T16:07:12.623848567Z [API] POST /api/ptt/end | user=Jreeder5029(id:2) | sid=GjcEfag3... | 200 | 10ms
+2026-03-20T16:07:14Z clientIP="166.137.146.4" requestID="13fdb11f-ff37-4eba" responseTimeMS=29 responseBytes=232 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+2026-03-20T16:07:14.91318749Z [AI-Dispatcher-Signaling] 2026-03-20T16:07:14.912Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"DISPATCH-1","isEmergency":false}
+2026-03-20T16:07:14.913218542Z [Signaling] PTT_READY sent for DISPATCH-1 on DISPATCH__DISPATCH
+2026-03-20T16:07:14.915250521Z [AI-Dispatcher-Signaling] 2026-03-20T16:07:14.913Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"DISPATCH-1","wasAlreadyConnected":true}
+2026-03-20T16:07:14.915267032Z [Signaling] PTT START: DISPATCH-1 on DISPATCH__DISPATCH
+2026-03-20T16:07:15.081559381Z [AI-Dispatcher] 2026-03-20T16:07:15.081Z | TRACK_SUBSCRIBED {"participant":"DISPATCH-1","room":"DISPATCH__DISPATCH","trackSid":"TR_AMS6JWMGtEBAoE"}
+2026-03-20T16:07:15.083019316Z [AI-Dispatcher] 2026-03-20T16:07:15.082Z | AUDIO_BUFFERING_START {"participant":"DISPATCH-1","room":"DISPATCH__DISPATCH"}
+2026-03-20T16:07:17.348327746Z [AI-Dispatcher-Signaling] 2026-03-20T16:07:17.348Z | PTT_END_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"DISPATCH-1","gracePeriodMs":15000}
+2026-03-20T16:07:17.348353868Z [Signaling] PTT END: DISPATCH-1 on DISPATCH__DISPATCH (2435ms)
+2026-03-20T16:07:17.498877796Z [AI-Dispatcher] 2026-03-20T16:07:17.498Z | TRACK_UNSUBSCRIBED {"participant":"DISPATCH-1","room":"DISPATCH__DISPATCH"}
+2026-03-20T16:07:17.498981792Z [AI-Dispatcher] 2026-03-20T16:07:17.498Z | AUDIO_BUFFERING_COMPLETE {"participant":"DISPATCH-1","frames":241,"bytes":231360}
+2026-03-20T16:07:17.510262461Z [AI-Dispatcher] 2026-03-20T16:07:17.509Z | VOICE_MESSAGE_SAVED {"channel":"DISPATCH__DISPATCH","sender":"DISPATCH-1","filename":"DISPATCH__DISPATCH_1774022837499_DISPATCH_1.wav","duration":2}
+2026-03-20T16:07:17.512764837Z [AI-Dispatcher] 2026-03-20T16:07:17.512Z | MESSAGE_BROADCAST {"channel":"DISPATCH__DISPATCH","messageId":847}
+2026-03-20T16:07:17.515341617Z [AI-Dispatcher] 2026-03-20T16:07:17.514Z | AUDIO_PROCESSING {"bytes":231360,"room":"DISPATCH__DISPATCH","participant":"DISPATCH-1"}
+2026-03-20T16:07:18.536843398Z [AI-Dispatcher] 2026-03-20T16:07:18.536Z | STT_RESULT {"transcript":"Making this property for constantly looking for.","participant":"DISPATCH-1"}
+2026-03-20T16:07:18.53687957Z [AI-Dispatcher] 2026-03-20T16:07:18.536Z | LLM_CLASSIFY_START {"participant":"DISPATCH-1","state":"IDLE","transcript":"Making this property for constantly looking for."}
+2026-03-20T16:07:18.53721338Z [LLM-Intent] Classifying: unit=DISPATCH-1, state=IDLE, transcript="Making this property for constantly looking for."
+2026-03-20T16:07:19Z clientIP="166.137.146.4" requestID="2503c737-0851-4f8f" responseTimeMS=33 responseBytes=232 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+2026-03-20T16:07:19.303486429Z [LLM-Intent] Result (766ms): intent=UNKNOWN, response="I didn't catch that. Could you please repeat?"
+2026-03-20T16:07:19.303523541Z [AI-Dispatcher] 2026-03-20T16:07:19.303Z | LLM_CLASSIFY_RESULT {"participant":"DISPATCH-1","intent":"UNKNOWN","response":"I didn't catch that. Could you please repeat?"}
+2026-03-20T16:07:19.551441546Z [AI-Dispatcher] 2026-03-20T16:07:19.550Z | TRACK_PUBLISHED {"room":"DISPATCH__DISPATCH","trackSid":"TR_AMrYZFWf265zX5"}
+2026-03-20T16:07:19.851641003Z [AI-Dispatcher] 2026-03-20T16:07:19.851Z | AUDIO_STREAMING {"totalSamples":67400,"frames":71,"frameDurationMs":60}
+2026-03-20T16:07:23.579660495Z [Signaling] Grace period ended for DISPATCH__DISPATCH
+2026-03-20T16:07:24Z clientIP="166.137.146.4" requestID="3004b7af-471e-4da7" responseTimeMS=26 responseBytes=232 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+2026-03-20T16:07:25.172878756Z [AI-Dispatcher] 2026-03-20T16:07:25.172Z | CHAT_RECORDED {"room":"DISPATCH__DISPATCH","messageId":848}
+2026-03-20T16:07:25.173164042Z [AI-Dispatcher] Broadcast message to DISPATCH__DISPATCH: 848
+2026-03-20T16:07:25.22622291Z [AI-Dispatcher] 2026-03-20T16:07:25.225Z | TRACK_UNPUBLISHED {"room":"DISPATCH__DISPATCH","trackSid":"TR_AMrYZFWf265zX5"}
+2026-03-20T16:07:25.226828445Z [SESSION] DISPATCH-1: IDLE → IDLE | oldSlotKeys=[empty] | newSlotKeys=[lastSpokenText] | replace=false
+2026-03-20T16:07:25.226919471Z [SESSION] DISPATCH-1: IDLE → IDLE | oldSlotKeys=[lastSpokenText] | newSlotKeys=[lastSpokenText,conversationHistory] | replace=false
+2026-03-20T16:07:27.733897522Z [AI-Dispatcher] 2026-03-20T16:07:27.733Z | PARTICIPANT_LEFT {"identity":"INDIANA-1","room":"DISPATCH__DISPATCH","humanCount":1}
+2026-03-20T16:07:29Z clientIP="166.137.146.4" requestID="58598495-dcc5-4a25" responseTimeMS=28 responseBytes=232 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+2026-03-20T16:07:29Z clientIP="166.137.146.4" requestID="9f6482a1-68d7-4226" responseTimeMS=29 responseBytes=315 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+2026-03-20T16:07:29.186785219Z [AUTH] /me check: hasSession=true sessionID=0xjyMCNA... cookie=true
+2026-03-20T16:07:29.186818741Z [AUTH] /me: session has user="DISPATCH-1" id=7, refreshing from DB...
+2026-03-20T16:07:29.194604416Z [AUTH] /me: returning fresh user data for "DISPATCH-1" role=admin unit_id=DISPATCH-1
+2026-03-20T16:07:29.20357343Z [API] GET /api/auth/me | user=DISPATCH-1(id:7) | sid=0xjyMCNA... | 304 | 17ms
+2026-03-20T16:07:29.258077792Z [Signaling] Unit authenticated: DISPATCH-1 (DISPATCH-1)
+2026-03-20T16:07:29.30771389Z [Signaling] DISPATCH-1 joined channel DISPATCH__DISPATCH
+2026-03-20T16:07:32.348079684Z [AI-Dispatcher-Signaling] 2026-03-20T16:07:32.347Z | DISCONNECTING_IDLE {"channelId":"DISPATCH__DISPATCH"}
+2026-03-20T16:07:32.348126977Z [AI-Dispatcher] 2026-03-20T16:07:32.348Z | ROOM_LEAVING {"room":"DISPATCH__DISPATCH","reason":"No humans present"}
+2026-03-20T16:07:32.357719267Z [AI-Dispatcher] 2026-03-20T16:07:32.356Z | ROOM_LEFT {"room":"DISPATCH__DISPATCH"}
+2026-03-20T16:07:34Z clientIP="166.137.146.4" requestID="8bacaaf9-87b6-4e5a" responseTimeMS=26 responseBytes=232 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+2026-03-20T16:07:39Z clientIP="166.137.146.4" requestID="a58c1875-7773-4d25" responseTimeMS=27 responseBytes=232 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+2026-03-20T16:07:44Z clientIP="166.137.146.4" requestID="480c276b-7555-4ca5" responseTimeMS=26 responseBytes=232 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
