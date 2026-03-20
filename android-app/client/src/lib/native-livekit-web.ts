@@ -30,6 +30,11 @@ export class NativeLiveKitWeb implements NativeLiveKitPlugin {
     throw new Error('Native LiveKit not available on web. Use livekit-client SDK instead.');
   }
   
+  async setSpeakerphone(_options: { enabled: boolean }): Promise<{ success: boolean; enabled: boolean }> {
+    console.log('[NativeLiveKit Web] setSpeakerphone() called - native not available');
+    throw new Error('Native LiveKit not available on web. Use livekit-client SDK instead.');
+  }
+  
   async getState(): Promise<{
     isConnected: boolean;
     isMicEnabled: boolean;
