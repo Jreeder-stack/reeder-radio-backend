@@ -220,18 +220,18 @@ private fun CenterDisplay(
                 T320Text(
                     "ZN",
                     color = textColor.copy(alpha = 0.5f),
-                    bold = false, size = 11
+                    bold = false, size = 14
                 )
                 T320Text(
                     state.currentZone?.name?.uppercase() ?: "NO ZONE",
                     color = textColor.copy(alpha = 0.7f),
-                    bold = true, size = 18
+                    bold = true, size = 28
                 )
                 Spacer(Modifier.height(6.dp))
                 T320Text(
                     "CH",
                     color = textColor.copy(alpha = 0.5f),
-                    bold = false, size = 11
+                    bold = false, size = 14
                 )
                 T320Text(
                     state.currentChannel?.name ?: "NO CH",
@@ -242,17 +242,12 @@ private fun CenterDisplay(
                 when {
                     state.pttState == PttState.TRANSMITTING -> {
                         Spacer(Modifier.height(6.dp))
-                        T320Text("TX", color = Red.copy(alpha = txAlpha), bold = true, size = 18)
-                        T320Text("ID: ${state.unitId}", color = textColor, bold = true, size = 14)
+                        T320Text("TX", color = Green, bold = true, size = 18)
                     }
                     state.activeTransmittingUnit != null -> {
+                        val rxUnitId = state.activeTransmittingUnit
                         Spacer(Modifier.height(6.dp))
-                        T320Text(
-                            "ID: ${state.activeTransmittingUnit}",
-                            color = Green,
-                            bold = true, size = 14
-                        )
-                        T320Text("RX", color = Green.copy(alpha = txAlpha), bold = true, size = 18)
+                        T320Text(rxUnitId, color = Orange, bold = true, size = 14)
                     }
                     isEmergency -> {
                         Spacer(Modifier.height(6.dp))
