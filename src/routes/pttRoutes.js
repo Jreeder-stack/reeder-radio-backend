@@ -9,12 +9,33 @@ const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET;
 const router = Router();
 
 /**
- * Resolve auth for PTT start/end requests.
- * Primary: unit must be in the live presence map (Socket.IO authenticated).
- * Fallback: valid session cookie whose unit_id or username matches the requested unitId.
- * Returns { channelId, unitId } on success, null (+ response already sent) on failure.
+ * Look up a DB user by unit_id or username and verify they have
+ * access to the given numeric channelId via user_channel_access.
+ * Returns the user row on success, null otherwise.
  */
-function validatePttRequest(req, res) {
+async function dbVerifyUnitChannelAccess(identity, channelId) {
+  const result = await pool.query(
+    `SELECT u.id, u.unit_id, u.username
+     FROM users u
+     JOIN user_channel_access uca ON uca.user_id = u.id
+     WHERE (u.unit_id = $1 OR u.username = $1)
+       AND uca.channel_id = $2
+     LIMIT 1`,
+    [identity, channelId]
+  );
+  return result.rows[0] ?? null;
+}
+
+/**
+ * Resolve auth for PTT start/end requests.
+ *
+ * Primary  : unit in signalingService.unitPresence (Socket.IO authenticated).
+ * Fallback : valid session cookie + DB channel access verification.
+ *
+ * Returns { channelId, unitId, presenceSynthesized } on success,
+ * or null (response already sent) on failure.
+ */
+async function validatePttRequest(req, res) {
   const { channelId, unitId } = req.body;
 
   if (!channelId || !unitId) {
@@ -25,23 +46,57 @@ function validatePttRequest(req, res) {
   // Primary: live Socket.IO presence
   const presence = signalingService.unitPresence?.get(unitId);
   if (presence) {
-    return { channelId, unitId };
+    return { channelId, unitId, presenceSynthesized: false };
   }
 
-  // Fallback: session cookie auth (handles Doze-dropped socket reconnects)
+  // Fallback: session cookie identity match
   const sessionUser = req.session?.user;
-  if (sessionUser && (sessionUser.unit_id === unitId || sessionUser.username === unitId)) {
-    console.log(`[PTT-HTTP] Session fallback auth: unit "${unitId}" not in presence — accepted via session cookie`);
-    return { channelId, unitId };
+  if (!sessionUser) {
+    console.warn(`[PTT-HTTP] Rejected ${unitId} on ch${channelId}: not in presence, no session (cookie=${!!req.headers.cookie})`);
+    res.status(403).json({ error: 'Unit not authenticated' });
+    return null;
   }
 
-  console.warn(`[PTT-HTTP] Rejected: unit "${unitId}" not in presence and no valid session (cookie=${!!req.headers.cookie})`);
-  res.status(403).json({ error: 'Unit not authenticated' });
-  return null;
+  const identityMatchesSession =
+    sessionUser.unit_id === unitId || sessionUser.username === unitId;
+  if (!identityMatchesSession) {
+    console.warn(`[PTT-HTTP] Rejected ${unitId} on ch${channelId}: session belongs to "${sessionUser.username}", not requested unit`);
+    res.status(403).json({ error: 'Unit not authenticated' });
+    return null;
+  }
+
+  // DB: confirm this user has access to the requested channel
+  let dbUser = null;
+  try {
+    dbUser = await dbVerifyUnitChannelAccess(unitId, channelId);
+  } catch (dbErr) {
+    console.error('[PTT-HTTP] DB channel access check failed:', dbErr.message);
+    res.status(500).json({ error: 'Internal error during authorization' });
+    return null;
+  }
+
+  if (!dbUser) {
+    console.warn(`[PTT-HTTP] Rejected ${unitId} on ch${channelId}: session valid but no DB channel access`);
+    res.status(403).json({ error: 'Unit does not have access to this channel' });
+    return null;
+  }
+
+  // Auth passed via session + DB. Synthesize a minimal presence entry so
+  // downstream signaling emits behave consistently (status/channels).
+  const synthPresence = {
+    unitId,
+    status: 'online',
+    channels: [channelId],
+    synthesized: true,
+  };
+  signalingService.unitPresence.set(unitId, synthPresence);
+  console.log(`[PTT-HTTP] Session+DB fallback auth OK: "${unitId}" on ch${channelId} — minimal presence synthesized`);
+
+  return { channelId, unitId, presenceSynthesized: true };
 }
 
-router.post('/start', (req, res) => {
-  const validated = validatePttRequest(req, res);
+router.post('/start', async (req, res) => {
+  const validated = await validatePttRequest(req, res);
   if (!validated) return;
   const { channelId, unitId } = validated;
 
@@ -73,7 +128,7 @@ router.post('/start', (req, res) => {
       signalingService._emitCallback('pttStart', transmissionData);
     }
 
-    console.log(`[PTT-HTTP] PTT START: ${unitId} on ${channelId}`);
+    console.log(`[PTT-HTTP] PTT START: ${unitId} on ch${channelId}`);
     res.json({ success: true });
   } catch (err) {
     console.error('[PTT-HTTP] Error on ptt/start:', err);
@@ -81,10 +136,10 @@ router.post('/start', (req, res) => {
   }
 });
 
-router.post('/end', (req, res) => {
-  const validated = validatePttRequest(req, res);
+router.post('/end', async (req, res) => {
+  const validated = await validatePttRequest(req, res);
   if (!validated) return;
-  const { channelId, unitId } = validated;
+  const { channelId, unitId, presenceSynthesized } = validated;
 
   try {
     const io = signalingService.io;
@@ -124,6 +179,17 @@ router.post('/end', (req, res) => {
     const presence = signalingService.unitPresence.get(unitId);
     if (presence) {
       presence.status = 'online';
+      // Clean up synthesized presence entries after PTT end — the unit's socket
+      // will re-populate presence properly when its Socket.IO reconnects.
+      if (presenceSynthesized) {
+        setTimeout(() => {
+          const p = signalingService.unitPresence.get(unitId);
+          if (p?.synthesized) {
+            signalingService.unitPresence.delete(unitId);
+            console.log(`[PTT-HTTP] Removed synthesized presence for "${unitId}"`);
+          }
+        }, (signalingService.GRACE_PERIOD_MS || 3000) + 1000);
+      }
     }
 
     io.to(`channel:${channelId}`).emit('ptt:end', endData);
@@ -132,7 +198,7 @@ router.post('/end', (req, res) => {
       signalingService._emitCallback('pttEnd', endData);
     }
 
-    console.log(`[PTT-HTTP] PTT END: ${unitId} on ${channelId} (${duration}ms)`);
+    console.log(`[PTT-HTTP] PTT END: ${unitId} on ch${channelId} (${duration}ms)`);
     res.json({ success: true });
   } catch (err) {
     console.error('[PTT-HTTP] Error on ptt/end:', err);
@@ -150,34 +216,57 @@ router.get('/token', async (req, res) => {
   // Primary: live Socket.IO presence
   const presence = signalingService.unitPresence?.get(identity);
 
-  // Fallback: session cookie auth (handles Doze-dropped socket reconnects)
+  let authPath = 'presence';
+
   if (!presence) {
+    // Fallback: session cookie identity match
     const sessionUser = req.session?.user;
     const sessionMatchesIdentity = sessionUser &&
       (sessionUser.unit_id === identity || sessionUser.username === identity);
 
     if (!sessionMatchesIdentity) {
-      console.warn(`[PTT-HTTP] Token rejected: unit "${identity}" not in presence and no valid session (cookie=${!!req.headers.cookie})`);
+      console.warn(`[PTT-HTTP] Token rejected "${identity}" on "${room}": not in presence, no matching session (cookie=${!!req.headers.cookie})`);
       return res.status(403).json({ error: 'Unit not authenticated' });
     }
 
-    console.log(`[PTT-HTTP] Token session fallback: unit "${identity}" not in presence — accepted via session cookie`);
-    // Fall through to channel lookup + token generation below
-  }
-
-  // Channel existence + access check
-  try {
-    const result = await pool.query(
-      `SELECT id FROM channels WHERE COALESCE(zone, 'Default') || '__' || name = $1 AND enabled = true LIMIT 1`,
-      [room]
-    );
-    if (!result.rows.length) {
-      console.warn(`[PTT-HTTP] Token rejected: unknown room key "${room}"`);
-      return res.status(400).json({ error: 'Unknown room' });
+    // DB: resolve channel numeric ID from room key and verify access
+    let channelRow = null;
+    try {
+      const result = await pool.query(
+        `SELECT c.id
+         FROM channels c
+         JOIN user_channel_access uca ON uca.channel_id = c.id
+         JOIN users u ON uca.user_id = u.id
+         WHERE COALESCE(c.zone, 'Default') || '__' || c.name = $1
+           AND c.enabled = true
+           AND (u.unit_id = $2 OR u.username = $2)
+         LIMIT 1`,
+        [room, identity]
+      );
+      channelRow = result.rows[0] ?? null;
+    } catch (dbErr) {
+      console.error('[PTT-HTTP] DB channel access check for token failed:', dbErr.message);
+      return res.status(500).json({ error: 'Internal error during authorization' });
     }
 
-    // When presence is live, verify the unit is actually on this channel
-    if (presence) {
+    if (!channelRow) {
+      console.warn(`[PTT-HTTP] Token rejected "${identity}" on "${room}": session valid but no DB channel access or unknown room`);
+      return res.status(403).json({ error: 'Unit does not have access to this channel' });
+    }
+
+    authPath = 'session+db';
+    console.log(`[PTT-HTTP] Token session+DB fallback OK: "${identity}" on "${room}"`);
+  } else {
+    // Presence path: verify the unit is actually on this channel
+    try {
+      const result = await pool.query(
+        `SELECT id FROM channels WHERE COALESCE(zone, 'Default') || '__' || name = $1 AND enabled = true LIMIT 1`,
+        [room]
+      );
+      if (!result.rows.length) {
+        console.warn(`[PTT-HTTP] Token rejected: unknown room key "${room}"`);
+        return res.status(400).json({ error: 'Unknown room' });
+      }
       const channelNumericId = result.rows[0].id;
       const unitChannels = presence.channels ?? [];
       const onChannel = unitChannels.some(c => Number(c) === channelNumericId);
@@ -185,13 +274,10 @@ router.get('/token', async (req, res) => {
         console.warn(`[PTT-HTTP] Token rejected: unit "${identity}" channels=[${unitChannels.join(',')}] not on channel ${channelNumericId} ("${room}")`);
         return res.status(403).json({ error: 'Unit not assigned to requested channel' });
       }
+    } catch (dbErr) {
+      console.error('[PTT-HTTP] DB lookup failed during token auth:', dbErr.message);
+      return res.status(500).json({ error: 'Internal error during channel lookup' });
     }
-    // Session fallback: channel existence is sufficient — the unit authenticated
-    // previously and the session proves identity; channel assignment is not re-checked
-    // since presence (which holds channel list) is temporarily unavailable.
-  } catch (dbErr) {
-    console.error('[PTT-HTTP] DB lookup failed during token auth:', dbErr.message);
-    return res.status(500).json({ error: 'Internal error during channel lookup' });
   }
 
   if (!LIVEKIT_API_KEY || !LIVEKIT_API_SECRET) {
@@ -212,7 +298,7 @@ router.get('/token', async (req, res) => {
     });
 
     const token = await at.toJwt();
-    console.log(`[PTT-HTTP] Service token issued for ${identity} on ${room} (via ${presence ? 'presence' : 'session fallback'})`);
+    console.log(`[PTT-HTTP] Token issued for "${identity}" on "${room}" (via ${authPath})`);
     res.json({ token, livekitUrl: process.env.LIVEKIT_URL });
   } catch (err) {
     console.error('[PTT-HTTP] Token generation failed:', err);

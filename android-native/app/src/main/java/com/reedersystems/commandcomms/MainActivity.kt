@@ -52,6 +52,7 @@ class MainActivity : ComponentActivity() {
     ) { granted ->
         Log.d(TAG, "POST_NOTIFICATIONS granted=$granted")
         app.sessionPrefs.notificationPermissionGranted = granted
+        requestBatteryOptimizationExemptionIfNeeded()
     }
 
     private val requestLocationLauncher = registerForActivityResult(
@@ -64,7 +65,11 @@ class MainActivity : ComponentActivity() {
                 != PackageManager.PERMISSION_GRANTED
             ) {
                 requestNotificationsLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            } else {
+                requestBatteryOptimizationExemptionIfNeeded()
             }
+        } else {
+            requestBatteryOptimizationExemptionIfNeeded()
         }
     }
 
@@ -82,6 +87,8 @@ class MainActivity : ComponentActivity() {
             != PackageManager.PERMISSION_GRANTED
         ) {
             requestNotificationsLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            requestBatteryOptimizationExemptionIfNeeded()
         }
     }
 
@@ -100,7 +107,6 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         logDiagnostics()
         promptForAccessibilityServiceIfNeeded()
-        requestBatteryOptimizationExemptionIfNeeded()
     }
 
     private fun requestAppPermissions() {
@@ -123,6 +129,8 @@ class MainActivity : ComponentActivity() {
             requestLocationLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
         } else if (!notifGranted && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             requestNotificationsLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            requestBatteryOptimizationExemptionIfNeeded()
         }
     }
 
