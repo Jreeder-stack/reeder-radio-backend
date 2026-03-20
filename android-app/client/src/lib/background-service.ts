@@ -28,12 +28,6 @@ export async function syncBackgroundConnectionInfo(options: {
     return;
   }
 
-  try {
-    await BackgroundService.startService();
-  } catch (error) {
-    console.warn('[BackgroundService] startService failed before sync:', error);
-  }
-
   const shouldClear = Object.values(options).every((value) => value == null);
 
   try {
@@ -41,6 +35,12 @@ export async function syncBackgroundConnectionInfo(options: {
       await BackgroundService.clearConnectionInfo();
       console.log('[BackgroundService] Connection info cleared');
       return;
+    }
+
+    try {
+      await BackgroundService.startService();
+    } catch (error) {
+      console.warn('[BackgroundService] startService failed before sync:', error);
     }
 
     const payload = {
