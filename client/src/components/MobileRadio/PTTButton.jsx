@@ -96,7 +96,7 @@ export function PTTButton({
   };
 
   const startTransmit = () => {
-    if (disabled || !isConnected) return;
+    if (disabled) return;
     
     const now = Date.now();
     if (now - lastActionTimeRef.current < 100) return;
@@ -106,6 +106,12 @@ export function PTTButton({
     isActiveRef.current = true;
     
     if (window.navigator.vibrate) window.navigator.vibrate(50);
+
+    if (!isConnected) {
+      if (setTransmitting) setTransmitting(true);
+      onTransmitStartRef.current?.();
+      return;
+    }
 
     const status = channelStatusRef.current;
     if (status === 'busy') {

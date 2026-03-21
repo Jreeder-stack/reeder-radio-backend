@@ -21,6 +21,7 @@ export default function MobileRadioView({ user, onLogout }) {
     channels: contextChannels,
     switchChannel: contextSwitchChannel,
     ensureConnected,
+    retryConnection,
   } = useLiveKitConnection();
   
   const {
@@ -222,21 +223,44 @@ export default function MobileRadioView({ user, onLogout }) {
     const channelName = transmitChannelRef.current;
     if (!channelName) return;
 
+    if (connectionStatus === 'idle' || connectionStatus === 'failed') {
+      await retryConnection();
+    }
+
     const ok = await ensureConnected(channelName);
     if (!ok) {
       console.warn('[PTT] ensureConnected returned false for channel:', channelName);
-      return;
     }
 
     let room = livekitManager?.getRoom(channelName);
+
     if (!room) {
-      for (let i = 0; i < 15 && !room; i++) {
-        await new Promise(r => setTimeout(r, 200));
+      const deadline = Date.now() + 3000;
+      while (!room && Date.now() < deadline) {
+        await new Promise(resolve => setTimeout(resolve, 250));
         room = livekitManager?.getRoom(channelName);
       }
     }
+
     if (!room) {
-      console.warn('[PTT] Room still null after 3s wait for channel:', channelName);
+      setIsTransmitting(false);
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const now = ctx.currentTime;
+      const volume = 0.4;
+      const playBeep = (freq, startTime) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(freq, startTime);
+        gain.gain.setValueAtTime(volume, startTime);
+        osc.start(startTime);
+        osc.stop(startTime + 0.1);
+      };
+      playBeep(800, now);
+      playBeep(600, now + 0.15);
+      playBeep(400, now + 0.30);
       return;
     }
 
@@ -245,7 +269,7 @@ export default function MobileRadioView({ user, onLogout }) {
     micPTTManager.setRoom(room);
     signalPttStart(channelName);
     micPTTManager.start();
-  }, [ensureConnected, livekitManager, signalPttStart, identity]);
+  }, [ensureConnected, retryConnection, livekitManager, signalPttStart, identity, connectionStatus]);
 
   const handleTransmitEnd = useCallback(() => {
     const channelName = transmitChannelRef.current;
@@ -354,12 +378,13 @@ export default function MobileRadioView({ user, onLogout }) {
   }, [currentRoomKey, getTransmittingUnit, activeTransmissions]);
   
   const channelStatus = useMemo(() => {
+    if (connectionStatus === 'idle' || connectionStatus === 'failed') return 'clear';
     if (!connected && !connecting) return 'error';
     if (connecting) return 'busy';
     if (isTransmitting) return 'clear';
     if (channelIsBusy && transmittingUnitId !== identity) return 'busy';
     return 'clear';
-  }, [connected, connecting, channelIsBusy, transmittingUnitId, identity, isTransmitting]);
+  }, [connectionStatus, connected, connecting, channelIsBusy, transmittingUnitId, identity, isTransmitting]);
   
   const unitPresence = useMemo(() => {
     if (!currentRoomKey) return [];
@@ -451,7 +476,7 @@ export default function MobileRadioView({ user, onLogout }) {
             channelStatus={channelStatus}
             onTransmitStart={handleTransmitStart}
             onTransmitEnd={handleTransmitEnd}
-            disabled={!connected}
+            disabled={false}
             isConnected={connected}
             isReceiving={isReceiving}
             activeSpeaker={transmittingUnitId || activeAudio?.from}

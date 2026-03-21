@@ -427,6 +427,12 @@ class MicPTTManager {
     }
   }
 
+  _isDeadObjectError(err) {
+    if (!err) return false;
+    const msg = (err.message || err.toString() || '').toLowerCase();
+    return msg.includes('-38') || msg.includes('dead object') || msg.includes('deadobject');
+  }
+
   async _startNative() {
     console.log('[PTT-DIAG] [JS] MicPTTManager._startNative() — BEGIN');
     acquireWakeLock().catch(e => console.warn('[PTT-DIAG] [JS] Native wake lock acquire failed:', e));
@@ -451,7 +457,15 @@ class MicPTTManager {
 
       if (this.pendingStop) {
         console.log('[PTT-DIAG] [JS] _startNative() — pendingStop, disabling mic');
-        await nativeDisableMic();
+        try {
+          await nativeDisableMic();
+        } catch (stopErr) {
+          if (this._isDeadObjectError(stopErr)) {
+            console.warn('[PTT-DIAG] [JS] _startNative() — dead object (-38) on pendingStop disable, ignoring');
+          } else {
+            console.warn('[PTT-DIAG] [JS] _startNative() — error on pendingStop disable:', stopErr);
+          }
+        }
         this._setState(PTT_STATES.IDLE);
         this.transitionLock = false;
         return false;
@@ -464,9 +478,15 @@ class MicPTTManager {
       return true;
 
     } catch (err) {
-      console.error('[PTT-DIAG] [JS] _startNative() — ERROR:', err);
+      if (this._isDeadObjectError(err)) {
+        console.warn('[PTT-DIAG] [JS] _startNative() — dead object (-38) caught, resetting state machine to IDLE');
+      } else {
+        console.error('[PTT-DIAG] [JS] _startNative() — ERROR:', err);
+      }
+      this.pendingStop = false;
       this.transitionLock = false;
       this._setState(PTT_STATES.IDLE);
+      releaseWakeLock().catch(() => {});
       return false;
     }
   }
@@ -514,7 +534,11 @@ class MicPTTManager {
       await nativeDisableMic();
       console.log('[PTT-DIAG] [JS] _doStopNative() — nativeDisableMic() OK');
     } catch (err) {
-      console.error('[PTT-DIAG] [JS] _doStopNative() — ERROR:', err);
+      if (this._isDeadObjectError(err)) {
+        console.warn('[PTT-DIAG] [JS] _doStopNative() — dead object (-38) on disable, AudioRecord already torn down — resetting state machine cleanly');
+      } else {
+        console.error('[PTT-DIAG] [JS] _doStopNative() — ERROR:', err);
+      }
     } finally {
       this.pendingStop = false;
       this.transitionLock = false;
