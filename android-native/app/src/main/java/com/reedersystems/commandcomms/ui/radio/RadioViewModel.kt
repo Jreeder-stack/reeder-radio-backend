@@ -516,6 +516,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
     private fun sendServiceIntent(action: String) {
         val intent = Intent(getApplication(), BackgroundAudioService::class.java).apply {
             this.action = action
+            putExtra(BackgroundAudioService.EXTRA_NEEDS_SIGNALING, false)
         }
         getApplication<Application>().startForegroundService(intent)
     }

@@ -60,6 +60,14 @@ class BackgroundAudioService : Service() {
      */
     @Volatile private var pttUpWhileConnecting = false
 
+    /**
+     * True when the current (or most recent) TX was initiated by PttHardwareReceiver
+     * with EXTRA_NEEDS_SIGNALING=true (screen-off path). The service must emit all
+     * Socket.IO signaling events itself because the ViewModel is asleep.
+     * Reset to false at the top of handlePttDown() so it always reflects the current TX.
+     */
+    @Volatile private var needsSignaling = false
+
     override fun onCreate() {
         super.onCreate()
         Log.d(TAG, "BackgroundAudioService created")
@@ -79,7 +87,7 @@ class BackgroundAudioService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
-            ACTION_PTT_DOWN -> handlePttDown()
+            ACTION_PTT_DOWN -> handlePttDown(intent.getBooleanExtra(EXTRA_NEEDS_SIGNALING, false))
             ACTION_PTT_UP -> handlePttUp()
             ACTION_RX_CONNECT -> {
                 val channelId = intent.getIntExtra(EXTRA_CHANNEL_ID, -1)
@@ -106,8 +114,8 @@ class BackgroundAudioService : Service() {
         return START_STICKY
     }
 
-    private fun handlePttDown() {
-        Log.d(TAG, "handlePttDown pttState=$pttState")
+    private fun handlePttDown(signaling: Boolean) {
+        Log.d(TAG, "handlePttDown pttState=$pttState signaling=$signaling")
 
         if (!app.sessionPrefs.micPermissionGranted) {
             Log.w(TAG, "PTT DOWN service: mic permission denied — blocked")
@@ -120,6 +128,7 @@ class BackgroundAudioService : Service() {
         // Reset AFTER all early-return guards so a second DOWN while still CONNECTING
         // cannot clear the flag set by an intervening UP (race condition fix).
         pttUpWhileConnecting = false
+        needsSignaling = signaling
 
         gracePeriodJob?.cancel()
         gracePeriodJob = null
@@ -143,6 +152,11 @@ class BackgroundAudioService : Service() {
 
         pttState = PttState.CONNECTING
         updateNotification("Connecting…")
+
+        if (signaling) {
+            app.signalingRepository.transmitPre(channelId)
+            Log.d(TAG, "Screen-off PTT: transmitPre sent for channel $channelId")
+        }
 
         scope.launch {
             val tokenResult = app.liveKitTokenRepository.getToken(identity = unitId, room = roomKey)
@@ -192,11 +206,17 @@ class BackgroundAudioService : Service() {
             pttState = PttState.TRANSMITTING
             updateNotification("TRANSMITTING")
             httpPttStart(serverUrl, channelId, unitId)
+
+            if (signaling) {
+                app.signalingRepository.transmitStart(channelId)
+                app.toneEngine.playTalkPermitTone()
+                Log.d(TAG, "Screen-off PTT: transmitStart + talk-permit tone for channel $channelId")
+            }
         }
     }
 
     private fun handlePttUp() {
-        Log.d(TAG, "handlePttUp pttState=$pttState")
+        Log.d(TAG, "handlePttUp pttState=$pttState needsSignaling=$needsSignaling")
 
         pttUpWhileConnecting = true
 
@@ -205,6 +225,7 @@ class BackgroundAudioService : Service() {
         val unitId = servicePrefs.unitId ?: app.sessionPrefs.unitId ?: return
         val channelId = servicePrefs.channelId.takeIf { it >= 0 } ?: return
         val serverUrl = servicePrefs.serverUrl ?: app.apiClient.baseUrl
+        val wasSignaling = needsSignaling
 
         pttState = PttState.IDLE
         updateNotification("Radio — Standby")
@@ -212,6 +233,11 @@ class BackgroundAudioService : Service() {
         scope.launch {
             audioEngine.stopTransmit()
             httpPttEnd(serverUrl, channelId, unitId)
+            if (wasSignaling) {
+                app.signalingRepository.transmitEnd(channelId)
+                app.toneEngine.playEndOfTxTone()
+                Log.d(TAG, "Screen-off PTT: transmitEnd + end-of-TX tone for channel $channelId")
+            }
             rescheduleGracePeriod()
         }
     }
@@ -428,6 +454,7 @@ class BackgroundAudioService : Service() {
         const val EXTRA_CHANNEL_ID = "channel_id"
         const val EXTRA_ROOM_KEY = "room_key"
         const val EXTRA_CHANNEL_NAME = "channel_name"
+        const val EXTRA_NEEDS_SIGNALING = "needs_signaling"
 
         private const val WAKE_LOCK_TAG = "CommandComms:PttService"
     }

@@ -94,8 +94,15 @@ class PttHardwareReceiver : BroadcastReceiver() {
 
         val serviceIntent = Intent(context, BackgroundAudioService::class.java).apply {
             this.action = pttAction
+            if (pttAction == BackgroundAudioService.ACTION_PTT_DOWN) {
+                putExtra(BackgroundAudioService.EXTRA_NEEDS_SIGNALING, true)
+            }
         }
-        context.startForegroundService(serviceIntent)
+        try {
+            context.startForegroundService(serviceIntent)
+        } catch (e: Exception) {
+            Log.e(TAG, "PttHardwareReceiver: startForegroundService failed — ${e::class.simpleName}: ${e.message}")
+        }
     }
 
     companion object {
