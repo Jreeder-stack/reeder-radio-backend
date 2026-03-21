@@ -99,7 +99,10 @@ async function tryAutoLogin() {
 export function AuthProvider({ children }) {
   const cachedUser = getCachedUser();
   const [user, setUser] = useState(cachedUser);
-  const [loading, setLoading] = useState(!cachedUser);
+  // Always start loading regardless of cached user — the session must be verified
+  // with the server before the app renders and starts making authenticated requests
+  // (e.g. /getToken). Without this, a stale cache causes /getToken 401s.
+  const [loading, setLoading] = useState(true);
 
   const checkAuth = useCallback(async (isBackgroundCheck = false) => {
     if (!isBackgroundCheck) {
@@ -141,11 +144,9 @@ export function AuthProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    if (cachedUser) {
-      checkAuth(true);
-    } else {
-      checkAuth(false);
-    }
+    // Always run a foreground check so loading stays true until the server confirms
+    // the session is valid. Auto-login handles re-auth transparently if needed.
+    checkAuth(false);
   }, []);
 
   useEffect(() => {
