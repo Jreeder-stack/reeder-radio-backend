@@ -10,13 +10,19 @@ import android.os.Bundle
 import android.os.PowerManager
 import android.os.SystemClock
 import android.provider.Settings
-import android.view.KeyEvent
 import android.util.Log
+import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.core.content.ContextCompat
+import androidx.core.content.edit
 import com.reedersystems.commandcomms.audio.BackgroundAudioService
 import com.reedersystems.commandcomms.navigation.AppNavigation
 import com.reedersystems.commandcomms.ui.theme.CommandCommsTheme
@@ -46,7 +52,7 @@ class MainActivity : ComponentActivity() {
 
     /**
      * Set to true when we have launched ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENTS.
-     * On the next onResume we fire the battery exemption prompt instead of doing it
+     * On the next onResume we open battery optimization settings instead of doing it
      * immediately (which would conflict with the settings activity still on screen).
      */
     private var pendingBatteryPromptAfterFullScreenIntent = false
@@ -94,7 +100,13 @@ class MainActivity : ComponentActivity() {
         requestAppPermissions()
         setContent {
             CommandCommsTheme {
-                AppNavigation()
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .onPreviewKeyEvent(::handlePreviewKeyEvent)
+                ) {
+                    AppNavigation()
+                }
             }
         }
     }
@@ -104,7 +116,7 @@ class MainActivity : ComponentActivity() {
         logDiagnostics()
         if (pendingBatteryPromptAfterFullScreenIntent) {
             pendingBatteryPromptAfterFullScreenIntent = false
-            requestBatteryOptimizationExemptionIfNeeded()
+            openBatteryOptimizationSettingsIfNeeded()
         }
     }
 
@@ -167,24 +179,22 @@ class MainActivity : ComponentActivity() {
                 return
             }
         }
-        requestBatteryOptimizationExemptionIfNeeded()
+        openBatteryOptimizationSettingsIfNeeded()
     }
 
-    private fun requestBatteryOptimizationExemptionIfNeeded() {
+    private fun openBatteryOptimizationSettingsIfNeeded() {
         val pm = getSystemService(POWER_SERVICE) as PowerManager
         if (pm.isIgnoringBatteryOptimizations(packageName)) return
 
         val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
         if (prefs.getBoolean(KEY_BATTERY_OPT_PROMPT_SHOWN, false)) return
 
-        prefs.edit().putBoolean(KEY_BATTERY_OPT_PROMPT_SHOWN, true).apply()
+        prefs.edit {
+            putBoolean(KEY_BATTERY_OPT_PROMPT_SHOWN, true)
+        }
 
-        Log.d(TAG, "Requesting battery optimization exemption")
-        startActivity(
-            Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-                data = Uri.parse("package:$packageName")
-            }
-        )
+        Log.d(TAG, "Opening battery optimization settings")
+        startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
     }
 
     private fun logDiagnostics() {
@@ -200,20 +210,21 @@ class MainActivity : ComponentActivity() {
         keyCode == KEY_ACC || keyCode == KEY_STAR
 
     /**
-     * Intercept our hardware keys before the Compose view hierarchy can consume them for
-     * focus traversal. Without this override, Compose's clickable/combinedClickable elements
-     * absorb D-pad events to move UI focus, meaning onKeyDown is only called after all
-     * focusable elements have been exhausted — requiring 3+ presses to change a zone/channel.
+     * Intercept our hardware keys during Compose's preview phase so D-pad navigation doesn't
+     * consume them for focus traversal before the radio shortcuts can react.
      */
-    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        if (isOurKey(event.keyCode)) {
-            return when (event.action) {
-                KeyEvent.ACTION_DOWN -> handleKeyDown(event.keyCode, event)
-                KeyEvent.ACTION_UP   -> { handleKeyUp(event.keyCode, event); true }
-                else                 -> false
+    private fun handlePreviewKeyEvent(event: androidx.compose.ui.input.key.KeyEvent): Boolean {
+        val nativeEvent = event.nativeKeyEvent
+        if (!isOurKey(nativeEvent.keyCode)) return false
+
+        return when (event.type) {
+            KeyEventType.KeyDown -> handleKeyDown(nativeEvent.keyCode, nativeEvent)
+            KeyEventType.KeyUp -> {
+                handleKeyUp(nativeEvent.keyCode, nativeEvent)
+                true
             }
+            else -> false
         }
-        return super.dispatchKeyEvent(event)
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
