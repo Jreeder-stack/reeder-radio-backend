@@ -11,17 +11,17 @@ class SignalingRepository(private val client: SignalingClient) {
     fun connect(unitId: String, username: String) = client.connect(unitId, username)
     fun disconnect() = client.disconnect()
 
-    fun joinChannel(channelId: Int) = client.joinChannel(channelId)
-    fun leaveChannel(channelId: Int) = client.leaveChannel(channelId)
+    fun joinChannel(channelKey: String) = client.joinChannel(channelKey)
+    fun leaveChannel(channelKey: String) = client.leaveChannel(channelKey)
 
-    fun transmitPre(channelId: Int) = client.emitPttPre(channelId)
-    fun transmitStart(channelId: Int) = client.emitPttStart(channelId)
-    fun transmitEnd(channelId: Int) = client.emitPttEnd(channelId)
+    fun transmitPre(channelKey: String) = client.emitPttPre(channelKey)
+    fun transmitStart(channelKey: String) = client.emitPttStart(channelKey)
+    fun transmitEnd(channelKey: String) = client.emitPttEnd(channelKey)
 
     fun setStatus(status: String) = client.emitStatusUpdate(status)
 
-    fun emergencyStart(channelId: Int) = client.emitEmergencyStart(channelId)
-    fun emergencyEnd(channelId: Int) = client.emitEmergencyEnd(channelId)
+    fun emergencyStart(channelKey: String) = client.emitEmergencyStart(channelKey)
+    fun emergencyEnd(channelKey: String) = client.emitEmergencyEnd(channelKey)
 
     fun sendLocationUpdate(lat: Double, lon: Double, accuracy: Float, heading: Float?, speed: Float?) =
         client.emitLocationUpdate(lat, lon, accuracy, heading, speed)

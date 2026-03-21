@@ -104,7 +104,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                         // (race-condition cancellation path), no error tone and no duplicate
                         // transmitEnd — the UP handler already cleaned both up.
                         app.toneEngine.playErrorTone()
-                        s.currentChannel?.id?.let { app.signalingRepository.transmitEnd(it) }
+                        s.currentChannel?.roomKey?.let { app.signalingRepository.transmitEnd(it) }
                         _uiState.update { it.copy(pttState = PttState.IDLE) }
                     }
                 }
@@ -205,9 +205,9 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
             app.signalingRepository.connectionState.collect { connState ->
                 _uiState.update { it.copy(signalingState = connState) }
                 if (connState == ConnectionState.AUTHENTICATED) {
-                    val channelId = _uiState.value.currentChannel?.id
-                    if (channelId != null) {
-                        app.signalingRepository.joinChannel(channelId)
+                    val roomKey = _uiState.value.currentChannel?.roomKey
+                    if (roomKey != null) {
+                        app.signalingRepository.joinChannel(roomKey)
                         updateServiceChannel()
                     }
                 }
@@ -221,16 +221,16 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                 when (event) {
                     is SignalingEvent.PttPre -> {
                         val state = _uiState.value
-                        if (event.unitId != state.unitId && event.channelId == state.currentChannel?.id) {
-                            sendServiceRxIntent(BackgroundAudioService.ACTION_RX_CONNECT, event.channelId)
+                        if (event.unitId != state.unitId && event.channelId == state.currentChannel?.roomKey) {
+                            sendServiceRxIntent(BackgroundAudioService.ACTION_RX_CONNECT, state.currentChannel?.id ?: -1)
                         }
                     }
                     is SignalingEvent.PttStart -> {
                         val state = _uiState.value
                         if (event.unitId != state.unitId) {
                             _uiState.update { it.copy(activeTransmittingUnit = event.unitId) }
-                            if (event.channelId == state.currentChannel?.id) {
-                                sendServiceRxIntent(BackgroundAudioService.ACTION_RX_CONNECT, event.channelId)
+                            if (event.channelId == state.currentChannel?.roomKey) {
+                                sendServiceRxIntent(BackgroundAudioService.ACTION_RX_CONNECT, state.currentChannel?.id ?: -1)
                             }
                         }
                     }
@@ -238,8 +238,8 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                         val state = _uiState.value
                         if (event.unitId == state.activeTransmittingUnit) {
                             _uiState.update { it.copy(activeTransmittingUnit = null) }
-                            if (event.channelId == state.currentChannel?.id) {
-                                sendServiceRxIntent(BackgroundAudioService.ACTION_RX_END, event.channelId)
+                            if (event.channelId == state.currentChannel?.roomKey) {
+                                sendServiceRxIntent(BackgroundAudioService.ACTION_RX_END, state.currentChannel?.id ?: -1)
                             }
                         }
                     }
@@ -307,7 +307,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
             app.toneEngine.playErrorTone()
             return
         }
-        val channelId = state.currentChannel?.id ?: run {
+        val channel = state.currentChannel ?: run {
             Log.w(TAG, "PTT DOWN: no channel selected")
             app.toneEngine.playErrorTone()
             return
@@ -317,22 +317,22 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
             app.toneEngine.playBusyTone()
             return
         }
-        Log.d(TAG, "onPttDown channelId=$channelId")
-        app.signalingRepository.transmitPre(channelId)
+        Log.d(TAG, "onPttDown roomKey=${channel.roomKey}")
+        app.signalingRepository.transmitPre(channel.roomKey)
         app.toneEngine.playTalkPermitTone()
         _uiState.update { it.copy(pttState = PttState.TRANSMITTING) }
-        app.signalingRepository.transmitStart(channelId)
+        app.signalingRepository.transmitStart(channel.roomKey)
         sendServiceIntent(BackgroundAudioService.ACTION_PTT_DOWN)
     }
 
     fun onPttUp() {
         val state = _uiState.value
         if (state.pttState == PttState.IDLE) return
-        val channelId = state.currentChannel?.id ?: return
-        Log.d(TAG, "onPttUp channelId=$channelId")
+        val channel = state.currentChannel ?: return
+        Log.d(TAG, "onPttUp roomKey=${channel.roomKey}")
         app.toneEngine.playEndOfTxTone()
         _uiState.update { it.copy(pttState = PttState.IDLE) }
-        app.signalingRepository.transmitEnd(channelId)
+        app.signalingRepository.transmitEnd(channel.roomKey)
         sendServiceIntent(BackgroundAudioService.ACTION_PTT_UP)
     }
 
@@ -440,28 +440,28 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun onEmergencyActivate() {
-        val channelId = _uiState.value.currentChannel?.id ?: return
-        Log.d(TAG, "EMERGENCY ACTIVATE channelId=$channelId")
+        val channel = _uiState.value.currentChannel ?: return
+        Log.d(TAG, "EMERGENCY ACTIVATE roomKey=${channel.roomKey}")
         _uiState.update { it.copy(myEmergencyActive = true, channelEmergencyActive = true) }
-        app.signalingRepository.emergencyStart(channelId)
+        app.signalingRepository.emergencyStart(channel.roomKey)
         locationTracker.startTracking()
-        startEmergencyTx(channelId)
+        startEmergencyTx(channel.roomKey)
     }
 
-    private fun startEmergencyTx(channelId: Int) {
+    private fun startEmergencyTx(channelKey: String) {
         if (_uiState.value.pttState != PttState.IDLE) return
-        Log.d(TAG, "EMERGENCY TX START channelId=$channelId (key-lock bypassed)")
+        Log.d(TAG, "EMERGENCY TX START roomKey=$channelKey (key-lock bypassed)")
         app.toneEngine.playTalkPermitTone()
         _uiState.update { it.copy(pttState = PttState.TRANSMITTING) }
-        app.signalingRepository.transmitStart(channelId)
+        app.signalingRepository.transmitStart(channelKey)
         sendServiceIntent(BackgroundAudioService.ACTION_PTT_DOWN)
     }
 
     private fun onEmergencyClear() {
-        val channelId = _uiState.value.currentChannel?.id ?: return
-        Log.d(TAG, "EMERGENCY CLEAR channelId=$channelId")
+        val channel = _uiState.value.currentChannel ?: return
+        Log.d(TAG, "EMERGENCY CLEAR roomKey=${channel.roomKey}")
         _uiState.update { it.copy(myEmergencyActive = false) }
-        app.signalingRepository.emergencyEnd(channelId)
+        app.signalingRepository.emergencyEnd(channel.roomKey)
         locationTracker.stopTracking()
         if (_uiState.value.pttState != PttState.IDLE) onPttUp()
     }
@@ -541,35 +541,47 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         val zones = _uiState.value.zones
         if (zones.isEmpty()) return
         val next = (_uiState.value.currentZoneIndex + 1) % zones.size
+        val oldRoomKey = _uiState.value.currentChannel?.roomKey
         _uiState.update { it.copy(currentZoneIndex = next, currentChannelIndex = 0) }
-        onChannelChanged()
+        onChannelChanged(oldRoomKey)
     }
 
     fun prevZone() {
         val zones = _uiState.value.zones
         if (zones.isEmpty()) return
         val p = (_uiState.value.currentZoneIndex - 1 + zones.size) % zones.size
+        val oldRoomKey = _uiState.value.currentChannel?.roomKey
         _uiState.update { it.copy(currentZoneIndex = p, currentChannelIndex = 0) }
-        onChannelChanged()
+        onChannelChanged(oldRoomKey)
     }
 
     fun nextChannel() {
         val channels = _uiState.value.currentZone?.channels ?: return
         if (channels.isEmpty()) return
         val next = (_uiState.value.currentChannelIndex + 1) % channels.size
+        val oldRoomKey = _uiState.value.currentChannel?.roomKey
         _uiState.update { it.copy(currentChannelIndex = next) }
-        onChannelChanged()
+        onChannelChanged(oldRoomKey)
     }
 
     fun prevChannel() {
         val channels = _uiState.value.currentZone?.channels ?: return
         if (channels.isEmpty()) return
         val p = (_uiState.value.currentChannelIndex - 1 + channels.size) % channels.size
+        val oldRoomKey = _uiState.value.currentChannel?.roomKey
         _uiState.update { it.copy(currentChannelIndex = p) }
-        onChannelChanged()
+        onChannelChanged(oldRoomKey)
     }
 
-    private fun onChannelChanged() {
+    private fun onChannelChanged(oldRoomKey: String? = null) {
+        val newRoomKey = _uiState.value.currentChannel?.roomKey
+        if (oldRoomKey != null && oldRoomKey != newRoomKey &&
+            app.signalingRepository.connectionState.value == ConnectionState.AUTHENTICATED) {
+            app.signalingRepository.leaveChannel(oldRoomKey)
+            if (newRoomKey != null) {
+                app.signalingRepository.joinChannel(newRoomKey)
+            }
+        }
         updateServiceChannel()
     }
 

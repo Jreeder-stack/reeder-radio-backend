@@ -78,27 +78,27 @@ class SignalingClient(private val serverUrl: String) {
         s.on("ptt:pre") { args -> parseAndEmit(args) { json ->
             SignalingEvent.PttPre(
                 unitId = json.optString("unitId"),
-                channelId = json.optInt("channelId")
+                channelId = json.optString("channelId")
             )
         }}
 
         s.on("ptt:start") { args -> parseAndEmit(args) { json ->
             SignalingEvent.PttStart(
                 unitId = json.optString("unitId"),
-                channelId = json.optInt("channelId")
+                channelId = json.optString("channelId")
             )
         }}
 
         s.on("ptt:end") { args -> parseAndEmit(args) { json ->
             SignalingEvent.PttEnd(
                 unitId = json.optString("unitId"),
-                channelId = json.optInt("channelId")
+                channelId = json.optString("channelId")
             )
         }}
 
         s.on("ptt:busy") { args -> parseAndEmit(args) { json ->
             SignalingEvent.PttBusy(
-                channelId = json.optInt("channelId"),
+                channelId = json.optString("channelId"),
                 transmittingUnit = json.optString("transmittingUnit")
             )
         }}
@@ -106,41 +106,41 @@ class SignalingClient(private val serverUrl: String) {
         s.on("channel:join") { args -> parseAndEmit(args) { json ->
             SignalingEvent.UnitJoined(
                 unitId = json.optString("unitId"),
-                channelId = json.optInt("channelId")
+                channelId = json.optString("channelId")
             )
         }}
 
         s.on("channel:leave") { args -> parseAndEmit(args) { json ->
             SignalingEvent.UnitLeft(
                 unitId = json.optString("unitId"),
-                channelId = json.optInt("channelId")
+                channelId = json.optString("channelId")
             )
         }}
 
         s.on("emergency:start") { args -> parseAndEmit(args) { json ->
             SignalingEvent.EmergencyStart(
                 unitId = json.optString("unitId"),
-                channelId = json.optInt("channelId")
+                channelId = json.optString("channelId")
             )
         }}
 
         s.on("emergency:end") { args -> parseAndEmit(args) { json ->
             SignalingEvent.EmergencyEnd(
                 unitId = json.optString("unitId"),
-                channelId = json.optInt("channelId")
+                channelId = json.optString("channelId")
             )
         }}
 
         s.on("clear_air:start") { args -> parseAndEmit(args) { json ->
-            SignalingEvent.ClearAirStart(channelId = json.optInt("channelId"))
+            SignalingEvent.ClearAirStart(channelId = json.optString("channelId"))
         }}
 
         s.on("clear_air:alert") { args -> parseAndEmit(args) { json ->
-            SignalingEvent.ClearAirStart(channelId = json.optInt("channelId"))
+            SignalingEvent.ClearAirStart(channelId = json.optString("channelId"))
         }}
 
         s.on("clear_air:end") { args -> parseAndEmit(args) { json ->
-            SignalingEvent.ClearAirEnd(channelId = json.optInt("channelId"))
+            SignalingEvent.ClearAirEnd(channelId = json.optString("channelId"))
         }}
 
         s.on("unit:status") { args -> parseAndEmit(args) { json ->
@@ -177,41 +177,41 @@ class SignalingClient(private val serverUrl: String) {
         _connectionState.value = ConnectionState.DISCONNECTED
     }
 
-    fun joinChannel(channelId: Int) {
+    fun joinChannel(channelKey: String) {
         if (!isReady()) return
-        Log.d(TAG, "joinChannel $channelId")
-        socket?.emit("channel:join", JSONObject().put("channelId", channelId))
+        Log.d(TAG, "joinChannel $channelKey")
+        socket?.emit("channel:join", JSONObject().put("channelId", channelKey))
     }
 
-    fun leaveChannel(channelId: Int) {
+    fun leaveChannel(channelKey: String) {
         if (socket?.connected() != true) return
-        Log.d(TAG, "leaveChannel $channelId")
-        socket?.emit("channel:leave", JSONObject().put("channelId", channelId))
+        Log.d(TAG, "leaveChannel $channelKey")
+        socket?.emit("channel:leave", JSONObject().put("channelId", channelKey))
     }
 
-    fun emitPttPre(channelId: Int) {
+    fun emitPttPre(channelKey: String) {
         if (!isReady()) return
-        Log.d(TAG, "emitPttPre $channelId")
+        Log.d(TAG, "emitPttPre $channelKey")
         socket?.emit("ptt:pre", JSONObject().apply {
-            put("channelId", channelId)
+            put("channelId", channelKey)
             put("unitId", unitId)
         })
     }
 
-    fun emitPttStart(channelId: Int) {
+    fun emitPttStart(channelKey: String) {
         if (!isReady()) return
-        Log.d(TAG, "emitPttStart $channelId")
+        Log.d(TAG, "emitPttStart $channelKey")
         socket?.emit("ptt:start", JSONObject().apply {
-            put("channelId", channelId)
+            put("channelId", channelKey)
             put("unitId", unitId)
         })
     }
 
-    fun emitPttEnd(channelId: Int) {
+    fun emitPttEnd(channelKey: String) {
         if (!isReady()) return
-        Log.d(TAG, "emitPttEnd $channelId")
+        Log.d(TAG, "emitPttEnd $channelKey")
         socket?.emit("ptt:end", JSONObject().apply {
-            put("channelId", channelId)
+            put("channelId", channelKey)
             put("unitId", unitId)
         })
     }
@@ -224,16 +224,16 @@ class SignalingClient(private val serverUrl: String) {
         })
     }
 
-    fun emitEmergencyStart(channelId: Int) {
+    fun emitEmergencyStart(channelKey: String) {
         if (!isReady()) return
-        Log.d(TAG, "emitEmergencyStart $channelId")
-        socket?.emit("emergency:start", JSONObject().put("channelId", channelId))
+        Log.d(TAG, "emitEmergencyStart $channelKey")
+        socket?.emit("emergency:start", JSONObject().put("channelId", channelKey))
     }
 
-    fun emitEmergencyEnd(channelId: Int) {
+    fun emitEmergencyEnd(channelKey: String) {
         if (!isReady()) return
-        Log.d(TAG, "emitEmergencyEnd $channelId")
-        socket?.emit("emergency:end", JSONObject().put("channelId", channelId))
+        Log.d(TAG, "emitEmergencyEnd $channelKey")
+        socket?.emit("emergency:end", JSONObject().put("channelId", channelKey))
     }
 
     fun emitLocationUpdate(lat: Double, lon: Double, accuracy: Float, heading: Float?, speed: Float?) {

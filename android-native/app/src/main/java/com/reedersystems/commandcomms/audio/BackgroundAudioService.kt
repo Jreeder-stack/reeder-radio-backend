@@ -85,10 +85,10 @@ class BackgroundAudioService : Service() {
     @Volatile private var needsSignaling = false
 
     /**
-     * Channel currently joined on the background signaling socket.
+     * Channel roomKey currently joined on the background signaling socket.
      * Reset on disconnect so reconnects re-join the selected channel.
      */
-    @Volatile private var joinedSignalingChannelId: Int = -1
+    @Volatile private var joinedSignalingChannelId: String? = null
 
     /**
      * True while an RX-triggered LiveKit connect coroutine is in flight.
@@ -244,8 +244,8 @@ class BackgroundAudioService : Service() {
             }
 
             if (signaling) {
-                app.signalingRepository.transmitPre(channelId)
-                Log.d(TAG, "Screen-off PTT: transmitPre sent for channel $channelId")
+                app.signalingRepository.transmitPre(roomKey)
+                Log.d(TAG, "Screen-off PTT: transmitPre sent for roomKey $roomKey")
             }
             val tokenResult = app.liveKitTokenRepository.getToken(identity = unitId, room = roomKey)
             if (tokenResult.isFailure) {
@@ -296,9 +296,9 @@ class BackgroundAudioService : Service() {
             httpPttStart(serverUrl, channelId, unitId)
 
             if (signaling) {
-                app.signalingRepository.transmitStart(channelId)
+                app.signalingRepository.transmitStart(roomKey)
                 app.toneEngine.playTalkPermitTone()
-                Log.d(TAG, "Screen-off PTT: transmitStart + talk-permit tone for channel $channelId")
+                Log.d(TAG, "Screen-off PTT: transmitStart + talk-permit tone for roomKey $roomKey")
             }
         }
     }
@@ -312,6 +312,7 @@ class BackgroundAudioService : Service() {
 
         val unitId = servicePrefs.unitId ?: app.sessionPrefs.unitId ?: return
         val channelId = servicePrefs.channelId.takeIf { it >= 0 } ?: return
+        val roomKey = servicePrefs.channelRoomKey ?: return
         val serverUrl = servicePrefs.serverUrl ?: app.apiClient.baseUrl
         val wasSignaling = needsSignaling
 
@@ -322,9 +323,9 @@ class BackgroundAudioService : Service() {
             audioEngine.stopTransmit()
             httpPttEnd(serverUrl, channelId, unitId)
             if (wasSignaling) {
-                app.signalingRepository.transmitEnd(channelId)
+                app.signalingRepository.transmitEnd(roomKey)
                 app.toneEngine.playEndOfTxTone()
-                Log.d(TAG, "Screen-off PTT: transmitEnd + end-of-TX tone for channel $channelId")
+                Log.d(TAG, "Screen-off PTT: transmitEnd + end-of-TX tone for roomKey $roomKey")
             }
             rescheduleGracePeriod()
         }
@@ -365,7 +366,7 @@ class BackgroundAudioService : Service() {
                 app.signalingRepository.connectionState.collectLatest { state ->
                     when (state) {
                         ConnectionState.AUTHENTICATED -> syncBackgroundSignalingChannel()
-                        ConnectionState.DISCONNECTED -> joinedSignalingChannelId = -1
+                        ConnectionState.DISCONNECTED -> joinedSignalingChannelId = null
                         else -> Unit
                     }
                 }
@@ -375,21 +376,22 @@ class BackgroundAudioService : Service() {
         if (signalingEventsJob == null) {
             signalingEventsJob = scope.launch {
                 app.signalingRepository.events.collectLatest { event ->
+                    val currentRoomKey = servicePrefs.channelRoomKey
                     val currentChannelId = servicePrefs.channelId
                     val selfUnitId = servicePrefs.unitId ?: app.sessionPrefs.unitId
                     when (event) {
                         is SignalingEvent.PttPre -> {
-                            if (event.unitId != selfUnitId && event.channelId == currentChannelId) {
-                                handleRxConnect(event.channelId)
+                            if (event.unitId != selfUnitId && event.channelId == currentRoomKey) {
+                                handleRxConnect(currentChannelId)
                             }
                         }
                         is SignalingEvent.PttStart -> {
-                            if (event.unitId != selfUnitId && event.channelId == currentChannelId) {
-                                handleRxConnect(event.channelId)
+                            if (event.unitId != selfUnitId && event.channelId == currentRoomKey) {
+                                handleRxConnect(currentChannelId)
                             }
                         }
                         is SignalingEvent.PttEnd -> {
-                            if (event.unitId != selfUnitId && event.channelId == currentChannelId) {
+                            if (event.unitId != selfUnitId && event.channelId == currentRoomKey) {
                                 handleRxEnd()
                             }
                         }
@@ -421,23 +423,23 @@ class BackgroundAudioService : Service() {
         return syncBackgroundSignalingChannel()
     }
 
-    private fun currentTargetChannelId(): Int = servicePrefs.channelId.takeIf { it >= 0 } ?: -1
+    private fun currentTargetRoomKey(): String? = servicePrefs.channelRoomKey
 
     private suspend fun syncBackgroundSignalingChannel(): Boolean {
         if (app.signalingRepository.connectionState.value != ConnectionState.AUTHENTICATED) {
             return false
         }
 
-        val targetChannelId = currentTargetChannelId()
-        if (targetChannelId < 0) return false
-        if (joinedSignalingChannelId == targetChannelId) return true
+        val targetRoomKey = currentTargetRoomKey() ?: return false
+        if (joinedSignalingChannelId == targetRoomKey) return true
 
-        if (joinedSignalingChannelId >= 0) {
-            app.signalingRepository.leaveChannel(joinedSignalingChannelId)
+        val previousRoomKey = joinedSignalingChannelId
+        if (previousRoomKey != null) {
+            app.signalingRepository.leaveChannel(previousRoomKey)
         }
-        app.signalingRepository.joinChannel(targetChannelId)
-        joinedSignalingChannelId = targetChannelId
-        Log.d(TAG, "Background signaling joined channel $targetChannelId")
+        app.signalingRepository.joinChannel(targetRoomKey)
+        joinedSignalingChannelId = targetRoomKey
+        Log.d(TAG, "Background signaling joined channel $targetRoomKey")
         return true
     }
 
