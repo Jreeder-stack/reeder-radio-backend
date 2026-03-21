@@ -184,7 +184,11 @@ class NativeRadioEngine private constructor(context: Context) {
             Log.d(DIAG_TAG, "engine.stopTransmitSuspend() SUCCESS")
             true
         } catch (e: Exception) {
-            Log.e(DIAG_TAG, "engine.stopTransmitSuspend() FAILED — ${e.javaClass.simpleName}: ${e.message}", e)
+            // Guard against Error -38 (dead AudioRecord object) when session is torn down
+            // mid-read — always reset isMicEnabledState to prevent TX stuck open.
+            isMicEnabledState = false
+            emit("microphoneDisabled", mapOf("success" to false, "enabled" to false))
+            Log.w(DIAG_TAG, "engine.stopTransmitSuspend() — mic disable exception (may be dead object -38): ${e.javaClass.simpleName}: ${e.message}")
             false
         }
     }

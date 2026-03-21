@@ -221,11 +221,25 @@ export default function MobileRadioView({ user, onLogout }) {
   const handleTransmitStart = useCallback(async () => {
     const channelName = transmitChannelRef.current;
     if (!channelName) return;
-    
-    await ensureConnected();
-    const room = livekitManager?.getRoom(channelName);
-    if (!room) return;
-    
+
+    const ok = await ensureConnected(channelName);
+    if (!ok) {
+      console.warn('[PTT] ensureConnected returned false for channel:', channelName);
+      return;
+    }
+
+    let room = livekitManager?.getRoom(channelName);
+    if (!room) {
+      for (let i = 0; i < 15 && !room; i++) {
+        await new Promise(r => setTimeout(r, 200));
+        room = livekitManager?.getRoom(channelName);
+      }
+    }
+    if (!room) {
+      console.warn('[PTT] Room still null after 3s wait for channel:', channelName);
+      return;
+    }
+
     micPTTManager.setCurrentChannel(channelName);
     micPTTManager.setCurrentUnit(identity);
     micPTTManager.setRoom(room);
@@ -438,6 +452,7 @@ export default function MobileRadioView({ user, onLogout }) {
             onTransmitStart={handleTransmitStart}
             onTransmitEnd={handleTransmitEnd}
             disabled={!connected}
+            isConnected={connected}
             isReceiving={isReceiving}
             activeSpeaker={transmittingUnitId || activeAudio?.from}
             isTransmitting={isTransmitting}
