@@ -26,10 +26,27 @@ class PttHardwareReceiver : BroadcastReceiver() {
 
         Log.d(TAG, "PttHardwareReceiver.onReceive action=$action extras=${intent.extras}")
 
+        // Vendor hardware broadcasts must be suppressed when the screen is interactive.
+        // When the screen is on, MainActivity receives the physical key event and routes
+        // PTT through RadioViewModel → BackgroundAudioService. Forwarding the vendor
+        // broadcast simultaneously creates a second concurrent LiveKit session.
+        // Internal self-sent actions always proceed regardless of screen state.
+        val isInternalAction = action == ACTION_PTT_DOWN || action == ACTION_PTT_UP ||
+            action == ACTION_EMERGENCY_DOWN || action == ACTION_EMERGENCY_UP
+        if (!isInternalAction) {
+            val pm0 = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+            if (pm0.isInteractive) {
+                Log.d(TAG, "PttHardwareReceiver: screen ON — dropping vendor broadcast '$action' (handled by MainActivity)")
+                return
+            }
+        }
+
         val pttAction: String? = when (action) {
             // Internal self-sent actions (legacy / foreground callers)
-            ACTION_PTT_DOWN -> BackgroundAudioService.ACTION_PTT_DOWN
-            ACTION_PTT_UP   -> BackgroundAudioService.ACTION_PTT_UP
+            ACTION_PTT_DOWN     -> BackgroundAudioService.ACTION_PTT_DOWN
+            ACTION_PTT_UP       -> BackgroundAudioService.ACTION_PTT_UP
+            ACTION_EMERGENCY_DOWN -> BackgroundAudioService.ACTION_EMERGENCY_DOWN
+            ACTION_EMERGENCY_UP   -> BackgroundAudioService.ACTION_EMERGENCY_UP
 
             // Generic Android PTT broadcast with pttKeyState extra (some Inrico firmware)
             "android.intent.action.PTT" -> {
@@ -67,6 +84,14 @@ class PttHardwareReceiver : BroadcastReceiver() {
             // Inrico T320 firmware — telecom namespace (seen on some ROM versions)
             "com.android.server.telecom.PushToTalk.action.PTT_KEY_DOWN" -> BackgroundAudioService.ACTION_PTT_DOWN
             "com.android.server.telecom.PushToTalk.action.PTT_KEY_UP"   -> BackgroundAudioService.ACTION_PTT_UP
+
+            // Inrico T320 emergency button broadcasts
+            "android.intent.action.EMERGENCY_DOWN"        -> BackgroundAudioService.ACTION_EMERGENCY_DOWN
+            "android.intent.action.EMERGENCY_UP"          -> BackgroundAudioService.ACTION_EMERGENCY_UP
+            "com.inrico.emergency.down"                   -> BackgroundAudioService.ACTION_EMERGENCY_DOWN
+            "com.inrico.emergency.up"                     -> BackgroundAudioService.ACTION_EMERGENCY_UP
+            "com.inrico.intent.action.EMERGENCY_DOWN"     -> BackgroundAudioService.ACTION_EMERGENCY_DOWN
+            "com.inrico.intent.action.EMERGENCY_UP"       -> BackgroundAudioService.ACTION_EMERGENCY_UP
 
             else -> {
                 Log.d(TAG, "PttHardwareReceiver: unrecognised action=$action — ignoring")
@@ -106,8 +131,10 @@ class PttHardwareReceiver : BroadcastReceiver() {
     }
 
     companion object {
-        const val ACTION_PTT_DOWN = "com.reedersystems.commandcomms.PTT_DOWN"
-        const val ACTION_PTT_UP   = "com.reedersystems.commandcomms.PTT_UP"
+        const val ACTION_PTT_DOWN       = "com.reedersystems.commandcomms.PTT_DOWN"
+        const val ACTION_PTT_UP         = "com.reedersystems.commandcomms.PTT_UP"
+        const val ACTION_EMERGENCY_DOWN = "com.reedersystems.commandcomms.EMERGENCY_DOWN"
+        const val ACTION_EMERGENCY_UP   = "com.reedersystems.commandcomms.EMERGENCY_UP"
 
         private const val WAKE_LOCK_TAG       = "CommandComms:PttReceiver"
         private const val WAKE_LOCK_TIMEOUT_MS = 5_000L
