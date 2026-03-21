@@ -23,23 +23,42 @@ class ToneEngine(private val context: Context) {
 
     fun playTalkPermitTone() {
         scope.launch {
-            try {
-                val mp = MediaPlayer.create(
-                    context,
-                    R.raw.talk_permit,
-                    audioAttribs(),
-                    AudioManager.AUDIO_SESSION_ID_GENERATE
-                )
-                if (mp != null) {
-                    mp.setOnCompletionListener { it.release() }
-                    mp.start()
-                    return@launch
-                }
-            } catch (e: Exception) {
-                Log.w(TAG, "WAV playback failed, using oscillator fallback: ${e.message}")
-            }
-            playBeeps(800f, count = 3, durationMs = 40, gapMs = 30, volume = 0.5f)
+            playTalkPermitToneAndAwait()
         }
+    }
+
+    suspend fun playTalkPermitToneAndAwait() {
+        var mp: MediaPlayer? = null
+        try {
+            val deferred = CompletableDeferred<Unit>()
+            mp = MediaPlayer.create(
+                context,
+                R.raw.talk_permit,
+                audioAttribs(),
+                AudioManager.AUDIO_SESSION_ID_GENERATE
+            )
+            if (mp != null) {
+                mp.setOnCompletionListener {
+                    it.release()
+                    deferred.complete(Unit)
+                }
+                mp.start()
+                try {
+                    deferred.await()
+                } catch (e: CancellationException) {
+                    runCatching { mp.stop() }
+                    runCatching { mp.release() }
+                    throw e
+                }
+                return
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            runCatching { mp?.release() }
+            Log.w(TAG, "WAV playback failed, using oscillator fallback: ${e.message}")
+        }
+        playBeeps(800f, count = 3, durationMs = 40, gapMs = 30, volume = 0.5f)
     }
 
     fun playEndOfTxTone() {

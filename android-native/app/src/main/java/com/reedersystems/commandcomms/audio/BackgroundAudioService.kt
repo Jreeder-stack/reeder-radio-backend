@@ -282,6 +282,20 @@ class BackgroundAudioService : Service() {
                 return@launch
             }
 
+            if (signaling) {
+                app.toneEngine.playTalkPermitToneAndAwait()
+                Log.d(TAG, "Screen-off PTT: talk-permit tone finished for roomKey $roomKey")
+            }
+
+            if (pttUpWhileConnecting) {
+                Log.d(TAG, "PTT_UP received during talk-permit tone — aborting TX")
+                pttState = PttState.IDLE
+                updateNotification("Radio — Standby")
+                rescheduleGracePeriod()
+                sendPttTxAborted()
+                return@launch
+            }
+
             val txStarted = audioEngine.startTransmit()
             if (!txStarted) {
                 Log.e(TAG, "TX start failed after connect")
@@ -298,8 +312,7 @@ class BackgroundAudioService : Service() {
 
             if (signaling) {
                 app.signalingRepository.transmitStart(roomKey)
-                app.toneEngine.playTalkPermitTone()
-                Log.d(TAG, "Screen-off PTT: transmitStart + talk-permit tone for roomKey $roomKey")
+                Log.d(TAG, "Screen-off PTT: transmitStart sent for roomKey $roomKey")
             }
         }
     }
