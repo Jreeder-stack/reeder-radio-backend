@@ -26,20 +26,9 @@ class PttHardwareReceiver : BroadcastReceiver() {
 
         Log.d(TAG, "PttHardwareReceiver.onReceive action=$action extras=${intent.extras}")
 
-        // Vendor hardware broadcasts must be suppressed when the screen is interactive.
-        // When the screen is on, MainActivity receives the physical key event and routes
-        // PTT through RadioViewModel → BackgroundAudioService. Forwarding the vendor
-        // broadcast simultaneously creates a second concurrent LiveKit session.
-        // Internal self-sent actions always proceed regardless of screen state.
-        val isInternalAction = action == ACTION_PTT_DOWN || action == ACTION_PTT_UP ||
-            action == ACTION_EMERGENCY_DOWN || action == ACTION_EMERGENCY_UP
-        if (!isInternalAction) {
-            val pm0 = context.getSystemService(Context.POWER_SERVICE) as PowerManager
-            if (pm0.isInteractive) {
-                Log.d(TAG, "PttHardwareReceiver: screen ON — dropping vendor broadcast '$action' (handled by MainActivity)")
-                return
-            }
-        }
+        // All PTT events are forwarded to BackgroundAudioService regardless of screen state.
+        // The service's CONNECTING/TRANSMITTING guard prevents double-firing if both
+        // the key-event path and the broadcast path arrive simultaneously.
 
         val pttAction: String? = when (action) {
             // Internal self-sent actions (legacy / foreground callers)

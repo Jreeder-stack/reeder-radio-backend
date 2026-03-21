@@ -117,6 +117,14 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                         _uiState.update { it.copy(pttState = PttState.IDLE) }
                     }
                 }
+                BackgroundAudioService.ACTION_PTT_TX_STARTED -> {
+                    Log.d(TAG, "PTT_TX_STARTED received — setting pttState = TRANSMITTING")
+                    _uiState.update { it.copy(pttState = PttState.TRANSMITTING) }
+                }
+                BackgroundAudioService.ACTION_PTT_TX_ENDED -> {
+                    Log.d(TAG, "PTT_TX_ENDED received — setting pttState = IDLE")
+                    _uiState.update { it.copy(pttState = PttState.IDLE) }
+                }
             }
         }
     }
@@ -148,6 +156,8 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
     private fun registerPttFailureReceiver() {
         val filter = IntentFilter(BackgroundAudioService.ACTION_PTT_TX_FAILED).apply {
             addAction(BackgroundAudioService.ACTION_PTT_TX_ABORTED)
+            addAction(BackgroundAudioService.ACTION_PTT_TX_STARTED)
+            addAction(BackgroundAudioService.ACTION_PTT_TX_ENDED)
         }
         ContextCompat.registerReceiver(
             getApplication(),
@@ -155,7 +165,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
             filter,
             ContextCompat.RECEIVER_NOT_EXPORTED
         )
-        Log.d(TAG, "PTT_TX_FAILED/ABORTED receiver registered")
+        Log.d(TAG, "PTT_TX_FAILED/ABORTED/STARTED/ENDED receiver registered")
     }
 
     private fun updateClock() {

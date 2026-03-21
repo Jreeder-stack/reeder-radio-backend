@@ -293,6 +293,7 @@ class BackgroundAudioService : Service() {
 
             pttState = PttState.TRANSMITTING
             updateNotification("TRANSMITTING")
+            sendPttTxStarted()
             httpPttStart(serverUrl, channelId, unitId)
 
             if (signaling) {
@@ -321,6 +322,7 @@ class BackgroundAudioService : Service() {
 
         scope.launch {
             audioEngine.stopTransmit()
+            sendPttTxEnded()
             httpPttEnd(serverUrl, channelId, unitId)
             if (wasSignaling) {
                 app.signalingRepository.transmitEnd(roomKey)
@@ -599,6 +601,26 @@ class BackgroundAudioService : Service() {
         sendBroadcast(intent)
     }
 
+    /**
+     * Broadcast PTT_TX_STARTED to the ViewModel so it can set pttState = TRANSMITTING
+     * and update the PTT button visual state.
+     */
+    private fun sendPttTxStarted() {
+        Log.d(TAG, "Sending PTT_TX_STARTED broadcast")
+        val intent = Intent(ACTION_PTT_TX_STARTED).apply { setPackage(packageName) }
+        sendBroadcast(intent)
+    }
+
+    /**
+     * Broadcast PTT_TX_ENDED to the ViewModel so it can set pttState = IDLE
+     * and update the PTT button visual state.
+     */
+    private fun sendPttTxEnded() {
+        Log.d(TAG, "Sending PTT_TX_ENDED broadcast")
+        val intent = Intent(ACTION_PTT_TX_ENDED).apply { setPackage(packageName) }
+        sendBroadcast(intent)
+    }
+
     private fun httpPttStart(serverUrl: String, channelId: Int, unitId: String) {
         val json = """{"channelId":$channelId,"unitId":"$unitId"}"""
         try {
@@ -680,6 +702,8 @@ class BackgroundAudioService : Service() {
         const val ACTION_STOP = "com.reedersystems.commandcomms.STOP"
         const val ACTION_PTT_TX_FAILED = "com.reedersystems.commandcomms.PTT_TX_FAILED"
         const val ACTION_PTT_TX_ABORTED = "com.reedersystems.commandcomms.PTT_TX_ABORTED"
+        const val ACTION_PTT_TX_STARTED = "com.reedersystems.commandcomms.PTT_TX_STARTED"
+        const val ACTION_PTT_TX_ENDED = "com.reedersystems.commandcomms.PTT_TX_ENDED"
         const val EXTRA_CHANNEL_ID = "channel_id"
         const val EXTRA_ROOM_KEY = "room_key"
         const val EXTRA_CHANNEL_NAME = "channel_name"
