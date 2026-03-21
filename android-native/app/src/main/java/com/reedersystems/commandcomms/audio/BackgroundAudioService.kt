@@ -12,7 +12,11 @@ import com.reedersystems.commandcomms.CommandCommsApp
 import com.reedersystems.commandcomms.MainActivity
 import com.reedersystems.commandcomms.data.model.PttState
 import com.reedersystems.commandcomms.data.prefs.ServiceConnectionPrefs
+import com.reedersystems.commandcomms.signaling.ConnectionState
+import com.reedersystems.commandcomms.signaling.SignalingEvent
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.first
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -68,6 +72,15 @@ class BackgroundAudioService : Service() {
      */
     @Volatile private var needsSignaling = false
 
+    /**
+     * Channel currently joined on the background signaling socket.
+     * Reset on disconnect so reconnects re-join the selected channel.
+     */
+    @Volatile private var joinedSignalingChannelId: Int = -1
+
+    private var signalingConnectionJob: Job? = null
+    private var signalingEventsJob: Job? = null
+
     override fun onCreate() {
         super.onCreate()
         Log.d(TAG, "BackgroundAudioService created")
@@ -83,6 +96,8 @@ class BackgroundAudioService : Service() {
         audioEngine = PttAudioEngine(applicationContext)
         servicePrefs = ServiceConnectionPrefs(applicationContext)
         startForeground(NOTIFICATION_ID, buildNotification("Radio — Standby"))
+        startBackgroundSignalingObservers()
+        ensureBackgroundSignalingConnected()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -103,6 +118,8 @@ class BackgroundAudioService : Service() {
                     servicePrefs.channelRoomKey = roomKey
                     if (channelName != null) servicePrefs.channelName = channelName
                     Log.d(TAG, "Channel updated: $channelId / $roomKey")
+                    ensureBackgroundSignalingConnected()
+                    scope.launch { syncBackgroundSignalingChannel() }
                 }
             }
             ACTION_STOP -> {
@@ -153,12 +170,19 @@ class BackgroundAudioService : Service() {
         pttState = PttState.CONNECTING
         updateNotification("Connecting…")
 
-        if (signaling) {
-            app.signalingRepository.transmitPre(channelId)
-            Log.d(TAG, "Screen-off PTT: transmitPre sent for channel $channelId")
-        }
-
         scope.launch {
+            if (signaling && !ensureBackgroundSignalingReady(channelId)) {
+                Log.e(TAG, "Screen-off PTT: signaling not ready")
+                pttState = PttState.IDLE
+                updateNotification("Radio — Standby")
+                sendPttTxFailed()
+                return@launch
+            }
+
+            if (signaling) {
+                app.signalingRepository.transmitPre(channelId)
+                Log.d(TAG, "Screen-off PTT: transmitPre sent for channel $channelId")
+            }
             val tokenResult = app.liveKitTokenRepository.getToken(identity = unitId, room = roomKey)
             if (tokenResult.isFailure) {
                 Log.e(TAG, "Token fetch failed: ${tokenResult.exceptionOrNull()?.message}")
@@ -240,6 +264,88 @@ class BackgroundAudioService : Service() {
             }
             rescheduleGracePeriod()
         }
+    }
+
+    private fun startBackgroundSignalingObservers() {
+        if (signalingConnectionJob == null) {
+            signalingConnectionJob = scope.launch {
+                app.signalingRepository.connectionState.collectLatest { state ->
+                    when (state) {
+                        ConnectionState.AUTHENTICATED -> syncBackgroundSignalingChannel()
+                        ConnectionState.DISCONNECTED -> joinedSignalingChannelId = -1
+                        else -> Unit
+                    }
+                }
+            }
+        }
+
+        if (signalingEventsJob == null) {
+            signalingEventsJob = scope.launch {
+                app.signalingRepository.events.collectLatest { event ->
+                    val currentChannelId = servicePrefs.channelId
+                    val selfUnitId = servicePrefs.unitId ?: app.sessionPrefs.unitId
+                    when (event) {
+                        is SignalingEvent.PttPre -> {
+                            if (event.unitId != selfUnitId && event.channelId == currentChannelId) {
+                                handleRxConnect(event.channelId)
+                            }
+                        }
+                        is SignalingEvent.PttStart -> {
+                            if (event.unitId != selfUnitId && event.channelId == currentChannelId) {
+                                handleRxConnect(event.channelId)
+                            }
+                        }
+                        is SignalingEvent.PttEnd -> {
+                            if (event.unitId != selfUnitId && event.channelId == currentChannelId) {
+                                handleRxEnd()
+                            }
+                        }
+                        else -> Unit
+                    }
+                }
+            }
+        }
+    }
+
+    private fun ensureBackgroundSignalingConnected() {
+        val unitId = servicePrefs.unitId ?: app.sessionPrefs.unitId ?: return
+        val username = app.sessionPrefs.username ?: unitId
+        startBackgroundSignalingObservers()
+        app.signalingRepository.connect(unitId, username)
+    }
+
+    private suspend fun ensureBackgroundSignalingReady(channelId: Int): Boolean {
+        ensureBackgroundSignalingConnected()
+        val authenticated = when (app.signalingRepository.connectionState.value) {
+            ConnectionState.AUTHENTICATED -> true
+            else -> withTimeoutOrNull(5_000L) {
+                app.signalingRepository.connectionState.first { it == ConnectionState.AUTHENTICATED }
+            } != null
+        }
+        if (!authenticated) return false
+
+        servicePrefs.channelId = channelId
+        return syncBackgroundSignalingChannel()
+    }
+
+    private fun currentTargetChannelId(): Int = servicePrefs.channelId.takeIf { it >= 0 } ?: -1
+
+    private suspend fun syncBackgroundSignalingChannel(): Boolean {
+        if (app.signalingRepository.connectionState.value != ConnectionState.AUTHENTICATED) {
+            return false
+        }
+
+        val targetChannelId = currentTargetChannelId()
+        if (targetChannelId < 0) return false
+        if (joinedSignalingChannelId == targetChannelId) return true
+
+        if (joinedSignalingChannelId >= 0) {
+            app.signalingRepository.leaveChannel(joinedSignalingChannelId)
+        }
+        app.signalingRepository.joinChannel(targetChannelId)
+        joinedSignalingChannelId = targetChannelId
+        Log.d(TAG, "Background signaling joined channel $targetChannelId")
+        return true
     }
 
     /**
@@ -432,6 +538,8 @@ class BackgroundAudioService : Service() {
 
     override fun onDestroy() {
         Log.d(TAG, "BackgroundAudioService destroyed")
+        signalingConnectionJob?.cancel()
+        signalingEventsJob?.cancel()
         scope.launch { audioEngine.stopTransmit() }
         scope.cancel()
         audioEngine.release()
