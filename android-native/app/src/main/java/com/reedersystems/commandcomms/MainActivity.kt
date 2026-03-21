@@ -54,6 +54,12 @@ class MainActivity : ComponentActivity() {
      */
     private var pendingBatteryPromptAfterFullScreenIntent = false
 
+    /**
+     * Set to true when we have launched ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS.
+     * On the next onResume we open overlay (SYSTEM_ALERT_WINDOW) settings if not yet granted.
+     */
+    private var pendingOverlayPromptAfterBattery = false
+
     private val requestBackgroundLocationLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
@@ -117,6 +123,9 @@ class MainActivity : ComponentActivity() {
         if (pendingBatteryPromptAfterFullScreenIntent) {
             pendingBatteryPromptAfterFullScreenIntent = false
             openBatteryOptimizationSettingsIfNeeded()
+        } else if (pendingOverlayPromptAfterBattery) {
+            pendingOverlayPromptAfterBattery = false
+            requestOverlayPermissionIfNeeded()
         }
     }
 
@@ -195,9 +204,14 @@ class MainActivity : ComponentActivity() {
 
     private fun openBatteryOptimizationSettingsIfNeeded() {
         val pm = getSystemService(POWER_SERVICE) as PowerManager
-        if (pm.isIgnoringBatteryOptimizations(packageName)) return
+        if (pm.isIgnoringBatteryOptimizations(packageName)) {
+            // Battery opt already exempted — go straight to overlay check
+            requestOverlayPermissionIfNeeded()
+            return
+        }
 
         Log.d(TAG, "Requesting battery optimization exemption")
+        pendingOverlayPromptAfterBattery = true
         try {
             startActivity(
                 Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
@@ -207,6 +221,21 @@ class MainActivity : ComponentActivity() {
         } catch (e: Exception) {
             Log.w(TAG, "Direct battery opt request unavailable — falling back to settings list")
             startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+        }
+    }
+
+    private fun requestOverlayPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
+            Log.d(TAG, "Requesting SYSTEM_ALERT_WINDOW (overlay) permission")
+            try {
+                startActivity(
+                    Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION).apply {
+                        data = Uri.parse("package:$packageName")
+                    }
+                )
+            } catch (e: Exception) {
+                Log.w(TAG, "Overlay permission request unavailable: ${e.message}")
+            }
         }
     }
 
