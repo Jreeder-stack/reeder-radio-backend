@@ -3,11 +3,14 @@ package com.reedersystems.commandcomms.audio
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.BroadcastReceiver
 import android.content.Intent
+import android.content.IntentFilter
 import android.os.IBinder
 import android.os.PowerManager
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import com.reedersystems.commandcomms.CommandCommsApp
 import com.reedersystems.commandcomms.MainActivity
 import com.reedersystems.commandcomms.data.model.PttState
@@ -39,6 +42,13 @@ class BackgroundAudioService : Service() {
      * Prevents Doze from interrupting audio or HTTP PTT calls mid-transmission.
      */
     private lateinit var serviceWakeLock: PowerManager.WakeLock
+
+    /**
+     * Dynamically-registered PttHardwareReceiver. Dynamic registration bypasses the Android 8.0
+     * implicit broadcast restriction that blocks manifest-declared receivers from receiving
+     * vendor PTT broadcasts (e.g. android.intent.action.PTT.down) when the app is backgrounded.
+     */
+    private var dynamicPttReceiver: BroadcastReceiver? = null
 
     private var pttState = PttState.IDLE
     private var gracePeriodJob: Job? = null
@@ -96,8 +106,35 @@ class BackgroundAudioService : Service() {
         audioEngine = PttAudioEngine(applicationContext)
         servicePrefs = ServiceConnectionPrefs(applicationContext)
         startForeground(NOTIFICATION_ID, buildNotification("Radio — Standby"))
+        registerDynamicPttReceiver()
         startBackgroundSignalingObservers()
         ensureBackgroundSignalingConnected()
+    }
+
+    private fun registerDynamicPttReceiver() {
+        val filter = IntentFilter().apply {
+            addAction(PttHardwareReceiver.ACTION_PTT_DOWN)
+            addAction(PttHardwareReceiver.ACTION_PTT_UP)
+            addAction("android.intent.action.PTT")
+            addAction("android.intent.action.PTT.down")
+            addAction("android.intent.action.PTT.up")
+            addAction("android.intent.action.PTT_DOWN")
+            addAction("android.intent.action.PTT_UP")
+            addAction("android.intent.action.PTT_KEY_DOWN")
+            addAction("android.intent.action.PTT_KEY_UP")
+            addAction("com.inrico.ptt.down")
+            addAction("com.inrico.ptt.up")
+            addAction("com.inrico.ptt.PTT_KEY_DOWN")
+            addAction("com.inrico.ptt.PTT_KEY_UP")
+            addAction("com.inrico.intent.action.PTT_DOWN")
+            addAction("com.inrico.intent.action.PTT_UP")
+            addAction("com.android.server.telecom.PushToTalk.action.PTT_KEY_DOWN")
+            addAction("com.android.server.telecom.PushToTalk.action.PTT_KEY_UP")
+        }
+        val receiver = PttHardwareReceiver()
+        ContextCompat.registerReceiver(this, receiver, filter, ContextCompat.RECEIVER_EXPORTED)
+        dynamicPttReceiver = receiver
+        Log.d(TAG, "Dynamic PttHardwareReceiver registered")
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -142,8 +179,6 @@ class BackgroundAudioService : Service() {
 
         if (pttState == PttState.TRANSMITTING || pttState == PttState.CONNECTING) return
 
-        // Reset AFTER all early-return guards so a second DOWN while still CONNECTING
-        // cannot clear the flag set by an intervening UP (race condition fix).
         pttUpWhileConnecting = false
         needsSignaling = signaling
 
@@ -348,10 +383,6 @@ class BackgroundAudioService : Service() {
         return true
     }
 
-    /**
-     * Called when a remote unit starts transmitting (ptt:pre or ptt:start from ViewModel).
-     * Ensures we are connected to LiveKit to receive the incoming audio.
-     */
     private fun handleRxConnect(channelId: Int) {
         Log.d(TAG, "handleRxConnect channelId=$channelId pttState=$pttState connected=${audioEngine.isConnected} deadline=$sessionDeadlineMs")
         lastActivityMs = System.currentTimeMillis()
@@ -362,17 +393,12 @@ class BackgroundAudioService : Service() {
 
         if (audioEngine.isConnected) {
             if (sessionDeadlineMs > 0L) {
-                // Active session — extend deadline on RX activity
                 sessionDeadlineMs = System.currentTimeMillis() + GRACE_PERIOD_MS
                 rescheduleGracePeriod()
                 return
             }
-            // sessionDeadlineMs == -1L but engine still shows connected: thread-race between
-            // onGracePeriodExpired (IO) and this handler (main). Force-disconnect so the
-            // reconnect path below can establish a clean new session.
             Log.w(TAG, "RX connect: stale isConnected after session expiry — forcing disconnect")
             audioEngine.disconnect()
-            // Fall through to the reconnect path below
         }
 
         val unitId = servicePrefs.unitId ?: app.sessionPrefs.unitId ?: run {
@@ -385,7 +411,6 @@ class BackgroundAudioService : Service() {
         }
 
         scope.launch {
-            // Brief delay to allow any in-progress disconnect to complete before re-checking state
             delay(100L)
             if (audioEngine.isConnected) return@launch
             val tokenResult = app.liveKitTokenRepository.getToken(identity = unitId, room = roomKey)
@@ -403,10 +428,6 @@ class BackgroundAudioService : Service() {
         }
     }
 
-    /**
-     * Called when the remote unit's transmission ends (ptt:end from ViewModel).
-     * Resumes the grace period countdown so the session can expire naturally.
-     */
     private fun handleRxEnd() {
         Log.d(TAG, "handleRxEnd pttState=$pttState connected=${audioEngine.isConnected}")
         if (audioEngine.isConnected && pttState == PttState.IDLE && sessionDeadlineMs > 0L) {
@@ -414,20 +435,12 @@ class BackgroundAudioService : Service() {
         }
     }
 
-    /**
-     * Set the session deadline once on first LiveKit connect for this session.
-     * Launches the grace-period countdown.
-     */
     private fun startSessionTimer() {
         sessionDeadlineMs = System.currentTimeMillis() + GRACE_PERIOD_MS
         Log.d(TAG, "Session timer started, deadline in ${GRACE_PERIOD_MS}ms")
         rescheduleGracePeriod()
     }
 
-    /**
-     * Schedule (or reschedule) the grace-period job to fire at sessionDeadlineMs.
-     * Does NOT reset the deadline — it resumes the countdown from wherever it is.
-     */
     private fun rescheduleGracePeriod() {
         gracePeriodJob?.cancel()
         val remaining = sessionDeadlineMs - System.currentTimeMillis()
@@ -442,10 +455,6 @@ class BackgroundAudioService : Service() {
         Log.d(TAG, "Grace period rescheduled, ${remaining}ms remaining until deadline")
     }
 
-    /**
-     * Deadline reached. Extend if there was activity in the last ACTIVITY_WINDOW_MS,
-     * otherwise disconnect. Never interrupts an active TX.
-     */
     private fun onGracePeriodExpired() {
         val now = System.currentTimeMillis()
         if (pttState != PttState.IDLE) {
@@ -465,20 +474,12 @@ class BackgroundAudioService : Service() {
         sessionDeadlineMs = -1L
     }
 
-    /**
-     * Broadcast PTT_TX_FAILED back to the ViewModel so it can reset pttState = IDLE
-     * and play an error tone. Sent on real failures: token error, connect error, TX error.
-     */
     private fun sendPttTxFailed() {
         Log.d(TAG, "Sending PTT_TX_FAILED broadcast")
         val intent = Intent(ACTION_PTT_TX_FAILED).apply { setPackage(packageName) }
         sendBroadcast(intent)
     }
 
-    /**
-     * Broadcast PTT_TX_ABORTED back to the ViewModel when the user released PTT before
-     * the connection completed (deliberate early release). No error tone should play.
-     */
     private fun sendPttTxAborted() {
         Log.d(TAG, "Sending PTT_TX_ABORTED broadcast")
         val intent = Intent(ACTION_PTT_TX_ABORTED).apply { setPackage(packageName) }
@@ -538,6 +539,11 @@ class BackgroundAudioService : Service() {
 
     override fun onDestroy() {
         Log.d(TAG, "BackgroundAudioService destroyed")
+        dynamicPttReceiver?.let {
+            unregisterReceiver(it)
+            dynamicPttReceiver = null
+            Log.d(TAG, "Dynamic PttHardwareReceiver unregistered")
+        }
         signalingConnectionJob?.cancel()
         signalingEventsJob?.cancel()
         scope.launch { audioEngine.stopTransmit() }
