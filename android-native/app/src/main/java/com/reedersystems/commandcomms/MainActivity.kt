@@ -96,6 +96,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Allow emergency activation to wake the screen and show over the lockscreen
+        setTurnScreenOn(true)
+        setShowWhenLocked(true)
         enableEdgeToEdge()
         requestAppPermissions()
         setContent {
@@ -259,8 +262,13 @@ class MainActivity : ComponentActivity() {
             }
             keyCode == KEY_EMERGENCY -> {
                 if (event?.repeatCount == 0) {
-                    Log.d(TAG, "MainActivity EMERGENCY DOWN")
-                    app.keyEventFlow.tryEmit(KeyAction.EmergencyDown)
+                    if (!isDeviceInteractive()) {
+                        Log.d(TAG, "MainActivity EMERGENCY DOWN while screen-off — forwarding to service")
+                        forwardEmergencyToBackgroundService(BackgroundAudioService.ACTION_EMERGENCY_DOWN)
+                    } else {
+                        Log.d(TAG, "MainActivity EMERGENCY DOWN")
+                        app.keyEventFlow.tryEmit(KeyAction.EmergencyDown)
+                    }
                 }
                 return true
             }
@@ -311,8 +319,13 @@ class MainActivity : ComponentActivity() {
                 return true
             }
             keyCode == KEY_EMERGENCY -> {
-                Log.d(TAG, "MainActivity EMERGENCY UP")
-                app.keyEventFlow.tryEmit(KeyAction.EmergencyUp)
+                if (!isDeviceInteractive()) {
+                    Log.d(TAG, "MainActivity EMERGENCY UP while screen-off — forwarding to service")
+                    forwardEmergencyToBackgroundService(BackgroundAudioService.ACTION_EMERGENCY_UP)
+                } else {
+                    Log.d(TAG, "MainActivity EMERGENCY UP")
+                    app.keyEventFlow.tryEmit(KeyAction.EmergencyUp)
+                }
                 return true
             }
             keyCode == KEY_STAR -> {
@@ -336,6 +349,13 @@ class MainActivity : ComponentActivity() {
         val intent = Intent(this, BackgroundAudioService::class.java).apply {
             this.action = action
             putExtra(BackgroundAudioService.EXTRA_NEEDS_SIGNALING, false)
+        }
+        ContextCompat.startForegroundService(this, intent)
+    }
+
+    private fun forwardEmergencyToBackgroundService(action: String) {
+        val intent = Intent(this, BackgroundAudioService::class.java).apply {
+            this.action = action
         }
         ContextCompat.startForegroundService(this, intent)
     }
