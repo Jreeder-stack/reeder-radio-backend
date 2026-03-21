@@ -140,4 +140,27 @@ public class BackgroundServicePlugin extends Plugin {
         ret.put("success", true);
         call.resolve(ret);
     }
+
+    @PluginMethod
+    public void clearConnectionInfo(PluginCall call) {
+        Log.d(TAG, "clearConnectionInfo() — clearing persisted background connection state");
+
+        SharedPreferences prefs = getContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        prefs.edit()
+            .remove("server_base_url")
+            .remove("unit_id")
+            .remove("channel_id")
+            .remove("livekit_url")
+            .remove("channel_name")
+            .apply();
+
+        BackgroundAudioService service = BackgroundAudioService.getInstance();
+        if (service != null) {
+            service.clearConnectionInfo();
+        }
+
+        JSObject ret = new JSObject();
+        ret.put("success", true);
+        call.resolve(ret);
+    }
 }

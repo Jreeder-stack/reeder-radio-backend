@@ -345,6 +345,14 @@ export function useLiveKitCombined({ channelId, channelName, identity, enabled =
     setIsMuted(true);
     setIsReceiving(false);
     setActiveSpeaker(null);
+
+    await syncBackgroundConnectionInfo({
+      serverBaseUrl: null,
+      unitId: null,
+      channelId: null,
+      livekitUrl: null,
+      channelName: null,
+    });
   }, [useNative]);
 
   // ============= TRANSMIT CONTROLS =============
