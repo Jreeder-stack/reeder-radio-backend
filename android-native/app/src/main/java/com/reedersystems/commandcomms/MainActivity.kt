@@ -17,6 +17,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
+import com.reedersystems.commandcomms.audio.BackgroundAudioService
 import com.reedersystems.commandcomms.navigation.AppNavigation
 import com.reedersystems.commandcomms.ui.theme.CommandCommsTheme
 
@@ -229,8 +230,12 @@ class MainActivity : ComponentActivity() {
                 if (event?.repeatCount == 0) {
                     val now = System.currentTimeMillis()
                     val repeat = event?.repeatCount ?: 0
+                    val interactive = isDeviceInteractive()
                     Log.d(TAG, "MainActivity PTT DOWN source=MainActivity code=$keyCode action=DOWN repeat=$repeat ts=$now")
-                    if (app.sessionPrefs.micPermissionGranted) {
+                    if (!interactive) {
+                        Log.d(TAG, "MainActivity PTT DOWN while screen-off — forwarding directly to BackgroundAudioService")
+                        forwardPttToBackgroundService(BackgroundAudioService.ACTION_PTT_DOWN)
+                    } else if (app.sessionPrefs.micPermissionGranted) {
                         app.keyEventFlow.tryEmit(KeyAction.PttDown)
                     } else {
                         Log.w(TAG, "PTT DOWN source=MainActivity code=$keyCode: mic permission denied")
@@ -282,8 +287,14 @@ class MainActivity : ComponentActivity() {
         when {
             isPttKey(keyCode) -> {
                 val now = System.currentTimeMillis()
+                val interactive = isDeviceInteractive()
                 Log.d(TAG, "MainActivity PTT UP source=MainActivity code=$keyCode action=UP ts=$now")
-                app.keyEventFlow.tryEmit(KeyAction.PttUp)
+                if (!interactive) {
+                    Log.d(TAG, "MainActivity PTT UP while screen-off — forwarding directly to BackgroundAudioService")
+                    forwardPttToBackgroundService(BackgroundAudioService.ACTION_PTT_UP)
+                } else {
+                    app.keyEventFlow.tryEmit(KeyAction.PttUp)
+                }
                 return true
             }
             keyCode == KEY_EMERGENCY -> {
@@ -301,6 +312,19 @@ class MainActivity : ComponentActivity() {
             }
         }
         return false
+    }
+
+    private fun isDeviceInteractive(): Boolean {
+        val pm = getSystemService(POWER_SERVICE) as PowerManager
+        return pm.isInteractive
+    }
+
+    private fun forwardPttToBackgroundService(action: String) {
+        val intent = Intent(this, BackgroundAudioService::class.java).apply {
+            this.action = action
+            putExtra(BackgroundAudioService.EXTRA_NEEDS_SIGNALING, false)
+        }
+        ContextCompat.startForegroundService(this, intent)
     }
 
 }
