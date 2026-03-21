@@ -12,6 +12,7 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.reedersystems.commandcomms.CommandCommsApp
+import com.reedersystems.commandcomms.KeyAction
 import com.reedersystems.commandcomms.MainActivity
 import com.reedersystems.commandcomms.data.model.PttState
 import com.reedersystems.commandcomms.data.prefs.ServiceConnectionPrefs
@@ -23,6 +24,7 @@ import kotlinx.coroutines.flow.first
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import java.util.concurrent.atomic.AtomicBoolean
 
 private const val TAG = "[PTT-DIAG]"
 private const val NOTIFICATION_ID = 1001
@@ -88,6 +90,14 @@ class BackgroundAudioService : Service() {
      */
     @Volatile private var joinedSignalingChannelId: Int = -1
 
+    /**
+     * True while an RX-triggered LiveKit connect coroutine is in flight.
+     * Prevents PttPre + PttStart arriving close together from launching two
+     * concurrent connect attempts (collectLatest cancels the collector lambda
+     * but not scope.launch coroutines already in flight).
+     */
+    private val rxConnecting = AtomicBoolean(false)
+
     private var signalingConnectionJob: Job? = null
     private var signalingEventsJob: Job? = null
 
@@ -130,6 +140,15 @@ class BackgroundAudioService : Service() {
             addAction("com.inrico.intent.action.PTT_UP")
             addAction("com.android.server.telecom.PushToTalk.action.PTT_KEY_DOWN")
             addAction("com.android.server.telecom.PushToTalk.action.PTT_KEY_UP")
+            // Emergency button broadcasts
+            addAction(PttHardwareReceiver.ACTION_EMERGENCY_DOWN)
+            addAction(PttHardwareReceiver.ACTION_EMERGENCY_UP)
+            addAction("android.intent.action.EMERGENCY_DOWN")
+            addAction("android.intent.action.EMERGENCY_UP")
+            addAction("com.inrico.emergency.down")
+            addAction("com.inrico.emergency.up")
+            addAction("com.inrico.intent.action.EMERGENCY_DOWN")
+            addAction("com.inrico.intent.action.EMERGENCY_UP")
         }
         val receiver = PttHardwareReceiver()
         ContextCompat.registerReceiver(this, receiver, filter, ContextCompat.RECEIVER_EXPORTED)
@@ -141,6 +160,8 @@ class BackgroundAudioService : Service() {
         when (intent?.action) {
             ACTION_PTT_DOWN -> handlePttDown(intent.getBooleanExtra(EXTRA_NEEDS_SIGNALING, false))
             ACTION_PTT_UP -> handlePttUp()
+            ACTION_EMERGENCY_DOWN -> handleEmergencyDown()
+            ACTION_EMERGENCY_UP -> handleEmergencyUp()
             ACTION_RX_CONNECT -> {
                 val channelId = intent.getIntExtra(EXTRA_CHANNEL_ID, -1)
                 if (channelId >= 0) handleRxConnect(channelId)
@@ -179,6 +200,8 @@ class BackgroundAudioService : Service() {
 
         if (pttState == PttState.TRANSMITTING || pttState == PttState.CONNECTING) return
 
+        // Reset AFTER all early-return guards so a second DOWN while still CONNECTING
+        // cannot clear the flag set by an intervening UP (race condition fix).
         pttUpWhileConnecting = false
         needsSignaling = signaling
 
@@ -301,6 +324,35 @@ class BackgroundAudioService : Service() {
         }
     }
 
+    private fun handleEmergencyDown() {
+        Log.d(TAG, "handleEmergencyDown — waking screen and routing to ViewModel")
+        app.keyEventFlow.tryEmit(KeyAction.EmergencyDown)
+
+        // Wake the screen and bring the app to the foreground for emergency activation.
+        // setTurnScreenOn(true) + setShowWhenLocked(true) are set on MainActivity so
+        // relaunching it is sufficient to light up the display.
+        @Suppress("DEPRECATION")
+        val wl = (getSystemService(POWER_SERVICE) as PowerManager).newWakeLock(
+            PowerManager.FULL_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP,
+            "CommandComms:EmergencyWake"
+        ).apply { setReferenceCounted(false) }
+        wl.acquire(5_000L)
+
+        val wakeIntent = Intent(this, MainActivity::class.java).apply {
+            addFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK or
+                Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+            )
+        }
+        startActivity(wakeIntent)
+    }
+
+    private fun handleEmergencyUp() {
+        Log.d(TAG, "handleEmergencyUp — routing to ViewModel")
+        app.keyEventFlow.tryEmit(KeyAction.EmergencyUp)
+    }
+
     private fun startBackgroundSignalingObservers() {
         if (signalingConnectionJob == null) {
             signalingConnectionJob = scope.launch {
@@ -383,6 +435,16 @@ class BackgroundAudioService : Service() {
         return true
     }
 
+    /**
+     * Called when a remote unit starts transmitting (ptt:pre or ptt:start from ViewModel).
+     * Ensures we are connected to LiveKit to receive the incoming audio.
+     *
+     * The AtomicBoolean [rxConnecting] prevents duplicate concurrent connects that arise
+     * because PttPre + PttStart often arrive back-to-back: collectLatest cancels the
+     * collector lambda, but scope.launch coroutines already in flight are NOT cancelled.
+     * The old delay(100) + isConnected check also failed when onGracePeriodExpired's
+     * async disconnect hadn't finished by the time the 100 ms elapsed.
+     */
     private fun handleRxConnect(channelId: Int) {
         Log.d(TAG, "handleRxConnect channelId=$channelId pttState=$pttState connected=${audioEngine.isConnected} deadline=$sessionDeadlineMs")
         lastActivityMs = System.currentTimeMillis()
@@ -391,43 +453,62 @@ class BackgroundAudioService : Service() {
             return
         }
 
-        if (audioEngine.isConnected) {
-            if (sessionDeadlineMs > 0L) {
-                sessionDeadlineMs = System.currentTimeMillis() + GRACE_PERIOD_MS
-                rescheduleGracePeriod()
-                return
-            }
-            Log.w(TAG, "RX connect: stale isConnected after session expiry — forcing disconnect")
-            audioEngine.disconnect()
+        // Active session — just extend the deadline and stay connected
+        if (audioEngine.isConnected && sessionDeadlineMs > 0L) {
+            sessionDeadlineMs = System.currentTimeMillis() + GRACE_PERIOD_MS
+            rescheduleGracePeriod()
+            return
+        }
+
+        // Deduplicate: skip if an RX connect coroutine is already in flight
+        if (!rxConnecting.compareAndSet(false, true)) {
+            Log.d(TAG, "RX connect: already in progress — skipping duplicate")
+            return
         }
 
         val unitId = servicePrefs.unitId ?: app.sessionPrefs.unitId ?: run {
             Log.w(TAG, "RX connect: no unit ID")
+            rxConnecting.set(false)
             return
         }
         val roomKey = servicePrefs.channelRoomKey ?: run {
             Log.w(TAG, "RX connect: no room key")
+            rxConnecting.set(false)
             return
         }
 
         scope.launch {
-            delay(100L)
-            if (audioEngine.isConnected) return@launch
-            val tokenResult = app.liveKitTokenRepository.getToken(identity = unitId, room = roomKey)
-            if (tokenResult.isFailure) {
-                Log.w(TAG, "RX connect: token fetch failed — ${tokenResult.exceptionOrNull()?.message}")
-                return@launch
-            }
-            val (token, livekitUrl) = tokenResult.getOrThrow()
-            servicePrefs.livekitUrl = livekitUrl
-            val connected = audioEngine.connect(livekitUrl, token)
-            if (connected) {
-                Log.d(TAG, "RX connect: LiveKit connected for receive")
-                startSessionTimer()
+            try {
+                // Tear down any stale connection before reconnecting. This handles the
+                // thread-race where onGracePeriodExpired's disconnect hasn't completed yet
+                // when this coroutine starts (sessionDeadlineMs is already -1 but
+                // audioEngine.isConnected is transiently still true).
+                if (audioEngine.isConnected) {
+                    Log.w(TAG, "RX connect: stale connection — disconnecting first")
+                    audioEngine.disconnect()
+                }
+                val tokenResult = app.liveKitTokenRepository.getToken(identity = unitId, room = roomKey)
+                if (tokenResult.isFailure) {
+                    Log.w(TAG, "RX connect: token fetch failed — ${tokenResult.exceptionOrNull()?.message}")
+                    return@launch
+                }
+                val (token, livekitUrl) = tokenResult.getOrThrow()
+                servicePrefs.livekitUrl = livekitUrl
+                val connected = audioEngine.connect(livekitUrl, token)
+                if (connected) {
+                    Log.d(TAG, "RX connect: LiveKit connected for receive")
+                    startSessionTimer()
+                }
+            } finally {
+                rxConnecting.set(false)
             }
         }
     }
 
+    /**
+     * Called when the remote unit's transmission ends (ptt:end from ViewModel).
+     * Resumes the grace period countdown so the session can expire naturally.
+     */
     private fun handleRxEnd() {
         Log.d(TAG, "handleRxEnd pttState=$pttState connected=${audioEngine.isConnected}")
         if (audioEngine.isConnected && pttState == PttState.IDLE && sessionDeadlineMs > 0L) {
@@ -435,12 +516,20 @@ class BackgroundAudioService : Service() {
         }
     }
 
+    /**
+     * Set the session deadline once on first LiveKit connect for this session.
+     * Launches the grace-period countdown.
+     */
     private fun startSessionTimer() {
         sessionDeadlineMs = System.currentTimeMillis() + GRACE_PERIOD_MS
         Log.d(TAG, "Session timer started, deadline in ${GRACE_PERIOD_MS}ms")
         rescheduleGracePeriod()
     }
 
+    /**
+     * Schedule (or reschedule) the grace-period job to fire at sessionDeadlineMs.
+     * Does NOT reset the deadline — it resumes the countdown from wherever it is.
+     */
     private fun rescheduleGracePeriod() {
         gracePeriodJob?.cancel()
         val remaining = sessionDeadlineMs - System.currentTimeMillis()
@@ -455,6 +544,10 @@ class BackgroundAudioService : Service() {
         Log.d(TAG, "Grace period rescheduled, ${remaining}ms remaining until deadline")
     }
 
+    /**
+     * Deadline reached. Extend if there was activity in the last ACTIVITY_WINDOW_MS,
+     * otherwise disconnect. Never interrupts an active TX.
+     */
     private fun onGracePeriodExpired() {
         val now = System.currentTimeMillis()
         if (pttState != PttState.IDLE) {
@@ -474,12 +567,20 @@ class BackgroundAudioService : Service() {
         sessionDeadlineMs = -1L
     }
 
+    /**
+     * Broadcast PTT_TX_FAILED back to the ViewModel so it can reset pttState = IDLE
+     * and play an error tone. Sent on real failures: token error, connect error, TX error.
+     */
     private fun sendPttTxFailed() {
         Log.d(TAG, "Sending PTT_TX_FAILED broadcast")
         val intent = Intent(ACTION_PTT_TX_FAILED).apply { setPackage(packageName) }
         sendBroadcast(intent)
     }
 
+    /**
+     * Broadcast PTT_TX_ABORTED back to the ViewModel when the user released PTT before
+     * the connection completed (deliberate early release). No error tone should play.
+     */
     private fun sendPttTxAborted() {
         Log.d(TAG, "Sending PTT_TX_ABORTED broadcast")
         val intent = Intent(ACTION_PTT_TX_ABORTED).apply { setPackage(packageName) }
@@ -559,6 +660,8 @@ class BackgroundAudioService : Service() {
     companion object {
         const val ACTION_PTT_DOWN = "com.reedersystems.commandcomms.SVC_PTT_DOWN"
         const val ACTION_PTT_UP = "com.reedersystems.commandcomms.SVC_PTT_UP"
+        const val ACTION_EMERGENCY_DOWN = "com.reedersystems.commandcomms.SVC_EMERGENCY_DOWN"
+        const val ACTION_EMERGENCY_UP = "com.reedersystems.commandcomms.SVC_EMERGENCY_UP"
         const val ACTION_RX_CONNECT = "com.reedersystems.commandcomms.RX_CONNECT"
         const val ACTION_RX_END = "com.reedersystems.commandcomms.RX_END"
         const val ACTION_UPDATE_CHANNEL = "com.reedersystems.commandcomms.UPDATE_CHANNEL"
