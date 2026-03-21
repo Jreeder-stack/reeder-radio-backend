@@ -235,84 +235,101 @@ class BackgroundAudioService : Service() {
         updateNotification("Connecting…")
 
         scope.launch {
-            if (signaling && !ensureBackgroundSignalingReady(channelId)) {
-                Log.e(TAG, "Screen-off PTT: signaling not ready")
-                pttState = PttState.IDLE
-                updateNotification("Radio — Standby")
-                sendPttTxFailed()
-                return@launch
-            }
+            val toneJob = async { app.toneEngine.playTalkPermitToneAndAwait() }
+            try {
+                if (signaling && !ensureBackgroundSignalingReady(channelId)) {
+                    Log.e(TAG, "Screen-off PTT: signaling not ready")
+                    toneJob.await()
+                    app.toneEngine.playErrorTone()
+                    pttState = PttState.IDLE
+                    updateNotification("Radio — Standby")
+                    sendPttTxFailed()
+                    return@launch
+                }
 
-            if (signaling) {
-                app.signalingRepository.transmitPre(roomKey)
-                Log.d(TAG, "Screen-off PTT: transmitPre sent for roomKey $roomKey")
-            }
-            val tokenResult = app.liveKitTokenRepository.getToken(identity = unitId, room = roomKey)
-            if (tokenResult.isFailure) {
-                Log.e(TAG, "Token fetch failed: ${tokenResult.exceptionOrNull()?.message}")
-                pttState = PttState.IDLE
-                updateNotification("Radio — Standby")
-                sendPttTxFailed()
-                return@launch
-            }
-            val (token, livekitUrl) = tokenResult.getOrThrow()
-            servicePrefs.livekitUrl = livekitUrl
+                if (signaling) {
+                    app.signalingRepository.transmitPre(roomKey)
+                    Log.d(TAG, "Screen-off PTT: transmitPre sent for roomKey $roomKey")
+                }
+                val tokenResult = app.liveKitTokenRepository.getToken(identity = unitId, room = roomKey)
+                if (tokenResult.isFailure) {
+                    Log.e(TAG, "Token fetch failed: ${tokenResult.exceptionOrNull()?.message}")
+                    toneJob.await()
+                    app.toneEngine.playErrorTone()
+                    pttState = PttState.IDLE
+                    updateNotification("Radio — Standby")
+                    sendPttTxFailed()
+                    return@launch
+                }
+                val (token, livekitUrl) = tokenResult.getOrThrow()
+                servicePrefs.livekitUrl = livekitUrl
 
-            val wasAlreadyConnected = audioEngine.isConnected
-            val connected = if (wasAlreadyConnected) true
-            else audioEngine.connect(livekitUrl, token)
+                val wasAlreadyConnected = audioEngine.isConnected
+                val connected = if (wasAlreadyConnected) true
+                else audioEngine.connect(livekitUrl, token)
 
-            if (!connected) {
-                Log.e(TAG, "LiveKit connect failed")
-                pttState = PttState.IDLE
-                updateNotification("Radio — Standby")
-                sendPttTxFailed()
-                return@launch
-            }
+                if (!connected) {
+                    Log.e(TAG, "LiveKit connect failed")
+                    toneJob.await()
+                    app.toneEngine.playErrorTone()
+                    pttState = PttState.IDLE
+                    updateNotification("Radio — Standby")
+                    sendPttTxFailed()
+                    return@launch
+                }
 
-            lastActivityMs = System.currentTimeMillis()
-            if (!wasAlreadyConnected) startSessionTimer()
+                lastActivityMs = System.currentTimeMillis()
+                if (!wasAlreadyConnected) startSessionTimer()
 
-            if (pttUpWhileConnecting) {
-                Log.d(TAG, "PTT_UP received during connect — aborting TX (race condition avoided)")
-                pttState = PttState.IDLE
-                updateNotification("Radio — Standby")
-                rescheduleGracePeriod()
-                sendPttTxAborted()
-                return@launch
-            }
+                if (pttUpWhileConnecting) {
+                    Log.d(TAG, "PTT_UP received during connect — aborting TX (race condition avoided)")
+                    toneJob.cancel()
+                    pttState = PttState.IDLE
+                    updateNotification("Radio — Standby")
+                    rescheduleGracePeriod()
+                    sendPttTxAborted()
+                    return@launch
+                }
 
-            if (signaling) {
-                app.toneEngine.playTalkPermitToneAndAwait()
-                Log.d(TAG, "Screen-off PTT: talk-permit tone finished for roomKey $roomKey")
-            }
+                toneJob.await()
+                Log.d(TAG, "Talk-permit tone finished for roomKey $roomKey")
 
-            if (pttUpWhileConnecting) {
-                Log.d(TAG, "PTT_UP received during talk-permit tone — aborting TX")
-                pttState = PttState.IDLE
-                updateNotification("Radio — Standby")
-                rescheduleGracePeriod()
-                sendPttTxAborted()
-                return@launch
-            }
+                if (pttUpWhileConnecting) {
+                    Log.d(TAG, "PTT_UP received during talk-permit tone — aborting TX")
+                    pttState = PttState.IDLE
+                    updateNotification("Radio — Standby")
+                    rescheduleGracePeriod()
+                    sendPttTxAborted()
+                    return@launch
+                }
 
-            val txStarted = audioEngine.startTransmit()
-            if (!txStarted) {
-                Log.e(TAG, "TX start failed after connect")
-                pttState = PttState.IDLE
-                updateNotification("Radio — Standby")
-                sendPttTxFailed()
-                return@launch
-            }
+                val txStarted = audioEngine.startTransmit()
+                if (!txStarted) {
+                    Log.e(TAG, "TX start failed after connect")
+                    app.toneEngine.playErrorTone()
+                    pttState = PttState.IDLE
+                    updateNotification("Radio — Standby")
+                    sendPttTxFailed()
+                    return@launch
+                }
 
-            pttState = PttState.TRANSMITTING
-            updateNotification("TRANSMITTING")
-            sendPttTxStarted()
-            httpPttStart(serverUrl, channelId, unitId)
+                pttState = PttState.TRANSMITTING
+                updateNotification("TRANSMITTING")
+                sendPttTxStarted()
+                httpPttStart(serverUrl, channelId, unitId)
 
-            if (signaling) {
-                app.signalingRepository.transmitStart(roomKey)
-                Log.d(TAG, "Screen-off PTT: transmitStart sent for roomKey $roomKey")
+                if (signaling) {
+                    app.signalingRepository.transmitStart(roomKey)
+                    Log.d(TAG, "Screen-off PTT: transmitStart sent for roomKey $roomKey")
+                }
+            } catch (e: Exception) {
+                if (e !is CancellationException) {
+                    Log.e(TAG, "Unhandled exception in PTT coroutine — resetting state", e)
+                    pttState = PttState.IDLE
+                    updateNotification("Radio — Standby")
+                    sendPttTxFailed()
+                }
+                throw e
             }
         }
     }
