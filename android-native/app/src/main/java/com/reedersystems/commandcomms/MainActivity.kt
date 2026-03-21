@@ -35,6 +35,8 @@ private const val KEY_DPAD_RIGHT = 22
 
 private const val PREFS_NAME = "commandcomms_ui_prefs"
 private const val KEY_BATTERY_OPT_PROMPT_SHOWN = "battery_opt_prompt_shown"
+private const val ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENTS =
+    "android.settings.MANAGE_APP_USE_FULL_SCREEN_INTENTS"
 
 class MainActivity : ComponentActivity() {
 
@@ -158,8 +160,8 @@ class MainActivity : ComponentActivity() {
                 Log.d(TAG, "Requesting USE_FULL_SCREEN_INTENT permission (API 34+)")
                 pendingBatteryPromptAfterFullScreenIntent = true
                 startActivity(
-                    Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENTS).apply {
-                        data = Uri.parse("package:$packageName")
+                    Intent(ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENTS).apply {
+                        setData(Uri.parse("package:$packageName"))
                     }
                 )
                 return
