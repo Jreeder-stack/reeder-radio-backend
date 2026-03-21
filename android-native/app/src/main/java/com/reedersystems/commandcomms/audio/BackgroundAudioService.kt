@@ -28,7 +28,9 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 private const val TAG = "[PTT-DIAG]"
 private const val NOTIFICATION_ID = 1001
+private const val EMERGENCY_NOTIFICATION_ID = 1002
 private const val CHANNEL_ID = "ptt_service"
+private const val CHANNEL_EMERGENCY = "channel_emergency"
 private const val GRACE_PERIOD_MS = 59_000L
 private const val ACTIVITY_WINDOW_MS = 10_000L
 
@@ -364,11 +366,11 @@ class BackgroundAudioService : Service() {
     }
 
     private fun handleEmergencyDown() {
-        Log.d(TAG, "handleEmergencyDown — waking screen and launching MainActivity")
+        Log.d(TAG, "handleEmergencyDown — posting full-screen intent notification to wake screen")
 
-        // Wake the screen. SCREEN_BRIGHT_WAKE_LOCK + ACQUIRE_CAUSES_WAKEUP turns the
-        // display on. KeyAction.EmergencyDown is emitted in MainActivity.onNewIntent
-        // once the Activity is visible so the keyEventFlow collector is running.
+        // Acquire a screen-bright wake lock as a belt-and-suspenders measure. On some
+        // devices / firmware versions this helps ensure the display turns on before the
+        // notification is rendered.
         @Suppress("DEPRECATION")
         val wl = (getSystemService(POWER_SERVICE) as PowerManager).newWakeLock(
             PowerManager.SCREEN_BRIGHT_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP,
@@ -376,7 +378,10 @@ class BackgroundAudioService : Service() {
         ).apply { setReferenceCounted(false) }
         wl.acquire(5_000L)
 
-        val wakeIntent = Intent(this, MainActivity::class.java).apply {
+        // On Android 10+ (API 29+), startActivity() from a background service is
+        // restricted and silently fails. A full-screen intent notification is the
+        // correct modern approach — it works across all screen/lock states.
+        val activityIntent = Intent(this, MainActivity::class.java).apply {
             addFlags(
                 Intent.FLAG_ACTIVITY_NEW_TASK or
                 Intent.FLAG_ACTIVITY_SINGLE_TOP or
@@ -384,7 +389,26 @@ class BackgroundAudioService : Service() {
             )
             putExtra(EXTRA_EMERGENCY_KEY_DOWN, true)
         }
-        startActivity(wakeIntent)
+        val pendingIntent = PendingIntent.getActivity(
+            this,
+            EMERGENCY_NOTIFICATION_ID,
+            activityIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val notification = NotificationCompat.Builder(this, CHANNEL_EMERGENCY)
+            .setSmallIcon(android.R.drawable.ic_dialog_alert)
+            .setContentTitle("EMERGENCY ACTIVATED")
+            .setContentText("Emergency button pressed — tap to respond")
+            .setPriority(NotificationCompat.PRIORITY_MAX)
+            .setCategory(NotificationCompat.CATEGORY_ALARM)
+            .setFullScreenIntent(pendingIntent, true)
+            .setAutoCancel(true)
+            .build()
+
+        val nm = getSystemService(NotificationManager::class.java)
+        nm.notify(EMERGENCY_NOTIFICATION_ID, notification)
+        Log.d(TAG, "handleEmergencyDown — full-screen intent notification posted")
     }
 
     private fun handleEmergencyUp() {

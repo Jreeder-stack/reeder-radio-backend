@@ -734,7 +734,7 @@ app.get("/getToken", requireAuth, async (req, res) => {
     }
 
     console.log("=== /getToken DEBUG END - SUCCESS ===");
-    res.json({ token });
+    res.json({ token, url: process.env.LIVEKIT_URL });
   } catch (error) {
     console.error("=== /getToken DEBUG END - ERROR ===");
     console.error("Token generation error:", error);
