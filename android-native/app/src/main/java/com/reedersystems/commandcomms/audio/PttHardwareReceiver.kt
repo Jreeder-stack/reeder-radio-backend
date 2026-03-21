@@ -40,13 +40,29 @@ class PttHardwareReceiver : BroadcastReceiver() {
                 else null
             }
 
-            // Inrico T320 firmware — standard Android namespace
+            // Inrico T320 firmware — confirmed primary actions from Zello logcat (dot-separated, lowercase)
+            "android.intent.action.PTT.down"      -> BackgroundAudioService.ACTION_PTT_DOWN
+            "android.intent.action.PTT.up"        -> BackgroundAudioService.ACTION_PTT_UP
+
+            // Inrico T320 firmware — underscore variant
+            "android.intent.action.PTT_DOWN"      -> BackgroundAudioService.ACTION_PTT_DOWN
+            "android.intent.action.PTT_UP"        -> BackgroundAudioService.ACTION_PTT_UP
+
+            // Inrico T320 firmware — standard Android namespace (_KEY_ variant)
             "android.intent.action.PTT_KEY_DOWN"  -> BackgroundAudioService.ACTION_PTT_DOWN
             "android.intent.action.PTT_KEY_UP"    -> BackgroundAudioService.ACTION_PTT_UP
 
-            // Inrico T320 firmware — vendor namespace
+            // Inrico T320 firmware — vendor namespace (lowercase, confirmed)
+            "com.inrico.ptt.down"                 -> BackgroundAudioService.ACTION_PTT_DOWN
+            "com.inrico.ptt.up"                   -> BackgroundAudioService.ACTION_PTT_UP
+
+            // Inrico T320 firmware — vendor namespace (PTT_KEY_ prefix variant)
             "com.inrico.ptt.PTT_KEY_DOWN"         -> BackgroundAudioService.ACTION_PTT_DOWN
             "com.inrico.ptt.PTT_KEY_UP"           -> BackgroundAudioService.ACTION_PTT_UP
+
+            // Inrico T320 firmware — vendor namespace with intent.action prefix
+            "com.inrico.intent.action.PTT_DOWN"   -> BackgroundAudioService.ACTION_PTT_DOWN
+            "com.inrico.intent.action.PTT_UP"     -> BackgroundAudioService.ACTION_PTT_UP
 
             // Inrico T320 firmware — telecom namespace (seen on some ROM versions)
             "com.android.server.telecom.PushToTalk.action.PTT_KEY_DOWN" -> BackgroundAudioService.ACTION_PTT_DOWN

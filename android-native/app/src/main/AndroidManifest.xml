@@ -56,15 +56,35 @@
             <intent-filter>
                 <action android:name="android.intent.action.PTT" />
             </intent-filter>
-            <!-- Inrico T320 firmware — standard Android namespace -->
+            <!-- Inrico T320 firmware — confirmed primary actions from Zello logcat (dot-separated, lowercase) -->
+            <intent-filter>
+                <action android:name="android.intent.action.PTT.down" />
+                <action android:name="android.intent.action.PTT.up" />
+            </intent-filter>
+            <!-- Inrico T320 firmware — underscore variant -->
+            <intent-filter>
+                <action android:name="android.intent.action.PTT_DOWN" />
+                <action android:name="android.intent.action.PTT_UP" />
+            </intent-filter>
+            <!-- Inrico T320 firmware — standard Android namespace (_KEY_ variant) -->
             <intent-filter>
                 <action android:name="android.intent.action.PTT_KEY_DOWN" />
                 <action android:name="android.intent.action.PTT_KEY_UP" />
             </intent-filter>
-            <!-- Inrico T320 firmware — vendor namespace -->
+            <!-- Inrico T320 firmware — vendor namespace (lowercase, confirmed) -->
+            <intent-filter>
+                <action android:name="com.inrico.ptt.down" />
+                <action android:name="com.inrico.ptt.up" />
+            </intent-filter>
+            <!-- Inrico T320 firmware — vendor namespace (PTT_KEY_ prefix variant) -->
             <intent-filter>
                 <action android:name="com.inrico.ptt.PTT_KEY_DOWN" />
                 <action android:name="com.inrico.ptt.PTT_KEY_UP" />
+            </intent-filter>
+            <!-- Inrico T320 firmware — vendor namespace with intent.action prefix -->
+            <intent-filter>
+                <action android:name="com.inrico.intent.action.PTT_DOWN" />
+                <action android:name="com.inrico.intent.action.PTT_UP" />
             </intent-filter>
             <!-- Inrico T320 firmware — telecom namespace (some ROM versions) -->
             <intent-filter>
