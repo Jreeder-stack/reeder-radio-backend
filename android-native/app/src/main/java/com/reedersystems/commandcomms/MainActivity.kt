@@ -242,7 +242,7 @@ class MainActivity : ComponentActivity() {
             isPttKey(keyCode) -> {
                 if (event?.repeatCount == 0) {
                     val now = System.currentTimeMillis()
-                    val repeat = event?.repeatCount ?: 0
+                    val repeat = event.repeatCount
                     val interactive = isDeviceInteractive()
                     Log.d(TAG, "MainActivity PTT DOWN source=MainActivity code=$keyCode action=DOWN repeat=$repeat ts=$now")
                     if (!interactive) {
