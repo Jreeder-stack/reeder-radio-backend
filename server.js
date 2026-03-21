@@ -72,6 +72,7 @@ app.use(
     store: new PgSession({
       pool: pool,
       tableName: "session",
+      createTableIfMissing: true,
     }),
     secret: sessionSecret,
     resave: false,
@@ -193,14 +194,20 @@ app.post("/api/auth/login", rateLimitAuth, async (req, res) => {
       is_dispatcher: user.is_dispatcher || false,
     };
 
-    res.json({
-      user: {
-        id: user.id,
-        username: user.username,
-        role: user.role,
-        unit_id: user.unit_id,
-        is_dispatcher: user.is_dispatcher || false,
-      },
+    const sessionUser = {
+      id: user.id,
+      username: user.username,
+      role: user.role,
+      unit_id: user.unit_id,
+      is_dispatcher: user.is_dispatcher || false,
+    };
+
+    req.session.save((err) => {
+      if (err) {
+        console.error("Session save error:", err);
+        return res.status(500).json({ error: "Login failed" });
+      }
+      res.json({ user: sessionUser });
     });
   } catch (error) {
     console.error("Login error:", error);

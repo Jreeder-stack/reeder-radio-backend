@@ -100,6 +100,18 @@ class BackgroundAudioService : Service() {
      */
     private val rxConnecting = AtomicBoolean(false)
 
+    /**
+     * Coroutine running the 3-second arming countdown when the emergency button is held.
+     * Null when not arming. Cancelled by handleEmergencyUp() if the button is released early.
+     */
+    private var emergencyArmingJob: Job? = null
+
+    /**
+     * True after the 3-second arming countdown completes and the emergency:start signal
+     * has been sent. Used to route a second button press to the ViewModel cancel-hold flow.
+     */
+    @Volatile private var emergencyActive = false
+
     private var signalingConnectionJob: Job? = null
     private var signalingEventsJob: Job? = null
 
@@ -366,11 +378,27 @@ class BackgroundAudioService : Service() {
     }
 
     private fun handleEmergencyDown() {
-        Log.d(TAG, "handleEmergencyDown — posting full-screen intent notification to wake screen")
+        Log.d(TAG, "handleEmergencyDown emergencyActive=$emergencyActive arming=${emergencyArmingJob != null}")
 
-        // Acquire a screen-bright wake lock as a belt-and-suspenders measure. On some
-        // devices / firmware versions this helps ensure the display turns on before the
-        // notification is rendered.
+        // Second press while already in emergency → route cancel-hold to ViewModel (UI must be visible)
+        if (emergencyActive) {
+            app.keyEventFlow.tryEmit(KeyAction.EmergencyDown)
+            return
+        }
+
+        // Already arming — ignore duplicate DOWN
+        if (emergencyArmingJob != null) return
+
+        val channelId = servicePrefs.channelId.takeIf { it >= 0 } ?: run {
+            Log.w(TAG, "Emergency: no channel selected")
+            return
+        }
+        val channelKey = servicePrefs.channelRoomKey ?: run {
+            Log.w(TAG, "Emergency: no room key")
+            return
+        }
+
+        // Wake the screen so the notification is visible immediately
         @Suppress("DEPRECATION")
         val wl = (getSystemService(POWER_SERVICE) as PowerManager).newWakeLock(
             PowerManager.SCREEN_BRIGHT_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP,
@@ -378,9 +406,62 @@ class BackgroundAudioService : Service() {
         ).apply { setReferenceCounted(false) }
         wl.acquire(5_000L)
 
-        // On Android 10+ (API 29+), startActivity() from a background service is
-        // restricted and silently fails. A full-screen intent notification is the
-        // correct modern approach — it works across all screen/lock states.
+        // Arming notification with full-screen intent — brings MainActivity to front if possible
+        postEmergencyNotification("EMERGENCY ARMING — hold to activate")
+
+        // Emit to keyEventFlow so ViewModel runs the arming UI if it's active
+        app.keyEventFlow.tryEmit(KeyAction.EmergencyDown)
+
+        // 3-second arming countdown in the service (mirrors ViewModel.startArming()).
+        // If the button is released before the countdown ends, handleEmergencyUp() cancels this job.
+        app.toneEngine.startCountdownBeep()
+        emergencyArmingJob = scope.launch {
+            delay(3_000L)
+            emergencyArmingJob = null
+            app.toneEngine.stopCountdownBeep()
+            activateEmergency(channelId, channelKey)
+        }
+    }
+
+    private suspend fun activateEmergency(channelId: Int, channelKey: String) {
+        Log.d(TAG, "activateEmergency channelId=$channelId channelKey=$channelKey")
+        emergencyActive = true
+        updateNotification("EMERGENCY ACTIVE")
+        postEmergencyNotification("EMERGENCY ACTIVE — tap to respond")
+
+        // Ensure signaling socket is connected and joined to the selected channel
+        ensureBackgroundSignalingReady(channelId)
+
+        // Send emergency:start Socket.IO event (notifies all units and dispatch console)
+        app.signalingRepository.emergencyStart(channelKey)
+        Log.d(TAG, "activateEmergency: emergencyStart signal sent for $channelKey")
+
+        // Start emergency audio TX — reuse the existing PTT infrastructure.
+        // signaling=true so transmitPre + transmitStart are emitted, which triggers
+        // RX connect on other units so they can hear the emergency broadcast.
+        handlePttDown(signaling = true)
+    }
+
+    private fun handleEmergencyUp() {
+        Log.d(TAG, "handleEmergencyUp arming=${emergencyArmingJob != null} active=$emergencyActive")
+
+        // Cancel arming if the button was released before the 3-second countdown finished
+        if (emergencyArmingJob != null) {
+            emergencyArmingJob?.cancel()
+            emergencyArmingJob = null
+            app.toneEngine.stopCountdownBeep()
+            updateNotification("Radio — Standby")
+            dismissEmergencyNotification()
+            Log.d(TAG, "Emergency arming cancelled by button release")
+        }
+
+        // Route UP to ViewModel so it can manage cancel-hold UI and emergencyEnd signaling
+        // when the Activity is in the foreground. The service does not independently send
+        // emergencyEnd because the ViewModel owns that state machine after activation.
+        app.keyEventFlow.tryEmit(KeyAction.EmergencyUp)
+    }
+
+    private fun postEmergencyNotification(text: String) {
         val activityIntent = Intent(this, MainActivity::class.java).apply {
             addFlags(
                 Intent.FLAG_ACTIVITY_NEW_TASK or
@@ -389,31 +470,26 @@ class BackgroundAudioService : Service() {
             )
             putExtra(EXTRA_EMERGENCY_KEY_DOWN, true)
         }
-        val pendingIntent = PendingIntent.getActivity(
+        val pi = PendingIntent.getActivity(
             this,
             EMERGENCY_NOTIFICATION_ID,
             activityIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-
-        val notification = NotificationCompat.Builder(this, CHANNEL_EMERGENCY)
+        val n = NotificationCompat.Builder(this, CHANNEL_EMERGENCY)
             .setSmallIcon(android.R.drawable.ic_dialog_alert)
-            .setContentTitle("EMERGENCY ACTIVATED")
-            .setContentText("Emergency button pressed — tap to respond")
+            .setContentTitle("EMERGENCY")
+            .setContentText(text)
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
-            .setFullScreenIntent(pendingIntent, true)
-            .setAutoCancel(true)
+            .setFullScreenIntent(pi, true)
+            .setAutoCancel(false)
             .build()
-
-        val nm = getSystemService(NotificationManager::class.java)
-        nm.notify(EMERGENCY_NOTIFICATION_ID, notification)
-        Log.d(TAG, "handleEmergencyDown — full-screen intent notification posted")
+        getSystemService(NotificationManager::class.java).notify(EMERGENCY_NOTIFICATION_ID, n)
     }
 
-    private fun handleEmergencyUp() {
-        Log.d(TAG, "handleEmergencyUp — routing to ViewModel")
-        app.keyEventFlow.tryEmit(KeyAction.EmergencyUp)
+    private fun dismissEmergencyNotification() {
+        getSystemService(NotificationManager::class.java).cancel(EMERGENCY_NOTIFICATION_ID)
     }
 
     private fun startBackgroundSignalingObservers() {
