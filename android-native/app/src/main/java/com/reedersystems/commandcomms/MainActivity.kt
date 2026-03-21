@@ -1,7 +1,6 @@
 package com.reedersystems.commandcomms
 
 import android.Manifest
-import android.app.AlertDialog
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -20,6 +19,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
@@ -242,7 +242,7 @@ class MainActivity : ComponentActivity() {
             isPttKey(keyCode) -> {
                 if (event?.repeatCount == 0) {
                     val now = System.currentTimeMillis()
-                    val repeat = event?.repeatCount ?: 0
+                    val repeat = event.repeatCount
                     val interactive = isDeviceInteractive()
                     Log.d(TAG, "MainActivity PTT DOWN source=MainActivity code=$keyCode action=DOWN repeat=$repeat ts=$now")
                     if (!interactive) {
