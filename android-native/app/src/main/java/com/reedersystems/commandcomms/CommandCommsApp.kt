@@ -1,6 +1,10 @@
 package com.reedersystems.commandcomms
 
 import android.app.Application
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.media.AudioAttributes
+import android.media.RingtoneManager
 import com.reedersystems.commandcomms.audio.ToneEngine
 import com.reedersystems.commandcomms.data.api.ApiClient
 import com.reedersystems.commandcomms.data.prefs.ServiceConnectionPrefs
@@ -45,6 +49,7 @@ class CommandCommsApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        createNotificationChannels()
         apiClient = ApiClient.getInstance(this)
         sessionPrefs = SessionPrefs(this)
         serviceConnectionPrefs = ServiceConnectionPrefs(this)
@@ -54,5 +59,59 @@ class CommandCommsApp : Application() {
         signalingClient = SignalingClient(apiClient.baseUrl)
         signalingRepository = SignalingRepository(signalingClient)
         toneEngine = ToneEngine(this)
+    }
+
+    private fun createNotificationChannels() {
+        val nm = getSystemService(NotificationManager::class.java)
+
+        val alarmSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+            ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+        val alarmAudioAttrs = AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_ALARM)
+            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+            .build()
+
+        val emergency = NotificationChannel(
+            "channel_emergency",
+            "Emergency",
+            NotificationManager.IMPORTANCE_HIGH
+        ).apply {
+            description = "High-priority emergency alerts"
+            enableVibration(true)
+            setBypassDnd(true)
+            setShowBadge(true)
+            setSound(alarmSound, alarmAudioAttrs)
+        }
+
+        val pttService = NotificationChannel(
+            "ptt_service",
+            "PTT Service",
+            NotificationManager.IMPORTANCE_LOW
+        ).apply {
+            description = "Keeps radio connection alive for PTT"
+            setShowBadge(false)
+        }
+
+        val messages = NotificationChannel(
+            "channel_messages",
+            "Messages",
+            NotificationManager.IMPORTANCE_DEFAULT
+        ).apply {
+            description = "Incoming messages and communications"
+            enableVibration(true)
+            setShowBadge(true)
+        }
+
+        val system = NotificationChannel(
+            "channel_system",
+            "System",
+            NotificationManager.IMPORTANCE_DEFAULT
+        ).apply {
+            description = "Status alerts and login events"
+            enableVibration(true)
+            setShowBadge(true)
+        }
+
+        nm.createNotificationChannels(listOf(emergency, pttService, messages, system))
     }
 }

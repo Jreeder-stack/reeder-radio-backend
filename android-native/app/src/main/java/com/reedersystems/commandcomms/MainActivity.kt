@@ -41,48 +41,47 @@ class MainActivity : ComponentActivity() {
 
     private var starDownTime = 0L
 
-    private val requestNotificationsLauncher = registerForActivityResult(
+    /**
+     * Set to true when we have launched ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENTS.
+     * On the next onResume we fire the battery exemption prompt instead of doing it
+     * immediately (which would conflict with the settings activity still on screen).
+     */
+    private var pendingBatteryPromptAfterFullScreenIntent = false
+
+    private val requestBackgroundLocationLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
-        Log.d(TAG, "POST_NOTIFICATIONS granted=$granted")
-        app.sessionPrefs.notificationPermissionGranted = granted
-        requestBatteryOptimizationExemptionIfNeeded()
+        Log.d(TAG, "ACCESS_BACKGROUND_LOCATION granted=$granted")
+        requestFullScreenIntentIfNeeded()
     }
 
-    private val requestLocationLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        Log.d(TAG, "ACCESS_FINE_LOCATION granted=$granted")
-        app.sessionPrefs.locationPermissionGranted = granted
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
-                != PackageManager.PERMISSION_GRANTED
-            ) {
-                requestNotificationsLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-            } else {
-                requestBatteryOptimizationExemptionIfNeeded()
-            }
-        } else {
-            requestBatteryOptimizationExemptionIfNeeded()
-        }
-    }
+    private val requestMultiplePermissionsLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { results ->
+        fun isGranted(perm: String): Boolean =
+            results[perm]
+                ?: (ContextCompat.checkSelfPermission(this, perm) == PackageManager.PERMISSION_GRANTED)
 
-    private val requestMicLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        Log.d(TAG, "RECORD_AUDIO granted=$granted")
-        app.sessionPrefs.micPermissionGranted = granted
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+        val micGranted = isGranted(Manifest.permission.RECORD_AUDIO)
+        val locationGranted = isGranted(Manifest.permission.ACCESS_FINE_LOCATION)
+        val notifGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
+            isGranted(Manifest.permission.POST_NOTIFICATIONS)
+        else true
+
+        Log.d(TAG, "Multi-permission results: mic=$micGranted location=$locationGranted notif=$notifGranted")
+
+        app.sessionPrefs.micPermissionGranted = micGranted
+        app.sessionPrefs.locationPermissionGranted = locationGranted
+        app.sessionPrefs.notificationPermissionGranted = notifGranted
+
+        if (locationGranted &&
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_BACKGROUND_LOCATION)
             != PackageManager.PERMISSION_GRANTED
         ) {
-            requestLocationLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
-            != PackageManager.PERMISSION_GRANTED
-        ) {
-            requestNotificationsLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            requestBackgroundLocationLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
         } else {
-            requestBatteryOptimizationExemptionIfNeeded()
+            requestFullScreenIntentIfNeeded()
         }
     }
 
@@ -100,6 +99,10 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         logDiagnostics()
+        if (pendingBatteryPromptAfterFullScreenIntent) {
+            pendingBatteryPromptAfterFullScreenIntent = false
+            requestBatteryOptimizationExemptionIfNeeded()
+        }
     }
 
     private fun requestAppPermissions() {
@@ -111,20 +114,57 @@ class MainActivity : ComponentActivity() {
             ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) ==
                 PackageManager.PERMISSION_GRANTED
         else true
+        val bgLocationGranted = Build.VERSION.SDK_INT < Build.VERSION_CODES.Q ||
+            ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_BACKGROUND_LOCATION) ==
+            PackageManager.PERMISSION_GRANTED
+        val btConnectGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
+            ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) ==
+                PackageManager.PERMISSION_GRANTED
+        else true
+        val btScanGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
+            ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) ==
+                PackageManager.PERMISSION_GRANTED
+        else true
 
         app.sessionPrefs.micPermissionGranted = micGranted
         app.sessionPrefs.locationPermissionGranted = locationGranted
         app.sessionPrefs.notificationPermissionGranted = notifGranted
 
-        if (!micGranted) {
-            requestMicLauncher.launch(Manifest.permission.RECORD_AUDIO)
-        } else if (!locationGranted) {
-            requestLocationLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
-        } else if (!notifGranted && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            requestNotificationsLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        val permissionsToRequest = mutableListOf<String>()
+
+        if (!micGranted) permissionsToRequest.add(Manifest.permission.RECORD_AUDIO)
+        if (!locationGranted) permissionsToRequest.add(Manifest.permission.ACCESS_FINE_LOCATION)
+        if (!notifGranted && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
+            permissionsToRequest.add(Manifest.permission.POST_NOTIFICATIONS)
+        if (!btConnectGranted && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
+            permissionsToRequest.add(Manifest.permission.BLUETOOTH_CONNECT)
+        if (!btScanGranted && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
+            permissionsToRequest.add(Manifest.permission.BLUETOOTH_SCAN)
+
+        if (permissionsToRequest.isNotEmpty()) {
+            requestMultiplePermissionsLauncher.launch(permissionsToRequest.toTypedArray())
+        } else if (!bgLocationGranted && locationGranted) {
+            requestBackgroundLocationLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
         } else {
-            requestBatteryOptimizationExemptionIfNeeded()
+            requestFullScreenIntentIfNeeded()
         }
+    }
+
+    private fun requestFullScreenIntentIfNeeded() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            val nm = getSystemService(android.app.NotificationManager::class.java)
+            if (!nm.canUseFullScreenIntent()) {
+                Log.d(TAG, "Requesting USE_FULL_SCREEN_INTENT permission (API 34+)")
+                pendingBatteryPromptAfterFullScreenIntent = true
+                startActivity(
+                    Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENTS).apply {
+                        data = Uri.parse("package:$packageName")
+                    }
+                )
+                return
+            }
+        }
+        requestBatteryOptimizationExemptionIfNeeded()
     }
 
     private fun requestBatteryOptimizationExemptionIfNeeded() {

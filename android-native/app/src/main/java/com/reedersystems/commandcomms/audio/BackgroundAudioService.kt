@@ -1,6 +1,5 @@
 package com.reedersystems.commandcomms.audio
 
-import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
@@ -75,7 +74,6 @@ class BackgroundAudioService : Service() {
 
         audioEngine = PttAudioEngine(applicationContext)
         servicePrefs = ServiceConnectionPrefs(applicationContext)
-        createNotificationChannel()
         startForeground(NOTIFICATION_ID, buildNotification("Radio — Standby"))
     }
 
@@ -381,19 +379,6 @@ class BackgroundAudioService : Service() {
         } catch (e: Exception) {
             Log.w(TAG, "ptt/end HTTP failed (non-critical): ${e.message}")
         }
-    }
-
-    private fun createNotificationChannel() {
-        val channel = NotificationChannel(
-            CHANNEL_ID,
-            "PTT Radio Service",
-            NotificationManager.IMPORTANCE_LOW
-        ).apply {
-            description = "Keeps radio connection alive for PTT"
-            setShowBadge(false)
-        }
-        val nm = getSystemService(NotificationManager::class.java)
-        nm.createNotificationChannel(channel)
     }
 
     private fun updateNotification(status: String) {
