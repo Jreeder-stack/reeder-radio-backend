@@ -96,13 +96,14 @@ class PttAudioEngine(private val context: Context) {
 
     @RequiresApi(Build.VERSION_CODES.S)
     private fun enableSpeakerphoneModern() {
+        audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
         val speakerDevice = audioManager.availableCommunicationDevices
             .firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
         if (speakerDevice != null) {
             val success = audioManager.setCommunicationDevice(speakerDevice)
-            Log.d(TAG, "AudioManager: setCommunicationDevice(SPEAKER) success=$success")
+            Log.d(TAG, "AudioManager: mode=IN_COMMUNICATION setCommunicationDevice(SPEAKER) success=$success")
         } else {
-            Log.w(TAG, "AudioManager: TYPE_BUILTIN_SPEAKER not available — no routing change")
+            Log.w(TAG, "AudioManager: mode=IN_COMMUNICATION TYPE_BUILTIN_SPEAKER not available — no routing change")
         }
     }
 
@@ -128,7 +129,8 @@ class PttAudioEngine(private val context: Context) {
         audioManager.clearCommunicationDevice()
         audioFocusRequest?.let { audioManager.abandonAudioFocusRequest(it) }
         audioFocusRequest = null
-        Log.d(TAG, "AudioManager: clearCommunicationDevice() + audio focus abandoned")
+        audioManager.mode = AudioManager.MODE_NORMAL
+        Log.d(TAG, "AudioManager: clearCommunicationDevice() + audio focus abandoned + mode=NORMAL")
     }
 
     @Suppress("DEPRECATION")
