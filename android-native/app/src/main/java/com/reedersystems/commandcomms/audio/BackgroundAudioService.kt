@@ -114,6 +114,12 @@ class BackgroundAudioService : Service() {
         Log.d(TAG, "BackgroundAudioService: service-lifetime WakeLock acquired")
 
         audioEngine = PttAudioEngine(applicationContext)
+        audioEngine.onDisconnected = {
+            Log.d(TAG, "LiveKit unexpected disconnect — resetting session state")
+            gracePeriodJob?.cancel()
+            gracePeriodJob = null
+            sessionDeadlineMs = -1L
+        }
         servicePrefs = ServiceConnectionPrefs(applicationContext)
         startForeground(NOTIFICATION_ID, buildNotification("Radio — Standby"))
         registerDynamicPttReceiver()
@@ -325,15 +331,14 @@ class BackgroundAudioService : Service() {
     }
 
     private fun handleEmergencyDown() {
-        Log.d(TAG, "handleEmergencyDown — waking screen and routing to ViewModel")
-        app.keyEventFlow.tryEmit(KeyAction.EmergencyDown)
+        Log.d(TAG, "handleEmergencyDown — waking screen and launching MainActivity")
 
-        // Wake the screen and bring the app to the foreground for emergency activation.
-        // setTurnScreenOn(true) + setShowWhenLocked(true) are set on MainActivity so
-        // relaunching it is sufficient to light up the display.
+        // Wake the screen. SCREEN_BRIGHT_WAKE_LOCK + ACQUIRE_CAUSES_WAKEUP turns the
+        // display on. KeyAction.EmergencyDown is emitted in MainActivity.onNewIntent
+        // once the Activity is visible so the keyEventFlow collector is running.
         @Suppress("DEPRECATION")
         val wl = (getSystemService(POWER_SERVICE) as PowerManager).newWakeLock(
-            PowerManager.FULL_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP,
+            PowerManager.SCREEN_BRIGHT_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP,
             "CommandComms:EmergencyWake"
         ).apply { setReferenceCounted(false) }
         wl.acquire(5_000L)
@@ -344,6 +349,7 @@ class BackgroundAudioService : Service() {
                 Intent.FLAG_ACTIVITY_SINGLE_TOP or
                 Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
             )
+            putExtra(EXTRA_EMERGENCY_KEY_DOWN, true)
         }
         startActivity(wakeIntent)
     }
@@ -534,7 +540,7 @@ class BackgroundAudioService : Service() {
         gracePeriodJob?.cancel()
         val remaining = sessionDeadlineMs - System.currentTimeMillis()
         if (remaining <= 0L) {
-            onGracePeriodExpired()
+            scope.launch { onGracePeriodExpired() }
             return
         }
         gracePeriodJob = scope.launch {
@@ -547,8 +553,12 @@ class BackgroundAudioService : Service() {
     /**
      * Deadline reached. Extend if there was activity in the last ACTIVITY_WINDOW_MS,
      * otherwise disconnect. Never interrupts an active TX.
+     *
+     * suspend so that audioEngine.disconnect() fully runs before sessionDeadlineMs = -1L,
+     * preventing a ptt:pre arriving right after the grace period from colliding with a
+     * still-in-progress LiveKit teardown on its first reconnect attempt.
      */
-    private fun onGracePeriodExpired() {
+    private suspend fun onGracePeriodExpired() {
         val now = System.currentTimeMillis()
         if (pttState != PttState.IDLE) {
             Log.d(TAG, "Grace period expired but PTT active — extending deadline")
@@ -672,6 +682,7 @@ class BackgroundAudioService : Service() {
         const val EXTRA_ROOM_KEY = "room_key"
         const val EXTRA_CHANNEL_NAME = "channel_name"
         const val EXTRA_NEEDS_SIGNALING = "needs_signaling"
+        const val EXTRA_EMERGENCY_KEY_DOWN = "emergency_key_down"
 
         private const val WAKE_LOCK_TAG = "CommandComms:PttService"
     }
