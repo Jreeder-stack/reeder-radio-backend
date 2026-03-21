@@ -22,7 +22,6 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.core.content.ContextCompat
-import androidx.core.content.edit
 import com.reedersystems.commandcomms.audio.BackgroundAudioService
 import com.reedersystems.commandcomms.navigation.AppNavigation
 import com.reedersystems.commandcomms.ui.theme.CommandCommsTheme
@@ -39,8 +38,6 @@ private const val KEY_DPAD_DOWN = 20
 private const val KEY_DPAD_LEFT = 21
 private const val KEY_DPAD_RIGHT = 22
 
-private const val PREFS_NAME = "commandcomms_ui_prefs"
-private const val KEY_BATTERY_OPT_PROMPT_SHOWN = "battery_opt_prompt_shown"
 private const val ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENTS =
     "android.settings.MANAGE_APP_USE_FULL_SCREEN_INTENTS"
 
@@ -123,6 +120,17 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        // Re-assert screen-on/lock flags for a singleTop Activity brought to front
+        setTurnScreenOn(true)
+        setShowWhenLocked(true)
+        if (intent.getBooleanExtra(BackgroundAudioService.EXTRA_EMERGENCY_KEY_DOWN, false)) {
+            Log.d(TAG, "onNewIntent: emergency DOWN — routing to ViewModel")
+            app.keyEventFlow.tryEmit(KeyAction.EmergencyDown)
+        }
+    }
+
     private fun requestAppPermissions() {
         val micGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) ==
             PackageManager.PERMISSION_GRANTED
@@ -189,15 +197,17 @@ class MainActivity : ComponentActivity() {
         val pm = getSystemService(POWER_SERVICE) as PowerManager
         if (pm.isIgnoringBatteryOptimizations(packageName)) return
 
-        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-        if (prefs.getBoolean(KEY_BATTERY_OPT_PROMPT_SHOWN, false)) return
-
-        prefs.edit {
-            putBoolean(KEY_BATTERY_OPT_PROMPT_SHOWN, true)
+        Log.d(TAG, "Requesting battery optimization exemption")
+        try {
+            startActivity(
+                Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                    data = Uri.parse("package:$packageName")
+                }
+            )
+        } catch (e: Exception) {
+            Log.w(TAG, "Direct battery opt request unavailable — falling back to settings list")
+            startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
         }
-
-        Log.d(TAG, "Opening battery optimization settings")
-        startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
     }
 
     private fun logDiagnostics() {
