@@ -1,7 +1,9 @@
 package com.reedersystems.commandcomms.audio
 
 import android.content.Context
+import android.media.AudioAttributes
 import android.media.AudioDeviceInfo
+import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.os.Build
 import android.util.Log
@@ -23,6 +25,12 @@ class PttAudioEngine(private val context: Context) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
 
+    private var audioFocusRequest: AudioFocusRequest? = null
+    private var expectingDisconnect = false
+
+    /** Called when LiveKit disconnects unexpectedly (not via our own disconnect()). */
+    var onDisconnected: (() -> Unit)? = null
+
     val isConnected: Boolean
         get() = room?.state == Room.State.CONNECTED
 
@@ -30,6 +38,30 @@ class PttAudioEngine(private val context: Context) {
         withContext(Dispatchers.Main) {
             runCatching {
                 Log.d(TAG, "PttAudioEngine.connect() url=$livekitUrl")
+
+                // Acquire audio focus so Android routes remote audio to speaker for RX and TX.
+                // Without this, receive-only connections get no audio because the voice
+                // communication pipeline is never opened by the OS.
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    val req = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
+                        .setAudioAttributes(
+                            AudioAttributes.Builder()
+                                .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
+                                .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                                .build()
+                        )
+                        .build()
+                    audioManager.requestAudioFocus(req)
+                    audioFocusRequest = req
+                } else {
+                    @Suppress("DEPRECATION")
+                    audioManager.requestAudioFocus(
+                        null,
+                        AudioManager.STREAM_VOICE_CALL,
+                        AudioManager.AUDIOFOCUS_GAIN_TRANSIENT
+                    )
+                }
+
                 val newRoom = LiveKit.create(appContext = context)
 
                 val connected = withTimeoutOrNull(CONNECT_TIMEOUT_MS) {
@@ -94,14 +126,18 @@ class PttAudioEngine(private val context: Context) {
     @RequiresApi(Build.VERSION_CODES.S)
     private fun restoreAudioModern() {
         audioManager.clearCommunicationDevice()
-        Log.d(TAG, "AudioManager: clearCommunicationDevice()")
+        audioFocusRequest?.let { audioManager.abandonAudioFocusRequest(it) }
+        audioFocusRequest = null
+        Log.d(TAG, "AudioManager: clearCommunicationDevice() + audio focus abandoned")
     }
 
     @Suppress("DEPRECATION")
     private fun restoreAudioLegacy() {
         audioManager.isSpeakerphoneOn = false
         audioManager.mode = AudioManager.MODE_NORMAL
-        Log.d(TAG, "AudioManager: mode=NORMAL speakerphone=OFF (legacy API)")
+        @Suppress("DEPRECATION")
+        audioManager.abandonAudioFocus(null)
+        Log.d(TAG, "AudioManager: mode=NORMAL speakerphone=OFF audio focus abandoned (legacy API)")
     }
 
     private fun observeRoomEvents(room: Room) {
@@ -112,7 +148,13 @@ class PttAudioEngine(private val context: Context) {
                     is RoomEvent.Disconnected -> {
                         Log.d(TAG, "Room disconnected: ${event.error?.message}")
                         isTransmitting = false
+                        this@PttAudioEngine.room = null
                         restoreAudio()
+                        if (!expectingDisconnect) {
+                            Log.d(TAG, "Unexpected LiveKit disconnect — notifying service")
+                            onDisconnected?.invoke()
+                        }
+                        expectingDisconnect = false
                     }
                     else -> {}
                 }
@@ -151,6 +193,7 @@ class PttAudioEngine(private val context: Context) {
 
     fun disconnect() {
         runCatching {
+            expectingDisconnect = true
             isTransmitting = false
             eventJob?.cancel()
             eventJob = null
