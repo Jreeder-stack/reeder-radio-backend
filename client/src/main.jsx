@@ -172,15 +172,11 @@ function AppWrapper() {
         console.warn('[AppWrapper] Failed to start background service:', err);
       });
 
-      const permKey = 'permissions_initialized';
-      if (!localStorage.getItem(permKey)) {
-        requestAllPermissions().then(results => {
-          console.log('[AppWrapper] First-login permissions granted:', results);
-          localStorage.setItem(permKey, 'true');
-        }).catch(err => {
-          console.warn('[AppWrapper] Permission request error:', err);
-        });
-      }
+      requestAllPermissions().then(results => {
+        console.log('[AppWrapper] Permissions requested:', results);
+      }).catch(err => {
+        console.warn('[AppWrapper] Permission request error:', err);
+      });
     }
   }, [user]);
   
@@ -267,11 +263,11 @@ function MobileSettingsWrapper() {
 }
 
 function ConnectedRoutes() {
-  const { user } = useAuth();
-  
+  const { user, loading } = useAuth();
+
   return (
     <SignalingProvider>
-      <LiveKitConnectionProvider user={user}>
+      <LiveKitConnectionProvider user={loading ? null : user}>
         <MobileRadioProvider>
           <GlobalEmergencyOverlay />
           <Routes>

@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">COMMAND COMMS</string>
+    <string name="accessibility_service_description">Allows Command Comms to receive emergency and PTT button presses when the app is in the background. Required for the Inrico T320 emergency button to wake the screen and activate the emergency protocol.</string>
 </resources>

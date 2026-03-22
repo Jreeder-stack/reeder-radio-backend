@@ -64,6 +64,11 @@ class PttAudioEngine(private val context: Context) {
 
                 val newRoom = LiveKit.create(appContext = context)
 
+                // Set speaker routing BEFORE connecting so WebRTC starts on the right audio path.
+                // Without this, the OS defaults to earpiece for MODE_IN_COMMUNICATION.
+                audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
+                enableSpeakerphone()
+
                 val connected = withTimeoutOrNull(CONNECT_TIMEOUT_MS) {
                     newRoom.connect(url = livekitUrl, token = token)
                     true
@@ -72,7 +77,13 @@ class PttAudioEngine(private val context: Context) {
                 if (connected == true) {
                     room = newRoom
                     observeRoomEvents(newRoom)
-                    enableSpeakerphone()
+                    // Re-apply after 300 ms: WebRTC/LiveKit may reset audio routing internally
+                    // once the room is fully connected. The delayed call ensures speaker wins.
+                    scope.launch {
+                        delay(300)
+                        enableSpeakerphone()
+                        Log.d(TAG, "PttAudioEngine: speaker routing re-applied after 300ms")
+                    }
                     Log.d(TAG, "PttAudioEngine connected — speakerphone enabled")
                     true
                 } else {
@@ -103,7 +114,12 @@ class PttAudioEngine(private val context: Context) {
             val success = audioManager.setCommunicationDevice(speakerDevice)
             Log.d(TAG, "AudioManager: mode=IN_COMMUNICATION setCommunicationDevice(SPEAKER) success=$success")
         } else {
-            Log.w(TAG, "AudioManager: mode=IN_COMMUNICATION TYPE_BUILTIN_SPEAKER not available — no routing change")
+            // TYPE_BUILTIN_SPEAKER not in availableCommunicationDevices (can happen on PoC devices
+            // like Inrico T320 before audio session fully initialises). Fall back to the deprecated
+            // setSpeakerphoneOn which still works on all API levels.
+            Log.w(TAG, "AudioManager: TYPE_BUILTIN_SPEAKER not available — using legacy setSpeakerphoneOn fallback")
+            @Suppress("DEPRECATION")
+            audioManager.isSpeakerphoneOn = true
         }
     }
 

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Accessibility service configuration for PttAccessibilityService.
+
+    flagRequestFilterKeyEvents  — receive ALL hardware key events via onKeyEvent(), including
+                                  those directed at other apps. This is the core capability
+                                  needed to capture T320 emergency/PTT keys when backgrounded.
+    canRetrieveWindowContent    — allows getWindows() so the service can check whether our own
+                                  app is currently the foreground window and avoid double-firing
+                                  with MainActivity.onKeyDown().
+    typeNone                    — we do not need any AccessibilityEvent callbacks; setting this
+                                  to none avoids unnecessary system overhead.
+-->
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accessibilityFlags="flagRequestFilterKeyEvents"
+    android:accessibilityEventTypes="typeNone"
+    android:canRetrieveWindowContent="true"
+    android:canRequestFilterKeyEvents="true"
+    android:description="@string/accessibility_service_description"
+    android:notificationTimeout="0"
+    android:settingsActivity="" />
