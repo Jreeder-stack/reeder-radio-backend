@@ -271,7 +271,7 @@ router.get('/token', async (req, res) => {
       }
       const channelNumericId = result.rows[0].id;
       const unitChannels = presence.channels ?? [];
-      const onChannel = unitChannels.some(c => Number(c) === channelNumericId);
+      const onChannel = unitChannels.some(c => Number(c) === channelNumericId || c === room);
       if (!onChannel) {
         console.warn(`[PTT-HTTP] Token rejected: unit "${identity}" channels=[${unitChannels.join(',')}] not on channel ${channelNumericId} ("${room}")`);
         return res.status(403).json({ error: 'Unit not assigned to requested channel' });
