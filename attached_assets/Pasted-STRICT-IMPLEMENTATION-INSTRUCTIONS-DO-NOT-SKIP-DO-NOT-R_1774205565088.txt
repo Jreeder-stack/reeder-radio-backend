@@ -1,0 +1,322 @@
+STRICT IMPLEMENTATION INSTRUCTIONS — DO NOT SKIP, DO NOT RE-ARCHITECT RANDOMLY
+
+Project goal:
+Replace the handheld/radio-side LiveKit audio path with a custom radio transport while preserving the existing app shell, existing UI, existing auth, existing channels/zones logic, and existing radio hardware button mappings.
+
+CRITICAL NON-NEGOTIABLE RULES:
+1. DO NOT change, remove, remap, rename, or “clean up” any existing hardware button mappings.
+2. DO NOT modify the current radio button keycodes, scan codes, intent actions, accessibility hooks, broadcast receivers, or button behavior unless explicitly instructed in this task.
+3. DO NOT replace working hardware button logic with generic Android key listeners.
+4. DO NOT remove or alter any existing emergency button mappings.
+5. DO NOT rewrite the whole app.
+6. DO NOT move the radio core back into webview/javascript-only logic.
+7. DO NOT introduce LiveKit for handheld radio audio.
+8. DO NOT delete existing signaling, auth, UI, or CAD functionality unless it directly conflicts with the new radio audio transport.
+9. DO NOT change existing API contracts unless absolutely required, and if a change is required, document it clearly first in code comments and a migration note.
+10. DO NOT perform broad refactors unrelated to this task.
+
+HARDWARE BUTTON PROTECTION REQUIREMENT:
+Before making any code changes, identify and preserve all current hardware radio button handling code exactly as-is.
+This includes, but is not limited to:
+- PTT button mappings
+- emergency button mappings
+- side button mappings
+- scan codes
+- key codes
+- broadcast intent names
+- accessibility service hooks
+- receiver/service registration
+Create comments in the code marking these sections as:
+“DO NOT MODIFY — VERIFIED HARDWARE MAPPING”
+Do not change behavior in those sections.
+
+PRIMARY OBJECTIVE:
+Build a custom radio transport for the Android handheld/radio path using:
+- lightweight persistent signaling connection
+- floor control / channel busy logic
+- custom audio transport
+- no always-on LiveKit room requirement for handhelds
+
+TARGET ARCHITECTURE:
+Keep:
+- existing login/auth
+- existing channels/zones UI
+- existing dispatcher/admin UI
+- existing backend REST API
+- existing signaling layer if already present and usable
+- existing radio screen and app shell
+- existing native Android service structure
+- existing hardware button mapping code
+
+Replace handheld audio transport with:
+- signaling connection for control/presence/channel state
+- custom radio audio engine
+- Opus-based voice transport
+- relay model instead of LiveKit room participation
+
+IMPLEMENTATION STRATEGY:
+Do this as a controlled transplant, not a rewrite.
+
+PHASE 1 — ANALYZE CURRENT CODEBASE
+1. Inspect the project and produce a short internal implementation plan in comments or notes.
+2. Identify these categories:
+   - hardware button handling files/classes
+   - background service files/classes
+   - LiveKit-related files/classes
+   - signaling-related files/classes
+   - channel state files/classes
+   - audio engine files/classes
+3. Mark hardware mapping code as protected and do not modify it.
+4. Identify every handheld-side dependency on LiveKit.
+
+PHASE 2 — PRESERVE APP SHELL
+Keep all existing user-visible app behavior unrelated to LiveKit audio.
+This includes:
+- auth/session restore
+- channels list
+- zones
+- dispatcher interaction
+- radio screen UI
+- settings
+- alerts
+- location if already working
+
+PHASE 3 — CREATE NEW RADIO CORE
+Create a new native Android radio core that is independent of LiveKit.
+
+Required Android-side components:
+1. RadioAudioEngine
+   Responsibilities:
+   - coordinate capture/playback
+   - start/stop transmit
+   - start/stop receive
+   - respond to floor-control events
+   - keep state machine clean
+
+2. AudioCapture
+   Responsibilities:
+   - capture microphone audio
+   - feed PCM frames into encoder
+   - support push-to-talk start/stop
+   - avoid changing existing hardware trigger behavior
+
+3. AudioPlayback
+   Responsibilities:
+   - receive decoded PCM
+   - play incoming audio quickly
+   - support low-latency playback
+   - stop cleanly at TX end
+
+4. OpusCodec or split into OpusEncoder / OpusDecoder
+   Responsibilities:
+   - encode mic PCM frames to Opus
+   - decode received Opus frames to PCM
+   - use voice-friendly settings
+   - keep API clean and isolated
+
+5. UdpAudioTransport (or transport abstraction with UDP implementation)
+   Responsibilities:
+   - send outbound encoded audio frames
+   - receive inbound encoded audio frames
+   - manage socket lifecycle
+   - reconnect/rebind cleanly if needed
+
+6. JitterBuffer
+   Responsibilities:
+   - smooth packet timing variation
+   - prevent choppy receive audio
+   - stay small enough for radio-style latency
+
+7. FloorControlManager
+   Responsibilities:
+   - request transmit grant
+   - handle granted/denied/busy
+   - enforce single active talker per talkgroup unless emergency override rules apply
+
+8. RadioStateManager
+   Responsibilities:
+   - track idle / receiving / requesting_tx / transmitting / reconnecting
+   - publish observable state to existing UI/viewmodel/service
+
+PHASE 4 — KEEP SIGNALING, REMOVE HANDHELD LIVEKIT DEPENDENCY
+Use the existing signaling path if one already exists and is stable.
+Preferred signaling responsibilities:
+- presence
+- channel join/leave
+- ptt request
+- ptt granted
+- ptt denied
+- tx start
+- tx stop
+- emergency event
+- active speaker
+- reconnect status
+
+Add or adapt signaling messages as needed:
+- radio:joinChannel
+- radio:leaveChannel
+- ptt:request
+- ptt:granted
+- ptt:denied
+- tx:start
+- tx:stop
+- emergency:start
+- emergency:stop
+- channel:busy
+- channel:idle
+
+Important:
+Do not remove existing signaling features used elsewhere in the app.
+Do not break dispatcher/web signaling behavior.
+
+PHASE 5 — BACKEND CHANGES
+Keep the backend shell and extend it.
+
+Backend requirements:
+1. Keep auth, users, channels, zones, CAD, and general API routes intact.
+2. Deprecate handheld-side LiveKit dependence without breaking unrelated functionality.
+3. Add server-side floor control logic.
+4. Add audio relay service for talkgroup fanout.
+5. Add minimal recording hook if recording already exists or is expected.
+6. Preserve existing permissions/channel membership logic.
+
+Server behavior:
+- a radio joins a talkgroup via signaling
+- when PTT is pressed, client requests floor
+- server grants or denies based on channel state
+- if granted, client sends encoded audio packets to relay
+- relay forwards packets only to subscribers of that talkgroup
+- on release, client stops sending and server marks channel idle
+- emergency traffic may preempt normal traffic only if existing business rules allow it
+
+PHASE 6 — HANDHELD SERVICE INTEGRATION
+Integrate the new radio core into the existing native Android service.
+Use the current background/foreground radio service structure.
+Do not remove the service that keeps the radio alive in background.
+Do not move radio behavior into an Activity lifecycle.
+
+Required:
+- service owns the radio connection lifecycle
+- service survives app backgrounding as currently designed
+- service interfaces with existing hardware button flow
+- hardware button flow triggers radio engine actions without remapping buttons
+
+PHASE 7 — LIVEKIT REMOVAL SCOPE
+Remove LiveKit only from the handheld audio path.
+Do not delete dispatcher/web LiveKit usage yet unless directly instructed.
+Do not rip out shared code recklessly.
+Do not break any AI dispatcher or desktop/web features while doing this phase.
+
+PHASE 8 — FILE/FOLDER EXPECTATIONS
+Create or adapt files in a clean, modular structure.
+Use names close to these if the codebase language/platform fits:
+
+Android native:
+- RadioAudioEngine.kt
+- AudioCapture.kt
+- AudioPlayback.kt
+- OpusCodec.kt
+- UdpAudioTransport.kt
+- JitterBuffer.kt
+- FloorControlManager.kt
+- RadioStateManager.kt
+
+Backend:
+- audioRelayService.js (or ts/go equivalent)
+- floorControlService.js
+- signaling handlers for ptt/channel state
+- recording hooks as needed
+
+Do not rename existing protected hardware files/classes unless absolutely necessary.
+Do not change package structure more than needed.
+
+PHASE 9 — STRICT ACCEPTANCE CRITERIA
+The task is only complete when all of the following are true:
+
+A. Hardware safety
+- existing hardware mappings are unchanged
+- emergency button mapping unchanged
+- PTT button mapping unchanged
+- side button mapping unchanged
+- no regression in current button detection path
+
+B. App shell preserved
+- login still works
+- session restore still works
+- channel/zone UI still works
+- existing radio screen still works
+- dispatcher/web shell not broken
+
+C. Radio function
+- radio can join a channel
+- radio can request floor
+- radio can be granted floor
+- radio can transmit voice without LiveKit
+- another radio can receive voice without LiveKit
+- TX release stops audio and clears floor state
+- reconnect behavior works after temporary network interruption
+
+D. Background behavior
+- radio core is controlled by service, not fragile UI lifecycle
+- app backgrounding does not destroy radio readiness
+- existing hardware button routing is still honored
+
+E. Code quality
+- no giant god-classes
+- comments added where transport replaced LiveKit
+- hardware mapping sections clearly marked “DO NOT MODIFY — VERIFIED HARDWARE MAPPING”
+- old handheld LiveKit code removed or isolated cleanly, not half-broken
+
+PHASE 10 — DO NOT DO THESE THINGS
+- Do not switch to WebRTC for handheld transport
+- Do not replace custom transport with another conferencing SDK
+- Do not rebind button mappings
+- Do not use generic “onKeyDown only” logic as the main hardware strategy
+- Do not convert working native pieces back into JS
+- Do not redesign the UI for fun
+- Do not rename half the project
+- Do not delete dispatcher support
+- Do not introduce unrelated libraries without necessity
+
+PHASE 11 — IMPLEMENTATION ORDER
+Work in this order:
+1. Identify and protect hardware mapping code
+2. Identify handheld LiveKit dependencies
+3. Build new radio engine modules
+4. Add backend floor control and relay support
+5. Wire signaling to new radio engine
+6. Integrate service lifecycle
+7. Replace handheld transmit/receive path
+8. Test background/service state handling
+9. Verify hardware mappings still unchanged
+10. Clean up old handheld LiveKit references only after replacement works
+
+PHASE 12 — DELIVERABLES REQUIRED
+At the end of implementation, provide:
+1. A short summary of what files were changed
+2. A list of newly added files
+3. A list of removed or deprecated handheld LiveKit files/usages
+4. Explicit confirmation that hardware button mappings were not changed
+5. Any required env vars, ports, or backend config
+6. Any migration steps needed to run the new system
+
+PHASE 13 — TRANSPORT DESIGN REQUIREMENTS
+For handheld audio transport:
+- use a persistent lightweight signaling connection
+- use custom encoded audio transport
+- design for radio-style low latency
+- design for push-to-talk bursts, not always-on conferencing
+- do not assume all participants are permanently in a media room
+- support talkgroup fanout from relay/server
+- support future emergency priority handling
+
+PHASE 14 — DEVELOPMENT RULE
+Make the smallest set of changes necessary to achieve the objective.
+Preserve working app behavior whenever possible.
+Protect hardware mappings above all else.
+
+Now begin by:
+1. scanning the project
+2. listing LiveKit handheld dependencies
+3. locating and marking hardware mapping code as protected
+4. implementing the new radio core in parallel without changing the button mappings

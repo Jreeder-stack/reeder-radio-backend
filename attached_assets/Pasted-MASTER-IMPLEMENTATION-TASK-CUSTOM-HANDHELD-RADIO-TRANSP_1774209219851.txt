@@ -1,0 +1,268 @@
+MASTER IMPLEMENTATION TASK — CUSTOM HANDHELD RADIO TRANSPORT
+
+You are implementing a custom handheld radio transport that replaces LiveKit ONLY for handheld/native Android radio audio.
+
+This is a controlled transplant.
+
+DO NOT rewrite the application.
+DO NOT refactor unrelated systems.
+DO NOT redesign signaling architecture.
+DO NOT break dispatcher/web LiveKit path.
+DO NOT change hardware button mappings.
+
+Only implement what is specified.
+
+====================================================
+HIGHEST PRIORITY RULE — HARDWARE BUTTON SAFETY
+====================================================
+
+The following code areas are PROTECTED and MUST NOT have behavioral changes:
+
+- PttHardwareReceiver.kt
+- MainActivity.kt hardware key handling
+- AccessibilityService key filtering
+- BroadcastReceiver registrations
+- Intent action names used for PTT/emergency
+- All keycodes and scan codes
+- Emergency button mapping
+- Side button mapping
+- Foreground/background service start triggers
+
+Before any implementation:
+Add comments in those files marking sections:
+
+"DO NOT MODIFY — VERIFIED HARDWARE MAPPING"
+
+You may only change what happens AFTER BackgroundAudioService receives the intent.
+
+No remapping.
+No renaming.
+No replacing detection logic.
+No migration to generic key listeners.
+
+====================================================
+ARCHITECTURE OVERVIEW
+====================================================
+
+Handheld radio flow:
+
+Hardware Button →
+Existing Broadcast / Accessibility →
+BackgroundAudioService →
+RadioAudioEngine →
+Floor request →
+Granted →
+Audio capture →
+Opus encode →
+UDP relay →
+Subscribers receive →
+Decode →
+Jitter buffer →
+Playback
+
+Dispatcher/web LiveKit flow remains unchanged.
+
+Custom transport must be capability-gated.
+
+Example:
+transportMode === "custom-radio"
+
+Dispatcher/web clients must never enter this path.
+
+====================================================
+TASK #71 — BACKEND FLOOR CONTROL & AUDIO RELAY
+====================================================
+
+Create:
+
+src/services/floorControlService.js
+src/services/audioRelayService.js
+
+Do NOT rewrite app.js.
+Do NOT refactor signaling architecture.
+Only extend signalingService.js.
+
+FloorControlService responsibilities:
+
+- Track floor holder per channel
+- Grant / deny logic
+- Automatic release on timeout
+- Release on disconnect
+- Emergency preemption using existing emergency state
+- Pure service — no direct socket emissions
+
+AudioRelayService responsibilities:
+
+- Bind UDP socket (env AUDIO_RELAY_PORT default 5100)
+- Authenticate packet sender via session token
+- Verify sender holds floor
+- Maintain subscriber membership list per talkgroup
+- Fan out Opus frames ONLY to subscribers of that talkgroup
+- Expose recording tap callback
+- Do NOT mix or transcode audio
+
+Packet format:
+
+[session token][channelId uint16][sequence uint16][Opus payload]
+
+Security rules:
+
+- Reject packet if token invalid
+- Reject packet if channel unauthorized
+- Reject packet if sender does not hold floor
+- Remove subscribers on disconnect / leave / timeout
+
+Extend signalingService.js ONLY by adding handlers:
+
+- radio:joinChannel
+- radio:leaveChannel
+- ptt:request
+- ptt:release
+- tx:start
+- tx:stop
+- channel:busy
+- channel:idle
+
+Do NOT remove existing handlers.
+
+====================================================
+TASK #72 — ANDROID RADIO ENGINE MODULES (NEW FILES ONLY)
+====================================================
+
+Create new package:
+
+android-native/app/src/main/java/com/reedersystems/commandcomms/audio/radio/
+
+Create:
+
+- RadioAudioEngine.kt
+- AudioCapture.kt
+- AudioPlayback.kt
+- OpusCodec.kt (use Concentus pure Java library)
+- UdpAudioTransport.kt
+- JitterBuffer.kt
+- FloorControlManager.kt
+- RadioStateManager.kt
+- RadioSignalingGateway.kt (new abstraction interface)
+
+Rules:
+
+- DO NOT modify any existing files in this task
+- Use Kotlin StateFlow
+- Constructor dependency injection
+- Modules testable independently
+- Add KDoc explaining purpose and hardware safety boundary
+
+Opus settings:
+
+- 16kHz mono
+- ~24kbps
+- 20ms frames
+
+Jitter buffer:
+
+- 2–4 frames
+- 40–80ms latency
+
+FloorControlManager must depend ONLY on RadioSignalingGateway.
+
+====================================================
+TASK #73 — HANDHELD INTEGRATION
+====================================================
+
+Modify ONLY:
+
+- BackgroundAudioService.kt
+- SignalingClient.kt
+- RadioViewModel.kt
+- build.gradle.kts (only for dependency changes)
+
+Integration rules:
+
+- Service lifecycle unchanged
+- Hardware intent routing unchanged
+- Replace only downstream engine calls
+- Feature-flag custom transport
+- Add new signaling handlers alongside old ones
+- Dispatcher/web path untouched
+
+Deprecate only:
+
+- PttAudioEngine.kt
+- LiveKitTokenRepository.kt
+
+Do NOT delete yet.
+
+====================================================
+ACCEPTANCE CRITERIA
+====================================================
+
+Hardware safety:
+
+- Button mappings unchanged
+- Emergency works
+- PTT detection path identical
+
+Radio behavior:
+
+- Join channel
+- Request floor
+- Grant/deny
+- TX audio relayed
+- RX audio plays
+- Floor clears on release
+- Reconnect after network drop works
+
+Background:
+
+- Radio functional with screen off
+- Service owns lifecycle
+
+App shell:
+
+- Login/session restore unchanged
+- Zones/channels UI unchanged
+- Dispatcher features unaffected
+
+Code quality:
+
+- No giant god classes
+- Clear protected hardware comments
+- No broad refactors
+- No unrelated library upgrades
+
+====================================================
+DO NOT DO
+====================================================
+
+- Do not rewrite app.js
+- Do not refactor signaling architecture
+- Do not migrate whole project to new framework
+- Do not redesign UI
+- Do not change Kotlin/Gradle versions
+- Do not change minSdk/targetSdk
+- Do not break LiveKit dispatcher path
+- Do not move radio logic into WebView JS
+
+====================================================
+IMPLEMENTATION ORDER
+====================================================
+
+1. Mark protected hardware code
+2. Implement backend floor + relay
+3. Implement Android radio modules
+4. Extend signaling client
+5. Swap engine in BackgroundAudioService (feature-flagged)
+6. End-to-end handheld test
+7. Deprecate LiveKit handheld path
+8. Re-verify hardware mappings
+
+====================================================
+DELIVERABLE SUMMARY REQUIRED
+====================================================
+
+- Files added
+- Files modified
+- Files deprecated
+- Confirmation hardware mappings untouched
+- Required env vars / ports
