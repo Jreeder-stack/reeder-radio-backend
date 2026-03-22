@@ -249,11 +249,9 @@ class BackgroundAudioService : Service() {
         updateNotification("Connecting…")
 
         scope.launch {
-            val toneJob = async { app.toneEngine.playTalkPermitToneAndAwait() }
             try {
                 if (signaling && !ensureBackgroundSignalingReady(channelId)) {
                     Log.e(TAG, "Screen-off PTT: signaling not ready")
-                    toneJob.await()
                     app.toneEngine.playErrorTone()
                     pttState = PttState.IDLE
                     updateNotification("Radio — Standby")
@@ -268,7 +266,6 @@ class BackgroundAudioService : Service() {
                 val tokenResult = app.liveKitTokenRepository.getToken(identity = unitId, room = roomKey)
                 if (tokenResult.isFailure) {
                     Log.e(TAG, "Token fetch failed: ${tokenResult.exceptionOrNull()?.message}")
-                    toneJob.await()
                     app.toneEngine.playErrorTone()
                     pttState = PttState.IDLE
                     updateNotification("Radio — Standby")
@@ -284,7 +281,6 @@ class BackgroundAudioService : Service() {
 
                 if (!connected) {
                     Log.e(TAG, "LiveKit connect failed")
-                    toneJob.await()
                     app.toneEngine.playErrorTone()
                     pttState = PttState.IDLE
                     updateNotification("Radio — Standby")
@@ -297,7 +293,6 @@ class BackgroundAudioService : Service() {
 
                 if (pttUpWhileConnecting) {
                     Log.d(TAG, "PTT_UP received during connect — aborting TX (race condition avoided)")
-                    toneJob.cancel()
                     pttState = PttState.IDLE
                     updateNotification("Radio — Standby")
                     rescheduleGracePeriod()
@@ -305,7 +300,9 @@ class BackgroundAudioService : Service() {
                     return@launch
                 }
 
-                toneJob.await()
+                if (signaling) {
+                    app.toneEngine.playTalkPermitToneAndAwait()
+                }
                 Log.d(TAG, "Talk-permit tone finished for roomKey $roomKey")
 
                 if (pttUpWhileConnecting) {
