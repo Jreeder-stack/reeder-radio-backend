@@ -1,0 +1,52 @@
+2026-03-22T13:03:40Z clientIP="166.137.146.60" requestID="3a5b26ed-77ce-430d" responseTimeMS=26 responseBytes=232 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+2026-03-22T13:03:40.143680537Z Database initialized successfully
+2026-03-22T13:03:40.144117108Z [STARTUP] Database schema initialized
+2026-03-22T13:03:40.277402685Z [STARTUP] DB State: 5 users, 3 channels (3 enabled), 3 zones, 8 active sessions
+2026-03-22T13:03:40.28569492Z [STARTUP] Channels list:
+2026-03-22T13:03:40.285822912Z   [ON ] id=169 "DISPATCH" zone="DISPATCH" room_key="DISPATCH__DISPATCH"
+2026-03-22T13:03:40.285846473Z   [ON ] id=170 "OPS-1" zone="OPS" room_key="OPS__OPS-1"
+2026-03-22T13:03:40.285879144Z   [ON ] id=534 "OPS-1" zone="PHILADELPHIA" room_key="PHILADELPHIA__OPS-1"
+2026-03-22T13:03:40.288685543Z [Signaling] Socket.IO signaling server initialized
+2026-03-22T13:03:40.288701983Z Signaling service initialized
+2026-03-22T13:03:40.313585615Z Auto-starting AI Dispatcher on channel: DISPATCH (room: DISPATCH__DISPATCH)
+2026-03-22T13:03:40.331591888Z [AI-Dispatcher] 2026-03-22T13:03:40.331Z | STARTED_STANDBY {"channel":"DISPATCH","roomKey":"DISPATCH__DISPATCH","mode":"on-demand"}
+2026-03-22T13:03:40.33409375Z [AI-Dispatcher-Signaling] 2026-03-22T13:03:40.333Z | INITIALIZED {"channels":[]}
+2026-03-22T13:03:40.33410978Z [AI-Dispatcher-Signaling] 2026-03-22T13:03:40.333Z | CHANNEL_ACTIVATED {"channelId":"DISPATCH__DISPATCH"}
+2026-03-22T13:03:40.33412075Z [AI-Dispatcher] Signaling integration setup for channel: DISPATCH__DISPATCH
+2026-03-22T13:03:40.336449408Z Server running on port 5000
+2026-03-22T13:03:40.336467888Z Signaling endpoint: ws://0.0.0.0:5000/signaling
+2026-03-22T13:03:40.448490312Z [CAD] Loaded 69 call natures from CAD
+2026-03-22T13:03:44Z clientIP="34.145.120.165" requestID="899ca041-71dc-41ec" responseTimeMS=9 responseBytes=1380 userAgent="Go-http-client/2.0"
+2026-03-22T13:03:44.699822989Z ==> Your service is live 🎉
+2026-03-22T13:03:44.848313159Z ==> 
+2026-03-22T13:03:44.850912533Z ==> ///////////////////////////////////////////////////////////
+2026-03-22T13:03:44.853090559Z ==> 
+2026-03-22T13:03:44.855542411Z ==> Available at your primary URL https://comms.reeder-systems.com + 1 more domain
+2026-03-22T13:03:44.858290927Z ==> 
+2026-03-22T13:03:44.86147206Z ==> ///////////////////////////////////////////////////////////
+2026-03-22T13:03:45Z clientIP="166.137.146.60" requestID="35dcebdc-18af-4d3d" responseTimeMS=29 responseBytes=232 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+2026-03-22T13:03:48Z clientIP="166.137.146.60" requestID="e7a9ecb1-634a-49d6" responseTimeMS=28 responseBytes=235 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+2026-03-22T13:03:48.723815171Z [API] GET /api/messages/DISPATCH__DISPATCH?limit=50&offset=0 | user=DISPATCH-1(id:7) | sid=Y-nW2NnK... | 304 | 18ms
+2026-03-22T13:03:50Z clientIP="166.137.146.60" requestID="235437b3-908c-43d2" responseTimeMS=28 responseBytes=232 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+2026-03-22T13:03:55Z clientIP="166.137.146.60" requestID="f2af8657-cbfb-4b24" responseTimeMS=115 responseBytes=232 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+2026-03-22T13:03:55.811132319Z [DISPATCH] getUnits: 0 units returned | user=DISPATCH-1 | sessionID=Y-nW2NnK... (logged 1/60)
+2026-03-22T13:03:55.823106554Z [API] GET /api/dispatch/units | user=DISPATCH-1(id:7) | sid=Y-nW2NnK... | 304 | 20ms (logged 1/60)
+2026-03-22T13:03:58Z clientIP="166.137.146.60" requestID="3bbb1180-165d-4d96" responseTimeMS=37 responseBytes=235 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+2026-03-22T13:03:58.73487609Z [API] GET /api/messages/DISPATCH__DISPATCH?limit=50&offset=0 | user=DISPATCH-1(id:7) | sid=Y-nW2NnK... | 304 | 25ms
+2026-03-22T13:04:00Z clientIP="166.137.146.60" requestID="74a590fa-fde2-439b" responseTimeMS=27 responseBytes=232 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+2026-03-22T13:04:05Z clientIP="166.137.146.60" requestID="b37d81ac-3f7a-4aa7" responseTimeMS=25 responseBytes=232 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+2026-03-22T13:04:08Z clientIP="166.137.146.60" requestID="2b792443-b53a-44b7" responseTimeMS=45 responseBytes=235 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+2026-03-22T13:04:08.911152464Z [API] GET /api/messages/DISPATCH__DISPATCH?limit=50&offset=0 | user=DISPATCH-1(id:7) | sid=Y-nW2NnK... | 304 | 17ms
+2026-03-22T13:04:10Z clientIP="166.137.146.60" requestID="bcd354a8-b8bd-4654" responseTimeMS=26 responseBytes=232 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+2026-03-22T13:04:15Z clientIP="166.137.146.60" requestID="883abe22-e9ef-470f" responseTimeMS=29 responseBytes=232 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+2026-03-22T13:04:20Z clientIP="166.137.146.60" requestID="da6aac75-4d15-4e27" responseTimeMS=27 responseBytes=235 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+2026-03-22T13:04:20Z clientIP="166.137.146.60" requestID="936d3258-4fb6-4f1f" responseTimeMS=33 responseBytes=232 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+2026-03-22T13:04:20.100433893Z [API] GET /api/messages/DISPATCH__DISPATCH?limit=50&offset=0 | user=DISPATCH-1(id:7) | sid=Y-nW2NnK... | 304 | 17ms
+2026-03-22T13:04:25Z clientIP="166.137.146.60" requestID="17d878fe-77a1-4726" responseTimeMS=28 responseBytes=232 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+2026-03-22T13:04:28Z clientIP="166.137.146.60" requestID="97cfac1e-274d-4875" responseTimeMS=29 responseBytes=235 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+2026-03-22T13:04:28.719445555Z [API] GET /api/messages/DISPATCH__DISPATCH?limit=50&offset=0 | user=DISPATCH-1(id:7) | sid=Y-nW2NnK... | 304 | 19ms
+2026-03-22T13:04:30Z clientIP="166.137.146.60" requestID="58f819d6-bf8b-4f2b" responseTimeMS=28 responseBytes=232 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+2026-03-22T13:04:33Z clientIP="100.50.235.109" requestID="b49fbc61-bb26-498a" responseTimeMS=6 responseBytes=1380 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36 Edg/127.0.0.0"
+2026-03-22T13:04:35Z clientIP="166.137.146.60" requestID="60e6d1b0-0665-43d4" responseTimeMS=29 responseBytes=232 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+2026-03-22T13:04:38.727455144Z [API] GET /api/messages/DISPATCH__DISPATCH?limit=50&offset=0 | user=DISPATCH-1(id:7) | sid=Y-nW2NnK... | 304 | 19ms
+2026-03-22T13:04:38Z clientIP="166.137.146.60" requestID="148c2f8d-5104-4ce2" responseTimeMS=28 responseBytes=235 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
