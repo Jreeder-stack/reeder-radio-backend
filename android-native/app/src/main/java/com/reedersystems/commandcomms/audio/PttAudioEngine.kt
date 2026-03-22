@@ -9,9 +9,11 @@ import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
 import io.livekit.android.LiveKit
+import io.livekit.android.RoomOptions
 import io.livekit.android.events.RoomEvent
 import io.livekit.android.events.collect
 import io.livekit.android.room.Room
+import io.livekit.android.room.track.LocalAudioTrackOptions
 import kotlinx.coroutines.*
 
 private const val TAG = "[PTT-DIAG]"
@@ -22,6 +24,7 @@ class PttAudioEngine(private val context: Context) {
 
     private var room: Room? = null
     private var isTransmitting = false
+    private val radioDsp = RadioDspChain()
     private var eventJob: Job? = null
     private var watchdogJob: Job? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -78,7 +81,18 @@ class PttAudioEngine(private val context: Context) {
                     )
                 }
 
-                val newRoom = LiveKit.create(appContext = context)
+                val newRoom = LiveKit.create(
+                    appContext = context,
+                    options = RoomOptions(
+                        audioTrackCaptureDefaults = LocalAudioTrackOptions(
+                            noiseSuppression = true,
+                            echoCancellation = true,
+                            autoGainControl = true,
+                            highPassFilter = true,
+                            typingNoiseDetection = false
+                        )
+                    )
+                )
 
                 // Set speaker routing BEFORE connecting so WebRTC starts on the right audio path.
                 // Without this, the OS defaults to earpiece for MODE_IN_COMMUNICATION.
@@ -93,6 +107,7 @@ class PttAudioEngine(private val context: Context) {
 
                 if (connected == true) {
                     room = newRoom
+                    radioDsp.enable()
                     observeRoomEvents(newRoom)
                     // Re-apply at 300ms, 600ms, and 1500ms after connect to catch all phases
                     // of LiveKit/WebRTC initialization that can override audio routing.
@@ -202,6 +217,7 @@ class PttAudioEngine(private val context: Context) {
 
     private fun restoreAudio() {
         stopWatchdog()
+        radioDsp.disable()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             restoreAudioModern()
         } else {
