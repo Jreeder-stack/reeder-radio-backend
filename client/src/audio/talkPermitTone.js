@@ -39,7 +39,7 @@ function playOscillatorFallback(ctx) {
 
     var gain = ctx.createGain();
     var startTime = now + i * (beepDuration + gap);
-    gain.gain.setValueAtTime(0.4, startTime);
+    gain.gain.setValueAtTime(0.6, startTime);
     gain.gain.setValueAtTime(0, startTime + beepDuration);
 
     osc.connect(gain);

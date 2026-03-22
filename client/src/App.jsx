@@ -6,6 +6,7 @@ import { updateUnitStatus } from "./utils/api.js";
 import { useLiveKitConnection } from "./context/LiveKitConnectionContext.jsx";
 import { useSignalingContext } from "./context/SignalingContext.jsx";
 import { unlockAudio } from "./audio/iosAudioUnlock";
+import { preloadPermitBuffer } from "./audio/talkPermitTone.js";
 import { setupAppLifecycle } from "./lib/capacitor";
 import { signalingManager } from "./signaling/SignalingManager";
 
@@ -274,6 +275,10 @@ export default function App({ user, onLogout }) {
       }
     );
     return cleanup;
+  }, []);
+
+  useEffect(() => {
+    preloadPermitBuffer();
   }, []);
 
   useEffect(() => {
