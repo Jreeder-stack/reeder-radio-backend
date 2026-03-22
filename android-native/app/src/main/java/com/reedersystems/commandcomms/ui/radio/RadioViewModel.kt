@@ -381,12 +381,8 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         Log.d(TAG, "onPttDown roomKey=${channel.roomKey}")
         app.signalingRepository.transmitPre(channel.roomKey)
         _uiState.update { it.copy(pttState = PttState.TRANSMITTING) }
+        app.toneEngine.playTalkPermitTone()
         pttStartJob = viewModelScope.launch {
-            app.toneEngine.playTalkPermitToneAndAwait()
-            if (_uiState.value.pttState != PttState.TRANSMITTING) {
-                Log.d(TAG, "PTT released during talk-permit tone — aborting TX")
-                return@launch
-            }
             app.signalingRepository.transmitStart(channel.roomKey)
             sendServiceIntent(BackgroundAudioService.ACTION_PTT_DOWN)
         }
@@ -498,12 +494,8 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         if (_uiState.value.pttState != PttState.IDLE) return
         Log.d(TAG, "EMERGENCY TX START roomKey=$channelKey (key-lock bypassed)")
         _uiState.update { it.copy(pttState = PttState.TRANSMITTING) }
+        app.toneEngine.playTalkPermitTone()
         pttStartJob = viewModelScope.launch {
-            app.toneEngine.playTalkPermitToneAndAwait()
-            if (_uiState.value.pttState != PttState.TRANSMITTING) {
-                Log.d(TAG, "PTT released during emergency talk-permit tone — aborting TX")
-                return@launch
-            }
             app.signalingRepository.transmitStart(channelKey)
             sendServiceIntent(BackgroundAudioService.ACTION_PTT_DOWN)
         }

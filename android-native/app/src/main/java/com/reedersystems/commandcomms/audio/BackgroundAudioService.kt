@@ -273,11 +273,17 @@ class BackgroundAudioService : Service() {
                     return@launch
                 }
 
+                val tokenDeferred = async {
+                    app.liveKitTokenRepository.getToken(identity = unitId, room = roomKey)
+                }
+
                 if (signaling) {
                     app.signalingRepository.transmitPre(roomKey)
                     Log.d(TAG, "Screen-off PTT: transmitPre sent for roomKey $roomKey")
+                    app.toneEngine.playTalkPermitTone()
                 }
-                val tokenResult = app.liveKitTokenRepository.getToken(identity = unitId, room = roomKey)
+
+                val tokenResult = tokenDeferred.await()
                 if (tokenResult.isFailure) {
                     Log.e(TAG, "Token fetch failed: ${tokenResult.exceptionOrNull()?.message}")
                     app.toneEngine.playErrorTone()
@@ -307,20 +313,6 @@ class BackgroundAudioService : Service() {
 
                 if (pttUpWhileConnecting) {
                     Log.d(TAG, "PTT_UP received during connect — aborting TX (race condition avoided)")
-                    pttState = PttState.IDLE
-                    updateNotification("Radio — Standby")
-                    rescheduleGracePeriod()
-                    sendPttTxAborted()
-                    return@launch
-                }
-
-                if (signaling) {
-                    app.toneEngine.playTalkPermitToneAndAwait()
-                }
-                Log.d(TAG, "Talk-permit tone finished for roomKey $roomKey")
-
-                if (pttUpWhileConnecting) {
-                    Log.d(TAG, "PTT_UP received during talk-permit tone — aborting TX")
                     pttState = PttState.IDLE
                     updateNotification("Radio — Standby")
                     rescheduleGracePeriod()
