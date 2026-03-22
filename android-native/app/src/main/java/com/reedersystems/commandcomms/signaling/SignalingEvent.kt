@@ -14,4 +14,11 @@ sealed class SignalingEvent {
     data class LocationTrackStart(val requestedBy: String, val emergency: Boolean) : SignalingEvent()
     object LocationTrackStop : SignalingEvent()
     data class UnitStatusChanged(val unitId: String, val status: String) : SignalingEvent()
+
+    data class RadioPttGranted(val channelId: String) : SignalingEvent()
+    data class RadioPttDenied(val channelId: String, val reason: String) : SignalingEvent()
+    data class RadioTxStart(val unitId: String, val channelId: String) : SignalingEvent()
+    data class RadioTxStop(val unitId: String, val channelId: String) : SignalingEvent()
+    data class RadioChannelBusy(val channelId: String, val transmittingUnit: String) : SignalingEvent()
+    data class RadioChannelIdle(val channelId: String) : SignalingEvent()
 }

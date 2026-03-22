@@ -1,38 +1,31 @@
-/**
- * AudioPlayback — Plays decoded PCM audio via Android AudioTrack.
- *
- * Module boundary: This module handles audio output only. It accepts decoded PCM frames
- * from the JitterBuffer/OpusCodec pipeline and plays them with low-latency settings.
- * It does not interact with the network, codec, or signaling layers directly.
- *
- * Configuration: Voice communication usage, 16 kHz mono, 16-bit PCM, low-latency mode.
- *
- * Hardware safety: This module does not interact with any hardware buttons, key codes,
- * scan codes, broadcast receivers, or accessibility hooks. PTT detection is handled
- * entirely outside the radio engine module boundary.
- */
 package com.reedersystems.commandcomms.audio.radio
 
 import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioTrack
 import android.util.Log
+import kotlinx.coroutines.*
 
-private const val TAG = "[RadioPlayback]"
+private const val TAG = "[AudioPlay]"
+private const val SAMPLE_RATE = 16000
+private const val PLAYBACK_INTERVAL_MS = 20L
 
 class AudioPlayback(
-    private val sampleRate: Int = OpusCodec.SAMPLE_RATE,
-    private val frameSizeSamples: Int = OpusCodec.FRAME_SIZE
+    private val jitterBuffer: JitterBuffer,
+    private val opusCodec: OpusCodec
 ) {
+
     private var audioTrack: AudioTrack? = null
+    private var playbackJob: Job? = null
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     fun start() {
         if (audioTrack != null) return
 
         val channelConfig = AudioFormat.CHANNEL_OUT_MONO
         val audioFormat = AudioFormat.ENCODING_PCM_16BIT
-        val minBufferSize = AudioTrack.getMinBufferSize(sampleRate, channelConfig, audioFormat)
-        val bufferSize = maxOf(minBufferSize, frameSizeSamples * 2 * 4)
+        val minBufferSize = AudioTrack.getMinBufferSize(SAMPLE_RATE, channelConfig, audioFormat)
+        val bufferSize = maxOf(minBufferSize, OpusCodec.FRAME_SIZE * 2 * 4)
 
         val track = AudioTrack.Builder()
             .setAudioAttributes(
@@ -43,7 +36,7 @@ class AudioPlayback(
             )
             .setAudioFormat(
                 AudioFormat.Builder()
-                    .setSampleRate(sampleRate)
+                    .setSampleRate(SAMPLE_RATE)
                     .setChannelMask(channelConfig)
                     .setEncoding(audioFormat)
                     .build()
@@ -59,20 +52,36 @@ class AudioPlayback(
             return
         }
 
-        audioTrack = track
         track.play()
-        Log.d(TAG, "AudioPlayback started: ${sampleRate}Hz mono, low-latency")
-    }
+        audioTrack = track
+        Log.d(TAG, "AudioPlayback started: ${SAMPLE_RATE}Hz mono, low-latency")
 
-    fun writePcm(pcmSamples: ShortArray) {
-        val track = audioTrack ?: return
-        track.write(pcmSamples, 0, pcmSamples.size)
+        playbackJob = scope.launch {
+            while (isActive) {
+                val packet = jitterBuffer.dequeue()
+                if (packet != null) {
+                    val pcm = opusCodec.decode(packet)
+                    if (pcm != null && pcm.isNotEmpty()) {
+                        track.write(pcm, 0, pcm.size)
+                    }
+                } else {
+                    delay(PLAYBACK_INTERVAL_MS)
+                }
+            }
+        }
     }
 
     fun stop() {
+        playbackJob?.cancel()
+        playbackJob = null
         audioTrack?.stop()
         audioTrack?.release()
         audioTrack = null
         Log.d(TAG, "AudioPlayback stopped")
+    }
+
+    fun release() {
+        stop()
+        scope.cancel()
     }
 }

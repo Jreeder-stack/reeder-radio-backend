@@ -8,6 +8,12 @@ import okhttp3.Request
 
 data class LiveKitToken(val token: String, val livekitUrl: String)
 
+/**
+ * @deprecated The custom radio transport path uses UDP relay instead of LiveKit.
+ * This repository is retained only for the dispatcher/web fallback path (transportMode="livekit")
+ * and will be removed once the replacement is verified working in production.
+ */
+@Deprecated("Replaced by custom radio UDP transport for handheld devices")
 class LiveKitTokenRepository(private val api: ApiClient) {
 
     suspend fun getToken(identity: String, room: String): Result<LiveKitToken> =

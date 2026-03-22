@@ -9,6 +9,7 @@ import android.os.Build
 import android.util.Log
 import com.reedersystems.commandcomms.audio.DndOverrideManager
 import com.reedersystems.commandcomms.audio.ToneEngine
+import com.reedersystems.commandcomms.audio.radio.RadioStateManager
 import com.reedersystems.commandcomms.data.api.ApiClient
 import com.reedersystems.commandcomms.data.prefs.PttKeyPrefs
 import com.reedersystems.commandcomms.data.prefs.ServiceConnectionPrefs
@@ -56,6 +57,9 @@ class CommandCommsApp : Application() {
     lateinit var dndOverrideManager: DndOverrideManager
         private set
 
+    var radioStateManager: RadioStateManager? = null
+        private set
+
     val keyEventFlow = MutableSharedFlow<KeyAction>(extraBufferCapacity = 16)
     val keyCapturingFlow = MutableStateFlow(false)
 
@@ -79,11 +83,17 @@ class CommandCommsApp : Application() {
 
         authRepository = AuthRepository(apiClient)
         channelRepository = ChannelRepository(apiClient)
+        @Suppress("DEPRECATION")
         liveKitTokenRepository = LiveKitTokenRepository(apiClient)
         signalingClient = SignalingClient(apiClient.baseUrl)
         signalingRepository = SignalingRepository(signalingClient)
         toneEngine = ToneEngine(this)
         dndOverrideManager = DndOverrideManager(this)
+
+        val prefs = ServiceConnectionPrefs(this)
+        if (prefs.transportMode == "custom-radio") {
+            radioStateManager = RadioStateManager()
+        }
     }
 
     private fun createNotificationChannels() {

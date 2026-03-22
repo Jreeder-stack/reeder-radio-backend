@@ -165,6 +165,46 @@ class SignalingClient(private val serverUrl: String) {
             _events.tryEmit(SignalingEvent.LocationTrackStop)
         }
 
+        s.on("ptt:granted") { args -> parseAndEmit(args) { json ->
+            SignalingEvent.RadioPttGranted(
+                channelId = json.optString("channelId")
+            )
+        }}
+
+        s.on("ptt:denied") { args -> parseAndEmit(args) { json ->
+            SignalingEvent.RadioPttDenied(
+                channelId = json.optString("channelId"),
+                reason = json.optString("reason", "")
+            )
+        }}
+
+        s.on("tx:start") { args -> parseAndEmit(args) { json ->
+            SignalingEvent.RadioTxStart(
+                unitId = json.optString("unitId"),
+                channelId = json.optString("channelId")
+            )
+        }}
+
+        s.on("tx:stop") { args -> parseAndEmit(args) { json ->
+            SignalingEvent.RadioTxStop(
+                unitId = json.optString("unitId"),
+                channelId = json.optString("channelId")
+            )
+        }}
+
+        s.on("channel:busy") { args -> parseAndEmit(args) { json ->
+            SignalingEvent.RadioChannelBusy(
+                channelId = json.optString("channelId"),
+                transmittingUnit = json.optString("transmittingUnit")
+            )
+        }}
+
+        s.on("channel:idle") { args -> parseAndEmit(args) { json ->
+            SignalingEvent.RadioChannelIdle(
+                channelId = json.optString("channelId")
+            )
+        }}
+
         s.on("ping") { s.emit("pong") }
 
         s.connect()
@@ -244,6 +284,45 @@ class SignalingClient(private val serverUrl: String) {
             put("accuracy", accuracy)
             if (heading != null) put("heading", heading)
             if (speed != null) put("speed", speed)
+        })
+    }
+
+    fun emitRadioJoinChannel(channelKey: String) {
+        if (!isReady()) return
+        Log.d(TAG, "emitRadioJoinChannel $channelKey")
+        socket?.emit("radio:joinChannel", JSONObject().put("channelId", channelKey))
+    }
+
+    fun emitRadioLeaveChannel(channelKey: String) {
+        if (!isReady()) return
+        Log.d(TAG, "emitRadioLeaveChannel $channelKey")
+        socket?.emit("radio:leaveChannel", JSONObject().put("channelId", channelKey))
+    }
+
+    fun emitRadioPttRequest(channelKey: String) {
+        if (!isReady()) return
+        Log.d(TAG, "emitRadioPttRequest $channelKey")
+        socket?.emit("ptt:request", JSONObject().apply {
+            put("channelId", channelKey)
+            put("unitId", unitId)
+        })
+    }
+
+    fun emitRadioTxStart(channelKey: String) {
+        if (!isReady()) return
+        Log.d(TAG, "emitRadioTxStart $channelKey")
+        socket?.emit("tx:start", JSONObject().apply {
+            put("channelId", channelKey)
+            put("unitId", unitId)
+        })
+    }
+
+    fun emitRadioTxStop(channelKey: String) {
+        if (!isReady()) return
+        Log.d(TAG, "emitRadioTxStop $channelKey")
+        socket?.emit("tx:stop", JSONObject().apply {
+            put("channelId", channelKey)
+            put("unitId", unitId)
         })
     }
 

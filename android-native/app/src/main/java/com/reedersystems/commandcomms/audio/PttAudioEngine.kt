@@ -20,6 +20,13 @@ private const val TAG = "[PTT-DIAG]"
 private const val CONNECT_TIMEOUT_MS = 5_000L
 private const val WATCHDOG_INTERVAL_MS = 500L
 
+/**
+ * @deprecated Use [com.reedersystems.commandcomms.audio.radio.RadioAudioEngine] for the
+ * custom radio transport path on handheld devices. This LiveKit-based engine is retained
+ * only for the dispatcher/web fallback path and will be removed once the replacement is
+ * verified working in production.
+ */
+@Deprecated("Replaced by RadioAudioEngine for handheld custom-radio transport")
 class PttAudioEngine(private val context: Context) {
 
     private var room: Room? = null

@@ -247,6 +247,7 @@ class MainActivity : ComponentActivity() {
         Log.d(TAG, "Diagnostics: PTT via PttHardwareReceiver (T320 vendor broadcasts)")
     }
 
+    // ── DO NOT MODIFY — VERIFIED HARDWARE MAPPING ──────────────────────
     private fun isPttKey(keyCode: Int): Boolean {
         if (keyCode == KEY_PTT_F11 || keyCode == KEY_PTT) return true
         if (app.pttKeyPrefs.volumeButtonPttEnabled && keyCode == KeyEvent.KEYCODE_VOLUME_UP) return true
@@ -267,6 +268,7 @@ class MainActivity : ComponentActivity() {
         if (keyCode == KEY_ACC || keyCode == KEY_STAR) return true
         return false
     }
+    // ── END DO NOT MODIFY — VERIFIED HARDWARE MAPPING ──────────────────
 
     private fun handleKeyCaptureIfActive(keyCode: Int): Boolean {
         val capturing = app.keyCapturingFlow.value
@@ -325,6 +327,9 @@ class MainActivity : ComponentActivity() {
         return super.onKeyUp(keyCode, event)
     }
 
+    // ── DO NOT MODIFY — VERIFIED HARDWARE MAPPING ──────────────────────
+    // Key dispatch routes hardware events to BackgroundAudioService via intents.
+    // Only the service-side handler (what happens AFTER the intent) may change.
     private fun handleKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         when {
             isPttKey(keyCode) -> {
@@ -426,5 +431,6 @@ class MainActivity : ComponentActivity() {
         }
         ContextCompat.startForegroundService(this, intent)
     }
+    // ── END DO NOT MODIFY — VERIFIED HARDWARE MAPPING ──────────────────
 
 }

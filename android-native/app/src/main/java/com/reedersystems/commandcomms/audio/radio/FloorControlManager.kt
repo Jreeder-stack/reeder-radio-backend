@@ -1,123 +1,99 @@
-/**
- * FloorControlManager — Manages the PTT floor request/grant/deny/busy state machine.
- *
- * Module boundary: This class depends ONLY on RadioSignalingGateway and RadioStateManager.
- * It never references SignalingClient or any other concrete signaling implementation.
- * It sends floor requests via the gateway and listens for granted/denied/busy/idle
- * callbacks, emitting state transitions to RadioStateManager accordingly.
- *
- * Engine-level observers can register via [registerEngineListener] to receive callbacks
- * when the floor state changes (e.g., to start/stop audio capture on grant/release).
- *
- * Hardware safety: This module does not interact with any hardware buttons, key codes,
- * scan codes, broadcast receivers, or accessibility hooks. PTT detection is handled
- * entirely outside the radio engine module boundary.
- */
 package com.reedersystems.commandcomms.audio.radio
 
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import android.util.Log
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 
-enum class FloorState {
-    IDLE,
-    REQUESTING,
+private const val TAG = "[FloorCtrl]"
+
+enum class FloorControlEvent {
     GRANTED,
     DENIED,
-    BUSY
-}
-
-interface FloorControlListener {
-    fun onGranted(channelId: String)
-    fun onDenied(channelId: String)
-    fun onBusy(channelId: String, transmittingUnit: String)
-    fun onReleased(channelId: String)
+    RELEASED
 }
 
 class FloorControlManager(
     private val gateway: RadioSignalingGateway,
     private val stateManager: RadioStateManager
-) : RadioSignalingGateway.Listener {
+) {
 
-    private val _floorState = MutableStateFlow(FloorState.IDLE)
-    val floorState: StateFlow<FloorState> = _floorState.asStateFlow()
+    private val _events = MutableSharedFlow<FloorControlEvent>(extraBufferCapacity = 16)
+    val events: SharedFlow<FloorControlEvent> = _events.asSharedFlow()
 
-    private var activeChannelId: String? = null
-    private val engineListeners = mutableListOf<FloorControlListener>()
+    @Volatile
+    var pendingChannelKey: String? = null
+        private set
 
-    fun start() {
-        gateway.registerListener(this)
+    @Volatile
+    var cancelled = false
+        private set
+
+    fun requestFloor(channelKey: String) {
+        Log.d(TAG, "requestFloor channelKey=$channelKey")
+        pendingChannelKey = channelKey
+        cancelled = false
+        stateManager.transitionTo(RadioState.REQUESTING_FLOOR)
+        gateway.requestFloor(channelKey)
     }
 
-    fun stop() {
-        gateway.unregisterListener(this)
-        _floorState.value = FloorState.IDLE
-        activeChannelId = null
+    fun releaseFloor(channelKey: String) {
+        Log.d(TAG, "releaseFloor channelKey=$channelKey")
+        pendingChannelKey = null
+        cancelled = true
+        gateway.releaseFloor(channelKey)
+        stateManager.transitionTo(RadioState.IDLE)
+        _events.tryEmit(FloorControlEvent.RELEASED)
     }
 
-    fun registerEngineListener(listener: FloorControlListener) {
-        if (!engineListeners.contains(listener)) {
-            engineListeners.add(listener)
-        }
+    fun cancelPending() {
+        Log.d(TAG, "cancelPending (PTT released before grant)")
+        pendingChannelKey = null
+        cancelled = true
     }
 
-    fun unregisterEngineListener(listener: FloorControlListener) {
-        engineListeners.remove(listener)
-    }
-
-    fun requestFloor(channelId: String) {
-        if (_floorState.value == FloorState.REQUESTING || _floorState.value == FloorState.GRANTED) {
+    fun onFloorGranted(channelKey: String? = null) {
+        if (cancelled) {
+            Log.d(TAG, "Floor GRANTED but PTT already released — ignoring")
+            if (channelKey != null) gateway.releaseFloor(channelKey)
+            stateManager.transitionTo(RadioState.IDLE)
             return
         }
-        activeChannelId = channelId
-        _floorState.value = FloorState.REQUESTING
-        stateManager.transitionTo(RadioState.REQUESTING_TX)
-        gateway.requestFloor(channelId)
-    }
-
-    fun releaseFloor() {
-        val channelId = activeChannelId ?: return
-        _floorState.value = FloorState.IDLE
-        gateway.releaseFloor(channelId)
-        activeChannelId = null
-    }
-
-    override fun onFloorGranted(channelId: String) {
-        if (channelId != activeChannelId) return
-        _floorState.value = FloorState.GRANTED
+        if (channelKey != null && pendingChannelKey != null && channelKey != pendingChannelKey) {
+            Log.w(TAG, "Floor GRANTED for wrong channel ($channelKey != $pendingChannelKey) — ignoring")
+            return
+        }
+        Log.d(TAG, "Floor GRANTED")
         stateManager.transitionTo(RadioState.TRANSMITTING)
-        engineListeners.forEach { it.onGranted(channelId) }
+        _events.tryEmit(FloorControlEvent.GRANTED)
     }
 
-    override fun onFloorDenied(channelId: String) {
-        if (channelId != activeChannelId) return
-        _floorState.value = FloorState.DENIED
-        stateManager.transitionTo(RadioState.IDLE)
-        activeChannelId = null
-        engineListeners.forEach { it.onDenied(channelId) }
+    fun onFloorDenied(channelKey: String? = null) {
+        if (channelKey != null && pendingChannelKey != null && channelKey != pendingChannelKey) {
+            Log.w(TAG, "Floor DENIED for wrong channel ($channelKey != $pendingChannelKey) — ignoring")
+            return
+        }
+        Log.d(TAG, "Floor DENIED")
+        pendingChannelKey = null
+        cancelled = true
+        stateManager.transitionTo(RadioState.CHANNEL_BUSY)
+        _events.tryEmit(FloorControlEvent.DENIED)
     }
 
-    override fun onFloorBusy(channelId: String, transmittingUnit: String) {
-        if (channelId != activeChannelId) return
-        _floorState.value = FloorState.BUSY
-        stateManager.transitionTo(RadioState.IDLE)
-        engineListeners.forEach { it.onBusy(channelId, transmittingUnit) }
-    }
-
-    override fun onFloorIdle(channelId: String) {
-        if (_floorState.value == FloorState.BUSY && channelId == activeChannelId) {
-            _floorState.value = FloorState.IDLE
-            stateManager.transitionTo(RadioState.IDLE)
-            activeChannelId = null
+    fun onChannelBusy(transmittingUnitId: String) {
+        Log.d(TAG, "Channel busy — transmitting unit: $transmittingUnitId")
+        stateManager.setTransmittingUnit(transmittingUnitId)
+        if (stateManager.state.value != RadioState.TRANSMITTING) {
+            stateManager.transitionTo(RadioState.RECEIVING)
         }
     }
 
-    override fun onFloorReleased(channelId: String) {
-        if (channelId == activeChannelId) {
-            _floorState.value = FloorState.IDLE
+    fun onChannelIdle() {
+        Log.d(TAG, "Channel idle")
+        stateManager.setTransmittingUnit(null)
+        if (stateManager.state.value == RadioState.RECEIVING ||
+            stateManager.state.value == RadioState.CHANNEL_BUSY) {
             stateManager.transitionTo(RadioState.IDLE)
-            activeChannelId = null
-            engineListeners.forEach { it.onReleased(channelId) }
         }
     }
 }

@@ -14,6 +14,7 @@ import com.reedersystems.commandcomms.CommandCommsApp
 import com.reedersystems.commandcomms.KeyAction
 import com.reedersystems.commandcomms.audio.BackgroundAudioService
 import com.reedersystems.commandcomms.audio.DndOverrideSource
+import com.reedersystems.commandcomms.audio.radio.RadioState
 import com.reedersystems.commandcomms.data.model.Channel
 import com.reedersystems.commandcomms.data.model.PttState
 import com.reedersystems.commandcomms.data.model.Zone
@@ -65,6 +66,8 @@ data class RadioUiState(
     val batteryLevel: Int? = null,
     val micPermissionGranted: Boolean = false,
     val showDndPermissionDialog: Boolean = false,
+    val radioState: RadioState = RadioState.IDLE,
+    val isChannelBusy: Boolean = false,
 ) {
     val currentZone: Zone? get() = zones.getOrNull(currentZoneIndex)
     val currentChannel: Channel? get() = currentZone?.channels?.getOrNull(currentChannelIndex)
@@ -175,6 +178,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         collectKeyEvents()
         registerPttFailureReceiver()
         checkDndPermission()
+        observeRadioState()
     }
 
     private fun checkDndPermission() {
@@ -350,6 +354,21 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                         }
                     }
                 }
+            }
+        }
+    }
+
+    private fun observeRadioState() {
+        val radioStateManager = app.radioStateManager ?: return
+        viewModelScope.launch {
+            radioStateManager.state.collect { radioState ->
+                _uiState.update {
+                    it.copy(
+                        radioState = radioState,
+                        isChannelBusy = radioState == RadioState.CHANNEL_BUSY || radioState == RadioState.RECEIVING
+                    )
+                }
+                Log.d(TAG, "RadioState updated: $radioState")
             }
         }
     }

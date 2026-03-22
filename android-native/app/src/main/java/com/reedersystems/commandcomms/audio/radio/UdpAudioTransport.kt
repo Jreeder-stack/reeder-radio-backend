@@ -1,142 +1,124 @@
-/**
- * UdpAudioTransport — Sends and receives encoded audio frames over UDP.
- *
- * Module boundary: This module handles network I/O only. It does not encode/decode audio
- * or manage signaling. It sends outbound Opus frames and delivers inbound frames to a
- * callback. Socket lifecycle, binding, and reconnect on network change are managed here.
- *
- * Packet format (matches backend relay):
- *   [session token (variable length bytes)] [channelId uint16 BE] [sequence uint16 BE] [Opus payload]
- *
- * The session token length is communicated out-of-band (known at construction time).
- * Both sender and receiver use the same fixed token length for framing.
- *
- * Hardware safety: This module does not interact with any hardware buttons, key codes,
- * scan codes, broadcast receivers, or accessibility hooks. PTT detection is handled
- * entirely outside the radio engine module boundary.
- */
 package com.reedersystems.commandcomms.audio.radio
 
 import android.util.Log
+import kotlinx.coroutines.*
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress
-import java.net.SocketException
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
 
-private const val TAG = "[RadioUDP]"
-private const val MAX_PACKET_SIZE = 1500
-private const val RECEIVE_TIMEOUT_MS = 5000
+private const val TAG = "[UdpTransport]"
+private const val DEFAULT_RELAY_PORT = 5600
+private const val RECEIVE_BUFFER_SIZE = 4096
+private const val RECEIVE_TIMEOUT_MS = 100
+private const val HEADER_SIZE = 8
+private const val PROTOCOL_VERSION: Byte = 1
+private const val PACKET_TYPE_AUDIO: Byte = 0x01
 
 class UdpAudioTransport(
-    private val sessionToken: String,
-    private val onFrameReceived: (sequenceNumber: Int, channelId: Int, opusData: ByteArray) -> Unit
+    private var relayHost: String = "",
+    private var relayPort: Int = DEFAULT_RELAY_PORT
 ) {
+
     private var socket: DatagramSocket? = null
-    private var receiveThread: Thread? = null
-    @Volatile
-    private var isRunning = false
-    private var remoteAddress: InetAddress? = null
-    private var remotePort: Int = 0
-    private var sendSequence: Int = 0
+    private var receiveJob: Job? = null
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private var sequenceNumber: Int = 0
 
-    private val tokenBytes: ByteArray = sessionToken.toByteArray(Charsets.UTF_8)
+    var channelId: String = ""
+    var unitId: String = ""
+    var onPacketReceived: ((ByteArray) -> Unit)? = null
 
-    fun bind(relayHost: String, relayPort: Int) {
-        close()
+    fun configure(host: String, port: Int) {
+        this.relayHost = host
+        this.relayPort = port
+        Log.d(TAG, "Configured relay: $host:$port")
+    }
 
-        remoteAddress = InetAddress.getByName(relayHost)
-        remotePort = relayPort
-        sendSequence = 0
+    fun start() {
+        if (socket != null) return
+        try {
+            val sock = DatagramSocket()
+            sock.soTimeout = RECEIVE_TIMEOUT_MS
+            socket = sock
+            Log.d(TAG, "UDP socket opened on local port ${sock.localPort}")
+            startReceiveLoop()
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to open UDP socket: ${e.message}", e)
+        }
+    }
 
-        val sock = DatagramSocket()
-        sock.soTimeout = RECEIVE_TIMEOUT_MS
-        sock.broadcast = false
-        socket = sock
-        isRunning = true
+    fun stop() {
+        receiveJob?.cancel()
+        receiveJob = null
+        socket?.close()
+        socket = null
+        sequenceNumber = 0
+        Log.d(TAG, "UDP transport stopped")
+    }
 
-        receiveThread = Thread({
-            android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO)
-            val recvBuffer = ByteArray(MAX_PACKET_SIZE)
-            val packet = DatagramPacket(recvBuffer, recvBuffer.size)
-            while (isRunning) {
+    fun send(data: ByteArray) {
+        val sock = socket ?: return
+        if (relayHost.isBlank()) {
+            Log.w(TAG, "Cannot send — relay host not configured")
+            return
+        }
+        scope.launch {
+            try {
+                val address = InetAddress.getByName(relayHost)
+                val framed = framePacket(data)
+                val packet = DatagramPacket(framed, framed.size, address, relayPort)
+                sock.send(packet)
+            } catch (e: Exception) {
+                Log.w(TAG, "UDP send error: ${e.message}")
+            }
+        }
+    }
+
+    private fun framePacket(audioData: ByteArray): ByteArray {
+        val channelHash = channelId.hashCode()
+        val seq = sequenceNumber++
+        val frame = ByteArray(HEADER_SIZE + audioData.size)
+        frame[0] = PROTOCOL_VERSION
+        frame[1] = PACKET_TYPE_AUDIO
+        frame[2] = ((seq shr 8) and 0xFF).toByte()
+        frame[3] = (seq and 0xFF).toByte()
+        frame[4] = ((channelHash shr 24) and 0xFF).toByte()
+        frame[5] = ((channelHash shr 16) and 0xFF).toByte()
+        frame[6] = ((channelHash shr 8) and 0xFF).toByte()
+        frame[7] = (channelHash and 0xFF).toByte()
+        System.arraycopy(audioData, 0, frame, HEADER_SIZE, audioData.size)
+        return frame
+    }
+
+    private fun startReceiveLoop() {
+        receiveJob = scope.launch {
+            val buffer = ByteArray(RECEIVE_BUFFER_SIZE)
+            while (isActive) {
+                val sock = socket ?: break
                 try {
+                    val packet = DatagramPacket(buffer, buffer.size)
                     sock.receive(packet)
-                    parseInboundPacket(recvBuffer, packet.length)
-                } catch (_: java.net.SocketTimeoutException) {
-                } catch (e: SocketException) {
-                    if (isRunning) {
-                        Log.w(TAG, "Socket exception: ${e.message}")
+                    if (packet.length > HEADER_SIZE) {
+                        if (buffer[0] != PROTOCOL_VERSION || buffer[1] != PACKET_TYPE_AUDIO) {
+                            Log.w(TAG, "Invalid packet header — discarding")
+                            continue
+                        }
+                        val audioData = buffer.copyOfRange(HEADER_SIZE, packet.length)
+                        onPacketReceived?.invoke(audioData)
+                    }
+                } catch (e: java.net.SocketTimeoutException) {
+                } catch (e: Exception) {
+                    if (isActive) {
+                        Log.w(TAG, "UDP receive error: ${e.message}")
                     }
                     break
-                } catch (e: Exception) {
-                    Log.e(TAG, "Receive error: ${e.message}")
                 }
             }
-        }, "RadioUdpReceive").also { it.start() }
-
-        Log.d(TAG, "UdpAudioTransport bound to $relayHost:$relayPort")
-    }
-
-    fun send(channelId: Int, opusData: ByteArray) {
-        val sock = socket ?: return
-        val addr = remoteAddress ?: return
-
-        val headerSize = tokenBytes.size + 4
-        val packetData = ByteArray(headerSize + opusData.size)
-        val bb = ByteBuffer.wrap(packetData).order(ByteOrder.BIG_ENDIAN)
-
-        bb.put(tokenBytes)
-        bb.putShort(channelId.toShort())
-        bb.putShort(sendSequence.toShort())
-        bb.put(opusData)
-
-        sendSequence = (sendSequence + 1) and 0xFFFF
-
-        try {
-            val packet = DatagramPacket(packetData, packetData.size, addr, remotePort)
-            sock.send(packet)
-        } catch (e: Exception) {
-            Log.w(TAG, "Send error: ${e.message}")
         }
     }
 
-    fun close() {
-        isRunning = false
-        socket?.close()
-        receiveThread?.join(2000)
-        receiveThread = null
-        socket = null
-        sendSequence = 0
-        Log.d(TAG, "UdpAudioTransport closed")
-    }
-
-    fun rebind() {
-        val host = remoteAddress?.hostAddress ?: return
-        val port = remotePort
-        close()
-        bind(host, port)
-    }
-
-    private fun parseInboundPacket(data: ByteArray, length: Int) {
-        val minSize = tokenBytes.size + 4
-        if (length < minSize) return
-
-        for (i in tokenBytes.indices) {
-            if (data[i] != tokenBytes[i]) return
-        }
-
-        val headerStart = tokenBytes.size
-        val bb = ByteBuffer.wrap(data, headerStart, 4).order(ByteOrder.BIG_ENDIAN)
-        val channelId = bb.short.toInt() and 0xFFFF
-        val sequenceNumber = bb.short.toInt() and 0xFFFF
-
-        val payloadStart = headerStart + 4
-        val payloadLength = length - payloadStart
-        if (payloadLength <= 0) return
-
-        val opusPayload = data.copyOfRange(payloadStart, payloadStart + payloadLength)
-        onFrameReceived(sequenceNumber, channelId, opusPayload)
+    fun release() {
+        stop()
+        scope.cancel()
     }
 }

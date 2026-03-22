@@ -16,6 +16,9 @@ import com.reedersystems.commandcomms.KeyAction
 import com.reedersystems.commandcomms.MainActivity
 import com.reedersystems.commandcomms.data.model.PttState
 import com.reedersystems.commandcomms.data.prefs.ServiceConnectionPrefs
+import com.reedersystems.commandcomms.audio.radio.FloorControlEvent
+import com.reedersystems.commandcomms.audio.radio.RadioAudioEngine
+import com.reedersystems.commandcomms.audio.radio.RadioSignalingGatewayImpl
 import com.reedersystems.commandcomms.signaling.ConnectionState
 import com.reedersystems.commandcomms.signaling.SignalingEvent
 import kotlinx.coroutines.*
@@ -36,8 +39,12 @@ class BackgroundAudioService : Service() {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private lateinit var audioEngine: PttAudioEngine
+    private var radioEngine: RadioAudioEngine? = null
     private lateinit var servicePrefs: ServiceConnectionPrefs
     private val app get() = application as CommandCommsApp
+
+    private val useCustomRadio: Boolean
+        get() = servicePrefs.transportMode == "custom-radio"
 
     /**
      * Held for the entire service lifetime so the CPU stays awake during screen-off PTT.
@@ -125,6 +132,7 @@ class BackgroundAudioService : Service() {
         serviceWakeLock.acquire()
         Log.d(TAG, "BackgroundAudioService: service-lifetime WakeLock acquired")
 
+        @Suppress("DEPRECATION")
         audioEngine = PttAudioEngine(applicationContext)
         audioEngine.onDisconnected = {
             Log.d(TAG, "LiveKit unexpected disconnect — resetting session state")
@@ -133,6 +141,12 @@ class BackgroundAudioService : Service() {
             sessionDeadlineMs = -1L
         }
         servicePrefs = ServiceConnectionPrefs(applicationContext)
+
+        if (useCustomRadio) {
+            initRadioEngine()
+            observeRadioSignalingEvents()
+        }
+
         startForeground(NOTIFICATION_ID, buildNotification("Radio — Standby"))
         registerDynamicPttReceiver()
         startBackgroundSignalingObservers()
@@ -190,10 +204,20 @@ class BackgroundAudioService : Service() {
         Log.d(TAG, "Dynamic PttHardwareReceiver registered")
     }
 
+    // ── DO NOT MODIFY — VERIFIED HARDWARE MAPPING ──────────────────────
+    // Intent dispatch — the action constants and this when-block routing are
+    // the termination point for all hardware button paths. Only what happens
+    // INSIDE each handler may change (e.g. swapping LiveKit for RadioAudioEngine).
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
-            ACTION_PTT_DOWN -> handlePttDown(intent.getBooleanExtra(EXTRA_NEEDS_SIGNALING, false))
-            ACTION_PTT_UP -> handlePttUp()
+            ACTION_PTT_DOWN -> {
+                if (useCustomRadio) handleRadioPttDown(intent.getBooleanExtra(EXTRA_NEEDS_SIGNALING, false))
+                else handlePttDown(intent.getBooleanExtra(EXTRA_NEEDS_SIGNALING, false))
+            }
+            ACTION_PTT_UP -> {
+                if (useCustomRadio) handleRadioPttUp()
+                else handlePttUp()
+            }
             ACTION_EMERGENCY_DOWN -> handleEmergencyDown()
             ACTION_EMERGENCY_UP -> handleEmergencyUp()
             ACTION_RX_CONNECT -> {
@@ -210,16 +234,22 @@ class BackgroundAudioService : Service() {
                     servicePrefs.channelRoomKey = roomKey
                     if (channelName != null) servicePrefs.channelName = channelName
                     Log.d(TAG, "Channel updated: $channelId / $roomKey")
+                    radioEngine?.udpTransport?.channelId = roomKey
                     ensureBackgroundSignalingConnected()
                     scope.launch { syncBackgroundSignalingChannel() }
                 }
             }
             ACTION_STOP -> {
                 Log.d(TAG, "Service stop requested")
-                scope.launch { audioEngine.disconnect() }
+                if (useCustomRadio) {
+                    radioEngine?.stop()
+                } else {
+                    scope.launch { audioEngine.disconnect() }
+                }
                 stopSelf()
             }
         }
+        // ── END DO NOT MODIFY — VERIFIED HARDWARE MAPPING ──────────────────
         return START_STICKY
     }
 
@@ -680,6 +710,211 @@ class BackgroundAudioService : Service() {
         sessionDeadlineMs = -1L
     }
 
+    private fun initRadioEngine() {
+        val engine = RadioAudioEngine(applicationContext)
+
+        val appStateManager = app.radioStateManager
+        if (appStateManager != null) {
+            engine.useSharedStateManager(appStateManager)
+        }
+
+        val gateway = RadioSignalingGatewayImpl(app.signalingClient)
+        engine.wireFloorControl(gateway)
+
+        val relayHost = servicePrefs.relayHost ?: run {
+            val serverUrl = servicePrefs.serverUrl ?: app.apiClient.baseUrl
+            try { java.net.URI(serverUrl).host ?: "" } catch (_: Exception) { "" }
+        }
+        engine.udpTransport.configure(relayHost, servicePrefs.relayPort)
+        engine.udpTransport.channelId = servicePrefs.channelRoomKey ?: ""
+        engine.udpTransport.unitId = servicePrefs.unitId ?: app.sessionPrefs.unitId ?: ""
+
+        engine.onDisconnected = {
+            Log.d(TAG, "RadioAudioEngine unexpected stop — resetting state")
+        }
+        engine.start()
+        radioEngine = engine
+        observeRadioFloorEvents(engine)
+        Log.d(TAG, "RadioAudioEngine initialized (custom-radio transport)")
+    }
+
+    private fun observeRadioFloorEvents(engine: RadioAudioEngine) {
+        scope.launch {
+            engine.floorControl.events.collect { event ->
+                when (event) {
+                    FloorControlEvent.GRANTED -> {
+                        Log.d(TAG, "Floor GRANTED — starting TX")
+                        val txStarted = engine.startTransmit()
+                        if (txStarted) {
+                            val roomKey = servicePrefs.channelRoomKey
+                            if (roomKey != null) {
+                                engine.floorControl.let { /* floor already transitioned */ }
+                            }
+                            pttState = PttState.TRANSMITTING
+                            updateNotification("TRANSMITTING")
+                            sendPttTxStarted()
+                            if (needsSignaling) {
+                                val rk = servicePrefs.channelRoomKey
+                                if (rk != null) {
+                                    app.signalingRepository.transmitStart(rk)
+                                    Log.d(TAG, "Radio TX: transmitStart signaled for $rk")
+                                }
+                            }
+                        } else {
+                            Log.e(TAG, "Radio TX: startTransmit failed after floor granted")
+                            app.toneEngine.playErrorTone()
+                            pttState = PttState.IDLE
+                            updateNotification("Radio — Standby")
+                            sendPttTxFailed()
+                        }
+                    }
+                    FloorControlEvent.DENIED -> {
+                        Log.d(TAG, "Floor DENIED — aborting TX")
+                        app.toneEngine.playBusyTone()
+                        pttState = PttState.IDLE
+                        updateNotification("Radio — Standby")
+                        sendPttTxFailed()
+                    }
+                    FloorControlEvent.RELEASED -> {
+                        Log.d(TAG, "Floor RELEASED")
+                    }
+                }
+            }
+        }
+    }
+
+    private fun observeRadioSignalingEvents() {
+        scope.launch {
+            app.signalingRepository.events.collectLatest { event ->
+                val engine = radioEngine ?: return@collectLatest
+                val currentRoomKey = servicePrefs.channelRoomKey
+                when (event) {
+                    is SignalingEvent.RadioPttGranted -> {
+                        engine.floorControl.onFloorGranted(event.channelId)
+                    }
+                    is SignalingEvent.RadioPttDenied -> {
+                        engine.floorControl.onFloorDenied(event.channelId)
+                    }
+                    is SignalingEvent.RadioChannelBusy -> {
+                        if (event.channelId == currentRoomKey) {
+                            engine.floorControl.onChannelBusy(event.transmittingUnit)
+                            engine.startReceive()
+                        }
+                    }
+                    is SignalingEvent.RadioChannelIdle -> {
+                        if (event.channelId == currentRoomKey) {
+                            engine.floorControl.onChannelIdle()
+                            engine.stopReceive()
+                        }
+                    }
+                    is SignalingEvent.RadioTxStart -> {
+                        val selfUnitId = servicePrefs.unitId ?: app.sessionPrefs.unitId
+                        if (event.unitId != selfUnitId && event.channelId == currentRoomKey) {
+                            engine.floorControl.onChannelBusy(event.unitId)
+                            engine.startReceive()
+                        }
+                    }
+                    is SignalingEvent.RadioTxStop -> {
+                        val selfUnitId = servicePrefs.unitId ?: app.sessionPrefs.unitId
+                        if (event.unitId != selfUnitId && event.channelId == currentRoomKey) {
+                            engine.floorControl.onChannelIdle()
+                            engine.stopReceive()
+                        }
+                    }
+                    else -> {}
+                }
+            }
+        }
+    }
+
+    private fun handleRadioPttDown(signaling: Boolean) {
+        Log.d(TAG, "handleRadioPttDown pttState=$pttState signaling=$signaling")
+
+        if (!app.sessionPrefs.micPermissionGranted) {
+            Log.w(TAG, "Radio PTT DOWN: mic permission denied — blocked")
+            app.toneEngine.playErrorTone()
+            return
+        }
+
+        if (pttState == PttState.TRANSMITTING || pttState == PttState.CONNECTING) return
+
+        pttUpWhileConnecting = false
+        needsSignaling = signaling
+
+        val roomKey = servicePrefs.channelRoomKey ?: run {
+            Log.w(TAG, "Radio PTT DOWN ignored: no room key")
+            sendPttTxFailed()
+            return
+        }
+
+        val engine = radioEngine ?: run {
+            Log.e(TAG, "Radio PTT DOWN: radioEngine not initialized — falling back to LiveKit")
+            handlePttDown(signaling)
+            return
+        }
+
+        pttState = PttState.CONNECTING
+        updateNotification("Requesting floor…")
+        app.toneEngine.playTalkPermitTone()
+
+        scope.launch {
+            if (signaling && !ensureBackgroundSignalingReady(servicePrefs.channelId)) {
+                Log.e(TAG, "Radio PTT: signaling not ready")
+                app.toneEngine.playErrorTone()
+                pttState = PttState.IDLE
+                updateNotification("Radio — Standby")
+                sendPttTxFailed()
+                return@launch
+            }
+
+            if (signaling) {
+                app.signalingRepository.transmitPre(roomKey)
+                Log.d(TAG, "Radio PTT: transmitPre sent for roomKey $roomKey")
+            }
+
+            engine.floorControl.requestFloor(roomKey)
+            val serverUrl = servicePrefs.serverUrl ?: app.apiClient.baseUrl
+            val unitId = servicePrefs.unitId ?: app.sessionPrefs.unitId ?: return@launch
+            httpPttStart(serverUrl, roomKey, unitId)
+        }
+    }
+
+    private fun handleRadioPttUp() {
+        Log.d(TAG, "handleRadioPttUp pttState=$pttState")
+
+        pttUpWhileConnecting = true
+
+        if (pttState != PttState.TRANSMITTING) {
+            if (pttState == PttState.CONNECTING) {
+                radioEngine?.floorControl?.cancelPending()
+                pttState = PttState.IDLE
+                updateNotification("Radio — Standby")
+                sendPttTxAborted()
+            }
+            return
+        }
+
+        val roomKey = servicePrefs.channelRoomKey ?: return
+        val unitId = servicePrefs.unitId ?: app.sessionPrefs.unitId ?: return
+        val serverUrl = servicePrefs.serverUrl ?: app.apiClient.baseUrl
+        val wasSignaling = needsSignaling
+
+        pttState = PttState.IDLE
+        updateNotification("Radio — Standby")
+
+        scope.launch {
+            radioEngine?.stopTransmit()
+            radioEngine?.floorControl?.releaseFloor(roomKey)
+            sendPttTxEnded()
+            if (wasSignaling) {
+                app.signalingRepository.transmitEnd(roomKey)
+                app.toneEngine.playEndOfTxTone()
+                Log.d(TAG, "Radio PTT UP: transmitEnd + end-of-TX tone for roomKey $roomKey")
+            }
+            httpPttEnd(serverUrl, roomKey, unitId)
+        }
+    }
+
     private fun sendEmergencyActivated() {
         sendBroadcast(Intent(ACTION_EMERGENCY_ACTIVATED).apply { setPackage(packageName) })
     }
@@ -789,6 +1024,8 @@ class BackgroundAudioService : Service() {
         }
         signalingConnectionJob?.cancel()
         signalingEventsJob?.cancel()
+        radioEngine?.release()
+        radioEngine = null
         scope.launch { audioEngine.stopTransmit() }
         scope.cancel()
         audioEngine.release()

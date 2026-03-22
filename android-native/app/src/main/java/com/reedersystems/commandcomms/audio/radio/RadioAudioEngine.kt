@@ -1,285 +1,213 @@
-/**
- * RadioAudioEngine — Top-level coordinator for the custom radio audio pipeline.
- *
- * Module boundary: This class composes all radio engine modules (AudioCapture, AudioPlayback,
- * OpusCodec, UdpAudioTransport, JitterBuffer, FloorControlManager, RadioStateManager) and
- * exposes a simple API for transmit/receive lifecycle. It does NOT replace the existing
- * PttAudioEngine or BackgroundAudioService — it is a standalone building block for the
- * future integration task.
- *
- * Floor control integration: startTransmit() requests floor via FloorControlManager.
- * Audio capture only begins when the floor is granted via the FloorControlListener callback.
- * If denied or busy, transmit is aborted. stopTransmit() releases the floor and stops
- * capture/transport.
- *
- * Network changes: Call onNetworkChanged() when connectivity changes to rebind the UDP
- * transport socket. The integration layer should wire Android ConnectivityManager callbacks
- * to this method.
- *
- * All dependencies are provided via constructor injection (including injectable factories
- * for AudioCapture, AudioPlayback, UdpAudioTransport, and JitterBuffer). The engine does
- * not create Android services, register broadcast receivers, or interact with hardware buttons.
- *
- * Hardware safety: This module does not interact with any hardware buttons, key codes,
- * scan codes, broadcast receivers, or accessibility hooks. PTT detection is handled
- * entirely outside the radio engine module boundary.
- */
 package com.reedersystems.commandcomms.audio.radio
 
+import android.content.Context
+import android.media.AudioAttributes
+import android.media.AudioFormat
+import android.media.AudioFocusRequest
+import android.media.AudioManager
+import android.media.AudioRecord
+import android.media.MediaRecorder
+import android.os.Build
 import android.util.Log
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 
 private const val TAG = "[RadioEngine]"
-private const val PLAYBACK_INTERVAL_MS = 20L
+private const val SAMPLE_RATE = 16000
+private const val FRAME_SIZE_BYTES = 640
+private const val CAPTURE_INTERVAL_MS = 20L
 
-fun interface AudioCaptureFactory {
-    fun create(sampleRate: Int, frameSizeSamples: Int, onFrame: (ShortArray) -> Unit): AudioCapture
-}
+class RadioAudioEngine(private val context: Context) {
 
-fun interface AudioPlaybackFactory {
-    fun create(sampleRate: Int, frameSizeSamples: Int): AudioPlayback
-}
+    var stateManager = RadioStateManager()
+        private set
+    val opusCodec = OpusCodec()
+    val jitterBuffer = JitterBuffer()
+    val audioPlayback = AudioPlayback(jitterBuffer, opusCodec)
+    val udpTransport = UdpAudioTransport()
 
-fun interface UdpTransportFactory {
-    fun create(sessionToken: String, onFrameReceived: (Int, Int, ByteArray) -> Unit): UdpAudioTransport
-}
+    lateinit var floorControl: FloorControlManager
+        private set
 
-fun interface JitterBufferFactory {
-    fun create(): JitterBuffer
-}
-
-class RadioAudioEngine(
-    private val stateManager: RadioStateManager,
-    private val floorControl: FloorControlManager,
-    private val codec: OpusCodec,
-    private val sessionToken: String,
-    private val channelIdMapper: (String) -> Int = { it.hashCode() and 0xFFFF },
-    private val captureFactory: AudioCaptureFactory = AudioCaptureFactory { sr, fs, cb -> AudioCapture(sr, fs, cb) },
-    private val playbackFactory: AudioPlaybackFactory = AudioPlaybackFactory { sr, fs -> AudioPlayback(sr, fs) },
-    private val transportFactory: UdpTransportFactory = UdpTransportFactory { token, cb -> UdpAudioTransport(token, cb) },
-    private val jitterBufferFactory: JitterBufferFactory = JitterBufferFactory { JitterBuffer() }
-) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+    private var audioFocusRequest: AudioFocusRequest? = null
 
-    private var audioCapture: AudioCapture? = null
-    private var audioPlayback: AudioPlayback? = null
-    private var transport: UdpAudioTransport? = null
-    private var jitterBuffer: JitterBuffer? = null
-    private var playbackJob: Job? = null
-    private var currentChannelId: String? = null
-    private var relayHost: String? = null
-    private var relayPort: Int = 0
-    private var rxActive = false
+    private var audioRecord: AudioRecord? = null
+    private var captureJob: Job? = null
+    @Volatile
+    private var isTransmitting = false
+    @Volatile
+    private var started = false
 
-    private val engineFloorListener = object : FloorControlListener {
-        override fun onGranted(channelId: String) {
-            if (channelId != currentChannelId) return
-            onTransmitGranted()
-        }
-
-        override fun onDenied(channelId: String) {
-            if (channelId != currentChannelId) return
-            Log.w(TAG, "Floor denied for channel $channelId")
-            stateManager.transitionTo(if (rxActive) RadioState.RECEIVING else RadioState.IDLE)
-        }
-
-        override fun onBusy(channelId: String, transmittingUnit: String) {
-            if (channelId != currentChannelId) return
-            Log.w(TAG, "Floor busy for channel $channelId (tx by $transmittingUnit)")
-            stateManager.transitionTo(if (rxActive) RadioState.RECEIVING else RadioState.IDLE)
-        }
-
-        override fun onReleased(channelId: String) {
-            if (channelId != currentChannelId) return
-            teardownTransmitPipeline()
+    private val audioFocusListener = AudioManager.OnAudioFocusChangeListener { focusChange ->
+        when (focusChange) {
+            AudioManager.AUDIOFOCUS_GAIN,
+            AudioManager.AUDIOFOCUS_GAIN_TRANSIENT -> {
+                Log.d(TAG, "Audio focus gained")
+            }
+            else -> {}
         }
     }
 
-    fun init() {
-        floorControl.start()
-        floorControl.registerEngineListener(engineFloorListener)
+    var onDisconnected: (() -> Unit)? = null
+
+    val isConnected: Boolean get() = started
+
+    fun useSharedStateManager(shared: RadioStateManager) {
+        stateManager = shared
     }
 
-    fun startTransmit() {
-        if (stateManager.isTransmitting() || stateManager.currentState == RadioState.REQUESTING_TX) {
-            Log.w(TAG, "Already transmitting or requesting")
-            return
-        }
-        val channelId = currentChannelId
-        if (channelId == null) {
-            Log.e(TAG, "Cannot transmit: no channel configured. Call setChannel() first.")
-            return
-        }
-        floorControl.requestFloor(channelId)
-        Log.d(TAG, "Floor requested for channel $channelId")
+    fun wireFloorControl(gateway: RadioSignalingGateway) {
+        floorControl = FloorControlManager(gateway, stateManager)
     }
 
-    val state: StateFlow<RadioState>
-        get() = stateManager.state
+    fun start() {
+        if (started) return
+        opusCodec.initialize()
+        acquireAudioFocus()
+        udpTransport.onPacketReceived = { packet -> onAudioPacketReceived(packet) }
+        udpTransport.start()
+        started = true
+        Log.d(TAG, "RadioAudioEngine started")
+    }
+
+    fun stop() {
+        if (!started) return
+        stopTransmit()
+        stopReceive()
+        udpTransport.stop()
+        releaseAudioFocus()
+        opusCodec.release()
+        started = false
+        stateManager.reset()
+        Log.d(TAG, "RadioAudioEngine stopped")
+    }
+
+    fun startTransmit(): Boolean {
+        if (!started) {
+            Log.w(TAG, "startTransmit: engine not started")
+            return false
+        }
+        if (isTransmitting) return true
+
+        try {
+            val bufferSize = AudioRecord.getMinBufferSize(
+                SAMPLE_RATE,
+                AudioFormat.CHANNEL_IN_MONO,
+                AudioFormat.ENCODING_PCM_16BIT
+            )
+            val record = AudioRecord(
+                MediaRecorder.AudioSource.VOICE_COMMUNICATION,
+                SAMPLE_RATE,
+                AudioFormat.CHANNEL_IN_MONO,
+                AudioFormat.ENCODING_PCM_16BIT,
+                bufferSize
+            )
+            if (record.state != AudioRecord.STATE_INITIALIZED) {
+                Log.e(TAG, "AudioRecord failed to initialize")
+                record.release()
+                return false
+            }
+            record.startRecording()
+            audioRecord = record
+            isTransmitting = true
+            stateManager.transitionTo(RadioState.TRANSMITTING)
+
+            captureJob = scope.launch {
+                val buffer = ByteArray(FRAME_SIZE_BYTES)
+                while (isActive && isTransmitting) {
+                    val read = record.read(buffer, 0, buffer.size)
+                    if (read > 0) {
+                        val encoded = opusCodec.encode(buffer.copyOf(read))
+                        if (encoded != null) {
+                            udpTransport.send(encoded)
+                        }
+                    }
+                }
+            }
+            Log.d(TAG, "TX started — audio capture active")
+            return true
+        } catch (e: SecurityException) {
+            Log.e(TAG, "Mic permission denied: ${e.message}", e)
+            return false
+        } catch (e: Exception) {
+            Log.e(TAG, "startTransmit error: ${e.message}", e)
+            return false
+        }
+    }
 
     fun stopTransmit() {
-        val wasRequesting = stateManager.currentState == RadioState.REQUESTING_TX
-        teardownTransmitPipeline()
-        floorControl.releaseFloor()
-        if (wasRequesting) {
-            stateManager.transitionTo(if (rxActive) RadioState.RECEIVING else RadioState.IDLE)
-        }
-        Log.d(TAG, "Transmit stopped, floor released")
+        if (!isTransmitting) return
+        isTransmitting = false
+        captureJob?.cancel()
+        captureJob = null
+        audioRecord?.stop()
+        audioRecord?.release()
+        audioRecord = null
+        stateManager.transitionTo(RadioState.IDLE)
+        Log.d(TAG, "TX stopped")
     }
 
-    fun startReceive(relayHost: String, relayPort: Int) {
-        if (rxActive) {
-            Log.w(TAG, "Already receiving")
-            return
+    fun startReceive() {
+        if (!started) return
+        jitterBuffer.start()
+        audioPlayback.start()
+        if (stateManager.state.value != RadioState.TRANSMITTING) {
+            stateManager.transitionTo(RadioState.RECEIVING)
         }
-
-        this.relayHost = relayHost
-        this.relayPort = relayPort
-
-        codec.initDecoder()
-
-        jitterBuffer = jitterBufferFactory.create()
-
-        transport = transportFactory.create(sessionToken) { seq, ch, data ->
-            handleReceivedFrame(seq, ch, data)
-        }
-        transport?.bind(relayHost, relayPort)
-
-        audioPlayback = playbackFactory.create(OpusCodec.SAMPLE_RATE, OpusCodec.FRAME_SIZE)
-        audioPlayback?.start()
-
-        startPlaybackLoop()
-
-        rxActive = true
-        stateManager.transitionTo(RadioState.RECEIVING)
-        Log.d(TAG, "Receive started: $relayHost:$relayPort")
+        Log.d(TAG, "RX started — playback active")
     }
 
     fun stopReceive() {
-        playbackJob?.cancel()
-        playbackJob = null
-
-        transport?.close()
-        transport = null
-
-        audioPlayback?.stop()
-        audioPlayback = null
-
-        jitterBuffer?.reset()
-        jitterBuffer = null
-
-        codec.releaseDecoder()
-
-        rxActive = false
-        if (stateManager.currentState == RadioState.RECEIVING) {
+        audioPlayback.stop()
+        jitterBuffer.stop()
+        if (stateManager.state.value == RadioState.RECEIVING) {
             stateManager.transitionTo(RadioState.IDLE)
         }
-        Log.d(TAG, "Receive stopped")
+        Log.d(TAG, "RX stopped")
     }
 
-    fun setChannel(channelId: String) {
-        currentChannelId = channelId
+    private fun onAudioPacketReceived(packet: ByteArray) {
+        jitterBuffer.enqueue(packet)
     }
 
-    fun onNetworkChanged() {
-        Log.d(TAG, "Network changed — rebinding UDP transport")
-        transport?.rebind()
+    private fun acquireAudioFocus() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val req = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
+                .setAudioAttributes(
+                    AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                        .build()
+                )
+                .setOnAudioFocusChangeListener(audioFocusListener)
+                .build()
+            audioManager.requestAudioFocus(req)
+            audioFocusRequest = req
+        } else {
+            @Suppress("DEPRECATION")
+            audioManager.requestAudioFocus(
+                audioFocusListener,
+                AudioManager.STREAM_VOICE_CALL,
+                AudioManager.AUDIOFOCUS_GAIN_TRANSIENT
+            )
+        }
     }
 
-    fun destroy() {
-        stopTransmit()
-        stopReceive()
-        floorControl.unregisterEngineListener(engineFloorListener)
-        floorControl.stop()
+    private fun releaseAudioFocus() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            audioFocusRequest?.let { audioManager.abandonAudioFocusRequest(it) }
+            audioFocusRequest = null
+        } else {
+            @Suppress("DEPRECATION")
+            audioManager.abandonAudioFocus(audioFocusListener)
+        }
+    }
+
+    fun release() {
+        stop()
+        audioPlayback.release()
+        udpTransport.release()
         scope.cancel()
-        Log.d(TAG, "RadioAudioEngine destroyed")
-    }
-
-    private fun onTransmitGranted() {
-        val host = relayHost
-        val port = relayPort
-        val channelId = currentChannelId
-
-        if (host == null || channelId == null) {
-            Log.e(TAG, "Floor granted but relay not configured")
-            floorControl.releaseFloor()
-            return
-        }
-
-        codec.initEncoder()
-
-        if (transport == null) {
-            transport = transportFactory.create(sessionToken) { _, _, _ -> }
-            transport?.bind(host, port)
-        }
-
-        audioCapture = captureFactory.create(
-            OpusCodec.SAMPLE_RATE,
-            OpusCodec.FRAME_SIZE
-        ) { pcmFrame -> handleCapturedFrame(pcmFrame) }
-        audioCapture?.start()
-
-        Log.d(TAG, "Transmit started on channel $channelId via $host:$port")
-    }
-
-    private fun teardownTransmitPipeline() {
-        audioCapture?.stop()
-        audioCapture = null
-
-        if (!rxActive) {
-            transport?.close()
-            transport = null
-        }
-
-        codec.releaseEncoder()
-
-        if (stateManager.isTransmitting()) {
-            if (rxActive) {
-                stateManager.transitionTo(RadioState.RECEIVING)
-            } else {
-                stateManager.transitionTo(RadioState.IDLE)
-            }
-        }
-    }
-
-    private fun handleCapturedFrame(pcmFrame: ShortArray) {
-        val encoded = codec.encode(pcmFrame) ?: return
-        val chId = currentChannelId ?: return
-        transport?.send(channelIdMapper(chId), encoded)
-    }
-
-    private fun handleReceivedFrame(sequenceNumber: Int, channelId: Int, opusData: ByteArray) {
-        val expectedChId = channelIdMapper(currentChannelId ?: return)
-        if (channelId != expectedChId) return
-        jitterBuffer?.push(sequenceNumber, opusData)
-    }
-
-    private fun startPlaybackLoop() {
-        playbackJob?.cancel()
-        playbackJob = scope.launch {
-            while (isActive) {
-                val frame = jitterBuffer?.pop()
-                if (frame != null) {
-                    val pcm = codec.decode(frame.data)
-                    if (pcm != null) {
-                        audioPlayback?.writePcm(pcm)
-                    }
-                } else if (jitterBuffer?.isReady == true) {
-                    val plc = codec.decodePLC()
-                    if (plc != null) {
-                        audioPlayback?.writePcm(plc)
-                    }
-                }
-                delay(PLAYBACK_INTERVAL_MS)
-            }
-        }
     }
 }

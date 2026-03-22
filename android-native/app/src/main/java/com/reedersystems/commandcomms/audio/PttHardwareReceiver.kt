@@ -30,6 +30,9 @@ class PttHardwareReceiver : BroadcastReceiver() {
         // The service's CONNECTING/TRANSMITTING guard prevents double-firing if both
         // the key-event path and the broadcast path arrive simultaneously.
 
+        // ── DO NOT MODIFY — VERIFIED HARDWARE MAPPING ──────────────────────
+        // Every action→service mapping below has been verified against Inrico T320
+        // firmware broadcasts and must not be changed, reordered, or removed.
         val pttAction: String? = when (action) {
             // Internal self-sent actions (legacy / foreground callers)
             ACTION_PTT_DOWN     -> BackgroundAudioService.ACTION_PTT_DOWN
@@ -111,6 +114,7 @@ class PttHardwareReceiver : BroadcastReceiver() {
                 null
             }
         }
+        // ── END DO NOT MODIFY — VERIFIED HARDWARE MAPPING ──────────────────
 
         if (pttAction == null) return
 
@@ -157,6 +161,7 @@ class PttHardwareReceiver : BroadcastReceiver() {
         }
     }
 
+    // ── DO NOT MODIFY — VERIFIED HARDWARE MAPPING ──────────────────────
     companion object {
         const val ACTION_PTT_DOWN       = "com.reedersystems.commandcomms.PTT_DOWN"
         const val ACTION_PTT_UP         = "com.reedersystems.commandcomms.PTT_UP"
@@ -166,4 +171,5 @@ class PttHardwareReceiver : BroadcastReceiver() {
         private const val WAKE_LOCK_TAG       = "CommandComms:PttReceiver"
         private const val WAKE_LOCK_TIMEOUT_MS = 5_000L
     }
+    // ── END DO NOT MODIFY — VERIFIED HARDWARE MAPPING ──────────────────
 }
