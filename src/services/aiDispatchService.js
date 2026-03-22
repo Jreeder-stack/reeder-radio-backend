@@ -55,6 +55,8 @@ const SAMPLES_PER_FRAME = 960; // 60ms frames at 16kHz for smoother playback
 const FRAME_DURATION_MS = Math.floor((SAMPLES_PER_FRAME / AZURE_SAMPLE_RATE) * 1000);
 const DISCONNECT_GRACE_PERIOD_MS = 30000;
 const EMERGENCY_STATUS_CHECK_TIMEOUT_MS = 5000;
+const MAX_RECORDING_DURATION_MS = 60000;
+const MAX_AUDIO_FILE_SIZE = 10 * 1024 * 1024;
 
 const EMERGENCY_ESCALATION_STATE = {
   IDLE: 'IDLE',
@@ -559,28 +561,33 @@ class AIDispatcher {
     const MIN_AUDIO_BYTES = LIVEKIT_SAMPLE_RATE * 2 * 0.5;
     let trackEnded = false;
     let lastFrameTime = Date.now();
+    const startTime = Date.now();
     const IDLE_TIMEOUT_MS = 1500;
     let idleTimeoutTriggered = false;
 
+    let idleCheckInterval = null;
+    let maxDurationTimer = null;
+    let trackUnsubHandler = null;
+
     const trackEndPromise = new Promise((resolve) => {
-      const onTrackUnsubscribed = (unsubTrack, publication, participant) => {
+      trackUnsubHandler = (unsubTrack, publication, participant) => {
         if (unsubTrack === track) {
           this.log('TRACK_UNSUBSCRIBED', { 
             participant: participant.identity, 
             room: roomName 
           });
           trackEnded = true;
-          room.off(RoomEvent.TrackUnsubscribed, onTrackUnsubscribed);
-          resolve();
+          resolve('track_end');
         }
       };
-      room.on(RoomEvent.TrackUnsubscribed, onTrackUnsubscribed);
+      room.on(RoomEvent.TrackUnsubscribed, trackUnsubHandler);
     });
 
     const idleTimeoutPromise = new Promise((resolve) => {
-      const checkIdle = setInterval(() => {
+      idleCheckInterval = setInterval(() => {
         if (trackEnded || idleTimeoutTriggered) {
-          clearInterval(checkIdle);
+          clearInterval(idleCheckInterval);
+          idleCheckInterval = null;
           return;
         }
         const timeSinceLastFrame = Date.now() - lastFrameTime;
@@ -592,19 +599,36 @@ class AIDispatcher {
           });
           idleTimeoutTriggered = true;
           trackEnded = true;
-          clearInterval(checkIdle);
-          resolve();
+          clearInterval(idleCheckInterval);
+          idleCheckInterval = null;
+          resolve('idle_timeout');
         }
       }, 200);
     });
 
+    const maxDurationPromise = new Promise((resolve) => {
+      maxDurationTimer = setTimeout(() => {
+        if (!trackEnded) {
+          this.log('AUDIO_MAX_DURATION', {
+            participant: participantId,
+            maxMs: MAX_RECORDING_DURATION_MS,
+            frameCount
+          });
+          trackEnded = true;
+          resolve('max_duration');
+        }
+      }, MAX_RECORDING_DURATION_MS);
+    });
+
     const audioStream = new AudioStream(track, LIVEKIT_SAMPLE_RATE, CHANNELS);
+    const asyncIterator = audioStream[Symbol.asyncIterator]();
     this.log('AUDIO_BUFFERING_START', { participant: participantId, room: roomName });
 
     const bufferAudio = async () => {
       try {
-        for await (const frame of audioStream) {
-          if (!this.isRunning || trackEnded) {
+        while (true) {
+          const { value: frame, done } = await asyncIterator.next();
+          if (done || !this.isRunning || trackEnded) {
             break;
           }
           chunks.push(Buffer.from(frame.data.buffer));
@@ -616,7 +640,39 @@ class AIDispatcher {
       }
     };
 
-    await Promise.race([bufferAudio(), trackEndPromise, idleTimeoutPromise]);
+    let raceResult;
+    try {
+      raceResult = await Promise.race([bufferAudio(), trackEndPromise, idleTimeoutPromise, maxDurationPromise]);
+    } finally {
+      if (idleCheckInterval) {
+        clearInterval(idleCheckInterval);
+        idleCheckInterval = null;
+      }
+      if (maxDurationTimer) {
+        clearTimeout(maxDurationTimer);
+        maxDurationTimer = null;
+      }
+      if (trackUnsubHandler) {
+        room.off(RoomEvent.TrackUnsubscribed, trackUnsubHandler);
+      }
+
+      try {
+        if (typeof audioStream.close === 'function') {
+          audioStream.close();
+        } else if (typeof audioStream.destroy === 'function') {
+          audioStream.destroy();
+        }
+        if (typeof asyncIterator.return === 'function') {
+          await asyncIterator.return();
+        }
+      } catch (cleanupErr) {
+        this.log('AUDIO_STREAM_CLEANUP_ERROR', { error: cleanupErr.message });
+      }
+    }
+
+    if (raceResult === 'max_duration') {
+      this.log('AUDIO_CAPPED', { participant: participantId, durationMs: Date.now() - startTime, frames: frameCount });
+    }
 
     if (!this.isRunning) {
       this.log('AUDIO_DISCARDED', { reason: 'Dispatcher stopped during buffering' });
@@ -644,42 +700,85 @@ class AIDispatcher {
 
     const enabled = await isAiDispatchEnabled();
     if (enabled && this.isRunning) {
-      await this.processAudio(audioBuffer, roomName, room, participantId);
+      this.processAudio(audioBuffer, roomName, room, participantId).catch(err => {
+        this.log('PROCESS_AUDIO_UNHANDLED_ERROR', { error: err.message, participant: participantId });
+      });
     }
   }
 
   async saveAudioAsMessage(audioBuffer, channelName, sender) {
     try {
       const wavBuffer = pcmToWav(audioBuffer, LIVEKIT_SAMPLE_RATE, CHANNELS, 16);
+
+      if (wavBuffer.length > MAX_AUDIO_FILE_SIZE) {
+        this.log('VOICE_MESSAGE_TOO_LARGE', { 
+          channel: channelName, sender, 
+          size: wavBuffer.length, 
+          maxSize: MAX_AUDIO_FILE_SIZE 
+        });
+        return;
+      }
+
+      if (wavBuffer.length < 44 ||
+          wavBuffer.toString('ascii', 0, 4) !== 'RIFF' ||
+          wavBuffer.toString('ascii', 8, 12) !== 'WAVE') {
+        this.log('VOICE_MESSAGE_CORRUPT_WAV', { channel: channelName, sender, size: wavBuffer.length });
+        return;
+      }
+
+      const headerDataLen = wavBuffer.readUInt32LE(40);
+      const actualDataLen = wavBuffer.length - 44;
+      if (Math.abs(headerDataLen - actualDataLen) > 1024) {
+        this.log('VOICE_MESSAGE_WAV_MISMATCH', { 
+          channel: channelName, sender, 
+          headerDataLen, actualDataLen 
+        });
+        return;
+      }
+
+      const durationSecs = Math.round(audioBuffer.length / (LIVEKIT_SAMPLE_RATE * 2));
+      if (durationSecs <= 0) {
+        this.log('VOICE_MESSAGE_INVALID_DURATION', { channel: channelName, sender, durationSecs });
+        return;
+      }
+
       const filename = `${channelName}_${Date.now()}_${sender.replace(/[^a-zA-Z0-9]/g, '_')}.wav`;
       const filepath = path.join(AUDIO_DIR, filename);
       
       fs.writeFileSync(filepath, wavBuffer);
       
       const audioUrl = `/api/messages/audio/${filename}`;
-      const durationSecs = Math.round(audioBuffer.length / (LIVEKIT_SAMPLE_RATE * 2));
       
       const message = await createChannelMessage(channelName, sender, 'audio', null, audioUrl, durationSecs);
       this.log('VOICE_MESSAGE_SAVED', { channel: channelName, sender, filename, duration: durationSecs });
       
+      const broadcastPayload = {
+        type: 'new_message',
+        message: {
+          id: message.id,
+          channel: channelName,
+          sender,
+          message_type: 'audio',
+          audio_url: audioUrl,
+          audio_duration: durationSecs,
+          created_at: message.created_at
+        }
+      };
+
       if (this.room && this.roomName === channelName && this.room.localParticipant) {
-        try {
-          const broadcastData = new TextEncoder().encode(JSON.stringify({
-            type: 'new_message',
-            message: {
-              id: message.id,
-              channel: channelName,
-              sender,
-              message_type: 'audio',
-              audio_url: audioUrl,
-              audio_duration: durationSecs,
-              created_at: message.created_at
+        const maxRetries = 2;
+        for (let attempt = 0; attempt <= maxRetries; attempt++) {
+          try {
+            const broadcastData = new TextEncoder().encode(JSON.stringify(broadcastPayload));
+            await this.room.localParticipant.publishData(broadcastData, { reliable: true });
+            this.log('MESSAGE_BROADCAST', { channel: channelName, messageId: message.id });
+            break;
+          } catch (broadcastErr) {
+            this.log('MESSAGE_BROADCAST_ERROR', { error: broadcastErr.message, attempt: attempt + 1 });
+            if (attempt < maxRetries) {
+              await new Promise(r => setTimeout(r, 500 * (attempt + 1)));
             }
-          }));
-          await this.room.localParticipant.publishData(broadcastData, { reliable: true });
-          this.log('MESSAGE_BROADCAST', { channel: channelName, messageId: message.id });
-        } catch (broadcastErr) {
-          this.log('MESSAGE_BROADCAST_ERROR', { error: broadcastErr.message });
+          }
         }
       }
     } catch (error) {

@@ -267,9 +267,10 @@ html, body {
 
 /* Premium Tab Buttons */
 .dispatch-tab {
-  flex: 1;
-  padding: 0.5rem 1rem;
-  font-size: 0.875rem;
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 0.5rem 0.25rem;
+  font-size: 0.75rem;
   font-weight: 500;
   color: var(--dispatch-text-secondary);
   background: transparent;
@@ -277,6 +278,16 @@ html, body {
   border-bottom: 2px solid transparent;
   cursor: pointer;
   transition: all 0.15s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (min-width: 1280px) {
+  .dispatch-tab {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+  }
 }
 
 .dispatch-tab:hover {

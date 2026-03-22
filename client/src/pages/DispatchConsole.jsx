@@ -319,8 +319,8 @@ export default function DispatchConsole({ user, onLogout }) {
           )}
         </div>
         
-        <div className="w-80 border-l border-dispatch-border flex flex-col dispatch-sidebar">
-          <div className="flex border-b border-dispatch-border">
+        <div className="w-80 min-w-0 border-l border-dispatch-border flex flex-col dispatch-sidebar">
+          <div className="flex overflow-x-auto border-b border-dispatch-border">
             <button
               onClick={() => setRightTab('emergency')}
               className={`dispatch-tab ${rightTab === 'emergency' ? 'active active-emergency' : ''}`}
