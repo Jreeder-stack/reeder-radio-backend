@@ -16,17 +16,32 @@ import kotlinx.coroutines.*
 
 private const val TAG = "[PTT-DIAG]"
 private const val CONNECT_TIMEOUT_MS = 5_000L
+private const val WATCHDOG_INTERVAL_MS = 500L
 
 class PttAudioEngine(private val context: Context) {
 
     private var room: Room? = null
     private var isTransmitting = false
     private var eventJob: Job? = null
+    private var watchdogJob: Job? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
 
     private var audioFocusRequest: AudioFocusRequest? = null
     private var expectingDisconnect = false
+
+    private val audioFocusListener = AudioManager.OnAudioFocusChangeListener { focusChange ->
+        when (focusChange) {
+            AudioManager.AUDIOFOCUS_GAIN,
+            AudioManager.AUDIOFOCUS_GAIN_TRANSIENT -> {
+                Log.d(TAG, "PttAudioEngine: audio focus gained — re-asserting speakerphone")
+                audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
+                enableSpeakerphone()
+                setMaxVoiceCallVolume()
+            }
+            else -> {}
+        }
+    }
 
     /** Called when LiveKit disconnects unexpectedly (not via our own disconnect()). */
     var onDisconnected: (() -> Unit)? = null
@@ -50,13 +65,14 @@ class PttAudioEngine(private val context: Context) {
                                 .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
                                 .build()
                         )
+                        .setOnAudioFocusChangeListener(audioFocusListener)
                         .build()
                     audioManager.requestAudioFocus(req)
                     audioFocusRequest = req
                 } else {
                     @Suppress("DEPRECATION")
                     audioManager.requestAudioFocus(
-                        null,
+                        audioFocusListener,
                         AudioManager.STREAM_VOICE_CALL,
                         AudioManager.AUDIOFOCUS_GAIN_TRANSIENT
                     )
@@ -68,6 +84,7 @@ class PttAudioEngine(private val context: Context) {
                 // Without this, the OS defaults to earpiece for MODE_IN_COMMUNICATION.
                 audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
                 enableSpeakerphone()
+                setMaxVoiceCallVolume()
 
                 val connected = withTimeoutOrNull(CONNECT_TIMEOUT_MS) {
                     newRoom.connect(url = livekitUrl, token = token)
@@ -77,14 +94,28 @@ class PttAudioEngine(private val context: Context) {
                 if (connected == true) {
                     room = newRoom
                     observeRoomEvents(newRoom)
-                    // Re-apply after 300 ms: WebRTC/LiveKit may reset audio routing internally
-                    // once the room is fully connected. The delayed call ensures speaker wins.
+                    // Re-apply at 300ms, 600ms, and 1500ms after connect to catch all phases
+                    // of LiveKit/WebRTC initialization that can override audio routing.
                     scope.launch {
                         delay(300)
                         enableSpeakerphone()
+                        setMaxVoiceCallVolume()
                         Log.d(TAG, "PttAudioEngine: speaker routing re-applied after 300ms")
                     }
-                    Log.d(TAG, "PttAudioEngine connected — speakerphone enabled")
+                    scope.launch {
+                        delay(600)
+                        enableSpeakerphone()
+                        setMaxVoiceCallVolume()
+                        Log.d(TAG, "PttAudioEngine: speaker routing re-applied after 600ms")
+                    }
+                    scope.launch {
+                        delay(1500)
+                        enableSpeakerphone()
+                        setMaxVoiceCallVolume()
+                        Log.d(TAG, "PttAudioEngine: speaker routing re-applied after 1500ms")
+                    }
+                    startWatchdog()
+                    Log.d(TAG, "PttAudioEngine connected — speakerphone enabled, watchdog started")
                     true
                 } else {
                     Log.w(TAG, "PttAudioEngine connect timed out")
@@ -96,6 +127,43 @@ class PttAudioEngine(private val context: Context) {
                 false
             }
         }
+
+    private fun startWatchdog() {
+        watchdogJob?.cancel()
+        watchdogJob = scope.launch {
+            while (isActive) {
+                delay(WATCHDOG_INTERVAL_MS)
+                if (room?.state == Room.State.CONNECTED) {
+                    val needsReapply = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        val commDevice = audioManager.communicationDevice
+                        audioManager.mode != AudioManager.MODE_IN_COMMUNICATION ||
+                            commDevice?.type != AudioDeviceInfo.TYPE_BUILTIN_SPEAKER
+                    } else {
+                        @Suppress("DEPRECATION")
+                        audioManager.mode != AudioManager.MODE_IN_COMMUNICATION ||
+                            !audioManager.isSpeakerphoneOn
+                    }
+                    if (needsReapply) {
+                        Log.w(TAG, "PttAudioEngine watchdog: routing reverted — re-asserting speakerphone")
+                        audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
+                        enableSpeakerphone()
+                        setMaxVoiceCallVolume()
+                    }
+                }
+            }
+        }
+    }
+
+    private fun stopWatchdog() {
+        watchdogJob?.cancel()
+        watchdogJob = null
+    }
+
+    private fun setMaxVoiceCallVolume() {
+        val maxVol = audioManager.getStreamMaxVolume(AudioManager.STREAM_VOICE_CALL)
+        audioManager.setStreamVolume(AudioManager.STREAM_VOICE_CALL, maxVol, 0)
+        Log.d(TAG, "AudioManager: STREAM_VOICE_CALL volume set to max ($maxVol)")
+    }
 
     private fun enableSpeakerphone() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -133,6 +201,7 @@ class PttAudioEngine(private val context: Context) {
     }
 
     private fun restoreAudio() {
+        stopWatchdog()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             restoreAudioModern()
         } else {
@@ -154,7 +223,7 @@ class PttAudioEngine(private val context: Context) {
         audioManager.isSpeakerphoneOn = false
         audioManager.mode = AudioManager.MODE_NORMAL
         @Suppress("DEPRECATION")
-        audioManager.abandonAudioFocus(null)
+        audioManager.abandonAudioFocus(audioFocusListener)
         Log.d(TAG, "AudioManager: mode=NORMAL speakerphone=OFF audio focus abandoned (legacy API)")
     }
 
