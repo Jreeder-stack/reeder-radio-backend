@@ -298,13 +298,8 @@ class MainActivity : ComponentActivity() {
             }
             keyCode == KEY_EMERGENCY -> {
                 if (event?.repeatCount == 0) {
-                    if (!isDeviceInteractive()) {
-                        Log.d(TAG, "MainActivity EMERGENCY DOWN while screen-off — forwarding to service")
-                        forwardEmergencyToBackgroundService(BackgroundAudioService.ACTION_EMERGENCY_DOWN)
-                    } else {
-                        Log.d(TAG, "MainActivity EMERGENCY DOWN")
-                        app.keyEventFlow.tryEmit(KeyAction.EmergencyDown)
-                    }
+                    Log.d(TAG, "MainActivity EMERGENCY DOWN — forwarding to BackgroundAudioService")
+                    forwardEmergencyToBackgroundService(BackgroundAudioService.ACTION_EMERGENCY_DOWN)
                 }
                 return true
             }
@@ -350,13 +345,8 @@ class MainActivity : ComponentActivity() {
                 return true
             }
             keyCode == KEY_EMERGENCY -> {
-                if (!isDeviceInteractive()) {
-                    Log.d(TAG, "MainActivity EMERGENCY UP while screen-off — forwarding to service")
-                    forwardEmergencyToBackgroundService(BackgroundAudioService.ACTION_EMERGENCY_UP)
-                } else {
-                    Log.d(TAG, "MainActivity EMERGENCY UP")
-                    app.keyEventFlow.tryEmit(KeyAction.EmergencyUp)
-                }
+                Log.d(TAG, "MainActivity EMERGENCY UP — forwarding to BackgroundAudioService")
+                forwardEmergencyToBackgroundService(BackgroundAudioService.ACTION_EMERGENCY_UP)
                 return true
             }
             keyCode == KEY_STAR -> {

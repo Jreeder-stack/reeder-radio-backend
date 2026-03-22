@@ -409,10 +409,11 @@ class BackgroundAudioService : Service() {
         // Arming notification with full-screen intent — brings MainActivity to front if possible
         postEmergencyNotification("EMERGENCY ARMING — hold to activate")
 
-        // Emit to keyEventFlow so ViewModel runs the arming UI if it's active
-        app.keyEventFlow.tryEmit(KeyAction.EmergencyDown)
+        // Tell the ViewModel to show the arming progress arc. The service owns the countdown
+        // and all signaling; the ViewModel is UI-only from this point (same pattern as PTT).
+        sendEmergencyArming()
 
-        // 3-second arming countdown in the service (mirrors ViewModel.startArming()).
+        // 3-second arming countdown in the service.
         // If the button is released before the countdown ends, handleEmergencyUp() cancels this job.
         app.toneEngine.startCountdownBeep()
         emergencyArmingJob = scope.launch {
@@ -436,6 +437,9 @@ class BackgroundAudioService : Service() {
         app.signalingRepository.emergencyStart(channelKey)
         Log.d(TAG, "activateEmergency: emergencyStart signal sent for $channelKey")
 
+        // Tell the ViewModel to update its UI state to "emergency active".
+        sendEmergencyActivated()
+
         // Start emergency audio TX — reuse the existing PTT infrastructure.
         // signaling=true so transmitPre + transmitStart are emitted, which triggers
         // RX connect on other units so they can hear the emergency broadcast.
@@ -453,6 +457,8 @@ class BackgroundAudioService : Service() {
             updateNotification("Radio — Standby")
             dismissEmergencyNotification()
             Log.d(TAG, "Emergency arming cancelled by button release")
+            // Tell the ViewModel to dismiss the arming progress arc
+            sendEmergencyCancelled()
         }
 
         // Route UP to ViewModel so it can manage cancel-hold UI and emergencyEnd signaling
@@ -711,6 +717,18 @@ class BackgroundAudioService : Service() {
         sessionDeadlineMs = -1L
     }
 
+    private fun sendEmergencyArming() {
+        sendBroadcast(Intent(ACTION_EMERGENCY_ARMING).apply { setPackage(packageName) })
+    }
+
+    private fun sendEmergencyActivated() {
+        sendBroadcast(Intent(ACTION_EMERGENCY_ACTIVATED).apply { setPackage(packageName) })
+    }
+
+    private fun sendEmergencyCancelled() {
+        sendBroadcast(Intent(ACTION_EMERGENCY_CANCELLED).apply { setPackage(packageName) })
+    }
+
     /**
      * Broadcast PTT_TX_FAILED back to the ViewModel so it can reset pttState = IDLE
      * and play an error tone. Sent on real failures: token error, connect error, TX error.
@@ -834,6 +852,12 @@ class BackgroundAudioService : Service() {
         const val ACTION_PTT_TX_ABORTED = "com.reedersystems.commandcomms.PTT_TX_ABORTED"
         const val ACTION_PTT_TX_STARTED = "com.reedersystems.commandcomms.PTT_TX_STARTED"
         const val ACTION_PTT_TX_ENDED = "com.reedersystems.commandcomms.PTT_TX_ENDED"
+        /** Sent when the 3-second arming countdown begins. ViewModel shows the progress arc. */
+        const val ACTION_EMERGENCY_ARMING = "com.reedersystems.commandcomms.EMERGENCY_ARMING"
+        /** Sent after the countdown completes and emergency:start has been signalled. */
+        const val ACTION_EMERGENCY_ACTIVATED = "com.reedersystems.commandcomms.EMERGENCY_ACTIVATED"
+        /** Sent when arming is cancelled (button released before 3 s). */
+        const val ACTION_EMERGENCY_CANCELLED = "com.reedersystems.commandcomms.EMERGENCY_CANCELLED"
         const val EXTRA_CHANNEL_ID = "channel_id"
         const val EXTRA_ROOM_KEY = "room_key"
         const val EXTRA_CHANNEL_NAME = "channel_name"

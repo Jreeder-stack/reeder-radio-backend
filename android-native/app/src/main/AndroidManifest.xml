@@ -108,14 +108,40 @@
                 <action android:name="android.intent.action.EMERGENCY_DOWN" />
                 <action android:name="android.intent.action.EMERGENCY_UP" />
             </intent-filter>
+            <!-- Inrico T320 emergency — dot-separated lowercase (mirrors PTT.down / PTT.up) -->
+            <intent-filter>
+                <action android:name="android.intent.action.EMERGENCY.down" />
+                <action android:name="android.intent.action.EMERGENCY.up" />
+            </intent-filter>
             <!-- Inrico T320 vendor emergency broadcasts -->
             <intent-filter>
                 <action android:name="com.inrico.emergency.down" />
                 <action android:name="com.inrico.emergency.up" />
             </intent-filter>
             <intent-filter>
+                <action android:name="com.inrico.emergency.EMERGENCY.down" />
+                <action android:name="com.inrico.emergency.EMERGENCY.up" />
+            </intent-filter>
+            <intent-filter>
                 <action android:name="com.inrico.intent.action.EMERGENCY_DOWN" />
                 <action android:name="com.inrico.intent.action.EMERGENCY_UP" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="com.inrico.intent.action.EMERGENCY.down" />
+                <action android:name="com.inrico.intent.action.EMERGENCY.up" />
+            </intent-filter>
+            <!-- SOS variants — some Inrico firmware labels the emergency button as SOS -->
+            <intent-filter>
+                <action android:name="android.intent.action.SOS_KEY_DOWN" />
+                <action android:name="android.intent.action.SOS_KEY_UP" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="com.inrico.sos.down" />
+                <action android:name="com.inrico.sos.up" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="com.inrico.intent.action.SOS_KEY_DOWN" />
+                <action android:name="com.inrico.intent.action.SOS_KEY_UP" />
             </intent-filter>
         </receiver>
 

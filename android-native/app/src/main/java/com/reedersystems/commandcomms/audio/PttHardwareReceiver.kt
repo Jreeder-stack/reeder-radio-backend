@@ -75,12 +75,28 @@ class PttHardwareReceiver : BroadcastReceiver() {
             "com.android.server.telecom.PushToTalk.action.PTT_KEY_UP"   -> BackgroundAudioService.ACTION_PTT_UP
 
             // Inrico T320 emergency button broadcasts
+            // Dot-separated lowercase (mirrors the confirmed PTT.down / PTT.up pattern)
+            "android.intent.action.EMERGENCY.down"        -> BackgroundAudioService.ACTION_EMERGENCY_DOWN
+            "android.intent.action.EMERGENCY.up"          -> BackgroundAudioService.ACTION_EMERGENCY_UP
+            // Underscore variants
             "android.intent.action.EMERGENCY_DOWN"        -> BackgroundAudioService.ACTION_EMERGENCY_DOWN
             "android.intent.action.EMERGENCY_UP"          -> BackgroundAudioService.ACTION_EMERGENCY_UP
+            // Vendor namespace
             "com.inrico.emergency.down"                   -> BackgroundAudioService.ACTION_EMERGENCY_DOWN
             "com.inrico.emergency.up"                     -> BackgroundAudioService.ACTION_EMERGENCY_UP
+            "com.inrico.emergency.EMERGENCY.down"         -> BackgroundAudioService.ACTION_EMERGENCY_DOWN
+            "com.inrico.emergency.EMERGENCY.up"           -> BackgroundAudioService.ACTION_EMERGENCY_UP
             "com.inrico.intent.action.EMERGENCY_DOWN"     -> BackgroundAudioService.ACTION_EMERGENCY_DOWN
             "com.inrico.intent.action.EMERGENCY_UP"       -> BackgroundAudioService.ACTION_EMERGENCY_UP
+            "com.inrico.intent.action.EMERGENCY.down"     -> BackgroundAudioService.ACTION_EMERGENCY_DOWN
+            "com.inrico.intent.action.EMERGENCY.up"       -> BackgroundAudioService.ACTION_EMERGENCY_UP
+            // SOS variants (some Inrico firmware labels emergency as SOS)
+            "android.intent.action.SOS_KEY_DOWN"          -> BackgroundAudioService.ACTION_EMERGENCY_DOWN
+            "android.intent.action.SOS_KEY_UP"            -> BackgroundAudioService.ACTION_EMERGENCY_UP
+            "com.inrico.sos.down"                         -> BackgroundAudioService.ACTION_EMERGENCY_DOWN
+            "com.inrico.sos.up"                           -> BackgroundAudioService.ACTION_EMERGENCY_UP
+            "com.inrico.intent.action.SOS_KEY_DOWN"       -> BackgroundAudioService.ACTION_EMERGENCY_DOWN
+            "com.inrico.intent.action.SOS_KEY_UP"         -> BackgroundAudioService.ACTION_EMERGENCY_UP
 
             else -> {
                 Log.d(TAG, "PttHardwareReceiver: unrecognised action=$action — ignoring")
