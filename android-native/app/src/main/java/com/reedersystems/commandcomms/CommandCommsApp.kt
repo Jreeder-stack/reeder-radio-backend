@@ -5,6 +5,8 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.media.AudioAttributes
 import android.media.RingtoneManager
+import android.os.Build
+import android.util.Log
 import com.reedersystems.commandcomms.audio.ToneEngine
 import com.reedersystems.commandcomms.data.api.ApiClient
 import com.reedersystems.commandcomms.data.prefs.ServiceConnectionPrefs
@@ -53,6 +55,17 @@ class CommandCommsApp : Application() {
         apiClient = ApiClient.getInstance(this)
         sessionPrefs = SessionPrefs(this)
         serviceConnectionPrefs = ServiceConnectionPrefs(this)
+        val currentVersionCode = packageManager
+            .getPackageInfo(packageName, 0)
+            .let { if (Build.VERSION.SDK_INT >= 28) it.longVersionCode else it.versionCode.toLong() }
+        if (sessionPrefs.lastVersionCode != currentVersionCode) {
+            Log.d("CommandCommsApp", "Version changed (${sessionPrefs.lastVersionCode} → $currentVersionCode), clearing session")
+            sessionPrefs.clear()
+            serviceConnectionPrefs.clear()
+            apiClient.cookieJar.clear()
+            sessionPrefs.lastVersionCode = currentVersionCode
+        }
+
         authRepository = AuthRepository(apiClient)
         channelRepository = ChannelRepository(apiClient)
         liveKitTokenRepository = LiveKitTokenRepository(apiClient)

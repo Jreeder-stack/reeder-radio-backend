@@ -36,8 +36,14 @@ class SessionPrefs(context: Context) {
         get() = prefs.getBoolean(KEY_NOTIFICATION_GRANTED, false)
         set(value) = prefs.edit().putBoolean(KEY_NOTIFICATION_GRANTED, value).apply()
 
+    var lastVersionCode: Long
+        get() = prefs.getLong(KEY_LAST_VERSION_CODE, -1L)
+        set(value) = prefs.edit().putLong(KEY_LAST_VERSION_CODE, value).apply()
+
     fun clear() {
+        val savedVersion = lastVersionCode
         prefs.edit().clear().apply()
+        if (savedVersion != -1L) lastVersionCode = savedVersion
     }
 
     companion object {
@@ -49,5 +55,6 @@ class SessionPrefs(context: Context) {
         private const val KEY_MIC_GRANTED = "mic_granted"
         private const val KEY_LOCATION_GRANTED = "location_granted"
         private const val KEY_NOTIFICATION_GRANTED = "notification_granted"
+        private const val KEY_LAST_VERSION_CODE = "last_version_code"
     }
 }
