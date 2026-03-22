@@ -3,11 +3,9 @@ package com.reedersystems.commandcomms.ui.radio
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.compose.animation.core.*
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -55,6 +53,7 @@ fun RadioScreen(
             context, Manifest.permission.RECORD_AUDIO
         ) == PackageManager.PERMISSION_GRANTED
         viewModel.setMicPermissionGranted(granted)
+        viewModel.refreshSession(onLogout)
         onPauseOrDispose {}
     }
 
@@ -72,17 +71,17 @@ fun RadioScreen(
     if (showLogoutDialog) {
         AlertDialog(
             onDismissRequest = { showLogoutDialog = false },
-            title = { androidx.compose.material3.Text("Sign Out") },
+            title = { androidx.compose.material3.Text("Are you sure?") },
             text = { androidx.compose.material3.Text("Sign out of Command Comms?") },
             confirmButton = {
                 TextButton(onClick = {
                     showLogoutDialog = false
                     viewModel.logout(onLogout)
-                }) { androidx.compose.material3.Text("Sign Out") }
+                }) { androidx.compose.material3.Text("ACCEPT") }
             },
             dismissButton = {
                 TextButton(onClick = { showLogoutDialog = false }) {
-                    androidx.compose.material3.Text("Cancel")
+                    androidx.compose.material3.Text("DENY")
                 }
             }
         )
@@ -269,7 +268,6 @@ private fun CenterDisplay(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun BottomBar(
     state: RadioUiState,
@@ -290,17 +288,11 @@ private fun BottomBar(
             color = if (state.isScanning) Color(0xFF00FF77) else Color(0xFFE0E0E0),
             onClick = onScnl
         )
-        Box(
-            modifier = Modifier
-                .combinedClickable(
-                    onClick = {},
-                    onLongClick = onLogoutRequest
-                )
-                .padding(horizontal = 8.dp, vertical = 6.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            T320Text(state.clockTime, color = White, bold = true, size = 12)
-        }
+        BottomBarButton(
+            text = "LOGOUT",
+            color = Color(0xFFFF4444),
+            onClick = onLogoutRequest
+        )
         state.batteryLevel?.let { bat ->
             BottomBarButton(
                 text = "$bat%",

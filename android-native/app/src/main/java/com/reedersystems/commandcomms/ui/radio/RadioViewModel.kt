@@ -61,7 +61,6 @@ data class RadioUiState(
     val emergencyHoldProgress: Float? = null,
     val isEmergencyCancelling: Boolean = false,
     val showScanOverlay: Boolean = false,
-    val clockTime: String = "",
     val batteryLevel: Int? = null,
     val micPermissionGranted: Boolean = false,
 ) {
@@ -169,12 +168,10 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                 micPermissionGranted = prefs.micPermissionGranted
             )
         }
-        updateClock()
         updateBattery()
         viewModelScope.launch {
             while (true) {
                 delay(10_000)
-                updateClock()
                 updateBattery()
             }
         }
@@ -200,13 +197,6 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
             ContextCompat.RECEIVER_NOT_EXPORTED
         )
         Log.d(TAG, "PTT/Emergency service broadcast receiver registered")
-    }
-
-    private fun updateClock() {
-        val cal = java.util.Calendar.getInstance()
-        val h = "%02d".format(cal.get(java.util.Calendar.HOUR_OF_DAY))
-        val m = "%02d".format(cal.get(java.util.Calendar.MINUTE))
-        _uiState.update { it.copy(clockTime = "$h:$m") }
     }
 
     private fun updateBattery() {
@@ -640,6 +630,16 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
         updateServiceChannel()
+    }
+
+    fun refreshSession(onSessionExpired: () -> Unit) {
+        viewModelScope.launch {
+            val result = app.authRepository.me()
+            if (result.isFailure) {
+                Log.w(TAG, "Session expired on resume, logging out")
+                logout(onSessionExpired)
+            }
+        }
     }
 
     fun logout(onComplete: () -> Unit) {
