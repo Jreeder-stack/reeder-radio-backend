@@ -10,6 +10,7 @@ import android.util.Log
 import com.reedersystems.commandcomms.audio.DndOverrideManager
 import com.reedersystems.commandcomms.audio.ToneEngine
 import com.reedersystems.commandcomms.data.api.ApiClient
+import com.reedersystems.commandcomms.data.prefs.PttKeyPrefs
 import com.reedersystems.commandcomms.data.prefs.ServiceConnectionPrefs
 import com.reedersystems.commandcomms.data.prefs.SessionPrefs
 import com.reedersystems.commandcomms.data.repository.AuthRepository
@@ -18,6 +19,7 @@ import com.reedersystems.commandcomms.data.repository.LiveKitTokenRepository
 import com.reedersystems.commandcomms.signaling.SignalingClient
 import com.reedersystems.commandcomms.signaling.SignalingRepository
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 
 class CommandCommsApp : Application() {
 
@@ -45,6 +47,9 @@ class CommandCommsApp : Application() {
     lateinit var signalingRepository: SignalingRepository
         private set
 
+    lateinit var pttKeyPrefs: PttKeyPrefs
+        private set
+
     lateinit var toneEngine: ToneEngine
         private set
 
@@ -52,6 +57,7 @@ class CommandCommsApp : Application() {
         private set
 
     val keyEventFlow = MutableSharedFlow<KeyAction>(extraBufferCapacity = 16)
+    val keyCapturingFlow = MutableStateFlow(false)
 
     override fun onCreate() {
         super.onCreate()
@@ -59,6 +65,7 @@ class CommandCommsApp : Application() {
         apiClient = ApiClient.getInstance(this)
         sessionPrefs = SessionPrefs(this)
         serviceConnectionPrefs = ServiceConnectionPrefs(this)
+        pttKeyPrefs = PttKeyPrefs(this)
         val currentVersionCode = packageManager
             .getPackageInfo(packageName, 0)
             .let { if (Build.VERSION.SDK_INT >= 28) it.longVersionCode else it.versionCode.toLong() }

@@ -43,6 +43,7 @@ private val White     = Color.White
 @Composable
 fun RadioScreen(
     onLogout: () -> Unit,
+    onOpenSettings: () -> Unit = {},
     viewModel: RadioViewModel = viewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -136,7 +137,8 @@ fun RadioScreen(
             BottomBar(
                 state = state,
                 onScnl = { viewModel.setShowScanOverlay(true) },
-                onLogoutRequest = { showLogoutDialog = true }
+                onLogoutRequest = { showLogoutDialog = true },
+                onOpenSettings = onOpenSettings
             )
         }
 
@@ -293,7 +295,8 @@ private fun CenterDisplay(
 private fun BottomBar(
     state: RadioUiState,
     onScnl: () -> Unit,
-    onLogoutRequest: () -> Unit
+    onLogoutRequest: () -> Unit,
+    onOpenSettings: () -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -308,6 +311,11 @@ private fun BottomBar(
             text = "SCNL",
             color = if (state.isScanning) Color(0xFF00FF77) else Color(0xFFE0E0E0),
             onClick = onScnl
+        )
+        BottomBarButton(
+            text = "SET",
+            color = Color(0xFFE0E0E0),
+            onClick = onOpenSettings
         )
         BottomBarButton(
             text = "LOGOUT",

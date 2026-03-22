@@ -23,6 +23,8 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.core.content.ContextCompat
 import com.reedersystems.commandcomms.audio.BackgroundAudioService
+import com.reedersystems.commandcomms.data.prefs.formatKeyLabel
+import com.reedersystems.commandcomms.data.prefs.isNonCapturableKey
 import com.reedersystems.commandcomms.navigation.AppNavigation
 import com.reedersystems.commandcomms.ui.theme.CommandCommsTheme
 
@@ -46,6 +48,7 @@ class MainActivity : ComponentActivity() {
     private val app get() = application as CommandCommsApp
 
     private var starDownTime = 0L
+    private var lastCapturedKeyCode = -1
 
     /**
      * Set to true when we have launched ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENTS.
@@ -243,13 +246,35 @@ class MainActivity : ComponentActivity() {
         Log.d(TAG, "Diagnostics: PTT via PttHardwareReceiver (T320 vendor broadcasts)")
     }
 
-    private fun isPttKey(keyCode: Int) = keyCode == KEY_PTT_F11 || keyCode == KEY_PTT
+    private fun isPttKey(keyCode: Int): Boolean {
+        if (keyCode == KEY_PTT_F11 || keyCode == KEY_PTT) return true
+        if (app.pttKeyPrefs.volumeButtonPttEnabled && keyCode == KeyEvent.KEYCODE_VOLUME_UP) return true
+        val custom = app.pttKeyPrefs.customKeyCode
+        if (custom > 0 && keyCode == custom) return true
+        return false
+    }
 
-    private fun isOurKey(keyCode: Int) = isPttKey(keyCode) ||
-        keyCode == KEY_EMERGENCY ||
-        keyCode == KEY_DPAD_UP || keyCode == KEY_DPAD_DOWN ||
-        keyCode == KEY_DPAD_LEFT || keyCode == KEY_DPAD_RIGHT ||
-        keyCode == KEY_ACC || keyCode == KEY_STAR
+    private fun isOurKey(keyCode: Int): Boolean {
+        if (isPttKey(keyCode)) return true
+        if (keyCode == KEY_EMERGENCY) return true
+        if (keyCode == KEY_DPAD_UP || keyCode == KEY_DPAD_DOWN ||
+            keyCode == KEY_DPAD_LEFT || keyCode == KEY_DPAD_RIGHT) return true
+        if (keyCode == KEY_ACC || keyCode == KEY_STAR) return true
+        return false
+    }
+
+    private fun handleKeyCaptureIfActive(keyCode: Int): Boolean {
+        val capturing = app.keyCapturingFlow.value
+        if (!capturing) return false
+        if (isNonCapturableKey(keyCode)) return true
+        val label = formatKeyLabel(keyCode)
+        app.pttKeyPrefs.customKeyCode = keyCode
+        app.pttKeyPrefs.customKeyLabel = label
+        lastCapturedKeyCode = keyCode
+        app.keyCapturingFlow.value = false
+        Log.d(TAG, "Key captured: code=$keyCode label=$label")
+        return true
+    }
 
     /**
      * Intercept our hardware keys during Compose's preview phase so D-pad navigation doesn't
@@ -257,6 +282,16 @@ class MainActivity : ComponentActivity() {
      */
     private fun handlePreviewKeyEvent(event: androidx.compose.ui.input.key.KeyEvent): Boolean {
         val nativeEvent = event.nativeKeyEvent
+        if (app.keyCapturingFlow.value) {
+            if (event.type == KeyEventType.KeyDown) {
+                return handleKeyCaptureIfActive(nativeEvent.keyCode)
+            }
+            return true
+        }
+        if (lastCapturedKeyCode == nativeEvent.keyCode && event.type == KeyEventType.KeyUp) {
+            lastCapturedKeyCode = -1
+            return true
+        }
         if (!isOurKey(nativeEvent.keyCode)) return false
 
         return when (event.type) {
@@ -270,11 +305,17 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        if (handleKeyCaptureIfActive(keyCode)) return true
         if (isOurKey(keyCode)) return handleKeyDown(keyCode, event)
         return super.onKeyDown(keyCode, event)
     }
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent?): Boolean {
+        if (app.keyCapturingFlow.value) return true
+        if (lastCapturedKeyCode == keyCode) {
+            lastCapturedKeyCode = -1
+            return true
+        }
         if (isOurKey(keyCode)) return handleKeyUp(keyCode, event)
         return super.onKeyUp(keyCode, event)
     }
