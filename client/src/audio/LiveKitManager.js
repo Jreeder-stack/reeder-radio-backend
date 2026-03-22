@@ -26,7 +26,18 @@ class LiveKitManager {
     this.pttListenerRemover = null;
     this.primaryTxChannel = null;
     
-    // Connection health tracking
+    this._audioSettings = {
+      incomingVolume: 80,
+      playbackAmplifierEnabled: false,
+      playbackAmplifierLevel: 50,
+      autoIncreaseVolumeEnabled: false,
+      autoIncreaseVolumeLevel: 100,
+    };
+    this._settingsListener = null;
+    this._lastRxActivityTime = Date.now();
+    this._autoVolumeBoostActive = false;
+    this._autoVolumeCheckInterval = null;
+    
     this.connectionHealth = new Map(); // channelName -> { lastPing, connected, quality }
     this.healthCheckInterval = null;
     this.HEALTH_CHECK_INTERVAL = 5000; // Check every 5 seconds
@@ -387,15 +398,117 @@ class LiveKitManager {
   }
 
   _unmuteAllAfterPTT() {
+    const vol = this._getEffectiveVolume();
     for (const [channelName, gainNode] of this.channelGainNodes) {
       if (!this.mutedChannels.has(channelName)) {
-        gainNode.gain.value = 1;
+        gainNode.gain.value = vol;
       }
     }
     for (const [channelName, elements] of this.fallbackAudioElements) {
       if (!this.mutedChannels.has(channelName)) {
-        elements.forEach(el => { el.muted = false; el.volume = 1; });
+        elements.forEach(el => { el.muted = false; el.volume = vol; });
       }
+    }
+  }
+
+  _getEffectiveVolume() {
+    if (this._autoVolumeBoostActive) {
+      return Math.min((this._audioSettings.autoIncreaseVolumeLevel ?? 100) / 100, 2.0);
+    }
+    const baseVol = (this._audioSettings.incomingVolume ?? 80) / 100;
+    let amplifier = 1.0;
+    if (this._audioSettings.playbackAmplifierEnabled && this._audioSettings.playbackAmplifierLevel) {
+      amplifier = 1.0 + (this._audioSettings.playbackAmplifierLevel / 100);
+    }
+    return Math.min(baseVol * amplifier, 2.0);
+  }
+
+  applyAudioSettings(settings) {
+    this._audioSettings = {
+      incomingVolume: settings.incomingVolume ?? 80,
+      playbackAmplifierEnabled: settings.playbackAmplifierEnabled ?? false,
+      playbackAmplifierLevel: settings.playbackAmplifierLevel ?? 50,
+      autoIncreaseVolumeEnabled: settings.autoIncreaseVolumeEnabled ?? false,
+      autoIncreaseVolumeLevel: settings.autoIncreaseVolumeLevel ?? 100,
+    };
+
+    this._updateAutoVolumeBoostTimer();
+
+    if (!this.pttMuted) {
+      const vol = this._getEffectiveVolume();
+      for (const [channelName, gainNode] of this.channelGainNodes) {
+        if (!this.mutedChannels.has(channelName)) {
+          gainNode.gain.value = vol;
+        }
+      }
+      for (const [channelName, elements] of this.fallbackAudioElements) {
+        if (!this.mutedChannels.has(channelName)) {
+          elements.forEach(el => { el.volume = vol; });
+        }
+      }
+    }
+  }
+
+  _recordRxActivity() {
+    this._lastRxActivityTime = Date.now();
+    if (this._autoVolumeBoostActive) {
+      this._autoVolumeBoostActive = false;
+      this.applyAudioSettings(this._audioSettings);
+      console.log('[LiveKit] Auto-volume boost deactivated due to activity');
+    }
+  }
+
+  _updateAutoVolumeBoostTimer() {
+    if (this._autoVolumeCheckInterval) {
+      clearInterval(this._autoVolumeCheckInterval);
+      this._autoVolumeCheckInterval = null;
+    }
+
+    if (!this._audioSettings.autoIncreaseVolumeEnabled) {
+      this._autoVolumeBoostActive = false;
+      return;
+    }
+
+    const AUTO_INCREASE_TIMEOUT_MS = 10 * 60 * 1000;
+    this._autoVolumeCheckInterval = setInterval(() => {
+      const elapsed = Date.now() - this._lastRxActivityTime;
+      if (elapsed >= AUTO_INCREASE_TIMEOUT_MS && !this._autoVolumeBoostActive) {
+        this._autoVolumeBoostActive = true;
+        const boostedVol = (this._audioSettings.autoIncreaseVolumeLevel ?? 100) / 100;
+        console.log(`[LiveKit] Auto-volume boost activated after ${Math.round(elapsed / 1000)}s inactivity, volume=${boostedVol}`);
+        if (!this.pttMuted) {
+          for (const [channelName, gainNode] of this.channelGainNodes) {
+            if (!this.mutedChannels.has(channelName)) {
+              gainNode.gain.value = boostedVol;
+            }
+          }
+          for (const [channelName, elements] of this.fallbackAudioElements) {
+            if (!this.mutedChannels.has(channelName)) {
+              elements.forEach(el => { el.volume = Math.min(boostedVol, 1.0); });
+            }
+          }
+        }
+      }
+    }, 30000);
+  }
+
+
+  startSettingsListener() {
+    if (this._settingsListener) return;
+    this._settingsListener = (e) => {
+      if (e.detail) {
+        this.applyAudioSettings(e.detail);
+      }
+    };
+    window.addEventListener('settings-changed', this._settingsListener);
+
+    try {
+      const stored = localStorage.getItem('app_settings');
+      if (stored) {
+        this.applyAudioSettings(JSON.parse(stored));
+      }
+    } catch (e) {
+      console.warn('[LiveKit] Failed to load initial audio settings:', e);
     }
   }
 
@@ -629,6 +742,7 @@ class LiveKitManager {
       }
       
       if (track.kind === Track.Kind.Audio) {
+        this._recordRxActivity();
         this._handleAudioTrack(track, participant, channelName, room);
       }
       
@@ -699,7 +813,7 @@ class LiveKitManager {
       analyser.smoothingTimeConstant = 0.3;
       
       const gainNode = ctx.createGain();
-      gainNode.gain.value = shouldMute ? 0 : 1;
+      gainNode.gain.value = shouldMute ? 0 : this._getEffectiveVolume();
       
       source.connect(analyser);
       analyser.connect(gainNode);
@@ -713,7 +827,7 @@ class LiveKitManager {
       
     } catch (err) {
       console.warn('[LiveKit] Using direct audio playback for', channelName);
-      audioElem.volume = shouldMute ? 0 : 1;
+      audioElem.volume = shouldMute ? 0 : Math.min(this._getEffectiveVolume(), 1.0);
       
       if (!this.fallbackAudioElements.has(channelName)) {
         this.fallbackAudioElements.set(channelName, new Set());
@@ -731,7 +845,11 @@ class LiveKitManager {
       analyser.getByteFrequencyData(dataArray);
       const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
       
-      this._emitLevelUpdate(channelName, Math.min(100, avg * 1.5));
+      const level = Math.min(100, avg * 1.5);
+      if (level > 5) {
+        this._recordRxActivity();
+      }
+      this._emitLevelUpdate(channelName, level);
       
       this.levelAnimations.set(channelName, requestAnimationFrame(update));
     };
@@ -749,7 +867,7 @@ class LiveKitManager {
     this._emitLevelUpdate(channelName, 0);
     
     try {
-      track.detach().forEach(el => {
+      (track.detach() || []).forEach(el => {
         const cached = this.audioElements.get(el);
         if (cached) {
           this.audioElements.delete(el);
@@ -763,7 +881,9 @@ class LiveKitManager {
         }
         el.remove();
       });
-    } catch (e) {}
+    } catch (e) {
+      console.warn('[LiveKit] Error detaching track:', e);
+    }
   }
 
   _cleanupChannel(channelName) {
@@ -1006,10 +1126,18 @@ class LiveKitManager {
     this.fallbackAudioElements.clear();
     this.pendingConnections.clear();
     
+    if (this._autoVolumeCheckInterval) {
+      clearInterval(this._autoVolumeCheckInterval);
+      this._autoVolumeCheckInterval = null;
+    }
+    this._autoVolumeBoostActive = false;
+    
     if (this.audioContext && this.audioContext.state !== 'closed') {
       try {
         await this.audioContext.close();
-      } catch (e) {}
+      } catch (e) {
+        console.warn('[LiveKit] Error closing AudioContext:', e);
+      }
       this.audioContext = null;
     }
     

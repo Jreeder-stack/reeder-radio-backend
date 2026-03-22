@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { MobileFrame } from "./MobileFrame";
 import { Switch } from "../ui/Switch";
-import { Mic, Volume2, Bluetooth, MapPin, Database, ChevronRight, Info, Bell, Radio, AlertTriangle, Shield } from "lucide-react";
+import { Mic, Volume2, Bluetooth, MapPin, Database, ChevronRight, Info, Bell, Radio, AlertTriangle, Shield, Power, Monitor, Moon, BatteryCharging } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { 
   getSettings, 
@@ -332,6 +332,165 @@ export function MobileSettings({ onLogout }) {
                       updateSetting('alertSoundsEnabled', false);
                     }
                   }}
+                />
+              }
+            />
+
+            <div className="p-4 border-b border-white/5">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="text-zinc-400"><Volume2 size={18} /></div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-zinc-200">Incoming Volume</p>
+                  <p className="text-[10px] text-zinc-500">{settings.incomingVolume}%</p>
+                </div>
+              </div>
+              <input type="range" min="0" max="100" value={settings.incomingVolume || 80}
+                onChange={(e) => updateSetting('incomingVolume', parseInt(e.target.value))}
+                className="w-full h-1.5 bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-cyan-500" />
+            </div>
+
+            <SettingItem
+              icon={<Volume2 size={18} />}
+              title="Auto-increase Volume"
+              description="Increase volume after 10 min inactivity"
+              action={
+                <Switch
+                  checked={settings.autoIncreaseVolumeEnabled}
+                  onCheckedChange={(checked) => updateSetting('autoIncreaseVolumeEnabled', checked)}
+                />
+              }
+            />
+
+            <SettingItem
+              icon={<Volume2 size={18} />}
+              title="Playback Amplifier"
+              description="Software gain boost on incoming audio"
+              action={
+                <Switch
+                  checked={settings.playbackAmplifierEnabled}
+                  onCheckedChange={(checked) => updateSetting('playbackAmplifierEnabled', checked)}
+                />
+              }
+            />
+
+            <SettingItem
+              icon={<Mic size={18} />}
+              title="Recording Amplifier"
+              description="Software gain boost on outgoing mic audio"
+              action={
+                <Switch
+                  checked={settings.recordingAmplifierEnabled}
+                  onCheckedChange={(checked) => updateSetting('recordingAmplifierEnabled', checked)}
+                />
+              }
+            />
+
+            <SettingItem
+              icon={<Mic size={18} />}
+              title="Noise Suppression"
+              description="Reduce background noise on outgoing audio"
+              action={
+                <Switch
+                  checked={settings.noiseSuppressionEnabled}
+                  onCheckedChange={(checked) => updateSetting('noiseSuppressionEnabled', checked)}
+                />
+              }
+            />
+
+            <SettingItem
+              icon={<Bluetooth size={18} />}
+              title="Audio Mode on Send/Receive Only"
+              description="Activate BT SCO/speakerphone only during TX/RX"
+              action={
+                <Switch
+                  checked={settings.audioModeOnSendReceiveOnly}
+                  onCheckedChange={(checked) => updateSetting('audioModeOnSendReceiveOnly', checked)}
+                />
+              }
+            />
+
+          </div>
+        </section>
+
+        <section className="space-y-3">
+          <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest px-2">Behavior</h3>
+          <div className="bg-zinc-900/50 rounded-xl border border-white/5 overflow-hidden">
+
+            <SettingItem
+              icon={<Power size={18} />}
+              title="Start App on Boot"
+              description="Launch background service when device boots"
+              action={
+                <Switch
+                  checked={settings.startOnBoot}
+                  onCheckedChange={(checked) => updateSetting('startOnBoot', checked)}
+                />
+              }
+            />
+
+            <div className="p-4 border-b border-white/5">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="text-zinc-400"><Monitor size={18} /></div>
+                <div>
+                  <p className="text-sm font-medium text-zinc-200">Bring App to Foreground</p>
+                  <p className="text-[10px] text-zinc-500">When to bring app to front on incoming message</p>
+                </div>
+              </div>
+              <select
+                value={settings.foregroundOnMessage || 'never'}
+                onChange={(e) => updateSetting('foregroundOnMessage', e.target.value)}
+                className="w-full bg-zinc-800 border border-zinc-700 rounded px-2 py-1.5 text-sm text-zinc-200 mt-1"
+              >
+                <option value="never">Never</option>
+                <option value="screen_off">When screen is off</option>
+                <option value="always">When any message is received</option>
+              </select>
+            </div>
+
+            <SettingItem
+              icon={<Bell size={18} />}
+              title="Push Notifications"
+              description="Show notifications for incoming traffic"
+              action={
+                <Switch
+                  checked={settings.pushNotificationsEnabled}
+                  onCheckedChange={(checked) => updateSetting('pushNotificationsEnabled', checked)}
+                />
+              }
+            />
+
+            <SettingItem
+              icon={<Mic size={18} />}
+              title="Start on Incoming Voice"
+              description="Bring app to foreground on incoming voice"
+              action={
+                <Switch
+                  checked={settings.startOnVoiceMessage}
+                  onCheckedChange={(checked) => updateSetting('startOnVoiceMessage', checked)}
+                />
+              }
+            />
+
+            <SettingItem
+              icon={<BatteryCharging size={18} />}
+              title="Working in Background"
+              description="Request battery optimization exemption"
+              action={
+                <Switch
+                  checked={settings.workingInBackground}
+                  onCheckedChange={(checked) => updateSetting('workingInBackground', checked)}
+                />
+              }
+            />
+
+            <SettingItem
+              icon={<Moon size={18} />}
+              title="Wake Up Device"
+              description="Hold CPU wake lock to prevent sleep"
+              action={
+                <Switch
+                  checked={settings.wakeDevice}
+                  onCheckedChange={(checked) => updateSetting('wakeDevice', checked)}
                 />
               }
             />

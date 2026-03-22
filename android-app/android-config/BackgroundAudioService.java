@@ -141,14 +141,30 @@ public class BackgroundAudioService extends Service
         initSoundPool();
         initSignalingConnection();
 
-        PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
-        if (pm != null) {
-            cpuWakeLock = pm.newWakeLock(
-                PowerManager.PARTIAL_WAKE_LOCK,
-                "CommandComms::BackgroundCPU"
-            );
-            cpuWakeLock.acquire();
-            Log.d(DIAG_TAG, "CPU wake lock acquired");
+        boolean wakeDeviceEnabled = true;
+        try {
+            SharedPreferences settingsPrefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+            String settingsJson = settingsPrefs.getString("app_settings_json", null);
+            if (settingsJson != null) {
+                JSONObject appSettings = new JSONObject(settingsJson);
+                wakeDeviceEnabled = appSettings.optBoolean("wakeDevice", true);
+            }
+        } catch (Exception e) {
+            Log.e(DIAG_TAG, "Failed to read wakeDevice setting: " + e.getMessage());
+        }
+
+        if (wakeDeviceEnabled) {
+            PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
+            if (pm != null) {
+                cpuWakeLock = pm.newWakeLock(
+                    PowerManager.PARTIAL_WAKE_LOCK,
+                    "CommandComms::BackgroundCPU"
+                );
+                cpuWakeLock.acquire();
+                Log.d(DIAG_TAG, "CPU wake lock acquired");
+            }
+        } else {
+            Log.d(DIAG_TAG, "CPU wake lock skipped — wakeDevice setting is disabled");
         }
 
         audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
@@ -634,6 +650,8 @@ public class BackgroundAudioService extends Service
         Log.d(DIAG_TAG, "[Signaling] ptt:start from=" + fromUnitId + " channel=" + channelId
                 + " — cancelling RX grace timer and pre-connecting LiveKit");
 
+        handleIncomingMessageSettings(fromUnitId);
+        checkAndApplyAudioMode(true);
         cancelRxGraceTimer();
 
         NativeRadioEngine engine = NativeRadioEngine.getInstance(getApplicationContext());
@@ -668,6 +686,7 @@ public class BackgroundAudioService extends Service
     public void onPttEnd(String fromUnitId, String channelId) {
         Log.d(DIAG_TAG, "[Signaling] ptt:end from=" + fromUnitId + " channel=" + channelId
                 + " — scheduling RX grace disconnect in " + RX_GRACE_PERIOD_MS + "ms");
+        checkAndApplyAudioMode(false);
         scheduleRxGraceDisconnect();
     }
 
@@ -849,6 +868,7 @@ public class BackgroundAudioService extends Service
         boolean txResult = engine.startTransmit();
         Log.d(DIAG_TAG, "handlePttDown() — startTransmit() result=" + txResult);
 
+        checkAndApplyAudioMode(true);
         updateMediaSessionPlaybackState(true);
         sendPttSignaling("start");
         notifyUiPttState(true);
@@ -980,6 +1000,7 @@ public class BackgroundAudioService extends Service
         Log.d(DIAG_TAG, "handlePttUp() — stopTransmit() result=" + txResult);
 
         abandonAudioFocus();
+        checkAndApplyAudioMode(false);
         updateMediaSessionPlaybackState(false);
 
         sendPttSignaling("end");
@@ -1077,6 +1098,147 @@ public class BackgroundAudioService extends Service
                 Log.w(DIAG_TAG, "sendPttSignaling(" + action + ") FAILED: " + e.getMessage());
             }
         }).start();
+    }
+
+    private void handleIncomingMessageSettings(String fromUnitId) {
+        try {
+            SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+            String settingsJson = prefs.getString("app_settings_json", null);
+            if (settingsJson == null) return;
+
+            JSONObject settings = new JSONObject(settingsJson);
+
+            String foregroundMode = settings.optString("foregroundOnMessage", "never");
+            boolean startOnVoice = settings.optBoolean("startOnVoiceMessage", false);
+            boolean pushEnabled = settings.optBoolean("pushNotificationsEnabled", true);
+
+            boolean shouldBringToForeground = false;
+            if ("always".equals(foregroundMode)) {
+                shouldBringToForeground = true;
+            } else if ("screen_off".equals(foregroundMode)) {
+                PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
+                if (pm != null && !pm.isInteractive()) {
+                    shouldBringToForeground = true;
+                }
+            }
+
+            if (startOnVoice) {
+                shouldBringToForeground = true;
+            }
+
+            if (shouldBringToForeground) {
+                Log.d(DIAG_TAG, "handleIncomingMessageSettings — bringing app to foreground");
+                try {
+                    PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
+                    if (pm != null) {
+                        PowerManager.WakeLock screenLock = pm.newWakeLock(
+                            PowerManager.FULL_WAKE_LOCK
+                            | PowerManager.ACQUIRE_CAUSES_WAKEUP
+                            | PowerManager.ON_AFTER_RELEASE,
+                            "CommandComms::IncomingMessage"
+                        );
+                        screenLock.acquire(10 * 1000L);
+                    }
+                    Intent launchIntent = new Intent(this, MainActivity.class);
+                    launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                    startActivity(launchIntent);
+                } catch (Exception e) {
+                    Log.e(DIAG_TAG, "Failed to bring app to foreground: " + e.getMessage());
+                }
+            }
+
+            if (pushEnabled) {
+                try {
+                    String notifTitle = "Incoming Transmission";
+                    String notifText = fromUnitId != null ? "From: " + fromUnitId : "Incoming radio traffic";
+
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        NotificationChannel rxChannel = new NotificationChannel(
+                            "rx_traffic_channel",
+                            "Incoming Traffic",
+                            NotificationManager.IMPORTANCE_HIGH
+                        );
+                        rxChannel.setDescription("Notifications for incoming radio traffic");
+                        NotificationManager nm = getSystemService(NotificationManager.class);
+                        if (nm != null) nm.createNotificationChannel(rxChannel);
+                    }
+
+                    Intent notifIntent = new Intent(this, MainActivity.class);
+                    notifIntent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                    PendingIntent pendingIntent = PendingIntent.getActivity(
+                        this, 0, notifIntent,
+                        PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+                    );
+
+                    Notification notification = new NotificationCompat.Builder(this, "rx_traffic_channel")
+                        .setSmallIcon(android.R.drawable.ic_btn_speak_now)
+                        .setContentTitle(notifTitle)
+                        .setContentText(notifText)
+                        .setPriority(NotificationCompat.PRIORITY_HIGH)
+                        .setContentIntent(pendingIntent)
+                        .setAutoCancel(true)
+                        .build();
+
+                    NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+                    if (nm != null) {
+                        nm.notify(2001, notification);
+                    }
+                } catch (Exception e) {
+                    Log.e(DIAG_TAG, "Failed to post incoming traffic notification: " + e.getMessage());
+                }
+            }
+        } catch (Exception e) {
+            Log.e(DIAG_TAG, "handleIncomingMessageSettings error: " + e.getMessage());
+        }
+    }
+
+    private boolean audioModeOnSendReceiveOnly = false;
+    private boolean audioModeCurrentlyActive = false;
+
+    private void checkAndApplyAudioMode(boolean txRxActive) {
+        try {
+            SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+            String settingsJson = prefs.getString("app_settings_json", null);
+            if (settingsJson != null) {
+                JSONObject settings = new JSONObject(settingsJson);
+                audioModeOnSendReceiveOnly = settings.optBoolean("audioModeOnSendReceiveOnly", false);
+            }
+        } catch (Exception e) {
+            Log.w(DIAG_TAG, "checkAndApplyAudioMode — failed to read settings: " + e.getMessage());
+        }
+
+        if (!audioModeOnSendReceiveOnly) return;
+
+        if (txRxActive && !audioModeCurrentlyActive) {
+            audioModeCurrentlyActive = true;
+            if (audioManager != null) {
+                audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
+                if (audioManager.isBluetoothScoAvailableOffCall()) {
+                    try {
+                        audioManager.startBluetoothSco();
+                        audioManager.setBluetoothScoOn(true);
+                    } catch (Exception e) {
+                        Log.w(DIAG_TAG, "Failed to start BT SCO: " + e.getMessage());
+                    }
+                } else {
+                    audioManager.setSpeakerphoneOn(true);
+                }
+                Log.d(DIAG_TAG, "Audio mode activated for TX/RX");
+            }
+        } else if (!txRxActive && audioModeCurrentlyActive) {
+            audioModeCurrentlyActive = false;
+            if (audioManager != null) {
+                try {
+                    audioManager.setBluetoothScoOn(false);
+                    audioManager.stopBluetoothSco();
+                } catch (Exception e) {
+                    Log.w(DIAG_TAG, "Failed to stop BT SCO: " + e.getMessage());
+                }
+                audioManager.setSpeakerphoneOn(false);
+                audioManager.setMode(AudioManager.MODE_NORMAL);
+                Log.d(DIAG_TAG, "Audio mode deactivated after TX/RX");
+            }
+        }
     }
 
     private void notifyUiPttState(boolean transmitting) {

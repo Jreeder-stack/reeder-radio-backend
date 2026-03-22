@@ -118,8 +118,7 @@ public class PttAccessibilityService extends AccessibilityService {
         lastAction    = actionStr;
         lastTimestamp = eventTime;
 
-        // PTT — KEYCODE_F11 (141) primary, 230 fallback
-        if (PttKeyMapping.isPttKey(keyCode)) {
+        if (PttKeyMapping.isPttKey(keyCode, this)) {
             Log.d(DIAG_TAG, "[AccessibilitySvc] PTT matched keyCode=" + keyCode
                     + " (primary=" + PttKeyMapping.KEYCODE_PTT_PRIMARY
                     + ", fallback=" + PttKeyMapping.KEYCODE_PTT_FALLBACK + ")");

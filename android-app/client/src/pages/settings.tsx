@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { MobileFrame } from "@/components/layout/mobile-frame";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { Mic, Volume2, Bluetooth, MapPin, Database, ChevronRight, Info, Bell, Radio, AlertTriangle, Shield } from "lucide-react";
+import { Mic, Volume2, Bluetooth, MapPin, Database, ChevronRight, Info, Bell, Radio, AlertTriangle, Shield, Power, Monitor, Moon, BatteryCharging } from "lucide-react";
 import { useLocation } from "wouter";
 import { apiClient } from "@/lib/api-client";
 import { 
@@ -56,11 +56,13 @@ export default function SettingsPage() {
   const [capturingPtt, setCapturingPtt] = useState(false);
   const [showFreqPicker, setShowFreqPicker] = useState(false);
   const [dndPermissionGranted, setDndPermissionGranted] = useState(false);
+  const [batteryOptExempt, setBatteryOptExempt] = useState<boolean | null>(null);
 
   useEffect(() => {
     dndStateSetters = { setDndPermissionGranted, setSettings };
     
     loadSettings();
+    checkBatteryOptStatus();
     
     if (isNative) {
       setupAppLifecycle(syncDndPermissionState, () => {});
@@ -106,6 +108,20 @@ export default function SettingsPage() {
     const newSettings = { ...settings, [key]: value };
     setSettings(newSettings);
     await saveSettings(newSettings);
+  }
+
+  async function checkBatteryOptStatus() {
+    if (!isNative) {
+      setBatteryOptExempt(true);
+      return;
+    }
+    try {
+      const { checkBatteryOptimizationStatus } = await import('@/lib/background-service');
+      const exempt = await checkBatteryOptimizationStatus();
+      setBatteryOptExempt(exempt);
+    } catch (e) {
+      console.warn('Failed to check battery optimization status:', e);
+    }
   }
 
   async function handleEnableGps() {
@@ -195,14 +211,18 @@ export default function SettingsPage() {
               description="Use Volume Up as Push-to-Talk"
               action={
                 <Switch 
-                  checked={settings.pttKeyLabel.includes('Volume')}
+                  checked={settings.volumeButtonPtt}
                   onCheckedChange={(checked) => {
+                    const newSettings = { ...settings, volumeButtonPtt: checked };
                     if (checked) {
-                      updateSetting('pttKeyLabel', 'VolumeUp');
-                      updateSetting('pttKeyCode', 24);
+                      newSettings.pttKeyLabel = 'VolumeUp';
+                      newSettings.pttKeyCode = 24;
                     } else {
-                      clearPttMapping();
+                      newSettings.pttKeyLabel = 'Screen Button';
+                      newSettings.pttKeyCode = null;
                     }
+                    setSettings(newSettings);
+                    saveSettings(newSettings);
                   }}
                   data-testid="toggle-volume-ptt"
                 />
@@ -234,7 +254,13 @@ export default function SettingsPage() {
               icon={<Bluetooth size={18} />}
               title="Bluetooth Headset"
               description="Media Button Integration"
-              action={<Switch defaultChecked data-testid="toggle-bluetooth-ptt" />}
+              action={
+                <Switch 
+                  checked={settings.bluetoothMediaButtonPtt}
+                  onCheckedChange={(checked) => updateSetting('bluetoothMediaButtonPtt', checked)}
+                  data-testid="toggle-bluetooth-ptt"
+                />
+              }
             />
 
           </div>
@@ -339,6 +365,222 @@ export default function SettingsPage() {
                     }
                   }}
                   data-testid="toggle-alert-sounds"
+                />
+              }
+            />
+
+            <div className="p-4 border-b border-white/5">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="text-zinc-400"><Volume2 size={18} /></div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-zinc-200">Incoming Volume</p>
+                  <p className="text-[10px] text-zinc-500">{settings.incomingVolume}%</p>
+                </div>
+              </div>
+              <input type="range" min="0" max="100" value={settings.incomingVolume ?? 80}
+                onChange={(e) => updateSetting('incomingVolume', parseInt(e.target.value))}
+                className="w-full h-1.5 bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-cyan-500" />
+            </div>
+
+            <div className="p-4 border-b border-white/5">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-3">
+                  <div className="text-zinc-400"><Volume2 size={18} /></div>
+                  <div>
+                    <p className="text-sm font-medium text-zinc-200">Auto-increase Volume</p>
+                    <p className="text-[10px] text-zinc-500">Increase volume after 10 min inactivity</p>
+                  </div>
+                </div>
+                <Switch
+                  checked={settings.autoIncreaseVolumeEnabled}
+                  onCheckedChange={(checked) => updateSetting('autoIncreaseVolumeEnabled', checked)}
+                />
+              </div>
+              {settings.autoIncreaseVolumeEnabled && (
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="text-xs text-zinc-400">Level:</span>
+                  <input type="range" min="50" max="100" value={settings.autoIncreaseVolumeLevel ?? 100}
+                    onChange={(e) => updateSetting('autoIncreaseVolumeLevel', parseInt(e.target.value))}
+                    className="flex-1 h-1.5 bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-cyan-500" />
+                  <span className="text-xs text-cyan-400 w-8 text-right">{settings.autoIncreaseVolumeLevel ?? 100}%</span>
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 border-b border-white/5">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-3">
+                  <div className="text-zinc-400"><Volume2 size={18} /></div>
+                  <div>
+                    <p className="text-sm font-medium text-zinc-200">Playback Amplifier</p>
+                    <p className="text-[10px] text-zinc-500">Software gain boost on incoming audio</p>
+                  </div>
+                </div>
+                <Switch
+                  checked={settings.playbackAmplifierEnabled}
+                  onCheckedChange={(checked) => updateSetting('playbackAmplifierEnabled', checked)}
+                />
+              </div>
+              {settings.playbackAmplifierEnabled && (
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="text-xs text-zinc-400">Level:</span>
+                  <input type="range" min="0" max="100" value={settings.playbackAmplifierLevel ?? 50}
+                    onChange={(e) => updateSetting('playbackAmplifierLevel', parseInt(e.target.value))}
+                    className="flex-1 h-1.5 bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-cyan-500" />
+                  <span className="text-xs text-cyan-400 w-8 text-right">{settings.playbackAmplifierLevel ?? 50}%</span>
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 border-b border-white/5">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-3">
+                  <div className="text-zinc-400"><Mic size={18} /></div>
+                  <div>
+                    <p className="text-sm font-medium text-zinc-200">Recording Amplifier</p>
+                    <p className="text-[10px] text-zinc-500">Software gain boost on outgoing mic audio</p>
+                  </div>
+                </div>
+                <Switch
+                  checked={settings.recordingAmplifierEnabled}
+                  onCheckedChange={(checked) => updateSetting('recordingAmplifierEnabled', checked)}
+                />
+              </div>
+              {settings.recordingAmplifierEnabled && (
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="text-xs text-zinc-400">Level:</span>
+                  <input type="range" min="0" max="100" value={settings.recordingAmplifierLevel ?? 50}
+                    onChange={(e) => updateSetting('recordingAmplifierLevel', parseInt(e.target.value))}
+                    className="flex-1 h-1.5 bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-cyan-500" />
+                  <span className="text-xs text-cyan-400 w-8 text-right">{settings.recordingAmplifierLevel ?? 50}%</span>
+                </div>
+              )}
+            </div>
+
+            <SettingItem
+              icon={<Mic size={18} />}
+              title="Noise Suppression"
+              description="Reduce background noise on outgoing audio"
+              action={
+                <Switch
+                  checked={settings.noiseSuppressionEnabled}
+                  onCheckedChange={(checked) => updateSetting('noiseSuppressionEnabled', checked)}
+                />
+              }
+            />
+
+            <SettingItem
+              icon={<Bluetooth size={18} />}
+              title="Audio Mode on Send/Receive Only"
+              description="Activate BT SCO/speakerphone only during TX/RX"
+              action={
+                <Switch
+                  checked={settings.audioModeOnSendReceiveOnly}
+                  onCheckedChange={(checked) => updateSetting('audioModeOnSendReceiveOnly', checked)}
+                />
+              }
+            />
+
+          </div>
+        </section>
+
+        {/* Behavior Section */}
+        <section className="space-y-3">
+          <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest px-2">Behavior</h3>
+          <div className="bg-zinc-900/50 rounded-xl border border-white/5 overflow-hidden">
+
+            <SettingItem
+              icon={<Power size={18} />}
+              title="Start App on Boot"
+              description="Launch background service when device boots"
+              action={
+                <Switch
+                  checked={settings.startOnBoot}
+                  onCheckedChange={(checked) => updateSetting('startOnBoot', checked)}
+                />
+              }
+            />
+
+            <div className="p-4 border-b border-white/5">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="text-zinc-400"><Monitor size={18} /></div>
+                <div>
+                  <p className="text-sm font-medium text-zinc-200">Bring App to Foreground</p>
+                  <p className="text-[10px] text-zinc-500">When to bring app to front on incoming message</p>
+                </div>
+              </div>
+              <select
+                value={settings.foregroundOnMessage ?? 'never'}
+                onChange={(e) => updateSetting('foregroundOnMessage', e.target.value as AppSettings['foregroundOnMessage'])}
+                className="w-full bg-zinc-800 border border-zinc-700 rounded px-2 py-1.5 text-sm text-zinc-200 mt-1"
+              >
+                <option value="never">Never</option>
+                <option value="screen_off">When screen is off</option>
+                <option value="always">When any message is received</option>
+              </select>
+            </div>
+
+            <SettingItem
+              icon={<Bell size={18} />}
+              title="Push Notifications"
+              description="Show notifications for incoming traffic"
+              action={
+                <Switch
+                  checked={settings.pushNotificationsEnabled}
+                  onCheckedChange={(checked) => updateSetting('pushNotificationsEnabled', checked)}
+                />
+              }
+            />
+
+            <SettingItem
+              icon={<Mic size={18} />}
+              title="Start on Incoming Voice"
+              description="Bring app to foreground on incoming voice"
+              action={
+                <Switch
+                  checked={settings.startOnVoiceMessage}
+                  onCheckedChange={(checked) => updateSetting('startOnVoiceMessage', checked)}
+                />
+              }
+            />
+
+            <SettingItem
+              icon={<BatteryCharging size={18} />}
+              title="Working in Background"
+              description={
+                batteryOptExempt === true
+                  ? "Battery optimization exempt"
+                  : batteryOptExempt === false
+                    ? "Not exempt — tap to request"
+                    : "Request battery optimization exemption"
+              }
+              action={
+                <Switch
+                  checked={settings.workingInBackground}
+                  onCheckedChange={async (checked) => {
+                    if (checked && isNative) {
+                      try {
+                        const { requestBatteryOptExemption } = await import('@/lib/background-service');
+                        await requestBatteryOptExemption();
+                        await checkBatteryOptStatus();
+                      } catch (e) {
+                        console.warn('Battery optimization request failed:', e);
+                      }
+                    }
+                    updateSetting('workingInBackground', checked);
+                  }}
+                />
+              }
+            />
+
+            <SettingItem
+              icon={<Moon size={18} />}
+              title="Wake Up Device"
+              description="Hold CPU wake lock to prevent sleep"
+              action={
+                <Switch
+                  checked={settings.wakeDevice}
+                  onCheckedChange={(checked) => updateSetting('wakeDevice', checked)}
                 />
               }
             />
@@ -465,7 +707,15 @@ export default function SettingsPage() {
   );
 }
 
-function SettingItem({ icon, title, description, action, hasChevron }: any) {
+interface SettingItemProps {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  action: React.ReactNode;
+  hasChevron?: boolean;
+}
+
+function SettingItem({ icon, title, description, action, hasChevron }: SettingItemProps) {
   return (
     <div className="flex items-center justify-between p-4 border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors cursor-pointer active:bg-white/10">
       <div className="flex items-center gap-3">

@@ -291,7 +291,7 @@ public class MainActivity extends BridgeActivity {
     }
 
     private boolean isPttKey(int keyCode) {
-        return PttKeyMapping.isPttKey(keyCode);
+        return PttKeyMapping.isPttKey(keyCode, this);
     }
 
     private boolean isSide1Key(int keyCode) {

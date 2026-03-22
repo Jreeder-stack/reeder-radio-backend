@@ -60,7 +60,17 @@ export function processRadioVoice(inputStream) {
     waveShaperNode.oversample = '2x';
     
     gainNode = ctx.createGain();
-    gainNode.gain.value = 1.4;
+    let micGain = 1.4;
+    try {
+      const stored = localStorage.getItem('app_settings');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed.recordingAmplifierEnabled && parsed.recordingAmplifierLevel) {
+          micGain = 1.4 * (1.0 + parsed.recordingAmplifierLevel / 100);
+        }
+      }
+    } catch (e) {}
+    gainNode.gain.value = micGain;
     
     const destination = ctx.createMediaStreamDestination();
     

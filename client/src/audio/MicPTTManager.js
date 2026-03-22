@@ -300,10 +300,21 @@ class MicPTTManager {
       playPermitTone();
       console.log('[MicPTT] Permit tone played immediately');
 
+      let noiseSuppressionEnabled = true;
+      try {
+        const stored = localStorage.getItem('app_settings');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed.noiseSuppressionEnabled !== undefined) {
+            noiseSuppressionEnabled = parsed.noiseSuppressionEnabled;
+          }
+        }
+      } catch (e) {}
+
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
-          noiseSuppression: true,
+          noiseSuppression: noiseSuppressionEnabled,
           autoGainControl: true
         }
       });

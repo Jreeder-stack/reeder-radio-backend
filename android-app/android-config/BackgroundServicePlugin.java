@@ -142,6 +142,91 @@ public class BackgroundServicePlugin extends Plugin {
     }
 
     @PluginMethod
+    public void getSharedPreference(PluginCall call) {
+        String key = call.getString("key");
+        String defaultValue = call.getString("defaultValue", "");
+        
+        try {
+            SharedPreferences prefs = getContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+            String value = prefs.getString(key, defaultValue);
+            
+            JSObject ret = new JSObject();
+            ret.put("value", value);
+            call.resolve(ret);
+        } catch (Exception e) {
+            call.reject("Failed to read preference: " + e.getMessage());
+        }
+    }
+
+    @PluginMethod
+    public void setSharedPreference(PluginCall call) {
+        String key = call.getString("key");
+        String value = call.getString("value");
+        
+        try {
+            SharedPreferences prefs = getContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+            prefs.edit().putString(key, value).apply();
+            
+            JSObject ret = new JSObject();
+            ret.put("success", true);
+            call.resolve(ret);
+        } catch (Exception e) {
+            call.reject("Failed to write preference: " + e.getMessage());
+        }
+    }
+
+    @PluginMethod
+    public void syncSettingsToNative(PluginCall call) {
+        String settingsJson = call.getString("settings");
+        
+        try {
+            SharedPreferences prefs = getContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+            prefs.edit().putString("app_settings_json", settingsJson).apply();
+            Log.d(TAG, "syncSettingsToNative() — settings persisted to SharedPreferences");
+            
+            JSObject ret = new JSObject();
+            ret.put("success", true);
+            call.resolve(ret);
+        } catch (Exception e) {
+            call.reject("Failed to sync settings: " + e.getMessage());
+        }
+    }
+
+    @PluginMethod
+    public void checkBatteryOptimization(PluginCall call) {
+        try {
+            JSObject ret = new JSObject();
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                PowerManager pm = (PowerManager) getContext().getSystemService(Context.POWER_SERVICE);
+                boolean isExempt = pm != null && pm.isIgnoringBatteryOptimizations(getContext().getPackageName());
+                ret.put("isExempt", isExempt);
+            } else {
+                ret.put("isExempt", true);
+            }
+            call.resolve(ret);
+        } catch (Exception e) {
+            call.reject("Failed to check battery optimization: " + e.getMessage());
+        }
+    }
+
+    @PluginMethod
+    public void requestBatteryOptimizationExemption(PluginCall call) {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                Intent intent = new Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+                intent.setData(android.net.Uri.parse("package:" + getContext().getPackageName()));
+                getActivity().startActivity(intent);
+            }
+            
+            JSObject ret = new JSObject();
+            ret.put("success", true);
+            call.resolve(ret);
+        } catch (Exception e) {
+            call.reject("Failed to request battery optimization exemption: " + e.getMessage());
+        }
+    }
+
+    @PluginMethod
     public void clearConnectionInfo(PluginCall call) {
         Log.d(TAG, "clearConnectionInfo() — clearing persisted background connection state");
 

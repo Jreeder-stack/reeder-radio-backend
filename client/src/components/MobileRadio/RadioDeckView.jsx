@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { ChevronUp, ChevronDown, List, Settings, AlertTriangle, MessageSquare, Users, MoreHorizontal, Plus, Mail, GripVertical, Wifi, WifiOff, X, Loader2, Search } from 'lucide-react';
+import { ChevronUp, ChevronDown, List, Settings, AlertTriangle, MessageSquare, Users, MoreHorizontal, Plus, Mail, GripVertical, Wifi, WifiOff, X, Loader2, Search, Volume2, Mic, Bell, Bluetooth, Radio, Power, Smartphone, Monitor, Moon, BatteryCharging, ChevronRight } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useLiveKitConnection } from '../../context/LiveKitConnectionContext';
 import { useSignalingContext } from '../../context/SignalingContext';
@@ -10,7 +10,7 @@ import { updateUnitStatus } from '../../utils/api';
 import { DataPacket_Kind } from 'livekit-client';
 import { startBackgroundService, stopBackgroundService } from '../../plugins/backgroundService';
 import { updateServiceConnectionInfo } from '../../plugins/nativeLiveKit';
-import { setupAppLifecycle } from '../../lib/capacitor';
+import { setupAppLifecycle, getSettings, saveSettings, isNative, setHardwarePttKeyCode } from '../../lib/capacitor';
 import { signalingManager } from '../../signaling/SignalingManager';
 import { useClearAir } from './useClearAir';
 import { startTracking as gpsStartTracking, stopTracking as gpsStopTracking } from '../../services/gpsService.js';
@@ -157,6 +157,9 @@ export function RadioDeckView({ user, onLogout }) {
   const [showMessages, setShowMessages] = useState(false);
   const [showNewMessage, setShowNewMessage] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [appSettings, setAppSettings] = useState(null);
+  const [batteryOptExempt, setBatteryOptExempt] = useState(null);
+  const [capturingPttKey, setCapturingPttKey] = useState(false);
   const [contacts, setContacts] = useState([]);
   const [contactsLoading, setContactsLoading] = useState(false);
   const [personQueryForm, setPersonQueryForm] = useState({ firstName: '', lastName: '', dob: '' });
@@ -890,6 +893,49 @@ export function RadioDeckView({ user, onLogout }) {
     }
   };
 
+  useEffect(() => {
+    getSettings().then(s => setAppSettings(s));
+    if (isNative && showSettings && window.Capacitor?.Plugins?.BackgroundService?.checkBatteryOptimization) {
+      window.Capacitor.Plugins.BackgroundService.checkBatteryOptimization()
+        .then(r => setBatteryOptExempt(r?.isExempt ?? null))
+        .catch(() => setBatteryOptExempt(null));
+    }
+  }, [showSettings]);
+
+  useEffect(() => {
+    if (!capturingPttKey) return;
+    const handleKeyDown = async (e) => {
+      e.preventDefault();
+      if (appSettings) {
+        const newSettings = {
+          ...appSettings,
+          pttKeyCode: e.keyCode,
+          pttKeyLabel: e.key || `Key ${e.keyCode}`,
+        };
+        setAppSettings(newSettings);
+        await saveSettings(newSettings);
+        await setHardwarePttKeyCode(e.keyCode);
+      }
+      setCapturingPttKey(false);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [capturingPttKey, appSettings]);
+
+  const updateAppSetting = async (key, value) => {
+    if (!appSettings) return;
+    const newSettings = { ...appSettings, [key]: value };
+    setAppSettings(newSettings);
+    await saveSettings(newSettings);
+  };
+
+  const clearPttKeyMapping = () => {
+    if (!appSettings) return;
+    const newSettings = { ...appSettings, pttKeyCode: null, pttKeyLabel: 'Screen Button' };
+    setAppSettings(newSettings);
+    saveSettings(newSettings);
+  };
+
   const togglePTTVisibility = () => {
     const newValue = !showPTT;
     setShowPTT(newValue);
@@ -1356,14 +1402,15 @@ export function RadioDeckView({ user, onLogout }) {
               }}
             >SCNL</button>
             <button
-              onClick={() => setShowT320Menu(showT320Menu === 'clock' ? null : 'clock')}
+              onClick={() => setShowSettings(true)}
               style={{
                 background: 'none', border: 'none', padding: '6px 12px',
-                color: '#ffffff', fontSize: '14px', fontWeight: 'bold',
+                color: '#e0e0e0', fontSize: '14px', fontWeight: 'bold',
                 letterSpacing: '1px', cursor: 'pointer',
                 fontFamily: 'inherit',
+                display: 'flex', alignItems: 'center', gap: '4px',
               }}
-            >{clockTime}</button>
+            ><Settings className="w-4 h-4" />SET</button>
             <button
               onClick={() => setShowT320Menu(showT320Menu === 'batt' ? null : 'batt')}
               style={{
@@ -1759,84 +1806,326 @@ export function RadioDeckView({ user, onLogout }) {
       )}
 
       {showSettings && (
-        <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl border-2 border-black w-full max-w-sm flex flex-col">
-            <div className="p-4 border-b border-black">
-              <h2 className="text-black font-mono font-bold uppercase tracking-wider">Settings</h2>
-            </div>
-            <div className="p-4 space-y-4 max-h-[60vh] overflow-y-auto">
-              <label className="flex items-center justify-between">
-                <span className="text-black font-medium">Show PTT Button</span>
-                <input
-                  type="checkbox"
-                  checked={showPTT}
-                  onChange={togglePTTVisibility}
-                  className="w-5 h-5"
-                />
-              </label>
-              
-              <div className="pt-4 border-t border-gray-200 space-y-3">
-                <h3 className="text-sm font-bold text-gray-700 uppercase">Widget Configuration</h3>
-                
-                <div className="flex items-center justify-between">
-                  <span className="text-black font-medium text-sm">F3 Button</span>
-                  <select
-                    value={widgetConfig.f3}
-                    onChange={(e) => handleWidgetConfigChange('f3', e.target.value)}
-                    className="border border-gray-300 rounded px-2 py-1 text-sm text-black bg-white"
-                  >
-                    {F3F4_WIDGET_OPTIONS.map(opt => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </select>
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <span className="text-black font-medium text-sm">F4 Button</span>
-                  <select
-                    value={widgetConfig.f4}
-                    onChange={(e) => handleWidgetConfigChange('f4', e.target.value)}
-                    className="border border-gray-300 rounded px-2 py-1 text-sm text-black bg-white"
-                  >
-                    {F3F4_WIDGET_OPTIONS.map(opt => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </select>
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <span className="text-black font-medium text-sm">Large Widget</span>
-                  <select
-                    value={widgetConfig.widget}
-                    onChange={(e) => handleWidgetConfigChange('widget', e.target.value)}
-                    className="border border-gray-300 rounded px-2 py-1 text-sm text-black bg-white"
-                  >
-                    {MAIN_WIDGET_OPTIONS.map(opt => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </select>
-                </div>
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+          <div className="bg-zinc-900 w-full h-full flex flex-col overflow-hidden">
+            <div className="p-4 border-b border-zinc-700 flex items-center justify-between bg-zinc-800">
+              <div className="flex items-center gap-2">
+                <Settings className="w-5 h-5 text-cyan-400" />
+                <h2 className="text-white font-mono font-bold uppercase tracking-wider text-sm">Settings</h2>
               </div>
-              
-              <div className="pt-4 border-t border-gray-200">
-                <button
-                  onClick={() => {
-                    setShowSettings(false);
-                    if (onLogout) onLogout();
-                  }}
-                  className="w-full py-2 bg-red-600 text-white font-mono uppercase rounded font-bold"
-                >
-                  Log Out
-                </button>
-              </div>
-            </div>
-            <div className="p-4 border-t border-black">
-              <button
-                onClick={() => setShowSettings(false)}
-                className="w-full py-2 bg-black text-white font-mono uppercase rounded"
-              >
-                Close
+              <button onClick={() => { setShowSettings(false); setCapturingPttKey(false); }} className="text-zinc-400 hover:text-white">
+                <X className="w-5 h-5" />
               </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-5">
+              {!appSettings ? (
+                <div className="flex items-center justify-center h-32">
+                  <Loader2 className="w-6 h-6 animate-spin text-zinc-500" />
+                </div>
+              ) : (
+                <>
+                  <section>
+                    <h3 className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest px-1 mb-2">Audio</h3>
+                    <div className="bg-zinc-800/60 rounded-xl border border-zinc-700/50 overflow-hidden">
+                      <div className="p-3 border-b border-zinc-700/30">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Volume2 size={16} className="text-zinc-400" />
+                          <span className="text-sm text-zinc-200">Incoming Volume</span>
+                          <span className="text-xs text-cyan-400 ml-auto">{appSettings.incomingVolume}%</span>
+                        </div>
+                        <input type="range" min="0" max="100" value={appSettings.incomingVolume}
+                          onChange={(e) => updateAppSetting('incomingVolume', parseInt(e.target.value))}
+                          className="w-full h-1.5 bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-cyan-500"
+                        />
+                      </div>
+
+                      <div className="p-3 border-b border-zinc-700/30">
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-2">
+                            <Volume2 size={16} className="text-zinc-400" />
+                            <span className="text-sm text-zinc-200">Auto-increase after inactivity</span>
+                          </div>
+                          <label className="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" checked={appSettings.autoIncreaseVolumeEnabled}
+                              onChange={(e) => updateAppSetting('autoIncreaseVolumeEnabled', e.target.checked)}
+                              className="sr-only peer" />
+                            <div className="w-9 h-5 bg-zinc-600 peer-checked:bg-cyan-500 rounded-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full"></div>
+                          </label>
+                        </div>
+                        <p className="text-[10px] text-zinc-500 mb-1">After 10 min of no incoming messages, increase to set level</p>
+                        {appSettings.autoIncreaseVolumeEnabled && (
+                          <div className="flex items-center gap-2 mt-2">
+                            <span className="text-xs text-zinc-400">Level:</span>
+                            <input type="range" min="50" max="100" value={appSettings.autoIncreaseVolumeLevel}
+                              onChange={(e) => updateAppSetting('autoIncreaseVolumeLevel', parseInt(e.target.value))}
+                              className="flex-1 h-1.5 bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-cyan-500"
+                            />
+                            <span className="text-xs text-cyan-400 w-8 text-right">{appSettings.autoIncreaseVolumeLevel}%</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="p-3 border-b border-zinc-700/30">
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-2">
+                            <Volume2 size={16} className="text-zinc-400" />
+                            <span className="text-sm text-zinc-200">Playback Amplifier</span>
+                          </div>
+                          <label className="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" checked={appSettings.playbackAmplifierEnabled}
+                              onChange={(e) => updateAppSetting('playbackAmplifierEnabled', e.target.checked)}
+                              className="sr-only peer" />
+                            <div className="w-9 h-5 bg-zinc-600 peer-checked:bg-cyan-500 rounded-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full"></div>
+                          </label>
+                        </div>
+                        <p className="text-[10px] text-zinc-500">Software gain boost on incoming audio</p>
+                        {appSettings.playbackAmplifierEnabled && (
+                          <div className="flex items-center gap-2 mt-2">
+                            <span className="text-xs text-zinc-400">Gain:</span>
+                            <input type="range" min="0" max="100" value={appSettings.playbackAmplifierLevel}
+                              onChange={(e) => updateAppSetting('playbackAmplifierLevel', parseInt(e.target.value))}
+                              className="flex-1 h-1.5 bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-cyan-500"
+                            />
+                            <span className="text-xs text-cyan-400 w-8 text-right">{appSettings.playbackAmplifierLevel}%</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="p-3 border-b border-zinc-700/30">
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-2">
+                            <Mic size={16} className="text-zinc-400" />
+                            <span className="text-sm text-zinc-200">Recording Amplifier</span>
+                          </div>
+                          <label className="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" checked={appSettings.recordingAmplifierEnabled}
+                              onChange={(e) => updateAppSetting('recordingAmplifierEnabled', e.target.checked)}
+                              className="sr-only peer" />
+                            <div className="w-9 h-5 bg-zinc-600 peer-checked:bg-cyan-500 rounded-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full"></div>
+                          </label>
+                        </div>
+                        <p className="text-[10px] text-zinc-500">Software gain boost on outgoing mic audio</p>
+                        {appSettings.recordingAmplifierEnabled && (
+                          <div className="flex items-center gap-2 mt-2">
+                            <span className="text-xs text-zinc-400">Gain:</span>
+                            <input type="range" min="0" max="100" value={appSettings.recordingAmplifierLevel}
+                              onChange={(e) => updateAppSetting('recordingAmplifierLevel', parseInt(e.target.value))}
+                              className="flex-1 h-1.5 bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-cyan-500"
+                            />
+                            <span className="text-xs text-cyan-400 w-8 text-right">{appSettings.recordingAmplifierLevel}%</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <SettingsToggleItem
+                        icon={<Mic size={16} />}
+                        title="Noise Suppression"
+                        description="Reduce background noise on outgoing audio"
+                        checked={appSettings.noiseSuppressionEnabled}
+                        onChange={(v) => updateAppSetting('noiseSuppressionEnabled', v)}
+                      />
+
+                      <SettingsToggleItem
+                        icon={<Bluetooth size={16} />}
+                        title="Audio mode only on send/receive"
+                        description="Activate BT SCO/speakerphone only during TX/RX"
+                        checked={appSettings.audioModeOnSendReceiveOnly}
+                        onChange={(v) => updateAppSetting('audioModeOnSendReceiveOnly', v)}
+                      />
+                    </div>
+                  </section>
+
+                  <section>
+                    <h3 className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest px-1 mb-2">PTT Button</h3>
+                    <div className="bg-zinc-800/60 rounded-xl border border-zinc-700/50 overflow-hidden">
+                      <div
+                        className="flex items-center justify-between p-3 border-b border-zinc-700/30 cursor-pointer hover:bg-zinc-700/30 active:bg-zinc-700/50"
+                        onClick={() => setCapturingPttKey(true)}
+                      >
+                        <div className="flex items-center gap-2">
+                          <Radio size={16} className="text-zinc-400" />
+                          <div>
+                            <p className="text-sm text-zinc-200">Hardware PTT Key</p>
+                            <p className="text-[10px] text-zinc-500">
+                              {capturingPttKey ? 'Press any key now...' : `Current: ${appSettings.pttKeyLabel}`}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className={cn("text-xs font-bold", capturingPttKey ? 'text-yellow-400 animate-pulse' : 'text-cyan-400')}>
+                            {capturingPttKey ? 'LISTENING' : 'SET'}
+                          </span>
+                          <ChevronRight size={14} className="text-zinc-600" />
+                        </div>
+                      </div>
+
+                      <SettingsToggleItem
+                        icon={<Volume2 size={16} />}
+                        title="Volume Button PTT"
+                        description="Use volume button as Push-to-Talk"
+                        checked={appSettings.volumeButtonPtt}
+                        onChange={async (v) => {
+                          const newSettings = { ...appSettings, volumeButtonPtt: v };
+                          if (v) {
+                            newSettings.pttKeyLabel = 'VolumeUp';
+                            newSettings.pttKeyCode = 24;
+                          } else if (appSettings.pttKeyLabel === 'VolumeUp') {
+                            newSettings.pttKeyLabel = 'Screen Button';
+                            newSettings.pttKeyCode = null;
+                          }
+                          setAppSettings(newSettings);
+                          await saveSettings(newSettings);
+                        }}
+                      />
+
+                      <SettingsToggleItem
+                        icon={<Bluetooth size={16} />}
+                        title="Bluetooth Headset Media Button"
+                        description="Use BT headset media button for PTT"
+                        checked={appSettings.bluetoothMediaButtonPtt}
+                        onChange={(v) => updateAppSetting('bluetoothMediaButtonPtt', v)}
+                      />
+                    </div>
+                  </section>
+
+                  <section>
+                    <h3 className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest px-1 mb-2">Behavior</h3>
+                    <div className="bg-zinc-800/60 rounded-xl border border-zinc-700/50 overflow-hidden">
+                      <SettingsToggleItem
+                        icon={<Power size={16} />}
+                        title="Start App on Boot"
+                        description="Launch background service when device boots"
+                        checked={appSettings.startOnBoot}
+                        onChange={(v) => updateAppSetting('startOnBoot', v)}
+                      />
+
+                      <div className="p-3 border-b border-zinc-700/30">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Monitor size={16} className="text-zinc-400" />
+                            <div>
+                              <p className="text-sm text-zinc-200">Bring App to Foreground</p>
+                              <p className="text-[10px] text-zinc-500">When to bring app to front on incoming message</p>
+                            </div>
+                          </div>
+                        </div>
+                        <select
+                          value={appSettings.foregroundOnMessage}
+                          onChange={(e) => updateAppSetting('foregroundOnMessage', e.target.value)}
+                          className="mt-2 w-full bg-zinc-700 border border-zinc-600 rounded px-2 py-1.5 text-sm text-zinc-200"
+                        >
+                          <option value="never">Never</option>
+                          <option value="screen_off">When screen is off</option>
+                          <option value="always">When any message is received</option>
+                        </select>
+                      </div>
+
+                      <SettingsToggleItem
+                        icon={<Bell size={16} />}
+                        title="Push Notifications"
+                        description="Show notifications for incoming radio traffic"
+                        checked={appSettings.pushNotificationsEnabled}
+                        onChange={(v) => updateAppSetting('pushNotificationsEnabled', v)}
+                      />
+
+                      <SettingsToggleItem
+                        icon={<Mic size={16} />}
+                        title="Start on Incoming Voice"
+                        description="Bring app to foreground on incoming voice message"
+                        checked={appSettings.startOnVoiceMessage}
+                        onChange={(v) => updateAppSetting('startOnVoiceMessage', v)}
+                      />
+
+                      <SettingsToggleItem
+                        icon={<BatteryCharging size={16} />}
+                        title="Working in Background"
+                        description={
+                          !isNative ? "Keep service active in background"
+                            : batteryOptExempt === true ? "Battery optimization exempt"
+                            : batteryOptExempt === false ? "Not exempt — tap to request"
+                            : "Request battery optimization exemption"
+                        }
+                        checked={appSettings.workingInBackground}
+                        onChange={async (v) => {
+                          if (v && isNative && window.Capacitor?.Plugins?.BackgroundService) {
+                            try {
+                              await window.Capacitor.Plugins.BackgroundService.requestBatteryOptimizationExemption();
+                              const r = await window.Capacitor.Plugins.BackgroundService.checkBatteryOptimization();
+                              setBatteryOptExempt(r?.isExempt ?? null);
+                            } catch (e) {
+                              console.warn('Battery optimization request failed:', e);
+                            }
+                          }
+                          updateAppSetting('workingInBackground', v);
+                        }}
+                      />
+
+                      <SettingsToggleItem
+                        icon={<Moon size={16} />}
+                        title="Wake Up Device"
+                        description="Hold CPU wake lock to prevent sleep"
+                        checked={appSettings.wakeDevice}
+                        onChange={(v) => updateAppSetting('wakeDevice', v)}
+                      />
+                    </div>
+                  </section>
+
+                  <section>
+                    <h3 className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest px-1 mb-2">UI Configuration</h3>
+                    <div className="bg-zinc-800/60 rounded-xl border border-zinc-700/50 overflow-hidden">
+                      <SettingsToggleItem
+                        icon={<Smartphone size={16} />}
+                        title="Show PTT Button"
+                        description="Show on-screen Push-to-Talk button"
+                        checked={showPTT}
+                        onChange={togglePTTVisibility}
+                      />
+
+                      <div className="p-3 border-b border-zinc-700/30 space-y-2">
+                        <p className="text-sm text-zinc-200">Widget Configuration</p>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-zinc-400">F3 Button</span>
+                          <select value={widgetConfig.f3} onChange={(e) => handleWidgetConfigChange('f3', e.target.value)}
+                            className="bg-zinc-700 border border-zinc-600 rounded px-2 py-1 text-xs text-zinc-200">
+                            {F3F4_WIDGET_OPTIONS.map(opt => (
+                              <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-zinc-400">F4 Button</span>
+                          <select value={widgetConfig.f4} onChange={(e) => handleWidgetConfigChange('f4', e.target.value)}
+                            className="bg-zinc-700 border border-zinc-600 rounded px-2 py-1 text-xs text-zinc-200">
+                            {F3F4_WIDGET_OPTIONS.map(opt => (
+                              <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-zinc-400">Large Widget</span>
+                          <select value={widgetConfig.widget} onChange={(e) => handleWidgetConfigChange('widget', e.target.value)}
+                            className="bg-zinc-700 border border-zinc-600 rounded px-2 py-1 text-xs text-zinc-200">
+                            {MAIN_WIDGET_OPTIONS.map(opt => (
+                              <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+
+                  <button
+                    onClick={() => {
+                      setShowSettings(false);
+                      if (onLogout) onLogout();
+                    }}
+                    className="w-full py-3 border border-red-800/50 text-red-500 hover:bg-red-950/30 rounded-lg font-bold tracking-widest uppercase text-sm"
+                  >
+                    Disconnect & Logout
+                  </button>
+                  <div className="h-4" />
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -1982,6 +2271,26 @@ export function RadioDeckView({ user, onLogout }) {
       <BoloWidget show={showBolo} onClose={() => setShowBolo(false)} />
       <MessagesWidget show={showMessages} onClose={() => setShowMessages(false)} />
       <NewMessageModal show={showNewMessage} onClose={() => setShowNewMessage(false)} />
+    </div>
+  );
+}
+
+function SettingsToggleItem({ icon, title, description, checked, onChange }) {
+  return (
+    <div className="flex items-center justify-between p-3 border-b border-zinc-700/30 last:border-0">
+      <div className="flex items-center gap-2 flex-1 min-w-0">
+        <div className="text-zinc-400 flex-shrink-0">{icon}</div>
+        <div className="min-w-0">
+          <p className="text-sm text-zinc-200">{title}</p>
+          <p className="text-[10px] text-zinc-500">{description}</p>
+        </div>
+      </div>
+      <label className="relative inline-flex items-center cursor-pointer flex-shrink-0 ml-2">
+        <input type="checkbox" checked={checked}
+          onChange={(e) => onChange(e.target.checked)}
+          className="sr-only peer" />
+        <div className="w-9 h-5 bg-zinc-600 peer-checked:bg-cyan-500 rounded-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full"></div>
+      </label>
     </div>
   );
 }

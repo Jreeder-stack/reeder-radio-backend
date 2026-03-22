@@ -81,11 +81,67 @@ export function getServiceState() {
   };
 }
 
+export async function syncSettingsToNative(settings) {
+  try {
+    await BackgroundService.syncSettingsToNative({ settings: JSON.stringify(settings) });
+    console.log('[BackgroundService] Settings synced to native SharedPreferences');
+    return { success: true };
+  } catch (error) {
+    console.error('[BackgroundService] Failed to sync settings:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function checkBatteryOptimization() {
+  try {
+    const result = await BackgroundService.checkBatteryOptimization();
+    return result.isExempt;
+  } catch (error) {
+    console.error('[BackgroundService] Failed to check battery optimization:', error);
+    return false;
+  }
+}
+
+export async function requestBatteryOptimizationExemption() {
+  try {
+    const result = await BackgroundService.requestBatteryOptimizationExemption();
+    return result.success;
+  } catch (error) {
+    console.error('[BackgroundService] Failed to request battery optimization exemption:', error);
+    return false;
+  }
+}
+
+export async function getSharedPreference(key, defaultValue = '') {
+  try {
+    const result = await BackgroundService.getSharedPreference({ key, defaultValue });
+    return result.value;
+  } catch (error) {
+    console.error('[BackgroundService] Failed to get preference:', error);
+    return defaultValue;
+  }
+}
+
+export async function setSharedPreference(key, value) {
+  try {
+    await BackgroundService.setSharedPreference({ key, value });
+    return true;
+  } catch (error) {
+    console.error('[BackgroundService] Failed to set preference:', error);
+    return false;
+  }
+}
+
 export default {
   startBackgroundService,
   stopBackgroundService,
   acquireWakeLock,
   releaseWakeLock,
   isServiceRunning,
-  getServiceState
+  getServiceState,
+  syncSettingsToNative,
+  checkBatteryOptimization,
+  requestBatteryOptimizationExemption,
+  getSharedPreference,
+  setSharedPreference
 };

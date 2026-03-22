@@ -112,6 +112,8 @@ export function LiveKitConnectionProvider({ children, user }) {
     listenerRemoversRef.current.forEach(remove => remove());
     listenerRemoversRef.current = [];
     
+    livekitManager.startSettingsListener();
+    
     listenerRemoversRef.current.push(
       livekitManager.addLevelUpdateListener((channelName, level) => {
         const channels = useDispatchStore.getState().channels;

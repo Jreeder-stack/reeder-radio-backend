@@ -15,6 +15,23 @@ const DEFAULT_SETTINGS = {
   dndOverrideEmergency: true,
   dndOverrideCadPriority: true,
   dndOverrideOfficerDown: true,
+  incomingVolume: 80,
+  autoIncreaseVolumeEnabled: false,
+  autoIncreaseVolumeLevel: 100,
+  playbackAmplifierEnabled: false,
+  playbackAmplifierLevel: 50,
+  recordingAmplifierEnabled: false,
+  recordingAmplifierLevel: 50,
+  noiseSuppressionEnabled: false,
+  audioModeOnSendReceiveOnly: false,
+  volumeButtonPtt: false,
+  bluetoothMediaButtonPtt: true,
+  startOnBoot: true,
+  foregroundOnMessage: 'never',
+  pushNotificationsEnabled: true,
+  startOnVoiceMessage: false,
+  workingInBackground: true,
+  wakeDevice: true,
 };
 
 export async function getSettings() {
@@ -32,6 +49,18 @@ export async function getSettings() {
 export async function saveSettings(settings) {
   try {
     localStorage.setItem('app_settings', JSON.stringify(settings));
+    window.dispatchEvent(new CustomEvent('settings-changed', { detail: settings }));
+
+    if (isNative && window.Capacitor?.Plugins?.BackgroundService?.syncSettingsToNative) {
+      try {
+        await window.Capacitor.Plugins.BackgroundService.syncSettingsToNative({
+          settings: JSON.stringify(settings),
+        });
+      } catch (syncErr) {
+        console.warn('[Capacitor] Failed to sync settings to native:', syncErr);
+      }
+    }
+
     return true;
   } catch (e) {
     console.error('Failed to save settings:', e);

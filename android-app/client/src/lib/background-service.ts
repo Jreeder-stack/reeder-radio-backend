@@ -11,11 +11,55 @@ export interface BackgroundServicePlugin {
     channelName?: string;
   }): Promise<{ success: boolean }>;
   clearConnectionInfo(): Promise<{ success: boolean }>;
+  syncSettingsToNative(options: { settings: string }): Promise<{ success: boolean }>;
+  checkBatteryOptimization(): Promise<{ isExempt: boolean }>;
+  requestBatteryOptimizationExemption(): Promise<{ success: boolean }>;
 }
 
 const BackgroundService = registerPlugin<BackgroundServicePlugin>('BackgroundService');
 
 export { BackgroundService };
+
+export async function syncAppSettingsToNative(settings: Record<string, any>): Promise<void> {
+  if (Capacitor.getPlatform() !== 'android') {
+    return;
+  }
+
+  try {
+    await BackgroundService.syncSettingsToNative({ settings: JSON.stringify(settings) });
+    console.log('[BackgroundService] App settings synced to native SharedPreferences');
+  } catch (error) {
+    console.warn('[BackgroundService] Failed to sync settings to native:', error);
+  }
+}
+
+export async function checkBatteryOptimizationStatus(): Promise<boolean> {
+  if (Capacitor.getPlatform() !== 'android') {
+    return true;
+  }
+
+  try {
+    const result = await BackgroundService.checkBatteryOptimization();
+    return result.isExempt;
+  } catch (error) {
+    console.warn('[BackgroundService] Failed to check battery optimization:', error);
+    return false;
+  }
+}
+
+export async function requestBatteryOptExemption(): Promise<boolean> {
+  if (Capacitor.getPlatform() !== 'android') {
+    return true;
+  }
+
+  try {
+    const result = await BackgroundService.requestBatteryOptimizationExemption();
+    return result.success;
+  } catch (error) {
+    console.warn('[BackgroundService] Failed to request battery opt exemption:', error);
+    return false;
+  }
+}
 
 export async function syncBackgroundConnectionInfo(options: {
   serverBaseUrl?: string | null;

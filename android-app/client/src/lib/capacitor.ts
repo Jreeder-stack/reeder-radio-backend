@@ -69,6 +69,23 @@ export interface AppSettings {
   dndOverrideEmergency: boolean;
   dndOverrideCadPriority: boolean;
   dndOverrideOfficerDown: boolean;
+  incomingVolume: number;
+  autoIncreaseVolumeEnabled: boolean;
+  autoIncreaseVolumeLevel: number;
+  playbackAmplifierEnabled: boolean;
+  playbackAmplifierLevel: number;
+  recordingAmplifierEnabled: boolean;
+  recordingAmplifierLevel: number;
+  noiseSuppressionEnabled: boolean;
+  audioModeOnSendReceiveOnly: boolean;
+  volumeButtonPtt: boolean;
+  bluetoothMediaButtonPtt: boolean;
+  startOnBoot: boolean;
+  foregroundOnMessage: 'never' | 'screen_off' | 'always';
+  pushNotificationsEnabled: boolean;
+  startOnVoiceMessage: boolean;
+  workingInBackground: boolean;
+  wakeDevice: boolean;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -82,6 +99,23 @@ const DEFAULT_SETTINGS: AppSettings = {
   dndOverrideEmergency: true,
   dndOverrideCadPriority: true,
   dndOverrideOfficerDown: true,
+  incomingVolume: 80,
+  autoIncreaseVolumeEnabled: false,
+  autoIncreaseVolumeLevel: 100,
+  playbackAmplifierEnabled: false,
+  playbackAmplifierLevel: 50,
+  recordingAmplifierEnabled: false,
+  recordingAmplifierLevel: 50,
+  noiseSuppressionEnabled: false,
+  audioModeOnSendReceiveOnly: false,
+  volumeButtonPtt: false,
+  bluetoothMediaButtonPtt: true,
+  startOnBoot: true,
+  foregroundOnMessage: 'never',
+  pushNotificationsEnabled: true,
+  startOnVoiceMessage: false,
+  workingInBackground: true,
+  wakeDevice: true,
 };
 
 export async function getSettings(): Promise<AppSettings> {
@@ -101,6 +135,12 @@ export async function saveSettings(settings: AppSettings): Promise<void> {
     localStorage.setItem('app_settings', data);
   } else {
     await Preferences.set({ key: 'app_settings', value: data });
+    try {
+      const { syncAppSettingsToNative } = await import('./background-service');
+      await syncAppSettingsToNative(settings);
+    } catch (e) {
+      console.warn('[Capacitor] Failed to sync settings to native layer:', e);
+    }
   }
   
   window.dispatchEvent(new CustomEvent('settings-changed', { detail: settings }));
