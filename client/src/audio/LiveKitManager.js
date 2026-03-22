@@ -434,6 +434,22 @@ class LiveKitManager {
     return this.audioContext;
   }
 
+  async prepareConnection(url, token) {
+    if (this._warmRoom) {
+      return;
+    }
+    const t0 = performance.now();
+    try {
+      const room = new Room();
+      this._warmRoom = room;
+      await room.prepareConnection(url || LIVEKIT_URL, token);
+      console.log(`[LiveKit] prepareConnection warm-up done in ${(performance.now() - t0).toFixed(1)}ms (token=${!!token})`);
+    } catch (err) {
+      console.warn('[LiveKit] prepareConnection warm-up failed:', err.message);
+      this._warmRoom = null;
+    }
+  }
+
   async connect(channelName, identity) {
     if (this.disconnectPromise) {
       console.log(`[LiveKit] Waiting for disconnect to complete before connecting to ${channelName}`);
@@ -469,6 +485,8 @@ class LiveKitManager {
       return this._doConnectNative(channelName, identity);
     }
 
+    const tTotal = performance.now();
+
     const room = new Room({
       adaptiveStream: true,
       dynacast: true,
@@ -482,11 +500,23 @@ class LiveKitManager {
     this._setupRoomEventHandlers(room, channelName);
 
     try {
+      const tToken = performance.now();
       const { token, url: livekitUrl } = await getToken(identity, channelName);
+      console.log(`[LiveKit] Token fetch for ${channelName} took ${(performance.now() - tToken).toFixed(1)}ms`);
+
+      const warmUpReady = !!this._warmRoom;
+      console.log(`[LiveKit] Warm-up room available before connect: ${warmUpReady}`);
+      if (this._warmRoom) {
+        try { this._warmRoom.disconnect(); } catch (_) {}
+        this._warmRoom = null;
+      }
+
+      const tConnect = performance.now();
       await room.connect(livekitUrl || LIVEKIT_URL, token);
+      console.log(`[LiveKit] room.connect() for ${channelName} took ${(performance.now() - tConnect).toFixed(1)}ms`);
       
       this.rooms.set(channelName, room);
-      console.log(`[LiveKit] Connected to ${channelName}`);
+      console.log(`[LiveKit] Connected to ${channelName} (total ${(performance.now() - tTotal).toFixed(1)}ms)`);
       
       notifyChannelJoin(channelName, identity);
       
@@ -497,6 +527,11 @@ class LiveKitManager {
     } catch (err) {
       console.error(`[LiveKit] Failed to connect to ${channelName}:`, err);
       
+      if (this._warmRoom) {
+        try { this._warmRoom.disconnect(); } catch (_) {}
+        this._warmRoom = null;
+      }
+
       try {
         room.disconnect();
       } catch (disconnectErr) {

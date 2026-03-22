@@ -292,8 +292,12 @@ export function LiveKitConnectionProvider({ children, user }) {
     recordActivity();
     
     try {
-      await preCaptureForMobile();
-      await livekitManager.connect(channelName, identity);
+      const tConnect = performance.now();
+      await Promise.all([
+        preCaptureForMobile(),
+        livekitManager.connect(channelName, identity)
+      ]);
+      console.log(`[LiveKitConnection] connectToChannel total for ${channelName}: ${(performance.now() - tConnect).toFixed(1)}ms`);
       connectionStartTimes.current.set(channelName, Date.now());
       
       if (markActive) {
@@ -567,6 +571,8 @@ export function LiveKitConnectionProvider({ children, user }) {
         const fetchedChannels = data.channels || [];
         console.log('[LiveKitConnection] Fetched', fetchedChannels.length, 'channels');
         setChannels(fetchedChannels);
+
+        livekitManager.prepareConnection();
         
         if (fetchedChannels.length > 0) {
           await initializeConnections(identity, fetchedChannels);
