@@ -28,9 +28,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 private const val TAG = "[PTT-DIAG]"
 private const val NOTIFICATION_ID = 1001
-private const val EMERGENCY_NOTIFICATION_ID = 1002
 private const val CHANNEL_ID = "ptt_service"
-private const val CHANNEL_EMERGENCY = "channel_emergency"
 private const val GRACE_PERIOD_MS = 59_000L
 private const val ACTIVITY_WINDOW_MS = 10_000L
 
@@ -101,14 +99,14 @@ class BackgroundAudioService : Service() {
     private val rxConnecting = AtomicBoolean(false)
 
     /**
-     * Coroutine running the 3-second arming countdown when the emergency button is held.
-     * Null when not arming. Cancelled by handleEmergencyUp() if the button is released early.
+     * Coroutine running the emergency activation. Null when not activating.
+     * Guards against duplicate DOWN events (race between key event and vendor broadcast).
      */
-    private var emergencyArmingJob: Job? = null
+    private var emergencyActivatingJob: Job? = null
 
     /**
-     * True after the 3-second arming countdown completes and the emergency:start signal
-     * has been sent. Used to route a second button press to the ViewModel cancel-hold flow.
+     * True after emergency:start has been signalled. Used to route a second button press
+     * to the ViewModel cancel-hold flow.
      */
     @Volatile private var emergencyActive = false
 
@@ -375,16 +373,16 @@ class BackgroundAudioService : Service() {
     }
 
     private fun handleEmergencyDown() {
-        Log.d(TAG, "handleEmergencyDown emergencyActive=$emergencyActive arming=${emergencyArmingJob != null}")
+        Log.d(TAG, "handleEmergencyDown emergencyActive=$emergencyActive")
 
-        // Second press while already in emergency → route cancel-hold to ViewModel (UI must be visible)
+        // Second press while already in emergency → send to ViewModel for cancel-hold UI
         if (emergencyActive) {
             app.keyEventFlow.tryEmit(KeyAction.EmergencyDown)
             return
         }
 
-        // Already arming — ignore duplicate DOWN
-        if (emergencyArmingJob != null) return
+        // Already activating — ignore duplicate DOWN (race between key event and vendor broadcast)
+        if (emergencyActivatingJob != null) return
 
         val channelId = servicePrefs.channelId.takeIf { it >= 0 } ?: run {
             Log.w(TAG, "Emergency: no channel selected")
@@ -395,7 +393,7 @@ class BackgroundAudioService : Service() {
             return
         }
 
-        // Wake the screen so the notification is visible immediately
+        // Wake the screen so the emergency UI is visible immediately
         @Suppress("DEPRECATION")
         val wl = (getSystemService(POWER_SERVICE) as PowerManager).newWakeLock(
             PowerManager.SCREEN_BRIGHT_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP,
@@ -403,20 +401,9 @@ class BackgroundAudioService : Service() {
         ).apply { setReferenceCounted(false) }
         wl.acquire(5_000L)
 
-        // Arming notification with full-screen intent — brings MainActivity to front if possible
-        postEmergencyNotification("EMERGENCY ARMING — hold to activate")
-
-        // Tell the ViewModel to show the arming progress arc. The service owns the countdown
-        // and all signaling; the ViewModel is UI-only from this point (same pattern as PTT).
-        sendEmergencyArming()
-
-        // 3-second arming countdown in the service.
-        // If the button is released before the countdown ends, handleEmergencyUp() cancels this job.
-        app.toneEngine.startCountdownBeep()
-        emergencyArmingJob = scope.launch {
-            delay(3_000L)
-            emergencyArmingJob = null
-            app.toneEngine.stopCountdownBeep()
+        // Activate immediately — no arming countdown, no notification
+        emergencyActivatingJob = scope.launch {
+            emergencyActivatingJob = null
             activateEmergency(channelId, channelKey)
         }
     }
@@ -425,7 +412,6 @@ class BackgroundAudioService : Service() {
         Log.d(TAG, "activateEmergency channelId=$channelId channelKey=$channelKey")
         emergencyActive = true
         updateNotification("EMERGENCY ACTIVE")
-        postEmergencyNotification("EMERGENCY ACTIVE — tap to respond")
 
         // Ensure signaling socket is connected and joined to the selected channel
         ensureBackgroundSignalingReady(channelId)
@@ -444,55 +430,9 @@ class BackgroundAudioService : Service() {
     }
 
     private fun handleEmergencyUp() {
-        Log.d(TAG, "handleEmergencyUp arming=${emergencyArmingJob != null} active=$emergencyActive")
-
-        // Cancel arming if the button was released before the 3-second countdown finished
-        if (emergencyArmingJob != null) {
-            emergencyArmingJob?.cancel()
-            emergencyArmingJob = null
-            app.toneEngine.stopCountdownBeep()
-            updateNotification("Radio — Standby")
-            dismissEmergencyNotification()
-            Log.d(TAG, "Emergency arming cancelled by button release")
-            // Tell the ViewModel to dismiss the arming progress arc
-            sendEmergencyCancelled()
-        }
-
-        // Route UP to ViewModel so it can manage cancel-hold UI and emergencyEnd signaling
-        // when the Activity is in the foreground. The service does not independently send
-        // emergencyEnd because the ViewModel owns that state machine after activation.
+        Log.d(TAG, "handleEmergencyUp active=$emergencyActive")
+        // Route to ViewModel so it can manage cancel-hold UI when Activity is in the foreground
         app.keyEventFlow.tryEmit(KeyAction.EmergencyUp)
-    }
-
-    private fun postEmergencyNotification(text: String) {
-        val activityIntent = Intent(this, MainActivity::class.java).apply {
-            addFlags(
-                Intent.FLAG_ACTIVITY_NEW_TASK or
-                Intent.FLAG_ACTIVITY_SINGLE_TOP or
-                Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-            )
-            putExtra(EXTRA_EMERGENCY_KEY_DOWN, true)
-        }
-        val pi = PendingIntent.getActivity(
-            this,
-            EMERGENCY_NOTIFICATION_ID,
-            activityIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-        val n = NotificationCompat.Builder(this, CHANNEL_EMERGENCY)
-            .setSmallIcon(android.R.drawable.ic_dialog_alert)
-            .setContentTitle("EMERGENCY")
-            .setContentText(text)
-            .setPriority(NotificationCompat.PRIORITY_MAX)
-            .setCategory(NotificationCompat.CATEGORY_ALARM)
-            .setFullScreenIntent(pi, true)
-            .setAutoCancel(false)
-            .build()
-        getSystemService(NotificationManager::class.java).notify(EMERGENCY_NOTIFICATION_ID, n)
-    }
-
-    private fun dismissEmergencyNotification() {
-        getSystemService(NotificationManager::class.java).cancel(EMERGENCY_NOTIFICATION_ID)
     }
 
     private fun startBackgroundSignalingObservers() {
@@ -714,10 +654,6 @@ class BackgroundAudioService : Service() {
         sessionDeadlineMs = -1L
     }
 
-    private fun sendEmergencyArming() {
-        sendBroadcast(Intent(ACTION_EMERGENCY_ARMING).apply { setPackage(packageName) })
-    }
-
     private fun sendEmergencyActivated() {
         sendBroadcast(Intent(ACTION_EMERGENCY_ACTIVATED).apply { setPackage(packageName) })
     }
@@ -849,11 +785,9 @@ class BackgroundAudioService : Service() {
         const val ACTION_PTT_TX_ABORTED = "com.reedersystems.commandcomms.PTT_TX_ABORTED"
         const val ACTION_PTT_TX_STARTED = "com.reedersystems.commandcomms.PTT_TX_STARTED"
         const val ACTION_PTT_TX_ENDED = "com.reedersystems.commandcomms.PTT_TX_ENDED"
-        /** Sent when the 3-second arming countdown begins. ViewModel shows the progress arc. */
-        const val ACTION_EMERGENCY_ARMING = "com.reedersystems.commandcomms.EMERGENCY_ARMING"
-        /** Sent after the countdown completes and emergency:start has been signalled. */
+        /** Sent after emergency:start has been signalled. */
         const val ACTION_EMERGENCY_ACTIVATED = "com.reedersystems.commandcomms.EMERGENCY_ACTIVATED"
-        /** Sent when arming is cancelled (button released before 3 s). */
+        /** Sent when an active emergency is cancelled (cancel-hold completed). */
         const val ACTION_EMERGENCY_CANCELLED = "com.reedersystems.commandcomms.EMERGENCY_CANCELLED"
         const val EXTRA_CHANNEL_ID = "channel_id"
         const val EXTRA_ROOM_KEY = "room_key"

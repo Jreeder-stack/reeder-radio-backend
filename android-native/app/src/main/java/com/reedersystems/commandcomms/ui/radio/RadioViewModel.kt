@@ -126,16 +126,9 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                     _uiState.update { it.copy(pttState = PttState.IDLE) }
                 }
 
-                // Emergency broadcasts — service owns arming/signaling/PTT, ViewModel owns UI only
-                BackgroundAudioService.ACTION_EMERGENCY_ARMING -> {
-                    Log.d(TAG, "EMERGENCY_ARMING received — starting arming UI animation")
-                    startArming()
-                }
+                // Emergency broadcasts — service owns signaling/PTT, ViewModel owns UI only
                 BackgroundAudioService.ACTION_EMERGENCY_ACTIVATED -> {
                     Log.d(TAG, "EMERGENCY_ACTIVATED received — updating UI to active state")
-                    emergencyJob?.cancel()
-                    emergencyJob = null
-                    app.toneEngine.stopCountdownBeep()
                     _uiState.update {
                         it.copy(
                             emergencyHoldProgress = null,
@@ -147,7 +140,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                     // Service already started PTT via handlePttDown() — no TX needed here
                 }
                 BackgroundAudioService.ACTION_EMERGENCY_CANCELLED -> {
-                    Log.d(TAG, "EMERGENCY_CANCELLED received — dismissing arming UI")
+                    Log.d(TAG, "EMERGENCY_CANCELLED received — dismissing emergency UI")
                     emergencyJob?.cancel()
                     emergencyJob = null
                     cancelArmingJob?.cancel()
@@ -186,7 +179,6 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
             addAction(BackgroundAudioService.ACTION_PTT_TX_ABORTED)
             addAction(BackgroundAudioService.ACTION_PTT_TX_STARTED)
             addAction(BackgroundAudioService.ACTION_PTT_TX_ENDED)
-            addAction(BackgroundAudioService.ACTION_EMERGENCY_ARMING)
             addAction(BackgroundAudioService.ACTION_EMERGENCY_ACTIVATED)
             addAction(BackgroundAudioService.ACTION_EMERGENCY_CANCELLED)
         }
@@ -380,7 +372,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun onEmergencyDown() {
         val state = _uiState.value
-        // Arming is handled entirely by BackgroundAudioService (ACTION_EMERGENCY_ARMING broadcast).
+        // Activation is handled entirely by BackgroundAudioService (immediate, no arming phase).
         // The ViewModel only needs to manage the cancel-hold UI when an emergency is already active.
         if (state.myEmergencyActive && !state.isEmergencyCancelling) {
             startCancelHold()
@@ -410,28 +402,6 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                 _uiState.update { it.copy(isEmergencyCancelling = false, emergencyHoldProgress = null) }
                 Log.d(TAG, "CANCEL HOLD: aborted early")
             }
-        }
-    }
-
-    private fun startArming() {
-        // UI-only animation. BackgroundAudioService owns the real countdown, tones,
-        // signaling, and PTT (same pattern as PTT unification). This coroutine drives
-        // the progress arc and is cancelled by ACTION_EMERGENCY_CANCELLED or
-        // ACTION_EMERGENCY_ACTIVATED broadcasts when the service finishes.
-        if (emergencyJob != null) return  // Already animating
-        emergencyJob = viewModelScope.launch {
-            Log.d(TAG, "EMERGENCY ARMING: UI countdown started")
-            var elapsed = 0L
-            _uiState.update { it.copy(emergencyHoldProgress = 0f) }
-            while (elapsed < 3000L) {
-                delay(50)
-                elapsed += 50
-                _uiState.update { it.copy(emergencyHoldProgress = elapsed / 3000f) }
-            }
-            // Animation finished — wait for ACTION_EMERGENCY_ACTIVATED broadcast to update
-            // the active state. The service fires that broadcast after its own 3-second delay.
-            emergencyJob = null
-            _uiState.update { it.copy(emergencyHoldProgress = null) }
         }
     }
 
