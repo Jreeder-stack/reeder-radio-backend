@@ -233,6 +233,7 @@ public class MainActivity extends BridgeActivity {
     private static final int KEY_PTT = PttKeyMapping.KEYCODE_PTT_FALLBACK;
     private static final int KEY_ACC = 231;
     private static final int KEY_EMERGENCY = 233;
+    private static final int KEY_TV_TELETEXT = 349;
     private static final int KEY_DPAD_UP = 19;
     private static final int KEY_DPAD_DOWN = 20;
     private static final int KEY_DPAD_LEFT = 21;
@@ -280,9 +281,13 @@ public class MainActivity extends BridgeActivity {
         jsKeepaliveRunnable = null;
     }
 
+    private boolean isEmergencyKey(int keyCode) {
+        return keyCode == KEY_EMERGENCY || keyCode == KEY_TV_TELETEXT;
+    }
+
     private boolean isT320Key(int keyCode) {
         return keyCode == KEY_PTT || keyCode == KEY_PTT_F11
-            || keyCode == KEY_ACC || keyCode == KEY_EMERGENCY
+            || keyCode == KEY_ACC || isEmergencyKey(keyCode)
             || keyCode == KEY_SIDE1_F1
             || keyCode == KEY_SIDE2_SELECT || keyCode == KEY_SIDE2_DPAD_CTR
             || keyCode == KEY_DPAD_UP || keyCode == KEY_DPAD_DOWN
@@ -557,6 +562,51 @@ public class MainActivity extends BridgeActivity {
                 activitySide2Held = false;
                 BackgroundAudioService svc = BackgroundAudioService.getInstance();
                 if (svc != null) svc.handleSideButton2Up();
+            }
+            if (!isScreenOff) injectJsKeyEvent(keyCode, action == KeyEvent.ACTION_DOWN ? "keydown" : "keyup");
+            else injectJsKeyEventDelayed(keyCode, action == KeyEvent.ACTION_DOWN ? "keydown" : "keyup", 50);
+            return true;
+        }
+
+        // --- Emergency key handling (KEYCODE 233, KEYCODE_TV_TELETEXT 349) ---
+        if (isEmergencyKey(keyCode)) {
+            if (action == KeyEvent.ACTION_DOWN && repeat == 0) {
+                Log.d(DIAG_TAG, "MainActivity — EMERGENCY DOWN keyCode=" + keyCode + " — forwarding to service");
+                BackgroundAudioService svc = BackgroundAudioService.getInstance();
+                if (svc != null) {
+                    svc.handleEmergencyDown();
+                } else {
+                    Log.w(DIAG_TAG, "MainActivity — BackgroundAudioService NULL, cannot forward EMERGENCY DOWN");
+                    Intent emergencyIntent = new Intent(this, BackgroundAudioService.class);
+                    emergencyIntent.setAction(BackgroundAudioService.ACTION_BTN_EMERGENCY_DOWN);
+                    try {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            startForegroundService(emergencyIntent);
+                        } else {
+                            startService(emergencyIntent);
+                        }
+                    } catch (Exception e) {
+                        Log.e(DIAG_TAG, "Failed to start service for emergency: " + e.getMessage());
+                    }
+                }
+            } else if (action == KeyEvent.ACTION_UP) {
+                Log.d(DIAG_TAG, "MainActivity — EMERGENCY UP keyCode=" + keyCode + " — forwarding to service");
+                BackgroundAudioService svc = BackgroundAudioService.getInstance();
+                if (svc != null) {
+                    svc.handleEmergencyUp();
+                } else {
+                    Intent emergencyIntent = new Intent(this, BackgroundAudioService.class);
+                    emergencyIntent.setAction(BackgroundAudioService.ACTION_BTN_EMERGENCY_UP);
+                    try {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            startForegroundService(emergencyIntent);
+                        } else {
+                            startService(emergencyIntent);
+                        }
+                    } catch (Exception e) {
+                        Log.e(DIAG_TAG, "Failed to start service for emergency UP: " + e.getMessage());
+                    }
+                }
             }
             if (!isScreenOff) injectJsKeyEvent(keyCode, action == KeyEvent.ACTION_DOWN ? "keydown" : "keyup");
             else injectJsKeyEventDelayed(keyCode, action == KeyEvent.ACTION_DOWN ? "keydown" : "keyup", 50);

@@ -34,11 +34,14 @@ public class PttAccessibilityService extends AccessibilityService {
     private static final int KEYCODE_SIDE1        = KeyEvent.KEYCODE_F1;            // 131
     private static final int KEYCODE_SIDE2_A      = KeyEvent.KEYCODE_BUTTON_SELECT; // 109 — verify on device
     private static final int KEYCODE_SIDE2_B      = KeyEvent.KEYCODE_DPAD_CENTER;   // 23  — fallback
+    private static final int KEYCODE_EMERGENCY    = 233;
+    private static final int KEYCODE_TV_TELETEXT  = 349;
 
     // Per-button held-state — process only first DOWN (released→pressed) and first UP (pressed→released)
-    private volatile boolean pttHeld    = false;
-    private volatile boolean side1Held  = false;
-    private volatile boolean side2Held  = false;
+    private volatile boolean pttHeld       = false;
+    private volatile boolean side1Held     = false;
+    private volatile boolean side2Held     = false;
+    private volatile boolean emergencyHeld = false;
 
     // Last captured event for diagnostics
     private volatile int    lastCode      = -1;
@@ -138,6 +141,12 @@ public class PttAccessibilityService extends AccessibilityService {
             return handleSide2(action, repeatCount);
         }
 
+        // Emergency button — KEYCODE 233 or KEYCODE_TV_TELETEXT (349 / scanCode 353)
+        if (keyCode == KEYCODE_EMERGENCY || keyCode == KEYCODE_TV_TELETEXT) {
+            Log.d(DIAG_TAG, "[AccessibilitySvc] EMERGENCY key observed keyCode=" + keyCode);
+            return handleEmergency(keyCode, action, repeatCount);
+        }
+
         // Unhandled — pass through
         return false;
     }
@@ -223,6 +232,35 @@ public class PttAccessibilityService extends AccessibilityService {
             side2Held = false;
             Log.d(DIAG_TAG, "[AccessibilitySvc] SIDE2 UP — forwarding");
             sendButtonIntent(BackgroundAudioService.ACTION_BTN_SIDE2_UP, "AccessibilitySvc");
+            return true;
+        }
+
+        return true;
+    }
+
+    // --- Emergency button (KEYCODE 233, KEYCODE_TV_TELETEXT 349) ---
+
+    private boolean handleEmergency(int keyCode, int action, int repeatCount) {
+        if (action == KeyEvent.ACTION_DOWN) {
+            if (repeatCount > 0 || emergencyHeld) {
+                Log.d(DIAG_TAG, "[AccessibilitySvc] EMERGENCY DOWN suppressed repeat=" + repeatCount + " held=" + emergencyHeld);
+                return true;
+            }
+            emergencyHeld = true;
+            Log.d(DIAG_TAG, "[AccessibilitySvc] EMERGENCY DOWN keyCode=" + keyCode + " — forwarding");
+            acquireCpuWakeLock();
+            wakeScreenAndLaunchActivity();
+            sendButtonIntent(BackgroundAudioService.ACTION_BTN_EMERGENCY_DOWN, "AccessibilitySvc");
+            return true;
+
+        } else if (action == KeyEvent.ACTION_UP) {
+            if (!emergencyHeld) {
+                Log.d(DIAG_TAG, "[AccessibilitySvc] EMERGENCY UP suppressed — not held");
+                return true;
+            }
+            emergencyHeld = false;
+            Log.d(DIAG_TAG, "[AccessibilitySvc] EMERGENCY UP keyCode=" + keyCode + " — forwarding");
+            sendButtonIntent(BackgroundAudioService.ACTION_BTN_EMERGENCY_UP, "AccessibilitySvc");
             return true;
         }
 

@@ -144,6 +144,12 @@
                 <action android:name="com.inrico.intent.action.SOS_KEY_DOWN" />
                 <action android:name="com.inrico.intent.action.SOS_KEY_UP" />
             </intent-filter>
+            <!-- Confirmed SOS broadcasts from PhoneWindowManager on Inrico T320 (screen-off emergency button) -->
+            <intent-filter>
+                <action android:name="android.intent.action.SOS.down" />
+                <action android:name="android.intent.action.SOS.up" />
+                <action android:name="android.intent.action.SOS.shortpress" />
+            </intent-filter>
         </receiver>
 
         <receiver

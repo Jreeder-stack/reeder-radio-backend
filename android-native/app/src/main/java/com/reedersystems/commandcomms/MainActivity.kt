@@ -30,10 +30,11 @@ import com.reedersystems.commandcomms.ui.theme.CommandCommsTheme
 
 private const val TAG = "[PTT-DIAG]"
 
-private const val KEY_PTT_F11   = 141
-private const val KEY_PTT       = 230
-private const val KEY_EMERGENCY = 233
-private const val KEY_ACC       = 231
+private const val KEY_PTT_F11       = 141
+private const val KEY_PTT           = 230
+private const val KEY_EMERGENCY     = 233
+private const val KEY_TV_TELETEXT   = 349
+private const val KEY_ACC           = 231
 private const val KEY_STAR      = 17
 private const val KEY_DPAD_UP   = 19
 private const val KEY_DPAD_DOWN = 20
@@ -254,9 +255,13 @@ class MainActivity : ComponentActivity() {
         return false
     }
 
+    private fun isEmergencyKey(keyCode: Int): Boolean {
+        return keyCode == KEY_EMERGENCY || keyCode == KEY_TV_TELETEXT
+    }
+
     private fun isOurKey(keyCode: Int): Boolean {
         if (isPttKey(keyCode)) return true
-        if (keyCode == KEY_EMERGENCY) return true
+        if (isEmergencyKey(keyCode)) return true
         if (keyCode == KEY_DPAD_UP || keyCode == KEY_DPAD_DOWN ||
             keyCode == KEY_DPAD_LEFT || keyCode == KEY_DPAD_RIGHT) return true
         if (keyCode == KEY_ACC || keyCode == KEY_STAR) return true
@@ -337,9 +342,9 @@ class MainActivity : ComponentActivity() {
                 }
                 return true
             }
-            keyCode == KEY_EMERGENCY -> {
+            isEmergencyKey(keyCode) -> {
                 if (event?.repeatCount == 0) {
-                    Log.d(TAG, "MainActivity EMERGENCY DOWN — forwarding to BackgroundAudioService")
+                    Log.d(TAG, "MainActivity EMERGENCY DOWN (keyCode=$keyCode) — forwarding to BackgroundAudioService")
                     forwardEmergencyToBackgroundService(BackgroundAudioService.ACTION_EMERGENCY_DOWN)
                 }
                 return true
@@ -385,8 +390,8 @@ class MainActivity : ComponentActivity() {
                 forwardPttToBackgroundService(BackgroundAudioService.ACTION_PTT_UP)
                 return true
             }
-            keyCode == KEY_EMERGENCY -> {
-                Log.d(TAG, "MainActivity EMERGENCY UP — forwarding to BackgroundAudioService")
+            isEmergencyKey(keyCode) -> {
+                Log.d(TAG, "MainActivity EMERGENCY UP (keyCode=$keyCode) — forwarding to BackgroundAudioService")
                 forwardEmergencyToBackgroundService(BackgroundAudioService.ACTION_EMERGENCY_UP)
                 return true
             }

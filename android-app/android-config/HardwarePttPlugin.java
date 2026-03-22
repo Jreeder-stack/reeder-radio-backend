@@ -113,6 +113,11 @@ public class HardwarePttPlugin extends Plugin {
         notifyButtonEventToJs(pressed ? "sideButton2Down" : "sideButton2Up");
     }
 
+    public void notifyEmergencyFromService(boolean pressed) {
+        Log.d(TAG, "HardwarePttPlugin.notifyEmergencyFromService(" + pressed + ")");
+        notifyButtonEventToJs(pressed ? "emergencyDown" : "emergencyUp");
+    }
+
     private void notifyButtonEventToJs(String eventName) {
         try {
             JSObject data = new JSObject();

@@ -37,6 +37,32 @@ public class PttBroadcastReceiver extends BroadcastReceiver {
         "com.inrico.intent.action.PTT_UP"
     )));
 
+    private static final Set<String> EMERGENCY_DOWN_ACTIONS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
+        "android.intent.action.SOS.down",
+        "android.intent.action.SOS_KEY_DOWN",
+        "android.intent.action.EMERGENCY.down",
+        "android.intent.action.EMERGENCY_DOWN",
+        "com.inrico.sos.down",
+        "com.inrico.emergency.down",
+        "com.inrico.emergency.EMERGENCY.down",
+        "com.inrico.intent.action.SOS_KEY_DOWN",
+        "com.inrico.intent.action.EMERGENCY_DOWN",
+        "com.inrico.intent.action.EMERGENCY.down"
+    )));
+    private static final Set<String> EMERGENCY_UP_ACTIONS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
+        "android.intent.action.SOS.up",
+        "android.intent.action.SOS_KEY_UP",
+        "android.intent.action.EMERGENCY.up",
+        "android.intent.action.EMERGENCY_UP",
+        "com.inrico.sos.up",
+        "com.inrico.emergency.up",
+        "com.inrico.emergency.EMERGENCY.up",
+        "com.inrico.intent.action.SOS_KEY_UP",
+        "com.inrico.intent.action.EMERGENCY_UP",
+        "com.inrico.intent.action.EMERGENCY.up"
+    )));
+    private static final String SOS_SHORTPRESS_ACTION = "android.intent.action.SOS.shortpress";
+
     @Override
     public void onReceive(Context context, Intent intent) {
         if (intent == null) return;
@@ -77,6 +103,24 @@ public class PttBroadcastReceiver extends BroadcastReceiver {
             Log.d(TAG, "PTT ROUTE: broadcast action matched UP allowlist -> BackgroundAudioService.handlePttUp()");
             Log.d(TAG, "PTT UP broadcast — forwarding to service");
             forwardToService(context, BackgroundAudioService.PTT_ACTION_UP);
+        } else if (SOS_SHORTPRESS_ACTION.equals(action)) {
+            Log.d(TAG, "EMERGENCY ROUTE: SOS.shortpress — firing emergency DOWN+UP sequence");
+            acquireCpuWakeLock(context);
+            if (!isScreenOn) {
+                wakeScreenAndLaunchActivity(context);
+            }
+            forwardEmergencyToService(context, BackgroundAudioService.ACTION_BTN_EMERGENCY_DOWN);
+            forwardEmergencyToService(context, BackgroundAudioService.ACTION_BTN_EMERGENCY_UP);
+        } else if (EMERGENCY_DOWN_ACTIONS.contains(action)) {
+            Log.d(TAG, "EMERGENCY ROUTE: broadcast action matched EMERGENCY DOWN -> BackgroundAudioService.handleEmergencyDown()");
+            acquireCpuWakeLock(context);
+            if (!isScreenOn) {
+                wakeScreenAndLaunchActivity(context);
+            }
+            forwardEmergencyToService(context, BackgroundAudioService.ACTION_BTN_EMERGENCY_DOWN);
+        } else if (EMERGENCY_UP_ACTIONS.contains(action)) {
+            Log.d(TAG, "EMERGENCY ROUTE: broadcast action matched EMERGENCY UP -> BackgroundAudioService.handleEmergencyUp()");
+            forwardEmergencyToService(context, BackgroundAudioService.ACTION_BTN_EMERGENCY_UP);
         } else if (diagLogUnmatched) {
             Log.d(TAG, "PTT ROUTE: broadcast action UNMATCHED (ignored by receiver allowlist)");
             Log.d(TAG, "[DIAG-ONLY] Unmatched PTT broadcast action observed: action=" + action
@@ -149,6 +193,34 @@ public class PttBroadcastReceiver extends BroadcastReceiver {
                 Log.d(TAG, "Service cold-start intent sent with action=" + pttAction);
             } catch (Exception e) {
                 Log.e(TAG, "Failed to cold-start service: " + e.getMessage());
+            }
+        }
+    }
+
+    private void forwardEmergencyToService(Context context, String emergencyAction) {
+        BackgroundAudioService serviceInstance = BackgroundAudioService.getInstance();
+
+        if (serviceInstance != null) {
+            Log.d(TAG, "Service instance AVAILABLE — calling emergency handler directly, action=" + emergencyAction);
+            if (BackgroundAudioService.ACTION_BTN_EMERGENCY_DOWN.equals(emergencyAction)) {
+                serviceInstance.handleEmergencyDown();
+            } else {
+                serviceInstance.handleEmergencyUp();
+            }
+            Log.d(TAG, "Direct service call completed for emergency action=" + emergencyAction);
+        } else {
+            Log.d(TAG, "Service instance NULL — cold-starting service with emergency intent, action=" + emergencyAction);
+            Intent serviceIntent = new Intent(context, BackgroundAudioService.class);
+            serviceIntent.setAction(emergencyAction);
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    context.startForegroundService(serviceIntent);
+                } else {
+                    context.startService(serviceIntent);
+                }
+                Log.d(TAG, "Service cold-start intent sent with emergency action=" + emergencyAction);
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to cold-start service for emergency: " + e.getMessage());
             }
         }
     }

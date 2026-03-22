@@ -62,6 +62,8 @@ public class BackgroundAudioService extends Service
     public static final String ACTION_BTN_SIDE1_UP   = "com.reedersystems.commandcomms.action.SIDE1_UP";
     public static final String ACTION_BTN_SIDE2_DOWN = "com.reedersystems.commandcomms.action.SIDE2_DOWN";
     public static final String ACTION_BTN_SIDE2_UP   = "com.reedersystems.commandcomms.action.SIDE2_UP";
+    public static final String ACTION_BTN_EMERGENCY_DOWN = "com.reedersystems.commandcomms.action.EMERGENCY_DOWN";
+    public static final String ACTION_BTN_EMERGENCY_UP   = "com.reedersystems.commandcomms.action.EMERGENCY_UP";
     public static final String EXTRA_EVENT_SOURCE   = "event_source";
 
     private static volatile BackgroundAudioService instance = null;
@@ -186,6 +188,32 @@ public class BackgroundAudioService extends Service
         pttFilter.addAction(ACTION_BTN_SIDE1_UP);
         pttFilter.addAction(ACTION_BTN_SIDE2_DOWN);
         pttFilter.addAction(ACTION_BTN_SIDE2_UP);
+        pttFilter.addAction(ACTION_BTN_EMERGENCY_DOWN);
+        pttFilter.addAction(ACTION_BTN_EMERGENCY_UP);
+        // SOS broadcasts (confirmed from PhoneWindowManager on Inrico T320)
+        pttFilter.addAction("android.intent.action.SOS.down");
+        pttFilter.addAction("android.intent.action.SOS.up");
+        pttFilter.addAction("android.intent.action.SOS.shortpress");
+        pttFilter.addAction("android.intent.action.SOS_KEY_DOWN");
+        pttFilter.addAction("android.intent.action.SOS_KEY_UP");
+        // Emergency broadcasts
+        pttFilter.addAction("android.intent.action.EMERGENCY.down");
+        pttFilter.addAction("android.intent.action.EMERGENCY.up");
+        pttFilter.addAction("android.intent.action.EMERGENCY_DOWN");
+        pttFilter.addAction("android.intent.action.EMERGENCY_UP");
+        // Vendor emergency/SOS broadcasts
+        pttFilter.addAction("com.inrico.sos.down");
+        pttFilter.addAction("com.inrico.sos.up");
+        pttFilter.addAction("com.inrico.emergency.down");
+        pttFilter.addAction("com.inrico.emergency.up");
+        pttFilter.addAction("com.inrico.emergency.EMERGENCY.down");
+        pttFilter.addAction("com.inrico.emergency.EMERGENCY.up");
+        pttFilter.addAction("com.inrico.intent.action.SOS_KEY_DOWN");
+        pttFilter.addAction("com.inrico.intent.action.SOS_KEY_UP");
+        pttFilter.addAction("com.inrico.intent.action.EMERGENCY_DOWN");
+        pttFilter.addAction("com.inrico.intent.action.EMERGENCY_UP");
+        pttFilter.addAction("com.inrico.intent.action.EMERGENCY.down");
+        pttFilter.addAction("com.inrico.intent.action.EMERGENCY.up");
         registerReceiver(pttReceiver, pttFilter);
         Log.d(DIAG_TAG, "PTT broadcast receiver registered dynamically (full action set)");
 
@@ -460,6 +488,16 @@ public class BackgroundAudioService extends Service
                 Log.d(DIAG_TAG, "[Service] ACTION_BTN_SIDE2_UP from source=" + source);
                 recordEventDebug(source, 109, "UP");
                 handleSideButton2Up();
+                return START_STICKY;
+            } else if (ACTION_BTN_EMERGENCY_DOWN.equals(intentAction)) {
+                Log.d(DIAG_TAG, "[Service] ACTION_BTN_EMERGENCY_DOWN from source=" + source);
+                recordEventDebug(source, 233, "EMERGENCY_DOWN");
+                handleEmergencyDown();
+                return START_STICKY;
+            } else if (ACTION_BTN_EMERGENCY_UP.equals(intentAction)) {
+                Log.d(DIAG_TAG, "[Service] ACTION_BTN_EMERGENCY_UP from source=" + source);
+                recordEventDebug(source, 233, "EMERGENCY_UP");
+                handleEmergencyUp();
                 return START_STICKY;
             }
 
@@ -1039,6 +1077,22 @@ public class BackgroundAudioService extends Service
         HardwarePttPlugin plugin = HardwarePttPlugin.getInstance();
         if (plugin != null) {
             plugin.notifySideButton2FromService(false);
+        }
+    }
+
+    public void handleEmergencyDown() {
+        Log.d(DIAG_TAG, "[Service] handleEmergencyDown() — emergency button pressed");
+        HardwarePttPlugin plugin = HardwarePttPlugin.getInstance();
+        if (plugin != null) {
+            plugin.notifyEmergencyFromService(true);
+        }
+    }
+
+    public void handleEmergencyUp() {
+        Log.d(DIAG_TAG, "[Service] handleEmergencyUp() — emergency button released");
+        HardwarePttPlugin plugin = HardwarePttPlugin.getInstance();
+        if (plugin != null) {
+            plugin.notifyEmergencyFromService(false);
         }
     }
 

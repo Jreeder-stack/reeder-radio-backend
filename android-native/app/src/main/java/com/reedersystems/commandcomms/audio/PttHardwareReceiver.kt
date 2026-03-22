@@ -98,6 +98,14 @@ class PttHardwareReceiver : BroadcastReceiver() {
             "com.inrico.intent.action.SOS_KEY_DOWN"       -> BackgroundAudioService.ACTION_EMERGENCY_DOWN
             "com.inrico.intent.action.SOS_KEY_UP"         -> BackgroundAudioService.ACTION_EMERGENCY_UP
 
+            // Confirmed SOS broadcasts from PhoneWindowManager.interceptKeyBeforeQueueing on Inrico T320
+            "android.intent.action.SOS.down"              -> BackgroundAudioService.ACTION_EMERGENCY_DOWN
+            "android.intent.action.SOS.up"                -> BackgroundAudioService.ACTION_EMERGENCY_UP
+            "android.intent.action.SOS.shortpress"        -> {
+                Log.d(TAG, "PttHardwareReceiver: SOS.shortpress — firing emergency DOWN+UP sequence")
+                BackgroundAudioService.ACTION_EMERGENCY_DOWN
+            }
+
             else -> {
                 Log.d(TAG, "PttHardwareReceiver: unrecognised action=$action — ignoring")
                 null
@@ -122,6 +130,8 @@ class PttHardwareReceiver : BroadcastReceiver() {
         wakeLock.acquire(WAKE_LOCK_TIMEOUT_MS)
         Log.d(TAG, "PttHardwareReceiver: WakeLock acquired (auto-releases in ${WAKE_LOCK_TIMEOUT_MS}ms)")
 
+        val isSosShortpress = action == "android.intent.action.SOS.shortpress"
+
         val serviceIntent = Intent(context, BackgroundAudioService::class.java).apply {
             this.action = pttAction
             if (pttAction == BackgroundAudioService.ACTION_PTT_DOWN) {
@@ -132,6 +142,18 @@ class PttHardwareReceiver : BroadcastReceiver() {
             context.startForegroundService(serviceIntent)
         } catch (e: Exception) {
             Log.e(TAG, "PttHardwareReceiver: startForegroundService failed — ${e::class.simpleName}: ${e.message}")
+        }
+
+        if (isSosShortpress) {
+            val upIntent = Intent(context, BackgroundAudioService::class.java).apply {
+                this.action = BackgroundAudioService.ACTION_EMERGENCY_UP
+            }
+            try {
+                context.startForegroundService(upIntent)
+                Log.d(TAG, "PttHardwareReceiver: SOS.shortpress follow-up EMERGENCY_UP sent")
+            } catch (e: Exception) {
+                Log.e(TAG, "PttHardwareReceiver: SOS.shortpress EMERGENCY_UP failed — ${e::class.simpleName}: ${e.message}")
+            }
         }
     }
 
