@@ -1,4 +1,8 @@
 import { Server } from 'socket.io';
+import { floorControlService } from './floorControlService.js';
+import { audioRelayService } from './audioRelayService.js';
+import crypto from 'crypto';
+import pool from '../db/index.js';
 
 const SIGNALING_EVENTS = {
   CHANNEL_JOIN: 'channel:join',
@@ -16,6 +20,19 @@ const SIGNALING_EVENTS = {
   SYSTEM_STATUS: 'system:status',
   TOKEN_REQUEST: 'token:request',
   TOKEN_RESPONSE: 'token:response',
+};
+
+const RADIO_EVENTS = {
+  JOIN_CHANNEL: 'radio:joinChannel',
+  LEAVE_CHANNEL: 'radio:leaveChannel',
+  PTT_REQUEST: 'ptt:request',
+  PTT_RELEASE: 'ptt:release',
+  PTT_GRANTED: 'ptt:granted',
+  PTT_DENIED: 'ptt:denied',
+  TX_START: 'tx:start',
+  TX_STOP: 'tx:stop',
+  CHANNEL_BUSY: 'channel:busy',
+  CHANNEL_IDLE: 'channel:idle',
 };
 
 class SignalingService {
@@ -111,9 +128,51 @@ class SignalingService {
       socket.on('location:track_start', (data) => this._handleLocationTrackStart(socket, data));
       socket.on('location:track_stop', (data) => this._handleLocationTrackStop(socket, data));
       socket.on('location:update', (data) => this._handleGpsLocationUpdate(socket, data));
-      socket.on('ping', () => socket.emit('pong'));
+      socket.on(RADIO_EVENTS.JOIN_CHANNEL, (data) => this._handleRadioJoinChannel(socket, data));
+      socket.on(RADIO_EVENTS.LEAVE_CHANNEL, (data) => this._handleRadioLeaveChannel(socket, data));
+      socket.on(RADIO_EVENTS.PTT_REQUEST, (data) => this._handlePttRequest(socket, data));
+      socket.on(RADIO_EVENTS.PTT_RELEASE, (data) => this._handlePttRelease(socket, data));
+      socket.on(RADIO_EVENTS.TX_START, (data) => this._handleTxStart(socket, data));
+      socket.on(RADIO_EVENTS.TX_STOP, (data) => this._handleTxStop(socket, data));
+      socket.on('ping', () => {
+        socket.emit('pong');
+        if (socket.isRadioClient && socket.channels) {
+          for (const ch of socket.channels) {
+            audioRelayService.refreshSubscriber(ch, socket.unitId);
+          }
+        }
+      });
       socket.on('disconnect', () => this._handleDisconnect(socket));
     });
+
+    floorControlService.onTimeout((channelId, unitId) => {
+      const unitSocket = this._findSocketByUnitId(unitId);
+      if (unitSocket && unitSocket.radioSessionToken) {
+        audioRelayService.removeSession(unitSocket.radioSessionToken);
+        unitSocket.radioSessionToken = null;
+        unitSocket.radioSessionChannel = null;
+      }
+
+      this.io.to(`channel:${channelId}`).emit(RADIO_EVENTS.TX_STOP, {
+        unitId,
+        channelId,
+        timestamp: Date.now(),
+        reason: 'timeout',
+      });
+      this.io.to(`channel:${channelId}`).emit(RADIO_EVENTS.CHANNEL_IDLE, {
+        channelId,
+        timestamp: Date.now(),
+      });
+
+      const presenceData = this.unitPresence.get(unitId);
+      if (presenceData) {
+        presenceData.status = 'online';
+      }
+
+      console.log(`[Signaling] Floor timeout: ${unitId} on ${channelId}`);
+    });
+
+    audioRelayService.setFloorControlService(floorControlService);
 
     console.log('[Signaling] Socket.IO signaling server initialized');
     return this.io;
@@ -670,7 +729,28 @@ class SignalingService {
           reason: 'disconnect',
         });
       }
+
+      if (floorControlService.holdsFloor(channelId, socket.unitId)) {
+        floorControlService.releaseFloor(channelId, socket.unitId);
+        this.io.to(`channel:${channelId}`).emit(RADIO_EVENTS.TX_STOP, {
+          unitId: socket.unitId,
+          channelId,
+          timestamp: Date.now(),
+          reason: 'disconnect',
+        });
+        this.io.to(`channel:${channelId}`).emit(RADIO_EVENTS.CHANNEL_IDLE, {
+          channelId,
+          timestamp: Date.now(),
+        });
+      }
+
+      audioRelayService.removeSubscriber(channelId, socket.unitId);
     }
+
+    if (socket.radioSessionToken) {
+      audioRelayService.removeSession(socket.radioSessionToken);
+    }
+    audioRelayService.removeSessionsByUnit(socket.unitId);
     
     this.unitPresence.delete(socket.unitId);
     console.log(`[Signaling] Unit disconnected: ${socket.unitId}`);
@@ -793,7 +873,292 @@ class SignalingService {
   isLivekitAllowed() {
     return this.livekitAvailable && this.io?.engine?.clientsCount > 0;
   }
+
+  async _handleRadioJoinChannel(socket, data) {
+    const { channelId: rawChannelId, udpPort, udpAddress } = data;
+    const channelId = String(rawChannelId);
+
+    if (!socket.unitId) {
+      socket.emit('error', { message: 'Not authenticated' });
+      return;
+    }
+
+    try {
+      const accessResult = await pool.query(
+        `SELECT uca.channel_id
+         FROM user_channel_access uca
+         JOIN users u ON uca.user_id = u.id
+         JOIN channels c ON uca.channel_id = c.id
+         WHERE (u.unit_id = $1 OR u.username = $1)
+           AND (c.id::text = $2 OR COALESCE(c.zone, 'Default') || '__' || c.name = $2)
+           AND c.enabled = true
+         LIMIT 1`,
+        [socket.unitId, channelId]
+      );
+
+      if (accessResult.rows.length === 0) {
+        socket.emit('error', { message: 'Not authorized for this channel' });
+        console.log(`[Signaling] Radio ${socket.unitId} denied access to channel ${channelId}`);
+        return;
+      }
+    } catch (dbErr) {
+      console.error('[Signaling] DB channel access check failed:', dbErr.message);
+      socket.emit('error', { message: 'Authorization check failed' });
+      return;
+    }
+
+    socket.join(`channel:${channelId}`);
+    if (!socket.channels) socket.channels = new Set();
+    socket.channels.add(channelId);
+    socket.isRadioClient = true;
+
+    if (!this.channelMembers.has(channelId)) {
+      this.channelMembers.set(channelId, new Set());
+    }
+    this.channelMembers.get(channelId).add(socket.unitId);
+
+    const presence = this.unitPresence.get(socket.unitId);
+    if (presence) {
+      presence.channels = Array.from(socket.channels);
+    }
+
+    if (udpPort && udpAddress) {
+      const peerAddress = socket.handshake?.address || null;
+      const subscriberAddress = peerAddress || udpAddress;
+      audioRelayService.addSubscriber(channelId, socket.unitId, subscriberAddress, udpPort);
+    }
+
+    socket.emit('radio:channelJoined', {
+      channelId,
+      timestamp: Date.now(),
+      members: this._getChannelMemberDetails(channelId),
+    });
+
+    const floorHolder = floorControlService.getFloorHolder(channelId);
+    if (floorHolder) {
+      socket.emit(RADIO_EVENTS.CHANNEL_BUSY, {
+        channelId,
+        heldBy: floorHolder.unitId,
+        timestamp: Date.now(),
+      });
+    }
+
+    console.log(`[Signaling] Radio ${socket.unitId} joined channel ${channelId}`);
+  }
+
+  _handleRadioLeaveChannel(socket, data) {
+    const channelId = String(data.channelId);
+
+    if (!socket.unitId) return;
+
+    socket.leave(`channel:${channelId}`);
+    if (socket.channels) socket.channels.delete(channelId);
+
+    const members = this.channelMembers.get(channelId);
+    if (members) {
+      members.delete(socket.unitId);
+      if (members.size === 0) {
+        this.channelMembers.delete(channelId);
+      }
+    }
+
+    const presence = this.unitPresence.get(socket.unitId);
+    if (presence) {
+      presence.channels = Array.from(socket.channels || []);
+    }
+
+    audioRelayService.removeSubscriber(channelId, socket.unitId);
+
+    if (floorControlService.holdsFloor(channelId, socket.unitId)) {
+      floorControlService.releaseFloor(channelId, socket.unitId);
+      this.io.to(`channel:${channelId}`).emit(RADIO_EVENTS.TX_STOP, {
+        unitId: socket.unitId,
+        channelId,
+        timestamp: Date.now(),
+        reason: 'leave',
+      });
+      this.io.to(`channel:${channelId}`).emit(RADIO_EVENTS.CHANNEL_IDLE, {
+        channelId,
+        timestamp: Date.now(),
+      });
+    }
+
+    socket.emit('radio:channelLeft', { channelId, timestamp: Date.now() });
+    console.log(`[Signaling] Radio ${socket.unitId} left channel ${channelId}`);
+  }
+
+  _handlePttRequest(socket, data) {
+    const channelId = String(data.channelId);
+
+    if (!socket.unitId) {
+      socket.emit('error', { message: 'Not authenticated' });
+      return;
+    }
+
+    if (!socket.channels || !socket.channels.has(channelId)) {
+      socket.emit(RADIO_EVENTS.PTT_DENIED, {
+        channelId,
+        reason: 'not_on_channel',
+        timestamp: Date.now(),
+      });
+      return;
+    }
+
+    const isEmergency = this.emergencyStates.has(channelId) &&
+      this.emergencyStates.get(channelId).unitId === socket.unitId;
+
+    const result = floorControlService.requestFloor(channelId, socket.unitId, {
+      isEmergency,
+      emergencyStates: this.emergencyStates,
+    });
+
+    if (result.granted) {
+      socket.emit(RADIO_EVENTS.PTT_GRANTED, {
+        channelId,
+        timestamp: Date.now(),
+      });
+
+      if (socket.radioSessionToken) {
+        audioRelayService.removeSession(socket.radioSessionToken);
+      }
+
+      const sessionToken = crypto.randomBytes(16).toString('hex');
+      socket.radioSessionToken = sessionToken;
+      socket.radioSessionChannel = channelId;
+      socket.emit('radio:sessionToken', { token: sessionToken, channelId });
+
+      audioRelayService.registerSession(socket.unitId, sessionToken, channelId);
+
+      this.io.to(`channel:${channelId}`).emit(RADIO_EVENTS.TX_START, {
+        unitId: socket.unitId,
+        channelId,
+        timestamp: Date.now(),
+        isEmergency: result.isEmergency || false,
+      });
+
+      this.io.to(`channel:${channelId}`).emit(RADIO_EVENTS.CHANNEL_BUSY, {
+        channelId,
+        heldBy: socket.unitId,
+        timestamp: Date.now(),
+      });
+
+      if (result.preemptedUnit) {
+        const preemptedSocket = this._findSocketByUnitId(result.preemptedUnit);
+        if (preemptedSocket) {
+          preemptedSocket.emit(RADIO_EVENTS.PTT_DENIED, {
+            channelId,
+            reason: 'preempted_emergency',
+            timestamp: Date.now(),
+          });
+          if (preemptedSocket.radioSessionToken) {
+            audioRelayService.removeSession(preemptedSocket.radioSessionToken);
+            preemptedSocket.radioSessionToken = null;
+            preemptedSocket.radioSessionChannel = null;
+          }
+        }
+      }
+
+      const presenceData = this.unitPresence.get(socket.unitId);
+      if (presenceData) {
+        presenceData.status = 'transmitting';
+      }
+
+      console.log(`[Signaling] PTT granted: ${socket.unitId} on ${channelId}`);
+    } else {
+      socket.emit(RADIO_EVENTS.PTT_DENIED, {
+        channelId,
+        reason: result.reason,
+        heldBy: result.heldBy,
+        timestamp: Date.now(),
+      });
+      console.log(`[Signaling] PTT denied: ${socket.unitId} on ${channelId} (${result.reason})`);
+    }
+  }
+
+  _handlePttRelease(socket, data) {
+    const channelId = String(data.channelId);
+
+    if (!socket.unitId) return;
+
+    const released = floorControlService.releaseFloor(channelId, socket.unitId);
+    if (!released) return;
+
+    if (socket.radioSessionToken) {
+      audioRelayService.removeSession(socket.radioSessionToken);
+      socket.radioSessionToken = null;
+      socket.radioSessionChannel = null;
+    }
+
+    const presenceData = this.unitPresence.get(socket.unitId);
+    if (presenceData) {
+      presenceData.status = 'online';
+    }
+
+    this.io.to(`channel:${channelId}`).emit(RADIO_EVENTS.TX_STOP, {
+      unitId: socket.unitId,
+      channelId,
+      timestamp: Date.now(),
+    });
+
+    this.io.to(`channel:${channelId}`).emit(RADIO_EVENTS.CHANNEL_IDLE, {
+      channelId,
+      timestamp: Date.now(),
+    });
+
+    console.log(`[Signaling] PTT released: ${socket.unitId} on ${channelId}`);
+  }
+
+  _handleTxStart(socket, data) {
+    const channelId = String(data.channelId);
+    if (!socket.unitId) return;
+
+    if (!floorControlService.holdsFloor(channelId, socket.unitId)) {
+      socket.emit('error', { message: 'Cannot start TX without floor grant' });
+      return;
+    }
+
+    for (const ch of socket.channels || []) {
+      if (ch === channelId) {
+        audioRelayService.refreshSubscriber(ch, socket.unitId);
+      }
+    }
+
+    console.log(`[Signaling] TX start ack: ${socket.unitId} on ${channelId}`);
+  }
+
+  _handleTxStop(socket, data) {
+    const channelId = String(data.channelId);
+    if (!socket.unitId) return;
+
+    if (floorControlService.holdsFloor(channelId, socket.unitId)) {
+      floorControlService.releaseFloor(channelId, socket.unitId);
+
+      if (socket.radioSessionToken) {
+        audioRelayService.removeSession(socket.radioSessionToken);
+        socket.radioSessionToken = null;
+        socket.radioSessionChannel = null;
+      }
+
+      const presenceData = this.unitPresence.get(socket.unitId);
+      if (presenceData) {
+        presenceData.status = 'online';
+      }
+
+      this.io.to(`channel:${channelId}`).emit(RADIO_EVENTS.TX_STOP, {
+        unitId: socket.unitId,
+        channelId,
+        timestamp: Date.now(),
+      });
+
+      this.io.to(`channel:${channelId}`).emit(RADIO_EVENTS.CHANNEL_IDLE, {
+        channelId,
+        timestamp: Date.now(),
+      });
+    }
+
+    console.log(`[Signaling] TX stop ack: ${socket.unitId} on ${channelId}`);
+  }
 }
 
 export const signalingService = new SignalingService();
-export { SIGNALING_EVENTS };
+export { SIGNALING_EVENTS, RADIO_EVENTS };

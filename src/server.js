@@ -6,6 +6,7 @@ import { initializeDatabase, isAiDispatchEnabled, getAiDispatchChannel, getAllCh
 import { startDispatcher, getDispatcher } from './services/aiDispatchService.js';
 import { isConfigured as isAzureConfigured } from './services/azureSpeechService.js';
 import { signalingService } from './services/signalingService.js';
+import { audioRelayService } from './services/audioRelayService.js';
 
 async function start() {
   validateEnv();
@@ -50,6 +51,10 @@ async function start() {
   
   signalingService.initialize(httpServer);
   console.log('Signaling service initialized');
+
+  const audioRelayPort = parseInt(process.env.AUDIO_RELAY_PORT, 10) || 5100;
+  audioRelayService.start(audioRelayPort);
+  console.log(`Audio relay service started on UDP port ${audioRelayPort}`);
 
   try {
     if (!isAzureConfigured()) {
