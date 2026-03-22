@@ -36,6 +36,10 @@ class SessionPrefs(context: Context) {
         get() = prefs.getBoolean(KEY_NOTIFICATION_GRANTED, false)
         set(value) = prefs.edit().putBoolean(KEY_NOTIFICATION_GRANTED, value).apply()
 
+    var dndPromptShown: Boolean
+        get() = prefs.getBoolean(KEY_DND_PROMPT_SHOWN, false)
+        set(value) = prefs.edit().putBoolean(KEY_DND_PROMPT_SHOWN, value).apply()
+
     var lastVersionCode: Long
         get() = prefs.getLong(KEY_LAST_VERSION_CODE, -1L)
         set(value) = prefs.edit().putLong(KEY_LAST_VERSION_CODE, value).apply()
@@ -55,6 +59,7 @@ class SessionPrefs(context: Context) {
         private const val KEY_MIC_GRANTED = "mic_granted"
         private const val KEY_LOCATION_GRANTED = "location_granted"
         private const val KEY_NOTIFICATION_GRANTED = "notification_granted"
+        private const val KEY_DND_PROMPT_SHOWN = "dnd_prompt_shown"
         private const val KEY_LAST_VERSION_CODE = "last_version_code"
     }
 }

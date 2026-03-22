@@ -13,6 +13,7 @@ import androidx.lifecycle.viewModelScope
 import com.reedersystems.commandcomms.CommandCommsApp
 import com.reedersystems.commandcomms.KeyAction
 import com.reedersystems.commandcomms.audio.BackgroundAudioService
+import com.reedersystems.commandcomms.audio.DndOverrideSource
 import com.reedersystems.commandcomms.data.model.Channel
 import com.reedersystems.commandcomms.data.model.PttState
 import com.reedersystems.commandcomms.data.model.Zone
@@ -63,6 +64,7 @@ data class RadioUiState(
     val showScanOverlay: Boolean = false,
     val batteryLevel: Int? = null,
     val micPermissionGranted: Boolean = false,
+    val showDndPermissionDialog: Boolean = false,
 ) {
     val currentZone: Zone? get() = zones.getOrNull(currentZoneIndex)
     val currentChannel: Channel? get() = currentZone?.channels?.getOrNull(currentChannelIndex)
@@ -172,6 +174,39 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         observeSignaling()
         collectKeyEvents()
         registerPttFailureReceiver()
+        checkDndPermission()
+    }
+
+    private fun checkDndPermission() {
+        if (!app.dndOverrideManager.isGranted && !app.sessionPrefs.dndPromptShown) {
+            _uiState.update { it.copy(showDndPermissionDialog = true) }
+        }
+    }
+
+    fun dismissDndPermissionDialog(userDeclined: Boolean = false) {
+        if (userDeclined) {
+            app.sessionPrefs.dndPromptShown = true
+        }
+        _uiState.update { it.copy(showDndPermissionDialog = false) }
+    }
+
+    fun openDndPermissionSettings(activity: android.app.Activity?) {
+        if (activity != null) {
+            dndSettingsOpened = true
+            app.dndOverrideManager.requestPermission(activity)
+        }
+    }
+
+    private var dndSettingsOpened = false
+
+    fun recheckDndPermission() {
+        if (app.dndOverrideManager.isGranted) {
+            _uiState.update { it.copy(showDndPermissionDialog = false) }
+        } else if (dndSettingsOpened) {
+            dndSettingsOpened = false
+        } else if (!app.sessionPrefs.dndPromptShown) {
+            _uiState.update { it.copy(showDndPermissionDialog = true) }
+        }
     }
 
     private fun registerPttFailureReceiver() {
@@ -478,6 +513,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         val channel = _uiState.value.currentChannel ?: return
         Log.d(TAG, "EMERGENCY CLEAR roomKey=${channel.roomKey}")
         _uiState.update { it.copy(myEmergencyActive = false) }
+        app.dndOverrideManager.restore(DndOverrideSource.EMERGENCY)
         app.signalingRepository.emergencyEnd(channel.roomKey)
         locationTracker.stopTracking()
         if (_uiState.value.pttState != PttState.IDLE) onPttUp()

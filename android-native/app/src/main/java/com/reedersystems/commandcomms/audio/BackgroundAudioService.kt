@@ -412,6 +412,7 @@ class BackgroundAudioService : Service() {
     private suspend fun activateEmergency(channelId: Int, channelKey: String) {
         Log.d(TAG, "activateEmergency channelId=$channelId channelKey=$channelKey")
         emergencyActive = true
+        app.dndOverrideManager.activate(DndOverrideSource.EMERGENCY)
         updateNotification("EMERGENCY ACTIVE")
 
         // Ensure signaling socket is connected and joined to the selected channel
@@ -470,6 +471,22 @@ class BackgroundAudioService : Service() {
                             if (event.unitId != selfUnitId && event.channelId == currentRoomKey) {
                                 handleRxEnd()
                             }
+                        }
+                        is SignalingEvent.EmergencyEnd -> {
+                            if (emergencyActive) {
+                                emergencyActive = false
+                                app.dndOverrideManager.restore(DndOverrideSource.EMERGENCY)
+                                updateNotification("Radio — Standby")
+                                Log.d(TAG, "Emergency ended — DND override restored")
+                            }
+                        }
+                        is SignalingEvent.ClearAirStart -> {
+                            app.dndOverrideManager.activate(DndOverrideSource.CLEAR_AIR)
+                            Log.d(TAG, "Clear Air started — DND override activated")
+                        }
+                        is SignalingEvent.ClearAirEnd -> {
+                            app.dndOverrideManager.restore(DndOverrideSource.CLEAR_AIR)
+                            Log.d(TAG, "Clear Air ended — DND override restored")
                         }
                         else -> Unit
                     }
@@ -756,6 +773,7 @@ class BackgroundAudioService : Service() {
 
     override fun onDestroy() {
         Log.d(TAG, "BackgroundAudioService destroyed")
+        app.dndOverrideManager.forceRestoreAll()
         dynamicPttReceiver?.let {
             unregisterReceiver(it)
             dynamicPttReceiver = null
