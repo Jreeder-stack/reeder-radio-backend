@@ -35,20 +35,47 @@ async function dbVerifyUnitChannelAccess(identity, channelId) {
  * Returns { channelId, unitId, presenceSynthesized } on success,
  * or null (response already sent) on failure.
  */
-async function validatePttRequest(req, res) {
-  const { channelId, unitId } = req.body;
+async function resolveChannel(rawChannelId) {
+  if (typeof rawChannelId === 'string' && rawChannelId.includes('__')) {
+    const result = await pool.query(
+      `SELECT id, COALESCE(zone,'Default') || '__' || name AS room_key FROM channels WHERE COALESCE(zone,'Default') || '__' || name = $1 LIMIT 1`,
+      [rawChannelId]
+    );
+    if (!result.rows[0]) return null;
+    return { numericId: result.rows[0].id, roomKey: result.rows[0].room_key };
+  }
+  const parsed = Number(rawChannelId);
+  if (!Number.isFinite(parsed)) return null;
+  const result = await pool.query(
+    `SELECT id, COALESCE(zone,'Default') || '__' || name AS room_key FROM channels WHERE id = $1 LIMIT 1`,
+    [parsed]
+  );
+  if (!result.rows[0]) return null;
+  return { numericId: result.rows[0].id, roomKey: result.rows[0].room_key };
+}
 
-  if (!channelId || !unitId) {
+async function validatePttRequest(req, res) {
+  const { channelId: rawChannelId, unitId } = req.body;
+
+  if (!rawChannelId || !unitId) {
     res.status(400).json({ error: 'channelId and unitId required' });
     return null;
   }
 
+  const resolved = await resolveChannel(rawChannelId);
+
+  if (!resolved) {
+    res.status(400).json({ error: 'Invalid channelId or roomKey' });
+    return null;
+  }
+
+  const { numericId: numericChannelId, roomKey } = resolved;
+  const channelId = roomKey;
+
   // Primary: live Socket.IO presence
   const presence = signalingService.unitPresence?.get(unitId);
   if (presence) {
-    // Pass through whether this presence was synthesized by a prior fallback /start.
-    // This ensures /end will still trigger cleanup even though presence now exists.
-    return { channelId, unitId, presenceSynthesized: !!presence.synthesized };
+    return { channelId, numericChannelId, roomKey, unitId, presenceSynthesized: !!presence.synthesized };
   }
 
   // Fallback: session cookie identity match
@@ -67,10 +94,9 @@ async function validatePttRequest(req, res) {
     return null;
   }
 
-  // DB: confirm this user has access to the requested channel
   let dbUser = null;
   try {
-    dbUser = await dbVerifyUnitChannelAccess(unitId, channelId);
+    dbUser = await dbVerifyUnitChannelAccess(unitId, numericChannelId);
   } catch (dbErr) {
     console.error('[PTT-HTTP] DB channel access check failed:', dbErr.message);
     res.status(500).json({ error: 'Internal error during authorization' });
@@ -83,8 +109,6 @@ async function validatePttRequest(req, res) {
     return null;
   }
 
-  // Auth passed via session + DB. Synthesize a minimal presence entry so
-  // downstream signaling emits behave consistently (status/channels).
   const synthPresence = {
     unitId,
     status: 'online',
@@ -94,7 +118,7 @@ async function validatePttRequest(req, res) {
   signalingService.unitPresence.set(unitId, synthPresence);
   console.log(`[PTT-HTTP] Session+DB fallback auth OK: "${unitId}" on ch${channelId} — minimal presence synthesized`);
 
-  return { channelId, unitId, presenceSynthesized: true };
+  return { channelId, numericChannelId, roomKey, unitId, presenceSynthesized: true };
 }
 
 router.post('/start', async (req, res) => {

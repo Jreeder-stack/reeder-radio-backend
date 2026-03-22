@@ -340,10 +340,10 @@ export default function DispatchConsole({ user, onLogout }) {
               Events
             </button>
             <button
-              onClick={() => setRightTab('chat')}
-              className={`dispatch-tab ${rightTab === 'chat' ? 'active active-chat' : ''}`}
+              onClick={() => setRightTab('playback')}
+              className={`dispatch-tab ${rightTab === 'playback' ? 'active active-playback' : ''}`}
             >
-              Chat
+              Playback
             </button>
           </div>
           
@@ -351,7 +351,7 @@ export default function DispatchConsole({ user, onLogout }) {
             {rightTab === 'emergency' && <EmergencyPanel />}
             {rightTab === 'patches' && <PatchPanel />}
             {rightTab === 'events' && <EventLog />}
-            {rightTab === 'chat' && (
+            {rightTab === 'playback' && (
               <div className="flex flex-col h-full">
                 <div className="px-3 py-2 border-b border-dispatch-border">
                   <select

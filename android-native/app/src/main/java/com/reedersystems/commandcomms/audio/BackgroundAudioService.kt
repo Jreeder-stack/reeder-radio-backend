@@ -325,12 +325,13 @@ class BackgroundAudioService : Service() {
                 pttState = PttState.TRANSMITTING
                 updateNotification("TRANSMITTING")
                 sendPttTxStarted()
-                httpPttStart(serverUrl, channelId, unitId)
 
                 if (signaling) {
                     app.signalingRepository.transmitStart(roomKey)
                     Log.d(TAG, "Screen-off PTT: transmitStart sent for roomKey $roomKey")
                 }
+
+                httpPttStart(serverUrl, roomKey, unitId)
             } catch (e: Exception) {
                 if (e !is CancellationException) {
                     Log.e(TAG, "Unhandled exception in PTT coroutine — resetting state", e)
@@ -362,12 +363,12 @@ class BackgroundAudioService : Service() {
         scope.launch {
             audioEngine.stopTransmit()
             sendPttTxEnded()
-            httpPttEnd(serverUrl, channelId, unitId)
             if (wasSignaling) {
                 app.signalingRepository.transmitEnd(roomKey)
                 app.toneEngine.playEndOfTxTone()
                 Log.d(TAG, "Screen-off PTT: transmitEnd + end-of-TX tone for roomKey $roomKey")
             }
+            httpPttEnd(serverUrl, roomKey, unitId)
             rescheduleGracePeriod()
         }
     }
@@ -702,8 +703,8 @@ class BackgroundAudioService : Service() {
         sendBroadcast(intent)
     }
 
-    private fun httpPttStart(serverUrl: String, channelId: Int, unitId: String) {
-        val json = """{"channelId":$channelId,"unitId":"$unitId"}"""
+    private fun httpPttStart(serverUrl: String, roomKey: String, unitId: String) {
+        val json = """{"channelId":"$roomKey","unitId":"$unitId"}"""
         try {
             val req = Request.Builder()
                 .url("$serverUrl/api/ptt/start")
@@ -716,8 +717,8 @@ class BackgroundAudioService : Service() {
         }
     }
 
-    private fun httpPttEnd(serverUrl: String, channelId: Int, unitId: String) {
-        val json = """{"channelId":$channelId,"unitId":"$unitId"}"""
+    private fun httpPttEnd(serverUrl: String, roomKey: String, unitId: String) {
+        val json = """{"channelId":"$roomKey","unitId":"$unitId"}"""
         try {
             val req = Request.Builder()
                 .url("$serverUrl/api/ptt/end")

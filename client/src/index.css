@@ -302,7 +302,7 @@ html, body {
   border-bottom-color: var(--dispatch-success);
 }
 
-.dispatch-tab.active-chat {
+.dispatch-tab.active-playback {
   border-bottom-color: #a855f7;
 }
 
