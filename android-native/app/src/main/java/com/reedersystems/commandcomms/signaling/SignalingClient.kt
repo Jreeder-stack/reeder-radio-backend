@@ -16,7 +16,7 @@ private const val TAG = "[PTT-DIAG]"
 
 enum class ConnectionState { DISCONNECTED, CONNECTING, CONNECTED, AUTHENTICATED }
 
-class SignalingClient(private val serverUrl: String) {
+class SignalingClient(var serverUrl: String) {
 
     private var socket: Socket? = null
 

@@ -14,9 +14,11 @@ import com.reedersystems.commandcomms.data.api.ApiClient
 import com.reedersystems.commandcomms.data.prefs.PttKeyPrefs
 import com.reedersystems.commandcomms.data.prefs.ServiceConnectionPrefs
 import com.reedersystems.commandcomms.data.prefs.SessionPrefs
+import com.reedersystems.commandcomms.data.model.RadioTransportConfig
 import com.reedersystems.commandcomms.data.repository.AuthRepository
 import com.reedersystems.commandcomms.data.repository.ChannelRepository
 import com.reedersystems.commandcomms.data.repository.LiveKitTokenRepository
+import com.reedersystems.commandcomms.data.repository.RadioConfigRepository
 import com.reedersystems.commandcomms.signaling.SignalingClient
 import com.reedersystems.commandcomms.signaling.SignalingRepository
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -48,6 +50,9 @@ class CommandCommsApp : Application() {
     lateinit var signalingRepository: SignalingRepository
         private set
 
+    lateinit var radioConfigRepository: RadioConfigRepository
+        private set
+
     lateinit var pttKeyPrefs: PttKeyPrefs
         private set
 
@@ -59,6 +64,9 @@ class CommandCommsApp : Application() {
 
     var radioStateManager: RadioStateManager? = null
         private set
+
+    @Volatile
+    var radioTransportConfig: RadioTransportConfig? = null
 
     val keyEventFlow = MutableSharedFlow<KeyAction>(extraBufferCapacity = 16)
     val keyCapturingFlow = MutableStateFlow(false)
@@ -87,6 +95,7 @@ class CommandCommsApp : Application() {
         liveKitTokenRepository = LiveKitTokenRepository(apiClient)
         signalingClient = SignalingClient(apiClient.baseUrl)
         signalingRepository = SignalingRepository(signalingClient)
+        radioConfigRepository = RadioConfigRepository(apiClient)
         toneEngine = ToneEngine(this)
         dndOverrideManager = DndOverrideManager(this)
 

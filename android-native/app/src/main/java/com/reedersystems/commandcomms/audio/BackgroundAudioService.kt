@@ -718,14 +718,23 @@ class BackgroundAudioService : Service() {
             engine.useSharedStateManager(appStateManager)
         }
 
+        val persistedSignalingUrl = servicePrefs.signalingUrl
+        if (!persistedSignalingUrl.isNullOrBlank()) {
+            app.signalingClient.serverUrl = persistedSignalingUrl
+            Log.d(TAG, "SignalingClient serverUrl updated from config: $persistedSignalingUrl")
+        }
+
         val gateway = RadioSignalingGatewayImpl(app.signalingClient)
         engine.wireFloorControl(gateway)
 
         val relayHost = servicePrefs.relayHost ?: run {
+            Log.w(TAG, "No relay host from radio config, falling back to server URL derivation")
             val serverUrl = servicePrefs.serverUrl ?: app.apiClient.baseUrl
             try { java.net.URI(serverUrl).host ?: "" } catch (_: Exception) { "" }
         }
-        engine.udpTransport.configure(relayHost, servicePrefs.relayPort)
+        val relayPort = servicePrefs.relayPort
+        engine.udpTransport.configure(relayHost, relayPort)
+        Log.d(TAG, "Radio transport configured: host=$relayHost port=$relayPort")
         engine.udpTransport.channelId = servicePrefs.channelRoomKey ?: ""
         engine.udpTransport.unitId = servicePrefs.unitId ?: app.sessionPrefs.unitId ?: ""
 

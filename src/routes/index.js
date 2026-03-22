@@ -8,6 +8,7 @@ import messagesRouter from './messagesRouter.js';
 import cadRouter from './cadRouter.js';
 import unitRouter from './unitRouter.js';
 import pttRouter from './pttRoutes.js';
+import radioConfigRouter from './radioConfigRouter.js';
 
 export function setupRoutes(app) {
   app.use('/api/auth', authRouter);
@@ -19,4 +20,5 @@ export function setupRoutes(app) {
   app.use('/api/cad', cadRouter);
   app.use('/api/unit', unitRouter);
   app.use('/api/ptt', pttRouter);
+  app.use('/api/radio', radioConfigRouter);
 }

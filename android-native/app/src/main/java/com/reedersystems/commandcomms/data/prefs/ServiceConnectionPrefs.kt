@@ -44,6 +44,14 @@ class ServiceConnectionPrefs(context: Context) {
         get() = prefs.getInt(KEY_RELAY_PORT, 5600)
         set(v) = prefs.edit().putInt(KEY_RELAY_PORT, v).apply()
 
+    var signalingUrl: String?
+        get() = prefs.getString(KEY_SIGNALING_URL, null)
+        set(v) = prefs.edit().putString(KEY_SIGNALING_URL, v).apply()
+
+    var useTls: Boolean
+        get() = prefs.getBoolean(KEY_USE_TLS, false)
+        set(v) = prefs.edit().putBoolean(KEY_USE_TLS, v).apply()
+
     fun isValid(): Boolean =
         serverUrl != null && unitId != null && channelId >= 0 && channelRoomKey != null
 
@@ -62,5 +70,7 @@ class ServiceConnectionPrefs(context: Context) {
         private const val KEY_TRANSPORT_MODE = "transport_mode"
         private const val KEY_RELAY_HOST = "relay_host"
         private const val KEY_RELAY_PORT = "relay_port"
+        private const val KEY_SIGNALING_URL = "signaling_url"
+        private const val KEY_USE_TLS = "use_tls"
     }
 }
