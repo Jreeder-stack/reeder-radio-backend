@@ -1063,6 +1063,13 @@ class SignalingService {
         presenceData.status = 'transmitting';
       }
 
+      this._emitCallback('pttStart', {
+        unitId: socket.unitId,
+        channelId,
+        timestamp: Date.now(),
+        isEmergency: isEmergency || false,
+      });
+
       console.log(`[Signaling] PTT granted: ${socket.unitId} on ${channelId}`);
     } else {
       socket.emit(RADIO_EVENTS.PTT_DENIED, {
@@ -1101,6 +1108,12 @@ class SignalingService {
     });
 
     this.io.to(`channel:${channelId}`).emit(RADIO_EVENTS.CHANNEL_IDLE, {
+      channelId,
+      timestamp: Date.now(),
+    });
+
+    this._emitCallback('pttEnd', {
+      unitId: socket.unitId,
       channelId,
       timestamp: Date.now(),
     });

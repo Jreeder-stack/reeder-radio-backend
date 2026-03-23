@@ -195,16 +195,73 @@ export async function notifyJoin(req, res) {
       });
     }
     
-    console.log(`[AI-Dispatcher] Notify join received: ${identity} on ${channel} (standby mode - no LiveKit connection)`);
+    console.log(`[AI-Dispatcher] Notify join received: ${identity} on ${channel} - connecting dispatcher`);
+    
+    const dispatcher = getDispatcher();
+    let triggered = false;
+    
+    if (dispatcher) {
+      try {
+        await dispatcher.rejoinIfNeeded();
+        triggered = !!dispatcher.room;
+        console.log(`[AI-Dispatcher] Dispatcher ${triggered ? 'connected' : 'not connected'} for channel ${channel}`);
+      } catch (err) {
+        console.error(`[AI-Dispatcher] Failed to connect dispatcher for channel ${channel}:`, err.message);
+      }
+    }
     
     success(res, { 
-      triggered: false, 
+      triggered, 
       channel,
-      message: 'AI Dispatcher notified (standby mode - connects on PTT only)' 
+      message: triggered ? 'AI Dispatcher connected' : 'AI Dispatcher not available' 
     });
   } catch (err) {
     console.error('Notify join error:', err);
     error(res, 'Failed to process notify join', 500);
+  }
+}
+
+export async function notifyPtt(req, res) {
+  try {
+    const { channel, identity, action } = req.body;
+    
+    const resolvedIdentity = req.session?.user?.username || req.session?.user?.unit_id || identity;
+    
+    if (!channel || !resolvedIdentity || !action) {
+      return error(res, 'Channel, identity, and action required', 400);
+    }
+    
+    if (action !== 'start' && action !== 'end') {
+      return error(res, 'Action must be "start" or "end"', 400);
+    }
+    
+    const enabled = await isAiDispatchEnabled();
+    if (!enabled) {
+      return success(res, { triggered: false, reason: 'AI Dispatch is disabled' });
+    }
+    
+    const configuredChannel = await getAiDispatchChannel();
+    if (configuredChannel !== channel) {
+      return success(res, { triggered: false, reason: 'Not dispatch channel' });
+    }
+    
+    const dispatcher = getDispatcher();
+    if (!dispatcher) {
+      return success(res, { triggered: false, reason: 'Dispatcher not available' });
+    }
+    
+    const { aiDispatcherSignaling } = await import('../services/aiDispatcherSignaling.js');
+    
+    if (action === 'start') {
+      await aiDispatcherSignaling.handlePttStart(channel, resolvedIdentity);
+    } else {
+      await aiDispatcherSignaling.handlePttEnd(channel, resolvedIdentity);
+    }
+    
+    success(res, { triggered: true, channel, action });
+  } catch (err) {
+    console.error('Notify PTT error:', err);
+    error(res, 'Failed to process PTT notification', 500);
   }
 }
 

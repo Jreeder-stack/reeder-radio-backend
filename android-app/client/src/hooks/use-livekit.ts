@@ -259,6 +259,12 @@ export function useLiveKit({ channelName, identity, enabled = true }: UseLiveKit
       await room.localParticipant.setMicrophoneEnabled(true);
       console.log('[LiveKit] Microphone enabled');
       
+      if (currentChannelRef.current) {
+        apiClient.notifyPtt('start', currentChannelRef.current).catch(err => {
+          console.error('[LiveKit] Failed to notify PTT start:', err);
+        });
+      }
+      
       setIsMuted(false);
       setError(null);
       
@@ -285,6 +291,13 @@ export function useLiveKit({ channelName, identity, enabled = true }: UseLiveKit
         console.error('[LiveKit] Failed to disable microphone:', err);
       }
     }
+    
+    if (currentChannelRef.current) {
+      apiClient.notifyPtt('end', currentChannelRef.current).catch(err => {
+        console.error('[LiveKit] Failed to notify PTT end:', err);
+      });
+    }
+    
     setIsMuted(true);
     
     apiClient.updateStatus('idle', currentChannelRef.current || undefined).catch(err => {

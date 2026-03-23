@@ -1,8 +1,8 @@
 import { signalingService, SIGNALING_EVENTS } from './signalingService.js';
 
 const AI_UNIT_ID = 'AI-Dispatcher';
-const CONNECTION_GRACE_MS = 15000;
-const FALLBACK_IDLE_DISCONNECT_MS = 60000;
+const CONNECTION_GRACE_MS = 120000;
+const FALLBACK_IDLE_DISCONNECT_MS = 180000;
 
 class AIDispatcherSignaling {
   constructor() {
@@ -55,6 +55,13 @@ class AIDispatcherSignaling {
         const hasEmergency = Array.from(this.activeChannels).some(
           ch => signalingService.isEmergencyActive(ch)
         );
+
+        const hasHumans = this.dispatcher.humanParticipantCount > 0;
+
+        if (hasHumans) {
+          this.log('FALLBACK_IDLE_SKIP', { reason: 'humans_present', humanCount: this.dispatcher.humanParticipantCount, idleMs: idleTime });
+          return;
+        }
 
         if (!hasActiveTransmission && !hasEmergency) {
           this.log('FALLBACK_IDLE_DISCONNECT', { idleMs: idleTime });
@@ -212,6 +219,12 @@ class AIDispatcherSignaling {
 
     const hasActiveTransmission = signalingService.getActiveTransmission(channelId);
     const isEmergency = signalingService.isEmergencyActive(channelId);
+    const hasHumans = this.dispatcher.humanParticipantCount > 0;
+
+    if (hasHumans) {
+      this.log('DISCONNECT_SKIPPED', { channelId, reason: 'humans_present', humanCount: this.dispatcher.humanParticipantCount });
+      return;
+    }
 
     if (!hasActiveTransmission && !isEmergency) {
       this.log('DISCONNECTING_IDLE', { channelId });

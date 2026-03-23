@@ -382,6 +382,10 @@ export function useLiveKitCombined({ channelId, channelName, identity, enabled =
         await room.localParticipant.setMicrophoneEnabled(true);
         console.log('[LiveKit Web] Microphone enabled');
         
+        if (currentChannelRef.current) {
+          apiClient.notifyPtt('start', currentChannelRef.current).catch(console.error);
+        }
+        
         setIsMuted(false);
         setError(null);
         playTalkPermitTone();
@@ -411,6 +415,10 @@ export function useLiveKitCombined({ channelId, channelName, identity, enabled =
         } catch (err) {
           console.error('[LiveKit Web] Failed to disable microphone:', err);
         }
+      }
+      
+      if (currentChannelRef.current) {
+        apiClient.notifyPtt('end', currentChannelRef.current).catch(console.error);
       }
     }
     

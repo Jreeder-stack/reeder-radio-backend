@@ -249,6 +249,17 @@ class ApiClient {
     });
   }
 
+  async notifyPtt(action: 'start' | 'end', channel: string): Promise<ApiResponse> {
+    return this.request('/api/dispatch/notify-ptt', {
+      method: 'POST',
+      body: JSON.stringify({
+        channel,
+        identity: this.unitId || 'Unknown-Unit',
+        action,
+      }),
+    });
+  }
+
   // Update unit status (transmitting/idle)
   async updateStatus(status: 'transmitting' | 'idle', channel?: string): Promise<ApiResponse> {
     return this.request('/api/dispatch/unit/update', {
