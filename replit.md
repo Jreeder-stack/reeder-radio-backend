@@ -9,7 +9,7 @@ Not specified.
 ## System Architecture
 
 ### Client Architecture Split
-- **Dispatch Console:** Web app (React/Vite) used by dispatchers on desktop browsers. Stays web.
+- **Dispatch Console:** Web app (React/Vite) used by dispatchers on desktop browsers. Also available as an Electron desktop app (`desktop-app/`) with global PTT hotkeys that work even when the app is minimized or unfocused. The Electron app wraps the production web URL and injects simulated keyboard events for PTT.
 - **Radio Client (Field Units / T320):** Native Kotlin Android app (`android-native/`). Replaces the previous Capacitor WebView APK. Uses the LiveKit Android SDK directly (no WebView), native PTT hardware key handling, and a foreground service for screen-off PTT. Connects to the same backend as the web app.
 
 ### UI/UX Decisions

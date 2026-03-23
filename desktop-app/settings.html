@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Settings</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1a1a2e;
+      color: #e0e0e0;
+      padding: 24px;
+    }
+    h1 {
+      font-size: 20px;
+      color: #4ade80;
+      margin-bottom: 24px;
+      text-align: center;
+    }
+    .section {
+      background: #16213e;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .section-title {
+      font-size: 13px;
+      color: #4ade80;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 12px;
+      font-weight: 600;
+    }
+    .field {
+      margin-bottom: 14px;
+    }
+    .field:last-child {
+      margin-bottom: 0;
+    }
+    label {
+      display: block;
+      font-size: 13px;
+      color: #aaa;
+      margin-bottom: 6px;
+    }
+    input[type="text"], input[type="url"] {
+      width: 100%;
+      padding: 8px 12px;
+      background: #0f3460;
+      border: 1px solid #1a4a7a;
+      border-radius: 6px;
+      color: #e0e0e0;
+      font-size: 14px;
+      outline: none;
+    }
+    input[type="text"]:focus, input[type="url"]:focus {
+      border-color: #4ade80;
+    }
+    .hotkey-input {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .hotkey-display {
+      flex: 1;
+      padding: 8px 12px;
+      background: #0f3460;
+      border: 1px solid #1a4a7a;
+      border-radius: 6px;
+      color: #e0e0e0;
+      font-size: 14px;
+      min-height: 36px;
+      display: flex;
+      align-items: center;
+    }
+    .hotkey-display.capturing {
+      border-color: #f59e0b;
+      color: #f59e0b;
+      animation: pulse 1s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+    .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    .btn-capture {
+      background: #0f3460;
+      color: #4ade80;
+      border: 1px solid #4ade80;
+    }
+    .btn-capture:hover {
+      background: #1a4a7a;
+    }
+    .btn-capture.active {
+      background: #f59e0b;
+      color: #1a1a2e;
+      border-color: #f59e0b;
+    }
+    .btn-clear {
+      background: transparent;
+      color: #888;
+      border: 1px solid #444;
+    }
+    .btn-clear:hover {
+      color: #ef4444;
+      border-color: #ef4444;
+    }
+    .toggle-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 4px 0;
+    }
+    .toggle-label {
+      font-size: 14px;
+      color: #e0e0e0;
+    }
+    .toggle-desc {
+      font-size: 11px;
+      color: #888;
+      margin-top: 2px;
+    }
+    .toggle {
+      position: relative;
+      width: 44px;
+      height: 24px;
+      flex-shrink: 0;
+    }
+    .toggle input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background: #333;
+      border-radius: 24px;
+      transition: 0.2s;
+    }
+    .toggle-slider:before {
+      content: "";
+      position: absolute;
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background: white;
+      border-radius: 50%;
+      transition: 0.2s;
+    }
+    .toggle input:checked + .toggle-slider {
+      background: #4ade80;
+    }
+    .toggle input:checked + .toggle-slider:before {
+      transform: translateX(20px);
+    }
+    .actions {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+      margin-top: 20px;
+    }
+    .btn-save {
+      background: #4ade80;
+      color: #1a1a2e;
+      padding: 10px 28px;
+      font-weight: 600;
+    }
+    .btn-save:hover {
+      background: #22c55e;
+    }
+    .btn-cancel {
+      background: transparent;
+      color: #888;
+      border: 1px solid #444;
+      padding: 10px 20px;
+    }
+    .btn-cancel:hover {
+      color: #e0e0e0;
+      border-color: #888;
+    }
+    .hint {
+      font-size: 11px;
+      color: #666;
+      margin-top: 8px;
+      line-height: 1.5;
+    }
+    .key-badge {
+      display: inline-block;
+      background: #0f3460;
+      border: 1px solid #1a4a7a;
+      border-radius: 4px;
+      padding: 2px 8px;
+      font-size: 12px;
+      font-family: monospace;
+      color: #4ade80;
+    }
+  </style>
+</head>
+<body>
+  <h1>Desktop Settings</h1>
+
+  <div class="section">
+    <div class="section-title">Server</div>
+    <div class="field">
+      <label>Server URL</label>
+      <input type="url" id="serverUrl" placeholder="https://comms.reeder-systems.com">
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Global Hotkeys</div>
+    <div class="hint" style="margin-bottom: 12px; margin-top: 0;">
+      These keys work even when the app is minimized or behind other windows.
+    </div>
+    <div class="field">
+      <label>PTT Key (Push-to-Talk)</label>
+      <div class="hotkey-input">
+        <div class="hotkey-display" id="pttKeyDisplay">F5</div>
+        <button class="btn btn-capture" id="pttCaptureBtn" onclick="startCapture('ptt')">Change</button>
+        <button class="btn btn-clear" onclick="clearKey('ptt')">Clear</button>
+      </div>
+      <div class="hint">
+        Hold this key to transmit. Note: Global hotkeys trigger on press only — 
+        release is detected when the app window is focused. For unfocused PTT, 
+        press the hotkey to start transmitting, then press again to stop (toggle mode).
+      </div>
+    </div>
+    <div class="field">
+      <label>Emergency Key</label>
+      <div class="hotkey-input">
+        <div class="hotkey-display" id="emergencyKeyDisplay">F6</div>
+        <button class="btn btn-capture" id="emergencyCaptureBtn" onclick="startCapture('emergency')">Change</button>
+        <button class="btn btn-clear" onclick="clearKey('emergency')">Clear</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Behavior</div>
+    <div class="field">
+      <div class="toggle-row">
+        <div>
+          <div class="toggle-label">Always on Top</div>
+          <div class="toggle-desc">Keep window above other applications</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="alwaysOnTop">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+    <div class="field">
+      <div class="toggle-row">
+        <div>
+          <div class="toggle-label">Minimize to Tray</div>
+          <div class="toggle-desc">Keep running in system tray when closed</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="minimizeToTray">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+    <div class="field">
+      <div class="toggle-row">
+        <div>
+          <div class="toggle-label">Start Minimized</div>
+          <div class="toggle-desc">Start in system tray on launch</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="startMinimized">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="btn btn-cancel" onclick="window.close()">Cancel</button>
+    <button class="btn btn-save" onclick="saveSettings()">Save</button>
+  </div>
+
+  <script src="settings.js"></script>
+</body>
+</html>
