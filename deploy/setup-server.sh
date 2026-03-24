@@ -37,20 +37,24 @@ fi
 echo "  Node.js $(node -v) installed"
 echo "  npm $(npm -v) installed"
 
-echo "[3/7] Installing PostgreSQL 16..."
-CURRENT_PG=$(psql --version 2>/dev/null | awk '{print $3}' || echo "none")
-if [[ "$CURRENT_PG" != 16.* ]]; then
-  echo "  Current PostgreSQL: $CURRENT_PG — installing 16..."
-  sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
-  curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor -o /etc/apt/trusted.gpg.d/postgresql.gpg
-  apt-get update
-  apt-get install -y postgresql-16
+if [ "${SKIP_LOCAL_PG:-0}" = "1" ]; then
+  echo "[3/7] Skipping local PostgreSQL (using external database)..."
 else
-  echo "  PostgreSQL $CURRENT_PG already installed"
+  echo "[3/7] Installing PostgreSQL 16..."
+  CURRENT_PG=$(psql --version 2>/dev/null | awk '{print $3}' || echo "none")
+  if [[ "$CURRENT_PG" != 16.* ]]; then
+    echo "  Current PostgreSQL: $CURRENT_PG — installing 16..."
+    sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+    curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor -o /etc/apt/trusted.gpg.d/postgresql.gpg
+    apt-get update
+    apt-get install -y postgresql-16
+  else
+    echo "  PostgreSQL $CURRENT_PG already installed"
+  fi
+  systemctl enable postgresql
+  systemctl start postgresql
+  echo "  PostgreSQL $(psql --version | awk '{print $3}') installed"
 fi
-systemctl enable postgresql
-systemctl start postgresql
-echo "  PostgreSQL $(psql --version | awk '{print $3}') installed"
 
 echo "[4/7] Installing nginx..."
 apt-get install -y nginx
