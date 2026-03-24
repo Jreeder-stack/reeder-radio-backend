@@ -1,6 +1,7 @@
 const { app, BrowserWindow, globalShortcut, ipcMain, Menu, Tray, dialog, shell } = require('electron');
 const path = require('path');
 const Store = require('electron-store');
+const { autoUpdater } = require('electron-updater');
 
 const store = new Store({
   defaults: {
@@ -18,6 +19,76 @@ let mainWindow = null;
 let settingsWindow = null;
 let tray = null;
 const activePttChannels = new Set();
+
+function setupAutoUpdater() {
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
+
+  autoUpdater.on('update-available', (info) => {
+    console.log(`[Electron] Update available: v${info.version}`);
+  });
+
+  autoUpdater.on('update-not-available', () => {
+    console.log('[Electron] App is up to date');
+  });
+
+  autoUpdater.on('download-progress', (progress) => {
+    console.log(`[Electron] Download progress: ${Math.round(progress.percent)}%`);
+  });
+
+  autoUpdater.on('update-downloaded', (info) => {
+    console.log(`[Electron] Update downloaded: v${info.version}`);
+    if (mainWindow) {
+      dialog.showMessageBox(mainWindow, {
+        type: 'info',
+        title: 'Update Ready',
+        message: `Version ${info.version} has been downloaded`,
+        detail: 'A new version has been downloaded. Would you like to restart and install it now?',
+        buttons: ['Install Now', 'Later'],
+        defaultId: 0,
+        cancelId: 1
+      }).then((result) => {
+        if (result.response === 0) {
+          app.isQuitting = true;
+          autoUpdater.quitAndInstall();
+        }
+      });
+    }
+  });
+
+  autoUpdater.on('error', (err) => {
+    console.error('[Electron] Auto-updater error:', err.message);
+  });
+
+  autoUpdater.checkForUpdates().catch((err) => {
+    console.error('[Electron] Update check failed:', err.message);
+  });
+}
+
+function checkForUpdatesManually() {
+  autoUpdater.checkForUpdates().then((result) => {
+    if (!result || !result.updateInfo || result.updateInfo.version === app.getVersion()) {
+      if (mainWindow) {
+        dialog.showMessageBox(mainWindow, {
+          type: 'info',
+          title: 'No Updates',
+          message: 'You are running the latest version',
+          detail: `Current version: ${app.getVersion()}`
+        });
+      }
+    }
+  }).catch((err) => {
+    console.error('[Electron] Manual update check failed:', err.message);
+    if (mainWindow) {
+      dialog.showMessageBox(mainWindow, {
+        type: 'error',
+        title: 'Update Check Failed',
+        message: 'Could not check for updates',
+        detail: err.message
+      });
+    }
+  });
+}
 
 function createMainWindow() {
   const bounds = store.get('windowBounds');
@@ -260,6 +331,11 @@ function createMenu() {
       label: 'Help',
       submenu: [
         {
+          label: 'Check for Updates',
+          click: () => checkForUpdatesManually()
+        },
+        { type: 'separator' },
+        {
           label: 'About',
           click: () => {
             const hotkeys = store.get('channelHotkeys') || {};
@@ -438,6 +514,7 @@ app.whenReady().then(() => {
   createMainWindow();
   createTray();
   registerGlobalHotkeys();
+  setupAutoUpdater();
 
   if (store.get('startMinimized')) {
     mainWindow.hide();

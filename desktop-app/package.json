@@ -23,17 +23,25 @@
       "settings.js",
       "icon.png"
     ],
+    "publish": {
+      "provider": "github",
+      "owner": "Jreeder-stack",
+      "repo": "reeder-radio-backend"
+    },
     "win": {
       "target": "nsis",
-      "icon": "icon.png"
+      "icon": "icon.png",
+      "publish": ["github"]
     },
     "mac": {
-      "target": "dmg",
-      "icon": "icon.png"
+      "target": ["dmg", "zip"],
+      "icon": "icon.png",
+      "publish": ["github"]
     },
     "linux": {
       "target": "AppImage",
-      "icon": "icon.png"
+      "icon": "icon.png",
+      "publish": ["github"]
     },
     "nsis": {
       "oneClick": false,
@@ -47,6 +55,7 @@
     "electron-builder": "^25.1.8"
   },
   "dependencies": {
-    "electron-store": "^8.2.0"
+    "electron-store": "^8.2.0",
+    "electron-updater": "^6.3.9"
   }
 }
