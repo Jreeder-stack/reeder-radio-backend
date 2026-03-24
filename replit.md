@@ -61,9 +61,20 @@ The dispatch console is a Progressive Web App (PWA) with a responsive design for
 - **`archiver`:** For ZIP file creation in the audio export system.
 
 ## Azure VM Deployment
+The app is deployed on Azure VM `20.115.21.70` at `https://comms.reeder-systems.com`.
+
+### SSL/TLS
+- Let's Encrypt certificate issued via certbot (nginx plugin) on 2026-03-24
+- Certificate auto-renews via certbot systemd timer
+- nginx serves HTTPS on port 443 with HTTP→HTTPS redirect on port 80
+- Certificate path: `/etc/letsencrypt/live/comms.reeder-systems.com/`
+
+### Deploy Scripts
 Deployment scripts and configs are in the `deploy/` directory:
+- `deploy/remote-deploy.sh` — Full remote deployment: SSH into VM, sync code, install deps, build frontend, configure nginx+SSL, start PM2.
 - `deploy/setup-server.sh` — Provisions a fresh Ubuntu VM with Node.js 20, PostgreSQL 16, nginx, PM2, certbot, and firewall rules (ports 443, 80, 5100/UDP).
 - `deploy/nginx.conf` — Reverse proxy config with SSL, WebSocket upgrade for Socket.IO and signaling.
+- `deploy/nginx-pre-ssl.conf` — HTTP-only nginx config used before certbot runs.
 - `deploy/ecosystem.config.cjs` — PM2 process config for auto-restart and boot persistence.
 - `deploy/init-db.sh` — Creates the PostgreSQL database and user. The app auto-creates tables on first connect.
 - `deploy/deploy.sh` — Pulls latest code, installs deps, builds frontend, restarts PM2.
