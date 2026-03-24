@@ -11,6 +11,7 @@
       background: #1a1a2e;
       color: #e0e0e0;
       padding: 24px;
+      overflow-y: auto;
     }
     h1 {
       font-size: 20px;
@@ -44,7 +45,7 @@
       color: #aaa;
       margin-bottom: 6px;
     }
-    input[type="text"], input[type="url"] {
+    input[type="text"], input[type="url"], select {
       width: 100%;
       padding: 8px 12px;
       background: #0f3460;
@@ -54,8 +55,108 @@
       font-size: 14px;
       outline: none;
     }
-    input[type="text"]:focus, input[type="url"]:focus {
+    select {
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%234ade80' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 32px;
+    }
+    select option {
+      background: #0f3460;
+      color: #e0e0e0;
+    }
+    input:focus, select:focus {
       border-color: #4ade80;
+    }
+    .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    .btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .btn-capture {
+      background: #0f3460;
+      color: #4ade80;
+      border: 1px solid #4ade80;
+    }
+    .btn-capture:hover:not(:disabled) {
+      background: #1a4a7a;
+    }
+    .btn-capture.active {
+      background: #f59e0b;
+      color: #1a1a2e;
+      border-color: #f59e0b;
+    }
+    .btn-remove {
+      background: transparent;
+      color: #888;
+      border: 1px solid #444;
+      padding: 5px 10px;
+      font-size: 12px;
+    }
+    .btn-remove:hover {
+      color: #ef4444;
+      border-color: #ef4444;
+    }
+    .assign-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .assign-row select {
+      flex: 1;
+    }
+    .assigned-list {
+      border-top: 1px solid #1a4a7a;
+      padding-top: 12px;
+    }
+    .assigned-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      background: #0f3460;
+      border: 1px solid #1a4a7a;
+      border-radius: 6px;
+      margin-bottom: 6px;
+    }
+    .assigned-item:last-child {
+      margin-bottom: 0;
+    }
+    .assigned-channel {
+      font-size: 14px;
+      color: #e0e0e0;
+      flex: 1;
+    }
+    .assigned-channel .zone {
+      font-size: 11px;
+      color: #888;
+    }
+    .assigned-hotkey {
+      font-family: monospace;
+      font-size: 13px;
+      color: #4ade80;
+      background: #1a1a2e;
+      border: 1px solid #1a4a7a;
+      border-radius: 4px;
+      padding: 3px 10px;
+      margin: 0 10px;
+    }
+    .empty-state {
+      color: #666;
+      font-size: 13px;
+      font-style: italic;
+      text-align: center;
+      padding: 12px;
     }
     .hotkey-input {
       display: flex;
@@ -74,44 +175,64 @@
       display: flex;
       align-items: center;
     }
-    .hotkey-display.capturing {
+    .hotkey-display.capturing, .capture-overlay .capture-box {
       border-color: #f59e0b;
       color: #f59e0b;
-      animation: pulse 1s ease-in-out infinite;
     }
     @keyframes pulse {
       0%, 100% { opacity: 1; }
       50% { opacity: 0.6; }
     }
-    .btn {
-      padding: 8px 16px;
-      border: none;
-      border-radius: 6px;
+    .capture-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+    .capture-overlay.hidden {
+      display: none;
+    }
+    .capture-box {
+      background: #16213e;
+      border: 2px solid #f59e0b;
+      border-radius: 12px;
+      padding: 32px 48px;
+      text-align: center;
+    }
+    .capture-box h2 {
+      color: #f59e0b;
+      font-size: 18px;
+      margin-bottom: 8px;
+      animation: pulse 1.2s ease-in-out infinite;
+    }
+    .capture-box p {
+      color: #aaa;
       font-size: 13px;
-      cursor: pointer;
-      font-weight: 500;
+      margin-bottom: 4px;
     }
-    .btn-capture {
-      background: #0f3460;
+    .capture-box .channel-name {
       color: #4ade80;
-      border: 1px solid #4ade80;
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 16px;
     }
-    .btn-capture:hover {
-      background: #1a4a7a;
-    }
-    .btn-capture.active {
-      background: #f59e0b;
-      color: #1a1a2e;
-      border-color: #f59e0b;
-    }
-    .btn-clear {
-      background: transparent;
+    .capture-box .cancel-link {
       color: #888;
-      border: 1px solid #444;
+      font-size: 12px;
+      cursor: pointer;
+      text-decoration: underline;
     }
-    .btn-clear:hover {
+    .capture-box .cancel-link:hover {
+      color: #e0e0e0;
+    }
+    .capture-box .error-msg {
       color: #ef4444;
-      border-color: #ef4444;
+      font-size: 12px;
+      margin-top: 8px;
+      min-height: 16px;
     }
     .toggle-row {
       display: flex;
@@ -195,15 +316,11 @@
       margin-top: 8px;
       line-height: 1.5;
     }
-    .key-badge {
-      display: inline-block;
-      background: #0f3460;
-      border: 1px solid #1a4a7a;
-      border-radius: 4px;
-      padding: 2px 8px;
-      font-size: 12px;
-      font-family: monospace;
-      color: #4ade80;
+    .loading {
+      color: #888;
+      font-size: 13px;
+      text-align: center;
+      padding: 8px;
     }
   </style>
 </head>
@@ -219,29 +336,31 @@
   </div>
 
   <div class="section">
-    <div class="section-title">Global Hotkeys</div>
+    <div class="section-title">Channel PTT Hotkeys</div>
     <div class="hint" style="margin-bottom: 12px; margin-top: 0;">
-      These keys work even when the app is minimized or behind other windows.
+      Assign a modifier+key combo (e.g., Ctrl+1, Shift+F1) to each channel.
+      These hotkeys work system-wide, even when the app is in the background.
     </div>
-    <div class="field">
-      <label>PTT Key (Push-to-Talk)</label>
-      <div class="hotkey-input">
-        <div class="hotkey-display" id="pttKeyDisplay">F5</div>
-        <button class="btn btn-capture" id="pttCaptureBtn" onclick="startCapture('ptt')">Change</button>
-        <button class="btn btn-clear" onclick="clearKey('ptt')">Clear</button>
-      </div>
-      <div class="hint">
-        Hold this key to transmit. Note: Global hotkeys trigger on press only — 
-        release is detected when the app window is focused. For unfocused PTT, 
-        press the hotkey to start transmitting, then press again to stop (toggle mode).
-      </div>
+
+    <div class="assign-row">
+      <select id="channelSelect">
+        <option value="">Loading channels...</option>
+      </select>
+      <button class="btn btn-capture" id="assignBtn" onclick="startChannelCapture()" disabled>Assign Hotkey</button>
     </div>
+
+    <div class="assigned-list" id="assignedList">
+      <div class="empty-state" id="emptyState">No channel hotkeys assigned</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Emergency Hotkey</div>
     <div class="field">
-      <label>Emergency Key</label>
       <div class="hotkey-input">
-        <div class="hotkey-display" id="emergencyKeyDisplay">F6</div>
-        <button class="btn btn-capture" id="emergencyCaptureBtn" onclick="startCapture('emergency')">Change</button>
-        <button class="btn btn-clear" onclick="clearKey('emergency')">Clear</button>
+        <div class="hotkey-display" id="emergencyKeyDisplay">None</div>
+        <button class="btn btn-capture" id="emergencyCaptureBtn" onclick="startEmergencyCapture()">Change</button>
+        <button class="btn btn-remove" onclick="clearEmergencyKey()">Clear</button>
       </div>
     </div>
   </div>
@@ -289,6 +408,17 @@
   <div class="actions">
     <button class="btn btn-cancel" onclick="window.close()">Cancel</button>
     <button class="btn btn-save" onclick="saveSettings()">Save</button>
+  </div>
+
+  <div class="capture-overlay hidden" id="captureOverlay">
+    <div class="capture-box">
+      <h2>Press Hotkey Combo</h2>
+      <p>Assigning to channel:</p>
+      <div class="channel-name" id="captureChannelName"></div>
+      <p>Press a modifier + key (e.g., Ctrl+1, Shift+F1)</p>
+      <div class="error-msg" id="captureError"></div>
+      <span class="cancel-link" onclick="cancelCapture()">Cancel</span>
+    </div>
   </div>
 
   <script src="settings.js"></script>

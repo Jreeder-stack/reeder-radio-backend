@@ -255,4 +255,8 @@ const useDispatchStore = create(
   )
 );
 
+if (typeof window !== 'undefined') {
+  window.__dispatchStore = useDispatchStore;
+}
+
 export default useDispatchStore;

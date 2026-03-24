@@ -1,11 +1,12 @@
 # Command Communications Desktop App
 
-Electron desktop wrapper for the Command Communications dispatch console with **global PTT hotkeys** that work even when the app is minimized or behind other windows.
+Electron desktop wrapper for the Command Communications dispatch console with **per-channel global PTT hotkeys** that work even when the app is minimized or behind other windows.
 
 ## Features
 
-- **Global PTT Hotkey** (default: F5) — press to start transmitting, press again to stop. Works system-wide.
-- **Global Emergency Hotkey** (default: F6) — triggers emergency from anywhere.
+- **Per-Channel PTT Hotkeys** — assign a modifier+key combo (Ctrl+1, Shift+F1, Alt+2, etc.) to each channel. Press to start transmitting on that channel, press again to stop. Works system-wide.
+- **Global Emergency Hotkey** (default: Ctrl+Shift+E) — triggers emergency from anywhere.
+- **Channel Dropdown** — settings screen fetches available channels from the server and shows them in a dropdown for easy assignment.
 - **Always on Top** — keep the dispatch console above other windows.
 - **Minimize to Tray** — keeps running in the system tray when closed.
 - **Configurable Server URL** — point to any Command Communications server.
@@ -49,18 +50,25 @@ Built installers will be in the `dist/` folder.
 
 ## How PTT Works
 
-- **When the app is focused:** The global hotkey triggers PTT like normal hold-to-talk. Releasing focus auto-releases PTT.
-- **When the app is NOT focused:** The global hotkey works as a toggle — press once to start transmitting (the app will come to the foreground), press again to stop.
-- **Spacebar** continues to work as PTT when the app is focused, same as the web version.
+Each channel gets its own global hotkey (modifier+key combo). When you press a channel's hotkey:
+1. The app temporarily switches the TX channel to the mapped channel
+2. PTT starts immediately — the app stays in the background
+3. Press the same hotkey again to stop transmitting
+4. The previous TX channel selection is automatically restored
 
-## Default Hotkeys
+Spacebar continues to work as PTT for the currently selected TX channels when the app is focused.
 
-| Action | Default Key |
-|--------|------------|
-| PTT (Push-to-Talk) | F5 |
-| Emergency | F6 |
+## Hotkey Requirements
 
-You can change these in Settings (File > Settings or Ctrl+,). Any key or key combination (e.g., Ctrl+Shift+T) can be mapped.
+All hotkeys must include at least one modifier key:
+- **Ctrl** (or Cmd on Mac)
+- **Shift**
+- **Alt**
+
+Single keys without modifiers are rejected to prevent accidental activation. Examples:
+- Ctrl+1, Ctrl+2, Ctrl+3 (for channels)
+- Shift+F1, Shift+F2 (for channels)
+- Ctrl+Shift+E (emergency)
 
 ## Configuration
 

@@ -5,8 +5,8 @@ const Store = require('electron-store');
 const store = new Store({
   defaults: {
     serverUrl: 'https://comms.reeder-systems.com',
-    pttKey: 'F5',
-    emergencyKey: 'F6',
+    channelHotkeys: {},
+    emergencyKey: 'CmdOrCtrl+Shift+E',
     windowBounds: { width: 1280, height: 800 },
     alwaysOnTop: false,
     minimizeToTray: true,
@@ -17,7 +17,7 @@ const store = new Store({
 let mainWindow = null;
 let settingsWindow = null;
 let tray = null;
-let pttActive = false;
+const activePttChannels = new Set();
 
 function createMainWindow() {
   const bounds = store.get('windowBounds');
@@ -57,6 +57,7 @@ function createMainWindow() {
   });
 
   mainWindow.on('closed', () => {
+    releaseAllPtt();
     mainWindow = null;
   });
 
@@ -77,119 +78,95 @@ function createMainWindow() {
     injectPttBridge();
   });
 
-  mainWindow.on('blur', () => {
-    if (pttActive) {
-      pttActive = false;
-      simulatePttUp();
-    }
-  });
-
   createMenu();
 }
 
 function injectPttBridge() {
   if (!mainWindow) return;
-  const pttKey = store.get('pttKey') || '';
   mainWindow.webContents.executeJavaScript(`
     (() => {
-      if (window.__electronPttCleanup) window.__electronPttCleanup();
-      const pttAccel = ${JSON.stringify(pttKey)};
-      if (!pttAccel) return;
+      window.__electronPttBridgeReady = true;
 
-      function matchesAccel(e) {
-        const parts = pttAccel.split('+');
-        const key = parts[parts.length - 1];
-        const needCtrl = parts.includes('CmdOrCtrl') || parts.includes('Ctrl');
-        const needAlt = parts.includes('Alt');
-        const needShift = parts.includes('Shift');
-        if (needCtrl !== e.ctrlKey) return false;
-        if (needAlt !== e.altKey) return false;
-        if (needShift !== e.shiftKey) return false;
-        const keyLower = key.toLowerCase();
-        const eKey = e.key.toLowerCase();
-        const eCode = e.code.toLowerCase();
-        if (eKey === keyLower || eCode === keyLower || eCode === 'key' + keyLower) return true;
-        if (key.match(/^F\\d+$/) && eCode === key.toLowerCase()) return true;
-        return false;
-      }
+      let activeSession = null;
 
-      function onDown(e) {
-        if (e.repeat) return;
-        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-        if (!matchesAccel(e)) return;
-        e.preventDefault();
-        e.stopPropagation();
-        window.dispatchEvent(new KeyboardEvent('keydown', {
-          code: 'Space', key: ' ', keyCode: 32, which: 32, bubbles: true
-        }));
-      }
-      function onUp(e) {
-        if (!matchesAccel(e)) return;
-        e.preventDefault();
-        e.stopPropagation();
-        window.dispatchEvent(new KeyboardEvent('keyup', {
-          code: 'Space', key: ' ', keyCode: 32, which: 32, bubbles: true
-        }));
-      }
-      document.addEventListener('keydown', onDown, { capture: true });
-      document.addEventListener('keyup', onUp, { capture: true });
-      window.__electronPttCleanup = () => {
-        document.removeEventListener('keydown', onDown, { capture: true });
-        document.removeEventListener('keyup', onUp, { capture: true });
+      window.__electronChannelPtt = {
+        start(channelId, roomKey) {
+          const store = window.__dispatchStore;
+          if (!store) { console.error('[Electron] No dispatch store'); return; }
+
+          if (activeSession) {
+            this.stop();
+          }
+
+          const state = store.getState();
+          const session = {
+            savedTxIds: [...state.txChannelIds],
+            roomKey: roomKey,
+            channelId: channelId
+          };
+          activeSession = session;
+
+          store.setState({ txChannelIds: [channelId] });
+          console.log('[Electron] PTT start on channel', channelId, roomKey);
+          setTimeout(() => {
+            if (activeSession !== session) return;
+            window.dispatchEvent(new KeyboardEvent('keydown', {
+              code: 'Space', key: ' ', keyCode: 32, which: 32, bubbles: true
+            }));
+          }, 50);
+        },
+
+        stop() {
+          if (!activeSession) return;
+          const session = activeSession;
+          activeSession = null;
+
+          console.log('[Electron] PTT stop, restoring', session.savedTxIds);
+          window.dispatchEvent(new KeyboardEvent('keyup', {
+            code: 'Space', key: ' ', keyCode: 32, which: 32, bubbles: true
+          }));
+
+          const store = window.__dispatchStore;
+          if (store) {
+            setTimeout(() => {
+              store.setState({ txChannelIds: session.savedTxIds });
+            }, 200);
+          }
+        }
       };
-      console.log('[Electron] PTT bridge ready, mapped key:', pttAccel);
+
+      console.log('[Electron] Channel PTT bridge ready');
     })();
   `).catch(() => {});
 }
 
-function simulatePttDown() {
+function handleChannelPtt(channelId, roomKey) {
   if (!mainWindow) return;
-  mainWindow.webContents.executeJavaScript(`
-    (() => {
-      const event = new KeyboardEvent('keydown', {
-        code: 'Space',
-        key: ' ',
-        keyCode: 32,
-        which: 32,
-        bubbles: true,
-        cancelable: true
-      });
-      window.dispatchEvent(event);
-    })();
-  `).catch(() => {});
-}
 
-function simulatePttUp() {
-  if (!mainWindow) return;
-  mainWindow.webContents.executeJavaScript(`
-    (() => {
-      const event = new KeyboardEvent('keyup', {
-        code: 'Space',
-        key: ' ',
-        keyCode: 32,
-        which: 32,
-        bubbles: true,
-        cancelable: true
-      });
-      window.dispatchEvent(event);
-    })();
-  `).catch(() => {});
-}
-
-function handleGlobalPtt() {
-  if (!mainWindow) return;
-  if (mainWindow.isFocused()) {
+  if (activePttChannels.has(roomKey)) {
+    activePttChannels.delete(roomKey);
+    mainWindow.webContents.executeJavaScript(`
+      window.__electronChannelPtt && window.__electronChannelPtt.stop();
+    `).catch(() => {});
     return;
   }
-  if (!pttActive) {
-    pttActive = true;
-    simulatePttDown();
-    mainWindow.show();
-    mainWindow.focus();
-  } else {
-    pttActive = false;
-    simulatePttUp();
+
+  if (activePttChannels.size > 0) {
+    releaseAllPtt();
   }
+
+  activePttChannels.add(roomKey);
+  mainWindow.webContents.executeJavaScript(`
+    window.__electronChannelPtt && window.__electronChannelPtt.start(${channelId}, ${JSON.stringify(roomKey)});
+  `).catch(() => {});
+}
+
+function releaseAllPtt() {
+  if (!mainWindow || activePttChannels.size === 0) return;
+  activePttChannels.clear();
+  mainWindow.webContents.executeJavaScript(`
+    window.__electronChannelPtt && window.__electronChannelPtt.stop();
+  `).catch(() => {});
 }
 
 function simulateEmergency() {
@@ -208,28 +185,36 @@ function simulateEmergency() {
 function registerGlobalHotkeys() {
   globalShortcut.unregisterAll();
 
-  const pttKey = store.get('pttKey');
+  const channelHotkeys = store.get('channelHotkeys') || {};
   const emergencyKey = store.get('emergencyKey');
 
-  if (pttKey) {
-    const downRegistered = globalShortcut.register(pttKey, () => {
-      handleGlobalPtt();
-    });
-    if (!downRegistered) {
-      console.error(`[Electron] Failed to register PTT hotkey: ${pttKey}`);
-    } else {
-      console.log(`[Electron] PTT hotkey registered: ${pttKey} (toggle mode)`);
+  for (const [accel, mapping] of Object.entries(channelHotkeys)) {
+    try {
+      const ok = globalShortcut.register(accel, () => {
+        handleChannelPtt(mapping.channelId, mapping.roomKey);
+      });
+      if (ok) {
+        console.log(`[Electron] Channel hotkey registered: ${accel} -> ${mapping.channelName}`);
+      } else {
+        console.error(`[Electron] Failed to register channel hotkey: ${accel}`);
+      }
+    } catch (err) {
+      console.error(`[Electron] Error registering hotkey ${accel}:`, err.message);
     }
   }
 
   if (emergencyKey) {
-    const emergRegistered = globalShortcut.register(emergencyKey, () => {
-      simulateEmergency();
-    });
-    if (!emergRegistered) {
-      console.error(`[Electron] Failed to register Emergency hotkey: ${emergencyKey}`);
-    } else {
-      console.log(`[Electron] Emergency hotkey registered: ${emergencyKey}`);
+    try {
+      const ok = globalShortcut.register(emergencyKey, () => {
+        simulateEmergency();
+      });
+      if (ok) {
+        console.log(`[Electron] Emergency hotkey registered: ${emergencyKey}`);
+      } else {
+        console.error(`[Electron] Failed to register emergency hotkey: ${emergencyKey}`);
+      }
+    } catch (err) {
+      console.error(`[Electron] Error registering emergency hotkey:`, err.message);
     }
   }
 }
@@ -277,11 +262,15 @@ function createMenu() {
         {
           label: 'About',
           click: () => {
+            const hotkeys = store.get('channelHotkeys') || {};
+            const hotkeyList = Object.entries(hotkeys)
+              .map(([k, v]) => `  ${k} -> ${v.channelName}`)
+              .join('\n') || '  None configured';
             dialog.showMessageBox(mainWindow, {
               type: 'info',
               title: 'About Command Communications',
               message: 'Command Communications by Reeder - Systems',
-              detail: `Version ${app.getVersion()}\nDesktop Dispatch Console\n\nGlobal PTT Hotkey: ${store.get('pttKey')}\nEmergency Hotkey: ${store.get('emergencyKey')}`
+              detail: `Version ${app.getVersion()}\nDesktop Dispatch Console\n\nChannel Hotkeys:\n${hotkeyList}\n\nEmergency: ${store.get('emergencyKey') || 'None'}`
             });
           }
         },
@@ -306,11 +295,13 @@ function openSettings() {
   }
 
   settingsWindow = new BrowserWindow({
-    width: 500,
-    height: 600,
+    width: 560,
+    height: 700,
     parent: mainWindow,
     modal: true,
-    resizable: false,
+    resizable: true,
+    minWidth: 450,
+    minHeight: 500,
     title: 'Settings',
     icon: path.join(__dirname, 'icon.png'),
     autoHideMenuBar: true,
@@ -372,7 +363,7 @@ function createTray() {
 ipcMain.handle('get-settings', () => {
   return {
     serverUrl: store.get('serverUrl'),
-    pttKey: store.get('pttKey'),
+    channelHotkeys: store.get('channelHotkeys') || {},
     emergencyKey: store.get('emergencyKey'),
     alwaysOnTop: store.get('alwaysOnTop'),
     minimizeToTray: store.get('minimizeToTray'),
@@ -394,8 +385,23 @@ ipcMain.handle('save-settings', (event, settings) => {
 
   const needsReload = settings.serverUrl !== store.get('serverUrl');
 
+  const hasModifier = (accel) =>
+    accel.includes('CmdOrCtrl') || accel.includes('Ctrl') ||
+    accel.includes('Alt') || accel.includes('Shift');
+
+  if (settings.channelHotkeys) {
+    for (const accel of Object.keys(settings.channelHotkeys)) {
+      if (!hasModifier(accel)) {
+        return { success: false, error: `Hotkey "${accel}" must include a modifier (Ctrl, Alt, or Shift)` };
+      }
+    }
+  }
+  if (settings.emergencyKey && !hasModifier(settings.emergencyKey)) {
+    return { success: false, error: 'Emergency hotkey must include a modifier (Ctrl, Alt, or Shift)' };
+  }
+
   if (settings.serverUrl) store.set('serverUrl', settings.serverUrl);
-  if (settings.pttKey !== undefined) store.set('pttKey', settings.pttKey);
+  if (settings.channelHotkeys !== undefined) store.set('channelHotkeys', settings.channelHotkeys);
   if (settings.emergencyKey !== undefined) store.set('emergencyKey', settings.emergencyKey);
   if (settings.alwaysOnTop !== undefined) {
     store.set('alwaysOnTop', settings.alwaysOnTop);
@@ -406,7 +412,6 @@ ipcMain.handle('save-settings', (event, settings) => {
 
   registerGlobalHotkeys();
   createMenu();
-  injectPttBridge();
 
   if (needsReload && mainWindow) {
     mainWindow.loadURL(settings.serverUrl);
@@ -415,8 +420,18 @@ ipcMain.handle('save-settings', (event, settings) => {
   return { success: true };
 });
 
-ipcMain.on('ptt-up', () => {
-  simulatePttUp();
+ipcMain.handle('fetch-channels', async () => {
+  if (!mainWindow) return [];
+  try {
+    const result = await mainWindow.webContents.executeJavaScript(`
+      fetch('/api/dispatch/channels', { credentials: 'include' })
+        .then(r => r.ok ? r.json() : [])
+        .catch(() => [])
+    `);
+    return result || [];
+  } catch {
+    return [];
+  }
 });
 
 app.whenReady().then(() => {
@@ -438,6 +453,7 @@ app.on('activate', () => {
 });
 
 app.on('will-quit', () => {
+  releaseAllPtt();
   globalShortcut.unregisterAll();
 });
 
@@ -448,5 +464,6 @@ app.on('window-all-closed', () => {
 });
 
 app.on('before-quit', () => {
+  releaseAllPtt();
   app.isQuitting = true;
 });
