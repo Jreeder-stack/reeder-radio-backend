@@ -59,3 +59,12 @@ The dispatch console is a Progressive Web App (PWA) with a responsive design for
 - **Zustand:** Frontend state management.
 - **Leaflet/react-leaflet:** Mapping components for the Dispatcher Map.
 - **`archiver`:** For ZIP file creation in the audio export system.
+
+## Azure VM Deployment
+Deployment scripts and configs are in the `deploy/` directory:
+- `deploy/setup-server.sh` — Provisions a fresh Ubuntu VM with Node.js 20, PostgreSQL 16, nginx, PM2, certbot, and firewall rules (ports 443, 80, 5100/UDP).
+- `deploy/nginx.conf` — Reverse proxy config with SSL, WebSocket upgrade for Socket.IO and signaling.
+- `deploy/ecosystem.config.cjs` — PM2 process config for auto-restart and boot persistence.
+- `deploy/init-db.sh` — Creates the PostgreSQL database and user. The app auto-creates tables on first connect.
+- `deploy/deploy.sh` — Pulls latest code, installs deps, builds frontend, restarts PM2.
+- `.env.production.example` — Template listing all required and optional environment variables.
