@@ -4,8 +4,6 @@ import { signalingManager } from './SignalingManager.js';
 export function useSignaling() {
   const [connected, setConnected] = useState(false);
   const [authenticated, setAuthenticated] = useState(false);
-  const [livekitAvailable, setLivekitAvailable] = useState(true);
-
   useEffect(() => {
     const removeConnectionListener = signalingManager.on('connectionChange', (data) => {
       setConnected(data.connected);
@@ -14,17 +12,11 @@ export function useSignaling() {
       }
     });
 
-    const removeSystemStatusListener = signalingManager.on('systemStatus', (data) => {
-      setLivekitAvailable(data.livekitAvailable !== false);
-    });
-
     setConnected(signalingManager.socket?.connected || false);
     setAuthenticated(signalingManager.authenticated);
-    setLivekitAvailable(signalingManager.livekitAvailable);
 
     return () => {
       removeConnectionListener();
-      removeSystemStatusListener();
     };
   }, []);
 
@@ -56,7 +48,6 @@ export function useSignaling() {
   return {
     connected,
     authenticated,
-    livekitAvailable,
     connect,
     authenticate,
     disconnect,

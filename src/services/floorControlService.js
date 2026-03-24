@@ -7,22 +7,24 @@ class FloorControlService {
   }
 
   requestFloor(channelId, unitId, { isEmergency = false, emergencyStates = null } = {}) {
-    const current = this.floorHolders.get(channelId);
+    const key = String(channelId);
+    const current = this.floorHolders.get(key);
 
     if (current && current.unitId === unitId) {
-      return { granted: true, channelId, unitId, timestamp: Date.now() };
+      this._rearmTimer(key, unitId);
+      return { granted: true, channelId: key, unitId, timestamp: Date.now() };
     }
 
     if (current) {
       const currentIsEmergency = current.isEmergency;
 
       if (isEmergency && !currentIsEmergency) {
-        this._clearTimer(channelId);
+        this._clearTimer(key);
         const preempted = current.unitId;
-        this._setFloor(channelId, unitId, true);
+        this._setFloor(key, unitId, true);
         return {
           granted: true,
-          channelId,
+          channelId: key,
           unitId,
           timestamp: Date.now(),
           preemptedUnit: preempted,
@@ -32,7 +34,7 @@ class FloorControlService {
 
       return {
         granted: false,
-        channelId,
+        channelId: key,
         unitId,
         timestamp: Date.now(),
         heldBy: current.unitId,
@@ -40,34 +42,38 @@ class FloorControlService {
       };
     }
 
-    this._setFloor(channelId, unitId, isEmergency);
-    return { granted: true, channelId, unitId, timestamp: Date.now(), isEmergency };
+    this._setFloor(key, unitId, isEmergency);
+    return { granted: true, channelId: key, unitId, timestamp: Date.now(), isEmergency };
   }
 
   releaseFloor(channelId, unitId) {
-    const current = this.floorHolders.get(channelId);
+    const key = String(channelId);
+    const current = this.floorHolders.get(key);
     if (!current || current.unitId !== unitId) {
       return false;
     }
-    this._clearTimer(channelId);
-    this.floorHolders.delete(channelId);
+    this._clearTimer(key);
+    this.floorHolders.delete(key);
     return true;
   }
 
   forceRelease(channelId) {
-    const current = this.floorHolders.get(channelId);
-    this._clearTimer(channelId);
-    this.floorHolders.delete(channelId);
+    const key = String(channelId);
+    const current = this.floorHolders.get(key);
+    this._clearTimer(key);
+    this.floorHolders.delete(key);
     return current || null;
   }
 
   holdsFloor(channelId, unitId) {
-    const current = this.floorHolders.get(channelId);
+    const key = String(channelId);
+    const current = this.floorHolders.get(key);
     return current ? current.unitId === unitId : false;
   }
 
   getFloorHolder(channelId) {
-    return this.floorHolders.get(channelId) || null;
+    const key = String(channelId);
+    return this.floorHolders.get(key) || null;
   }
 
   releaseAllForUnit(unitId) {
@@ -82,35 +88,55 @@ class FloorControlService {
     return released;
   }
 
-  _setFloor(channelId, unitId, isEmergency) {
-    this.floorHolders.set(channelId, {
+  _setFloor(key, unitId, isEmergency) {
+    this.floorHolders.set(key, {
       unitId,
       isEmergency,
       grantedAt: Date.now(),
     });
 
-    this._clearTimer(channelId);
+    this._clearTimer(key);
     const timer = setTimeout(() => {
-      const current = this.floorHolders.get(channelId);
+      const current = this.floorHolders.get(key);
       if (current && current.unitId === unitId) {
-        this.floorHolders.delete(channelId);
-        this.floorTimers.delete(channelId);
-        console.log(`[FloorControl] Timeout: released floor on ${channelId} from ${unitId}`);
+        this.floorHolders.delete(key);
+        this.floorTimers.delete(key);
+        console.log(`[FloorControl] Timeout: released floor on ${key} from ${unitId}`);
         if (this._onTimeout) {
-          this._onTimeout(channelId, unitId);
+          this._onTimeout(key, unitId);
         }
       }
     }, FLOOR_HOLD_TIMEOUT_MS);
 
     timer.unref?.();
-    this.floorTimers.set(channelId, timer);
+    this.floorTimers.set(key, timer);
   }
 
-  _clearTimer(channelId) {
-    const timer = this.floorTimers.get(channelId);
+  _rearmTimer(key, unitId) {
+    this._clearTimer(key);
+    const current = this.floorHolders.get(key);
+    if (!current) return;
+    current.grantedAt = Date.now();
+    const timer = setTimeout(() => {
+      const cur = this.floorHolders.get(key);
+      if (cur && cur.unitId === unitId) {
+        this.floorHolders.delete(key);
+        this.floorTimers.delete(key);
+        console.log(`[FloorControl] Timeout: released floor on ${key} from ${unitId}`);
+        if (this._onTimeout) {
+          this._onTimeout(key, unitId);
+        }
+      }
+    }, FLOOR_HOLD_TIMEOUT_MS);
+    timer.unref?.();
+    this.floorTimers.set(key, timer);
+  }
+
+  _clearTimer(key) {
+    const timer = this.floorTimers.get(key);
     if (timer) {
       clearTimeout(timer);
-      this.floorTimers.delete(channelId);
+      this.floorTimers.delete(key);
     }
   }
 

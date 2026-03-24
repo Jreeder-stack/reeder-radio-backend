@@ -28,7 +28,6 @@ class SignalingManager {
     this.isDispatcher = false;
     this.subscribedChannels = new Set();
     this.channelMembers = new Map();
-    this.livekitAvailable = true;
     this._keepaliveInterval = null;
     this._pongTimeout = null;
     
@@ -55,6 +54,7 @@ class SignalingManager {
       systemStatus: new Set(),
       connectionChange: new Set(),
       emergencyAlert: new Set(),
+      'data:message': new Set(),
     };
     
     this.reconnectAttempts = 0;
@@ -117,7 +117,6 @@ class SignalingManager {
       this.socket.on('authenticated', (data) => {
         console.log('[Signaling] Authenticated as', data.unitId);
         this.authenticated = true;
-        this.livekitAvailable = data.livekitAvailable !== false;
 
         if (this.subscribedChannels.size > 0) {
           console.log('[Signaling] Re-joining', this.subscribedChannels.size, 'channels');
@@ -192,7 +191,6 @@ class SignalingManager {
     });
 
     this.socket.on(SIGNALING_EVENTS.SYSTEM_STATUS, (data) => {
-      this.livekitAvailable = data.livekitAvailable !== false;
       this._emit('systemStatus', data);
     });
 
@@ -219,6 +217,10 @@ class SignalingManager {
     this.socket.on('clear_air:cleared', (data) => {
       this._emit('clear_air:cleared', data);
       this._emit('clearAirEnd', data);
+    });
+
+    this.socket.on('data:message', (data) => {
+      this._emit('data:message', data);
     });
 
     this.socket.on('location:track_start', (data) => {
@@ -278,16 +280,39 @@ class SignalingManager {
   signalPttStart(channelId) {
     if (!this.socket?.connected || !this.authenticated) {
       console.error('[Signaling] Cannot signal PTT start: not connected/authenticated');
-      return false;
+      return Promise.reject(new Error('Not connected'));
     }
 
-    if (!this.livekitAvailable) {
-      console.error('[Signaling] Cannot start PTT: LiveKit unavailable');
-      return false;
-    }
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        cleanup();
+        reject(new Error('PTT grant timeout'));
+      }, 3000);
 
-    this.socket.emit(SIGNALING_EVENTS.PTT_START, { channelId });
-    return true;
+      const onGranted = (data) => {
+        if (data.channelId === channelId) {
+          cleanup();
+          resolve(data);
+        }
+      };
+
+      const onBusy = (data) => {
+        if (data.channelId === channelId) {
+          cleanup();
+          reject(new Error(`Channel busy: ${data.transmittingUnit}`));
+        }
+      };
+
+      const cleanup = () => {
+        clearTimeout(timeout);
+        this.socket.off('ptt:granted', onGranted);
+        this.socket.off('ptt:busy', onBusy);
+      };
+
+      this.socket.on('ptt:granted', onGranted);
+      this.socket.on('ptt:busy', onBusy);
+      this.socket.emit(SIGNALING_EVENTS.PTT_START, { channelId });
+    });
   }
 
   signalPttEnd(channelId) {
@@ -325,6 +350,13 @@ class SignalingManager {
     return true;
   }
 
+  sendChannelData(channelId, payload) {
+    if (!this.socket?.connected || !this.authenticated) return false;
+
+    this.socket.emit('data:send', { channelId, payload });
+    return true;
+  }
+
   updateStatus(status) {
     if (!this.socket?.connected) return false;
 
@@ -349,8 +381,8 @@ class SignalingManager {
     return this.channelMembers.get(channelId) || [];
   }
 
-  isLivekitAvailable() {
-    return this.livekitAvailable;
+  isVoiceAvailable() {
+    return true;
   }
 
   on(event, callback) {

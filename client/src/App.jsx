@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { DataPacket_Kind, Track } from "livekit-client";
 import { micPTTManager } from "./audio/MicPTTManager";
 import { PTT_STATES } from "./constants/pttStates";
 import { updateUnitStatus } from "./utils/api.js";
@@ -487,21 +486,16 @@ export default function App({ user, onLogout }) {
   }, [livekitManager]);
 
   const broadcastStatus = useCallback((status, channel) => {
-    const room = livekitManager?.getRoom(channel);
-    if (!room || !room.localParticipant) return;
+    if (!livekitManager?.isConnected(channel)) return;
     
-    const message = JSON.stringify({
+    livekitManager.sendData(channel, {
       type: "status_update",
-      identity: room.localParticipant.identity,
+      identity,
       status,
       channel,
       timestamp: Date.now(),
     });
-    
-    const encoder = new TextEncoder();
-    const data = encoder.encode(message);
-    room.localParticipant.publishData(data, DataPacket_Kind.RELIABLE);
-  }, [livekitManager]);
+  }, [livekitManager, identity]);
 
   useEffect(() => {
     if (Object.keys(activeEmergencies).length > 0) {
@@ -604,21 +598,16 @@ export default function App({ user, onLogout }) {
   }, []);
 
   const broadcastEmergency = useCallback((channel, active) => {
-    const room = livekitManager?.getRoom(channel);
-    if (!room || !room.localParticipant) return;
+    if (!livekitManager?.isConnected(channel)) return;
     
-    const message = JSON.stringify({
+    livekitManager.sendData(channel, {
       type: "emergency",
-      identity: room.localParticipant.identity,
+      identity,
       channel,
       active,
       timestamp: Date.now(),
     });
-    
-    const encoder = new TextEncoder();
-    const data = encoder.encode(message);
-    room.localParticipant.publishData(data, DataPacket_Kind.RELIABLE);
-  }, [livekitManager]);
+  }, [livekitManager, identity]);
 
   const acknowledgeEmergency = useCallback((unitId, channel) => {
     setActiveEmergencies((prev) => {
@@ -627,42 +616,31 @@ export default function App({ user, onLogout }) {
       return updated;
     });
     
-    const room = livekitManager?.getRoom(channel || transmitChannelRef.current);
-    if (room && room.localParticipant) {
-      const message = JSON.stringify({
+    const targetChannel = channel || transmitChannelRef.current;
+    if (targetChannel) {
+      livekitManager?.sendData(targetChannel, {
         type: "emergency_ack",
         targetUnit: unitId,
         channel,
         acknowledgedBy: identity,
         timestamp: Date.now(),
       });
-      
-      const encoder = new TextEncoder();
-      const data = encoder.encode(message);
-      room.localParticipant.publishData(data, DataPacket_Kind.RELIABLE);
     }
   }, [identity, livekitManager]);
 
   const broadcastHeartbeat = useCallback((channel) => {
-    const room = livekitManager?.getRoom(channel);
-    if (!room || !room.localParticipant) return;
-    if (room.state !== 'connected') {
-      console.log('[Radio] Skipping heartbeat - room not connected, state:', room.state);
+    if (!livekitManager?.isConnected(channel)) {
       return;
     }
     
-    const message = JSON.stringify({
+    livekitManager.sendData(channel, {
       type: "heartbeat",
-      identity: room.localParticipant.identity,
+      identity,
       channel,
       location: userLocation,
       timestamp: Date.now(),
     });
-    
-    const encoder = new TextEncoder();
-    const data = encoder.encode(message);
-    room.localParticipant.publishData(data, DataPacket_Kind.RELIABLE);
-  }, [userLocation, livekitManager]);
+  }, [userLocation, livekitManager, identity]);
 
   const startHeartbeat = useCallback((channel) => {
     if (heartbeatIntervalRef.current) {

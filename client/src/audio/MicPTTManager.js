@@ -1,4 +1,3 @@
-import { Track, RoomEvent } from 'livekit-client';
 import { PTT_STATES } from '../constants/pttStates.js';
 import { playPermitTone, startBonkLoop, stopBonkLoop } from './talkPermitTone.js';
 import { unlockAudio } from './iosAudioUnlock.js';
@@ -6,15 +5,11 @@ import { processRadioVoice, cleanup as cleanupRadioDSP } from './radioVoiceDSP.j
 import { acquireWakeLock, releaseWakeLock } from '../plugins/backgroundService.js';
 import { isNativeLiveKitAvailable, nativeEnableMic, nativeDisableMic } from '../plugins/nativeLiveKit.js';
 
-const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || 
-  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-
 const isNativeAndroid = () => isNativeLiveKitAvailable();
-
-const PERMIT_TONE_DURATION = 150;
 
 const PTT_COOLDOWN_MS = 500;
 const PTT_READY_TIMEOUT_MS = 5000;
+const PCM_FRAME_SIZE = 960;
 
 class MicPTTManager {
   constructor() {
@@ -22,8 +17,11 @@ class MicPTTManager {
     this.audioContext = null;
     this.stream = null;
     this.browserTrack = null;
-    this.localTrack = null;
-    this.room = null;
+    this._ws = null;
+    this._captureWorkletNode = null;
+    this._captureWorkletReady = false;
+    this._sourceNode = null;
+    this._txSequence = 0;
     this.onStateChange = null;
     this.onError = null;
     this.onDisconnectDuringTx = null;
@@ -33,18 +31,14 @@ class MicPTTManager {
     this.publishComplete = false;
     this.lastPttEndTime = 0;
     this.stateListeners = new Set();
-    this._roomDisconnectHandler = null;
-    this._roomReconnectingHandler = null;
+    this._wsCloseHandler = null;
     this._signalingManager = null;
     this._pttReadyResolver = null;
     this._currentChannelId = null;
     this._currentUnitId = null;
-    
-    this._audioBuffer = [];
-    this._isBuffering = false;
-    this._mediaRecorder = null;
-    this._roomResolver = null;
-    this._waitingForRoom = false;
+
+    this._wsResolver = null;
+    this._waitingForWs = false;
   }
 
   setSignalingManager(signalingManager) {
@@ -62,7 +56,6 @@ class MicPTTManager {
   _waitForPttReady() {
     return new Promise((resolve) => {
       if (!this._signalingManager) {
-        console.log('[MicPTT] No signaling manager - proceeding immediately');
         resolve(false);
         return;
       }
@@ -73,7 +66,7 @@ class MicPTTManager {
       const onReady = (data) => {
         const channelMatch = !this._currentChannelId || data.channelId === this._currentChannelId;
         const unitMatch = !this._currentUnitId || data.unitId === this._currentUnitId;
-        
+
         if (channelMatch && unitMatch) {
           console.log(`[MicPTT] PTT_READY received for ${data.unitId} on ${data.channelId}`);
           if (timeout) clearTimeout(timeout);
@@ -135,7 +128,7 @@ class MicPTTManager {
   }
 
   canStop() {
-    return this.state === PTT_STATES.TRANSMITTING || 
+    return this.state === PTT_STATES.TRANSMITTING ||
            this.state === PTT_STATES.ARMING ||
            this.state === PTT_STATES.BUSY;
   }
@@ -158,7 +151,7 @@ class MicPTTManager {
 
   _ensureAudioContext() {
     if (!this.audioContext || this.audioContext.state === 'closed') {
-      this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      this.audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 48000 });
     }
     if (this.audioContext.state === 'suspended') {
       this.audioContext.resume().catch(e => console.warn('[MicPTT] AudioContext resume failed:', e));
@@ -166,102 +159,96 @@ class MicPTTManager {
     return this.audioContext;
   }
 
-  setRoom(room) {
-    this._removeRoomListeners();
-    this.room = room;
-    
-    if (this._waitingForRoom && this._roomResolver) {
-      console.log('[MicPTT] Room received while waiting - resolving promise');
-      this._roomResolver(room);
-      this._roomResolver = null;
-      this._waitingForRoom = false;
+  setWsTransport(ws) {
+    this._removeWsListeners();
+    this._ws = ws;
+
+    if (this._waitingForWs && this._wsResolver) {
+      console.log('[MicPTT] WS transport received while waiting - resolving promise');
+      this._wsResolver(ws);
+      this._wsResolver = null;
+      this._waitingForWs = false;
     }
   }
-  
-  _waitForRoom(timeoutMs = 5000) {
-    if (this.room && this.room.state === 'connected') {
-      return Promise.resolve(this.room);
+
+  setRoom(room) {
+    if (room && room.ws) {
+      this.setWsTransport(room.ws);
+    } else if (room && typeof room === 'object') {
+      this.setWsTransport(room);
     }
-    
-    this._waitingForRoom = true;
-    
+  }
+
+  _waitForWsTransport(timeoutMs = 5000) {
+    if (this._ws && this._ws.readyState === WebSocket.OPEN) {
+      return Promise.resolve(this._ws);
+    }
+
+    this._waitingForWs = true;
+
     return new Promise((resolve, reject) => {
-      this._roomRejecter = reject;
-      
-      this._roomWaitTimeout = setTimeout(() => {
-        if (this._waitingForRoom) {
-          this._waitingForRoom = false;
-          this._roomResolver = null;
-          this._roomRejecter = null;
-          this._roomWaitTimeout = null;
-          reject(new Error('Room connection timeout'));
+      this._wsRejecter = reject;
+
+      this._wsWaitTimeout = setTimeout(() => {
+        if (this._waitingForWs) {
+          this._waitingForWs = false;
+          this._wsResolver = null;
+          this._wsRejecter = null;
+          this._wsWaitTimeout = null;
+          reject(new Error('WS transport connection timeout'));
         }
       }, timeoutMs);
-      
-      this._roomResolver = (room) => {
-        if (this._roomWaitTimeout) {
-          clearTimeout(this._roomWaitTimeout);
-          this._roomWaitTimeout = null;
+
+      this._wsResolver = (ws) => {
+        if (this._wsWaitTimeout) {
+          clearTimeout(this._wsWaitTimeout);
+          this._wsWaitTimeout = null;
         }
-        this._roomRejecter = null;
-        resolve(room);
+        this._wsRejecter = null;
+        resolve(ws);
       };
     });
   }
-  
-  _cancelRoomWait() {
-    if (this._roomWaitTimeout) {
-      clearTimeout(this._roomWaitTimeout);
-      this._roomWaitTimeout = null;
+
+  _cancelWsWait() {
+    if (this._wsWaitTimeout) {
+      clearTimeout(this._wsWaitTimeout);
+      this._wsWaitTimeout = null;
     }
-    if (this._roomRejecter) {
-      this._roomRejecter(new Error('Room wait cancelled'));
-      this._roomRejecter = null;
+    if (this._wsRejecter) {
+      this._wsRejecter(new Error('WS wait cancelled'));
+      this._wsRejecter = null;
     }
-    this._waitingForRoom = false;
-    this._roomResolver = null;
+    this._waitingForWs = false;
+    this._wsResolver = null;
   }
 
-  _setupRoomListeners() {
-    if (!this.room) return;
-    
-    this._roomDisconnectHandler = () => {
-      console.warn('[MicPTT] Room disconnected during transmission!');
+  _setupWsListeners() {
+    if (!this._ws) return;
+
+    this._wsCloseHandler = () => {
+      console.warn('[MicPTT] WS disconnected during transmission!');
       this._handleDisconnectDuringTx();
     };
-    
-    this._roomReconnectingHandler = () => {
-      console.warn('[MicPTT] Room reconnecting during transmission');
-    };
-    
-    this.room.on(RoomEvent.Disconnected, this._roomDisconnectHandler);
-    this.room.on(RoomEvent.Reconnecting, this._roomReconnectingHandler);
+
+    this._ws.addEventListener('close', this._wsCloseHandler);
   }
 
-  _removeRoomListeners() {
-    if (this.room) {
-      if (this._roomDisconnectHandler) {
-        this.room.off(RoomEvent.Disconnected, this._roomDisconnectHandler);
-      }
-      if (this._roomReconnectingHandler) {
-        this.room.off(RoomEvent.Reconnecting, this._roomReconnectingHandler);
-      }
+  _removeWsListeners() {
+    if (this._ws && this._wsCloseHandler) {
+      this._ws.removeEventListener('close', this._wsCloseHandler);
     }
-    this._roomDisconnectHandler = null;
-    this._roomReconnectingHandler = null;
+    this._wsCloseHandler = null;
   }
 
   _handleDisconnectDuringTx() {
-    // If we're transmitting, clean up immediately
     if (this.state === PTT_STATES.TRANSMITTING || this.state === PTT_STATES.ARMING) {
       console.error('[MicPTT] Disconnected during active transmission - forcing cleanup');
-      
-      // Play error tone to alert user
+
       if (this.onDisconnectDuringTx) {
         this.onDisconnectDuringTx();
       }
-      
-      // Force cleanup
+
       this.forceRelease();
     }
   }
@@ -273,21 +260,28 @@ class MicPTTManager {
     }
   }
 
+  async _ensureCaptureWorklet() {
+    if (this._captureWorkletReady) return;
+    const ctx = this._ensureAudioContext();
+    await ctx.audioWorklet.addModule('/audio/pcm-capture-worklet.js');
+    this._captureWorkletReady = true;
+    console.log('[MicPTT] Capture worklet module loaded');
+  }
+
   async start() {
     if (!this.canStart()) {
-      console.log(`[PTT-DIAG] [JS] MicPTTManager.start() — BLOCKED, state=${this.state} lock=${this.transitionLock}`);
+      console.log(`[MicPTT] start() — BLOCKED, state=${this.state} lock=${this.transitionLock}`);
       return false;
     }
 
     const native = isNativeAndroid();
-    console.log(`[PTT-DIAG] [JS] MicPTTManager.start() — path=${native ? 'NATIVE' : 'WEB'} channel=${this.currentChannel} unit=${this.currentUnit}`);
+    console.log(`[MicPTT] start() — path=${native ? 'NATIVE' : 'WEB'} channel=${this._currentChannelId} unit=${this._currentUnitId}`);
 
     if (native) {
       return this._startNative();
     }
 
     unlockAudio();
-    
     acquireWakeLock().catch(e => console.warn('[MicPTT] Wake lock acquire failed:', e));
 
     this.transitionLock = true;
@@ -295,8 +289,9 @@ class MicPTTManager {
 
     try {
       this._setState(PTT_STATES.ARMING);
-      this._ensureAudioContext();
-      
+      const ctx = this._ensureAudioContext();
+      await this._ensureCaptureWorklet();
+
       playPermitTone();
       console.log('[MicPTT] Permit tone played immediately');
 
@@ -328,19 +323,19 @@ class MicPTTManager {
       }
 
       this.stream = stream;
-      
+
       const processedStream = processRadioVoice(stream);
       this.browserTrack = processedStream.getAudioTracks()[0];
       console.log('[MicPTT] Mic acquired with radio voice DSP');
 
-      let room = this.room;
-      if (!room || room.state !== 'connected') {
-        console.log('[MicPTT] Waiting for room connection...');
+      let ws = this._ws;
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
+        console.log('[MicPTT] Waiting for WS transport connection...');
         try {
-          room = await this._waitForRoom(PTT_READY_TIMEOUT_MS);
-          this.room = room;
-        } catch (roomErr) {
-          console.error('[MicPTT] Room connection failed:', roomErr);
+          ws = await this._waitForWsTransport(PTT_READY_TIMEOUT_MS);
+          this._ws = ws;
+        } catch (wsErr) {
+          console.error('[MicPTT] WS transport connection failed:', wsErr);
           startBonkLoop();
           await this._cleanup();
           this.transitionLock = false;
@@ -352,45 +347,55 @@ class MicPTTManager {
             this._setState(PTT_STATES.BUSY);
           }
           if (this.onError) {
-            this.onError(roomErr);
+            this.onError(wsErr);
           }
           return false;
         }
       }
 
       if (this.pendingStop) {
-        console.log('[MicPTT] Stop requested during room wait - aborting');
+        console.log('[MicPTT] Stop requested during WS wait - aborting');
         this._stopTracks(stream);
         this._setState(PTT_STATES.IDLE);
         this.transitionLock = false;
         return false;
       }
 
-      this._setupRoomListeners();
+      this._setupWsListeners();
       this.publishComplete = false;
-      console.log('[MicPTT] Room ready, publishing track...');
-      
+      console.log('[MicPTT] WS transport ready, starting capture...');
+
       this.permitDeadlineTimer = setTimeout(() => {
         if (!this.publishComplete && this.state === PTT_STATES.ARMING && !this.pendingStop) {
-          console.log('[MicPTT] Publish taking too long, starting bonk');
+          console.log('[MicPTT] Capture setup taking too long, starting bonk');
           startBonkLoop();
         }
       }, 2000);
-      
+
       try {
-        const publication = await this.room.localParticipant.publishTrack(
-          this.browserTrack,
-          {
-            name: 'microphone',
-            source: Track.Source.Microphone
+        const source = ctx.createMediaStreamSource(new MediaStream([this.browserTrack]));
+        this._sourceNode = source;
+
+        const captureNode = new AudioWorkletNode(ctx, 'pcm-capture-processor');
+        this._captureWorkletNode = captureNode;
+        this._txSequence = 0;
+
+        captureNode.port.onmessage = (e) => {
+          if (e.data.type === 'pcm') {
+            this._sendPcmFrame(e.data.samples);
           }
-        );
-        this.localTrack = publication.track;
+        };
+
+        source.connect(captureNode);
+        captureNode.connect(ctx.destination);
+
+        captureNode.port.postMessage({ type: 'start' });
+
         this.publishComplete = true;
         this._clearPermitDeadline();
         stopBonkLoop();
-      } catch (publishErr) {
-        console.error('[MicPTT] Publish failed:', publishErr);
+      } catch (captureErr) {
+        console.error('[MicPTT] Capture setup failed:', captureErr);
         this._clearPermitDeadline();
         startBonkLoop();
         await this._cleanup();
@@ -403,13 +408,13 @@ class MicPTTManager {
           this._setState(PTT_STATES.BUSY);
         }
         if (this.onError) {
-          this.onError(publishErr);
+          this.onError(captureErr);
         }
         return false;
       }
 
       if (this.pendingStop) {
-        console.log('[MicPTT] Stop requested during publish - cleaning up');
+        console.log('[MicPTT] Stop requested during capture setup - cleaning up');
         await this._doStop();
         return false;
       }
@@ -438,6 +443,27 @@ class MicPTTManager {
     }
   }
 
+  _sendPcmFrame(int16Samples) {
+    if (!this._ws || this._ws.readyState !== WebSocket.OPEN) return;
+
+    const header = new ArrayBuffer(3);
+    const view = new DataView(header);
+    view.setUint8(0, 0x01);
+    view.setUint16(1, this._txSequence & 0xFFFF);
+    this._txSequence++;
+
+    const pcmBytes = new Uint8Array(int16Samples.buffer, int16Samples.byteOffset, int16Samples.byteLength);
+    const frame = new Uint8Array(3 + pcmBytes.length);
+    frame.set(new Uint8Array(header), 0);
+    frame.set(pcmBytes, 3);
+
+    try {
+      this._ws.send(frame.buffer);
+    } catch (err) {
+      console.warn('[MicPTT] WS send error:', err.message);
+    }
+  }
+
   _isDeadObjectError(err) {
     if (!err) return false;
     const msg = (err.message || err.toString() || '').toLowerCase();
@@ -445,8 +471,8 @@ class MicPTTManager {
   }
 
   async _startNative() {
-    console.log('[PTT-DIAG] [JS] MicPTTManager._startNative() — BEGIN');
-    acquireWakeLock().catch(e => console.warn('[PTT-DIAG] [JS] Native wake lock acquire failed:', e));
+    console.log('[MicPTT] _startNative() — BEGIN');
+    acquireWakeLock().catch(e => console.warn('[MicPTT] Native wake lock acquire failed:', e));
 
     this.transitionLock = true;
     this.pendingStop = false;
@@ -454,12 +480,10 @@ class MicPTTManager {
     try {
       this._setState(PTT_STATES.ARMING);
       playPermitTone();
-      console.log('[PTT-DIAG] [JS] _startNative() — calling nativeEnableMic()');
 
       const success = await nativeEnableMic();
-      console.log('[PTT-DIAG] [JS] _startNative() — nativeEnableMic() result=' + success);
       if (!success) {
-        console.error('[PTT-DIAG] [JS] _startNative() — nativeEnableMic FAILED');
+        console.error('[MicPTT] _startNative() — nativeEnableMic FAILED');
         startBonkLoop();
         this.transitionLock = false;
         this._setState(PTT_STATES.BUSY);
@@ -467,14 +491,11 @@ class MicPTTManager {
       }
 
       if (this.pendingStop) {
-        console.log('[PTT-DIAG] [JS] _startNative() — pendingStop, disabling mic');
         try {
           await nativeDisableMic();
         } catch (stopErr) {
-          if (this._isDeadObjectError(stopErr)) {
-            console.warn('[PTT-DIAG] [JS] _startNative() — dead object (-38) on pendingStop disable, ignoring');
-          } else {
-            console.warn('[PTT-DIAG] [JS] _startNative() — error on pendingStop disable:', stopErr);
+          if (!this._isDeadObjectError(stopErr)) {
+            console.warn('[MicPTT] _startNative() — error on pendingStop disable:', stopErr);
           }
         }
         this._setState(PTT_STATES.IDLE);
@@ -485,14 +506,13 @@ class MicPTTManager {
       stopBonkLoop();
       this._setState(PTT_STATES.TRANSMITTING);
       this.transitionLock = false;
-      console.log('[PTT-DIAG] [JS] _startNative() — TRANSMITTING');
       return true;
 
     } catch (err) {
       if (this._isDeadObjectError(err)) {
-        console.warn('[PTT-DIAG] [JS] _startNative() — dead object (-38) caught, resetting state machine to IDLE');
+        console.warn('[MicPTT] _startNative() — dead object caught, resetting to IDLE');
       } else {
-        console.error('[PTT-DIAG] [JS] _startNative() — ERROR:', err);
+        console.error('[MicPTT] _startNative() — ERROR:', err);
       }
       this.pendingStop = false;
       this.transitionLock = false;
@@ -504,7 +524,7 @@ class MicPTTManager {
 
   async stop() {
     const native = isNativeAndroid();
-    console.log(`[PTT-DIAG] [JS] MicPTTManager.stop() — state=${this.state} path=${native ? 'NATIVE' : 'WEB'}`);
+    console.log(`[MicPTT] stop() — state=${this.state} path=${native ? 'NATIVE' : 'WEB'}`);
 
     stopBonkLoop();
 
@@ -521,7 +541,7 @@ class MicPTTManager {
       console.log('[MicPTT] Setting pendingStop flag');
       this.pendingStop = true;
       this._cancelPttReadyWait();
-      this._cancelRoomWait();
+      this._cancelWsWait();
       return;
     }
 
@@ -537,47 +557,38 @@ class MicPTTManager {
   }
 
   async _doStopNative() {
-    console.log('[PTT-DIAG] [JS] MicPTTManager._doStopNative() — BEGIN');
     this._setState(PTT_STATES.COOLDOWN);
 
     try {
-      console.log('[PTT-DIAG] [JS] _doStopNative() — calling nativeDisableMic()');
       await nativeDisableMic();
-      console.log('[PTT-DIAG] [JS] _doStopNative() — nativeDisableMic() OK');
     } catch (err) {
-      if (this._isDeadObjectError(err)) {
-        console.warn('[PTT-DIAG] [JS] _doStopNative() — dead object (-38) on disable, AudioRecord already torn down — resetting state machine cleanly');
-      } else {
-        console.error('[PTT-DIAG] [JS] _doStopNative() — ERROR:', err);
+      if (!this._isDeadObjectError(err)) {
+        console.error('[MicPTT] _doStopNative() — ERROR:', err);
       }
     } finally {
       this.pendingStop = false;
       this.transitionLock = false;
       this.lastPttEndTime = Date.now();
       this._setState(PTT_STATES.IDLE);
-      releaseWakeLock().catch(e => console.warn('[PTT-DIAG] [JS] Native wake lock release failed:', e));
-      console.log('[PTT-DIAG] [JS] _doStopNative() — COMPLETE, state=IDLE');
+      releaseWakeLock().catch(e => console.warn('[MicPTT] Native wake lock release failed:', e));
     }
   }
 
   async _doStop() {
     this._setState(PTT_STATES.COOLDOWN);
 
-    this._removeRoomListeners();
+    this._removeWsListeners();
 
     try {
-      if (this.localTrack && this.room) {
-        console.log('[MicPTT] Unpublishing track...');
-        try {
-          this.localTrack.stop();
-        } catch (e) {
-          console.warn('[MicPTT] LocalTrack stop warning:', e.message);
-        }
-        try {
-          await this.room.localParticipant.unpublishTrack(this.localTrack);
-        } catch (e) {
-          console.warn('[MicPTT] Unpublish warning:', e.message);
-        }
+      if (this._captureWorkletNode) {
+        this._captureWorkletNode.port.postMessage({ type: 'stop' });
+        try { this._captureWorkletNode.disconnect(); } catch (e) {}
+        this._captureWorkletNode = null;
+      }
+
+      if (this._sourceNode) {
+        try { this._sourceNode.disconnect(); } catch (e) {}
+        this._sourceNode = null;
       }
 
       this._cleanup();
@@ -596,11 +607,24 @@ class MicPTTManager {
 
   async _cleanup() {
     this._clearPermitDeadline();
-    this._cancelRoomWait();
+    this._cancelWsWait();
     this.publishComplete = false;
     stopBonkLoop();
     cleanupRadioDSP();
-    
+
+    if (this._captureWorkletNode) {
+      try {
+        this._captureWorkletNode.port.postMessage({ type: 'stop' });
+        this._captureWorkletNode.disconnect();
+      } catch (e) {}
+      this._captureWorkletNode = null;
+    }
+
+    if (this._sourceNode) {
+      try { this._sourceNode.disconnect(); } catch (e) {}
+      this._sourceNode = null;
+    }
+
     if (this.browserTrack) {
       try {
         this.browserTrack.stop();
@@ -611,14 +635,12 @@ class MicPTTManager {
 
     if (this.stream) {
       this.stream.getTracks().forEach(t => {
-        try { 
-          t.stop(); 
+        try {
+          t.stop();
         } catch (e) {}
       });
       this.stream = null;
     }
-
-    this.localTrack = null;
   }
 
   _stopTracks(stream) {
@@ -631,21 +653,17 @@ class MicPTTManager {
 
   forceRelease() {
     console.log('[MicPTT] Force release');
-    
+
     this._clearPermitDeadline();
-    this._removeRoomListeners();
-    this._cancelRoomWait();
+    this._removeWsListeners();
+    this._cancelWsWait();
     this._cancelPttReadyWait();
     stopBonkLoop();
-    
-    if (this.localTrack) {
-      try { this.localTrack.stop(); } catch (e) {}
-    }
-    
+
     this._cleanup();
     this.pendingStop = false;
     this.transitionLock = false;
-    
+
     if (this.state !== PTT_STATES.IDLE) {
       this._setState(PTT_STATES.IDLE);
     }
@@ -653,13 +671,14 @@ class MicPTTManager {
 
   disconnect() {
     this.forceRelease();
-    this.room = null;
-    
+    this._ws = null;
+
     if (this.audioContext && this.audioContext.state !== 'closed') {
       try {
         this.audioContext.close();
       } catch (e) {}
       this.audioContext = null;
+      this._captureWorkletReady = false;
     }
   }
 }

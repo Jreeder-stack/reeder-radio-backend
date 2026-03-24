@@ -1,10 +1,11 @@
-import { Room, RoomEvent, TrackKind, AudioFrame, AudioSource, LocalAudioTrack, AudioStream, TrackPublishOptions, TrackSource } from '@livekit/rtc-node';
-import { createLiveKitToken, getLiveKitUrl } from '../config/livekit.js';
 import { speechToText, textToSpeech, isConfigured as isAzureConfigured } from './azureSpeechService.js';
 import { matchCommand, resetDispatcherState, matchEmergencyResponse, matchSecureConfirmation, getUnitSessionState, setUnitSessionState, DISPATCHER_STATE } from './commandMatcher.js';
 import { isConfigured as isLlmConfigured, classifyIntent } from './llmIntentService.js';
 import { parsePersonDetails, parseDOB, extractNameFromTranscript } from './phoneticParser.js';
 import { isAiDispatchEnabled, getAiDispatchChannel, createChannelMessage } from '../db/index.js';
+import { audioRelayService } from './audioRelayService.js';
+import { opusCodec, SAMPLE_RATE as OPUS_SAMPLE_RATE, FRAME_SIZE as OPUS_FRAME_SIZE } from './opusCodec.js';
+import { floorControlService } from './floorControlService.js';
 import * as cadService from './cadService.js';
 import fs from 'fs';
 import path from 'path';
@@ -48,15 +49,16 @@ function pcmToWav(pcmBuffer, sampleRate = 48000, channels = 1, bitsPerSample = 1
 }
 
 const AI_IDENTITY = 'AI-Dispatcher';
-const LIVEKIT_SAMPLE_RATE = 48000;
+const RELAY_SAMPLE_RATE = 48000;
 const AZURE_SAMPLE_RATE = 16000;
 const CHANNELS = 1;
-const SAMPLES_PER_FRAME = 960; // 60ms frames at 16kHz for smoother playback
+const SAMPLES_PER_FRAME = 960;
 const FRAME_DURATION_MS = Math.floor((SAMPLES_PER_FRAME / AZURE_SAMPLE_RATE) * 1000);
 const DISCONNECT_GRACE_PERIOD_MS = 90000;
 const EMERGENCY_STATUS_CHECK_TIMEOUT_MS = 5000;
 const MAX_RECORDING_DURATION_MS = 60000;
 const MAX_AUDIO_FILE_SIZE = 10 * 1024 * 1024;
+const IDLE_TIMEOUT_MS = 1500;
 
 const EMERGENCY_ESCALATION_STATE = {
   IDLE: 'IDLE',
@@ -151,7 +153,6 @@ class EmergencyEscalationController {
     
     await this.sendCadBroadcast(unitId, `EMERGENCY: ${unitId} pressed emergency key with NO RESPONSE`, 'emergency');
 
-    // Notify the unit to clear their local emergency state
     await this.sendEmergencyAck(unitId, 'escalation_complete');
     
     this.clearEscalation(unitId);
@@ -161,21 +162,19 @@ class EmergencyEscalationController {
     const escalation = this.activeEscalations.get(targetUnit);
     if (!escalation) return;
     
-    // Ensure room is connected before sending
-    if (!this.dispatcher.room || !this.dispatcher.room.localParticipant) {
-      this.log('EMERGENCY_ACK_SKIPPED', { targetUnit, reason: 'Room not connected' });
+    if (!this.dispatcher.connected) {
+      this.log('EMERGENCY_ACK_SKIPPED', { targetUnit, reason: 'Not connected' });
       return;
     }
     
     try {
-      const data = new TextEncoder().encode(JSON.stringify({
+      await this.dispatcher.sendDataMessage({
         type: 'emergency_ack',
         targetUnit,
         channel: escalation.channel,
         timestamp: Date.now(),
         reason
-      }));
-      await this.dispatcher.room.localParticipant.publishData(data, { reliable: true });
+      });
       this.log('EMERGENCY_ACK_SENT', { targetUnit, reason });
     } catch (error) {
       this.log('EMERGENCY_ACK_ERROR', { error: error.message });
@@ -206,7 +205,6 @@ class EmergencyEscalationController {
     this.log('UNIT_RESPONDED', { unitId, responseType, details });
 
     if (responseType === 'OK') {
-      // Notify the unit to clear their local emergency state
       await this.sendEmergencyAck(unitId, 'acknowledged');
       
       this.clearEscalation(unitId);
@@ -275,22 +273,42 @@ function resampleAudio(inputBuffer, fromRate, toRate) {
 
 class AIDispatcher {
   constructor() {
-    this.room = null;
-    this.roomName = null;
+    this.connected = false;
+    this.channelName = null;
     this.isRunning = false;
-    this.humanParticipantCount = 0;
     this.disconnectTimer = null;
     this.configuredChannel = null;
     this.emergencyEscalation = new EmergencyEscalationController(this);
-    this.handledTrackSids = new Set();
     this.errorCounts = new Map();
     this.errorCooldowns = new Map();
     this.stoppedByUser = false;
+    this._activeRecordings = new Map();
+    this._signalingService = null;
+    this._audioListenerBound = null;
+    this._publishSequence = 0;
   }
 
   log(action, details = {}) {
     const timestamp = new Date().toISOString();
     console.log(`[AI-Dispatcher] ${timestamp} | ${action}`, JSON.stringify(details));
+  }
+
+  get humanParticipantCount() {
+    if (!this._signalingService || !this.channelName) return 0;
+    try {
+      const members = this._signalingService.getChannelMembers(this.channelName);
+      return members.filter(m => this.isHumanParticipant(m.unitId)).length;
+    } catch {
+      return 0;
+    }
+  }
+
+  async _ensureSignalingService() {
+    if (!this._signalingService) {
+      const mod = await import('./signalingService.js');
+      this._signalingService = mod.signalingService;
+    }
+    return this._signalingService;
   }
 
   async start(channelName, options = {}) {
@@ -312,9 +330,9 @@ class AIDispatcher {
       return;
     }
 
-    if (this.room) {
-      this.log('CHANNEL_SWITCH', { from: this.roomName, to: channelName });
-      await this.leaveCurrentRoom();
+    if (this.connected) {
+      this.log('CHANNEL_SWITCH', { from: this.channelName, to: channelName });
+      await this.leaveChannel();
     }
 
     this.configuredChannel = roomKey || channelName;
@@ -323,6 +341,8 @@ class AIDispatcher {
     this.stoppedByUser = false;
     this.errorCounts.clear();
     this.errorCooldowns.clear();
+    
+    await this._ensureSignalingService();
     
     if (cadService.isConfigured()) {
       cadService.getCallNatures().catch(err => {
@@ -333,42 +353,42 @@ class AIDispatcher {
     this.log('STARTED_STANDBY', { channel: channelName, roomKey: this.configuredChannel, mode: 'on-demand' });
   }
 
-  async leaveCurrentRoom() {
+  async leaveChannel() {
     this.clearDisconnectTimer();
     
-    if (this.room) {
+    if (this.connected) {
       try {
-        await this.room.disconnect();
-        this.log('ROOM_LEFT', { room: this.roomName });
+        audioRelayService.removeAudioListener(this.channelName, AI_IDENTITY);
+        this.log('CHANNEL_LEFT', { channel: this.channelName });
       } catch (error) {
-        this.log('ROOM_LEAVE_ERROR', { room: this.roomName, error: error.message });
+        this.log('CHANNEL_LEAVE_ERROR', { channel: this.channelName, error: error.message });
       }
-      this.room = null;
-      this.roomName = null;
-      this.humanParticipantCount = 0;
+      this.connected = false;
+      this.channelName = null;
+      this._clearAllRecordings();
     }
   }
 
   async stop() {
-    this.log('STOPPING', { room: this.roomName });
+    this.log('STOPPING', { channel: this.channelName });
     this.isRunning = false;
     this.stoppedByUser = true;
     this.clearDisconnectTimer();
     this.emergencyEscalation.clearAllEscalations();
     resetDispatcherState();
 
-    if (this.room) {
+    if (this.connected) {
       try {
-        await this.room.disconnect();
-        this.log('ROOM_LEFT', { room: this.roomName });
+        audioRelayService.removeAudioListener(this.channelName, AI_IDENTITY);
+        this.log('CHANNEL_LEFT', { channel: this.channelName });
       } catch (error) {
-        this.log('ROOM_LEAVE_ERROR', { room: this.roomName, error: error.message });
+        this.log('CHANNEL_LEAVE_ERROR', { channel: this.channelName, error: error.message });
       }
-      this.room = null;
-      this.roomName = null;
+      this.connected = false;
+      this.channelName = null;
     }
 
-    this.humanParticipantCount = 0;
+    this._clearAllRecordings();
   }
 
   clearDisconnectTimer() {
@@ -384,32 +404,19 @@ class AIDispatcher {
     this.log('DISCONNECT_TIMER_STARTED', { graceMs: DISCONNECT_GRACE_PERIOD_MS });
     
     this.disconnectTimer = setTimeout(async () => {
-      if (this.humanParticipantCount === 0 && this.room) {
-        this.log('DISCONNECT_TIMER_EXPIRED', { reason: 'No humans in room' });
+      if (this.humanParticipantCount === 0 && this.connected) {
+        this.log('DISCONNECT_TIMER_EXPIRED', { reason: 'No humans on channel' });
         await this.leaveRoom();
       }
     }, DISCONNECT_GRACE_PERIOD_MS);
   }
 
   async leaveRoom() {
-    if (!this.room) return;
-    
-    this.log('ROOM_LEAVING', { room: this.roomName, reason: 'No humans present' });
-    
-    try {
-      await this.room.disconnect();
-      this.log('ROOM_LEFT', { room: this.roomName });
-    } catch (error) {
-      this.log('ROOM_LEAVE_ERROR', { room: this.roomName, error: error.message });
-    }
-    
-    this.room = null;
-    this.roomName = null;
-    this.humanParticipantCount = 0;
+    await this.leaveChannel();
   }
 
   async rejoinIfNeeded() {
-    if (this.room || !this.isRunning || this.stoppedByUser || !this.configuredChannel) {
+    if (this.connected || !this.isRunning || this.stoppedByUser || !this.configuredChannel) {
       return;
     }
 
@@ -419,7 +426,7 @@ class AIDispatcher {
     }
 
     this.log('REJOIN_TRIGGERED', { channel: this.configuredChannel });
-    await this.joinRoom(this.configuredChannel);
+    await this.joinChannel(this.configuredChannel);
   }
 
   isHumanParticipant(identity) {
@@ -435,243 +442,96 @@ class AIDispatcher {
     return true;
   }
 
-  countHumanParticipants(room) {
-    let count = 0;
-    for (const [, participant] of room.remoteParticipants) {
-      if (this.isHumanParticipant(participant.identity)) {
-        count++;
-      }
-    }
-    return count;
-  }
-
-  async joinRoom(roomName) {
-    const url = getLiveKitUrl();
-    if (!url) {
-      throw new Error('LiveKit URL not configured');
+  async joinChannel(channelName) {
+    if (this.connected && this.channelName === channelName) {
+      return;
     }
 
-    const token = await createLiveKitToken(AI_IDENTITY, roomName, {
-      canPublish: true,
-      canSubscribe: true,
-      canPublishData: true,
-    });
+    if (this.connected) {
+      await this.leaveChannel();
+    }
 
-    const room = new Room();
+    this._audioListenerBound = this._onAudioFrame.bind(this);
+    audioRelayService.addAudioListener(channelName, AI_IDENTITY, this._audioListenerBound);
+
+    this.connected = true;
+    this.channelName = channelName;
     
-    room.on(RoomEvent.ParticipantConnected, (participant) => {
-      if (this.isHumanParticipant(participant.identity)) {
-        this.humanParticipantCount++;
-        this.log('PARTICIPANT_JOINED', { 
-          identity: participant.identity, 
-          room: roomName,
-          humanCount: this.humanParticipantCount 
-        });
-        this.clearDisconnectTimer();
-      } else {
-        this.log('NON_HUMAN_JOINED', { identity: participant.identity, room: roomName });
-      }
-    });
-
-    room.on(RoomEvent.ParticipantDisconnected, (participant) => {
-      this.errorCounts.delete(participant.identity);
-      this.errorCooldowns.delete(participant.identity);
-      if (this.isHumanParticipant(participant.identity)) {
-        this.humanParticipantCount = Math.max(0, this.humanParticipantCount - 1);
-        this.log('PARTICIPANT_LEFT', { 
-          identity: participant.identity, 
-          room: roomName,
-          humanCount: this.humanParticipantCount 
-        });
-        
-        if (this.humanParticipantCount === 0) {
-          this.startDisconnectTimer();
-        }
-      } else {
-        this.log('NON_HUMAN_LEFT', { identity: participant.identity, room: roomName });
-      }
-    });
-
-    room.on(RoomEvent.TrackSubscribed, async (track, publication, participant) => {
-      if (track.kind === TrackKind.KIND_AUDIO && participant.identity !== AI_IDENTITY) {
-        this.log('TRACK_SUBSCRIBED', { 
-          participant: participant.identity, 
-          room: roomName,
-          trackSid: publication.sid 
-        });
-        await this.handleAudioTrack(track, participant.identity, roomName, room);
-      }
-    });
-
-    room.on(RoomEvent.Disconnected, () => {
-      this.log('ROOM_DISCONNECTED', { room: roomName });
-      this.room = null;
-      this.roomName = null;
-      this.humanParticipantCount = 0;
-      this.handledTrackSids.clear();
-    });
-
-    room.on(RoomEvent.DataReceived, (payload, participant) => {
-      if (participant && this.isHumanParticipant(participant.identity)) {
-        this.handleDataMessage(payload, participant);
-      }
-    });
-
-    await room.connect(url, token);
-    this.room = room;
-    this.roomName = roomName;
-    
-    this.humanParticipantCount = this.countHumanParticipants(room);
-    this.log('ROOM_JOINED', { 
-      room: roomName, 
-      humanCount: this.humanParticipantCount 
-    });
-
-    for (const [, participant] of room.remoteParticipants) {
-      if (participant.identity === AI_IDENTITY) continue;
-      if (!this.isHumanParticipant(participant.identity)) continue;
-      
-      for (const [, publication] of participant.trackPublications) {
-        if (publication.track && publication.track.kind === TrackKind.KIND_AUDIO) {
-          this.log('LATE_TRACK_PICKUP', {
-            participant: participant.identity,
-            room: roomName,
-            trackSid: publication.sid
-          });
-          this.handleAudioTrack(publication.track, participant.identity, roomName, room);
-        }
-      }
-    }
+    this.log('CHANNEL_JOINED', { channel: channelName });
 
     if (this.humanParticipantCount === 0) {
       this.startDisconnectTimer();
     }
   }
 
-  async handleAudioTrack(track, participantId, roomName, room) {
-    const trackSid = track.sid || track.mediaStreamID || `${participantId}_${Date.now()}`;
-    if (this.handledTrackSids.has(trackSid)) {
-      this.log('TRACK_ALREADY_HANDLED', { participant: participantId, trackSid });
+  _onAudioFrame(audioEvent) {
+    const { channelId, unitId, opusPayload, sequence } = audioEvent;
+    if (unitId === AI_IDENTITY) return;
+    if (!this.isHumanParticipant(unitId)) return;
+
+    let pcmFrame;
+    try {
+      pcmFrame = opusCodec.decodeOpusToPcm(opusPayload);
+    } catch (err) {
+      this.log('OPUS_DECODE_ERROR', { unitId, error: err.message });
       return;
     }
-    this.handledTrackSids.add(trackSid);
 
-    const chunks = [];
-    let frameCount = 0;
-    const MIN_AUDIO_BYTES = LIVEKIT_SAMPLE_RATE * 2 * 0.5;
-    let trackEnded = false;
-    let lastFrameTime = Date.now();
-    const startTime = Date.now();
-    const IDLE_TIMEOUT_MS = 1500;
-    let idleTimeoutTriggered = false;
-
-    let idleCheckInterval = null;
-    let maxDurationTimer = null;
-    let trackUnsubHandler = null;
-
-    const trackEndPromise = new Promise((resolve) => {
-      trackUnsubHandler = (unsubTrack, publication, participant) => {
-        if (unsubTrack === track) {
-          this.log('TRACK_UNSUBSCRIBED', { 
-            participant: participant.identity, 
-            room: roomName 
-          });
-          trackEnded = true;
-          resolve('track_end');
-        }
+    let recording = this._activeRecordings.get(unitId);
+    if (!recording) {
+      recording = {
+        chunks: [],
+        frameCount: 0,
+        lastFrameTime: Date.now(),
+        startTime: Date.now(),
+        idleTimer: null,
+        maxTimer: null,
       };
-      room.on(RoomEvent.TrackUnsubscribed, trackUnsubHandler);
-    });
+      this._activeRecordings.set(unitId, recording);
+      this.log('AUDIO_BUFFERING_START', { participant: unitId, channel: channelId });
 
-    const idleTimeoutPromise = new Promise((resolve) => {
-      idleCheckInterval = setInterval(() => {
-        if (trackEnded || idleTimeoutTriggered) {
-          clearInterval(idleCheckInterval);
-          idleCheckInterval = null;
-          return;
-        }
-        const timeSinceLastFrame = Date.now() - lastFrameTime;
-        if (frameCount > 0 && timeSinceLastFrame > IDLE_TIMEOUT_MS) {
-          this.log('AUDIO_IDLE_TIMEOUT', { 
-            participant: participantId,
-            timeSinceLastFrame,
-            frameCount
-          });
-          idleTimeoutTriggered = true;
-          trackEnded = true;
-          clearInterval(idleCheckInterval);
-          idleCheckInterval = null;
-          resolve('idle_timeout');
-        }
-      }, 200);
-    });
-
-    const maxDurationPromise = new Promise((resolve) => {
-      maxDurationTimer = setTimeout(() => {
-        if (!trackEnded) {
-          this.log('AUDIO_MAX_DURATION', {
-            participant: participantId,
-            maxMs: MAX_RECORDING_DURATION_MS,
-            frameCount
-          });
-          trackEnded = true;
-          resolve('max_duration');
-        }
+      recording.maxTimer = setTimeout(() => {
+        this.log('AUDIO_MAX_DURATION', { participant: unitId, maxMs: MAX_RECORDING_DURATION_MS, frameCount: recording.frameCount });
+        this._finishRecording(unitId);
       }, MAX_RECORDING_DURATION_MS);
-    });
-
-    const audioStream = new AudioStream(track, LIVEKIT_SAMPLE_RATE, CHANNELS);
-    const asyncIterator = audioStream[Symbol.asyncIterator]();
-    this.log('AUDIO_BUFFERING_START', { participant: participantId, room: roomName });
-
-    const bufferAudio = async () => {
-      try {
-        while (true) {
-          const { value: frame, done } = await asyncIterator.next();
-          if (done || !this.isRunning || trackEnded) {
-            break;
-          }
-          chunks.push(Buffer.from(frame.data.buffer));
-          frameCount++;
-          lastFrameTime = Date.now();
-        }
-      } catch (error) {
-        this.log('AUDIO_STREAM_ERROR', { error: error.message });
-      }
-    };
-
-    let raceResult;
-    try {
-      raceResult = await Promise.race([bufferAudio(), trackEndPromise, idleTimeoutPromise, maxDurationPromise]);
-    } finally {
-      if (idleCheckInterval) {
-        clearInterval(idleCheckInterval);
-        idleCheckInterval = null;
-      }
-      if (maxDurationTimer) {
-        clearTimeout(maxDurationTimer);
-        maxDurationTimer = null;
-      }
-      if (trackUnsubHandler) {
-        room.off(RoomEvent.TrackUnsubscribed, trackUnsubHandler);
-      }
-
-      try {
-        if (typeof audioStream.close === 'function') {
-          audioStream.close();
-        } else if (typeof audioStream.destroy === 'function') {
-          audioStream.destroy();
-        }
-        if (typeof asyncIterator.return === 'function') {
-          await asyncIterator.return();
-        }
-      } catch (cleanupErr) {
-        this.log('AUDIO_STREAM_CLEANUP_ERROR', { error: cleanupErr.message });
-      }
     }
 
-    if (raceResult === 'max_duration') {
-      this.log('AUDIO_CAPPED', { participant: participantId, durationMs: Date.now() - startTime, frames: frameCount });
+    recording.chunks.push(pcmFrame);
+    recording.frameCount++;
+    recording.lastFrameTime = Date.now();
+
+    if (recording.idleTimer) clearTimeout(recording.idleTimer);
+    recording.idleTimer = setTimeout(() => {
+      this.log('AUDIO_IDLE_TIMEOUT', { participant: unitId, frameCount: recording.frameCount });
+      this._finishRecording(unitId);
+    }, IDLE_TIMEOUT_MS);
+  }
+
+  _finishRecording(unitId) {
+    const recording = this._activeRecordings.get(unitId);
+    if (!recording) return;
+
+    this._activeRecordings.delete(unitId);
+
+    if (recording.idleTimer) clearTimeout(recording.idleTimer);
+    if (recording.maxTimer) clearTimeout(recording.maxTimer);
+
+    if (recording.chunks.length === 0) {
+      this.log('AUDIO_EMPTY', { participant: unitId });
+      return;
+    }
+
+    const audioBuffer = Buffer.concat(recording.chunks);
+    this.log('AUDIO_BUFFERING_COMPLETE', {
+      participant: unitId,
+      frames: recording.frameCount,
+      bytes: audioBuffer.length
+    });
+
+    const MIN_AUDIO_BYTES = RELAY_SAMPLE_RATE * 2 * 0.5;
+    if (audioBuffer.length < MIN_AUDIO_BYTES) {
+      this.log('AUDIO_TOO_SHORT', { bytes: audioBuffer.length, minBytes: MIN_AUDIO_BYTES });
+      return;
     }
 
     if (!this.isRunning) {
@@ -679,36 +539,29 @@ class AIDispatcher {
       return;
     }
 
-    if (chunks.length === 0) {
-      this.log('AUDIO_EMPTY', { participant: participantId });
-      return;
-    }
+    const channelName = this.channelName;
+    this.saveAudioAsMessage(audioBuffer, channelName, unitId);
 
-    const audioBuffer = Buffer.concat(chunks);
-    this.log('AUDIO_BUFFERING_COMPLETE', { 
-      participant: participantId, 
-      frames: frameCount, 
-      bytes: audioBuffer.length 
+    isAiDispatchEnabled().then(enabled => {
+      if (enabled && this.isRunning) {
+        this.processAudio(audioBuffer, unitId).catch(err => {
+          this.log('PROCESS_AUDIO_UNHANDLED_ERROR', { error: err.message, participant: unitId });
+        });
+      }
     });
+  }
 
-    if (audioBuffer.length < MIN_AUDIO_BYTES) {
-      this.log('AUDIO_TOO_SHORT', { bytes: audioBuffer.length, minBytes: MIN_AUDIO_BYTES });
-      return;
+  _clearAllRecordings() {
+    for (const [unitId, recording] of this._activeRecordings) {
+      if (recording.idleTimer) clearTimeout(recording.idleTimer);
+      if (recording.maxTimer) clearTimeout(recording.maxTimer);
     }
-
-    this.saveAudioAsMessage(audioBuffer, roomName, participantId);
-
-    const enabled = await isAiDispatchEnabled();
-    if (enabled && this.isRunning) {
-      this.processAudio(audioBuffer, roomName, room, participantId).catch(err => {
-        this.log('PROCESS_AUDIO_UNHANDLED_ERROR', { error: err.message, participant: participantId });
-      });
-    }
+    this._activeRecordings.clear();
   }
 
   async saveAudioAsMessage(audioBuffer, channelName, sender) {
     try {
-      const wavBuffer = pcmToWav(audioBuffer, LIVEKIT_SAMPLE_RATE, CHANNELS, 16);
+      const wavBuffer = pcmToWav(audioBuffer, RELAY_SAMPLE_RATE, CHANNELS, 16);
 
       if (wavBuffer.length > MAX_AUDIO_FILE_SIZE) {
         this.log('VOICE_MESSAGE_TOO_LARGE', { 
@@ -736,7 +589,7 @@ class AIDispatcher {
         return;
       }
 
-      const durationSecs = Math.round(audioBuffer.length / (LIVEKIT_SAMPLE_RATE * 2));
+      const durationSecs = Math.round(audioBuffer.length / (RELAY_SAMPLE_RATE * 2));
       if (durationSecs <= 0) {
         this.log('VOICE_MESSAGE_INVALID_DURATION', { channel: channelName, sender, durationSecs });
         return;
@@ -765,22 +618,7 @@ class AIDispatcher {
         }
       };
 
-      if (this.room && this.roomName === channelName && this.room.localParticipant) {
-        const maxRetries = 2;
-        for (let attempt = 0; attempt <= maxRetries; attempt++) {
-          try {
-            const broadcastData = new TextEncoder().encode(JSON.stringify(broadcastPayload));
-            await this.room.localParticipant.publishData(broadcastData, { reliable: true });
-            this.log('MESSAGE_BROADCAST', { channel: channelName, messageId: message.id });
-            break;
-          } catch (broadcastErr) {
-            this.log('MESSAGE_BROADCAST_ERROR', { error: broadcastErr.message, attempt: attempt + 1 });
-            if (attempt < maxRetries) {
-              await new Promise(r => setTimeout(r, 500 * (attempt + 1)));
-            }
-          }
-        }
-      }
+      await this.sendDataMessage(broadcastPayload);
     } catch (error) {
       this.log('VOICE_MESSAGE_SAVE_ERROR', { error: error.message, channel: channelName, sender });
     }
@@ -796,7 +634,7 @@ class AIDispatcher {
     }
   }
 
-  async processAudio(audioBuffer, roomName, room, participantId) {
+  async processAudio(audioBuffer, participantId) {
     try {
       if (!await this.shouldRespond()) {
         this.log('PROCESS_SKIPPED', { reason: 'Disabled' });
@@ -814,9 +652,9 @@ class AIDispatcher {
         this.log('PROCESS_RETRY', { reason: 'Cooldown expired, retrying', participant: participantId, consecutiveErrors });
       }
 
-      this.log('AUDIO_PROCESSING', { bytes: audioBuffer.length, room: roomName, participant: participantId });
+      this.log('AUDIO_PROCESSING', { bytes: audioBuffer.length, channel: this.channelName, participant: participantId });
 
-      const resampledAudio = resampleAudio(audioBuffer, LIVEKIT_SAMPLE_RATE, AZURE_SAMPLE_RATE);
+      const resampledAudio = resampleAudio(audioBuffer, RELAY_SAMPLE_RATE, AZURE_SAMPLE_RATE);
 
       const transcript = await speechToText(resampledAudio);
       if (!transcript) {
@@ -846,7 +684,7 @@ class AIDispatcher {
           );
           
           if (result && result.response) {
-            await this.speak(result.response, room, roomName, participantId);
+            await this.speak(result.response, participantId);
           }
           
           if (result && result.cadAction === 'broadcast' && result.cadData && cadService.isConfigured()) {
@@ -862,9 +700,9 @@ class AIDispatcher {
       }
 
       if (isLlmConfigured()) {
-        await this.processTranscriptWithLLM(transcript, participantId, room, roomName);
+        await this.processTranscriptWithLLM(transcript, participantId);
       } else {
-        await this.processTranscriptWithRegex(transcript, participantId, room, roomName);
+        await this.processTranscriptWithRegex(transcript, participantId);
       }
 
     } catch (error) {
@@ -879,7 +717,7 @@ class AIDispatcher {
     }
   }
 
-  async processTranscriptWithLLM(transcript, participantId, room, roomName) {
+  async processTranscriptWithLLM(transcript, participantId) {
     try {
       const sessionState = getUnitSessionState(participantId);
       const { state, slots } = sessionState;
@@ -896,32 +734,32 @@ class AIDispatcher {
 
       if (isEmergencyCommand) {
         this.log('EMERGENCY_FAST_PATH', { participant: participantId, transcript });
-        await this.processTranscriptWithRegex(transcript, participantId, room, roomName);
+        await this.processTranscriptWithRegex(transcript, participantId);
         return;
       }
 
       if (state === DISPATCHER_STATE.AWAITING_SECURE_CONFIRM) {
         this.log('SECURE_CONFIRM_FAST_PATH', { participant: participantId });
-        await this.handleSecureConfirmResponse(participantId, transcript, slots, room, roomName);
+        await this.handleSecureConfirmResponse(participantId, transcript, slots);
         return;
       }
 
       if ([DISPATCHER_STATE.AWAITING_PLATE, DISPATCHER_STATE.AWAITING_NAME,
            DISPATCHER_STATE.AWAITING_LOCATION, DISPATCHER_STATE.AWAITING_DESCRIPTION].includes(state)) {
         this.log('REGEX_ONLY_STATE_FALLBACK', { participant: participantId, state });
-        await this.processTranscriptWithRegex(transcript, participantId, room, roomName);
+        await this.processTranscriptWithRegex(transcript, participantId);
         return;
       }
 
       if (state === DISPATCHER_STATE.AWAITING_CALL_NATURE) {
         this.log('CALL_NATURE_FAST_PATH', { participant: participantId, transcript });
-        await this.handleCallNatureInput(participantId, transcript, slots, room, roomName);
+        await this.handleCallNatureInput(participantId, transcript, slots);
         return;
       }
 
       if (state === DISPATCHER_STATE.AWAITING_CALL_ADDRESS) {
         this.log('CALL_ADDRESS_FAST_PATH', { participant: participantId, transcript });
-        await this.handleCallAddressInput(participantId, transcript, slots, room, roomName);
+        await this.handleCallAddressInput(participantId, transcript, slots);
         return;
       }
 
@@ -942,7 +780,7 @@ class AIDispatcher {
           this.log('LLM_DISREGARD', { participant: participantId, state });
           setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
           const resp = result.response || `${participantId}, 10-4, disregard.`;
-          await this.speak(resp, room, roomName, participantId);
+          await this.speak(resp, participantId);
           this.addConversationExchange(participantId, transcript, resp);
           break;
         }
@@ -958,7 +796,7 @@ class AIDispatcher {
           }
           setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
           const statusResp = result.response || `${participantId}, 10-4.`;
-          await this.speak(statusResp, room, roomName, participantId);
+          await this.speak(statusResp, participantId);
           this.addConversationExchange(participantId, transcript, statusResp);
           break;
         }
@@ -966,11 +804,11 @@ class AIDispatcher {
         case 'ZONE_CHANGE': {
           const zone = normalizeAddress(result.slots?.zone);
           if (zone) {
-            await this.handleZoneConfirmPrompt(participantId, zone, room, roomName);
+            await this.handleZoneConfirmPrompt(participantId, zone);
           } else {
             setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_ZONE, null, {}, true);
             const resp = result.response || `${participantId}, go ahead with zone.`;
-            await this.speak(resp, room, roomName, participantId);
+            await this.speak(resp, participantId);
             this.addConversationExchange(participantId, transcript, resp);
           }
           break;
@@ -979,7 +817,7 @@ class AIDispatcher {
         case 'ZONE_PROMPT': {
           setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_ZONE, null, {}, true);
           const resp = result.response || `${participantId}, go ahead with zone.`;
-          await this.speak(resp, room, roomName, participantId);
+          await this.speak(resp, participantId);
           this.addConversationExchange(participantId, transcript, resp);
           break;
         }
@@ -987,11 +825,11 @@ class AIDispatcher {
         case 'DETAIL': {
           const location = normalizeAddress(result.slots?.location);
           if (location) {
-            await this.handleDetailConfirmPrompt(participantId, location, room, roomName);
+            await this.handleDetailConfirmPrompt(participantId, location);
           } else {
             setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_DETAIL_LOCATION, null, {}, true);
             const resp = result.response || `${participantId}, go ahead with location.`;
-            await this.speak(resp, room, roomName, participantId);
+            await this.speak(resp, participantId);
             this.addConversationExchange(participantId, transcript, resp);
           }
           break;
@@ -1000,25 +838,25 @@ class AIDispatcher {
         case 'DETAIL_PROMPT': {
           setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_DETAIL_LOCATION, null, {}, true);
           const resp = result.response || `${participantId}, go ahead with location.`;
-          await this.speak(resp, room, roomName, participantId);
+          await this.speak(resp, participantId);
           this.addConversationExchange(participantId, transcript, resp);
           break;
         }
 
         case 'CONFIRM': {
           if (state === DISPATCHER_STATE.AWAITING_ZONE_CONFIRM) {
-            await this.handleZoneConfirm(participantId, transcript, slots, room, roomName);
+            await this.handleZoneConfirm(participantId, transcript, slots);
           } else if (state === DISPATCHER_STATE.AWAITING_DETAIL_CONFIRM) {
-            await this.handleDetailConfirm(participantId, transcript, slots, room, roomName);
+            await this.handleDetailConfirm(participantId, transcript, slots);
           } else if (state === DISPATCHER_STATE.AWAITING_PERSON_CONFIRM) {
-            await this.handlePersonCheckConfirm(participantId, transcript, slots, room, roomName);
+            await this.handlePersonCheckConfirm(participantId, transcript, slots);
           } else if (state === DISPATCHER_STATE.AWAITING_SECURE_CONFIRM) {
-            await this.handleSecureConfirmResponse(participantId, transcript, slots, room, roomName);
+            await this.handleSecureConfirmResponse(participantId, transcript, slots);
           } else if (state === DISPATCHER_STATE.AWAITING_CALL_CONFIRM) {
-            await this.handleCallConfirm(participantId, transcript, slots, room, roomName);
+            await this.handleCallConfirm(participantId, transcript, slots);
           } else {
             const resp = result.response || `${participantId}, 10-4.`;
-            await this.speak(resp, room, roomName, participantId);
+            await this.speak(resp, participantId);
             this.addConversationExchange(participantId, transcript, resp);
           }
           break;
@@ -1026,18 +864,18 @@ class AIDispatcher {
 
         case 'DENY': {
           if (state === DISPATCHER_STATE.AWAITING_ZONE_CONFIRM) {
-            await this.handleZoneConfirm(participantId, transcript, slots, room, roomName);
+            await this.handleZoneConfirm(participantId, transcript, slots);
           } else if (state === DISPATCHER_STATE.AWAITING_DETAIL_CONFIRM) {
-            await this.handleDetailConfirm(participantId, transcript, slots, room, roomName);
+            await this.handleDetailConfirm(participantId, transcript, slots);
           } else if (state === DISPATCHER_STATE.AWAITING_PERSON_CONFIRM) {
-            await this.handlePersonCheckConfirm(participantId, transcript, slots, room, roomName);
+            await this.handlePersonCheckConfirm(participantId, transcript, slots);
           } else if (state === DISPATCHER_STATE.AWAITING_SECURE_CONFIRM) {
-            await this.handleSecureConfirmResponse(participantId, transcript, slots, room, roomName);
+            await this.handleSecureConfirmResponse(participantId, transcript, slots);
           } else if (state === DISPATCHER_STATE.AWAITING_CALL_CONFIRM) {
-            await this.handleCallDeny(participantId, room, roomName);
+            await this.handleCallDeny(participantId);
           } else {
             const resp = result.response || `${participantId}, 10-4. Disregard.`;
-            await this.speak(resp, room, roomName, participantId);
+            await this.speak(resp, participantId);
             this.addConversationExchange(participantId, transcript, resp);
           }
           break;
@@ -1046,18 +884,18 @@ class AIDispatcher {
         case 'PERSON_CHECK_START': {
           setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_PERSON_DETAILS, null, {}, true);
           const resp = result.response || `${participantId}, 10-27, go ahead.`;
-          await this.speak(resp, room, roomName, participantId);
+          await this.speak(resp, participantId);
           this.addConversationExchange(participantId, transcript, resp);
           break;
         }
 
         case 'PERSON_DETAILS': {
           if (state === DISPATCHER_STATE.AWAITING_PERSON_DOB) {
-            await this.handlePersonCheckDOB(participantId, transcript, slots, room, roomName, result.slots);
+            await this.handlePersonCheckDOB(participantId, transcript, slots, result.slots);
           } else if (state === DISPATCHER_STATE.AWAITING_PERSON_FIRSTNAME) {
-            await this.handlePersonFirstName(participantId, transcript, slots, room, roomName);
+            await this.handlePersonFirstName(participantId, transcript, slots);
           } else {
-            await this.handlePersonCheckDetails(participantId, transcript, room, roomName, result.slots);
+            await this.handlePersonCheckDetails(participantId, transcript, result.slots);
           }
           break;
         }
@@ -1067,7 +905,7 @@ class AIDispatcher {
         case 'WAKE_ONLY':
         case 'UNKNOWN': {
           const genResp = result.response || `${participantId}, Central, say again?`;
-          await this.speak(genResp, room, roomName, participantId);
+          await this.speak(genResp, participantId);
           this.addConversationExchange(participantId, transcript, genResp);
           break;
         }
@@ -1082,7 +920,7 @@ class AIDispatcher {
             }
           }
           const backupResp = result.response || `${participantId}, 10-4. Dispatching backup.`;
-          await this.speak(backupResp, room, roomName, participantId);
+          await this.speak(backupResp, participantId);
           this.addConversationExchange(participantId, transcript, backupResp);
           break;
         }
@@ -1098,7 +936,7 @@ class AIDispatcher {
           }
           setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
           const stopResp = result.response || `${participantId}, 10-4.`;
-          await this.speak(stopResp, room, roomName, participantId);
+          await this.speak(stopResp, participantId);
           this.addConversationExchange(participantId, transcript, stopResp);
           break;
         }
@@ -1107,12 +945,12 @@ class AIDispatcher {
           if (result.slots?.plate) {
             setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
             const resp = result.response || `${participantId}, standby on plate.`;
-            await this.speak(resp, room, roomName, participantId);
+            await this.speak(resp, participantId);
             this.addConversationExchange(participantId, transcript, resp);
           } else {
             setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_PLATE, null, {}, true);
             const resp = result.response || `${participantId}, go ahead with plate.`;
-            await this.speak(resp, room, roomName, participantId);
+            await this.speak(resp, participantId);
             this.addConversationExchange(participantId, transcript, resp);
           }
           break;
@@ -1134,7 +972,7 @@ class AIDispatcher {
               priority
             }, true);
             const confirmResp = `${participantId}, confirm, ${matchedNature.toLowerCase()} at ${address}?`;
-            await this.speak(confirmResp, room, roomName, participantId);
+            await this.speak(confirmResp, participantId);
             this.addConversationExchange(participantId, transcript, confirmResp);
           } else if (nature && !address) {
             const matchedNature = await cadService.findBestNature(nature);
@@ -1144,7 +982,7 @@ class AIDispatcher {
               priority
             }, true);
             const resp = result.response || `${participantId}, go ahead with address.`;
-            await this.speak(resp, room, roomName, participantId);
+            await this.speak(resp, participantId);
             this.addConversationExchange(participantId, transcript, resp);
           } else {
             setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_CALL_NATURE, null, {
@@ -1153,7 +991,7 @@ class AIDispatcher {
               priority
             }, true);
             const resp = result.response || `${participantId}, go ahead with call nature.`;
-            await this.speak(resp, room, roomName, participantId);
+            await this.speak(resp, participantId);
             this.addConversationExchange(participantId, transcript, resp);
           }
           break;
@@ -1173,7 +1011,7 @@ class AIDispatcher {
               priority: promptPriority
             }, true);
             const resp = result.response || `${participantId}, go ahead with address for ${matchedNature.toLowerCase()}.`;
-            await this.speak(resp, room, roomName, participantId);
+            await this.speak(resp, participantId);
             this.addConversationExchange(participantId, transcript, resp);
           } else if (!promptNature && promptAddress) {
             setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_CALL_NATURE, null, {
@@ -1182,7 +1020,7 @@ class AIDispatcher {
               priority: promptPriority
             }, true);
             const resp = result.response || `${participantId}, go ahead with call nature.`;
-            await this.speak(resp, room, roomName, participantId);
+            await this.speak(resp, participantId);
             this.addConversationExchange(participantId, transcript, resp);
           } else {
             setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_CALL_NATURE, null, {
@@ -1191,7 +1029,7 @@ class AIDispatcher {
               priority: promptPriority
             }, true);
             const resp = result.response || `${participantId}, go ahead with call nature and address.`;
-            await this.speak(resp, room, roomName, participantId);
+            await this.speak(resp, participantId);
             this.addConversationExchange(participantId, transcript, resp);
           }
           break;
@@ -1200,7 +1038,7 @@ class AIDispatcher {
         case 'SIGNAL_100': {
           setUnitSessionState(participantId, DISPATCHER_STATE.SIGNAL_100_ACTIVE, null, {}, true);
           const sig100Resp = result.response || 'All units, Signal 100. Emergency traffic only.';
-          await this.speak(sig100Resp, room, roomName, participantId);
+          await this.speak(sig100Resp, participantId);
           this.addConversationExchange(participantId, transcript, sig100Resp);
           break;
         }
@@ -1208,7 +1046,7 @@ class AIDispatcher {
         case 'SIGNAL_100_CLEAR': {
           setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
           const sigClearResp = result.response || 'All units, Signal 100 clear. Resume normal traffic.';
-          await this.speak(sigClearResp, room, roomName, participantId);
+          await this.speak(sigClearResp, participantId);
           this.addConversationExchange(participantId, transcript, sigClearResp);
           break;
         }
@@ -1219,11 +1057,11 @@ class AIDispatcher {
           if (lastResult?.lastName) {
             const spelled = lastResult.lastName.toUpperCase().split('').join(', ');
             const spellResp = `${participantId}, last name spelling: ${spelled}.`;
-            await this.speak(spellResp, room, roomName, participantId);
+            await this.speak(spellResp, participantId);
             this.addConversationExchange(participantId, transcript, spellResp);
           } else {
             const noNameResp = `${participantId}, no name on file to spell.`;
-            await this.speak(noNameResp, room, roomName, participantId);
+            await this.speak(noNameResp, participantId);
             this.addConversationExchange(participantId, transcript, noNameResp);
           }
           break;
@@ -1241,15 +1079,15 @@ class AIDispatcher {
             if (repeatResult.dob) parts.push(`date of birth ${repeatResult.dob}`);
             if (repeatResult.status) parts.push(`status ${repeatResult.status}`);
             const repeatResp = `${participantId}, repeating: ${parts.join(', ')}.`;
-            await this.speak(repeatResp, room, roomName, participantId);
+            await this.speak(repeatResp, participantId);
             this.addConversationExchange(participantId, transcript, repeatResp);
           } else if (lastSpoken) {
             const repeatResp = `${participantId}, repeating: ${lastSpoken}`;
-            await this.speak(repeatResp, room, roomName, participantId);
+            await this.speak(repeatResp, participantId);
             this.addConversationExchange(participantId, transcript, repeatResp);
           } else {
             const noRepeatResp = `${participantId}, nothing to repeat.`;
-            await this.speak(noRepeatResp, room, roomName, participantId);
+            await this.speak(noRepeatResp, participantId);
             this.addConversationExchange(participantId, transcript, noRepeatResp);
           }
           break;
@@ -1258,7 +1096,7 @@ class AIDispatcher {
         default: {
           this.log('LLM_UNKNOWN_INTENT', { intent: result.intent });
           const defaultResp = result.response || `${participantId}, Central, say again?`;
-          await this.speak(defaultResp, room, roomName, participantId);
+          await this.speak(defaultResp, participantId);
           this.addConversationExchange(participantId, transcript, defaultResp);
           break;
         }
@@ -1266,11 +1104,11 @@ class AIDispatcher {
     } catch (llmError) {
       this.log('LLM_ERROR', { error: llmError.message });
       this.log('LLM_FALLBACK_TO_REGEX', { participant: participantId });
-      await this.processTranscriptWithRegex(transcript, participantId, room, roomName);
+      await this.processTranscriptWithRegex(transcript, participantId);
     }
   }
 
-  async processTranscriptWithRegex(transcript, participantId, room, roomName) {
+  async processTranscriptWithRegex(transcript, participantId) {
     const commandResult = matchCommand(transcript, participantId);
     if (!commandResult) {
       this.log('COMMAND_NO_MATCH', { transcript });
@@ -1278,57 +1116,57 @@ class AIDispatcher {
     }
 
     if (commandResult.intent === 'PERSON_CHECK_DETAILS') {
-      await this.handlePersonCheckDetails(participantId, commandResult.rawTranscript, room, roomName);
+      await this.handlePersonCheckDetails(participantId, commandResult.rawTranscript);
       return;
     }
 
     if (commandResult.intent === 'PERSON_CHECK_DOB') {
-      await this.handlePersonCheckDOB(participantId, commandResult.rawTranscript, commandResult.slots, room, roomName);
+      await this.handlePersonCheckDOB(participantId, commandResult.rawTranscript, commandResult.slots);
       return;
     }
 
     if (commandResult.intent === 'PERSON_CHECK_FIRSTNAME') {
-      await this.handlePersonFirstName(participantId, commandResult.rawTranscript, commandResult.slots, room, roomName);
+      await this.handlePersonFirstName(participantId, commandResult.rawTranscript, commandResult.slots);
       return;
     }
 
     if (commandResult.intent === 'PERSON_CHECK_CONFIRM') {
-      await this.handlePersonCheckConfirm(participantId, commandResult.rawTranscript, commandResult.slots, room, roomName);
+      await this.handlePersonCheckConfirm(participantId, commandResult.rawTranscript, commandResult.slots);
       return;
     }
 
     if (commandResult.intent === 'ZONE_DETAILS_WITH_ZONE') {
-      await this.handleZoneConfirmPrompt(participantId, commandResult.slots.zone, room, roomName);
+      await this.handleZoneConfirmPrompt(participantId, commandResult.slots.zone);
       return;
     }
 
     if (commandResult.intent === 'ZONE_DETAILS') {
-      await this.handleZoneDetails(participantId, commandResult.rawTranscript, room, roomName);
+      await this.handleZoneDetails(participantId, commandResult.rawTranscript);
       return;
     }
 
     if (commandResult.intent === 'ZONE_CONFIRM') {
-      await this.handleZoneConfirm(participantId, commandResult.rawTranscript, commandResult.slots, room, roomName);
+      await this.handleZoneConfirm(participantId, commandResult.rawTranscript, commandResult.slots);
       return;
     }
 
     if (commandResult.intent === 'DETAIL_WITH_LOCATION') {
-      await this.handleDetailConfirmPrompt(participantId, commandResult.slots.location, room, roomName);
+      await this.handleDetailConfirmPrompt(participantId, commandResult.slots.location);
       return;
     }
 
     if (commandResult.intent === 'DETAIL_LOCATION') {
-      await this.handleDetailLocation(participantId, commandResult.rawTranscript, room, roomName);
+      await this.handleDetailLocation(participantId, commandResult.rawTranscript);
       return;
     }
 
     if (commandResult.intent === 'DETAIL_CONFIRM') {
-      await this.handleDetailConfirm(participantId, commandResult.rawTranscript, commandResult.slots, room, roomName);
+      await this.handleDetailConfirm(participantId, commandResult.rawTranscript, commandResult.slots);
       return;
     }
 
     if (commandResult.intent === 'SECURE_CONFIRM_RESPONSE') {
-      await this.handleSecureConfirmResponse(participantId, commandResult.rawTranscript, commandResult.slots, room, roomName);
+      await this.handleSecureConfirmResponse(participantId, commandResult.rawTranscript, commandResult.slots);
       return;
     }
 
@@ -1400,10 +1238,10 @@ class AIDispatcher {
       return;
     }
 
-    await this.publishAudio(responseAudio, room, roomName, finalResponse);
+    await this.publishAudio(responseAudio, finalResponse);
   }
 
-  async handlePersonCheckDetails(participantId, rawTranscript, room, roomName, llmSlots) {
+  async handlePersonCheckDetails(participantId, rawTranscript, llmSlots) {
     this.log('PERSON_CHECK_DETAILS', { participant: participantId, transcript: rawTranscript, llmSlots });
     
     const personDetails = parsePersonDetails(rawTranscript);
@@ -1427,7 +1265,7 @@ class AIDispatcher {
     
     if (!personDetails.lastName) {
       const response = `${participantId}, did not copy last name. Go ahead with last name.`;
-      await this.speak(response, room, roomName, participantId);
+      await this.speak(response, participantId);
       return;
     }
     
@@ -1436,7 +1274,7 @@ class AIDispatcher {
       if (personDetails.dob) newSlots.dob = personDetails.dob.formatted;
       setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_PERSON_FIRSTNAME, null, newSlots, true);
       const response = `${participantId}, did not copy first name. Go ahead with first name.`;
-      await this.speak(response, room, roomName, participantId);
+      await this.speak(response, participantId);
       return;
     }
     
@@ -1446,7 +1284,7 @@ class AIDispatcher {
         firstName: personDetails.firstName
       }, true);
       const response = `${participantId}, did not copy date of birth. Go ahead with date of birth.`;
-      await this.speak(response, room, roomName, participantId);
+      await this.speak(response, participantId);
       return;
     }
     
@@ -1461,10 +1299,10 @@ class AIDispatcher {
     }, true);
     
     const confirmResponse = `${participantId}, confirming. Last ${lastName}, first ${firstName}, date of birth ${dob}. 10-4?`;
-    await this.speak(confirmResponse, room, roomName, participantId);
+    await this.speak(confirmResponse, participantId);
   }
 
-  async handlePersonCheckDOB(participantId, rawTranscript, savedSlots, room, roomName, llmSlots) {
+  async handlePersonCheckDOB(participantId, rawTranscript, savedSlots, llmSlots) {
     this.log('PERSON_CHECK_DOB', { participant: participantId, transcript: rawTranscript, savedSlots, llmSlots });
     
     let dob = null;
@@ -1480,7 +1318,7 @@ class AIDispatcher {
     
     if (!dob) {
       const response = `${participantId}, did not copy date of birth. Go ahead with date of birth.`;
-      await this.speak(response, room, roomName, participantId);
+      await this.speak(response, participantId);
       return;
     }
     
@@ -1495,7 +1333,7 @@ class AIDispatcher {
     }, true);
     
     const confirmResponse = `${participantId}, confirming. Last ${lastName}, first ${firstName}, date of birth ${dobFormatted}. 10-4?`;
-    await this.speak(confirmResponse, room, roomName, participantId);
+    await this.speak(confirmResponse, participantId);
   }
 
   formatMilitaryTime() {
@@ -1512,30 +1350,30 @@ class AIDispatcher {
     return `${hour}${minute} hours`;
   }
 
-  async handleZoneConfirmPrompt(participantId, zone, room, roomName) {
+  async handleZoneConfirmPrompt(participantId, zone) {
     this.log('ZONE_CONFIRM_PROMPT', { participant: participantId, zone });
     
     setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_ZONE_CONFIRM, null, { zone }, true);
     
     const confirmResponse = `${participantId}, just to confirm, you want a zone change to ${zone}?`;
-    await this.speak(confirmResponse, room, roomName, participantId);
+    await this.speak(confirmResponse, participantId);
   }
 
-  async handleZoneDetails(participantId, rawTranscript, room, roomName) {
+  async handleZoneDetails(participantId, rawTranscript) {
     this.log('ZONE_DETAILS', { participant: participantId, transcript: rawTranscript });
     
     const zone = rawTranscript.trim();
     
     if (!zone || zone.length < 2) {
       const response = `${participantId}, did not copy zone. Go ahead with zone.`;
-      await this.speak(response, room, roomName, participantId);
+      await this.speak(response, participantId);
       return;
     }
     
-    await this.handleZoneConfirmPrompt(participantId, zone, room, roomName);
+    await this.handleZoneConfirmPrompt(participantId, zone);
   }
 
-  async handleZoneConfirm(participantId, rawTranscript, slots, room, roomName) {
+  async handleZoneConfirm(participantId, rawTranscript, slots) {
     this.log('ZONE_CONFIRM', { participant: participantId, transcript: rawTranscript, slots });
     
     const normalized = rawTranscript.toLowerCase().trim();
@@ -1567,13 +1405,13 @@ class AIDispatcher {
     if (isDenied) {
       setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_ZONE, null, {}, true);
       const retryResponse = `${participantId}, can you repeat the zone for me again?`;
-      await this.speak(retryResponse, room, roomName, participantId);
+      await this.speak(retryResponse, participantId);
       return;
     }
     
     if (!isConfirmed) {
       const askAgainResponse = `${participantId}, confirm zone change, 10-4 or negative?`;
-      await this.speak(askAgainResponse, room, roomName, participantId);
+      await this.speak(askAgainResponse, participantId);
       return;
     }
     
@@ -1590,36 +1428,36 @@ class AIDispatcher {
     
     const timeStr = this.formatMilitaryTime();
     const confirmResponse = `${participantId}, 10-4. ${timeStr}.`;
-    await this.speak(confirmResponse, room, roomName, participantId);
+    await this.speak(confirmResponse, participantId);
     
     await this.logToCallNotes(participantId, `Zone change: ${zone}`);
     setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
   }
 
-  async handleDetailConfirmPrompt(participantId, location, room, roomName) {
+  async handleDetailConfirmPrompt(participantId, location) {
     this.log('DETAIL_CONFIRM_PROMPT', { participant: participantId, location });
     
     setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_DETAIL_CONFIRM, null, { location }, true);
     
     const confirmResponse = `${participantId}, just to confirm, detail at ${location}?`;
-    await this.speak(confirmResponse, room, roomName, participantId);
+    await this.speak(confirmResponse, participantId);
   }
 
-  async handleDetailLocation(participantId, rawTranscript, room, roomName) {
+  async handleDetailLocation(participantId, rawTranscript) {
     this.log('DETAIL_LOCATION', { participant: participantId, transcript: rawTranscript });
     
     const location = rawTranscript.trim();
     
     if (!location || location.length < 2) {
       const response = `${participantId}, did not copy location. Go ahead with location.`;
-      await this.speak(response, room, roomName, participantId);
+      await this.speak(response, participantId);
       return;
     }
     
-    await this.handleDetailConfirmPrompt(participantId, location, room, roomName);
+    await this.handleDetailConfirmPrompt(participantId, location);
   }
 
-  async handleDetailConfirm(participantId, rawTranscript, slots, room, roomName) {
+  async handleDetailConfirm(participantId, rawTranscript, slots) {
     this.log('DETAIL_CONFIRM', { participant: participantId, transcript: rawTranscript, slots });
     
     const normalized = rawTranscript.toLowerCase().trim();
@@ -1651,13 +1489,13 @@ class AIDispatcher {
     if (isDenied) {
       setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_DETAIL_LOCATION, null, {}, true);
       const retryResponse = `${participantId}, can you repeat the location?`;
-      await this.speak(retryResponse, room, roomName, participantId);
+      await this.speak(retryResponse, participantId);
       return;
     }
     
     if (!isConfirmed) {
       const askAgainResponse = `${participantId}, confirm detail, 10-4 or negative?`;
-      await this.speak(askAgainResponse, room, roomName, participantId);
+      await this.speak(askAgainResponse, participantId);
       return;
     }
     
@@ -1677,13 +1515,13 @@ class AIDispatcher {
     
     const timeStr = this.formatMilitaryTime();
     const confirmResponse = `${participantId}, 10-4. ${timeStr}.`;
-    await this.speak(confirmResponse, room, roomName, participantId);
+    await this.speak(confirmResponse, participantId);
     
     await this.logToCallNotes(participantId, `Detail at: ${location}`);
     setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
   }
 
-  async handleCallNatureInput(participantId, transcript, savedSlots, room, roomName) {
+  async handleCallNatureInput(participantId, transcript, savedSlots) {
     this.log('CALL_NATURE_INPUT', { participant: participantId, transcript, savedSlots });
 
     const normalized = transcript.toLowerCase().trim();
@@ -1691,14 +1529,14 @@ class AIDispatcher {
     if (disregardPhrases.some(p => normalized.includes(p))) {
       setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
       const resp = `${participantId}, 10-4, disregard.`;
-      await this.speak(resp, room, roomName, participantId);
+      await this.speak(resp, participantId);
       return;
     }
 
     const nature = transcript.trim();
     if (!nature || nature.length < 2) {
       const resp = `${participantId}, did not copy call nature. Go ahead with call nature.`;
-      await this.speak(resp, room, roomName, participantId);
+      await this.speak(resp, participantId);
       return;
     }
 
@@ -1714,7 +1552,7 @@ class AIDispatcher {
         priority: savedSlots?.priority || 'medium'
       }, true);
       const confirmResp = `${participantId}, confirm, ${matchedNature.toLowerCase()} at ${address}?`;
-      await this.speak(confirmResp, room, roomName, participantId);
+      await this.speak(confirmResp, participantId);
     } else {
       setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_CALL_ADDRESS, null, {
         nature: matchedNature,
@@ -1722,11 +1560,11 @@ class AIDispatcher {
         priority: savedSlots?.priority || 'medium'
       }, true);
       const resp = `${participantId}, go ahead with address.`;
-      await this.speak(resp, room, roomName, participantId);
+      await this.speak(resp, participantId);
     }
   }
 
-  async handleCallAddressInput(participantId, transcript, savedSlots, room, roomName) {
+  async handleCallAddressInput(participantId, transcript, savedSlots) {
     this.log('CALL_ADDRESS_INPUT', { participant: participantId, transcript, savedSlots });
 
     const normalized = transcript.toLowerCase().trim();
@@ -1734,14 +1572,14 @@ class AIDispatcher {
     if (disregardPhrases.some(p => normalized.includes(p))) {
       setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
       const resp = `${participantId}, 10-4, disregard.`;
-      await this.speak(resp, room, roomName, participantId);
+      await this.speak(resp, participantId);
       return;
     }
 
     const address = normalizeAddress(transcript.trim());
     if (!address || address.length < 2) {
       const resp = `${participantId}, did not copy address. Go ahead with address.`;
-      await this.speak(resp, room, roomName, participantId);
+      await this.speak(resp, participantId);
       return;
     }
 
@@ -1753,10 +1591,10 @@ class AIDispatcher {
       priority: savedSlots?.priority || 'medium'
     }, true);
     const confirmResp = `${participantId}, confirm, ${nature.toLowerCase()} at ${address}?`;
-    await this.speak(confirmResp, room, roomName, participantId);
+    await this.speak(confirmResp, participantId);
   }
 
-  async handleCallConfirm(participantId, transcript, slots, room, roomName) {
+  async handleCallConfirm(participantId, transcript, slots) {
     this.log('CALL_CONFIRM', { participant: participantId, transcript, slots });
 
     const normalized = transcript.toLowerCase().trim();
@@ -1786,27 +1624,27 @@ class AIDispatcher {
     }
 
     if (isDenied) {
-      await this.handleCallDeny(participantId, room, roomName);
+      await this.handleCallDeny(participantId);
       return;
     }
 
     if (!isConfirmed) {
       const askResp = `${participantId}, confirm call, 10-4 or negative?`;
-      await this.speak(askResp, room, roomName, participantId);
+      await this.speak(askResp, participantId);
       return;
     }
 
-    await this.executeCallCreation(participantId, slots, room, roomName);
+    await this.executeCallCreation(participantId, slots);
   }
 
-  async handleCallDeny(participantId, room, roomName) {
+  async handleCallDeny(participantId) {
     this.log('CALL_DENY', { participant: participantId });
     setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
     const resp = `${participantId}, 10-4, disregard.`;
-    await this.speak(resp, room, roomName, participantId);
+    await this.speak(resp, participantId);
   }
 
-  async executeCallCreation(participantId, slots, room, roomName) {
+  async executeCallCreation(participantId, slots) {
     const { nature, address, additionalUnits, priority } = slots;
     this.log('CALL_CREATION_EXECUTING', { participantId, nature, address, priority, additionalUnits });
 
@@ -1816,7 +1654,7 @@ class AIDispatcher {
         setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
         const timeStr = this.formatMilitaryTime();
         const resp = `${participantId}, 10-4. ${nature.toLowerCase()} at ${address}. ${timeStr}.`;
-        await this.speak(resp, room, roomName, participantId);
+        await this.speak(resp, participantId);
         return;
       }
 
@@ -1826,7 +1664,7 @@ class AIDispatcher {
       if (!callResult.success) {
         setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
         const resp = `${participantId}, unable to create call. System error.`;
-        await this.speak(resp, room, roomName, participantId);
+        await this.speak(resp, participantId);
         return;
       }
 
@@ -1860,17 +1698,17 @@ class AIDispatcher {
       setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
       const timeStr = this.formatMilitaryTime();
       const resp = `${participantId}, 10-4. Call created, ${nature.toLowerCase()} at ${address}. ${timeStr}.`;
-      await this.speak(resp, room, roomName, participantId);
+      await this.speak(resp, participantId);
 
     } catch (error) {
       this.log('CALL_CREATION_ERROR', { error: error.message });
       setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
       const resp = `${participantId}, unable to create call. System error.`;
-      await this.speak(resp, room, roomName, participantId);
+      await this.speak(resp, participantId);
     }
   }
 
-  async handlePersonFirstName(participantId, rawTranscript, savedSlots, room, roomName) {
+  async handlePersonFirstName(participantId, rawTranscript, savedSlots) {
     this.log('PERSON_CHECK_FIRSTNAME', { participant: participantId, transcript: rawTranscript, savedSlots });
     
     const cleaned = rawTranscript
@@ -1882,7 +1720,7 @@ class AIDispatcher {
     
     if (!firstName) {
       const response = `${participantId}, did not copy first name. Go ahead with first name.`;
-      await this.speak(response, room, roomName, participantId);
+      await this.speak(response, participantId);
       return;
     }
     
@@ -1895,7 +1733,7 @@ class AIDispatcher {
         firstName
       }, true);
       const response = `${participantId}, did not copy date of birth. Go ahead with date of birth.`;
-      await this.speak(response, room, roomName, participantId);
+      await this.speak(response, participantId);
       return;
     }
     
@@ -1906,10 +1744,10 @@ class AIDispatcher {
     }, true);
     
     const confirmResponse = `${participantId}, confirming. Last ${lastName}, first ${firstName}, date of birth ${dob}. 10-4?`;
-    await this.speak(confirmResponse, room, roomName, participantId);
+    await this.speak(confirmResponse, participantId);
   }
 
-  async handlePersonCheckConfirm(participantId, rawTranscript, slots, room, roomName) {
+  async handlePersonCheckConfirm(participantId, rawTranscript, slots) {
     this.log('PERSON_CHECK_CONFIRM', { participant: participantId, transcript: rawTranscript, slots });
     
     const normalized = rawTranscript.toLowerCase().trim();
@@ -1941,29 +1779,29 @@ class AIDispatcher {
     if (isDenied) {
       setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_PERSON_DETAILS, null, {}, true);
       const retryResponse = `${participantId}, go ahead with details again.`;
-      await this.speak(retryResponse, room, roomName, participantId);
+      await this.speak(retryResponse, participantId);
       return;
     }
     
     if (!isConfirmed) {
       const askAgainResponse = `${participantId}, confirm details, 10-4 or negative?`;
-      await this.speak(askAgainResponse, room, roomName, participantId);
+      await this.speak(askAgainResponse, participantId);
       return;
     }
     
     const { lastName, firstName, dob } = slots;
     
     const standbyResponse = `${participantId}, 10-4. Standby.`;
-    await this.speak(standbyResponse, room, roomName, participantId);
+    await this.speak(standbyResponse, participantId);
     
-    await this.executePersonCheck(participantId, lastName, firstName, dob, room, roomName);
+    await this.executePersonCheck(participantId, lastName, firstName, dob);
   }
 
-  async executePersonCheck(participantId, lastName, firstName, dob, room, roomName) {
+  async executePersonCheck(participantId, lastName, firstName, dob) {
     try {
       if (!cadService.isConfigured()) {
         const noConfigResponse = `${participantId}, CAD system not available. Standby.`;
-        await this.speak(noConfigResponse, room, roomName, participantId);
+        await this.speak(noConfigResponse, participantId);
         setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
         return;
       }
@@ -1974,7 +1812,7 @@ class AIDispatcher {
       
       if (!cadResult.success) {
         const errorResponse = `${participantId}, Central. Unable to complete records check. Try again.`;
-        await this.speak(errorResponse, room, roomName, participantId);
+        await this.speak(errorResponse, participantId);
         setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
         return;
       }
@@ -2003,16 +1841,16 @@ class AIDispatcher {
         }, true);
         
         const securePrompt = `${participantId}, Central. Is your mic secure?`;
-        await this.speak(securePrompt, room, roomName, participantId);
+        await this.speak(securePrompt, participantId);
       } else if (hasRecord) {
         const clearResponse = `${participantId}, Central. Local file, no wants or warrants.`;
-        await this.speak(clearResponse, room, roomName, participantId);
+        await this.speak(clearResponse, participantId);
         
         await this.logToCallNotes(participantId, `Records check: ${lastName}, ${firstName}, DOB ${dob} - Local file, no wants or warrants`);
         setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, { lastSearchResult }, true);
       } else {
         const noRecordResponse = `${participantId}, Central. No record on file.`;
-        await this.speak(noRecordResponse, room, roomName, participantId);
+        await this.speak(noRecordResponse, participantId);
         
         await this.logToCallNotes(participantId, `Records check: ${lastName}, ${firstName}, DOB ${dob} - No record on file`);
         setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, { lastSearchResult }, true);
@@ -2021,25 +1859,25 @@ class AIDispatcher {
     } catch (error) {
       this.log('PERSON_CHECK_ERROR', { error: error.message });
       const errorResponse = `${participantId}, Central. System error on records check.`;
-      await this.speak(errorResponse, room, roomName, participantId);
+      await this.speak(errorResponse, participantId);
       setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
     }
   }
 
-  async handleSecureConfirmResponse(participantId, rawTranscript, slots, room, roomName) {
+  async handleSecureConfirmResponse(participantId, rawTranscript, slots) {
     this.log('SECURE_CONFIRM_RESPONSE', { participant: participantId, transcript: rawTranscript, slots });
     
     const secureResult = matchSecureConfirmation(rawTranscript);
     
     if (!secureResult) {
       const repeatPrompt = `${participantId}, Central. Confirm, is your mic secure?`;
-      await this.speak(repeatPrompt, room, roomName, participantId);
+      await this.speak(repeatPrompt, participantId);
       return;
     }
     
     if (!secureResult.confirmed) {
       const standbyResponse = `${participantId}, Central. Copy. Contact dispatch on secure line.`;
-      await this.speak(standbyResponse, room, roomName, participantId);
+      await this.speak(standbyResponse, participantId);
       setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
       return;
     }
@@ -2061,7 +1899,7 @@ class AIDispatcher {
     
     const flagText = flagDetails.length > 0 ? flagDetails.join(', ') : 'flag on file';
     const flagResponse = `${participantId}, Central. ${lastName}, ${firstName}, date of birth ${dob} returns ${flagText}. Use caution.`;
-    await this.speak(flagResponse, room, roomName, participantId);
+    await this.speak(flagResponse, participantId);
     
     await this.logToCallNotes(participantId, `Records check: ${lastName}, ${firstName}, DOB ${dob} - ${flagText}`);
     
@@ -2085,12 +1923,11 @@ class AIDispatcher {
     }
   }
 
-  async speak(text, room, roomName, participantId = null) {
+  async speak(text, participantId = null) {
     const audio = await textToSpeech(text);
-    await this.publishAudio(audio, room, roomName, text);
+    await this.publishAudio(audio, text);
     if (participantId) {
       const session = getUnitSessionState(participantId);
-      const history = session?.slots?.conversationHistory || [];
       setUnitSessionState(participantId, session?.state || 'IDLE', null, {
         lastSpokenText: text
       }, false);
@@ -2107,66 +1944,59 @@ class AIDispatcher {
     }, false);
   }
 
-  async publishAudio(audioBuffer, room, roomName, responseText = null) {
-    let audioSource = null;
-    let track = null;
-    let publication = null;
-
+  async publishAudio(audioBuffer, responseText = null) {
     try {
       if (!await this.shouldRespond()) {
         this.log('PUBLISH_SKIPPED', { reason: 'Disabled' });
         return;
       }
 
-      audioSource = new AudioSource(AZURE_SAMPLE_RATE, CHANNELS);
-      track = LocalAudioTrack.createAudioTrack('ai-response', audioSource);
-      
-      const publishOptions = new TrackPublishOptions();
-      publishOptions.source = TrackSource.SOURCE_MICROPHONE;
-      
-      publication = await room.localParticipant.publishTrack(track, publishOptions);
-      this.log('TRACK_PUBLISHED', { room: roomName, trackSid: publication.sid });
+      if (!this.connected || !this.channelName) {
+        this.log('PUBLISH_SKIPPED', { reason: 'Not connected to channel' });
+        return;
+      }
 
-      // Wait for clients to subscribe before sending audio
+      const resampled48k = resampleAudio(audioBuffer, AZURE_SAMPLE_RATE, RELAY_SAMPLE_RATE);
+
+      let opusFrames;
+      try {
+        opusFrames = opusCodec.encodePcmToOpus(resampled48k);
+      } catch (err) {
+        this.log('OPUS_ENCODE_ERROR', { error: err.message });
+        return;
+      }
+
+      this.log('AUDIO_STREAMING', { opusFrames: opusFrames.length, channel: this.channelName });
+
+      const floorResult = floorControlService.requestFloor(this.channelName, AI_IDENTITY, {
+        isEmergency: false,
+        emergencyStates: null,
+      });
+      if (!floorResult.granted) {
+        this.log('PUBLISH_SKIPPED', { reason: 'Floor busy', heldBy: floorResult.heldBy });
+        return;
+      }
+
       await new Promise(resolve => setTimeout(resolve, 300));
 
-      const samples = new Int16Array(audioBuffer.buffer);
-      const framesCount = Math.ceil(samples.length / SAMPLES_PER_FRAME);
-      
-      this.log('AUDIO_STREAMING', { totalSamples: samples.length, frames: framesCount, frameDurationMs: FRAME_DURATION_MS });
-
-      // Send all frames with precise timing using a single continuous stream
       const startTime = Date.now();
-      
-      for (let i = 0; i < framesCount; i++) {
-        // Only check enabled status every 10 frames to avoid database latency
+      const FRAME_MS = 20;
+
+      for (let i = 0; i < opusFrames.length; i++) {
         if (i % 10 === 0 && !this.isRunning) {
           this.log('PUBLISH_INTERRUPTED', { reason: 'Dispatcher stopped mid-publish' });
           break;
         }
 
-        const start = i * SAMPLES_PER_FRAME;
-        const end = Math.min(start + SAMPLES_PER_FRAME, samples.length);
-        const frameData = samples.slice(start, end);
-        
-        // Pad last frame if needed
-        let paddedData = frameData;
-        if (frameData.length < SAMPLES_PER_FRAME) {
-          paddedData = new Int16Array(SAMPLES_PER_FRAME);
-          paddedData.set(frameData);
-        }
-
-        const frame = new AudioFrame(
-          Buffer.from(paddedData.buffer),
-          AZURE_SAMPLE_RATE,
-          CHANNELS,
-          SAMPLES_PER_FRAME
+        this._publishSequence = (this._publishSequence + 1) & 0xFFFF;
+        audioRelayService.injectAudio(
+          this.channelName,
+          AI_IDENTITY,
+          this._publishSequence,
+          opusFrames[i]
         );
 
-        await audioSource.captureFrame(frame);
-        
-        // Calculate precise sleep time based on elapsed time to maintain accurate timing
-        const expectedTime = (i + 1) * FRAME_DURATION_MS;
+        const expectedTime = (i + 1) * FRAME_MS;
         const elapsed = Date.now() - startTime;
         const sleepTime = Math.max(0, expectedTime - elapsed);
         if (sleepTime > 0) {
@@ -2175,61 +2005,47 @@ class AIDispatcher {
       }
 
       const TRAILING_SILENT_FRAMES = 4;
-      for (let s = 0; s < TRAILING_SILENT_FRAMES; s++) {
-        const silentFrame = new AudioFrame(
-          Buffer.alloc(SAMPLES_PER_FRAME * 2),
-          AZURE_SAMPLE_RATE,
-          CHANNELS,
-          SAMPLES_PER_FRAME
-        );
-        await audioSource.captureFrame(silentFrame);
-        await new Promise(resolve => setTimeout(resolve, FRAME_DURATION_MS));
+      const silentPcm = Buffer.alloc(OPUS_FRAME_SIZE * 2);
+      let silentOpusFrames;
+      try {
+        silentOpusFrames = opusCodec.encodePcmToOpus(silentPcm);
+      } catch (_) {
+        silentOpusFrames = [];
+      }
+      for (const silentFrame of silentOpusFrames) {
+        this._publishSequence = (this._publishSequence + 1) & 0xFFFF;
+        audioRelayService.injectAudio(this.channelName, AI_IDENTITY, this._publishSequence, silentFrame);
+        await new Promise(resolve => setTimeout(resolve, FRAME_MS));
       }
 
       await new Promise(resolve => setTimeout(resolve, 800));
 
-      if (responseText && roomName) {
+      if (responseText && this.channelName) {
         try {
           const wavHeader = createWavHeader(audioBuffer.length, AZURE_SAMPLE_RATE, CHANNELS, 16);
           const wavBuffer = Buffer.concat([wavHeader, audioBuffer]);
-          const filename = `${roomName}_${Date.now()}_AI-DISPATCHER.wav`;
+          const filename = `${this.channelName}_${Date.now()}_AI-DISPATCHER.wav`;
           const filepath = path.join(AUDIO_DIR, filename);
           fs.writeFileSync(filepath, wavBuffer);
           const audioUrl = `/api/messages/audio/${filename}`;
+          const samples = new Int16Array(audioBuffer.buffer, audioBuffer.byteOffset, audioBuffer.length / 2);
           const durationMs = Math.round((samples.length / AZURE_SAMPLE_RATE) * 1000);
-          const msg = await createChannelMessage(roomName, 'AI-DISPATCHER', 'audio', null, audioUrl, durationMs);
+          const msg = await createChannelMessage(this.channelName, 'AI-DISPATCHER', 'audio', null, audioUrl, durationMs);
           if (msg) {
-            await createChannelMessage(roomName, 'AI-DISPATCHER', 'text', responseText).catch(() => {});
-            broadcastMessage(roomName, msg).catch(() => {});
+            await createChannelMessage(this.channelName, 'AI-DISPATCHER', 'text', responseText).catch(() => {});
+            broadcastMessage(this.channelName, msg).catch(() => {});
           }
-          this.log('CHAT_RECORDED', { room: roomName, messageId: msg?.id });
+          this.log('CHAT_RECORDED', { channel: this.channelName, messageId: msg?.id });
         } catch (chatErr) {
           this.log('CHAT_RECORD_ERROR', { error: chatErr.message });
         }
       }
 
+      floorControlService.releaseFloor(this.channelName, AI_IDENTITY);
+
     } catch (error) {
+      floorControlService.releaseFloor(this.channelName, AI_IDENTITY);
       this.log('PUBLISH_ERROR', { error: error.message });
-    } finally {
-      if (publication && room.localParticipant) {
-        try {
-          await room.localParticipant.unpublishTrack(publication.sid);
-          this.log('TRACK_UNPUBLISHED', { room: roomName, trackSid: publication.sid });
-        } catch (e) {
-          this.log('TRACK_UNPUBLISH_ERROR', { error: e.message });
-        }
-      }
-      
-      if (track) {
-        try {
-          track.stop();
-          this.log('TRACK_STOPPED', { room: roomName });
-        } catch (e) {
-        }
-      }
-      
-      audioSource = null;
-      track = null;
     }
   }
 
@@ -2260,10 +2076,10 @@ class AIDispatcher {
   }
 
   async sendDataMessage(messageObj) {
-    if (!this.room) return;
+    if (!this.connected || !this.channelName) return;
     try {
-      const data = new TextEncoder().encode(JSON.stringify(messageObj));
-      await this.room.localParticipant.publishData(data, { reliable: true });
+      const sig = await this._ensureSignalingService();
+      sig.broadcastDataToChannel(this.channelName, messageObj);
       this.log('DATA_MESSAGE_SENT', messageObj);
     } catch (error) {
       this.log('DATA_MESSAGE_SEND_ERROR', { error: error.message });
@@ -2271,7 +2087,7 @@ class AIDispatcher {
   }
 
   async playToneAndSpeak(toneType, message) {
-    if (!this.room || !this.isRunning) {
+    if (!this.connected || !this.isRunning) {
       this.log('TONE_SPEAK_SKIPPED', { reason: 'Not connected or not running' });
       return;
     }
@@ -2279,39 +2095,34 @@ class AIDispatcher {
     this.log('TONE_SPEAK_START', { toneType, message });
 
     try {
-      // Signal clients to release PTT so they can hear the AI
       await this.sendDataMessage({ type: 'ai-playback-start' });
       
-      // Small delay to let clients process the signal
       await new Promise(resolve => setTimeout(resolve, 200));
       
       const toneDuration = toneType === 'CONTINUOUS' ? 3000 : 2500;
       const toneAudio = this.generateTone(toneType, toneDuration);
       
-      await this.publishAudio(toneAudio, this.room, this.roomName);
+      await this.publishAudio(toneAudio);
       
       await new Promise(resolve => setTimeout(resolve, 300));
       
       if (message) {
         const speechAudio = await textToSpeech(message);
-        await this.publishAudio(speechAudio, this.room, this.roomName);
+        await this.publishAudio(speechAudio);
       }
       
-      // Small delay after audio completes
       await new Promise(resolve => setTimeout(resolve, 300));
       
-      // Signal clients that AI playback is done
       await this.sendDataMessage({ type: 'ai-playback-end' });
       
       this.log('TONE_SPEAK_COMPLETE', { toneType, message });
     } catch (error) {
       this.log('TONE_SPEAK_ERROR', { error: error.message });
-      // Still send end signal on error
       await this.sendDataMessage({ type: 'ai-playback-end' });
     }
   }
 
-  handleDataMessage(data, participant) {
+  handleDataMessage(data, senderUnitId) {
     try {
       let jsonStr;
       if (data instanceof Uint8Array || Buffer.isBuffer(data)) {
@@ -2322,12 +2133,12 @@ class AIDispatcher {
         jsonStr = data.toString();
       }
       
-      this.log('DATA_MESSAGE_RAW', { raw: jsonStr.substring(0, 200), participant: participant?.identity });
+      this.log('DATA_MESSAGE_RAW', { raw: jsonStr.substring(0, 200), sender: senderUnitId });
       
       const message = JSON.parse(jsonStr);
       
       if (message.type === 'heartbeat' && message.location) {
-        const unitId = message.identity || participant?.identity;
+        const unitId = message.identity || senderUnitId;
         const { lat, lng, accuracy } = message.location;
         if (unitId && typeof lat === 'number' && typeof lng === 'number') {
           import('../services/locationService.js').then(mod => {
@@ -2335,15 +2146,11 @@ class AIDispatcher {
           });
         }
       } else if (message.type === 'emergency' && message.active === true) {
-        const unitId = participant.identity;
-        this.log('EMERGENCY_BUTTON_PRESSED', { unitId, channel: this.roomName });
-        
-        this.emergencyEscalation.startEscalation(unitId, this.roomName);
+        this.log('EMERGENCY_BUTTON_PRESSED', { unitId: senderUnitId, channel: this.channelName });
+        this.emergencyEscalation.startEscalation(senderUnitId, this.channelName);
       } else if (message.type === 'emergency' && message.active === false) {
-        const unitId = participant.identity;
-        this.log('EMERGENCY_BUTTON_CLEARED', { unitId });
-        
-        this.emergencyEscalation.clearEscalation(unitId);
+        this.log('EMERGENCY_BUTTON_CLEARED', { unitId: senderUnitId });
+        this.emergencyEscalation.clearEscalation(senderUnitId);
       }
     } catch (error) {
       this.log('DATA_MESSAGE_PARSE_ERROR', { error: error.message });
@@ -2443,13 +2250,12 @@ export async function restartDispatcher(channelName, roomKey = null) {
 
 export async function broadcastMessage(channelName, message) {
   const dispatcher = getDispatcher();
-  if (dispatcher.room && dispatcher.roomName === channelName && dispatcher.room.localParticipant) {
+  if (dispatcher.connected && dispatcher.channelName === channelName) {
     try {
-      const data = new TextEncoder().encode(JSON.stringify({
+      await dispatcher.sendDataMessage({
         type: 'new_message',
         message
-      }));
-      await dispatcher.room.localParticipant.publishData(data, { reliable: true });
+      });
       console.log(`[AI-Dispatcher] Broadcast message to ${channelName}:`, message.id);
       return true;
     } catch (error) {
@@ -2457,6 +2263,6 @@ export async function broadcastMessage(channelName, message) {
       return false;
     }
   }
-  console.log(`[AI-Dispatcher] Cannot broadcast to ${channelName}: dispatcher is on ${dispatcher.roomName || 'no room'}`);
+  console.log(`[AI-Dispatcher] Cannot broadcast to ${channelName}: dispatcher is on ${dispatcher.channelName || 'no channel'}`);
   return false;
 }

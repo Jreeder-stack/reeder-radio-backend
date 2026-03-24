@@ -11,8 +11,6 @@ import pool from './db/index.js';
 import { setupRoutes } from './routes/index.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { requireAuth } from './middleware/auth.js';
-import * as livekitService from './services/livekitService.js';
-import { getLiveKitUrl } from './config/livekit.js';
 import * as authService from './services/authService.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -100,24 +98,6 @@ app.post('/api/activity/log', requireAuth, async (req, res) => {
   }
 });
 
-app.get('/api/livekit-url', (req, res) => {
-  res.json({ url: getLiveKitUrl() });
-});
-
-app.get('/getToken', requireAuth, async (req, res) => {
-  try {
-    const { room, identity } = req.query;
-    if (!room || !identity) {
-      return res.status(400).json({ error: 'Room and identity required' });
-    }
-    
-    const result = await livekitService.generateToken(identity, room);
-    res.json(result);
-  } catch (err) {
-    console.error('Token generation error:', err);
-    res.status(500).json({ error: 'Failed to generate token' });
-  }
-});
 
 const clientDistPath = path.join(__dirname, '..', 'client', 'dist');
 

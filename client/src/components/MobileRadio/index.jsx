@@ -9,7 +9,6 @@ import { useSignalingContext } from '../../context/SignalingContext';
 import { micPTTManager } from '../../audio/MicPTTManager';
 import { PTT_STATES } from '../../constants/pttStates';
 import { updateUnitStatus } from '../../utils/api';
-import { DataPacket_Kind } from 'livekit-client';
 import { useClearAir } from './useClearAir';
 
 export default function MobileRadioView({ user, onLogout }) {
@@ -174,21 +173,16 @@ export default function MobileRadioView({ user, onLogout }) {
   }, [livekitManager]);
 
   const broadcastStatus = useCallback((status, channel) => {
-    const room = livekitManager?.getRoom(channel);
-    if (!room || !room.localParticipant) return;
+    if (!livekitManager?.isConnected(channel)) return;
     
-    const message = JSON.stringify({
+    livekitManager.sendData(channel, {
       type: 'status_update',
-      identity: room.localParticipant.identity,
+      identity,
       status,
       channel,
       timestamp: Date.now(),
     });
-    
-    const encoder = new TextEncoder();
-    const data = encoder.encode(message);
-    room.localParticipant.publishData(data, DataPacket_Kind.RELIABLE);
-  }, [livekitManager]);
+  }, [livekitManager, identity]);
 
   useEffect(() => {
     micPTTManager.onStateChange = (newState) => {
@@ -267,7 +261,12 @@ export default function MobileRadioView({ user, onLogout }) {
     micPTTManager.setCurrentChannel(channelName);
     micPTTManager.setCurrentUnit(identity);
     micPTTManager.setRoom(room);
-    signalPttStart(channelName);
+    try {
+      await signalPttStart(channelName);
+    } catch (grantErr) {
+      console.warn('[MobileRadio] Floor denied:', grantErr.message);
+      return;
+    }
     micPTTManager.start();
   }, [ensureConnected, retryConnection, livekitManager, signalPttStart, identity, connectionStatus]);
 

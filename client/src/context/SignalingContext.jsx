@@ -11,7 +11,6 @@ export function SignalingProvider({ children }) {
   const { user } = useAuth();
   const [connected, setConnected] = useState(false);
   const [authenticated, setAuthenticated] = useState(false);
-  const [livekitAvailable, setLivekitAvailable] = useState(true);
   const [channelMembers, setChannelMembers] = useState({});
   const [activeTransmissions, setActiveTransmissions] = useState({});
   const [emergencyChannels, setEmergencyChannels] = useState(new Set());
@@ -60,10 +59,6 @@ export function SignalingProvider({ children }) {
       if (!data.connected) {
         setAuthenticated(false);
       }
-    });
-
-    const removeSystemListener = signalingManager.on('systemStatus', (data) => {
-      setLivekitAvailable(data.livekitAvailable !== false);
     });
 
     const removeMembersListener = signalingManager.on('channelMembers', (data) => {
@@ -201,7 +196,6 @@ export function SignalingProvider({ children }) {
 
     return () => {
       removeConnectionListener();
-      removeSystemListener();
       removeMembersListener();
       removeJoinListener();
       removeLeaveListener();
@@ -346,7 +340,6 @@ export function SignalingProvider({ children }) {
   const value = {
     connected,
     authenticated,
-    livekitAvailable,
     channelMembers,
     activeTransmissions,
     emergencyChannels: Array.from(emergencyChannels),

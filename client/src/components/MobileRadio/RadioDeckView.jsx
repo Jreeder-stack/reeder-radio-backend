@@ -7,7 +7,6 @@ import { useMobileRadioContext } from '../../context/MobileRadioContext';
 import { micPTTManager } from '../../audio/MicPTTManager';
 import { PTT_STATES } from '../../constants/pttStates';
 import { updateUnitStatus } from '../../utils/api';
-import { DataPacket_Kind } from 'livekit-client';
 import { startBackgroundService, stopBackgroundService } from '../../plugins/backgroundService';
 import { updateServiceConnectionInfo } from '../../plugins/nativeLiveKit';
 import { setupAppLifecycle, getSettings, saveSettings, isNative, setHardwarePttKeyCode } from '../../lib/capacitor';
@@ -448,21 +447,16 @@ export function RadioDeckView({ user, onLogout }) {
   }, []);
 
   const broadcastStatus = useCallback((status, channel) => {
-    const room = livekitManager?.getRoom(channel);
-    if (!room || !room.localParticipant) return;
+    if (!livekitManager?.isConnected(channel)) return;
     
-    const message = JSON.stringify({
+    livekitManager.sendData(channel, {
       type: 'status_update',
-      identity: room.localParticipant.identity,
+      identity,
       status,
       channel,
       timestamp: Date.now(),
     });
-    
-    const encoder = new TextEncoder();
-    const data = encoder.encode(message);
-    room.localParticipant.publishData(data, DataPacket_Kind.RELIABLE);
-  }, [livekitManager]);
+  }, [livekitManager, identity]);
 
   useEffect(() => {
     micPTTManager.onStateChange = (newState) => {
@@ -729,7 +723,12 @@ export function RadioDeckView({ user, onLogout }) {
     micPTTManager.setCurrentChannel(channelName);
     micPTTManager.setCurrentUnit(identity);
     micPTTManager.setRoom(room);
-    signalPttStart(channelName);
+    try {
+      await signalPttStart(channelName);
+    } catch (grantErr) {
+      console.warn('[PTT-DIAG] [JS] Floor denied:', grantErr.message);
+      return;
+    }
     console.log('[PTT-DIAG] [JS] handleTransmitStart() — calling micPTTManager.start()');
     micPTTManager.start();
   }, [ensureConnected, livekitManager, signalPttStart, identity]);

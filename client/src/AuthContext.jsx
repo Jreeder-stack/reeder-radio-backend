@@ -101,7 +101,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(cachedUser);
   // Always start loading regardless of cached user — the session must be verified
   // with the server before the app renders and starts making authenticated requests
-  // (e.g. /getToken). Without this, a stale cache causes /getToken 401s.
+  // Without this, a stale cache causes authenticated API request 401s.
   const [loading, setLoading] = useState(true);
 
   const checkAuth = useCallback(async (isBackgroundCheck = false) => {

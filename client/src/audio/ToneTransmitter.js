@@ -1,19 +1,22 @@
-import { Track } from 'livekit-client';
 import toneEngine from './toneEngine.js';
+
+const PCM_FRAME_SIZE = 960;
 
 class ToneTransmitter {
   constructor() {
     this.audioContext = null;
     this.mediaStreamDestination = null;
-    this.localTrack = null;
-    this.browserTrack = null;
-    this.room = null;
+    this._ws = null;
+    this._captureWorkletNode = null;
+    this._captureWorkletReady = false;
+    this._sourceNode = null;
+    this._txSequence = 0;
     this.isTransmitting = false;
   }
 
   _ensureAudioContext() {
     if (!this.audioContext || this.audioContext.state === 'closed') {
-      this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      this.audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 48000 });
     }
     if (this.audioContext.state === 'suspended') {
       this.audioContext.resume();
@@ -27,8 +30,23 @@ class ToneTransmitter {
     return this.mediaStreamDestination;
   }
 
+  setWsTransport(ws) {
+    this._ws = ws;
+  }
+
   setRoom(room) {
-    this.room = room;
+    if (room && room.ws) {
+      this.setWsTransport(room.ws);
+    } else if (room && typeof room === 'object' && room instanceof WebSocket) {
+      this.setWsTransport(room);
+    }
+  }
+
+  async _ensureCaptureWorklet() {
+    if (this._captureWorkletReady) return;
+    const ctx = this._ensureAudioContext();
+    await ctx.audioWorklet.addModule('/audio/pcm-capture-worklet.js');
+    this._captureWorkletReady = true;
   }
 
   async startToneTransmission() {
@@ -37,56 +55,94 @@ class ToneTransmitter {
       return true;
     }
 
-    if (!this.room) {
-      console.error('[ToneTransmitter] No room set');
+    if (!this._ws || this._ws.readyState !== WebSocket.OPEN) {
+      console.error('[ToneTransmitter] No WS transport available');
       return false;
     }
 
     try {
       const ctx = this._ensureAudioContext();
+      await this._ensureCaptureWorklet();
       const destination = this._createFreshMediaStreamDestination();
 
       toneEngine.setTxMode(ctx, destination);
 
-      this.browserTrack = destination.stream.getAudioTracks()[0];
-      
-      if (!this.browserTrack) {
+      const track = destination.stream.getAudioTracks()[0];
+      if (!track) {
         console.error('[ToneTransmitter] No audio track from MediaStreamDestination');
         return false;
       }
 
-      console.log('[ToneTransmitter] Publishing tone track to LiveKit...');
-      
-      const publication = await this.room.localParticipant.publishTrack(
-        this.browserTrack,
-        {
-          name: 'dispatch-tone',
-          source: Track.Source.Microphone
+      const source = ctx.createMediaStreamSource(new MediaStream([track]));
+      this._sourceNode = source;
+
+      const captureNode = new AudioWorkletNode(ctx, 'pcm-capture-processor');
+      this._captureWorkletNode = captureNode;
+      this._txSequence = 0;
+
+      captureNode.port.onmessage = (e) => {
+        if (e.data.type === 'pcm') {
+          this._sendPcmFrame(e.data.samples);
         }
-      );
-      
-      this.localTrack = publication.track;
+      };
+
+      source.connect(captureNode);
+      captureNode.connect(ctx.destination);
+      captureNode.port.postMessage({ type: 'start' });
+
       this.isTransmitting = true;
-      
-      console.log('[ToneTransmitter] Tone track published successfully');
+      console.log('[ToneTransmitter] Tone capture started via WS');
       return true;
 
     } catch (err) {
       console.error('[ToneTransmitter] Failed to start tone transmission:', err);
       toneEngine.clearTxMode();
-      this._cleanupDestination();
+      this._cleanupCapture();
       return false;
     }
   }
 
-  _cleanupDestination() {
-    if (this.browserTrack) {
-      try {
-        this.browserTrack.stop();
-      } catch (e) {}
-      this.browserTrack = null;
+  _sendPcmFrame(int16Samples) {
+    if (!this._ws || this._ws.readyState !== WebSocket.OPEN) return;
+
+    const header = new ArrayBuffer(3);
+    const view = new DataView(header);
+    view.setUint8(0, 0x01);
+    view.setUint16(1, this._txSequence & 0xFFFF);
+    this._txSequence++;
+
+    const pcmBytes = new Uint8Array(int16Samples.buffer, int16Samples.byteOffset, int16Samples.byteLength);
+    const frame = new Uint8Array(3 + pcmBytes.length);
+    frame.set(new Uint8Array(header), 0);
+    frame.set(pcmBytes, 3);
+
+    try {
+      this._ws.send(frame.buffer);
+    } catch (err) {
+      console.warn('[ToneTransmitter] WS send error:', err.message);
     }
-    this.mediaStreamDestination = null;
+  }
+
+  _cleanupCapture() {
+    if (this._captureWorkletNode) {
+      try {
+        this._captureWorkletNode.port.postMessage({ type: 'stop' });
+        this._captureWorkletNode.disconnect();
+      } catch (e) {}
+      this._captureWorkletNode = null;
+    }
+
+    if (this._sourceNode) {
+      try { this._sourceNode.disconnect(); } catch (e) {}
+      this._sourceNode = null;
+    }
+
+    if (this.mediaStreamDestination) {
+      try {
+        this.mediaStreamDestination.stream.getTracks().forEach(t => t.stop());
+      } catch (e) {}
+      this.mediaStreamDestination = null;
+    }
   }
 
   async stopToneTransmission() {
@@ -97,25 +153,11 @@ class ToneTransmitter {
     console.log('[ToneTransmitter] Stopping tone transmission...');
 
     try {
-      if (this.localTrack && this.room) {
-        try {
-          await this.room.localParticipant.unpublishTrack(this.localTrack);
-        } catch (e) {
-          console.warn('[ToneTransmitter] Unpublish warning:', e.message);
-        }
-        
-        try {
-          this.localTrack.stop();
-        } catch (e) {
-          console.warn('[ToneTransmitter] LocalTrack stop warning:', e.message);
-        }
-      }
+      toneEngine.clearTxMode();
+      this._cleanupCapture();
     } catch (err) {
       console.error('[ToneTransmitter] Stop error:', err);
     } finally {
-      toneEngine.clearTxMode();
-      this._cleanupDestination();
-      this.localTrack = null;
       this.isTransmitting = false;
       console.log('[ToneTransmitter] Tone transmission stopped');
     }
@@ -123,7 +165,7 @@ class ToneTransmitter {
 
   async transmitTone(type, duration) {
     console.log(`[ToneTransmitter] Transmitting tone ${type} for ${duration}ms`);
-    
+
     const started = await this.startToneTransmission();
     if (!started) {
       console.error('[ToneTransmitter] Failed to start transmission for tone');
@@ -153,15 +195,15 @@ class ToneTransmitter {
 
   disconnect() {
     this.stopToneTransmission();
-    this.room = null;
-    
+    this._ws = null;
+
     if (this.audioContext && this.audioContext.state !== 'closed') {
       try {
         this.audioContext.close();
       } catch (e) {}
       this.audioContext = null;
+      this._captureWorkletReady = false;
     }
-    this.mediaStreamDestination = null;
   }
 }
 

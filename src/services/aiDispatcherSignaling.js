@@ -35,13 +35,18 @@ class AIDispatcherSignaling {
     this.lastActivityTime = Date.now();
   }
 
+  _getHumanCount() {
+    if (!this.dispatcher) return 0;
+    return this.dispatcher.humanParticipantCount;
+  }
+
   _startFallbackIdleCheck() {
     if (this.fallbackIdleTimer) {
       clearInterval(this.fallbackIdleTimer);
     }
 
     this.fallbackIdleTimer = setInterval(async () => {
-      if (!this.dispatcher || !this.dispatcher.room) {
+      if (!this.dispatcher || !this.dispatcher.connected) {
         return;
       }
 
@@ -56,10 +61,10 @@ class AIDispatcherSignaling {
           ch => signalingService.isEmergencyActive(ch)
         );
 
-        const hasHumans = this.dispatcher.humanParticipantCount > 0;
+        const hasHumans = this._getHumanCount() > 0;
 
         if (hasHumans) {
-          this.log('FALLBACK_IDLE_SKIP', { reason: 'humans_present', humanCount: this.dispatcher.humanParticipantCount, idleMs: idleTime });
+          this.log('FALLBACK_IDLE_SKIP', { reason: 'humans_present', humanCount: this._getHumanCount(), idleMs: idleTime });
           return;
         }
 
@@ -121,7 +126,7 @@ class AIDispatcherSignaling {
     };
     this.transmissionLogs.push(transmissionLog);
 
-    const wasAlreadyConnected = !!this.dispatcher.room;
+    const wasAlreadyConnected = this.dispatcher.connected;
 
     if (!wasAlreadyConnected) {
       this.log('CONNECTING_FOR_PTT', { channelId, unitId });
@@ -164,7 +169,7 @@ class AIDispatcherSignaling {
 
     this._clearConnectionTimer(channelId);
 
-    if (!this.dispatcher.room) {
+    if (!this.dispatcher.connected) {
       try {
         await this.dispatcher.rejoinIfNeeded();
       } catch (err) {
@@ -215,14 +220,14 @@ class AIDispatcherSignaling {
   }
 
   async _checkAndDisconnect(channelId) {
-    if (!this.dispatcher || !this.dispatcher.room) return;
+    if (!this.dispatcher || !this.dispatcher.connected) return;
 
     const hasActiveTransmission = signalingService.getActiveTransmission(channelId);
     const isEmergency = signalingService.isEmergencyActive(channelId);
-    const hasHumans = this.dispatcher.humanParticipantCount > 0;
+    const hasHumans = this._getHumanCount() > 0;
 
     if (hasHumans) {
-      this.log('DISCONNECT_SKIPPED', { channelId, reason: 'humans_present', humanCount: this.dispatcher.humanParticipantCount });
+      this.log('DISCONNECT_SKIPPED', { channelId, reason: 'humans_present', humanCount: this._getHumanCount() });
       return;
     }
 

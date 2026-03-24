@@ -1,10 +1,6 @@
 import { Router } from 'express';
-import { AccessToken } from 'livekit-server-sdk';
 import { signalingService } from '../services/signalingService.js';
 import pool from '../db/index.js';
-
-const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY;
-const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET;
 
 const router = Router();
 
@@ -233,103 +229,8 @@ router.post('/end', async (req, res) => {
 });
 
 router.get('/token', async (req, res) => {
-  const { identity, room } = req.query;
-
-  if (!identity || !room) {
-    return res.status(400).json({ error: 'identity and room are required' });
-  }
-
-  // Primary: live Socket.IO presence
-  const presence = signalingService.unitPresence?.get(identity);
-
-  let authPath = 'presence';
-
-  if (!presence) {
-    // Fallback: session cookie identity match
-    const sessionUser = req.session?.user;
-    const sessionMatchesIdentity = sessionUser &&
-      (sessionUser.unit_id === identity || sessionUser.username === identity);
-
-    if (!sessionMatchesIdentity) {
-      console.warn(`[PTT-HTTP] Token rejected "${identity}" on "${room}": not in presence, no matching session (cookie=${!!req.headers.cookie})`);
-      return res.status(403).json({ error: 'Unit not authenticated' });
-    }
-
-    // DB: resolve channel numeric ID from room key and verify access
-    let channelRow = null;
-    try {
-      const result = await pool.query(
-        `SELECT c.id
-         FROM channels c
-         JOIN user_channel_access uca ON uca.channel_id = c.id
-         JOIN users u ON uca.user_id = u.id
-         WHERE COALESCE(c.zone, 'Default') || '__' || c.name = $1
-           AND c.enabled = true
-           AND (u.unit_id = $2 OR u.username = $2)
-         LIMIT 1`,
-        [room, identity]
-      );
-      channelRow = result.rows[0] ?? null;
-    } catch (dbErr) {
-      console.error('[PTT-HTTP] DB channel access check for token failed:', dbErr.message);
-      return res.status(500).json({ error: 'Internal error during authorization' });
-    }
-
-    if (!channelRow) {
-      console.warn(`[PTT-HTTP] Token rejected "${identity}" on "${room}": session valid but no DB channel access or unknown room`);
-      return res.status(403).json({ error: 'Unit does not have access to this channel' });
-    }
-
-    authPath = 'session+db';
-    console.log(`[PTT-HTTP] Token session+DB fallback OK: "${identity}" on "${room}"`);
-  } else {
-    // Presence path: verify the unit is actually on this channel
-    try {
-      const result = await pool.query(
-        `SELECT id FROM channels WHERE COALESCE(zone, 'Default') || '__' || name = $1 AND enabled = true LIMIT 1`,
-        [room]
-      );
-      if (!result.rows.length) {
-        console.warn(`[PTT-HTTP] Token rejected: unknown room key "${room}"`);
-        return res.status(400).json({ error: 'Unknown room' });
-      }
-      const channelNumericId = result.rows[0].id;
-      const unitChannels = presence.channels ?? [];
-      const onChannel = unitChannels.some(c => Number(c) === channelNumericId || c === room);
-      if (!onChannel) {
-        console.warn(`[PTT-HTTP] Token rejected: unit "${identity}" channels=[${unitChannels.join(',')}] not on channel ${channelNumericId} ("${room}")`);
-        return res.status(403).json({ error: 'Unit not assigned to requested channel' });
-      }
-    } catch (dbErr) {
-      console.error('[PTT-HTTP] DB lookup failed during token auth:', dbErr.message);
-      return res.status(500).json({ error: 'Internal error during channel lookup' });
-    }
-  }
-
-  if (!LIVEKIT_API_KEY || !LIVEKIT_API_SECRET) {
-    return res.status(500).json({ error: 'LiveKit credentials not configured' });
-  }
-
-  try {
-    const at = new AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET, {
-      identity: identity,
-      ttl: '1h',
-    });
-
-    at.addGrant({
-      roomJoin: true,
-      room: room,
-      canPublish: true,
-      canSubscribe: true,
-    });
-
-    const token = await at.toJwt();
-    console.log(`[PTT-HTTP] Token issued for "${identity}" on "${room}" (via ${authPath})`);
-    res.json({ token, livekitUrl: process.env.LIVEKIT_URL });
-  } catch (err) {
-    console.error('[PTT-HTTP] Token generation failed:', err);
-    res.status(500).json({ error: 'Failed to generate token' });
-  }
+  res.status(410).json({ error: 'LiveKit tokens are no longer issued. Audio uses WebSocket transport.' });
 });
+
 
 export default router;

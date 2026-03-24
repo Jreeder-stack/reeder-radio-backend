@@ -15,7 +15,6 @@
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
-    "@livekit/rtc-node": "^0.13.22",
     "@tailwindcss/postcss": "^4.1.17",
     "@tailwindcss/vite": "^4.1.17",
     "@vitejs/plugin-legacy": "^7.2.1",
@@ -31,10 +30,10 @@
     "express-session": "^1.18.2",
     "framer-motion": "^12.23.26",
     "leaflet": "^1.9.4",
-    "livekit-server-sdk": "^2.9.1",
     "lucide-react": "^0.562.0",
     "microsoft-cognitiveservices-speech-sdk": "^1.47.0",
     "openai": "^6.25.0",
+    "opusscript": "^0.1.1",
     "pg": "^8.16.3",
     "postcss": "^8.5.6",
     "react-leaflet": "^5.0.0",
@@ -44,6 +43,7 @@
     "tailwind-merge": "^3.4.0",
     "tailwindcss": "^4.1.17",
     "vite-plugin-circular-dependency": "^0.5.0",
+    "ws": "^8.20.0",
     "zustand": "^5.0.9"
   }
 }

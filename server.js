@@ -6,7 +6,6 @@ import crypto from "crypto";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { fileURLToPath } from "url";
-import { AccessToken } from "livekit-server-sdk";
 import pool, {
   initializeDatabase,
   getUser,
@@ -86,8 +85,6 @@ app.use(
   })
 );
 
-const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY;
-const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET;
 
 // Simple in-memory rate limiter for auth endpoints
 const rateLimitStore = new Map();
@@ -137,13 +134,6 @@ setInterval(() => {
 
 console.log("=== STARTUP CONFIG DEBUG ===");
 console.log("NODE_ENV:", process.env.NODE_ENV || "not set");
-console.log("LIVEKIT_API_KEY exists:", !!LIVEKIT_API_KEY);
-console.log("LIVEKIT_API_KEY length:", LIVEKIT_API_KEY ? LIVEKIT_API_KEY.length : 0);
-console.log("LIVEKIT_API_KEY first 8 chars:", LIVEKIT_API_KEY ? LIVEKIT_API_KEY.substring(0, 8) + "..." : "N/A");
-console.log("LIVEKIT_API_SECRET exists:", !!LIVEKIT_API_SECRET);
-console.log("LIVEKIT_API_SECRET length:", LIVEKIT_API_SECRET ? LIVEKIT_API_SECRET.length : 0);
-console.log("LIVEKIT_URL:", process.env.LIVEKIT_URL || "NOT SET");
-console.log("VITE_LIVEKIT_URL:", process.env.VITE_LIVEKIT_URL || "NOT SET");
 console.log("SESSION_SECRET exists:", !!process.env.SESSION_SECRET);
 console.log("=== END STARTUP CONFIG ===");
 
@@ -654,102 +644,7 @@ app.use("/api/dispatch", requireAuth, dispatchRouter);
 app.use(express.static(path.join(__dirname, "client", "dist")));
 
 app.get("/getToken", requireAuth, async (req, res) => {
-  const { identity, room } = req.query;
-  
-  console.log("=== /getToken DEBUG START ===");
-  console.log("Request query params:", { identity, room });
-  console.log("Session user:", req.session.user ? { id: req.session.user.id, username: req.session.user.username, role: req.session.user.role } : "NO SESSION USER");
-  console.log("LIVEKIT_API_KEY exists:", !!LIVEKIT_API_KEY);
-  console.log("LIVEKIT_API_KEY length:", LIVEKIT_API_KEY ? LIVEKIT_API_KEY.length : 0);
-  console.log("LIVEKIT_API_KEY first 8 chars:", LIVEKIT_API_KEY ? LIVEKIT_API_KEY.substring(0, 8) + "..." : "N/A");
-  console.log("LIVEKIT_API_SECRET exists:", !!LIVEKIT_API_SECRET);
-  console.log("LIVEKIT_API_SECRET length:", LIVEKIT_API_SECRET ? LIVEKIT_API_SECRET.length : 0);
-  console.log("LIVEKIT_URL:", process.env.LIVEKIT_URL || "NOT SET");
-
-  if (!identity || !room) {
-    console.log("ERROR: Missing identity or room");
-    return res.status(400).json({ error: "identity and room are required" });
-  }
-
-  if (!LIVEKIT_API_KEY || !LIVEKIT_API_SECRET) {
-    console.log("ERROR: LiveKit credentials not configured");
-    return res.status(500).json({ error: "LiveKit credentials not configured" });
-  }
-
-  try {
-    // Verify user has access to the requested channel
-    const channels = await getAllChannels();
-    console.log("Total channels from DB:", channels.length);
-    const requestedChannel = channels.find(c => c.name === room && c.enabled);
-    console.log("Requested channel found:", requestedChannel ? { id: requestedChannel.id, name: requestedChannel.name } : "NOT FOUND");
-    
-    if (!requestedChannel) {
-      console.log("ERROR: Channel not found or disabled");
-      return res.status(404).json({ error: "Channel not found or disabled" });
-    }
-    
-    // Only enforce permissions for non-admin users
-    if (req.session.user.role !== "admin") {
-      const userChannelIds = await getUserChannelAccess(req.session.user.id);
-      console.log("User channel access IDs:", userChannelIds);
-      // If user has specific channel assignments, verify access
-      if (userChannelIds.length > 0 && !userChannelIds.includes(requestedChannel.id)) {
-        console.log("ERROR: Access denied - user doesn't have channel permission");
-        return res.status(403).json({ error: "Access denied to this channel" });
-      }
-    } else {
-      console.log("User is admin - bypassing channel permission check");
-    }
-    
-    console.log("Creating AccessToken with identity:", identity, "room:", room);
-    const at = new AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET, {
-      identity: identity,
-      ttl: "1h",
-    });
-
-    at.addGrant({
-      roomJoin: true,
-      room: room,
-      canPublish: true,
-      canSubscribe: true,
-    });
-
-    console.log("Generating JWT token...");
-    const token = await at.toJwt();
-    console.log("Token generated successfully, length:", token.length);
-    console.log("Token first 50 chars:", token.substring(0, 50) + "...");
-    
-    await logActivity(
-      req.session.user.id,
-      req.session.user.username,
-      "join_channel",
-      { identity, room },
-      room
-    );
-
-    // Trigger AI Dispatcher to rejoin if it had disconnected due to no humans
-    try {
-      const dispatcher = getDispatcher();
-      if (dispatcher.configuredChannel === room) {
-        dispatcher.rejoinIfNeeded().catch(err => {
-          console.log('[AI-Dispatcher] Rejoin error (non-fatal):', err.message);
-        });
-      }
-    } catch (err) {
-      // Non-fatal - AI dispatcher features are optional
-      console.log('[AI-Dispatcher] Could not trigger rejoin:', err.message);
-    }
-
-    console.log("=== /getToken DEBUG END - SUCCESS ===");
-    res.json({ token, url: process.env.LIVEKIT_URL });
-  } catch (error) {
-    console.error("=== /getToken DEBUG END - ERROR ===");
-    console.error("Token generation error:", error);
-    console.error("Error name:", error.name);
-    console.error("Error message:", error.message);
-    console.error("Error stack:", error.stack);
-    res.status(500).json({ error: "Failed to generate token" });
-  }
+  res.status(410).json({ error: "LiveKit tokens are no longer issued. Audio uses WebSocket transport." });
 });
 
 app.get("*", (req, res) => {

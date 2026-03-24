@@ -101,20 +101,6 @@ export async function saveMonitorConfig(dispatcherId, primary, monitored, primar
   });
 }
 
-export async function getToken(identity, room) {
-  const response = await fetch(`/getToken?identity=${encodeURIComponent(identity)}&room=${encodeURIComponent(room)}`, {
-    credentials: 'include',
-  });
-  
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Token request failed' }));
-    throw new Error(error.error || 'Token request failed');
-  }
-  
-  const data = await response.json();
-  return { token: data.token, url: data.url };
-}
-
 export async function notifyChannelJoin(channel, identity) {
   try {
     await fetchAPI('/notify-join', {

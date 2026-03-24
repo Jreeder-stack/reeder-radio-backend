@@ -109,7 +109,16 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
       micPTTManager.setRoom(room);
       
       if (signalPttStart) {
-        signalPttStart(primaryChannel);
+        try {
+          await signalPttStart(primaryChannel);
+        } catch (grantErr) {
+          console.warn('[PTT] Floor denied:', grantErr.message);
+          livekitManager.unmuteChannels(mutedChannelsRef.current);
+          mutedChannelsRef.current = [];
+          setChannelBusy(true);
+          toneEngine.startBusyTone();
+          return false;
+        }
       }
       
       const success = await micPTTManager.start();
@@ -120,7 +129,6 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
         return false;
       }
       
-      // Note: MicPTTManager already plays permit tone - don't play duplicate
       console.log('[PTT] Transmission started successfully');
       
       return true;

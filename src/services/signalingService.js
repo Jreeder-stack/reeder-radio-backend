@@ -2,7 +2,10 @@ import { Server } from 'socket.io';
 import { floorControlService } from './floorControlService.js';
 import { audioRelayService } from './audioRelayService.js';
 import crypto from 'crypto';
+import cookie from 'cookie';
+import signature from 'cookie-signature';
 import pool from '../db/index.js';
+import { config } from '../config/env.js';
 
 const SIGNALING_EVENTS = {
   CHANNEL_JOIN: 'channel:join',
@@ -46,8 +49,6 @@ class SignalingService {
     this.clearAirStates = new Map();
     this.connectionTimes = new Map();
     this.trackedUnitLocations = new Map();
-    this.livekitAvailable = true;
-    
     this.GRACE_PERIOD_MS = 15000;
     this.EMERGENCY_ROOM_LIFETIME_MS = 60000;
     
@@ -125,6 +126,7 @@ class SignalingService {
       socket.on(SIGNALING_EVENTS.UNIT_STATUS_UPDATE, (data) => this._handleStatusUpdate(socket, data));
       socket.on(SIGNALING_EVENTS.LOCATION_UPDATE, (data) => this._handleLocationUpdate(socket, data));
       socket.on(SIGNALING_EVENTS.TOKEN_REQUEST, (data) => this._handleTokenRequest(socket, data));
+      socket.on('data:send', (data) => this._handleDataSend(socket, data));
       socket.on('location:track_start', (data) => this._handleLocationTrackStart(socket, data));
       socket.on('location:track_stop', (data) => this._handleLocationTrackStop(socket, data));
       socket.on('location:update', (data) => this._handleGpsLocationUpdate(socket, data));
@@ -178,26 +180,62 @@ class SignalingService {
     return this.io;
   }
 
-  _handleAuthenticate(socket, data) {
+  async _handleAuthenticate(socket, data) {
     const { unitId, agencyId, username, isDispatcher } = data;
     
     if (!unitId || !username) {
       socket.emit('error', { message: 'unitId and username required' });
       return;
     }
-    
-    socket.unitId = unitId;
+
+    let sessionUser = null;
+    try {
+      const rawCookies = socket.handshake?.headers?.cookie;
+      if (rawCookies) {
+        const cookies = cookie.parse(rawCookies);
+        let sid = cookies['connect.sid'];
+        if (sid) {
+          if (sid.startsWith('s:')) {
+            sid = signature.unsign(sid.slice(2), config.sessionSecret);
+            if (sid === false) sid = null;
+          }
+          if (sid) {
+            const sessResult = await pool.query('SELECT sess FROM session WHERE sid = $1', [sid]);
+            if (sessResult.rows.length > 0) {
+              const sess = typeof sessResult.rows[0].sess === 'string'
+                ? JSON.parse(sessResult.rows[0].sess)
+                : sessResult.rows[0].sess;
+              sessionUser = sess?.user || null;
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('[Signaling] Session lookup failed:', err.message);
+    }
+
+    let validatedUnitId = unitId;
+    let validatedUsername = username;
+    let validatedIsDispatcher = isDispatcher || false;
+
+    if (sessionUser) {
+      validatedUnitId = sessionUser.unit_id || sessionUser.username || unitId;
+      validatedUsername = sessionUser.username || username;
+      validatedIsDispatcher = sessionUser.role === 'admin' || sessionUser.role === 'dispatcher' || false;
+    }
+
+    socket.unitId = validatedUnitId;
     socket.agencyId = agencyId || 'default';
-    socket.username = username;
-    socket.isDispatcher = isDispatcher || false;
+    socket.username = validatedUsername;
+    socket.isDispatcher = validatedIsDispatcher;
     socket.channels = new Set();
     
-    this.unitPresence.set(unitId, {
+    this.unitPresence.set(validatedUnitId, {
       socketId: socket.id,
-      unitId,
+      unitId: validatedUnitId,
       agencyId: socket.agencyId,
-      username,
-      isDispatcher,
+      username: validatedUsername,
+      isDispatcher: validatedIsDispatcher,
       status: 'online',
       channels: [],
       lastSeen: Date.now(),
@@ -205,9 +243,9 @@ class SignalingService {
     });
     
     socket.emit('authenticated', { 
-      unitId, 
+      unitId: validatedUnitId, 
       timestamp: Date.now(),
-      livekitAvailable: this.livekitAvailable,
+      voiceAvailable: true,
     });
 
     if (this.clearAirStates.size > 0) {
@@ -219,7 +257,7 @@ class SignalingService {
       }
     }
     
-    console.log(`[Signaling] Unit authenticated: ${unitId} (${username})`);
+    console.log(`[Signaling] Unit authenticated: ${validatedUnitId} (${validatedUsername})${sessionUser ? ' [session-verified]' : ' [client-claimed]'}`);
   }
 
   _handleChannelJoin(socket, data) {
@@ -322,11 +360,6 @@ class SignalingService {
       return;
     }
     
-    if (!this.livekitAvailable) {
-      socket.emit('error', { message: 'Voice service unavailable', code: 'LIVEKIT_UNAVAILABLE' });
-      return;
-    }
-    
     const existingTransmission = this.activeTransmissions.get(channelId);
     if (existingTransmission && existingTransmission.unitId !== socket.unitId) {
       socket.emit('ptt:busy', { 
@@ -349,13 +382,27 @@ class SignalingService {
     if (graceState && graceState.unitId === socket.unitId) {
       this.graceChannels.delete(channelId);
     }
+
+    const isEmergency = this.emergencyStates.has(channelId);
+    const floorResult = floorControlService.requestFloor(channelId, socket.unitId, {
+      isEmergency,
+      emergencyStates: this.emergencyStates,
+    });
+
+    if (!floorResult.granted) {
+      socket.emit('ptt:busy', {
+        channelId,
+        transmittingUnit: floorResult.heldBy || 'unknown',
+      });
+      return;
+    }
     
     const transmissionData = {
       unitId: socket.unitId,
       agencyId: socket.agencyId,
       channelId,
       timestamp: Date.now(),
-      isEmergency: this.emergencyStates.has(channelId),
+      isEmergency,
     };
     
     this.activeTransmissions.set(channelId, transmissionData);
@@ -365,6 +412,8 @@ class SignalingService {
       presence.status = 'transmitting';
     }
     
+    socket.emit('ptt:granted', { channelId, unitId: socket.unitId, timestamp: Date.now() });
+
     this.io.to(`channel:${channelId}`).emit(SIGNALING_EVENTS.PTT_START, transmissionData);
     
     this._emitCallback('pttStart', transmissionData);
@@ -392,6 +441,7 @@ class SignalingService {
     };
     
     this.activeTransmissions.delete(channelId);
+    floorControlService.releaseFloor(channelId, socket.unitId);
     
     this.graceChannels.set(channelId, {
       unitId: socket.unitId,
@@ -808,12 +858,22 @@ class SignalingService {
     return Array.from(this.unitPresence.values());
   }
 
-  setLivekitAvailability(available) {
-    this.livekitAvailable = available;
-    this.io?.emit(SIGNALING_EVENTS.SYSTEM_STATUS, {
-      livekitAvailable: available,
+  _handleDataSend(socket, data) {
+    if (!socket.unitId) return;
+    const { channelId, payload } = data;
+    if (!channelId || !payload) return;
+
+    socket.to(`channel:${channelId}`).emit('data:message', {
+      channelId,
+      payload,
+      from: socket.unitId,
       timestamp: Date.now(),
     });
+  }
+
+  broadcastDataToChannel(channelId, data) {
+    if (!this.io) return;
+    this.io.to(`channel:${channelId}`).emit('data:message', data);
   }
 
   recordConnectionTime(unitId, channelId, durationMs) {
@@ -861,17 +921,13 @@ class SignalingService {
   getSystemHealth() {
     return {
       signalingConnected: this.io?.engine?.clientsCount > 0,
-      livekitAvailable: this.livekitAvailable,
+      audioTransportAvailable: true,
       activeTransmissions: this.activeTransmissions.size,
       activeEmergencies: this.emergencyStates.size,
       connectedUnits: this.unitPresence.size,
       channelCount: this.channelMembers.size,
       timestamp: Date.now(),
     };
-  }
-
-  isLivekitAllowed() {
-    return this.livekitAvailable && this.io?.engine?.clientsCount > 0;
   }
 
   async _handleRadioJoinChannel(socket, data) {
