@@ -157,7 +157,7 @@ function handleChannelPtt(channelId, roomKey) {
 
   activePttChannels.add(roomKey);
   mainWindow.webContents.executeJavaScript(`
-    window.__electronChannelPtt && window.__electronChannelPtt.start(${channelId}, ${JSON.stringify(roomKey)});
+    window.__electronChannelPtt && window.__electronChannelPtt.start(${JSON.stringify(channelId)}, ${JSON.stringify(roomKey)});
   `).catch(() => {});
 }
 

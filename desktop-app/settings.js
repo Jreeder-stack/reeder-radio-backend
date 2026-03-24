@@ -166,10 +166,10 @@ function removeHotkey(accel) {
 
 function startChannelCapture() {
   const select = document.getElementById('channelSelect');
-  const channelId = parseInt(select.value, 10);
-  if (!channelId) return;
+  const selectedValue = select.value;
+  if (!selectedValue) return;
 
-  const ch = allChannels.find(c => c.id === channelId);
+  const ch = allChannels.find(c => String(c.id) === String(selectedValue));
   if (!ch) return;
 
   captureMode = {
