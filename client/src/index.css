@@ -777,3 +777,7 @@ html, body {
 .mobile-frame * {
   -webkit-tap-highlight-color: transparent;
 }
+
+.admin-tab-scroll::-webkit-scrollbar {
+  display: none;
+}

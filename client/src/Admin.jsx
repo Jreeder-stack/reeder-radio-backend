@@ -347,6 +347,7 @@ export default function Admin({ user, onLogout }) {
     fontWeight: 500,
     transition: "all 0.2s",
     whiteSpace: "nowrap",
+    flexShrink: 0,
   });
 
   const inputStyle = {
@@ -511,7 +512,10 @@ export default function Admin({ user, onLogout }) {
             borderRadius: 12,
             overflowX: "auto",
             WebkitOverflowScrolling: "touch",
+            scrollbarWidth: "none",
+            msOverflowStyle: "none",
           }}
+          className="admin-tab-scroll"
         >
           <button style={tabStyle(activeTab === "users")} onClick={() => setActiveTab("users")}>
             Users ({users.length})
@@ -524,12 +528,6 @@ export default function Admin({ user, onLogout }) {
           </button>
           <button style={tabStyle(activeTab === "settings")} onClick={() => setActiveTab("settings")}>
             Settings
-          </button>
-          <button 
-            style={tabStyle(false)} 
-            onClick={() => navigate("/radio-app")}
-          >
-            Radio App
           </button>
         </div>
 
