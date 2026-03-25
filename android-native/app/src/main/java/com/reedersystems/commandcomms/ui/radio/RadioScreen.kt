@@ -1,7 +1,6 @@
 package com.reedersystems.commandcomms.ui.radio
 
 import android.Manifest
-import android.app.Activity
 import android.content.pm.PackageManager
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -55,7 +54,6 @@ fun RadioScreen(
             context, Manifest.permission.RECORD_AUDIO
         ) == PackageManager.PERMISSION_GRANTED
         viewModel.setMicPermissionGranted(granted)
-        viewModel.recheckDndPermission()
         onPauseOrDispose {}
     }
 
@@ -69,25 +67,6 @@ fun RadioScreen(
     val bgColor = if (state.myEmergencyActive)
         BgEmerg.copy(alpha = flashAlpha)
     else BgWhite
-
-    if (state.showDndPermissionDialog) {
-        AlertDialog(
-            onDismissRequest = { viewModel.dismissDndPermissionDialog(userDeclined = true) },
-            title = { androidx.compose.material3.Text("Do Not Disturb Override") },
-            text = { androidx.compose.material3.Text("This app needs to override Do Not Disturb to deliver emergency alerts. Please grant notification policy access on the next screen.") },
-            confirmButton = {
-                TextButton(onClick = {
-                    viewModel.dismissDndPermissionDialog()
-                    viewModel.openDndPermissionSettings(context as? Activity)
-                }) { androidx.compose.material3.Text("GRANT ACCESS") }
-            },
-            dismissButton = {
-                TextButton(onClick = { viewModel.dismissDndPermissionDialog(userDeclined = true) }) {
-                    androidx.compose.material3.Text("NOT NOW")
-                }
-            }
-        )
-    }
 
     if (showLogoutDialog) {
         AlertDialog(

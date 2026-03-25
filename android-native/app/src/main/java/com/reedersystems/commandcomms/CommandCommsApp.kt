@@ -7,7 +7,6 @@ import android.media.AudioAttributes
 import android.media.RingtoneManager
 import android.os.Build
 import android.util.Log
-import com.reedersystems.commandcomms.audio.DndOverrideManager
 import com.reedersystems.commandcomms.audio.ToneEngine
 import com.reedersystems.commandcomms.audio.radio.RadioStateManager
 import com.reedersystems.commandcomms.data.api.ApiClient
@@ -59,9 +58,6 @@ class CommandCommsApp : Application() {
     lateinit var toneEngine: ToneEngine
         private set
 
-    lateinit var dndOverrideManager: DndOverrideManager
-        private set
-
     var radioStateManager: RadioStateManager? = null
         private set
 
@@ -97,7 +93,6 @@ class CommandCommsApp : Application() {
         signalingRepository = SignalingRepository(signalingClient)
         radioConfigRepository = RadioConfigRepository(apiClient)
         toneEngine = ToneEngine(this)
-        dndOverrideManager = DndOverrideManager(this)
 
         val prefs = ServiceConnectionPrefs(this)
         if (prefs.transportMode == "custom-radio") {
