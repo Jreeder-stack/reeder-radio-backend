@@ -204,7 +204,7 @@ class WsAudioBridge {
       }
 
       const sequence = buf.readUInt16BE(1);
-      const pcmData = buf.subarray(3);
+      const pcmData = Buffer.from(buf.subarray(3));
 
       if (pcmData.length < 2) return;
 

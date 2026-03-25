@@ -47,8 +47,10 @@ class OpusCodecPool {
     const encoder = this.acquireEncoder();
     try {
       let aligned = pcmInt16Buffer;
-      if (pcmInt16Buffer.byteOffset % 2 !== 0) {
-        aligned = Buffer.from(pcmInt16Buffer);
+      if (aligned.byteOffset % 2 !== 0) {
+        const copy = new Uint8Array(aligned.length);
+        copy.set(new Uint8Array(aligned.buffer, aligned.byteOffset, aligned.length));
+        aligned = Buffer.from(copy.buffer, copy.byteOffset, copy.byteLength);
       }
       const samples = new Int16Array(
         aligned.buffer,
