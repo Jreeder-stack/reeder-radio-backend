@@ -505,8 +505,14 @@ ipcMain.handle('fetch-channels', async () => {
   if (!mainWindow) return [];
   try {
     const result = await mainWindow.webContents.executeJavaScript(`
-      fetch('/api/dispatch/channels', { credentials: 'include' })
-        .then(r => r.ok ? r.json() : [])
+      fetch('/api/channels/', { credentials: 'include' })
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if (Array.isArray(data) && data.length > 0) return data;
+          return fetch('/api/admin/channels', { credentials: 'include' })
+            .then(r2 => r2.ok ? r2.json() : [])
+            .catch(() => []);
+        })
         .catch(() => [])
     `);
     return result || [];

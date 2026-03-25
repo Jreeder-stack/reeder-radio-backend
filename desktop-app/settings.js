@@ -56,7 +56,6 @@ async function loadSettings() {
   currentSettings = await window.electronAPI.getSettings();
   channelHotkeys = { ...(currentSettings.channelHotkeys || {}) };
 
-  document.getElementById('serverUrl').value = currentSettings.serverUrl || '';
   document.getElementById('emergencyKeyDisplay').textContent = currentSettings.emergencyKey || 'None';
   document.getElementById('alwaysOnTop').checked = currentSettings.alwaysOnTop || false;
   document.getElementById('minimizeToTray').checked = currentSettings.minimizeToTray || false;
@@ -263,7 +262,6 @@ function clearEmergencyKey() {
 
 async function saveSettings() {
   const settings = {
-    serverUrl: document.getElementById('serverUrl').value.trim(),
     channelHotkeys: channelHotkeys,
     emergencyKey: currentSettings.emergencyKey || '',
     alwaysOnTop: document.getElementById('alwaysOnTop').checked,
