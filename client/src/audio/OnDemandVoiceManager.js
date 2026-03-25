@@ -22,6 +22,11 @@ class OnDemandVoiceManager {
     this.GRACE_PERIOD_MS = 15000;
     this.EMERGENCY_ROOM_LIFETIME_MS = 60000;
     this._dispatcherMode = false;
+    this._reconnectAttempts = new Map();
+    this._reconnectTimers = new Map();
+    this._RECONNECT_BASE_DELAY = 1000;
+    this._RECONNECT_MAX_DELAY = 30000;
+    this._RECONNECT_MAX_ATTEMPTS = 20;
 
     this._listeners = {
       stateChange: new Set(),
@@ -113,6 +118,10 @@ class OnDemandVoiceManager {
   async _handleRemotePttStart(channelId, unitId, isEmergency = false) {
     this._clearGraceTimer(channelId);
 
+    if (this._dispatcherMode) {
+      return;
+    }
+
     if (this.rooms.has(channelId)) {
       console.log(`[OnDemandVoice] Already connected to ${channelId} for receiving`);
       return;
@@ -200,8 +209,56 @@ class OnDemandVoiceManager {
         clearTimeout(timerId);
       }
       this.graceTimers.clear();
+    } else {
+      for (const [channelId, timerId] of this._reconnectTimers) {
+        clearTimeout(timerId);
+      }
+      this._reconnectTimers.clear();
+      this._reconnectAttempts.clear();
     }
     console.log(`[OnDemandVoice] Dispatcher mode ${this._dispatcherMode ? 'enabled' : 'disabled'} — grace period disconnect ${this._dispatcherMode ? 'disabled' : 'enabled'}`);
+  }
+
+  _scheduleDispatcherReconnect(channelId) {
+    if (!this._dispatcherMode) return;
+
+    const existingTimer = this._reconnectTimers.get(channelId);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+    }
+
+    let attempts = this._reconnectAttempts.get(channelId) || 0;
+    if (attempts >= this._RECONNECT_MAX_ATTEMPTS) {
+      console.log(`[OnDemandVoice] Dispatcher auto-reconnect: resetting attempt counter for ${channelId} (always-connected mode)`);
+      attempts = 0;
+      this._reconnectAttempts.set(channelId, 0);
+    }
+
+    const baseDelay = this._RECONNECT_BASE_DELAY * Math.pow(2, Math.min(attempts, 5));
+    const jitter = Math.random() * 1000;
+    const delay = Math.min(baseDelay + jitter, this._RECONNECT_MAX_DELAY);
+
+    console.log(`[OnDemandVoice] Dispatcher auto-reconnect: scheduling ${channelId} in ${Math.round(delay)}ms (attempt ${attempts + 1})`);
+
+    const timer = setTimeout(async () => {
+      this._reconnectTimers.delete(channelId);
+
+      if (!this._dispatcherMode) return;
+      if (this.rooms.has(channelId)) return;
+
+      this._reconnectAttempts.set(channelId, attempts + 1);
+
+      try {
+        await this._connectToReceive(channelId);
+        console.log(`[OnDemandVoice] Dispatcher auto-reconnect: successfully reconnected to ${channelId}`);
+        this._reconnectAttempts.delete(channelId);
+      } catch (err) {
+        console.error(`[OnDemandVoice] Dispatcher auto-reconnect: failed for ${channelId}:`, err.message);
+        this._scheduleDispatcherReconnect(channelId);
+      }
+    }, delay);
+
+    this._reconnectTimers.set(channelId, timer);
   }
 
   _startGraceTimer(channelId, gracePeriodMs) {
@@ -368,6 +425,11 @@ class OnDemandVoiceManager {
     ws.addEventListener('close', () => {
       console.log(`[OnDemandVoice] Disconnected from ${channelId}`);
       this._cleanupRoom(channelId);
+
+      if (this._dispatcherMode) {
+        console.log(`[OnDemandVoice] Dispatcher mode: auto-reconnecting ${channelId}`);
+        this._scheduleDispatcherReconnect(channelId);
+      }
     });
   }
 
@@ -537,6 +599,11 @@ class OnDemandVoiceManager {
       clearTimeout(timerId);
     }
     this.graceTimers.clear();
+    for (const timerId of this._reconnectTimers.values()) {
+      clearTimeout(timerId);
+    }
+    this._reconnectTimers.clear();
+    this._reconnectAttempts.clear();
     if (this.audioContext) {
       this.audioContext.close().catch(console.warn);
     }

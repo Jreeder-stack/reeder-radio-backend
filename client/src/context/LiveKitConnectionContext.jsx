@@ -243,7 +243,7 @@ export function LiveKitConnectionProvider({ children, user }) {
           setConnectionHealth(livekitManager.getConnectionStatus());
         }
         
-        if (state === 'disconnected' && mountedRef.current) {
+        if (state === 'disconnected' && mountedRef.current && !livekitManager.isDispatcherMode()) {
           scheduleReconnect(channelName, identity);
         }
       })
@@ -309,7 +309,9 @@ export function LiveKitConnectionProvider({ children, user }) {
       return true;
     } catch (err) {
       console.error(`[LiveKitConnection] Failed to connect to ${channelName}:`, err);
-      scheduleReconnect(channelName, identity);
+      if (!livekitManager.isDispatcherMode()) {
+        scheduleReconnect(channelName, identity);
+      }
       return false;
     }
   }, [recordActivity, preCaptureForMobile, scheduleReconnect]);
@@ -420,9 +422,33 @@ export function LiveKitConnectionProvider({ children, user }) {
       const isDispatcher = currentPath === '/dispatcher';
       
       if (isDispatcher) {
-        console.log(`[LiveKitConnection] Dispatcher mode - NO auto-connect (on-demand only)`);
-        setConnected(true);
-        setConnectionStatus('connected');
+        console.log(`[LiveKitConnection] Dispatcher mode - connecting to all ${enabledChannels.length} channels`);
+
+        const connectResults = await Promise.all(
+          enabledChannels.map(ch => {
+            const roomKey = ch.room_key || ((ch.zone || 'Default') + '__' + ch.name);
+            return connectToChannel(roomKey, identity, true).then(success => {
+              if (!success) {
+                livekitManager.scheduleDispatcherReconnect(roomKey, identity);
+              }
+              return success;
+            }).catch(err => {
+              console.warn(`[LiveKitConnection] Dispatcher: failed to connect ${roomKey}:`, err.message);
+              livekitManager.scheduleDispatcherReconnect(roomKey, identity);
+              return false;
+            });
+          })
+        );
+
+        const successCount = connectResults.filter(Boolean).length;
+        if (successCount > 0) {
+          setConnected(true);
+          setConnectionStatus(successCount === enabledChannels.length ? 'connected' : 'partial');
+        } else {
+          setConnected(false);
+          setConnectionStatus('failed');
+        }
+        console.log(`[LiveKitConnection] Dispatcher mode - connected ${successCount}/${enabledChannels.length} channels`);
       } else {
         const firstChannel = initialChannel || enabledChannels[0]?.room_key || enabledChannels[0]?.name;
         if (firstChannel) {
@@ -452,6 +478,8 @@ export function LiveKitConnectionProvider({ children, user }) {
 
   const disconnectAll = useCallback(async () => {
     console.log('[LiveKitConnection] Disconnecting all');
+    livekitManager.setDispatcherMode(false);
+    onDemandVoiceManager.setDispatcherMode(false);
     clearAllReconnectTimers();
     releaseMobileMic();
     await livekitManager.disconnectAll();

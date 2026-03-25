@@ -47,6 +47,12 @@ class LiveKitManager {
     this.idleCheckInterval = null;
     this._dispatcherMode = false;
 
+    this._reconnectAttempts = new Map();
+    this._reconnectTimers = new Map();
+    this._RECONNECT_BASE_DELAY = 1000;
+    this._RECONNECT_MAX_DELAY = 30000;
+    this._RECONNECT_MAX_ATTEMPTS = 20;
+
     this._trackSubscribedListeners = new Set();
     this._trackUnsubscribedListeners = new Set();
     this._participantConnectedListeners = new Set();
@@ -355,8 +361,60 @@ class LiveKitManager {
       for (const [channelName] of this.idleTimeoutTimers) {
         this._clearIdleTimer(channelName);
       }
+    } else {
+      for (const [channelName] of this._reconnectTimers) {
+        clearTimeout(this._reconnectTimers.get(channelName));
+      }
+      this._reconnectTimers.clear();
+      this._reconnectAttempts.clear();
     }
     console.log(`[AudioWS] Dispatcher mode ${this._dispatcherMode ? 'enabled' : 'disabled'} — idle disconnect ${this._dispatcherMode ? 'disabled' : 'enabled'}`);
+  }
+
+  isDispatcherMode() {
+    return this._dispatcherMode;
+  }
+
+  scheduleDispatcherReconnect(channelName, identity) {
+    if (!this._dispatcherMode) return;
+
+    const existingTimer = this._reconnectTimers.get(channelName);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+    }
+
+    let attempts = this._reconnectAttempts.get(channelName) || 0;
+    if (attempts >= this._RECONNECT_MAX_ATTEMPTS) {
+      console.log(`[AudioWS] Dispatcher auto-reconnect: resetting attempt counter for ${channelName} (always-connected mode)`);
+      attempts = 0;
+      this._reconnectAttempts.set(channelName, 0);
+    }
+
+    const baseDelay = this._RECONNECT_BASE_DELAY * Math.pow(2, Math.min(attempts, 5));
+    const jitter = Math.random() * 1000;
+    const delay = Math.min(baseDelay + jitter, this._RECONNECT_MAX_DELAY);
+
+    console.log(`[AudioWS] Dispatcher auto-reconnect: scheduling ${channelName} in ${Math.round(delay)}ms (attempt ${attempts + 1})`);
+
+    const timer = setTimeout(async () => {
+      this._reconnectTimers.delete(channelName);
+
+      if (!this._dispatcherMode) return;
+      if (this.rooms.has(channelName)) return;
+
+      this._reconnectAttempts.set(channelName, attempts + 1);
+
+      try {
+        await this.connect(channelName, identity);
+        console.log(`[AudioWS] Dispatcher auto-reconnect: successfully reconnected to ${channelName}`);
+        this._reconnectAttempts.delete(channelName);
+      } catch (err) {
+        console.error(`[AudioWS] Dispatcher auto-reconnect: failed for ${channelName}:`, err.message);
+        this.scheduleDispatcherReconnect(channelName, identity);
+      }
+    }, delay);
+
+    this._reconnectTimers.set(channelName, timer);
   }
 
   _initDataListener() {
@@ -718,6 +776,11 @@ class LiveKitManager {
       if (this.rooms.get(channelName) === conn) {
         this._cleanupChannel(channelName);
         this._emitConnectionStateChange(channelName, 'disconnected');
+
+        if (this._dispatcherMode) {
+          console.log(`[AudioWS] Dispatcher mode: auto-reconnecting ${channelName}`);
+          this.scheduleDispatcherReconnect(channelName, identity);
+        }
       }
     });
 
@@ -1028,6 +1091,12 @@ class LiveKitManager {
 
   async _doDisconnectAll() {
     console.log('[AudioWS] Disconnecting all channels');
+
+    for (const [channelName, timerId] of this._reconnectTimers) {
+      clearTimeout(timerId);
+    }
+    this._reconnectTimers.clear();
+    this._reconnectAttempts.clear();
 
     for (const [channelName] of this.rooms) {
       const animationId = this.levelAnimations.get(channelName);
