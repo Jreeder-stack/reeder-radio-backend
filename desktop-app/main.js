@@ -436,6 +436,11 @@ function createTray() {
   }
 }
 
+ipcMain.handle('open-settings', () => {
+  openSettings();
+  return { success: true };
+});
+
 ipcMain.handle('get-settings', () => {
   return {
     serverUrl: store.get('serverUrl'),

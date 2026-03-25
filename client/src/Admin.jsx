@@ -456,6 +456,7 @@ export default function Admin({ user, onLogout }) {
         background: "#1a1a2e",
         fontFamily: "system-ui, -apple-system, sans-serif",
         color: "#fff",
+        overflowY: "auto",
       }}
     >
       <header
@@ -477,6 +478,24 @@ export default function Admin({ user, onLogout }) {
           </h1>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
+          {typeof window !== "undefined" && window.electronAPI && (
+            <button
+              onClick={() => window.electronAPI.openSettings()}
+              style={{
+                padding: "8px 16px",
+                background: "#0f3460",
+                color: "#4ade80",
+                border: "1px solid #4ade80",
+                borderRadius: 6,
+                cursor: "pointer",
+                fontSize: 14,
+                fontWeight: 500,
+                flex: isMobile ? 1 : "none",
+              }}
+            >
+              Desktop Settings
+            </button>
+          )}
           <button
             onClick={() => navigate("/")}
             style={{ ...btnSecondary, flex: isMobile ? 1 : "none" }}
@@ -953,95 +972,98 @@ export default function Admin({ user, onLogout }) {
         )}
 
         {activeTab === "settings" && (
-          <div style={{ maxWidth: 600, maxHeight: isMobile ? "calc(100vh - 200px)" : "none", overflowY: isMobile ? "auto" : "visible", WebkitOverflowScrolling: "touch" }}>
+          <div style={{ overflowY: "auto", WebkitOverflowScrolling: "touch" }}>
             <h2 style={{ margin: "0 0 24px", fontSize: 20 }}>System Settings</h2>
             
-            <div style={{ background: "#1e1e2e", borderRadius: 12, padding: 24 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div>
-                  <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>AI Voice Dispatcher</h3>
-                  <p style={{ margin: "8px 0 0", color: "#888", fontSize: 14 }}>
-                    When enabled, the AI dispatcher listens to radio traffic and responds to common commands like "radio check", "status check", and "traffic stop".
-                  </p>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 24 }}>
+              <div style={{ background: "#1e1e2e", borderRadius: 12, padding: 24 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>AI Voice Dispatcher</h3>
+                    <p style={{ margin: "8px 0 0", color: "#888", fontSize: 14 }}>
+                      When enabled, the AI dispatcher listens to radio traffic and responds to common commands like "radio check", "status check", and "traffic stop".
+                    </p>
+                  </div>
+                  <button
+                    onClick={toggleAiDispatch}
+                    disabled={aiDispatchLoading}
+                    style={{
+                      padding: "12px 24px",
+                      borderRadius: 8,
+                      border: "none",
+                      cursor: aiDispatchLoading ? "not-allowed" : "pointer",
+                      fontSize: 14,
+                      fontWeight: 600,
+                      minWidth: 100,
+                      flexShrink: 0,
+                      background: aiDispatchEnabled ? "#22c55e" : "#444",
+                      color: "#fff",
+                      transition: "all 0.2s",
+                      opacity: aiDispatchLoading ? 0.6 : 1,
+                    }}
+                  >
+                    {aiDispatchLoading ? "..." : aiDispatchEnabled ? "ON" : "OFF"}
+                  </button>
                 </div>
-                <button
-                  onClick={toggleAiDispatch}
-                  disabled={aiDispatchLoading}
-                  style={{
-                    padding: "12px 24px",
-                    borderRadius: 8,
-                    border: "none",
-                    cursor: aiDispatchLoading ? "not-allowed" : "pointer",
-                    fontSize: 14,
-                    fontWeight: 600,
-                    minWidth: 100,
-                    background: aiDispatchEnabled ? "#22c55e" : "#444",
-                    color: "#fff",
-                    transition: "all 0.2s",
-                    opacity: aiDispatchLoading ? 0.6 : 1,
-                  }}
-                >
-                  {aiDispatchLoading ? "..." : aiDispatchEnabled ? "ON" : "OFF"}
-                </button>
-              </div>
-              
-              <div style={{ marginTop: 16 }}>
-                <label style={{ display: "block", fontSize: 14, color: "#888", marginBottom: 8 }}>
-                  Dispatch Channel (AI will only monitor this channel)
-                </label>
-                <select
-                  value={aiDispatchChannel}
-                  onChange={(e) => updateAiDispatchChannel(e.target.value)}
-                  disabled={aiDispatchLoading}
-                  style={{
-                    width: "100%",
-                    padding: "10px 12px",
-                    borderRadius: 6,
-                    border: "1px solid #444",
-                    background: "#2a2a3e",
-                    color: "#fff",
-                    fontSize: 14,
-                  }}
-                >
-                  <option value="">Select a channel...</option>
-                  {channels.filter(c => c.enabled).map((c) => (
-                    <option key={c.id} value={c.name}>{c.name}</option>
-                  ))}
-                </select>
+                
+                <div style={{ marginTop: 16 }}>
+                  <label style={{ display: "block", fontSize: 14, color: "#888", marginBottom: 8 }}>
+                    Dispatch Channel (AI will only monitor this channel)
+                  </label>
+                  <select
+                    value={aiDispatchChannel}
+                    onChange={(e) => updateAiDispatchChannel(e.target.value)}
+                    disabled={aiDispatchLoading}
+                    style={{
+                      width: "100%",
+                      padding: "10px 12px",
+                      borderRadius: 6,
+                      border: "1px solid #444",
+                      background: "#2a2a3e",
+                      color: "#fff",
+                      fontSize: 14,
+                    }}
+                  >
+                    <option value="">Select a channel...</option>
+                    {channels.filter(c => c.enabled).map((c) => (
+                      <option key={c.id} value={c.name}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {aiDispatchEnabled && aiDispatchChannel && (
+                  <div style={{ marginTop: 16, padding: 12, background: "#22c55e22", borderRadius: 8, border: "1px solid #22c55e44" }}>
+                    <p style={{ margin: 0, color: "#22c55e", fontSize: 13 }}>
+                      AI Dispatcher is active on channel: <strong>{aiDispatchChannel}</strong>
+                    </p>
+                  </div>
+                )}
               </div>
 
-              {aiDispatchEnabled && aiDispatchChannel && (
-                <div style={{ marginTop: 16, padding: 12, background: "#22c55e22", borderRadius: 8, border: "1px solid #22c55e44" }}>
-                  <p style={{ margin: 0, color: "#22c55e", fontSize: 13 }}>
-                    AI Dispatcher is active on channel: <strong>{aiDispatchChannel}</strong>
-                  </p>
-                </div>
-              )}
-            </div>
-
-            <div style={{ marginTop: 24, background: "#1e1e2e", borderRadius: 12, padding: 24 }}>
-              <h3 style={{ margin: "0 0 12px", fontSize: 16, fontWeight: 600 }}>Supported Commands</h3>
-              <div style={{ color: "#888", fontSize: 14 }}>
-                <div style={{ display: "grid", gap: 8 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #333" }}>
-                    <span>"radio check"</span>
-                    <span style={{ color: "#22c55e" }}>"Loud and clear."</span>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #333" }}>
-                    <span>"status check"</span>
-                    <span style={{ color: "#22c55e" }}>"Go ahead."</span>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #333" }}>
-                    <span>"traffic stop"</span>
-                    <span style={{ color: "#22c55e" }}>"Copy traffic stop."</span>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #333" }}>
-                    <span>"clear"</span>
-                    <span style={{ color: "#22c55e" }}>"Copy, clear."</span>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0" }}>
-                    <span>"need assistance"</span>
-                    <span style={{ color: "#22c55e" }}>"Copy. Assistance requested."</span>
+              <div style={{ background: "#1e1e2e", borderRadius: 12, padding: 24 }}>
+                <h3 style={{ margin: "0 0 12px", fontSize: 16, fontWeight: 600 }}>Supported Commands</h3>
+                <div style={{ color: "#888", fontSize: 14 }}>
+                  <div style={{ display: "grid", gap: 8 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #333" }}>
+                      <span>"radio check"</span>
+                      <span style={{ color: "#22c55e" }}>"Loud and clear."</span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #333" }}>
+                      <span>"status check"</span>
+                      <span style={{ color: "#22c55e" }}>"Go ahead."</span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #333" }}>
+                      <span>"traffic stop"</span>
+                      <span style={{ color: "#22c55e" }}>"Copy traffic stop."</span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #333" }}>
+                      <span>"clear"</span>
+                      <span style={{ color: "#22c55e" }}>"Copy, clear."</span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0" }}>
+                      <span>"need assistance"</span>
+                      <span style={{ color: "#22c55e" }}>"Copy. Assistance requested."</span>
+                    </div>
                   </div>
                 </div>
               </div>
