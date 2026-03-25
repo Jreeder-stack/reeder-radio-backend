@@ -506,9 +506,10 @@ export function LiveKitConnectionProvider({ children, user }) {
     
     const currentPath = location.pathname;
     const isDispatcher = currentPath === '/dispatcher';
+    const isRadio = currentPath === '/';
     
-    if (isDispatcher) {
-      console.log('[LiveKitConnection] Dispatcher mode - idle timeout disabled');
+    if (isDispatcher || isRadio) {
+      console.log(`[LiveKitConnection] ${isDispatcher ? 'Dispatcher' : 'Radio'} mode - idle timeout disabled (must survive screen lock)`);
       return;
     }
     
@@ -535,6 +536,43 @@ export function LiveKitConnectionProvider({ children, user }) {
       }
     };
   }, [location.pathname, setConnected, releaseMobileMic]);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && user) {
+        console.log('[LiveKitConnection] Page became visible — checking audio channels');
+        lastActivityRef.current = Date.now();
+
+        const connectedChannels = livekitManager.getConnectedChannels();
+        let reconnectedCount = 0;
+
+        for (const channelName of connectedChannels) {
+          const conn = livekitManager.getRoom(channelName);
+          if (conn && conn.ws && conn.ws.readyState === WebSocket.OPEN) {
+            continue;
+          }
+          const unitId = (conn && conn.unitId) || identity;
+          console.log(`[LiveKitConnection] Audio WS dead for ${channelName} after visibility restore — reconnecting`);
+          livekitManager.disconnect(channelName).then(() => {
+            connectToChannel(channelName, unitId);
+          });
+          reconnectedCount++;
+        }
+
+        if (reconnectedCount === 0 && connectedChannels.length === 0 && connectionStatus !== 'idle') {
+          console.log('[LiveKitConnection] No audio channels connected after visibility restore — retrying');
+          retryConnection();
+        } else if (reconnectedCount === 0) {
+          console.log('[LiveKitConnection] All audio channels healthy after visibility restore');
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [user, identity, connectionStatus, connectToChannel, retryConnection]);
 
   useEffect(() => {
     mountedRef.current = true;

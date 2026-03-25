@@ -184,6 +184,7 @@ class WsAudioBridge {
     try {
       const msg = JSON.parse(data);
       if (msg.type === 'ping') {
+        clientInfo.alive = true;
         clientInfo.ws.send(JSON.stringify({ type: 'pong' }));
       }
     } catch (err) {

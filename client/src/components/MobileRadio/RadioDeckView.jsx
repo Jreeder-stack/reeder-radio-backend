@@ -311,6 +311,23 @@ export function RadioDeckView({ user, onLogout }) {
         } catch (e) {
           console.warn('[RadioDeck] AudioContext resume failed:', e.message);
         }
+
+        if (window.__livekitManager) {
+          const mgr = window.__livekitManager;
+          const connectedChannels = mgr.getConnectedChannels();
+          for (const ch of connectedChannels) {
+            const conn = mgr.getRoom(ch);
+            if (conn && conn.ws && conn.ws.readyState === WebSocket.OPEN) {
+              console.log(`[RadioDeck] Audio WS for ${ch} still open`);
+              continue;
+            }
+            const savedUnitId = conn ? conn.unitId : '';
+            console.log(`[RadioDeck] Audio WS dead for ${ch} after resume — reconnecting`);
+            mgr.disconnect(ch).then(() => {
+              mgr.connect(ch, savedUnitId);
+            });
+          }
+        }
       },
       () => {
         console.log('[RadioDeck] App paused — keeping connections alive');

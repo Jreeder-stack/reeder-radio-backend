@@ -530,6 +530,45 @@ app.whenReady().then(() => {
   if (store.get('startMinimized')) {
     mainWindow.hide();
   }
+
+  const { powerMonitor } = require('electron');
+
+  const reconnectAudioOnWake = () => {
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    console.log('[Desktop] Wake/unlock detected — triggering audio channel reconnection');
+    mainWindow.webContents.executeJavaScript(`
+      (function() {
+        try {
+          console.log('[Desktop] powerMonitor wake — reconnecting audio channels');
+          if (window.__livekitManager) {
+            var channels = window.__livekitManager.getConnectedChannels();
+            channels.forEach(function(ch) {
+              var conn = window.__livekitManager.getRoom(ch);
+              if (!conn || !conn.ws || conn.ws.readyState !== WebSocket.OPEN) {
+                var savedUnitId = conn ? conn.unitId : '';
+                console.log('[Desktop] Audio WS dead for ' + ch + ' after wake — reconnecting');
+                window.__livekitManager.disconnect(ch).then(function() {
+                  window.__livekitManager.connect(ch, savedUnitId);
+                });
+              }
+            });
+          }
+          if (window.__signalingManager) {
+            window.__signalingManager.verifyConnection();
+          }
+          var ac = window._sharedAudioContext;
+          if (ac && ac.state === 'suspended') {
+            ac.resume();
+          }
+        } catch(e) {
+          console.error('[Desktop] Wake reconnect error:', e.message);
+        }
+      })();
+    `).catch(err => console.error('[Desktop] executeJavaScript error:', err.message));
+  };
+
+  powerMonitor.on('resume', reconnectAudioOnWake);
+  powerMonitor.on('unlock-screen', reconnectAudioOnWake);
 });
 
 app.on('activate', () => {

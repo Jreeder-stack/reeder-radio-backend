@@ -504,4 +504,9 @@ class SignalingManager {
 }
 
 export const signalingManager = new SignalingManager();
+
+if (typeof window !== 'undefined') {
+  window.__signalingManager = signalingManager;
+}
+
 export { SIGNALING_EVENTS };

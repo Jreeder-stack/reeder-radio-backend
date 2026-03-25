@@ -667,16 +667,42 @@ class LiveKitManager {
   }
 
   _setupWsHandlers(ws, channelName, identity, conn) {
+    conn._lastPong = Date.now();
+
     ws.addEventListener('message', (event) => {
       if (typeof event.data === 'string') {
+        try {
+          const msg = JSON.parse(event.data);
+          if (msg.type === 'pong') {
+            conn._lastPong = Date.now();
+            return;
+          }
+        } catch (e) {}
         this._handleWsTextMessage(channelName, event.data);
         return;
       }
       this._handleWsBinaryMessage(channelName, event.data);
     });
 
+    const pingInterval = setInterval(() => {
+      if (ws.readyState === WebSocket.OPEN) {
+        try {
+          ws.send(JSON.stringify({ type: 'ping', ts: Date.now() }));
+        } catch (e) {}
+
+        const sincePong = Date.now() - conn._lastPong;
+        if (sincePong > 45000) {
+          console.warn(`[AudioWS] No pong from server for ${channelName} in ${Math.round(sincePong / 1000)}s — connection likely dead`);
+          ws.close();
+        }
+      }
+    }, 15000);
+
+    conn._pingInterval = pingInterval;
+
     ws.addEventListener('close', () => {
       console.log(`[AudioWS] WebSocket closed for ${channelName}`);
+      clearInterval(pingInterval);
       if (this.rooms.get(channelName) === conn) {
         this._cleanupChannel(channelName);
         this._emitConnectionStateChange(channelName, 'disconnected');
@@ -797,6 +823,10 @@ class LiveKitManager {
 
   _cleanupChannel(channelName) {
     const conn = this.rooms.get(channelName);
+
+    if (conn && conn._pingInterval) {
+      clearInterval(conn._pingInterval);
+    }
 
     if (conn && conn._syntheticTrack) {
       const syntheticParticipant = { identity: 'channel-audio', sid: channelName };
@@ -1038,4 +1068,9 @@ class LiveKitManager {
 }
 
 export const livekitManager = new LiveKitManager();
+
+if (typeof window !== 'undefined') {
+  window.__livekitManager = livekitManager;
+}
+
 export default livekitManager;
