@@ -284,33 +284,45 @@ class SignalingManager {
     }
 
     return new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        cleanup();
-        reject(new Error('PTT grant timeout'));
-      }, 3000);
-
-      const onGranted = (data) => {
-        if (data.channelId === channelId) {
-          cleanup();
-          resolve(data);
-        }
-      };
-
-      const onBusy = (data) => {
-        if (data.channelId === channelId) {
-          cleanup();
-          reject(new Error(`Channel busy: ${data.transmittingUnit}`));
-        }
-      };
+      let settled = false;
 
       const cleanup = () => {
         clearTimeout(timeout);
         this.socket.off('ptt:granted', onGranted);
         this.socket.off('ptt:busy', onBusy);
+        this.socket.off('disconnect', onDisconnect);
       };
 
-      this.socket.on('ptt:granted', onGranted);
-      this.socket.on('ptt:busy', onBusy);
+      const settle = (fn, value) => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        fn(value);
+      };
+
+      const timeout = setTimeout(() => {
+        settle(reject, new Error('PTT grant timeout'));
+      }, 3000);
+
+      const onGranted = (data) => {
+        if (data.channelId === channelId) {
+          settle(resolve, data);
+        }
+      };
+
+      const onBusy = (data) => {
+        if (data.channelId === channelId) {
+          settle(reject, new Error(`Channel busy: ${data.transmittingUnit}`));
+        }
+      };
+
+      const onDisconnect = () => {
+        settle(reject, new Error('Socket disconnected during PTT request'));
+      };
+
+      this.socket.once('ptt:granted', onGranted);
+      this.socket.once('ptt:busy', onBusy);
+      this.socket.once('disconnect', onDisconnect);
       this.socket.emit(SIGNALING_EVENTS.PTT_START, { channelId });
     });
   }

@@ -10,6 +10,8 @@ import android.media.MediaRecorder
 import android.os.Build
 import android.util.Log
 import kotlinx.coroutines.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 private const val TAG = "[RadioEngine]"
 private const val SAMPLE_RATE = 16000
@@ -25,12 +27,13 @@ class RadioAudioEngine(private val context: Context) {
     val audioPlayback = AudioPlayback(jitterBuffer, opusCodec)
     val udpTransport = UdpAudioTransport()
 
-    lateinit var floorControl: FloorControlManager
+    var floorControl: FloorControlManager? = null
         private set
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
     private var audioFocusRequest: AudioFocusRequest? = null
+    private val transmitMutex = Mutex()
 
     private var audioRecord: AudioRecord? = null
     private var captureJob: Job? = null
@@ -73,7 +76,7 @@ class RadioAudioEngine(private val context: Context) {
 
     fun stop() {
         if (!started) return
-        stopTransmit()
+        runBlocking { stopTransmit() }
         stopReceive()
         udpTransport.stop()
         releaseAudioFocus()
@@ -83,7 +86,7 @@ class RadioAudioEngine(private val context: Context) {
         Log.d(TAG, "RadioAudioEngine stopped")
     }
 
-    fun startTransmit(): Boolean {
+    suspend fun startTransmit(): Boolean = transmitMutex.withLock {
         if (!started) {
             Log.w(TAG, "startTransmit: engine not started")
             return false
@@ -116,12 +119,17 @@ class RadioAudioEngine(private val context: Context) {
             captureJob = scope.launch {
                 val buffer = ByteArray(FRAME_SIZE_BYTES)
                 while (isActive && isTransmitting) {
-                    val read = record.read(buffer, 0, buffer.size)
-                    if (read > 0) {
-                        val encoded = opusCodec.encode(buffer.copyOf(read))
-                        if (encoded != null) {
-                            udpTransport.send(encoded)
+                    try {
+                        val read = record.read(buffer, 0, buffer.size)
+                        if (read > 0) {
+                            val encoded = opusCodec.encode(buffer.copyOf(read))
+                            if (encoded != null) {
+                                udpTransport.send(encoded)
+                            }
                         }
+                    } catch (e: IllegalStateException) {
+                        Log.w(TAG, "AudioRecord read failed (released?): ${e.message}")
+                        break
                     }
                 }
             }
@@ -136,13 +144,21 @@ class RadioAudioEngine(private val context: Context) {
         }
     }
 
-    fun stopTransmit() {
+    suspend fun stopTransmit() = transmitMutex.withLock {
         if (!isTransmitting) return
         isTransmitting = false
-        captureJob?.cancel()
+        captureJob?.cancelAndJoin()
         captureJob = null
-        audioRecord?.stop()
-        audioRecord?.release()
+        try {
+            audioRecord?.stop()
+        } catch (e: IllegalStateException) {
+            Log.w(TAG, "AudioRecord stop failed: ${e.message}")
+        }
+        try {
+            audioRecord?.release()
+        } catch (e: IllegalStateException) {
+            Log.w(TAG, "AudioRecord release failed: ${e.message}")
+        }
         audioRecord = null
         stateManager.transitionTo(RadioState.IDLE)
         Log.d(TAG, "TX stopped")

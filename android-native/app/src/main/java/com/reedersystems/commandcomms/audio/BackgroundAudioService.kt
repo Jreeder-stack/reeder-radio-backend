@@ -745,7 +745,7 @@ class BackgroundAudioService : Service() {
 
     private fun observeRadioFloorEvents(engine: RadioAudioEngine) {
         scope.launch {
-            engine.floorControl.events.collect { event ->
+            engine.floorControl?.events?.collect { event ->
                 when (event) {
                     FloorControlEvent.GRANTED -> {
                         Log.d(TAG, "Floor GRANTED — starting TX")
@@ -753,7 +753,7 @@ class BackgroundAudioService : Service() {
                         if (txStarted) {
                             val roomKey = servicePrefs.channelRoomKey
                             if (roomKey != null) {
-                                engine.floorControl.let { /* floor already transitioned */ }
+                                engine.floorControl?.let { /* floor already transitioned */ }
                             }
                             pttState = PttState.TRANSMITTING
                             updateNotification("TRANSMITTING")
@@ -795,34 +795,34 @@ class BackgroundAudioService : Service() {
                 val currentRoomKey = servicePrefs.channelRoomKey
                 when (event) {
                     is SignalingEvent.RadioPttGranted -> {
-                        engine.floorControl.onFloorGranted(event.channelId)
+                        engine.floorControl?.onFloorGranted(event.channelId)
                     }
                     is SignalingEvent.RadioPttDenied -> {
-                        engine.floorControl.onFloorDenied(event.channelId)
+                        engine.floorControl?.onFloorDenied(event.channelId)
                     }
                     is SignalingEvent.RadioChannelBusy -> {
                         if (event.channelId == currentRoomKey) {
-                            engine.floorControl.onChannelBusy(event.transmittingUnit)
+                            engine.floorControl?.onChannelBusy(event.transmittingUnit)
                             engine.startReceive()
                         }
                     }
                     is SignalingEvent.RadioChannelIdle -> {
                         if (event.channelId == currentRoomKey) {
-                            engine.floorControl.onChannelIdle()
+                            engine.floorControl?.onChannelIdle()
                             engine.stopReceive()
                         }
                     }
                     is SignalingEvent.RadioTxStart -> {
                         val selfUnitId = servicePrefs.unitId ?: app.sessionPrefs.unitId
                         if (event.unitId != selfUnitId && event.channelId == currentRoomKey) {
-                            engine.floorControl.onChannelBusy(event.unitId)
+                            engine.floorControl?.onChannelBusy(event.unitId)
                             engine.startReceive()
                         }
                     }
                     is SignalingEvent.RadioTxStop -> {
                         val selfUnitId = servicePrefs.unitId ?: app.sessionPrefs.unitId
                         if (event.unitId != selfUnitId && event.channelId == currentRoomKey) {
-                            engine.floorControl.onChannelIdle()
+                            engine.floorControl?.onChannelIdle()
                             engine.stopReceive()
                         }
                     }
@@ -863,6 +863,8 @@ class BackgroundAudioService : Service() {
         app.toneEngine.playTalkPermitTone()
 
         scope.launch {
+            delay(200)
+
             if (signaling && !ensureBackgroundSignalingReady(servicePrefs.channelId)) {
                 Log.e(TAG, "Radio PTT: signaling not ready")
                 app.toneEngine.playErrorTone()
@@ -877,7 +879,7 @@ class BackgroundAudioService : Service() {
                 Log.d(TAG, "Radio PTT: transmitPre sent for roomKey $roomKey")
             }
 
-            engine.floorControl.requestFloor(roomKey)
+            engine.floorControl?.requestFloor(roomKey)
             val serverUrl = servicePrefs.serverUrl ?: app.apiClient.baseUrl
             val unitId = servicePrefs.unitId ?: app.sessionPrefs.unitId ?: return@launch
             httpPttStart(serverUrl, roomKey, unitId)

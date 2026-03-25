@@ -49,7 +49,7 @@ class SignalingService {
     this.clearAirStates = new Map();
     this.connectionTimes = new Map();
     this.trackedUnitLocations = new Map();
-    this.GRACE_PERIOD_MS = 15000;
+    this.GRACE_PERIOD_MS = 3000;
     this.EMERGENCY_ROOM_LIFETIME_MS = 60000;
     
     this._eventCallbacks = {
@@ -814,6 +814,31 @@ class SignalingService {
       }
 
       audioRelayService.removeSubscriber(channelId, socket.unitId);
+    }
+
+    for (const [channelId, transmission] of this.activeTransmissions) {
+      if (transmission.unitId === socket.unitId && !(socket.channels && socket.channels.has(channelId))) {
+        this.activeTransmissions.delete(channelId);
+        floorControlService.releaseFloor(channelId, socket.unitId);
+        this.io.to(`channel:${channelId}`).emit(SIGNALING_EVENTS.PTT_END, {
+          unitId: socket.unitId,
+          channelId,
+          timestamp: Date.now(),
+          reason: 'disconnect',
+        });
+        console.log(`[Signaling] Cleaned up orphaned transmission for ${socket.unitId} on ${channelId}`);
+      }
+    }
+
+    const releasedChannels = floorControlService.releaseAllForUnit(socket.unitId);
+    for (const channelId of releasedChannels) {
+      if (!(socket.channels && socket.channels.has(channelId))) {
+        this.io.to(`channel:${channelId}`).emit(RADIO_EVENTS.CHANNEL_IDLE, {
+          channelId,
+          timestamp: Date.now(),
+        });
+        console.log(`[Signaling] Released orphaned floor for ${socket.unitId} on ${channelId}`);
+      }
     }
 
     if (socket.radioSessionToken) {

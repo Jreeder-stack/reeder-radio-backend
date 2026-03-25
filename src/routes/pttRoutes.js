@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { signalingService } from '../services/signalingService.js';
+import { floorControlService } from '../services/floorControlService.js';
 import pool from '../db/index.js';
 
 const router = Router();
@@ -129,11 +130,26 @@ router.post('/start', async (req, res) => {
       return res.status(503).json({ error: 'Signaling not ready' });
     }
 
+    const isEmergency = signalingService.emergencyStates?.has(channelId) || false;
+    const floorResult = floorControlService.requestFloor(channelId, unitId, {
+      isEmergency,
+      emergencyStates: signalingService.emergencyStates,
+    });
+
+    if (!floorResult.granted) {
+      console.warn(`[PTT-HTTP] Floor denied for ${unitId} on ch${channelId}: held by ${floorResult.heldBy}`);
+      return res.status(409).json({
+        error: 'Channel busy',
+        heldBy: floorResult.heldBy || 'unknown',
+        reason: floorResult.reason,
+      });
+    }
+
     const transmissionData = {
       unitId,
       channelId,
       timestamp: Date.now(),
-      isEmergency: signalingService.emergencyStates?.has(channelId) || false,
+      isEmergency,
       source: 'native-service',
     };
 
@@ -154,6 +170,7 @@ router.post('/start', async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     console.error('[PTT-HTTP] Error on ptt/start:', err);
+    floorControlService.releaseFloor(channelId, unitId);
     res.status(500).json({ error: 'Internal error' });
   }
 });
@@ -172,6 +189,8 @@ router.post('/end', async (req, res) => {
 
     const transmission = signalingService.activeTransmissions.get(channelId);
     const duration = transmission ? Date.now() - transmission.timestamp : 0;
+
+    floorControlService.releaseFloor(channelId, unitId);
 
     const endData = {
       unitId,

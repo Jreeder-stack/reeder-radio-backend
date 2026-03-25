@@ -481,9 +481,12 @@ class MicPTTManager {
       this._setState(PTT_STATES.ARMING);
       playPermitTone();
 
+      await new Promise(resolve => setTimeout(resolve, 200));
+
       const success = await nativeEnableMic();
       if (!success) {
         console.error('[MicPTT] _startNative() — nativeEnableMic FAILED');
+        await new Promise(resolve => setTimeout(resolve, 100));
         startBonkLoop();
         this.transitionLock = false;
         this._setState(PTT_STATES.BUSY);

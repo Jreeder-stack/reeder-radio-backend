@@ -261,22 +261,35 @@ export default function MobileRadioView({ user, onLogout }) {
     micPTTManager.setCurrentChannel(channelName);
     micPTTManager.setCurrentUnit(identity);
     micPTTManager.setRoom(room);
+    let floorGranted = false;
     try {
       await signalPttStart(channelName);
+      floorGranted = true;
     } catch (grantErr) {
       console.warn('[MobileRadio] Floor denied:', grantErr.message);
       return;
     }
-    micPTTManager.start();
-  }, [ensureConnected, retryConnection, livekitManager, signalPttStart, identity, connectionStatus]);
+    try {
+      const started = await micPTTManager.start();
+      if (!started && floorGranted) {
+        console.warn('[MobileRadio] micPTTManager.start() failed, releasing floor');
+        signalPttEnd(channelName);
+      }
+    } catch (startErr) {
+      console.error('[MobileRadio] micPTTManager.start() threw:', startErr);
+      if (floorGranted) {
+        signalPttEnd(channelName);
+      }
+    }
+  }, [ensureConnected, retryConnection, livekitManager, signalPttStart, signalPttEnd, identity, connectionStatus]);
 
   const handleTransmitEnd = useCallback(() => {
     const channelName = transmitChannelRef.current;
     if (micPTTManager.canStop()) {
       micPTTManager.stop();
-      if (channelName) {
-        signalPttEnd(channelName);
-      }
+    }
+    if (channelName) {
+      signalPttEnd(channelName);
     }
   }, [signalPttEnd]);
 
