@@ -442,7 +442,10 @@ export async function upsertUnitPresence(identity, channel, status, location = n
                    status = EXCLUDED.status,
                    last_seen = CURRENT_TIMESTAMP,
                    location = EXCLUDED.location,
-                   is_emergency = EXCLUDED.is_emergency
+                   is_emergency = CASE
+                     WHEN EXCLUDED.is_emergency = true THEN true
+                     ELSE units.is_emergency
+                   END
      RETURNING *`,
     [identity, channel, status, location, isEmergency]
   );
@@ -509,6 +512,14 @@ export async function setUnitEmergency(unitId, active) {
   const result = await pool.query(
     `UPDATE units SET is_emergency = $1, last_seen = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *`,
     [active, unitId]
+  );
+  return result.rows[0];
+}
+
+export async function clearUnitEmergencyByIdentity(unitIdentity) {
+  const result = await pool.query(
+    `UPDATE units SET is_emergency = false, last_seen = CURRENT_TIMESTAMP WHERE unit_identity = $1 RETURNING *`,
+    [unitIdentity]
   );
   return result.rows[0];
 }

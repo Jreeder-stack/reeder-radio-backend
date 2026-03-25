@@ -97,7 +97,7 @@ const useDispatchStore = create(
       
       setUnits: (units) => {
         const unitsByChannel = {};
-        const emergencies = [];
+        const newEmergencies = [];
         
         units.forEach(unit => {
           const channel = unit.channel || 'unknown';
@@ -107,7 +107,7 @@ const useDispatchStore = create(
           unitsByChannel[channel].push(unit);
           
           if (unit.is_emergency) {
-            emergencies.push({
+            newEmergencies.push({
               id: `emergency-${unit.id}`,
               unitId: unit.id,
               unitIdentity: unit.unit_identity,
@@ -117,7 +117,19 @@ const useDispatchStore = create(
           }
         });
         
-        set({ units, unitsByChannel, emergencies });
+        const existingEmergencies = get().emergencies;
+        const newUnitKeys = new Set(newEmergencies.map(e => e.unitIdentity || e.unitId));
+        const keptExisting = existingEmergencies.filter(e => !newUnitKeys.has(e.unitIdentity || e.unitId));
+        const merged = [...keptExisting, ...newEmergencies];
+        const seenUnits = new Set();
+        const deduplicated = merged.filter(e => {
+          const key = e.unitIdentity || e.unitId;
+          if (seenUnits.has(key)) return false;
+          seenUnits.add(key);
+          return true;
+        });
+        
+        set({ units, unitsByChannel, emergencies: deduplicated });
       },
       
       updateUnit: (identity, updates) => set((state) => {
@@ -137,13 +149,21 @@ const useDispatchStore = create(
         return { units, unitsByChannel };
       }),
       
-      addEmergency: (emergency) => set((state) => ({
-        emergencies: [...state.emergencies.filter(e => e.id !== emergency.id), emergency]
-      })),
+      addEmergency: (emergency) => set((state) => {
+        const key = emergency.unitIdentity || emergency.unitId;
+        return {
+          emergencies: [...state.emergencies.filter(e => (e.unitIdentity || e.unitId) !== key), emergency]
+        };
+      }),
       
-      removeEmergency: (id) => set((state) => ({
-        emergencies: state.emergencies.filter(e => e.id !== id)
-      })),
+      removeEmergency: (id) => set((state) => {
+        const target = state.emergencies.find(e => e.id === id);
+        if (target) {
+          const key = target.unitIdentity || target.unitId;
+          return { emergencies: state.emergencies.filter(e => (e.unitIdentity || e.unitId) !== key) };
+        }
+        return { emergencies: state.emergencies.filter(e => e.id !== id) };
+      }),
       
       clearEmergencies: () => set({ emergencies: [] }),
       

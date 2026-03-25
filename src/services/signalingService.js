@@ -4,7 +4,7 @@ import { audioRelayService } from './audioRelayService.js';
 import crypto from 'crypto';
 import cookie from 'cookie';
 import signature from 'cookie-signature';
-import pool from '../db/index.js';
+import pool, { clearUnitEmergencyByIdentity } from '../db/index.js';
 import { config } from '../config/env.js';
 
 const SIGNALING_EVENTS = {
@@ -568,6 +568,10 @@ class SignalingService {
     if (presence) {
       presence.status = 'online';
     }
+    
+    clearUnitEmergencyByIdentity(emergency.unitId).catch(err => {
+      console.error(`[Signaling] Failed to clear DB emergency for ${emergency.unitId}:`, err);
+    });
     
     const endData = {
       unitId: emergency.unitId,

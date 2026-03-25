@@ -116,7 +116,7 @@ export function RadioDeckView({ user, onLogout }) {
     emergencyAlerts,
   } = useSignalingContext();
   
-  const { isScanning, toggleScanning, isEmergency, triggerEmergency, cancelEmergency, scanChannels, setScanChannels, toggleScanChannel } = useMobileRadioContext();
+  const { isScanning, toggleScanning, isEmergency, setIsEmergency, triggerEmergency, cancelEmergency, scanChannels, setScanChannels, toggleScanChannel } = useMobileRadioContext();
   
   const connected = signalingConnected;
   const connecting = connectionStatus === 'connecting';
@@ -669,8 +669,16 @@ export function RadioDeckView({ user, onLogout }) {
   const handleEmergencyActivate = async () => {
     if (isEmergency) return;
     const channel = currentRoomKey || 'DISPATCH';
-    await triggerEmergency();
-    gpsStartTracking();
+    try {
+      await triggerEmergency();
+    } catch (err) {
+      console.error('[Emergency] triggerEmergency failed:', err);
+    }
+    try {
+      gpsStartTracking();
+    } catch (err) {
+      console.error('[Emergency] GPS start failed:', err);
+    }
     try {
       signalEmergencyStart(channel);
     } catch (err) {
@@ -691,8 +699,17 @@ export function RadioDeckView({ user, onLogout }) {
   const handleEmergencyDeactivate = async () => {
     if (!isEmergency) return;
     const channel = currentRoomKey || 'DISPATCH';
-    await cancelEmergency();
-    gpsStopTracking();
+    try {
+      await cancelEmergency();
+    } catch (err) {
+      console.error('[Emergency] cancelEmergency failed:', err);
+      setIsEmergency(false);
+    }
+    try {
+      gpsStopTracking();
+    } catch (err) {
+      console.error('[Emergency] GPS stop failed:', err);
+    }
     try {
       signalEmergencyEnd(channel);
     } catch (err) {

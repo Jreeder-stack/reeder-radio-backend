@@ -202,12 +202,10 @@ export function LiveKitConnectionProvider({ children, user }) {
     const removeSignalingEmergencyEnd = signalingManager.on('emergencyEnd', (data) => {
       console.log('[LiveKitConnection] Emergency END via signaling:', data);
       const store = useDispatchStore.getState();
-      const match = store.emergencies.find(e =>
-        e.unitIdentity === data.unitId && e.id.startsWith('sig-emergency-')
+      const matches = store.emergencies.filter(e =>
+        e.unitIdentity === data.unitId
       );
-      if (match) {
-        store.removeEmergency(match.id);
-      }
+      matches.forEach(match => store.removeEmergency(match.id));
     });
     listenerRemoversRef.current.push(removeSignalingEmergencyEnd);
 

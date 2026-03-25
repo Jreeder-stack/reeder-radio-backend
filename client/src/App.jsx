@@ -8,6 +8,7 @@ import { unlockAudio } from "./audio/iosAudioUnlock";
 import { preloadPermitBuffer } from "./audio/talkPermitTone.js";
 import { setupAppLifecycle } from "./lib/capacitor";
 import { signalingManager } from "./signaling/SignalingManager";
+import { useMobileRadioContext } from "./context/MobileRadioContext.jsx";
 
 // Track audio elements that have already been connected to a MediaElementSource
 // This prevents the "HTMLMediaElement already connected" error on reconnection
@@ -167,6 +168,8 @@ export default function App({ user, onLogout }) {
     joinChannel: signalingJoinChannel,
     leaveChannel: signalingLeaveChannel,
   } = useSignalingContext();
+  
+  const { setIsEmergency: setContextIsEmergency } = useMobileRadioContext();
   
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem('darkMode');
@@ -375,6 +378,8 @@ export default function App({ user, onLogout }) {
           if (message.targetUnit === identity) {
             console.log('[Radio] Emergency ACK received - clearing emergency state');
             setIsEmergency(false);
+            isEmergencyRef.current = false;
+            setContextIsEmergency(false);
             if (emergencyTimerRef.current) {
               clearInterval(emergencyTimerRef.current);
               emergencyTimerRef.current = null;
@@ -387,7 +392,6 @@ export default function App({ user, onLogout }) {
             setEmergencyResponseWindow(false);
             emergencyPausedForAIRef.current = false;
             
-            // Unmute receive audio
             rxAudioElementsRef.current.forEach(el => {
               el.muted = false;
             });
@@ -1020,6 +1024,7 @@ export default function App({ user, onLogout }) {
     
     setIsEmergency(true);
     isEmergencyRef.current = true;
+    setContextIsEmergency(true);
     
     playEmergencyAlertSound();
     
@@ -1037,7 +1042,6 @@ export default function App({ user, onLogout }) {
       emergencyTimerRef.current = null;
     }
     
-    // Clear response window state
     if (emergencyResponseTimeoutRef.current) {
       clearTimeout(emergencyResponseTimeoutRef.current);
       emergencyResponseTimeoutRef.current = null;
@@ -1049,6 +1053,7 @@ export default function App({ user, onLogout }) {
     await stopPTT();
     setIsEmergency(false);
     isEmergencyRef.current = false;
+    setContextIsEmergency(false);
     
     rxAudioElementsRef.current.forEach(el => {
       el.muted = false;
