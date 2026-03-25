@@ -24,7 +24,9 @@ fun AppNavigation() {
     val context = LocalContext.current
     val app = context.applicationContext as CommandCommsApp
 
-    NavHost(navController = navController, startDestination = Routes.LOGIN) {
+    val startDestination = if (app.sessionPrefs.hasSession) Routes.RADIO else Routes.LOGIN
+
+    NavHost(navController = navController, startDestination = startDestination) {
         composable(Routes.LOGIN) {
             LoginScreen(
                 onLoginSuccess = {

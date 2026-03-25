@@ -44,6 +44,9 @@ class SessionPrefs(context: Context) {
         get() = prefs.getLong(KEY_LAST_VERSION_CODE, -1L)
         set(value) = prefs.edit().putLong(KEY_LAST_VERSION_CODE, value).apply()
 
+    val hasSession: Boolean
+        get() = userId != -1 && username != null
+
     fun clear() {
         val savedVersion = lastVersionCode
         prefs.edit().clear().apply()

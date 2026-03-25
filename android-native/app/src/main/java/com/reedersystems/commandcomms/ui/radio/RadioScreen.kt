@@ -56,7 +56,6 @@ fun RadioScreen(
         ) == PackageManager.PERMISSION_GRANTED
         viewModel.setMicPermissionGranted(granted)
         viewModel.recheckDndPermission()
-        viewModel.refreshSession(onLogout)
         onPauseOrDispose {}
     }
 

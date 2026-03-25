@@ -649,16 +649,6 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         updateServiceChannel()
     }
 
-    fun refreshSession(onSessionExpired: () -> Unit) {
-        viewModelScope.launch {
-            val result = app.authRepository.me()
-            if (result.isFailure) {
-                Log.w(TAG, "Session expired on resume, logging out")
-                logout(onSessionExpired)
-            }
-        }
-    }
-
     fun logout(onComplete: () -> Unit) {
         viewModelScope.launch {
             if (_uiState.value.myEmergencyActive) onEmergencyClear()
