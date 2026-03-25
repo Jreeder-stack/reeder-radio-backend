@@ -1,0 +1,187 @@
+Executing tasks: [:app:assembleDebug] in project C:\Users\Justin\reeder-radio-backend\android-native
+
+> Task :app:createDebugVariantModel UP-TO-DATE
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
+> Task :app:checkKotlinGradlePluginConfigurationErrors
+> Task :app:generateDebugBuildConfig UP-TO-DATE
+> Task :app:checkDebugAarMetadata FAILED
+> Task :app:generateDebugResValues UP-TO-DATE
+> Task :app:mapDebugSourceSetPaths FAILED
+> Task :app:generateDebugResources UP-TO-DATE
+> Task :app:mergeDebugResources FAILED
+> Task :app:packageDebugResources UP-TO-DATE
+> Task :app:parseDebugLocalResources UP-TO-DATE
+> Task :app:createDebugCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksDebug UP-TO-DATE
+> Task :app:processDebugMainManifest FAILED
+> Task :app:javaPreCompileDebug UP-TO-DATE
+> Task :app:mergeDebugShaders UP-TO-DATE
+> Task :app:compileDebugShaders NO-SOURCE
+> Task :app:generateDebugAssets UP-TO-DATE
+> Task :app:mergeDebugAssets FAILED
+> Task :app:desugarDebugFileDependencies FAILED
+> Task :app:checkDebugDuplicateClasses FAILED
+> Task :app:mergeDebugJniLibFolders UP-TO-DATE
+> Task :app:mergeDebugNativeLibs FAILED
+> Task :app:validateSigningDebug UP-TO-DATE
+> Task :app:writeDebugAppMetadata UP-TO-DATE
+> Task :app:writeDebugSigningConfigVersions UP-TO-DATE
+
+FAILURE: Build completed with 8 failures.
+
+1: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':app:checkDebugAarMetadata'.
+> Could not resolve all files for configuration ':app:debugRuntimeClasspath'.
+   > Could not find com.github.davidliu:audioswitch:89582c47c9a04c62f90aa5e57251af4800a62c9a.
+     Searched in the following locations:
+       - https://dl.google.com/dl/android/maven2/com/github/davidliu/audioswitch/89582c47c9a04c62f90aa5e57251af4800a62c9a/audioswitch-89582c47c9a04c62f90aa5e57251af4800a62c9a.pom
+       - https://repo.maven.apache.org/maven2/com/github/davidliu/audioswitch/89582c47c9a04c62f90aa5e57251af4800a62c9a/audioswitch-89582c47c9a04c62f90aa5e57251af4800a62c9a.pom
+     Required by:
+         project :app > io.livekit:livekit-android:2.4.0
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+==============================================================================
+
+2: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':app:mapDebugSourceSetPaths'.
+> Could not resolve all files for configuration ':app:debugRuntimeClasspath'.
+   > Could not find com.github.davidliu:audioswitch:89582c47c9a04c62f90aa5e57251af4800a62c9a.
+     Searched in the following locations:
+       - https://dl.google.com/dl/android/maven2/com/github/davidliu/audioswitch/89582c47c9a04c62f90aa5e57251af4800a62c9a/audioswitch-89582c47c9a04c62f90aa5e57251af4800a62c9a.pom
+       - https://repo.maven.apache.org/maven2/com/github/davidliu/audioswitch/89582c47c9a04c62f90aa5e57251af4800a62c9a/audioswitch-89582c47c9a04c62f90aa5e57251af4800a62c9a.pom
+     Required by:
+         project :app > io.livekit:livekit-android:2.4.0
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+==============================================================================
+
+3: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':app:mergeDebugResources'.
+> Could not resolve all files for configuration ':app:debugRuntimeClasspath'.
+   > Could not find com.github.davidliu:audioswitch:89582c47c9a04c62f90aa5e57251af4800a62c9a.
+     Searched in the following locations:
+       - https://dl.google.com/dl/android/maven2/com/github/davidliu/audioswitch/89582c47c9a04c62f90aa5e57251af4800a62c9a/audioswitch-89582c47c9a04c62f90aa5e57251af4800a62c9a.pom
+       - https://repo.maven.apache.org/maven2/com/github/davidliu/audioswitch/89582c47c9a04c62f90aa5e57251af4800a62c9a/audioswitch-89582c47c9a04c62f90aa5e57251af4800a62c9a.pom
+     Required by:
+         project :app > io.livekit:livekit-android:2.4.0
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+==============================================================================
+
+4: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':app:processDebugMainManifest'.
+> Could not resolve all files for configuration ':app:debugRuntimeClasspath'.
+   > Could not find com.github.davidliu:audioswitch:89582c47c9a04c62f90aa5e57251af4800a62c9a.
+     Searched in the following locations:
+       - https://dl.google.com/dl/android/maven2/com/github/davidliu/audioswitch/89582c47c9a04c62f90aa5e57251af4800a62c9a/audioswitch-89582c47c9a04c62f90aa5e57251af4800a62c9a.pom
+       - https://repo.maven.apache.org/maven2/com/github/davidliu/audioswitch/89582c47c9a04c62f90aa5e57251af4800a62c9a/audioswitch-89582c47c9a04c62f90aa5e57251af4800a62c9a.pom
+     Required by:
+         project :app > io.livekit:livekit-android:2.4.0
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+==============================================================================
+
+5: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':app:mergeDebugAssets'.
+> Could not resolve all files for configuration ':app:debugRuntimeClasspath'.
+   > Could not find com.github.davidliu:audioswitch:89582c47c9a04c62f90aa5e57251af4800a62c9a.
+     Searched in the following locations:
+       - https://dl.google.com/dl/android/maven2/com/github/davidliu/audioswitch/89582c47c9a04c62f90aa5e57251af4800a62c9a/audioswitch-89582c47c9a04c62f90aa5e57251af4800a62c9a.pom
+       - https://repo.maven.apache.org/maven2/com/github/davidliu/audioswitch/89582c47c9a04c62f90aa5e57251af4800a62c9a/audioswitch-89582c47c9a04c62f90aa5e57251af4800a62c9a.pom
+     Required by:
+         project :app > io.livekit:livekit-android:2.4.0
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+==============================================================================
+
+6: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':app:desugarDebugFileDependencies'.
+> Could not resolve all files for configuration ':app:debugRuntimeClasspath'.
+   > Could not find com.github.davidliu:audioswitch:89582c47c9a04c62f90aa5e57251af4800a62c9a.
+     Searched in the following locations:
+       - https://dl.google.com/dl/android/maven2/com/github/davidliu/audioswitch/89582c47c9a04c62f90aa5e57251af4800a62c9a/audioswitch-89582c47c9a04c62f90aa5e57251af4800a62c9a.pom
+       - https://repo.maven.apache.org/maven2/com/github/davidliu/audioswitch/89582c47c9a04c62f90aa5e57251af4800a62c9a/audioswitch-89582c47c9a04c62f90aa5e57251af4800a62c9a.pom
+     Required by:
+         project :app > io.livekit:livekit-android:2.4.0
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+==============================================================================
+
+7: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':app:checkDebugDuplicateClasses'.
+> Could not resolve all files for configuration ':app:debugRuntimeClasspath'.
+   > Could not find com.github.davidliu:audioswitch:89582c47c9a04c62f90aa5e57251af4800a62c9a.
+     Searched in the following locations:
+       - https://dl.google.com/dl/android/maven2/com/github/davidliu/audioswitch/89582c47c9a04c62f90aa5e57251af4800a62c9a/audioswitch-89582c47c9a04c62f90aa5e57251af4800a62c9a.pom
+       - https://repo.maven.apache.org/maven2/com/github/davidliu/audioswitch/89582c47c9a04c62f90aa5e57251af4800a62c9a/audioswitch-89582c47c9a04c62f90aa5e57251af4800a62c9a.pom
+     Required by:
+         project :app > io.livekit:livekit-android:2.4.0
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+==============================================================================
+
+8: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':app:mergeDebugNativeLibs'.
+> Could not resolve all files for configuration ':app:debugRuntimeClasspath'.
+   > Could not find com.github.davidliu:audioswitch:89582c47c9a04c62f90aa5e57251af4800a62c9a.
+     Searched in the following locations:
+       - https://dl.google.com/dl/android/maven2/com/github/davidliu/audioswitch/89582c47c9a04c62f90aa5e57251af4800a62c9a/audioswitch-89582c47c9a04c62f90aa5e57251af4800a62c9a.pom
+       - https://repo.maven.apache.org/maven2/com/github/davidliu/audioswitch/89582c47c9a04c62f90aa5e57251af4800a62c9a/audioswitch-89582c47c9a04c62f90aa5e57251af4800a62c9a.pom
+     Required by:
+         project :app > io.livekit:livekit-android:2.4.0
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+==============================================================================
+
+BUILD FAILED in 5s
+22 actionable tasks: 9 executed, 13 up-to-date
