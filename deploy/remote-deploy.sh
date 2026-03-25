@@ -59,7 +59,6 @@ rsync -az --delete \
   --exclude attached_assets \
   --exclude desktop-app \
   --exclude android-native \
-  --exclude android-app \
   --exclude .local \
   --exclude .replit \
   --exclude replit.nix \

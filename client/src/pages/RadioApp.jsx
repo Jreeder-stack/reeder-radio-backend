@@ -54,8 +54,8 @@ export default function RadioApp({ user, onLogout }) {
         <div style={cardStyle}>
           <h2 style={{ fontSize: 18, marginBottom: 16, color: "#10b981" }}>Android App Development</h2>
           <p style={{ color: "#aaa", fontSize: 14, lineHeight: 1.6 }}>
-            The Android radio app source code is located in the <code style={{ background: "#1a1a2e", padding: "2px 6px", borderRadius: 4 }}>android-app/</code> folder.
-            It uses Capacitor to wrap the web UI into a native Android application with hardware PTT support.
+            The native Android radio app source code is located in the <code style={{ background: "#1a1a2e", padding: "2px 6px", borderRadius: 4 }}>android-native/</code> folder.
+            It is a native Android application with hardware PTT support.
           </p>
         </div>
 
@@ -78,13 +78,10 @@ export default function RadioApp({ user, onLogout }) {
         <div style={cardStyle}>
           <h2 style={{ fontSize: 18, marginBottom: 16 }}>Build Instructions</h2>
           <ol style={{ color: "#aaa", fontSize: 14, lineHeight: 2, paddingLeft: 20, margin: 0 }}>
-            <li>Install dependencies: <code style={{ background: "#1a1a2e", padding: "2px 6px", borderRadius: 4 }}>cd android-app && npm install</code></li>
-            <li>Build the web app: <code style={{ background: "#1a1a2e", padding: "2px 6px", borderRadius: 4 }}>npm run build</code></li>
-            <li>Add Android platform: <code style={{ background: "#1a1a2e", padding: "2px 6px", borderRadius: 4 }}>npx cap add android</code></li>
-            <li>Sync with Capacitor: <code style={{ background: "#1a1a2e", padding: "2px 6px", borderRadius: 4 }}>npx cap sync android</code></li>
-            <li>Copy native plugins from <code style={{ background: "#1a1a2e", padding: "2px 6px", borderRadius: 4 }}>android-config/</code></li>
-            <li>Open in Android Studio: <code style={{ background: "#1a1a2e", padding: "2px 6px", borderRadius: 4 }}>npx cap open android</code></li>
-            <li>Build APK from Android Studio</li>
+            <li>Open the <code style={{ background: "#1a1a2e", padding: "2px 6px", borderRadius: 4 }}>android-native/</code> project in Android Studio</li>
+            <li>Sync Gradle and resolve dependencies</li>
+            <li>Build and run on a device or emulator</li>
+            <li>Build a signed APK/AAB for release</li>
           </ol>
         </div>
 
