@@ -25,6 +25,25 @@ function normalizeAddress(raw) {
   return addr;
 }
 
+function cleanTranscript(raw) {
+  if (!raw) return raw;
+  let text = raw.trim();
+  text = text.replace(/^(um|uh|ah|like|so|okay|well|yeah)[,.]?\s+/gi, '');
+  text = text.replace(/\s+(um|uh|ah)\s+/gi, ' ');
+  text = text.replace(/\.$/, '');
+  text = text.replace(/\b[Bb]oulevard\b/g, 'Blvd');
+  text = text.replace(/\b[Aa]venue\b/g, 'Ave');
+  text = text.replace(/(?<=\s)[Ss]treet\b/g, 'St');
+  text = text.replace(/(?<=\s)[Dd]rive\b/g, 'Dr');
+  text = text.replace(/(?<=\s)[Ll]ane\b/g, 'Ln');
+  text = text.replace(/(?<=\s)[Rr]oad\b/g, 'Rd');
+  text = text.replace(/(?<=\s)[Pp]lace\b/g, 'Pl');
+  text = text.replace(/(?<=\s)[Cc]ourt\b/g, 'Ct');
+  text = text.replace(/\b[Pp]arkway\b/g, 'Pkwy');
+  text = text.replace(/\s{2,}/g, ' ');
+  return text.trim();
+}
+
 function createWavHeader(dataLength, sampleRate, channels, bitsPerSample) {
   const buffer = Buffer.alloc(44);
   buffer.write('RIFF', 0);
@@ -1524,7 +1543,7 @@ class AIDispatcher {
   async handleZoneDetails(participantId, rawTranscript) {
     this.log('ZONE_DETAILS', { participant: participantId, transcript: rawTranscript });
     
-    const zone = rawTranscript.trim();
+    const zone = cleanTranscript(rawTranscript);
     
     if (!zone || zone.length < 2) {
       const response = `${participantId}, did not copy zone. Go ahead with zone.`;
@@ -1608,7 +1627,7 @@ class AIDispatcher {
   async handleDetailLocation(participantId, rawTranscript) {
     this.log('DETAIL_LOCATION', { participant: participantId, transcript: rawTranscript });
     
-    const location = rawTranscript.trim();
+    const location = cleanTranscript(rawTranscript);
     
     if (!location || location.length < 2) {
       const response = `${participantId}, did not copy location. Go ahead with location.`;
@@ -1738,7 +1757,7 @@ class AIDispatcher {
       return;
     }
 
-    const address = normalizeAddress(transcript.trim());
+    const address = normalizeAddress(cleanTranscript(transcript));
     if (!address || address.length < 2) {
       const resp = `${participantId}, did not copy address. Go ahead with address.`;
       await this.speak(resp, participantId);
