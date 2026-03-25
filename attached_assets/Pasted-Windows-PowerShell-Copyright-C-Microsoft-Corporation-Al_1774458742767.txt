@@ -1,0 +1,1128 @@
+Windows PowerShell
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+Install the latest PowerShell for new features and improvements! https://aka.ms/PSWindows
+
+PS C:\Users\Justin> ssh -i C:\Users\Justin\Desktop\commandcomms-key_1774361622787.pem Jreeder5029@20.115.21.70 "pm2 logs command-comms"
+[TAILING] Tailing last 15 lines for [command-comms] process (change the value with --lines option)
+/home/Jreeder5029/.pm2/logs/command-comms-error-0.log last 15 lines:
+0|command- | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command- | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command- | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command- | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command- | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command- | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command- | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command- | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command- | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command- | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command- | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command- | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command- | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command- | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command- | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+
+/home/Jreeder5029/.pm2/logs/command-comms-out-0.log last 15 lines:
+0|command- | [AudioRelay] WS subscriber removed: DISPATCH-1 from channel DISPATCH__DISPATCH
+0|command- | [WsAudioBridge] Client disconnected: DISPATCH-1 from channel DISPATCH__DISPATCH
+0|command- | [AudioRelay] WS subscriber added: DISPATCH-1 on channel DISPATCH__DISPATCH
+0|command- | [WsAudioBridge] Client connected: DISPATCH-1 on channel DISPATCH__DISPATCH
+0|command- | [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=-ooGjbK-... | 200 | 22ms
+0|command- | [AudioRelay] WS subscriber removed: DISPATCH-1 from channel DISPATCH__DISPATCH
+0|command- | [WsAudioBridge] Client disconnected: DISPATCH-1 from channel DISPATCH__DISPATCH
+0|command- | [AudioRelay] WS subscriber added: DISPATCH-1 on channel DISPATCH__DISPATCH
+0|command- | [WsAudioBridge] Client connected: DISPATCH-1 on channel DISPATCH__DISPATCH
+0|command- | [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=-ooGjbK-... | 200 | 21ms
+0|command- | [AudioRelay] WS subscriber removed: DISPATCH-1 from channel DISPATCH__DISPATCH
+0|command- | [WsAudioBridge] Client disconnected: DISPATCH-1 from channel DISPATCH__DISPATCH
+0|command- | [AudioRelay] WS subscriber added: DISPATCH-1 on channel DISPATCH__DISPATCH
+0|command- | [WsAudioBridge] Client connected: DISPATCH-1 on channel DISPATCH__DISPATCH
+0|command- | [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=-ooGjbK-... | 200 | 22ms
+
+0|command-comms  | [AudioRelay] WS subscriber removed: DISPATCH-1 from channel DISPATCH__DISPATCH
+0|command-comms  | [WsAudioBridge] Client disconnected: DISPATCH-1 from channel DISPATCH__DISPATCH
+0|command-comms  | [AudioRelay] WS subscriber added: DISPATCH-1 on channel DISPATCH__DISPATCH
+0|command-comms  | [WsAudioBridge] Client connected: DISPATCH-1 on channel DISPATCH__DISPATCH
+0|command-comms  | [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=-ooGjbK-... | 200 | 21ms
+0|command-comms  | [AUTH] /me check: hasSession=true sessionID=-ooGjbK-... cookie=true
+0|command-comms  | [AUTH] /me: session has user="DISPATCH-1" id=7, refreshing from DB...
+0|command-comms  | [AUTH] /me: returning fresh user data for "DISPATCH-1" role=admin unit_id=DISPATCH-1
+0|command-comms  | [API] GET /api/auth/me | user=DISPATCH-1(id:7) | sid=-ooGjbK-... | 304 | 14ms
+0|command-comms  | [Signaling] Unit authenticated: DISPATCH-1 (DISPATCH-1) [session-verified]
+0|command-comms  | [Signaling] DISPATCH-1 joined channel DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T16:55:52.854Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"DISPATCH-1","isEmergency":false}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T16:55:52.854Z | CONNECTING_FOR_PTT {"channelId":"DISPATCH__DISPATCH","unitId":"DISPATCH-1"}
+0|command-comms  | [Signaling] PTT START: DISPATCH-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher] 2026-03-25T16:55:52.860Z | REJOIN_TRIGGERED {"channel":"DISPATCH__DISPATCH"}
+0|command-comms  | [AudioRelay] Internal listener added: AI-Dispatcher on channel DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher] 2026-03-25T16:55:52.861Z | CHANNEL_JOINED {"channel":"DISPATCH__DISPATCH"}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T16:55:52.861Z | DISCONNECT_TIMER_STARTED {"graceMs":90000}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T16:55:52.861Z | CONNECTED_FOR_PTT {"channelId":"DISPATCH__DISPATCH","unitId":"DISPATCH-1"}
+0|command-comms  | [Signaling] PTT_READY sent for DISPATCH-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T16:55:52.861Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"DISPATCH-1","wasAlreadyConnected":false}
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T16:55:53.646Z | PTT_END_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"DISPATCH-1","gracePeriodMs":3000}
+0|command-comms  | [Signaling] PTT END: DISPATCH-1 on DISPATCH__DISPATCH (793ms)
+0|command-comms  | [Signaling] Grace period ended for DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T16:55:56.647Z | DISCONNECTING_IDLE {"channelId":"DISPATCH__DISPATCH"}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T16:55:56.647Z | DISCONNECT_TIMER_CLEARED {}
+0|command-comms  | [AudioRelay] Internal listener removed: AI-Dispatcher from channel DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher] 2026-03-25T16:55:56.647Z | CHANNEL_LEFT {"channel":"DISPATCH__DISPATCH"}
+0|command-comms  | [AudioRelay] WS subscriber removed: DISPATCH-1 from channel DISPATCH__DISPATCH
+0|command-comms  | [WsAudioBridge] Client disconnected: DISPATCH-1 from channel DISPATCH__DISPATCH
+0|command-comms  | [AudioRelay] WS subscriber added: DISPATCH-1 on channel DISPATCH__DISPATCH
+0|command-comms  | [WsAudioBridge] Client connected: DISPATCH-1 on channel DISPATCH__DISPATCH
+0|command-comms  | [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=-ooGjbK-... | 200 | 20ms
+0|command-comms  | [AudioRelay] WS subscriber removed: DISPATCH-1 from channel DISPATCH__DISPATCH
+0|command-comms  | [WsAudioBridge] Client disconnected: DISPATCH-1 from channel DISPATCH__DISPATCH
+0|command-comms  | [AudioRelay] WS subscriber added: DISPATCH-1 on channel DISPATCH__DISPATCH
+0|command-comms  | [WsAudioBridge] Client connected: DISPATCH-1 on channel DISPATCH__DISPATCH
+0|command-comms  | [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=-ooGjbK-... | 200 | 21ms
+0|command-comms  | [AudioRelay] WS subscriber removed: DISPATCH-1 from channel DISPATCH__DISPATCH
+0|command-comms  | [WsAudioBridge] Client disconnected: DISPATCH-1 from channel DISPATCH__DISPATCH
+0|command-comms  | [AudioRelay] WS subscriber added: DISPATCH-1 on channel DISPATCH__DISPATCH
+0|command-comms  | [WsAudioBridge] Client connected: DISPATCH-1 on channel DISPATCH__DISPATCH
+0|command-comms  | [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=-ooGjbK-... | 200 | 20ms
+0|command-comms  | [AudioRelay] WS subscriber removed: DISPATCH-1 from channel DISPATCH__DISPATCH
+0|command-comms  | [WsAudioBridge] Client disconnected: DISPATCH-1 from channel DISPATCH__DISPATCH
+0|command-comms  | [AudioRelay] WS subscriber added: DISPATCH-1 on channel DISPATCH__DISPATCH
+0|command-comms  | [WsAudioBridge] Client connected: DISPATCH-1 on channel DISPATCH__DISPATCH
+0|command-comms  | [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=-ooGjbK-... | 200 | 22ms
+0|command-comms  | Database initialized successfully
+0|command-comms  | [STARTUP] Database schema initialized
+0|command-comms  | [STARTUP] DB State: 5 users, 3 channels (3 enabled), 3 zones, 5 active sessions
+0|command-comms  | [STARTUP] Channels list:
+0|command-comms  |   [ON ] id=169 "DISPATCH" zone="DISPATCH" room_key="DISPATCH__DISPATCH"
+0|command-comms  |   [ON ] id=170 "OPS-1" zone="OPS" room_key="OPS__OPS-1"
+0|command-comms  |   [ON ] id=534 "OPS-1" zone="PHILADELPHIA" room_key="PHILADELPHIA__OPS-1"
+0|command-comms  | [Signaling] Socket.IO signaling server initialized
+0|command-comms  | Signaling service initialized
+0|command-comms  | Audio relay service started on UDP port 5100
+0|command-comms  | [WsAudioBridge] Attached to HTTP server on /api/audio-ws
+0|command-comms  | WebSocket audio bridge attached
+0|command-comms  | [AudioRelay] UDP relay listening on port 5100
+0|command-comms  | Auto-starting AI Dispatcher on channel: DISPATCH (room: DISPATCH__DISPATCH)
+0|command-comms  | [AI-Dispatcher] 2026-03-25T16:58:42.561Z | STARTED_STANDBY {"channel":"DISPATCH","roomKey":"DISPATCH__DISPATCH","mode":"on-demand"}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T16:58:42.579Z | INITIALIZED {"channels":[]}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T16:58:42.579Z | CHANNEL_ACTIVATED {"channelId":"DISPATCH__DISPATCH"}
+0|command-comms  | [AI-Dispatcher] Signaling integration setup for channel: DISPATCH__DISPATCH
+0|command-comms  | Server running on port 3001
+0|command-comms  | Signaling endpoint: ws://0.0.0.0:3001/signaling
+0|command-comms  | [CAD] Loaded 69 call natures from CAD
+0|command-comms  | [Signaling] Client connected: r09IU_DVPDIZfehGAAAB
+0|command-comms  | [Signaling] Unit authenticated: DISPATCH-1 (DISPATCH-1) [session-verified]
+0|command-comms  | [Signaling] DISPATCH-1 joined channel DISPATCH__DISPATCH
+0|command-comms  | [AudioRelay] WS subscriber added: DISPATCH-1 on channel DISPATCH__DISPATCH
+0|command-comms  | [WsAudioBridge] Client connected: DISPATCH-1 on channel DISPATCH__DISPATCH
+0|command-comms  | [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=-ooGjbK-... | 200 | 27ms
+0|command-comms  | [DISPATCH] getUnits: 0 units returned | user=DISPATCH-1 | sessionID=-ooGjbK-... (logged 1/60)
+0|command-comms  | [API] GET /api/dispatch/units | user=DISPATCH-1(id:7) | sid=-ooGjbK-... | 304 | 17ms (logged 1/60)
+0|command-comms  | [AudioRelay] WS subscriber removed: DISPATCH-1 from channel DISPATCH__DISPATCH
+0|command-comms  | [WsAudioBridge] Client disconnected: DISPATCH-1 from channel DISPATCH__DISPATCH
+0|command-comms  | [DISPATCH] getChannels: 3 radio channels returned
+0|command-comms  | [API] GET /api/dispatch/channels | user=DISPATCH-1(id:7) | sid=-ooGjbK-... | 304 | 20ms
+0|command-comms  | [AUTH] /me check: hasSession=true sessionID=-ooGjbK-... cookie=true
+0|command-comms  | [AUTH] /me: session has user="DISPATCH-1" id=7, refreshing from DB...
+0|command-comms  | [Signaling] DISPATCH-1 left channel DISPATCH__DISPATCH
+0|command-comms  | [AUTH] /me: returning fresh user data for "DISPATCH-1" role=admin unit_id=DISPATCH-1
+0|command-comms  | [API] GET /api/auth/me | user=DISPATCH-1(id:7) | sid=-ooGjbK-... | 304 | 16ms
+0|command-comms  | [Signaling] DISPATCH-1 left channel DISPATCH__DISPATCH
+0|command-comms  | [Signaling] DISPATCH-1 joined channel DISPATCH__DISPATCH
+0|command-comms  | [Signaling] Unit authenticated: DISPATCH-1 (DISPATCH-1) [session-verified]
+0|command-comms  | [Signaling] DISPATCH-1 joined channel DISPATCH__DISPATCH
+0|command-comms  | [AUTH] /me check: hasSession=true sessionID=-ooGjbK-... cookie=true
+0|command-comms  | [AUTH] /me: session has user="DISPATCH-1" id=7, refreshing from DB...
+0|command-comms  | [AUTH] /me: returning fresh user data for "DISPATCH-1" role=admin unit_id=DISPATCH-1
+0|command-comms  | [DISPATCH] getChannels: 3 radio channels returned
+0|command-comms  | [API] GET /api/auth/me | user=DISPATCH-1(id:7) | sid=-ooGjbK-... | 304 | 17ms
+0|command-comms  | [API] GET /api/dispatch/channels | user=DISPATCH-1(id:7) | sid=-ooGjbK-... | 304 | 17ms
+0|command-comms  | [Signaling] DISPATCH-1 left channel DISPATCH__DISPATCH
+0|command-comms  | [Signaling] DISPATCH-1 joined channel DISPATCH__DISPATCH
+0|command-comms  | [Signaling] Unit authenticated: DISPATCH-1 (DISPATCH-1) [session-verified]
+0|command-comms  | [Signaling] DISPATCH-1 joined channel DISPATCH__DISPATCH
+0|command-comms  | [Signaling] Unit disconnected: DISPATCH-1
+0|command-comms  | [AUTH] /me check: hasSession=true sessionID=-ooGjbK-... cookie=true
+0|command-comms  | [AUTH] /me: session has user="DISPATCH-1" id=7, refreshing from DB...
+0|command-comms  | [AUTH] /me: returning fresh user data for "DISPATCH-1" role=admin unit_id=DISPATCH-1
+0|command-comms  | [API] GET /api/auth/me | user=DISPATCH-1(id:7) | sid=-ooGjbK-... | 304 | 15ms
+0|command-comms  | [Signaling] Client connected: pjtdVxtTqOkHThRiAAAD
+0|command-comms  | [Signaling] Unit authenticated: DISPATCH-1 (DISPATCH-1) [session-verified]
+0|command-comms  | [DISPATCH] getChannels: 3 radio channels returned
+0|command-comms  | [API] GET /api/dispatch/channels | user=DISPATCH-1(id:7) | sid=-ooGjbK-... | 304 | 19ms
+0|command-comms  | [Signaling] DISPATCH-1 joined channel DISPATCH__DISPATCH
+0|command-comms  | [Signaling] Unit authenticated: DISPATCH-1 (DISPATCH-1) [session-verified]
+0|command-comms  | [Signaling] DISPATCH-1 joined channel DISPATCH__DISPATCH
+0|command-comms  | [AudioRelay] WS subscriber added: DISPATCH-1 on channel DISPATCH__DISPATCH
+0|command-comms  | [WsAudioBridge] Client connected: DISPATCH-1 on channel DISPATCH__DISPATCH
+0|command-comms  | [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=-ooGjbK-... | 200 | 23ms
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T16:59:40.155Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"DISPATCH-1","isEmergency":false}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T16:59:40.155Z | CONNECTING_FOR_PTT {"channelId":"DISPATCH__DISPATCH","unitId":"DISPATCH-1"}
+0|command-comms  | [Signaling] PTT START: DISPATCH-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher] 2026-03-25T16:59:40.162Z | REJOIN_TRIGGERED {"channel":"DISPATCH__DISPATCH"}
+0|command-comms  | [AudioRelay] Internal listener added: AI-Dispatcher on channel DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher] 2026-03-25T16:59:40.162Z | CHANNEL_JOINED {"channel":"DISPATCH__DISPATCH"}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T16:59:40.163Z | DISCONNECT_TIMER_STARTED {"graceMs":90000}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T16:59:40.163Z | CONNECTED_FOR_PTT {"channelId":"DISPATCH__DISPATCH","unitId":"DISPATCH-1"}
+0|command-comms  | [Signaling] PTT_READY sent for DISPATCH-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T16:59:40.163Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"DISPATCH-1","wasAlreadyConnected":false}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T16:59:40.510Z | AUDIO_BUFFERING_START {"participant":"DISPATCH-1","channel":"DISPATCH__DISPATCH"}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T16:59:43.524Z | PTT_END_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"DISPATCH-1","gracePeriodMs":3000}
+0|command-comms  | [Signaling] PTT END: DISPATCH-1 on DISPATCH__DISPATCH (3369ms)
+0|command-comms  | [AI-Dispatcher] 2026-03-25T16:59:45.014Z | AUDIO_IDLE_TIMEOUT {"participant":"DISPATCH-1","frameCount":154}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T16:59:45.015Z | AUDIO_BUFFERING_COMPLETE {"participant":"DISPATCH-1","frames":154,"bytes":295680}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T16:59:45.030Z | VOICE_MESSAGE_SAVED {"channel":"DISPATCH__DISPATCH","sender":"DISPATCH-1","filename":"DISPATCH__DISPATCH_1774457985016_DISPATCH_1.wav","duration":3}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T16:59:45.031Z | DATA_MESSAGE_SENT {"type":"new_message","message":{"id":1021,"channel":"DISPATCH__DISPATCH","sender":"DISPATCH-1","message_type":"audio","audio_url":"/api/messages/audio/DISPATCH__DISPATCH_1774457985016_DISPATCH_1.wav","audio_duration":3,"created_at":"2026-03-25T16:59:45.015Z"}}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T16:59:45.031Z | AUDIO_PROCESSING {"bytes":295680,"channel":"DISPATCH__DISPATCH","participant":"DISPATCH-1"}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T16:59:46.304Z | STT_RESULT {"transcript":"Central from this *****.","participant":"DISPATCH-1"}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T16:59:46.306Z | LLM_CLASSIFY_START {"participant":"DISPATCH-1","state":"IDLE","transcript":"Central from this *****."}
+0|command-comms  | [LLM-Intent] Classifying: unit=DISPATCH-1, state=IDLE, transcript="Central from this *****."
+0|command-comms  | [AI-Dispatcher] 2026-03-25T16:59:46.510Z | LLM_ERROR {"error":"404 The API deployment for this resource does not exist. If you created the deployment within the last 5 minutes, please wait a moment and try again."}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T16:59:46.510Z | LLM_FALLBACK_TO_REGEX {"participant":"DISPATCH-1"}
+0|command-comms  | [CommandMatcher] Unit: DISPATCH-1, State: IDLE, Transcript: "Central from this *****."
+0|command-comms  | [AI-Dispatcher] 2026-03-25T16:59:46.513Z | COMMAND_MATCHED {"transcript":"Central from this *****.","response":"DISPATCH-1, go ahead.","cadStatus":null}
+0|command-comms  | [Signaling] Grace period ended for DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T16:59:46.525Z | DISCONNECTING_IDLE {"channelId":"DISPATCH__DISPATCH"}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T16:59:46.526Z | DISCONNECT_TIMER_CLEARED {}
+0|command-comms  | [AudioRelay] Internal listener removed: AI-Dispatcher from channel DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher] 2026-03-25T16:59:46.526Z | CHANNEL_LEFT {"channel":"DISPATCH__DISPATCH"}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T16:59:46.681Z | PUBLISH_SKIPPED {"reason":"Not connected to channel"}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:00:06.544Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"DISPATCH-1","isEmergency":false}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:00:06.544Z | CONNECTING_FOR_PTT {"channelId":"DISPATCH__DISPATCH","unitId":"DISPATCH-1"}
+0|command-comms  | [Signaling] PTT START: DISPATCH-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:00:06.551Z | REJOIN_TRIGGERED {"channel":"DISPATCH__DISPATCH"}
+0|command-comms  | [AudioRelay] Internal listener added: AI-Dispatcher on channel DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:00:06.551Z | CHANNEL_JOINED {"channel":"DISPATCH__DISPATCH"}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:00:06.552Z | DISCONNECT_TIMER_STARTED {"graceMs":90000}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:00:06.552Z | CONNECTED_FOR_PTT {"channelId":"DISPATCH__DISPATCH","unitId":"DISPATCH-1"}
+0|command-comms  | [Signaling] PTT_READY sent for DISPATCH-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:00:06.552Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"DISPATCH-1","wasAlreadyConnected":false}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:00:06.712Z | AUDIO_BUFFERING_START {"participant":"DISPATCH-1","channel":"DISPATCH__DISPATCH"}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:00:10.199Z | PTT_END_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"DISPATCH-1","gracePeriodMs":3000}
+0|command-comms  | [Signaling] PTT END: DISPATCH-1 on DISPATCH__DISPATCH (3656ms)
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:00:11.698Z | AUDIO_IDLE_TIMEOUT {"participant":"DISPATCH-1","frameCount":176}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:00:11.699Z | AUDIO_BUFFERING_COMPLETE {"participant":"DISPATCH-1","frames":176,"bytes":337920}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:00:11.709Z | VOICE_MESSAGE_SAVED {"channel":"DISPATCH__DISPATCH","sender":"DISPATCH-1","filename":"DISPATCH__DISPATCH_1774458011699_DISPATCH_1.wav","duration":4}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:00:11.710Z | DATA_MESSAGE_SENT {"type":"new_message","message":{"id":1022,"channel":"DISPATCH__DISPATCH","sender":"DISPATCH-1","message_type":"audio","audio_url":"/api/messages/audio/DISPATCH__DISPATCH_1774458011699_DISPATCH_1.wav","audio_duration":4,"created_at":"2026-03-25T17:00:11.699Z"}}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:00:11.802Z | AUDIO_PROCESSING {"bytes":337920,"channel":"DISPATCH__DISPATCH","participant":"DISPATCH-1"}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:00:13.167Z | STT_RESULT {"transcript":"Test, test.","participant":"DISPATCH-1"}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:00:13.167Z | LLM_CLASSIFY_START {"participant":"DISPATCH-1","state":"AWAITING_COMMAND","transcript":"Test, test."}
+0|command-comms  | [LLM-Intent] Classifying: unit=DISPATCH-1, state=AWAITING_COMMAND, transcript="Test, test."
+0|command-comms  | [Signaling] Grace period ended for DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:00:13.200Z | DISCONNECTING_IDLE {"channelId":"DISPATCH__DISPATCH"}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:00:13.200Z | DISCONNECT_TIMER_CLEARED {}
+0|command-comms  | [AudioRelay] Internal listener removed: AI-Dispatcher from channel DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:00:13.200Z | CHANNEL_LEFT {"channel":"DISPATCH__DISPATCH"}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:00:13.277Z | LLM_ERROR {"error":"404 The API deployment for this resource does not exist. If you created the deployment within the last 5 minutes, please wait a moment and try again."}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:00:13.277Z | LLM_FALLBACK_TO_REGEX {"participant":"DISPATCH-1"}
+0|command-comms  | [CommandMatcher] Unit: DISPATCH-1, State: AWAITING_COMMAND, Transcript: "Test, test."
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:00:13.278Z | COMMAND_NO_MATCH {"transcript":"Test, test."}
+0|command-comms  | [AudioRelay] WS subscriber removed: DISPATCH-1 from channel DISPATCH__DISPATCH
+0|command-comms  | [WsAudioBridge] Client disconnected: DISPATCH-1 from channel DISPATCH__DISPATCH
+0|command-comms  | [AudioRelay] WS subscriber added: DISPATCH-1 on channel DISPATCH__DISPATCH
+0|command-comms  | [WsAudioBridge] Client connected: DISPATCH-1 on channel DISPATCH__DISPATCH
+0|command-comms  | [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=-ooGjbK-... | 200 | 22ms
+0|command-comms  | [AUTH] /me check: hasSession=true sessionID=-ooGjbK-... cookie=true
+0|command-comms  | [AUTH] /me: session has user="DISPATCH-1" id=7, refreshing from DB...
+0|command-comms  | [AUTH] /me: returning fresh user data for "DISPATCH-1" role=admin unit_id=DISPATCH-1
+0|command-comms  | [API] GET /api/auth/me | user=DISPATCH-1(id:7) | sid=-ooGjbK-... | 304 | 16ms
+0|command-comms  | [Signaling] Unit authenticated: DISPATCH-1 (DISPATCH-1) [session-verified]
+0|command-comms  | [Signaling] DISPATCH-1 joined channel DISPATCH__DISPATCH
+0|command-comms  | [AUTH] /me check: hasSession=true sessionID=-ooGjbK-... cookie=true
+0|command-comms  | [AUTH] /me: session has user="DISPATCH-1" id=7, refreshing from DB...
+0|command-comms  | [AUTH] /me: returning fresh user data for "DISPATCH-1" role=admin unit_id=DISPATCH-1
+0|command-comms  | [API] GET /api/auth/me | user=DISPATCH-1(id:7) | sid=-ooGjbK-... | 304 | 16ms
+0|command-comms  | [Signaling] Unit authenticated: DISPATCH-1 (DISPATCH-1) [session-verified]
+0|command-comms  | [Signaling] DISPATCH-1 joined channel DISPATCH__DISPATCH
+0|command-comms  | [AudioRelay] WS subscriber removed: DISPATCH-1 from channel DISPATCH__DISPATCH
+0|command-comms  | [WsAudioBridge] Client disconnected: DISPATCH-1 from channel DISPATCH__DISPATCH
+0|command-comms  | [AudioRelay] WS subscriber added: DISPATCH-1 on channel DISPATCH__DISPATCH
+0|command-comms  | [WsAudioBridge] Client connected: DISPATCH-1 on channel DISPATCH__DISPATCH
+0|command-comms  | [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=-ooGjbK-... | 200 | 23ms
+0|command-comms  | [AUTH] /me check: hasSession=true sessionID=-ooGjbK-... cookie=true
+0|command-comms  | [AUTH] /me: session has user="DISPATCH-1" id=7, refreshing from DB...
+0|command-comms  | [AUTH] /me: returning fresh user data for "DISPATCH-1" role=admin unit_id=DISPATCH-1
+0|command-comms  | [API] GET /api/auth/me | user=DISPATCH-1(id:7) | sid=-ooGjbK-... | 304 | 16ms
+0|command-comms  | [Signaling] Unit authenticated: DISPATCH-1 (DISPATCH-1) [session-verified]
+0|command-comms  | [Signaling] DISPATCH-1 joined channel DISPATCH__DISPATCH
+0|command-comms  | [AUTH] /me check: hasSession=true sessionID=-ooGjbK-... cookie=true
+0|command-comms  | [AUTH] /me: session has user="DISPATCH-1" id=7, refreshing from DB...
+0|command-comms  | [AUTH] /me: returning fresh user data for "DISPATCH-1" role=admin unit_id=DISPATCH-1
+0|command-comms  | [API] GET /api/auth/me | user=DISPATCH-1(id:7) | sid=-ooGjbK-... | 304 | 16ms
+0|command-comms  | [Signaling] Unit authenticated: DISPATCH-1 (DISPATCH-1) [session-verified]
+0|command-comms  | [Signaling] DISPATCH-1 joined channel DISPATCH__DISPATCH
+0|command-comms  | [Signaling] Unit disconnected: DISPATCH-1
+0|command-comms  | [AudioRelay] WS subscriber removed: DISPATCH-1 from channel DISPATCH__DISPATCH
+0|command-comms  | [WsAudioBridge] Client disconnected: DISPATCH-1 from channel DISPATCH__DISPATCH
+0|command-comms  | [AUTH] /me check: hasSession=true sessionID=-ooGjbK-... cookie=true
+0|command-comms  | [AUTH] /me: session has user="DISPATCH-1" id=7, refreshing from DB...
+0|command-comms  | [AUTH] /me: returning fresh user data for "DISPATCH-1" role=admin unit_id=DISPATCH-1
+0|command-comms  | [API] GET /api/auth/me | user=DISPATCH-1(id:7) | sid=-ooGjbK-... | 304 | 16ms
+0|command-comms  | [Signaling] Client connected: Mck4l4_UP6LnKPbMAAAF
+0|command-comms  | [Signaling] Unit authenticated: DISPATCH-1 (DISPATCH-1) [session-verified]
+0|command-comms  | [Signaling] Unit authenticated: DISPATCH-1 (DISPATCH-1) [session-verified]
+0|command-comms  | [DISPATCH] getChannels: 3 radio channels returned
+0|command-comms  | [API] GET /api/dispatch/channels | user=DISPATCH-1(id:7) | sid=-ooGjbK-... | 304 | 16ms
+0|command-comms  | [Signaling] DISPATCH-1 joined channel DISPATCH__DISPATCH
+0|command-comms  | [AudioRelay] WS subscriber added: DISPATCH-1 on channel DISPATCH__DISPATCH
+0|command-comms  | [WsAudioBridge] Client connected: DISPATCH-1 on channel DISPATCH__DISPATCH
+0|command-comms  | [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=-ooGjbK-... | 200 | 22ms
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:01:28.803Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"DISPATCH-1","isEmergency":false}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:01:28.803Z | CONNECTING_FOR_PTT {"channelId":"DISPATCH__DISPATCH","unitId":"DISPATCH-1"}
+0|command-comms  | [Signaling] PTT START: DISPATCH-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:01:28.810Z | REJOIN_TRIGGERED {"channel":"DISPATCH__DISPATCH"}
+0|command-comms  | [AudioRelay] Internal listener added: AI-Dispatcher on channel DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:01:28.810Z | CHANNEL_JOINED {"channel":"DISPATCH__DISPATCH"}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:01:28.811Z | DISCONNECT_TIMER_STARTED {"graceMs":90000}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:01:28.811Z | CONNECTED_FOR_PTT {"channelId":"DISPATCH__DISPATCH","unitId":"DISPATCH-1"}
+0|command-comms  | [Signaling] PTT_READY sent for DISPATCH-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:01:28.811Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"DISPATCH-1","wasAlreadyConnected":false}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:01:29.098Z | AUDIO_BUFFERING_START {"participant":"DISPATCH-1","channel":"DISPATCH__DISPATCH"}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:01:30.904Z | PTT_END_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"DISPATCH-1","gracePeriodMs":3000}
+0|command-comms  | [Signaling] PTT END: DISPATCH-1 on DISPATCH__DISPATCH (2100ms)
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:01:32.372Z | AUDIO_IDLE_TIMEOUT {"participant":"DISPATCH-1","frameCount":90}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:01:32.372Z | AUDIO_BUFFERING_COMPLETE {"participant":"DISPATCH-1","frames":90,"bytes":172800}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:01:32.383Z | VOICE_MESSAGE_SAVED {"channel":"DISPATCH__DISPATCH","sender":"DISPATCH-1","filename":"DISPATCH__DISPATCH_1774458092373_DISPATCH_1.wav","duration":2}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:01:32.384Z | DATA_MESSAGE_SENT {"type":"new_message","message":{"id":1023,"channel":"DISPATCH__DISPATCH","sender":"DISPATCH-1","message_type":"audio","audio_url":"/api/messages/audio/DISPATCH__DISPATCH_1774458092373_DISPATCH_1.wav","audio_duration":2,"created_at":"2026-03-25T17:01:32.372Z"}}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:01:32.387Z | AUDIO_PROCESSING {"bytes":172800,"channel":"DISPATCH__DISPATCH","participant":"DISPATCH-1"}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:01:33.143Z | STT_RESULT {"transcript":"Test, test, test.","participant":"DISPATCH-1"}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:01:33.143Z | LLM_CLASSIFY_START {"participant":"DISPATCH-1","state":"AWAITING_COMMAND","transcript":"Test, test, test."}
+0|command-comms  | [LLM-Intent] Classifying: unit=DISPATCH-1, state=AWAITING_COMMAND, transcript="Test, test, test."
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:01:33.253Z | LLM_ERROR {"error":"404 The API deployment for this resource does not exist. If you created the deployment within the last 5 minutes, please wait a moment and try again."}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:01:33.253Z | LLM_FALLBACK_TO_REGEX {"participant":"DISPATCH-1"}
+0|command-comms  | [CommandMatcher] Unit: DISPATCH-1, State: AWAITING_COMMAND, Transcript: "Test, test, test."
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:01:33.253Z | COMMAND_NO_MATCH {"transcript":"Test, test, test."}
+0|command-comms  | [Signaling] Grace period ended for DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:01:33.904Z | DISCONNECTING_IDLE {"channelId":"DISPATCH__DISPATCH"}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:01:33.904Z | DISCONNECT_TIMER_CLEARED {}
+0|command-comms  | [AudioRelay] Internal listener removed: AI-Dispatcher from channel DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:01:33.904Z | CHANNEL_LEFT {"channel":"DISPATCH__DISPATCH"}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:01:43.159Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"DISPATCH-1","isEmergency":false}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:01:43.159Z | CONNECTING_FOR_PTT {"channelId":"DISPATCH__DISPATCH","unitId":"DISPATCH-1"}
+0|command-comms  | [Signaling] PTT START: DISPATCH-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:01:43.166Z | REJOIN_TRIGGERED {"channel":"DISPATCH__DISPATCH"}
+0|command-comms  | [AudioRelay] Internal listener added: AI-Dispatcher on channel DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:01:43.166Z | CHANNEL_JOINED {"channel":"DISPATCH__DISPATCH"}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:01:43.166Z | DISCONNECT_TIMER_STARTED {"graceMs":90000}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:01:43.166Z | CONNECTED_FOR_PTT {"channelId":"DISPATCH__DISPATCH","unitId":"DISPATCH-1"}
+0|command-comms  | [Signaling] PTT_READY sent for DISPATCH-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:01:43.167Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"DISPATCH-1","wasAlreadyConnected":false}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:01:43.325Z | AUDIO_BUFFERING_START {"participant":"DISPATCH-1","channel":"DISPATCH__DISPATCH"}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:01:45.581Z | PTT_END_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"DISPATCH-1","gracePeriodMs":3000}
+0|command-comms  | [Signaling] PTT END: DISPATCH-1 on DISPATCH__DISPATCH (2422ms)
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:01:47.057Z | AUDIO_IDLE_TIMEOUT {"participant":"DISPATCH-1","frameCount":113}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:01:47.057Z | AUDIO_BUFFERING_COMPLETE {"participant":"DISPATCH-1","frames":113,"bytes":216960}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:01:47.067Z | VOICE_MESSAGE_SAVED {"channel":"DISPATCH__DISPATCH","sender":"DISPATCH-1","filename":"DISPATCH__DISPATCH_1774458107058_DISPATCH_1.wav","duration":2}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:01:47.067Z | DATA_MESSAGE_SENT {"type":"new_message","message":{"id":1024,"channel":"DISPATCH__DISPATCH","sender":"DISPATCH-1","message_type":"audio","audio_url":"/api/messages/audio/DISPATCH__DISPATCH_1774458107058_DISPATCH_1.wav","audio_duration":2,"created_at":"2026-03-25T17:01:47.057Z"}}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:01:47.163Z | AUDIO_PROCESSING {"bytes":216960,"channel":"DISPATCH__DISPATCH","participant":"DISPATCH-1"}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:01:48.105Z | STT_RESULT {"transcript":"Central from dispatch.","participant":"DISPATCH-1"}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:01:48.105Z | LLM_CLASSIFY_START {"participant":"DISPATCH-1","state":"AWAITING_COMMAND","transcript":"Central from dispatch."}
+0|command-comms  | [LLM-Intent] Classifying: unit=DISPATCH-1, state=AWAITING_COMMAND, transcript="Central from dispatch."
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:01:48.230Z | LLM_ERROR {"error":"404 The API deployment for this resource does not exist. If you created the deployment within the last 5 minutes, please wait a moment and try again."}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:01:48.230Z | LLM_FALLBACK_TO_REGEX {"participant":"DISPATCH-1"}
+0|command-comms  | [CommandMatcher] Unit: DISPATCH-1, State: AWAITING_COMMAND, Transcript: "Central from dispatch."
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:01:48.231Z | COMMAND_MATCHED {"transcript":"Central from dispatch.","response":"DISPATCH-1, go ahead.","cadStatus":null}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:01:48.481Z | AUDIO_STREAMING {"opusFrames":127,"channel":"DISPATCH__DISPATCH"}
+0|command-comms  | [Signaling] Grace period ended for DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:01:48.581Z | DISCONNECTING_IDLE {"channelId":"DISPATCH__DISPATCH"}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:01:48.581Z | DISCONNECT_TIMER_CLEARED {}
+0|command-comms  | [AudioRelay] Internal listener removed: AI-Dispatcher from channel DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:01:48.581Z | CHANNEL_LEFT {"channel":"DISPATCH__DISPATCH"}
+0|command-comms  | [AudioRelay] injectAudio dropped: AI-Dispatcher does not hold floor on null
+0|command-comms  | [AudioRelay] injectAudio dropped: AI-Dispatcher does not hold floor on null
+0|command-comms  | [AudioRelay] WS subscriber removed: DISPATCH-1 from channel DISPATCH__DISPATCH
+0|command-comms  | [WsAudioBridge] Client disconnected: DISPATCH-1 from channel DISPATCH__DISPATCH
+0|command-comms  | [AudioRelay] WS subscriber added: DISPATCH-1 on channel DISPATCH__DISPATCH
+0|command-comms  | [WsAudioBridge] Client connected: DISPATCH-1 on channel DISPATCH__DISPATCH
+0|command-comms  | [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=-ooGjbK-... | 200 | 21ms
+0|command-comms  | [FloorControl] Timeout: released floor on DISPATCH__DISPATCH from AI-Dispatcher
+0|command-comms  | [Signaling] Floor timeout: AI-Dispatcher on DISPATCH__DISPATCH
+0|command-comms  | [AudioRelay] WS subscriber removed: DISPATCH-1 from channel DISPATCH__DISPATCH
+0|command-comms  | [WsAudioBridge] Client disconnected: DISPATCH-1 from channel DISPATCH__DISPATCH
+0|command-comms  | [AudioRelay] WS subscriber added: DISPATCH-1 on channel DISPATCH__DISPATCH
+0|command-comms  | [WsAudioBridge] Client connected: DISPATCH-1 on channel DISPATCH__DISPATCH
+0|command-comms  | [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=-ooGjbK-... | 200 | 20ms
+0|command-comms  | [AudioRelay] WS subscriber removed: DISPATCH-1 from channel DISPATCH__DISPATCH
+0|command-comms  | [WsAudioBridge] Client disconnected: DISPATCH-1 from channel DISPATCH__DISPATCH
+0|command-comms  | [AudioRelay] WS subscriber added: DISPATCH-1 on channel DISPATCH__DISPATCH
+0|command-comms  | [WsAudioBridge] Client connected: DISPATCH-1 on channel DISPATCH__DISPATCH
+0|command-comms  | [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=-ooGjbK-... | 200 | 22ms
+0|command-comms  | [AudioRelay] WS subscriber removed: DISPATCH-1 from channel DISPATCH__DISPATCH
+0|command-comms  | [WsAudioBridge] Client disconnected: DISPATCH-1 from channel DISPATCH__DISPATCH
+0|command-comms  | [AudioRelay] WS subscriber added: DISPATCH-1 on channel DISPATCH__DISPATCH
+0|command-comms  | [WsAudioBridge] Client connected: DISPATCH-1 on channel DISPATCH__DISPATCH
+0|command-comms  | [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=-ooGjbK-... | 200 | 20ms
+0|command-comms  | [AudioRelay] WS subscriber removed: DISPATCH-1 from channel DISPATCH__DISPATCH
+0|command-comms  | [WsAudioBridge] Client disconnected: DISPATCH-1 from channel DISPATCH__DISPATCH
+0|command-comms  | [AudioRelay] WS subscriber added: DISPATCH-1 on channel DISPATCH__DISPATCH
+0|command-comms  | [WsAudioBridge] Client connected: DISPATCH-1 on channel DISPATCH__DISPATCH
+0|command-comms  | [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=-ooGjbK-... | 200 | 24ms
+0|command-comms  | [AudioRelay] WS subscriber removed: DISPATCH-1 from channel DISPATCH__DISPATCH
+0|command-comms  | [WsAudioBridge] Client disconnected: DISPATCH-1 from channel DISPATCH__DISPATCH
+0|command-comms  | [AudioRelay] WS subscriber added: DISPATCH-1 on channel DISPATCH__DISPATCH
+0|command-comms  | [WsAudioBridge] Client connected: DISPATCH-1 on channel DISPATCH__DISPATCH
+0|command-comms  | [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=-ooGjbK-... | 200 | 23ms
+0|command-comms  | [AudioRelay] WS subscriber removed: DISPATCH-1 from channel DISPATCH__DISPATCH
+0|command-comms  | [WsAudioBridge] Client disconnected: DISPATCH-1 from channel DISPATCH__DISPATCH
+0|command-comms  | [AudioRelay] WS subscriber added: DISPATCH-1 on channel DISPATCH__DISPATCH
+0|command-comms  | [WsAudioBridge] Client connected: DISPATCH-1 on channel DISPATCH__DISPATCH
+0|command-comms  | [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=-ooGjbK-... | 200 | 22ms
+0|command-comms  | [AudioRelay] WS subscriber removed: DISPATCH-1 from channel DISPATCH__DISPATCH
+0|command-comms  | [WsAudioBridge] Client disconnected: DISPATCH-1 from channel DISPATCH__DISPATCH
+0|command-comms  | [AudioRelay] WS subscriber added: DISPATCH-1 on channel DISPATCH__DISPATCH
+0|command-comms  | [WsAudioBridge] Client connected: DISPATCH-1 on channel DISPATCH__DISPATCH
+0|command-comms  | [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=-ooGjbK-... | 200 | 21ms
+0|command-comms  | [AUTH] /me check: hasSession=false sessionID=HNnS7-9d... cookie=false
+0|command-comms  | [AUTH] /me: no session user, returning 401
+0|command-comms  | [API] GET /api/auth/me | session=none | sid=HNnS7-9d... | 401 | 1ms
+0|command-comms  | [AudioRelay] WS subscriber removed: DISPATCH-1 from channel DISPATCH__DISPATCH
+0|command-comms  | [WsAudioBridge] Client disconnected: DISPATCH-1 from channel DISPATCH__DISPATCH
+0|command-comms  | [AudioRelay] WS subscriber added: DISPATCH-1 on channel DISPATCH__DISPATCH
+0|command-comms  | [WsAudioBridge] Client connected: DISPATCH-1 on channel DISPATCH__DISPATCH
+0|command-comms  | [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=-ooGjbK-... | 200 | 22ms
+0|command-comms  | [AUTH] /me check: hasSession=true sessionID=-ooGjbK-... cookie=true
+0|command-comms  | [AUTH] /me: session has user="DISPATCH-1" id=7, refreshing from DB...
+0|command-comms  | [AUTH] /me: returning fresh user data for "DISPATCH-1" role=admin unit_id=DISPATCH-1
+0|command-comms  | [API] GET /api/auth/me | user=DISPATCH-1(id:7) | sid=-ooGjbK-... | 304 | 14ms
+0|command-comms  | [Signaling] Unit authenticated: DISPATCH-1 (DISPATCH-1) [session-verified]
+0|command-comms  | [Signaling] DISPATCH-1 joined channel DISPATCH__DISPATCH
+0|command-comms  | [DISPATCH] getUnits: 0 units returned | user=DISPATCH-1 | sessionID=-ooGjbK-... (logged 1/60)
+0|command-comms  | [API] GET /api/dispatch/units | user=DISPATCH-1(id:7) | sid=-ooGjbK-... | 304 | 15ms (logged 1/60)
+0|command-comms  | [AUTH] Login attempt: username="Jreeder5029"
+0|command-comms  | [AUTH] Login success: username="Jreeder5029" id=2 role=admin unit_id=INDIANA-1 is_dispatcher=true sessionID=KgSm7nvd...
+0|command-comms  | [API] POST /api/auth/login | session=none | sid=KgSm7nvd... | 200 | 147ms
+0|command-comms  | [API] GET /api/radio/config | user=Jreeder5029(id:2) | sid=KgSm7nvd... | 200 | 9ms
+0|command-comms  | [API /channels] Request from user="Jreeder5029" id=2 role=admin sessionID=KgSm7nvd...
+0|command-comms  | [CHANNELS] DB returned 3 total channels
+0|command-comms  | [CHANNELS] 3 enabled channels (0 disabled)
+0|command-comms  | [CHANNELS] Admin user (id=2) gets all 3 enabled channels
+0|command-comms  | [API /channels] Returning 3 channels to "Jreeder5029" — names: [DISPATCH__DISPATCH, OPS__OPS-1, PHILADELPHIA__OPS-1]
+0|command-comms  | [API] GET /api/channels | user=Jreeder5029(id:2) | sid=KgSm7nvd... | 200 | 16ms
+0|command-comms  | [Signaling] Client connected: cR3BASadPLnZYjwpAAAH
+0|command-comms  | [Signaling] Unit authenticated: INDIANA-1 (Jreeder5029) [client-claimed]
+0|command-comms  | [Signaling] INDIANA-1 joined channel DISPATCH__DISPATCH
+0|command-comms  | [Signaling] INDIANA-1 joined channel DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:32.033Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:32.034Z | CONNECTING_FOR_PTT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1"}
+0|command-comms  | [PTT-HTTP] PTT START: INDIANA-1 on chDISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:09:32.041Z | REJOIN_TRIGGERED {"channel":"DISPATCH__DISPATCH"}
+0|command-comms  | [AudioRelay] Internal listener added: AI-Dispatcher on channel DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:09:32.041Z | CHANNEL_JOINED {"channel":"DISPATCH__DISPATCH"}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:09:32.041Z | DISCONNECT_TIMER_STARTED {"graceMs":90000}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:32.041Z | CONNECTED_FOR_PTT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1"}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:32.042Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":false}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:32.075Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:32.075Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT granted: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [API] POST /api/ptt/start | user=Jreeder5029(id:2) | sid=KgSm7nvd... | 200 | 100ms
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:32.294Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:32.294Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:32.504Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:32.504Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:32.653Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:32.654Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:32.769Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:32.769Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:32.886Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:32.886Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:33.026Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:33.027Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AudioRelay] WS subscriber removed: DISPATCH-1 from channel DISPATCH__DISPATCH
+0|command-comms  | [WsAudioBridge] Client disconnected: DISPATCH-1 from channel DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:33.144Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:33.144Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:33.339Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:33.340Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:33.476Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:33.477Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:33.644Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:33.645Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:33.846Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:33.846Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:33.949Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:33.949Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:34.116Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:34.116Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:34.314Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:34.314Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:34.472Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:34.472Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:34.667Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:34.667Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [Signaling] TX stop ack: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:34.765Z | PTT_END_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","gracePeriodMs":3000}
+0|command-comms  | [PTT-HTTP] PTT END: INDIANA-1 on chDISPATCH__DISPATCH (98ms)
+0|command-comms  | [API] POST /api/ptt/end | user=Jreeder5029(id:2) | sid=KgSm7nvd... | 200 | 17ms
+0|command-comms  | [Signaling] TX stop ack: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AudioRelay] WS subscriber added: DISPATCH-1 on channel DISPATCH__DISPATCH
+0|command-comms  | [WsAudioBridge] Client connected: DISPATCH-1 on channel DISPATCH__DISPATCH
+0|command-comms  | [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=-ooGjbK-... | 200 | 21ms
+0|command-comms  | [AUTH] /me check: hasSession=true sessionID=-ooGjbK-... cookie=true
+0|command-comms  | [AUTH] /me: session has user="DISPATCH-1" id=7, refreshing from DB...
+0|command-comms  | [AUTH] /me: returning fresh user data for "DISPATCH-1" role=admin unit_id=DISPATCH-1
+0|command-comms  | [API] GET /api/auth/me | user=DISPATCH-1(id:7) | sid=-ooGjbK-... | 304 | 15ms
+0|command-comms  | [Signaling] Unit authenticated: DISPATCH-1 (DISPATCH-1) [session-verified]
+0|command-comms  | [Signaling] DISPATCH-1 joined channel DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:37.765Z | DISCONNECTING_IDLE {"channelId":"DISPATCH__DISPATCH"}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:09:37.766Z | DISCONNECT_TIMER_CLEARED {}
+0|command-comms  | [AudioRelay] Internal listener removed: AI-Dispatcher from channel DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:09:37.766Z | CHANNEL_LEFT {"channel":"DISPATCH__DISPATCH"}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:37.877Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:37.877Z | CONNECTING_FOR_PTT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1"}
+0|command-comms  | [PTT-HTTP] PTT START: INDIANA-1 on chDISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:09:37.884Z | REJOIN_TRIGGERED {"channel":"DISPATCH__DISPATCH"}
+0|command-comms  | [AudioRelay] Internal listener added: AI-Dispatcher on channel DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:09:37.885Z | CHANNEL_JOINED {"channel":"DISPATCH__DISPATCH"}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:09:37.885Z | DISCONNECT_TIMER_STARTED {"graceMs":90000}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:37.885Z | CONNECTED_FOR_PTT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1"}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:37.885Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":false}
+0|command-comms  | [API] POST /api/ptt/start | user=Jreeder5029(id:2) | sid=KgSm7nvd... | 200 | 16ms
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:37.909Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:37.909Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT granted: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:38.086Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:38.086Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:38.309Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:38.309Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:38.487Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:38.487Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:38.639Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:38.640Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:38.774Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:38.774Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:39.006Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:39.006Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:39.139Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:39.139Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:39.319Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:39.319Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:39.474Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:39.474Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:39.628Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:39.629Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:39.934Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:39.934Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:40.066Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:40.066Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [Signaling] Unit disconnected: INDIANA-1
+0|command-comms  | [Signaling] Client connected: p6pA463nTG_QwF-WAAAJ
+0|command-comms  | [Signaling] Unit authenticated: INDIANA-1 (Jreeder5029) [client-claimed]
+0|command-comms  | [Signaling] INDIANA-1 joined channel DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:49.216Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:49.216Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT granted: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:49.419Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:49.419Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:49.698Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:49.699Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:49.732Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:49.732Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [PTT-HTTP] PTT START: INDIANA-1 on chDISPATCH__DISPATCH
+0|command-comms  | [API] POST /api/ptt/start | user=Jreeder5029(id:2) | sid=KgSm7nvd... | 200 | 17ms
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:49.916Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:49.916Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:50.099Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:50.099Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:50.274Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:50.274Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:50.406Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:50.406Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:50.646Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:50.647Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:50.839Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:50.839Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:51.114Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:51.114Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:51.323Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:51.324Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:51.514Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:51.514Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:51.724Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:51.724Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:51.884Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:09:51.884Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [Signaling] Unit disconnected: INDIANA-1
+0|command-comms  | [Signaling] Client connected: OoDbx1JWU7fPc5zyAAAL
+0|command-comms  | [Signaling] Unit authenticated: INDIANA-1 (Jreeder5029) [client-claimed]
+0|command-comms  | [Signaling] INDIANA-1 joined channel DISPATCH__DISPATCH
+0|command-comms  | [API /channels] Request from user="Jreeder5029" id=2 role=admin sessionID=KgSm7nvd...
+0|command-comms  | [CHANNELS] DB returned 3 total channels
+0|command-comms  | [CHANNELS] 3 enabled channels (0 disabled)
+0|command-comms  | [CHANNELS] Admin user (id=2) gets all 3 enabled channels
+0|command-comms  | [API /channels] Returning 3 channels to "Jreeder5029" — names: [DISPATCH__DISPATCH, OPS__OPS-1, PHILADELPHIA__OPS-1]
+0|command-comms  | [API] GET /api/channels | user=Jreeder5029(id:2) | sid=KgSm7nvd... | 200 | 16ms
+0|command-comms  | [Signaling] INDIANA-1 joined channel DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:04.219Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:04.219Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [PTT-HTTP] PTT START: INDIANA-1 on chDISPATCH__DISPATCH
+0|command-comms  | [API] POST /api/ptt/start | user=Jreeder5029(id:2) | sid=KgSm7nvd... | 200 | 17ms
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:04.255Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:04.255Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT granted: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:04.436Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:04.436Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:04.737Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:04.737Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:04.918Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:04.919Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:05.086Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:05.086Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:05.239Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:05.240Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:05.366Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:05.366Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:05.535Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:05.535Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:05.668Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:05.668Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:05.854Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:05.855Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:06.100Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:06.100Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:06.205Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:06.205Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:06.349Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:06.349Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:06.469Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:06.470Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:06.646Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:06.647Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:06.734Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:06.734Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:06.954Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:06.955Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:07.078Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:07.078Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:07.235Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:07.235Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:07.399Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:07.400Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:07.500Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:07.501Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:07.604Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:07.605Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:07.840Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:07.841Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:08.010Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:08.010Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:08.105Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:08.105Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:08.209Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:08.210Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:08.310Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:08.310Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:08.399Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:08.399Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:08.529Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:08.530Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:08.674Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:08.675Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:08.819Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:08.819Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:08.929Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:08.930Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:09.020Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:09.020Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:09.155Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:09.155Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:09.245Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:09.245Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:09.340Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:09.340Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:09.444Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:09.445Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:09.564Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:09.565Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:09.654Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:09.655Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:09.797Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:09.798Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:09.909Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:09.910Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:10.034Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:10.035Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:10.124Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:10.124Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:10.249Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:10.249Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:10.359Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:10.360Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:10.452Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:10.453Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:10.549Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:10.550Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:10.696Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:10.697Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [Signaling] Unit disconnected: INDIANA-1
+0|command-comms  | [AudioRelay] WS subscriber removed: DISPATCH-1 from channel DISPATCH__DISPATCH
+0|command-comms  | [WsAudioBridge] Client disconnected: DISPATCH-1 from channel DISPATCH__DISPATCH
+0|command-comms  | [AudioRelay] WS subscriber added: DISPATCH-1 on channel DISPATCH__DISPATCH
+0|command-comms  | [WsAudioBridge] Client connected: DISPATCH-1 on channel DISPATCH__DISPATCH
+0|command-comms  | [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=-ooGjbK-... | 200 | 22ms
+0|command-comms  | [Signaling] Client connected: Ai6mnRRrfqa150xVAAAN
+0|command-comms  | [Signaling] Unit authenticated: INDIANA-1 (Jreeder5029) [client-claimed]
+0|command-comms  | [Signaling] INDIANA-1 joined channel DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:28.174Z | EMERGENCY_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1"}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:28.174Z | EMERGENCY_ESCALATION_WAITING {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","delayMs":3000}
+0|command-comms  | [Signaling] Auto GPS track_start for emergency unit INDIANA-1
+0|command-comms  | [Signaling] EMERGENCY START: INDIANA-1 on DISPATCH__DISPATCH - Force connect broadcast sent
+0|command-comms  | [API] GET /api/ptt/token?identity=INDIANA-1&room=DISPATCH__DISPATCH | user=Jreeder5029(id:2) | sid=KgSm7nvd... | 410 | 8ms
+0|command-comms  | [Emergency-Escalation] 2026-03-25T17:10:31.175Z | ESCALATION_STARTED {"unitId":"INDIANA-1","channel":"DISPATCH__DISPATCH"}
+0|command-comms  | [Emergency-Escalation] 2026-03-25T17:10:31.176Z | STATUS_CHECK_ATTEMPT {"unitId":"INDIANA-1","attempt":1}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:10:31.176Z | TONE_SPEAK_START {"toneType":"A","message":"INDIANA-1, status check."}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:10:31.177Z | DATA_MESSAGE_SENT {"type":"ai-playback-start"}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:10:31.432Z | AUDIO_STREAMING {"opusFrames":125,"channel":"DISPATCH__DISPATCH"}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:10:35.591Z | AUDIO_STREAMING {"opusFrames":139,"channel":"DISPATCH__DISPATCH"}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:38.547Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":true}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:38.547Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [PTT-HTTP] PTT START: INDIANA-1 on chDISPATCH__DISPATCH
+0|command-comms  | [API] POST /api/ptt/start | user=Jreeder5029(id:2) | sid=KgSm7nvd... | 200 | 16ms
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:38.569Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":true}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:38.569Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT granted: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:38.760Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":true}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:38.760Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:38.936Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":true}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:38.936Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:39.074Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":true}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:39.074Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:39.224Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":true}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:39.224Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:39.399Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":true}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:39.399Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:39.565Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":true}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:39.565Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:39.694Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":true}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:39.694Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:10:39.794Z | DATA_MESSAGE_SENT {"type":"ai-playback-end"}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:10:39.794Z | TONE_SPEAK_COMPLETE {"toneType":"A","message":"INDIANA-1, status check."}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:39.794Z | EMERGENCY_ESCALATION_TRIGGERED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1"}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:39.879Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":true}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:39.879Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:40.004Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":true}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:40.004Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:40.143Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":true}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:40.144Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:40.294Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":true}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:40.295Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:40.579Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":true}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:40.579Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:40.684Z | PTT_END_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","gracePeriodMs":3000}
+0|command-comms  | [PTT-HTTP] PTT END: INDIANA-1 on chDISPATCH__DISPATCH (106ms)
+0|command-comms  | [API] POST /api/ptt/end | user=Jreeder5029(id:2) | sid=KgSm7nvd... | 200 | 18ms
+0|command-comms  | [Signaling] TX stop ack: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [Signaling] TX stop ack: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [API /channels] Request from user="Jreeder5029" id=2 role=admin sessionID=KgSm7nvd...
+0|command-comms  | [CHANNELS] DB returned 3 total channels
+0|command-comms  | [CHANNELS] 3 enabled channels (0 disabled)
+0|command-comms  | [CHANNELS] Admin user (id=2) gets all 3 enabled channels
+0|command-comms  | [API /channels] Returning 3 channels to "Jreeder5029" — names: [DISPATCH__DISPATCH, OPS__OPS-1, PHILADELPHIA__OPS-1]
+0|command-comms  | [API] GET /api/channels | user=Jreeder5029(id:2) | sid=KgSm7nvd... | 200 | 17ms
+0|command-comms  | [Signaling] INDIANA-1 joined channel DISPATCH__DISPATCH
+0|command-comms  | [Emergency-Escalation] 2026-03-25T17:10:44.795Z | STATUS_CHECK_TIMEOUT {"unitId":"INDIANA-1","attempt":1}
+0|command-comms  | [Emergency-Escalation] 2026-03-25T17:10:44.796Z | STATUS_CHECK_ATTEMPT {"unitId":"INDIANA-1","attempt":2}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:10:44.796Z | TONE_SPEAK_START {"toneType":"A","message":"INDIANA-1, status check."}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:10:44.796Z | DATA_MESSAGE_SENT {"type":"ai-playback-start"}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:10:45.044Z | AUDIO_STREAMING {"opusFrames":125,"channel":"DISPATCH__DISPATCH"}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:10:49.152Z | AUDIO_STREAMING {"opusFrames":139,"channel":"DISPATCH__DISPATCH"}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:10:53.355Z | DATA_MESSAGE_SENT {"type":"ai-playback-end"}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:10:53.355Z | TONE_SPEAK_COMPLETE {"toneType":"A","message":"INDIANA-1, status check."}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:57.695Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":true}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:57.695Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [PTT-HTTP] PTT START: INDIANA-1 on chDISPATCH__DISPATCH
+0|command-comms  | [API] POST /api/ptt/start | user=Jreeder5029(id:2) | sid=KgSm7nvd... | 200 | 19ms
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:57.714Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":true}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:57.714Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT granted: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:57.863Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":true}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:57.864Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:58.134Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":true}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:58.134Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:58.284Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":true}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:58.284Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [Emergency-Escalation] 2026-03-25T17:10:58.356Z | STATUS_CHECK_TIMEOUT {"unitId":"INDIANA-1","attempt":2}
+0|command-comms  | [Emergency-Escalation] 2026-03-25T17:10:58.356Z | NO_RESPONSE_BROADCAST {"unitId":"INDIANA-1"}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:10:58.356Z | TONE_SPEAK_START {"toneType":"CONTINUOUS","message":"Attention all receiving units, INDIANA-1 pressed their emergency key with no response."}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:10:58.357Z | DATA_MESSAGE_SENT {"type":"ai-playback-start"}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:58.404Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":true}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:58.404Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:10:58.612Z | AUDIO_STREAMING {"opusFrames":150,"channel":"DISPATCH__DISPATCH"}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:10:58.612Z | PUBLISH_SKIPPED {"reason":"Floor busy","heldBy":"INDIANA-1"}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:58.613Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":true}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:58.613Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:58.819Z | PTT_END_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","gracePeriodMs":3000}
+0|command-comms  | [PTT-HTTP] PTT END: INDIANA-1 on chDISPATCH__DISPATCH (205ms)
+0|command-comms  | [Signaling] TX stop ack: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [API] POST /api/ptt/end | user=Jreeder5029(id:2) | sid=KgSm7nvd... | 200 | 16ms
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:58.923Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":true}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:10:58.924Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:10:59.239Z | AUDIO_STREAMING {"opusFrames":281,"channel":"DISPATCH__DISPATCH"}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:10:59.239Z | PUBLISH_SKIPPED {"reason":"Floor busy","heldBy":"INDIANA-1"}
+0|command-comms  | [Signaling] TX stop ack: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:10:59.539Z | DATA_MESSAGE_SENT {"type":"ai-playback-end"}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:10:59.539Z | TONE_SPEAK_COMPLETE {"toneType":"CONTINUOUS","message":"Attention all receiving units, INDIANA-1 pressed their emergency key with no response."}
+0|command-comms  | [CAD] Broadcast (emergency): EMERGENCY: INDIANA-1 pressed emergency key with NO RESPONSE
+0|command-comms  | [Emergency-Escalation] 2026-03-25T17:10:59.754Z | CAD_BROADCAST_SENT {"unitId":"INDIANA-1","message":"EMERGENCY: INDIANA-1 pressed emergency key with NO RESPONSE","priority":"emergency","success":true}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:10:59.755Z | DATA_MESSAGE_SENT {"type":"emergency_ack","targetUnit":"INDIANA-1","channel":"DISPATCH__DISPATCH","timestamp":1774458659755,"reason":"escalation_complete"}
+0|command-comms  | [Emergency-Escalation] 2026-03-25T17:10:59.755Z | EMERGENCY_ACK_SENT {"targetUnit":"INDIANA-1","reason":"escalation_complete"}
+0|command-comms  | [Emergency-Escalation] 2026-03-25T17:10:59.755Z | ESCALATION_CLEARED {"unitId":"INDIANA-1"}
+0|command-comms  | [Signaling] Unit disconnected: INDIANA-1
+0|command-comms  | [Signaling] Client connected: pZTuFzLKN_Ifz5fcAAAP
+0|command-comms  | [Signaling] Unit authenticated: INDIANA-1 (Jreeder5029) [client-claimed]
+0|command-comms  | [Signaling] INDIANA-1 joined channel DISPATCH__DISPATCH
+0|command-comms  | [API /channels] Request from user="Jreeder5029" id=2 role=admin sessionID=KgSm7nvd...
+0|command-comms  | [CHANNELS] DB returned 3 total channels
+0|command-comms  | [CHANNELS] 3 enabled channels (0 disabled)
+0|command-comms  | [CHANNELS] Admin user (id=2) gets all 3 enabled channels
+0|command-comms  | [API /channels] Returning 3 channels to "Jreeder5029" — names: [DISPATCH__DISPATCH, OPS__OPS-1, PHILADELPHIA__OPS-1]
+0|command-comms  | [API] GET /api/channels | user=Jreeder5029(id:2) | sid=KgSm7nvd... | 200 | 16ms
+0|command-comms  | [Signaling] INDIANA-1 joined channel DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:11:07.886Z | DISCONNECT_TIMER_EXPIRED {"reason":"No humans on channel"}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:11:07.886Z | DISCONNECT_TIMER_CLEARED {}
+0|command-comms  | [AudioRelay] Internal listener removed: AI-Dispatcher from channel DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:11:07.886Z | CHANNEL_LEFT {"channel":"DISPATCH__DISPATCH"}
+0|command-comms  | [AudioRelay] WS subscriber removed: DISPATCH-1 from channel DISPATCH__DISPATCH
+0|command-comms  | [WsAudioBridge] Client disconnected: DISPATCH-1 from channel DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:11:10.816Z | EMERGENCY_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1"}
+0|command-comms  | [Signaling] Auto GPS track_start for emergency unit INDIANA-1
+0|command-comms  | [Signaling] EMERGENCY START: INDIANA-1 on DISPATCH__DISPATCH - Force connect broadcast sent
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:11:10.823Z | REJOIN_TRIGGERED {"channel":"DISPATCH__DISPATCH"}
+0|command-comms  | [AudioRelay] Internal listener added: AI-Dispatcher on channel DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:11:10.824Z | CHANNEL_JOINED {"channel":"DISPATCH__DISPATCH"}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:11:10.824Z | DISCONNECT_TIMER_STARTED {"graceMs":90000}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:11:10.824Z | EMERGENCY_ESCALATION_WAITING {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","delayMs":3000}
+0|command-comms  | [API] GET /api/ptt/token?identity=INDIANA-1&room=DISPATCH__DISPATCH | user=Jreeder5029(id:2) | sid=KgSm7nvd... | 410 | 9ms
+0|command-comms  | [AudioRelay] WS subscriber added: DISPATCH-1 on channel DISPATCH__DISPATCH
+0|command-comms  | [WsAudioBridge] Client connected: DISPATCH-1 on channel DISPATCH__DISPATCH
+0|command-comms  | [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=-ooGjbK-... | 200 | 23ms
+0|command-comms  | [Emergency-Escalation] 2026-03-25T17:11:13.825Z | ESCALATION_STARTED {"unitId":"INDIANA-1","channel":"DISPATCH__DISPATCH"}
+0|command-comms  | [Emergency-Escalation] 2026-03-25T17:11:13.826Z | STATUS_CHECK_ATTEMPT {"unitId":"INDIANA-1","attempt":1}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:11:13.826Z | TONE_SPEAK_START {"toneType":"A","message":"INDIANA-1, status check."}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:11:13.826Z | DATA_MESSAGE_SENT {"type":"ai-playback-start"}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:11:14.089Z | AUDIO_STREAMING {"opusFrames":125,"channel":"DISPATCH__DISPATCH"}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:11:18.191Z | AUDIO_STREAMING {"opusFrames":139,"channel":"DISPATCH__DISPATCH"}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:11:18.761Z | EMERGENCY_END_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1"}
+0|command-comms  | [Emergency-Escalation] 2026-03-25T17:11:18.761Z | ESCALATION_CLEARED {"unitId":"INDIANA-1"}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:11:18.761Z | EMERGENCY_ESCALATION_CLEARED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1"}
+0|command-comms  | [Signaling] Auto GPS track_stop for emergency unit INDIANA-1
+0|command-comms  | [Signaling] EMERGENCY END: DISPATCH__DISPATCH cleared by INDIANA-1
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:11:22.393Z | DATA_MESSAGE_SENT {"type":"ai-playback-end"}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:11:22.393Z | TONE_SPEAK_COMPLETE {"toneType":"A","message":"INDIANA-1, status check."}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:11:22.393Z | EMERGENCY_ESCALATION_TRIGGERED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1"}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:11:27.093Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:11:27.093Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [PTT-HTTP] PTT START: INDIANA-1 on chDISPATCH__DISPATCH
+0|command-comms  | [API] POST /api/ptt/start | user=Jreeder5029(id:2) | sid=KgSm7nvd... | 200 | 17ms
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:11:27.132Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:11:27.132Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT granted: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:11:27.287Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:11:27.287Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:11:27.556Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:11:27.556Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:11:27.676Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:11:27.676Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:11:27.856Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:11:27.856Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:11:27.959Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:11:27.959Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:11:28.164Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:11:28.164Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:11:28.329Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:11:28.329Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:11:28.474Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:11:28.474Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:11:28.674Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:11:28.674Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:11:28.949Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:11:28.950Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:11:28.978Z | PTT_END_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","gracePeriodMs":3000}
+0|command-comms  | [PTT-HTTP] PTT END: INDIANA-1 on chDISPATCH__DISPATCH (29ms)
+0|command-comms  | [API] POST /api/ptt/end | user=Jreeder5029(id:2) | sid=KgSm7nvd... | 200 | 17ms
+0|command-comms  | [Signaling] TX stop ack: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [Signaling] TX stop ack: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:11:31.978Z | DISCONNECTING_IDLE {"channelId":"DISPATCH__DISPATCH"}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:11:31.979Z | DISCONNECT_TIMER_CLEARED {}
+0|command-comms  | [AudioRelay] Internal listener removed: AI-Dispatcher from channel DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher] 2026-03-25T17:11:31.979Z | CHANNEL_LEFT {"channel":"DISPATCH__DISPATCH"}
+0|command-comms  | [AudioRelay] WS subscriber removed: DISPATCH-1 from channel DISPATCH__DISPATCH
+0|command-comms  | [WsAudioBridge] Client disconnected: DISPATCH-1 from channel DISPATCH__DISPATCH
+0|command-comms  | [AudioRelay] WS subscriber added: DISPATCH-1 on channel DISPATCH__DISPATCH
+0|command-comms  | [WsAudioBridge] Client connected: DISPATCH-1 on channel DISPATCH__DISPATCH
+0|command-comms  | [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=-ooGjbK-... | 200 | 21ms
