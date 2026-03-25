@@ -145,7 +145,7 @@ class RadioAudioEngine(private val context: Context) {
     }
 
     suspend fun stopTransmit() = transmitMutex.withLock {
-        if (!isTransmitting) return
+        if (!isTransmitting) return@withLock
         isTransmitting = false
         captureJob?.cancelAndJoin()
         captureJob = null
