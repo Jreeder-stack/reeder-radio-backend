@@ -88,9 +88,7 @@ dependencies {
 
     implementation("com.google.android.gms:play-services-location:21.0.1")
 
-    implementation("com.github.nicstuffs:concentus:v1.0") {
-        because("Pure-Java Opus codec for custom radio audio engine — no native JNI required")
-    }
+    implementation(fileTree("libs") { include("*.jar") })
 
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
