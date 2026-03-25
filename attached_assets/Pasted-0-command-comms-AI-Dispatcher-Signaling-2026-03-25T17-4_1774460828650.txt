@@ -1,0 +1,21 @@
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:46:42.535Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:46:42.685Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:46:42.686Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [Signaling] TX stop ack: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:46:42.999Z | PTT_END_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","gracePeriodMs":3000}
+0|command-comms  | [Signaling] PTT END: INDIANA-1 on DISPATCH__DISPATCH (314ms)
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:46:43.068Z | PTT_END_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","gracePeriodMs":3000}
+0|command-comms  | [PTT-HTTP] PTT END: INDIANA-1 on chDISPATCH__DISPATCH (0ms)
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:46:43.075Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+0|command-comms  | [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T17:46:43.076Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","wasAlreadyConnected":true}
+0|command-comms  | [Signaling] PTT START: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [API] POST /api/ptt/end | user=Jreeder5029(id:2) | sid=KgSm7nvd... | 200 | 15ms
+0|command-comms  | [Signaling] TX stop ack: INDIANA-1 on DISPATCH__DISPATCH
+0|command-comms  | [AudioRelay] WS subscriber removed: DISPATCH-1 from channel DISPATCH__DISPATCH
+0|command-comms  | [WsAudioBridge] Client disconnected: DISPATCH-1 from channel DISPATCH__DISPATCH
+0|command-comms  | [AudioRelay] WS subscriber added: DISPATCH-1 on channel DISPATCH__DISPATCH
+0|command-comms  | [WsAudioBridge] Client connected: DISPATCH-1 on channel DISPATCH__DISPATCH
