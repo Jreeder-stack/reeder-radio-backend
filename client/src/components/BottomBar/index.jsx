@@ -24,6 +24,8 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
   const [disabledTones, setDisabledTones] = useState({});
   const [toneTransmitting, setToneTransmitting] = useState(false);
   const [channelBusy, setChannelBusy] = useState(false);
+  const [pttError, setPttError] = useState(false);
+  const pttErrorTimerRef = useRef(null);
   const [showClearAirModal, setShowClearAirModal] = useState(false);
   const [showClearAirConfirm, setShowClearAirConfirm] = useState(false);
   const [selectedClearAirChannelId, setSelectedClearAirChannelId] = useState(null);
@@ -33,6 +35,18 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
   const mutedChannelsRef = useRef([]);
 
   const selectedChannelNames = getTxChannelNames();
+
+  const flashPttError = useCallback(() => {
+    setPttError(true);
+    if (pttErrorTimerRef.current) clearTimeout(pttErrorTimerRef.current);
+    pttErrorTimerRef.current = setTimeout(() => setPttError(false), 1500);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (pttErrorTimerRef.current) clearTimeout(pttErrorTimerRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     toneEngine.onToneStart = (type) => {
@@ -71,13 +85,13 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
     console.log('[PTT] startTransmission called, channels:', selectedChannelNames);
     if (selectedChannelNames.length === 0) return false;
     
-    // Check connection health before starting transmission
-    if (!livekitManager.areChannelsHealthy(selectedChannelNames)) {
+    const isDispatcher = livekitManager.isDispatcherMode();
+    if (!livekitManager.areChannelsHealthy(selectedChannelNames, { allowReconnecting: isDispatcher })) {
       console.warn('[PTT] Connection not healthy, blocking transmission');
       const status = livekitManager.getConnectionStatus();
       console.log('[PTT] Connection status:', status);
-      // Play error tone to indicate connection issue
-      toneEngine.playErrorTone?.() || console.log('[PTT] No error tone available');
+      toneEngine.playErrorTone?.();
+      flashPttError();
       return false;
     }
     
@@ -95,10 +109,27 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
       livekitManager.muteChannels(mutedChannelsRef.current);
       
       const primaryChannel = selectedChannelNames[0];
-      const room = livekitManager.getRoom(primaryChannel);
+      let room = livekitManager.getRoom(primaryChannel);
+      
+      if (!room && isDispatcher && livekitManager.isChannelReconnecting(primaryChannel)) {
+        console.log('[PTT] Room not ready, waiting for reconnect...');
+        try {
+          room = await livekitManager.waitForRoom(primaryChannel, 5000);
+          console.log('[PTT] Room became available after reconnect');
+        } catch (waitErr) {
+          console.error('[PTT] Timed out waiting for room reconnect:', waitErr.message);
+          toneEngine.playErrorTone?.();
+          flashPttError();
+          livekitManager.unmuteChannels(mutedChannelsRef.current);
+          mutedChannelsRef.current = [];
+          return false;
+        }
+      }
       
       if (!room) {
         console.error('[PTT] No room for primary channel:', primaryChannel);
+        toneEngine.playErrorTone?.();
+        flashPttError();
         livekitManager.unmuteChannels(mutedChannelsRef.current);
         mutedChannelsRef.current = [];
         return false;
@@ -124,6 +155,9 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
       const success = await micPTTManager.start();
       
       if (!success) {
+        console.warn('[PTT] micPTTManager.start() returned false');
+        toneEngine.playErrorTone?.();
+        flashPttError();
         livekitManager.unmuteChannels(mutedChannelsRef.current);
         mutedChannelsRef.current = [];
         return false;
@@ -134,11 +168,13 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
       return true;
     } catch (err) {
       console.error('[PTT] Failed to start transmission:', err);
+      toneEngine.playErrorTone?.();
+      flashPttError();
       livekitManager.unmuteChannels(mutedChannelsRef.current);
       mutedChannelsRef.current = [];
       return false;
     }
-  }, [selectedChannelNames, identity, signalPttStart]);
+  }, [selectedChannelNames, identity, signalPttStart, flashPttError]);
 
   const stopTransmission = useCallback(async () => {
     console.log('[PTT] stopTransmission called');
@@ -404,14 +440,16 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
           onTouchEnd={handlePTTUp}
           disabled={!hasTxChannels || toneTransmitting}
           className={`px-8 py-3 rounded-lg font-bold text-lg transition-all select-none ${
-            isTransmitting
-              ? 'bg-red-600 text-white ring-4 ring-red-400' 
-              : hasTxChannels 
-                ? 'bg-green-600 hover:bg-green-700 text-white' 
-                : 'bg-dispatch-border text-dispatch-secondary cursor-not-allowed'
+            pttError
+              ? 'bg-orange-600 text-white ring-4 ring-orange-400 animate-pulse'
+              : isTransmitting
+                ? 'bg-red-600 text-white ring-4 ring-red-400' 
+                : hasTxChannels 
+                  ? 'bg-green-600 hover:bg-green-700 text-white' 
+                  : 'bg-dispatch-border text-dispatch-secondary cursor-not-allowed'
           }`}
         >
-          {isTransmitting ? 'TRANSMITTING' : 'PTT (SPACE)'}
+          {pttError ? 'PTT FAILED' : isTransmitting ? 'TRANSMITTING' : 'PTT (SPACE)'}
         </button>
       </div>
 

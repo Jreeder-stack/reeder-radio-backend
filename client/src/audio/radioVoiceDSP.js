@@ -5,7 +5,6 @@ let highPassFilter = null;
 let lowPassFilter = null;
 let compressor = null;
 let gainNode = null;
-let waveShaperNode = null;
 
 function getAudioContext() {
   if (!audioContext || audioContext.state === 'closed') {
@@ -15,19 +14,6 @@ function getAudioContext() {
     audioContext.resume().catch(console.warn);
   }
   return audioContext;
-}
-
-function createSaturationCurve(amount = 0.4) {
-  const samples = 44100;
-  const curve = new Float32Array(samples);
-  const deg = Math.PI / 180;
-  
-  for (let i = 0; i < samples; i++) {
-    const x = (i * 2) / samples - 1;
-    curve[i] = ((3 + amount) * x * 20 * deg) / (Math.PI + amount * Math.abs(x));
-  }
-  
-  return curve;
 }
 
 export function processRadioVoice(inputStream) {
@@ -40,24 +26,20 @@ export function processRadioVoice(inputStream) {
     
     highPassFilter = ctx.createBiquadFilter();
     highPassFilter.type = 'highpass';
-    highPassFilter.frequency.value = 300;
+    highPassFilter.frequency.value = 80;
     highPassFilter.Q.value = 0.7;
     
     lowPassFilter = ctx.createBiquadFilter();
     lowPassFilter.type = 'lowpass';
-    lowPassFilter.frequency.value = 3400;
+    lowPassFilter.frequency.value = 7500;
     lowPassFilter.Q.value = 0.7;
     
     compressor = ctx.createDynamicsCompressor();
-    compressor.threshold.value = -24;
-    compressor.knee.value = 6;
-    compressor.ratio.value = 8;
+    compressor.threshold.value = -18;
+    compressor.knee.value = 10;
+    compressor.ratio.value = 3;
     compressor.attack.value = 0.003;
     compressor.release.value = 0.15;
-    
-    waveShaperNode = ctx.createWaveShaper();
-    waveShaperNode.curve = createSaturationCurve(0.3);
-    waveShaperNode.oversample = '2x';
     
     gainNode = ctx.createGain();
     let micGain = 1.4;
@@ -78,13 +60,12 @@ export function processRadioVoice(inputStream) {
       .connect(highPassFilter)
       .connect(lowPassFilter)
       .connect(compressor)
-      .connect(waveShaperNode)
       .connect(gainNode)
       .connect(destination);
     
     processedStream = destination.stream;
     
-    console.log('[RadioDSP] Radio voice processing chain created');
+    console.log('[RadioDSP] Voice-optimized processing chain created');
     
     return processedStream;
   } catch (err) {
@@ -111,10 +92,6 @@ export function cleanup() {
     if (compressor) {
       compressor.disconnect();
       compressor = null;
-    }
-    if (waveShaperNode) {
-      waveShaperNode.disconnect();
-      waveShaperNode = null;
     }
     if (gainNode) {
       gainNode.disconnect();

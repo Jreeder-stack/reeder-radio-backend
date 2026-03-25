@@ -258,24 +258,58 @@ class LiveKitManager {
     }
   }
 
-  isChannelHealthy(channelName) {
+  isChannelHealthy(channelName, { allowReconnecting = false } = {}) {
     const conn = this.rooms.get(channelName);
-    if (!conn) return false;
+
+    if (!conn) {
+      if (allowReconnecting && (this._reconnectTimers.has(channelName) || this.pendingConnections.has(channelName))) {
+        return true;
+      }
+      return false;
+    }
 
     if (!conn.ws || conn.ws.readyState !== WebSocket.OPEN) {
+      if (allowReconnecting && (this._reconnectTimers.has(channelName) || this.pendingConnections.has(channelName))) {
+        return true;
+      }
       return false;
     }
 
     const health = this.connectionHealth.get(channelName);
     if (health && health.quality === 'poor') {
+      if (allowReconnecting && this._reconnectTimers.has(channelName)) {
+        return true;
+      }
       return false;
     }
 
     return true;
   }
 
-  areChannelsHealthy(channelNames) {
-    return channelNames.every(name => this.isChannelHealthy(name));
+  areChannelsHealthy(channelNames, { allowReconnecting = false } = {}) {
+    return channelNames.every(name => this.isChannelHealthy(name, { allowReconnecting }));
+  }
+
+  isChannelReconnecting(channelName) {
+    return this._reconnectTimers.has(channelName) || this.pendingConnections.has(channelName);
+  }
+
+  waitForRoom(channelName, timeoutMs = 5000) {
+    if (this.rooms.has(channelName)) {
+      return Promise.resolve(this.rooms.get(channelName));
+    }
+    return new Promise((resolve, reject) => {
+      const startTime = Date.now();
+      const checkInterval = setInterval(() => {
+        if (this.rooms.has(channelName)) {
+          clearInterval(checkInterval);
+          resolve(this.rooms.get(channelName));
+        } else if (Date.now() - startTime > timeoutMs) {
+          clearInterval(checkInterval);
+          reject(new Error(`Timed out waiting for room ${channelName}`));
+        }
+      }, 100);
+    });
   }
 
   getConnectionStatus() {

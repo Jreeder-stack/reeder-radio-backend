@@ -9,6 +9,7 @@ import kotlinx.coroutines.*
 private const val TAG = "[AudioPlay]"
 private const val SAMPLE_RATE = 48000
 private const val PLAYBACK_INTERVAL_MS = 20L
+private const val DEFAULT_SOFTWARE_GAIN = 3.5f
 
 class AudioPlayback(
     private val jitterBuffer: JitterBuffer,
@@ -18,6 +19,16 @@ class AudioPlayback(
     private var audioTrack: AudioTrack? = null
     private var playbackJob: Job? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    var softwareGain: Float = DEFAULT_SOFTWARE_GAIN
+
+    private fun applyGain(pcm: ShortArray): ShortArray {
+        if (softwareGain == 1.0f) return pcm
+        for (i in pcm.indices) {
+            val amplified = (pcm[i] * softwareGain).toInt()
+            pcm[i] = amplified.coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
+        }
+        return pcm
+    }
 
     fun start() {
         if (audioTrack != null) return
@@ -62,6 +73,7 @@ class AudioPlayback(
                 if (packet != null) {
                     val pcm = opusCodec.decode(packet)
                     if (pcm != null && pcm.isNotEmpty()) {
+                        applyGain(pcm)
                         track.write(pcm, 0, pcm.size)
                     }
                 } else {
