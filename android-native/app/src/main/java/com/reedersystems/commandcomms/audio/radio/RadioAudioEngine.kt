@@ -14,8 +14,11 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 private const val TAG = "[RadioEngine]"
-private const val SAMPLE_RATE = 48000
-private const val FRAME_SIZE_BYTES = 1920
+private const val MIC_SAMPLE_RATE = 16000
+private const val OPUS_SAMPLE_RATE = 48000
+private const val MIC_FRAME_SAMPLES = 320
+private const val MIC_FRAME_SIZE_BYTES = MIC_FRAME_SAMPLES * 2
+private const val OPUS_FRAME_SAMPLES = 960
 private const val CAPTURE_INTERVAL_MS = 20L
 
 class RadioAudioEngine(private val context: Context) {
@@ -95,13 +98,13 @@ class RadioAudioEngine(private val context: Context) {
 
         try {
             val bufferSize = AudioRecord.getMinBufferSize(
-                SAMPLE_RATE,
+                MIC_SAMPLE_RATE,
                 AudioFormat.CHANNEL_IN_MONO,
                 AudioFormat.ENCODING_PCM_16BIT
             )
             val record = AudioRecord(
                 MediaRecorder.AudioSource.VOICE_COMMUNICATION,
-                SAMPLE_RATE,
+                MIC_SAMPLE_RATE,
                 AudioFormat.CHANNEL_IN_MONO,
                 AudioFormat.ENCODING_PCM_16BIT,
                 bufferSize
@@ -117,12 +120,13 @@ class RadioAudioEngine(private val context: Context) {
             stateManager.transitionTo(RadioState.TRANSMITTING)
 
             captureJob = scope.launch {
-                val buffer = ByteArray(FRAME_SIZE_BYTES)
+                val micBuffer = ByteArray(MIC_FRAME_SIZE_BYTES)
                 while (isActive && isTransmitting) {
                     try {
-                        val read = record.read(buffer, 0, buffer.size)
+                        val read = record.read(micBuffer, 0, micBuffer.size)
                         if (read > 0) {
-                            val encoded = opusCodec.encode(buffer.copyOf(read))
+                            val upsampled = upsample16kTo48k(micBuffer, read)
+                            val encoded = opusCodec.encode(upsampled)
                             if (encoded != null) {
                                 udpTransport.send(encoded)
                             }
@@ -189,13 +193,33 @@ class RadioAudioEngine(private val context: Context) {
         jitterBuffer.enqueue(packet)
     }
 
+    private fun upsample16kTo48k(input: ByteArray, length: Int): ByteArray {
+        val inputSamples = length / 2
+        val outputSamples = inputSamples * 3
+        val output = ByteArray(outputSamples * 2)
+        val inBuf = java.nio.ByteBuffer.wrap(input, 0, length).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+        val outBuf = java.nio.ByteBuffer.wrap(output).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+
+        var prevSample: Short = 0
+        for (i in 0 until inputSamples) {
+            val sample = inBuf.getShort(i * 2)
+            val s0 = prevSample.toInt()
+            val s1 = sample.toInt()
+            outBuf.putShort((i * 3) * 2, ((s0 * 2 + s1) / 3).toShort())
+            outBuf.putShort((i * 3 + 1) * 2, ((s0 + s1 * 2) / 3).toShort())
+            outBuf.putShort((i * 3 + 2) * 2, sample)
+            prevSample = sample
+        }
+        return output
+    }
+
     private fun acquireAudioFocus() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val req = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
                 .setAudioAttributes(
                     AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                        .setUsage(AudioAttributes.USAGE_MEDIA)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
                         .build()
                 )
                 .setOnAudioFocusChangeListener(audioFocusListener)
