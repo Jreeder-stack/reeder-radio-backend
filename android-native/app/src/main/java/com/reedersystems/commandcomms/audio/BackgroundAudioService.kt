@@ -345,10 +345,6 @@ class BackgroundAudioService : Service() {
                         Log.d(TAG, "Floor GRANTED — starting TX")
                         val txStarted = engine.startTransmit()
                         if (txStarted) {
-                            val roomKey = servicePrefs.channelRoomKey
-                            if (roomKey != null) {
-                                engine.floorControl?.let { }
-                            }
                             pttState = PttState.TRANSMITTING
                             updateNotification("TRANSMITTING")
                             sendPttTxStarted()
@@ -435,7 +431,10 @@ class BackgroundAudioService : Service() {
             return
         }
 
-        if (pttState == PttState.TRANSMITTING || pttState == PttState.CONNECTING) return
+        if (pttState == PttState.TRANSMITTING || pttState == PttState.CONNECTING || pttState == PttState.CLEANING_UP) {
+            Log.d(TAG, "Radio PTT DOWN ignored: pttState=$pttState")
+            return
+        }
 
         pttUpWhileConnecting = false
         needsSignaling = signaling
@@ -500,19 +499,24 @@ class BackgroundAudioService : Service() {
         val serverUrl = servicePrefs.serverUrl ?: app.apiClient.baseUrl
         val wasSignaling = needsSignaling
 
-        pttState = PttState.IDLE
+        pttState = PttState.CLEANING_UP
         updateNotification("Radio — Standby")
 
         scope.launch {
-            radioEngine?.stopTransmit()
-            radioEngine?.floorControl?.releaseFloor(roomKey)
-            sendPttTxEnded()
-            if (wasSignaling) {
-                app.signalingRepository.transmitEnd(roomKey)
-                app.toneEngine.playEndOfTxTone()
-                Log.d(TAG, "Radio PTT UP: transmitEnd + end-of-TX tone for roomKey $roomKey")
+            try {
+                radioEngine?.stopTransmit()
+                radioEngine?.floorControl?.releaseFloor(roomKey)
+                sendPttTxEnded()
+                if (wasSignaling) {
+                    app.signalingRepository.transmitEnd(roomKey)
+                    app.toneEngine.playEndOfTxTone()
+                    Log.d(TAG, "Radio PTT UP: transmitEnd + end-of-TX tone for roomKey $roomKey")
+                }
+                httpPttEnd(serverUrl, roomKey, unitId)
+            } finally {
+                pttState = PttState.IDLE
+                Log.d(TAG, "PTT cleanup complete — state is now IDLE")
             }
-            httpPttEnd(serverUrl, roomKey, unitId)
         }
     }
 

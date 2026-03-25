@@ -86,8 +86,8 @@ class OpusCodec {
                 java.nio.ByteBuffer.wrap(result).order(java.nio.ByteOrder.LITTLE_ENDIAN).asShortBuffer().put(pcmBuffer, 0, decodedSamples * CHANNELS)
                 result
             } else null
-        } catch (e: Exception) {
-            Log.w(TAG, "Decode error: ${e.message}")
+        } catch (t: Throwable) {
+            Log.w(TAG, "Decode error: ${t.message}")
             null
         }
     }

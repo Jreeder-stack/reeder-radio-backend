@@ -2,6 +2,7 @@ package com.reedersystems.commandcomms.signaling
 
 import android.util.Log
 import io.socket.client.IO
+import io.socket.client.Manager
 import io.socket.client.Socket
 import io.socket.engineio.client.transports.WebSocket
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -42,7 +43,7 @@ class SignalingClient(var serverUrl: String) {
             .setTransports(arrayOf(WebSocket.NAME))
             .setReconnection(true)
             .setReconnectionDelay(2_000)
-            .setReconnectionAttempts(10)
+            .setReconnectionAttempts(Integer.MAX_VALUE)
             .build()
 
         val s = IO.socket(serverUrl, options)
@@ -72,6 +73,11 @@ class SignalingClient(var serverUrl: String) {
 
         s.on(Socket.EVENT_CONNECT_ERROR) { args ->
             Log.w(TAG, "Socket connect error: ${args.firstOrNull()}")
+            _connectionState.value = ConnectionState.DISCONNECTED
+        }
+
+        s.io().on(Manager.EVENT_RECONNECT_FAILED) {
+            Log.e(TAG, "Signaling reconnection attempts exhausted — connection lost")
             _connectionState.value = ConnectionState.DISCONNECTED
         }
 

@@ -294,8 +294,6 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                     is KeyAction.StarLongPress -> toggleKeyLock()
                     is KeyAction.EmergencyDown -> onEmergencyDown()
                     is KeyAction.EmergencyUp -> onEmergencyUp()
-                    is KeyAction.PttDown -> onPttDown()
-                    is KeyAction.PttUp -> onPttUp()
                     else -> {
                         if (!locked) when (action) {
                             is KeyAction.DpadUp -> nextChannel()
