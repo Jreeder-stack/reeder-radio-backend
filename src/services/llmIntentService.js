@@ -319,16 +319,42 @@ export async function classifyIntent(transcript, unitId, currentState = 'IDLE', 
 
   const startTime = Date.now();
 
-  const response = await openai.chat.completions.create({
-    model: AZURE_OPENAI_DEPLOYMENT,
-    messages: [
-      { role: 'system', content: SYSTEM_PROMPT },
-      { role: 'user', content: userMessage }
-    ],
-    response_format: { type: 'json_object' },
-    temperature: 0.4,
-    max_tokens: 300
-  });
+  const callLLM = async () => {
+    const response = await openai.chat.completions.create({
+      model: AZURE_OPENAI_DEPLOYMENT,
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: userMessage }
+      ],
+      response_format: { type: 'json_object' },
+      temperature: 0.4,
+      max_tokens: 300
+    });
+    return response;
+  };
+
+  let response;
+  try {
+    response = await callLLM();
+  } catch (firstError) {
+    const isTransient = firstError.status === 429 ||
+      firstError.code === 'ECONNRESET' ||
+      firstError.code === 'ETIMEDOUT' ||
+      firstError.code === 'ENOTFOUND' ||
+      firstError.type === 'system';
+    if (isTransient) {
+      console.warn(`[LLM-Intent] Transient error, retrying in 1s: ${firstError.message}`);
+      await new Promise(r => setTimeout(r, 1000));
+      try {
+        response = await callLLM();
+      } catch (retryError) {
+        console.error(`[LLM-Intent] Retry also failed (${Date.now() - startTime}ms):`, retryError.message);
+        return { intent: 'UNKNOWN', response: `${unitId}, Central, say again?` };
+      }
+    } else {
+      throw firstError;
+    }
+  }
 
   const elapsed = Date.now() - startTime;
   const content = response.choices[0]?.message?.content;

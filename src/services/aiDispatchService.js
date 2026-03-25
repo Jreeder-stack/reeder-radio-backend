@@ -67,11 +67,14 @@ const EMERGENCY_ESCALATION_STATE = {
   NO_RESPONSE_BROADCAST: 'NO_RESPONSE_BROADCAST'
 };
 
+const MAX_AUDIO_QUEUE_DEPTH = 5;
+
 class EmergencyEscalationController {
   constructor(dispatcher) {
     this.dispatcher = dispatcher;
     this.activeEscalations = new Map();
     this.audioQueue = Promise.resolve();
+    this._audioQueueDepth = 0;
   }
 
   log(action, details = {}) {
@@ -116,10 +119,15 @@ class EmergencyEscalationController {
 
     const message = `${unitId}, status check.`;
     
-    this.audioQueue = this.audioQueue.then(async () => {
-      await this.dispatcher.playToneAndSpeak('A', message);
-    });
-    await this.audioQueue;
+    if (this._audioQueueDepth >= MAX_AUDIO_QUEUE_DEPTH) {
+      this.log('AUDIO_QUEUE_FULL', { depth: this._audioQueueDepth, dropped: message });
+    } else {
+      this._audioQueueDepth++;
+      this.audioQueue = this.audioQueue.then(async () => {
+        await this.dispatcher.playToneAndSpeak('A', message);
+      }).finally(() => { this._audioQueueDepth--; });
+      await this.audioQueue;
+    }
 
     escalation.timer = setTimeout(async () => {
       await this.handleTimeout(unitId, attempt);
@@ -146,10 +154,15 @@ class EmergencyEscalationController {
 
     const message = `Attention all receiving units, ${unitId} pressed their emergency key with no response.`;
     
-    this.audioQueue = this.audioQueue.then(async () => {
-      await this.dispatcher.playToneAndSpeak('CONTINUOUS', message);
-    });
-    await this.audioQueue;
+    if (this._audioQueueDepth >= MAX_AUDIO_QUEUE_DEPTH) {
+      this.log('AUDIO_QUEUE_FULL', { depth: this._audioQueueDepth, dropped: message });
+    } else {
+      this._audioQueueDepth++;
+      this.audioQueue = this.audioQueue.then(async () => {
+        await this.dispatcher.playToneAndSpeak('CONTINUOUS', message);
+      }).finally(() => { this._audioQueueDepth--; });
+      await this.audioQueue;
+    }
     
     await this.sendCadBroadcast(unitId, `EMERGENCY: ${unitId} pressed emergency key with NO RESPONSE`, 'emergency');
 
@@ -217,10 +230,15 @@ class EmergencyEscalationController {
       const distressType = details.distressType || 'requesting backup';
       const message = `Attention all units, ${unitId} is ${distressType}.`;
       
-      this.audioQueue = this.audioQueue.then(async () => {
-        await this.dispatcher.playToneAndSpeak('CONTINUOUS', message);
-      });
-      await this.audioQueue;
+      if (this._audioQueueDepth >= MAX_AUDIO_QUEUE_DEPTH) {
+        this.log('AUDIO_QUEUE_FULL', { depth: this._audioQueueDepth, dropped: message });
+      } else {
+        this._audioQueueDepth++;
+        this.audioQueue = this.audioQueue.then(async () => {
+          await this.dispatcher.playToneAndSpeak('CONTINUOUS', message);
+        }).finally(() => { this._audioQueueDepth--; });
+        await this.audioQueue;
+      }
       
       await this.sendCadBroadcast(unitId, `EMERGENCY: ${unitId} ${distressType}`, 'emergency');
       
@@ -284,8 +302,10 @@ class AIDispatcher {
     this.emergencyEscalation = new EmergencyEscalationController(this);
     this.errorCounts = new Map();
     this.errorCooldowns = new Map();
+    this._errorLastSeen = new Map();
     this.stoppedByUser = false;
     this._activeRecordings = new Map();
+    this._errorCleanupInterval = null;
     this._signalingService = null;
     this._audioListenerBound = null;
     this._publishSequence = 0;
@@ -403,6 +423,8 @@ class AIDispatcher {
     this.stoppedByUser = false;
     this.errorCounts.clear();
     this.errorCooldowns.clear();
+    this._errorLastSeen.clear();
+    this._startErrorCleanup();
     
     await this._resolveChannelAliases(channelName, roomKey);
     await this._ensureSignalingService();
@@ -441,6 +463,10 @@ class AIDispatcher {
     this.isRunning = false;
     this.stoppedByUser = true;
     this.clearDisconnectTimer();
+    this._stopErrorCleanup();
+    this.errorCounts.clear();
+    this.errorCooldowns.clear();
+    this._errorLastSeen.clear();
     this.emergencyEscalation.clearAllEscalations();
     resetDispatcherState();
 
@@ -456,6 +482,37 @@ class AIDispatcher {
     }
 
     this._clearAllRecordings();
+  }
+
+  _startErrorCleanup() {
+    this._stopErrorCleanup();
+    const ERROR_STALENESS_MS = 5 * 60 * 1000;
+    this._errorCleanupInterval = setInterval(() => {
+      const now = Date.now();
+      for (const [key, until] of this.errorCooldowns) {
+        if (now >= until) {
+          this.errorCooldowns.delete(key);
+          this.errorCounts.delete(key);
+          this._errorLastSeen.delete(key);
+        }
+      }
+      for (const [key, lastSeen] of this._errorLastSeen) {
+        if (now - lastSeen > ERROR_STALENESS_MS && !this.errorCooldowns.has(key)) {
+          this.errorCounts.delete(key);
+          this._errorLastSeen.delete(key);
+        }
+      }
+    }, 5 * 60 * 1000);
+    if (this._errorCleanupInterval.unref) {
+      this._errorCleanupInterval.unref();
+    }
+  }
+
+  _stopErrorCleanup() {
+    if (this._errorCleanupInterval) {
+      clearInterval(this._errorCleanupInterval);
+      this._errorCleanupInterval = null;
+    }
   }
 
   clearDisconnectTimer() {
@@ -796,6 +853,7 @@ class AIDispatcher {
     } catch (error) {
       const count = (this.errorCounts.get(participantId) || 0) + 1;
       this.errorCounts.set(participantId, count);
+      this._errorLastSeen.set(participantId, Date.now());
       this.log('PROCESS_ERROR', { error: error.message, participant: participantId, consecutiveErrors: count });
       if (count >= 5) {
         const cooldownMs = Math.min(30000, 10000 * Math.floor(count / 5));

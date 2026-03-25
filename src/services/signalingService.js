@@ -180,11 +180,46 @@ class SignalingService {
     return this.io;
   }
 
+  _checkAuthRateLimit(ip) {
+    const now = Date.now();
+    const windowMs = 60 * 1000;
+    const maxAttempts = 10;
+
+    if (!this._authAttempts) {
+      this._authAttempts = new Map();
+      this._authCleanupInterval = setInterval(() => {
+        const cutoff = Date.now() - windowMs;
+        for (const [key, timestamps] of this._authAttempts) {
+          const filtered = timestamps.filter(t => t > cutoff);
+          if (filtered.length === 0) {
+            this._authAttempts.delete(key);
+          } else {
+            this._authAttempts.set(key, filtered);
+          }
+        }
+      }, 60 * 1000);
+      if (this._authCleanupInterval.unref) this._authCleanupInterval.unref();
+    }
+
+    const attempts = (this._authAttempts.get(ip) || []).filter(t => t > now - windowMs);
+    attempts.push(now);
+    this._authAttempts.set(ip, attempts);
+
+    return attempts.length > maxAttempts;
+  }
+
   async _handleAuthenticate(socket, data) {
     const { unitId, agencyId, username, isDispatcher } = data;
     
     if (!unitId || !username) {
       socket.emit('error', { message: 'unitId and username required' });
+      return;
+    }
+
+    const clientIp = socket.handshake?.address || 'unknown';
+    if (this._checkAuthRateLimit(clientIp)) {
+      console.warn(`[Signaling] Auth rate limited: ip=${clientIp}`);
+      socket.emit('error', { message: 'Too many authentication attempts. Try again later.' });
       return;
     }
 

@@ -196,6 +196,10 @@ export async function initializeDatabase() {
     await client.query(`CREATE INDEX IF NOT EXISTS idx_channel_messages_channel ON channel_messages (channel)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_channel_messages_created ON channel_messages (created_at DESC)`);
 
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_units_last_seen ON units (last_seen)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_activity_logs_created_at ON activity_logs (created_at)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_activity_logs_username ON activity_logs (username)`);
+
     const existingAdmin = await client.query(
       'SELECT id FROM users WHERE username = $1',
       [config.adminUsername]
