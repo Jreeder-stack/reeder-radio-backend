@@ -491,9 +491,9 @@ class SignalingService {
       presence.status = 'emergency';
     }
     
-    this.io.to(`channel:${channelId}`).emit(SIGNALING_EVENTS.EMERGENCY_START, emergencyData);
+    this._emitToChannelDispatchers(channelId, SIGNALING_EVENTS.EMERGENCY_START, emergencyData);
     
-    this.io.to(`channel:${channelId}`).emit(SIGNALING_EVENTS.EMERGENCY_FORCE_CONNECT, {
+    this._emitToChannelDispatchers(channelId, SIGNALING_EVENTS.EMERGENCY_FORCE_CONNECT, {
       channelId,
       unitId: socket.unitId,
       agencyId: socket.agencyId,
@@ -505,7 +505,7 @@ class SignalingService {
     
     this._emitCallback('emergencyStart', emergencyData);
     
-    this.io.emit('emergency:alert', {
+    this._emitToDispatchers('emergency:alert', {
       ...emergencyData,
       message: `EMERGENCY: Unit ${socket.unitId} activated emergency on ${channelId}`,
     });
@@ -543,9 +543,9 @@ class SignalingService {
       duration: Date.now() - emergency.timestamp,
     };
     
-    this.io.to(`channel:${channelId}`).emit(SIGNALING_EVENTS.EMERGENCY_END, endData);
+    this._emitToChannelDispatchers(channelId, SIGNALING_EVENTS.EMERGENCY_END, endData);
     this._emitCallback('emergencyEnd', endData);
-    this.io.emit('emergency:cleared', endData);
+    this._emitToDispatchers('emergency:cleared', endData);
 
     const emergencyUnitSocket = this._findSocketByUnitId(emergency.unitId);
     if (emergencyUnitSocket) {
@@ -576,9 +576,9 @@ class SignalingService {
     
     this.clearAirStates.set(channelId, clearAirData);
     
-    this.io.to(`channel:${channelId}`).emit(SIGNALING_EVENTS.CLEAR_AIR_START, clearAirData);
+    this._emitToChannelDispatchers(channelId, SIGNALING_EVENTS.CLEAR_AIR_START, clearAirData);
     
-    this.io.emit('clear_air:alert', {
+    this._emitToDispatchers('clear_air:alert', {
       ...clearAirData,
       message: `CLEAR AIR: Dispatcher ${socket.unitId} activated Clear Air on ${channelId}`,
     });
@@ -607,8 +607,8 @@ class SignalingService {
       duration: Date.now() - clearAir.timestamp,
     };
     
-    this.io.to(`channel:${channelId}`).emit(SIGNALING_EVENTS.CLEAR_AIR_END, endData);
-    this.io.emit('clear_air:cleared', endData);
+    this._emitToChannelDispatchers(channelId, SIGNALING_EVENTS.CLEAR_AIR_END, endData);
+    this._emitToDispatchers('clear_air:cleared', endData);
     
     console.log(`[Signaling] CLEAR AIR END: ${channelId} released by ${socket.unitId}`);
   }
@@ -647,7 +647,7 @@ class SignalingService {
     }
     
     for (const channelId of socket.channels) {
-      this.io.to(`channel:${channelId}`).emit(SIGNALING_EVENTS.LOCATION_UPDATE, {
+      this._emitToChannelDispatchers(channelId, SIGNALING_EVENTS.LOCATION_UPDATE, {
         unitId: socket.unitId,
         agencyId: socket.agencyId,
         channelId,
@@ -724,6 +724,25 @@ class SignalingService {
         }
       });
     }
+  }
+
+  _emitToDispatchers(event, data) {
+    if (!this.io) return;
+    this.io.sockets.sockets.forEach((s) => {
+      if (s.isDispatcher) {
+        s.emit(event, data);
+      }
+    });
+  }
+
+  _emitToChannelDispatchers(channelId, event, data) {
+    if (!this.io) return;
+    const room = `channel:${channelId}`;
+    this.io.sockets.sockets.forEach((s) => {
+      if (s.isDispatcher && s.rooms && s.rooms.has(room)) {
+        s.emit(event, data);
+      }
+    });
   }
 
   _findSocketByUnitId(unitId) {

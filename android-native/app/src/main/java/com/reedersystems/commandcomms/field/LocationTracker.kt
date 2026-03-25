@@ -11,6 +11,8 @@ import com.reedersystems.commandcomms.signaling.SignalingRepository
 private const val TAG = "[PTT-DIAG]"
 private const val LOCATION_INTERVAL_MS = 5_000L
 private const val LOCATION_FASTEST_INTERVAL_MS = 2_000L
+private const val STATIONARY_SPEED_THRESHOLD = 1.0f
+private const val STATIONARY_SEND_INTERVAL_MS = 90_000L
 
 class LocationTracker(
     context: Context,
@@ -19,11 +21,23 @@ class LocationTracker(
 
     private val fusedClient = LocationServices.getFusedLocationProviderClient(context)
     private var isTracking = false
+    private var lastSentTime = 0L
 
     private val locationCallback = object : LocationCallback() {
         override fun onLocationResult(result: LocationResult) {
             val location: Location = result.lastLocation ?: return
-            Log.d(TAG, "LocationTracker update: ${location.latitude},${location.longitude}")
+            val speed = if (location.hasSpeed()) location.speed else 0f
+            val now = System.currentTimeMillis()
+            val isMoving = speed >= STATIONARY_SPEED_THRESHOLD
+            val elapsed = now - lastSentTime
+
+            if (!isMoving && elapsed < STATIONARY_SEND_INTERVAL_MS) {
+                Log.d(TAG, "LocationTracker suppressed (stationary, ${elapsed}ms since last)")
+                return
+            }
+
+            lastSentTime = now
+            Log.d(TAG, "LocationTracker update: ${location.latitude},${location.longitude} speed=$speed")
             signalingRepository.sendLocationUpdate(
                 lat = location.latitude,
                 lon = location.longitude,
