@@ -1,0 +1,96 @@
+PS C:\Users\Justin> ssh -i C:\Users\Justin\Desktop\commandcomms-key_1774361622787.pem Jreeder5029@20.115.21.70 "pm2 logs command-comms"
+[TAILING] Tailing last 15 lines for [command-comms] process (change the value with --lines option)
+/home/Jreeder5029/.pm2/logs/command-comms-error-0.log last 15 lines:
+0|command- | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command- | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command- | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command- | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command- | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command- | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command- | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command- | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command- | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command- | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command- | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command- | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command- | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command- | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command- | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+
+/home/Jreeder5029/.pm2/logs/command-comms-out-0.log last 15 lines:
+0|command- | [AudioRelay] WS subscriber removed: DISPATCH-1 from channel DISPATCH__DISPATCH
+0|command- | [WsAudioBridge] Client disconnected: DISPATCH-1 from channel DISPATCH__DISPATCH
+0|command- | [AudioRelay] WS subscriber added: DISPATCH-1 on channel DISPATCH__DISPATCH
+0|command- | [WsAudioBridge] Client connected: DISPATCH-1 on channel DISPATCH__DISPATCH
+0|command- | [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=-ooGjbK-... | 200 | 22ms
+0|command- | [AudioRelay] WS subscriber removed: DISPATCH-1 from channel DISPATCH__DISPATCH
+0|command- | [WsAudioBridge] Client disconnected: DISPATCH-1 from channel DISPATCH__DISPATCH
+0|command- | [AudioRelay] WS subscriber added: DISPATCH-1 on channel DISPATCH__DISPATCH
+0|command- | [WsAudioBridge] Client connected: DISPATCH-1 on channel DISPATCH__DISPATCH
+0|command- | [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=-ooGjbK-... | 200 | 21ms
+0|command- | [AudioRelay] WS subscriber removed: DISPATCH-1 from channel DISPATCH__DISPATCH
+0|command- | [WsAudioBridge] Client disconnected: DISPATCH-1 from channel DISPATCH__DISPATCH
+0|command- | [AudioRelay] WS subscriber added: DISPATCH-1 on channel DISPATCH__DISPATCH
+0|command- | [WsAudioBridge] Client connected: DISPATCH-1 on channel DISPATCH__DISPATCH
+0|command- | [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=-ooGjbK-... | 200 | 22ms
+
+0|command-comms  | [AudioRelay] WS subscriber removed: DISPATCH-1 from channel DISPATCH__DISPATCH
+0|command-comms  | [WsAudioBridge] Client disconnected: DISPATCH-1 from channel DISPATCH__DISPATCH
+0|command-comms  | [AudioRelay] WS subscriber added: DISPATCH-1 on channel DISPATCH__DISPATCH
+0|command-comms  | [WsAudioBridge] Client connected: DISPATCH-1 on channel DISPATCH__DISPATCH
+0|command-comms  | [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=-ooGjbK-... | 200 | 21ms
+0|command-comms  | [AUTH] /me check: hasSession=true sessionID=-ooGjbK-... cookie=true
+0|command-comms  | [AUTH] /me: session has user="DISPATCH-1" id=7, refreshing from DB...
+0|command-comms  | [AUTH] /me: returning fresh user data for "DISPATCH-1" role=admin unit_id=DISPATCH-1
+0|command-comms  | [API] GET /api/auth/me | user=DISPATCH-1(id:7) | sid=-ooGjbK-... | 304 | 14ms
+0|command-comms  | [Signaling] Unit authenticated: DISPATCH-1 (DISPATCH-1) [session-verified]
+0|command-comms  | [Signaling] DISPATCH-1 joined channel DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T16:55:52.854Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"DISPATCH-1","isEmergency":false}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T16:55:52.854Z | CONNECTING_FOR_PTT {"channelId":"DISPATCH__DISPATCH","unitId":"DISPATCH-1"}
+0|command-comms  | [Signaling] PTT START: DISPATCH-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher] 2026-03-25T16:55:52.860Z | REJOIN_TRIGGERED {"channel":"DISPATCH__DISPATCH"}
+0|command-comms  | [AudioRelay] Internal listener added: AI-Dispatcher on channel DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher] 2026-03-25T16:55:52.861Z | CHANNEL_JOINED {"channel":"DISPATCH__DISPATCH"}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T16:55:52.861Z | DISCONNECT_TIMER_STARTED {"graceMs":90000}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T16:55:52.861Z | CONNECTED_FOR_PTT {"channelId":"DISPATCH__DISPATCH","unitId":"DISPATCH-1"}
+0|command-comms  | [Signaling] PTT_READY sent for DISPATCH-1 on DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T16:55:52.861Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"DISPATCH-1","wasAlreadyConnected":false}
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [WsAudioBridge] Encode error for DISPATCH-1: start offset of Int16Array should be a multiple of 2
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T16:55:53.646Z | PTT_END_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"DISPATCH-1","gracePeriodMs":3000}
+0|command-comms  | [Signaling] PTT END: DISPATCH-1 on DISPATCH__DISPATCH (793ms)
+0|command-comms  | [Signaling] Grace period ended for DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-25T16:55:56.647Z | DISCONNECTING_IDLE {"channelId":"DISPATCH__DISPATCH"}
+0|command-comms  | [AI-Dispatcher] 2026-03-25T16:55:56.647Z | DISCONNECT_TIMER_CLEARED {}
+0|command-comms  | [AudioRelay] Internal listener removed: AI-Dispatcher from channel DISPATCH__DISPATCH
+0|command-comms  | [AI-Dispatcher] 2026-03-25T16:55:56.647Z | CHANNEL_LEFT {"channel":"DISPATCH__DISPATCH"}
