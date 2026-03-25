@@ -249,28 +249,16 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             app.signalingRepository.events.collect { event ->
                 when (event) {
-                    is SignalingEvent.PttPre -> {
-                        val state = _uiState.value
-                        if (event.unitId != state.unitId && event.channelId == state.currentChannel?.roomKey) {
-                            sendServiceRxIntent(BackgroundAudioService.ACTION_RX_CONNECT, state.currentChannel?.id ?: -1)
-                        }
-                    }
                     is SignalingEvent.PttStart -> {
                         val state = _uiState.value
                         if (event.unitId != state.unitId) {
                             _uiState.update { it.copy(activeTransmittingUnit = event.unitId) }
-                            if (event.channelId == state.currentChannel?.roomKey) {
-                                sendServiceRxIntent(BackgroundAudioService.ACTION_RX_CONNECT, state.currentChannel?.id ?: -1)
-                            }
                         }
                     }
                     is SignalingEvent.PttEnd -> {
                         val state = _uiState.value
                         if (event.unitId == state.activeTransmittingUnit) {
                             _uiState.update { it.copy(activeTransmittingUnit = null) }
-                            if (event.channelId == state.currentChannel?.roomKey) {
-                                sendServiceRxIntent(BackgroundAudioService.ACTION_RX_END, state.currentChannel?.id ?: -1)
-                            }
                         }
                     }
                     is SignalingEvent.EmergencyStart -> {
@@ -553,14 +541,6 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         val intent = Intent(getApplication(), BackgroundAudioService::class.java).apply {
             this.action = action
             putExtra(BackgroundAudioService.EXTRA_NEEDS_SIGNALING, false)
-        }
-        getApplication<Application>().startForegroundService(intent)
-    }
-
-    private fun sendServiceRxIntent(action: String, channelId: Int) {
-        val intent = Intent(getApplication(), BackgroundAudioService::class.java).apply {
-            this.action = action
-            putExtra(BackgroundAudioService.EXTRA_CHANNEL_ID, channelId)
         }
         getApplication<Application>().startForegroundService(intent)
     }

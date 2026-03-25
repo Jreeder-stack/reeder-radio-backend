@@ -12,10 +12,6 @@ class ServiceConnectionPrefs(context: Context) {
         get() = prefs.getString(KEY_SERVER_URL, null)
         set(v) = prefs.edit().putString(KEY_SERVER_URL, v).apply()
 
-    var livekitUrl: String?
-        get() = prefs.getString(KEY_LIVEKIT_URL, null)
-        set(v) = prefs.edit().putString(KEY_LIVEKIT_URL, v).apply()
-
     var unitId: String?
         get() = prefs.getString(KEY_UNIT_ID, null)
         set(v) = prefs.edit().putString(KEY_UNIT_ID, v).apply()
@@ -33,7 +29,7 @@ class ServiceConnectionPrefs(context: Context) {
         set(v) = prefs.edit().putString(KEY_CHANNEL_NAME, v).apply()
 
     var transportMode: String
-        get() = prefs.getString(KEY_TRANSPORT_MODE, "livekit") ?: "livekit"
+        get() = prefs.getString(KEY_TRANSPORT_MODE, "custom-radio") ?: "custom-radio"
         set(v) = prefs.edit().putString(KEY_TRANSPORT_MODE, v).apply()
 
     var relayHost: String?
@@ -62,7 +58,6 @@ class ServiceConnectionPrefs(context: Context) {
     companion object {
         const val PREFS_NAME = "CommandCommsServicePrefs"
         private const val KEY_SERVER_URL = "server_url"
-        private const val KEY_LIVEKIT_URL = "livekit_url"
         private const val KEY_UNIT_ID = "unit_id"
         private const val KEY_CHANNEL_ID = "channel_id"
         private const val KEY_CHANNEL_ROOM_KEY = "channel_room_key"

@@ -78,10 +78,6 @@ dependencies {
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 
-    if (findProperty("enableLiveKit")?.toString()?.toBoolean() != false) {
-        implementation("io.livekit:livekit-android:2.4.0")
-    }
-
     implementation("io.socket:socket.io-client:2.1.0") {
         exclude(group = "org.json", module = "json")
     }

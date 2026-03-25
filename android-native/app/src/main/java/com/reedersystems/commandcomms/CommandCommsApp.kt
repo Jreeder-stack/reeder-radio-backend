@@ -16,7 +16,6 @@ import com.reedersystems.commandcomms.data.prefs.SessionPrefs
 import com.reedersystems.commandcomms.data.model.RadioTransportConfig
 import com.reedersystems.commandcomms.data.repository.AuthRepository
 import com.reedersystems.commandcomms.data.repository.ChannelRepository
-import com.reedersystems.commandcomms.data.repository.LiveKitTokenRepository
 import com.reedersystems.commandcomms.data.repository.RadioConfigRepository
 import com.reedersystems.commandcomms.signaling.SignalingClient
 import com.reedersystems.commandcomms.signaling.SignalingRepository
@@ -38,9 +37,6 @@ class CommandCommsApp : Application() {
         private set
 
     lateinit var channelRepository: ChannelRepository
-        private set
-
-    lateinit var liveKitTokenRepository: LiveKitTokenRepository
         private set
 
     lateinit var signalingClient: SignalingClient
@@ -87,17 +83,12 @@ class CommandCommsApp : Application() {
 
         authRepository = AuthRepository(apiClient)
         channelRepository = ChannelRepository(apiClient)
-        @Suppress("DEPRECATION")
-        liveKitTokenRepository = LiveKitTokenRepository(apiClient)
         signalingClient = SignalingClient(apiClient.baseUrl)
         signalingRepository = SignalingRepository(signalingClient)
         radioConfigRepository = RadioConfigRepository(apiClient)
         toneEngine = ToneEngine(this)
 
-        val prefs = ServiceConnectionPrefs(this)
-        if (prefs.transportMode == "custom-radio") {
-            radioStateManager = RadioStateManager()
-        }
+        radioStateManager = RadioStateManager()
     }
 
     private fun createNotificationChannels() {
