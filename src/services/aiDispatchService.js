@@ -860,7 +860,15 @@ class AIDispatcher {
 
       switch (result.intent) {
         case 'SILENCE': {
-          this.log('LLM_SILENCE', { participant: participantId, transcript });
+          if (state === DISPATCHER_STATE.AWAITING_COMMAND) {
+            this.log('LLM_SILENCE_AFTER_GOAHEAD', {
+              participant: participantId,
+              transcript,
+              state,
+              conversationHistory,
+            });
+          }
+          this.log('LLM_SILENCE', { participant: participantId, transcript, state });
           break;
         }
 
@@ -990,11 +998,19 @@ class AIDispatcher {
 
         case 'RADIO_CHECK':
         case 'TIME_CHECK':
-        case 'WAKE_ONLY':
         case 'UNKNOWN': {
           const genResp = result.response || `${participantId}, Central, say again?`;
           await this.speak(genResp, participantId);
           this.addConversationExchange(participantId, transcript, genResp);
+          break;
+        }
+
+        case 'WAKE_ONLY': {
+          const wakeResp = result.response || `${participantId}, go ahead.`;
+          await this.speak(wakeResp, participantId);
+          this.addConversationExchange(participantId, transcript, wakeResp);
+          setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_COMMAND);
+          this.log('WAKE_ONLY_AWAITING', { participant: participantId, newState: DISPATCHER_STATE.AWAITING_COMMAND });
           break;
         }
 
