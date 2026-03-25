@@ -15,6 +15,7 @@ sealed class SignalingEvent {
     object LocationTrackStop : SignalingEvent()
     data class UnitStatusChanged(val unitId: String, val status: String) : SignalingEvent()
 
+    data class RadioSessionToken(val token: String, val channelId: String) : SignalingEvent()
     data class RadioPttGranted(val channelId: String) : SignalingEvent()
     data class RadioPttDenied(val channelId: String, val reason: String) : SignalingEvent()
     data class RadioTxStart(val unitId: String, val channelId: String) : SignalingEvent()

@@ -384,6 +384,10 @@ class BackgroundAudioService : Service() {
                 val engine = radioEngine ?: return@collectLatest
                 val currentRoomKey = servicePrefs.channelRoomKey
                 when (event) {
+                    is SignalingEvent.RadioSessionToken -> {
+                        Log.d(TAG, "Session token received for channel ${event.channelId}")
+                        engine.udpTransport.setSessionToken(event.token)
+                    }
                     is SignalingEvent.RadioPttGranted -> {
                         engine.floorControl?.onFloorGranted(event.channelId)
                     }
@@ -505,6 +509,7 @@ class BackgroundAudioService : Service() {
         scope.launch {
             try {
                 radioEngine?.stopTransmit()
+                radioEngine?.udpTransport?.clearSessionToken()
                 radioEngine?.floorControl?.releaseFloor(roomKey)
                 sendPttTxEnded()
                 if (wasSignaling) {

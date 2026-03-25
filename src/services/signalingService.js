@@ -1113,11 +1113,6 @@ class SignalingService {
     });
 
     if (result.granted) {
-      socket.emit(RADIO_EVENTS.PTT_GRANTED, {
-        channelId,
-        timestamp: Date.now(),
-      });
-
       if (socket.radioSessionToken) {
         audioRelayService.removeSession(socket.radioSessionToken);
       }
@@ -1125,9 +1120,14 @@ class SignalingService {
       const sessionToken = crypto.randomBytes(16).toString('hex');
       socket.radioSessionToken = sessionToken;
       socket.radioSessionChannel = channelId;
+      audioRelayService.registerSession(socket.unitId, sessionToken, channelId);
+
       socket.emit('radio:sessionToken', { token: sessionToken, channelId });
 
-      audioRelayService.registerSession(socket.unitId, sessionToken, channelId);
+      socket.emit(RADIO_EVENTS.PTT_GRANTED, {
+        channelId,
+        timestamp: Date.now(),
+      });
 
       this.io.to(`channel:${channelId}`).emit(RADIO_EVENTS.TX_START, {
         unitId: socket.unitId,

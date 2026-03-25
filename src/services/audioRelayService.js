@@ -317,7 +317,6 @@ class AudioRelayService {
 
     const tokenBuf = msg.subarray(0, SESSION_TOKEN_LEN);
     const token = tokenBuf.toString('hex');
-    const channelId = msg.readUInt16BE(SESSION_TOKEN_LEN);
     const sequence = msg.readUInt16BE(SESSION_TOKEN_LEN + CHANNEL_ID_LEN);
     const opusPayload = msg.subarray(HEADER_LEN);
 
@@ -327,17 +326,19 @@ class AudioRelayService {
     }
 
     const { unitId, allowedChannel } = session;
-
-    const channelKey = String(channelId);
-    if (allowedChannel !== channelKey) {
-      return;
-    }
+    const channelKey = allowedChannel;
 
     if (this._floorControlService && !this._floorControlService.holdsFloor(channelKey, unitId)) {
       return;
     }
 
-    const rxPayload = msg.subarray(SESSION_TOKEN_LEN);
+    this.addSubscriber(channelKey, unitId, rinfo.address, rinfo.port);
+
+    const channelIdNum = parseInt(channelKey, 10);
+    const rxPayload = Buffer.alloc(CHANNEL_ID_LEN + SEQUENCE_LEN + opusPayload.length);
+    rxPayload.writeUInt16BE(isNaN(channelIdNum) ? 0 : channelIdNum, 0);
+    rxPayload.writeUInt16BE(sequence & 0xFFFF, CHANNEL_ID_LEN);
+    opusPayload.copy(rxPayload, CHANNEL_ID_LEN + SEQUENCE_LEN);
 
     this._broadcastToAll(channelKey, unitId, rxPayload, sequence, opusPayload);
   }

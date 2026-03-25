@@ -7,12 +7,14 @@ import java.net.DatagramSocket
 import java.net.InetAddress
 
 private const val TAG = "[UdpTransport]"
-private const val DEFAULT_RELAY_PORT = 5600
+private const val DEFAULT_RELAY_PORT = 5100
 private const val RECEIVE_BUFFER_SIZE = 4096
 private const val RECEIVE_TIMEOUT_MS = 100
-private const val HEADER_SIZE = 8
-private const val PROTOCOL_VERSION: Byte = 1
-private const val PACKET_TYPE_AUDIO: Byte = 0x01
+private const val SESSION_TOKEN_LEN = 16
+private const val CHANNEL_ID_LEN = 2
+private const val SEQUENCE_LEN = 2
+private const val TX_HEADER_SIZE = SESSION_TOKEN_LEN + CHANNEL_ID_LEN + SEQUENCE_LEN
+private const val RX_HEADER_SIZE = CHANNEL_ID_LEN + SEQUENCE_LEN
 
 class UdpAudioTransport(
     private var relayHost: String = "",
@@ -28,10 +30,23 @@ class UdpAudioTransport(
     var unitId: String = ""
     var onPacketReceived: ((ByteArray) -> Unit)? = null
 
+    @Volatile
+    private var sessionTokenBytes: ByteArray? = null
+
     fun configure(host: String, port: Int) {
         this.relayHost = host
         this.relayPort = port
         Log.d(TAG, "Configured relay: $host:$port")
+    }
+
+    fun setSessionToken(hexToken: String) {
+        sessionTokenBytes = hexStringToByteArray(hexToken)
+        Log.d(TAG, "Session token set (${hexToken.length / 2} bytes)")
+    }
+
+    fun clearSessionToken() {
+        sessionTokenBytes = null
+        sequenceNumber = 0
     }
 
     fun start() {
@@ -53,11 +68,17 @@ class UdpAudioTransport(
         socket?.close()
         socket = null
         sequenceNumber = 0
+        sessionTokenBytes = null
         Log.d(TAG, "UDP transport stopped")
     }
 
     fun send(data: ByteArray) {
         val sock = socket ?: return
+        val token = sessionTokenBytes
+        if (token == null) {
+            Log.w(TAG, "Cannot send — no session token")
+            return
+        }
         if (relayHost.isBlank()) {
             Log.w(TAG, "Cannot send — relay host not configured")
             return
@@ -65,7 +86,7 @@ class UdpAudioTransport(
         scope.launch {
             try {
                 val address = InetAddress.getByName(relayHost)
-                val framed = framePacket(data)
+                val framed = framePacket(token, data)
                 val packet = DatagramPacket(framed, framed.size, address, relayPort)
                 sock.send(packet)
             } catch (e: Exception) {
@@ -74,19 +95,15 @@ class UdpAudioTransport(
         }
     }
 
-    private fun framePacket(audioData: ByteArray): ByteArray {
-        val channelHash = channelId.hashCode()
+    private fun framePacket(token: ByteArray, audioData: ByteArray): ByteArray {
         val seq = sequenceNumber++
-        val frame = ByteArray(HEADER_SIZE + audioData.size)
-        frame[0] = PROTOCOL_VERSION
-        frame[1] = PACKET_TYPE_AUDIO
-        frame[2] = ((seq shr 8) and 0xFF).toByte()
-        frame[3] = (seq and 0xFF).toByte()
-        frame[4] = ((channelHash shr 24) and 0xFF).toByte()
-        frame[5] = ((channelHash shr 16) and 0xFF).toByte()
-        frame[6] = ((channelHash shr 8) and 0xFF).toByte()
-        frame[7] = (channelHash and 0xFF).toByte()
-        System.arraycopy(audioData, 0, frame, HEADER_SIZE, audioData.size)
+        val frame = ByteArray(TX_HEADER_SIZE + audioData.size)
+        System.arraycopy(token, 0, frame, 0, SESSION_TOKEN_LEN)
+        frame[SESSION_TOKEN_LEN] = 0
+        frame[SESSION_TOKEN_LEN + 1] = 0
+        frame[SESSION_TOKEN_LEN + 2] = ((seq shr 8) and 0xFF).toByte()
+        frame[SESSION_TOKEN_LEN + 3] = (seq and 0xFF).toByte()
+        System.arraycopy(audioData, 0, frame, TX_HEADER_SIZE, audioData.size)
         return frame
     }
 
@@ -98,12 +115,8 @@ class UdpAudioTransport(
                 try {
                     val packet = DatagramPacket(buffer, buffer.size)
                     sock.receive(packet)
-                    if (packet.length > HEADER_SIZE) {
-                        if (buffer[0] != PROTOCOL_VERSION || buffer[1] != PACKET_TYPE_AUDIO) {
-                            Log.w(TAG, "Invalid packet header — discarding")
-                            continue
-                        }
-                        val audioData = buffer.copyOfRange(HEADER_SIZE, packet.length)
+                    if (packet.length > RX_HEADER_SIZE) {
+                        val audioData = buffer.copyOfRange(RX_HEADER_SIZE, packet.length)
                         onPacketReceived?.invoke(audioData)
                     }
                 } catch (e: java.net.SocketTimeoutException) {
@@ -120,5 +133,17 @@ class UdpAudioTransport(
     fun release() {
         stop()
         scope.cancel()
+    }
+
+    private fun hexStringToByteArray(hex: String): ByteArray {
+        val len = hex.length
+        val data = ByteArray(len / 2)
+        var i = 0
+        while (i < len) {
+            data[i / 2] = ((Character.digit(hex[i], 16) shl 4) +
+                    Character.digit(hex[i + 1], 16)).toByte()
+            i += 2
+        }
+        return data
     }
 }

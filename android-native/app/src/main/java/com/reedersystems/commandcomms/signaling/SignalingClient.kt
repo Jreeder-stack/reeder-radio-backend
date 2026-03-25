@@ -171,6 +171,13 @@ class SignalingClient(var serverUrl: String) {
             _events.tryEmit(SignalingEvent.LocationTrackStop)
         }
 
+        s.on("radio:sessionToken") { args -> parseAndEmit(args) { json ->
+            SignalingEvent.RadioSessionToken(
+                token = json.optString("token"),
+                channelId = json.optString("channelId")
+            )
+        }}
+
         s.on("ptt:granted") { args -> parseAndEmit(args) { json ->
             SignalingEvent.RadioPttGranted(
                 channelId = json.optString("channelId")
