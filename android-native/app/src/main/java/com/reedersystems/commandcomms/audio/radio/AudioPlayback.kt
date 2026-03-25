@@ -21,13 +21,15 @@ class AudioPlayback(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     var softwareGain: Float = DEFAULT_SOFTWARE_GAIN
 
-    private fun applyGain(pcm: ShortArray): ShortArray {
-        if (softwareGain == 1.0f) return pcm
-        for (i in pcm.indices) {
-            val amplified = (pcm[i] * softwareGain).toInt()
-            pcm[i] = amplified.coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
+    private fun applyGain(pcmBytes: ByteArray): ByteArray {
+        if (softwareGain == 1.0f) return pcmBytes
+        val buf = java.nio.ByteBuffer.wrap(pcmBytes).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+        val shortBuf = buf.asShortBuffer()
+        for (i in 0 until shortBuf.limit()) {
+            val amplified = (shortBuf[i] * softwareGain).toInt()
+            shortBuf.put(i, amplified.coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort())
         }
-        return pcm
+        return pcmBytes
     }
 
     fun start() {
