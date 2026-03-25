@@ -130,6 +130,8 @@ class RadioAudioEngine(private val context: Context) {
                     } catch (e: IllegalStateException) {
                         Log.w(TAG, "AudioRecord read failed (released?): ${e.message}")
                         break
+                    } catch (t: Throwable) {
+                        Log.e(TAG, "Capture loop error (continuing): ${t.message}", t)
                     }
                 }
             }

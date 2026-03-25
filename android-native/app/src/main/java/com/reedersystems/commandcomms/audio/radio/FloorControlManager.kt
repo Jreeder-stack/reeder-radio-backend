@@ -53,6 +53,10 @@ class FloorControlManager(
     }
 
     fun onFloorGranted(channelKey: String? = null) {
+        if (stateManager.state.value == RadioState.TRANSMITTING) {
+            Log.d(TAG, "Floor GRANTED but already TRANSMITTING — ignoring duplicate")
+            return
+        }
         if (cancelled) {
             Log.d(TAG, "Floor GRANTED but PTT already released — ignoring")
             if (channelKey != null) gateway.releaseFloor(channelKey)

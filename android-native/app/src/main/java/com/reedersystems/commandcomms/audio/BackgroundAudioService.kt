@@ -338,6 +338,10 @@ class BackgroundAudioService : Service() {
             engine.floorControl?.events?.collect { event ->
                 when (event) {
                     FloorControlEvent.GRANTED -> {
+                        if (pttState == PttState.TRANSMITTING) {
+                            Log.d(TAG, "Floor GRANTED but already TRANSMITTING — ignoring duplicate")
+                            return@collect
+                        }
                         Log.d(TAG, "Floor GRANTED — starting TX")
                         val txStarted = engine.startTransmit()
                         if (txStarted) {

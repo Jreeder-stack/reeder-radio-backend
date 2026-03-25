@@ -42,6 +42,10 @@ class OpusCodec {
     fun encode(pcmData: ByteArray): ByteArray? {
         val enc = encoder ?: return null
         val pcmSamples = ShortArray(pcmData.size / 2)
+        if (pcmSamples.size < FRAME_SIZE) {
+            Log.w(TAG, "PCM frame too small: ${pcmSamples.size} samples, expected $FRAME_SIZE")
+            return null
+        }
         java.nio.ByteBuffer.wrap(pcmData).order(java.nio.ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(pcmSamples)
         val outputBuffer = ByteArray(MAX_ENCODED_SIZE)
         return try {
@@ -50,6 +54,25 @@ class OpusCodec {
         } catch (e: Exception) {
             Log.w(TAG, "Encode error: ${e.message}")
             null
+        } catch (e: AssertionError) {
+            Log.e(TAG, "Encode assertion failure (re-initializing encoder): ${e.message}", e)
+            reinitializeEncoder()
+            null
+        }
+    }
+
+    private fun reinitializeEncoder() {
+        try {
+            val enc = OpusEncoder(SAMPLE_RATE, CHANNELS, OpusApplication.OPUS_APPLICATION_VOIP)
+            enc.setBitrate(BITRATE)
+            enc.setSignalType(OpusSignal.OPUS_SIGNAL_VOICE)
+            enc.setComplexity(5)
+            encoder = enc
+            Log.d(TAG, "Encoder re-initialized after assertion failure")
+        } catch (t: Throwable) {
+            Log.e(TAG, "Failed to re-initialize encoder: ${t.message}", t)
+            encoder = null
+            initialized = false
         }
     }
 
