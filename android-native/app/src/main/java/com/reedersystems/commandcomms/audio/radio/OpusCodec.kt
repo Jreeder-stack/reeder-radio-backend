@@ -12,7 +12,7 @@ class OpusCodec {
     companion object {
         const val SAMPLE_RATE = 48000
         const val CHANNELS = 1
-        const val BITRATE = 24000
+        const val BITRATE = 32000
         const val FRAME_SIZE = 960
         const val FRAME_DURATION_MS = 20
         const val MAX_ENCODED_SIZE = 512
@@ -29,7 +29,7 @@ class OpusCodec {
             val enc = OpusEncoder(SAMPLE_RATE, CHANNELS, OpusApplication.OPUS_APPLICATION_VOIP)
             enc.setBitrate(BITRATE)
             enc.setSignalType(OpusSignal.OPUS_SIGNAL_VOICE)
-            enc.setComplexity(5)
+            enc.setComplexity(8)
             encoder = enc
             decoder = OpusDecoder(SAMPLE_RATE, CHANNELS)
             initialized = true
@@ -66,7 +66,7 @@ class OpusCodec {
             val enc = OpusEncoder(SAMPLE_RATE, CHANNELS, OpusApplication.OPUS_APPLICATION_VOIP)
             enc.setBitrate(BITRATE)
             enc.setSignalType(OpusSignal.OPUS_SIGNAL_VOICE)
-            enc.setComplexity(5)
+            enc.setComplexity(8)
             encoder = enc
             Log.d(TAG, "Encoder re-initialized after assertion failure")
         } catch (t: Throwable) {

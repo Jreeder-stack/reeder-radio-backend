@@ -14,11 +14,9 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 private const val TAG = "[RadioEngine]"
-private const val MIC_SAMPLE_RATE = 16000
-private const val OPUS_SAMPLE_RATE = 48000
-private const val MIC_FRAME_SAMPLES = 320
+private const val MIC_SAMPLE_RATE = 48000
+private const val MIC_FRAME_SAMPLES = 960
 private const val MIC_FRAME_SIZE_BYTES = MIC_FRAME_SAMPLES * 2
-private const val OPUS_FRAME_SAMPLES = 960
 private const val CAPTURE_INTERVAL_MS = 20L
 
 class RadioAudioEngine(private val context: Context) {
@@ -124,9 +122,9 @@ class RadioAudioEngine(private val context: Context) {
                 while (isActive && isTransmitting) {
                     try {
                         val read = record.read(micBuffer, 0, micBuffer.size)
-                        if (read > 0) {
-                            val upsampled = upsample16kTo48k(micBuffer, read)
-                            val encoded = opusCodec.encode(upsampled)
+                        if (read == MIC_FRAME_SIZE_BYTES) {
+                            highPassFilter(micBuffer, read)
+                            val encoded = opusCodec.encode(micBuffer)
                             if (encoded != null) {
                                 udpTransport.send(encoded)
                             }
@@ -155,6 +153,8 @@ class RadioAudioEngine(private val context: Context) {
         isTransmitting = false
         captureJob?.cancelAndJoin()
         captureJob = null
+        hpPrevOutput = 0.0
+        hpPrevInput = 0.0
         try {
             audioRecord?.stop()
         } catch (e: IllegalStateException) {
@@ -193,24 +193,25 @@ class RadioAudioEngine(private val context: Context) {
         jitterBuffer.enqueue(packet)
     }
 
-    private fun upsample16kTo48k(input: ByteArray, length: Int): ByteArray {
-        val inputSamples = length / 2
-        val outputSamples = inputSamples * 3
-        val output = ByteArray(outputSamples * 2)
-        val inBuf = java.nio.ByteBuffer.wrap(input, 0, length).order(java.nio.ByteOrder.LITTLE_ENDIAN)
-        val outBuf = java.nio.ByteBuffer.wrap(output).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+    private var hpPrevOutput: Double = 0.0
+    private var hpPrevInput: Double = 0.0
+    private val HP_ALPHA: Double = 0.9889
 
-        var prevSample: Short = 0
-        for (i in 0 until inputSamples) {
-            val sample = inBuf.getShort(i * 2)
-            val s0 = prevSample.toInt()
-            val s1 = sample.toInt()
-            outBuf.putShort((i * 3) * 2, ((s0 * 2 + s1) / 3).toShort())
-            outBuf.putShort((i * 3 + 1) * 2, ((s0 + s1 * 2) / 3).toShort())
-            outBuf.putShort((i * 3 + 2) * 2, sample)
-            prevSample = sample
+    private fun highPassFilter(buffer: ByteArray, length: Int) {
+        val buf = java.nio.ByteBuffer.wrap(buffer, 0, length).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+        val sampleCount = length / 2
+        var prevOut = hpPrevOutput
+        var prevIn = hpPrevInput
+        for (i in 0 until sampleCount) {
+            val x = buf.getShort(i * 2).toDouble()
+            val y = HP_ALPHA * (prevOut + x - prevIn)
+            prevIn = x
+            prevOut = y
+            val clamped = y.coerceIn(-32768.0, 32767.0).toInt().toShort()
+            buf.putShort(i * 2, clamped)
         }
-        return output
+        hpPrevOutput = prevOut
+        hpPrevInput = prevIn
     }
 
     private fun acquireAudioFocus() {

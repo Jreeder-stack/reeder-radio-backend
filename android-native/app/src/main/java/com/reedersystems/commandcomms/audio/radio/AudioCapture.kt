@@ -5,7 +5,7 @@
  * button presses — it is started/stopped by the RadioAudioEngine when PTT state changes.
  * Captured PCM frames are delivered to an encoder callback for further processing.
  *
- * Configuration: Voice communication audio source, 16 kHz mono, 16-bit PCM.
+ * Configuration: Voice communication audio source, 48 kHz mono, 16-bit PCM.
  *
  * Hardware safety: This module does not interact with any hardware buttons, key codes,
  * scan codes, broadcast receivers, or accessibility hooks. PTT detection is handled
