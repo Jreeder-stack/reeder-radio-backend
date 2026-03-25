@@ -108,6 +108,8 @@ class SignalingService {
         credentials: true,
       },
       path: '/signaling',
+      pingInterval: 25000,
+      pingTimeout: 60000,
     });
 
     this.io.on('connection', (socket) => {
