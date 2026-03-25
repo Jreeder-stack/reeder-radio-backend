@@ -143,23 +143,34 @@ export function GlobalEmergencyOverlay() {
   const { emergencies, removeEmergency, updateUnit, addEvent, dispatcherName } = useDispatchStore();
   const alarmStopRef = useRef(null);
 
+  const isDispatchOrAdmin = user && (user.is_dispatcher || user.role === 'admin');
+
   useEffect(() => {
-    if (!user) return;
+    if (!isDispatchOrAdmin) {
+      if (alarmStopRef.current) {
+        alarmStopRef.current();
+        alarmStopRef.current = null;
+      }
+      return;
+    }
     if (emergencies.length > 0 && !alarmStopRef.current) {
       alarmStopRef.current = startAlarmTone();
     } else if (emergencies.length === 0 && alarmStopRef.current) {
       alarmStopRef.current();
       alarmStopRef.current = null;
     }
+  }, [emergencies.length, isDispatchOrAdmin]);
+
+  useEffect(() => {
     return () => {
       if (alarmStopRef.current) {
         alarmStopRef.current();
         alarmStopRef.current = null;
       }
     };
-  }, [emergencies.length, user]);
+  }, []);
 
-  if (!user || emergencies.length === 0) return null;
+  if (!isDispatchOrAdmin || emergencies.length === 0) return null;
 
   const handleAcknowledge = async (emergency) => {
     try {
