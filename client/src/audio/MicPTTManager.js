@@ -4,6 +4,7 @@ import { unlockAudio } from './iosAudioUnlock.js';
 import { processRadioVoice, cleanup as cleanupRadioDSP } from './radioVoiceDSP.js';
 import { acquireWakeLock, releaseWakeLock } from '../plugins/backgroundService.js';
 import { isNativeLiveKitAvailable, nativeEnableMic, nativeDisableMic } from '../plugins/nativeLiveKit.js';
+import { getOpusBrowserCodec, initOpusBrowserCodec } from './OpusBrowserCodec.js';
 
 const isNativeAndroid = () => isNativeLiveKitAvailable();
 
@@ -292,6 +293,13 @@ class MicPTTManager {
       const ctx = this._ensureAudioContext();
       await this._ensureCaptureWorklet();
 
+      try {
+        await initOpusBrowserCodec();
+        console.log('[MicPTT] Opus browser codec ready');
+      } catch (err) {
+        console.warn('[MicPTT] Opus browser codec init failed, will fallback to PCM:', err.message);
+      }
+
       playPermitTone();
       console.log('[MicPTT] Permit tone played immediately');
 
@@ -446,21 +454,39 @@ class MicPTTManager {
   _sendPcmFrame(int16Samples) {
     if (!this._ws || this._ws.readyState !== WebSocket.OPEN) return;
 
-    const header = new ArrayBuffer(3);
-    const view = new DataView(header);
-    view.setUint8(0, 0x01);
-    view.setUint16(1, this._txSequence & 0xFFFF);
-    this._txSequence++;
+    const codec = getOpusBrowserCodec();
+    if (codec.ready) {
+      try {
+        const opusData = codec.encode(int16Samples);
 
-    const pcmBytes = new Uint8Array(int16Samples.buffer, int16Samples.byteOffset, int16Samples.byteLength);
-    const frame = new Uint8Array(3 + pcmBytes.length);
-    frame.set(new Uint8Array(header), 0);
-    frame.set(pcmBytes, 3);
+        const frame = new Uint8Array(3 + opusData.length);
+        frame[0] = 0x02;
+        frame[1] = (this._txSequence >> 8) & 0xFF;
+        frame[2] = this._txSequence & 0xFF;
+        frame.set(opusData, 3);
+        this._txSequence = (this._txSequence + 1) & 0xFFFF;
 
-    try {
-      this._ws.send(frame.buffer);
-    } catch (err) {
-      console.warn('[MicPTT] WS send error:', err.message);
+        this._ws.send(frame.buffer);
+      } catch (err) {
+        console.warn('[MicPTT] Opus encode/send error:', err.message);
+      }
+    } else {
+      const header = new ArrayBuffer(3);
+      const view = new DataView(header);
+      view.setUint8(0, 0x01);
+      view.setUint16(1, this._txSequence & 0xFFFF);
+      this._txSequence++;
+
+      const pcmBytes = new Uint8Array(int16Samples.buffer, int16Samples.byteOffset, int16Samples.byteLength);
+      const frame = new Uint8Array(3 + pcmBytes.length);
+      frame.set(new Uint8Array(header), 0);
+      frame.set(pcmBytes, 3);
+
+      try {
+        this._ws.send(frame.buffer);
+      } catch (err) {
+        console.warn('[MicPTT] WS send error:', err.message);
+      }
     }
   }
 

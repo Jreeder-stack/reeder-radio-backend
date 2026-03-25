@@ -2,6 +2,8 @@ import { notifyChannelJoin } from '../utils/api.js';
 import { micPTTManager, PTT_STATES } from './MicPTTManager.js';
 import { isNativeLiveKitAvailable, nativeConnect, nativeDisconnect, updateServiceConnectionInfo } from '../plugins/nativeLiveKit.js';
 import { signalingManager } from '../signaling/SignalingManager.js';
+import { getOpusBrowserCodec, initOpusBrowserCodec } from './OpusBrowserCodec.js';
+import { JitterBuffer } from './JitterBuffer.js';
 
 const isNativeAndroid = () => isNativeLiveKitAvailable();
 
@@ -630,6 +632,8 @@ class LiveKitManager {
   }
 
   async connect(channelName, identity) {
+    initOpusBrowserCodec().catch(() => {});
+
     if (this.disconnectPromise) {
       console.log(`[AudioWS] Waiting for disconnect to complete before connecting to ${channelName}`);
       await this.disconnectPromise;
@@ -773,6 +777,12 @@ class LiveKitManager {
   _setupWsHandlers(ws, channelName, identity, conn) {
     conn._lastPong = Date.now();
 
+    initOpusBrowserCodec().then(() => {
+      console.log('[LiveKitManager] Opus browser codec ready for RX');
+    }).catch(err => {
+      console.warn('[LiveKitManager] Opus browser codec init failed:', err.message);
+    });
+
     ws.addEventListener('message', (event) => {
       if (typeof event.data === 'string') {
         try {
@@ -836,16 +846,46 @@ class LiveKitManager {
   _handleWsBinaryMessage(channelName, data) {
     if (!this.autoPlaybackEnabled) return;
 
-    if (data.byteLength < 6) return;
+    const view = new DataView(data instanceof ArrayBuffer ? data : data.buffer || new Uint8Array(data).buffer);
+    const frameType = view.getUint8(0);
 
-    this._recordActivity(channelName);
-    this._recordRxActivity();
+    if (frameType === 0x02) {
+      if (data.byteLength < 6) return;
 
-    const pcmData = new Int16Array(data.slice(4));
+      this._recordActivity(channelName);
+      this._recordRxActivity();
 
-    const playback = this._playbackNodes.get(channelName);
-    if (playback && playback.workletNode) {
-      playback.workletNode.port.postMessage({ type: 'pcm', samples: pcmData }, [pcmData.buffer]);
+      const sequence = view.getUint16(3);
+      const opusData = new Uint8Array(data instanceof ArrayBuffer ? data : data.buffer || new Uint8Array(data).buffer, 5);
+
+      let jitter = this._jitterBuffers && this._jitterBuffers.get(channelName);
+      if (!jitter) {
+        const codec = getOpusBrowserCodec();
+        if (!codec.ready) return;
+        if (!this._jitterBuffers) this._jitterBuffers = new Map();
+        jitter = new JitterBuffer(codec);
+        this._jitterBuffers.set(channelName, jitter);
+      }
+
+      jitter.push(sequence, opusData.slice());
+      const frames = jitter.getFrames();
+      const playback = this._playbackNodes.get(channelName);
+      if (playback && playback.workletNode) {
+        for (const pcmData of frames) {
+          playback.workletNode.port.postMessage({ type: 'pcm', samples: pcmData }, [pcmData.buffer]);
+        }
+      }
+    } else if (frameType === 0x01 || (frameType === 0x00 && data.byteLength >= 6)) {
+      if (data.byteLength < 6) return;
+
+      this._recordActivity(channelName);
+      this._recordRxActivity();
+
+      const pcmData = new Int16Array(data.slice(4));
+      const playback = this._playbackNodes.get(channelName);
+      if (playback && playback.workletNode) {
+        playback.workletNode.port.postMessage({ type: 'pcm', samples: pcmData }, [pcmData.buffer]);
+      }
     }
   }
 
@@ -963,6 +1003,14 @@ class LiveKitManager {
       try { playback.analyser.disconnect(); } catch (e) {}
       try { playback.gainNode.disconnect(); } catch (e) {}
       this._playbackNodes.delete(channelName);
+    }
+
+    if (this._jitterBuffers) {
+      const jitter = this._jitterBuffers.get(channelName);
+      if (jitter) {
+        jitter.reset();
+        this._jitterBuffers.delete(channelName);
+      }
     }
 
     if (this.rooms.size === 0) {

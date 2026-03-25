@@ -614,6 +614,7 @@ class AIDispatcher {
     this.channelName = channelName;
     
     this.log('CHANNEL_JOINED', { channel: channelName, audioListenerKeys: Array.from(listenKeys) });
+    this.log('OPUS_TRANSPORT_VERIFIED', { mode: 'server-side decode', note: 'AI dispatcher receives Opus from relay listeners and decodes server-side for STT' });
 
     if (this.humanParticipantCount === 0) {
       this.startDisconnectTimer();

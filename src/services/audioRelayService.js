@@ -1,5 +1,4 @@
 import dgram from 'dgram';
-import { opusCodec } from './opusCodec.js';
 
 const SESSION_TOKEN_LEN = 16;
 const CHANNEL_ID_LEN = 2;
@@ -185,29 +184,22 @@ class AudioRelayService {
 
     const wsSubs = this.wsSubscribers.get(channelKey);
     if (wsSubs && wsSubs.size > 0) {
-      let pcmFrame = null;
-      try {
-        const pcmData = opusCodec.decodeOpusToPcm(opusPayload);
-        const channelIdNum = parseInt(channelKey, 10);
-        pcmFrame = Buffer.alloc(4 + pcmData.length);
-        pcmFrame.writeUInt16BE(isNaN(channelIdNum) ? 0 : channelIdNum, 0);
-        pcmFrame.writeUInt16BE(sequence & 0xFFFF, 2);
-        pcmData.copy(pcmFrame, 4);
-      } catch (err) {
-        console.error('[AudioRelay] Opus decode for WS broadcast error:', err.message);
-      }
+      const channelIdNum = parseInt(channelKey, 10);
+      const opusFrame = Buffer.alloc(5 + opusPayload.length);
+      opusFrame.writeUInt8(0x02, 0);
+      opusFrame.writeUInt16BE(isNaN(channelIdNum) ? 0 : channelIdNum, 1);
+      opusFrame.writeUInt16BE(sequence & 0xFFFF, 3);
+      opusPayload.copy(opusFrame, 5);
 
-      if (pcmFrame) {
-        for (const [subUnitId, subInfo] of wsSubs) {
-          if (subUnitId === senderUnitId) continue;
-          subInfo.lastSeen = Date.now();
-          try {
-            if (subInfo.ws.readyState === 1) {
-              subInfo.ws.send(pcmFrame);
-            }
-          } catch (err) {
-            console.error(`[AudioRelay] WS send error to ${subUnitId}:`, err.message);
+      for (const [subUnitId, subInfo] of wsSubs) {
+        if (subUnitId === senderUnitId) continue;
+        subInfo.lastSeen = Date.now();
+        try {
+          if (subInfo.ws.readyState === 1) {
+            subInfo.ws.send(opusFrame);
           }
+        } catch (err) {
+          console.error(`[AudioRelay] WS send error to ${subUnitId}:`, err.message);
         }
       }
     }

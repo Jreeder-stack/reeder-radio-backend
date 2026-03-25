@@ -198,7 +198,27 @@ class WsAudioBridge {
 
     const frameType = buf[0];
 
-    if (frameType === 0x01) {
+    if (frameType === 0x02) {
+      if (!floorControlService.holdsFloor(clientInfo.channelId, clientInfo.unitId)) {
+        return;
+      }
+
+      const sequence = buf.readUInt16BE(1);
+      const opusPayload = Buffer.from(buf.subarray(3));
+
+      if (opusPayload.length < 1) return;
+
+      try {
+        audioRelayService.injectAudio(
+          clientInfo.channelId,
+          clientInfo.unitId,
+          sequence,
+          opusPayload
+        );
+      } catch (err) {
+        console.error(`[WsAudioBridge] Relay error for ${clientInfo.unitId}:`, err.message);
+      }
+    } else if (frameType === 0x01) {
       if (!floorControlService.holdsFloor(clientInfo.channelId, clientInfo.unitId)) {
         return;
       }

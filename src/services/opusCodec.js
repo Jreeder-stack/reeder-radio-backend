@@ -12,7 +12,14 @@ class OpusCodecPool {
   }
 
   _createEncoder() {
-    return new OpusScript(SAMPLE_RATE, CHANNELS, OpusScript.Application.VOIP);
+    const encoder = new OpusScript(SAMPLE_RATE, CHANNELS, OpusScript.Application.VOIP);
+    try {
+      encoder.encoderCTL(4012, 1);
+      encoder.encoderCTL(4014, 10);
+    } catch (e) {
+      console.warn('[OpusCodec] Failed to enable FEC on encoder:', e.message);
+    }
+    return encoder;
   }
 
   _createDecoder() {

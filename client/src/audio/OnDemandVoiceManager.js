@@ -1,4 +1,6 @@
 import { signalingManager } from '../signaling/SignalingManager.js';
+import { getOpusBrowserCodec, initOpusBrowserCodec } from './OpusBrowserCodec.js';
+import { JitterBuffer } from './JitterBuffer.js';
 
 const VOICE_STATE = {
   DISCONNECTED: 'disconnected',
@@ -349,6 +351,13 @@ class OnDemandVoiceManager {
       try {
         await this._ensurePlaybackWorklet();
 
+        try {
+          await initOpusBrowserCodec();
+          console.log('[OnDemandVoice] Opus browser codec ready for RX');
+        } catch (err) {
+          console.warn('[OnDemandVoice] Opus browser codec init failed:', err.message);
+        }
+
         const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const wsUrl = `${proto}//${window.location.host}/api/audio-ws?channelId=${encodeURIComponent(channelId)}&unitId=${encodeURIComponent(identity)}`;
 
@@ -394,6 +403,7 @@ class OnDemandVoiceManager {
   }
 
   async connectForReceiving(channelId, options = {}) {
+    initOpusBrowserCodec().catch(() => {});
     return this._connectToReceive(channelId);
   }
 
@@ -434,19 +444,51 @@ class OnDemandVoiceManager {
   }
 
   _handleBinaryMessage(channelId, data) {
-    if (data.byteLength < 6) return;
+    const view = new DataView(data instanceof ArrayBuffer ? data : data.buffer || new Uint8Array(data).buffer);
+    const frameType = view.getUint8(0);
 
-    const currentState = this.roomStates.get(channelId);
-    if (currentState === VOICE_STATE.TRANSMITTING) return;
+    if (frameType === 0x02) {
+      if (data.byteLength < 6) return;
 
-    const pcmData = new Int16Array(data.slice(4));
+      const currentState = this.roomStates.get(channelId);
+      if (currentState === VOICE_STATE.TRANSMITTING) return;
 
-    const playback = this._playbackNodes.get(channelId);
-    if (playback && playback.workletNode) {
-      playback.workletNode.port.postMessage({ type: 'pcm', samples: pcmData }, [pcmData.buffer]);
+      const sequence = view.getUint16(3);
+      const opusData = new Uint8Array(data instanceof ArrayBuffer ? data : data.buffer || new Uint8Array(data).buffer, 5);
+
+      let jitter = this._jitterBuffers && this._jitterBuffers.get(channelId);
+      if (!jitter) {
+        const codec = getOpusBrowserCodec();
+        if (!codec.ready) return;
+        if (!this._jitterBuffers) this._jitterBuffers = new Map();
+        jitter = new JitterBuffer(codec);
+        this._jitterBuffers.set(channelId, jitter);
+      }
+
+      jitter.push(sequence, opusData.slice());
+      const frames = jitter.getFrames();
+      const playback = this._playbackNodes.get(channelId);
+      if (playback && playback.workletNode) {
+        for (const pcmData of frames) {
+          playback.workletNode.port.postMessage({ type: 'pcm', samples: pcmData }, [pcmData.buffer]);
+        }
+      }
+
+      this._emit('audioReceived', { channelId });
+    } else if (frameType === 0x01 || (frameType === 0x00 && data.byteLength >= 6)) {
+      if (data.byteLength < 6) return;
+
+      const currentState = this.roomStates.get(channelId);
+      if (currentState === VOICE_STATE.TRANSMITTING) return;
+
+      const pcmData = new Int16Array(data.slice(4));
+      const playback = this._playbackNodes.get(channelId);
+      if (playback && playback.workletNode) {
+        playback.workletNode.port.postMessage({ type: 'pcm', samples: pcmData }, [pcmData.buffer]);
+      }
+
+      this._emit('audioReceived', { channelId });
     }
-
-    this._emit('audioReceived', { channelId });
   }
 
   _setupPlaybackChain(channelId) {
@@ -495,6 +537,14 @@ class OnDemandVoiceManager {
     this._cleanupPlayback(channelId);
     this._setState(channelId, VOICE_STATE.DISCONNECTED);
     this._clearGraceTimer(channelId);
+
+    if (this._jitterBuffers) {
+      const jitter = this._jitterBuffers.get(channelId);
+      if (jitter) {
+        jitter.reset();
+        this._jitterBuffers.delete(channelId);
+      }
+    }
   }
 
   _setState(channelId, state) {
