@@ -10,10 +10,10 @@ private const val TAG = "[OpusCodec]"
 
 class OpusCodec {
     companion object {
-        const val SAMPLE_RATE = 16000
+        const val SAMPLE_RATE = 48000
         const val CHANNELS = 1
-        const val BITRATE = 16000
-        const val FRAME_SIZE = 320
+        const val BITRATE = 24000
+        const val FRAME_SIZE = 960
         const val FRAME_DURATION_MS = 20
         const val MAX_ENCODED_SIZE = 512
     }

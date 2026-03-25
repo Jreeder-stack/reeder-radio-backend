@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useCallback, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { livekitManager } from '../audio/LiveKitManager.js';
+import { onDemandVoiceManager } from '../audio/OnDemandVoiceManager.js';
 import { signalingManager } from '../signaling/SignalingManager.js';
 import { getChannels } from '../utils/api.js';
 import useDispatchStore from '../state/dispatchStore.js';
@@ -506,6 +507,9 @@ export function LiveKitConnectionProvider({ children, user }) {
     const isDispatcher = currentPath === '/dispatcher';
     const isRadio = currentPath === '/';
     
+    livekitManager.setDispatcherMode(isDispatcher);
+    onDemandVoiceManager.setDispatcherMode(isDispatcher);
+
     if (isDispatcher || isRadio) {
       console.log(`[LiveKitConnection] ${isDispatcher ? 'Dispatcher' : 'Radio'} mode - idle timeout disabled (must survive screen lock)`);
       return;

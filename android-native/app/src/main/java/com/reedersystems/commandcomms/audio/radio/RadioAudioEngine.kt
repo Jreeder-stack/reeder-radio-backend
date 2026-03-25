@@ -14,8 +14,8 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 private const val TAG = "[RadioEngine]"
-private const val SAMPLE_RATE = 16000
-private const val FRAME_SIZE_BYTES = 640
+private const val SAMPLE_RATE = 48000
+private const val FRAME_SIZE_BYTES = 1920
 private const val CAPTURE_INTERVAL_MS = 20L
 
 class RadioAudioEngine(private val context: Context) {

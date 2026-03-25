@@ -292,7 +292,8 @@ class BackgroundAudioService : Service() {
         }
         app.signalingRepository.joinChannel(targetRoomKey)
         joinedSignalingChannelId = targetRoomKey
-        Log.d(TAG, "Background signaling joined channel $targetRoomKey")
+        radioEngine?.startReceive()
+        Log.d(TAG, "Background signaling joined channel $targetRoomKey — RX restarted")
         return true
     }
 
@@ -328,9 +329,10 @@ class BackgroundAudioService : Service() {
             Log.d(TAG, "RadioAudioEngine unexpected stop — resetting state")
         }
         engine.start()
+        engine.startReceive()
         radioEngine = engine
         observeRadioFloorEvents(engine)
-        Log.d(TAG, "RadioAudioEngine initialized (custom-radio transport)")
+        Log.d(TAG, "RadioAudioEngine initialized (custom-radio transport) — RX always-on")
     }
 
     private fun observeRadioFloorEvents(engine: RadioAudioEngine) {
@@ -397,27 +399,23 @@ class BackgroundAudioService : Service() {
                     is SignalingEvent.RadioChannelBusy -> {
                         if (event.channelId == currentRoomKey) {
                             engine.floorControl?.onChannelBusy(event.transmittingUnit)
-                            engine.startReceive()
                         }
                     }
                     is SignalingEvent.RadioChannelIdle -> {
                         if (event.channelId == currentRoomKey) {
                             engine.floorControl?.onChannelIdle()
-                            engine.stopReceive()
                         }
                     }
                     is SignalingEvent.RadioTxStart -> {
                         val selfUnitId = servicePrefs.unitId ?: app.sessionPrefs.unitId
                         if (event.unitId != selfUnitId && event.channelId == currentRoomKey) {
                             engine.floorControl?.onChannelBusy(event.unitId)
-                            engine.startReceive()
                         }
                     }
                     is SignalingEvent.RadioTxStop -> {
                         val selfUnitId = servicePrefs.unitId ?: app.sessionPrefs.unitId
                         if (event.unitId != selfUnitId && event.channelId == currentRoomKey) {
                             engine.floorControl?.onChannelIdle()
-                            engine.stopReceive()
                         }
                     }
                     else -> {}

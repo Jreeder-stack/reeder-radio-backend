@@ -7,7 +7,7 @@ import android.util.Log
 import kotlinx.coroutines.*
 
 private const val TAG = "[AudioPlay]"
-private const val SAMPLE_RATE = 16000
+private const val SAMPLE_RATE = 48000
 private const val PLAYBACK_INTERVAL_MS = 20L
 
 class AudioPlayback(

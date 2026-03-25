@@ -21,6 +21,7 @@ class OnDemandVoiceManager {
 
     this.GRACE_PERIOD_MS = 15000;
     this.EMERGENCY_ROOM_LIFETIME_MS = 60000;
+    this._dispatcherMode = false;
 
     this._listeners = {
       stateChange: new Set(),
@@ -192,7 +193,20 @@ class OnDemandVoiceManager {
     }
   }
 
+  setDispatcherMode(enabled) {
+    this._dispatcherMode = !!enabled;
+    if (this._dispatcherMode) {
+      for (const [channelId, timerId] of this.graceTimers) {
+        clearTimeout(timerId);
+      }
+      this.graceTimers.clear();
+    }
+    console.log(`[OnDemandVoice] Dispatcher mode ${this._dispatcherMode ? 'enabled' : 'disabled'} — grace period disconnect ${this._dispatcherMode ? 'disabled' : 'enabled'}`);
+  }
+
   _startGraceTimer(channelId, gracePeriodMs) {
+    if (this._dispatcherMode) return;
+
     if (this.activeEmergencies.has(channelId)) {
       console.log(`[OnDemandVoice] Grace timer blocked for ${channelId} - emergency active`);
       return;

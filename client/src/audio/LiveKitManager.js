@@ -45,6 +45,7 @@ class LiveKitManager {
     this.idleTimeoutTimers = new Map();
     this.IDLE_TIMEOUT_MS = 60000;
     this.idleCheckInterval = null;
+    this._dispatcherMode = false;
 
     this._trackSubscribedListeners = new Set();
     this._trackUnsubscribedListeners = new Set();
@@ -316,6 +317,7 @@ class LiveKitManager {
   _startIdleTimer(channelName) {
     this._clearIdleTimer(channelName);
 
+    if (this._dispatcherMode) return;
     if (this.activeChannels.has(channelName)) return;
     if (!this.rooms.has(channelName)) return;
 
@@ -345,6 +347,16 @@ class LiveKitManager {
   setIdleTimeout(ms) {
     this.IDLE_TIMEOUT_MS = ms;
     console.log(`[AudioWS] Idle timeout set to ${ms}ms`);
+  }
+
+  setDispatcherMode(enabled) {
+    this._dispatcherMode = !!enabled;
+    if (this._dispatcherMode) {
+      for (const [channelName] of this.idleTimeoutTimers) {
+        this._clearIdleTimer(channelName);
+      }
+    }
+    console.log(`[AudioWS] Dispatcher mode ${this._dispatcherMode ? 'enabled' : 'disabled'} — idle disconnect ${this._dispatcherMode ? 'disabled' : 'enabled'}`);
   }
 
   _initDataListener() {
