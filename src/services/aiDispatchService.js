@@ -2,7 +2,7 @@ import { speechToText, textToSpeech, isConfigured as isAzureConfigured } from '.
 import { matchCommand, resetDispatcherState, matchEmergencyResponse, matchSecureConfirmation, getUnitSessionState, setUnitSessionState, DISPATCHER_STATE } from './commandMatcher.js';
 import { isConfigured as isLlmConfigured, classifyIntent } from './llmIntentService.js';
 import { parsePersonDetails, parseDOB, extractNameFromTranscript } from './phoneticParser.js';
-import { isAiDispatchEnabled, getAiDispatchChannel, createChannelMessage } from '../db/index.js';
+import pool, { isAiDispatchEnabled, getAiDispatchChannel, createChannelMessage } from '../db/index.js';
 import { audioRelayService } from './audioRelayService.js';
 import { opusCodec, SAMPLE_RATE as OPUS_SAMPLE_RATE, FRAME_SIZE as OPUS_FRAME_SIZE } from './opusCodec.js';
 import { floorControlService } from './floorControlService.js';
@@ -278,6 +278,9 @@ class AIDispatcher {
     this.isRunning = false;
     this.disconnectTimer = null;
     this.configuredChannel = null;
+    this.channelAliases = new Set();
+    this.numericChannelId = null;
+    this.displayChannel = null;
     this.emergencyEscalation = new EmergencyEscalationController(this);
     this.errorCounts = new Map();
     this.errorCooldowns = new Map();
@@ -294,10 +297,25 @@ class AIDispatcher {
   }
 
   get humanParticipantCount() {
-    if (!this._signalingService || !this.channelName) return 0;
+    if (!this._signalingService) return 0;
     try {
-      const members = this._signalingService.getChannelMembers(this.channelName);
-      return members.filter(m => this.isHumanParticipant(m.unitId)).length;
+      const seen = new Set();
+      let count = 0;
+      const keysToCheck = this.channelName ? [this.channelName, ...this.channelAliases] : [...this.channelAliases];
+      for (const key of keysToCheck) {
+        const members = this._signalingService.getChannelMembers(key);
+        if (members && (members.size || members.length)) {
+          const arr = members instanceof Set ? Array.from(members) : members;
+          for (const m of arr) {
+            const uid = typeof m === 'string' ? m : m.unitId;
+            if (uid && !seen.has(uid) && this.isHumanParticipant(uid)) {
+              seen.add(uid);
+              count++;
+            }
+          }
+        }
+      }
+      return count;
     } catch {
       return 0;
     }
@@ -309,6 +327,45 @@ class AIDispatcher {
       this._signalingService = mod.signalingService;
     }
     return this._signalingService;
+  }
+
+  matchesChannel(channelId) {
+    if (!channelId) return false;
+    const id = String(channelId);
+    if (this.channelAliases.has(id)) return true;
+    if (this.configuredChannel && id === this.configuredChannel) return true;
+    if (this.displayChannel && id === this.displayChannel) return true;
+    if (this.numericChannelId != null && id === String(this.numericChannelId)) return true;
+    return false;
+  }
+
+  async _resolveChannelAliases(channelName, roomKey) {
+    this.channelAliases.clear();
+    this.numericChannelId = null;
+    if (channelName) this.channelAliases.add(channelName);
+    if (roomKey) this.channelAliases.add(roomKey);
+
+    try {
+      const result = await pool.query(
+        `SELECT id, name, COALESCE(zone, 'Default') || '__' || name AS room_key
+         FROM channels
+         WHERE name = $1
+            OR COALESCE(zone, 'Default') || '__' || name = $2
+         LIMIT 1`,
+        [channelName, roomKey || channelName]
+      );
+      if (result.rows[0]) {
+        const row = result.rows[0];
+        this.numericChannelId = row.id;
+        this.channelAliases.add(String(row.id));
+        this.channelAliases.add(row.name);
+        this.channelAliases.add(row.room_key);
+      }
+    } catch (err) {
+      this.log('CHANNEL_ALIAS_RESOLVE_ERROR', { error: err.message, channelName, roomKey });
+    }
+
+    this.log('CHANNEL_ALIASES_RESOLVED', { aliases: Array.from(this.channelAliases), numericId: this.numericChannelId });
   }
 
   async start(channelName, options = {}) {
@@ -323,6 +380,11 @@ class AIDispatcher {
       this.log('START_SKIPPED', { reason: 'Azure Speech not configured' });
       return;
     }
+
+    this.log('CONFIG_STATUS', {
+      azureSpeech: isAzureConfigured(),
+      llm: isLlmConfigured(),
+    });
 
     const enabled = await isAiDispatchEnabled();
     if (!enabled) {
@@ -342,6 +404,7 @@ class AIDispatcher {
     this.errorCounts.clear();
     this.errorCooldowns.clear();
     
+    await this._resolveChannelAliases(channelName, roomKey);
     await this._ensureSignalingService();
     
     if (cadService.isConfigured()) {
@@ -350,7 +413,11 @@ class AIDispatcher {
       });
     }
 
-    this.log('STARTED_STANDBY', { channel: channelName, roomKey: this.configuredChannel, mode: 'on-demand' });
+    this.log('STARTED_STANDBY', { channel: channelName, roomKey: this.configuredChannel, numericId: this.numericChannelId, aliases: Array.from(this.channelAliases), mode: 'on-demand' });
+  }
+
+  _removeAllAudioListeners() {
+    audioRelayService.removeAllAudioListeners(AI_IDENTITY);
   }
 
   async leaveChannel() {
@@ -358,7 +425,7 @@ class AIDispatcher {
     
     if (this.connected) {
       try {
-        audioRelayService.removeAudioListener(this.channelName, AI_IDENTITY);
+        this._removeAllAudioListeners();
         this.log('CHANNEL_LEFT', { channel: this.channelName });
       } catch (error) {
         this.log('CHANNEL_LEAVE_ERROR', { channel: this.channelName, error: error.message });
@@ -379,7 +446,7 @@ class AIDispatcher {
 
     if (this.connected) {
       try {
-        audioRelayService.removeAudioListener(this.channelName, AI_IDENTITY);
+        this._removeAllAudioListeners();
         this.log('CHANNEL_LEFT', { channel: this.channelName });
       } catch (error) {
         this.log('CHANNEL_LEAVE_ERROR', { channel: this.channelName, error: error.message });
@@ -444,6 +511,7 @@ class AIDispatcher {
 
   async joinChannel(channelName) {
     if (this.connected && this.channelName === channelName) {
+      this.log('JOIN_SKIPPED', { reason: 'Already connected to this channel', channel: channelName });
       return;
     }
 
@@ -452,12 +520,24 @@ class AIDispatcher {
     }
 
     this._audioListenerBound = this._onAudioFrame.bind(this);
-    audioRelayService.addAudioListener(channelName, AI_IDENTITY, this._audioListenerBound);
+
+    const listenKeys = new Set();
+    listenKeys.add(channelName);
+    for (const alias of this.channelAliases) {
+      listenKeys.add(alias);
+    }
+    if (this.numericChannelId != null) {
+      listenKeys.add(String(this.numericChannelId));
+    }
+
+    for (const key of listenKeys) {
+      audioRelayService.addAudioListener(key, AI_IDENTITY, this._audioListenerBound);
+    }
 
     this.connected = true;
     this.channelName = channelName;
     
-    this.log('CHANNEL_JOINED', { channel: channelName });
+    this.log('CHANNEL_JOINED', { channel: channelName, audioListenerKeys: Array.from(listenKeys) });
 
     if (this.humanParticipantCount === 0) {
       this.startDisconnectTimer();
@@ -467,7 +547,15 @@ class AIDispatcher {
   _onAudioFrame(audioEvent) {
     const { channelId, unitId, opusPayload, sequence } = audioEvent;
     if (unitId === AI_IDENTITY) return;
-    if (!this.isHumanParticipant(unitId)) return;
+    if (!this.isHumanParticipant(unitId)) {
+      if (sequence === 0) {
+        this.log('AUDIO_FRAME_NON_HUMAN', { unitId, channelId });
+      }
+      return;
+    }
+    if (sequence === 0 || (!this._activeRecordings.has(unitId) && sequence % 50 === 0)) {
+      this.log('AUDIO_FRAME_RECEIVED', { unitId, channelId, sequence, payloadBytes: opusPayload?.length });
+    }
 
     let pcmFrame;
     try {
@@ -2178,11 +2266,20 @@ async function setupSignalingIntegration(channelName) {
     
     const dispatcher = getDispatcher();
     aiDispatcherSignaling.initialize(dispatcher);
-    aiDispatcherSignaling.setActiveChannel(channelName);
+
+    const allChannelKeys = new Set(dispatcher.channelAliases);
+    if (dispatcher.configuredChannel) allChannelKeys.add(dispatcher.configuredChannel);
+    if (dispatcher.displayChannel) allChannelKeys.add(dispatcher.displayChannel);
+    if (channelName) allChannelKeys.add(channelName);
+
+    for (const alias of allChannelKeys) {
+      aiDispatcherSignaling.setActiveChannel(alias);
+    }
     
     signalingUnsubscribers.push(
       signalingService.onPttStart(async (data) => {
-        if (data.channelId === channelName) {
+        if (dispatcher.matchesChannel(data.channelId)) {
+          console.log(`[AI-Dispatcher] PTT_START callback matched: channelId=${data.channelId}, unitId=${data.unitId}`);
           await aiDispatcherSignaling.handlePttStart(data.channelId, data.unitId, data.isEmergency);
         }
       })
@@ -2190,7 +2287,7 @@ async function setupSignalingIntegration(channelName) {
     
     signalingUnsubscribers.push(
       signalingService.onPttEnd(async (data) => {
-        if (data.channelId === channelName) {
+        if (dispatcher.matchesChannel(data.channelId)) {
           await aiDispatcherSignaling.handlePttEnd(data.channelId, data.unitId, data.gracePeriodMs);
         }
       })
@@ -2198,7 +2295,7 @@ async function setupSignalingIntegration(channelName) {
     
     signalingUnsubscribers.push(
       signalingService.onEmergencyStart(async (data) => {
-        if (data.channelId === channelName) {
+        if (dispatcher.matchesChannel(data.channelId)) {
           await aiDispatcherSignaling.handleEmergencyStart(data.channelId, data.unitId);
         }
       })
@@ -2206,13 +2303,13 @@ async function setupSignalingIntegration(channelName) {
     
     signalingUnsubscribers.push(
       signalingService.onEmergencyEnd(async (data) => {
-        if (data.channelId === channelName) {
+        if (dispatcher.matchesChannel(data.channelId)) {
           await aiDispatcherSignaling.handleEmergencyEnd(data.channelId, data.unitId);
         }
       })
     );
     
-    console.log(`[AI-Dispatcher] Signaling integration setup for channel: ${channelName}`);
+    console.log(`[AI-Dispatcher] Signaling integration setup for channel: ${channelName} (aliases: ${Array.from(dispatcher.channelAliases).join(', ')})`);
   } catch (err) {
     console.error('[AI-Dispatcher] Failed to setup signaling integration:', err.message);
   }
@@ -2233,6 +2330,9 @@ export async function stopDispatcher() {
   
   try {
     const { aiDispatcherSignaling } = await import('./aiDispatcherSignaling.js');
+    for (const alias of dispatcher.channelAliases) {
+      aiDispatcherSignaling.removeActiveChannel(alias);
+    }
     if (dispatcher.configuredChannel) {
       aiDispatcherSignaling.removeActiveChannel(dispatcher.configuredChannel);
     }

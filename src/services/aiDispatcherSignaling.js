@@ -88,14 +88,24 @@ class AIDispatcherSignaling {
   }
 
   setActiveChannel(channelId) {
-    this.activeChannels.add(channelId);
-    this.log('CHANNEL_ACTIVATED', { channelId });
+    const key = String(channelId);
+    this.activeChannels.add(key);
+    this.log('CHANNEL_ACTIVATED', { channelId: key });
   }
 
   removeActiveChannel(channelId) {
-    this.activeChannels.delete(channelId);
-    this._clearConnectionTimer(channelId);
-    this.log('CHANNEL_DEACTIVATED', { channelId });
+    const key = String(channelId);
+    this.activeChannels.delete(key);
+    this._clearConnectionTimer(key);
+    this.log('CHANNEL_DEACTIVATED', { channelId: key });
+  }
+
+  _matchesChannel(channelId) {
+    if (this.activeChannels.has(channelId)) return true;
+    if (this.dispatcher && this.dispatcher.matchesChannel) {
+      return this.dispatcher.matchesChannel(channelId);
+    }
+    return false;
   }
 
   async handlePttStart(channelId, unitId, isEmergency = false) {
@@ -104,8 +114,8 @@ class AIDispatcherSignaling {
       return;
     }
 
-    if (!this.activeChannels.has(channelId)) {
-      this.log('PTT_IGNORED', { channelId, reason: 'Channel not active' });
+    if (!this._matchesChannel(channelId)) {
+      this.log('PTT_IGNORED', { channelId, reason: 'Channel not active', activeChannels: Array.from(this.activeChannels) });
       return;
     }
 
@@ -132,7 +142,7 @@ class AIDispatcherSignaling {
       this.log('CONNECTING_FOR_PTT', { channelId, unitId });
       try {
         await this.dispatcher.rejoinIfNeeded();
-        this.log('CONNECTED_FOR_PTT', { channelId, unitId });
+        this.log('CONNECTED_FOR_PTT', { channelId, unitId, dispatcherConnected: this.dispatcher.connected });
       } catch (err) {
         this.log('CONNECTION_FAILED', { channelId, error: err.message });
       }
@@ -144,7 +154,7 @@ class AIDispatcherSignaling {
 
   async handlePttEnd(channelId, unitId, gracePeriodMs = CONNECTION_GRACE_MS) {
     if (!this.dispatcher) return;
-    if (!this.activeChannels.has(channelId)) return;
+    if (!this._matchesChannel(channelId)) return;
     if (unitId === AI_UNIT_ID) return;
 
     this.log('PTT_END_DETECTED', { channelId, unitId, gracePeriodMs });
@@ -162,7 +172,7 @@ class AIDispatcherSignaling {
 
   async handleEmergencyStart(channelId, unitId) {
     if (!this.dispatcher) return;
-    if (!this.activeChannels.has(channelId)) return;
+    if (!this._matchesChannel(channelId)) return;
 
     this._recordActivity();
     this.log('EMERGENCY_START_DETECTED', { channelId, unitId });
