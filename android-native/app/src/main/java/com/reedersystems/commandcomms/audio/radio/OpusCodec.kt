@@ -12,7 +12,7 @@ class OpusCodec {
     companion object {
         const val SAMPLE_RATE = 48000
         const val CHANNELS = 1
-        const val BITRATE = 32000
+        const val BITRATE = 64000
         const val FRAME_SIZE = 960
         const val FRAME_DURATION_MS = 20
         const val MAX_ENCODED_SIZE = 512
