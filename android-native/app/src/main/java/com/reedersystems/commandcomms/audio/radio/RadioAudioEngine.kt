@@ -7,6 +7,8 @@ import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.media.AudioRecord
 import android.media.MediaRecorder
+import android.media.audiofx.AutomaticGainControl
+import android.media.audiofx.NoiseSuppressor
 import android.os.Build
 import android.util.Log
 import kotlinx.coroutines.*
@@ -37,6 +39,8 @@ class RadioAudioEngine(private val context: Context) {
     private val transmitMutex = Mutex()
 
     private var audioRecord: AudioRecord? = null
+    private var noiseSuppressor: NoiseSuppressor? = null
+    private var autoGainControl: AutomaticGainControl? = null
     private var captureJob: Job? = null
     @Volatile
     private var isTransmitting = false
@@ -95,11 +99,12 @@ class RadioAudioEngine(private val context: Context) {
         if (isTransmitting) return true
 
         try {
-            val bufferSize = AudioRecord.getMinBufferSize(
+            val minBufferSize = AudioRecord.getMinBufferSize(
                 MIC_SAMPLE_RATE,
                 AudioFormat.CHANNEL_IN_MONO,
                 AudioFormat.ENCODING_PCM_16BIT
             )
+            val bufferSize = maxOf(minBufferSize, MIC_FRAME_SIZE_BYTES * 4)
             val record = AudioRecord(
                 MediaRecorder.AudioSource.VOICE_COMMUNICATION,
                 MIC_SAMPLE_RATE,
@@ -114,6 +119,26 @@ class RadioAudioEngine(private val context: Context) {
             }
             record.startRecording()
             audioRecord = record
+
+            // Attach platform audio effects when available
+            val sessionId = record.audioSessionId
+            try {
+                if (NoiseSuppressor.isAvailable()) {
+                    noiseSuppressor = NoiseSuppressor.create(sessionId)?.also { it.enabled = true }
+                    Log.d(TAG, "NoiseSuppressor attached: ${noiseSuppressor != null}")
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "NoiseSuppressor unavailable: ${e.message}")
+            }
+            try {
+                if (AutomaticGainControl.isAvailable()) {
+                    autoGainControl = AutomaticGainControl.create(sessionId)?.also { it.enabled = true }
+                    Log.d(TAG, "AutomaticGainControl attached: ${autoGainControl != null}")
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "AutomaticGainControl unavailable: ${e.message}")
+            }
+
             isTransmitting = true
             stateManager.transitionTo(RadioState.TRANSMITTING)
 
@@ -124,6 +149,9 @@ class RadioAudioEngine(private val context: Context) {
                         val read = record.read(micBuffer, 0, micBuffer.size)
                         if (read == MIC_FRAME_SIZE_BYTES) {
                             highPassFilter(micBuffer, read)
+                            lowPassFilter(micBuffer, read)
+                            softwareCompressor(micBuffer, read)
+                            applyGain(micBuffer, read, TX_GAIN)
                             val encoded = opusCodec.encode(micBuffer)
                             if (encoded != null) {
                                 udpTransport.send(encoded)
@@ -137,7 +165,7 @@ class RadioAudioEngine(private val context: Context) {
                     }
                 }
             }
-            Log.d(TAG, "TX started — audio capture active")
+            Log.d(TAG, "TX started — audio capture active (buffer=${bufferSize}, bitrate=${OpusCodec.BITRATE})")
             return true
         } catch (e: SecurityException) {
             Log.e(TAG, "Mic permission denied: ${e.message}", e)
@@ -153,8 +181,15 @@ class RadioAudioEngine(private val context: Context) {
         isTransmitting = false
         captureJob?.cancelAndJoin()
         captureJob = null
-        hpPrevOutput = 0.0
-        hpPrevInput = 0.0
+        resetDspState()
+        try {
+            noiseSuppressor?.release()
+        } catch (_: Exception) {}
+        noiseSuppressor = null
+        try {
+            autoGainControl?.release()
+        } catch (_: Exception) {}
+        autoGainControl = null
         try {
             audioRecord?.stop()
         } catch (e: IllegalStateException) {
@@ -193,9 +228,41 @@ class RadioAudioEngine(private val context: Context) {
         jitterBuffer.enqueue(sequence, packet)
     }
 
+    // --- DSP state ---
+
+    // High-pass filter state (~80Hz, single-pole IIR)
     private var hpPrevOutput: Double = 0.0
     private var hpPrevInput: Double = 0.0
     private val HP_ALPHA: Double = 0.9889
+
+    // Low-pass filter state (7.5kHz biquad at 48kHz sample rate)
+    // Biquad coefficients for: fc=7500Hz, Q=0.707, fs=48000Hz
+    private val LP_B0: Double = 0.1554851459
+    private val LP_B1: Double = 0.3109702918
+    private val LP_B2: Double = 0.1554851459
+    private val LP_A1: Double = -0.5765879199
+    private val LP_A2: Double = 0.1985285035
+    private var lpX1: Double = 0.0
+    private var lpX2: Double = 0.0
+    private var lpY1: Double = 0.0
+    private var lpY2: Double = 0.0
+
+    // Compressor state (matches web: threshold=-18dB, ratio=3:1, attack=3ms, release=150ms)
+    private val COMP_THRESHOLD_DB: Double = -18.0
+    private val COMP_RATIO: Double = 3.0
+    private val COMP_ATTACK_COEFF: Double = 1.0 - Math.exp(-1.0 / (MIC_SAMPLE_RATE * 0.003))
+    private val COMP_RELEASE_COEFF: Double = 1.0 - Math.exp(-1.0 / (MIC_SAMPLE_RATE * 0.15))
+    private var compEnvelopeDb: Double = -90.0
+
+    // TX gain (matches web's 1.4x base gain)
+    private val TX_GAIN: Double = 1.4
+
+    private fun resetDspState() {
+        hpPrevOutput = 0.0
+        hpPrevInput = 0.0
+        lpX1 = 0.0; lpX2 = 0.0; lpY1 = 0.0; lpY2 = 0.0
+        compEnvelopeDb = -90.0
+    }
 
     private fun highPassFilter(buffer: ByteArray, length: Int) {
         val buf = java.nio.ByteBuffer.wrap(buffer, 0, length).order(java.nio.ByteOrder.LITTLE_ENDIAN)
@@ -212,6 +279,59 @@ class RadioAudioEngine(private val context: Context) {
         }
         hpPrevOutput = prevOut
         hpPrevInput = prevIn
+    }
+
+    private fun lowPassFilter(buffer: ByteArray, length: Int) {
+        val buf = java.nio.ByteBuffer.wrap(buffer, 0, length).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+        val sampleCount = length / 2
+        var x1 = lpX1; var x2 = lpX2
+        var y1 = lpY1; var y2 = lpY2
+        for (i in 0 until sampleCount) {
+            val x0 = buf.getShort(i * 2).toDouble()
+            val y0 = LP_B0 * x0 + LP_B1 * x1 + LP_B2 * x2 - LP_A1 * y1 - LP_A2 * y2
+            x2 = x1; x1 = x0
+            y2 = y1; y1 = y0
+            buf.putShort(i * 2, y0.coerceIn(-32768.0, 32767.0).toInt().toShort())
+        }
+        lpX1 = x1; lpX2 = x2
+        lpY1 = y1; lpY2 = y2
+    }
+
+    private fun softwareCompressor(buffer: ByteArray, length: Int) {
+        val buf = java.nio.ByteBuffer.wrap(buffer, 0, length).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+        val sampleCount = length / 2
+        var envelope = compEnvelopeDb
+        for (i in 0 until sampleCount) {
+            val sample = buf.getShort(i * 2).toDouble()
+            val absSample = Math.abs(sample) + 1e-10
+            val inputDb = 20.0 * Math.log10(absSample / 32768.0)
+
+            // Envelope follower
+            val coeff = if (inputDb > envelope) COMP_ATTACK_COEFF else COMP_RELEASE_COEFF
+            envelope += coeff * (inputDb - envelope)
+
+            // Gain computation
+            var gainDb = 0.0
+            if (envelope > COMP_THRESHOLD_DB) {
+                val overDb = envelope - COMP_THRESHOLD_DB
+                gainDb = -(overDb - overDb / COMP_RATIO)
+            }
+
+            val gainLinear = Math.pow(10.0, gainDb / 20.0)
+            val output = sample * gainLinear
+            buf.putShort(i * 2, output.coerceIn(-32768.0, 32767.0).toInt().toShort())
+        }
+        compEnvelopeDb = envelope
+    }
+
+    private fun applyGain(buffer: ByteArray, length: Int, gain: Double) {
+        if (gain == 1.0) return
+        val buf = java.nio.ByteBuffer.wrap(buffer, 0, length).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+        val sampleCount = length / 2
+        for (i in 0 until sampleCount) {
+            val sample = buf.getShort(i * 2).toDouble() * gain
+            buf.putShort(i * 2, sample.coerceIn(-32768.0, 32767.0).toInt().toShort())
+        }
     }
 
     private fun acquireAudioFocus() {

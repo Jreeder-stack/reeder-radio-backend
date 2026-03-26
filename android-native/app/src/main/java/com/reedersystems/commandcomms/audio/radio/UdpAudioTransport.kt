@@ -2,6 +2,7 @@ package com.reedersystems.commandcomms.audio.radio
 
 import android.util.Log
 import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.Channel
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress
@@ -23,8 +24,15 @@ class UdpAudioTransport(
 
     private var socket: DatagramSocket? = null
     private var receiveJob: Job? = null
+    private var sendJob: Job? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var sequenceNumber: Int = 0
+    private val sendQueue = Channel<ByteArray>(capacity = 64)
+
+    // Cached DNS resolution
+    @Volatile
+    private var cachedAddress: InetAddress? = null
+    private var cachedHost: String = ""
 
     var channelId: String = ""
     var unitId: String = ""
@@ -36,6 +44,11 @@ class UdpAudioTransport(
     fun configure(host: String, port: Int) {
         this.relayHost = host
         this.relayPort = port
+        // Invalidate cached address when host changes
+        if (host != cachedHost) {
+            cachedAddress = null
+            cachedHost = ""
+        }
         Log.d(TAG, "Configured relay: $host:$port")
     }
 
@@ -57,6 +70,7 @@ class UdpAudioTransport(
             socket = sock
             Log.d(TAG, "UDP socket opened on local port ${sock.localPort}")
             startReceiveLoop()
+            startSendLoop()
         } catch (e: Exception) {
             Log.e(TAG, "Failed to open UDP socket: ${e.message}", e)
         }
@@ -65,15 +79,18 @@ class UdpAudioTransport(
     fun stop() {
         receiveJob?.cancel()
         receiveJob = null
+        sendJob?.cancel()
+        sendJob = null
         socket?.close()
         socket = null
         sequenceNumber = 0
         sessionTokenBytes = null
+        cachedAddress = null
+        cachedHost = ""
         Log.d(TAG, "UDP transport stopped")
     }
 
     fun send(data: ByteArray) {
-        val sock = socket ?: return
         val token = sessionTokenBytes
         if (token == null) {
             Log.w(TAG, "Cannot send — no session token")
@@ -83,15 +100,40 @@ class UdpAudioTransport(
             Log.w(TAG, "Cannot send — relay host not configured")
             return
         }
-        scope.launch {
-            try {
-                val address = InetAddress.getByName(relayHost)
-                val framed = framePacket(token, data)
-                val packet = DatagramPacket(framed, framed.size, address, relayPort)
-                sock.send(packet)
-            } catch (e: Exception) {
-                Log.w(TAG, "UDP send error: ${e.message}")
+        val framed = framePacket(token, data)
+        sendQueue.trySend(framed)
+    }
+
+    private fun startSendLoop() {
+        sendJob = scope.launch {
+            for (framed in sendQueue) {
+                val sock = socket ?: break
+                try {
+                    val address = resolveAddress()
+                    if (address != null) {
+                        val packet = DatagramPacket(framed, framed.size, address, relayPort)
+                        sock.send(packet)
+                    }
+                } catch (e: Exception) {
+                    Log.w(TAG, "UDP send error: ${e.message}")
+                }
             }
+        }
+    }
+
+    private fun resolveAddress(): InetAddress? {
+        val host = relayHost
+        if (host == cachedHost && cachedAddress != null) {
+            return cachedAddress
+        }
+        return try {
+            val addr = InetAddress.getByName(host)
+            cachedAddress = addr
+            cachedHost = host
+            addr
+        } catch (e: Exception) {
+            Log.w(TAG, "DNS resolve failed for $host: ${e.message}")
+            null
         }
     }
 
