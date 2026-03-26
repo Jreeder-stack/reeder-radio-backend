@@ -671,12 +671,14 @@ class LiveKitManager {
     const tTotal = performance.now();
 
     try {
-      await this._ensurePlaybackWorklet();
-
       const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const wsUrl = `${proto}//${window.location.host}/api/audio-ws?channelId=${encodeURIComponent(channelName)}&unitId=${encodeURIComponent(identity)}`;
 
-      const ws = await this._openWebSocket(wsUrl);
+      let ws;
+      await Promise.all([
+        this._ensurePlaybackWorklet(),
+        this._openWebSocket(wsUrl).then(w => { ws = w; }),
+      ]);
 
       const conn = {
         ws,

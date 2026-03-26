@@ -332,8 +332,9 @@ class MicPTTManager {
 
       this.stream = stream;
 
-      const processedStream = processRadioVoice(stream);
-      this.browserTrack = processedStream.getAudioTracks()[0];
+      const source = ctx.createMediaStreamSource(stream);
+      this._sourceNode = source;
+      const dspOutput = processRadioVoice(ctx, source);
       console.log('[MicPTT] Mic acquired with radio voice DSP');
 
       let ws = this._ws;
@@ -381,9 +382,6 @@ class MicPTTManager {
       }, 2000);
 
       try {
-        const source = ctx.createMediaStreamSource(new MediaStream([this.browserTrack]));
-        this._sourceNode = source;
-
         const captureNode = new AudioWorkletNode(ctx, 'pcm-capture-processor');
         this._captureWorkletNode = captureNode;
 
@@ -393,7 +391,7 @@ class MicPTTManager {
           }
         };
 
-        source.connect(captureNode);
+        dspOutput.connect(captureNode);
         captureNode.connect(ctx.destination);
 
         captureNode.port.postMessage({ type: 'start' });
@@ -651,14 +649,6 @@ class MicPTTManager {
     if (this._sourceNode) {
       try { this._sourceNode.disconnect(); } catch (e) {}
       this._sourceNode = null;
-    }
-
-    if (this.browserTrack) {
-      try {
-        this.browserTrack.stop();
-        console.log('[MicPTT] Browser track stopped');
-      } catch (e) {}
-      this.browserTrack = null;
     }
 
     if (this.stream) {

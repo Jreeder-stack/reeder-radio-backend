@@ -349,19 +349,18 @@ class OnDemandVoiceManager {
       this._setState(channelId, VOICE_STATE.CONNECTING);
 
       try {
-        await this._ensurePlaybackWorklet();
-
-        try {
-          await initOpusBrowserCodec();
-          console.log('[OnDemandVoice] Opus browser codec ready for RX');
-        } catch (err) {
-          console.warn('[OnDemandVoice] Opus browser codec init failed:', err.message);
-        }
-
         const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const wsUrl = `${proto}//${window.location.host}/api/audio-ws?channelId=${encodeURIComponent(channelId)}&unitId=${encodeURIComponent(identity)}`;
 
-        const ws = await this._openWebSocket(wsUrl);
+        let ws;
+        await Promise.all([
+          this._ensurePlaybackWorklet(),
+          initOpusBrowserCodec().catch(err => {
+            console.warn('[OnDemandVoice] Opus browser codec init failed:', err.message);
+          }),
+          this._openWebSocket(wsUrl).then(w => { ws = w; }),
+        ]);
+
         const conn = { ws, channelId, unitId: identity };
 
         this._setupWsHandlers(ws, channelId);
@@ -405,6 +404,18 @@ class OnDemandVoiceManager {
   async connectForReceiving(channelId, options = {}) {
     initOpusBrowserCodec().catch(() => {});
     return this._connectToReceive(channelId);
+  }
+
+  async warmUp() {
+    try {
+      await Promise.all([
+        this._ensurePlaybackWorklet().catch(() => {}),
+        initOpusBrowserCodec().catch(() => {}),
+      ]);
+      console.log('[OnDemandVoice] Warm-up complete (worklet + codec pre-loaded)');
+    } catch (err) {
+      console.warn('[OnDemandVoice] Warm-up failed:', err.message);
+    }
   }
 
   _openWebSocket(url) {
