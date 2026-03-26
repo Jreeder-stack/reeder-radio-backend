@@ -141,8 +141,9 @@ class UdpAudioTransport(
         val seq = sequenceNumber++
         val frame = ByteArray(TX_HEADER_SIZE + audioData.size)
         System.arraycopy(token, 0, frame, 0, SESSION_TOKEN_LEN)
-        frame[SESSION_TOKEN_LEN] = 0
-        frame[SESSION_TOKEN_LEN + 1] = 0
+        val chId = channelId.toIntOrNull() ?: 0
+        frame[SESSION_TOKEN_LEN] = ((chId shr 8) and 0xFF).toByte()
+        frame[SESSION_TOKEN_LEN + 1] = (chId and 0xFF).toByte()
         frame[SESSION_TOKEN_LEN + 2] = ((seq shr 8) and 0xFF).toByte()
         frame[SESSION_TOKEN_LEN + 3] = (seq and 0xFF).toByte()
         System.arraycopy(audioData, 0, frame, TX_HEADER_SIZE, audioData.size)
