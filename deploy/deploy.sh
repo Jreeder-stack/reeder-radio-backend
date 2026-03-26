@@ -16,7 +16,11 @@ git reset --hard "origin/$DEPLOY_BRANCH"
 git clean -fd
 
 echo "[2/6] Fixing file ownership..."
-sudo chown -R "$(whoami)" "$APP_DIR"
+if [ ! -f "$APP_DIR/package.json" ]; then
+  echo "ERROR: APP_DIR ($APP_DIR) does not look like the project root. Aborting chown."
+  exit 1
+fi
+sudo chown -R "$(whoami):$(whoami)" "$APP_DIR"
 
 echo "[3/6] Installing backend dependencies..."
 npm install --production
