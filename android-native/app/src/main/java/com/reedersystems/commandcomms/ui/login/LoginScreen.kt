@@ -48,17 +48,30 @@ fun LoginScreen(
             .background(ColorBackground),
         contentAlignment = Alignment.Center
     ) {
-        when (uiState) {
-            is LoginUiState.CheckingSession -> {
+        if (viewModel.isAutoLoginMode && uiState !is LoginUiState.Error) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 CircularProgressIndicator(color = ColorPrimary)
-            }
-            else -> {
-                LoginForm(
-                    isLoading = uiState is LoginUiState.Loading,
-                    errorMessage = (uiState as? LoginUiState.Error)?.message,
-                    onLogin = { user, pass -> viewModel.login(user, pass) },
-                    onErrorDismiss = viewModel::clearError
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "Connecting...",
+                    color = ColorTextSecondary,
+                    fontSize = 14.sp,
+                    fontFamily = FontFamily.Monospace
                 )
+            }
+        } else {
+            when (uiState) {
+                is LoginUiState.CheckingSession -> {
+                    CircularProgressIndicator(color = ColorPrimary)
+                }
+                else -> {
+                    LoginForm(
+                        isLoading = uiState is LoginUiState.Loading,
+                        errorMessage = (uiState as? LoginUiState.Error)?.message,
+                        onLogin = { user, pass -> viewModel.login(user, pass) },
+                        onErrorDismiss = viewModel::clearError
+                    )
+                }
             }
         }
     }

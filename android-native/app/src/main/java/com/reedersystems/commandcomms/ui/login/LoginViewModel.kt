@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.reedersystems.commandcomms.CommandCommsApp
+import com.reedersystems.commandcomms.DevConfig
 import com.reedersystems.commandcomms.data.model.User
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -23,11 +24,40 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
 
     private val app get() = getApplication<CommandCommsApp>()
 
-    private val _uiState = MutableStateFlow<LoginUiState>(LoginUiState.CheckingSession)
+    val isAutoLoginMode = DevConfig.AUTO_LOGIN_ENABLED
+
+    private val _uiState = MutableStateFlow<LoginUiState>(
+        if (DevConfig.AUTO_LOGIN_ENABLED) LoginUiState.Loading else LoginUiState.CheckingSession
+    )
     val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
 
     init {
-        checkExistingSession()
+        if (DevConfig.AUTO_LOGIN_ENABLED) {
+            performAutoLogin()
+        } else {
+            checkExistingSession()
+        }
+    }
+
+    private fun performAutoLogin() {
+        viewModelScope.launch {
+            Log.d("LoginViewModel", "Auto-login enabled, logging in as ${DevConfig.AUTO_LOGIN_UNIT_ID}")
+            val result = app.authRepository.login(
+                DevConfig.AUTO_LOGIN_UNIT_ID,
+                DevConfig.AUTO_LOGIN_PASSWORD
+            )
+            if (result.isSuccess) {
+                val user = result.getOrThrow()
+                saveUserPrefs(user)
+                fetchAndStoreRadioConfig()
+                _uiState.value = LoginUiState.Success(user)
+            } else {
+                Log.w("LoginViewModel", "Auto-login failed: ${result.exceptionOrNull()?.message}")
+                _uiState.value = LoginUiState.Error(
+                    "Auto-login failed: ${result.exceptionOrNull()?.message ?: "Unknown error"}"
+                )
+            }
+        }
     }
 
     private fun checkExistingSession() {
