@@ -3,6 +3,7 @@ class PcmPlaybackProcessor extends AudioWorkletProcessor {
     super();
     this._queue = [];
     this._queueOffset = 0;
+    this._maxQueueDepth = 6;
     this.port.onmessage = (e) => {
       if (e.data.type === 'pcm') {
         const int16 = e.data.samples;
@@ -11,6 +12,14 @@ class PcmPlaybackProcessor extends AudioWorkletProcessor {
           float32[i] = int16[i] / 32768;
         }
         this._queue.push(float32);
+        if (this._queue.length > this._maxQueueDepth) {
+          const discard = this._queue.length - this._maxQueueDepth;
+          this._queue.splice(0, discard);
+          this._queueOffset = 0;
+        }
+      } else if (e.data.type === 'reset') {
+        this._queue = [];
+        this._queueOffset = 0;
       }
     };
   }

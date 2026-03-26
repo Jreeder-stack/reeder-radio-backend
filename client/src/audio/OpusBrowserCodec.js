@@ -25,7 +25,7 @@ function _loadModule() {
             reject(new Error('opusscript module factory not found'));
             return;
           }
-          const instance = factory();
+          const instance = factory({ wasmBinary: new ArrayBuffer(0) });
           if (instance.ready) {
             instance.ready.then(() => resolve(instance)).catch(reject);
           } else {

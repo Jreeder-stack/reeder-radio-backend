@@ -167,6 +167,8 @@ export default function App({ user, onLogout }) {
   const {
     joinChannel: signalingJoinChannel,
     leaveChannel: signalingLeaveChannel,
+    signalPttStart,
+    signalPttEnd,
   } = useSignalingContext();
   
   const { setIsEmergency: setContextIsEmergency } = useMobileRadioContext();
@@ -895,8 +897,19 @@ export default function App({ user, onLogout }) {
       return;
     }
     
-    await startPTT();
-  }, [pttState, startPTT, recordActivity, ensureConnected, transmitChannel]);
+    try {
+      await signalPttStart(transmitChannel);
+    } catch (grantErr) {
+      console.warn('[Radio PTT] Floor denied:', grantErr.message);
+      return;
+    }
+    
+    const started = await startPTT();
+    if (!started) {
+      console.warn('[Radio PTT] startPTT failed, releasing floor');
+      signalPttEnd(transmitChannel);
+    }
+  }, [pttState, startPTT, recordActivity, ensureConnected, transmitChannel, signalPttStart, signalPttEnd]);
 
   const handlePTTUp = useCallback(async () => {
     console.log('[Radio PTT] === PTT UP ===, state:', pttState);
@@ -907,8 +920,14 @@ export default function App({ user, onLogout }) {
       return;
     }
     
-    await stopPTT();
-  }, [pttState, stopPTT]);
+    try {
+      await stopPTT();
+    } finally {
+      if (transmitChannel) {
+        signalPttEnd(transmitChannel);
+      }
+    }
+  }, [pttState, stopPTT, transmitChannel, signalPttEnd]);
 
   // Spacebar PTT keyboard shortcut
   useEffect(() => {

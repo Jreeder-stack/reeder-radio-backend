@@ -861,7 +861,17 @@ class LiveKitManager {
       let jitter = this._jitterBuffers && this._jitterBuffers.get(channelName);
       if (!jitter) {
         const codec = getOpusBrowserCodec();
-        if (!codec.ready) return;
+        if (!codec.ready) {
+          const now = Date.now();
+          if (!this._lastCodecRetry || now - this._lastCodecRetry > 3000) {
+            this._lastCodecRetry = now;
+            console.warn('[LiveKitManager] Opus codec not ready, attempting re-init for RX audio');
+            initOpusBrowserCodec().catch(err => {
+              console.error('[LiveKitManager] Opus codec re-init failed:', err.message);
+            });
+          }
+          return;
+        }
         if (!this._jitterBuffers) this._jitterBuffers = new Map();
         jitter = new JitterBuffer(codec);
         this._jitterBuffers.set(channelName, jitter);
