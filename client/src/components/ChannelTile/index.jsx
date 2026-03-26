@@ -59,8 +59,8 @@ export default function ChannelTile({ channel, onRemove }) {
   const isTxSelected = txChannelIds.includes(channel.id);
   const level = channelLevels[channel.id] || 0;
   const volumeLevel = channelLevels[`volume_${channel.id}`] ?? 100;
-  const activeTransmission = activeTransmissions[channel.id];
   const roomKey = channel.room_key || ((channel.zone || 'Default') + '__' + channel.name);
+  const activeTransmission = activeTransmissions[roomKey];
   const unitsInChannel = unitsByChannel[roomKey] || [];
   const hasEmergency = emergencies.some(e => e.channel === roomKey);
 
