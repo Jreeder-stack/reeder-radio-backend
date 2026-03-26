@@ -146,6 +146,7 @@ class WsAudioBridge {
       unitId,
       user,
       sequence: 0,
+      serverSequence: 0,
       alive: true,
     };
 
@@ -231,10 +232,11 @@ class WsAudioBridge {
       try {
         const opusFrames = opusCodec.encodePcmToOpus(pcmData);
         for (const opusPayload of opusFrames) {
+          clientInfo.serverSequence = (clientInfo.serverSequence + 1) & 0xFFFF;
           audioRelayService.injectAudio(
             clientInfo.channelId,
             clientInfo.unitId,
-            sequence,
+            clientInfo.serverSequence,
             opusPayload
           );
         }

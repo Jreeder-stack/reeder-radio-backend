@@ -31,13 +31,14 @@ class JitterBuffer {
       this._fillCount = 0;
     }
 
-    const distance = this._seqDistance(sequence, this._nextSequence);
+    let distance = this._seqDistance(sequence, this._nextSequence);
 
-    if (distance > this._bufferDepth * 8) {
+    if (distance > this._bufferDepth * 8 || distance < -(this._bufferDepth * 8)) {
       this.reset();
       this._nextSequence = sequence;
       this._filling = true;
       this._fillCount = 0;
+      distance = 0;
     }
 
     if (distance < -this._bufferDepth * 2) {

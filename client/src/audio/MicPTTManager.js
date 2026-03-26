@@ -386,7 +386,6 @@ class MicPTTManager {
 
         const captureNode = new AudioWorkletNode(ctx, 'pcm-capture-processor');
         this._captureWorkletNode = captureNode;
-        this._txSequence = 0;
 
         captureNode.port.onmessage = (e) => {
           if (e.data.type === 'pcm') {

@@ -175,7 +175,8 @@ class OpusBrowserCodec {
     if (!this._ready) return new Int16Array(FRAME_SIZE);
 
     try {
-      const samples = this._decoder._decode(this._inOpusPointer, 0, this._outPCM.byteOffset);
+      this._inOpus.set(nextOpusPacket);
+      const samples = this._decoder._decode(this._inOpusPointer, nextOpusPacket.length, this._outPCM.byteOffset);
       if (samples > 0) {
         const pcmByteLen = samples * CHANNELS * 2;
         const raw = new Uint8Array(pcmByteLen);
