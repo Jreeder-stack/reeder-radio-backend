@@ -48,9 +48,13 @@ class OpusBrowserCodec {
     this._encoder = null;
     this._decoder = null;
     this._inPCMPointer = 0;
+    this._inPCM = null;
     this._inOpusPointer = 0;
+    this._inOpus = null;
     this._outOpusPointer = 0;
+    this._outOpus = null;
     this._outPCMPointer = 0;
+    this._outPCM = null;
     this._ready = false;
   }
 
@@ -64,13 +68,17 @@ class OpusBrowserCodec {
 
     const inPCMLength = MAX_FRAME_SIZE * CHANNELS * 2;
     this._inPCMPointer = this._native._malloc(inPCMLength);
+    this._inPCM = this._native.HEAPU16.subarray(this._inPCMPointer, this._inPCMPointer + inPCMLength);
 
     this._inOpusPointer = this._native._malloc(MAX_PACKET_SIZE);
+    this._inOpus = this._native.HEAPU8.subarray(this._inOpusPointer, this._inOpusPointer + MAX_PACKET_SIZE);
 
     this._outOpusPointer = this._native._malloc(MAX_PACKET_SIZE);
+    this._outOpus = this._native.HEAPU8.subarray(this._outOpusPointer, this._outOpusPointer + MAX_PACKET_SIZE);
 
     const outPCMLength = MAX_FRAME_SIZE * CHANNELS * 2;
     this._outPCMPointer = this._native._malloc(outPCMLength);
+    this._outPCM = this._native.HEAPU16.subarray(this._outPCMPointer, this._outPCMPointer + outPCMLength);
 
     this._encoder._encoder_ctl(OPUS_SET_BITRATE, 32000);
     this._encoder._encoder_ctl(OPUS_SET_INBAND_FEC, 1);
@@ -79,22 +87,38 @@ class OpusBrowserCodec {
     let selfTestPassed = false;
     try {
       const testPcm = new Int16Array(FRAME_SIZE);
-      const testBytes = new Uint8Array(testPcm.buffer);
-      this._native.HEAPU8.set(testBytes, this._inPCMPointer);
-      const encLen = this._encoder._encode(this._inPCMPointer, testBytes.length, this._outOpusPointer, FRAME_SIZE);
+      for (let i = 0; i < FRAME_SIZE; i++) {
+        testPcm[i] = Math.sin(i * 2 * Math.PI * 440 / SAMPLE_RATE) * 16384;
+      }
+      const testBuf = new Uint16Array(testPcm.buffer);
+      this._inPCM.set(testBuf);
+
+      const encLen = this._encoder._encode(this._inPCM.byteOffset, testBuf.length, this._outOpusPointer, FRAME_SIZE);
       if (encLen <= 0) {
         console.error('[OpusBrowserCodec] Self-test encode failed, len=' + encLen);
       } else {
-        this._native.HEAPU8.set(
-          this._native.HEAPU8.subarray(this._outOpusPointer, this._outOpusPointer + encLen),
-          this._inOpusPointer
-        );
-        const decSamples = this._decoder._decode(this._inOpusPointer, encLen, this._outPCMPointer);
+        this._inOpus.set(this._outOpus.subarray(0, encLen));
+
+        const decSamples = this._decoder._decode(this._inOpusPointer, encLen, this._outPCM.byteOffset);
         if (decSamples <= 0) {
           console.error('[OpusBrowserCodec] Self-test decode failed, samples=' + decSamples);
         } else {
-          console.log('[OpusBrowserCodec] Self-test OK: encoded ' + encLen + ' bytes, decoded ' + decSamples + ' samples');
-          selfTestPassed = true;
+          const decoded = new Int16Array(this._outPCM.buffer, this._outPCM.byteOffset, decSamples * CHANNELS);
+          let maxVal = 0;
+          let sumAbs = 0;
+          for (let i = 0; i < Math.min(decoded.length, 100); i++) {
+            const v = Math.abs(decoded[i]);
+            if (v > maxVal) maxVal = v;
+            sumAbs += v;
+          }
+          const avgAbs = sumAbs / Math.min(decoded.length, 100);
+
+          if (maxVal < 100 || avgAbs < 10) {
+            console.error('[OpusBrowserCodec] Self-test FAILED: decoded signal too quiet (max=' + maxVal + ', avg=' + avgAbs.toFixed(1) + '). Codec may be broken.');
+          } else {
+            console.log('[OpusBrowserCodec] Self-test OK: encoded ' + encLen + ' bytes, decoded ' + decSamples + ' samples, peak=' + maxVal + ', avg=' + avgAbs.toFixed(1));
+            selfTestPassed = true;
+          }
         }
       }
     } catch (e) {
@@ -118,49 +142,44 @@ class OpusBrowserCodec {
   encode(pcmInt16) {
     if (!this._ready) throw new Error('OpusBrowserCodec not initialized');
 
-    const pcmBytes = new Uint8Array(pcmInt16.buffer, pcmInt16.byteOffset, pcmInt16.byteLength);
-    this._native.HEAPU8.set(pcmBytes, this._inPCMPointer);
+    const buf = new Uint16Array(pcmInt16.buffer, pcmInt16.byteOffset, pcmInt16.length);
+    this._inPCM.set(buf);
 
-    const len = this._encoder._encode(this._inPCMPointer, pcmBytes.length, this._outOpusPointer, FRAME_SIZE);
+    const len = this._encoder._encode(this._inPCM.byteOffset, buf.length, this._outOpusPointer, FRAME_SIZE);
     if (len < 0) {
       throw new Error('Opus encode error: ' + len);
     }
 
     const result = new Uint8Array(len);
-    result.set(this._native.HEAPU8.subarray(this._outOpusPointer, this._outOpusPointer + len));
+    result.set(this._outOpus.subarray(0, len));
     return result;
   }
 
   decode(opusData) {
     if (!this._ready) throw new Error('OpusBrowserCodec not initialized');
 
-    this._native.HEAPU8.set(opusData, this._inOpusPointer);
+    this._inOpus.set(opusData);
 
-    const samples = this._decoder._decode(this._inOpusPointer, opusData.length, this._outPCMPointer);
+    const samples = this._decoder._decode(this._inOpusPointer, opusData.length, this._outPCM.byteOffset);
     if (samples < 0) {
       throw new Error('Opus decode error: ' + samples);
     }
 
     const pcmByteLen = samples * CHANNELS * 2;
     const raw = new Uint8Array(pcmByteLen);
-    raw.set(this._native.HEAPU8.subarray(this._outPCMPointer, this._outPCMPointer + pcmByteLen));
+    raw.set(new Uint8Array(this._outPCM.buffer, this._outPCM.byteOffset, pcmByteLen));
     return new Int16Array(raw.buffer);
   }
 
-  // FEC recovery: ideally calls opus_decode(decoder, nextPacket, len, pcm, frameSize, 1)
-  // to extract forward error correction data from the next packet. However, opusscript's
-  // compiled handler does not expose the decode_fec parameter (hardcoded to 0). This falls
-  // back to PLC (zero-length decode) which uses the decoder's internal state for concealment.
-  // To enable true FEC decode, replace with a WASM build that exports decode_fec.
   decodeFEC(nextOpusPacket) {
     if (!this._ready) return new Int16Array(FRAME_SIZE);
 
     try {
-      const samples = this._decoder._decode(this._inOpusPointer, 0, this._outPCMPointer);
+      const samples = this._decoder._decode(this._inOpusPointer, 0, this._outPCM.byteOffset);
       if (samples > 0) {
         const pcmByteLen = samples * CHANNELS * 2;
         const raw = new Uint8Array(pcmByteLen);
-        raw.set(this._native.HEAPU8.subarray(this._outPCMPointer, this._outPCMPointer + pcmByteLen));
+        raw.set(new Uint8Array(this._outPCM.buffer, this._outPCM.byteOffset, pcmByteLen));
         return new Int16Array(raw.buffer);
       }
     } catch (e) {}
@@ -172,11 +191,11 @@ class OpusBrowserCodec {
     if (!this._ready) return new Int16Array(FRAME_SIZE);
 
     try {
-      const samples = this._decoder._decode(this._inOpusPointer, 0, this._outPCMPointer);
+      const samples = this._decoder._decode(this._inOpusPointer, 0, this._outPCM.byteOffset);
       if (samples > 0) {
         const pcmByteLen = samples * CHANNELS * 2;
         const raw = new Uint8Array(pcmByteLen);
-        raw.set(this._native.HEAPU8.subarray(this._outPCMPointer, this._outPCMPointer + pcmByteLen));
+        raw.set(new Uint8Array(this._outPCM.buffer, this._outPCM.byteOffset, pcmByteLen));
         return new Int16Array(raw.buffer);
       }
     } catch (e) {}
@@ -193,6 +212,10 @@ class OpusBrowserCodec {
       if (this._encoder) { try { this._encoder.delete(); } catch (e) {} }
       if (this._decoder) { try { this._decoder.delete(); } catch (e) {} }
     }
+    this._inPCM = null;
+    this._inOpus = null;
+    this._outOpus = null;
+    this._outPCM = null;
     this._ready = false;
     console.log('[OpusBrowserCodec] Destroyed');
   }
