@@ -10,23 +10,26 @@ echo ""
 
 cd "$APP_DIR"
 
-echo "[1/5] Pulling latest code from '$DEPLOY_BRANCH'..."
+echo "[1/6] Pulling latest code from '$DEPLOY_BRANCH'..."
 git fetch origin "$DEPLOY_BRANCH"
 git reset --hard "origin/$DEPLOY_BRANCH"
 git clean -fd
 
-echo "[2/5] Installing backend dependencies..."
+echo "[2/6] Fixing file ownership..."
+sudo chown -R "$(whoami)" "$APP_DIR"
+
+echo "[3/6] Installing backend dependencies..."
 npm install --production
 
-echo "[3/5] Installing client dependencies..."
+echo "[4/6] Installing client dependencies..."
 cd client
 npm install
 
-echo "[4/5] Building frontend..."
+echo "[5/6] Building frontend..."
 npm run build
 cd ..
 
-echo "[5/5] Restarting application..."
+echo "[6/6] Restarting application..."
 if pm2 describe command-comms &>/dev/null; then
   pm2 restart deploy/ecosystem.config.cjs
 else
