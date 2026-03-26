@@ -69,7 +69,7 @@ class RadioAudioEngine(private val context: Context) {
         if (started) return
         opusCodec.initialize()
         acquireAudioFocus()
-        udpTransport.onPacketReceived = { packet -> onAudioPacketReceived(packet) }
+        udpTransport.onPacketReceived = { sequence, packet -> onAudioPacketReceived(sequence, packet) }
         udpTransport.start()
         started = true
         Log.d(TAG, "RadioAudioEngine started")
@@ -189,8 +189,8 @@ class RadioAudioEngine(private val context: Context) {
         Log.d(TAG, "RX stopped")
     }
 
-    private fun onAudioPacketReceived(packet: ByteArray) {
-        jitterBuffer.enqueue(packet)
+    private fun onAudioPacketReceived(sequence: Int, packet: ByteArray) {
+        jitterBuffer.enqueue(sequence, packet)
     }
 
     private var hpPrevOutput: Double = 0.0

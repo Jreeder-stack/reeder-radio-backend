@@ -28,7 +28,7 @@ class UdpAudioTransport(
 
     var channelId: String = ""
     var unitId: String = ""
-    var onPacketReceived: ((ByteArray) -> Unit)? = null
+    var onPacketReceived: ((sequence: Int, data: ByteArray) -> Unit)? = null
 
     @Volatile
     private var sessionTokenBytes: ByteArray? = null
@@ -116,8 +116,10 @@ class UdpAudioTransport(
                     val packet = DatagramPacket(buffer, buffer.size)
                     sock.receive(packet)
                     if (packet.length > RX_HEADER_SIZE) {
+                        val seq = ((buffer[CHANNEL_ID_LEN].toInt() and 0xFF) shl 8) or
+                                   (buffer[CHANNEL_ID_LEN + 1].toInt() and 0xFF)
                         val audioData = buffer.copyOfRange(RX_HEADER_SIZE, packet.length)
-                        onPacketReceived?.invoke(audioData)
+                        onPacketReceived?.invoke(seq, audioData)
                     }
                 } catch (e: java.net.SocketTimeoutException) {
                 } catch (e: Exception) {

@@ -76,11 +76,15 @@ class OpusCodec {
         }
     }
 
-    fun decode(opusData: ByteArray): ByteArray? {
+    fun decode(opusData: ByteArray?): ByteArray? {
         val dec = decoder ?: return null
         val pcmBuffer = ShortArray(FRAME_SIZE * CHANNELS)
         return try {
-            val decodedSamples = dec.decode(opusData, 0, opusData.size, pcmBuffer, 0, FRAME_SIZE, false)
+            val decodedSamples = if (opusData != null) {
+                dec.decode(opusData, 0, opusData.size, pcmBuffer, 0, FRAME_SIZE, false)
+            } else {
+                dec.decode(null, 0, 0, pcmBuffer, 0, FRAME_SIZE, false)
+            }
             if (decodedSamples > 0) {
                 val result = ByteArray(decodedSamples * CHANNELS * 2)
                 java.nio.ByteBuffer.wrap(result).order(java.nio.ByteOrder.LITTLE_ENDIAN).asShortBuffer().put(pcmBuffer, 0, decodedSamples * CHANNELS)

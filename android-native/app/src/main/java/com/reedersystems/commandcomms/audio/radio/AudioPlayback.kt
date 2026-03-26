@@ -8,8 +8,10 @@ import kotlinx.coroutines.*
 
 private const val TAG = "[AudioPlay]"
 private const val SAMPLE_RATE = 48000
-private const val PLAYBACK_INTERVAL_MS = 20L
+private const val FRAME_INTERVAL_MS = 20L
 private const val DEFAULT_SOFTWARE_GAIN = 3.5f
+private const val IDLE_TIMEOUT_MS = 200L
+private const val WAIT_WINDOW_MS = 20L
 
 class AudioPlayback(
     private val jitterBuffer: JitterBuffer,
@@ -70,16 +72,79 @@ class AudioPlayback(
         Log.d(TAG, "AudioPlayback started: ${SAMPLE_RATE}Hz mono, low-latency")
 
         playbackJob = scope.launch {
+            var lastDataTimeMs = System.currentTimeMillis()
+            var missWaitStartMs = 0L
+            var plcCount = 0
+
             while (isActive) {
-                val packet = jitterBuffer.dequeue()
-                if (packet != null) {
-                    val pcm = opusCodec.decode(packet)
-                    if (pcm != null && pcm.isNotEmpty()) {
-                        applyGain(pcm)
-                        track.write(pcm, 0, pcm.size)
+                if (!jitterBuffer.isPlaybackActive) {
+                    if (!jitterBuffer.tryStartPlayback()) {
+                        delay(FRAME_INTERVAL_MS)
+
+                        if (!jitterBuffer.isEmpty) {
+                            lastDataTimeMs = System.currentTimeMillis()
+                        }
+                        continue
+                    }
+                    lastDataTimeMs = System.currentTimeMillis()
+                    missWaitStartMs = 0L
+                }
+
+                val expectedSeq = jitterBuffer.getExpectedSeq()
+                if (expectedSeq < 0) {
+                    delay(FRAME_INTERVAL_MS)
+                    continue
+                }
+
+                if (jitterBuffer.hasPacket(expectedSeq)) {
+                    val data = jitterBuffer.take(expectedSeq)
+                    jitterBuffer.advancePlaybackSeq()
+                    missWaitStartMs = 0L
+                    lastDataTimeMs = System.currentTimeMillis()
+
+                    if (data != null) {
+                        val pcm = opusCodec.decode(data)
+                        if (pcm != null && pcm.isNotEmpty()) {
+                            applyGain(pcm)
+                            track.write(pcm, 0, pcm.size)
+                        }
                     }
                 } else {
-                    delay(PLAYBACK_INTERVAL_MS)
+                    val now = System.currentTimeMillis()
+
+                    if (missWaitStartMs == 0L) {
+                        missWaitStartMs = now
+                    }
+
+                    val waited = now - missWaitStartMs
+
+                    if (waited < WAIT_WINDOW_MS) {
+                        delay(FRAME_INTERVAL_MS)
+                    } else {
+                        plcCount++
+                        val pcm = opusCodec.decode(null)
+                        if (pcm != null && pcm.isNotEmpty()) {
+                            applyGain(pcm)
+                            track.write(pcm, 0, pcm.size)
+                            if (plcCount % 10 == 1) {
+                                Log.d(TAG, "PLC frame for seq=$expectedSeq (total=$plcCount)")
+                            }
+                        } else {
+                            delay(FRAME_INTERVAL_MS)
+                        }
+
+                        jitterBuffer.advancePlaybackSeq()
+                        missWaitStartMs = 0L
+
+                        if (jitterBuffer.isEmpty) {
+                            val silenceMs = now - lastDataTimeMs
+                            if (silenceMs >= IDLE_TIMEOUT_MS) {
+                                jitterBuffer.enterIdle()
+                                lastDataTimeMs = now
+                                Log.d(TAG, "Idle — buffer empty for ${IDLE_TIMEOUT_MS}ms, reset pre-buffer")
+                            }
+                        }
+                    }
                 }
             }
         }
