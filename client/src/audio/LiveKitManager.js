@@ -587,10 +587,20 @@ class LiveKitManager {
     this.autoPlaybackEnabled = enabled;
     console.log(`[AudioWS] Auto playback ${enabled ? 'enabled' : 'disabled'}`);
 
+    const ctx = this.audioContext;
     if (!enabled) {
-      this._muteAllExistingAudio();
-    } else if (!this.pttMuted) {
-      this._unmuteAllAfterPTT();
+      // Disconnect gain nodes from ctx.destination — synthetic track handles output
+      for (const [, gainNode] of this.channelGainNodes) {
+        try { gainNode.disconnect(ctx?.destination); } catch (e) {}
+      }
+    } else if (ctx) {
+      // Reconnect gain nodes to ctx.destination for direct speaker output
+      for (const [, gainNode] of this.channelGainNodes) {
+        try { gainNode.connect(ctx.destination); } catch (e) {}
+      }
+      if (!this.pttMuted) {
+        this._unmuteAllAfterPTT();
+      }
     }
   }
 
@@ -845,7 +855,11 @@ class LiveKitManager {
   }
 
   _handleWsBinaryMessage(channelName, data) {
-    if (!this.autoPlaybackEnabled) return;
+    // Note: do NOT check autoPlaybackEnabled here — frames must always be
+    // decoded so synthetic track audio elements receive data. The
+    // autoPlaybackEnabled flag only controls whether gainNode is connected
+    // to ctx.destination (direct speaker output) vs routed through the
+    // synthetic track path (Audio element).
 
     const view = new DataView(data instanceof ArrayBuffer ? data : data.buffer || new Uint8Array(data).buffer);
     const frameType = view.getUint8(0);
@@ -914,7 +928,9 @@ class LiveKitManager {
 
     workletNode.connect(analyser);
     analyser.connect(gainNode);
-    gainNode.connect(ctx.destination);
+    if (this.autoPlaybackEnabled) {
+      gainNode.connect(ctx.destination);
+    }
 
     this.channelGainNodes.set(channelName, gainNode);
     this._playbackNodes.set(channelName, { workletNode, analyser, gainNode });
