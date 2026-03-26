@@ -8,7 +8,7 @@ let gainNode = null;
 
 function getAudioContext() {
   if (!audioContext || audioContext.state === 'closed') {
-    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 48000 });
   }
   if (audioContext.state === 'suspended') {
     audioContext.resume().catch(console.warn);
