@@ -643,6 +643,7 @@ export function LiveKitConnectionProvider({ children, user }) {
         setChannels(fetchedChannels);
 
         livekitManager.prepareConnection();
+        onDemandVoiceManager.warmUp();
         
         if (fetchedChannels.length > 0) {
           await initializeConnections(identity, fetchedChannels);

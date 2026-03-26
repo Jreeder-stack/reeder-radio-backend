@@ -80,7 +80,7 @@ class OpusBrowserCodec {
     this._outPCMPointer = this._native._malloc(outPCMLength);
     this._outPCM = this._native.HEAPU16.subarray(this._outPCMPointer >> 1, (this._outPCMPointer + outPCMLength) >> 1);
 
-    this._encoder._encoder_ctl(OPUS_SET_BITRATE, 32000);
+    this._encoder._encoder_ctl(OPUS_SET_BITRATE, 48000);
     this._encoder._encoder_ctl(OPUS_SET_INBAND_FEC, 1);
     this._encoder._encoder_ctl(OPUS_SET_PACKET_LOSS_PERC, 10);
 
