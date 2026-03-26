@@ -25,8 +25,12 @@ function _loadModule() {
             reject(new Error('opusscript module factory not found'));
             return;
           }
-          const instance = factory();
-          resolve(instance);
+          const instance = factory({ wasmBinary: new ArrayBuffer(0) });
+          if (instance.ready) {
+            instance.ready.then(() => resolve(instance)).catch(reject);
+          } else {
+            resolve(instance);
+          }
         } catch (err) {
           reject(err);
         }
@@ -71,6 +75,37 @@ class OpusBrowserCodec {
     this._encoder._encoder_ctl(OPUS_SET_BITRATE, 32000);
     this._encoder._encoder_ctl(OPUS_SET_INBAND_FEC, 1);
     this._encoder._encoder_ctl(OPUS_SET_PACKET_LOSS_PERC, 10);
+
+    let selfTestPassed = false;
+    try {
+      const testPcm = new Int16Array(FRAME_SIZE);
+      const testBytes = new Uint8Array(testPcm.buffer);
+      this._native.HEAPU8.set(testBytes, this._inPCMPointer);
+      const encLen = this._encoder._encode(this._inPCMPointer, testBytes.length, this._outOpusPointer, FRAME_SIZE);
+      if (encLen <= 0) {
+        console.error('[OpusBrowserCodec] Self-test encode failed, len=' + encLen);
+      } else {
+        this._native.HEAPU8.set(
+          this._native.HEAPU8.subarray(this._outOpusPointer, this._outOpusPointer + encLen),
+          this._inOpusPointer
+        );
+        const decSamples = this._decoder._decode(this._inOpusPointer, encLen, this._outPCMPointer);
+        if (decSamples <= 0) {
+          console.error('[OpusBrowserCodec] Self-test decode failed, samples=' + decSamples);
+        } else {
+          console.log('[OpusBrowserCodec] Self-test OK: encoded ' + encLen + ' bytes, decoded ' + decSamples + ' samples');
+          selfTestPassed = true;
+        }
+      }
+    } catch (e) {
+      console.error('[OpusBrowserCodec] Self-test exception:', e.message);
+    }
+
+    if (!selfTestPassed) {
+      console.error('[OpusBrowserCodec] Self-test FAILED — codec will not be used, falling back to PCM');
+      this.destroy();
+      return;
+    }
 
     this._ready = true;
     console.log('[OpusBrowserCodec] Initialized (48kHz, mono, 960 frame, FEC enabled)');
