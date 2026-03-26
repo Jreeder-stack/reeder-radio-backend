@@ -11,7 +11,9 @@ echo ""
 cd "$APP_DIR"
 
 echo "[1/5] Pulling latest code from '$DEPLOY_BRANCH'..."
-git pull origin "$DEPLOY_BRANCH"
+git fetch origin "$DEPLOY_BRANCH"
+git reset --hard "origin/$DEPLOY_BRANCH"
+git clean -fd
 
 echo "[2/5] Installing backend dependencies..."
 npm install --production
