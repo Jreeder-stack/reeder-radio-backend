@@ -674,10 +674,9 @@ class LiveKitManager {
       const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const wsUrl = `${proto}//${window.location.host}/api/audio-ws?channelId=${encodeURIComponent(channelName)}&unitId=${encodeURIComponent(identity)}`;
 
-      let ws;
-      await Promise.all([
+      const [, ws] = await Promise.all([
         this._ensurePlaybackWorklet(),
-        this._openWebSocket(wsUrl).then(w => { ws = w; }),
+        this._openWebSocket(wsUrl),
       ]);
 
       const conn = {
