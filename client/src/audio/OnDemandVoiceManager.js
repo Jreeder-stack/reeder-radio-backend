@@ -1,6 +1,7 @@
 import { signalingManager } from '../signaling/SignalingManager.js';
 import { getOpusBrowserCodec, initOpusBrowserCodec } from './OpusBrowserCodec.js';
 import { JitterBuffer } from './JitterBuffer.js';
+import { preloadPermitBuffer } from './talkPermitTone.js';
 
 const VOICE_STATE = {
   DISCONNECTED: 'disconnected',
@@ -352,14 +353,12 @@ class OnDemandVoiceManager {
         const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const wsUrl = `${proto}//${window.location.host}/api/audio-ws?channelId=${encodeURIComponent(channelId)}&unitId=${encodeURIComponent(identity)}`;
 
-        let ws;
-        await Promise.all([
-          this._ensurePlaybackWorklet(),
-          initOpusBrowserCodec().catch(err => {
-            console.warn('[OnDemandVoice] Opus browser codec init failed:', err.message);
-          }),
-          this._openWebSocket(wsUrl).then(w => { ws = w; }),
-        ]);
+        await this._ensurePlaybackWorklet();
+        await initOpusBrowserCodec().catch(err => {
+          console.warn('[OnDemandVoice] Opus browser codec init failed:', err.message);
+        });
+
+        const ws = await this._openWebSocket(wsUrl);
 
         const conn = { ws, channelId, unitId: identity };
 
@@ -412,7 +411,8 @@ class OnDemandVoiceManager {
         this._ensurePlaybackWorklet().catch(() => {}),
         initOpusBrowserCodec().catch(() => {}),
       ]);
-      console.log('[OnDemandVoice] Warm-up complete (worklet + codec pre-loaded)');
+      preloadPermitBuffer();
+      console.log('[OnDemandVoice] Warm-up complete (worklet + codec + permit tone pre-loaded)');
     } catch (err) {
       console.warn('[OnDemandVoice] Warm-up failed:', err.message);
     }
