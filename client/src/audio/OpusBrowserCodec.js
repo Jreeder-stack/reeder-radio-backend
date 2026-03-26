@@ -68,7 +68,7 @@ class OpusBrowserCodec {
 
     const inPCMLength = MAX_FRAME_SIZE * CHANNELS * 2;
     this._inPCMPointer = this._native._malloc(inPCMLength);
-    this._inPCM = this._native.HEAPU16.subarray(this._inPCMPointer, this._inPCMPointer + inPCMLength);
+    this._inPCM = this._native.HEAPU16.subarray(this._inPCMPointer >> 1, (this._inPCMPointer + inPCMLength) >> 1);
 
     this._inOpusPointer = this._native._malloc(MAX_PACKET_SIZE);
     this._inOpus = this._native.HEAPU8.subarray(this._inOpusPointer, this._inOpusPointer + MAX_PACKET_SIZE);
@@ -78,7 +78,7 @@ class OpusBrowserCodec {
 
     const outPCMLength = MAX_FRAME_SIZE * CHANNELS * 2;
     this._outPCMPointer = this._native._malloc(outPCMLength);
-    this._outPCM = this._native.HEAPU16.subarray(this._outPCMPointer, this._outPCMPointer + outPCMLength);
+    this._outPCM = this._native.HEAPU16.subarray(this._outPCMPointer >> 1, (this._outPCMPointer + outPCMLength) >> 1);
 
     this._encoder._encoder_ctl(OPUS_SET_BITRATE, 32000);
     this._encoder._encoder_ctl(OPUS_SET_INBAND_FEC, 1);
@@ -113,10 +113,21 @@ class OpusBrowserCodec {
           }
           const avgAbs = sumAbs / Math.min(decoded.length, 100);
 
+          let dotProduct = 0, normA = 0, normB = 0;
+          const checkLen = Math.min(decoded.length, testPcm.length);
+          for (let i = 0; i < checkLen; i++) {
+            dotProduct += testPcm[i] * decoded[i];
+            normA += testPcm[i] * testPcm[i];
+            normB += decoded[i] * decoded[i];
+          }
+          const correlation = (normA > 0 && normB > 0) ? dotProduct / (Math.sqrt(normA) * Math.sqrt(normB)) : 0;
+
           if (maxVal < 100 || avgAbs < 10) {
             console.error('[OpusBrowserCodec] Self-test FAILED: decoded signal too quiet (max=' + maxVal + ', avg=' + avgAbs.toFixed(1) + '). Codec may be broken.');
+          } else if (correlation < 0.5) {
+            console.error('[OpusBrowserCodec] Self-test FAILED: decoded signal does not correlate with input (r=' + correlation.toFixed(3) + '). Possible memory corruption.');
           } else {
-            console.log('[OpusBrowserCodec] Self-test OK: encoded ' + encLen + ' bytes, decoded ' + decSamples + ' samples, peak=' + maxVal + ', avg=' + avgAbs.toFixed(1));
+            console.log('[OpusBrowserCodec] Self-test OK: encoded ' + encLen + ' bytes, decoded ' + decSamples + ' samples, peak=' + maxVal + ', avg=' + avgAbs.toFixed(1) + ', correlation=' + correlation.toFixed(3));
             selfTestPassed = true;
           }
         }
