@@ -1,0 +1,56 @@
+# Auto-deploy to Azure VM on push to main
+#
+# Required GitHub Repository Secrets:
+#   AZURE_VM_HOST     — The Azure VM's public IP address or hostname
+#   AZURE_VM_USER     — SSH username on the VM (e.g. Jreeder5029)
+#   AZURE_VM_SSH_KEY  — Private SSH key for authenticating to the VM
+#                       (Generate a key pair, add the public key to the VM's
+#                        ~/.ssh/authorized_keys, paste the private key here)
+#
+# Optional secrets:
+#   AZURE_VM_PORT        — SSH port if not the default 22
+#   AZURE_VM_FINGERPRINT — SSH host key fingerprint for host verification
+#                          (run `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub`
+#                           on the VM to obtain it)
+#
+# VM prerequisites:
+#   1. The app directory (/home/Jreeder5029/command-comms) must be a git clone
+#      of this repository so that `git pull origin main` works.
+#      - Option A: Add a read-only deploy key (SSH) to this GitHub repo and
+#        configure the VM's SSH to use it for github.com.
+#      - Option B: Use a personal access token as the git remote URL.
+#   2. Node.js, npm, and PM2 must be installed on the VM.
+
+name: Deploy to Azure VM
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to Azure VM
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.AZURE_VM_HOST }}
+          username: ${{ secrets.AZURE_VM_USER }}
+          key: ${{ secrets.AZURE_VM_SSH_KEY }}
+          port: ${{ secrets.AZURE_VM_PORT || 22 }}
+          fingerprint: ${{ secrets.AZURE_VM_FINGERPRINT }}
+          script_stop: true
+          command_timeout: 10m
+          script: |
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+
+            cd /home/Jreeder5029/command-comms
+            bash deploy/deploy.sh
