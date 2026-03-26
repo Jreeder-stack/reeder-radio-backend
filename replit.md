@@ -76,4 +76,5 @@ Deployment scripts and configs are in the `deploy/` directory:
 - `deploy/ecosystem.config.cjs` — PM2 process config for auto-restart and boot persistence.
 - `deploy/init-db.sh` — Creates the PostgreSQL database and user. The app auto-creates tables on first connect.
 - `deploy/deploy.sh` — Pulls latest code, installs deps, builds frontend, restarts PM2.
+- `.github/workflows/deploy.yml` — GitHub Actions workflow that auto-deploys to the Azure VM on push to `main` using `appleboy/ssh-action`. Requires GitHub repository secrets: `AZURE_VM_HOST`, `AZURE_VM_USER`, `AZURE_VM_SSH_KEY` (and optionally `AZURE_VM_PORT`, `AZURE_VM_FINGERPRINT`).
 - `.env.production.example` — Template listing all required and optional environment variables.
