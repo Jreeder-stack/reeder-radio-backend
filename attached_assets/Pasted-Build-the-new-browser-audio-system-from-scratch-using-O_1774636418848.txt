@@ -1,0 +1,116 @@
+Build the new browser audio system from scratch using ONE clean PCM-only implementation.
+
+Do NOT add Opus.
+Do NOT add fallback logic.
+Do NOT reuse old audio code.
+Do NOT mix old and new audio paths.
+
+Use this exact audio format:
+- codec: pcm
+- sampleRate: 48000
+- channels: 1
+- sample format: signed 16-bit PCM
+- frame duration: 20 ms
+- frameSamples: 960
+- payloadBytesPerFrame: 1920
+
+PHASE 1 — Create new isolated audio modules
+Create new modules for:
+- browser mic capture
+- PCM frame packing
+- websocket audio transport
+- PCM playback buffer / playback path
+- shared audio packet schema/constants
+
+Keep these systems intact and separate:
+- auth
+- signaling
+- floor grant / deny
+- channel membership
+- dispatcher UI
+
+PHASE 2 — Define one explicit audio packet schema
+Every browser audio packet must include:
+- type
+- codec
+- sampleRate
+- channels
+- frameSamples
+- sequence
+- senderUnitId
+- channelId
+- payloadBytes
+- payload
+
+Use codec = "pcm" only.
+
+Do not assume receiver format implicitly.
+Do not reuse any old packet format unless it already matches this exactly.
+
+PHASE 3 — Build TX path
+Implement:
+1. microphone capture
+2. conversion to signed 16-bit PCM
+3. fixed 20 ms frame packing
+4. websocket send using the explicit PCM packet schema
+
+PHASE 4 — Build RX path
+Implement:
+1. websocket receive handler for PCM packets
+2. validate packet metadata
+3. unpack signed 16-bit PCM
+4. enqueue audio safely
+5. play received PCM audio
+
+PHASE 5 — Server relay
+Server must:
+- accept the new PCM packet schema
+- validate codec/sample rate/channels/frame size
+- relay PCM packets unchanged to subscribed listeners
+- log sender, channel, codec, payload bytes, and listener count
+
+PHASE 6 — Logging
+Add focused logs for one test transmission:
+Sender:
+- codec
+- sampleRate
+- frameSamples
+- payloadBytes
+- sequence
+Server:
+- codec
+- payloadBytes
+- listener count
+Receiver:
+- codec
+- payloadBytes
+- sample count
+- playback enqueue success
+
+PHASE 7 — Test order
+Implement and verify in this exact order:
+A. mic capture only
+B. local loopback playback only
+C. browser -> server -> same browser echo test
+D. browser -> server -> second client playback test
+E. dispatcher -> other unit test
+F. other unit -> dispatcher test
+
+Rules:
+- no Opus
+- no WASM
+- no fallback logic
+- no old audio path reuse
+- keep new audio implementation modular and isolated
+- do not change UI unless required for wiring buttons/events
+- do not break signaling or floor control
+
+Goal:
+Produce one verified PCM-only end-to-end browser audio path that works cleanly between clients.
+
+Return:
+- list of new files created
+- list of old audio files removed/disabled
+- exact packet schema used
+- exact root cause if any mismatch is found
+- results of each test phase
