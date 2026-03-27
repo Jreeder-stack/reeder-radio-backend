@@ -449,7 +449,16 @@ class MicPTTManager {
   }
 
   _sendPcmFrame(int16Samples) {
-    if (!this._ws || this._ws.readyState !== WebSocket.OPEN) return;
+    if (!this._ws || this._ws.readyState !== WebSocket.OPEN) {
+      if (!this._txDropLogged) {
+        console.warn(`[MicPTT] _sendPcmFrame: WS not open (ws=${!!this._ws} readyState=${this._ws?.readyState}), dropping frames`);
+        this._txDropLogged = true;
+      }
+      return;
+    }
+
+    if (!this._txFrameCount) this._txFrameCount = 0;
+    this._txFrameCount++;
 
     const codec = getOpusBrowserCodec();
     if (codec.ready) {
@@ -464,6 +473,12 @@ class MicPTTManager {
         this._txSequence = (this._txSequence + 1) & 0xFFFF;
 
         this._ws.send(frame.buffer);
+
+        if (this._txFrameCount === 1) {
+          console.log(`[MicPTT] First Opus frame sent: seq=${this._txSequence - 1} opusLen=${opusData.length} ch=${this._currentChannelId} unit=${this._currentUnitId}`);
+        } else if (this._txFrameCount % 50 === 0) {
+          console.log(`[MicPTT] TX progress: ${this._txFrameCount} frames sent (Opus)`);
+        }
       } catch (err) {
         console.warn('[MicPTT] Opus encode/send error:', err.message);
       }
@@ -481,6 +496,12 @@ class MicPTTManager {
 
       try {
         this._ws.send(frame.buffer);
+
+        if (this._txFrameCount === 1) {
+          console.log(`[MicPTT] First PCM frame sent: seq=${this._txSequence - 1} pcmLen=${pcmBytes.length} ch=${this._currentChannelId} unit=${this._currentUnitId}`);
+        } else if (this._txFrameCount % 50 === 0) {
+          console.log(`[MicPTT] TX progress: ${this._txFrameCount} frames sent (PCM)`);
+        }
       } catch (err) {
         console.warn('[MicPTT] WS send error:', err.message);
       }
@@ -605,6 +626,8 @@ class MicPTTManager {
 
     this._removeWsListeners();
 
+    const totalFrames = this._txFrameCount || 0;
+
     try {
       if (this._captureWorkletNode) {
         this._captureWorkletNode.port.postMessage({ type: 'stop' });
@@ -625,9 +648,11 @@ class MicPTTManager {
       this.pendingStop = false;
       this.transitionLock = false;
       this.lastPttEndTime = Date.now();
+      this._txFrameCount = 0;
+      this._txDropLogged = false;
       this._setState(PTT_STATES.IDLE);
       releaseWakeLock().catch(e => console.warn('[MicPTT] Wake lock release failed:', e));
-      console.log('[MicPTT] Transmission ended, state reset to IDLE');
+      console.log(`[MicPTT] Transmission ended, ${totalFrames} frames sent, state reset to IDLE`);
     }
   }
 

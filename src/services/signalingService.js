@@ -1,6 +1,7 @@
 import { Server } from 'socket.io';
 import { floorControlService } from './floorControlService.js';
 import { audioRelayService } from './audioRelayService.js';
+import { canonicalChannelKey } from './channelKeyUtils.js';
 import crypto from 'crypto';
 import cookie from 'cookie';
 import signature from 'cookie-signature';
@@ -297,7 +298,7 @@ class SignalingService {
   }
 
   _handleChannelJoin(socket, data) {
-    const { channelId } = data;
+    const channelId = canonicalChannelKey(data.channelId);
     
     if (!socket.unitId) {
       socket.emit('error', { message: 'Not authenticated' });
@@ -349,7 +350,7 @@ class SignalingService {
   }
 
   _handleChannelLeave(socket, data) {
-    const { channelId } = data;
+    const channelId = canonicalChannelKey(data.channelId);
     
     if (!socket.unitId) return;
     
@@ -380,7 +381,7 @@ class SignalingService {
   }
 
   _handlePttPre(socket, data) {
-    const { channelId } = data;
+    const channelId = canonicalChannelKey(data.channelId);
     if (!socket.unitId) return;
     socket.to(`channel:${channelId}`).emit('ptt:pre', {
       unitId: socket.unitId,
@@ -389,7 +390,7 @@ class SignalingService {
   }
 
   _handlePttStart(socket, data) {
-    const { channelId } = data;
+    const channelId = canonicalChannelKey(data.channelId);
     
     if (!socket.unitId) {
       socket.emit('error', { message: 'Not authenticated' });
@@ -420,12 +421,15 @@ class SignalingService {
     }
 
     const isEmergency = this.emergencyStates.has(channelId);
+    console.log(`[Signaling] PTT START request: unitId=${socket.unitId} channelId=${channelId}`);
+
     const floorResult = floorControlService.requestFloor(channelId, socket.unitId, {
       isEmergency,
       emergencyStates: this.emergencyStates,
     });
 
     if (!floorResult.granted) {
+      console.log(`[Signaling] PTT DENIED: unitId=${socket.unitId} channelId=${channelId} heldBy=${floorResult.heldBy}`);
       socket.emit('ptt:busy', {
         channelId,
         transmittingUnit: floorResult.heldBy || 'unknown',
@@ -454,11 +458,11 @@ class SignalingService {
     
     this._emitCallback('pttStart', transmissionData);
     
-    console.log(`[Signaling] PTT START: ${socket.unitId} on ${channelId}`);
+    console.log(`[Signaling] PTT START granted: ${socket.unitId} on ${channelId} (floor granted for holdsFloor check)`);
   }
 
   _handlePttEnd(socket, data) {
-    const { channelId } = data;
+    const channelId = canonicalChannelKey(data.channelId);
     
     if (!socket.unitId) return;
     
@@ -505,7 +509,7 @@ class SignalingService {
   }
 
   _handleEmergencyStart(socket, data) {
-    const { channelId } = data;
+    const channelId = canonicalChannelKey(data.channelId);
     
     if (!socket.unitId) {
       socket.emit('error', { message: 'Not authenticated' });
@@ -596,7 +600,7 @@ class SignalingService {
   }
 
   _handleClearAirStart(socket, data) {
-    const { channelId } = data;
+    const channelId = canonicalChannelKey(data.channelId);
     
     if (!socket.unitId || !socket.isDispatcher) {
       socket.emit('error', { message: 'Only dispatchers can activate Clear Air' });
@@ -625,7 +629,7 @@ class SignalingService {
   }
 
   _handleClearAirEnd(socket, data) {
-    const { channelId } = data;
+    const channelId = canonicalChannelKey(data.channelId);
     
     const clearAir = this.clearAirStates.get(channelId);
     if (!clearAir) return;

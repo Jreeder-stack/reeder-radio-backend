@@ -9,6 +9,7 @@ import { isConfigured as isAzureConfigured } from './services/azureSpeechService
 import { signalingService } from './services/signalingService.js';
 import { audioRelayService } from './services/audioRelayService.js';
 import { wsAudioBridge } from './services/wsAudioBridge.js';
+import { setupRecordingTap } from './services/recordingTapService.js';
 
 let _buildVersion = 'unknown';
 try {
@@ -68,6 +69,9 @@ async function start() {
 
   wsAudioBridge.attach(httpServer);
   console.log('WebSocket audio bridge attached');
+
+  setupRecordingTap(audioRelayService, signalingService);
+  console.log('Recording tap wired to audio relay');
 
   try {
     if (!isAzureConfigured()) {

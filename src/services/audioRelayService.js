@@ -1,4 +1,5 @@
 import dgram from 'dgram';
+import { canonicalChannelKey } from './channelKeyUtils.js';
 
 const SESSION_TOKEN_LEN = 16;
 const CHANNEL_ID_LEN = 2;
@@ -94,7 +95,7 @@ class AudioRelayService {
   }
 
   addWsSubscriber(channelId, unitId, ws) {
-    const key = String(channelId);
+    const key = canonicalChannelKey(channelId);
     if (!this.wsSubscribers.has(key)) {
       this.wsSubscribers.set(key, new Map());
     }
@@ -103,7 +104,7 @@ class AudioRelayService {
   }
 
   removeWsSubscriber(channelId, unitId) {
-    const key = String(channelId);
+    const key = canonicalChannelKey(channelId);
     const subs = this.wsSubscribers.get(key);
     if (subs) {
       subs.delete(unitId);
@@ -124,7 +125,7 @@ class AudioRelayService {
   }
 
   addAudioListener(channelId, listenerId, callback) {
-    const key = String(channelId);
+    const key = canonicalChannelKey(channelId);
     if (!this._audioListeners.has(key)) {
       this._audioListeners.set(key, new Map());
     }
@@ -133,7 +134,7 @@ class AudioRelayService {
   }
 
   removeAudioListener(channelId, listenerId) {
-    const key = String(channelId);
+    const key = canonicalChannelKey(channelId);
     const listeners = this._audioListeners.get(key);
     if (listeners) {
       listeners.delete(listenerId);
@@ -154,11 +155,11 @@ class AudioRelayService {
   }
 
   injectAudio(channelId, senderUnitId, sequence, opusPayload) {
-    const channelKey = String(channelId);
+    const channelKey = canonicalChannelKey(channelId);
 
     if (this._floorControlService && !this._floorControlService.holdsFloor(channelKey, senderUnitId)) {
-      if (sequence % 50 === 0) {
-        console.warn(`[AudioRelay] injectAudio dropped: ${senderUnitId} does not hold floor on ${channelKey}`);
+      if (sequence % 50 === 0 || sequence < 3) {
+        console.warn(`[AudioRelay] injectAudio dropped: ${senderUnitId} does not hold floor on channelKey="${channelKey}" seq=${sequence}`);
       }
       return;
     }

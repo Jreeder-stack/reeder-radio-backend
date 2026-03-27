@@ -2,6 +2,7 @@ import { WebSocketServer } from 'ws';
 import { audioRelayService } from './audioRelayService.js';
 import { opusCodec, SAMPLE_RATE, FRAME_SIZE } from './opusCodec.js';
 import { floorControlService } from './floorControlService.js';
+import { canonicalChannelKey } from './channelKeyUtils.js';
 import pool from '../db/index.js';
 import { config } from '../config/env.js';
 
@@ -99,8 +100,13 @@ class WsAudioBridge {
 
   async _handleConnection(ws, request, user) {
     const url = new URL(request.url, `http://${request.headers.host}`);
-    const channelId = url.searchParams.get('channelId');
+    const rawChannelId = url.searchParams.get('channelId');
+    const channelId = canonicalChannelKey(rawChannelId);
     const unitId = user.unit_id || user.username;
+
+    if (rawChannelId !== channelId) {
+      console.log(`[WsAudioBridge] Channel ID normalized: raw="${rawChannelId}" canonical="${channelId}"`);
+    }
 
     if (!channelId) {
       ws.close(4000, 'channelId required');
@@ -165,9 +171,10 @@ class WsAudioBridge {
     });
 
     ws.on('close', () => {
+      const frameCount = clientInfo._rxFrameCount || 0;
       audioRelayService.removeWsSubscriber(channelId, unitId);
       this.clients.delete(clientId);
-      console.log(`[WsAudioBridge] Client disconnected: ${unitId} from channel ${channelId}`);
+      console.log(`[WsAudioBridge] Client disconnected: ${unitId} from channel ${channelId} (received ${frameCount} binary frames)`);
     });
 
     ws.on('error', (err) => {
@@ -195,12 +202,26 @@ class WsAudioBridge {
 
   _handleBinaryMessage(clientId, clientInfo, data) {
     const buf = Buffer.from(data);
-    if (buf.length < 3) return;
+    if (buf.length < 3) {
+      console.warn(`[WsAudioBridge] Binary frame too short (${buf.length} bytes) from ${clientInfo.unitId}`);
+      return;
+    }
 
     const frameType = buf[0];
 
+    if (!clientInfo._rxFrameCount) clientInfo._rxFrameCount = 0;
+    clientInfo._rxFrameCount++;
+
+    if (clientInfo._rxFrameCount === 1) {
+      console.log(`[WsAudioBridge] First binary frame from ${clientInfo.unitId} on channel=${clientInfo.channelId} frameType=0x${frameType.toString(16).padStart(2, '0')} len=${buf.length}`);
+    }
+
     if (frameType === 0x02) {
       if (!floorControlService.holdsFloor(clientInfo.channelId, clientInfo.unitId)) {
+        if (clientInfo._rxFrameCount <= 3 || clientInfo._rxFrameCount % 50 === 0) {
+          const holder = floorControlService.getFloorHolder(clientInfo.channelId);
+          console.warn(`[WsAudioBridge] Floor check FAILED: unit=${clientInfo.unitId} channel=${clientInfo.channelId} holder=${holder ? holder.unitId : 'none'} frame#=${clientInfo._rxFrameCount}`);
+        }
         return;
       }
 
@@ -208,6 +229,10 @@ class WsAudioBridge {
       const opusPayload = Buffer.from(buf.subarray(3));
 
       if (opusPayload.length < 1) return;
+
+      if (clientInfo._rxFrameCount <= 2) {
+        console.log(`[WsAudioBridge] Relaying Opus frame: unit=${clientInfo.unitId} ch=${clientInfo.channelId} seq=${sequence} opusLen=${opusPayload.length}`);
+      }
 
       try {
         audioRelayService.injectAudio(
@@ -221,6 +246,10 @@ class WsAudioBridge {
       }
     } else if (frameType === 0x01) {
       if (!floorControlService.holdsFloor(clientInfo.channelId, clientInfo.unitId)) {
+        if (clientInfo._rxFrameCount <= 3 || clientInfo._rxFrameCount % 50 === 0) {
+          const holder = floorControlService.getFloorHolder(clientInfo.channelId);
+          console.warn(`[WsAudioBridge] Floor check FAILED (PCM): unit=${clientInfo.unitId} channel=${clientInfo.channelId} holder=${holder ? holder.unitId : 'none'} frame#=${clientInfo._rxFrameCount}`);
+        }
         return;
       }
 
@@ -228,6 +257,10 @@ class WsAudioBridge {
       const pcmData = Buffer.from(buf.subarray(3));
 
       if (pcmData.length < 2) return;
+
+      if (clientInfo._rxFrameCount <= 2) {
+        console.log(`[WsAudioBridge] Relaying PCM frame: unit=${clientInfo.unitId} ch=${clientInfo.channelId} seq=${sequence} pcmLen=${pcmData.length}`);
+      }
 
       try {
         const opusFrames = opusCodec.encodePcmToOpus(pcmData);

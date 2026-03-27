@@ -1,3 +1,5 @@
+import { canonicalChannelKey } from './channelKeyUtils.js';
+
 const FLOOR_HOLD_TIMEOUT_MS = 30000;
 
 class FloorControlService {
@@ -7,7 +9,9 @@ class FloorControlService {
   }
 
   requestFloor(channelId, unitId, { isEmergency = false, emergencyStates = null } = {}) {
-    const key = String(channelId);
+    const key = canonicalChannelKey(channelId);
+    console.log(`[FloorControl] requestFloor: raw="${channelId}" canonical="${key}" unitId="${unitId}"`);
+
     const current = this.floorHolders.get(key);
 
     if (current && current.unitId === unitId) {
@@ -47,7 +51,7 @@ class FloorControlService {
   }
 
   releaseFloor(channelId, unitId) {
-    const key = String(channelId);
+    const key = canonicalChannelKey(channelId);
     const current = this.floorHolders.get(key);
     if (!current || current.unitId !== unitId) {
       return false;
@@ -58,7 +62,7 @@ class FloorControlService {
   }
 
   forceRelease(channelId) {
-    const key = String(channelId);
+    const key = canonicalChannelKey(channelId);
     const current = this.floorHolders.get(key);
     this._clearTimer(key);
     this.floorHolders.delete(key);
@@ -66,13 +70,28 @@ class FloorControlService {
   }
 
   holdsFloor(channelId, unitId) {
-    const key = String(channelId);
+    const key = canonicalChannelKey(channelId);
     const current = this.floorHolders.get(key);
-    return current ? current.unitId === unitId : false;
+    const holds = current ? current.unitId === unitId : false;
+    if (!holds && !this._holdsFloorLogThrottle) {
+      this._holdsFloorLogThrottle = true;
+      const allKeys = [...this.floorHolders.keys()];
+      console.log(`[FloorControl] holdsFloor MISS: query key="${key}" unitId="${unitId}" holder=${current ? current.unitId : 'none'} allFloorKeys=[${allKeys.join(',')}]`);
+      setTimeout(() => { this._holdsFloorLogThrottle = false; }, 2000);
+    }
+    return holds;
+  }
+
+  getActiveFloors() {
+    const floors = {};
+    for (const [key, holder] of this.floorHolders) {
+      floors[key] = { unitId: holder.unitId, grantedAt: holder.grantedAt };
+    }
+    return floors;
   }
 
   getFloorHolder(channelId) {
-    const key = String(channelId);
+    const key = canonicalChannelKey(channelId);
     return this.floorHolders.get(key) || null;
   }
 
