@@ -668,6 +668,8 @@ class LiveKitManager {
   }
 
   async _ensureOpusCodec() {
+    if (this._opusInitFailed) return;
+
     const maxAttempts = 2;
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
@@ -684,6 +686,7 @@ class LiveKitManager {
         }
       }
     }
+    this._opusInitFailed = true;
     console.error('[AudioWS] Opus codec init failed after retries — RX audio may fall back to PCM');
   }
 
