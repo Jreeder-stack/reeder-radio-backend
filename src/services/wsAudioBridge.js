@@ -162,9 +162,9 @@ class WsAudioBridge {
 
     console.log(`[WsAudioBridge] Client connected: ${unitId} on channel ${channelId}`);
 
-    ws.on('message', (data) => {
-      if (typeof data === 'string') {
-        this._handleTextMessage(clientId, clientInfo, data);
+    ws.on('message', (data, isBinary) => {
+      if (!isBinary) {
+        this._handleTextMessage(clientId, clientInfo, data.toString());
         return;
       }
       this._handleBinaryMessage(clientId, clientInfo, data);
