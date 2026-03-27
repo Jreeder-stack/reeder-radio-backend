@@ -614,6 +614,8 @@ class LiveKitManager {
     if (!this.audioContext || this.audioContext.state === 'closed') {
       this.audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 48000 });
       console.log(`[AudioWS] Created new AudioContext, sampleRate: ${this.audioContext.sampleRate}, state: ${this.audioContext.state}`);
+      this._userGestureHandlerInstalled = false;
+      this._installUserGestureResumeHandler();
     }
     if (this.audioContext.state === 'suspended') {
       console.log('[AudioWS] AudioContext is suspended, attempting resume...');
@@ -624,12 +626,65 @@ class LiveKitManager {
     return this.audioContext;
   }
 
+  _installUserGestureResumeHandler() {
+    if (this._userGestureHandlerInstalled) return;
+    this._userGestureHandlerInstalled = true;
+
+    const resumeOnGesture = () => {
+      if (!this.audioContext || this.audioContext.state !== 'suspended') {
+        this._removeUserGestureHandler();
+        return;
+      }
+      console.log('[AudioWS] User gesture detected — resuming AudioContext');
+      this.audioContext.resume().then(() => {
+        console.log(`[AudioWS] AudioContext resumed via user gesture, state: ${this.audioContext.state}`);
+        this._removeUserGestureHandler();
+      }).catch(e => console.warn('[AudioWS] AudioContext resume via gesture failed:', e));
+    };
+
+    this._gestureHandler = resumeOnGesture;
+    document.addEventListener('click', resumeOnGesture, true);
+    document.addEventListener('keydown', resumeOnGesture, true);
+    document.addEventListener('pointerdown', resumeOnGesture, true);
+    console.log('[AudioWS] Installed user gesture resume handler for AudioContext');
+  }
+
+  _removeUserGestureHandler() {
+    if (this._gestureHandler) {
+      document.removeEventListener('click', this._gestureHandler, true);
+      document.removeEventListener('keydown', this._gestureHandler, true);
+      document.removeEventListener('pointerdown', this._gestureHandler, true);
+      this._gestureHandler = null;
+    }
+    this._userGestureHandlerInstalled = false;
+  }
+
   async _ensurePlaybackWorklet() {
     if (this._workletReady) return;
     const ctx = this._getAudioContext();
     await ctx.audioWorklet.addModule('/audio/pcm-playback-worklet.js');
     this._workletReady = true;
     console.log('[AudioWS] Playback worklet module loaded');
+  }
+
+  async _ensureOpusCodec() {
+    const maxAttempts = 2;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        const codec = await initOpusBrowserCodec();
+        if (!codec || !codec.ready) {
+          throw new Error('Opus codec init completed but codec is not ready (self-test may have failed)');
+        }
+        console.log('[AudioWS] Opus codec initialized successfully');
+        return;
+      } catch (err) {
+        console.warn(`[AudioWS] Opus codec init attempt ${attempt}/${maxAttempts} failed:`, err.message);
+        if (attempt < maxAttempts) {
+          await new Promise(r => setTimeout(r, 500));
+        }
+      }
+    }
+    console.error('[AudioWS] Opus codec init failed after retries — RX audio may fall back to PCM');
   }
 
   async prepareConnection() {
@@ -642,8 +697,6 @@ class LiveKitManager {
   }
 
   async connect(channelName, identity) {
-    initOpusBrowserCodec().catch(() => {});
-
     if (this.disconnectPromise) {
       console.log(`[AudioWS] Waiting for disconnect to complete before connecting to ${channelName}`);
       await this.disconnectPromise;
@@ -687,6 +740,7 @@ class LiveKitManager {
       const [, ws] = await Promise.all([
         this._ensurePlaybackWorklet(),
         this._openWebSocket(wsUrl),
+        this._ensureOpusCodec(),
       ]);
 
       const conn = {
@@ -788,12 +842,6 @@ class LiveKitManager {
   _setupWsHandlers(ws, channelName, identity, conn) {
     conn._lastPong = Date.now();
 
-    initOpusBrowserCodec().then(() => {
-      console.log('[LiveKitManager] Opus browser codec ready for RX');
-    }).catch(err => {
-      console.warn('[LiveKitManager] Opus browser codec init failed:', err.message);
-    });
-
     ws.addEventListener('message', (event) => {
       if (typeof event.data === 'string') {
         try {
@@ -867,6 +915,14 @@ class LiveKitManager {
     if (frameType === 0x02) {
       if (data.byteLength < 6) return;
 
+      if (this.audioContext && this.audioContext.state === 'suspended') {
+        const now = Date.now();
+        if (!this._lastSuspendedWarn || now - this._lastSuspendedWarn > 5000) {
+          this._lastSuspendedWarn = now;
+          console.warn('[LiveKitManager] RX Opus frame received but AudioContext is suspended — audio will be silent until user interaction or context resumes');
+        }
+      }
+
       this._recordActivity(channelName);
       this._recordRxActivity();
 
@@ -880,7 +936,7 @@ class LiveKitManager {
           const now = Date.now();
           if (!this._lastCodecRetry || now - this._lastCodecRetry > 3000) {
             this._lastCodecRetry = now;
-            console.warn('[LiveKitManager] Opus codec not ready, attempting re-init for RX audio');
+            console.warn('[LiveKitManager] Opus codec not ready, attempting re-init for RX audio — frames will be dropped');
             initOpusBrowserCodec().catch(err => {
               console.error('[LiveKitManager] Opus codec re-init failed:', err.message);
             });
@@ -1242,6 +1298,8 @@ class LiveKitManager {
       this._autoVolumeCheckInterval = null;
     }
     this._autoVolumeBoostActive = false;
+
+    this._removeUserGestureHandler();
 
     if (this.audioContext && this.audioContext.state !== 'closed') {
       try {
