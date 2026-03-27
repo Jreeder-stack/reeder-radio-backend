@@ -1,0 +1,64 @@
+Yes, remove the entire current browser audio implementation and rebuild it from the ground up.
+
+Do this as a controlled teardown, not a partial patch.
+
+Phase 1 — Safe removal
+1. Disable and remove all current browser audio paths:
+   - Opus codec / WASM loading
+   - PCM fallback path
+   - mic capture pipeline
+   - TX audio packet building
+   - RX audio packet decoding
+   - playback worklet / playback queue
+   - browser audio WebSocket payload handlers
+   - any audio-specific retry/fallback logic
+
+2. Keep these systems intact:
+   - authentication
+   - signaling connection
+   - channel membership / join / leave
+   - floor grant / deny logic
+   - dispatcher UI
+   - busy / idle channel state
+   - non-audio websocket/signaling logic
+
+3. After removal, the app must still:
+   - log in
+   - connect to signaling
+   - join channels
+   - request and release floor
+   - show channel state correctly
+   - not crash from missing audio modules
+
+4. Temporarily stub audio actions so the app remains stable:
+   - PTT can request/release floor
+   - but no audio capture or playback occurs
+   - add clear logs indicating audio is intentionally disabled during rebuild
+
+Phase 2 — Ground-up rebuild plan
+After teardown, build a brand-new browser audio path in this order:
+
+A. Mic capture only
+B. Local loopback playback test
+C. PCM frame packing with explicit format
+   - 48kHz
+   - mono
+   - signed 16-bit PCM
+   - fixed frame size
+D. Browser -> server -> same browser echo test
+E. Browser -> server -> second client playback test
+F. Integrate floor control with the new PCM path
+G. Only after PCM is proven end-to-end, create a separate isolated Opus module later
+
+Important rules:
+- Do not reuse the old OpusBrowserCodec implementation
+- Do not reuse the old PCM fallback implementation
+- Do not mix rebuild work with old audio code
+- Keep the new audio path modular and isolated
+- Add focused logging at every stage
+
+Return:
+- list of files removed/disabled
+- list of files kept intact
+- list of files created for the rebuild
+- exact staged test plan for validating the new audio path
