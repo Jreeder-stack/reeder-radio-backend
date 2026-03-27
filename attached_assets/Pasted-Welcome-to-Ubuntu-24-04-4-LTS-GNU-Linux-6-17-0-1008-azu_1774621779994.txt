@@ -1,0 +1,39 @@
+Welcome to Ubuntu 24.04.4 LTS (GNU/Linux 6.17.0-1008-azure x86_64)
+
+ * Documentation:  https://help.ubuntu.com
+ * Management:     https://landscape.canonical.com
+ * Support:        https://ubuntu.com/pro
+
+ System information as of Fri Mar 27 14:26:23 UTC 2026
+
+  System load:  1.41               Processes:             139
+  Usage of /:   12.0% of 28.02GB   Users logged in:       0
+  Memory usage: 9%                 IPv4 address for eth0: 10.0.0.4
+  Swap usage:   0%
+
+ * Strictly confined Kubernetes makes edge and IoT secure. Learn how MicroK8s
+   just raised the bar for easy, resilient and secure K8s cluster deployment.
+
+   https://ubuntu.com/engage/secure-kubernetes-at-the-edge
+
+Expanded Security Maintenance for Applications is not enabled.
+
+0 updates can be applied immediately.
+
+Enable ESM Apps to receive additional future security updates.
+See https://ubuntu.com/esm or run: sudo pro status
+
+
+*** System restart required ***
+Last login: Thu Mar 26 12:47:27 2026 from 166.137.146.118
+Jreeder5029@CommandComms:~$ journalctl -f
+Mar 27 14:27:10 CommandComms systemd[1]: Starting fwupd.service - Firmware update daemon...
+Mar 27 14:27:10 CommandComms fwupd[983824]: 14:27:10.489 FuEngine             failed to add device /sys/devices/LNXSYSTM:00/LNXSYBUS:00/ACPI0004:00/MSFT1000:00/f8b3781a-1e82-4818-a1c3-63d806ec15bb/host0/target0:0:0/0:0:0:2/block/sr0: failed to open /dev/sr0: No medium found
+Mar 27 14:27:10 CommandComms fwupd[983824]: 14:27:10.518 FuMain               fwupd 1.9.33 ready for requests (locale C.UTF-8)
+Mar 27 14:27:10 CommandComms dbus-daemon[930]: [system] Successfully activated service 'org.freedesktop.fwupd'
+Mar 27 14:27:10 CommandComms systemd[1]: Started fwupd.service - Firmware update daemon.
+Mar 27 14:27:10 CommandComms systemd[1]: fwupd-refresh.service: Deactivated successfully.
+Mar 27 14:27:10 CommandComms systemd[1]: Finished fwupd-refresh.service - Refresh fwupd metadata and update motd.
+Mar 27 14:27:26 CommandComms python3[23615]: 2026-03-27T14:27:26.178954Z INFO ExtHandler ExtHandler Downloading agent manifest
+Mar 27 14:28:05 CommandComms sshd[984433]: Connection reset by authenticating user root 2.57.121.69 port 46472 [preauth]
+Mar 27 14:28:14 CommandComms sshd[984525]: Connection closed by authenticating user root 43.228.104.170 port 58236 [preauth]
