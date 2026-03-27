@@ -1,0 +1,521 @@
+main.jsx:26 [BUILD] client version=9347398 built=2026-03-27T16:07:30.122Z
+LiveKitManager.js:410 [AudioWS] Dispatcher mode enabled — idle disconnect disabled
+OnDemandVoiceManager.js:234 [OnDemandVoice] Dispatcher mode enabled — grace period disconnect disabled
+LiveKitConnectionContext.jsx:542 [LiveKitConnection] Dispatcher mode - idle timeout disabled (must survive screen lock)
+LiveKitConnectionContext.jsx:612 [LiveKitConnection] Init check - user: undefined lastUser: null initializing: false path: /dispatcher
+LiveKitConnectionContext.jsx:621 [LiveKitConnection] No user, skipping init
+AuthContext.jsx:170 [PTT-DIAG] [JS] Auth: pushed early connection info to service: server=https://comms.reeder-systems.com unit=DISPATCH-1
+SignalingManager.js:110 [Signaling] Connected to signaling server
+SignalingManager.js:337 [Signaling] Authentication request sent for DISPATCH-1
+LiveKitConnectionContext.jsx:612 [LiveKitConnection] Init check - user: DISPATCH-1 lastUser: null initializing: false path: /dispatcher
+LiveKitConnectionContext.jsx:639 [LiveKitConnection] Fetching channels...
+SignalingManager.js:71 [Signaling] Already connected
+AuthContext.jsx:170 [PTT-DIAG] [JS] Auth: pushed early connection info to service: server=https://comms.reeder-systems.com unit=DISPATCH-1
+SignalingManager.js:296 [Signaling] Authentication already in progress, returning existing promise
+SignalingManager.js:160 [Signaling] Authenticated as DISPATCH-1
+SignalingContext.jsx:48 [SignalingContext] Connected and authenticated as DISPATCH-1
+SignalingContext.jsx:48 [SignalingContext] Connected and authenticated as DISPATCH-1
+LiveKitConnectionContext.jsx:642 [LiveKitConnection] Fetched 3 channels
+LiveKitManager.js:619 [RX-DIAG] AudioContext CREATED state=running sampleRate=48000
+LiveKitManager.js:644 [RX-DIAG] Gesture handler INSTALLED, waiting for user interaction
+LiveKitManager.js:664 [RX-DIAG] Gesture events registered: click, keydown, pointerdown, touchstart
+OpusBrowserCodec.js:73 [RX-DIAG] OpusBrowserCodec init starting...
+LiveKitConnectionContext.jsx:425 [LiveKitConnection] Dispatcher mode - connecting to all 3 channels
+LiveKitManager.js:772 [AudioWS] _doConnect() — channel=DISPATCH__DISPATCH identity=DISPATCH-1 path=WEB
+OpusBrowserCodec.js:73 [RX-DIAG] OpusBrowserCodec init starting...
+LiveKitManager.js:772 [AudioWS] _doConnect() — channel=OPS__OPS-1 identity=DISPATCH-1 path=WEB
+OpusBrowserCodec.js:73 [RX-DIAG] OpusBrowserCodec init starting...
+LiveKitManager.js:772 [AudioWS] _doConnect() — channel=PHILADELPHIA__OPS-1 identity=DISPATCH-1 path=WEB
+OpusBrowserCodec.js:73 [RX-DIAG] OpusBrowserCodec init starting...
+SignalingManager.js:376 [Signaling] Joined channel: DISPATCH__DISPATCH
+LiveKitManager.js:755 [AudioWS] Awaiting existing connection for DISPATCH__DISPATCH
+LiveKitManager.js:625 [RX-DIAG] AudioContext STATE CHANGE: running → running
+LiveKitManager.js:874 [RX-DIAG] WebSocket OPENED for wss://comms.reeder-systems.com/api/audio-ws?channelId=DISPATCH__DISPATCH&unitId=DISPATCH-1
+LiveKitManager.js:706 [RX-DIAG] Worklet module load: success in 242.0ms
+LiveKitManager.js:706 [RX-DIAG] Worklet module load: success in 251.9ms
+LiveKitManager.js:737 [AudioWS] prepareConnection warm-up done
+LiveKitManager.js:706 [RX-DIAG] Worklet module load: success in 244.9ms
+LiveKitManager.js:706 [RX-DIAG] Worklet module load: success in 242.0ms
+LiveKitManager.js:874 [RX-DIAG] WebSocket OPENED for wss://comms.reeder-systems.com/api/audio-ws?channelId=OPS__OPS-1&unitId=DISPATCH-1
+OpusBrowserCodec.js:109 [OpusBrowserCodec] Self-test encode failed, len=-1
+init @ OpusBrowserCodec.js:109
+await in init
+Ja @ OpusBrowserCodec.js:269
+_tryInitOpus @ OnDemandVoiceManager.js:124
+warmUp @ OnDemandVoiceManager.js:422
+(anonymous) @ LiveKitConnectionContext.jsx:646
+await in (anonymous)
+(anonymous) @ LiveKitConnectionContext.jsx:660
+Xu @ react-dom.production.min.js:243
+Mo @ react-dom.production.min.js:285
+(anonymous) @ react-dom.production.min.js:281
+P @ scheduler.production.min.js:13
+W @ scheduler.production.min.js:14
+OpusBrowserCodec.js:155 [RX-DIAG] OpusBrowserCodec init FAILED (self-test) in 434.0ms — codec will not be used
+init @ OpusBrowserCodec.js:155
+await in init
+Ja @ OpusBrowserCodec.js:269
+_tryInitOpus @ OnDemandVoiceManager.js:124
+warmUp @ OnDemandVoiceManager.js:422
+(anonymous) @ LiveKitConnectionContext.jsx:646
+await in (anonymous)
+(anonymous) @ LiveKitConnectionContext.jsx:660
+Xu @ react-dom.production.min.js:243
+Mo @ react-dom.production.min.js:285
+(anonymous) @ react-dom.production.min.js:281
+P @ scheduler.production.min.js:13
+W @ scheduler.production.min.js:14
+OpusBrowserCodec.js:109 [OpusBrowserCodec] Self-test encode failed, len=-1
+init @ OpusBrowserCodec.js:109
+await in init
+Ja @ OpusBrowserCodec.js:269
+_ensureOpusCodec @ LiveKitManager.js:721
+_doConnect @ LiveKitManager.js:787
+connect @ LiveKitManager.js:759
+(anonymous) @ LiveKitConnectionContext.jsx:299
+(anonymous) @ LiveKitConnectionContext.jsx:430
+(anonymous) @ LiveKitConnectionContext.jsx:428
+(anonymous) @ LiveKitConnectionContext.jsx:649
+await in (anonymous)
+(anonymous) @ LiveKitConnectionContext.jsx:660
+Xu @ react-dom.production.min.js:243
+Mo @ react-dom.production.min.js:285
+(anonymous) @ react-dom.production.min.js:281
+P @ scheduler.production.min.js:13
+W @ scheduler.production.min.js:14
+OpusBrowserCodec.js:155 [RX-DIAG] OpusBrowserCodec init FAILED (self-test) in 428.9ms — codec will not be used
+init @ OpusBrowserCodec.js:155
+await in init
+Ja @ OpusBrowserCodec.js:269
+_ensureOpusCodec @ LiveKitManager.js:721
+_doConnect @ LiveKitManager.js:787
+connect @ LiveKitManager.js:759
+(anonymous) @ LiveKitConnectionContext.jsx:299
+(anonymous) @ LiveKitConnectionContext.jsx:430
+(anonymous) @ LiveKitConnectionContext.jsx:428
+(anonymous) @ LiveKitConnectionContext.jsx:649
+await in (anonymous)
+(anonymous) @ LiveKitConnectionContext.jsx:660
+Xu @ react-dom.production.min.js:243
+Mo @ react-dom.production.min.js:285
+(anonymous) @ react-dom.production.min.js:281
+P @ scheduler.production.min.js:13
+W @ scheduler.production.min.js:14
+OpusBrowserCodec.js:109 [OpusBrowserCodec] Self-test encode failed, len=-1
+init @ OpusBrowserCodec.js:109
+await in init
+Ja @ OpusBrowserCodec.js:269
+_ensureOpusCodec @ LiveKitManager.js:721
+_doConnect @ LiveKitManager.js:787
+connect @ LiveKitManager.js:759
+(anonymous) @ LiveKitConnectionContext.jsx:299
+(anonymous) @ LiveKitConnectionContext.jsx:430
+(anonymous) @ LiveKitConnectionContext.jsx:428
+(anonymous) @ LiveKitConnectionContext.jsx:649
+await in (anonymous)
+(anonymous) @ LiveKitConnectionContext.jsx:660
+Xu @ react-dom.production.min.js:243
+Mo @ react-dom.production.min.js:285
+(anonymous) @ react-dom.production.min.js:281
+P @ scheduler.production.min.js:13
+W @ scheduler.production.min.js:14
+OpusBrowserCodec.js:155 [RX-DIAG] OpusBrowserCodec init FAILED (self-test) in 429.1ms — codec will not be used
+init @ OpusBrowserCodec.js:155
+await in init
+Ja @ OpusBrowserCodec.js:269
+_ensureOpusCodec @ LiveKitManager.js:721
+_doConnect @ LiveKitManager.js:787
+connect @ LiveKitManager.js:759
+(anonymous) @ LiveKitConnectionContext.jsx:299
+(anonymous) @ LiveKitConnectionContext.jsx:430
+(anonymous) @ LiveKitConnectionContext.jsx:428
+(anonymous) @ LiveKitConnectionContext.jsx:649
+await in (anonymous)
+(anonymous) @ LiveKitConnectionContext.jsx:660
+Xu @ react-dom.production.min.js:243
+Mo @ react-dom.production.min.js:285
+(anonymous) @ react-dom.production.min.js:281
+P @ scheduler.production.min.js:13
+W @ scheduler.production.min.js:14
+OpusBrowserCodec.js:109 [OpusBrowserCodec] Self-test encode failed, len=-1
+init @ OpusBrowserCodec.js:109
+await in init
+Ja @ OpusBrowserCodec.js:269
+_ensureOpusCodec @ LiveKitManager.js:721
+_doConnect @ LiveKitManager.js:787
+connect @ LiveKitManager.js:759
+(anonymous) @ LiveKitConnectionContext.jsx:299
+(anonymous) @ LiveKitConnectionContext.jsx:430
+(anonymous) @ LiveKitConnectionContext.jsx:428
+(anonymous) @ LiveKitConnectionContext.jsx:649
+await in (anonymous)
+(anonymous) @ LiveKitConnectionContext.jsx:660
+Xu @ react-dom.production.min.js:243
+Mo @ react-dom.production.min.js:285
+(anonymous) @ react-dom.production.min.js:281
+P @ scheduler.production.min.js:13
+W @ scheduler.production.min.js:14
+OpusBrowserCodec.js:155 [RX-DIAG] OpusBrowserCodec init FAILED (self-test) in 429.1ms — codec will not be used
+init @ OpusBrowserCodec.js:155
+await in init
+Ja @ OpusBrowserCodec.js:269
+_ensureOpusCodec @ LiveKitManager.js:721
+_doConnect @ LiveKitManager.js:787
+connect @ LiveKitManager.js:759
+(anonymous) @ LiveKitConnectionContext.jsx:299
+(anonymous) @ LiveKitConnectionContext.jsx:430
+(anonymous) @ LiveKitConnectionContext.jsx:428
+(anonymous) @ LiveKitConnectionContext.jsx:649
+await in (anonymous)
+(anonymous) @ LiveKitConnectionContext.jsx:660
+Xu @ react-dom.production.min.js:243
+Mo @ react-dom.production.min.js:285
+(anonymous) @ react-dom.production.min.js:281
+P @ scheduler.production.min.js:13
+W @ scheduler.production.min.js:14
+OnDemandVoiceManager.js:128 [OnDemandVoice] Opus codec init failed — sticky PCM fallback for this session: OpusBrowserCodec initialization failed (self-test)
+_tryInitOpus @ OnDemandVoiceManager.js:128
+await in _tryInitOpus
+warmUp @ OnDemandVoiceManager.js:422
+(anonymous) @ LiveKitConnectionContext.jsx:646
+await in (anonymous)
+(anonymous) @ LiveKitConnectionContext.jsx:660
+Xu @ react-dom.production.min.js:243
+Mo @ react-dom.production.min.js:285
+(anonymous) @ react-dom.production.min.js:281
+P @ scheduler.production.min.js:13
+W @ scheduler.production.min.js:14
+LiveKitManager.js:728 [RX-DIAG] Opus codec init: fail in 432.7ms — Cannot read properties of null (reading 'ready')
+_ensureOpusCodec @ LiveKitManager.js:728
+await in _ensureOpusCodec
+_doConnect @ LiveKitManager.js:787
+connect @ LiveKitManager.js:759
+(anonymous) @ LiveKitConnectionContext.jsx:299
+(anonymous) @ LiveKitConnectionContext.jsx:430
+(anonymous) @ LiveKitConnectionContext.jsx:428
+(anonymous) @ LiveKitConnectionContext.jsx:649
+await in (anonymous)
+(anonymous) @ LiveKitConnectionContext.jsx:660
+Xu @ react-dom.production.min.js:243
+Mo @ react-dom.production.min.js:285
+(anonymous) @ react-dom.production.min.js:281
+P @ scheduler.production.min.js:13
+W @ scheduler.production.min.js:14
+LiveKitManager.js:731 [RX-DIAG] Opus codec init failed — sticky fallback to PCM for this session
+_ensureOpusCodec @ LiveKitManager.js:731
+await in _ensureOpusCodec
+_doConnect @ LiveKitManager.js:787
+connect @ LiveKitManager.js:759
+(anonymous) @ LiveKitConnectionContext.jsx:299
+(anonymous) @ LiveKitConnectionContext.jsx:430
+(anonymous) @ LiveKitConnectionContext.jsx:428
+(anonymous) @ LiveKitConnectionContext.jsx:649
+await in (anonymous)
+(anonymous) @ LiveKitConnectionContext.jsx:660
+Xu @ react-dom.production.min.js:243
+Mo @ react-dom.production.min.js:285
+(anonymous) @ react-dom.production.min.js:281
+P @ scheduler.production.min.js:13
+W @ scheduler.production.min.js:14
+LiveKitManager.js:728 [RX-DIAG] Opus codec init: fail in 432.0ms — Cannot read properties of null (reading 'ready')
+_ensureOpusCodec @ LiveKitManager.js:728
+await in _ensureOpusCodec
+_doConnect @ LiveKitManager.js:787
+connect @ LiveKitManager.js:759
+(anonymous) @ LiveKitConnectionContext.jsx:299
+(anonymous) @ LiveKitConnectionContext.jsx:430
+(anonymous) @ LiveKitConnectionContext.jsx:428
+(anonymous) @ LiveKitConnectionContext.jsx:649
+await in (anonymous)
+(anonymous) @ LiveKitConnectionContext.jsx:660
+Xu @ react-dom.production.min.js:243
+Mo @ react-dom.production.min.js:285
+(anonymous) @ react-dom.production.min.js:281
+P @ scheduler.production.min.js:13
+W @ scheduler.production.min.js:14
+LiveKitManager.js:731 [RX-DIAG] Opus codec init failed — sticky fallback to PCM for this session
+_ensureOpusCodec @ LiveKitManager.js:731
+await in _ensureOpusCodec
+_doConnect @ LiveKitManager.js:787
+connect @ LiveKitManager.js:759
+(anonymous) @ LiveKitConnectionContext.jsx:299
+(anonymous) @ LiveKitConnectionContext.jsx:430
+(anonymous) @ LiveKitConnectionContext.jsx:428
+(anonymous) @ LiveKitConnectionContext.jsx:649
+await in (anonymous)
+(anonymous) @ LiveKitConnectionContext.jsx:660
+Xu @ react-dom.production.min.js:243
+Mo @ react-dom.production.min.js:285
+(anonymous) @ react-dom.production.min.js:281
+P @ scheduler.production.min.js:13
+W @ scheduler.production.min.js:14
+LiveKitManager.js:728 [RX-DIAG] Opus codec init: fail in 431.4ms — Cannot read properties of null (reading 'ready')
+_ensureOpusCodec @ LiveKitManager.js:728
+await in _ensureOpusCodec
+_doConnect @ LiveKitManager.js:787
+connect @ LiveKitManager.js:759
+(anonymous) @ LiveKitConnectionContext.jsx:299
+(anonymous) @ LiveKitConnectionContext.jsx:430
+(anonymous) @ LiveKitConnectionContext.jsx:428
+(anonymous) @ LiveKitConnectionContext.jsx:649
+await in (anonymous)
+(anonymous) @ LiveKitConnectionContext.jsx:660
+Xu @ react-dom.production.min.js:243
+Mo @ react-dom.production.min.js:285
+(anonymous) @ react-dom.production.min.js:281
+P @ scheduler.production.min.js:13
+W @ scheduler.production.min.js:14
+LiveKitManager.js:731 [RX-DIAG] Opus codec init failed — sticky fallback to PCM for this session
+_ensureOpusCodec @ LiveKitManager.js:731
+await in _ensureOpusCodec
+_doConnect @ LiveKitManager.js:787
+connect @ LiveKitManager.js:759
+(anonymous) @ LiveKitConnectionContext.jsx:299
+(anonymous) @ LiveKitConnectionContext.jsx:430
+(anonymous) @ LiveKitConnectionContext.jsx:428
+(anonymous) @ LiveKitConnectionContext.jsx:649
+await in (anonymous)
+(anonymous) @ LiveKitConnectionContext.jsx:660
+Xu @ react-dom.production.min.js:243
+Mo @ react-dom.production.min.js:285
+(anonymous) @ react-dom.production.min.js:281
+P @ scheduler.production.min.js:13
+W @ scheduler.production.min.js:14
+LiveKitManager.js:1093 [RX-DIAG] Playback chain CREATED for DISPATCH__DISPATCH, AudioContext.state=running
+LiveKitManager.js:808 [AudioWS] Connected to DISPATCH__DISPATCH (total 437.6ms)
+LiveKitConnectionContext.jsx:240 [LiveKitConnection] DISPATCH__DISPATCH state: connected
+LiveKitManager.js:1093 [RX-DIAG] Playback chain CREATED for OPS__OPS-1, AudioContext.state=running
+LiveKitManager.js:808 [AudioWS] Connected to OPS__OPS-1 (total 438.5ms)
+LiveKitConnectionContext.jsx:240 [LiveKitConnection] OPS__OPS-1 state: connected
+OnDemandVoiceManager.js:425 [OnDemandVoice] Warm-up complete (worklet + codec + permit tone pre-loaded)
+LiveKitConnectionContext.jsx:301 [LiveKitConnection] connectToChannel total for DISPATCH__DISPATCH: 445.9ms
+LiveKitManager.js:346 [AudioWS] Channel DISPATCH__DISPATCH marked active
+LiveKitConnectionContext.jsx:308 [LiveKitConnection] Connected to DISPATCH__DISPATCH
+LiveKitConnectionContext.jsx:301 [LiveKitConnection] connectToChannel total for DISPATCH__DISPATCH: 434.8ms
+LiveKitManager.js:346 [AudioWS] Channel DISPATCH__DISPATCH marked active
+LiveKitConnectionContext.jsx:308 [LiveKitConnection] Connected to DISPATCH__DISPATCH
+LiveKitConnectionContext.jsx:301 [LiveKitConnection] connectToChannel total for OPS__OPS-1: 445.2ms
+LiveKitManager.js:346 [AudioWS] Channel OPS__OPS-1 marked active
+LiveKitConnectionContext.jsx:308 [LiveKitConnection] Connected to OPS__OPS-1
+talkPermitTone.js:21 [TalkPermit] WAV preloaded
+LiveKitManager.js:874 [RX-DIAG] WebSocket OPENED for wss://comms.reeder-systems.com/api/audio-ws?channelId=PHILADELPHIA__OPS-1&unitId=DISPATCH-1
+LiveKitManager.js:1093 [RX-DIAG] Playback chain CREATED for PHILADELPHIA__OPS-1, AudioContext.state=running
+LiveKitManager.js:808 [AudioWS] Connected to PHILADELPHIA__OPS-1 (total 584.4ms)
+LiveKitConnectionContext.jsx:240 [LiveKitConnection] PHILADELPHIA__OPS-1 state: connected
+LiveKitConnectionContext.jsx:301 [LiveKitConnection] connectToChannel total for PHILADELPHIA__OPS-1: 586.6ms
+LiveKitManager.js:346 [AudioWS] Channel PHILADELPHIA__OPS-1 marked active
+LiveKitConnectionContext.jsx:308 [LiveKitConnection] Connected to PHILADELPHIA__OPS-1
+LiveKitConnectionContext.jsx:451 [LiveKitConnection] Dispatcher mode - connected 3/3 channels
+LiveKitManager.js:946 [AudioWS] Server confirmed connection for PHILADELPHIA__OPS-1
+index.jsx:219 [PTT] === PTT DOWN ===
+index.jsx:85 [PTT] startTransmission called, channels: ['DISPATCH__DISPATCH']
+index.jsx:144 [PTT] Requesting floor grant for channel=DISPATCH__DISPATCH unit=DISPATCH-1
+index.jsx:146 [PTT] Floor granted for channel=DISPATCH__DISPATCH
+MicPTTManager.js:284 [MicPTT] start() — path=WEB channel=DISPATCH__DISPATCH unit=DISPATCH-1
+MicPTTManager.js:285 [TX-DIAG] PTT START channel=DISPATCH__DISPATCH unit=DISPATCH-1 path=WEB
+iosAudioUnlock.js:17 [iOS Audio] Unlock attempt 1
+iosAudioUnlock.js:39 [iOS Audio] Silent buffer played via AudioContext
+MicPTTManager.js:145 [MicPTT] State: idle → arming
+LiveKitManager.js:473 [AudioWS] PTT active - muting all RX audio
+backgroundService.js:55 [BackgroundService] Web wake lock acquired
+iosAudioUnlock.js:49 [iOS Audio] Silent audio element played - audio unlocked
+MicPTTManager.js:274 [MicPTT] Capture worklet module loaded
+MicPTTManager.js:308 [MicPTT] Opus browser codec init failed, will fallback to PCM (txMode=pcm): OpusBrowserCodec initialization previously failed (self-test)
+start @ MicPTTManager.js:308
+await in start
+(anonymous) @ index.jsx:157
+await in (anonymous)
+(anonymous) @ index.jsx:222
+Xw @ react-dom.production.min.js:54
+Qw @ react-dom.production.min.js:54
+eb @ react-dom.production.min.js:55
+ng @ react-dom.production.min.js:105
+rx @ react-dom.production.min.js:106
+(anonymous) @ react-dom.production.min.js:117
+_p @ react-dom.production.min.js:273
+Ev @ react-dom.production.min.js:52
+Dd @ react-dom.production.min.js:109
+Kf @ react-dom.production.min.js:74
+gb @ react-dom.production.min.js:73
+MicPTTManager.js:312 [MicPTT] Permit tone played immediately
+radioVoiceDSP.js:55 [RadioDSP] Voice-optimized processing chain created
+MicPTTManager.js:346 [MicPTT] Mic acquired with radio voice DSP
+MicPTTManager.js:387 [MicPTT] WS transport ready, starting capture...
+MicPTTManager.js:388 [TX-DIAG] Transport ready: ws=true wsOpen=true txMode=pcm
+MicPTTManager.js:416 [TX-DIAG] PCM transport confirmed open before capture start
+MicPTTManager.js:145 [MicPTT] State: arming → transmitting
+MicPTTManager.js:464 [MicPTT] Transmission active
+index.jsx:168 [PTT] Transmission started successfully
+MicPTTManager.js:544 [TX-DIAG] First frame sent: mode=pcm seq=0 pcmLen=1920 ch=DISPATCH__DISPATCH unit=DISPATCH-1
+MicPTTManager.js:546 [TX-DIAG] Progress: 50 frames sent (pcm) dropped=0 errors=0
+MicPTTManager.js:546 [TX-DIAG] Progress: 100 frames sent (pcm) dropped=0 errors=0
+MicPTTManager.js:546 [TX-DIAG] Progress: 150 frames sent (pcm) dropped=0 errors=0
+index.jsx:236 [PTT] === PTT UP ===, gestureActive: true
+index.jsx:182 [PTT] stopTransmission called
+MicPTTManager.js:618 [MicPTT] stop() — state=transmitting path=WEB
+MicPTTManager.js:145 [MicPTT] State: transmitting → cooldown
+LiveKitManager.js:477 [AudioWS] PTT released - unmuting RX audio
+MicPTTManager.js:145 [MicPTT] State: cooldown → idle
+MicPTTManager.js:699 [MicPTT] Transmission ended, 196 frames sent, state reset to IDLE
+MicPTTManager.js:700 [TX-DIAG] PTT STOP channel=DISPATCH__DISPATCH unit=DISPATCH-1 txMode=pcm sent=196 dropped=0 errors=0
+backgroundService.js:83 [BackgroundService] Web wake lock released
+index.jsx:196 [PTT] Transmission stopped
+index.jsx:207 [PTT] Unmuted channels: ['DISPATCH__DISPATCH']
+index.jsx:236 [PTT] === PTT UP ===, gestureActive: false
+index.jsx:236 [PTT] === PTT UP ===, gestureActive: false
+index.jsx:236 [PTT] === PTT UP ===, gestureActive: false
+LiveKitManager.js:914 [AudioWS] No pong from server for DISPATCH__DISPATCH in 45s — connection likely dead
+(anonymous) @ LiveKitManager.js:914
+setInterval
+_setupWsHandlers @ LiveKitManager.js:906
+_doConnect @ LiveKitManager.js:798
+await in _doConnect
+connect @ LiveKitManager.js:759
+(anonymous) @ LiveKitConnectionContext.jsx:299
+(anonymous) @ LiveKitConnectionContext.jsx:430
+(anonymous) @ LiveKitConnectionContext.jsx:428
+(anonymous) @ LiveKitConnectionContext.jsx:649
+await in (anonymous)
+(anonymous) @ LiveKitConnectionContext.jsx:660
+Xu @ react-dom.production.min.js:243
+Mo @ react-dom.production.min.js:285
+(anonymous) @ react-dom.production.min.js:281
+P @ scheduler.production.min.js:13
+W @ scheduler.production.min.js:14
+LiveKitManager.js:914 [AudioWS] No pong from server for OPS__OPS-1 in 45s — connection likely dead
+(anonymous) @ LiveKitManager.js:914
+setInterval
+_setupWsHandlers @ LiveKitManager.js:906
+_doConnect @ LiveKitManager.js:798
+await in _doConnect
+connect @ LiveKitManager.js:759
+(anonymous) @ LiveKitConnectionContext.jsx:299
+(anonymous) @ LiveKitConnectionContext.jsx:430
+(anonymous) @ LiveKitConnectionContext.jsx:428
+(anonymous) @ LiveKitConnectionContext.jsx:649
+await in (anonymous)
+(anonymous) @ LiveKitConnectionContext.jsx:660
+Xu @ react-dom.production.min.js:243
+Mo @ react-dom.production.min.js:285
+(anonymous) @ react-dom.production.min.js:281
+P @ scheduler.production.min.js:13
+W @ scheduler.production.min.js:14
+LiveKitManager.js:923 [RX-DIAG] WebSocket CLOSED for DISPATCH__DISPATCH code=1005 reason=none
+LiveKitManager.js:1164 [RX-DIAG] Playback chain DESTROYED for DISPATCH__DISPATCH, reason=ws-closed
+LiveKitConnectionContext.jsx:240 [LiveKitConnection] DISPATCH__DISPATCH state: disconnected
+LiveKitManager.js:930 [AudioWS] Dispatcher mode: auto-reconnecting DISPATCH__DISPATCH
+LiveKitManager.js:436 [AudioWS] Dispatcher auto-reconnect: scheduling DISPATCH__DISPATCH in 1789ms (attempt 1)
+LiveKitManager.js:923 [RX-DIAG] WebSocket CLOSED for OPS__OPS-1 code=1005 reason=none
+LiveKitManager.js:1164 [RX-DIAG] Playback chain DESTROYED for OPS__OPS-1, reason=ws-closed
+LiveKitConnectionContext.jsx:240 [LiveKitConnection] OPS__OPS-1 state: disconnected
+LiveKitManager.js:930 [AudioWS] Dispatcher mode: auto-reconnecting OPS__OPS-1
+LiveKitManager.js:436 [AudioWS] Dispatcher auto-reconnect: scheduling OPS__OPS-1 in 1328ms (attempt 1)
+LiveKitManager.js:914 [AudioWS] No pong from server for PHILADELPHIA__OPS-1 in 45s — connection likely dead
+(anonymous) @ LiveKitManager.js:914
+setInterval
+_setupWsHandlers @ LiveKitManager.js:906
+_doConnect @ LiveKitManager.js:798
+await in _doConnect
+connect @ LiveKitManager.js:759
+(anonymous) @ LiveKitConnectionContext.jsx:299
+(anonymous) @ LiveKitConnectionContext.jsx:430
+(anonymous) @ LiveKitConnectionContext.jsx:428
+(anonymous) @ LiveKitConnectionContext.jsx:649
+await in (anonymous)
+(anonymous) @ LiveKitConnectionContext.jsx:660
+Xu @ react-dom.production.min.js:243
+Mo @ react-dom.production.min.js:285
+(anonymous) @ react-dom.production.min.js:281
+P @ scheduler.production.min.js:13
+W @ scheduler.production.min.js:14
+LiveKitManager.js:923 [RX-DIAG] WebSocket CLOSED for PHILADELPHIA__OPS-1 code=1005 reason=none
+LiveKitManager.js:1164 [RX-DIAG] Playback chain DESTROYED for PHILADELPHIA__OPS-1, reason=ws-closed
+LiveKitConnectionContext.jsx:240 [LiveKitConnection] PHILADELPHIA__OPS-1 state: disconnected
+LiveKitManager.js:930 [AudioWS] Dispatcher mode: auto-reconnecting PHILADELPHIA__OPS-1
+LiveKitManager.js:436 [AudioWS] Dispatcher auto-reconnect: scheduling PHILADELPHIA__OPS-1 in 1310ms (attempt 1)
+LiveKitManager.js:772 [AudioWS] _doConnect() — channel=OPS__OPS-1 identity=DISPATCH-1 path=WEB
+LiveKitManager.js:715 [RX-DIAG] Opus codec init skipped — sticky failure from previous attempt
+LiveKitManager.js:772 [AudioWS] _doConnect() — channel=PHILADELPHIA__OPS-1 identity=DISPATCH-1 path=WEB
+LiveKitManager.js:715 [RX-DIAG] Opus codec init skipped — sticky failure from previous attempt
+LiveKitManager.js:874 [RX-DIAG] WebSocket OPENED for wss://comms.reeder-systems.com/api/audio-ws?channelId=OPS__OPS-1&unitId=DISPATCH-1
+LiveKitManager.js:1093 [RX-DIAG] Playback chain CREATED for OPS__OPS-1, AudioContext.state=running
+LiveKitManager.js:808 [AudioWS] Connected to OPS__OPS-1 (total 173.2ms)
+LiveKitConnectionContext.jsx:240 [LiveKitConnection] OPS__OPS-1 state: connected
+LiveKitManager.js:448 [AudioWS] Dispatcher auto-reconnect: successfully reconnected to OPS__OPS-1
+LiveKitManager.js:946 [AudioWS] Server confirmed connection for OPS__OPS-1
+LiveKitManager.js:874 [RX-DIAG] WebSocket OPENED for wss://comms.reeder-systems.com/api/audio-ws?channelId=PHILADELPHIA__OPS-1&unitId=DISPATCH-1
+LiveKitManager.js:1093 [RX-DIAG] Playback chain CREATED for PHILADELPHIA__OPS-1, AudioContext.state=running
+LiveKitManager.js:808 [AudioWS] Connected to PHILADELPHIA__OPS-1 (total 332.3ms)
+LiveKitConnectionContext.jsx:240 [LiveKitConnection] PHILADELPHIA__OPS-1 state: connected
+LiveKitManager.js:448 [AudioWS] Dispatcher auto-reconnect: successfully reconnected to PHILADELPHIA__OPS-1
+LiveKitManager.js:946 [AudioWS] Server confirmed connection for PHILADELPHIA__OPS-1
+LiveKitManager.js:772 [AudioWS] _doConnect() — channel=DISPATCH__DISPATCH identity=DISPATCH-1 path=WEB
+LiveKitManager.js:715 [RX-DIAG] Opus codec init skipped — sticky failure from previous attempt
+LiveKitManager.js:874 [RX-DIAG] WebSocket OPENED for wss://comms.reeder-systems.com/api/audio-ws?channelId=DISPATCH__DISPATCH&unitId=DISPATCH-1
+LiveKitManager.js:1093 [RX-DIAG] Playback chain CREATED for DISPATCH__DISPATCH, AudioContext.state=running
+LiveKitManager.js:808 [AudioWS] Connected to DISPATCH__DISPATCH (total 123.5ms)
+LiveKitConnectionContext.jsx:240 [LiveKitConnection] DISPATCH__DISPATCH state: connected
+LiveKitManager.js:448 [AudioWS] Dispatcher auto-reconnect: successfully reconnected to DISPATCH__DISPATCH
+LiveKitManager.js:946 [AudioWS] Server confirmed connection for DISPATCH__DISPATCH
+LiveKitConnectionContext.jsx:573 [LiveKitConnection] Page became visible — checking audio channels
+LiveKitConnectionContext.jsx:596 [LiveKitConnection] All audio channels healthy after visibility restore
+LiveKitConnectionContext.jsx:612 [LiveKitConnection] Init check - user: DISPATCH-1 lastUser: DISPATCH-1 initializing: false path: /dispatcher
+LiveKitConnectionContext.jsx:631 [LiveKitConnection] Already initialized for this user on this path, skipping
+SignalingManager.js:71 [Signaling] Already connected
+AuthContext.jsx:170 [PTT-DIAG] [JS] Auth: pushed early connection info to service: server=https://comms.reeder-systems.com unit=DISPATCH-1
+SignalingManager.js:291 [Signaling] Already authenticated
+SignalingContext.jsx:48 [SignalingContext] Connected and authenticated as DISPATCH-1
+index.jsx:219 [PTT] === PTT DOWN ===
+index.jsx:85 [PTT] startTransmission called, channels: ['DISPATCH__DISPATCH']
+index.jsx:144 [PTT] Requesting floor grant for channel=DISPATCH__DISPATCH unit=DISPATCH-1
+index.jsx:146 [PTT] Floor granted for channel=DISPATCH__DISPATCH
+MicPTTManager.js:284 [MicPTT] start() — path=WEB channel=DISPATCH__DISPATCH unit=DISPATCH-1
+MicPTTManager.js:285 [TX-DIAG] PTT START channel=DISPATCH__DISPATCH unit=DISPATCH-1 path=WEB
+MicPTTManager.js:145 [MicPTT] State: idle → arming
+LiveKitManager.js:473 [AudioWS] PTT active - muting all RX audio
+MicPTTManager.js:308 [MicPTT] Opus browser codec init failed, will fallback to PCM (txMode=pcm): OpusBrowserCodec initialization previously failed (self-test)
+start @ MicPTTManager.js:308
+await in start
+(anonymous) @ index.jsx:157
+await in (anonymous)
+(anonymous) @ index.jsx:222
+Xw @ react-dom.production.min.js:54
+Qw @ react-dom.production.min.js:54
+eb @ react-dom.production.min.js:55
+ng @ react-dom.production.min.js:105
+rx @ react-dom.production.min.js:106
+(anonymous) @ react-dom.production.min.js:117
+_p @ react-dom.production.min.js:273
+Ev @ react-dom.production.min.js:52
+Dd @ react-dom.production.min.js:109
+Kf @ react-dom.production.min.js:74
+gb @ react-dom.production.min.js:73
+MicPTTManager.js:312 [MicPTT] Permit tone played immediately
+backgroundService.js:55 [BackgroundService] Web wake lock acquired
+radioVoiceDSP.js:55 [RadioDSP] Voice-optimized processing chain created
+MicPTTManager.js:346 [MicPTT] Mic acquired with radio voice DSP
+MicPTTManager.js:387 [MicPTT] WS transport ready, starting capture...
+MicPTTManager.js:388 [TX-DIAG] Transport ready: ws=true wsOpen=true txMode=pcm
+MicPTTManager.js:416 [TX-DIAG] PCM transport confirmed open before capture start
+MicPTTManager.js:145 [MicPTT] State: arming → transmitting
+MicPTTManager.js:464 [MicPTT] Transmission active
+index.jsx:168 [PTT] Transmission started successfully
+MicPTTManager.js:544 [TX-DIAG] First frame sent: mode=pcm seq=196 pcmLen=1920 ch=DISPATCH__DISPATCH unit=DISPATCH-1
+MicPTTManager.js:546 [TX-DIAG] Progress: 50 frames sent (pcm) dropped=0 errors=0
+MicPTTManager.js:546 [TX-DIAG] Progress: 100 frames sent (pcm) dropped=0 errors=0
+MicPTTManager.js:546 [TX-DIAG] Progress: 150 frames sent (pcm) dropped=0 errors=0
+MicPTTManager.js:546 [TX-DIAG] Progress: 200 frames sent (pcm) dropped=0 errors=0
+MicPTTManager.js:546 [TX-DIAG] Progress: 250 frames sent (pcm) dropped=0 errors=0
+index.jsx:236 [PTT] === PTT UP ===, gestureActive: true
+index.jsx:182 [PTT] stopTransmission called
+MicPTTManager.js:618 [MicPTT] stop() — state=transmitting path=WEB
+MicPTTManager.js:145 [MicPTT] State: transmitting → cooldown
+LiveKitManager.js:477 [AudioWS] PTT released - unmuting RX audio
+MicPTTManager.js:145 [MicPTT] State: cooldown → idle
+MicPTTManager.js:699 [MicPTT] Transmission ended, 273 frames sent, state reset to IDLE
+MicPTTManager.js:700 [TX-DIAG] PTT STOP channel=DISPATCH__DISPATCH unit=DISPATCH-1 txMode=pcm sent=273 dropped=0 errors=0
+backgroundService.js:83 [BackgroundService] Web wake lock released
+index.jsx:196 [PTT] Transmission stopped
+index.jsx:207 [PTT] Unmuted channels: ['DISPATCH__DISPATCH']
+index.jsx:236 [PTT] === PTT UP ===, gestureActive: false
+index.jsx:236 [PTT] === PTT UP ===, gestureActive: false
