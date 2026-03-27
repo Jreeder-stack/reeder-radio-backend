@@ -69,6 +69,8 @@ class OpusBrowserCodec {
 
   async init() {
     if (this._ready) return;
+    const t0 = performance.now();
+    console.log('[RX-DIAG] OpusBrowserCodec init starting...');
 
     this._native = await _loadModule();
 
@@ -150,13 +152,13 @@ class OpusBrowserCodec {
     }
 
     if (!selfTestPassed) {
-      console.error('[OpusBrowserCodec] Self-test FAILED — codec will not be used, falling back to PCM');
+      console.error(`[RX-DIAG] OpusBrowserCodec init FAILED (self-test) in ${(performance.now() - t0).toFixed(1)}ms — codec will not be used`);
       this.destroy();
       return;
     }
 
     this._ready = true;
-    console.log('[OpusBrowserCodec] Initialized with WASM (48kHz, mono, 960 frame, FEC enabled)');
+    console.log(`[RX-DIAG] OpusBrowserCodec init complete in ${(performance.now() - t0).toFixed(1)}ms (48kHz, mono, 960 frame, FEC enabled)`);
   }
 
   get ready() {

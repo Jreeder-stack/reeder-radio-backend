@@ -1,6 +1,14 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import legacy from "@vitejs/plugin-legacy";
+import { execSync } from "child_process";
+
+let gitHash = "unknown";
+try {
+  gitHash = execSync("git rev-parse --short HEAD").toString().trim();
+} catch (e) {}
+
+const buildTime = new Date().toISOString();
 
 export default defineConfig({
   plugins: [
@@ -11,6 +19,10 @@ export default defineConfig({
       renderLegacyChunks: true,
     }),
   ],
+  define: {
+    __BUILD_VERSION__: JSON.stringify(gitHash),
+    __BUILD_TIME__: JSON.stringify(buildTime),
+  },
   build: {
     sourcemap: true,
   },

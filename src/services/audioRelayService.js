@@ -19,6 +19,10 @@ class AudioRelayService {
 
     this.wsSubscribers = new Map();
     this._audioListeners = new Map();
+
+    this._txSessions = new Map();
+    this._relayCounters = new Map();
+    this._txIdleTimer = null;
   }
 
   setFloorControlService(fcs) {
@@ -168,8 +172,25 @@ class AudioRelayService {
     this._broadcastToAll(channelKey, senderUnitId, rxPayload, sequence, opusPayload);
   }
 
+  _trackTxSession(channelKey, senderUnitId) {
+    const txKey = `${senderUnitId}:${channelKey}`;
+    const now = Date.now();
+    let session = this._txSessions.get(txKey);
+    if (!session) {
+      session = { startTime: now, lastPacketTime: now, packetCount: 0, firstRelayLogged: false };
+      this._txSessions.set(txKey, session);
+      console.log(`[RELAY-DIAG] TX START unitId=${senderUnitId} channel=${channelKey}`);
+    }
+    session.lastPacketTime = now;
+    session.packetCount++;
+    return session;
+  }
+
   _broadcastToAll(channelKey, senderUnitId, rxPayload, sequence, opusPayload) {
+    const txSession = this._trackTxSession(channelKey, senderUnitId);
+
     const udpSubs = this.subscribers.get(channelKey);
+    const udpSubCount = udpSubs ? udpSubs.size : 0;
     if (udpSubs) {
       for (const [subUnitId, subInfo] of udpSubs) {
         if (subUnitId === senderUnitId) continue;
@@ -183,6 +204,7 @@ class AudioRelayService {
     }
 
     const wsSubs = this.wsSubscribers.get(channelKey);
+    const wsSubCount = wsSubs ? wsSubs.size : 0;
     if (wsSubs && wsSubs.size > 0) {
       const channelIdNum = parseInt(channelKey, 10);
       const opusFrame = Buffer.alloc(5 + opusPayload.length);
@@ -190,6 +212,12 @@ class AudioRelayService {
       opusFrame.writeUInt16BE(isNaN(channelIdNum) ? 0 : channelIdNum, 1);
       opusFrame.writeUInt16BE(sequence & 0xFFFF, 3);
       opusPayload.copy(opusFrame, 5);
+
+      if (!txSession.firstRelayLogged) {
+        const wsUnitIds = [...wsSubs.keys()].filter(id => id !== senderUnitId);
+        console.log(`[RELAY-DIAG] First relay packet: ch=${channelKey} from=${senderUnitId} wsSubscribers=[${wsUnitIds.join(',')}]`);
+        txSession.firstRelayLogged = true;
+      }
 
       for (const [subUnitId, subInfo] of wsSubs) {
         if (subUnitId === senderUnitId) continue;
@@ -205,6 +233,12 @@ class AudioRelayService {
     }
 
     const listeners = this._audioListeners.get(channelKey);
+    const listenerCount = listeners ? listeners.size : 0;
+
+    if (txSession.packetCount % 50 === 0) {
+      console.log(`[RELAY-DIAG] RELAY ch=${channelKey} from=${senderUnitId} seq=${sequence} udpSubs=${udpSubCount} wsSubs=${wsSubCount} listeners=${listenerCount}`);
+    }
+
     if (listeners) {
       for (const [listenerId, callback] of listeners) {
         if (listenerId === senderUnitId) continue;
@@ -257,6 +291,11 @@ class AudioRelayService {
       this._sweepStaleSubscribers();
     }, SUBSCRIBER_SWEEP_INTERVAL_MS);
     this._sweepTimer.unref?.();
+
+    this._txIdleTimer = setInterval(() => {
+      this._sweepIdleTxSessions();
+    }, 1000);
+    this._txIdleTimer.unref?.();
   }
 
   stop() {
@@ -264,10 +303,26 @@ class AudioRelayService {
       clearInterval(this._sweepTimer);
       this._sweepTimer = null;
     }
+    if (this._txIdleTimer) {
+      clearInterval(this._txIdleTimer);
+      this._txIdleTimer = null;
+    }
     if (this.socket) {
       this.socket.close();
       this.socket = null;
       console.log('[AudioRelay] UDP relay stopped');
+    }
+  }
+
+  _sweepIdleTxSessions() {
+    const now = Date.now();
+    for (const [txKey, session] of this._txSessions) {
+      if (now - session.lastPacketTime > 500) {
+        const [unitId, channel] = txKey.split(':');
+        const duration = session.lastPacketTime - session.startTime;
+        console.log(`[RELAY-DIAG] TX STOP unitId=${unitId} channel=${channel} packets=${session.packetCount} duration=${duration}ms`);
+        this._txSessions.delete(txKey);
+      }
     }
   }
 

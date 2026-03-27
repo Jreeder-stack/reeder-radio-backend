@@ -24,6 +24,9 @@ class LiveKitManager {
 
     this._playbackNodes = new Map();
     this._workletReady = false;
+    this._rxFrameCounters = new Map();
+    this._prePlaybackBuffers = new Map();
+    this._audioUnlockToastShown = false;
 
     this._audioSettings = {
       incomingVolume: 80,
@@ -613,15 +616,24 @@ class LiveKitManager {
   _getAudioContext() {
     if (!this.audioContext || this.audioContext.state === 'closed') {
       this.audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 48000 });
-      console.log(`[AudioWS] Created new AudioContext, sampleRate: ${this.audioContext.sampleRate}, state: ${this.audioContext.state}`);
+      console.log(`[RX-DIAG] AudioContext CREATED state=${this.audioContext.state} sampleRate=${this.audioContext.sampleRate}`);
       this._userGestureHandlerInstalled = false;
       this._installUserGestureResumeHandler();
+      const ctx = this.audioContext;
+      let prevState = ctx.state;
+      ctx.onstatechange = () => {
+        console.log(`[RX-DIAG] AudioContext STATE CHANGE: ${prevState} → ${ctx.state}`);
+        prevState = ctx.state;
+        if (ctx.state === 'running') {
+          this._dismissAudioUnlockToast();
+        }
+      };
     }
     if (this.audioContext.state === 'suspended') {
-      console.log('[AudioWS] AudioContext is suspended, attempting resume...');
+      console.log('[RX-DIAG] AudioContext is suspended, attempting resume...');
       this.audioContext.resume().then(() => {
-        console.log(`[AudioWS] AudioContext resumed successfully, state: ${this.audioContext.state}`);
-      }).catch(e => console.warn('[AudioWS] AudioContext resume failed:', e));
+        console.log(`[RX-DIAG] AudioContext resumed successfully, state=${this.audioContext.state}`);
+      }).catch(e => console.warn('[RX-DIAG] AudioContext resume failed:', e));
     }
     return this.audioContext;
   }
@@ -629,24 +641,27 @@ class LiveKitManager {
   _installUserGestureResumeHandler() {
     if (this._userGestureHandlerInstalled) return;
     this._userGestureHandlerInstalled = true;
+    console.log('[RX-DIAG] Gesture handler INSTALLED, waiting for user interaction');
 
     const resumeOnGesture = () => {
       if (!this.audioContext || this.audioContext.state !== 'suspended') {
         this._removeUserGestureHandler();
         return;
       }
-      console.log('[AudioWS] User gesture detected — resuming AudioContext');
+      console.log('[RX-DIAG] User gesture detected, calling AudioContext.resume()');
       this.audioContext.resume().then(() => {
-        console.log(`[AudioWS] AudioContext resumed via user gesture, state: ${this.audioContext.state}`);
+        console.log(`[RX-DIAG] User gesture detected, AudioContext.resume() → ${this.audioContext.state}`);
         this._removeUserGestureHandler();
-      }).catch(e => console.warn('[AudioWS] AudioContext resume via gesture failed:', e));
+        this._dismissAudioUnlockToast();
+      }).catch(e => console.warn('[RX-DIAG] AudioContext resume via gesture failed:', e));
     };
 
     this._gestureHandler = resumeOnGesture;
     document.addEventListener('click', resumeOnGesture, true);
     document.addEventListener('keydown', resumeOnGesture, true);
     document.addEventListener('pointerdown', resumeOnGesture, true);
-    console.log('[AudioWS] Installed user gesture resume handler for AudioContext');
+    document.addEventListener('touchstart', resumeOnGesture, true);
+    console.log('[RX-DIAG] Gesture events registered: click, keydown, pointerdown, touchstart');
   }
 
   _removeUserGestureHandler() {
@@ -654,17 +669,45 @@ class LiveKitManager {
       document.removeEventListener('click', this._gestureHandler, true);
       document.removeEventListener('keydown', this._gestureHandler, true);
       document.removeEventListener('pointerdown', this._gestureHandler, true);
+      document.removeEventListener('touchstart', this._gestureHandler, true);
       this._gestureHandler = null;
     }
     this._userGestureHandlerInstalled = false;
   }
 
+  _showAudioUnlockToast() {
+    if (this._audioUnlockToastShown) return;
+    this._audioUnlockToastShown = true;
+    const toast = document.createElement('div');
+    toast.id = '__audio-unlock-toast';
+    toast.textContent = 'Click anywhere to enable audio';
+    toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.85);color:#fff;padding:12px 24px;border-radius:8px;font-size:14px;z-index:99999;cursor:pointer;transition:opacity 0.3s;';
+    toast.addEventListener('click', () => this._dismissAudioUnlockToast());
+    document.body.appendChild(toast);
+    console.log('[RX-DIAG] Audio unlock toast SHOWN');
+  }
+
+  _dismissAudioUnlockToast() {
+    const toast = document.getElementById('__audio-unlock-toast');
+    if (toast) {
+      toast.style.opacity = '0';
+      setTimeout(() => toast.remove(), 300);
+      console.log('[RX-DIAG] Audio unlock toast DISMISSED');
+    }
+  }
+
   async _ensurePlaybackWorklet() {
     if (this._workletReady) return;
     const ctx = this._getAudioContext();
-    await ctx.audioWorklet.addModule('/audio/pcm-playback-worklet.js');
-    this._workletReady = true;
-    console.log('[AudioWS] Playback worklet module loaded');
+    const t0 = performance.now();
+    try {
+      await ctx.audioWorklet.addModule('/audio/pcm-playback-worklet.js');
+      this._workletReady = true;
+      console.log(`[RX-DIAG] Worklet module load: success in ${(performance.now() - t0).toFixed(1)}ms`);
+    } catch (err) {
+      console.error(`[RX-DIAG] Worklet module load: fail in ${(performance.now() - t0).toFixed(1)}ms — ${err.message}`);
+      throw err;
+    }
   }
 
   async _ensureOpusCodec() {
@@ -672,22 +715,23 @@ class LiveKitManager {
 
     const maxAttempts = 2;
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      const t0 = performance.now();
       try {
         const codec = await initOpusBrowserCodec();
         if (!codec || !codec.ready) {
           throw new Error('Opus codec init completed but codec is not ready (self-test may have failed)');
         }
-        console.log('[AudioWS] Opus codec initialized successfully');
+        console.log(`[RX-DIAG] Opus codec init: success in ${(performance.now() - t0).toFixed(1)}ms`);
         return;
       } catch (err) {
-        console.warn(`[AudioWS] Opus codec init attempt ${attempt}/${maxAttempts} failed:`, err.message);
+        console.warn(`[RX-DIAG] Opus codec init: fail in ${(performance.now() - t0).toFixed(1)}ms (attempt ${attempt}/${maxAttempts}) — ${err.message}`);
         if (attempt < maxAttempts) {
           await new Promise(r => setTimeout(r, 500));
         }
       }
     }
     this._opusInitFailed = true;
-    console.error('[AudioWS] Opus codec init failed after retries — RX audio may fall back to PCM');
+    console.error('[RX-DIAG] Opus codec init failed after retries — RX audio may fall back to PCM');
   }
 
   async prepareConnection() {
@@ -773,7 +817,7 @@ class LiveKitManager {
       return conn;
     } catch (err) {
       console.error(`[AudioWS] Failed to connect to ${channelName}:`, err);
-      this._cleanupChannel(channelName);
+      this._cleanupChannel(channelName, 'connect-failed');
       this._emitConnectionStateChange(channelName, 'failed', err);
       throw err;
     }
@@ -799,7 +843,7 @@ class LiveKitManager {
       return nativeConn;
     } catch (err) {
       console.error(`[AudioWS] _doConnectNative() FAILED for ${channelName}:`, err);
-      this._cleanupChannel(channelName);
+      this._cleanupChannel(channelName, 'native-connect-failed');
       this._emitConnectionStateChange(channelName, 'failed', err);
       throw err;
     }
@@ -816,7 +860,7 @@ class LiveKitManager {
       disconnect: async () => {
         proxy.state = 'disconnected';
         await nativeDisconnect();
-        self._cleanupChannel(channelName);
+        self._cleanupChannel(channelName, 'native-disconnect');
         self._emitConnectionStateChange(channelName, 'disconnected');
       },
     };
@@ -830,10 +874,12 @@ class LiveKitManager {
 
       const onOpen = () => {
         ws.removeEventListener('error', onError);
+        console.log(`[RX-DIAG] WebSocket OPENED for ${url}`);
         resolve(ws);
       };
-      const onError = () => {
+      const onError = (evt) => {
         ws.removeEventListener('open', onOpen);
+        console.error(`[RX-DIAG] WebSocket ERROR for ${url}`);
         reject(new Error('WebSocket connection failed'));
       };
 
@@ -876,11 +922,11 @@ class LiveKitManager {
 
     conn._pingInterval = pingInterval;
 
-    ws.addEventListener('close', () => {
-      console.log(`[AudioWS] WebSocket closed for ${channelName}`);
+    ws.addEventListener('close', (evt) => {
+      console.log(`[RX-DIAG] WebSocket CLOSED for ${channelName} code=${evt.code} reason=${evt.reason || 'none'}`);
       clearInterval(pingInterval);
       if (this.rooms.get(channelName) === conn) {
-        this._cleanupChannel(channelName);
+        this._cleanupChannel(channelName, 'ws-closed');
         this._emitConnectionStateChange(channelName, 'disconnected');
 
         if (this._dispatcherMode) {
@@ -891,7 +937,7 @@ class LiveKitManager {
     });
 
     ws.addEventListener('error', (err) => {
-      console.error(`[AudioWS] WebSocket error for ${channelName}`);
+      console.error(`[RX-DIAG] WebSocket ERROR for ${channelName}`);
     });
   }
 
@@ -906,23 +952,28 @@ class LiveKitManager {
   }
 
   _handleWsBinaryMessage(channelName, data) {
-    // Note: do NOT check autoPlaybackEnabled here — frames must always be
-    // decoded so synthetic track audio elements receive data. The
-    // autoPlaybackEnabled flag only controls whether gainNode is connected
-    // to ctx.destination (direct speaker output) vs routed through the
-    // synthetic track path (Audio element).
-
     const view = new DataView(data instanceof ArrayBuffer ? data : data.buffer || new Uint8Array(data).buffer);
     const frameType = view.getUint8(0);
 
+    const frameCount = (this._rxFrameCounters.get(channelName) || 0) + 1;
+    this._rxFrameCounters.set(channelName, frameCount);
+    const shouldLog = frameCount === 1 || frameCount % 100 === 0;
+
     if (frameType === 0x02) {
       if (data.byteLength < 6) return;
+
+      if (shouldLog) {
+        const ctxState = this.audioContext ? this.audioContext.state : 'no-context';
+        const playback = this._playbackNodes.get(channelName);
+        console.log(`[RX-DIAG] Opus frame #${frameCount} ch=${channelName} len=${data.byteLength} AudioContext=${ctxState} playbackNode=${playback ? 'exists' : 'null'} workletNode=${playback && playback.workletNode ? 'exists' : 'null'}`);
+      }
 
       if (this.audioContext && this.audioContext.state === 'suspended') {
         const now = Date.now();
         if (!this._lastSuspendedWarn || now - this._lastSuspendedWarn > 5000) {
           this._lastSuspendedWarn = now;
-          console.warn('[LiveKitManager] RX Opus frame received but AudioContext is suspended — audio will be silent until user interaction or context resumes');
+          console.warn('[RX-DIAG] AudioContext is suspended — audio will be silent until user interaction');
+          this._showAudioUnlockToast();
         }
       }
 
@@ -935,13 +986,24 @@ class LiveKitManager {
       let jitter = this._jitterBuffers && this._jitterBuffers.get(channelName);
       if (!jitter) {
         const codec = getOpusBrowserCodec();
+        if (!codec) {
+          const now = Date.now();
+          if (!this._lastCodecRetry || now - this._lastCodecRetry > 3000) {
+            this._lastCodecRetry = now;
+            console.warn('[RX-DIAG] Opus codec is NULL — WASM init failed or incomplete, attempting re-init');
+            initOpusBrowserCodec().catch(err => {
+              console.error('[RX-DIAG] Opus codec re-init failed:', err.message);
+            });
+          }
+          return;
+        }
         if (!codec.ready) {
           const now = Date.now();
           if (!this._lastCodecRetry || now - this._lastCodecRetry > 3000) {
             this._lastCodecRetry = now;
-            console.warn('[LiveKitManager] Opus codec not ready, attempting re-init for RX audio — frames will be dropped');
+            console.warn('[RX-DIAG] Opus codec exists but not ready, attempting re-init');
             initOpusBrowserCodec().catch(err => {
-              console.error('[LiveKitManager] Opus codec re-init failed:', err.message);
+              console.error('[RX-DIAG] Opus codec re-init failed:', err.message);
             });
           }
           return;
@@ -949,18 +1011,50 @@ class LiveKitManager {
         if (!this._jitterBuffers) this._jitterBuffers = new Map();
         jitter = new JitterBuffer(codec);
         this._jitterBuffers.set(channelName, jitter);
+        console.log(`[RX-DIAG] JitterBuffer CREATED for ch=${channelName}`);
       }
 
       jitter.push(sequence, opusData.slice());
       const frames = jitter.getFrames();
+
+      if (shouldLog && frames.length > 0) {
+        console.log(`[RX-DIAG] Decoded ${frames.length} PCM frames for ch=${channelName} firstLen=${frames[0].length}`);
+      }
+
       const playback = this._playbackNodes.get(channelName);
-      if (playback && playback.workletNode) {
-        for (const pcmData of frames) {
-          playback.workletNode.port.postMessage({ type: 'pcm', samples: pcmData }, [pcmData.buffer]);
+      if (!playback) {
+        if (shouldLog) {
+          console.log(`[RX-DIAG] No playback chain for ${channelName} — buffering packet (pipeline not ready)`);
         }
+        let buf = this._prePlaybackBuffers.get(channelName);
+        if (!buf) {
+          buf = [];
+          this._prePlaybackBuffers.set(channelName, buf);
+        }
+        for (const pcmData of frames) {
+          buf.push(pcmData);
+          if (buf.length > 20) buf.shift();
+        }
+        return;
+      }
+      if (!playback.workletNode) {
+        if (shouldLog) {
+          console.log(`[RX-DIAG] Playback chain exists but workletNode is null for ${channelName}`);
+        }
+        return;
+      }
+      for (const pcmData of frames) {
+        playback.workletNode.port.postMessage({ type: 'pcm', samples: pcmData }, [pcmData.buffer]);
+      }
+      if (shouldLog && frames.length > 0) {
+        console.log(`[RX-DIAG] Frames queued to worklet, count=${frames.length} ch=${channelName}`);
       }
     } else if (frameType === 0x01 || (frameType === 0x00 && data.byteLength >= 6)) {
       if (data.byteLength < 6) return;
+
+      if (shouldLog) {
+        console.log(`[RX-DIAG] PCM frame #${frameCount} ch=${channelName} len=${data.byteLength} frameType=0x${frameType.toString(16).padStart(2, '0')}`);
+      }
 
       this._recordActivity(channelName);
       this._recordRxActivity();
@@ -969,7 +1063,11 @@ class LiveKitManager {
       const playback = this._playbackNodes.get(channelName);
       if (playback && playback.workletNode) {
         playback.workletNode.port.postMessage({ type: 'pcm', samples: pcmData }, [pcmData.buffer]);
+      } else if (shouldLog) {
+        console.log(`[RX-DIAG] PCM frame dropped: playback=${playback ? 'exists' : 'null'} worklet=${playback && playback.workletNode ? 'exists' : 'null'} ch=${channelName}`);
       }
+    } else if (shouldLog) {
+      console.log(`[RX-DIAG] Unknown frameType=0x${frameType.toString(16).padStart(2, '0')} ch=${channelName} len=${data.byteLength}`);
     }
   }
 
@@ -995,7 +1093,16 @@ class LiveKitManager {
     this._playbackNodes.set(channelName, { workletNode, analyser, gainNode });
 
     this._startLevelMonitor(channelName, analyser);
-    console.log(`[AudioWS] Playback chain created for ${channelName}, AudioContext state: ${ctx.state}`);
+    console.log(`[RX-DIAG] Playback chain CREATED for ${channelName}, AudioContext.state=${ctx.state}`);
+
+    const buffered = this._prePlaybackBuffers.get(channelName);
+    if (buffered && buffered.length > 0) {
+      console.log(`[RX-DIAG] Flushing ${buffered.length} buffered frames to worklet for ${channelName}`);
+      for (const pcmData of buffered) {
+        workletNode.port.postMessage({ type: 'pcm', samples: pcmData }, [pcmData.buffer]);
+      }
+      this._prePlaybackBuffers.delete(channelName);
+    }
   }
 
   _startLevelMonitor(channelName, analyser) {
@@ -1056,7 +1163,8 @@ class LiveKitManager {
     };
   }
 
-  _cleanupChannel(channelName) {
+  _cleanupChannel(channelName, reason = 'cleanup') {
+    console.log(`[RX-DIAG] Playback chain DESTROYED for ${channelName}, reason=${reason}`);
     const conn = this.rooms.get(channelName);
 
     if (conn && conn._pingInterval) {
@@ -1072,6 +1180,8 @@ class LiveKitManager {
     this.channelGainNodes.delete(channelName);
     this.mutedChannels.delete(channelName);
     this.connectionHealth.delete(channelName);
+    this._rxFrameCounters.delete(channelName);
+    this._prePlaybackBuffers.delete(channelName);
 
     this._clearIdleTimer(channelName);
     this.activeChannels.delete(channelName);
@@ -1232,7 +1342,7 @@ class LiveKitManager {
     if (!conn) return;
 
     console.log(`[AudioWS] Disconnecting from ${channelName}`);
-    this._cleanupChannel(channelName);
+    this._cleanupChannel(channelName, 'user-disconnect');
 
     try {
       if (conn.ws && conn.ws.readyState === WebSocket.OPEN) {
@@ -1274,7 +1384,7 @@ class LiveKitManager {
     }
 
     const closePromises = Array.from(this.rooms.entries()).map(([channelName, conn]) => {
-      this._cleanupChannel(channelName);
+      this._cleanupChannel(channelName, 'disconnect-all');
       try {
         if (conn.ws && conn.ws.readyState === WebSocket.OPEN) {
           conn.ws.close();

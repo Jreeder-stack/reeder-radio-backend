@@ -5,6 +5,7 @@ import pgSession from 'connect-pg-simple';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import rateLimit from 'express-rate-limit';
+import { execSync } from 'child_process';
 
 import { config } from './config/env.js';
 import pool from './db/index.js';
@@ -12,6 +13,13 @@ import { setupRoutes } from './routes/index.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { requireAuth } from './middleware/auth.js';
 import * as authService from './services/authService.js';
+
+let _appBuildVersion = 'unknown';
+try {
+  _appBuildVersion = execSync('git rev-parse --short HEAD').toString().trim();
+} catch (e) {}
+const _appBuildTime = new Date().toISOString();
+const _appStartTime = Date.now();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -98,6 +106,14 @@ app.post('/api/activity/log', requireAuth, async (req, res) => {
   }
 });
 
+
+app.get('/api/version', (req, res) => {
+  res.json({
+    version: _appBuildVersion,
+    built: _appBuildTime,
+    uptime: Math.round((Date.now() - _appStartTime) / 1000),
+  });
+});
 
 const clientDistPath = path.join(__dirname, '..', 'client', 'dist');
 

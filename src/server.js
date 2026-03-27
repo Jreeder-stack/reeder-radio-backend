@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { createServer } from 'http';
+import { execSync } from 'child_process';
 import app from './app.js';
 import { config, validateEnv } from './config/env.js';
 import { initializeDatabase, isAiDispatchEnabled, getAiDispatchChannel, getAllChannels } from './db/index.js';
@@ -8,6 +9,14 @@ import { isConfigured as isAzureConfigured } from './services/azureSpeechService
 import { signalingService } from './services/signalingService.js';
 import { audioRelayService } from './services/audioRelayService.js';
 import { wsAudioBridge } from './services/wsAudioBridge.js';
+
+let _buildVersion = 'unknown';
+try {
+  _buildVersion = execSync('git rev-parse --short HEAD').toString().trim();
+} catch (e) {}
+const _buildTime = new Date().toISOString();
+const _startTime = Date.now();
+console.log(`[BUILD] version=${_buildVersion} built=${_buildTime}`);
 
 async function start() {
   validateEnv();

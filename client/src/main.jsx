@@ -22,6 +22,8 @@ import { overrideVisibilityAPI, isNative, requestAllPermissions } from "./lib/ca
 import { startBackgroundService } from "./plugins/backgroundService.js";
 import "./index.css";
 
+console.log(`[BUILD] client version=${typeof __BUILD_VERSION__ !== 'undefined' ? __BUILD_VERSION__ : 'dev'} built=${typeof __BUILD_TIME__ !== 'undefined' ? __BUILD_TIME__ : 'dev'}`);
+
 const isCapacitorNative = typeof window !== 'undefined' && 
   window.Capacitor?.isNativePlatform?.() === true;
 

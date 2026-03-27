@@ -6,6 +6,7 @@ import crypto from "crypto";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { fileURLToPath } from "url";
+import { execSync } from "child_process";
 import pool, {
   initializeDatabase,
   getUser,
@@ -34,6 +35,14 @@ import dispatchRouter from "./dispatch/dispatchRouter.js";
 import { getDispatcher } from "./src/services/aiDispatchService.js";
 
 dotenv.config();
+
+let _buildVersion = "unknown";
+try {
+  _buildVersion = execSync("git rev-parse --short HEAD").toString().trim();
+} catch (e) {}
+const _buildTime = new Date().toISOString();
+const _startTime = Date.now();
+console.log(`[BUILD] version=${_buildVersion} built=${_buildTime}`);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -640,6 +649,14 @@ app.delete("/api/admin/channels/:id", requireAdmin, async (req, res) => {
 });
 
 app.use("/api/dispatch", requireAuth, dispatchRouter);
+
+app.get("/api/version", (req, res) => {
+  res.json({
+    version: _buildVersion,
+    built: _buildTime,
+    uptime: Math.round((Date.now() - _startTime) / 1000),
+  });
+});
 
 app.use(express.static(path.join(__dirname, "client", "dist")));
 
