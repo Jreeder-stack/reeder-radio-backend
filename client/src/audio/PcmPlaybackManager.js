@@ -8,6 +8,7 @@ class PcmPlaybackManager {
     this._audioContext = null;
     this._workletNode = null;
     this._workletReady = false;
+    this._initPromise = null;
     this._playing = false;
     this._enqueueCount = 0;
     this._muted = false;
@@ -15,18 +16,23 @@ class PcmPlaybackManager {
 
   async init() {
     if (this._workletReady) return;
+    if (this._initPromise) return this._initPromise;
 
-    this._audioContext = new (window.AudioContext || window.webkitAudioContext)({
-      sampleRate: PCM_AUDIO.SAMPLE_RATE,
-    });
+    this._initPromise = (async () => {
+      this._audioContext = new (window.AudioContext || window.webkitAudioContext)({
+        sampleRate: PCM_AUDIO.SAMPLE_RATE,
+      });
 
-    if (this._audioContext.state === 'suspended') {
-      await this._audioContext.resume();
-    }
+      if (this._audioContext.state === 'suspended') {
+        await this._audioContext.resume();
+      }
 
-    await this._audioContext.audioWorklet.addModule('/audio/new-pcm-playback-worklet.js');
-    this._workletReady = true;
-    console.log(`${LOG_PREFIX} Worklet loaded, sampleRate=${this._audioContext.sampleRate}`);
+      await this._audioContext.audioWorklet.addModule('/audio/new-pcm-playback-worklet.js');
+      this._workletReady = true;
+      console.log(`${LOG_PREFIX} Worklet loaded, sampleRate=${this._audioContext.sampleRate}`);
+    })();
+
+    return this._initPromise;
   }
 
   async startPlayback() {
