@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import RecordingLogs from "./RecordingLogs.jsx";
 
 export default function Admin({ user, onLogout }) {
   const navigate = useNavigate();
@@ -548,6 +549,9 @@ export default function Admin({ user, onLogout }) {
           <button style={tabStyle(activeTab === "settings")} onClick={() => setActiveTab("settings")}>
             Settings
           </button>
+          <button style={tabStyle(activeTab === "recordings")} onClick={() => setActiveTab("recordings")}>
+            Recording Logs
+          </button>
         </div>
 
         {error && (
@@ -1069,6 +1073,10 @@ export default function Admin({ user, onLogout }) {
               </div>
             </div>
           </div>
+        )}
+
+        {activeTab === "recordings" && (
+          <RecordingLogs isMobile={isMobile} />
         )}
       </div>
 

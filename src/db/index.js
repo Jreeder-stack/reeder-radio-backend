@@ -661,6 +661,63 @@ export async function getMessagesByDateRange(channel, from, to, type = null) {
   return result.rows;
 }
 
+export async function getAudioLogs({ channels, units, from, to, limit = 100, offset = 0 }) {
+  let paramIndex = 1;
+  const params = [];
+  const conditions = ["message_type = 'audio'"];
+
+  if (channels && channels.length > 0) {
+    conditions.push(`channel = ANY($${paramIndex})`);
+    params.push(channels);
+    paramIndex++;
+  }
+  if (units && units.length > 0) {
+    conditions.push(`sender = ANY($${paramIndex})`);
+    params.push(units);
+    paramIndex++;
+  }
+  if (from) {
+    conditions.push(`created_at >= $${paramIndex}`);
+    params.push(new Date(from));
+    paramIndex++;
+  }
+  if (to) {
+    conditions.push(`created_at <= $${paramIndex}`);
+    params.push(new Date(to));
+    paramIndex++;
+  }
+
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+  const countResult = await pool.query(
+    `SELECT COUNT(*) FROM channel_messages ${whereClause}`,
+    params
+  );
+  const total = parseInt(countResult.rows[0].count);
+
+  const dataParams = [...params, limit, offset];
+  const result = await pool.query(
+    `SELECT * FROM channel_messages ${whereClause} ORDER BY created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
+    dataParams
+  );
+
+  return { rows: result.rows, total };
+}
+
+export async function getDistinctUnits() {
+  const result = await pool.query(
+    `SELECT DISTINCT sender FROM channel_messages WHERE message_type = 'audio' ORDER BY sender`
+  );
+  return result.rows.map(r => r.sender);
+}
+
+export async function getDistinctChannels() {
+  const result = await pool.query(
+    `SELECT DISTINCT channel FROM channel_messages WHERE message_type = 'audio' ORDER BY channel`
+  );
+  return result.rows.map(r => r.channel);
+}
+
 export async function deleteChannelMessages(channel, olderThanDays = 30) {
   const result = await pool.query(
     `DELETE FROM channel_messages WHERE channel = $1 AND created_at < NOW() - INTERVAL '1 day' * $2 RETURNING *`,
