@@ -1,7 +1,8 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import useDispatchStore from '../../state/dispatchStore.js';
-import { toggleUnitEmergency } from '../../utils/api.js';
+import { toggleUnitEmergency, resetEmergency as resetEmergencyApi } from '../../utils/api.js';
 import { useAuth } from '../../AuthContext.jsx';
+import { useSignalingContext } from '../../context/SignalingContext.jsx';
 
 function formatTime(timestamp) {
   if (!timestamp) return '';
@@ -72,25 +73,154 @@ function startAlarmTone() {
   }
 }
 
-export default function EmergencyPanel() {
-  const { emergencies, removeEmergency, updateUnit, addEvent, dispatcherName } = useDispatchStore();
+function ResetConfirmDialog({ emergency, onConfirm, onCancel }) {
+  const [inputValue, setInputValue] = useState('');
+  const [error, setError] = useState('');
 
-  const handleAcknowledge = async (emergency) => {
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (inputValue.trim().toUpperCase() === (emergency.unitIdentity || '').toUpperCase()) {
+      onConfirm(inputValue.trim());
+    } else {
+      setError('Unit ID does not match. Please try again.');
+    }
+  };
+
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      background: 'rgba(0,0,0,0.7)',
+      zIndex: 99999,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+    }}>
+      <div style={{
+        background: '#1e293b',
+        border: '2px solid #dc2626',
+        borderRadius: '8px',
+        padding: '24px',
+        maxWidth: '400px',
+        width: '90%',
+      }}>
+        <h3 style={{ color: '#fff', margin: '0 0 12px', fontSize: '16px' }}>
+          Reset Emergency — {emergency.unitIdentity}
+        </h3>
+        <p style={{ color: '#94a3b8', fontSize: '13px', margin: '0 0 16px' }}>
+          To confirm the reset, type the unit's ID: <strong style={{ color: '#fff' }}>{emergency.unitIdentity}</strong>
+        </p>
+        <form onSubmit={handleSubmit}>
+          <input
+            type="text"
+            value={inputValue}
+            onChange={(e) => { setInputValue(e.target.value); setError(''); }}
+            placeholder="Enter unit ID"
+            autoFocus
+            style={{
+              width: '100%',
+              padding: '8px 12px',
+              fontSize: '14px',
+              background: '#0f172a',
+              border: '1px solid #334155',
+              borderRadius: '4px',
+              color: '#fff',
+              marginBottom: '8px',
+              boxSizing: 'border-box',
+            }}
+          />
+          {error && (
+            <p style={{ color: '#f87171', fontSize: '12px', margin: '0 0 8px' }}>{error}</p>
+          )}
+          <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+            <button
+              type="button"
+              onClick={onCancel}
+              style={{
+                flex: 1,
+                padding: '8px',
+                fontSize: '13px',
+                fontWeight: 'bold',
+                background: '#334155',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+              }}
+            >
+              CANCEL
+            </button>
+            <button
+              type="submit"
+              style={{
+                flex: 1,
+                padding: '8px',
+                fontSize: '13px',
+                fontWeight: 'bold',
+                background: '#dc2626',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+              }}
+            >
+              CONFIRM RESET
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+export default function EmergencyPanel() {
+  const { emergencies, acknowledgeEmergency: storeAcknowledge, removeEmergency, updateUnit, addEvent, dispatcherName } = useDispatchStore();
+  const { signalEmergencyEnd } = useSignalingContext();
+  const [resetTarget, setResetTarget] = useState(null);
+
+  const handleAcknowledge = (emergency) => {
+    storeAcknowledge(emergency.id);
+    addEvent({
+      type: 'emergency_ack',
+      unit: emergency.unitIdentity,
+      channel: emergency.channel,
+      acknowledgedBy: dispatcherName || 'DISPATCH',
+    });
+  };
+
+  const handleResetClick = (emergency) => {
+    setResetTarget(emergency);
+  };
+
+  const handleResetConfirm = async (typedConfirmation) => {
+    if (!resetTarget) return;
     try {
-      if (emergency.unitId) {
-        await toggleUnitEmergency(emergency.unitId, false);
-        updateUnit(emergency.unitIdentity, { is_emergency: false, status: 'idle' });
+      await resetEmergencyApi(resetTarget.unitIdentity, resetTarget.channel, typedConfirmation);
+      if (resetTarget.unitId) {
+        await toggleUnitEmergency(resetTarget.unitId, false);
+        updateUnit(resetTarget.unitIdentity, { is_emergency: false, status: 'idle' });
       }
-      removeEmergency(emergency.id);
+      if (resetTarget.channel) {
+        signalEmergencyEnd(resetTarget.channel);
+      }
+      removeEmergency(resetTarget.id);
       addEvent({
-        type: 'emergency_ack',
-        unit: emergency.unitIdentity,
-        channel: emergency.channel,
-        acknowledgedBy: dispatcherName || 'DISPATCH',
+        type: 'emergency_reset',
+        unit: resetTarget.unitIdentity,
+        channel: resetTarget.channel,
+        resetBy: dispatcherName || 'DISPATCH',
       });
     } catch (error) {
-      console.error('Failed to acknowledge emergency:', error);
+      console.error('Failed to reset emergency:', error);
     }
+    setResetTarget(null);
+  };
+
+  const handleResetCancel = () => {
+    setResetTarget(null);
   };
 
   return (
@@ -115,35 +245,63 @@ export default function EmergencyPanel() {
           emergencies.map(emergency => (
             <div
               key={emergency.id}
-              className="p-3 bg-red-900/50 border border-red-600 rounded animate-pulse"
+              className={`p-3 border rounded ${
+                emergency.acknowledged
+                  ? 'bg-red-900/30 border-red-700'
+                  : 'bg-red-900/50 border-red-600 animate-pulse'
+              }`}
             >
               <div className="flex items-center justify-between mb-2">
                 <span className="font-bold text-white">{emergency.unitIdentity}</span>
-                <span className="text-xs text-red-300">{formatTime(emergency.timestamp)}</span>
+                <div className="flex items-center gap-2">
+                  {emergency.acknowledged && (
+                    <span className="text-[10px] text-yellow-400 uppercase font-semibold">Acknowledged</span>
+                  )}
+                  <span className="text-xs text-red-300">{formatTime(emergency.timestamp)}</span>
+                </div>
               </div>
               <div className="text-xs text-red-200 mb-2">
                 Channel: {emergency.channel || 'Unknown'}
               </div>
-              <button
-                onClick={() => handleAcknowledge(emergency)}
-                className="w-full px-3 py-1.5 text-sm font-bold bg-green-600 hover:bg-green-700 text-white rounded transition-colors"
-              >
-                ACKNOWLEDGE
-              </button>
+              {emergency.acknowledged ? (
+                <button
+                  onClick={() => handleResetClick(emergency)}
+                  className="w-full px-3 py-1.5 text-sm font-bold bg-red-700 hover:bg-red-800 text-white rounded transition-colors"
+                >
+                  RESET
+                </button>
+              ) : (
+                <button
+                  onClick={() => handleAcknowledge(emergency)}
+                  className="w-full px-3 py-1.5 text-sm font-bold bg-green-600 hover:bg-green-700 text-white rounded transition-colors"
+                >
+                  ACKNOWLEDGE
+                </button>
+              )}
             </div>
           ))
         )}
       </div>
+
+      {resetTarget && (
+        <ResetConfirmDialog
+          emergency={resetTarget}
+          onConfirm={handleResetConfirm}
+          onCancel={handleResetCancel}
+        />
+      )}
     </div>
   );
 }
 
 export function GlobalEmergencyOverlay() {
   const { user } = useAuth();
-  const { emergencies, removeEmergency, updateUnit, addEvent, dispatcherName } = useDispatchStore();
+  const { emergencies, acknowledgeEmergency: storeAcknowledge, addEvent, dispatcherName } = useDispatchStore();
   const alarmStopRef = useRef(null);
 
   const isDispatchOrAdmin = user && (user.is_dispatcher || user.role === 'admin');
+
+  const unacknowledgedEmergencies = emergencies.filter(e => !e.acknowledged);
 
   useEffect(() => {
     if (!isDispatchOrAdmin) {
@@ -153,13 +311,13 @@ export function GlobalEmergencyOverlay() {
       }
       return;
     }
-    if (emergencies.length > 0 && !alarmStopRef.current) {
+    if (unacknowledgedEmergencies.length > 0 && !alarmStopRef.current) {
       alarmStopRef.current = startAlarmTone();
-    } else if (emergencies.length === 0 && alarmStopRef.current) {
+    } else if (unacknowledgedEmergencies.length === 0 && alarmStopRef.current) {
       alarmStopRef.current();
       alarmStopRef.current = null;
     }
-  }, [emergencies.length, isDispatchOrAdmin]);
+  }, [unacknowledgedEmergencies.length, isDispatchOrAdmin]);
 
   useEffect(() => {
     return () => {
@@ -170,24 +328,16 @@ export function GlobalEmergencyOverlay() {
     };
   }, []);
 
-  if (!isDispatchOrAdmin || emergencies.length === 0) return null;
+  if (!isDispatchOrAdmin || unacknowledgedEmergencies.length === 0) return null;
 
-  const handleAcknowledge = async (emergency) => {
-    try {
-      if (emergency.unitId) {
-        await toggleUnitEmergency(emergency.unitId, false);
-        updateUnit(emergency.unitIdentity, { is_emergency: false, status: 'idle' });
-      }
-      removeEmergency(emergency.id);
-      addEvent({
-        type: 'emergency_ack',
-        unit: emergency.unitIdentity,
-        channel: emergency.channel,
-        acknowledgedBy: dispatcherName || 'DISPATCH',
-      });
-    } catch (error) {
-      console.error('Failed to acknowledge emergency:', error);
-    }
+  const handleAcknowledge = (emergency) => {
+    storeAcknowledge(emergency.id);
+    addEvent({
+      type: 'emergency_ack',
+      unit: emergency.unitIdentity,
+      channel: emergency.channel,
+      acknowledgedBy: dispatcherName || 'DISPATCH',
+    });
   };
 
   return (
@@ -204,7 +354,7 @@ export function GlobalEmergencyOverlay() {
         maxWidth: '480px',
         pointerEvents: 'auto',
       }}>
-        {emergencies.map(emergency => (
+        {unacknowledgedEmergencies.map(emergency => (
           <div
             key={emergency.id}
             style={{

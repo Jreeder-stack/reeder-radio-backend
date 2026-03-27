@@ -27,6 +27,10 @@ export async function acknowledgeEmergency(identity, channel, acknowledgedBy) {
   await db.logRadioEvent(identity, channel, 'emergency_ack', { acknowledgedBy });
 }
 
+export async function resetEmergency(identity, channel, resetBy) {
+  await db.logRadioEvent(identity, channel, 'emergency_reset', { resetBy });
+}
+
 export async function getMonitorSet(dispatcherId) {
   return db.getMonitorSet(dispatcherId);
 }

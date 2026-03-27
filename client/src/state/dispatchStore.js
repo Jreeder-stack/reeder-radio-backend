@@ -118,9 +118,21 @@ const useDispatchStore = create(
         });
         
         const existingEmergencies = get().emergencies;
+        const existingByKey = new Map();
+        existingEmergencies.forEach(e => {
+          existingByKey.set(e.unitIdentity || e.unitId, e);
+        });
+        const mergedEmergencies = newEmergencies.map(e => {
+          const key = e.unitIdentity || e.unitId;
+          const existing = existingByKey.get(key);
+          if (existing) {
+            return { ...e, acknowledged: existing.acknowledged || false };
+          }
+          return { ...e, acknowledged: false };
+        });
         const newUnitKeys = new Set(newEmergencies.map(e => e.unitIdentity || e.unitId));
         const keptExisting = existingEmergencies.filter(e => !newUnitKeys.has(e.unitIdentity || e.unitId));
-        const merged = [...keptExisting, ...newEmergencies];
+        const merged = [...keptExisting, ...mergedEmergencies];
         const seenUnits = new Set();
         const deduplicated = merged.filter(e => {
           const key = e.unitIdentity || e.unitId;
@@ -152,9 +164,15 @@ const useDispatchStore = create(
       addEmergency: (emergency) => set((state) => {
         const key = emergency.unitIdentity || emergency.unitId;
         return {
-          emergencies: [...state.emergencies.filter(e => (e.unitIdentity || e.unitId) !== key), emergency]
+          emergencies: [...state.emergencies.filter(e => (e.unitIdentity || e.unitId) !== key), { ...emergency, acknowledged: false }]
         };
       }),
+      
+      acknowledgeEmergency: (id) => set((state) => ({
+        emergencies: state.emergencies.map(e =>
+          e.id === id ? { ...e, acknowledged: true } : e
+        ),
+      })),
       
       removeEmergency: (id) => set((state) => {
         const target = state.emergencies.find(e => e.id === id);

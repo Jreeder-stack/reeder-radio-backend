@@ -56,6 +56,25 @@ export async function acknowledgeEmergency(req, res) {
   }
 }
 
+export async function resetEmergency(req, res) {
+  try {
+    const user = req.session?.user;
+    if (!user || (!user.is_dispatcher && user.role !== 'admin')) {
+      return error(res, 'Only dispatchers or admins can reset emergencies', 403);
+    }
+    const { identity, channel, confirmIdentity } = req.body;
+    if (!identity || !confirmIdentity || confirmIdentity.trim().toUpperCase() !== identity.trim().toUpperCase()) {
+      return error(res, 'Unit ID confirmation does not match', 400);
+    }
+    const resetBy = user.username || user.unit_id || 'DISPATCH';
+    await dispatchService.resetEmergency(identity, channel, resetBy);
+    success(res, { success: true });
+  } catch (err) {
+    console.error('Reset emergency error:', err);
+    error(res, 'Failed to reset emergency', 500);
+  }
+}
+
 export async function getMonitorSet(req, res) {
   try {
     const data = await dispatchService.getMonitorSet(req.params.dispatcherId);

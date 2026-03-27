@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, useCallback, useRef } f
 import { signalingManager } from '../signaling/SignalingManager.js';
 import { useAuth } from '../AuthContext.jsx';
 import { micPTTManager } from '../audio/MicPTTManager.js';
+import useDispatchStore from '../state/dispatchStore.js';
 
 micPTTManager.setSignalingManager(signalingManager);
 
@@ -165,6 +166,13 @@ export function SignalingProvider({ children }) {
         return next;
       });
       setEmergencyAlerts(prev => prev.filter(a => !(a.unitId === data.unitId && a.channelId === data.channelId)));
+      const storeState = useDispatchStore.getState();
+      const matchingEmergency = storeState.emergencies.find(
+        e => (e.unitIdentity === data.unitId || e.unitId === data.unitId) && (!data.channelId || e.channel === data.channelId)
+      );
+      if (matchingEmergency) {
+        storeState.removeEmergency(matchingEmergency.id);
+      }
     });
 
     const removeAlertListener = signalingManager.on('emergencyAlert', (data) => {

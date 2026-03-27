@@ -44,6 +44,13 @@ export async function acknowledgeEmergency(identity, channel, acknowledgedBy) {
   });
 }
 
+export async function resetEmergency(identity, channel, confirmIdentity) {
+  return fetchAPI('/emergency/reset', {
+    method: 'POST',
+    body: JSON.stringify({ identity, channel, confirmIdentity }),
+  });
+}
+
 export async function getChannels() {
   return fetchAPI('/channels');
 }

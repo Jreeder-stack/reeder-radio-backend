@@ -42,6 +42,7 @@ router.get('/units', dispatchController.getUnits);
 router.post('/unit/update', dispatchController.updateUnit);
 router.post('/units/:id/emergency', dispatchController.toggleEmergency);
 router.post('/emergency/ack', dispatchController.acknowledgeEmergency);
+router.post('/emergency/reset', dispatchController.resetEmergency);
 
 router.get('/monitor/:dispatcherId', dispatchController.getMonitorSet);
 router.post('/monitor/:dispatcherId', dispatchController.setMonitorSet);

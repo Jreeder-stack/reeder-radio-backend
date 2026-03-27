@@ -13,6 +13,8 @@ function getEventColor(type) {
       return 'text-red-400';
     case 'emergency_ack':
       return 'text-green-400';
+    case 'emergency_reset':
+      return 'text-orange-400';
     case 'ptt_start':
     case 'transmitting':
       return 'text-yellow-400';
@@ -38,6 +40,8 @@ function getEventIcon(type) {
       return '🚨';
     case 'emergency_ack':
       return '✓';
+    case 'emergency_reset':
+      return '🔄';
     case 'ptt_start':
     case 'transmitting':
       return '🎙️';
@@ -99,6 +103,11 @@ export default function EventLog() {
               {event.acknowledgedBy && (
                 <div className="text-green-400 mt-1">
                   Ack by: {event.acknowledgedBy}
+                </div>
+              )}
+              {event.resetBy && (
+                <div className="text-orange-400 mt-1">
+                  Reset by: {event.resetBy}
                 </div>
               )}
             </div>

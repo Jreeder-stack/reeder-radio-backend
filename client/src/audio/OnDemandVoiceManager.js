@@ -23,7 +23,6 @@ class OnDemandVoiceManager {
     this.emergencyTimers = new Map();
 
     this.GRACE_PERIOD_MS = 15000;
-    this.EMERGENCY_ROOM_LIFETIME_MS = 60000;
     this._dispatcherMode = false;
     this._reconnectAttempts = new Map();
     this._reconnectTimers = new Map();
@@ -160,15 +159,9 @@ class OnDemandVoiceManager {
     });
 
     this._clearGraceTimer(channelId);
-
     this._clearEmergencyTimer(channelId);
-    const timerId = setTimeout(() => {
-      console.log(`[OnDemandVoice] Emergency timer expired for ${channelId}`);
-      this._clearEmergencyActive(channelId);
-    }, emergencyData.expiresAt ? (emergencyData.expiresAt - Date.now()) : this.EMERGENCY_ROOM_LIFETIME_MS);
-    this.emergencyTimers.set(channelId, timerId);
 
-    console.log(`[OnDemandVoice] Emergency activated for ${channelId}`);
+    console.log(`[OnDemandVoice] Emergency activated for ${channelId} — persists until explicit reset`);
   }
 
   _clearEmergencyActive(channelId) {

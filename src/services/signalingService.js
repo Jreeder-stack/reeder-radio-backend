@@ -50,7 +50,6 @@ class SignalingService {
     this.connectionTimes = new Map();
     this.trackedUnitLocations = new Map();
     this.GRACE_PERIOD_MS = 3000;
-    this.EMERGENCY_ROOM_LIFETIME_MS = 60000;
     
     this._eventCallbacks = {
       pttStart: [],
@@ -518,7 +517,6 @@ class SignalingService {
       agencyId: socket.agencyId,
       channelId,
       timestamp: Date.now(),
-      expiresAt: Date.now() + this.EMERGENCY_ROOM_LIFETIME_MS,
     };
     
     this.emergencyStates.set(channelId, emergencyData);
@@ -535,7 +533,6 @@ class SignalingService {
       unitId: socket.unitId,
       agencyId: socket.agencyId,
       timestamp: Date.now(),
-      roomLifetimeMs: this.EMERGENCY_ROOM_LIFETIME_MS,
       bypassGracePeriod: true,
       priority: 'emergency',
     });
