@@ -272,31 +272,50 @@ class AudioRelayService {
     }
   }
 
-  start(port) {
+  start(port, retries = 3, delay = 2000) {
     this.port = port || this.port;
-    this.socket = dgram.createSocket('udp4');
 
-    this.socket.on('message', (msg, rinfo) => {
-      this._handlePacket(msg, rinfo);
+    return new Promise((resolve, reject) => {
+      const bindWithRetry = (remaining) => {
+        this.socket = dgram.createSocket('udp4');
+
+        this.socket.on('message', (msg, rinfo) => {
+          this._handlePacket(msg, rinfo);
+        });
+
+        this.socket.once('error', (err) => {
+          if (err.code === 'EADDRINUSE' && remaining > 0) {
+            console.warn(`[AudioRelay] UDP port ${this.port} in use, retrying in ${delay}ms (${remaining} attempts left)...`);
+            try { this.socket.close(); } catch (_) {}
+            this.socket = null;
+            setTimeout(() => bindWithRetry(remaining - 1), delay);
+          } else {
+            reject(err);
+          }
+        });
+
+        this.socket.bind(this.port, '0.0.0.0', () => {
+          this.socket.removeAllListeners('error');
+          this.socket.on('error', (err) => {
+            console.error('[AudioRelay] Socket error:', err.message);
+          });
+          console.log(`[AudioRelay] UDP relay listening on port ${this.port}`);
+          resolve();
+        });
+      };
+
+      bindWithRetry(retries);
+    }).then(() => {
+      this._sweepTimer = setInterval(() => {
+        this._sweepStaleSubscribers();
+      }, SUBSCRIBER_SWEEP_INTERVAL_MS);
+      this._sweepTimer.unref?.();
+
+      this._txIdleTimer = setInterval(() => {
+        this._sweepIdleTxSessions();
+      }, 1000);
+      this._txIdleTimer.unref?.();
     });
-
-    this.socket.on('error', (err) => {
-      console.error('[AudioRelay] Socket error:', err.message);
-    });
-
-    this.socket.bind(this.port, '0.0.0.0', () => {
-      console.log(`[AudioRelay] UDP relay listening on port ${this.port}`);
-    });
-
-    this._sweepTimer = setInterval(() => {
-      this._sweepStaleSubscribers();
-    }, SUBSCRIBER_SWEEP_INTERVAL_MS);
-    this._sweepTimer.unref?.();
-
-    this._txIdleTimer = setInterval(() => {
-      this._sweepIdleTxSessions();
-    }, 1000);
-    this._txIdleTimer.unref?.();
   }
 
   stop() {

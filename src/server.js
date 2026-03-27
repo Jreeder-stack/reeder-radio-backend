@@ -59,13 +59,16 @@ async function start() {
   }
 
   const httpServer = createServer(app);
-  
-  signalingService.initialize(httpServer);
-  console.log('Signaling service initialized');
+
+  await listenWithRetry(httpServer, config.port, '0.0.0.0');
+  console.log(`Server running on port ${config.port}`);
 
   const audioRelayPort = parseInt(process.env.AUDIO_RELAY_PORT, 10) || 5100;
-  audioRelayService.start(audioRelayPort);
+  await audioRelayService.start(audioRelayPort);
   console.log(`Audio relay service started on UDP port ${audioRelayPort}`);
+
+  signalingService.initialize(httpServer);
+  console.log('Signaling service initialized');
 
   wsAudioBridge.attach(httpServer);
   console.log('WebSocket audio bridge attached');
@@ -101,11 +104,95 @@ async function start() {
   } catch (err) {
     console.error('AI Dispatcher auto-start failed:', err.message);
   }
-  
-  httpServer.listen(config.port, '0.0.0.0', () => {
-    console.log(`Server running on port ${config.port}`);
-    console.log(`Signaling endpoint: ws://0.0.0.0:${config.port}/signaling`);
+
+  console.log(`Signaling endpoint: ws://0.0.0.0:${config.port}/signaling`);
+
+  setupGracefulShutdown(httpServer);
+}
+
+function listenWithRetry(server, port, host, retries = 3, delay = 2000) {
+  return new Promise((resolve, reject) => {
+    const attempt = (remaining) => {
+      const onError = (err) => {
+        if (err.code === 'EADDRINUSE' && remaining > 0) {
+          console.warn(`[STARTUP] Port ${port} in use, retrying in ${delay}ms (${remaining} attempts left)...`);
+          setTimeout(() => attempt(remaining - 1), delay);
+        } else {
+          reject(err);
+        }
+      };
+      server.once('error', onError);
+      server.listen(port, host, () => {
+        server.removeListener('error', onError);
+        resolve();
+      });
+    };
+    attempt(retries);
   });
 }
 
-start().catch(console.error);
+const HARD_SHUTDOWN_TIMEOUT_MS = 8000;
+
+function setupGracefulShutdown(httpServer) {
+  let shuttingDown = false;
+
+  const shutdown = async (signal) => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    console.log(`[SHUTDOWN] Received ${signal}, starting graceful shutdown...`);
+
+    const hardShutdownTimer = setTimeout(() => {
+      console.error('[SHUTDOWN] Hard shutdown timeout reached, forcing exit.');
+      process.exit(1);
+    }, HARD_SHUTDOWN_TIMEOUT_MS);
+    hardShutdownTimer.unref();
+
+    try {
+      console.log('[SHUTDOWN] Stopping signaling service...');
+      signalingService.stop();
+    } catch (err) {
+      console.error('[SHUTDOWN] Signaling service stop error:', err.message);
+    }
+
+    try {
+      console.log('[SHUTDOWN] Stopping WebSocket audio bridge...');
+      wsAudioBridge.stop();
+    } catch (err) {
+      console.error('[SHUTDOWN] WS audio bridge stop error:', err.message);
+    }
+
+    try {
+      console.log('[SHUTDOWN] Stopping audio relay service...');
+      audioRelayService.stop();
+    } catch (err) {
+      console.error('[SHUTDOWN] Audio relay stop error:', err.message);
+    }
+
+    try {
+      console.log('[SHUTDOWN] Closing HTTP server...');
+      await new Promise((resolve) => httpServer.close(() => resolve()));
+    } catch (err) {
+      console.error('[SHUTDOWN] HTTP server close error:', err.message);
+    }
+
+    try {
+      console.log('[SHUTDOWN] Closing database pool...');
+      const pool = (await import('./db/index.js')).default;
+      await pool.end();
+    } catch (err) {
+      console.error('[SHUTDOWN] Database pool close error:', err.message);
+    }
+
+    console.log('[SHUTDOWN] Graceful shutdown complete.');
+    clearTimeout(hardShutdownTimer);
+    process.exit(0);
+  };
+
+  process.on('SIGINT', () => shutdown('SIGINT'));
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+}
+
+start().catch((err) => {
+  console.error('[STARTUP] Fatal error:', err);
+  process.exit(1);
+});

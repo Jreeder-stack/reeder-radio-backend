@@ -1313,6 +1313,18 @@ class SignalingService {
 
     console.log(`[Signaling] TX stop ack: ${socket.unitId} on ${channelId}`);
   }
+
+  stop() {
+    if (this._authCleanupInterval) {
+      clearInterval(this._authCleanupInterval);
+      this._authCleanupInterval = null;
+    }
+    if (this.io) {
+      this.io.close();
+      this.io = null;
+      console.log('[Signaling] Socket.IO server closed');
+    }
+  }
 }
 
 export const signalingService = new SignalingService();
