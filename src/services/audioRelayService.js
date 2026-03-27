@@ -178,9 +178,9 @@ class AudioRelayService {
     const now = Date.now();
     let session = this._txSessions.get(txKey);
     if (!session) {
-      session = { startTime: now, lastPacketTime: now, packetCount: 0, firstRelayLogged: false };
+      session = { startTime: now, lastPacketTime: now, packetCount: 0, firstRelayLogged: false, totalBytes: 0, totalForwarded: 0 };
       this._txSessions.set(txKey, session);
-      console.log(`[RELAY-DIAG] TX START unitId=${senderUnitId} channel=${channelKey}`);
+      console.log(`[RELAY-DIAG] TX START txId=${txKey} unitId=${senderUnitId} channel=${channelKey}`);
     }
     session.lastPacketTime = now;
     session.packetCount++;
@@ -189,6 +189,9 @@ class AudioRelayService {
 
   _broadcastToAll(channelKey, senderUnitId, rxPayload, sequence, opusPayload) {
     const txSession = this._trackTxSession(channelKey, senderUnitId);
+    const txId = `${senderUnitId}:${channelKey}`;
+    txSession.totalBytes = (txSession.totalBytes || 0) + opusPayload.length;
+    txSession.totalForwarded = txSession.totalForwarded || 0;
 
     const udpSubs = this.subscribers.get(channelKey);
     const udpSubCount = udpSubs ? udpSubs.size : 0;
@@ -226,6 +229,7 @@ class AudioRelayService {
         try {
           if (subInfo.ws.readyState === 1) {
             subInfo.ws.send(opusFrame);
+            txSession.totalForwarded++;
           }
         } catch (err) {
           console.error(`[AudioRelay] WS send error to ${subUnitId}:`, err.message);
@@ -237,7 +241,7 @@ class AudioRelayService {
     const listenerCount = listeners ? listeners.size : 0;
 
     if (txSession.packetCount % 50 === 0) {
-      console.log(`[RELAY-DIAG] RELAY ch=${channelKey} from=${senderUnitId} seq=${sequence} udpSubs=${udpSubCount} wsSubs=${wsSubCount} listeners=${listenerCount}`);
+      console.log(`[RELAY-DIAG] RELAY txId=${txId} ch=${channelKey} from=${senderUnitId} seq=${sequence} udpSubs=${udpSubCount} wsSubs=${wsSubCount} listeners=${listenerCount} forwarded=${txSession.totalForwarded} bytes=${txSession.totalBytes}`);
     }
 
     if (listeners) {
@@ -340,7 +344,7 @@ class AudioRelayService {
       if (now - session.lastPacketTime > 500) {
         const [unitId, channel] = txKey.split(':');
         const duration = session.lastPacketTime - session.startTime;
-        console.log(`[RELAY-DIAG] TX STOP unitId=${unitId} channel=${channel} packets=${session.packetCount} duration=${duration}ms`);
+        console.log(`[RELAY-DIAG] TX STOP txId=${txKey} unitId=${unitId} channel=${channel} packets=${session.packetCount} bytes=${session.totalBytes || 0} forwarded=${session.totalForwarded || 0} duration=${duration}ms`);
         this._txSessions.delete(txKey);
       }
     }

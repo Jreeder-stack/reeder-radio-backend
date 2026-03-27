@@ -39,6 +39,8 @@ class OnDemandVoiceManager {
     this.audioContext = null;
     this._playbackNodes = new Map();
     this._workletReady = false;
+    this._opusInitFailed = false;
+    this._opusInitAttempted = false;
 
     this._setupSignalingListeners();
   }
@@ -108,6 +110,23 @@ class OnDemandVoiceManager {
       this.audioContext.resume().catch(console.warn);
     }
     return this.audioContext;
+  }
+
+  async _tryInitOpus() {
+    if (this._opusInitFailed) {
+      return;
+    }
+    if (this._opusInitAttempted) {
+      return;
+    }
+    this._opusInitAttempted = true;
+    try {
+      await initOpusBrowserCodec();
+      console.log('[OnDemandVoice] Opus codec initialized successfully');
+    } catch (err) {
+      this._opusInitFailed = true;
+      console.warn('[OnDemandVoice] Opus codec init failed — sticky PCM fallback for this session:', err.message);
+    }
   }
 
   async _ensurePlaybackWorklet() {
@@ -347,9 +366,7 @@ class OnDemandVoiceManager {
         const wsUrl = `${proto}//${window.location.host}/api/audio-ws?channelId=${encodeURIComponent(channelId)}&unitId=${encodeURIComponent(identity)}`;
 
         await this._ensurePlaybackWorklet();
-        await initOpusBrowserCodec().catch(err => {
-          console.warn('[OnDemandVoice] Opus browser codec init failed:', err.message);
-        });
+        await this._tryInitOpus();
 
         const ws = await this._openWebSocket(wsUrl);
 
@@ -394,7 +411,7 @@ class OnDemandVoiceManager {
   }
 
   async connectForReceiving(channelId, options = {}) {
-    initOpusBrowserCodec().catch(() => {});
+    this._tryInitOpus().catch(() => {});
     return this._connectToReceive(channelId);
   }
 
@@ -402,7 +419,7 @@ class OnDemandVoiceManager {
     try {
       await Promise.all([
         this._ensurePlaybackWorklet().catch(() => {}),
-        initOpusBrowserCodec().catch(() => {}),
+        this._tryInitOpus().catch(() => {}),
       ]);
       preloadPermitBuffer();
       console.log('[OnDemandVoice] Warm-up complete (worklet + codec + permit tone pre-loaded)');
@@ -463,14 +480,9 @@ class OnDemandVoiceManager {
       let jitter = this._jitterBuffers && this._jitterBuffers.get(channelId);
       if (!jitter) {
         const codec = getOpusBrowserCodec();
-        if (!codec.ready) {
-          const now = Date.now();
-          if (!this._lastCodecRetry || now - this._lastCodecRetry > 3000) {
-            this._lastCodecRetry = now;
-            console.warn('[OnDemandVoiceManager] Opus codec not ready, attempting re-init for RX audio');
-            initOpusBrowserCodec().catch(err => {
-              console.error('[OnDemandVoiceManager] Opus codec re-init failed:', err.message);
-            });
+        if (!codec || !codec.ready) {
+          if (!this._opusInitFailed) {
+            this._tryInitOpus().catch(() => {});
           }
           return;
         }

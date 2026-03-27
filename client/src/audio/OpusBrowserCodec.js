@@ -79,11 +79,11 @@ class OpusBrowserCodec {
 
     this._inPCMLength = MAX_FRAME_SIZE * CHANNELS * 2;
     this._inPCMPointer = this._native._malloc(this._inPCMLength);
-    this._inPCM = this._native.HEAPU16.subarray(this._inPCMPointer, this._inPCMPointer + this._inPCMLength);
+    this._inPCM = this._native.HEAPU16.subarray(this._inPCMPointer >> 1, (this._inPCMPointer >> 1) + MAX_FRAME_SIZE * CHANNELS);
 
     this._outPCMLength = MAX_FRAME_SIZE * CHANNELS * 2;
     this._outPCMPointer = this._native._malloc(this._outPCMLength);
-    this._outPCM = this._native.HEAPU16.subarray(this._outPCMPointer, this._outPCMPointer + this._outPCMLength);
+    this._outPCM = this._native.HEAPU16.subarray(this._outPCMPointer >> 1, (this._outPCMPointer >> 1) + MAX_FRAME_SIZE * CHANNELS);
 
     this._inOpusPointer = this._native._malloc(MAX_PACKET_SIZE);
     this._inOpus = this._native.HEAPU8.subarray(this._inOpusPointer, this._inOpusPointer + MAX_PACKET_SIZE);
@@ -104,7 +104,7 @@ class OpusBrowserCodec {
 
       this._inPCM.set(testPcm);
 
-      const encLen = this._encoder._encode(this._inPCM.byteOffset, testPcm.length, this._outOpusPointer, FRAME_SIZE);
+      const encLen = this._encoder._encode(this._inPCM.byteOffset, testPcm.length, this._outOpusPointer, MAX_PACKET_SIZE);
       if (encLen <= 0) {
         console.error('[OpusBrowserCodec] Self-test encode failed, len=' + encLen);
       } else {
@@ -170,7 +170,7 @@ class OpusBrowserCodec {
 
     this._inPCM.set(pcmInt16);
 
-    const len = this._encoder._encode(this._inPCM.byteOffset, pcmInt16.length, this._outOpusPointer, FRAME_SIZE);
+    const len = this._encoder._encode(this._inPCM.byteOffset, pcmInt16.length, this._outOpusPointer, MAX_PACKET_SIZE);
     if (len < 0) {
       throw new Error('Opus encode error: ' + len);
     }

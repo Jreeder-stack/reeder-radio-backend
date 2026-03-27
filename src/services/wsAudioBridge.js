@@ -172,6 +172,7 @@ class WsAudioBridge {
 
     ws.on('close', () => {
       const frameCount = clientInfo._rxFrameCount || 0;
+      clearTimeout(clientInfo._rxBurstIdleTimer);
       audioRelayService.removeWsSubscriber(channelId, unitId);
       this.clients.delete(clientId);
       console.log(`[WsAudioBridge] Client disconnected: ${unitId} from channel ${channelId} (received ${frameCount} binary frames)`);
@@ -210,7 +211,26 @@ class WsAudioBridge {
     const frameType = buf[0];
 
     if (!clientInfo._rxFrameCount) clientInfo._rxFrameCount = 0;
+    if (!clientInfo._rxBurstFrameCount) clientInfo._rxBurstFrameCount = 0;
+    if (!clientInfo._rxBurstBytes) clientInfo._rxBurstBytes = 0;
     clientInfo._rxFrameCount++;
+    clientInfo._rxBurstFrameCount++;
+    clientInfo._rxBurstBytes += buf.length;
+
+    if (clientInfo._rxBurstFrameCount === 1) {
+      clientInfo._rxBurstStart = Date.now();
+      console.log(`[TX-RELAY] Burst START from ${clientInfo.unitId} on channel=${clientInfo.channelId} frameType=0x${frameType.toString(16).padStart(2, '0')} len=${buf.length}`);
+    } else if (clientInfo._rxBurstFrameCount % 50 === 0) {
+      console.log(`[TX-RELAY] Burst progress: unit=${clientInfo.unitId} ch=${clientInfo.channelId} frames=${clientInfo._rxBurstFrameCount} bytes=${clientInfo._rxBurstBytes}`);
+    }
+
+    clearTimeout(clientInfo._rxBurstIdleTimer);
+    clientInfo._rxBurstIdleTimer = setTimeout(() => {
+      const duration = Date.now() - (clientInfo._rxBurstStart || Date.now());
+      console.log(`[TX-RELAY] Burst END unit=${clientInfo.unitId} ch=${clientInfo.channelId} frames=${clientInfo._rxBurstFrameCount} bytes=${clientInfo._rxBurstBytes} duration=${duration}ms`);
+      clientInfo._rxBurstFrameCount = 0;
+      clientInfo._rxBurstBytes = 0;
+    }, 500);
 
     if (clientInfo._rxFrameCount === 1) {
       console.log(`[WsAudioBridge] First binary frame from ${clientInfo.unitId} on channel=${clientInfo.channelId} frameType=0x${frameType.toString(16).padStart(2, '0')} len=${buf.length}`);

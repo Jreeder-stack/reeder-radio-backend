@@ -40,6 +40,11 @@ class MicPTTManager {
 
     this._wsResolver = null;
     this._waitingForWs = false;
+    this._txMode = null;
+    this._txFrameCount = 0;
+    this._txDropCount = 0;
+    this._txErrorCount = 0;
+    this._txDropLogged = false;
   }
 
   setSignalingManager(signalingManager) {
@@ -277,6 +282,7 @@ class MicPTTManager {
 
     const native = isNativeAndroid();
     console.log(`[MicPTT] start() — path=${native ? 'NATIVE' : 'WEB'} channel=${this._currentChannelId} unit=${this._currentUnitId}`);
+    console.log(`[TX-DIAG] PTT START channel=${this._currentChannelId} unit=${this._currentUnitId} path=${native ? 'NATIVE' : 'WEB'}`);
 
     if (native) {
       return this._startNative();
@@ -295,9 +301,11 @@ class MicPTTManager {
 
       try {
         await initOpusBrowserCodec();
-        console.log('[MicPTT] Opus browser codec ready');
+        this._txMode = 'opus';
+        console.log('[MicPTT] Opus browser codec ready, txMode=opus');
       } catch (err) {
-        console.warn('[MicPTT] Opus browser codec init failed, will fallback to PCM:', err.message);
+        this._txMode = 'pcm';
+        console.warn('[MicPTT] Opus browser codec init failed, will fallback to PCM (txMode=pcm):', err.message);
       }
 
       playPermitTone();
@@ -372,7 +380,12 @@ class MicPTTManager {
 
       this._setupWsListeners();
       this.publishComplete = false;
+      this._txFrameCount = 0;
+      this._txDropCount = 0;
+      this._txErrorCount = 0;
+      this._txDropLogged = false;
       console.log('[MicPTT] WS transport ready, starting capture...');
+      console.log(`[TX-DIAG] Transport ready: ws=${!!ws} wsOpen=${ws?.readyState === WebSocket.OPEN} txMode=${this._txMode}`);
 
       this.permitDeadlineTimer = setTimeout(() => {
         if (!this.publishComplete && this.state === PTT_STATES.ARMING && !this.pendingStop) {
@@ -380,6 +393,28 @@ class MicPTTManager {
           startBonkLoop();
         }
       }, 2000);
+
+      if (this._txMode === 'pcm') {
+        if (!ws || ws.readyState !== WebSocket.OPEN) {
+          console.error('[TX-DIAG] PCM fallback aborted — WS transport not open at capture start');
+          this._clearPermitDeadline();
+          startBonkLoop();
+          await this._cleanup();
+          this.transitionLock = false;
+          if (this.pendingStop) {
+            stopBonkLoop();
+            this.pendingStop = false;
+            this._setState(PTT_STATES.IDLE);
+          } else {
+            this._setState(PTT_STATES.BUSY);
+          }
+          if (this.onError) {
+            this.onError(new Error('WebSocket transport not available for PCM fallback'));
+          }
+          return false;
+        }
+        console.log('[TX-DIAG] PCM transport confirmed open before capture start');
+      }
 
       try {
         const captureNode = new AudioWorkletNode(ctx, 'pcm-capture-processor');
@@ -454,14 +489,21 @@ class MicPTTManager {
         console.warn(`[MicPTT] _sendPcmFrame: WS not open (ws=${!!this._ws} readyState=${this._ws?.readyState}), dropping frames`);
         this._txDropLogged = true;
       }
+      this._txDropCount++;
       return;
     }
 
-    if (!this._txFrameCount) this._txFrameCount = 0;
     this._txFrameCount++;
 
-    const codec = getOpusBrowserCodec();
-    if (codec.ready) {
+    if (this._txMode === 'opus') {
+      const codec = getOpusBrowserCodec();
+      if (!codec || !codec.ready) {
+        this._txErrorCount++;
+        if (this._txErrorCount <= 3) {
+          console.warn('[TX-DIAG] Opus codec unavailable during opus TX mode — dropping frame');
+        }
+        return;
+      }
       try {
         const opusData = codec.encode(int16Samples);
 
@@ -475,11 +517,12 @@ class MicPTTManager {
         this._ws.send(frame.buffer);
 
         if (this._txFrameCount === 1) {
-          console.log(`[MicPTT] First Opus frame sent: seq=${this._txSequence - 1} opusLen=${opusData.length} ch=${this._currentChannelId} unit=${this._currentUnitId}`);
+          console.log(`[TX-DIAG] First frame sent: mode=opus seq=${this._txSequence - 1} opusLen=${opusData.length} ch=${this._currentChannelId} unit=${this._currentUnitId}`);
         } else if (this._txFrameCount % 50 === 0) {
-          console.log(`[MicPTT] TX progress: ${this._txFrameCount} frames sent (Opus)`);
+          console.log(`[TX-DIAG] Progress: ${this._txFrameCount} frames sent (opus) dropped=${this._txDropCount} errors=${this._txErrorCount}`);
         }
       } catch (err) {
+        this._txErrorCount++;
         console.warn('[MicPTT] Opus encode/send error:', err.message);
       }
     } else {
@@ -498,11 +541,12 @@ class MicPTTManager {
         this._ws.send(frame.buffer);
 
         if (this._txFrameCount === 1) {
-          console.log(`[MicPTT] First PCM frame sent: seq=${this._txSequence - 1} pcmLen=${pcmBytes.length} ch=${this._currentChannelId} unit=${this._currentUnitId}`);
+          console.log(`[TX-DIAG] First frame sent: mode=pcm seq=${this._txSequence - 1} pcmLen=${pcmBytes.length} ch=${this._currentChannelId} unit=${this._currentUnitId}`);
         } else if (this._txFrameCount % 50 === 0) {
-          console.log(`[MicPTT] TX progress: ${this._txFrameCount} frames sent (PCM)`);
+          console.log(`[TX-DIAG] Progress: ${this._txFrameCount} frames sent (pcm) dropped=${this._txDropCount} errors=${this._txErrorCount}`);
         }
       } catch (err) {
+        this._txErrorCount++;
         console.warn('[MicPTT] WS send error:', err.message);
       }
     }
@@ -653,6 +697,9 @@ class MicPTTManager {
       this._setState(PTT_STATES.IDLE);
       releaseWakeLock().catch(e => console.warn('[MicPTT] Wake lock release failed:', e));
       console.log(`[MicPTT] Transmission ended, ${totalFrames} frames sent, state reset to IDLE`);
+      console.log(`[TX-DIAG] PTT STOP channel=${this._currentChannelId} unit=${this._currentUnitId} txMode=${this._txMode} sent=${totalFrames} dropped=${this._txDropCount || 0} errors=${this._txErrorCount || 0}`);
+      this._txDropCount = 0;
+      this._txErrorCount = 0;
     }
   }
 

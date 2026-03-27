@@ -711,27 +711,24 @@ class LiveKitManager {
   }
 
   async _ensureOpusCodec() {
-    if (this._opusInitFailed) return;
+    if (this._opusInitFailed) {
+      console.log('[RX-DIAG] Opus codec init skipped — sticky failure from previous attempt');
+      return;
+    }
 
-    const maxAttempts = 2;
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      const t0 = performance.now();
-      try {
-        const codec = await initOpusBrowserCodec();
-        if (!codec || !codec.ready) {
-          throw new Error('Opus codec init completed but codec is not ready (self-test may have failed)');
-        }
-        console.log(`[RX-DIAG] Opus codec init: success in ${(performance.now() - t0).toFixed(1)}ms`);
-        return;
-      } catch (err) {
-        console.warn(`[RX-DIAG] Opus codec init: fail in ${(performance.now() - t0).toFixed(1)}ms (attempt ${attempt}/${maxAttempts}) — ${err.message}`);
-        if (attempt < maxAttempts) {
-          await new Promise(r => setTimeout(r, 500));
-        }
+    const t0 = performance.now();
+    try {
+      const codec = await initOpusBrowserCodec();
+      if (!codec || !codec.ready) {
+        throw new Error('Opus codec init completed but codec is not ready (self-test may have failed)');
       }
+      console.log(`[RX-DIAG] Opus codec init: success in ${(performance.now() - t0).toFixed(1)}ms`);
+      return;
+    } catch (err) {
+      console.warn(`[RX-DIAG] Opus codec init: fail in ${(performance.now() - t0).toFixed(1)}ms — ${err.message}`);
     }
     this._opusInitFailed = true;
-    console.error('[RX-DIAG] Opus codec init failed after retries — RX audio may fall back to PCM');
+    console.error('[RX-DIAG] Opus codec init failed — sticky fallback to PCM for this session');
   }
 
   async prepareConnection() {
