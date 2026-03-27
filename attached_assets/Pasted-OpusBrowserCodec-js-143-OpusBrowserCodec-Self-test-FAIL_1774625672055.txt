@@ -1,0 +1,882 @@
+OpusBrowserCodec.js:143 [OpusBrowserCodec] Self-test FAILED: decoded signal does not correlate with input (r=-0.043). peak=255, avg=34.4
+init @ OpusBrowserCodec.js:143
+await in init
+ts @ OpusBrowserCodec.js:269
+warmUp @ OnDemandVoiceManager.js:405
+(anonymous) @ LiveKitConnectionContext.jsx:646
+await in (anonymous)
+(anonymous) @ LiveKitConnectionContext.jsx:660
+Yu @ react-dom.production.min.js:243
+Do @ react-dom.production.min.js:285
+(anonymous) @ react-dom.production.min.js:281
+P @ scheduler.production.min.js:13
+W @ scheduler.production.min.js:14
+OpusBrowserCodec.js:155 [RX-DIAG] OpusBrowserCodec init FAILED (self-test) in 676.6ms — codec will not be used
+init @ OpusBrowserCodec.js:155
+await in init
+ts @ OpusBrowserCodec.js:269
+warmUp @ OnDemandVoiceManager.js:405
+(anonymous) @ LiveKitConnectionContext.jsx:646
+await in (anonymous)
+(anonymous) @ LiveKitConnectionContext.jsx:660
+Yu @ react-dom.production.min.js:243
+Do @ react-dom.production.min.js:285
+(anonymous) @ react-dom.production.min.js:281
+P @ scheduler.production.min.js:13
+W @ scheduler.production.min.js:14
+OpusBrowserCodec.js:143 [OpusBrowserCodec] Self-test FAILED: decoded signal does not correlate with input (r=-0.043). peak=255, avg=34.4
+init @ OpusBrowserCodec.js:143
+await in init
+ts @ OpusBrowserCodec.js:269
+_ensureOpusCodec @ LiveKitManager.js:720
+_doConnect @ LiveKitManager.js:790
+connect @ LiveKitManager.js:762
+(anonymous) @ LiveKitConnectionContext.jsx:299
+(anonymous) @ LiveKitConnectionContext.jsx:430
+(anonymous) @ LiveKitConnectionContext.jsx:428
+(anonymous) @ LiveKitConnectionContext.jsx:649
+await in (anonymous)
+(anonymous) @ LiveKitConnectionContext.jsx:660
+Yu @ react-dom.production.min.js:243
+Do @ react-dom.production.min.js:285
+(anonymous) @ react-dom.production.min.js:281
+P @ scheduler.production.min.js:13
+W @ scheduler.production.min.js:14
+OpusBrowserCodec.js:155 [RX-DIAG] OpusBrowserCodec init FAILED (self-test) in 672.8ms — codec will not be used
+init @ OpusBrowserCodec.js:155
+await in init
+ts @ OpusBrowserCodec.js:269
+_ensureOpusCodec @ LiveKitManager.js:720
+_doConnect @ LiveKitManager.js:790
+connect @ LiveKitManager.js:762
+(anonymous) @ LiveKitConnectionContext.jsx:299
+(anonymous) @ LiveKitConnectionContext.jsx:430
+(anonymous) @ LiveKitConnectionContext.jsx:428
+(anonymous) @ LiveKitConnectionContext.jsx:649
+await in (anonymous)
+(anonymous) @ LiveKitConnectionContext.jsx:660
+Yu @ react-dom.production.min.js:243
+Do @ react-dom.production.min.js:285
+(anonymous) @ react-dom.production.min.js:281
+P @ scheduler.production.min.js:13
+W @ scheduler.production.min.js:14
+OpusBrowserCodec.js:143 [OpusBrowserCodec] Self-test FAILED: decoded signal does not correlate with input (r=-0.043). peak=255, avg=34.4
+init @ OpusBrowserCodec.js:143
+await in init
+ts @ OpusBrowserCodec.js:269
+_ensureOpusCodec @ LiveKitManager.js:720
+_doConnect @ LiveKitManager.js:790
+connect @ LiveKitManager.js:762
+(anonymous) @ LiveKitConnectionContext.jsx:299
+(anonymous) @ LiveKitConnectionContext.jsx:430
+(anonymous) @ LiveKitConnectionContext.jsx:428
+(anonymous) @ LiveKitConnectionContext.jsx:649
+await in (anonymous)
+(anonymous) @ LiveKitConnectionContext.jsx:660
+Yu @ react-dom.production.min.js:243
+Do @ react-dom.production.min.js:285
+(anonymous) @ react-dom.production.min.js:281
+P @ scheduler.production.min.js:13
+W @ scheduler.production.min.js:14
+OpusBrowserCodec.js:155 [RX-DIAG] OpusBrowserCodec init FAILED (self-test) in 674.5ms — codec will not be used
+init @ OpusBrowserCodec.js:155
+await in init
+ts @ OpusBrowserCodec.js:269
+_ensureOpusCodec @ LiveKitManager.js:720
+_doConnect @ LiveKitManager.js:790
+connect @ LiveKitManager.js:762
+(anonymous) @ LiveKitConnectionContext.jsx:299
+(anonymous) @ LiveKitConnectionContext.jsx:430
+(anonymous) @ LiveKitConnectionContext.jsx:428
+(anonymous) @ LiveKitConnectionContext.jsx:649
+await in (anonymous)
+(anonymous) @ LiveKitConnectionContext.jsx:660
+Yu @ react-dom.production.min.js:243
+Do @ react-dom.production.min.js:285
+(anonymous) @ react-dom.production.min.js:281
+P @ scheduler.production.min.js:13
+W @ scheduler.production.min.js:14
+OpusBrowserCodec.js:143 [OpusBrowserCodec] Self-test FAILED: decoded signal does not correlate with input (r=-0.043). peak=255, avg=34.4
+init @ OpusBrowserCodec.js:143
+await in init
+ts @ OpusBrowserCodec.js:269
+_ensureOpusCodec @ LiveKitManager.js:720
+_doConnect @ LiveKitManager.js:790
+connect @ LiveKitManager.js:762
+(anonymous) @ LiveKitConnectionContext.jsx:299
+(anonymous) @ LiveKitConnectionContext.jsx:430
+(anonymous) @ LiveKitConnectionContext.jsx:428
+(anonymous) @ LiveKitConnectionContext.jsx:649
+await in (anonymous)
+(anonymous) @ LiveKitConnectionContext.jsx:660
+Yu @ react-dom.production.min.js:243
+Do @ react-dom.production.min.js:285
+(anonymous) @ react-dom.production.min.js:281
+P @ scheduler.production.min.js:13
+W @ scheduler.production.min.js:14
+OpusBrowserCodec.js:155 [RX-DIAG] OpusBrowserCodec init FAILED (self-test) in 676.5ms — codec will not be used
+init @ OpusBrowserCodec.js:155
+await in init
+ts @ OpusBrowserCodec.js:269
+_ensureOpusCodec @ LiveKitManager.js:720
+_doConnect @ LiveKitManager.js:790
+connect @ LiveKitManager.js:762
+(anonymous) @ LiveKitConnectionContext.jsx:299
+(anonymous) @ LiveKitConnectionContext.jsx:430
+(anonymous) @ LiveKitConnectionContext.jsx:428
+(anonymous) @ LiveKitConnectionContext.jsx:649
+await in (anonymous)
+(anonymous) @ LiveKitConnectionContext.jsx:660
+Yu @ react-dom.production.min.js:243
+Do @ react-dom.production.min.js:285
+(anonymous) @ react-dom.production.min.js:281
+P @ scheduler.production.min.js:13
+W @ scheduler.production.min.js:14
+LiveKitManager.js:734 [RX-DIAG] Opus codec init failed after retries — RX audio may fall back to PCM
+_ensureOpusCodec @ LiveKitManager.js:734
+await in _ensureOpusCodec
+_doConnect @ LiveKitManager.js:790
+connect @ LiveKitManager.js:762
+(anonymous) @ LiveKitConnectionContext.jsx:299
+(anonymous) @ LiveKitConnectionContext.jsx:430
+(anonymous) @ LiveKitConnectionContext.jsx:428
+(anonymous) @ LiveKitConnectionContext.jsx:649
+await in (anonymous)
+(anonymous) @ LiveKitConnectionContext.jsx:660
+Yu @ react-dom.production.min.js:243
+Do @ react-dom.production.min.js:285
+(anonymous) @ react-dom.production.min.js:281
+P @ scheduler.production.min.js:13
+W @ scheduler.production.min.js:14
+LiveKitManager.js:734 [RX-DIAG] Opus codec init failed after retries — RX audio may fall back to PCM
+_ensureOpusCodec @ LiveKitManager.js:734
+await in _ensureOpusCodec
+_doConnect @ LiveKitManager.js:790
+connect @ LiveKitManager.js:762
+(anonymous) @ LiveKitConnectionContext.jsx:299
+(anonymous) @ LiveKitConnectionContext.jsx:430
+(anonymous) @ LiveKitConnectionContext.jsx:428
+(anonymous) @ LiveKitConnectionContext.jsx:649
+await in (anonymous)
+(anonymous) @ LiveKitConnectionContext.jsx:660
+Yu @ react-dom.production.min.js:243
+Do @ react-dom.production.min.js:285
+(anonymous) @ react-dom.production.min.js:281
+P @ scheduler.production.min.js:13
+W @ scheduler.production.min.js:14
+LiveKitManager.js:734 [RX-DIAG] Opus codec init failed after retries — RX audio may fall back to PCM
+_ensureOpusCodec @ LiveKitManager.js:734
+await in _ensureOpusCodec
+_doConnect @ LiveKitManager.js:790
+connect @ LiveKitManager.js:762
+(anonymous) @ LiveKitConnectionContext.jsx:299
+(anonymous) @ LiveKitConnectionContext.jsx:430
+(anonymous) @ LiveKitConnectionContext.jsx:428
+(anonymous) @ LiveKitConnectionContext.jsx:649
+await in (anonymous)
+(anonymous) @ LiveKitConnectionContext.jsx:660
+Yu @ react-dom.production.min.js:243
+Do @ react-dom.production.min.js:285
+(anonymous) @ react-dom.production.min.js:281
+P @ scheduler.production.min.js:13
+W @ scheduler.production.min.js:14
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390
+main.jsx:53 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-7q0lZugW.js 60
+(anonymous) @ main.jsx:53
+MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at jS._sendPcmFrame (MicPTTManager.js:464:15)
+    at h.port.onmessage (MicPTTManager.js:390:18)
+_sendPcmFrame @ MicPTTManager.js:464
+h.port.onmessage @ MicPTTManager.js:390

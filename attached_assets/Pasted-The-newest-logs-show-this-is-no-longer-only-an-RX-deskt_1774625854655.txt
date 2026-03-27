@@ -1,0 +1,228 @@
+The newest logs show this is no longer only an RX/desktop playback problem.
+
+We now have a TX-side crash too, and that explains why:
+- audio is being recorded for playback
+- but other units do not hear it live
+
+LOG-BASED CONCLUSION
+
+1. Opus codec is still failing initialization:
+- "OpusBrowserCodec Self-test FAILED"
+- "codec will not be used"
+- "Opus codec init failed after retries"
+
+2. The PCM fallback send path is also crashing:
+- "MicPTTManager.js:464 Uncaught TypeError: Cannot read properties of null (reading 'ready')"
+- inside _sendPcmFrame(...)
+
+This means the app is not successfully sending live TX audio to the transport.
+Recording may still work through a separate capture/recording path, but live outbound transmission is failing. :contentReference[oaicite:2]{index=2}
+
+==================================================
+IMMEDIATE DIAGNOSIS
+==================================================
+
+This is the likely live TX flow right now:
+
+1. PTT starts
+2. Mic/audio worklet captures audio
+3. App tries Opus encode/send
+4. Opus init failed, so codec is unavailable
+5. App falls back to PCM
+6. MicPTTManager._sendPcmFrame() touches `.ready` on a null dependency
+7. Every outgoing frame throws
+8. Live TX frames are not transmitted properly to other units
+9. Recording still succeeds because recording path is separate from live transport
+
+So the system is failing before outbound live audio can be delivered.
+
+==================================================
+REQUIRED FIXES — DO THESE NOW
+==================================================
+
+PART 1 — FIX THE TX CRASH IN MicPTTManager.js
+
+Inspect MicPTTManager.js around:
+- onmessage handler near line ~390
+- _sendPcmFrame near line ~464
+
+There is a null object being accessed with `.ready`.
+Find EXACTLY which dependency is null.
+
+Before touching `.ready`, log and guard each of these individually:
+- this.audioWs
+- this.audioWs.ready
+- this.ws
+- this.ws.readyState
+- this.opusCodec
+- this.pcmTransport
+- this.txPipeline
+- this.currentChannel
+- this.isTransmitting
+
+DO NOT just log “null”.
+Log each dependency separately.
+
+Example required logging:
+
+[TX-DIAG] _sendPcmFrame called
+- isTransmitting=<true/false>
+- channel=<id>
+- audioWs exists=<true/false>
+- audioWs ready=<true/false/n/a>
+- opusCodec exists=<true/false>
+- pcmTransport exists=<true/false>
+- txPipeline exists=<true/false>
+- frameBytes=<n>
+
+Then add a hard guard:
+- if the required TX transport object is null, log and return safely
+- do NOT throw uncaught errors for every frame
+
+IMPORTANT:
+This must not silently “pretend to send.”
+If transport is missing, log the exact reason and drop safely.
+
+==================================================
+PART 2 — FIX FALLBACK LOGIC
+==================================================
+
+Current behavior appears to be:
+
+- Opus fails
+- fallback to PCM is announced
+- PCM path still assumes an object exists and crashes
+
+That is unacceptable.
+
+Implement strict transport selection logic:
+
+A. If Opus init succeeds:
+- use Opus TX path
+
+B. If Opus init fails:
+- explicitly switch TX mode to PCM
+- initialize PCM transport objects before first frame is sent
+- do not allow _sendPcmFrame to run until PCM transport is fully initialized
+
+C. If neither transport is available:
+- fail TX cleanly
+- show/log "TX transport unavailable"
+- do not keep throwing per-frame exceptions
+
+==================================================
+PART 3 — ADD TX PIPELINE LIFECYCLE LOGGING
+==================================================
+
+We need full logs for the outbound path:
+
+1. PTT pressed
+2. TX session created
+3. transport selected: opus or pcm
+4. websocket/audio socket exists
+5. websocket/audio socket ready
+6. first outgoing frame captured
+7. first outgoing frame encoded
+8. first outgoing frame sent
+9. tx stop
+10. total frames captured
+11. total frames sent
+12. total frames dropped
+13. total send errors
+
+Required log examples:
+
+[TX-DIAG] PTT start channel=<id>
+[TX-DIAG] transport selected=<opus|pcm>
+[TX-DIAG] opus init success=<true/false>
+[TX-DIAG] pcm transport init success=<true/false>
+[TX-DIAG] first frame captured bytes=<n>
+[TX-DIAG] frame send success seq=<n>
+[TX-DIAG] frame dropped reason=<reason>
+[TX-DIAG] PTT stop totalCaptured=<n> totalSent=<n> totalDropped=<n>
+
+==================================================
+PART 4 — ADD SERVER LOGGING TO PROVE FRAMES ARRIVE
+==================================================
+
+We need to prove whether the server is receiving TX frames at all.
+
+For each TX burst add txId and log:
+
+1. tx:start
+- txId
+- source user
+- source device
+- channel
+- transport mode
+- codec
+
+2. every N frames:
+- txId
+- frames received from source
+- bytes received
+- fanout subscribers
+- frames forwarded
+
+3. tx:stop
+- txId
+- total frames received
+- total bytes
+- total frames forwarded
+- subscriber ids
+
+Critical question to answer:
+Are live TX frames ever reaching the server from the transmitting unit?
+If not, the failure is client-side before transport.
+If yes, then next check is server fanout.
+
+==================================================
+PART 5 — FIX THE RETRY SPAM
+==================================================
+
+Do NOT keep retrying broken Opus init on every connect/PTT cycle forever.
+
+Add:
+- a single init attempt per session or controlled backoff
+- a sticky "Opus unavailable" state for that session
+- immediate switch to PCM path if supported
+
+Current repeated logs show the system is thrashing instead of making a clean decision. :contentReference[oaicite:3]{index=3}
+
+==================================================
+PART 6 — REQUIRED HARDENING
+==================================================
+
+1. No code anywhere should do `.ready` on a possibly-null object
+2. No TX frame handler should throw uncaught exceptions per audio frame
+3. Fallback to PCM must be a REAL initialized path, not just a log line
+4. TX transport must be fully ready before the first mic frame is sent
+5. If transport is unavailable, PTT should fail clearly instead of pretending to transmit
+
+==================================================
+WHAT I WANT REPORTED BACK
+==================================================
+
+After these changes, report back with hard evidence:
+
+1. Which exact object is null in MicPTTManager._sendPcmFrame?
+2. Is the transmitting client actually sending any live frames successfully?
+3. Does the server receive TX frames from the transmitting unit?
+4. Does the server fan them out to subscribers?
+5. Is transport mode actually Opus or PCM during TX?
+6. How many frames are captured vs sent vs dropped per PTT session?
+7. If PCM fallback is active, is it fully initialized before first frame send?
+
+==================================================
+SUCCESS CRITERIA
+==================================================
+
+Done looks like:
+- no more "Cannot read properties of null (reading 'ready')" in MicPTTManager.js
+- Opus failure does not break TX
+- PCM fallback initializes correctly
+- first live TX frame is sent successfully
+- server logs confirm frames received
+- server logs confirm frames fanned out
+- other units hear live audio
+- recording and live transport both work
