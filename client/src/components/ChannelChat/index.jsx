@@ -11,6 +11,7 @@ export default function ChannelChat({ channel, currentUser, onNewMessage }) {
   const messagesEndRef = useRef(null);
   const containerRef = useRef(null);
   const pollIntervalRef = useRef(null);
+  const prevMessageCountRef = useRef(0);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -28,6 +29,7 @@ export default function ChannelChat({ channel, currentUser, onNewMessage }) {
 
   useEffect(() => {
     if (channel) {
+      prevMessageCountRef.current = 0;
       setLoading(true);
       fetchMessages().finally(() => setLoading(false));
 
@@ -55,7 +57,11 @@ export default function ChannelChat({ channel, currentUser, onNewMessage }) {
   }, [channel, fetchMessages]);
 
   useEffect(() => {
-    scrollToBottom();
+    const currentCount = messages.length;
+    if (currentCount > prevMessageCountRef.current) {
+      scrollToBottom();
+    }
+    prevMessageCountRef.current = currentCount;
   }, [messages, scrollToBottom]);
 
   const handleSend = async (e) => {
