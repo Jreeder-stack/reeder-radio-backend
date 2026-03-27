@@ -22,6 +22,7 @@ class SignalingManager {
   constructor() {
     this.socket = null;
     this.authenticated = false;
+    this._connected = false;
     this.unitId = null;
     this.agencyId = null;
     this.username = null;
@@ -30,7 +31,11 @@ class SignalingManager {
     this.channelMembers = new Map();
     this._keepaliveInterval = null;
     this._pongTimeout = null;
-    
+
+    this._connectPromise = null;
+    this._authPromise = null;
+    this._joinPromises = new Map();
+
     this._listeners = {
       channelJoin: new Set(),
       channelLeave: new Set(),
@@ -62,13 +67,25 @@ class SignalingManager {
   }
 
   connect(options = {}) {
-    if (this.socket?.connected) {
+    if (this.socket?.connected && this._connected) {
       console.log('[Signaling] Already connected');
       return Promise.resolve();
     }
 
-    return new Promise((resolve, reject) => {
+    if (this._connectPromise) {
+      console.log('[Signaling] Connection already in progress, returning existing promise');
+      return this._connectPromise;
+    }
+
+    this._connectPromise = new Promise((resolve, reject) => {
+      let settled = false;
       const serverUrl = window.location.origin;
+
+      if (this.socket) {
+        this.socket.removeAllListeners();
+        this.socket.disconnect();
+        this.socket = null;
+      }
       
       this.socket = io(serverUrl, {
         path: '/signaling',
@@ -80,28 +97,50 @@ class SignalingManager {
         reconnectionDelayMax: 5000,
       });
 
+      const connectionTimeout = setTimeout(() => {
+        if (!settled && !this.socket?.connected) {
+          settled = true;
+          this._connectPromise = null;
+          reject(new Error('Connection timeout'));
+        }
+      }, 10000);
+
       this.socket.on('connect', () => {
+        clearTimeout(connectionTimeout);
         console.log('[Signaling] Connected to signaling server');
+        this._connected = true;
         this.reconnectAttempts = 0;
         this._emit('connectionChange', { connected: true });
 
-        if (this.unitId) {
+        if (this.unitId && !this.authenticated) {
           console.log('[Signaling] Re-authenticating as', this.unitId);
-          this.socket.emit('authenticate', {
-            unitId: this.unitId,
-            username: this.username,
-            agencyId: this.agencyId,
-            isDispatcher: this.isDispatcher,
-          });
+          this._authPromise = null;
+          this.authenticate(this.unitId, this.username, this.agencyId, this.isDispatcher)
+            .catch(err => console.error('[Signaling] Auto re-auth failed:', err.message));
         }
 
         this._startKeepalive();
-        resolve();
+
+        if (!settled) {
+          settled = true;
+          this._connectPromise = null;
+          resolve();
+        }
       });
 
       this.socket.on('disconnect', (reason) => {
         console.log('[Signaling] Disconnected:', reason);
+        this._connected = false;
         this.authenticated = false;
+        this._connectPromise = null;
+
+        if (this._authReject) {
+          this._authReject(new Error('Disconnected during authentication'));
+        }
+        this._authPromise = null;
+        this._authResolve = null;
+        this._authReject = null;
+        this._joinPromises.clear();
         this._stopKeepalive();
         this._emit('connectionChange', { connected: false, reason });
       });
@@ -109,7 +148,10 @@ class SignalingManager {
       this.socket.on('connect_error', (error) => {
         console.error('[Signaling] Connection error:', error.message);
         this.reconnectAttempts++;
-        if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+        if (!settled && this.reconnectAttempts >= this.maxReconnectAttempts) {
+          settled = true;
+          clearTimeout(connectionTimeout);
+          this._connectPromise = null;
           reject(new Error('Failed to connect to signaling server'));
         }
       });
@@ -117,6 +159,13 @@ class SignalingManager {
       this.socket.on('authenticated', (data) => {
         console.log('[Signaling] Authenticated as', data.unitId);
         this.authenticated = true;
+
+        if (this._authResolve) {
+          this._authResolve(data);
+          this._authResolve = null;
+          this._authReject = null;
+        }
+        this._authPromise = null;
 
         if (this.subscribedChannels.size > 0) {
           console.log('[Signaling] Re-joining', this.subscribedChannels.size, 'channels');
@@ -131,13 +180,9 @@ class SignalingManager {
       });
 
       this._setupEventHandlers();
-
-      setTimeout(() => {
-        if (!this.socket?.connected) {
-          reject(new Error('Connection timeout'));
-        }
-      }, 10000);
     });
+
+    return this._connectPromise;
   }
 
   _setupEventHandlers() {
@@ -236,36 +281,120 @@ class SignalingManager {
     });
   }
 
-  authenticate(unitId, username, agencyId = 'default', isDispatcher = false) {
-    if (!this.socket?.connected) {
-      console.error('[Signaling] Cannot authenticate: not connected');
-      return false;
-    }
-
+  async authenticate(unitId, username, agencyId = 'default', isDispatcher = false) {
     this.unitId = unitId;
     this.username = username;
     this.agencyId = agencyId;
     this.isDispatcher = isDispatcher;
 
-    this.socket.emit('authenticate', {
-      unitId,
-      username,
-      agencyId,
-      isDispatcher,
-    });
-
-    return true;
-  }
-
-  joinChannel(channelId) {
-    if (!this.socket?.connected || !this.authenticated) {
-      console.error('[Signaling] Cannot join channel: not connected/authenticated');
-      return false;
+    if (this.authenticated) {
+      console.log('[Signaling] Already authenticated');
+      return true;
     }
 
-    this.socket.emit(SIGNALING_EVENTS.CHANNEL_JOIN, { channelId });
-    this.subscribedChannels.add(channelId);
-    return true;
+    if (this._authPromise) {
+      console.log('[Signaling] Authentication already in progress, returning existing promise');
+      return this._authPromise;
+    }
+
+    if (!this.socket?.connected) {
+      console.log('[Signaling] Not connected, waiting for connection before authenticating');
+      await this.connect();
+    }
+
+    this._authPromise = new Promise((resolve, reject) => {
+      this._authResolve = resolve;
+      this._authReject = reject;
+
+      const authTimeout = setTimeout(() => {
+        if (!this.authenticated) {
+          this._authPromise = null;
+          this._authResolve = null;
+          this._authReject = null;
+          reject(new Error('Authentication timeout'));
+        }
+      }, 10000);
+
+      const originalResolve = this._authResolve;
+      this._authResolve = (data) => {
+        clearTimeout(authTimeout);
+        originalResolve(data);
+      };
+
+      const originalReject = this._authReject;
+      this._authReject = (err) => {
+        clearTimeout(authTimeout);
+        originalReject(err);
+      };
+
+      this.socket.emit('authenticate', {
+        unitId,
+        username,
+        agencyId,
+        isDispatcher,
+      });
+
+      console.log('[Signaling] Authentication request sent for', unitId);
+    });
+
+    try {
+      await this._authPromise;
+      return true;
+    } catch (err) {
+      this._authPromise = null;
+      throw err;
+    }
+  }
+
+  async joinChannel(channelId) {
+    if (this.subscribedChannels.has(channelId) && this.socket?.connected && this.authenticated) {
+      return true;
+    }
+
+    if (this._joinPromises.has(channelId)) {
+      return this._joinPromises.get(channelId);
+    }
+
+    const joinOp = (async () => {
+      if (!this.authenticated) {
+        console.log('[Signaling] Not authenticated, waiting for authentication before joining', channelId);
+        if (this.unitId) {
+          await this.authenticate(this.unitId, this.username, this.agencyId, this.isDispatcher);
+        } else {
+          console.error('[Signaling] Cannot join channel: no credentials available');
+          return false;
+        }
+      }
+
+      if (!this.socket?.connected) {
+        console.error('[Signaling] Cannot join channel: socket not connected after auth');
+        return false;
+      }
+
+      this.socket.emit(SIGNALING_EVENTS.CHANNEL_JOIN, { channelId });
+      this.subscribedChannels.add(channelId);
+      console.log('[Signaling] Joined channel:', channelId);
+      return true;
+    })();
+
+    this._joinPromises.set(channelId, joinOp);
+    try {
+      const result = await joinOp;
+      return result;
+    } finally {
+      this._joinPromises.delete(channelId);
+    }
+  }
+
+  async ensureReady(channelId) {
+    await this.connect();
+    if (!this.unitId) {
+      throw new Error('Cannot ensureReady: no credentials stored. Call authenticate() first.');
+    }
+    await this.authenticate(this.unitId, this.username, this.agencyId, this.isDispatcher);
+    if (channelId) {
+      await this.joinChannel(channelId);
+    }
   }
 
   leaveChannel(channelId) {
@@ -470,7 +599,13 @@ class SignalingManager {
       this.socket.disconnect();
       this.socket = null;
     }
+    this._connected = false;
     this.authenticated = false;
+    this._connectPromise = null;
+    this._authPromise = null;
+    this._authResolve = null;
+    this._authReject = null;
+    this._joinPromises.clear();
     this.subscribedChannels.clear();
     this.channelMembers.clear();
   }
@@ -487,23 +622,19 @@ class SignalingManager {
 
     if (this.socket?.connected && !this.authenticated && this.unitId) {
       console.log('[Signaling] Socket connected but not authenticated — re-authenticating');
-      this.socket.emit('authenticate', {
-        unitId: this.unitId,
-        username: this.username,
-        agencyId: this.agencyId,
-        isDispatcher: this.isDispatcher,
-      });
-      return true;
+      try {
+        await this.authenticate(this.unitId, this.username, this.agencyId, this.isDispatcher);
+        return true;
+      } catch (err) {
+        console.error('[Signaling] Re-authentication failed:', err.message);
+        return false;
+      }
     }
 
     if (!this.socket?.connected && this.unitId) {
       console.log('[Signaling] Socket disconnected — forcing reconnect');
       try {
-        if (this.socket) {
-          this.socket.connect();
-        } else {
-          await this.connect();
-        }
+        await this.connect();
         return true;
       } catch (err) {
         console.error('[Signaling] Reconnect failed:', err.message);

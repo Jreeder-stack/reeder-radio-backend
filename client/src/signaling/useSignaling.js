@@ -31,12 +31,15 @@ export function useSignaling() {
     }
   }, []);
 
-  const authenticate = useCallback((unitId, username, agencyId, isDispatcher) => {
-    const result = signalingManager.authenticate(unitId, username, agencyId, isDispatcher);
-    if (result) {
+  const authenticate = useCallback(async (unitId, username, agencyId, isDispatcher) => {
+    try {
+      await signalingManager.authenticate(unitId, username, agencyId, isDispatcher);
       setAuthenticated(true);
+      return true;
+    } catch (err) {
+      console.error('[useSignaling] Authentication failed:', err);
+      return false;
     }
-    return result;
   }, []);
 
   const disconnect = useCallback(() => {

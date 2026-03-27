@@ -36,7 +36,7 @@ export function SignalingProvider({ children }) {
         setConnected(true);
         
         const unitId = user.unit_id || user.username;
-        signalingManager.authenticate(
+        await signalingManager.authenticate(
           unitId,
           user.username,
           'default',
@@ -58,6 +58,22 @@ export function SignalingProvider({ children }) {
       setConnected(data.connected);
       if (!data.connected) {
         setAuthenticated(false);
+      }
+    });
+
+    const onSocketAuthenticated = () => {
+      setAuthenticated(true);
+    };
+    const registerAuthListener = () => {
+      if (signalingManager.socket) {
+        signalingManager.socket.off('authenticated', onSocketAuthenticated);
+        signalingManager.socket.on('authenticated', onSocketAuthenticated);
+      }
+    };
+    registerAuthListener();
+    const removeReconnectAuthListener = signalingManager.on('connectionChange', (data) => {
+      if (data.connected) {
+        registerAuthListener();
       }
     });
 
@@ -196,6 +212,10 @@ export function SignalingProvider({ children }) {
 
     return () => {
       removeConnectionListener();
+      removeReconnectAuthListener();
+      if (signalingManager.socket) {
+        signalingManager.socket.off('authenticated', onSocketAuthenticated);
+      }
       removeMembersListener();
       removeJoinListener();
       removeLeaveListener();
@@ -214,14 +234,18 @@ export function SignalingProvider({ children }) {
     };
   }, [user]);
 
-  const joinChannel = useCallback((channelId) => {
-    if (!authenticated) return false;
-    const result = signalingManager.joinChannel(channelId);
-    if (result) {
-      joinedChannelsRef.current.add(channelId);
+  const joinChannel = useCallback(async (channelId) => {
+    try {
+      const result = await signalingManager.joinChannel(channelId);
+      if (result) {
+        joinedChannelsRef.current.add(channelId);
+      }
+      return result;
+    } catch (err) {
+      console.error('[SignalingContext] Failed to join channel:', channelId, err);
+      return false;
     }
-    return result;
-  }, [authenticated]);
+  }, []);
 
   const leaveChannel = useCallback((channelId) => {
     const result = signalingManager.leaveChannel(channelId);

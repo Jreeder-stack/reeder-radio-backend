@@ -41,7 +41,8 @@ export default function DispatchConsole({ user, onLogout }) {
 
   const { retryConnection, connectToChannel, disconnectFromChannel } = useLiveKitConnection();
   const { 
-    connected: signalingConnected, 
+    connected: signalingConnected,
+    authenticated: signalingAuthenticated,
     channelMembers, 
     activeTransmissions,
     emergencyChannels,
@@ -122,7 +123,7 @@ export default function DispatchConsole({ user, onLogout }) {
   }, []);
 
   useEffect(() => {
-    if (!signalingConnected || !channels.length) return;
+    if (!signalingAuthenticated || !channels.length) return;
     
     const roomKeys = gridChannelIds
       .map(id => {
@@ -130,17 +131,27 @@ export default function DispatchConsole({ user, onLogout }) {
         return ch ? (ch.room_key || ((ch.zone || 'Default') + '__' + ch.name)) : null;
       })
       .filter(Boolean);
-    
-    roomKeys.forEach(rk => {
-      joinChannel(rk);
-    });
+
+    let cancelled = false;
+    const joinAll = async () => {
+      for (const rk of roomKeys) {
+        if (cancelled) return;
+        try {
+          await joinChannel(rk);
+        } catch (err) {
+          console.error('[DispatchConsole] Failed to join channel:', rk, err);
+        }
+      }
+    };
+    joinAll();
     
     return () => {
+      cancelled = true;
       roomKeys.forEach(rk => {
         leaveChannel(rk);
       });
     };
-  }, [signalingConnected, gridChannelIds, channels, joinChannel, leaveChannel]);
+  }, [signalingAuthenticated, gridChannelIds, channels, joinChannel, leaveChannel]);
 
   const prevMonitoredRef = useRef([]);
   useEffect(() => {
