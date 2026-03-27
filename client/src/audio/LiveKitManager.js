@@ -2,6 +2,9 @@ import { notifyChannelJoin } from '../utils/api.js';
 import { micPTTManager, PTT_STATES } from './MicPTTManager.js';
 import { isNativeLiveKitAvailable, nativeConnect, nativeDisconnect, updateServiceConnectionInfo } from '../plugins/nativeLiveKit.js';
 import { signalingManager } from '../signaling/SignalingManager.js';
+import { pcmPlaybackManager } from './PcmPlaybackManager.js';
+import { pcmAudioTransport } from './PcmAudioTransport.js';
+import { PCM_AUDIO } from './pcmAudioConstants.js';
 
 const isNativeAndroid = () => isNativeLiveKitAvailable();
 
@@ -468,9 +471,11 @@ class LiveKitManager {
       if (shouldMute && !this.pttMuted) {
         console.log('[AudioWS] PTT active - muting all RX audio');
         this.pttMuted = true;
+        pcmPlaybackManager.setMuted(true);
       } else if (!shouldMute && this.pttMuted) {
         console.log('[AudioWS] PTT released - unmuting RX audio');
         this.pttMuted = false;
+        pcmPlaybackManager.setMuted(false);
       }
     });
   }
@@ -495,7 +500,7 @@ class LiveKitManager {
       autoIncreaseVolumeEnabled: settings.autoIncreaseVolumeEnabled ?? false,
       autoIncreaseVolumeLevel: settings.autoIncreaseVolumeLevel ?? 100,
     };
-    console.log('[AUDIO-REBUILD] applyAudioSettings() stored — playback intentionally disabled during rebuild');
+    console.log('[AUDIO-NEW] applyAudioSettings() stored');
   }
 
   startSettingsListener() {
@@ -519,11 +524,24 @@ class LiveKitManager {
 
   setAutoPlayback(enabled) {
     this.autoPlaybackEnabled = enabled;
-    console.log(`[AUDIO-REBUILD] setAutoPlayback(${enabled}) — playback intentionally disabled during rebuild`);
+    console.log(`[AUDIO-NEW] setAutoPlayback(${enabled})`);
   }
 
   async prepareConnection() {
-    console.log('[AUDIO-REBUILD] prepareConnection() — audio warm-up intentionally disabled during rebuild');
+    try {
+      await pcmPlaybackManager.init();
+      await pcmPlaybackManager.startPlayback();
+      pcmAudioTransport.resetRx();
+      pcmAudioTransport.addOnValidPacket('livekit', (packet) => {
+        const success = pcmPlaybackManager.enqueue(packet.payload);
+        if (!success && packet.sequence % 50 === 0) {
+          console.log('[AUDIO-NEW][RX] enqueue failed (muted or not playing)');
+        }
+      });
+      console.log('[AUDIO-NEW] Playback pipeline ready');
+    } catch (err) {
+      console.error('[AUDIO-NEW] prepareConnection failed:', err);
+    }
   }
 
   async connect(channelName, identity) {
@@ -582,7 +600,8 @@ class LiveKitManager {
       this.rooms.set(channelName, conn);
 
       console.log(`[AudioWS] Connected to ${channelName} (total ${(performance.now() - tTotal).toFixed(1)}ms)`);
-      console.log('[AUDIO-REBUILD] Audio playback pipeline intentionally disabled during rebuild — WS connected for signaling only');
+
+      await this.prepareConnection();
 
       notifyChannelJoin(channelName, identity);
       this._recordActivity(channelName);
@@ -729,11 +748,28 @@ class LiveKitManager {
     const frameCount = (this._rxFrameCounters.get(channelName) || 0) + 1;
     this._rxFrameCounters.set(channelName, frameCount);
 
-    if (frameCount === 1 || frameCount % 500 === 0) {
-      console.log(`[AUDIO-REBUILD] Binary audio frame #${frameCount} received on ${channelName} — intentionally discarded during rebuild`);
+    this._recordActivity(channelName);
+
+    if (this.pttMuted) return;
+
+    let arrayBuffer;
+    if (data instanceof ArrayBuffer) {
+      arrayBuffer = data;
+    } else if (data instanceof Uint8Array || data instanceof Int8Array) {
+      arrayBuffer = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength);
+    } else if (data && data.buffer instanceof ArrayBuffer) {
+      arrayBuffer = data.buffer.slice(data.byteOffset || 0, (data.byteOffset || 0) + (data.byteLength || data.buffer.byteLength));
+    } else {
+      return;
     }
 
-    this._recordActivity(channelName);
+    const firstByte = new Uint8Array(arrayBuffer)[0];
+
+    if (firstByte === PCM_AUDIO.FRAME_TYPE) {
+      pcmAudioTransport.receiveData(arrayBuffer);
+    } else if (frameCount === 1 || frameCount % 500 === 0) {
+      console.log(`[AUDIO-NEW][RX] Non-PCM frame #${frameCount} on ${channelName} type=0x${firstByte.toString(16)}`);
+    }
   }
 
   _cleanupChannel(channelName, reason = 'cleanup') {
@@ -790,12 +826,16 @@ class LiveKitManager {
 
   muteChannel(channelName) {
     this.mutedChannels.add(channelName);
-    console.log(`[AUDIO-REBUILD] muteChannel(${channelName}) — playback intentionally disabled during rebuild`);
+    pcmPlaybackManager.setMuted(true);
+    console.log(`[AUDIO-NEW] muteChannel(${channelName})`);
   }
 
   unmuteChannel(channelName) {
     this.mutedChannels.delete(channelName);
-    console.log(`[AUDIO-REBUILD] unmuteChannel(${channelName}) — playback intentionally disabled during rebuild`);
+    if (this.mutedChannels.size === 0) {
+      pcmPlaybackManager.setMuted(false);
+    }
+    console.log(`[AUDIO-NEW] unmuteChannel(${channelName})`);
   }
 
   muteChannels(channelNames) {

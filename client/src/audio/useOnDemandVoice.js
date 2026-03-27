@@ -82,7 +82,7 @@ export function useOnDemandPTT(channelId, identity, options = {}) {
       } else if (newState === PTT_STATES.TRANSMITTING && oldState === PTT_STATES.ARMING) {
         try {
           await startTransmission(identity);
-          console.log('[AUDIO-REBUILD] Track publishing intentionally disabled during rebuild — floor control only');
+          console.log('[AUDIO-NEW] PTT transmitting — PCM capture active');
           onTransmitStart?.();
         } catch (err) {
           console.error('[useOnDemandPTT] Failed to start transmission:', err);

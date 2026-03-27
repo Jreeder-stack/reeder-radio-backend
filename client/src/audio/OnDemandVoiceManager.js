@@ -1,5 +1,8 @@
 import { signalingManager } from '../signaling/SignalingManager.js';
 import { preloadPermitBuffer } from './talkPermitTone.js';
+import { pcmPlaybackManager } from './PcmPlaybackManager.js';
+import { pcmAudioTransport } from './PcmAudioTransport.js';
+import { PCM_AUDIO } from './pcmAudioConstants.js';
 
 const VOICE_STATE = {
   DISCONNECTED: 'disconnected',
@@ -296,8 +299,6 @@ class OnDemandVoiceManager {
     this._setState(channelId, VOICE_STATE.TRANSMITTING);
     this._recordConnectionStart(channelId);
 
-    console.log('[AUDIO-REBUILD] Audio transmission intentionally disabled during rebuild — floor control only');
-
     return conn;
   }
 
@@ -335,7 +336,19 @@ class OnDemandVoiceManager {
         this._setState(channelId, VOICE_STATE.CONNECTED);
 
         console.log(`[OnDemandVoice] Connected to ${channelId}`);
-        console.log('[AUDIO-REBUILD] Audio playback pipeline intentionally disabled during rebuild');
+
+        try {
+          await pcmPlaybackManager.init();
+          await pcmPlaybackManager.startPlayback();
+          pcmAudioTransport.resetRx();
+          pcmAudioTransport.addOnValidPacket('ondemand', (packet) => {
+            pcmPlaybackManager.enqueue(packet.payload);
+          });
+          console.log('[AUDIO-NEW] Playback pipeline ready via OnDemandVoice');
+        } catch (playbackErr) {
+          console.error('[AUDIO-NEW] Playback init failed:', playbackErr);
+        }
+
         return conn;
       } catch (err) {
         this._setState(channelId, VOICE_STATE.DISCONNECTED);
@@ -374,8 +387,8 @@ class OnDemandVoiceManager {
   async warmUp() {
     try {
       preloadPermitBuffer();
-      console.log('[OnDemandVoice] Warm-up complete (permit tone pre-loaded)');
-      console.log('[AUDIO-REBUILD] Audio codec/worklet warm-up intentionally disabled during rebuild');
+      await pcmPlaybackManager.init();
+      console.log('[OnDemandVoice] Warm-up complete (permit tone + playback worklet pre-loaded)');
     } catch (err) {
       console.warn('[OnDemandVoice] Warm-up failed:', err.message);
     }
@@ -418,7 +431,21 @@ class OnDemandVoiceManager {
   }
 
   _handleBinaryMessage(channelId, data) {
-    console.log('[AUDIO-REBUILD] Binary audio message received — intentionally discarded during rebuild');
+    let arrayBuffer;
+    if (data instanceof ArrayBuffer) {
+      arrayBuffer = data;
+    } else if (data instanceof Uint8Array || data instanceof Int8Array) {
+      arrayBuffer = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength);
+    } else if (data && data.buffer instanceof ArrayBuffer) {
+      arrayBuffer = data.buffer.slice(data.byteOffset || 0, (data.byteOffset || 0) + (data.byteLength || data.buffer.byteLength));
+    } else {
+      return;
+    }
+    const firstByte = new Uint8Array(arrayBuffer)[0];
+
+    if (firstByte === PCM_AUDIO.FRAME_TYPE) {
+      pcmAudioTransport.receiveData(arrayBuffer);
+    }
   }
 
   async _disconnectRoom(channelId) {
@@ -504,11 +531,13 @@ class OnDemandVoiceManager {
   }
 
   muteReceiveAudio(channelId, muted) {
-    console.log(`[AUDIO-REBUILD] muteReceiveAudio(${channelId}, ${muted}) — playback intentionally disabled during rebuild`);
+    pcmPlaybackManager.setMuted(muted);
+    console.log(`[AUDIO-NEW] muteReceiveAudio(${channelId}, ${muted})`);
   }
 
   muteAllReceiveAudio(muted) {
-    console.log(`[AUDIO-REBUILD] muteAllReceiveAudio(${muted}) — playback intentionally disabled during rebuild`);
+    pcmPlaybackManager.setMuted(muted);
+    console.log(`[AUDIO-NEW] muteAllReceiveAudio(${muted})`);
   }
 
   on(event, callback) {

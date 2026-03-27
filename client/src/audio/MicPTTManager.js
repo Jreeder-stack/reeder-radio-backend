@@ -3,6 +3,8 @@ import { playPermitTone, startBonkLoop, stopBonkLoop } from './talkPermitTone.js
 import { unlockAudio } from './iosAudioUnlock.js';
 import { acquireWakeLock, releaseWakeLock } from '../plugins/backgroundService.js';
 import { isNativeLiveKitAvailable, nativeEnableMic, nativeDisableMic } from '../plugins/nativeLiveKit.js';
+import { pcmCaptureManager } from './PcmCaptureManager.js';
+import { pcmAudioTransport } from './PcmAudioTransport.js';
 
 const isNativeAndroid = () => isNativeLiveKitAvailable();
 
@@ -249,7 +251,6 @@ class MicPTTManager {
 
     const native = isNativeAndroid();
     console.log(`[MicPTT] start() — path=${native ? 'NATIVE' : 'WEB'} channel=${this._currentChannelId} unit=${this._currentUnitId}`);
-    console.log('[AUDIO-REBUILD] Audio capture intentionally disabled during rebuild — floor control only');
 
     if (native) {
       return this._startNative();
@@ -302,13 +303,30 @@ class MicPTTManager {
       this.publishComplete = true;
       stopBonkLoop();
 
+      pcmAudioTransport.resetTx();
+      const txChannelId = this._currentChannelId || '';
+      const txUnitId = this._currentUnitId || '';
+      pcmCaptureManager.setOnFrame((int16Samples) => {
+        if (this.state === PTT_STATES.TRANSMITTING && this._ws && this._ws.readyState === WebSocket.OPEN) {
+          pcmAudioTransport.sendFrame(this._ws, int16Samples, txUnitId, txChannelId);
+        }
+      });
+
+      try {
+        await pcmCaptureManager.startCapture();
+        console.log('[AUDIO-NEW][TX] Mic capture started, TX path wired');
+      } catch (captureErr) {
+        console.error('[AUDIO-NEW][TX] Mic capture failed:', captureErr);
+      }
+
       this._setState(PTT_STATES.TRANSMITTING);
       this.transitionLock = false;
-      console.log('[MicPTT] Floor acquired (audio capture disabled during rebuild)');
+      console.log('[MicPTT] Floor acquired, transmitting PCM audio');
       return true;
 
     } catch (err) {
       console.error('[MicPTT] Start failed:', err);
+      pcmCaptureManager.stopCapture();
       startBonkLoop();
       this.transitionLock = false;
       if (this.pendingStop) {
@@ -327,7 +345,6 @@ class MicPTTManager {
 
   async _startNative() {
     console.log('[MicPTT] _startNative() — BEGIN');
-    console.log('[AUDIO-REBUILD] Native mic enable intentionally disabled during rebuild');
     acquireWakeLock().catch(e => console.warn('[MicPTT] Native wake lock acquire failed:', e));
 
     this.transitionLock = true;
@@ -443,18 +460,23 @@ class MicPTTManager {
     this._setState(PTT_STATES.COOLDOWN);
     this._removeWsListeners();
 
-    console.log('[AUDIO-REBUILD] Audio cleanup intentionally disabled during rebuild');
+    pcmCaptureManager.stopCapture();
+    pcmCaptureManager.setOnFrame(null);
+    console.log('[AUDIO-NEW][TX] Capture stopped, TX path torn down');
 
     this.pendingStop = false;
     this.transitionLock = false;
     this.lastPttEndTime = Date.now();
     this._setState(PTT_STATES.IDLE);
     releaseWakeLock().catch(e => console.warn('[MicPTT] Wake lock release failed:', e));
-    console.log('[MicPTT] Transmission ended (no audio was captured), state reset to IDLE');
+    console.log('[MicPTT] Transmission ended, state reset to IDLE');
   }
 
   forceRelease() {
     console.log('[MicPTT] Force release');
+
+    pcmCaptureManager.stopCapture();
+    pcmCaptureManager.setOnFrame(null);
 
     this._clearPermitDeadline();
     this._removeWsListeners();

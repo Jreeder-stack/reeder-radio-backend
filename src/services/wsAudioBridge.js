@@ -296,6 +296,84 @@ class WsAudioBridge {
       } catch (err) {
         console.error(`[WsAudioBridge] Encode error for ${clientInfo.unitId}:`, err.message);
       }
+    } else if (frameType === 0x10) {
+      this._handleNewPcmFrame(clientId, clientInfo, buf);
+    }
+  }
+
+  _handleNewPcmFrame(clientId, clientInfo, buf) {
+    if (!floorControlService.holdsFloor(clientInfo.channelId, clientInfo.unitId)) {
+      if (clientInfo._rxFrameCount <= 3 || clientInfo._rxFrameCount % 50 === 0) {
+        const holder = floorControlService.getFloorHolder(clientInfo.channelId);
+        console.warn(`[AUDIO-NEW] Floor check FAILED: unit=${clientInfo.unitId} channel=${clientInfo.channelId} holder=${holder ? holder.unitId : 'none'} frame#=${clientInfo._rxFrameCount}`);
+      }
+      return;
+    }
+
+    const PCM_HEADER_MIN = 13;
+    if (buf.length < PCM_HEADER_MIN) {
+      console.warn(`[AUDIO-NEW] PCM packet too short (${buf.length} bytes, need ${PCM_HEADER_MIN}) from ${clientInfo.unitId}`);
+      return;
+    }
+
+    let offset = 1;
+    const codecId = buf.readUInt8(offset); offset += 1;
+    const sampleRate = buf.readUInt16BE(offset); offset += 2;
+    const channels = buf.readUInt8(offset); offset += 1;
+    const frameSamples = buf.readUInt16BE(offset); offset += 2;
+    const sequence = buf.readUInt16BE(offset); offset += 2;
+
+    if (offset + 1 > buf.length) return;
+    const senderIdLen = buf.readUInt8(offset); offset += 1;
+    if (offset + senderIdLen > buf.length) return;
+    offset += senderIdLen;
+
+    if (offset + 1 > buf.length) return;
+    const channelIdLen = buf.readUInt8(offset); offset += 1;
+    if (offset + channelIdLen > buf.length) return;
+    offset += channelIdLen;
+
+    if (offset + 2 > buf.length) return;
+    const payloadBytes = buf.readUInt16BE(offset); offset += 2;
+    if (offset + payloadBytes > buf.length) return;
+
+    if (payloadBytes !== 1920 || payloadBytes % 2 !== 0) {
+      if (clientInfo._rxFrameCount <= 5) {
+        console.warn(`[AUDIO-NEW] Invalid payloadBytes=${payloadBytes} (expected 1920) from ${clientInfo.unitId}`);
+      }
+      return;
+    }
+
+    if (codecId !== 0x01 || sampleRate !== 48000 || channels !== 1 || frameSamples !== 960) {
+      if (clientInfo._rxFrameCount <= 5) {
+        console.warn(`[AUDIO-NEW] Invalid metadata: codec=0x${codecId.toString(16)} sampleRate=${sampleRate} channels=${channels} frameSamples=${frameSamples} from ${clientInfo.unitId}`);
+      }
+      return;
+    }
+
+    if (!clientInfo._newPcmRelayCount) clientInfo._newPcmRelayCount = 0;
+    clientInfo._newPcmRelayCount++;
+
+    const wsSubs = audioRelayService.wsSubscribers.get(canonicalChannelKey(clientInfo.channelId));
+    const listenerCount = wsSubs ? wsSubs.size : 0;
+
+    if (clientInfo._newPcmRelayCount === 1 || clientInfo._newPcmRelayCount % 50 === 0) {
+      console.log(`[AUDIO-NEW] RELAY sender=${clientInfo.unitId} channel=${clientInfo.channelId} codec=pcm payloadBytes=${payloadBytes} listenerCount=${listenerCount} seq=${sequence} relayed=${clientInfo._newPcmRelayCount}`);
+    }
+
+    if (wsSubs && wsSubs.size > 0) {
+      const packetBuf = Buffer.from(buf);
+      for (const [subUnitId, subInfo] of wsSubs) {
+        if (subUnitId === clientInfo.unitId) continue;
+        try {
+          if (subInfo.ws.readyState === 1) {
+            subInfo.ws.send(packetBuf);
+            subInfo.lastSeen = Date.now();
+          }
+        } catch (err) {
+          console.error(`[AUDIO-NEW] WS send error to ${subUnitId}:`, err.message);
+        }
+      }
     }
   }
 

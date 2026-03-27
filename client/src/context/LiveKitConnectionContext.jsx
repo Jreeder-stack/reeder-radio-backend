@@ -260,7 +260,6 @@ export function LiveKitConnectionProvider({ children, user }) {
   }, [scheduleReconnect, recordActivity]);
 
   const preCaptureForMobile = useCallback(async () => {
-    console.log('[AUDIO-REBUILD] Mobile mic pre-capture intentionally disabled during rebuild');
   }, []);
 
   const releaseMobileMic = useCallback(() => {
