@@ -1,0 +1,423 @@
+0|command-comms  |     at Server.setupListenHandle [as _listen2] (node:net:1908:16)
+0|command-comms  |     at listenInCluster (node:net:1965:12)
+0|command-comms  |     at doListen (node:net:2139:7)
+0|command-comms  |     at process.processTicksAndRejections (node:internal/process/task_queues:83:21) {
+0|command-comms  |   code: 'EADDRINUSE',
+0|command-comms  |   errno: -98,
+0|command-comms  |   syscall: 'listen',
+0|command-comms  |   address: '0.0.0.0',
+0|command-comms  |   port: 3001
+0|command-comms  | }
+PM2              | App [command-comms:0] exited with code [1] via signal [SIGINT]
+PM2              | App [command-comms:0] starting in -fork mode-
+PM2              | App [command-comms:0] online
+0|command-comms  | [BUILD] version=29cdec2 built=2026-03-27T14:48:18.735Z
+0|command-comms  | Database initialized successfully
+0|command-comms  | [STARTUP] Database schema initialized
+0|command-comms  | [STARTUP] DB State: 5 users, 3 channels (3 enabled), 3 zones, 6 active sessions
+0|command-comms  | [STARTUP] Channels list:
+0|command-comms  |   [ON ] id=169 "DISPATCH" zone="DISPATCH" room_key="DISPATCH__DISPATCH"
+0|command-comms  |   [ON ] id=170 "OPS-1" zone="OPS" room_key="OPS__OPS-1"
+0|command-comms  |   [ON ] id=534 "OPS-1" zone="PHILADELPHIA" room_key="PHILADELPHIA__OPS-1"
+0|command-comms  | [Signaling] Socket.IO signaling server initialized
+0|command-comms  | Signaling service initialized
+0|command-comms  | Audio relay service started on UDP port 5100
+0|command-comms  | [WsAudioBridge] Attached to HTTP server on /api/audio-ws
+0|command-comms  | WebSocket audio bridge attached
+0|command-comms  | [AudioRelay] Socket error: bind EADDRINUSE 0.0.0.0:5100
+0|command-comms  | Auto-starting AI Dispatcher on channel: DISPATCH (room: DISPATCH__DISPATCH)
+0|command-comms  | [AI-Dispatcher] 2026-03-27T14:48:19.220Z | CONFIG_STATUS {"azureSpeech":true,"llm":true}
+0|command-comms  | [AI-Dispatcher] 2026-03-27T14:48:19.232Z | CHANNEL_ALIASES_RESOLVED {"aliases":["DISPATCH","DISPATCH__DISPATCH","169"],"numericId":169}
+0|command-comms  | [AI-Dispatcher] 2026-03-27T14:48:19.239Z | STARTED_STANDBY {"channel":"DISPATCH","roomKey":"DISPATCH__DISPATCH","numericId":169,"aliases":["DISPATCH","DISPATCH__DISPATCH","169"],"mode":"on-demand"}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-27T14:48:19.241Z | INITIALIZED {"channels":[]}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-27T14:48:19.241Z | CHANNEL_ACTIVATED {"channelId":"DISPATCH"}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-27T14:48:19.242Z | CHANNEL_ACTIVATED {"channelId":"DISPATCH__DISPATCH"}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-27T14:48:19.242Z | CHANNEL_ACTIVATED {"channelId":"169"}
+0|command-comms  | [AI-Dispatcher] Signaling integration setup for channel: DISPATCH__DISPATCH (aliases: DISPATCH, DISPATCH__DISPATCH, 169)
+0|command-comms  | Error: listen EADDRINUSE: address already in use 0.0.0.0:3001
+0|command-comms  |     at Server.setupListenHandle [as _listen2] (node:net:1908:16)
+0|command-comms  |     at listenInCluster (node:net:1965:12)
+0|command-comms  |     at doListen (node:net:2139:7)
+0|command-comms  |     at process.processTicksAndRejections (node:internal/process/task_queues:83:21) {
+0|command-comms  |   code: 'EADDRINUSE',
+0|command-comms  |   errno: -98,
+0|command-comms  |   syscall: 'listen',
+0|command-comms  |   address: '0.0.0.0',
+0|command-comms  |   port: 3001
+0|command-comms  | }
+PM2              | App [command-comms:0] exited with code [1] via signal [SIGINT]
+PM2              | App [command-comms:0] starting in -fork mode-
+PM2              | App [command-comms:0] online
+0|command-comms  | [BUILD] version=29cdec2 built=2026-03-27T14:48:20.094Z
+0|command-comms  | Database initialized successfully
+0|command-comms  | [STARTUP] Database schema initialized
+0|command-comms  | [STARTUP] DB State: 5 users, 3 channels (3 enabled), 3 zones, 6 active sessions
+0|command-comms  | [STARTUP] Channels list:
+0|command-comms  |   [ON ] id=169 "DISPATCH" zone="DISPATCH" room_key="DISPATCH__DISPATCH"
+0|command-comms  |   [ON ] id=170 "OPS-1" zone="OPS" room_key="OPS__OPS-1"
+0|command-comms  |   [ON ] id=534 "OPS-1" zone="PHILADELPHIA" room_key="PHILADELPHIA__OPS-1"
+0|command-comms  | [Signaling] Socket.IO signaling server initialized
+0|command-comms  | Signaling service initialized
+0|command-comms  | Audio relay service started on UDP port 5100
+0|command-comms  | [WsAudioBridge] Attached to HTTP server on /api/audio-ws
+0|command-comms  | WebSocket audio bridge attached
+0|command-comms  | [AudioRelay] Socket error: bind EADDRINUSE 0.0.0.0:5100
+0|command-comms  | Auto-starting AI Dispatcher on channel: DISPATCH (room: DISPATCH__DISPATCH)
+0|command-comms  | [AI-Dispatcher] 2026-03-27T14:48:20.608Z | CONFIG_STATUS {"azureSpeech":true,"llm":true}
+0|command-comms  | [AI-Dispatcher] 2026-03-27T14:48:20.622Z | CHANNEL_ALIASES_RESOLVED {"aliases":["DISPATCH","DISPATCH__DISPATCH","169"],"numericId":169}
+0|command-comms  | [AI-Dispatcher] 2026-03-27T14:48:20.631Z | STARTED_STANDBY {"channel":"DISPATCH","roomKey":"DISPATCH__DISPATCH","numericId":169,"aliases":["DISPATCH","DISPATCH__DISPATCH","169"],"mode":"on-demand"}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-27T14:48:20.633Z | INITIALIZED {"channels":[]}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-27T14:48:20.633Z | CHANNEL_ACTIVATED {"channelId":"DISPATCH"}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-27T14:48:20.633Z | CHANNEL_ACTIVATED {"channelId":"DISPATCH__DISPATCH"}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-27T14:48:20.633Z | CHANNEL_ACTIVATED {"channelId":"169"}
+0|command-comms  | [AI-Dispatcher] Signaling integration setup for channel: DISPATCH__DISPATCH (aliases: DISPATCH, DISPATCH__DISPATCH, 169)
+0|command-comms  | Error: listen EADDRINUSE: address already in use 0.0.0.0:3001
+0|command-comms  |     at Server.setupListenHandle [as _listen2] (node:net:1908:16)
+0|command-comms  |     at listenInCluster (node:net:1965:12)
+0|command-comms  |     at doListen (node:net:2139:7)
+0|command-comms  |     at process.processTicksAndRejections (node:internal/process/task_queues:83:21) {
+0|command-comms  |   code: 'EADDRINUSE',
+0|command-comms  |   errno: -98,
+0|command-comms  |   syscall: 'listen',
+0|command-comms  |   address: '0.0.0.0',
+0|command-comms  |   port: 3001
+0|command-comms  | }
+PM2              | App [command-comms:0] exited with code [1] via signal [SIGINT]
+PM2              | App [command-comms:0] starting in -fork mode-
+PM2              | App [command-comms:0] online
+0|command-comms  | [BUILD] version=29cdec2 built=2026-03-27T14:48:21.486Z
+0|command-comms  | Database initialized successfully
+0|command-comms  | [STARTUP] Database schema initialized
+0|command-comms  | [STARTUP] DB State: 5 users, 3 channels (3 enabled), 3 zones, 6 active sessions
+0|command-comms  | [STARTUP] Channels list:
+0|command-comms  |   [ON ] id=169 "DISPATCH" zone="DISPATCH" room_key="DISPATCH__DISPATCH"
+0|command-comms  |   [ON ] id=170 "OPS-1" zone="OPS" room_key="OPS__OPS-1"
+0|command-comms  |   [ON ] id=534 "OPS-1" zone="PHILADELPHIA" room_key="PHILADELPHIA__OPS-1"
+0|command-comms  | [Signaling] Socket.IO signaling server initialized
+0|command-comms  | Signaling service initialized
+0|command-comms  | Audio relay service started on UDP port 5100
+0|command-comms  | [WsAudioBridge] Attached to HTTP server on /api/audio-ws
+0|command-comms  | WebSocket audio bridge attached
+0|command-comms  | [AudioRelay] Socket error: bind EADDRINUSE 0.0.0.0:5100
+0|command-comms  | Auto-starting AI Dispatcher on channel: DISPATCH (room: DISPATCH__DISPATCH)
+0|command-comms  | [AI-Dispatcher] 2026-03-27T14:48:21.999Z | CONFIG_STATUS {"azureSpeech":true,"llm":true}
+0|command-comms  | [AI-Dispatcher] 2026-03-27T14:48:22.012Z | CHANNEL_ALIASES_RESOLVED {"aliases":["DISPATCH","DISPATCH__DISPATCH","169"],"numericId":169}
+0|command-comms  | [AI-Dispatcher] 2026-03-27T14:48:22.020Z | STARTED_STANDBY {"channel":"DISPATCH","roomKey":"DISPATCH__DISPATCH","numericId":169,"aliases":["DISPATCH","DISPATCH__DISPATCH","169"],"mode":"on-demand"}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-27T14:48:22.022Z | INITIALIZED {"channels":[]}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-27T14:48:22.022Z | CHANNEL_ACTIVATED {"channelId":"DISPATCH"}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-27T14:48:22.023Z | CHANNEL_ACTIVATED {"channelId":"DISPATCH__DISPATCH"}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-27T14:48:22.023Z | CHANNEL_ACTIVATED {"channelId":"169"}
+0|command-comms  | [AI-Dispatcher] Signaling integration setup for channel: DISPATCH__DISPATCH (aliases: DISPATCH, DISPATCH__DISPATCH, 169)
+0|command-comms  | Error: listen EADDRINUSE: address already in use 0.0.0.0:3001
+0|command-comms  |     at Server.setupListenHandle [as _listen2] (node:net:1908:16)
+0|command-comms  |     at listenInCluster (node:net:1965:12)
+0|command-comms  |     at doListen (node:net:2139:7)
+0|command-comms  |     at process.processTicksAndRejections (node:internal/process/task_queues:83:21) {
+0|command-comms  |   code: 'EADDRINUSE',
+0|command-comms  |   errno: -98,
+0|command-comms  |   syscall: 'listen',
+0|command-comms  |   address: '0.0.0.0',
+0|command-comms  |   port: 3001
+0|command-comms  | }
+PM2              | App [command-comms:0] exited with code [1] via signal [SIGINT]
+PM2              | App [command-comms:0] starting in -fork mode-
+PM2              | App [command-comms:0] online
+0|command-comms  | [BUILD] version=29cdec2 built=2026-03-27T14:48:22.839Z
+0|command-comms  | Database initialized successfully
+0|command-comms  | [STARTUP] Database schema initialized
+0|command-comms  | [STARTUP] DB State: 5 users, 3 channels (3 enabled), 3 zones, 6 active sessions
+0|command-comms  | [STARTUP] Channels list:
+0|command-comms  |   [ON ] id=169 "DISPATCH" zone="DISPATCH" room_key="DISPATCH__DISPATCH"
+0|command-comms  |   [ON ] id=170 "OPS-1" zone="OPS" room_key="OPS__OPS-1"
+0|command-comms  |   [ON ] id=534 "OPS-1" zone="PHILADELPHIA" room_key="PHILADELPHIA__OPS-1"
+0|command-comms  | [Signaling] Socket.IO signaling server initialized
+0|command-comms  | Signaling service initialized
+0|command-comms  | Audio relay service started on UDP port 5100
+0|command-comms  | [WsAudioBridge] Attached to HTTP server on /api/audio-ws
+0|command-comms  | WebSocket audio bridge attached
+0|command-comms  | [AudioRelay] Socket error: bind EADDRINUSE 0.0.0.0:5100
+0|command-comms  | Auto-starting AI Dispatcher on channel: DISPATCH (room: DISPATCH__DISPATCH)
+0|command-comms  | [AI-Dispatcher] 2026-03-27T14:48:23.348Z | CONFIG_STATUS {"azureSpeech":true,"llm":true}
+0|command-comms  | [AI-Dispatcher] 2026-03-27T14:48:23.361Z | CHANNEL_ALIASES_RESOLVED {"aliases":["DISPATCH","DISPATCH__DISPATCH","169"],"numericId":169}
+0|command-comms  | [AI-Dispatcher] 2026-03-27T14:48:23.369Z | STARTED_STANDBY {"channel":"DISPATCH","roomKey":"DISPATCH__DISPATCH","numericId":169,"aliases":["DISPATCH","DISPATCH__DISPATCH","169"],"mode":"on-demand"}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-27T14:48:23.371Z | INITIALIZED {"channels":[]}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-27T14:48:23.371Z | CHANNEL_ACTIVATED {"channelId":"DISPATCH"}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-27T14:48:23.371Z | CHANNEL_ACTIVATED {"channelId":"DISPATCH__DISPATCH"}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-27T14:48:23.371Z | CHANNEL_ACTIVATED {"channelId":"169"}
+0|command-comms  | [AI-Dispatcher] Signaling integration setup for channel: DISPATCH__DISPATCH (aliases: DISPATCH, DISPATCH__DISPATCH, 169)
+0|command-comms  | Error: listen EADDRINUSE: address already in use 0.0.0.0:3001
+0|command-comms  |     at Server.setupListenHandle [as _listen2] (node:net:1908:16)
+0|command-comms  |     at listenInCluster (node:net:1965:12)
+0|command-comms  |     at doListen (node:net:2139:7)
+0|command-comms  |     at process.processTicksAndRejections (node:internal/process/task_queues:83:21) {
+0|command-comms  |   code: 'EADDRINUSE',
+0|command-comms  |   errno: -98,
+0|command-comms  |   syscall: 'listen',
+0|command-comms  |   address: '0.0.0.0',
+0|command-comms  |   port: 3001
+0|command-comms  | }
+PM2              | App [command-comms:0] exited with code [1] via signal [SIGINT]
+PM2              | App [command-comms:0] starting in -fork mode-
+PM2              | App [command-comms:0] online
+0|command-comms  | [BUILD] version=29cdec2 built=2026-03-27T14:48:24.214Z
+0|command-comms  | Database initialized successfully
+0|command-comms  | [STARTUP] Database schema initialized
+^C
+Jreeder5029@CommandComms:~$ pm2 stop all
+[PM2] Applying action stopProcessId on app [all](ids: [ 0 ])
+[PM2] [command-comms](0) ✓
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+├────┼────────────────────┼──────────┼──────┼───────────┼──────────┼──────────┤
+│ 0  │ command-comms      │ fork     │ 618… │ stopped   │ 0%       │ 0b       │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+Jreeder5029@CommandComms:~$ fuser -k 3001/tcp; fuser -k 5100/udp
+Jreeder5029@CommandComms:~$ sleep 2
+Jreeder5029@CommandComms:~$ pm2 start command-comms
+[PM2] Applying action restartProcessId on app [command-comms](ids: [ 0 ])
+[PM2] [command-comms](0) ✓
+[PM2] Process successfully started
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+├────┼────────────────────┼──────────┼──────┼───────────┼──────────┼──────────┤
+│ 0  │ command-comms      │ fork     │ 618… │ online    │ 0%       │ 18.4mb   │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+Jreeder5029@CommandComms:~$ pm2 logs
+[TAILING] Tailing last 15 lines for [all] processes (change the value with --lines option)
+/home/Jreeder5029/.pm2/pm2.log last 15 lines:
+PM2        | 2026-03-27T14:50:30: PM2 log: App [command-comms:0] exited with code [1] via signal [SIGINT]
+PM2        | 2026-03-27T14:50:30: PM2 log: App [command-comms:0] starting in -fork mode-
+PM2        | 2026-03-27T14:50:30: PM2 log: App [command-comms:0] online
+PM2        | 2026-03-27T14:50:32: PM2 log: App [command-comms:0] exited with code [1] via signal [SIGINT]
+PM2        | 2026-03-27T14:50:32: PM2 log: App [command-comms:0] starting in -fork mode-
+PM2        | 2026-03-27T14:50:32: PM2 log: App [command-comms:0] online
+PM2        | 2026-03-27T14:50:33: PM2 log: App [command-comms:0] exited with code [1] via signal [SIGINT]
+PM2        | 2026-03-27T14:50:33: PM2 log: App [command-comms:0] starting in -fork mode-
+PM2        | 2026-03-27T14:50:33: PM2 log: App [command-comms:0] online
+PM2        | 2026-03-27T14:50:34: PM2 log: App [command-comms:0] exited with code [1] via signal [SIGINT]
+PM2        | 2026-03-27T14:50:34: PM2 log: App [command-comms:0] starting in -fork mode-
+PM2        | 2026-03-27T14:50:34: PM2 log: App [command-comms:0] online
+PM2        | 2026-03-27T14:50:36: PM2 log: App [command-comms:0] exited with code [1] via signal [SIGINT]
+PM2        | 2026-03-27T14:50:36: PM2 log: App [command-comms:0] starting in -fork mode-
+PM2        | 2026-03-27T14:50:36: PM2 log: App [command-comms:0] online
+
+/home/Jreeder5029/.pm2/logs/command-comms-out.log last 15 lines:
+0|command- |   [ON ] id=534 "OPS-1" zone="PHILADELPHIA" room_key="PHILADELPHIA__OPS-1"
+0|command- | [Signaling] Socket.IO signaling server initialized
+0|command- | Signaling service initialized
+0|command- | Audio relay service started on UDP port 5100
+0|command- | [WsAudioBridge] Attached to HTTP server on /api/audio-ws
+0|command- | WebSocket audio bridge attached
+0|command- | Auto-starting AI Dispatcher on channel: DISPATCH (room: DISPATCH__DISPATCH)
+0|command- | [AI-Dispatcher] 2026-03-27T14:50:36.071Z | CONFIG_STATUS {"azureSpeech":true,"llm":true}
+0|command- | [AI-Dispatcher] 2026-03-27T14:50:36.084Z | CHANNEL_ALIASES_RESOLVED {"aliases":["DISPATCH","DISPATCH__DISPATCH","169"],"numericId":169}
+0|command- | [AI-Dispatcher] 2026-03-27T14:50:36.092Z | STARTED_STANDBY {"channel":"DISPATCH","roomKey":"DISPATCH__DISPATCH","numericId":169,"aliases":["DISPATCH","DISPATCH__DISPATCH","169"],"mode":"on-demand"}
+0|command- | [AI-Dispatcher-Signaling] 2026-03-27T14:50:36.094Z | INITIALIZED {"channels":[]}
+0|command- | [AI-Dispatcher-Signaling] 2026-03-27T14:50:36.094Z | CHANNEL_ACTIVATED {"channelId":"DISPATCH"}
+0|command- | [AI-Dispatcher-Signaling] 2026-03-27T14:50:36.094Z | CHANNEL_ACTIVATED {"channelId":"DISPATCH__DISPATCH"}
+0|command- | [AI-Dispatcher-Signaling] 2026-03-27T14:50:36.094Z | CHANNEL_ACTIVATED {"channelId":"169"}
+0|command- | [AI-Dispatcher] Signaling integration setup for channel: DISPATCH__DISPATCH (aliases: DISPATCH, DISPATCH__DISPATCH, 169)
+
+/home/Jreeder5029/.pm2/logs/command-comms-error.log last 15 lines:
+0|command- |   address: '0.0.0.0',
+0|command- |   port: 3001
+0|command- | }
+0|command- | [AudioRelay] Socket error: bind EADDRINUSE 0.0.0.0:5100
+0|command- | Error: listen EADDRINUSE: address already in use 0.0.0.0:3001
+0|command- |     at Server.setupListenHandle [as _listen2] (node:net:1908:16)
+0|command- |     at listenInCluster (node:net:1965:12)
+0|command- |     at doListen (node:net:2139:7)
+0|command- |     at process.processTicksAndRejections (node:internal/process/task_queues:83:21) {
+0|command- |   code: 'EADDRINUSE',
+0|command- |   errno: -98,
+0|command- |   syscall: 'listen',
+0|command- |   address: '0.0.0.0',
+0|command- |   port: 3001
+0|command- | }
+
+0|command-comms  | [BUILD] version=29cdec2 built=2026-03-27T14:50:37.031Z
+0|command-comms  | Database initialized successfully
+0|command-comms  | [STARTUP] Database schema initialized
+0|command-comms  | [STARTUP] DB State: 5 users, 3 channels (3 enabled), 3 zones, 6 active sessions
+0|command-comms  | [STARTUP] Channels list:
+0|command-comms  |   [ON ] id=169 "DISPATCH" zone="DISPATCH" room_key="DISPATCH__DISPATCH"
+0|command-comms  |   [ON ] id=170 "OPS-1" zone="OPS" room_key="OPS__OPS-1"
+0|command-comms  |   [ON ] id=534 "OPS-1" zone="PHILADELPHIA" room_key="PHILADELPHIA__OPS-1"
+0|command-comms  | [Signaling] Socket.IO signaling server initialized
+0|command-comms  | Signaling service initialized
+0|command-comms  | Audio relay service started on UDP port 5100
+0|command-comms  | [WsAudioBridge] Attached to HTTP server on /api/audio-ws
+0|command-comms  | WebSocket audio bridge attached
+0|command-comms  | [AudioRelay] Socket error: bind EADDRINUSE 0.0.0.0:5100
+0|command-comms  | Auto-starting AI Dispatcher on channel: DISPATCH (room: DISPATCH__DISPATCH)
+0|command-comms  | [AI-Dispatcher] 2026-03-27T14:50:37.524Z | CONFIG_STATUS {"azureSpeech":true,"llm":true}
+0|command-comms  | [AI-Dispatcher] 2026-03-27T14:50:37.536Z | CHANNEL_ALIASES_RESOLVED {"aliases":["DISPATCH","DISPATCH__DISPATCH","169"],"numericId":169}
+0|command-comms  | [AI-Dispatcher] 2026-03-27T14:50:37.544Z | STARTED_STANDBY {"channel":"DISPATCH","roomKey":"DISPATCH__DISPATCH","numericId":169,"aliases":["DISPATCH","DISPATCH__DISPATCH","169"],"mode":"on-demand"}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-27T14:50:37.546Z | INITIALIZED {"channels":[]}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-27T14:50:37.546Z | CHANNEL_ACTIVATED {"channelId":"DISPATCH"}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-27T14:50:37.546Z | CHANNEL_ACTIVATED {"channelId":"DISPATCH__DISPATCH"}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-27T14:50:37.546Z | CHANNEL_ACTIVATED {"channelId":"169"}
+0|command-comms  | [AI-Dispatcher] Signaling integration setup for channel: DISPATCH__DISPATCH (aliases: DISPATCH, DISPATCH__DISPATCH, 169)
+0|command-comms  | Error: listen EADDRINUSE: address already in use 0.0.0.0:3001
+0|command-comms  |     at Server.setupListenHandle [as _listen2] (node:net:1908:16)
+0|command-comms  |     at listenInCluster (node:net:1965:12)
+0|command-comms  |     at doListen (node:net:2139:7)
+0|command-comms  |     at process.processTicksAndRejections (node:internal/process/task_queues:83:21) {
+0|command-comms  |   code: 'EADDRINUSE',
+0|command-comms  |   errno: -98,
+0|command-comms  |   syscall: 'listen',
+0|command-comms  |   address: '0.0.0.0',
+0|command-comms  |   port: 3001
+0|command-comms  | }
+PM2              | App [command-comms:0] exited with code [1] via signal [SIGINT]
+PM2              | App [command-comms:0] starting in -fork mode-
+PM2              | App [command-comms:0] online
+0|command-comms  | [BUILD] version=29cdec2 built=2026-03-27T14:50:38.370Z
+0|command-comms  | Database initialized successfully
+0|command-comms  | [STARTUP] Database schema initialized
+0|command-comms  | [STARTUP] DB State: 5 users, 3 channels (3 enabled), 3 zones, 6 active sessions
+0|command-comms  | [STARTUP] Channels list:
+0|command-comms  |   [ON ] id=169 "DISPATCH" zone="DISPATCH" room_key="DISPATCH__DISPATCH"
+0|command-comms  |   [ON ] id=170 "OPS-1" zone="OPS" room_key="OPS__OPS-1"
+0|command-comms  |   [ON ] id=534 "OPS-1" zone="PHILADELPHIA" room_key="PHILADELPHIA__OPS-1"
+0|command-comms  | [Signaling] Socket.IO signaling server initialized
+0|command-comms  | Signaling service initialized
+0|command-comms  | Audio relay service started on UDP port 5100
+0|command-comms  | [WsAudioBridge] Attached to HTTP server on /api/audio-ws
+0|command-comms  | WebSocket audio bridge attached
+0|command-comms  | [AudioRelay] Socket error: bind EADDRINUSE 0.0.0.0:5100
+0|command-comms  | Auto-starting AI Dispatcher on channel: DISPATCH (room: DISPATCH__DISPATCH)
+0|command-comms  | [AI-Dispatcher] 2026-03-27T14:50:38.870Z | CONFIG_STATUS {"azureSpeech":true,"llm":true}
+0|command-comms  | [AI-Dispatcher] 2026-03-27T14:50:38.882Z | CHANNEL_ALIASES_RESOLVED {"aliases":["DISPATCH","DISPATCH__DISPATCH","169"],"numericId":169}
+0|command-comms  | [AI-Dispatcher] 2026-03-27T14:50:38.890Z | STARTED_STANDBY {"channel":"DISPATCH","roomKey":"DISPATCH__DISPATCH","numericId":169,"aliases":["DISPATCH","DISPATCH__DISPATCH","169"],"mode":"on-demand"}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-27T14:50:38.892Z | INITIALIZED {"channels":[]}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-27T14:50:38.892Z | CHANNEL_ACTIVATED {"channelId":"DISPATCH"}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-27T14:50:38.892Z | CHANNEL_ACTIVATED {"channelId":"DISPATCH__DISPATCH"}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-27T14:50:38.892Z | CHANNEL_ACTIVATED {"channelId":"169"}
+0|command-comms  | [AI-Dispatcher] Signaling integration setup for channel: DISPATCH__DISPATCH (aliases: DISPATCH, DISPATCH__DISPATCH, 169)
+0|command-comms  | Error: listen EADDRINUSE: address already in use 0.0.0.0:3001
+0|command-comms  |     at Server.setupListenHandle [as _listen2] (node:net:1908:16)
+0|command-comms  |     at listenInCluster (node:net:1965:12)
+0|command-comms  |     at doListen (node:net:2139:7)
+0|command-comms  |     at process.processTicksAndRejections (node:internal/process/task_queues:83:21) {
+0|command-comms  |   code: 'EADDRINUSE',
+0|command-comms  |   errno: -98,
+0|command-comms  |   syscall: 'listen',
+0|command-comms  |   address: '0.0.0.0',
+0|command-comms  |   port: 3001
+0|command-comms  | }
+PM2              | App [command-comms:0] exited with code [1] via signal [SIGINT]
+PM2              | App [command-comms:0] starting in -fork mode-
+PM2              | App [command-comms:0] online
+0|command-comms  | [BUILD] version=29cdec2 built=2026-03-27T14:50:39.710Z
+0|command-comms  | Database initialized successfully
+0|command-comms  | [STARTUP] Database schema initialized
+0|command-comms  | [STARTUP] DB State: 5 users, 3 channels (3 enabled), 3 zones, 6 active sessions
+0|command-comms  | [STARTUP] Channels list:
+0|command-comms  |   [ON ] id=169 "DISPATCH" zone="DISPATCH" room_key="DISPATCH__DISPATCH"
+0|command-comms  |   [ON ] id=170 "OPS-1" zone="OPS" room_key="OPS__OPS-1"
+0|command-comms  |   [ON ] id=534 "OPS-1" zone="PHILADELPHIA" room_key="PHILADELPHIA__OPS-1"
+0|command-comms  | [Signaling] Socket.IO signaling server initialized
+0|command-comms  | Signaling service initialized
+0|command-comms  | Audio relay service started on UDP port 5100
+0|command-comms  | [WsAudioBridge] Attached to HTTP server on /api/audio-ws
+0|command-comms  | WebSocket audio bridge attached
+0|command-comms  | [AudioRelay] Socket error: bind EADDRINUSE 0.0.0.0:5100
+0|command-comms  | Auto-starting AI Dispatcher on channel: DISPATCH (room: DISPATCH__DISPATCH)
+0|command-comms  | [AI-Dispatcher] 2026-03-27T14:50:40.217Z | CONFIG_STATUS {"azureSpeech":true,"llm":true}
+0|command-comms  | [AI-Dispatcher] 2026-03-27T14:50:40.230Z | CHANNEL_ALIASES_RESOLVED {"aliases":["DISPATCH","DISPATCH__DISPATCH","169"],"numericId":169}
+0|command-comms  | [AI-Dispatcher] 2026-03-27T14:50:40.238Z | STARTED_STANDBY {"channel":"DISPATCH","roomKey":"DISPATCH__DISPATCH","numericId":169,"aliases":["DISPATCH","DISPATCH__DISPATCH","169"],"mode":"on-demand"}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-27T14:50:40.240Z | INITIALIZED {"channels":[]}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-27T14:50:40.240Z | CHANNEL_ACTIVATED {"channelId":"DISPATCH"}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-27T14:50:40.240Z | CHANNEL_ACTIVATED {"channelId":"DISPATCH__DISPATCH"}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-27T14:50:40.240Z | CHANNEL_ACTIVATED {"channelId":"169"}
+0|command-comms  | [AI-Dispatcher] Signaling integration setup for channel: DISPATCH__DISPATCH (aliases: DISPATCH, DISPATCH__DISPATCH, 169)
+0|command-comms  | Error: listen EADDRINUSE: address already in use 0.0.0.0:3001
+0|command-comms  |     at Server.setupListenHandle [as _listen2] (node:net:1908:16)
+0|command-comms  |     at listenInCluster (node:net:1965:12)
+0|command-comms  |     at doListen (node:net:2139:7)
+0|command-comms  |     at process.processTicksAndRejections (node:internal/process/task_queues:83:21) {
+0|command-comms  |   code: 'EADDRINUSE',
+0|command-comms  |   errno: -98,
+0|command-comms  |   syscall: 'listen',
+0|command-comms  |   address: '0.0.0.0',
+0|command-comms  |   port: 3001
+0|command-comms  | }
+PM2              | App [command-comms:0] exited with code [1] via signal [SIGINT]
+PM2              | App [command-comms:0] starting in -fork mode-
+PM2              | App [command-comms:0] online
+0|command-comms  | [BUILD] version=29cdec2 built=2026-03-27T14:50:41.071Z
+0|command-comms  | Database initialized successfully
+0|command-comms  | [STARTUP] Database schema initialized
+0|command-comms  | [STARTUP] DB State: 5 users, 3 channels (3 enabled), 3 zones, 6 active sessions
+0|command-comms  | [STARTUP] Channels list:
+0|command-comms  |   [ON ] id=169 "DISPATCH" zone="DISPATCH" room_key="DISPATCH__DISPATCH"
+0|command-comms  |   [ON ] id=170 "OPS-1" zone="OPS" room_key="OPS__OPS-1"
+0|command-comms  |   [ON ] id=534 "OPS-1" zone="PHILADELPHIA" room_key="PHILADELPHIA__OPS-1"
+0|command-comms  | [Signaling] Socket.IO signaling server initialized
+0|command-comms  | Signaling service initialized
+0|command-comms  | Audio relay service started on UDP port 5100
+0|command-comms  | [WsAudioBridge] Attached to HTTP server on /api/audio-ws
+0|command-comms  | WebSocket audio bridge attached
+0|command-comms  | [AudioRelay] Socket error: bind EADDRINUSE 0.0.0.0:5100
+0|command-comms  | Auto-starting AI Dispatcher on channel: DISPATCH (room: DISPATCH__DISPATCH)
+0|command-comms  | [AI-Dispatcher] 2026-03-27T14:50:41.592Z | CONFIG_STATUS {"azureSpeech":true,"llm":true}
+0|command-comms  | [AI-Dispatcher] 2026-03-27T14:50:41.605Z | CHANNEL_ALIASES_RESOLVED {"aliases":["DISPATCH","DISPATCH__DISPATCH","169"],"numericId":169}
+0|command-comms  | [AI-Dispatcher] 2026-03-27T14:50:41.613Z | STARTED_STANDBY {"channel":"DISPATCH","roomKey":"DISPATCH__DISPATCH","numericId":169,"aliases":["DISPATCH","DISPATCH__DISPATCH","169"],"mode":"on-demand"}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-27T14:50:41.615Z | INITIALIZED {"channels":[]}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-27T14:50:41.615Z | CHANNEL_ACTIVATED {"channelId":"DISPATCH"}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-27T14:50:41.615Z | CHANNEL_ACTIVATED {"channelId":"DISPATCH__DISPATCH"}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-27T14:50:41.616Z | CHANNEL_ACTIVATED {"channelId":"169"}
+0|command-comms  | [AI-Dispatcher] Signaling integration setup for channel: DISPATCH__DISPATCH (aliases: DISPATCH, DISPATCH__DISPATCH, 169)
+0|command-comms  | Error: listen EADDRINUSE: address already in use 0.0.0.0:3001
+0|command-comms  |     at Server.setupListenHandle [as _listen2] (node:net:1908:16)
+0|command-comms  |     at listenInCluster (node:net:1965:12)
+0|command-comms  |     at doListen (node:net:2139:7)
+0|command-comms  |     at process.processTicksAndRejections (node:internal/process/task_queues:83:21) {
+0|command-comms  |   code: 'EADDRINUSE',
+0|command-comms  |   errno: -98,
+0|command-comms  |   syscall: 'listen',
+0|command-comms  |   address: '0.0.0.0',
+0|command-comms  |   port: 3001
+0|command-comms  | }
+PM2              | App [command-comms:0] exited with code [1] via signal [SIGINT]
+PM2              | App [command-comms:0] starting in -fork mode-
+PM2              | App [command-comms:0] online
+0|command-comms  | [BUILD] version=29cdec2 built=2026-03-27T14:50:42.458Z
+0|command-comms  | Database initialized successfully
+0|command-comms  | [STARTUP] Database schema initialized
+0|command-comms  | [STARTUP] DB State: 5 users, 3 channels (3 enabled), 3 zones, 6 active sessions
+0|command-comms  | [STARTUP] Channels list:
+0|command-comms  |   [ON ] id=169 "DISPATCH" zone="DISPATCH" room_key="DISPATCH__DISPATCH"
+0|command-comms  |   [ON ] id=170 "OPS-1" zone="OPS" room_key="OPS__OPS-1"
+0|command-comms  |   [ON ] id=534 "OPS-1" zone="PHILADELPHIA" room_key="PHILADELPHIA__OPS-1"
+0|command-comms  | [Signaling] Socket.IO signaling server initialized
+0|command-comms  | Signaling service initialized
+0|command-comms  | Audio relay service started on UDP port 5100
+0|command-comms  | [WsAudioBridge] Attached to HTTP server on /api/audio-ws
+0|command-comms  | WebSocket audio bridge attached
+0|command-comms  | [AudioRelay] Socket error: bind EADDRINUSE 0.0.0.0:5100
+0|command-comms  | Auto-starting AI Dispatcher on channel: DISPATCH (room: DISPATCH__DISPATCH)
+0|command-comms  | [AI-Dispatcher] 2026-03-27T14:50:42.960Z | CONFIG_STATUS {"azureSpeech":true,"llm":true}
+0|command-comms  | [AI-Dispatcher] 2026-03-27T14:50:42.973Z | CHANNEL_ALIASES_RESOLVED {"aliases":["DISPATCH","DISPATCH__DISPATCH","169"],"numericId":169}
+0|command-comms  | [AI-Dispatcher] 2026-03-27T14:50:42.981Z | STARTED_STANDBY {"channel":"DISPATCH","roomKey":"DISPATCH__DISPATCH","numericId":169,"aliases":["DISPATCH","DISPATCH__DISPATCH","169"],"mode":"on-demand"}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-27T14:50:42.983Z | INITIALIZED {"channels":[]}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-27T14:50:42.983Z | CHANNEL_ACTIVATED {"channelId":"DISPATCH"}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-27T14:50:42.983Z | CHANNEL_ACTIVATED {"channelId":"DISPATCH__DISPATCH"}
+0|command-comms  | [AI-Dispatcher-Signaling] 2026-03-27T14:50:42.983Z | CHANNEL_ACTIVATED {"channelId":"169"}
+0|command-comms  | [AI-Dispatcher] Signaling integration setup for channel: DISPATCH__DISPATCH (aliases: DISPATCH, DISPATCH__DISPATCH, 169)
+0|command-comms  | Error: listen EADDRINUSE: address already in use 0.0.0.0:3001
+0|command-comms  |     at Server.setupListenHandle [as _listen2] (node:net:1908:16)
+0|command-comms  |     at listenInCluster (node:net:1965:12)
+0|command-comms  |     at doListen (node:net:2139:7)
+0|command-comms  |     at process.processTicksAndRejections (node:internal/process/task_queues:83:21) {
+0|command-comms  |   code: 'EADDRINUSE',
+0|command-comms  |   errno: -98,
+0|command-comms  |   syscall: 'listen',
+0|command-comms  |   address: '0.0.0.0',
+0|command-comms  |   port: 3001
+0|command-comms  | }
+PM2              | App [command-comms:0] exited with code [1] via signal [SIGINT]
+PM2              | App [command-comms:0] starting in -fork mode-
+PM2              | App [command-comms:0] online
+^C
