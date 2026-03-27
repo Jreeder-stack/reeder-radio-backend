@@ -110,12 +110,13 @@ async function start() {
   setupGracefulShutdown(httpServer);
 }
 
-function listenWithRetry(server, port, host, retries = 3, delay = 2000) {
+function listenWithRetry(server, port, host, retries = 3, delay = 3000) {
   return new Promise((resolve, reject) => {
     const attempt = (remaining) => {
       const onError = (err) => {
         if (err.code === 'EADDRINUSE' && remaining > 0) {
           console.warn(`[STARTUP] Port ${port} in use, retrying in ${delay}ms (${remaining} attempts left)...`);
+          try { server.close(); } catch (_) {}
           setTimeout(() => attempt(remaining - 1), delay);
         } else {
           reject(err);

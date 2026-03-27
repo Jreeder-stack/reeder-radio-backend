@@ -272,7 +272,7 @@ class AudioRelayService {
     }
   }
 
-  start(port, retries = 3, delay = 2000) {
+  start(port, retries = 3, delay = 3000) {
     this.port = port || this.port;
 
     return new Promise((resolve, reject) => {
