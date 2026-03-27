@@ -8,7 +8,6 @@ import { startDispatcher, getDispatcher } from './services/aiDispatchService.js'
 import { isConfigured as isAzureConfigured } from './services/azureSpeechService.js';
 import { signalingService } from './services/signalingService.js';
 import { audioRelayService } from './services/audioRelayService.js';
-import { wsAudioBridge } from './services/wsAudioBridge.js';
 import { setupRecordingTap } from './services/recordingTapService.js';
 
 let _buildVersion = 'unknown';
@@ -70,7 +69,6 @@ async function start() {
   signalingService.initialize(httpServer);
   console.log('Signaling service initialized');
 
-  wsAudioBridge.attach(httpServer);
   console.log('WebSocket audio bridge attached');
 
   setupRecordingTap(audioRelayService, signalingService);
@@ -157,7 +155,6 @@ function setupGracefulShutdown(httpServer) {
 
     try {
       console.log('[SHUTDOWN] Stopping WebSocket audio bridge...');
-      wsAudioBridge.stop();
     } catch (err) {
       console.error('[SHUTDOWN] WS audio bridge stop error:', err.message);
     }

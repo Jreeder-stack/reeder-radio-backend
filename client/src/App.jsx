@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { micPTTManager } from "./audio/MicPTTManager";
 import { PTT_STATES } from "./constants/pttStates";
 import { updateUnitStatus } from "./utils/api.js";
 import { useLiveKitConnection } from "./context/LiveKitConnectionContext.jsx";
@@ -310,7 +309,7 @@ export default function App({ user, onLogout }) {
         document.body.appendChild(audioElem);
         rxAudioElementsRef.current.add(audioElem);
         
-        const currentState = micPTTManager.getState();
+        const currentState = livekitManager.getState();
         if (currentState === PTT_STATES.TRANSMITTING || currentState === PTT_STATES.ARMING) {
           audioElem.muted = true;
           console.log('[Radio] Muting incoming audio - we are transmitting');
@@ -443,7 +442,7 @@ export default function App({ user, onLogout }) {
             }
             
             // Stop PTT to let AI be heard
-            micPTTManager.forceRelease();
+            livekitManager.forceRelease();
             
             // Unmute receive audio
             rxAudioElementsRef.current.forEach(el => {
@@ -523,7 +522,7 @@ export default function App({ user, onLogout }) {
   }, [emergencyResponseWindow]);
 
   useEffect(() => {
-    micPTTManager.onStateChange = (newState) => {
+    livekitManager.onStateChange = (newState) => {
       setPttState(newState);
       const txChannel = transmitChannelRef.current;
       
@@ -561,7 +560,7 @@ export default function App({ user, onLogout }) {
       if (txAnimationRef.current) cancelAnimationFrame(txAnimationRef.current);
       if (rxAnimationRef.current) cancelAnimationFrame(rxAnimationRef.current);
       if (audioContextRef.current) audioContextRef.current.close();
-      micPTTManager.disconnect();
+      livekitManager.disconnect();
     };
   }, [broadcastStatus, identity, userLocation]);
 
@@ -571,9 +570,9 @@ export default function App({ user, onLogout }) {
         console.log('[Radio PTT] Global release ignored during emergency');
         return;
       }
-      if (!micPTTManager.canStop()) return;
+      if (!livekitManager.canStop()) return;
       console.log('[Radio PTT] Global release detected, event:', e.type);
-      micPTTManager.stop();
+      livekitManager.stop();
     };
 
     const captureOptions = { capture: true, passive: false };
@@ -886,7 +885,7 @@ export default function App({ user, onLogout }) {
     
     console.log('[Radio PTT] === PTT DOWN ===, state:', pttState);
     
-    if (!micPTTManager.canStart()) {
+    if (!livekitManager.canStart()) {
       console.log('[Radio PTT] Ignoring PTT down, not idle');
       return;
     }

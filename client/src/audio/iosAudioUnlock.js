@@ -1,5 +1,4 @@
 import { preloadPermitBuffer } from './talkPermitTone.js';
-import { pcmPlaybackManager } from './PcmPlaybackManager.js';
 
 let unlocked = false;
 let audioContext = null;
@@ -11,7 +10,6 @@ export function isAudioUnlocked() {
 
 export async function unlockAudio() {
   if (unlocked) {
-    pcmPlaybackManager.ensureAudioContextResumed();
     return true;
   }
 
@@ -41,7 +39,6 @@ export async function unlockAudio() {
       console.log('[iOS Audio] Silent buffer played via AudioContext');
     }
 
-    pcmPlaybackManager.ensureAudioContextResumed();
 
     const silentAudio = new Audio();
     silentAudio.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
