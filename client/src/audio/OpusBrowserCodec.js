@@ -104,7 +104,7 @@ class OpusBrowserCodec {
 
       this._inPCM.set(testPcm);
 
-      const encLen = this._encoder._encode(this._inPCM.byteOffset, testPcm.length, this._outOpusPointer, MAX_PACKET_SIZE);
+      const encLen = this._encoder._encode(this._inPCM.byteOffset, MAX_PACKET_SIZE, this._outOpusPointer, FRAME_SIZE);
       if (encLen <= 0) {
         console.error('[OpusBrowserCodec] Self-test encode failed, len=' + encLen);
       } else {
@@ -170,7 +170,7 @@ class OpusBrowserCodec {
 
     this._inPCM.set(pcmInt16);
 
-    const len = this._encoder._encode(this._inPCM.byteOffset, pcmInt16.length, this._outOpusPointer, MAX_PACKET_SIZE);
+    const len = this._encoder._encode(this._inPCM.byteOffset, MAX_PACKET_SIZE, this._outOpusPointer, pcmInt16.length);
     if (len < 0) {
       throw new Error('Opus encode error: ' + len);
     }
