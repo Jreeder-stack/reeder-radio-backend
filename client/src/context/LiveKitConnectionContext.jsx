@@ -260,23 +260,7 @@ export function LiveKitConnectionProvider({ children, user }) {
   }, [scheduleReconnect, recordActivity]);
 
   const preCaptureForMobile = useCallback(async () => {
-    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-    
-    if (!isMobile) return;
-    
-    if (micStreamRef.current) {
-      console.log('[LiveKitConnection] Mobile mic already captured');
-      return;
-    }
-    
-    try {
-      console.log('[LiveKitConnection] Mobile detected - pre-capturing mic for RX audio');
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      micStreamRef.current = stream;
-      console.log('[LiveKitConnection] Mobile mic pre-capture successful');
-    } catch (err) {
-      console.warn('[LiveKitConnection] Mobile mic pre-capture failed:', err.message);
-    }
+    console.log('[AUDIO-REBUILD] Mobile mic pre-capture intentionally disabled during rebuild');
   }, []);
 
   const releaseMobileMic = useCallback(() => {

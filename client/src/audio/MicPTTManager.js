@@ -1,28 +1,18 @@
 import { PTT_STATES } from '../constants/pttStates.js';
 import { playPermitTone, startBonkLoop, stopBonkLoop } from './talkPermitTone.js';
 import { unlockAudio } from './iosAudioUnlock.js';
-import { processRadioVoice, cleanup as cleanupRadioDSP } from './radioVoiceDSP.js';
 import { acquireWakeLock, releaseWakeLock } from '../plugins/backgroundService.js';
 import { isNativeLiveKitAvailable, nativeEnableMic, nativeDisableMic } from '../plugins/nativeLiveKit.js';
-import { getOpusBrowserCodec, initOpusBrowserCodec } from './OpusBrowserCodec.js';
 
 const isNativeAndroid = () => isNativeLiveKitAvailable();
 
 const PTT_COOLDOWN_MS = 500;
 const PTT_READY_TIMEOUT_MS = 5000;
-const PCM_FRAME_SIZE = 960;
 
 class MicPTTManager {
   constructor() {
     this.state = PTT_STATES.IDLE;
-    this.audioContext = null;
-    this.stream = null;
-    this.browserTrack = null;
     this._ws = null;
-    this._captureWorkletNode = null;
-    this._captureWorkletReady = false;
-    this._sourceNode = null;
-    this._txSequence = 0;
     this.onStateChange = null;
     this.onError = null;
     this.onDisconnectDuringTx = null;
@@ -40,11 +30,6 @@ class MicPTTManager {
 
     this._wsResolver = null;
     this._waitingForWs = false;
-    this._txMode = null;
-    this._txFrameCount = 0;
-    this._txDropCount = 0;
-    this._txErrorCount = 0;
-    this._txDropLogged = false;
   }
 
   setSignalingManager(signalingManager) {
@@ -155,16 +140,6 @@ class MicPTTManager {
     });
   }
 
-  _ensureAudioContext() {
-    if (!this.audioContext || this.audioContext.state === 'closed') {
-      this.audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 48000 });
-    }
-    if (this.audioContext.state === 'suspended') {
-      this.audioContext.resume().catch(e => console.warn('[MicPTT] AudioContext resume failed:', e));
-    }
-    return this.audioContext;
-  }
-
   setWsTransport(ws) {
     this._removeWsListeners();
     this._ws = ws;
@@ -182,6 +157,43 @@ class MicPTTManager {
       this.setWsTransport(room.ws);
     } else if (room && typeof room === 'object') {
       this.setWsTransport(room);
+    }
+  }
+
+  _setupWsListeners() {
+    if (!this._ws) return;
+
+    this._wsCloseHandler = () => {
+      console.warn('[MicPTT] WS disconnected during transmission!');
+      this._handleDisconnectDuringTx();
+    };
+
+    this._ws.addEventListener('close', this._wsCloseHandler);
+  }
+
+  _removeWsListeners() {
+    if (this._ws && this._wsCloseHandler) {
+      this._ws.removeEventListener('close', this._wsCloseHandler);
+    }
+    this._wsCloseHandler = null;
+  }
+
+  _handleDisconnectDuringTx() {
+    if (this.state === PTT_STATES.TRANSMITTING || this.state === PTT_STATES.ARMING) {
+      console.error('[MicPTT] Disconnected during active transmission - forcing cleanup');
+
+      if (this.onDisconnectDuringTx) {
+        this.onDisconnectDuringTx();
+      }
+
+      this.forceRelease();
+    }
+  }
+
+  _clearPermitDeadline() {
+    if (this.permitDeadlineTimer) {
+      clearTimeout(this.permitDeadlineTimer);
+      this.permitDeadlineTimer = null;
     }
   }
 
@@ -229,51 +241,6 @@ class MicPTTManager {
     this._wsResolver = null;
   }
 
-  _setupWsListeners() {
-    if (!this._ws) return;
-
-    this._wsCloseHandler = () => {
-      console.warn('[MicPTT] WS disconnected during transmission!');
-      this._handleDisconnectDuringTx();
-    };
-
-    this._ws.addEventListener('close', this._wsCloseHandler);
-  }
-
-  _removeWsListeners() {
-    if (this._ws && this._wsCloseHandler) {
-      this._ws.removeEventListener('close', this._wsCloseHandler);
-    }
-    this._wsCloseHandler = null;
-  }
-
-  _handleDisconnectDuringTx() {
-    if (this.state === PTT_STATES.TRANSMITTING || this.state === PTT_STATES.ARMING) {
-      console.error('[MicPTT] Disconnected during active transmission - forcing cleanup');
-
-      if (this.onDisconnectDuringTx) {
-        this.onDisconnectDuringTx();
-      }
-
-      this.forceRelease();
-    }
-  }
-
-  _clearPermitDeadline() {
-    if (this.permitDeadlineTimer) {
-      clearTimeout(this.permitDeadlineTimer);
-      this.permitDeadlineTimer = null;
-    }
-  }
-
-  async _ensureCaptureWorklet() {
-    if (this._captureWorkletReady) return;
-    const ctx = this._ensureAudioContext();
-    await ctx.audioWorklet.addModule('/audio/pcm-capture-worklet.js');
-    this._captureWorkletReady = true;
-    console.log('[MicPTT] Capture worklet module loaded');
-  }
-
   async start() {
     if (!this.canStart()) {
       console.log(`[MicPTT] start() — BLOCKED, state=${this.state} lock=${this.transitionLock}`);
@@ -282,7 +249,7 @@ class MicPTTManager {
 
     const native = isNativeAndroid();
     console.log(`[MicPTT] start() — path=${native ? 'NATIVE' : 'WEB'} channel=${this._currentChannelId} unit=${this._currentUnitId}`);
-    console.log(`[TX-DIAG] PTT START channel=${this._currentChannelId} unit=${this._currentUnitId} path=${native ? 'NATIVE' : 'WEB'}`);
+    console.log('[AUDIO-REBUILD] Audio capture intentionally disabled during rebuild — floor control only');
 
     if (native) {
       return this._startNative();
@@ -296,54 +263,9 @@ class MicPTTManager {
 
     try {
       this._setState(PTT_STATES.ARMING);
-      const ctx = this._ensureAudioContext();
-      await this._ensureCaptureWorklet();
-
-      try {
-        await initOpusBrowserCodec();
-        this._txMode = 'opus';
-        console.log('[MicPTT] Opus browser codec ready, txMode=opus');
-      } catch (err) {
-        this._txMode = 'pcm';
-        console.warn('[MicPTT] Opus browser codec init failed, will fallback to PCM (txMode=pcm):', err.message);
-      }
 
       playPermitTone();
-      console.log('[MicPTT] Permit tone played immediately');
-
-      let noiseSuppressionEnabled = true;
-      try {
-        const stored = localStorage.getItem('app_settings');
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          if (parsed.noiseSuppressionEnabled !== undefined) {
-            noiseSuppressionEnabled = parsed.noiseSuppressionEnabled;
-          }
-        }
-      } catch (e) {}
-
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: noiseSuppressionEnabled,
-          autoGainControl: true
-        }
-      });
-
-      if (this.pendingStop) {
-        console.log('[MicPTT] Stop requested during mic acquisition - aborting');
-        this._stopTracks(stream);
-        this._setState(PTT_STATES.IDLE);
-        this.transitionLock = false;
-        return false;
-      }
-
-      this.stream = stream;
-
-      const source = ctx.createMediaStreamSource(stream);
-      this._sourceNode = source;
-      const dspOutput = processRadioVoice(ctx, source);
-      console.log('[MicPTT] Mic acquired with radio voice DSP');
+      console.log('[MicPTT] Permit tone played');
 
       let ws = this._ws;
       if (!ws || ws.readyState !== WebSocket.OPEN) {
@@ -354,7 +276,6 @@ class MicPTTManager {
         } catch (wsErr) {
           console.error('[MicPTT] WS transport connection failed:', wsErr);
           startBonkLoop();
-          await this._cleanup();
           this.transitionLock = false;
           if (this.pendingStop) {
             stopBonkLoop();
@@ -372,102 +293,23 @@ class MicPTTManager {
 
       if (this.pendingStop) {
         console.log('[MicPTT] Stop requested during WS wait - aborting');
-        this._stopTracks(stream);
         this._setState(PTT_STATES.IDLE);
         this.transitionLock = false;
         return false;
       }
 
       this._setupWsListeners();
-      this.publishComplete = false;
-      this._txFrameCount = 0;
-      this._txDropCount = 0;
-      this._txErrorCount = 0;
-      this._txDropLogged = false;
-      console.log('[MicPTT] WS transport ready, starting capture...');
-      console.log(`[TX-DIAG] Transport ready: ws=${!!ws} wsOpen=${ws?.readyState === WebSocket.OPEN} txMode=${this._txMode}`);
-
-      this.permitDeadlineTimer = setTimeout(() => {
-        if (!this.publishComplete && this.state === PTT_STATES.ARMING && !this.pendingStop) {
-          console.log('[MicPTT] Capture setup taking too long, starting bonk');
-          startBonkLoop();
-        }
-      }, 2000);
-
-      if (this._txMode === 'pcm') {
-        if (!ws || ws.readyState !== WebSocket.OPEN) {
-          console.error('[TX-DIAG] PCM fallback aborted — WS transport not open at capture start');
-          this._clearPermitDeadline();
-          startBonkLoop();
-          await this._cleanup();
-          this.transitionLock = false;
-          if (this.pendingStop) {
-            stopBonkLoop();
-            this.pendingStop = false;
-            this._setState(PTT_STATES.IDLE);
-          } else {
-            this._setState(PTT_STATES.BUSY);
-          }
-          if (this.onError) {
-            this.onError(new Error('WebSocket transport not available for PCM fallback'));
-          }
-          return false;
-        }
-        console.log('[TX-DIAG] PCM transport confirmed open before capture start');
-      }
-
-      try {
-        const captureNode = new AudioWorkletNode(ctx, 'pcm-capture-processor');
-        this._captureWorkletNode = captureNode;
-
-        captureNode.port.onmessage = (e) => {
-          if (e.data.type === 'pcm') {
-            this._sendPcmFrame(e.data.samples);
-          }
-        };
-
-        dspOutput.connect(captureNode);
-        captureNode.connect(ctx.destination);
-
-        captureNode.port.postMessage({ type: 'start' });
-
-        this.publishComplete = true;
-        this._clearPermitDeadline();
-        stopBonkLoop();
-      } catch (captureErr) {
-        console.error('[MicPTT] Capture setup failed:', captureErr);
-        this._clearPermitDeadline();
-        startBonkLoop();
-        await this._cleanup();
-        this.transitionLock = false;
-        if (this.pendingStop) {
-          stopBonkLoop();
-          this.pendingStop = false;
-          this._setState(PTT_STATES.IDLE);
-        } else {
-          this._setState(PTT_STATES.BUSY);
-        }
-        if (this.onError) {
-          this.onError(captureErr);
-        }
-        return false;
-      }
-
-      if (this.pendingStop) {
-        console.log('[MicPTT] Stop requested during capture setup - cleaning up');
-        await this._doStop();
-        return false;
-      }
+      this.publishComplete = true;
+      stopBonkLoop();
 
       this._setState(PTT_STATES.TRANSMITTING);
       this.transitionLock = false;
-      console.log('[MicPTT] Transmission active');
+      console.log('[MicPTT] Floor acquired (audio capture disabled during rebuild)');
       return true;
 
     } catch (err) {
-      console.error('[MicPTT] Start failed (mic access):', err);
+      console.error('[MicPTT] Start failed:', err);
       startBonkLoop();
-      await this._cleanup();
       this.transitionLock = false;
       if (this.pendingStop) {
         stopBonkLoop();
@@ -483,83 +325,9 @@ class MicPTTManager {
     }
   }
 
-  _sendPcmFrame(int16Samples) {
-    if (!this._ws || this._ws.readyState !== WebSocket.OPEN) {
-      if (!this._txDropLogged) {
-        console.warn(`[MicPTT] _sendPcmFrame: WS not open (ws=${!!this._ws} readyState=${this._ws?.readyState}), dropping frames`);
-        this._txDropLogged = true;
-      }
-      this._txDropCount++;
-      return;
-    }
-
-    this._txFrameCount++;
-
-    if (this._txMode === 'opus') {
-      const codec = getOpusBrowserCodec();
-      if (!codec || !codec.ready) {
-        this._txErrorCount++;
-        if (this._txErrorCount <= 3) {
-          console.warn('[TX-DIAG] Opus codec unavailable during opus TX mode — dropping frame');
-        }
-        return;
-      }
-      try {
-        const opusData = codec.encode(int16Samples);
-
-        const frame = new Uint8Array(3 + opusData.length);
-        frame[0] = 0x02;
-        frame[1] = (this._txSequence >> 8) & 0xFF;
-        frame[2] = this._txSequence & 0xFF;
-        frame.set(opusData, 3);
-        this._txSequence = (this._txSequence + 1) & 0xFFFF;
-
-        this._ws.send(frame.buffer);
-
-        if (this._txFrameCount === 1) {
-          console.log(`[TX-DIAG] First frame sent: mode=opus seq=${this._txSequence - 1} opusLen=${opusData.length} ch=${this._currentChannelId} unit=${this._currentUnitId}`);
-        } else if (this._txFrameCount % 50 === 0) {
-          console.log(`[TX-DIAG] Progress: ${this._txFrameCount} frames sent (opus) dropped=${this._txDropCount} errors=${this._txErrorCount}`);
-        }
-      } catch (err) {
-        this._txErrorCount++;
-        console.warn('[MicPTT] Opus encode/send error:', err.message);
-      }
-    } else {
-      const header = new ArrayBuffer(3);
-      const view = new DataView(header);
-      view.setUint8(0, 0x01);
-      view.setUint16(1, this._txSequence & 0xFFFF);
-      this._txSequence++;
-
-      const pcmBytes = new Uint8Array(int16Samples.buffer, int16Samples.byteOffset, int16Samples.byteLength);
-      const frame = new Uint8Array(3 + pcmBytes.length);
-      frame.set(new Uint8Array(header), 0);
-      frame.set(pcmBytes, 3);
-
-      try {
-        this._ws.send(frame.buffer);
-
-        if (this._txFrameCount === 1) {
-          console.log(`[TX-DIAG] First frame sent: mode=pcm seq=${this._txSequence - 1} pcmLen=${pcmBytes.length} ch=${this._currentChannelId} unit=${this._currentUnitId}`);
-        } else if (this._txFrameCount % 50 === 0) {
-          console.log(`[TX-DIAG] Progress: ${this._txFrameCount} frames sent (pcm) dropped=${this._txDropCount} errors=${this._txErrorCount}`);
-        }
-      } catch (err) {
-        this._txErrorCount++;
-        console.warn('[MicPTT] WS send error:', err.message);
-      }
-    }
-  }
-
-  _isDeadObjectError(err) {
-    if (!err) return false;
-    const msg = (err.message || err.toString() || '').toLowerCase();
-    return msg.includes('-38') || msg.includes('dead object') || msg.includes('deadobject');
-  }
-
   async _startNative() {
     console.log('[MicPTT] _startNative() — BEGIN');
+    console.log('[AUDIO-REBUILD] Native mic enable intentionally disabled during rebuild');
     acquireWakeLock().catch(e => console.warn('[MicPTT] Native wake lock acquire failed:', e));
 
     this.transitionLock = true;
@@ -611,6 +379,12 @@ class MicPTTManager {
       releaseWakeLock().catch(() => {});
       return false;
     }
+  }
+
+  _isDeadObjectError(err) {
+    if (!err) return false;
+    const msg = (err.message || err.toString() || '').toLowerCase();
+    return msg.includes('-38') || msg.includes('dead object') || msg.includes('deadobject');
   }
 
   async stop() {
@@ -667,78 +441,16 @@ class MicPTTManager {
 
   async _doStop() {
     this._setState(PTT_STATES.COOLDOWN);
-
     this._removeWsListeners();
 
-    const totalFrames = this._txFrameCount || 0;
+    console.log('[AUDIO-REBUILD] Audio cleanup intentionally disabled during rebuild');
 
-    try {
-      if (this._captureWorkletNode) {
-        this._captureWorkletNode.port.postMessage({ type: 'stop' });
-        try { this._captureWorkletNode.disconnect(); } catch (e) {}
-        this._captureWorkletNode = null;
-      }
-
-      if (this._sourceNode) {
-        try { this._sourceNode.disconnect(); } catch (e) {}
-        this._sourceNode = null;
-      }
-
-      this._cleanup();
-
-    } catch (err) {
-      console.error('[MicPTT] Stop error:', err);
-    } finally {
-      this.pendingStop = false;
-      this.transitionLock = false;
-      this.lastPttEndTime = Date.now();
-      this._txFrameCount = 0;
-      this._txDropLogged = false;
-      this._setState(PTT_STATES.IDLE);
-      releaseWakeLock().catch(e => console.warn('[MicPTT] Wake lock release failed:', e));
-      console.log(`[MicPTT] Transmission ended, ${totalFrames} frames sent, state reset to IDLE`);
-      console.log(`[TX-DIAG] PTT STOP channel=${this._currentChannelId} unit=${this._currentUnitId} txMode=${this._txMode} sent=${totalFrames} dropped=${this._txDropCount || 0} errors=${this._txErrorCount || 0}`);
-      this._txDropCount = 0;
-      this._txErrorCount = 0;
-    }
-  }
-
-  async _cleanup() {
-    this._clearPermitDeadline();
-    this._cancelWsWait();
-    this.publishComplete = false;
-    stopBonkLoop();
-    cleanupRadioDSP();
-
-    if (this._captureWorkletNode) {
-      try {
-        this._captureWorkletNode.port.postMessage({ type: 'stop' });
-        this._captureWorkletNode.disconnect();
-      } catch (e) {}
-      this._captureWorkletNode = null;
-    }
-
-    if (this._sourceNode) {
-      try { this._sourceNode.disconnect(); } catch (e) {}
-      this._sourceNode = null;
-    }
-
-    if (this.stream) {
-      this.stream.getTracks().forEach(t => {
-        try {
-          t.stop();
-        } catch (e) {}
-      });
-      this.stream = null;
-    }
-  }
-
-  _stopTracks(stream) {
-    if (stream) {
-      stream.getTracks().forEach(t => {
-        try { t.stop(); } catch (e) {}
-      });
-    }
+    this.pendingStop = false;
+    this.transitionLock = false;
+    this.lastPttEndTime = Date.now();
+    this._setState(PTT_STATES.IDLE);
+    releaseWakeLock().catch(e => console.warn('[MicPTT] Wake lock release failed:', e));
+    console.log('[MicPTT] Transmission ended (no audio was captured), state reset to IDLE');
   }
 
   forceRelease() {
@@ -750,7 +462,6 @@ class MicPTTManager {
     this._cancelPttReadyWait();
     stopBonkLoop();
 
-    this._cleanup();
     this.pendingStop = false;
     this.transitionLock = false;
 
@@ -762,14 +473,6 @@ class MicPTTManager {
   disconnect() {
     this.forceRelease();
     this._ws = null;
-
-    if (this.audioContext && this.audioContext.state !== 'closed') {
-      try {
-        this.audioContext.close();
-      } catch (e) {}
-      this.audioContext = null;
-      this._captureWorkletReady = false;
-    }
   }
 }
 

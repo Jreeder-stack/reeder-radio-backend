@@ -72,8 +72,6 @@ export function useOnDemandPTT(channelId, identity, options = {}) {
   const { onTransmitStart, onTransmitEnd, onError } = options;
   const { startTransmission, endTransmission, muteReceiveAudio, getRoom } = useOnDemandVoice(channelId);
   const [pttState, setPttState] = useState(PTT_STATES.IDLE);
-  const roomRef = useRef(null);
-  const localTrackRef = useRef(null);
 
   useEffect(() => {
     const handleStateChange = async (newState, oldState) => {
@@ -83,19 +81,8 @@ export function useOnDemandPTT(channelId, identity, options = {}) {
         muteReceiveAudio(true);
       } else if (newState === PTT_STATES.TRANSMITTING && oldState === PTT_STATES.ARMING) {
         try {
-          roomRef.current = await startTransmission(identity);
-          
-          if (roomRef.current && roomRef.current.localParticipant) {
-            const track = micPTTManager.getLocalTrack();
-            if (track) {
-              await roomRef.current.localParticipant.publishTrack(track, {
-                name: 'microphone',
-                source: 'microphone',
-              });
-              localTrackRef.current = track;
-            }
-          }
-          
+          await startTransmission(identity);
+          console.log('[AUDIO-REBUILD] Track publishing intentionally disabled during rebuild — floor control only');
           onTransmitStart?.();
         } catch (err) {
           console.error('[useOnDemandPTT] Failed to start transmission:', err);
@@ -103,15 +90,6 @@ export function useOnDemandPTT(channelId, identity, options = {}) {
           micPTTManager.forceRelease();
         }
       } else if (newState === PTT_STATES.IDLE && oldState === PTT_STATES.TRANSMITTING) {
-        if (localTrackRef.current && roomRef.current?.localParticipant) {
-          try {
-            await roomRef.current.localParticipant.unpublishTrack(localTrackRef.current);
-          } catch (err) {
-            console.warn('[useOnDemandPTT] Failed to unpublish track:', err);
-          }
-        }
-        
-        localTrackRef.current = null;
         await endTransmission();
         muteReceiveAudio(false);
         onTransmitEnd?.();

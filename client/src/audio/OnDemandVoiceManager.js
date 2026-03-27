@@ -1,6 +1,4 @@
 import { signalingManager } from '../signaling/SignalingManager.js';
-import { getOpusBrowserCodec, initOpusBrowserCodec } from './OpusBrowserCodec.js';
-import { JitterBuffer } from './JitterBuffer.js';
 import { preloadPermitBuffer } from './talkPermitTone.js';
 
 const VOICE_STATE = {
@@ -35,12 +33,6 @@ class OnDemandVoiceManager {
       audioReceived: new Set(),
       connectionError: new Set(),
     };
-
-    this.audioContext = null;
-    this._playbackNodes = new Map();
-    this._workletReady = false;
-    this._opusInitFailed = false;
-    this._opusInitAttempted = false;
 
     this._setupSignalingListeners();
   }
@@ -100,40 +92,6 @@ class OnDemandVoiceManager {
     } catch (err) {
       console.error(`[OnDemandVoice] Emergency force-connect failed:`, err.message);
     }
-  }
-
-  _getAudioContext() {
-    if (!this.audioContext || this.audioContext.state === 'closed') {
-      this.audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 48000 });
-    }
-    if (this.audioContext.state === 'suspended') {
-      this.audioContext.resume().catch(console.warn);
-    }
-    return this.audioContext;
-  }
-
-  async _tryInitOpus() {
-    if (this._opusInitFailed) {
-      return;
-    }
-    if (this._opusInitAttempted) {
-      return;
-    }
-    this._opusInitAttempted = true;
-    try {
-      await initOpusBrowserCodec();
-      console.log('[OnDemandVoice] Opus codec initialized successfully');
-    } catch (err) {
-      this._opusInitFailed = true;
-      console.warn('[OnDemandVoice] Opus codec init failed — sticky PCM fallback for this session:', err.message);
-    }
-  }
-
-  async _ensurePlaybackWorklet() {
-    if (this._workletReady) return;
-    const ctx = this._getAudioContext();
-    await ctx.audioWorklet.addModule('/audio/pcm-playback-worklet.js');
-    this._workletReady = true;
   }
 
   async _handleRemotePttStart(channelId, unitId, isEmergency = false) {
@@ -338,6 +296,8 @@ class OnDemandVoiceManager {
     this._setState(channelId, VOICE_STATE.TRANSMITTING);
     this._recordConnectionStart(channelId);
 
+    console.log('[AUDIO-REBUILD] Audio transmission intentionally disabled during rebuild — floor control only');
+
     return conn;
   }
 
@@ -365,20 +325,17 @@ class OnDemandVoiceManager {
         const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const wsUrl = `${proto}//${window.location.host}/api/audio-ws?channelId=${encodeURIComponent(channelId)}&unitId=${encodeURIComponent(identity)}`;
 
-        await this._ensurePlaybackWorklet();
-        await this._tryInitOpus();
-
         const ws = await this._openWebSocket(wsUrl);
 
         const conn = { ws, channelId, unitId: identity };
 
         this._setupWsHandlers(ws, channelId);
-        this._setupPlaybackChain(channelId);
 
         this.rooms.set(channelId, conn);
         this._setState(channelId, VOICE_STATE.CONNECTED);
 
         console.log(`[OnDemandVoice] Connected to ${channelId}`);
+        console.log('[AUDIO-REBUILD] Audio playback pipeline intentionally disabled during rebuild');
         return conn;
       } catch (err) {
         this._setState(channelId, VOICE_STATE.DISCONNECTED);
@@ -411,18 +368,14 @@ class OnDemandVoiceManager {
   }
 
   async connectForReceiving(channelId, options = {}) {
-    this._tryInitOpus().catch(() => {});
     return this._connectToReceive(channelId);
   }
 
   async warmUp() {
     try {
-      await Promise.all([
-        this._ensurePlaybackWorklet().catch(() => {}),
-        this._tryInitOpus().catch(() => {}),
-      ]);
       preloadPermitBuffer();
-      console.log('[OnDemandVoice] Warm-up complete (worklet + codec + permit tone pre-loaded)');
+      console.log('[OnDemandVoice] Warm-up complete (permit tone pre-loaded)');
+      console.log('[AUDIO-REBUILD] Audio codec/worklet warm-up intentionally disabled during rebuild');
     } catch (err) {
       console.warn('[OnDemandVoice] Warm-up failed:', err.message);
     }
@@ -465,77 +418,7 @@ class OnDemandVoiceManager {
   }
 
   _handleBinaryMessage(channelId, data) {
-    const view = new DataView(data instanceof ArrayBuffer ? data : data.buffer || new Uint8Array(data).buffer);
-    const frameType = view.getUint8(0);
-
-    if (frameType === 0x02) {
-      if (data.byteLength < 6) return;
-
-      const currentState = this.roomStates.get(channelId);
-      if (currentState === VOICE_STATE.TRANSMITTING) return;
-
-      const sequence = view.getUint16(3);
-      const opusData = new Uint8Array(data instanceof ArrayBuffer ? data : data.buffer || new Uint8Array(data).buffer, 5);
-
-      let jitter = this._jitterBuffers && this._jitterBuffers.get(channelId);
-      if (!jitter) {
-        const codec = getOpusBrowserCodec();
-        if (!codec || !codec.ready) {
-          if (!this._opusInitFailed) {
-            this._tryInitOpus().catch(() => {});
-          }
-          return;
-        }
-        if (!this._jitterBuffers) this._jitterBuffers = new Map();
-        jitter = new JitterBuffer(codec);
-        this._jitterBuffers.set(channelId, jitter);
-      }
-
-      jitter.push(sequence, opusData.slice());
-      const frames = jitter.getFrames();
-      const playback = this._playbackNodes.get(channelId);
-      if (playback && playback.workletNode) {
-        for (const pcmData of frames) {
-          playback.workletNode.port.postMessage({ type: 'pcm', samples: pcmData }, [pcmData.buffer]);
-        }
-      }
-
-      this._emit('audioReceived', { channelId });
-    } else if (frameType === 0x01 || (frameType === 0x00 && data.byteLength >= 6)) {
-      if (data.byteLength < 6) return;
-
-      const currentState = this.roomStates.get(channelId);
-      if (currentState === VOICE_STATE.TRANSMITTING) return;
-
-      const pcmData = new Int16Array(data.slice(4));
-      const playback = this._playbackNodes.get(channelId);
-      if (playback && playback.workletNode) {
-        playback.workletNode.port.postMessage({ type: 'pcm', samples: pcmData }, [pcmData.buffer]);
-      }
-
-      this._emit('audioReceived', { channelId });
-    }
-  }
-
-  _setupPlaybackChain(channelId) {
-    const ctx = this._getAudioContext();
-
-    const workletNode = new AudioWorkletNode(ctx, 'pcm-playback-processor');
-    const gainNode = ctx.createGain();
-
-    workletNode.connect(gainNode);
-    gainNode.connect(ctx.destination);
-
-    this._playbackNodes.set(channelId, { workletNode, gainNode });
-  }
-
-  _cleanupPlayback(channelId) {
-    const playback = this._playbackNodes.get(channelId);
-    if (playback) {
-      try { playback.workletNode.disconnect(); } catch (e) {}
-      try { playback.gainNode.disconnect(); } catch (e) {}
-      this._playbackNodes.delete(channelId);
-    }
+    console.log('[AUDIO-REBUILD] Binary audio message received — intentionally discarded during rebuild');
   }
 
   async _disconnectRoom(channelId) {
@@ -546,8 +429,6 @@ class OnDemandVoiceManager {
     this._recordConnectionEnd(channelId);
 
     try {
-      this._cleanupPlayback(channelId);
-
       if (conn.ws && conn.ws.readyState === WebSocket.OPEN) {
         conn.ws.close();
       }
@@ -560,17 +441,8 @@ class OnDemandVoiceManager {
 
   _cleanupRoom(channelId) {
     this.rooms.delete(channelId);
-    this._cleanupPlayback(channelId);
     this._setState(channelId, VOICE_STATE.DISCONNECTED);
     this._clearGraceTimer(channelId);
-
-    if (this._jitterBuffers) {
-      const jitter = this._jitterBuffers.get(channelId);
-      if (jitter) {
-        jitter.reset();
-        this._jitterBuffers.delete(channelId);
-      }
-    }
   }
 
   _setState(channelId, state) {
@@ -632,16 +504,11 @@ class OnDemandVoiceManager {
   }
 
   muteReceiveAudio(channelId, muted) {
-    const playback = this._playbackNodes.get(channelId);
-    if (playback) {
-      playback.gainNode.gain.value = muted ? 0 : 1;
-    }
+    console.log(`[AUDIO-REBUILD] muteReceiveAudio(${channelId}, ${muted}) — playback intentionally disabled during rebuild`);
   }
 
   muteAllReceiveAudio(muted) {
-    for (const [channelId] of this._playbackNodes) {
-      this.muteReceiveAudio(channelId, muted);
-    }
+    console.log(`[AUDIO-REBUILD] muteAllReceiveAudio(${muted}) — playback intentionally disabled during rebuild`);
   }
 
   on(event, callback) {
@@ -680,9 +547,6 @@ class OnDemandVoiceManager {
     }
     this._reconnectTimers.clear();
     this._reconnectAttempts.clear();
-    if (this.audioContext) {
-      this.audioContext.close().catch(console.warn);
-    }
   }
 }
 
