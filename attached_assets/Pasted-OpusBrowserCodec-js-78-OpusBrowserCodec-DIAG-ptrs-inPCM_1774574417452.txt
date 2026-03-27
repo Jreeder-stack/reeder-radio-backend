@@ -1,0 +1,84 @@
+OpusBrowserCodec.js:78 [OpusBrowserCodec] DIAG: ptrs inPCM=295608 outOpus=310976 inOpus=307144 outPCM=301376
+OpusBrowserCodec.js:79 [OpusBrowserCodec] DIAG: HEAPU8.buffer.byteLength=16777216 HEAPU16.buffer.byteLength=16777216 same=true
+OpusBrowserCodec.js:85 [OpusBrowserCodec] DIAG: input PCM[0..4]=0,943,1883,2817,3741
+OpusBrowserCodec.js:91 [OpusBrowserCodec] DIAG: HEAPU8 readback PCM[0..4]=0,943,1883,2817,3741
+OpusBrowserCodec.js:92 [OpusBrowserCodec] DIAG: match=true
+OpusBrowserCodec.js:95 [OpusBrowserCodec] DIAG: encLen=113
+OpusBrowserCodec.js:101 [OpusBrowserCodec] DIAG: opus[0..9]=120,133,78,103,218,236,72,44,84,171
+OpusBrowserCodec.js:108 [OpusBrowserCodec] DIAG: decSamples=960
+OpusBrowserCodec.js:114 [OpusBrowserCodec] DIAG: decoded PCM[0..4]=0,0,0,0,0
+OpusBrowserCodec.js:128 [OpusBrowserCodec] DIAG: peak=255 avg=34.4
+OpusBrowserCodec.js:138 [OpusBrowserCodec] DIAG: correlation=-0.042758 normA=129411411695 normB=23690069
+OpusBrowserCodec.js:153 [OpusBrowserCodec] DIAG: offset correlations: offset120=0.049, offset240=0.126, offset312=-0.076, offset480=0.131
+OpusBrowserCodec.js:78 [OpusBrowserCodec] DIAG: ptrs inPCM=307144 outOpus=322512 inOpus=318680 outPCM=312912
+OpusBrowserCodec.js:79 [OpusBrowserCodec] DIAG: HEAPU8.buffer.byteLength=16777216 HEAPU16.buffer.byteLength=16777216 same=true
+OpusBrowserCodec.js:85 [OpusBrowserCodec] DIAG: input PCM[0..4]=0,943,1883,2817,3741
+OpusBrowserCodec.js:91 [OpusBrowserCodec] DIAG: HEAPU8 readback PCM[0..4]=0,943,1883,2817,3741
+OpusBrowserCodec.js:92 [OpusBrowserCodec] DIAG: match=true
+OpusBrowserCodec.js:95 [OpusBrowserCodec] DIAG: encLen=113
+OpusBrowserCodec.js:101 [OpusBrowserCodec] DIAG: opus[0..9]=120,133,78,103,218,236,72,44,84,171
+OpusBrowserCodec.js:108 [OpusBrowserCodec] DIAG: decSamples=960
+OpusBrowserCodec.js:114 [OpusBrowserCodec] DIAG: decoded PCM[0..4]=0,0,0,0,0
+OpusBrowserCodec.js:128 [OpusBrowserCodec] DIAG: peak=255 avg=34.4
+OpusBrowserCodec.js:138 [OpusBrowserCodec] DIAG: correlation=-0.042758 normA=129411411695 normB=23690069
+OpusBrowserCodec.js:153 [OpusBrowserCodec] DIAG: offset correlations: offset120=0.049, offset240=0.126, offset312=-0.076, offset480=0.131
+OpusBrowserCodec.js:78 [OpusBrowserCodec] DIAG: ptrs inPCM=318680 outOpus=334048 inOpus=330216 outPCM=324448
+OpusBrowserCodec.js:79 [OpusBrowserCodec] DIAG: HEAPU8.buffer.byteLength=16777216 HEAPU16.buffer.byteLength=16777216 same=true
+OpusBrowserCodec.js:85 [OpusBrowserCodec] DIAG: input PCM[0..4]=0,943,1883,2817,3741
+OpusBrowserCodec.js:91 [OpusBrowserCodec] DIAG: HEAPU8 readback PCM[0..4]=0,943,1883,2817,3741
+OpusBrowserCodec.js:92 [OpusBrowserCodec] DIAG: match=true
+OpusBrowserCodec.js:95 [OpusBrowserCodec] DIAG: encLen=113
+OpusBrowserCodec.js:101 [OpusBrowserCodec] DIAG: opus[0..9]=120,133,78,103,218,236,72,44,84,171
+OpusBrowserCodec.js:108 [OpusBrowserCodec] DIAG: decSamples=960
+OpusBrowserCodec.js:114 [OpusBrowserCodec] DIAG: decoded PCM[0..4]=0,0,0,0,0
+OpusBrowserCodec.js:128 [OpusBrowserCodec] DIAG: peak=255 avg=34.4
+OpusBrowserCodec.js:138 [OpusBrowserCodec] DIAG: correlation=-0.042758 normA=129411411695 normB=23690069
+OpusBrowserCodec.js:153 [OpusBrowserCodec] DIAG: offset correlations: offset120=0.049, offset240=0.126, offset312=-0.076, offset480=0.131
+OpusBrowserCodec.js:78 [OpusBrowserCodec] DIAG: ptrs inPCM=330216 outOpus=345584 inOpus=341752 outPCM=335984
+OpusBrowserCodec.js:79 [OpusBrowserCodec] DIAG: HEAPU8.buffer.byteLength=16777216 HEAPU16.buffer.byteLength=16777216 same=true
+OpusBrowserCodec.js:85 [OpusBrowserCodec] DIAG: input PCM[0..4]=0,943,1883,2817,3741
+OpusBrowserCodec.js:91 [OpusBrowserCodec] DIAG: HEAPU8 readback PCM[0..4]=0,943,1883,2817,3741
+OpusBrowserCodec.js:92 [OpusBrowserCodec] DIAG: match=true
+OpusBrowserCodec.js:95 [OpusBrowserCodec] DIAG: encLen=113
+OpusBrowserCodec.js:101 [OpusBrowserCodec] DIAG: opus[0..9]=120,133,78,103,218,236,72,44,84,171
+OpusBrowserCodec.js:108 [OpusBrowserCodec] DIAG: decSamples=960
+OpusBrowserCodec.js:114 [OpusBrowserCodec] DIAG: decoded PCM[0..4]=0,0,0,0,0
+OpusBrowserCodec.js:128 [OpusBrowserCodec] DIAG: peak=255 avg=34.4
+OpusBrowserCodec.js:138 [OpusBrowserCodec] DIAG: correlation=-0.042758 normA=129411411695 normB=23690069
+OpusBrowserCodec.js:153 [OpusBrowserCodec] DIAG: offset correlations: offset120=0.049, offset240=0.126, offset312=-0.076, offset480=0.131
+OpusBrowserCodec.js:78 [OpusBrowserCodec] DIAG: ptrs inPCM=341752 outOpus=357120 inOpus=353288 outPCM=347520
+OpusBrowserCodec.js:79 [OpusBrowserCodec] DIAG: HEAPU8.buffer.byteLength=16777216 HEAPU16.buffer.byteLength=16777216 same=true
+OpusBrowserCodec.js:85 [OpusBrowserCodec] DIAG: input PCM[0..4]=0,943,1883,2817,3741
+OpusBrowserCodec.js:91 [OpusBrowserCodec] DIAG: HEAPU8 readback PCM[0..4]=0,943,1883,2817,3741
+OpusBrowserCodec.js:92 [OpusBrowserCodec] DIAG: match=true
+OpusBrowserCodec.js:95 [OpusBrowserCodec] DIAG: encLen=113
+OpusBrowserCodec.js:101 [OpusBrowserCodec] DIAG: opus[0..9]=120,133,78,103,218,236,72,44,84,171
+OpusBrowserCodec.js:108 [OpusBrowserCodec] DIAG: decSamples=960
+OpusBrowserCodec.js:114 [OpusBrowserCodec] DIAG: decoded PCM[0..4]=0,0,0,0,0
+OpusBrowserCodec.js:128 [OpusBrowserCodec] DIAG: peak=255 avg=34.4
+OpusBrowserCodec.js:138 [OpusBrowserCodec] DIAG: correlation=-0.042758 normA=129411411695 normB=23690069
+OpusBrowserCodec.js:153 [OpusBrowserCodec] DIAG: offset correlations: offset120=0.049, offset240=0.126, offset312=-0.076, offset480=0.131
+OpusBrowserCodec.js:78 [OpusBrowserCodec] DIAG: ptrs inPCM=353288 outOpus=368656 inOpus=364824 outPCM=359056
+OpusBrowserCodec.js:79 [OpusBrowserCodec] DIAG: HEAPU8.buffer.byteLength=16777216 HEAPU16.buffer.byteLength=16777216 same=true
+OpusBrowserCodec.js:85 [OpusBrowserCodec] DIAG: input PCM[0..4]=0,943,1883,2817,3741
+OpusBrowserCodec.js:91 [OpusBrowserCodec] DIAG: HEAPU8 readback PCM[0..4]=0,943,1883,2817,3741
+OpusBrowserCodec.js:92 [OpusBrowserCodec] DIAG: match=true
+OpusBrowserCodec.js:95 [OpusBrowserCodec] DIAG: encLen=113
+OpusBrowserCodec.js:101 [OpusBrowserCodec] DIAG: opus[0..9]=120,133,78,103,218,236,72,44,84,171
+OpusBrowserCodec.js:108 [OpusBrowserCodec] DIAG: decSamples=960
+OpusBrowserCodec.js:114 [OpusBrowserCodec] DIAG: decoded PCM[0..4]=0,0,0,0,0
+OpusBrowserCodec.js:128 [OpusBrowserCodec] DIAG: peak=255 avg=34.4
+OpusBrowserCodec.js:138 [OpusBrowserCodec] DIAG: correlation=-0.042758 normA=129411411695 normB=23690069
+OpusBrowserCodec.js:153 [OpusBrowserCodec] DIAG: offset correlations: offset120=0.049, offset240=0.126, offset312=-0.076, offset480=0.131
+OpusBrowserCodec.js:78 [OpusBrowserCodec] DIAG: ptrs inPCM=364824 outOpus=380192 inOpus=376360 outPCM=370592
+OpusBrowserCodec.js:79 [OpusBrowserCodec] DIAG: HEAPU8.buffer.byteLength=16777216 HEAPU16.buffer.byteLength=16777216 same=true
+OpusBrowserCodec.js:85 [OpusBrowserCodec] DIAG: input PCM[0..4]=0,943,1883,2817,3741
+OpusBrowserCodec.js:91 [OpusBrowserCodec] DIAG: HEAPU8 readback PCM[0..4]=0,943,1883,2817,3741
+OpusBrowserCodec.js:92 [OpusBrowserCodec] DIAG: match=true
+OpusBrowserCodec.js:95 [OpusBrowserCodec] DIAG: encLen=113
+OpusBrowserCodec.js:101 [OpusBrowserCodec] DIAG: opus[0..9]=120,133,78,103,218,236,72,44,84,171
+OpusBrowserCodec.js:108 [OpusBrowserCodec] DIAG: decSamples=960
+OpusBrowserCodec.js:114 [OpusBrowserCodec] DIAG: decoded PCM[0..4]=0,0,0,0,0
+OpusBrowserCodec.js:128 [OpusBrowserCodec] DIAG: peak=255 avg=34.4
+OpusBrowserCodec.js:138 [OpusBrowserCodec] DIAG: correlation=-0.042758 normA=129411411695 normB=23690069
+OpusBrowserCodec.js:153 [OpusBrowserCodec] DIAG: offset correlations: offset120=0.049, offset240=0.126, offset312=-0.076, offset480=0.131
