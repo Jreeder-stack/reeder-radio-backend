@@ -24,10 +24,10 @@ import PatchPanel from '../components/PatchPanel/index.jsx';
 import ChannelChat from '../components/ChannelChat/index.jsx';
 
 import useDispatchStore from '../state/dispatchStore.js';
-import { micPTTManager } from '../audio/MicPTTManager.js';
 import toneEngine from '../audio/toneEngine.js';
 import { getUnits } from '../utils/api.js';
 import { useLiveKitConnection } from '../context/LiveKitConnectionContext.jsx';
+import livekitManager from '../audio/LiveKitManager.js';
 import { useSignalingContext } from '../context/SignalingContext.jsx';
 
 export default function DispatchConsole({ user, onLogout }) {
@@ -117,7 +117,7 @@ export default function DispatchConsole({ user, onLogout }) {
 
   useEffect(() => {
     return () => {
-      micPTTManager.disconnect();
+      livekitManager.disconnect();
       toneEngine.destroy();
     };
   }, []);

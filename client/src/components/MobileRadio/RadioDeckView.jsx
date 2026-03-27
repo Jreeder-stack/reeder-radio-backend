@@ -4,7 +4,6 @@ import { cn } from '../../lib/utils';
 import { useLiveKitConnection } from '../../context/LiveKitConnectionContext';
 import { useSignalingContext } from '../../context/SignalingContext';
 import { useMobileRadioContext } from '../../context/MobileRadioContext';
-import { micPTTManager } from '../../audio/MicPTTManager';
 import { PTT_STATES } from '../../constants/pttStates';
 import { updateUnitStatus } from '../../utils/api';
 import { startBackgroundService, stopBackgroundService } from '../../plugins/backgroundService';
@@ -426,7 +425,7 @@ export function RadioDeckView({ user, onLogout }) {
         document.body.appendChild(audioElem);
         rxAudioElementsRef.current.add(audioElem);
         
-        const currentState = micPTTManager.getState();
+        const currentState = livekitManager.getState();
         if (currentState === PTT_STATES.TRANSMITTING || currentState === PTT_STATES.ARMING) {
           audioElem.muted = true;
         } else {
@@ -476,7 +475,7 @@ export function RadioDeckView({ user, onLogout }) {
   }, [livekitManager, identity]);
 
   useEffect(() => {
-    micPTTManager.onStateChange = (newState) => {
+    livekitManager.onStateChange = (newState) => {
       setPttState(newState);
       const txChannel = transmitChannelRef.current;
       
@@ -500,7 +499,7 @@ export function RadioDeckView({ user, onLogout }) {
     };
     
     return () => {
-      micPTTManager.disconnect();
+      livekitManager.disconnect();
     };
   }, [broadcastStatus, identity]);
 
@@ -754,24 +753,24 @@ export function RadioDeckView({ user, onLogout }) {
       return;
     }
     
-    micPTTManager.setCurrentChannel(channelName);
-    micPTTManager.setCurrentUnit(identity);
-    micPTTManager.setRoom(room);
+    livekitManager.setCurrentChannel(channelName);
+    livekitManager.setCurrentUnit(identity);
+    livekitManager.setRoom(room);
     try {
       await signalPttStart(channelName);
     } catch (grantErr) {
       console.warn('[PTT-DIAG] [JS] Floor denied:', grantErr.message);
       return;
     }
-    console.log('[PTT-DIAG] [JS] handleTransmitStart() — calling micPTTManager.start()');
-    micPTTManager.start();
+    console.log('[PTT-DIAG] [JS] handleTransmitStart() — calling livekitManager.start()');
+    livekitManager.start();
   }, [ensureConnected, livekitManager, signalPttStart, identity]);
 
   const handleTransmitEnd = useCallback(() => {
     const channelName = transmitChannelRef.current;
-    console.log('[PTT-DIAG] [JS] handleTransmitEnd() — channel=' + channelName + ' canStop=' + micPTTManager.canStop());
-    if (micPTTManager.canStop()) {
-      micPTTManager.stop();
+    console.log('[PTT-DIAG] [JS] handleTransmitEnd() — channel=' + channelName + ' canStop=' + livekitManager.canStop());
+    if (livekitManager.canStop()) {
+      livekitManager.stop();
       if (channelName) {
         signalPttEnd(channelName);
       }

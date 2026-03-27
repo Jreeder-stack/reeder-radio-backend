@@ -6,7 +6,6 @@ import { AlertTriangle, Activity, Loader2, Wifi, WifiOff, MapPin } from 'lucide-
 import { cn } from '../../lib/utils';
 import { useLiveKitConnection } from '../../context/LiveKitConnectionContext';
 import { useSignalingContext } from '../../context/SignalingContext';
-import { micPTTManager } from '../../audio/MicPTTManager';
 import { PTT_STATES } from '../../constants/pttStates';
 import { updateUnitStatus } from '../../utils/api';
 import { useClearAir } from './useClearAir';
@@ -140,7 +139,7 @@ export default function MobileRadioView({ user, onLogout }) {
         document.body.appendChild(audioElem);
         rxAudioElementsRef.current.add(audioElem);
         
-        const currentState = micPTTManager.getState();
+        const currentState = livekitManager.getState();
         if (currentState === PTT_STATES.TRANSMITTING || currentState === PTT_STATES.ARMING) {
           audioElem.muted = true;
         } else {
@@ -185,7 +184,7 @@ export default function MobileRadioView({ user, onLogout }) {
   }, [livekitManager, identity]);
 
   useEffect(() => {
-    micPTTManager.onStateChange = (newState) => {
+    livekitManager.onStateChange = (newState) => {
       setPttState(newState);
       const txChannel = transmitChannelRef.current;
       
@@ -209,7 +208,7 @@ export default function MobileRadioView({ user, onLogout }) {
     };
     
     return () => {
-      micPTTManager.disconnect();
+      livekitManager.disconnect();
     };
   }, [broadcastStatus, identity, userLocation]);
 
@@ -258,9 +257,9 @@ export default function MobileRadioView({ user, onLogout }) {
       return;
     }
 
-    micPTTManager.setCurrentChannel(channelName);
-    micPTTManager.setCurrentUnit(identity);
-    micPTTManager.setRoom(room);
+    livekitManager.setCurrentChannel(channelName);
+    livekitManager.setCurrentUnit(identity);
+    livekitManager.setRoom(room);
     let floorGranted = false;
     try {
       await signalPttStart(channelName);
@@ -270,13 +269,13 @@ export default function MobileRadioView({ user, onLogout }) {
       return;
     }
     try {
-      const started = await micPTTManager.start();
+      const started = await livekitManager.start();
       if (!started && floorGranted) {
-        console.warn('[MobileRadio] micPTTManager.start() failed, releasing floor');
+        console.warn('[MobileRadio] livekitManager.start() failed, releasing floor');
         signalPttEnd(channelName);
       }
     } catch (startErr) {
-      console.error('[MobileRadio] micPTTManager.start() threw:', startErr);
+      console.error('[MobileRadio] livekitManager.start() threw:', startErr);
       if (floorGranted) {
         signalPttEnd(channelName);
       }
@@ -285,8 +284,8 @@ export default function MobileRadioView({ user, onLogout }) {
 
   const handleTransmitEnd = useCallback(() => {
     const channelName = transmitChannelRef.current;
-    if (micPTTManager.canStop()) {
-      micPTTManager.stop();
+    if (livekitManager.canStop()) {
+      livekitManager.stop();
     }
     if (channelName) {
       signalPttEnd(channelName);
