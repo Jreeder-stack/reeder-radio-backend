@@ -303,17 +303,37 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
     mutedChannelsRef.current = [...selectedChannelNames];
     livekitManager.muteChannels(mutedChannelsRef.current);
     
-    if (onToneTransmit) {
-      onToneTransmit(selectedChannelNames, type, duration);
+    if (signalPttStart) {
+      try {
+        await signalPttStart(primaryChannel);
+      } catch (grantErr) {
+        console.warn('[BottomBar] Tone floor denied:', grantErr.message);
+        livekitManager.unmuteChannels(mutedChannelsRef.current);
+        mutedChannelsRef.current = [];
+        toneEngine.startBusyTone();
+        setTimeout(() => toneEngine.stopBusyTone(), 1000);
+        setToneTransmitting(false);
+        return;
+      }
     }
     
-    toneTransmitter.setRoom(room);
-    await toneTransmitter.transmitTone(type, duration);
-    
-    livekitManager.unmuteChannels(mutedChannelsRef.current);
-    mutedChannelsRef.current = [];
-    
-    setToneTransmitting(false);
+    try {
+      if (onToneTransmit) {
+        onToneTransmit(selectedChannelNames, type, duration);
+      }
+      
+      toneTransmitter.setRoom(room);
+      await toneTransmitter.transmitTone(type, duration);
+    } finally {
+      if (signalPttEnd) {
+        signalPttEnd(primaryChannel);
+      }
+      
+      livekitManager.unmuteChannels(mutedChannelsRef.current);
+      mutedChannelsRef.current = [];
+      
+      setToneTransmitting(false);
+    }
   };
 
   const isClearAirActive = !!clearAirChannel;
@@ -328,45 +348,71 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
     }
   };
 
-  const handleClearAirConfirmStart = () => {
+  const handleClearAirConfirmStart = async () => {
     if (!selectedClearAirChannelId) return;
     const channelId = String(selectedClearAirChannelId);
     const channel = channels.find(ch => String(ch.id) === channelId);
     const roomKey = channel ? (channel.room_key || ((channel.zone || 'Default') + '__' + channel.name)) : null;
     
-    toggleClearAir(channelId);
-    setClearAirChannel(channelId);
     setShowClearAirModal(false);
     
     if (roomKey) {
       const wasAlreadyConnected = livekitManager.isConnected(roomKey);
       if (!wasAlreadyConnected) {
         clearAirLiveKitRoomRef.current = roomKey;
-        livekitManager.connect(roomKey, identity).catch(err => {
+        try {
+          await livekitManager.connect(roomKey, identity);
+        } catch (err) {
           console.warn('[BottomBar] ClearAir LiveKit connect failed:', err);
-        });
+          clearAirLiveKitRoomRef.current = null;
+          return;
+        }
       } else {
         clearAirLiveKitRoomRef.current = null;
       }
 
-      const startClearAirTone = async () => {
-        const room = livekitManager.getRoom(roomKey);
-        if (room) {
-          toneTransmitter.setRoom(room);
-          const started = await toneTransmitter.startToneTransmission();
-          if (started) {
-            console.log('[BottomBar] Clear Air tone broadcasting over air on', roomKey);
+      if (signalPttStart) {
+        try {
+          await signalPttStart(roomKey);
+        } catch (grantErr) {
+          console.warn('[BottomBar] Clear Air floor denied:', grantErr.message);
+          toneEngine.startBusyTone();
+          setTimeout(() => toneEngine.stopBusyTone(), 1000);
+          if (clearAirLiveKitRoomRef.current === roomKey) {
+            clearAirLiveKitRoomRef.current = null;
+            livekitManager.disconnect(roomKey).catch(() => {});
           }
+          return;
         }
-        toneEngine.startClearAir(channelId);
-      };
-
-      if (!wasAlreadyConnected) {
-        setTimeout(() => startClearAirTone(), 1500);
-      } else {
-        startClearAirTone();
       }
 
+      const room = livekitManager.getRoom(roomKey);
+      if (room) {
+        toneTransmitter.setRoom(room);
+        const started = await toneTransmitter.startToneTransmission();
+        if (started) {
+          console.log('[BottomBar] Clear Air tone broadcasting over air on', roomKey);
+        } else {
+          if (signalPttEnd) signalPttEnd(roomKey);
+          if (clearAirLiveKitRoomRef.current === roomKey) {
+            clearAirLiveKitRoomRef.current = null;
+            livekitManager.disconnect(roomKey).catch(() => {});
+          }
+          return;
+        }
+      } else {
+        console.warn('[BottomBar] No room available for Clear Air on', roomKey);
+        if (signalPttEnd) signalPttEnd(roomKey);
+        if (clearAirLiveKitRoomRef.current === roomKey) {
+          clearAirLiveKitRoomRef.current = null;
+          livekitManager.disconnect(roomKey).catch(() => {});
+        }
+        return;
+      }
+
+      toggleClearAir(channelId);
+      setClearAirChannel(channelId);
+      toneEngine.startClearAir(channelId);
       signalClearAirStart(roomKey);
     }
   };
@@ -386,6 +432,9 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
       toneTransmitter.stopToneTransmission().catch(err => {
         console.warn('[BottomBar] ClearAir tone stop failed:', err);
       });
+      if (signalPttEnd) {
+        signalPttEnd(roomKey);
+      }
       signalClearAirEnd(roomKey);
       const ownedRoom = clearAirLiveKitRoomRef.current;
       if (ownedRoom === roomKey) {
