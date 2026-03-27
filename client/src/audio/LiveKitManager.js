@@ -469,13 +469,11 @@ class LiveKitManager {
       const shouldMute = newState === PTT_STATES.ARMING || newState === PTT_STATES.TRANSMITTING;
 
       if (shouldMute && !this.pttMuted) {
-        console.log('[AudioWS] PTT active - muting all RX audio');
+        console.log(`[AudioWS] PTT active - muting sidetone on TX channel ${this.primaryTxChannel || '(none)'}`);
         this.pttMuted = true;
-        pcmPlaybackManager.setMuted(true);
       } else if (!shouldMute && this.pttMuted) {
-        console.log('[AudioWS] PTT released - unmuting RX audio');
+        console.log('[AudioWS] PTT released - unmuting sidetone');
         this.pttMuted = false;
-        pcmPlaybackManager.setMuted(false);
       }
     });
   }
@@ -527,17 +525,24 @@ class LiveKitManager {
     console.log(`[AUDIO-NEW] setAutoPlayback(${enabled})`);
   }
 
-  async prepareConnection() {
-    try {
-      await pcmPlaybackManager.init();
-      await pcmPlaybackManager.startPlayback();
-      pcmAudioTransport.resetRx();
-      pcmAudioTransport.addOnValidPacket('livekit', (packet) => {
+  _ensurePlaybackHandler() {
+    if (!pcmAudioTransport.hasHandler('playback')) {
+      pcmAudioTransport.addOnValidPacket('playback', (packet) => {
         const success = pcmPlaybackManager.enqueue(packet.payload);
         if (!success && packet.sequence % 50 === 0) {
           console.log('[AUDIO-NEW][RX] enqueue failed (muted or not playing)');
         }
       });
+      console.log('[AUDIO-NEW] Playback transport handler registered');
+    }
+  }
+
+  async prepareConnection() {
+    try {
+      this._ensurePlaybackHandler();
+      pcmAudioTransport.resetRx();
+      await pcmPlaybackManager.init();
+      await pcmPlaybackManager.startPlayback();
       console.log('[AUDIO-NEW] Playback pipeline ready');
     } catch (err) {
       console.error('[AUDIO-NEW] prepareConnection failed:', err);
@@ -595,13 +600,15 @@ class LiveKitManager {
         localParticipant: { identity },
       };
 
+      this._ensurePlaybackHandler();
+
       this._setupWsHandlers(ws, channelName, identity, conn);
 
       this.rooms.set(channelName, conn);
 
-      console.log(`[AudioWS] Connected to ${channelName} (total ${(performance.now() - tTotal).toFixed(1)}ms)`);
-
       await this.prepareConnection();
+
+      console.log(`[AudioWS] Connected to ${channelName} (total ${(performance.now() - tTotal).toFixed(1)}ms)`);
 
       notifyChannelJoin(channelName, identity);
       this._recordActivity(channelName);
@@ -750,7 +757,9 @@ class LiveKitManager {
 
     this._recordActivity(channelName);
 
-    if (this.pttMuted) return;
+    if (this.pttMuted && channelName === this.primaryTxChannel) {
+      return;
+    }
 
     let arrayBuffer;
     if (data instanceof ArrayBuffer) {

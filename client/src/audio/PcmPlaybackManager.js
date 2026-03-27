@@ -12,6 +12,9 @@ class PcmPlaybackManager {
     this._playing = false;
     this._enqueueCount = 0;
     this._muted = false;
+    this._prePlaybackBuffer = [];
+    this._maxPreBuffer = 100;
+    this._gestureListenerAttached = false;
   }
 
   async init() {
@@ -19,20 +22,60 @@ class PcmPlaybackManager {
     if (this._initPromise) return this._initPromise;
 
     this._initPromise = (async () => {
-      this._audioContext = new (window.AudioContext || window.webkitAudioContext)({
-        sampleRate: PCM_AUDIO.SAMPLE_RATE,
-      });
+      try {
+        this._audioContext = new (window.AudioContext || window.webkitAudioContext)({
+          sampleRate: PCM_AUDIO.SAMPLE_RATE,
+        });
 
-      if (this._audioContext.state === 'suspended') {
-        await this._audioContext.resume();
+        if (this._audioContext.state === 'suspended') {
+          try {
+            await this._audioContext.resume();
+          } catch (e) {
+            console.warn(`${LOG_PREFIX} AudioContext resume deferred (no user gesture yet):`, e.message);
+          }
+        }
+
+        await this._audioContext.audioWorklet.addModule('/audio/new-pcm-playback-worklet.js');
+        this._workletReady = true;
+        this._attachGestureListener();
+        console.log(`${LOG_PREFIX} Worklet loaded, sampleRate=${this._audioContext.sampleRate}`);
+      } catch (err) {
+        console.error(`${LOG_PREFIX} init failed, clearing promise for retry:`, err);
+        this._initPromise = null;
+        throw err;
       }
-
-      await this._audioContext.audioWorklet.addModule('/audio/new-pcm-playback-worklet.js');
-      this._workletReady = true;
-      console.log(`${LOG_PREFIX} Worklet loaded, sampleRate=${this._audioContext.sampleRate}`);
     })();
 
     return this._initPromise;
+  }
+
+  _attachGestureListener() {
+    if (this._gestureListenerAttached) return;
+    this._gestureListenerAttached = true;
+
+    const resumeOnGesture = () => {
+      if (this._audioContext && this._audioContext.state === 'suspended') {
+        this._audioContext.resume().then(() => {
+          console.log(`${LOG_PREFIX} AudioContext resumed via user gesture`);
+        }).catch(() => {});
+      }
+    };
+
+    ['touchstart', 'touchend', 'click', 'keydown'].forEach((evt) => {
+      document.addEventListener(evt, resumeOnGesture, { once: false, passive: true });
+    });
+  }
+
+  async ensureAudioContextResumed() {
+    if (!this._audioContext) return;
+    if (this._audioContext.state === 'suspended') {
+      try {
+        await this._audioContext.resume();
+        console.log(`${LOG_PREFIX} AudioContext resumed explicitly`);
+      } catch (e) {
+        console.warn(`${LOG_PREFIX} AudioContext resume failed:`, e.message);
+      }
+    }
   }
 
   async startPlayback() {
@@ -56,11 +99,37 @@ class PcmPlaybackManager {
     this._playing = true;
     this._enqueueCount = 0;
 
+    if (this._prePlaybackBuffer.length > 0) {
+      const validFrames = this._prePlaybackBuffer.filter(f => f !== null);
+      console.log(`${LOG_PREFIX} Flushing ${validFrames.length} buffered frames`);
+      for (const buffered of validFrames) {
+        this._workletNode.port.postMessage({
+          type: 'pcmFrame',
+          samples: buffered,
+        }, [buffered.buffer]);
+        this._enqueueCount++;
+      }
+      this._prePlaybackBuffer = [];
+    }
+
     console.log(`${LOG_PREFIX} Playback started`);
   }
 
   enqueue(int16Samples) {
-    if (!this._playing || !this._workletNode || this._muted) return false;
+    if (this._muted) return false;
+
+    if (!this._playing || !this._workletNode) {
+      if (this._prePlaybackBuffer.length < this._maxPreBuffer) {
+        this._prePlaybackBuffer.push(new Int16Array(int16Samples));
+        if (this._prePlaybackBuffer.length === 1) {
+          console.log(`${LOG_PREFIX} buffering frames before playback ready`);
+        }
+      } else if (this._prePlaybackBuffer.length === this._maxPreBuffer) {
+        console.warn(`${LOG_PREFIX} pre-playback buffer full (${this._maxPreBuffer} frames), dropping new frames`);
+        this._prePlaybackBuffer.push(null);
+      }
+      return false;
+    }
 
     const copy = new Int16Array(int16Samples);
     this._workletNode.port.postMessage({
@@ -90,6 +159,7 @@ class PcmPlaybackManager {
       this._workletNode.port.postMessage({ type: 'reset' });
     }
     this._enqueueCount = 0;
+    this._prePlaybackBuffer = [];
   }
 
   stopPlayback() {
@@ -101,6 +171,7 @@ class PcmPlaybackManager {
     }
 
     this._playing = false;
+    this._prePlaybackBuffer = [];
     console.log(`${LOG_PREFIX} Playback stopped after ${this._enqueueCount} frames`);
   }
 

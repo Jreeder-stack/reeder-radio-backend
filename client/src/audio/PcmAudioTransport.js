@@ -18,6 +18,10 @@ class PcmAudioTransport {
     this._onValidPacketHandlers.set(key, callback);
   }
 
+  hasHandler(key) {
+    return this._onValidPacketHandlers.has(key);
+  }
+
   removeOnValidPacket(key) {
     this._onValidPacketHandlers.delete(key);
   }

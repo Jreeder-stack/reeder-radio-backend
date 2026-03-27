@@ -330,6 +330,8 @@ class OnDemandVoiceManager {
 
         const conn = { ws, channelId, unitId: identity };
 
+        this._ensurePlaybackHandler();
+
         this._setupWsHandlers(ws, channelId);
 
         this.rooms.set(channelId, conn);
@@ -338,12 +340,9 @@ class OnDemandVoiceManager {
         console.log(`[OnDemandVoice] Connected to ${channelId}`);
 
         try {
+          pcmAudioTransport.resetRx();
           await pcmPlaybackManager.init();
           await pcmPlaybackManager.startPlayback();
-          pcmAudioTransport.resetRx();
-          pcmAudioTransport.addOnValidPacket('ondemand', (packet) => {
-            pcmPlaybackManager.enqueue(packet.payload);
-          });
           console.log('[AUDIO-NEW] Playback pipeline ready via OnDemandVoice');
         } catch (playbackErr) {
           console.error('[AUDIO-NEW] Playback init failed:', playbackErr);
@@ -391,6 +390,18 @@ class OnDemandVoiceManager {
       console.log('[OnDemandVoice] Warm-up complete (permit tone + playback worklet pre-loaded)');
     } catch (err) {
       console.warn('[OnDemandVoice] Warm-up failed:', err.message);
+    }
+  }
+
+  _ensurePlaybackHandler() {
+    if (!pcmAudioTransport.hasHandler('playback')) {
+      pcmAudioTransport.addOnValidPacket('playback', (packet) => {
+        const success = pcmPlaybackManager.enqueue(packet.payload);
+        if (!success && packet.sequence % 50 === 0) {
+          console.log('[AUDIO-NEW][RX] enqueue failed (muted or not playing)');
+        }
+      });
+      console.log('[AUDIO-NEW] Playback transport handler registered via OnDemandVoice');
     }
   }
 
