@@ -1,0 +1,89 @@
+Yes — this is the right direction, but do NOT stop at the null-guard alone.
+
+I agree the immediate blocker is the desktop RX crash:
+- "Cannot read properties of null (reading 'ready')" in LiveKitManager.js on incoming audio frames
+This is clearly killing live desktop playback. :contentReference[oaicite:4]{index=4}
+
+I also agree the deployed build may be stale if Task #118 fixed the WASM pointer issue and that build is not actually running yet.
+
+BUT:
+There is also a second visible problem:
+- "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page."
+So even after the null crash is fixed, playback may still fail if the browser audio context never reaches running state. :contentReference[oaicite:5]{index=5}
+
+DO THIS IN THIS ORDER:
+
+1. Fix the crash in LiveKitManager._handleWsBinaryMessage
+- Add null guards before touching codec.ready or any RX pipeline dependency
+- If codec is null, log it clearly and route to the correct fallback path
+- Do not throw on every packet
+- Do not silently swallow it either
+
+2. Rebuild and deploy the actual latest code
+- Confirm the VM/build contains the Task #118 WASM fix
+- Print build/version/commit info at server startup and client boot so we can prove the deployed build is current
+- I want a visible log line showing the exact version running on the VM
+
+3. Add detailed diagnostic logging across the full RX path
+Client logs must show:
+- websocket opened
+- binary packet received
+- packet length
+- transport detected (opus/pcm/unknown)
+- codec object exists true/false
+- codec ready true/false
+- rx pipeline exists true/false
+- decoder exists true/false
+- player exists true/false
+- AudioContext exists true/false
+- AudioContext state running/suspended/closed
+- packet decode success/failure
+- packet queued to output success/failure
+- packet dropped reason
+
+Server logs must show:
+- tx start with txId
+- source user
+- channel
+- codec/transport mode
+- packet counts in
+- packet counts fanned out
+- desktop subscriber included true/false
+- tx stop with totals
+
+4. Fix browser audio unlock path
+- Add explicit AudioContext lifecycle logs
+- Log create, resume attempt, resume success/failure, state changes
+- Add a visible "Click to enable audio" UX if needed
+- Confirm AudioContext reaches "running" before declaring playback fixed
+
+5. Harden RX pipeline lifecycle
+- Log when RX pipeline is created
+- Log when it is marked ready
+- Log when it is destroyed
+- Log why it was destroyed
+- If packets arrive before RX pipeline exists, log exactly what is missing and drop or buffer safely instead of crashing
+
+6. Report back with proof, not assumptions
+I want these answers after deployment:
+- Are binary audio frames arriving on desktop?
+- Is codec still null?
+- Is Task #118 actually live on the VM?
+- Is transport currently Opus or PCM?
+- Does AudioContext ever reach running?
+- Are frames decoded successfully?
+- Are frames handed to output successfully?
+- Are frames audible on desktop after output scheduling?
+
+IMPORTANT:
+Do NOT declare the issue solved just because the null crash is gone.
+The logs already show an AudioContext startup problem too, and that can still block live playback even if RX decode is fixed.
+
+SUCCESS LOOKS LIKE:
+- no more null crash
+- confirmed latest build deployed
+- confirmed desktop receives frames
+- confirmed decode path runs
+- confirmed AudioContext is running
+- confirmed frames are scheduled to output
+- confirmed audible live playback on desktop

@@ -1,0 +1,1412 @@
+dispatcher:1 <meta name="apple-mobile-web-app-capable" content="yes"> is deprecated. Please include <meta name="mobile-web-app-capable" content="yes">
+The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. <URL>
+The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. <URL>
+The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. <URL>
+The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. <URL>
+The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. <URL>
+The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. <URL>
+The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. <URL>
+The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. <URL>
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [LiveKitManager] RX Opus frame received but AudioContext is suspended — audio will be silent until user interaction or context resumes
+_handleWsBinaryMessage @ index-D54voQo4.js:60
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ index-D54voQo4.js:323
+index-D54voQo4.js:60 Uncaught 
+ [OnDemandVoice] PTT ended by ADMIN on DISPATCH__DISPATCH
+ [OnDemandVoice] Starting grace period for DISPATCH__DISPATCH: 3000ms
+ [OnDemandVoice] PTT started by ADMIN on DISPATCH__DISPATCH
+ [OnDemandVoice] PTT ended by ADMIN on DISPATCH__DISPATCH
+ [OnDemandVoice] Starting grace period for DISPATCH__DISPATCH: 3000ms
+ [AudioWS] User gesture detected — resuming AudioContext
+ [AudioWS] AudioContext resumed successfully, state: running
+ [AudioWS] AudioContext resumed successfully, state: running
+ [AudioWS] AudioContext resumed successfully, state: running
+ [AudioWS] AudioContext resumed successfully, state: running
+ [AudioWS] AudioContext resumed successfully, state: running
+ [AudioWS] AudioContext resumed successfully, state: running
+ [AudioWS] AudioContext resumed successfully, state: running
+ [AudioWS] AudioContext resumed via user gesture, state: running
+ [AudioWS] No pong from server for DISPATCH__DISPATCH in 45s — connection likely dead
+(anonymous) @ index-D54voQo4.js:60
+ [AudioWS] No pong from server for OPS__OPS-1 in 45s — connection likely dead
+(anonymous) @ index-D54voQo4.js:60
+ [AudioWS] No pong from server for PHILADELPHIA__OPS-1 in 45s — connection likely dead
+(anonymous) @ index-D54voQo4.js:60
+ [AudioWS] WebSocket closed for DISPATCH__DISPATCH
+ [LiveKitConnection] DISPATCH__DISPATCH state: disconnected
+ [AudioWS] Dispatcher mode: auto-reconnecting DISPATCH__DISPATCH
+ [AudioWS] Dispatcher auto-reconnect: scheduling DISPATCH__DISPATCH in 1368ms (attempt 1)
+ [AudioWS] WebSocket closed for OPS__OPS-1
+ [LiveKitConnection] OPS__OPS-1 state: disconnected
+ [AudioWS] Dispatcher mode: auto-reconnecting OPS__OPS-1
+ [AudioWS] Dispatcher auto-reconnect: scheduling OPS__OPS-1 in 1886ms (attempt 1)
+ [AudioWS] WebSocket closed for PHILADELPHIA__OPS-1
+ [LiveKitConnection] PHILADELPHIA__OPS-1 state: disconnected
+ [AudioWS] Dispatcher mode: auto-reconnecting PHILADELPHIA__OPS-1
+ [AudioWS] Dispatcher auto-reconnect: scheduling PHILADELPHIA__OPS-1 in 1421ms (attempt 1)
+ [AudioWS] _doConnect() — channel=DISPATCH__DISPATCH identity=DISPATCH-1 path=WEB
+ [AudioWS] _doConnect() — channel=PHILADELPHIA__OPS-1 identity=DISPATCH-1 path=WEB
+ [AudioWS] Playback chain created for DISPATCH__DISPATCH, AudioContext state: running
+ [AudioWS] Connected to DISPATCH__DISPATCH (total 125.4ms)
+ [LiveKitConnection] DISPATCH__DISPATCH state: connected
+ [AudioWS] Dispatcher auto-reconnect: successfully reconnected to DISPATCH__DISPATCH
+ [AudioWS] Server confirmed connection for DISPATCH__DISPATCH
+ [AudioWS] Playback chain created for PHILADELPHIA__OPS-1, AudioContext state: running
+ [AudioWS] Connected to PHILADELPHIA__OPS-1 (total 153.7ms)
+ [LiveKitConnection] PHILADELPHIA__OPS-1 state: connected
+ [AudioWS] Dispatcher auto-reconnect: successfully reconnected to PHILADELPHIA__OPS-1
+ [AudioWS] Server confirmed connection for PHILADELPHIA__OPS-1
+ [AudioWS] _doConnect() — channel=OPS__OPS-1 identity=DISPATCH-1 path=WEB
+ [AudioWS] Playback chain created for OPS__OPS-1, AudioContext state: running
+ [AudioWS] Connected to OPS__OPS-1 (total 115.9ms)
+ [LiveKitConnection] OPS__OPS-1 state: connected
+ [AudioWS] Dispatcher auto-reconnect: successfully reconnected to OPS__OPS-1
+ [AudioWS] Server confirmed connection for OPS__OPS-1
+ [OnDemandVoice] PTT started by ADMIN on DISPATCH__DISPATCH
+ [OnDemandVoice] PTT ended by ADMIN on DISPATCH__DISPATCH
+ [OnDemandVoice] Starting grace period for DISPATCH__DISPATCH: 3000ms
+ [LiveKitConnection] Page became visible — checking audio channels
+ [LiveKitConnection] All audio channels healthy after visibility restore
+ [LiveKitConnection] Init check - user: DISPATCH-1 lastUser: DISPATCH-1 initializing: false path: /dispatcher
+ [LiveKitConnection] Already initialized for this user on this path, skipping
+ [Signaling] Already connected
+ [PTT-DIAG] [JS] Auth: pushed early connection info to service: server=https://comms.reeder-systems.com unit=DISPATCH-1
+ [Signaling] Already authenticated
+ [SignalingContext] Connected and authenticated as DISPATCH-1
+ [AudioWS] No pong from server for DISPATCH__DISPATCH in 45s — connection likely dead
+(anonymous) @ index-D54voQo4.js:60
+ [AudioWS] WebSocket closed for DISPATCH__DISPATCH
+ [LiveKitConnection] DISPATCH__DISPATCH state: disconnected
+ [AudioWS] Dispatcher mode: auto-reconnecting DISPATCH__DISPATCH
+ [AudioWS] Dispatcher auto-reconnect: scheduling DISPATCH__DISPATCH in 1085ms (attempt 1)
+ [AudioWS] No pong from server for PHILADELPHIA__OPS-1 in 45s — connection likely dead
+(anonymous) @ index-D54voQo4.js:60
+ [AudioWS] WebSocket closed for PHILADELPHIA__OPS-1
+ [LiveKitConnection] PHILADELPHIA__OPS-1 state: disconnected
+ [AudioWS] Dispatcher mode: auto-reconnecting PHILADELPHIA__OPS-1
+ [AudioWS] Dispatcher auto-reconnect: scheduling PHILADELPHIA__OPS-1 in 1608ms (attempt 1)
+ [AudioWS] No pong from server for OPS__OPS-1 in 45s — connection likely dead
+(anonymous) @ index-D54voQo4.js:60
+ [AudioWS] WebSocket closed for OPS__OPS-1
+ [LiveKitConnection] OPS__OPS-1 state: disconnected
+ [AudioWS] Dispatcher mode: auto-reconnecting OPS__OPS-1
+ [AudioWS] Dispatcher auto-reconnect: scheduling OPS__OPS-1 in 1564ms (attempt 1)
+ [AudioWS] _doConnect() — channel=DISPATCH__DISPATCH identity=DISPATCH-1 path=WEB
+ [AudioWS] Playback chain created for DISPATCH__DISPATCH, AudioContext state: running
+ [AudioWS] Connected to DISPATCH__DISPATCH (total 128.2ms)
+ [LiveKitConnection] DISPATCH__DISPATCH state: connected
+ [AudioWS] Dispatcher auto-reconnect: successfully reconnected to DISPATCH__DISPATCH
+ [AudioWS] Server confirmed connection for DISPATCH__DISPATCH
+ [AudioWS] _doConnect() — channel=PHILADELPHIA__OPS-1 identity=DISPATCH-1 path=WEB
+ [AudioWS] Playback chain created for PHILADELPHIA__OPS-1, AudioContext state: running
+ [AudioWS] Connected to PHILADELPHIA__OPS-1 (total 113.2ms)
+ [LiveKitConnection] PHILADELPHIA__OPS-1 state: connected
+ [AudioWS] Dispatcher auto-reconnect: successfully reconnected to PHILADELPHIA__OPS-1
+ [AudioWS] Server confirmed connection for PHILADELPHIA__OPS-1
+ [AudioWS] _doConnect() — channel=OPS__OPS-1 identity=DISPATCH-1 path=WEB
+ [AudioWS] Playback chain created for OPS__OPS-1, AudioContext state: running
+ [AudioWS] Connected to OPS__OPS-1 (total 138.4ms)
+ [LiveKitConnection] OPS__OPS-1 state: connected
+ [AudioWS] Dispatcher auto-reconnect: successfully reconnected to OPS__OPS-1
+ [AudioWS] Server confirmed connection for OPS__OPS-1
+ [AudioWS] No pong from server for DISPATCH__DISPATCH in 46s — connection likely dead
+(anonymous) @ index-D54voQo4.js:60
+ [AudioWS] No pong from server for PHILADELPHIA__OPS-1 in 45s — connection likely dead
+(anonymous) @ index-D54voQo4.js:60
+ [AudioWS] WebSocket closed for DISPATCH__DISPATCH
+ [LiveKitConnection] DISPATCH__DISPATCH state: disconnected
+ [AudioWS] Dispatcher mode: auto-reconnecting DISPATCH__DISPATCH
+ [AudioWS] Dispatcher auto-reconnect: scheduling DISPATCH__DISPATCH in 1200ms (attempt 1)
+ [AudioWS] WebSocket closed for PHILADELPHIA__OPS-1
+ [LiveKitConnection] PHILADELPHIA__OPS-1 state: disconnected
+ [AudioWS] Dispatcher mode: auto-reconnecting PHILADELPHIA__OPS-1
+ [AudioWS] Dispatcher auto-reconnect: scheduling PHILADELPHIA__OPS-1 in 1126ms (attempt 1)
+ [AudioWS] No pong from server for OPS__OPS-1 in 46s — connection likely dead
+(anonymous) @ index-D54voQo4.js:60
+ [AudioWS] WebSocket closed for OPS__OPS-1
+ [LiveKitConnection] OPS__OPS-1 state: disconnected
+ [AudioWS] Dispatcher mode: auto-reconnecting OPS__OPS-1
+ [AudioWS] Dispatcher auto-reconnect: scheduling OPS__OPS-1 in 1800ms (attempt 1)
+ [AudioWS] _doConnect() — channel=PHILADELPHIA__OPS-1 identity=DISPATCH-1 path=WEB
+ [AudioWS] _doConnect() — channel=DISPATCH__DISPATCH identity=DISPATCH-1 path=WEB
+ [AudioWS] Playback chain created for PHILADELPHIA__OPS-1, AudioContext state: running
+ [AudioWS] Connected to PHILADELPHIA__OPS-1 (total 112.0ms)
+ [LiveKitConnection] PHILADELPHIA__OPS-1 state: connected
+ [AudioWS] Dispatcher auto-reconnect: successfully reconnected to PHILADELPHIA__OPS-1
+ [AudioWS] Server confirmed connection for PHILADELPHIA__OPS-1
+ [AudioWS] Playback chain created for DISPATCH__DISPATCH, AudioContext state: running
+ [AudioWS] Connected to DISPATCH__DISPATCH (total 235.2ms)
+ [LiveKitConnection] DISPATCH__DISPATCH state: connected
+ [AudioWS] Dispatcher auto-reconnect: successfully reconnected to DISPATCH__DISPATCH
+ [AudioWS] Server confirmed connection for DISPATCH__DISPATCH
+ [AudioWS] _doConnect() — channel=OPS__OPS-1 identity=DISPATCH-1 path=WEB
+ [AudioWS] Playback chain created for OPS__OPS-1, AudioContext state: running
+ [AudioWS] Connected to OPS__OPS-1 (total 119.7ms)
+ [LiveKitConnection] OPS__OPS-1 state: connected
+ [AudioWS] Dispatcher auto-reconnect: successfully reconnected to OPS__OPS-1
+ [AudioWS] Server confirmed connection for OPS__OPS-1
+ [AudioWS] No pong from server for PHILADELPHIA__OPS-1 in 46s — connection likely dead
+(anonymous) @ index-D54voQo4.js:60
+ [AudioWS] No pong from server for DISPATCH__DISPATCH in 46s — connection likely dead
+(anonymous) @ index-D54voQo4.js:60
+ [AudioWS] WebSocket closed for PHILADELPHIA__OPS-1
+ [LiveKitConnection] PHILADELPHIA__OPS-1 state: disconnected
+ [AudioWS] Dispatcher mode: auto-reconnecting PHILADELPHIA__OPS-1
+ [AudioWS] Dispatcher auto-reconnect: scheduling PHILADELPHIA__OPS-1 in 1634ms (attempt 1)
+ [AudioWS] WebSocket closed for DISPATCH__DISPATCH
+ [LiveKitConnection] DISPATCH__DISPATCH state: disconnected
+ [AudioWS] Dispatcher mode: auto-reconnecting DISPATCH__DISPATCH
+ [AudioWS] Dispatcher auto-reconnect: scheduling DISPATCH__DISPATCH in 1534ms (attempt 1)
+ [AudioWS] No pong from server for OPS__OPS-1 in 46s — connection likely dead
+(anonymous) @ index-D54voQo4.js:60
+ [AudioWS] WebSocket closed for OPS__OPS-1
+ [LiveKitConnection] OPS__OPS-1 state: disconnected
+ [AudioWS] Dispatcher mode: auto-reconnecting OPS__OPS-1
+ [AudioWS] Dispatcher auto-reconnect: scheduling OPS__OPS-1 in 1581ms (attempt 1)
+ [AudioWS] _doConnect() — channel=DISPATCH__DISPATCH identity=DISPATCH-1 path=WEB
+ [AudioWS] _doConnect() — channel=PHILADELPHIA__OPS-1 identity=DISPATCH-1 path=WEB
+ [AudioWS] Playback chain created for DISPATCH__DISPATCH, AudioContext state: running
+ [AudioWS] Connected to DISPATCH__DISPATCH (total 123.4ms)
+ [LiveKitConnection] DISPATCH__DISPATCH state: connected
+ [AudioWS] Dispatcher auto-reconnect: successfully reconnected to DISPATCH__DISPATCH
+ [AudioWS] Server confirmed connection for DISPATCH__DISPATCH
+ [AudioWS] Playback chain created for PHILADELPHIA__OPS-1, AudioContext state: running
+ [AudioWS] Connected to PHILADELPHIA__OPS-1 (total 246.4ms)
+ [LiveKitConnection] PHILADELPHIA__OPS-1 state: connected
+ [AudioWS] Dispatcher auto-reconnect: successfully reconnected to PHILADELPHIA__OPS-1
+ [AudioWS] Server confirmed connection for PHILADELPHIA__OPS-1
+ [AudioWS] _doConnect() — channel=OPS__OPS-1 identity=DISPATCH-1 path=WEB
+ [AudioWS] Playback chain created for OPS__OPS-1, AudioContext state: running
+ [AudioWS] Connected to OPS__OPS-1 (total 119.3ms)
+ [LiveKitConnection] OPS__OPS-1 state: connected
+ [AudioWS] Dispatcher auto-reconnect: successfully reconnected to OPS__OPS-1
+ [AudioWS] Server confirmed connection for OPS__OPS-1
+ [AudioWS] No pong from server for DISPATCH__DISPATCH in 46s — connection likely dead
+(anonymous) @ index-D54voQo4.js:60
+ [AudioWS] No pong from server for PHILADELPHIA__OPS-1 in 46s — connection likely dead
+(anonymous) @ index-D54voQo4.js:60
+ [AudioWS] WebSocket closed for DISPATCH__DISPATCH
+ [LiveKitConnection] DISPATCH__DISPATCH state: disconnected
+ [AudioWS] Dispatcher mode: auto-reconnecting DISPATCH__DISPATCH
+ [AudioWS] Dispatcher auto-reconnect: scheduling DISPATCH__DISPATCH in 1045ms (attempt 1)
+ [AudioWS] WebSocket closed for PHILADELPHIA__OPS-1
+ [LiveKitConnection] PHILADELPHIA__OPS-1 state: disconnected
+ [AudioWS] Dispatcher mode: auto-reconnecting PHILADELPHIA__OPS-1
+ [AudioWS] Dispatcher auto-reconnect: scheduling PHILADELPHIA__OPS-1 in 1252ms (attempt 1)
+ [AudioWS] No pong from server for OPS__OPS-1 in 46s — connection likely dead
+(anonymous) @ index-D54voQo4.js:60
+ [AudioWS] WebSocket closed for OPS__OPS-1
+ [LiveKitConnection] OPS__OPS-1 state: disconnected
+ [AudioWS] Dispatcher mode: auto-reconnecting OPS__OPS-1
+ [AudioWS] Dispatcher auto-reconnect: scheduling OPS__OPS-1 in 1340ms (attempt 1)
+LiveKitManager.js:731 [AudioWS] _doConnect() — channel=DISPATCH__DISPATCH identity=DISPATCH-1 path=WEB
+LiveKitManager.js:731 [AudioWS] _doConnect() — channel=PHILADELPHIA__OPS-1 identity=DISPATCH-1 path=WEB
+LiveKitManager.js:998 [AudioWS] Playback chain created for DISPATCH__DISPATCH, AudioContext state: running
+LiveKitManager.js:767 [AudioWS] Connected to DISPATCH__DISPATCH (total 240.2ms)
+LiveKitConnectionContext.jsx:240 [LiveKitConnection] DISPATCH__DISPATCH state: connected
+LiveKitManager.js:445 [AudioWS] Dispatcher auto-reconnect: successfully reconnected to DISPATCH__DISPATCH
+LiveKitManager.js:903 [AudioWS] Server confirmed connection for DISPATCH__DISPATCH
+LiveKitManager.js:998 [AudioWS] Playback chain created for PHILADELPHIA__OPS-1, AudioContext state: running
+LiveKitManager.js:767 [AudioWS] Connected to PHILADELPHIA__OPS-1 (total 367.1ms)
+LiveKitConnectionContext.jsx:240 [LiveKitConnection] PHILADELPHIA__OPS-1 state: connected
+LiveKitManager.js:445 [AudioWS] Dispatcher auto-reconnect: successfully reconnected to PHILADELPHIA__OPS-1
+LiveKitManager.js:903 [AudioWS] Server confirmed connection for PHILADELPHIA__OPS-1
+LiveKitManager.js:731 [AudioWS] _doConnect() — channel=OPS__OPS-1 identity=DISPATCH-1 path=WEB
+LiveKitManager.js:998 [AudioWS] Playback chain created for OPS__OPS-1, AudioContext state: running
+LiveKitManager.js:767 [AudioWS] Connected to OPS__OPS-1 (total 119.4ms)
+LiveKitConnectionContext.jsx:240 [LiveKitConnection] OPS__OPS-1 state: connected
+LiveKitManager.js:445 [AudioWS] Dispatcher auto-reconnect: successfully reconnected to OPS__OPS-1
+LiveKitManager.js:903 [AudioWS] Server confirmed connection for OPS__OPS-1
+LiveKitManager.js:871 [AudioWS] No pong from server for DISPATCH__DISPATCH in 46s — connection likely dead
+(anonymous) @ LiveKitManager.js:871
+LiveKitManager.js:871 [AudioWS] No pong from server for PHILADELPHIA__OPS-1 in 46s — connection likely dead
+(anonymous) @ LiveKitManager.js:871
+LiveKitManager.js:880 [AudioWS] WebSocket closed for DISPATCH__DISPATCH
+LiveKitConnectionContext.jsx:240 [LiveKitConnection] DISPATCH__DISPATCH state: disconnected
+LiveKitManager.js:887 [AudioWS] Dispatcher mode: auto-reconnecting DISPATCH__DISPATCH
+LiveKitManager.js:433 [AudioWS] Dispatcher auto-reconnect: scheduling DISPATCH__DISPATCH in 1475ms (attempt 1)
+LiveKitManager.js:880 [AudioWS] WebSocket closed for PHILADELPHIA__OPS-1
+LiveKitConnectionContext.jsx:240 [LiveKitConnection] PHILADELPHIA__OPS-1 state: disconnected
+LiveKitManager.js:887 [AudioWS] Dispatcher mode: auto-reconnecting PHILADELPHIA__OPS-1
+LiveKitManager.js:433 [AudioWS] Dispatcher auto-reconnect: scheduling PHILADELPHIA__OPS-1 in 1106ms (attempt 1)
+LiveKitManager.js:871 [AudioWS] No pong from server for OPS__OPS-1 in 46s — connection likely dead
+(anonymous) @ LiveKitManager.js:871
+LiveKitManager.js:880 [AudioWS] WebSocket closed for OPS__OPS-1
+LiveKitConnectionContext.jsx:240 [LiveKitConnection] OPS__OPS-1 state: disconnected
+LiveKitManager.js:887 [AudioWS] Dispatcher mode: auto-reconnecting OPS__OPS-1
+LiveKitManager.js:433 [AudioWS] Dispatcher auto-reconnect: scheduling OPS__OPS-1 in 1224ms (attempt 1)
+LiveKitManager.js:731 [AudioWS] _doConnect() — channel=PHILADELPHIA__OPS-1 identity=DISPATCH-1 path=WEB
+LiveKitManager.js:731 [AudioWS] _doConnect() — channel=DISPATCH__DISPATCH identity=DISPATCH-1 path=WEB
+LiveKitManager.js:998 [AudioWS] Playback chain created for PHILADELPHIA__OPS-1, AudioContext state: running
+LiveKitManager.js:767 [AudioWS] Connected to PHILADELPHIA__OPS-1 (total 118.8ms)
+LiveKitConnectionContext.jsx:240 [LiveKitConnection] PHILADELPHIA__OPS-1 state: connected
+LiveKitManager.js:445 [AudioWS] Dispatcher auto-reconnect: successfully reconnected to PHILADELPHIA__OPS-1
+LiveKitManager.js:903 [AudioWS] Server confirmed connection for PHILADELPHIA__OPS-1
+LiveKitManager.js:998 [AudioWS] Playback chain created for DISPATCH__DISPATCH, AudioContext state: running
+LiveKitManager.js:767 [AudioWS] Connected to DISPATCH__DISPATCH (total 236.0ms)
+LiveKitConnectionContext.jsx:240 [LiveKitConnection] DISPATCH__DISPATCH state: connected
+LiveKitManager.js:445 [AudioWS] Dispatcher auto-reconnect: successfully reconnected to DISPATCH__DISPATCH
+LiveKitManager.js:903 [AudioWS] Server confirmed connection for DISPATCH__DISPATCH
+LiveKitManager.js:731 [AudioWS] _doConnect() — channel=OPS__OPS-1 identity=DISPATCH-1 path=WEB
+LiveKitManager.js:998 [AudioWS] Playback chain created for OPS__OPS-1, AudioContext state: running
+LiveKitManager.js:767 [AudioWS] Connected to OPS__OPS-1 (total 113.5ms)
+LiveKitConnectionContext.jsx:240 [LiveKitConnection] OPS__OPS-1 state: connected
+LiveKitManager.js:445 [AudioWS] Dispatcher auto-reconnect: successfully reconnected to OPS__OPS-1
+LiveKitManager.js:903 [AudioWS] Server confirmed connection for OPS__OPS-1
+LiveKitConnectionContext.jsx:573 [LiveKitConnection] Page became visible — checking audio channels
+LiveKitConnectionContext.jsx:596 [LiveKitConnection] All audio channels healthy after visibility restore
+LiveKitConnectionContext.jsx:612 [LiveKitConnection] Init check - user: DISPATCH-1 lastUser: DISPATCH-1 initializing: false path: /dispatcher
+LiveKitConnectionContext.jsx:631 [LiveKitConnection] Already initialized for this user on this path, skipping
+SignalingManager.js:71 [Signaling] Already connected
+AuthContext.jsx:170 [PTT-DIAG] [JS] Auth: pushed early connection info to service: server=https://comms.reeder-systems.com unit=DISPATCH-1
+SignalingManager.js:291 [Signaling] Already authenticated
+SignalingContext.jsx:47 [SignalingContext] Connected and authenticated as DISPATCH-1

@@ -1,0 +1,1920 @@
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
+main.jsx:50 [GLOBAL ERROR] Uncaught TypeError: Cannot read properties of null (reading 'ready') https://comms.reeder-systems.com/assets/index-D54voQo4.js 60
+(anonymous) @ main.jsx:50
+LiveKitManager.js:938 Uncaught TypeError: Cannot read properties of null (reading 'ready')
+    at Ck._handleWsBinaryMessage (LiveKitManager.js:938:20)
+    at WebSocket.<anonymous> (LiveKitManager.js:860:12)
