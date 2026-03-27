@@ -1,0 +1,50 @@
+Jreeder5029@CommandComms:~$ sudo ss -tlnp
+State   Recv-Q   Send-Q     Local Address:Port                  Peer Address:Port               Process
+LISTEN  0        4096             0.0.0.0:22                         0.0.0.0:*                   users:(("sshd",pid=23518,fd=3),("systemd",pid=1,fd=160))
+LISTEN  0        511              0.0.0.0:80                         0.0.0.0:*                   users:(("nginx",pid=32681,fd=5),("nginx",pid=32680,fd=5),("nginx",pid=24793,fd=5))
+LISTEN  0        511              0.0.0.0:443                        0.0.0.0:*                   users:(("nginx",pid=32681,fd=13),("nginx",pid=32680,fd=13),("nginx",pid=24793,fd=13))
+LISTEN  0        4096       127.0.0.53%lo:53                         0.0.0.0:*                   users:(("systemd-resolve",pid=19716,fd=15))
+LISTEN  0        4096          127.0.0.54:53                         0.0.0.0:*                   users:(("systemd-resolve",pid=19716,fd=17))
+LISTEN  0        511              0.0.0.0:3001                       0.0.0.0:*                   users:(("PM2 v6.0.14: Go",pid=169131,fd=24))
+LISTEN  0        4096                [::]:22                            [::]:*                   users:(("sshd",pid=23518,fd=4),("systemd",pid=1,fd=161))
+Jreeder5029@CommandComms:~$ sudo ss -tulnp
+Netid State  Recv-Q Send-Q Local Address:Port Peer Address:PortProcess
+udp   UNCONN 0      0         127.0.0.54:53        0.0.0.0:*    users:(("systemd-resolve",pid=19716,fd=16))
+udp   UNCONN 0      0      127.0.0.53%lo:53        0.0.0.0:*    users:(("systemd-resolve",pid=19716,fd=14))
+udp   UNCONN 0      0      10.0.0.4%eth0:68        0.0.0.0:*    users:(("systemd-network",pid=19560,fd=22))
+udp   UNCONN 0      0          127.0.0.1:323       0.0.0.0:*    users:(("chronyd",pid=999,fd=6))
+udp   UNCONN 0      0            0.0.0.0:5100      0.0.0.0:*    users:(("node /home/Jree",pid=503900,fd=25),("PM2 v6.0.14: Go",pid=169131,fd=23))
+udp   UNCONN 0      0              [::1]:323          [::]:*    users:(("chronyd",pid=999,fd=7))
+tcp   LISTEN 0      4096         0.0.0.0:22        0.0.0.0:*    users:(("sshd",pid=23518,fd=3),("systemd",pid=1,fd=160))
+tcp   LISTEN 0      511          0.0.0.0:80        0.0.0.0:*    users:(("nginx",pid=32681,fd=5),("nginx",pid=32680,fd=5),("nginx",pid=24793,fd=5))
+tcp   LISTEN 0      511          0.0.0.0:443       0.0.0.0:*    users:(("nginx",pid=32681,fd=13),("nginx",pid=32680,fd=13),("nginx",pid=24793,fd=13))
+tcp   LISTEN 0      4096   127.0.0.53%lo:53        0.0.0.0:*    users:(("systemd-resolve",pid=19716,fd=15))
+tcp   LISTEN 0      4096      127.0.0.54:53        0.0.0.0:*    users:(("systemd-resolve",pid=19716,fd=17))
+tcp   LISTEN 0      511          0.0.0.0:3001      0.0.0.0:*    users:(("PM2 v6.0.14: Go",pid=169131,fd=24))
+tcp   LISTEN 0      4096            [::]:22           [::]:*    users:(("sshd",pid=23518,fd=4),("systemd",pid=1,fd=161))
+Jreeder5029@CommandComms:~$ pm2 stop command-comms
+[PM2] Applying action stopProcessId on app [command-comms](ids: [ 0 ])
+[PM2] [command-comms](0) ✓
+┌────┬──────────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐
+│ id │ name             │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │
+├────┼──────────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤
+│ 0  │ command-comms    │ default     │ 1.0.0   │ fork    │ 0        │ 0      │ 629… │ stopped   │ 0%       │ 0b       │ Jre… │ disabled │
+└────┴──────────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘
+Jreeder5029@CommandComms:~$ sudo ss -tlnp
+State  Recv-Q  Send-Q   Local Address:Port   Peer Address:Port Process
+LISTEN 0       4096           0.0.0.0:22          0.0.0.0:*     users:(("sshd",pid=23518,fd=3),("systemd",pid=1,fd=160))
+LISTEN 0       511            0.0.0.0:80          0.0.0.0:*     users:(("nginx",pid=32681,fd=5),("nginx",pid=32680,fd=5),("nginx",pid=24793,fd=5))
+LISTEN 0       511            0.0.0.0:443         0.0.0.0:*     users:(("nginx",pid=32681,fd=13),("nginx",pid=32680,fd=13),("nginx",pid=24793,fd=13))
+LISTEN 0       4096     127.0.0.53%lo:53          0.0.0.0:*     users:(("systemd-resolve",pid=19716,fd=15))
+LISTEN 0       4096        127.0.0.54:53          0.0.0.0:*     users:(("systemd-resolve",pid=19716,fd=17))
+LISTEN 0       511            0.0.0.0:3001        0.0.0.0:*     users:(("PM2 v6.0.14: Go",pid=169131,fd=24))
+LISTEN 0       4096              [::]:22             [::]:*     users:(("sshd",pid=23518,fd=4),("systemd",pid=1,fd=161))
+Jreeder5029@CommandComms:~$ sudo ss -tlnp
+State  Recv-Q  Send-Q   Local Address:Port   Peer Address:Port Process
+LISTEN 0       4096           0.0.0.0:22          0.0.0.0:*     users:(("sshd",pid=23518,fd=3),("systemd",pid=1,fd=160))
+LISTEN 0       511            0.0.0.0:80          0.0.0.0:*     users:(("nginx",pid=32681,fd=5),("nginx",pid=32680,fd=5),("nginx",pid=24793,fd=5))
+LISTEN 0       511            0.0.0.0:443         0.0.0.0:*     users:(("nginx",pid=32681,fd=13),("nginx",pid=32680,fd=13),("nginx",pid=24793,fd=13))
+LISTEN 0       4096     127.0.0.53%lo:53          0.0.0.0:*     users:(("systemd-resolve",pid=19716,fd=15))
+LISTEN 0       4096        127.0.0.54:53          0.0.0.0:*     users:(("systemd-resolve",pid=19716,fd=17))
+LISTEN 0       511            0.0.0.0:3001        0.0.0.0:*     users:(("PM2 v6.0.14: Go",pid=169131,fd=24))
+LISTEN 0       4096              [::]:22             [::]:*     users:(("sshd",pid=23518,fd=4),("systemd",pid=1,fd=161))
