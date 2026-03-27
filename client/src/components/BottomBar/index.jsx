@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import useDispatchStore from '../../state/dispatchStore.js';
-import { micPTTManager } from '../../audio/MicPTTManager.js';
 import { PTT_STATES } from '../../constants/pttStates.js';
 import livekitManager from '../../audio/LiveKitManager.js';
 import toneEngine from '../../audio/toneEngine.js';
@@ -56,12 +55,12 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
       setDisabledTones(prev => ({ ...prev, [type]: false }));
     };
 
-    micPTTManager.onStateChange = (newState) => {
+    livekitManager.onStateChange = (newState) => {
       setPttState(newState);
     };
 
     // Handle disconnect during transmission
-    micPTTManager.onDisconnectDuringTx = () => {
+    livekitManager.onDisconnectDuringTx = () => {
       console.warn('[BottomBar] Disconnect during transmission detected');
       toneEngine.playErrorTone();
       // Reset gesture state since transmission was force-released
@@ -76,8 +75,8 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
     return () => {
       toneEngine.onToneStart = null;
       toneEngine.onToneEnd = null;
-      micPTTManager.onStateChange = null;
-      micPTTManager.onDisconnectDuringTx = null;
+      livekitManager.onStateChange = null;
+      livekitManager.onDisconnectDuringTx = null;
     };
   }, [setPttState]);
 
@@ -135,9 +134,9 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
         return false;
       }
 
-      micPTTManager.setCurrentChannel(primaryChannel);
-      micPTTManager.setCurrentUnit(identity);
-      micPTTManager.setRoom(room);
+      livekitManager.setCurrentChannel(primaryChannel);
+      livekitManager.setCurrentUnit(identity);
+      livekitManager.setRoom(room);
       livekitManager.setPrimaryTxChannel(primaryChannel);
       
       if (signalPttStart) {
@@ -155,10 +154,10 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
         }
       }
       
-      const success = await micPTTManager.start();
+      const success = await livekitManager.start();
       
       if (!success) {
-        console.warn('[PTT] micPTTManager.start() returned false');
+        console.warn('[PTT] livekitManager.start() returned false');
         toneEngine.playErrorTone?.();
         flashPttError();
         livekitManager.unmuteChannels(mutedChannelsRef.current);
@@ -193,7 +192,7 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
     const primaryChannel = selectedChannelNames[0];
     
     try {
-      await micPTTManager.stop();
+      await livekitManager.stop();
       console.log('[PTT] Transmission stopped');
       
       if (signalPttEnd && primaryChannel) {
@@ -201,7 +200,7 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
       }
     } catch (err) {
       console.error('[PTT] Failed to stop transmission:', err);
-      micPTTManager.forceRelease();
+      livekitManager.forceRelease();
     } finally {
       if (channelsToUnmute.length > 0) {
         livekitManager.unmuteChannels(channelsToUnmute);
@@ -215,7 +214,7 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
     if (e.type === 'keydown' && e.repeat) return;
     if (txChannelIds.length === 0) return;
     if (gestureActiveRef.current) return;
-    if (!micPTTManager.canStart()) return;
+    if (!livekitManager.canStart()) return;
     
     console.log('[PTT] === PTT DOWN ===');
     gestureActiveRef.current = true;
