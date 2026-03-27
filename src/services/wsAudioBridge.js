@@ -302,6 +302,10 @@ class WsAudioBridge {
   }
 
   _handleNewPcmFrame(clientId, clientInfo, buf) {
+    if (clientInfo._rxFrameCount <= 2) {
+      console.log(`[AUDIO-NEW] _handleNewPcmFrame ENTRY: unit=${clientInfo.unitId} ch=${clientInfo.channelId} bufLen=${buf.length} frame#=${clientInfo._rxFrameCount}`);
+    }
+
     if (!floorControlService.holdsFloor(clientInfo.channelId, clientInfo.unitId)) {
       if (clientInfo._rxFrameCount <= 3 || clientInfo._rxFrameCount % 50 === 0) {
         const holder = floorControlService.getFloorHolder(clientInfo.channelId);

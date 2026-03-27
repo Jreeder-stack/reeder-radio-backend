@@ -138,6 +138,7 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
       micPTTManager.setCurrentChannel(primaryChannel);
       micPTTManager.setCurrentUnit(identity);
       micPTTManager.setRoom(room);
+      livekitManager.setPrimaryTxChannel(primaryChannel);
       
       if (signalPttStart) {
         try {

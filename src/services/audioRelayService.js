@@ -1,5 +1,6 @@
 import dgram from 'dgram';
 import { canonicalChannelKey } from './channelKeyUtils.js';
+import { opusCodec, SAMPLE_RATE, FRAME_SIZE } from './opusCodec.js';
 
 const SESSION_TOKEN_LEN = 16;
 const CHANNEL_ID_LEN = 2;
@@ -210,25 +211,51 @@ class AudioRelayService {
     const wsSubs = this.wsSubscribers.get(channelKey);
     const wsSubCount = wsSubs ? wsSubs.size : 0;
     if (wsSubs && wsSubs.size > 0) {
-      const channelIdNum = parseInt(channelKey, 10);
-      const opusFrame = Buffer.alloc(5 + opusPayload.length);
-      opusFrame.writeUInt8(0x02, 0);
-      opusFrame.writeUInt16BE(isNaN(channelIdNum) ? 0 : channelIdNum, 1);
-      opusFrame.writeUInt16BE(sequence & 0xFFFF, 3);
-      opusPayload.copy(opusFrame, 5);
-
       if (!txSession.firstRelayLogged) {
         const wsUnitIds = [...wsSubs.keys()].filter(id => id !== senderUnitId);
         console.log(`[RELAY-DIAG] First relay packet: ch=${channelKey} from=${senderUnitId} wsSubscribers=[${wsUnitIds.join(',')}]`);
         txSession.firstRelayLogged = true;
       }
 
+      let pcmFrame = null;
+      try {
+        const pcmBuf = opusCodec.decodeOpusToPcm(opusPayload);
+        const senderIdStr = senderUnitId || '';
+        const channelIdStr = channelKey || '';
+        const senderBytes = Buffer.from(senderIdStr, 'utf8');
+        const channelBytes = Buffer.from(channelIdStr, 'utf8');
+        const headerSize = 1 + 1 + 2 + 1 + 2 + 2 + 1 + senderBytes.length + 1 + channelBytes.length + 2;
+        const totalSize = headerSize + pcmBuf.length;
+        pcmFrame = Buffer.alloc(totalSize);
+        let off = 0;
+        pcmFrame.writeUInt8(0x10, off); off += 1;
+        pcmFrame.writeUInt8(0x01, off); off += 1;
+        pcmFrame.writeUInt16BE(SAMPLE_RATE, off); off += 2;
+        pcmFrame.writeUInt8(1, off); off += 1;
+        pcmFrame.writeUInt16BE(FRAME_SIZE, off); off += 2;
+        pcmFrame.writeUInt16BE(sequence & 0xFFFF, off); off += 2;
+        pcmFrame.writeUInt8(senderBytes.length, off); off += 1;
+        senderBytes.copy(pcmFrame, off); off += senderBytes.length;
+        pcmFrame.writeUInt8(channelBytes.length, off); off += 1;
+        channelBytes.copy(pcmFrame, off); off += channelBytes.length;
+        pcmFrame.writeUInt16BE(pcmBuf.length, off); off += 2;
+        pcmBuf.copy(pcmFrame, off);
+
+        if (txSession.packetCount <= 2) {
+          console.log(`[RELAY-DIAG] Opus→PCM transcode: ch=${channelKey} from=${senderUnitId} opusLen=${opusPayload.length} pcmLen=${pcmBuf.length} totalFrame=${totalSize}`);
+        }
+      } catch (decErr) {
+        if (txSession.packetCount <= 5 || txSession.packetCount % 100 === 0) {
+          console.error(`[RELAY-DIAG] Opus→PCM decode error: ch=${channelKey} from=${senderUnitId}:`, decErr.message);
+        }
+      }
+
       for (const [subUnitId, subInfo] of wsSubs) {
         if (subUnitId === senderUnitId) continue;
         subInfo.lastSeen = Date.now();
         try {
-          if (subInfo.ws.readyState === 1) {
-            subInfo.ws.send(opusFrame);
+          if (subInfo.ws.readyState === 1 && pcmFrame) {
+            subInfo.ws.send(pcmFrame);
             txSession.totalForwarded++;
           }
         } catch (err) {

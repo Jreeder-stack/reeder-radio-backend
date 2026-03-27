@@ -15,6 +15,7 @@ class PcmPlaybackManager {
     this._prePlaybackBuffer = [];
     this._maxPreBuffer = 100;
     this._gestureListenerAttached = false;
+    this._resumeInFlight = false;
   }
 
   async init() {
@@ -68,13 +69,16 @@ class PcmPlaybackManager {
 
   async ensureAudioContextResumed() {
     if (!this._audioContext) return;
-    if (this._audioContext.state === 'suspended') {
-      try {
-        await this._audioContext.resume();
-        console.log(`${LOG_PREFIX} AudioContext resumed explicitly`);
-      } catch (e) {
-        console.warn(`${LOG_PREFIX} AudioContext resume failed:`, e.message);
-      }
+    if (this._audioContext.state !== 'suspended') return;
+    if (this._resumeInFlight) return;
+    this._resumeInFlight = true;
+    try {
+      await this._audioContext.resume();
+      console.log(`${LOG_PREFIX} AudioContext resumed explicitly (state=${this._audioContext.state})`);
+    } catch (e) {
+      console.warn(`${LOG_PREFIX} AudioContext resume failed:`, e.message);
+    } finally {
+      this._resumeInFlight = false;
     }
   }
 

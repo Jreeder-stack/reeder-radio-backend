@@ -25,6 +25,8 @@ class OnDemandVoiceManager {
 
     this.GRACE_PERIOD_MS = 15000;
     this._dispatcherMode = false;
+    this._mutedChannels = new Set();
+    this._globalMuted = false;
     this._reconnectAttempts = new Map();
     this._reconnectTimers = new Map();
     this._RECONNECT_BASE_DELAY = 1000;
@@ -396,6 +398,7 @@ class OnDemandVoiceManager {
   _ensurePlaybackHandler() {
     if (!pcmAudioTransport.hasHandler('playback')) {
       pcmAudioTransport.addOnValidPacket('playback', (packet) => {
+        pcmPlaybackManager.ensureAudioContextResumed();
         const success = pcmPlaybackManager.enqueue(packet.payload);
         if (!success && packet.sequence % 50 === 0) {
           console.log('[AUDIO-NEW][RX] enqueue failed (muted or not playing)');
@@ -442,6 +445,9 @@ class OnDemandVoiceManager {
   }
 
   _handleBinaryMessage(channelId, data) {
+    if (this._globalMuted) return;
+    if (this._mutedChannels && this._mutedChannels.has(channelId)) return;
+
     let arrayBuffer;
     if (data instanceof ArrayBuffer) {
       arrayBuffer = data;
@@ -542,12 +548,21 @@ class OnDemandVoiceManager {
   }
 
   muteReceiveAudio(channelId, muted) {
-    pcmPlaybackManager.setMuted(muted);
-    console.log(`[AUDIO-NEW] muteReceiveAudio(${channelId}, ${muted})`);
+    if (muted) {
+      if (!this._mutedChannels) this._mutedChannels = new Set();
+      this._mutedChannels.add(channelId);
+    } else {
+      if (this._mutedChannels) this._mutedChannels.delete(channelId);
+    }
+    console.log(`[AUDIO-NEW] muteReceiveAudio(${channelId}, ${muted}) — mutedSet=[${this._mutedChannels ? [...this._mutedChannels].join(',') : ''}]`);
   }
 
   muteAllReceiveAudio(muted) {
-    pcmPlaybackManager.setMuted(muted);
+    if (muted) {
+      this._globalMuted = true;
+    } else {
+      this._globalMuted = false;
+    }
     console.log(`[AUDIO-NEW] muteAllReceiveAudio(${muted})`);
   }
 

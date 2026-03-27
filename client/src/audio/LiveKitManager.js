@@ -528,6 +528,7 @@ class LiveKitManager {
   _ensurePlaybackHandler() {
     if (!pcmAudioTransport.hasHandler('playback')) {
       pcmAudioTransport.addOnValidPacket('playback', (packet) => {
+        pcmPlaybackManager.ensureAudioContextResumed();
         const success = pcmPlaybackManager.enqueue(packet.payload);
         if (!success && packet.sequence % 50 === 0) {
           console.log('[AUDIO-NEW][RX] enqueue failed (muted or not playing)');
@@ -761,6 +762,10 @@ class LiveKitManager {
       return;
     }
 
+    if (this.mutedChannels.has(channelName)) {
+      return;
+    }
+
     let arrayBuffer;
     if (data instanceof ArrayBuffer) {
       arrayBuffer = data;
@@ -835,16 +840,12 @@ class LiveKitManager {
 
   muteChannel(channelName) {
     this.mutedChannels.add(channelName);
-    pcmPlaybackManager.setMuted(true);
-    console.log(`[AUDIO-NEW] muteChannel(${channelName})`);
+    console.log(`[AUDIO-NEW] muteChannel(${channelName}) — per-channel mute, mutedSet=[${[...this.mutedChannels].join(',')}]`);
   }
 
   unmuteChannel(channelName) {
     this.mutedChannels.delete(channelName);
-    if (this.mutedChannels.size === 0) {
-      pcmPlaybackManager.setMuted(false);
-    }
-    console.log(`[AUDIO-NEW] unmuteChannel(${channelName})`);
+    console.log(`[AUDIO-NEW] unmuteChannel(${channelName}) — per-channel unmute, mutedSet=[${[...this.mutedChannels].join(',')}]`);
   }
 
   muteChannels(channelNames) {
