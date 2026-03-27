@@ -1,0 +1,148 @@
+main.jsx:26 [BUILD] client version=5b219b6 built=2026-03-27T20:21:33.777Z
+LiveKitManager.js:409 [AudioWS] Dispatcher mode enabled — idle disconnect disabled
+OnDemandVoiceManager.js:195 [OnDemandVoice] Dispatcher mode enabled — grace period disconnect disabled
+LiveKitConnectionContext.jsx:525 [LiveKitConnection] Dispatcher mode - idle timeout disabled (must survive screen lock)
+LiveKitConnectionContext.jsx:595 [LiveKitConnection] Init check - user: undefined lastUser: null initializing: false path: /dispatcher
+LiveKitConnectionContext.jsx:604 [LiveKitConnection] No user, skipping init
+AuthContext.jsx:170 [PTT-DIAG] [JS] Auth: pushed early connection info to service: server=https://comms.reeder-systems.com unit=DISPATCH-1
+LiveKitConnectionContext.jsx:595 [LiveKitConnection] Init check - user: DISPATCH-1 lastUser: null initializing: false path: /dispatcher
+LiveKitConnectionContext.jsx:622 [LiveKitConnection] Fetching channels...
+SignalingManager.js:76 [Signaling] Connection already in progress, returning existing promise
+AuthContext.jsx:170 [PTT-DIAG] [JS] Auth: pushed early connection info to service: server=https://comms.reeder-systems.com unit=DISPATCH-1
+SignalingManager.js:110 [Signaling] Connected to signaling server
+SignalingManager.js:337 [Signaling] Authentication request sent for DISPATCH-1
+SignalingManager.js:296 [Signaling] Authentication already in progress, returning existing promise
+LiveKitConnectionContext.jsx:625 [LiveKitConnection] Fetched 3 channels
+LiveKitManager.js:536 [AUDIO-NEW] Playback transport handler registered
+LiveKitConnectionContext.jsx:408 [LiveKitConnection] Dispatcher mode - connecting to all 3 channels
+LiveKitManager.js:581 [AudioWS] _doConnect() — channel=DISPATCH__DISPATCH identity=DISPATCH-1 path=WEB
+LiveKitManager.js:581 [AudioWS] _doConnect() — channel=OPS__OPS-1 identity=DISPATCH-1 path=WEB
+LiveKitManager.js:581 [AudioWS] _doConnect() — channel=PHILADELPHIA__OPS-1 identity=DISPATCH-1 path=WEB
+LiveKitManager.js:564 [AudioWS] Awaiting existing connection for DISPATCH__DISPATCH
+SignalingManager.js:160 [Signaling] Authenticated as DISPATCH-1
+SignalingContext.jsx:48 [SignalingContext] Connected and authenticated as DISPATCH-1
+SignalingContext.jsx:48 [SignalingContext] Connected and authenticated as DISPATCH-1
+SignalingManager.js:376 [Signaling] Joined channel: DISPATCH__DISPATCH
+talkPermitTone.js:21 [TalkPermit] WAV preloaded
+LiveKitManager.js:677 [AudioWS] WebSocket OPENED for wss://comms.reeder-systems.com/api/audio-ws?channelId=DISPATCH__DISPATCH&unitId=DISPATCH-1
+LiveKitManager.js:749 [AudioWS] Server confirmed connection for DISPATCH__DISPATCH
+PcmPlaybackManager.js:41 [AUDIO-NEW][RX-PLAYBACK] Worklet loaded, sampleRate=48000
+OnDemandVoiceManager.js:390 [OnDemandVoice] Warm-up complete (permit tone + playback worklet pre-loaded)
+PcmPlaybackManager.js:115 [AUDIO-NEW][RX-PLAYBACK] Playback started
+PcmPlaybackManager.js:115 [AUDIO-NEW][RX-PLAYBACK] Playback started
+LiveKitManager.js:546 [AUDIO-NEW] Playback pipeline ready
+LiveKitManager.js:546 [AUDIO-NEW] Playback pipeline ready
+LiveKitManager.js:611 [AudioWS] Connected to DISPATCH__DISPATCH (total 172.2ms)
+LiveKitConnectionContext.jsx:240 [LiveKitConnection] DISPATCH__DISPATCH state: connected
+LiveKitConnectionContext.jsx:284 [LiveKitConnection] connectToChannel total for DISPATCH__DISPATCH: 177.5ms
+LiveKitManager.js:345 [AudioWS] Channel DISPATCH__DISPATCH marked active
+LiveKitConnectionContext.jsx:291 [LiveKitConnection] Connected to DISPATCH__DISPATCH
+LiveKitConnectionContext.jsx:284 [LiveKitConnection] connectToChannel total for DISPATCH__DISPATCH: 165.5ms
+LiveKitManager.js:345 [AudioWS] Channel DISPATCH__DISPATCH marked active
+LiveKitConnectionContext.jsx:291 [LiveKitConnection] Connected to DISPATCH__DISPATCH
+LiveKitManager.js:677 [AudioWS] WebSocket OPENED for wss://comms.reeder-systems.com/api/audio-ws?channelId=OPS__OPS-1&unitId=DISPATCH-1
+LiveKitManager.js:546 [AUDIO-NEW] Playback pipeline ready
+LiveKitManager.js:611 [AudioWS] Connected to OPS__OPS-1 (total 286.4ms)
+LiveKitConnectionContext.jsx:240 [LiveKitConnection] OPS__OPS-1 state: connected
+LiveKitConnectionContext.jsx:284 [LiveKitConnection] connectToChannel total for OPS__OPS-1: 288.4ms
+LiveKitManager.js:345 [AudioWS] Channel OPS__OPS-1 marked active
+LiveKitConnectionContext.jsx:291 [LiveKitConnection] Connected to OPS__OPS-1
+LiveKitManager.js:749 [AudioWS] Server confirmed connection for OPS__OPS-1
+LiveKitManager.js:677 [AudioWS] WebSocket OPENED for wss://comms.reeder-systems.com/api/audio-ws?channelId=PHILADELPHIA__OPS-1&unitId=DISPATCH-1
+LiveKitManager.js:546 [AUDIO-NEW] Playback pipeline ready
+LiveKitManager.js:611 [AudioWS] Connected to PHILADELPHIA__OPS-1 (total 406.0ms)
+LiveKitConnectionContext.jsx:240 [LiveKitConnection] PHILADELPHIA__OPS-1 state: connected
+LiveKitConnectionContext.jsx:284 [LiveKitConnection] connectToChannel total for PHILADELPHIA__OPS-1: 407.0ms
+LiveKitManager.js:345 [AudioWS] Channel PHILADELPHIA__OPS-1 marked active
+LiveKitConnectionContext.jsx:291 [LiveKitConnection] Connected to PHILADELPHIA__OPS-1
+LiveKitConnectionContext.jsx:434 [LiveKitConnection] Dispatcher mode - connected 3/3 channels
+LiveKitManager.js:749 [AudioWS] Server confirmed connection for PHILADELPHIA__OPS-1
+index.jsx:219 [PTT] === PTT DOWN ===
+index.jsx:85 [PTT] startTransmission called, channels: ['DISPATCH__DISPATCH']
+PcmPlaybackManager.js:154 [AUDIO-NEW][RX-PLAYBACK] muted=true
+LiveKitManager.js:839 [AUDIO-NEW] muteChannel(DISPATCH__DISPATCH)
+index.jsx:144 [PTT] Requesting floor grant for channel=DISPATCH__DISPATCH unit=DISPATCH-1
+index.jsx:146 [PTT] Floor granted for channel=DISPATCH__DISPATCH
+MicPTTManager.js:253 [MicPTT] start() — path=WEB channel=DISPATCH__DISPATCH unit=DISPATCH-1
+iosAudioUnlock.js:19 [iOS Audio] Unlock attempt 1
+iosAudioUnlock.js:41 [iOS Audio] Silent buffer played via AudioContext
+MicPTTManager.js:132 [MicPTT] State: idle → arming
+LiveKitManager.js:472 [AudioWS] PTT active - muting sidetone on TX channel (none)
+MicPTTManager.js:269 [MicPTT] Permit tone played
+backgroundService.js:55 [BackgroundService] Web wake lock acquired
+iosAudioUnlock.js:53 [iOS Audio] Silent audio element played - audio unlocked
+PcmCaptureManager.js:38 [AUDIO-NEW][TX-CAPTURE] Worklet loaded, sampleRate=48000
+PcmCaptureManager.js:91 [AUDIO-NEW][TX-CAPTURE] Capture started: 48000Hz mono Int16 960-sample frames
+MicPTTManager.js:317 [AUDIO-NEW][TX] Mic capture started, TX path wired
+MicPTTManager.js:132 [MicPTT] State: arming → transmitting
+MicPTTManager.js:324 [MicPTT] Floor acquired, transmitting PCM audio
+index.jsx:168 [PTT] Transmission started successfully
+PcmCaptureManager.js:78 [AUDIO-NEW][TX-CAPTURE] frame=1 rms=0.0000 samples=960
+PcmAudioTransport.js:54 [AUDIO-NEW][TX] codec=pcm sampleRate=48000 frameSamples=960 payloadBytes=1920 sequence=1 totalFrames=1
+PcmCaptureManager.js:78 [AUDIO-NEW][TX-CAPTURE] frame=50 rms=0.0525 samples=960
+PcmAudioTransport.js:54 [AUDIO-NEW][TX] codec=pcm sampleRate=48000 frameSamples=960 payloadBytes=1920 sequence=50 totalFrames=50
+PcmCaptureManager.js:78 [AUDIO-NEW][TX-CAPTURE] frame=100 rms=0.0049 samples=960
+PcmAudioTransport.js:54 [AUDIO-NEW][TX] codec=pcm sampleRate=48000 frameSamples=960 payloadBytes=1920 sequence=100 totalFrames=100
+index.jsx:236 [PTT] === PTT UP ===, gestureActive: true
+index.jsx:182 [PTT] stopTransmission called
+MicPTTManager.js:409 [MicPTT] stop() — state=transmitting path=WEB
+MicPTTManager.js:132 [MicPTT] State: transmitting → cooldown
+LiveKitManager.js:475 [AudioWS] PTT released - unmuting sidetone
+PcmCaptureManager.js:114 [AUDIO-NEW][TX-CAPTURE] Capture stopped after 106 frames
+MicPTTManager.js:465 [AUDIO-NEW][TX] Capture stopped, TX path torn down
+MicPTTManager.js:132 [MicPTT] State: cooldown → idle
+MicPTTManager.js:472 [MicPTT] Transmission ended, state reset to IDLE
+backgroundService.js:83 [BackgroundService] Web wake lock released
+index.jsx:196 [PTT] Transmission stopped
+PcmPlaybackManager.js:154 [AUDIO-NEW][RX-PLAYBACK] muted=false
+LiveKitManager.js:847 [AUDIO-NEW] unmuteChannel(DISPATCH__DISPATCH)
+index.jsx:207 [PTT] Unmuted channels: ['DISPATCH__DISPATCH']
+OnDemandVoiceManager.js:47 [OnDemandVoice] PTT started by ADMIN on DISPATCH__DISPATCH
+OnDemandVoiceManager.js:54 [OnDemandVoice] PTT ended by ADMIN on DISPATCH__DISPATCH
+OnDemandVoiceManager.js:131 [OnDemandVoice] Starting grace period for DISPATCH__DISPATCH: 3000ms
+OnDemandVoiceManager.js:47 [OnDemandVoice] PTT started by ADMIN on DISPATCH__DISPATCH
+OnDemandVoiceManager.js:54 [OnDemandVoice] PTT ended by ADMIN on DISPATCH__DISPATCH
+OnDemandVoiceManager.js:131 [OnDemandVoice] Starting grace period for DISPATCH__DISPATCH: 3000ms
+index.jsx:219 [PTT] === PTT DOWN ===
+index.jsx:85 [PTT] startTransmission called, channels: ['DISPATCH__DISPATCH']
+PcmPlaybackManager.js:154 [AUDIO-NEW][RX-PLAYBACK] muted=true
+LiveKitManager.js:839 [AUDIO-NEW] muteChannel(DISPATCH__DISPATCH)
+index.jsx:144 [PTT] Requesting floor grant for channel=DISPATCH__DISPATCH unit=DISPATCH-1
+index.jsx:146 [PTT] Floor granted for channel=DISPATCH__DISPATCH
+MicPTTManager.js:253 [MicPTT] start() — path=WEB channel=DISPATCH__DISPATCH unit=DISPATCH-1
+MicPTTManager.js:132 [MicPTT] State: idle → arming
+LiveKitManager.js:472 [AudioWS] PTT active - muting sidetone on TX channel (none)
+MicPTTManager.js:269 [MicPTT] Permit tone played
+backgroundService.js:55 [BackgroundService] Web wake lock acquired
+PcmCaptureManager.js:91 [AUDIO-NEW][TX-CAPTURE] Capture started: 48000Hz mono Int16 960-sample frames
+MicPTTManager.js:317 [AUDIO-NEW][TX] Mic capture started, TX path wired
+MicPTTManager.js:132 [MicPTT] State: arming → transmitting
+MicPTTManager.js:324 [MicPTT] Floor acquired, transmitting PCM audio
+index.jsx:168 [PTT] Transmission started successfully
+PcmCaptureManager.js:78 [AUDIO-NEW][TX-CAPTURE] frame=1 rms=0.0000 samples=960
+PcmAudioTransport.js:54 [AUDIO-NEW][TX] codec=pcm sampleRate=48000 frameSamples=960 payloadBytes=1920 sequence=1 totalFrames=1
+PcmCaptureManager.js:78 [AUDIO-NEW][TX-CAPTURE] frame=50 rms=0.0055 samples=960
+PcmAudioTransport.js:54 [AUDIO-NEW][TX] codec=pcm sampleRate=48000 frameSamples=960 payloadBytes=1920 sequence=50 totalFrames=50
+PcmCaptureManager.js:78 [AUDIO-NEW][TX-CAPTURE] frame=100 rms=0.4421 samples=960
+PcmAudioTransport.js:54 [AUDIO-NEW][TX] codec=pcm sampleRate=48000 frameSamples=960 payloadBytes=1920 sequence=100 totalFrames=100
+PcmCaptureManager.js:78 [AUDIO-NEW][TX-CAPTURE] frame=150 rms=0.0747 samples=960
+PcmAudioTransport.js:54 [AUDIO-NEW][TX] codec=pcm sampleRate=48000 frameSamples=960 payloadBytes=1920 sequence=150 totalFrames=150
+PcmCaptureManager.js:78 [AUDIO-NEW][TX-CAPTURE] frame=200 rms=0.0014 samples=960
+PcmAudioTransport.js:54 [AUDIO-NEW][TX] codec=pcm sampleRate=48000 frameSamples=960 payloadBytes=1920 sequence=200 totalFrames=200
+PcmCaptureManager.js:78 [AUDIO-NEW][TX-CAPTURE] frame=250 rms=0.0012 samples=960
+PcmAudioTransport.js:54 [AUDIO-NEW][TX] codec=pcm sampleRate=48000 frameSamples=960 payloadBytes=1920 sequence=250 totalFrames=250
+index.jsx:236 [PTT] === PTT UP ===, gestureActive: true
+index.jsx:182 [PTT] stopTransmission called
+MicPTTManager.js:409 [MicPTT] stop() — state=transmitting path=WEB
+MicPTTManager.js:132 [MicPTT] State: transmitting → cooldown
+LiveKitManager.js:475 [AudioWS] PTT released - unmuting sidetone
+PcmCaptureManager.js:114 [AUDIO-NEW][TX-CAPTURE] Capture stopped after 290 frames
+MicPTTManager.js:465 [AUDIO-NEW][TX] Capture stopped, TX path torn down
+MicPTTManager.js:132 [MicPTT] State: cooldown → idle
+MicPTTManager.js:472 [MicPTT] Transmission ended, state reset to IDLE
+backgroundService.js:83 [BackgroundService] Web wake lock released
+index.jsx:196 [PTT] Transmission stopped
+PcmPlaybackManager.js:154 [AUDIO-NEW][RX-PLAYBACK] muted=false
+LiveKitManager.js:847 [AUDIO-NEW] unmuteChannel(DISPATCH__DISPATCH)
+index.jsx:207 [PTT] Unmuted channels: ['DISPATCH__DISPATCH']
+index.jsx:236 [PTT] === PTT UP ===, gestureActive: false
