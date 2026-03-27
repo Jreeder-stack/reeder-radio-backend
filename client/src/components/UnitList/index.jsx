@@ -41,21 +41,28 @@ export default function UnitList() {
   
   const getFilteredUnits = () => {
     switch (filter) {
-      case 'online':
+      case 'ondt':
+        return units.filter(u => {
+          const status = (u.status || '').toUpperCase();
+          return status !== 'OFF';
+        });
+      case 'connected':
         return units.filter(u => {
           const lastSeen = new Date(u.last_seen);
           const now = new Date();
           return (now - lastSeen) < 60000;
         });
-      case 'emergency':
-        return units.filter(u => u.is_emergency);
       default:
         return units;
     }
   };
   
   const filteredUnits = getFilteredUnits();
-  const emergencyCount = units.filter(u => u.is_emergency).length;
+  const connectedCount = units.filter(u => {
+    const lastSeen = new Date(u.last_seen);
+    const now = new Date();
+    return (now - lastSeen) < 60000;
+  }).length;
 
   const handleToggleTracking = (unitIdentity) => {
     if (trackedUnits.includes(unitIdentity)) {
@@ -77,19 +84,19 @@ export default function UnitList() {
           onClick={() => setFilter('all')}
           className={`tile-btn ${filter === 'all' ? 'tile-btn-active tile-btn-tx' : 'tile-btn-default'}`}
         >
-          All
+          ALL
         </button>
         <button
-          onClick={() => setFilter('online')}
-          className={`tile-btn ${filter === 'online' ? 'tile-btn-active tile-btn-monitor' : 'tile-btn-default'}`}
+          onClick={() => setFilter('ondt')}
+          className={`tile-btn ${filter === 'ondt' ? 'tile-btn-active tile-btn-monitor' : 'tile-btn-default'}`}
         >
-          Online
+          ONDT
         </button>
         <button
-          onClick={() => setFilter('emergency')}
-          className={`tile-btn ${filter === 'emergency' ? 'tile-btn-active tile-btn-mute' : 'tile-btn-default'}`}
+          onClick={() => setFilter('connected')}
+          className={`tile-btn ${filter === 'connected' ? 'tile-btn-active tile-btn-mute' : 'tile-btn-default'}`}
         >
-          Emergency ({emergencyCount})
+          Connected ({connectedCount})
         </button>
       </div>
 
@@ -133,7 +140,13 @@ export default function UnitList() {
                       <LocationIcon tracking={isTracking} />
                       {isTracking ? 'Stop' : 'Track'}
                     </button>
-                    <span className="text-xs px-1.5 py-0.5 rounded bg-dispatch-border text-dispatch-secondary">{unit.status}</span>
+                    <span className="text-xs px-1.5 py-0.5 rounded bg-dispatch-border text-dispatch-secondary">
+                      {(() => {
+                        const s = (unit.status || '').toUpperCase();
+                        if (!s || s === 'ONDT' || s === 'ON DUTY' || s === 'ONLINE') return 'ONDT';
+                        return s;
+                      })()}
+                    </span>
                   </div>
                 </div>
               </div>

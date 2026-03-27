@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import useDispatchStore from '../../state/dispatchStore.js';
 import ConnectionIndicator from '../ConnectionIndicator.jsx';
 
-export default function TopBar({ user, onLogout, agencyName = "Reeder Radio", darkMode, onToggleTheme }) {
+export default function TopBar({ user, onLogout, agencyName = "REEDER-SYSTEMS", darkMode, onToggleTheme }) {
   const navigate = useNavigate();
   const [time, setTime] = useState(new Date());
   const { dispatcherName, isTalking } = useDispatchStore();

@@ -35,20 +35,22 @@ export default function RadioApp({ user, onLogout }) {
       <div style={{ maxWidth: 600, margin: "0 auto" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
           <h1 style={{ fontSize: 24, margin: 0 }}>Radio App</h1>
-          <button
-            onClick={() => navigate("/admin")}
-            style={{
-              padding: "8px 16px",
-              background: "#3b82f6",
-              color: "#fff",
-              border: "none",
-              borderRadius: 8,
-              cursor: "pointer",
-              fontSize: 14,
-            }}
-          >
-            Back to Admin
-          </button>
+          {user?.role === 'admin' && (
+            <button
+              onClick={() => navigate("/admin")}
+              style={{
+                padding: "8px 16px",
+                background: "#3b82f6",
+                color: "#fff",
+                border: "none",
+                borderRadius: 8,
+                cursor: "pointer",
+                fontSize: 14,
+              }}
+            >
+              Back to Admin
+            </button>
+          )}
         </div>
 
         <div style={cardStyle}>
