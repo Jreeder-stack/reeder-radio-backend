@@ -37,6 +37,8 @@ class UdpAudioTransport(
     var channelId: String = ""
     var unitId: String = ""
     var onPacketReceived: ((sequence: Int, data: ByteArray) -> Unit)? = null
+    val localPort: Int?
+        get() = socket?.localPort
 
     @Volatile
     private var sessionTokenBytes: ByteArray? = null

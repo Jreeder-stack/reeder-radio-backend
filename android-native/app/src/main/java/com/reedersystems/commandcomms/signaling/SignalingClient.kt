@@ -300,10 +300,13 @@ class SignalingClient(var serverUrl: String) {
         })
     }
 
-    fun emitRadioJoinChannel(channelKey: String) {
+    fun emitRadioJoinChannel(channelKey: String, udpPort: Int? = null) {
         if (!isReady()) return
-        Log.d(TAG, "emitRadioJoinChannel $channelKey")
-        socket?.emit("radio:joinChannel", JSONObject().put("channelId", channelKey))
+        Log.d(TAG, "emitRadioJoinChannel $channelKey udpPort=${udpPort ?: "none"}")
+        socket?.emit("radio:joinChannel", JSONObject().apply {
+            put("channelId", channelKey)
+            if (udpPort != null && udpPort > 0) put("udpPort", udpPort)
+        })
     }
 
     fun emitRadioLeaveChannel(channelKey: String) {
