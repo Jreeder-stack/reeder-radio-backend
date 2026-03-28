@@ -9,6 +9,7 @@ import { isConfigured as isAzureConfigured } from './services/azureSpeechService
 import { signalingService } from './services/signalingService.js';
 import { audioRelayService } from './services/audioRelayService.js';
 import { setupRecordingTap } from './services/recordingTapService.js';
+import { wsAudioBridge } from './services/wsAudioBridge.js';
 
 let _buildVersion = 'unknown';
 try {
