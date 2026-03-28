@@ -99,6 +99,7 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
     if (isBusy) {
       console.log('[PTT] Channel busy, playing busy tone');
       setChannelBusy(true);
+      console.log('[PTT] PTT_TONE_START', { reason: 'CHANNEL_BUSY' });
       toneEngine.startBusyTone();
       return false;
     }
@@ -142,13 +143,16 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
       if (signalPttStart) {
         try {
           console.log(`[PTT] Requesting floor grant for channel=${primaryChannel} unit=${identity}`);
+          console.log('[PTT] PTT_FLOOR_REQUEST_SENT', { channel: primaryChannel, unit: identity });
           await signalPttStart(primaryChannel);
           console.log(`[PTT] Floor granted for channel=${primaryChannel}`);
+          console.log('[PTT] PTT_FLOOR_GRANTED', { channel: primaryChannel, unit: identity });
         } catch (grantErr) {
           console.warn('[PTT] Floor denied:', grantErr.message);
           livekitManager.unmuteChannels(mutedChannelsRef.current);
           mutedChannelsRef.current = [];
           setChannelBusy(true);
+          console.log('[PTT] PTT_TONE_START', { reason: 'FLOOR_DENIED' });
           toneEngine.startBusyTone();
           return false;
         }
@@ -214,10 +218,11 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
     if (e.type === 'keydown' && e.repeat) return;
     if (txChannelIds.length === 0) return;
     if (gestureActiveRef.current) return;
-    if (!livekitManager.canStart()) return;
     
-    console.log('[PTT] === PTT DOWN ===');
+    console.log('[PTT] PTT_DOWN', { eventType: e.type });
     gestureActiveRef.current = true;
+    console.log('[PTT] PTT_GESTURE_ACTIVE_TRUE');
+    console.log('[PTT] PTT_START');
     
     const success = await startTransmission();
     
@@ -233,10 +238,12 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
   }, [txChannelIds, selectedChannelNames, onPTTStart, startTransmission, stopTransmission]);
 
   const handlePTTUp = useCallback(async () => {
-    console.log('[PTT] === PTT UP ===, gestureActive:', gestureActiveRef.current);
+    console.log('[PTT] PTT_UP', { gestureActive: gestureActiveRef.current });
     if (!gestureActiveRef.current) return;
     
+    console.log('[PTT] PTT_STOP');
     gestureActiveRef.current = false;
+    console.log('[PTT] PTT_GESTURE_ACTIVE_FALSE');
     await stopTransmission();
     
     if (onPTTEnd) {
@@ -484,6 +491,9 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
       <div className="flex items-center gap-3">
         <button
           ref={pttRef}
+          onPointerDown={handlePTTDown}
+          onPointerUp={handlePTTUp}
+          onPointerCancel={handlePTTUp}
           onMouseDown={handlePTTDown}
           onMouseUp={handlePTTUp}
           onMouseLeave={handlePTTUp}

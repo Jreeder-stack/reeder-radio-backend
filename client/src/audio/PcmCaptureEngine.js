@@ -54,6 +54,7 @@ export class PcmCaptureEngine {
         const frame = this.buffer.slice(0, PCM_SPEC.frameSamples);
         this.buffer = this.buffer.slice(PCM_SPEC.frameSamples);
         console.log('TX_FRAME_READY', { samples: frame.length });
+        console.log('TX_FRAME_CREATED', { samples: frame.length });
         if (this.onFrame) this.onFrame(frame);
       }
     };
