@@ -70,11 +70,38 @@ class LiveKitManager {
   async _openWebSocket(channelName, identity) {
     const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const url = `${proto}//${window.location.host}/api/audio-ws?channelId=${encodeURIComponent(channelName)}&unitId=${encodeURIComponent(identity)}`;
+    const redactedUrl = (() => {
+      try {
+        const parsed = new URL(url);
+        ['token', 'auth', 'access_token'].forEach((key) => {
+          if (parsed.searchParams.has(key)) parsed.searchParams.set(key, '[REDACTED]');
+        });
+        return parsed.toString();
+      } catch {
+        return url;
+      }
+    })();
+    console.log('AUDIO_WS_CONNECT_ATTEMPT', { channelName, identity, url: redactedUrl });
 
     return new Promise((resolve, reject) => {
       const ws = new WebSocket(url);
-      ws.onopen = () => resolve(ws);
-      ws.onerror = () => reject(new Error('audio websocket connect failed'));
+      ws.onopen = () => {
+        console.log('AUDIO_WS_ONOPEN', { channelName, identity });
+        resolve(ws);
+      };
+      ws.onerror = (event) => {
+        console.error('AUDIO_WS_ONERROR', { channelName, identity, eventType: event?.type || 'unknown' });
+        reject(new Error('audio websocket connect failed'));
+      };
+      ws.onclose = (event) => {
+        console.warn('AUDIO_WS_ONCLOSE', {
+          channelName,
+          identity,
+          code: event?.code,
+          reason: event?.reason || '',
+          wasClean: event?.wasClean,
+        });
+      };
     });
   }
 
@@ -195,10 +222,25 @@ class LiveKitManager {
   isTransmitting() { return this.pttState === PTT_STATES.TRANSMITTING; }
 
   async startTransmit() {
-    if (!this.canStartTransmit()) return false;
+    if (!this.canStartTransmit()) {
+      console.warn('AUDIO_TX_BLOCKED', {
+        reason: 'cannot_start_transmit',
+        primaryTxChannel: this.primaryTxChannel,
+        pttState: this.pttState,
+      });
+      return false;
+    }
     const txChannel = this.primaryTxChannel;
     const room = this.rooms.get(txChannel);
-    if (!room || !room.ws || room.ws.readyState !== WebSocket.OPEN) return false;
+    if (!room || !room.ws || room.ws.readyState !== WebSocket.OPEN) {
+      console.warn('AUDIO_TX_BLOCKED', {
+        reason: 'ws_not_open',
+        txChannel,
+        hasRoom: !!room,
+        readyState: room?.ws?.readyState,
+      });
+      return false;
+    }
 
     this._setPttState(PTT_STATES.ARMING);
     this._loopbackOk = false;
