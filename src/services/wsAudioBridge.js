@@ -128,13 +128,25 @@ class WsAudioBridge {
         });
         return;
       }
+      console.log('SRV_TX_FRAME_RECEIVED', {
+        channelId,
+        senderUnitId: unitId,
+        sequence: packet.sequence,
+        samples: packet.payload?.length,
+      });
 
       const listeners = this.channelClients.get(channelId);
       const listenerCount = listeners ? Math.max(0, listeners.size - 1) : 0;
       console.log('SRV_RELAY', { channelId, listenerCount });
+      console.log('SRV_TX_FRAME_RELAYED', {
+        channelId,
+        senderUnitId: unitId,
+        sequence: packet.sequence,
+        listenerCount,
+      });
 
       if (!listeners) return;
-      const outbound = JSON.stringify(packet);
+      const outbound = JSON.stringify({ ...packet, senderUnitId: unitId });
       for (const [listenerUnitId, listenerWs] of listeners) {
         if (listenerUnitId === unitId) continue;
         if (listenerWs.readyState === 1) {

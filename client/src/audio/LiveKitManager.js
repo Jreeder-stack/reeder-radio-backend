@@ -125,10 +125,23 @@ class LiveKitManager {
 
         if (!validatePcmPacket(msg)) return;
         if (this.mutedChannels.has(channelName)) return;
+        if (msg.senderUnitId && msg.senderUnitId === conn.unitId) {
+          console.log('SELF_AUDIO_SUPPRESSED', {
+            channelName,
+            senderUnitId: msg.senderUnitId,
+            localUnitId: conn.unitId,
+            sequence: msg.sequence,
+          });
+          return;
+        }
 
-        console.log('RX_RECEIVED', { sequence: msg.sequence, samples: msg.payload.length });
+        console.log('RX_RECEIVED', { sequence: msg.sequence, samples: msg.payload.length, senderUnitId: msg.senderUnitId || null });
+        console.log('RX_FRAME_RECEIVED', { sequence: msg.sequence, senderUnitId: msg.senderUnitId || null });
         const frame = Int16Array.from(msg.payload);
         const enqueued = await this._playback.enqueue(frame);
+        if (enqueued) {
+          console.log('RX_REMOTE_AUDIO_PLAYED', { sequence: msg.sequence, senderUnitId: msg.senderUnitId || null });
+        }
         if (enqueued && !this._rxPlaybackStarted) {
           this._rxPlaybackStarted = true;
           console.log('RX_PLAYBACK_STARTED');
@@ -243,21 +256,17 @@ class LiveKitManager {
     }
 
     this._setPttState(PTT_STATES.ARMING);
-    this._loopbackOk = false;
+    this._loopbackOk = true;
+    console.log('SELF_MONITOR_DISABLED');
 
     await this._capture.start(async (frame) => {
-      const loopbackOk = await this._playback.enqueue(frame);
-      if (loopbackOk && !this._loopbackOk) {
-        this._loopbackOk = true;
-        console.log('LOOPBACK_PLAYBACK_OK');
-      }
-
       if (!this._loopbackOk) return;
 
       const packet = buildPcmPacket(this._txSequence++, txChannel, frame);
       const payloadBytes = frame.length * 2;
       room.ws.send(JSON.stringify(packet));
       console.log('TX_SENT', { sequence: packet.sequence, payloadBytes });
+      console.log('TX_WS_FRAME_SENT', { sequence: packet.sequence, payloadBytes });
     });
 
     this._setPttState(PTT_STATES.TRANSMITTING);

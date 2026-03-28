@@ -143,8 +143,10 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
       if (signalPttStart) {
         try {
           console.log(`[PTT] Requesting floor grant for channel=${primaryChannel} unit=${identity}`);
+          console.log('[PTT] PTT_FLOOR_REQUEST_SENT', { channel: primaryChannel, unit: identity });
           await signalPttStart(primaryChannel);
           console.log(`[PTT] Floor granted for channel=${primaryChannel}`);
+          console.log('[PTT] PTT_FLOOR_GRANTED', { channel: primaryChannel, unit: identity });
         } catch (grantErr) {
           console.warn('[PTT] Floor denied:', grantErr.message);
           livekitManager.unmuteChannels(mutedChannelsRef.current);
