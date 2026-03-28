@@ -216,8 +216,10 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
     if (gestureActiveRef.current) return;
     if (!livekitManager.canStart()) return;
     
-    console.log('[PTT] === PTT DOWN ===');
+    console.log('[PTT] PTT_DOWN', { eventType: e.type });
     gestureActiveRef.current = true;
+    console.log('[PTT] PTT_GESTURE_ACTIVE_TRUE');
+    console.log('[PTT] PTT_START_REQUEST');
     
     const success = await startTransmission();
     
@@ -233,10 +235,12 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
   }, [txChannelIds, selectedChannelNames, onPTTStart, startTransmission, stopTransmission]);
 
   const handlePTTUp = useCallback(async () => {
-    console.log('[PTT] === PTT UP ===, gestureActive:', gestureActiveRef.current);
+    console.log('[PTT] PTT_UP', { gestureActive: gestureActiveRef.current });
     if (!gestureActiveRef.current) return;
     
+    console.log('[PTT] PTT_STOP_REQUEST');
     gestureActiveRef.current = false;
+    console.log('[PTT] PTT_GESTURE_ACTIVE_FALSE');
     await stopTransmission();
     
     if (onPTTEnd) {
@@ -484,6 +488,9 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
       <div className="flex items-center gap-3">
         <button
           ref={pttRef}
+          onPointerDown={handlePTTDown}
+          onPointerUp={handlePTTUp}
+          onPointerCancel={handlePTTUp}
           onMouseDown={handlePTTDown}
           onMouseUp={handlePTTUp}
           onMouseLeave={handlePTTUp}
