@@ -32,7 +32,6 @@ class LiveKitManager {
     this._playback = new PcmPlaybackEngine();
     this._txSequence = 0;
     this._loopbackOk = false;
-    this._rxPlaybackStarted = false;
   }
 
   addTrackSubscribedListener(cb) { this._trackSubscribedListeners.add(cb); return () => this._trackSubscribedListeners.delete(cb); }
@@ -124,7 +123,15 @@ class LiveKitManager {
         }
 
         if (!validatePcmPacket(msg)) return;
-        if (this.mutedChannels.has(channelName)) return;
+        console.log('RX_RECEIVED', { sequence: msg.sequence, samples: msg.payload.length, senderUnitId: msg.senderUnitId || null });
+        if (this.mutedChannels.has(channelName)) {
+          console.warn('RX_DROPPED_MUTED_CHANNEL', {
+            sequence: msg.sequence,
+            channelName,
+            mutedChannels: [...this.mutedChannels],
+          });
+          return;
+        }
         if (msg.senderUnitId && msg.senderUnitId === conn.unitId) {
           console.log('SELF_AUDIO_SUPPRESSED', {
             channelName,
@@ -135,16 +142,21 @@ class LiveKitManager {
           return;
         }
 
-        console.log('RX_RECEIVED', { sequence: msg.sequence, samples: msg.payload.length, senderUnitId: msg.senderUnitId || null });
-        console.log('RX_FRAME_RECEIVED', { sequence: msg.sequence, senderUnitId: msg.senderUnitId || null });
         const frame = Int16Array.from(msg.payload);
+        console.log('RX_FRAME_RECEIVED', {
+          sequence: msg.sequence,
+          senderUnitId: msg.senderUnitId || null,
+          samples: frame.length,
+        });
         const enqueued = await this._playback.enqueue(frame);
         if (enqueued) {
           console.log('RX_REMOTE_AUDIO_PLAYED', { sequence: msg.sequence, senderUnitId: msg.senderUnitId || null });
-        }
-        if (enqueued && !this._rxPlaybackStarted) {
-          this._rxPlaybackStarted = true;
-          console.log('RX_PLAYBACK_STARTED');
+        } else {
+          console.warn('RX_REMOTE_AUDIO_PLAYED', {
+            sequence: msg.sequence,
+            senderUnitId: msg.senderUnitId || null,
+            status: 'enqueue_failed',
+          });
         }
       };
 
@@ -280,6 +292,11 @@ class LiveKitManager {
     await this._capture.stop();
     this._setPttState(PTT_STATES.COOLDOWN);
     this._setPttState(PTT_STATES.IDLE);
+    console.log('TX_STOP_UNMUTE_STATE', {
+      primaryTxChannel: this.primaryTxChannel,
+      mutedChannels: [...this.mutedChannels],
+      pttState: this.pttState,
+    });
   }
 
   async stop() { return this.stopTransmit(); }
