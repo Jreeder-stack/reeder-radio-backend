@@ -222,10 +222,25 @@ class LiveKitManager {
   isTransmitting() { return this.pttState === PTT_STATES.TRANSMITTING; }
 
   async startTransmit() {
-    if (!this.canStartTransmit()) return false;
+    if (!this.canStartTransmit()) {
+      console.warn('AUDIO_TX_BLOCKED', {
+        reason: 'cannot_start_transmit',
+        primaryTxChannel: this.primaryTxChannel,
+        pttState: this.pttState,
+      });
+      return false;
+    }
     const txChannel = this.primaryTxChannel;
     const room = this.rooms.get(txChannel);
-    if (!room || !room.ws || room.ws.readyState !== WebSocket.OPEN) return false;
+    if (!room || !room.ws || room.ws.readyState !== WebSocket.OPEN) {
+      console.warn('AUDIO_TX_BLOCKED', {
+        reason: 'ws_not_open',
+        txChannel,
+        hasRoom: !!room,
+        readyState: room?.ws?.readyState,
+      });
+      return false;
+    }
 
     this._setPttState(PTT_STATES.ARMING);
     this._loopbackOk = false;

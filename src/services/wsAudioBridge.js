@@ -1,6 +1,9 @@
 // PCM-only websocket bridge (merge-resolved baseline).
 import { WebSocketServer } from 'ws';
+import cookie from 'cookie';
+import signature from 'cookie-signature';
 import pool from '../db/index.js';
+import { config } from '../config/env.js';
 import { canonicalChannelKey } from './channelKeyUtils.js';
 import { floorControlService } from './floorControlService.js';
 
@@ -70,15 +73,15 @@ class WsAudioBridge {
 
   async _authenticate(request) {
     try {
-      const cookies = Object.fromEntries((request.headers.cookie || '').split(';').map((v) => v.trim().split('=')));
-      const rawSid = cookies['connect.sid'];
-      if (!rawSid) return null;
+      const rawCookies = request.headers.cookie || '';
+      const cookies = cookie.parse(rawCookies);
+      let sid = cookies['connect.sid'];
+      if (!sid) return null;
 
-      let sid = rawSid;
-      if (sid.startsWith('s:') || sid.startsWith('s%3A')) {
-        sid = sid.startsWith('s%3A') ? decodeURIComponent(sid).slice(2) : sid.slice(2);
-        const dotIndex = sid.indexOf('.');
-        if (dotIndex !== -1) sid = sid.slice(0, dotIndex);
+      if (sid.startsWith('s%3A')) sid = decodeURIComponent(sid);
+      if (sid.startsWith('s:')) {
+        sid = signature.unsign(sid.slice(2), config.sessionSecret);
+        if (sid === false) return null;
       }
 
       const result = await pool.query('SELECT sess FROM session WHERE sid = $1', [sid]);
@@ -116,7 +119,15 @@ class WsAudioBridge {
 
       if (!isValidPcmPacket(packet)) return;
       if (packet.channelId !== channelId) return;
-      if (!floorControlService.holdsFloor(channelId, unitId)) return;
+      if (!floorControlService.holdsFloor(channelId, unitId)) {
+        console.warn('AUDIO_WS_REJECTED', {
+          reason: 'floor_not_held',
+          channelId,
+          unitId,
+          sequence: packet.sequence,
+        });
+        return;
+      }
 
       const listeners = this.channelClients.get(channelId);
       const listenerCount = listeners ? Math.max(0, listeners.size - 1) : 0;
