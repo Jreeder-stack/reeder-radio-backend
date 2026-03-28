@@ -70,11 +70,38 @@ class LiveKitManager {
   async _openWebSocket(channelName, identity) {
     const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const url = `${proto}//${window.location.host}/api/audio-ws?channelId=${encodeURIComponent(channelName)}&unitId=${encodeURIComponent(identity)}`;
+    const redactedUrl = (() => {
+      try {
+        const parsed = new URL(url);
+        ['token', 'auth', 'access_token'].forEach((key) => {
+          if (parsed.searchParams.has(key)) parsed.searchParams.set(key, '[REDACTED]');
+        });
+        return parsed.toString();
+      } catch {
+        return url;
+      }
+    })();
+    console.log('AUDIO_WS_CONNECT_ATTEMPT', { channelName, identity, url: redactedUrl });
 
     return new Promise((resolve, reject) => {
       const ws = new WebSocket(url);
-      ws.onopen = () => resolve(ws);
-      ws.onerror = () => reject(new Error('audio websocket connect failed'));
+      ws.onopen = () => {
+        console.log('AUDIO_WS_ONOPEN', { channelName, identity });
+        resolve(ws);
+      };
+      ws.onerror = (event) => {
+        console.error('AUDIO_WS_ONERROR', { channelName, identity, eventType: event?.type || 'unknown' });
+        reject(new Error('audio websocket connect failed'));
+      };
+      ws.onclose = (event) => {
+        console.warn('AUDIO_WS_ONCLOSE', {
+          channelName,
+          identity,
+          code: event?.code,
+          reason: event?.reason || '',
+          wasClean: event?.wasClean,
+        });
+      };
     });
   }
 

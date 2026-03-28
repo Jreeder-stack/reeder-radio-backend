@@ -37,15 +37,28 @@ class WsAudioBridge {
     httpServer.on('upgrade', async (request, socket, head) => {
       const url = new URL(request.url, `http://${request.headers.host}`);
       if (url.pathname !== '/api/audio-ws') return;
+      console.log('AUDIO_WS_UPGRADE_HIT', {
+        method: request.method,
+        path: url.pathname,
+        query: url.search,
+        host: request.headers.host,
+        upgrade: request.headers.upgrade,
+        connection: request.headers.connection,
+      });
 
       const user = await this._authenticate(request);
       if (!user) {
+        console.warn('AUDIO_WS_REJECTED', { reason: 'unauthorized_session' });
         socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
         socket.destroy();
         return;
       }
 
       this.wss.handleUpgrade(request, socket, head, (ws) => {
+        console.log('AUDIO_WS_ACCEPTED', {
+          username: user.username,
+          unitId: user.unit_id || user.username,
+        });
         this.wss.emit('connection', ws, request, user);
       });
     });
@@ -81,6 +94,11 @@ class WsAudioBridge {
     const unitId = user.unit_id || user.username;
 
     if (!channelId || !unitId) {
+      console.warn('AUDIO_WS_REJECTED', {
+        reason: 'missing_channel_or_unit',
+        channelId,
+        unitId,
+      });
       ws.close();
       return;
     }
