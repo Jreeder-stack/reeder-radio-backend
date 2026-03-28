@@ -288,12 +288,13 @@ class BackgroundAudioService : Service() {
 
         val previousRoomKey = joinedSignalingChannelId
         if (previousRoomKey != null) {
-            app.signalingRepository.leaveChannel(previousRoomKey)
+            app.signalingRepository.leaveRadioChannel(previousRoomKey)
         }
-        app.signalingRepository.joinChannel(targetRoomKey)
+        val udpPort = radioEngine?.udpTransport?.localPort
+        app.signalingRepository.joinRadioChannel(targetRoomKey, udpPort)
         joinedSignalingChannelId = targetRoomKey
         radioEngine?.startReceive()
-        Log.d(TAG, "Background signaling joined channel $targetRoomKey — RX restarted")
+        Log.d(TAG, "Background signaling joined RADIO channel $targetRoomKey (udpPort=${udpPort ?: "none"}) — RX restarted")
         return true
     }
 

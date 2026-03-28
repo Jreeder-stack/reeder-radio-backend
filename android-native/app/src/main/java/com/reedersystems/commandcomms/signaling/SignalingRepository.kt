@@ -13,6 +13,9 @@ class SignalingRepository(private val client: SignalingClient) {
 
     fun joinChannel(channelKey: String) = client.joinChannel(channelKey)
     fun leaveChannel(channelKey: String) = client.leaveChannel(channelKey)
+    fun joinRadioChannel(channelKey: String, udpPort: Int? = null) =
+        client.emitRadioJoinChannel(channelKey, udpPort)
+    fun leaveRadioChannel(channelKey: String) = client.emitRadioLeaveChannel(channelKey)
 
     fun transmitPre(channelKey: String) = client.emitPttPre(channelKey)
     fun transmitStart(channelKey: String) = client.emitPttStart(channelKey)
