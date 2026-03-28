@@ -99,6 +99,7 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
     if (isBusy) {
       console.log('[PTT] Channel busy, playing busy tone');
       setChannelBusy(true);
+      console.log('[PTT] PTT_TONE_START', { reason: 'CHANNEL_BUSY' });
       toneEngine.startBusyTone();
       return false;
     }
@@ -149,6 +150,7 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
           livekitManager.unmuteChannels(mutedChannelsRef.current);
           mutedChannelsRef.current = [];
           setChannelBusy(true);
+          console.log('[PTT] PTT_TONE_START', { reason: 'FLOOR_DENIED' });
           toneEngine.startBusyTone();
           return false;
         }
@@ -214,12 +216,11 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
     if (e.type === 'keydown' && e.repeat) return;
     if (txChannelIds.length === 0) return;
     if (gestureActiveRef.current) return;
-    if (!livekitManager.canStart()) return;
     
     console.log('[PTT] PTT_DOWN', { eventType: e.type });
     gestureActiveRef.current = true;
     console.log('[PTT] PTT_GESTURE_ACTIVE_TRUE');
-    console.log('[PTT] PTT_START_REQUEST');
+    console.log('[PTT] PTT_START');
     
     const success = await startTransmission();
     
@@ -238,7 +239,7 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
     console.log('[PTT] PTT_UP', { gestureActive: gestureActiveRef.current });
     if (!gestureActiveRef.current) return;
     
-    console.log('[PTT] PTT_STOP_REQUEST');
+    console.log('[PTT] PTT_STOP');
     gestureActiveRef.current = false;
     console.log('[PTT] PTT_GESTURE_ACTIVE_FALSE');
     await stopTransmission();
