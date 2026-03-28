@@ -7,6 +7,8 @@ export class PcmPlaybackEngine {
     this.queue = [];
     this.offset = 0;
     this.started = false;
+    this._speakerRouteLogged = false;
+    this._processorConnected = false;
   }
 
   async init() {
@@ -15,9 +17,7 @@ export class PcmPlaybackEngine {
       sampleRate: PCM_SPEC.sampleRate,
     });
 
-    if (this.audioContext.state === 'suspended') {
-      await this.audioContext.resume().catch(() => {});
-    }
+    await this.ensureAudioContextResumed('init');
 
     this.processor = this.audioContext.createScriptProcessor(1024, 1, 1);
     this.processor.onaudioprocess = (event) => {
@@ -49,12 +49,63 @@ export class PcmPlaybackEngine {
     };
 
     this.processor.connect(this.audioContext.destination);
+    this._processorConnected = true;
     this.started = true;
+    console.log('RX_PLAYBACK_STARTED', {
+      started: this.started,
+      processorConnected: this._processorConnected,
+      hasDestination: !!this.audioContext?.destination,
+    });
+  }
+
+  async ensureAudioContextResumed(reason = 'unknown') {
+    if (!this.audioContext) return false;
+
+    console.log('AUDIO_CONTEXT_STATE', {
+      reason,
+      state: this.audioContext.state,
+      sampleRate: this.audioContext.sampleRate,
+      baseLatency: this.audioContext.baseLatency ?? null,
+      outputLatency: this.audioContext.outputLatency ?? null,
+    });
+
+    if (this.audioContext.state !== 'suspended') return true;
+
+    try {
+      await this.audioContext.resume();
+      console.log('AUDIO_CONTEXT_RESUMED', { reason, state: this.audioContext.state });
+      return this.audioContext.state === 'running';
+    } catch (err) {
+      console.warn('AUDIO_CONTEXT_RESUMED', {
+        reason,
+        state: this.audioContext.state,
+        error: err?.message || String(err),
+      });
+      return false;
+    }
   }
 
   async enqueue(int16Frame) {
     await this.init();
+    await this.ensureAudioContextResumed('enqueue');
+
+    if (!this._speakerRouteLogged) {
+      this._speakerRouteLogged = true;
+      const sinkIdSupported = typeof this.audioContext?.setSinkId === 'function';
+      console.log('SPEAKER_ROUTE_SELECTED', {
+        route: 'default',
+        sinkIdSupported,
+      });
+    }
+
     this.queue.push(new Int16Array(int16Frame));
+    console.log('RX_QUEUE_ENQUEUED', {
+      frameSamples: int16Frame?.length || 0,
+      queueDepth: this.queue.length,
+      offset: this.offset,
+      processorConnected: this._processorConnected,
+      hasDestination: !!this.audioContext?.destination,
+    });
     return true;
   }
 
