@@ -24,9 +24,6 @@ import com.reedersystems.commandcomms.signaling.SignalingEvent
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
 
 private const val TAG = "[PTT-DIAG]"
 private const val NOTIFICATION_ID = 1001
@@ -294,6 +291,7 @@ class BackgroundAudioService : Service() {
         app.signalingRepository.joinRadioChannel(targetRoomKey, udpPort)
         joinedSignalingChannelId = targetRoomKey
         radioEngine?.startReceive()
+        Log.d(TAG, "SUBSCRIBER_REGISTERED channelId=$targetRoomKey udpPort=${udpPort ?: "none"}")
         Log.d(TAG, "Background signaling joined RADIO channel $targetRoomKey (udpPort=${udpPort ?: "none"}) — RX restarted")
         return true
     }
@@ -315,12 +313,16 @@ class BackgroundAudioService : Service() {
         val gateway = RadioSignalingGatewayImpl(app.signalingClient)
         engine.wireFloorControl(gateway)
 
-        val relayHost = servicePrefs.relayHost ?: run {
-            Log.w(TAG, "No relay host from radio config, falling back to server URL derivation")
-            val serverUrl = servicePrefs.serverUrl ?: app.apiClient.baseUrl
-            try { java.net.URI(serverUrl).host ?: "" } catch (_: Exception) { "" }
+        val relayHost = servicePrefs.relayHost
+        if (relayHost.isNullOrBlank()) {
+            Log.e(TAG, "Radio transport config missing audioRelayHost from backend; aborting radio engine init")
+            return
         }
         val relayPort = servicePrefs.relayPort
+        if (relayPort <= 0) {
+            Log.e(TAG, "Radio transport config invalid audioRelayPort=$relayPort; aborting radio engine init")
+            return
+        }
         engine.udpTransport.configure(relayHost, relayPort)
         Log.d(TAG, "Radio transport configured: host=$relayHost port=$relayPort")
         engine.udpTransport.channelId = servicePrefs.channelRoomKey ?: ""
@@ -351,13 +353,6 @@ class BackgroundAudioService : Service() {
                             pttState = PttState.TRANSMITTING
                             updateNotification("TRANSMITTING")
                             sendPttTxStarted()
-                            if (needsSignaling) {
-                                val rk = servicePrefs.channelRoomKey
-                                if (rk != null) {
-                                    app.signalingRepository.transmitStart(rk)
-                                    Log.d(TAG, "Radio TX: transmitStart signaled for $rk")
-                                }
-                            }
                         } else {
                             Log.e(TAG, "Radio TX: startTransmit failed after floor granted")
                             app.toneEngine.playErrorTone()
@@ -391,15 +386,20 @@ class BackgroundAudioService : Service() {
                         Log.d(TAG, "Session token received for channel ${event.channelId}")
                         engine.udpTransport.setSessionToken(event.token)
                     }
+                    is SignalingEvent.RadioChannelJoined -> {
+                        Log.d(TAG, "CHANNEL_JOINED channelId=${event.channelId}")
+                    }
                     is SignalingEvent.RadioPttGranted -> {
+                        Log.d(TAG, "PTT_GRANTED channelId=${event.channelId} senderUnitId=${event.senderUnitId}")
                         engine.floorControl?.onFloorGranted(event.channelId)
                     }
                     is SignalingEvent.RadioPttDenied -> {
+                        Log.d(TAG, "PTT_DENIED channelId=${event.channelId} reason=${event.reason} heldBy=${event.heldBy}")
                         engine.floorControl?.onFloorDenied(event.channelId)
                     }
                     is SignalingEvent.RadioChannelBusy -> {
                         if (event.channelId == currentRoomKey) {
-                            engine.floorControl?.onChannelBusy(event.transmittingUnit)
+                            engine.floorControl?.onChannelBusy(event.heldBy)
                         }
                     }
                     is SignalingEvent.RadioChannelIdle -> {
@@ -409,13 +409,13 @@ class BackgroundAudioService : Service() {
                     }
                     is SignalingEvent.RadioTxStart -> {
                         val selfUnitId = servicePrefs.unitId ?: app.sessionPrefs.unitId
-                        if (event.unitId != selfUnitId && event.channelId == currentRoomKey) {
-                            engine.floorControl?.onChannelBusy(event.unitId)
+                        if (event.senderUnitId != selfUnitId && event.channelId == currentRoomKey) {
+                            engine.floorControl?.onChannelBusy(event.senderUnitId)
                         }
                     }
                     is SignalingEvent.RadioTxStop -> {
                         val selfUnitId = servicePrefs.unitId ?: app.sessionPrefs.unitId
-                        if (event.unitId != selfUnitId && event.channelId == currentRoomKey) {
+                        if (event.senderUnitId != selfUnitId && event.channelId == currentRoomKey) {
                             engine.floorControl?.onChannelIdle()
                         }
                     }
@@ -475,10 +475,8 @@ class BackgroundAudioService : Service() {
                 Log.d(TAG, "Radio PTT: transmitPre sent for roomKey $roomKey")
             }
 
+            Log.d(TAG, "PTT_REQUEST_SENT channelId=$roomKey")
             engine.floorControl?.requestFloor(roomKey)
-            val serverUrl = servicePrefs.serverUrl ?: app.apiClient.baseUrl
-            val unitId = servicePrefs.unitId ?: app.sessionPrefs.unitId ?: return@launch
-            httpPttStart(serverUrl, roomKey, unitId)
         }
     }
 
@@ -498,8 +496,6 @@ class BackgroundAudioService : Service() {
         }
 
         val roomKey = servicePrefs.channelRoomKey ?: return
-        val unitId = servicePrefs.unitId ?: app.sessionPrefs.unitId ?: return
-        val serverUrl = servicePrefs.serverUrl ?: app.apiClient.baseUrl
         val wasSignaling = needsSignaling
 
         pttState = PttState.CLEANING_UP
@@ -510,13 +506,12 @@ class BackgroundAudioService : Service() {
                 radioEngine?.stopTransmit()
                 radioEngine?.udpTransport?.clearSessionToken()
                 radioEngine?.floorControl?.releaseFloor(roomKey)
+                Log.d(TAG, "PTT_RELEASE_SENT channelId=$roomKey")
                 sendPttTxEnded()
                 if (wasSignaling) {
-                    app.signalingRepository.transmitEnd(roomKey)
                     app.toneEngine.playEndOfTxTone()
-                    Log.d(TAG, "Radio PTT UP: transmitEnd + end-of-TX tone for roomKey $roomKey")
+                    Log.d(TAG, "Radio PTT UP: end-of-TX tone for roomKey $roomKey")
                 }
-                httpPttEnd(serverUrl, roomKey, unitId)
             } finally {
                 pttState = PttState.IDLE
                 Log.d(TAG, "PTT cleanup complete — state is now IDLE")
@@ -554,34 +549,6 @@ class BackgroundAudioService : Service() {
         Log.d(TAG, "Sending PTT_TX_ENDED broadcast")
         val intent = Intent(ACTION_PTT_TX_ENDED).apply { setPackage(packageName) }
         sendBroadcast(intent)
-    }
-
-    private fun httpPttStart(serverUrl: String, roomKey: String, unitId: String) {
-        val json = """{"channelId":"$roomKey","unitId":"$unitId"}"""
-        try {
-            val req = Request.Builder()
-                .url("$serverUrl/api/ptt/start")
-                .post(json.toRequestBody("application/json".toMediaType()))
-                .build()
-            app.apiClient.httpClient.newCall(req).execute().close()
-            Log.d(TAG, "HTTP ptt/start sent")
-        } catch (e: Exception) {
-            Log.w(TAG, "ptt/start HTTP failed (non-critical): ${e.message}")
-        }
-    }
-
-    private fun httpPttEnd(serverUrl: String, roomKey: String, unitId: String) {
-        val json = """{"channelId":"$roomKey","unitId":"$unitId"}"""
-        try {
-            val req = Request.Builder()
-                .url("$serverUrl/api/ptt/end")
-                .post(json.toRequestBody("application/json".toMediaType()))
-                .build()
-            app.apiClient.httpClient.newCall(req).execute().close()
-            Log.d(TAG, "HTTP ptt/end sent")
-        } catch (e: Exception) {
-            Log.w(TAG, "ptt/end HTTP failed (non-critical): ${e.message}")
-        }
     }
 
     private fun updateNotification(status: String) {

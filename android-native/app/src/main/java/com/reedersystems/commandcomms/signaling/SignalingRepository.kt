@@ -18,8 +18,6 @@ class SignalingRepository(private val client: SignalingClient) {
     fun leaveRadioChannel(channelKey: String) = client.emitRadioLeaveChannel(channelKey)
 
     fun transmitPre(channelKey: String) = client.emitPttPre(channelKey)
-    fun transmitStart(channelKey: String) = client.emitPttStart(channelKey)
-    fun transmitEnd(channelKey: String) = client.emitPttEnd(channelKey)
 
     fun setStatus(status: String) = client.emitStatusUpdate(status)
 

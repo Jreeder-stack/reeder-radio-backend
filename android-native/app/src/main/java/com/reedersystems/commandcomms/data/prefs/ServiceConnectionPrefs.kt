@@ -37,7 +37,7 @@ class ServiceConnectionPrefs(context: Context) {
         set(v) = prefs.edit().putString(KEY_RELAY_HOST, v).apply()
 
     var relayPort: Int
-        get() = prefs.getInt(KEY_RELAY_PORT, 5600)
+        get() = prefs.getInt(KEY_RELAY_PORT, 5100)
         set(v) = prefs.edit().putInt(KEY_RELAY_PORT, v).apply()
 
     var signalingUrl: String?
