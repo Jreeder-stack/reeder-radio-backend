@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.reedersystems.commandcomms.ui.theme.*
+import android.util.Log
 
 @Composable
 fun LoginScreen(
@@ -38,6 +39,7 @@ fun LoginScreen(
 
     LaunchedEffect(uiState) {
         if (uiState is LoginUiState.Success) {
+            Log.d("[APP-STARTUP]", "CONNECTING_SCREEN_EXIT")
             onLoginSuccess()
         }
     }

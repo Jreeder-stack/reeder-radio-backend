@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import org.json.JSONObject
 
 private const val TAG = "[PTT-DIAG]"
+private const val STARTUP_TAG = "[APP-STARTUP]"
 
 enum class ConnectionState { DISCONNECTED, CONNECTING, CONNECTED, AUTHENTICATED }
 
@@ -36,6 +37,7 @@ class SignalingClient(var serverUrl: String) {
         this.username = username
 
         Log.d(TAG, "SignalingClient connecting to $serverUrl")
+        Log.d(STARTUP_TAG, "SIGNALING_CONNECT_ATTEMPT url=$serverUrl unitId=$unitId")
         _connectionState.value = ConnectionState.CONNECTING
 
         val options = IO.Options.builder()
@@ -51,6 +53,7 @@ class SignalingClient(var serverUrl: String) {
 
         s.on(Socket.EVENT_CONNECT) {
             Log.d(TAG, "Socket connected, authenticating as $unitId")
+            Log.d(STARTUP_TAG, "SIGNALING_CONNECTED")
             _connectionState.value = ConnectionState.CONNECTED
             val auth = JSONObject().apply {
                 put("unitId", unitId)
@@ -58,12 +61,24 @@ class SignalingClient(var serverUrl: String) {
                 put("agencyId", "default")
                 put("isDispatcher", false)
             }
+            Log.d(STARTUP_TAG, "SIGNALING_AUTH_SENT unitId=$unitId")
             s.emit("authenticate", auth)
         }
 
         s.on("authenticated") { _ ->
             Log.d(TAG, "Signaling authenticated: $unitId")
+            Log.d(STARTUP_TAG, "SIGNALING_AUTH_SUCCESS unitId=$unitId")
             _connectionState.value = ConnectionState.AUTHENTICATED
+        }
+
+        s.on("unauthorized") { args ->
+            Log.e(STARTUP_TAG, "SIGNALING_AUTH_FAILED reason=${args.firstOrNull()}")
+            _connectionState.value = ConnectionState.DISCONNECTED
+        }
+
+        s.on("auth:error") { args ->
+            Log.e(STARTUP_TAG, "SIGNALING_AUTH_FAILED reason=${args.firstOrNull()}")
+            _connectionState.value = ConnectionState.DISCONNECTED
         }
 
         s.on(Socket.EVENT_DISCONNECT) { _ ->
@@ -73,6 +88,7 @@ class SignalingClient(var serverUrl: String) {
 
         s.on(Socket.EVENT_CONNECT_ERROR) { args ->
             Log.w(TAG, "Socket connect error: ${args.firstOrNull()}")
+            Log.e(STARTUP_TAG, "SIGNALING_AUTH_FAILED reason=connect_error ${args.firstOrNull()}")
             _connectionState.value = ConnectionState.DISCONNECTED
         }
 

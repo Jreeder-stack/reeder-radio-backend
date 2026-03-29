@@ -103,6 +103,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Log.d(TAG, "APP_START")
         // Allow emergency activation to wake the screen and show over the lockscreen
         setTurnScreenOn(true)
         setShowWhenLocked(true)

@@ -21,6 +21,9 @@ sealed class LoginUiState {
 }
 
 class LoginViewModel(application: Application) : AndroidViewModel(application) {
+    private companion object {
+        const val STARTUP_TAG = "[APP-STARTUP]"
+    }
 
     private val app get() = getApplication<CommandCommsApp>()
 
@@ -41,6 +44,7 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun performAutoLogin() {
         viewModelScope.launch {
+            Log.d(STARTUP_TAG, "AUTH_REQUEST_SENT method=auto_login unitId=${DevConfig.AUTO_LOGIN_UNIT_ID}")
             Log.d("LoginViewModel", "Auto-login enabled, logging in as ${DevConfig.AUTO_LOGIN_UNIT_ID}")
             val result = app.authRepository.login(
                 DevConfig.AUTO_LOGIN_UNIT_ID,
@@ -48,10 +52,12 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
             )
             if (result.isSuccess) {
                 val user = result.getOrThrow()
+                Log.d(STARTUP_TAG, "AUTH_SUCCESS user=${user.username} unitId=${user.unitId ?: "none"}")
                 saveUserPrefs(user)
                 fetchAndStoreRadioConfig()
                 _uiState.value = LoginUiState.Success(user)
             } else {
+                Log.e(STARTUP_TAG, "AUTH_FAILED method=auto_login reason=${result.exceptionOrNull()?.message}")
                 Log.w("LoginViewModel", "Auto-login failed: ${result.exceptionOrNull()?.message}")
                 _uiState.value = LoginUiState.Error(
                     "Auto-login failed: ${result.exceptionOrNull()?.message ?: "Unknown error"}"
@@ -62,14 +68,17 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun checkExistingSession() {
         viewModelScope.launch {
+            Log.d(STARTUP_TAG, "SESSION_CHECK_START")
             _uiState.value = LoginUiState.CheckingSession
             val result = app.authRepository.me()
             if (result.isSuccess) {
                 val user = result.getOrThrow()
+                Log.d(STARTUP_TAG, "SESSION_CHECK_RESULT hasSession=true user=${user.username}")
                 saveUserPrefs(user)
                 fetchAndStoreRadioConfig()
                 _uiState.value = LoginUiState.Success(user)
             } else {
+                Log.w(STARTUP_TAG, "SESSION_CHECK_RESULT hasSession=false reason=${result.exceptionOrNull()?.message}")
                 _uiState.value = LoginUiState.Idle
             }
         }
@@ -82,13 +91,16 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
         }
         viewModelScope.launch {
             _uiState.value = LoginUiState.Loading
+            Log.d(STARTUP_TAG, "AUTH_REQUEST_SENT method=manual_login unitId=${username.trim()}")
             val result = app.authRepository.login(username.trim(), password)
             if (result.isSuccess) {
                 val user = result.getOrThrow()
+                Log.d(STARTUP_TAG, "AUTH_SUCCESS user=${user.username} unitId=${user.unitId ?: "none"}")
                 saveUserPrefs(user)
                 fetchAndStoreRadioConfig()
                 _uiState.value = LoginUiState.Success(user)
             } else {
+                Log.e(STARTUP_TAG, "AUTH_FAILED method=manual_login reason=${result.exceptionOrNull()?.message}")
                 _uiState.value = LoginUiState.Error(
                     result.exceptionOrNull()?.message ?: "Login failed"
                 )
@@ -110,9 +122,11 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private suspend fun fetchAndStoreRadioConfig() {
+        Log.d(STARTUP_TAG, "RADIO_CONFIG_FETCH_START")
         val result = app.radioConfigRepository.fetchConfig()
         if (result.isSuccess) {
             val config = result.getOrThrow()
+            Log.d(STARTUP_TAG, "RADIO_CONFIG_FETCH_SUCCESS host=${config.audioRelayHost} port=${config.audioRelayPort} signalingUrl=${config.signalingUrl}")
             app.radioTransportConfig = config
             val prefs = app.serviceConnectionPrefs
             prefs.transportMode = config.transportMode
@@ -123,6 +137,7 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
             app.signalingClient.serverUrl = config.signalingUrl
             Log.d("LoginViewModel", "Radio transport config persisted: host=${config.audioRelayHost} port=${config.audioRelayPort} signalingUrl=${config.signalingUrl}")
         } else {
+            Log.e(STARTUP_TAG, "RADIO_CONFIG_FETCH_FAILED reason=${result.exceptionOrNull()?.message}")
             Log.w("LoginViewModel", "Radio config fetch failed, using defaults: ${result.exceptionOrNull()?.message}")
         }
     }
