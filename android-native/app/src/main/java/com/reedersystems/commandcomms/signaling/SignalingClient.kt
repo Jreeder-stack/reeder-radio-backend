@@ -208,7 +208,9 @@ class SignalingClient(var serverUrl: String) {
         s.on("channel:busy") { args -> parseAndEmit(args) { json ->
             SignalingEvent.RadioChannelBusy(
                 channelId = json.optString("channelId"),
-                transmittingUnit = json.optString("transmittingUnit")
+                transmittingUnit = json.optString("transmittingUnit").ifBlank {
+                    json.optString("heldBy")
+                }
             )
         }}
 
@@ -328,6 +330,15 @@ class SignalingClient(var serverUrl: String) {
         if (!isReady()) return
         Log.d(TAG, "emitRadioTxStart $channelKey")
         socket?.emit("tx:start", JSONObject().apply {
+            put("channelId", channelKey)
+            put("unitId", unitId)
+        })
+    }
+
+    fun emitRadioPttRelease(channelKey: String) {
+        if (!isReady()) return
+        Log.d(TAG, "emitRadioPttRelease $channelKey")
+        socket?.emit("ptt:release", JSONObject().apply {
             put("channelId", channelKey)
             put("unitId", unitId)
         })

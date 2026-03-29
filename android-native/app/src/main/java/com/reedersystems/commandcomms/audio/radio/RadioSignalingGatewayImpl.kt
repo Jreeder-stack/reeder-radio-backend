@@ -16,7 +16,7 @@ class RadioSignalingGatewayImpl(
 
     override fun releaseFloor(channelKey: String) {
         Log.d(TAG, "releaseFloor channelKey=$channelKey")
-        signalingClient.emitRadioTxStop(channelKey)
+        signalingClient.emitRadioPttRelease(channelKey)
     }
 
     override fun joinChannel(channelKey: String) {
