@@ -20,6 +20,8 @@ class OpusCodec {
 
     private var encoder: OpusEncoder? = null
     private var decoder: OpusDecoder? = null
+    private val encodeLock = Any()
+    private val expectedFrameBytes = FRAME_SIZE * CHANNELS * 2
     @Volatile
     private var initialized = false
 
@@ -43,24 +45,37 @@ class OpusCodec {
     }
 
     fun encode(pcmData: ByteArray): ByteArray? {
-        val enc = encoder ?: return null
-        val pcmSamples = ShortArray(pcmData.size / 2)
-        if (pcmSamples.size < FRAME_SIZE) {
-            Log.w(TAG, "PCM frame too small: ${pcmSamples.size} samples, expected $FRAME_SIZE")
+        val byteCount = pcmData.size
+        val sampleCount = byteCount / 2
+        val currentThread = Thread.currentThread().name
+        Log.d(TAG, "OPUS_ENCODE_INPUT samples=$sampleCount bytes=$byteCount thread=$currentThread reusedBuffer=${System.identityHashCode(pcmData)}")
+
+        if (byteCount != expectedFrameBytes || (byteCount and 1) != 0) {
+            Log.w(TAG, "OPUS_ENCODE_REJECTED_BAD_FRAME samples=$sampleCount bytes=$byteCount expectedSamples=$FRAME_SIZE expectedBytes=$expectedFrameBytes")
             return null
         }
-        java.nio.ByteBuffer.wrap(pcmData).order(java.nio.ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(pcmSamples)
-        val outputBuffer = ByteArray(MAX_ENCODED_SIZE)
-        return try {
-            val encodedBytes = enc.encode(pcmSamples, 0, FRAME_SIZE, outputBuffer, 0, outputBuffer.size)
-            if (encodedBytes > 0) outputBuffer.copyOf(encodedBytes) else null
-        } catch (e: Exception) {
-            Log.w(TAG, "Encode error: ${e.message}")
-            null
-        } catch (e: AssertionError) {
-            Log.e(TAG, "Encode assertion failure (re-initializing encoder): ${e.message}", e)
-            reinitializeEncoder()
-            null
+
+        synchronized(encodeLock) {
+            Log.d(TAG, "OPUS_ENCODE_SERIALIZED thread=$currentThread")
+            val enc = encoder ?: return null
+            val safeFrameBytes = pcmData.copyOf(expectedFrameBytes)
+            val pcmFrame = ShortArray(FRAME_SIZE)
+            java.nio.ByteBuffer.wrap(safeFrameBytes)
+                .order(java.nio.ByteOrder.LITTLE_ENDIAN)
+                .asShortBuffer()
+                .get(pcmFrame, 0, FRAME_SIZE)
+            val outputBuffer = ByteArray(MAX_ENCODED_SIZE)
+            return try {
+                val encodedBytes = enc.encode(pcmFrame, 0, FRAME_SIZE, outputBuffer, 0, outputBuffer.size)
+                if (encodedBytes > 0) outputBuffer.copyOf(encodedBytes) else null
+            } catch (e: AssertionError) {
+                Log.e(TAG, "OPUS_ENCODE_ASSERTION_FAILURE samples=$sampleCount bytes=$byteCount thread=$currentThread message=${e.message}", e)
+                reinitializeEncoder()
+                null
+            } catch (e: Exception) {
+                Log.w(TAG, "Encode error: ${e.message}")
+                null
+            }
         }
     }
 
