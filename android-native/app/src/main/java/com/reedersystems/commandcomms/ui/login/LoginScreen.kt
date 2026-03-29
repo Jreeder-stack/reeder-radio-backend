@@ -36,9 +36,16 @@ fun LoginScreen(
     viewModel: LoginViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val isAutoLoginInProgress by viewModel.isAutoLoginInProgress.collectAsStateWithLifecycle()
+
+    LaunchedEffect(Unit) {
+        Log.d("[LOGIN-FLOW]", "LOGIN_SCREEN_ENTER")
+    }
 
     LaunchedEffect(uiState) {
+        Log.d("[LOGIN-FLOW]", "SESSION_STATE_CHANGED uiState=${uiState::class.simpleName}")
         if (uiState is LoginUiState.Success) {
+            Log.d("[LOGIN-FLOW]", "NAVIGATE_TO_CONNECTING_REASON auth_success")
             Log.d("[APP-STARTUP]", "CONNECTING_SCREEN_EXIT")
             onLoginSuccess()
         }
@@ -50,7 +57,7 @@ fun LoginScreen(
             .background(ColorBackground),
         contentAlignment = Alignment.Center
     ) {
-        if (viewModel.isAutoLoginMode && uiState !is LoginUiState.Error) {
+        if (viewModel.isAutoLoginMode && isAutoLoginInProgress && uiState !is LoginUiState.Error) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 CircularProgressIndicator(color = ColorPrimary)
                 Spacer(modifier = Modifier.height(16.dp))
@@ -71,7 +78,8 @@ fun LoginScreen(
                         isLoading = uiState is LoginUiState.Loading,
                         errorMessage = (uiState as? LoginUiState.Error)?.message,
                         onLogin = { user, pass -> viewModel.login(user, pass) },
-                        onErrorDismiss = viewModel::clearError
+                        onErrorDismiss = viewModel::clearError,
+                        onInputChanged = viewModel::onManualInputChanged
                     )
                 }
             }
@@ -84,7 +92,8 @@ private fun LoginForm(
     isLoading: Boolean,
     errorMessage: String?,
     onLogin: (String, String) -> Unit,
-    onErrorDismiss: () -> Unit
+    onErrorDismiss: () -> Unit,
+    onInputChanged: (String, String) -> Unit
 ) {
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -128,6 +137,7 @@ private fun LoginForm(
             value = username,
             onValueChange = {
                 username = it
+                onInputChanged("username", it)
                 if (errorMessage != null) onErrorDismiss()
             },
             label = { Text("Unit ID") },
@@ -151,6 +161,7 @@ private fun LoginForm(
             value = password,
             onValueChange = {
                 password = it
+                onInputChanged("password", it)
                 if (errorMessage != null) onErrorDismiss()
             },
             label = { Text("Password") },
