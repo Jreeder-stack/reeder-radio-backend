@@ -47,6 +47,7 @@ class BackgroundAudioService : Service() {
     @Volatile private var needsSignaling = false
 
     @Volatile private var joinedSignalingChannelId: String? = null
+    @Volatile private var pendingSignalingChannelId: String? = null
 
     private var emergencyActivatingJob: Job? = null
 
@@ -220,7 +221,10 @@ class BackgroundAudioService : Service() {
                 app.signalingRepository.connectionState.collectLatest { state ->
                     when (state) {
                         ConnectionState.AUTHENTICATED -> syncBackgroundSignalingChannel()
-                        ConnectionState.DISCONNECTED -> joinedSignalingChannelId = null
+                        ConnectionState.DISCONNECTED -> {
+                            joinedSignalingChannelId = null
+                            pendingSignalingChannelId = null
+                        }
                         else -> Unit
                     }
                 }
@@ -270,7 +274,18 @@ class BackgroundAudioService : Service() {
         if (!authenticated) return false
 
         servicePrefs.channelId = channelId
-        return syncBackgroundSignalingChannel()
+        if (!syncBackgroundSignalingChannel()) return false
+
+        val targetRoomKey = currentTargetRoomKey() ?: return false
+        return when {
+            joinedSignalingChannelId == targetRoomKey -> true
+            else -> withTimeoutOrNull(3_000L) {
+                while (joinedSignalingChannelId != targetRoomKey) {
+                    delay(50L)
+                }
+                true
+            } != null
+        }
     }
 
     private fun currentTargetRoomKey(): String? = servicePrefs.channelRoomKey
@@ -289,10 +304,10 @@ class BackgroundAudioService : Service() {
         }
         val udpPort = radioEngine?.udpTransport?.localPort
         app.signalingRepository.joinRadioChannel(targetRoomKey, udpPort)
-        joinedSignalingChannelId = targetRoomKey
+        pendingSignalingChannelId = targetRoomKey
         radioEngine?.startReceive()
-        Log.d(TAG, "SUBSCRIBER_REGISTERED channelId=$targetRoomKey udpPort=${udpPort ?: "none"}")
-        Log.d(TAG, "Background signaling joined RADIO channel $targetRoomKey (udpPort=${udpPort ?: "none"}) — RX restarted")
+        Log.d(TAG, "RADIO_SUBSCRIBER_REGISTERED channelId=$targetRoomKey udpPort=${udpPort ?: "none"}")
+        Log.d(TAG, "Background signaling join requested for RADIO channel $targetRoomKey (udpPort=${udpPort ?: "none"}) — awaiting join ack")
         return true
     }
 
@@ -387,14 +402,18 @@ class BackgroundAudioService : Service() {
                         engine.udpTransport.setSessionToken(event.token)
                     }
                     is SignalingEvent.RadioChannelJoined -> {
-                        Log.d(TAG, "CHANNEL_JOINED channelId=${event.channelId}")
+                        joinedSignalingChannelId = event.channelId
+                        if (pendingSignalingChannelId == event.channelId) {
+                            pendingSignalingChannelId = null
+                        }
+                        Log.d(TAG, "RADIO_CHANNEL_JOINED channelId=${event.channelId}")
                     }
                     is SignalingEvent.RadioPttGranted -> {
-                        Log.d(TAG, "PTT_GRANTED channelId=${event.channelId} senderUnitId=${event.senderUnitId}")
+                        Log.d(TAG, "RADIO_PTT_GRANTED channelId=${event.channelId} senderUnitId=${event.senderUnitId}")
                         engine.floorControl?.onFloorGranted(event.channelId)
                     }
                     is SignalingEvent.RadioPttDenied -> {
-                        Log.d(TAG, "PTT_DENIED channelId=${event.channelId} reason=${event.reason} heldBy=${event.heldBy}")
+                        Log.d(TAG, "RADIO_PTT_DENIED channelId=${event.channelId} reason=${event.reason} heldBy=${event.heldBy}")
                         engine.floorControl?.onFloorDenied(event.channelId)
                     }
                     is SignalingEvent.RadioChannelBusy -> {
@@ -427,6 +446,7 @@ class BackgroundAudioService : Service() {
 
     private fun handleRadioPttDown(signaling: Boolean) {
         Log.d(TAG, "handleRadioPttDown pttState=$pttState signaling=$signaling")
+        Log.d(TAG, "RADIO_PTT_DOWN")
 
         if (!app.sessionPrefs.micPermissionGranted) {
             Log.w(TAG, "Radio PTT DOWN: mic permission denied — blocked")
@@ -476,12 +496,14 @@ class BackgroundAudioService : Service() {
             }
 
             Log.d(TAG, "PTT_REQUEST_SENT channelId=$roomKey")
+            Log.d(TAG, "RADIO_PTT_REQUEST_SENT channelId=$roomKey")
             engine.floorControl?.requestFloor(roomKey)
         }
     }
 
     private fun handleRadioPttUp() {
         Log.d(TAG, "handleRadioPttUp pttState=$pttState")
+        Log.d(TAG, "RADIO_PTT_UP")
 
         pttUpWhileConnecting = true
 
