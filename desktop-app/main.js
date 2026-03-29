@@ -541,15 +541,15 @@ app.whenReady().then(() => {
       (function() {
         try {
           console.log('[Desktop] powerMonitor wake — reconnecting audio channels');
-          if (window.__livekitManager) {
-            var channels = window.__livekitManager.getConnectedChannels();
+          if (window.__audioTransportManager) {
+            var channels = window.__audioTransportManager.getConnectedChannels();
             channels.forEach(function(ch) {
-              var conn = window.__livekitManager.getRoom(ch);
+              var conn = window.__audioTransportManager.getRoom(ch);
               if (!conn || !conn.ws || conn.ws.readyState !== WebSocket.OPEN) {
                 var savedUnitId = conn ? conn.unitId : '';
                 console.log('[Desktop] Audio WS dead for ' + ch + ' after wake — reconnecting');
-                window.__livekitManager.disconnect(ch).then(function() {
-                  window.__livekitManager.connect(ch, savedUnitId);
+                window.__audioTransportManager.disconnect(ch).then(function() {
+                  window.__audioTransportManager.connect(ch, savedUnitId);
                 });
               }
             });

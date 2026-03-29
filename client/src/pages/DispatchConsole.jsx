@@ -26,8 +26,8 @@ import ChannelChat from '../components/ChannelChat/index.jsx';
 import useDispatchStore from '../state/dispatchStore.js';
 import toneEngine from '../audio/toneEngine.js';
 import { getUnits } from '../utils/api.js';
-import { useLiveKitConnection } from '../context/LiveKitConnectionContext.jsx';
-import livekitManager from '../audio/LiveKitManager.js';
+import { useAudioConnection } from '../context/AudioConnectionContext.jsx';
+import audioTransportManager from '../audio/AudioTransportManager.js';
 import { useSignalingContext } from '../context/SignalingContext.jsx';
 
 export default function DispatchConsole({ user, onLogout }) {
@@ -39,7 +39,7 @@ export default function DispatchConsole({ user, onLogout }) {
     return saved !== null ? JSON.parse(saved) : true;
   });
 
-  const { retryConnection, connectToChannel, disconnectFromChannel } = useLiveKitConnection();
+  const { retryConnection, connectToChannel, disconnectFromChannel } = useAudioConnection();
   const { 
     connected: signalingConnected,
     authenticated: signalingAuthenticated,
@@ -117,7 +117,7 @@ export default function DispatchConsole({ user, onLogout }) {
 
   useEffect(() => {
     return () => {
-      livekitManager.disconnect();
+      audioTransportManager.disconnect();
       toneEngine.destroy();
     };
   }, []);

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./AuthContext.jsx";
-import { LiveKitConnectionProvider, useLiveKitConnection } from "./context/LiveKitConnectionContext.jsx";
+import { AudioConnectionProvider, useAudioConnection } from "./context/AudioConnectionContext.jsx";
 import { SignalingProvider } from "./context/SignalingContext.jsx";
 import { MobileRadioProvider } from "./context/MobileRadioContext.jsx";
 import { ErrorBoundary } from "./components/ErrorBoundary.jsx";
@@ -104,7 +104,7 @@ function LoginRoute() {
 
 function AppWrapper() {
   const { user, logout } = useAuth();
-  const { disconnectAll } = useLiveKitConnection();
+  const { disconnectAll } = useAudioConnection();
   const isMobile = useMobile();
   
   useEffect(() => {
@@ -153,7 +153,7 @@ function AppWrapper() {
 
 function DispatchConsoleWrapper() {
   const { user, logout } = useAuth();
-  const { disconnectAll } = useLiveKitConnection();
+  const { disconnectAll } = useAudioConnection();
   
   const handleLogout = async () => {
     await disconnectAll();
@@ -165,7 +165,7 @@ function DispatchConsoleWrapper() {
 
 function AdminWrapper() {
   const { user, logout } = useAuth();
-  const { disconnectAll } = useLiveKitConnection();
+  const { disconnectAll } = useAudioConnection();
   
   const handleLogout = async () => {
     await disconnectAll();
@@ -177,7 +177,7 @@ function AdminWrapper() {
 
 function RadioAppWrapper() {
   const { user, logout } = useAuth();
-  const { disconnectAll } = useLiveKitConnection();
+  const { disconnectAll } = useAudioConnection();
   
   const handleLogout = async () => {
     await disconnectAll();
@@ -189,7 +189,7 @@ function RadioAppWrapper() {
 
 function RecordingLogsWrapper() {
   const { user, logout } = useAuth();
-  const { disconnectAll } = useLiveKitConnection();
+  const { disconnectAll } = useAudioConnection();
   
   const handleLogout = async () => {
     await disconnectAll();
@@ -201,7 +201,7 @@ function RecordingLogsWrapper() {
 
 function MobileSettingsWrapper() {
   const { logout } = useAuth();
-  const { disconnectAll } = useLiveKitConnection();
+  const { disconnectAll } = useAudioConnection();
   
   const handleLogout = async () => {
     await disconnectAll();
@@ -216,7 +216,7 @@ function ConnectedRoutes() {
 
   return (
     <SignalingProvider>
-      <LiveKitConnectionProvider user={loading ? null : user}>
+      <AudioConnectionProvider user={loading ? null : user}>
         <MobileRadioProvider>
           <GlobalEmergencyOverlay />
           <Routes>
@@ -287,7 +287,7 @@ function ConnectedRoutes() {
             />
           </Routes>
         </MobileRadioProvider>
-      </LiveKitConnectionProvider>
+      </AudioConnectionProvider>
     </SignalingProvider>
   );
 }

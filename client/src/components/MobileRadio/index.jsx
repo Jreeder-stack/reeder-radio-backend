@@ -4,7 +4,7 @@ import { PTTButton } from './PTTButton';
 import { PresenceList } from './PresenceList';
 import { AlertTriangle, Activity, Loader2, Wifi, WifiOff, MapPin } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { useLiveKitConnection } from '../../context/LiveKitConnectionContext';
+import { useAudioConnection } from '../../context/AudioConnectionContext';
 import { useSignalingContext } from '../../context/SignalingContext';
 import { PTT_STATES } from '../../constants/pttStates';
 import { updateUnitStatus } from '../../utils/api';
@@ -14,13 +14,13 @@ export default function MobileRadioView({ user, onLogout }) {
   const identity = (user?.unit_id && user.unit_id.trim()) || user?.username || 'Unknown';
   
   const {
-    livekitManager,
+    audioTransportManager,
     connectionStatus,
     channels: contextChannels,
     switchChannel: contextSwitchChannel,
     ensureConnected,
     retryConnection,
-  } = useLiveKitConnection();
+  } = useAudioConnection();
   
   const {
     channelMembers,
@@ -120,13 +120,13 @@ export default function MobileRadioView({ user, onLogout }) {
   }, []);
 
   useEffect(() => {
-    if (!livekitManager) return;
-    livekitManager.setAutoPlayback(false);
+    if (!audioTransportManager) return;
+    audioTransportManager.setAutoPlayback(false);
     
     const listenerRemovers = [];
     
     listenerRemovers.push(
-      livekitManager.addTrackSubscribedListener((channelName, track, participant) => {
+      audioTransportManager.addTrackSubscribedListener((channelName, track, participant) => {
         if (track.kind !== 'audio') return;
         
         const audioElem = track.attach();
@@ -139,7 +139,7 @@ export default function MobileRadioView({ user, onLogout }) {
         document.body.appendChild(audioElem);
         rxAudioElementsRef.current.add(audioElem);
         
-        const currentState = livekitManager.getState();
+        const currentState = audioTransportManager.getState();
         if (currentState === PTT_STATES.TRANSMITTING || currentState === PTT_STATES.ARMING) {
           audioElem.muted = true;
         } else {
@@ -153,7 +153,7 @@ export default function MobileRadioView({ user, onLogout }) {
     );
     
     listenerRemovers.push(
-      livekitManager.addTrackUnsubscribedListener((channelName, track, participant) => {
+      audioTransportManager.addTrackUnsubscribedListener((channelName, track, participant) => {
         const detachedElements = track.detach();
         detachedElements.forEach((el) => {
           rxAudioElementsRef.current.delete(el);
@@ -164,27 +164,27 @@ export default function MobileRadioView({ user, onLogout }) {
     );
     
     return () => {
-      if (livekitManager) {
-        livekitManager.setAutoPlayback(true);
+      if (audioTransportManager) {
+        audioTransportManager.setAutoPlayback(true);
       }
       listenerRemovers.forEach(remove => remove());
     };
-  }, [livekitManager]);
+  }, [audioTransportManager]);
 
   const broadcastStatus = useCallback((status, channel) => {
-    if (!livekitManager?.isConnected(channel)) return;
+    if (!audioTransportManager?.isConnected(channel)) return;
     
-    livekitManager.sendData(channel, {
+    audioTransportManager.sendData(channel, {
       type: 'status_update',
       identity,
       status,
       channel,
       timestamp: Date.now(),
     });
-  }, [livekitManager, identity]);
+  }, [audioTransportManager, identity]);
 
   useEffect(() => {
-    livekitManager.onStateChange = (newState) => {
+    audioTransportManager.onStateChange = (newState) => {
       setPttState(newState);
       const txChannel = transmitChannelRef.current;
       
@@ -208,7 +208,7 @@ export default function MobileRadioView({ user, onLogout }) {
     };
     
     return () => {
-      livekitManager.disconnect();
+      audioTransportManager.disconnect();
     };
   }, [broadcastStatus, identity, userLocation]);
 
@@ -225,13 +225,13 @@ export default function MobileRadioView({ user, onLogout }) {
       console.warn('[PTT] ensureConnected returned false for channel:', channelName);
     }
 
-    let room = livekitManager?.getRoom(channelName);
+    let room = audioTransportManager?.getRoom(channelName);
 
     if (!room) {
       const deadline = Date.now() + 3000;
       while (!room && Date.now() < deadline) {
         await new Promise(resolve => setTimeout(resolve, 250));
-        room = livekitManager?.getRoom(channelName);
+        room = audioTransportManager?.getRoom(channelName);
       }
     }
 
@@ -257,9 +257,9 @@ export default function MobileRadioView({ user, onLogout }) {
       return;
     }
 
-    livekitManager.setCurrentChannel(channelName);
-    livekitManager.setCurrentUnit(identity);
-    livekitManager.setRoom(room);
+    audioTransportManager.setCurrentChannel(channelName);
+    audioTransportManager.setCurrentUnit(identity);
+    audioTransportManager.setRoom(room);
     let floorGranted = false;
     try {
       await signalPttStart(channelName);
@@ -269,23 +269,23 @@ export default function MobileRadioView({ user, onLogout }) {
       return;
     }
     try {
-      const started = await livekitManager.start();
+      const started = await audioTransportManager.start();
       if (!started && floorGranted) {
-        console.warn('[MobileRadio] livekitManager.start() failed, releasing floor');
+        console.warn('[MobileRadio] audioTransportManager.start() failed, releasing floor');
         signalPttEnd(channelName);
       }
     } catch (startErr) {
-      console.error('[MobileRadio] livekitManager.start() threw:', startErr);
+      console.error('[MobileRadio] audioTransportManager.start() threw:', startErr);
       if (floorGranted) {
         signalPttEnd(channelName);
       }
     }
-  }, [ensureConnected, retryConnection, livekitManager, signalPttStart, signalPttEnd, identity, connectionStatus]);
+  }, [ensureConnected, retryConnection, audioTransportManager, signalPttStart, signalPttEnd, identity, connectionStatus]);
 
   const handleTransmitEnd = useCallback(() => {
     const channelName = transmitChannelRef.current;
-    if (livekitManager.canStop()) {
-      livekitManager.stop();
+    if (audioTransportManager.canStop()) {
+      audioTransportManager.stop();
     }
     if (channelName) {
       signalPttEnd(channelName);

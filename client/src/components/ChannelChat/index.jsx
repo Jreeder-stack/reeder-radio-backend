@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { getChannelMessages, sendTextMessage, transcribeMessage } from '../../utils/api.js';
-import { livekitManager } from '../../audio/LiveKitManager.js';
+import { audioTransportManager } from '../../audio/AudioTransportManager.js';
 import VoiceMessage from './VoiceMessage.jsx';
 
 export default function ChannelChat({ channel, currentUser, onNewMessage }) {
@@ -45,7 +45,7 @@ export default function ChannelChat({ channel, currentUser, onNewMessage }) {
         }
       };
       
-      const removeListener = livekitManager.addDataReceivedListener(handleDataReceived);
+      const removeListener = audioTransportManager.addDataReceivedListener(handleDataReceived);
       
       return () => {
         if (pollIntervalRef.current) {
