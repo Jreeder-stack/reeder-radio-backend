@@ -145,25 +145,41 @@ class RadioAudioEngine(private val context: Context) {
             Log.d(TAG, "RADIO_TX_CAPTURE_STARTED sampleRate=$MIC_SAMPLE_RATE frameMs=$CAPTURE_INTERVAL_MS")
 
             captureJob = scope.launch {
-                val micBuffer = ByteArray(MIC_FRAME_SIZE_BYTES)
+                val readBuffer = ByteArray(MIC_FRAME_SIZE_BYTES)
+                val pendingFrame = ByteArray(MIC_FRAME_SIZE_BYTES)
+                var pendingBytes = 0
                 var frameCounter = 0
                 while (isActive && isTransmitting) {
                     try {
-                        val read = record.read(micBuffer, 0, micBuffer.size)
-                        if (read == MIC_FRAME_SIZE_BYTES) {
-                            highPassFilter(micBuffer, read)
-                            lowPassFilter(micBuffer, read)
-                            softwareCompressor(micBuffer, read)
-                            applyGain(micBuffer, read, TX_GAIN)
-                            val encoded = opusCodec.encode(micBuffer)
-                            if (encoded != null) {
-                                frameCounter++
-                                Log.d(TAG, "OPUS_TX_FRAME_ENCODED frame=$frameCounter bytes=${encoded.size}")
-                                Log.d(TAG, "RADIO_OPUS_TX_FRAME_ENCODED frame=$frameCounter bytes=${encoded.size}")
-                                udpTransport.send(encoded)
-                                Log.d(TAG, "OPUS_TX_FRAME_SENT frame=$frameCounter bytes=${encoded.size}")
-                                Log.d(TAG, "RADIO_OPUS_TX_FRAME_SENT frame=$frameCounter bytes=${encoded.size}")
+                        val read = record.read(readBuffer, 0, readBuffer.size)
+                        if (read > 0) {
+                            var readOffset = 0
+                            while (readOffset < read) {
+                                val remainingFrameBytes = MIC_FRAME_SIZE_BYTES - pendingBytes
+                                val chunkSize = minOf(remainingFrameBytes, read - readOffset)
+                                System.arraycopy(readBuffer, readOffset, pendingFrame, pendingBytes, chunkSize)
+                                pendingBytes += chunkSize
+                                readOffset += chunkSize
+
+                                if (pendingBytes == MIC_FRAME_SIZE_BYTES) {
+                                    highPassFilter(pendingFrame, MIC_FRAME_SIZE_BYTES)
+                                    lowPassFilter(pendingFrame, MIC_FRAME_SIZE_BYTES)
+                                    softwareCompressor(pendingFrame, MIC_FRAME_SIZE_BYTES)
+                                    applyGain(pendingFrame, MIC_FRAME_SIZE_BYTES, TX_GAIN)
+                                    val encoded = opusCodec.encode(pendingFrame)
+                                    if (encoded != null) {
+                                        frameCounter++
+                                        Log.d(TAG, "OPUS_TX_FRAME_ENCODED frame=$frameCounter bytes=${encoded.size}")
+                                        Log.d(TAG, "RADIO_OPUS_TX_FRAME_ENCODED frame=$frameCounter bytes=${encoded.size}")
+                                        udpTransport.send(encoded)
+                                        Log.d(TAG, "OPUS_TX_FRAME_SENT frame=$frameCounter bytes=${encoded.size}")
+                                        Log.d(TAG, "RADIO_OPUS_TX_FRAME_SENT frame=$frameCounter bytes=${encoded.size}")
+                                    }
+                                    pendingBytes = 0
+                                }
                             }
+                        } else if (read < 0) {
+                            Log.w(TAG, "AudioRecord read returned error: $read")
                         }
                     } catch (e: IllegalStateException) {
                         Log.w(TAG, "AudioRecord read failed (released?): ${e.message}")
