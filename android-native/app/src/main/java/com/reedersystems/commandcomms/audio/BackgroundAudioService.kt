@@ -48,6 +48,7 @@ class BackgroundAudioService : Service() {
 
     @Volatile private var joinedSignalingChannelId: String? = null
     @Volatile private var pendingSignalingChannelId: String? = null
+    @Volatile private var sessionTokenChannelId: String? = null
 
     private var emergencyActivatingJob: Job? = null
 
@@ -55,6 +56,7 @@ class BackgroundAudioService : Service() {
 
     private var signalingConnectionJob: Job? = null
     private var signalingEventsJob: Job? = null
+    private var pendingFloorTimeoutJob: Job? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -306,6 +308,7 @@ class BackgroundAudioService : Service() {
         app.signalingRepository.joinRadioChannel(targetRoomKey, udpPort)
         pendingSignalingChannelId = targetRoomKey
         radioEngine?.startReceive()
+        Log.d(TAG, "RADIO_CHANNEL_JOINED requested channelId=$targetRoomKey")
         Log.d(TAG, "RADIO_SUBSCRIBER_REGISTERED channelId=$targetRoomKey udpPort=${udpPort ?: "none"}")
         Log.d(TAG, "Background signaling join requested for RADIO channel $targetRoomKey (udpPort=${udpPort ?: "none"}) — awaiting join ack")
         return true
@@ -358,6 +361,7 @@ class BackgroundAudioService : Service() {
             engine.floorControl?.events?.collect { event ->
                 when (event) {
                     FloorControlEvent.GRANTED -> {
+                        cancelPendingFloorTimeout()
                         if (pttState == PttState.TRANSMITTING) {
                             Log.d(TAG, "Floor GRANTED but already TRANSMITTING — ignoring duplicate")
                             return@collect
@@ -365,21 +369,22 @@ class BackgroundAudioService : Service() {
                         Log.d(TAG, "Floor GRANTED — starting TX")
                         val txStarted = engine.startTransmit()
                         if (txStarted) {
-                            pttState = PttState.TRANSMITTING
+                            transitionPttState(PttState.TRANSMITTING)
                             updateNotification("TRANSMITTING")
                             sendPttTxStarted()
                         } else {
                             Log.e(TAG, "Radio TX: startTransmit failed after floor granted")
                             app.toneEngine.playErrorTone()
-                            pttState = PttState.IDLE
+                            transitionPttState(PttState.IDLE)
                             updateNotification("Radio — Standby")
                             sendPttTxFailed()
                         }
                     }
                     FloorControlEvent.DENIED -> {
+                        cancelPendingFloorTimeout()
                         Log.d(TAG, "Floor DENIED — aborting TX")
                         app.toneEngine.playBusyTone()
-                        pttState = PttState.IDLE
+                        transitionPttState(PttState.IDLE)
                         updateNotification("Radio — Standby")
                         sendPttTxFailed()
                     }
@@ -399,6 +404,8 @@ class BackgroundAudioService : Service() {
                 when (event) {
                     is SignalingEvent.RadioSessionToken -> {
                         Log.d(TAG, "Session token received for channel ${event.channelId}")
+                        sessionTokenChannelId = event.channelId
+                        Log.d(TAG, "RADIO_SESSION_TOKEN_RECEIVED channelId=${event.channelId}")
                         engine.udpTransport.setSessionToken(event.token)
                     }
                     is SignalingEvent.RadioChannelJoined -> {
@@ -429,6 +436,7 @@ class BackgroundAudioService : Service() {
                     is SignalingEvent.RadioTxStart -> {
                         val selfUnitId = servicePrefs.unitId ?: app.sessionPrefs.unitId
                         if (event.senderUnitId != selfUnitId && event.channelId == currentRoomKey) {
+                            Log.d(TAG, "RADIO_STATE_RX_ENTER channelId=${event.channelId} senderUnitId=${event.senderUnitId}")
                             engine.floorControl?.onChannelBusy(event.senderUnitId)
                         }
                     }
@@ -474,7 +482,16 @@ class BackgroundAudioService : Service() {
             return
         }
 
-        pttState = PttState.CONNECTING
+        val (ready, blockedReason) = evaluateReadinessForPtt(signaling, roomKey)
+        if (!ready) {
+            Log.w(TAG, "RADIO_READY_BLOCKED_REASON reason=$blockedReason")
+            app.toneEngine.playErrorTone()
+            sendPttTxFailed()
+            return
+        }
+        Log.d(TAG, "RADIO_READY_FOR_PTT roomKey=$roomKey signaling=$signaling")
+
+        transitionPttState(PttState.CONNECTING)
         updateNotification("Requesting floor…")
         app.toneEngine.playTalkPermitTone()
 
@@ -484,7 +501,7 @@ class BackgroundAudioService : Service() {
             if (signaling && !ensureBackgroundSignalingReady(servicePrefs.channelId)) {
                 Log.e(TAG, "Radio PTT: signaling not ready")
                 app.toneEngine.playErrorTone()
-                pttState = PttState.IDLE
+                transitionPttState(PttState.IDLE)
                 updateNotification("Radio — Standby")
                 sendPttTxFailed()
                 return@launch
@@ -498,6 +515,7 @@ class BackgroundAudioService : Service() {
             Log.d(TAG, "PTT_REQUEST_SENT channelId=$roomKey")
             Log.d(TAG, "RADIO_PTT_REQUEST_SENT channelId=$roomKey")
             engine.floorControl?.requestFloor(roomKey)
+            startPendingFloorTimeout(roomKey)
         }
     }
 
@@ -509,8 +527,9 @@ class BackgroundAudioService : Service() {
 
         if (pttState != PttState.TRANSMITTING) {
             if (pttState == PttState.CONNECTING) {
+                cancelPendingFloorTimeout()
                 radioEngine?.floorControl?.cancelPending()
-                pttState = PttState.IDLE
+                transitionPttState(PttState.IDLE)
                 updateNotification("Radio — Standby")
                 sendPttTxAborted()
             }
@@ -520,7 +539,7 @@ class BackgroundAudioService : Service() {
         val roomKey = servicePrefs.channelRoomKey ?: return
         val wasSignaling = needsSignaling
 
-        pttState = PttState.CLEANING_UP
+        transitionPttState(PttState.CLEANING_UP)
         updateNotification("Radio — Standby")
 
         scope.launch {
@@ -535,10 +554,50 @@ class BackgroundAudioService : Service() {
                     Log.d(TAG, "Radio PTT UP: end-of-TX tone for roomKey $roomKey")
                 }
             } finally {
-                pttState = PttState.IDLE
+                transitionPttState(PttState.IDLE)
                 Log.d(TAG, "PTT cleanup complete — state is now IDLE")
             }
         }
+    }
+
+    private fun transitionPttState(newState: PttState) {
+        if (pttState == newState) return
+        pttState = newState
+        when (newState) {
+            PttState.CONNECTING -> Log.d(TAG, "RADIO_STATE_CONNECTING_ENTER")
+            PttState.IDLE -> Log.d(TAG, "RADIO_STATE_IDLE_ENTER")
+            PttState.TRANSMITTING -> Log.d(TAG, "RADIO_STATE_TX_ENTER")
+            PttState.CLEANING_UP -> Unit
+        }
+    }
+
+    private fun evaluateReadinessForPtt(signaling: Boolean, roomKey: String): Pair<Boolean, String?> {
+        if (radioEngine == null) return false to "radio_engine_missing"
+        if (!signaling) return true to null
+        val state = app.signalingRepository.connectionState.value
+        if (state != ConnectionState.AUTHENTICATED) return false to "signaling_not_authenticated:$state"
+        if (joinedSignalingChannelId != roomKey) return false to "channel_not_joined joined=$joinedSignalingChannelId target=$roomKey"
+        if (sessionTokenChannelId != roomKey) return false to "session_token_missing channel=$roomKey tokenChannel=$sessionTokenChannelId"
+        return true to null
+    }
+
+    private fun startPendingFloorTimeout(roomKey: String) {
+        cancelPendingFloorTimeout()
+        pendingFloorTimeoutJob = scope.launch {
+            delay(5_000L)
+            if (pttState == PttState.CONNECTING) {
+                Log.w(TAG, "RADIO_READY_BLOCKED_REASON reason=floor_response_timeout channelId=$roomKey")
+                radioEngine?.floorControl?.cancelPending()
+                transitionPttState(PttState.IDLE)
+                updateNotification("Radio — Standby")
+                sendPttTxFailed()
+            }
+        }
+    }
+
+    private fun cancelPendingFloorTimeout() {
+        pendingFloorTimeoutJob?.cancel()
+        pendingFloorTimeoutJob = null
     }
 
     private fun sendEmergencyActivated() {
@@ -607,6 +666,7 @@ class BackgroundAudioService : Service() {
         signalingEventsJob?.cancel()
         radioEngine?.release()
         radioEngine = null
+        cancelPendingFloorTimeout()
         scope.cancel()
         if (serviceWakeLock.isHeld) {
             serviceWakeLock.release()
