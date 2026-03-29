@@ -142,6 +142,7 @@ class RadioAudioEngine(private val context: Context) {
             isTransmitting = true
             stateManager.transitionTo(RadioState.TRANSMITTING)
             Log.d(TAG, "OPUS_TX_INIT sampleRate=$MIC_SAMPLE_RATE channels=1 frameMs=$CAPTURE_INTERVAL_MS bitrate=${OpusCodec.BITRATE}")
+            Log.d(TAG, "RADIO_TX_CAPTURE_STARTED sampleRate=$MIC_SAMPLE_RATE frameMs=$CAPTURE_INTERVAL_MS")
 
             captureJob = scope.launch {
                 val micBuffer = ByteArray(MIC_FRAME_SIZE_BYTES)
@@ -158,8 +159,10 @@ class RadioAudioEngine(private val context: Context) {
                             if (encoded != null) {
                                 frameCounter++
                                 Log.d(TAG, "OPUS_TX_FRAME_ENCODED frame=$frameCounter bytes=${encoded.size}")
+                                Log.d(TAG, "RADIO_OPUS_TX_FRAME_ENCODED frame=$frameCounter bytes=${encoded.size}")
                                 udpTransport.send(encoded)
                                 Log.d(TAG, "OPUS_TX_FRAME_SENT frame=$frameCounter bytes=${encoded.size}")
+                                Log.d(TAG, "RADIO_OPUS_TX_FRAME_SENT frame=$frameCounter bytes=${encoded.size}")
                             }
                         }
                     } catch (e: IllegalStateException) {
@@ -215,6 +218,7 @@ class RadioAudioEngine(private val context: Context) {
         jitterBuffer.start()
         audioPlayback.start()
         Log.d(TAG, "OPUS_RX_PLAYBACK_STARTED")
+        Log.d(TAG, "RADIO_RX_PLAYBACK_STARTED")
         if (stateManager.state.value != RadioState.TRANSMITTING) {
             stateManager.transitionTo(RadioState.RECEIVING)
         }
@@ -235,6 +239,7 @@ class RadioAudioEngine(private val context: Context) {
             Log.d(TAG, "Dropping RX frame for other channel packetChannel=${packet.channelId} local=${udpTransport.channelId}")
             return
         }
+        Log.d(TAG, "RADIO_RX_PACKET_RECEIVED seq=${packet.sequence} sender=${packet.senderUnitId} payload=${packet.opusPayload.size}")
         jitterBuffer.enqueue(packet.sequence, packet.opusPayload)
     }
 
