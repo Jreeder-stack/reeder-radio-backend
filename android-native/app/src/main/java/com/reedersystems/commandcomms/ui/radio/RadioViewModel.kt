@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 private const val TAG = "[PTT-DIAG]"
+private const val STARTUP_TAG = "[APP-STARTUP]"
 
 val STATUS_CYCLE = listOf("off_duty", "on_duty", "en_route", "arrived", "oos")
 val STATUS_LABELS = mapOf(
@@ -206,9 +207,11 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
     private fun loadChannels() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
+            Log.d(STARTUP_TAG, "CHANNEL_FETCH_START")
             val result = app.channelRepository.getZones()
             if (result.isSuccess) {
                 val zones = result.getOrThrow()
+                Log.d(STARTUP_TAG, "CHANNEL_FETCH_SUCCESS zones=${zones.size}")
                 val allChannels = zones.flatMap { it.channels }
                 val scanChannels = allChannels.map { ch ->
                     ScanChannelItem(ch.id, ch.name, loadScanEnabled(ch.id))
@@ -217,6 +220,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                 _uiState.update { it.copy(zones = zones, isLoading = false, scanChannels = scanChannels, isScanning = savedScanning) }
                 connectSignaling()
             } else {
+                Log.e(STARTUP_TAG, "CHANNEL_FETCH_FAILED reason=${result.exceptionOrNull()?.message}")
                 _uiState.update {
                     it.copy(isLoading = false, error = result.exceptionOrNull()?.message ?: "Failed to load channels")
                 }
@@ -228,6 +232,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         val state = _uiState.value
         val unitId = state.unitId.ifBlank { return }
         val username = state.username.ifBlank { unitId }
+        Log.d(STARTUP_TAG, "SIGNALING_CONNECT_ATTEMPT url=${app.signalingClient.serverUrl} unitId=$unitId")
         app.signalingRepository.connect(unitId, username)
 
         viewModelScope.launch {
@@ -236,8 +241,11 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                 if (connState == ConnectionState.AUTHENTICATED) {
                     val roomKey = _uiState.value.currentChannel?.roomKey
                     if (roomKey != null) {
+                        Log.d(STARTUP_TAG, "CHANNEL_JOIN_ATTEMPT channel=$roomKey")
                         app.signalingRepository.joinChannel(roomKey)
                         updateServiceChannel()
+                    } else {
+                        Log.e(STARTUP_TAG, "CHANNEL_JOIN_FAILED reason=no_current_channel")
                     }
                 }
             }
@@ -278,6 +286,11 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                     }
                     is SignalingEvent.LocationTrackStop -> {
                         locationTracker.stopTracking()
+                    }
+                    is SignalingEvent.UnitJoined -> {
+                        if (event.unitId == _uiState.value.unitId) {
+                            Log.d(STARTUP_TAG, "CHANNEL_JOIN_SUCCESS channel=${event.channelId}")
+                        }
                     }
                     else -> {}
                 }
