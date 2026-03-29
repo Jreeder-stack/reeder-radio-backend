@@ -51,16 +51,6 @@ export async function saveSettings(settings) {
     localStorage.setItem('app_settings', JSON.stringify(settings));
     window.dispatchEvent(new CustomEvent('settings-changed', { detail: settings }));
 
-    if (isNative && window.Capacitor?.Plugins?.BackgroundService?.syncSettingsToNative) {
-      try {
-        await window.Capacitor.Plugins.BackgroundService.syncSettingsToNative({
-          settings: JSON.stringify(settings),
-        });
-      } catch (syncErr) {
-        console.warn('[Capacitor] Failed to sync settings to native:', syncErr);
-      }
-    }
-
     return true;
   } catch (e) {
     console.error('Failed to save settings:', e);
@@ -142,25 +132,6 @@ export async function setHardwarePttKeyCode(keyCode) {
   return false;
 }
 
-export async function requestAllPermissions() {
-  console.log('[Capacitor] Requesting all permissions...');
-  const results = {};
-
-  results.location = await requestLocationPermissions();
-  console.log('[Capacitor] Location permission:', results.location);
-
-  results.notifications = await requestNotificationPermissions();
-  console.log('[Capacitor] Notification permission:', results.notifications);
-
-  if (isNative) {
-    results.dndOverride = await requestDndOverridePermission();
-    console.log('[Capacitor] DND override permission:', results.dndOverride);
-  }
-
-  console.log('[Capacitor] All permissions requested:', results);
-  return results;
-}
-
 export function setupAppLifecycle(onResume, onPause) {
   if (!isNative) {
     return () => {};
@@ -182,48 +153,4 @@ export function setupAppLifecycle(onResume, onPause) {
   }
   
   return () => {};
-}
-
-export function overrideVisibilityAPI() {
-  if (!isNative) return;
-
-  try {
-    Object.defineProperty(document, 'hidden', {
-      get: function() { return false; },
-      configurable: true,
-    });
-    Object.defineProperty(document, 'visibilityState', {
-      get: function() { return 'visible'; },
-      configurable: true,
-    });
-
-    var origDocAddEventListener = document.addEventListener.bind(document);
-    document.addEventListener = function(type, listener, options) {
-      if (type === 'visibilitychange') {
-        return;
-      }
-      return origDocAddEventListener(type, listener, options);
-    };
-
-    var origWinAddEventListener = window.addEventListener.bind(window);
-    window.addEventListener = function(type, listener, options) {
-      if (type === 'visibilitychange') {
-        return;
-      }
-      return origWinAddEventListener(type, listener, options);
-    };
-
-    if (typeof Page !== 'undefined' && Page.prototype) {
-      try {
-        Object.defineProperty(Page.prototype, 'hidden', {
-          get: function() { return false; },
-          configurable: true,
-        });
-      } catch (e) {}
-    }
-
-    console.log('[Capacitor] Visibility API overridden - app will always report visible');
-  } catch (e) {
-    console.warn('[Capacitor] Failed to override visibility API:', e.message);
-  }
 }
