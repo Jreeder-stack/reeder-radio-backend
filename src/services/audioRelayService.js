@@ -2,9 +2,17 @@ import dgram from 'dgram';
 import { canonicalChannelKey } from './channelKeyUtils.js';
 
 const SESSION_TOKEN_LEN = 16;
+const VERSION_LEN = 1;
+const FLAGS_LEN = 1;
 const CHANNEL_ID_LEN = 2;
 const SEQUENCE_LEN = 2;
-const HEADER_LEN = SESSION_TOKEN_LEN + CHANNEL_ID_LEN + SEQUENCE_LEN;
+const TIMESTAMP_LEN = 4;
+const SENDER_LEN_LEN = 1;
+const PAYLOAD_LEN_LEN = 2;
+const RADIO_HEADER_FIXED_LEN = VERSION_LEN + FLAGS_LEN + CHANNEL_ID_LEN + SEQUENCE_LEN + TIMESTAMP_LEN + SENDER_LEN_LEN + PAYLOAD_LEN_LEN;
+const HEADER_LEN = SESSION_TOKEN_LEN + RADIO_HEADER_FIXED_LEN;
+const PACKET_VERSION = 1;
+const FLAG_FEC_HINT = 0x01;
 const SUBSCRIBER_TIMEOUT_MS = 120000;
 const SUBSCRIBER_SWEEP_INTERVAL_MS = 30000;
 
@@ -105,11 +113,14 @@ class AudioRelayService {
       return;
     }
 
-    const channelIdNum = parseInt(channelKey, 10);
-    const rxPayload = Buffer.alloc(CHANNEL_ID_LEN + SEQUENCE_LEN + opusPayload.length);
-    rxPayload.writeUInt16BE(isNaN(channelIdNum) ? 0 : channelIdNum, 0);
-    rxPayload.writeUInt16BE(sequence & 0xFFFF, CHANNEL_ID_LEN);
-    opusPayload.copy(rxPayload, CHANNEL_ID_LEN + SEQUENCE_LEN);
+    const rxPayload = this._buildRelayPacket({
+      channelKey,
+      senderUnitId,
+      sequence,
+      opusPayload,
+      flags: FLAG_FEC_HINT,
+      timestampMs: Date.now(),
+    });
 
     this._broadcastToAll(channelKey, senderUnitId, rxPayload, sequence, opusPayload);
   }
@@ -206,8 +217,9 @@ class AudioRelayService {
     if (msg.length < HEADER_LEN + 1) return;
 
     const token = msg.subarray(0, SESSION_TOKEN_LEN).toString('hex');
-    const sequence = msg.readUInt16BE(SESSION_TOKEN_LEN + CHANNEL_ID_LEN);
-    const opusPayload = msg.subarray(HEADER_LEN);
+    const parsed = this._parsePacket(msg, SESSION_TOKEN_LEN);
+    if (!parsed) return;
+    const { sequence, opusPayload, flags, timestampMs, senderUnitId } = parsed;
 
     const session = this.sessionTokens.get(token);
     if (!session) return;
@@ -219,13 +231,53 @@ class AudioRelayService {
 
     this.addSubscriber(channelKey, unitId, rinfo.address, rinfo.port);
 
-    const channelIdNum = parseInt(channelKey, 10);
-    const rxPayload = Buffer.alloc(CHANNEL_ID_LEN + SEQUENCE_LEN + opusPayload.length);
-    rxPayload.writeUInt16BE(isNaN(channelIdNum) ? 0 : channelIdNum, 0);
-    rxPayload.writeUInt16BE(sequence & 0xFFFF, CHANNEL_ID_LEN);
-    opusPayload.copy(rxPayload, CHANNEL_ID_LEN + SEQUENCE_LEN);
+    const rxPayload = this._buildRelayPacket({
+      channelKey,
+      senderUnitId: senderUnitId || unitId,
+      sequence,
+      opusPayload,
+      flags,
+      timestampMs,
+    });
 
     this._broadcastToAll(channelKey, unitId, rxPayload, sequence, opusPayload);
+  }
+
+  _buildRelayPacket({ channelKey, senderUnitId, sequence, opusPayload, flags = FLAG_FEC_HINT, timestampMs = Date.now() }) {
+    const channelIdNum = parseInt(channelKey, 10);
+    const senderBytes = Buffer.from(senderUnitId || '', 'utf8').subarray(0, 255);
+    const payloadLength = Math.min(opusPayload.length, 0xffff);
+    const packet = Buffer.alloc(RADIO_HEADER_FIXED_LEN + senderBytes.length + payloadLength);
+    let offset = 0;
+    packet.writeUInt8(PACKET_VERSION, offset); offset += VERSION_LEN;
+    packet.writeUInt8(flags & 0xff, offset); offset += FLAGS_LEN;
+    packet.writeUInt16BE(Number.isNaN(channelIdNum) ? 0 : channelIdNum, offset); offset += CHANNEL_ID_LEN;
+    packet.writeUInt16BE(sequence & 0xffff, offset); offset += SEQUENCE_LEN;
+    packet.writeUInt32BE((timestampMs >>> 0), offset); offset += TIMESTAMP_LEN;
+    packet.writeUInt8(senderBytes.length, offset); offset += SENDER_LEN_LEN;
+    senderBytes.copy(packet, offset); offset += senderBytes.length;
+    packet.writeUInt16BE(payloadLength, offset); offset += PAYLOAD_LEN_LEN;
+    opusPayload.copy(packet, offset, 0, payloadLength);
+    return packet;
+  }
+
+  _parsePacket(msg, startOffset = 0) {
+    if (msg.length < startOffset + RADIO_HEADER_FIXED_LEN) return null;
+    let offset = startOffset;
+    const version = msg.readUInt8(offset); offset += VERSION_LEN;
+    if (version !== PACKET_VERSION) return null;
+    const flags = msg.readUInt8(offset); offset += FLAGS_LEN;
+    const channelId = msg.readUInt16BE(offset); offset += CHANNEL_ID_LEN;
+    const sequence = msg.readUInt16BE(offset); offset += SEQUENCE_LEN;
+    const timestampMs = msg.readUInt32BE(offset); offset += TIMESTAMP_LEN;
+    const senderLen = msg.readUInt8(offset); offset += SENDER_LEN_LEN;
+    if (msg.length < offset + senderLen + PAYLOAD_LEN_LEN) return null;
+    const senderUnitId = msg.subarray(offset, offset + senderLen).toString('utf8');
+    offset += senderLen;
+    const payloadLength = msg.readUInt16BE(offset); offset += PAYLOAD_LEN_LEN;
+    if (payloadLength <= 0 || msg.length < offset + payloadLength) return null;
+    const opusPayload = msg.subarray(offset, offset + payloadLength);
+    return { channelId, sequence, timestampMs, flags, senderUnitId, opusPayload };
   }
 }
 
