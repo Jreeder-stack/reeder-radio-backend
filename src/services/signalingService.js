@@ -1092,6 +1092,8 @@ class SignalingService {
     }
 
     console.log(`[Signaling] CHANNEL_JOINED unitId=${socket.unitId} channelId=${channelId}`);
+
+    this._issueRadioSessionToken(socket, channelId, 'join');
   }
 
   _handleRadioLeaveChannel(socket, data) {
@@ -1163,16 +1165,7 @@ class SignalingService {
     });
 
     if (result.granted) {
-      if (socket.radioSessionToken) {
-        audioRelayService.removeSession(socket.radioSessionToken);
-      }
-
-      const sessionToken = crypto.randomBytes(16).toString('hex');
-      socket.radioSessionToken = sessionToken;
-      socket.radioSessionChannel = channelId;
-      audioRelayService.registerSession(socket.unitId, sessionToken, channelId);
-
-      socket.emit('radio:sessionToken', { token: sessionToken, channelId });
+      this._issueRadioSessionToken(socket, channelId, 'ptt_granted');
 
       socket.emit(RADIO_EVENTS.PTT_GRANTED, {
         channelId,
@@ -1234,6 +1227,26 @@ class SignalingService {
       console.log(`[Signaling] PTT_DENIED unitId=${socket.unitId} channelId=${channelId} reason=${result.reason} heldBy=${result.heldBy || ''}`);
       console.log(`[Signaling] PTT denied: ${socket.unitId} on ${channelId} (${result.reason})`);
     }
+  }
+
+  _issueRadioSessionToken(socket, channelId, reason = 'unknown') {
+    if (!socket?.unitId || !channelId) return null;
+
+    console.log(`[Signaling] RADIO_TOKEN_ISSUE_ATTEMPT unitId=${socket.unitId} channelId=${channelId} reason=${reason}`);
+
+    if (socket.radioSessionToken) {
+      audioRelayService.removeSession(socket.radioSessionToken);
+    }
+
+    const sessionToken = crypto.randomBytes(16).toString('hex');
+    socket.radioSessionToken = sessionToken;
+    socket.radioSessionChannel = channelId;
+    audioRelayService.registerSession(socket.unitId, sessionToken, channelId);
+    console.log(`[Signaling] RADIO_TOKEN_ISSUED unitId=${socket.unitId} channelId=${channelId} reason=${reason}`);
+
+    socket.emit('radio:sessionToken', { token: sessionToken, channelId });
+    console.log(`[Signaling] RADIO_TOKEN_EMIT channelId=${channelId} roomKey=${channelId} unitId=${socket.unitId}`);
+    return sessionToken;
   }
 
   _handlePttRelease(socket, data) {

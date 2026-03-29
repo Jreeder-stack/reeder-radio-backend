@@ -403,7 +403,35 @@ class BackgroundAudioService : Service() {
                 val currentRoomKey = servicePrefs.channelRoomKey
                 when (event) {
                     is SignalingEvent.RadioSessionToken -> {
-                        Log.d(TAG, "Session token received for channel ${event.channelId}")
+                        val activeChannel = currentRoomKey
+                        val tokenPresent = event.token.isNotBlank()
+                        Log.d(
+                            TAG,
+                            "RADIO_TOKEN_EVENT_RECEIVED channelId=${event.channelId} roomKey=${activeChannel ?: "none"} tokenPresent=${if (tokenPresent) "yes" else "no"}"
+                        )
+
+                        if (!tokenPresent) {
+                            Log.w(TAG, "RADIO_TOKEN_IGNORED reason=empty_token channelId=${event.channelId}")
+                            return@collectLatest
+                        }
+
+                        if (activeChannel.isNullOrBlank()) {
+                            Log.w(TAG, "RADIO_TOKEN_IGNORED reason=no_active_channel tokenChannel=${event.channelId}")
+                            return@collectLatest
+                        }
+
+                        if (event.channelId != activeChannel) {
+                            Log.w(
+                                TAG,
+                                "RADIO_TOKEN_IGNORED reason=channel_mismatch activeChannel=$activeChannel tokenChannel=${event.channelId}"
+                            )
+                            return@collectLatest
+                        }
+
+                        Log.d(
+                            TAG,
+                            "RADIO_TOKEN_ACCEPTED_FOR_ACTIVE_CHANNEL activeChannel=$activeChannel tokenChannel=${event.channelId}"
+                        )
                         sessionTokenChannelId = event.channelId
                         Log.d(TAG, "RADIO_SESSION_TOKEN_RECEIVED channelId=${event.channelId}")
                         engine.udpTransport.setSessionToken(event.token)
@@ -545,7 +573,6 @@ class BackgroundAudioService : Service() {
         scope.launch {
             try {
                 radioEngine?.stopTransmit()
-                radioEngine?.udpTransport?.clearSessionToken()
                 radioEngine?.floorControl?.releaseFloor(roomKey)
                 Log.d(TAG, "PTT_RELEASE_SENT channelId=$roomKey")
                 sendPttTxEnded()
