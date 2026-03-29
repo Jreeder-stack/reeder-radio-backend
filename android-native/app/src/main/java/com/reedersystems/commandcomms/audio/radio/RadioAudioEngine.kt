@@ -73,7 +73,7 @@ class RadioAudioEngine(private val context: Context) {
         if (started) return
         opusCodec.initialize()
         acquireAudioFocus()
-        udpTransport.onPacketReceived = { sequence, packet -> onAudioPacketReceived(sequence, packet) }
+        udpTransport.onPacketReceived = { packet -> onAudioPacketReceived(packet) }
         udpTransport.start()
         started = true
         Log.d(TAG, "RadioAudioEngine started")
@@ -141,9 +141,11 @@ class RadioAudioEngine(private val context: Context) {
 
             isTransmitting = true
             stateManager.transitionTo(RadioState.TRANSMITTING)
+            Log.d(TAG, "OPUS_TX_INIT sampleRate=$MIC_SAMPLE_RATE channels=1 frameMs=$CAPTURE_INTERVAL_MS bitrate=${OpusCodec.BITRATE}")
 
             captureJob = scope.launch {
                 val micBuffer = ByteArray(MIC_FRAME_SIZE_BYTES)
+                var frameCounter = 0
                 while (isActive && isTransmitting) {
                     try {
                         val read = record.read(micBuffer, 0, micBuffer.size)
@@ -154,7 +156,10 @@ class RadioAudioEngine(private val context: Context) {
                             applyGain(micBuffer, read, TX_GAIN)
                             val encoded = opusCodec.encode(micBuffer)
                             if (encoded != null) {
+                                frameCounter++
+                                Log.d(TAG, "OPUS_TX_FRAME_ENCODED frame=$frameCounter bytes=${encoded.size}")
                                 udpTransport.send(encoded)
+                                Log.d(TAG, "OPUS_TX_FRAME_SENT frame=$frameCounter bytes=${encoded.size}")
                             }
                         }
                     } catch (e: IllegalStateException) {
@@ -209,6 +214,7 @@ class RadioAudioEngine(private val context: Context) {
         if (!started) return
         jitterBuffer.start()
         audioPlayback.start()
+        Log.d(TAG, "OPUS_RX_PLAYBACK_STARTED")
         if (stateManager.state.value != RadioState.TRANSMITTING) {
             stateManager.transitionTo(RadioState.RECEIVING)
         }
@@ -224,8 +230,12 @@ class RadioAudioEngine(private val context: Context) {
         Log.d(TAG, "RX stopped")
     }
 
-    private fun onAudioPacketReceived(sequence: Int, packet: ByteArray) {
-        jitterBuffer.enqueue(sequence, packet)
+    private fun onAudioPacketReceived(packet: OpusRadioPacket) {
+        if (packet.channelId != udpTransport.channelId) {
+            Log.d(TAG, "Dropping RX frame for other channel packetChannel=${packet.channelId} local=${udpTransport.channelId}")
+            return
+        }
+        jitterBuffer.enqueue(packet.sequence, packet.opusPayload)
     }
 
     // --- DSP state ---

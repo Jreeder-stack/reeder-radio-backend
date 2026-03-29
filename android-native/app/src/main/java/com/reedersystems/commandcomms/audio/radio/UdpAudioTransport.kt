@@ -12,10 +12,18 @@ private const val DEFAULT_RELAY_PORT = 5100
 private const val RECEIVE_BUFFER_SIZE = 4096
 private const val RECEIVE_TIMEOUT_MS = 100
 private const val SESSION_TOKEN_LEN = 16
-private const val CHANNEL_ID_LEN = 2
-private const val SEQUENCE_LEN = 2
-private const val TX_HEADER_SIZE = SESSION_TOKEN_LEN + CHANNEL_ID_LEN + SEQUENCE_LEN
-private const val RX_HEADER_SIZE = CHANNEL_ID_LEN + SEQUENCE_LEN
+private const val RADIO_HEADER_FIXED_LEN = 1 + 1 + 2 + 2 + 4 + 1 + 2
+private const val PACKET_VERSION: Byte = 1
+private const val FLAG_FEC_HINT = 0x01
+
+data class OpusRadioPacket(
+    val channelId: String,
+    val senderUnitId: String,
+    val sequence: Int,
+    val timestampMs: Long,
+    val flags: Int,
+    val opusPayload: ByteArray
+)
 
 class UdpAudioTransport(
     private var relayHost: String = "",
@@ -36,7 +44,7 @@ class UdpAudioTransport(
 
     var channelId: String = ""
     var unitId: String = ""
-    var onPacketReceived: ((sequence: Int, data: ByteArray) -> Unit)? = null
+    var onPacketReceived: ((packet: OpusRadioPacket) -> Unit)? = null
     val localPort: Int?
         get() = socket?.localPort
 
@@ -141,14 +149,29 @@ class UdpAudioTransport(
 
     private fun framePacket(token: ByteArray, audioData: ByteArray): ByteArray {
         val seq = sequenceNumber++
-        val frame = ByteArray(TX_HEADER_SIZE + audioData.size)
+        val senderBytes = unitId.toByteArray(Charsets.UTF_8)
+        val senderLen = senderBytes.size.coerceAtMost(255)
+        val channelNumeric = channelId.toIntOrNull() ?: 0
+        val timestampMs = (System.currentTimeMillis() and 0xFFFFFFFFL).toInt()
+        val frame = ByteArray(SESSION_TOKEN_LEN + RADIO_HEADER_FIXED_LEN + senderLen + audioData.size)
         System.arraycopy(token, 0, frame, 0, SESSION_TOKEN_LEN)
-        val chId = channelId.toIntOrNull() ?: 0
-        frame[SESSION_TOKEN_LEN] = ((chId shr 8) and 0xFF).toByte()
-        frame[SESSION_TOKEN_LEN + 1] = (chId and 0xFF).toByte()
-        frame[SESSION_TOKEN_LEN + 2] = ((seq shr 8) and 0xFF).toByte()
-        frame[SESSION_TOKEN_LEN + 3] = (seq and 0xFF).toByte()
-        System.arraycopy(audioData, 0, frame, TX_HEADER_SIZE, audioData.size)
+        var offset = SESSION_TOKEN_LEN
+        frame[offset++] = PACKET_VERSION
+        frame[offset++] = FLAG_FEC_HINT.toByte()
+        frame[offset++] = ((channelNumeric shr 8) and 0xFF).toByte()
+        frame[offset++] = (channelNumeric and 0xFF).toByte()
+        frame[offset++] = ((seq shr 8) and 0xFF).toByte()
+        frame[offset++] = (seq and 0xFF).toByte()
+        frame[offset++] = ((timestampMs shr 24) and 0xFF).toByte()
+        frame[offset++] = ((timestampMs shr 16) and 0xFF).toByte()
+        frame[offset++] = ((timestampMs shr 8) and 0xFF).toByte()
+        frame[offset++] = (timestampMs and 0xFF).toByte()
+        frame[offset++] = senderLen.toByte()
+        System.arraycopy(senderBytes, 0, frame, offset, senderLen)
+        offset += senderLen
+        frame[offset++] = ((audioData.size shr 8) and 0xFF).toByte()
+        frame[offset++] = (audioData.size and 0xFF).toByte()
+        System.arraycopy(audioData, 0, frame, offset, audioData.size)
         return frame
     }
 
@@ -160,11 +183,14 @@ class UdpAudioTransport(
                 try {
                     val packet = DatagramPacket(buffer, buffer.size)
                     sock.receive(packet)
-                    if (packet.length > RX_HEADER_SIZE) {
-                        val seq = ((buffer[CHANNEL_ID_LEN].toInt() and 0xFF) shl 8) or
-                                   (buffer[CHANNEL_ID_LEN + 1].toInt() and 0xFF)
-                        val audioData = buffer.copyOfRange(RX_HEADER_SIZE, packet.length)
-                        onPacketReceived?.invoke(seq, audioData)
+                    val parsed = parseRelayPacket(buffer, packet.length)
+                    if (parsed != null) {
+                        if (parsed.senderUnitId == unitId) {
+                            Log.d(TAG, "SELF_AUDIO_SUPPRESSED senderUnitId=${parsed.senderUnitId} seq=${parsed.sequence}")
+                        } else {
+                            onPacketReceived?.invoke(parsed)
+                            Log.d(TAG, "OPUS_RX_FRAME_RECEIVED seq=${parsed.sequence} sender=${parsed.senderUnitId} payload=${parsed.opusPayload.size}")
+                        }
                     }
                 } catch (e: java.net.SocketTimeoutException) {
                 } catch (e: Exception) {
@@ -192,5 +218,42 @@ class UdpAudioTransport(
             i += 2
         }
         return data
+    }
+
+    private fun parseRelayPacket(buffer: ByteArray, packetLength: Int): OpusRadioPacket? {
+        if (packetLength < RADIO_HEADER_FIXED_LEN) return null
+        var offset = 0
+        val version = buffer[offset++].toInt() and 0xFF
+        if (version != PACKET_VERSION.toInt()) {
+            Log.w(TAG, "Unsupported relay packet version=$version")
+            return null
+        }
+        val flags = buffer[offset++].toInt() and 0xFF
+        val channelNumeric = ((buffer[offset++].toInt() and 0xFF) shl 8) or (buffer[offset++].toInt() and 0xFF)
+        val sequence = ((buffer[offset++].toInt() and 0xFF) shl 8) or (buffer[offset++].toInt() and 0xFF)
+        val timestampMs = ((buffer[offset++].toLong() and 0xFF) shl 24) or
+            ((buffer[offset++].toLong() and 0xFF) shl 16) or
+            ((buffer[offset++].toLong() and 0xFF) shl 8) or
+            (buffer[offset++].toLong() and 0xFF)
+        val senderLen = buffer[offset++].toInt() and 0xFF
+        if (packetLength < RADIO_HEADER_FIXED_LEN + senderLen) return null
+        val sender = if (senderLen > 0) {
+            String(buffer, offset, senderLen, Charsets.UTF_8)
+        } else {
+            ""
+        }
+        offset += senderLen
+        if (packetLength < offset + 2) return null
+        val payloadLength = ((buffer[offset++].toInt() and 0xFF) shl 8) or (buffer[offset++].toInt() and 0xFF)
+        if (payloadLength <= 0 || packetLength < offset + payloadLength) return null
+        val payload = buffer.copyOfRange(offset, offset + payloadLength)
+        return OpusRadioPacket(
+            channelId = channelNumeric.toString(),
+            senderUnitId = sender,
+            sequence = sequence,
+            timestampMs = timestampMs,
+            flags = flags,
+            opusPayload = payload
+        )
     }
 }

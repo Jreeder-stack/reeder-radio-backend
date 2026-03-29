@@ -105,6 +105,7 @@ class AudioPlayback(
                     if (data != null) {
                         val pcm = opusCodec.decode(data)
                         if (pcm != null && pcm.isNotEmpty()) {
+                            Log.d(TAG, "OPUS_RX_FRAME_DECODED bytes=${data.size} pcm=${pcm.size}")
                             applyGain(pcm)
                             track.write(pcm, 0, pcm.size)
                         }
