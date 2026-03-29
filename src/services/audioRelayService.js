@@ -131,6 +131,7 @@ class AudioRelayService {
       for (const [subUnitId, subInfo] of udpSubs) {
         if (subUnitId === senderUnitId) continue;
         subInfo.lastSeen = Date.now();
+        console.log(`RADIO_SERVER_PACKET_RELAYED targetUnit=${subUnitId} bytes=${rxPayload.length} channelId=${channelKey}`);
         try {
           this.socket.send(rxPayload, 0, rxPayload.length, subInfo.port, subInfo.address);
         } catch (err) {
@@ -143,6 +144,7 @@ class AudioRelayService {
     if (listeners) {
       for (const [listenerId, callback] of listeners) {
         if (listenerId === senderUnitId) continue;
+        console.log(`DESKTOP_AUDIO_DISPATCH bytes=${opusPayload.length} channelId=${channelKey} targetClient=${listenerId}`);
         try {
           callback({ channelId: channelKey, unitId: senderUnitId, sequence, opusPayload, timestamp: Date.now() });
         } catch (err) {
@@ -219,7 +221,8 @@ class AudioRelayService {
     const token = msg.subarray(0, SESSION_TOKEN_LEN).toString('hex');
     const parsed = this._parsePacket(msg, SESSION_TOKEN_LEN);
     if (!parsed) return;
-    const { sequence, opusPayload, flags, timestampMs, senderUnitId } = parsed;
+    const { channelId, sequence, opusPayload, flags, timestampMs, senderUnitId } = parsed;
+    console.log(`RADIO_SERVER_PACKET_RECEIVED bytes=${msg.length} sender=${rinfo.address}:${rinfo.port} channelId=${channelId} senderUnitId=${senderUnitId || ''}`);
 
     const session = this.sessionTokens.get(token);
     if (!session) return;
