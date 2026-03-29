@@ -248,7 +248,7 @@ router.post('/end', async (req, res) => {
 });
 
 router.get('/token', async (req, res) => {
-  res.status(410).json({ error: 'LiveKit tokens are no longer issued. Audio uses WebSocket transport.' });
+  res.status(410).json({ error: 'Audio Transport tokens are no longer issued. Audio uses WebSocket transport.' });
 });
 
 

@@ -1,13 +1,13 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { ChevronUp, ChevronDown, List, Settings, AlertTriangle, MessageSquare, Users, MoreHorizontal, Plus, Mail, GripVertical, Wifi, WifiOff, X, Loader2, Search, Volume2, Mic, Bell, Bluetooth, Radio, Power, Smartphone, Monitor, Moon, BatteryCharging, ChevronRight } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { useLiveKitConnection } from '../../context/LiveKitConnectionContext';
+import { useAudioConnection } from '../../context/AudioConnectionContext';
 import { useSignalingContext } from '../../context/SignalingContext';
 import { useMobileRadioContext } from '../../context/MobileRadioContext';
 import { PTT_STATES } from '../../constants/pttStates';
 import { updateUnitStatus } from '../../utils/api';
 import { startBackgroundService, stopBackgroundService } from '../../plugins/backgroundService';
-import { updateServiceConnectionInfo } from '../../plugins/nativeLiveKit';
+import { updateServiceConnectionInfo } from '../../plugins/nativeAudioBridge';
 import { setupAppLifecycle, getSettings, saveSettings, isNative, setHardwarePttKeyCode } from '../../lib/capacitor';
 import { signalingManager } from '../../signaling/SignalingManager';
 import { useClearAir } from './useClearAir';
@@ -94,11 +94,11 @@ export function RadioDeckView({ user, onLogout }) {
   const identity = (user?.unit_id && user.unit_id.trim()) || user?.username || 'Unknown';
   
   const {
-    livekitManager,
+    audioTransportManager,
     connectionStatus,
     switchChannel: contextSwitchChannel,
     ensureConnected,
-  } = useLiveKitConnection();
+  } = useAudioConnection();
   
   const {
     channelMembers,
@@ -185,7 +185,7 @@ export function RadioDeckView({ user, onLogout }) {
   const hasJoinedRef = useRef(false);
   const transmitChannelRef = useRef('');
   const isEmergencyRef = useRef(false);
-  const livekitUrlRef = useRef('');
+  const audioUrlRef = useRef('');
   const rxAudioElementsRef = useRef(new Set());
   const emergencyAlarmRef = useRef(null);
 
@@ -274,10 +274,10 @@ export function RadioDeckView({ user, onLogout }) {
     fetch('/api/livekit-url')
       .then(r => r.json())
       .then(data => {
-        const livekitUrl = data.url || '';
-        livekitUrlRef.current = livekitUrl;
-        console.log('[PTT-DIAG] [JS] Passing early connection info to service: unit=' + identity + ' channel=' + txChannel + ' server=' + serverBaseUrl + ' lkUrl=' + livekitUrl);
-        updateServiceConnectionInfo(serverBaseUrl, identity, txChannel || '', livekitUrl, txChannel || '');
+        const audioUrl = data.url || '';
+        audioUrlRef.current = audioUrl;
+        console.log('[PTT-DIAG] [JS] Passing early connection info to service: unit=' + identity + ' channel=' + txChannel + ' server=' + serverBaseUrl + ' lkUrl=' + audioUrl);
+        updateServiceConnectionInfo(serverBaseUrl, identity, txChannel || '', audioUrl, txChannel || '');
       })
       .catch(err => {
         console.warn('[PTT-DIAG] [JS] Failed to fetch livekit-url, passing without lkUrl:', err);
@@ -311,8 +311,8 @@ export function RadioDeckView({ user, onLogout }) {
           console.warn('[RadioDeck] AudioContext resume failed:', e.message);
         }
 
-        if (window.__livekitManager) {
-          const mgr = window.__livekitManager;
+        if (window.__audioTransportManager) {
+          const mgr = window.__audioTransportManager;
           const connectedChannels = mgr.getConnectedChannels();
           for (const ch of connectedChannels) {
             const conn = mgr.getRoom(ch);
@@ -385,9 +385,9 @@ export function RadioDeckView({ user, onLogout }) {
     transmitChannelRef.current = currentRoomKey || '';
     if (currentRoomKey && identity) {
       const serverBaseUrl = window.location.origin;
-      const livekitUrl = livekitUrlRef.current;
-      console.log('[PTT-DIAG] [JS] Channel changed — updating service connection info: channel=' + currentRoomKey + ' lkUrl=' + livekitUrl);
-      updateServiceConnectionInfo(serverBaseUrl, identity, currentRoomKey, livekitUrl, currentRoomKey);
+      const audioUrl = audioUrlRef.current;
+      console.log('[PTT-DIAG] [JS] Channel changed — updating service connection info: channel=' + currentRoomKey + ' lkUrl=' + audioUrl);
+      updateServiceConnectionInfo(serverBaseUrl, identity, currentRoomKey, audioUrl, currentRoomKey);
     }
   }, [currentRoomKey, identity]);
 
@@ -406,13 +406,13 @@ export function RadioDeckView({ user, onLogout }) {
 
 
   useEffect(() => {
-    if (!livekitManager) return;
-    livekitManager.setAutoPlayback(false);
+    if (!audioTransportManager) return;
+    audioTransportManager.setAutoPlayback(false);
     
     const listenerRemovers = [];
     
     listenerRemovers.push(
-      livekitManager.addTrackSubscribedListener((channelName, track, participant) => {
+      audioTransportManager.addTrackSubscribedListener((channelName, track, participant) => {
         if (track.kind !== 'audio') return;
         
         const audioElem = track.attach();
@@ -425,7 +425,7 @@ export function RadioDeckView({ user, onLogout }) {
         document.body.appendChild(audioElem);
         rxAudioElementsRef.current.add(audioElem);
         
-        const currentState = livekitManager.getState();
+        const currentState = audioTransportManager.getState();
         if (currentState === PTT_STATES.TRANSMITTING || currentState === PTT_STATES.ARMING) {
           audioElem.muted = true;
         } else {
@@ -439,7 +439,7 @@ export function RadioDeckView({ user, onLogout }) {
     );
     
     listenerRemovers.push(
-      livekitManager.addTrackUnsubscribedListener((channelName, track, participant) => {
+      audioTransportManager.addTrackUnsubscribedListener((channelName, track, participant) => {
         const detachedElements = track.detach();
         detachedElements.forEach((el) => {
           rxAudioElementsRef.current.delete(el);
@@ -450,12 +450,12 @@ export function RadioDeckView({ user, onLogout }) {
     );
     
     return () => {
-      if (livekitManager) {
-        livekitManager.setAutoPlayback(true);
+      if (audioTransportManager) {
+        audioTransportManager.setAutoPlayback(true);
       }
       listenerRemovers.forEach(remove => remove());
     };
-  }, [livekitManager]);
+  }, [audioTransportManager]);
 
   const getRoomKey = useCallback((ch) => {
     if (!ch) return null;
@@ -463,19 +463,19 @@ export function RadioDeckView({ user, onLogout }) {
   }, []);
 
   const broadcastStatus = useCallback((status, channel) => {
-    if (!livekitManager?.isConnected(channel)) return;
+    if (!audioTransportManager?.isConnected(channel)) return;
     
-    livekitManager.sendData(channel, {
+    audioTransportManager.sendData(channel, {
       type: 'status_update',
       identity,
       status,
       channel,
       timestamp: Date.now(),
     });
-  }, [livekitManager, identity]);
+  }, [audioTransportManager, identity]);
 
   useEffect(() => {
-    livekitManager.onStateChange = (newState) => {
+    audioTransportManager.onStateChange = (newState) => {
       setPttState(newState);
       const txChannel = transmitChannelRef.current;
       
@@ -499,7 +499,7 @@ export function RadioDeckView({ user, onLogout }) {
     };
     
     return () => {
-      livekitManager.disconnect();
+      audioTransportManager.disconnect();
     };
   }, [broadcastStatus, identity]);
 
@@ -746,31 +746,31 @@ export function RadioDeckView({ user, onLogout }) {
     if (!isConn) {
       console.warn('[PTT-DIAG] [JS] handleTransmitStart() — ensureConnected FAILED for', channelName);
     }
-    const room = livekitManager?.getRoom(channelName);
+    const room = audioTransportManager?.getRoom(channelName);
     console.log('[PTT-DIAG] [JS] handleTransmitStart() — room=' + (room ? (room._isNativeProxy ? 'NATIVE_PROXY' : 'WEB_SDK') : 'NULL') + ' state=' + (room?.state || 'N/A'));
     if (!room) {
       console.warn('[PTT-DIAG] [JS] handleTransmitStart() — NO ROOM, aborting');
       return;
     }
     
-    livekitManager.setCurrentChannel(channelName);
-    livekitManager.setCurrentUnit(identity);
-    livekitManager.setRoom(room);
+    audioTransportManager.setCurrentChannel(channelName);
+    audioTransportManager.setCurrentUnit(identity);
+    audioTransportManager.setRoom(room);
     try {
       await signalPttStart(channelName);
     } catch (grantErr) {
       console.warn('[PTT-DIAG] [JS] Floor denied:', grantErr.message);
       return;
     }
-    console.log('[PTT-DIAG] [JS] handleTransmitStart() — calling livekitManager.start()');
-    livekitManager.start();
-  }, [ensureConnected, livekitManager, signalPttStart, identity]);
+    console.log('[PTT-DIAG] [JS] handleTransmitStart() — calling audioTransportManager.start()');
+    audioTransportManager.start();
+  }, [ensureConnected, audioTransportManager, signalPttStart, identity]);
 
   const handleTransmitEnd = useCallback(() => {
     const channelName = transmitChannelRef.current;
-    console.log('[PTT-DIAG] [JS] handleTransmitEnd() — channel=' + channelName + ' canStop=' + livekitManager.canStop());
-    if (livekitManager.canStop()) {
-      livekitManager.stop();
+    console.log('[PTT-DIAG] [JS] handleTransmitEnd() — channel=' + channelName + ' canStop=' + audioTransportManager.canStop());
+    if (audioTransportManager.canStop()) {
+      audioTransportManager.stop();
       if (channelName) {
         signalPttEnd(channelName);
       }

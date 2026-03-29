@@ -73,7 +73,7 @@ export default function RadioApp({ user, onLogout }) {
           </div>
           <div>
             <span style={labelStyle}>Backend</span>
-            <span style={valueStyle}>Uses this server for authentication and LiveKit</span>
+            <span style={valueStyle}>Uses this server for authentication and Audio Transport</span>
           </div>
         </div>
 
@@ -90,7 +90,7 @@ export default function RadioApp({ user, onLogout }) {
         <div style={cardStyle}>
           <h2 style={{ fontSize: 18, marginBottom: 16 }}>Native Plugins</h2>
           <ul style={{ color: "#aaa", fontSize: 14, lineHeight: 1.8, paddingLeft: 20, margin: 0 }}>
-            <li><strong style={{ color: "#fff" }}>LiveKitPlugin.kt</strong> - Native LiveKit SDK for reliable PTT audio</li>
+            <li><strong style={{ color: "#fff" }}>AudioBridgePlugin.kt</strong> - Native Audio Transport SDK for reliable PTT audio</li>
             <li><strong style={{ color: "#fff" }}>HardwarePttPlugin.java</strong> - Volume/Bluetooth PTT key support</li>
             <li><strong style={{ color: "#fff" }}>BackgroundAudioService.java</strong> - Background audio and GPS service</li>
             <li><strong style={{ color: "#fff" }}>DndOverridePlugin.java</strong> - Do Not Disturb override for alerts</li>

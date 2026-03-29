@@ -1,7 +1,7 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import useDispatchStore from '../../state/dispatchStore.js';
-import livekitManager from '../../audio/LiveKitManager.js';
+import audioTransportManager from '../../audio/AudioTransportManager.js';
 
 function AudioLevelMeter({ level }) {
   const barCount = 8;
@@ -79,9 +79,9 @@ export default function ChannelTile({ channel, onRemove }) {
   const handleMuteToggle = () => {
     toggleMute(channel.id);
     if (mutedChannelIds.includes(channel.id)) {
-      livekitManager.unmuteChannel(roomKey);
+      audioTransportManager.unmuteChannel(roomKey);
     } else {
-      livekitManager.muteChannel(roomKey);
+      audioTransportManager.muteChannel(roomKey);
     }
   };
 

@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import useDispatchStore from "./state/dispatchStore";
-import { updateServiceConnectionInfo } from "./plugins/nativeLiveKit";
+import { updateServiceConnectionInfo } from "./plugins/nativeAudioBridge";
 
 const AuthContext = createContext(null);
 

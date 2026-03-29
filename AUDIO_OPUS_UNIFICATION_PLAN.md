@@ -13,7 +13,7 @@ Decision: single end-to-end codec path is **Opus-only** (no long-term PCM transp
 ## 1) Exact current mismatches
 
 ### A. Browser/Desktop path is still PCM-over-WebSocket
-- `client/src/audio/LiveKitManager.js` transmits and receives JSON PCM packets via `/api/audio-ws`.
+- `client/src/audio/AudioTransportManager.js` transmits and receives JSON PCM packets via `/api/audio-ws`.
 - `client/src/audio/PcmPacket.js` hardcodes `codec: 'pcm'` and array payload samples.
 - `client/src/audio/PcmCaptureEngine.js` captures PCM and emits Int16 frames.
 - `client/src/audio/PcmPlaybackEngine.js` plays Int16 PCM frames.
@@ -119,7 +119,7 @@ Operational guardrails:
    - Replace with `OpusCaptureEngine` that encodes Opus 20 ms frames.
 7. `client/src/audio/PcmPlaybackEngine.js`
    - Replace with `OpusPlaybackEngine` decode+playback path.
-8. `client/src/audio/LiveKitManager.js`
+8. `client/src/audio/AudioTransportManager.js`
    - Remove PCM JSON assumptions and move to Opus packet send/receive.
 9. `src/server.js`
    - Stop attaching legacy PCM ws bridge once Opus web path is active.

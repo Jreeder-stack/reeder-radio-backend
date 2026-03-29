@@ -1,7 +1,7 @@
-import { useLiveKitConnection } from '../context/LiveKitConnectionContext.jsx';
+import { useAudioConnection } from '../context/AudioConnectionContext.jsx';
 
 export default function ConnectionIndicator() {
-  const { connectionHealth } = useLiveKitConnection();
+  const { connectionHealth } = useAudioConnection();
   
   const getStatusColor = () => {
     switch (connectionHealth.status) {

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import useDispatchStore from '../../state/dispatchStore.js';
 import { PTT_STATES } from '../../constants/pttStates.js';
-import livekitManager from '../../audio/LiveKitManager.js';
+import audioTransportManager from '../../audio/AudioTransportManager.js';
 import toneEngine from '../../audio/toneEngine.js';
 import toneTransmitter from '../../audio/ToneTransmitter.js';
 import { useSignalingContext } from '../../context/SignalingContext.jsx';
@@ -28,7 +28,7 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
   const [showClearAirModal, setShowClearAirModal] = useState(false);
   const [showClearAirConfirm, setShowClearAirConfirm] = useState(false);
   const [selectedClearAirChannelId, setSelectedClearAirChannelId] = useState(null);
-  const clearAirLiveKitRoomRef = useRef(null);
+  const clearAirAudioRoomRef = useRef(null);
   const pttRef = useRef(null);
   const gestureActiveRef = useRef(false);
   const mutedChannelsRef = useRef([]);
@@ -55,19 +55,19 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
       setDisabledTones(prev => ({ ...prev, [type]: false }));
     };
 
-    livekitManager.onStateChange = (newState) => {
+    audioTransportManager.onStateChange = (newState) => {
       setPttState(newState);
     };
 
     // Handle disconnect during transmission
-    livekitManager.onDisconnectDuringTx = () => {
+    audioTransportManager.onDisconnectDuringTx = () => {
       console.warn('[BottomBar] Disconnect during transmission detected');
       toneEngine.playErrorTone();
       // Reset gesture state since transmission was force-released
       gestureActiveRef.current = false;
       // Unmute channels
       if (mutedChannelsRef.current.length > 0) {
-        livekitManager.unmuteChannels(mutedChannelsRef.current);
+        audioTransportManager.unmuteChannels(mutedChannelsRef.current);
         mutedChannelsRef.current = [];
       }
     };
@@ -75,8 +75,8 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
     return () => {
       toneEngine.onToneStart = null;
       toneEngine.onToneEnd = null;
-      livekitManager.onStateChange = null;
-      livekitManager.onDisconnectDuringTx = null;
+      audioTransportManager.onStateChange = null;
+      audioTransportManager.onDisconnectDuringTx = null;
     };
   }, [setPttState]);
 
@@ -84,17 +84,17 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
     console.log('[PTT] startTransmission called, channels:', selectedChannelNames);
     if (selectedChannelNames.length === 0) return false;
     
-    const isDispatcher = livekitManager.isDispatcherMode();
-    if (!livekitManager.areChannelsHealthy(selectedChannelNames, { allowReconnecting: isDispatcher })) {
+    const isDispatcher = audioTransportManager.isDispatcherMode();
+    if (!audioTransportManager.areChannelsHealthy(selectedChannelNames, { allowReconnecting: isDispatcher })) {
       console.warn('[PTT] Connection not healthy, blocking transmission');
-      const status = livekitManager.getConnectionStatus();
+      const status = audioTransportManager.getConnectionStatus();
       console.log('[PTT] Connection status:', status);
       toneEngine.playErrorTone?.();
       flashPttError();
       return false;
     }
     
-    const isBusy = livekitManager.areAnyChannelsBusy(selectedChannelNames);
+    const isBusy = audioTransportManager.areAnyChannelsBusy(selectedChannelNames);
     
     if (isBusy) {
       console.log('[PTT] Channel busy, playing busy tone');
@@ -106,21 +106,21 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
     
     try {
       mutedChannelsRef.current = [...selectedChannelNames];
-      livekitManager.muteChannels(mutedChannelsRef.current);
+      audioTransportManager.muteChannels(mutedChannelsRef.current);
       
       const primaryChannel = selectedChannelNames[0];
-      let room = livekitManager.getRoom(primaryChannel);
+      let room = audioTransportManager.getRoom(primaryChannel);
       
-      if (!room && isDispatcher && livekitManager.isChannelReconnecting(primaryChannel)) {
+      if (!room && isDispatcher && audioTransportManager.isChannelReconnecting(primaryChannel)) {
         console.log('[PTT] Room not ready, waiting for reconnect...');
         try {
-          room = await livekitManager.waitForRoom(primaryChannel, 5000);
+          room = await audioTransportManager.waitForRoom(primaryChannel, 5000);
           console.log('[PTT] Room became available after reconnect');
         } catch (waitErr) {
           console.error('[PTT] Timed out waiting for room reconnect:', waitErr.message);
           toneEngine.playErrorTone?.();
           flashPttError();
-          livekitManager.unmuteChannels(mutedChannelsRef.current);
+          audioTransportManager.unmuteChannels(mutedChannelsRef.current);
           mutedChannelsRef.current = [];
           return false;
         }
@@ -130,15 +130,15 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
         console.error('[PTT] No room for primary channel:', primaryChannel);
         toneEngine.playErrorTone?.();
         flashPttError();
-        livekitManager.unmuteChannels(mutedChannelsRef.current);
+        audioTransportManager.unmuteChannels(mutedChannelsRef.current);
         mutedChannelsRef.current = [];
         return false;
       }
 
-      livekitManager.setCurrentChannel(primaryChannel);
-      livekitManager.setCurrentUnit(identity);
-      livekitManager.setRoom(room);
-      livekitManager.setPrimaryTxChannel(primaryChannel);
+      audioTransportManager.setCurrentChannel(primaryChannel);
+      audioTransportManager.setCurrentUnit(identity);
+      audioTransportManager.setRoom(room);
+      audioTransportManager.setPrimaryTxChannel(primaryChannel);
       
       if (signalPttStart) {
         try {
@@ -149,7 +149,7 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
           console.log('[PTT] PTT_FLOOR_GRANTED', { channel: primaryChannel, unit: identity });
         } catch (grantErr) {
           console.warn('[PTT] Floor denied:', grantErr.message);
-          livekitManager.unmuteChannels(mutedChannelsRef.current);
+          audioTransportManager.unmuteChannels(mutedChannelsRef.current);
           mutedChannelsRef.current = [];
           setChannelBusy(true);
           console.log('[PTT] PTT_TONE_START', { reason: 'FLOOR_DENIED' });
@@ -158,13 +158,13 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
         }
       }
       
-      const success = await livekitManager.start();
+      const success = await audioTransportManager.start();
       
       if (!success) {
-        console.warn('[PTT] livekitManager.start() returned false');
+        console.warn('[PTT] audioTransportManager.start() returned false');
         toneEngine.playErrorTone?.();
         flashPttError();
-        livekitManager.unmuteChannels(mutedChannelsRef.current);
+        audioTransportManager.unmuteChannels(mutedChannelsRef.current);
         mutedChannelsRef.current = [];
         return false;
       }
@@ -176,7 +176,7 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
       console.error('[PTT] Failed to start transmission:', err);
       toneEngine.playErrorTone?.();
       flashPttError();
-      livekitManager.unmuteChannels(mutedChannelsRef.current);
+      audioTransportManager.unmuteChannels(mutedChannelsRef.current);
       mutedChannelsRef.current = [];
       return false;
     }
@@ -196,7 +196,7 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
     const primaryChannel = selectedChannelNames[0];
     
     try {
-      await livekitManager.stop();
+      await audioTransportManager.stop();
       console.log('[PTT] Transmission stopped');
       
       if (signalPttEnd && primaryChannel) {
@@ -204,10 +204,10 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
       }
     } catch (err) {
       console.error('[PTT] Failed to stop transmission:', err);
-      livekitManager.forceRelease();
+      audioTransportManager.forceRelease();
     } finally {
       if (channelsToUnmute.length > 0) {
-        livekitManager.unmuteChannels(channelsToUnmute);
+        audioTransportManager.unmuteChannels(channelsToUnmute);
         console.log('[PTT] Unmuted channels:', channelsToUnmute);
       }
       mutedChannelsRef.current = [];
@@ -299,7 +299,7 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
     setToneTransmitting(true);
     
     const primaryChannel = selectedChannelNames[0];
-    const room = livekitManager.getRoom(primaryChannel);
+    const room = audioTransportManager.getRoom(primaryChannel);
     
     if (!room) {
       console.error('[BottomBar] No room for tone transmission on channel:', primaryChannel);
@@ -310,14 +310,14 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
     }
     
     mutedChannelsRef.current = [...selectedChannelNames];
-    livekitManager.muteChannels(mutedChannelsRef.current);
+    audioTransportManager.muteChannels(mutedChannelsRef.current);
     
     if (signalPttStart) {
       try {
         await signalPttStart(primaryChannel);
       } catch (grantErr) {
         console.warn('[BottomBar] Tone floor denied:', grantErr.message);
-        livekitManager.unmuteChannels(mutedChannelsRef.current);
+        audioTransportManager.unmuteChannels(mutedChannelsRef.current);
         mutedChannelsRef.current = [];
         toneEngine.startBusyTone();
         setTimeout(() => toneEngine.stopBusyTone(), 1000);
@@ -338,7 +338,7 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
         signalPttEnd(primaryChannel);
       }
       
-      livekitManager.unmuteChannels(mutedChannelsRef.current);
+      audioTransportManager.unmuteChannels(mutedChannelsRef.current);
       mutedChannelsRef.current = [];
       
       setToneTransmitting(false);
@@ -366,18 +366,18 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
     setShowClearAirModal(false);
     
     if (roomKey) {
-      const wasAlreadyConnected = livekitManager.isConnected(roomKey);
+      const wasAlreadyConnected = audioTransportManager.isConnected(roomKey);
       if (!wasAlreadyConnected) {
-        clearAirLiveKitRoomRef.current = roomKey;
+        clearAirAudioRoomRef.current = roomKey;
         try {
-          await livekitManager.connect(roomKey, identity);
+          await audioTransportManager.connect(roomKey, identity);
         } catch (err) {
-          console.warn('[BottomBar] ClearAir LiveKit connect failed:', err);
-          clearAirLiveKitRoomRef.current = null;
+          console.warn('[BottomBar] ClearAir audio transport connect failed:', err);
+          clearAirAudioRoomRef.current = null;
           return;
         }
       } else {
-        clearAirLiveKitRoomRef.current = null;
+        clearAirAudioRoomRef.current = null;
       }
 
       if (signalPttStart) {
@@ -387,15 +387,15 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
           console.warn('[BottomBar] Clear Air floor denied:', grantErr.message);
           toneEngine.startBusyTone();
           setTimeout(() => toneEngine.stopBusyTone(), 1000);
-          if (clearAirLiveKitRoomRef.current === roomKey) {
-            clearAirLiveKitRoomRef.current = null;
-            livekitManager.disconnect(roomKey).catch(() => {});
+          if (clearAirAudioRoomRef.current === roomKey) {
+            clearAirAudioRoomRef.current = null;
+            audioTransportManager.disconnect(roomKey).catch(() => {});
           }
           return;
         }
       }
 
-      const room = livekitManager.getRoom(roomKey);
+      const room = audioTransportManager.getRoom(roomKey);
       if (room) {
         toneTransmitter.setRoom(room);
         const started = await toneTransmitter.startToneTransmission();
@@ -403,18 +403,18 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
           console.log('[BottomBar] Clear Air tone broadcasting over air on', roomKey);
         } else {
           if (signalPttEnd) signalPttEnd(roomKey);
-          if (clearAirLiveKitRoomRef.current === roomKey) {
-            clearAirLiveKitRoomRef.current = null;
-            livekitManager.disconnect(roomKey).catch(() => {});
+          if (clearAirAudioRoomRef.current === roomKey) {
+            clearAirAudioRoomRef.current = null;
+            audioTransportManager.disconnect(roomKey).catch(() => {});
           }
           return;
         }
       } else {
         console.warn('[BottomBar] No room available for Clear Air on', roomKey);
         if (signalPttEnd) signalPttEnd(roomKey);
-        if (clearAirLiveKitRoomRef.current === roomKey) {
-          clearAirLiveKitRoomRef.current = null;
-          livekitManager.disconnect(roomKey).catch(() => {});
+        if (clearAirAudioRoomRef.current === roomKey) {
+          clearAirAudioRoomRef.current = null;
+          audioTransportManager.disconnect(roomKey).catch(() => {});
         }
         return;
       }
@@ -445,11 +445,11 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
         signalPttEnd(roomKey);
       }
       signalClearAirEnd(roomKey);
-      const ownedRoom = clearAirLiveKitRoomRef.current;
+      const ownedRoom = clearAirAudioRoomRef.current;
       if (ownedRoom === roomKey) {
-        clearAirLiveKitRoomRef.current = null;
-        livekitManager.disconnect(roomKey).catch(err => {
-          console.warn('[BottomBar] ClearAir LiveKit disconnect failed:', err);
+        clearAirAudioRoomRef.current = null;
+        audioTransportManager.disconnect(roomKey).catch(err => {
+          console.warn('[BottomBar] ClearAir audio transport disconnect failed:', err);
         });
       }
     }

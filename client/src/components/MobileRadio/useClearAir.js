@@ -1,13 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { signalingManager } from '../../signaling/SignalingManager';
-import { useLiveKitConnection } from '../../context/LiveKitConnectionContext';
+import { useAudioConnection } from '../../context/AudioConnectionContext';
 import { useSignalingContext } from '../../context/SignalingContext';
 
 export function useClearAir({ identity, channels, isScanning, scanChannels }) {
   const [clearAirActive, setClearAirActive] = useState(false);
   const [clearAirChannelName, setClearAirChannelName] = useState('');
 
-  const { connectToChannel, disconnectFromChannel, ensureConnected, activeChannel } = useLiveKitConnection();
+  const { connectToChannel, disconnectFromChannel, ensureConnected, activeChannel } = useAudioConnection();
   const { joinChannel: signalingJoinChannel, leaveChannel: signalingLeaveChannel } = useSignalingContext();
 
   const forcedRoomRef = useRef(null);
