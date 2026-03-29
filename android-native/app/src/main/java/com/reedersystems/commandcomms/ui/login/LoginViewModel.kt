@@ -23,6 +23,7 @@ sealed class LoginUiState {
 class LoginViewModel(application: Application) : AndroidViewModel(application) {
     private companion object {
         const val STARTUP_TAG = "[APP-STARTUP]"
+        const val LOGIN_TAG = "[LOGIN-FLOW]"
     }
 
     private val app get() = getApplication<CommandCommsApp>()
@@ -33,6 +34,9 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
         if (DevConfig.AUTO_LOGIN_ENABLED) LoginUiState.Loading else LoginUiState.CheckingSession
     )
     val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
+    private val _isAutoLoginInProgress = MutableStateFlow(DevConfig.AUTO_LOGIN_ENABLED)
+    val isAutoLoginInProgress: StateFlow<Boolean> = _isAutoLoginInProgress.asStateFlow()
+    private val _manualInputDetected = MutableStateFlow(false)
 
     init {
         if (DevConfig.AUTO_LOGIN_ENABLED) {
@@ -44,6 +48,7 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun performAutoLogin() {
         viewModelScope.launch {
+            Log.d(LOGIN_TAG, "AUTO_LOGIN_TRIGGERED")
             Log.d(STARTUP_TAG, "AUTH_REQUEST_SENT method=auto_login unitId=${DevConfig.AUTO_LOGIN_UNIT_ID}")
             Log.d("LoginViewModel", "Auto-login enabled, logging in as ${DevConfig.AUTO_LOGIN_UNIT_ID}")
             val result = app.authRepository.login(
@@ -53,16 +58,20 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
             if (result.isSuccess) {
                 val user = result.getOrThrow()
                 Log.d(STARTUP_TAG, "AUTH_SUCCESS user=${user.username} unitId=${user.unitId ?: "none"}")
+                Log.d(LOGIN_TAG, "SESSION_STATE_CHANGED state=authenticated source=auto_login")
                 saveUserPrefs(user)
                 fetchAndStoreRadioConfig()
                 _uiState.value = LoginUiState.Success(user)
             } else {
                 Log.e(STARTUP_TAG, "AUTH_FAILED method=auto_login reason=${result.exceptionOrNull()?.message}")
                 Log.w("LoginViewModel", "Auto-login failed: ${result.exceptionOrNull()?.message}")
+                clearStaleSession("auto_login_failed")
                 _uiState.value = LoginUiState.Error(
                     "Auto-login failed: ${result.exceptionOrNull()?.message ?: "Unknown error"}"
                 )
             }
+            _isAutoLoginInProgress.value = false
+            logFormState("auto_login_completed")
         }
     }
 
@@ -74,17 +83,22 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
             if (result.isSuccess) {
                 val user = result.getOrThrow()
                 Log.d(STARTUP_TAG, "SESSION_CHECK_RESULT hasSession=true user=${user.username}")
+                Log.d(LOGIN_TAG, "SESSION_STATE_CHANGED state=authenticated source=session_check")
                 saveUserPrefs(user)
                 fetchAndStoreRadioConfig()
                 _uiState.value = LoginUiState.Success(user)
             } else {
                 Log.w(STARTUP_TAG, "SESSION_CHECK_RESULT hasSession=false reason=${result.exceptionOrNull()?.message}")
+                clearStaleSession("session_check_failed")
+                Log.d(LOGIN_TAG, "SESSION_STATE_CHANGED state=unauthenticated source=session_check_failed")
                 _uiState.value = LoginUiState.Idle
             }
+            logFormState("session_check_completed")
         }
     }
 
     fun login(username: String, password: String) {
+        Log.d(LOGIN_TAG, "MANUAL_LOGIN_SUBMIT unitId=${username.trim()}")
         if (username.isBlank() || password.isBlank()) {
             _uiState.value = LoginUiState.Error("Unit ID and password are required")
             return
@@ -96,22 +110,41 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
             if (result.isSuccess) {
                 val user = result.getOrThrow()
                 Log.d(STARTUP_TAG, "AUTH_SUCCESS user=${user.username} unitId=${user.unitId ?: "none"}")
+                Log.d(LOGIN_TAG, "SESSION_STATE_CHANGED state=authenticated source=manual_login")
                 saveUserPrefs(user)
                 fetchAndStoreRadioConfig()
                 _uiState.value = LoginUiState.Success(user)
             } else {
                 Log.e(STARTUP_TAG, "AUTH_FAILED method=manual_login reason=${result.exceptionOrNull()?.message}")
+                clearStaleSession("manual_login_failed")
+                Log.d(LOGIN_TAG, "SESSION_STATE_CHANGED state=unauthenticated source=manual_login_failed")
                 _uiState.value = LoginUiState.Error(
                     result.exceptionOrNull()?.message ?: "Login failed"
                 )
             }
+            logFormState("manual_login_completed")
         }
     }
 
     fun clearError() {
         if (_uiState.value is LoginUiState.Error) {
             _uiState.value = LoginUiState.Idle
+            logFormState("error_cleared")
         }
+    }
+
+    fun onManualInputChanged(field: String, value: String) {
+        Log.d(LOGIN_TAG, "LOGIN_INPUT_CHANGED field=$field length=${value.length}")
+        if (!_manualInputDetected.value) {
+            _manualInputDetected.value = true
+            if (isAutoLoginMode) {
+                Log.d(LOGIN_TAG, "AUTO_LOGIN_DISABLED_DUE_TO_MANUAL_INPUT")
+            }
+        }
+        if (_isAutoLoginInProgress.value) {
+            _isAutoLoginInProgress.value = false
+        }
+        logFormState("manual_input")
     }
 
     private fun saveUserPrefs(user: User) {
@@ -119,6 +152,19 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
         app.sessionPrefs.username = user.username
         app.sessionPrefs.unitId = user.unitId
         app.sessionPrefs.userRole = user.role
+    }
+
+    private fun clearStaleSession(reason: String) {
+        app.sessionPrefs.clear()
+        app.apiClient.cookieJar.clear()
+        Log.w(LOGIN_TAG, "SESSION_STATE_CHANGED state=cleared reason=$reason")
+    }
+
+    private fun logFormState(source: String) {
+        Log.d(
+            LOGIN_TAG,
+            "LOGIN_FORM_STATE source=$source uiState=${_uiState.value::class.simpleName} autoLoginInProgress=${_isAutoLoginInProgress.value} manualInputDetected=${_manualInputDetected.value}"
+        )
     }
 
     private suspend fun fetchAndStoreRadioConfig() {
