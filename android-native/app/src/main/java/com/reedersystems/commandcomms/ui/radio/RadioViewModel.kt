@@ -107,7 +107,6 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                         // (race-condition cancellation path), no error tone and no duplicate
                         // transmitEnd — the UP handler already cleaned both up.
                         app.toneEngine.playErrorTone()
-                        s.currentChannel?.roomKey?.let { app.signalingRepository.transmitEnd(it) }
                         _uiState.update { it.copy(pttState = PttState.IDLE) }
                     }
                 }
@@ -353,7 +352,6 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { it.copy(pttState = PttState.TRANSMITTING) }
         app.toneEngine.playTalkPermitTone()
         pttStartJob = viewModelScope.launch {
-            app.signalingRepository.transmitStart(channel.roomKey)
             sendServiceIntent(BackgroundAudioService.ACTION_PTT_DOWN)
         }
     }
@@ -367,7 +365,6 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         Log.d(TAG, "onPttUp roomKey=${channel.roomKey}")
         app.toneEngine.playEndOfTxTone()
         _uiState.update { it.copy(pttState = PttState.IDLE) }
-        app.signalingRepository.transmitEnd(channel.roomKey)
         sendServiceIntent(BackgroundAudioService.ACTION_PTT_UP)
     }
 
@@ -466,7 +463,6 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { it.copy(pttState = PttState.TRANSMITTING) }
         app.toneEngine.playTalkPermitTone()
         pttStartJob = viewModelScope.launch {
-            app.signalingRepository.transmitStart(channelKey)
             sendServiceIntent(BackgroundAudioService.ACTION_PTT_DOWN)
         }
     }

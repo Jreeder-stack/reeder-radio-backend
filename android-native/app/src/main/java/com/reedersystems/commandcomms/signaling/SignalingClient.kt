@@ -171,6 +171,12 @@ class SignalingClient(var serverUrl: String) {
             _events.tryEmit(SignalingEvent.LocationTrackStop)
         }
 
+        s.on("radio:channelJoined") { args -> parseAndEmit(args) { json ->
+            SignalingEvent.RadioChannelJoined(
+                channelId = json.optString("channelId")
+            )
+        }}
+
         s.on("radio:sessionToken") { args -> parseAndEmit(args) { json ->
             SignalingEvent.RadioSessionToken(
                 token = json.optString("token"),
@@ -180,27 +186,29 @@ class SignalingClient(var serverUrl: String) {
 
         s.on("ptt:granted") { args -> parseAndEmit(args) { json ->
             SignalingEvent.RadioPttGranted(
-                channelId = json.optString("channelId")
+                channelId = json.optString("channelId"),
+                senderUnitId = json.optString("senderUnitId")
             )
         }}
 
         s.on("ptt:denied") { args -> parseAndEmit(args) { json ->
             SignalingEvent.RadioPttDenied(
                 channelId = json.optString("channelId"),
-                reason = json.optString("reason", "")
+                reason = json.optString("reason", ""),
+                heldBy = json.optString("heldBy")
             )
         }}
 
         s.on("tx:start") { args -> parseAndEmit(args) { json ->
             SignalingEvent.RadioTxStart(
-                unitId = json.optString("unitId"),
+                senderUnitId = json.optString("senderUnitId"),
                 channelId = json.optString("channelId")
             )
         }}
 
         s.on("tx:stop") { args -> parseAndEmit(args) { json ->
             SignalingEvent.RadioTxStop(
-                unitId = json.optString("unitId"),
+                senderUnitId = json.optString("senderUnitId"),
                 channelId = json.optString("channelId")
             )
         }}
@@ -208,9 +216,7 @@ class SignalingClient(var serverUrl: String) {
         s.on("channel:busy") { args -> parseAndEmit(args) { json ->
             SignalingEvent.RadioChannelBusy(
                 channelId = json.optString("channelId"),
-                transmittingUnit = json.optString("transmittingUnit").ifBlank {
-                    json.optString("heldBy")
-                }
+                heldBy = json.optString("heldBy")
             )
         }}
 
@@ -248,24 +254,6 @@ class SignalingClient(var serverUrl: String) {
         if (!isReady()) return
         Log.d(TAG, "emitPttPre $channelKey")
         socket?.emit("ptt:pre", JSONObject().apply {
-            put("channelId", channelKey)
-            put("unitId", unitId)
-        })
-    }
-
-    fun emitPttStart(channelKey: String) {
-        if (!isReady()) return
-        Log.d(TAG, "emitPttStart $channelKey")
-        socket?.emit("ptt:start", JSONObject().apply {
-            put("channelId", channelKey)
-            put("unitId", unitId)
-        })
-    }
-
-    fun emitPttEnd(channelKey: String) {
-        if (!isReady()) return
-        Log.d(TAG, "emitPttEnd $channelKey")
-        socket?.emit("ptt:end", JSONObject().apply {
             put("channelId", channelKey)
             put("unitId", unitId)
         })

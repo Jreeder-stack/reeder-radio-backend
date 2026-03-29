@@ -28,6 +28,7 @@ const SIGNALING_EVENTS = {
 
 const RADIO_EVENTS = {
   JOIN_CHANNEL: 'radio:joinChannel',
+  CHANNEL_JOINED: 'radio:channelJoined',
   LEAVE_CHANNEL: 'radio:leaveChannel',
   PTT_REQUEST: 'ptt:request',
   PTT_RELEASE: 'ptt:release',
@@ -158,7 +159,7 @@ class SignalingService {
       }
 
       this.io.to(`channel:${channelId}`).emit(RADIO_EVENTS.TX_STOP, {
-        unitId,
+        senderUnitId: unitId,
         channelId,
         timestamp: Date.now(),
         reason: 'timeout',
@@ -1064,13 +1065,18 @@ class SignalingService {
       presence.channels = Array.from(socket.channels);
     }
 
-    if (udpPort && udpAddress) {
-      const peerAddress = socket.handshake?.address || null;
-      const subscriberAddress = peerAddress || udpAddress;
-      audioRelayService.addSubscriber(channelId, socket.unitId, subscriberAddress, udpPort);
+    const peerAddressRaw = socket.handshake?.address || '';
+    const peerAddress = peerAddressRaw.startsWith('::ffff:') ? peerAddressRaw.slice(7) : peerAddressRaw;
+    const subscriberAddress = (udpAddress || peerAddress || '').trim();
+    const subscriberPort = Number(udpPort);
+    if (subscriberPort > 0 && subscriberAddress) {
+      audioRelayService.addSubscriber(channelId, socket.unitId, subscriberAddress, subscriberPort);
+      console.log(`[Signaling] SUBSCRIBER_REGISTERED unitId=${socket.unitId} channelId=${channelId} address=${subscriberAddress} port=${subscriberPort}`);
+    } else {
+      console.warn(`[Signaling] SUBSCRIBER_REGISTRATION_FAILED unitId=${socket.unitId} channelId=${channelId} udpPort=${udpPort ?? 'missing'} udpAddress=${udpAddress ?? 'missing'} peerAddress=${peerAddress || 'missing'}`);
     }
 
-    socket.emit('radio:channelJoined', {
+    socket.emit(RADIO_EVENTS.CHANNEL_JOINED, {
       channelId,
       timestamp: Date.now(),
       members: this._getChannelMemberDetails(channelId),
@@ -1085,7 +1091,7 @@ class SignalingService {
       });
     }
 
-    console.log(`[Signaling] Radio ${socket.unitId} joined channel ${channelId}`);
+    console.log(`[Signaling] CHANNEL_JOINED unitId=${socket.unitId} channelId=${channelId}`);
   }
 
   _handleRadioLeaveChannel(socket, data) {
@@ -1114,7 +1120,7 @@ class SignalingService {
     if (floorControlService.holdsFloor(channelId, socket.unitId)) {
       floorControlService.releaseFloor(channelId, socket.unitId);
       this.io.to(`channel:${channelId}`).emit(RADIO_EVENTS.TX_STOP, {
-        unitId: socket.unitId,
+        senderUnitId: socket.unitId,
         channelId,
         timestamp: Date.now(),
         reason: 'leave',
@@ -1146,6 +1152,8 @@ class SignalingService {
       return;
     }
 
+    console.log(`[Signaling] PTT_REQUEST_SENT unitId=${socket.unitId} channelId=${channelId}`);
+
     const isEmergency = this.emergencyStates.has(channelId) &&
       this.emergencyStates.get(channelId).unitId === socket.unitId;
 
@@ -1168,11 +1176,13 @@ class SignalingService {
 
       socket.emit(RADIO_EVENTS.PTT_GRANTED, {
         channelId,
+        senderUnitId: socket.unitId,
         timestamp: Date.now(),
       });
+      console.log(`[Signaling] PTT_GRANTED unitId=${socket.unitId} channelId=${channelId}`);
 
       this.io.to(`channel:${channelId}`).emit(RADIO_EVENTS.TX_START, {
-        unitId: socket.unitId,
+        senderUnitId: socket.unitId,
         channelId,
         timestamp: Date.now(),
         isEmergency: result.isEmergency || false,
@@ -1218,8 +1228,10 @@ class SignalingService {
         channelId,
         reason: result.reason,
         heldBy: result.heldBy,
+        senderUnitId: socket.unitId,
         timestamp: Date.now(),
       });
+      console.log(`[Signaling] PTT_DENIED unitId=${socket.unitId} channelId=${channelId} reason=${result.reason} heldBy=${result.heldBy || ''}`);
       console.log(`[Signaling] PTT denied: ${socket.unitId} on ${channelId} (${result.reason})`);
     }
   }
@@ -1228,6 +1240,7 @@ class SignalingService {
     const channelId = String(data.channelId);
 
     if (!socket.unitId) return;
+    console.log(`[Signaling] PTT_RELEASE_SENT unitId=${socket.unitId} channelId=${channelId}`);
 
     const released = floorControlService.releaseFloor(channelId, socket.unitId);
     if (!released) return;
@@ -1244,7 +1257,7 @@ class SignalingService {
     }
 
     this.io.to(`channel:${channelId}`).emit(RADIO_EVENTS.TX_STOP, {
-      unitId: socket.unitId,
+      senderUnitId: socket.unitId,
       channelId,
       timestamp: Date.now(),
     });
@@ -1300,7 +1313,7 @@ class SignalingService {
       }
 
       this.io.to(`channel:${channelId}`).emit(RADIO_EVENTS.TX_STOP, {
-        unitId: socket.unitId,
+        senderUnitId: socket.unitId,
         channelId,
         timestamp: Date.now(),
       });
