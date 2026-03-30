@@ -11,6 +11,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.Request
 
+class HttpException(val code: Int, message: String) : Exception(message)
+
 class ChannelRepository(private val api: ApiClient) {
 
     private companion object {
@@ -27,6 +29,9 @@ class ChannelRepository(private val api: ApiClient) {
                 Log.d(AUTH_TAG, "CHANNEL_FETCH_REQUEST_SENT url=${request.url.redact()}")
                 val hasCookie = api.cookieJar.hasCookiesForUrl(request.url)
                 Log.d(AUTH_TAG, "CHANNEL_FETCH_AUTH_ATTACHED cookie=${if (hasCookie) "yes" else "no"} token=no")
+                if (!hasCookie) {
+                    Log.w(AUTH_TAG, "AUTH_MISSING_REASON noCookiesForUrl=${request.url.redact()} cookieJarEmpty=${!api.cookieJar.hasCookies()}")
+                }
                 val response = api.httpClient.newCall(request).execute()
                 val body = response.body?.string() ?: "{}"
                 Log.d(AUTH_TAG, "CHANNEL_FETCH_HTTP_RESPONSE code=${response.code}")
@@ -35,7 +40,7 @@ class ChannelRepository(private val api: ApiClient) {
                         val preview = body.replace("\n", " ").take(180)
                         Log.e(AUTH_TAG, "CHANNEL_FETCH_401_DETAILS body=$preview")
                     }
-                    error("Failed to fetch channels (${response.code})")
+                    throw HttpException(response.code, "Failed to fetch channels (${response.code})")
                 }
                 val wrapper = api.gson.fromJson(body, JsonObject::class.java)
                 val channelsArray = wrapper.get("channels") ?: error("No channels field in response")

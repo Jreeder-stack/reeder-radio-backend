@@ -78,16 +78,19 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
     private fun checkExistingSession() {
         viewModelScope.launch {
             Log.d(STARTUP_TAG, "SESSION_CHECK_START")
+            Log.d(STARTUP_TAG, "AUTH_RESTORE_START hasSession=${app.sessionPrefs.hasSession} hasCookies=${app.apiClient.cookieJar.hasCookies()}")
             _uiState.value = LoginUiState.CheckingSession
             val result = app.authRepository.me()
             if (result.isSuccess) {
                 val user = result.getOrThrow()
+                Log.d(STARTUP_TAG, "AUTH_RESTORE_RESULT success=true user=${user.username}")
                 Log.d(STARTUP_TAG, "SESSION_CHECK_RESULT hasSession=true user=${user.username}")
                 Log.d(LOGIN_TAG, "SESSION_STATE_CHANGED state=authenticated source=session_check")
                 saveUserPrefs(user)
                 fetchAndStoreRadioConfig()
                 _uiState.value = LoginUiState.Success(user)
             } else {
+                Log.w(STARTUP_TAG, "AUTH_RESTORE_RESULT success=false reason=${result.exceptionOrNull()?.message}")
                 Log.w(STARTUP_TAG, "SESSION_CHECK_RESULT hasSession=false reason=${result.exceptionOrNull()?.message}")
                 clearStaleSession("session_check_failed")
                 Log.d(LOGIN_TAG, "SESSION_STATE_CHANGED state=unauthenticated source=session_check_failed")

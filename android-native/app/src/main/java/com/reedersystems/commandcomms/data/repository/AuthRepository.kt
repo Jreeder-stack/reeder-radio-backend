@@ -20,7 +20,8 @@ class AuthRepository(private val api: ApiClient) {
 
     suspend fun login(username: String, password: String): Result<User> =
         withContext(Dispatchers.IO) {
-            runCatching {
+            var loginFailedLogged = false
+            try {
                 val bodyJson = api.gson.toJson(
                     mapOf("username" to username, "password" to password)
                 )
@@ -28,6 +29,7 @@ class AuthRepository(private val api: ApiClient) {
                     .url("${api.baseUrl}/api/auth/login")
                     .post(bodyJson.toRequestBody(json))
                     .build()
+                Log.d(AUTH_TAG, "LOGIN_REQUEST_SENT url=${request.url.redact()} unitId=$username")
                 Log.d(AUTH_TAG, "LOGIN_HTTP_REQUEST_SENT url=${request.url.redact()}")
                 val response = api.httpClient.newCall(request).execute()
                 val body = response.body?.string() ?: ""
@@ -41,11 +43,23 @@ class AuthRepository(private val api: ApiClient) {
                         api.gson.fromJson(body, JsonObject::class.java)
                             ?.get("error")?.asString
                     }.getOrNull()
-                    error(errorObj ?: "Login failed (${response.code})")
+                    val reason = errorObj ?: "Login failed (${response.code})"
+                    Log.e(AUTH_TAG, "LOGIN_FAILED reason=$reason code=${response.code}")
+                    loginFailedLogged = true
+                    error(reason)
                 }
                 val wrapper = api.gson.fromJson(body, JsonObject::class.java)
+                val user = api.gson.fromJson(wrapper.get("user"), User::class.java)
+                Log.d(AUTH_TAG, "LOGIN_SUCCESS user=${user.username} unitId=${user.unitId ?: "none"}")
+                Log.d(AUTH_TAG, "SESSION_PERSIST_START")
+                Log.d(AUTH_TAG, "SESSION_PERSIST_RESULT cookieJarHasEntries=${api.cookieJar.hasCookies()} setCookieReceived=$setCookieReceived")
                 Log.d(AUTH_TAG, "SESSION_PERSISTED cookieJarHasEntries=${api.cookieJar.hasCookies()}")
-                api.gson.fromJson(wrapper.get("user"), User::class.java)
+                Result.success(user)
+            } catch (e: Exception) {
+                if (!loginFailedLogged) {
+                    Log.e(AUTH_TAG, "LOGIN_FAILED reason=${e.message} type=${e::class.simpleName}")
+                }
+                Result.failure(e)
             }
         }
 
