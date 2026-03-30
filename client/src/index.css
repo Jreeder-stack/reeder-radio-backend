@@ -532,6 +532,12 @@ html, body {
   border-radius: 0.25rem;
 }
 
+.channel-tile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr));
+  gap: 0.75rem;
+}
+
 .channel-tile {
   background: linear-gradient(135deg, var(--dispatch-panel) 0%, var(--dispatch-panel-elevated) 100%);
   border: 1px solid var(--dispatch-border);

@@ -2,7 +2,6 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import useDispatchStore from '../../state/dispatchStore.js';
 import audioTransportManager from '../../audio/AudioTransportManager.js';
-import formatChannelDisplay from '../../utils/formatChannelDisplay.js';
 import { PTT_STATES } from '../../constants/pttStates.js';
 
 function AudioLevelMeter({ level }) {
@@ -34,7 +33,6 @@ export default function ChannelTile({ channel, onRemove }) {
     channelLevels,
     setChannelLevel,
     activeTransmissions,
-    unitsByChannel,
     emergencies,
     pttState,
     toggleMonitor, 
@@ -64,7 +62,6 @@ export default function ChannelTile({ channel, onRemove }) {
   const volumeLevel = channelLevels[`volume_${channel.id}`] ?? 100;
   const roomKey = channel.room_key || ((channel.zone || 'Default') + '__' + channel.name);
   const activeTransmission = activeTransmissions[roomKey];
-  const unitsInChannel = unitsByChannel[roomKey] || [];
   const hasEmergency = emergencies.some(e => e.channel === roomKey);
 
   const handleVolumeChange = (e) => {
@@ -98,7 +95,10 @@ export default function ChannelTile({ channel, onRemove }) {
         <div className="flex items-center gap-2 min-w-0" {...attributes} {...listeners}>
           <span className="text-xs text-dispatch-secondary cursor-grab">⋮⋮</span>
           <div className="min-w-0">
-            <h3 className="font-bold text-dispatch-text leading-tight truncate">{formatChannelDisplay(channel.zone, channel.name)}</h3>
+            {channel.zone && (
+              <p className="text-xs text-dispatch-secondary leading-tight">ZN-{channel.zone}</p>
+            )}
+            <h3 className="font-bold text-dispatch-text leading-tight">CH-{channel.name}</h3>
           </div>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
@@ -139,10 +139,6 @@ export default function ChannelTile({ channel, onRemove }) {
         </div>
       )}
 
-      <div className="flex items-center gap-1 mb-2">
-        <span className="text-xs text-dispatch-secondary">Units:</span>
-        <span className="text-xs text-dispatch-text">{unitsInChannel.length}</span>
-      </div>
 
       <div className="tile-btn-group">
         <button
