@@ -6,6 +6,7 @@ import pool from '../db/index.js';
 import { config } from '../config/env.js';
 import { canonicalChannelKey } from './channelKeyUtils.js';
 import { floorControlService } from './floorControlService.js';
+import { audioRelayService } from './audioRelayService.js';
 
 const PCM_SHAPE = {
   type: 'audio',
@@ -109,6 +110,8 @@ class WsAudioBridge {
     if (!this.channelClients.has(channelId)) this.channelClients.set(channelId, new Map());
     this.channelClients.get(channelId).set(unitId, ws);
 
+    audioRelayService.addWsSubscriber(channelId, unitId, ws);
+
     ws.on('message', (raw) => {
       let packet;
       try {
@@ -156,6 +159,7 @@ class WsAudioBridge {
     });
 
     ws.on('close', () => {
+      audioRelayService.removeWsSubscriber(channelId, unitId);
       const map = this.channelClients.get(channelId);
       if (!map) return;
       map.delete(unitId);

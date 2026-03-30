@@ -1,5 +1,6 @@
 import dgram from 'dgram';
 import { canonicalChannelKey } from './channelKeyUtils.js';
+import { opusCodec } from './opusCodec.js';
 
 const SESSION_TOKEN_LEN = 16;
 const VERSION_LEN = 1;
@@ -80,10 +81,31 @@ class AudioRelayService {
     }
   }
 
-  // Browser-WS audio path removed in teardown.
-  addWsSubscriber() {}
-  removeWsSubscriber() {}
-  removeAllWsSubscriptions() {}
+  addWsSubscriber(channelId, unitId, ws) {
+    const key = canonicalChannelKey(channelId);
+    if (!this._wsSubscribers) this._wsSubscribers = new Map();
+    if (!this._wsSubscribers.has(key)) this._wsSubscribers.set(key, new Map());
+    this._wsSubscribers.get(key).set(unitId, ws);
+    console.log(`[AudioRelay] WS subscriber added: ${unitId} on ${key}`);
+  }
+
+  removeWsSubscriber(channelId, unitId) {
+    const key = canonicalChannelKey(channelId);
+    if (!this._wsSubscribers) return;
+    const subs = this._wsSubscribers.get(key);
+    if (!subs) return;
+    subs.delete(unitId);
+    if (subs.size === 0) this._wsSubscribers.delete(key);
+    console.log(`[AudioRelay] WS subscriber removed: ${unitId} from ${key}`);
+  }
+
+  removeAllWsSubscriptions(unitId) {
+    if (!this._wsSubscribers) return;
+    for (const [key, subs] of this._wsSubscribers) {
+      subs.delete(unitId);
+      if (subs.size === 0) this._wsSubscribers.delete(key);
+    }
+  }
 
   addAudioListener(channelId, listenerId, callback) {
     const key = canonicalChannelKey(channelId);
@@ -149,6 +171,42 @@ class AudioRelayService {
           callback({ channelId: channelKey, unitId: senderUnitId, sequence, opusPayload, timestamp: Date.now() });
         } catch (err) {
           console.error(`[AudioRelay] Listener error for ${listenerId}:`, err.message);
+        }
+      }
+    }
+
+    if (this._wsSubscribers) {
+      const wsSubs = this._wsSubscribers.get(channelKey);
+      if (wsSubs && wsSubs.size > 0) {
+        let pcmSamples;
+        try {
+          const pcmBuf = opusCodec.decodeOpusToPcm(opusPayload);
+          pcmSamples = Array.from(new Int16Array(pcmBuf.buffer, pcmBuf.byteOffset, pcmBuf.byteLength / 2));
+        } catch (err) {
+          console.error(`[AudioRelay] Opus→PCM decode error: ${err.message}`);
+        }
+        if (pcmSamples) {
+          const pcmPacket = JSON.stringify({
+            type: 'audio',
+            codec: 'pcm',
+            sampleRate: 48000,
+            channels: 1,
+            frameSamples: 960,
+            sequence,
+            channelId: channelKey,
+            senderUnitId,
+            payload: pcmSamples,
+          });
+          for (const [subUnitId, ws] of wsSubs) {
+            if (subUnitId === senderUnitId) continue;
+            try {
+              if (ws.readyState === 1) {
+                ws.send(pcmPacket);
+              }
+            } catch (err) {
+              console.error(`[AudioRelay] WS send error to ${subUnitId}:`, err.message);
+            }
+          }
         }
       }
     }
