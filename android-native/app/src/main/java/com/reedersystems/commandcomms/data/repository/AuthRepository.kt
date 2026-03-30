@@ -1,5 +1,6 @@
 package com.reedersystems.commandcomms.data.repository
 
+import android.util.Log
 import com.google.gson.JsonObject
 import com.reedersystems.commandcomms.data.api.ApiClient
 import com.reedersystems.commandcomms.data.model.User
@@ -10,6 +11,10 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 
 class AuthRepository(private val api: ApiClient) {
+
+    private companion object {
+        const val AUTH_TAG = "[AUTH-TRACE]"
+    }
 
     private val json = "application/json; charset=utf-8".toMediaType()
 
@@ -23,8 +28,14 @@ class AuthRepository(private val api: ApiClient) {
                     .url("${api.baseUrl}/api/auth/login")
                     .post(bodyJson.toRequestBody(json))
                     .build()
+                Log.d(AUTH_TAG, "LOGIN_HTTP_REQUEST_SENT url=${request.url.redact()}")
                 val response = api.httpClient.newCall(request).execute()
                 val body = response.body?.string() ?: ""
+                Log.d(AUTH_TAG, "LOGIN_HTTP_RESPONSE code=${response.code}")
+                val setCookieReceived = response.headers("Set-Cookie").isNotEmpty()
+                if (!setCookieReceived) {
+                    Log.w(AUTH_TAG, "LOGIN_SET_COOKIE_RECEIVED none")
+                }
                 if (!response.isSuccessful) {
                     val errorObj = runCatching {
                         api.gson.fromJson(body, JsonObject::class.java)
@@ -33,6 +44,7 @@ class AuthRepository(private val api: ApiClient) {
                     error(errorObj ?: "Login failed (${response.code})")
                 }
                 val wrapper = api.gson.fromJson(body, JsonObject::class.java)
+                Log.d(AUTH_TAG, "SESSION_PERSISTED cookieJarHasEntries=${api.cookieJar.hasCookies()}")
                 api.gson.fromJson(wrapper.get("user"), User::class.java)
             }
         }

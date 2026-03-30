@@ -2,6 +2,7 @@ package com.reedersystems.commandcomms.data.api
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.util.Log
 import com.google.gson.Gson
 import com.reedersystems.commandcomms.BuildConfig
 import okhttp3.Cookie
@@ -43,36 +44,106 @@ class ApiClient private constructor(context: Context) {
 
 class PersistentCookieJar(private val prefs: SharedPreferences) : CookieJar {
 
+    private companion object {
+        private const val TAG = "[AUTH-TRACE]"
+        private const val COOKIE_STORE_KEY = "cookies_store"
+    }
+
+    private val gson = Gson()
+
     override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>) {
         if (cookies.isEmpty()) return
-        val key = "cookies_${url.host}"
-        val serialized = cookies.joinToString(DELIMITER) { "${it.name}${SEP}${it.value}" }
-        prefs.edit().putString(key, serialized).apply()
+        val existing = loadAllCookies().associateBy { cookieIdentity(it) }.toMutableMap()
+        cookies.forEach { cookie ->
+            existing[cookieIdentity(cookie)] = cookie
+            Log.d(TAG, "LOGIN_SET_COOKIE_RECEIVED name=${cookie.name} domain=${cookie.domain} path=${cookie.path}")
+        }
+        persistCookies(existing.values.toList())
     }
 
     override fun loadForRequest(url: HttpUrl): List<Cookie> {
-        val key = "cookies_${url.host}"
-        val saved = prefs.getString(key, null) ?: return emptyList()
-        return saved.split(DELIMITER).mapNotNull { entry ->
-            val idx = entry.indexOf(SEP)
-            if (idx < 0) return@mapNotNull null
-            val name = entry.substring(0, idx)
-            val value = entry.substring(idx + SEP.length)
-            Cookie.Builder()
-                .name(name)
-                .value(value)
-                .domain(url.host)
-                .path("/")
-                .build()
+        val now = System.currentTimeMillis()
+        val validCookies = loadAllCookies().filterNot { cookie ->
+            cookie.expiresAt <= now
         }
+        if (validCookies.isEmpty()) {
+            return emptyList()
+        }
+        val matched = validCookies.filter { it.matches(url) }
+        if (validCookies.size != loadAllCookies().size) {
+            persistCookies(validCookies)
+        }
+        return matched
     }
 
     fun clear() {
         prefs.edit().clear().apply()
     }
 
-    companion object {
-        private const val DELIMITER = "||"
-        private const val SEP = "::="
+    fun hasCookies(): Boolean = loadAllCookies().isNotEmpty()
+
+    fun hasCookiesForUrl(url: HttpUrl): Boolean = loadForRequest(url).isNotEmpty()
+
+    private fun loadAllCookies(): List<Cookie> {
+        val serialized = prefs.getString(COOKIE_STORE_KEY, null) ?: return emptyList()
+        val records = runCatching {
+            gson.fromJson(serialized, Array<CookieRecord>::class.java)?.toList().orEmpty()
+        }.getOrElse {
+            emptyList()
+        }
+        return records.mapNotNull { it.toCookie() }
+    }
+
+    private fun persistCookies(cookies: List<Cookie>) {
+        val records = cookies.map { CookieRecord.fromCookie(it) }
+        val serialized = gson.toJson(records)
+        prefs.edit().putString(COOKIE_STORE_KEY, serialized).apply()
+    }
+
+    private fun cookieIdentity(cookie: Cookie): String =
+        "${cookie.name}|${cookie.domain}|${cookie.path}"
+
+    private data class CookieRecord(
+        val name: String,
+        val value: String,
+        val expiresAt: Long,
+        val domain: String,
+        val path: String,
+        val secure: Boolean,
+        val httpOnly: Boolean,
+        val persistent: Boolean,
+        val hostOnly: Boolean,
+    ) {
+        fun toCookie(): Cookie? = runCatching {
+            Cookie.Builder()
+                .name(name)
+                .value(value)
+                .expiresAt(expiresAt)
+                .apply {
+                    if (hostOnly) {
+                        hostOnlyDomain(domain)
+                    } else {
+                        domain(domain)
+                    }
+                    path(path)
+                    if (secure) secure()
+                    if (httpOnly) httpOnly()
+                }
+                .build()
+        }.getOrNull()
+
+        companion object {
+            fun fromCookie(cookie: Cookie): CookieRecord = CookieRecord(
+                name = cookie.name,
+                value = cookie.value,
+                expiresAt = cookie.expiresAt,
+                domain = cookie.domain,
+                path = cookie.path,
+                secure = cookie.secure,
+                httpOnly = cookie.httpOnly,
+                persistent = cookie.persistent,
+                hostOnly = cookie.hostOnly,
+            )
+        }
     }
 }
