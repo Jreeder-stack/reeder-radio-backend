@@ -1,5 +1,6 @@
 package com.reedersystems.commandcomms.data.repository
 
+import android.util.Log
 import com.google.gson.JsonObject
 import com.google.gson.reflect.TypeToken
 import com.reedersystems.commandcomms.data.api.ApiClient
@@ -12,6 +13,10 @@ import okhttp3.Request
 
 class ChannelRepository(private val api: ApiClient) {
 
+    private companion object {
+        const val AUTH_TAG = "[AUTH-TRACE]"
+    }
+
     suspend fun getChannels(): Result<List<Channel>> =
         withContext(Dispatchers.IO) {
             runCatching {
@@ -19,12 +24,23 @@ class ChannelRepository(private val api: ApiClient) {
                     .url("${api.baseUrl}/api/channels")
                     .get()
                     .build()
+                Log.d(AUTH_TAG, "CHANNEL_FETCH_REQUEST_SENT url=${request.url.redact()}")
+                val hasCookie = api.cookieJar.hasCookiesForUrl(request.url)
+                Log.d(AUTH_TAG, "CHANNEL_FETCH_AUTH_ATTACHED cookie=${if (hasCookie) "yes" else "no"} token=no")
                 val response = api.httpClient.newCall(request).execute()
-                if (!response.isSuccessful) error("Failed to fetch channels (${response.code})")
                 val body = response.body?.string() ?: "{}"
+                Log.d(AUTH_TAG, "CHANNEL_FETCH_HTTP_RESPONSE code=${response.code}")
+                if (!response.isSuccessful) {
+                    if (response.code == 401) {
+                        val preview = body.replace("\n", " ").take(180)
+                        Log.e(AUTH_TAG, "CHANNEL_FETCH_401_DETAILS body=$preview")
+                    }
+                    error("Failed to fetch channels (${response.code})")
+                }
                 val wrapper = api.gson.fromJson(body, JsonObject::class.java)
                 val channelsArray = wrapper.get("channels") ?: error("No channels field in response")
                 val type = object : TypeToken<List<Channel>>() {}.type
+                Log.d(AUTH_TAG, "CHANNEL_FETCH_SUCCESS")
                 api.gson.fromJson<List<Channel>>(channelsArray, type)
             }
         }
