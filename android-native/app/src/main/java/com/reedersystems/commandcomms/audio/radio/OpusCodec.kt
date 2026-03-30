@@ -31,14 +31,14 @@ class OpusCodec {
             val enc = OpusEncoder(SAMPLE_RATE, CHANNELS, OpusApplication.OPUS_APPLICATION_VOIP)
             enc.setBitrate(BITRATE)
             enc.setSignalType(OpusSignal.OPUS_SIGNAL_VOICE)
-            enc.setComplexity(5)
+            enc.setComplexity(0)
             enc.setUseVBR(true)
             enc.setUseInbandFEC(true)
             enc.setPacketLossPercent(10)
             encoder = enc
             decoder = OpusDecoder(SAMPLE_RATE, CHANNELS)
             initialized = true
-            Log.d(TAG, "OpusCodec initialized (Concentus, sample_rate=$SAMPLE_RATE frame_size=$FRAME_SIZE channels=$CHANNELS)")
+            Log.d(TAG, "OpusCodec initialized (Concentus, sample_rate=$SAMPLE_RATE frame_size=$FRAME_SIZE channels=$CHANNELS complexity=0)")
         } catch (e: Exception) {
             Log.e(TAG, "OpusCodec initialization failed: ${e.message}", e)
         }
@@ -84,12 +84,12 @@ class OpusCodec {
             val enc = OpusEncoder(SAMPLE_RATE, CHANNELS, OpusApplication.OPUS_APPLICATION_VOIP)
             enc.setBitrate(BITRATE)
             enc.setSignalType(OpusSignal.OPUS_SIGNAL_VOICE)
-            enc.setComplexity(5)
+            enc.setComplexity(0)
             enc.setUseVBR(true)
             enc.setUseInbandFEC(true)
             enc.setPacketLossPercent(10)
             encoder = enc
-            Log.d(TAG, "Encoder re-initialized after assertion failure")
+            Log.d(TAG, "Encoder re-initialized after assertion failure (complexity=0)")
         } catch (t: Throwable) {
             Log.e(TAG, "Failed to re-initialize encoder: ${t.message}", t)
             encoder = null
