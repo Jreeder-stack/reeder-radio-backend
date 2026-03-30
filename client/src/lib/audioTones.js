@@ -10,7 +10,7 @@ function getAudioContext() {
 }
 
 export function playTalkPermitTone() {
-  playPermitTone();
+  return playPermitTone();
 }
 
 export function playBusyTone() {

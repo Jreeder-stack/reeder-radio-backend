@@ -4,6 +4,7 @@ import { PTT_STATES } from '../../constants/pttStates.js';
 import audioTransportManager from '../../audio/AudioTransportManager.js';
 import toneEngine from '../../audio/toneEngine.js';
 import toneTransmitter from '../../audio/ToneTransmitter.js';
+import { playTalkPermitTone } from '../../lib/audioTones.js';
 import { useSignalingContext } from '../../context/SignalingContext.jsx';
 
 export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identity = 'Dispatch', signalPttStart, signalPttEnd }) {
@@ -156,6 +157,21 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
           toneEngine.startBusyTone();
           return false;
         }
+      }
+      
+      try {
+        console.log('[PTT] Playing talk permit tone before mic goes live');
+        await playTalkPermitTone();
+        console.log('[PTT] Talk permit tone finished, opening mic');
+      } catch (toneErr) {
+        console.warn('[PTT] Talk permit tone failed, proceeding anyway:', toneErr.message);
+      }
+      
+      if (!gestureActiveRef.current) {
+        console.log('[PTT] PTT released during tone playback, aborting');
+        audioTransportManager.unmuteChannels(mutedChannelsRef.current);
+        mutedChannelsRef.current = [];
+        return false;
       }
       
       const success = await audioTransportManager.start();

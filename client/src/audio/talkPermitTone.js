@@ -50,7 +50,7 @@ function playOscillatorFallback(ctx) {
 }
 
 export function playPermitTone() {
-  (async function () {
+  return (async function () {
     try {
       var ctx = getPermitContext();
 
@@ -68,11 +68,24 @@ export function playPermitTone() {
         source.connect(gain);
         gain.connect(ctx.destination);
         source.start(0);
+        var duration = permitBuffer.duration * 1000;
+        await new Promise(function (resolve) {
+          source.onended = function () { resolve(duration); };
+        });
+        return duration;
       } else {
+        var beepDuration = 0.040;
+        var gap = 0.030;
+        var totalMs = (3 * beepDuration + 2 * gap) * 1000;
         playOscillatorFallback(ctx);
+        await new Promise(function (resolve) {
+          setTimeout(function () { resolve(totalMs); }, totalMs);
+        });
+        return totalMs;
       }
     } catch (e) {
       console.warn('[TalkPermit] Playback failed:', e.message);
+      return 0;
     }
   })();
 }

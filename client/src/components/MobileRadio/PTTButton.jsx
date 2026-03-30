@@ -95,7 +95,7 @@ export function PTTButton({
     playBeep(400, now + 0.30);
   };
 
-  const startTransmit = () => {
+  const startTransmit = async () => {
     if (disabled) return;
     
     const now = Date.now();
@@ -120,7 +120,8 @@ export function PTTButton({
       playErrorTone();
       setIsDenying(true);
     } else {
-      playTalkPermitTone();
+      await playTalkPermitTone();
+      if (!isActiveRef.current) return;
       if (setTransmitting) setTransmitting(true);
       onTransmitStartRef.current?.();
     }
