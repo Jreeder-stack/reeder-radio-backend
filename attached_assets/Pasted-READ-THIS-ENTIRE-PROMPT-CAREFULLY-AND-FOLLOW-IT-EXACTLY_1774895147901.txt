@@ -1,0 +1,88 @@
+READ THIS ENTIRE PROMPT CAREFULLY AND FOLLOW IT EXACTLY.
+
+We are fixing ONE issue only:
+NATIVE ANDROID APP 401 AUTH FAILURE DURING CHANNEL FETCH / STARTUP.
+
+Current proven log behavior:
+- CHANNEL_FETCH_REQUEST_SENT is happening
+- CHANNEL_FETCH_AUTH_ATTACHED shows cookie=no token=no
+- server returns 401 with body {"error":"Not authenticated"}
+
+YOUR JOB:
+Read the logs and source code, identify the first exact cause of the missing authentication on native Android startup/channel fetch, and fix ONLY that.
+
+ABSOLUTE DO-NOT-TOUCH RULES:
+1. DO NOT TOUCH hardware key mappings at all.
+2. DO NOT MODIFY any PTT key handling, emergency key handling, side button mapping, orange button mapping, black button mapping, or receiver mappings.
+3. DO NOT MODIFY any code paths we recently stabilized for:
+   - native TX/RX audio transport
+   - Opus encode/decode pipeline
+   - floor control lifecycle
+   - radio join/token flow
+   - UDP transport
+   - session token issuance for radio channel
+4. DO NOT CHANGE permission prompt behavior.
+5. DO NOT REFACTOR unrelated UI.
+6. DO NOT “clean up” or rename anything outside the exact auth failure path.
+7. DO NOT change desktop/web code unless absolutely required to confirm backend contract.
+8. DO NOT remove logs. You may add focused auth/debug logs only.
+
+ALLOWED SCOPE:
+You may inspect and modify ONLY the minimum code needed for:
+- native Android auth/session persistence
+- native Android cookie/token attachment
+- startup auth restore path
+- channel fetch auth path
+- any backend auth expectation directly involved in this 401, if and only if needed
+
+GOAL:
+Fix the native Android 401 error first.
+Nothing else.
+
+TRACE THIS EXACT FLOW:
+1. app startup
+2. login/manual login/session restore
+3. auth persistence (cookie jar, token store, session prefs, etc.)
+4. channel fetch request creation
+5. auth attachment to that request
+6. backend auth check for that route
+7. why cookie=no token=no occurs on native Android
+
+ADD/KEEP THESE LOGS:
+- AUTH_RESTORE_START
+- AUTH_RESTORE_RESULT
+- LOGIN_REQUEST_SENT
+- LOGIN_SUCCESS
+- LOGIN_FAILED
+- SESSION_PERSIST_START
+- SESSION_PERSIST_RESULT
+- CHANNEL_FETCH_REQUEST_SENT
+- CHANNEL_FETCH_AUTH_ATTACHED cookie= token=
+- CHANNEL_FETCH_HTTP_RESPONSE code=
+- CHANNEL_FETCH_401_DETAILS body=
+- AUTH_MISSING_REASON
+
+TASKS:
+1. Identify the first exact reason auth is missing on channel fetch.
+2. Fix only that exact issue.
+3. Do not touch hardware mapping or radio runtime logic.
+4. Return a report with:
+   - EXACT ROOT CAUSE
+   - FILE + FUNCTION
+   - EXACT FIX APPLIED
+   - CONFIRMATION that hardware key mapping was untouched
+   - CONFIRMATION that TX/RX/Opus/floor-control code was untouched
+   - LOG EVIDENCE showing channel fetch now sends auth and no longer gets 401
+
+IMPORTANT:
+If you are tempted to modify anything related to:
+- PttHardwareReceiver
+- MainActivity key event mapping
+- BackgroundAudioService hardware mapping sections
+- OpusCodec
+- RadioAudioEngine
+- UdpAudioTransport
+- floor-control signaling
+STOP. DO NOT CHANGE IT.
+
+This step is AUTH ONLY.
