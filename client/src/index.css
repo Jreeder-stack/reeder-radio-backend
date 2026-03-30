@@ -552,6 +552,29 @@ html, body {
   height: clamp(3px, 0.4vw, 4px);
 }
 
+.dispatch-resize-handle {
+  width: 4px;
+  cursor: col-resize;
+  background: var(--dispatch-border);
+  transition: background 0.15s ease;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.dispatch-resize-handle:hover,
+.dispatch-resize-handle:active {
+  background: var(--dispatch-accent);
+}
+
+.dispatch-resize-handle::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -4px;
+  right: -4px;
+  bottom: 0;
+}
+
 .channel-tile::before {
   content: '';
   position: absolute;

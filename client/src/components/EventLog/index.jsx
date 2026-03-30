@@ -1,4 +1,5 @@
 import useDispatchStore from '../../state/dispatchStore.js';
+import { formatRoomKey } from '../../utils/formatChannelDisplay.js';
 
 function formatTime(timestamp) {
   if (!timestamp) return '';
@@ -97,7 +98,7 @@ export default function EventLog() {
               </div>
               {event.unit && (
                 <div className="text-dispatch-secondary mt-1">
-                  Unit: {event.unit} {event.channel && `| Channel: ${event.channel}`}
+                  Unit: {event.unit} {event.channel && `| Channel: ${event.channel.split(', ').map(formatRoomKey).join(', ')}`}
                 </div>
               )}
               {event.acknowledgedBy && (

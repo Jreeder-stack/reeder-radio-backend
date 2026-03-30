@@ -2,6 +2,8 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import useDispatchStore from '../../state/dispatchStore.js';
 import audioTransportManager from '../../audio/AudioTransportManager.js';
+import formatChannelDisplay from '../../utils/formatChannelDisplay.js';
+import { PTT_STATES } from '../../constants/pttStates.js';
 
 function AudioLevelMeter({ level }) {
   const barCount = 8;
@@ -34,6 +36,7 @@ export default function ChannelTile({ channel, onRemove }) {
     activeTransmissions,
     unitsByChannel,
     emergencies,
+    pttState,
     toggleMonitor, 
     toggleMute,
     toggleTx,
@@ -95,10 +98,7 @@ export default function ChannelTile({ channel, onRemove }) {
         <div className="flex items-center gap-2 min-w-0" {...attributes} {...listeners}>
           <span className="text-xs text-dispatch-secondary cursor-grab">⋮⋮</span>
           <div className="min-w-0">
-            {channel.zone && (
-              <span className="block text-[10px] uppercase tracking-wider text-dispatch-secondary leading-tight truncate">{channel.zone}</span>
-            )}
-            <h3 className="font-bold text-dispatch-text leading-tight truncate">{channel.name}</h3>
+            <h3 className="font-bold text-dispatch-text leading-tight truncate">{formatChannelDisplay(channel.zone, channel.name)}</h3>
           </div>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
@@ -127,9 +127,15 @@ export default function ChannelTile({ channel, onRemove }) {
         </div>
       )}
 
-      {activeTransmission && (
+      {(pttState === PTT_STATES.TRANSMITTING || pttState === PTT_STATES.ARMING) && isTxSelected && (
+        <div className="px-2 py-1 mb-2 text-xs font-bold text-center text-white bg-green-600 rounded">
+          TX
+        </div>
+      )}
+
+      {activeTransmission && !((pttState === PTT_STATES.TRANSMITTING || pttState === PTT_STATES.ARMING) && isTxSelected) && (
         <div className="px-2 py-1 mb-2 text-xs text-center text-yellow-200 bg-yellow-900 rounded">
-          TX: {activeTransmission.from}
+          RX: {activeTransmission.from}
         </div>
       )}
 
@@ -189,7 +195,7 @@ export default function ChannelTile({ channel, onRemove }) {
         </button>
       </div>
 
-      <div className="mt-3 flex items-center gap-2">
+      <div className="mt-3 flex items-center gap-2 min-w-0">
         <svg className="w-3 h-3 text-dispatch-secondary flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
           <path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217z" clipRule="evenodd" />
         </svg>
@@ -199,7 +205,8 @@ export default function ChannelTile({ channel, onRemove }) {
           max="100"
           value={volumeLevel}
           onChange={handleVolumeChange}
-          className="volume-slider flex-1"
+          className="volume-slider flex-1 min-w-0"
+          style={{ width: '100%' }}
           title={`Volume: ${volumeLevel}%`}
         />
         <svg className="w-4 h-4 text-dispatch-secondary flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">

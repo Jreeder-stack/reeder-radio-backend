@@ -6,6 +6,7 @@ import toneEngine from '../../audio/toneEngine.js';
 import toneTransmitter from '../../audio/ToneTransmitter.js';
 import { playTalkPermitTone } from '../../lib/audioTones.js';
 import { useSignalingContext } from '../../context/SignalingContext.jsx';
+import formatChannelDisplay from '../../utils/formatChannelDisplay.js';
 
 export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identity = 'Dispatch', signalPttStart, signalPttEnd }) {
   const { 
@@ -471,8 +472,11 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
     }
   };
 
-  const activeClearAirChannelName = clearAirChannel
-    ? (channels.find(ch => String(ch.id) === String(clearAirChannel))?.name || '')
+  const activeClearAirChannel = clearAirChannel
+    ? channels.find(ch => String(ch.id) === String(clearAirChannel))
+    : null;
+  const activeClearAirChannelName = activeClearAirChannel
+    ? formatChannelDisplay(activeClearAirChannel.zone, activeClearAirChannel.name)
     : '';
 
   const hasTxChannels = txChannelIds.length > 0;
@@ -482,28 +486,6 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
 
   return (
     <div className="flex items-center justify-between px-4 py-3 bg-dispatch-panel border-t border-dispatch-border">
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-dispatch-secondary">TX Channels:</span>
-          {txChannelIds.length > 0 ? (
-            <div className="flex flex-wrap gap-1 max-w-xs">
-              {selectedChannelNames.slice(0, 4).map(name => (
-                <span key={name} className="px-2 py-0.5 bg-blue-600 rounded text-white text-xs font-medium">
-                  {name}
-                </span>
-              ))}
-              {selectedChannelNames.length > 4 && (
-                <span className="px-2 py-0.5 bg-dispatch-border rounded text-dispatch-secondary text-xs">
-                  +{selectedChannelNames.length - 4} more
-                </span>
-              )}
-            </div>
-          ) : (
-            <span className="text-xs text-dispatch-secondary">None selected</span>
-          )}
-        </div>
-      </div>
-
       <div className="flex items-center gap-3">
         <button
           ref={pttRef}
@@ -602,7 +584,7 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
               className="w-full bg-dispatch-bg border border-dispatch-border text-white rounded px-3 py-2 mb-4 text-sm"
             >
               {channels.map(ch => (
-                <option key={ch.id} value={ch.id}>{ch.name}{ch.zone ? ` (${ch.zone})` : ''}</option>
+                <option key={ch.id} value={ch.id}>{formatChannelDisplay(ch.zone, ch.name)}</option>
               ))}
             </select>
             <div className="flex gap-3 justify-end">

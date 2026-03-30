@@ -29,6 +29,7 @@ import { getUnits } from '../utils/api.js';
 import { useAudioConnection } from '../context/AudioConnectionContext.jsx';
 import audioTransportManager from '../audio/AudioTransportManager.js';
 import { useSignalingContext } from '../context/SignalingContext.jsx';
+import formatChannelDisplay from '../utils/formatChannelDisplay.js';
 
 export default function DispatchConsole({ user, onLogout }) {
   const [rightTab, setRightTab] = useState('emergency');
@@ -38,6 +39,87 @@ export default function DispatchConsole({ user, onLogout }) {
     const saved = localStorage.getItem('dispatchDarkMode');
     return saved !== null ? JSON.parse(saved) : true;
   });
+
+  const MIN_LEFT = 180;
+  const MIN_CENTER = 300;
+  const MIN_RIGHT = 200;
+
+  const [panelWidths, setPanelWidths] = useState(() => {
+    try {
+      const saved = localStorage.getItem('dispatchPanelWidths');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return { left: 256, right: 320 };
+  });
+
+  const containerRef = useRef(null);
+  const draggingRef = useRef(null);
+  const startXRef = useRef(0);
+  const startWidthsRef = useRef({ left: 256, right: 320 });
+
+  const handleResizeStart = useCallback((side, e) => {
+    e.preventDefault();
+    draggingRef.current = side;
+    startXRef.current = e.clientX;
+    startWidthsRef.current = { ...panelWidths };
+
+    const handleMouseMove = (moveEvent) => {
+      if (!draggingRef.current || !containerRef.current) return;
+      const containerWidth = containerRef.current.offsetWidth;
+      const delta = moveEvent.clientX - startXRef.current;
+
+      if (draggingRef.current === 'left') {
+        const newLeft = Math.max(MIN_LEFT, Math.min(startWidthsRef.current.left + delta, containerWidth - startWidthsRef.current.right - MIN_CENTER));
+        setPanelWidths(prev => {
+          const updated = { ...prev, left: newLeft };
+          localStorage.setItem('dispatchPanelWidths', JSON.stringify(updated));
+          return updated;
+        });
+      } else if (draggingRef.current === 'right') {
+        const newRight = Math.max(MIN_RIGHT, Math.min(startWidthsRef.current.right - delta, containerWidth - startWidthsRef.current.left - MIN_CENTER));
+        setPanelWidths(prev => {
+          const updated = { ...prev, right: newRight };
+          localStorage.setItem('dispatchPanelWidths', JSON.stringify(updated));
+          return updated;
+        });
+      }
+    };
+
+    const handleMouseUp = () => {
+      draggingRef.current = null;
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  }, [panelWidths]);
+
+  useEffect(() => {
+    const normalize = () => {
+      if (!containerRef.current) return;
+      const w = containerRef.current.offsetWidth;
+      setPanelWidths(prev => {
+        const maxLeft = w - prev.right - MIN_CENTER;
+        const maxRight = w - prev.left - MIN_CENTER;
+        const left = Math.max(MIN_LEFT, Math.min(prev.left, maxLeft));
+        const right = Math.max(MIN_RIGHT, Math.min(prev.right, maxRight));
+        if (left !== prev.left || right !== prev.right) {
+          const updated = { left, right };
+          localStorage.setItem('dispatchPanelWidths', JSON.stringify(updated));
+          return updated;
+        }
+        return prev;
+      });
+    };
+    normalize();
+    window.addEventListener('resize', normalize);
+    return () => window.removeEventListener('resize', normalize);
+  }, []);
 
   const { retryConnection, connectToChannel, disconnectFromChannel } = useAudioConnection();
   const { 
@@ -283,12 +365,17 @@ export default function DispatchConsole({ user, onLogout }) {
     <div className="flex flex-col h-screen bg-dispatch-bg">
       <TopBar user={user} onLogout={onLogout} darkMode={darkMode} onToggleTheme={toggleTheme} />
       
-      <div className="flex flex-1 overflow-hidden">
-        <div className="w-64 p-3 border-r border-dispatch-border overflow-y-auto scrollbar-thin">
+      <div className="flex flex-1 overflow-hidden" ref={containerRef}>
+        <div className="p-3 overflow-y-auto scrollbar-thin" style={{ width: panelWidths.left, minWidth: MIN_LEFT, flexShrink: 0 }}>
           <UnitList />
         </div>
+
+        <div
+          className="dispatch-resize-handle"
+          onMouseDown={(e) => handleResizeStart('left', e)}
+        />
         
-        <div className="flex-1 p-3 overflow-y-auto scrollbar-thin">
+        <div className="flex-1 p-3 overflow-y-auto scrollbar-thin min-w-0">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-lg font-semibold text-dispatch-text">Channels</h2>
             <button
@@ -330,7 +417,11 @@ export default function DispatchConsole({ user, onLogout }) {
           )}
         </div>
         
-        <div className="w-80 min-w-0 border-l border-dispatch-border flex flex-col dispatch-sidebar">
+        <div
+          className="dispatch-resize-handle"
+          onMouseDown={(e) => handleResizeStart('right', e)}
+        />
+        <div className="min-w-0 flex flex-col dispatch-sidebar" style={{ width: panelWidths.right, minWidth: MIN_RIGHT, flexShrink: 0 }}>
           <div className="flex overflow-x-auto border-b border-dispatch-border">
             <button
               onClick={() => setRightTab('emergency')}
@@ -371,7 +462,7 @@ export default function DispatchConsole({ user, onLogout }) {
                     className="dispatch-select"
                   >
                     {orderedChannels.map(ch => (
-                      <option key={ch.id} value={ch.room_key || ((ch.zone || 'Default') + '__' + ch.name)}>{ch.zone ? `${ch.zone} - ${ch.name}` : ch.name}</option>
+                      <option key={ch.id} value={ch.room_key || ((ch.zone || 'Default') + '__' + ch.name)}>{formatChannelDisplay(ch.zone, ch.name)}</option>
                     ))}
                   </select>
                 </div>
@@ -421,8 +512,7 @@ export default function DispatchConsole({ user, onLogout }) {
                     onClick={() => handleAddChannel(channel.id)}
                     className="w-full px-3 py-2.5 text-left bg-dispatch-panel-elevated hover:bg-dispatch-border rounded-md text-dispatch-text transition-colors flex items-center justify-between group"
                   >
-                    <span className="font-medium">{channel.name}</span>
-                    <span className="text-xs text-dispatch-secondary group-hover:text-dispatch-text">{channel.zone}</span>
+                    <span className="font-medium">{formatChannelDisplay(channel.zone, channel.name)}</span>
                   </button>
                 ))}
               </div>

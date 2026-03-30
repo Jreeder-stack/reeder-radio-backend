@@ -3,6 +3,7 @@ import useDispatchStore from '../../state/dispatchStore.js';
 import { toggleUnitEmergency, resetEmergency as resetEmergencyApi } from '../../utils/api.js';
 import { useAuth } from '../../AuthContext.jsx';
 import { useSignalingContext } from '../../context/SignalingContext.jsx';
+import { formatRoomKey } from '../../utils/formatChannelDisplay.js';
 
 function formatTime(timestamp) {
   if (!timestamp) return '';
@@ -261,7 +262,7 @@ export default function EmergencyPanel() {
                 </div>
               </div>
               <div className="text-xs text-red-200 mb-2">
-                Channel: {emergency.channel || 'Unknown'}
+                Channel: {formatRoomKey(emergency.channel)}
               </div>
               {emergency.acknowledged ? (
                 <button
@@ -376,7 +377,7 @@ export function GlobalEmergencyOverlay() {
               </span>
             </div>
             <div style={{ fontSize: '12px', color: '#fecaca', marginBottom: '8px' }}>
-              Channel: {emergency.channel || 'Unknown'}
+              Channel: {formatRoomKey(emergency.channel)}
             </div>
             <button
               onClick={() => handleAcknowledge(emergency)}
