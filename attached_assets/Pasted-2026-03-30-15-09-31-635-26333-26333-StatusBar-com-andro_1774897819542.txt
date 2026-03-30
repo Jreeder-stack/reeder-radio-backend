@@ -1,0 +1,84 @@
+2026-03-30 15:09:31.635 26333-26333 StatusBar               com.android.systemui                 D  onNotificationPosted: StatusBarNotification(pkg=com.reedersystems.commandcomms user=UserHandle{0} id=1001 tag=null key=0|com.reedersystems.commandcomms|1001|null|10157: Notification(channel=ptt_service pri=-1 contentView=null vibrate=null sound=null defaults=0x0 flags=0x62 color=0x00000000 vis=PRIVATE))
+2026-03-30 15:09:31.771 26075-25875 ACodec                  mediaserver                          D  endian is 2, bitWidth is 16, pcmType is 1, channelAssignment is 0, numericalType is 1
+2026-03-30 15:09:31.828 26075-25873 AudioTrack              mediaserver                          D  set(): 0xac70a000, streamType 8, sampleRate 44100, format 0x1, channelMask 0x1, frameCount 22560, flags #0, notificationFrames 0, sessionId 0, transferType 0, uid 10157, pid 25086
+2026-03-30 15:09:31.830 26072-19655 AudioFlinger            audioserver                          D  track(0xab4e9b00): mIsOut 1, mFrameCount 22560, mSampleRate 44100, mFormat 1, mChannelCount 1, mTrackCount 188, thread 0xaac83140, sessionId 1769
+2026-03-30 15:09:31.837 26078-29085 AudioALSAP...dlerNormal and...re.audio@2.0-service-mediatek  D  open(), mConfig: channels = 2, rate = 48000, period_size = 256, period_count = 2, format = 1 avail_min = 256
+2026-03-30 15:09:31.846 26078-29085 AudioVoiceUIDL          and...re.audio@2.0-service-mediatek  D  [GetSRCInputParameter] mOutputSampleRate 16000,  mInputSampleRate 48000, mInChannel 2, mOutChannel, 0 format 4
+2026-03-30 15:09:31.852 25086-25699 [PTT-DIAG]              com.reedersystems.commandcomms       D  PTT_REQUEST_SENT channelId=TESTING__TESTING 1
+2026-03-30 15:09:31.852 25086-25699 [PTT-DIAG]              com.reedersystems.commandcomms       D  RADIO_PTT_REQUEST_SENT channelId=TESTING__TESTING 1
+2026-03-30 15:09:31.852 25086-25699 [FloorCtrl]             com.reedersystems.commandcomms       D  requestFloor channelKey=TESTING__TESTING 1
+2026-03-30 15:09:31.854 25086-25699 [RadioSigGW]            com.reedersystems.commandcomms       D  requestFloor channelKey=TESTING__TESTING 1
+2026-03-30 15:09:31.956 25086-25882 [PTT-DIAG]              com.reedersystems.commandcomms       D  RADIO_TOKEN_EVENT_RECEIVED channelId=TESTING__TESTING 1 roomKey=TESTING__TESTING 1 tokenPresent=yes
+2026-03-30 15:09:31.960 25086-25704 [PTT-DIAG]              com.reedersystems.commandcomms       D  RADIO_TOKEN_EVENT_RECEIVED channelId=TESTING__TESTING 1 roomKey=TESTING__TESTING 1 tokenPresent=yes
+2026-03-30 15:09:31.960 25086-25704 [PTT-DIAG]              com.reedersystems.commandcomms       D  RADIO_TOKEN_ACCEPTED_FOR_ACTIVE_CHANNEL activeChannel=TESTING__TESTING 1 tokenChannel=TESTING__TESTING 1
+2026-03-30 15:09:31.961 25086-25704 [PTT-DIAG]              com.reedersystems.commandcomms       D  RADIO_SESSION_TOKEN_RECEIVED channelId=TESTING__TESTING 1
+2026-03-30 15:09:31.965 25086-25704 [PTT-DIAG]              com.reedersystems.commandcomms       D  RADIO_PTT_GRANTED channelId=TESTING__TESTING 1 senderUnitId=INDIANA-1
+2026-03-30 15:09:31.974 25086-25699 AudioRecord             com.reedersystems.commandcomms       D  set(): 0x8acca000, inputSource 7, sampleRate 48000, format 0x1, channelMask 0x10, frameCount 3840, notificationFrames 0, sessionId 0, transferType 0, flags 0, opPackageName com.reedersystems.commandcomms uid -1, pid -1
+2026-03-30 15:09:31.975 26072-26116 APM_AudioPolicyManager  audioserver                          D  getInputForAttr() source 7, samplingRate 48000, format 1, channelMask 10,session 1777, flags 0
+2026-03-30 15:09:31.975 25086-25704 [FloorCtrl]             com.reedersystems.commandcomms       D  Channel busy — transmitting unit: INDIANA-1
+2026-03-30 15:09:31.976 26078-26142 AudioALSAStreamManager  and...re.audio@2.0-service-mediatek  D  openInputStream(), devices = 0x80000004, format = 0x1, channels = 0x10, sampleRate = 48000, status = 238, acoustics = 0x0
+2026-03-30 15:09:31.976 26078-26142 AudioALSAStreamIn       and...re.audio@2.0-service-mediatek  D  set(), devices = 0x80000004, format = 0x1, channels = 0x10, sampleRate = 48000, acoustics = 0x0, flags = 0
+2026-03-30 15:09:31.976 26078-26142 AudioALSAStreamIn       and...re.audio@2.0-service-mediatek  D  set() done, sampleRate = 48000, num_channels = 1, buffer_size=1920, tempDebugflag = 0
+2026-03-30 15:09:32.020 26072-26116 AudioFlinger            audioserver                          D  track(0xab4b05c0): mIsOut 0, mFrameCount 3840, mSampleRate 48000, mFormat 1, mChannelCount 1, mTrackCount 189, thread 0xaa483980, sessionId 1777
+2026-03-30 15:09:32.038 26078-25885 AudioALSAC...HandlerAEC and...re.audio@2.0-service-mediatek  D  +open(), input_device = 0x80000004, input_source = 0x7, sample_rate=48000, num_channels=1, output_devices=0x2
+2026-03-30 15:09:32.056 26078-25885 AudioALSAC...DataClient and...re.audio@2.0-service-mediatek  D  sample rate = 48000, drop ms = 25, channels = 1, byts per sample = 2, dropBesRecordDataSize = 3840
+2026-03-30 15:09:32.056 26078-25885 AudioPreProcess         and...re.audio@2.0-service-mediatek  D  start_echo_reference()+ channel_count=1,sampling_rate=48000,mEcho_Reference=0x0
+2026-03-30 15:09:32.056 26078-25885 AudioPreProcess         and...re.audio@2.0-service-mediatek  D  start_echo_reference,wr_channel_count=2,wr_sampling_rate=48000
+2026-03-30 15:09:32.056 26078-25885 AudioPreProcess         and...re.audio@2.0-service-mediatek  D  start_echo_reference(),wr_channel_count=2,wr_sampling_rate=48000
+2026-03-30 15:09:32.057 26078-25885 AudioPreProcess         and...re.audio@2.0-service-mediatek  D  addAudioEffect(), StreamInAttributeinfo num_channels=1, audio_channel_mask=10, sample_rate=48000
+2026-03-30 15:09:32.057 26078-25885 AudioPreProcess         and...re.audio@2.0-service-mediatek  D  addAudioEffect(), StreamInAttributeinfo num_channels=1, audio_channel_mask=10, sample_rate=48000
+2026-03-30 15:09:32.058 26078-25885 AudioALSAC...iderNormal and...re.audio@2.0-service-mediatek  D  mConfig format: 1, channels: 2, rate: 48000, period_size: 960, period_count: 6, latency: 20, kReadBufferSize: 7680, mCaptureDropSize: 0
+2026-03-30 15:09:32.060 26078-25885 AudioALSAC...DataClient and...re.audio@2.0-service-mediatek  D  CheckNeedBesRecordSRC(), mStreamAttributeSource->sample_rate=48000, mStreamAttributeSource->num_channels=2, mStreamAttributeTarget->sample_rate=48000,mStreamAttributeTarget->num_channels=1, BesRecord_usingsamplerate=16000
+2026-03-30 15:09:32.060 26078-25885 AudioALSAC...DataClient and...re.audio@2.0-service-mediatek  D  CheckChannelRemixOp(), ch 2->1 (mBesRecordStereoMode = 0, BesRecord enable = 1), ChannelRemixOp = 4
+2026-03-30 15:09:32.061 26078-25885 AudioALSAC...derEchoRef and...re.audio@2.0-service-mediatek  D  open(), audio_format = 1, audio_channel_mask=c, num_channels=2, sample_rate=48000, buf_total_latency=120ms
+2026-03-30 15:09:32.061 26078-25885 AudioALSAC...derEchoRef and...re.audio@2.0-service-mediatek  D  open(), format = 0, channels=2, rate=48000, period_size=240, period_count=24,latency=5,kReadBufferSize=960
+2026-03-30 15:09:32.064 26078-25885 AudioALSAC...DataClient and...re.audio@2.0-service-mediatek  D  AddEchoRefDataProvider(), Source sample_rate=48000, num_channels=2, audio_format=1
+2026-03-30 15:09:32.064 26078-25885 AudioALSAC...DataClient and...re.audio@2.0-service-mediatek  D  AddEchoRefDataProvider(), Target sample_rate=48000, num_channels=2, audio_format=1
+2026-03-30 15:09:32.189 25086-25699 [RadioEngine]           com.reedersystems.commandcomms       D  OPUS_TX_INIT sampleRate=48000 channels=1 frameMs=20 bitrate=16000
+2026-03-30 15:09:32.204 26078-25885 AudioPreProcess         and...re.audio@2.0-service-mediatek  D  addAudioEffect(), StreamInAttributeinfo num_channels=1, audio_channel_mask=10, sample_rate=48000
+2026-03-30 15:09:32.226 26333-26333 StatusBar               com.android.systemui                 D  onNotificationPosted: StatusBarNotification(pkg=com.reedersystems.commandcomms user=UserHandle{0} id=1001 tag=null key=0|com.reedersystems.commandcomms|1001|null|10157: Notification(channel=ptt_service pri=-1 contentView=null vibrate=null sound=null defaults=0x0 flags=0x62 color=0x00000000 vis=PRIVATE))
+2026-03-30 15:09:32.858 25086-25751 [OpusCodec]             com.reedersystems.commandcomms       E  OPUS_ENCODE_ASSERTION_FAILURE samples=960 bytes=1920 thread=DefaultDispatcher-worker-10 message=null (Explain with AI)
+                                                                                                    java.lang.AssertionError
+                                                                                                    	at org.concentus.Inlines.OpusAssert(Inlines.java:40)
+                                                                                                    	at org.concentus.Autocorrelation.silk_warped_autocorrelation(Autocorrelation.java:254)
+                                                                                                    	at org.concentus.NoiseShapeAnalysis.silk_noise_shape_analysis(NoiseShapeAnalysis.java:308)
+                                                                                                    	at org.concentus.SilkChannelEncoder.silk_encode_frame(SilkChannelEncoder.java:937)
+                                                                                                    	at org.concentus.EncodeAPI.silk_Encode(EncodeAPI.java:524)
+                                                                                                    	at org.concentus.OpusEncoder.opus_encode_native(OpusEncoder.java:988)
+                                                                                                    	at org.concentus.OpusEncoder.encode(OpusEncoder.java:1313)
+                                                                                                    	at com.reedersystems.commandcomms.audio.radio.OpusCodec.encode(OpusCodec.kt:69)
+                                                                                                    	at com.reedersystems.commandcomms.audio.radio.RadioAudioEngine$startTransmit$2$3.invokeSuspend(RadioAudioEngine.kt:169)
+                                                                                                    	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:33)
+                                                                                                    	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:108)
+                                                                                                    	at kotlinx.coroutines.internal.LimitedDispatcher$Worker.run(LimitedDispatcher.kt:115)
+                                                                                                    	at kotlinx.coroutines.scheduling.TaskImpl.run(Tasks.kt:103)
+                                                                                                    	at kotlinx.coroutines.scheduling.CoroutineScheduler.runSafely(CoroutineScheduler.kt:584)
+                                                                                                    	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.executeTask(CoroutineScheduler.kt:793)
+                                                                                                    	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.runWorker(CoroutineScheduler.kt:697)
+                                                                                                    	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.run(CoroutineScheduler.kt:684)
+2026-03-30 15:09:32.875 25086-25751 [OpusCodec]             com.reedersystems.commandcomms       E  OPUS_ENCODE_ASSERTION_FAILURE samples=960 bytes=1920 thread=DefaultDispatcher-worker-10 message=null (Explain with AI)
+                                                                                                    java.lang.AssertionError
+                                                                                                    	at org.concentus.Inlines.OpusAssert(Inlines.java:40)
+                                                                                                    	at org.concentus.Autocorrelation.silk_warped_autocorrelation(Autocorrelation.java:254)
+                                                                                                    	at org.concentus.NoiseShapeAnalysis.silk_noise_shape_analysis(NoiseShapeAnalysis.java:308)
+                                                                                                    	at org.concentus.SilkChannelEncoder.silk_encode_frame(SilkChannelEncoder.java:937)
+                                                                                                    	at org.concentus.EncodeAPI.silk_Encode(EncodeAPI.java:524)
+                                                                                                    	at org.concentus.OpusEncoder.opus_encode_native(OpusEncoder.java:988)
+                                                                                                    	at org.concentus.OpusEncoder.encode(OpusEncoder.java:1313)
+                                                                                                    	at com.reedersystems.commandcomms.audio.radio.OpusCodec.encode(OpusCodec.kt:69)
+                                                                                                    	at com.reedersystems.commandcomms.audio.radio.RadioAudioEngine$startTransmit$2$3.invokeSuspend(RadioAudioEngine.kt:169)
+                                                                                                    	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:33)
+                                                                                                    	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:108)
+                                                                                                    	at kotlinx.coroutines.internal.LimitedDispatcher$Worker.run(LimitedDispatcher.kt:115)
+                                                                                                    	at kotlinx.coroutines.scheduling.TaskImpl.run(Tasks.kt:103)
+                                                                                                    	at kotlinx.coroutines.scheduling.CoroutineScheduler.runSafely(CoroutineScheduler.kt:584)
+                                                                                                    	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.executeTask(CoroutineScheduler.kt:793)
+                                                                                                    	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.runWorker(CoroutineScheduler.kt:697)
+                                                                                                    	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.run(CoroutineScheduler.kt:684)
+2026-03-30 15:09:34.947 26333-26333 StatusBar               com.android.systemui                 D  onNotificationPosted: StatusBarNotification(pkg=com.reedersystems.commandcomms user=UserHandle{0} id=1001 tag=null key=0|com.reedersystems.commandcomms|1001|null|10157: Notification(channel=ptt_service pri=-1 contentView=null vibrate=null sound=null defaults=0x0 flags=0x62 color=0x00000000 vis=PRIVATE))
+2026-03-30 15:09:35.046 25086-25751 [FloorCtrl]             com.reedersystems.commandcomms       D  releaseFloor channelKey=TESTING__TESTING 1
+2026-03-30 15:09:35.046 25086-25751 [RadioSigGW]            com.reedersystems.commandcomms       D  releaseFloor channelKey=TESTING__TESTING 1
+2026-03-30 15:09:35.049 25086-25751 [PTT-DIAG]              com.reedersystems.commandcomms       D  PTT_RELEASE_SENT channelId=TESTING__TESTING 1
+2026-03-30 15:09:35.067 25086-25751 AudioTrack              com.reedersystems.commandcomms       D  set(): 0x8c544b80, streamType -1, sampleRate 44100, format 0x1, channelMask 0x1, frameCount 6615, flags #0, notificationFrames 0, sessionId 0, transferType 4, uid -1, pid -1
+2026-03-30 15:09:35.073 26072-19655 AudioFlinger            audioserver                          D  track(0xab4e9b00): mIsOut 1, mFrameCount 6615, mSampleRate 44100, mFormat 1, mChannelCount 1, mTrackCount 190, thread 0xaac83140, sessionId 1785
+2026-03-30 15:09:35.171 25086-25751 [FloorCtrl]             com.reedersystems.commandcomms       D  Channel idle
