@@ -1,82 +1,57 @@
 # Command Communications by Reeder - Systems
 
 ## Overview
-This project is a Push-to-Talk (PTT) radio communication application designed for real-time audio streaming between field units and dispatch operations. Its primary purpose is to enhance operational efficiency and communication reliability through features such as a talkgroup system, unit presence tracking, advanced audio processing, emergency signaling, and an AI Voice Dispatcher for automated acknowledgments and voice-driven interactions. The application aims to provide a robust and intuitive communication platform for critical field operations.
+This project is a Push-to-Talk (PTT) radio communication application for real-time audio streaming between field units and dispatch operations. It aims to enhance operational efficiency and communication reliability through features like a talkgroup system, unit presence tracking, advanced audio processing, emergency signaling, and an AI Voice Dispatcher. The AI Voice Dispatcher provides automated acknowledgments and voice-driven interactions for tasks such as status changes, records checks, traffic stops, and emergency escalations, acting as a robust and intuitive communication platform for critical field operations.
 
 ## User Preferences
 Not specified.
 
 ## System Architecture
 
-### Client Architecture Split
-- **Dispatch Console:** Web app (React/Vite) used by dispatchers on desktop browsers. Also available as an Electron desktop app (`desktop-app/`) with global PTT hotkeys that work even when the app is minimized or unfocused. The Electron app wraps the production web URL and injects simulated keyboard events for PTT.
-- **Radio Client (Field Units / T320):** Native Kotlin Android app (`android-native/`). Uses custom UDP radio transport with Opus encoding, native PTT hardware key handling, and a foreground service for screen-off PTT. Connects to the same backend as the web app.
+### Client Architecture
+- **Dispatch Console:** A React/Vite web application, also available as an Electron desktop app (`desktop-app/`) for global PTT hotkeys.
+- **Radio Client (Field Units / T320):** A native Kotlin Android app (`android-native/`) utilizing custom UDP radio transport with Opus encoding and native PTT hardware key handling.
 
 ### UI/UX Decisions
-The dispatch console is a Progressive Web App (PWA) with a responsive design for desktop. Key UI/UX elements include auto-login, dark/light theme toggles, and a Dispatcher Console built with React and TailwindCSS v4, utilizing `dnd-kit` for channel grid management. The native Android radio client uses Jetpack Compose with a dark cyan theme matching the web radio interface.
+The dispatch console is a PWA with responsive design, featuring auto-login, dark/light themes, and a Dispatcher Console built with React, TailwindCSS v4, and `dnd-kit`. The native Android app uses Jetpack Compose with a dark cyan theme.
 
 ### Technical Implementations
-- **Frontend:** Developed with React/Vite, using Zustand for state management and `localStorage` for persistence. Audio connections are managed by dedicated audio engines using WebSocket transport with end-to-end Opus encoding (48kHz/mono/960-frame).
-- **Backend:** An Express.js server provides API endpoints for authentication, user/channel management, and dispatch services. PostgreSQL serves as the primary database for data persistence and session management.
-- **New PCM-Only Browser Audio System (Task #131, updated Task #133):** Pure 48kHz mono signed 16-bit PCM in 960-sample (20ms) frames, relayed unchanged through the WebSocket audio bridge. No Opus, no WASM, no fallback paths for browser clients. Frame type `0x10` / codec ID `0x01`. Shared constants in `pcmAudioConstants.js` with `buildPcmPacket()`/`parsePcmPacket()`/`validatePcmPacketMeta()`. TX: `PcmCaptureManager` (AudioWorklet `new-pcm-capture-worklet.js`) → `PcmAudioTransport.sendFrame()` → WS. RX: WS → `PcmAudioTransport.receiveData()` → `PcmPlaybackManager` (AudioWorklet `new-pcm-playback-worklet.js`). Server `wsAudioBridge.js` `_handleNewPcmFrame()` validates schema and relays to all WS subscribers unchanged. Server `audioRelayService._broadcastToAll()` transcodes Opus→PCM (via `opusCodec.decodeOpusToPcm`) and wraps as 0x10 PCM frames before sending to WS subscribers, enabling Android Opus audio to be heard by web PCM clients. `MicPTTManager` gates TX on PTT floor grant. `AudioTransportManager` and `OnDemandVoiceManager` wire RX with keyed handler registration (`addOnValidPacket`). Mute is per-channel (tracked in `mutedChannels` Set), not global — PTT sidetone mute only blocks the TX channel. `PcmPlaybackManager.ensureAudioContextResumed()` called on every RX packet for iPad compatibility. Previous Opus modules (`OpusBrowserCodec.js`, `JitterBuffer.js`, `radioVoiceDSP.js`, `ToneTransmitter.js`) remain stubbed with `[AUDIO-REBUILD]` markers. Legacy frame types (`0x01` PCM-to-Opus, `0x02` Opus relay) still handled server-side for backward compatibility with Android/AI dispatcher.
-- **Legacy Custom WebSocket/UDP Audio Transport (End-to-End Opus):** Native Android clients use UDP with Opus. The server `audioRelayService.js` broadcasts Opus to UDP subscribers, audio listeners, and WebSocket PCM subscribers (via Opus→PCM transcoding with `opusCodec.decodeOpusToPcm`). `wsAudioBridge.js` registers browser WS clients with `audioRelayService.addWsSubscriber()` on connect and unregisters on close, enabling Android Opus audio to be heard by web browser PCM clients. AI dispatcher receives Opus from relay listeners and decodes server-side for STT. Socket.IO handles persistent signaling (presence, PTT floor control, data messages, emergency, location). Server-side Opus decoders are pinned per sender (not pooled randomly) to preserve codec state across a transmission. Early audio packets arriving before floor grant are buffered (up to 500ms/25 frames) and flushed when the grant arrives, preventing start-of-transmission clipping.
-- **Real-time Communication:** WebSocket handles real-time audio streaming, while Socket.IO manages persistent, lightweight signaling and channel data messages.
-- **Audio Processing:** Incorporates advanced Digital Signal Processing (DSP) via the Web Audio API, including AGC, noise suppression, and a transmit compressor, alongside PTT Release Reliability and Feedback Loop Prevention.
-- **Authentication & Authorization:** Implements username/password authentication with bcrypt hashing and session management, supporting role-based access control (users, dispatchers, administrators).
-- **AI Voice Dispatcher:** Integrates Azure Speech Services for STT/TTS and Azure OpenAI (GPT-4o-mini) for **full AI response generation**, enabling natural speech commands for status changes, detail commands, 10-27 records checks with phonetic spelling, traffic stops, plate checks, backup requests, radio/time checks, Signal 100, emergency escalation, and **voice-driven CAD call creation**. The LLM generates natural, varied response text (temperature 0.4) instead of rigid templates, with per-unit conversation history (last 4 exchanges) passed to the LLM for contextual awareness. It operates in standby, connecting to Audio Transport on demand. Emergency commands prioritize fast pattern matching. "Repeat" / "say again" / "10-9" repeats the last spoken response to any unit. TTS pronunciation of 10-codes is pre-processed, and address normalization is applied to spoken inputs. AI dispatcher TTS responses are recorded and stored. **Two-tier response system:** Tier 1 (routine: status changes, traffic stops, radio/time checks, disregard) uses fixed short format without unit ID echo; Tier 2 (complex: backup, records, CAD calls, emergencies) uses natural AI personality with variation. Military time is output as spoken words (e.g., "fourteen thirty" not "1430") to prevent TTS mispronunciation.
-- **T320 Screen-Off PTT (Service-Level Architecture):** PTT works entirely at the native Android service level, independent of MainActivity/WebView. Primary chain: `PttHardwareReceiver` → `BackgroundAudioService.onStartCommand()` → `RadioAudioEngine` `startTransmit/stopTransmit()`. BackgroundAudioService owns PTT state machine (IDLE/CONNECTING/TRANSMITTING). Uses `RadioAudioEngine` with `FloorControlManager` → `RadioSignalingGateway` → Socket.IO floor control → `UdpAudioTransport` → relay server → `OpusCodec` → `JitterBuffer` → `AudioPlayback`. Radio state managed by `RadioStateManager` (IDLE/REQUESTING_FLOOR/TRANSMITTING/RECEIVING/CHANNEL_BUSY), observed by `RadioViewModel` for UI updates. Signaling events: `radio:joinChannel`, `radio:leaveChannel`, `ptt:request`, `ptt:granted`, `ptt:denied`, `tx:start`, `tx:stop`, `channel:busy`, `channel:idle`.
-  Hardware button detection code in `PttHardwareReceiver.kt`, `MainActivity.kt` key handlers, and `BackgroundAudioService.kt` intent dispatch are marked with "DO NOT MODIFY — VERIFIED HARDWARE MAPPING" comments. `[PTT-DIAG]` diagnostic logging throughout entire chain, filterable via `adb logcat -s PTT-DIAG`. Battery optimization exemption requested on first launch.
-- **Android Dev Auto-Login:** `DevConfig.AUTO_LOGIN_ENABLED` (in `android-native/.../DevConfig.kt`) skips the login screen and auto-authenticates with hardcoded credentials (unit ID "T320"). Set to `false` for production builds. The auto-login still calls `/api/auth/login` server-side so sessions are established normally.
-- **Background PTT Persistence:** Connection info (server URL, unit ID, channel ID, channel name) is persisted to Android SharedPreferences (`CommandCommsServicePrefs`). On service cold-start, info is restored automatically.
-- **On-Demand GPS Tracking:** Activates GPS streaming only when necessary (emergency button or dispatcher request) via Socket.IO events, with server-side processing and broadcasting to dispatch consoles.
-- **Global Emergency Alerts:** A `GlobalEmergencyOverlay` component ensures emergency alarms are displayed and acknowledged across all application pages.
-- **Monitor-Only Audio Connections:** The Dispatch Console can monitor channels via Socket.IO signaling without consuming audio resources until actively monitored.
-- **Cost Optimization:** Audio connections are optimized through on-demand activation and idle timeouts (no external media server dependency).
+- **Frontend:** React/Vite with Zustand for state management. Audio connections utilize WebSockets with end-to-end Opus or PCM encoding.
+- **Backend:** An Express.js server providing API endpoints for authentication, user/channel management, and dispatch services, backed by PostgreSQL.
+- **Audio System:** Features a pure 48kHz mono 16-bit PCM browser audio system via WebSockets. Legacy Opus modules and frame types are supported for backward compatibility with Android and the AI dispatcher. Android clients use UDP with Opus encoding.
+- **Real-time Communication:** WebSockets for audio streaming; Socket.IO for signaling (presence, PTT floor control, data messages, emergency, location).
+- **Audio Processing:** Incorporates Web Audio API DSP for AGC, noise suppression, transmit compression, PTT release reliability, and feedback loop prevention.
+- **Authentication & Authorization:** Username/password authentication with bcrypt, session management, and role-based access control.
+- **AI Voice Dispatcher:** Integrates Azure Speech Services (STT/TTS) and Azure OpenAI (GPT-4o-mini) for natural language processing, enabling voice commands for various operational tasks and contextual conversations. It supports a two-tier response system for routine and complex interactions.
+- **T320 Screen-Off PTT:** Native Android service-level PTT functionality, independent of the main activity, ensuring consistent operation.
+- **On-Demand GPS Tracking:** Activates GPS streaming only when necessary (emergency or dispatcher request).
+- **Global Emergency Alerts:** `GlobalEmergencyOverlay` component ensures emergency alarms are displayed and acknowledged across the application.
+- **Monitor-Only Audio Connections:** Dispatch Console can monitor channels via Socket.IO without immediately consuming audio resources.
+- **Cost Optimization:** On-demand audio connection activation and idle timeouts to optimize resource usage.
 
 ### Feature Specifications
-- **Core PTT:** Unit ID-based authentication and Push-to-Talk functionality.
-- **Talkgroup System:** Channels are organized into zones with switching and scan capabilities.
-- **Unit Presence:** Real-time unit status (idle, transmitting, emergency) displayed via visual indicators and synced via Socket.IO.
-- **Emergency Button (E-Button):** Activates a transmit lock, broadcasts an emergency flag, and supports acknowledgment/cancellation.
-- **AI-Powered Emergency Escalation:** The AI Dispatcher automatically initiates a status check flow upon emergency, escalating if no response.
-- **Dispatcher Console:** A dedicated interface for multi-channel monitoring, unit management, audio controls, last transmission recall, emergency acknowledgment, and channel patching, including multi-channel TX and tone broadcasting.
-- **Dispatcher Map:** Real-time unit location display using Leaflet with OpenStreetMap tiles.
-- **Channel Chat:** Each channel includes a chat tab in the Dispatcher Console, showing text messages and playable voice messages with transcription.
-- **Admin System:** Provides user and channel management, role assignment, and activity logging. Zones and channels are structured with unique channel names per zone, enforced by a `room_key` (`COALESCE(zone, 'Default') || '__' || name`) used for audio rooms and signaling. Includes a temporary "Audio Tuning" tab with sliders for all TX/RX DSP parameters and Opus bitrate, pushing changes to connected T320 units in real time via Socket.IO `radio:dsp_config` events. Admin endpoints: `GET/PUT /api/admin/audio-tuning`, `POST /api/admin/audio-tuning/reset`.
-- **Audio Export System:** Allows exporting channel audio messages within a specified date range as a ZIP file including a `manifest.json`.
-- **Recording Logs (Admin):** A "Recording Logs" tab in the admin panel for reviewing, playing back, and exporting all radio transmissions. Supports date/time range filtering (military/24hr), multi-unit and multi-channel filtering, quick-filter presets (Last Hour through Last 7 Days), inline audio playback, individual WAV download, PDF transmission log export, and ZIP export with dated folder naming convention. Backend routes: `src/routes/recordingLogsRouter.js`. Frontend component: `client/src/RecordingLogs.jsx`. Uses `pdfkit` for PDF generation and `archiver` for ZIP bundling.
-- **Clear Air:** Dispatcher selects a channel and activates Clear Air mode (with persistent beep alert). Server broadcasts `clear_air:start` to all connected units via Socket.IO; units on that channel or in their scan list are force-connected and shown a prominent animated "CLEAR AIR — EMERGENCY TRAFFIC ONLY" banner. Releasing Clear Air requires a confirmation dialog and broadcasts `clear_air:end`. Late-joining units receive immediate Clear Air state on channel join.
+- **Core PTT:** Unit ID-based authentication and Push-to-Talk.
+- **Talkgroup System:** Channels organized into zones with switching and scan capabilities.
+- **Unit Presence:** Real-time unit status tracking via Socket.IO.
+- **Emergency Button (E-Button):** Activates transmit lock, broadcasts emergency flag, and supports acknowledgment.
+- **AI-Powered Emergency Escalation:** AI Dispatcher automatically initiates status checks and escalates emergencies.
+- **Dispatcher Console:** Multi-channel monitoring, unit management, audio controls, last transmission recall, emergency acknowledgment, channel patching, multi-channel TX, and tone broadcasting.
+- **Dispatcher Map:** Real-time unit location display using Leaflet with OpenStreetMap.
+- **Channel Chat:** Text and playable voice messages with transcription in the Dispatcher Console.
+- **Admin System:** User/channel management, role assignment, activity logging, and real-time audio tuning.
+- **Audio Export System:** Exports channel audio messages within a specified date range as a ZIP file.
+- **Recording Logs (Admin):** Review, playback, and export radio transmissions with filtering options and PDF/ZIP export.
+- **Clear Air:** Dispatcher-activated mode for emergency traffic, forcing units onto a channel with a prominent visual alert.
 
 ## External Dependencies
-- **opusscript:** Opus audio codec used server-side (AI dispatcher encode/decode, legacy PCM fallback) and browser-side (via asm.js build in `client/public/audio/opusscript_native_nasm.js` for end-to-end Opus transport).
-- **PostgreSQL:** Primary database for application data.
-- **Azure Speech Services:** Speech-to-Text (STT) and Text-to-Speech (TTS) for the AI Voice Dispatcher.
-- **Azure OpenAI (GPT-4o-mini):** Natural language intent classification for the AI Voice Dispatcher.
-- **`dnd-kit`:** Drag-and-drop functionality for UI components.
+- **opusscript:** Opus audio codec (server-side and browser-side).
+- **PostgreSQL:** Primary database.
+- **Azure Speech Services:** STT/TTS for AI Voice Dispatcher.
+- **Azure OpenAI (GPT-4o-mini):** Natural language intent classification for AI Voice Dispatcher.
+- **`dnd-kit`:** Drag-and-drop functionality.
 - **`bcrypt`:** Password hashing.
 - **`connect-pg-simple`:** PostgreSQL-backed session management.
-- **TailwindCSS v4:** Frontend styling framework.
+- **TailwindCSS v4:** Frontend styling.
 - **Zustand:** Frontend state management.
-- **Leaflet/react-leaflet:** Mapping components for the Dispatcher Map.
-- **`archiver`:** For ZIP file creation in the audio export system.
-
-## Azure VM Deployment
-The app is deployed on Azure VM `20.115.21.70` at `https://comms.reeder-systems.com`.
-
-### SSL/TLS
-- Let's Encrypt certificate issued via certbot (nginx plugin) on 2026-03-24
-- Certificate auto-renews via certbot systemd timer
-- nginx serves HTTPS on port 443 with HTTP→HTTPS redirect on port 80
-- Certificate path: `/etc/letsencrypt/live/comms.reeder-systems.com/`
-
-### Deploy Scripts
-Deployment scripts and configs are in the `deploy/` directory:
-- `deploy/remote-deploy.sh` — Full remote deployment: SSH into VM, sync code, install deps, build frontend, configure nginx+SSL, start PM2.
-- `deploy/setup-server.sh` — Provisions a fresh Ubuntu VM with Node.js 20, PostgreSQL 16, nginx, PM2, certbot, and firewall rules (ports 443, 80, 5100/UDP).
-- `deploy/nginx.conf` — Reverse proxy config with SSL, WebSocket upgrade for Socket.IO and signaling.
-- `deploy/nginx-pre-ssl.conf` — HTTP-only nginx config used before certbot runs.
-- `deploy/ecosystem.config.cjs` — PM2 process config for auto-restart and boot persistence.
-- `deploy/init-db.sh` — Creates the PostgreSQL database and user. The app auto-creates tables on first connect.
-- `deploy/deploy.sh` — Pulls latest code, installs deps, builds frontend, restarts PM2.
-- `.github/workflows/deploy.yml` — GitHub Actions workflow that auto-deploys to the Azure VM on push to `main` using `appleboy/ssh-action`. Requires GitHub repository secrets: `AZURE_VM_HOST`, `AZURE_VM_USER`, `AZURE_VM_SSH_KEY` (and optionally `AZURE_VM_PORT`, `AZURE_VM_FINGERPRINT`).
-- `.env.production.example` — Template listing all required and optional environment variables.
+- **Leaflet/react-leaflet:** Mapping components.
+- **`archiver`:** ZIP file creation.
