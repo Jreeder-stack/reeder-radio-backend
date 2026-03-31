@@ -3,6 +3,7 @@ import { CSS } from '@dnd-kit/utilities';
 import useDispatchStore from '../../state/dispatchStore.js';
 import audioTransportManager from '../../audio/AudioTransportManager.js';
 import { PTT_STATES } from '../../constants/pttStates.js';
+import { useAuth } from '../../AuthContext.jsx';
 
 function AudioLevelMeter({ level }) {
   const barCount = 8;
@@ -26,6 +27,8 @@ function AudioLevelMeter({ level }) {
 }
 
 export default function ChannelTile({ channel, onRemove }) {
+  const { user } = useAuth();
+  const localIdentity = (user?.unit_id && user.unit_id.trim()) || user?.username || "Unknown";
   const { 
     monitoredChannelIds, 
     mutedChannelIds, 
@@ -133,7 +136,7 @@ export default function ChannelTile({ channel, onRemove }) {
         </div>
       )}
 
-      {activeTransmission && !((pttState === PTT_STATES.TRANSMITTING || pttState === PTT_STATES.ARMING) && isTxSelected) && (
+      {activeTransmission && activeTransmission.from !== localIdentity && activeTransmission.from !== user?.username && !((pttState === PTT_STATES.TRANSMITTING || pttState === PTT_STATES.ARMING) && isTxSelected) && (
         <div className="px-2 py-1 mb-2 text-xs text-center text-yellow-200 bg-yellow-900 rounded">
           RX: {activeTransmission.from}
         </div>

@@ -227,6 +227,9 @@ export function AudioConnectionProvider({ children, user }) {
     listenerRemoversRef.current.push(removeSignalingReconnect);
 
     const removeSignalingPttStart = signalingManager.on('pttStart', (data) => {
+      if (data.unitId === identity || data.unitId === user?.username) {
+        return;
+      }
       const store = useDispatchStore.getState();
       store.setActiveTransmission(data.channelId, {
         from: data.unitId,
