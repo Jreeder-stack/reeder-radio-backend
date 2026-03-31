@@ -251,8 +251,8 @@ class RadioAudioEngine(private val context: Context) {
     }
 
     private fun onAudioPacketReceived(packet: OpusRadioPacket) {
-        if (packet.channelId != udpTransport.channelId) {
-            Log.d(TAG, "Dropping RX frame for other channel packetChannel=${packet.channelId} local=${udpTransport.channelId}")
+        if (packet.channelIndex != udpTransport.channelIndex) {
+            Log.d(TAG, "Dropping RX frame for other channel packetChannel=${packet.channelIndex} local=${udpTransport.channelIndex}")
             return
         }
         Log.d(TAG, "RADIO_RX_PACKET_RECEIVED seq=${packet.sequence} sender=${packet.senderUnitId} payload=${packet.opusPayload.size}")

@@ -151,6 +151,7 @@ class BackgroundAudioService : Service() {
                     if (channelName != null) servicePrefs.channelName = channelName
                     Log.d(TAG, "Channel updated: $channelId / $roomKey")
                     radioEngine?.udpTransport?.channelId = roomKey
+                    radioEngine?.udpTransport?.channelIndex = channelId
                     ensureBackgroundSignalingConnected()
                     scope.launch { syncBackgroundSignalingChannel() }
                 }
@@ -344,6 +345,7 @@ class BackgroundAudioService : Service() {
         engine.udpTransport.configure(relayHost, relayPort)
         Log.d(TAG, "Radio transport configured: host=$relayHost port=$relayPort")
         engine.udpTransport.channelId = servicePrefs.channelRoomKey ?: ""
+        engine.udpTransport.channelIndex = servicePrefs.channelId
         engine.udpTransport.unitId = servicePrefs.unitId ?: app.sessionPrefs.unitId ?: ""
 
         engine.onDisconnected = {

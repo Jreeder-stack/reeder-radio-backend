@@ -17,7 +17,7 @@ private const val PACKET_VERSION: Byte = 1
 private const val FLAG_FEC_HINT = 0x01
 
 data class OpusRadioPacket(
-    val channelId: String,
+    val channelIndex: Int,
     val senderUnitId: String,
     val sequence: Int,
     val timestampMs: Long,
@@ -43,6 +43,7 @@ class UdpAudioTransport(
     private var cachedHost: String = ""
 
     var channelId: String = ""
+    var channelIndex: Int = 0
     var unitId: String = ""
     var onPacketReceived: ((packet: OpusRadioPacket) -> Unit)? = null
     val localPort: Int?
@@ -151,7 +152,7 @@ class UdpAudioTransport(
         val seq = sequenceNumber++
         val senderBytes = unitId.toByteArray(Charsets.UTF_8)
         val senderLen = senderBytes.size.coerceAtMost(255)
-        val channelNumeric = channelId.toIntOrNull() ?: 0
+        val channelNumeric = channelIndex
         val timestampMs = (System.currentTimeMillis() and 0xFFFFFFFFL).toInt()
         val frame = ByteArray(SESSION_TOKEN_LEN + RADIO_HEADER_FIXED_LEN + senderLen + audioData.size)
         System.arraycopy(token, 0, frame, 0, SESSION_TOKEN_LEN)
@@ -248,7 +249,7 @@ class UdpAudioTransport(
         if (payloadLength <= 0 || packetLength < offset + payloadLength) return null
         val payload = buffer.copyOfRange(offset, offset + payloadLength)
         return OpusRadioPacket(
-            channelId = channelNumeric.toString(),
+            channelIndex = channelNumeric,
             senderUnitId = sender,
             sequence = sequence,
             timestampMs = timestampMs,
