@@ -11,12 +11,10 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.reedersystems.commandcomms.CommandCommsApp
-import com.reedersystems.commandcomms.DevConfig
 import com.reedersystems.commandcomms.KeyAction
 import com.reedersystems.commandcomms.audio.BackgroundAudioService
 import com.reedersystems.commandcomms.audio.radio.RadioState
 import com.reedersystems.commandcomms.data.model.Channel
-import com.reedersystems.commandcomms.data.repository.HttpException
 import com.reedersystems.commandcomms.data.model.PttState
 import com.reedersystems.commandcomms.data.model.Zone
 import com.reedersystems.commandcomms.signaling.ConnectionState
@@ -210,24 +208,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             Log.d(STARTUP_TAG, "CHANNEL_FETCH_START")
-            var result = app.channelRepository.getZones()
-            if (result.isFailure) {
-                val exception = result.exceptionOrNull()
-                val is401 = exception is HttpException && exception.code == 401
-                if (is401 && DevConfig.AUTO_LOGIN_ENABLED) {
-                    Log.w(STARTUP_TAG, "CHANNEL_FETCH_401_RETRY re-authenticating before retry")
-                    val loginResult = app.authRepository.login(
-                        DevConfig.AUTO_LOGIN_UNIT_ID,
-                        DevConfig.AUTO_LOGIN_PASSWORD
-                    )
-                    if (loginResult.isSuccess) {
-                        Log.d(STARTUP_TAG, "CHANNEL_FETCH_401_RETRY_AUTH_SUCCESS")
-                        result = app.channelRepository.getZones()
-                    } else {
-                        Log.e(STARTUP_TAG, "CHANNEL_FETCH_401_RETRY_AUTH_FAILED reason=${loginResult.exceptionOrNull()?.message}")
-                    }
-                }
-            }
+            val result = app.channelRepository.getZones()
             if (result.isSuccess) {
                 val zones = result.getOrThrow()
                 Log.d(STARTUP_TAG, "CHANNEL_FETCH_SUCCESS zones=${zones.size}")

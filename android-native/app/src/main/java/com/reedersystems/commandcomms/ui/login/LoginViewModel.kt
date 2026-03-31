@@ -5,7 +5,6 @@ import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.reedersystems.commandcomms.CommandCommsApp
-import com.reedersystems.commandcomms.DevConfig
 import com.reedersystems.commandcomms.data.model.User
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -28,51 +27,12 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
 
     private val app get() = getApplication<CommandCommsApp>()
 
-    val isAutoLoginMode = DevConfig.AUTO_LOGIN_ENABLED
-
-    private val _uiState = MutableStateFlow<LoginUiState>(
-        if (DevConfig.AUTO_LOGIN_ENABLED) LoginUiState.Loading else LoginUiState.CheckingSession
-    )
+    private val _uiState = MutableStateFlow<LoginUiState>(LoginUiState.CheckingSession)
     val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
-    private val _isAutoLoginInProgress = MutableStateFlow(DevConfig.AUTO_LOGIN_ENABLED)
-    val isAutoLoginInProgress: StateFlow<Boolean> = _isAutoLoginInProgress.asStateFlow()
     private val _manualInputDetected = MutableStateFlow(false)
 
     init {
-        if (DevConfig.AUTO_LOGIN_ENABLED) {
-            performAutoLogin()
-        } else {
-            checkExistingSession()
-        }
-    }
-
-    private fun performAutoLogin() {
-        viewModelScope.launch {
-            Log.d(LOGIN_TAG, "AUTO_LOGIN_TRIGGERED")
-            Log.d(STARTUP_TAG, "AUTH_REQUEST_SENT method=auto_login unitId=${DevConfig.AUTO_LOGIN_UNIT_ID}")
-            Log.d("LoginViewModel", "Auto-login enabled, logging in as ${DevConfig.AUTO_LOGIN_UNIT_ID}")
-            val result = app.authRepository.login(
-                DevConfig.AUTO_LOGIN_UNIT_ID,
-                DevConfig.AUTO_LOGIN_PASSWORD
-            )
-            if (result.isSuccess) {
-                val user = result.getOrThrow()
-                Log.d(STARTUP_TAG, "AUTH_SUCCESS user=${user.username} unitId=${user.unitId ?: "none"}")
-                Log.d(LOGIN_TAG, "SESSION_STATE_CHANGED state=authenticated source=auto_login")
-                saveUserPrefs(user)
-                fetchAndStoreRadioConfig()
-                _uiState.value = LoginUiState.Success(user)
-            } else {
-                Log.e(STARTUP_TAG, "AUTH_FAILED method=auto_login reason=${result.exceptionOrNull()?.message}")
-                Log.w("LoginViewModel", "Auto-login failed: ${result.exceptionOrNull()?.message}")
-                clearStaleSession("auto_login_failed")
-                _uiState.value = LoginUiState.Error(
-                    "Auto-login failed: ${result.exceptionOrNull()?.message ?: "Unknown error"}"
-                )
-            }
-            _isAutoLoginInProgress.value = false
-            logFormState("auto_login_completed")
-        }
+        checkExistingSession()
     }
 
     private fun checkExistingSession() {
@@ -140,12 +100,6 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
         Log.d(LOGIN_TAG, "LOGIN_INPUT_CHANGED field=$field length=${value.length}")
         if (!_manualInputDetected.value) {
             _manualInputDetected.value = true
-            if (isAutoLoginMode) {
-                Log.d(LOGIN_TAG, "AUTO_LOGIN_DISABLED_DUE_TO_MANUAL_INPUT")
-            }
-        }
-        if (_isAutoLoginInProgress.value) {
-            _isAutoLoginInProgress.value = false
         }
         logFormState("manual_input")
     }
@@ -166,7 +120,7 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
     private fun logFormState(source: String) {
         Log.d(
             LOGIN_TAG,
-            "LOGIN_FORM_STATE source=$source uiState=${_uiState.value::class.simpleName} autoLoginInProgress=${_isAutoLoginInProgress.value} manualInputDetected=${_manualInputDetected.value}"
+            "LOGIN_FORM_STATE source=$source uiState=${_uiState.value::class.simpleName} manualInputDetected=${_manualInputDetected.value}"
         )
     }
 

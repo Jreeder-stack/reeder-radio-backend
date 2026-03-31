@@ -36,7 +36,6 @@ fun LoginScreen(
     viewModel: LoginViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val isAutoLoginInProgress by viewModel.isAutoLoginInProgress.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
         Log.d("[LOGIN-FLOW]", "LOGIN_SCREEN_ENTER")
@@ -57,31 +56,18 @@ fun LoginScreen(
             .background(ColorBackground),
         contentAlignment = Alignment.Center
     ) {
-        if (viewModel.isAutoLoginMode && isAutoLoginInProgress && uiState !is LoginUiState.Error) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        when (uiState) {
+            is LoginUiState.CheckingSession -> {
                 CircularProgressIndicator(color = ColorPrimary)
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = "Connecting...",
-                    color = ColorTextSecondary,
-                    fontSize = 14.sp,
-                    fontFamily = FontFamily.Monospace
-                )
             }
-        } else {
-            when (uiState) {
-                is LoginUiState.CheckingSession -> {
-                    CircularProgressIndicator(color = ColorPrimary)
-                }
-                else -> {
-                    LoginForm(
-                        isLoading = uiState is LoginUiState.Loading,
-                        errorMessage = (uiState as? LoginUiState.Error)?.message,
-                        onLogin = { user, pass -> viewModel.login(user, pass) },
-                        onErrorDismiss = viewModel::clearError,
-                        onInputChanged = viewModel::onManualInputChanged
-                    )
-                }
+            else -> {
+                LoginForm(
+                    isLoading = uiState is LoginUiState.Loading,
+                    errorMessage = (uiState as? LoginUiState.Error)?.message,
+                    onLogin = { user, pass -> viewModel.login(user, pass) },
+                    onErrorDismiss = viewModel::clearError,
+                    onInputChanged = viewModel::onManualInputChanged
+                )
             }
         }
     }
