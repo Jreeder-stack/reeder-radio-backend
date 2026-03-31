@@ -342,17 +342,6 @@ class AudioRelayService {
     return 0;
   }
 
-
-  _resolveChannelIdNumeric({ channelKey, channelIdNumeric }) {
-    const candidate = Number.parseInt(String(channelIdNumeric ?? '').trim(), 10);
-    if (!Number.isNaN(candidate)) return candidate;
-
-    const fromKey = Number.parseInt(String(channelKey ?? '').trim(), 10);
-    if (!Number.isNaN(fromKey)) return fromKey;
-
-    return 0;
-  }
-
   _buildRelayPacket({ channelKey, channelIdNumeric, senderUnitId, sequence, opusPayload, flags = FLAG_FEC_HINT, timestampMs = Date.now() }) {
     const channelIdNum = this._resolveChannelIdNumeric({ channelKey, channelIdNumeric });
     if (channelIdNum === 0) {
