@@ -570,6 +570,40 @@ app.whenReady().then(() => {
 
   powerMonitor.on('resume', reconnectAudioOnWake);
   powerMonitor.on('unlock-screen', reconnectAudioOnWake);
+
+  let wasOnline = true;
+  const checkNetworkConnectivity = () => {
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    mainWindow.webContents.executeJavaScript('navigator.onLine')
+      .then((isOnline) => {
+        if (isOnline && !wasOnline) {
+          console.log('[Desktop] Network restored — triggering audio reconnection');
+          reconnectAudioOnWake();
+        }
+        wasOnline = isOnline;
+      })
+      .catch(() => {});
+  };
+
+  const networkCheckInterval = setInterval(checkNetworkConnectivity, 10000);
+
+  mainWindow.webContents.executeJavaScript(`
+    (function() {
+      window.addEventListener('online', function() {
+        console.log('[Desktop] Browser online event — reconnecting audio');
+        if (window.__audioTransportManager) {
+          window.__audioTransportManager.verifyAndReconnectAll();
+        }
+        if (window.__signalingManager) {
+          window.__signalingManager.verifyConnection();
+        }
+      });
+    })();
+  `).catch(() => {});
+
+  mainWindow.on('closed', () => {
+    clearInterval(networkCheckInterval);
+  });
 });
 
 app.on('activate', () => {

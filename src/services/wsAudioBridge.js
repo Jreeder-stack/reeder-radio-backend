@@ -29,10 +29,15 @@ function isValidPcmPacket(packet) {
   return true;
 }
 
+const PING_INTERVAL = 30000;
+const PONG_TIMEOUT = 10000;
+
 class WsAudioBridge {
   constructor() {
     this.wss = null;
     this.channelClients = new Map();
+    this._pingInterval = null;
+    this._pongCheckInterval = null;
   }
 
   attach(httpServer) {
@@ -70,6 +75,43 @@ class WsAudioBridge {
     this.wss.on('connection', (ws, request, user) => {
       this._onConnection(ws, request, user);
     });
+
+    this._startPingInterval();
+  }
+
+  _startPingInterval() {
+    if (this._pingInterval) clearInterval(this._pingInterval);
+    if (this._pongCheckInterval) clearInterval(this._pongCheckInterval);
+
+    this._pingInterval = setInterval(() => {
+      if (!this.wss) return;
+      const now = Date.now();
+      const heartbeat = JSON.stringify({ type: 'heartbeat', ts: now });
+      for (const ws of this.wss.clients) {
+        if (ws.readyState !== 1) continue;
+        if (!ws._audioPongPending) {
+          ws._audioPongPending = true;
+          ws._audioPingSentAt = now;
+          try {
+            ws.ping();
+            ws.send(heartbeat);
+          } catch (_) {
+            ws.terminate();
+          }
+        }
+      }
+    }, PING_INTERVAL);
+
+    this._pongCheckInterval = setInterval(() => {
+      if (!this.wss) return;
+      const now = Date.now();
+      for (const ws of this.wss.clients) {
+        if (ws._audioPongPending && ws._audioPingSentAt && (now - ws._audioPingSentAt) > PONG_TIMEOUT) {
+          console.warn('AUDIO_WS_PING_TIMEOUT', { channelId: ws._audioChannelId, unitId: ws._audioUnitId, elapsed: now - ws._audioPingSentAt });
+          ws.terminate();
+        }
+      }
+    }, 5000);
   }
 
   async _authenticate(request) {
@@ -109,6 +151,14 @@ class WsAudioBridge {
 
     if (!this.channelClients.has(channelId)) this.channelClients.set(channelId, new Map());
     this.channelClients.get(channelId).set(unitId, ws);
+
+    ws._audioChannelId = channelId;
+    ws._audioUnitId = unitId;
+    ws._audioPongPending = false;
+
+    ws.on('pong', () => {
+      ws._audioPongPending = false;
+    });
 
     audioRelayService.addWsSubscriber(channelId, unitId, ws);
 
@@ -168,6 +218,14 @@ class WsAudioBridge {
   }
 
   stop() {
+    if (this._pingInterval) {
+      clearInterval(this._pingInterval);
+      this._pingInterval = null;
+    }
+    if (this._pongCheckInterval) {
+      clearInterval(this._pongCheckInterval);
+      this._pongCheckInterval = null;
+    }
     if (this.wss) {
       this.wss.close();
       this.wss = null;

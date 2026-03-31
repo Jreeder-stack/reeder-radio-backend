@@ -9,7 +9,8 @@ const AudioConnectionContext = createContext(null);
 
 const RECONNECT_BASE_DELAY = 2000;
 const RECONNECT_MAX_DELAY = 30000;
-const RECONNECT_MAX_ATTEMPTS = 10;
+const RECONNECT_BACKOFF_ATTEMPTS = 10;
+const RECONNECT_SUSTAINED_INTERVAL = 30000;
 const STABILITY_THRESHOLD = 5000;
 const IDLE_TIMEOUT = 5 * 60 * 1000; // 5 minutes
 
@@ -74,14 +75,15 @@ export function AudioConnectionProvider({ children, user }) {
     }
     
     const attempts = reconnectAttempts.current.get(channelName) || 0;
-    if (attempts >= RECONNECT_MAX_ATTEMPTS) {
-      console.log(`[AudioConnection] Max reconnect attempts reached for ${channelName}`);
-      return;
-    }
     
-    const baseDelay = RECONNECT_BASE_DELAY * Math.pow(2, attempts);
-    const jitter = Math.random() * 1000;
-    const delay = Math.min(baseDelay + jitter, RECONNECT_MAX_DELAY);
+    let delay;
+    if (attempts < RECONNECT_BACKOFF_ATTEMPTS) {
+      const baseDelay = RECONNECT_BASE_DELAY * Math.pow(2, attempts);
+      const jitter = Math.random() * 1000;
+      delay = Math.min(baseDelay + jitter, RECONNECT_MAX_DELAY);
+    } else {
+      delay = RECONNECT_SUSTAINED_INTERVAL + Math.random() * 2000;
+    }
     
     console.log(`[AudioConnection] Scheduling reconnect for ${channelName} in ${Math.round(delay)}ms (attempt ${attempts + 1})`);
     
@@ -94,8 +96,9 @@ export function AudioConnectionProvider({ children, user }) {
       
       try {
         await audioTransportManager.connect(channelName, identity);
+        reconnectAttempts.current.delete(channelName);
         connectionStartTimes.current.set(channelName, Date.now());
-        lastActivityRef.current = Date.now(); // Reset idle timer on reconnect
+        lastActivityRef.current = Date.now();
         console.log(`[AudioConnection] Reconnected to ${channelName}`);
       } catch (err) {
         console.error(`[AudioConnection] Reconnect failed for ${channelName}:`, err);
@@ -209,6 +212,20 @@ export function AudioConnectionProvider({ children, user }) {
     });
     listenerRemoversRef.current.push(removeSignalingEmergencyEnd);
 
+    const removeSignalingReconnect = signalingManager.on('connectionChange', (data) => {
+      if (data.connected) {
+        console.log('[AudioConnection] Signaling reconnected — verifying audio WebSockets');
+        audioTransportManager.verifyAndReconnectAll().then((count) => {
+          if (count > 0) {
+            console.log(`[AudioConnection] Recovered ${count} dead audio WebSocket(s) after signaling reconnect`);
+          }
+        }).catch((err) => {
+          console.error('[AudioConnection] Audio recovery after signaling reconnect failed:', err.message);
+        });
+      }
+    });
+    listenerRemoversRef.current.push(removeSignalingReconnect);
+
     const removeSignalingPttStart = signalingManager.on('pttStart', (data) => {
       const store = useDispatchStore.getState();
       store.setActiveTransmission(data.channelId, {
@@ -242,7 +259,7 @@ export function AudioConnectionProvider({ children, user }) {
           setConnectionHealth(audioTransportManager.getConnectionStatus());
         }
         
-        if (state === 'disconnected' && mountedRef.current && !audioTransportManager.isDispatcherMode()) {
+        if (state === 'disconnected' && mountedRef.current) {
           scheduleReconnect(channelName, identity);
         }
       })

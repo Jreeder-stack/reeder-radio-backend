@@ -6,6 +6,9 @@ import { buildPcmPacket, validatePcmPacket } from './PcmPacket.js';
 import { PcmCaptureEngine } from './PcmCaptureEngine.js';
 import { PcmPlaybackEngine } from './PcmPlaybackEngine.js';
 
+const WS_HEALTH_CHECK_INTERVAL = 5000;
+const WS_LIVENESS_TIMEOUT = 45000;
+
 class AudioTransportManager {
   constructor() {
     this.rooms = new Map();
@@ -32,6 +35,27 @@ class AudioTransportManager {
     this._playback = new PcmPlaybackEngine();
     this._txSequence = 0;
     this._loopbackOk = false;
+
+    this._targetChannels = new Map();
+    this._healthCheckInterval = null;
+    this._startHealthCheck();
+  }
+
+  _startHealthCheck() {
+    if (this._healthCheckInterval) clearInterval(this._healthCheckInterval);
+    this._healthCheckInterval = setInterval(() => {
+      const now = Date.now();
+      for (const [channelName, conn] of this.rooms) {
+        const isDead = !conn.ws || conn.ws.readyState !== WebSocket.OPEN;
+        const isStale = conn.ws && conn.ws.readyState === WebSocket.OPEN && conn._lastActivity && (now - conn._lastActivity) > WS_LIVENESS_TIMEOUT;
+        if (isDead || isStale) {
+          console.warn('AUDIO_WS_HEALTH_CHECK_DEAD', { channelName, readyState: conn.ws?.readyState, stale: isStale, lastActivity: conn._lastActivity });
+          try { conn.ws.close(); } catch (_) {}
+          this.rooms.delete(channelName);
+          this._emitConnectionStateChange(channelName, 'disconnected');
+        }
+      }
+    }, WS_HEALTH_CHECK_INTERVAL);
   }
 
   addTrackSubscribedListener(cb) { this._trackSubscribedListeners.add(cb); return () => this._trackSubscribedListeners.delete(cb); }
@@ -106,14 +130,16 @@ class AudioTransportManager {
 
   async connect(channelName, identity) {
     if (!channelName || !identity) throw new Error('channelName and identity required');
+    this._targetChannels.set(channelName, identity);
     if (this.rooms.has(channelName)) return this.rooms.get(channelName);
     if (this.pendingConnections.has(channelName)) return this.pendingConnections.get(channelName);
 
     const pending = (async () => {
       const ws = await this._openWebSocket(channelName, identity);
-      const conn = { channelName, unitId: identity, ws, state: 'connected' };
+      const conn = { channelName, unitId: identity, ws, state: 'connected', _lastActivity: Date.now() };
 
       ws.onmessage = async (evt) => {
+        conn._lastActivity = Date.now();
         if (typeof evt.data !== 'string') return;
         let msg;
         try {
@@ -184,6 +210,7 @@ class AudioTransportManager {
       await this.stopTransmit();
       return;
     }
+    this._targetChannels.delete(channelName);
     const conn = this.rooms.get(channelName);
     if (!conn) return;
     this.rooms.delete(channelName);
@@ -192,6 +219,7 @@ class AudioTransportManager {
   }
 
   async disconnectAll() {
+    this._targetChannels.clear();
     for (const channel of [...this.rooms.keys()]) {
       await this.disconnect(channel);
     }
@@ -322,17 +350,66 @@ class AudioTransportManager {
 
   getConnectionStatus() {
     const total = this.rooms.size;
+    let healthy = 0;
+    const channels = [];
+    for (const [ch, conn] of this.rooms) {
+      const isOpen = conn.ws && conn.ws.readyState === WebSocket.OPEN;
+      if (isOpen) healthy++;
+      channels.push({
+        channel: ch,
+        connected: isOpen,
+        quality: isOpen ? 'good' : 'poor',
+        state: isOpen ? 'connected' : 'reconnecting',
+      });
+    }
+    for (const ch of this.pendingConnections.keys()) {
+      if (!this.rooms.has(ch)) {
+        channels.push({ channel: ch, connected: false, quality: 'poor', state: 'reconnecting' });
+      }
+    }
+    const reconnecting = this.pendingConnections.size > 0 || (total > 0 && healthy < total);
     return {
-      status: total > 0 ? 'connected' : 'disconnected',
-      healthy: total,
-      total,
-      channels: [...this.rooms.keys()].map((ch) => ({ channel: ch, connected: true, quality: 'good', state: 'connected' })),
+      status: healthy > 0 ? 'connected' : (reconnecting ? 'reconnecting' : 'disconnected'),
+      healthy,
+      total: total + (channels.length - total),
+      channels,
     };
   }
 
   setDispatcherMode(enabled) { this._dispatcherMode = !!enabled; }
   isDispatcherMode() { return this._dispatcherMode; }
   scheduleDispatcherReconnect(_channelName, _identity) {}
+
+  async verifyAndReconnectAll() {
+    const toReconnect = [];
+    for (const [channelName, conn] of this.rooms) {
+      if (!conn.ws || conn.ws.readyState !== WebSocket.OPEN) {
+        toReconnect.push({ channelName, unitId: conn.unitId });
+      }
+    }
+    for (const [channelName, unitId] of this._targetChannels) {
+      if (!this.rooms.has(channelName) && !this.pendingConnections.has(channelName)) {
+        if (!toReconnect.some(r => r.channelName === channelName)) {
+          toReconnect.push({ channelName, unitId });
+        }
+      }
+    }
+    for (const { channelName, unitId } of toReconnect) {
+      console.log('AUDIO_WS_VERIFY_RECONNECT', { channelName, unitId });
+      const existing = this.rooms.get(channelName);
+      if (existing) {
+        try { existing.ws?.close(); } catch (_) {}
+        this.rooms.delete(channelName);
+        this._emitConnectionStateChange(channelName, 'disconnected');
+      }
+      try {
+        await this.connect(channelName, unitId);
+      } catch (err) {
+        console.error('AUDIO_WS_VERIFY_RECONNECT_FAILED', { channelName, error: err.message });
+      }
+    }
+    return toReconnect.length;
+  }
 
   broadcastData(data) {
     for (const [channelName] of this.rooms) {
