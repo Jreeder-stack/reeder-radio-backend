@@ -1,0 +1,94 @@
+STEP 150 — FIX FIRST-AUDIO GARBLED AFTER RECONNECT + REDUCE STARTUP DELAY
+
+Current state:
+- Native radio TX/RX now works.
+- However, audio startup is slow, especially the first time.
+- More importantly: the first transmission after the radio disconnects/reconnects is often extremely garbled / hard to understand.
+- Later transmissions are better.
+
+This means we need to investigate reconnect cold-start audio quality and startup delay together.
+
+CRITICAL HARD RULES:
+1. DO NOT TOUCH hardware key mappings.
+2. DO NOT MODIFY PTT/emergency routing.
+3. DO NOT CHANGE permission prompt behavior.
+4. DO NOT REBREAK the working RX/TX path.
+5. Make only small runtime-stability / latency changes.
+
+Goal:
+Fix garbled first audio after reconnect and reduce first-TX / first-RX startup delay.
+
+PHASE A — Measure the exact delay and cold-start path
+Add timing/state logs for:
+- signaling reconnect start
+- signaling re-auth success
+- channel rejoin success
+- subscriber re-register success
+- session token ready
+- first PTT after reconnect
+- first TX frame encoded/sent after reconnect
+- first RX packet received after reconnect
+- first RX frame decoded after reconnect
+- first playback write after reconnect
+
+Use logs like:
+- LATENCY_RECONNECT_START t=
+- LATENCY_REJOIN_SUCCESS t=
+- LATENCY_TOKEN_READY t=
+- LATENCY_FIRST_TX_AFTER_RECONNECT t=
+- LATENCY_FIRST_RX_PACKET_AFTER_RECONNECT t=
+- LATENCY_FIRST_PLAYBACK_WRITE_AFTER_RECONNECT t=
+
+Also add:
+- RECONNECT_AUDIO_PATH_RESET
+- RECONNECT_DECODER_REINIT
+- RECONNECT_ENCODER_REINIT
+- RECONNECT_JITTER_RESET
+- RECONNECT_FIRST_AUDIO_QUALITY_WINDOW
+
+PHASE B — Audit reconnect cleanup/reset
+Verify reconnect does a clean, explicit reset of:
+- UDP transport state
+- session token / active channel state
+- encoder state
+- decoder state
+- jitter buffer contents
+- sequence/timestamp tracking
+- playback state
+
+Fix any stale-state carryover.
+Do not leave old buffered frames from the previous session/channel alive after reconnect.
+
+PHASE C — Stabilize first audio after reconnect
+Investigate whether garble is caused by:
+- partial/bad first Opus frames
+- stale decoder state
+- jitter buffer too shallow at reconnect start
+- playback starting too early
+- sequence discontinuity not handled
+
+Apply the smallest safe fix, likely one or more of:
+- explicit decoder reset/reinit on reconnect
+- explicit jitter buffer flush/reset on reconnect
+- short startup protection window for first frames after reconnect
+- require a minimal valid frame threshold before first playback after reconnect
+- reset sequence/timestamp tracking on reconnect/channel rejoin
+
+PHASE D — Reduce first audio delay without harming quality
+If safe, keep warm while joined/idle:
+- AudioTrack
+- decoder
+- encoder
+- transport/session readiness
+
+Reduce startup delay conservatively.
+Do not trade reliability for speed.
+
+PHASE E — Output
+Return:
+1. exact root cause of garbled first transmission after reconnect
+2. exact biggest source of startup delay
+3. file + function
+4. exact fix applied
+5. before/after logs if available
+6. confirmation hardware key mapping untouched
