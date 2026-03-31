@@ -12,7 +12,7 @@ class OpusCodec {
     companion object {
         const val SAMPLE_RATE = 48000
         const val CHANNELS = 1
-        const val BITRATE = 16000
+        const val BITRATE = 24000
         const val FRAME_SIZE = 960
         const val FRAME_DURATION_MS = 20
         const val MAX_ENCODED_SIZE = 512
@@ -31,14 +31,14 @@ class OpusCodec {
             val enc = OpusEncoder(SAMPLE_RATE, CHANNELS, OpusApplication.OPUS_APPLICATION_VOIP)
             enc.setBitrate(BITRATE)
             enc.setSignalType(OpusSignal.OPUS_SIGNAL_VOICE)
-            enc.setComplexity(0)
+            enc.setComplexity(5)
             enc.setUseVBR(true)
             enc.setUseInbandFEC(true)
             enc.setPacketLossPercent(10)
             encoder = enc
             decoder = OpusDecoder(SAMPLE_RATE, CHANNELS)
             initialized = true
-            Log.d(TAG, "OpusCodec initialized (Concentus, sample_rate=$SAMPLE_RATE frame_size=$FRAME_SIZE channels=$CHANNELS complexity=0)")
+            Log.d(TAG, "OpusCodec initialized (Concentus, sample_rate=$SAMPLE_RATE frame_size=$FRAME_SIZE channels=$CHANNELS complexity=5)")
         } catch (e: Exception) {
             Log.e(TAG, "OpusCodec initialization failed: ${e.message}", e)
         }
@@ -61,7 +61,7 @@ class OpusCodec {
                 val enc = OpusEncoder(SAMPLE_RATE, CHANNELS, OpusApplication.OPUS_APPLICATION_VOIP)
                 enc.setBitrate(BITRATE)
                 enc.setSignalType(OpusSignal.OPUS_SIGNAL_VOICE)
-                enc.setComplexity(0)
+                enc.setComplexity(5)
                 enc.setUseVBR(true)
                 enc.setUseInbandFEC(true)
                 enc.setPacketLossPercent(10)
@@ -113,12 +113,12 @@ class OpusCodec {
             val enc = OpusEncoder(SAMPLE_RATE, CHANNELS, OpusApplication.OPUS_APPLICATION_VOIP)
             enc.setBitrate(BITRATE)
             enc.setSignalType(OpusSignal.OPUS_SIGNAL_VOICE)
-            enc.setComplexity(0)
+            enc.setComplexity(5)
             enc.setUseVBR(true)
             enc.setUseInbandFEC(true)
             enc.setPacketLossPercent(10)
             encoder = enc
-            Log.d(TAG, "Encoder re-initialized after assertion failure (complexity=0)")
+            Log.d(TAG, "Encoder re-initialized after assertion failure (complexity=5)")
         } catch (t: Throwable) {
             Log.e(TAG, "Failed to re-initialize encoder: ${t.message}", t)
             encoder = null

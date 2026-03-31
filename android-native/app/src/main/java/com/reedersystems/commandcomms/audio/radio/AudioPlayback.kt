@@ -9,7 +9,7 @@ import kotlinx.coroutines.*
 private const val TAG = "[AudioPlay]"
 private const val SAMPLE_RATE = 48000
 private const val FRAME_INTERVAL_MS = 20L
-private const val DEFAULT_SOFTWARE_GAIN = 3.5f
+private const val DEFAULT_SOFTWARE_GAIN = 2.5f
 private const val IDLE_TIMEOUT_MS = 200L
 private const val WAIT_WINDOW_MS = 20L
 
@@ -27,6 +27,90 @@ class AudioPlayback(
     @Volatile
     private var firstPlaybackWriteLogged = false
 
+    private var rxHpPrevOutput: Double = 0.0
+    private var rxHpPrevInput: Double = 0.0
+    private val RX_HP_ALPHA: Double = 0.9673
+
+    private val RX_LP_B0: Double = 0.06050
+    private val RX_LP_B1: Double = 0.12100
+    private val RX_LP_B2: Double = 0.06050
+    private val RX_LP_A1: Double = -1.19388
+    private val RX_LP_A2: Double = 0.43585
+    private var rxLpX1: Double = 0.0
+    private var rxLpX2: Double = 0.0
+    private var rxLpY1: Double = 0.0
+    private var rxLpY2: Double = 0.0
+
+    private val GATE_THRESHOLD_DB: Double = -40.0
+    private val GATE_ATTACK_COEFF: Double = 1.0 - Math.exp(-1.0 / (SAMPLE_RATE * 0.001))
+    private val GATE_RELEASE_COEFF: Double = 1.0 - Math.exp(-1.0 / (SAMPLE_RATE * 0.05))
+    private var gateEnvelopeDb: Double = -90.0
+    private var gateAttenuation: Double = 0.0
+
+    private fun resetRxDspState() {
+        rxHpPrevOutput = 0.0
+        rxHpPrevInput = 0.0
+        rxLpX1 = 0.0; rxLpX2 = 0.0; rxLpY1 = 0.0; rxLpY2 = 0.0
+        gateEnvelopeDb = -90.0
+        gateAttenuation = 0.0
+    }
+
+    private fun rxHighPassFilter(buffer: ByteArray, length: Int) {
+        val buf = java.nio.ByteBuffer.wrap(buffer, 0, length).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+        val sampleCount = length / 2
+        var prevOut = rxHpPrevOutput
+        var prevIn = rxHpPrevInput
+        for (i in 0 until sampleCount) {
+            val x = buf.getShort(i * 2).toDouble()
+            val y = RX_HP_ALPHA * (prevOut + x - prevIn)
+            prevIn = x
+            prevOut = y
+            buf.putShort(i * 2, y.coerceIn(-32768.0, 32767.0).toInt().toShort())
+        }
+        rxHpPrevOutput = prevOut
+        rxHpPrevInput = prevIn
+    }
+
+    private fun rxLowPassFilter(buffer: ByteArray, length: Int) {
+        val buf = java.nio.ByteBuffer.wrap(buffer, 0, length).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+        val sampleCount = length / 2
+        var x1 = rxLpX1; var x2 = rxLpX2
+        var y1 = rxLpY1; var y2 = rxLpY2
+        for (i in 0 until sampleCount) {
+            val x0 = buf.getShort(i * 2).toDouble()
+            val y0 = RX_LP_B0 * x0 + RX_LP_B1 * x1 + RX_LP_B2 * x2 - RX_LP_A1 * y1 - RX_LP_A2 * y2
+            x2 = x1; x1 = x0
+            y2 = y1; y1 = y0
+            buf.putShort(i * 2, y0.coerceIn(-32768.0, 32767.0).toInt().toShort())
+        }
+        rxLpX1 = x1; rxLpX2 = x2
+        rxLpY1 = y1; rxLpY2 = y2
+    }
+
+    private fun rxNoiseGate(buffer: ByteArray, length: Int) {
+        val buf = java.nio.ByteBuffer.wrap(buffer, 0, length).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+        val sampleCount = length / 2
+        var envelope = gateEnvelopeDb
+        var atten = gateAttenuation
+        for (i in 0 until sampleCount) {
+            val sample = buf.getShort(i * 2).toDouble()
+            val absSample = Math.abs(sample) + 1e-10
+            val inputDb = 20.0 * Math.log10(absSample / 32768.0)
+
+            val coeff = if (inputDb > envelope) GATE_ATTACK_COEFF else GATE_RELEASE_COEFF
+            envelope += coeff * (inputDb - envelope)
+
+            val targetAtten = if (envelope < GATE_THRESHOLD_DB) 0.0 else 1.0
+            val smoothCoeff = if (targetAtten > atten) GATE_ATTACK_COEFF else GATE_RELEASE_COEFF
+            atten += smoothCoeff * (targetAtten - atten)
+
+            val output = sample * atten
+            buf.putShort(i * 2, output.coerceIn(-32768.0, 32767.0).toInt().toShort())
+        }
+        gateEnvelopeDb = envelope
+        gateAttenuation = atten
+    }
+
     private fun applyGain(pcmBytes: ByteArray): ByteArray {
         if (softwareGain == 1.0f) return pcmBytes
         val buf = java.nio.ByteBuffer.wrap(pcmBytes).order(java.nio.ByteOrder.LITTLE_ENDIAN)
@@ -36,6 +120,13 @@ class AudioPlayback(
             shortBuf.put(i, amplified.coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort())
         }
         return pcmBytes
+    }
+
+    private fun applyRxDspChain(pcmBytes: ByteArray) {
+        val length = pcmBytes.size
+        rxHighPassFilter(pcmBytes, length)
+        rxLowPassFilter(pcmBytes, length)
+        rxNoiseGate(pcmBytes, length)
     }
 
     fun ensureTrackReady() {
@@ -86,6 +177,7 @@ class AudioPlayback(
             }
             firstRxDecodeLogged = false
             firstPlaybackWriteLogged = false
+            resetRxDspState()
             Log.d(TAG, "RECONNECT_AUDIOTRACK_FLUSHED stale playback data cleared")
         } catch (e: Exception) {
             Log.w(TAG, "RECONNECT_AUDIOTRACK_FLUSH_FAILED: ${e.message}")
@@ -146,6 +238,7 @@ class AudioPlayback(
                             }
                             Log.d(TAG, "OPUS_RX_FRAME_DECODED bytes=${data.size} pcm=${pcm.size}")
                             Log.d(TAG, "RADIO_OPUS_RX_FRAME_DECODED bytes=${data.size} pcm=${pcm.size}")
+                            applyRxDspChain(pcm)
                             applyGain(pcm)
                             track.write(pcm, 0, pcm.size)
                         }
@@ -165,6 +258,7 @@ class AudioPlayback(
                         plcCount++
                         val pcm = opusCodec.decode(null)
                         if (pcm != null && pcm.isNotEmpty()) {
+                            applyRxDspChain(pcm)
                             applyGain(pcm)
                             track.write(pcm, 0, pcm.size)
                             if (plcCount % 10 == 1) {
