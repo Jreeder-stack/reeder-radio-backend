@@ -63,6 +63,10 @@ class BackgroundAudioService : Service() {
     private var signalingEventsJob: Job? = null
     private var pendingFloorTimeoutJob: Job? = null
 
+    @Volatile private var hadPriorAuthentication = false
+    @Volatile private var reconnectStartTimeMs: Long = 0L
+    @Volatile private var pendingFirstPttAfterReconnect = false
+
     override fun onCreate() {
         super.onCreate()
         Log.d(TAG, "BackgroundAudioService created")
@@ -236,8 +240,27 @@ class BackgroundAudioService : Service() {
             signalingConnectionJob = scope.launch {
                 app.signalingRepository.connectionState.collectLatest { state ->
                     when (state) {
-                        ConnectionState.AUTHENTICATED -> syncBackgroundSignalingChannel()
+                        ConnectionState.AUTHENTICATED -> {
+                            val isReconnect = hadPriorAuthentication
+                            if (isReconnect) {
+                                val reconnectDurationMs = if (reconnectStartTimeMs > 0) {
+                                    System.currentTimeMillis() - reconnectStartTimeMs
+                                } else 0L
+                                Log.d(TAG, "RECONNECT_SIGNALING_REAUTHENTICATED reconnectDurationMs=$reconnectDurationMs")
+                                pendingFirstPttAfterReconnect = true
+                                reconnectStartTimeMs = 0L
+                                triggerReconnectPipelineReset()
+                            } else {
+                                Log.d(TAG, "LATENCY_SIGNALING_FIRST_AUTH")
+                            }
+                            syncBackgroundSignalingChannel()
+                            hadPriorAuthentication = true
+                        }
                         ConnectionState.DISCONNECTED -> {
+                            if (hadPriorAuthentication) {
+                                reconnectStartTimeMs = System.currentTimeMillis()
+                                Log.d(TAG, "RECONNECT_SIGNALING_DISCONNECTED — tracking reconnect latency")
+                            }
                             joinedSignalingChannelId = null
                             pendingSignalingChannelId = null
                         }
@@ -442,10 +465,14 @@ class BackgroundAudioService : Service() {
                             return@collectLatest
                         }
 
+                        val isReconnectToken = sessionTokenChannelId == event.channelId
                         Log.d(
                             TAG,
-                            "RADIO_TOKEN_ACCEPTED_FOR_ACTIVE_CHANNEL activeChannel=$activeChannel tokenChannel=${event.channelId}"
+                            "RADIO_TOKEN_ACCEPTED_FOR_ACTIVE_CHANNEL activeChannel=$activeChannel tokenChannel=${event.channelId} isReconnect=$isReconnectToken"
                         )
+                        if (isReconnectToken) {
+                            Log.d(TAG, "RECONNECT_SESSION_TOKEN_RECEIVED channelId=${event.channelId}")
+                        }
                         sessionTokenChannelId = event.channelId
                         Log.d(TAG, "RADIO_SESSION_TOKEN_RECEIVED channelId=${event.channelId}")
                         engine.udpTransport.setSessionToken(event.token)
@@ -456,6 +483,11 @@ class BackgroundAudioService : Service() {
                             pendingSignalingChannelId = null
                         }
                         Log.d(TAG, "RADIO_CHANNEL_JOINED channelId=${event.channelId}")
+                        if (hadPriorAuthentication) {
+                            Log.d(TAG, "RECONNECT_CHANNEL_REJOINED channelId=${event.channelId}")
+                        } else {
+                            Log.d(TAG, "LATENCY_CHANNEL_JOINED channelId=${event.channelId}")
+                        }
                     }
                     is SignalingEvent.RadioPttGranted -> {
                         Log.d(TAG, "RADIO_PTT_GRANTED channelId=${event.channelId} senderUnitId=${event.senderUnitId}")
@@ -497,6 +529,10 @@ class BackgroundAudioService : Service() {
     private fun handleRadioPttDown(signaling: Boolean) {
         Log.d(TAG, "handleRadioPttDown pttState=$pttState signaling=$signaling")
         Log.d(TAG, "RADIO_PTT_DOWN")
+        if (pendingFirstPttAfterReconnect) {
+            pendingFirstPttAfterReconnect = false
+            Log.d(TAG, "LATENCY_FIRST_PTT_AFTER_RECONNECT")
+        }
 
         if (!app.sessionPrefs.micPermissionGranted) {
             Log.w(TAG, "Radio PTT DOWN: mic permission denied — blocked")
@@ -620,6 +656,17 @@ class BackgroundAudioService : Service() {
         if (joinedSignalingChannelId != roomKey) return false to "channel_not_joined joined=$joinedSignalingChannelId target=$roomKey"
         if (sessionTokenChannelId != roomKey) return false to "session_token_missing channel=$roomKey tokenChannel=$sessionTokenChannelId"
         return true to null
+    }
+
+    private fun triggerReconnectPipelineReset() {
+        val engine = radioEngine ?: return
+        Log.d(TAG, "RECONNECT_AUTH_PIPELINE_RESET — fallback cleanup on signaling re-auth")
+        engine.opusCodec.resetDecoder()
+        engine.opusCodec.resetEncoder()
+        engine.jitterBuffer.flushForReconnect()
+        engine.audioPlayback.clearStaleFrames()
+        engine.udpTransport.clearSessionToken()
+        Log.d(TAG, "RECONNECT_AUTH_PIPELINE_RESET_COMPLETE — codec, jitter, playback, transport all reset")
     }
 
     private fun startPendingFloorTimeout(roomKey: String) {

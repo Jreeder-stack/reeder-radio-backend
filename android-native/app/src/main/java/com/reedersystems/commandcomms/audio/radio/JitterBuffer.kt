@@ -10,6 +10,7 @@ private const val INITIAL_DEPTH = 3
 private const val JITTER_ALPHA = 0.07
 private const val SEQ_MOD = 65536
 private const val SEQ_HALF = 32768
+private const val RECONNECT_PROTECTION_FRAMES = 3
 
 class JitterBuffer {
 
@@ -25,6 +26,10 @@ class JitterBuffer {
     private var lastArrivalTimeNs: Long = 0L
     private var estimatedJitterMs: Double = 0.0
 
+    @Volatile
+    private var reconnectProtection = false
+    private var reconnectProtectionDepth = RECONNECT_PROTECTION_FRAMES
+
     fun start() {
         synchronized(lock) {
             running = true
@@ -35,6 +40,7 @@ class JitterBuffer {
             targetDepth = INITIAL_DEPTH
             lastArrivalTimeNs = 0L
             estimatedJitterMs = 0.0
+            reconnectProtection = false
         }
         Log.d(TAG, "JitterBuffer started (adaptive depth=$INITIAL_DEPTH)")
     }
@@ -46,8 +52,25 @@ class JitterBuffer {
             buffer.clear()
             nextPlaybackSeq = -1
             preBuffering = true
+            reconnectProtection = false
         }
         Log.d(TAG, "JitterBuffer stopped")
+    }
+
+    fun flushForReconnect() {
+        synchronized(lock) {
+            val staleCount = buffer.size
+            buffer.clear()
+            nextPlaybackSeq = -1
+            preBuffering = true
+            playbackActive = false
+            lastArrivalTimeNs = 0L
+            estimatedJitterMs = 0.0
+            targetDepth = INITIAL_DEPTH
+            reconnectProtection = true
+            reconnectProtectionDepth = RECONNECT_PROTECTION_FRAMES
+            Log.d(TAG, "RECONNECT_JITTER_BUFFER_FLUSHED staleFrames=$staleCount protectionFrames=$RECONNECT_PROTECTION_FRAMES")
+        }
     }
 
     fun enqueue(sequence: Int, packet: ByteArray) {
@@ -105,13 +128,24 @@ class JitterBuffer {
             if (!running) return false
             if (!preBuffering) return playbackActive
 
-            if (buffer.size < targetDepth) {
+            val requiredDepth = if (reconnectProtection) {
+                maxOf(targetDepth, reconnectProtectionDepth)
+            } else {
+                targetDepth
+            }
+
+            if (buffer.size < requiredDepth) {
                 return false
             }
             preBuffering = false
             playbackActive = true
             nextPlaybackSeq = findOldestSeq() ?: return false
-            Log.d(TAG, "Pre-buffer complete, starting at seq=$nextPlaybackSeq (depth=$targetDepth, buffered=${buffer.size})")
+            if (reconnectProtection) {
+                Log.d(TAG, "RECONNECT_PROTECTION_COMPLETE — playback starting at seq=$nextPlaybackSeq (protectionDepth=$reconnectProtectionDepth buffered=${buffer.size})")
+                reconnectProtection = false
+            } else {
+                Log.d(TAG, "Pre-buffer complete, starting at seq=$nextPlaybackSeq (depth=$targetDepth, buffered=${buffer.size})")
+            }
             return true
         }
     }

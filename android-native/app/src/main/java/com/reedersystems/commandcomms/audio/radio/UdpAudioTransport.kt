@@ -68,9 +68,22 @@ class UdpAudioTransport(
         Log.d(TAG, "Configured relay: $host:$port")
     }
 
+    var onSessionTokenChanged: (() -> Unit)? = null
+
     fun setSessionToken(hexToken: String) {
+        val hadPreviousToken = sessionTokenBytes != null
+        sequenceNumber = 0
+        rxPacketCount = 0
         sessionTokenBytes = hexStringToByteArray(hexToken)
+        if (hadPreviousToken) {
+            Log.d(TAG, "RECONNECT_SESSION_TOKEN_SET seqReset=true rxCountReset=true previousTokenCleared=true")
+        } else {
+            Log.d(TAG, "LATENCY_SESSION_TOKEN_READY tokenBytes=${hexToken.length / 2}")
+        }
         Log.d(TAG, "Session token set (${hexToken.length / 2} bytes)")
+        if (hadPreviousToken) {
+            onSessionTokenChanged?.invoke()
+        }
         sendImmediateKeepalive()
     }
 

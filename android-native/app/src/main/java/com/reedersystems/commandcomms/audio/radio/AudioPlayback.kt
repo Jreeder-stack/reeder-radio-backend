@@ -22,6 +22,10 @@ class AudioPlayback(
     private var playbackJob: Job? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     var softwareGain: Float = DEFAULT_SOFTWARE_GAIN
+    @Volatile
+    private var firstRxDecodeLogged = false
+    @Volatile
+    private var firstPlaybackWriteLogged = false
 
     private fun applyGain(pcmBytes: ByteArray): ByteArray {
         if (softwareGain == 1.0f) return pcmBytes
@@ -34,9 +38,8 @@ class AudioPlayback(
         return pcmBytes
     }
 
-    fun start() {
+    fun ensureTrackReady() {
         if (audioTrack != null) return
-
         val channelConfig = AudioFormat.CHANNEL_OUT_MONO
         val audioFormat = AudioFormat.ENCODING_PCM_16BIT
         val minBufferSize = AudioTrack.getMinBufferSize(SAMPLE_RATE, channelConfig, audioFormat)
@@ -67,15 +70,43 @@ class AudioPlayback(
             return
         }
 
-        track.play()
         audioTrack = track
+        Log.d(TAG, "LATENCY_AUDIOTRACK_WARM_IDLE AudioTrack pre-initialized: ${SAMPLE_RATE}Hz mono, low-latency")
+    }
+
+    fun clearStaleFrames() {
+        val track = audioTrack ?: return
+        try {
+            if (track.playState == AudioTrack.PLAYSTATE_PLAYING) {
+                track.pause()
+                track.flush()
+                track.play()
+            } else {
+                track.flush()
+            }
+            firstRxDecodeLogged = false
+            firstPlaybackWriteLogged = false
+            Log.d(TAG, "RECONNECT_AUDIOTRACK_FLUSHED stale playback data cleared")
+        } catch (e: Exception) {
+            Log.w(TAG, "RECONNECT_AUDIOTRACK_FLUSH_FAILED: ${e.message}")
+        }
+    }
+
+    fun start() {
+        ensureTrackReady()
+        val track = audioTrack ?: return
+
+        if (playbackJob != null) return
+
+        if (track.playState != AudioTrack.PLAYSTATE_PLAYING) {
+            track.play()
+        }
         Log.d(TAG, "AudioPlayback started: ${SAMPLE_RATE}Hz mono, low-latency")
 
         playbackJob = scope.launch {
             var lastDataTimeMs = System.currentTimeMillis()
             var missWaitStartMs = 0L
             var plcCount = 0
-
             while (isActive) {
                 if (!jitterBuffer.isPlaybackActive) {
                     if (!jitterBuffer.tryStartPlayback()) {
@@ -105,6 +136,14 @@ class AudioPlayback(
                     if (data != null) {
                         val pcm = opusCodec.decode(data)
                         if (pcm != null && pcm.isNotEmpty()) {
+                            if (!firstRxDecodeLogged) {
+                                Log.d(TAG, "LATENCY_FIRST_RX_FRAME_DECODED seq=$expectedSeq bytes=${data.size} pcm=${pcm.size}")
+                                firstRxDecodeLogged = true
+                            }
+                            if (!firstPlaybackWriteLogged) {
+                                Log.d(TAG, "LATENCY_FIRST_PLAYBACK_WRITE seq=$expectedSeq pcm=${pcm.size}")
+                                firstPlaybackWriteLogged = true
+                            }
                             Log.d(TAG, "OPUS_RX_FRAME_DECODED bytes=${data.size} pcm=${pcm.size}")
                             Log.d(TAG, "RADIO_OPUS_RX_FRAME_DECODED bytes=${data.size} pcm=${pcm.size}")
                             applyGain(pcm)
@@ -155,14 +194,16 @@ class AudioPlayback(
     fun stop() {
         playbackJob?.cancel()
         playbackJob = null
-        audioTrack?.stop()
-        audioTrack?.release()
-        audioTrack = null
-        Log.d(TAG, "AudioPlayback stopped")
+        Log.d(TAG, "AudioPlayback playback loop stopped (track kept warm)")
     }
 
     fun release() {
-        stop()
+        playbackJob?.cancel()
+        playbackJob = null
+        audioTrack?.stop()
+        audioTrack?.release()
+        audioTrack = null
         scope.cancel()
+        Log.d(TAG, "AudioPlayback released")
     }
 }

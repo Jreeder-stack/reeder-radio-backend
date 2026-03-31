@@ -51,6 +51,9 @@ class RadioAudioEngine(private val context: Context) {
     @Volatile
     private var lastDiagRxCount: Long = 0
 
+    @Volatile
+    private var reconnectCount = 0
+
     private val audioFocusListener = AudioManager.OnAudioFocusChangeListener { focusChange ->
         when (focusChange) {
             AudioManager.AUDIOFOCUS_GAIN,
@@ -77,7 +80,9 @@ class RadioAudioEngine(private val context: Context) {
         if (started) return
         opusCodec.initialize()
         acquireAudioFocus()
+        audioPlayback.ensureTrackReady()
         udpTransport.onPacketReceived = { packet -> onAudioPacketReceived(packet) }
+        udpTransport.onSessionTokenChanged = { onSessionTokenChanged() }
         udpTransport.start()
         started = true
         Log.d(TAG, "RadioAudioEngine started")
@@ -87,12 +92,39 @@ class RadioAudioEngine(private val context: Context) {
         if (!started) return
         runBlocking { stopTransmit() }
         stopReceive()
+        udpTransport.onSessionTokenChanged = null
         udpTransport.stop()
         releaseAudioFocus()
         opusCodec.release()
         started = false
         stateManager.reset()
         Log.d(TAG, "RadioAudioEngine stopped")
+    }
+
+    private fun onSessionTokenChanged() {
+        if (!started) return
+        reconnectCount++
+        val rc = reconnectCount
+        Log.d(TAG, "RECONNECT_START reconnectCount=$rc — coordinated audio pipeline reset")
+        val resetStartMs = System.currentTimeMillis()
+
+        opusCodec.resetDecoder()
+        Log.d(TAG, "RECONNECT_STEP_1_DECODER_RESET reconnectCount=$rc")
+
+        opusCodec.resetEncoder()
+        Log.d(TAG, "RECONNECT_STEP_2_ENCODER_RESET reconnectCount=$rc")
+
+        jitterBuffer.flushForReconnect()
+        Log.d(TAG, "RECONNECT_STEP_3_JITTER_BUFFER_FLUSHED reconnectCount=$rc")
+
+        audioPlayback.clearStaleFrames()
+        Log.d(TAG, "RECONNECT_STEP_4_AUDIOTRACK_FLUSHED reconnectCount=$rc")
+
+        resetDspState()
+        Log.d(TAG, "RECONNECT_STEP_5_DSP_STATE_RESET reconnectCount=$rc")
+
+        val resetDurationMs = System.currentTimeMillis() - resetStartMs
+        Log.d(TAG, "RECONNECT_COMPLETE reconnectCount=$rc resetDurationMs=$resetDurationMs")
     }
 
     suspend fun startTransmit(): Boolean = transmitMutex.withLock {
@@ -103,6 +135,9 @@ class RadioAudioEngine(private val context: Context) {
         if (isTransmitting) return true
 
         try {
+            val txStartMs = System.currentTimeMillis()
+            Log.d(TAG, "LATENCY_TX_START_BEGIN")
+
             val minBufferSize = AudioRecord.getMinBufferSize(
                 MIC_SAMPLE_RATE,
                 AudioFormat.CHANNEL_IN_MONO,
@@ -124,7 +159,6 @@ class RadioAudioEngine(private val context: Context) {
             record.startRecording()
             audioRecord = record
 
-            // Attach platform audio effects when available
             val sessionId = record.audioSessionId
             try {
                 if (NoiseSuppressor.isAvailable()) {
@@ -173,6 +207,10 @@ class RadioAudioEngine(private val context: Context) {
                                     val encoded = opusCodec.encode(pendingFrame)
                                     if (encoded != null) {
                                         frameCounter++
+                                        if (frameCounter == 1) {
+                                            val latencyMs = System.currentTimeMillis() - txStartMs
+                                            Log.d(TAG, "LATENCY_FIRST_TX_FRAME_SENT frame=$frameCounter bytes=${encoded.size} latencyMs=$latencyMs")
+                                        }
                                         Log.d(TAG, "OPUS_TX_FRAME_ENCODED frame=$frameCounter bytes=${encoded.size}")
                                         Log.d(TAG, "RADIO_OPUS_TX_FRAME_ENCODED frame=$frameCounter bytes=${encoded.size}")
                                         udpTransport.send(encoded)
@@ -281,6 +319,9 @@ class RadioAudioEngine(private val context: Context) {
         }
         Log.d(TAG, "RADIO_RX_CHANNEL_MATCH packetChannel=${packet.channelIndex} local=${udpTransport.channelIndex}")
         Log.d(TAG, "RADIO_RX_PACKET_RECEIVED seq=${packet.sequence} sender=${packet.senderUnitId} payload=${packet.opusPayload.size}")
+        if (udpTransport.rxPacketCount == 1L) {
+            Log.d(TAG, "LATENCY_FIRST_RX_PACKET seq=${packet.sequence} sender=${packet.senderUnitId}")
+        }
         jitterBuffer.enqueue(packet.sequence, packet.opusPayload)
     }
 

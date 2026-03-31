@@ -44,6 +44,35 @@ class OpusCodec {
         }
     }
 
+    fun resetDecoder() {
+        if (!initialized) return
+        try {
+            decoder = OpusDecoder(SAMPLE_RATE, CHANNELS)
+            Log.d(TAG, "RECONNECT_DECODER_RESET OpusDecoder recreated — stale state cleared")
+        } catch (e: Exception) {
+            Log.e(TAG, "RECONNECT_DECODER_RESET_FAILED: ${e.message}", e)
+        }
+    }
+
+    fun resetEncoder() {
+        if (!initialized) return
+        synchronized(encodeLock) {
+            try {
+                val enc = OpusEncoder(SAMPLE_RATE, CHANNELS, OpusApplication.OPUS_APPLICATION_VOIP)
+                enc.setBitrate(BITRATE)
+                enc.setSignalType(OpusSignal.OPUS_SIGNAL_VOICE)
+                enc.setComplexity(0)
+                enc.setUseVBR(true)
+                enc.setUseInbandFEC(true)
+                enc.setPacketLossPercent(10)
+                encoder = enc
+                Log.d(TAG, "RECONNECT_ENCODER_RESET OpusEncoder recreated — stale state cleared")
+            } catch (e: Exception) {
+                Log.e(TAG, "RECONNECT_ENCODER_RESET_FAILED: ${e.message}", e)
+            }
+        }
+    }
+
     fun encode(pcmData: ByteArray): ByteArray? {
         val byteCount = pcmData.size
         val sampleCount = byteCount / 2
