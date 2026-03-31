@@ -34,7 +34,7 @@ export default function TopBar({ user, onLogout, agencyName = "REEDER-SYSTEMS", 
         )}
 
         <div className="topbar-clock text-xl font-mono text-dispatch-text px-3 py-1 rounded-md">
-          {time.toLocaleTimeString()}
+          {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
         </div>
 
         <div className="flex items-center gap-2 px-3 py-1.5 bg-dispatch-panel-elevated rounded-md border border-dispatch-border">

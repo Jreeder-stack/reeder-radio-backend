@@ -46,7 +46,7 @@ function MapBoundsUpdater({ locations }) {
 function formatTime(timestamp) {
   if (!timestamp) return 'Unknown';
   const date = new Date(timestamp);
-  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
 }
 
 function formatAge(timestamp) {
