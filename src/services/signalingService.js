@@ -1051,6 +1051,8 @@ class SignalingService {
         console.log(`[Signaling] Radio ${socket.unitId} denied access to channel ${channelId}`);
         return;
       }
+
+      socket.lastAuthorizedRadioChannelNumeric = Number(accessResult.rows[0].channel_id);
     } catch (dbErr) {
       console.error('[Signaling] DB channel access check failed:', dbErr.message);
       socket.emit('error', { message: 'Authorization check failed' });
@@ -1100,7 +1102,7 @@ class SignalingService {
 
     console.log(`[Signaling] CHANNEL_JOINED unitId=${socket.unitId} channelId=${channelId}`);
 
-    this._issueRadioSessionToken(socket, channelId, 'join');
+    this._issueRadioSessionToken(socket, channelId, 'join', socket.lastAuthorizedRadioChannelNumeric);
   }
 
   _handleRadioLeaveChannel(socket, data) {
@@ -1172,7 +1174,7 @@ class SignalingService {
     });
 
     if (result.granted) {
-      this._issueRadioSessionToken(socket, channelId, 'ptt_granted');
+      this._issueRadioSessionToken(socket, channelId, 'ptt_granted', socket.lastAuthorizedRadioChannelNumeric);
 
       socket.emit(RADIO_EVENTS.PTT_GRANTED, {
         channelId,
@@ -1244,7 +1246,7 @@ class SignalingService {
     }
   }
 
-  _issueRadioSessionToken(socket, channelId, reason = 'unknown') {
+  _issueRadioSessionToken(socket, channelId, reason = 'unknown', channelNumericId = null) {
     if (!socket?.unitId || !channelId) return null;
 
     console.log(`[Signaling] RADIO_TOKEN_ISSUE_ATTEMPT unitId=${socket.unitId} channelId=${channelId} reason=${reason}`);
@@ -1256,8 +1258,8 @@ class SignalingService {
     const sessionToken = crypto.randomBytes(16).toString('hex');
     socket.radioSessionToken = sessionToken;
     socket.radioSessionChannel = channelId;
-    audioRelayService.registerSession(socket.unitId, sessionToken, channelId);
-    console.log(`[Signaling] RADIO_TOKEN_ISSUED unitId=${socket.unitId} channelId=${channelId} reason=${reason}`);
+    audioRelayService.registerSession(socket.unitId, sessionToken, channelId, channelNumericId);
+    console.log(`[Signaling] RADIO_TOKEN_ISSUED unitId=${socket.unitId} channelId=${channelId} numericChannelId=${channelNumericId ?? 'unknown'} reason=${reason}`);
 
     socket.emit('radio:sessionToken', { token: sessionToken, channelId });
     console.log(`[Signaling] RADIO_TOKEN_EMIT channelId=${channelId} roomKey=${channelId} unitId=${socket.unitId}`);
