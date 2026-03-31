@@ -237,7 +237,6 @@ class BackgroundAudioService : Service() {
         if (signalingEventsJob == null) {
             signalingEventsJob = scope.launch {
                 app.signalingRepository.events.collectLatest { event ->
-                    val currentRoomKey = servicePrefs.channelRoomKey
                     when (event) {
                         is SignalingEvent.EmergencyEnd -> {
                             if (emergencyActive) {
