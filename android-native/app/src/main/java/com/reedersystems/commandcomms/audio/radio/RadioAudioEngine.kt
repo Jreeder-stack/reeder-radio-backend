@@ -20,6 +20,7 @@ private const val MIC_SAMPLE_RATE = 48000
 private const val MIC_FRAME_SAMPLES = 960
 private const val MIC_FRAME_SIZE_BYTES = MIC_FRAME_SAMPLES * 2
 private const val CAPTURE_INTERVAL_MS = 20L
+private const val RX_DIAG_INTERVAL_MS = 5_000L
 
 class RadioAudioEngine(private val context: Context) {
 
@@ -42,10 +43,13 @@ class RadioAudioEngine(private val context: Context) {
     private var noiseSuppressor: NoiseSuppressor? = null
     private var autoGainControl: AutomaticGainControl? = null
     private var captureJob: Job? = null
+    private var rxDiagJob: Job? = null
     @Volatile
     private var isTransmitting = false
     @Volatile
     private var started = false
+    @Volatile
+    private var lastDiagRxCount: Long = 0
 
     private val audioFocusListener = AudioManager.OnAudioFocusChangeListener { focusChange ->
         when (focusChange) {
@@ -238,16 +242,36 @@ class RadioAudioEngine(private val context: Context) {
         if (stateManager.state.value != RadioState.TRANSMITTING) {
             stateManager.transitionTo(RadioState.RECEIVING)
         }
+        startRxDiagnostics()
         Log.d(TAG, "RX started — playback active")
     }
 
     fun stopReceive() {
+        rxDiagJob?.cancel()
+        rxDiagJob = null
         audioPlayback.stop()
         jitterBuffer.stop()
         if (stateManager.state.value == RadioState.RECEIVING) {
             stateManager.transitionTo(RadioState.IDLE)
         }
         Log.d(TAG, "RX stopped")
+    }
+
+    private fun startRxDiagnostics() {
+        rxDiagJob?.cancel()
+        lastDiagRxCount = udpTransport.rxPacketCount
+        rxDiagJob = scope.launch {
+            while (isActive) {
+                delay(RX_DIAG_INTERVAL_MS)
+                val currentRxCount = udpTransport.rxPacketCount
+                val newPackets = currentRxCount - lastDiagRxCount
+                lastDiagRxCount = currentRxCount
+                val bufSize = jitterBuffer.size
+                val bufDepth = jitterBuffer.currentTargetDepth
+                val bufPlaying = jitterBuffer.isPlaybackActive
+                Log.d(TAG, "RX_DIAG rxTotal=$currentRxCount rxNew=$newPackets jbSize=$bufSize jbDepth=$bufDepth jbPlaying=$bufPlaying channelIdx=${udpTransport.channelIndex}")
+            }
+        }
     }
 
     private fun onAudioPacketReceived(packet: OpusRadioPacket) {

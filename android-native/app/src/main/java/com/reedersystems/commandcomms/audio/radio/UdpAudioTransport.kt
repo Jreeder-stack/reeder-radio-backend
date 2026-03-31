@@ -15,6 +15,7 @@ private const val SESSION_TOKEN_LEN = 16
 private const val RADIO_HEADER_FIXED_LEN = 1 + 1 + 2 + 2 + 4 + 1 + 2
 private const val PACKET_VERSION: Byte = 1
 private const val FLAG_FEC_HINT = 0x01
+private const val KEEPALIVE_INTERVAL_MS = 15_000L
 
 data class OpusRadioPacket(
     val channelIndex: Int,
@@ -33,9 +34,13 @@ class UdpAudioTransport(
     private var socket: DatagramSocket? = null
     private var receiveJob: Job? = null
     private var sendJob: Job? = null
+    private var keepaliveJob: Job? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var sequenceNumber: Int = 0
     private val sendQueue = Channel<ByteArray>(capacity = 64)
+    @Volatile
+    var rxPacketCount: Long = 0
+        private set
 
     // Cached DNS resolution
     @Volatile
@@ -66,6 +71,23 @@ class UdpAudioTransport(
     fun setSessionToken(hexToken: String) {
         sessionTokenBytes = hexStringToByteArray(hexToken)
         Log.d(TAG, "Session token set (${hexToken.length / 2} bytes)")
+        sendImmediateKeepalive()
+    }
+
+    private fun sendImmediateKeepalive() {
+        val token = sessionTokenBytes ?: return
+        val sock = socket ?: return
+        scope.launch {
+            try {
+                val keepalivePacket = buildKeepalivePacket(token)
+                val address = resolveAddress() ?: return@launch
+                val dgram = DatagramPacket(keepalivePacket, keepalivePacket.size, address, relayPort)
+                sock.send(dgram)
+                Log.d(TAG, "UDP_KEEPALIVE_IMMEDIATE_SENT to=$relayHost:$relayPort")
+            } catch (e: Exception) {
+                Log.w(TAG, "UDP immediate keepalive send error: ${e.message}")
+            }
+        }
     }
 
     fun clearSessionToken() {
@@ -82,12 +104,15 @@ class UdpAudioTransport(
             Log.d(TAG, "UDP socket opened on local port ${sock.localPort}")
             startReceiveLoop()
             startSendLoop()
+            startKeepaliveLoop()
         } catch (e: Exception) {
             Log.e(TAG, "Failed to open UDP socket: ${e.message}", e)
         }
     }
 
     fun stop() {
+        keepaliveJob?.cancel()
+        keepaliveJob = null
         receiveJob?.cancel()
         receiveJob = null
         sendJob?.cancel()
@@ -98,6 +123,7 @@ class UdpAudioTransport(
         sessionTokenBytes = null
         cachedAddress = null
         cachedHost = ""
+        rxPacketCount = 0
         Log.d(TAG, "UDP transport stopped")
     }
 
@@ -189,8 +215,9 @@ class UdpAudioTransport(
                         if (parsed.senderUnitId == unitId) {
                             Log.d(TAG, "SELF_AUDIO_SUPPRESSED senderUnitId=${parsed.senderUnitId} seq=${parsed.sequence}")
                         } else {
+                            rxPacketCount++
                             onPacketReceived?.invoke(parsed)
-                            Log.d(TAG, "OPUS_RX_FRAME_RECEIVED seq=${parsed.sequence} sender=${parsed.senderUnitId} payload=${parsed.opusPayload.size}")
+                            Log.d(TAG, "OPUS_RX_FRAME_RECEIVED seq=${parsed.sequence} sender=${parsed.senderUnitId} channelIdx=${parsed.channelIndex} payload=${parsed.opusPayload.size}")
                         }
                     }
                 } catch (e: java.net.SocketTimeoutException) {
@@ -202,6 +229,51 @@ class UdpAudioTransport(
                 }
             }
         }
+    }
+
+    private fun startKeepaliveLoop() {
+        keepaliveJob = scope.launch {
+            while (isActive) {
+                delay(KEEPALIVE_INTERVAL_MS)
+                val token = sessionTokenBytes ?: continue
+                val sock = socket ?: break
+                try {
+                    val keepalivePacket = buildKeepalivePacket(token)
+                    val address = resolveAddress() ?: continue
+                    val dgram = DatagramPacket(keepalivePacket, keepalivePacket.size, address, relayPort)
+                    sock.send(dgram)
+                    Log.d(TAG, "UDP_KEEPALIVE_SENT to=$relayHost:$relayPort")
+                } catch (e: Exception) {
+                    Log.w(TAG, "UDP keepalive send error: ${e.message}")
+                }
+            }
+        }
+    }
+
+    private fun buildKeepalivePacket(token: ByteArray): ByteArray {
+        val senderBytes = unitId.toByteArray(Charsets.UTF_8)
+        val senderLen = senderBytes.size.coerceAtMost(255)
+        val channelNumeric = channelIndex
+        val timestampMs = (System.currentTimeMillis() and 0xFFFFFFFFL).toInt()
+        val frame = ByteArray(SESSION_TOKEN_LEN + RADIO_HEADER_FIXED_LEN + senderLen)
+        System.arraycopy(token, 0, frame, 0, SESSION_TOKEN_LEN)
+        var offset = SESSION_TOKEN_LEN
+        frame[offset++] = PACKET_VERSION
+        frame[offset++] = 0
+        frame[offset++] = ((channelNumeric shr 8) and 0xFF).toByte()
+        frame[offset++] = (channelNumeric and 0xFF).toByte()
+        frame[offset++] = 0
+        frame[offset++] = 0
+        frame[offset++] = ((timestampMs shr 24) and 0xFF).toByte()
+        frame[offset++] = ((timestampMs shr 16) and 0xFF).toByte()
+        frame[offset++] = ((timestampMs shr 8) and 0xFF).toByte()
+        frame[offset++] = (timestampMs and 0xFF).toByte()
+        frame[offset++] = senderLen.toByte()
+        System.arraycopy(senderBytes, 0, frame, offset, senderLen)
+        offset += senderLen
+        frame[offset++] = 0
+        frame[offset] = 0
+        return frame
     }
 
     fun release() {
