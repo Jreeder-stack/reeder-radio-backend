@@ -135,11 +135,9 @@ class AudioRelayService {
       return;
     }
 
-    const channelIdNumeric = parseInt(channelId, 10);
-
     const rxPayload = this._buildRelayPacket({
       channelKey,
-      channelIdNumeric: Number.isNaN(channelIdNumeric) ? 0 : channelIdNumeric,
+      channelIdNumeric: this._resolveChannelIdNumeric({ channelKey, channelIdNumeric: channelId }),
       senderUnitId,
       sequence,
       opusPayload,
@@ -160,7 +158,7 @@ class AudioRelayService {
       for (const [subUnitId, subInfo] of udpSubs) {
         if (subUnitId === senderUnitId) continue;
         subInfo.lastSeen = Date.now();
-        console.log(`RADIO_SERVER_PACKET_RELAYED targetUnit=${subUnitId} addr=${subInfo.address}:${subInfo.port} bytes=${rxPayload.length} channelId=${channelKey}`);
+        console.log(`RADIO_SERVER_PACKET_RELAYED channelId=${channelKey} targetUnit=${subUnitId}`);
         try {
           this.socket.send(rxPayload, 0, rxPayload.length, subInfo.port, subInfo.address);
         } catch (err) {
@@ -286,14 +284,15 @@ class AudioRelayService {
     const token = msg.subarray(0, SESSION_TOKEN_LEN).toString('hex');
     const parsed = this._parsePacket(msg, SESSION_TOKEN_LEN);
     if (!parsed) return;
-    const { channelId, sequence, opusPayload, flags, timestampMs, senderUnitId } = parsed;
-    console.log(`RADIO_SERVER_PACKET_RECEIVED bytes=${msg.length} sender=${rinfo.address}:${rinfo.port} channelId=${channelId} senderUnitId=${senderUnitId || ''}`);
+    const { sequence, opusPayload, flags, timestampMs, senderUnitId } = parsed;
 
     const session = this.sessionTokens.get(token);
     if (!session) return;
 
     const { unitId, allowedChannel } = session;
-    const channelKey = allowedChannel;
+    const channelKey = canonicalChannelKey(allowedChannel);
+    const resolvedChannelId = this._resolveChannelIdNumeric({ channelKey, channelIdNumeric: allowedChannel });
+    console.log(`RADIO_SERVER_PACKET_RECEIVED channelId=${resolvedChannelId} roomKey=${channelKey} senderUnitId=${senderUnitId || unitId}`);
 
     this.addSubscriber(channelKey, unitId, rinfo.address, rinfo.port);
 
@@ -306,7 +305,7 @@ class AudioRelayService {
 
     const rxPayload = this._buildRelayPacket({
       channelKey,
-      channelIdNumeric: channelId,
+      channelIdNumeric: resolvedChannelId,
       senderUnitId: senderUnitId || unitId,
       sequence,
       opusPayload,
@@ -317,11 +316,23 @@ class AudioRelayService {
     this._broadcastToAll(channelKey, unitId, rxPayload, sequence, opusPayload);
   }
 
+
+  _resolveChannelIdNumeric({ channelKey, channelIdNumeric }) {
+    const candidate = Number.parseInt(String(channelIdNumeric ?? '').trim(), 10);
+    if (!Number.isNaN(candidate)) return candidate;
+
+    const fromKey = Number.parseInt(String(channelKey ?? '').trim(), 10);
+    if (!Number.isNaN(fromKey)) return fromKey;
+
+    return 0;
+  }
+
   _buildRelayPacket({ channelKey, channelIdNumeric, senderUnitId, sequence, opusPayload, flags = FLAG_FEC_HINT, timestampMs = Date.now() }) {
-    const channelIdNum = (channelIdNumeric != null && !Number.isNaN(channelIdNumeric)) ? channelIdNumeric : 0;
+    const channelIdNum = this._resolveChannelIdNumeric({ channelKey, channelIdNumeric });
     if (channelIdNum === 0) {
       console.warn(`[AudioRelay] RELAY_CHANNEL_ID_ZERO channelKey=${channelKey} — receiver may drop this packet`);
     }
+    console.log(`RADIO_RELAY_PACKET_BUILT channelId=${channelIdNum} roomKey=${channelKey}`);
     const senderBytes = Buffer.from(senderUnitId || '', 'utf8').subarray(0, 255);
     const payloadLength = Math.min(opusPayload.length, 0xffff);
     const packet = Buffer.alloc(RADIO_HEADER_FIXED_LEN + senderBytes.length + payloadLength);

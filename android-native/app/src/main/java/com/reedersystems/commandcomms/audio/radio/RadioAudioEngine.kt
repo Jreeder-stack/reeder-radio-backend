@@ -279,6 +279,7 @@ class RadioAudioEngine(private val context: Context) {
             Log.d(TAG, "Dropping RX frame for other channel packetChannel=${packet.channelIndex} local=${udpTransport.channelIndex}")
             return
         }
+        Log.d(TAG, "RADIO_RX_CHANNEL_MATCH packetChannel=${packet.channelIndex} local=${udpTransport.channelIndex}")
         Log.d(TAG, "RADIO_RX_PACKET_RECEIVED seq=${packet.sequence} sender=${packet.senderUnitId} payload=${packet.opusPayload.size}")
         jitterBuffer.enqueue(packet.sequence, packet.opusPayload)
     }
