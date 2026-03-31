@@ -6,6 +6,7 @@ import android.app.Service
 import android.content.BroadcastReceiver
 import android.content.Intent
 import android.content.IntentFilter
+import android.media.AudioManager
 import android.os.IBinder
 import android.os.PowerManager
 import android.util.Log
@@ -38,6 +39,10 @@ class BackgroundAudioService : Service() {
 
     private lateinit var serviceWakeLock: PowerManager.WakeLock
 
+    private lateinit var audioManager: AudioManager
+    private var previousAudioMode: Int = AudioManager.MODE_NORMAL
+    private var previousSpeakerphoneOn: Boolean = false
+
     private var dynamicPttReceiver: BroadcastReceiver? = null
 
     private var pttState = PttState.IDLE
@@ -69,6 +74,13 @@ class BackgroundAudioService : Service() {
         ).apply { setReferenceCounted(false) }
         serviceWakeLock.acquire()
         Log.d(TAG, "BackgroundAudioService: service-lifetime WakeLock acquired")
+
+        audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
+        previousAudioMode = audioManager.mode
+        previousSpeakerphoneOn = audioManager.isSpeakerphoneOn
+        audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
+        audioManager.isSpeakerphoneOn = true
+        Log.d(TAG, "BackgroundAudioService: loudspeaker forced on (prev mode=$previousAudioMode, prev speaker=$previousSpeakerphoneOn)")
 
         servicePrefs = ServiceConnectionPrefs(applicationContext)
 
@@ -158,6 +170,7 @@ class BackgroundAudioService : Service() {
             }
             ACTION_STOP -> {
                 Log.d(TAG, "Service stop requested")
+                restoreSpeakerState()
                 radioEngine?.stop()
                 stopSelf()
             }
@@ -683,8 +696,21 @@ class BackgroundAudioService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
+    private var speakerStateRestored = false
+
+    private fun restoreSpeakerState() {
+        if (speakerStateRestored) return
+        speakerStateRestored = true
+        if (::audioManager.isInitialized) {
+            audioManager.isSpeakerphoneOn = previousSpeakerphoneOn
+            audioManager.mode = previousAudioMode
+            Log.d(TAG, "BackgroundAudioService: loudspeaker restored (mode=$previousAudioMode, speaker=$previousSpeakerphoneOn)")
+        }
+    }
+
     override fun onDestroy() {
         Log.d(TAG, "BackgroundAudioService destroyed")
+        restoreSpeakerState()
         dynamicPttReceiver?.let {
             unregisterReceiver(it)
             dynamicPttReceiver = null
