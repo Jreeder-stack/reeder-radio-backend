@@ -7,6 +7,7 @@ import { config } from '../config/env.js';
 import { canonicalChannelKey } from './channelKeyUtils.js';
 import { floorControlService } from './floorControlService.js';
 import { audioRelayService } from './audioRelayService.js';
+import { opusCodec } from './opusCodec.js';
 
 const PCM_SHAPE = {
   type: 'audio',
@@ -198,13 +199,25 @@ class WsAudioBridge {
         listenerCount,
       });
 
-      if (!listeners) return;
-      const outbound = JSON.stringify({ ...packet, senderUnitId: unitId });
-      for (const [listenerUnitId, listenerWs] of listeners) {
-        if (listenerUnitId === unitId) continue;
-        if (listenerWs.readyState === 1) {
-          listenerWs.send(outbound);
+      try {
+        const pcmInt16 = Buffer.from(new Int16Array(packet.payload).buffer);
+        const opusFrames = opusCodec.encodePcmToOpus(pcmInt16);
+        for (let i = 0; i < opusFrames.length; i++) {
+          audioRelayService.injectAudio(channelId, unitId, packet.sequence + i, opusFrames[i]);
         }
+        console.log('WS_TO_UDP_RELAY', {
+          channelId,
+          senderUnitId: unitId,
+          sequence: packet.sequence,
+          opusFrameCount: opusFrames.length,
+        });
+      } catch (err) {
+        console.error('WS_TO_UDP_RELAY_ERROR', {
+          channelId,
+          senderUnitId: unitId,
+          sequence: packet.sequence,
+          error: err.message,
+        });
       }
     });
 
