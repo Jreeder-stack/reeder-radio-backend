@@ -6,7 +6,9 @@ import android.app.Service
 import android.content.BroadcastReceiver
 import android.content.Intent
 import android.content.IntentFilter
+import android.media.AudioDeviceInfo
 import android.media.AudioManager
+import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
 import android.util.Log
@@ -81,9 +83,23 @@ class BackgroundAudioService : Service() {
 
         audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
         previousAudioMode = audioManager.mode
-        previousSpeakerphoneOn = audioManager.isSpeakerphoneOn
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            previousSpeakerphoneOn = audioManager.communicationDevice?.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER
+        } else {
+            @Suppress("DEPRECATION")
+            previousSpeakerphoneOn = audioManager.isSpeakerphoneOn
+        }
         audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
-        audioManager.isSpeakerphoneOn = true
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val speakerDevice = audioManager.availableCommunicationDevices
+                .firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
+            if (speakerDevice != null) {
+                audioManager.setCommunicationDevice(speakerDevice)
+            }
+        } else {
+            @Suppress("DEPRECATION")
+            audioManager.isSpeakerphoneOn = true
+        }
         Log.d(TAG, "BackgroundAudioService: loudspeaker forced on (prev mode=$previousAudioMode, prev speaker=$previousSpeakerphoneOn)")
 
         servicePrefs = ServiceConnectionPrefs(applicationContext)
@@ -749,7 +765,20 @@ class BackgroundAudioService : Service() {
         if (speakerStateRestored) return
         speakerStateRestored = true
         if (::audioManager.isInitialized) {
-            audioManager.isSpeakerphoneOn = previousSpeakerphoneOn
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                if (previousSpeakerphoneOn) {
+                    val speakerDevice = audioManager.availableCommunicationDevices
+                        .firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
+                    if (speakerDevice != null) {
+                        audioManager.setCommunicationDevice(speakerDevice)
+                    }
+                } else {
+                    audioManager.clearCommunicationDevice()
+                }
+            } else {
+                @Suppress("DEPRECATION")
+                audioManager.isSpeakerphoneOn = previousSpeakerphoneOn
+            }
             audioManager.mode = previousAudioMode
             Log.d(TAG, "BackgroundAudioService: loudspeaker restored (mode=$previousAudioMode, speaker=$previousSpeakerphoneOn)")
         }
