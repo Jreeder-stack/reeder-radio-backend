@@ -28,6 +28,9 @@ class AudioRelayService {
     this._sweepTimer = null;
     this._audioListeners = new Map();
     this._channelNumericByKey = new Map();
+    this._earlyAudioBuffers = new Map();
+    this._earlyBufferMaxMs = 500;
+    this._earlyBufferMaxFrames = 25;
   }
 
   setFloorControlService(fcs) {
@@ -159,7 +162,7 @@ class AudioRelayService {
     this._broadcastToAll(channelKey, senderUnitId, rxPayload, sequence, opusPayload, this._resolveChannelIdNumeric({ channelKey, channelIdNumeric: channelId }));
   }
 
-  _broadcastToAll(channelKey, senderUnitId, rxPayload, sequence, opusPayload, channelIdNumeric = null) {
+  _broadcastToAll(channelKey, senderUnitId, rxPayload, sequence, opusPayload, channelIdNumeric = null, resolvedSender = null) {
     const resolvedChannelId = this._resolveChannelIdNumeric({ channelKey, channelIdNumeric });
     const udpSubs = this.subscribers.get(channelKey);
     const udpSubCount = udpSubs ? udpSubs.size : 0;
@@ -197,7 +200,7 @@ class AudioRelayService {
       if (wsSubs && wsSubs.size > 0) {
         let pcmSamples;
         try {
-          const pcmBuf = opusCodec.decodeOpusToPcm(opusPayload);
+          const pcmBuf = opusCodec.decodeOpusToPcm(opusPayload, resolvedSender || senderUnitId);
           pcmSamples = Array.from(new Int16Array(pcmBuf.buffer, pcmBuf.byteOffset, pcmBuf.byteLength / 2));
         } catch (err) {
           console.error(`[AudioRelay] Opus→PCM decode error: ${err.message}`);
@@ -313,19 +316,52 @@ class AudioRelayService {
       return;
     }
 
-    if (this._floorControlService && !this._floorControlService.holdsFloor(channelKey, unitId)) return;
+    const resolvedSender = senderUnitId || unitId;
+
+    if (this._floorControlService && !this._floorControlService.holdsFloor(channelKey, unitId)) {
+      const bufKey = `${channelKey}:${unitId}`;
+      let buf = this._earlyAudioBuffers.get(bufKey);
+      if (!buf) {
+        buf = [];
+        this._earlyAudioBuffers.set(bufKey, buf);
+      }
+      const now = Date.now();
+      while (buf.length > 0 && (now - buf[0].bufferedAt) > this._earlyBufferMaxMs) {
+        buf.shift();
+      }
+      if (buf.length < this._earlyBufferMaxFrames) {
+        buf.push({ channelKey, channelIdNumeric: resolvedChannelId, senderUnitId: resolvedSender, sequence, opusPayload, flags, timestampMs, bufferedAt: now });
+        console.log(`[AudioRelay] EARLY_AUDIO_BUFFERED unitId=${unitId} channel=${channelKey} seq=${sequence} buffered=${buf.length}`);
+      }
+      return;
+    }
+
+    const bufKey = `${channelKey}:${unitId}`;
+    const earlyBuf = this._earlyAudioBuffers.get(bufKey);
+    if (earlyBuf && earlyBuf.length > 0) {
+      const now = Date.now();
+      const freshFrames = earlyBuf.filter(pkt => (now - pkt.bufferedAt) <= this._earlyBufferMaxMs);
+      if (freshFrames.length > 0) {
+        console.log(`[AudioRelay] EARLY_AUDIO_FLUSHING unitId=${unitId} channel=${channelKey} frames=${freshFrames.length} (dropped=${earlyBuf.length - freshFrames.length} stale)`);
+        for (const pkt of freshFrames) {
+          const earlyPayload = this._buildRelayPacket(pkt);
+          this._broadcastToAll(pkt.channelKey, unitId, earlyPayload, pkt.sequence, pkt.opusPayload, pkt.channelIdNumeric, pkt.senderUnitId);
+        }
+      }
+      this._earlyAudioBuffers.delete(bufKey);
+    }
 
     const rxPayload = this._buildRelayPacket({
       channelKey,
       channelIdNumeric: resolvedChannelId,
-      senderUnitId: senderUnitId || unitId,
+      senderUnitId: resolvedSender,
       sequence,
       opusPayload,
       flags,
       timestampMs,
     });
 
-    this._broadcastToAll(channelKey, unitId, rxPayload, sequence, opusPayload, resolvedChannelId);
+    this._broadcastToAll(channelKey, unitId, rxPayload, sequence, opusPayload, resolvedChannelId, resolvedSender);
   }
 
 

@@ -218,12 +218,14 @@ class UdpAudioTransport(
     private fun startReceiveLoop() {
         receiveJob = scope.launch {
             val buffer = ByteArray(RECEIVE_BUFFER_SIZE)
+            var consecutiveErrors = 0
             while (isActive) {
                 val sock = socket ?: break
                 try {
                     val packet = DatagramPacket(buffer, buffer.size)
                     sock.receive(packet)
                     val parsed = parseRelayPacket(buffer, packet.length)
+                    consecutiveErrors = 0
                     if (parsed != null) {
                         if (parsed.senderUnitId == unitId) {
                             Log.d(TAG, "SELF_AUDIO_SUPPRESSED senderUnitId=${parsed.senderUnitId} seq=${parsed.sequence}")
@@ -234,11 +236,23 @@ class UdpAudioTransport(
                         }
                     }
                 } catch (e: java.net.SocketTimeoutException) {
-                } catch (e: Exception) {
+                } catch (e: java.net.SocketException) {
                     if (isActive) {
-                        Log.w(TAG, "UDP receive error: ${e.message}")
+                        Log.e(TAG, "UDP socket error (unrecoverable): ${e.message}")
                     }
                     break
+                } catch (e: Exception) {
+                    if (isActive) {
+                        Log.w(TAG, "UDP receive error (transient, continuing): ${e.message}")
+                        consecutiveErrors++
+                        if (consecutiveErrors >= 10) {
+                            Log.w(TAG, "UDP receive: $consecutiveErrors consecutive errors, backing off 100ms")
+                            delay(100)
+                        } else if (consecutiveErrors >= 3) {
+                            delay(20)
+                        }
+                    }
+                    continue
                 }
             }
         }

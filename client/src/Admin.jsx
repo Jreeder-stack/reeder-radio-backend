@@ -15,6 +15,11 @@ export default function Admin({ user, onLogout }) {
   const [aiDispatchEnabled, setAiDispatchEnabled] = useState(false);
   const [aiDispatchChannel, setAiDispatchChannel] = useState("");
   const [aiDispatchLoading, setAiDispatchLoading] = useState(false);
+
+  /* --- Audio Tuning (temporary) --- */
+  const [dspConfig, setDspConfig] = useState(null);
+  const [dspDefaults, setDspDefaults] = useState(null);
+  const [dspLoading, setDspLoading] = useState(false);
   
   const [showAddUser, setShowAddUser] = useState(false);
   const [showEditUser, setShowEditUser] = useState(null);
@@ -328,6 +333,52 @@ export default function Admin({ user, onLogout }) {
     }
   };
 
+  /* --- Audio Tuning functions (temporary) --- */
+  const loadAudioTuning = async () => {
+    if (dspConfig) return;
+    setDspLoading(true);
+    try {
+      const res = await fetch("/api/admin/audio-tuning", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to load audio tuning");
+      const data = await res.json();
+      setDspConfig(data.config);
+      setDspDefaults(data.defaults);
+    } catch (err) {
+      alert("Failed to load audio tuning: " + err.message);
+    } finally {
+      setDspLoading(false);
+    }
+  };
+
+  const updateDspParam = async (key, value) => {
+    const updated = { ...dspConfig, [key]: value };
+    setDspConfig(updated);
+    try {
+      await fetch("/api/admin/audio-tuning", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ [key]: value }),
+      });
+    } catch (err) {
+      console.error("Failed to update DSP param:", err);
+    }
+  };
+
+  const resetDspToDefaults = async () => {
+    try {
+      const res = await fetch("/api/admin/audio-tuning/reset", {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to reset");
+      const data = await res.json();
+      setDspConfig(data.config);
+    } catch (err) {
+      alert("Failed to reset audio tuning: " + err.message);
+    }
+  };
+
   const formatDate = (dateStr) => {
     if (!dateStr) return "Never";
     const date = new Date(dateStr);
@@ -551,6 +602,9 @@ export default function Admin({ user, onLogout }) {
           </button>
           <button style={tabStyle(activeTab === "recordings")} onClick={() => setActiveTab("recordings")}>
             Recording Logs
+          </button>
+          <button style={tabStyle(activeTab === "audioTuning")} onClick={() => { setActiveTab("audioTuning"); loadAudioTuning(); }}>
+            Audio Tuning
           </button>
         </div>
 
@@ -1078,6 +1132,77 @@ export default function Admin({ user, onLogout }) {
         {activeTab === "recordings" && (
           <RecordingLogs isMobile={isMobile} />
         )}
+
+        {/* --- Audio Tuning Tab (temporary - remove once tuning is finalized) --- */}
+        {activeTab === "audioTuning" && (
+          <div style={{ overflowY: "auto", WebkitOverflowScrolling: "touch" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+              <h2 style={{ margin: 0, fontSize: 20 }}>Audio Tuning</h2>
+              <button
+                onClick={resetDspToDefaults}
+                style={{
+                  padding: "10px 20px",
+                  background: "#dc2626",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 8,
+                  cursor: "pointer",
+                  fontSize: 14,
+                  fontWeight: 600,
+                }}
+              >
+                Reset to Defaults
+              </button>
+            </div>
+
+            {dspLoading && <p style={{ color: "#888" }}>Loading...</p>}
+
+            {dspConfig && (
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 20 }}>
+                <div style={{ background: "#1e1e2e", borderRadius: 12, padding: 20 }}>
+                  <h3 style={{ margin: "0 0 16px", fontSize: 16, color: "#3b82f6" }}>TX (Transmit)</h3>
+                  <DspSlider label="HP Alpha" paramKey="txHpAlpha" value={dspConfig.txHpAlpha} min={0.9} max={0.999} step={0.001} onChange={updateDspParam} />
+                  <DspSlider label="LP B0" paramKey="txLpB0" value={dspConfig.txLpB0} min={0} max={1} step={0.0001} onChange={updateDspParam} />
+                  <DspSlider label="LP B1" paramKey="txLpB1" value={dspConfig.txLpB1} min={0} max={1} step={0.0001} onChange={updateDspParam} />
+                  <DspSlider label="LP B2" paramKey="txLpB2" value={dspConfig.txLpB2} min={0} max={1} step={0.0001} onChange={updateDspParam} />
+                  <DspSlider label="LP A1" paramKey="txLpA1" value={dspConfig.txLpA1} min={-2} max={2} step={0.0001} onChange={updateDspParam} />
+                  <DspSlider label="LP A2" paramKey="txLpA2" value={dspConfig.txLpA2} min={-2} max={2} step={0.0001} onChange={updateDspParam} />
+                  <DspSlider label="Comp Threshold (dB)" paramKey="txCompThresholdDb" value={dspConfig.txCompThresholdDb} min={-40} max={0} step={1} onChange={updateDspParam} />
+                  <DspSlider label="Comp Ratio" paramKey="txCompRatio" value={dspConfig.txCompRatio} min={1} max={20} step={0.5} onChange={updateDspParam} />
+                  <DspSlider label="Comp Attack (ms)" paramKey="txCompAttackMs" value={dspConfig.txCompAttackMs} min={0.001} max={0.05} step={0.001} onChange={updateDspParam} />
+                  <DspSlider label="Comp Release (ms)" paramKey="txCompReleaseMs" value={dspConfig.txCompReleaseMs} min={0.01} max={0.5} step={0.01} onChange={updateDspParam} />
+                  <DspSlider label="TX Gain" paramKey="txGain" value={dspConfig.txGain} min={0.1} max={5.0} step={0.1} onChange={updateDspParam} />
+                </div>
+
+                <div style={{ background: "#1e1e2e", borderRadius: 12, padding: 20 }}>
+                  <h3 style={{ margin: "0 0 16px", fontSize: 16, color: "#22c55e" }}>RX (Receive)</h3>
+                  <DspSlider label="HP Alpha" paramKey="rxHpAlpha" value={dspConfig.rxHpAlpha} min={0.9} max={0.999} step={0.001} onChange={updateDspParam} />
+                  <DspSlider label="LP B0" paramKey="rxLpB0" value={dspConfig.rxLpB0} min={0} max={1} step={0.0001} onChange={updateDspParam} />
+                  <DspSlider label="LP B1" paramKey="rxLpB1" value={dspConfig.rxLpB1} min={0} max={1} step={0.0001} onChange={updateDspParam} />
+                  <DspSlider label="LP B2" paramKey="rxLpB2" value={dspConfig.rxLpB2} min={0} max={1} step={0.0001} onChange={updateDspParam} />
+                  <DspSlider label="LP A1" paramKey="rxLpA1" value={dspConfig.rxLpA1} min={-2} max={2} step={0.0001} onChange={updateDspParam} />
+                  <DspSlider label="LP A2" paramKey="rxLpA2" value={dspConfig.rxLpA2} min={-2} max={2} step={0.0001} onChange={updateDspParam} />
+                  <DspSlider label="Noise Gate (dB)" paramKey="rxGateThresholdDb" value={dspConfig.rxGateThresholdDb} min={-80} max={0} step={1} onChange={updateDspParam} />
+                  <DspSlider label="RX Gain" paramKey="rxGain" value={dspConfig.rxGain} min={0.1} max={10.0} step={0.1} onChange={updateDspParam} />
+                </div>
+
+                <div style={{ background: "#1e1e2e", borderRadius: 12, padding: 20 }}>
+                  <h3 style={{ margin: "0 0 16px", fontSize: 16, color: "#f59e0b" }}>Codec</h3>
+                  <DspSlider label="Opus Bitrate" paramKey="opusBitrate" value={dspConfig.opusBitrate} min={6000} max={128000} step={1000} onChange={updateDspParam} />
+                </div>
+              </div>
+            )}
+
+            {dspConfig && (
+              <div style={{ marginTop: 24, background: "#1e1e2e", borderRadius: 12, padding: 20 }}>
+                <h3 style={{ margin: "0 0 12px", fontSize: 14, color: "#888" }}>Current Config (JSON)</h3>
+                <pre style={{ background: "#111", padding: 12, borderRadius: 8, fontSize: 12, color: "#ccc", overflow: "auto", maxHeight: 200, margin: 0 }}>
+                  {JSON.stringify(dspConfig, null, 2)}
+                </pre>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {showAddUser && (
@@ -1421,6 +1546,35 @@ function EditUserModal({ user, channels, isMobile, onClose, onSave }) {
             </div>
           </form>
         )}
+      </div>
+    </div>
+  );
+}
+
+/* --- DspSlider: temporary component for Audio Tuning tab --- */
+function DspSlider({ label, paramKey, value, min, max, step, onChange }) {
+  const displayValue = typeof value === "number"
+    ? (Number.isInteger(value) ? value : value.toFixed(step < 0.01 ? 4 : step < 1 ? 3 : 1))
+    : value;
+
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+        <label style={{ fontSize: 13, color: "#ccc" }}>{label}</label>
+        <span style={{ fontSize: 13, color: "#3b82f6", fontFamily: "monospace" }}>{displayValue}</span>
+      </div>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(e) => onChange(paramKey, parseFloat(e.target.value))}
+        style={{ width: "100%", accentColor: "#3b82f6" }}
+      />
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#666" }}>
+        <span>{min}</span>
+        <span>{max}</span>
       </div>
     </div>
   );

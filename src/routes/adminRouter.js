@@ -29,4 +29,8 @@ router.get('/logs', adminController.listLogs);
 router.get('/ai-dispatch', adminController.getAiDispatch);
 router.put('/ai-dispatch', adminController.setAiDispatch);
 
+router.get('/audio-tuning', adminController.getAudioTuning);
+router.put('/audio-tuning', adminController.setAudioTuning);
+router.post('/audio-tuning/reset', adminController.resetAudioTuning);
+
 export default router;

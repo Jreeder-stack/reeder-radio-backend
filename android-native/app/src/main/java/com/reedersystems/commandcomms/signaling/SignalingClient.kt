@@ -248,6 +248,16 @@ class SignalingClient(var serverUrl: String) {
             )
         }}
 
+        s.on("radio:dsp_config") { args ->
+            try {
+                val json = args.firstOrNull() as? JSONObject ?: return@on
+                Log.d(TAG, "radio:dsp_config received: $json")
+                _events.tryEmit(SignalingEvent.RadioDspConfig(json))
+            } catch (e: Exception) {
+                Log.w(TAG, "radio:dsp_config parse error: ${e.message}")
+            }
+        }
+
         s.on("ping") { s.emit("pong") }
 
         s.connect()

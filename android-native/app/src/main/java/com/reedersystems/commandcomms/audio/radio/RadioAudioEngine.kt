@@ -203,7 +203,7 @@ class RadioAudioEngine(private val context: Context) {
                                     highPassFilter(pendingFrame, MIC_FRAME_SIZE_BYTES)
                                     lowPassFilter(pendingFrame, MIC_FRAME_SIZE_BYTES)
                                     softwareCompressor(pendingFrame, MIC_FRAME_SIZE_BYTES)
-                                    applyGain(pendingFrame, MIC_FRAME_SIZE_BYTES, TX_GAIN)
+                                    applyGain(pendingFrame, MIC_FRAME_SIZE_BYTES, txGain)
                                     val encoded = opusCodec.encode(pendingFrame)
                                     if (encoded != null) {
                                         frameCounter++
@@ -330,29 +330,30 @@ class RadioAudioEngine(private val context: Context) {
     // High-pass filter state (~80Hz, single-pole IIR)
     private var hpPrevOutput: Double = 0.0
     private var hpPrevInput: Double = 0.0
-    private val HP_ALPHA: Double = 0.9889
+    var txHpAlpha: Double = 0.9889
 
     // Low-pass filter state (7.5kHz biquad at 48kHz sample rate)
-    // Biquad coefficients for: fc=7500Hz, Q=0.707, fs=48000Hz
-    private val LP_B0: Double = 0.1554851459
-    private val LP_B1: Double = 0.3109702918
-    private val LP_B2: Double = 0.1554851459
-    private val LP_A1: Double = -0.5765879199
-    private val LP_A2: Double = 0.1985285035
+    var txLpB0: Double = 0.1554851459
+    var txLpB1: Double = 0.3109702918
+    var txLpB2: Double = 0.1554851459
+    var txLpA1: Double = -0.5765879199
+    var txLpA2: Double = 0.1985285035
     private var lpX1: Double = 0.0
     private var lpX2: Double = 0.0
     private var lpY1: Double = 0.0
     private var lpY2: Double = 0.0
 
-    // Compressor state (matches web: threshold=-18dB, ratio=3:1, attack=3ms, release=150ms)
-    private val COMP_THRESHOLD_DB: Double = -18.0
-    private val COMP_RATIO: Double = 3.0
-    private val COMP_ATTACK_COEFF: Double = 1.0 - Math.exp(-1.0 / (MIC_SAMPLE_RATE * 0.003))
-    private val COMP_RELEASE_COEFF: Double = 1.0 - Math.exp(-1.0 / (MIC_SAMPLE_RATE * 0.15))
+    // Compressor state
+    var txCompThresholdDb: Double = -18.0
+    var txCompRatio: Double = 3.0
+    var txCompAttackMs: Double = 0.003
+    var txCompReleaseMs: Double = 0.15
     private var compEnvelopeDb: Double = -90.0
 
-    // TX gain (matches web's 1.4x base gain)
-    private val TX_GAIN: Double = 1.4
+    private val compAttackCoeff: Double get() = 1.0 - Math.exp(-1.0 / (MIC_SAMPLE_RATE * txCompAttackMs))
+    private val compReleaseCoeff: Double get() = 1.0 - Math.exp(-1.0 / (MIC_SAMPLE_RATE * txCompReleaseMs))
+
+    var txGain: Double = 1.4
 
     private fun resetDspState() {
         hpPrevOutput = 0.0
@@ -368,7 +369,7 @@ class RadioAudioEngine(private val context: Context) {
         var prevIn = hpPrevInput
         for (i in 0 until sampleCount) {
             val x = buf.getShort(i * 2).toDouble()
-            val y = HP_ALPHA * (prevOut + x - prevIn)
+            val y = txHpAlpha * (prevOut + x - prevIn)
             prevIn = x
             prevOut = y
             val clamped = y.coerceIn(-32768.0, 32767.0).toInt().toShort()
@@ -385,7 +386,7 @@ class RadioAudioEngine(private val context: Context) {
         var y1 = lpY1; var y2 = lpY2
         for (i in 0 until sampleCount) {
             val x0 = buf.getShort(i * 2).toDouble()
-            val y0 = LP_B0 * x0 + LP_B1 * x1 + LP_B2 * x2 - LP_A1 * y1 - LP_A2 * y2
+            val y0 = txLpB0 * x0 + txLpB1 * x1 + txLpB2 * x2 - txLpA1 * y1 - txLpA2 * y2
             x2 = x1; x1 = x0
             y2 = y1; y1 = y0
             buf.putShort(i * 2, y0.coerceIn(-32768.0, 32767.0).toInt().toShort())
@@ -403,15 +404,13 @@ class RadioAudioEngine(private val context: Context) {
             val absSample = Math.abs(sample) + 1e-10
             val inputDb = 20.0 * Math.log10(absSample / 32768.0)
 
-            // Envelope follower
-            val coeff = if (inputDb > envelope) COMP_ATTACK_COEFF else COMP_RELEASE_COEFF
+            val coeff = if (inputDb > envelope) compAttackCoeff else compReleaseCoeff
             envelope += coeff * (inputDb - envelope)
 
-            // Gain computation
             var gainDb = 0.0
-            if (envelope > COMP_THRESHOLD_DB) {
-                val overDb = envelope - COMP_THRESHOLD_DB
-                gainDb = -(overDb - overDb / COMP_RATIO)
+            if (envelope > txCompThresholdDb) {
+                val overDb = envelope - txCompThresholdDb
+                gainDb = -(overDb - overDb / txCompRatio)
             }
 
             val gainLinear = Math.pow(10.0, gainDb / 20.0)

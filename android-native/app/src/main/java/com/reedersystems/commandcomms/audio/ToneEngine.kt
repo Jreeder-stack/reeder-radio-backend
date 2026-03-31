@@ -20,9 +20,36 @@ class ToneEngine(private val context: Context) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var busyJob: Job? = null
     private var busyTrack: AudioTrack? = null
+    private var beepTrack: AudioTrack? = null
+    private val beepTrackLock = Any()
+
+    init {
+        initBeepTrack()
+    }
+
+    private fun initBeepTrack() {
+        synchronized(beepTrackLock) {
+            if (beepTrack != null) return
+            try {
+                val minBuf = AudioTrack.getMinBufferSize(
+                    SAMPLE_RATE, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT
+                )
+                val track = AudioTrack.Builder()
+                    .setAudioAttributes(audioAttribs())
+                    .setAudioFormat(audioFormat())
+                    .setBufferSizeInBytes(maxOf(minBuf, SAMPLE_RATE * 2))
+                    .setTransferMode(AudioTrack.MODE_STREAM)
+                    .build()
+                beepTrack = track
+                Log.d(TAG, "Beep AudioTrack pre-initialized")
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to pre-initialize beep AudioTrack: ${e.message}")
+            }
+        }
+    }
 
     fun playTalkPermitTone() {
-        scope.launch {
+        scope.launch(Dispatchers.Main.immediate) {
             playTalkPermitToneAndAwait()
         }
     }
@@ -37,6 +64,16 @@ class ToneEngine(private val context: Context) {
                 audioAttribs(),
                 AudioManager.AUDIO_SESSION_ID_GENERATE
             )
+            if (mp == null) {
+                Log.w(TAG, "MediaPlayer.create returned null, retrying once")
+                delay(50)
+                mp = MediaPlayer.create(
+                    context,
+                    R.raw.talk_permit,
+                    audioAttribs(),
+                    AudioManager.AUDIO_SESSION_ID_GENERATE
+                )
+            }
             if (mp != null) {
                 mp.setOnCompletionListener {
                     it.release()
@@ -52,6 +89,7 @@ class ToneEngine(private val context: Context) {
                 }
                 return
             }
+            Log.w(TAG, "MediaPlayer.create returned null after retry, using oscillator fallback")
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -162,25 +200,50 @@ class ToneEngine(private val context: Context) {
             phase += inc
             if (phase > 2.0 * PI) phase -= 2.0 * PI
         }
-        val minBuf = AudioTrack.getMinBufferSize(
-            SAMPLE_RATE, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT
-        )
+
         repeat(count) { idx ->
             runCatching {
-                val track = AudioTrack.Builder()
-                    .setAudioAttributes(audioAttribs())
-                    .setAudioFormat(audioFormat())
-                    .setBufferSizeInBytes(maxOf(minBuf, samples * 2))
-                    .setTransferMode(AudioTrack.MODE_STATIC)
-                    .build()
-                track.write(buf, 0, buf.size)
-                track.play()
-                delay(durationMs.toLong() + 20)
-                track.stop()
-                track.release()
+                val track = synchronized(beepTrackLock) { beepTrack }
+                if (track != null) {
+                    try {
+                        if (track.playState != AudioTrack.PLAYSTATE_PLAYING) {
+                            track.play()
+                        }
+                        track.write(buf, 0, buf.size)
+                        delay(durationMs.toLong() + 20)
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Reusable beep track error, recreating: ${e.message}")
+                        synchronized(beepTrackLock) {
+                            runCatching { beepTrack?.stop() }
+                            runCatching { beepTrack?.release() }
+                            beepTrack = null
+                        }
+                        initBeepTrack()
+                        playBeepFallback(buf, durationMs)
+                    }
+                } else {
+                    playBeepFallback(buf, durationMs)
+                }
                 if (idx < count - 1 && gapMs > 0) delay(gapMs.toLong())
             }.onFailure { Log.w(TAG, "Beep error: ${it.message}") }
         }
+    }
+
+    private suspend fun playBeepFallback(buf: ShortArray, durationMs: Int) {
+        val minBuf = AudioTrack.getMinBufferSize(
+            SAMPLE_RATE, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT
+        )
+        val track = AudioTrack.Builder()
+            .setAudioAttributes(audioAttribs())
+            .setAudioFormat(audioFormat())
+            .setBufferSizeInBytes(maxOf(minBuf, buf.size * 2))
+            .setTransferMode(AudioTrack.MODE_STATIC)
+            .build()
+        track.write(buf, 0, buf.size)
+        track.play()
+        delay(durationMs.toLong() + 20)
+        track.stop()
+        track.release()
     }
 
     private fun audioAttribs() = AudioAttributes.Builder()
@@ -197,6 +260,11 @@ class ToneEngine(private val context: Context) {
     fun release() {
         stopBusyTone()
         stopCountdownBeep()
+        synchronized(beepTrackLock) {
+            try { beepTrack?.stop() } catch (_: Exception) {}
+            try { beepTrack?.release() } catch (_: Exception) {}
+            beepTrack = null
+        }
         scope.cancel()
     }
 }

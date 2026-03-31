@@ -3,6 +3,32 @@ import * as authService from '../services/authService.js';
 import { success, error, created } from '../utils/response.js';
 import { startDispatcher, stopDispatcher } from '../services/aiDispatchService.js';
 import { getAiDispatchChannel, setAiDispatchChannel, getAllChannels } from '../db/index.js';
+import { signalingService } from '../services/signalingService.js';
+
+const DSP_DEFAULTS = {
+  txHpAlpha: 0.9889,
+  txLpB0: 0.1554851459,
+  txLpB1: 0.3109702918,
+  txLpB2: 0.1554851459,
+  txLpA1: -0.5765879199,
+  txLpA2: 0.1985285035,
+  txCompThresholdDb: -18.0,
+  txCompRatio: 3.0,
+  txCompAttackMs: 0.003,
+  txCompReleaseMs: 0.15,
+  txGain: 1.4,
+  rxHpAlpha: 0.9673,
+  rxLpB0: 0.06050,
+  rxLpB1: 0.12100,
+  rxLpB2: 0.06050,
+  rxLpA1: -1.19388,
+  rxLpA2: 0.43585,
+  rxGateThresholdDb: -40.0,
+  rxGain: 2.5,
+  opusBitrate: 48000,
+};
+
+let currentDspConfig = { ...DSP_DEFAULTS };
 
 export async function listUsers(req, res) {
   try {
@@ -239,6 +265,51 @@ export async function getAiDispatch(req, res) {
   } catch (err) {
     console.error('Get AI dispatch error:', err);
     error(res, 'Failed to get AI dispatch status', 500);
+  }
+}
+
+export function getAudioTuning(req, res) {
+  try {
+    success(res, { config: currentDspConfig, defaults: DSP_DEFAULTS });
+  } catch (err) {
+    console.error('Get audio tuning error:', err);
+    error(res, 'Failed to get audio tuning', 500);
+  }
+}
+
+export function setAudioTuning(req, res) {
+  try {
+    const updates = req.body;
+    if (!updates || typeof updates !== 'object') {
+      return error(res, 'Invalid config object', 400);
+    }
+    for (const [key, value] of Object.entries(updates)) {
+      if (key in DSP_DEFAULTS && typeof value === 'number' && isFinite(value)) {
+        currentDspConfig[key] = value;
+      }
+    }
+    if (signalingService.io) {
+      signalingService.io.emit('radio:dsp_config', currentDspConfig);
+      console.log('[AudioTuning] DSP config broadcast to all connected clients');
+    }
+    success(res, { config: currentDspConfig });
+  } catch (err) {
+    console.error('Set audio tuning error:', err);
+    error(res, 'Failed to set audio tuning', 500);
+  }
+}
+
+export function resetAudioTuning(req, res) {
+  try {
+    currentDspConfig = { ...DSP_DEFAULTS };
+    if (signalingService.io) {
+      signalingService.io.emit('radio:dsp_config', currentDspConfig);
+      console.log('[AudioTuning] DSP config reset to defaults and broadcast');
+    }
+    success(res, { config: currentDspConfig });
+  } catch (err) {
+    console.error('Reset audio tuning error:', err);
+    error(res, 'Failed to reset audio tuning', 500);
   }
 }
 

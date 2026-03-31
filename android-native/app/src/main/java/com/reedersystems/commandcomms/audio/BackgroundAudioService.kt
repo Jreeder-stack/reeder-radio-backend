@@ -536,6 +536,10 @@ class BackgroundAudioService : Service() {
                             engine.floorControl?.onChannelIdle()
                         }
                     }
+                    is SignalingEvent.RadioDspConfig -> {
+                        Log.d(TAG, "RADIO_DSP_CONFIG_RECEIVED: ${event.config}")
+                        applyDspConfig(engine, event.config)
+                    }
                     else -> {}
                 }
             }
@@ -803,6 +807,34 @@ class BackgroundAudioService : Service() {
             Log.d(TAG, "BackgroundAudioService: service-lifetime WakeLock released")
         }
         super.onDestroy()
+    }
+
+    private fun applyDspConfig(engine: com.reedersystems.commandcomms.audio.radio.RadioAudioEngine, config: org.json.JSONObject) {
+        try {
+            if (config.has("txHpAlpha")) engine.txHpAlpha = config.getDouble("txHpAlpha")
+            if (config.has("txLpB0")) engine.txLpB0 = config.getDouble("txLpB0")
+            if (config.has("txLpB1")) engine.txLpB1 = config.getDouble("txLpB1")
+            if (config.has("txLpB2")) engine.txLpB2 = config.getDouble("txLpB2")
+            if (config.has("txLpA1")) engine.txLpA1 = config.getDouble("txLpA1")
+            if (config.has("txLpA2")) engine.txLpA2 = config.getDouble("txLpA2")
+            if (config.has("txCompThresholdDb")) engine.txCompThresholdDb = config.getDouble("txCompThresholdDb")
+            if (config.has("txCompRatio")) engine.txCompRatio = config.getDouble("txCompRatio")
+            if (config.has("txCompAttackMs")) engine.txCompAttackMs = config.getDouble("txCompAttackMs")
+            if (config.has("txCompReleaseMs")) engine.txCompReleaseMs = config.getDouble("txCompReleaseMs")
+            if (config.has("txGain")) engine.txGain = config.getDouble("txGain")
+            if (config.has("rxHpAlpha")) engine.audioPlayback.rxHpAlpha = config.getDouble("rxHpAlpha")
+            if (config.has("rxLpB0")) engine.audioPlayback.rxLpB0 = config.getDouble("rxLpB0")
+            if (config.has("rxLpB1")) engine.audioPlayback.rxLpB1 = config.getDouble("rxLpB1")
+            if (config.has("rxLpB2")) engine.audioPlayback.rxLpB2 = config.getDouble("rxLpB2")
+            if (config.has("rxLpA1")) engine.audioPlayback.rxLpA1 = config.getDouble("rxLpA1")
+            if (config.has("rxLpA2")) engine.audioPlayback.rxLpA2 = config.getDouble("rxLpA2")
+            if (config.has("rxGateThresholdDb")) engine.audioPlayback.rxGateThresholdDb = config.getDouble("rxGateThresholdDb")
+            if (config.has("rxGain")) engine.audioPlayback.softwareGain = config.getDouble("rxGain").toFloat()
+            if (config.has("opusBitrate")) engine.opusCodec.setBitrateRuntime(config.getInt("opusBitrate"))
+            Log.d(TAG, "DSP config applied successfully")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to apply DSP config: ${e.message}", e)
+        }
     }
 
     companion object {

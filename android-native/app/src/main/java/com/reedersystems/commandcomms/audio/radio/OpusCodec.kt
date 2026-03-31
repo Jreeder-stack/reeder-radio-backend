@@ -12,7 +12,7 @@ class OpusCodec {
     companion object {
         const val SAMPLE_RATE = 48000
         const val CHANNELS = 1
-        const val BITRATE = 24000
+        const val BITRATE = 48000
         const val FRAME_SIZE = 960
         const val FRAME_DURATION_MS = 20
         const val MAX_ENCODED_SIZE = 512
@@ -41,6 +41,25 @@ class OpusCodec {
             Log.d(TAG, "OpusCodec initialized (Concentus, sample_rate=$SAMPLE_RATE frame_size=$FRAME_SIZE channels=$CHANNELS complexity=5)")
         } catch (e: Exception) {
             Log.e(TAG, "OpusCodec initialization failed: ${e.message}", e)
+        }
+    }
+
+    @Volatile
+    var currentBitrate: Int = BITRATE
+
+    fun setBitrateRuntime(newBitrate: Int) {
+        if (newBitrate < 6000 || newBitrate > 128000) {
+            Log.w(TAG, "setBitrateRuntime: invalid bitrate $newBitrate, ignoring")
+            return
+        }
+        currentBitrate = newBitrate
+        synchronized(encodeLock) {
+            try {
+                encoder?.setBitrate(newBitrate)
+                Log.d(TAG, "Encoder bitrate updated to $newBitrate at runtime")
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to set encoder bitrate: ${e.message}")
+            }
         }
     }
 

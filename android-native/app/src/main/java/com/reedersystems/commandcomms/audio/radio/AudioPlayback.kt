@@ -29,21 +29,21 @@ class AudioPlayback(
 
     private var rxHpPrevOutput: Double = 0.0
     private var rxHpPrevInput: Double = 0.0
-    private val RX_HP_ALPHA: Double = 0.9673
+    var rxHpAlpha: Double = 0.9673
 
-    private val RX_LP_B0: Double = 0.06050
-    private val RX_LP_B1: Double = 0.12100
-    private val RX_LP_B2: Double = 0.06050
-    private val RX_LP_A1: Double = -1.19388
-    private val RX_LP_A2: Double = 0.43585
+    var rxLpB0: Double = 0.06050
+    var rxLpB1: Double = 0.12100
+    var rxLpB2: Double = 0.06050
+    var rxLpA1: Double = -1.19388
+    var rxLpA2: Double = 0.43585
     private var rxLpX1: Double = 0.0
     private var rxLpX2: Double = 0.0
     private var rxLpY1: Double = 0.0
     private var rxLpY2: Double = 0.0
 
-    private val GATE_THRESHOLD_DB: Double = -40.0
-    private val GATE_ATTACK_COEFF: Double = 1.0 - Math.exp(-1.0 / (SAMPLE_RATE * 0.001))
-    private val GATE_RELEASE_COEFF: Double = 1.0 - Math.exp(-1.0 / (SAMPLE_RATE * 0.05))
+    var rxGateThresholdDb: Double = -40.0
+    private val gateAttackCoeff: Double get() = 1.0 - Math.exp(-1.0 / (SAMPLE_RATE * 0.001))
+    private val gateReleaseCoeff: Double get() = 1.0 - Math.exp(-1.0 / (SAMPLE_RATE * 0.05))
     private var gateEnvelopeDb: Double = -90.0
     private var gateAttenuation: Double = 0.0
 
@@ -62,7 +62,7 @@ class AudioPlayback(
         var prevIn = rxHpPrevInput
         for (i in 0 until sampleCount) {
             val x = buf.getShort(i * 2).toDouble()
-            val y = RX_HP_ALPHA * (prevOut + x - prevIn)
+            val y = rxHpAlpha * (prevOut + x - prevIn)
             prevIn = x
             prevOut = y
             buf.putShort(i * 2, y.coerceIn(-32768.0, 32767.0).toInt().toShort())
@@ -78,7 +78,7 @@ class AudioPlayback(
         var y1 = rxLpY1; var y2 = rxLpY2
         for (i in 0 until sampleCount) {
             val x0 = buf.getShort(i * 2).toDouble()
-            val y0 = RX_LP_B0 * x0 + RX_LP_B1 * x1 + RX_LP_B2 * x2 - RX_LP_A1 * y1 - RX_LP_A2 * y2
+            val y0 = rxLpB0 * x0 + rxLpB1 * x1 + rxLpB2 * x2 - rxLpA1 * y1 - rxLpA2 * y2
             x2 = x1; x1 = x0
             y2 = y1; y1 = y0
             buf.putShort(i * 2, y0.coerceIn(-32768.0, 32767.0).toInt().toShort())
@@ -97,11 +97,11 @@ class AudioPlayback(
             val absSample = Math.abs(sample) + 1e-10
             val inputDb = 20.0 * Math.log10(absSample / 32768.0)
 
-            val coeff = if (inputDb > envelope) GATE_ATTACK_COEFF else GATE_RELEASE_COEFF
+            val coeff = if (inputDb > envelope) gateAttackCoeff else gateReleaseCoeff
             envelope += coeff * (inputDb - envelope)
 
-            val targetAtten = if (envelope < GATE_THRESHOLD_DB) 0.0 else 1.0
-            val smoothCoeff = if (targetAtten > atten) GATE_ATTACK_COEFF else GATE_RELEASE_COEFF
+            val targetAtten = if (envelope < rxGateThresholdDb) 0.0 else 1.0
+            val smoothCoeff = if (targetAtten > atten) gateAttackCoeff else gateReleaseCoeff
             atten += smoothCoeff * (targetAtten - atten)
 
             val output = sample * atten
@@ -226,21 +226,43 @@ class AudioPlayback(
                     lastDataTimeMs = System.currentTimeMillis()
 
                     if (data != null) {
-                        val pcm = opusCodec.decode(data)
-                        if (pcm != null && pcm.isNotEmpty()) {
-                            if (!firstRxDecodeLogged) {
-                                Log.d(TAG, "LATENCY_FIRST_RX_FRAME_DECODED seq=$expectedSeq bytes=${data.size} pcm=${pcm.size}")
-                                firstRxDecodeLogged = true
+                        try {
+                            val pcm = opusCodec.decode(data)
+                            if (pcm != null && pcm.isNotEmpty()) {
+                                if (!firstRxDecodeLogged) {
+                                    Log.d(TAG, "LATENCY_FIRST_RX_FRAME_DECODED seq=$expectedSeq bytes=${data.size} pcm=${pcm.size}")
+                                    firstRxDecodeLogged = true
+                                }
+                                if (!firstPlaybackWriteLogged) {
+                                    Log.d(TAG, "LATENCY_FIRST_PLAYBACK_WRITE seq=$expectedSeq pcm=${pcm.size}")
+                                    firstPlaybackWriteLogged = true
+                                }
+                                Log.d(TAG, "OPUS_RX_FRAME_DECODED bytes=${data.size} pcm=${pcm.size}")
+                                Log.d(TAG, "RADIO_OPUS_RX_FRAME_DECODED bytes=${data.size} pcm=${pcm.size}")
+                                applyRxDspChain(pcm)
+                                applyGain(pcm)
+                                try {
+                                    track.write(pcm, 0, pcm.size)
+                                } catch (e: Exception) {
+                                    Log.e(TAG, "AudioTrack write error (continuing): ${e.message}")
+                                }
                             }
-                            if (!firstPlaybackWriteLogged) {
-                                Log.d(TAG, "LATENCY_FIRST_PLAYBACK_WRITE seq=$expectedSeq pcm=${pcm.size}")
-                                firstPlaybackWriteLogged = true
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Opus decode error seq=$expectedSeq (falling through to PLC): ${e.message}")
+                            try {
+                                val plcPcm = opusCodec.decode(null)
+                                if (plcPcm != null && plcPcm.isNotEmpty()) {
+                                    applyRxDspChain(plcPcm)
+                                    applyGain(plcPcm)
+                                    try {
+                                        track.write(plcPcm, 0, plcPcm.size)
+                                    } catch (writeEx: Exception) {
+                                        Log.e(TAG, "AudioTrack write error in PLC fallback (continuing): ${writeEx.message}")
+                                    }
+                                }
+                            } catch (plcEx: Exception) {
+                                Log.e(TAG, "PLC fallback also failed: ${plcEx.message}")
                             }
-                            Log.d(TAG, "OPUS_RX_FRAME_DECODED bytes=${data.size} pcm=${pcm.size}")
-                            Log.d(TAG, "RADIO_OPUS_RX_FRAME_DECODED bytes=${data.size} pcm=${pcm.size}")
-                            applyRxDspChain(pcm)
-                            applyGain(pcm)
-                            track.write(pcm, 0, pcm.size)
                         }
                     }
                 } else {
@@ -256,15 +278,24 @@ class AudioPlayback(
                         delay(FRAME_INTERVAL_MS)
                     } else {
                         plcCount++
-                        val pcm = opusCodec.decode(null)
-                        if (pcm != null && pcm.isNotEmpty()) {
-                            applyRxDspChain(pcm)
-                            applyGain(pcm)
-                            track.write(pcm, 0, pcm.size)
-                            if (plcCount % 10 == 1) {
-                                Log.d(TAG, "PLC frame for seq=$expectedSeq (total=$plcCount)")
+                        try {
+                            val pcm = opusCodec.decode(null)
+                            if (pcm != null && pcm.isNotEmpty()) {
+                                applyRxDspChain(pcm)
+                                applyGain(pcm)
+                                try {
+                                    track.write(pcm, 0, pcm.size)
+                                } catch (e: Exception) {
+                                    Log.e(TAG, "AudioTrack write error in PLC path (continuing): ${e.message}")
+                                }
+                                if (plcCount % 10 == 1) {
+                                    Log.d(TAG, "PLC frame for seq=$expectedSeq (total=$plcCount)")
+                                }
+                            } else {
+                                delay(FRAME_INTERVAL_MS)
                             }
-                        } else {
+                        } catch (e: Exception) {
+                            Log.e(TAG, "PLC decode error (continuing): ${e.message}")
                             delay(FRAME_INTERVAL_MS)
                         }
 
