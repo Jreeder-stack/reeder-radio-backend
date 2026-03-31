@@ -164,6 +164,13 @@ class SignalingService {
         timestamp: Date.now(),
         reason: 'timeout',
       });
+
+      this.io.to(`channel:${channelId}`).emit(SIGNALING_EVENTS.PTT_END, {
+        unitId,
+        channelId,
+        timestamp: Date.now(),
+      });
+
       this.io.to(`channel:${channelId}`).emit(RADIO_EVENTS.CHANNEL_IDLE, {
         channelId,
         timestamp: Date.now(),
@@ -1181,6 +1188,14 @@ class SignalingService {
         isEmergency: result.isEmergency || false,
       });
 
+      this.io.to(`channel:${channelId}`).emit(SIGNALING_EVENTS.PTT_START, {
+        unitId: socket.unitId,
+        agencyId: socket.agencyId,
+        channelId,
+        timestamp: Date.now(),
+        isEmergency: isEmergency || false,
+      });
+
       this.io.to(`channel:${channelId}`).emit(RADIO_EVENTS.CHANNEL_BUSY, {
         channelId,
         heldBy: socket.unitId,
@@ -1255,6 +1270,9 @@ class SignalingService {
     if (!socket.unitId) return;
     console.log(`[Signaling] PTT_RELEASE_SENT unitId=${socket.unitId} channelId=${channelId}`);
 
+    const floorHolder = floorControlService.getFloorHolder(channelId);
+    const grantedAt = floorHolder && floorHolder.unitId === socket.unitId ? floorHolder.grantedAt : null;
+
     const released = floorControlService.releaseFloor(channelId, socket.unitId);
     if (!released) return;
 
@@ -1269,10 +1287,19 @@ class SignalingService {
       presenceData.status = 'online';
     }
 
+    const now = Date.now();
+
     this.io.to(`channel:${channelId}`).emit(RADIO_EVENTS.TX_STOP, {
       senderUnitId: socket.unitId,
       channelId,
-      timestamp: Date.now(),
+      timestamp: now,
+    });
+
+    this.io.to(`channel:${channelId}`).emit(SIGNALING_EVENTS.PTT_END, {
+      unitId: socket.unitId,
+      channelId,
+      timestamp: now,
+      duration: grantedAt ? now - grantedAt : undefined,
     });
 
     this.io.to(`channel:${channelId}`).emit(RADIO_EVENTS.CHANNEL_IDLE, {
@@ -1312,6 +1339,9 @@ class SignalingService {
     if (!socket.unitId) return;
 
     if (floorControlService.holdsFloor(channelId, socket.unitId)) {
+      const floorHolder = floorControlService.getFloorHolder(channelId);
+      const grantedAt = floorHolder ? floorHolder.grantedAt : null;
+
       floorControlService.releaseFloor(channelId, socket.unitId);
 
       if (socket.radioSessionToken) {
@@ -1325,10 +1355,19 @@ class SignalingService {
         presenceData.status = 'online';
       }
 
+      const now = Date.now();
+
       this.io.to(`channel:${channelId}`).emit(RADIO_EVENTS.TX_STOP, {
         senderUnitId: socket.unitId,
         channelId,
-        timestamp: Date.now(),
+        timestamp: now,
+      });
+
+      this.io.to(`channel:${channelId}`).emit(SIGNALING_EVENTS.PTT_END, {
+        unitId: socket.unitId,
+        channelId,
+        timestamp: now,
+        duration: grantedAt ? now - grantedAt : undefined,
       });
 
       this.io.to(`channel:${channelId}`).emit(RADIO_EVENTS.CHANNEL_IDLE, {
