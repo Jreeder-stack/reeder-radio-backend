@@ -323,6 +323,11 @@ class AudioRelayService {
       clearInterval(this._sweepTimer);
       this._sweepTimer = null;
     }
+    for (const [, timer] of this._wsPacingTimers) {
+      clearInterval(timer);
+    }
+    this._wsPacingTimers.clear();
+    this._wsPacingQueues.clear();
     if (this.socket) {
       this.socket.close();
       this.socket = null;
