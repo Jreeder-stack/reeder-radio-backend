@@ -49,8 +49,9 @@ export class PcmPlaybackEngine {
 
         for (let i = 0; i < count; i++) {
           let sample = (current[this._fallbackOffset + i] / 32768) * 2.5;
-          if (sample > 1.0) sample = 1.0;
-          else if (sample < -1.0) sample = -1.0;
+          if (sample > 0.8 || sample < -0.8) {
+            sample = Math.tanh(sample);
+          }
           output[written + i] = sample;
         }
 

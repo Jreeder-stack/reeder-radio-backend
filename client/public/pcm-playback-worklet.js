@@ -56,8 +56,9 @@ class PcmPlaybackProcessor extends AudioWorkletProcessor {
 
       for (let i = 0; i < count; i++) {
         let sample = (this._currentFrame[this._offset + i] / 32768) * gain;
-        if (sample > 1.0) sample = 1.0;
-        else if (sample < -1.0) sample = -1.0;
+        if (sample > 0.8 || sample < -0.8) {
+          sample = Math.tanh(sample);
+        }
         outChannel[written + i] = sample;
       }
 
