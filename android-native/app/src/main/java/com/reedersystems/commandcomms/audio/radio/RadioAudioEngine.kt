@@ -8,7 +8,6 @@ import android.media.AudioManager
 import android.media.AudioRecord
 import android.media.MediaRecorder
 import android.media.audiofx.AutomaticGainControl
-import android.media.audiofx.NoiseSuppressor
 import android.os.Build
 import android.util.Log
 import kotlinx.coroutines.*
@@ -40,7 +39,6 @@ class RadioAudioEngine(private val context: Context) {
     private val transmitMutex = Mutex()
 
     private var audioRecord: AudioRecord? = null
-    private var noiseSuppressor: NoiseSuppressor? = null
     private var autoGainControl: AutomaticGainControl? = null
     private var captureJob: Job? = null
     private var rxDiagJob: Job? = null
@@ -145,7 +143,7 @@ class RadioAudioEngine(private val context: Context) {
             )
             val bufferSize = maxOf(minBufferSize, MIC_FRAME_SIZE_BYTES * 4)
             val record = AudioRecord(
-                MediaRecorder.AudioSource.VOICE_COMMUNICATION,
+                MediaRecorder.AudioSource.MIC,
                 MIC_SAMPLE_RATE,
                 AudioFormat.CHANNEL_IN_MONO,
                 AudioFormat.ENCODING_PCM_16BIT,
@@ -160,14 +158,6 @@ class RadioAudioEngine(private val context: Context) {
             audioRecord = record
 
             val sessionId = record.audioSessionId
-            try {
-                if (NoiseSuppressor.isAvailable()) {
-                    noiseSuppressor = NoiseSuppressor.create(sessionId)?.also { it.enabled = true }
-                    Log.d(TAG, "NoiseSuppressor attached: ${noiseSuppressor != null}")
-                }
-            } catch (e: Exception) {
-                Log.w(TAG, "NoiseSuppressor unavailable: ${e.message}")
-            }
             try {
                 if (AutomaticGainControl.isAvailable()) {
                     autoGainControl = AutomaticGainControl.create(sessionId)?.also { it.enabled = true }
@@ -248,10 +238,6 @@ class RadioAudioEngine(private val context: Context) {
         captureJob?.cancelAndJoin()
         captureJob = null
         resetDspState()
-        try {
-            noiseSuppressor?.release()
-        } catch (_: Exception) {}
-        noiseSuppressor = null
         try {
             autoGainControl?.release()
         } catch (_: Exception) {}
@@ -344,7 +330,7 @@ class RadioAudioEngine(private val context: Context) {
     private var lpY2: Double = 0.0
 
     // Compressor state
-    var txCompThresholdDb: Double = -18.0
+    var txCompThresholdDb: Double = -12.0
     var txCompRatio: Double = 3.0
     var txCompAttackMs: Double = 0.003
     var txCompReleaseMs: Double = 0.15
@@ -353,7 +339,7 @@ class RadioAudioEngine(private val context: Context) {
     private val compAttackCoeff: Double get() = 1.0 - Math.exp(-1.0 / (MIC_SAMPLE_RATE * txCompAttackMs))
     private val compReleaseCoeff: Double get() = 1.0 - Math.exp(-1.0 / (MIC_SAMPLE_RATE * txCompReleaseMs))
 
-    var txGain: Double = 1.4
+    var txGain: Double = 3.5
 
     private fun resetDspState() {
         hpPrevOutput = 0.0
