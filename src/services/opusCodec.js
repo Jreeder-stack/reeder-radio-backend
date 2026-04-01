@@ -49,8 +49,15 @@ class OpusCodecPool {
     }
     const decoder = this._createDecoder();
     this._senderDecoders.set(senderId, { decoder, lastUsed: Date.now() });
-    console.log(`[OpusCodec] Pinned decoder created for sender=${senderId} (active=${this._senderDecoders.size})`);
     return decoder;
+  }
+
+  resetSenderDecoder(senderId) {
+    const entry = this._senderDecoders.get(senderId);
+    if (entry) {
+      try { entry.decoder.delete(); } catch (e) {}
+      this._senderDecoders.delete(senderId);
+    }
   }
 
   releaseSenderDecoder(senderId) {

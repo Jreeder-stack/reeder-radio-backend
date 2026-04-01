@@ -1,6 +1,7 @@
 import { Server } from 'socket.io';
 import { floorControlService } from './floorControlService.js';
 import { audioRelayService } from './audioRelayService.js';
+import { opusCodec } from './opusCodec.js';
 import { canonicalChannelKey } from './channelKeyUtils.js';
 import crypto from 'crypto';
 import cookie from 'cookie';
@@ -445,6 +446,8 @@ class SignalingService {
       return;
     }
     
+    opusCodec.resetSenderDecoder(socket.unitId);
+
     const transmissionData = {
       unitId: socket.unitId,
       agencyId: socket.agencyId,
@@ -1174,6 +1177,7 @@ class SignalingService {
     });
 
     if (result.granted) {
+      opusCodec.resetSenderDecoder(socket.unitId);
       this._issueRadioSessionToken(socket, channelId, 'ptt_granted', socket.lastAuthorizedRadioChannelNumeric);
 
       socket.emit(RADIO_EVENTS.PTT_GRANTED, {

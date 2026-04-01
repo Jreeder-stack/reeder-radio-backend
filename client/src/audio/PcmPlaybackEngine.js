@@ -83,8 +83,12 @@ export class PcmPlaybackEngine {
   }
 
   async enqueue(int16Frame) {
-    await this.init();
-    await this.ensureAudioContextResumed('enqueue');
+    if (!this.started) {
+      await this.init();
+    }
+    if (this.audioContext && this.audioContext.state === 'suspended') {
+      this.audioContext.resume().catch(() => {});
+    }
 
     if (this._workletNode) {
       this._workletNode.port.postMessage({
