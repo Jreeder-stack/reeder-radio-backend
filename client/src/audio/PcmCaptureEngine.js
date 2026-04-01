@@ -5,8 +5,7 @@ export class PcmCaptureEngine {
     this.audioContext = null;
     this.stream = null;
     this.source = null;
-    this.processor = null;
-    this.buffer = new Int16Array(0);
+    this._workletNode = null;
     this.running = false;
     this.onFrame = null;
   }
@@ -34,9 +33,33 @@ export class PcmCaptureEngine {
     }
 
     this.source = this.audioContext.createMediaStreamSource(this.stream);
-    this.processor = this.audioContext.createScriptProcessor(1024, 1, 1);
 
-    this.processor.onaudioprocess = (event) => {
+    try {
+      await this.audioContext.audioWorklet.addModule('/pcm-capture-worklet.js');
+      this._workletNode = new AudioWorkletNode(this.audioContext, 'pcm-capture-processor');
+
+      this._workletNode.port.onmessage = (event) => {
+        if (!this.running) return;
+        if (event.data.type === 'pcmFrame' && this.onFrame) {
+          this.onFrame(event.data.samples);
+        }
+      };
+
+      this.source.connect(this._workletNode);
+      this._workletNode.connect(this.audioContext.destination);
+    } catch (err) {
+      console.warn('AudioWorklet not supported, falling back to ScriptProcessor:', err.message);
+      this._useFallback();
+    }
+
+    this.running = true;
+  }
+
+  _useFallback() {
+    this._fallbackProcessor = this.audioContext.createScriptProcessor(1024, 1, 1);
+    this._fallbackBuffer = new Int16Array(0);
+
+    this._fallbackProcessor.onaudioprocess = (event) => {
       if (!this.running) return;
       const input = event.inputBuffer.getChannelData(0);
       const pcmChunk = new Int16Array(input.length);
@@ -45,35 +68,36 @@ export class PcmCaptureEngine {
         pcmChunk[i] = s < 0 ? s * 32768 : s * 32767;
       }
 
-      const merged = new Int16Array(this.buffer.length + pcmChunk.length);
-      merged.set(this.buffer, 0);
-      merged.set(pcmChunk, this.buffer.length);
-      this.buffer = merged;
+      const merged = new Int16Array(this._fallbackBuffer.length + pcmChunk.length);
+      merged.set(this._fallbackBuffer, 0);
+      merged.set(pcmChunk, this._fallbackBuffer.length);
+      this._fallbackBuffer = merged;
 
-      while (this.buffer.length >= PCM_SPEC.frameSamples) {
-        const frame = this.buffer.slice(0, PCM_SPEC.frameSamples);
-        this.buffer = this.buffer.slice(PCM_SPEC.frameSamples);
-        console.log('TX_FRAME_READY', { samples: frame.length });
-        console.log('TX_FRAME_CREATED', { samples: frame.length });
+      while (this._fallbackBuffer.length >= PCM_SPEC.frameSamples) {
+        const frame = this._fallbackBuffer.slice(0, PCM_SPEC.frameSamples);
+        this._fallbackBuffer = this._fallbackBuffer.slice(PCM_SPEC.frameSamples);
         if (this.onFrame) this.onFrame(frame);
       }
     };
 
-    this.source.connect(this.processor);
-    this.processor.connect(this.audioContext.destination);
-
-    this.running = true;
-    console.log('TX_CAPTURE_STARTED');
+    this.source.connect(this._fallbackProcessor);
+    this._fallbackProcessor.connect(this.audioContext.destination);
   }
 
   async stop() {
     this.running = false;
-    this.buffer = new Int16Array(0);
 
-    if (this.processor) {
-      this.processor.disconnect();
-      this.processor.onaudioprocess = null;
-      this.processor = null;
+    if (this._workletNode) {
+      this._workletNode.disconnect();
+      this._workletNode.port.onmessage = null;
+      this._workletNode = null;
+    }
+
+    if (this._fallbackProcessor) {
+      this._fallbackProcessor.disconnect();
+      this._fallbackProcessor.onaudioprocess = null;
+      this._fallbackProcessor = null;
+      this._fallbackBuffer = new Int16Array(0);
     }
 
     if (this.source) {

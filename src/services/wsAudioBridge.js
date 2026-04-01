@@ -182,35 +182,12 @@ class WsAudioBridge {
         });
         return;
       }
-      console.log('SRV_TX_FRAME_RECEIVED', {
-        channelId,
-        senderUnitId: unitId,
-        sequence: packet.sequence,
-        samples: packet.payload?.length,
-      });
-
-      const listeners = this.channelClients.get(channelId);
-      const listenerCount = listeners ? Math.max(0, listeners.size - 1) : 0;
-      console.log('SRV_RELAY', { channelId, listenerCount });
-      console.log('SRV_TX_FRAME_RELAYED', {
-        channelId,
-        senderUnitId: unitId,
-        sequence: packet.sequence,
-        listenerCount,
-      });
-
       try {
         const pcmInt16 = Buffer.from(new Int16Array(packet.payload).buffer);
         const opusFrames = opusCodec.encodePcmToOpus(pcmInt16);
         for (let i = 0; i < opusFrames.length; i++) {
-          audioRelayService.injectAudio(channelId, unitId, packet.sequence + i, opusFrames[i]);
+          audioRelayService.injectAudio(channelId, unitId, packet.sequence + i, opusFrames[i], i === 0 ? packet.payload : null);
         }
-        console.log('WS_TO_UDP_RELAY', {
-          channelId,
-          senderUnitId: unitId,
-          sequence: packet.sequence,
-          opusFrameCount: opusFrames.length,
-        });
       } catch (err) {
         console.error('WS_TO_UDP_RELAY_ERROR', {
           channelId,

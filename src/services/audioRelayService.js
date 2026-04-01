@@ -100,7 +100,7 @@ class AudioRelayService {
     if (!this._wsSubscribers) this._wsSubscribers = new Map();
     if (!this._wsSubscribers.has(key)) this._wsSubscribers.set(key, new Map());
     this._wsSubscribers.get(key).set(unitId, ws);
-    console.log(`[AudioRelay] WS subscriber added: ${unitId} on ${key}`);
+  
   }
 
   removeWsSubscriber(channelId, unitId) {
@@ -110,7 +110,7 @@ class AudioRelayService {
     if (!subs) return;
     subs.delete(unitId);
     if (subs.size === 0) this._wsSubscribers.delete(key);
-    console.log(`[AudioRelay] WS subscriber removed: ${unitId} from ${key}`);
+  
   }
 
   removeAllWsSubscriptions(unitId) {
@@ -142,7 +142,7 @@ class AudioRelayService {
     }
   }
 
-  injectAudio(channelId, senderUnitId, sequence, opusPayload) {
+  injectAudio(channelId, senderUnitId, sequence, opusPayload, rawPcmSamples = null) {
     const channelKey = canonicalChannelKey(channelId);
 
     if (this._floorControlService && !this._floorControlService.holdsFloor(channelKey, senderUnitId)) {
@@ -159,21 +159,15 @@ class AudioRelayService {
       timestampMs: Date.now(),
     });
 
-    this._broadcastToAll(channelKey, senderUnitId, rxPayload, sequence, opusPayload, this._resolveChannelIdNumeric({ channelKey, channelIdNumeric: channelId }));
+    this._broadcastToAll(channelKey, senderUnitId, rxPayload, sequence, opusPayload, this._resolveChannelIdNumeric({ channelKey, channelIdNumeric: channelId }), null, rawPcmSamples);
   }
 
-  _broadcastToAll(channelKey, senderUnitId, rxPayload, sequence, opusPayload, channelIdNumeric = null, resolvedSender = null) {
-    const resolvedChannelId = this._resolveChannelIdNumeric({ channelKey, channelIdNumeric });
+  _broadcastToAll(channelKey, senderUnitId, rxPayload, sequence, opusPayload, channelIdNumeric = null, resolvedSender = null, rawPcmSamples = null) {
     const udpSubs = this.subscribers.get(channelKey);
-    const udpSubCount = udpSubs ? udpSubs.size : 0;
-    const wsSubCount = this._wsSubscribers?.get(channelKey)?.size || 0;
-    const listenerCount = this._audioListeners.get(channelKey)?.size || 0;
-    console.log(`[AudioRelay] RELAY_BROADCAST channelId=${channelKey} sender=${senderUnitId} udpSubs=${udpSubCount} wsSubs=${wsSubCount} listeners=${listenerCount}`);
     if (udpSubs) {
       for (const [subUnitId, subInfo] of udpSubs) {
         if (subUnitId === senderUnitId) continue;
         subInfo.lastSeen = Date.now();
-        console.log(`RADIO_SERVER_PACKET_RELAYED channelId=${resolvedChannelId} targetUnit=${subUnitId}`);
         try {
           this.socket.send(rxPayload, 0, rxPayload.length, subInfo.port, subInfo.address);
         } catch (err) {
@@ -186,7 +180,6 @@ class AudioRelayService {
     if (listeners) {
       for (const [listenerId, callback] of listeners) {
         if (listenerId === senderUnitId) continue;
-        console.log(`DESKTOP_AUDIO_DISPATCH bytes=${opusPayload.length} channelId=${channelKey} targetClient=${listenerId}`);
         try {
           callback({ channelId: channelKey, unitId: senderUnitId, sequence, opusPayload, timestamp: Date.now() });
         } catch (err) {
@@ -198,12 +191,14 @@ class AudioRelayService {
     if (this._wsSubscribers) {
       const wsSubs = this._wsSubscribers.get(channelKey);
       if (wsSubs && wsSubs.size > 0) {
-        let pcmSamples;
-        try {
-          const pcmBuf = opusCodec.decodeOpusToPcm(opusPayload, resolvedSender || senderUnitId);
-          pcmSamples = Array.from(new Int16Array(pcmBuf.buffer, pcmBuf.byteOffset, pcmBuf.byteLength / 2));
-        } catch (err) {
-          console.error(`[AudioRelay] Opus→PCM decode error: ${err.message}`);
+        let pcmSamples = rawPcmSamples || null;
+        if (!pcmSamples) {
+          try {
+            const pcmBuf = opusCodec.decodeOpusToPcm(opusPayload, resolvedSender || senderUnitId);
+            pcmSamples = Array.from(new Int16Array(pcmBuf.buffer, pcmBuf.byteOffset, pcmBuf.byteLength / 2));
+          } catch (err) {
+            console.error(`[AudioRelay] Opus→PCM decode error: ${err.message}`);
+          }
         }
         if (pcmSamples) {
           const pcmPacket = JSON.stringify({
@@ -307,12 +302,12 @@ class AudioRelayService {
     const { unitId, allowedChannel, allowedChannelNumeric } = session;
     const channelKey = canonicalChannelKey(allowedChannel);
     const resolvedChannelId = this._resolveChannelIdNumeric({ channelKey, channelIdNumeric: allowedChannelNumeric });
-    console.log(`RADIO_SERVER_PACKET_RECEIVED channelId=${resolvedChannelId} roomKey=${channelKey} senderUnitId=${senderUnitId || unitId}`);
+  
 
     this.addSubscriber(channelKey, unitId, rinfo.address, rinfo.port);
 
     if (!opusPayload || opusPayload.length === 0) {
-      console.log(`[AudioRelay] KEEPALIVE_RECEIVED unitId=${unitId} channelId=${channelKey} from=${rinfo.address}:${rinfo.port}`);
+    
       return;
     }
 
@@ -331,7 +326,7 @@ class AudioRelayService {
       }
       if (buf.length < this._earlyBufferMaxFrames) {
         buf.push({ channelKey, channelIdNumeric: resolvedChannelId, senderUnitId: resolvedSender, sequence, opusPayload, flags, timestampMs, bufferedAt: now });
-        console.log(`[AudioRelay] EARLY_AUDIO_BUFFERED unitId=${unitId} channel=${channelKey} seq=${sequence} buffered=${buf.length}`);
+      
       }
       return;
     }
@@ -342,7 +337,7 @@ class AudioRelayService {
       const now = Date.now();
       const freshFrames = earlyBuf.filter(pkt => (now - pkt.bufferedAt) <= this._earlyBufferMaxMs);
       if (freshFrames.length > 0) {
-        console.log(`[AudioRelay] EARLY_AUDIO_FLUSHING unitId=${unitId} channel=${channelKey} frames=${freshFrames.length} (dropped=${earlyBuf.length - freshFrames.length} stale)`);
+      
         for (const pkt of freshFrames) {
           const earlyPayload = this._buildRelayPacket(pkt);
           this._broadcastToAll(pkt.channelKey, unitId, earlyPayload, pkt.sequence, pkt.opusPayload, pkt.channelIdNumeric, pkt.senderUnitId);
@@ -384,7 +379,7 @@ class AudioRelayService {
       console.warn(`[AudioRelay] RELAY_CHANNEL_ID_ZERO channelKey=${channelKey} — receiver may drop this packet`);
       console.warn(`RADIO_RELAY_PACKET_ZERO_CHANNEL_WARNING roomKey=${channelKey} senderUnit=${senderUnitId || ''}`);
     }
-    console.log(`RADIO_RELAY_PACKET_BUILT channelId=${channelIdNum} roomKey=${channelKey}`);
+  
     const senderBytes = Buffer.from(senderUnitId || '', 'utf8').subarray(0, 255);
     const payloadLength = Math.min(opusPayload.length, 0xffff);
     const packet = Buffer.alloc(RADIO_HEADER_FIXED_LEN + senderBytes.length + payloadLength);

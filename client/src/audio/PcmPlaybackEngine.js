@@ -3,9 +3,10 @@ import { PCM_SPEC } from './PcmPacket.js';
 export class PcmPlaybackEngine {
   constructor() {
     this.audioContext = null;
-    this.processor = null;
-    this.queue = [];
-    this.offset = 0;
+    this._workletNode = null;
+    this._fallbackProcessor = null;
+    this._fallbackQueue = [];
+    this._fallbackOffset = 0;
     this.started = false;
     this._speakerRouteLogged = false;
     this._processorConnected = false;
@@ -19,27 +20,43 @@ export class PcmPlaybackEngine {
 
     await this.ensureAudioContextResumed('init');
 
-    this.processor = this.audioContext.createScriptProcessor(1024, 1, 1);
-    this.processor.onaudioprocess = (event) => {
+    try {
+      await this.audioContext.audioWorklet.addModule('/pcm-playback-worklet.js');
+      this._workletNode = new AudioWorkletNode(this.audioContext, 'pcm-playback-processor', {
+        outputChannelCount: [1],
+      });
+      this._workletNode.connect(this.audioContext.destination);
+    } catch (err) {
+      console.warn('AudioWorklet not supported for playback, falling back to ScriptProcessor:', err.message);
+      this._useFallback();
+    }
+
+    this._processorConnected = true;
+    this.started = true;
+  }
+
+  _useFallback() {
+    this._fallbackProcessor = this.audioContext.createScriptProcessor(1024, 1, 1);
+    this._fallbackProcessor.onaudioprocess = (event) => {
       const output = event.outputBuffer.getChannelData(0);
       let written = 0;
 
-      while (written < output.length && this.queue.length > 0) {
-        const current = this.queue[0];
-        const available = current.length - this.offset;
+      while (written < output.length && this._fallbackQueue.length > 0) {
+        const current = this._fallbackQueue[0];
+        const available = current.length - this._fallbackOffset;
         const needed = output.length - written;
         const count = Math.min(available, needed);
 
         for (let i = 0; i < count; i++) {
-          output[written + i] = current[this.offset + i] / 32768;
+          output[written + i] = current[this._fallbackOffset + i] / 32768;
         }
 
         written += count;
-        this.offset += count;
+        this._fallbackOffset += count;
 
-        if (this.offset >= current.length) {
-          this.queue.shift();
-          this.offset = 0;
+        if (this._fallbackOffset >= current.length) {
+          this._fallbackQueue.shift();
+          this._fallbackOffset = 0;
         }
       }
 
@@ -48,39 +65,19 @@ export class PcmPlaybackEngine {
       }
     };
 
-    this.processor.connect(this.audioContext.destination);
-    this._processorConnected = true;
-    this.started = true;
-    console.log('RX_PLAYBACK_STARTED', {
-      started: this.started,
-      processorConnected: this._processorConnected,
-      hasDestination: !!this.audioContext?.destination,
-    });
+    this._fallbackProcessor.connect(this.audioContext.destination);
   }
 
   async ensureAudioContextResumed(reason = 'unknown') {
     if (!this.audioContext) return false;
 
-    console.log('AUDIO_CONTEXT_STATE', {
-      reason,
-      state: this.audioContext.state,
-      sampleRate: this.audioContext.sampleRate,
-      baseLatency: this.audioContext.baseLatency ?? null,
-      outputLatency: this.audioContext.outputLatency ?? null,
-    });
-
     if (this.audioContext.state !== 'suspended') return true;
 
     try {
       await this.audioContext.resume();
-      console.log('AUDIO_CONTEXT_RESUMED', { reason, state: this.audioContext.state });
       return this.audioContext.state === 'running';
     } catch (err) {
-      console.warn('AUDIO_CONTEXT_RESUMED', {
-        reason,
-        state: this.audioContext.state,
-        error: err?.message || String(err),
-      });
+      console.warn('AUDIO_CONTEXT_RESUME_FAILED', { reason, error: err?.message || String(err) });
       return false;
     }
   }
@@ -89,38 +86,35 @@ export class PcmPlaybackEngine {
     await this.init();
     await this.ensureAudioContextResumed('enqueue');
 
-    if (!this._speakerRouteLogged) {
-      this._speakerRouteLogged = true;
-      const sinkIdSupported = typeof this.audioContext?.setSinkId === 'function';
-      console.log('SPEAKER_ROUTE_SELECTED', {
-        route: 'default',
-        sinkIdSupported,
+    if (this._workletNode) {
+      this._workletNode.port.postMessage({
+        type: 'enqueue',
+        samples: new Int16Array(int16Frame),
       });
+    } else if (this._fallbackProcessor) {
+      this._fallbackQueue.push(new Int16Array(int16Frame));
     }
-
-    this.queue.push(new Int16Array(int16Frame));
-    console.log('RX_QUEUE_ENQUEUED', {
-      frameSamples: int16Frame?.length || 0,
-      queueDepth: this.queue.length,
-      offset: this.offset,
-      processorConnected: this._processorConnected,
-      hasDestination: !!this.audioContext?.destination,
-    });
     return true;
   }
 
   async close() {
-    this.queue = [];
-    this.offset = 0;
-    if (this.processor) {
-      this.processor.disconnect();
-      this.processor.onaudioprocess = null;
-      this.processor = null;
+    if (this._workletNode) {
+      this._workletNode.port.postMessage({ type: 'clear' });
+      this._workletNode.disconnect();
+      this._workletNode = null;
+    }
+    if (this._fallbackProcessor) {
+      this._fallbackProcessor.disconnect();
+      this._fallbackProcessor.onaudioprocess = null;
+      this._fallbackProcessor = null;
+      this._fallbackQueue = [];
+      this._fallbackOffset = 0;
     }
     if (this.audioContext) {
       await this.audioContext.close().catch(() => {});
       this.audioContext = null;
     }
     this.started = false;
+    this._processorConnected = false;
   }
 }

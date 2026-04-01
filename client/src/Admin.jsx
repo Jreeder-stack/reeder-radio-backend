@@ -1135,7 +1135,7 @@ export default function Admin({ user, onLogout }) {
 
         {/* --- Audio Tuning Tab (temporary - remove once tuning is finalized) --- */}
         {activeTab === "audioTuning" && (
-          <div style={{ overflowY: "auto", WebkitOverflowScrolling: "touch" }}>
+          <div style={{ overflowY: "auto", WebkitOverflowScrolling: "touch", maxHeight: "calc(100vh - 180px)", paddingBottom: 24 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
               <h2 style={{ margin: 0, fontSize: 20 }}>Audio Tuning</h2>
               <button
@@ -1161,34 +1161,34 @@ export default function Admin({ user, onLogout }) {
               <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 20 }}>
                 <div style={{ background: "#1e1e2e", borderRadius: 12, padding: 20 }}>
                   <h3 style={{ margin: "0 0 16px", fontSize: 16, color: "#3b82f6" }}>TX (Transmit)</h3>
-                  <DspSlider label="HP Alpha" paramKey="txHpAlpha" value={dspConfig.txHpAlpha} min={0.9} max={0.999} step={0.001} onChange={updateDspParam} />
-                  <DspSlider label="LP B0" paramKey="txLpB0" value={dspConfig.txLpB0} min={0} max={1} step={0.0001} onChange={updateDspParam} />
-                  <DspSlider label="LP B1" paramKey="txLpB1" value={dspConfig.txLpB1} min={0} max={1} step={0.0001} onChange={updateDspParam} />
-                  <DspSlider label="LP B2" paramKey="txLpB2" value={dspConfig.txLpB2} min={0} max={1} step={0.0001} onChange={updateDspParam} />
-                  <DspSlider label="LP A1" paramKey="txLpA1" value={dspConfig.txLpA1} min={-2} max={2} step={0.0001} onChange={updateDspParam} />
-                  <DspSlider label="LP A2" paramKey="txLpA2" value={dspConfig.txLpA2} min={-2} max={2} step={0.0001} onChange={updateDspParam} />
-                  <DspSlider label="Comp Threshold (dB)" paramKey="txCompThresholdDb" value={dspConfig.txCompThresholdDb} min={-40} max={0} step={1} onChange={updateDspParam} />
-                  <DspSlider label="Comp Ratio" paramKey="txCompRatio" value={dspConfig.txCompRatio} min={1} max={20} step={0.5} onChange={updateDspParam} />
-                  <DspSlider label="Comp Attack (ms)" paramKey="txCompAttackMs" value={dspConfig.txCompAttackMs} min={0.001} max={0.05} step={0.001} onChange={updateDspParam} />
-                  <DspSlider label="Comp Release (ms)" paramKey="txCompReleaseMs" value={dspConfig.txCompReleaseMs} min={0.01} max={0.5} step={0.01} onChange={updateDspParam} />
-                  <DspSlider label="TX Gain" paramKey="txGain" value={dspConfig.txGain} min={0.1} max={5.0} step={0.1} onChange={updateDspParam} />
+                  <DspSlider label="HP Alpha" paramKey="txHpAlpha" value={dspConfig.txHpAlpha} min={0.9} max={0.999} step={0.001} onChange={updateDspParam} description="Controls the high-pass filter cutoff — higher values remove more low-frequency rumble" />
+                  <DspSlider label="LP B0" paramKey="txLpB0" value={dspConfig.txLpB0} min={0} max={1} step={0.0001} onChange={updateDspParam} description="Low-pass filter feedforward coefficient — shapes the amount of treble allowed through" />
+                  <DspSlider label="LP B1" paramKey="txLpB1" value={dspConfig.txLpB1} min={0} max={1} step={0.0001} onChange={updateDspParam} description="Low-pass filter first delay tap — adjusts frequency roll-off curve" />
+                  <DspSlider label="LP B2" paramKey="txLpB2" value={dspConfig.txLpB2} min={0} max={1} step={0.0001} onChange={updateDspParam} description="Low-pass filter second delay tap — fine-tunes the steepness of the roll-off" />
+                  <DspSlider label="LP A1" paramKey="txLpA1" value={dspConfig.txLpA1} min={-2} max={2} step={0.0001} onChange={updateDspParam} description="Low-pass filter first feedback coefficient — controls resonance near the cutoff" />
+                  <DspSlider label="LP A2" paramKey="txLpA2" value={dspConfig.txLpA2} min={-2} max={2} step={0.0001} onChange={updateDspParam} description="Low-pass filter second feedback coefficient — affects filter stability and sharpness" />
+                  <DspSlider label="Comp Threshold (dB)" paramKey="txCompThresholdDb" value={dspConfig.txCompThresholdDb} min={-40} max={0} step={1} onChange={updateDspParam} description="Volume level above which compression kicks in — lower values compress more of the signal" />
+                  <DspSlider label="Comp Ratio" paramKey="txCompRatio" value={dspConfig.txCompRatio} min={1} max={20} step={0.5} onChange={updateDspParam} description="How much the volume is reduced above the threshold — higher values mean stronger compression" />
+                  <DspSlider label="Comp Attack (ms)" paramKey="txCompAttackMs" value={dspConfig.txCompAttackMs} min={0.001} max={0.05} step={0.001} onChange={updateDspParam} description="How quickly the compressor reacts to loud sounds — lower is faster" />
+                  <DspSlider label="Comp Release (ms)" paramKey="txCompReleaseMs" value={dspConfig.txCompReleaseMs} min={0.01} max={0.5} step={0.01} onChange={updateDspParam} description="How quickly the compressor stops reducing volume after sound drops — lower is faster" />
+                  <DspSlider label="TX Gain" paramKey="txGain" value={dspConfig.txGain} min={0.1} max={5.0} step={0.1} onChange={updateDspParam} description="Overall transmit volume multiplier — increase to make outgoing audio louder" />
                 </div>
 
                 <div style={{ background: "#1e1e2e", borderRadius: 12, padding: 20 }}>
                   <h3 style={{ margin: "0 0 16px", fontSize: 16, color: "#22c55e" }}>RX (Receive)</h3>
-                  <DspSlider label="HP Alpha" paramKey="rxHpAlpha" value={dspConfig.rxHpAlpha} min={0.9} max={0.999} step={0.001} onChange={updateDspParam} />
-                  <DspSlider label="LP B0" paramKey="rxLpB0" value={dspConfig.rxLpB0} min={0} max={1} step={0.0001} onChange={updateDspParam} />
-                  <DspSlider label="LP B1" paramKey="rxLpB1" value={dspConfig.rxLpB1} min={0} max={1} step={0.0001} onChange={updateDspParam} />
-                  <DspSlider label="LP B2" paramKey="rxLpB2" value={dspConfig.rxLpB2} min={0} max={1} step={0.0001} onChange={updateDspParam} />
-                  <DspSlider label="LP A1" paramKey="rxLpA1" value={dspConfig.rxLpA1} min={-2} max={2} step={0.0001} onChange={updateDspParam} />
-                  <DspSlider label="LP A2" paramKey="rxLpA2" value={dspConfig.rxLpA2} min={-2} max={2} step={0.0001} onChange={updateDspParam} />
-                  <DspSlider label="Noise Gate (dB)" paramKey="rxGateThresholdDb" value={dspConfig.rxGateThresholdDb} min={-80} max={0} step={1} onChange={updateDspParam} />
-                  <DspSlider label="RX Gain" paramKey="rxGain" value={dspConfig.rxGain} min={0.1} max={10.0} step={0.1} onChange={updateDspParam} />
+                  <DspSlider label="HP Alpha" paramKey="rxHpAlpha" value={dspConfig.rxHpAlpha} min={0.9} max={0.999} step={0.001} onChange={updateDspParam} description="Controls the receive high-pass filter cutoff — removes low-frequency noise from incoming audio" />
+                  <DspSlider label="LP B0" paramKey="rxLpB0" value={dspConfig.rxLpB0} min={0} max={1} step={0.0001} onChange={updateDspParam} description="Receive low-pass feedforward coefficient — shapes treble on incoming audio" />
+                  <DspSlider label="LP B1" paramKey="rxLpB1" value={dspConfig.rxLpB1} min={0} max={1} step={0.0001} onChange={updateDspParam} description="Receive low-pass first delay tap — adjusts incoming audio roll-off curve" />
+                  <DspSlider label="LP B2" paramKey="rxLpB2" value={dspConfig.rxLpB2} min={0} max={1} step={0.0001} onChange={updateDspParam} description="Receive low-pass second delay tap — fine-tunes incoming audio roll-off steepness" />
+                  <DspSlider label="LP A1" paramKey="rxLpA1" value={dspConfig.rxLpA1} min={-2} max={2} step={0.0001} onChange={updateDspParam} description="Receive low-pass first feedback coefficient — controls resonance on incoming audio" />
+                  <DspSlider label="LP A2" paramKey="rxLpA2" value={dspConfig.rxLpA2} min={-2} max={2} step={0.0001} onChange={updateDspParam} description="Receive low-pass second feedback coefficient — affects incoming filter stability" />
+                  <DspSlider label="Noise Gate (dB)" paramKey="rxGateThresholdDb" value={dspConfig.rxGateThresholdDb} min={-80} max={0} step={1} onChange={updateDspParam} description="Audio below this level is silenced — raise to cut out background noise between transmissions" />
+                  <DspSlider label="RX Gain" paramKey="rxGain" value={dspConfig.rxGain} min={0.1} max={10.0} step={0.1} onChange={updateDspParam} description="Overall receive volume multiplier — increase to make incoming audio louder" />
                 </div>
 
                 <div style={{ background: "#1e1e2e", borderRadius: 12, padding: 20 }}>
                   <h3 style={{ margin: "0 0 16px", fontSize: 16, color: "#f59e0b" }}>Codec</h3>
-                  <DspSlider label="Opus Bitrate" paramKey="opusBitrate" value={dspConfig.opusBitrate} min={6000} max={128000} step={1000} onChange={updateDspParam} />
+                  <DspSlider label="Opus Bitrate" paramKey="opusBitrate" value={dspConfig.opusBitrate} min={6000} max={128000} step={1000} onChange={updateDspParam} description="Target bitrate for Opus encoding — higher values mean better quality but more bandwidth" />
                 </div>
               </div>
             )}
@@ -1552,17 +1552,20 @@ function EditUserModal({ user, channels, isMobile, onClose, onSave }) {
 }
 
 /* --- DspSlider: temporary component for Audio Tuning tab --- */
-function DspSlider({ label, paramKey, value, min, max, step, onChange }) {
+function DspSlider({ label, paramKey, value, min, max, step, onChange, description }) {
   const displayValue = typeof value === "number"
     ? (Number.isInteger(value) ? value : value.toFixed(step < 0.01 ? 4 : step < 1 ? 3 : 1))
     : value;
 
   return (
     <div style={{ marginBottom: 16 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
         <label style={{ fontSize: 13, color: "#ccc" }}>{label}</label>
         <span style={{ fontSize: 13, color: "#3b82f6", fontFamily: "monospace" }}>{displayValue}</span>
       </div>
+      {description && (
+        <div style={{ fontSize: 11, color: "#888", marginBottom: 4, lineHeight: 1.3 }}>{description}</div>
+      )}
       <input
         type="range"
         min={min}

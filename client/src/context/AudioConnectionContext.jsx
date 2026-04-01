@@ -535,11 +535,12 @@ export function AudioConnectionProvider({ children, user }) {
     const currentPath = location.pathname;
     const isDispatcher = currentPath === '/dispatcher';
     const isRadio = currentPath === '/';
+    const isAdmin = currentPath === '/admin';
     
     audioTransportManager.setDispatcherMode(isDispatcher);
 
-    if (isDispatcher || isRadio) {
-      console.log(`[AudioConnection] ${isDispatcher ? 'Dispatcher' : 'Radio'} mode - idle timeout disabled (must survive screen lock)`);
+    if (isDispatcher || isRadio || isAdmin) {
+      console.log(`[AudioConnection] ${isDispatcher ? 'Dispatcher' : isAdmin ? 'Admin' : 'Radio'} mode - idle timeout disabled (audio must persist)`);
       return;
     }
     
@@ -611,9 +612,9 @@ export function AudioConnectionProvider({ children, user }) {
     const init = async () => {
       console.log('[AudioConnection] Init check - user:', user?.username, 'lastUser:', lastUserRef.current, 'initializing:', initializingRef.current, 'path:', currentPath);
       
-      const shouldConnect = currentPath === '/' || currentPath === '/dispatcher';
+      const shouldConnect = currentPath === '/' || currentPath === '/dispatcher' || currentPath === '/admin';
       if (!shouldConnect) {
-        console.log('[AudioConnection] Not on radio or dispatcher route, skipping auto-connect');
+        console.log('[AudioConnection] Not on radio, dispatcher, or admin route, skipping auto-connect');
         return;
       }
       
