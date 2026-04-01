@@ -25,6 +25,8 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import androidx.core.content.ContextCompat
 import com.reedersystems.commandcomms.audio.BackgroundAudioService
 import com.reedersystems.commandcomms.data.prefs.formatKeyLabel
@@ -54,6 +56,7 @@ class MainActivity : ComponentActivity() {
 
     private var starDownTime = 0L
     private var lastCapturedKeyCode = -1
+    private val rootFocusRequester = FocusRequester()
 
     /**
      * Set to true when we have launched ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENTS.
@@ -115,18 +118,17 @@ class MainActivity : ComponentActivity() {
         requestAppPermissions()
         setContent {
             CommandCommsTheme {
-                val focusRequester = FocusRequester()
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .focusRequester(focusRequester)
+                        .focusRequester(rootFocusRequester)
                         .focusable()
                         .onPreviewKeyEvent(::handlePreviewKeyEvent)
                 ) {
                     AppNavigation()
                 }
                 LaunchedEffect(Unit) {
-                    focusRequester.requestFocus()
+                    rootFocusRequester.requestFocus()
                 }
             }
         }
@@ -135,6 +137,9 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         logDiagnostics()
+        lifecycleScope.launch {
+            try { rootFocusRequester.requestFocus() } catch (_: Exception) {}
+        }
         if (pendingBatteryPromptAfterFullScreenIntent) {
             pendingBatteryPromptAfterFullScreenIntent = false
             openBatteryOptimizationSettingsIfNeeded()

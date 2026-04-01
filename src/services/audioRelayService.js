@@ -19,6 +19,8 @@ const SUBSCRIBER_SWEEP_INTERVAL_MS = 30000;
 
 const WS_PACING_INTERVAL_MS = 20;
 const WS_PACING_MAX_QUEUE = 10;
+const PCM_FRAME_SAMPLES = 960;
+const _reusablePcmArray = new Array(PCM_FRAME_SAMPLES);
 
 class AudioRelayService {
   constructor() {
@@ -201,8 +203,14 @@ class AudioRelayService {
           try {
             const pcmBuf = opusCodec.decodeOpusToPcm(opusPayload, resolvedSender || senderUnitId);
             const int16View = new Int16Array(pcmBuf.buffer, pcmBuf.byteOffset, pcmBuf.byteLength / 2);
-            pcmSamples = [];
-            for (let i = 0; i < int16View.length; i++) pcmSamples[i] = int16View[i];
+            const len = int16View.length;
+            if (len === PCM_FRAME_SAMPLES) {
+              for (let i = 0; i < PCM_FRAME_SAMPLES; i++) _reusablePcmArray[i] = int16View[i];
+              pcmSamples = _reusablePcmArray;
+            } else {
+              pcmSamples = new Array(len);
+              for (let i = 0; i < len; i++) pcmSamples[i] = int16View[i];
+            }
           } catch (err) {
             console.error(`[AudioRelay] Opus→PCM decode error: ${err.message}`);
           }
