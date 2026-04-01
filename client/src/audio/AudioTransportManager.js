@@ -152,7 +152,7 @@ class AudioTransportManager {
         if (this.mutedChannels.has(channelName)) return;
         if (msg.senderUnitId && msg.senderUnitId === conn.unitId) return;
 
-        const frame = Int16Array.from(msg.payload);
+        const frame = new Int16Array(msg.payload);
         await this._playback.enqueue(frame);
       };
 

@@ -17,6 +17,9 @@ const FLAG_FEC_HINT = 0x01;
 const SUBSCRIBER_TIMEOUT_MS = 120000;
 const SUBSCRIBER_SWEEP_INTERVAL_MS = 30000;
 
+const WS_PACING_INTERVAL_MS = 20;
+const WS_PACING_MAX_QUEUE = 10;
+
 class AudioRelayService {
   constructor() {
     this.socket = null;
@@ -31,6 +34,8 @@ class AudioRelayService {
     this._earlyAudioBuffers = new Map();
     this._earlyBufferMaxMs = 500;
     this._earlyBufferMaxFrames = 25;
+    this._wsPacingQueues = new Map();
+    this._wsPacingTimers = new Map();
   }
 
   setFloorControlService(fcs) {
@@ -195,13 +200,15 @@ class AudioRelayService {
         if (!pcmSamples) {
           try {
             const pcmBuf = opusCodec.decodeOpusToPcm(opusPayload, resolvedSender || senderUnitId);
-            pcmSamples = Array.from(new Int16Array(pcmBuf.buffer, pcmBuf.byteOffset, pcmBuf.byteLength / 2));
+            const int16View = new Int16Array(pcmBuf.buffer, pcmBuf.byteOffset, pcmBuf.byteLength / 2);
+            pcmSamples = [];
+            for (let i = 0; i < int16View.length; i++) pcmSamples[i] = int16View[i];
           } catch (err) {
             console.error(`[AudioRelay] Opus→PCM decode error: ${err.message}`);
           }
         }
         if (pcmSamples) {
-          const pcmPacket = JSON.stringify({
+          const packetStr = JSON.stringify({
             type: 'audio',
             codec: 'pcm',
             sampleRate: 48000,
@@ -212,16 +219,7 @@ class AudioRelayService {
             senderUnitId,
             payload: pcmSamples,
           });
-          for (const [subUnitId, ws] of wsSubs) {
-            if (subUnitId === senderUnitId) continue;
-            try {
-              if (ws.readyState === 1) {
-                ws.send(pcmPacket);
-              }
-            } catch (err) {
-              console.error(`[AudioRelay] WS send error to ${subUnitId}:`, err.message);
-            }
-          }
+          this._enqueueWsFrame(channelKey, senderUnitId, packetStr);
         }
       }
     }
@@ -231,6 +229,51 @@ class AudioRelayService {
         this._recordingTap({ channelId: channelKey, unitId: senderUnitId, sequence, opusPayload, timestamp: Date.now() });
       } catch (err) {
         console.error('[AudioRelay] Recording tap error:', err.message);
+      }
+    }
+  }
+
+  _enqueueWsFrame(channelKey, senderUnitId, packetStr) {
+    let queue = this._wsPacingQueues.get(channelKey);
+    if (!queue) {
+      queue = [];
+      this._wsPacingQueues.set(channelKey, queue);
+    }
+    if (queue.length >= WS_PACING_MAX_QUEUE) {
+      queue.shift();
+    }
+    queue.push({ senderUnitId, packetStr });
+
+    if (!this._wsPacingTimers.has(channelKey)) {
+      const timer = setInterval(() => this._drainWsQueue(channelKey), WS_PACING_INTERVAL_MS);
+      this._wsPacingTimers.set(channelKey, timer);
+    }
+  }
+
+  _drainWsQueue(channelKey) {
+    const queue = this._wsPacingQueues.get(channelKey);
+    if (!queue || queue.length === 0) {
+      const timer = this._wsPacingTimers.get(channelKey);
+      if (timer) {
+        clearInterval(timer);
+        this._wsPacingTimers.delete(channelKey);
+      }
+      this._wsPacingQueues.delete(channelKey);
+      return;
+    }
+
+    const frame = queue.shift();
+    const wsSubs = this._wsSubscribers ? this._wsSubscribers.get(channelKey) : null;
+    if (!wsSubs) return;
+
+    for (const [subUnitId, ws] of wsSubs) {
+      if (subUnitId === frame.senderUnitId) continue;
+      try {
+        if (ws.readyState === 1) {
+          ws.send(frame.packetStr);
+        }
+      } catch (err) {
+        console.error(`[AudioRelay] WS send error to ${subUnitId}:`, err.message);
       }
     }
   }

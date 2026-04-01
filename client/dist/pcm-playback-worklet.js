@@ -6,6 +6,7 @@ class PcmPlaybackProcessor extends AudioWorkletProcessor {
     this._offset = 0;
     this._primed = false;
     this._PRE_BUFFER_FRAMES = 3;
+    this._gain = 2.5;
 
     this.port.onmessage = (event) => {
       if (event.data.type === 'enqueue') {
@@ -15,6 +16,8 @@ class PcmPlaybackProcessor extends AudioWorkletProcessor {
         this._currentFrame = null;
         this._offset = 0;
         this._primed = false;
+      } else if (event.data.type === 'setGain') {
+        this._gain = event.data.gain;
       }
     };
   }
@@ -24,6 +27,7 @@ class PcmPlaybackProcessor extends AudioWorkletProcessor {
     if (!output || !output[0]) return true;
 
     const outChannel = output[0];
+    const gain = this._gain;
 
     if (!this._primed) {
       if (this._ringBuffer.length < this._PRE_BUFFER_FRAMES) {
@@ -51,7 +55,10 @@ class PcmPlaybackProcessor extends AudioWorkletProcessor {
       const count = Math.min(available, needed);
 
       for (let i = 0; i < count; i++) {
-        outChannel[written + i] = this._currentFrame[this._offset + i] / 32768;
+        let sample = (this._currentFrame[this._offset + i] / 32768) * gain;
+        if (sample > 1.0) sample = 1.0;
+        else if (sample < -1.0) sample = -1.0;
+        outChannel[written + i] = sample;
       }
 
       written += count;

@@ -90,13 +90,11 @@ export class PcmPlaybackEngine {
       this.audioContext.resume().catch(() => {});
     }
 
+    const samples = (int16Frame instanceof Int16Array) ? int16Frame : new Int16Array(int16Frame);
     if (this._workletNode) {
-      this._workletNode.port.postMessage({
-        type: 'enqueue',
-        samples: new Int16Array(int16Frame),
-      });
+      this._workletNode.port.postMessage({ type: 'enqueue', samples });
     } else if (this._fallbackProcessor) {
-      this._fallbackQueue.push(new Int16Array(int16Frame));
+      this._fallbackQueue.push(samples);
     }
     return true;
   }

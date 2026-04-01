@@ -10,7 +10,7 @@ private const val TAG = "[AudioPlay]"
 private const val SAMPLE_RATE = 48000
 private const val FRAME_INTERVAL_MS = 20L
 private const val DEFAULT_SOFTWARE_GAIN = 2.5f
-private const val IDLE_TIMEOUT_MS = 200L
+private const val IDLE_TIMEOUT_MS = 500L
 private const val WAIT_WINDOW_MS = 20L
 
 class AudioPlayback(

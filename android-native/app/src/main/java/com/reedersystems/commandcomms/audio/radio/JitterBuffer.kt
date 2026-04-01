@@ -154,14 +154,13 @@ class JitterBuffer {
 
     fun enterIdle() {
         synchronized(lock) {
-            buffer.clear()
             nextPlaybackSeq = -1
             preBuffering = true
             playbackActive = false
             lastArrivalTimeNs = 0L
             estimatedJitterMs = 0.0
-            targetDepth = INITIAL_DEPTH
-            Log.d(TAG, "Entered idle — pre-buffering on next packet (depth reset to $INITIAL_DEPTH)")
+            targetDepth = MIN_DEPTH
+            Log.d(TAG, "Entered idle — pre-buffering on next packet (depth=$MIN_DEPTH, kept ${buffer.size} buffered frames)")
         }
     }
 
