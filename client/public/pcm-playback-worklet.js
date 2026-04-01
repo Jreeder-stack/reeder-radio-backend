@@ -40,7 +40,6 @@ class PcmPlaybackProcessor extends AudioWorkletProcessor {
     while (written < outChannel.length) {
       if (!this._currentFrame) {
         if (this._ringBuffer.length === 0) {
-          this._primed = false;
           break;
         }
         this._currentFrame = this._ringBuffer.shift();
