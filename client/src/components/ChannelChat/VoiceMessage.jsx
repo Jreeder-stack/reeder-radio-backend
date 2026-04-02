@@ -64,10 +64,11 @@ export default function VoiceMessage({ audioUrl, duration, transcription, onTran
     }
   };
 
-  const formatDuration = (secs) => {
-    if (!secs) return '0:00';
-    const mins = Math.floor(secs / 60);
-    const remainingSecs = secs % 60;
+  const formatDuration = (ms) => {
+    if (!ms) return '0:00';
+    const totalSecs = Math.round(ms / 1000);
+    const mins = Math.floor(totalSecs / 60);
+    const remainingSecs = totalSecs % 60;
     return `${mins}:${remainingSecs.toString().padStart(2, '0')}`;
   };
 
