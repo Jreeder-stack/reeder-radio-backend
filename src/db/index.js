@@ -281,6 +281,14 @@ export async function getUserChannelAccess(userId) {
   return result.rows.map(r => r.channel_id);
 }
 
+export async function getUserByUnitId(unitId) {
+  const result = await pool.query(
+    'SELECT id, username, email, role, unit_id, status, is_dispatcher, created_at, last_login FROM users WHERE unit_id = $1',
+    [unitId]
+  );
+  return result.rows[0];
+}
+
 export async function setUserChannelAccess(userId, channelIds) {
   const client = await pool.connect();
   try {
