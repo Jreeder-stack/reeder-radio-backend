@@ -73,7 +73,6 @@ const AZURE_SAMPLE_RATE = 16000;
 const CHANNELS = 1;
 const SAMPLES_PER_FRAME = 960;
 const FRAME_DURATION_MS = Math.floor((SAMPLES_PER_FRAME / RELAY_SAMPLE_RATE) * 1000);
-const DISCONNECT_GRACE_PERIOD_MS = 90000;
 const EMERGENCY_STATUS_CHECK_TIMEOUT_MS = 5000;
 const MAX_RECORDING_DURATION_MS = 60000;
 const MAX_AUDIO_FILE_SIZE = 10 * 1024 * 1024;
@@ -313,7 +312,6 @@ class AIDispatcher {
     this.connected = false;
     this.channelName = null;
     this.isRunning = false;
-    this.disconnectTimer = null;
     this.configuredChannel = null;
     this.channelAliases = new Set();
     this.numericChannelId = null;
@@ -408,7 +406,7 @@ class AIDispatcher {
   }
 
   async start(channelName, options = {}) {
-    const { connectImmediately = false, roomKey = null } = options;
+    const { roomKey = null } = options;
     
     if (!channelName) {
       this.log('START_SKIPPED', { reason: 'No channel configured' });
@@ -454,7 +452,8 @@ class AIDispatcher {
       });
     }
 
-    this.log('STARTED_STANDBY', { channel: channelName, roomKey: this.configuredChannel, numericId: this.numericChannelId, aliases: Array.from(this.channelAliases), mode: 'on-demand' });
+    await this.joinChannel(this.configuredChannel);
+    this.log('STARTED_CONNECTED', { channel: channelName, roomKey: this.configuredChannel, numericId: this.numericChannelId, aliases: Array.from(this.channelAliases), mode: 'always-on' });
   }
 
   _removeAllAudioListeners() {
@@ -462,8 +461,6 @@ class AIDispatcher {
   }
 
   async leaveChannel() {
-    this.clearDisconnectTimer();
-    
     if (this.connected) {
       try {
         this._removeAllAudioListeners();
@@ -481,7 +478,6 @@ class AIDispatcher {
     this.log('STOPPING', { channel: this.channelName });
     this.isRunning = false;
     this.stoppedByUser = true;
-    this.clearDisconnectTimer();
     this._stopErrorCleanup();
     this.errorCounts.clear();
     this.errorCooldowns.clear();
@@ -532,26 +528,6 @@ class AIDispatcher {
       clearInterval(this._errorCleanupInterval);
       this._errorCleanupInterval = null;
     }
-  }
-
-  clearDisconnectTimer() {
-    if (this.disconnectTimer) {
-      clearTimeout(this.disconnectTimer);
-      this.disconnectTimer = null;
-      this.log('DISCONNECT_TIMER_CLEARED');
-    }
-  }
-
-  startDisconnectTimer() {
-    this.clearDisconnectTimer();
-    this.log('DISCONNECT_TIMER_STARTED', { graceMs: DISCONNECT_GRACE_PERIOD_MS });
-    
-    this.disconnectTimer = setTimeout(async () => {
-      if (this.humanParticipantCount === 0 && this.connected) {
-        this.log('DISCONNECT_TIMER_EXPIRED', { reason: 'No humans on channel' });
-        await this.leaveRoom();
-      }
-    }, DISCONNECT_GRACE_PERIOD_MS);
   }
 
   async leaveRoom() {
@@ -615,10 +591,6 @@ class AIDispatcher {
     
     this.log('CHANNEL_JOINED', { channel: channelName, audioListenerKeys: Array.from(listenKeys) });
     this.log('OPUS_TRANSPORT_VERIFIED', { mode: 'server-side decode', note: 'AI dispatcher receives Opus from relay listeners and decodes server-side for STT' });
-
-    if (this.humanParticipantCount === 0) {
-      this.startDisconnectTimer();
-    }
   }
 
   _onAudioFrame(audioEvent) {

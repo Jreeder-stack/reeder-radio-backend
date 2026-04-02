@@ -1,18 +1,13 @@
 import { signalingService, SIGNALING_EVENTS } from './signalingService.js';
 
 const AI_UNIT_ID = 'AI-Dispatcher';
-const CONNECTION_GRACE_MS = 120000;
-const FALLBACK_IDLE_DISCONNECT_MS = 180000;
 
 class AIDispatcherSignaling {
   constructor() {
     this.dispatcher = null;
     this.activeChannels = new Set();
-    this.connectionTimers = new Map();
     this.transmissionLogs = [];
     this.initialized = false;
-    this.fallbackIdleTimer = null;
-    this.lastActivityTime = null;
   }
 
   log(action, details = {}) {
@@ -26,65 +21,7 @@ class AIDispatcherSignaling {
     this.dispatcher = dispatcher;
     this.initialized = true;
     
-    this._startFallbackIdleCheck();
-    
     this.log('INITIALIZED', { channels: Array.from(this.activeChannels) });
-  }
-
-  _recordActivity() {
-    this.lastActivityTime = Date.now();
-  }
-
-  _getHumanCount() {
-    if (!this.dispatcher) return 0;
-    return this.dispatcher.humanParticipantCount;
-  }
-
-  _startFallbackIdleCheck() {
-    if (this.fallbackIdleTimer) {
-      clearInterval(this.fallbackIdleTimer);
-    }
-
-    this.fallbackIdleTimer = setInterval(async () => {
-      if (!this.dispatcher || !this.dispatcher.connected) {
-        return;
-      }
-
-      const now = Date.now();
-      const idleTime = this.lastActivityTime ? now - this.lastActivityTime : 0;
-
-      if (idleTime >= FALLBACK_IDLE_DISCONNECT_MS) {
-        const hasActiveTransmission = Array.from(this.activeChannels).some(
-          ch => signalingService.getActiveTransmission(ch)
-        );
-        const hasEmergency = Array.from(this.activeChannels).some(
-          ch => signalingService.isEmergencyActive(ch)
-        );
-
-        const hasHumans = this._getHumanCount() > 0;
-
-        if (hasHumans) {
-          this.log('FALLBACK_IDLE_SKIP', { reason: 'humans_present', humanCount: this._getHumanCount(), idleMs: idleTime });
-          return;
-        }
-
-        if (!hasActiveTransmission && !hasEmergency) {
-          this.log('FALLBACK_IDLE_DISCONNECT', { idleMs: idleTime });
-          try {
-            await this.dispatcher.leaveRoom();
-          } catch (err) {
-            this.log('FALLBACK_DISCONNECT_ERROR', { error: err.message });
-          }
-        }
-      }
-    }, 15000);
-  }
-
-  _stopFallbackIdleCheck() {
-    if (this.fallbackIdleTimer) {
-      clearInterval(this.fallbackIdleTimer);
-      this.fallbackIdleTimer = null;
-    }
   }
 
   setActiveChannel(channelId) {
@@ -96,7 +33,6 @@ class AIDispatcherSignaling {
   removeActiveChannel(channelId) {
     const key = String(channelId);
     this.activeChannels.delete(key);
-    this._clearConnectionTimer(key);
     this.log('CHANNEL_DEACTIVATED', { channelId: key });
   }
 
@@ -123,9 +59,6 @@ class AIDispatcherSignaling {
       return;
     }
 
-    this._recordActivity();
-    this._clearConnectionTimer(channelId);
-
     this.log('PTT_START_DETECTED', { channelId, unitId, isEmergency });
 
     const transmissionLog = {
@@ -136,28 +69,16 @@ class AIDispatcherSignaling {
     };
     this.transmissionLogs.push(transmissionLog);
 
-    const wasAlreadyConnected = this.dispatcher.connected;
-
-    if (!wasAlreadyConnected) {
-      this.log('CONNECTING_FOR_PTT', { channelId, unitId });
-      try {
-        await this.dispatcher.rejoinIfNeeded();
-        this.log('CONNECTED_FOR_PTT', { channelId, unitId, dispatcherConnected: this.dispatcher.connected });
-      } catch (err) {
-        this.log('CONNECTION_FAILED', { channelId, error: err.message });
-      }
-    }
-
     signalingService.sendPttReady(channelId, unitId);
-    this.log('PTT_READY_SENT', { channelId, unitId, wasAlreadyConnected });
+    this.log('PTT_READY_SENT', { channelId, unitId, alreadyConnected: this.dispatcher.connected });
   }
 
-  async handlePttEnd(channelId, unitId, gracePeriodMs = CONNECTION_GRACE_MS) {
+  async handlePttEnd(channelId, unitId) {
     if (!this.dispatcher) return;
     if (!this._matchesChannel(channelId)) return;
     if (unitId === AI_UNIT_ID) return;
 
-    this.log('PTT_END_DETECTED', { channelId, unitId, gracePeriodMs });
+    this.log('PTT_END_DETECTED', { channelId, unitId });
 
     const log = this.transmissionLogs.find(
       l => l.channelId === channelId && l.unitId === unitId && !l.endTime
@@ -166,26 +87,13 @@ class AIDispatcherSignaling {
       log.endTime = Date.now();
       log.duration = log.endTime - log.startTime;
     }
-
-    this._startConnectionTimer(channelId, gracePeriodMs);
   }
 
   async handleEmergencyStart(channelId, unitId) {
     if (!this.dispatcher) return;
     if (!this._matchesChannel(channelId)) return;
 
-    this._recordActivity();
     this.log('EMERGENCY_START_DETECTED', { channelId, unitId });
-
-    this._clearConnectionTimer(channelId);
-
-    if (!this.dispatcher.connected) {
-      try {
-        await this.dispatcher.rejoinIfNeeded();
-      } catch (err) {
-        this.log('EMERGENCY_CONNECTION_FAILED', { channelId, error: err.message });
-      }
-    }
 
     if (this.dispatcher.emergencyEscalation) {
       try {
@@ -207,47 +115,6 @@ class AIDispatcherSignaling {
     if (this.dispatcher.emergencyEscalation) {
       this.dispatcher.emergencyEscalation.clearEscalation(unitId);
       this.log('EMERGENCY_ESCALATION_CLEARED', { channelId, unitId });
-    }
-  }
-
-  _clearConnectionTimer(channelId) {
-    const timer = this.connectionTimers.get(channelId);
-    if (timer) {
-      clearTimeout(timer);
-      this.connectionTimers.delete(channelId);
-    }
-  }
-
-  _startConnectionTimer(channelId, delayMs) {
-    this._clearConnectionTimer(channelId);
-
-    const timer = setTimeout(async () => {
-      this.connectionTimers.delete(channelId);
-      await this._checkAndDisconnect(channelId);
-    }, delayMs);
-
-    this.connectionTimers.set(channelId, timer);
-  }
-
-  async _checkAndDisconnect(channelId) {
-    if (!this.dispatcher || !this.dispatcher.connected) return;
-
-    const hasActiveTransmission = signalingService.getActiveTransmission(channelId);
-    const isEmergency = signalingService.isEmergencyActive(channelId);
-    const hasHumans = this._getHumanCount() > 0;
-
-    if (hasHumans) {
-      this.log('DISCONNECT_SKIPPED', { channelId, reason: 'humans_present', humanCount: this._getHumanCount() });
-      return;
-    }
-
-    if (!hasActiveTransmission && !isEmergency) {
-      this.log('DISCONNECTING_IDLE', { channelId });
-      try {
-        await this.dispatcher.leaveRoom();
-      } catch (err) {
-        this.log('DISCONNECT_ERROR', { channelId, error: err.message });
-      }
     }
   }
 
