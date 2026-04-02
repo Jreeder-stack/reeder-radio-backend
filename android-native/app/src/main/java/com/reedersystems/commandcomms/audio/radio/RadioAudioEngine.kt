@@ -201,11 +201,7 @@ class RadioAudioEngine(private val context: Context) {
                                             val latencyMs = System.currentTimeMillis() - txStartMs
                                             Log.d(TAG, "LATENCY_FIRST_TX_FRAME_SENT frame=$frameCounter bytes=${encoded.size} latencyMs=$latencyMs")
                                         }
-                                        Log.d(TAG, "OPUS_TX_FRAME_ENCODED frame=$frameCounter bytes=${encoded.size}")
-                                        Log.d(TAG, "RADIO_OPUS_TX_FRAME_ENCODED frame=$frameCounter bytes=${encoded.size}")
                                         udpTransport.send(encoded)
-                                        Log.d(TAG, "OPUS_TX_FRAME_SENT frame=$frameCounter bytes=${encoded.size}")
-                                        Log.d(TAG, "RADIO_OPUS_TX_FRAME_SENT frame=$frameCounter bytes=${encoded.size}")
                                     }
                                     pendingBytes = 0
                                 }

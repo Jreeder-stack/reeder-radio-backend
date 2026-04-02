@@ -9,9 +9,12 @@ import kotlinx.coroutines.*
 private const val TAG = "[AudioPlay]"
 private const val SAMPLE_RATE = 48000
 private const val FRAME_INTERVAL_MS = 20L
+private const val FRAME_INTERVAL_NS = FRAME_INTERVAL_MS * 1_000_000L
 private const val DEFAULT_SOFTWARE_GAIN = 2.5f
 private const val IDLE_TIMEOUT_MS = 500L
-private const val WAIT_WINDOW_MS = 20L
+private const val WAIT_WINDOW_MS = 5L
+private const val MAX_CATCHUP_FRAMES = 2
+private const val SOFT_CLIP_THRESHOLD = 0.8
 
 class AudioPlayback(
     private val jitterBuffer: JitterBuffer,
@@ -41,9 +44,9 @@ class AudioPlayback(
     private var rxLpY1: Double = 0.0
     private var rxLpY2: Double = 0.0
 
-    var rxGateThresholdDb: Double = -40.0
+    var rxGateThresholdDb: Double = -50.0
     private val gateAttackCoeff: Double get() = 1.0 - Math.exp(-1.0 / (SAMPLE_RATE * 0.001))
-    private val gateReleaseCoeff: Double get() = 1.0 - Math.exp(-1.0 / (SAMPLE_RATE * 0.05))
+    private val gateReleaseCoeff: Double get() = 1.0 - Math.exp(-1.0 / (SAMPLE_RATE * 0.15))
     private var gateEnvelopeDb: Double = -90.0
     private var gateAttenuation: Double = 0.0
 
@@ -116,8 +119,14 @@ class AudioPlayback(
         val buf = java.nio.ByteBuffer.wrap(pcmBytes).order(java.nio.ByteOrder.LITTLE_ENDIAN)
         val shortBuf = buf.asShortBuffer()
         for (i in 0 until shortBuf.limit()) {
-            val amplified = (shortBuf[i] * softwareGain).toInt()
-            shortBuf.put(i, amplified.coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort())
+            val normalized = shortBuf[i].toDouble() / 32768.0
+            val amplified = normalized * softwareGain
+            val clipped = if (amplified > SOFT_CLIP_THRESHOLD || amplified < -SOFT_CLIP_THRESHOLD) {
+                Math.tanh(amplified)
+            } else {
+                amplified
+            }
+            shortBuf.put(i, (clipped * 32768.0).coerceIn(-32768.0, 32767.0).toInt().toShort())
         }
         return pcmBytes
     }
@@ -199,6 +208,8 @@ class AudioPlayback(
             var lastDataTimeMs = System.currentTimeMillis()
             var missWaitStartMs = 0L
             var plcCount = 0
+            var nextFrameTimeNs = System.nanoTime()
+            var catchupCount = 0
             while (isActive) {
                 if (!jitterBuffer.isPlaybackActive) {
                     if (!jitterBuffer.tryStartPlayback()) {
@@ -211,11 +222,21 @@ class AudioPlayback(
                     }
                     lastDataTimeMs = System.currentTimeMillis()
                     missWaitStartMs = 0L
+                    nextFrameTimeNs = System.nanoTime()
+                    catchupCount = 0
+                }
+
+                val nowNs = System.nanoTime()
+                val sleepNs = nextFrameTimeNs - nowNs
+                if (sleepNs > 1_000_000L) {
+                    delay(sleepNs / 1_000_000L)
+                    catchupCount = 0
                 }
 
                 val expectedSeq = jitterBuffer.getExpectedSeq()
                 if (expectedSeq < 0) {
                     delay(FRAME_INTERVAL_MS)
+                    nextFrameTimeNs = System.nanoTime() + FRAME_INTERVAL_NS
                     continue
                 }
 
@@ -237,8 +258,6 @@ class AudioPlayback(
                                     Log.d(TAG, "LATENCY_FIRST_PLAYBACK_WRITE seq=$expectedSeq pcm=${pcm.size}")
                                     firstPlaybackWriteLogged = true
                                 }
-                                Log.d(TAG, "OPUS_RX_FRAME_DECODED bytes=${data.size} pcm=${pcm.size}")
-                                Log.d(TAG, "RADIO_OPUS_RX_FRAME_DECODED bytes=${data.size} pcm=${pcm.size}")
                                 applyRxDspChain(pcm)
                                 applyGain(pcm)
                                 try {
@@ -265,6 +284,18 @@ class AudioPlayback(
                             }
                         }
                     }
+
+                    nextFrameTimeNs += FRAME_INTERVAL_NS
+                    val drift = System.nanoTime() - nextFrameTimeNs
+                    if (drift > 0) {
+                        catchupCount++
+                        if (catchupCount >= MAX_CATCHUP_FRAMES) {
+                            nextFrameTimeNs = System.nanoTime()
+                            catchupCount = 0
+                        }
+                    } else {
+                        catchupCount = 0
+                    }
                 } else {
                     val now = System.currentTimeMillis()
 
@@ -275,7 +306,7 @@ class AudioPlayback(
                     val waited = now - missWaitStartMs
 
                     if (waited < WAIT_WINDOW_MS) {
-                        delay(FRAME_INTERVAL_MS)
+                        delay(1L)
                     } else {
                         plcCount++
                         try {
@@ -301,6 +332,18 @@ class AudioPlayback(
 
                         jitterBuffer.advancePlaybackSeq()
                         missWaitStartMs = 0L
+
+                        nextFrameTimeNs += FRAME_INTERVAL_NS
+                        val drift = System.nanoTime() - nextFrameTimeNs
+                        if (drift > 0) {
+                            catchupCount++
+                            if (catchupCount >= MAX_CATCHUP_FRAMES) {
+                                nextFrameTimeNs = System.nanoTime()
+                                catchupCount = 0
+                            }
+                        } else {
+                            catchupCount = 0
+                        }
 
                         if (jitterBuffer.isEmpty) {
                             val silenceMs = now - lastDataTimeMs

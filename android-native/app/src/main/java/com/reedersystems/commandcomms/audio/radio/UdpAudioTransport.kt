@@ -232,7 +232,6 @@ class UdpAudioTransport(
                         } else {
                             rxPacketCount++
                             onPacketReceived?.invoke(parsed)
-                            Log.d(TAG, "OPUS_RX_FRAME_RECEIVED seq=${parsed.sequence} sender=${parsed.senderUnitId} channelIdx=${parsed.channelIndex} payload=${parsed.opusPayload.size}")
                         }
                     }
                 } catch (e: java.net.SocketTimeoutException) {

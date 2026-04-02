@@ -95,8 +95,6 @@ class OpusCodec {
     fun encode(pcmData: ByteArray): ByteArray? {
         val byteCount = pcmData.size
         val sampleCount = byteCount / 2
-        val currentThread = Thread.currentThread().name
-        Log.d(TAG, "OPUS_ENCODE_INPUT samples=$sampleCount bytes=$byteCount thread=$currentThread reusedBuffer=${System.identityHashCode(pcmData)}")
 
         if (byteCount != expectedFrameBytes || (byteCount and 1) != 0) {
             Log.w(TAG, "OPUS_ENCODE_REJECTED_BAD_FRAME samples=$sampleCount bytes=$byteCount expectedSamples=$FRAME_SIZE expectedBytes=$expectedFrameBytes")
@@ -104,7 +102,6 @@ class OpusCodec {
         }
 
         synchronized(encodeLock) {
-            Log.d(TAG, "OPUS_ENCODE_SERIALIZED thread=$currentThread")
             val enc = encoder ?: return null
             val safeFrameBytes = pcmData.copyOf(expectedFrameBytes)
             val pcmFrame = ShortArray(FRAME_SIZE)
@@ -117,7 +114,7 @@ class OpusCodec {
                 val encodedBytes = enc.encode(pcmFrame, 0, FRAME_SIZE, outputBuffer, 0, outputBuffer.size)
                 if (encodedBytes > 0) outputBuffer.copyOf(encodedBytes) else null
             } catch (e: AssertionError) {
-                Log.e(TAG, "OPUS_ENCODE_ASSERTION_FAILURE samples=$sampleCount bytes=$byteCount thread=$currentThread message=${e.message}", e)
+                Log.e(TAG, "OPUS_ENCODE_ASSERTION_FAILURE samples=$sampleCount bytes=$byteCount message=${e.message}", e)
                 reinitializeEncoder()
                 null
             } catch (e: Exception) {
