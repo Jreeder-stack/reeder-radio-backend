@@ -12,6 +12,7 @@ yarn-error.log*
 *.swp
 *.swo
 *~
+*.timestamp-*.mjs
 .local/
 .cache/
 .replit

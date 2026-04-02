@@ -70,7 +70,6 @@ VITE_LIVEKIT_URL = "wss://reeder-ptt-rcm02mdx.livekit.cloud"
 [userenv.shared]
 AZURE_SPEECH_REGION = "eastus"
 CAD_URL = "https://cad.reeder-systems.com"
-CAD_INTEGRATION_KEY = "cad-dev-integration-key-change-in-production"
 
 [userenv.production]
 
