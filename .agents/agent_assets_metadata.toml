@@ -6,3 +6,9 @@ id = "qdT4juIHJ0ekSL6DQJr4j"
 uri = "file://.local/tasks/app-synopsis.txt"
 type = "text"
 title = "Command Comms - App Architecture Synopsis"
+
+[[outputs]]
+id = "FTJe-MjmMHajO-Gx8GhA7"
+uri = "file://client/public/sounds/talk-permit.wav"
+type = "audio"
+title = "PTT Talk Permit Tone (WAV)"
