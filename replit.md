@@ -21,7 +21,8 @@ The dispatch console is a PWA with responsive design, featuring auto-login, dark
 - **Audio System:** Features a pure 48kHz mono 16-bit PCM browser audio system via WebSockets. Legacy Opus modules and frame types are supported for backward compatibility with Android and the AI dispatcher. Android clients use UDP with Opus encoding.
 - **Real-time Communication:** WebSockets for audio streaming; Socket.IO for signaling (presence, PTT floor control, data messages, emergency, location).
 - **Audio Processing:** Incorporates Web Audio API DSP for AGC, noise suppression, transmit compression, PTT release reliability, and feedback loop prevention.
-- **Authentication & Authorization:** Username/password authentication with bcrypt, session management, and role-based access control.
+- **Authentication & Authorization:** Username/password authentication with bcrypt, session management, and role-based access control. CAD integration uses a shared API key (`CAD_INTEGRATION_KEY` env var) for trusted server-to-server authentication.
+- **CAD-to-Radio PTT Integration:** External CAD systems can authenticate users via `POST /api/auth/cad-login` (API key + username, no password), verify users via `POST /api/cad-integration/verify-user`, and fetch zones/channels via `GET /api/cad-integration/zones` and `/channels`. An embeddable JavaScript client (`/api/radio-client.js`) provides PTT functionality for CAD pages.
 - **AI Voice Dispatcher:** Integrates Azure Speech Services (STT/TTS) and Azure OpenAI (GPT-4o-mini) for natural language processing, enabling voice commands for various operational tasks and contextual conversations. It supports a two-tier response system for routine and complex interactions.
 - **T320 Screen-Off PTT:** Native Android service-level PTT functionality, independent of the main activity, ensuring consistent operation.
 - **On-Demand GPS Tracking:** Activates GPS streaming only when necessary (emergency or dispatcher request).

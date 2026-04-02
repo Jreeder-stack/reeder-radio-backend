@@ -7,6 +7,7 @@ export const config = {
   adminPassword: process.env.ADMIN_PASSWORD || 'admin123',
   cadUrl: process.env.CAD_URL,
   cadApiKey: process.env.CAD_API_KEY,
+  cadIntegrationKey: process.env.CAD_INTEGRATION_KEY,
 };
 
 export function validateEnv() {

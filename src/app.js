@@ -61,6 +61,13 @@ const rateLimitAuth = rateLimit({
 
 app.use('/api/auth', rateLimitAuth);
 
+const rateLimitCadIntegration = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 200,
+  message: { error: 'Too many requests' }
+});
+app.use('/api/cad-integration', rateLimitCadIntegration);
+
 const NOISY_ENDPOINTS = new Set(['/api/dispatch/units', '/api/cad/messages/unread', '/api/cad/pending-checks']);
 const noisyCounters = {};
 
@@ -88,6 +95,17 @@ app.use('/api', (req, res, next) => {
 });
 
 setupRoutes(app);
+
+app.get('/api/radio-client.js', (req, res) => {
+  const clientPath = path.join(__dirname, '..', 'public', 'radio-client.js');
+  res.setHeader('Content-Type', 'application/javascript');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.sendFile(clientPath, (err) => {
+    if (err) {
+      res.status(404).json({ error: 'Radio client not found' });
+    }
+  });
+});
 
 app.post('/api/activity/log', requireAuth, async (req, res) => {
   try {
