@@ -10,7 +10,8 @@ private const val TAG = "[OpusCodec]"
 
 class OpusCodec {
     companion object {
-        const val SAMPLE_RATE = 48000
+        const val DEFAULT_SAMPLE_RATE = 48000
+        const val SAMPLE_RATE = DEFAULT_SAMPLE_RATE
         const val CHANNELS = 1
         const val BITRATE = 48000
         const val FRAME_SIZE = 960
@@ -21,14 +22,29 @@ class OpusCodec {
     private var encoder: OpusEncoder? = null
     private var decoder: OpusDecoder? = null
     private val encodeLock = Any()
-    private val expectedFrameBytes = FRAME_SIZE * CHANNELS * 2
     @Volatile
     private var initialized = false
 
+    var encoderSampleRate: Int = DEFAULT_SAMPLE_RATE
+        private set
+    var encoderChannels: Int = CHANNELS
+        private set
+    var encoderFrameSize: Int = FRAME_SIZE
+        private set
+    private var expectedFrameBytes: Int = FRAME_SIZE * CHANNELS * 2
+
     fun initialize() {
-        if (initialized) return
+        initialize(DEFAULT_SAMPLE_RATE, CHANNELS)
+    }
+
+    fun initialize(sampleRate: Int, channels: Int) {
+        if (initialized) release()
+        encoderSampleRate = sampleRate
+        encoderChannels = channels
+        encoderFrameSize = (sampleRate * FRAME_DURATION_MS) / 1000
+        expectedFrameBytes = encoderFrameSize * channels * 2
         try {
-            val enc = OpusEncoder(SAMPLE_RATE, CHANNELS, OpusApplication.OPUS_APPLICATION_VOIP)
+            val enc = OpusEncoder(sampleRate, channels, OpusApplication.OPUS_APPLICATION_VOIP)
             enc.setBitrate(BITRATE)
             enc.setSignalType(OpusSignal.OPUS_SIGNAL_VOICE)
             enc.setComplexity(5)
@@ -36,11 +52,33 @@ class OpusCodec {
             enc.setUseInbandFEC(true)
             enc.setPacketLossPercent(10)
             encoder = enc
-            decoder = OpusDecoder(SAMPLE_RATE, CHANNELS)
+            decoder = OpusDecoder(DEFAULT_SAMPLE_RATE, CHANNELS)
             initialized = true
-            Log.d(TAG, "OpusCodec initialized (Concentus, sample_rate=$SAMPLE_RATE frame_size=$FRAME_SIZE channels=$CHANNELS complexity=5)")
+            Log.d(TAG, "OpusCodec initialized (Concentus, encoder_sample_rate=$sampleRate encoder_frame_size=$encoderFrameSize channels=$channels decoder_sample_rate=$DEFAULT_SAMPLE_RATE complexity=5)")
         } catch (e: Exception) {
             Log.e(TAG, "OpusCodec initialization failed: ${e.message}", e)
+        }
+    }
+
+    fun reinitializeEncoderOnly(sampleRate: Int, channels: Int) {
+        encoderSampleRate = sampleRate
+        encoderChannels = channels
+        encoderFrameSize = (sampleRate * FRAME_DURATION_MS) / 1000
+        expectedFrameBytes = encoderFrameSize * channels * 2
+        synchronized(encodeLock) {
+            try {
+                val enc = OpusEncoder(sampleRate, channels, OpusApplication.OPUS_APPLICATION_VOIP)
+                enc.setBitrate(currentBitrate)
+                enc.setSignalType(OpusSignal.OPUS_SIGNAL_VOICE)
+                enc.setComplexity(5)
+                enc.setUseVBR(true)
+                enc.setUseInbandFEC(true)
+                enc.setPacketLossPercent(10)
+                encoder = enc
+                Log.d(TAG, "Encoder-only reinit (sampleRate=$sampleRate frameSize=$encoderFrameSize channels=$channels) — decoder untouched")
+            } catch (e: Exception) {
+                Log.e(TAG, "Encoder-only reinit failed: ${e.message}", e)
+            }
         }
     }
 
@@ -66,7 +104,7 @@ class OpusCodec {
     fun resetDecoder() {
         if (!initialized) return
         try {
-            decoder = OpusDecoder(SAMPLE_RATE, CHANNELS)
+            decoder = OpusDecoder(DEFAULT_SAMPLE_RATE, CHANNELS)
             Log.d(TAG, "RECONNECT_DECODER_RESET OpusDecoder recreated — stale state cleared")
         } catch (e: Exception) {
             Log.e(TAG, "RECONNECT_DECODER_RESET_FAILED: ${e.message}", e)
@@ -77,7 +115,7 @@ class OpusCodec {
         if (!initialized) return
         synchronized(encodeLock) {
             try {
-                val enc = OpusEncoder(SAMPLE_RATE, CHANNELS, OpusApplication.OPUS_APPLICATION_VOIP)
+                val enc = OpusEncoder(encoderSampleRate, encoderChannels, OpusApplication.OPUS_APPLICATION_VOIP)
                 enc.setBitrate(BITRATE)
                 enc.setSignalType(OpusSignal.OPUS_SIGNAL_VOICE)
                 enc.setComplexity(5)
@@ -85,7 +123,7 @@ class OpusCodec {
                 enc.setUseInbandFEC(true)
                 enc.setPacketLossPercent(10)
                 encoder = enc
-                Log.d(TAG, "RECONNECT_ENCODER_RESET OpusEncoder recreated — stale state cleared")
+                Log.d(TAG, "RECONNECT_ENCODER_RESET OpusEncoder recreated (sampleRate=$encoderSampleRate frameSize=$encoderFrameSize) — stale state cleared")
             } catch (e: Exception) {
                 Log.e(TAG, "RECONNECT_ENCODER_RESET_FAILED: ${e.message}", e)
             }
@@ -97,21 +135,21 @@ class OpusCodec {
         val sampleCount = byteCount / 2
 
         if (byteCount != expectedFrameBytes || (byteCount and 1) != 0) {
-            Log.w(TAG, "OPUS_ENCODE_REJECTED_BAD_FRAME samples=$sampleCount bytes=$byteCount expectedSamples=$FRAME_SIZE expectedBytes=$expectedFrameBytes")
+            Log.w(TAG, "OPUS_ENCODE_REJECTED_BAD_FRAME samples=$sampleCount bytes=$byteCount expectedSamples=$encoderFrameSize expectedBytes=$expectedFrameBytes")
             return null
         }
 
         synchronized(encodeLock) {
             val enc = encoder ?: return null
             val safeFrameBytes = pcmData.copyOf(expectedFrameBytes)
-            val pcmFrame = ShortArray(FRAME_SIZE)
+            val pcmFrame = ShortArray(encoderFrameSize)
             java.nio.ByteBuffer.wrap(safeFrameBytes)
                 .order(java.nio.ByteOrder.LITTLE_ENDIAN)
                 .asShortBuffer()
-                .get(pcmFrame, 0, FRAME_SIZE)
+                .get(pcmFrame, 0, encoderFrameSize)
             val outputBuffer = ByteArray(MAX_ENCODED_SIZE)
             return try {
-                val encodedBytes = enc.encode(pcmFrame, 0, FRAME_SIZE, outputBuffer, 0, outputBuffer.size)
+                val encodedBytes = enc.encode(pcmFrame, 0, encoderFrameSize, outputBuffer, 0, outputBuffer.size)
                 if (encodedBytes > 0) outputBuffer.copyOf(encodedBytes) else null
             } catch (e: AssertionError) {
                 Log.e(TAG, "OPUS_ENCODE_ASSERTION_FAILURE samples=$sampleCount bytes=$byteCount message=${e.message}", e)
@@ -126,7 +164,7 @@ class OpusCodec {
 
     private fun reinitializeEncoder() {
         try {
-            val enc = OpusEncoder(SAMPLE_RATE, CHANNELS, OpusApplication.OPUS_APPLICATION_VOIP)
+            val enc = OpusEncoder(encoderSampleRate, encoderChannels, OpusApplication.OPUS_APPLICATION_VOIP)
             enc.setBitrate(BITRATE)
             enc.setSignalType(OpusSignal.OPUS_SIGNAL_VOICE)
             enc.setComplexity(5)
@@ -134,7 +172,7 @@ class OpusCodec {
             enc.setUseInbandFEC(true)
             enc.setPacketLossPercent(10)
             encoder = enc
-            Log.d(TAG, "Encoder re-initialized after assertion failure (complexity=5)")
+            Log.d(TAG, "Encoder re-initialized after assertion failure (sampleRate=$encoderSampleRate frameSize=$encoderFrameSize complexity=5)")
         } catch (t: Throwable) {
             Log.e(TAG, "Failed to re-initialize encoder: ${t.message}", t)
             encoder = null
@@ -166,6 +204,10 @@ class OpusCodec {
         encoder = null
         decoder = null
         initialized = false
+        encoderSampleRate = DEFAULT_SAMPLE_RATE
+        encoderChannels = CHANNELS
+        encoderFrameSize = FRAME_SIZE
+        expectedFrameBytes = FRAME_SIZE * CHANNELS * 2
         Log.d(TAG, "OpusCodec released")
     }
 }

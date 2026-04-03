@@ -18,7 +18,7 @@ The dispatch console is a PWA with responsive design, featuring auto-login, dark
 ### Technical Implementations
 - **Frontend:** React/Vite with Zustand for state management. Audio connections utilize WebSockets with end-to-end Opus or PCM encoding.
 - **Backend:** An Express.js server providing API endpoints for authentication, user/channel management, and dispatch services, backed by PostgreSQL.
-- **Audio System:** Features a pure 48kHz mono 16-bit PCM browser audio system via WebSockets. Legacy Opus modules and frame types are supported for backward compatibility with Android and the AI dispatcher. Android clients use UDP with Opus encoding.
+- **Audio System:** Features a pure 48kHz mono 16-bit PCM browser audio system via WebSockets. Legacy Opus modules and frame types are supported for backward compatibility with Android and the AI dispatcher. Android clients use UDP with Opus encoding. The Android TX path detects the HAL-negotiated sample rate (e.g. 16 kHz on T320) and adapts the Opus encoder, DSP filters, and buffer sizes accordingly. RX/decoder path remains at 48 kHz.
 - **Real-time Communication:** WebSockets for audio streaming; Socket.IO for signaling (presence, PTT floor control, data messages, emergency, location).
 - **Audio Processing:** Incorporates Web Audio API DSP for AGC, noise suppression, transmit compression, PTT release reliability, and feedback loop prevention.
 - **Authentication & Authorization:** Username/password authentication with bcrypt, session management, and role-based access control. CAD integration uses an API key (`CAD_INTEGRATION_KEY`) stored as a Replit Secret for trusted server-to-server authentication. The key is a 32-byte hex string provided via `x-radio-api-key` header or `apiKey` body field.

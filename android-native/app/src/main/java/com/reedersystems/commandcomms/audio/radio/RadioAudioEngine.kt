@@ -15,9 +15,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 private const val TAG = "[RadioEngine]"
-private const val MIC_SAMPLE_RATE = 48000
-private const val MIC_FRAME_SAMPLES = 960
-private const val MIC_FRAME_SIZE_BYTES = MIC_FRAME_SAMPLES * 2
+private const val DEFAULT_MIC_SAMPLE_RATE = 48000
 private const val CAPTURE_INTERVAL_MS = 20L
 private const val RX_DIAG_INTERVAL_MS = 5_000L
 
@@ -51,6 +49,11 @@ class RadioAudioEngine(private val context: Context) {
 
     @Volatile
     private var reconnectCount = 0
+
+    private var actualSampleRate: Int = DEFAULT_MIC_SAMPLE_RATE
+    private var actualChannelCount: Int = 1
+    private var actualFrameSizeSamples: Int = (DEFAULT_MIC_SAMPLE_RATE * CAPTURE_INTERVAL_MS.toInt()) / 1000
+    private var actualFrameSizeBytes: Int = actualFrameSizeSamples * 2
 
     private val audioFocusListener = AudioManager.OnAudioFocusChangeListener { focusChange ->
         when (focusChange) {
@@ -125,6 +128,77 @@ class RadioAudioEngine(private val context: Context) {
         Log.d(TAG, "RECONNECT_COMPLETE reconnectCount=$rc resetDurationMs=$resetDurationMs")
     }
 
+    private val OPUS_SUPPORTED_RATES = setOf(8000, 12000, 16000, 24000, 48000)
+
+    private fun probeAudioSource(source: Int, sourceName: String): Boolean {
+        val probeRates = intArrayOf(DEFAULT_MIC_SAMPLE_RATE, 16000, 8000)
+        for (rate in probeRates) {
+            try {
+                val testMinBuf = AudioRecord.getMinBufferSize(
+                    rate,
+                    AudioFormat.CHANNEL_IN_MONO,
+                    AudioFormat.ENCODING_PCM_16BIT
+                )
+                if (testMinBuf <= 0) continue
+                val testRecord = AudioRecord(
+                    source,
+                    rate,
+                    AudioFormat.CHANNEL_IN_MONO,
+                    AudioFormat.ENCODING_PCM_16BIT,
+                    testMinBuf
+                )
+                val ok = testRecord.state == AudioRecord.STATE_INITIALIZED
+                testRecord.release()
+                if (ok) {
+                    Log.d(TAG, "TX_AUDIO_SOURCE_PROBE source=$sourceName probeRate=$rate result=OK")
+                    return true
+                }
+            } catch (_: Exception) {}
+        }
+        return false
+    }
+
+    private fun selectAudioSource(): Int {
+        if (Build.VERSION.SDK_INT >= 24) {
+            if (probeAudioSource(MediaRecorder.AudioSource.UNPROCESSED, "UNPROCESSED")) {
+                Log.d(TAG, "TX_AUDIO_SOURCE selected=UNPROCESSED (API ${Build.VERSION.SDK_INT})")
+                return MediaRecorder.AudioSource.UNPROCESSED
+            }
+        }
+
+        if (probeAudioSource(MediaRecorder.AudioSource.VOICE_RECOGNITION, "VOICE_RECOGNITION")) {
+            Log.d(TAG, "TX_AUDIO_SOURCE selected=VOICE_RECOGNITION")
+            return MediaRecorder.AudioSource.VOICE_RECOGNITION
+        }
+
+        Log.d(TAG, "TX_AUDIO_SOURCE selected=MIC (fallback)")
+        return MediaRecorder.AudioSource.MIC
+    }
+
+    private fun computeDspCoefficients(sampleRate: Int) {
+        val sr = sampleRate.toDouble()
+
+        val hpCutoff = 80.0
+        txHpAlpha = 1.0 / (1.0 + (2.0 * Math.PI * hpCutoff / sr))
+
+        val lpCutoff = if (sampleRate <= 16000) 3500.0 else 7500.0
+        val omega = 2.0 * Math.PI * lpCutoff / sr
+        val sinOmega = Math.sin(omega)
+        val cosOmega = Math.cos(omega)
+        val alpha = sinOmega / (2.0 * 0.7071)
+        val a0 = 1.0 + alpha
+        txLpB0 = ((1.0 - cosOmega) / 2.0) / a0
+        txLpB1 = (1.0 - cosOmega) / a0
+        txLpB2 = ((1.0 - cosOmega) / 2.0) / a0
+        txLpA1 = (-2.0 * cosOmega) / a0
+        txLpA2 = (1.0 - alpha) / a0
+
+        txCompAttackMs = 0.003
+        txCompReleaseMs = 0.15
+
+        Log.d(TAG, "TX_DSP_COEFFICIENTS sampleRate=$sampleRate hpAlpha=$txHpAlpha lpCutoff=$lpCutoff lpB0=$txLpB0 lpB1=$txLpB1 lpB2=$txLpB2 lpA1=$txLpA1 lpA2=$txLpA2")
+    }
+
     suspend fun startTransmit(): Boolean = transmitMutex.withLock {
         if (!started) {
             Log.w(TAG, "startTransmit: engine not started")
@@ -136,15 +210,18 @@ class RadioAudioEngine(private val context: Context) {
             val txStartMs = System.currentTimeMillis()
             Log.d(TAG, "LATENCY_TX_START_BEGIN")
 
+            val audioSource = selectAudioSource()
+
             val minBufferSize = AudioRecord.getMinBufferSize(
-                MIC_SAMPLE_RATE,
+                DEFAULT_MIC_SAMPLE_RATE,
                 AudioFormat.CHANNEL_IN_MONO,
                 AudioFormat.ENCODING_PCM_16BIT
             )
-            val bufferSize = maxOf(minBufferSize, MIC_FRAME_SIZE_BYTES * 4)
+            val requestedFrameSizeBytes = (DEFAULT_MIC_SAMPLE_RATE / 1000 * CAPTURE_INTERVAL_MS.toInt()) * 2
+            val bufferSize = maxOf(minBufferSize, requestedFrameSizeBytes * 4)
             val record = AudioRecord(
-                MediaRecorder.AudioSource.MIC,
-                MIC_SAMPLE_RATE,
+                audioSource,
+                DEFAULT_MIC_SAMPLE_RATE,
                 AudioFormat.CHANNEL_IN_MONO,
                 AudioFormat.ENCODING_PCM_16BIT,
                 bufferSize
@@ -154,14 +231,66 @@ class RadioAudioEngine(private val context: Context) {
                 record.release()
                 return false
             }
+
+            actualSampleRate = record.sampleRate
+            actualChannelCount = record.channelCount
+            val actualAudioFormat = record.audioFormat
+
+            if (actualSampleRate !in OPUS_SUPPORTED_RATES) {
+                Log.e(TAG, "TX_UNSUPPORTED_SAMPLE_RATE halRate=$actualSampleRate — not in Opus supported set $OPUS_SUPPORTED_RATES, aborting TX")
+                record.release()
+                return false
+            }
+
+            actualFrameSizeSamples = (actualSampleRate * CAPTURE_INTERVAL_MS.toInt()) / 1000
+            actualFrameSizeBytes = actualFrameSizeSamples * actualChannelCount * 2
+            val needsStereoDownmix = actualChannelCount == 2
+
+            if (actualChannelCount > 2) {
+                Log.e(TAG, "TX_UNEXPECTED_CHANNEL_COUNT channelCount=$actualChannelCount — only mono/stereo supported, aborting TX")
+                record.release()
+                return false
+            }
+
+            Log.d(TAG, "TX_HAL_NEGOTIATED actualSampleRate=$actualSampleRate actualChannelCount=$actualChannelCount audioFormat=$actualAudioFormat requestedSampleRate=$DEFAULT_MIC_SAMPLE_RATE needsStereoDownmix=$needsStereoDownmix bufferSize=$bufferSize")
+
+            if (actualSampleRate != DEFAULT_MIC_SAMPLE_RATE) {
+                Log.w(TAG, "TX_SAMPLE_RATE_MISMATCH requested=$DEFAULT_MIC_SAMPLE_RATE actual=$actualSampleRate — adapting TX pipeline")
+            }
+
+            opusCodec.reinitializeEncoderOnly(actualSampleRate, 1)
+            Log.d(TAG, "OPUS_TX_INIT sampleRate=$actualSampleRate channels=1 frameMs=$CAPTURE_INTERVAL_MS frameSize=${opusCodec.encoderFrameSize} bitrate=${OpusCodec.BITRATE}")
+
+            computeDspCoefficients(actualSampleRate)
+
             record.startRecording()
             audioRecord = record
+
+            val postStartRate = record.sampleRate
+            if (postStartRate != actualSampleRate) {
+                Log.w(TAG, "TX_POST_START_RATE_CHANGE preStart=$actualSampleRate postStart=$postStartRate — vendor changed rate after startRecording()")
+                actualSampleRate = postStartRate
+                if (actualSampleRate !in OPUS_SUPPORTED_RATES) {
+                    Log.e(TAG, "TX_UNSUPPORTED_SAMPLE_RATE_POST_START rate=$actualSampleRate — aborting TX")
+                    record.stop()
+                    record.release()
+                    audioRecord = null
+                    return false
+                }
+                actualFrameSizeSamples = (actualSampleRate * CAPTURE_INTERVAL_MS.toInt()) / 1000
+                actualFrameSizeBytes = actualFrameSizeSamples * actualChannelCount * 2
+                opusCodec.reinitializeEncoderOnly(actualSampleRate, 1)
+                computeDspCoefficients(actualSampleRate)
+                Log.d(TAG, "TX_PIPELINE_READAPTED postStartRate=$actualSampleRate frameSize=$actualFrameSizeSamples")
+            }
+
+            val monoFrameSizeBytes = actualFrameSizeSamples * 2
 
             val sessionId = record.audioSessionId
             try {
                 if (AutomaticGainControl.isAvailable()) {
-                    autoGainControl = AutomaticGainControl.create(sessionId)?.also { it.enabled = true }
-                    Log.d(TAG, "AutomaticGainControl attached: ${autoGainControl != null}")
+                    autoGainControl = AutomaticGainControl.create(sessionId)?.also { it.enabled = false }
+                    Log.d(TAG, "AutomaticGainControl attached and DISABLED for radio TX")
                 }
             } catch (e: Exception) {
                 Log.w(TAG, "AutomaticGainControl unavailable: ${e.message}")
@@ -169,12 +298,11 @@ class RadioAudioEngine(private val context: Context) {
 
             isTransmitting = true
             stateManager.transitionTo(RadioState.TRANSMITTING)
-            Log.d(TAG, "OPUS_TX_INIT sampleRate=$MIC_SAMPLE_RATE channels=1 frameMs=$CAPTURE_INTERVAL_MS bitrate=${OpusCodec.BITRATE}")
-            Log.d(TAG, "RADIO_TX_CAPTURE_STARTED sampleRate=$MIC_SAMPLE_RATE frameMs=$CAPTURE_INTERVAL_MS")
+            Log.d(TAG, "RADIO_TX_CAPTURE_STARTED sampleRate=$actualSampleRate channelCount=$actualChannelCount frameMs=$CAPTURE_INTERVAL_MS frameSizeSamples=$actualFrameSizeSamples frameSizeBytes=$actualFrameSizeBytes")
 
             captureJob = scope.launch {
-                val readBuffer = ByteArray(MIC_FRAME_SIZE_BYTES)
-                val pendingFrame = ByteArray(MIC_FRAME_SIZE_BYTES)
+                val readBuffer = ByteArray(actualFrameSizeBytes)
+                val pendingFrame = ByteArray(actualFrameSizeBytes)
                 var pendingBytes = 0
                 var frameCounter = 0
                 while (isActive && isTransmitting) {
@@ -183,23 +311,30 @@ class RadioAudioEngine(private val context: Context) {
                         if (read > 0) {
                             var readOffset = 0
                             while (readOffset < read) {
-                                val remainingFrameBytes = MIC_FRAME_SIZE_BYTES - pendingBytes
+                                val remainingFrameBytes = actualFrameSizeBytes - pendingBytes
                                 val chunkSize = minOf(remainingFrameBytes, read - readOffset)
                                 System.arraycopy(readBuffer, readOffset, pendingFrame, pendingBytes, chunkSize)
                                 pendingBytes += chunkSize
                                 readOffset += chunkSize
 
-                                if (pendingBytes == MIC_FRAME_SIZE_BYTES) {
-                                    highPassFilter(pendingFrame, MIC_FRAME_SIZE_BYTES)
-                                    lowPassFilter(pendingFrame, MIC_FRAME_SIZE_BYTES)
-                                    softwareCompressor(pendingFrame, MIC_FRAME_SIZE_BYTES)
-                                    applyGain(pendingFrame, MIC_FRAME_SIZE_BYTES, txGain)
-                                    val encoded = opusCodec.encode(pendingFrame)
+                                if (pendingBytes == actualFrameSizeBytes) {
+                                    val monoFrame: ByteArray
+                                    if (needsStereoDownmix) {
+                                        monoFrame = stereoToMono(pendingFrame, actualFrameSizeBytes)
+                                    } else {
+                                        monoFrame = pendingFrame.copyOf(monoFrameSizeBytes)
+                                    }
+                                    highPassFilter(monoFrame, monoFrameSizeBytes)
+                                    lowPassFilter(monoFrame, monoFrameSizeBytes)
+                                    softwareCompressor(monoFrame, monoFrameSizeBytes)
+                                    applyGain(monoFrame, monoFrameSizeBytes, txGain)
+                                    val encoded = opusCodec.encode(monoFrame)
                                     if (encoded != null) {
                                         frameCounter++
                                         if (frameCounter == 1) {
                                             val latencyMs = System.currentTimeMillis() - txStartMs
-                                            Log.d(TAG, "LATENCY_FIRST_TX_FRAME_SENT frame=$frameCounter bytes=${encoded.size} latencyMs=$latencyMs")
+                                            val monoFrameByteCount = actualFrameSizeSamples * 2
+                                            Log.d(TAG, "LATENCY_FIRST_TX_FRAME_SENT frame=$frameCounter samplesPerFrame=$actualFrameSizeSamples pcmBytesToEncode=$monoFrameByteCount opusFrameSize=${opusCodec.encoderFrameSize} encodedBytes=${encoded.size} latencyMs=$latencyMs")
                                         }
                                         udpTransport.send(encoded)
                                     }
@@ -217,7 +352,7 @@ class RadioAudioEngine(private val context: Context) {
                     }
                 }
             }
-            Log.d(TAG, "TX started — audio capture active (buffer=${bufferSize}, bitrate=${OpusCodec.BITRATE})")
+            Log.d(TAG, "TX started — audio capture active (sampleRate=$actualSampleRate channels=$actualChannelCount buffer=$bufferSize bitrate=${OpusCodec.BITRATE})")
             return true
         } catch (e: SecurityException) {
             Log.e(TAG, "Mic permission denied: ${e.message}", e)
@@ -226,6 +361,21 @@ class RadioAudioEngine(private val context: Context) {
             Log.e(TAG, "startTransmit error: ${e.message}", e)
             return false
         }
+    }
+
+    private fun stereoToMono(stereoBuffer: ByteArray, stereoLength: Int): ByteArray {
+        val stereoBuf = java.nio.ByteBuffer.wrap(stereoBuffer, 0, stereoLength).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+        val stereoSamples = stereoLength / 2
+        val monoSamples = stereoSamples / 2
+        val monoBytes = ByteArray(monoSamples * 2)
+        val monoBuf = java.nio.ByteBuffer.wrap(monoBytes).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+        for (i in 0 until monoSamples) {
+            val left = stereoBuf.getShort(i * 4).toInt()
+            val right = stereoBuf.getShort(i * 4 + 2).toInt()
+            val mono = ((left + right) / 2).coerceIn(-32768, 32767).toShort()
+            monoBuf.putShort(i * 2, mono)
+        }
+        return monoBytes
     }
 
     suspend fun stopTransmit() = transmitMutex.withLock {
@@ -309,12 +459,10 @@ class RadioAudioEngine(private val context: Context) {
 
     // --- DSP state ---
 
-    // High-pass filter state (~80Hz, single-pole IIR)
     private var hpPrevOutput: Double = 0.0
     private var hpPrevInput: Double = 0.0
     var txHpAlpha: Double = 0.9889
 
-    // Low-pass filter state (7.5kHz biquad at 48kHz sample rate)
     var txLpB0: Double = 0.1554851459
     var txLpB1: Double = 0.3109702918
     var txLpB2: Double = 0.1554851459
@@ -325,15 +473,14 @@ class RadioAudioEngine(private val context: Context) {
     private var lpY1: Double = 0.0
     private var lpY2: Double = 0.0
 
-    // Compressor state
     var txCompThresholdDb: Double = -12.0
     var txCompRatio: Double = 3.0
     var txCompAttackMs: Double = 0.003
     var txCompReleaseMs: Double = 0.15
     private var compEnvelopeDb: Double = -90.0
 
-    private val compAttackCoeff: Double get() = 1.0 - Math.exp(-1.0 / (MIC_SAMPLE_RATE * txCompAttackMs))
-    private val compReleaseCoeff: Double get() = 1.0 - Math.exp(-1.0 / (MIC_SAMPLE_RATE * txCompReleaseMs))
+    private val compAttackCoeff: Double get() = 1.0 - Math.exp(-1.0 / (actualSampleRate * txCompAttackMs))
+    private val compReleaseCoeff: Double get() = 1.0 - Math.exp(-1.0 / (actualSampleRate * txCompReleaseMs))
 
     var txGain: Double = 3.5
 
