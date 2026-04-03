@@ -1,0 +1,138 @@
+I need you to fix the Android native TX path on the T320 in a strict, step-by-step way. Do not make broad rewrites. Make surgical changes only in the Android native radio/audio code.
+
+Current proven facts from logs
+- TX floor grant works.
+- TX packets are being sent over UDP.
+- Current selected source is VOICE_COMMUNICATION from cache.
+- Real TX PCM is still near digital silence on T320, with RMS values like 1.2, 2.5, 9.3 on 16-bit PCM.
+- Opus encode is also intermittently crashing with OPUS_ENCODE_ASSERTION_FAILURE inside Concentus.
+- Current TX path is running 48 kHz, mono, 20 ms, frame size 960 samples.
+
+Important Opus rules to follow
+- The encoder must be fed exactly one valid Opus frame at a supported duration: 2.5, 5, 10, 20, 40, or 60 ms. For 48 kHz, valid frame sizes are 120, 240, 480, 960, 1920, 2880 samples per channel.
+- The input PCM length must be frame_size * channels samples.
+- The encoder state is stateful and must not be used for more than one stream at the same time, and must not be re-initialized for each frame.
+- opus_encode() returns the actual encoded byte count; packets are variable length and transport must send only the returned byte count, not a fixed buffer length.
+- Decoder output rate can differ from the encoder-side signal bandwidth/sample configuration; Opus supports interoperable decoding at supported output rates.
+
+References already in repo/docs:
+- opus_encode must get exactly one supported frame and frame_size is samples per channel.
+- 48 kHz valid frame sizes include 960 for 20 ms.
+- PCM buffer length must be frame_size * channels * sizeof(opus_int16).
+- Encoder state must not be reused across multiple simultaneous streams and must not be re-initialized per frame.
+- Encoded packet length is variable and the return value is the number of bytes actually written.
+
+What to do, in order
+
+STEP 1 — Disable cached TX source selection during testing
+- Remove or bypass cached_for_device source selection for the T320 during debug/testing.
+- Add a debug flag to force fresh probe every TX start, or at minimum every app launch.
+- Log clearly when cache is bypassed.
+
+STEP 2 — Rebuild audio source probe so it tests real capture, not just init
+Test these sources in this exact order:
+1. MIC
+2. VOICE_RECOGNITION
+3. VOICE_COMMUNICATION
+4. UNPROCESSED
+
+For each source:
+- construct AudioRecord with current TX settings
+- startRecording()
+- read 5 short frames
+- compute min / max / RMS per frame
+- compute average RMS across probe
+- reject source if average RMS is near silence
+- stop/release cleanly no matter what
+
+Log one line per source like:
+TX_SOURCE_PROBE source=MIC init=true start=true avgRms=842 min=-2200 max=2400 accepted=true reason=best_valid_source
+
+Do NOT accept a source just because AudioRecord init succeeds.
+
+STEP 3 — Pick best valid source, not first passing source
+- Compare all valid sources from the live probe.
+- Pick the source with the strongest stable RMS.
+- Reject stale cache and reject near-silent sources.
+- If all sources are near silent, log that loudly and fail TX start with a clear reason instead of pretending capture is healthy.
+
+STEP 4 — Keep TX capture stats for first 10 real frames
+On each TX session, log for the first 10 frames:
+- source
+- sample rate
+- channels
+- min
+- max
+- RMS
+- silent=true/false
+- zeros count
+- downmix=true/false
+
+This is required so we can confirm the chosen source actually works during real PTT, not just during probing.
+
+STEP 5 — Fix Opus encoder safety and ownership rules
+The current Concentus assertion failures strongly suggest buffer misuse, race, or invalid encoder usage.
+
+Do all of the following:
+- Ensure the encoder instance is used by exactly one TX stream at a time.
+- Ensure no concurrent encode() calls can hit the same encoder instance.
+- Do not reinitialize the encoder per frame.
+- Audit coroutine/thread usage around RadioAudioEngine TX encode loop.
+- If capture and encode are on different coroutines/threads, make a defensive copy of the PCM frame before handing it to encode.
+- Never let AudioRecord overwrite a PCM buffer that is still being encoded.
+- Ensure frame_size passed to encode is always exactly 960 at 48 kHz / 20 ms, and PCM buffer length is exactly 1920 bytes for mono 16-bit.
+- If a frame is short/partial, accumulate until a full exact frame is available before encode. Never encode partial garbage.
+- If an encode assertion happens, log frame number, source, sample rate, frame_size, pcmBytes, and whether the PCM array was copied or shared.
+
+Important:
+opus_encode requires exactly one supported frame and exact samples-per-channel sizing. Do not pass anything except a valid full frame.
+
+STEP 6 — Audit fixed-size assumptions in transport
+- Keep sending only the actual number of bytes returned by opus_encode.
+- Verify UDP send uses encodedBytes, not a full preallocated packet buffer length.
+- Keep logs for first 5 TX packets:
+  - seq
+  - payload bytes
+  - destination
+  - token present
+- Do not change packet format unless you find a real bug.
+
+STEP 7 — Add a hard TX health summary
+At end of each TX session, log:
+- selected source
+- requested source order tried
+- avg probe RMS per source
+- chosen source RMS
+- first 10 real-frame RMS values
+- total frames read
+- total frames encoded
+- encode failures
+- assertion failures
+- packets sent
+- stop reason
+
+STEP 8 — Do not touch server or desktop yet
+- No server relay changes.
+- No desktop RX changes.
+- No floor-control redesign in this task.
+First make T320 capture real audio and make encoder stable.
+
+Implementation constraints
+- Keep changes surgical.
+- Keep existing module/file names.
+- Do not rewrite working RX path.
+- Do not remove existing useful logs.
+- Add clear logs, but rate-limit hot-loop summaries after first 10 frames.
+
+Files to update
+- android-native/app/src/main/java/com/reedersystems/commandcomms/audio/radio/RadioAudioEngine.kt
+- android-native/app/src/main/java/com/reedersystems/commandcomms/audio/radio/AudioCapture.kt
+- android-native/app/src/main/java/com/reedersystems/commandcomms/audio/radio/OpusCodec.kt
+- android-native/app/src/main/java/com/reedersystems/commandcomms/audio/radio/RadioDiagLog.kt
+
+Expected outcome
+- T320 chooses MIC or another actually-working source based on real RMS, not cached guesswork.
+- TX PCM is no longer near-silent.
+- Opus encode assertion failures stop.
+- Desktop can hear intelligible T320 audio.
+- Logs clearly show which source won and why.
