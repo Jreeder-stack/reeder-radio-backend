@@ -1,0 +1,60 @@
+#168 - Fix T320 TX Path for Actual Delivered Capture Format
+
+What & Why
+T320 logs prove the Android input request for 48 kHz mono is not the actual delivered TX capture format. The device rejects 48 kHz input, reopens the app-facing stream at 16 kHz mono, and internally runs vendor voice processing on a 48 kHz stereo path with SRC/remix before handing audio to the app. The app still initializes Opus TX using 48000 Hz / 960-sample 20 ms frames. That mismatch can garble, pitch-shift, or otherwise corrupt transmitted speech.
+
+The fix is to detect the actual delivered AudioRecord format at runtime and build the entire TX pipeline from that real format: AudioRecord read sizing, frame accumulation, DSP coefficients, mono downmix if needed, and Opus encoder init. Also add diagnostics so future device-specific rate/channel mismatches are visible immediately in logcat.
+
+Server-side changes are not required. Opus decoders can decode a stream into supported output rates independently of the encoder’s input-side capture format, so the Android TX side must be corrected first.
+Relevant evidence from device logs:
+- 48 kHz input open fails as invalid
+- app-facing input reopens at 16 kHz mono
+- vendor capture/provider path opens at 48 kHz stereo and converts/remixes to 16 kHz mono
+- app currently logs Opus TX init at 48000 Hz
+
+Done looks like
+- On T320, TX uses the actual delivered capture format at runtime, which is currently 16 kHz mono, instead of assuming 48 kHz
+- Opus encoder initializes using actualSampleRate and actualChannelCount, with frame size derived as actualSampleRate * 20 / 1000
+- At 16 kHz mono / 20 ms, TX frame size is 320 samples and 640 PCM bytes
+- No 48 kHz TX constants remain hardcoded in buffer sizes, frame accumulation, or DSP code
+- DSP filter coefficients and compressor timing are recalculated from actualSampleRate
+- If AudioRecord delivers 2-channel data, interleaved stereo is downmixed to mono before DSP and Opus encode
+- Devices that truly deliver 48 kHz continue to work because TX is runtime-configured, not hardcoded to 16 kHz
+- Logcat prints once per TX start:
+  - requested sample rate/channel count
+  - actual AudioRecord sampleRate/channelCount/audioFormat
+  - buffer size in bytes
+  - chosen audio source
+  - whether stereo downmix is active
+- Logcat prints on first encoded TX frame:
+  - samples read
+  - PCM bytes accumulated
+  - opus frame size passed
+  - encoded byte count returned
+- Hardware AGC is disabled for TX
+- Audio source selection prefers UNPROCESSED, then VOICE_RECOGNITION, then MIC, with logging of which source was actually used
+- Optional debug flag can dump 1 short raw PCM capture to file before Opus for verification
+- T320 -> desktop speech is intelligible and at correct pitch
+
+Out of scope
+- Server relay / decoder changes
+- Desktop/web RX changes
+- Android RX playback path
+- Stereo Opus TX
+
+Required implementation details
+1. In startTransmit(), after AudioRecord is created and started, capture the actual delivered format from the AudioRecord instance and use that to drive the TX chain. Do not trust requested values.
+2. Refactor OpusCodec so encoder initialization accepts runtime sampleRate and channel count. Frame size must be derived from runtime sampleRate, not fixed 960.
+3. Refactor RadioAudioEngine and AudioCapture so read buffers, pending frame buffers, and per-frame math derive from actual sample rate and actual channel count.
+4. Remove all TX assumptions tied to 48 kHz / 960-sample frames.
+5. If actual channel count is 2, read stereo-interleaved PCM and downmix to mono before DSP and encoding.
+6. Recalculate all DSP/sample-dependent coefficients and timing constants from actual sample rate.
+7. Disable hardware AutomaticGainControl for TX and log success/failure.
+8. Prefer UNPROCESSED audio source when supported; otherwise try VOICE_RECOGNITION; otherwise MIC. Log chosen source and fallback path.
+9. Add a one-session-first-frame diagnostic log showing exact encode inputs/outputs.
+10. Add an optional raw PCM dump toggle for one short TX capture to verify whether the capture path is already distorted before Opus.
+
+Relevant files
+- android-native/app/src/main/java/com/reedersystems/commandcomms/audio/radio/RadioAudioEngine.kt
+- android-native/app/src/main/java/com/reedersystems/commandcomms/audio/radio/OpusCodec.kt
+- android-native/app/src/main/java/com/reedersystems/commandcomms/audio/radio/AudioCapture.kt
