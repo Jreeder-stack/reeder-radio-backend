@@ -1145,6 +1145,12 @@ class SignalingService {
       });
     }
 
+    if (socket.radioSessionToken) {
+      audioRelayService.removeSession(socket.radioSessionToken);
+      socket.radioSessionToken = null;
+      socket.radioSessionChannel = null;
+    }
+
     socket.emit('radio:channelLeft', { channelId, timestamp: Date.now() });
     console.log(`[Signaling] Radio ${socket.unitId} left channel ${channelId}`);
   }
@@ -1287,6 +1293,8 @@ class SignalingService {
       socket.radioSessionToken = null;
       socket.radioSessionChannel = null;
     }
+
+    this._issueRadioSessionToken(socket, channelId, 'ptt_release_rx');
 
     const presenceData = this.unitPresence.get(socket.unitId);
     if (presenceData) {

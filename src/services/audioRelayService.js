@@ -363,7 +363,7 @@ class AudioRelayService {
     this.addSubscriber(channelKey, unitId, rinfo.address, rinfo.port);
 
     if (!opusPayload || opusPayload.length === 0) {
-    
+      console.log(`[Signaling] KEEPALIVE_OK unitId=${unitId} channelKey=${channelKey} addr=${rinfo.address}:${rinfo.port}`);
       return;
     }
 
