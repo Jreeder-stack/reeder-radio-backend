@@ -57,7 +57,7 @@ class RadioAudioEngine(private val context: Context) {
 
     private val txSessionStats = RadioDiagLog.TxSessionStats()
     private val rxSessionStats = RadioDiagLog.RxSessionStats()
-    private val pcmReadRateLimiter = RadioDiagLog.RateLimiter(detailCount = 5)
+    private val pcmReadRateLimiter = RadioDiagLog.RateLimiter(detailCount = 10)
     private val dspRateLimiter = RadioDiagLog.RateLimiter(detailCount = 3)
 
     private val audioFocusListener = AudioManager.OnAudioFocusChangeListener { focusChange ->
@@ -153,52 +153,158 @@ class RadioAudioEngine(private val context: Context) {
 
     private val OPUS_SUPPORTED_RATES = setOf(8000, 12000, 16000, 24000, 48000)
 
-    private fun probeAudioSource(source: Int, sourceName: String): Boolean {
-        val probeRates = intArrayOf(DEFAULT_MIC_SAMPLE_RATE, 16000, 8000)
-        for (rate in probeRates) {
-            try {
-                val testMinBuf = AudioRecord.getMinBufferSize(
-                    rate,
-                    AudioFormat.CHANNEL_IN_MONO,
-                    AudioFormat.ENCODING_PCM_16BIT
-                )
-                if (testMinBuf <= 0) continue
-                val testRecord = AudioRecord(
-                    source,
-                    rate,
-                    AudioFormat.CHANNEL_IN_MONO,
-                    AudioFormat.ENCODING_PCM_16BIT,
-                    testMinBuf
-                )
-                val ok = testRecord.state == AudioRecord.STATE_INITIALIZED
-                testRecord.release()
-                if (ok) {
-                    Log.d("[AudioCapture]", "TX_AUDIO_SOURCE_PROBE source=$sourceName probeRate=$rate result=OK")
-                    return true
-                }
-            } catch (e: Exception) {
-                Log.w("[AudioCapture]", "TX_AUDIO_SOURCE_PROBE source=$sourceName probeRate=$rate result=EXCEPTION(${e.message})")
+    companion object {
+        private const val PROBE_SILENCE_RMS_THRESHOLD = 50.0
+        private const val PROBE_FRAME_COUNT = 5
+        private const val PROBE_RATE = DEFAULT_MIC_SAMPLE_RATE
+
+        @Volatile
+        private var cachedSourceKey: String? = null
+        @Volatile
+        private var cachedSourceValue: Int? = null
+        @Volatile
+        private var cachedSourceName: String? = null
+    }
+
+    private data class SourceProbeResult(
+        val source: Int,
+        val sourceName: String,
+        val avgRms: Double,
+        val minSample: Int,
+        val maxSample: Int,
+        val accepted: Boolean,
+        val reason: String
+    )
+
+    private fun probeAudioSource(source: Int, sourceName: String): SourceProbeResult {
+        val rate = PROBE_RATE
+        try {
+            val testMinBuf = AudioRecord.getMinBufferSize(
+                rate,
+                AudioFormat.CHANNEL_IN_MONO,
+                AudioFormat.ENCODING_PCM_16BIT
+            )
+            if (testMinBuf <= 0) {
+                val reason = "init_failed_bad_buffer_size"
+                Log.w("[AudioCapture]", "TX_AUDIO_SOURCE_PROBE source=$sourceName probeRate=$rate result=REJECT reason=$reason minBuf=$testMinBuf")
+                return SourceProbeResult(source, sourceName, 0.0, 0, 0, false, reason)
             }
+            val testRecord = AudioRecord(
+                source,
+                rate,
+                AudioFormat.CHANNEL_IN_MONO,
+                AudioFormat.ENCODING_PCM_16BIT,
+                testMinBuf
+            )
+            try {
+                if (testRecord.state != AudioRecord.STATE_INITIALIZED) {
+                    val reason = "init_failed_not_initialized"
+                    Log.w("[AudioCapture]", "TX_AUDIO_SOURCE_PROBE source=$sourceName probeRate=$rate result=REJECT reason=$reason")
+                    return SourceProbeResult(source, sourceName, 0.0, 0, 0, false, reason)
+                }
+
+                try {
+                    testRecord.startRecording()
+                } catch (e: Exception) {
+                    val reason = "start_recording_failed"
+                    Log.w("[AudioCapture]", "TX_AUDIO_SOURCE_PROBE source=$sourceName probeRate=$rate result=REJECT reason=$reason err=${e.message}")
+                    return SourceProbeResult(source, sourceName, 0.0, 0, 0, false, reason)
+                }
+
+                val frameSizeSamples = (rate * CAPTURE_INTERVAL_MS.toInt()) / 1000
+                val frameSizeBytes = frameSizeSamples * 2
+                val readBuf = ByteArray(frameSizeBytes)
+                var totalRms = 0.0
+                var globalMin = Short.MAX_VALUE.toInt()
+                var globalMax = Short.MIN_VALUE.toInt()
+                var validFrames = 0
+
+                for (i in 0 until PROBE_FRAME_COUNT) {
+                    val bytesRead = testRecord.read(readBuf, 0, frameSizeBytes)
+                    if (bytesRead > 0) {
+                        val stats = RadioDiagLog.pcmStats(readBuf, bytesRead)
+                        totalRms += stats.rms
+                        if (stats.min < globalMin) globalMin = stats.min
+                        if (stats.max > globalMax) globalMax = stats.max
+                        validFrames++
+                        Log.d("[AudioCapture]", "TX_AUDIO_SOURCE_PROBE source=$sourceName probeFrame=$i $stats")
+                    } else {
+                        Log.w("[AudioCapture]", "TX_AUDIO_SOURCE_PROBE source=$sourceName probeFrame=$i readRet=$bytesRead")
+                    }
+                }
+
+                if (validFrames == 0) {
+                    val reason = "read_failed_no_valid_frames"
+                    Log.w("[AudioCapture]", "TX_AUDIO_SOURCE_PROBE source=$sourceName probeRate=$rate result=REJECT reason=$reason")
+                    return SourceProbeResult(source, sourceName, 0.0, 0, 0, false, reason)
+                }
+
+                val avgRms = totalRms / validFrames
+                val accepted = avgRms >= PROBE_SILENCE_RMS_THRESHOLD
+                val reason = if (accepted) "rms_above_threshold" else "rms_too_low"
+                Log.d("[AudioCapture]", "TX_AUDIO_SOURCE_PROBE source=$sourceName probeRate=$rate result=${if (accepted) "OK" else "REJECT"} avgRms=${String.format("%.1f", avgRms)} min=$globalMin max=$globalMax validFrames=$validFrames reason=$reason threshold=$PROBE_SILENCE_RMS_THRESHOLD")
+                return SourceProbeResult(source, sourceName, avgRms, globalMin, globalMax, accepted, reason)
+
+            } finally {
+                try { testRecord.stop() } catch (_: Exception) {}
+                try { testRecord.release() } catch (_: Exception) {}
+            }
+
+        } catch (e: Exception) {
+            val reason = "exception"
+            Log.w("[AudioCapture]", "TX_AUDIO_SOURCE_PROBE source=$sourceName probeRate=$rate result=REJECT reason=$reason err=${e.message}")
+            return SourceProbeResult(source, sourceName, 0.0, 0, 0, false, reason)
         }
-        return false
     }
 
     private fun selectAudioSource(): Int {
+        val deviceKey = "${Build.MANUFACTURER}/${Build.MODEL}/API${Build.VERSION.SDK_INT}"
+        val cached = cachedSourceKey
+        if (cached != null && cached == deviceKey && cachedSourceValue != null) {
+            val src = cachedSourceValue!!
+            val name = cachedSourceName ?: "UNKNOWN"
+            Log.d("[AudioCapture]", "TX_AUDIO_SOURCE_SELECTED source=$name reason=cached_for_device device=$deviceKey")
+            txSessionStats.audioSource = name
+            return src
+        }
+
+        data class Candidate(val source: Int, val name: String)
+        val primaryCandidates = listOf(
+            Candidate(MediaRecorder.AudioSource.MIC, "MIC"),
+            Candidate(MediaRecorder.AudioSource.VOICE_COMMUNICATION, "VOICE_COMMUNICATION"),
+            Candidate(MediaRecorder.AudioSource.VOICE_RECOGNITION, "VOICE_RECOGNITION")
+        )
+
+        val allCandidateNames = primaryCandidates.map { it.name }.toMutableList()
+        if (Build.VERSION.SDK_INT >= 24) allCandidateNames.add("UNPROCESSED")
+        Log.d("[AudioCapture]", "TX_AUDIO_SOURCE_PROBE_BEGIN device=$deviceKey candidates=$allCandidateNames")
+
+        val primaryResults = primaryCandidates.map { c -> probeAudioSource(c.source, c.name) }
+        val validPrimary = primaryResults.filter { it.accepted }
+        val bestPrimary = validPrimary.maxByOrNull { it.avgRms }
+
+        if (bestPrimary != null) {
+            Log.d("[AudioCapture]", "TX_AUDIO_SOURCE_SELECTED source=${bestPrimary.sourceName} avgRms=${String.format("%.1f", bestPrimary.avgRms)} min=${bestPrimary.minSample} max=${bestPrimary.maxSample} reason=best_valid_source device=$deviceKey")
+            txSessionStats.audioSource = bestPrimary.sourceName
+            cachedSourceKey = deviceKey
+            cachedSourceValue = bestPrimary.source
+            cachedSourceName = bestPrimary.sourceName
+            return bestPrimary.source
+        }
+
         if (Build.VERSION.SDK_INT >= 24) {
-            if (probeAudioSource(MediaRecorder.AudioSource.UNPROCESSED, "UNPROCESSED")) {
-                Log.d("[AudioCapture]", "TX_AUDIO_SOURCE selected=UNPROCESSED (API ${Build.VERSION.SDK_INT})")
+            val unprocessedResult = probeAudioSource(MediaRecorder.AudioSource.UNPROCESSED, "UNPROCESSED")
+            if (unprocessedResult.accepted) {
+                Log.w("[AudioCapture]", "TX_AUDIO_SOURCE_SELECTED source=UNPROCESSED avgRms=${String.format("%.1f", unprocessedResult.avgRms)} min=${unprocessedResult.minSample} max=${unprocessedResult.maxSample} reason=last_resort_primary_sources_failed device=$deviceKey")
                 txSessionStats.audioSource = "UNPROCESSED"
+                cachedSourceKey = deviceKey
+                cachedSourceValue = MediaRecorder.AudioSource.UNPROCESSED
+                cachedSourceName = "UNPROCESSED"
                 return MediaRecorder.AudioSource.UNPROCESSED
             }
         }
 
-        if (probeAudioSource(MediaRecorder.AudioSource.VOICE_RECOGNITION, "VOICE_RECOGNITION")) {
-            Log.d("[AudioCapture]", "TX_AUDIO_SOURCE selected=VOICE_RECOGNITION")
-            txSessionStats.audioSource = "VOICE_RECOGNITION"
-            return MediaRecorder.AudioSource.VOICE_RECOGNITION
-        }
-
-        Log.d("[AudioCapture]", "TX_AUDIO_SOURCE selected=MIC (fallback)")
+        Log.w("[AudioCapture]", "TX_AUDIO_SOURCE_SELECTED source=MIC reason=no_valid_source_above_threshold_hard_fallback device=$deviceKey threshold=$PROBE_SILENCE_RMS_THRESHOLD")
         txSessionStats.audioSource = "MIC"
         return MediaRecorder.AudioSource.MIC
     }
@@ -390,7 +496,7 @@ class RadioAudioEngine(private val context: Context) {
                                         if (pcmReadRateLimiter.shouldLogDetail()) {
                                             val stats = RadioDiagLog.pcmStats(monoFrame, monoFrameSizeBytes)
                                             if (stats.silent) txSessionStats.silentFrames++
-                                            Log.d("[AudioCapture]", "PCM_FRAME frame=${pcmReadRateLimiter.frameCount} readRet=$read $stats downmix=$needsStereoDownmix ${RadioDiagLog.elapsedTag()}")
+                                            Log.d("[AudioCapture]", "PCM_FRAME frame=${pcmReadRateLimiter.frameCount} readRet=$read $stats downmix=$needsStereoDownmix source=${txSessionStats.audioSource} sampleRate=$actualSampleRate channels=$actualChannelCount ${RadioDiagLog.elapsedTag()}")
                                         } else {
                                             val stats = RadioDiagLog.pcmStats(monoFrame, monoFrameSizeBytes)
                                             if (stats.silent) txSessionStats.silentFrames++
