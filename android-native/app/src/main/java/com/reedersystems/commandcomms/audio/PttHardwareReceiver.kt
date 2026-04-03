@@ -22,9 +22,12 @@ private const val TAG = "[PTT-DIAG]"
 class PttHardwareReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
-        val action = intent.action ?: return
+        val action = intent.action ?: run {
+            Log.w(TAG, "[RadioError] PttHardwareReceiver.onReceive: null action — ignoring")
+            return
+        }
 
-        Log.d(TAG, "PttHardwareReceiver.onReceive action=$action extras=${intent.extras}")
+        Log.d(TAG, "PttHardwareReceiver.onReceive action=$action extras=${intent.extras} source=broadcast")
 
         // All PTT events are forwarded to BackgroundAudioService regardless of screen state.
         // The service's CONNECTING/TRANSMITTING guard prevents double-firing if both
@@ -110,7 +113,7 @@ class PttHardwareReceiver : BroadcastReceiver() {
             }
 
             else -> {
-                Log.d(TAG, "PttHardwareReceiver: unrecognised action=$action — ignoring")
+                Log.w(TAG, "[RadioError] PttHardwareReceiver: unrecognised action=$action — ignoring (no mapping found)")
                 null
             }
         }

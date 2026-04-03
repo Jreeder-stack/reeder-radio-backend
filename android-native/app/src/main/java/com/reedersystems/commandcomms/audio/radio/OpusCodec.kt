@@ -33,6 +33,14 @@ class OpusCodec {
         private set
     private var expectedFrameBytes: Int = FRAME_SIZE * CHANNELS * 2
 
+    private val encodeRateLimiter = RadioDiagLog.RateLimiter(detailCount = 5)
+    private val decodeRateLimiter = RadioDiagLog.RateLimiter(detailCount = 5)
+    private var encodeSummaryBytes: Long = 0
+    private var encodeSummaryPcmBytes: Long = 0
+    private var decodeSummaryBytes: Long = 0
+    private var decodeSummaryPcmBytes: Long = 0
+    private var decodePlcCount: Long = 0
+
     fun initialize() {
         initialize(DEFAULT_SAMPLE_RATE, CHANNELS)
     }
@@ -54,9 +62,9 @@ class OpusCodec {
             encoder = enc
             decoder = OpusDecoder(DEFAULT_SAMPLE_RATE, CHANNELS)
             initialized = true
-            Log.d(TAG, "OpusCodec initialized (Concentus, encoder_sample_rate=$sampleRate encoder_frame_size=$encoderFrameSize channels=$channels decoder_sample_rate=$DEFAULT_SAMPLE_RATE complexity=5)")
+            Log.d(TAG, "OpusCodec initialized rate=$sampleRate channels=$channels frameSize=$encoderFrameSize bitrate=$BITRATE VBR=true complexity=5 FEC=true lossPercent=10 decoderRate=$DEFAULT_SAMPLE_RATE ${RadioDiagLog.elapsedTag()}")
         } catch (e: Exception) {
-            Log.e(TAG, "OpusCodec initialization failed: ${e.message}", e)
+            Log.e("[RadioError]", "OpusCodec initialization failed: ${e::class.simpleName}: ${e.message} rate=$sampleRate channels=$channels", e)
         }
     }
 
@@ -65,6 +73,8 @@ class OpusCodec {
         encoderChannels = channels
         encoderFrameSize = (sampleRate * FRAME_DURATION_MS) / 1000
         expectedFrameBytes = encoderFrameSize * channels * 2
+        encodeRateLimiter.reset()
+        encodeSummaryBytes = 0; encodeSummaryPcmBytes = 0
         synchronized(encodeLock) {
             try {
                 val enc = OpusEncoder(sampleRate, channels, OpusApplication.OPUS_APPLICATION_VOIP)
@@ -75,9 +85,9 @@ class OpusCodec {
                 enc.setUseInbandFEC(true)
                 enc.setPacketLossPercent(10)
                 encoder = enc
-                Log.d(TAG, "Encoder-only reinit (sampleRate=$sampleRate frameSize=$encoderFrameSize channels=$channels) — decoder untouched")
+                Log.d(TAG, "ENCODER_REINIT rate=$sampleRate frameSize=$encoderFrameSize channels=$channels bitrate=$currentBitrate VBR=true complexity=5 FEC=true — decoder untouched ${RadioDiagLog.elapsedTag()}")
             } catch (e: Exception) {
-                Log.e(TAG, "Encoder-only reinit failed: ${e.message}", e)
+                Log.e("[RadioError]", "Encoder-only reinit failed: ${e::class.simpleName}: ${e.message} rate=$sampleRate channels=$channels", e)
             }
         }
     }
@@ -87,32 +97,40 @@ class OpusCodec {
 
     fun setBitrateRuntime(newBitrate: Int) {
         if (newBitrate < 6000 || newBitrate > 128000) {
-            Log.w(TAG, "setBitrateRuntime: invalid bitrate $newBitrate, ignoring")
+            Log.w("[RadioError]", "setBitrateRuntime: invalid bitrate $newBitrate (valid 6000-128000), ignoring")
             return
         }
         currentBitrate = newBitrate
         synchronized(encodeLock) {
             try {
                 encoder?.setBitrate(newBitrate)
-                Log.d(TAG, "Encoder bitrate updated to $newBitrate at runtime")
+                Log.d(TAG, "Encoder bitrate updated to $newBitrate at runtime ${RadioDiagLog.elapsedTag()}")
             } catch (e: Exception) {
-                Log.w(TAG, "Failed to set encoder bitrate: ${e.message}")
+                Log.w("[RadioError]", "Failed to set encoder bitrate: ${e.message}")
             }
         }
     }
 
     fun resetDecoder() {
-        if (!initialized) return
+        if (!initialized) {
+            Log.w("[RadioError]", "resetDecoder called but codec not initialized")
+            return
+        }
         try {
             decoder = OpusDecoder(DEFAULT_SAMPLE_RATE, CHANNELS)
-            Log.d(TAG, "RECONNECT_DECODER_RESET OpusDecoder recreated — stale state cleared")
+            decodeRateLimiter.reset()
+            decodeSummaryBytes = 0; decodeSummaryPcmBytes = 0; decodePlcCount = 0
+            Log.d(TAG, "DECODER_RESET OpusDecoder recreated rate=$DEFAULT_SAMPLE_RATE channels=$CHANNELS ${RadioDiagLog.elapsedTag()}")
         } catch (e: Exception) {
-            Log.e(TAG, "RECONNECT_DECODER_RESET_FAILED: ${e.message}", e)
+            Log.e("[RadioError]", "DECODER_RESET_FAILED: ${e::class.simpleName}: ${e.message}", e)
         }
     }
 
     fun resetEncoder() {
-        if (!initialized) return
+        if (!initialized) {
+            Log.w("[RadioError]", "resetEncoder called but codec not initialized")
+            return
+        }
         synchronized(encodeLock) {
             try {
                 val enc = OpusEncoder(encoderSampleRate, encoderChannels, OpusApplication.OPUS_APPLICATION_VOIP)
@@ -123,9 +141,11 @@ class OpusCodec {
                 enc.setUseInbandFEC(true)
                 enc.setPacketLossPercent(10)
                 encoder = enc
-                Log.d(TAG, "RECONNECT_ENCODER_RESET OpusEncoder recreated (sampleRate=$encoderSampleRate frameSize=$encoderFrameSize) — stale state cleared")
+                encodeRateLimiter.reset()
+                encodeSummaryBytes = 0; encodeSummaryPcmBytes = 0
+                Log.d(TAG, "ENCODER_RESET OpusEncoder recreated rate=$encoderSampleRate frameSize=$encoderFrameSize channels=$encoderChannels ${RadioDiagLog.elapsedTag()}")
             } catch (e: Exception) {
-                Log.e(TAG, "RECONNECT_ENCODER_RESET_FAILED: ${e.message}", e)
+                Log.e("[RadioError]", "ENCODER_RESET_FAILED: ${e::class.simpleName}: ${e.message}", e)
             }
         }
     }
@@ -135,12 +155,16 @@ class OpusCodec {
         val sampleCount = byteCount / 2
 
         if (byteCount != expectedFrameBytes || (byteCount and 1) != 0) {
-            Log.w(TAG, "OPUS_ENCODE_REJECTED_BAD_FRAME samples=$sampleCount bytes=$byteCount expectedSamples=$encoderFrameSize expectedBytes=$expectedFrameBytes")
+            Log.w("[RadioError]", "OPUS_ENCODE_REJECTED_BAD_FRAME samples=$sampleCount bytes=$byteCount expectedSamples=$encoderFrameSize expectedBytes=$expectedFrameBytes method=encode")
             return null
         }
 
         synchronized(encodeLock) {
-            val enc = encoder ?: return null
+            val enc = encoder
+            if (enc == null) {
+                Log.w("[RadioError]", "OPUS_ENCODE_NULL_ENCODER method=encode")
+                return null
+            }
             val safeFrameBytes = pcmData.copyOf(expectedFrameBytes)
             val pcmFrame = ShortArray(encoderFrameSize)
             java.nio.ByteBuffer.wrap(safeFrameBytes)
@@ -150,13 +174,30 @@ class OpusCodec {
             val outputBuffer = ByteArray(MAX_ENCODED_SIZE)
             return try {
                 val encodedBytes = enc.encode(pcmFrame, 0, encoderFrameSize, outputBuffer, 0, outputBuffer.size)
-                if (encodedBytes > 0) outputBuffer.copyOf(encodedBytes) else null
+                if (encodedBytes > 0) {
+                    val result = outputBuffer.copyOf(encodedBytes)
+                    encodeRateLimiter.tick()
+                    encodeSummaryBytes += encodedBytes
+                    encodeSummaryPcmBytes += byteCount
+
+                    if (encodeRateLimiter.shouldLogDetail()) {
+                        Log.d(TAG, "ENCODE frame=${encodeRateLimiter.frameCount} pcmBytes=$byteCount encodedBytes=$encodedBytes seq=${encodeRateLimiter.frameCount} ${RadioDiagLog.elapsedTag()}")
+                    } else if (encodeRateLimiter.shouldLogSummary()) {
+                        val cnt = encodeRateLimiter.resetSummaryAccumulator()
+                        Log.d(TAG, "ENCODE_SUMMARY frames=$cnt totalFrames=${encodeRateLimiter.frameCount} totalPcmBytes=$encodeSummaryPcmBytes totalEncodedBytes=$encodeSummaryBytes ${RadioDiagLog.elapsedTag()}")
+                    }
+
+                    result
+                } else {
+                    Log.w("[RadioError]", "OPUS_ENCODE_ZERO_RESULT encodedBytes=$encodedBytes samples=$sampleCount method=encode")
+                    null
+                }
             } catch (e: AssertionError) {
-                Log.e(TAG, "OPUS_ENCODE_ASSERTION_FAILURE samples=$sampleCount bytes=$byteCount message=${e.message}", e)
+                Log.e("[RadioError]", "OPUS_ENCODE_ASSERTION_FAILURE samples=$sampleCount bytes=$byteCount message=${e.message} method=encode", e)
                 reinitializeEncoder()
                 null
             } catch (e: Exception) {
-                Log.w(TAG, "Encode error: ${e.message}")
+                Log.w("[RadioError]", "Encode error: ${e::class.simpleName}: ${e.message} samples=$sampleCount method=encode")
                 null
             }
         }
@@ -172,30 +213,52 @@ class OpusCodec {
             enc.setUseInbandFEC(true)
             enc.setPacketLossPercent(10)
             encoder = enc
-            Log.d(TAG, "Encoder re-initialized after assertion failure (sampleRate=$encoderSampleRate frameSize=$encoderFrameSize complexity=5)")
+            Log.d(TAG, "Encoder re-initialized after assertion failure (sampleRate=$encoderSampleRate frameSize=$encoderFrameSize complexity=5) ${RadioDiagLog.elapsedTag()}")
         } catch (t: Throwable) {
-            Log.e(TAG, "Failed to re-initialize encoder: ${t.message}", t)
+            Log.e("[RadioError]", "Failed to re-initialize encoder: ${t::class.simpleName}: ${t.message} method=reinitializeEncoder", t)
             encoder = null
             initialized = false
         }
     }
 
     fun decode(opusData: ByteArray?): ByteArray? {
-        val dec = decoder ?: return null
+        val dec = decoder
+        if (dec == null) {
+            Log.w("[RadioError]", "OPUS_DECODE_NULL_DECODER method=decode isNull=${opusData == null}")
+            return null
+        }
         val pcmBuffer = ShortArray(FRAME_SIZE * CHANNELS)
         return try {
             val decodedSamples = if (opusData != null) {
                 dec.decode(opusData, 0, opusData.size, pcmBuffer, 0, FRAME_SIZE, false)
             } else {
+                decodePlcCount++
                 dec.decode(null, 0, 0, pcmBuffer, 0, FRAME_SIZE, false)
             }
             if (decodedSamples > 0) {
                 val result = ByteArray(decodedSamples * CHANNELS * 2)
                 java.nio.ByteBuffer.wrap(result).order(java.nio.ByteOrder.LITTLE_ENDIAN).asShortBuffer().put(pcmBuffer, 0, decodedSamples * CHANNELS)
+
+                decodeRateLimiter.tick()
+                val pcmBytes = result.size
+                decodeSummaryPcmBytes += pcmBytes
+                if (opusData != null) decodeSummaryBytes += opusData.size
+
+                val isPLC = opusData == null
+                if (decodeRateLimiter.shouldLogDetail()) {
+                    Log.d(TAG, "DECODE frame=${decodeRateLimiter.frameCount} opusBytes=${opusData?.size ?: 0} pcmBytes=$pcmBytes decodedSamples=$decodedSamples PLC=$isPLC ${RadioDiagLog.elapsedTag()}")
+                } else if (decodeRateLimiter.shouldLogSummary()) {
+                    val cnt = decodeRateLimiter.resetSummaryAccumulator()
+                    Log.d(TAG, "DECODE_SUMMARY frames=$cnt totalFrames=${decodeRateLimiter.frameCount} totalOpusBytes=$decodeSummaryBytes totalPcmBytes=$decodeSummaryPcmBytes plcCount=$decodePlcCount ${RadioDiagLog.elapsedTag()}")
+                }
+
                 result
-            } else null
+            } else {
+                Log.w("[RadioError]", "OPUS_DECODE_ZERO_RESULT decodedSamples=$decodedSamples opusBytes=${opusData?.size ?: 0} PLC=${opusData == null} method=decode")
+                null
+            }
         } catch (t: Throwable) {
-            Log.w(TAG, "Decode error: ${t.message}")
+            Log.w("[RadioError]", "Decode error: ${t::class.simpleName}: ${t.message} opusBytes=${opusData?.size ?: 0} PLC=${opusData == null} method=decode")
             null
         }
     }
@@ -208,6 +271,8 @@ class OpusCodec {
         encoderChannels = CHANNELS
         encoderFrameSize = FRAME_SIZE
         expectedFrameBytes = FRAME_SIZE * CHANNELS * 2
-        Log.d(TAG, "OpusCodec released")
+        encodeRateLimiter.reset()
+        decodeRateLimiter.reset()
+        Log.d(TAG, "OpusCodec released ${RadioDiagLog.elapsedTag()}")
     }
 }

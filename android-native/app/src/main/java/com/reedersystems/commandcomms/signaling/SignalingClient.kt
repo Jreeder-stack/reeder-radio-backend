@@ -207,17 +207,24 @@ class SignalingClient(var serverUrl: String) {
         }}
 
         s.on("ptt:granted") { args -> parseAndEmit(args) { json ->
+            val ch = json.optString("channelId")
+            val sender = json.optString("senderUnitId")
+            Log.d(TAG, "[FloorCtrl] SIGNALING_FLOOR_GRANTED channelId=$ch senderUnitId=$sender")
             SignalingEvent.RadioPttGranted(
-                channelId = json.optString("channelId"),
-                senderUnitId = json.optString("senderUnitId")
+                channelId = ch,
+                senderUnitId = sender
             )
         }}
 
         s.on("ptt:denied") { args -> parseAndEmit(args) { json ->
+            val ch = json.optString("channelId")
+            val reason = json.optString("reason", "")
+            val heldBy = json.optString("heldBy")
+            Log.d(TAG, "[FloorCtrl] SIGNALING_FLOOR_DENIED channelId=$ch reason=$reason heldBy=$heldBy")
             SignalingEvent.RadioPttDenied(
-                channelId = json.optString("channelId"),
-                reason = json.optString("reason", ""),
-                heldBy = json.optString("heldBy")
+                channelId = ch,
+                reason = reason,
+                heldBy = heldBy
             )
         }}
 
@@ -338,8 +345,11 @@ class SignalingClient(var serverUrl: String) {
     }
 
     fun emitRadioPttRequest(channelKey: String) {
-        if (!isReady()) return
-        Log.d(TAG, "emitRadioPttRequest $channelKey")
+        if (!isReady()) {
+            Log.w(TAG, "[RadioError] emitRadioPttRequest: not ready state=${_connectionState.value} channelKey=$channelKey")
+            return
+        }
+        Log.d(TAG, "[FloorCtrl] SIGNALING_FLOOR_REQUEST channelKey=$channelKey unitId=$unitId sessionTokenPresent=${socket?.connected() == true}")
         socket?.emit("ptt:request", JSONObject().apply {
             put("channelId", channelKey)
             put("unitId", unitId)
@@ -347,8 +357,11 @@ class SignalingClient(var serverUrl: String) {
     }
 
     fun emitRadioTxStart(channelKey: String) {
-        if (!isReady()) return
-        Log.d(TAG, "emitRadioTxStart $channelKey")
+        if (!isReady()) {
+            Log.w(TAG, "[RadioError] emitRadioTxStart: not ready state=${_connectionState.value} channelKey=$channelKey")
+            return
+        }
+        Log.d(TAG, "[FloorCtrl] SIGNALING_TX_START channelKey=$channelKey unitId=$unitId")
         socket?.emit("tx:start", JSONObject().apply {
             put("channelId", channelKey)
             put("unitId", unitId)
@@ -356,8 +369,11 @@ class SignalingClient(var serverUrl: String) {
     }
 
     fun emitRadioPttRelease(channelKey: String) {
-        if (!isReady()) return
-        Log.d(TAG, "emitRadioPttRelease $channelKey")
+        if (!isReady()) {
+            Log.w(TAG, "[RadioError] emitRadioPttRelease: not ready state=${_connectionState.value} channelKey=$channelKey")
+            return
+        }
+        Log.d(TAG, "[FloorCtrl] SIGNALING_FLOOR_RELEASE channelKey=$channelKey unitId=$unitId")
         socket?.emit("ptt:release", JSONObject().apply {
             put("channelId", channelKey)
             put("unitId", unitId)
@@ -365,8 +381,11 @@ class SignalingClient(var serverUrl: String) {
     }
 
     fun emitRadioTxStop(channelKey: String) {
-        if (!isReady()) return
-        Log.d(TAG, "emitRadioTxStop $channelKey")
+        if (!isReady()) {
+            Log.w(TAG, "[RadioError] emitRadioTxStop: not ready state=${_connectionState.value} channelKey=$channelKey")
+            return
+        }
+        Log.d(TAG, "[FloorCtrl] SIGNALING_TX_STOP channelKey=$channelKey unitId=$unitId")
         socket?.emit("tx:stop", JSONObject().apply {
             put("channelId", channelKey)
             put("unitId", unitId)

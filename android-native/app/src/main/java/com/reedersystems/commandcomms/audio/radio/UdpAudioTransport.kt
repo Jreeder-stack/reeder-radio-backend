@@ -42,7 +42,6 @@ class UdpAudioTransport(
     var rxPacketCount: Long = 0
         private set
 
-    // Cached DNS resolution
     @Volatile
     private var cachedAddress: InetAddress? = null
     private var cachedHost: String = ""
@@ -57,15 +56,24 @@ class UdpAudioTransport(
     @Volatile
     private var sessionTokenBytes: ByteArray? = null
 
+    private val txRateLimiter = RadioDiagLog.RateLimiter(detailCount = 5)
+    private val rxRateLimiter = RadioDiagLog.RateLimiter(detailCount = 5)
+    private var txSummaryBytes: Long = 0
+    private var txFailures: Long = 0
+    private var rxSummaryBytes: Long = 0
+    private var rxDropped: Long = 0
+    @Volatile
+    var txPacketCount: Long = 0
+        private set
+
     fun configure(host: String, port: Int) {
         this.relayHost = host
         this.relayPort = port
-        // Invalidate cached address when host changes
         if (host != cachedHost) {
             cachedAddress = null
             cachedHost = ""
         }
-        Log.d(TAG, "Configured relay: $host:$port")
+        Log.d(TAG, "Configured relay: $host:$port ${RadioDiagLog.elapsedTag()}")
     }
 
     var onSessionTokenChanged: (() -> Unit)? = null
@@ -74,11 +82,14 @@ class UdpAudioTransport(
         val hadPreviousToken = sessionTokenBytes != null
         sequenceNumber = 0
         rxPacketCount = 0
+        txPacketCount = 0
+        txRateLimiter.reset(); rxRateLimiter.reset()
+        txSummaryBytes = 0; txFailures = 0; rxSummaryBytes = 0; rxDropped = 0
         sessionTokenBytes = hexStringToByteArray(hexToken)
         if (hadPreviousToken) {
-            Log.d(TAG, "RECONNECT_SESSION_TOKEN_SET seqReset=true rxCountReset=true previousTokenCleared=true")
+            Log.d(TAG, "RECONNECT_SESSION_TOKEN_SET seqReset=true rxCountReset=true previousTokenCleared=true tokenBytes=${hexToken.length / 2} ${RadioDiagLog.elapsedTag()}")
         } else {
-            Log.d(TAG, "LATENCY_SESSION_TOKEN_READY tokenBytes=${hexToken.length / 2}")
+            Log.d(TAG, "SESSION_TOKEN_SET tokenBytes=${hexToken.length / 2} ${RadioDiagLog.elapsedTag()}")
         }
         Log.d(TAG, "Session token set (${hexToken.length / 2} bytes)")
         if (hadPreviousToken) {
@@ -96,9 +107,9 @@ class UdpAudioTransport(
                 val address = resolveAddress() ?: return@launch
                 val dgram = DatagramPacket(keepalivePacket, keepalivePacket.size, address, relayPort)
                 sock.send(dgram)
-                Log.d(TAG, "UDP_KEEPALIVE_IMMEDIATE_SENT to=$relayHost:$relayPort")
+                Log.d(TAG, "UDP_KEEPALIVE_IMMEDIATE_SENT to=$relayHost:$relayPort ${RadioDiagLog.elapsedTag()}")
             } catch (e: Exception) {
-                Log.w(TAG, "UDP immediate keepalive send error: ${e.message}")
+                Log.w("[RadioError]", "UDP immediate keepalive send error: ${e::class.simpleName}: ${e.message} dest=$relayHost:$relayPort method=sendImmediateKeepalive")
             }
         }
     }
@@ -106,20 +117,24 @@ class UdpAudioTransport(
     fun clearSessionToken() {
         sessionTokenBytes = null
         sequenceNumber = 0
+        Log.d(TAG, "SESSION_TOKEN_CLEARED ${RadioDiagLog.elapsedTag()}")
     }
 
     fun start() {
-        if (socket != null) return
+        if (socket != null) {
+            Log.w(TAG, "start() called but socket already open — ignoring")
+            return
+        }
         try {
             val sock = DatagramSocket()
             sock.soTimeout = RECEIVE_TIMEOUT_MS
             socket = sock
-            Log.d(TAG, "UDP socket opened on local port ${sock.localPort}")
+            Log.d(TAG, "UDP_SOCKET_OPENED localPort=${sock.localPort} timeout=${RECEIVE_TIMEOUT_MS}ms ${RadioDiagLog.elapsedTag()}")
             startReceiveLoop()
             startSendLoop()
             startKeepaliveLoop()
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to open UDP socket: ${e.message}", e)
+            Log.e("[RadioError]", "Failed to open UDP socket: ${e::class.simpleName}: ${e.message} method=start", e)
         }
     }
 
@@ -136,18 +151,19 @@ class UdpAudioTransport(
         sessionTokenBytes = null
         cachedAddress = null
         cachedHost = ""
+        Log.d(TAG, "UDP transport stopped txTotal=$txPacketCount rxTotal=$rxPacketCount txFailures=$txFailures rxDropped=$rxDropped ${RadioDiagLog.elapsedTag()}")
         rxPacketCount = 0
-        Log.d(TAG, "UDP transport stopped")
+        txPacketCount = 0
     }
 
     fun send(data: ByteArray) {
         val token = sessionTokenBytes
         if (token == null) {
-            Log.w(TAG, "Cannot send — no session token")
+            Log.w("[RadioError]", "Cannot send — no session token method=send payloadSize=${data.size}")
             return
         }
         if (relayHost.isBlank()) {
-            Log.w(TAG, "Cannot send — relay host not configured")
+            Log.w("[RadioError]", "Cannot send — relay host not configured method=send")
             return
         }
         val framed = framePacket(token, data)
@@ -156,17 +172,35 @@ class UdpAudioTransport(
 
     private fun startSendLoop() {
         sendJob = scope.launch {
-            for (framed in sendQueue) {
-                val sock = socket ?: break
-                try {
-                    val address = resolveAddress()
-                    if (address != null) {
-                        val packet = DatagramPacket(framed, framed.size, address, relayPort)
-                        sock.send(packet)
+            try {
+                for (framed in sendQueue) {
+                    val sock = socket ?: break
+                    try {
+                        val address = resolveAddress()
+                        if (address != null) {
+                            val packet = DatagramPacket(framed, framed.size, address, relayPort)
+                            sock.send(packet)
+                            txPacketCount++
+                            txSummaryBytes += framed.size
+
+                            txRateLimiter.tick()
+                            if (txRateLimiter.shouldLogDetail()) {
+                                Log.d(TAG, "TX_PACKET seq=${sequenceNumber - 1} dest=$relayHost:$relayPort bytes=${framed.size} tokenPresent=true channelIdx=$channelIndex ${RadioDiagLog.elapsedTag()}")
+                            } else if (txRateLimiter.shouldLogSummary()) {
+                                val cnt = txRateLimiter.resetSummaryAccumulator()
+                                Log.d(TAG, "TX_SUMMARY packets=$cnt totalPkts=$txPacketCount totalBytes=$txSummaryBytes failures=$txFailures dest=$relayHost:$relayPort ${RadioDiagLog.elapsedTag()}")
+                            }
+                        } else {
+                            txFailures++
+                            Log.w("[RadioError]", "TX_SEND_FAILED reason=dns_resolve_failed host=$relayHost method=sendLoop")
+                        }
+                    } catch (e: Exception) {
+                        txFailures++
+                        Log.w("[RadioError]", "UDP send error: ${e::class.simpleName}: ${e.message} dest=$relayHost:$relayPort method=sendLoop")
                     }
-                } catch (e: Exception) {
-                    Log.w(TAG, "UDP send error: ${e.message}")
                 }
+            } catch (e: Exception) {
+                Log.e("[RadioError]", "SEND_LOOP_EXCEPTION ${e::class.simpleName}: ${e.message} method=sendLoop", e)
             }
         }
     }
@@ -182,7 +216,7 @@ class UdpAudioTransport(
             cachedHost = host
             addr
         } catch (e: Exception) {
-            Log.w(TAG, "DNS resolve failed for $host: ${e.message}")
+            Log.w("[RadioError]", "DNS resolve failed for $host: ${e::class.simpleName}: ${e.message} method=resolveAddress")
             null
         }
     }
@@ -219,40 +253,62 @@ class UdpAudioTransport(
         receiveJob = scope.launch {
             val buffer = ByteArray(RECEIVE_BUFFER_SIZE)
             var consecutiveErrors = 0
-            while (isActive) {
-                val sock = socket ?: break
-                try {
-                    val packet = DatagramPacket(buffer, buffer.size)
-                    sock.receive(packet)
-                    val parsed = parseRelayPacket(buffer, packet.length)
-                    consecutiveErrors = 0
-                    if (parsed != null) {
-                        if (parsed.senderUnitId == unitId) {
-                            Log.d(TAG, "SELF_AUDIO_SUPPRESSED senderUnitId=${parsed.senderUnitId} seq=${parsed.sequence}")
+            try {
+                while (isActive) {
+                    val sock = socket ?: break
+                    try {
+                        val packet = DatagramPacket(buffer, buffer.size)
+                        sock.receive(packet)
+                        val parsed = parseRelayPacket(buffer, packet.length)
+                        consecutiveErrors = 0
+                        if (parsed != null) {
+                            if (parsed.senderUnitId == unitId) {
+                                Log.d(TAG, "SELF_AUDIO_SUPPRESSED senderUnitId=${parsed.senderUnitId} seq=${parsed.sequence}")
+                            } else {
+                                rxPacketCount++
+                                rxSummaryBytes += packet.length
+
+                                val channelMatch = parsed.channelIndex == channelIndex
+                                val acceptReason = if (channelMatch) "channel_match" else "forwarded"
+
+                                rxRateLimiter.tick()
+                                if (rxRateLimiter.shouldLogDetail()) {
+                                    Log.d(TAG, "RX_PACKET seq=${parsed.sequence} sender=${parsed.senderUnitId} payload=${parsed.opusPayload.size} ch=${parsed.channelIndex} localCh=$channelIndex channelMatch=$channelMatch accept=$acceptReason ${RadioDiagLog.elapsedTag()}")
+                                } else if (rxRateLimiter.shouldLogSummary()) {
+                                    val cnt = rxRateLimiter.resetSummaryAccumulator()
+                                    Log.d(TAG, "RX_SUMMARY packets=$cnt totalPkts=$rxPacketCount totalBytes=$rxSummaryBytes dropped=$rxDropped ${RadioDiagLog.elapsedTag()}")
+                                }
+
+                                onPacketReceived?.invoke(parsed)
+                            }
                         } else {
-                            rxPacketCount++
-                            onPacketReceived?.invoke(parsed)
+                            rxDropped++
+                            if (packet.length > 0) {
+                                Log.w(TAG, "RX_PARSE_FAILED packetLen=${packet.length} — dropped")
+                            }
                         }
-                    }
-                } catch (e: java.net.SocketTimeoutException) {
-                } catch (e: java.net.SocketException) {
-                    if (isActive) {
-                        Log.e(TAG, "UDP socket error (unrecoverable): ${e.message}")
-                    }
-                    break
-                } catch (e: Exception) {
-                    if (isActive) {
-                        Log.w(TAG, "UDP receive error (transient, continuing): ${e.message}")
-                        consecutiveErrors++
-                        if (consecutiveErrors >= 10) {
-                            Log.w(TAG, "UDP receive: $consecutiveErrors consecutive errors, backing off 100ms")
-                            delay(100)
-                        } else if (consecutiveErrors >= 3) {
-                            delay(20)
+                    } catch (e: java.net.SocketTimeoutException) {
+                    } catch (e: java.net.SocketException) {
+                        if (isActive) {
+                            Log.e("[RadioError]", "UDP socket error (unrecoverable): ${e::class.simpleName}: ${e.message} method=receiveLoop")
                         }
+                        break
+                    } catch (e: Exception) {
+                        if (isActive) {
+                            consecutiveErrors++
+                            Log.w("[RadioError]", "UDP receive error (transient, continuing): ${e::class.simpleName}: ${e.message} consecutiveErrors=$consecutiveErrors method=receiveLoop")
+                            if (consecutiveErrors >= 10) {
+                                Log.w("[RadioError]", "UDP receive: $consecutiveErrors consecutive errors, backing off 100ms method=receiveLoop")
+                                delay(100)
+                            } else if (consecutiveErrors >= 3) {
+                                delay(20)
+                            }
+                        }
+                        continue
                     }
-                    continue
                 }
+            } catch (e: Exception) {
+                Log.e("[RadioError]", "RECEIVE_LOOP_EXCEPTION ${e::class.simpleName}: ${e.message} method=receiveLoop", e)
             }
         }
     }
@@ -270,7 +326,7 @@ class UdpAudioTransport(
                     sock.send(dgram)
                     Log.d(TAG, "UDP_KEEPALIVE_SENT to=$relayHost:$relayPort")
                 } catch (e: Exception) {
-                    Log.w(TAG, "UDP keepalive send error: ${e.message}")
+                    Log.w("[RadioError]", "UDP keepalive send error: ${e::class.simpleName}: ${e.message} dest=$relayHost:$relayPort method=keepaliveLoop")
                 }
             }
         }
@@ -324,7 +380,7 @@ class UdpAudioTransport(
         var offset = 0
         val version = buffer[offset++].toInt() and 0xFF
         if (version != PACKET_VERSION.toInt()) {
-            Log.w(TAG, "Unsupported relay packet version=$version")
+            Log.w("[RadioError]", "Unsupported relay packet version=$version expected=${PACKET_VERSION.toInt()} method=parseRelayPacket")
             return null
         }
         val flags = buffer[offset++].toInt() and 0xFF
@@ -335,16 +391,27 @@ class UdpAudioTransport(
             ((buffer[offset++].toLong() and 0xFF) shl 8) or
             (buffer[offset++].toLong() and 0xFF)
         val senderLen = buffer[offset++].toInt() and 0xFF
-        if (packetLength < RADIO_HEADER_FIXED_LEN + senderLen) return null
+        if (packetLength < RADIO_HEADER_FIXED_LEN + senderLen) {
+            Log.w("[RadioError]", "Truncated packet: senderLen=$senderLen totalLen=$packetLength method=parseRelayPacket")
+            return null
+        }
         val sender = if (senderLen > 0) {
             String(buffer, offset, senderLen, Charsets.UTF_8)
         } else {
             ""
         }
         offset += senderLen
-        if (packetLength < offset + 2) return null
+        if (packetLength < offset + 2) {
+            Log.w("[RadioError]", "Truncated packet: missing payload length totalLen=$packetLength method=parseRelayPacket")
+            return null
+        }
         val payloadLength = ((buffer[offset++].toInt() and 0xFF) shl 8) or (buffer[offset++].toInt() and 0xFF)
-        if (payloadLength <= 0 || packetLength < offset + payloadLength) return null
+        if (payloadLength <= 0 || packetLength < offset + payloadLength) {
+            if (payloadLength > 0) {
+                Log.w("[RadioError]", "Truncated packet: payloadLen=$payloadLength available=${packetLength - offset} method=parseRelayPacket")
+            }
+            return null
+        }
         val payload = buffer.copyOfRange(offset, offset + payloadLength)
         return OpusRadioPacket(
             channelIndex = channelNumeric,

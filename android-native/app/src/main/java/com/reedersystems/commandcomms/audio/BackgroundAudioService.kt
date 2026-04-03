@@ -184,6 +184,7 @@ class BackgroundAudioService : Service() {
                     Log.d(TAG, "Channel updated: $channelId / $roomKey")
                     radioEngine?.udpTransport?.channelId = roomKey
                     radioEngine?.udpTransport?.channelIndex = channelId
+                    radioEngine?.stateManager?.activeChannelKey = roomKey
                     ensureBackgroundSignalingConnected()
                     scope.launch { syncBackgroundSignalingChannel() }
                 }
@@ -397,6 +398,7 @@ class BackgroundAudioService : Service() {
         Log.d(TAG, "Radio transport configured: host=$relayHost port=$relayPort")
         engine.udpTransport.channelId = servicePrefs.channelRoomKey ?: ""
         engine.udpTransport.channelIndex = servicePrefs.channelId
+        engine.stateManager.activeChannelKey = servicePrefs.channelRoomKey
         engine.udpTransport.unitId = servicePrefs.unitId ?: app.sessionPrefs.unitId ?: ""
 
         engine.onDisconnected = {
@@ -547,8 +549,10 @@ class BackgroundAudioService : Service() {
     }
 
     private fun handleRadioPttDown(signaling: Boolean) {
-        Log.d(TAG, "handleRadioPttDown pttState=$pttState signaling=$signaling")
-        Log.d(TAG, "RADIO_PTT_DOWN")
+        val channelKey = servicePrefs.channelRoomKey
+        val channelId = servicePrefs.channelId
+        Log.d(TAG, "handleRadioPttDown pttState=$pttState signaling=$signaling channelKey=${channelKey ?: "none"} channelId=$channelId")
+        Log.d(TAG, "RADIO_PTT_DOWN source=service state=$pttState channelKey=${channelKey ?: "none"}")
         if (pendingFirstPttAfterReconnect) {
             pendingFirstPttAfterReconnect = false
             Log.d(TAG, "LATENCY_FIRST_PTT_AFTER_RECONNECT")
@@ -618,8 +622,9 @@ class BackgroundAudioService : Service() {
     }
 
     private fun handleRadioPttUp() {
-        Log.d(TAG, "handleRadioPttUp pttState=$pttState")
-        Log.d(TAG, "RADIO_PTT_UP")
+        val channelKey = servicePrefs.channelRoomKey
+        Log.d(TAG, "handleRadioPttUp pttState=$pttState channelKey=${channelKey ?: "none"}")
+        Log.d(TAG, "RADIO_PTT_UP source=service state=$pttState channelKey=${channelKey ?: "none"}")
 
         pttUpWhileConnecting = true
 
@@ -658,13 +663,15 @@ class BackgroundAudioService : Service() {
     }
 
     private fun transitionPttState(newState: PttState) {
-        if (pttState == newState) return
+        val old = pttState
+        if (old == newState) return
         pttState = newState
+        val channelKey = servicePrefs.channelRoomKey
         when (newState) {
-            PttState.CONNECTING -> Log.d(TAG, "RADIO_STATE_CONNECTING_ENTER")
-            PttState.IDLE -> Log.d(TAG, "RADIO_STATE_IDLE_ENTER")
-            PttState.TRANSMITTING -> Log.d(TAG, "RADIO_STATE_TX_ENTER")
-            PttState.CLEANING_UP -> Unit
+            PttState.CONNECTING -> Log.d(TAG, "PTT_STATE $old -> CONNECTING channelKey=${channelKey ?: "none"}")
+            PttState.IDLE -> Log.d(TAG, "PTT_STATE $old -> IDLE channelKey=${channelKey ?: "none"}")
+            PttState.TRANSMITTING -> Log.d(TAG, "PTT_STATE $old -> TRANSMITTING channelKey=${channelKey ?: "none"}")
+            PttState.CLEANING_UP -> Log.d(TAG, "PTT_STATE $old -> CLEANING_UP channelKey=${channelKey ?: "none"}")
         }
     }
 

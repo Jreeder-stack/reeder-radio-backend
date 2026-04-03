@@ -25,6 +25,9 @@ class AudioPlayback(
     private var playbackJob: Job? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     var softwareGain: Float = DEFAULT_SOFTWARE_GAIN
+    var onFrameDecoded: (() -> Unit)? = null
+    var onUnderrun: (() -> Unit)? = null
+    var onDecodeFailure: (() -> Unit)? = null
     @Volatile
     private var firstRxDecodeLogged = false
     @Volatile
@@ -49,6 +52,9 @@ class AudioPlayback(
     private val gateReleaseCoeff: Double get() = 1.0 - Math.exp(-1.0 / (SAMPLE_RATE * 0.15))
     private var gateEnvelopeDb: Double = -90.0
     private var gateAttenuation: Double = 0.0
+
+    private val writeRateLimiter = RadioDiagLog.RateLimiter(detailCount = 5)
+    private var summaryWriteBytes: Long = 0
 
     private fun resetRxDspState() {
         rxHpPrevOutput = 0.0
@@ -145,33 +151,40 @@ class AudioPlayback(
         val minBufferSize = AudioTrack.getMinBufferSize(SAMPLE_RATE, channelConfig, audioFormat)
         val bufferSize = maxOf(minBufferSize, OpusCodec.FRAME_SIZE * 2 * 4)
 
-        val track = AudioTrack.Builder()
-            .setAudioAttributes(
-                AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_MEDIA)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                    .build()
-            )
-            .setAudioFormat(
-                AudioFormat.Builder()
-                    .setSampleRate(SAMPLE_RATE)
-                    .setChannelMask(channelConfig)
-                    .setEncoding(audioFormat)
-                    .build()
-            )
-            .setBufferSizeInBytes(bufferSize)
-            .setTransferMode(AudioTrack.MODE_STREAM)
-            .setPerformanceMode(AudioTrack.PERFORMANCE_MODE_LOW_LATENCY)
-            .build()
+        Log.d(TAG, "AUDIOTRACK_INIT rate=$SAMPLE_RATE channelConfig=MONO format=PCM_16BIT minBufSize=$minBufferSize allocBufSize=$bufferSize perfMode=LOW_LATENCY ${RadioDiagLog.elapsedTag()}")
+
+        val track = try {
+            AudioTrack.Builder()
+                .setAudioAttributes(
+                    AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_MEDIA)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                        .build()
+                )
+                .setAudioFormat(
+                    AudioFormat.Builder()
+                        .setSampleRate(SAMPLE_RATE)
+                        .setChannelMask(channelConfig)
+                        .setEncoding(audioFormat)
+                        .build()
+                )
+                .setBufferSizeInBytes(bufferSize)
+                .setTransferMode(AudioTrack.MODE_STREAM)
+                .setPerformanceMode(AudioTrack.PERFORMANCE_MODE_LOW_LATENCY)
+                .build()
+        } catch (e: Exception) {
+            Log.e("[RadioError]", "AudioTrack.Builder threw: ${e::class.simpleName}: ${e.message} rate=$SAMPLE_RATE bufSize=$bufferSize", e)
+            return
+        }
 
         if (track.state != AudioTrack.STATE_INITIALIZED) {
-            Log.e(TAG, "AudioTrack failed to initialize")
+            Log.e("[RadioError]", "AudioTrack failed to initialize state=${track.state} rate=$SAMPLE_RATE bufSize=$bufferSize")
             track.release()
             return
         }
 
         audioTrack = track
-        Log.d(TAG, "LATENCY_AUDIOTRACK_WARM_IDLE AudioTrack pre-initialized: ${SAMPLE_RATE}Hz mono, low-latency")
+        Log.d(TAG, "AUDIOTRACK_READY rate=$SAMPLE_RATE mono low-latency sessionId=${track.audioSessionId} ${RadioDiagLog.elapsedTag()}")
     }
 
     fun clearStaleFrames() {
@@ -187,22 +200,33 @@ class AudioPlayback(
             firstRxDecodeLogged = false
             firstPlaybackWriteLogged = false
             resetRxDspState()
-            Log.d(TAG, "RECONNECT_AUDIOTRACK_FLUSHED stale playback data cleared")
+            writeRateLimiter.reset()
+            summaryWriteBytes = 0
+            Log.d(TAG, "RECONNECT_AUDIOTRACK_FLUSHED stale playback data cleared ${RadioDiagLog.elapsedTag()}")
         } catch (e: Exception) {
-            Log.w(TAG, "RECONNECT_AUDIOTRACK_FLUSH_FAILED: ${e.message}")
+            Log.w("[RadioError]", "RECONNECT_AUDIOTRACK_FLUSH_FAILED: ${e::class.simpleName}: ${e.message} method=clearStaleFrames")
         }
     }
 
     fun start() {
         ensureTrackReady()
-        val track = audioTrack ?: return
+        val track = audioTrack
+        if (track == null) {
+            Log.e("[RadioError]", "start() called but audioTrack is null after ensureTrackReady — aborting")
+            return
+        }
 
-        if (playbackJob != null) return
+        if (playbackJob != null) {
+            Log.w(TAG, "start() called but playbackJob already active — ignoring")
+            return
+        }
 
         if (track.playState != AudioTrack.PLAYSTATE_PLAYING) {
             track.play()
         }
-        Log.d(TAG, "AudioPlayback started: ${SAMPLE_RATE}Hz mono, low-latency")
+        writeRateLimiter.reset()
+        summaryWriteBytes = 0
+        Log.d(TAG, "AudioPlayback started: ${SAMPLE_RATE}Hz mono, low-latency playState=${track.playState} ${RadioDiagLog.elapsedTag()}")
 
         playbackJob = scope.launch {
             var lastDataTimeMs = System.currentTimeMillis()
@@ -210,128 +234,95 @@ class AudioPlayback(
             var plcCount = 0
             var nextFrameTimeNs = System.nanoTime()
             var catchupCount = 0
-            while (isActive) {
-                if (!jitterBuffer.isPlaybackActive) {
-                    if (!jitterBuffer.tryStartPlayback()) {
-                        delay(FRAME_INTERVAL_MS)
+            try {
+                while (isActive) {
+                    if (!jitterBuffer.isPlaybackActive) {
+                        if (!jitterBuffer.tryStartPlayback()) {
+                            delay(FRAME_INTERVAL_MS)
 
-                        if (!jitterBuffer.isEmpty) {
-                            lastDataTimeMs = System.currentTimeMillis()
-                        }
-                        continue
-                    }
-                    lastDataTimeMs = System.currentTimeMillis()
-                    missWaitStartMs = 0L
-                    nextFrameTimeNs = System.nanoTime()
-                    catchupCount = 0
-                }
-
-                val nowNs = System.nanoTime()
-                val sleepNs = nextFrameTimeNs - nowNs
-                if (sleepNs > 1_000_000L) {
-                    delay(sleepNs / 1_000_000L)
-                    catchupCount = 0
-                }
-
-                val expectedSeq = jitterBuffer.getExpectedSeq()
-                if (expectedSeq < 0) {
-                    delay(FRAME_INTERVAL_MS)
-                    nextFrameTimeNs = System.nanoTime() + FRAME_INTERVAL_NS
-                    continue
-                }
-
-                if (jitterBuffer.hasPacket(expectedSeq)) {
-                    val data = jitterBuffer.take(expectedSeq)
-                    jitterBuffer.advancePlaybackSeq()
-                    missWaitStartMs = 0L
-                    lastDataTimeMs = System.currentTimeMillis()
-
-                    if (data != null) {
-                        try {
-                            val pcm = opusCodec.decode(data)
-                            if (pcm != null && pcm.isNotEmpty()) {
-                                if (!firstRxDecodeLogged) {
-                                    Log.d(TAG, "LATENCY_FIRST_RX_FRAME_DECODED seq=$expectedSeq bytes=${data.size} pcm=${pcm.size}")
-                                    firstRxDecodeLogged = true
-                                }
-                                if (!firstPlaybackWriteLogged) {
-                                    Log.d(TAG, "LATENCY_FIRST_PLAYBACK_WRITE seq=$expectedSeq pcm=${pcm.size}")
-                                    firstPlaybackWriteLogged = true
-                                }
-                                applyRxDspChain(pcm)
-                                applyGain(pcm)
-                                try {
-                                    track.write(pcm, 0, pcm.size)
-                                } catch (e: Exception) {
-                                    Log.e(TAG, "AudioTrack write error (continuing): ${e.message}")
-                                }
+                            if (!jitterBuffer.isEmpty) {
+                                lastDataTimeMs = System.currentTimeMillis()
                             }
-                        } catch (e: Exception) {
-                            Log.e(TAG, "Opus decode error seq=$expectedSeq (falling through to PLC): ${e.message}")
-                            try {
-                                val plcPcm = opusCodec.decode(null)
-                                if (plcPcm != null && plcPcm.isNotEmpty()) {
-                                    applyRxDspChain(plcPcm)
-                                    applyGain(plcPcm)
-                                    try {
-                                        track.write(plcPcm, 0, plcPcm.size)
-                                    } catch (writeEx: Exception) {
-                                        Log.e(TAG, "AudioTrack write error in PLC fallback (continuing): ${writeEx.message}")
-                                    }
-                                }
-                            } catch (plcEx: Exception) {
-                                Log.e(TAG, "PLC fallback also failed: ${plcEx.message}")
-                            }
+                            continue
                         }
-                    }
-
-                    nextFrameTimeNs += FRAME_INTERVAL_NS
-                    val drift = System.nanoTime() - nextFrameTimeNs
-                    if (drift > 0) {
-                        catchupCount++
-                        if (catchupCount >= MAX_CATCHUP_FRAMES) {
-                            nextFrameTimeNs = System.nanoTime()
-                            catchupCount = 0
-                        }
-                    } else {
+                        lastDataTimeMs = System.currentTimeMillis()
+                        missWaitStartMs = 0L
+                        nextFrameTimeNs = System.nanoTime()
                         catchupCount = 0
                     }
-                } else {
-                    val now = System.currentTimeMillis()
 
-                    if (missWaitStartMs == 0L) {
-                        missWaitStartMs = now
+                    val nowNs = System.nanoTime()
+                    val sleepNs = nextFrameTimeNs - nowNs
+                    if (sleepNs > 1_000_000L) {
+                        delay(sleepNs / 1_000_000L)
+                        catchupCount = 0
                     }
 
-                    val waited = now - missWaitStartMs
+                    val expectedSeq = jitterBuffer.getExpectedSeq()
+                    if (expectedSeq < 0) {
+                        delay(FRAME_INTERVAL_MS)
+                        nextFrameTimeNs = System.nanoTime() + FRAME_INTERVAL_NS
+                        continue
+                    }
 
-                    if (waited < WAIT_WINDOW_MS) {
-                        delay(1L)
-                    } else {
-                        plcCount++
-                        try {
-                            val pcm = opusCodec.decode(null)
-                            if (pcm != null && pcm.isNotEmpty()) {
-                                applyRxDspChain(pcm)
-                                applyGain(pcm)
-                                try {
-                                    track.write(pcm, 0, pcm.size)
-                                } catch (e: Exception) {
-                                    Log.e(TAG, "AudioTrack write error in PLC path (continuing): ${e.message}")
-                                }
-                                if (plcCount % 10 == 1) {
-                                    Log.d(TAG, "PLC frame for seq=$expectedSeq (total=$plcCount)")
-                                }
-                            } else {
-                                delay(FRAME_INTERVAL_MS)
-                            }
-                        } catch (e: Exception) {
-                            Log.e(TAG, "PLC decode error (continuing): ${e.message}")
-                            delay(FRAME_INTERVAL_MS)
-                        }
-
+                    if (jitterBuffer.hasPacket(expectedSeq)) {
+                        val data = jitterBuffer.take(expectedSeq)
                         jitterBuffer.advancePlaybackSeq()
                         missWaitStartMs = 0L
+                        lastDataTimeMs = System.currentTimeMillis()
+
+                        if (data != null) {
+                            try {
+                                val pcm = opusCodec.decode(data)
+                                if (pcm != null && pcm.isNotEmpty()) {
+                                    onFrameDecoded?.invoke()
+                                    if (!firstRxDecodeLogged) {
+                                        Log.d(TAG, "LATENCY_FIRST_RX_FRAME_DECODED seq=$expectedSeq opusBytes=${data.size} pcmBytes=${pcm.size} ${RadioDiagLog.elapsedTag()}")
+                                        firstRxDecodeLogged = true
+                                    }
+                                    applyRxDspChain(pcm)
+                                    applyGain(pcm)
+
+                                    writeRateLimiter.tick()
+                                    summaryWriteBytes += pcm.size
+
+                                    if (writeRateLimiter.shouldLogDetail()) {
+                                        Log.d(TAG, "WRITE frame=${writeRateLimiter.frameCount} seq=$expectedSeq pcmBytes=${pcm.size} trackState=${track.playState} ${RadioDiagLog.elapsedTag()}")
+                                    } else if (writeRateLimiter.shouldLogSummary()) {
+                                        val cnt = writeRateLimiter.resetSummaryAccumulator()
+                                        val underrunCount = try { track.underrunCount } catch (_: Exception) { -1 }
+                                        Log.d(TAG, "WRITE_SUMMARY frames=$cnt totalFrames=${writeRateLimiter.frameCount} totalBytes=$summaryWriteBytes underruns=$underrunCount jbSize=${jitterBuffer.size} ${RadioDiagLog.elapsedTag()}")
+                                    }
+
+                                    if (!firstPlaybackWriteLogged) {
+                                        Log.d(TAG, "LATENCY_FIRST_PLAYBACK_WRITE seq=$expectedSeq pcm=${pcm.size} ${RadioDiagLog.elapsedTag()}")
+                                        firstPlaybackWriteLogged = true
+                                    }
+                                    try {
+                                        track.write(pcm, 0, pcm.size)
+                                    } catch (e: Exception) {
+                                        Log.e("[RadioError]", "AudioTrack write error: ${e::class.simpleName}: ${e.message} seq=$expectedSeq pcmSize=${pcm.size} method=playbackLoop", e)
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                onDecodeFailure?.invoke()
+                                Log.e("[RadioError]", "Opus decode error seq=$expectedSeq (falling through to PLC): ${e::class.simpleName}: ${e.message} method=playbackLoop", e)
+                                try {
+                                    val plcPcm = opusCodec.decode(null)
+                                    if (plcPcm != null && plcPcm.isNotEmpty()) {
+                                        applyRxDspChain(plcPcm)
+                                        applyGain(plcPcm)
+                                        try {
+                                            track.write(plcPcm, 0, plcPcm.size)
+                                        } catch (writeEx: Exception) {
+                                            Log.e("[RadioError]", "AudioTrack write error in PLC fallback: ${writeEx::class.simpleName}: ${writeEx.message} method=playbackLoop")
+                                        }
+                                    }
+                                } catch (plcEx: Exception) {
+                                    Log.e("[RadioError]", "PLC fallback also failed: ${plcEx::class.simpleName}: ${plcEx.message} method=playbackLoop")
+                                }
+                            }
+                        }
 
                         nextFrameTimeNs += FRAME_INTERVAL_NS
                         val drift = System.nanoTime() - nextFrameTimeNs
@@ -344,17 +335,70 @@ class AudioPlayback(
                         } else {
                             catchupCount = 0
                         }
+                    } else {
+                        val now = System.currentTimeMillis()
 
-                        if (jitterBuffer.isEmpty) {
-                            val silenceMs = now - lastDataTimeMs
-                            if (silenceMs >= IDLE_TIMEOUT_MS) {
-                                jitterBuffer.enterIdle()
-                                lastDataTimeMs = now
-                                Log.d(TAG, "Idle — buffer empty for ${IDLE_TIMEOUT_MS}ms, reset pre-buffer")
+                        if (missWaitStartMs == 0L) {
+                            missWaitStartMs = now
+                        }
+
+                        val waited = now - missWaitStartMs
+
+                        if (waited < WAIT_WINDOW_MS) {
+                            delay(1L)
+                        } else {
+                            plcCount++
+                            jitterBuffer.recordUnderrun()
+                            onUnderrun?.invoke()
+                            try {
+                                val pcm = opusCodec.decode(null)
+                                if (pcm != null && pcm.isNotEmpty()) {
+                                    applyRxDspChain(pcm)
+                                    applyGain(pcm)
+                                    try {
+                                        track.write(pcm, 0, pcm.size)
+                                    } catch (e: Exception) {
+                                        Log.e("[RadioError]", "AudioTrack write error in PLC path: ${e::class.simpleName}: ${e.message} method=playbackLoop")
+                                    }
+                                    if (plcCount % 10 == 1) {
+                                        Log.d(TAG, "PLC frame for seq=$expectedSeq (total=$plcCount) jbSize=${jitterBuffer.size} ${RadioDiagLog.elapsedTag()}")
+                                    }
+                                } else {
+                                    delay(FRAME_INTERVAL_MS)
+                                }
+                            } catch (e: Exception) {
+                                Log.e("[RadioError]", "PLC decode error: ${e::class.simpleName}: ${e.message} method=playbackLoop", e)
+                                delay(FRAME_INTERVAL_MS)
+                            }
+
+                            jitterBuffer.advancePlaybackSeq()
+                            missWaitStartMs = 0L
+
+                            nextFrameTimeNs += FRAME_INTERVAL_NS
+                            val drift = System.nanoTime() - nextFrameTimeNs
+                            if (drift > 0) {
+                                catchupCount++
+                                if (catchupCount >= MAX_CATCHUP_FRAMES) {
+                                    nextFrameTimeNs = System.nanoTime()
+                                    catchupCount = 0
+                                }
+                            } else {
+                                catchupCount = 0
+                            }
+
+                            if (jitterBuffer.isEmpty) {
+                                val silenceMs = now - lastDataTimeMs
+                                if (silenceMs >= IDLE_TIMEOUT_MS) {
+                                    jitterBuffer.enterIdle()
+                                    lastDataTimeMs = now
+                                    Log.d(TAG, "Idle — buffer empty for ${IDLE_TIMEOUT_MS}ms, reset pre-buffer plcTotal=$plcCount ${RadioDiagLog.elapsedTag()}")
+                                }
                             }
                         }
                     }
                 }
+            } catch (e: Exception) {
+                Log.e("[RadioError]", "PLAYBACK_LOOP_EXCEPTION ${e::class.simpleName}: ${e.message} method=playbackWriteLoop", e)
             }
         }
     }
@@ -362,16 +406,25 @@ class AudioPlayback(
     fun stop() {
         playbackJob?.cancel()
         playbackJob = null
-        Log.d(TAG, "AudioPlayback playback loop stopped (track kept warm)")
+        val underrunCount = try { audioTrack?.underrunCount ?: -1 } catch (_: Exception) { -1 }
+        Log.d(TAG, "AudioPlayback stopped totalWrites=${writeRateLimiter.frameCount} totalBytes=$summaryWriteBytes underruns=$underrunCount ${RadioDiagLog.elapsedTag()}")
     }
 
     fun release() {
         playbackJob?.cancel()
         playbackJob = null
-        audioTrack?.stop()
-        audioTrack?.release()
+        try {
+            audioTrack?.stop()
+        } catch (e: Exception) {
+            Log.e("[RadioError]", "AudioTrack stop threw: ${e::class.simpleName}: ${e.message} method=release")
+        }
+        try {
+            audioTrack?.release()
+        } catch (e: Exception) {
+            Log.e("[RadioError]", "AudioTrack release threw: ${e::class.simpleName}: ${e.message} method=release")
+        }
         audioTrack = null
         scope.cancel()
-        Log.d(TAG, "AudioPlayback released")
+        Log.d(TAG, "AudioPlayback released ${RadioDiagLog.elapsedTag()}")
     }
 }

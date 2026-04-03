@@ -18,11 +18,20 @@ class RadioStateManager {
     val currentState: RadioState
         get() = _state.value
 
-    fun transitionTo(newState: RadioState) {
+    @Volatile
+    var activeChannelKey: String? = null
+
+    @Volatile
+    var txPipelineRunning: Boolean = false
+
+    @Volatile
+    var rxPipelineRunning: Boolean = false
+
+    fun transitionTo(newState: RadioState, reason: String = "") {
         val old = _state.value
         if (old == newState) return
         _state.value = newState
-        Log.d(TAG, "State transition: $old -> $newState")
+        Log.d(TAG, "State transition: $old -> $newState reason=${reason.ifEmpty { "direct" }} activeChannel=${activeChannelKey ?: "none"} txPipeline=$txPipelineRunning rxPipeline=$rxPipelineRunning ${RadioDiagLog.elapsedTag()}")
     }
 
     fun setTransmittingUnit(unitId: String?) {
@@ -36,7 +45,11 @@ class RadioStateManager {
     fun isIdle(): Boolean = _state.value == RadioState.IDLE
 
     fun reset() {
+        val old = _state.value
         _state.value = RadioState.IDLE
         _transmittingUnitId.value = null
+        txPipelineRunning = false
+        rxPipelineRunning = false
+        Log.d(TAG, "State RESET: $old -> IDLE activeChannel=${activeChannelKey ?: "none"}")
     }
 }

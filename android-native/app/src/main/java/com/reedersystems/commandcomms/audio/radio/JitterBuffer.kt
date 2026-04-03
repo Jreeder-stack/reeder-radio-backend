@@ -30,6 +30,13 @@ class JitterBuffer {
     private var reconnectProtection = false
     private var reconnectProtectionDepth = RECONNECT_PROTECTION_FRAMES
 
+    private val enqueueRateLimiter = RadioDiagLog.RateLimiter(detailCount = 5)
+    private var summaryLateDrops: Long = 0
+    private var summaryOverflows: Long = 0
+    private var summaryUnderruns: Long = 0
+    private var summaryReorders: Long = 0
+    private var summaryEnqueued: Long = 0
+
     fun start() {
         synchronized(lock) {
             running = true
@@ -42,7 +49,9 @@ class JitterBuffer {
             estimatedJitterMs = 0.0
             reconnectProtection = false
         }
-        Log.d(TAG, "JitterBuffer started (adaptive depth=$INITIAL_DEPTH)")
+        enqueueRateLimiter.reset()
+        summaryLateDrops = 0; summaryOverflows = 0; summaryUnderruns = 0; summaryReorders = 0; summaryEnqueued = 0
+        Log.d(TAG, "JitterBuffer started targetDepth=$INITIAL_DEPTH maxBuf=$MAX_BUFFER_SIZE ${RadioDiagLog.elapsedTag()}")
     }
 
     fun stop() {
@@ -54,7 +63,7 @@ class JitterBuffer {
             preBuffering = true
             reconnectProtection = false
         }
-        Log.d(TAG, "JitterBuffer stopped")
+        Log.d(TAG, "JitterBuffer stopped totalEnqueued=$summaryEnqueued lateDrops=$summaryLateDrops overflows=$summaryOverflows underruns=$summaryUnderruns reorders=$summaryReorders ${RadioDiagLog.elapsedTag()}")
     }
 
     fun flushForReconnect() {
@@ -69,16 +78,21 @@ class JitterBuffer {
             targetDepth = INITIAL_DEPTH
             reconnectProtection = true
             reconnectProtectionDepth = RECONNECT_PROTECTION_FRAMES
-            Log.d(TAG, "RECONNECT_JITTER_BUFFER_FLUSHED staleFrames=$staleCount protectionFrames=$RECONNECT_PROTECTION_FRAMES")
+            Log.d(TAG, "FLUSH_FOR_RECONNECT staleFrames=$staleCount protectionFrames=$RECONNECT_PROTECTION_FRAMES resetDepth=$INITIAL_DEPTH ${RadioDiagLog.elapsedTag()}")
         }
+        enqueueRateLimiter.reset()
     }
 
     fun enqueue(sequence: Int, packet: ByteArray) {
         synchronized(lock) {
-            if (!running) return
+            if (!running) {
+                Log.w("[RadioError]", "enqueue called while not running seq=$sequence — ignoring")
+                return
+            }
 
             if (playbackActive && nextPlaybackSeq >= 0 && seqBefore(sequence, nextPlaybackSeq)) {
-                Log.d(TAG, "Late packet seq=$sequence (playing=$nextPlaybackSeq), discarded")
+                summaryLateDrops++
+                Log.d(TAG, "Late packet seq=$sequence (playing=$nextPlaybackSeq), discarded totalLateDrops=$summaryLateDrops")
                 return
             }
 
@@ -86,11 +100,28 @@ class JitterBuffer {
                 val farthest = findFarthestSeq()
                 if (farthest != null) {
                     buffer.remove(farthest)
-                    Log.w(TAG, "Overflow — dropped farthest seq=$farthest")
+                    summaryOverflows++
+                    Log.w(TAG, "Overflow — dropped farthest seq=$farthest bufSize=${buffer.size} totalOverflows=$summaryOverflows")
+                }
+            }
+
+            if (playbackActive && nextPlaybackSeq >= 0) {
+                val distance = seqDistance(nextPlaybackSeq, sequence)
+                if (distance > 1 && buffer.containsKey(sequence).not()) {
+                    summaryReorders++
                 }
             }
 
             buffer[sequence] = packet
+            summaryEnqueued++
+
+            enqueueRateLimiter.tick()
+            if (enqueueRateLimiter.shouldLogDetail()) {
+                Log.d(TAG, "ENQUEUE seq=$sequence bufSize=${buffer.size} targetDepth=$targetDepth playbackActive=$playbackActive playbackSeq=$nextPlaybackSeq payload=${packet.size} ${RadioDiagLog.elapsedTag()}")
+            } else if (enqueueRateLimiter.shouldLogSummary()) {
+                val cnt = enqueueRateLimiter.resetSummaryAccumulator()
+                Log.d(TAG, "ENQUEUE_SUMMARY frames=$cnt totalEnqueued=$summaryEnqueued bufSize=${buffer.size} depth=$targetDepth lateDrops=$summaryLateDrops overflows=$summaryOverflows underruns=$summaryUnderruns reorders=$summaryReorders jitter=${String.format("%.1f", estimatedJitterMs)}ms ${RadioDiagLog.elapsedTag()}")
+            }
 
             updateJitterEstimate()
         }
@@ -141,13 +172,17 @@ class JitterBuffer {
             playbackActive = true
             nextPlaybackSeq = findOldestSeq() ?: return false
             if (reconnectProtection) {
-                Log.d(TAG, "RECONNECT_PROTECTION_COMPLETE — playback starting at seq=$nextPlaybackSeq (protectionDepth=$reconnectProtectionDepth buffered=${buffer.size})")
+                Log.d(TAG, "RECONNECT_PROTECTION_COMPLETE — playback starting at seq=$nextPlaybackSeq (protectionDepth=$reconnectProtectionDepth buffered=${buffer.size}) ${RadioDiagLog.elapsedTag()}")
                 reconnectProtection = false
             } else {
-                Log.d(TAG, "Pre-buffer complete, starting at seq=$nextPlaybackSeq (depth=$targetDepth, buffered=${buffer.size})")
+                Log.d(TAG, "PRE_BUFFER_COMPLETE startSeq=$nextPlaybackSeq targetDepth=$targetDepth buffered=${buffer.size} ${RadioDiagLog.elapsedTag()}")
             }
             return true
         }
+    }
+
+    fun recordUnderrun() {
+        summaryUnderruns++
     }
 
     val isPlaybackActive: Boolean get() = synchronized(lock) { playbackActive }
@@ -160,7 +195,7 @@ class JitterBuffer {
             lastArrivalTimeNs = 0L
             estimatedJitterMs = 0.0
             targetDepth = MIN_DEPTH
-            Log.d(TAG, "Entered idle — pre-buffering on next packet (depth=$MIN_DEPTH, kept ${buffer.size} buffered frames)")
+            Log.d(TAG, "ENTER_IDLE depth=$MIN_DEPTH keptFrames=${buffer.size} ${RadioDiagLog.elapsedTag()}")
         }
     }
 

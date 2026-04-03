@@ -55,11 +55,20 @@ class RadioAudioEngine(private val context: Context) {
     private var actualFrameSizeSamples: Int = (DEFAULT_MIC_SAMPLE_RATE * CAPTURE_INTERVAL_MS.toInt()) / 1000
     private var actualFrameSizeBytes: Int = actualFrameSizeSamples * 2
 
+    private val txSessionStats = RadioDiagLog.TxSessionStats()
+    private val rxSessionStats = RadioDiagLog.RxSessionStats()
+    private val pcmReadRateLimiter = RadioDiagLog.RateLimiter(detailCount = 5)
+    private val dspRateLimiter = RadioDiagLog.RateLimiter(detailCount = 3)
+
     private val audioFocusListener = AudioManager.OnAudioFocusChangeListener { focusChange ->
         when (focusChange) {
             AudioManager.AUDIOFOCUS_GAIN,
             AudioManager.AUDIOFOCUS_GAIN_TRANSIENT -> {
                 Log.d(TAG, "Audio focus gained")
+            }
+            AudioManager.AUDIOFOCUS_LOSS,
+            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
+                Log.w(TAG, "Audio focus lost focusChange=$focusChange ${RadioDiagLog.elapsedTag()}")
             }
             else -> {}
         }
@@ -78,7 +87,10 @@ class RadioAudioEngine(private val context: Context) {
     }
 
     fun start() {
-        if (started) return
+        if (started) {
+            Log.w("[RadioError]", "start() called but engine already started — ignoring")
+            return
+        }
         opusCodec.initialize()
         acquireAudioFocus()
         audioPlayback.ensureTrackReady()
@@ -86,11 +98,15 @@ class RadioAudioEngine(private val context: Context) {
         udpTransport.onSessionTokenChanged = { onSessionTokenChanged() }
         udpTransport.start()
         started = true
-        Log.d(TAG, "RadioAudioEngine started")
+        RadioDiagLog.resetSessionClock()
+        Log.d(TAG, "RadioAudioEngine started ${RadioDiagLog.elapsedTag()}")
     }
 
     fun stop() {
-        if (!started) return
+        if (!started) {
+            Log.w("[RadioError]", "stop() called but engine not started — ignoring")
+            return
+        }
         runBlocking { stopTransmit() }
         stopReceive()
         udpTransport.onSessionTokenChanged = null
@@ -99,33 +115,40 @@ class RadioAudioEngine(private val context: Context) {
         opusCodec.release()
         started = false
         stateManager.reset()
-        Log.d(TAG, "RadioAudioEngine stopped")
+        Log.d(TAG, "RadioAudioEngine stopped ${RadioDiagLog.elapsedTag()}")
     }
 
     private fun onSessionTokenChanged() {
-        if (!started) return
+        if (!started) {
+            Log.w("[RadioError]", "onSessionTokenChanged called but engine not started — ignoring")
+            return
+        }
         reconnectCount++
         val rc = reconnectCount
-        Log.d(TAG, "RECONNECT_START reconnectCount=$rc — coordinated audio pipeline reset")
         val resetStartMs = System.currentTimeMillis()
+        Log.d(TAG, "RECONNECT_START reconnectCount=$rc — coordinated audio pipeline reset ${RadioDiagLog.elapsedTag()}")
 
-        opusCodec.resetDecoder()
-        Log.d(TAG, "RECONNECT_STEP_1_DECODER_RESET reconnectCount=$rc")
+        try {
+            opusCodec.resetDecoder()
+            Log.d(TAG, "RECONNECT_STEP decoder_reset reconnectCount=$rc")
 
-        opusCodec.resetEncoder()
-        Log.d(TAG, "RECONNECT_STEP_2_ENCODER_RESET reconnectCount=$rc")
+            opusCodec.resetEncoder()
+            Log.d(TAG, "RECONNECT_STEP encoder_reset reconnectCount=$rc")
 
-        jitterBuffer.flushForReconnect()
-        Log.d(TAG, "RECONNECT_STEP_3_JITTER_BUFFER_FLUSHED reconnectCount=$rc")
+            jitterBuffer.flushForReconnect()
+            Log.d(TAG, "RECONNECT_STEP jitter_buffer_flushed reconnectCount=$rc")
 
-        audioPlayback.clearStaleFrames()
-        Log.d(TAG, "RECONNECT_STEP_4_AUDIOTRACK_FLUSHED reconnectCount=$rc")
+            audioPlayback.clearStaleFrames()
+            Log.d(TAG, "RECONNECT_STEP audiotrack_flushed reconnectCount=$rc")
 
-        resetDspState()
-        Log.d(TAG, "RECONNECT_STEP_5_DSP_STATE_RESET reconnectCount=$rc")
+            resetDspState()
+            Log.d(TAG, "RECONNECT_STEP dsp_state_reset reconnectCount=$rc")
 
-        val resetDurationMs = System.currentTimeMillis() - resetStartMs
-        Log.d(TAG, "RECONNECT_COMPLETE reconnectCount=$rc resetDurationMs=$resetDurationMs")
+            val resetDurationMs = System.currentTimeMillis() - resetStartMs
+            Log.d(TAG, "RECONNECT_COMPLETE reconnectCount=$rc resetDurationMs=$resetDurationMs componentsReset=decoder,encoder,jitterBuffer,audioTrack,dsp ${RadioDiagLog.elapsedTag()}")
+        } catch (e: Exception) {
+            Log.e("[RadioError]", "RECONNECT_EXCEPTION reconnectCount=$rc ${e::class.simpleName}: ${e.message} method=onSessionTokenChanged", e)
+        }
     }
 
     private val OPUS_SUPPORTED_RATES = setOf(8000, 12000, 16000, 24000, 48000)
@@ -150,10 +173,12 @@ class RadioAudioEngine(private val context: Context) {
                 val ok = testRecord.state == AudioRecord.STATE_INITIALIZED
                 testRecord.release()
                 if (ok) {
-                    Log.d(TAG, "TX_AUDIO_SOURCE_PROBE source=$sourceName probeRate=$rate result=OK")
+                    Log.d("[AudioCapture]", "TX_AUDIO_SOURCE_PROBE source=$sourceName probeRate=$rate result=OK")
                     return true
                 }
-            } catch (_: Exception) {}
+            } catch (e: Exception) {
+                Log.w("[AudioCapture]", "TX_AUDIO_SOURCE_PROBE source=$sourceName probeRate=$rate result=EXCEPTION(${e.message})")
+            }
         }
         return false
     }
@@ -161,17 +186,20 @@ class RadioAudioEngine(private val context: Context) {
     private fun selectAudioSource(): Int {
         if (Build.VERSION.SDK_INT >= 24) {
             if (probeAudioSource(MediaRecorder.AudioSource.UNPROCESSED, "UNPROCESSED")) {
-                Log.d(TAG, "TX_AUDIO_SOURCE selected=UNPROCESSED (API ${Build.VERSION.SDK_INT})")
+                Log.d("[AudioCapture]", "TX_AUDIO_SOURCE selected=UNPROCESSED (API ${Build.VERSION.SDK_INT})")
+                txSessionStats.audioSource = "UNPROCESSED"
                 return MediaRecorder.AudioSource.UNPROCESSED
             }
         }
 
         if (probeAudioSource(MediaRecorder.AudioSource.VOICE_RECOGNITION, "VOICE_RECOGNITION")) {
-            Log.d(TAG, "TX_AUDIO_SOURCE selected=VOICE_RECOGNITION")
+            Log.d("[AudioCapture]", "TX_AUDIO_SOURCE selected=VOICE_RECOGNITION")
+            txSessionStats.audioSource = "VOICE_RECOGNITION"
             return MediaRecorder.AudioSource.VOICE_RECOGNITION
         }
 
-        Log.d(TAG, "TX_AUDIO_SOURCE selected=MIC (fallback)")
+        Log.d("[AudioCapture]", "TX_AUDIO_SOURCE selected=MIC (fallback)")
+        txSessionStats.audioSource = "MIC"
         return MediaRecorder.AudioSource.MIC
     }
 
@@ -196,19 +224,28 @@ class RadioAudioEngine(private val context: Context) {
         txCompAttackMs = 0.003
         txCompReleaseMs = 0.15
 
-        Log.d(TAG, "TX_DSP_COEFFICIENTS sampleRate=$sampleRate hpAlpha=$txHpAlpha lpCutoff=$lpCutoff lpB0=$txLpB0 lpB1=$txLpB1 lpB2=$txLpB2 lpA1=$txLpA1 lpA2=$txLpA2")
+        Log.d("[AudioDSP]", "TX_DSP_COEFFICIENTS sampleRate=$sampleRate hpCutoff=$hpCutoff hpAlpha=$txHpAlpha lpCutoff=$lpCutoff lpB0=$txLpB0 lpB1=$txLpB1 lpB2=$txLpB2 lpA1=$txLpA1 lpA2=$txLpA2 compThreshold=$txCompThresholdDb compRatio=$txCompRatio compAttack=$txCompAttackMs compRelease=$txCompReleaseMs gain=$txGain ${RadioDiagLog.elapsedTag()}")
     }
 
     suspend fun startTransmit(): Boolean = transmitMutex.withLock {
         if (!started) {
-            Log.w(TAG, "startTransmit: engine not started")
+            Log.w("[RadioError]", "startTransmit: engine not started method=startTransmit")
             return false
         }
-        if (isTransmitting) return true
+        if (isTransmitting) {
+            Log.w("[RadioError]", "startTransmit: already transmitting — ignoring method=startTransmit")
+            return true
+        }
 
         try {
+            RadioDiagLog.resetSessionClock()
+            txSessionStats.reset()
+            txSessionStats.startTimeMs = System.currentTimeMillis()
+            txSessionStats.requestedRate = DEFAULT_MIC_SAMPLE_RATE
+            pcmReadRateLimiter.reset()
+            dspRateLimiter.reset()
             val txStartMs = System.currentTimeMillis()
-            Log.d(TAG, "LATENCY_TX_START_BEGIN")
+            Log.d(TAG, "TX_SESSION_START ${RadioDiagLog.elapsedTag()}")
 
             val audioSource = selectAudioSource()
 
@@ -219,26 +256,39 @@ class RadioAudioEngine(private val context: Context) {
             )
             val requestedFrameSizeBytes = (DEFAULT_MIC_SAMPLE_RATE / 1000 * CAPTURE_INTERVAL_MS.toInt()) * 2
             val bufferSize = maxOf(minBufferSize, requestedFrameSizeBytes * 4)
-            val record = AudioRecord(
-                audioSource,
-                DEFAULT_MIC_SAMPLE_RATE,
-                AudioFormat.CHANNEL_IN_MONO,
-                AudioFormat.ENCODING_PCM_16BIT,
-                bufferSize
-            )
+
+            Log.d("[AudioCapture]", "TX_AUDIORECORD_INIT requestedRate=$DEFAULT_MIC_SAMPLE_RATE source=${txSessionStats.audioSource} minBufSize=$minBufferSize allocBufSize=$bufferSize frameMs=$CAPTURE_INTERVAL_MS ${RadioDiagLog.elapsedTag()}")
+
+            val record = try {
+                AudioRecord(
+                    audioSource,
+                    DEFAULT_MIC_SAMPLE_RATE,
+                    AudioFormat.CHANNEL_IN_MONO,
+                    AudioFormat.ENCODING_PCM_16BIT,
+                    bufferSize
+                )
+            } catch (e: Exception) {
+                Log.e("[RadioError]", "AudioRecord constructor threw: ${e::class.simpleName}: ${e.message} source=${txSessionStats.audioSource} rate=$DEFAULT_MIC_SAMPLE_RATE method=startTransmit", e)
+                txSessionStats.stopReason = "audiorecord_constructor_exception"
+                return false
+            }
             if (record.state != AudioRecord.STATE_INITIALIZED) {
-                Log.e(TAG, "AudioRecord failed to initialize")
+                Log.e("[RadioError]", "AudioRecord failed to initialize state=${record.state} source=${txSessionStats.audioSource} rate=$DEFAULT_MIC_SAMPLE_RATE method=startTransmit")
                 record.release()
+                txSessionStats.stopReason = "audiorecord_init_failed"
                 return false
             }
 
             actualSampleRate = record.sampleRate
             actualChannelCount = record.channelCount
             val actualAudioFormat = record.audioFormat
+            txSessionStats.actualRate = actualSampleRate
+            txSessionStats.channels = actualChannelCount
 
             if (actualSampleRate !in OPUS_SUPPORTED_RATES) {
-                Log.e(TAG, "TX_UNSUPPORTED_SAMPLE_RATE halRate=$actualSampleRate — not in Opus supported set $OPUS_SUPPORTED_RATES, aborting TX")
+                Log.e("[RadioError]", "TX_UNSUPPORTED_SAMPLE_RATE halRate=$actualSampleRate — not in Opus supported set $OPUS_SUPPORTED_RATES, aborting TX method=startTransmit")
                 record.release()
+                txSessionStats.stopReason = "unsupported_sample_rate"
                 return false
             }
 
@@ -247,19 +297,20 @@ class RadioAudioEngine(private val context: Context) {
             val needsStereoDownmix = actualChannelCount == 2
 
             if (actualChannelCount > 2) {
-                Log.e(TAG, "TX_UNEXPECTED_CHANNEL_COUNT channelCount=$actualChannelCount — only mono/stereo supported, aborting TX")
+                Log.e("[RadioError]", "TX_UNEXPECTED_CHANNEL_COUNT channelCount=$actualChannelCount — only mono/stereo supported, aborting TX method=startTransmit")
                 record.release()
+                txSessionStats.stopReason = "unsupported_channel_count"
                 return false
             }
 
-            Log.d(TAG, "TX_HAL_NEGOTIATED actualSampleRate=$actualSampleRate actualChannelCount=$actualChannelCount audioFormat=$actualAudioFormat requestedSampleRate=$DEFAULT_MIC_SAMPLE_RATE needsStereoDownmix=$needsStereoDownmix bufferSize=$bufferSize")
+            Log.d("[AudioCapture]", "TX_HAL_NEGOTIATED requestedRate=$DEFAULT_MIC_SAMPLE_RATE actualRate=$actualSampleRate actualChannels=$actualChannelCount audioFormat=$actualAudioFormat needsStereoDownmix=$needsStereoDownmix bufferSize=$bufferSize ${RadioDiagLog.elapsedTag()}")
 
             if (actualSampleRate != DEFAULT_MIC_SAMPLE_RATE) {
-                Log.w(TAG, "TX_SAMPLE_RATE_MISMATCH requested=$DEFAULT_MIC_SAMPLE_RATE actual=$actualSampleRate — adapting TX pipeline")
+                Log.w("[AudioCapture]", "TX_SAMPLE_RATE_MISMATCH requested=$DEFAULT_MIC_SAMPLE_RATE actual=$actualSampleRate — adapting TX pipeline")
             }
 
             opusCodec.reinitializeEncoderOnly(actualSampleRate, 1)
-            Log.d(TAG, "OPUS_TX_INIT sampleRate=$actualSampleRate channels=1 frameMs=$CAPTURE_INTERVAL_MS frameSize=${opusCodec.encoderFrameSize} bitrate=${OpusCodec.BITRATE}")
+            Log.d("[OpusCodec]", "OPUS_TX_INIT sampleRate=$actualSampleRate channels=1 frameMs=$CAPTURE_INTERVAL_MS frameSize=${opusCodec.encoderFrameSize} bitrate=${OpusCodec.BITRATE} ${RadioDiagLog.elapsedTag()}")
 
             computeDspCoefficients(actualSampleRate)
 
@@ -268,21 +319,25 @@ class RadioAudioEngine(private val context: Context) {
 
             val postStartRate = record.sampleRate
             if (postStartRate != actualSampleRate) {
-                Log.w(TAG, "TX_POST_START_RATE_CHANGE preStart=$actualSampleRate postStart=$postStartRate — vendor changed rate after startRecording()")
+                Log.w("[AudioCapture]", "TX_POST_START_RATE_CHANGE preStart=$actualSampleRate postStart=$postStartRate — vendor changed rate after startRecording()")
                 actualSampleRate = postStartRate
+                txSessionStats.actualRate = actualSampleRate
                 if (actualSampleRate !in OPUS_SUPPORTED_RATES) {
-                    Log.e(TAG, "TX_UNSUPPORTED_SAMPLE_RATE_POST_START rate=$actualSampleRate — aborting TX")
+                    Log.e("[RadioError]", "TX_UNSUPPORTED_SAMPLE_RATE_POST_START rate=$actualSampleRate — aborting TX method=startTransmit")
                     record.stop()
                     record.release()
                     audioRecord = null
+                    txSessionStats.stopReason = "post_start_unsupported_rate"
                     return false
                 }
                 actualFrameSizeSamples = (actualSampleRate * CAPTURE_INTERVAL_MS.toInt()) / 1000
                 actualFrameSizeBytes = actualFrameSizeSamples * actualChannelCount * 2
                 opusCodec.reinitializeEncoderOnly(actualSampleRate, 1)
                 computeDspCoefficients(actualSampleRate)
-                Log.d(TAG, "TX_PIPELINE_READAPTED postStartRate=$actualSampleRate frameSize=$actualFrameSizeSamples")
+                Log.d("[AudioCapture]", "TX_PIPELINE_READAPTED postStartRate=$actualSampleRate frameSize=$actualFrameSizeSamples ${RadioDiagLog.elapsedTag()}")
             }
+
+            Log.d("[AudioCapture]", "TX_POST_START_VERIFY recordingState=${record.recordingState} sessionId=${record.audioSessionId} actualRate=${record.sampleRate} ${RadioDiagLog.elapsedTag()}")
 
             val monoFrameSizeBytes = actualFrameSizeSamples * 2
 
@@ -290,75 +345,120 @@ class RadioAudioEngine(private val context: Context) {
             try {
                 if (AutomaticGainControl.isAvailable()) {
                     autoGainControl = AutomaticGainControl.create(sessionId)?.also { it.enabled = false }
-                    Log.d(TAG, "AutomaticGainControl attached and DISABLED for radio TX")
+                    Log.d("[AudioCapture]", "AGC attached=true enabled=false sessionId=$sessionId ${RadioDiagLog.elapsedTag()}")
+                } else {
+                    Log.d("[AudioCapture]", "AGC attached=false reason=unavailable ${RadioDiagLog.elapsedTag()}")
                 }
             } catch (e: Exception) {
-                Log.w(TAG, "AutomaticGainControl unavailable: ${e.message}")
+                Log.w("[RadioError]", "AutomaticGainControl unavailable: ${e.message} method=startTransmit")
             }
 
             isTransmitting = true
-            stateManager.transitionTo(RadioState.TRANSMITTING)
-            Log.d(TAG, "RADIO_TX_CAPTURE_STARTED sampleRate=$actualSampleRate channelCount=$actualChannelCount frameMs=$CAPTURE_INTERVAL_MS frameSizeSamples=$actualFrameSizeSamples frameSizeBytes=$actualFrameSizeBytes")
+            stateManager.txPipelineRunning = true
+            stateManager.transitionTo(RadioState.TRANSMITTING, "tx_started")
+            Log.d("[AudioCapture]", "TX_CAPTURE_STARTED sampleRate=$actualSampleRate channelCount=$actualChannelCount frameMs=$CAPTURE_INTERVAL_MS frameSizeSamples=$actualFrameSizeSamples frameSizeBytes=$actualFrameSizeBytes ${RadioDiagLog.elapsedTag()}")
 
             captureJob = scope.launch {
                 val readBuffer = ByteArray(actualFrameSizeBytes)
                 val pendingFrame = ByteArray(actualFrameSizeBytes)
                 var pendingBytes = 0
                 var frameCounter = 0
-                while (isActive && isTransmitting) {
-                    try {
-                        val read = record.read(readBuffer, 0, readBuffer.size)
-                        if (read > 0) {
-                            var readOffset = 0
-                            while (readOffset < read) {
-                                val remainingFrameBytes = actualFrameSizeBytes - pendingBytes
-                                val chunkSize = minOf(remainingFrameBytes, read - readOffset)
-                                System.arraycopy(readBuffer, readOffset, pendingFrame, pendingBytes, chunkSize)
-                                pendingBytes += chunkSize
-                                readOffset += chunkSize
+                try {
+                    while (isActive && isTransmitting) {
+                        try {
+                            val read = record.read(readBuffer, 0, readBuffer.size)
+                            if (read > 0) {
+                                txSessionStats.framesRead++
+                                if (read < readBuffer.size) txSessionStats.partialReads++
+                                var readOffset = 0
+                                while (readOffset < read) {
+                                    val remainingFrameBytes = actualFrameSizeBytes - pendingBytes
+                                    val chunkSize = minOf(remainingFrameBytes, read - readOffset)
+                                    System.arraycopy(readBuffer, readOffset, pendingFrame, pendingBytes, chunkSize)
+                                    pendingBytes += chunkSize
+                                    readOffset += chunkSize
 
-                                if (pendingBytes == actualFrameSizeBytes) {
-                                    val monoFrame: ByteArray
-                                    if (needsStereoDownmix) {
-                                        monoFrame = stereoToMono(pendingFrame, actualFrameSizeBytes)
-                                    } else {
-                                        monoFrame = pendingFrame.copyOf(monoFrameSizeBytes)
-                                    }
-                                    highPassFilter(monoFrame, monoFrameSizeBytes)
-                                    lowPassFilter(monoFrame, monoFrameSizeBytes)
-                                    softwareCompressor(monoFrame, monoFrameSizeBytes)
-                                    applyGain(monoFrame, monoFrameSizeBytes, txGain)
-                                    val encoded = opusCodec.encode(monoFrame)
-                                    if (encoded != null) {
-                                        frameCounter++
-                                        if (frameCounter == 1) {
-                                            val latencyMs = System.currentTimeMillis() - txStartMs
-                                            val monoFrameByteCount = actualFrameSizeSamples * 2
-                                            Log.d(TAG, "LATENCY_FIRST_TX_FRAME_SENT frame=$frameCounter samplesPerFrame=$actualFrameSizeSamples pcmBytesToEncode=$monoFrameByteCount opusFrameSize=${opusCodec.encoderFrameSize} encodedBytes=${encoded.size} latencyMs=$latencyMs")
+                                    if (pendingBytes == actualFrameSizeBytes) {
+                                        val monoFrame: ByteArray
+                                        if (needsStereoDownmix) {
+                                            monoFrame = stereoToMono(pendingFrame, actualFrameSizeBytes)
+                                        } else {
+                                            monoFrame = pendingFrame.copyOf(monoFrameSizeBytes)
                                         }
-                                        udpTransport.send(encoded)
+
+                                        pcmReadRateLimiter.tick()
+                                        if (pcmReadRateLimiter.shouldLogDetail()) {
+                                            val stats = RadioDiagLog.pcmStats(monoFrame, monoFrameSizeBytes)
+                                            if (stats.silent) txSessionStats.silentFrames++
+                                            Log.d("[AudioCapture]", "PCM_FRAME frame=${pcmReadRateLimiter.frameCount} readRet=$read $stats downmix=$needsStereoDownmix ${RadioDiagLog.elapsedTag()}")
+                                        } else {
+                                            val stats = RadioDiagLog.pcmStats(monoFrame, monoFrameSizeBytes)
+                                            if (stats.silent) txSessionStats.silentFrames++
+                                            if (pcmReadRateLimiter.shouldLogSummary()) {
+                                                val cnt = pcmReadRateLimiter.resetSummaryAccumulator()
+                                                Log.d("[AudioCapture]", "PCM_SUMMARY frames=$cnt totalFrames=${pcmReadRateLimiter.frameCount} silentFrames=${txSessionStats.silentFrames} partials=${txSessionStats.partialReads} zeros=${txSessionStats.zeroReads} ${RadioDiagLog.elapsedTag()}")
+                                            }
+                                        }
+
+                                        dspRateLimiter.tick()
+                                        val preStats = if (dspRateLimiter.shouldLogDetail()) RadioDiagLog.pcmStats(monoFrame, monoFrameSizeBytes) else null
+
+                                        highPassFilter(monoFrame, monoFrameSizeBytes)
+                                        lowPassFilter(monoFrame, monoFrameSizeBytes)
+                                        softwareCompressor(monoFrame, monoFrameSizeBytes)
+                                        applyGain(monoFrame, monoFrameSizeBytes, txGain)
+
+                                        if (preStats != null) {
+                                            val postStats = RadioDiagLog.pcmStats(monoFrame, monoFrameSizeBytes)
+                                            Log.d("[AudioDSP]", "DSP_FRAME frame=${dspRateLimiter.frameCount} pre=[$preStats] post=[$postStats] ${RadioDiagLog.elapsedTag()}")
+                                        }
+
+                                        val encoded = opusCodec.encode(monoFrame)
+                                        if (encoded != null) {
+                                            frameCounter++
+                                            txSessionStats.framesEncoded++
+                                            txSessionStats.packetsSent++
+                                            if (frameCounter == 1) {
+                                                val latencyMs = System.currentTimeMillis() - txStartMs
+                                                val monoFrameByteCount = actualFrameSizeSamples * 2
+                                                Log.d(TAG, "LATENCY_FIRST_TX_FRAME_SENT frame=$frameCounter samplesPerFrame=$actualFrameSizeSamples pcmBytesToEncode=$monoFrameByteCount opusFrameSize=${opusCodec.encoderFrameSize} encodedBytes=${encoded.size} latencyMs=$latencyMs ${RadioDiagLog.elapsedTag()}")
+                                            }
+                                            udpTransport.send(encoded)
+                                        } else {
+                                            txSessionStats.failures++
+                                        }
+                                        pendingBytes = 0
                                     }
-                                    pendingBytes = 0
                                 }
+                            } else if (read < 0) {
+                                txSessionStats.failures++
+                                Log.w("[RadioError]", "AudioRecord read returned error: $read method=captureLoop ${RadioDiagLog.elapsedTag()}")
+                            } else {
+                                txSessionStats.zeroReads++
                             }
-                        } else if (read < 0) {
-                            Log.w(TAG, "AudioRecord read returned error: $read")
+                        } catch (e: IllegalStateException) {
+                            Log.w("[RadioError]", "AudioRecord read failed (released?): ${e.message} method=captureLoop")
+                            txSessionStats.stopReason = "audiorecord_released"
+                            break
+                        } catch (t: Throwable) {
+                            txSessionStats.failures++
+                            Log.e("[RadioError]", "Capture loop error (continuing): ${t::class.simpleName}: ${t.message} method=captureLoop", t)
                         }
-                    } catch (e: IllegalStateException) {
-                        Log.w(TAG, "AudioRecord read failed (released?): ${e.message}")
-                        break
-                    } catch (t: Throwable) {
-                        Log.e(TAG, "Capture loop error (continuing): ${t.message}", t)
                     }
+                } catch (e: Exception) {
+                    Log.e("[RadioError]", "TX_CAPTURE_LOOP_EXCEPTION ${e::class.simpleName}: ${e.message} method=captureLoop", e)
+                    txSessionStats.stopReason = "capture_loop_exception"
                 }
             }
-            Log.d(TAG, "TX started — audio capture active (sampleRate=$actualSampleRate channels=$actualChannelCount buffer=$bufferSize bitrate=${OpusCodec.BITRATE})")
+            Log.d(TAG, "TX started — audio capture active (sampleRate=$actualSampleRate channels=$actualChannelCount buffer=$bufferSize bitrate=${OpusCodec.BITRATE}) ${RadioDiagLog.elapsedTag()}")
             return true
         } catch (e: SecurityException) {
-            Log.e(TAG, "Mic permission denied: ${e.message}", e)
+            Log.e("[RadioError]", "Mic permission denied: ${e.message} method=startTransmit", e)
+            txSessionStats.stopReason = "mic_permission_denied"
             return false
         } catch (e: Exception) {
-            Log.e(TAG, "startTransmit error: ${e.message}", e)
+            Log.e("[RadioError]", "startTransmit error: ${e::class.simpleName}: ${e.message} method=startTransmit", e)
+            txSessionStats.stopReason = "startTransmit_exception"
             return false
         }
     }
@@ -379,51 +479,72 @@ class RadioAudioEngine(private val context: Context) {
     }
 
     suspend fun stopTransmit() = transmitMutex.withLock {
-        if (!isTransmitting) return@withLock
+        if (!isTransmitting) {
+            Log.w("[RadioError]", "stopTransmit called but not transmitting — ignoring")
+            return@withLock
+        }
         isTransmitting = false
+        txSessionStats.stopReason = "ptt_release"
         captureJob?.cancelAndJoin()
         captureJob = null
         resetDspState()
         try {
             autoGainControl?.release()
-        } catch (_: Exception) {}
+        } catch (e: Exception) {
+            Log.w("[RadioError]", "AGC release threw: ${e.message} method=stopTransmit")
+        }
         autoGainControl = null
         try {
             audioRecord?.stop()
         } catch (e: IllegalStateException) {
-            Log.w(TAG, "AudioRecord stop failed: ${e.message}")
+            Log.w("[RadioError]", "AudioRecord stop failed: ${e.message} method=stopTransmit")
         }
         try {
             audioRecord?.release()
         } catch (e: IllegalStateException) {
-            Log.w(TAG, "AudioRecord release failed: ${e.message}")
+            Log.w("[RadioError]", "AudioRecord release failed: ${e.message} method=stopTransmit")
         }
         audioRecord = null
-        stateManager.transitionTo(RadioState.IDLE)
+        stateManager.txPipelineRunning = false
+        stateManager.transitionTo(RadioState.IDLE, "tx_stopped")
+        Log.d(TAG, txSessionStats.summary() + " ${RadioDiagLog.elapsedTag()}")
         Log.d(TAG, "TX stopped")
     }
 
     fun startReceive() {
-        if (!started) return
+        if (!started) {
+            Log.w("[RadioError]", "startReceive called but engine not started — ignoring")
+            return
+        }
+        rxSessionStats.reset()
+        audioPlayback.onFrameDecoded = { rxSessionStats.packetsDecoded++ }
+        audioPlayback.onUnderrun = { rxSessionStats.underruns++ }
+        audioPlayback.onDecodeFailure = { rxSessionStats.failures++ }
         jitterBuffer.start()
         audioPlayback.start()
-        Log.d(TAG, "OPUS_RX_PLAYBACK_STARTED")
-        Log.d(TAG, "RADIO_RX_PLAYBACK_STARTED")
+        stateManager.rxPipelineRunning = true
+        Log.d(TAG, "RX_SESSION_START ${RadioDiagLog.elapsedTag()}")
         if (stateManager.state.value != RadioState.TRANSMITTING) {
-            stateManager.transitionTo(RadioState.RECEIVING)
+            stateManager.transitionTo(RadioState.RECEIVING, "rx_started")
         }
         startRxDiagnostics()
-        Log.d(TAG, "RX started — playback active")
+        Log.d(TAG, "RX started — playback active ${RadioDiagLog.elapsedTag()}")
     }
 
     fun stopReceive() {
         rxDiagJob?.cancel()
         rxDiagJob = null
         audioPlayback.stop()
+        audioPlayback.onFrameDecoded = null
+        audioPlayback.onUnderrun = null
+        audioPlayback.onDecodeFailure = null
         jitterBuffer.stop()
+        stateManager.rxPipelineRunning = false
         if (stateManager.state.value == RadioState.RECEIVING) {
-            stateManager.transitionTo(RadioState.IDLE)
+            stateManager.transitionTo(RadioState.IDLE, "rx_stopped")
         }
+        rxSessionStats.stopReason = "explicit_stop"
+        Log.d(TAG, rxSessionStats.summary() + " ${RadioDiagLog.elapsedTag()}")
         Log.d(TAG, "RX stopped")
     }
 
@@ -439,20 +560,24 @@ class RadioAudioEngine(private val context: Context) {
                 val bufSize = jitterBuffer.size
                 val bufDepth = jitterBuffer.currentTargetDepth
                 val bufPlaying = jitterBuffer.isPlaybackActive
-                Log.d(TAG, "RX_DIAG rxTotal=$currentRxCount rxNew=$newPackets jbSize=$bufSize jbDepth=$bufDepth jbPlaying=$bufPlaying channelIdx=${udpTransport.channelIndex}")
+                Log.d(TAG, "RX_DIAG rxTotal=$currentRxCount rxNew=$newPackets jbSize=$bufSize jbDepth=$bufDepth jbPlaying=$bufPlaying channelIdx=${udpTransport.channelIndex} ${RadioDiagLog.elapsedTag()}")
             }
         }
     }
 
     private fun onAudioPacketReceived(packet: OpusRadioPacket) {
+        rxSessionStats.packetsReceived++
         if (packet.channelIndex != udpTransport.channelIndex) {
-            Log.d(TAG, "Dropping RX frame for other channel packetChannel=${packet.channelIndex} local=${udpTransport.channelIndex}")
+            rxSessionStats.packetsDropped++
+            Log.d(TAG, "RX_DROP_WRONG_CHANNEL packetChannel=${packet.channelIndex} local=${udpTransport.channelIndex} seq=${packet.sequence}")
             return
         }
         Log.d(TAG, "RADIO_RX_CHANNEL_MATCH packetChannel=${packet.channelIndex} local=${udpTransport.channelIndex}")
         Log.d(TAG, "RADIO_RX_PACKET_RECEIVED seq=${packet.sequence} sender=${packet.senderUnitId} payload=${packet.opusPayload.size}")
+        rxSessionStats.totalJitterDepth += jitterBuffer.size
+        rxSessionStats.jitterSamples++
         if (udpTransport.rxPacketCount == 1L) {
-            Log.d(TAG, "LATENCY_FIRST_RX_PACKET seq=${packet.sequence} sender=${packet.senderUnitId}")
+            Log.d(TAG, "LATENCY_FIRST_RX_PACKET seq=${packet.sequence} sender=${packet.senderUnitId} ${RadioDiagLog.elapsedTag()}")
         }
         jitterBuffer.enqueue(packet.sequence, packet.opusPayload)
     }
