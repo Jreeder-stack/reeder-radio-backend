@@ -33,4 +33,6 @@ router.get('/audio-tuning', adminController.getAudioTuning);
 router.put('/audio-tuning', adminController.setAudioTuning);
 router.post('/audio-tuning/reset', adminController.resetAudioTuning);
 
+router.get('/vm-logs', adminController.streamVmLogs);
+
 export default router;

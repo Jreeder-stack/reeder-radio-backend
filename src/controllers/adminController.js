@@ -1,3 +1,4 @@
+import { spawn } from 'child_process';
 import * as adminService from '../services/adminService.js';
 import * as authService from '../services/authService.js';
 import { success, error, created } from '../utils/response.js';
@@ -354,4 +355,84 @@ export async function setAiDispatch(req, res) {
     console.error('Set AI dispatch error:', err);
     error(res, 'Failed to set AI dispatch status', 500);
   }
+}
+
+export function streamVmLogs(req, res) {
+  const source = req.query.source === 'system' ? 'system' : 'server';
+  let closed = false;
+
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    Connection: 'keep-alive',
+    'X-Accel-Buffering': 'no',
+  });
+  res.flushHeaders();
+
+  let child;
+  if (source === 'system') {
+    child = spawn('journalctl', ['-f', '-n', '50', '--no-pager'], { stdio: ['ignore', 'pipe', 'pipe'] });
+  } else {
+    child = spawn('pm2', ['logs', '--raw', '--lines', '50'], { stdio: ['ignore', 'pipe', 'pipe'] });
+  }
+
+  const safeSend = (data) => {
+    if (closed || res.writableEnded || res.destroyed) return;
+    try {
+      res.write(`data: ${JSON.stringify(data)}\n\n`);
+    } catch (_) {}
+  };
+
+  const sendLine = (line) => {
+    const text = line.toString();
+    if (text.trim()) {
+      safeSend({ line: text, source, ts: Date.now() });
+    }
+  };
+
+  let stdoutBuf = '';
+  child.stdout.on('data', (chunk) => {
+    stdoutBuf += chunk.toString();
+    const lines = stdoutBuf.split('\n');
+    stdoutBuf = lines.pop();
+    lines.forEach(sendLine);
+  });
+
+  let stderrBuf = '';
+  child.stderr.on('data', (chunk) => {
+    stderrBuf += chunk.toString();
+    const lines = stderrBuf.split('\n');
+    stderrBuf = lines.pop();
+    lines.forEach(sendLine);
+  });
+
+  child.on('error', (err) => {
+    safeSend({ line: `[error] Failed to start ${source} log stream: ${err.message}`, source, ts: Date.now() });
+  });
+
+  child.on('close', (code) => {
+    if (stdoutBuf.trim()) sendLine(stdoutBuf);
+    if (stderrBuf.trim()) sendLine(stderrBuf);
+    stdoutBuf = '';
+    stderrBuf = '';
+    safeSend({ line: `[info] ${source} log stream ended (exit code ${code})`, source, ts: Date.now() });
+    if (!closed && !res.writableEnded) {
+      try { res.end(); } catch (_) {}
+    }
+  });
+
+  const heartbeat = setInterval(() => {
+    if (closed || res.writableEnded || res.destroyed) return;
+    try { res.write(': ping\n\n'); } catch (_) {}
+  }, 20000);
+
+  const cleanup = () => {
+    if (closed) return;
+    closed = true;
+    clearInterval(heartbeat);
+    try { child.kill('SIGTERM'); } catch (_) {}
+  };
+
+  req.on('close', cleanup);
+  req.on('error', cleanup);
 }
