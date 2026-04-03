@@ -10,7 +10,6 @@ import { execSync } from "child_process";
 import pool, {
   initializeDatabase,
   getUser,
-  createUser,
   createUserWithChannels,
   getAllUsers,
   updateUser,
@@ -18,8 +17,6 @@ import pool, {
   deleteUser,
   getUserChannelAccess,
   setUserChannelAccess,
-  updateLastLogin,
-  verifyPassword,
   getAllChannels,
   updateChannel,
   createChannel,
@@ -32,6 +29,7 @@ import pool, {
   getActivityLogs,
 } from "./db.js";
 import dispatchRouter from "./dispatch/dispatchRouter.js";
+import { createAuthRouter } from "./src/routes/authRouter.js";
 import { getDispatcher } from "./src/services/aiDispatchService.js";
 
 dotenv.config();
@@ -160,116 +158,7 @@ function requireAdmin(req, res, next) {
   next();
 }
 
-app.post("/api/auth/login", rateLimitAuth, async (req, res) => {
-  try {
-    const { username, password } = req.body;
-    
-    if (!username || !password) {
-      return res.status(400).json({ error: "Username and password required" });
-    }
-
-    const user = await getUser(username);
-    if (!user) {
-      return res.status(401).json({ error: "Invalid credentials" });
-    }
-
-    if (user.status === "blocked") {
-      return res.status(403).json({ error: "Account is blocked" });
-    }
-
-    const valid = await verifyPassword(user, password);
-    if (!valid) {
-      return res.status(401).json({ error: "Invalid credentials" });
-    }
-
-    await updateLastLogin(user.id);
-    await logActivity(user.id, user.username, "login", { ip: req.ip });
-
-    req.session.user = {
-      id: user.id,
-      username: user.username,
-      role: user.role,
-      unit_id: user.unit_id,
-      is_dispatcher: user.is_dispatcher || false,
-    };
-
-    const sessionUser = {
-      id: user.id,
-      username: user.username,
-      role: user.role,
-      unit_id: user.unit_id,
-      is_dispatcher: user.is_dispatcher || false,
-    };
-
-    req.session.save((err) => {
-      if (err) {
-        console.error("Session save error:", err);
-        return res.status(500).json({ error: "Login failed" });
-      }
-      res.json({ user: sessionUser });
-    });
-  } catch (error) {
-    console.error("Login error:", error);
-    res.status(500).json({ error: "Login failed" });
-  }
-});
-
-app.post("/api/auth/register", rateLimitAuth, async (req, res) => {
-  try {
-    const { username, password } = req.body;
-    
-    if (!username || !password) {
-      return res.status(400).json({ error: "Username and password required" });
-    }
-
-    if (password.length < 4) {
-      return res.status(400).json({ error: "Password must be at least 4 characters" });
-    }
-
-    const existing = await getUser(username);
-    if (existing) {
-      return res.status(400).json({ error: "Username already taken" });
-    }
-
-    const user = await createUser(username, password);
-    await logActivity(user.id, user.username, "register", {});
-
-    req.session.user = {
-      id: user.id,
-      username: user.username,
-      role: user.role,
-      unit_id: user.unit_id,
-    };
-
-    res.json({
-      user: {
-        id: user.id,
-        username: user.username,
-        role: user.role,
-        unit_id: user.unit_id,
-      },
-    });
-  } catch (error) {
-    console.error("Register error:", error);
-    res.status(500).json({ error: "Registration failed" });
-  }
-});
-
-app.post("/api/auth/logout", (req, res) => {
-  req.session.destroy((err) => {
-    if (err) {
-      return res.status(500).json({ error: "Logout failed" });
-    }
-    res.json({ success: true });
-  });
-});
-
-app.get("/api/auth/me", (req, res) => {
-  if (!req.session.user) {
-    return res.status(401).json({ error: "Not authenticated" });
-  }
-  res.json({ user: req.session.user });
-});
+app.use("/api/auth", createAuthRouter(rateLimitAuth));
 
 app.get("/api/admin/users", requireAdmin, async (req, res) => {
   try {

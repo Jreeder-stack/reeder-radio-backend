@@ -3,11 +3,21 @@ import * as authController from '../controllers/authController.js';
 import { requireCadApiKey } from '../middleware/cadApiKey.js';
 import { cadLogin } from '../controllers/cadIntegrationController.js';
 
-const router = express.Router();
+function buildAuthRouter(rateLimitMiddleware) {
+  const router = express.Router();
+  const rateLimit = rateLimitMiddleware ? [rateLimitMiddleware] : [];
 
-router.post('/login', authController.login);
-router.post('/logout', authController.logout);
-router.get('/me', authController.me);
-router.post('/cad-login', requireCadApiKey, cadLogin);
+  router.post('/login', ...rateLimit, authController.login);
+  router.post('/register', ...rateLimit, authController.register);
+  router.post('/logout', authController.logout);
+  router.get('/me', authController.me);
+  router.post('/cad-login', requireCadApiKey, cadLogin);
 
-export default router;
+  return router;
+}
+
+export function createAuthRouter(rateLimitAuth) {
+  return buildAuthRouter(rateLimitAuth);
+}
+
+export default buildAuthRouter();
