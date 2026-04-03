@@ -1,0 +1,76 @@
+#172 - Fix T320 TX Audio Source Selection — UNPROCESSED Captures Near-Silent Mic
+
+What & Why
+The T320 TX chain is functional end-to-end: floor grant succeeds, AudioRecord starts, PCM frames are read, Opus encodes, and UDP TX packets are sent successfully. However, the captured PCM amplitude is near digital silence, with first-frame stats like min=-4 max=4 rms=1.2 on 16-bit PCM. This indicates the selected audio source is initializing successfully but is not connected to the handheld’s real PTT microphone path on this device.
+
+Current logs show TX_AUDIO_SOURCE selected=UNPROCESSED and then near-silent PCM frames. This strongly suggests that UNPROCESSED is the wrong capture route for the T320, even though initialization succeeds. The existing source probe only verifies AudioRecord construction, not whether the source captures meaningful audio.
+
+The fix is to change audio source selection from “can initialize” to “can initialize and captures usable speech-level PCM”, preferring practical sources first and using UNPROCESSED only as a last resort.
+
+Done looks like
+- On T320, source selection chooses MIC, VOICE_COMMUNICATION, or VOICE_RECOGNITION if those capture real mic audio, instead of defaulting to UNPROCESSED
+- Source probe performs a short real capture and computes RMS/min/max before accepting the source
+- Sources producing near-silent PCM are rejected even if AudioRecord initializes successfully
+- Logcat clearly shows every source attempted, measured RMS/min/max, and accept/reject reason
+- First 10 TX frames log PCM stats for field verification
+- T320 TX audio is clearly audible/intelligible on the receiver
+- UNPROCESSED is only selected if all other candidates fail validation
+
+Out of scope
+- Desktop RX gain/DSP changes
+- RX playback path
+- Opus bitrate/frame/application changes
+- Fixing the separate Concentus/Opus assertion failure seen during TX (that should be tracked separately)
+
+Required changes
+1. Change source priority order to:
+   - MIC
+   - VOICE_COMMUNICATION
+   - VOICE_RECOGNITION
+   - UNPROCESSED (last resort only)
+
+2. Upgrade probeAudioSource() so it does all of the following:
+   - create AudioRecord
+   - startRecording()
+   - read 3-5 short PCM frames
+   - compute min/max/RMS for each
+   - compute average RMS across the probe
+   - reject the source if average RMS is below a configurable silence threshold
+   - always stop/release the probe recorder cleanly
+
+3. Do not simply accept the first source that clears a minimal threshold if multiple sources work.
+   - Prefer the source with the strongest stable RMS over the probe window
+   - Reject obviously unstable or silent candidates
+   - Log the winning source and comparison results
+
+4. Add per-session TX diagnostics for first 10 real TX frames:
+   - frame number
+   - min
+   - max
+   - RMS
+   - silent=true/false
+   - source selected
+   - sample rate / channels
+
+5. Log all source probe outcomes with explicit reasons:
+   - init failed
+   - startRecording failed
+   - read failed
+   - RMS too low
+   - accepted as best source
+
+6. Keep the implementation surgical:
+   - no behavior changes outside source selection / diagnostics
+   - no changes to RX path
+   - no changes to server or desktop
+
+Implementation notes
+- Make the RMS threshold easy to tune in one place (default can start around 50)
+- Probe should match real TX settings as closely as possible: same sample rate, mono config, PCM16, and frame duration
+- If practical, cache the winning source for the current device model/session to avoid unnecessary re-probing on every single TX start
+- Add a clear one-line log such as:
+  TX_AUDIO_SOURCE_SELECTED source=MIC avgRms=842 min=-2200 max=2400 reason=best_valid_source
+
+Relevant files
+- android-native/app/src/main/java/com/reedersystems/commandcomms/audio/radio/RadioAudioEngine.kt
+- android-native/app/src/main/java/com/reedersystems/commandcomms/audio/radio/RadioDiagLog.kt
