@@ -5,6 +5,7 @@ import org.concentus.OpusApplication
 import org.concentus.OpusDecoder
 import org.concentus.OpusEncoder
 import org.concentus.OpusSignal
+import java.util.concurrent.atomic.AtomicLong
 
 private const val TAG = "[OpusCodec]"
 
@@ -69,13 +70,13 @@ class OpusCodec {
     }
 
     fun reinitializeEncoderOnly(sampleRate: Int, channels: Int) {
-        encoderSampleRate = sampleRate
-        encoderChannels = channels
-        encoderFrameSize = (sampleRate * FRAME_DURATION_MS) / 1000
-        expectedFrameBytes = encoderFrameSize * channels * 2
-        encodeRateLimiter.reset()
-        encodeSummaryBytes = 0; encodeSummaryPcmBytes = 0
         synchronized(encodeLock) {
+            encoderSampleRate = sampleRate
+            encoderChannels = channels
+            encoderFrameSize = (sampleRate * FRAME_DURATION_MS) / 1000
+            expectedFrameBytes = encoderFrameSize * channels * 2
+            encodeRateLimiter.reset()
+            encodeSummaryBytes = 0; encodeSummaryPcmBytes = 0
             try {
                 val enc = OpusEncoder(sampleRate, channels, OpusApplication.OPUS_APPLICATION_VOIP)
                 enc.setBitrate(currentBitrate)
@@ -150,30 +151,52 @@ class OpusCodec {
         }
     }
 
+    private val _assertionFailureCount = AtomicLong(0)
+    val assertionFailureCount: Long get() = _assertionFailureCount.get()
+
+    private val _encodeFailureCount = AtomicLong(0)
+    val encodeFailureCount: Long get() = _encodeFailureCount.get()
+
+    @Volatile
+    var currentAudioSource: String = ""
+
+    fun resetFailureCounts() {
+        _assertionFailureCount.set(0)
+        _encodeFailureCount.set(0)
+    }
+
     fun encode(pcmData: ByteArray): ByteArray? {
         val byteCount = pcmData.size
         val sampleCount = byteCount / 2
 
-        if (byteCount != expectedFrameBytes || (byteCount and 1) != 0) {
-            Log.w("[RadioError]", "OPUS_ENCODE_REJECTED_BAD_FRAME samples=$sampleCount bytes=$byteCount expectedSamples=$encoderFrameSize expectedBytes=$expectedFrameBytes method=encode")
-            return null
-        }
-
         synchronized(encodeLock) {
             val enc = encoder
             if (enc == null) {
+                _encodeFailureCount.incrementAndGet()
                 Log.w("[RadioError]", "OPUS_ENCODE_NULL_ENCODER method=encode")
                 return null
             }
-            val safeFrameBytes = pcmData.copyOf(expectedFrameBytes)
-            val pcmFrame = ShortArray(encoderFrameSize)
+
+            val lockedExpectedBytes = expectedFrameBytes
+            val lockedFrameSize = encoderFrameSize
+            val lockedSampleRate = encoderSampleRate
+            val lockedSource = currentAudioSource
+
+            if (byteCount != lockedExpectedBytes || (byteCount and 1) != 0) {
+                _encodeFailureCount.incrementAndGet()
+                Log.w("[RadioError]", "OPUS_ENCODE_REJECTED_BAD_FRAME samples=$sampleCount bytes=$byteCount expectedSamples=$lockedFrameSize expectedBytes=$lockedExpectedBytes frame=${encodeRateLimiter.frameCount} source=$lockedSource method=encode")
+                return null
+            }
+
+            val safeFrameBytes = pcmData.copyOf(lockedExpectedBytes)
+            val pcmFrame = ShortArray(lockedFrameSize)
             java.nio.ByteBuffer.wrap(safeFrameBytes)
                 .order(java.nio.ByteOrder.LITTLE_ENDIAN)
                 .asShortBuffer()
-                .get(pcmFrame, 0, encoderFrameSize)
+                .get(pcmFrame, 0, lockedFrameSize)
             val outputBuffer = ByteArray(MAX_ENCODED_SIZE)
             return try {
-                val encodedBytes = enc.encode(pcmFrame, 0, encoderFrameSize, outputBuffer, 0, outputBuffer.size)
+                val encodedBytes = enc.encode(pcmFrame, 0, lockedFrameSize, outputBuffer, 0, outputBuffer.size)
                 if (encodedBytes > 0) {
                     val result = outputBuffer.copyOf(encodedBytes)
                     encodeRateLimiter.tick()
@@ -189,14 +212,17 @@ class OpusCodec {
 
                     result
                 } else {
+                    _encodeFailureCount.incrementAndGet()
                     Log.w("[RadioError]", "OPUS_ENCODE_ZERO_RESULT encodedBytes=$encodedBytes samples=$sampleCount method=encode")
                     null
                 }
             } catch (e: AssertionError) {
-                Log.e("[RadioError]", "OPUS_ENCODE_ASSERTION_FAILURE samples=$sampleCount bytes=$byteCount message=${e.message} method=encode", e)
+                val assertCount = _assertionFailureCount.incrementAndGet()
+                Log.e("[RadioError]", "OPUS_ENCODE_ASSERTION_FAILURE frame=${encodeRateLimiter.frameCount} source=$lockedSource samples=$sampleCount bytes=$byteCount expectedBytes=$lockedExpectedBytes sampleRate=$lockedSampleRate frameSize=$lockedFrameSize pcmCopied=true message=${e.message} assertionFailures=$assertCount method=encode", e)
                 reinitializeEncoder()
                 null
             } catch (e: Exception) {
+                _encodeFailureCount.incrementAndGet()
                 Log.w("[RadioError]", "Encode error: ${e::class.simpleName}: ${e.message} samples=$sampleCount method=encode")
                 null
             }
@@ -204,20 +230,22 @@ class OpusCodec {
     }
 
     private fun reinitializeEncoder() {
-        try {
-            val enc = OpusEncoder(encoderSampleRate, encoderChannels, OpusApplication.OPUS_APPLICATION_VOIP)
-            enc.setBitrate(BITRATE)
-            enc.setSignalType(OpusSignal.OPUS_SIGNAL_VOICE)
-            enc.setComplexity(5)
-            enc.setUseVBR(true)
-            enc.setUseInbandFEC(true)
-            enc.setPacketLossPercent(10)
-            encoder = enc
-            Log.d(TAG, "Encoder re-initialized after assertion failure (sampleRate=$encoderSampleRate frameSize=$encoderFrameSize complexity=5) ${RadioDiagLog.elapsedTag()}")
-        } catch (t: Throwable) {
-            Log.e("[RadioError]", "Failed to re-initialize encoder: ${t::class.simpleName}: ${t.message} method=reinitializeEncoder", t)
-            encoder = null
-            initialized = false
+        synchronized(encodeLock) {
+            try {
+                val enc = OpusEncoder(encoderSampleRate, encoderChannels, OpusApplication.OPUS_APPLICATION_VOIP)
+                enc.setBitrate(currentBitrate)
+                enc.setSignalType(OpusSignal.OPUS_SIGNAL_VOICE)
+                enc.setComplexity(5)
+                enc.setUseVBR(true)
+                enc.setUseInbandFEC(true)
+                enc.setPacketLossPercent(10)
+                encoder = enc
+                Log.d(TAG, "Encoder re-initialized after assertion failure (sampleRate=$encoderSampleRate frameSize=$encoderFrameSize complexity=5 bitrate=$currentBitrate) ${RadioDiagLog.elapsedTag()}")
+            } catch (t: Throwable) {
+                Log.e("[RadioError]", "Failed to re-initialize encoder: ${t::class.simpleName}: ${t.message} method=reinitializeEncoder", t)
+                encoder = null
+                initialized = false
+            }
         }
     }
 

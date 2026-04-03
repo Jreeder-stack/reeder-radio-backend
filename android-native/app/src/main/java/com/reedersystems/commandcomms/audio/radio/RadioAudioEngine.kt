@@ -59,6 +59,7 @@ class RadioAudioEngine(private val context: Context) {
     private val rxSessionStats = RadioDiagLog.RxSessionStats()
     private val pcmReadRateLimiter = RadioDiagLog.RateLimiter(detailCount = 10)
     private val dspRateLimiter = RadioDiagLog.RateLimiter(detailCount = 3)
+    private var txSessionStartPacketCount: Long = 0
 
     private val audioFocusListener = AudioManager.OnAudioFocusChangeListener { focusChange ->
         when (focusChange) {
@@ -159,6 +160,9 @@ class RadioAudioEngine(private val context: Context) {
         private const val PROBE_RATE = DEFAULT_MIC_SAMPLE_RATE
 
         @Volatile
+        var bypassSourceCache: Boolean = true
+
+        @Volatile
         private var cachedSourceKey: String? = null
         @Volatile
         private var cachedSourceValue: Int? = null
@@ -257,56 +261,55 @@ class RadioAudioEngine(private val context: Context) {
         }
     }
 
-    private fun selectAudioSource(): Int {
+    private fun selectAudioSource(): Int? {
         val deviceKey = "${Build.MANUFACTURER}/${Build.MODEL}/API${Build.VERSION.SDK_INT}"
-        val cached = cachedSourceKey
-        if (cached != null && cached == deviceKey && cachedSourceValue != null) {
-            val src = cachedSourceValue!!
-            val name = cachedSourceName ?: "UNKNOWN"
-            Log.d("[AudioCapture]", "TX_AUDIO_SOURCE_SELECTED source=$name reason=cached_for_device device=$deviceKey")
-            txSessionStats.audioSource = name
-            return src
+        if (!bypassSourceCache) {
+            val cached = cachedSourceKey
+            if (cached != null && cached == deviceKey && cachedSourceValue != null) {
+                val src = cachedSourceValue!!
+                val name = cachedSourceName ?: "UNKNOWN"
+                Log.d("[AudioCapture]", "TX_AUDIO_SOURCE_SELECTED source=$name reason=cached_for_device device=$deviceKey")
+                txSessionStats.audioSource = name
+                return src
+            }
+        } else {
+            Log.d("[AudioCapture]", "TX_AUDIO_SOURCE_CACHE_BYPASSED device=$deviceKey bypassSourceCache=true")
         }
 
         data class Candidate(val source: Int, val name: String)
-        val primaryCandidates = listOf(
+        val candidates = mutableListOf(
             Candidate(MediaRecorder.AudioSource.MIC, "MIC"),
-            Candidate(MediaRecorder.AudioSource.VOICE_COMMUNICATION, "VOICE_COMMUNICATION"),
-            Candidate(MediaRecorder.AudioSource.VOICE_RECOGNITION, "VOICE_RECOGNITION")
+            Candidate(MediaRecorder.AudioSource.VOICE_RECOGNITION, "VOICE_RECOGNITION"),
+            Candidate(MediaRecorder.AudioSource.VOICE_COMMUNICATION, "VOICE_COMMUNICATION")
         )
+        if (Build.VERSION.SDK_INT >= 24) {
+            candidates.add(Candidate(MediaRecorder.AudioSource.UNPROCESSED, "UNPROCESSED"))
+        }
 
-        val allCandidateNames = primaryCandidates.map { it.name }.toMutableList()
-        if (Build.VERSION.SDK_INT >= 24) allCandidateNames.add("UNPROCESSED")
+        val allCandidateNames = candidates.map { it.name }
         Log.d("[AudioCapture]", "TX_AUDIO_SOURCE_PROBE_BEGIN device=$deviceKey candidates=$allCandidateNames")
 
-        val primaryResults = primaryCandidates.map { c -> probeAudioSource(c.source, c.name) }
-        val validPrimary = primaryResults.filter { it.accepted }
-        val bestPrimary = validPrimary.maxByOrNull { it.avgRms }
+        val allResults = candidates.map { c -> probeAudioSource(c.source, c.name) }
+        txSessionStats.probeResults.clear()
+        for (r in allResults) {
+            txSessionStats.probeResults[r.sourceName] = r.avgRms
+        }
 
-        if (bestPrimary != null) {
-            Log.d("[AudioCapture]", "TX_AUDIO_SOURCE_SELECTED source=${bestPrimary.sourceName} avgRms=${String.format("%.1f", bestPrimary.avgRms)} min=${bestPrimary.minSample} max=${bestPrimary.maxSample} reason=best_valid_source device=$deviceKey")
-            txSessionStats.audioSource = bestPrimary.sourceName
+        val validResults = allResults.filter { it.accepted }
+        val best = validResults.maxByOrNull { it.avgRms }
+
+        if (best != null) {
+            Log.d("[AudioCapture]", "TX_AUDIO_SOURCE_SELECTED source=${best.sourceName} avgRms=${String.format("%.1f", best.avgRms)} min=${best.minSample} max=${best.maxSample} reason=best_valid_source device=$deviceKey")
+            txSessionStats.audioSource = best.sourceName
             cachedSourceKey = deviceKey
-            cachedSourceValue = bestPrimary.source
-            cachedSourceName = bestPrimary.sourceName
-            return bestPrimary.source
+            cachedSourceValue = best.source
+            cachedSourceName = best.sourceName
+            return best.source
         }
 
-        if (Build.VERSION.SDK_INT >= 24) {
-            val unprocessedResult = probeAudioSource(MediaRecorder.AudioSource.UNPROCESSED, "UNPROCESSED")
-            if (unprocessedResult.accepted) {
-                Log.w("[AudioCapture]", "TX_AUDIO_SOURCE_SELECTED source=UNPROCESSED avgRms=${String.format("%.1f", unprocessedResult.avgRms)} min=${unprocessedResult.minSample} max=${unprocessedResult.maxSample} reason=last_resort_primary_sources_failed device=$deviceKey")
-                txSessionStats.audioSource = "UNPROCESSED"
-                cachedSourceKey = deviceKey
-                cachedSourceValue = MediaRecorder.AudioSource.UNPROCESSED
-                cachedSourceName = "UNPROCESSED"
-                return MediaRecorder.AudioSource.UNPROCESSED
-            }
-        }
-
-        Log.w("[AudioCapture]", "TX_AUDIO_SOURCE_SELECTED source=MIC reason=no_valid_source_above_threshold_hard_fallback device=$deviceKey threshold=$PROBE_SILENCE_RMS_THRESHOLD")
-        txSessionStats.audioSource = "MIC"
-        return MediaRecorder.AudioSource.MIC
+        Log.e("[AudioCapture]", "TX_AUDIO_SOURCE_ALL_REJECTED device=$deviceKey threshold=$PROBE_SILENCE_RMS_THRESHOLD probeResults=${txSessionStats.probeResults}")
+        txSessionStats.audioSource = "NONE"
+        return null
     }
 
     private fun computeDspCoefficients(sampleRate: Int) {
@@ -350,10 +353,18 @@ class RadioAudioEngine(private val context: Context) {
             txSessionStats.requestedRate = DEFAULT_MIC_SAMPLE_RATE
             pcmReadRateLimiter.reset()
             dspRateLimiter.reset()
+            opusCodec.resetFailureCounts()
+            udpTransport.resetTxDetailLogging()
+            txSessionStartPacketCount = udpTransport.txPacketCount
             val txStartMs = System.currentTimeMillis()
             Log.d(TAG, "TX_SESSION_START ${RadioDiagLog.elapsedTag()}")
 
             val audioSource = selectAudioSource()
+            if (audioSource == null) {
+                Log.e("[RadioError]", "TX_START_ABORTED reason=all_audio_sources_rejected method=startTransmit")
+                txSessionStats.stopReason = "all_sources_rejected"
+                return false
+            }
 
             val minBufferSize = AudioRecord.getMinBufferSize(
                 DEFAULT_MIC_SAMPLE_RATE,
@@ -415,6 +426,7 @@ class RadioAudioEngine(private val context: Context) {
                 Log.w("[AudioCapture]", "TX_SAMPLE_RATE_MISMATCH requested=$DEFAULT_MIC_SAMPLE_RATE actual=$actualSampleRate — adapting TX pipeline")
             }
 
+            opusCodec.currentAudioSource = txSessionStats.audioSource
             opusCodec.reinitializeEncoderOnly(actualSampleRate, 1)
             Log.d("[OpusCodec]", "OPUS_TX_INIT sampleRate=$actualSampleRate channels=1 frameMs=$CAPTURE_INTERVAL_MS frameSize=${opusCodec.encoderFrameSize} bitrate=${OpusCodec.BITRATE} ${RadioDiagLog.elapsedTag()}")
 
@@ -496,6 +508,7 @@ class RadioAudioEngine(private val context: Context) {
                                         if (pcmReadRateLimiter.shouldLogDetail()) {
                                             val stats = RadioDiagLog.pcmStats(monoFrame, monoFrameSizeBytes)
                                             if (stats.silent) txSessionStats.silentFrames++
+                                            txSessionStats.firstFrameRmsValues.add(stats.rms)
                                             Log.d("[AudioCapture]", "PCM_FRAME frame=${pcmReadRateLimiter.frameCount} readRet=$read $stats downmix=$needsStereoDownmix source=${txSessionStats.audioSource} sampleRate=$actualSampleRate channels=$actualChannelCount ${RadioDiagLog.elapsedTag()}")
                                         } else {
                                             val stats = RadioDiagLog.pcmStats(monoFrame, monoFrameSizeBytes)
@@ -611,6 +624,9 @@ class RadioAudioEngine(private val context: Context) {
             Log.w("[RadioError]", "AudioRecord release failed: ${e.message} method=stopTransmit")
         }
         audioRecord = null
+        txSessionStats.assertionFailures = opusCodec.assertionFailureCount
+        txSessionStats.encodeFailures = opusCodec.encodeFailureCount
+        txSessionStats.packetsSent = udpTransport.txPacketCount - txSessionStartPacketCount
         stateManager.txPipelineRunning = false
         stateManager.transitionTo(RadioState.IDLE, "tx_stopped")
         Log.d(TAG, txSessionStats.summary() + " ${RadioDiagLog.elapsedTag()}")

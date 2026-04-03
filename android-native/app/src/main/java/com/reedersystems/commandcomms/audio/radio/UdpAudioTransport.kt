@@ -37,7 +37,6 @@ class UdpAudioTransport(
     private var keepaliveJob: Job? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var sequenceNumber: Int = 0
-    private val sendQueue = Channel<ByteArray>(capacity = 64)
     @Volatile
     var rxPacketCount: Long = 0
         private set
@@ -58,6 +57,10 @@ class UdpAudioTransport(
 
     private val txRateLimiter = RadioDiagLog.RateLimiter(detailCount = 5)
     private val rxRateLimiter = RadioDiagLog.RateLimiter(detailCount = 5)
+
+    fun resetTxDetailLogging() {
+        txRateLimiter.reset()
+    }
     private var txSummaryBytes: Long = 0
     private var txFailures: Long = 0
     private var rxSummaryBytes: Long = 0
@@ -156,6 +159,10 @@ class UdpAudioTransport(
         txPacketCount = 0
     }
 
+    private data class QueuedPacket(val framed: ByteArray, val payloadBytes: Int)
+
+    private val sendPacketQueue = Channel<QueuedPacket>(capacity = 64)
+
     fun send(data: ByteArray) {
         val token = sessionTokenBytes
         if (token == null) {
@@ -166,15 +173,17 @@ class UdpAudioTransport(
             Log.w("[RadioError]", "Cannot send — relay host not configured method=send")
             return
         }
+        val payloadBytes = data.size
         val framed = framePacket(token, data)
-        sendQueue.trySend(framed)
+        sendPacketQueue.trySend(QueuedPacket(framed, payloadBytes))
     }
 
     private fun startSendLoop() {
         sendJob = scope.launch {
             try {
-                for (framed in sendQueue) {
+                for (qp in sendPacketQueue) {
                     val sock = socket ?: break
+                    val framed = qp.framed
                     try {
                         val address = resolveAddress()
                         if (address != null) {
@@ -185,7 +194,7 @@ class UdpAudioTransport(
 
                             txRateLimiter.tick()
                             if (txRateLimiter.shouldLogDetail()) {
-                                Log.d(TAG, "TX_PACKET seq=${sequenceNumber - 1} dest=$relayHost:$relayPort bytes=${framed.size} tokenPresent=true channelIdx=$channelIndex ${RadioDiagLog.elapsedTag()}")
+                                Log.d(TAG, "TX_PACKET seq=${sequenceNumber - 1} payloadBytes=${qp.payloadBytes} framedBytes=${framed.size} dest=$relayHost:$relayPort tokenPresent=true channelIdx=$channelIndex ${RadioDiagLog.elapsedTag()}")
                             } else if (txRateLimiter.shouldLogSummary()) {
                                 val cnt = txRateLimiter.resetSummaryAccumulator()
                                 Log.d(TAG, "TX_SUMMARY packets=$cnt totalPkts=$txPacketCount totalBytes=$txSummaryBytes failures=$txFailures dest=$relayHost:$relayPort ${RadioDiagLog.elapsedTag()}")
