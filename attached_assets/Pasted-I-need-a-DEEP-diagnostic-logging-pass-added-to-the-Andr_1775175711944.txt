@@ -1,0 +1,398 @@
+I need a DEEP diagnostic logging pass added to the Android native radio TX/RX path so logcat can tell us exactly where the T320 audio path is failing.
+
+Goal:
+Make logcat show the complete life of a radio session from PTT press to floor request to TX startup to audio capture to Opus encode to UDP send to RX decode/playback and teardown. I want enough logging to identify whether failure is in:
+- PTT handling
+- floor control/signaling
+- AudioRecord creation/start
+- actual negotiated sample rate/channel count
+- PCM read loop
+- DSP/downmix
+- Opus encode/decode
+- UDP send/receive
+- jitter buffer
+- AudioTrack playback
+- reconnect/reset logic
+- any abort/early return path
+
+IMPORTANT:
+- Do NOT change the working behavior beyond adding logs and tiny safe guards.
+- Do NOT remove or rename existing logs unless replacing them with richer versions.
+- Keep all existing file/module names and architecture.
+- Add logs only where helpful; avoid flooding every single frame forever.
+- Use rate-limited recurring logs for hot loops and detailed one-time logs for startup/first frame/errors/state changes.
+- Every early return, exception, negative return code, fallback, or guard path must log the exact reason.
+
+Use consistent tags so I can filter logcat clearly. Add or standardize these tags:
+- [PTT-DIAG]
+- [RadioState]
+- [FloorCtrl]
+- [RadioSigGW]
+- [AudioCapture]
+- [AudioDSP]
+- [OpusCodec]
+- [UdpTransport]
+- [JitterBuf]
+- [AudioPlay]
+- [RadioEngine]
+- [RadioError]
+
+Files to audit/add logs in at minimum:
+- android-native/app/src/main/java/com/reedersystems/commandcomms/audio/radio/RadioAudioEngine.kt
+- android-native/app/src/main/java/com/reedersystems/commandcomms/audio/radio/AudioCapture.kt
+- android-native/app/src/main/java/com/reedersystems/commandcomms/audio/radio/OpusCodec.kt
+And any closely related UDP/signaling/floor-control files used by the native Android radio path.
+
+What to log in detail:
+
+1) PTT + FLOOR CONTROL
+On every PTT press/release:
+- source of the event (hardware receiver, MainActivity, service, etc.)
+- action down/up
+- key code if present
+- current radio/PTT state before handling
+- active channel / room key / channel numeric id if known
+- whether signaling is connected
+- whether request is ignored and why
+
+On floor request path:
+- floor request emitted
+- channel key/id used
+- session token presence yes/no
+- reconnect state yes/no
+- exact timestamp for request start
+
+On floor response path:
+- granted / denied / timeout / ignored
+- sender unit id if present
+- exact channel key/id used
+- latency from PTT down -> grant
+- if denied/ignored, exact reason
+
+2) RADIO STATE MACHINE
+Whenever radio state changes:
+- old state -> new state
+- reason/event causing change
+- active channel
+- reconnect counter
+- whether TX/RX pipelines are running
+
+Also log if an event is ignored because state does not allow it.
+
+3) AUDIORECORD / CAPTURE STARTUP
+When TX begins:
+- requested audio source name and numeric value
+- requested sample rate
+- requested channel mask
+- requested channel count
+- requested PCM format
+- requested buffer size
+- minBufferSize result
+- selected frame duration ms
+- requested samples per frame
+- requested bytes per frame
+
+After AudioRecord is created:
+- state initialized yes/no
+- actual AudioRecord sampleRate
+- actual channelCount if available
+- actual audioFormat
+- actual bufferSize/frameCount if available
+- audio session id
+- whether source fallback happened (UNPROCESSED -> VOICE_RECOGNITION -> MIC, etc.)
+- whether AGC/NS/AEC were found and whether each was enabled/disabled successfully
+- if any effect attach/detach fails, log exact error
+
+After startRecording():
+- success/failure
+- recordingState
+- actual sample rate/channel count/audio format re-checked after start
+- if actual rate differs from requested rate, log both loudly
+- if channel count differs from requested, log both loudly
+- if unsupported rate/channel count detected, log exact abort reason
+
+4) PCM READ LOOP
+For first 5 frames of every TX session, log:
+- read() return value
+- whether read was bytes or shorts
+- expected samples per frame
+- expected bytes per frame
+- actual bytes accumulated
+- channel count used by pipeline
+- whether stereo downmix was active
+- whether frame was accepted, partial, padded, dropped, or skipped
+- first few sample stats:
+  - min sample
+  - max sample
+  - average absolute amplitude
+  - RMS if easy
+  - whether frame appears silent/near-zero
+- time since TX start
+
+After that, rate-limit to once every 1 second:
+- total frames read
+- partial reads count
+- zero/negative reads count
+- silent-frame count
+- accumulated bytes pending
+- overruns if known
+
+If read() <= 0:
+- log exact value
+- count occurrences
+- if aborting, log exact reason
+
+5) DOWNMIX + DSP
+When downmix is used:
+- source channels
+- target channels
+- method used (left only, average L/R, etc.)
+
+For DSP startup per TX session:
+- sample rate used for DSP
+- frame size used
+- HP filter cutoff/coefficients
+- LP filter cutoff/coefficients
+- compressor settings/time constants
+- any other sample-rate-derived coefficient
+
+For first 3 frames after DSP:
+- pre-DSP min/max/RMS
+- post-DSP min/max/RMS
+- clipping count if any
+- whether frame was considered too quiet or saturated
+
+6) OPUS ENCODER
+On encoder init/reinit:
+- sample rate
+- channels
+- frame size samples
+- frame duration ms
+- bitrate
+- VBR enabled yes/no
+- complexity
+- application mode
+- FEC enabled yes/no
+- packet loss percent configured
+- whether encoder-only reset or full codec reset happened
+- exact reason for reinit/reset
+
+On first 5 encode calls of each TX session:
+- PCM samples passed to opus_encode
+- bytes of PCM source buffer
+- frame size argument passed
+- encoded byte count returned
+- if return < 0, log exact error code and translate to symbolic meaning if possible
+- running sequence number for outbound voice packet
+- whether packet was skipped because encoded bytes <= 0
+
+Then rate-limit to once every 1 second:
+- total frames encoded
+- average encoded packet size
+- min/max encoded size
+- encode failures count
+- zero-length packet count
+
+7) UDP TX
+Every TX session start:
+- destination host/IP
+- destination port
+- session token present yes/no
+- token length
+- whether token was refreshed/reconnect
+- initial sequence number
+
+For first 5 outbound voice packets:
+- sequence number
+- payload size
+- opus size
+- full packet size
+- timestamp
+- channel id/key
+- whether keepalive was sent before TX
+- whether send succeeded
+
+Then rate-limit to once every 1 second:
+- total packets sent
+- total bytes sent
+- send failures count
+- last sequence number
+- last successful send timestamp
+
+If send fails:
+- exact exception / errno / message
+- packet sequence number
+- payload length
+- whether socket/session token/destination was null or stale
+
+8) UDP RX
+For first 5 inbound packets per RX session:
+- sequence number
+- payload length
+- whether token matched
+- channel id/key
+- whether packet was accepted or dropped
+- drop reason if dropped
+- jitter buffer depth before/after enqueue
+
+Then rate-limit to once every 1 second:
+- rx packets count
+- rx bytes count
+- duplicates count
+- out-of-order count
+- dropped count by reason
+- jitter depth
+- last rx timestamp
+
+9) JITTER BUFFER
+On RX start/reset:
+- configured target depth
+- protection frames
+- flush count
+- reason for flush/reset
+
+On first packets:
+- enqueue sequence
+- queue depth after enqueue
+- whether playback is waiting for threshold
+- whether late packet dropped
+- whether missing packet concealment/filler used
+
+Rate-limited once per second:
+- queue depth
+- underruns
+- overruns
+- late drops
+- duplicate drops
+- reorder events
+
+10) OPUS DECODER
+On decoder init/reset:
+- output sample rate
+- channels
+- reason for reset
+
+For first 5 decode calls:
+- packet sequence number
+- packet size
+- decoded sample count returned
+- PLC/FEC path used or not
+- decode error code if any
+- whether output considered silent
+
+Then rate-limit:
+- decode count
+- failures
+- average decoded samples/frame
+- PLC/FEC usage count
+
+11) AUDIO TRACK / PLAYBACK
+On AudioTrack init/start:
+- sample rate
+- channel config
+- format
+- buffer size
+- mode/stream attributes
+- state and playState
+- any route/device info available
+
+For first 5 writes:
+- bytes/samples written
+- short write yes/no
+- write error code if any
+- playback started yes/no
+
+Rate-limited:
+- total writes
+- short writes
+- playback underruns if available
+- last write timestamp
+
+12) RECONNECT / RESET PATHS
+Whenever reconnect logic triggers:
+- reconnect count
+- what triggered reconnect
+- whether token changed
+- whether encoder reset
+- whether decoder reset
+- whether jitter buffer flushed
+- whether AudioTrack flushed
+- whether UDP sequence reset
+- total reset duration ms
+
+13) EARLY RETURNS / FAILURES
+This is critical:
+Every place the code returns early from TX or RX startup/loop/teardown must log:
+- method name
+- exact condition
+- relevant variable values
+- whether this is fatal or recoverable
+
+Examples:
+- no session token
+- floor not granted
+- AudioRecord init failed
+- unsupported sample rate
+- unsupported channel count
+- negative read
+- zero encoded bytes
+- UDP socket null
+- destination missing
+- decoder reset failure
+- playback init failure
+
+14) EXCEPTIONS
+Wrap major boundaries and log full stack traces:
+- TX startup
+- capture loop
+- encode/send loop
+- RX receive/decode loop
+- playback write loop
+- reconnect/reset sequence
+
+Use [RadioError] tag for all exceptions and fatal paths.
+
+15) ONE-LINE SESSION SUMMARIES
+At end of each TX session, print a compact summary:
+- txDurationMs
+- requestedRate
+- actualRate
+- channels
+- sourceUsed
+- framesRead
+- framesEncoded
+- packetsSent
+- encodeFailures
+- sendFailures
+- avgEncodedBytes
+- silenceFrames
+- reasonStopped
+
+At end of each RX session, print:
+- rxDurationMs
+- packetsReceived
+- packetsDropped
+- packetsDecoded
+- decodeFailures
+- avgJitterDepth
+- underruns
+- reasonStopped
+
+16) OPTIONAL DEBUG HELPERS
+If easy and safe, add:
+- a debug flag to dump the first 1-2 TX PCM frames stats more verbosely
+- a debug flag to dump first few encoded packet sizes
+- a single helper function to standardize structured logs
+- monotonic elapsed timestamps in ms from session start for TX/RX events
+
+IMPORTANT PERFORMANCE RULES
+- Detailed per-frame logs only for the first 5 frames of a session
+- After that, switch to 1-second summary logs inside loops
+- Always log errors/exceptions immediately
+- Do not spam logcat endlessly per frame during normal operation
+
+Deliverable:
+- Add the logs
+- Keep behavior intact
+- Briefly summarize exactly where logs were added and what tags to filter
+- Make it easy for me to run logcat and see the full TX/RX story
