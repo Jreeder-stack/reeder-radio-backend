@@ -233,12 +233,6 @@ export function PTTButton({
         e.preventDefault();
         e.stopPropagation();
       }}
-      onTouchStart={(e) => {
-        e.preventDefault();
-      }}
-      onTouchMove={(e) => {
-        e.preventDefault();
-      }}
       style={{
         touchAction: 'none',
         WebkitTouchCallout: 'none',

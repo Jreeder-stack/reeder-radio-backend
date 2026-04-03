@@ -191,6 +191,7 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
       return true;
     } catch (err) {
       console.error('[PTT] Failed to start transmission:', err);
+      audioTransportManager.forceRelease();
       toneEngine.playErrorTone?.();
       flashPttError();
       audioTransportManager.unmuteChannels(mutedChannelsRef.current);
@@ -492,11 +493,6 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
           onPointerDown={handlePTTDown}
           onPointerUp={handlePTTUp}
           onPointerCancel={handlePTTUp}
-          onMouseDown={handlePTTDown}
-          onMouseUp={handlePTTUp}
-          onMouseLeave={handlePTTUp}
-          onTouchStart={handlePTTDown}
-          onTouchEnd={handlePTTUp}
           disabled={!hasTxChannels || toneTransmitting}
           className={`px-8 py-3 rounded-lg font-bold text-lg transition-all select-none ${
             pttError

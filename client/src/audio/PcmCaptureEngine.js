@@ -8,13 +8,16 @@ export class PcmCaptureEngine {
     this._workletNode = null;
     this.running = false;
     this.onFrame = null;
+    this._generation = 0;
   }
 
   async start(onFrame) {
     if (this.running) return;
     this.onFrame = onFrame;
 
-    this.stream = await navigator.mediaDevices.getUserMedia({
+    const gen = ++this._generation;
+
+    const stream = await navigator.mediaDevices.getUserMedia({
       audio: {
         channelCount: 1,
         sampleRate: PCM_SPEC.sampleRate,
@@ -24,18 +27,45 @@ export class PcmCaptureEngine {
       },
     });
 
-    this.audioContext = new (window.AudioContext || window.webkitAudioContext)({
+    if (this._generation !== gen) {
+      stream.getTracks().forEach((t) => t.stop());
+      return;
+    }
+
+    this.stream = stream;
+
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)({
       sampleRate: PCM_SPEC.sampleRate,
     });
 
+    if (this._generation !== gen) {
+      this.stream.getTracks().forEach((t) => t.stop());
+      this.stream = null;
+      await audioContext.close().catch(() => {});
+      return;
+    }
+
+    this.audioContext = audioContext;
+
     if (this.audioContext.state === 'suspended') {
       await this.audioContext.resume();
+    }
+
+    if (this._generation !== gen) {
+      this._cleanupPartial();
+      return;
     }
 
     this.source = this.audioContext.createMediaStreamSource(this.stream);
 
     try {
       await this.audioContext.audioWorklet.addModule('/pcm-capture-worklet.js');
+
+      if (this._generation !== gen) {
+        this._cleanupPartial();
+        return;
+      }
+
       this._workletNode = new AudioWorkletNode(this.audioContext, 'pcm-capture-processor');
 
       this._workletNode.port.onmessage = (event) => {
@@ -49,10 +79,45 @@ export class PcmCaptureEngine {
       this._workletNode.connect(this.audioContext.destination);
     } catch (err) {
       console.warn('AudioWorklet not supported, falling back to ScriptProcessor:', err.message);
+      if (this._generation !== gen) {
+        this._cleanupPartial();
+        return;
+      }
       this._useFallback();
     }
 
+    if (this._generation !== gen) {
+      this._cleanupPartial();
+      return;
+    }
+
     this.running = true;
+  }
+
+  _cleanupPartial() {
+    if (this._workletNode) {
+      this._workletNode.disconnect();
+      this._workletNode.port.onmessage = null;
+      this._workletNode = null;
+    }
+    if (this._fallbackProcessor) {
+      this._fallbackProcessor.disconnect();
+      this._fallbackProcessor.onaudioprocess = null;
+      this._fallbackProcessor = null;
+      this._fallbackBuffer = new Int16Array(0);
+    }
+    if (this.source) {
+      this.source.disconnect();
+      this.source = null;
+    }
+    if (this.stream) {
+      this.stream.getTracks().forEach((t) => t.stop());
+      this.stream = null;
+    }
+    if (this.audioContext) {
+      this.audioContext.close().catch(() => {});
+      this.audioContext = null;
+    }
   }
 
   _useFallback() {
@@ -85,6 +150,7 @@ export class PcmCaptureEngine {
   }
 
   async stop() {
+    this._generation++;
     this.running = false;
 
     if (this._workletNode) {

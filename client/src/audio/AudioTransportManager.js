@@ -275,6 +275,11 @@ class AudioTransportManager {
       room.ws.send(JSON.stringify(packet));
     });
 
+    if (this.pttState !== PTT_STATES.ARMING) {
+      await this._capture.stop();
+      return false;
+    }
+
     this._setPttState(PTT_STATES.TRANSMITTING);
     return true;
   }
