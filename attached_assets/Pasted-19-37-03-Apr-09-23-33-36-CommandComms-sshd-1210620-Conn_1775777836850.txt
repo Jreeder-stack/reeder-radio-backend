@@ -1,0 +1,50 @@
+19:37:03 Apr 09 23:33:36 CommandComms sshd[1210620]: Connection closed by authenticating user root 147.224.62.110 port 35234 [preauth]
+19:37:03 Apr 09 23:33:49 CommandComms sshd[1210622]: Invalid user prueba from 101.126.130.65 port 43544
+19:37:03 Apr 09 23:33:49 CommandComms sshd[1210622]: Received disconnect from 101.126.130.65 port 43544:11: Bye Bye [preauth]
+19:37:03 Apr 09 23:33:49 CommandComms sshd[1210622]: Disconnected from invalid user prueba 101.126.130.65 port 43544 [preauth]
+19:37:03 Apr 09 23:33:50 CommandComms sshd[1210624]: Invalid user user from 2.57.121.25 port 45992
+19:37:03 Apr 09 23:33:51 CommandComms sshd[1210624]: Received disconnect from 2.57.121.25 port 45992:11: Bye [preauth]
+19:37:03 Apr 09 23:33:51 CommandComms sshd[1210624]: Disconnected from invalid user user 2.57.121.25 port 45992 [preauth]
+19:37:03 Apr 09 23:33:56 CommandComms sshd[1210626]: Received disconnect from 43.160.200.19 port 49196:11: Bye Bye [preauth]
+19:37:03 Apr 09 23:33:56 CommandComms sshd[1210626]: Disconnected from authenticating user root 43.160.200.19 port 49196 [preauth]
+19:37:03 Apr 09 23:34:25 CommandComms sshd[1210629]: Received disconnect from 152.32.252.65 port 35278:11: Bye Bye [preauth]
+19:37:03 Apr 09 23:34:25 CommandComms sshd[1210629]: Disconnected from authenticating user root 152.32.252.65 port 35278 [preauth]
+19:37:03 Apr 09 23:34:30 CommandComms sshd[1210631]: Invalid user bitcoin from 89.190.156.113 port 41934
+19:37:03 Apr 09 23:34:30 CommandComms sshd[1210631]: Received disconnect from 89.190.156.113 port 41934:11: Bye Bye [preauth]
+19:37:03 Apr 09 23:34:30 CommandComms sshd[1210631]: Disconnected from invalid user bitcoin 89.190.156.113 port 41934 [preauth]
+19:37:03 Apr 09 23:34:40 CommandComms sshd[1210633]: Invalid user ubuntu from 211.186.79.173 port 50602
+19:37:03 Apr 09 23:34:40 CommandComms sshd[1210633]: Received disconnect from 211.186.79.173 port 50602:11: Bye Bye [preauth]
+19:37:03 Apr 09 23:34:40 CommandComms sshd[1210633]: Disconnected from invalid user ubuntu 211.186.79.173 port 50602 [preauth]
+19:37:03 Apr 09 23:34:53 CommandComms sshd[1210639]: Received disconnect from 182.93.50.90 port 55610:11: Bye Bye [preauth]
+19:37:03 Apr 09 23:34:53 CommandComms sshd[1210639]: Disconnected from authenticating user root 182.93.50.90 port 55610 [preauth]
+19:37:03 Apr 09 23:34:53 CommandComms sshd[1210641]: Invalid user alex from 177.70.6.158 port 54288
+19:37:03 Apr 09 23:34:53 CommandComms sshd[1210641]: Received disconnect from 177.70.6.158 port 54288:11: Bye Bye [preauth]
+19:37:03 Apr 09 23:34:53 CommandComms sshd[1210641]: Disconnected from invalid user alex 177.70.6.158 port 54288 [preauth]
+19:37:03 Apr 09 23:34:54 CommandComms sshd[1210643]: Connection reset by authenticating user root 45.148.10.147 port 5070 [preauth]
+19:37:03 Apr 09 23:34:55 CommandComms sshd[1210645]: Invalid user user from 103.117.56.120 port 56388
+19:37:03 Apr 09 23:34:56 CommandComms sshd[1210645]: Received disconnect from 103.117.56.120 port 56388:11: Bye Bye [preauth]
+19:37:03 Apr 09 23:34:56 CommandComms sshd[1210645]: Disconnected from invalid user user 103.117.56.120 port 56388 [preauth]
+19:37:03 Apr 09 23:35:00 CommandComms sshd[1210647]: Connection closed by authenticating user root 110.35.80.116 port 36562 [preauth]
+19:37:03 Apr 09 23:35:01 CommandComms CRON[1210649]: pam_unix(cron:session): session opened for user root(uid=0) by root(uid=0)
+19:37:03 Apr 09 23:35:01 CommandComms CRON[1210650]: (root) CMD (command -v debian-sa1 > /dev/null && debian-sa1 1 1)
+19:37:03 Apr 09 23:35:01 CommandComms CRON[1210649]: pam_unix(cron:session): session closed for user root
+19:37:03 Apr 09 23:35:32 CommandComms sshd[1210676]: Invalid user bkuser from 43.160.200.19 port 21648
+19:37:03 Apr 09 23:35:32 CommandComms sshd[1210676]: Received disconnect from 43.160.200.19 port 21648:11: Bye Bye [preauth]
+19:37:03 Apr 09 23:35:32 CommandComms sshd[1210676]: Disconnected from invalid user bkuser 43.160.200.19 port 21648 [preauth]
+19:37:03 Apr 09 23:35:49 CommandComms sshd[1210679]: Invalid user ftpuser from 89.190.156.113 port 53356
+19:37:03 Apr 09 23:35:49 CommandComms sshd[1210679]: Received disconnect from 89.190.156.113 port 53356:11: Bye Bye [preauth]
+19:37:03 Apr 09 23:35:49 CommandComms sshd[1210679]: Disconnected from invalid user ftpuser 89.190.156.113 port 53356 [preauth]
+19:37:03 Apr 09 23:36:01 CommandComms sshd[1210681]: Connection closed by authenticating user root 147.224.62.110 port 54732 [preauth]
+19:37:03 Apr 09 23:36:10 CommandComms sshd[1210683]: Received disconnect from 152.32.252.65 port 41532:11: Bye Bye [preauth]
+19:37:03 Apr 09 23:36:10 CommandComms sshd[1210683]: Disconnected from authenticating user root 152.32.252.65 port 41532 [preauth]
+19:37:03 Apr 09 23:36:19 CommandComms python3[23615]: 2026-04-09T23:36:19.174798Z INFO ExtHandler ExtHandler [HEARTBEAT] Agent WALinuxAgent-2.15.1.3 is running as the goal state agent [DEBUG HeartbeatCounter: 775;HeartbeatId: C4A2BB3F-197C-40BD-847D-62890B0A8BFB;UpdateGSErrors: 0;AutoUpdate: 1;UpdateMode: SelfUpdate;]
+19:37:03 Apr 09 23:36:23 CommandComms sshd[1210685]: Invalid user testftp from 211.186.79.173 port 40866
+19:37:03 Apr 09 23:36:23 CommandComms sshd[1210685]: Received disconnect from 211.186.79.173 port 40866:11: Bye Bye [preauth]
+19:37:03 Apr 09 23:36:23 CommandComms sshd[1210685]: Disconnected from invalid user testftp 211.186.79.173 port 40866 [preauth]
+19:37:03 Apr 09 23:36:33 CommandComms sshd[1210698]: Connection closed by authenticating user root 110.35.80.116 port 42756 [preauth]
+19:37:03 Apr 09 23:36:38 CommandComms sshd[1210700]: Received disconnect from 177.70.6.158 port 52750:11: Bye Bye [preauth]
+19:37:03 Apr 09 23:36:38 CommandComms sshd[1210700]: Disconnected from authenticating user root 177.70.6.158 port 52750 [preauth]
+19:37:03 Apr 09 23:36:43 CommandComms sshd[1210704]: Connection reset by authenticating user root 2.57.122.194 port 11076 [preauth]
+19:37:03 Apr 09 23:36:44 CommandComms sshd[1210702]: Received disconnect from 103.117.56.120 port 52872:11: Bye Bye [preauth]
+19:37:03 Apr 09 23:36:44 CommandComms sshd[1210702]: Disconnected from authenticating user root 103.117.56.120 port 52872 [preauth]
+19:37:03 Apr 09 23:36:57 CommandComms sshd[1210706]: Connection closed by 45.148.10.121 port 51914 [preauth]

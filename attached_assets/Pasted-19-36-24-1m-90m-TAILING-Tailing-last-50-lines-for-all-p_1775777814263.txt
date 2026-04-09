@@ -1,0 +1,104 @@
+19:36:24 [1m[90m[TAILING] Tailing last 50 lines for [all] processes (change the value with --lines option)[39m[22m
+19:36:24 [90m/home/Jreeder5029/.pm2/logs/command-comms-error.log last 50 lines:[39m
+19:36:24 [AudioRelay] RELAY_CHANNEL_ID_ZERO channelKey=TESTING__TESTING 1 — receiver may drop this packet
+19:36:24 RADIO_RELAY_PACKET_ZERO_CHANNEL_WARNING roomKey=TESTING__TESTING 1 senderUnit=ADMIN
+19:36:24 [AudioRelay] RELAY_CHANNEL_ID_ZERO channelKey=TESTING__TESTING 1 — receiver may drop this packet
+19:36:24 RADIO_RELAY_PACKET_ZERO_CHANNEL_WARNING roomKey=TESTING__TESTING 1 senderUnit=ADMIN
+19:36:24 [AudioRelay] RELAY_CHANNEL_ID_ZERO channelKey=TESTING__TESTING 1 — receiver may drop this packet
+19:36:24 RADIO_RELAY_PACKET_ZERO_CHANNEL_WARNING roomKey=TESTING__TESTING 1 senderUnit=ADMIN
+19:36:24 [AudioRelay] RELAY_CHANNEL_ID_ZERO channelKey=TESTING__TESTING 1 — receiver may drop this packet
+19:36:24 RADIO_RELAY_PACKET_ZERO_CHANNEL_WARNING roomKey=TESTING__TESTING 1 senderUnit=ADMIN
+19:36:24 [AudioRelay] RELAY_CHANNEL_ID_ZERO channelKey=TESTING__TESTING 1 — receiver may drop this packet
+19:36:24 RADIO_RELAY_PACKET_ZERO_CHANNEL_WARNING roomKey=TESTING__TESTING 1 senderUnit=ADMIN
+19:36:24 [AudioRelay] RELAY_CHANNEL_ID_ZERO channelKey=TESTING__TESTING 1 — receiver may drop this packet
+19:36:24 RADIO_RELAY_PACKET_ZERO_CHANNEL_WARNING roomKey=TESTING__TESTING 1 senderUnit=ADMIN
+19:36:24 [AudioRelay] RELAY_CHANNEL_ID_ZERO channelKey=TESTING__TESTING 1 — receiver may drop this packet
+19:36:24 RADIO_RELAY_PACKET_ZERO_CHANNEL_WARNING roomKey=TESTING__TESTING 1 senderUnit=ADMIN
+19:36:24 [AudioRelay] RELAY_CHANNEL_ID_ZERO channelKey=TESTING__TESTING 1 — receiver may drop this packet
+19:36:24 RADIO_RELAY_PACKET_ZERO_CHANNEL_WARNING roomKey=TESTING__TESTING 1 senderUnit=ADMIN
+19:36:24 [AudioRelay] RELAY_CHANNEL_ID_ZERO channelKey=TESTING__TESTING 1 — receiver may drop this packet
+19:36:24 RADIO_RELAY_PACKET_ZERO_CHANNEL_WARNING roomKey=TESTING__TESTING 1 senderUnit=ADMIN
+19:36:24 [AudioRelay] RELAY_CHANNEL_ID_ZERO channelKey=TESTING__TESTING 1 — receiver may drop this packet
+19:36:24 RADIO_RELAY_PACKET_ZERO_CHANNEL_WARNING roomKey=TESTING__TESTING 1 senderUnit=ADMIN
+19:36:24 [AudioRelay] RELAY_CHANNEL_ID_ZERO channelKey=TESTING__TESTING 1 — receiver may drop this packet
+19:36:24 RADIO_RELAY_PACKET_ZERO_CHANNEL_WARNING roomKey=TESTING__TESTING 1 senderUnit=ADMIN
+19:36:24 [AudioRelay] RELAY_CHANNEL_ID_ZERO channelKey=TESTING__TESTING 1 — receiver may drop this packet
+19:36:24 RADIO_RELAY_PACKET_ZERO_CHANNEL_WARNING roomKey=TESTING__TESTING 1 senderUnit=ADMIN
+19:36:24 [AudioRelay] RELAY_CHANNEL_ID_ZERO channelKey=TESTING__TESTING 1 — receiver may drop this packet
+19:36:24 RADIO_RELAY_PACKET_ZERO_CHANNEL_WARNING roomKey=TESTING__TESTING 1 senderUnit=ADMIN
+19:36:24 [AudioRelay] RELAY_CHANNEL_ID_ZERO channelKey=TESTING__TESTING 1 — receiver may drop this packet
+19:36:24 RADIO_RELAY_PACKET_ZERO_CHANNEL_WARNING roomKey=TESTING__TESTING 1 senderUnit=ADMIN
+19:36:24 [AudioRelay] RELAY_CHANNEL_ID_ZERO channelKey=TESTING__TESTING 1 — receiver may drop this packet
+19:36:24 RADIO_RELAY_PACKET_ZERO_CHANNEL_WARNING roomKey=TESTING__TESTING 1 senderUnit=ADMIN
+19:36:24 [AudioRelay] RELAY_CHANNEL_ID_ZERO channelKey=TESTING__TESTING 1 — receiver may drop this packet
+19:36:24 RADIO_RELAY_PACKET_ZERO_CHANNEL_WARNING roomKey=TESTING__TESTING 1 senderUnit=ADMIN
+19:36:24 [AudioRelay] RELAY_CHANNEL_ID_ZERO channelKey=TESTING__TESTING 1 — receiver may drop this packet
+19:36:24 RADIO_RELAY_PACKET_ZERO_CHANNEL_WARNING roomKey=TESTING__TESTING 1 senderUnit=ADMIN
+19:36:24 [AudioRelay] RELAY_CHANNEL_ID_ZERO channelKey=TESTING__TESTING 1 — receiver may drop this packet
+19:36:24 RADIO_RELAY_PACKET_ZERO_CHANNEL_WARNING roomKey=TESTING__TESTING 1 senderUnit=ADMIN
+19:36:24 [AudioRelay] RELAY_CHANNEL_ID_ZERO channelKey=TESTING__TESTING 1 — receiver may drop this packet
+19:36:24 RADIO_RELAY_PACKET_ZERO_CHANNEL_WARNING roomKey=TESTING__TESTING 1 senderUnit=ADMIN
+19:36:24 [AudioRelay] RELAY_CHANNEL_ID_ZERO channelKey=TESTING__TESTING 1 — receiver may drop this packet
+19:36:24 RADIO_RELAY_PACKET_ZERO_CHANNEL_WARNING roomKey=TESTING__TESTING 1 senderUnit=ADMIN
+19:36:24 [AudioRelay] RELAY_CHANNEL_ID_ZERO channelKey=TESTING__TESTING 1 — receiver may drop this packet
+19:36:24 RADIO_RELAY_PACKET_ZERO_CHANNEL_WARNING roomKey=TESTING__TESTING 1 senderUnit=ADMIN
+19:36:24 [AudioRelay] RELAY_CHANNEL_ID_ZERO channelKey=TESTING__TESTING 1 — receiver may drop this packet
+19:36:24 RADIO_RELAY_PACKET_ZERO_CHANNEL_WARNING roomKey=TESTING__TESTING 1 senderUnit=ADMIN
+19:36:24 [AudioRelay] RELAY_CHANNEL_ID_ZERO channelKey=TESTING__TESTING 1 — receiver may drop this packet
+19:36:24 RADIO_RELAY_PACKET_ZERO_CHANNEL_WARNING roomKey=TESTING__TESTING 1 senderUnit=ADMIN
+19:36:24 [AudioRelay] RELAY_CHANNEL_ID_ZERO channelKey=TESTING__TESTING 1 — receiver may drop this packet
+19:36:24 RADIO_RELAY_PACKET_ZERO_CHANNEL_WARNING roomKey=TESTING__TESTING 1 senderUnit=ADMIN
+19:36:24 [AudioRelay] RELAY_CHANNEL_ID_ZERO channelKey=TESTING__TESTING 1 — receiver may drop this packet
+19:36:24 RADIO_RELAY_PACKET_ZERO_CHANNEL_WARNING roomKey=TESTING__TESTING 1 senderUnit=ADMIN
+19:36:24 [90m/home/Jreeder5029/.pm2/logs/command-comms-out.log last 50 lines:[39m
+19:36:24 [Signaling] PTT START granted: DISPATCH-1 on TESTING__TESTING 1 (floor granted for holdsFloor check)
+19:36:24 [RecordingTap] TX recording started: unit=DISPATCH-1 channel=TESTING__TESTING 1
+19:36:24 [RecordingTap] Finalizing recording: unit=DISPATCH-1 channel=TESTING__TESTING 1 frames=5 duration=2000ms
+19:36:24 [RecordingTap] Audio message saved: id=2193 channel=TESTING__TESTING 1 sender=DISPATCH-1 duration=2000ms
+19:36:24 [RecordingTap] TX recording started: unit=DISPATCH-1 channel=TESTING__TESTING 1
+19:36:24 [Signaling] PTT END: DISPATCH-1 on TESTING__TESTING 1 (4974ms)
+19:36:24 [RecordingTap] Skipping short TX (0ms < 100ms): unit=DISPATCH-1 channel=TESTING__TESTING 1
+19:36:24 [Signaling] Grace period ended for TESTING__TESTING 1
+19:36:24 [AUTH] /me check: hasSession=true sessionID=bAp98PQE... cookie=true
+19:36:24 [AUTH] /me: session has user="DISPATCH-1" id=7, refreshing from DB...
+19:36:24 [AUTH] /me: returning fresh user data for "DISPATCH-1" role=admin unit_id=DISPATCH-1
+19:36:24 [API] GET /api/auth/me | user=DISPATCH-1(id:7) | sid=bAp98PQE... | 304 | 16ms
+19:36:24 [AUTH] /me check: hasSession=true sessionID=bAp98PQE... cookie=true
+19:36:24 [AUTH] /me: session has user="DISPATCH-1" id=7, refreshing from DB...
+19:36:24 [AUTH] /me: returning fresh user data for "DISPATCH-1" role=admin unit_id=DISPATCH-1
+19:36:24 [API] GET /api/auth/me | user=DISPATCH-1(id:7) | sid=bAp98PQE... | 304 | 16ms
+19:36:24 [AUTH] /me check: hasSession=true sessionID=bAp98PQE... cookie=true
+19:36:24 [AUTH] /me: session has user="DISPATCH-1" id=7, refreshing from DB...
+19:36:24 [AUTH] /me: returning fresh user data for "DISPATCH-1" role=admin unit_id=DISPATCH-1
+19:36:24 [API] GET /api/auth/me | user=DISPATCH-1(id:7) | sid=bAp98PQE... | 304 | 15ms
+19:36:24 [Signaling] DISPATCH-1 left channel TESTING__TESTING 1
+19:36:24 [Signaling] DISPATCH-1 left channel DISPATCH__DISPATCH
+19:36:24 [API] GET /api/admin/zones | user=DISPATCH-1(id:7) | sid=bAp98PQE... | 304 | 17ms
+19:36:24 [DISPATCH] getChannels: 4 radio channels returned
+19:36:24 [API] GET /api/dispatch/channels | user=DISPATCH-1(id:7) | sid=bAp98PQE... | 304 | 21ms
+19:36:24 [API] GET /api/admin/users | user=DISPATCH-1(id:7) | sid=bAp98PQE... | 200 | 16ms
+19:36:24 [API] GET /api/admin/channels | user=DISPATCH-1(id:7) | sid=bAp98PQE... | 304 | 15ms
+19:36:24 [API] GET /api/admin/logs?limit=200 | user=DISPATCH-1(id:7) | sid=bAp98PQE... | 200 | 18ms
+19:36:24 [API] GET /api/admin/ai-dispatch | user=DISPATCH-1(id:7) | sid=bAp98PQE... | 304 | 21ms
+19:36:24 AUDIO_WS_UPGRADE_HIT {
+19:36:24   method: 'GET',
+19:36:24   path: '/api/audio-ws',
+19:36:24   query: '?channelId=DISPATCH__DISPATCH&unitId=DISPATCH-1',
+19:36:24   host: 'comms.reeder-systems.com',
+19:36:24   upgrade: 'websocket',
+19:36:24   connection: 'upgrade'
+19:36:24 }
+19:36:24 AUDIO_WS_ACCEPTED { username: 'DISPATCH-1', unitId: 'DISPATCH-1' }
+19:36:24 [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=bAp98PQE... | 200 | 23ms
+19:36:24 [OpusCodec] Idle decoder swept for sender=DISPATCH-1
+19:36:24 [Signaling] PTT START request: unitId=ADMIN channelId=TESTING__TESTING 1
+19:36:24 [FloorControl] requestFloor: raw="TESTING__TESTING 1" canonical="TESTING__TESTING 1" unitId="ADMIN"
+19:36:24 [Signaling] PTT START granted: ADMIN on TESTING__TESTING 1 (floor granted for holdsFloor check)
+19:36:24 [API] POST /api/dispatch/unit/update | user=ADMIN(id:1) | sid=vLwzdq33... | 200 | 28ms
+19:36:24 [RecordingTap] TX recording started: unit=ADMIN channel=TESTING__TESTING 1
+19:36:24 [Signaling] PTT END: ADMIN on TESTING__TESTING 1 (5509ms)
+19:36:24 [API] POST /api/dispatch/unit/update | user=ADMIN(id:1) | sid=vLwzdq33... | 200 | 27ms
+19:36:24 [RecordingTap] Finalizing recording: unit=ADMIN channel=TESTING__TESTING 1 frames=257 duration=5128ms
+19:36:24 [RecordingTap] Audio message saved: id=2194 channel=TESTING__TESTING 1 sender=ADMIN duration=5128ms
+19:36:24 [Signaling] Grace period ended for TESTING__TESTING 1
+19:36:32 [OpusCodec] Idle decoder swept for sender=ADMIN
