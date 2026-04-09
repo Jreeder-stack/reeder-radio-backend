@@ -50,6 +50,7 @@ class BackgroundAudioService : Service() {
     private var pttState = PttState.IDLE
 
     @Volatile private var pttUpWhileConnecting = false
+    private var preCaptureSetupJob: Job? = null
 
     @Volatile private var needsSignaling = false
 
@@ -421,14 +422,29 @@ class BackgroundAudioService : Service() {
                             Log.d(TAG, "Floor GRANTED but already TRANSMITTING — ignoring duplicate")
                             return@collect
                         }
-                        Log.d(TAG, "Floor GRANTED — starting TX")
-                        val txStarted = engine.startTransmit()
+                        if (pttState != PttState.CONNECTING || pttUpWhileConnecting) {
+                            Log.d(TAG, "Floor GRANTED but PTT no longer active — ignoring late grant (pttState=$pttState pttUpWhileConnecting=$pttUpWhileConnecting)")
+                            engine.abortPreCapture()
+                            preCaptureSetupJob?.join()
+                            preCaptureSetupJob = null
+                            engine.stopPreCapture()
+                            val roomKey = servicePrefs.channelRoomKey
+                            if (roomKey != null) {
+                                engine.floorControl?.releaseFloor(roomKey)
+                            }
+                            return@collect
+                        }
+                        Log.d(TAG, "Floor GRANTED — promoting pre-capture to live TX")
+                        preCaptureSetupJob?.join()
+                        preCaptureSetupJob = null
+                        val txStarted = engine.promoteToLiveTransmit() || engine.startTransmit()
                         if (txStarted) {
                             transitionPttState(PttState.TRANSMITTING)
                             updateNotification("TRANSMITTING")
                             sendPttTxStarted()
                         } else {
-                            Log.e(TAG, "Radio TX: startTransmit failed after floor granted")
+                            Log.e(TAG, "Radio TX: promote/startTransmit failed after floor granted")
+                            engine.stopPreCapture()
                             app.toneEngine.playErrorTone()
                             transitionPttState(PttState.IDLE)
                             updateNotification("Radio — Standby")
@@ -437,7 +453,11 @@ class BackgroundAudioService : Service() {
                     }
                     FloorControlEvent.DENIED -> {
                         cancelPendingFloorTimeout()
-                        Log.d(TAG, "Floor DENIED — aborting TX")
+                        Log.d(TAG, "Floor DENIED — aborting TX, discarding pre-buffer")
+                        engine.abortPreCapture()
+                        preCaptureSetupJob?.join()
+                        preCaptureSetupJob = null
+                        engine.stopPreCapture()
                         app.toneEngine.playBusyTone()
                         transitionPttState(PttState.IDLE)
                         updateNotification("Radio — Standby")
@@ -598,10 +618,32 @@ class BackgroundAudioService : Service() {
         app.toneEngine.playTalkPermitTone()
 
         scope.launch {
+            preCaptureSetupJob = scope.launch {
+                val preStarted = engine.startPreCapture()
+                if (!preStarted) {
+                    Log.e(TAG, "Radio PTT: pre-capture failed to start")
+                }
+            }
+
             delay(200)
+
+            if (pttState != PttState.CONNECTING || pttUpWhileConnecting) {
+                Log.d(TAG, "Radio PTT: state changed during tone delay — aborting (pttState=$pttState pttUpWhileConnecting=$pttUpWhileConnecting)")
+                engine.abortPreCapture()
+                preCaptureSetupJob?.cancel()
+                preCaptureSetupJob?.join()
+                preCaptureSetupJob = null
+                engine.stopPreCapture()
+                return@launch
+            }
 
             if (signaling && !ensureBackgroundSignalingReady(servicePrefs.channelId)) {
                 Log.e(TAG, "Radio PTT: signaling not ready")
+                engine.abortPreCapture()
+                preCaptureSetupJob?.cancel()
+                preCaptureSetupJob?.join()
+                preCaptureSetupJob = null
+                engine.stopPreCapture()
                 app.toneEngine.playErrorTone()
                 transitionPttState(PttState.IDLE)
                 updateNotification("Radio — Standby")
@@ -612,6 +654,16 @@ class BackgroundAudioService : Service() {
             if (signaling) {
                 app.signalingRepository.transmitPre(roomKey)
                 Log.d(TAG, "Radio PTT: transmitPre sent for roomKey $roomKey")
+            }
+
+            if (pttState != PttState.CONNECTING || pttUpWhileConnecting) {
+                Log.d(TAG, "Radio PTT: state changed before floor request — aborting (pttState=$pttState pttUpWhileConnecting=$pttUpWhileConnecting)")
+                engine.abortPreCapture()
+                preCaptureSetupJob?.cancel()
+                preCaptureSetupJob?.join()
+                preCaptureSetupJob = null
+                engine.stopPreCapture()
+                return@launch
             }
 
             Log.d(TAG, "PTT_REQUEST_SENT channelId=$roomKey")
@@ -632,6 +684,13 @@ class BackgroundAudioService : Service() {
             if (pttState == PttState.CONNECTING) {
                 cancelPendingFloorTimeout()
                 radioEngine?.floorControl?.cancelPending()
+                radioEngine?.abortPreCapture()
+                val setupJob = preCaptureSetupJob
+                preCaptureSetupJob = null
+                scope.launch {
+                    setupJob?.join()
+                    radioEngine?.stopPreCapture()
+                }
                 transitionPttState(PttState.IDLE)
                 updateNotification("Radio — Standby")
                 sendPttTxAborted()
@@ -703,6 +762,11 @@ class BackgroundAudioService : Service() {
             if (pttState == PttState.CONNECTING) {
                 Log.w(TAG, "RADIO_READY_BLOCKED_REASON reason=floor_response_timeout channelId=$roomKey")
                 radioEngine?.floorControl?.cancelPending()
+                radioEngine?.abortPreCapture()
+                preCaptureSetupJob?.join()
+                preCaptureSetupJob = null
+                radioEngine?.stopPreCapture()
+                app.toneEngine.playBusyTone()
                 transitionPttState(PttState.IDLE)
                 updateNotification("Radio — Standby")
                 sendPttTxFailed()
