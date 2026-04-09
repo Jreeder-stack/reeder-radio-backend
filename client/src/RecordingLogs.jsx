@@ -167,7 +167,7 @@ export default function RecordingLogs({ isMobile }) {
 
   const isAudioPlayable = (log) => {
     if (!log.audio_available) return false;
-    if (log.audio_duration === 0) return false;
+    if (!log.audio_duration || log.audio_duration < 100) return false;
     return true;
   };
 
@@ -187,7 +187,7 @@ export default function RecordingLogs({ isMobile }) {
       audioRef.current.pause();
     }
 
-    const audio = new Audio(log.audio_url);
+    const audio = new Audio(encodeURI(log.audio_url));
     audio.onended = () => setPlayingId(null);
     audio.onerror = () => {
       setPlayingId(null);
@@ -205,7 +205,7 @@ export default function RecordingLogs({ isMobile }) {
     if (!log.audio_available) return;
     const filename = log.audio_url.split("/").pop();
     const a = document.createElement("a");
-    a.href = log.audio_url;
+    a.href = encodeURI(log.audio_url);
     a.download = filename;
     a.click();
   };

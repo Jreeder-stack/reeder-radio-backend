@@ -6,6 +6,7 @@ import { sendAudioMessage } from './messagesService.js';
 const AUDIO_DIR = path.join(process.cwd(), 'uploads', 'audio');
 const TX_IDLE_TIMEOUT_MS = 2000;
 const MAX_TX_DURATION_MS = 60000;
+const MIN_TX_DURATION_MS = 100;
 
 if (!fs.existsSync(AUDIO_DIR)) {
   fs.mkdirSync(AUDIO_DIR, { recursive: true });
@@ -64,6 +65,11 @@ function finalizeRecording(key) {
 
   if (frames.length === 0) {
     console.log(`[RecordingTap] No frames to save for unit=${unitId} channel=${channelId}`);
+    return;
+  }
+
+  if (durationMs < MIN_TX_DURATION_MS) {
+    console.log(`[RecordingTap] Skipping short TX (${durationMs}ms < ${MIN_TX_DURATION_MS}ms): unit=${unitId} channel=${channelId}`);
     return;
   }
 
