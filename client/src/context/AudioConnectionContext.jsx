@@ -37,6 +37,7 @@ export function AudioConnectionProvider({ children, user }) {
   const micStreamRef = useRef(null);
   const switchCounterRef = useRef(0);
   const latestSwitchTargetRef = useRef(null);
+  const intentionalDisconnectsRef = useRef(new Set());
   
   const {
     channels: storeChannels,
@@ -68,6 +69,7 @@ export function AudioConnectionProvider({ children, user }) {
 
   const scheduleReconnect = useCallback((channelName, identity) => {
     if (!mountedRef.current) return;
+    if (intentionalDisconnectsRef.current.has(channelName)) return;
     
     const startTime = connectionStartTimes.current.get(channelName);
     const wasStable = startTime && (Date.now() - startTime) > STABILITY_THRESHOLD;
@@ -115,6 +117,19 @@ export function AudioConnectionProvider({ children, user }) {
     
     reconnectTimers.current.set(channelName, timer);
   }, [clearReconnectTimer]);
+
+  const getMonitoredRoomKeys = useCallback(() => {
+    const state = useDispatchStore.getState();
+    const chList = state.channels || [];
+    return new Set(
+      (state.monitoredChannelIds || [])
+        .map(id => {
+          const ch = chList.find(c => c.id === id);
+          return ch ? (ch.room_key || ((ch.zone || 'Default') + '__' + ch.name)) : null;
+        })
+        .filter(Boolean)
+    );
+  }, []);
 
   const listenerRemoversRef = useRef([]);
   
@@ -222,13 +237,24 @@ export function AudioConnectionProvider({ children, user }) {
     const removeSignalingReconnect = signalingManager.on('connectionChange', (data) => {
       if (data.connected) {
         console.log('[AudioConnection] Signaling reconnected — verifying audio WebSockets');
-        audioTransportManager.verifyAndReconnectAll().then((count) => {
-          if (count > 0) {
-            console.log(`[AudioConnection] Recovered ${count} dead audio WebSocket(s) after signaling reconnect`);
-          }
-        }).catch((err) => {
-          console.error('[AudioConnection] Audio recovery after signaling reconnect failed:', err.message);
-        });
+        if (audioTransportManager.isDispatcherMode()) {
+          const monitoredKeys = getMonitoredRoomKeys();
+          audioTransportManager.verifyAndReconnectAll(monitoredKeys).then((count) => {
+            if (count > 0) {
+              console.log(`[AudioConnection] Recovered ${count} dead audio WebSocket(s) after signaling reconnect (dispatcher, filtered)`);
+            }
+          }).catch((err) => {
+            console.error('[AudioConnection] Audio recovery after signaling reconnect failed:', err.message);
+          });
+        } else {
+          audioTransportManager.verifyAndReconnectAll().then((count) => {
+            if (count > 0) {
+              console.log(`[AudioConnection] Recovered ${count} dead audio WebSocket(s) after signaling reconnect`);
+            }
+          }).catch((err) => {
+            console.error('[AudioConnection] Audio recovery after signaling reconnect failed:', err.message);
+          });
+        }
       }
     });
     listenerRemoversRef.current.push(removeSignalingReconnect);
@@ -270,7 +296,18 @@ export function AudioConnectionProvider({ children, user }) {
         }
         
         if (state === 'disconnected' && mountedRef.current) {
-          scheduleReconnect(channelName, identity);
+          if (intentionalDisconnectsRef.current.has(channelName)) {
+            console.log(`[AudioConnection] Skipping reconnect for intentionally disconnected ${channelName}`);
+          } else if (audioTransportManager.isDispatcherMode()) {
+            const monitoredKeys = getMonitoredRoomKeys();
+            if (monitoredKeys.has(channelName)) {
+              scheduleReconnect(channelName, identity);
+            } else {
+              console.log(`[AudioConnection] Skipping reconnect for unmonitored channel ${channelName}`);
+            }
+          } else {
+            scheduleReconnect(channelName, identity);
+          }
         }
       })
     );
@@ -283,7 +320,7 @@ export function AudioConnectionProvider({ children, user }) {
         }
       })
     );
-  }, [scheduleReconnect, recordActivity]);
+  }, [scheduleReconnect, recordActivity, getMonitoredRoomKeys]);
 
   const preCaptureForMobile = useCallback(async () => {
   }, []);
@@ -299,6 +336,7 @@ export function AudioConnectionProvider({ children, user }) {
   const connectToChannel = useCallback(async (channelName, identity, markActive = true) => {
     if (!channelName || !identity) return false;
     
+    intentionalDisconnectsRef.current.delete(channelName);
     recordActivity();
     
     try {
@@ -326,10 +364,11 @@ export function AudioConnectionProvider({ children, user }) {
   }, [recordActivity, preCaptureForMobile, scheduleReconnect]);
 
   const disconnectFromChannel = useCallback(async (channelName) => {
+    intentionalDisconnectsRef.current.add(channelName);
     clearReconnectTimer(channelName);
     audioTransportManager.setChannelInactive(channelName);
     await audioTransportManager.disconnect(channelName);
-    console.log(`[AudioConnection] Disconnected from ${channelName}`);
+    console.log(`[AudioConnection] Intentionally disconnected from ${channelName}`);
   }, [clearReconnectTimer]);
 
   const switchChannel = useCallback(async (newChannelName, callerIdentity, isDispatcher = false) => {
@@ -575,9 +614,18 @@ export function AudioConnectionProvider({ children, user }) {
         lastActivityRef.current = Date.now();
 
         const connectedChannels = audioTransportManager.getConnectedChannels();
+        const monitoredKeys = audioTransportManager.isDispatcherMode() ? getMonitoredRoomKeys() : null;
         let reconnectedCount = 0;
 
         for (const channelName of connectedChannels) {
+          if (intentionalDisconnectsRef.current.has(channelName)) {
+            console.log(`[AudioConnection] Skipping visibility reconnect for intentionally disconnected ${channelName}`);
+            continue;
+          }
+          if (monitoredKeys && !monitoredKeys.has(channelName)) {
+            console.log(`[AudioConnection] Skipping visibility reconnect for unmonitored channel ${channelName}`);
+            continue;
+          }
           const conn = audioTransportManager.getRoom(channelName);
           if (conn && conn.ws && conn.ws.readyState === WebSocket.OPEN) {
             continue;
@@ -603,7 +651,7 @@ export function AudioConnectionProvider({ children, user }) {
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [user, identity, connectionStatus, connectToChannel, retryConnection]);
+  }, [user, identity, connectionStatus, connectToChannel, retryConnection, getMonitoredRoomKeys]);
 
   useEffect(() => {
     mountedRef.current = true;

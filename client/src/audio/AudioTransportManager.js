@@ -233,6 +233,11 @@ class AudioTransportManager {
         this._scheduleReconnect(channelName);
       };
 
+      if (!this._targetChannels.has(channelName)) {
+        try { ws.close(); } catch (_) {}
+        return null;
+      }
+
       this._reconnectAttempts.delete(channelName);
       this.rooms.set(channelName, conn);
       this._playback.ensureAudioContextResumed('channelJoin').catch(() => {});
@@ -431,14 +436,16 @@ class AudioTransportManager {
   isDispatcherMode() { return this._dispatcherMode; }
   scheduleDispatcherReconnect(_channelName, _identity) {}
 
-  async verifyAndReconnectAll() {
+  async verifyAndReconnectAll(allowedChannels = null) {
     const toReconnect = [];
     for (const [channelName, conn] of this.rooms) {
+      if (allowedChannels && !allowedChannels.has(channelName)) continue;
       if (!conn.ws || conn.ws.readyState !== WebSocket.OPEN) {
         toReconnect.push({ channelName, unitId: conn.unitId });
       }
     }
     for (const [channelName, unitId] of this._targetChannels) {
+      if (allowedChannels && !allowedChannels.has(channelName)) continue;
       if (!this.rooms.has(channelName) && !this.pendingConnections.has(channelName)) {
         if (!toReconnect.some(r => r.channelName === channelName)) {
           toReconnect.push({ channelName, unitId });
