@@ -1,0 +1,122 @@
+--------- beginning of system
+--------- beginning of main
+2026-04-08 22:20:33.779  9017-9666  [RadioError]            com.reedersystems.commandcomms       E  TX_START_ABORTED reason=all_audio_sources_rejected method=startTransmit
+2026-04-08 22:20:41.607  9017-9678  [RadioError]            com.reedersystems.commandcomms       E  OPUS_ENCODE_ASSERTION_FAILURE frame=114 source=UNPROCESSED samples=960 bytes=1920 expectedBytes=1920 sampleRate=48000 frameSize=960 pcmCopied=true message=null assertionFailures=1 method=encode (Explain with AI)
+                                                                                                    java.lang.AssertionError
+                                                                                                    	at org.concentus.Inlines.OpusAssert(Inlines.java:40)
+                                                                                                    	at org.concentus.Autocorrelation.silk_warped_autocorrelation(Autocorrelation.java:254)
+                                                                                                    	at org.concentus.NoiseShapeAnalysis.silk_noise_shape_analysis(NoiseShapeAnalysis.java:308)
+                                                                                                    	at org.concentus.SilkChannelEncoder.silk_encode_frame(SilkChannelEncoder.java:937)
+                                                                                                    	at org.concentus.EncodeAPI.silk_Encode(EncodeAPI.java:524)
+                                                                                                    	at org.concentus.OpusEncoder.opus_encode_native(OpusEncoder.java:988)
+                                                                                                    	at org.concentus.OpusEncoder.encode(OpusEncoder.java:1313)
+                                                                                                    	at com.reedersystems.commandcomms.audio.radio.OpusCodec.encode(OpusCodec.kt:199)
+                                                                                                    	at com.reedersystems.commandcomms.audio.radio.RadioAudioEngine$startTransmit$2$2.invokeSuspend(RadioAudioEngine.kt:535)
+                                                                                                    	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:33)
+                                                                                                    	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:108)
+                                                                                                    	at kotlinx.coroutines.internal.LimitedDispatcher$Worker.run(LimitedDispatcher.kt:115)
+                                                                                                    	at kotlinx.coroutines.scheduling.TaskImpl.run(Tasks.kt:103)
+                                                                                                    	at kotlinx.coroutines.scheduling.CoroutineScheduler.runSafely(CoroutineScheduler.kt:584)
+                                                                                                    	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.executeTask(CoroutineScheduler.kt:793)
+                                                                                                    	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.runWorker(CoroutineScheduler.kt:697)
+                                                                                                    	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.run(CoroutineScheduler.kt:684)
+2026-04-08 22:20:41.622  9017-9678  [RadioError]            com.reedersystems.commandcomms       E  OPUS_ENCODE_ASSERTION_FAILURE frame=114 source=UNPROCESSED samples=960 bytes=1920 expectedBytes=1920 sampleRate=48000 frameSize=960 pcmCopied=true message=null assertionFailures=2 method=encode (Explain with AI)
+                                                                                                    java.lang.AssertionError
+                                                                                                    	at org.concentus.Inlines.OpusAssert(Inlines.java:40)
+                                                                                                    	at org.concentus.Autocorrelation.silk_warped_autocorrelation(Autocorrelation.java:254)
+                                                                                                    	at org.concentus.NoiseShapeAnalysis.silk_noise_shape_analysis(NoiseShapeAnalysis.java:308)
+                                                                                                    	at org.concentus.SilkChannelEncoder.silk_encode_frame(SilkChannelEncoder.java:937)
+                                                                                                    	at org.concentus.EncodeAPI.silk_Encode(EncodeAPI.java:524)
+                                                                                                    	at org.concentus.OpusEncoder.opus_encode_native(OpusEncoder.java:988)
+                                                                                                    	at org.concentus.OpusEncoder.encode(OpusEncoder.java:1313)
+                                                                                                    	at com.reedersystems.commandcomms.audio.radio.OpusCodec.encode(OpusCodec.kt:199)
+                                                                                                    	at com.reedersystems.commandcomms.audio.radio.RadioAudioEngine$startTransmit$2$2.invokeSuspend(RadioAudioEngine.kt:535)
+                                                                                                    	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:33)
+                                                                                                    	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:108)
+                                                                                                    	at kotlinx.coroutines.internal.LimitedDispatcher$Worker.run(LimitedDispatcher.kt:115)
+                                                                                                    	at kotlinx.coroutines.scheduling.TaskImpl.run(Tasks.kt:103)
+                                                                                                    	at kotlinx.coroutines.scheduling.CoroutineScheduler.runSafely(CoroutineScheduler.kt:584)
+                                                                                                    	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.executeTask(CoroutineScheduler.kt:793)
+                                                                                                    	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.runWorker(CoroutineScheduler.kt:697)
+                                                                                                    	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.run(CoroutineScheduler.kt:684)
+2026-04-08 22:20:41.640  9017-9678  [RadioError]            com.reedersystems.commandcomms       E  OPUS_ENCODE_ASSERTION_FAILURE frame=114 source=UNPROCESSED samples=960 bytes=1920 expectedBytes=1920 sampleRate=48000 frameSize=960 pcmCopied=true message=null assertionFailures=3 method=encode (Explain with AI)
+                                                                                                    java.lang.AssertionError
+                                                                                                    	at org.concentus.Inlines.OpusAssert(Inlines.java:40)
+                                                                                                    	at org.concentus.Autocorrelation.silk_warped_autocorrelation(Autocorrelation.java:254)
+                                                                                                    	at org.concentus.NoiseShapeAnalysis.silk_noise_shape_analysis(NoiseShapeAnalysis.java:308)
+                                                                                                    	at org.concentus.SilkChannelEncoder.silk_encode_frame(SilkChannelEncoder.java:937)
+                                                                                                    	at org.concentus.EncodeAPI.silk_Encode(EncodeAPI.java:524)
+                                                                                                    	at org.concentus.OpusEncoder.opus_encode_native(OpusEncoder.java:988)
+                                                                                                    	at org.concentus.OpusEncoder.encode(OpusEncoder.java:1313)
+                                                                                                    	at com.reedersystems.commandcomms.audio.radio.OpusCodec.encode(OpusCodec.kt:199)
+                                                                                                    	at com.reedersystems.commandcomms.audio.radio.RadioAudioEngine$startTransmit$2$2.invokeSuspend(RadioAudioEngine.kt:535)
+                                                                                                    	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:33)
+                                                                                                    	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:108)
+                                                                                                    	at kotlinx.coroutines.internal.LimitedDispatcher$Worker.run(LimitedDispatcher.kt:115)
+                                                                                                    	at kotlinx.coroutines.scheduling.TaskImpl.run(Tasks.kt:103)
+                                                                                                    	at kotlinx.coroutines.scheduling.CoroutineScheduler.runSafely(CoroutineScheduler.kt:584)
+                                                                                                    	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.executeTask(CoroutineScheduler.kt:793)
+                                                                                                    	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.runWorker(CoroutineScheduler.kt:697)
+                                                                                                    	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.run(CoroutineScheduler.kt:684)
+2026-04-08 22:20:42.068  9017-9678  [RadioError]            com.reedersystems.commandcomms       E  OPUS_ENCODE_ASSERTION_FAILURE frame=132 source=UNPROCESSED samples=960 bytes=1920 expectedBytes=1920 sampleRate=48000 frameSize=960 pcmCopied=true message=null assertionFailures=4 method=encode (Explain with AI)
+                                                                                                    java.lang.AssertionError
+                                                                                                    	at org.concentus.Inlines.OpusAssert(Inlines.java:40)
+                                                                                                    	at org.concentus.Autocorrelation.silk_warped_autocorrelation(Autocorrelation.java:254)
+                                                                                                    	at org.concentus.NoiseShapeAnalysis.silk_noise_shape_analysis(NoiseShapeAnalysis.java:308)
+                                                                                                    	at org.concentus.SilkChannelEncoder.silk_encode_frame(SilkChannelEncoder.java:937)
+                                                                                                    	at org.concentus.EncodeAPI.silk_Encode(EncodeAPI.java:524)
+                                                                                                    	at org.concentus.OpusEncoder.opus_encode_native(OpusEncoder.java:988)
+                                                                                                    	at org.concentus.OpusEncoder.encode(OpusEncoder.java:1313)
+                                                                                                    	at com.reedersystems.commandcomms.audio.radio.OpusCodec.encode(OpusCodec.kt:199)
+                                                                                                    	at com.reedersystems.commandcomms.audio.radio.RadioAudioEngine$startTransmit$2$2.invokeSuspend(RadioAudioEngine.kt:535)
+                                                                                                    	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:33)
+                                                                                                    	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:108)
+                                                                                                    	at kotlinx.coroutines.internal.LimitedDispatcher$Worker.run(LimitedDispatcher.kt:115)
+                                                                                                    	at kotlinx.coroutines.scheduling.TaskImpl.run(Tasks.kt:103)
+                                                                                                    	at kotlinx.coroutines.scheduling.CoroutineScheduler.runSafely(CoroutineScheduler.kt:584)
+                                                                                                    	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.executeTask(CoroutineScheduler.kt:793)
+                                                                                                    	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.runWorker(CoroutineScheduler.kt:697)
+                                                                                                    	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.run(CoroutineScheduler.kt:684)
+2026-04-08 22:20:43.127  9017-9678  [RadioError]            com.reedersystems.commandcomms       E  OPUS_ENCODE_ASSERTION_FAILURE frame=181 source=UNPROCESSED samples=960 bytes=1920 expectedBytes=1920 sampleRate=48000 frameSize=960 pcmCopied=true message=null assertionFailures=5 method=encode (Explain with AI)
+                                                                                                    java.lang.AssertionError
+                                                                                                    	at org.concentus.Inlines.OpusAssert(Inlines.java:40)
+                                                                                                    	at org.concentus.Autocorrelation.silk_warped_autocorrelation(Autocorrelation.java:254)
+                                                                                                    	at org.concentus.NoiseShapeAnalysis.silk_noise_shape_analysis(NoiseShapeAnalysis.java:308)
+                                                                                                    	at org.concentus.SilkChannelEncoder.silk_encode_frame(SilkChannelEncoder.java:937)
+                                                                                                    	at org.concentus.EncodeAPI.silk_Encode(EncodeAPI.java:524)
+                                                                                                    	at org.concentus.OpusEncoder.opus_encode_native(OpusEncoder.java:988)
+                                                                                                    	at org.concentus.OpusEncoder.encode(OpusEncoder.java:1313)
+                                                                                                    	at com.reedersystems.commandcomms.audio.radio.OpusCodec.encode(OpusCodec.kt:199)
+                                                                                                    	at com.reedersystems.commandcomms.audio.radio.RadioAudioEngine$startTransmit$2$2.invokeSuspend(RadioAudioEngine.kt:535)
+                                                                                                    	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:33)
+                                                                                                    	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:108)
+                                                                                                    	at kotlinx.coroutines.internal.LimitedDispatcher$Worker.run(LimitedDispatcher.kt:115)
+                                                                                                    	at kotlinx.coroutines.scheduling.TaskImpl.run(Tasks.kt:103)
+                                                                                                    	at kotlinx.coroutines.scheduling.CoroutineScheduler.runSafely(CoroutineScheduler.kt:584)
+                                                                                                    	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.executeTask(CoroutineScheduler.kt:793)
+                                                                                                    	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.runWorker(CoroutineScheduler.kt:697)
+                                                                                                    	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.run(CoroutineScheduler.kt:684)
+2026-04-08 22:23:57.222  9017-10831 [RadioError]            com.reedersystems.commandcomms       W  UDP keepalive send error: IOException: sendto failed: ENETUNREACH (Network is unreachable) dest=comms.reeder-systems.com:5100 method=keepaliveLoop
+2026-04-08 22:24:12.224  9017-10831 [RadioError]            com.reedersystems.commandcomms       W  UDP keepalive send error: IOException: sendto failed: ENETUNREACH (Network is unreachable) dest=comms.reeder-systems.com:5100 method=keepaliveLoop
+2026-04-08 22:24:27.234  9017-9672  [RadioError]            com.reedersystems.commandcomms       W  UDP keepalive send error: IOException: sendto failed: ENETUNREACH (Network is unreachable) dest=comms.reeder-systems.com:5100 method=keepaliveLoop
+2026-04-08 22:24:42.238  9017-10831 [RadioError]            com.reedersystems.commandcomms       W  UDP keepalive send error: IOException: sendto failed: ENETUNREACH (Network is unreachable) dest=comms.reeder-systems.com:5100 method=keepaliveLoop
+2026-04-08 22:24:57.266  9017-10832 [RadioError]            com.reedersystems.commandcomms       W  UDP keepalive send error: IOException: sendto failed: ENETUNREACH (Network is unreachable) dest=comms.reeder-systems.com:5100 method=keepaliveLoop
+2026-04-08 22:25:12.273  9017-10832 [RadioError]            com.reedersystems.commandcomms       W  UDP keepalive send error: IOException: sendto failed: ENETUNREACH (Network is unreachable) dest=comms.reeder-systems.com:5100 method=keepaliveLoop
+2026-04-08 22:25:27.281  9017-10833 [RadioError]            com.reedersystems.commandcomms       W  UDP keepalive send error: IOException: sendto failed: ENETUNREACH (Network is unreachable) dest=comms.reeder-systems.com:5100 method=keepaliveLoop
+2026-04-08 22:25:42.288  9017-9672  [RadioError]            com.reedersystems.commandcomms       W  UDP keepalive send error: IOException: sendto failed: ENETUNREACH (Network is unreachable) dest=comms.reeder-systems.com:5100 method=keepaliveLoop
+2026-04-08 22:25:57.292  9017-9672  [RadioError]            com.reedersystems.commandcomms       W  UDP keepalive send error: IOException: sendto failed: ENETUNREACH (Network is unreachable) dest=comms.reeder-systems.com:5100 method=keepaliveLoop
+2026-04-08 22:26:12.298  9017-10833 [RadioError]            com.reedersystems.commandcomms       W  UDP keepalive send error: IOException: sendto failed: ENETUNREACH (Network is unreachable) dest=comms.reeder-systems.com:5100 method=keepaliveLoop
+2026-04-08 22:26:27.303  9017-9672  [RadioError]            com.reedersystems.commandcomms       W  UDP keepalive send error: IOException: sendto failed: ENETUNREACH (Network is unreachable) dest=comms.reeder-systems.com:5100 method=keepaliveLoop
+2026-04-08 22:26:42.308  9017-9672  [RadioError]            com.reedersystems.commandcomms       W  UDP keepalive send error: IOException: sendto failed: ENETUNREACH (Network is unreachable) dest=comms.reeder-systems.com:5100 method=keepaliveLoop
+2026-04-08 22:26:57.312  9017-9672  [RadioError]            com.reedersystems.commandcomms       W  UDP keepalive send error: IOException: sendto failed: ENETUNREACH (Network is unreachable) dest=comms.reeder-systems.com:5100 method=keepaliveLoop
+2026-04-08 22:27:12.317  9017-9672  [RadioError]            com.reedersystems.commandcomms       W  UDP keepalive send error: IOException: sendto failed: ENETUNREACH (Network is unreachable) dest=comms.reeder-systems.com:5100 method=keepaliveLoop
+2026-04-08 22:27:27.322  9017-10833 [RadioError]            com.reedersystems.commandcomms       W  UDP keepalive send error: IOException: sendto failed: ENETUNREACH (Network is unreachable) dest=comms.reeder-systems.com:5100 method=keepaliveLoop
+2026-04-08 22:27:42.326  9017-10833 [RadioError]            com.reedersystems.commandcomms       W  UDP keepalive send error: IOException: sendto failed: ENETUNREACH (Network is unreachable) dest=comms.reeder-systems.com:5100 method=keepaliveLoop
+2026-04-08 22:27:57.329  9017-9672  [RadioError]            com.reedersystems.commandcomms       W  UDP keepalive send error: IOException: sendto failed: ENETUNREACH (Network is unreachable) dest=comms.reeder-systems.com:5100 method=keepaliveLoop
+2026-04-08 22:28:12.334  9017-10832 [RadioError]            com.reedersystems.commandcomms       W  UDP keepalive send error: IOException: sendto failed: ENETUNREACH (Network is unreachable) dest=comms.reeder-systems.com:5100 method=keepaliveLoop
+2026-04-08 22:28:27.339  9017-12803 [RadioError]            com.reedersystems.commandcomms       W  UDP keepalive send error: IOException: sendto failed: ENETUNREACH (Network is unreachable) dest=comms.reeder-systems.com:5100 method=keepaliveLoop
+2026-04-08 22:28:42.344  9017-12803 [RadioError]            com.reedersystems.commandcomms       W  UDP keepalive send error: IOException: sendto failed: ENETUNREACH (Network is unreachable) dest=comms.reeder-systems.com:5100 method=keepaliveLoop
+2026-04-08 22:28:57.347  9017-12803 [RadioError]            com.reedersystems.commandcomms       W  UDP keepalive send error: IOException: sendto failed: ENETUNREACH (Network is unreachable) dest=comms.reeder-systems.com:5100 method=keepaliveLoop
+2026-04-08 22:29:12.352  9017-10833 [RadioError]            com.reedersystems.commandcomms       W  UDP keepalive send error: IOException: sendto failed: ENETUNREACH (Network is unreachable) dest=comms.reeder-systems.com:5100 method=keepaliveLoop
+2026-04-08 22:29:27.354  9017-13128 [RadioError]            com.reedersystems.commandcomms       W  UDP keepalive send error: IOException: sendto failed: ENETUNREACH (Network is unreachable) dest=comms.reeder-systems.com:5100 method=keepaliveLoop
+2026-04-08 22:29:42.359  9017-13128 [RadioError]            com.reedersystems.commandcomms       W  UDP keepalive send error: IOException: sendto failed: ENETUNREACH (Network is unreachable) dest=comms.reeder-systems.com:5100 method=keepaliveLoop
