@@ -473,7 +473,7 @@ export default function RecordingLogs({ isMobile }) {
           </div>
         </div>
       ) : isMobile ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: "calc(100vh - 300px)", overflowY: "auto", WebkitOverflowScrolling: "touch" }}>
           {logs.map((log) => (
             <div
               key={log.id}
@@ -534,16 +534,16 @@ export default function RecordingLogs({ isMobile }) {
           ))}
         </div>
       ) : (
-        <div style={{ overflowX: "auto" }}>
+        <div style={{ overflowX: "auto", overflowY: "auto", maxHeight: "calc(100vh - 300px)", WebkitOverflowScrolling: "touch" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
             <thead>
               <tr style={{ borderBottom: "1px solid #333" }}>
-                <th style={{ textAlign: "left", padding: "10px 12px", color: "#888", fontWeight: 500, fontSize: 12 }}>Date</th>
-                <th style={{ textAlign: "left", padding: "10px 12px", color: "#888", fontWeight: 500, fontSize: 12 }}>Time</th>
-                <th style={{ textAlign: "left", padding: "10px 12px", color: "#888", fontWeight: 500, fontSize: 12 }}>Unit</th>
-                <th style={{ textAlign: "left", padding: "10px 12px", color: "#888", fontWeight: 500, fontSize: 12 }}>Channel</th>
-                <th style={{ textAlign: "left", padding: "10px 12px", color: "#888", fontWeight: 500, fontSize: 12 }}>Length</th>
-                <th style={{ textAlign: "right", padding: "10px 12px", color: "#888", fontWeight: 500, fontSize: 12 }}>Actions</th>
+                <th style={{ textAlign: "left", padding: "10px 12px", color: "#888", fontWeight: 500, fontSize: 12, position: "sticky", top: 0, zIndex: 1, background: "#1a1a2e" }}>Date</th>
+                <th style={{ textAlign: "left", padding: "10px 12px", color: "#888", fontWeight: 500, fontSize: 12, position: "sticky", top: 0, zIndex: 1, background: "#1a1a2e" }}>Time</th>
+                <th style={{ textAlign: "left", padding: "10px 12px", color: "#888", fontWeight: 500, fontSize: 12, position: "sticky", top: 0, zIndex: 1, background: "#1a1a2e" }}>Unit</th>
+                <th style={{ textAlign: "left", padding: "10px 12px", color: "#888", fontWeight: 500, fontSize: 12, position: "sticky", top: 0, zIndex: 1, background: "#1a1a2e" }}>Channel</th>
+                <th style={{ textAlign: "left", padding: "10px 12px", color: "#888", fontWeight: 500, fontSize: 12, position: "sticky", top: 0, zIndex: 1, background: "#1a1a2e" }}>Length</th>
+                <th style={{ textAlign: "right", padding: "10px 12px", color: "#888", fontWeight: 500, fontSize: 12, position: "sticky", top: 0, zIndex: 1, background: "#1a1a2e" }}>Actions</th>
               </tr>
             </thead>
             <tbody>
