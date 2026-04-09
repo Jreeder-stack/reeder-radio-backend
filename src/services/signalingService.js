@@ -110,6 +110,7 @@ class SignalingService {
         credentials: true,
       },
       path: '/signaling',
+      allowEIO3: true,
       pingInterval: 25000,
       pingTimeout: 60000,
     });
@@ -223,6 +224,7 @@ class SignalingService {
   }
 
   _checkAuthRateLimit(ip) {
+    if (ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1') return false;
     const now = Date.now();
     const windowMs = 60 * 1000;
     const maxAttempts = 10;
@@ -254,14 +256,14 @@ class SignalingService {
     const { unitId, agencyId, username, isDispatcher } = data;
     
     if (!unitId || !username) {
-      socket.emit('error', { message: 'unitId and username required' });
+      socket.emit('auth:error', { message: 'unitId and username required' });
       return;
     }
 
     const clientIp = socket.handshake?.address || 'unknown';
     if (this._checkAuthRateLimit(clientIp)) {
       console.warn(`[Signaling] Auth rate limited: ip=${clientIp}`);
-      socket.emit('error', { message: 'Too many authentication attempts. Try again later.' });
+      socket.emit('auth:error', { message: 'Too many authentication attempts. Try again later.' });
       return;
     }
 

@@ -1,0 +1,52 @@
+PS C:\Users\Justin\reeder-radio-backend\android-native> & "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" logcat | Select-String "PTT-DIAG|RadioState|FloorCtrl|APP-STARTUP|RadioError|BackgroundAudio"                                                                                                                            
+
+04-09 12:01:07.798 11798 11798 D [PTT-DIAG]: PttHardwareReceiver.onReceive action=android.intent.action.PTT.down extras=null source=broadcast
+04-09 12:01:07.798 11798 11798 D [PTT-DIAG]: PttHardwareReceiver: mapped action=android.intent.action.PTT.down -> 
+svcAction=com.reedersystems.commandcomms.SVC_PTT_DOWN
+04-09 12:01:07.801 11798 11798 D [PTT-DIAG]: PttHardwareReceiver: WakeLock acquired (auto-releases in 5000ms)
+04-09 12:01:07.807 11798 11798 D [PTT-DIAG]: MainActivity PTT DOWN source=MainActivity code=230 action=DOWN repeat=0 ts=1775750467807
+04-09 12:01:07.807 11798 11798 D [PTT-DIAG]: MainActivity PTT DOWN ΓÇö forwarding to BackgroundAudioService (signaling=true)
+04-09 12:01:07.810 11798 11798 D [PTT-DIAG]: handleRadioPttDown pttState=IDLE signaling=true channelKey=TESTING__TESTING 1 channelId=535
+04-09 12:01:07.810 11798 11798 D [PTT-DIAG]: RADIO_PTT_DOWN source=service state=IDLE channelKey=TESTING__TESTING 1
+04-09 12:01:07.810 11798 11798 W [PTT-DIAG]: RADIO_READY_BLOCKED_REASON reason=signaling_not_authenticated:CONNECTED
+04-09 12:01:07.811 11798 11798 D [PTT-DIAG]: Sending PTT_TX_FAILED broadcast
+04-09 12:01:07.814 11798 11798 D [PTT-DIAG]: handleRadioPttDown pttState=IDLE signaling=true channelKey=TESTING__TESTING 1 channelId=535
+04-09 12:01:07.814 11798 11798 D [PTT-DIAG]: RADIO_PTT_DOWN source=service state=IDLE channelKey=TESTING__TESTING 1
+04-09 12:01:07.814 11798 11798 W [PTT-DIAG]: RADIO_READY_BLOCKED_REASON reason=signaling_not_authenticated:CONNECTED
+04-09 12:01:07.814 11798 11798 D [PTT-DIAG]: Sending PTT_TX_FAILED broadcast
+04-09 12:01:07.818 11798 11798 D [PTT-DIAG]: PTT_TX_FAILED received ΓÇö resetting to IDLE
+04-09 12:01:07.819 11798 11798 D [PTT-DIAG]: PTT_TX_FAILED received ΓÇö resetting to IDLE
+04-09 12:01:09.394 11798 11798 D [PTT-DIAG]: PttHardwareReceiver.onReceive action=android.intent.action.PTT.up extras=null source=broadcast
+04-09 12:01:09.394 11798 11798 D [PTT-DIAG]: PttHardwareReceiver: mapped action=android.intent.action.PTT.up -> svcAction=com.reedersystems.commandcomms.SVC_PTT_UP
+04-09 12:01:09.396 11798 11798 D [PTT-DIAG]: PttHardwareReceiver: WakeLock acquired (auto-releases in 5000ms)
+04-09 12:01:09.399 11798 11798 D [PTT-DIAG]: MainActivity PTT UP source=MainActivity code=230 action=UP ts=1775750469399
+04-09 12:01:09.399 11798 11798 D [PTT-DIAG]: MainActivity PTT UP ΓÇö forwarding to BackgroundAudioService (signaling=true)
+04-09 12:01:09.404 11798 11798 D [PTT-DIAG]: handleRadioPttUp pttState=IDLE channelKey=TESTING__TESTING 1
+04-09 12:01:09.404 11798 11798 D [PTT-DIAG]: RADIO_PTT_UP source=service state=IDLE channelKey=TESTING__TESTING 1
+04-09 12:01:09.405 11798 11798 D [PTT-DIAG]: handleRadioPttUp pttState=IDLE channelKey=TESTING__TESTING 1
+04-09 12:01:09.405 11798 11798 D [PTT-DIAG]: RADIO_PTT_UP source=service state=IDLE channelKey=TESTING__TESTING 1
+04-09 12:01:10.103 11798 11798 D [PTT-DIAG]: PttHardwareReceiver.onReceive action=android.intent.action.PTT.down extras=null source=broadcast
+04-09 12:01:10.104 11798 11798 D [PTT-DIAG]: PttHardwareReceiver: mapped action=android.intent.action.PTT.down -> 
+svcAction=com.reedersystems.commandcomms.SVC_PTT_DOWN
+04-09 12:01:10.106 11798 11798 D [PTT-DIAG]: PttHardwareReceiver: WakeLock acquired (auto-releases in 5000ms)
+04-09 12:01:10.112 11798 11798 D [PTT-DIAG]: handleRadioPttDown pttState=IDLE signaling=true channelKey=TESTING__TESTING 1 channelId=535
+04-09 12:01:10.112 11798 11798 D [PTT-DIAG]: RADIO_PTT_DOWN source=service state=IDLE channelKey=TESTING__TESTING 1
+04-09 12:01:10.113 11798 11798 W [PTT-DIAG]: RADIO_READY_BLOCKED_REASON reason=signaling_not_authenticated:CONNECTED
+04-09 12:01:10.114 11798 11798 D [PTT-DIAG]: Sending PTT_TX_FAILED broadcast
+04-09 12:01:10.118 11798 11798 D [PTT-DIAG]: MainActivity PTT DOWN source=MainActivity code=230 action=DOWN repeat=0 ts=1775750470118
+04-09 12:01:10.118 11798 11798 D [PTT-DIAG]: MainActivity PTT DOWN ΓÇö forwarding to BackgroundAudioService (signaling=true)
+04-09 12:01:10.122 11798 11798 D [PTT-DIAG]: PTT_TX_FAILED received ΓÇö resetting to IDLE
+04-09 12:01:10.123 11798 11798 D [PTT-DIAG]: handleRadioPttDown pttState=IDLE signaling=true channelKey=TESTING__TESTING 1 channelId=535
+04-09 12:01:10.124 11798 11798 D [PTT-DIAG]: RADIO_PTT_DOWN source=service state=IDLE channelKey=TESTING__TESTING 1
+04-09 12:01:10.124 11798 11798 W [PTT-DIAG]: RADIO_READY_BLOCKED_REASON reason=signaling_not_authenticated:CONNECTED
+04-09 12:01:10.125 11798 11798 D [PTT-DIAG]: Sending PTT_TX_FAILED broadcast
+04-09 12:01:10.133 11798 11798 D [PTT-DIAG]: PTT_TX_FAILED received ΓÇö resetting to IDLE
+04-09 12:01:10.976 11798 11798 D [PTT-DIAG]: PttHardwareReceiver.onReceive action=android.intent.action.PTT.up extras=null source=broadcast
+04-09 12:01:10.976 11798 11798 D [PTT-DIAG]: PttHardwareReceiver: mapped action=android.intent.action.PTT.up -> svcAction=com.reedersystems.commandcomms.SVC_PTT_UP
+04-09 12:01:10.978 11798 11798 D [PTT-DIAG]: PttHardwareReceiver: WakeLock acquired (auto-releases in 5000ms)
+04-09 12:01:10.981 11798 11798 D [PTT-DIAG]: MainActivity PTT UP source=MainActivity code=230 action=UP ts=1775750470981
+04-09 12:01:10.981 11798 11798 D [PTT-DIAG]: MainActivity PTT UP ΓÇö forwarding to BackgroundAudioService (signaling=true)
+04-09 12:01:10.984 11798 11798 D [PTT-DIAG]: handleRadioPttUp pttState=IDLE channelKey=TESTING__TESTING 1
+04-09 12:01:10.984 11798 11798 D [PTT-DIAG]: RADIO_PTT_UP source=service state=IDLE channelKey=TESTING__TESTING 1
+04-09 12:01:10.986 11798 11798 D [PTT-DIAG]: handleRadioPttUp pttState=IDLE channelKey=TESTING__TESTING 1
+04-09 12:01:10.987 11798 11798 D [PTT-DIAG]: RADIO_PTT_UP source=service state=IDLE channelKey=TESTING__TESTING 1
