@@ -2,7 +2,6 @@ import dgram from 'dgram';
 import { canonicalChannelKey } from './channelKeyUtils.js';
 import { opusCodec } from './opusCodec.js';
 
-const SESSION_TOKEN_LEN = 16;
 const VERSION_LEN = 1;
 const FLAGS_LEN = 1;
 const CHANNEL_ID_LEN = 2;
@@ -11,7 +10,6 @@ const TIMESTAMP_LEN = 4;
 const SENDER_LEN_LEN = 1;
 const PAYLOAD_LEN_LEN = 2;
 const RADIO_HEADER_FIXED_LEN = VERSION_LEN + FLAGS_LEN + CHANNEL_ID_LEN + SEQUENCE_LEN + TIMESTAMP_LEN + SENDER_LEN_LEN + PAYLOAD_LEN_LEN;
-const HEADER_LEN = SESSION_TOKEN_LEN + RADIO_HEADER_FIXED_LEN;
 const PACKET_VERSION = 1;
 const FLAG_FEC_HINT = 0x01;
 const SUBSCRIBER_TIMEOUT_MS = 60000;
@@ -27,52 +25,25 @@ class AudioRelayService {
     this.socket = null;
     this.port = 5100;
     this.subscribers = new Map();
-    this.sessionTokens = new Map();
-    this._floorControlService = null;
     this._recordingTap = null;
     this._sweepTimer = null;
     this._audioListeners = new Map();
     this._channelNumericByKey = new Map();
-    this._earlyAudioBuffers = new Map();
-    this._earlyBufferMaxMs = 3000;
-    this._earlyBufferMaxFrames = 150;
+    this._channelKeyByNumeric = new Map();
     this._wsPacingQueues = new Map();
     this._wsPacingTimers = new Map();
-  }
-
-  setFloorControlService(fcs) {
-    this._floorControlService = fcs;
   }
 
   onRecordingTap(callback) {
     this._recordingTap = callback;
   }
 
-  registerSession(unitId, token, allowedChannelId, allowedChannelNumeric = null) {
-    const allowedChannelKey = canonicalChannelKey(allowedChannelId);
-    const resolvedChannelId = this._resolveChannelIdNumeric({
-      channelKey: allowedChannelKey,
-      channelIdNumeric: allowedChannelNumeric,
-    });
-    if (allowedChannelKey && resolvedChannelId > 0) {
-      this._channelNumericByKey.set(allowedChannelKey, resolvedChannelId);
-    }
-
-    this.sessionTokens.set(token, {
-      unitId,
-      allowedChannel: allowedChannelKey,
-      allowedChannelNumeric: resolvedChannelId,
-      createdAt: Date.now(),
-    });
-  }
-
-  removeSession(token) {
-    this.sessionTokens.delete(token);
-  }
-
-  removeSessionsByUnit(unitId) {
-    for (const [token, info] of this.sessionTokens) {
-      if (info.unitId === unitId) this.sessionTokens.delete(token);
+  registerChannelNumeric(channelId, channelNumeric) {
+    const key = canonicalChannelKey(channelId);
+    const resolved = this._resolveChannelIdNumeric({ channelKey: key, channelIdNumeric: channelNumeric });
+    if (key && resolved > 0) {
+      this._channelNumericByKey.set(key, resolved);
+      this._channelKeyByNumeric.set(resolved, key);
     }
   }
 
@@ -155,37 +126,6 @@ class AudioRelayService {
   injectAudio(channelId, senderUnitId, sequence, opusPayload, rawPcmSamples = null) {
     const channelKey = canonicalChannelKey(channelId);
     const resolvedChannelId = this._resolveChannelIdNumeric({ channelKey, channelIdNumeric: channelId });
-
-    if (this._floorControlService && !this._floorControlService.holdsFloor(channelKey, senderUnitId)) {
-      const bufKey = `${channelKey}:${senderUnitId}`;
-      let buf = this._earlyAudioBuffers.get(bufKey);
-      if (!buf) {
-        buf = [];
-        this._earlyAudioBuffers.set(bufKey, buf);
-      }
-      const now = Date.now();
-      while (buf.length > 0 && (now - buf[0].bufferedAt) > this._earlyBufferMaxMs) {
-        buf.shift();
-      }
-      if (buf.length < this._earlyBufferMaxFrames) {
-        buf.push({ channelKey, channelIdNumeric: resolvedChannelId, senderUnitId, sequence, opusPayload, flags: FLAG_FEC_HINT, timestampMs: Date.now(), bufferedAt: now, rawPcmSamples });
-      }
-      return;
-    }
-
-    const bufKey = `${channelKey}:${senderUnitId}`;
-    const earlyBuf = this._earlyAudioBuffers.get(bufKey);
-    if (earlyBuf && earlyBuf.length > 0) {
-      const now = Date.now();
-      const freshFrames = earlyBuf.filter(pkt => (now - pkt.bufferedAt) <= this._earlyBufferMaxMs);
-      if (freshFrames.length > 0) {
-        for (const pkt of freshFrames) {
-          const earlyPayload = this._buildRelayPacket(pkt);
-          this._broadcastToAll(pkt.channelKey, pkt.senderUnitId, earlyPayload, pkt.sequence, pkt.opusPayload, pkt.channelIdNumeric, null, pkt.rawPcmSamples);
-        }
-      }
-      this._earlyAudioBuffers.delete(bufKey);
-    }
 
     const rxPayload = this._buildRelayPacket({
       channelKey,
@@ -440,74 +380,41 @@ class AudioRelayService {
   }
 
   _handlePacket(msg, rinfo) {
-    if (msg.length < HEADER_LEN) return;
+    if (msg.length < RADIO_HEADER_FIXED_LEN) return;
 
-    const token = msg.subarray(0, SESSION_TOKEN_LEN).toString('hex');
-    const parsed = this._parsePacket(msg, SESSION_TOKEN_LEN);
+    const parsed = this._parsePacket(msg, 0);
     if (!parsed) return;
-    const { sequence, opusPayload, flags, timestampMs, senderUnitId } = parsed;
+    const { channelId: channelIdNumeric, sequence, opusPayload, flags, timestampMs, senderUnitId } = parsed;
 
-    const session = this.sessionTokens.get(token);
-    if (!session) return;
+    if (!senderUnitId) return;
 
-    const { unitId, allowedChannel, allowedChannelNumeric } = session;
-    const channelKey = canonicalChannelKey(allowedChannel);
-    const resolvedChannelId = this._resolveChannelIdNumeric({ channelKey, channelIdNumeric: allowedChannelNumeric });
-  
+    const channelKey = this._resolveChannelKeyFromNumeric(channelIdNumeric);
+    if (!channelKey) return;
 
-    this.addSubscriber(channelKey, unitId, rinfo.address, rinfo.port);
+    this.addSubscriber(channelKey, senderUnitId, rinfo.address, rinfo.port);
 
     if (!opusPayload || opusPayload.length === 0) {
-      console.log(`[Signaling] KEEPALIVE_OK unitId=${unitId} channelKey=${channelKey} addr=${rinfo.address}:${rinfo.port}`);
+      console.log(`[Signaling] KEEPALIVE_OK unitId=${senderUnitId} channelKey=${channelKey} addr=${rinfo.address}:${rinfo.port}`);
       return;
     }
 
-    const resolvedSender = senderUnitId || unitId;
-
-    if (this._floorControlService && !this._floorControlService.holdsFloor(channelKey, unitId)) {
-      const bufKey = `${channelKey}:${unitId}`;
-      let buf = this._earlyAudioBuffers.get(bufKey);
-      if (!buf) {
-        buf = [];
-        this._earlyAudioBuffers.set(bufKey, buf);
-      }
-      const now = Date.now();
-      while (buf.length > 0 && (now - buf[0].bufferedAt) > this._earlyBufferMaxMs) {
-        buf.shift();
-      }
-      if (buf.length < this._earlyBufferMaxFrames) {
-        buf.push({ channelKey, channelIdNumeric: resolvedChannelId, senderUnitId: resolvedSender, sequence, opusPayload, flags, timestampMs, bufferedAt: now });
-      
-      }
-      return;
-    }
-
-    const bufKey = `${channelKey}:${unitId}`;
-    const earlyBuf = this._earlyAudioBuffers.get(bufKey);
-    if (earlyBuf && earlyBuf.length > 0) {
-      const now = Date.now();
-      const freshFrames = earlyBuf.filter(pkt => (now - pkt.bufferedAt) <= this._earlyBufferMaxMs);
-      if (freshFrames.length > 0) {
-      
-        for (const pkt of freshFrames) {
-          const earlyPayload = this._buildRelayPacket(pkt);
-          this._broadcastToAllDirect(pkt.channelKey, unitId, earlyPayload, pkt.sequence, pkt.opusPayload, pkt.channelIdNumeric, pkt.senderUnitId);
-        }
-      }
-      this._earlyAudioBuffers.delete(bufKey);
-    }
+    const resolvedChannelId = this._resolveChannelIdNumeric({ channelKey, channelIdNumeric });
 
     const rxPayload = this._buildRelayPacket({
       channelKey,
       channelIdNumeric: resolvedChannelId,
-      senderUnitId: resolvedSender,
+      senderUnitId,
       sequence,
       opusPayload,
       flags,
       timestampMs,
     });
 
-    this._broadcastToAll(channelKey, unitId, rxPayload, sequence, opusPayload, resolvedChannelId, resolvedSender);
+    this._broadcastToAll(channelKey, senderUnitId, rxPayload, sequence, opusPayload, resolvedChannelId, senderUnitId);
+  }
+
+  _resolveChannelKeyFromNumeric(numericId) {
+    return this._channelKeyByNumeric.get(numericId) || null;
   }
 
 

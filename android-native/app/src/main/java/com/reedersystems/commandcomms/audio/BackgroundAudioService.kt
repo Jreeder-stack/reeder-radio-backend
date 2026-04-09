@@ -56,7 +56,6 @@ class BackgroundAudioService : Service() {
 
     @Volatile private var joinedSignalingChannelId: String? = null
     @Volatile private var pendingSignalingChannelId: String? = null
-    @Volatile private var sessionTokenChannelId: String? = null
 
     private var emergencyActivatingJob: Job? = null
 
@@ -477,44 +476,6 @@ class BackgroundAudioService : Service() {
                 val engine = radioEngine ?: return@collectLatest
                 val currentRoomKey = servicePrefs.channelRoomKey
                 when (event) {
-                    is SignalingEvent.RadioSessionToken -> {
-                        val activeChannel = currentRoomKey
-                        val tokenPresent = event.token.isNotBlank()
-                        Log.d(
-                            TAG,
-                            "RADIO_TOKEN_EVENT_RECEIVED channelId=${event.channelId} roomKey=${activeChannel ?: "none"} tokenPresent=${if (tokenPresent) "yes" else "no"}"
-                        )
-
-                        if (!tokenPresent) {
-                            Log.w(TAG, "RADIO_TOKEN_IGNORED reason=empty_token channelId=${event.channelId}")
-                            return@collectLatest
-                        }
-
-                        if (activeChannel.isNullOrBlank()) {
-                            Log.w(TAG, "RADIO_TOKEN_IGNORED reason=no_active_channel tokenChannel=${event.channelId}")
-                            return@collectLatest
-                        }
-
-                        if (event.channelId != activeChannel) {
-                            Log.w(
-                                TAG,
-                                "RADIO_TOKEN_IGNORED reason=channel_mismatch activeChannel=$activeChannel tokenChannel=${event.channelId}"
-                            )
-                            return@collectLatest
-                        }
-
-                        val isReconnectToken = sessionTokenChannelId == event.channelId
-                        Log.d(
-                            TAG,
-                            "RADIO_TOKEN_ACCEPTED_FOR_ACTIVE_CHANNEL activeChannel=$activeChannel tokenChannel=${event.channelId} isReconnect=$isReconnectToken"
-                        )
-                        if (isReconnectToken) {
-                            Log.d(TAG, "RECONNECT_SESSION_TOKEN_RECEIVED channelId=${event.channelId}")
-                        }
-                        sessionTokenChannelId = event.channelId
-                        Log.d(TAG, "RADIO_SESSION_TOKEN_RECEIVED channelId=${event.channelId}")
-                        engine.udpTransport.setSessionToken(event.token)
-                    }
                     is SignalingEvent.RadioChannelJoined -> {
                         joinedSignalingChannelId = event.channelId
                         if (pendingSignalingChannelId == event.channelId) {
@@ -740,7 +701,6 @@ class BackgroundAudioService : Service() {
         val state = app.signalingRepository.connectionState.value
         if (state != ConnectionState.AUTHENTICATED) return false to "signaling_not_authenticated:$state"
         if (joinedSignalingChannelId != roomKey) return false to "channel_not_joined joined=$joinedSignalingChannelId target=$roomKey"
-        if (sessionTokenChannelId != roomKey) return false to "session_token_missing channel=$roomKey tokenChannel=$sessionTokenChannelId"
         return true to null
     }
 
@@ -749,8 +709,7 @@ class BackgroundAudioService : Service() {
         Log.d(TAG, "RECONNECT_AUTH_PIPELINE_RESET — transport cleanup on signaling re-auth, codec preserved")
         engine.jitterBuffer.flushForReconnect()
         engine.audioPlayback.clearStaleFrames()
-        engine.udpTransport.clearSessionToken()
-        Log.d(TAG, "RECONNECT_AUTH_PIPELINE_RESET_COMPLETE — jitter, playback, transport reset — codec untouched")
+        Log.d(TAG, "RECONNECT_AUTH_PIPELINE_RESET_COMPLETE — jitter, playback reset — codec untouched")
     }
 
     private fun startPendingFloorTimeout(roomKey: String) {

@@ -59,9 +59,6 @@ class RadioAudioEngine(private val context: Context) {
     @Volatile
     private var lastDiagRxCount: Long = 0
 
-    @Volatile
-    private var reconnectCount = 0
-
     private var actualSampleRate: Int = DEFAULT_MIC_SAMPLE_RATE
     private var actualChannelCount: Int = 1
     private var actualFrameSizeSamples: Int = (DEFAULT_MIC_SAMPLE_RATE * CAPTURE_INTERVAL_MS.toInt()) / 1000
@@ -108,7 +105,6 @@ class RadioAudioEngine(private val context: Context) {
         acquireAudioFocus()
         audioPlayback.ensureTrackReady()
         udpTransport.onPacketReceived = { packet -> onAudioPacketReceived(packet) }
-        udpTransport.onSessionTokenChanged = { onSessionTokenChanged() }
         udpTransport.start()
         started = true
         RadioDiagLog.resetSessionClock()
@@ -125,37 +121,12 @@ class RadioAudioEngine(private val context: Context) {
             stopTransmit()
         }
         stopReceive()
-        udpTransport.onSessionTokenChanged = null
         udpTransport.stop()
         releaseAudioFocus()
         opusCodec.release()
         started = false
         stateManager.reset()
         Log.d(TAG, "RadioAudioEngine stopped ${RadioDiagLog.elapsedTag()}")
-    }
-
-    private fun onSessionTokenChanged() {
-        if (!started) {
-            Log.w("[RadioError]", "onSessionTokenChanged called but engine not started — ignoring")
-            return
-        }
-        reconnectCount++
-        val rc = reconnectCount
-        val resetStartMs = System.currentTimeMillis()
-        Log.d(TAG, "SESSION_TOKEN_CHANGED reconnectCount=$rc — transport-only reset, codec preserved ${RadioDiagLog.elapsedTag()}")
-
-        try {
-            jitterBuffer.flushForReconnect()
-            Log.d(TAG, "SESSION_TOKEN_STEP jitter_buffer_flushed reconnectCount=$rc")
-
-            audioPlayback.clearStaleFrames()
-            Log.d(TAG, "SESSION_TOKEN_STEP audiotrack_flushed reconnectCount=$rc")
-
-            val resetDurationMs = System.currentTimeMillis() - resetStartMs
-            Log.d(TAG, "SESSION_TOKEN_COMPLETE reconnectCount=$rc resetDurationMs=$resetDurationMs componentsReset=jitterBuffer,audioTrack codecPreserved=true ${RadioDiagLog.elapsedTag()}")
-        } catch (e: Exception) {
-            Log.e("[RadioError]", "SESSION_TOKEN_EXCEPTION reconnectCount=$rc ${e::class.simpleName}: ${e.message} method=onSessionTokenChanged", e)
-        }
     }
 
     fun requestCodecReset() {

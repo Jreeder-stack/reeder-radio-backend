@@ -3,7 +3,6 @@ import { floorControlService } from './floorControlService.js';
 import { audioRelayService } from './audioRelayService.js';
 import { opusCodec } from './opusCodec.js';
 import { canonicalChannelKey } from './channelKeyUtils.js';
-import crypto from 'crypto';
 import cookie from 'cookie';
 import signature from 'cookie-signature';
 import pool, { clearUnitEmergencyByIdentity } from '../db/index.js';
@@ -183,7 +182,6 @@ class SignalingService {
       console.log(`[Signaling] Floor timeout: cleaned up activeTransmissions and floor for ${unitId} on ${channelId}`);
     });
 
-    audioRelayService.setFloorControlService(floorControlService);
 
     this._startActiveTransmissionsSweep();
 
@@ -936,10 +934,6 @@ class SignalingService {
       console.log(`[Signaling] Released floor for ${socket.unitId} on ${channelId}`);
     }
 
-    if (socket.radioSessionToken) {
-      audioRelayService.removeSession(socket.radioSessionToken);
-    }
-    audioRelayService.removeSessionsByUnit(socket.unitId);
     audioRelayService.removeAllSubscriptions(socket.unitId);
     
     this.unitPresence.delete(socket.unitId);
@@ -1149,7 +1143,7 @@ class SignalingService {
 
     console.log(`[Signaling] CHANNEL_JOINED unitId=${socket.unitId} channelId=${channelId}`);
 
-    this._issueRadioSessionToken(socket, channelId, 'join', socket.lastAuthorizedRadioChannelNumeric);
+    audioRelayService.registerChannelNumeric(channelId, socket.lastAuthorizedRadioChannelNumeric);
   }
 
   _handleRadioLeaveChannel(socket, data) {
@@ -1192,12 +1186,6 @@ class SignalingService {
         channelId,
         timestamp: Date.now(),
       });
-    }
-
-    if (socket.radioSessionToken) {
-      audioRelayService.removeSession(socket.radioSessionToken);
-      socket.radioSessionToken = null;
-      socket.radioSessionChannel = null;
     }
 
     socket.emit('radio:channelLeft', { channelId, timestamp: Date.now() });
@@ -1278,11 +1266,6 @@ class SignalingService {
             reason: 'preempted_emergency',
             timestamp: Date.now(),
           });
-          if (preemptedSocket.radioSessionToken) {
-            audioRelayService.removeSession(preemptedSocket.radioSessionToken);
-            preemptedSocket.radioSessionToken = null;
-            preemptedSocket.radioSessionChannel = null;
-          }
         }
       }
 
@@ -1310,26 +1293,6 @@ class SignalingService {
       console.log(`[Signaling] PTT_DENIED unitId=${socket.unitId} channelId=${channelId} reason=${result.reason} heldBy=${result.heldBy || ''}`);
       console.log(`[Signaling] PTT denied: ${socket.unitId} on ${channelId} (${result.reason})`);
     }
-  }
-
-  _issueRadioSessionToken(socket, channelId, reason = 'unknown', channelNumericId = null) {
-    if (!socket?.unitId || !channelId) return null;
-
-    console.log(`[Signaling] RADIO_TOKEN_ISSUE_ATTEMPT unitId=${socket.unitId} channelId=${channelId} reason=${reason}`);
-
-    if (socket.radioSessionToken) {
-      audioRelayService.removeSession(socket.radioSessionToken);
-    }
-
-    const sessionToken = crypto.randomBytes(16).toString('hex');
-    socket.radioSessionToken = sessionToken;
-    socket.radioSessionChannel = channelId;
-    audioRelayService.registerSession(socket.unitId, sessionToken, channelId, channelNumericId);
-    console.log(`[Signaling] RADIO_TOKEN_ISSUED unitId=${socket.unitId} channelId=${channelId} numericChannelId=${channelNumericId ?? 'unknown'} reason=${reason}`);
-
-    socket.emit('radio:sessionToken', { token: sessionToken, channelId });
-    console.log(`[Signaling] RADIO_TOKEN_EMIT channelId=${channelId} roomKey=${channelId} unitId=${socket.unitId}`);
-    return sessionToken;
   }
 
   _handlePttRelease(socket, data) {
@@ -1408,12 +1371,6 @@ class SignalingService {
 
       floorControlService.releaseFloor(channelId, socket.unitId);
       this.activeTransmissions.delete(channelId);
-
-      if (socket.radioSessionToken) {
-        audioRelayService.removeSession(socket.radioSessionToken);
-        socket.radioSessionToken = null;
-        socket.radioSessionChannel = null;
-      }
 
       const presenceData = this.unitPresence.get(socket.unitId);
       if (presenceData) {

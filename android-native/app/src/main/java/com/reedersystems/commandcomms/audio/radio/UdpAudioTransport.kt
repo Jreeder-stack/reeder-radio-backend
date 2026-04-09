@@ -11,7 +11,6 @@ private const val TAG = "[UdpTransport]"
 private const val DEFAULT_RELAY_PORT = 5100
 private const val RECEIVE_BUFFER_SIZE = 4096
 private const val RECEIVE_TIMEOUT_MS = 100
-private const val SESSION_TOKEN_LEN = 16
 private const val RADIO_HEADER_FIXED_LEN = 1 + 1 + 2 + 2 + 4 + 1 + 2
 private const val PACKET_VERSION: Byte = 1
 private const val FLAG_FEC_HINT = 0x01
@@ -52,9 +51,6 @@ class UdpAudioTransport(
     val localPort: Int?
         get() = socket?.localPort
 
-    @Volatile
-    private var sessionTokenBytes: ByteArray? = null
-
     private val txRateLimiter = RadioDiagLog.RateLimiter(detailCount = 5)
     private val rxRateLimiter = RadioDiagLog.RateLimiter(detailCount = 5)
 
@@ -79,34 +75,21 @@ class UdpAudioTransport(
         Log.d(TAG, "Configured relay: $host:$port ${RadioDiagLog.elapsedTag()}")
     }
 
-    var onSessionTokenChanged: (() -> Unit)? = null
-
-    fun setSessionToken(hexToken: String) {
-        val hadPreviousToken = sessionTokenBytes != null
+    fun resetCounters() {
         sequenceNumber = 0
         rxPacketCount = 0
         txPacketCount = 0
         txRateLimiter.reset(); rxRateLimiter.reset()
         txSummaryBytes = 0; txFailures = 0; rxSummaryBytes = 0; rxDropped = 0
-        sessionTokenBytes = hexStringToByteArray(hexToken)
-        if (hadPreviousToken) {
-            Log.d(TAG, "RECONNECT_SESSION_TOKEN_SET seqReset=true rxCountReset=true previousTokenCleared=true tokenBytes=${hexToken.length / 2} ${RadioDiagLog.elapsedTag()}")
-        } else {
-            Log.d(TAG, "SESSION_TOKEN_SET tokenBytes=${hexToken.length / 2} ${RadioDiagLog.elapsedTag()}")
-        }
-        Log.d(TAG, "Session token set (${hexToken.length / 2} bytes)")
-        if (hadPreviousToken) {
-            onSessionTokenChanged?.invoke()
-        }
+        Log.d(TAG, "COUNTERS_RESET ${RadioDiagLog.elapsedTag()}")
         sendImmediateKeepalive()
     }
 
     private fun sendImmediateKeepalive() {
-        val token = sessionTokenBytes ?: return
         val sock = socket ?: return
         scope.launch {
             try {
-                val keepalivePacket = buildKeepalivePacket(token)
+                val keepalivePacket = buildKeepalivePacket()
                 val address = resolveAddress() ?: return@launch
                 val dgram = DatagramPacket(keepalivePacket, keepalivePacket.size, address, relayPort)
                 sock.send(dgram)
@@ -115,12 +98,6 @@ class UdpAudioTransport(
                 Log.w("[RadioError]", "UDP immediate keepalive send error: ${e::class.simpleName}: ${e.message} dest=$relayHost:$relayPort method=sendImmediateKeepalive")
             }
         }
-    }
-
-    fun clearSessionToken() {
-        sessionTokenBytes = null
-        sequenceNumber = 0
-        Log.d(TAG, "SESSION_TOKEN_CLEARED ${RadioDiagLog.elapsedTag()}")
     }
 
     fun start() {
@@ -151,7 +128,6 @@ class UdpAudioTransport(
         socket?.close()
         socket = null
         sequenceNumber = 0
-        sessionTokenBytes = null
         cachedAddress = null
         cachedHost = ""
         Log.d(TAG, "UDP transport stopped txTotal=$txPacketCount rxTotal=$rxPacketCount txFailures=$txFailures rxDropped=$rxDropped ${RadioDiagLog.elapsedTag()}")
@@ -164,17 +140,12 @@ class UdpAudioTransport(
     private val sendPacketQueue = Channel<QueuedPacket>(capacity = 64)
 
     fun send(data: ByteArray) {
-        val token = sessionTokenBytes
-        if (token == null) {
-            Log.w("[RadioError]", "Cannot send — no session token method=send payloadSize=${data.size}")
-            return
-        }
         if (relayHost.isBlank()) {
             Log.w("[RadioError]", "Cannot send — relay host not configured method=send")
             return
         }
         val payloadBytes = data.size
-        val framed = framePacket(token, data)
+        val framed = framePacket(data)
         sendPacketQueue.trySend(QueuedPacket(framed, payloadBytes))
     }
 
@@ -194,7 +165,7 @@ class UdpAudioTransport(
 
                             txRateLimiter.tick()
                             if (txRateLimiter.shouldLogDetail()) {
-                                Log.d(TAG, "TX_PACKET seq=${sequenceNumber - 1} payloadBytes=${qp.payloadBytes} framedBytes=${framed.size} dest=$relayHost:$relayPort tokenPresent=true channelIdx=$channelIndex ${RadioDiagLog.elapsedTag()}")
+                                Log.d(TAG, "TX_PACKET seq=${sequenceNumber - 1} payloadBytes=${qp.payloadBytes} framedBytes=${framed.size} dest=$relayHost:$relayPort channelIdx=$channelIndex ${RadioDiagLog.elapsedTag()}")
                             } else if (txRateLimiter.shouldLogSummary()) {
                                 val cnt = txRateLimiter.resetSummaryAccumulator()
                                 Log.d(TAG, "TX_SUMMARY packets=$cnt totalPkts=$txPacketCount totalBytes=$txSummaryBytes failures=$txFailures dest=$relayHost:$relayPort ${RadioDiagLog.elapsedTag()}")
@@ -230,15 +201,14 @@ class UdpAudioTransport(
         }
     }
 
-    private fun framePacket(token: ByteArray, audioData: ByteArray): ByteArray {
+    private fun framePacket(audioData: ByteArray): ByteArray {
         val seq = sequenceNumber++
         val senderBytes = unitId.toByteArray(Charsets.UTF_8)
         val senderLen = senderBytes.size.coerceAtMost(255)
         val channelNumeric = channelIndex
         val timestampMs = (System.currentTimeMillis() and 0xFFFFFFFFL).toInt()
-        val frame = ByteArray(SESSION_TOKEN_LEN + RADIO_HEADER_FIXED_LEN + senderLen + audioData.size)
-        System.arraycopy(token, 0, frame, 0, SESSION_TOKEN_LEN)
-        var offset = SESSION_TOKEN_LEN
+        val frame = ByteArray(RADIO_HEADER_FIXED_LEN + senderLen + audioData.size)
+        var offset = 0
         frame[offset++] = PACKET_VERSION
         frame[offset++] = FLAG_FEC_HINT.toByte()
         frame[offset++] = ((channelNumeric shr 8) and 0xFF).toByte()
@@ -326,10 +296,9 @@ class UdpAudioTransport(
         keepaliveJob = scope.launch {
             while (isActive) {
                 delay(KEEPALIVE_INTERVAL_MS)
-                val token = sessionTokenBytes ?: continue
                 val sock = socket ?: break
                 try {
-                    val keepalivePacket = buildKeepalivePacket(token)
+                    val keepalivePacket = buildKeepalivePacket()
                     val address = resolveAddress() ?: continue
                     val dgram = DatagramPacket(keepalivePacket, keepalivePacket.size, address, relayPort)
                     sock.send(dgram)
@@ -341,14 +310,13 @@ class UdpAudioTransport(
         }
     }
 
-    private fun buildKeepalivePacket(token: ByteArray): ByteArray {
+    private fun buildKeepalivePacket(): ByteArray {
         val senderBytes = unitId.toByteArray(Charsets.UTF_8)
         val senderLen = senderBytes.size.coerceAtMost(255)
         val channelNumeric = channelIndex
         val timestampMs = (System.currentTimeMillis() and 0xFFFFFFFFL).toInt()
-        val frame = ByteArray(SESSION_TOKEN_LEN + RADIO_HEADER_FIXED_LEN + senderLen)
-        System.arraycopy(token, 0, frame, 0, SESSION_TOKEN_LEN)
-        var offset = SESSION_TOKEN_LEN
+        val frame = ByteArray(RADIO_HEADER_FIXED_LEN + senderLen)
+        var offset = 0
         frame[offset++] = PACKET_VERSION
         frame[offset++] = 0
         frame[offset++] = ((channelNumeric shr 8) and 0xFF).toByte()
@@ -370,18 +338,6 @@ class UdpAudioTransport(
     fun release() {
         stop()
         scope.cancel()
-    }
-
-    private fun hexStringToByteArray(hex: String): ByteArray {
-        val len = hex.length
-        val data = ByteArray(len / 2)
-        var i = 0
-        while (i < len) {
-            data[i / 2] = ((Character.digit(hex[i], 16) shl 4) +
-                    Character.digit(hex[i + 1], 16)).toByte()
-            i += 2
-        }
-        return data
     }
 
     private fun parseRelayPacket(buffer: ByteArray, packetLength: Int): OpusRadioPacket? {

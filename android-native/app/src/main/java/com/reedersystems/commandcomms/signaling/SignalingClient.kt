@@ -193,19 +193,6 @@ class SignalingClient(var serverUrl: String) {
             )
         }}
 
-        s.on("radio:sessionToken") { args -> parseAndEmit(args) { json ->
-            val channelId = json.optString("channelId")
-            val token = json.optString("token")
-            Log.d(
-                TAG,
-                "RADIO_TOKEN_EVENT_RECEIVED channelId=$channelId roomKey=$channelId tokenPresent=${if (token.isNotBlank()) "yes" else "no"}"
-            )
-            SignalingEvent.RadioSessionToken(
-                token = token,
-                channelId = channelId
-            )
-        }}
-
         s.on("ptt:granted") { args -> parseAndEmit(args) { json ->
             val ch = json.optString("channelId")
             val sender = json.optString("senderUnitId")
