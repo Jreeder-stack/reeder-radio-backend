@@ -88,6 +88,11 @@ function finalizeRecording(key) {
     const pcmData = Buffer.concat(pcmChunks);
     const wavBuffer = createWavBuffer(pcmData, SAMPLE_RATE, CHANNELS);
 
+    if (!validateWavBuffer(wavBuffer)) {
+      console.warn(`[RecordingTap] Invalid WAV buffer for unit=${unitId} channel=${channelId} — skipping save`);
+      return;
+    }
+
     sendAudioMessage(channelId, unitId, wavBuffer, durationMs, true)
       .then((msg) => {
         console.log(`[RecordingTap] Audio message saved: id=${msg.id} channel=${channelId} sender=${unitId} duration=${durationMs}ms`);
@@ -132,6 +137,22 @@ function createWavBuffer(pcmData, sampleRate, numChannels) {
   pcmData.copy(buffer, 44);
 
   return buffer;
+}
+
+const MIN_WAV_SIZE = 44 + 100;
+
+function validateWavBuffer(buffer) {
+  if (!Buffer.isBuffer(buffer) || buffer.length < MIN_WAV_SIZE) {
+    console.warn(`[RecordingTap] WAV validation failed: buffer too small (${buffer?.length || 0} bytes)`);
+    return false;
+  }
+  const riff = buffer.toString('ascii', 0, 4);
+  const wave = buffer.toString('ascii', 8, 12);
+  if (riff !== 'RIFF' || wave !== 'WAVE') {
+    console.warn(`[RecordingTap] WAV validation failed: invalid magic bytes (got "${riff}"/"${wave}")`);
+    return false;
+  }
+  return true;
 }
 
 export function setupRecordingTap(audioRelayService, signalingService) {

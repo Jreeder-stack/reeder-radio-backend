@@ -42,11 +42,20 @@ export async function sendTextMessage(channel, sender, content) {
 
 export async function sendAudioMessage(channel, sender, audioBuffer, duration = null, skipBroadcast = false) {
   const normalizedChannel = await normalizeChannelToRoomKey(channel);
-  const filename = `${normalizedChannel}_${Date.now()}_${sender.replace(/[^a-zA-Z0-9]/g, '_')}.wav`;
+  const sanitizedChannel = normalizedChannel.replace(/[^a-zA-Z0-9_\-]/g, '_');
+  const sanitizedSender = sender.replace(/[^a-zA-Z0-9]/g, '_');
+  const filename = `${sanitizedChannel}_${Date.now()}_${sanitizedSender}.wav`;
   
   const audioUrl = `/api/messages/audio/${filename}`;
   
   const message = await createChannelMessage(normalizedChannel, sender, 'audio', null, audioUrl, duration, audioBuffer);
+  
+  try {
+    const filepath = path.join(AUDIO_DIR, filename);
+    fs.writeFileSync(filepath, audioBuffer);
+  } catch (err) {
+    console.warn('[MessagesService] Failed to write audio file to filesystem:', err.message);
+  }
   
   if (!skipBroadcast) {
     broadcastMessage(normalizedChannel, message).catch(err => {
@@ -143,7 +152,10 @@ async function transcribeAudioFile(filepath) {
 }
 
 export function getAudioFilePath(filename) {
-  const filepath = path.join(AUDIO_DIR, filename);
+  const filepath = path.resolve(AUDIO_DIR, filename);
+  if (!filepath.startsWith(AUDIO_DIR + path.sep)) {
+    return null;
+  }
   if (!fs.existsSync(filepath)) {
     return null;
   }

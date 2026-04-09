@@ -84,12 +84,41 @@ router.get('/audio/:filename', async (req, res) => {
       return res.send(audioData);
     }
 
+    let decodedFilename;
+    try {
+      decodedFilename = decodeURIComponent(filename);
+    } catch {
+      decodedFilename = filename;
+    }
+    const isSafeDecoded = decodedFilename !== filename
+      && !decodedFilename.includes('..')
+      && !decodedFilename.includes('/')
+      && !decodedFilename.includes('\\');
+
+    if (isSafeDecoded) {
+      const decodedAudioData = await getAudioDataByFilename(decodedFilename);
+      if (decodedAudioData) {
+        res.setHeader('Content-Type', 'audio/wav');
+        res.setHeader('Content-Length', decodedAudioData.length);
+        return res.send(decodedAudioData);
+      }
+    }
+
     const filepath = getAudioFilePath(filename);
     if (filepath) {
       res.setHeader('Content-Type', 'audio/wav');
       return res.sendFile(filepath);
     }
 
+    if (isSafeDecoded) {
+      const decodedFilepath = getAudioFilePath(decodedFilename);
+      if (decodedFilepath) {
+        res.setHeader('Content-Type', 'audio/wav');
+        return res.sendFile(decodedFilepath);
+      }
+    }
+
+    console.warn(`[AudioRoute] Audio file not found: filename="${filename}"${isSafeDecoded ? `, decoded="${decodedFilename}"` : ''} — no match in DB or filesystem`);
     return res.status(404).json({ success: false, error: 'Audio file not found' });
   } catch (error) {
     console.error('Error serving audio:', error);

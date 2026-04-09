@@ -168,7 +168,7 @@ export default function VoiceMessage({ audioUrl, duration, transcription, onTran
 
   return (
     <div className="min-w-[200px]">
-      <audio ref={audioRef} src={audioUrl} preload="metadata" />
+      <audio ref={audioRef} src={encodeURI(audioUrl)} preload="metadata" />
       
       <div className="flex items-center gap-3">
         <button
