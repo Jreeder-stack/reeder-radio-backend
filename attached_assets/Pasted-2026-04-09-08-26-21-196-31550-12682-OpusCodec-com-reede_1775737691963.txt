@@ -1,0 +1,196 @@
+2026-04-09 08:26:21.196 31550-12682 [OpusCodec]             com.reedersystems.commandcomms       D  DECODER_RESET OpusDecoder recreated rate=48000 channels=1 t=159237ms
+2026-04-09 08:26:21.221 31550-12682 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODER_RESET OpusEncoder recreated rate=48000 frameSize=960 channels=1 t=159247ms
+2026-04-09 08:26:26.433 31550-13660 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODER_REINIT rate=48000 frameSize=960 channels=1 bitrate=48000 VBR=true complexity=5 FEC=true — decoder untouched t=57ms
+2026-04-09 08:26:26.591 31550-12552 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=1 pcmBytes=1920 encodedBytes=107 seq=1 t=216ms
+2026-04-09 08:26:26.625 31550-12552 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=2 pcmBytes=1920 encodedBytes=101 seq=2 t=249ms
+2026-04-09 08:26:26.648 31550-12552 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=3 pcmBytes=1920 encodedBytes=104 seq=3 t=272ms
+2026-04-09 08:26:26.666 31550-12552 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=4 pcmBytes=1920 encodedBytes=126 seq=4 t=291ms
+2026-04-09 08:26:26.685 31550-12552 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=5 pcmBytes=1920 encodedBytes=124 seq=5 t=309ms
+2026-04-09 08:26:26.703 31550-12552 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE_SUMMARY frames=6 totalFrames=6 totalPcmBytes=11520 totalEncodedBytes=686 t=327ms
+2026-04-09 08:26:26.884 31550-13660 [OpusCodec]             com.reedersystems.commandcomms       D  DECODER_RESET OpusDecoder recreated rate=48000 channels=1 t=508ms
+2026-04-09 08:26:26.890 31550-13660 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODER_RESET OpusEncoder recreated rate=48000 frameSize=960 channels=1 t=514ms
+2026-04-09 08:26:26.905 31550-12552 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=1 pcmBytes=1920 encodedBytes=122 seq=1 t=529ms
+2026-04-09 08:26:26.924 31550-12552 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=2 pcmBytes=1920 encodedBytes=135 seq=2 t=548ms
+2026-04-09 08:26:26.942 31550-12552 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=3 pcmBytes=1920 encodedBytes=132 seq=3 t=566ms
+2026-04-09 08:26:26.959 31550-12552 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=4 pcmBytes=1920 encodedBytes=153 seq=4 t=583ms
+2026-04-09 08:26:26.975 31550-12552 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=5 pcmBytes=1920 encodedBytes=138 seq=5 t=599ms
+2026-04-09 08:26:26.993 31550-12552 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE_SUMMARY frames=6 totalFrames=6 totalPcmBytes=11520 totalEncodedBytes=809 t=617ms
+2026-04-09 08:26:27.995 31550-12552 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE_SUMMARY frames=48 totalFrames=54 totalPcmBytes=103680 totalEncodedBytes=6936 t=1619ms
+2026-04-09 08:26:29.011 31550-12552 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE_SUMMARY frames=46 totalFrames=100 totalPcmBytes=192000 totalEncodedBytes=12110 t=2635ms
+2026-04-09 08:26:29.468 31550-12682 [OpusCodec]             com.reedersystems.commandcomms       D  DECODER_RESET OpusDecoder recreated rate=48000 channels=1 t=3092ms
+2026-04-09 08:26:29.470 31550-12682 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODER_RESET OpusEncoder recreated rate=48000 frameSize=960 channels=1 t=3094ms
+2026-04-09 08:26:31.973 31550-12682 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODER_REINIT rate=48000 frameSize=960 channels=1 bitrate=48000 VBR=true complexity=5 FEC=true — decoder untouched t=100ms
+2026-04-09 08:26:32.147 31550-13660 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=1 pcmBytes=1920 encodedBytes=120 seq=1 t=275ms
+2026-04-09 08:26:32.169 31550-13660 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=2 pcmBytes=1920 encodedBytes=113 seq=2 t=297ms
+2026-04-09 08:26:32.189 31550-13660 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=3 pcmBytes=1920 encodedBytes=99 seq=3 t=317ms
+2026-04-09 08:26:32.208 31550-13660 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=4 pcmBytes=1920 encodedBytes=90 seq=4 t=335ms
+2026-04-09 08:26:32.227 31550-13660 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=5 pcmBytes=1920 encodedBytes=96 seq=5 t=355ms
+2026-04-09 08:26:32.246 31550-13660 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE_SUMMARY frames=6 totalFrames=6 totalPcmBytes=11520 totalEncodedBytes=612 t=374ms
+2026-04-09 08:26:32.336 31550-13663 [OpusCodec]             com.reedersystems.commandcomms       D  DECODER_RESET OpusDecoder recreated rate=48000 channels=1 t=463ms
+2026-04-09 08:26:32.345 31550-13663 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODER_RESET OpusEncoder recreated rate=48000 frameSize=960 channels=1 t=473ms
+2026-04-09 08:26:32.361 31550-13660 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=1 pcmBytes=1920 encodedBytes=95 seq=1 t=488ms
+2026-04-09 08:26:32.381 31550-13660 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=2 pcmBytes=1920 encodedBytes=98 seq=2 t=509ms
+2026-04-09 08:26:32.402 31550-13660 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=3 pcmBytes=1920 encodedBytes=106 seq=3 t=530ms
+2026-04-09 08:26:32.421 31550-13660 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=4 pcmBytes=1920 encodedBytes=92 seq=4 t=549ms
+2026-04-09 08:26:32.442 31550-13660 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=5 pcmBytes=1920 encodedBytes=97 seq=5 t=569ms
+2026-04-09 08:26:32.461 31550-13660 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE_SUMMARY frames=6 totalFrames=6 totalPcmBytes=11520 totalEncodedBytes=623 t=589ms
+2026-04-09 08:26:33.476 31550-13660 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE_SUMMARY frames=45 totalFrames=51 totalPcmBytes=97920 totalEncodedBytes=6207 t=1604ms
+2026-04-09 08:26:34.489 31550-13660 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE_SUMMARY frames=49 totalFrames=100 totalPcmBytes=192000 totalEncodedBytes=11985 t=2617ms
+2026-04-09 08:26:35.081 31550-13660 [OpusCodec]             com.reedersystems.commandcomms       D  DECODER_RESET OpusDecoder recreated rate=48000 channels=1 t=3207ms
+2026-04-09 08:26:35.084 31550-13660 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODER_RESET OpusEncoder recreated rate=48000 frameSize=960 channels=1 t=3212ms
+2026-04-09 08:26:36.476 31550-13660 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODER_REINIT rate=48000 frameSize=960 channels=1 bitrate=48000 VBR=true complexity=5 FEC=true — decoder untouched t=61ms
+2026-04-09 08:26:36.657 31550-12682 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=1 pcmBytes=1920 encodedBytes=98 seq=1 t=242ms
+2026-04-09 08:26:36.683 31550-12682 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=2 pcmBytes=1920 encodedBytes=103 seq=2 t=268ms
+2026-04-09 08:26:36.704 31550-12682 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=3 pcmBytes=1920 encodedBytes=96 seq=3 t=289ms
+2026-04-09 08:26:36.722 31550-12682 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=4 pcmBytes=1920 encodedBytes=113 seq=4 t=307ms
+2026-04-09 08:26:36.740 31550-12682 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=5 pcmBytes=1920 encodedBytes=127 seq=5 t=325ms
+2026-04-09 08:26:36.758 31550-12682 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE_SUMMARY frames=6 totalFrames=6 totalPcmBytes=11520 totalEncodedBytes=675 t=343ms
+2026-04-09 08:26:36.935 31550-13774 [OpusCodec]             com.reedersystems.commandcomms       D  DECODER_RESET OpusDecoder recreated rate=48000 channels=1 t=520ms
+2026-04-09 08:26:36.959 31550-13774 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODER_RESET OpusEncoder recreated rate=48000 frameSize=960 channels=1 t=544ms
+2026-04-09 08:26:36.974 31550-12682 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=1 pcmBytes=1920 encodedBytes=116 seq=1 t=558ms
+2026-04-09 08:26:36.990 31550-12682 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=2 pcmBytes=1920 encodedBytes=123 seq=2 t=575ms
+2026-04-09 08:26:37.008 31550-12682 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=3 pcmBytes=1920 encodedBytes=134 seq=3 t=592ms
+2026-04-09 08:26:37.026 31550-12682 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=4 pcmBytes=1920 encodedBytes=141 seq=4 t=611ms
+2026-04-09 08:26:37.045 31550-12682 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=5 pcmBytes=1920 encodedBytes=138 seq=5 t=630ms
+2026-04-09 08:26:37.065 31550-12682 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE_SUMMARY frames=6 totalFrames=6 totalPcmBytes=11520 totalEncodedBytes=778 t=650ms
+2026-04-09 08:26:38.076 31550-12682 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE_SUMMARY frames=46 totalFrames=52 totalPcmBytes=99840 totalEncodedBytes=6504 t=1661ms
+2026-04-09 08:26:38.838 31550-12682 [RadioError]            com.reedersystems.commandcomms       E  OPUS_ENCODE_ASSERTION_FAILURE frame=91 source=VOICE_COMMUNICATION samples=960 bytes=1920 expectedBytes=1920 sampleRate=48000 frameSize=960 consecutiveFailures=1 assertionFailures=1 method=encode
+2026-04-09 08:26:38.840 31550-12682 [OpusCodec]             com.reedersystems.commandcomms       D  Encoder re-initialized after assertion failure (sampleRate=48000 frameSize=960 complexity=5 bitrate=48000) t=2425ms
+2026-04-09 08:26:39.033 31550-12682 [OpusCodec]             com.reedersystems.commandcomms       D  DECODER_RESET OpusDecoder recreated rate=48000 channels=1 t=2618ms
+2026-04-09 08:26:39.036 31550-12682 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODER_RESET OpusEncoder recreated rate=48000 frameSize=960 channels=1 t=2621ms
+2026-04-09 08:26:40.714 31550-13661 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODER_REINIT rate=48000 frameSize=960 channels=1 bitrate=48000 VBR=true complexity=5 FEC=true — decoder untouched t=70ms
+2026-04-09 08:26:40.914 31550-13663 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=1 pcmBytes=1920 encodedBytes=102 seq=1 t=270ms
+2026-04-09 08:26:40.934 31550-13663 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=2 pcmBytes=1920 encodedBytes=109 seq=2 t=290ms
+2026-04-09 08:26:40.955 31550-13663 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=3 pcmBytes=1920 encodedBytes=98 seq=3 t=312ms
+2026-04-09 08:26:40.974 31550-13663 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=4 pcmBytes=1920 encodedBytes=117 seq=4 t=330ms
+2026-04-09 08:26:40.992 31550-13663 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=5 pcmBytes=1920 encodedBytes=143 seq=5 t=348ms
+2026-04-09 08:26:41.010 31550-13663 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE_SUMMARY frames=6 totalFrames=6 totalPcmBytes=11520 totalEncodedBytes=706 t=366ms
+2026-04-09 08:26:41.127 31550-13661 [OpusCodec]             com.reedersystems.commandcomms       D  DECODER_RESET OpusDecoder recreated rate=48000 channels=1 t=483ms
+2026-04-09 08:26:41.142 31550-13661 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODER_RESET OpusEncoder recreated rate=48000 frameSize=960 channels=1 t=498ms
+2026-04-09 08:26:41.158 31550-13663 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=1 pcmBytes=1920 encodedBytes=111 seq=1 t=514ms
+2026-04-09 08:26:41.176 31550-13663 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=2 pcmBytes=1920 encodedBytes=130 seq=2 t=532ms
+2026-04-09 08:26:41.194 31550-13663 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=3 pcmBytes=1920 encodedBytes=134 seq=3 t=550ms
+2026-04-09 08:26:41.212 31550-13663 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=4 pcmBytes=1920 encodedBytes=137 seq=4 t=568ms
+2026-04-09 08:26:41.234 31550-13663 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=5 pcmBytes=1920 encodedBytes=141 seq=5 t=590ms
+2026-04-09 08:26:41.251 31550-13663 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE_SUMMARY frames=6 totalFrames=6 totalPcmBytes=11520 totalEncodedBytes=781 t=607ms
+2026-04-09 08:26:42.267 31550-13663 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE_SUMMARY frames=43 totalFrames=49 totalPcmBytes=94080 totalEncodedBytes=5973 t=1623ms
+2026-04-09 08:26:42.836 31550-13661 [OpusCodec]             com.reedersystems.commandcomms       D  DECODER_RESET OpusDecoder recreated rate=48000 channels=1 t=2192ms
+2026-04-09 08:26:42.839 31550-13661 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODER_RESET OpusEncoder recreated rate=48000 frameSize=960 channels=1 t=2195ms
+2026-04-09 08:26:55.706 31550-13728 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODER_REINIT rate=48000 frameSize=960 channels=1 bitrate=48000 VBR=true complexity=5 FEC=true — decoder untouched t=78ms
+2026-04-09 08:26:55.905 31550-13728 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=1 pcmBytes=1920 encodedBytes=102 seq=1 t=278ms
+2026-04-09 08:26:55.927 31550-13728 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=2 pcmBytes=1920 encodedBytes=103 seq=2 t=300ms
+2026-04-09 08:26:55.950 31550-13728 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=3 pcmBytes=1920 encodedBytes=101 seq=3 t=322ms
+2026-04-09 08:26:55.969 31550-13728 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=4 pcmBytes=1920 encodedBytes=128 seq=4 t=342ms
+2026-04-09 08:26:55.988 31550-13728 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=5 pcmBytes=1920 encodedBytes=133 seq=5 t=361ms
+2026-04-09 08:26:56.007 31550-13728 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE_SUMMARY frames=6 totalFrames=6 totalPcmBytes=11520 totalEncodedBytes=683 t=379ms
+2026-04-09 08:26:57.008 31550-13728 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE_SUMMARY frames=49 totalFrames=55 totalPcmBytes=105600 totalEncodedBytes=6864 t=1380ms
+2026-04-09 08:26:57.465 31550-11660 [OpusCodec]             com.reedersystems.commandcomms       D  DECODER_RESET OpusDecoder recreated rate=48000 channels=1 t=1837ms
+2026-04-09 08:26:57.469 31550-11660 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODER_RESET OpusEncoder recreated rate=48000 frameSize=960 channels=1 t=1841ms
+2026-04-09 08:26:57.483 31550-13728 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=1 pcmBytes=1920 encodedBytes=149 seq=1 t=1856ms
+2026-04-09 08:26:57.501 31550-13728 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=2 pcmBytes=1920 encodedBytes=173 seq=2 t=1874ms
+2026-04-09 08:26:57.520 31550-13728 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=3 pcmBytes=1920 encodedBytes=136 seq=3 t=1893ms
+2026-04-09 08:26:57.538 31550-13728 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=4 pcmBytes=1920 encodedBytes=129 seq=4 t=1911ms
+2026-04-09 08:26:57.561 31550-13728 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=5 pcmBytes=1920 encodedBytes=142 seq=5 t=1933ms
+2026-04-09 08:26:57.579 31550-13728 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE_SUMMARY frames=6 totalFrames=6 totalPcmBytes=11520 totalEncodedBytes=859 t=1951ms
+2026-04-09 08:26:58.437 31550-11660 [OpusCodec]             com.reedersystems.commandcomms       D  DECODER_RESET OpusDecoder recreated rate=48000 channels=1 t=2810ms
+2026-04-09 08:26:58.439 31550-11660 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODER_RESET OpusEncoder recreated rate=48000 frameSize=960 channels=1 t=2811ms
+2026-04-09 08:27:00.299 31550-12552 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODER_REINIT rate=48000 frameSize=960 channels=1 bitrate=48000 VBR=true complexity=5 FEC=true — decoder untouched t=84ms
+2026-04-09 08:27:00.486 31550-13663 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=1 pcmBytes=1920 encodedBytes=117 seq=1 t=270ms
+2026-04-09 08:27:00.508 31550-13663 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=2 pcmBytes=1920 encodedBytes=107 seq=2 t=293ms
+2026-04-09 08:27:00.532 31550-13663 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=3 pcmBytes=1920 encodedBytes=96 seq=3 t=316ms
+2026-04-09 08:27:00.551 31550-13663 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=4 pcmBytes=1920 encodedBytes=126 seq=4 t=335ms
+2026-04-09 08:27:00.569 31550-13663 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=5 pcmBytes=1920 encodedBytes=121 seq=5 t=354ms
+2026-04-09 08:27:00.588 31550-13663 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE_SUMMARY frames=6 totalFrames=6 totalPcmBytes=11520 totalEncodedBytes=695 t=373ms
+2026-04-09 08:27:00.743 31550-12682 [OpusCodec]             com.reedersystems.commandcomms       D  DECODER_RESET OpusDecoder recreated rate=48000 channels=1 t=528ms
+2026-04-09 08:27:00.751 31550-12682 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODER_RESET OpusEncoder recreated rate=48000 frameSize=960 channels=1 t=535ms
+2026-04-09 08:27:00.767 31550-13663 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=1 pcmBytes=1920 encodedBytes=108 seq=1 t=552ms
+2026-04-09 08:27:00.788 31550-13663 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=2 pcmBytes=1920 encodedBytes=133 seq=2 t=573ms
+2026-04-09 08:27:00.806 31550-13663 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=3 pcmBytes=1920 encodedBytes=126 seq=3 t=590ms
+2026-04-09 08:27:00.824 31550-13663 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=4 pcmBytes=1920 encodedBytes=129 seq=4 t=609ms
+2026-04-09 08:27:00.861 31550-13663 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=5 pcmBytes=1920 encodedBytes=125 seq=5 t=646ms
+2026-04-09 08:27:00.880 31550-13663 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE_SUMMARY frames=6 totalFrames=6 totalPcmBytes=11520 totalEncodedBytes=754 t=665ms
+2026-04-09 08:27:01.895 31550-13663 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE_SUMMARY frames=47 totalFrames=53 totalPcmBytes=101760 totalEncodedBytes=6750 t=1680ms
+2026-04-09 08:27:02.907 31550-13663 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE_SUMMARY frames=54 totalFrames=107 totalPcmBytes=205440 totalEncodedBytes=13336 t=2691ms
+2026-04-09 08:27:03.362 31550-13663 [OpusCodec]             com.reedersystems.commandcomms       D  DECODER_RESET OpusDecoder recreated rate=48000 channels=1 t=3147ms
+2026-04-09 08:27:03.365 31550-13663 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODER_RESET OpusEncoder recreated rate=48000 frameSize=960 channels=1 t=3150ms
+2026-04-09 08:27:04.422 31550-13660 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODER_REINIT rate=48000 frameSize=960 channels=1 bitrate=48000 VBR=true complexity=5 FEC=true — decoder untouched t=95ms
+2026-04-09 08:27:04.605 31550-13660 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=1 pcmBytes=1920 encodedBytes=115 seq=1 t=278ms
+2026-04-09 08:27:04.626 31550-13660 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=2 pcmBytes=1920 encodedBytes=105 seq=2 t=299ms
+2026-04-09 08:27:04.647 31550-13660 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=3 pcmBytes=1920 encodedBytes=97 seq=3 t=321ms
+2026-04-09 08:27:04.669 31550-13660 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=4 pcmBytes=1920 encodedBytes=127 seq=4 t=342ms
+2026-04-09 08:27:04.687 31550-13660 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=5 pcmBytes=1920 encodedBytes=140 seq=5 t=361ms
+2026-04-09 08:27:04.707 31550-13660 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE_SUMMARY frames=6 totalFrames=6 totalPcmBytes=11520 totalEncodedBytes=725 t=380ms
+2026-04-09 08:27:04.813 31550-13728 [OpusCodec]             com.reedersystems.commandcomms       D  DECODER_RESET OpusDecoder recreated rate=48000 channels=1 t=486ms
+2026-04-09 08:27:04.829 31550-13728 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODER_RESET OpusEncoder recreated rate=48000 frameSize=960 channels=1 t=502ms
+2026-04-09 08:27:04.845 31550-13660 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=1 pcmBytes=1920 encodedBytes=106 seq=1 t=518ms
+2026-04-09 08:27:04.897 31550-13660 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=2 pcmBytes=1920 encodedBytes=119 seq=2 t=570ms
+2026-04-09 08:27:04.938 31550-13660 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=3 pcmBytes=1920 encodedBytes=126 seq=3 t=611ms
+2026-04-09 08:27:04.990 31550-13660 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=4 pcmBytes=1920 encodedBytes=139 seq=4 t=664ms
+2026-04-09 08:27:05.015 31550-13660 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=5 pcmBytes=1920 encodedBytes=133 seq=5 t=689ms
+2026-04-09 08:27:05.079 31550-13660 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE_SUMMARY frames=6 totalFrames=6 totalPcmBytes=11520 totalEncodedBytes=758 t=752ms
+2026-04-09 08:27:06.080 31550-13660 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE_SUMMARY frames=48 totalFrames=54 totalPcmBytes=103680 totalEncodedBytes=6940 t=1754ms
+2026-04-09 08:27:07.098 31550-13660 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE_SUMMARY frames=47 totalFrames=101 totalPcmBytes=193920 totalEncodedBytes=12278 t=2771ms
+2026-04-09 08:27:08.104 31550-13660 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE_SUMMARY frames=53 totalFrames=154 totalPcmBytes=295680 totalEncodedBytes=18944 t=3777ms
+2026-04-09 08:27:08.385 31550-13660 [OpusCodec]             com.reedersystems.commandcomms       D  DECODER_RESET OpusDecoder recreated rate=48000 channels=1 t=4058ms
+2026-04-09 08:27:08.391 31550-13660 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODER_RESET OpusEncoder recreated rate=48000 frameSize=960 channels=1 t=4064ms
+2026-04-09 08:27:11.652 31550-11554 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODER_REINIT rate=48000 frameSize=960 channels=1 bitrate=48000 VBR=true complexity=5 FEC=true — decoder untouched t=110ms
+2026-04-09 08:27:11.860 31550-11660 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=1 pcmBytes=1920 encodedBytes=117 seq=1 t=318ms
+2026-04-09 08:27:11.881 31550-11660 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=2 pcmBytes=1920 encodedBytes=116 seq=2 t=339ms
+2026-04-09 08:27:11.904 31550-11660 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=3 pcmBytes=1920 encodedBytes=99 seq=3 t=362ms
+2026-04-09 08:27:11.929 31550-11660 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=4 pcmBytes=1920 encodedBytes=87 seq=4 t=387ms
+2026-04-09 08:27:11.949 31550-11660 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=5 pcmBytes=1920 encodedBytes=104 seq=5 t=407ms
+2026-04-09 08:27:11.969 31550-11660 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE_SUMMARY frames=6 totalFrames=6 totalPcmBytes=11520 totalEncodedBytes=619 t=426ms
+2026-04-09 08:27:12.054 31550-13660 [OpusCodec]             com.reedersystems.commandcomms       D  DECODER_RESET OpusDecoder recreated rate=48000 channels=1 t=511ms
+2026-04-09 08:27:12.068 31550-13660 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODER_RESET OpusEncoder recreated rate=48000 frameSize=960 channels=1 t=525ms
+2026-04-09 08:27:12.083 31550-11660 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=1 pcmBytes=1920 encodedBytes=88 seq=1 t=541ms
+2026-04-09 08:27:12.102 31550-11660 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=2 pcmBytes=1920 encodedBytes=105 seq=2 t=559ms
+2026-04-09 08:27:12.120 31550-11660 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=3 pcmBytes=1920 encodedBytes=100 seq=3 t=577ms
+2026-04-09 08:27:12.138 31550-11660 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=4 pcmBytes=1920 encodedBytes=102 seq=4 t=595ms
+2026-04-09 08:27:12.155 31550-11660 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=5 pcmBytes=1920 encodedBytes=92 seq=5 t=613ms
+2026-04-09 08:27:12.175 31550-11660 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE_SUMMARY frames=6 totalFrames=6 totalPcmBytes=11520 totalEncodedBytes=586 t=632ms
+2026-04-09 08:27:12.994 31550-11660 [OpusCodec]             com.reedersystems.commandcomms       D  DECODER_RESET OpusDecoder recreated rate=48000 channels=1 t=1452ms
+2026-04-09 08:27:12.998 31550-11660 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODER_RESET OpusEncoder recreated rate=48000 frameSize=960 channels=1 t=1455ms
+2026-04-09 08:27:14.581 31550-11554 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODER_REINIT rate=48000 frameSize=960 channels=1 bitrate=48000 VBR=true complexity=5 FEC=true — decoder untouched t=96ms
+2026-04-09 08:27:14.773 31550-11554 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=1 pcmBytes=1920 encodedBytes=111 seq=1 t=288ms
+2026-04-09 08:27:14.794 31550-11554 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=2 pcmBytes=1920 encodedBytes=105 seq=2 t=309ms
+2026-04-09 08:27:14.814 31550-11554 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=3 pcmBytes=1920 encodedBytes=93 seq=3 t=329ms
+2026-04-09 08:27:14.832 31550-11554 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=4 pcmBytes=1920 encodedBytes=128 seq=4 t=347ms
+2026-04-09 08:27:14.853 31550-11554 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=5 pcmBytes=1920 encodedBytes=125 seq=5 t=368ms
+2026-04-09 08:27:14.871 31550-11554 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE_SUMMARY frames=6 totalFrames=6 totalPcmBytes=11520 totalEncodedBytes=701 t=386ms
+2026-04-09 08:27:14.935 31550-11554 [RadioError]            com.reedersystems.commandcomms       E  OPUS_ENCODE_ASSERTION_FAILURE frame=9 source=VOICE_COMMUNICATION samples=960 bytes=1920 expectedBytes=1920 sampleRate=48000 frameSize=960 consecutiveFailures=1 assertionFailures=1 method=encode
+2026-04-09 08:27:14.936 31550-11554 [OpusCodec]             com.reedersystems.commandcomms       D  Encoder re-initialized after assertion failure (sampleRate=48000 frameSize=960 complexity=5 bitrate=48000) t=451ms
+2026-04-09 08:27:14.976 31550-12682 [OpusCodec]             com.reedersystems.commandcomms       D  DECODER_RESET OpusDecoder recreated rate=48000 channels=1 t=491ms
+2026-04-09 08:27:14.982 31550-12682 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODER_RESET OpusEncoder recreated rate=48000 frameSize=960 channels=1 t=497ms
+2026-04-09 08:27:14.997 31550-11554 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=1 pcmBytes=1920 encodedBytes=106 seq=1 t=512ms
+2026-04-09 08:27:15.015 31550-11554 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=2 pcmBytes=1920 encodedBytes=136 seq=2 t=530ms
+2026-04-09 08:27:15.033 31550-11554 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=3 pcmBytes=1920 encodedBytes=130 seq=3 t=548ms
+2026-04-09 08:27:15.053 31550-11554 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=4 pcmBytes=1920 encodedBytes=140 seq=4 t=568ms
+2026-04-09 08:27:15.088 31550-11554 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=5 pcmBytes=1920 encodedBytes=120 seq=5 t=603ms
+2026-04-09 08:27:15.132 31550-11554 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE_SUMMARY frames=6 totalFrames=6 totalPcmBytes=11520 totalEncodedBytes=759 t=647ms
+2026-04-09 08:27:15.552 31550-11554 [OpusCodec]             com.reedersystems.commandcomms       D  DECODER_RESET OpusDecoder recreated rate=48000 channels=1 t=1067ms
+2026-04-09 08:27:15.554 31550-11554 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODER_RESET OpusEncoder recreated rate=48000 frameSize=960 channels=1 t=1068ms
+2026-04-09 08:27:27.608 31550-11554 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODER_REINIT rate=48000 frameSize=960 channels=1 bitrate=48000 VBR=true complexity=5 FEC=true — decoder untouched t=66ms
+2026-04-09 08:27:27.816 31550-11554 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=1 pcmBytes=1920 encodedBytes=113 seq=1 t=274ms
+2026-04-09 08:27:27.840 31550-11554 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=2 pcmBytes=1920 encodedBytes=123 seq=2 t=298ms
+2026-04-09 08:27:27.860 31550-11554 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=3 pcmBytes=1920 encodedBytes=98 seq=3 t=318ms
+2026-04-09 08:27:27.880 31550-11554 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=4 pcmBytes=1920 encodedBytes=134 seq=4 t=338ms
+2026-04-09 08:27:27.900 31550-11554 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=5 pcmBytes=1920 encodedBytes=137 seq=5 t=358ms
+2026-04-09 08:27:27.919 31550-11554 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE_SUMMARY frames=6 totalFrames=6 totalPcmBytes=11520 totalEncodedBytes=732 t=377ms
+2026-04-09 08:27:28.130 31550-13663 [OpusCodec]             com.reedersystems.commandcomms       D  DECODER_RESET OpusDecoder recreated rate=48000 channels=1 t=588ms
+2026-04-09 08:27:28.143 31550-13663 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODER_RESET OpusEncoder recreated rate=48000 frameSize=960 channels=1 t=601ms
+2026-04-09 08:27:28.159 31550-11554 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=1 pcmBytes=1920 encodedBytes=110 seq=1 t=617ms
+2026-04-09 08:27:28.177 31550-11554 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=2 pcmBytes=1920 encodedBytes=149 seq=2 t=635ms
+2026-04-09 08:27:28.195 31550-11554 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=3 pcmBytes=1920 encodedBytes=150 seq=3 t=653ms
+2026-04-09 08:27:28.221 31550-11554 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=4 pcmBytes=1920 encodedBytes=145 seq=4 t=679ms
+2026-04-09 08:27:28.238 31550-11554 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=5 pcmBytes=1920 encodedBytes=142 seq=5 t=696ms
+2026-04-09 08:27:28.258 31550-11554 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE_SUMMARY frames=6 totalFrames=6 totalPcmBytes=11520 totalEncodedBytes=840 t=716ms
+2026-04-09 08:27:29.264 31550-11554 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE_SUMMARY frames=50 totalFrames=56 totalPcmBytes=107520 totalEncodedBytes=7246 t=1722ms
+2026-04-09 08:27:30.278 31550-11554 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE_SUMMARY frames=49 totalFrames=105 totalPcmBytes=201600 totalEncodedBytes=12972 t=2736ms
+2026-04-09 08:27:31.286 31550-11554 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE_SUMMARY frames=45 totalFrames=150 totalPcmBytes=288000 totalEncodedBytes=17864 t=3744ms
+2026-04-09 08:27:31.704 31550-11554 [RadioError]            com.reedersystems.commandcomms       E  OPUS_ENCODE_ASSERTION_FAILURE frame=170 source=VOICE_COMMUNICATION samples=960 bytes=1920 expectedBytes=1920 sampleRate=48000 frameSize=960 consecutiveFailures=1 assertionFailures=1 method=encode
+2026-04-09 08:27:31.706 31550-11554 [OpusCodec]             com.reedersystems.commandcomms       D  Encoder re-initialized after assertion failure (sampleRate=48000 frameSize=960 complexity=5 bitrate=48000) t=4164ms
+2026-04-09 08:27:31.714 31550-11554 [RadioError]            com.reedersystems.commandcomms       E  OPUS_ENCODE_ASSERTION_FAILURE frame=170 source=VOICE_COMMUNICATION samples=960 bytes=1920 expectedBytes=1920 sampleRate=48000 frameSize=960 consecutiveFailures=2 assertionFailures=2 method=encode
+2026-04-09 08:27:31.715 31550-11554 [OpusCodec]             com.reedersystems.commandcomms       D  Encoder re-initialized after assertion failure (sampleRate=48000 frameSize=960 complexity=5 bitrate=48000) t=4173ms
+2026-04-09 08:27:31.723 31550-11554 [RadioError]            com.reedersystems.commandcomms       E  OPUS_ENCODE_CIRCUIT_BREAKER_TRIPPED consecutiveFailures=3 totalAssertionFailures=3 frame=170 source=VOICE_COMMUNICATION — encoding disabled for remainder of TX session method=encode
+2026-04-09 08:27:35.869 31550-13663 [OpusCodec]             com.reedersystems.commandcomms       D  DECODER_RESET OpusDecoder recreated rate=48000 channels=1 t=8327ms
+2026-04-09 08:27:35.874 31550-13663 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODER_RESET OpusEncoder recreated rate=48000 frameSize=960 channels=1 t=8332ms
