@@ -169,6 +169,19 @@ class WsAudioBridge {
     });
 
     audioRelayService.addWsSubscriber(channelId, unitId, ws);
+
+    pool.query(
+      "SELECT id FROM channels WHERE COALESCE(zone, 'Default') || '__' || name = $1 LIMIT 1",
+      [channelId]
+    ).then(result => {
+      if (result.rows.length > 0) {
+        audioRelayService.registerChannelNumeric(channelId, result.rows[0].id);
+        if (AUDIO_DIAG) console.log(`[WsAudioBridge] CHANNEL_NUMERIC_REGISTERED channelId=${channelId} numericId=${result.rows[0].id}`);
+      }
+    }).catch(err => {
+      console.error(`[WsAudioBridge] Failed to look up channel numeric for ${channelId}:`, err.message);
+    });
+
     if (AUDIO_DIAG) console.log(`[WsAudioBridge] CONNECTION_REGISTERED channelId=${channelId} unitId=${unitId}`);
 
     ws.on('message', (raw) => {

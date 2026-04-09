@@ -73,6 +73,20 @@ async function start() {
   wsAudioBridge.attach(httpServer);
   console.log('WebSocket audio bridge attached');
 
+  try {
+    const allChannels = await getAllChannels();
+    let registered = 0;
+    for (const ch of allChannels) {
+      if (ch.id && ch.room_key) {
+        audioRelayService.registerChannelNumeric(ch.room_key, ch.id);
+        registered++;
+      }
+    }
+    console.log(`[STARTUP] Registered ${registered} channel numeric IDs with audio relay`);
+  } catch (err) {
+    console.error('[STARTUP] Failed to register channel numeric IDs:', err.message);
+  }
+
   setupRecordingTap(audioRelayService, signalingService);
   console.log('Recording tap wired to audio relay');
 

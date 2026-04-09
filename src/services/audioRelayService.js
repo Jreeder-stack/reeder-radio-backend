@@ -34,6 +34,7 @@ class AudioRelayService {
     this._channelKeyByNumeric = new Map();
     this._wsPacingQueues = new Map();
     this._wsPacingTimers = new Map();
+    this._zeroChannelWarnTimes = new Map();
   }
 
   onRecordingTap(callback) {
@@ -520,8 +521,13 @@ class AudioRelayService {
       }
     }
     if (channelIdNum === 0) {
-      console.warn(`[AudioRelay] RELAY_CHANNEL_ID_ZERO channelKey=${channelKey} — receiver may drop this packet`);
-      console.warn(`RADIO_RELAY_PACKET_ZERO_CHANNEL_WARNING roomKey=${channelKey} senderUnit=${senderUnitId || ''}`);
+      const now = Date.now();
+      const lastWarn = this._zeroChannelWarnTimes.get(channelKey) || 0;
+      if (now - lastWarn >= 30000) {
+        this._zeroChannelWarnTimes.set(channelKey, now);
+        console.warn(`[AudioRelay] RELAY_CHANNEL_ID_ZERO channelKey=${channelKey} — receiver may drop this packet`);
+        console.warn(`RADIO_RELAY_PACKET_ZERO_CHANNEL_WARNING roomKey=${channelKey} senderUnit=${senderUnitId || ''}`);
+      }
     }
   
     const senderBytes = Buffer.from(senderUnitId || '', 'utf8').subarray(0, 255);

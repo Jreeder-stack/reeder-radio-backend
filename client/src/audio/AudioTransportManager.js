@@ -382,15 +382,31 @@ class AudioTransportManager {
       return false;
     }
     const txChannel = this.primaryTxChannel;
-    const room = this.rooms.get(txChannel);
+    let room = this.rooms.get(txChannel);
     if (!room || !room.ws || room.ws.readyState !== WebSocket.OPEN) {
-      console.warn('AUDIO_TX_BLOCKED', {
-        reason: 'ws_not_open',
-        txChannel,
-        hasRoom: !!room,
-        readyState: room?.ws?.readyState,
-      });
-      return false;
+      const target = this._targetChannels.get(txChannel);
+      if (target) {
+        console.log('AUDIO_TX_AUTO_RECONNECT', { txChannel });
+        try {
+          const connectTimeout = 5000;
+          await Promise.race([
+            this.connect(txChannel, target),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('auto-connect timeout')), connectTimeout)),
+          ]);
+          room = this.rooms.get(txChannel);
+        } catch (err) {
+          console.warn('AUDIO_TX_AUTO_RECONNECT_FAILED', { txChannel, error: err.message });
+        }
+      }
+      if (!room || !room.ws || room.ws.readyState !== WebSocket.OPEN) {
+        console.warn('AUDIO_TX_BLOCKED', {
+          reason: 'ws_not_open',
+          txChannel,
+          hasRoom: !!room,
+          readyState: room?.ws?.readyState,
+        });
+        return false;
+      }
     }
 
     this._setPttState(PTT_STATES.ARMING);
