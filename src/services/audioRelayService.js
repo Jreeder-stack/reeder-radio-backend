@@ -151,14 +151,42 @@ class AudioRelayService {
 
   injectAudio(channelId, senderUnitId, sequence, opusPayload, rawPcmSamples = null) {
     const channelKey = canonicalChannelKey(channelId);
+    const resolvedChannelId = this._resolveChannelIdNumeric({ channelKey, channelIdNumeric: channelId });
 
     if (this._floorControlService && !this._floorControlService.holdsFloor(channelKey, senderUnitId)) {
+      const bufKey = `${channelKey}:${senderUnitId}`;
+      let buf = this._earlyAudioBuffers.get(bufKey);
+      if (!buf) {
+        buf = [];
+        this._earlyAudioBuffers.set(bufKey, buf);
+      }
+      const now = Date.now();
+      while (buf.length > 0 && (now - buf[0].bufferedAt) > this._earlyBufferMaxMs) {
+        buf.shift();
+      }
+      if (buf.length < this._earlyBufferMaxFrames) {
+        buf.push({ channelKey, channelIdNumeric: resolvedChannelId, senderUnitId, sequence, opusPayload, flags: FLAG_FEC_HINT, timestampMs: Date.now(), bufferedAt: now, rawPcmSamples });
+      }
       return;
+    }
+
+    const bufKey = `${channelKey}:${senderUnitId}`;
+    const earlyBuf = this._earlyAudioBuffers.get(bufKey);
+    if (earlyBuf && earlyBuf.length > 0) {
+      const now = Date.now();
+      const freshFrames = earlyBuf.filter(pkt => (now - pkt.bufferedAt) <= this._earlyBufferMaxMs);
+      if (freshFrames.length > 0) {
+        for (const pkt of freshFrames) {
+          const earlyPayload = this._buildRelayPacket(pkt);
+          this._broadcastToAll(pkt.channelKey, pkt.senderUnitId, earlyPayload, pkt.sequence, pkt.opusPayload, pkt.channelIdNumeric, null, pkt.rawPcmSamples);
+        }
+      }
+      this._earlyAudioBuffers.delete(bufKey);
     }
 
     const rxPayload = this._buildRelayPacket({
       channelKey,
-      channelIdNumeric: this._resolveChannelIdNumeric({ channelKey, channelIdNumeric: channelId }),
+      channelIdNumeric: resolvedChannelId,
       senderUnitId,
       sequence,
       opusPayload,
@@ -166,7 +194,7 @@ class AudioRelayService {
       timestampMs: Date.now(),
     });
 
-    this._broadcastToAll(channelKey, senderUnitId, rxPayload, sequence, opusPayload, this._resolveChannelIdNumeric({ channelKey, channelIdNumeric: channelId }), null, rawPcmSamples);
+    this._broadcastToAll(channelKey, senderUnitId, rxPayload, sequence, opusPayload, resolvedChannelId, null, rawPcmSamples);
   }
 
   _buildBinaryWsFrame(sequence, channelKey, senderUnitId, pcmInt16View) {

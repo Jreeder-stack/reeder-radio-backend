@@ -185,15 +185,6 @@ class WsAudioBridge {
 
       if (!isValidPcmPacket(packet)) return;
       if (packet.channelId !== channelId) return;
-      if (!floorControlService.holdsFloor(channelId, unitId)) {
-        console.warn('AUDIO_WS_REJECTED', {
-          reason: 'floor_not_held',
-          channelId,
-          unitId,
-          sequence: packet.sequence,
-        });
-        return;
-      }
       try {
         const pcmInt16 = Buffer.from(new Int16Array(packet.payload).buffer);
         const opusFrames = opusCodec.encodePcmToOpus(pcmInt16);
