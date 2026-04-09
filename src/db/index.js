@@ -196,6 +196,29 @@ export async function initializeDatabase() {
     await client.query(`CREATE INDEX IF NOT EXISTS idx_channel_messages_channel ON channel_messages (channel)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_channel_messages_created ON channel_messages (created_at DESC)`);
 
+    await client.query(`ALTER TABLE channel_messages ALTER COLUMN channel TYPE VARCHAR(200)`).catch(() => {});
+
+    await client.query(`
+      UPDATE channel_messages cm
+      SET channel = sub.room_key
+      FROM (
+        SELECT ch.name, COALESCE(ch.zone, 'Default') || '__' || ch.name AS room_key
+        FROM channels ch
+        WHERE ch.name IN (
+          SELECT DISTINCT cm2.channel FROM channel_messages cm2
+          WHERE position('__' in cm2.channel) = 0
+        )
+        AND NOT EXISTS (
+          SELECT 1 FROM channels ch2
+          WHERE ch2.name = ch.name AND ch2.id != ch.id
+        )
+      ) sub
+      WHERE cm.channel = sub.name
+        AND position('__' in cm.channel) = 0
+    `).catch(err => {
+      console.warn('[DB] Legacy channel name migration skipped:', err.message);
+    });
+
     await client.query(`CREATE INDEX IF NOT EXISTS idx_units_last_seen ON units (last_seen)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_activity_logs_created_at ON activity_logs (created_at)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_activity_logs_username ON activity_logs (username)`);

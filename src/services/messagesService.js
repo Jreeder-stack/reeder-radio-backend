@@ -1,4 +1,5 @@
 import { createChannelMessage, getChannelMessages, updateMessageTranscription, getMessageById } from '../db/index.js';
+import pool from '../db/index.js';
 import * as sdk from 'microsoft-cognitiveservices-speech-sdk';
 import { broadcastMessage } from './aiDispatchService.js';
 import fs from 'fs';
@@ -10,10 +11,29 @@ if (!fs.existsSync(AUDIO_DIR)) {
   fs.mkdirSync(AUDIO_DIR, { recursive: true });
 }
 
+async function normalizeChannelToRoomKey(channel) {
+  if (typeof channel === 'string' && channel.includes('__')) {
+    return channel;
+  }
+  try {
+    const result = await pool.query(
+      `SELECT COALESCE(zone, 'Default') || '__' || name AS room_key FROM channels WHERE name = $1 LIMIT 1`,
+      [channel]
+    );
+    if (result.rows.length > 0) {
+      return result.rows[0].room_key;
+    }
+  } catch (err) {
+    console.warn('[MessagesService] Channel normalization lookup failed:', err.message);
+  }
+  return channel;
+}
+
 export async function sendTextMessage(channel, sender, content) {
-  const message = await createChannelMessage(channel, sender, 'text', content);
+  const normalizedChannel = await normalizeChannelToRoomKey(channel);
+  const message = await createChannelMessage(normalizedChannel, sender, 'text', content);
   
-  broadcastMessage(channel, message).catch(err => {
+  broadcastMessage(normalizedChannel, message).catch(err => {
     console.warn('[MessagesService] Failed to broadcast text message:', err.message);
   });
   
@@ -21,17 +41,18 @@ export async function sendTextMessage(channel, sender, content) {
 }
 
 export async function sendAudioMessage(channel, sender, audioBuffer, duration = null, skipBroadcast = false) {
-  const filename = `${channel}_${Date.now()}_${sender.replace(/[^a-zA-Z0-9]/g, '_')}.wav`;
+  const normalizedChannel = await normalizeChannelToRoomKey(channel);
+  const filename = `${normalizedChannel}_${Date.now()}_${sender.replace(/[^a-zA-Z0-9]/g, '_')}.wav`;
   const filepath = path.join(AUDIO_DIR, filename);
   
   fs.writeFileSync(filepath, audioBuffer);
   
   const audioUrl = `/api/messages/audio/${filename}`;
   
-  const message = await createChannelMessage(channel, sender, 'audio', null, audioUrl, duration);
+  const message = await createChannelMessage(normalizedChannel, sender, 'audio', null, audioUrl, duration);
   
   if (!skipBroadcast) {
-    broadcastMessage(channel, message).catch(err => {
+    broadcastMessage(normalizedChannel, message).catch(err => {
       console.warn('[MessagesService] Failed to broadcast audio message:', err.message);
     });
   }

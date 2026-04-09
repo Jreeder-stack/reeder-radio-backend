@@ -3,6 +3,8 @@ import { useState, useRef, useEffect } from 'react';
 export default function VoiceMessage({ audioUrl, duration, transcription, onTranscribe, isOwn }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [playbackError, setPlaybackError] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
   const [showTranscription, setShowTranscription] = useState(false);
   const audioRef = useRef(null);
@@ -22,20 +24,76 @@ export default function VoiceMessage({ audioUrl, duration, transcription, onTran
       setProgress(0);
     };
 
-    const handlePlay = () => setIsPlaying(true);
+    const handlePlay = () => {
+      setIsPlaying(true);
+      setIsLoading(false);
+      setPlaybackError(null);
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
+        loadingTimeoutRef.current = null;
+      }
+    };
     const handlePause = () => setIsPlaying(false);
+
+    const handleError = () => {
+      setIsPlaying(false);
+      setIsLoading(false);
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
+        loadingTimeoutRef.current = null;
+      }
+      const err = audio.error;
+      let msg = 'Playback failed';
+      if (err) {
+        switch (err.code) {
+          case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
+            msg = 'Audio format not supported';
+            break;
+          case MediaError.MEDIA_ERR_NETWORK:
+            msg = 'Network error';
+            break;
+          case MediaError.MEDIA_ERR_DECODE:
+            msg = 'Audio decode error';
+            break;
+          default:
+            msg = 'Playback failed';
+        }
+      }
+      setPlaybackError(msg);
+    };
+
+    const handleCanPlay = () => {
+      setIsLoading(false);
+    };
 
     audio.addEventListener('timeupdate', handleTimeUpdate);
     audio.addEventListener('ended', handleEnded);
     audio.addEventListener('play', handlePlay);
     audio.addEventListener('pause', handlePause);
+    audio.addEventListener('error', handleError);
+    audio.addEventListener('canplay', handleCanPlay);
 
     return () => {
       audio.removeEventListener('timeupdate', handleTimeUpdate);
       audio.removeEventListener('ended', handleEnded);
       audio.removeEventListener('play', handlePlay);
       audio.removeEventListener('pause', handlePause);
+      audio.removeEventListener('error', handleError);
+      audio.removeEventListener('canplay', handleCanPlay);
     };
+  }, []);
+
+  const loadingTimeoutRef = useRef(null);
+
+  const clearLoadingTimeout = () => {
+    if (loadingTimeoutRef.current) {
+      clearTimeout(loadingTimeoutRef.current);
+      loadingTimeoutRef.current = null;
+    }
+  };
+
+  useEffect(() => {
+    return () => clearLoadingTimeout();
   }, []);
 
   const togglePlay = () => {
@@ -44,9 +102,45 @@ export default function VoiceMessage({ audioUrl, duration, transcription, onTran
 
     if (isPlaying) {
       audio.pause();
-    } else {
-      audio.play().catch(err => console.error('Playback failed:', err));
+      return;
     }
+
+    if (playbackError) {
+      setPlaybackError(null);
+      setIsLoading(true);
+      clearLoadingTimeout();
+      loadingTimeoutRef.current = setTimeout(() => {
+        setIsLoading(false);
+        setPlaybackError('Load timed out');
+      }, 10000);
+
+      const onReady = () => {
+        audio.removeEventListener('canplay', onReady);
+        clearLoadingTimeout();
+        audio.play().catch(err => {
+          console.error('Playback failed:', err);
+          setIsLoading(false);
+          setPlaybackError('Playback failed');
+        });
+      };
+      audio.addEventListener('canplay', onReady, { once: true });
+      audio.load();
+      return;
+    }
+
+    setIsLoading(true);
+    clearLoadingTimeout();
+    loadingTimeoutRef.current = setTimeout(() => {
+      setIsLoading(false);
+      setPlaybackError('Load timed out');
+    }, 10000);
+
+    audio.play().catch(err => {
+      console.error('Playback failed:', err);
+      clearLoadingTimeout();
+      setIsLoading(false);
+      setPlaybackError('Playback failed');
+    });
   };
 
   const handleTranscribe = async () => {
@@ -79,13 +173,26 @@ export default function VoiceMessage({ audioUrl, duration, transcription, onTran
       <div className="flex items-center gap-3">
         <button
           onClick={togglePlay}
+          disabled={isLoading}
           className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
-            isOwn 
-              ? 'bg-blue-500 hover:bg-blue-400' 
-              : 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600'
-          }`}
+            playbackError
+              ? 'bg-red-500 hover:bg-red-400'
+              : isOwn 
+                ? 'bg-blue-500 hover:bg-blue-400' 
+                : 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600'
+          } ${isLoading ? 'opacity-60 cursor-wait' : ''}`}
+          title={playbackError || (isPlaying ? 'Pause' : 'Play')}
         >
-          {isPlaying ? (
+          {isLoading ? (
+            <svg className={`w-5 h-5 animate-spin ${isOwn ? 'text-white' : 'text-gray-700 dark:text-gray-200'}`} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+          ) : playbackError ? (
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M12 3a9 9 0 100 18 9 9 0 000-18z" />
+            </svg>
+          ) : isPlaying ? (
             <svg xmlns="http://www.w3.org/2000/svg" className={`w-5 h-5 ${isOwn ? 'text-white' : 'text-gray-700 dark:text-gray-200'}`} fill="currentColor" viewBox="0 0 24 24">
               <rect x="6" y="4" width="4" height="16" rx="1" />
               <rect x="14" y="4" width="4" height="16" rx="1" />
@@ -100,12 +207,12 @@ export default function VoiceMessage({ audioUrl, duration, transcription, onTran
         <div className="flex-1">
           <div className="h-1 bg-gray-300 dark:bg-gray-600 rounded-full overflow-hidden">
             <div 
-              className={`h-full transition-all ${isOwn ? 'bg-blue-300' : 'bg-blue-500'}`}
+              className={`h-full transition-all ${playbackError ? 'bg-red-400' : isOwn ? 'bg-blue-300' : 'bg-blue-500'}`}
               style={{ width: `${progress}%` }}
             />
           </div>
-          <div className={`text-xs mt-1 ${isOwn ? 'text-blue-200' : 'text-gray-500 dark:text-gray-400'}`}>
-            {formatDuration(duration)}
+          <div className={`text-xs mt-1 ${playbackError ? 'text-red-400' : isOwn ? 'text-blue-200' : 'text-gray-500 dark:text-gray-400'}`}>
+            {playbackError || formatDuration(duration)}
           </div>
         </div>
 
