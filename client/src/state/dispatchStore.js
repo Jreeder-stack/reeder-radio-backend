@@ -253,12 +253,6 @@ const useDispatchStore = create(
       
       resetStore: () => set({
         channels: [],
-        channelOrder: [],
-        gridChannelIds: [],
-        txChannelIds: [],
-        mutedChannelIds: [],
-        monitoredChannelIds: [],
-        channelLevels: {},
         activeTransmissions: {},
         units: [],
         unitsByChannel: {},
@@ -274,7 +268,6 @@ const useDispatchStore = create(
         isTalking: false,
         activeTxChannelId: null,
         toneState: null,
-        clearAirEnabled: {},
         clearAirChannel: null
       })
     }),

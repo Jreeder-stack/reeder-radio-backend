@@ -8,6 +8,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
+import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
@@ -40,6 +41,7 @@ class BackgroundAudioService : Service() {
     private val app get() = application as CommandCommsApp
 
     private lateinit var serviceWakeLock: PowerManager.WakeLock
+    private lateinit var wifiLock: WifiManager.WifiLock
 
     private lateinit var audioManager: AudioManager
     private var previousAudioMode: Int = AudioManager.MODE_NORMAL
@@ -80,6 +82,14 @@ class BackgroundAudioService : Service() {
         ).apply { setReferenceCounted(false) }
         serviceWakeLock.acquire()
         Log.d(TAG, "BackgroundAudioService: service-lifetime WakeLock acquired")
+
+        val wifiManager = applicationContext.getSystemService(WIFI_SERVICE) as WifiManager
+        wifiLock = wifiManager.createWifiLock(
+            WifiManager.WIFI_MODE_FULL_HIGH_PERF,
+            "CommandComms::AudioServiceWifi"
+        ).apply { setReferenceCounted(false) }
+        wifiLock.acquire()
+        Log.d(TAG, "BackgroundAudioService: WiFi WakeLock acquired")
 
         audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
         previousAudioMode = audioManager.mode
@@ -830,6 +840,10 @@ class BackgroundAudioService : Service() {
         radioEngine = null
         cancelPendingFloorTimeout()
         scope.cancel()
+        if (wifiLock.isHeld) {
+            wifiLock.release()
+            Log.d(TAG, "BackgroundAudioService: WiFi WakeLock released")
+        }
         if (serviceWakeLock.isHeld) {
             serviceWakeLock.release()
             Log.d(TAG, "BackgroundAudioService: service-lifetime WakeLock released")
