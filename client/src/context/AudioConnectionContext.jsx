@@ -35,6 +35,8 @@ export function AudioConnectionProvider({ children, user }) {
   const idleTimerRef = useRef(null);
   const lastActivityRef = useRef(Date.now());
   const micStreamRef = useRef(null);
+  const switchCounterRef = useRef(0);
+  const latestSwitchTargetRef = useRef(null);
   
   const {
     channels: storeChannels,
@@ -347,19 +349,35 @@ export function AudioConnectionProvider({ children, user }) {
       return;
     }
     
-    const currentChannels = audioTransportManager.getConnectedChannels();
+    const switchId = ++switchCounterRef.current;
+    latestSwitchTargetRef.current = newChannelName;
+    
     const channelsToKeep = scanMode 
       ? [newChannelName, ...scanChannels.filter(ch => ch !== newChannelName)]
       : [newChannelName];
     
+    const currentChannels = audioTransportManager.getConnectedChannels();
     for (const ch of currentChannels) {
       if (!channelsToKeep.includes(ch)) {
         await disconnectFromChannel(ch);
       }
     }
     
-    if (!currentChannels.includes(newChannelName)) {
+    if (switchId !== switchCounterRef.current) {
+      console.log(`[AudioConnection] switchChannel superseded (wanted ${newChannelName}, newer switch pending)`);
+      return;
+    }
+    
+    if (!audioTransportManager.isConnected(newChannelName)) {
       await connectToChannel(newChannelName, resolvedIdentity);
+    }
+    
+    if (switchId !== switchCounterRef.current) {
+      console.log(`[AudioConnection] switchChannel superseded after connect (wanted ${newChannelName}, newer switch pending)`);
+      if (latestSwitchTargetRef.current !== newChannelName) {
+        await disconnectFromChannel(newChannelName);
+      }
+      return;
     }
     
     setActiveChannel(newChannelName);
@@ -429,33 +447,10 @@ export function AudioConnectionProvider({ children, user }) {
       const isDispatcher = currentPath === '/dispatcher';
       
       if (isDispatcher) {
-        console.log(`[AudioConnection] Dispatcher mode - connecting to all ${enabledChannels.length} channels`);
-
-        const connectResults = await Promise.all(
-          enabledChannels.map(ch => {
-            const roomKey = ch.room_key || ((ch.zone || 'Default') + '__' + ch.name);
-            return connectToChannel(roomKey, identity, true).then(success => {
-              if (!success) {
-                audioTransportManager.scheduleDispatcherReconnect(roomKey, identity);
-              }
-              return success;
-            }).catch(err => {
-              console.warn(`[AudioConnection] Dispatcher: failed to connect ${roomKey}:`, err.message);
-              audioTransportManager.scheduleDispatcherReconnect(roomKey, identity);
-              return false;
-            });
-          })
-        );
-
-        const successCount = connectResults.filter(Boolean).length;
-        if (successCount > 0) {
-          setConnected(true);
-          setConnectionStatus(successCount === enabledChannels.length ? 'connected' : 'partial');
-        } else {
-          setConnected(false);
-          setConnectionStatus('failed');
-        }
-        console.log(`[AudioConnection] Dispatcher mode - connected ${successCount}/${enabledChannels.length} channels`);
+        console.log(`[AudioConnection] Dispatcher mode - skipping audio connections at init; monitoring effect will drive connections`);
+        audioTransportManager.setDispatcherMode(true);
+        setConnected(true);
+        setConnectionStatus('connected');
       } else {
         const firstChannel = initialChannel || enabledChannels[0]?.room_key || enabledChannels[0]?.name;
         if (firstChannel) {
