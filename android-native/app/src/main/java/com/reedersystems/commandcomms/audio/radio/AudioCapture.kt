@@ -168,7 +168,7 @@ class AudioCapture(
     private fun probeAudioSource(source: Int, sourceName: String): SourceProbeResult {
         val rate = sampleRate
         val probeFrameCount = 5
-        val silenceThreshold = 50.0
+        val silenceThreshold = 2.0
         try {
             val testMinBuf = AudioRecord.getMinBufferSize(
                 rate,
@@ -268,6 +268,13 @@ class AudioCapture(
         if (best != null) {
             Log.d(DIAG_TAG, "CAPTURE_AUDIO_SOURCE selected=${best.sourceName} avgRms=${String.format("%.1f", best.avgRms)} reason=best_valid_source")
             return best.source
+        }
+
+        val readableResults = allResults.filter { it.reason == "rms_too_low" }
+        val fallback = readableResults.maxByOrNull { it.avgRms }
+        if (fallback != null) {
+            Log.w(DIAG_TAG, "CAPTURE_AUDIO_SOURCE_FALLBACK source=${fallback.sourceName} avgRms=${String.format("%.1f", fallback.avgRms)} reason=below_threshold_fallback")
+            return fallback.source
         }
 
         Log.e(DIAG_TAG, "CAPTURE_AUDIO_SOURCE_ALL_REJECTED — no valid source above silence threshold")

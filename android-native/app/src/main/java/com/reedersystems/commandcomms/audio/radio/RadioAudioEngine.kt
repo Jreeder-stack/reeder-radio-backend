@@ -168,12 +168,12 @@ class RadioAudioEngine(private val context: Context) {
     private val OPUS_SUPPORTED_RATES = setOf(8000, 12000, 16000, 24000, 48000)
 
     companion object {
-        private const val PROBE_SILENCE_RMS_THRESHOLD = 20.0
+        private const val PROBE_SILENCE_RMS_THRESHOLD = 2.0
         private const val PROBE_FRAME_COUNT = 10
         private const val PROBE_RATE = DEFAULT_MIC_SAMPLE_RATE
 
         @Volatile
-        var bypassSourceCache: Boolean = true
+        var bypassSourceCache: Boolean = false
 
         @Volatile
         private var cachedSourceKey: String? = null
@@ -274,6 +274,12 @@ class RadioAudioEngine(private val context: Context) {
         }
     }
 
+    private fun isKnownGoodDevice(): Boolean {
+        val model = Build.MODEL?.uppercase() ?: ""
+        val manufacturer = Build.MANUFACTURER?.uppercase() ?: ""
+        return (manufacturer == "ZRK" && model == "T320")
+    }
+
     private fun selectAudioSource(): Int? {
         val deviceKey = "${Build.MANUFACTURER}/${Build.MODEL}/API${Build.VERSION.SDK_INT}"
         if (!bypassSourceCache) {
@@ -289,6 +295,17 @@ class RadioAudioEngine(private val context: Context) {
             Log.d("[AudioCapture]", "TX_AUDIO_SOURCE_CACHE_BYPASSED device=$deviceKey bypassSourceCache=true")
         }
 
+        if (isKnownGoodDevice()) {
+            val source = MediaRecorder.AudioSource.VOICE_COMMUNICATION
+            val name = "VOICE_COMMUNICATION"
+            Log.d("[AudioCapture]", "TX_AUDIO_SOURCE_SELECTED source=$name reason=known_good_device device=$deviceKey")
+            txSessionStats.audioSource = name
+            cachedSourceKey = deviceKey
+            cachedSourceValue = source
+            cachedSourceName = name
+            return source
+        }
+
         data class Candidate(val source: Int, val name: String)
         val candidates = mutableListOf(
             Candidate(MediaRecorder.AudioSource.MIC, "MIC"),
@@ -302,7 +319,15 @@ class RadioAudioEngine(private val context: Context) {
         val allCandidateNames = candidates.map { it.name }
         Log.d("[AudioCapture]", "TX_AUDIO_SOURCE_PROBE_BEGIN device=$deviceKey candidates=$allCandidateNames")
 
-        val allResults = candidates.map { c -> probeAudioSource(c.source, c.name) }
+        val allResults = mutableListOf<SourceProbeResult>()
+        for (c in candidates) {
+            val result = probeAudioSource(c.source, c.name)
+            allResults.add(result)
+            if (result.accepted) {
+                Log.d("[AudioCapture]", "TX_AUDIO_SOURCE_PROBE_EARLY_EXIT source=${result.sourceName} avgRms=${String.format("%.1f", result.avgRms)} reason=accepted_early device=$deviceKey")
+                break
+            }
+        }
         txSessionStats.probeResults.clear()
         for (r in allResults) {
             txSessionStats.probeResults[r.sourceName] = r.avgRms
