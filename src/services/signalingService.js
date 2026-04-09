@@ -1066,16 +1066,18 @@ class SignalingService {
 
   async _handleRadioJoinChannel(socket, data) {
     const { channelId: rawChannelId, udpPort, udpAddress } = data;
-    const channelId = String(rawChannelId);
+    const rawChannelStr = canonicalChannelKey(rawChannelId);
 
     if (!socket.unitId) {
       socket.emit('error', { message: 'Not authenticated' });
       return;
     }
 
+    let channelId;
     try {
       const accessResult = await pool.query(
-        `SELECT uca.channel_id
+        `SELECT uca.channel_id,
+                COALESCE(c.zone, 'Default') || '__' || c.name AS compound_key
          FROM user_channel_access uca
          JOIN users u ON uca.user_id = u.id
          JOIN channels c ON uca.channel_id = c.id
@@ -1083,21 +1085,30 @@ class SignalingService {
            AND (c.id::text = $2 OR COALESCE(c.zone, 'Default') || '__' || c.name = $2)
            AND c.enabled = true
          LIMIT 1`,
-        [socket.unitId, channelId]
+        [socket.unitId, rawChannelStr]
       );
 
       if (accessResult.rows.length === 0) {
         socket.emit('error', { message: 'Not authorized for this channel' });
-        console.log(`[Signaling] Radio ${socket.unitId} denied access to channel ${channelId}`);
+        console.log(`[Signaling] Radio ${socket.unitId} denied access to channel ${rawChannelStr}`);
         return;
       }
 
       socket.lastAuthorizedRadioChannelNumeric = Number(accessResult.rows[0].channel_id);
+      channelId = canonicalChannelKey(accessResult.rows[0].compound_key) || rawChannelStr;
+
+      if (channelId !== rawChannelStr) {
+        console.log(`[Signaling] CHANNEL_KEY_NORMALIZED raw="${rawChannelStr}" canonical="${channelId}" unitId=${socket.unitId}`);
+      }
     } catch (dbErr) {
       console.error('[Signaling] DB channel access check failed:', dbErr.message);
       socket.emit('error', { message: 'Authorization check failed' });
       return;
     }
+
+    if (!socket._channelKeyMap) socket._channelKeyMap = new Map();
+    socket._channelKeyMap.set(rawChannelStr, channelId);
+    socket._channelKeyMap.set(channelId, channelId);
 
     socket.join(`channel:${channelId}`);
     if (!socket.channels) socket.channels = new Set();
@@ -1147,7 +1158,8 @@ class SignalingService {
   }
 
   _handleRadioLeaveChannel(socket, data) {
-    const channelId = String(data.channelId);
+    const rawChannelId = canonicalChannelKey(data.channelId);
+    const channelId = socket._channelKeyMap?.get(rawChannelId) || rawChannelId;
 
     if (!socket.unitId) return;
 
@@ -1193,7 +1205,8 @@ class SignalingService {
   }
 
   _handlePttRequest(socket, data) {
-    const channelId = String(data.channelId);
+    const rawChannelId = canonicalChannelKey(data.channelId);
+    const channelId = socket._channelKeyMap?.get(rawChannelId) || rawChannelId;
 
     if (!socket.unitId) {
       socket.emit('error', { message: 'Not authenticated' });
@@ -1296,7 +1309,8 @@ class SignalingService {
   }
 
   _handlePttRelease(socket, data) {
-    const channelId = String(data.channelId);
+    const rawChannelId = canonicalChannelKey(data.channelId);
+    const channelId = socket._channelKeyMap?.get(rawChannelId) || rawChannelId;
 
     if (!socket.unitId) return;
     console.log(`[Signaling] PTT_RELEASE_SENT unitId=${socket.unitId} channelId=${channelId}`);
@@ -1344,7 +1358,8 @@ class SignalingService {
   }
 
   _handleTxStart(socket, data) {
-    const channelId = String(data.channelId);
+    const rawChannelId = canonicalChannelKey(data.channelId);
+    const channelId = socket._channelKeyMap?.get(rawChannelId) || rawChannelId;
     if (!socket.unitId) return;
 
     if (!floorControlService.holdsFloor(channelId, socket.unitId)) {
@@ -1362,7 +1377,8 @@ class SignalingService {
   }
 
   _handleTxStop(socket, data) {
-    const channelId = String(data.channelId);
+    const rawChannelId = canonicalChannelKey(data.channelId);
+    const channelId = socket._channelKeyMap?.get(rawChannelId) || rawChannelId;
     if (!socket.unitId) return;
 
     if (floorControlService.holdsFloor(channelId, socket.unitId)) {

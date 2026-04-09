@@ -13,6 +13,7 @@ const RADIO_HEADER_FIXED_LEN = VERSION_LEN + FLAGS_LEN + CHANNEL_ID_LEN + SEQUEN
 const PACKET_VERSION = 1;
 const FLAG_FEC_HINT = 0x01;
 const SUBSCRIBER_TIMEOUT_MS = 60000;
+const AUDIO_DIAG = process.env.AUDIO_DIAG === 'true';
 const SUBSCRIBER_SWEEP_INTERVAL_MS = 30000;
 
 const WS_PACING_INTERVAL_MS = 20;
@@ -28,6 +29,7 @@ class AudioRelayService {
     this._recordingTap = null;
     this._sweepTimer = null;
     this._audioListeners = new Map();
+    this._wsSubscribers = new Map();
     this._channelNumericByKey = new Map();
     this._channelKeyByNumeric = new Map();
     this._wsPacingQueues = new Map();
@@ -42,6 +44,51 @@ class AudioRelayService {
     const key = canonicalChannelKey(channelId);
     const resolved = this._resolveChannelIdNumeric({ channelKey: key, channelIdNumeric: channelNumeric });
     if (key && resolved > 0) {
+      const existingKey = this._channelKeyByNumeric.get(resolved);
+      if (existingKey && existingKey !== key) {
+        console.log(`[AudioRelay] CHANNEL_NUMERIC_REMAP numeric=${resolved} oldKey="${existingKey}" newKey="${key}"`);
+        if (this.subscribers.has(existingKey)) {
+          const oldSubs = this.subscribers.get(existingKey);
+          if (!this.subscribers.has(key)) this.subscribers.set(key, new Map());
+          const newSubs = this.subscribers.get(key);
+          for (const [unitId, subInfo] of oldSubs) {
+            newSubs.set(unitId, subInfo);
+          }
+          this.subscribers.delete(existingKey);
+          console.log(`[AudioRelay] SUBSCRIBERS_MIGRATED from="${existingKey}" to="${key}" count=${oldSubs.size}`);
+        }
+        if (this._wsSubscribers.has(existingKey)) {
+          const oldWsSubs = this._wsSubscribers.get(existingKey);
+          if (!this._wsSubscribers.has(key)) this._wsSubscribers.set(key, new Map());
+          const newWsSubs = this._wsSubscribers.get(key);
+          for (const [unitId, ws] of oldWsSubs) {
+            newWsSubs.set(unitId, ws);
+          }
+          this._wsSubscribers.delete(existingKey);
+          console.log(`[AudioRelay] WS_SUBSCRIBERS_MIGRATED from="${existingKey}" to="${key}" count=${oldWsSubs.size}`);
+        }
+        if (this._audioListeners.has(existingKey)) {
+          const oldListeners = this._audioListeners.get(existingKey);
+          if (!this._audioListeners.has(key)) this._audioListeners.set(key, new Map());
+          const newListeners = this._audioListeners.get(key);
+          for (const [listenerId, cb] of oldListeners) {
+            newListeners.set(listenerId, cb);
+          }
+          this._audioListeners.delete(existingKey);
+          console.log(`[AudioRelay] AUDIO_LISTENERS_MIGRATED from="${existingKey}" to="${key}" count=${oldListeners.size}`);
+        }
+        if (this._wsPacingQueues.has(existingKey)) {
+          const oldQueue = this._wsPacingQueues.get(existingKey);
+          const existingQueue = this._wsPacingQueues.get(key) || [];
+          this._wsPacingQueues.set(key, existingQueue.concat(oldQueue));
+          this._wsPacingQueues.delete(existingKey);
+        }
+        if (this._wsPacingTimers.has(existingKey)) {
+          clearInterval(this._wsPacingTimers.get(existingKey));
+          this._wsPacingTimers.delete(existingKey);
+        }
+        this._channelNumericByKey.delete(existingKey);
+      }
       this._channelNumericByKey.set(key, resolved);
       this._channelKeyByNumeric.set(resolved, key);
     }
@@ -78,24 +125,32 @@ class AudioRelayService {
 
   addWsSubscriber(channelId, unitId, ws) {
     const key = canonicalChannelKey(channelId);
-    if (!this._wsSubscribers) this._wsSubscribers = new Map();
     if (!this._wsSubscribers.has(key)) this._wsSubscribers.set(key, new Map());
     this._wsSubscribers.get(key).set(unitId, ws);
-  
+    if (AUDIO_DIAG) console.log(`[AudioRelay] WS_SUBSCRIBER_ADDED channelKey=${key} unitId=${unitId} totalWsSubs=${this._wsSubscribers.get(key).size}`);
   }
 
-  removeWsSubscriber(channelId, unitId) {
+  removeWsSubscriber(channelId, unitId, wsInstance = null) {
     const key = canonicalChannelKey(channelId);
-    if (!this._wsSubscribers) return;
     const subs = this._wsSubscribers.get(key);
-    if (!subs) return;
-    subs.delete(unitId);
-    if (subs.size === 0) this._wsSubscribers.delete(key);
-  
+    if (subs && subs.has(unitId)) {
+      subs.delete(unitId);
+      if (subs.size === 0) this._wsSubscribers.delete(key);
+      if (AUDIO_DIAG) console.log(`[AudioRelay] WS_SUBSCRIBER_REMOVED channelKey=${key} unitId=${unitId}`);
+      return;
+    }
+    for (const [k, s] of this._wsSubscribers) {
+      if (s.has(unitId)) {
+        if (wsInstance && s.get(unitId) !== wsInstance) continue;
+        s.delete(unitId);
+        if (s.size === 0) this._wsSubscribers.delete(k);
+        if (AUDIO_DIAG) console.log(`[AudioRelay] WS_SUBSCRIBER_REMOVED channelKey=${k} unitId=${unitId} (fallback from requested key=${key})`);
+        return;
+      }
+    }
   }
 
   removeAllWsSubscriptions(unitId) {
-    if (!this._wsSubscribers) return;
     for (const [key, subs] of this._wsSubscribers) {
       subs.delete(unitId);
       if (subs.size === 0) this._wsSubscribers.delete(key);
@@ -126,6 +181,10 @@ class AudioRelayService {
   injectAudio(channelId, senderUnitId, sequence, opusPayload, rawPcmSamples = null) {
     const channelKey = canonicalChannelKey(channelId);
     const resolvedChannelId = this._resolveChannelIdNumeric({ channelKey, channelIdNumeric: channelId });
+
+    if (AUDIO_DIAG && sequence % 100 === 0) {
+      console.log(`[AudioRelay] INJECT_AUDIO channelKey=${channelKey} sender=${senderUnitId} seq=${sequence} numericId=${resolvedChannelId}`);
+    }
 
     const rxPayload = this._buildRelayPacket({
       channelKey,
@@ -159,6 +218,13 @@ class AudioRelayService {
   }
 
   _broadcastToAll(channelKey, senderUnitId, rxPayload, sequence, opusPayload, channelIdNumeric = null, resolvedSender = null, rawPcmSamples = null) {
+    if (AUDIO_DIAG && sequence % 100 === 0) {
+      const udpKeys = [...this.subscribers.keys()];
+      const wsKeys = [...this._wsSubscribers.keys()];
+      const listenerKeys = [...this._audioListeners.keys()];
+      console.log(`[AudioRelay] BROADCAST channelKey=${channelKey} sender=${senderUnitId} seq=${sequence} udpChannels=[${udpKeys.join(',')}] wsChannels=[${wsKeys.join(',')}] listenerChannels=[${listenerKeys.join(',')}]`);
+    }
+
     const udpSubs = this.subscribers.get(channelKey);
     if (udpSubs) {
       for (const [subUnitId, subInfo] of udpSubs) {
@@ -184,7 +250,7 @@ class AudioRelayService {
       }
     }
 
-    if (this._wsSubscribers) {
+    {
       const wsSubs = this._wsSubscribers.get(channelKey);
       if (wsSubs && wsSubs.size > 0) {
         let int16View = null;
@@ -240,7 +306,7 @@ class AudioRelayService {
       }
     }
 
-    if (this._wsSubscribers) {
+    {
       const wsSubs = this._wsSubscribers.get(channelKey);
       if (wsSubs && wsSubs.size > 0) {
         let int16View = null;
@@ -306,18 +372,23 @@ class AudioRelayService {
     }
 
     const frame = queue.shift();
-    const wsSubs = this._wsSubscribers ? this._wsSubscribers.get(channelKey) : null;
+    const wsSubs = this._wsSubscribers.get(channelKey);
     if (!wsSubs) return;
 
+    let wsSentCount = 0;
     for (const [subUnitId, ws] of wsSubs) {
       if (subUnitId === frame.senderUnitId) continue;
       try {
         if (ws.readyState === 1) {
           ws.send(frame.packetBuf);
+          wsSentCount++;
         }
       } catch (err) {
         console.error(`[AudioRelay] WS send error to ${subUnitId}:`, err.message);
       }
+    }
+    if (AUDIO_DIAG && wsSentCount > 0 && queue.length % 50 === 0) {
+      console.log(`[AudioRelay] WS_RELAY channelKey=${channelKey} sender=${frame.senderUnitId} recipients=${wsSentCount} queueRemaining=${queue.length}`);
     }
   }
 
@@ -389,7 +460,16 @@ class AudioRelayService {
     if (!senderUnitId) return;
 
     const channelKey = this._resolveChannelKeyFromNumeric(channelIdNumeric);
-    if (!channelKey) return;
+    if (!channelKey) {
+      if (sequence % 50 === 0) {
+        console.warn(`[AudioRelay] PACKET_UNRESOLVED_CHANNEL numericId=${channelIdNumeric} sender=${senderUnitId} knownNumerics=[${[...this._channelKeyByNumeric.keys()].join(',')}]`);
+      }
+      return;
+    }
+
+    if (AUDIO_DIAG && sequence % 100 === 0) {
+      console.log(`[AudioRelay] PACKET_RECEIVED numericId=${channelIdNumeric} resolvedKey=${channelKey} sender=${senderUnitId} seq=${sequence} from=${rinfo.address}:${rinfo.port}`);
+    }
 
     this.addSubscriber(channelKey, senderUnitId, rinfo.address, rinfo.port);
 

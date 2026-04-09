@@ -8,6 +8,7 @@ import { canonicalChannelKey } from './channelKeyUtils.js';
 import { floorControlService } from './floorControlService.js';
 import { audioRelayService } from './audioRelayService.js';
 import { opusCodec } from './opusCodec.js';
+const AUDIO_DIAG = process.env.AUDIO_DIAG === 'true';
 
 const PCM_SHAPE = {
   type: 'audio',
@@ -168,6 +169,7 @@ class WsAudioBridge {
     });
 
     audioRelayService.addWsSubscriber(channelId, unitId, ws);
+    if (AUDIO_DIAG) console.log(`[WsAudioBridge] CONNECTION_REGISTERED channelId=${channelId} unitId=${unitId}`);
 
     ws.on('message', (raw) => {
       let packet;
@@ -184,7 +186,10 @@ class WsAudioBridge {
       }
 
       if (!isValidPcmPacket(packet)) return;
-      if (packet.channelId !== channelId) return;
+      if (packet.channelId !== channelId) {
+        console.warn(`[WsAudioBridge] CHANNEL_MISMATCH wsChannel=${channelId} packetChannel=${packet.channelId} unitId=${unitId}`);
+        return;
+      }
       try {
         const pcmInt16 = Buffer.from(new Int16Array(packet.payload).buffer);
         const opusFrames = opusCodec.encodePcmToOpus(pcmInt16);
@@ -202,7 +207,7 @@ class WsAudioBridge {
     });
 
     ws.on('close', () => {
-      audioRelayService.removeWsSubscriber(channelId, unitId);
+      audioRelayService.removeWsSubscriber(channelId, unitId, ws);
       const map = this.channelClients.get(channelId);
       if (!map) return;
       map.delete(unitId);
