@@ -432,7 +432,13 @@ class AudioRelayService {
   }
 
   _buildRelayPacket({ channelKey, channelIdNumeric, senderUnitId, sequence, opusPayload, flags = FLAG_FEC_HINT, timestampMs = Date.now() }) {
-    const channelIdNum = this._resolveChannelIdNumeric({ channelKey, channelIdNumeric });
+    let channelIdNum = this._resolveChannelIdNumeric({ channelKey, channelIdNumeric });
+    if (channelIdNum === 0) {
+      const fallback = this._channelNumericByKey.get(canonicalChannelKey(channelKey));
+      if (fallback != null && !Number.isNaN(fallback) && fallback > 0) {
+        channelIdNum = fallback;
+      }
+    }
     if (channelIdNum === 0) {
       console.warn(`[AudioRelay] RELAY_CHANNEL_ID_ZERO channelKey=${channelKey} — receiver may drop this packet`);
       console.warn(`RADIO_RELAY_PACKET_ZERO_CHANNEL_WARNING roomKey=${channelKey} senderUnit=${senderUnitId || ''}`);

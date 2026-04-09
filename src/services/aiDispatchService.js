@@ -586,10 +586,14 @@ class AIDispatcher {
       audioRelayService.addAudioListener(key, AI_IDENTITY, this._audioListenerBound);
     }
 
+    if (this.numericChannelId != null) {
+      audioRelayService.registerChannelNumeric(channelName, this.numericChannelId);
+    }
+
     this.connected = true;
     this.channelName = channelName;
     
-    this.log('CHANNEL_JOINED', { channel: channelName, audioListenerKeys: Array.from(listenKeys) });
+    this.log('CHANNEL_JOINED', { channel: channelName, audioListenerKeys: Array.from(listenKeys), registeredNumericId: this.numericChannelId });
     this.log('OPUS_TRANSPORT_VERIFIED', { mode: 'server-side decode', note: 'AI dispatcher receives Opus from relay listeners and decodes server-side for STT' });
   }
 
