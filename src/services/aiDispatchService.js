@@ -612,7 +612,7 @@ class AIDispatcher {
 
     let pcmFrame;
     try {
-      pcmFrame = opusCodec.decodeOpusToPcm(opusPayload);
+      pcmFrame = opusCodec.decodeOpusToPcm(opusPayload, unitId);
     } catch (err) {
       this.log('OPUS_DECODE_ERROR', { unitId, error: err.message });
       return;

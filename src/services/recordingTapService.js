@@ -73,7 +73,7 @@ function finalizeRecording(key) {
     const pcmChunks = [];
     for (const opusFrame of frames) {
       try {
-        const pcm = opusCodec.decodeOpusToPcm(opusFrame);
+        const pcm = opusCodec.decodeOpusToPcm(opusFrame, unitId);
         pcmChunks.push(pcm);
       } catch (decErr) {
         // skip corrupted frames
