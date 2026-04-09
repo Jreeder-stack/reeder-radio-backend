@@ -34,8 +34,8 @@ class AudioRelayService {
     this._audioListeners = new Map();
     this._channelNumericByKey = new Map();
     this._earlyAudioBuffers = new Map();
-    this._earlyBufferMaxMs = 500;
-    this._earlyBufferMaxFrames = 25;
+    this._earlyBufferMaxMs = 3000;
+    this._earlyBufferMaxFrames = 150;
     this._wsPacingQueues = new Map();
     this._wsPacingTimers = new Map();
   }
@@ -241,6 +241,86 @@ class AudioRelayService {
     }
   }
 
+  _broadcastToAllDirect(channelKey, senderUnitId, rxPayload, sequence, opusPayload, channelIdNumeric = null, resolvedSender = null) {
+    const udpSubs = this.subscribers.get(channelKey);
+    if (udpSubs) {
+      for (const [subUnitId, subInfo] of udpSubs) {
+        if (subUnitId === senderUnitId) continue;
+        subInfo.lastSeen = Date.now();
+        try {
+          this.socket.send(rxPayload, 0, rxPayload.length, subInfo.port, subInfo.address);
+        } catch (err) {
+          console.error(`[AudioRelay] Send error to ${subUnitId}:`, err.message);
+        }
+      }
+    }
+
+    const listeners = this._audioListeners.get(channelKey);
+    if (listeners) {
+      for (const [listenerId, callback] of listeners) {
+        if (listenerId === senderUnitId) continue;
+        try {
+          callback({ channelId: channelKey, unitId: senderUnitId, sequence, opusPayload, timestamp: Date.now() });
+        } catch (err) {
+          console.error(`[AudioRelay] Listener error for ${listenerId}:`, err.message);
+        }
+      }
+    }
+
+    if (this._wsSubscribers) {
+      const wsSubs = this._wsSubscribers.get(channelKey);
+      if (wsSubs && wsSubs.size > 0) {
+        let pcmSamples = null;
+        try {
+          const pcmBuf = opusCodec.decodeOpusToPcm(opusPayload, resolvedSender || senderUnitId);
+          const int16View = new Int16Array(pcmBuf.buffer, pcmBuf.byteOffset, pcmBuf.byteLength / 2);
+          const len = int16View.length;
+          if (len === PCM_FRAME_SAMPLES) {
+            const samples = new Array(PCM_FRAME_SAMPLES);
+            for (let i = 0; i < PCM_FRAME_SAMPLES; i++) samples[i] = int16View[i];
+            pcmSamples = samples;
+          } else {
+            pcmSamples = new Array(len);
+            for (let i = 0; i < len; i++) pcmSamples[i] = int16View[i];
+          }
+        } catch (err) {
+          console.error(`[AudioRelay] Opus→PCM decode error: ${err.message}`);
+        }
+        if (pcmSamples) {
+          const packetStr = JSON.stringify({
+            type: 'audio',
+            codec: 'pcm',
+            sampleRate: 48000,
+            channels: 1,
+            frameSamples: 960,
+            sequence,
+            channelId: channelKey,
+            senderUnitId,
+            payload: pcmSamples,
+          });
+          for (const [subUnitId, ws] of wsSubs) {
+            if (subUnitId === senderUnitId) continue;
+            try {
+              if (ws.readyState === 1) {
+                ws.send(packetStr);
+              }
+            } catch (err) {
+              console.error(`[AudioRelay] WS send error to ${subUnitId}:`, err.message);
+            }
+          }
+        }
+      }
+    }
+
+    if (this._recordingTap) {
+      try {
+        this._recordingTap({ channelId: channelKey, unitId: senderUnitId, sequence, opusPayload, timestamp: Date.now() });
+      } catch (err) {
+        console.error('[AudioRelay] Recording tap error:', err.message);
+      }
+    }
+  }
+
   _enqueueWsFrame(channelKey, senderUnitId, packetStr) {
     let queue = this._wsPacingQueues.get(channelKey);
     if (!queue) {
@@ -396,7 +476,7 @@ class AudioRelayService {
       
         for (const pkt of freshFrames) {
           const earlyPayload = this._buildRelayPacket(pkt);
-          this._broadcastToAll(pkt.channelKey, unitId, earlyPayload, pkt.sequence, pkt.opusPayload, pkt.channelIdNumeric, pkt.senderUnitId);
+          this._broadcastToAllDirect(pkt.channelKey, unitId, earlyPayload, pkt.sequence, pkt.opusPayload, pkt.channelIdNumeric, pkt.senderUnitId);
         }
       }
       this._earlyAudioBuffers.delete(bufKey);

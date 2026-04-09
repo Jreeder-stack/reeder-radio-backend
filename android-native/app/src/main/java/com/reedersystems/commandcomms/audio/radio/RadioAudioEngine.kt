@@ -729,7 +729,7 @@ class RadioAudioEngine(private val context: Context) {
     private val compAttackCoeff: Double get() = 1.0 - Math.exp(-1.0 / (actualSampleRate * txCompAttackMs))
     private val compReleaseCoeff: Double get() = 1.0 - Math.exp(-1.0 / (actualSampleRate * txCompReleaseMs))
 
-    var txGain: Double = 3.5
+    var txGain: Double = 1.5
 
     private fun resetDspState() {
         hpPrevOutput = 0.0

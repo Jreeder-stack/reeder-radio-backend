@@ -6,7 +6,7 @@ class PcmPlaybackProcessor extends AudioWorkletProcessor {
     this._offset = 0;
     this._primed = false;
     this._PRE_BUFFER_FRAMES = 3;
-    this._gain = 2.5;
+    this._gain = 1.5;
 
     this.port.onmessage = (event) => {
       if (event.data.type === 'enqueue') {
