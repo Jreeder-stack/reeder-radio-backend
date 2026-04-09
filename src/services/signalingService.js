@@ -153,11 +153,6 @@ class SignalingService {
 
     floorControlService.onTimeout((channelId, unitId) => {
       const unitSocket = this._findSocketByUnitId(unitId);
-      if (unitSocket && unitSocket.radioSessionToken) {
-        audioRelayService.removeSession(unitSocket.radioSessionToken);
-        unitSocket.radioSessionToken = null;
-        unitSocket.radioSessionChannel = null;
-      }
 
       this.activeTransmissions.delete(channelId);
 
@@ -1236,7 +1231,6 @@ class SignalingService {
 
     if (result.granted) {
       opusCodec.resetSenderDecoder(socket.unitId);
-      this._issueRadioSessionToken(socket, channelId, 'ptt_granted', socket.lastAuthorizedRadioChannelNumeric);
 
       this.activeTransmissions.set(channelId, {
         unitId: socket.unitId,
@@ -1349,14 +1343,6 @@ class SignalingService {
     if (!released) return;
 
     this.activeTransmissions.delete(channelId);
-
-    if (socket.radioSessionToken) {
-      audioRelayService.removeSession(socket.radioSessionToken);
-      socket.radioSessionToken = null;
-      socket.radioSessionChannel = null;
-    }
-
-    this._issueRadioSessionToken(socket, channelId, 'ptt_release_rx');
 
     const presenceData = this.unitPresence.get(socket.unitId);
     if (presenceData) {

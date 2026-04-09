@@ -44,6 +44,8 @@ class RadioAudioEngine(private val context: Context) {
     @Volatile
     private var isTransmitting = false
     @Volatile
+    private var pendingCodecReset = false
+    @Volatile
     private var started = false
     @Volatile
     var isPreCapturing = false
@@ -140,28 +142,39 @@ class RadioAudioEngine(private val context: Context) {
         reconnectCount++
         val rc = reconnectCount
         val resetStartMs = System.currentTimeMillis()
-        Log.d(TAG, "RECONNECT_START reconnectCount=$rc — coordinated audio pipeline reset ${RadioDiagLog.elapsedTag()}")
+        Log.d(TAG, "SESSION_TOKEN_CHANGED reconnectCount=$rc — transport-only reset, codec preserved ${RadioDiagLog.elapsedTag()}")
 
         try {
-            opusCodec.resetDecoder()
-            Log.d(TAG, "RECONNECT_STEP decoder_reset reconnectCount=$rc")
-
-            opusCodec.resetEncoder()
-            Log.d(TAG, "RECONNECT_STEP encoder_reset reconnectCount=$rc")
-
             jitterBuffer.flushForReconnect()
-            Log.d(TAG, "RECONNECT_STEP jitter_buffer_flushed reconnectCount=$rc")
+            Log.d(TAG, "SESSION_TOKEN_STEP jitter_buffer_flushed reconnectCount=$rc")
 
             audioPlayback.clearStaleFrames()
-            Log.d(TAG, "RECONNECT_STEP audiotrack_flushed reconnectCount=$rc")
-
-            resetDspState()
-            Log.d(TAG, "RECONNECT_STEP dsp_state_reset reconnectCount=$rc")
+            Log.d(TAG, "SESSION_TOKEN_STEP audiotrack_flushed reconnectCount=$rc")
 
             val resetDurationMs = System.currentTimeMillis() - resetStartMs
-            Log.d(TAG, "RECONNECT_COMPLETE reconnectCount=$rc resetDurationMs=$resetDurationMs componentsReset=decoder,encoder,jitterBuffer,audioTrack,dsp ${RadioDiagLog.elapsedTag()}")
+            Log.d(TAG, "SESSION_TOKEN_COMPLETE reconnectCount=$rc resetDurationMs=$resetDurationMs componentsReset=jitterBuffer,audioTrack codecPreserved=true ${RadioDiagLog.elapsedTag()}")
         } catch (e: Exception) {
-            Log.e("[RadioError]", "RECONNECT_EXCEPTION reconnectCount=$rc ${e::class.simpleName}: ${e.message} method=onSessionTokenChanged", e)
+            Log.e("[RadioError]", "SESSION_TOKEN_EXCEPTION reconnectCount=$rc ${e::class.simpleName}: ${e.message} method=onSessionTokenChanged", e)
+        }
+    }
+
+    fun requestCodecReset() {
+        if (isTransmitting || isPreCapturing) {
+            Log.w(TAG, "CODEC_RESET_DEFERRED — active TX/preCapture, will reset after TX completes")
+            pendingCodecReset = true
+            return
+        }
+        performCodecReset()
+    }
+
+    private fun performCodecReset() {
+        pendingCodecReset = false
+        try {
+            opusCodec.resetDecoder()
+            opusCodec.resetEncoder()
+            Log.d(TAG, "CODEC_RESET_PERFORMED decoder+encoder reset ${RadioDiagLog.elapsedTag()}")
+        } catch (e: Exception) {
+            Log.e("[RadioError]", "CODEC_RESET_FAILED: ${e::class.simpleName}: ${e.message}", e)
         }
     }
 
@@ -1036,6 +1049,10 @@ class RadioAudioEngine(private val context: Context) {
         stateManager.transitionTo(RadioState.IDLE, "tx_stopped")
         Log.d(TAG, txSessionStats.summary() + " ${RadioDiagLog.elapsedTag()}")
         Log.d(TAG, "TX stopped")
+        if (pendingCodecReset) {
+            Log.d(TAG, "CODEC_RESET_EXECUTING_DEFERRED — performing codec reset deferred during TX")
+            performCodecReset()
+        }
     }
 
     fun startReceive() {

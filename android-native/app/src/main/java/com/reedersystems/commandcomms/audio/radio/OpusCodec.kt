@@ -14,7 +14,7 @@ class OpusCodec {
         const val DEFAULT_SAMPLE_RATE = 48000
         const val SAMPLE_RATE = DEFAULT_SAMPLE_RATE
         const val CHANNELS = 1
-        const val BITRATE = 48000
+        const val BITRATE = 64000
         const val FRAME_SIZE = 960
         const val FRAME_DURATION_MS = 20
         const val MAX_ENCODED_SIZE = 512
@@ -59,14 +59,14 @@ class OpusCodec {
             val enc = OpusEncoder(sampleRate, channels, OpusApplication.OPUS_APPLICATION_VOIP)
             enc.setBitrate(BITRATE)
             enc.setSignalType(OpusSignal.OPUS_SIGNAL_VOICE)
-            enc.setComplexity(5)
+            enc.setComplexity(8)
             enc.setUseVBR(true)
             enc.setUseInbandFEC(true)
             enc.setPacketLossPercent(10)
             encoder = enc
             decoder = OpusDecoder(DEFAULT_SAMPLE_RATE, CHANNELS)
             initialized = true
-            Log.d(TAG, "OpusCodec initialized rate=$sampleRate channels=$channels frameSize=$encoderFrameSize bitrate=$BITRATE VBR=true complexity=5 FEC=true lossPercent=10 decoderRate=$DEFAULT_SAMPLE_RATE ${RadioDiagLog.elapsedTag()}")
+            Log.d(TAG, "OpusCodec initialized rate=$sampleRate channels=$channels frameSize=$encoderFrameSize bitrate=$BITRATE VBR=true complexity=8 FEC=true lossPercent=10 decoderRate=$DEFAULT_SAMPLE_RATE ${RadioDiagLog.elapsedTag()}")
         } catch (e: Exception) {
             Log.e("[RadioError]", "OpusCodec initialization failed: ${e::class.simpleName}: ${e.message} rate=$sampleRate channels=$channels", e)
         }
@@ -84,12 +84,12 @@ class OpusCodec {
                 val enc = OpusEncoder(sampleRate, channels, OpusApplication.OPUS_APPLICATION_VOIP)
                 enc.setBitrate(currentBitrate)
                 enc.setSignalType(OpusSignal.OPUS_SIGNAL_VOICE)
-                enc.setComplexity(5)
+                enc.setComplexity(8)
                 enc.setUseVBR(true)
                 enc.setUseInbandFEC(true)
                 enc.setPacketLossPercent(10)
                 encoder = enc
-                Log.d(TAG, "ENCODER_REINIT rate=$sampleRate frameSize=$encoderFrameSize channels=$channels bitrate=$currentBitrate VBR=true complexity=5 FEC=true — decoder untouched ${RadioDiagLog.elapsedTag()}")
+                Log.d(TAG, "ENCODER_REINIT rate=$sampleRate frameSize=$encoderFrameSize channels=$channels bitrate=$currentBitrate VBR=true complexity=8 FEC=true — decoder untouched ${RadioDiagLog.elapsedTag()}")
             } catch (e: Exception) {
                 Log.e("[RadioError]", "Encoder-only reinit failed: ${e::class.simpleName}: ${e.message} rate=$sampleRate channels=$channels", e)
             }
@@ -140,7 +140,7 @@ class OpusCodec {
                 val enc = OpusEncoder(encoderSampleRate, encoderChannels, OpusApplication.OPUS_APPLICATION_VOIP)
                 enc.setBitrate(BITRATE)
                 enc.setSignalType(OpusSignal.OPUS_SIGNAL_VOICE)
-                enc.setComplexity(5)
+                enc.setComplexity(8)
                 enc.setUseVBR(true)
                 enc.setUseInbandFEC(true)
                 enc.setPacketLossPercent(10)
@@ -285,13 +285,13 @@ class OpusCodec {
                 val enc = OpusEncoder(encoderSampleRate, encoderChannels, OpusApplication.OPUS_APPLICATION_VOIP)
                 enc.setBitrate(currentBitrate)
                 enc.setSignalType(OpusSignal.OPUS_SIGNAL_VOICE)
-                enc.setComplexity(5)
+                enc.setComplexity(8)
                 enc.setUseVBR(true)
                 enc.setUseInbandFEC(true)
                 enc.setPacketLossPercent(10)
                 encoder = enc
                 encoderReinitialized = true
-                Log.d(TAG, "Encoder re-initialized after assertion failure (sampleRate=$encoderSampleRate frameSize=$encoderFrameSize complexity=5 bitrate=$currentBitrate) ${RadioDiagLog.elapsedTag()}")
+                Log.d(TAG, "Encoder re-initialized after assertion failure (sampleRate=$encoderSampleRate frameSize=$encoderFrameSize complexity=8 bitrate=$currentBitrate) ${RadioDiagLog.elapsedTag()}")
             } catch (t: Throwable) {
                 Log.e("[RadioError]", "Failed to re-initialize encoder: ${t::class.simpleName}: ${t.message} method=reinitializeEncoder", t)
                 encoder = null

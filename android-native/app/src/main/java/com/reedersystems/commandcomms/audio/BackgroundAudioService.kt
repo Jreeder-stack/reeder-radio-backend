@@ -746,13 +746,11 @@ class BackgroundAudioService : Service() {
 
     private fun triggerReconnectPipelineReset() {
         val engine = radioEngine ?: return
-        Log.d(TAG, "RECONNECT_AUTH_PIPELINE_RESET — fallback cleanup on signaling re-auth")
-        engine.opusCodec.resetDecoder()
-        engine.opusCodec.resetEncoder()
+        Log.d(TAG, "RECONNECT_AUTH_PIPELINE_RESET — transport cleanup on signaling re-auth, codec preserved")
         engine.jitterBuffer.flushForReconnect()
         engine.audioPlayback.clearStaleFrames()
         engine.udpTransport.clearSessionToken()
-        Log.d(TAG, "RECONNECT_AUTH_PIPELINE_RESET_COMPLETE — codec, jitter, playback, transport all reset")
+        Log.d(TAG, "RECONNECT_AUTH_PIPELINE_RESET_COMPLETE — jitter, playback, transport reset — codec untouched")
     }
 
     private fun startPendingFloorTimeout(roomKey: String) {
