@@ -49,6 +49,33 @@ export function parseBinaryAudioFrame(arrayBuffer) {
   }
 }
 
+function truncateUtf8(encoder, str, maxBytes) {
+  let encoded = encoder.encode(str || '');
+  if (encoded.length > maxBytes) encoded = encoded.slice(0, maxBytes);
+  return encoded;
+}
+
+export function buildBinaryFrame(sequence, channelId, unitId, int16Frame) {
+  const encoder = new TextEncoder();
+  const channelBytes = truncateUtf8(encoder, channelId, 255);
+  const senderBytes = truncateUtf8(encoder, unitId, 255);
+  const headerLen = 1 + 4 + 1 + channelBytes.length + 1 + senderBytes.length;
+  const pcmBytes = int16Frame.length * 2;
+  const buf = new ArrayBuffer(headerLen + pcmBytes);
+  const view = new DataView(buf);
+  const u8 = new Uint8Array(buf);
+  let offset = 0;
+  view.setUint8(offset, WS_BINARY_MARKER); offset += 1;
+  view.setUint32(offset, sequence, true); offset += 4;
+  view.setUint8(offset, channelBytes.length); offset += 1;
+  u8.set(channelBytes, offset); offset += channelBytes.length;
+  view.setUint8(offset, senderBytes.length); offset += 1;
+  u8.set(senderBytes, offset); offset += senderBytes.length;
+  const pcmU8 = new Uint8Array(int16Frame.buffer, int16Frame.byteOffset, int16Frame.byteLength);
+  u8.set(pcmU8, offset);
+  return buf;
+}
+
 export function validatePcmPacket(packet) {
   if (!packet || typeof packet !== 'object') return false;
   if (packet.type !== PCM_SPEC.type) return false;

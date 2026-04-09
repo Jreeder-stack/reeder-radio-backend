@@ -1,7 +1,7 @@
 import { notifyChannelJoin } from '../utils/api.js';
 import { signalingManager } from '../signaling/SignalingManager.js';
 import { PTT_STATES } from '../constants/pttStates.js';
-import { buildPcmPacket, validatePcmPacket, parseBinaryAudioFrame } from './PcmPacket.js';
+import { buildPcmPacket, buildBinaryFrame, validatePcmPacket, parseBinaryAudioFrame } from './PcmPacket.js';
 import { PcmCaptureEngine } from './PcmCaptureEngine.js';
 import { PcmPlaybackEngine } from './PcmPlaybackEngine.js';
 
@@ -361,8 +361,8 @@ class AudioTransportManager {
     await this._capture.start(async (frame) => {
       if (!this._loopbackOk) return;
 
-      const packet = buildPcmPacket(this._txSequence++, txChannel, frame);
-      room.ws.send(JSON.stringify(packet));
+      const binFrame = buildBinaryFrame(this._txSequence++, txChannel, room.unitId, frame);
+      room.ws.send(binFrame);
     });
 
     if (this.pttState !== PTT_STATES.ARMING) {

@@ -172,6 +172,37 @@ class WsAudioBridge {
     if (AUDIO_DIAG) console.log(`[WsAudioBridge] CONNECTION_REGISTERED channelId=${channelId} unitId=${unitId}`);
 
     ws.on('message', (raw) => {
+      if (Buffer.isBuffer(raw) && raw.length >= 7 && raw[0] === 0x01) {
+        let offset = 1;
+        const sequence = raw.readUInt32LE(offset); offset += 4;
+        const chLen = raw[offset]; offset += 1;
+        if (offset + chLen >= raw.length) return;
+        const binChannelId = raw.slice(offset, offset + chLen).toString('utf8'); offset += chLen;
+        if (offset >= raw.length) return;
+        const senderLen = raw[offset]; offset += 1;
+        if (offset + senderLen > raw.length) return;
+        offset += senderLen;
+        const pcmByteLen = raw.length - offset;
+        if (pcmByteLen < 2 || pcmByteLen % 2 !== 0) return;
+
+        if (binChannelId !== channelId) {
+          console.warn(`[WsAudioBridge] CHANNEL_MISMATCH wsChannel=${channelId} packetChannel=${binChannelId} unitId=${unitId}`);
+          return;
+        }
+
+        try {
+          const pcmInt16 = raw.slice(offset, offset + pcmByteLen);
+          const opusFrames = opusCodec.encodePcmToOpus(pcmInt16);
+          const rawPayload = Array.from(new Int16Array(pcmInt16.buffer, pcmInt16.byteOffset, pcmInt16.byteLength / 2));
+          for (let i = 0; i < opusFrames.length; i++) {
+            audioRelayService.injectAudio(channelId, unitId, sequence + i, opusFrames[i], i === 0 ? rawPayload : null);
+          }
+        } catch (err) {
+          console.error('WS_TO_UDP_RELAY_ERROR', { channelId, senderUnitId: unitId, sequence, error: err.message });
+        }
+        return;
+      }
+
       let packet;
       try {
         packet = JSON.parse(raw.toString());

@@ -88,6 +88,62 @@
     };
   }
 
+  var WS_BINARY_MARKER = 0x01;
+
+  function truncateUtf8(encoder, str, maxBytes) {
+    var encoded = encoder.encode(str || '');
+    if (encoded.length > maxBytes) encoded = encoded.slice(0, maxBytes);
+    return encoded;
+  }
+
+  function buildBinaryFrame(sequence, channelId, unitId, int16Frame) {
+    var encoder = new TextEncoder();
+    var channelBytes = truncateUtf8(encoder, channelId, 255);
+    var senderBytes = truncateUtf8(encoder, unitId, 255);
+    var headerLen = 1 + 4 + 1 + channelBytes.length + 1 + senderBytes.length;
+    var pcmBytes = int16Frame.length * 2;
+    var buf = new ArrayBuffer(headerLen + pcmBytes);
+    var view = new DataView(buf);
+    var u8 = new Uint8Array(buf);
+    var off = 0;
+    view.setUint8(off, WS_BINARY_MARKER); off += 1;
+    view.setUint32(off, sequence, true); off += 4;
+    view.setUint8(off, channelBytes.length); off += 1;
+    u8.set(channelBytes, off); off += channelBytes.length;
+    view.setUint8(off, senderBytes.length); off += 1;
+    u8.set(senderBytes, off); off += senderBytes.length;
+    var pcmU8 = new Uint8Array(int16Frame.buffer, int16Frame.byteOffset, int16Frame.byteLength);
+    u8.set(pcmU8, off);
+    return buf;
+  }
+
+  function parseBinaryAudioFrame(arrayBuffer) {
+    try {
+      if (arrayBuffer.byteLength < 7) return null;
+      var view = new DataView(arrayBuffer);
+      var off = 0;
+      var marker = view.getUint8(off); off += 1;
+      if (marker !== WS_BINARY_MARKER) return null;
+      var sequence = view.getUint32(off, true); off += 4;
+      if (off >= arrayBuffer.byteLength) return null;
+      var channelIdLen = view.getUint8(off); off += 1;
+      if (off + channelIdLen >= arrayBuffer.byteLength) return null;
+      var channelIdBytes = new Uint8Array(arrayBuffer, off, channelIdLen);
+      var channelId = new TextDecoder().decode(channelIdBytes); off += channelIdLen;
+      if (off >= arrayBuffer.byteLength) return null;
+      var senderIdLen = view.getUint8(off); off += 1;
+      if (off + senderIdLen > arrayBuffer.byteLength) return null;
+      var senderIdBytes = new Uint8Array(arrayBuffer, off, senderIdLen);
+      var senderUnitId = new TextDecoder().decode(senderIdBytes); off += senderIdLen;
+      var pcmByteLength = arrayBuffer.byteLength - off;
+      if (pcmByteLength < 2 || pcmByteLength % 2 !== 0) return null;
+      var samples = new Int16Array(arrayBuffer.slice(off, off + pcmByteLength));
+      return { sequence: sequence, channelId: channelId, senderUnitId: senderUnitId, samples: samples };
+    } catch (e) {
+      return null;
+    }
+  }
+
   function validatePcmPacket(packet) {
     if (!packet || typeof packet !== 'object') return false;
     if (packet.type !== PCM_SPEC.type) return false;
@@ -281,6 +337,7 @@
         encodeURIComponent(channelId) + '&unitId=' + encodeURIComponent(self._unitId);
 
       var ws = new WebSocket(url);
+      ws.binaryType = 'arraybuffer';
 
       ws.onopen = function () {
         self._ws = ws;
@@ -292,11 +349,28 @@
       };
 
       ws.onmessage = function (evt) {
+        if (evt.data instanceof ArrayBuffer) {
+          var parsed = parseBinaryAudioFrame(evt.data);
+          if (!parsed) return;
+          if (parsed.senderUnitId && parsed.senderUnitId === self._unitId) return;
+          if (self._playback) {
+            self._playback.enqueue(parsed.samples);
+          }
+          return;
+        }
+
         if (typeof evt.data !== 'string') return;
         var msg;
         try {
           msg = JSON.parse(evt.data);
         } catch (e) {
+          return;
+        }
+
+        if (msg.type === 'heartbeat') {
+          try {
+            ws.send(JSON.stringify({ type: 'pong', ts: msg.ts }));
+          } catch (_) {}
           return;
         }
 
@@ -462,8 +536,8 @@
       this._captureWorklet = new AudioWorkletNode(this._captureCtx, 'pcm-capture-processor');
       this._captureWorklet.port.onmessage = function (event) {
         if (event.data.type === 'pcmFrame' && self._transmitting && self._ws && self._ws.readyState === WebSocket.OPEN) {
-          var packet = buildPcmPacket(self._txSequence++, self._channelId, event.data.samples);
-          self._ws.send(JSON.stringify(packet));
+          var bin = buildBinaryFrame(self._txSequence++, self._channelId, self._unitId, event.data.samples);
+          self._ws.send(bin);
         }
       };
       this._captureSource.connect(this._captureWorklet);
@@ -486,8 +560,8 @@
         while (self._captureFallbackBuffer.length >= PCM_SPEC.frameSamples) {
           var frame = self._captureFallbackBuffer.slice(0, PCM_SPEC.frameSamples);
           self._captureFallbackBuffer = self._captureFallbackBuffer.slice(PCM_SPEC.frameSamples);
-          var packet = buildPcmPacket(self._txSequence++, self._channelId, frame);
-          self._ws.send(JSON.stringify(packet));
+          var bin = buildBinaryFrame(self._txSequence++, self._channelId, self._unitId, frame);
+          self._ws.send(bin);
         }
       };
       this._captureSource.connect(this._captureFallback);
