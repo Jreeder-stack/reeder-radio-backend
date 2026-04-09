@@ -14,7 +14,7 @@ const RADIO_HEADER_FIXED_LEN = VERSION_LEN + FLAGS_LEN + CHANNEL_ID_LEN + SEQUEN
 const HEADER_LEN = SESSION_TOKEN_LEN + RADIO_HEADER_FIXED_LEN;
 const PACKET_VERSION = 1;
 const FLAG_FEC_HINT = 0x01;
-const SUBSCRIBER_TIMEOUT_MS = 120000;
+const SUBSCRIBER_TIMEOUT_MS = 60000;
 const SUBSCRIBER_SWEEP_INTERVAL_MS = 30000;
 
 const WS_PACING_INTERVAL_MS = 20;
@@ -77,22 +77,25 @@ class AudioRelayService {
   }
 
   addSubscriber(channelId, unitId, address, port) {
-    if (!this.subscribers.has(channelId)) this.subscribers.set(channelId, new Map());
-    this.subscribers.get(channelId).set(unitId, { address, port, lastSeen: Date.now() });
+    const key = canonicalChannelKey(channelId);
+    if (!this.subscribers.has(key)) this.subscribers.set(key, new Map());
+    this.subscribers.get(key).set(unitId, { address, port, lastSeen: Date.now() });
   }
 
   refreshSubscriber(channelId, unitId) {
-    const subs = this.subscribers.get(channelId);
+    const key = canonicalChannelKey(channelId);
+    const subs = this.subscribers.get(key);
     if (!subs) return;
     const sub = subs.get(unitId);
     if (sub) sub.lastSeen = Date.now();
   }
 
   removeSubscriber(channelId, unitId) {
-    const subs = this.subscribers.get(channelId);
+    const key = canonicalChannelKey(channelId);
+    const subs = this.subscribers.get(key);
     if (!subs) return;
     subs.delete(unitId);
-    if (subs.size === 0) this.subscribers.delete(channelId);
+    if (subs.size === 0) this.subscribers.delete(key);
   }
 
   removeAllSubscriptions(unitId) {

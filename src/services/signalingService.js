@@ -159,6 +159,8 @@ class SignalingService {
         unitSocket.radioSessionChannel = null;
       }
 
+      this.activeTransmissions.delete(channelId);
+
       this.io.to(`channel:${channelId}`).emit(RADIO_EVENTS.TX_STOP, {
         senderUnitId: unitId,
         channelId,
@@ -182,13 +184,47 @@ class SignalingService {
         presenceData.status = 'online';
       }
 
-      console.log(`[Signaling] Floor timeout: ${unitId} on ${channelId}`);
+      console.log(`[Signaling] Floor timeout: cleaned up activeTransmissions and floor for ${unitId} on ${channelId}`);
     });
 
     audioRelayService.setFloorControlService(floorControlService);
 
+    this._startActiveTransmissionsSweep();
+
     console.log('[Signaling] Socket.IO signaling server initialized');
     return this.io;
+  }
+
+  _startActiveTransmissionsSweep() {
+    const SWEEP_INTERVAL_MS = 30000;
+    this._transmissionSweepTimer = setInterval(() => {
+      for (const [channelId, transmission] of this.activeTransmissions) {
+        const floorHolder = floorControlService.getFloorHolder(channelId);
+        if (!floorHolder || floorHolder.unitId !== transmission.unitId) {
+          this.activeTransmissions.delete(channelId);
+
+          this.io.to(`channel:${channelId}`).emit(SIGNALING_EVENTS.PTT_END, {
+            unitId: transmission.unitId,
+            channelId,
+            timestamp: Date.now(),
+            reason: 'consistency_sweep',
+          });
+
+          this.io.to(`channel:${channelId}`).emit(RADIO_EVENTS.CHANNEL_IDLE, {
+            channelId,
+            timestamp: Date.now(),
+          });
+
+          const presenceData = this.unitPresence.get(transmission.unitId);
+          if (presenceData) {
+            presenceData.status = 'online';
+          }
+
+          console.log(`[Signaling] Consistency sweep: removed ghost transmission for ${transmission.unitId} on ${channelId}`);
+        }
+      }
+    }, SWEEP_INTERVAL_MS);
+    this._transmissionSweepTimer.unref?.();
   }
 
   _checkAuthRateLimit(ip) {
@@ -478,7 +514,31 @@ class SignalingService {
     if (!socket.unitId) return;
     
     const transmission = this.activeTransmissions.get(channelId);
-    if (!transmission || transmission.unitId !== socket.unitId) {
+    if (!transmission) {
+      return;
+    }
+
+    if (transmission.unitId !== socket.unitId) {
+      console.warn(`[Signaling] PTT END unitId mismatch: socket=${socket.unitId} transmission=${transmission.unitId} on ${channelId} — cleaning up anyway`);
+      this.activeTransmissions.delete(channelId);
+      floorControlService.releaseFloor(channelId, transmission.unitId);
+
+      this.io.to(`channel:${channelId}`).emit(SIGNALING_EVENTS.PTT_END, {
+        unitId: transmission.unitId,
+        channelId,
+        timestamp: Date.now(),
+        reason: 'unitId_mismatch_cleanup',
+      });
+
+      this.io.to(`channel:${channelId}`).emit(RADIO_EVENTS.CHANNEL_IDLE, {
+        channelId,
+        timestamp: Date.now(),
+      });
+
+      const presenceData = this.unitPresence.get(transmission.unitId);
+      if (presenceData) {
+        presenceData.status = 'online';
+      }
       return;
     }
     
@@ -823,8 +883,11 @@ class SignalingService {
       console.log(`[Signaling] Anonymous client disconnected: ${socket.id}`);
       return;
     }
-    
+
+    const cleanedChannels = new Set();
+
     for (const channelId of socket.channels || []) {
+      cleanedChannels.add(channelId);
       const members = this.channelMembers.get(channelId);
       if (members) {
         members.delete(socket.unitId);
@@ -840,64 +903,47 @@ class SignalingService {
         timestamp: Date.now(),
         reason: 'disconnect',
       });
-      
-      const transmission = this.activeTransmissions.get(channelId);
-      if (transmission && transmission.unitId === socket.unitId) {
-        this.activeTransmissions.delete(channelId);
-        this.io.to(`channel:${channelId}`).emit(SIGNALING_EVENTS.PTT_END, {
-          unitId: socket.unitId,
-          channelId,
-          timestamp: Date.now(),
-          reason: 'disconnect',
-        });
-      }
-
-      if (floorControlService.holdsFloor(channelId, socket.unitId)) {
-        floorControlService.releaseFloor(channelId, socket.unitId);
-        this.io.to(`channel:${channelId}`).emit(RADIO_EVENTS.TX_STOP, {
-          unitId: socket.unitId,
-          channelId,
-          timestamp: Date.now(),
-          reason: 'disconnect',
-        });
-        this.io.to(`channel:${channelId}`).emit(RADIO_EVENTS.CHANNEL_IDLE, {
-          channelId,
-          timestamp: Date.now(),
-        });
-      }
 
       audioRelayService.removeSubscriber(channelId, socket.unitId);
     }
 
     for (const [channelId, transmission] of this.activeTransmissions) {
-      if (transmission.unitId === socket.unitId && !(socket.channels && socket.channels.has(channelId))) {
+      if (transmission.unitId === socket.unitId) {
         this.activeTransmissions.delete(channelId);
-        floorControlService.releaseFloor(channelId, socket.unitId);
         this.io.to(`channel:${channelId}`).emit(SIGNALING_EVENTS.PTT_END, {
           unitId: socket.unitId,
           channelId,
           timestamp: Date.now(),
           reason: 'disconnect',
         });
-        console.log(`[Signaling] Cleaned up orphaned transmission for ${socket.unitId} on ${channelId}`);
+        this.io.to(`channel:${channelId}`).emit(RADIO_EVENTS.TX_STOP, {
+          senderUnitId: socket.unitId,
+          channelId,
+          timestamp: Date.now(),
+          reason: 'disconnect',
+        });
+        this.io.to(`channel:${channelId}`).emit(RADIO_EVENTS.CHANNEL_IDLE, {
+          channelId,
+          timestamp: Date.now(),
+        });
+        console.log(`[Signaling] Cleaned up transmission for ${socket.unitId} on ${channelId}`);
       }
     }
 
     const releasedChannels = floorControlService.releaseAllForUnit(socket.unitId);
     for (const channelId of releasedChannels) {
-      if (!(socket.channels && socket.channels.has(channelId))) {
-        this.io.to(`channel:${channelId}`).emit(RADIO_EVENTS.CHANNEL_IDLE, {
-          channelId,
-          timestamp: Date.now(),
-        });
-        console.log(`[Signaling] Released orphaned floor for ${socket.unitId} on ${channelId}`);
-      }
+      this.io.to(`channel:${channelId}`).emit(RADIO_EVENTS.CHANNEL_IDLE, {
+        channelId,
+        timestamp: Date.now(),
+      });
+      console.log(`[Signaling] Released floor for ${socket.unitId} on ${channelId}`);
     }
 
     if (socket.radioSessionToken) {
       audioRelayService.removeSession(socket.radioSessionToken);
     }
     audioRelayService.removeSessionsByUnit(socket.unitId);
+    audioRelayService.removeAllSubscriptions(socket.unitId);
     
     this.unitPresence.delete(socket.unitId);
     console.log(`[Signaling] Unit disconnected: ${socket.unitId}`);
@@ -1082,8 +1128,9 @@ class SignalingService {
     const subscriberAddress = (udpAddress || peerAddress || '').trim();
     const subscriberPort = Number(udpPort);
     if (subscriberPort > 0 && subscriberAddress) {
+      audioRelayService.removeSubscriber(channelId, socket.unitId);
       audioRelayService.addSubscriber(channelId, socket.unitId, subscriberAddress, subscriberPort);
-      console.log(`[Signaling] SUBSCRIBER_REGISTERED unitId=${socket.unitId} channelId=${channelId} address=${subscriberAddress} port=${subscriberPort}`);
+      console.log(`[Signaling] SUBSCRIBER_REGISTERED (replaced stale) unitId=${socket.unitId} channelId=${channelId} address=${subscriberAddress} port=${subscriberPort}`);
     } else {
       console.warn(`[Signaling] SUBSCRIBER_REGISTRATION_FAILED unitId=${socket.unitId} channelId=${channelId} udpPort=${udpPort ?? 'missing'} udpAddress=${udpAddress ?? 'missing'} peerAddress=${peerAddress || 'missing'}`);
     }
@@ -1130,6 +1177,11 @@ class SignalingService {
     }
 
     audioRelayService.removeSubscriber(channelId, socket.unitId);
+
+    const leaveTransmission = this.activeTransmissions.get(channelId);
+    if (leaveTransmission && leaveTransmission.unitId === socket.unitId) {
+      this.activeTransmissions.delete(channelId);
+    }
 
     if (floorControlService.holdsFloor(channelId, socket.unitId)) {
       floorControlService.releaseFloor(channelId, socket.unitId);
@@ -1185,6 +1237,14 @@ class SignalingService {
     if (result.granted) {
       opusCodec.resetSenderDecoder(socket.unitId);
       this._issueRadioSessionToken(socket, channelId, 'ptt_granted', socket.lastAuthorizedRadioChannelNumeric);
+
+      this.activeTransmissions.set(channelId, {
+        unitId: socket.unitId,
+        agencyId: socket.agencyId,
+        channelId,
+        timestamp: Date.now(),
+        isEmergency: result.isEmergency || false,
+      });
 
       socket.emit(RADIO_EVENTS.PTT_GRANTED, {
         channelId,
@@ -1288,6 +1348,8 @@ class SignalingService {
     const released = floorControlService.releaseFloor(channelId, socket.unitId);
     if (!released) return;
 
+    this.activeTransmissions.delete(channelId);
+
     if (socket.radioSessionToken) {
       audioRelayService.removeSession(socket.radioSessionToken);
       socket.radioSessionToken = null;
@@ -1357,6 +1419,7 @@ class SignalingService {
       const grantedAt = floorHolder ? floorHolder.grantedAt : null;
 
       floorControlService.releaseFloor(channelId, socket.unitId);
+      this.activeTransmissions.delete(channelId);
 
       if (socket.radioSessionToken) {
         audioRelayService.removeSession(socket.radioSessionToken);
@@ -1397,6 +1460,10 @@ class SignalingService {
     if (this._authCleanupInterval) {
       clearInterval(this._authCleanupInterval);
       this._authCleanupInterval = null;
+    }
+    if (this._transmissionSweepTimer) {
+      clearInterval(this._transmissionSweepTimer);
+      this._transmissionSweepTimer = null;
     }
     if (this.io) {
       this.io.close();

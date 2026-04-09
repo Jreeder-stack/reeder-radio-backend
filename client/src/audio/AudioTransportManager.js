@@ -10,6 +10,9 @@ const WS_LIVENESS_TIMEOUT = 45000;
 const REORDER_BUFFER_SIZE = 10;
 const REORDER_MAX_LATE = 10;
 
+const RECONNECT_BASE_MS = 1000;
+const RECONNECT_MAX_MS = 10000;
+
 class AudioTransportManager {
   constructor() {
     this.rooms = new Map();
@@ -45,6 +48,8 @@ class AudioTransportManager {
 
     this._targetChannels = new Map();
     this._healthCheckInterval = null;
+    this._reconnectAttempts = new Map();
+    this._reconnectTimers = new Map();
     this._startHealthCheck();
   }
 
@@ -60,9 +65,48 @@ class AudioTransportManager {
           try { conn.ws.close(); } catch (_) {}
           this.rooms.delete(channelName);
           this._emitConnectionStateChange(channelName, 'disconnected');
+          this._scheduleReconnect(channelName);
         }
       }
     }, WS_HEALTH_CHECK_INTERVAL);
+  }
+
+  _scheduleReconnect(channelName) {
+    if (!this._targetChannels.has(channelName)) return;
+    if (this._reconnectTimers.has(channelName)) return;
+    if (this.rooms.has(channelName)) return;
+
+    const attempt = (this._reconnectAttempts.get(channelName) || 0) + 1;
+    this._reconnectAttempts.set(channelName, attempt);
+    const delay = Math.min(RECONNECT_BASE_MS * Math.pow(2, attempt - 1), RECONNECT_MAX_MS);
+
+    console.log('AUDIO_WS_RECONNECT_SCHEDULED', { channelName, attempt, delayMs: delay });
+    this._emitConnectionStateChange(channelName, 'reconnecting');
+
+    const timer = setTimeout(async () => {
+      this._reconnectTimers.delete(channelName);
+      const identity = this._targetChannels.get(channelName);
+      if (!identity) return;
+      if (this.rooms.has(channelName)) return;
+
+      try {
+        await this.connect(channelName, identity);
+        console.log('AUDIO_WS_RECONNECT_SUCCESS', { channelName, attempt });
+      } catch (err) {
+        console.warn('AUDIO_WS_RECONNECT_FAILED', { channelName, attempt, error: err.message });
+        this._scheduleReconnect(channelName);
+      }
+    }, delay);
+    this._reconnectTimers.set(channelName, timer);
+  }
+
+  _cancelReconnect(channelName) {
+    const timer = this._reconnectTimers.get(channelName);
+    if (timer) {
+      clearTimeout(timer);
+      this._reconnectTimers.delete(channelName);
+    }
+    this._reconnectAttempts.delete(channelName);
   }
 
   addTrackSubscribedListener(cb) { this._trackSubscribedListeners.add(cb); return () => this._trackSubscribedListeners.delete(cb); }
@@ -186,8 +230,10 @@ class AudioTransportManager {
       ws.onclose = () => {
         this.rooms.delete(channelName);
         this._emitConnectionStateChange(channelName, 'disconnected');
+        this._scheduleReconnect(channelName);
       };
 
+      this._reconnectAttempts.delete(channelName);
       this.rooms.set(channelName, conn);
       this._playback.ensureAudioContextResumed('channelJoin').catch(() => {});
       this._resetReorderForChannel(channelName);
@@ -210,6 +256,7 @@ class AudioTransportManager {
       return;
     }
     this._targetChannels.delete(channelName);
+    this._cancelReconnect(channelName);
     this._resetReorderForChannel(channelName);
     const conn = this.rooms.get(channelName);
     if (!conn) return;
@@ -220,6 +267,9 @@ class AudioTransportManager {
 
   async disconnectAll() {
     this._targetChannels.clear();
+    for (const channelName of this._reconnectTimers.keys()) {
+      this._cancelReconnect(channelName);
+    }
     for (const [key, stream] of this._reorderStreams) {
       if (stream.flushTimer) clearTimeout(stream.flushTimer);
     }
