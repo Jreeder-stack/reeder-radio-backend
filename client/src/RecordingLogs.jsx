@@ -165,7 +165,15 @@ export default function RecordingLogs({ isMobile }) {
       .finally(() => setLoading(false));
   };
 
+  const isAudioPlayable = (log) => {
+    if (!log.audio_available) return false;
+    if (log.audio_duration === 0) return false;
+    return true;
+  };
+
   const handlePlay = (log) => {
+    if (!isAudioPlayable(log)) return;
+
     if (playingId === log.id) {
       if (audioRef.current) {
         audioRef.current.pause();
@@ -181,12 +189,20 @@ export default function RecordingLogs({ isMobile }) {
 
     const audio = new Audio(log.audio_url);
     audio.onended = () => setPlayingId(null);
-    audio.play();
+    audio.onerror = () => {
+      setPlayingId(null);
+      alert("Playback failed — audio may be unavailable.");
+    };
+    audio.play().catch(() => {
+      setPlayingId(null);
+      alert("Playback failed — audio may be unavailable.");
+    });
     audioRef.current = audio;
     setPlayingId(log.id);
   };
 
   const handleDownload = (log) => {
+    if (!log.audio_available) return;
     const filename = log.audio_url.split("/").pop();
     const a = document.createElement("a");
     a.href = log.audio_url;
@@ -501,30 +517,35 @@ export default function RecordingLogs({ isMobile }) {
               <div style={{ display: "flex", gap: 8 }}>
                 <button
                   onClick={() => handlePlay(log)}
+                  disabled={!isAudioPlayable(log)}
+                  title={!isAudioPlayable(log) ? (log.audio_duration === 0 ? "0-second recording" : "Audio unavailable") : ""}
                   style={{
                     flex: 1,
                     padding: "8px",
                     borderRadius: 6,
                     border: "none",
-                    background: playingId === log.id ? "#3b82f6" : "#333",
-                    color: "#fff",
+                    background: !isAudioPlayable(log) ? "#222" : playingId === log.id ? "#3b82f6" : "#333",
+                    color: !isAudioPlayable(log) ? "#555" : "#fff",
                     fontSize: 13,
-                    cursor: "pointer",
+                    cursor: !isAudioPlayable(log) ? "not-allowed" : "pointer",
+                    opacity: !isAudioPlayable(log) ? 0.6 : 1,
                   }}
                 >
-                  {playingId === log.id ? "⏹ Stop" : "▶ Play"}
+                  {!isAudioPlayable(log) ? (log.audio_duration === 0 ? "0s" : "Unavailable") : playingId === log.id ? "⏹ Stop" : "▶ Play"}
                 </button>
                 <button
                   onClick={() => handleDownload(log)}
+                  disabled={!log.audio_available}
                   style={{
                     flex: 1,
                     padding: "8px",
                     borderRadius: 6,
                     border: "1px solid #444",
                     background: "transparent",
-                    color: "#aaa",
+                    color: !log.audio_available ? "#555" : "#aaa",
                     fontSize: 13,
-                    cursor: "pointer",
+                    cursor: !log.audio_available ? "not-allowed" : "pointer",
+                    opacity: !log.audio_available ? 0.6 : 1,
                   }}
                 >
                   ⬇ Download
@@ -566,28 +587,33 @@ export default function RecordingLogs({ isMobile }) {
                     <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
                       <button
                         onClick={() => handlePlay(log)}
+                        disabled={!isAudioPlayable(log)}
+                        title={!isAudioPlayable(log) ? (log.audio_duration === 0 ? "0-second recording" : "Audio unavailable") : ""}
                         style={{
                           padding: "5px 12px",
                           borderRadius: 5,
                           border: "none",
-                          background: playingId === log.id ? "#3b82f6" : "#333",
-                          color: "#fff",
+                          background: !isAudioPlayable(log) ? "#222" : playingId === log.id ? "#3b82f6" : "#333",
+                          color: !isAudioPlayable(log) ? "#555" : "#fff",
                           fontSize: 12,
-                          cursor: "pointer",
+                          cursor: !isAudioPlayable(log) ? "not-allowed" : "pointer",
+                          opacity: !isAudioPlayable(log) ? 0.6 : 1,
                         }}
                       >
-                        {playingId === log.id ? "⏹ Stop" : "▶ Play"}
+                        {!isAudioPlayable(log) ? (log.audio_duration === 0 ? "0s" : "N/A") : playingId === log.id ? "⏹ Stop" : "▶ Play"}
                       </button>
                       <button
                         onClick={() => handleDownload(log)}
+                        disabled={!log.audio_available}
                         style={{
                           padding: "5px 12px",
                           borderRadius: 5,
                           border: "1px solid #444",
                           background: "transparent",
-                          color: "#aaa",
+                          color: !log.audio_available ? "#555" : "#aaa",
                           fontSize: 12,
-                          cursor: "pointer",
+                          cursor: !log.audio_available ? "not-allowed" : "pointer",
+                          opacity: !log.audio_available ? 0.6 : 1,
                         }}
                       >
                         ⬇

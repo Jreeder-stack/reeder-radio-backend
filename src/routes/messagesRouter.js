@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { sendTextMessage, sendAudioMessage, getMessages, transcribeMessage, getAudioFilePath } from '../services/messagesService.js';
-import { getMessagesByDateRange } from '../db/index.js';
+import { getMessagesByDateRange, getAudioDataByFilename } from '../db/index.js';
 import { requireDispatcher } from '../middleware/auth.js';
 import archiver from 'archiver';
 import fs from 'fs';
@@ -33,9 +33,10 @@ router.get('/export/audio', requireDispatcher, async (req, res) => {
     for (const msg of messages) {
       if (!msg.audio_url) continue;
       const filename = msg.audio_url.split('/').pop();
-      const filepath = path.join(AUDIO_DIR, filename);
-      if (fs.existsSync(filepath)) {
-        archive.file(filepath, { name: filename });
+      
+      const audioData = await getAudioDataByFilename(filename);
+      if (audioData) {
+        archive.append(audioData, { name: filename });
         manifest.push({
           file: filename,
           sender: msg.sender,
@@ -43,6 +44,18 @@ router.get('/export/audio', requireDispatcher, async (req, res) => {
           duration_ms: msg.audio_duration,
           transcription: msg.transcription || null
         });
+      } else {
+        const filepath = path.join(AUDIO_DIR, filename);
+        if (fs.existsSync(filepath)) {
+          archive.file(filepath, { name: filename });
+          manifest.push({
+            file: filename,
+            sender: msg.sender,
+            timestamp: msg.created_at,
+            duration_ms: msg.audio_duration,
+            transcription: msg.transcription || null
+          });
+        }
       }
     }
 
@@ -53,6 +66,46 @@ router.get('/export/audio', requireDispatcher, async (req, res) => {
     if (!res.headersSent) {
       res.status(500).json({ success: false, error: error.message });
     }
+  }
+});
+
+router.get('/audio/:filename', async (req, res) => {
+  try {
+    const { filename } = req.params;
+    
+    if (filename.includes('..') || filename.includes('/')) {
+      return res.status(400).json({ success: false, error: 'Invalid filename' });
+    }
+    
+    const audioData = await getAudioDataByFilename(filename);
+    if (audioData) {
+      res.setHeader('Content-Type', 'audio/wav');
+      res.setHeader('Content-Length', audioData.length);
+      return res.send(audioData);
+    }
+
+    const filepath = getAudioFilePath(filename);
+    if (filepath) {
+      res.setHeader('Content-Type', 'audio/wav');
+      return res.sendFile(filepath);
+    }
+
+    return res.status(404).json({ success: false, error: 'Audio file not found' });
+  } catch (error) {
+    console.error('Error serving audio:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.post('/transcribe/:messageId', async (req, res) => {
+  try {
+    const { messageId } = req.params;
+    
+    const message = await transcribeMessage(parseInt(messageId));
+    res.json({ success: true, message });
+  } catch (error) {
+    console.error('Error transcribing message:', error);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
@@ -104,40 +157,6 @@ router.post('/:channel/audio', async (req, res) => {
     res.json({ success: true, message });
   } catch (error) {
     console.error('Error sending audio message:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-router.post('/transcribe/:messageId', async (req, res) => {
-  try {
-    const { messageId } = req.params;
-    
-    const message = await transcribeMessage(parseInt(messageId));
-    res.json({ success: true, message });
-  } catch (error) {
-    console.error('Error transcribing message:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-router.get('/audio/:filename', async (req, res) => {
-  try {
-    const { filename } = req.params;
-    
-    if (filename.includes('..') || filename.includes('/')) {
-      return res.status(400).json({ success: false, error: 'Invalid filename' });
-    }
-    
-    const filepath = getAudioFilePath(filename);
-    
-    if (!filepath) {
-      return res.status(404).json({ success: false, error: 'Audio file not found' });
-    }
-    
-    res.setHeader('Content-Type', 'audio/wav');
-    res.sendFile(filepath);
-  } catch (error) {
-    console.error('Error serving audio:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });

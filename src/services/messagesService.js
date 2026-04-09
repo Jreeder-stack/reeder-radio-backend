@@ -1,4 +1,4 @@
-import { createChannelMessage, getChannelMessages, updateMessageTranscription, getMessageById } from '../db/index.js';
+import { createChannelMessage, getChannelMessages, updateMessageTranscription, getMessageById, getAudioDataById } from '../db/index.js';
 import pool from '../db/index.js';
 import * as sdk from 'microsoft-cognitiveservices-speech-sdk';
 import { broadcastMessage } from './aiDispatchService.js';
@@ -43,13 +43,10 @@ export async function sendTextMessage(channel, sender, content) {
 export async function sendAudioMessage(channel, sender, audioBuffer, duration = null, skipBroadcast = false) {
   const normalizedChannel = await normalizeChannelToRoomKey(channel);
   const filename = `${normalizedChannel}_${Date.now()}_${sender.replace(/[^a-zA-Z0-9]/g, '_')}.wav`;
-  const filepath = path.join(AUDIO_DIR, filename);
-  
-  fs.writeFileSync(filepath, audioBuffer);
   
   const audioUrl = `/api/messages/audio/${filename}`;
   
-  const message = await createChannelMessage(normalizedChannel, sender, 'audio', null, audioUrl, duration);
+  const message = await createChannelMessage(normalizedChannel, sender, 'audio', null, audioUrl, duration, audioBuffer);
   
   if (!skipBroadcast) {
     broadcastMessage(normalizedChannel, message).catch(err => {
@@ -79,14 +76,24 @@ export async function transcribeMessage(messageId) {
     return message;
   }
   
-  const filename = message.audio_url.split('/').pop();
-  const filepath = path.join(AUDIO_DIR, filename);
-  
-  if (!fs.existsSync(filepath)) {
-    throw new Error('Audio file not found');
+  const audioData = await getAudioDataById(message.id);
+  let filepath;
+  if (audioData) {
+    filepath = path.join(AUDIO_DIR, `tmp_transcribe_${message.id}.wav`);
+    fs.writeFileSync(filepath, audioData);
+  } else {
+    const filename = message.audio_url.split('/').pop();
+    filepath = path.join(AUDIO_DIR, filename);
+    if (!fs.existsSync(filepath)) {
+      throw new Error('Audio file not found');
+    }
   }
   
   const transcription = await transcribeAudioFile(filepath);
+  
+  if (audioData) {
+    try { fs.unlinkSync(filepath); } catch(e) {}
+  }
   
   return await updateMessageTranscription(messageId, transcription);
 }

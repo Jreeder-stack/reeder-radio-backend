@@ -42,7 +42,7 @@ The dispatch console is a PWA with responsive design, featuring auto-login, dark
 - **Channel Chat:** Text and playable voice messages with transcription in the Dispatcher Console.
 - **Admin System:** User/channel management, role assignment, activity logging, and real-time audio tuning.
 - **Audio Export System:** Exports channel audio messages within a specified date range as a ZIP file.
-- **Recording Logs (Admin):** Review, playback, and export radio transmissions with filtering options and PDF/ZIP export.
+- **Recording Logs (Admin):** Review, playback, and export radio transmissions with filtering options and PDF/ZIP export. Audio data is persisted in the PostgreSQL database (`audio_data BYTEA` column on `channel_messages`) so recordings survive server restarts and deploys. On startup, any WAV files on disk are migrated into the database. The frontend gracefully handles missing audio (disabled Play/Download buttons with "Unavailable" label) and 0-second recordings.
 - **Clear Air:** Dispatcher-activated mode for emergency traffic, forcing units onto a channel with a prominent visual alert.
 
 ## External Dependencies

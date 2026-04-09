@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getAudioLogs, getDistinctUnits, getDistinctChannels } from '../db/index.js';
+import { getAudioLogs, getDistinctUnits, getDistinctChannels, getAudioDataByFilename } from '../db/index.js';
 import { requireDispatcher } from '../middleware/auth.js';
 import PDFDocument from 'pdfkit';
 import archiver from 'archiver';
@@ -98,7 +98,18 @@ router.get('/search', requireDispatcher, async (req, res) => {
       offset: parsedOffset
     });
 
-    res.json({ success: true, logs: rows, total });
+    const enrichedRows = rows.map(row => {
+      if (!row.audio_available && row.audio_url) {
+        const filename = row.audio_url.split('/').pop();
+        const filepath = path.join(AUDIO_DIR, filename);
+        if (fs.existsSync(filepath)) {
+          return { ...row, audio_available: true };
+        }
+      }
+      return row;
+    });
+
+    res.json({ success: true, logs: enrichedRows, total });
   } catch (error) {
     console.error('Error searching audio logs:', error);
     res.status(500).json({ success: false, error: 'Failed to search audio logs' });
@@ -293,21 +304,29 @@ router.get('/export/zip', requireDispatcher, async (req, res) => {
     for (const msg of rows) {
       if (!msg.audio_url) continue;
       const originalFilename = msg.audio_url.split('/').pop();
-      const filepath = path.join(AUDIO_DIR, originalFilename);
-      if (fs.existsSync(filepath)) {
-        let baseName = `${formatDateForFilename(msg.created_at, tzOffset)}_${formatTimeForFilename(msg.created_at, tzOffset)}`;
-        let newFilename = `${baseName}.wav`;
-        if (usedFilenames.has(newFilename)) {
-          baseName = `${formatDateForFilename(msg.created_at, tzOffset)}_${formatTimeForFilenameWithSeconds(msg.created_at, tzOffset)}`;
-          newFilename = `${baseName}.wav`;
-          let counter = 2;
-          while (usedFilenames.has(newFilename)) {
-            newFilename = `${baseName}_${counter}.wav`;
-            counter++;
-          }
+
+      let baseName = `${formatDateForFilename(msg.created_at, tzOffset)}_${formatTimeForFilename(msg.created_at, tzOffset)}`;
+      let newFilename = `${baseName}.wav`;
+      if (usedFilenames.has(newFilename)) {
+        baseName = `${formatDateForFilename(msg.created_at, tzOffset)}_${formatTimeForFilenameWithSeconds(msg.created_at, tzOffset)}`;
+        newFilename = `${baseName}.wav`;
+        let counter = 2;
+        while (usedFilenames.has(newFilename)) {
+          newFilename = `${baseName}_${counter}.wav`;
+          counter++;
         }
+      }
+
+      const audioData = await getAudioDataByFilename(originalFilename);
+      if (audioData) {
         usedFilenames.add(newFilename);
-        archive.file(filepath, { name: `${folderName}/${newFilename}` });
+        archive.append(audioData, { name: `${folderName}/${newFilename}` });
+      } else {
+        const filepath = path.join(AUDIO_DIR, originalFilename);
+        if (fs.existsSync(filepath)) {
+          usedFilenames.add(newFilename);
+          archive.file(filepath, { name: `${folderName}/${newFilename}` });
+        }
       }
     }
 

@@ -219,6 +219,34 @@ export async function initializeDatabase() {
       console.warn('[DB] Legacy channel name migration skipped:', err.message);
     });
 
+    await client.query(`ALTER TABLE channel_messages ADD COLUMN IF NOT EXISTS audio_data BYTEA`).catch(() => {});
+
+    try {
+      const { default: fs } = await import('fs');
+      const { default: path } = await import('path');
+      const AUDIO_DIR = path.join(process.cwd(), 'uploads', 'audio');
+      if (fs.existsSync(AUDIO_DIR)) {
+        const needBackfill = await client.query(
+          `SELECT id, audio_url FROM channel_messages WHERE message_type = 'audio' AND audio_data IS NULL AND audio_url IS NOT NULL`
+        );
+        let migrated = 0;
+        for (const row of needBackfill.rows) {
+          const filename = row.audio_url.split('/').pop();
+          const filepath = path.join(AUDIO_DIR, filename);
+          if (fs.existsSync(filepath)) {
+            const audioBuffer = fs.readFileSync(filepath);
+            await client.query(`UPDATE channel_messages SET audio_data = $1 WHERE id = $2`, [audioBuffer, row.id]);
+            migrated++;
+          }
+        }
+        if (migrated > 0) {
+          console.log(`[DB] Migrated ${migrated} WAV files from disk into database`);
+        }
+      }
+    } catch (err) {
+      console.warn('[DB] Audio data migration from disk skipped:', err.message);
+    }
+
     await client.query(`CREATE INDEX IF NOT EXISTS idx_units_last_seen ON units (last_seen)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_activity_logs_created_at ON activity_logs (created_at)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_activity_logs_username ON activity_logs (username)`);
@@ -647,18 +675,35 @@ export async function setAiDispatchChannel(channelName) {
   return setAiSetting('ai_dispatch_channel', channelName || '');
 }
 
-export async function createChannelMessage(channel, sender, messageType, content = null, audioUrl = null, audioDuration = null) {
+export async function createChannelMessage(channel, sender, messageType, content = null, audioUrl = null, audioDuration = null, audioData = null) {
   const result = await pool.query(
-    `INSERT INTO channel_messages (channel, sender, message_type, content, audio_url, audio_duration)
-     VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-    [channel, sender, messageType, content, audioUrl, audioDuration]
+    `INSERT INTO channel_messages (channel, sender, message_type, content, audio_url, audio_duration, audio_data)
+     VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, channel, sender, message_type, content, audio_url, audio_duration, transcription, created_at`,
+    [channel, sender, messageType, content, audioUrl, audioDuration, audioData]
   );
   return result.rows[0];
 }
 
+export async function getAudioDataByFilename(filename) {
+  const audioUrl = `/api/messages/audio/${filename}`;
+  const result = await pool.query(
+    `SELECT audio_data FROM channel_messages WHERE audio_url = $1 AND audio_data IS NOT NULL LIMIT 1`,
+    [audioUrl]
+  );
+  return result.rows[0]?.audio_data || null;
+}
+
+export async function getAudioDataById(messageId) {
+  const result = await pool.query(
+    `SELECT audio_data FROM channel_messages WHERE id = $1`,
+    [messageId]
+  );
+  return result.rows[0]?.audio_data || null;
+}
+
 export async function getChannelMessages(channel, limit = 50, offset = 0) {
   const result = await pool.query(
-    `SELECT * FROM channel_messages WHERE channel = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`,
+    `SELECT id, channel, sender, message_type, content, audio_url, audio_duration, transcription, created_at FROM channel_messages WHERE channel = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`,
     [channel, limit, offset]
   );
   return result.rows.reverse();
@@ -674,14 +719,14 @@ export async function updateMessageTranscription(messageId, transcription) {
 
 export async function getMessageById(messageId) {
   const result = await pool.query(
-    `SELECT * FROM channel_messages WHERE id = $1`,
+    `SELECT id, channel, sender, message_type, content, audio_url, audio_duration, transcription, created_at FROM channel_messages WHERE id = $1`,
     [messageId]
   );
   return result.rows[0];
 }
 
 export async function getMessagesByDateRange(channel, from, to, type = null) {
-  let query = `SELECT * FROM channel_messages WHERE channel = $1 AND created_at >= $2 AND created_at <= $3`;
+  let query = `SELECT id, channel, sender, message_type, content, audio_url, audio_duration, transcription, created_at FROM channel_messages WHERE channel = $1 AND created_at >= $2 AND created_at <= $3`;
   const params = [channel, new Date(from), new Date(to)];
   if (type) {
     query += ` AND message_type = $4`;
@@ -728,7 +773,7 @@ export async function getAudioLogs({ channels, units, from, to, limit = 100, off
 
   const dataParams = [...params, limit, offset];
   const result = await pool.query(
-    `SELECT * FROM channel_messages ${whereClause} ORDER BY created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
+    `SELECT id, channel, sender, message_type, content, audio_url, audio_duration, transcription, created_at, (audio_data IS NOT NULL) AS audio_available FROM channel_messages ${whereClause} ORDER BY created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
     dataParams
   );
 
