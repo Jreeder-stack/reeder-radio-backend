@@ -155,8 +155,8 @@ class RadioAudioEngine(private val context: Context) {
     private val OPUS_SUPPORTED_RATES = setOf(8000, 12000, 16000, 24000, 48000)
 
     companion object {
-        private const val PROBE_SILENCE_RMS_THRESHOLD = 50.0
-        private const val PROBE_FRAME_COUNT = 5
+        private const val PROBE_SILENCE_RMS_THRESHOLD = 20.0
+        private const val PROBE_FRAME_COUNT = 10
         private const val PROBE_RATE = DEFAULT_MIC_SAMPLE_RATE
 
         @Volatile
@@ -307,6 +307,17 @@ class RadioAudioEngine(private val context: Context) {
             return best.source
         }
 
+        val readableResults = allResults.filter { it.reason == "rms_too_low" }
+        val fallback = readableResults.maxByOrNull { it.avgRms }
+        if (fallback != null) {
+            Log.w("[AudioCapture]", "TX_AUDIO_SOURCE_FALLBACK source=${fallback.sourceName} avgRms=${String.format("%.1f", fallback.avgRms)} min=${fallback.minSample} max=${fallback.maxSample} reason=below_threshold_fallback device=$deviceKey threshold=$PROBE_SILENCE_RMS_THRESHOLD")
+            txSessionStats.audioSource = fallback.sourceName
+            cachedSourceKey = deviceKey
+            cachedSourceValue = fallback.source
+            cachedSourceName = fallback.sourceName
+            return fallback.source
+        }
+
         Log.e("[AudioCapture]", "TX_AUDIO_SOURCE_ALL_REJECTED device=$deviceKey threshold=$PROBE_SILENCE_RMS_THRESHOLD probeResults=${txSessionStats.probeResults}")
         txSessionStats.audioSource = "NONE"
         return null
@@ -426,6 +437,7 @@ class RadioAudioEngine(private val context: Context) {
                 Log.w("[AudioCapture]", "TX_SAMPLE_RATE_MISMATCH requested=$DEFAULT_MIC_SAMPLE_RATE actual=$actualSampleRate — adapting TX pipeline")
             }
 
+            resetDspState()
             opusCodec.currentAudioSource = txSessionStats.audioSource
             opusCodec.reinitializeEncoderOnly(actualSampleRate, 1)
             Log.d("[OpusCodec]", "OPUS_TX_INIT sampleRate=$actualSampleRate channels=1 frameMs=$CAPTURE_INTERVAL_MS frameSize=${opusCodec.encoderFrameSize} bitrate=${OpusCodec.BITRATE} ${RadioDiagLog.elapsedTag()}")
@@ -533,6 +545,11 @@ class RadioAudioEngine(private val context: Context) {
                                         }
 
                                         val encoded = opusCodec.encode(monoFrame)
+                                        if (opusCodec.encoderReinitialized) {
+                                            opusCodec.encoderReinitialized = false
+                                            resetDspState()
+                                            Log.d("[AudioDSP]", "DSP_STATE_RESET reason=encoder_reinitialized frame=${pcmReadRateLimiter.frameCount} ${RadioDiagLog.elapsedTag()}")
+                                        }
                                         if (encoded != null) {
                                             frameCounter++
                                             txSessionStats.framesEncoded++

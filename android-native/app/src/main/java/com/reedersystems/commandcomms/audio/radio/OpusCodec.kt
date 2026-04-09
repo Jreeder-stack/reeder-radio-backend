@@ -18,6 +18,9 @@ class OpusCodec {
         const val FRAME_SIZE = 960
         const val FRAME_DURATION_MS = 20
         const val MAX_ENCODED_SIZE = 512
+        const val CONSECUTIVE_FAILURE_THRESHOLD = 3
+        private const val COMFORT_NOISE_AMPLITUDE: Short = 10
+        private const val MIN_FRAME_ENERGY_THRESHOLD = 1.0
     }
 
     private var encoder: OpusEncoder? = null
@@ -157,12 +160,25 @@ class OpusCodec {
     private val _encodeFailureCount = AtomicLong(0)
     val encodeFailureCount: Long get() = _encodeFailureCount.get()
 
+    private val _consecutiveAssertionFailures = AtomicLong(0)
+    val consecutiveAssertionFailures: Long get() = _consecutiveAssertionFailures.get()
+
+    @Volatile
+    var circuitBreakerTripped: Boolean = false
+        private set
+
+    @Volatile
+    var encoderReinitialized: Boolean = false
+
     @Volatile
     var currentAudioSource: String = ""
 
     fun resetFailureCounts() {
         _assertionFailureCount.set(0)
         _encodeFailureCount.set(0)
+        _consecutiveAssertionFailures.set(0)
+        circuitBreakerTripped = false
+        encoderReinitialized = false
     }
 
     fun encode(pcmData: ByteArray): ByteArray? {
@@ -170,6 +186,10 @@ class OpusCodec {
         val sampleCount = byteCount / 2
 
         synchronized(encodeLock) {
+            if (circuitBreakerTripped) {
+                return null
+            }
+
             val enc = encoder
             if (enc == null) {
                 _encodeFailureCount.incrementAndGet()
@@ -194,9 +214,13 @@ class OpusCodec {
                 .order(java.nio.ByteOrder.LITTLE_ENDIAN)
                 .asShortBuffer()
                 .get(pcmFrame, 0, lockedFrameSize)
+
+            sanitizePcmFrame(pcmFrame, lockedFrameSize)
+
             val outputBuffer = ByteArray(MAX_ENCODED_SIZE)
             return try {
                 val encodedBytes = enc.encode(pcmFrame, 0, lockedFrameSize, outputBuffer, 0, outputBuffer.size)
+                _consecutiveAssertionFailures.set(0)
                 if (encodedBytes > 0) {
                     val result = outputBuffer.copyOf(encodedBytes)
                     encodeRateLimiter.tick()
@@ -218,13 +242,39 @@ class OpusCodec {
                 }
             } catch (e: AssertionError) {
                 val assertCount = _assertionFailureCount.incrementAndGet()
-                Log.e("[RadioError]", "OPUS_ENCODE_ASSERTION_FAILURE frame=${encodeRateLimiter.frameCount} source=$lockedSource samples=$sampleCount bytes=$byteCount expectedBytes=$lockedExpectedBytes sampleRate=$lockedSampleRate frameSize=$lockedFrameSize pcmCopied=true message=${e.message} assertionFailures=$assertCount method=encode", e)
-                reinitializeEncoder()
+                val consecutiveCount = _consecutiveAssertionFailures.incrementAndGet()
+                if (consecutiveCount >= CONSECUTIVE_FAILURE_THRESHOLD) {
+                    circuitBreakerTripped = true
+                    Log.e("[RadioError]", "OPUS_ENCODE_CIRCUIT_BREAKER_TRIPPED consecutiveFailures=$consecutiveCount totalAssertionFailures=$assertCount frame=${encodeRateLimiter.frameCount} source=$lockedSource — encoding disabled for remainder of TX session method=encode")
+                } else {
+                    Log.e("[RadioError]", "OPUS_ENCODE_ASSERTION_FAILURE frame=${encodeRateLimiter.frameCount} source=$lockedSource samples=$sampleCount bytes=$byteCount expectedBytes=$lockedExpectedBytes sampleRate=$lockedSampleRate frameSize=$lockedFrameSize consecutiveFailures=$consecutiveCount assertionFailures=$assertCount method=encode")
+                    reinitializeEncoder()
+                }
                 null
             } catch (e: Exception) {
+                _consecutiveAssertionFailures.set(0)
                 _encodeFailureCount.incrementAndGet()
                 Log.w("[RadioError]", "Encode error: ${e::class.simpleName}: ${e.message} samples=$sampleCount method=encode")
                 null
+            }
+        }
+    }
+
+    private var comfortNoiseSeed: Long = 1
+
+    private fun sanitizePcmFrame(pcmFrame: ShortArray, frameSize: Int) {
+        var energy = 0.0
+        for (i in 0 until frameSize) {
+            val sample = pcmFrame[i].toDouble()
+            energy += sample * sample
+            pcmFrame[i] = pcmFrame[i].coerceIn(-32000, 32000)
+        }
+        val rmsEnergy = Math.sqrt(energy / frameSize)
+        if (rmsEnergy < MIN_FRAME_ENERGY_THRESHOLD) {
+            for (i in 0 until frameSize) {
+                comfortNoiseSeed = comfortNoiseSeed * 1103515245 + 12345
+                val noise = ((comfortNoiseSeed shr 16) and 0xFF) - 128
+                pcmFrame[i] = (noise * COMFORT_NOISE_AMPLITUDE / 128).toShort()
             }
         }
     }
@@ -240,6 +290,7 @@ class OpusCodec {
                 enc.setUseInbandFEC(true)
                 enc.setPacketLossPercent(10)
                 encoder = enc
+                encoderReinitialized = true
                 Log.d(TAG, "Encoder re-initialized after assertion failure (sampleRate=$encoderSampleRate frameSize=$encoderFrameSize complexity=5 bitrate=$currentBitrate) ${RadioDiagLog.elapsedTag()}")
             } catch (t: Throwable) {
                 Log.e("[RadioError]", "Failed to re-initialize encoder: ${t::class.simpleName}: ${t.message} method=reinitializeEncoder", t)
