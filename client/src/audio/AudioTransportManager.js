@@ -100,6 +100,45 @@ class AudioTransportManager {
     this._reconnectTimers.set(channelName, timer);
   }
 
+  forceHealthCheck() {
+    const now = Date.now();
+    for (const [channelName, conn] of this.rooms) {
+      const isDead = !conn.ws || conn.ws.readyState !== WebSocket.OPEN;
+      const isStale = conn.ws && conn.ws.readyState === WebSocket.OPEN && conn._lastActivity && (now - conn._lastActivity) > WS_LIVENESS_TIMEOUT;
+      if (isDead || isStale) {
+        console.warn('AUDIO_WS_FORCE_HEALTH_CHECK_DEAD', { channelName, readyState: conn.ws?.readyState, stale: isStale, lastActivity: conn._lastActivity });
+        try { conn.ws.close(); } catch (_) {}
+        this.rooms.delete(channelName);
+        this._emitConnectionStateChange(channelName, 'disconnected');
+      }
+    }
+  }
+
+  hasRecoveryTargets() {
+    return this._targetChannels.size > 0;
+  }
+
+  hasActiveConnections() {
+    return this.rooms.size > 0 || this.pendingConnections.size > 0;
+  }
+
+  getTargetChannelsSnapshot() {
+    return new Map(this._targetChannels);
+  }
+
+  restoreTargetChannels(snapshot) {
+    for (const [channelName, unitId] of snapshot) {
+      this._targetChannels.set(channelName, unitId);
+    }
+  }
+
+  async resumePlayback() {
+    if (this._playback && this._playback.audioContext) {
+      return await this._playback.ensureAudioContextResumed('visibility-restore');
+    }
+    return false;
+  }
+
   _cancelReconnect(channelName) {
     const timer = this._reconnectTimers.get(channelName);
     if (timer) {

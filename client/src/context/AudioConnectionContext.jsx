@@ -38,6 +38,7 @@ export function AudioConnectionProvider({ children, user }) {
   const switchCounterRef = useRef(0);
   const latestSwitchTargetRef = useRef(null);
   const intentionalDisconnectsRef = useRef(new Set());
+  const visibilityRecoveryInFlightRef = useRef(false);
   
   const {
     channels: storeChannels,
@@ -533,25 +534,31 @@ export function AudioConnectionProvider({ children, user }) {
   const retryConnection = useCallback(async () => {
     if (!user) return;
     
-    console.log('[AudioConnection] Retrying connection...');
+    const savedActiveChannel = activeChannel;
+    const savedTargetChannels = audioTransportManager.getTargetChannelsSnapshot();
+    console.log('[AudioConnection] Retrying connection...', { savedActiveChannel });
+    setConnectionStatus('reconnecting');
     recordActivity();
     clearAllReconnectTimers();
     initializingRef.current = false;
     lastUserRef.current = null;
     await audioTransportManager.disconnectAll();
     
+    audioTransportManager.restoreTargetChannels(savedTargetChannels);
+    
     try {
       const data = await getChannels();
       const fetchedChannels = data.channels || [];
       setChannels(fetchedChannels);
       lastUserRef.current = identity;
-      await initializeConnections(identity, fetchedChannels);
+      await initializeConnections(identity, fetchedChannels, savedActiveChannel);
     } catch (err) {
       console.error('[AudioConnection] Retry failed:', err);
       setConnectionError(err.message);
+      setConnectionStatus('failed');
       lastUserRef.current = null;
     }
-  }, [user, recordActivity, clearAllReconnectTimers, setChannels, initializeConnections, setConnectionError]);
+  }, [user, activeChannel, recordActivity, clearAllReconnectTimers, setChannels, initializeConnections, setConnectionError]);
 
   const ensureConnected = useCallback(async (channelName) => {
     if (!user) return false;
@@ -608,41 +615,75 @@ export function AudioConnectionProvider({ children, user }) {
   }, [location.pathname, setConnected, releaseMobileMic]);
 
   useEffect(() => {
-    const handleVisibilityChange = () => {
+    const handleVisibilityChange = async () => {
       if (document.visibilityState === 'visible' && user) {
-        console.log('[AudioConnection] Page became visible — checking audio channels');
+        console.log('[AudioConnection] Page became visible — running recovery sequence');
         lastActivityRef.current = Date.now();
 
-        const connectedChannels = audioTransportManager.getConnectedChannels();
-        const monitoredKeys = audioTransportManager.isDispatcherMode() ? getMonitoredRoomKeys() : null;
-        let reconnectedCount = 0;
-
-        for (const channelName of connectedChannels) {
-          if (intentionalDisconnectsRef.current.has(channelName)) {
-            console.log(`[AudioConnection] Skipping visibility reconnect for intentionally disconnected ${channelName}`);
-            continue;
-          }
-          if (monitoredKeys && !monitoredKeys.has(channelName)) {
-            console.log(`[AudioConnection] Skipping visibility reconnect for unmonitored channel ${channelName}`);
-            continue;
-          }
-          const conn = audioTransportManager.getRoom(channelName);
-          if (conn && conn.ws && conn.ws.readyState === WebSocket.OPEN) {
-            continue;
-          }
-          const unitId = (conn && conn.unitId) || identity;
-          console.log(`[AudioConnection] Audio WS dead for ${channelName} after visibility restore — reconnecting`);
-          audioTransportManager.disconnect(channelName).then(() => {
-            connectToChannel(channelName, unitId);
-          });
-          reconnectedCount++;
+        if (connectionStatus === 'idle') {
+          console.log('[AudioConnection] Status is idle — skipping visibility recovery');
+          return;
         }
 
-        if (reconnectedCount === 0 && connectedChannels.length === 0 && connectionStatus !== 'idle') {
-          console.log('[AudioConnection] No audio channels connected after visibility restore — retrying');
-          retryConnection();
-        } else if (reconnectedCount === 0) {
-          console.log('[AudioConnection] All audio channels healthy after visibility restore');
+        if (visibilityRecoveryInFlightRef.current) {
+          console.log('[AudioConnection] Visibility recovery already in progress — skipping duplicate');
+          return;
+        }
+        visibilityRecoveryInFlightRef.current = true;
+
+        const previousStatus = connectionStatus;
+        setConnectionStatus('reconnecting');
+
+        try {
+          const signalingOk = await signalingManager.verifyConnection();
+          if (!signalingOk) {
+            console.warn('[AudioConnection] Signaling recovery failed — falling back to full retry');
+            await retryConnection();
+            return;
+          }
+          console.log('[AudioConnection] Signaling connection verified');
+
+          audioTransportManager.forceHealthCheck();
+
+          let allowedChannels = audioTransportManager.isDispatcherMode() ? getMonitoredRoomKeys() : null;
+          if (allowedChannels && activeChannel && !allowedChannels.has(activeChannel)) {
+            allowedChannels = new Set(allowedChannels);
+            allowedChannels.add(activeChannel);
+          }
+          const reconnectedCount = await audioTransportManager.verifyAndReconnectAll(allowedChannels);
+
+          await audioTransportManager.resumePlayback();
+
+          if (reconnectedCount > 0) {
+            console.log(`[AudioConnection] Visibility restore recovered ${reconnectedCount} channel(s)`);
+          } else {
+            console.log('[AudioConnection] All audio channels healthy after visibility restore');
+          }
+
+          const hasTargets = audioTransportManager.hasRecoveryTargets();
+          const hasRooms = audioTransportManager.hasActiveConnections();
+
+          if (!hasTargets && !hasRooms && previousStatus !== 'idle') {
+            console.log('[AudioConnection] No target channels after visibility restore — full retry');
+            await retryConnection();
+            return;
+          }
+
+          const health = audioTransportManager.getConnectionStatus();
+          setConnectionHealth(health);
+          if (health.status === 'connected' || health.healthy > 0) {
+            setConnectionStatus('connected');
+          } else if (hasTargets) {
+            console.warn('[AudioConnection] Targets exist but no healthy channels after recovery — retrying');
+            await retryConnection();
+          } else {
+            setConnectionStatus('connected');
+          }
+        } catch (err) {
+          console.error('[AudioConnection] Visibility recovery error:', err);
+          setConnectionStatus('failed');
+        } finally {
+          visibilityRecoveryInFlightRef.current = false;
         }
       }
     };
@@ -651,7 +692,7 @@ export function AudioConnectionProvider({ children, user }) {
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [user, identity, connectionStatus, connectToChannel, retryConnection, getMonitoredRoomKeys]);
+  }, [user, identity, connectionStatus, activeChannel, retryConnection, getMonitoredRoomKeys]);
 
   useEffect(() => {
     mountedRef.current = true;
