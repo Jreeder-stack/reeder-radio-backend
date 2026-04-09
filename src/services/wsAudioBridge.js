@@ -32,6 +32,7 @@ function isValidPcmPacket(packet) {
 
 const PING_INTERVAL = 30000;
 const PONG_TIMEOUT = 10000;
+const MAX_MISSED_PONGS = 3;
 
 class WsAudioBridge {
   constructor() {
@@ -90,15 +91,13 @@ class WsAudioBridge {
       const heartbeat = JSON.stringify({ type: 'heartbeat', ts: now });
       for (const ws of this.wss.clients) {
         if (ws.readyState !== 1) continue;
-        if (!ws._audioPongPending) {
-          ws._audioPongPending = true;
-          ws._audioPingSentAt = now;
-          try {
-            ws.ping();
-            ws.send(heartbeat);
-          } catch (_) {
-            ws.terminate();
-          }
+        ws._audioPongPending = true;
+        ws._audioPingSentAt = now;
+        try {
+          ws.ping();
+          ws.send(heartbeat);
+        } catch (_) {
+          ws.terminate();
         }
       }
     }, PING_INTERVAL);
@@ -108,8 +107,13 @@ class WsAudioBridge {
       const now = Date.now();
       for (const ws of this.wss.clients) {
         if (ws._audioPongPending && ws._audioPingSentAt && (now - ws._audioPingSentAt) > PONG_TIMEOUT) {
-          console.warn('AUDIO_WS_PING_TIMEOUT', { channelId: ws._audioChannelId, unitId: ws._audioUnitId, elapsed: now - ws._audioPingSentAt });
-          ws.terminate();
+          ws._missedPongs = (ws._missedPongs || 0) + 1;
+          ws._audioPongPending = false;
+          console.warn('AUDIO_WS_PING_TIMEOUT', { channelId: ws._audioChannelId, unitId: ws._audioUnitId, elapsed: now - ws._audioPingSentAt, missedPongs: ws._missedPongs });
+          if (ws._missedPongs >= MAX_MISSED_PONGS) {
+            console.warn('AUDIO_WS_TERMINATING', { channelId: ws._audioChannelId, unitId: ws._audioUnitId, missedPongs: ws._missedPongs });
+            ws.terminate();
+          }
         }
       }
     }, 5000);
@@ -156,9 +160,11 @@ class WsAudioBridge {
     ws._audioChannelId = channelId;
     ws._audioUnitId = unitId;
     ws._audioPongPending = false;
+    ws._missedPongs = 0;
 
     ws.on('pong', () => {
       ws._audioPongPending = false;
+      ws._missedPongs = 0;
     });
 
     audioRelayService.addWsSubscriber(channelId, unitId, ws);
@@ -168,6 +174,12 @@ class WsAudioBridge {
       try {
         packet = JSON.parse(raw.toString());
       } catch {
+        return;
+      }
+
+      if (packet.type === 'pong') {
+        ws._audioPongPending = false;
+        ws._missedPongs = 0;
         return;
       }
 

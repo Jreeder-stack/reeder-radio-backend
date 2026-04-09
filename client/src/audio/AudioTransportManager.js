@@ -148,6 +148,13 @@ class AudioTransportManager {
           return;
         }
 
+        if (msg.type === 'heartbeat') {
+          try {
+            ws.send(JSON.stringify({ type: 'pong', ts: msg.ts }));
+          } catch (_) {}
+          return;
+        }
+
         if (!validatePcmPacket(msg)) return;
         if (this.mutedChannels.has(channelName)) return;
         if (msg.senderUnitId && msg.senderUnitId === conn.unitId) return;

@@ -7,10 +7,12 @@ import useDispatchStore from '../state/dispatchStore.js';
 
 const AudioConnectionContext = createContext(null);
 
+const RECONNECT_FAST_DELAY = 1500;
+const RECONNECT_FAST_ATTEMPTS = 5;
 const RECONNECT_BASE_DELAY = 2000;
-const RECONNECT_MAX_DELAY = 30000;
+const RECONNECT_MAX_DELAY = 15000;
 const RECONNECT_BACKOFF_ATTEMPTS = 10;
-const RECONNECT_SUSTAINED_INTERVAL = 30000;
+const RECONNECT_SUSTAINED_INTERVAL = 15000;
 const STABILITY_THRESHOLD = 5000;
 const IDLE_TIMEOUT = 5 * 60 * 1000; // 5 minutes
 
@@ -77,8 +79,11 @@ export function AudioConnectionProvider({ children, user }) {
     const attempts = reconnectAttempts.current.get(channelName) || 0;
     
     let delay;
-    if (attempts < RECONNECT_BACKOFF_ATTEMPTS) {
-      const baseDelay = RECONNECT_BASE_DELAY * Math.pow(2, attempts);
+    if (attempts < RECONNECT_FAST_ATTEMPTS) {
+      delay = RECONNECT_FAST_DELAY + Math.random() * 500;
+    } else if (attempts < RECONNECT_BACKOFF_ATTEMPTS) {
+      const backoffAttempt = attempts - RECONNECT_FAST_ATTEMPTS;
+      const baseDelay = RECONNECT_BASE_DELAY * Math.pow(2, backoffAttempt);
       const jitter = Math.random() * 1000;
       delay = Math.min(baseDelay + jitter, RECONNECT_MAX_DELAY);
     } else {
