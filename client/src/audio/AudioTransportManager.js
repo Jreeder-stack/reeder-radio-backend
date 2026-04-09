@@ -1,13 +1,14 @@
-// PCM-only audio manager (merge-resolved baseline).
 import { notifyChannelJoin } from '../utils/api.js';
 import { signalingManager } from '../signaling/SignalingManager.js';
 import { PTT_STATES } from '../constants/pttStates.js';
-import { buildPcmPacket, validatePcmPacket } from './PcmPacket.js';
+import { buildPcmPacket, validatePcmPacket, parseBinaryAudioFrame } from './PcmPacket.js';
 import { PcmCaptureEngine } from './PcmCaptureEngine.js';
 import { PcmPlaybackEngine } from './PcmPlaybackEngine.js';
 
 const WS_HEALTH_CHECK_INTERVAL = 5000;
 const WS_LIVENESS_TIMEOUT = 45000;
+const REORDER_BUFFER_SIZE = 10;
+const REORDER_MAX_LATE = 10;
 
 class AudioTransportManager {
   constructor() {
@@ -35,6 +36,12 @@ class AudioTransportManager {
     this._playback = new PcmPlaybackEngine();
     this._txSequence = 0;
     this._loopbackOk = false;
+
+    this._reorderStreams = new Map();
+    this._latePackets = 0;
+    this._reorderedPackets = 0;
+    this._lastReorderLog = 0;
+    this._suspendedBuffer = [];
 
     this._targetChannels = new Map();
     this._healthCheckInterval = null;
@@ -88,6 +95,7 @@ class AudioTransportManager {
   startSettingsListener() {}
   async prepareConnection() {
     await this._playback.init();
+    await this._playback.ensureAudioContextResumed('prepareConnection');
   }
 
   async _openWebSocket(channelName, identity) {
@@ -138,8 +146,20 @@ class AudioTransportManager {
       const ws = await this._openWebSocket(channelName, identity);
       const conn = { channelName, unitId: identity, ws, state: 'connected', _lastActivity: Date.now() };
 
+      ws.binaryType = 'arraybuffer';
+
       ws.onmessage = async (evt) => {
         conn._lastActivity = Date.now();
+
+        if (evt.data instanceof ArrayBuffer) {
+          const parsed = parseBinaryAudioFrame(evt.data);
+          if (!parsed) return;
+          if (this.mutedChannels.has(channelName)) return;
+          if (parsed.senderUnitId && parsed.senderUnitId === conn.unitId) return;
+          await this._enqueueWithReorder(parsed.sequence, parsed.samples, parsed.channelId || channelName, parsed.senderUnitId);
+          return;
+        }
+
         if (typeof evt.data !== 'string') return;
         let msg;
         try {
@@ -160,7 +180,7 @@ class AudioTransportManager {
         if (msg.senderUnitId && msg.senderUnitId === conn.unitId) return;
 
         const frame = new Int16Array(msg.payload);
-        await this._playback.enqueue(frame);
+        await this._enqueueWithReorder(msg.sequence, frame, msg.channelId || channelName, msg.senderUnitId || 'unknown');
       };
 
       ws.onclose = () => {
@@ -169,6 +189,8 @@ class AudioTransportManager {
       };
 
       this.rooms.set(channelName, conn);
+      this._playback.ensureAudioContextResumed('channelJoin').catch(() => {});
+      this._resetReorderForChannel(channelName);
       notifyChannelJoin(channelName, identity);
       this._emitConnectionStateChange(channelName, 'connected');
       return conn;
@@ -188,6 +210,7 @@ class AudioTransportManager {
       return;
     }
     this._targetChannels.delete(channelName);
+    this._resetReorderForChannel(channelName);
     const conn = this.rooms.get(channelName);
     if (!conn) return;
     this.rooms.delete(channelName);
@@ -197,6 +220,10 @@ class AudioTransportManager {
 
   async disconnectAll() {
     this._targetChannels.clear();
+    for (const [key, stream] of this._reorderStreams) {
+      if (stream.flushTimer) clearTimeout(stream.flushTimer);
+    }
+    this._reorderStreams.clear();
     for (const channel of [...this.rooms.keys()]) {
       await this.disconnect(channel);
     }
@@ -274,6 +301,7 @@ class AudioTransportManager {
 
     this._setPttState(PTT_STATES.ARMING);
     this._loopbackOk = true;
+    await this._playback.ensureAudioContextResumed('pttActivity');
 
     await this._capture.start(async (frame) => {
       if (!this._loopbackOk) return;
@@ -382,6 +410,132 @@ class AudioTransportManager {
       }
     }
     return toReconnect.length;
+  }
+
+  _getReorderStream(channelId, senderUnitId) {
+    const key = `${channelId}::${senderUnitId}`;
+    let stream = this._reorderStreams.get(key);
+    if (!stream) {
+      stream = { expectedSequence: -1, buffer: [], flushTimer: null };
+      this._reorderStreams.set(key, stream);
+    }
+    return stream;
+  }
+
+  _resetReorderForChannel(channelId) {
+    for (const [key, stream] of this._reorderStreams) {
+      if (key.startsWith(channelId + '::')) {
+        if (stream.flushTimer) clearTimeout(stream.flushTimer);
+        this._reorderStreams.delete(key);
+      }
+    }
+  }
+
+  async _enqueueWithReorder(sequence, samples, channelId, senderUnitId) {
+    const stream = this._getReorderStream(channelId, senderUnitId);
+
+    if (stream.expectedSequence === -1 || sequence < stream.expectedSequence - REORDER_MAX_LATE * 5) {
+      stream.expectedSequence = sequence;
+    }
+
+    if (sequence < stream.expectedSequence - REORDER_MAX_LATE) {
+      this._latePackets++;
+      this._logReorderStats();
+      return;
+    }
+
+    if (sequence === stream.expectedSequence) {
+      await this._playbackFrame(samples);
+      stream.expectedSequence = sequence + 1;
+      await this._flushReorderBuffer(stream);
+      return;
+    }
+
+    if (sequence < stream.expectedSequence) {
+      this._latePackets++;
+      this._logReorderStats();
+      return;
+    }
+
+    this._reorderedPackets++;
+    this._logReorderStats();
+    stream.buffer.push({ sequence, samples });
+    stream.buffer.sort((a, b) => a.sequence - b.sequence);
+
+    if (stream.buffer.length > REORDER_BUFFER_SIZE) {
+      const oldest = stream.buffer.shift();
+      stream.expectedSequence = oldest.sequence + 1;
+      await this._playbackFrame(oldest.samples);
+      await this._flushReorderBuffer(stream);
+    }
+
+    if (!stream.flushTimer) {
+      stream.flushTimer = setTimeout(async () => {
+        stream.flushTimer = null;
+        if (stream.buffer.length > 0) {
+          const oldest = stream.buffer.shift();
+          stream.expectedSequence = oldest.sequence + 1;
+          await this._playbackFrame(oldest.samples);
+          await this._flushReorderBuffer(stream);
+        }
+      }, 40);
+    }
+  }
+
+  async _flushReorderBuffer(stream) {
+    while (stream.buffer.length > 0 && stream.buffer[0].sequence === stream.expectedSequence) {
+      const entry = stream.buffer.shift();
+      await this._playbackFrame(entry.samples);
+      stream.expectedSequence = entry.sequence + 1;
+    }
+  }
+
+  _logReorderStats() {
+    const now = Date.now();
+    if (now - this._lastReorderLog > 5000) {
+      this._lastReorderLog = now;
+      if (this._latePackets > 0 || this._reorderedPackets > 0) {
+        console.warn('AUDIO_RX_REORDER_STATS', {
+          lateDropped: this._latePackets,
+          reordered: this._reorderedPackets,
+          activeStreams: this._reorderStreams.size,
+        });
+        this._latePackets = 0;
+        this._reorderedPackets = 0;
+      }
+    }
+  }
+
+  async _playbackFrame(samples) {
+    if (!this._playback.started) {
+      await this._playback.init();
+    }
+
+    if (this._playback.audioContext && this._playback.audioContext.state === 'suspended') {
+      this._suspendedBuffer.push(samples);
+      if (this._suspendedBuffer.length > 50) {
+        this._suspendedBuffer.splice(0, this._suspendedBuffer.length - 25);
+      }
+      try {
+        await this._playback.audioContext.resume();
+      } catch (_) {}
+      if (this._playback.audioContext.state === 'running' && this._suspendedBuffer.length > 0) {
+        const buffered = this._suspendedBuffer.splice(0);
+        for (const frame of buffered) {
+          await this._playback.enqueue(frame);
+        }
+      }
+      return;
+    }
+
+    if (this._suspendedBuffer.length > 0) {
+      const buffered = this._suspendedBuffer.splice(0);
+      for (const frame of buffered) {
+        await this._playback.enqueue(frame);
+      }
+    }
+
+    await this._playback.enqueue(samples);
   }
 
   broadcastData(data) {

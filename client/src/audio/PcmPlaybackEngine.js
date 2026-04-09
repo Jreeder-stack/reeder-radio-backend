@@ -25,6 +25,14 @@ export class PcmPlaybackEngine {
       this._workletNode = new AudioWorkletNode(this.audioContext, 'pcm-playback-processor', {
         outputChannelCount: [1],
       });
+      this._workletNode.port.onmessage = (event) => {
+        if (event.data.type === 'underrun') {
+          console.warn('AUDIO_PLAYBACK_UNDERRUN', {
+            count: event.data.count,
+            bufferDepth: event.data.bufferDepth,
+          });
+        }
+      };
       this._workletNode.connect(this.audioContext.destination);
     } catch (err) {
       console.warn('AudioWorklet not supported for playback, falling back to ScriptProcessor:', err.message);

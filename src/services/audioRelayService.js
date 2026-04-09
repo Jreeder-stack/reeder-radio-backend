@@ -18,9 +18,9 @@ const SUBSCRIBER_TIMEOUT_MS = 120000;
 const SUBSCRIBER_SWEEP_INTERVAL_MS = 30000;
 
 const WS_PACING_INTERVAL_MS = 20;
-const WS_PACING_MAX_QUEUE = 10;
+const WS_PACING_MAX_QUEUE = 25;
 const PCM_FRAME_SAMPLES = 960;
-const _reusablePcmArray = new Array(PCM_FRAME_SAMPLES);
+const WS_BINARY_MARKER = 0x01;
 
 class AudioRelayService {
   constructor() {
@@ -169,6 +169,24 @@ class AudioRelayService {
     this._broadcastToAll(channelKey, senderUnitId, rxPayload, sequence, opusPayload, this._resolveChannelIdNumeric({ channelKey, channelIdNumeric: channelId }), null, rawPcmSamples);
   }
 
+  _buildBinaryWsFrame(sequence, channelKey, senderUnitId, pcmInt16View) {
+    const channelBytes = Buffer.from(channelKey.slice(0, 255), 'utf8');
+    const senderBytes = Buffer.from(senderUnitId.slice(0, 255), 'utf8');
+    const headerLen = 1 + 4 + 1 + channelBytes.length + 1 + senderBytes.length;
+    const pcmBytes = pcmInt16View.length * 2;
+    const buf = Buffer.alloc(headerLen + pcmBytes);
+    let offset = 0;
+    buf[offset++] = WS_BINARY_MARKER;
+    buf.writeUInt32LE(sequence, offset); offset += 4;
+    buf[offset++] = channelBytes.length;
+    channelBytes.copy(buf, offset); offset += channelBytes.length;
+    buf[offset++] = senderBytes.length;
+    senderBytes.copy(buf, offset); offset += senderBytes.length;
+    const pcmBuf = Buffer.from(pcmInt16View.buffer, pcmInt16View.byteOffset, pcmInt16View.byteLength);
+    pcmBuf.copy(buf, offset);
+    return buf;
+  }
+
   _broadcastToAll(channelKey, senderUnitId, rxPayload, sequence, opusPayload, channelIdNumeric = null, resolvedSender = null, rawPcmSamples = null) {
     const udpSubs = this.subscribers.get(channelKey);
     if (udpSubs) {
@@ -198,36 +216,20 @@ class AudioRelayService {
     if (this._wsSubscribers) {
       const wsSubs = this._wsSubscribers.get(channelKey);
       if (wsSubs && wsSubs.size > 0) {
-        let pcmSamples = rawPcmSamples || null;
-        if (!pcmSamples) {
+        let int16View = null;
+        if (rawPcmSamples) {
+          int16View = (rawPcmSamples instanceof Int16Array) ? rawPcmSamples : new Int16Array(rawPcmSamples);
+        } else {
           try {
             const pcmBuf = opusCodec.decodeOpusToPcm(opusPayload, resolvedSender || senderUnitId);
-            const int16View = new Int16Array(pcmBuf.buffer, pcmBuf.byteOffset, pcmBuf.byteLength / 2);
-            const len = int16View.length;
-            if (len === PCM_FRAME_SAMPLES) {
-              for (let i = 0; i < PCM_FRAME_SAMPLES; i++) _reusablePcmArray[i] = int16View[i];
-              pcmSamples = _reusablePcmArray;
-            } else {
-              pcmSamples = new Array(len);
-              for (let i = 0; i < len; i++) pcmSamples[i] = int16View[i];
-            }
+            int16View = new Int16Array(pcmBuf.buffer, pcmBuf.byteOffset, pcmBuf.byteLength / 2);
           } catch (err) {
             console.error(`[AudioRelay] Opus→PCM decode error: ${err.message}`);
           }
         }
-        if (pcmSamples) {
-          const packetStr = JSON.stringify({
-            type: 'audio',
-            codec: 'pcm',
-            sampleRate: 48000,
-            channels: 1,
-            frameSamples: 960,
-            sequence,
-            channelId: channelKey,
-            senderUnitId,
-            payload: pcmSamples,
-          });
-          this._enqueueWsFrame(channelKey, senderUnitId, packetStr);
+        if (int16View) {
+          const binaryFrame = this._buildBinaryWsFrame(sequence, channelKey, senderUnitId, int16View);
+          this._enqueueWsFrame(channelKey, senderUnitId, binaryFrame);
         }
       }
     }
@@ -270,39 +272,20 @@ class AudioRelayService {
     if (this._wsSubscribers) {
       const wsSubs = this._wsSubscribers.get(channelKey);
       if (wsSubs && wsSubs.size > 0) {
-        let pcmSamples = null;
+        let int16View = null;
         try {
           const pcmBuf = opusCodec.decodeOpusToPcm(opusPayload, resolvedSender || senderUnitId);
-          const int16View = new Int16Array(pcmBuf.buffer, pcmBuf.byteOffset, pcmBuf.byteLength / 2);
-          const len = int16View.length;
-          if (len === PCM_FRAME_SAMPLES) {
-            const samples = new Array(PCM_FRAME_SAMPLES);
-            for (let i = 0; i < PCM_FRAME_SAMPLES; i++) samples[i] = int16View[i];
-            pcmSamples = samples;
-          } else {
-            pcmSamples = new Array(len);
-            for (let i = 0; i < len; i++) pcmSamples[i] = int16View[i];
-          }
+          int16View = new Int16Array(pcmBuf.buffer, pcmBuf.byteOffset, pcmBuf.byteLength / 2);
         } catch (err) {
           console.error(`[AudioRelay] Opus→PCM decode error: ${err.message}`);
         }
-        if (pcmSamples) {
-          const packetStr = JSON.stringify({
-            type: 'audio',
-            codec: 'pcm',
-            sampleRate: 48000,
-            channels: 1,
-            frameSamples: 960,
-            sequence,
-            channelId: channelKey,
-            senderUnitId,
-            payload: pcmSamples,
-          });
+        if (int16View) {
+          const binaryFrame = this._buildBinaryWsFrame(sequence, channelKey, senderUnitId, int16View);
           for (const [subUnitId, ws] of wsSubs) {
             if (subUnitId === senderUnitId) continue;
             try {
               if (ws.readyState === 1) {
-                ws.send(packetStr);
+                ws.send(binaryFrame);
               }
             } catch (err) {
               console.error(`[AudioRelay] WS send error to ${subUnitId}:`, err.message);
@@ -321,7 +304,7 @@ class AudioRelayService {
     }
   }
 
-  _enqueueWsFrame(channelKey, senderUnitId, packetStr) {
+  _enqueueWsFrame(channelKey, senderUnitId, packetBuf) {
     let queue = this._wsPacingQueues.get(channelKey);
     if (!queue) {
       queue = [];
@@ -329,8 +312,9 @@ class AudioRelayService {
     }
     if (queue.length >= WS_PACING_MAX_QUEUE) {
       queue.shift();
+      console.warn(`[AudioRelay] WS_PACING_FRAME_DROPPED channelId=${channelKey} queueDepth=${queue.length} maxQueue=${WS_PACING_MAX_QUEUE}`);
     }
-    queue.push({ senderUnitId, packetStr });
+    queue.push({ senderUnitId, packetBuf });
 
     if (!this._wsPacingTimers.has(channelKey)) {
       const timer = setInterval(() => this._drainWsQueue(channelKey), WS_PACING_INTERVAL_MS);
@@ -358,7 +342,7 @@ class AudioRelayService {
       if (subUnitId === frame.senderUnitId) continue;
       try {
         if (ws.readyState === 1) {
-          ws.send(frame.packetStr);
+          ws.send(frame.packetBuf);
         }
       } catch (err) {
         console.error(`[AudioRelay] WS send error to ${subUnitId}:`, err.message);

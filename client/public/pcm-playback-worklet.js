@@ -5,8 +5,13 @@ class PcmPlaybackProcessor extends AudioWorkletProcessor {
     this._currentFrame = null;
     this._offset = 0;
     this._primed = false;
-    this._PRE_BUFFER_FRAMES = 3;
+    this._PRE_BUFFER_FRAMES = 6;
     this._gain = 1.5;
+    this._lastFrame = null;
+    this._underrunFadeStep = 0;
+    this._underrunMaxSteps = 4;
+    this._underrunCount = 0;
+    this._lastUnderrunReport = 0;
 
     this.port.onmessage = (event) => {
       if (event.data.type === 'enqueue') {
@@ -16,6 +21,8 @@ class PcmPlaybackProcessor extends AudioWorkletProcessor {
         this._currentFrame = null;
         this._offset = 0;
         this._primed = false;
+        this._lastFrame = null;
+        this._underrunFadeStep = 0;
       } else if (event.data.type === 'setGain') {
         this._gain = event.data.gain;
       }
@@ -48,6 +55,7 @@ class PcmPlaybackProcessor extends AudioWorkletProcessor {
         }
         this._currentFrame = this._ringBuffer.shift();
         this._offset = 0;
+        this._underrunFadeStep = 0;
       }
 
       const available = this._currentFrame.length - this._offset;
@@ -66,13 +74,42 @@ class PcmPlaybackProcessor extends AudioWorkletProcessor {
       this._offset += count;
 
       if (this._offset >= this._currentFrame.length) {
+        this._lastFrame = this._currentFrame;
         this._currentFrame = null;
         this._offset = 0;
       }
     }
 
-    for (let i = written; i < outChannel.length; i++) {
-      outChannel[i] = 0;
+    if (written < outChannel.length) {
+      if (this._lastFrame && this._underrunFadeStep < this._underrunMaxSteps) {
+        this._underrunFadeStep++;
+        const fadeGain = gain * (1.0 - (this._underrunFadeStep / this._underrunMaxSteps));
+        const srcLen = this._lastFrame.length;
+        for (let i = written; i < outChannel.length; i++) {
+          const srcIdx = (i - written) % srcLen;
+          let sample = (this._lastFrame[srcIdx] / 32768) * fadeGain;
+          if (sample > 0.8 || sample < -0.8) {
+            sample = Math.tanh(sample);
+          }
+          outChannel[i] = sample;
+        }
+      } else {
+        for (let i = written; i < outChannel.length; i++) {
+          outChannel[i] = 0;
+        }
+      }
+
+      this._underrunCount++;
+      const now = currentTime;
+      if (now - this._lastUnderrunReport > 2) {
+        this._lastUnderrunReport = now;
+        this.port.postMessage({
+          type: 'underrun',
+          count: this._underrunCount,
+          bufferDepth: this._ringBuffer.length,
+        });
+        this._underrunCount = 0;
+      }
     }
 
     return true;

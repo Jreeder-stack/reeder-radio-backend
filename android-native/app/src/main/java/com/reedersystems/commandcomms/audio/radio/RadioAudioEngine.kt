@@ -480,7 +480,11 @@ class RadioAudioEngine(private val context: Context) {
                 return false
             }
 
-            Log.d("[AudioCapture]", "PRE_CAPTURE_HAL_NEGOTIATED requestedRate=$DEFAULT_MIC_SAMPLE_RATE actualRate=$actualSampleRate actualChannels=$actualChannelCount needsStereoDownmix=$needsStereoDownmix bufferSize=$bufferSize ${RadioDiagLog.elapsedTag()}")
+            Log.d("[AudioCapture]", "PRE_CAPTURE_HAL_NEGOTIATED requestedRate=$DEFAULT_MIC_SAMPLE_RATE actualRate=$actualSampleRate actualChannels=$actualChannelCount needsStereoDownmix=$needsStereoDownmix bufferSize=$bufferSize monoFrameSamples=$actualFrameSizeSamples monoFrameBytes=${actualFrameSizeSamples * 2} ${RadioDiagLog.elapsedTag()}")
+
+            if (needsStereoDownmix) {
+                Log.w("[AudioCapture]", "PRE_CAPTURE_STEREO_DETECTED HAL returned stereo ($actualChannelCount ch) despite requesting CHANNEL_IN_MONO — will downmix to mono before DSP/Opus encoding")
+            }
 
             if (actualSampleRate != DEFAULT_MIC_SAMPLE_RATE) {
                 Log.w("[AudioCapture]", "PRE_CAPTURE_SAMPLE_RATE_MISMATCH requested=$DEFAULT_MIC_SAMPLE_RATE actual=$actualSampleRate — adapting pipeline")
@@ -811,7 +815,11 @@ class RadioAudioEngine(private val context: Context) {
                 return false
             }
 
-            Log.d("[AudioCapture]", "TX_HAL_NEGOTIATED requestedRate=$DEFAULT_MIC_SAMPLE_RATE actualRate=$actualSampleRate actualChannels=$actualChannelCount audioFormat=$actualAudioFormat needsStereoDownmix=$needsStereoDownmix bufferSize=$bufferSize ${RadioDiagLog.elapsedTag()}")
+            Log.d("[AudioCapture]", "TX_HAL_NEGOTIATED requestedRate=$DEFAULT_MIC_SAMPLE_RATE actualRate=$actualSampleRate actualChannels=$actualChannelCount audioFormat=$actualAudioFormat needsStereoDownmix=$needsStereoDownmix bufferSize=$bufferSize monoFrameSamples=$actualFrameSizeSamples monoFrameBytes=${actualFrameSizeSamples * 2} ${RadioDiagLog.elapsedTag()}")
+
+            if (needsStereoDownmix) {
+                Log.w("[AudioCapture]", "TX_STEREO_DETECTED HAL returned stereo ($actualChannelCount ch) despite requesting CHANNEL_IN_MONO — will downmix to mono before DSP/Opus encoding")
+            }
 
             if (actualSampleRate != DEFAULT_MIC_SAMPLE_RATE) {
                 Log.w("[AudioCapture]", "TX_SAMPLE_RATE_MISMATCH requested=$DEFAULT_MIC_SAMPLE_RATE actual=$actualSampleRate — adapting TX pipeline")
