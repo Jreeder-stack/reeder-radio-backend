@@ -1,11 +1,18 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { unlockAudio } from "./audio/iosAudioUnlock";
 
-export default function Login({ onLogin }) {
+export default function Login({ onLogin, sessionConflict, clearSessionConflict }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (sessionConflict && clearSessionConflict) {
+      const timer = setTimeout(() => clearSessionConflict(), 10000);
+      return () => clearTimeout(timer);
+    }
+  }, [sessionConflict, clearSessionConflict]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -142,6 +149,22 @@ export default function Login({ onLogin }) {
               required
             />
           </div>
+
+          {sessionConflict && (
+            <div
+              style={{
+                background: "#d97706",
+                color: "#fff",
+                padding: "10px 14px",
+                borderRadius: 8,
+                marginBottom: 20,
+                fontSize: 14,
+                lineHeight: 1.4,
+              }}
+            >
+              Your session was used by another account. Please sign in again.
+            </div>
+          )}
 
           {error && (
             <div

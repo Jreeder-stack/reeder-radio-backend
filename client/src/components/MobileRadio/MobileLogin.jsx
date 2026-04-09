@@ -1,4 +1,4 @@
-import { useState, useSyncExternalStore } from "react";
+import { useState, useEffect, useSyncExternalStore } from "react";
 import { useNavigate } from "react-router-dom";
 import { MobileFrame } from "./MobileFrame";
 import { Shield, Lock, ArrowRight, Radio, AlertCircle } from "lucide-react";
@@ -22,13 +22,20 @@ function useIsT320() {
   return val;
 }
 
-export function MobileLogin({ onLogin }) {
+export function MobileLogin({ onLogin, sessionConflict, clearSessionConflict }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
   const isT320 = useIsT320();
+
+  useEffect(() => {
+    if (sessionConflict && clearSessionConflict) {
+      const timer = setTimeout(() => clearSessionConflict(), 10000);
+      return () => clearTimeout(timer);
+    }
+  }, [sessionConflict, clearSessionConflict]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -106,6 +113,20 @@ export function MobileLogin({ onLogin }) {
               REEDER SYSTEMS
             </div>
           </div>
+
+          {sessionConflict && (
+            <div style={{
+              backgroundColor: '#fff7ed',
+              border: '1px solid #d97706',
+              color: '#92400e',
+              fontSize: '9px',
+              padding: '3px 6px',
+              marginBottom: '4px',
+              textAlign: 'center',
+            }}>
+              Session used by another account. Sign in again.
+            </div>
+          )}
 
           {error && (
             <div style={{
@@ -246,6 +267,13 @@ export function MobileLogin({ onLogin }) {
           </div>
 
           <form onSubmit={handleLogin} className="w-full space-y-4">
+            {sessionConflict && (
+              <div className="flex items-center gap-2 p-3 bg-amber-950/50 border border-amber-900/50 rounded-lg text-amber-400 text-sm">
+                <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                <span>Your session was used by another account. Please sign in again.</span>
+              </div>
+            )}
+
             {error && (
               <div className="flex items-center gap-2 p-3 bg-red-950/50 border border-red-900/50 rounded-lg text-red-400 text-sm">
                 <AlertCircle className="h-4 w-4 flex-shrink-0" />

@@ -5,6 +5,7 @@ import { updateServiceConnectionInfo } from "./plugins/nativeAudioBridge";
 const AuthContext = createContext(null);
 
 const AUTH_CACHE_KEY = 'auth_user_cache';
+const SESSION_CONFLICT_KEY = 'auth_session_conflict';
 
 function getCachedUser() {
   try {
@@ -30,13 +31,45 @@ function setCachedUser(user) {
   }
 }
 
+function clearAllAuthStorage() {
+  try {
+    localStorage.removeItem(AUTH_CACHE_KEY);
+    localStorage.removeItem('dispatch-channels');
+    sessionStorage.removeItem(AUTH_CACHE_KEY);
+  } catch(e) {
+  }
+}
+
 export function AuthProvider({ children }) {
   const cachedUser = getCachedUser();
   const [user, setUser] = useState(cachedUser);
-  // Always start loading regardless of cached user — the session must be verified
-  // with the server before the app renders and starts making authenticated requests
-  // Without this, a stale cache causes authenticated API request 401s.
+  const [sessionConflict, setSessionConflict] = useState(() => {
+    try {
+      return sessionStorage.getItem(SESSION_CONFLICT_KEY) === 'true';
+    } catch(e) {
+      return false;
+    }
+  });
   const [loading, setLoading] = useState(true);
+
+  const forceLogoutSessionConflict = useCallback(async () => {
+    console.warn("[AUTH] Session conflict detected — different user returned by server. Forcing logout.");
+    try {
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch (err) {
+      console.error("[AUTH] Logout request during session conflict failed:", err);
+    }
+    useDispatchStore.getState().resetStore();
+    clearAllAuthStorage();
+    try {
+      sessionStorage.setItem(SESSION_CONFLICT_KEY, 'true');
+    } catch(e) {}
+    setUser(null);
+    setSessionConflict(true);
+  }, []);
 
   const checkAuth = useCallback(async (isBackgroundCheck = false) => {
     if (!isBackgroundCheck) {
@@ -47,6 +80,11 @@ export function AuthProvider({ children }) {
       const res = await fetch("/api/auth/me", { credentials: "include" });
       if (res.ok) {
         const data = await res.json();
+        const currentUser = getCachedUser();
+        if (currentUser && data.user && String(currentUser.id) !== String(data.user.id)) {
+          await forceLogoutSessionConflict();
+          return;
+        }
         setUser(data.user);
         setCachedUser(data.user);
       } else {
@@ -62,7 +100,7 @@ export function AuthProvider({ children }) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [forceLogoutSessionConflict]);
 
   useEffect(() => {
     checkAuth(false);
@@ -96,6 +134,10 @@ export function AuthProvider({ children }) {
   const login = (userData) => {
     setUser(userData);
     setCachedUser(userData);
+    setSessionConflict(false);
+    try {
+      sessionStorage.removeItem(SESSION_CONFLICT_KEY);
+    } catch(e) {}
   };
 
   const logout = async () => {
@@ -109,14 +151,20 @@ export function AuthProvider({ children }) {
     }
     
     useDispatchStore.getState().resetStore();
-    localStorage.removeItem('dispatch-channels');
-    setCachedUser(null);
+    clearAllAuthStorage();
     
     setUser(null);
   };
 
+  const clearSessionConflict = useCallback(() => {
+    setSessionConflict(false);
+    try {
+      sessionStorage.removeItem(SESSION_CONFLICT_KEY);
+    } catch(e) {}
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, checkAuth }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, checkAuth, sessionConflict, clearSessionConflict }}>
       {children}
     </AuthContext.Provider>
   );

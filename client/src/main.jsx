@@ -70,7 +70,7 @@ function ProtectedRoute({ children, adminOnly = false, dispatcherOnly = false })
 }
 
 function LoginRoute() {
-  const { user, loading, login } = useAuth();
+  const { user, loading, login, sessionConflict, clearSessionConflict } = useAuth();
   const isMobile = useMobile();
 
   if (loading) {
@@ -96,10 +96,10 @@ function LoginRoute() {
   }
 
   if (isMobile) {
-    return <MobileLogin onLogin={login} />;
+    return <MobileLogin onLogin={login} sessionConflict={sessionConflict} clearSessionConflict={clearSessionConflict} />;
   }
 
-  return <Login onLogin={login} />;
+  return <Login onLogin={login} sessionConflict={sessionConflict} clearSessionConflict={clearSessionConflict} />;
 }
 
 function AppWrapper() {
