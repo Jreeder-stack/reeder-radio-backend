@@ -239,7 +239,7 @@ export default function DispatchConsole({ user, onLogout }) {
   useEffect(() => {
     if (!channels.length) return;
 
-    const identity = user?.username || user?.id || 'Dispatch';
+    const identity = user?.unit_id || user?.username || 'Dispatch';
 
     const monitoredRoomKeys = monitoredChannelIds
       .map(id => {
