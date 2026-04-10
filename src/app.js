@@ -134,6 +134,15 @@ app.get('/api/version', (req, res) => {
 });
 
 const clientDistPath = path.join(__dirname, '..', 'client', 'dist');
+const docsPath = path.join(__dirname, '..', 'docs');
+
+app.use('/docs', express.static(docsPath, {
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.md')) {
+      res.setHeader('Content-Type', 'text/markdown; charset=utf-8');
+    }
+  }
+}));
 
 app.get('/.well-known/assetlinks.json', (req, res) => {
   res.setHeader('Content-Type', 'application/json');
