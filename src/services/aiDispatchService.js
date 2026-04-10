@@ -766,7 +766,7 @@ class AIDispatcher {
       
       const audioUrl = `/api/messages/audio/${filename}`;
       
-      const message = await createChannelMessage(channelName, sender, 'audio', null, audioUrl, durationSecs);
+      const message = await createChannelMessage(channelName, sender, 'audio', null, audioUrl, durationSecs, wavBuffer);
       this.log('VOICE_MESSAGE_SAVED', { channel: channelName, sender, filename, duration: durationSecs });
       
       const broadcastPayload = {
@@ -2983,7 +2983,7 @@ class AIDispatcher {
           const audioUrl = `/api/messages/audio/${filename}`;
           const samples = new Int16Array(audioBuffer.buffer, audioBuffer.byteOffset, audioBuffer.length / 2);
           const durationMs = Math.round((samples.length / AZURE_SAMPLE_RATE) * 1000);
-          const msg = await createChannelMessage(this.channelName, 'AI-DISPATCHER', 'audio', null, audioUrl, durationMs);
+          const msg = await createChannelMessage(this.channelName, 'AI-DISPATCHER', 'audio', null, audioUrl, durationMs, wavBuffer);
           if (msg) {
             await createChannelMessage(this.channelName, 'AI-DISPATCHER', 'text', responseText).catch(() => {});
             broadcastMessage(this.channelName, msg).catch(() => {});
