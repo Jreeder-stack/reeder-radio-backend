@@ -204,7 +204,12 @@ class WsAudioBridge {
         }
 
         try {
-          const pcmInt16 = raw.slice(offset, offset + pcmByteLen);
+          let pcmInt16 = raw.slice(offset, offset + pcmByteLen);
+          if (pcmInt16.byteOffset % 2 !== 0) {
+            const copy = new Uint8Array(pcmInt16.length);
+            copy.set(new Uint8Array(pcmInt16.buffer, pcmInt16.byteOffset, pcmInt16.length));
+            pcmInt16 = Buffer.from(copy.buffer, copy.byteOffset, copy.byteLength);
+          }
           const opusFrames = opusCodec.encodePcmToOpus(pcmInt16);
           const rawPayload = Array.from(new Int16Array(pcmInt16.buffer, pcmInt16.byteOffset, pcmInt16.byteLength / 2));
           for (let i = 0; i < opusFrames.length; i++) {
