@@ -31,6 +31,14 @@ export class PcmPlaybackEngine {
             count: event.data.count,
             bufferDepth: event.data.bufferDepth,
           });
+        } else if (event.data.type === 'diagnostics') {
+          console.log('AUDIO_PLAYBACK_DIAG', {
+            framesReceived: event.data.framesReceived,
+            framesPlayed: event.data.framesPlayed,
+            underrunCount: event.data.underrunCount,
+            bufferDepth: event.data.bufferDepth,
+            avgBufferDepth: event.data.avgBufferDepth,
+          });
         }
       };
       this._workletNode.connect(this.audioContext.destination);

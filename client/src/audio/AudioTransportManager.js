@@ -12,6 +12,8 @@ const WS_LIVENESS_TIMEOUT = 45000;
 const REORDER_BUFFER_SIZE = 20;
 const REORDER_MAX_LATE = 20;
 const PLC_MAX_CONSECUTIVE = 7;
+const RX_DIAG_DETAIL_COUNT = 5;
+const RX_DIAG_SUMMARY_INTERVAL_MS = 2000;
 
 const RECONNECT_BASE_MS = 1000;
 const RECONNECT_MAX_MS = 10000;
@@ -61,6 +63,14 @@ class AudioTransportManager {
     this._reorderedPackets = 0;
     this._lastReorderLog = 0;
     this._suspendedBuffer = [];
+
+    this._rxDiagDecodedCount = 0;
+    this._rxDiagDetailCount = 0;
+    this._rxDiagLastSummaryTime = 0;
+    this._rxDiagSummaryFrames = 0;
+    this._rxDiagSummaryBytes = 0;
+    this._rxDiagPlcCount = 0;
+    this._rxDiagReorderFlushes = 0;
 
     this._targetChannels = new Map();
     this._healthCheckInterval = null;
@@ -644,6 +654,7 @@ class AudioTransportManager {
 
     if (sequence < stream.expectedSequence - REORDER_MAX_LATE) {
       this._latePackets++;
+      console.log('AUDIO_RX_LATE_DROPPED', { seq: sequence, expected: stream.expectedSequence, channelId, sender: senderUnitId });
       this._logReorderStats();
       return;
     }
@@ -687,10 +698,15 @@ class AudioTransportManager {
   }
 
   async _flushReorderBuffer(stream, channelId, senderUnitId) {
+    let flushed = 0;
     while (stream.buffer.length > 0 && stream.buffer[0].sequence === stream.expectedSequence) {
       const entry = stream.buffer.shift();
       stream.expectedSequence = entry.sequence + 1;
       await this._deliverFrame(stream, entry.sequence, entry.payload, entry.codec, channelId, senderUnitId);
+      flushed++;
+    }
+    if (flushed > 0) {
+      this._rxDiagReorderFlushes++;
     }
   }
 
@@ -714,6 +730,23 @@ class AudioTransportManager {
         const decoded = decoder.decodeFrame(payload);
         if (decoded.samplesDecoded > 0 && decoded.channelData && decoded.channelData[0]) {
           const int16 = float32ToInt16(decoded.channelData[0]);
+          this._rxDiagDecodedCount++;
+          this._rxDiagDetailCount++;
+          this._rxDiagSummaryFrames++;
+          this._rxDiagSummaryBytes += payload.byteLength || payload.length || 0;
+          if (this._rxDiagDetailCount <= RX_DIAG_DETAIL_COUNT) {
+            console.log('AUDIO_RX_DECODE_DETAIL', { opusBytes: payload.byteLength || payload.length, pcmSamples: decoded.samplesDecoded, channelId, sender: senderUnitId, frame: this._rxDiagDetailCount });
+          } else {
+            const now = Date.now();
+            if (now - this._rxDiagLastSummaryTime >= RX_DIAG_SUMMARY_INTERVAL_MS) {
+              console.log('AUDIO_RX_DECODE_SUMMARY', { frames: this._rxDiagSummaryFrames, totalBytes: this._rxDiagSummaryBytes, plcFrames: this._rxDiagPlcCount, reorderFlushes: this._rxDiagReorderFlushes });
+              this._rxDiagLastSummaryTime = now;
+              this._rxDiagSummaryFrames = 0;
+              this._rxDiagSummaryBytes = 0;
+              this._rxDiagPlcCount = 0;
+              this._rxDiagReorderFlushes = 0;
+            }
+          }
           await this._playbackFrame(int16);
         }
       } catch (err) {
@@ -728,6 +761,8 @@ class AudioTransportManager {
     try {
       const decoderKey = `${channelId}::${senderUnitId}`;
       const decoder = await this._getOpusDecoder(decoderKey);
+      console.log('AUDIO_RX_PLC_GENERATE', { channelId, sender: senderUnitId, count });
+      this._rxDiagPlcCount += count;
       for (let i = 0; i < count; i++) {
         try {
           const plc = decoder.decodeFrame(new Uint8Array(0));

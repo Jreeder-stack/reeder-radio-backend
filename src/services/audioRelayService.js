@@ -19,8 +19,8 @@ const SUBSCRIBER_SWEEP_INTERVAL_MS = 30000;
 const WS_PACING_INTERVAL_MS = 20;
 const WS_PACING_MAX_QUEUE = 75;
 const TX_WATCHDOG_INTERVAL_MS = 1000;
-const TX_WATCHDOG_SILENCE_THRESHOLD_MS = 2000;
-const TX_WATCHDOG_GRACE_MS = 3000;
+const TX_WATCHDOG_SILENCE_THRESHOLD_MS = 5000;
+const TX_WATCHDOG_GRACE_MS = 6000;
 const PCM_FRAME_SAMPLES = 960;
 const WS_BINARY_MARKER = 0x01;
 const WS_BINARY_MARKER_OPUS = 0x02;
@@ -47,6 +47,12 @@ class AudioRelayService {
     this._lastAudioReceived = new Map();
     this._txWatchdogTimer = null;
     this._txWatchdogAlerted = new Set();
+    this._txSessionStats = new Map();
+    this._wsRelayStats = new Map();
+    this._wsRelayStatsTimer = null;
+    this._txPacketLogCounters = new Map();
+    this._txPacketLogLastSummary = new Map();
+    this._txPacketIntervalStats = new Map();
   }
 
   onRecordingTap(callback) {
@@ -336,9 +342,12 @@ class AudioRelayService {
     }
     if (queue.length >= WS_PACING_MAX_QUEUE) {
       queue.shift();
+      this._trackWsRelayFrame(channelKey, 'drop');
       console.warn(`[AudioRelay] WS_PACING_FRAME_DROPPED channelId=${channelKey} queueDepth=${queue.length} maxQueue=${WS_PACING_MAX_QUEUE}`);
     }
     queue.push({ senderUnitId, packetBuf });
+    this._trackWsRelayFrame(channelKey, 'enqueue');
+    this._startWsRelayStatsTimer();
 
     if (!this._wsPacingTimers.has(channelKey)) {
       this._wsPacingDriftState.set(channelKey, { nextTick: Date.now() + WS_PACING_INTERVAL_MS });
@@ -381,11 +390,13 @@ class AudioRelayService {
 
     if (framesToDrain > 1) {
       console.log(`[AudioRelay] WS_PACING_BURST channelKey=${channelKey} queueDepth=${queue.length} draining=${framesToDrain}`);
+      this._trackWsRelayFrame(channelKey, 'burst');
     }
 
     for (let f = 0; f < framesToDrain; f++) {
       if (queue.length === 0) break;
       const frame = queue.shift();
+      this._trackWsRelayFrame(channelKey, 'drain');
       const wsSubs = this._wsSubscribers.get(channelKey);
 
       let wsSentCount = 0;
@@ -460,6 +471,7 @@ class AudioRelayService {
       clearInterval(this._txWatchdogTimer);
       this._txWatchdogTimer = null;
     }
+    this._stopWsRelayStatsTimer();
     for (const [, timer] of this._wsPacingTimers) {
       clearTimeout(timer);
     }
@@ -481,10 +493,191 @@ class AudioRelayService {
     }
   }
 
-  clearTxWatchdog(channelKey, unitId) {
+  clearTxWatchdog(channelKey, unitId, reason = 'ptt_release') {
     const key = `${channelKey}::${unitId}`;
     this._lastAudioReceived.delete(key);
     this._txWatchdogAlerted.delete(key);
+    this._finalizeTxSessionStats(channelKey, unitId, reason);
+    this._logWsRelayStats(channelKey, 'tx_session_end');
+  }
+
+  _initTxSessionStats(channelKey, unitId) {
+    const key = `${channelKey}::${unitId}`;
+    this._txSessionStats.set(key, {
+      channelKey,
+      unitId,
+      startTime: Date.now(),
+      firstSeq: null,
+      lastSeq: null,
+      totalFrames: 0,
+      maxConsecutiveGap: 0,
+      lastReceivedSeq: null,
+      interArrivalTimes: [],
+      lastArrivalTime: null,
+      minPacketSize: Infinity,
+      maxPacketSize: 0,
+      totalPacketBytes: 0,
+    });
+  }
+
+  _trackTxPacket(channelKey, unitId, sequence, packetSize) {
+    const key = `${channelKey}::${unitId}`;
+    let stats = this._txSessionStats.get(key);
+    if (!stats) {
+      this._initTxSessionStats(channelKey, unitId);
+      stats = this._txSessionStats.get(key);
+    }
+
+    stats.totalFrames++;
+    if (stats.firstSeq === null) stats.firstSeq = sequence;
+    stats.lastSeq = sequence;
+
+    if (stats.lastReceivedSeq !== null) {
+      const gap = ((sequence - stats.lastReceivedSeq) & 0xFFFF);
+      if (gap > 1 && gap < 0x8000) {
+        if (gap - 1 > stats.maxConsecutiveGap) stats.maxConsecutiveGap = gap - 1;
+      }
+    }
+    stats.lastReceivedSeq = sequence;
+
+    const now = Date.now();
+    if (stats.lastArrivalTime !== null) {
+      stats.interArrivalTimes.push(now - stats.lastArrivalTime);
+      if (stats.interArrivalTimes.length > 1000) {
+        stats.interArrivalTimes = stats.interArrivalTimes.slice(-500);
+      }
+    }
+    stats.lastArrivalTime = now;
+
+    if (packetSize < stats.minPacketSize) stats.minPacketSize = packetSize;
+    if (packetSize > stats.maxPacketSize) stats.maxPacketSize = packetSize;
+    stats.totalPacketBytes += packetSize;
+
+    const logKey = key;
+    let counter = this._txPacketLogCounters.get(logKey) || 0;
+    counter++;
+    this._txPacketLogCounters.set(logKey, counter);
+
+    if (counter <= 5) {
+      console.log(`[AudioRelay] PACKET_DETAIL unitId=${unitId} channelKey=${channelKey} seq=${sequence} packetBytes=${packetSize} frame=${counter}`);
+    } else {
+      const lastSummary = this._txPacketLogLastSummary.get(logKey) || 0;
+      if (now - lastSummary >= 1000) {
+        const interval = this._txPacketIntervalStats.get(logKey) || { frames: 0, bytes: 0 };
+        this._txPacketLogLastSummary.set(logKey, now);
+        console.log(`[AudioRelay] PACKET_SUMMARY unitId=${unitId} channelKey=${channelKey} intervalFrames=${interval.frames} intervalAvgBytes=${interval.frames > 0 ? Math.round(interval.bytes / interval.frames) : 0} totalFrames=${stats.totalFrames} lastSeq=${sequence}`);
+        this._txPacketIntervalStats.set(logKey, { frames: 0, bytes: 0 });
+      }
+    }
+
+    const interval = this._txPacketIntervalStats.get(logKey) || { frames: 0, bytes: 0 };
+    interval.frames++;
+    interval.bytes += packetSize;
+    this._txPacketIntervalStats.set(logKey, interval);
+  }
+
+  _finalizeTxSessionStats(channelKey, unitId, reason) {
+    const key = `${channelKey}::${unitId}`;
+    const stats = this._txSessionStats.get(key);
+    if (!stats || stats.totalFrames === 0) {
+      this._txSessionStats.delete(key);
+      this._txPacketLogCounters.delete(key);
+      this._txPacketLogLastSummary.delete(key);
+      this._txPacketIntervalStats.delete(key);
+      return;
+    }
+
+    const duration = Date.now() - stats.startTime;
+    const expectedFrames = stats.firstSeq !== null && stats.lastSeq !== null
+      ? ((stats.lastSeq - stats.firstSeq + 1 + 0x10000) % 0x10000)
+      : stats.totalFrames;
+    const lossCount = Math.max(0, expectedFrames - stats.totalFrames);
+    const lossPct = expectedFrames > 0 ? ((lossCount / expectedFrames) * 100).toFixed(1) : '0.0';
+    const avgInterArrival = stats.interArrivalTimes.length > 0
+      ? (stats.interArrivalTimes.reduce((a, b) => a + b, 0) / stats.interArrivalTimes.length).toFixed(1)
+      : 'N/A';
+
+    const summary = {
+      channelKey,
+      unitId,
+      reason,
+      durationMs: duration,
+      firstSeq: stats.firstSeq,
+      lastSeq: stats.lastSeq,
+      totalFrames: stats.totalFrames,
+      expectedFrames,
+      lossCount,
+      lossPct: parseFloat(lossPct),
+      maxConsecutiveGap: stats.maxConsecutiveGap,
+      avgInterArrivalMs: avgInterArrival === 'N/A' ? avgInterArrival : parseFloat(avgInterArrival),
+      minPacketBytes: stats.minPacketSize === Infinity ? 0 : stats.minPacketSize,
+      maxPacketBytes: stats.maxPacketSize,
+    };
+
+    console.log(`[AudioRelay] TX_SESSION_STATS ${JSON.stringify(summary)}`);
+
+    this._txSessionStats.delete(key);
+    this._txPacketLogCounters.delete(key);
+    this._txPacketLogLastSummary.delete(key);
+    this._txPacketIntervalStats.delete(key);
+  }
+
+  _trackWsRelayFrame(channelKey, action, count = 1) {
+    if (!this._wsRelayStats.has(channelKey)) {
+      this._wsRelayStats.set(channelKey, {
+        framesEnqueued: 0,
+        framesDropped: 0,
+        framesDrained: 0,
+        burstDrains: 0,
+        lastLogTime: Date.now(),
+      });
+    }
+    const s = this._wsRelayStats.get(channelKey);
+    if (action === 'enqueue') s.framesEnqueued += count;
+    else if (action === 'drop') s.framesDropped += count;
+    else if (action === 'drain') s.framesDrained += count;
+    else if (action === 'burst') s.burstDrains += count;
+  }
+
+  _logWsRelayStats(channelKey, reason = 'periodic') {
+    const s = this._wsRelayStats.get(channelKey);
+    if (!s) return;
+    if (s.framesEnqueued === 0 && s.framesDrained === 0 && s.framesDropped === 0) return;
+    const queueDepth = this._wsPacingQueues.has(channelKey) ? this._wsPacingQueues.get(channelKey).length : 0;
+    const wsSubCount = this._wsSubscribers.has(channelKey) ? this._wsSubscribers.get(channelKey).size : 0;
+    console.log(`[AudioRelay] WS_RELAY_STATS ${JSON.stringify({
+      channelKey,
+      reason,
+      framesEnqueued: s.framesEnqueued,
+      framesDropped: s.framesDropped,
+      framesDrained: s.framesDrained,
+      burstDrains: s.burstDrains,
+      queueDepth,
+      wsSubscribers: wsSubCount,
+    })}`);
+    s.framesEnqueued = 0;
+    s.framesDropped = 0;
+    s.framesDrained = 0;
+    s.burstDrains = 0;
+  }
+
+  _startWsRelayStatsTimer() {
+    if (this._wsRelayStatsTimer) return;
+    this._wsRelayStatsTimer = setInterval(() => {
+      for (const [channelKey, s] of this._wsRelayStats) {
+        if (s.framesEnqueued > 0 || s.framesDrained > 0) {
+          this._logWsRelayStats(channelKey, 'periodic');
+        }
+      }
+    }, 5000);
+    this._wsRelayStatsTimer.unref?.();
+  }
+
+  _stopWsRelayStatsTimer() {
+    if (this._wsRelayStatsTimer) {
+      clearInterval(this._wsRelayStatsTimer);
+      this._wsRelayStatsTimer = null;
+    }
   }
 
   _checkTxWatchdog() {
@@ -504,6 +697,8 @@ class AudioRelayService {
       if (silenceMs >= TX_WATCHDOG_SILENCE_THRESHOLD_MS && !this._txWatchdogAlerted.has(key)) {
         this._txWatchdogAlerted.add(key);
         console.warn(`[AudioRelay] TX_WATCHDOG_SILENCE unitId=${unitId} channelId=${channelId} silenceMs=${silenceMs} hadAudio=${!!lastReceived}`);
+        this._finalizeTxSessionStats(channelId, unitId, 'silence_watchdog');
+        this._logWsRelayStats(channelId, 'tx_session_end_watchdog');
         try {
           this._signalingService.emitTxSilenceWarning(channelId, unitId, silenceMs);
         } catch (err) {
@@ -592,6 +787,7 @@ class AudioRelayService {
       timestampMs,
     });
 
+    this._trackTxPacket(channelKey, senderUnitId, sequence, msg.length);
     this.trackAudioReceived(channelKey, senderUnitId);
     this._broadcastToAll(channelKey, senderUnitId, rxPayload, sequence, opusPayload, resolvedChannelId, senderUnitId);
   }

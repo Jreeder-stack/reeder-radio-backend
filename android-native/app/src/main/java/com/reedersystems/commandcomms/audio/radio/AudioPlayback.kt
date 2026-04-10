@@ -55,6 +55,8 @@ class AudioPlayback(
 
     private val writeRateLimiter = RadioDiagLog.RateLimiter(detailCount = 5)
     private var summaryWriteBytes: Long = 0
+    private var lastDepthSnapshotMs: Long = 0
+    private var rxPlcTotal: Long = 0
 
     private fun resetRxDspState() {
         rxHpPrevOutput = 0.0
@@ -226,6 +228,8 @@ class AudioPlayback(
         }
         writeRateLimiter.reset()
         summaryWriteBytes = 0
+        lastDepthSnapshotMs = System.currentTimeMillis()
+        rxPlcTotal = 0
         Log.d(TAG, "AudioPlayback started: ${SAMPLE_RATE}Hz mono, low-latency playState=${track.playState} ${RadioDiagLog.elapsedTag()}")
 
         playbackJob = scope.launch {
@@ -335,6 +339,13 @@ class AudioPlayback(
                         } else {
                             catchupCount = 0
                         }
+
+                        val snapNow = System.currentTimeMillis()
+                        if (snapNow - lastDepthSnapshotMs >= 2000) {
+                            val underruns = try { track.underrunCount } catch (_: Exception) { -1 }
+                            Log.d(TAG, "RX_DEPTH_SNAPSHOT jbSize=${jitterBuffer.size} jbTarget=${jitterBuffer.currentTargetDepth} totalFrames=${writeRateLimiter.frameCount} plcTotal=$rxPlcTotal underruns=$underruns ${RadioDiagLog.elapsedTag()}")
+                            lastDepthSnapshotMs = snapNow
+                        }
                     } else {
                         val now = System.currentTimeMillis()
 
@@ -348,6 +359,7 @@ class AudioPlayback(
                             delay(1L)
                         } else {
                             plcCount++
+                            rxPlcTotal++
                             jitterBuffer.recordUnderrun()
                             onUnderrun?.invoke()
                             try {
@@ -407,7 +419,7 @@ class AudioPlayback(
         playbackJob?.cancel()
         playbackJob = null
         val underrunCount = try { audioTrack?.underrunCount ?: -1 } catch (_: Exception) { -1 }
-        Log.d(TAG, "AudioPlayback stopped totalWrites=${writeRateLimiter.frameCount} totalBytes=$summaryWriteBytes underruns=$underrunCount ${RadioDiagLog.elapsedTag()}")
+        Log.d(TAG, "RX_SESSION_END totalWrites=${writeRateLimiter.frameCount} totalBytes=$summaryWriteBytes plcTotal=$rxPlcTotal underruns=$underrunCount jbDepth=${jitterBuffer.currentTargetDepth} jbSize=${jitterBuffer.size} ${RadioDiagLog.elapsedTag()}")
     }
 
     fun release() {

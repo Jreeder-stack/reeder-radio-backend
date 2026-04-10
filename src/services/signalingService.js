@@ -162,7 +162,7 @@ class SignalingService {
     floorControlService.onTimeout((channelId, unitId) => {
       const unitSocket = this._findSocketByUnitId(unitId);
 
-      audioRelayService.clearTxWatchdog(channelId, unitId);
+      audioRelayService.clearTxWatchdog(channelId, unitId, 'floor_timeout');
       this.activeTransmissions.delete(channelId);
 
       this.io.to(`channel:${channelId}`).emit(RADIO_EVENTS.TX_STOP, {

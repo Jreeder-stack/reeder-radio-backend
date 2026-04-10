@@ -6,6 +6,7 @@ class PcmPlaybackProcessor extends AudioWorkletProcessor {
     this._offset = 0;
     this._primed = false;
     this._PRE_BUFFER_FRAMES = 22;
+    this._REPRIME_FRAMES = 4;
     this._gain = 1.0;
     this._lastSampleValue = 0;
     this._underrunFading = false;
@@ -15,14 +16,24 @@ class PcmPlaybackProcessor extends AudioWorkletProcessor {
     this._underrunCount = 0;
     this._lastUnderrunReport = 0;
 
+    this._totalFramesReceived = 0;
+    this._totalFramesPlayed = 0;
+    this._hasEverPlayed = false;
+    this._bufferDepthSum = 0;
+    this._bufferDepthSamples = 0;
+    this._lastDiagReport = 0;
+    this._diagIntervalSec = 2;
+
     this.port.onmessage = (event) => {
       if (event.data.type === 'enqueue') {
         this._ringBuffer.push(event.data.samples);
+        this._totalFramesReceived++;
       } else if (event.data.type === 'clear') {
         this._ringBuffer = [];
         this._currentFrame = null;
         this._offset = 0;
         this._primed = false;
+        this._hasEverPlayed = false;
         this._lastSampleValue = 0;
         this._underrunFading = false;
         this._underrunFadeSamplesLeft = 0;
@@ -48,6 +59,32 @@ class PcmPlaybackProcessor extends AudioWorkletProcessor {
     const outChannel = output[0];
     const gain = this._gain;
 
+    this._bufferDepthSum += this._ringBuffer.length;
+    this._bufferDepthSamples++;
+
+    const now = currentTime;
+    if (now - this._lastDiagReport >= this._diagIntervalSec) {
+      this._lastDiagReport = now;
+      if (this._totalFramesReceived > 0 || this._totalFramesPlayed > 0 || this._underrunCount > 0) {
+        const avgDepth = this._bufferDepthSamples > 0
+          ? (this._bufferDepthSum / this._bufferDepthSamples).toFixed(1)
+          : 0;
+        this.port.postMessage({
+          type: 'diagnostics',
+          framesReceived: this._totalFramesReceived,
+          framesPlayed: this._totalFramesPlayed,
+          underrunCount: this._underrunCount,
+          bufferDepth: this._ringBuffer.length,
+          avgBufferDepth: parseFloat(avgDepth),
+        });
+      }
+      this._totalFramesReceived = 0;
+      this._totalFramesPlayed = 0;
+      this._underrunCount = 0;
+      this._bufferDepthSum = 0;
+      this._bufferDepthSamples = 0;
+    }
+
     if (this._underrunFading) {
       let i = 0;
       for (; i < outChannel.length; i++) {
@@ -70,7 +107,10 @@ class PcmPlaybackProcessor extends AudioWorkletProcessor {
     }
 
     if (!this._primed) {
-      if (this._ringBuffer.length < this._PRE_BUFFER_FRAMES) {
+      const requiredFrames = this._ringBuffer.length === 0
+        ? this._PRE_BUFFER_FRAMES
+        : (this._hasEverPlayed ? this._REPRIME_FRAMES : this._PRE_BUFFER_FRAMES);
+      if (this._ringBuffer.length < requiredFrames) {
         for (let i = 0; i < outChannel.length; i++) {
           outChannel[i] = 0;
         }
@@ -107,6 +147,8 @@ class PcmPlaybackProcessor extends AudioWorkletProcessor {
         this._lastSampleValue = (this._currentFrame[this._currentFrame.length - 1] / 32768) * gain;
         this._currentFrame = null;
         this._offset = 0;
+        this._totalFramesPlayed++;
+        this._hasEverPlayed = true;
       }
     }
 
@@ -114,6 +156,7 @@ class PcmPlaybackProcessor extends AudioWorkletProcessor {
       this._underrunFading = true;
       this._underrunFadeSamplesLeft = this._UNDERRUN_FADE_SAMPLES;
       this._underrunFadeStart = this._lastSampleValue;
+      this._primed = false;
 
       for (let i = written; i < outChannel.length; i++) {
         if (this._underrunFadeSamplesLeft > 0) {
@@ -131,7 +174,6 @@ class PcmPlaybackProcessor extends AudioWorkletProcessor {
       }
 
       this._underrunCount++;
-      const now = currentTime;
       if (now - this._lastUnderrunReport > 2) {
         this._lastUnderrunReport = now;
         this.port.postMessage({
@@ -139,7 +181,6 @@ class PcmPlaybackProcessor extends AudioWorkletProcessor {
           count: this._underrunCount,
           bufferDepth: this._ringBuffer.length,
         });
-        this._underrunCount = 0;
       }
     }
 

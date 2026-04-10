@@ -1123,8 +1123,9 @@ class RadioAudioEngine(private val context: Context) {
         stateManager.txPipelineRunning = false
         stateManager.transitionTo(RadioState.IDLE, "tx_stopped")
         val cleanupMs = System.currentTimeMillis() - cleanupStart
-        Log.d(TAG, """{"event":"TX_STOPPED","cleanupMs":$cleanupMs,${txSessionStats.summaryJson()}}""")
-        Log.d(TAG, txSessionStats.summary() + " ${RadioDiagLog.elapsedTag()}")
+        val lastSendGapMs = if (lastSuccessfulSendMs > 0) System.currentTimeMillis() - lastSuccessfulSendMs else -1
+        Log.d(TAG, """{"event":"TX_STOPPED","cleanupMs":$cleanupMs,"lastSendGapMs":$lastSendGapMs,${txSessionStats.summaryJson()}}""")
+        Log.d(TAG, txSessionStats.summary() + " lastSendGapMs=$lastSendGapMs ${RadioDiagLog.elapsedTag()}")
         if (pendingCodecReset) {
             Log.d(TAG, "CODEC_RESET_EXECUTING_DEFERRED — performing codec reset deferred during TX")
             performCodecReset()
