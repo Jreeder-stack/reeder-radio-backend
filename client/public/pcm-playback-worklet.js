@@ -5,9 +5,7 @@ class PcmPlaybackProcessor extends AudioWorkletProcessor {
     this._currentFrame = null;
     this._offset = 0;
     this._primed = false;
-    this._hadUnderrun = false;
     this._PRE_BUFFER_FRAMES = 22;
-    this._REPRIME_FRAMES = 10;
     this._gain = 1.0;
     this._lastSampleValue = 0;
     this._underrunFading = false;
@@ -25,7 +23,6 @@ class PcmPlaybackProcessor extends AudioWorkletProcessor {
         this._currentFrame = null;
         this._offset = 0;
         this._primed = false;
-        this._hadUnderrun = false;
         this._lastSampleValue = 0;
         this._underrunFading = false;
         this._underrunFadeSamplesLeft = 0;
@@ -73,8 +70,7 @@ class PcmPlaybackProcessor extends AudioWorkletProcessor {
     }
 
     if (!this._primed) {
-      const threshold = this._hadUnderrun ? this._REPRIME_FRAMES : this._PRE_BUFFER_FRAMES;
-      if (this._ringBuffer.length < threshold) {
+      if (this._ringBuffer.length < this._PRE_BUFFER_FRAMES) {
         for (let i = 0; i < outChannel.length; i++) {
           outChannel[i] = 0;
         }
@@ -133,9 +129,6 @@ class PcmPlaybackProcessor extends AudioWorkletProcessor {
         this._underrunFading = false;
         this._lastSampleValue = 0;
       }
-
-      this._primed = false;
-      this._hadUnderrun = true;
 
       this._underrunCount++;
       const now = currentTime;
