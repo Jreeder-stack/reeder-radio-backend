@@ -5,8 +5,8 @@ class PcmPlaybackProcessor extends AudioWorkletProcessor {
     this._currentFrame = null;
     this._offset = 0;
     this._primed = false;
-    this._PRE_BUFFER_FRAMES = 22;
-    this._REPRIME_FRAMES = 4;
+    this._PRE_BUFFER_FRAMES = 50;
+    this._REPRIME_FRAMES = 25;
     this._gain = 1.0;
     this._lastSampleValue = 0;
     this._underrunFading = false;
@@ -15,6 +15,13 @@ class PcmPlaybackProcessor extends AudioWorkletProcessor {
     this._UNDERRUN_FADE_SAMPLES = 240;
     this._underrunCount = 0;
     this._lastUnderrunReport = 0;
+
+    this._LOW_WATER_MARK = 8;
+    this._HIGH_WATER_MARK = 60;
+    this._STRETCH_PERIOD = 48;
+    this._SKIP_PERIOD = 48;
+    this._stretchCounter = 0;
+    this._skipCounter = 0;
 
     this._totalFramesReceived = 0;
     this._totalFramesPlayed = 0;
@@ -120,6 +127,9 @@ class PcmPlaybackProcessor extends AudioWorkletProcessor {
     }
 
     let written = 0;
+    const bufferDepth = this._ringBuffer.length + (this._currentFrame ? 1 : 0);
+    const stretching = bufferDepth < this._LOW_WATER_MARK;
+    const compressing = bufferDepth > this._HIGH_WATER_MARK;
 
     while (written < outChannel.length) {
       if (!this._currentFrame) {
@@ -130,18 +140,38 @@ class PcmPlaybackProcessor extends AudioWorkletProcessor {
         this._offset = 0;
       }
 
-      const available = this._currentFrame.length - this._offset;
-      const needed = outChannel.length - written;
-      const count = Math.min(available, needed);
-
-      for (let i = 0; i < count; i++) {
-        let sample = (this._currentFrame[this._offset + i] / 32768) * gain;
+      while (written < outChannel.length && this._offset < this._currentFrame.length) {
+        let sample = (this._currentFrame[this._offset] / 32768) * gain;
         sample = this._softClip(sample);
-        outChannel[written + i] = sample;
-      }
+        outChannel[written] = sample;
+        written++;
 
-      written += count;
-      this._offset += count;
+        if (stretching) {
+          this._stretchCounter++;
+          if (this._stretchCounter >= this._STRETCH_PERIOD) {
+            this._stretchCounter = 0;
+            if (written < outChannel.length) {
+              outChannel[written] = sample;
+              written++;
+            }
+          }
+        } else {
+          this._stretchCounter = 0;
+        }
+
+        if (compressing) {
+          this._skipCounter++;
+          if (this._skipCounter >= this._SKIP_PERIOD) {
+            this._skipCounter = 0;
+            this._offset++;
+            if (this._offset >= this._currentFrame.length) break;
+          }
+        } else {
+          this._skipCounter = 0;
+        }
+
+        this._offset++;
+      }
 
       if (this._offset >= this._currentFrame.length) {
         this._lastSampleValue = (this._currentFrame[this._currentFrame.length - 1] / 32768) * gain;

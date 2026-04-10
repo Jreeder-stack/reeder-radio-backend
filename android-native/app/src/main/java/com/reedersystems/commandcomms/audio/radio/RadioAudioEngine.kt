@@ -12,6 +12,8 @@ import android.os.Build
 import android.util.Log
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
+import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.TimeUnit
 
 private const val TAG = "[RadioEngine]"
 private const val DEFAULT_MIC_SAMPLE_RATE = 48000
@@ -41,11 +43,15 @@ class RadioAudioEngine(private val context: Context) {
     private var audioRecord: AudioRecord? = null
     private var autoGainControl: AutomaticGainControl? = null
     private var captureJob: Job? = null
+    private var encodeJob: Job? = null
+    private var encodeQueue: LinkedBlockingQueue<ByteArray>? = null
     private var rxDiagJob: Job? = null
     @Volatile
     private var isTransmitting = false
     @Volatile
     private var pendingCodecReset = false
+    @Volatile
+    private var pendingDspReset = false
     @Volatile
     private var started = false
     @Volatile
@@ -137,6 +143,9 @@ class RadioAudioEngine(private val context: Context) {
         Log.e(TAG, """{"event":"FORCE_RESET_TRANSMIT_STATE","reason":"$reason"}""")
         captureJob?.cancel()
         captureJob = null
+        encodeJob?.cancel()
+        encodeJob = null
+        encodeQueue = null
         isTransmitting = false
         stopTxHeartbeatMonitor()
         isPreCapturing = false
@@ -587,11 +596,63 @@ class RadioAudioEngine(private val context: Context) {
             Log.d("[AudioCapture]", "PRE_CAPTURE_STARTED sampleRate=$actualSampleRate channelCount=$actualChannelCount frameMs=$CAPTURE_INTERVAL_MS frameSizeSamples=$actualFrameSizeSamples maxBufferFrames=$PRE_BUFFER_MAX_FRAMES ${RadioDiagLog.elapsedTag()}")
 
             val captureStartMs = System.currentTimeMillis()
+            val queue = LinkedBlockingQueue<ByteArray>(50)
+            encodeQueue = queue
+            val poisonPill = ByteArray(0)
+
+            encodeJob = scope.launch {
+                var frameCounter = 0
+                try {
+                    while (isActive) {
+                        val monoFrame = queue.poll(100, TimeUnit.MILLISECONDS)
+                        if (monoFrame == null) {
+                            if (!isPreCapturing && !isTransmitting) break
+                            continue
+                        }
+                        if (monoFrame.isEmpty()) break
+
+                        val encoded = opusCodec.encode(monoFrame)
+                        if (opusCodec.encoderReinitialized) {
+                            opusCodec.encoderReinitialized = false
+                            pendingDspReset = true
+                            Log.d("[AudioDSP]", "DSP_STATE_RESET_PENDING reason=encoder_reinitialized frame=$frameCounter ${RadioDiagLog.elapsedTag()}")
+                        }
+                        if (encoded != null) {
+                            if (opusCodec.lastEncodeWasPcmFallback) {
+                                txSessionStats.pcmFallbackFrames++
+                            }
+                            frameCounter++
+                            txSessionStats.framesEncoded++
+                            synchronized(preBufferLock) {
+                                if (preCapturingToBuffer) {
+                                    if (preBuffer.size >= PRE_BUFFER_MAX_FRAMES) {
+                                        preBuffer.removeFirst()
+                                    }
+                                    preBuffer.addLast(encoded)
+                                } else {
+                                    txSessionStats.packetsSent++
+                                    if (frameCounter == 1) {
+                                        val latencyMs = System.currentTimeMillis() - captureStartMs
+                                        Log.d(TAG, "LATENCY_FIRST_LIVE_TX_FRAME frame=$frameCounter latencyMs=$latencyMs ${RadioDiagLog.elapsedTag()}")
+                                    }
+                                    udpTransport.send(encoded)
+                                    lastSuccessfulSendMs = System.currentTimeMillis()
+                                }
+                            }
+                        } else {
+                            txSessionStats.failures++
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e("[RadioError]", "PRE_CAPTURE_ENCODE_LOOP_EXCEPTION ${e::class.simpleName}: ${e.message} method=preCaptureEncodeLoop", e)
+                }
+                Log.d(TAG, "ENCODE_THREAD_EXIT framesEncoded=${txSessionStats.framesEncoded} ${RadioDiagLog.elapsedTag()}")
+            }
+
             captureJob = scope.launch {
                 val readBuffer = ByteArray(actualFrameSizeBytes)
                 val pendingFrame = ByteArray(actualFrameSizeBytes)
                 var pendingBytes = 0
-                var frameCounter = 0
                 try {
                     while (isActive && (isPreCapturing || isTransmitting)) {
                         try {
@@ -630,6 +691,12 @@ class RadioAudioEngine(private val context: Context) {
                                             }
                                         }
 
+                                        if (pendingDspReset) {
+                                            pendingDspReset = false
+                                            resetDspState()
+                                            Log.d("[AudioDSP]", "DSP_STATE_RESET reason=encoder_reinitialized frame=${pcmReadRateLimiter.frameCount} ${RadioDiagLog.elapsedTag()}")
+                                        }
+
                                         dspRateLimiter.tick()
                                         val preStats = if (dspRateLimiter.shouldLogDetail()) RadioDiagLog.pcmStats(monoFrame, monoFrameSizeBytes) else null
 
@@ -643,30 +710,8 @@ class RadioAudioEngine(private val context: Context) {
                                             Log.d("[AudioDSP]", "DSP_FRAME frame=${dspRateLimiter.frameCount} pre=[$preStats] post=[$postStats] ${RadioDiagLog.elapsedTag()}")
                                         }
 
-                                        val encoded = opusCodec.encode(monoFrame)
-                                        if (encoded != null) {
-                                            if (opusCodec.lastEncodeWasPcmFallback) {
-                                                txSessionStats.pcmFallbackFrames++
-                                            }
-                                            frameCounter++
-                                            txSessionStats.framesEncoded++
-                                            synchronized(preBufferLock) {
-                                                if (preCapturingToBuffer) {
-                                                    if (preBuffer.size >= PRE_BUFFER_MAX_FRAMES) {
-                                                        preBuffer.removeFirst()
-                                                    }
-                                                    preBuffer.addLast(encoded)
-                                                } else {
-                                                    txSessionStats.packetsSent++
-                                                    if (frameCounter == 1) {
-                                                        val latencyMs = System.currentTimeMillis() - captureStartMs
-                                                        Log.d(TAG, "LATENCY_FIRST_LIVE_TX_FRAME frame=$frameCounter latencyMs=$latencyMs ${RadioDiagLog.elapsedTag()}")
-                                                    }
-                                                    udpTransport.send(encoded)
-                                                }
-                                            }
-                                        } else {
-                                            txSessionStats.failures++
+                                        if (!queue.offer(monoFrame)) {
+                                            Log.w("[AudioCapture]", "ENCODE_QUEUE_FULL dropping frame ${pcmReadRateLimiter.frameCount} ${RadioDiagLog.elapsedTag()}")
                                         }
                                         pendingBytes = 0
                                     }
@@ -690,6 +735,8 @@ class RadioAudioEngine(private val context: Context) {
                     Log.e("[RadioError]", "PRE_CAPTURE_LOOP_EXCEPTION ${e::class.simpleName}: ${e.message} method=preCaptureLoop", e)
                     txSessionStats.stopReason = "capture_loop_exception"
                 }
+                queue.clear()
+                queue.offer(poisonPill)
             }
             Log.d(TAG, "Pre-capture started — buffering audio (sampleRate=$actualSampleRate channels=$actualChannelCount buffer=$bufferSize) ${RadioDiagLog.elapsedTag()}")
             return true
@@ -756,6 +803,13 @@ class RadioAudioEngine(private val context: Context) {
             Log.w(TAG, """{"event":"CAPTURE_JOIN_TIMEOUT","caller":"stopPreCapture","timeoutMs":$CAPTURE_JOIN_TIMEOUT_MS}""")
         }
         captureJob = null
+        val encodeJoinResult = withTimeoutOrNull(CAPTURE_JOIN_TIMEOUT_MS) { encodeJob?.join() }
+        if (encodeJoinResult == null && encodeJob != null) {
+            Log.w(TAG, """{"event":"ENCODE_JOIN_TIMEOUT","caller":"stopPreCapture","timeoutMs":$CAPTURE_JOIN_TIMEOUT_MS}""")
+            encodeJob?.cancel()
+        }
+        encodeJob = null
+        encodeQueue = null
         synchronized(preBufferLock) {
             preCapturingToBuffer = false
         }
@@ -952,11 +1006,55 @@ class RadioAudioEngine(private val context: Context) {
 
             startTxHeartbeatMonitor()
 
+            val queue = LinkedBlockingQueue<ByteArray>(50)
+            encodeQueue = queue
+            val poisonPill = ByteArray(0)
+
+            encodeJob = scope.launch {
+                var frameCounter = 0
+                try {
+                    while (isActive) {
+                        val monoFrame = queue.poll(100, TimeUnit.MILLISECONDS)
+                        if (monoFrame == null) {
+                            if (!isTransmitting) break
+                            continue
+                        }
+                        if (monoFrame.isEmpty()) break
+
+                        val encoded = opusCodec.encode(monoFrame)
+                        if (opusCodec.encoderReinitialized) {
+                            opusCodec.encoderReinitialized = false
+                            pendingDspReset = true
+                            Log.d("[AudioDSP]", "DSP_STATE_RESET_PENDING reason=encoder_reinitialized frame=$frameCounter ${RadioDiagLog.elapsedTag()}")
+                        }
+                        if (encoded != null) {
+                            if (opusCodec.lastEncodeWasPcmFallback) {
+                                txSessionStats.pcmFallbackFrames++
+                            }
+                            frameCounter++
+                            txSessionStats.framesEncoded++
+                            txSessionStats.packetsSent++
+                            if (frameCounter == 1) {
+                                val latencyMs = System.currentTimeMillis() - txStartMs
+                                val monoFrameByteCount = actualFrameSizeSamples * 2
+                                Log.d(TAG, "LATENCY_FIRST_TX_FRAME_SENT frame=$frameCounter samplesPerFrame=$actualFrameSizeSamples pcmBytesToEncode=$monoFrameByteCount opusFrameSize=${opusCodec.encoderFrameSize} encodedBytes=${encoded.size} latencyMs=$latencyMs ${RadioDiagLog.elapsedTag()}")
+                            }
+                            udpTransport.send(encoded)
+                            lastSuccessfulSendMs = System.currentTimeMillis()
+                        } else {
+                            txSessionStats.failures++
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e("[RadioError]", "TX_ENCODE_LOOP_EXCEPTION ${e::class.simpleName}: ${e.message} method=txEncodeLoop", e)
+                }
+                Log.d(TAG, "TX_ENCODE_THREAD_EXIT framesEncoded=${txSessionStats.framesEncoded} ${RadioDiagLog.elapsedTag()}")
+            }
+
             captureJob = scope.launch {
                 val readBuffer = ByteArray(actualFrameSizeBytes)
                 val pendingFrame = ByteArray(actualFrameSizeBytes)
                 var pendingBytes = 0
-                var frameCounter = 0
                 try {
                     while (isActive && isTransmitting) {
                         try {
@@ -995,6 +1093,12 @@ class RadioAudioEngine(private val context: Context) {
                                             }
                                         }
 
+                                        if (pendingDspReset) {
+                                            pendingDspReset = false
+                                            resetDspState()
+                                            Log.d("[AudioDSP]", "DSP_STATE_RESET reason=encoder_reinitialized frame=${pcmReadRateLimiter.frameCount} ${RadioDiagLog.elapsedTag()}")
+                                        }
+
                                         dspRateLimiter.tick()
                                         val preStats = if (dspRateLimiter.shouldLogDetail()) RadioDiagLog.pcmStats(monoFrame, monoFrameSizeBytes) else null
 
@@ -1008,28 +1112,8 @@ class RadioAudioEngine(private val context: Context) {
                                             Log.d("[AudioDSP]", "DSP_FRAME frame=${dspRateLimiter.frameCount} pre=[$preStats] post=[$postStats] ${RadioDiagLog.elapsedTag()}")
                                         }
 
-                                        val encoded = opusCodec.encode(monoFrame)
-                                        if (opusCodec.encoderReinitialized) {
-                                            opusCodec.encoderReinitialized = false
-                                            resetDspState()
-                                            Log.d("[AudioDSP]", "DSP_STATE_RESET reason=encoder_reinitialized frame=${pcmReadRateLimiter.frameCount} ${RadioDiagLog.elapsedTag()}")
-                                        }
-                                        if (encoded != null) {
-                                            if (opusCodec.lastEncodeWasPcmFallback) {
-                                                txSessionStats.pcmFallbackFrames++
-                                            }
-                                            frameCounter++
-                                            txSessionStats.framesEncoded++
-                                            txSessionStats.packetsSent++
-                                            if (frameCounter == 1) {
-                                                val latencyMs = System.currentTimeMillis() - txStartMs
-                                                val monoFrameByteCount = actualFrameSizeSamples * 2
-                                                Log.d(TAG, "LATENCY_FIRST_TX_FRAME_SENT frame=$frameCounter samplesPerFrame=$actualFrameSizeSamples pcmBytesToEncode=$monoFrameByteCount opusFrameSize=${opusCodec.encoderFrameSize} encodedBytes=${encoded.size} latencyMs=$latencyMs ${RadioDiagLog.elapsedTag()}")
-                                            }
-                                            udpTransport.send(encoded)
-                                            lastSuccessfulSendMs = System.currentTimeMillis()
-                                        } else {
-                                            txSessionStats.failures++
+                                        if (!queue.offer(monoFrame)) {
+                                            Log.w("[AudioCapture]", "ENCODE_QUEUE_FULL dropping frame ${pcmReadRateLimiter.frameCount} ${RadioDiagLog.elapsedTag()}")
                                         }
                                         pendingBytes = 0
                                     }
@@ -1053,6 +1137,8 @@ class RadioAudioEngine(private val context: Context) {
                     Log.e("[RadioError]", "TX_CAPTURE_LOOP_EXCEPTION ${e::class.simpleName}: ${e.message} method=captureLoop", e)
                     txSessionStats.stopReason = "capture_loop_exception"
                 }
+                queue.clear()
+                queue.offer(poisonPill)
             }
             Log.d(TAG, "TX started — audio capture active (sampleRate=$actualSampleRate channels=$actualChannelCount buffer=$bufferSize bitrate=${OpusCodec.BITRATE}) ${RadioDiagLog.elapsedTag()}")
             return true
@@ -1105,6 +1191,14 @@ class RadioAudioEngine(private val context: Context) {
             Log.w(TAG, """{"event":"CAPTURE_JOIN_TIMEOUT","caller":"stopTransmit","timeoutMs":$CAPTURE_JOIN_TIMEOUT_MS}""")
         }
         captureJob = null
+        encodeQueue?.clear()
+        val encodeJoinResult = withTimeoutOrNull(CAPTURE_JOIN_TIMEOUT_MS) { encodeJob?.join() }
+        if (encodeJoinResult == null && encodeJob != null) {
+            Log.w(TAG, """{"event":"ENCODE_JOIN_TIMEOUT","caller":"stopTransmit","timeoutMs":$CAPTURE_JOIN_TIMEOUT_MS}""")
+            encodeJob?.cancel()
+        }
+        encodeJob = null
+        encodeQueue = null
         resetDspState()
         try {
             autoGainControl?.release()
