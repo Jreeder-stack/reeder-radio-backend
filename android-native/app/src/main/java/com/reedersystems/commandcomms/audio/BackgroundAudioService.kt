@@ -527,8 +527,8 @@ class BackgroundAudioService : Service() {
                         } else {
                             Log.e(TAG, "Radio TX: promote/startTransmit failed after floor granted")
                             engine.stopPreCapture()
-                            Log.d("[ToneEvent]", """{"tone":"error","trigger":"floor_granted_tx_fail","state":"$pttState","ts":${System.currentTimeMillis()}}""")
-                            app.toneEngine.playErrorTone()
+                            Log.d("[ToneEvent]", """{"tone":"denied","trigger":"floor_granted_tx_fail","state":"$pttState","ts":${System.currentTimeMillis()}}""")
+                            app.toneEngine.startDeniedTone()
                             transitionPttState(PttState.IDLE)
                             updateNotification("Radio — Standby")
                             sendPttTxFailed()
@@ -541,8 +541,8 @@ class BackgroundAudioService : Service() {
                         preCaptureSetupJob?.join()
                         preCaptureSetupJob = null
                         engine.stopPreCapture()
-                        Log.d("[ToneEvent]", """{"tone":"busy","trigger":"floor_denied","state":"$pttState","ts":${System.currentTimeMillis()}}""")
-                        app.toneEngine.playBusyTone()
+                        Log.d("[ToneEvent]", """{"tone":"denied","trigger":"floor_denied","state":"$pttState","ts":${System.currentTimeMillis()}}""")
+                        app.toneEngine.startDeniedTone()
                         transitionPttState(PttState.IDLE)
                         updateNotification("Radio — Standby")
                         sendPttTxFailed()
@@ -611,9 +611,9 @@ class BackgroundAudioService : Service() {
                     is SignalingEvent.TxSilenceWarning -> {
                         val selfUnitId = servicePrefs.unitId ?: app.sessionPrefs.unitId
                         if (event.unitId == selfUnitId) {
-                            Log.e(TAG, "TX_SILENCE_WARNING_FROM_SERVER channelId=${event.channelId} silenceMs=${event.silenceMs} — playing error tone and stopping TX")
-                            Log.d("[ToneEvent]", """{"tone":"error","trigger":"tx_silence_warning","channelId":"${event.channelId}","silenceMs":${event.silenceMs},"state":"$pttState","ts":${System.currentTimeMillis()}}""")
-                            app.toneEngine.playErrorTone()
+                            Log.e(TAG, "TX_SILENCE_WARNING_FROM_SERVER channelId=${event.channelId} silenceMs=${event.silenceMs} — playing denied tone and stopping TX")
+                            Log.d("[ToneEvent]", """{"tone":"denied","trigger":"tx_silence_warning","channelId":"${event.channelId}","silenceMs":${event.silenceMs},"state":"$pttState","ts":${System.currentTimeMillis()}}""")
+                            app.toneEngine.startDeniedTone()
                             transitionPttState(PttState.IDLE)
                             updateNotification("Radio — TX Silence Warning")
                             try {
@@ -667,6 +667,20 @@ class BackgroundAudioService : Service() {
             return
         }
 
+        val stateManager = radioEngine?.stateManager
+        val transmittingUnit = stateManager?.transmittingUnitId?.value
+        val selfUnitId = servicePrefs.unitId ?: app.sessionPrefs.unitId
+        val radioState = stateManager?.currentState
+        val channelBusy = (transmittingUnit != null && transmittingUnit != selfUnitId) ||
+            radioState == RadioState.CHANNEL_BUSY ||
+            radioState == RadioState.RECEIVING
+        if (channelBusy) {
+            Log.w(TAG, """{"event":"RADIO_PTT_DOWN_CHANNEL_BUSY","transmittingUnit":"$transmittingUnit","radioState":"$radioState"}""")
+            Log.d("[ToneEvent]", """{"tone":"denied","trigger":"channel_busy","transmittingUnit":"$transmittingUnit","radioState":"$radioState","state":"$pttState","ts":${System.currentTimeMillis()}}""")
+            app.toneEngine.startDeniedTone()
+            return
+        }
+
         pttUpWhileConnecting = false
         needsSignaling = signaling
 
@@ -697,8 +711,8 @@ class BackgroundAudioService : Service() {
                 val (ready, blockedReason) = evaluateReadinessForPtt(signaling, roomKey)
                 if (!ready) {
                     Log.w(TAG, "RADIO_READY_BLOCKED_REASON reason=$blockedReason")
-                    Log.d("[ToneEvent]", """{"tone":"error","trigger":"ready_blocked","reason":"$blockedReason","state":"$pttState","ts":${System.currentTimeMillis()}}""")
-                    app.toneEngine.playErrorTone()
+                    Log.d("[ToneEvent]", """{"tone":"denied","trigger":"ready_blocked","reason":"$blockedReason","state":"$pttState","ts":${System.currentTimeMillis()}}""")
+                    app.toneEngine.startDeniedTone()
                     transitionPttState(PttState.IDLE)
                     updateNotification("Radio — Standby")
                     sendPttTxFailed()
@@ -733,8 +747,8 @@ class BackgroundAudioService : Service() {
                 preCaptureSetupJob?.join()
                 preCaptureSetupJob = null
                 engine.stopPreCapture()
-                Log.d("[ToneEvent]", """{"tone":"error","trigger":"signaling_not_ready","state":"$pttState","ts":${System.currentTimeMillis()}}""")
-                app.toneEngine.playErrorTone()
+                Log.d("[ToneEvent]", """{"tone":"denied","trigger":"signaling_not_ready","state":"$pttState","ts":${System.currentTimeMillis()}}""")
+                app.toneEngine.startDeniedTone()
                 transitionPttState(PttState.IDLE)
                 updateNotification("Radio — Standby")
                 sendPttTxFailed()
@@ -766,6 +780,8 @@ class BackgroundAudioService : Service() {
     private fun handleRadioPttUp() {
         val channelKey = servicePrefs.channelRoomKey
         Log.d(TAG, """{"event":"RADIO_PTT_UP","pttState":"$pttState","channelKey":"${channelKey ?: "none"}"}""")
+
+        app.toneEngine.stopDeniedTone()
 
         pttUpWhileConnecting = true
 
@@ -800,11 +816,9 @@ class BackgroundAudioService : Service() {
                 radioEngine?.floorControl?.releaseFloor(roomKey)
                 Log.d(TAG, """{"event":"PTT_RELEASE_SENT","channelId":"$roomKey"}""")
                 sendPttTxEnded()
-                if (wasSignaling) {
-                    Log.d("[ToneEvent]", """{"tone":"end-of-tx","trigger":"ptt_up","state":"$pttState","ts":${System.currentTimeMillis()}}""")
-                    app.toneEngine.playEndOfTxTone()
-                    Log.d(TAG, "Radio PTT UP: end-of-TX tone for roomKey $roomKey")
-                }
+                Log.d("[ToneEvent]", """{"tone":"end-of-tx","trigger":"ptt_up","state":"$pttState","signaling":$wasSignaling,"ts":${System.currentTimeMillis()}}""")
+                app.toneEngine.playEndOfTxTone()
+                Log.d(TAG, "Radio PTT UP: end-of-TX tone for roomKey $roomKey")
             } catch (e: Exception) {
                 Log.e(TAG, """{"event":"PTT_CLEANUP_ERROR","error":"${e::class.simpleName}","message":"${e.message}"}""")
             } finally {
@@ -904,8 +918,8 @@ class BackgroundAudioService : Service() {
                 preCaptureSetupJob?.join()
                 preCaptureSetupJob = null
                 radioEngine?.stopPreCapture()
-                Log.d("[ToneEvent]", """{"tone":"busy","trigger":"floor_response_timeout","channelId":"$roomKey","state":"$pttState","ts":${System.currentTimeMillis()}}""")
-                app.toneEngine.playBusyTone()
+                Log.d("[ToneEvent]", """{"tone":"denied","trigger":"floor_response_timeout","channelId":"$roomKey","state":"$pttState","ts":${System.currentTimeMillis()}}""")
+                app.toneEngine.startDeniedTone()
                 transitionPttState(PttState.IDLE)
                 updateNotification("Radio — Standby")
                 sendPttTxFailed()

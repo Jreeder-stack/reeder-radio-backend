@@ -357,7 +357,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         }
         if (state.activeTransmittingUnit != null && state.activeTransmittingUnit != state.unitId) {
             Log.w(TAG, "PTT DOWN: channel busy — unit=${state.activeTransmittingUnit}")
-            app.toneEngine.playBusyTone()
+            app.toneEngine.startDeniedTone()
             return
         }
         Log.d(TAG, "onPttDown roomKey=${channel.roomKey}")
@@ -370,6 +370,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun onPttUp() {
+        app.toneEngine.stopDeniedTone()
         val state = _uiState.value
         if (state.pttState == PttState.IDLE) return
         pttStartJob?.cancel()

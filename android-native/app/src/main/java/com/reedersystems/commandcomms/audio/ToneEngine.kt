@@ -22,6 +22,11 @@ class ToneEngine(private val context: Context) {
     private var busyTrack: AudioTrack? = null
     private var beepTrack: AudioTrack? = null
     private val beepTrackLock = Any()
+    private var deniedPlayer: MediaPlayer? = null
+    private val deniedLock = Any()
+    private var talkPermitJob: Job? = null
+    private var talkPermitPlayer: MediaPlayer? = null
+    private val talkPermitLock = Any()
 
     init {
         initBeepTrack()
@@ -49,8 +54,21 @@ class ToneEngine(private val context: Context) {
     }
 
     fun playTalkPermitTone() {
-        scope.launch(Dispatchers.Main.immediate) {
+        talkPermitJob?.cancel()
+        talkPermitJob = scope.launch(Dispatchers.Main.immediate) {
             playTalkPermitToneAndAwait()
+        }
+    }
+
+    fun stopTalkPermitTone() {
+        talkPermitJob?.cancel()
+        talkPermitJob = null
+        synchronized(talkPermitLock) {
+            talkPermitPlayer?.let { mp ->
+                runCatching { mp.stop() }
+                runCatching { mp.release() }
+            }
+            talkPermitPlayer = null
         }
     }
 
@@ -75,7 +93,9 @@ class ToneEngine(private val context: Context) {
                 )
             }
             if (mp != null) {
+                synchronized(talkPermitLock) { talkPermitPlayer = mp }
                 mp.setOnCompletionListener {
+                    synchronized(talkPermitLock) { talkPermitPlayer = null }
                     it.release()
                     deferred.complete(Unit)
                 }
@@ -83,6 +103,7 @@ class ToneEngine(private val context: Context) {
                 try {
                     deferred.await()
                 } catch (e: CancellationException) {
+                    synchronized(talkPermitLock) { talkPermitPlayer = null }
                     runCatching { mp.stop() }
                     runCatching { mp.release() }
                     throw e
@@ -121,6 +142,42 @@ class ToneEngine(private val context: Context) {
                 delay(200L)
             }
             busyJob = null
+        }
+    }
+
+    fun startDeniedTone() {
+        stopTalkPermitTone()
+        stopDeniedTone()
+        synchronized(deniedLock) {
+            try {
+                val mp = MediaPlayer.create(
+                    context,
+                    R.raw.apx_denied,
+                    audioAttribs(),
+                    AudioManager.AUDIO_SESSION_ID_GENERATE
+                )
+                if (mp != null) {
+                    mp.isLooping = true
+                    mp.start()
+                    deniedPlayer = mp
+                    Log.d(TAG, "Denied tone started (looping)")
+                } else {
+                    Log.w(TAG, "Failed to create denied tone MediaPlayer")
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to start denied tone: ${e.message}")
+            }
+        }
+    }
+
+    fun stopDeniedTone() {
+        synchronized(deniedLock) {
+            deniedPlayer?.let { mp ->
+                runCatching { mp.stop() }
+                runCatching { mp.release() }
+                Log.d(TAG, "Denied tone stopped")
+            }
+            deniedPlayer = null
         }
     }
 
@@ -259,6 +316,8 @@ class ToneEngine(private val context: Context) {
 
     fun release() {
         stopBusyTone()
+        stopDeniedTone()
+        stopTalkPermitTone()
         stopCountdownBeep()
         synchronized(beepTrackLock) {
             try { beepTrack?.stop() } catch (_: Exception) {}
