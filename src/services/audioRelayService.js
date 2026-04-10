@@ -20,6 +20,7 @@ const WS_PACING_INTERVAL_MS = 20;
 const WS_PACING_MAX_QUEUE = 25;
 const PCM_FRAME_SAMPLES = 960;
 const WS_BINARY_MARKER = 0x01;
+const PLC_MAX_CONSECUTIVE = 3;
 
 class AudioRelayService {
   constructor() {
@@ -34,6 +35,9 @@ class AudioRelayService {
     this._channelKeyByNumeric = new Map();
     this._wsPacingQueues = new Map();
     this._wsPacingTimers = new Map();
+    this._wsPacingDriftState = new Map();
+    this._senderLastSeq = new Map();
+    this._senderLastSeqTime = new Map();
     this._zeroChannelWarnTimes = new Map();
   }
 
@@ -85,8 +89,14 @@ class AudioRelayService {
           this._wsPacingQueues.delete(existingKey);
         }
         if (this._wsPacingTimers.has(existingKey)) {
-          clearInterval(this._wsPacingTimers.get(existingKey));
+          clearTimeout(this._wsPacingTimers.get(existingKey));
           this._wsPacingTimers.delete(existingKey);
+        }
+        this._wsPacingDriftState.delete(existingKey);
+        const migratedQueue = this._wsPacingQueues.get(key);
+        if (migratedQueue && migratedQueue.length > 0 && !this._wsPacingTimers.has(key)) {
+          this._wsPacingDriftState.set(key, { nextTick: Date.now() + WS_PACING_INTERVAL_MS });
+          this._schedulePacingTick(key);
         }
         this._channelNumericByKey.delete(existingKey);
       }
@@ -355,28 +365,52 @@ class AudioRelayService {
     queue.push({ senderUnitId, packetBuf });
 
     if (!this._wsPacingTimers.has(channelKey)) {
-      const timer = setInterval(() => this._drainWsQueue(channelKey), WS_PACING_INTERVAL_MS);
-      this._wsPacingTimers.set(channelKey, timer);
+      this._wsPacingDriftState.set(channelKey, { nextTick: Date.now() + WS_PACING_INTERVAL_MS });
+      this._schedulePacingTick(channelKey);
     }
+  }
+
+  _schedulePacingTick(channelKey) {
+    const drift = this._wsPacingDriftState.get(channelKey);
+    if (!drift) return;
+    const now = Date.now();
+    const delay = Math.max(1, drift.nextTick - now);
+    const timer = setTimeout(() => this._drainWsQueue(channelKey), delay);
+    this._wsPacingTimers.set(channelKey, timer);
   }
 
   _drainWsQueue(channelKey) {
     const queue = this._wsPacingQueues.get(channelKey);
     if (!queue || queue.length === 0) {
-      const timer = this._wsPacingTimers.get(channelKey);
-      if (timer) {
-        clearInterval(timer);
-        this._wsPacingTimers.delete(channelKey);
-      }
+      this._wsPacingTimers.delete(channelKey);
+      this._wsPacingDriftState.delete(channelKey);
       this._wsPacingQueues.delete(channelKey);
       return;
     }
 
+    const drift = this._wsPacingDriftState.get(channelKey);
+    if (drift) {
+      drift.nextTick += WS_PACING_INTERVAL_MS;
+      const now = Date.now();
+      if (drift.nextTick < now - WS_PACING_INTERVAL_MS * 3) {
+        drift.nextTick = now + WS_PACING_INTERVAL_MS;
+      }
+    }
+
     const frame = queue.shift();
     const wsSubs = this._wsSubscribers.get(channelKey);
-    if (!wsSubs) return;
 
     let wsSentCount = 0;
+    if (!wsSubs) {
+      if (queue.length > 0) {
+        this._schedulePacingTick(channelKey);
+      } else {
+        this._wsPacingTimers.delete(channelKey);
+        this._wsPacingDriftState.delete(channelKey);
+        this._wsPacingQueues.delete(channelKey);
+      }
+      return;
+    }
     for (const [subUnitId, ws] of wsSubs) {
       if (subUnitId === frame.senderUnitId) continue;
       try {
@@ -390,6 +424,14 @@ class AudioRelayService {
     }
     if (AUDIO_DIAG && wsSentCount > 0 && queue.length % 50 === 0) {
       console.log(`[AudioRelay] WS_RELAY channelKey=${channelKey} sender=${frame.senderUnitId} recipients=${wsSentCount} queueRemaining=${queue.length}`);
+    }
+
+    if (queue.length > 0) {
+      this._schedulePacingTick(channelKey);
+    } else {
+      this._wsPacingTimers.delete(channelKey);
+      this._wsPacingDriftState.delete(channelKey);
+      this._wsPacingQueues.delete(channelKey);
     }
   }
 
@@ -431,9 +473,10 @@ class AudioRelayService {
       this._sweepTimer = null;
     }
     for (const [, timer] of this._wsPacingTimers) {
-      clearInterval(timer);
+      clearTimeout(timer);
     }
     this._wsPacingTimers.clear();
+    this._wsPacingDriftState.clear();
     this._wsPacingQueues.clear();
     if (this.socket) {
       this.socket.close();
@@ -448,6 +491,12 @@ class AudioRelayService {
         if (now - sub.lastSeen > SUBSCRIBER_TIMEOUT_MS) subs.delete(unitId);
       }
       if (subs.size === 0) this.subscribers.delete(channelId);
+    }
+    for (const [key, ts] of this._senderLastSeqTime) {
+      if (now - ts > SUBSCRIBER_TIMEOUT_MS) {
+        this._senderLastSeq.delete(key);
+        this._senderLastSeqTime.delete(key);
+      }
     }
   }
 
@@ -480,6 +529,37 @@ class AudioRelayService {
     }
 
     const resolvedChannelId = this._resolveChannelIdNumeric({ channelKey, channelIdNumeric });
+
+    const senderSeqKey = `${channelKey}::${senderUnitId}`;
+    const lastSeqEntry = this._senderLastSeq.get(senderSeqKey);
+    const seqForward = lastSeqEntry !== undefined ? ((sequence - lastSeqEntry) & 0xFFFF) : 0;
+    const isForward = lastSeqEntry === undefined || (seqForward > 0 && seqForward < 0x8000);
+    if (isForward && lastSeqEntry !== undefined) {
+      if (seqForward > 1 && seqForward <= PLC_MAX_CONSECUTIVE + 1) {
+        for (let i = 1; i < seqForward; i++) {
+          const plcSeq = (lastSeqEntry + i) & 0xFFFF;
+          try {
+            const plcPcm = opusCodec.decodePlc(senderUnitId);
+            const int16View = new Int16Array(plcPcm.buffer, plcPcm.byteOffset, plcPcm.byteLength / 2);
+            const wsSubs = this._wsSubscribers.get(channelKey);
+            if (wsSubs && wsSubs.size > 0) {
+              const binaryFrame = this._buildBinaryWsFrame(plcSeq, channelKey, senderUnitId, int16View);
+              this._enqueueWsFrame(channelKey, senderUnitId, binaryFrame);
+            }
+            if (AUDIO_DIAG) {
+              console.log(`[AudioRelay] PLC_FRAME channelKey=${channelKey} sender=${senderUnitId} plcSeq=${plcSeq}`);
+            }
+          } catch (err) {
+            console.warn(`[AudioRelay] PLC_ERROR sender=${senderUnitId} seq=${plcSeq}: ${err.message}`);
+          }
+        }
+      }
+      this._senderLastSeq.set(senderSeqKey, sequence);
+      this._senderLastSeqTime.set(senderSeqKey, Date.now());
+    } else if (lastSeqEntry === undefined) {
+      this._senderLastSeq.set(senderSeqKey, sequence);
+      this._senderLastSeqTime.set(senderSeqKey, Date.now());
+    }
 
     const rxPayload = this._buildRelayPacket({
       channelKey,

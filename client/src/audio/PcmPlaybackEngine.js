@@ -56,10 +56,8 @@ export class PcmPlaybackEngine {
         const count = Math.min(available, needed);
 
         for (let i = 0; i < count; i++) {
-          let sample = (current[this._fallbackOffset + i] / 32768) * 1.5;
-          if (sample > 0.8 || sample < -0.8) {
-            sample = Math.tanh(sample);
-          }
+          let sample = (current[this._fallbackOffset + i] / 32768) * 1.0;
+          sample = sample / (1.0 + Math.abs(sample));
           output[written + i] = sample;
         }
 

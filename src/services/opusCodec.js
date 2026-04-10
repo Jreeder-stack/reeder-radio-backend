@@ -3,7 +3,7 @@ import OpusScript from 'opusscript';
 const SAMPLE_RATE = 48000;
 const CHANNELS = 1;
 const FRAME_SIZE = 960;
-const SENDER_DECODER_IDLE_MS = 10000;
+const SENDER_DECODER_IDLE_MS = 30000;
 
 class OpusCodecPool {
   constructor() {
@@ -110,6 +110,18 @@ class OpusCodecPool {
       return frames;
     } finally {
       this.releaseEncoder(encoder);
+    }
+  }
+
+  decodePlc(senderId) {
+    const decoder = this.acquireSenderDecoder(senderId);
+    try {
+      const decoded = decoder.decode(null);
+      return Buffer.from(decoded);
+    } catch (e) {
+      console.warn(`[OpusCodec] PLC decode error for ${senderId}:`, e.message);
+      const silence = Buffer.alloc(FRAME_SIZE * 2);
+      return silence;
     }
   }
 
