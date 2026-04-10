@@ -1,0 +1,104 @@
+22:13:20 [1m[90m[TAILING] Tailing last 50 lines for [all] processes (change the value with --lines option)[39m[22m
+22:13:20 [90m/home/Jreeder5029/.pm2/logs/command-comms-error.log last 50 lines:[39m
+22:13:20   error: 'start offset of Int16Array should be a multiple of 2'
+22:13:20 }
+22:13:20 WS_TO_UDP_RELAY_ERROR {
+22:13:20   channelId: 'DISPATCH__DISPATCH',
+22:13:20   senderUnitId: 'DISPATCH-1',
+22:13:20   sequence: 1415,
+22:13:20   error: 'start offset of Int16Array should be a multiple of 2'
+22:13:20 }
+22:13:20 WS_TO_UDP_RELAY_ERROR {
+22:13:20   channelId: 'DISPATCH__DISPATCH',
+22:13:20   senderUnitId: 'DISPATCH-1',
+22:13:20   sequence: 1416,
+22:13:20   error: 'start offset of Int16Array should be a multiple of 2'
+22:13:20 }
+22:13:20 WS_TO_UDP_RELAY_ERROR {
+22:13:20   channelId: 'DISPATCH__DISPATCH',
+22:13:20   senderUnitId: 'DISPATCH-1',
+22:13:20   sequence: 1417,
+22:13:20   error: 'start offset of Int16Array should be a multiple of 2'
+22:13:20 }
+22:13:20 WS_TO_UDP_RELAY_ERROR {
+22:13:20   channelId: 'DISPATCH__DISPATCH',
+22:13:20   senderUnitId: 'DISPATCH-1',
+22:13:20   sequence: 1418,
+22:13:20   error: 'start offset of Int16Array should be a multiple of 2'
+22:13:20 }
+22:13:20 WS_TO_UDP_RELAY_ERROR {
+22:13:20   channelId: 'DISPATCH__DISPATCH',
+22:13:20   senderUnitId: 'DISPATCH-1',
+22:13:20   sequence: 1419,
+22:13:20   error: 'start offset of Int16Array should be a multiple of 2'
+22:13:20 }
+22:13:20 WS_TO_UDP_RELAY_ERROR {
+22:13:20   channelId: 'DISPATCH__DISPATCH',
+22:13:20   senderUnitId: 'DISPATCH-1',
+22:13:20   sequence: 1420,
+22:13:20   error: 'start offset of Int16Array should be a multiple of 2'
+22:13:20 }
+22:13:20 WS_TO_UDP_RELAY_ERROR {
+22:13:20   channelId: 'DISPATCH__DISPATCH',
+22:13:20   senderUnitId: 'DISPATCH-1',
+22:13:20   sequence: 1421,
+22:13:20   error: 'start offset of Int16Array should be a multiple of 2'
+22:13:20 }
+22:13:20 WS_TO_UDP_RELAY_ERROR {
+22:13:20   channelId: 'DISPATCH__DISPATCH',
+22:13:20   senderUnitId: 'DISPATCH-1',
+22:13:20   sequence: 1422,
+22:13:20   error: 'start offset of Int16Array should be a multiple of 2'
+22:13:20 }
+22:13:20 [90m/home/Jreeder5029/.pm2/logs/command-comms-out.log last 50 lines:[39m
+22:13:20 [Signaling] DISPATCH-1 left channel DISPATCH__DISPATCH
+22:13:20 [Signaling] DISPATCH-1 joined channel TESTING__TESTING 1
+22:13:20 [Signaling] DISPATCH-1 joined channel DISPATCH__DISPATCH
+22:13:20 [Signaling] PTT START request: unitId=DISPATCH-1 channelId=DISPATCH__DISPATCH
+22:13:20 [FloorControl] requestFloor: raw="DISPATCH__DISPATCH" canonical="DISPATCH__DISPATCH" unitId="DISPATCH-1"
+22:13:20 [AI-Dispatcher] PTT_START callback matched: channelId=DISPATCH__DISPATCH, unitId=DISPATCH-1
+22:13:20 [AI-Dispatcher-Signaling] 2026-04-10T02:13:04.842Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"DISPATCH-1","isEmergency":false}
+22:13:20 [Signaling] PTT_READY sent for DISPATCH-1 on DISPATCH__DISPATCH
+22:13:20 [AI-Dispatcher-Signaling] 2026-04-10T02:13:04.842Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"DISPATCH-1","alreadyConnected":true}
+22:13:20 [Signaling] PTT START granted: DISPATCH-1 on DISPATCH__DISPATCH (floor granted for holdsFloor check)
+22:13:20 [RecordingTap] TX recording started: unit=DISPATCH-1 channel=DISPATCH__DISPATCH
+22:13:20 [Signaling] KEEPALIVE_OK unitId=ADMIN channelKey=DISPATCH__DISPATCH addr=12.75.146.17:31921
+22:13:20 [RecordingTap] Finalizing recording: unit=DISPATCH-1 channel=DISPATCH__DISPATCH frames=9 duration=1742ms
+22:13:20 [RecordingTap] Audio message saved: id=2329 channel=DISPATCH__DISPATCH sender=DISPATCH-1 duration=1742ms
+22:13:20 [AI-Dispatcher-Signaling] 2026-04-10T02:13:10.325Z | PTT_END_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"DISPATCH-1"}
+22:13:20 [Signaling] PTT END: DISPATCH-1 on DISPATCH__DISPATCH (5483ms)
+22:13:20 [OpusCodec] Idle decoder swept for sender=ADMIN
+22:13:20 [Signaling] PTT START request: unitId=DISPATCH-1 channelId=DISPATCH__DISPATCH
+22:13:20 [FloorControl] requestFloor: raw="DISPATCH__DISPATCH" canonical="DISPATCH__DISPATCH" unitId="DISPATCH-1"
+22:13:20 [AI-Dispatcher] PTT_START callback matched: channelId=DISPATCH__DISPATCH, unitId=DISPATCH-1
+22:13:20 [AI-Dispatcher-Signaling] 2026-04-10T02:13:11.147Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"DISPATCH-1","isEmergency":false}
+22:13:20 [Signaling] PTT_READY sent for DISPATCH-1 on DISPATCH__DISPATCH
+22:13:20 [AI-Dispatcher-Signaling] 2026-04-10T02:13:11.147Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"DISPATCH-1","alreadyConnected":true}
+22:13:20 [Signaling] PTT START granted: DISPATCH-1 on DISPATCH__DISPATCH (floor granted for holdsFloor check)
+22:13:20 [RecordingTap] TX recording started: unit=DISPATCH-1 channel=DISPATCH__DISPATCH
+22:13:20 [AI-Dispatcher-Signaling] 2026-04-10T02:13:13.127Z | PTT_END_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"DISPATCH-1"}
+22:13:20 [Signaling] PTT END: DISPATCH-1 on DISPATCH__DISPATCH (1979ms)
+22:13:20 [Signaling] Grace period ended for DISPATCH__DISPATCH
+22:13:20 [RecordingTap] Skipping short TX (23ms < 100ms): unit=DISPATCH-1 channel=DISPATCH__DISPATCH
+22:13:20 [Signaling] PTT START request: unitId=DISPATCH-1 channelId=DISPATCH__DISPATCH
+22:13:20 [FloorControl] requestFloor: raw="DISPATCH__DISPATCH" canonical="DISPATCH__DISPATCH" unitId="DISPATCH-1"
+22:13:20 [AI-Dispatcher] PTT_START callback matched: channelId=DISPATCH__DISPATCH, unitId=DISPATCH-1
+22:13:20 [AI-Dispatcher-Signaling] 2026-04-10T02:13:13.917Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"DISPATCH-1","isEmergency":false}
+22:13:20 [Signaling] PTT_READY sent for DISPATCH-1 on DISPATCH__DISPATCH
+22:13:20 [AI-Dispatcher-Signaling] 2026-04-10T02:13:13.917Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"DISPATCH-1","alreadyConnected":true}
+22:13:20 [Signaling] PTT START granted: DISPATCH-1 on DISPATCH__DISPATCH (floor granted for holdsFloor check)
+22:13:20 [RecordingTap] TX recording started: unit=DISPATCH-1 channel=DISPATCH__DISPATCH
+22:13:20 [AI-Dispatcher-Signaling] 2026-04-10T02:13:16.105Z | PTT_END_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"DISPATCH-1"}
+22:13:20 [Signaling] PTT END: DISPATCH-1 on DISPATCH__DISPATCH (2187ms)
+22:13:20 [Signaling] Grace period ended for DISPATCH__DISPATCH
+22:13:20 [RecordingTap] Skipping short TX (16ms < 100ms): unit=DISPATCH-1 channel=DISPATCH__DISPATCH
+22:13:20 [Signaling] DISPATCH-1 left channel TESTING__TESTING 1
+22:13:20 [Signaling] DISPATCH-1 left channel DISPATCH__DISPATCH
+22:13:20 [API] GET /api/admin/users | user=DISPATCH-1(id:7) | sid=iuTeYwvS... | 200 | 17ms
+22:13:20 [API] GET /api/admin/zones | user=DISPATCH-1(id:7) | sid=iuTeYwvS... | 304 | 23ms
+22:13:20 [API] GET /api/admin/channels | user=DISPATCH-1(id:7) | sid=iuTeYwvS... | 304 | 15ms
+22:13:20 [DISPATCH] getChannels: 4 radio channels returned
+22:13:20 [API] GET /api/admin/logs?limit=200 | user=DISPATCH-1(id:7) | sid=iuTeYwvS... | 200 | 18ms
+22:13:20 [API] GET /api/admin/ai-dispatch | user=DISPATCH-1(id:7) | sid=iuTeYwvS... | 304 | 23ms
+22:13:20 [API] GET /api/dispatch/channels | user=DISPATCH-1(id:7) | sid=iuTeYwvS... | 304 | 19ms
+22:13:21 [Signaling] KEEPALIVE_OK unitId=ADMIN channelKey=DISPATCH__DISPATCH addr=12.75.146.17:31921
