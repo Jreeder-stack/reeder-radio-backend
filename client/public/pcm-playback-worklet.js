@@ -18,9 +18,9 @@ class PcmPlaybackProcessor extends AudioWorkletProcessor {
 
     this._TARGET_BUFFER_DEPTH = 25;
     this._smoothedDepth = 0;
-    this._smoothAlpha = 0.05;
-    this._MAX_STRETCH_RATIO = 0.25;
-    this._MAX_COMPRESS_RATIO = 0.25;
+    this._smoothAlpha = 0.15;
+    this._MAX_STRETCH_RATIO = 0.05;
+    this._MAX_COMPRESS_RATIO = 0.05;
     this._stretchAccumulator = 0;
     this._skipAccumulator = 0;
 
@@ -136,15 +136,16 @@ class PcmPlaybackProcessor extends AudioWorkletProcessor {
         return true;
       }
       this._primed = true;
+      this._smoothedDepth = this._TARGET_BUFFER_DEPTH;
     }
 
     let stretchRatio = 0;
     let compressRatio = 0;
     if (!this._draining) {
       const depthError = this._TARGET_BUFFER_DEPTH - this._smoothedDepth;
-      if (depthError > 2) {
+      if (depthError > 5) {
         stretchRatio = Math.min(depthError / this._TARGET_BUFFER_DEPTH, this._MAX_STRETCH_RATIO);
-      } else if (depthError < -2) {
+      } else if (depthError < -5) {
         compressRatio = Math.min(-depthError / this._TARGET_BUFFER_DEPTH, this._MAX_COMPRESS_RATIO);
       }
     }
