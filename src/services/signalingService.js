@@ -1417,6 +1417,21 @@ class SignalingService {
     console.log(`[Signaling] TX stop ack: ${socket.unitId} on ${channelId}`);
   }
 
+  notifyUnitPotentiallyDisconnected(unitId, channelId) {
+    if (!this.io) return;
+    const presence = this.unitPresence.get(unitId);
+    if (presence && presence.status === 'online') {
+      presence.status = 'potentially_disconnected';
+      console.log(`[Signaling] UNIT_POTENTIALLY_DISCONNECTED unitId=${unitId} channelId=${channelId} lastSeen=${presence.lastSeen}`);
+      this.io.to(`channel:${channelId}`).emit('unit:connection_warning', {
+        unitId,
+        channelId,
+        status: 'potentially_disconnected',
+        timestamp: Date.now(),
+      });
+    }
+  }
+
   stop() {
     if (this._authCleanupInterval) {
       clearInterval(this._authCleanupInterval);

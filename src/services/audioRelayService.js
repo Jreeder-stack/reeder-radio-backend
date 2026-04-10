@@ -12,7 +12,7 @@ const PAYLOAD_LEN_LEN = 2;
 const RADIO_HEADER_FIXED_LEN = VERSION_LEN + FLAGS_LEN + CHANNEL_ID_LEN + SEQUENCE_LEN + TIMESTAMP_LEN + SENDER_LEN_LEN + PAYLOAD_LEN_LEN;
 const PACKET_VERSION = 1;
 const FLAG_FEC_HINT = 0x01;
-const SUBSCRIBER_TIMEOUT_MS = 60000;
+const SUBSCRIBER_TIMEOUT_MS = 30000;
 const AUDIO_DIAG = process.env.AUDIO_DIAG === 'true';
 const SUBSCRIBER_SWEEP_INTERVAL_MS = 30000;
 
@@ -39,6 +39,7 @@ class AudioRelayService {
     this._senderLastSeq = new Map();
     this._senderLastSeqTime = new Map();
     this._zeroChannelWarnTimes = new Map();
+    this._signalingService = null;
   }
 
   onRecordingTap(callback) {
@@ -108,7 +109,14 @@ class AudioRelayService {
   addSubscriber(channelId, unitId, address, port) {
     const key = canonicalChannelKey(channelId);
     if (!this.subscribers.has(key)) this.subscribers.set(key, new Map());
+    const existingSub = this.subscribers.get(key).get(unitId);
+    if (existingSub && (existingSub.address !== address || existingSub.port !== port)) {
+      console.log(`[AudioRelay] SUBSCRIBER_NAT_CHANGE unitId=${unitId} channelId=${key} oldAddr=${existingSub.address}:${existingSub.port} newAddr=${address}:${port}`);
+    }
     this.subscribers.get(key).set(unitId, { address, port, lastSeen: Date.now() });
+    if (!existingSub) {
+      console.log(`[AudioRelay] SUBSCRIBER_ADDED unitId=${unitId} channelId=${key} addr=${address}:${port}`);
+    }
   }
 
   refreshSubscriber(channelId, unitId) {
@@ -124,7 +132,12 @@ class AudioRelayService {
     const subs = this.subscribers.get(key);
     if (!subs) return;
     subs.delete(unitId);
+    console.log(`[AudioRelay] SUBSCRIBER_REMOVED unitId=${unitId} channelId=${key}`);
     if (subs.size === 0) this.subscribers.delete(key);
+  }
+
+  setSignalingService(signalingService) {
+    this._signalingService = signalingService;
   }
 
   removeAllSubscriptions(unitId) {
@@ -488,7 +501,18 @@ class AudioRelayService {
     const now = Date.now();
     for (const [channelId, subs] of this.subscribers) {
       for (const [unitId, sub] of subs) {
-        if (now - sub.lastSeen > SUBSCRIBER_TIMEOUT_MS) subs.delete(unitId);
+        if (now - sub.lastSeen > SUBSCRIBER_TIMEOUT_MS) {
+          const staleMs = now - sub.lastSeen;
+          subs.delete(unitId);
+          console.log(`[AudioRelay] SUBSCRIBER_STALE_REMOVED unitId=${unitId} channelId=${channelId} staleMs=${staleMs}`);
+          if (this._signalingService) {
+            try {
+              this._signalingService.notifyUnitPotentiallyDisconnected(unitId, channelId);
+            } catch (err) {
+              console.warn(`[AudioRelay] Failed to notify signaling of stale subscriber: ${err.message}`);
+            }
+          }
+        }
       }
       if (subs.size === 0) this.subscribers.delete(channelId);
     }

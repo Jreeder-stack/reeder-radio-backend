@@ -3,6 +3,9 @@ package com.reedersystems.commandcomms.audio.radio
 import android.util.Log
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress
@@ -14,7 +17,12 @@ private const val RECEIVE_TIMEOUT_MS = 100
 private const val RADIO_HEADER_FIXED_LEN = 1 + 1 + 2 + 2 + 4 + 1 + 2
 private const val PACKET_VERSION: Byte = 1
 private const val FLAG_FEC_HINT = 0x01
-private const val KEEPALIVE_INTERVAL_MS = 15_000L
+private const val KEEPALIVE_INTERVAL_MS = 8_000L
+private const val KEEPALIVE_FAST_INTERVAL_MS = 3_000L
+private const val KEEPALIVE_FAST_DURATION_MS = 30_000L
+private const val MAX_RECEIVE_RECONNECT_ATTEMPTS = 5
+
+enum class TransportHealth { CONNECTED, RECONNECTING, DISCONNECTED }
 
 data class OpusRadioPacket(
     val channelIndex: Int,
@@ -43,6 +51,15 @@ class UdpAudioTransport(
     @Volatile
     private var cachedAddress: InetAddress? = null
     private var cachedHost: String = ""
+
+    private val _connectionHealth = MutableStateFlow(TransportHealth.DISCONNECTED)
+    val connectionHealth: StateFlow<TransportHealth> = _connectionHealth.asStateFlow()
+
+    @Volatile
+    private var fastKeepaliveUntilMs: Long = 0L
+
+    private val rxSeqTracker = mutableMapOf<String, Int>()
+    private val SEQ_GAP_THRESHOLD = 3
 
     var channelId: String = ""
     var channelIndex: Int = 0
@@ -81,6 +98,7 @@ class UdpAudioTransport(
         txPacketCount = 0
         txRateLimiter.reset(); rxRateLimiter.reset()
         txSummaryBytes = 0; txFailures = 0; rxSummaryBytes = 0; rxDropped = 0
+        rxSeqTracker.clear()
         Log.d(TAG, "COUNTERS_RESET ${RadioDiagLog.elapsedTag()}")
         sendImmediateKeepalive()
     }
@@ -109,11 +127,13 @@ class UdpAudioTransport(
             val sock = DatagramSocket()
             sock.soTimeout = RECEIVE_TIMEOUT_MS
             socket = sock
-            Log.d(TAG, "UDP_SOCKET_OPENED localPort=${sock.localPort} timeout=${RECEIVE_TIMEOUT_MS}ms ${RadioDiagLog.elapsedTag()}")
+            _connectionHealth.value = TransportHealth.CONNECTED
+            Log.d(TAG, """{"event":"UDP_SOCKET_OPENED","localPort":${sock.localPort},"timeoutMs":$RECEIVE_TIMEOUT_MS}""")
             startReceiveLoop()
             startSendLoop()
             startKeepaliveLoop()
         } catch (e: Exception) {
+            _connectionHealth.value = TransportHealth.DISCONNECTED
             Log.e("[RadioError]", "Failed to open UDP socket: ${e::class.simpleName}: ${e.message} method=start", e)
         }
     }
@@ -130,9 +150,33 @@ class UdpAudioTransport(
         sequenceNumber = 0
         cachedAddress = null
         cachedHost = ""
+        _connectionHealth.value = TransportHealth.DISCONNECTED
+        fastKeepaliveUntilMs = 0L
+        rxSeqTracker.clear()
         Log.d(TAG, "UDP transport stopped txTotal=$txPacketCount rxTotal=$rxPacketCount txFailures=$txFailures rxDropped=$rxDropped ${RadioDiagLog.elapsedTag()}")
         rxPacketCount = 0
         txPacketCount = 0
+    }
+
+    private fun activateFastKeepalive() {
+        fastKeepaliveUntilMs = System.currentTimeMillis() + KEEPALIVE_FAST_DURATION_MS
+        Log.d(TAG, """{"event":"FAST_KEEPALIVE_ACTIVATED","durationMs":$KEEPALIVE_FAST_DURATION_MS}""")
+    }
+
+    private fun recreateSocket(): DatagramSocket? {
+        return try {
+            socket?.close()
+            val sock = DatagramSocket()
+            sock.soTimeout = RECEIVE_TIMEOUT_MS
+            socket = sock
+            cachedAddress = null
+            cachedHost = ""
+            Log.d(TAG, """{"event":"SOCKET_RECREATED","localPort":${sock.localPort}}""")
+            sock
+        } catch (e: Exception) {
+            Log.e("[RadioError]", """{"event":"SOCKET_RECREATE_FAILED","error":"${e::class.simpleName}","message":"${e.message}"}""")
+            null
+        }
     }
 
     private data class QueuedPacket(val framed: ByteArray, val payloadBytes: Int)
@@ -232,6 +276,7 @@ class UdpAudioTransport(
         receiveJob = scope.launch {
             val buffer = ByteArray(RECEIVE_BUFFER_SIZE)
             var consecutiveErrors = 0
+            var reconnectAttempts = 0
             try {
                 while (isActive) {
                     val sock = socket ?: break
@@ -240,12 +285,26 @@ class UdpAudioTransport(
                         sock.receive(packet)
                         val parsed = parseRelayPacket(buffer, packet.length)
                         consecutiveErrors = 0
+                        reconnectAttempts = 0
+                        if (_connectionHealth.value != TransportHealth.CONNECTED) {
+                            _connectionHealth.value = TransportHealth.CONNECTED
+                        }
                         if (parsed != null) {
                             if (parsed.senderUnitId == unitId) {
                                 Log.d(TAG, "SELF_AUDIO_SUPPRESSED senderUnitId=${parsed.senderUnitId} seq=${parsed.sequence}")
                             } else {
                                 rxPacketCount++
                                 rxSummaryBytes += packet.length
+
+                                val lastSeq = rxSeqTracker[parsed.senderUnitId]
+                                rxSeqTracker[parsed.senderUnitId] = parsed.sequence
+                                if (lastSeq != null) {
+                                    val gap = parsed.sequence - lastSeq
+                                    if (gap > SEQ_GAP_THRESHOLD) {
+                                        Log.w(TAG, """{"event":"RX_SEQ_GAP","sender":"${parsed.senderUnitId}","expected":${lastSeq + 1},"got":${parsed.sequence},"gap":$gap}""")
+                                        activateFastKeepalive()
+                                    }
+                                }
 
                                 val channelMatch = parsed.channelIndex == channelIndex
                                 val acceptReason = if (channelMatch) "channel_match" else "forwarded"
@@ -268,10 +327,26 @@ class UdpAudioTransport(
                         }
                     } catch (e: java.net.SocketTimeoutException) {
                     } catch (e: java.net.SocketException) {
-                        if (isActive) {
-                            Log.e("[RadioError]", "UDP socket error (unrecoverable): ${e::class.simpleName}: ${e.message} method=receiveLoop")
+                        if (!isActive) break
+                        reconnectAttempts++
+                        if (reconnectAttempts > MAX_RECEIVE_RECONNECT_ATTEMPTS) {
+                            Log.e("[RadioError]", """{"event":"RECEIVE_LOOP_RECONNECT_EXHAUSTED","attempts":$reconnectAttempts}""")
+                            _connectionHealth.value = TransportHealth.DISCONNECTED
+                            break
                         }
-                        break
+                        _connectionHealth.value = TransportHealth.RECONNECTING
+                        val backoffMs = 500L * (1L shl (reconnectAttempts - 1).coerceAtMost(4))
+                        Log.w(TAG, """{"event":"RECEIVE_LOOP_RECONNECTING","attempt":$reconnectAttempts,"backoffMs":$backoffMs,"error":"${e.message}"}""")
+                        delay(backoffMs)
+                        val newSock = recreateSocket()
+                        if (newSock != null) {
+                            activateFastKeepalive()
+                            sendImmediateKeepalive()
+                            Log.d(TAG, """{"event":"RECEIVE_LOOP_SOCKET_RECOVERED","attempt":$reconnectAttempts}""")
+                        } else {
+                            Log.e("[RadioError]", """{"event":"RECEIVE_LOOP_SOCKET_RECREATE_FAILED","attempt":$reconnectAttempts}""")
+                        }
+                        continue
                     } catch (e: Exception) {
                         if (isActive) {
                             consecutiveErrors++
@@ -295,16 +370,20 @@ class UdpAudioTransport(
     private fun startKeepaliveLoop() {
         keepaliveJob = scope.launch {
             while (isActive) {
-                delay(KEEPALIVE_INTERVAL_MS)
+                val now = System.currentTimeMillis()
+                val isFast = now < fastKeepaliveUntilMs
+                val interval = if (isFast) KEEPALIVE_FAST_INTERVAL_MS else KEEPALIVE_INTERVAL_MS
+                delay(interval)
                 val sock = socket ?: break
                 try {
                     val keepalivePacket = buildKeepalivePacket()
                     val address = resolveAddress() ?: continue
                     val dgram = DatagramPacket(keepalivePacket, keepalivePacket.size, address, relayPort)
                     sock.send(dgram)
-                    Log.d(TAG, "UDP_KEEPALIVE_SENT to=$relayHost:$relayPort")
+                    Log.d(TAG, """{"event":"UDP_KEEPALIVE_SENT","dest":"$relayHost:$relayPort","fast":$isFast,"intervalMs":$interval}""")
                 } catch (e: Exception) {
-                    Log.w("[RadioError]", "UDP keepalive send error: ${e::class.simpleName}: ${e.message} dest=$relayHost:$relayPort method=keepaliveLoop")
+                    Log.w("[RadioError]", """{"event":"UDP_KEEPALIVE_FAILED","error":"${e::class.simpleName}","message":"${e.message}","dest":"$relayHost:$relayPort"}""")
+                    activateFastKeepalive()
                 }
             }
         }

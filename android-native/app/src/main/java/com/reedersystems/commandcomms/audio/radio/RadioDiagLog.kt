@@ -151,6 +151,11 @@ object RadioDiagLog {
             return "TX_SESSION_END duration=${durationMs}ms reqRate=$requestedRate actRate=$actualRate ch=$channels src=$audioSource framesRead=$framesRead framesEncoded=$framesEncoded pktSent=$packetsSent failures=$failures encodeFailures=$encodeFailures assertionFailures=$assertionFailures silentFrames=$silentFrames partials=$partialReads zeros=$zeroReads probeRms=[$probeStr] first10rms=[$rmsStr] stop=$stopReason"
         }
 
+        fun summaryJson(): String {
+            val durationMs = System.currentTimeMillis() - startTimeMs
+            return """"durationMs":$durationMs,"framesRead":$framesRead,"framesEncoded":$framesEncoded,"pktSent":$packetsSent,"failures":$failures,"silentFrames":$silentFrames,"stopReason":"$stopReason""""
+        }
+
         fun reset() {
             startTimeMs = System.currentTimeMillis()
             requestedRate = 0; actualRate = 0; channels = 0; audioSource = ""

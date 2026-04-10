@@ -68,6 +68,7 @@ async function start() {
   console.log(`Audio relay service started on UDP port ${audioRelayPort}`);
 
   signalingService.initialize(httpServer);
+  audioRelayService.setSignalingService(signalingService);
   console.log('Signaling service initialized');
 
   wsAudioBridge.attach(httpServer);

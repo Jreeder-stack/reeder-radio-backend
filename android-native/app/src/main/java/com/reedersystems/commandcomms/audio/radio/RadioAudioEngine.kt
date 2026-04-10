@@ -12,13 +12,14 @@ import android.os.Build
 import android.util.Log
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 
 private const val TAG = "[RadioEngine]"
 private const val DEFAULT_MIC_SAMPLE_RATE = 48000
 private const val CAPTURE_INTERVAL_MS = 20L
 private const val RX_DIAG_INTERVAL_MS = 5_000L
 private const val PRE_BUFFER_MAX_FRAMES = 150
+private const val TRANSMIT_MUTEX_TIMEOUT_MS = 3_000L
+private const val CAPTURE_JOIN_TIMEOUT_MS = 500L
 
 class RadioAudioEngine(private val context: Context) {
 
@@ -87,6 +88,49 @@ class RadioAudioEngine(private val context: Context) {
     var onDisconnected: (() -> Unit)? = null
 
     val isConnected: Boolean get() = started
+
+    private suspend fun acquireTransmitMutex(caller: String): Boolean {
+        val acquireStart = System.currentTimeMillis()
+        val acquired = withTimeoutOrNull(TRANSMIT_MUTEX_TIMEOUT_MS) { transmitMutex.lock(); true }
+        if (acquired != null) {
+            val lockAcquiredMs = System.currentTimeMillis() - acquireStart
+            if (lockAcquiredMs > 100) {
+                Log.w(TAG, """{"event":"MUTEX_SLOW_ACQUIRE","caller":"$caller","acquireMs":$lockAcquiredMs}""")
+            }
+            return true
+        }
+        val waitMs = System.currentTimeMillis() - acquireStart
+        Log.e(TAG, """{"event":"MUTEX_TIMEOUT","caller":"$caller","waitMs":$waitMs,"timeoutMs":$TRANSMIT_MUTEX_TIMEOUT_MS}""")
+        forceResetTransmitState(caller)
+        val retryAcquired = withTimeoutOrNull(TRANSMIT_MUTEX_TIMEOUT_MS) { transmitMutex.lock(); true }
+        if (retryAcquired != null) {
+            Log.d(TAG, """{"event":"MUTEX_RETRY_SUCCESS","caller":"$caller"}""")
+            return true
+        }
+        Log.e(TAG, """{"event":"MUTEX_ACQUIRE_FAILED","caller":"$caller"}""")
+        return false
+    }
+
+    private fun forceResetTransmitState(reason: String) {
+        Log.e(TAG, """{"event":"FORCE_RESET_TRANSMIT_STATE","reason":"$reason"}""")
+        captureJob?.cancel()
+        captureJob = null
+        isTransmitting = false
+        isPreCapturing = false
+        synchronized(preBufferLock) {
+            preCapturingToBuffer = false
+            preBuffer.clear()
+        }
+        try { autoGainControl?.release() } catch (_: Exception) {}
+        autoGainControl = null
+        try { audioRecord?.stop() } catch (_: Exception) {}
+        try { audioRecord?.release() } catch (_: Exception) {}
+        audioRecord = null
+        resetDspState()
+        stateManager.txPipelineRunning = false
+        stateManager.transitionTo(RadioState.IDLE, "force_reset:$reason")
+        Log.e(TAG, """{"event":"FORCE_RESET_COMPLETE","reason":"$reason"}""")
+    }
 
     fun useSharedStateManager(shared: RadioStateManager) {
         stateManager = shared
@@ -374,7 +418,12 @@ class RadioAudioEngine(private val context: Context) {
         Log.d(TAG, "PRE_CAPTURE_ABORT_REQUESTED ${RadioDiagLog.elapsedTag()}")
     }
 
-    suspend fun startPreCapture(): Boolean = transmitMutex.withLock {
+    suspend fun startPreCapture(): Boolean {
+        if (!acquireTransmitMutex("startPreCapture")) {
+            Log.e(TAG, """{"event":"START_PRE_CAPTURE_ABORTED","reason":"mutex_acquire_failed"}""")
+            return false
+        }
+        try {
         if (!started) {
             Log.w("[RadioError]", "startPreCapture: engine not started method=startPreCapture")
             return false
@@ -643,9 +692,17 @@ class RadioAudioEngine(private val context: Context) {
             txSessionStats.stopReason = "startPreCapture_exception"
             return false
         }
+        } finally {
+            transmitMutex.unlock()
+        }
     }
 
-    suspend fun promoteToLiveTransmit(): Boolean = transmitMutex.withLock {
+    suspend fun promoteToLiveTransmit(): Boolean {
+        if (!acquireTransmitMutex("promoteToLiveTransmit")) {
+            Log.e(TAG, """{"event":"PROMOTE_TO_LIVE_ABORTED","reason":"mutex_acquire_failed"}""")
+            return false
+        }
+        try {
         if (!isPreCapturing) {
             Log.w("[RadioError]", "promoteToLiveTransmit: not pre-capturing method=promoteToLiveTransmit")
             return false
@@ -668,13 +725,26 @@ class RadioAudioEngine(private val context: Context) {
         stateManager.transitionTo(RadioState.TRANSMITTING, "tx_promoted_from_prebuffer")
         Log.d(TAG, "PRE_BUFFER_FLUSHED flushedFrames=$flushedFrames durationMs=${flushedFrames * CAPTURE_INTERVAL_MS} — live TX active ${RadioDiagLog.elapsedTag()}")
         return true
+        } finally {
+            transmitMutex.unlock()
+        }
     }
 
-    suspend fun stopPreCapture() = transmitMutex.withLock {
+    suspend fun stopPreCapture() {
+        if (!acquireTransmitMutex("stopPreCapture")) {
+            Log.e(TAG, """{"event":"STOP_PRE_CAPTURE_ABORTED","reason":"mutex_acquire_failed"}""")
+            return
+        }
+        try {
+        val cleanupStart = System.currentTimeMillis()
         preCaptureAborted = true
         val wasPreCapturing = isPreCapturing
         isPreCapturing = false
-        captureJob?.cancelAndJoin()
+        captureJob?.cancel()
+        val joinResult = withTimeoutOrNull(CAPTURE_JOIN_TIMEOUT_MS) { captureJob?.join() }
+        if (joinResult == null && captureJob != null) {
+            Log.w(TAG, """{"event":"CAPTURE_JOIN_TIMEOUT","caller":"stopPreCapture","timeoutMs":$CAPTURE_JOIN_TIMEOUT_MS}""")
+        }
         captureJob = null
         synchronized(preBufferLock) {
             preCapturingToBuffer = false
@@ -687,7 +757,7 @@ class RadioAudioEngine(private val context: Context) {
                 preBuffer.clear()
             }
             Log.d(TAG, "stopPreCapture: nothing to clean (wasPreCapturing=false, no resources) orphanFrames=$discardedOrphan")
-            return@withLock
+            return
         }
         resetDspState()
         try {
@@ -712,10 +782,19 @@ class RadioAudioEngine(private val context: Context) {
             discardedFrames = preBuffer.size
             preBuffer.clear()
         }
-        Log.d(TAG, "PRE_CAPTURE_STOPPED wasPreCapturing=$wasPreCapturing discardedFrames=$discardedFrames ${RadioDiagLog.elapsedTag()}")
+        val cleanupMs = System.currentTimeMillis() - cleanupStart
+        Log.d(TAG, """{"event":"PRE_CAPTURE_STOPPED","wasPreCapturing":$wasPreCapturing,"discardedFrames":$discardedFrames,"cleanupMs":$cleanupMs}""")
+        } finally {
+            transmitMutex.unlock()
+        }
     }
 
-    suspend fun startTransmit(): Boolean = transmitMutex.withLock {
+    suspend fun startTransmit(): Boolean {
+        if (!acquireTransmitMutex("startTransmit")) {
+            Log.e(TAG, """{"event":"START_TRANSMIT_ABORTED","reason":"mutex_acquire_failed"}""")
+            return false
+        }
+        try {
         if (!started) {
             Log.w("[RadioError]", "startTransmit: engine not started method=startTransmit")
             return false
@@ -969,6 +1048,9 @@ class RadioAudioEngine(private val context: Context) {
             txSessionStats.stopReason = "startTransmit_exception"
             return false
         }
+        } finally {
+            transmitMutex.unlock()
+        }
     }
 
     private fun stereoToMono(stereoBuffer: ByteArray, stereoLength: Int): ByteArray {
@@ -986,14 +1068,24 @@ class RadioAudioEngine(private val context: Context) {
         return monoBytes
     }
 
-    suspend fun stopTransmit() = transmitMutex.withLock {
+    suspend fun stopTransmit() {
+        if (!acquireTransmitMutex("stopTransmit")) {
+            Log.e(TAG, """{"event":"STOP_TRANSMIT_ABORTED","reason":"mutex_acquire_failed"}""")
+            return
+        }
+        try {
+        val cleanupStart = System.currentTimeMillis()
         if (!isTransmitting) {
             Log.w("[RadioError]", "stopTransmit called but not transmitting — ignoring")
-            return@withLock
+            return
         }
         isTransmitting = false
         txSessionStats.stopReason = "ptt_release"
-        captureJob?.cancelAndJoin()
+        captureJob?.cancel()
+        val joinResult = withTimeoutOrNull(CAPTURE_JOIN_TIMEOUT_MS) { captureJob?.join() }
+        if (joinResult == null && captureJob != null) {
+            Log.w(TAG, """{"event":"CAPTURE_JOIN_TIMEOUT","caller":"stopTransmit","timeoutMs":$CAPTURE_JOIN_TIMEOUT_MS}""")
+        }
         captureJob = null
         resetDspState()
         try {
@@ -1018,11 +1110,15 @@ class RadioAudioEngine(private val context: Context) {
         txSessionStats.packetsSent = udpTransport.txPacketCount - txSessionStartPacketCount
         stateManager.txPipelineRunning = false
         stateManager.transitionTo(RadioState.IDLE, "tx_stopped")
+        val cleanupMs = System.currentTimeMillis() - cleanupStart
+        Log.d(TAG, """{"event":"TX_STOPPED","cleanupMs":$cleanupMs,${txSessionStats.summaryJson()}}""")
         Log.d(TAG, txSessionStats.summary() + " ${RadioDiagLog.elapsedTag()}")
-        Log.d(TAG, "TX stopped")
         if (pendingCodecReset) {
             Log.d(TAG, "CODEC_RESET_EXECUTING_DEFERRED — performing codec reset deferred during TX")
             performCodecReset()
+        }
+        } finally {
+            transmitMutex.unlock()
         }
     }
 

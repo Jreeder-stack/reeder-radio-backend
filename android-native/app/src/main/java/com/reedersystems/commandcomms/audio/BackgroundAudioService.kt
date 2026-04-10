@@ -23,6 +23,7 @@ import com.reedersystems.commandcomms.data.prefs.ServiceConnectionPrefs
 import com.reedersystems.commandcomms.audio.radio.FloorControlEvent
 import com.reedersystems.commandcomms.audio.radio.RadioAudioEngine
 import com.reedersystems.commandcomms.audio.radio.RadioSignalingGatewayImpl
+import com.reedersystems.commandcomms.audio.radio.TransportHealth
 import com.reedersystems.commandcomms.signaling.ConnectionState
 import com.reedersystems.commandcomms.signaling.SignalingEvent
 import kotlinx.coroutines.*
@@ -57,6 +58,8 @@ class BackgroundAudioService : Service() {
     @Volatile private var needsSignaling = false
 
     @Volatile private var joinedSignalingChannelId: String? = null
+    @Volatile private var lastAuthenticatedTimeMs: Long = 0L
+    @Volatile private var cleaningUpSinceMs: Long = 0L
     @Volatile private var pendingSignalingChannelId: String? = null
 
     private var emergencyActivatingJob: Job? = null
@@ -293,6 +296,7 @@ class BackgroundAudioService : Service() {
                 app.signalingRepository.connectionState.collectLatest { state ->
                     when (state) {
                         ConnectionState.AUTHENTICATED -> {
+                            lastAuthenticatedTimeMs = System.currentTimeMillis()
                             val isReconnect = hadPriorAuthentication
                             if (isReconnect) {
                                 val reconnectDurationMs = if (reconnectStartTimeMs > 0) {
@@ -443,7 +447,26 @@ class BackgroundAudioService : Service() {
         engine.startReceive()
         radioEngine = engine
         observeRadioFloorEvents(engine)
+        observeTransportHealth(engine)
         Log.d(TAG, "RadioAudioEngine initialized (custom-radio transport) — RX always-on")
+    }
+
+    private fun observeTransportHealth(engine: RadioAudioEngine) {
+        scope.launch {
+            engine.udpTransport.connectionHealth.collect { health ->
+                when (health) {
+                    TransportHealth.RECONNECTING -> {
+                        Log.w(TAG, """{"event":"TRANSPORT_HEALTH_RECONNECTING"}""")
+                    }
+                    TransportHealth.DISCONNECTED -> {
+                        Log.e(TAG, """{"event":"TRANSPORT_HEALTH_DISCONNECTED"}""")
+                    }
+                    TransportHealth.CONNECTED -> {
+                        Log.d(TAG, """{"event":"TRANSPORT_HEALTH_CONNECTED"}""")
+                    }
+                }
+            }
+        }
     }
 
     private fun observeRadioFloorEvents(engine: RadioAudioEngine) {
@@ -567,8 +590,7 @@ class BackgroundAudioService : Service() {
     private fun handleRadioPttDown(signaling: Boolean) {
         val channelKey = servicePrefs.channelRoomKey
         val channelId = servicePrefs.channelId
-        Log.d(TAG, "handleRadioPttDown pttState=$pttState signaling=$signaling channelKey=${channelKey ?: "none"} channelId=$channelId")
-        Log.d(TAG, "RADIO_PTT_DOWN source=service state=$pttState channelKey=${channelKey ?: "none"}")
+        Log.d(TAG, """{"event":"RADIO_PTT_DOWN","pttState":"$pttState","signaling":$signaling,"channelKey":"${channelKey ?: "none"}","channelId":"$channelId"}""")
         if (pendingFirstPttAfterReconnect) {
             pendingFirstPttAfterReconnect = false
             Log.d(TAG, "LATENCY_FIRST_PTT_AFTER_RECONNECT")
@@ -580,7 +602,18 @@ class BackgroundAudioService : Service() {
             return
         }
 
-        if (pttState == PttState.TRANSMITTING || pttState == PttState.CONNECTING || pttState == PttState.CLEANING_UP) {
+        if (pttState == PttState.CLEANING_UP) {
+            val stuckMs = if (cleaningUpSinceMs > 0) System.currentTimeMillis() - cleaningUpSinceMs else 0L
+            if (stuckMs > 2_000L) {
+                Log.w(TAG, """{"event":"CLEANING_UP_STUCK_RESET","stuckMs":$stuckMs}""")
+                transitionPttState(PttState.IDLE)
+                cleaningUpSinceMs = 0L
+            } else {
+                Log.d(TAG, "Radio PTT DOWN ignored: pttState=$pttState stuckMs=$stuckMs")
+                return
+            }
+        }
+        if (pttState == PttState.TRANSMITTING || pttState == PttState.CONNECTING) {
             Log.d(TAG, "Radio PTT DOWN ignored: pttState=$pttState")
             return
         }
@@ -600,20 +633,29 @@ class BackgroundAudioService : Service() {
             return
         }
 
-        val (ready, blockedReason) = evaluateReadinessForPtt(signaling, roomKey)
-        if (!ready) {
-            Log.w(TAG, "RADIO_READY_BLOCKED_REASON reason=$blockedReason")
-            app.toneEngine.playErrorTone()
-            sendPttTxFailed()
+        val readySync = evaluateReadinessForPttSync(signaling, roomKey)
+        if (readySync == false) {
             return
         }
-        Log.d(TAG, "RADIO_READY_FOR_PTT roomKey=$roomKey signaling=$signaling")
 
         transitionPttState(PttState.CONNECTING)
         updateNotification("Requesting floor…")
         app.toneEngine.playTalkPermitTone()
 
         scope.launch {
+            if (readySync == null) {
+                val (ready, blockedReason) = evaluateReadinessForPtt(signaling, roomKey)
+                if (!ready) {
+                    Log.w(TAG, "RADIO_READY_BLOCKED_REASON reason=$blockedReason")
+                    app.toneEngine.playErrorTone()
+                    transitionPttState(PttState.IDLE)
+                    updateNotification("Radio — Standby")
+                    sendPttTxFailed()
+                    return@launch
+                }
+            }
+            Log.d(TAG, """{"event":"RADIO_READY_FOR_PTT","roomKey":"$roomKey","signaling":$signaling}""")
+
             preCaptureSetupJob = scope.launch {
                 val preStarted = engine.startPreCapture()
                 if (!preStarted) {
@@ -671,8 +713,7 @@ class BackgroundAudioService : Service() {
 
     private fun handleRadioPttUp() {
         val channelKey = servicePrefs.channelRoomKey
-        Log.d(TAG, "handleRadioPttUp pttState=$pttState channelKey=${channelKey ?: "none"}")
-        Log.d(TAG, "RADIO_PTT_UP source=service state=$pttState channelKey=${channelKey ?: "none"}")
+        Log.d(TAG, """{"event":"RADIO_PTT_UP","pttState":"$pttState","channelKey":"${channelKey ?: "none"}"}""")
 
         pttUpWhileConnecting = true
 
@@ -698,21 +739,26 @@ class BackgroundAudioService : Service() {
         val wasSignaling = needsSignaling
 
         transitionPttState(PttState.CLEANING_UP)
+        cleaningUpSinceMs = System.currentTimeMillis()
         updateNotification("Radio — Standby")
 
         scope.launch {
             try {
                 radioEngine?.stopTransmit()
                 radioEngine?.floorControl?.releaseFloor(roomKey)
-                Log.d(TAG, "PTT_RELEASE_SENT channelId=$roomKey")
+                Log.d(TAG, """{"event":"PTT_RELEASE_SENT","channelId":"$roomKey"}""")
                 sendPttTxEnded()
                 if (wasSignaling) {
                     app.toneEngine.playEndOfTxTone()
                     Log.d(TAG, "Radio PTT UP: end-of-TX tone for roomKey $roomKey")
                 }
+            } catch (e: Exception) {
+                Log.e(TAG, """{"event":"PTT_CLEANUP_ERROR","error":"${e::class.simpleName}","message":"${e.message}"}""")
             } finally {
+                val cleanupDurationMs = if (cleaningUpSinceMs > 0) System.currentTimeMillis() - cleaningUpSinceMs else 0L
                 transitionPttState(PttState.IDLE)
-                Log.d(TAG, "PTT cleanup complete — state is now IDLE")
+                cleaningUpSinceMs = 0L
+                Log.d(TAG, """{"event":"PTT_CLEANUP_COMPLETE","state":"IDLE","cleanupMs":$cleanupDurationMs}""")
             }
         }
     }
@@ -730,11 +776,55 @@ class BackgroundAudioService : Service() {
         }
     }
 
-    private fun evaluateReadinessForPtt(signaling: Boolean, roomKey: String): Pair<Boolean, String?> {
+    private fun evaluateReadinessForPttSync(signaling: Boolean, roomKey: String): Boolean? {
+        if (radioEngine == null) {
+            Log.w(TAG, "RADIO_READY_BLOCKED_REASON reason=radio_engine_missing")
+            app.toneEngine.playErrorTone()
+            sendPttTxFailed()
+            return false
+        }
+        if (!signaling) return true
+        val state = app.signalingRepository.connectionState.value
+        if (state == ConnectionState.AUTHENTICATED) {
+            if (joinedSignalingChannelId != roomKey) {
+                Log.w(TAG, "RADIO_READY_BLOCKED_REASON reason=channel_not_joined joined=$joinedSignalingChannelId target=$roomKey")
+                app.toneEngine.playErrorTone()
+                sendPttTxFailed()
+                return false
+            }
+            return true
+        }
+        val msSinceAuth = System.currentTimeMillis() - lastAuthenticatedTimeMs
+        if (msSinceAuth < 3_000L && lastAuthenticatedTimeMs > 0L) {
+            return null
+        }
+        Log.w(TAG, "RADIO_READY_BLOCKED_REASON reason=signaling_not_authenticated:$state")
+        app.toneEngine.playErrorTone()
+        sendPttTxFailed()
+        return false
+    }
+
+    private suspend fun evaluateReadinessForPtt(signaling: Boolean, roomKey: String): Pair<Boolean, String?> {
         if (radioEngine == null) return false to "radio_engine_missing"
         if (!signaling) return true to null
         val state = app.signalingRepository.connectionState.value
-        if (state != ConnectionState.AUTHENTICATED) return false to "signaling_not_authenticated:$state"
+        if (state != ConnectionState.AUTHENTICATED) {
+            val msSinceAuth = System.currentTimeMillis() - lastAuthenticatedTimeMs
+            if (msSinceAuth < 3_000L && lastAuthenticatedTimeMs > 0L) {
+                Log.d(TAG, """{"event":"PTT_SIGNALING_GRACE_WAIT","state":"$state","msSinceAuth":$msSinceAuth}""")
+                val graceWaitStart = System.currentTimeMillis()
+                val recovered = withTimeoutOrNull(1_000L) {
+                    app.signalingRepository.connectionState.first { it == ConnectionState.AUTHENTICATED }
+                }
+                if (recovered != null) {
+                    Log.d(TAG, """{"event":"PTT_SIGNALING_GRACE_RECOVERED","waitMs":${System.currentTimeMillis() - graceWaitStart}}""")
+                } else {
+                    return false to "signaling_not_authenticated_after_grace:$state"
+                }
+            } else {
+                return false to "signaling_not_authenticated:$state"
+            }
+        }
         if (joinedSignalingChannelId != roomKey) return false to "channel_not_joined joined=$joinedSignalingChannelId target=$roomKey"
         return true to null
     }
