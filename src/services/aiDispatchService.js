@@ -100,6 +100,11 @@ class EmergencyEscalationController {
     console.log(`[Emergency-Escalation] ${timestamp} | ${action}`, JSON.stringify(details));
   }
 
+  logSpeechEvent(unitId, heard, intent, response) {
+    const timestamp = new Date().toISOString();
+    console.log(`[AI-DISPATCH-SPEECH] ${timestamp} | unit=${unitId} | heard="${heard}" | intent=${intent} | response="${response || '(none)'}"`);
+  }
+
   hasActiveEscalation(unitId) {
     return this.activeEscalations.has(unitId);
   }
@@ -136,6 +141,7 @@ class EmergencyEscalationController {
     this.log('STATUS_CHECK_ATTEMPT', { unitId, attempt });
 
     const message = `${unitId}, status check.`;
+    this.logSpeechEvent(unitId, '(emergency key pressed)', 'STATUS_CHECK', message);
     
     if (this._audioQueueDepth >= MAX_AUDIO_QUEUE_DEPTH) {
       this.log('AUDIO_QUEUE_FULL', { depth: this._audioQueueDepth, dropped: message });
@@ -171,6 +177,7 @@ class EmergencyEscalationController {
     this.log('NO_RESPONSE_BROADCAST', { unitId });
 
     const message = `Attention all receiving units, ${unitId} pressed their emergency key with no response.`;
+    this.logSpeechEvent(unitId, '(no response to status check)', 'NO_RESPONSE_BROADCAST', message);
     
     if (this._audioQueueDepth >= MAX_AUDIO_QUEUE_DEPTH) {
       this.log('AUDIO_QUEUE_FULL', { depth: this._audioQueueDepth, dropped: message });
@@ -238,9 +245,10 @@ class EmergencyEscalationController {
     if (responseType === 'OK') {
       await this.sendEmergencyAck(unitId, 'acknowledged');
       
+      const okResponse = `${unitId}, copy. Clear emergency.`;
       this.clearEscalation(unitId);
       return {
-        response: `${unitId}, copy. Clear emergency.`,
+        response: okResponse,
         clearEmergency: true
       };
     } else if (responseType === 'DISTRESS') {
@@ -326,11 +334,24 @@ class AIDispatcher {
     this._signalingService = null;
     this._audioListenerBound = null;
     this._publishSequence = 0;
+    this.verboseLogging = process.env.AI_DISPATCH_VERBOSE === 'true';
+    this._turnContextByUnit = new Map();
   }
 
   log(action, details = {}) {
     const timestamp = new Date().toISOString();
     console.log(`[AI-Dispatcher] ${timestamp} | ${action}`, JSON.stringify(details));
+  }
+
+  verboseLog(action, details = {}) {
+    if (!this.verboseLogging) return;
+    const timestamp = new Date().toISOString();
+    console.log(`[AI-Dispatcher-Verbose] ${timestamp} | ${action}`, JSON.stringify(details));
+  }
+
+  logSpeechEvent(unitId, transcript, intent, response) {
+    const timestamp = new Date().toISOString();
+    console.log(`[AI-DISPATCH-SPEECH] ${timestamp} | unit=${unitId} | heard="${transcript}" | intent=${intent} | response="${response || '(none)'}"`);
   }
 
   get humanParticipantCount() {
@@ -594,7 +615,7 @@ class AIDispatcher {
     this.channelName = channelName;
     
     this.log('CHANNEL_JOINED', { channel: channelName, audioListenerKeys: Array.from(listenKeys), registeredNumericId: this.numericChannelId });
-    this.log('OPUS_TRANSPORT_VERIFIED', { mode: 'server-side decode', note: 'AI dispatcher receives Opus from relay listeners and decodes server-side for STT' });
+    this.verboseLog('OPUS_TRANSPORT_VERIFIED', { mode: 'server-side decode', note: 'AI dispatcher receives Opus from relay listeners and decodes server-side for STT' });
   }
 
   _onAudioFrame(audioEvent) {
@@ -602,19 +623,19 @@ class AIDispatcher {
     if (unitId === AI_IDENTITY) return;
     if (!this.isHumanParticipant(unitId)) {
       if (sequence === 0) {
-        this.log('AUDIO_FRAME_NON_HUMAN', { unitId, channelId });
+        this.verboseLog('AUDIO_FRAME_NON_HUMAN', { unitId, channelId });
       }
       return;
     }
     if (sequence === 0 || (!this._activeRecordings.has(unitId) && sequence % 50 === 0)) {
-      this.log('AUDIO_FRAME_RECEIVED', { unitId, channelId, sequence, payloadBytes: opusPayload?.length });
+      this.verboseLog('AUDIO_FRAME_RECEIVED', { unitId, channelId, sequence, payloadBytes: opusPayload?.length });
     }
 
     let pcmFrame;
     try {
       pcmFrame = opusCodec.decodeOpusToPcm(opusPayload, unitId);
     } catch (err) {
-      this.log('OPUS_DECODE_ERROR', { unitId, error: err.message });
+      this.verboseLog('OPUS_DECODE_ERROR', { unitId, error: err.message });
       return;
     }
 
@@ -629,10 +650,10 @@ class AIDispatcher {
         maxTimer: null,
       };
       this._activeRecordings.set(unitId, recording);
-      this.log('AUDIO_BUFFERING_START', { participant: unitId, channel: channelId });
+      this.verboseLog('AUDIO_BUFFERING_START', { participant: unitId, channel: channelId });
 
       recording.maxTimer = setTimeout(() => {
-        this.log('AUDIO_MAX_DURATION', { participant: unitId, maxMs: MAX_RECORDING_DURATION_MS, frameCount: recording.frameCount });
+        this.verboseLog('AUDIO_MAX_DURATION', { participant: unitId, maxMs: MAX_RECORDING_DURATION_MS, frameCount: recording.frameCount });
         this._finishRecording(unitId);
       }, MAX_RECORDING_DURATION_MS);
     }
@@ -643,7 +664,7 @@ class AIDispatcher {
 
     if (recording.idleTimer) clearTimeout(recording.idleTimer);
     recording.idleTimer = setTimeout(() => {
-      this.log('AUDIO_IDLE_TIMEOUT', { participant: unitId, frameCount: recording.frameCount });
+      this.verboseLog('AUDIO_IDLE_TIMEOUT', { participant: unitId, frameCount: recording.frameCount });
       this._finishRecording(unitId);
     }, IDLE_TIMEOUT_MS);
   }
@@ -658,12 +679,12 @@ class AIDispatcher {
     if (recording.maxTimer) clearTimeout(recording.maxTimer);
 
     if (recording.chunks.length === 0) {
-      this.log('AUDIO_EMPTY', { participant: unitId });
+      this.verboseLog('AUDIO_EMPTY', { participant: unitId });
       return;
     }
 
     const audioBuffer = Buffer.concat(recording.chunks);
-    this.log('AUDIO_BUFFERING_COMPLETE', {
+    this.verboseLog('AUDIO_BUFFERING_COMPLETE', {
       participant: unitId,
       frames: recording.frameCount,
       bytes: audioBuffer.length
@@ -671,12 +692,12 @@ class AIDispatcher {
 
     const MIN_AUDIO_BYTES = RELAY_SAMPLE_RATE * 2 * 0.5;
     if (audioBuffer.length < MIN_AUDIO_BYTES) {
-      this.log('AUDIO_TOO_SHORT', { bytes: audioBuffer.length, minBytes: MIN_AUDIO_BYTES });
+      this.verboseLog('AUDIO_TOO_SHORT', { bytes: audioBuffer.length, minBytes: MIN_AUDIO_BYTES });
       return;
     }
 
     if (!this.isRunning) {
-      this.log('AUDIO_DISCARDED', { reason: 'Dispatcher stopped during buffering' });
+      this.verboseLog('AUDIO_DISCARDED', { reason: 'Dispatcher stopped during buffering' });
       return;
     }
 
@@ -793,13 +814,13 @@ class AIDispatcher {
         this.log('PROCESS_RETRY', { reason: 'Cooldown expired, retrying', participant: participantId, consecutiveErrors });
       }
 
-      this.log('AUDIO_PROCESSING', { bytes: audioBuffer.length, channel: this.channelName, participant: participantId });
+      this.verboseLog('AUDIO_PROCESSING', { bytes: audioBuffer.length, channel: this.channelName, participant: participantId });
 
       const resampledAudio = resampleAudio(audioBuffer, RELAY_SAMPLE_RATE, AZURE_SAMPLE_RATE);
 
       const transcript = await speechToText(resampledAudio);
       if (!transcript) {
-        this.log('STT_NO_SPEECH');
+        this.verboseLog('STT_NO_SPEECH', { participant: participantId });
         return;
       }
 
@@ -818,6 +839,8 @@ class AIDispatcher {
             distressType: emergencyResponse.distressType 
           });
           
+          this._turnContextByUnit.set(participantId, { transcript, intent: `EMERGENCY_RESPONSE_${emergencyResponse.type}` });
+
           const result = await this.emergencyEscalation.handleUnitResponse(
             participantId, 
             emergencyResponse.type, 
@@ -826,6 +849,9 @@ class AIDispatcher {
           
           if (result && result.response) {
             await this.speak(result.response, participantId);
+          } else {
+            this.logSpeechEvent(participantId, transcript, `EMERGENCY_RESPONSE_${emergencyResponse.type}`, null);
+            this._turnContextByUnit.delete(participantId);
           }
           
           if (result && result.cadAction === 'broadcast' && result.cadData && cadService.isConfigured()) {
@@ -847,6 +873,7 @@ class AIDispatcher {
       }
 
     } catch (error) {
+      this._turnContextByUnit.delete(participantId);
       const count = (this.errorCounts.get(participantId) || 0) + 1;
       this.errorCounts.set(participantId, count);
       this._errorLastSeen.set(participantId, Date.now());
@@ -882,6 +909,7 @@ class AIDispatcher {
 
       if (state === DISPATCHER_STATE.AWAITING_SECURE_CONFIRM) {
         this.log('SECURE_CONFIRM_FAST_PATH', { participant: participantId });
+        this._turnContextByUnit.set(participantId, { transcript, intent: 'SECURE_CONFIRM' });
         await this.handleSecureConfirmResponse(participantId, transcript, slots);
         return;
       }
@@ -895,12 +923,14 @@ class AIDispatcher {
 
       if (state === DISPATCHER_STATE.AWAITING_CALL_NATURE) {
         this.log('CALL_NATURE_FAST_PATH', { participant: participantId, transcript });
+        this._turnContextByUnit.set(participantId, { transcript, intent: 'CALL_NATURE_INPUT' });
         await this.handleCallNatureInput(participantId, transcript, slots);
         return;
       }
 
       if (state === DISPATCHER_STATE.AWAITING_CALL_ADDRESS) {
         this.log('CALL_ADDRESS_FAST_PATH', { participant: participantId, transcript });
+        this._turnContextByUnit.set(participantId, { transcript, intent: 'CALL_ADDRESS_INPUT' });
         await this.handleCallAddressInput(participantId, transcript, slots);
         return;
       }
@@ -911,6 +941,7 @@ class AIDispatcher {
       const result = await classifyIntent(transcript, participantId, state, slots, conversationHistory);
 
       this.log('LLM_CLASSIFY_RESULT', { participant: participantId, intent: result.intent, response: result.response });
+      this._turnContextByUnit.set(participantId, { transcript, intent: result.intent });
 
       switch (result.intent) {
         case 'SILENCE': {
@@ -923,6 +954,8 @@ class AIDispatcher {
             });
           }
           this.log('LLM_SILENCE', { participant: participantId, transcript, state });
+          this.logSpeechEvent(participantId, transcript, 'SILENCE', null);
+          this._turnContextByUnit.delete(participantId);
           break;
         }
 
@@ -1273,6 +1306,8 @@ class AIDispatcher {
       return;
     }
 
+    this._turnContextByUnit.set(participantId, { transcript, intent: commandResult.intent });
+
     if (commandResult.intent === 'PERSON_CHECK_DETAILS') {
       await this.handlePersonCheckDetails(participantId, commandResult.rawTranscript);
       return;
@@ -1381,11 +1416,14 @@ class AIDispatcher {
 
     if (!finalResponse) {
       this.log('NO_RESPONSE_NEEDED');
+      this.logSpeechEvent(participantId, transcript, commandResult.intent, null);
+      this._turnContextByUnit.delete(participantId);
       return;
     }
 
     if (!await this.shouldRespond()) {
       this.log('TTS_ABORTED', { reason: 'Disabled before TTS' });
+      this._turnContextByUnit.delete(participantId);
       return;
     }
 
@@ -1393,9 +1431,12 @@ class AIDispatcher {
 
     if (!await this.shouldRespond()) {
       this.log('PUBLISH_ABORTED', { reason: 'Disabled before publish' });
+      this._turnContextByUnit.delete(participantId);
       return;
     }
 
+    this.logSpeechEvent(participantId, transcript, commandResult.intent, finalResponse);
+    this._turnContextByUnit.delete(participantId);
     await this.publishAudio(responseAudio, finalResponse);
   }
 
@@ -2082,6 +2123,12 @@ class AIDispatcher {
   }
 
   async speak(text, participantId = null) {
+    this.log('SPEAK', { text, unit: participantId || '(broadcast)' });
+    const turnCtx = participantId ? this._turnContextByUnit.get(participantId) : null;
+    if (turnCtx) {
+      this.logSpeechEvent(participantId, turnCtx.transcript, turnCtx.intent, text);
+      this._turnContextByUnit.delete(participantId);
+    }
     const audio = await textToSpeech(text);
     await this.publishAudio(audio, text);
     if (participantId) {
@@ -2120,11 +2167,11 @@ class AIDispatcher {
       try {
         opusFrames = opusCodec.encodePcmToOpus(resampled48k);
       } catch (err) {
-        this.log('OPUS_ENCODE_ERROR', { error: err.message });
+        this.verboseLog('OPUS_ENCODE_ERROR', { error: err.message });
         return;
       }
 
-      this.log('AUDIO_STREAMING', { opusFrames: opusFrames.length, channel: this.channelName });
+      this.verboseLog('AUDIO_STREAMING', { opusFrames: opusFrames.length, channel: this.channelName });
 
       const floorResult = floorControlService.requestFloor(this.channelName, AI_IDENTITY, {
         isEmergency: false,
