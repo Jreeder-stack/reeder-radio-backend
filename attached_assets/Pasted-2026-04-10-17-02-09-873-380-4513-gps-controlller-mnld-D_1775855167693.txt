@@ -1,0 +1,172 @@
+2026-04-10 17:02:09.873   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:02:10.857   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:02:11.858   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:02:12.822   737-7373  tydtech                 system_server                        D  Sending ACTION_BATTERY_CHANGED.  level:100, scale:100, status:2, health:2, present:true, voltage: 4355, temperature: 360, technology: Li-ion, AC powered:false, USB powered:true, Wireless powered:false, icon:17303460, invalid charger:0, maxChargingCurrent:5000000, maxChargingVoltage:500000, chargeCounter:100, chargeCURRENT:0
+2026-04-10 17:02:12.860   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:02:13.858   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:02:14.858   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:02:15.857   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:02:16.857   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:02:17.858   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:02:18.855   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:02:19.858   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:02:20.857   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:02:21.859   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:02:22.859   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:02:23.858   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:02:24.860   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:02:25.854   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:02:26.857   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:02:27.565   737-910   ActivityManager         system_server                        E  Sending non-protected broadcast idm.intent.action.connect_alarm from system uid 1000 pkg com.jzcqi.com (Explain with AI)
+                                                                                                    java.lang.Throwable
+                                                                                                    	at com.android.server.am.ActivityManagerService.checkBroadcastFromSystem(ActivityManagerService.java:19312)
+                                                                                                    	at com.android.server.am.ActivityManagerService.broadcastIntentLocked(ActivityManagerService.java:19920)
+                                                                                                    	at com.android.server.am.ActivityManagerService.broadcastIntentInPackage(ActivityManagerService.java:20084)
+                                                                                                    	at com.android.server.am.PendingIntentRecord.sendInner(PendingIntentRecord.java:357)
+                                                                                                    	at com.android.server.am.PendingIntentRecord.sendWithResult(PendingIntentRecord.java:240)
+                                                                                                    	at com.android.server.am.ActivityManagerService.sendIntentSender(ActivityManagerService.java:7862)
+                                                                                                    	at android.app.PendingIntent.send(PendingIntent.java:874)
+                                                                                                    	at com.android.server.AlarmManagerService$DeliveryTracker.deliverLocked(AlarmManagerService.java:3341)
+                                                                                                    	at com.android.server.AlarmManagerService.deliverAlarmsLocked(AlarmManagerService.java:2732)
+                                                                                                    	at com.android.server.AlarmManagerService$AlarmThread.run(AlarmManagerService.java:2865)
+2026-04-10 17:02:27.589  2411-5073  IDM/TCPClient           com.jzcqi.com                        V  com.myapi.idm.sdk.cmd.TCPClient.lambda$sendMessage$0$TCPClient().79:---> client sent message: 0B 0A 0C 00 00 01 02 06 00 00 0F 0E 
+2026-04-10 17:02:27.858   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:02:28.857   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:02:29.857   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:02:30.860   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:02:31.857   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:02:32.857   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:02:33.857   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:02:34.856   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:02:35.858   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:02:36.857   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:02:37.858   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:02:38.858   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:02:39.857   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:02:40.857   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:02:41.857   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:02:42.857   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:02:43.857   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:02:44.858   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:02:45.859   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:02:46.854   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:02:47.858   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:02:48.859   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:02:49.858   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:02:50.858   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:02:51.854   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:02:52.853   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:02:53.853   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:02:54.854   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:02:54.983   598-612   VoLTE IMSM              volte_imsm_93                        D  send CTRL_CMD_GET_SCAN (module/mdagent/volte_imsm_93/src/wireless.c:584)
+2026-04-10 17:02:55.853   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:02:56.857   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:02:57.858   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:02:58.857   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:02:59.854   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:03:00.304   737-1182  tydtech                 system_server                        D  Sending ACTION_BATTERY_CHANGED.  level:100, scale:100, status:2, health:2, present:true, voltage: 4355, temperature: 360, technology: Li-ion, AC powered:false, USB powered:true, Wireless powered:false, icon:17303460, invalid charger:0, maxChargingCurrent:5000000, maxChargingVoltage:500000, chargeCounter:100, chargeCURRENT:0
+2026-04-10 17:03:00.860   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:03:01.857   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:03:02.857   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:03:03.859   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:03:04.857   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:03:05.854   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:03:06.859   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:03:07.858   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:03:08.854   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:03:09.857   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:03:10.857   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:03:11.858   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:03:12.859   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:03:13.858   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:03:14.541   737-916   ActivityManager         system_server                        E  Sending non-protected broadcast android.intent.action.PTT.down from system 737:system/1000 pkg android (Explain with AI)
+                                                                                                    java.lang.Throwable
+                                                                                                    	at com.android.server.am.ActivityManagerService.checkBroadcastFromSystem(ActivityManagerService.java:19307)
+                                                                                                    	at com.android.server.am.ActivityManagerService.broadcastIntentLocked(ActivityManagerService.java:19920)
+                                                                                                    	at com.android.server.am.ActivityManagerService.broadcastIntent(ActivityManagerService.java:20062)
+                                                                                                    	at android.app.ContextImpl.sendBroadcast(ContextImpl.java:971)
+                                                                                                    	at com.android.server.policy.PhoneWindowManager.sendBC(PhoneWindowManager.java:6496)
+                                                                                                    	at com.android.server.policy.PhoneWindowManager.interceptKeyBeforeQueueing(PhoneWindowManager.java:6843)
+                                                                                                    	at com.freeme.server.policy.FreemePhoneWindowManager.interceptKeyBeforeQueueing(FreemePhoneWindowManager.java:301)
+                                                                                                    	at com.android.server.wm.InputMonitor.interceptKeyBeforeQueueing(InputMonitor.java:449)
+                                                                                                    	at com.android.server.input.InputManagerService.interceptKeyBeforeQueueing(InputManagerService.java:1975)
+2026-04-10 17:03:14.908   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:03:15.638   737-916   tyd                     system_server                        D  sendBroadcast: android.intent.action.PTT.up
+2026-04-10 17:03:15.638   737-916   ContextImpl             system_server                        W  Calling a method in the system process without a qualified user: android.app.ContextImpl.sendBroadcast:967 com.android.server.policy.PhoneWindowManager.sendBC:6496 com.android.server.policy.PhoneWindowManager.interceptKeyBeforeQueueing:6852 com.freeme.server.policy.FreemePhoneWindowManager.interceptKeyBeforeQueueing:301 com.android.server.wm.InputMonitor.interceptKeyBeforeQueueing:449 
+2026-04-10 17:03:15.639   737-916   ActivityManager         system_server                        E  Sending non-protected broadcast android.intent.action.PTT.up from system 737:system/1000 pkg android (Explain with AI)
+                                                                                                    java.lang.Throwable
+                                                                                                    	at com.android.server.am.ActivityManagerService.checkBroadcastFromSystem(ActivityManagerService.java:19307)
+                                                                                                    	at com.android.server.am.ActivityManagerService.broadcastIntentLocked(ActivityManagerService.java:19827)
+                                                                                                    	at com.android.server.am.ActivityManagerService.broadcastIntent(ActivityManagerService.java:20062)
+                                                                                                    	at android.app.ContextImpl.sendBroadcast(ContextImpl.java:971)
+                                                                                                    	at com.android.server.policy.PhoneWindowManager.sendBC(PhoneWindowManager.java:6496)
+                                                                                                    	at com.android.server.policy.PhoneWindowManager.interceptKeyBeforeQueueing(PhoneWindowManager.java:6852)
+                                                                                                    	at com.freeme.server.policy.FreemePhoneWindowManager.interceptKeyBeforeQueueing(FreemePhoneWindowManager.java:301)
+                                                                                                    	at com.android.server.wm.InputMonitor.interceptKeyBeforeQueueing(InputMonitor.java:449)
+                                                                                                    	at com.android.server.input.InputManagerService.interceptKeyBeforeQueueing(InputManagerService.java:1975)
+2026-04-10 17:03:15.698   737-916   ActivityManager         system_server                        E  Sending non-protected broadcast android.intent.action.PTT.up from system 737:system/1000 pkg android (Explain with AI)
+                                                                                                    java.lang.Throwable
+                                                                                                    	at com.android.server.am.ActivityManagerService.checkBroadcastFromSystem(ActivityManagerService.java:19307)
+                                                                                                    	at com.android.server.am.ActivityManagerService.broadcastIntentLocked(ActivityManagerService.java:19920)
+                                                                                                    	at com.android.server.am.ActivityManagerService.broadcastIntent(ActivityManagerService.java:20062)
+                                                                                                    	at android.app.ContextImpl.sendBroadcast(ContextImpl.java:971)
+                                                                                                    	at com.android.server.policy.PhoneWindowManager.sendBC(PhoneWindowManager.java:6496)
+                                                                                                    	at com.android.server.policy.PhoneWindowManager.interceptKeyBeforeQueueing(PhoneWindowManager.java:6852)
+                                                                                                    	at com.freeme.server.policy.FreemePhoneWindowManager.interceptKeyBeforeQueueing(FreemePhoneWindowManager.java:301)
+                                                                                                    	at com.android.server.wm.InputMonitor.interceptKeyBeforeQueueing(InputMonitor.java:449)
+                                                                                                    	at com.android.server.input.InputManagerService.interceptKeyBeforeQueueing(InputManagerService.java:1975)
+2026-04-10 17:03:15.941   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:03:16.858   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:03:17.858   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:03:18.859   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:03:19.858   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:03:20.857   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:03:21.857   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:03:22.331   737-1164  tydtech                 system_server                        D  Sending ACTION_BATTERY_CHANGED.  level:100, scale:100, status:2, health:2, present:true, voltage: 4355, temperature: 360, technology: Li-ion, AC powered:false, USB powered:true, Wireless powered:false, icon:17303460, invalid charger:0, maxChargingCurrent:5000000, maxChargingVoltage:500000, chargeCounter:100, chargeCURRENT:0
+2026-04-10 17:03:22.857   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:03:23.859   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:03:24.859   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:03:25.853   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:03:26.857   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:03:27.596   737-910   ActivityManager         system_server                        E  Sending non-protected broadcast idm.intent.action.connect_alarm from system uid 1000 pkg com.jzcqi.com (Explain with AI)
+                                                                                                    java.lang.Throwable
+                                                                                                    	at com.android.server.am.ActivityManagerService.checkBroadcastFromSystem(ActivityManagerService.java:19312)
+                                                                                                    	at com.android.server.am.ActivityManagerService.broadcastIntentLocked(ActivityManagerService.java:19920)
+                                                                                                    	at com.android.server.am.ActivityManagerService.broadcastIntentInPackage(ActivityManagerService.java:20084)
+                                                                                                    	at com.android.server.am.PendingIntentRecord.sendInner(PendingIntentRecord.java:357)
+                                                                                                    	at com.android.server.am.PendingIntentRecord.sendWithResult(PendingIntentRecord.java:240)
+                                                                                                    	at com.android.server.am.ActivityManagerService.sendIntentSender(ActivityManagerService.java:7862)
+                                                                                                    	at android.app.PendingIntent.send(PendingIntent.java:874)
+                                                                                                    	at com.android.server.AlarmManagerService$DeliveryTracker.deliverLocked(AlarmManagerService.java:3341)
+                                                                                                    	at com.android.server.AlarmManagerService.deliverAlarmsLocked(AlarmManagerService.java:2732)
+                                                                                                    	at com.android.server.AlarmManagerService$AlarmThread.run(AlarmManagerService.java:2865)
+2026-04-10 17:03:27.617  2411-5073  IDM/TCPClient           com.jzcqi.com                        V  com.myapi.idm.sdk.cmd.TCPClient.lambda$sendMessage$0$TCPClient().79:---> client sent message: 0B 0A 0C 00 00 01 03 06 00 00 0F 0E 
+2026-04-10 17:03:27.854   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:03:28.859   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:03:29.860   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:03:30.860   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:03:31.859   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:03:32.858   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:03:33.857   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:03:34.859   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:03:35.860   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:03:36.860   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:03:37.860   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:03:38.859   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:03:39.854   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:03:40.860   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:03:41.858   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:03:42.859   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:03:43.859   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:03:44.859   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:03:45.859   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:03:46.858   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:03:47.859   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:03:48.859   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:03:49.859   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:03:50.858   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:03:51.858   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:03:52.858   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:03:53.858   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:03:54.860   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!
+2026-04-10 17:03:55.854   380-4513  gps_controlller         mnld                                 D  send_active_notify: send clean nmea timer cmd!

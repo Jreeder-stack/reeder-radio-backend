@@ -1,0 +1,192 @@
+2026-04-10 17:02:09.883   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:02:09.886   397-29779 BufferQueueProducer     media.codec                          D  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) cancelBuffer: slot 4
+2026-04-10 17:02:11.900   365-713   BufferQueueProducer     surfaceflinger                       I  [StatusBar#0](this:0xaf6db000,id:4,api:1,p:967,c:365) queueBuffer: fps=0.25 dur=4016.67 max=4016.67 min=4016.67
+2026-04-10 17:02:11.917   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:02:11.919   397-29779 BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) queueBuffer: fps=0.40 dur=5017.82 max=4018.42 min=999.40
+2026-04-10 17:02:12.884   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:02:12.898   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:02:12.916   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:02:21.900   365-713   BufferQueueProducer     surfaceflinger                       I  [StatusBar#0](this:0xaf6db000,id:4,api:1,p:967,c:365) queueBuffer: fps=0.40 dur=10000.01 max=9003.18 min=9.66
+2026-04-10 17:02:21.914   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:02:21.917   397-29779 BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) queueBuffer: fps=0.40 dur=9998.52 max=8999.45 min=14.89
+2026-04-10 17:02:22.914   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:02:23.219   365-713   BufferQueueProducer     surfaceflinger                       I  [StatusBar#0](this:0xaf6db000,id:4,api:1,p:967,c:365) queueBuffer: fps=1.52 dur=1318.45 max=998.85 min=319.59
+2026-04-10 17:02:23.234   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:02:23.236   397-29779 BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) queueBuffer: fps=1.52 dur=1318.35 max=999.73 min=318.62
+2026-04-10 17:02:23.315   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:02:23.347   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:02:25.784   365-832   BufferQueueProducer     surfaceflinger                       I  [com.loudtalks/com.zello.ui.MainActivity#0](this:0xaf732000,id:1469,api:1,p:1587,c:365) queueBuffer: fps=0.03 dur=29999.58 max=29999.58 min=29999.58
+2026-04-10 17:02:25.800   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:02:25.802   397-29779 BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) queueBuffer: fps=1.17 dur=2566.20 max=2451.82 min=32.67
+2026-04-10 17:02:25.917   365-832   BufferQueueProducer     surfaceflinger                       I  [StatusBar#0](this:0xaf6db000,id:4,api:1,p:967,c:365) queueBuffer: fps=1.11 dur=2698.18 max=2589.69 min=24.69
+2026-04-10 17:02:25.933   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:02:26.931   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:02:26.934   397-29779 BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) queueBuffer: fps=1.77 dur=1131.97 max=998.81 min=133.17
+2026-04-10 17:02:27.916   365-832   BufferQueueProducer     surfaceflinger                       I  [StatusBar#0](this:0xaf6db000,id:4,api:1,p:967,c:365) queueBuffer: fps=1.00 dur=1998.88 max=999.48 min=999.40
+2026-04-10 17:02:27.931   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:02:27.934   397-29779 BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) queueBuffer: fps=1.00 dur=1000.19 max=1000.19 min=1000.19
+2026-04-10 17:02:28.921   365-832   BufferQueueProducer     surfaceflinger                       I  [StatusBar#0](this:0xaf6db000,id:4,api:1,p:967,c:365) queueBuffer: fps=0.99 dur=1005.28 max=1005.28 min=1005.28
+2026-04-10 17:02:28.931   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:02:28.934   397-29779 BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) queueBuffer: fps=1.00 dur=1000.11 max=1000.11 min=1000.11
+2026-04-10 17:02:29.931   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:02:30.916   365-832   BufferQueueProducer     surfaceflinger                       I  [StatusBar#0](this:0xaf6db000,id:4,api:1,p:967,c:365) queueBuffer: fps=1.00 dur=1994.56 max=999.72 min=994.84
+2026-04-10 17:02:30.931   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:02:30.934   397-29779 BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) queueBuffer: fps=1.00 dur=2000.11 max=1000.59 min=999.52
+2026-04-10 17:02:34.933   365-832   BufferQueueProducer     surfaceflinger                       I  [StatusBar#0](this:0xaf6db000,id:4,api:1,p:967,c:365) queueBuffer: fps=0.25 dur=4016.97 max=4016.97 min=4016.97
+2026-04-10 17:02:34.948   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:02:34.950   397-29779 BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) queueBuffer: fps=0.25 dur=4016.23 max=4016.23 min=4016.23
+2026-04-10 17:02:35.948   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:02:35.951   397-29779 BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) queueBuffer: fps=1.00 dur=1000.24 max=1000.24 min=1000.24
+2026-04-10 17:02:46.949   365-832   BufferQueueProducer     surfaceflinger                       I  [StatusBar#0](this:0xaf6db000,id:4,api:1,p:967,c:365) queueBuffer: fps=0.17 dur=12016.64 max=11016.67 min=999.97
+2026-04-10 17:02:46.964   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:02:46.967   397-29779 BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) queueBuffer: fps=0.09 dur=11016.70 max=11016.70 min=11016.70
+2026-04-10 17:02:47.964   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:02:51.949   365-832   BufferQueueProducer     surfaceflinger                       I  [StatusBar#0](this:0xaf6db000,id:4,api:1,p:967,c:365) queueBuffer: fps=0.40 dur=5000.13 max=4000.26 min=999.86
+2026-04-10 17:02:51.964   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:02:51.967   397-29779 BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) queueBuffer: fps=0.40 dur=4999.71 max=4000.12 min=999.59
+2026-04-10 17:02:52.949   365-832   BufferQueueProducer     surfaceflinger                       I  [StatusBar#0](this:0xaf6db000,id:4,api:1,p:967,c:365) queueBuffer: fps=1.00 dur=1000.04 max=1000.04 min=1000.04
+2026-04-10 17:02:52.964   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:02:55.784   365-713   BufferQueueProducer     surfaceflinger                       I  [com.loudtalks/com.zello.ui.MainActivity#0](this:0xaf732000,id:1469,api:1,p:1587,c:365) queueBuffer: fps=0.03 dur=29999.47 max=29999.47 min=29999.47
+2026-04-10 17:02:55.800   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:02:55.802   397-29779 BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) queueBuffer: fps=0.52 dur=3834.75 max=2835.01 min=999.75
+2026-04-10 17:02:55.966   365-713   BufferQueueProducer     surfaceflinger                       I  [StatusBar#0](this:0xaf6db000,id:4,api:1,p:967,c:365) queueBuffer: fps=0.33 dur=3016.52 max=3016.52 min=3016.52
+2026-04-10 17:02:55.983   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:02:56.967   365-713   BufferQueueProducer     surfaceflinger                       I  [StatusBar#0](this:0xaf6db000,id:4,api:1,p:967,c:365) queueBuffer: fps=1.00 dur=1000.76 max=1000.76 min=1000.76
+2026-04-10 17:02:56.981   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:02:56.984   397-29779 BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) queueBuffer: fps=1.69 dur=1182.41 max=999.34 min=183.08
+2026-04-10 17:02:58.966   365-713   BufferQueueProducer     surfaceflinger                       I  [StatusBar#0](this:0xaf6db000,id:4,api:1,p:967,c:365) queueBuffer: fps=0.50 dur=1999.05 max=1999.05 min=1999.05
+2026-04-10 17:02:58.981   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:02:58.984   397-29779 BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) queueBuffer: fps=0.50 dur=1999.91 max=1999.91 min=1999.91
+2026-04-10 17:02:59.981   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:00.019   365-713   BufferQueueProducer     surfaceflinger                       I  [StatusBar#0](this:0xaf6db000,id:4,api:1,p:967,c:365) queueBuffer: fps=1.90 dur=1052.75 max=999.89 min=52.86
+2026-04-10 17:03:00.034   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:00.036   397-29779 BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) queueBuffer: fps=1.90 dur=1051.53 max=999.19 min=52.34
+2026-04-10 17:03:00.048   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:00.064   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:00.331   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:00.348   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:14.604   332-617   AudioALSAStreamIn       and...re.audio@2.0-service-mediatek  D  set() done, sampleRate = 16000, num_channels = 1, buffer_size=640, tempDebugflag = 0
+2026-04-10 17:03:14.705   332-2693  MtkAudioBitConverter    and...re.audio@2.0-service-mediatek  D  +resetBuffer()
+2026-04-10 17:03:14.740   365-832   BufferQueueProducer     surfaceflinger                       I  [StatusBar#0](this:0xaf6db000,id:4,api:1,p:967,c:365) queueBuffer: fps=0.34 dur=14721.38 max=14404.59 min=9.56
+2026-04-10 17:03:14.749   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:14.753   397-29779 BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) queueBuffer: fps=0.34 dur=14716.84 max=14402.19 min=14.84
+2026-04-10 17:03:14.766   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:14.769   397-29779 BufferQueueProducer     media.codec                          D  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) cancelBuffer: slot 1
+2026-04-10 17:03:14.817   365-466   BufferQueueProducer     surfaceflinger                       I  [com.loudtalks/com.zello.ui.MainActivity#0](this:0xaf732000,id:1469,api:1,p:1587,c:365) queueBuffer: fps=0.05 dur=19033.26 max=19033.26 min=19033.26
+2026-04-10 17:03:14.834   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:14.851   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:14.865   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:14.881   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:14.898   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:14.954   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:14.967   332-8747  AudioSPELayer           and...re.audio@2.0-service-mediatek  D  Start, going to configure,mSphCtrlBuffer=0xb3545b80,mem_size=226672
+2026-04-10 17:03:14.969   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:14.974   332-8747  AudioALSAC...iderNormal and...re.audio@2.0-service-mediatek  D  buffersizemax: 49152, bHifiRecord: 0, btempDebug: 0
+2026-04-10 17:03:14.975   332-8747  AudioALSAC...iderNormal and...re.audio@2.0-service-mediatek  D  mConfig format: 1, channels: 2, rate: 48000, period_size: 960, period_count: 4, latency: 20, kReadBufferSize: 7680, mCaptureDropSize: 0
+2026-04-10 17:03:14.989   332-8748  AudioALSAC...iderNormal and...re.audio@2.0-service-mediatek  D  +readThread(), pid: 332, tid: 8748, kReadBufferSize=0x1e00, open_index=361, UPLINK_SET_AMICDCC_BUFFER_TIME_MS = 80, counter=1 
+2026-04-10 17:03:15.036   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:15.100   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:15.102   397-29779 BufferQueueProducer     media.codec                          D  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) cancelBuffer: slot 5
+2026-04-10 17:03:15.117   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:15.149   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:15.202   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:15.217   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:15.221   397-29779 BufferQueueProducer     media.codec                          D  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) cancelBuffer: slot 4
+2026-04-10 17:03:15.251   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:15.302   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:15.317   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:15.334   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:15.366   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:15.386   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:15.417   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:15.451   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:15.467   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:15.484   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:15.501   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:15.532   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:15.567   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:15.585   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:15.601   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:15.634   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:15.667   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:15.684   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:15.701   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:15.740   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:15.751   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:15.754   397-29779 BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) queueBuffer: fps=31.95 dur=1001.63 max=83.29 min=12.48
+2026-04-10 17:03:15.773   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:15.784   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:15.817   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:15.819   397-29779 BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) queueBuffer: slot 4 is dropped, handle=0xab261cc0
+2026-04-10 17:03:15.831   365-713   BufferQueueProducer     surfaceflinger                       I  [StatusBar#0](this:0xaf6db000,id:4,api:1,p:967,c:365) queueBuffer: fps=5.50 dur=1090.99 max=384.22 min=74.03
+2026-04-10 17:03:15.847   365-466   BufferQueueProducer     surfaceflinger                       I  [com.loudtalks/com.zello.ui.MainActivity#0](this:0xaf732000,id:1469,api:1,p:1587,c:365) queueBuffer: fps=31.08 dur=1029.66 max=168.15 min=9.49
+2026-04-10 17:03:15.851   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:15.852   397-29779 BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) queueBuffer: slot 0 is dropped, handle=0xab261180
+2026-04-10 17:03:15.867   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:15.869   397-29779 BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) queueBuffer: slot 4 is dropped, handle=0xab261cc0
+2026-04-10 17:03:15.911   332-14093 AudioSPELayer           and...re.audio@2.0-service-mediatek  D  free mSphCtrlBuffer 0xb3545b80
+2026-04-10 17:03:15.911   332-14093 AudioSPELayer           and...re.audio@2.0-service-mediatek  D  ~free mSphCtrlBuffer
+2026-04-10 17:03:15.912   332-14093 AudioSPELayer           and...re.audio@2.0-service-mediatek  D  FlushBufferQ+
+2026-04-10 17:03:15.912   332-14093 AudioSPELayer           and...re.audio@2.0-service-mediatek  D  FlushBufferQ mULOutBufferQ size=1,mULInBufferQ.size=1,mDLOutBufferQ.size()=0,mDLInBufferQ.size()=0,mDLDelayBufferQ.size()=0
+2026-04-10 17:03:15.912   332-14093 AudioSPELayer           and...re.audio@2.0-service-mediatek  D  FlushBufferQ-
+2026-04-10 17:03:16.016   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:16.018   397-29779 BufferQueueProducer     media.codec                          D  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) cancelBuffer: slot 4
+2026-04-10 17:03:16.034   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:16.103   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:16.248   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:16.365   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:16.715   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:16.782   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:16.785   397-29779 BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) queueBuffer: fps=10.67 dur=1030.90 max=350.18 min=10.44
+2026-04-10 17:03:16.814   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:17.002   365-832   BufferQueueProducer     surfaceflinger                       I  [StatusBar#0](this:0xaf6db000,id:4,api:1,p:967,c:365) queueBuffer: fps=5.98 dur=1171.13 max=354.93 min=25.64
+2026-04-10 17:03:17.016   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:21.001   365-832   BufferQueueProducer     surfaceflinger                       I  [StatusBar#0](this:0xaf6db000,id:4,api:1,p:967,c:365) queueBuffer: fps=0.25 dur=3998.44 max=3998.44 min=3998.44
+2026-04-10 17:03:21.014   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:21.017   397-29779 BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) queueBuffer: fps=0.71 dur=4232.30 max=3998.47 min=31.86
+2026-04-10 17:03:22.357   365-713   BufferQueueProducer     surfaceflinger                       I  [StatusBar#0](this:0xaf6db000,id:4,api:1,p:967,c:365) queueBuffer: fps=0.74 dur=1356.83 max=1356.83 min=1356.83
+2026-04-10 17:03:22.368   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:22.370   397-29779 BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) queueBuffer: fps=0.74 dur=1352.31 max=1352.31 min=1352.31
+2026-04-10 17:03:22.382   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:23.033   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:25.786   365-713   BufferQueueProducer     surfaceflinger                       I  [com.loudtalks/com.zello.ui.MainActivity#0](this:0xaf732000,id:1469,api:1,p:1587,c:365) queueBuffer: fps=0.20 dur=9939.69 max=9759.64 min=180.05
+2026-04-10 17:03:25.800   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:25.802   397-29779 BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) queueBuffer: fps=0.87 dur=3432.29 max=2767.62 min=14.51
+2026-04-10 17:03:26.016   365-713   BufferQueueProducer     surfaceflinger                       I  [StatusBar#0](this:0xaf6db000,id:4,api:1,p:967,c:365) queueBuffer: fps=0.82 dur=3658.83 max=2999.89 min=9.65
+2026-04-10 17:03:26.033   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:26.234   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:26.315   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:26.348   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:27.016   365-713   BufferQueueProducer     surfaceflinger                       I  [StatusBar#0](this:0xaf6db000,id:4,api:1,p:967,c:365) queueBuffer: fps=4.00 dur=1000.15 max=676.71 min=35.91
+2026-04-10 17:03:27.033   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:27.035   397-29779 BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) queueBuffer: fps=4.05 dur=1233.05 max=684.48 min=33.02
+2026-04-10 17:03:28.016   365-713   BufferQueueProducer     surfaceflinger                       I  [StatusBar#0](this:0xaf6db000,id:4,api:1,p:967,c:365) queueBuffer: fps=1.00 dur=1000.16 max=1000.16 min=1000.16
+2026-04-10 17:03:28.031   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:29.031   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:29.034   397-29779 BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) queueBuffer: fps=1.00 dur=1998.51 max=999.33 min=999.17
+2026-04-10 17:03:36.222   365-713   BufferQueueProducer     surfaceflinger                       I  [StatusBar#0](this:0xaf6db000,id:4,api:1,p:967,c:365) queueBuffer: fps=0.24 dur=8205.23 max=7205.86 min=999.37
+2026-04-10 17:03:36.235   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:36.237   397-29779 BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) queueBuffer: fps=0.14 dur=7203.22 max=7203.22 min=7203.22
+2026-04-10 17:03:36.298   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:36.331   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:40.617   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:40.619   397-29779 BufferQueueProducer     media.codec                          D  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) cancelBuffer: slot 0
+2026-04-10 17:03:46.225   365-713   BufferQueueProducer     surfaceflinger                       I  [StatusBar#0](this:0xaf6db000,id:4,api:1,p:967,c:365) queueBuffer: fps=0.30 dur=10003.48 max=9913.15 min=26.14
+2026-04-10 17:03:46.234   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:46.237   397-29779 BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) queueBuffer: fps=0.30 dur=9999.84 max=9903.23 min=32.44
+2026-04-10 17:03:46.298   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:46.331   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:52.050   365-713   BufferQueueProducer     surfaceflinger                       I  [StatusBar#0](this:0xaf6db000,id:4,api:1,p:967,c:365) queueBuffer: fps=0.52 dur=5824.63 max=5728.05 min=36.06
+2026-04-10 17:03:52.067   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:52.069   397-29779 BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) queueBuffer: fps=0.51 dur=5832.03 max=5735.26 min=32.58
+2026-04-10 17:03:53.066   365-713   BufferQueueProducer     surfaceflinger                       I  [StatusBar#0](this:0xaf6db000,id:4,api:1,p:967,c:365) queueBuffer: fps=0.98 dur=1016.36 max=1016.36 min=1016.36
+2026-04-10 17:03:53.081   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:53.084   397-29779 BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) queueBuffer: fps=0.98 dur=1015.26 max=1015.26 min=1015.26
+2026-04-10 17:03:55.786   365-713   BufferQueueProducer     surfaceflinger                       I  [com.loudtalks/com.zello.ui.MainActivity#0](this:0xaf732000,id:1469,api:1,p:1587,c:365) queueBuffer: fps=0.03 dur=29999.97 max=29999.97 min=29999.97
+2026-04-10 17:03:55.800   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:55.802   397-29779 BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) queueBuffer: fps=0.37 dur=2717.61 max=2717.61 min=2717.61
+2026-04-10 17:03:56.066   365-713   BufferQueueProducer     surfaceflinger                       I  [StatusBar#0](this:0xaf6db000,id:4,api:1,p:967,c:365) queueBuffer: fps=0.33 dur=2999.72 max=2999.72 min=2999.72
+2026-04-10 17:03:56.083   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:56.234   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:56.298   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 17:03:56.331   352-11764 hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  

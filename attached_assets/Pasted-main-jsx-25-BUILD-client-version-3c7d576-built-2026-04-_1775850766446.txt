@@ -1,0 +1,924 @@
+main.jsx:25 [BUILD] client version=3c7d576 built=2026-04-10T19:36:20.069Z
+dispatcher:1 <meta name="apple-mobile-web-app-capable" content="yes"> is deprecated. Please include <meta name="mobile-web-app-capable" content="yes">
+AudioConnectionContext.jsx:589 [AudioConnection] Dispatcher mode - idle timeout disabled (audio must persist)
+AudioConnectionContext.jsx:702 [AudioConnection] Init check - user: undefined lastUser: null initializing: false path: /dispatcher
+AudioConnectionContext.jsx:711 [AudioConnection] No user, skipping init
+AuthContext.jsx:127 [PTT-DIAG] [JS] Auth: pushed early connection info to service: server=https://comms.reeder-systems.com unit=DISPATCH-1
+AudioConnectionContext.jsx:702 [AudioConnection] Init check - user: DISPATCH-1 lastUser: null initializing: false path: /dispatcher
+AudioConnectionContext.jsx:729 [AudioConnection] Fetching channels...
+SignalingManager.js:76 [Signaling] Connection already in progress, returning existing promise
+AuthContext.jsx:127 [PTT-DIAG] [JS] Auth: pushed early connection info to service: server=https://comms.reeder-systems.com unit=DISPATCH-1
+AudioConnectionContext.jsx:732 [AudioConnection] Fetched 4 channels
+AudioConnectionContext.jsx:490 [AudioConnection] Dispatcher mode - skipping audio connections at init; monitoring effect will drive connections
+AudioTransportManager.js:264 AUDIO_WS_CONNECT_ATTEMPT {channelName: 'TESTING__TESTING 1', identity: 'DISPATCH-1', url: 'wss://comms.reeder-systems.com/api/audio-ws?channelId=TESTING__TESTING%201&unitId=DISPATCH-1'}
+AudioTransportManager.js:264 AUDIO_WS_CONNECT_ATTEMPT {channelName: 'DISPATCH__DISPATCH', identity: 'DISPATCH-1', url: 'wss://comms.reeder-systems.com/api/audio-ws?channelId=DISPATCH__DISPATCH&unitId=DISPATCH-1'}
+SignalingManager.js:110 [Signaling] Connected to signaling server
+AudioConnectionContext.jsx:240 [AudioConnection] Signaling reconnected — verifying audio WebSockets
+SignalingManager.js:337 [Signaling] Authentication request sent for DISPATCH-1
+SignalingManager.js:296 [Signaling] Authentication already in progress, returning existing promise
+SignalingManager.js:160 [Signaling] Authenticated as DISPATCH-1
+SignalingContext.jsx:47 [SignalingContext] Connected and authenticated as DISPATCH-1
+SignalingContext.jsx:47 [SignalingContext] Connected and authenticated as DISPATCH-1
+SignalingManager.js:376 [Signaling] Joined channel: TESTING__TESTING 1
+SignalingManager.js:376 [Signaling] Joined channel: DISPATCH__DISPATCH
+AudioTransportManager.js:269 AUDIO_WS_ONOPEN {channelName: 'TESTING__TESTING 1', identity: 'DISPATCH-1'}
+AudioConnectionContext.jsx:293 [AudioConnection] TESTING__TESTING 1 state: connected
+AudioConnectionContext.jsx:349 [AudioConnection] connectToChannel total for TESTING__TESTING 1: 454.0ms
+AudioConnectionContext.jsx:356 [AudioConnection] Connected to TESTING__TESTING 1
+PcmCaptureEngine.js:118 [PcmCaptureEngine] Warmed up – mic and AudioContext ready
+AudioTransportManager.js:269 AUDIO_WS_ONOPEN {channelName: 'DISPATCH__DISPATCH', identity: 'DISPATCH-1'}
+AudioConnectionContext.jsx:293 [AudioConnection] DISPATCH__DISPATCH state: connected
+AudioConnectionContext.jsx:349 [AudioConnection] connectToChannel total for DISPATCH__DISPATCH: 936.0ms
+AudioConnectionContext.jsx:356 [AudioConnection] Connected to DISPATCH__DISPATCH
+AudioTransportManager.js:738 AUDIO_RX_DECODE_DETAIL {opusBytes: 160, pcmSamples: 960, channelId: 'DISPATCH__DISPATCH', sender: 'ADMIN', frame: 1}
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 1, framesPlayed: 0, underrunCount: 0, bufferDepth: 1, avgBufferDepth: 0.2}
+AudioTransportManager.js:738 AUDIO_RX_DECODE_DETAIL {opusBytes: 160, pcmSamples: 960, channelId: 'DISPATCH__DISPATCH', sender: 'ADMIN', frame: 2}
+AudioTransportManager.js:738 AUDIO_RX_DECODE_DETAIL {opusBytes: 160, pcmSamples: 960, channelId: 'DISPATCH__DISPATCH', sender: 'ADMIN', frame: 3}
+AudioTransportManager.js:738 AUDIO_RX_DECODE_DETAIL {opusBytes: 160, pcmSamples: 960, channelId: 'DISPATCH__DISPATCH', sender: 'ADMIN', frame: 4}
+AudioTransportManager.js:738 AUDIO_RX_DECODE_DETAIL {opusBytes: 160, pcmSamples: 960, channelId: 'DISPATCH__DISPATCH', sender: 'ADMIN', frame: 5}
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 6, totalBytes: 960, plcFrames: 0, reorderFlushes: 0}
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 5, framesPlayed: 0, underrunCount: 0, bufferDepth: 6, avgBufferDepth: 5.1}
+AudioTransportManager.js:785 AUDIO_RX_REORDER_STATS {lateDropped: 0, reordered: 1, activeStreams: 1}
+_logReorderStats @ AudioTransportManager.js:785
+_enqueueWithReorder @ AudioTransportManager.js:676
+b.onmessage @ AudioTransportManager.js:310
+AudioTransportManager.js:764 AUDIO_RX_PLC_GENERATE {channelId: 'DISPATCH__DISPATCH', sender: 'ADMIN', count: 2}
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 1, totalBytes: 160, plcFrames: 2, reorderFlushes: 0}
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 35, framesPlayed: 0, underrunCount: 0, bufferDepth: 41, avgBufferDepth: 23.6}
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 46, totalBytes: 7360, plcFrames: 0, reorderFlushes: 1}
+AudioTransportManager.js:764 AUDIO_RX_PLC_GENERATE {channelId: 'DISPATCH__DISPATCH', sender: 'ADMIN', count: 1}
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 70, framesPlayed: 81, underrunCount: 0, bufferDepth: 29, avgBufferDepth: 39.1}
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 66, totalBytes: 10560, plcFrames: 1, reorderFlushes: 1}
+AudioTransportManager.js:764 AUDIO_RX_PLC_GENERATE {channelId: 'DISPATCH__DISPATCH', sender: 'ADMIN', count: 5}
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 81, framesPlayed: 70, underrunCount: 0, bufferDepth: 40, avgBufferDepth: 31.8}
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 86, totalBytes: 13760, plcFrames: 5, reorderFlushes: 1}
+PcmPlaybackEngine.js:30 AUDIO_PLAYBACK_UNDERRUN {count: 1, bufferDepth: 0}
+_workletNode.port.onmessage @ PcmPlaybackEngine.js:30
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 35, framesPlayed: 76, underrunCount: 1, bufferDepth: 0, avgBufferDepth: 22.3}
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 14, totalBytes: 2240, plcFrames: 0, reorderFlushes: 0}
+AudioTransportManager.js:785 AUDIO_RX_REORDER_STATS {lateDropped: 0, reordered: 19, activeStreams: 1}
+_logReorderStats @ AudioTransportManager.js:785
+_enqueueWithReorder @ AudioTransportManager.js:676
+b.onmessage @ AudioTransportManager.js:312
+AudioTransportManager.js:764 AUDIO_RX_PLC_GENERATE {channelId: 'DISPATCH__DISPATCH', sender: 'ADMIN', count: 5}
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 67, framesPlayed: 53, underrunCount: 0, bufferDepth: 13, avgBufferDepth: 12.5}
+PcmPlaybackEngine.js:30 AUDIO_PLAYBACK_UNDERRUN {count: 1, bufferDepth: 0}
+_workletNode.port.onmessage @ PcmPlaybackEngine.js:30
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 8, framesPlayed: 22, underrunCount: 1, bufferDepth: 0, avgBufferDepth: 5.5}
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 68, totalBytes: 10880, plcFrames: 5, reorderFlushes: 2}
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 50, framesPlayed: 31, underrunCount: 0, bufferDepth: 18, avgBufferDepth: 11.6}
+AudioTransportManager.js:785 AUDIO_RX_REORDER_STATS {lateDropped: 0, reordered: 7, activeStreams: 1}
+_logReorderStats @ AudioTransportManager.js:785
+_enqueueWithReorder @ AudioTransportManager.js:676
+b.onmessage @ AudioTransportManager.js:310
+AudioTransportManager.js:764 AUDIO_RX_PLC_GENERATE {channelId: 'DISPATCH__DISPATCH', sender: 'ADMIN', count: 7}
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 70, totalBytes: 11200, plcFrames: 7, reorderFlushes: 0}
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 81, framesPlayed: 65, underrunCount: 0, bufferDepth: 34, avgBufferDepth: 20.6}
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 86, totalBytes: 13760, plcFrames: 0, reorderFlushes: 1}
+PcmPlaybackEngine.js:30 AUDIO_PLAYBACK_UNDERRUN {count: 1, bufferDepth: 0}
+_workletNode.port.onmessage @ PcmPlaybackEngine.js:30
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 59, framesPlayed: 94, underrunCount: 1, bufferDepth: 0, avgBufferDepth: 22.6}
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 26, totalBytes: 4160, plcFrames: 0, reorderFlushes: 0}
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 22, framesPlayed: 0, underrunCount: 0, bufferDepth: 22, avgBufferDepth: 2.7}
+AudioTransportManager.js:785 AUDIO_RX_REORDER_STATS {lateDropped: 0, reordered: 4, activeStreams: 1}
+_logReorderStats @ AudioTransportManager.js:785
+_enqueueWithReorder @ AudioTransportManager.js:676
+b.onmessage @ AudioTransportManager.js:312
+AudioTransportManager.js:764 AUDIO_RX_PLC_GENERATE {channelId: 'DISPATCH__DISPATCH', sender: 'ADMIN', count: 3}
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 79, totalBytes: 12640, plcFrames: 3, reorderFlushes: 1}
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 69, framesPlayed: 81, underrunCount: 0, bufferDepth: 9, avgBufferDepth: 19.4}
+PcmPlaybackEngine.js:30 AUDIO_PLAYBACK_UNDERRUN {count: 1, bufferDepth: 0}
+_workletNode.port.onmessage @ PcmPlaybackEngine.js:30
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 8, totalBytes: 1280, plcFrames: 0, reorderFlushes: 0}
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 13, framesPlayed: 10, underrunCount: 1, bufferDepth: 13, avgBufferDepth: 1.6}
+AudioTransportManager.js:764 AUDIO_RX_PLC_GENERATE {channelId: 'DISPATCH__DISPATCH', sender: 'ADMIN', count: 2}
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 67, framesPlayed: 75, underrunCount: 0, bufferDepth: 4, avgBufferDepth: 18.2}
+PcmPlaybackEngine.js:30 AUDIO_PLAYBACK_UNDERRUN {count: 1, bufferDepth: 0}
+_workletNode.port.onmessage @ PcmPlaybackEngine.js:30
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 0, framesPlayed: 5, underrunCount: 1, bufferDepth: 0, avgBufferDepth: 0.1}
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 78, totalBytes: 12480, plcFrames: 2, reorderFlushes: 1}
+AudioTransportManager.js:785 AUDIO_RX_REORDER_STATS {lateDropped: 0, reordered: 11, activeStreams: 1}
+_logReorderStats @ AudioTransportManager.js:785
+_enqueueWithReorder @ AudioTransportManager.js:676
+b.onmessage @ AudioTransportManager.js:310
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 45, framesPlayed: 31, underrunCount: 0, bufferDepth: 13, avgBufferDepth: 10.5}
+AudioTransportManager.js:764 AUDIO_RX_PLC_GENERATE {channelId: 'DISPATCH__DISPATCH', sender: 'ADMIN', count: 1}
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 75, totalBytes: 12000, plcFrames: 1, reorderFlushes: 1}
+PcmPlaybackEngine.js:30 AUDIO_PLAYBACK_UNDERRUN {count: 1, bufferDepth: 0}
+_workletNode.port.onmessage @ PcmPlaybackEngine.js:30
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 43, framesPlayed: 57, underrunCount: 1, bufferDepth: 0, avgBufferDepth: 7.7}
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 12, totalBytes: 1920, plcFrames: 0, reorderFlushes: 0}
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 8, framesPlayed: 0, underrunCount: 0, bufferDepth: 8, avgBufferDepth: 0.3}
+AudioTransportManager.js:785 AUDIO_RX_REORDER_STATS {lateDropped: 0, reordered: 4, activeStreams: 1}
+_logReorderStats @ AudioTransportManager.js:785
+_enqueueWithReorder @ AudioTransportManager.js:676
+b.onmessage @ AudioTransportManager.js:310
+AudioTransportManager.js:764 AUDIO_RX_PLC_GENERATE {channelId: 'DISPATCH__DISPATCH', sender: 'ADMIN', count: 1}
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 83, totalBytes: 13280, plcFrames: 1, reorderFlushes: 1}
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 82, framesPlayed: 75, underrunCount: 0, bufferDepth: 14, avgBufferDepth: 16.6}
+PcmPlaybackEngine.js:30 AUDIO_PLAYBACK_UNDERRUN {count: 1, bufferDepth: 0}
+_workletNode.port.onmessage @ PcmPlaybackEngine.js:30
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 20, framesPlayed: 35, underrunCount: 1, bufferDepth: 0, avgBufferDepth: 3.2}
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 26, totalBytes: 4160, plcFrames: 0, reorderFlushes: 0}
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 19, framesPlayed: 0, underrunCount: 0, bufferDepth: 19, avgBufferDepth: 2.6}
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 78, totalBytes: 12480, plcFrames: 0, reorderFlushes: 0}
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 79, framesPlayed: 93, underrunCount: 0, bufferDepth: 4, avgBufferDepth: 13.8}
+PcmPlaybackEngine.js:30 AUDIO_PLAYBACK_UNDERRUN {count: 1, bufferDepth: 0}
+_workletNode.port.onmessage @ PcmPlaybackEngine.js:30
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 76, totalBytes: 12160, plcFrames: 0, reorderFlushes: 0}
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 75, framesPlayed: 65, underrunCount: 1, bufferDepth: 14, avgBufferDepth: 11.3}
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 8, framesPlayed: 23, underrunCount: 1, bufferDepth: 0, avgBufferDepth: 1.9}
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 27, totalBytes: 4320, plcFrames: 0, reorderFlushes: 0}
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 50, framesPlayed: 31, underrunCount: 0, bufferDepth: 18, avgBufferDepth: 10.4}
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 77, totalBytes: 12320, plcFrames: 0, reorderFlushes: 0}
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 81, framesPlayed: 99, underrunCount: 0, bufferDepth: 0, avgBufferDepth: 7.5}
+PcmPlaybackEngine.js:30 AUDIO_PLAYBACK_UNDERRUN {count: 1, bufferDepth: 0}
+_workletNode.port.onmessage @ PcmPlaybackEngine.js:30
+AudioTransportManager.js:785 AUDIO_RX_REORDER_STATS {lateDropped: 0, reordered: 4, activeStreams: 1}
+_logReorderStats @ AudioTransportManager.js:785
+_enqueueWithReorder @ AudioTransportManager.js:676
+b.onmessage @ AudioTransportManager.js:312
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 86, totalBytes: 13760, plcFrames: 0, reorderFlushes: 1}
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 89, framesPlayed: 74, underrunCount: 1, bufferDepth: 15, avgBufferDepth: 16.7}
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 87, totalBytes: 13920, plcFrames: 0, reorderFlushes: 0}
+PcmPlaybackEngine.js:30 AUDIO_PLAYBACK_UNDERRUN {count: 1, bufferDepth: 0}
+_workletNode.port.onmessage @ PcmPlaybackEngine.js:30
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 41, framesPlayed: 57, underrunCount: 1, bufferDepth: 0, avgBufferDepth: 6}
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 67, totalBytes: 10720, plcFrames: 0, reorderFlushes: 1}
+PcmPlaybackEngine.js:30 AUDIO_PLAYBACK_UNDERRUN {count: 1, bufferDepth: 0}
+_workletNode.port.onmessage @ PcmPlaybackEngine.js:30
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 78, framesPlayed: 78, underrunCount: 1, bufferDepth: 0, avgBufferDepth: 19.7}
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 19, totalBytes: 3040, plcFrames: 0, reorderFlushes: 0}
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 25, framesPlayed: 0, underrunCount: 0, bufferDepth: 24, avgBufferDepth: 3.5}
+PcmPlaybackEngine.js:30 AUDIO_PLAYBACK_UNDERRUN {count: 1, bufferDepth: 0}
+_workletNode.port.onmessage @ PcmPlaybackEngine.js:30
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 34, framesPlayed: 59, underrunCount: 1, bufferDepth: 0, avgBufferDepth: 10}
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 59, totalBytes: 9440, plcFrames: 0, reorderFlushes: 0}
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 20, framesPlayed: 0, underrunCount: 0, bufferDepth: 20, avgBufferDepth: 2.5}
+PcmPlaybackEngine.js:30 AUDIO_PLAYBACK_UNDERRUN {count: 1, bufferDepth: 0}
+_workletNode.port.onmessage @ PcmPlaybackEngine.js:30
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 75, framesPlayed: 95, underrunCount: 1, bufferDepth: 0, avgBufferDepth: 19.7}
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 95, totalBytes: 15200, plcFrames: 0, reorderFlushes: 0}
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 35, framesPlayed: 12, underrunCount: 0, bufferDepth: 23, avgBufferDepth: 5.9}
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 87, totalBytes: 13920, plcFrames: 0, reorderFlushes: 0}
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 83, framesPlayed: 99, underrunCount: 0, bufferDepth: 6, avgBufferDepth: 12.7}
+PcmPlaybackEngine.js:30 AUDIO_PLAYBACK_UNDERRUN {count: 1, bufferDepth: 0}
+_workletNode.port.onmessage @ PcmPlaybackEngine.js:30
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 87, totalBytes: 13920, plcFrames: 0, reorderFlushes: 0}
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 84, framesPlayed: 69, underrunCount: 1, bufferDepth: 22, avgBufferDepth: 8.9}
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 83, totalBytes: 13280, plcFrames: 0, reorderFlushes: 0}
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 87, framesPlayed: 100, underrunCount: 0, bufferDepth: 9, avgBufferDepth: 14.3}
+PcmPlaybackEngine.js:30 AUDIO_PLAYBACK_UNDERRUN {count: 1, bufferDepth: 0}
+_workletNode.port.onmessage @ PcmPlaybackEngine.js:30
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 87, totalBytes: 13920, plcFrames: 0, reorderFlushes: 0}
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 91, framesPlayed: 75, underrunCount: 1, bufferDepth: 24, avgBufferDepth: 6.7}
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 114, totalBytes: 18240, plcFrames: 0, reorderFlushes: 0}
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 96, framesPlayed: 100, underrunCount: 0, bufferDepth: 20, avgBufferDepth: 22.6}
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 92, totalBytes: 14720, plcFrames: 0, reorderFlushes: 0}
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 94, framesPlayed: 100, underrunCount: 0, bufferDepth: 14, avgBufferDepth: 16.8}
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 94, totalBytes: 15040, plcFrames: 0, reorderFlushes: 0}
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 91, framesPlayed: 99, underrunCount: 0, bufferDepth: 6, avgBufferDepth: 9.6}
+PcmPlaybackEngine.js:30 AUDIO_PLAYBACK_UNDERRUN {count: 1, bufferDepth: 0}
+_workletNode.port.onmessage @ PcmPlaybackEngine.js:30
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 84, totalBytes: 13440, plcFrames: 0, reorderFlushes: 0}
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 80, framesPlayed: 67, underrunCount: 1, bufferDepth: 19, avgBufferDepth: 10.7}
+PcmPlaybackEngine.js:30 AUDIO_PLAYBACK_UNDERRUN {count: 1, bufferDepth: 0}
+_workletNode.port.onmessage @ PcmPlaybackEngine.js:30
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 74, totalBytes: 11840, plcFrames: 0, reorderFlushes: 0}
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 75, framesPlayed: 70, underrunCount: 1, bufferDepth: 25, avgBufferDepth: 9.3}
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 15, totalBytes: 2400, plcFrames: 0, reorderFlushes: 0}
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 8, framesPlayed: 27, underrunCount: 1, bufferDepth: 6, avgBufferDepth: 3.6}
+AudioTransportManager.js:785 AUDIO_RX_REORDER_STATS {lateDropped: 0, reordered: 25, activeStreams: 1}
+_logReorderStats @ AudioTransportManager.js:785
+_enqueueWithReorder @ AudioTransportManager.js:676
+b.onmessage @ AudioTransportManager.js:310
+AudioTransportManager.js:764 AUDIO_RX_PLC_GENERATE {channelId: 'DISPATCH__DISPATCH', sender: 'ADMIN', count: 1}
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 75, totalBytes: 12000, plcFrames: 1, reorderFlushes: 1}
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 75, framesPlayed: 69, underrunCount: 0, bufferDepth: 11, avgBufferDepth: 15}
+PcmPlaybackEngine.js:30 AUDIO_PLAYBACK_UNDERRUN {count: 1, bufferDepth: 0}
+_workletNode.port.onmessage @ PcmPlaybackEngine.js:30
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 40, framesPlayed: 52, underrunCount: 1, bufferDepth: 0, avgBufferDepth: 3.8}
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 44, totalBytes: 7040, plcFrames: 0, reorderFlushes: 0}
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 54, framesPlayed: 38, underrunCount: 0, bufferDepth: 15, avgBufferDepth: 11.7}
+AudioTransportManager.js:785 AUDIO_RX_REORDER_STATS {lateDropped: 0, reordered: 4, activeStreams: 1}
+_logReorderStats @ AudioTransportManager.js:785
+_enqueueWithReorder @ AudioTransportManager.js:676
+b.onmessage @ AudioTransportManager.js:312
+AudioTransportManager.js:764 AUDIO_RX_PLC_GENERATE {channelId: 'DISPATCH__DISPATCH', sender: 'ADMIN', count: 1}
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 76, totalBytes: 12160, plcFrames: 1, reorderFlushes: 2}
+PcmPlaybackEngine.js:30 AUDIO_PLAYBACK_UNDERRUN {count: 1, bufferDepth: 0}
+_workletNode.port.onmessage @ PcmPlaybackEngine.js:30
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 76, framesPlayed: 92, underrunCount: 1, bufferDepth: 0, avgBufferDepth: 10.2}
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 49, totalBytes: 7840, plcFrames: 0, reorderFlushes: 1}
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 41, framesPlayed: 19, underrunCount: 0, bufferDepth: 21, avgBufferDepth: 7.9}
+AudioTransportManager.js:764 AUDIO_RX_PLC_GENERATE {channelId: 'DISPATCH__DISPATCH', sender: 'ADMIN', count: 1}
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 80, totalBytes: 12800, plcFrames: 1, reorderFlushes: 2}
+PcmPlaybackEngine.js:30 AUDIO_PLAYBACK_UNDERRUN {count: 1, bufferDepth: 0}
+_workletNode.port.onmessage @ PcmPlaybackEngine.js:30
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 68, framesPlayed: 90, underrunCount: 1, bufferDepth: 0, avgBufferDepth: 10}
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 35, totalBytes: 5600, plcFrames: 0, reorderFlushes: 0}
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 41, framesPlayed: 18, underrunCount: 0, bufferDepth: 22, avgBufferDepth: 8.3}
+AudioTransportManager.js:785 AUDIO_RX_REORDER_STATS {lateDropped: 0, reordered: 25, activeStreams: 1}
+_logReorderStats @ AudioTransportManager.js:785
+_enqueueWithReorder @ AudioTransportManager.js:676
+b.onmessage @ AudioTransportManager.js:312
+AudioTransportManager.js:764 AUDIO_RX_PLC_GENERATE {channelId: 'DISPATCH__DISPATCH', sender: 'ADMIN', count: 2}
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 75, totalBytes: 12000, plcFrames: 2, reorderFlushes: 2}
+AudioTransportManager.js:764 AUDIO_RX_PLC_GENERATE {channelId: 'DISPATCH__DISPATCH', sender: 'ADMIN', count: 1}
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 78, framesPlayed: 85, underrunCount: 0, bufferDepth: 15, avgBufferDepth: 15.3}
+PcmPlaybackEngine.js:30 AUDIO_PLAYBACK_UNDERRUN {count: 1, bufferDepth: 0}
+_workletNode.port.onmessage @ PcmPlaybackEngine.js:30
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 74, totalBytes: 11840, plcFrames: 1, reorderFlushes: 1}
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 77, framesPlayed: 71, underrunCount: 1, bufferDepth: 22, avgBufferDepth: 11.2}
+PcmPlaybackEngine.js:30 AUDIO_PLAYBACK_UNDERRUN {count: 1, bufferDepth: 0}
+_workletNode.port.onmessage @ PcmPlaybackEngine.js:30
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 48, framesPlayed: 70, underrunCount: 1, bufferDepth: 0, avgBufferDepth: 10.9}
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 80, totalBytes: 12800, plcFrames: 0, reorderFlushes: 0}
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 12, framesPlayed: 0, underrunCount: 0, bufferDepth: 12, avgBufferDepth: 2.1}
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 78, totalBytes: 12480, plcFrames: 0, reorderFlushes: 0}
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 84, framesPlayed: 84, underrunCount: 0, bufferDepth: 11, avgBufferDepth: 17.9}
+PcmPlaybackEngine.js:30 AUDIO_PLAYBACK_UNDERRUN {count: 1, bufferDepth: 0}
+_workletNode.port.onmessage @ PcmPlaybackEngine.js:30
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 79, totalBytes: 12640, plcFrames: 0, reorderFlushes: 0}
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 79, framesPlayed: 72, underrunCount: 1, bufferDepth: 18, avgBufferDepth: 12.3}
+PcmPlaybackEngine.js:30 AUDIO_PLAYBACK_UNDERRUN {count: 1, bufferDepth: 0}
+_workletNode.port.onmessage @ PcmPlaybackEngine.js:30
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 67, framesPlayed: 86, underrunCount: 1, bufferDepth: 0, avgBufferDepth: 10.1}
+AudioConnectionContext.jsx:620 [AudioConnection] Page became visible — running recovery sequence
+SignalingManager.js:619 [Signaling] Connection verified — alive and authenticated
+AudioConnectionContext.jsx:644 [AudioConnection] Signaling connection verified
+AudioConnectionContext.jsx:660 [AudioConnection] All audio channels healthy after visibility restore
+AudioConnectionContext.jsx:702 [AudioConnection] Init check - user: DISPATCH-1 lastUser: DISPATCH-1 initializing: false path: /dispatcher
+AudioConnectionContext.jsx:721 [AudioConnection] Already initialized for this user on this path, skipping
+SignalingManager.js:71 [Signaling] Already connected
+AuthContext.jsx:127 [PTT-DIAG] [JS] Auth: pushed early connection info to service: server=https://comms.reeder-systems.com unit=DISPATCH-1
+SignalingManager.js:291 [Signaling] Already authenticated
+SignalingContext.jsx:47 [SignalingContext] Connected and authenticated as DISPATCH-1
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 85, totalBytes: 13600, plcFrames: 0, reorderFlushes: 0}
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 66, framesPlayed: 46, underrunCount: 0, bufferDepth: 20, avgBufferDepth: 14.5}
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 80, totalBytes: 12800, plcFrames: 0, reorderFlushes: 0}
+PcmPlaybackEngine.js:30 AUDIO_PLAYBACK_UNDERRUN {count: 1, bufferDepth: 0}
+_workletNode.port.onmessage @ PcmPlaybackEngine.js:30
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 57, framesPlayed: 77, underrunCount: 1, bufferDepth: 0, avgBufferDepth: 7.3}
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 43, totalBytes: 6880, plcFrames: 0, reorderFlushes: 0}
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 7, framesPlayed: 0, underrunCount: 0, bufferDepth: 7, avgBufferDepth: 0.1}
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 82, totalBytes: 13120, plcFrames: 0, reorderFlushes: 0}
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 77, framesPlayed: 72, underrunCount: 0, bufferDepth: 12, avgBufferDepth: 18.5}
+PcmPlaybackEngine.js:30 AUDIO_PLAYBACK_UNDERRUN {count: 1, bufferDepth: 0}
+_workletNode.port.onmessage @ PcmPlaybackEngine.js:30
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 71, framesPlayed: 67, underrunCount: 1, bufferDepth: 15, avgBufferDepth: 11.5}
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 73, totalBytes: 11680, plcFrames: 0, reorderFlushes: 0}
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 18, framesPlayed: 16, underrunCount: 1, bufferDepth: 18, avgBufferDepth: 3.1}
+AudioTransportManager.js:785 AUDIO_RX_REORDER_STATS {lateDropped: 0, reordered: 17, activeStreams: 1}
+_logReorderStats @ AudioTransportManager.js:785
+_enqueueWithReorder @ AudioTransportManager.js:676
+b.onmessage @ AudioTransportManager.js:312
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 68, totalBytes: 10880, plcFrames: 0, reorderFlushes: 1}
+PcmPlaybackEngine.js:30 AUDIO_PLAYBACK_UNDERRUN {count: 1, bufferDepth: 0}
+_workletNode.port.onmessage @ PcmPlaybackEngine.js:30
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 69, framesPlayed: 75, underrunCount: 1, bufferDepth: 12, avgBufferDepth: 13.1}
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 41, framesPlayed: 53, underrunCount: 1, bufferDepth: 0, avgBufferDepth: 11.7}
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 59, totalBytes: 9440, plcFrames: 0, reorderFlushes: 0}
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 81, framesPlayed: 70, underrunCount: 0, bufferDepth: 10, avgBufferDepth: 16.2}
+AudioTransportManager.js:785 AUDIO_RX_REORDER_STATS {lateDropped: 0, reordered: 5, activeStreams: 1}
+_logReorderStats @ AudioTransportManager.js:785
+_enqueueWithReorder @ AudioTransportManager.js:676
+b.onmessage @ AudioTransportManager.js:310
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 81, totalBytes: 12960, plcFrames: 0, reorderFlushes: 0}
+PcmPlaybackEngine.js:30 AUDIO_PLAYBACK_UNDERRUN {count: 1, bufferDepth: 0}
+_workletNode.port.onmessage @ PcmPlaybackEngine.js:30
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 81, framesPlayed: 73, underrunCount: 1, bufferDepth: 19, avgBufferDepth: 10.3}
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 87, totalBytes: 13920, plcFrames: 0, reorderFlushes: 1}
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 90, framesPlayed: 100, underrunCount: 0, bufferDepth: 9, avgBufferDepth: 12.7}
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 89, totalBytes: 14240, plcFrames: 0, reorderFlushes: 0}
+PcmPlaybackEngine.js:30 AUDIO_PLAYBACK_UNDERRUN {count: 1, bufferDepth: 0}
+_workletNode.port.onmessage @ PcmPlaybackEngine.js:30
+AudioTransportManager.js:785 AUDIO_RX_REORDER_STATS {lateDropped: 0, reordered: 4, activeStreams: 1}
+_logReorderStats @ AudioTransportManager.js:785
+_enqueueWithReorder @ AudioTransportManager.js:676
+b.onmessage @ AudioTransportManager.js:310
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 45, framesPlayed: 30, underrunCount: 1, bufferDepth: 24, avgBufferDepth: 12.3}
+AudioTransportManager.js:764 AUDIO_RX_PLC_GENERATE {channelId: 'DISPATCH__DISPATCH', sender: 'ADMIN', count: 3}
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 44, totalBytes: 7040, plcFrames: 3, reorderFlushes: 1}
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 109, framesPlayed: 82, underrunCount: 0, bufferDepth: 50, avgBufferDepth: 56.6}
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 116, totalBytes: 18560, plcFrames: 0, reorderFlushes: 1}
+PcmPlaybackEngine.js:30 AUDIO_PLAYBACK_UNDERRUN {count: 1, bufferDepth: 0}
+_workletNode.port.onmessage @ PcmPlaybackEngine.js:30
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 32, framesPlayed: 83, underrunCount: 1, bufferDepth: 0, avgBufferDepth: 29.7}
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 17, totalBytes: 2720, plcFrames: 0, reorderFlushes: 0}
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 9, framesPlayed: 0, underrunCount: 0, bufferDepth: 9, avgBufferDepth: 0.3}
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 81, totalBytes: 12960, plcFrames: 0, reorderFlushes: 0}
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 78, framesPlayed: 76, underrunCount: 0, bufferDepth: 10, avgBufferDepth: 17.3}
+PcmPlaybackEngine.js:30 AUDIO_PLAYBACK_UNDERRUN {count: 1, bufferDepth: 0}
+_workletNode.port.onmessage @ PcmPlaybackEngine.js:30
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 78, totalBytes: 12480, plcFrames: 0, reorderFlushes: 0}
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 79, framesPlayed: 69, underrunCount: 1, bufferDepth: 20, avgBufferDepth: 11.3}
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 9, framesPlayed: 30, underrunCount: 1, bufferDepth: 0, avgBufferDepth: 3.6}
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 14, totalBytes: 2240, plcFrames: 0, reorderFlushes: 0}
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 18, framesPlayed: 0, underrunCount: 0, bufferDepth: 18, avgBufferDepth: 7.2}
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 21, totalBytes: 3360, plcFrames: 0, reorderFlushes: 0}
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 43, framesPlayed: 44, underrunCount: 0, bufferDepth: 16, avgBufferDepth: 18.4}
+PcmPlaybackEngine.js:30 AUDIO_PLAYBACK_UNDERRUN {count: 1, bufferDepth: 0}
+_workletNode.port.onmessage @ PcmPlaybackEngine.js:30
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 6, framesPlayed: 23, underrunCount: 1, bufferDepth: 0, avgBufferDepth: 2}
+AudioConnectionContext.jsx:620 [AudioConnection] Page became visible — running recovery sequence
+SignalingManager.js:619 [Signaling] Connection verified — alive and authenticated
+AudioConnectionContext.jsx:644 [AudioConnection] Signaling connection verified
+AudioConnectionContext.jsx:660 [AudioConnection] All audio channels healthy after visibility restore
+AudioConnectionContext.jsx:702 [AudioConnection] Init check - user: DISPATCH-1 lastUser: DISPATCH-1 initializing: false path: /dispatcher
+AudioConnectionContext.jsx:721 [AudioConnection] Already initialized for this user on this path, skipping
+SignalingManager.js:71 [Signaling] Already connected
+AuthContext.jsx:127 [PTT-DIAG] [JS] Auth: pushed early connection info to service: server=https://comms.reeder-systems.com unit=DISPATCH-1
+SignalingManager.js:291 [Signaling] Already authenticated
+SignalingContext.jsx:47 [SignalingContext] Connected and authenticated as DISPATCH-1
+AudioConnectionContext.jsx:620 [AudioConnection] Page became visible — running recovery sequence
+SignalingManager.js:619 [Signaling] Connection verified — alive and authenticated
+AudioConnectionContext.jsx:644 [AudioConnection] Signaling connection verified
+AudioConnectionContext.jsx:660 [AudioConnection] All audio channels healthy after visibility restore
+AudioConnectionContext.jsx:702 [AudioConnection] Init check - user: DISPATCH-1 lastUser: DISPATCH-1 initializing: false path: /dispatcher
+AudioConnectionContext.jsx:721 [AudioConnection] Already initialized for this user on this path, skipping
+SignalingManager.js:71 [Signaling] Already connected
+AuthContext.jsx:127 [PTT-DIAG] [JS] Auth: pushed early connection info to service: server=https://comms.reeder-systems.com unit=DISPATCH-1
+SignalingManager.js:291 [Signaling] Already authenticated
+SignalingContext.jsx:47 [SignalingContext] Connected and authenticated as DISPATCH-1
+index.jsx:250 [PTT] PTT_DOWN {eventType: 'keydown'}
+index.jsx:252 [PTT] PTT_GESTURE_ACTIVE_TRUE
+index.jsx:253 [PTT] PTT_START
+index.jsx:86 [PTT] startTransmission called, channels: ['DISPATCH__DISPATCH']
+index.jsx:157 [PTT] Requesting floor grant for channel=DISPATCH__DISPATCH unit=DISPATCH-1
+index.jsx:158 [PTT] PTT_FLOOR_REQUEST_SENT {channel: 'DISPATCH__DISPATCH', unit: 'DISPATCH-1'}
+index.jsx:160 [PTT] Floor granted for channel=DISPATCH__DISPATCH
+index.jsx:161 [PTT] PTT_FLOOR_GRANTED {channel: 'DISPATCH__DISPATCH', unit: 'DISPATCH-1'}
+index.jsx:174 [PTT] Playing talk permit tone before mic goes live
+talkPermitTone.js:21 [TalkPermit] WAV preloaded
+index.jsx:176 [PTT] Talk permit tone finished, opening mic
+OpusBrowserEncoder.js:16 Aborted(sync fetching of the wasm failed: you can preload it to Module['wasmBinary'] manually, or emcc.py will do that for you when generating HTML (but not JS))
+vn @ opusscript_native_wasm.js:12
+Bt @ opusscript_native_wasm.js:13
+(anonymous) @ opusscript_native_wasm.js:60
+(anonymous) @ opusscript_native_wasm.js:60
+Gs @ index.js:40
+init @ OpusBrowserEncoder.js:16
+_ensureTxEncoder @ AudioTransportManager.js:117
+startTransmit @ AudioTransportManager.js:505
+await in startTransmit
+start @ AudioTransportManager.js:534
+(anonymous) @ index.jsx:188
+await in (anonymous)
+(anonymous) @ index.jsx:255
+ge @ index.jsx:286
+OpusBrowserEncoder.js:16 failed to compile wasm module: RuntimeError: Aborted(sync fetching of the wasm failed: you can preload it to Module['wasmBinary'] manually, or emcc.py will do that for you when generating HTML (but not JS)). Build with -sASSERTIONS for more info.
+Bt @ opusscript_native_wasm.js:13
+(anonymous) @ opusscript_native_wasm.js:60
+(anonymous) @ opusscript_native_wasm.js:60
+Gs @ index.js:40
+init @ OpusBrowserEncoder.js:16
+_ensureTxEncoder @ AudioTransportManager.js:117
+startTransmit @ AudioTransportManager.js:505
+await in startTransmit
+start @ AudioTransportManager.js:534
+(anonymous) @ index.jsx:188
+await in (anonymous)
+(anonymous) @ index.jsx:255
+ge @ index.jsx:286
+OpusBrowserEncoder.js:24 [OpusBrowserEncoder] Failed to initialize: Aborted(sync fetching of the wasm failed: you can preload it to Module['wasmBinary'] manually, or emcc.py will do that for you when generating HTML (but not JS)). Build with -sASSERTIONS for more info.
+init @ OpusBrowserEncoder.js:24
+_ensureTxEncoder @ AudioTransportManager.js:117
+startTransmit @ AudioTransportManager.js:505
+await in startTransmit
+start @ AudioTransportManager.js:534
+(anonymous) @ index.jsx:188
+await in (anonymous)
+(anonymous) @ index.jsx:255
+ge @ index.jsx:286
+index.jsx:199 [PTT] Transmission started successfully
+main.jsx:33 [UNHANDLED REJECTION] RuntimeError: Aborted(sync fetching of the wasm failed: you can preload it to Module['wasmBinary'] manually, or emcc.py will do that for you when generating HTML (but not JS)). Build with -sASSERTIONS for more info.
+    at vn (opusscript_native_wasm.js:12:172)
+    at Bt (opusscript_native_wasm.js:13:274)
+    at opusscript_native_wasm.js:60:216
+    at opusscript_native_wasm.js:60:236
+    at new Gs (index.js:40:38)
+    at vA.init (OpusBrowserEncoder.js:16:23)
+    at Ox._ensureTxEncoder (AudioTransportManager.js:117:23)
+    at Ox.startTransmit (AudioTransportManager.js:505:30)
+(anonymous) @ main.jsx:33
+opusscript_native_wasm.js:12 Uncaught (in promise) RuntimeError: Aborted(sync fetching of the wasm failed: you can preload it to Module['wasmBinary'] manually, or emcc.py will do that for you when generating HTML (but not JS)). Build with -sASSERTIONS for more info.
+    at vn (opusscript_native_wasm.js:12:172)
+    at Bt (opusscript_native_wasm.js:13:274)
+    at opusscript_native_wasm.js:60:216
+    at opusscript_native_wasm.js:60:236
+    at new Gs (index.js:40:38)
+    at vA.init (OpusBrowserEncoder.js:16:23)
+    at Ox._ensureTxEncoder (AudioTransportManager.js:117:23)
+    at Ox.startTransmit (AudioTransportManager.js:505:30)
+vn @ opusscript_native_wasm.js:12
+Bt @ opusscript_native_wasm.js:13
+(anonymous) @ opusscript_native_wasm.js:60
+(anonymous) @ opusscript_native_wasm.js:60
+Gs @ index.js:40
+init @ OpusBrowserEncoder.js:16
+_ensureTxEncoder @ AudioTransportManager.js:117
+startTransmit @ AudioTransportManager.js:505
+await in startTransmit
+start @ AudioTransportManager.js:534
+(anonymous) @ index.jsx:188
+await in (anonymous)
+(anonymous) @ index.jsx:255
+ge @ index.jsx:286
+index.jsx:269 [PTT] PTT_UP {gestureActive: true}
+index.jsx:272 [PTT] PTT_STOP
+index.jsx:274 [PTT] PTT_GESTURE_ACTIVE_FALSE
+index.jsx:214 [PTT] stopTransmission called
+index.jsx:228 [PTT] Transmission stopped
+index.jsx:239 [PTT] Unmuted channels: ['DISPATCH__DISPATCH']
+index.jsx:250 [PTT] PTT_DOWN {eventType: 'keydown'}
+index.jsx:252 [PTT] PTT_GESTURE_ACTIVE_TRUE
+index.jsx:253 [PTT] PTT_START
+index.jsx:86 [PTT] startTransmission called, channels: ['DISPATCH__DISPATCH']
+index.jsx:157 [PTT] Requesting floor grant for channel=DISPATCH__DISPATCH unit=DISPATCH-1
+index.jsx:158 [PTT] PTT_FLOOR_REQUEST_SENT {channel: 'DISPATCH__DISPATCH', unit: 'DISPATCH-1'}
+index.jsx:160 [PTT] Floor granted for channel=DISPATCH__DISPATCH
+index.jsx:161 [PTT] PTT_FLOOR_GRANTED {channel: 'DISPATCH__DISPATCH', unit: 'DISPATCH-1'}
+index.jsx:174 [PTT] Playing talk permit tone before mic goes live
+index.jsx:269 [PTT] PTT_UP {gestureActive: true}
+index.jsx:272 [PTT] PTT_STOP
+index.jsx:274 [PTT] PTT_GESTURE_ACTIVE_FALSE
+index.jsx:214 [PTT] stopTransmission called
+index.jsx:228 [PTT] Transmission stopped
+index.jsx:239 [PTT] Unmuted channels: ['DISPATCH__DISPATCH']
+index.jsx:250 [PTT] PTT_DOWN {eventType: 'keydown'}
+index.jsx:252 [PTT] PTT_GESTURE_ACTIVE_TRUE
+index.jsx:253 [PTT] PTT_START
+index.jsx:86 [PTT] startTransmission called, channels: ['DISPATCH__DISPATCH']
+index.jsx:157 [PTT] Requesting floor grant for channel=DISPATCH__DISPATCH unit=DISPATCH-1
+index.jsx:158 [PTT] PTT_FLOOR_REQUEST_SENT {channel: 'DISPATCH__DISPATCH', unit: 'DISPATCH-1'}
+index.jsx:269 [PTT] PTT_UP {gestureActive: true}
+index.jsx:272 [PTT] PTT_STOP
+index.jsx:274 [PTT] PTT_GESTURE_ACTIVE_FALSE
+index.jsx:214 [PTT] stopTransmission called
+index.jsx:228 [PTT] Transmission stopped
+index.jsx:239 [PTT] Unmuted channels: ['DISPATCH__DISPATCH']
+index.jsx:160 [PTT] Floor granted for channel=DISPATCH__DISPATCH
+index.jsx:161 [PTT] PTT_FLOOR_GRANTED {channel: 'DISPATCH__DISPATCH', unit: 'DISPATCH-1'}
+index.jsx:174 [PTT] Playing talk permit tone before mic goes live
+index.jsx:176 [PTT] Talk permit tone finished, opening mic
+index.jsx:182 [PTT] PTT released during tone playback, aborting
+index.jsx:258 [PTT] Gesture released during setup, stopping
+index.jsx:214 [PTT] stopTransmission called
+index.jsx:228 [PTT] Transmission stopped
+index.jsx:176 [PTT] Talk permit tone finished, opening mic
+index.jsx:182 [PTT] PTT released during tone playback, aborting
+index.jsx:258 [PTT] Gesture released during setup, stopping
+index.jsx:214 [PTT] stopTransmission called
+index.jsx:228 [PTT] Transmission stopped
+index.jsx:250 [PTT] PTT_DOWN {eventType: 'keydown'}
+index.jsx:252 [PTT] PTT_GESTURE_ACTIVE_TRUE
+index.jsx:253 [PTT] PTT_START
+index.jsx:86 [PTT] startTransmission called, channels: ['DISPATCH__DISPATCH']
+index.jsx:157 [PTT] Requesting floor grant for channel=DISPATCH__DISPATCH unit=DISPATCH-1
+index.jsx:158 [PTT] PTT_FLOOR_REQUEST_SENT {channel: 'DISPATCH__DISPATCH', unit: 'DISPATCH-1'}
+index.jsx:160 [PTT] Floor granted for channel=DISPATCH__DISPATCH
+index.jsx:161 [PTT] PTT_FLOOR_GRANTED {channel: 'DISPATCH__DISPATCH', unit: 'DISPATCH-1'}
+index.jsx:174 [PTT] Playing talk permit tone before mic goes live
+index.jsx:176 [PTT] Talk permit tone finished, opening mic
+OpusBrowserEncoder.js:16 Aborted(sync fetching of the wasm failed: you can preload it to Module['wasmBinary'] manually, or emcc.py will do that for you when generating HTML (but not JS))
+vn @ opusscript_native_wasm.js:12
+Bt @ opusscript_native_wasm.js:13
+(anonymous) @ opusscript_native_wasm.js:60
+(anonymous) @ opusscript_native_wasm.js:60
+Gs @ index.js:40
+init @ OpusBrowserEncoder.js:16
+_ensureTxEncoder @ AudioTransportManager.js:117
+startTransmit @ AudioTransportManager.js:505
+await in startTransmit
+start @ AudioTransportManager.js:534
+(anonymous) @ index.jsx:188
+await in (anonymous)
+(anonymous) @ index.jsx:255
+ge @ index.jsx:286
+OpusBrowserEncoder.js:16 failed to compile wasm module: RuntimeError: Aborted(sync fetching of the wasm failed: you can preload it to Module['wasmBinary'] manually, or emcc.py will do that for you when generating HTML (but not JS)). Build with -sASSERTIONS for more info.
+Bt @ opusscript_native_wasm.js:13
+(anonymous) @ opusscript_native_wasm.js:60
+(anonymous) @ opusscript_native_wasm.js:60
+Gs @ index.js:40
+init @ OpusBrowserEncoder.js:16
+_ensureTxEncoder @ AudioTransportManager.js:117
+startTransmit @ AudioTransportManager.js:505
+await in startTransmit
+start @ AudioTransportManager.js:534
+(anonymous) @ index.jsx:188
+await in (anonymous)
+(anonymous) @ index.jsx:255
+ge @ index.jsx:286
+OpusBrowserEncoder.js:24 [OpusBrowserEncoder] Failed to initialize: Aborted(sync fetching of the wasm failed: you can preload it to Module['wasmBinary'] manually, or emcc.py will do that for you when generating HTML (but not JS)). Build with -sASSERTIONS for more info.
+init @ OpusBrowserEncoder.js:24
+_ensureTxEncoder @ AudioTransportManager.js:117
+startTransmit @ AudioTransportManager.js:505
+await in startTransmit
+start @ AudioTransportManager.js:534
+(anonymous) @ index.jsx:188
+await in (anonymous)
+(anonymous) @ index.jsx:255
+ge @ index.jsx:286
+index.jsx:199 [PTT] Transmission started successfully
+main.jsx:33 [UNHANDLED REJECTION] RuntimeError: Aborted(sync fetching of the wasm failed: you can preload it to Module['wasmBinary'] manually, or emcc.py will do that for you when generating HTML (but not JS)). Build with -sASSERTIONS for more info.
+    at vn (opusscript_native_wasm.js:12:172)
+    at Bt (opusscript_native_wasm.js:13:274)
+    at opusscript_native_wasm.js:60:216
+    at opusscript_native_wasm.js:60:236
+    at new Gs (index.js:40:38)
+    at vA.init (OpusBrowserEncoder.js:16:23)
+    at Ox._ensureTxEncoder (AudioTransportManager.js:117:23)
+    at Ox.startTransmit (AudioTransportManager.js:505:30)
+(anonymous) @ main.jsx:33
+opusscript_native_wasm.js:12 Uncaught (in promise) RuntimeError: Aborted(sync fetching of the wasm failed: you can preload it to Module['wasmBinary'] manually, or emcc.py will do that for you when generating HTML (but not JS)). Build with -sASSERTIONS for more info.
+    at vn (opusscript_native_wasm.js:12:172)
+    at Bt (opusscript_native_wasm.js:13:274)
+    at opusscript_native_wasm.js:60:216
+    at opusscript_native_wasm.js:60:236
+    at new Gs (index.js:40:38)
+    at vA.init (OpusBrowserEncoder.js:16:23)
+    at Ox._ensureTxEncoder (AudioTransportManager.js:117:23)
+    at Ox.startTransmit (AudioTransportManager.js:505:30)
+vn @ opusscript_native_wasm.js:12
+Bt @ opusscript_native_wasm.js:13
+(anonymous) @ opusscript_native_wasm.js:60
+(anonymous) @ opusscript_native_wasm.js:60
+Gs @ index.js:40
+init @ OpusBrowserEncoder.js:16
+_ensureTxEncoder @ AudioTransportManager.js:117
+startTransmit @ AudioTransportManager.js:505
+await in startTransmit
+start @ AudioTransportManager.js:534
+(anonymous) @ index.jsx:188
+await in (anonymous)
+(anonymous) @ index.jsx:255
+ge @ index.jsx:286
+index.jsx:269 [PTT] PTT_UP {gestureActive: true}
+index.jsx:272 [PTT] PTT_STOP
+index.jsx:274 [PTT] PTT_GESTURE_ACTIVE_FALSE
+index.jsx:214 [PTT] stopTransmission called
+index.jsx:228 [PTT] Transmission stopped
+index.jsx:239 [PTT] Unmuted channels: ['DISPATCH__DISPATCH']
+index.jsx:250 [PTT] PTT_DOWN {eventType: 'keydown'}
+index.jsx:252 [PTT] PTT_GESTURE_ACTIVE_TRUE
+index.jsx:253 [PTT] PTT_START
+index.jsx:86 [PTT] startTransmission called, channels: ['DISPATCH__DISPATCH']
+index.jsx:157 [PTT] Requesting floor grant for channel=DISPATCH__DISPATCH unit=DISPATCH-1
+index.jsx:158 [PTT] PTT_FLOOR_REQUEST_SENT {channel: 'DISPATCH__DISPATCH', unit: 'DISPATCH-1'}
+index.jsx:160 [PTT] Floor granted for channel=DISPATCH__DISPATCH
+index.jsx:161 [PTT] PTT_FLOOR_GRANTED {channel: 'DISPATCH__DISPATCH', unit: 'DISPATCH-1'}
+index.jsx:174 [PTT] Playing talk permit tone before mic goes live
+index.jsx:176 [PTT] Talk permit tone finished, opening mic
+OpusBrowserEncoder.js:16 Aborted(sync fetching of the wasm failed: you can preload it to Module['wasmBinary'] manually, or emcc.py will do that for you when generating HTML (but not JS))
+vn @ opusscript_native_wasm.js:12
+Bt @ opusscript_native_wasm.js:13
+(anonymous) @ opusscript_native_wasm.js:60
+(anonymous) @ opusscript_native_wasm.js:60
+Gs @ index.js:40
+init @ OpusBrowserEncoder.js:16
+_ensureTxEncoder @ AudioTransportManager.js:117
+startTransmit @ AudioTransportManager.js:505
+await in startTransmit
+start @ AudioTransportManager.js:534
+(anonymous) @ index.jsx:188
+await in (anonymous)
+(anonymous) @ index.jsx:255
+ge @ index.jsx:286
+OpusBrowserEncoder.js:16 failed to compile wasm module: RuntimeError: Aborted(sync fetching of the wasm failed: you can preload it to Module['wasmBinary'] manually, or emcc.py will do that for you when generating HTML (but not JS)). Build with -sASSERTIONS for more info.
+Bt @ opusscript_native_wasm.js:13
+(anonymous) @ opusscript_native_wasm.js:60
+(anonymous) @ opusscript_native_wasm.js:60
+Gs @ index.js:40
+init @ OpusBrowserEncoder.js:16
+_ensureTxEncoder @ AudioTransportManager.js:117
+startTransmit @ AudioTransportManager.js:505
+await in startTransmit
+start @ AudioTransportManager.js:534
+(anonymous) @ index.jsx:188
+await in (anonymous)
+(anonymous) @ index.jsx:255
+ge @ index.jsx:286
+OpusBrowserEncoder.js:24 [OpusBrowserEncoder] Failed to initialize: Aborted(sync fetching of the wasm failed: you can preload it to Module['wasmBinary'] manually, or emcc.py will do that for you when generating HTML (but not JS)). Build with -sASSERTIONS for more info.
+init @ OpusBrowserEncoder.js:24
+_ensureTxEncoder @ AudioTransportManager.js:117
+startTransmit @ AudioTransportManager.js:505
+await in startTransmit
+start @ AudioTransportManager.js:534
+(anonymous) @ index.jsx:188
+await in (anonymous)
+(anonymous) @ index.jsx:255
+ge @ index.jsx:286
+index.jsx:199 [PTT] Transmission started successfully
+main.jsx:33 [UNHANDLED REJECTION] RuntimeError: Aborted(sync fetching of the wasm failed: you can preload it to Module['wasmBinary'] manually, or emcc.py will do that for you when generating HTML (but not JS)). Build with -sASSERTIONS for more info.
+    at vn (opusscript_native_wasm.js:12:172)
+    at Bt (opusscript_native_wasm.js:13:274)
+    at opusscript_native_wasm.js:60:216
+    at opusscript_native_wasm.js:60:236
+    at new Gs (index.js:40:38)
+    at vA.init (OpusBrowserEncoder.js:16:23)
+    at Ox._ensureTxEncoder (AudioTransportManager.js:117:23)
+    at Ox.startTransmit (AudioTransportManager.js:505:30)
+(anonymous) @ main.jsx:33
+opusscript_native_wasm.js:12 Uncaught (in promise) RuntimeError: Aborted(sync fetching of the wasm failed: you can preload it to Module['wasmBinary'] manually, or emcc.py will do that for you when generating HTML (but not JS)). Build with -sASSERTIONS for more info.
+    at vn (opusscript_native_wasm.js:12:172)
+    at Bt (opusscript_native_wasm.js:13:274)
+    at opusscript_native_wasm.js:60:216
+    at opusscript_native_wasm.js:60:236
+    at new Gs (index.js:40:38)
+    at vA.init (OpusBrowserEncoder.js:16:23)
+    at Ox._ensureTxEncoder (AudioTransportManager.js:117:23)
+    at Ox.startTransmit (AudioTransportManager.js:505:30)
+vn @ opusscript_native_wasm.js:12
+Bt @ opusscript_native_wasm.js:13
+(anonymous) @ opusscript_native_wasm.js:60
+(anonymous) @ opusscript_native_wasm.js:60
+Gs @ index.js:40
+init @ OpusBrowserEncoder.js:16
+_ensureTxEncoder @ AudioTransportManager.js:117
+startTransmit @ AudioTransportManager.js:505
+await in startTransmit
+start @ AudioTransportManager.js:534
+(anonymous) @ index.jsx:188
+await in (anonymous)
+(anonymous) @ index.jsx:255
+ge @ index.jsx:286
+index.jsx:269 [PTT] PTT_UP {gestureActive: true}
+index.jsx:272 [PTT] PTT_STOP
+index.jsx:274 [PTT] PTT_GESTURE_ACTIVE_FALSE
+index.jsx:214 [PTT] stopTransmission called
+index.jsx:228 [PTT] Transmission stopped
+index.jsx:239 [PTT] Unmuted channels: ['DISPATCH__DISPATCH']
+index.jsx:250 [PTT] PTT_DOWN {eventType: 'keydown'}
+index.jsx:252 [PTT] PTT_GESTURE_ACTIVE_TRUE
+index.jsx:253 [PTT] PTT_START
+index.jsx:86 [PTT] startTransmission called, channels: ['DISPATCH__DISPATCH']
+index.jsx:157 [PTT] Requesting floor grant for channel=DISPATCH__DISPATCH unit=DISPATCH-1
+index.jsx:158 [PTT] PTT_FLOOR_REQUEST_SENT {channel: 'DISPATCH__DISPATCH', unit: 'DISPATCH-1'}
+index.jsx:160 [PTT] Floor granted for channel=DISPATCH__DISPATCH
+index.jsx:161 [PTT] PTT_FLOOR_GRANTED {channel: 'DISPATCH__DISPATCH', unit: 'DISPATCH-1'}
+index.jsx:174 [PTT] Playing talk permit tone before mic goes live
+index.jsx:176 [PTT] Talk permit tone finished, opening mic
+OpusBrowserEncoder.js:16 Aborted(sync fetching of the wasm failed: you can preload it to Module['wasmBinary'] manually, or emcc.py will do that for you when generating HTML (but not JS))
+vn @ opusscript_native_wasm.js:12
+Bt @ opusscript_native_wasm.js:13
+(anonymous) @ opusscript_native_wasm.js:60
+(anonymous) @ opusscript_native_wasm.js:60
+Gs @ index.js:40
+init @ OpusBrowserEncoder.js:16
+_ensureTxEncoder @ AudioTransportManager.js:117
+startTransmit @ AudioTransportManager.js:505
+await in startTransmit
+start @ AudioTransportManager.js:534
+(anonymous) @ index.jsx:188
+await in (anonymous)
+(anonymous) @ index.jsx:255
+ge @ index.jsx:286
+OpusBrowserEncoder.js:16 failed to compile wasm module: RuntimeError: Aborted(sync fetching of the wasm failed: you can preload it to Module['wasmBinary'] manually, or emcc.py will do that for you when generating HTML (but not JS)). Build with -sASSERTIONS for more info.
+Bt @ opusscript_native_wasm.js:13
+(anonymous) @ opusscript_native_wasm.js:60
+(anonymous) @ opusscript_native_wasm.js:60
+Gs @ index.js:40
+init @ OpusBrowserEncoder.js:16
+_ensureTxEncoder @ AudioTransportManager.js:117
+startTransmit @ AudioTransportManager.js:505
+await in startTransmit
+start @ AudioTransportManager.js:534
+(anonymous) @ index.jsx:188
+await in (anonymous)
+(anonymous) @ index.jsx:255
+ge @ index.jsx:286
+OpusBrowserEncoder.js:24 [OpusBrowserEncoder] Failed to initialize: Aborted(sync fetching of the wasm failed: you can preload it to Module['wasmBinary'] manually, or emcc.py will do that for you when generating HTML (but not JS)). Build with -sASSERTIONS for more info.
+init @ OpusBrowserEncoder.js:24
+_ensureTxEncoder @ AudioTransportManager.js:117
+startTransmit @ AudioTransportManager.js:505
+await in startTransmit
+start @ AudioTransportManager.js:534
+(anonymous) @ index.jsx:188
+await in (anonymous)
+(anonymous) @ index.jsx:255
+ge @ index.jsx:286
+index.jsx:199 [PTT] Transmission started successfully
+main.jsx:33 [UNHANDLED REJECTION] RuntimeError: Aborted(sync fetching of the wasm failed: you can preload it to Module['wasmBinary'] manually, or emcc.py will do that for you when generating HTML (but not JS)). Build with -sASSERTIONS for more info.
+    at vn (opusscript_native_wasm.js:12:172)
+    at Bt (opusscript_native_wasm.js:13:274)
+    at opusscript_native_wasm.js:60:216
+    at opusscript_native_wasm.js:60:236
+    at new Gs (index.js:40:38)
+    at vA.init (OpusBrowserEncoder.js:16:23)
+    at Ox._ensureTxEncoder (AudioTransportManager.js:117:23)
+    at Ox.startTransmit (AudioTransportManager.js:505:30)
+(anonymous) @ main.jsx:33
+opusscript_native_wasm.js:12 Uncaught (in promise) RuntimeError: Aborted(sync fetching of the wasm failed: you can preload it to Module['wasmBinary'] manually, or emcc.py will do that for you when generating HTML (but not JS)). Build with -sASSERTIONS for more info.
+    at vn (opusscript_native_wasm.js:12:172)
+    at Bt (opusscript_native_wasm.js:13:274)
+    at opusscript_native_wasm.js:60:216
+    at opusscript_native_wasm.js:60:236
+    at new Gs (index.js:40:38)
+    at vA.init (OpusBrowserEncoder.js:16:23)
+    at Ox._ensureTxEncoder (AudioTransportManager.js:117:23)
+    at Ox.startTransmit (AudioTransportManager.js:505:30)
+vn @ opusscript_native_wasm.js:12
+Bt @ opusscript_native_wasm.js:13
+(anonymous) @ opusscript_native_wasm.js:60
+(anonymous) @ opusscript_native_wasm.js:60
+Gs @ index.js:40
+init @ OpusBrowserEncoder.js:16
+_ensureTxEncoder @ AudioTransportManager.js:117
+startTransmit @ AudioTransportManager.js:505
+await in startTransmit
+start @ AudioTransportManager.js:534
+(anonymous) @ index.jsx:188
+await in (anonymous)
+(anonymous) @ index.jsx:255
+ge @ index.jsx:286
+index.jsx:269 [PTT] PTT_UP {gestureActive: true}
+index.jsx:272 [PTT] PTT_STOP
+index.jsx:274 [PTT] PTT_GESTURE_ACTIVE_FALSE
+index.jsx:214 [PTT] stopTransmission called
+index.jsx:228 [PTT] Transmission stopped
+index.jsx:239 [PTT] Unmuted channels: ['DISPATCH__DISPATCH']
+index.jsx:250 [PTT] PTT_DOWN {eventType: 'keydown'}
+index.jsx:252 [PTT] PTT_GESTURE_ACTIVE_TRUE
+index.jsx:253 [PTT] PTT_START
+index.jsx:86 [PTT] startTransmission called, channels: ['DISPATCH__DISPATCH']
+index.jsx:157 [PTT] Requesting floor grant for channel=DISPATCH__DISPATCH unit=DISPATCH-1
+index.jsx:158 [PTT] PTT_FLOOR_REQUEST_SENT {channel: 'DISPATCH__DISPATCH', unit: 'DISPATCH-1'}
+index.jsx:160 [PTT] Floor granted for channel=DISPATCH__DISPATCH
+index.jsx:161 [PTT] PTT_FLOOR_GRANTED {channel: 'DISPATCH__DISPATCH', unit: 'DISPATCH-1'}
+index.jsx:174 [PTT] Playing talk permit tone before mic goes live
+index.jsx:176 [PTT] Talk permit tone finished, opening mic
+OpusBrowserEncoder.js:16 Aborted(sync fetching of the wasm failed: you can preload it to Module['wasmBinary'] manually, or emcc.py will do that for you when generating HTML (but not JS))
+vn @ opusscript_native_wasm.js:12
+Bt @ opusscript_native_wasm.js:13
+(anonymous) @ opusscript_native_wasm.js:60
+(anonymous) @ opusscript_native_wasm.js:60
+Gs @ index.js:40
+init @ OpusBrowserEncoder.js:16
+_ensureTxEncoder @ AudioTransportManager.js:117
+startTransmit @ AudioTransportManager.js:505
+await in startTransmit
+start @ AudioTransportManager.js:534
+(anonymous) @ index.jsx:188
+await in (anonymous)
+(anonymous) @ index.jsx:255
+ge @ index.jsx:286
+OpusBrowserEncoder.js:16 failed to compile wasm module: RuntimeError: Aborted(sync fetching of the wasm failed: you can preload it to Module['wasmBinary'] manually, or emcc.py will do that for you when generating HTML (but not JS)). Build with -sASSERTIONS for more info.
+Bt @ opusscript_native_wasm.js:13
+(anonymous) @ opusscript_native_wasm.js:60
+(anonymous) @ opusscript_native_wasm.js:60
+Gs @ index.js:40
+init @ OpusBrowserEncoder.js:16
+_ensureTxEncoder @ AudioTransportManager.js:117
+startTransmit @ AudioTransportManager.js:505
+await in startTransmit
+start @ AudioTransportManager.js:534
+(anonymous) @ index.jsx:188
+await in (anonymous)
+(anonymous) @ index.jsx:255
+ge @ index.jsx:286
+OpusBrowserEncoder.js:24 [OpusBrowserEncoder] Failed to initialize: Aborted(sync fetching of the wasm failed: you can preload it to Module['wasmBinary'] manually, or emcc.py will do that for you when generating HTML (but not JS)). Build with -sASSERTIONS for more info.
+init @ OpusBrowserEncoder.js:24
+_ensureTxEncoder @ AudioTransportManager.js:117
+startTransmit @ AudioTransportManager.js:505
+await in startTransmit
+start @ AudioTransportManager.js:534
+(anonymous) @ index.jsx:188
+await in (anonymous)
+(anonymous) @ index.jsx:255
+ge @ index.jsx:286
+index.jsx:199 [PTT] Transmission started successfully
+main.jsx:33 [UNHANDLED REJECTION] RuntimeError: Aborted(sync fetching of the wasm failed: you can preload it to Module['wasmBinary'] manually, or emcc.py will do that for you when generating HTML (but not JS)). Build with -sASSERTIONS for more info.
+    at vn (opusscript_native_wasm.js:12:172)
+    at Bt (opusscript_native_wasm.js:13:274)
+    at opusscript_native_wasm.js:60:216
+    at opusscript_native_wasm.js:60:236
+    at new Gs (index.js:40:38)
+    at vA.init (OpusBrowserEncoder.js:16:23)
+    at Ox._ensureTxEncoder (AudioTransportManager.js:117:23)
+    at Ox.startTransmit (AudioTransportManager.js:505:30)
+(anonymous) @ main.jsx:33
+opusscript_native_wasm.js:12 Uncaught (in promise) RuntimeError: Aborted(sync fetching of the wasm failed: you can preload it to Module['wasmBinary'] manually, or emcc.py will do that for you when generating HTML (but not JS)). Build with -sASSERTIONS for more info.
+    at vn (opusscript_native_wasm.js:12:172)
+    at Bt (opusscript_native_wasm.js:13:274)
+    at opusscript_native_wasm.js:60:216
+    at opusscript_native_wasm.js:60:236
+    at new Gs (index.js:40:38)
+    at vA.init (OpusBrowserEncoder.js:16:23)
+    at Ox._ensureTxEncoder (AudioTransportManager.js:117:23)
+    at Ox.startTransmit (AudioTransportManager.js:505:30)
+vn @ opusscript_native_wasm.js:12
+Bt @ opusscript_native_wasm.js:13
+(anonymous) @ opusscript_native_wasm.js:60
+(anonymous) @ opusscript_native_wasm.js:60
+Gs @ index.js:40
+init @ OpusBrowserEncoder.js:16
+_ensureTxEncoder @ AudioTransportManager.js:117
+startTransmit @ AudioTransportManager.js:505
+await in startTransmit
+start @ AudioTransportManager.js:534
+(anonymous) @ index.jsx:188
+await in (anonymous)
+(anonymous) @ index.jsx:255
+ge @ index.jsx:286
+index.jsx:269 [PTT] PTT_UP {gestureActive: true}
+index.jsx:272 [PTT] PTT_STOP
+index.jsx:274 [PTT] PTT_GESTURE_ACTIVE_FALSE
+index.jsx:214 [PTT] stopTransmission called
+index.jsx:228 [PTT] Transmission stopped
+index.jsx:239 [PTT] Unmuted channels: ['DISPATCH__DISPATCH']
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 46, totalBytes: 7360, plcFrames: 0, reorderFlushes: 0}
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 18, framesPlayed: 0, underrunCount: 0, bufferDepth: 18, avgBufferDepth: 7}
+AudioTransportManager.js:742 AUDIO_RX_DECODE_SUMMARY {frames: 30, totalBytes: 4800, plcFrames: 0, reorderFlushes: 0}
+PcmPlaybackEngine.js:30 AUDIO_PLAYBACK_UNDERRUN {count: 1, bufferDepth: 0}
+_workletNode.port.onmessage @ PcmPlaybackEngine.js:30
+PcmPlaybackEngine.js:35 AUDIO_PLAYBACK_DIAG {framesReceived: 33, framesPlayed: 51, underrunCount: 1, bufferDepth: 0, avgBufferDepth: 14.1}
+index.jsx:250 [PTT] PTT_DOWN {eventType: 'keydown'}
+index.jsx:252 [PTT] PTT_GESTURE_ACTIVE_TRUE
+index.jsx:253 [PTT] PTT_START
+index.jsx:86 [PTT] startTransmission called, channels: ['DISPATCH__DISPATCH']
+index.jsx:157 [PTT] Requesting floor grant for channel=DISPATCH__DISPATCH unit=DISPATCH-1
+index.jsx:158 [PTT] PTT_FLOOR_REQUEST_SENT {channel: 'DISPATCH__DISPATCH', unit: 'DISPATCH-1'}
+index.jsx:160 [PTT] Floor granted for channel=DISPATCH__DISPATCH
+index.jsx:161 [PTT] PTT_FLOOR_GRANTED {channel: 'DISPATCH__DISPATCH', unit: 'DISPATCH-1'}
+index.jsx:174 [PTT] Playing talk permit tone before mic goes live
+index.jsx:176 [PTT] Talk permit tone finished, opening mic
+OpusBrowserEncoder.js:16 Aborted(sync fetching of the wasm failed: you can preload it to Module['wasmBinary'] manually, or emcc.py will do that for you when generating HTML (but not JS))
+vn @ opusscript_native_wasm.js:12
+Bt @ opusscript_native_wasm.js:13
+(anonymous) @ opusscript_native_wasm.js:60
+(anonymous) @ opusscript_native_wasm.js:60
+Gs @ index.js:40
+init @ OpusBrowserEncoder.js:16
+_ensureTxEncoder @ AudioTransportManager.js:117
+startTransmit @ AudioTransportManager.js:505
+await in startTransmit
+start @ AudioTransportManager.js:534
+(anonymous) @ index.jsx:188
+await in (anonymous)
+(anonymous) @ index.jsx:255
+ge @ index.jsx:286
+OpusBrowserEncoder.js:16 failed to compile wasm module: RuntimeError: Aborted(sync fetching of the wasm failed: you can preload it to Module['wasmBinary'] manually, or emcc.py will do that for you when generating HTML (but not JS)). Build with -sASSERTIONS for more info.
+Bt @ opusscript_native_wasm.js:13
+(anonymous) @ opusscript_native_wasm.js:60
+(anonymous) @ opusscript_native_wasm.js:60
+Gs @ index.js:40
+init @ OpusBrowserEncoder.js:16
+_ensureTxEncoder @ AudioTransportManager.js:117
+startTransmit @ AudioTransportManager.js:505
+await in startTransmit
+start @ AudioTransportManager.js:534
+(anonymous) @ index.jsx:188
+await in (anonymous)
+(anonymous) @ index.jsx:255
+ge @ index.jsx:286
+OpusBrowserEncoder.js:24 [OpusBrowserEncoder] Failed to initialize: Aborted(sync fetching of the wasm failed: you can preload it to Module['wasmBinary'] manually, or emcc.py will do that for you when generating HTML (but not JS)). Build with -sASSERTIONS for more info.
+init @ OpusBrowserEncoder.js:24
+_ensureTxEncoder @ AudioTransportManager.js:117
+startTransmit @ AudioTransportManager.js:505
+await in startTransmit
+start @ AudioTransportManager.js:534
+(anonymous) @ index.jsx:188
+await in (anonymous)
+(anonymous) @ index.jsx:255
+ge @ index.jsx:286
+index.jsx:199 [PTT] Transmission started successfully
+main.jsx:33 [UNHANDLED REJECTION] RuntimeError: Aborted(sync fetching of the wasm failed: you can preload it to Module['wasmBinary'] manually, or emcc.py will do that for you when generating HTML (but not JS)). Build with -sASSERTIONS for more info.
+    at vn (opusscript_native_wasm.js:12:172)
+    at Bt (opusscript_native_wasm.js:13:274)
+    at opusscript_native_wasm.js:60:216
+    at opusscript_native_wasm.js:60:236
+    at new Gs (index.js:40:38)
+    at vA.init (OpusBrowserEncoder.js:16:23)
+    at Ox._ensureTxEncoder (AudioTransportManager.js:117:23)
+    at Ox.startTransmit (AudioTransportManager.js:505:30)
+(anonymous) @ main.jsx:33
+opusscript_native_wasm.js:12 Uncaught (in promise) RuntimeError: Aborted(sync fetching of the wasm failed: you can preload it to Module['wasmBinary'] manually, or emcc.py will do that for you when generating HTML (but not JS)). Build with -sASSERTIONS for more info.
+    at vn (opusscript_native_wasm.js:12:172)
+    at Bt (opusscript_native_wasm.js:13:274)
+    at opusscript_native_wasm.js:60:216
+    at opusscript_native_wasm.js:60:236
+    at new Gs (index.js:40:38)
+    at vA.init (OpusBrowserEncoder.js:16:23)
+    at Ox._ensureTxEncoder (AudioTransportManager.js:117:23)
+    at Ox.startTransmit (AudioTransportManager.js:505:30)
+vn @ opusscript_native_wasm.js:12
+Bt @ opusscript_native_wasm.js:13
+(anonymous) @ opusscript_native_wasm.js:60
+(anonymous) @ opusscript_native_wasm.js:60
+Gs @ index.js:40
+init @ OpusBrowserEncoder.js:16
+_ensureTxEncoder @ AudioTransportManager.js:117
+startTransmit @ AudioTransportManager.js:505
+await in startTransmit
+start @ AudioTransportManager.js:534
+(anonymous) @ index.jsx:188
+await in (anonymous)
+(anonymous) @ index.jsx:255
+ge @ index.jsx:286
+index.jsx:269 [PTT] PTT_UP {gestureActive: true}
+index.jsx:272 [PTT] PTT_STOP
+index.jsx:274 [PTT] PTT_GESTURE_ACTIVE_FALSE
+index.jsx:214 [PTT] stopTransmission called
+index.jsx:228 [PTT] Transmission stopped
+index.jsx:239 [PTT] Unmuted channels: ['DISPATCH__DISPATCH']

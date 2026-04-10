@@ -1,0 +1,122 @@
+2026-04-10 16:06:27.934   356-1663  NxpTml                  vendor.nxp.nxpnfc@1.0-service        D  PN54X - Write requested.....
+2026-04-10 16:06:27.934   356-1663  NxpTml                  vendor.nxp.nxpnfc@1.0-service        D  PN54X - Invoking I2C Write.....
+2026-04-10 16:06:27.953   356-1663  NxpTml                  vendor.nxp.nxpnfc@1.0-service        E  _i2c_write() errno : 5
+2026-04-10 16:06:27.963   356-1663  NxpTml                  vendor.nxp.nxpnfc@1.0-service        D  PN54X - Invoking I2C Write.....
+2026-04-10 16:06:27.983   356-1663  NxpTml                  vendor.nxp.nxpnfc@1.0-service        E  _i2c_write() errno : 5
+2026-04-10 16:06:27.985 17116-22272 [RadioEngine]           com.reedersystems.commandcomms       D  RX_DIAG rxTotal=681 rxNew=0 jbSize=1 jbDepth=2 jbPlaying=true channelIdx=169 t=26530ms
+2026-04-10 16:06:27.985 17116-23925 [RadioEngine]           com.reedersystems.commandcomms       D  RX_DIAG rxTotal=681 rxNew=0 jbSize=1 jbDepth=2 jbPlaying=true channelIdx=169 t=26530ms
+2026-04-10 16:06:27.993   356-1663  NxpTml                  vendor.nxp.nxpnfc@1.0-service        D  PN54X - Invoking I2C Write.....
+2026-04-10 16:06:28.014   356-1663  NxpTml                  vendor.nxp.nxpnfc@1.0-service        E  _i2c_write() errno : 5
+2026-04-10 16:06:28.024   356-1663  NxpTml                  vendor.nxp.nxpnfc@1.0-service        D  PN54X - Invoking I2C Write.....
+2026-04-10 16:06:28.043   356-1663  NxpTml                  vendor.nxp.nxpnfc@1.0-service        E  _i2c_write() errno : 5
+2026-04-10 16:06:28.043   356-1663  NxpTml                  vendor.nxp.nxpnfc@1.0-service        E  PN54X - Error in I2C Write.....
+2026-04-10 16:06:28.043   356-1663  NxpTml                  vendor.nxp.nxpnfc@1.0-service        D  PN54X - Posting Fresh Write message.....
+2026-04-10 16:06:01.289   737-916   tyd                     system_server                        D  sendBroadcast: android.intent.action.PTT.down
+2026-04-10 16:06:01.291   737-916   ActivityManager         system_server                        E  Sending non-protected broadcast android.intent.action.PTT.down from system 737:system/1000 pkg android (Explain with AI)
+                                                                                                    java.lang.Throwable
+                                                                                                    	at com.android.server.am.ActivityManagerService.checkBroadcastFromSystem(ActivityManagerService.java:19307)
+                                                                                                    	at com.android.server.am.ActivityManagerService.broadcastIntentLocked(ActivityManagerService.java:19827)
+                                                                                                    	at com.android.server.am.ActivityManagerService.broadcastIntent(ActivityManagerService.java:20062)
+                                                                                                    	at android.app.ContextImpl.sendBroadcast(ContextImpl.java:971)
+                                                                                                    	at com.android.server.policy.PhoneWindowManager.sendBC(PhoneWindowManager.java:6496)
+                                                                                                    	at com.android.server.policy.PhoneWindowManager.interceptKeyBeforeQueueing(PhoneWindowManager.java:6843)
+                                                                                                    	at com.freeme.server.policy.FreemePhoneWindowManager.interceptKeyBeforeQueueing(FreemePhoneWindowManager.java:301)
+                                                                                                    	at com.android.server.wm.InputMonitor.interceptKeyBeforeQueueing(InputMonitor.java:449)
+                                                                                                    	at com.android.server.input.InputManagerService.interceptKeyBeforeQueueing(InputManagerService.java:1975)
+2026-04-10 16:06:01.310   737-916   ActivityManager         system_server                        E  Sending non-protected broadcast android.intent.action.PTT.down from system 737:system/1000 pkg android (Explain with AI)
+                                                                                                    java.lang.Throwable
+                                                                                                    	at com.android.server.am.ActivityManagerService.checkBroadcastFromSystem(ActivityManagerService.java:19307)
+                                                                                                    	at com.android.server.am.ActivityManagerService.broadcastIntentLocked(ActivityManagerService.java:19920)
+                                                                                                    	at com.android.server.am.ActivityManagerService.broadcastIntent(ActivityManagerService.java:20062)
+                                                                                                    	at android.app.ContextImpl.sendBroadcast(ContextImpl.java:971)
+                                                                                                    	at com.android.server.policy.PhoneWindowManager.sendBC(PhoneWindowManager.java:6496)
+                                                                                                    	at com.android.server.policy.PhoneWindowManager.interceptKeyBeforeQueueing(PhoneWindowManager.java:6843)
+                                                                                                    	at com.freeme.server.policy.FreemePhoneWindowManager.interceptKeyBeforeQueueing(FreemePhoneWindowManager.java:301)
+                                                                                                    	at com.android.server.wm.InputMonitor.interceptKeyBeforeQueueing(InputMonitor.java:449)
+                                                                                                    	at com.android.server.input.InputManagerService.interceptKeyBeforeQueueing(InputManagerService.java:1975)
+2026-04-10 16:06:01.343 17116-17116 [PTT-DIAG]              com.reedersystems.commandcomms       D  MainActivity PTT DOWN source=MainActivity code=230 action=DOWN repeat=0 ts=1775851561343
+2026-04-10 16:06:01.343 17116-17116 [PTT-DIAG]              com.reedersystems.commandcomms       D  MainActivity PTT DOWN — forwarding to BackgroundAudioService (signaling=true)
+2026-04-10 16:06:01.346 17116-17116 [PTT-DIAG]              com.reedersystems.commandcomms       D  PttHardwareReceiver.onReceive action=android.intent.action.PTT.down extras=null source=broadcast
+2026-04-10 16:06:01.346 17116-17116 [PTT-DIAG]              com.reedersystems.commandcomms       D  PttHardwareReceiver: mapped action=android.intent.action.PTT.down -> svcAction=com.reedersystems.commandcomms.SVC_PTT_DOWN
+2026-04-10 16:06:01.349 17116-17116 [PTT-DIAG]              com.reedersystems.commandcomms       D  PttHardwareReceiver: WakeLock acquired (auto-releases in 5000ms)
+2026-04-10 16:06:01.351 17116-17116 [PTT-DIAG]              com.reedersystems.commandcomms       D  {"event":"RADIO_PTT_DOWN","pttState":"IDLE","signaling":true,"channelKey":"DISPATCH__DISPATCH","channelId":"169"}
+2026-04-10 16:06:01.351 17116-17116 [PTT-DIAG]              com.reedersystems.commandcomms       D  PTT_STATE IDLE -> CONNECTING channelKey=DISPATCH__DISPATCH
+2026-04-10 16:06:01.366 17116-17116 [ToneEvent]             com.reedersystems.commandcomms       D  {"tone":"talk-permit","trigger":"ptt_down","state":"CONNECTING","channelKey":"DISPATCH__DISPATCH","ts":1775851561366}
+2026-04-10 16:06:01.368   967-967   StatusBar               com.android.systemui                 D  onNotificationPosted: StatusBarNotification(pkg=com.reedersystems.commandcomms user=UserHandle{0} id=1001 tag=null key=0|com.reedersystems.commandcomms|1001|null|10180: Notification(channel=ptt_service pri=-1 contentView=null vibrate=null sound=null defaults=0x0 flags=0x62 color=0x00000000 vis=PRIVATE))
+2026-04-10 16:06:01.433 17116-22270 [PTT-DIAG]              com.reedersystems.commandcomms       D  {"event":"RADIO_READY_FOR_PTT","roomKey":"DISPATCH__DISPATCH","signaling":true}
+2026-04-10 16:06:01.434 17116-17116 [PTT-DIAG]              com.reedersystems.commandcomms       D  {"event":"RADIO_PTT_DOWN","pttState":"CONNECTING","signaling":true,"channelKey":"DISPATCH__DISPATCH","channelId":"169"}
+2026-04-10 16:06:01.434 17116-17116 [PTT-DIAG]              com.reedersystems.commandcomms       D  Radio PTT DOWN ignored: pttState=CONNECTING
+2026-04-10 16:06:01.636 17116-23908 [PTT-DIAG]              com.reedersystems.commandcomms       D  emitPttPre DISPATCH__DISPATCH
+2026-04-10 16:06:01.637 17116-23908 [PTT-DIAG]              com.reedersystems.commandcomms       D  Radio PTT: transmitPre sent for roomKey DISPATCH__DISPATCH
+2026-04-10 16:06:01.637 17116-23908 [PTT-DIAG]              com.reedersystems.commandcomms       D  PTT_REQUEST_SENT channelId=DISPATCH__DISPATCH
+2026-04-10 16:06:01.637 17116-23908 [PTT-DIAG]              com.reedersystems.commandcomms       D  RADIO_PTT_REQUEST_SENT channelId=DISPATCH__DISPATCH
+2026-04-10 16:06:01.638 17116-17116 [PTT-DIAG]              com.reedersystems.commandcomms       D  RadioState updated: REQUESTING_FLOOR
+2026-04-10 16:06:01.638 17116-23908 [PTT-DIAG]              com.reedersystems.commandcomms       D  [FloorCtrl] SIGNALING_FLOOR_REQUEST channelKey=DISPATCH__DISPATCH unitId=ADMIN sessionTokenPresent=true
+2026-04-10 16:06:01.913 17116-23922 [PTT-DIAG]              com.reedersystems.commandcomms       D  [FloorCtrl] SIGNALING_FLOOR_GRANTED channelId=DISPATCH__DISPATCH senderUnitId=ADMIN
+2026-04-10 16:06:01.934 17116-23921 [PTT-DIAG]              com.reedersystems.commandcomms       D  RADIO_PTT_GRANTED channelId=DISPATCH__DISPATCH senderUnitId=ADMIN
+2026-04-10 16:06:01.937 17116-17116 [PTT-DIAG]              com.reedersystems.commandcomms       D  RadioState updated: TRANSMITTING
+2026-04-10 16:06:01.960 17116-23908 [PTT-DIAG]              com.reedersystems.commandcomms       D  Floor GRANTED — promoting pre-capture to live TX
+2026-04-10 16:06:01.962 17116-23908 [PTT-DIAG]              com.reedersystems.commandcomms       D  PTT_STATE CONNECTING -> TRANSMITTING channelKey=DISPATCH__DISPATCH
+2026-04-10 16:06:01.984 17116-23908 [PTT-DIAG]              com.reedersystems.commandcomms       D  Sending PTT_TX_STARTED broadcast
+2026-04-10 16:06:01.986   967-967   StatusBar               com.android.systemui                 D  onNotificationPosted: StatusBarNotification(pkg=com.reedersystems.commandcomms user=UserHandle{0} id=1001 tag=null key=0|com.reedersystems.commandcomms|1001|null|10180: Notification(channel=ptt_service pri=-1 contentView=null vibrate=null sound=null defaults=0x0 flags=0x62 color=0x00000000 vis=PRIVATE))
+2026-04-10 16:06:02.036 17116-17116 [PTT-DIAG]              com.reedersystems.commandcomms       D  PTT_TX_STARTED received — setting pttState = TRANSMITTING
+2026-04-10 16:06:03.339   737-836   tyd                     system_server                        D  sendBroadcast: android.intent.action.PTT.longpress
+2026-04-10 16:06:03.346   737-836   ActivityManager         system_server                        E  Sending non-protected broadcast android.intent.action.PTT.longpress from system 737:system/1000 pkg android (Explain with AI)
+                                                                                                    java.lang.Throwable
+                                                                                                    	at com.android.server.am.ActivityManagerService.checkBroadcastFromSystem(ActivityManagerService.java:19307)
+                                                                                                    	at com.android.server.am.ActivityManagerService.broadcastIntentLocked(ActivityManagerService.java:19920)
+                                                                                                    	at com.android.server.am.ActivityManagerService.broadcastIntent(ActivityManagerService.java:20062)
+                                                                                                    	at android.app.ContextImpl.sendBroadcast(ContextImpl.java:971)
+                                                                                                    	at com.android.server.policy.PhoneWindowManager.sendBC(PhoneWindowManager.java:6496)
+                                                                                                    	at com.android.server.policy.PhoneWindowManager.-wrap20(Unknown Source:0)
+                                                                                                    	at com.android.server.policy.PhoneWindowManager$23.run(PhoneWindowManager.java:6847)
+                                                                                                    	at android.os.Handler.handleCallback(Handler.java:790)
+                                                                                                    	at android.os.Handler.dispatchMessage(Handler.java:99)
+                                                                                                    	at android.os.Looper.loop(Looper.java:164)
+                                                                                                    	at android.os.HandlerThread.run(HandlerThread.java:65)
+                                                                                                    	at com.android.server.ServiceThread.run(ServiceThread.java:46)
+                                                                                                    	at com.android.server.UiThread.run(UiThread.java:42)
+2026-04-10 16:06:13.336   737-916   tyd                     system_server                        D  sendBroadcast: android.intent.action.PTT.up
+2026-04-10 16:06:13.337   737-916   ActivityManager         system_server                        E  Sending non-protected broadcast android.intent.action.PTT.up from system 737:system/1000 pkg android (Explain with AI)
+                                                                                                    java.lang.Throwable
+                                                                                                    	at com.android.server.am.ActivityManagerService.checkBroadcastFromSystem(ActivityManagerService.java:19307)
+                                                                                                    	at com.android.server.am.ActivityManagerService.broadcastIntentLocked(ActivityManagerService.java:19827)
+                                                                                                    	at com.android.server.am.ActivityManagerService.broadcastIntent(ActivityManagerService.java:20062)
+                                                                                                    	at android.app.ContextImpl.sendBroadcast(ContextImpl.java:971)
+                                                                                                    	at com.android.server.policy.PhoneWindowManager.sendBC(PhoneWindowManager.java:6496)
+                                                                                                    	at com.android.server.policy.PhoneWindowManager.interceptKeyBeforeQueueing(PhoneWindowManager.java:6852)
+                                                                                                    	at com.freeme.server.policy.FreemePhoneWindowManager.interceptKeyBeforeQueueing(FreemePhoneWindowManager.java:301)
+                                                                                                    	at com.android.server.wm.InputMonitor.interceptKeyBeforeQueueing(InputMonitor.java:449)
+                                                                                                    	at com.android.server.input.InputManagerService.interceptKeyBeforeQueueing(InputManagerService.java:1975)
+2026-04-10 16:06:13.368   737-916   ActivityManager         system_server                        E  Sending non-protected broadcast android.intent.action.PTT.up from system 737:system/1000 pkg android (Explain with AI)
+                                                                                                    java.lang.Throwable
+                                                                                                    	at com.android.server.am.ActivityManagerService.checkBroadcastFromSystem(ActivityManagerService.java:19307)
+                                                                                                    	at com.android.server.am.ActivityManagerService.broadcastIntentLocked(ActivityManagerService.java:19920)
+                                                                                                    	at com.android.server.am.ActivityManagerService.broadcastIntent(ActivityManagerService.java:20062)
+                                                                                                    	at android.app.ContextImpl.sendBroadcast(ContextImpl.java:971)
+                                                                                                    	at com.android.server.policy.PhoneWindowManager.sendBC(PhoneWindowManager.java:6496)
+                                                                                                    	at com.android.server.policy.PhoneWindowManager.interceptKeyBeforeQueueing(PhoneWindowManager.java:6852)
+                                                                                                    	at com.freeme.server.policy.FreemePhoneWindowManager.interceptKeyBeforeQueueing(FreemePhoneWindowManager.java:301)
+                                                                                                    	at com.android.server.wm.InputMonitor.interceptKeyBeforeQueueing(InputMonitor.java:449)
+                                                                                                    	at com.android.server.input.InputManagerService.interceptKeyBeforeQueueing(InputManagerService.java:1975)
+2026-04-10 16:06:13.398 17116-17116 [PTT-DIAG]              com.reedersystems.commandcomms       D  MainActivity PTT UP source=MainActivity code=230 action=UP ts=1775851573398
+2026-04-10 16:06:13.398 17116-17116 [PTT-DIAG]              com.reedersystems.commandcomms       D  MainActivity PTT UP — forwarding to BackgroundAudioService (signaling=true)
+2026-04-10 16:06:13.433 17116-17116 [PTT-DIAG]              com.reedersystems.commandcomms       D  PttHardwareReceiver.onReceive action=android.intent.action.PTT.up extras=null source=broadcast
+2026-04-10 16:06:13.433 17116-17116 [PTT-DIAG]              com.reedersystems.commandcomms       D  PttHardwareReceiver: mapped action=android.intent.action.PTT.up -> svcAction=com.reedersystems.commandcomms.SVC_PTT_UP
+2026-04-10 16:06:13.437 17116-17116 [PTT-DIAG]              com.reedersystems.commandcomms       D  PttHardwareReceiver: WakeLock acquired (auto-releases in 5000ms)
+2026-04-10 16:06:13.446 17116-17116 [PTT-DIAG]              com.reedersystems.commandcomms       D  {"event":"RADIO_PTT_UP","pttState":"TRANSMITTING","channelKey":"DISPATCH__DISPATCH"}
+2026-04-10 16:06:13.446 17116-17116 [PTT-DIAG]              com.reedersystems.commandcomms       D  PTT_STATE TRANSMITTING -> CLEANING_UP channelKey=DISPATCH__DISPATCH
+2026-04-10 16:06:13.465 17116-17116 [PTT-DIAG]              com.reedersystems.commandcomms       D  {"event":"RADIO_PTT_UP","pttState":"CLEANING_UP","channelKey":"DISPATCH__DISPATCH"}
+2026-04-10 16:06:13.467   967-967   StatusBar               com.android.systemui                 D  onNotificationPosted: StatusBarNotification(pkg=com.reedersystems.commandcomms user=UserHandle{0} id=1001 tag=null key=0|com.reedersystems.commandcomms|1001|null|10180: Notification(channel=ptt_service pri=-1 contentView=null vibrate=null sound=null defaults=0x0 flags=0x62 color=0x00000000 vis=PRIVATE))
+2026-04-10 16:06:13.623 17116-17116 [PTT-DIAG]              com.reedersystems.commandcomms       D  RadioState updated: IDLE
+2026-04-10 16:06:13.624 17116-22270 [RadioEngine]           com.reedersystems.commandcomms       D  {"event":"TX_STOPPED","cleanupMs":164,"lastSendGapMs":142,"durationMs":12169,"framesRead":582,"framesEncoded":435,"pktSent":435,"failures":0,"pcmFallback":0,"silentFrames":384,"stopReason":"ptt_release"}
+2026-04-10 16:06:13.642 17116-22270 [RadioEngine]           com.reedersystems.commandcomms       D  TX_SESSION_END duration=12169ms reqRate=48000 actRate=48000 ch=1 src=VOICE_COMMUNICATION framesRead=582 framesEncoded=435 pktSent=435 failures=0 encodeFailures=0 assertionFailures=0 pcmFallback=0 silentFrames=384 partials=0 zeros=0 probeRms=[] first10rms=[1.2,2.5,1.9,2.2,2.5,2.3,2.2,2.2,2.7,2.0] stop=ptt_release lastSendGapMs=142 t=12187ms
+2026-04-10 16:06:13.642 17116-22270 [PTT-DIAG]              com.reedersystems.commandcomms       D  [FloorCtrl] SIGNALING_FLOOR_RELEASE channelKey=DISPATCH__DISPATCH unitId=ADMIN
+2026-04-10 16:06:13.647 17116-22270 [PTT-DIAG]              com.reedersystems.commandcomms       D  {"event":"PTT_RELEASE_SENT","channelId":"DISPATCH__DISPATCH"}
+2026-04-10 16:06:13.647 17116-22270 [PTT-DIAG]              com.reedersystems.commandcomms       D  Sending PTT_TX_ENDED broadcast
+2026-04-10 16:06:13.647 17116-23925 [PTT-DIAG]              com.reedersystems.commandcomms       D  Floor RELEASED
+2026-04-10 16:06:13.653 17116-17116 [PTT-DIAG]              com.reedersystems.commandcomms       D  PTT_TX_ENDED received — setting pttState = IDLE
+2026-04-10 16:06:13.660 17116-22270 [ToneEvent]             com.reedersystems.commandcomms       D  {"tone":"end-of-tx","trigger":"ptt_up","state":"CLEANING_UP","ts":1775851573660}
+2026-04-10 16:06:13.667 17116-22270 [PTT-DIAG]              com.reedersystems.commandcomms       D  Radio PTT UP: end-of-TX tone for roomKey DISPATCH__DISPATCH
+2026-04-10 16:06:13.667 17116-22270 [PTT-DIAG]              com.reedersystems.commandcomms       D  PTT_STATE CLEANING_UP -> IDLE channelKey=DISPATCH__DISPATCH
+2026-04-10 16:06:13.668 17116-22270 [PTT-DIAG]              com.reedersystems.commandcomms       D  {"event":"PTT_CLEANUP_COMPLETE","state":"IDLE","cleanupMs":221}

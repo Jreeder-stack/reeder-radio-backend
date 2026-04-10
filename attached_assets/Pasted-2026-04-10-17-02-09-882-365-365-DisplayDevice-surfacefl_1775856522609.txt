@@ -1,0 +1,125 @@
+2026-04-10 17:02:09.882   365-365   DisplayDevice           surfaceflinger                       I  [studio.screen.sharing:0 (type:2)] fps:0.670710,dur:2981.91,max:1982.38,min:999.53
+2026-04-10 17:02:09.882   365-365   DisplayDevice           surfaceflinger                       I  [Built-in Screen (type:0)] fps:0.670698,dur:2981.97,max:1982.64,min:999.33
+2026-04-10 17:02:11.900   365-713   BufferQueueProducer     surfaceflinger                       I  [StatusBar#0](this:0xaf6db000,id:4,api:1,p:967,c:365) queueBuffer: fps=0.25 dur=4016.67 max=4016.67 min=4016.67
+2026-04-10 17:02:11.915   365-365   DisplayDevice           surfaceflinger                       I  [studio.screen.sharing:0 (type:2)] fps:0.491721,dur:2033.67,max:2033.67,min:2033.67
+2026-04-10 17:02:11.916   365-365   DisplayDevice           surfaceflinger                       I  [Built-in Screen (type:0)] fps:0.491741,dur:2033.59,max:2033.59,min:2033.59
+2026-04-10 17:02:11.919   397-29779 BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) queueBuffer: fps=0.40 dur=5017.82 max=4018.42 min=999.40
+2026-04-10 17:02:21.900   365-713   BufferQueueProducer     surfaceflinger                       I  [StatusBar#0](this:0xaf6db000,id:4,api:1,p:967,c:365) queueBuffer: fps=0.40 dur=10000.01 max=9003.18 min=9.66
+2026-04-10 17:02:21.916   365-365   DisplayDevice           surfaceflinger                       I  [studio.screen.sharing:0 (type:2)] fps:0.399971,dur:10000.73,max:9001.18,min:14.92
+2026-04-10 17:02:21.916   365-365   DisplayDevice           surfaceflinger                       I  [Built-in Screen (type:0)] fps:0.399970,dur:10000.76,max:9001.39,min:14.91
+2026-04-10 17:02:21.917   397-29779 BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) queueBuffer: fps=0.40 dur=9998.52 max=8999.45 min=14.89
+2026-04-10 17:02:23.219   365-713   BufferQueueProducer     surfaceflinger                       I  [StatusBar#0](this:0xaf6db000,id:4,api:1,p:967,c:365) queueBuffer: fps=1.52 dur=1318.45 max=998.85 min=319.59
+2026-04-10 17:02:23.232   365-365   DisplayDevice           surfaceflinger                       I  [studio.screen.sharing:0 (type:2)] fps:1.519469,dur:1316.25,max:999.87,min:316.38
+2026-04-10 17:02:23.233   365-365   DisplayDevice           surfaceflinger                       I  [Built-in Screen (type:0)] fps:1.519488,dur:1316.23,max:999.66,min:316.57
+2026-04-10 17:02:23.236   397-29779 BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) queueBuffer: fps=1.52 dur=1318.35 max=999.73 min=318.62
+2026-04-10 17:02:25.784   365-832   BufferQueueProducer     surfaceflinger                       I  [com.loudtalks/com.zello.ui.MainActivity#0](this:0xaf732000,id:1469,api:1,p:1587,c:365) queueBuffer: fps=0.03 dur=29999.58 max=29999.58 min=29999.58
+2026-04-10 17:02:25.799   365-365   DisplayDevice           surfaceflinger                       I  [studio.screen.sharing:0 (type:2)] fps:1.169076,dur:2566.13,max:2449.39,min:32.64
+2026-04-10 17:02:25.799   365-365   DisplayDevice           surfaceflinger                       I  [Built-in Screen (type:0)] fps:1.169090,dur:2566.10,max:2449.55,min:32.62
+2026-04-10 17:02:25.802   397-29779 BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) queueBuffer: fps=1.17 dur=2566.20 max=2451.82 min=32.67
+2026-04-10 17:02:25.917   365-832   BufferQueueProducer     surfaceflinger                       I  [StatusBar#0](this:0xaf6db000,id:4,api:1,p:967,c:365) queueBuffer: fps=1.11 dur=2698.18 max=2589.69 min=24.69
+2026-04-10 17:02:26.933   365-365   DisplayDevice           surfaceflinger                       I  [studio.screen.sharing:0 (type:2)] fps:1.763522,dur:1134.09,max:1000.50,min:133.60
+2026-04-10 17:02:26.933   365-365   DisplayDevice           surfaceflinger                       I  [Built-in Screen (type:0)] fps:1.763441,dur:1134.15,max:1000.71,min:133.43
+2026-04-10 17:02:26.934   397-29779 BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) queueBuffer: fps=1.77 dur=1131.97 max=998.81 min=133.17
+2026-04-10 17:02:27.916   365-832   BufferQueueProducer     surfaceflinger                       I  [StatusBar#0](this:0xaf6db000,id:4,api:1,p:967,c:365) queueBuffer: fps=1.00 dur=1998.88 max=999.48 min=999.40
+2026-04-10 17:02:27.933   365-365   DisplayDevice           surfaceflinger                       I  [studio.screen.sharing:0 (type:2)] fps:0.999802,dur:1000.20,max:1000.20,min:1000.20
+2026-04-10 17:02:27.933   365-365   DisplayDevice           surfaceflinger                       I  [Built-in Screen (type:0)] fps:0.999778,dur:1000.22,max:1000.22,min:1000.22
+2026-04-10 17:02:27.934   397-29779 BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) queueBuffer: fps=1.00 dur=1000.19 max=1000.19 min=1000.19
+2026-04-10 17:02:28.921   365-832   BufferQueueProducer     surfaceflinger                       I  [StatusBar#0](this:0xaf6db000,id:4,api:1,p:967,c:365) queueBuffer: fps=0.99 dur=1005.28 max=1005.28 min=1005.28
+2026-04-10 17:02:28.933   365-365   DisplayDevice           surfaceflinger                       I  [studio.screen.sharing:0 (type:2)] fps:0.999840,dur:1000.16,max:1000.16,min:1000.16
+2026-04-10 17:02:28.933   365-365   DisplayDevice           surfaceflinger                       I  [Built-in Screen (type:0)] fps:0.999885,dur:1000.12,max:1000.12,min:1000.12
+2026-04-10 17:02:28.934   397-29779 BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) queueBuffer: fps=1.00 dur=1000.11 max=1000.11 min=1000.11
+2026-04-10 17:02:30.916   365-832   BufferQueueProducer     surfaceflinger                       I  [StatusBar#0](this:0xaf6db000,id:4,api:1,p:967,c:365) queueBuffer: fps=1.00 dur=1994.56 max=999.72 min=994.84
+2026-04-10 17:02:30.933   365-365   DisplayDevice           surfaceflinger                       I  [studio.screen.sharing:0 (type:2)] fps:0.999985,dur:2000.03,max:1000.25,min:999.78
+2026-04-10 17:02:30.933   365-365   DisplayDevice           surfaceflinger                       I  [Built-in Screen (type:0)] fps:0.999964,dur:2000.07,max:1000.48,min:999.59
+2026-04-10 17:02:30.934   397-29779 BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) queueBuffer: fps=1.00 dur=2000.11 max=1000.59 min=999.52
+2026-04-10 17:02:34.933   365-832   BufferQueueProducer     surfaceflinger                       I  [StatusBar#0](this:0xaf6db000,id:4,api:1,p:967,c:365) queueBuffer: fps=0.25 dur=4016.97 max=4016.97 min=4016.97
+2026-04-10 17:02:34.949   365-365   DisplayDevice           surfaceflinger                       I  [studio.screen.sharing:0 (type:2)] fps:0.248981,dur:4016.38,max:4016.38,min:4016.38
+2026-04-10 17:02:34.950   365-365   DisplayDevice           surfaceflinger                       I  [Built-in Screen (type:0)] fps:0.248982,dur:4016.35,max:4016.35,min:4016.35
+2026-04-10 17:02:34.950   397-29779 BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) queueBuffer: fps=0.25 dur=4016.23 max=4016.23 min=4016.23
+2026-04-10 17:02:35.950   365-365   DisplayDevice           surfaceflinger                       I  [studio.screen.sharing:0 (type:2)] fps:0.999821,dur:1000.18,max:1000.18,min:1000.18
+2026-04-10 17:02:35.950   365-365   DisplayDevice           surfaceflinger                       I  [Built-in Screen (type:0)] fps:0.999821,dur:1000.18,max:1000.18,min:1000.18
+2026-04-10 17:02:35.951   397-29779 BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) queueBuffer: fps=1.00 dur=1000.24 max=1000.24 min=1000.24
+2026-04-10 17:02:46.949   365-832   BufferQueueProducer     surfaceflinger                       I  [StatusBar#0](this:0xaf6db000,id:4,api:1,p:967,c:365) queueBuffer: fps=0.17 dur=12016.64 max=11016.67 min=999.97
+2026-04-10 17:02:46.966   365-365   DisplayDevice           surfaceflinger                       I  [studio.screen.sharing:0 (type:2)] fps:0.090771,dur:11016.71,max:11016.71,min:11016.71
+2026-04-10 17:02:46.967   365-365   DisplayDevice           surfaceflinger                       I  [Built-in Screen (type:0)] fps:0.090771,dur:11016.72,max:11016.72,min:11016.72
+2026-04-10 17:02:46.967   397-29779 BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) queueBuffer: fps=0.09 dur=11016.70 max=11016.70 min=11016.70
+2026-04-10 17:02:51.949   365-832   BufferQueueProducer     surfaceflinger                       I  [StatusBar#0](this:0xaf6db000,id:4,api:1,p:967,c:365) queueBuffer: fps=0.40 dur=5000.13 max=4000.26 min=999.86
+2026-04-10 17:02:51.966   365-365   DisplayDevice           surfaceflinger                       I  [studio.screen.sharing:0 (type:2)] fps:0.400024,dur:4999.70,max:3999.95,min:999.76
+2026-04-10 17:02:51.966   365-365   DisplayDevice           surfaceflinger                       I  [Built-in Screen (type:0)] fps:0.400023,dur:4999.71,max:4000.14,min:999.56
+2026-04-10 17:02:51.967   397-29779 BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) queueBuffer: fps=0.40 dur=4999.71 max=4000.12 min=999.59
+2026-04-10 17:02:52.949   365-832   BufferQueueProducer     surfaceflinger                       I  [StatusBar#0](this:0xaf6db000,id:4,api:1,p:967,c:365) queueBuffer: fps=1.00 dur=1000.04 max=1000.04 min=1000.04
+2026-04-10 17:02:55.784   365-713   BufferQueueProducer     surfaceflinger                       I  [com.loudtalks/com.zello.ui.MainActivity#0](this:0xaf732000,id:1469,api:1,p:1587,c:365) queueBuffer: fps=0.03 dur=29999.47 max=29999.47 min=29999.47
+2026-04-10 17:02:55.799   365-365   DisplayDevice           surfaceflinger                       I  [studio.screen.sharing:0 (type:2)] fps:0.521839,dur:3832.60,max:2832.63,min:999.97
+2026-04-10 17:02:55.799   365-365   DisplayDevice           surfaceflinger                       I  [Built-in Screen (type:0)] fps:0.521848,dur:3832.54,max:2832.77,min:999.77
+2026-04-10 17:02:55.802   397-29779 BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) queueBuffer: fps=0.52 dur=3834.75 max=2835.01 min=999.75
+2026-04-10 17:02:55.966   365-713   BufferQueueProducer     surfaceflinger                       I  [StatusBar#0](this:0xaf6db000,id:4,api:1,p:967,c:365) queueBuffer: fps=0.33 dur=3016.52 max=3016.52 min=3016.52
+2026-04-10 17:02:56.967   365-713   BufferQueueProducer     surfaceflinger                       I  [StatusBar#0](this:0xaf6db000,id:4,api:1,p:967,c:365) queueBuffer: fps=1.00 dur=1000.76 max=1000.76 min=1000.76
+2026-04-10 17:02:56.983   365-365   DisplayDevice           surfaceflinger                       I  [studio.screen.sharing:0 (type:2)] fps:1.688947,dur:1184.17,max:1000.69,min:183.48
+2026-04-10 17:02:56.983   365-365   DisplayDevice           surfaceflinger                       I  [Built-in Screen (type:0)] fps:1.688866,dur:1184.23,max:1000.91,min:183.31
+2026-04-10 17:02:56.984   397-29779 BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) queueBuffer: fps=1.69 dur=1182.41 max=999.34 min=183.08
+2026-04-10 17:02:58.966   365-713   BufferQueueProducer     surfaceflinger                       I  [StatusBar#0](this:0xaf6db000,id:4,api:1,p:967,c:365) queueBuffer: fps=0.50 dur=1999.05 max=1999.05 min=1999.05
+2026-04-10 17:02:58.983   365-365   DisplayDevice           surfaceflinger                       I  [studio.screen.sharing:0 (type:2)] fps:0.499930,dur:2000.28,max:2000.28,min:2000.28
+2026-04-10 17:02:58.983   365-365   DisplayDevice           surfaceflinger                       I  [Built-in Screen (type:0)] fps:0.499930,dur:2000.28,max:2000.28,min:2000.28
+2026-04-10 17:02:58.984   397-29779 BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) queueBuffer: fps=0.50 dur=1999.91 max=1999.91 min=1999.91
+2026-04-10 17:03:00.019   365-713   BufferQueueProducer     surfaceflinger                       I  [StatusBar#0](this:0xaf6db000,id:4,api:1,p:967,c:365) queueBuffer: fps=1.90 dur=1052.75 max=999.89 min=52.86
+2026-04-10 17:03:00.032   365-365   DisplayDevice           surfaceflinger                       I  [studio.screen.sharing:0 (type:2)] fps:1.905970,dur:1049.33,max:999.30,min:50.03
+2026-04-10 17:03:00.033   365-365   DisplayDevice           surfaceflinger                       I  [Built-in Screen (type:0)] fps:1.905994,dur:1049.32,max:999.10,min:50.22
+2026-04-10 17:03:00.036   397-29779 BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) queueBuffer: fps=1.90 dur=1051.53 max=999.19 min=52.34
+2026-04-10 17:03:14.740   365-832   BufferQueueProducer     surfaceflinger                       I  [StatusBar#0](this:0xaf6db000,id:4,api:1,p:967,c:365) queueBuffer: fps=0.34 dur=14721.38 max=14404.59 min=9.56
+2026-04-10 17:03:14.751   365-365   DisplayDevice           surfaceflinger                       I  [studio.screen.sharing:0 (type:2)] fps:0.339702,dur:14718.76,max:14401.73,min:16.14
+2026-04-10 17:03:14.752   365-365   DisplayDevice           surfaceflinger                       I  [Built-in Screen (type:0)] fps:0.339700,dur:14718.87,max:14402.03,min:16.16
+2026-04-10 17:03:14.753   397-29779 BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) queueBuffer: fps=0.34 dur=14716.84 max=14402.19 min=14.84
+2026-04-10 17:03:14.817   365-466   BufferQueueProducer     surfaceflinger                       I  [com.loudtalks/com.zello.ui.MainActivity#0](this:0xaf732000,id:1469,api:1,p:1587,c:365) queueBuffer: fps=0.05 dur=19033.26 max=19033.26 min=19033.26
+2026-04-10 17:03:15.754   397-29779 BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) queueBuffer: fps=31.95 dur=1001.63 max=83.29 min=12.48
+2026-04-10 17:03:15.775   365-365   DisplayDevice           surfaceflinger                       I  [studio.screen.sharing:0 (type:2)] fps:35.176544,dur:1023.41,max:67.45,min:11.64
+2026-04-10 17:03:15.775   365-365   DisplayDevice           surfaceflinger                       I  [Built-in Screen (type:0)] fps:35.173923,dur:1023.49,max:67.44,min:11.63
+2026-04-10 17:03:15.831   365-713   BufferQueueProducer     surfaceflinger                       I  [StatusBar#0](this:0xaf6db000,id:4,api:1,p:967,c:365) queueBuffer: fps=5.50 dur=1090.99 max=384.22 min=74.03
+2026-04-10 17:03:15.847   365-466   BufferQueueProducer     surfaceflinger                       I  [com.loudtalks/com.zello.ui.MainActivity#0](this:0xaf732000,id:1469,api:1,p:1587,c:365) queueBuffer: fps=31.08 dur=1029.66 max=168.15 min=9.49
+2026-04-10 17:03:16.784   365-365   DisplayDevice           surfaceflinger                       I  [studio.screen.sharing:0 (type:2)] fps:10.899256,dur:1009.24,max:350.14,min:8.76
+2026-04-10 17:03:16.784   365-365   DisplayDevice           surfaceflinger                       I  [Built-in Screen (type:0)] fps:10.901005,dur:1009.08,max:350.18,min:8.36
+2026-04-10 17:03:16.785   397-29779 BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) queueBuffer: fps=10.67 dur=1030.90 max=350.18 min=10.44
+2026-04-10 17:03:17.002   365-832   BufferQueueProducer     surfaceflinger                       I  [StatusBar#0](this:0xaf6db000,id:4,api:1,p:967,c:365) queueBuffer: fps=5.98 dur=1171.13 max=354.93 min=25.64
+2026-04-10 17:03:21.001   365-832   BufferQueueProducer     surfaceflinger                       I  [StatusBar#0](this:0xaf6db000,id:4,api:1,p:967,c:365) queueBuffer: fps=0.25 dur=3998.44 max=3998.44 min=3998.44
+2026-04-10 17:03:21.016   365-365   DisplayDevice           surfaceflinger                       I  [studio.screen.sharing:0 (type:2)] fps:0.708818,dur:4232.40,max:4000.97,min:32.20
+2026-04-10 17:03:21.016   365-365   DisplayDevice           surfaceflinger                       I  [Built-in Screen (type:0)] fps:0.708817,dur:4232.40,max:4001.20,min:31.97
+2026-04-10 17:03:21.017   397-29779 BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) queueBuffer: fps=0.71 dur=4232.30 max=3998.47 min=31.86
+2026-04-10 17:03:22.357   365-713   BufferQueueProducer     surfaceflinger                       I  [StatusBar#0](this:0xaf6db000,id:4,api:1,p:967,c:365) queueBuffer: fps=0.74 dur=1356.83 max=1356.83 min=1356.83
+2026-04-10 17:03:22.366   365-365   DisplayDevice           surfaceflinger                       I  [studio.screen.sharing:0 (type:2)] fps:0.740713,dur:1350.05,max:1350.05,min:1350.05
+2026-04-10 17:03:22.366   365-365   DisplayDevice           surfaceflinger                       I  [Built-in Screen (type:0)] fps:0.740734,dur:1350.01,max:1350.01,min:1350.01
+2026-04-10 17:03:22.370   397-29779 BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) queueBuffer: fps=0.74 dur=1352.31 max=1352.31 min=1352.31
+2026-04-10 17:03:25.786   365-713   BufferQueueProducer     surfaceflinger                       I  [com.loudtalks/com.zello.ui.MainActivity#0](this:0xaf732000,id:1469,api:1,p:1587,c:365) queueBuffer: fps=0.20 dur=9939.69 max=9759.64 min=180.05
+2026-04-10 17:03:25.799   365-365   DisplayDevice           surfaceflinger                       I  [studio.screen.sharing:0 (type:2)] fps:0.874043,dur:3432.33,max:2766.81,min:17.12
+2026-04-10 17:03:25.799   365-365   DisplayDevice           surfaceflinger                       I  [Built-in Screen (type:0)] fps:0.874049,dur:3432.30,max:2766.99,min:16.93
+2026-04-10 17:03:25.802   397-29779 BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) queueBuffer: fps=0.87 dur=3432.29 max=2767.62 min=14.51
+2026-04-10 17:03:26.016   365-713   BufferQueueProducer     surfaceflinger                       I  [StatusBar#0](this:0xaf6db000,id:4,api:1,p:967,c:365) queueBuffer: fps=0.82 dur=3658.83 max=2999.89 min=9.65
+2026-04-10 17:03:27.016   365-713   BufferQueueProducer     surfaceflinger                       I  [StatusBar#0](this:0xaf6db000,id:4,api:1,p:967,c:365) queueBuffer: fps=4.00 dur=1000.15 max=676.71 min=35.91
+2026-04-10 17:03:27.032   365-365   DisplayDevice           surfaceflinger                       I  [studio.screen.sharing:0 (type:2)] fps:4.054268,dur:1233.27,max:682.20,min:33.02
+2026-04-10 17:03:27.032   365-365   DisplayDevice           surfaceflinger                       I  [Built-in Screen (type:0)] fps:4.054282,dur:1233.26,max:682.35,min:33.02
+2026-04-10 17:03:27.035   397-29779 BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) queueBuffer: fps=4.05 dur=1233.05 max=684.48 min=33.02
+2026-04-10 17:03:28.016   365-713   BufferQueueProducer     surfaceflinger                       I  [StatusBar#0](this:0xaf6db000,id:4,api:1,p:967,c:365) queueBuffer: fps=1.00 dur=1000.16 max=1000.16 min=1000.16
+2026-04-10 17:03:28.033   365-365   DisplayDevice           surfaceflinger                       I  [studio.screen.sharing:0 (type:2)] fps:0.998827,dur:1001.17,max:1001.17,min:1001.17
+2026-04-10 17:03:28.033   365-365   DisplayDevice           surfaceflinger                       I  [Built-in Screen (type:0)] fps:0.998814,dur:1001.19,max:1001.19,min:1001.19
+2026-04-10 17:03:29.034   397-29779 BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) queueBuffer: fps=1.00 dur=1998.51 max=999.33 min=999.17
+2026-04-10 17:03:36.222   365-713   BufferQueueProducer     surfaceflinger                       I  [StatusBar#0](this:0xaf6db000,id:4,api:1,p:967,c:365) queueBuffer: fps=0.24 dur=8205.23 max=7205.86 min=999.37
+2026-04-10 17:03:36.233   365-365   DisplayDevice           surfaceflinger                       I  [studio.screen.sharing:0 (type:2)] fps:0.243898,dur:8200.16,max:7200.55,min:999.60
+2026-04-10 17:03:36.233   365-365   DisplayDevice           surfaceflinger                       I  [Built-in Screen (type:0)] fps:0.243896,dur:8200.21,max:7200.78,min:999.43
+2026-04-10 17:03:36.237   397-29779 BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) queueBuffer: fps=0.14 dur=7203.22 max=7203.22 min=7203.22
+2026-04-10 17:03:40.615   365-365   DisplayDevice           surfaceflinger                       I  [studio.screen.sharing:0 (type:2)] fps:0.684587,dur:4382.20,max:4282.93,min:32.42
+2026-04-10 17:03:40.616   365-365   DisplayDevice           surfaceflinger                       I  [Built-in Screen (type:0)] fps:0.684596,dur:4382.15,max:4283.08,min:32.44
+2026-04-10 17:03:46.225   365-713   BufferQueueProducer     surfaceflinger                       I  [StatusBar#0](this:0xaf6db000,id:4,api:1,p:967,c:365) queueBuffer: fps=0.30 dur=10003.48 max=9913.15 min=26.14
+2026-04-10 17:03:46.233   365-365   DisplayDevice           surfaceflinger                       I  [studio.screen.sharing:0 (type:2)] fps:0.178012,dur:5617.59,max:5617.59,min:5617.59
+2026-04-10 17:03:46.233   365-365   DisplayDevice           surfaceflinger                       I  [Built-in Screen (type:0)] fps:0.178011,dur:5617.62,max:5617.62,min:5617.62
+2026-04-10 17:03:46.237   397-29779 BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) queueBuffer: fps=0.30 dur=9999.84 max=9903.23 min=32.44
+2026-04-10 17:03:52.050   365-713   BufferQueueProducer     surfaceflinger                       I  [StatusBar#0](this:0xaf6db000,id:4,api:1,p:967,c:365) queueBuffer: fps=0.52 dur=5824.63 max=5728.05 min=36.06
+2026-04-10 17:03:52.065   365-365   DisplayDevice           surfaceflinger                       I  [studio.screen.sharing:0 (type:2)] fps:0.514375,dur:5832.32,max:5732.92,min:32.50
+2026-04-10 17:03:52.066   365-365   DisplayDevice           surfaceflinger                       I  [Built-in Screen (type:0)] fps:0.514374,dur:5832.33,max:5733.12,min:32.49
+2026-04-10 17:03:52.069   397-29779 BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) queueBuffer: fps=0.51 dur=5832.03 max=5735.26 min=32.58
+2026-04-10 17:03:53.066   365-713   BufferQueueProducer     surfaceflinger                       I  [StatusBar#0](this:0xaf6db000,id:4,api:1,p:967,c:365) queueBuffer: fps=0.98 dur=1016.36 max=1016.36 min=1016.36
+2026-04-10 17:03:53.083   365-365   DisplayDevice           surfaceflinger                       I  [studio.screen.sharing:0 (type:2)] fps:0.982882,dur:1017.42,max:1017.42,min:1017.42
+2026-04-10 17:03:53.083   365-365   DisplayDevice           surfaceflinger                       I  [Built-in Screen (type:0)] fps:0.982875,dur:1017.42,max:1017.42,min:1017.42
+2026-04-10 17:03:53.084   397-29779 BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) queueBuffer: fps=0.98 dur=1015.26 max=1015.26 min=1015.26
+2026-04-10 17:03:55.786   365-713   BufferQueueProducer     surfaceflinger                       I  [com.loudtalks/com.zello.ui.MainActivity#0](this:0xaf732000,id:1469,api:1,p:1587,c:365) queueBuffer: fps=0.03 dur=29999.97 max=29999.97 min=29999.97
+2026-04-10 17:03:55.798   365-365   DisplayDevice           surfaceflinger                       I  [studio.screen.sharing:0 (type:2)] fps:0.368216,dur:2715.80,max:2715.80,min:2715.80
+2026-04-10 17:03:55.799   365-365   DisplayDevice           surfaceflinger                       I  [Built-in Screen (type:0)] fps:0.368224,dur:2715.74,max:2715.74,min:2715.74
+2026-04-10 17:03:55.802   397-29779 BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa9989000,id:418,api:1,p:397,c:397) queueBuffer: fps=0.37 dur=2717.61 max=2717.61 min=2717.61
+2026-04-10 17:03:56.066   365-713   BufferQueueProducer     surfaceflinger                       I  [StatusBar#0](this:0xaf6db000,id:4,api:1,p:967,c:365) queueBuffer: fps=0.33 dur=2999.72 max=2999.72 min=2999.72

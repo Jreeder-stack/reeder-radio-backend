@@ -1,0 +1,292 @@
+2026-04-10 17:02:10.252  8429-8429  SoundPool               pid-8429                             W  See the documentation of SoundPool() for what to use instead with android.media.AudioAttributes to qualify your playback use case
+2026-04-10 17:02:10.272  8429-8451  NuMediaExtractor        pid-8429                             V  track of type 'audio/vorbis' does not publish bitrate
+2026-04-10 17:02:10.288  8429-8456  MtkACodec               pid-8429                             D  setupAudioCodec: mime audio/vorbis, encoder 0, msg.get() 0xa4253800
+2026-04-10 17:02:10.446  8429-8451  MediaAnalyticsItem      pid-8429                             W  Unable to record: (codec:0:-1:-11:0:6:android.media.mediacodec.mime=audio/vorbis:android.media.mediacodec.mode=audio:android.media.mediacodec.encoder=0:android.media.mediacodec.codec=OMX.google.vorbis.decoder:android.media.mediacodec.secure=0:android.media.mediacodec.bytesin=7418:) [forcenew=0]
+2026-04-10 17:02:10.460  8429-8451  NuMediaExtractor        pid-8429                             V  track of type 'audio/vorbis' does not publish bitrate
+2026-04-10 17:02:10.470  8429-8461  MtkACodec               pid-8429                             D  setupAudioCodec: mime audio/vorbis, encoder 0, msg.get() 0xa4253800
+2026-04-10 17:02:10.575  8429-8451  MediaAnalyticsItem      pid-8429                             W  Unable to record: (codec:0:-1:-11:0:6:android.media.mediacodec.mime=audio/vorbis:android.media.mediacodec.mode=audio:android.media.mediacodec.encoder=0:android.media.mediacodec.codec=OMX.google.vorbis.decoder:android.media.mediacodec.secure=0:android.media.mediacodec.bytesin=6565:) [forcenew=0]
+2026-04-10 17:02:10.590  8429-8451  NuMediaExtractor        pid-8429                             V  track of type 'audio/vorbis' does not publish bitrate
+2026-04-10 17:02:10.601  8429-8465  MtkACodec               pid-8429                             D  setupAudioCodec: mime audio/vorbis, encoder 0, msg.get() 0xa4253800
+2026-04-10 17:02:10.706  8429-8451  MediaAnalyticsItem      pid-8429                             W  Unable to record: (codec:0:-1:-11:0:6:android.media.mediacodec.mime=audio/vorbis:android.media.mediacodec.mode=audio:android.media.mediacodec.encoder=0:android.media.mediacodec.codec=OMX.google.vorbis.decoder:android.media.mediacodec.secure=0:android.media.mediacodec.bytesin=6112:) [forcenew=0]
+2026-04-10 17:03:14.602  1587-3864  AudioRecord             com.loudtalks                        D  set(): 0x9a64cc00, inputSource 0, sampleRate 16000, format 0x1, channelMask 0x10, frameCount 8320, notificationFrames 0, sessionId 0, transferType 0, flags 0, opPackageName com.loudtalks uid -1, pid -1
+2026-04-10 17:03:14.603   381-381   APM_AudioPolicyManager  audioserver                          D  getInputForAttr() source 0, samplingRate 16000, format 1, channelMask 10,session 7393, flags 0
+2026-04-10 17:03:14.604   332-617   AudioALSAStreamManager  and...re.audio@2.0-service-mediatek  D  openInputStream(), devices = 0x80000004, format = 0x1, channels = 0x10, sampleRate = 16000, status = 2910, acoustics = 0x0
+2026-04-10 17:03:14.604   332-617   AudioALSAStreamIn       and...re.audio@2.0-service-mediatek  D  AudioALSAStreamIn()
+2026-04-10 17:03:14.604   332-617   AudioALSAStreamIn       and...re.audio@2.0-service-mediatek  D  set(), devices = 0x80000004, format = 0x1, channels = 0x10, sampleRate = 16000, acoustics = 0x0, flags = 0
+2026-04-10 17:03:14.604   332-617   AudioALSAStreamIn       and...re.audio@2.0-service-mediatek  D  CheckBesRecordInfo()
+2026-04-10 17:03:14.604   332-617   AudioSpeechEnhanceInfo  and...re.audio@2.0-service-mediatek  D  GetBesRecScene() -1
+2026-04-10 17:03:14.604   332-617   AudioSpeechEnhanceInfo  and...re.audio@2.0-service-mediatek  D  IsBesRecTuningEnable()- 0
+2026-04-10 17:03:14.604   332-617   NVRAM                   and...re.audio@2.0-service-mediatek  D  getNumMicSupport(), dualMicFlag 1, numMicString 2
+2026-04-10 17:03:14.604   332-617   NVRAM                   and...re.audio@2.0-service-mediatek  D  QueryFeatureSupportInfo(), feature support bit 0x1a097c57 
+2026-04-10 17:03:14.604   332-617   AudioSpeechEnhanceInfo  and...re.audio@2.0-service-mediatek  D  IsAPDMNRTuningEnable(), 0
+2026-04-10 17:03:14.604   332-617   NVRAM                   and...re.audio@2.0-service-mediatek  D  getNumMicSupport(), dualMicFlag 1, numMicString 2
+2026-04-10 17:03:14.604   332-617   NVRAM                   and...re.audio@2.0-service-mediatek  D  QueryFeatureSupportInfo(), feature support bit 0x1a097c57 
+2026-04-10 17:03:14.604   332-617   AudioSpeechEnhanceInfo  and...re.audio@2.0-service-mediatek  D  GetForceMagiASRState(), feature_support=1a097c57, 400, mForceMagiASR=0
+2026-04-10 17:03:14.604   332-617   AudioSpeechEnhanceInfo  and...re.audio@2.0-service-mediatek  D  GetForceAECRecState(), mForceAECRec=0
+2026-04-10 17:03:14.604   332-617   AudioALSAStreamIn       and...re.audio@2.0-service-mediatek  D  checkOpenStreamSampleRate(), origin sampleRate 16000, kDefaultInputSourceSampleRate 48000.
+2026-04-10 17:03:14.604   332-617   AudioALSAStreamIn       and...re.audio@2.0-service-mediatek  D  set() done, sampleRate = 16000, num_channels = 1, buffer_size=640, tempDebugflag = 0
+2026-04-10 17:03:14.604   332-617   AudioALSAStreamManager  and...re.audio@2.0-service-mediatek  D  -openInputStream(), in = 0xb5d6aa00, status = 0x0, mStreamInVector.size() = 1
+2026-04-10 17:03:14.605   332-617   AudioALSAStreamIn       and...re.audio@2.0-service-mediatek  D  +setParameters(): input_source=1
+2026-04-10 17:03:14.605   332-617   AudioALSAStreamIn       and...re.audio@2.0-service-mediatek  D  -setParameters(): input_source=1 
+2026-04-10 17:03:14.619   381-10069 AudioFlinger            audioserver                          D  track(0xa8fafd80): mIsOut 0, mFrameCount 8320, mSampleRate 16000, mFormat 1, mChannelCount 1, mTrackCount 667, thread 0xa7703000, sessionId 7393
+2026-04-10 17:03:14.620  1587-3864  AudioRecord             com.loudtalks                        D  openRecord_l: 0x9a64cc00, mCblk = 0x7fdfb000
+2026-04-10 17:03:14.639   381-8728  AudioFlinger_Threads    audioserver                          I  AudioFlinger's thread 0xa7703000 tid=8728 ready to run
+2026-04-10 17:03:14.640   332-617   AudioALSAStreamIn       and...re.audio@2.0-service-mediatek  D  +standby()
+2026-04-10 17:03:14.640   332-617   AudioALSAStreamIn       and...re.audio@2.0-service-mediatek  D  -standby()
+2026-04-10 17:03:14.646   332-617   AudioALSAStreamIn       and...re.audio@2.0-service-mediatek  D  +standby()
+2026-04-10 17:03:14.646   332-617   AudioALSAStreamIn       and...re.audio@2.0-service-mediatek  D  -standby()
+2026-04-10 17:03:14.682  1587-3887  AudioTrack              com.loudtalks                        D  set(): 0x84c0a300, streamType -1, sampleRate 44100, format 0x1, channelMask 0x1, frameCount 6838, flags #0, notificationFrames 0, sessionId 0, transferType 4, uid -1, pid -1
+2026-04-10 17:03:14.682  1587-3887  AudioTrack              com.loudtalks                        D  Building AudioTrack with attributes: usage = 1, content = 3, flags = 0x100, tags = []
+2026-04-10 17:03:14.685  1587-3887  AudioTrack              com.loudtalks                        D  set: Create AudioTrackThread, tid = 8734
+2026-04-10 17:03:14.686  1587-3887  AudioTrack              com.loudtalks                        D  mNotificationFramesReq 0, notificationFrames 940
+2026-04-10 17:03:14.686  1587-3887  AudioTrack              com.loudtalks                        W  AUDIO_OUTPUT_FLAG_FAST denied, rates do not match 44100 Hz, require 48000 Hz
+2026-04-10 17:03:14.687   381-6565  AudioFlinger            audioserver                          D  track(0xa8fe9200): mIsOut 1, mFrameCount 6838, mSampleRate 44100, mFormat 1, mChannelCount 1, mTrackCount 668, thread 0xa8803c00, sessionId 7401
+2026-04-10 17:03:14.687   381-6565  AudioFlinger            audioserver                          D  track(0xa8fe9200): mFastIndex -1, mStreamType 3, mName 4097
+2026-04-10 17:03:14.690  1587-3887  AudioTrack              com.loudtalks                        D  createTrack_l: 0x84c0a300, mCblk = 0x7fe030e0, mLatency = 207, mAfLatency = 52, frameCount = 6838, mSampleRate = 44100, mFlags = 0, mReqFrameCount = 6838, mNotificationFramesAct = 940
+2026-04-10 17:03:14.696  1587-3887  AudioTrack              com.loudtalks                        D  start(): 0x84c0a300, mState = 1
+2026-04-10 17:03:14.697   381-6467  APM_AudioPolicyManager  audioserver                          D  startOutput() output 13, stream 3, session 7401
+2026-04-10 17:03:14.697   381-6467  APM::Audio...Descriptor audioserver                          V  changeRefCount() stream 3, count 1
+2026-04-10 17:03:14.700   332-2693  AudioALSAStreamIn       and...re.audio@2.0-service-mediatek  D  updateOutputDeviceInfoForInputStream(), mUpdateOutputDevice = 0, mStreamAttributeTarget.output_devices change: 0x0 => 0x2
+2026-04-10 17:03:14.700   332-2693  AudioALSAStreamManager  and...re.audio@2.0-service-mediatek  D  +syncSharedOutDevice(), routingSharedOutDevice: 2
+2026-04-10 17:03:14.700   332-2693  AudioALSAStreamManager  and...re.audio@2.0-service-mediatek  D  setMasterVolume(), volume = 1.000000
+2026-04-10 17:03:14.700   332-2693  AudioMTKGainController  and...re.audio@2.0-service-mediatek  D  setNormalVolume(), mSceneIndex = 0, stream 3, devices 0x2, index 13, mode 0x0
+2026-04-10 17:03:14.701   332-2693  AudioMTKGainController  and...re.audio@2.0-service-mediatek  D  setSpeakerGain(), gain = 8, spkAnaType = 3, spkLMixerName = Lineout_PGAL_GAIN, spkRMixerName = Lineout_PGAR_GAIN
+2026-04-10 17:03:14.701   332-2693  AudioALSAStreamOut      and...re.audio@2.0-service-mediatek  D  open(), flags 6
+2026-04-10 17:03:14.701   332-2693  AudioUtility            and...re.audio@2.0-service-mediatek  D  power_hal_hint - custPowerHint 0, data 268435455
+2026-04-10 17:03:14.701   332-2693  AudioALSAStreamManager  and...re.audio@2.0-service-mediatek  D  +createPlaybackHandler(), mAudioMode = 0, output_devices = 0x2
+2026-04-10 17:03:14.701   332-2693  NVRAM                   and...re.audio@2.0-service-mediatek  D  getNumMicSupport(), dualMicFlag 1, numMicString 2
+2026-04-10 17:03:14.701   332-2693  NVRAM                   and...re.audio@2.0-service-mediatek  D  QueryFeatureSupportInfo(), feature support bit 0x1a097c57 
+2026-04-10 17:03:14.701   332-2693  AudioSpeechEnhanceInfo  and...re.audio@2.0-service-mediatek  D  IsAPDMNRTuningEnable(), 0
+2026-04-10 17:03:14.701   332-2693  AudioALSAP...dlerNormal and...re.audio@2.0-service-mediatek  D  AudioALSAPlaybackHandlerNormal()
+2026-04-10 17:03:14.701   332-2693  AudioALSAP...dlerNormal and...re.audio@2.0-service-mediatek  D  +setFilterMng() mAudioFilterManagerHandler [0xb5d16260]
+2026-04-10 17:03:14.701   332-2693  AudioALSAP...dlerNormal and...re.audio@2.0-service-mediatek  D  +open(), flag 6, mDevice = 0x2
+2026-04-10 17:03:14.702   332-2693  AudioALSADeviceParser   and...re.audio@2.0-service-mediatek  D  compare pcm success = 7, stringpair = I2S0DL1_PLayback
+2026-04-10 17:03:14.702   332-2693  <no-tag>                and...re.audio@2.0-service-mediatek  D  -AssignDRAM() retval 0
+2026-04-10 17:03:14.702   332-2693  AudioALSAP...andlerBase and...re.audio@2.0-service-mediatek  D  transferAudioFormatToPcmFormat(), audio_format(0x4) => pcm_format(0x1)
+2026-04-10 17:03:14.702   332-2693  AudioALSAP...dlerNormal and...re.audio@2.0-service-mediatek  D  open(), mConfig: channels = 2, rate = 48000, period_size = 256, period_count = 2, format = 1 avail_min = 256
+2026-04-10 17:03:14.702   332-2693  AudioALSADriverUtility  and...re.audio@2.0-service-mediatek  D  GetPropertyValue key = af.resouce.extdac_support value = 0
+2026-04-10 17:03:14.702   332-2693  AudioALSAP...dlerNormal and...re.audio@2.0-service-mediatek  D  SetLowJitterMode(), bypass low jitter mode, bEnable = 1, device = 0x2, SampleRate = 48000
+2026-04-10 17:03:14.702   332-2693  AudioALSAP...andlerBase and...re.audio@2.0-service-mediatek  D  openPcmDriverWithFlag(), pcm device = 7 flag = 0x8
+2026-04-10 17:03:14.705   332-2693  AudioALSAP...andlerBase and...re.audio@2.0-service-mediatek  D  initBitConverter(), audio_format: 0x3 => 0x4, bcv_pcm_format = 0x3
+2026-04-10 17:03:14.705   332-2693  MtkAudioBitConverter    and...re.audio@2.0-service-mediatek  D  +open(), format 3, CH 2, SR 48000
+2026-04-10 17:03:14.705   332-2693  MtkAudioBitConverter    and...re.audio@2.0-service-mediatek  D  +resetBuffer()
+2026-04-10 17:03:14.705   332-2693  AudioALSAH...rceManager and...re.audio@2.0-service-mediatek  D  +startOutputDevice(), new_devices = 0x2, mOutputDevices = 0x0, mStartOutputDevicesCount = 0 SampleRate = 48000
+2026-04-10 17:03:14.705   332-2693  AudioALSADriverUtility  and...re.audio@2.0-service-mediatek  D  GetPropertyValue key = af.resouce.extdac_support value = 0
+2026-04-10 17:03:14.705   332-2693  AudioALSAD...figManager and...re.audio@2.0-service-mediatek  D  ApplyDeviceTurnonSequenceByName() DeviceName = speaker_output descriptor->DeviceStatusCounte = 0
+2026-04-10 17:03:14.706   332-2693  AudioALSAD...figManager and...re.audio@2.0-service-mediatek  D  ApplyDeviceTurnonSequenceByName() DeviceName = ext_speaker_output descriptor->DeviceStatusCounte = 0
+2026-04-10 17:03:14.712   332-2693  AudioVoiceUIDL          and...re.audio@2.0-service-mediatek  D  [GetSRCInputParameter] mOutputSampleRate 16000,  mInputSampleRate 48000, mInChannel 2, mOutChannel, 0 format 4
+2026-04-10 17:03:14.713   332-2693  AudioVoiceUIDL          and...re.audio@2.0-service-mediatek  D  [GetSRCInputParameter] create SRC handle fail
+2026-04-10 17:03:14.713   332-2693  AudioALSAP...dlerNormal and...re.audio@2.0-service-mediatek  D  -open()
+2026-04-10 17:03:14.756   737-1104  MediaFocusControl       system_server                        I  requestAudioFocus() from uid/pid 10181/1587 clientId=android.media.AudioManager@69eeacom.zello.platform.f@a3925db callingPack=com.loudtalks req=2 flags=0x0 sdk=36
+2026-04-10 17:03:14.893  1587-3887  AudioTrack              com.loudtalks                        D  pause(): 0x84c0a300, mState = 0
+2026-04-10 17:03:14.894   381-620   AudioFlinger_Threads    audioserver                          D  pause signal - [NOT READY] on thread
+2026-04-10 17:03:14.895  1587-3887  AudioTrack              com.loudtalks                        D  stop(): 0x84c0a300, mState = 2
+2026-04-10 17:03:14.900  1587-3887  AudioTrack              com.loudtalks                        D  audiotrack 0x84c0a300 stop done
+2026-04-10 17:03:14.901  1587-3887  AudioTrack              com.loudtalks                        D  ~AudioTrack(): 0x84c0a300
+2026-04-10 17:03:14.901  1587-3887  AudioTrack              com.loudtalks                        D  stop(): 0x84c0a300, mState = 1
+2026-04-10 17:03:14.944  1587-3864  AudioRecord             com.loudtalks                        D  start: 0x9a64cc00, sync event 0 trigger session 0
+2026-04-10 17:03:14.944   381-10069 APM_AudioPolicyManager  audioserver                          D  startInput() input 2910
+2026-04-10 17:03:14.946   332-14093 AudioALSAHardware       and...re.audio@2.0-service-mediatek  D  +routing createAudioPatch 80000004->Mixer Src 1
+2026-04-10 17:03:14.946   332-14093 AudioALSAStreamManager  and...re.audio@2.0-service-mediatek  D  +setParameters(), IOport = 2910, keyValuePairs = input_source=1;routing=-2147483644
+2026-04-10 17:03:14.946   332-14093 AudioALSAStreamIn       and...re.audio@2.0-service-mediatek  D  +setParameters(): input_source=1;routing=-2147483644
+2026-04-10 17:03:14.946   332-14093 AudioALSAStreamManager  and...re.audio@2.0-service-mediatek  D  +routingInputDevice(), input_device: 0x80000004 => 0x80000004
+2026-04-10 17:03:14.946   332-14093 AudioALSAStreamManager  and...re.audio@2.0-service-mediatek  W  -routingInputDevice(), input_device == current_input_device(0x80000004), return
+2026-04-10 17:03:14.946   332-14093 AudioALSAStreamIn       and...re.audio@2.0-service-mediatek  D  -setParameters(): input_source=1;routing=-2147483644 
+2026-04-10 17:03:14.949  1587-3864  AudioRecord             com.loudtalks                        D  start return status 0
+2026-04-10 17:03:14.963   332-8747  AudioALSAStreamIn       and...re.audio@2.0-service-mediatek  D  open()
+2026-04-10 17:03:14.963   332-8747  AudioALSAStreamManager  and...re.audio@2.0-service-mediatek  D  +createCaptureHandler(), mAudioMode = 0, input_source = 1, input_device = 0x80000004, mBypassDualMICProcessUL=0, sample_rate=16000
+2026-04-10 17:03:14.963   332-8747  NVRAM                   and...re.audio@2.0-service-mediatek  D  getNumMicSupport(), dualMicFlag 1, numMicString 2
+2026-04-10 17:03:14.963   332-8747  NVRAM                   and...re.audio@2.0-service-mediatek  D  QueryFeatureSupportInfo(), feature support bit 0x1a097c57 
+2026-04-10 17:03:14.963   332-8747  AudioALSAStreamManager  and...re.audio@2.0-service-mediatek  D  -EnableBesRecord(), 1
+2026-04-10 17:03:14.963   332-8747  AudioALSAC...andlerBase and...re.audio@2.0-service-mediatek  D  AudioALSACaptureHandlerBase()
+2026-04-10 17:03:14.963   332-8747  AudioALSAC...dlerNormal and...re.audio@2.0-service-mediatek  D  AudioALSACaptureHandlerNormal()
+2026-04-10 17:03:14.963   332-8747  AudioALSAC...dlerNormal and...re.audio@2.0-service-mediatek  D  init()
+2026-04-10 17:03:14.963   332-8747  AudioALSAC...dlerNormal and...re.audio@2.0-service-mediatek  D  +open(), input_device = 0x80000004, input_source = 0x1, sample_rate=16000, num_channels=1
+2026-04-10 17:03:14.963   332-8747  AudioALSAC...DataClient and...re.audio@2.0-service-mediatek  D  AudioALSACaptureDataClient()
+2026-04-10 17:03:14.963   332-8747  AudioSPELayer           and...re.audio@2.0-service-mediatek  D  SPELayer+
+2026-04-10 17:03:14.963   332-8747  AudioSPELayer           and...re.audio@2.0-service-mediatek  D  GetVoIPJitterTime JitterTime=0,ret=1
+2026-04-10 17:03:14.965   332-8747  AudioSPELayer           and...re.audio@2.0-service-mediatek  D  SPELayer-
+2026-04-10 17:03:14.965   332-8747  AudioMTKGainController  and...re.audio@2.0-service-mediatek  D  +SetCaptureGain(), mode=0, source=1, input device=0x80000004, output device=0x2
+2026-04-10 17:03:14.966   332-8747  NVRAM                   and...re.audio@2.0-service-mediatek  D  getNumMicSupport(), dualMicFlag 1, numMicString 2
+2026-04-10 17:03:14.966   332-8747  NVRAM                   and...re.audio@2.0-service-mediatek  D  QueryFeatureSupportInfo(), feature support bit 0x1a097c57 
+2026-04-10 17:03:14.966   332-8747  AudioSpeechEnhanceInfo  and...re.audio@2.0-service-mediatek  D  IsAPDMNRTuningEnable(), 0
+2026-04-10 17:03:14.966   332-8747  AudioUtility            and...re.audio@2.0-service-mediatek  D  IsAudioSupportFeature AUDIO_SUPPORT_DMIC bSupportFlg[0]
+2026-04-10 17:03:14.966   332-8747  AudioMTKGainController  and...re.audio@2.0-service-mediatek  D  ApplyMicGain(), mSceneIndex = 0, _mic_mode = 0, _gain_device = 2, mode = 0, micgain = 20, mULTotalGain = 152, mBand = 0, mNetwork = 0, analogidx = 2
+2026-04-10 17:03:14.966   332-8747  AudioALSAC...DataClient and...re.audio@2.0-service-mediatek  D  AudioALSACaptureDataClient(), besrecord_enable=1, besrecord_scene=-1
+2026-04-10 17:03:14.966   332-8747  AudioSPELayer           and...re.audio@2.0-service-mediatek  D  SetVMDumpEnable(), 0
+2026-04-10 17:03:14.966   332-8747  AudioSPELayer           and...re.audio@2.0-service-mediatek  D  SetVMDumpFileName()+, VMFileName=
+2026-04-10 17:03:14.966   332-8747  AudioSPELayer           and...re.audio@2.0-service-mediatek  D  SetVMDumpFileName()-, VMFileName=, mVMDumpFileName=
+2026-04-10 17:03:14.966   332-8747  AudioSPELayer           and...re.audio@2.0-service-mediatek  D  SetPlatfromTimeOffset, old=0, new=-4
+2026-04-10 17:03:14.966   332-8747  AudioALSAC...DataClient and...re.audio@2.0-service-mediatek  D  CheckBesRecordBypass() 0
+2026-04-10 17:03:14.966   332-8747  AudioALSAC...DataClient and...re.audio@2.0-service-mediatek  D  +ConfigBesRecordParams()
+2026-04-10 17:03:14.966   332-8747  AudioALSAC...DataClient and...re.audio@2.0-service-mediatek  D  +GetBesRecordRoutePath(), output device = 0x2, input device = 0x80000004
+2026-04-10 17:03:14.966   332-8747  NVRAM                   and...re.audio@2.0-service-mediatek  D  getNumMicSupport(), dualMicFlag 1, numMicString 2
+2026-04-10 17:03:14.966   332-8747  NVRAM                   and...re.audio@2.0-service-mediatek  D  QueryFeatureSupportInfo(), feature support bit 0x1a097c57 
+2026-04-10 17:03:14.966   332-8747  AudioALSAC...DataClient and...re.audio@2.0-service-mediatek  D  CheckBesRecordStereoModeEnable(), set the mBesRecordStereoMode = true
+2026-04-10 17:03:14.966   332-8747  AudioALSAC...DataClient and...re.audio@2.0-service-mediatek  D  CheckBesRecordStereoModeEnable(), mBesRecordStereoMode = 1
+2026-04-10 17:03:14.966   332-8747  AudioALSAC...DataClient and...re.audio@2.0-service-mediatek  D  ConfigBesRecordParams(), categoryPath = Application,SndRecNormal,Profile,Handset, mBesRecordStereoMode = 1, input_source = 1, input_devices = 80000004, bVoIPEnable = 0, bypassDualProcess = 0
+2026-04-10 17:03:14.967   332-8747  AudioSPELayer           and...re.audio@2.0-service-mediatek  D  SetCompFilter, SPE_MODE=1
+2026-04-10 17:03:14.967   332-8747  NVRAM                   and...re.audio@2.0-service-mediatek  D  getNumMicSupport(), dualMicFlag 1, numMicString 2
+2026-04-10 17:03:14.967   332-8747  NVRAM                   and...re.audio@2.0-service-mediatek  D  QueryFeatureSupportInfo(), feature support bit 0x1a097c57 
+2026-04-10 17:03:14.967   332-8747  AudioSPELayer           and...re.audio@2.0-service-mediatek  D  SetRoute, 2
+2026-04-10 17:03:14.967   332-8747  AudioSPELayer           and...re.audio@2.0-service-mediatek  D  SetMICDigitalGain, MIC_DG, SPE_MODE=1, gain=12
+2026-04-10 17:03:14.967   332-8747  AudioSPELayer           and...re.audio@2.0-service-mediatek  D  SetUpLinkTotalGain, SPE_MODE=1, gain=152
+2026-04-10 17:03:14.967   332-8747  AudioALSAC...DataClient and...re.audio@2.0-service-mediatek  D  -ConfigBesRecordParams()
+2026-04-10 17:03:14.967   332-8747  AudioALSAC...DataClient and...re.audio@2.0-service-mediatek  D  +StartBesRecord()
+2026-04-10 17:03:14.967   332-8747  AudioSPELayer           and...re.audio@2.0-service-mediatek  D  mRecordSampleRate=48000, mRecordFrameRate=20, mRecordApp_table=8
+2026-04-10 17:03:14.967   332-8747  AudioSPELayer           and...re.audio@2.0-service-mediatek  D  Start, SWIP ver = 10.2
+2026-04-10 17:03:14.967   332-8747  AudioSPELayer           and...re.audio@2.0-service-mediatek  D  Start, going to configure,mSphCtrlBuffer=0xb3545b80,mem_size=226672
+2026-04-10 17:03:14.967   332-8747  AudioSPELayer           and...re.audio@2.0-service-mediatek  D  dump, State=0, mode=0
+2026-04-10 17:03:14.967   332-8747  AudioSPELayer           and...re.audio@2.0-service-mediatek  D  Record:Samplerate = 48000, FrameRate=20,App_table=8, Fea_Cfg_table=1ff
+2026-04-10 17:03:14.967   332-8747  AudioSPELayer           and...re.audio@2.0-service-mediatek  D  Record:EnhanceParas
+2026-04-10 17:03:14.967   332-8747  AudioSPELayer           and...re.audio@2.0-service-mediatek  D  [index 0] 0,479,16388,36884,37639,8192,896
+2026-04-10 17:03:14.968   332-8747  AudioSPELayer           and...re.audio@2.0-service-mediatek  D  [index 1] 0,36624,197,611,0,0,0
+2026-04-10 17:03:14.968   332-8747  AudioSPELayer           and...re.audio@2.0-service-mediatek  D  [index 2] 0,8192,0,0,0,0,0
+2026-04-10 17:03:14.968   332-8747  AudioSPELayer           and...re.audio@2.0-service-mediatek  D  [index 3] 0,0,0,0,0,0,0
+2026-04-10 17:03:14.968   332-8747  AudioSPELayer           and...re.audio@2.0-service-mediatek  D  [index 4] 0,0,0,0,0,0,0
+2026-04-10 17:03:14.968   332-8747  AudioSPELayer           and...re.audio@2.0-service-mediatek  D  [index 5] 0,0,0,0,0,0,0
+2026-04-10 17:03:14.968   332-8747  AudioSPELayer           and...re.audio@2.0-service-mediatek  D  [index 6] 0,0,0,0,0,0,0
+2026-04-10 17:03:14.968   332-8747  AudioSPELayer           and...re.audio@2.0-service-mediatek  D  [index 7] 55997,31000,10752,32769,0,0,0
+2026-04-10 17:03:14.968   332-8747  AudioSPELayer           and...re.audio@2.0-service-mediatek  D  Using:Samplerate = 48000, FrameRate=20,MIC_DG=12, App_table=8, Fea_Cfg_table=1ff, MMI_table=ffffffff, Device_mode=2, MMI_MIC_GAIN=152
+2026-04-10 17:03:14.968   332-8747  AudioSPELayer           and...re.audio@2.0-service-mediatek  D  Using:EnhanceParas
+2026-04-10 17:03:14.968   332-8747  AudioSPELayer           and...re.audio@2.0-service-mediatek  D  [index 0] 0,479,16388,36884,37639,8192,896
+2026-04-10 17:03:14.968   332-8747  AudioSPELayer           and...re.audio@2.0-service-mediatek  D  [index 1] 0,36624,197,611,0,0,0
+2026-04-10 17:03:14.968   332-8747  AudioSPELayer           and...re.audio@2.0-service-mediatek  D  [index 2] 0,8192,0,0,0,0,0
+2026-04-10 17:03:14.968   332-8747  AudioSPELayer           and...re.audio@2.0-service-mediatek  D  [index 3] 0,0,0,0,0,0,0
+2026-04-10 17:03:14.968   332-8747  AudioSPELayer           and...re.audio@2.0-service-mediatek  D  [index 4] 0,0,0,0,0,0,0
+2026-04-10 17:03:14.968   332-8747  AudioSPELayer           and...re.audio@2.0-service-mediatek  D  [index 5] 0,0,0,0,0,0,0
+2026-04-10 17:03:14.968   332-8747  AudioSPELayer           and...re.audio@2.0-service-mediatek  D  [index 6] 0,0,0,0,0,0,0
+2026-04-10 17:03:14.968   332-8747  AudioSPELayer           and...re.audio@2.0-service-mediatek  D  [index 7] 55997,31000,10752,32769,0,0,0
+2026-04-10 17:03:14.970   381-527   APM_AudioPolicyManager  audioserver                          D  stopOutput() output 13, stream 3, session 7401
+2026-04-10 17:03:14.970   381-527   APM::Audio...Descriptor audioserver                          V  changeRefCount() stream 3, count 0
+2026-04-10 17:03:14.971   332-8747  AudioSPELayer           and...re.audio@2.0-service-mediatek  D  Using:DMNRCalData
+2026-04-10 17:03:14.971   332-8747  AudioSPELayer           and...re.audio@2.0-service-mediatek  D  [index 0] 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+2026-04-10 17:03:14.971   332-8747  AudioSPELayer           and...re.audio@2.0-service-mediatek  D  [index 1] 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+2026-04-10 17:03:14.971   332-8747  AudioSPELayer           and...re.audio@2.0-service-mediatek  D  [index 2] 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+2026-04-10 17:03:14.971   332-8747  AudioSPELayer           and...re.audio@2.0-service-mediatek  D  [index 3] 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+2026-04-10 17:03:14.972   332-8747  AudioSPELayer           and...re.audio@2.0-service-mediatek  D  mSph_Enh_ctrl.frame_rate 20
+2026-04-10 17:03:14.972   332-8747  AudioSPELayer           and...re.audio@2.0-service-mediatek  D  mNsecPerSample=62500
+2026-04-10 17:03:14.972   332-8747  AudioSPELayer           and...re.audio@2.0-service-mediatek  D  mSPEProcessBufSize=3840
+2026-04-10 17:03:14.972   332-8747  AudioALSAC...DataClient and...re.audio@2.0-service-mediatek  D  -StartBesRecord()
+2026-04-10 17:03:14.972   332-8747  AudioALSAC...DataClient and...re.audio@2.0-service-mediatek  D  sample rate = 16000, drop ms = 25, channels = 1, byts per sample = 2, dropBesRecordDataSize = 800
+2026-04-10 17:03:14.972   332-8747  AudioPreProcess         and...re.audio@2.0-service-mediatek  D  AudioPreProcess()+
+2026-04-10 17:03:14.972   332-8747  AudioPreProcess         and...re.audio@2.0-service-mediatek  D  AudioPreProcess()-
+2026-04-10 17:03:14.972   332-8747  AudioALSAC...oviderBase and...re.audio@2.0-service-mediatek  D  configStreamAttribute(), audio_mode: 0 => 0, input_device: 0x80000004 => 0x80000004, flag: 0x0 => 0x0, input_source: 1->1
+2026-04-10 17:03:14.972   332-8747  AudioALSAC...oviderBase and...re.audio@2.0-service-mediatek  D  attach(), 0xb491dc80, mCaptureDataClientVector.size()=0, Identity=0xb5d7d800
+2026-04-10 17:03:14.972   332-8747  AudioALSADeviceParser   and...re.audio@2.0-service-mediatek  D  compare pcm success = 1, stringpair = MultiMedia1_Capture
+2026-04-10 17:03:14.972   332-8747  AudioALSAC...iderNormal and...re.audio@2.0-service-mediatek  D  open(+), audiomode=0, cardindex = 0, pcmindex = 1
+2026-04-10 17:03:14.974   332-8747  AudioSpeechEnhanceInfo  and...re.audio@2.0-service-mediatek  D  GetHifiRecord, mHiFiRecordEnable=0
+2026-04-10 17:03:14.974   332-8747  AudioALSAC...iderNormal and...re.audio@2.0-service-mediatek  D  buffersizemax: 49152, bHifiRecord: 0, btempDebug: 0
+2026-04-10 17:03:14.974   332-8747  AudioALSAC...DataClient and...re.audio@2.0-service-mediatek  D  IsLowLatencyCapture(), low_latency_on: 0, voip_on: 0
+2026-04-10 17:03:14.975   332-8747  AudioALSAC...iderNormal and...re.audio@2.0-service-mediatek  D  mConfig format: 1, channels: 2, rate: 48000, period_size: 960, period_count: 4, latency: 20, kReadBufferSize: 7680, mCaptureDropSize: 0
+2026-04-10 17:03:14.976   332-8747  AudioALSADeviceParser   and...re.audio@2.0-service-mediatek  D  compare pcm success = 1, stringpair = MultiMedia1_Capture
+2026-04-10 17:03:14.978   332-8747  AudioALSAH...rceManager and...re.audio@2.0-service-mediatek  D  +startInputDevice(), new_device = 0x80000004, mInputDevice = 0x0, mStartInputDeviceCount = 0, mMicInverse = 0, mNumPhoneMicSupport = 2
+2026-04-10 17:03:14.978   332-8747  AudioALSAD...figManager and...re.audio@2.0-service-mediatek  D  ApplyDeviceSettingByName() DeviceName = Mic1TypeACCMode descriptor->DeviceStatusCounter = 0
+2026-04-10 17:03:14.978   332-8747  AudioALSAD...figManager and...re.audio@2.0-service-mediatek  D  ApplyDeviceSettingByName() DeviceName = Mic2TypeACCMode descriptor->DeviceStatusCounter = 0
+2026-04-10 17:03:14.978   332-8747  AudioUtility            and...re.audio@2.0-service-mediatek  D  IsAudioSupportFeature AUDIO_SUPPORT_DMIC bSupportFlg[0]
+2026-04-10 17:03:14.978   332-8747  AudioALSAD...figManager and...re.audio@2.0-service-mediatek  D  ApplyDeviceTurnonSequenceByName() DeviceName = builtin_Mic_DualMic descriptor->DeviceStatusCounte = 0
+2026-04-10 17:03:14.979   332-8747  AudioALSAC...iderNormal and...re.audio@2.0-service-mediatek  D  open(-)
+2026-04-10 17:03:14.979   332-8747  AudioSPELayer           and...re.audio@2.0-service-mediatek  D  SetUPLinkDropTime, 0
+2026-04-10 17:03:14.979   332-8747  AudioALSAC...DataClient and...re.audio@2.0-service-mediatek  D  sample_rate: 48000 => 16000, num_channels: 2 => 2, audio_format: 0x4 => 0x1
+2026-04-10 17:03:14.979   332-8747  MtkAudioSrc             and...re.audio@2.0-service-mediatek  D  open(), SR 48000, CH 2; out SR 16000, CH 2; format 0, mState = 2
+2026-04-10 17:03:14.979   332-8747  AudioALSAC...DataClient and...re.audio@2.0-service-mediatek  D  CheckNeedBesRecordSRC(), mStreamAttributeSource->sample_rate=48000, mStreamAttributeSource->num_channels=2, mStreamAttributeTarget->sample_rate=16000,mStreamAttributeTarget->num_channels=1, BesRecord_usingsamplerate=48000
+2026-04-10 17:03:14.979   332-8747  MtkAudioSrc             and...re.audio@2.0-service-mediatek  D  open(), SR 48000, CH 2; out SR 16000, CH 2; format 0, mState = 2
+2026-04-10 17:03:14.979   332-8747  AudioALSAC...DataClient and...re.audio@2.0-service-mediatek  D  CheckNeedBesRecordSRC(), 0, 48000, mBesRecSRCSizeFactor=2
+2026-04-10 17:03:14.979   332-8747  AudioALSAC...DataClient and...re.audio@2.0-service-mediatek  D  CheckChannelRemixOp(), ch 2->1 (mBesRecordStereoMode = 1, BesRecord enable = 1), ChannelRemixOp = 4
+2026-04-10 17:03:14.979   332-8747  AudioVoiceUIDL          and...re.audio@2.0-service-mediatek  D  [SetUplinkStartTime] mULtime sec 0 nsec 0
+2026-04-10 17:03:14.979   332-8747  AudioALSAC...dlerNormal and...re.audio@2.0-service-mediatek  D  -open()
+2026-04-10 17:03:14.988   332-8748  AudioALSAC...DataClient and...re.audio@2.0-service-mediatek  D  IsLowLatencyCapture(), low_latency_on: 0, voip_on: 0
+2026-04-10 17:03:14.989   332-8748  AudioALSAC...iderNormal and...re.audio@2.0-service-mediatek  D  +readThread(), pid: 332, tid: 8748, kReadBufferSize=0x1e00, open_index=361, UPLINK_SET_AMICDCC_BUFFER_TIME_MS = 80, counter=1 
+2026-04-10 17:03:14.989   332-8748  AudioALSAC...oviderBase and...re.audio@2.0-service-mediatek  D  pcm_start
+2026-04-10 17:03:15.051   332-8747  AudioVoiceUIDL          and...re.audio@2.0-service-mediatek  D  [SetUplinkStartTime] mULtime sec 154803 nsec 851115144
+2026-04-10 17:03:15.052   381-8728  AudioFlinger            audioserver                          D  track(0xa8fafd80) pause signal - released
+2026-04-10 17:03:15.849   737-1182  MediaFocusControl       system_server                        I  abandonAudioFocus() from uid/pid 10181/1587 clientId=android.media.AudioManager@69eeacom.zello.platform.f@a3925db
+2026-04-10 17:03:15.857   737-1182  MediaFocusControl       system_server                        I  requestAudioFocus() from uid/pid 10181/1587 clientId=android.media.AudioManager@69eeacom.zello.platform.f@a3925db callingPack=com.loudtalks req=3 flags=0x0 sdk=36
+2026-04-10 17:03:15.860   737-1182  MediaFocusControl       system_server                        I  abandonAudioFocus() from uid/pid 10181/1587 clientId=android.media.AudioManager@69eeacom.zello.platform.f@a3925db
+2026-04-10 17:03:15.873  1587-3864  AudioRecord             com.loudtalks                        D  stop: 0x9a64cc00
+2026-04-10 17:03:15.892   332-14093 AudioALSAStreamIn       and...re.audio@2.0-service-mediatek  D  +standby()
+2026-04-10 17:03:15.893   332-14093 AudioALSAStreamIn       and...re.audio@2.0-service-mediatek  D  standby(), keep the mStandbyFrameCount = 14400, ret = 0
+2026-04-10 17:03:15.893   332-14093 AudioALSAStreamIn       and...re.audio@2.0-service-mediatek  D  close()
+2026-04-10 17:03:15.893   332-14093 AudioALSAC...dlerNormal and...re.audio@2.0-service-mediatek  D  +close()
+2026-04-10 17:03:15.893   332-14093 AudioALSAC...DataClient and...re.audio@2.0-service-mediatek  D  ~AudioALSACaptureDataClient()
+2026-04-10 17:03:15.893   332-14093 AudioALSAC...oviderBase and...re.audio@2.0-service-mediatek  D  detach(), 0xb491dc80, mCaptureDataClientVector.size()=1, Identity=0xb5d7d800
+2026-04-10 17:03:15.893   332-14093 AudioALSAH...rceManager and...re.audio@2.0-service-mediatek  D  +stopInputDevice(), mInputDevice = 0x80000004, stop_device = 0x80000004, mStartInputDeviceCount = 1, mMicInverse = 0, mNumPhoneMicSupport = 2
+2026-04-10 17:03:15.893   332-14093 AudioUtility            and...re.audio@2.0-service-mediatek  D  IsAudioSupportFeature AUDIO_SUPPORT_DMIC bSupportFlg[0]
+2026-04-10 17:03:15.893   332-14093 AudioALSAD...figManager and...re.audio@2.0-service-mediatek  D  ApplyDeviceSettingByName() DeviceName = Mic1TypeACCMode descriptor->DeviceStatusCounter = 0
+2026-04-10 17:03:15.893   332-14093 AudioALSAD...figManager and...re.audio@2.0-service-mediatek  D  ApplyDeviceSettingByName() DeviceName = Mic2TypeACCMode descriptor->DeviceStatusCounter = 0
+2026-04-10 17:03:15.893   332-14093 AudioALSAD...figManager and...re.audio@2.0-service-mediatek  D  ApplyDeviceTurnoffSequenceByName(), DeviceName = builtin_Mic_DualMic descriptor->DeviceStatusCounter = 1
+2026-04-10 17:03:15.893   332-14093 AudioALSAC...iderNormal and...re.audio@2.0-service-mediatek  D  close()
+2026-04-10 17:03:15.909   332-8748  AudioALSAC...iderNormal and...re.audio@2.0-service-mediatek  D  -readThread(), pid: 332, tid: 8748
+2026-04-10 17:03:15.909   332-14093 AudioALSAC...iderNormal and...re.audio@2.0-service-mediatek  D  pthread_join hReadThread done
+2026-04-10 17:03:15.911   332-14093 AudioALSAC...iderNormal and...re.audio@2.0-service-mediatek  D  -close()
+2026-04-10 17:03:15.911   332-14093 MtkAudioSrc             and...re.audio@2.0-service-mediatek  D  close(), mState = 1
+2026-04-10 17:03:15.911   332-14093 AudioALSAC...DataClient and...re.audio@2.0-service-mediatek  D  +StopBesRecord()
+2026-04-10 17:03:15.911   332-14093 AudioSPELayer           and...re.audio@2.0-service-mediatek  D  Stop
+2026-04-10 17:03:15.911   332-14093 AudioSPELayer           and...re.audio@2.0-service-mediatek  D  Clear
+2026-04-10 17:03:15.911   332-14093 AudioSPELayer           and...re.audio@2.0-service-mediatek  D  free mSphCtrlBuffer 0xb3545b80
+2026-04-10 17:03:15.911   332-14093 AudioSPELayer           and...re.audio@2.0-service-mediatek  D  ~free mSphCtrlBuffer
+2026-04-10 17:03:15.911   332-14093 AudioSPELayer           and...re.audio@2.0-service-mediatek  D  ~Clear
+2026-04-10 17:03:15.911   332-14093 AudioALSAC...DataClient and...re.audio@2.0-service-mediatek  D  -StopBesRecord()
+2026-04-10 17:03:15.912   332-14093 MtkAudioSrc             and...re.audio@2.0-service-mediatek  D  close(), mState = 1
+2026-04-10 17:03:15.912   332-14093 AudioSPELayer           and...re.audio@2.0-service-mediatek  D  ~SPELayer+
+2026-04-10 17:03:15.912   332-14093 AudioSPELayer           and...re.audio@2.0-service-mediatek  D  Clear
+2026-04-10 17:03:15.912   332-14093 AudioSPELayer           and...re.audio@2.0-service-mediatek  D  ~Clear
+2026-04-10 17:03:15.912   332-14093 AudioSPELayer           and...re.audio@2.0-service-mediatek  D  FlushBufferQ+
+2026-04-10 17:03:15.912   332-14093 AudioSPELayer           and...re.audio@2.0-service-mediatek  D  FlushBufferQ mULOutBufferQ size=1,mULInBufferQ.size=1,mDLOutBufferQ.size()=0,mDLInBufferQ.size()=0,mDLDelayBufferQ.size()=0
+2026-04-10 17:03:15.912   332-14093 AudioSPELayer           and...re.audio@2.0-service-mediatek  D  FlushBufferQ-
+2026-04-10 17:03:15.912   332-14093 AudioSPELayer           and...re.audio@2.0-service-mediatek  D  ~SPELayer-
+2026-04-10 17:03:15.913   332-14093 AudioPreProcess         and...re.audio@2.0-service-mediatek  D  ~AudioPreProcess()+
+2026-04-10 17:03:15.913   332-14093 AudioPreProcess         and...re.audio@2.0-service-mediatek  D  ~AudioPreProcess()-
+2026-04-10 17:03:15.913   332-14093 AudioALSAC...DataClient and...re.audio@2.0-service-mediatek  D  -~AudioALSACaptureDataClient()
+2026-04-10 17:03:15.913   332-14093 AudioVoiceUIDL          and...re.audio@2.0-service-mediatek  D  [SetUplinkStartTime] mULtime sec 0 nsec 0
+2026-04-10 17:03:15.913   332-14093 AudioALSAC...dlerNormal and...re.audio@2.0-service-mediatek  D  -close()
+2026-04-10 17:03:15.913   332-14093 AudioALSAC...dlerNormal and...re.audio@2.0-service-mediatek  D  +~AudioALSACaptureHandlerNormal()
+2026-04-10 17:03:15.913   332-14093 AudioALSAC...dlerNormal and...re.audio@2.0-service-mediatek  D  ~AudioALSACaptureHandlerNormal()
+2026-04-10 17:03:15.913   332-14093 AudioALSAC...andlerBase and...re.audio@2.0-service-mediatek  D  ~AudioALSACaptureHandlerBase()
+2026-04-10 17:03:15.913   332-14093 AudioALSAStreamManager  and...re.audio@2.0-service-mediatek  D  -destroyCaptureHandler(), mCaptureHandlerVector.size() = 0
+2026-04-10 17:03:15.913   332-14093 AudioALSAStreamIn       and...re.audio@2.0-service-mediatek  D  -standby()
+2026-04-10 17:03:15.913   381-381   APM_AudioPolicyManager  audioserver                          D  stopInput() input 2910
+2026-04-10 17:03:15.915   332-332   AudioALSAHardware       and...re.audio@2.0-service-mediatek  D  -releaseAudioPatch handle [0x183]
+2026-04-10 17:03:15.915   332-332   AudioALSAHardware       and...re.audio@2.0-service-mediatek  D  +routing releaseAudioPatch 80000004->Mixer
+2026-04-10 17:03:15.915   332-332   AudioALSAStreamManager  and...re.audio@2.0-service-mediatek  D  +setParameters(), IOport = 2910, keyValuePairs = routing=0
+2026-04-10 17:03:15.915   332-332   AudioALSAStreamIn       and...re.audio@2.0-service-mediatek  D  +setParameters(): routing=0
+2026-04-10 17:03:15.915   332-332   AudioALSAStreamManager  and...re.audio@2.0-service-mediatek  D  +routingInputDevice(), input_device: 0x80000004 => 0x0
+2026-04-10 17:03:15.915   332-332   AudioALSAStreamManager  and...re.audio@2.0-service-mediatek  W  -routingInputDevice(), input_device == AUDIO_DEVICE_NONE(0x0), return
+2026-04-10 17:03:15.915   332-332   AudioALSAStreamIn       and...re.audio@2.0-service-mediatek  D  -setParameters(): routing=0 
+2026-04-10 17:03:15.916   332-332   AudioALSAHardware       and...re.audio@2.0-service-mediatek  D  handlecheck releaseAudioPatch remove handle [183] OK
+2026-04-10 17:03:15.916   332-332   AudioALSAHardware       and...re.audio@2.0-service-mediatek  D  -releaseAudioPatch handle [0x183] status [0]
+2026-04-10 17:03:15.917  1587-3864  AudioRecord             com.loudtalks                        D  stop done
+2026-04-10 17:03:15.917  1587-3864  AudioRecord-JNI         com.loudtalks                        E  Error -38 during AudioRecord native read
+2026-04-10 17:03:15.917  1587-3864  AudioRecord             com.loudtalks                        D  stop: 0x9a64cc00
+2026-04-10 17:03:15.917  1587-3864  AudioRecord             com.loudtalks                        D  stop: 0x9a64cc00
+2026-04-10 17:03:15.923   332-14093 AudioALSAStreamManager  and...re.audio@2.0-service-mediatek  D  +closeInputStream(), in = 0xb5d6aa00, size() = 1
+2026-04-10 17:03:15.923   332-14093 AudioALSAStreamIn       and...re.audio@2.0-service-mediatek  D  ~AudioALSAStreamIn()
+2026-04-10 17:03:15.923   332-14093 AudioALSAStreamManager  and...re.audio@2.0-service-mediatek  D  -closeInputStream(), mStreamInVector.size() = 0
+2026-04-10 17:03:17.883   332-14093 AudioALSAStreamOut      and...re.audio@2.0-service-mediatek  D  standby(), flag 6
+2026-04-10 17:03:17.883   332-14093 AudioALSAStreamOut      and...re.audio@2.0-service-mediatek  D  standbyStreamOut(), flag 6
+2026-04-10 17:03:17.883   332-14093 AudioALSAStreamOut      and...re.audio@2.0-service-mediatek  D  close(), flags 6, mMixerOutInUse 0
+2026-04-10 17:03:17.883   332-14093 AudioALSAP...dlerNormal and...re.audio@2.0-service-mediatek  D  +close(), flag 6, mDevice = 0x2
+2026-04-10 17:03:17.883   332-14093 AudioVoiceUIDL          and...re.audio@2.0-service-mediatek  D  [SetInputStandBy] ReadRefFromRing to exit? (0) 
+2026-04-10 17:03:17.883   332-14093 AudioALSAH...rceManager and...re.audio@2.0-service-mediatek  D  +stopOutputDevice(), mOutputDevices = 0x2, mStartOutputDevicesCount = 1
+2026-04-10 17:03:17.884   332-14093 AudioALSAD...figManager and...re.audio@2.0-service-mediatek  D  ApplyDeviceTurnoffSequenceByName(), DeviceName = ext_speaker_output descriptor->DeviceStatusCounter = 1
+2026-04-10 17:03:17.884   332-14093 AudioALSAD...figManager and...re.audio@2.0-service-mediatek  D  ApplyDeviceTurnoffSequenceByName(), DeviceName = speaker_output descriptor->DeviceStatusCounter = 1
+2026-04-10 17:03:17.884   332-14093 AudioALSADriverUtility  and...re.audio@2.0-service-mediatek  D  GetPropertyValue key = af.resouce.extdac_support value = 0
+2026-04-10 17:03:17.884   332-14093 AudioALSAP...andlerBase and...re.audio@2.0-service-mediatek  D  closePcmDriver(), mPcm = 0xb5d28ee0
+2026-04-10 17:03:17.885   332-14093 AudioALSADriverUtility  and...re.audio@2.0-service-mediatek  D  GetPropertyValue key = af.resouce.extdac_support value = 0
+2026-04-10 17:03:17.885   332-14093 AudioALSAP...dlerNormal and...re.audio@2.0-service-mediatek  D  SetLowJitterMode(), bypass low jitter mode, bEnable = 0, device = 0x2, SampleRate = 48000
+2026-04-10 17:03:17.885   332-14093 MtkAudioBitConverter    and...re.audio@2.0-service-mediatek  D  +close()
+2026-04-10 17:03:17.885   332-14093 AudioALSAP...andlerBase and...re.audio@2.0-service-mediatek  D  DeinitDataPending
+2026-04-10 17:03:17.885   332-14093 AudioALSAP...dlerNormal and...re.audio@2.0-service-mediatek  D  -close()
+2026-04-10 17:03:17.885   332-14093 AudioALSAStreamManager  and...re.audio@2.0-service-mediatek  D  -destroyPlaybackHandler(), mode = 0, pPlaybackHandler = 0xb4712300, mPlaybackHandlerVector.size() = 0
+2026-04-10 17:03:17.885   332-14093 AudioALSAStreamOut      and...re.audio@2.0-service-mediatek  D  setMuteForRouting(), mute 0, flags 6
+2026-04-10 17:03:17.886   332-14093 AudioUtility            and...re.audio@2.0-service-mediatek  D  power_hal_hint - custPowerHint 0, data 0
+2026-04-10 17:03:41.029  8855-8855  SoundPool               pid-8855                             W  See the documentation of SoundPool() for what to use instead with android.media.AudioAttributes to qualify your playback use case
+2026-04-10 17:03:41.049  8855-8878  NuMediaExtractor        pid-8855                             V  track of type 'audio/vorbis' does not publish bitrate
+2026-04-10 17:03:41.062  8855-8880  MtkACodec               pid-8855                             D  setupAudioCodec: mime audio/vorbis, encoder 0, msg.get() 0xa4253800
+2026-04-10 17:03:41.214  8855-8878  MediaAnalyticsItem      com.android.nfc                      W  Unable to record: (codec:0:-1:-11:0:6:android.media.mediacodec.mime=audio/vorbis:android.media.mediacodec.mode=audio:android.media.mediacodec.encoder=0:android.media.mediacodec.codec=OMX.google.vorbis.decoder:android.media.mediacodec.secure=0:android.media.mediacodec.bytesin=7418:) [forcenew=0]
+2026-04-10 17:03:41.228  8855-8878  NuMediaExtractor        com.android.nfc                      V  track of type 'audio/vorbis' does not publish bitrate
+2026-04-10 17:03:41.237  8855-8885  MtkACodec               com.android.nfc                      D  setupAudioCodec: mime audio/vorbis, encoder 0, msg.get() 0xa4253800
+2026-04-10 17:03:41.347  8855-8878  MediaAnalyticsItem      com.android.nfc                      W  Unable to record: (codec:0:-1:-11:0:6:android.media.mediacodec.mime=audio/vorbis:android.media.mediacodec.mode=audio:android.media.mediacodec.encoder=0:android.media.mediacodec.codec=OMX.google.vorbis.decoder:android.media.mediacodec.secure=0:android.media.mediacodec.bytesin=6565:) [forcenew=0]
+2026-04-10 17:03:41.361  8855-8878  NuMediaExtractor        com.android.nfc                      V  track of type 'audio/vorbis' does not publish bitrate
+2026-04-10 17:03:41.371  8855-8890  MtkACodec               com.android.nfc                      D  setupAudioCodec: mime audio/vorbis, encoder 0, msg.get() 0xa4253800
+2026-04-10 17:03:41.483  8855-8878  MediaAnalyticsItem      com.android.nfc                      W  Unable to record: (codec:0:-1:-11:0:6:android.media.mediacodec.mime=audio/vorbis:android.media.mediacodec.mode=audio:android.media.mediacodec.encoder=0:android.media.mediacodec.codec=OMX.google.vorbis.decoder:android.media.mediacodec.secure=0:android.media.mediacodec.bytesin=6112:) [forcenew=0]

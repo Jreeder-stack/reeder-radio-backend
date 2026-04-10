@@ -1,0 +1,16 @@
+--------- beginning of main
+2026-04-10 16:59:16.276   352-5790  MDP                     and...graphics.composer@2.1-service  W  DpDriver::waitFramedone takes 36ms
+--------- beginning of system
+2026-04-10 16:59:21.639  1587-3887  AudioRecord             com.loudtalks                        D  set(): 0x7fc7e400, inputSource 0, sampleRate 16000, format 0x1, channelMask 0x10, frameCount 8320, notificationFrames 0, sessionId 0, transferType 0, flags 0, opPackageName com.loudtalks uid -1, pid -1
+2026-04-10 16:59:21.650   381-10069 AudioFlinger            audioserver                          D  track(0xa8fafd80): mIsOut 0, mFrameCount 8320, mSampleRate 16000, mFormat 1, mChannelCount 1, mTrackCount 665, thread 0xa77038c0, sessionId 7377
+2026-04-10 16:59:21.665   352-5790  MDP                     and...graphics.composer@2.1-service  W  DpDriver::waitFramedone takes 43ms
+2026-04-10 16:59:21.749  1587-3864  AudioTrack              com.loudtalks                        D  set(): 0x84c0a300, streamType -1, sampleRate 44100, format 0x1, channelMask 0x1, frameCount 6838, flags #0, notificationFrames 0, sessionId 0, transferType 4, uid -1, pid -1
+2026-04-10 16:59:21.761  1587-3864  AudioTrack              com.loudtalks                        D  mNotificationFramesReq 0, notificationFrames 940
+2026-04-10 16:59:21.763   381-5022  AudioFlinger            audioserver                          D  track(0xa8fe9200): mIsOut 1, mFrameCount 6838, mSampleRate 44100, mFormat 1, mChannelCount 1, mTrackCount 666, thread 0xa8803c00, sessionId 7385
+2026-04-10 16:59:21.764  1587-3864  AudioTrack              com.loudtalks                        D  createTrack_l: 0x84c0a300, mCblk = 0x7fe030e0, mLatency = 207, mAfLatency = 52, frameCount = 6838, mSampleRate = 44100, mFlags = 0, mReqFrameCount = 6838, mNotificationFramesAct = 940
+2026-04-10 16:59:22.057   332-7725  AudioSPELayer           and...re.audio@2.0-service-mediatek  D  mRecordSampleRate=48000, mRecordFrameRate=20, mRecordApp_table=8
+2026-04-10 16:59:22.058   332-7725  AudioSPELayer           and...re.audio@2.0-service-mediatek  D  Record:Samplerate = 48000, FrameRate=20,App_table=8, Fea_Cfg_table=1ff
+2026-04-10 16:59:22.059   332-7725  AudioSPELayer           and...re.audio@2.0-service-mediatek  D  Using:Samplerate = 48000, FrameRate=20,MIC_DG=12, App_table=8, Fea_Cfg_table=1ff, MMI_table=ffffffff, Device_mode=2, MMI_MIC_GAIN=152
+2026-04-10 16:59:22.059   332-7725  AudioSPELayer           and...re.audio@2.0-service-mediatek  D  mSph_Enh_ctrl.frame_rate 20
+2026-04-10 16:59:31.858   332-617   AudioALSAStreamIn       and...re.audio@2.0-service-mediatek  D  standby(), keep the mStandbyFrameCount = 156480, ret = 0
+2026-04-10 16:59:37.692   352-5790  MDP                     and...graphics.composer@2.1-service  W  DpDriver::waitFramedone takes 42ms
