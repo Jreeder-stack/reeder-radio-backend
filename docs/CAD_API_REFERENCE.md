@@ -2,7 +2,7 @@
 
 > **This document must be updated whenever API changes are made.**
 
-`last_updated: 2026-04-10`
+`last_updated: 2026-04-10T13:30:00Z`
 
 ---
 
@@ -2136,21 +2136,37 @@ The `channelId` query parameter uses the `zone__channelName` room key format. Th
 
 ### Binary Packet Format (Preferred)
 
-All audio is sent and received as binary WebSocket frames. The byte layout is:
+All audio is sent and received as binary WebSocket frames. The first byte is a **codec marker** that determines the payload format:
+
+| Marker | Codec | Payload | Notes |
+|--------|-------|---------|-------|
+| `0x02` | **Opus** (preferred) | Raw Opus-encoded bytes (~100–200 bytes/frame) | End-to-end passthrough, best quality and lowest bandwidth |
+| `0x01` | PCM (legacy) | int16[] little-endian samples (~1,920 bytes/frame) | Supported for backward compatibility |
+
+The header layout is identical for both markers — only the payload interpretation differs:
 
 ```
 Offset  Size         Field             Encoding
 ──────  ───────────  ────────────────  ─────────────────
-0       1 byte       marker            0x01 (constant)
+0       1 byte       marker            0x02 (Opus) or 0x01 (PCM)
 1       4 bytes      sequence          uint32, little-endian
 5       1 byte       channelIdLen      uint8
 6       N bytes      channelId         UTF-8 string (N = channelIdLen)
 6+N     1 byte       senderIdLen       uint8
 7+N     M bytes      senderId          UTF-8 string (M = senderIdLen)
-7+N+M   remainder    PCM payload       int16[] little-endian samples
+7+N+M   remainder    payload           Opus bytes (0x02) or PCM int16[] (0x01)
 ```
 
-**Diagram:**
+**Diagram (Opus — marker `0x02`):**
+
+```
+┌────────┬──────────┬───────────┬───────────┬───────────┬──────────┬──────────────┐
+│ 0x02   │ seq(u32) │ chLen(u8) │ channelId │ snLen(u8) │ senderId │ Opus bytes   │
+│ 1 byte │ 4 bytes  │ 1 byte    │ N bytes   │ 1 byte    │ M bytes  │ remainder    │
+└────────┴──────────┴───────────┴───────────┴───────────┴──────────┴──────────────┘
+```
+
+**Diagram (PCM legacy — marker `0x01`):**
 
 ```
 ┌────────┬──────────┬───────────┬───────────┬───────────┬──────────┬─────────────┐
@@ -2158,6 +2174,10 @@ Offset  Size         Field             Encoding
 │ 1 byte │ 4 bytes  │ 1 byte    │ N bytes   │ 1 byte    │ M bytes  │ remainder   │
 └────────┴──────────┴───────────┴───────────┴───────────┴──────────┴─────────────┘
 ```
+
+**RX (receiving audio):** The server sends **Opus frames (`0x02`)** by default. Clients must decode Opus to PCM for playback (e.g., using the `opus-decoder` WASM package or equivalent). Clients should also handle legacy `0x01` PCM frames for backward compatibility.
+
+**TX (transmitting audio):** Clients may send either `0x02` (Opus) or `0x01` (PCM) frames. Opus is strongly preferred — it avoids a server-side re-encode step and preserves audio fidelity end-to-end. If sending PCM (`0x01`), the server will encode to Opus before relaying.
 
 ### JSON Fallback Format
 
@@ -2204,7 +2224,9 @@ The server sends heartbeats at 30-second intervals:
 | **Sample Format** | int16 (signed 16-bit, little-endian) |
 | **Frame Size** | 960 samples |
 | **Frame Duration** | 20 ms (960 / 48000) |
-| **Codec (wire)** | PCM (raw); server re-encodes to Opus internally |
+| **Codec (RX wire)** | Opus passthrough (`0x02` marker); ~100–200 bytes/frame |
+| **Codec (TX wire)** | Opus (`0x02`, preferred) or PCM (`0x01`, legacy fallback) |
+| **Opus Encoding** | VOIP application, 48 kHz, mono, 960 samples/frame |
 
 ---
 
@@ -2330,4 +2352,5 @@ radio.destroy();
 
 | Date | Change |
 |---|---|
+| 2026-04-10 | Audio WebSocket: Added Opus end-to-end passthrough (`0x02` marker). Server now sends Opus frames by default instead of PCM. Clients may TX with either `0x02` (Opus, preferred) or `0x01` (PCM, legacy). Updated Audio Specification table. |
 | 2026-04-10 | Initial version — complete API reference covering all endpoints, Socket.IO events, Audio WebSocket protocol, and embeddable RadioClient. |
