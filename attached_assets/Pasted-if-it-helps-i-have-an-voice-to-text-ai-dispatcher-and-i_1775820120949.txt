@@ -1,0 +1,168 @@
+if it helps, i have an voice to text ai dispatcher, and it understands me
+
+That actually helps a lot — and honestly it’s one of the biggest clues so far.
+
+If your AI voice-to-text dispatcher understands you clearly, that strongly suggests the microphone capture on the T320 is already good enough.
+
+That shifts suspicion away from the mic / AudioRecord side and much more toward the transport + playback path to desktop.
+
+In plain terms:
+
+T320 mic → PCM capture = probably clean
+speech recognition = confirms intelligible audio
+desktop listener hears pops/crackles = downstream issue
+
+So this is now much less likely to be “bad Opus encoding quality” and much more likely to be one of these:
+
+packet timing / UDP jitter
+packet loss or out-of-order packets
+desktop jitter buffer too small
+AudioTrack underruns on desktop
+double decoding / wrong frame pacing
+
+That’s actually good news because it narrows the problem.
+
+Biggest likely culprit now: playback underrun
+
+Pops and crackles while speech remains understandable are classic playback discontinuities.
+
+Think of it like this:
+
+Your AI dispatcher can tolerate uneven timing because it just needs the audio content.
+
+Humans listening in real time are much more sensitive to:
+
+gaps
+dropped 20 ms frames
+timing jumps
+sudden sample discontinuities
+
+Even a single missing 20 ms frame sounds like a crack/pop.
+
+Speech-to-text may still transcribe it perfectly.
+
+This is why your AI can “hear” you but the desktop audio sounds bad.
+
+My top suspect now: desktop jitter buffer too aggressive
+
+I strongly suspect desktop playback is starting too fast.
+
+Example:
+
+Packets arrive every 20 ms ideally.
+
+Real world over UDP:
+
+18 ms
+22 ms
+19 ms
+27 ms
+17 ms
+
+That variance is enough to empty a tiny playback buffer.
+
+When the speaker runs out of samples for even a split second:
+
+POP
+
+Then next packet comes in and resumes.
+
+That sounds exactly like crackle.
+
+Immediate fix I would tell Replit to do
+
+Send them this exact message:
+
+COPY / PASTE TO REPLIT
+
+Since AI speech recognition receives clear audio from the T320, microphone capture and core Opus encode quality are likely acceptable.
+
+Focus on the desktop receive/playback path.
+
+Please implement these changes in order:
+
+1) increase jitter buffer
+
+Increase receive jitter buffer to 100 ms initially.
+
+At 20 ms frames this means queue 5 frames before playback begins.
+
+Do not start playback until 5 full frames are available.
+
+2) continuous playout
+
+If one packet is late, do NOT immediately underrun.
+
+Instead insert last good frame or PLC concealment frame.
+
+Use:
+
+opus_decode(decoder, NULL, 0, pcm, frameSize, 0)
+
+for missing packets.
+
+This is explicitly supported by Opus for packet loss concealment.
+
+3) log packet timing
+
+For every received packet log:
+
+seq
+timestamp
+arrival delta
+missing packets
+jitter buffer depth
+
+Example:
+
+RX seq=118 delta=24ms depth=4 missing=0
+
+4) log AudioTrack underruns
+
+Log every short write / underrun event.
+
+This is likely the source of crackle.
+
+5) smooth startup
+
+On first transmission after reconnect, pre-buffer 100 ms before speaker output.
+
+Do NOT change bitrate or encoder settings until playback stability is verified.
+
+This line is the key
+
+The spec explicitly supports packet loss concealment for exactly this kind of issue.
+
+If a packet is late or missing, decoder should conceal instead of letting the speaker buffer go dry.
+
+That is almost certainly what’s missing right now.
+
+Why first transmission is worst
+
+This fits perfectly with your earlier note:
+
+first transmission after disconnect is very bad
+
+That screams buffer warmup problem.
+
+There is no audio queued yet.
+
+Playback begins on frame 1.
+
+Any network delay = immediate underrun.
+
+So first syllable gets mangled.
+
+Once several frames are in motion, it sounds better.
+
+My honest read
+
+At this point I do not think Replit should spend another minute changing Opus bitrate, complexity, FEC percentages, or sample rates.
+
+The codec is almost certainly fine.
+
+This now looks like a real-time audio transport engineering problem, not a codec problem.
+
+That’s actually easier to fix.
+
+I’d put 80% confidence on jitter buffer / playback underrun right now.
