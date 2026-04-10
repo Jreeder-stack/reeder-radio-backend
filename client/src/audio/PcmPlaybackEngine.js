@@ -57,7 +57,12 @@ export class PcmPlaybackEngine {
 
         for (let i = 0; i < count; i++) {
           let sample = (current[this._fallbackOffset + i] / 32768) * 1.0;
-          sample = sample / (1.0 + Math.abs(sample));
+          const abs = Math.abs(sample);
+          if (abs >= 0.9) {
+            const over = abs - 0.9;
+            const compressed = 0.9 + over / (1.0 + over * 10.0);
+            sample = sample < 0 ? -compressed : compressed;
+          }
           output[written + i] = sample;
         }
 

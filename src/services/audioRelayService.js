@@ -373,33 +373,39 @@ class AudioRelayService {
       }
     }
 
-    const frame = queue.shift();
-    const wsSubs = this._wsSubscribers.get(channelKey);
+    const WS_PACING_BURST_THRESHOLD = 5;
+    const WS_PACING_BURST_COUNT = 3;
+    const framesToDrain = queue.length > WS_PACING_BURST_THRESHOLD
+      ? Math.min(WS_PACING_BURST_COUNT, queue.length)
+      : 1;
 
-    let wsSentCount = 0;
-    if (!wsSubs) {
-      if (queue.length > 0) {
-        this._schedulePacingTick(channelKey);
-      } else {
-        this._wsPacingTimers.delete(channelKey);
-        this._wsPacingDriftState.delete(channelKey);
-        this._wsPacingQueues.delete(channelKey);
-      }
-      return;
+    if (framesToDrain > 1) {
+      console.log(`[AudioRelay] WS_PACING_BURST channelKey=${channelKey} queueDepth=${queue.length} draining=${framesToDrain}`);
     }
-    for (const [subUnitId, ws] of wsSubs) {
-      if (subUnitId === frame.senderUnitId) continue;
-      try {
-        if (ws.readyState === 1) {
-          ws.send(frame.packetBuf);
-          wsSentCount++;
+
+    for (let f = 0; f < framesToDrain; f++) {
+      if (queue.length === 0) break;
+      const frame = queue.shift();
+      const wsSubs = this._wsSubscribers.get(channelKey);
+
+      let wsSentCount = 0;
+      if (!wsSubs) {
+        continue;
+      }
+      for (const [subUnitId, ws] of wsSubs) {
+        if (subUnitId === frame.senderUnitId) continue;
+        try {
+          if (ws.readyState === 1) {
+            ws.send(frame.packetBuf);
+            wsSentCount++;
+          }
+        } catch (err) {
+          console.error(`[AudioRelay] WS send error to ${subUnitId}:`, err.message);
         }
-      } catch (err) {
-        console.error(`[AudioRelay] WS send error to ${subUnitId}:`, err.message);
       }
-    }
-    if (AUDIO_DIAG && wsSentCount > 0 && queue.length % 50 === 0) {
-      console.log(`[AudioRelay] WS_RELAY channelKey=${channelKey} sender=${frame.senderUnitId} recipients=${wsSentCount} queueRemaining=${queue.length}`);
+      if (AUDIO_DIAG && wsSentCount > 0 && queue.length % 50 === 0) {
+        console.log(`[AudioRelay] WS_RELAY channelKey=${channelKey} sender=${frame.senderUnitId} recipients=${wsSentCount} queueRemaining=${queue.length}`);
+      }
     }
 
     if (queue.length > 0) {

@@ -5,11 +5,15 @@ class PcmPlaybackProcessor extends AudioWorkletProcessor {
     this._currentFrame = null;
     this._offset = 0;
     this._primed = false;
+    this._hadUnderrun = false;
     this._PRE_BUFFER_FRAMES = 22;
+    this._REPRIME_FRAMES = 10;
     this._gain = 1.0;
-    this._lastFrame = null;
-    this._underrunFadeStep = 0;
-    this._underrunMaxSteps = 10;
+    this._lastSampleValue = 0;
+    this._underrunFading = false;
+    this._underrunFadeSamplesLeft = 0;
+    this._underrunFadeStart = 0;
+    this._UNDERRUN_FADE_SAMPLES = 240;
     this._underrunCount = 0;
     this._lastUnderrunReport = 0;
 
@@ -21,12 +25,23 @@ class PcmPlaybackProcessor extends AudioWorkletProcessor {
         this._currentFrame = null;
         this._offset = 0;
         this._primed = false;
-        this._lastFrame = null;
-        this._underrunFadeStep = 0;
+        this._hadUnderrun = false;
+        this._lastSampleValue = 0;
+        this._underrunFading = false;
+        this._underrunFadeSamplesLeft = 0;
+        this._underrunFadeStart = 0;
       } else if (event.data.type === 'setGain') {
         this._gain = event.data.gain;
       }
     };
+  }
+
+  _softClip(sample) {
+    const abs = Math.abs(sample);
+    if (abs < 0.9) return sample;
+    const over = abs - 0.9;
+    const compressed = 0.9 + over / (1.0 + over * 10.0);
+    return sample < 0 ? -compressed : compressed;
   }
 
   process(inputs, outputs) {
@@ -36,8 +51,30 @@ class PcmPlaybackProcessor extends AudioWorkletProcessor {
     const outChannel = output[0];
     const gain = this._gain;
 
+    if (this._underrunFading) {
+      let i = 0;
+      for (; i < outChannel.length; i++) {
+        if (this._underrunFadeSamplesLeft > 0) {
+          const t = this._underrunFadeSamplesLeft / this._UNDERRUN_FADE_SAMPLES;
+          outChannel[i] = this._underrunFadeStart * t;
+          this._underrunFadeSamplesLeft--;
+        } else {
+          break;
+        }
+      }
+      for (; i < outChannel.length; i++) {
+        outChannel[i] = 0;
+      }
+      if (this._underrunFadeSamplesLeft <= 0) {
+        this._underrunFading = false;
+        this._lastSampleValue = 0;
+      }
+      return true;
+    }
+
     if (!this._primed) {
-      if (this._ringBuffer.length < this._PRE_BUFFER_FRAMES) {
+      const threshold = this._hadUnderrun ? this._REPRIME_FRAMES : this._PRE_BUFFER_FRAMES;
+      if (this._ringBuffer.length < threshold) {
         for (let i = 0; i < outChannel.length; i++) {
           outChannel[i] = 0;
         }
@@ -55,7 +92,6 @@ class PcmPlaybackProcessor extends AudioWorkletProcessor {
         }
         this._currentFrame = this._ringBuffer.shift();
         this._offset = 0;
-        this._underrunFadeStep = 0;
       }
 
       const available = this._currentFrame.length - this._offset;
@@ -64,7 +100,7 @@ class PcmPlaybackProcessor extends AudioWorkletProcessor {
 
       for (let i = 0; i < count; i++) {
         let sample = (this._currentFrame[this._offset + i] / 32768) * gain;
-        sample = sample / (1.0 + Math.abs(sample));
+        sample = this._softClip(sample);
         outChannel[written + i] = sample;
       }
 
@@ -72,31 +108,34 @@ class PcmPlaybackProcessor extends AudioWorkletProcessor {
       this._offset += count;
 
       if (this._offset >= this._currentFrame.length) {
-        this._lastFrame = this._currentFrame;
+        this._lastSampleValue = (this._currentFrame[this._currentFrame.length - 1] / 32768) * gain;
         this._currentFrame = null;
         this._offset = 0;
       }
     }
 
     if (written < outChannel.length) {
-      if (this._lastFrame && this._underrunFadeStep < this._underrunMaxSteps) {
-        this._underrunFadeStep++;
-        const t = this._underrunFadeStep / this._underrunMaxSteps;
-        const fadeGain = gain * (1.0 - t * t);
-        const srcLen = this._lastFrame.length;
-        for (let i = written; i < outChannel.length; i++) {
-          const srcIdx = (i - written) % srcLen;
-          const pos = (i - written) / outChannel.length;
-          const microFade = 1.0 - pos * 0.3;
-          let sample = (this._lastFrame[srcIdx] / 32768) * fadeGain * microFade;
-          sample = sample / (1.0 + Math.abs(sample));
-          outChannel[i] = sample;
-        }
-      } else {
-        for (let i = written; i < outChannel.length; i++) {
+      this._underrunFading = true;
+      this._underrunFadeSamplesLeft = this._UNDERRUN_FADE_SAMPLES;
+      this._underrunFadeStart = this._lastSampleValue;
+
+      for (let i = written; i < outChannel.length; i++) {
+        if (this._underrunFadeSamplesLeft > 0) {
+          const t = this._underrunFadeSamplesLeft / this._UNDERRUN_FADE_SAMPLES;
+          outChannel[i] = this._underrunFadeStart * t;
+          this._underrunFadeSamplesLeft--;
+        } else {
           outChannel[i] = 0;
         }
       }
+
+      if (this._underrunFadeSamplesLeft <= 0) {
+        this._underrunFading = false;
+        this._lastSampleValue = 0;
+      }
+
+      this._primed = false;
+      this._hadUnderrun = true;
 
       this._underrunCount++;
       const now = currentTime;
