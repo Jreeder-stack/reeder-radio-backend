@@ -196,11 +196,13 @@ export function PTTButton({
     };
   }, [setTransmitting]);
 
+  const showBusy = isDenying || (!isTransmitting && !isReceiving && channelStatus === 'busy');
+
   const getButtonLabel = () => {
     if (!isConnected) return 'CONNECTING...';
     if (isTransmitting) return 'TX ACTIVE';
     if (isReceiving) return activeSpeaker || 'RX ACTIVE';
-    if (isDenying) return 'BUSY';
+    if (showBusy) return 'BUSY';
     return 'HOLD TO TALK';
   };
 
@@ -247,7 +249,7 @@ export function PTTButton({
             ? "bg-cyan-500 text-white shadow-lg"
             : isReceiving
               ? "bg-red-500 text-white shadow-lg"
-              : isDenying
+              : showBusy
                 ? "bg-red-200 border border-red-400 text-red-600"
                 : "bg-white border border-gray-200 text-cyan-600 shadow-sm"
       )}
@@ -257,7 +259,7 @@ export function PTTButton({
         <Mic className="w-5 h-5" />
       ) : isReceiving ? (
         <Volume2 className="w-5 h-5 animate-pulse" />
-      ) : isDenying ? (
+      ) : showBusy ? (
         <Ban className="w-5 h-5" />
       ) : (
         <Mic className="w-5 h-5" />

@@ -27,6 +27,7 @@ export default function MobileRadioView({ user, onLogout }) {
     activeTransmissions,
     isTransmitting: isChannelTransmitting,
     getTransmittingUnit,
+    isInGracePeriod,
     joinChannel: signalingJoinChannel,
     leaveChannel: signalingLeaveChannel,
     signalPttStart,
@@ -45,11 +46,19 @@ export default function MobileRadioView({ user, onLogout }) {
   const [pttState, setPttState] = useState(PTT_STATES.IDLE);
   const [activeAudio, setActiveAudio] = useState(null);
   const [userLocation, setUserLocation] = useState(null);
+  const [pttRejectedBusy, setPttRejectedBusy] = useState(false);
+  const pttRejectedTimerRef = useRef(null);
   
   const transmitChannelRef = useRef('');
   const isEmergencyRef = useRef(false);
   const rxAudioElementsRef = useRef(new Set());
   const hasJoinedRef = useRef(false);
+
+  useEffect(() => {
+    return () => {
+      if (pttRejectedTimerRef.current) clearTimeout(pttRejectedTimerRef.current);
+    };
+  }, []);
 
   const { clearAirActive, clearAirChannelName } = useClearAir({
     identity,
@@ -266,6 +275,22 @@ export default function MobileRadioView({ user, onLogout }) {
       floorGranted = true;
     } catch (grantErr) {
       console.warn('[MobileRadio] Floor denied:', grantErr.message);
+      setIsTransmitting(false);
+      setPttRejectedBusy(true);
+      if (pttRejectedTimerRef.current) clearTimeout(pttRejectedTimerRef.current);
+      pttRejectedTimerRef.current = setTimeout(() => setPttRejectedBusy(false), 2000);
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(480, now);
+      gain.gain.setValueAtTime(0.3, now);
+      osc.start(now);
+      osc.stop(now + 0.5);
+      osc.onended = () => ctx.close();
       return;
     }
     try {
@@ -393,9 +418,11 @@ export default function MobileRadioView({ user, onLogout }) {
     if (!connected && !connecting) return 'error';
     if (connecting) return 'busy';
     if (isTransmitting) return 'clear';
+    if (pttRejectedBusy) return 'busy';
     if (channelIsBusy && transmittingUnitId !== identity) return 'busy';
+    if (currentRoomKey && isInGracePeriod(currentRoomKey, identity)) return 'busy';
     return 'clear';
-  }, [connectionStatus, connected, connecting, channelIsBusy, transmittingUnitId, identity, isTransmitting]);
+  }, [connectionStatus, connected, connecting, channelIsBusy, transmittingUnitId, identity, isTransmitting, pttRejectedBusy, currentRoomKey, isInGracePeriod]);
   
   const unitPresence = useMemo(() => {
     if (!currentRoomKey) return [];

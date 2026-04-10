@@ -15,8 +15,10 @@ export function SignalingProvider({ children }) {
   const [emergencyAlerts, setEmergencyAlerts] = useState([]);
   const [unitLocations, setUnitLocations] = useState({});
   const [trackedUnits, setTrackedUnits] = useState(new Set());
+  const [gracePeriods, setGracePeriods] = useState({});
   const locationIntervalRef = useRef(null);
   const joinedChannelsRef = useRef(new Set());
+  const graceTimersRef = useRef({});
 
   useEffect(() => {
     if (!user) {
@@ -132,6 +134,29 @@ export function SignalingProvider({ children }) {
           m.unitId === data.unitId ? { ...m, status: 'online' } : m
         ),
       }));
+
+      if (data.gracePeriodMs && data.gracePeriodMs > 0) {
+        const channelId = data.channelId;
+        const expiresAt = Date.now() + data.gracePeriodMs;
+        setGracePeriods(prev => ({
+          ...prev,
+          [channelId]: { unitId: data.unitId, expiresAt },
+        }));
+
+        if (graceTimersRef.current[channelId]) {
+          clearTimeout(graceTimersRef.current[channelId]);
+        }
+        graceTimersRef.current[channelId] = setTimeout(() => {
+          setGracePeriods(prev => {
+            const next = { ...prev };
+            if (next[channelId]?.unitId === data.unitId) {
+              delete next[channelId];
+            }
+            return next;
+          });
+          delete graceTimersRef.current[channelId];
+        }, data.gracePeriodMs);
+      }
     });
 
     const removeEmergencyStartListener = signalingManager.on('emergencyStart', (data) => {
@@ -236,6 +261,8 @@ export function SignalingProvider({ children }) {
       if (locationIntervalRef.current) {
         clearInterval(locationIntervalRef.current);
       }
+      Object.values(graceTimersRef.current).forEach(clearTimeout);
+      graceTimersRef.current = {};
     };
   }, [user]);
 
@@ -366,11 +393,20 @@ export function SignalingProvider({ children }) {
     return emergencyChannels.has(channelId);
   }, [emergencyChannels]);
 
+  const isInGracePeriod = useCallback((channelId, requestingUnit) => {
+    const grace = gracePeriods[channelId];
+    if (!grace) return false;
+    if (Date.now() >= grace.expiresAt) return false;
+    if (grace.unitId === requestingUnit) return false;
+    return true;
+  }, [gracePeriods]);
+
   const value = {
     connected,
     authenticated,
     channelMembers,
     activeTransmissions,
+    gracePeriods,
     emergencyChannels: Array.from(emergencyChannels),
     emergencyAlerts,
     unitLocations,
@@ -394,6 +430,7 @@ export function SignalingProvider({ children }) {
     isTransmitting,
     getTransmittingUnit,
     isEmergencyActive,
+    isInGracePeriod,
   };
 
   return (

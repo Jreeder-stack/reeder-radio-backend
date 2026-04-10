@@ -172,6 +172,8 @@
     this._playback = null;
     this._listeners = {};
     this._destroyed = false;
+    this._gracePeriods = {};
+    this._graceTimers = {};
   }
 
   RadioClient.prototype.init = async function (options) {
@@ -285,6 +287,24 @@
     });
     this._socket.on('ptt:end', function (data) {
       self._emit('pttEnd', data);
+      if (data.gracePeriodMs && data.gracePeriodMs > 0) {
+        var channelId = data.channelId;
+        self._gracePeriods = self._gracePeriods || {};
+        self._gracePeriods[channelId] = {
+          unitId: data.unitId,
+          expiresAt: Date.now() + data.gracePeriodMs,
+        };
+        if (self._graceTimers && self._graceTimers[channelId]) {
+          clearTimeout(self._graceTimers[channelId]);
+        }
+        self._graceTimers = self._graceTimers || {};
+        self._graceTimers[channelId] = setTimeout(function () {
+          if (self._gracePeriods && self._gracePeriods[channelId] && self._gracePeriods[channelId].unitId === data.unitId) {
+            delete self._gracePeriods[channelId];
+          }
+          delete self._graceTimers[channelId];
+        }, data.gracePeriodMs);
+      }
     });
     this._socket.on('ptt:busy', function (data) {
       self._emit('pttBusy', data);
@@ -464,6 +484,17 @@
     if (this._transmitting || !this._channelId) return false;
     if (!this._socket || !this._authenticated) return false;
     if (!this._ws || this._ws.readyState !== WebSocket.OPEN) return false;
+
+    var grace = this._gracePeriods && this._gracePeriods[this._channelId];
+    if (grace && Date.now() < grace.expiresAt && grace.unitId !== this._unitId) {
+      this._emit('pttBusy', {
+        channelId: this._channelId,
+        unitId: grace.unitId,
+        transmittingUnit: grace.unitId,
+        inGracePeriod: true,
+      });
+      return false;
+    }
 
     var self = this;
 
@@ -669,6 +700,15 @@
   RadioClient.prototype.destroy = async function () {
     if (this._destroyed) return;
     this._destroyed = true;
+
+    if (this._graceTimers) {
+      var timerKeys = Object.keys(this._graceTimers);
+      for (var i = 0; i < timerKeys.length; i++) {
+        clearTimeout(this._graceTimers[timerKeys[i]]);
+      }
+      this._graceTimers = {};
+    }
+    this._gracePeriods = {};
 
     await this.stopPtt();
 
