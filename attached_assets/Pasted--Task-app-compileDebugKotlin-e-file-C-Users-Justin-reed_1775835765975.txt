@@ -1,0 +1,25 @@
+> Task :app:compileDebugKotlin
+e: file:///C:/Users/Justin/reeder-radio-backend/android-native/app/src/main/java/com/reedersystems/commandcomms/audio/radio/RadioAudioEngine.kt:208:5 Only one companion object is allowed per class
+e: file:///C:/Users/Justin/reeder-radio-backend/android-native/app/src/main/java/com/reedersystems/commandcomms/audio/radio/RadioAudioEngine.kt:235:20 Unresolved reference: PROBE_RATE
+e: file:///C:/Users/Justin/reeder-radio-backend/android-native/app/src/main/java/com/reedersystems/commandcomms/audio/radio/RadioAudioEngine.kt:277:35 Unresolved reference: PROBE_FRAME_COUNT
+e: file:///C:/Users/Justin/reeder-radio-backend/android-native/app/src/main/java/com/reedersystems/commandcomms/audio/radio/RadioAudioEngine.kt:298:42 Unresolved reference: PROBE_SILENCE_RMS_THRESHOLD
+e: file:///C:/Users/Justin/reeder-radio-backend/android-native/app/src/main/java/com/reedersystems/commandcomms/audio/radio/RadioAudioEngine.kt:300:263 Unresolved reference: PROBE_SILENCE_RMS_THRESHOLD
+e: file:///C:/Users/Justin/reeder-radio-backend/android-native/app/src/main/java/com/reedersystems/commandcomms/audio/radio/RadioAudioEngine.kt:323:14 Unresolved reference: bypassSourceCache
+e: file:///C:/Users/Justin/reeder-radio-backend/android-native/app/src/main/java/com/reedersystems/commandcomms/audio/radio/RadioAudioEngine.kt:324:26 Unresolved reference: cachedSourceKey
+e: file:///C:/Users/Justin/reeder-radio-backend/android-native/app/src/main/java/com/reedersystems/commandcomms/audio/radio/RadioAudioEngine.kt:325:58 Unresolved reference: cachedSourceValue
+e: file:///C:/Users/Justin/reeder-radio-backend/android-native/app/src/main/java/com/reedersystems/commandcomms/audio/radio/RadioAudioEngine.kt:326:27 Unresolved reference: cachedSourceValue
+e: file:///C:/Users/Justin/reeder-radio-backend/android-native/app/src/main/java/com/reedersystems/commandcomms/audio/radio/RadioAudioEngine.kt:327:28 Unresolved reference: cachedSourceName
+e: file:///C:/Users/Justin/reeder-radio-backend/android-native/app/src/main/java/com/reedersystems/commandcomms/audio/radio/RadioAudioEngine.kt:341:13 Unresolved reference: cachedSourceKey
+e: file:///C:/Users/Justin/reeder-radio-backend/android-native/app/src/main/java/com/reedersystems/commandcomms/audio/radio/RadioAudioEngine.kt:342:13 Unresolved reference: cachedSourceValue
+e: file:///C:/Users/Justin/reeder-radio-backend/android-native/app/src/main/java/com/reedersystems/commandcomms/audio/radio/RadioAudioEngine.kt:343:13 Unresolved reference: cachedSourceName
+e: file:///C:/Users/Justin/reeder-radio-backend/android-native/app/src/main/java/com/reedersystems/commandcomms/audio/radio/RadioAudioEngine.kt:380:13 Unresolved reference: cachedSourceKey
+e: file:///C:/Users/Justin/reeder-radio-backend/android-native/app/src/main/java/com/reedersystems/commandcomms/audio/radio/RadioAudioEngine.kt:381:13 Unresolved reference: cachedSourceValue
+e: file:///C:/Users/Justin/reeder-radio-backend/android-native/app/src/main/java/com/reedersystems/commandcomms/audio/radio/RadioAudioEngine.kt:382:13 Unresolved reference: cachedSourceName
+e: file:///C:/Users/Justin/reeder-radio-backend/android-native/app/src/main/java/com/reedersystems/commandcomms/audio/radio/RadioAudioEngine.kt:389:255 Unresolved reference: PROBE_SILENCE_RMS_THRESHOLD
+e: file:///C:/Users/Justin/reeder-radio-backend/android-native/app/src/main/java/com/reedersystems/commandcomms/audio/radio/RadioAudioEngine.kt:391:13 Unresolved reference: cachedSourceKey
+e: file:///C:/Users/Justin/reeder-radio-backend/android-native/app/src/main/java/com/reedersystems/commandcomms/audio/radio/RadioAudioEngine.kt:392:13 Unresolved reference: cachedSourceValue
+e: file:///C:/Users/Justin/reeder-radio-backend/android-native/app/src/main/java/com/reedersystems/commandcomms/audio/radio/RadioAudioEngine.kt:393:13 Unresolved reference: cachedSourceName
+e: file:///C:/Users/Justin/reeder-radio-backend/android-native/app/src/main/java/com/reedersystems/commandcomms/audio/radio/RadioAudioEngine.kt:397:92 Unresolved reference: PROBE_SILENCE_RMS_THRESHOLD
+
+> Task :app:compileDebugKotlin FAILED
+
