@@ -153,6 +153,40 @@ export async function queryPerson(firstName, lastName, dob = null) {
   return result;
 }
 
+export async function queryPersonByDL(dlNumber, dlState) {
+  const body = {
+    dl_number: dlNumber.toUpperCase(),
+    dl_state: dlState.toUpperCase()
+  };
+  console.log(`[CAD] Person DL query request: state=${dlState.toUpperCase()}`);
+  const result = await cadRequest('/api/radio/query/person/dl', 'POST', body);
+  console.log(`[CAD] Person DL query response: success=${result.success}, count=${result.count ?? (result.results?.length ?? 'n/a')}`);
+  return result;
+}
+
+export async function queryPersonBySSN(ssn) {
+  const body = {
+    ssn: ssn.replace(/[^0-9]/g, '')
+  };
+  console.log(`[CAD] Person SSN query request`);
+  const result = await cadRequest('/api/radio/query/person/ssn', 'POST', body);
+  console.log(`[CAD] Person SSN query response: success=${result.success}, count=${result.count ?? (result.results?.length ?? 'n/a')}`);
+  return result;
+}
+
+export async function getUnitCurrentCallById(unitId) {
+  if (!unitId) {
+    console.warn('[CAD] getUnitCurrentCallById: No unit ID provided');
+    return { callNumber: null };
+  }
+  console.log(`[CAD] Getting current call for ${unitId}`);
+  const result = await cadRequest(`/api/radio/unit/${encodeURIComponent(unitId)}/call`, 'GET');
+  if (result.success === false) {
+    return { callNumber: null };
+  }
+  return result;
+}
+
 export async function queryVehicle(plate, state = 'PA') {
   console.log(`[CAD] Vehicle query: ${plate} ${state}`);
   return cadRequest('/api/radio/query/vehicle', 'POST', {

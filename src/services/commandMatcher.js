@@ -17,6 +17,11 @@ const DISPATCHER_STATE = {
   AWAITING_CALL_NATURE: 'AWAITING_CALL_NATURE',
   AWAITING_CALL_ADDRESS: 'AWAITING_CALL_ADDRESS',
   AWAITING_CALL_CONFIRM: 'AWAITING_CALL_CONFIRM',
+  AWAITING_NOTE_CONTENT: 'AWAITING_NOTE_CONTENT',
+  AWAITING_CALL_FOLLOWUP: 'AWAITING_CALL_FOLLOWUP',
+  AWAITING_DL_STATE: 'AWAITING_DL_STATE',
+  AWAITING_DL_NUMBER: 'AWAITING_DL_NUMBER',
+  AWAITING_SSN: 'AWAITING_SSN',
   SIGNAL_100_ACTIVE: 'SIGNAL_100_ACTIVE'
 };
 
@@ -145,7 +150,7 @@ const STATUS_COMMANDS = [
 const IMMEDIATE_COMMANDS = [
   {
     intent: 'RADIO_CHECK',
-    phrases: ['radio check', 'how do you copy', 'copy check', 'radio test', 'comm check', 'comms check', 'communication check'],
+    phrases: ['radio check', 'how do you copy', 'copy check', 'radio test', 'comm check', 'comms check', 'communication check', 'radio shack', 'radio shaq', 'ready a check', 'radio cheque', 'radio czech', 'radio jack', 'ready check', 'radio chalk'],
     response: (unitId) => `${unitId}, loud and clear.`,
     isEmergency: false
   },

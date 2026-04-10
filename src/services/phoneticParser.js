@@ -664,6 +664,36 @@ export function parsePersonDetails(transcript) {
   }
   
   if (!result.lastName && !result.firstName) {
+    const commaPattern = /^([^,]+),\s*([^,]+?)(?:,\s*(.+))?$/;
+    const commaMatch = transcript.trim().match(commaPattern);
+    if (commaMatch) {
+      const part1 = commaMatch[1].trim();
+      const part2 = commaMatch[2].trim();
+      const part3 = commaMatch[3]?.trim();
+
+      const part1Words = part1.split(/\s+/).filter(w => w.length > 0 && !['last', 'name', 'is'].includes(w.toLowerCase()));
+      const part2Words = part2.split(/\s+/).filter(w => w.length > 0 && !['first', 'name', 'is'].includes(w.toLowerCase()));
+
+      if (part1Words.length >= 1) {
+        result.lastName = capitalizeFirst(part1Words[part1Words.length - 1]);
+      }
+      if (part2Words.length >= 1) {
+        const potentialDob = parseDOB(part2);
+        if (potentialDob && !result.dob) {
+          result.dob = potentialDob;
+        } else {
+          result.firstName = capitalizeFirst(part2Words[0]);
+        }
+      }
+      if (part3 && !result.dob) {
+        const dobFromPart3 = parseDOB(part3);
+        if (dobFromPart3) {
+          result.dob = dobFromPart3;
+        }
+      }
+      if (result.lastName) return result;
+    }
+
     let withoutDob = transcript
       .replace(/\d{1,2}[\s\-\/]\d{1,2}[\s\-\/]\d{2,4}/g, '')
       .replace(/(?:dob|date of birth|born|birthday)\s*[:\s]?\s*.*/i, '')

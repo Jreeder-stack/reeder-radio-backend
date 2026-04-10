@@ -216,6 +216,7 @@ Return: { "intent": "PERSON_DETAILS", "response": null, "slots": { "lastName": "
 
 ### RADIO_CHECK
 Unit requesting a radio check. TIER 1: Keep it very short.
+NOTE: Speech-to-text often misrecognizes "radio check" as "radio shack", "radio shaq", "ready a check", "radio cheque", etc. These should ALL be classified as RADIO_CHECK.
 Return: { "intent": "RADIO_CHECK", "response": "Loud and clear." }
 
 ### TIME_CHECK
@@ -254,6 +255,40 @@ STRICT response format: "[UNIT_ID], go ahead." — the unit ID ALWAYS comes firs
 Use the exact unit ID string from the "Unit ID:" field provided in the prompt. Do not rephrase or reorder it.
 Return: { "intent": "WAKE_ONLY", "response": "<UNIT_ID>, go ahead." }
 
+### ASSIGN_CALL
+Unit wants to attach/assign THEMSELVES to a call. Phrases: "attach me to call 456", "show me on the call on Adams Street", "put me on call 456", "add me to the warrant service on Polk".
+If they give a call number (even shorthand like "456"), extract it. If they describe a call by location/nature, extract that.
+Return: { "intent": "ASSIGN_CALL", "response": null, "slots": { "callNumber": "<if provided, raw number like '456' or '26-1-000456'>", "callLocation": "<if described by location>", "callNature": "<if described by nature/type>" } }
+
+### ASSIGN_OTHER_UNIT
+Unit wants to attach/assign A DIFFERENT unit to a call. Phrases: "add Beaver-2 to my call", "attach Lincoln-3 to call 456", "put Beaver-2 on the call on Adams Street".
+Return: { "intent": "ASSIGN_OTHER_UNIT", "response": null, "slots": { "targetUnit": "<unit ID to assign>", "callNumber": "<if provided>", "callLocation": "<if described>", "callNature": "<if described>", "useMyCall": true/false } }
+
+### ADD_NOTE
+Unit wants to add a note to their current call. Phrases: "make a note", "note this", "can you note", "add a note".
+If the note content is provided inline (after the trigger phrase), extract it. Otherwise leave noteContent null.
+Return: { "intent": "ADD_NOTE", "response": null, "slots": { "noteContent": "<if provided inline, otherwise null>" } }
+
+### QUERY_CALLS
+Unit is asking about pending/holding calls. Phrases: "any calls pending", "what's holding", "how many calls", "anything holding", "any calls waiting".
+Return: { "intent": "QUERY_CALLS", "response": null }
+
+### CALL_FOLLOWUP
+Unit is asking a follow-up question about pending calls (after QUERY_CALLS). Only use this in AWAITING_CALL_FOLLOWUP state. Phrases: "give me the first one", "what's the priority call", "what's the oldest one", "tell me about the first call".
+Return: { "intent": "CALL_FOLLOWUP", "response": null, "slots": { "question": "<the follow-up question>" } }
+
+### MY_CALL
+Unit is asking what call they are currently assigned to. Phrases: "what am I on", "what's my call", "what am I assigned to", "what call am I on".
+Return: { "intent": "MY_CALL", "response": null }
+
+### PERSON_CHECK_DL
+Unit wants to search a person by driver's license or ID number. Phrases: "run a license", "check a DL", "run a DL", "check by license number", "run an ID number".
+Return: { "intent": "PERSON_CHECK_DL", "response": "<natural acknowledgment>", "slots": { "dlNumber": "<if provided>", "dlState": "<if provided>" } }
+
+### PERSON_CHECK_SSN
+Unit wants to search a person by social security number. Phrases: "run a social", "check by social security", "run a social security number", "check by SSN".
+Return: { "intent": "PERSON_CHECK_SSN", "response": "<natural acknowledgment>", "slots": { "ssn": "<if provided>" } }
+
 ### UNKNOWN
 Cannot determine what the unit is saying. Respond naturally asking them to repeat.
 Return: { "intent": "UNKNOWN", "response": "<natural request to repeat>" }
@@ -274,6 +309,11 @@ You will be told the current conversation state. Use it to interpret ambiguous i
 - AWAITING_CALL_NATURE: Unit is providing the call nature/incident type. Treat their entire transcript as the nature → return CREATE_CALL with nature slot.
 - AWAITING_CALL_ADDRESS: Unit is providing the address for the call. Treat their entire transcript as the address → return CREATE_CALL with address slot.
 - AWAITING_CALL_CONFIRM: Unit is confirming or denying call creation details → return CONFIRM or DENY.
+- AWAITING_NOTE_CONTENT: Unit is providing note content for their current call. Treat their entire transcript as the note → return ADD_NOTE with noteContent slot.
+- AWAITING_CALL_FOLLOWUP: Unit is asking a follow-up question about pending calls. Interpret their question and return CALL_FOLLOWUP with the question, or a new command if they change topics.
+- AWAITING_DL_STATE: Unit is providing the DL/ID state → return PERSON_CHECK_DL with dlState slot.
+- AWAITING_DL_NUMBER: Unit is providing the DL/ID number → return PERSON_CHECK_DL with dlNumber slot.
+- AWAITING_SSN: Unit is providing the SSN → return PERSON_CHECK_SSN with ssn slot.
 
 IMPORTANT: In AWAITING_* states, "10-4", "copy", "roger" mean CONFIRM (the unit is answering your question). In IDLE state, they mean SILENCE (the unit is just acknowledging, not talking to you).
 
