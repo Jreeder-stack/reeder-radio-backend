@@ -196,11 +196,7 @@ export class PcmCaptureEngine {
     this.onFrame = onFrame;
     this.running = true;
 
-    const buffered = this._preBuffer;
     this._preBuffer = [];
-    for (const frame of buffered) {
-      if (this.onFrame) this.onFrame(frame);
-    }
   }
 
   async stop() {

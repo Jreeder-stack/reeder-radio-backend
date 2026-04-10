@@ -2,11 +2,14 @@ import fs from 'fs';
 import path from 'path';
 import { opusCodec, SAMPLE_RATE, CHANNELS } from './opusCodec.js';
 import { sendAudioMessage } from './messagesService.js';
+import { getAudioDataByFilename } from '../db/index.js';
 
 const AUDIO_DIR = path.join(process.cwd(), 'uploads', 'audio');
 const TX_IDLE_TIMEOUT_MS = 2000;
 const MAX_TX_DURATION_MS = 60000;
 const MIN_TX_DURATION_MS = 100;
+const CLEANUP_INTERVAL_MS = 30 * 60 * 1000;
+const CLEANUP_MAX_AGE_MS = 60 * 60 * 1000;
 
 if (!fs.existsSync(AUDIO_DIR)) {
   fs.mkdirSync(AUDIO_DIR, { recursive: true });
@@ -99,7 +102,7 @@ function finalizeRecording(key) {
       return;
     }
 
-    sendAudioMessage(channelId, unitId, wavBuffer, durationMs, true)
+    sendAudioMessage(channelId, unitId, wavBuffer, durationMs, false)
       .then((msg) => {
         console.log(`[RecordingTap] Audio message saved: id=${msg.id} channel=${channelId} sender=${unitId} duration=${durationMs}ms`);
       })
@@ -161,8 +164,51 @@ function validateWavBuffer(buffer) {
   return true;
 }
 
+async function cleanupOldAudioFiles() {
+  try {
+    if (!fs.existsSync(AUDIO_DIR)) return;
+
+    const files = fs.readdirSync(AUDIO_DIR).filter(f => f.endsWith('.wav'));
+    const now = Date.now();
+    let cleaned = 0;
+
+    for (const file of files) {
+      const filepath = path.join(AUDIO_DIR, file);
+      let stat;
+      try {
+        stat = fs.statSync(filepath);
+      } catch {
+        continue;
+      }
+
+      const ageMs = now - stat.mtimeMs;
+      if (ageMs < CLEANUP_MAX_AGE_MS) continue;
+
+      try {
+        const audioData = await getAudioDataByFilename(file);
+        if (audioData) {
+          fs.unlinkSync(filepath);
+          cleaned++;
+        }
+      } catch {
+        // skip files that fail lookup
+      }
+    }
+
+    if (cleaned > 0) {
+      console.log(`[RecordingTap] Audio cleanup: removed ${cleaned} old WAV file(s) from disk`);
+    }
+  } catch (err) {
+    console.error('[RecordingTap] Audio cleanup error:', err.message);
+  }
+}
+
 export function setupRecordingTap(audioRelayService, signalingService) {
   audioRelayService.onRecordingTap(handleRecordingFrame);
   signalingService.onPttEnd(handlePttEnd);
   console.log('[RecordingTap] Recording tap and PTT end handler registered');
+
+  const cleanupTimer = setInterval(cleanupOldAudioFiles, CLEANUP_INTERVAL_MS);
+  if (cleanupTimer.unref) cleanupTimer.unref();
+  console.log(`[RecordingTap] Audio file cleanup scheduled every ${CLEANUP_INTERVAL_MS / 60000} minutes`);
 }

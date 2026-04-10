@@ -706,9 +706,6 @@ class AIDispatcher {
       return;
     }
 
-    const channelName = this.channelName;
-    this.saveAudioAsMessage(audioBuffer, channelName, unitId);
-
     isAiDispatchEnabled().then(enabled => {
       if (enabled && this.isRunning) {
         this.processAudio(audioBuffer, unitId).catch(err => {
