@@ -1,0 +1,140 @@
+
+Connected
+Server Logs
+System Logs
+⏸ Freeze
+Clear
+22:39:38 [1m[90m[TAILING] Tailing last 50 lines for [all] processes (change the value with --lines option)[39m[22m
+22:39:38 [90m/home/Jreeder5029/.pm2/logs/command-comms-error.log last 50 lines:[39m
+22:39:38 WS_TO_UDP_RELAY_ERROR {
+22:39:38   channelId: 'DISPATCH__DISPATCH',
+22:39:38   senderUnitId: 'DISPATCH-1',
+22:39:38   sequence: 1417,
+22:39:38   error: 'start offset of Int16Array should be a multiple of 2'
+22:39:38 }
+22:39:38 WS_TO_UDP_RELAY_ERROR {
+22:39:38   channelId: 'DISPATCH__DISPATCH',
+22:39:38   senderUnitId: 'DISPATCH-1',
+22:39:38   sequence: 1418,
+22:39:38   error: 'start offset of Int16Array should be a multiple of 2'
+22:39:38 }
+22:39:38 WS_TO_UDP_RELAY_ERROR {
+22:39:38   channelId: 'DISPATCH__DISPATCH',
+22:39:38   senderUnitId: 'DISPATCH-1',
+22:39:38   sequence: 1419,
+22:39:38   error: 'start offset of Int16Array should be a multiple of 2'
+22:39:38 }
+22:39:38 WS_TO_UDP_RELAY_ERROR {
+22:39:38   channelId: 'DISPATCH__DISPATCH',
+22:39:38   senderUnitId: 'DISPATCH-1',
+22:39:38   sequence: 1420,
+22:39:38   error: 'start offset of Int16Array should be a multiple of 2'
+22:39:38 }
+22:39:38 WS_TO_UDP_RELAY_ERROR {
+22:39:38   channelId: 'DISPATCH__DISPATCH',
+22:39:38   senderUnitId: 'DISPATCH-1',
+22:39:38   sequence: 1421,
+22:39:38   error: 'start offset of Int16Array should be a multiple of 2'
+22:39:38 }
+22:39:38 WS_TO_UDP_RELAY_ERROR {
+22:39:38   channelId: 'DISPATCH__DISPATCH',
+22:39:38   senderUnitId: 'DISPATCH-1',
+22:39:38   sequence: 1422,
+22:39:38   error: 'start offset of Int16Array should be a multiple of 2'
+22:39:38 }
+22:39:38 [SHUTDOWN] Hard shutdown timeout reached, forcing exit.
+22:39:38 [SHUTDOWN] Hard shutdown timeout reached, forcing exit.
+22:39:38 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+22:39:38 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+22:39:38 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+22:39:38 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+22:39:38 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+22:39:38 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+22:39:38 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+22:39:38 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+22:39:38 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+22:39:38 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+22:39:38 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+22:39:38 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+22:39:38 [90m/home/Jreeder5029/.pm2/logs/command-comms-out.log last 50 lines:[39m
+22:39:38   connection: 'upgrade'
+22:39:38 }
+22:39:38 [AUTH] Login attempt: username="DISPATCH-1"
+22:39:38 [AUTH] Login success: username="DISPATCH-1" id=7 role=admin unit_id=DISPATCH-1 is_dispatcher=true sessionID=rvfA8E4P...
+22:39:38 [API] POST /api/auth/login | session=none | sid=y2MD0LJt... | 200 | 143ms
+22:39:38 [DISPATCH] getChannels: 4 radio channels returned
+22:39:38 [API] GET /api/dispatch/channels | user=DISPATCH-1(id:7) | sid=rvfA8E4P... | 304 | 15ms
+22:39:38 [DISPATCH] getChannels: 4 radio channels returned
+22:39:38 [API] GET /api/dispatch/channels | user=DISPATCH-1(id:7) | sid=rvfA8E4P... | 304 | 16ms
+22:39:38 AUDIO_WS_UPGRADE_HIT {
+22:39:38   method: 'GET',
+22:39:38   path: '/api/audio-ws',
+22:39:38   query: '?channelId=DISPATCH__DISPATCH&unitId=DISPATCH-1',
+22:39:38   host: 'comms.reeder-systems.com',
+22:39:38   upgrade: 'websocket',
+22:39:38   connection: 'upgrade'
+22:39:38 }
+22:39:38 AUDIO_WS_ACCEPTED { username: 'DISPATCH-1', unitId: 'DISPATCH-1' }
+22:39:38 [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=rvfA8E4P... | 200 | 27ms
+22:39:38 [Signaling] Client connected: M3w-0I0tYn7uoAwPAAAJ
+22:39:38 [Signaling] Unit authenticated: DISPATCH-1 (DISPATCH-1) [session-verified]
+22:39:38 [Signaling] DISPATCH-1 joined channel TESTING__TESTING 1
+22:39:38 [Signaling] DISPATCH-1 joined channel DISPATCH__DISPATCH
+22:39:38 [Signaling] KEEPALIVE_OK unitId=ADMIN channelKey=DISPATCH__DISPATCH addr=12.75.146.17:31922
+22:39:38 [Signaling] PTT START request: unitId=DISPATCH-1 channelId=DISPATCH__DISPATCH
+22:39:38 [FloorControl] requestFloor: raw="DISPATCH__DISPATCH" canonical="DISPATCH__DISPATCH" unitId="DISPATCH-1"
+22:39:38 [AI-Dispatcher] PTT_START callback matched: channelId=DISPATCH__DISPATCH, unitId=DISPATCH-1
+22:39:38 [AI-Dispatcher-Signaling] 2026-04-10T02:39:29.479Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"DISPATCH-1","isEmergency":false}
+22:39:38 [Signaling] PTT_READY sent for DISPATCH-1 on DISPATCH__DISPATCH
+22:39:38 [AI-Dispatcher-Signaling] 2026-04-10T02:39:29.479Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"DISPATCH-1","alreadyConnected":true}
+22:39:38 [Signaling] PTT START granted: DISPATCH-1 on DISPATCH__DISPATCH (floor granted for holdsFloor check)
+22:39:38 [AI-Dispatcher-Signaling] 2026-04-10T02:39:31.120Z | PTT_END_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"DISPATCH-1"}
+22:39:38 [Signaling] PTT END: DISPATCH-1 on DISPATCH__DISPATCH (1641ms)
+22:39:38 [Signaling] PTT START request: unitId=DISPATCH-1 channelId=DISPATCH__DISPATCH
+22:39:38 [FloorControl] requestFloor: raw="DISPATCH__DISPATCH" canonical="DISPATCH__DISPATCH" unitId="DISPATCH-1"
+22:39:38 [AI-Dispatcher] PTT_START callback matched: channelId=DISPATCH__DISPATCH, unitId=DISPATCH-1
+22:39:38 [AI-Dispatcher-Signaling] 2026-04-10T02:39:31.735Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"DISPATCH-1","isEmergency":false}
+22:39:38 [Signaling] PTT_READY sent for DISPATCH-1 on DISPATCH__DISPATCH
+22:39:38 [AI-Dispatcher-Signaling] 2026-04-10T02:39:31.735Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"DISPATCH-1","alreadyConnected":true}
+22:39:38 [Signaling] PTT START granted: DISPATCH-1 on DISPATCH__DISPATCH (floor granted for holdsFloor check)
+22:39:38 [OpusCodec] Idle decoder swept for sender=ADMIN
+22:39:38 [Signaling] DISPATCH-1 left channel TESTING__TESTING 1
+22:39:38 [Signaling] DISPATCH-1 left channel DISPATCH__DISPATCH
+22:39:38 [API] GET /api/admin/users | user=DISPATCH-1(id:7) | sid=rvfA8E4P... | 200 | 15ms
+22:39:38 [API] GET /api/admin/logs?limit=200 | user=DISPATCH-1(id:7) | sid=rvfA8E4P... | 200 | 19ms
+22:39:38 [API] GET /api/admin/zones | user=DISPATCH-1(id:7) | sid=rvfA8E4P... | 304 | 19ms
+22:39:38 [API] GET /api/admin/channels | user=DISPATCH-1(id:7) | sid=rvfA8E4P... | 304 | 17ms
+22:39:38 [DISPATCH] getChannels: 4 radio channels returned
+22:39:38 [API] GET /api/dispatch/channels | user=DISPATCH-1(id:7) | sid=rvfA8E4P... | 304 | 20ms
+22:39:38 [API] GET /api/admin/ai-dispatch | user=DISPATCH-1(id:7) | sid=rvfA8E4P... | 304 | 26ms
+22:39:43 [Signaling] KEEPALIVE_OK unitId=ADMIN channelKey=DISPATCH__DISPATCH addr=12.75.146.17:31922
+22:39:43 [Signaling] PTT_REQUEST_SENT unitId=ADMIN channelId=DISPATCH__DISPATCH
+22:39:43 [FloorControl] requestFloor: raw="DISPATCH__DISPATCH" canonical="DISPATCH__DISPATCH" unitId="ADMIN"
+22:39:43 [Signaling] PTT_DENIED unitId=ADMIN channelId=DISPATCH__DISPATCH reason=channel_busy heldBy=DISPATCH-1
+22:39:43 [Signaling] PTT denied: ADMIN on DISPATCH__DISPATCH (channel_busy)
+22:39:51 [Signaling] PTT_REQUEST_SENT unitId=ADMIN channelId=DISPATCH__DISPATCH
+22:39:51 [FloorControl] requestFloor: raw="DISPATCH__DISPATCH" canonical="DISPATCH__DISPATCH" unitId="ADMIN"
+22:39:51 [Signaling] PTT_DENIED unitId=ADMIN channelId=DISPATCH__DISPATCH reason=channel_busy heldBy=DISPATCH-1
+22:39:51 [Signaling] PTT denied: ADMIN on DISPATCH__DISPATCH (channel_busy)
+22:39:58 [Signaling] KEEPALIVE_OK unitId=ADMIN channelKey=DISPATCH__DISPATCH addr=12.75.146.17:31922
+22:39:59 [AI-Dispatcher-Signaling] 2026-04-10T02:39:59.745Z | PTT_END_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"DISPATCH-1"}
+22:39:59 [Signaling] PTT END: DISPATCH-1 on DISPATCH__DISPATCH (28010ms)
+22:40:02 [Signaling] Grace period ended for DISPATCH__DISPATCH
+22:40:07 [Signaling] PTT START request: unitId=DISPATCH-1 channelId=DISPATCH__DISPATCH
+22:40:07 [FloorControl] requestFloor: raw="DISPATCH__DISPATCH" canonical="DISPATCH__DISPATCH" unitId="DISPATCH-1"
+22:40:07 [AI-Dispatcher] PTT_START callback matched: channelId=DISPATCH__DISPATCH, unitId=DISPATCH-1
+22:40:07 [AI-Dispatcher-Signaling] 2026-04-10T02:40:07.238Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"DISPATCH-1","isEmergency":false}
+22:40:07 [Signaling] PTT_READY sent for DISPATCH-1 on DISPATCH__DISPATCH
+22:40:07 [AI-Dispatcher-Signaling] 2026-04-10T02:40:07.238Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"DISPATCH-1","alreadyConnected":true}
+22:40:07 [Signaling] PTT START granted: DISPATCH-1 on DISPATCH__DISPATCH (floor granted for holdsFloor check)
+22:40:08 [AI-Dispatcher-Signaling] 2026-04-10T02:40:08.850Z | PTT_END_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"DISPATCH-1"}
+22:40:08 [Signaling] PTT END: DISPATCH-1 on DISPATCH__DISPATCH (1612ms)
+22:40:11 [Signaling] Grace period ended for DISPATCH__DISPATCH
+22:40:13 [Signaling] KEEPALIVE_OK unitId=ADMIN channelKey=DISPATCH__DISPATCH addr=12.75.146.17:31922
+22:40:28 [Signaling] KEEPALIVE_OK unitId=ADMIN channelKey=DISPATCH__DISPATCH addr=12.75.146.17:31922
+22:40:43 [Signaling] KEEPALIVE_OK unitId=ADMIN channelKey=DISPATCH__DISPATCH addr=12.75.146.17:31922
+22:40:54 [AUTH] /me check: hasSession=true sessionID=rvfA8E4P... cookie=true
+22:40:54 [AUTH] /me: session has user="DISPATCH-1" id=7, refreshing from DB...
+22:40:54 [AUTH] /me: returning fresh user data for "DISPATCH-1" role=admin unit_id=DISPATCH-1
+22:40:54 [API] GET /api/auth/me | user=DISPATCH-1(id:7) | sid=rvfA8E4P... | 304 | 16ms
+22:40:58 [Signaling] KEEPALIVE_OK unitId=ADMIN channelKey=DISPATCH__DISPATCH addr=12.75.146.17:31922
