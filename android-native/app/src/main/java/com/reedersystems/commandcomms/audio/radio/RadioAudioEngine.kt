@@ -701,13 +701,14 @@ class RadioAudioEngine(private val context: Context) {
                                         val preStats = if (dspRateLimiter.shouldLogDetail()) RadioDiagLog.pcmStats(monoFrame, monoFrameSizeBytes) else null
 
                                         highPassFilter(monoFrame, monoFrameSizeBytes)
+                                        txNoiseGate(monoFrame, monoFrameSizeBytes)
                                         lowPassFilter(monoFrame, monoFrameSizeBytes)
                                         softwareCompressor(monoFrame, monoFrameSizeBytes)
                                         applyGain(monoFrame, monoFrameSizeBytes, txGain)
 
                                         if (preStats != null) {
                                             val postStats = RadioDiagLog.pcmStats(monoFrame, monoFrameSizeBytes)
-                                            Log.d("[AudioDSP]", "DSP_FRAME frame=${dspRateLimiter.frameCount} pre=[$preStats] post=[$postStats] ${RadioDiagLog.elapsedTag()}")
+                                            Log.d("[AudioDSP]", "DSP_FRAME frame=${dspRateLimiter.frameCount} pre=[$preStats] post=[$postStats] gate=${if (txGateOpen) "open" else "closed"} gateEnv=${String.format("%.1f", txGateEnvelopeDb)}dB gateThreshold=${txGateThresholdDb}dB ${RadioDiagLog.elapsedTag()}")
                                         }
 
                                         if (!queue.offer(monoFrame)) {
@@ -1102,13 +1103,14 @@ class RadioAudioEngine(private val context: Context) {
                                         val preStats = if (dspRateLimiter.shouldLogDetail()) RadioDiagLog.pcmStats(monoFrame, monoFrameSizeBytes) else null
 
                                         highPassFilter(monoFrame, monoFrameSizeBytes)
+                                        txNoiseGate(monoFrame, monoFrameSizeBytes)
                                         lowPassFilter(monoFrame, monoFrameSizeBytes)
                                         softwareCompressor(monoFrame, monoFrameSizeBytes)
                                         applyGain(monoFrame, monoFrameSizeBytes, txGain)
 
                                         if (preStats != null) {
                                             val postStats = RadioDiagLog.pcmStats(monoFrame, monoFrameSizeBytes)
-                                            Log.d("[AudioDSP]", "DSP_FRAME frame=${dspRateLimiter.frameCount} pre=[$preStats] post=[$postStats] ${RadioDiagLog.elapsedTag()}")
+                                            Log.d("[AudioDSP]", "DSP_FRAME frame=${dspRateLimiter.frameCount} pre=[$preStats] post=[$postStats] gate=${if (txGateOpen) "open" else "closed"} gateEnv=${String.format("%.1f", txGateEnvelopeDb)}dB gateThreshold=${txGateThresholdDb}dB ${RadioDiagLog.elapsedTag()}")
                                         }
 
                                         if (!queue.offer(monoFrame)) {
@@ -1362,13 +1364,28 @@ class RadioAudioEngine(private val context: Context) {
     private val compAttackCoeff: Double get() = 1.0 - Math.exp(-1.0 / (actualSampleRate * txCompAttackMs))
     private val compReleaseCoeff: Double get() = 1.0 - Math.exp(-1.0 / (actualSampleRate * txCompReleaseMs))
 
-    var txGain: Double = 1.5
+    var txGain: Double = 2.5
+
+    var txGateThresholdDb: Double = -36.0
+    var txGateAttackMs: Double = 0.002
+    var txGateReleaseMs: Double = 0.08
+    private var txGateEnvelopeDb: Double = -90.0
+    private var txGateAttenuation: Double = 0.0
+    private var txGateOpen: Boolean = false
+    private var txGateLogCount: Int = 0
+
+    private val txGateAttackCoeff: Double get() = 1.0 - Math.exp(-1.0 / (actualSampleRate * txGateAttackMs))
+    private val txGateReleaseCoeff: Double get() = 1.0 - Math.exp(-1.0 / (actualSampleRate * txGateReleaseMs))
 
     private fun resetDspState() {
         hpPrevOutput = 0.0
         hpPrevInput = 0.0
         lpX1 = 0.0; lpX2 = 0.0; lpY1 = 0.0; lpY2 = 0.0
         compEnvelopeDb = -90.0
+        txGateEnvelopeDb = -90.0
+        txGateAttenuation = 0.0
+        txGateOpen = false
+        txGateLogCount = 0
     }
 
     private fun highPassFilter(buffer: ByteArray, length: Int) {
@@ -1437,6 +1454,39 @@ class RadioAudioEngine(private val context: Context) {
             val sample = buf.getShort(i * 2).toDouble() * gain
             buf.putShort(i * 2, sample.coerceIn(-32768.0, 32767.0).toInt().toShort())
         }
+    }
+
+    private fun txNoiseGate(buffer: ByteArray, length: Int) {
+        val buf = java.nio.ByteBuffer.wrap(buffer, 0, length).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+        val sampleCount = length / 2
+        var envelope = txGateEnvelopeDb
+        var atten = txGateAttenuation
+        for (i in 0 until sampleCount) {
+            val sample = buf.getShort(i * 2).toDouble()
+            val absSample = Math.abs(sample) + 1e-10
+            val inputDb = 20.0 * Math.log10(absSample / 32768.0)
+
+            val envCoeff = if (inputDb > envelope) txGateAttackCoeff else txGateReleaseCoeff
+            envelope += envCoeff * (inputDb - envelope)
+
+            val targetAtten = if (envelope < txGateThresholdDb) 0.0 else 1.0
+            val smoothCoeff = if (targetAtten > atten) txGateAttackCoeff else txGateReleaseCoeff
+            atten += smoothCoeff * (targetAtten - atten)
+
+            val output = sample * atten
+            buf.putShort(i * 2, output.coerceIn(-32768.0, 32767.0).toInt().toShort())
+        }
+        val wasOpen = txGateOpen
+        val nowOpen = atten > 0.5
+        if (nowOpen != wasOpen) {
+            txGateLogCount++
+            if (txGateLogCount <= 200) {
+                Log.d("[AudioDSP]", "TX_GATE ${if (nowOpen) "OPEN" else "CLOSED"} envelope=${String.format("%.1f", envelope)}dB threshold=${txGateThresholdDb}dB frame=${dspRateLimiter.frameCount} ${RadioDiagLog.elapsedTag()}")
+            }
+        }
+        txGateOpen = nowOpen
+        txGateEnvelopeDb = envelope
+        txGateAttenuation = atten
     }
 
     private fun acquireAudioFocus() {
