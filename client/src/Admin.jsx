@@ -17,6 +17,12 @@ export default function Admin({ user, onLogout }) {
   const [aiDispatchChannel, setAiDispatchChannel] = useState("");
   const [aiDispatchLoading, setAiDispatchLoading] = useState(false);
 
+  const [scannerEnabled, setScannerEnabled] = useState(false);
+  const [scannerChannel, setScannerChannel] = useState("");
+  const [scannerUrl, setScannerUrl] = useState("");
+  const [scannerLoading, setScannerLoading] = useState(false);
+  const [scannerTransmitting, setScannerTransmitting] = useState(false);
+
   /* --- Audio Tuning (temporary) --- */
   const [dspConfig, setDspConfig] = useState(null);
   const [dspDefaults, setDspDefaults] = useState(null);
@@ -55,24 +61,26 @@ export default function Admin({ user, onLogout }) {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [usersRes, channelsRes, zonesRes, logsRes, aiDispatchRes] = await Promise.all([
+      const [usersRes, channelsRes, zonesRes, logsRes, aiDispatchRes, scannerRes] = await Promise.all([
         fetch("/api/admin/users", { credentials: "include" }),
         fetch("/api/admin/channels", { credentials: "include" }),
         fetch("/api/admin/zones", { credentials: "include" }),
         fetch("/api/admin/logs?limit=200", { credentials: "include" }),
         fetch("/api/admin/ai-dispatch", { credentials: "include" }),
+        fetch("/api/admin/scanner", { credentials: "include" }),
       ]);
 
       if (!usersRes.ok || !channelsRes.ok || !zonesRes.ok || !logsRes.ok) {
         throw new Error("Failed to load data");
       }
 
-      const [usersData, channelsData, zonesData, logsData, aiDispatchData] = await Promise.all([
+      const [usersData, channelsData, zonesData, logsData, aiDispatchData, scannerData] = await Promise.all([
         usersRes.json(),
         channelsRes.json(),
         zonesRes.json(),
         logsRes.json(),
         aiDispatchRes.ok ? aiDispatchRes.json() : { enabled: false },
+        scannerRes.ok ? scannerRes.json() : { running: false },
       ]);
 
       setUsers(usersData.users);
@@ -81,6 +89,10 @@ export default function Admin({ user, onLogout }) {
       setLogs(logsData.logs);
       setAiDispatchEnabled(aiDispatchData.enabled);
       setAiDispatchChannel(aiDispatchData.channel || "");
+      setScannerEnabled(scannerData.running || false);
+      setScannerChannel(scannerData.channelName || "");
+      setScannerUrl(scannerData.streamUrl || "");
+      setScannerTransmitting(scannerData.transmitting || false);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -331,6 +343,36 @@ export default function Admin({ user, onLogout }) {
       } finally {
         setAiDispatchLoading(false);
       }
+    }
+  };
+
+  const toggleScanner = async () => {
+    if (!scannerEnabled && (!scannerChannel || !scannerUrl)) {
+      alert("Please select a channel and enter a stream URL first");
+      return;
+    }
+    setScannerLoading(true);
+    try {
+      const res = await fetch("/api/admin/scanner", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          enabled: !scannerEnabled,
+          streamUrl: scannerUrl,
+          channelName: scannerChannel,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to toggle scanner feed");
+      const data = await res.json();
+      setScannerEnabled(data.running || false);
+      if (data.channelName) setScannerChannel(data.channelName);
+      if (data.streamUrl) setScannerUrl(data.streamUrl);
+      setScannerTransmitting(data.transmitting || false);
+    } catch (err) {
+      alert("Failed to toggle scanner feed: " + err.message);
+    } finally {
+      setScannerLoading(false);
     }
   };
 
@@ -1128,6 +1170,99 @@ export default function Admin({ user, onLogout }) {
                     </div>
                   </div>
                 </div>
+              </div>
+
+              <div style={{ background: "#1e1e2e", borderRadius: 12, padding: 24 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>Live Scanner Feed</h3>
+                    <p style={{ margin: "8px 0 0", color: "#888", fontSize: 14 }}>
+                      Stream audio from a Broadcastify or HTTP audio stream into a channel. The scanner appears as a virtual "SCANNER" unit with real PTT behavior.
+                    </p>
+                  </div>
+                  <button
+                    onClick={toggleScanner}
+                    disabled={scannerLoading}
+                    style={{
+                      padding: "12px 24px",
+                      borderRadius: 8,
+                      border: "none",
+                      cursor: scannerLoading ? "not-allowed" : "pointer",
+                      fontSize: 14,
+                      fontWeight: 600,
+                      minWidth: 100,
+                      flexShrink: 0,
+                      background: scannerEnabled ? "#22c55e" : "#444",
+                      color: "#fff",
+                      transition: "all 0.2s",
+                      opacity: scannerLoading ? 0.6 : 1,
+                    }}
+                  >
+                    {scannerLoading ? "..." : scannerEnabled ? "ON" : "OFF"}
+                  </button>
+                </div>
+
+                <div style={{ marginTop: 16 }}>
+                  <label style={{ display: "block", fontSize: 14, color: "#888", marginBottom: 8 }}>
+                    Scanner Channel
+                  </label>
+                  <select
+                    value={scannerChannel}
+                    onChange={(e) => setScannerChannel(e.target.value)}
+                    disabled={scannerLoading || scannerEnabled}
+                    style={{
+                      width: "100%",
+                      padding: "10px 12px",
+                      borderRadius: 6,
+                      border: "1px solid #444",
+                      background: "#2a2a3e",
+                      color: "#fff",
+                      fontSize: 14,
+                    }}
+                  >
+                    <option value="">Select a channel...</option>
+                    {channels.filter(c => c.enabled).map((c) => (
+                      <option key={c.id} value={c.name}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div style={{ marginTop: 12 }}>
+                  <label style={{ display: "block", fontSize: 14, color: "#888", marginBottom: 8 }}>
+                    Stream URL
+                  </label>
+                  <input
+                    type="text"
+                    value={scannerUrl}
+                    onChange={(e) => setScannerUrl(e.target.value)}
+                    disabled={scannerLoading || scannerEnabled}
+                    placeholder="https://broadcastify.cdnstream1.com/FEED_ID"
+                    style={{
+                      width: "100%",
+                      padding: "10px 12px",
+                      borderRadius: 6,
+                      border: "1px solid #444",
+                      background: "#2a2a3e",
+                      color: "#fff",
+                      fontSize: 14,
+                      boxSizing: "border-box",
+                    }}
+                  />
+                </div>
+
+                {scannerEnabled && scannerChannel && (
+                  <div style={{ marginTop: 16, padding: 12, background: "#22c55e22", borderRadius: 8, border: "1px solid #22c55e44" }}>
+                    <p style={{ margin: 0, color: "#22c55e", fontSize: 13 }}>
+                      Scanner feed is active on channel: <strong>{scannerChannel}</strong>
+                      {scannerTransmitting && (
+                        <span style={{ marginLeft: 8, color: "#f59e0b", fontWeight: 600 }}>TX</span>
+                      )}
+                    </p>
+                    <p style={{ margin: "4px 0 0", color: "#888", fontSize: 12 }}>
+                      {scannerUrl}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </div>

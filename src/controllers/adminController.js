@@ -5,6 +5,7 @@ import { success, error, created } from '../utils/response.js';
 import { startDispatcher, stopDispatcher } from '../services/aiDispatchService.js';
 import { getAiDispatchChannel, setAiDispatchChannel, getAllChannels } from '../db/index.js';
 import { signalingService } from '../services/signalingService.js';
+import { scannerFeedService } from '../services/scannerFeedService.js';
 
 const DSP_DEFAULTS = {
   txHpAlpha: 0.9889,
@@ -354,6 +355,70 @@ export async function setAiDispatch(req, res) {
   } catch (err) {
     console.error('Set AI dispatch error:', err);
     error(res, 'Failed to set AI dispatch status', 500);
+  }
+}
+
+export function getScannerFeed(req, res) {
+  try {
+    const status = scannerFeedService.getStatus();
+    success(res, status);
+  } catch (err) {
+    console.error('Get scanner feed error:', err);
+    error(res, 'Failed to get scanner feed status', 500);
+  }
+}
+
+export async function setScannerFeed(req, res) {
+  try {
+    const { enabled, streamUrl, channelName } = req.body;
+
+    if (typeof enabled !== 'boolean') {
+      return error(res, 'enabled must be a boolean', 400);
+    }
+
+    if (enabled) {
+      if (!streamUrl || !channelName) {
+        return error(res, 'streamUrl and channelName are required to enable scanner', 400);
+      }
+
+      try {
+        const parsedUrl = new URL(streamUrl);
+        if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+          return error(res, 'Stream URL must use http or https protocol', 400);
+        }
+      } catch (_) {
+        return error(res, 'Invalid stream URL', 400);
+      }
+
+      const allChannels = await getAllChannels();
+      const channelData = allChannels.find(ch => (ch.name === channelName || ch.room_key === channelName) && ch.enabled);
+      if (!channelData) {
+        return error(res, 'Channel not found or not enabled', 400);
+      }
+
+      const roomKey = channelData.room_key || channelName;
+
+      try {
+        await scannerFeedService.start(streamUrl, roomKey, channelData.name);
+      } catch (startErr) {
+        return error(res, `Failed to start scanner: ${startErr.message}`, 500);
+      }
+    } else {
+      await scannerFeedService.stop();
+    }
+
+    await authService.logUserActivity(
+      req.session.user.id,
+      req.session.user.username,
+      'admin_toggle_scanner_feed',
+      { enabled, streamUrl, channelName }
+    );
+
+    const status = scannerFeedService.getStatus();
+    success(res, status);
+  } catch (err) {
+    console.error('Set scanner feed error:', err);
+    error(res, 'Failed to set scanner feed', 500);
   }
 }
 

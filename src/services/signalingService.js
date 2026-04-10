@@ -54,10 +54,19 @@ class SignalingService {
     this.GRACE_PERIOD_MS = 3000;
     
     this._eventCallbacks = {
+      pttAttempt: [],
       pttStart: [],
       pttEnd: [],
       emergencyStart: [],
       emergencyEnd: [],
+    };
+  }
+
+  onPttAttempt(callback) {
+    this._eventCallbacks.pttAttempt.push(callback);
+    return () => {
+      const idx = this._eventCallbacks.pttAttempt.indexOf(callback);
+      if (idx > -1) this._eventCallbacks.pttAttempt.splice(idx, 1);
     };
   }
 
@@ -445,6 +454,12 @@ class SignalingService {
       socket.emit('error', { message: 'Not authenticated' });
       return;
     }
+
+    this._emitCallback('pttAttempt', {
+      unitId: socket.unitId,
+      channelId,
+      timestamp: Date.now(),
+    });
     
     const existingTransmission = this.activeTransmissions.get(channelId);
     if (existingTransmission && existingTransmission.unitId !== socket.unitId) {
@@ -1230,6 +1245,12 @@ class SignalingService {
       });
       return;
     }
+
+    this._emitCallback('pttAttempt', {
+      unitId: socket.unitId,
+      channelId,
+      timestamp: Date.now(),
+    });
 
     console.log(`[Signaling] PTT_REQUEST_SENT unitId=${socket.unitId} channelId=${channelId}`);
 

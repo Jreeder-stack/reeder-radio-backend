@@ -44,6 +44,7 @@ The dispatch console is a PWA with responsive design, featuring auto-login, dark
 - **Audio Export System:** Exports channel audio messages within a specified date range as a ZIP file.
 - **Recording Logs (Admin):** Review, playback, and export radio transmissions with filtering options and PDF/ZIP export. Audio data is persisted in the PostgreSQL database (`audio_data BYTEA` column on `channel_messages`) so recordings survive server restarts and deploys. On startup, any WAV files on disk are migrated into the database. The frontend gracefully handles missing audio (disabled Play/Download buttons with "Unavailable" label) and 0-second recordings.
 - **Clear Air:** Dispatcher-activated mode for emergency traffic, forcing units onto a channel with a prominent visual alert.
+- **Live Scanner Feed:** Streams audio from HTTP audio streams (Broadcastify, etc.) into a channel as a virtual "SCANNER" unit. Uses ffmpeg to decode MP3/AAC to 16kHz PCM, applies Voice Activity Detection (VAD) via RMS energy thresholds for natural transmission bursts, encodes to Opus at 16kHz with a dedicated encoder, and injects via audioRelayService. Integrates with floor control (yields to real users) and signaling (PTT start/end events). Controlled from admin panel Settings tab.
 
 ## External Dependencies
 - **opusscript:** Opus audio codec (server-side encoding/decoding for AI dispatcher, recording tap, and PCM fallback).
