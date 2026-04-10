@@ -1,4 +1,4 @@
-// PCM-only websocket bridge (merge-resolved baseline).
+// WebSocket audio bridge — supports PCM (0x01) and Opus passthrough (0x02) binary frames.
 import { WebSocketServer } from 'ws';
 import cookie from 'cookie';
 import signature from 'cookie-signature';
@@ -185,7 +185,8 @@ class WsAudioBridge {
     if (AUDIO_DIAG) console.log(`[WsAudioBridge] CONNECTION_REGISTERED channelId=${channelId} unitId=${unitId}`);
 
     ws.on('message', (raw) => {
-      if (Buffer.isBuffer(raw) && raw.length >= 7 && raw[0] === 0x01) {
+      if (Buffer.isBuffer(raw) && raw.length >= 7 && (raw[0] === 0x01 || raw[0] === 0x02)) {
+        const marker = raw[0];
         let offset = 1;
         const sequence = raw.readUInt32LE(offset); offset += 4;
         const chLen = raw[offset]; offset += 1;
@@ -195,13 +196,25 @@ class WsAudioBridge {
         const senderLen = raw[offset]; offset += 1;
         if (offset + senderLen > raw.length) return;
         offset += senderLen;
-        const pcmByteLen = raw.length - offset;
-        if (pcmByteLen < 2 || pcmByteLen % 2 !== 0) return;
 
         if (binChannelId !== channelId) {
           console.warn(`[WsAudioBridge] CHANNEL_MISMATCH wsChannel=${channelId} packetChannel=${binChannelId} unitId=${unitId}`);
           return;
         }
+
+        if (marker === 0x02) {
+          const opusPayload = raw.slice(offset);
+          if (opusPayload.length === 0) return;
+          try {
+            audioRelayService.injectAudio(channelId, unitId, sequence, opusPayload);
+          } catch (err) {
+            console.error('WS_TO_UDP_RELAY_ERROR', { channelId, senderUnitId: unitId, sequence, error: err.message });
+          }
+          return;
+        }
+
+        const pcmByteLen = raw.length - offset;
+        if (pcmByteLen < 2 || pcmByteLen % 2 !== 0) return;
 
         try {
           let pcmInt16 = raw.slice(offset, offset + pcmByteLen);

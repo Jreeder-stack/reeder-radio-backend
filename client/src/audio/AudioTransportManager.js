@@ -1,17 +1,29 @@
 import { notifyChannelJoin } from '../utils/api.js';
 import { signalingManager } from '../signaling/SignalingManager.js';
 import { PTT_STATES } from '../constants/pttStates.js';
-import { buildPcmPacket, buildBinaryFrame, validatePcmPacket, parseBinaryAudioFrame } from './PcmPacket.js';
+import { buildPcmPacket, buildBinaryFrame, buildBinaryFrameOpus, validatePcmPacket, parseBinaryAudioFrame } from './PcmPacket.js';
 import { PcmCaptureEngine } from './PcmCaptureEngine.js';
 import { PcmPlaybackEngine } from './PcmPlaybackEngine.js';
+import { OpusDecoder } from 'opus-decoder';
+import { OpusBrowserEncoder } from './OpusBrowserEncoder.js';
 
 const WS_HEALTH_CHECK_INTERVAL = 5000;
 const WS_LIVENESS_TIMEOUT = 45000;
 const REORDER_BUFFER_SIZE = 10;
 const REORDER_MAX_LATE = 10;
+const PLC_MAX_CONSECUTIVE = 3;
 
 const RECONNECT_BASE_MS = 1000;
 const RECONNECT_MAX_MS = 10000;
+
+function float32ToInt16(float32) {
+  const int16 = new Int16Array(float32.length);
+  for (let i = 0; i < float32.length; i++) {
+    const s = Math.max(-1, Math.min(1, float32[i]));
+    int16[i] = s < 0 ? s * 32768 : s * 32767;
+  }
+  return int16;
+}
 
 class AudioTransportManager {
   constructor() {
@@ -40,6 +52,10 @@ class AudioTransportManager {
     this._txSequence = 0;
     this._loopbackOk = false;
 
+    this._opusDecoders = new Map();
+    this._opusDecoderReady = new Map();
+    this._txEncoder = new OpusBrowserEncoder();
+
     this._reorderStreams = new Map();
     this._latePackets = 0;
     this._reorderedPackets = 0;
@@ -51,6 +67,46 @@ class AudioTransportManager {
     this._reconnectAttempts = new Map();
     this._reconnectTimers = new Map();
     this._startHealthCheck();
+  }
+
+  async _getOpusDecoder(senderKey) {
+    if (this._opusDecoders.has(senderKey)) {
+      try {
+        await this._opusDecoderReady.get(senderKey);
+        return this._opusDecoders.get(senderKey);
+      } catch (err) {
+        console.warn('[AudioTransport] Cached decoder init failed for', senderKey, '- recreating');
+        this._opusDecoders.delete(senderKey);
+        this._opusDecoderReady.delete(senderKey);
+      }
+    }
+    const decoder = new OpusDecoder({ channels: 1, sampleRate: 48000 });
+    const readyPromise = decoder.ready.then(() => decoder).catch((err) => {
+      this._opusDecoders.delete(senderKey);
+      this._opusDecoderReady.delete(senderKey);
+      throw err;
+    });
+    this._opusDecoders.set(senderKey, decoder);
+    this._opusDecoderReady.set(senderKey, readyPromise);
+    await readyPromise;
+    return decoder;
+  }
+
+  _resetOpusDecoderForChannel(channelId) {
+    for (const [key, decoder] of this._opusDecoders) {
+      if (key.startsWith(channelId + '::')) {
+        try { decoder.free(); } catch (_) {}
+        this._opusDecoders.delete(key);
+        this._opusDecoderReady.delete(key);
+      }
+    }
+  }
+
+  _ensureTxEncoder() {
+    if (!this._txEncoder.isReady()) {
+      this._txEncoder.init();
+    }
+    return this._txEncoder.isReady();
   }
 
   _startHealthCheck() {
@@ -239,7 +295,12 @@ class AudioTransportManager {
           if (!parsed) return;
           if (this.mutedChannels.has(channelName)) return;
           if (parsed.senderUnitId && parsed.senderUnitId === conn.unitId) return;
-          await this._enqueueWithReorder(parsed.sequence, parsed.samples, parsed.channelId || channelName, parsed.senderUnitId);
+          const chId = parsed.channelId || channelName;
+          if (parsed.codec === 'opus') {
+            await this._enqueueWithReorder(parsed.sequence, parsed.opusData, chId, parsed.senderUnitId, 'opus');
+          } else {
+            await this._enqueueWithReorder(parsed.sequence, parsed.samples, chId, parsed.senderUnitId, 'pcm');
+          }
           return;
         }
 
@@ -263,7 +324,7 @@ class AudioTransportManager {
         if (msg.senderUnitId && msg.senderUnitId === conn.unitId) return;
 
         const frame = new Int16Array(msg.payload);
-        await this._enqueueWithReorder(msg.sequence, frame, msg.channelId || channelName, msg.senderUnitId || 'unknown');
+        await this._enqueueWithReorder(msg.sequence, frame, msg.channelId || channelName, msg.senderUnitId || 'unknown', 'pcm');
       };
 
       ws.onclose = () => {
@@ -305,6 +366,7 @@ class AudioTransportManager {
     this._targetChannels.delete(channelName);
     this._cancelReconnect(channelName);
     this._resetReorderForChannel(channelName);
+    this._resetOpusDecoderForChannel(channelName);
     const conn = this.rooms.get(channelName);
     if (!conn) return;
     this.rooms.delete(channelName);
@@ -325,6 +387,15 @@ class AudioTransportManager {
       if (stream.flushTimer) clearTimeout(stream.flushTimer);
     }
     this._reorderStreams.clear();
+    for (const [, decoder] of this._opusDecoders) {
+      try { decoder.free(); } catch (_) {}
+    }
+    this._opusDecoders.clear();
+    this._opusDecoderReady.clear();
+    if (this._txEncoder) {
+      this._txEncoder.destroy();
+      this._txEncoder = new OpusBrowserEncoder();
+    }
     for (const channel of [...this.rooms.keys()]) {
       await this.disconnect(channel);
     }
@@ -421,11 +492,24 @@ class AudioTransportManager {
     this._loopbackOk = true;
     await this._playback.ensureAudioContextResumed('pttActivity');
 
+    const opusTxReady = this._ensureTxEncoder();
+
     await this._capture.start(async (frame) => {
       if (!this._loopbackOk) return;
 
-      const binFrame = buildBinaryFrame(this._txSequence++, txChannel, room.unitId, frame);
-      room.ws.send(binFrame);
+      if (opusTxReady) {
+        const encoded = this._txEncoder.encode(frame);
+        if (encoded) {
+          const binFrame = buildBinaryFrameOpus(this._txSequence++, txChannel, room.unitId, encoded);
+          room.ws.send(binFrame);
+        } else {
+          const binFrame = buildBinaryFrame(this._txSequence++, txChannel, room.unitId, frame);
+          room.ws.send(binFrame);
+        }
+      } else {
+        const binFrame = buildBinaryFrame(this._txSequence++, txChannel, room.unitId, frame);
+        room.ws.send(binFrame);
+      }
     });
 
     if (this.pttState !== PTT_STATES.ARMING) {
@@ -551,7 +635,7 @@ class AudioTransportManager {
     }
   }
 
-  async _enqueueWithReorder(sequence, samples, channelId, senderUnitId) {
+  async _enqueueWithReorder(sequence, payload, channelId, senderUnitId, codec = 'pcm') {
     const stream = this._getReorderStream(channelId, senderUnitId);
 
     if (stream.expectedSequence === -1 || sequence < stream.expectedSequence - REORDER_MAX_LATE * 5) {
@@ -565,9 +649,9 @@ class AudioTransportManager {
     }
 
     if (sequence === stream.expectedSequence) {
-      await this._playbackFrame(samples);
+      await this._deliverFrame(stream, sequence, payload, codec, channelId, senderUnitId);
       stream.expectedSequence = sequence + 1;
-      await this._flushReorderBuffer(stream);
+      await this._flushReorderBuffer(stream, channelId, senderUnitId);
       return;
     }
 
@@ -579,14 +663,14 @@ class AudioTransportManager {
 
     this._reorderedPackets++;
     this._logReorderStats();
-    stream.buffer.push({ sequence, samples });
+    stream.buffer.push({ sequence, payload, codec });
     stream.buffer.sort((a, b) => a.sequence - b.sequence);
 
     if (stream.buffer.length > REORDER_BUFFER_SIZE) {
       const oldest = stream.buffer.shift();
       stream.expectedSequence = oldest.sequence + 1;
-      await this._playbackFrame(oldest.samples);
-      await this._flushReorderBuffer(stream);
+      await this._deliverFrame(stream, oldest.sequence, oldest.payload, oldest.codec, channelId, senderUnitId);
+      await this._flushReorderBuffer(stream, channelId, senderUnitId);
     }
 
     if (!stream.flushTimer) {
@@ -595,19 +679,67 @@ class AudioTransportManager {
         if (stream.buffer.length > 0) {
           const oldest = stream.buffer.shift();
           stream.expectedSequence = oldest.sequence + 1;
-          await this._playbackFrame(oldest.samples);
-          await this._flushReorderBuffer(stream);
+          await this._deliverFrame(stream, oldest.sequence, oldest.payload, oldest.codec, channelId, senderUnitId);
+          await this._flushReorderBuffer(stream, channelId, senderUnitId);
         }
       }, 40);
     }
   }
 
-  async _flushReorderBuffer(stream) {
+  async _flushReorderBuffer(stream, channelId, senderUnitId) {
     while (stream.buffer.length > 0 && stream.buffer[0].sequence === stream.expectedSequence) {
       const entry = stream.buffer.shift();
-      await this._playbackFrame(entry.samples);
       stream.expectedSequence = entry.sequence + 1;
+      await this._deliverFrame(stream, entry.sequence, entry.payload, entry.codec, channelId, senderUnitId);
     }
+  }
+
+  async _deliverFrame(stream, sequence, payload, codec, channelId, senderUnitId) {
+    const lastSeq = stream.lastDeliveredSeq;
+    if (lastSeq !== undefined && codec === 'opus') {
+      const gap = sequence - lastSeq - 1;
+      if (gap > 0 && gap <= PLC_MAX_CONSECUTIVE) {
+        await this._generatePlc(channelId, senderUnitId, gap);
+      }
+    }
+    stream.lastDeliveredSeq = sequence;
+    await this._decodeAndPlayback(payload, codec, channelId, senderUnitId);
+  }
+
+  async _decodeAndPlayback(payload, codec, channelId, senderUnitId) {
+    if (codec === 'opus') {
+      try {
+        const decoderKey = `${channelId}::${senderUnitId}`;
+        const decoder = await this._getOpusDecoder(decoderKey);
+        const decoded = decoder.decodeFrame(payload);
+        if (decoded.samplesDecoded > 0 && decoded.channelData && decoded.channelData[0]) {
+          const int16 = float32ToInt16(decoded.channelData[0]);
+          await this._playbackFrame(int16);
+        }
+      } catch (err) {
+        console.warn('OPUS_DECODE_ERROR', err.message);
+      }
+    } else {
+      await this._playbackFrame(payload);
+    }
+  }
+
+  async _generatePlc(channelId, senderUnitId, count) {
+    try {
+      const decoderKey = `${channelId}::${senderUnitId}`;
+      const decoder = await this._getOpusDecoder(decoderKey);
+      for (let i = 0; i < count; i++) {
+        try {
+          const plc = decoder.decodeFrame(new Uint8Array(0));
+          if (plc.samplesDecoded > 0 && plc.channelData && plc.channelData[0]) {
+            const int16 = float32ToInt16(plc.channelData[0]);
+            await this._playbackFrame(int16);
+          }
+        } catch (_) {
+          break;
+        }
+      }
+    } catch (_) {}
   }
 
   _logReorderStats() {

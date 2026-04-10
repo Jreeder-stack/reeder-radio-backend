@@ -20,6 +20,7 @@ const WS_PACING_INTERVAL_MS = 20;
 const WS_PACING_MAX_QUEUE = 25;
 const PCM_FRAME_SAMPLES = 960;
 const WS_BINARY_MARKER = 0x01;
+const WS_BINARY_MARKER_OPUS = 0x02;
 const PLC_MAX_CONSECUTIVE = 3;
 
 class AudioRelayService {
@@ -241,6 +242,27 @@ class AudioRelayService {
     return buf;
   }
 
+  _buildBinaryWsFrameOpus(sequence, channelKey, senderUnitId, opusPayload) {
+    const channelBytes = Buffer.from(channelKey.slice(0, 255), 'utf8');
+    const senderBytes = Buffer.from(senderUnitId.slice(0, 255), 'utf8');
+    const headerLen = 1 + 4 + 1 + channelBytes.length + 1 + senderBytes.length;
+    const payloadLen = opusPayload.length;
+    const buf = Buffer.alloc(headerLen + payloadLen);
+    let offset = 0;
+    buf[offset++] = WS_BINARY_MARKER_OPUS;
+    buf.writeUInt32LE(sequence, offset); offset += 4;
+    buf[offset++] = channelBytes.length;
+    channelBytes.copy(buf, offset); offset += channelBytes.length;
+    buf[offset++] = senderBytes.length;
+    senderBytes.copy(buf, offset); offset += senderBytes.length;
+    if (Buffer.isBuffer(opusPayload)) {
+      opusPayload.copy(buf, offset);
+    } else {
+      buf.set(opusPayload, offset);
+    }
+    return buf;
+  }
+
   _broadcastToAll(channelKey, senderUnitId, rxPayload, sequence, opusPayload, channelIdNumeric = null, resolvedSender = null, rawPcmSamples = null) {
     if (AUDIO_DIAG && sequence % 100 === 0) {
       const udpKeys = [...this.subscribers.keys()];
@@ -277,82 +299,8 @@ class AudioRelayService {
     {
       const wsSubs = this._wsSubscribers.get(channelKey);
       if (wsSubs && wsSubs.size > 0) {
-        let int16View = null;
-        if (rawPcmSamples) {
-          int16View = (rawPcmSamples instanceof Int16Array) ? rawPcmSamples : new Int16Array(rawPcmSamples);
-        } else {
-          try {
-            const pcmBuf = opusCodec.decodeOpusToPcm(opusPayload, resolvedSender || senderUnitId);
-            int16View = new Int16Array(pcmBuf.buffer, pcmBuf.byteOffset, pcmBuf.byteLength / 2);
-          } catch (err) {
-            console.error(`[AudioRelay] Opus→PCM decode error: ${err.message}`);
-          }
-        }
-        if (int16View) {
-          const binaryFrame = this._buildBinaryWsFrame(sequence, channelKey, senderUnitId, int16View);
-          this._enqueueWsFrame(channelKey, senderUnitId, binaryFrame);
-        }
-      }
-    }
-
-    if (this._recordingTap) {
-      try {
-        this._recordingTap({ channelId: channelKey, unitId: senderUnitId, sequence, opusPayload, timestamp: Date.now() });
-      } catch (err) {
-        console.error('[AudioRelay] Recording tap error:', err.message);
-      }
-    }
-  }
-
-  _broadcastToAllDirect(channelKey, senderUnitId, rxPayload, sequence, opusPayload, channelIdNumeric = null, resolvedSender = null) {
-    const udpSubs = this.subscribers.get(channelKey);
-    if (udpSubs) {
-      for (const [subUnitId, subInfo] of udpSubs) {
-        if (subUnitId === senderUnitId) continue;
-        subInfo.lastSeen = Date.now();
-        try {
-          this.socket.send(rxPayload, 0, rxPayload.length, subInfo.port, subInfo.address);
-        } catch (err) {
-          console.error(`[AudioRelay] Send error to ${subUnitId}:`, err.message);
-        }
-      }
-    }
-
-    const listeners = this._audioListeners.get(channelKey);
-    if (listeners) {
-      for (const [listenerId, callback] of listeners) {
-        if (listenerId === senderUnitId) continue;
-        try {
-          callback({ channelId: channelKey, unitId: senderUnitId, sequence, opusPayload, timestamp: Date.now() });
-        } catch (err) {
-          console.error(`[AudioRelay] Listener error for ${listenerId}:`, err.message);
-        }
-      }
-    }
-
-    {
-      const wsSubs = this._wsSubscribers.get(channelKey);
-      if (wsSubs && wsSubs.size > 0) {
-        let int16View = null;
-        try {
-          const pcmBuf = opusCodec.decodeOpusToPcm(opusPayload, resolvedSender || senderUnitId);
-          int16View = new Int16Array(pcmBuf.buffer, pcmBuf.byteOffset, pcmBuf.byteLength / 2);
-        } catch (err) {
-          console.error(`[AudioRelay] Opus→PCM decode error: ${err.message}`);
-        }
-        if (int16View) {
-          const binaryFrame = this._buildBinaryWsFrame(sequence, channelKey, senderUnitId, int16View);
-          for (const [subUnitId, ws] of wsSubs) {
-            if (subUnitId === senderUnitId) continue;
-            try {
-              if (ws.readyState === 1) {
-                ws.send(binaryFrame);
-              }
-            } catch (err) {
-              console.error(`[AudioRelay] WS send error to ${subUnitId}:`, err.message);
-            }
-          }
-        }
+        const binaryFrame = this._buildBinaryWsFrameOpus(sequence, channelKey, senderUnitId, opusPayload);
+        this._enqueueWsFrame(channelKey, senderUnitId, binaryFrame);
       }
     }
 
@@ -558,26 +506,7 @@ class AudioRelayService {
     const lastSeqEntry = this._senderLastSeq.get(senderSeqKey);
     const seqForward = lastSeqEntry !== undefined ? ((sequence - lastSeqEntry) & 0xFFFF) : 0;
     const isForward = lastSeqEntry === undefined || (seqForward > 0 && seqForward < 0x8000);
-    if (isForward && lastSeqEntry !== undefined) {
-      if (seqForward > 1 && seqForward <= PLC_MAX_CONSECUTIVE + 1) {
-        for (let i = 1; i < seqForward; i++) {
-          const plcSeq = (lastSeqEntry + i) & 0xFFFF;
-          try {
-            const plcPcm = opusCodec.decodePlc(senderUnitId);
-            const int16View = new Int16Array(plcPcm.buffer, plcPcm.byteOffset, plcPcm.byteLength / 2);
-            const wsSubs = this._wsSubscribers.get(channelKey);
-            if (wsSubs && wsSubs.size > 0) {
-              const binaryFrame = this._buildBinaryWsFrame(plcSeq, channelKey, senderUnitId, int16View);
-              this._enqueueWsFrame(channelKey, senderUnitId, binaryFrame);
-            }
-            if (AUDIO_DIAG) {
-              console.log(`[AudioRelay] PLC_FRAME channelKey=${channelKey} sender=${senderUnitId} plcSeq=${plcSeq}`);
-            }
-          } catch (err) {
-            console.warn(`[AudioRelay] PLC_ERROR sender=${senderUnitId} seq=${plcSeq}: ${err.message}`);
-          }
-        }
-      }
+    if (isForward) {
       this._senderLastSeq.set(senderSeqKey, sequence);
       this._senderLastSeqTime.set(senderSeqKey, Date.now());
     } else if (lastSeqEntry === undefined) {

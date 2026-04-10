@@ -14,9 +14,10 @@ export default defineConfig({
   plugins: [
     react(),
     legacy({
-      targets: ['Chrome >= 51', 'Android >= 7'],
+      targets: ['Chrome >= 67', 'Android >= 7'],
       additionalLegacyPolyfills: ['regenerator-runtime/runtime'],
       renderLegacyChunks: true,
+      modernTargets: ['Chrome >= 67', 'Firefox >= 68', 'Safari >= 14'],
     }),
   ],
   define: {
