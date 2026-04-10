@@ -487,6 +487,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         app.signalingRepository.emergencyEnd(channel.roomKey)
         locationTracker.stopTracking()
         if (_uiState.value.pttState != PttState.IDLE) onPttUp()
+        sendServiceIntent(BackgroundAudioService.ACTION_EMERGENCY_CLEAR)
     }
 
     fun cycleStatus() {

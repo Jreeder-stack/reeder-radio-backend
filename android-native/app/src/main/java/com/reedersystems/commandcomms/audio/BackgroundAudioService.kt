@@ -183,6 +183,7 @@ class BackgroundAudioService : Service() {
             }
             ACTION_EMERGENCY_DOWN -> handleEmergencyDown()
             ACTION_EMERGENCY_UP -> handleEmergencyUp()
+            ACTION_EMERGENCY_CLEAR -> handleEmergencyClear()
             ACTION_UPDATE_CHANNEL -> {
                 val channelId = intent.getIntExtra(EXTRA_CHANNEL_ID, -1)
                 val roomKey = intent.getStringExtra(EXTRA_ROOM_KEY)
@@ -210,12 +211,33 @@ class BackgroundAudioService : Service() {
         return START_STICKY
     }
 
+    private fun handleEmergencyClear() {
+        Log.d(TAG, "handleEmergencyClear emergencyActive=$emergencyActive pttState=$pttState")
+        emergencyActive = false
+        emergencyActivatingJob?.cancel()
+        emergencyActivatingJob = null
+
+        if (pttState == PttState.TRANSMITTING || pttState == PttState.CONNECTING || pttState == PttState.CLEANING_UP) {
+            handleRadioPttUp()
+        }
+
+        sendEmergencyCancelled()
+        updateNotification("Radio — Standby")
+        radioEngine?.startReceive()
+        Log.d(TAG, "handleEmergencyClear: cleanup complete, RX pipeline ensured")
+    }
+
     private fun handleEmergencyDown() {
         Log.d(TAG, "handleEmergencyDown emergencyActive=$emergencyActive")
 
         if (emergencyActive) {
-            app.keyEventFlow.tryEmit(KeyAction.EmergencyDown)
-            return
+            if (pttState == PttState.IDLE) {
+                Log.w(TAG, "handleEmergencyDown: emergencyActive=true but pttState=IDLE — force-resetting stale flag")
+                emergencyActive = false
+            } else {
+                app.keyEventFlow.tryEmit(KeyAction.EmergencyDown)
+                return
+            }
         }
 
         if (emergencyActivatingJob != null) return
@@ -237,8 +259,11 @@ class BackgroundAudioService : Service() {
         wl.acquire(5_000L)
 
         emergencyActivatingJob = scope.launch {
-            emergencyActivatingJob = null
-            activateEmergency(channelId, channelKey)
+            try {
+                activateEmergency(channelId, channelKey)
+            } finally {
+                emergencyActivatingJob = null
+            }
         }
     }
 
@@ -299,7 +324,7 @@ class BackgroundAudioService : Service() {
 
         if (signalingEventsJob == null) {
             signalingEventsJob = scope.launch {
-                app.signalingRepository.events.collectLatest { event ->
+                app.signalingRepository.events.collect { event ->
                     when (event) {
                         is SignalingEvent.EmergencyEnd -> {
                             if (emergencyActive) {
@@ -890,6 +915,7 @@ class BackgroundAudioService : Service() {
         const val ACTION_PTT_TX_ABORTED = "com.reedersystems.commandcomms.PTT_TX_ABORTED"
         const val ACTION_PTT_TX_STARTED = "com.reedersystems.commandcomms.PTT_TX_STARTED"
         const val ACTION_PTT_TX_ENDED = "com.reedersystems.commandcomms.PTT_TX_ENDED"
+        const val ACTION_EMERGENCY_CLEAR = "com.reedersystems.commandcomms.SVC_EMERGENCY_CLEAR"
         const val ACTION_EMERGENCY_ACTIVATED = "com.reedersystems.commandcomms.EMERGENCY_ACTIVATED"
         const val ACTION_EMERGENCY_CANCELLED = "com.reedersystems.commandcomms.EMERGENCY_CANCELLED"
         const val EXTRA_CHANNEL_ID = "channel_id"
