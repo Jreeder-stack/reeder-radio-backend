@@ -9,9 +9,9 @@ import { OpusBrowserEncoder } from './OpusBrowserEncoder.js';
 
 const WS_HEALTH_CHECK_INTERVAL = 5000;
 const WS_LIVENESS_TIMEOUT = 45000;
-const REORDER_BUFFER_SIZE = 10;
-const REORDER_MAX_LATE = 10;
-const PLC_MAX_CONSECUTIVE = 3;
+const REORDER_BUFFER_SIZE = 20;
+const REORDER_MAX_LATE = 20;
+const PLC_MAX_CONSECUTIVE = 7;
 
 const RECONNECT_BASE_MS = 1000;
 const RECONNECT_MAX_MS = 10000;
@@ -682,7 +682,7 @@ class AudioTransportManager {
           await this._deliverFrame(stream, oldest.sequence, oldest.payload, oldest.codec, channelId, senderUnitId);
           await this._flushReorderBuffer(stream, channelId, senderUnitId);
         }
-      }, 40);
+      }, 90);
     }
   }
 

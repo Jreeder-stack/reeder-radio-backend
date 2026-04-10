@@ -86,6 +86,15 @@ class RadioAudioEngine(private val context: Context) {
     }
 
     var onDisconnected: (() -> Unit)? = null
+    var onTxStall: ((reason: String) -> Unit)? = null
+
+    @Volatile
+    private var lastSuccessfulSendMs: Long = 0L
+    private var txHeartbeatJob: Job? = null
+    private companion object TxHeartbeat {
+        const val TX_HEARTBEAT_CHECK_INTERVAL_MS = 500L
+        const val TX_STALL_THRESHOLD_MS = 1000L
+    }
 
     val isConnected: Boolean get() = started
 
@@ -116,6 +125,7 @@ class RadioAudioEngine(private val context: Context) {
         captureJob?.cancel()
         captureJob = null
         isTransmitting = false
+        stopTxHeartbeatMonitor()
         isPreCapturing = false
         synchronized(preBufferLock) {
             preCapturingToBuffer = false
@@ -935,9 +945,12 @@ class RadioAudioEngine(private val context: Context) {
             }
 
             isTransmitting = true
+            lastSuccessfulSendMs = System.currentTimeMillis()
             stateManager.txPipelineRunning = true
             stateManager.transitionTo(RadioState.TRANSMITTING, "tx_started")
             Log.d("[AudioCapture]", "TX_CAPTURE_STARTED sampleRate=$actualSampleRate channelCount=$actualChannelCount frameMs=$CAPTURE_INTERVAL_MS frameSizeSamples=$actualFrameSizeSamples frameSizeBytes=$actualFrameSizeBytes ${RadioDiagLog.elapsedTag()}")
+
+            startTxHeartbeatMonitor()
 
             captureJob = scope.launch {
                 val readBuffer = ByteArray(actualFrameSizeBytes)
@@ -1011,6 +1024,7 @@ class RadioAudioEngine(private val context: Context) {
                                                 Log.d(TAG, "LATENCY_FIRST_TX_FRAME_SENT frame=$frameCounter samplesPerFrame=$actualFrameSizeSamples pcmBytesToEncode=$monoFrameByteCount opusFrameSize=${opusCodec.encoderFrameSize} encodedBytes=${encoded.size} latencyMs=$latencyMs ${RadioDiagLog.elapsedTag()}")
                                             }
                                             udpTransport.send(encoded)
+                                            lastSuccessfulSendMs = System.currentTimeMillis()
                                         } else {
                                             txSessionStats.failures++
                                         }
@@ -1080,6 +1094,7 @@ class RadioAudioEngine(private val context: Context) {
             return
         }
         isTransmitting = false
+        stopTxHeartbeatMonitor()
         txSessionStats.stopReason = "ptt_release"
         captureJob?.cancel()
         val joinResult = withTimeoutOrNull(CAPTURE_JOIN_TIMEOUT_MS) { captureJob?.join() }
@@ -1120,6 +1135,38 @@ class RadioAudioEngine(private val context: Context) {
         } finally {
             transmitMutex.unlock()
         }
+    }
+
+    private fun startTxHeartbeatMonitor() {
+        txHeartbeatJob?.cancel()
+        txHeartbeatJob = scope.launch {
+            var stallReported = false
+            while (isActive && isTransmitting) {
+                delay(TX_HEARTBEAT_CHECK_INTERVAL_MS)
+                if (!isTransmitting) break
+                val now = System.currentTimeMillis()
+                val gap = now - lastSuccessfulSendMs
+                if (gap > TX_STALL_THRESHOLD_MS && !stallReported) {
+                    stallReported = true
+                    val reason = "tx_heartbeat_stall_gap=${gap}ms"
+                    Log.e("[RadioError]", "TX_HEARTBEAT_STALL detected gap=${gap}ms threshold=${TX_STALL_THRESHOLD_MS}ms ${RadioDiagLog.elapsedTag()}")
+                    txSessionStats.stopReason = "tx_stall_detected"
+                    try {
+                        onTxStall?.invoke(reason)
+                    } catch (e: Exception) {
+                        Log.e("[RadioError]", "onTxStall callback error: ${e.message}")
+                    }
+                } else if (gap <= TX_STALL_THRESHOLD_MS && stallReported) {
+                    stallReported = false
+                    Log.d(TAG, "TX_HEARTBEAT_RECOVERED gap=${gap}ms ${RadioDiagLog.elapsedTag()}")
+                }
+            }
+        }
+    }
+
+    private fun stopTxHeartbeatMonitor() {
+        txHeartbeatJob?.cancel()
+        txHeartbeatJob = null
     }
 
     fun startReceive() {

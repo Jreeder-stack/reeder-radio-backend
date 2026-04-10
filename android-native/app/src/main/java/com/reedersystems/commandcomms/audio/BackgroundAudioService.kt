@@ -23,6 +23,7 @@ import com.reedersystems.commandcomms.data.prefs.ServiceConnectionPrefs
 import com.reedersystems.commandcomms.audio.radio.FloorControlEvent
 import com.reedersystems.commandcomms.audio.radio.RadioAudioEngine
 import com.reedersystems.commandcomms.audio.radio.RadioSignalingGatewayImpl
+import com.reedersystems.commandcomms.audio.radio.RadioState
 import com.reedersystems.commandcomms.audio.radio.TransportHealth
 import com.reedersystems.commandcomms.signaling.ConnectionState
 import com.reedersystems.commandcomms.signaling.SignalingEvent
@@ -443,6 +444,25 @@ class BackgroundAudioService : Service() {
         engine.onDisconnected = {
             Log.d(TAG, "RadioAudioEngine unexpected stop — resetting state")
         }
+        engine.onTxStall = { reason ->
+            Log.e(TAG, "TX_STALL_DETECTED reason=$reason — playing error tone and stopping TX")
+            app.toneEngine.playErrorTone()
+            scope.launch {
+                transitionPttState(PttState.IDLE)
+                updateNotification("Radio — TX Stall")
+                try {
+                    engine.stopTransmit()
+                } catch (e: Exception) {
+                    Log.e(TAG, "TX_STALL_STOP_TRANSMIT_ERROR: ${e.message}")
+                }
+                val channelKey = servicePrefs.channelRoomKey
+                if (channelKey != null) {
+                    engine.floorControl?.releaseFloor(channelKey)
+                }
+                sendPttTxFailed()
+                updateNotification("Radio — Standby")
+            }
+        }
         engine.start()
         engine.startReceive()
         radioEngine = engine
@@ -580,6 +600,26 @@ class BackgroundAudioService : Service() {
                     is SignalingEvent.RadioDspConfig -> {
                         Log.d(TAG, "RADIO_DSP_CONFIG_RECEIVED: ${event.config}")
                         applyDspConfig(engine, event.config)
+                    }
+                    is SignalingEvent.TxSilenceWarning -> {
+                        val selfUnitId = servicePrefs.unitId ?: app.sessionPrefs.unitId
+                        if (event.unitId == selfUnitId) {
+                            Log.e(TAG, "TX_SILENCE_WARNING_FROM_SERVER channelId=${event.channelId} silenceMs=${event.silenceMs} — playing error tone and stopping TX")
+                            app.toneEngine.playErrorTone()
+                            transitionPttState(PttState.IDLE)
+                            updateNotification("Radio — TX Silence Warning")
+                            try {
+                                engine.stopTransmit()
+                            } catch (e: Exception) {
+                                Log.e(TAG, "TX_SILENCE_STOP_TRANSMIT_ERROR: ${e.message}")
+                            }
+                            val channelKey = servicePrefs.channelRoomKey
+                            if (channelKey != null) {
+                                engine.floorControl?.releaseFloor(channelKey)
+                            }
+                            sendPttTxFailed()
+                            updateNotification("Radio — Standby")
+                        }
                     }
                     else -> {}
                 }

@@ -5,11 +5,11 @@ class PcmPlaybackProcessor extends AudioWorkletProcessor {
     this._currentFrame = null;
     this._offset = 0;
     this._primed = false;
-    this._PRE_BUFFER_FRAMES = 12;
+    this._PRE_BUFFER_FRAMES = 22;
     this._gain = 1.0;
     this._lastFrame = null;
     this._underrunFadeStep = 0;
-    this._underrunMaxSteps = 4;
+    this._underrunMaxSteps = 10;
     this._underrunCount = 0;
     this._lastUnderrunReport = 0;
 
@@ -81,11 +81,14 @@ class PcmPlaybackProcessor extends AudioWorkletProcessor {
     if (written < outChannel.length) {
       if (this._lastFrame && this._underrunFadeStep < this._underrunMaxSteps) {
         this._underrunFadeStep++;
-        const fadeGain = gain * (1.0 - (this._underrunFadeStep / this._underrunMaxSteps));
+        const t = this._underrunFadeStep / this._underrunMaxSteps;
+        const fadeGain = gain * (1.0 - t * t);
         const srcLen = this._lastFrame.length;
         for (let i = written; i < outChannel.length; i++) {
           const srcIdx = (i - written) % srcLen;
-          let sample = (this._lastFrame[srcIdx] / 32768) * fadeGain;
+          const pos = (i - written) / outChannel.length;
+          const microFade = 1.0 - pos * 0.3;
+          let sample = (this._lastFrame[srcIdx] / 32768) * fadeGain * microFade;
           sample = sample / (1.0 + Math.abs(sample));
           outChannel[i] = sample;
         }

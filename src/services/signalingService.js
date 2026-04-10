@@ -144,7 +144,15 @@ class SignalingService {
         socket.emit('pong');
         if (socket.isRadioClient && socket.channels) {
           for (const ch of socket.channels) {
-            audioRelayService.refreshSubscriber(ch, socket.unitId);
+            const refreshed = audioRelayService.refreshSubscriber(ch, socket.unitId);
+            if (refreshed) {
+              if (!socket._lastRefreshLogMs || Date.now() - socket._lastRefreshLogMs > 60000) {
+                socket._lastRefreshLogMs = Date.now();
+                console.log(`[Signaling] KEEPALIVE_SUBSCRIBER_REFRESH_OK unitId=${socket.unitId} channelId=${ch}`);
+              }
+            } else {
+              console.log(`[Signaling] KEEPALIVE_SUBSCRIBER_REFRESH_FAILED unitId=${socket.unitId} channelId=${ch}`);
+            }
           }
         }
       });
@@ -154,6 +162,7 @@ class SignalingService {
     floorControlService.onTimeout((channelId, unitId) => {
       const unitSocket = this._findSocketByUnitId(unitId);
 
+      audioRelayService.clearTxWatchdog(channelId, unitId);
       this.activeTransmissions.delete(channelId);
 
       this.io.to(`channel:${channelId}`).emit(RADIO_EVENTS.TX_STOP, {
@@ -1315,6 +1324,8 @@ class SignalingService {
     if (!socket.unitId) return;
     console.log(`[Signaling] PTT_RELEASE_SENT unitId=${socket.unitId} channelId=${channelId}`);
 
+    audioRelayService.clearTxWatchdog(channelId, socket.unitId);
+
     const floorHolder = floorControlService.getFloorHolder(channelId);
     const grantedAt = floorHolder && floorHolder.unitId === socket.unitId ? floorHolder.grantedAt : null;
 
@@ -1369,7 +1380,8 @@ class SignalingService {
 
     for (const ch of socket.channels || []) {
       if (ch === channelId) {
-        audioRelayService.refreshSubscriber(ch, socket.unitId);
+        const refreshed = audioRelayService.refreshSubscriber(ch, socket.unitId);
+        console.log(`[Signaling] TX_START_SUBSCRIBER_REFRESH unitId=${socket.unitId} channelId=${ch} refreshed=${refreshed}`);
       }
     }
 
@@ -1380,6 +1392,8 @@ class SignalingService {
     const rawChannelId = canonicalChannelKey(data.channelId);
     const channelId = socket._channelKeyMap?.get(rawChannelId) || rawChannelId;
     if (!socket.unitId) return;
+
+    audioRelayService.clearTxWatchdog(channelId, socket.unitId);
 
     if (floorControlService.holdsFloor(channelId, socket.unitId)) {
       const floorHolder = floorControlService.getFloorHolder(channelId);
@@ -1415,6 +1429,24 @@ class SignalingService {
     }
 
     console.log(`[Signaling] TX stop ack: ${socket.unitId} on ${channelId}`);
+  }
+
+  emitTxSilenceWarning(channelId, unitId, silenceMs) {
+    if (!this.io) return;
+    console.warn(`[Signaling] TX_SILENCE_WARNING unitId=${unitId} channelId=${channelId} silenceMs=${silenceMs}`);
+    const payload = {
+      channelId,
+      unitId,
+      silenceMs,
+      timestamp: Date.now(),
+    };
+    const unitSocket = this._findSocketByUnitId(unitId);
+    if (unitSocket) {
+      unitSocket.emit('tx:silence_warning', payload);
+      unitSocket.to(`channel:${channelId}`).emit('tx:silence_warning', payload);
+    } else {
+      this.io.to(`channel:${channelId}`).emit('tx:silence_warning', payload);
+    }
   }
 
   notifyUnitPotentiallyDisconnected(unitId, channelId) {

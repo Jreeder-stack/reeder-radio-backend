@@ -252,6 +252,14 @@ class SignalingClient(var serverUrl: String) {
             }
         }
 
+        s.on("tx:silence_warning") { args -> parseAndEmit(args) { json ->
+            SignalingEvent.TxSilenceWarning(
+                unitId = json.optString("unitId"),
+                channelId = json.optString("channelId"),
+                silenceMs = json.optLong("silenceMs", 0)
+            )
+        }}
+
         s.on("ping") { s.emit("pong") }
 
         s.connect()

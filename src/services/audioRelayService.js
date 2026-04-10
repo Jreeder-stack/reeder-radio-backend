@@ -12,12 +12,15 @@ const PAYLOAD_LEN_LEN = 2;
 const RADIO_HEADER_FIXED_LEN = VERSION_LEN + FLAGS_LEN + CHANNEL_ID_LEN + SEQUENCE_LEN + TIMESTAMP_LEN + SENDER_LEN_LEN + PAYLOAD_LEN_LEN;
 const PACKET_VERSION = 1;
 const FLAG_FEC_HINT = 0x01;
-const SUBSCRIBER_TIMEOUT_MS = 30000;
+const SUBSCRIBER_TIMEOUT_MS = 60000;
 const AUDIO_DIAG = process.env.AUDIO_DIAG === 'true';
 const SUBSCRIBER_SWEEP_INTERVAL_MS = 30000;
 
 const WS_PACING_INTERVAL_MS = 20;
-const WS_PACING_MAX_QUEUE = 25;
+const WS_PACING_MAX_QUEUE = 75;
+const TX_WATCHDOG_INTERVAL_MS = 1000;
+const TX_WATCHDOG_SILENCE_THRESHOLD_MS = 2000;
+const TX_WATCHDOG_GRACE_MS = 3000;
 const PCM_FRAME_SAMPLES = 960;
 const WS_BINARY_MARKER = 0x01;
 const WS_BINARY_MARKER_OPUS = 0x02;
@@ -41,6 +44,9 @@ class AudioRelayService {
     this._senderLastSeqTime = new Map();
     this._zeroChannelWarnTimes = new Map();
     this._signalingService = null;
+    this._lastAudioReceived = new Map();
+    this._txWatchdogTimer = null;
+    this._txWatchdogAlerted = new Set();
   }
 
   onRecordingTap(callback) {
@@ -123,9 +129,17 @@ class AudioRelayService {
   refreshSubscriber(channelId, unitId) {
     const key = canonicalChannelKey(channelId);
     const subs = this.subscribers.get(key);
-    if (!subs) return;
+    if (!subs) {
+      console.log(`[AudioRelay] SUBSCRIBER_REFRESH_NO_CHANNEL unitId=${unitId} channelId=${key} subscriberChannels=[${[...this.subscribers.keys()].join(',')}]`);
+      return false;
+    }
     const sub = subs.get(unitId);
-    if (sub) sub.lastSeen = Date.now();
+    if (sub) {
+      sub.lastSeen = Date.now();
+      return true;
+    }
+    console.log(`[AudioRelay] SUBSCRIBER_REFRESH_NOT_FOUND unitId=${unitId} channelId=${key} channelSubscribers=[${[...subs.keys()].join(',')}]`);
+    return false;
   }
 
   removeSubscriber(channelId, unitId) {
@@ -206,6 +220,7 @@ class AudioRelayService {
   injectAudio(channelId, senderUnitId, sequence, opusPayload, rawPcmSamples = null) {
     const channelKey = canonicalChannelKey(channelId);
     const resolvedChannelId = this._resolveChannelIdNumeric({ channelKey, channelIdNumeric: channelId });
+    this.trackAudioReceived(channelKey, senderUnitId);
 
     if (AUDIO_DIAG && sequence % 100 === 0) {
       console.log(`[AudioRelay] INJECT_AUDIO channelKey=${channelKey} sender=${senderUnitId} seq=${sequence} numericId=${resolvedChannelId}`);
@@ -425,6 +440,8 @@ class AudioRelayService {
     }).then(() => {
       this._sweepTimer = setInterval(() => this._sweepStaleSubscribers(), SUBSCRIBER_SWEEP_INTERVAL_MS);
       this._sweepTimer.unref?.();
+      this._txWatchdogTimer = setInterval(() => this._checkTxWatchdog(), TX_WATCHDOG_INTERVAL_MS);
+      this._txWatchdogTimer.unref?.();
     });
   }
 
@@ -432,6 +449,10 @@ class AudioRelayService {
     if (this._sweepTimer) {
       clearInterval(this._sweepTimer);
       this._sweepTimer = null;
+    }
+    if (this._txWatchdogTimer) {
+      clearInterval(this._txWatchdogTimer);
+      this._txWatchdogTimer = null;
     }
     for (const [, timer] of this._wsPacingTimers) {
       clearTimeout(timer);
@@ -442,6 +463,47 @@ class AudioRelayService {
     if (this.socket) {
       this.socket.close();
       this.socket = null;
+    }
+  }
+
+  trackAudioReceived(channelKey, unitId) {
+    const key = `${channelKey}::${unitId}`;
+    this._lastAudioReceived.set(key, Date.now());
+    if (this._txWatchdogAlerted.has(key)) {
+      this._txWatchdogAlerted.delete(key);
+      console.log(`[AudioRelay] TX_WATCHDOG_RECOVERED unitId=${unitId} channelKey=${channelKey}`);
+    }
+  }
+
+  clearTxWatchdog(channelKey, unitId) {
+    const key = `${channelKey}::${unitId}`;
+    this._lastAudioReceived.delete(key);
+    this._txWatchdogAlerted.delete(key);
+  }
+
+  _checkTxWatchdog() {
+    if (!this._signalingService) return;
+    const now = Date.now();
+    const activeTransmissions = this._signalingService.activeTransmissions;
+    if (!activeTransmissions) return;
+    for (const [channelId, transmission] of activeTransmissions) {
+      const unitId = transmission.unitId;
+      if (!unitId) continue;
+      const key = `${channelId}::${unitId}`;
+      const lastReceived = this._lastAudioReceived.get(key);
+      const baseline = lastReceived || transmission.timestamp;
+      if (!baseline) continue;
+      if (!lastReceived && transmission.timestamp && (now - transmission.timestamp) < TX_WATCHDOG_GRACE_MS) continue;
+      const silenceMs = now - baseline;
+      if (silenceMs >= TX_WATCHDOG_SILENCE_THRESHOLD_MS && !this._txWatchdogAlerted.has(key)) {
+        this._txWatchdogAlerted.add(key);
+        console.warn(`[AudioRelay] TX_WATCHDOG_SILENCE unitId=${unitId} channelId=${channelId} silenceMs=${silenceMs} hadAudio=${!!lastReceived}`);
+        try {
+          this._signalingService.emitTxSilenceWarning(channelId, unitId, silenceMs);
+        } catch (err) {
+          console.error(`[AudioRelay] TX_WATCHDOG_EMIT_ERROR: ${err.message}`);
+        }
+      }
     }
   }
 
@@ -524,6 +586,7 @@ class AudioRelayService {
       timestampMs,
     });
 
+    this.trackAudioReceived(channelKey, senderUnitId);
     this._broadcastToAll(channelKey, senderUnitId, rxPayload, sequence, opusPayload, resolvedChannelId, senderUnitId);
   }
 
