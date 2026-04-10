@@ -280,6 +280,9 @@ class AudioTransportManager {
       this._reconnectAttempts.delete(channelName);
       this.rooms.set(channelName, conn);
       this._playback.ensureAudioContextResumed('channelJoin').catch(() => {});
+      this._capture.warmup().catch((err) => {
+        console.warn('[AudioTransport] Capture warmup failed:', err.message);
+      });
       this._resetReorderForChannel(channelName);
       notifyChannelJoin(channelName, identity);
       this._emitConnectionStateChange(channelName, 'connected');
@@ -307,6 +310,10 @@ class AudioTransportManager {
     this.rooms.delete(channelName);
     try { conn.ws.close(); } catch (_) {}
     this._emitConnectionStateChange(channelName, 'disconnected');
+
+    if (this.rooms.size === 0) {
+      await this._capture.shutdown();
+    }
   }
 
   async disconnectAll() {
@@ -322,6 +329,7 @@ class AudioTransportManager {
       await this.disconnect(channel);
     }
     await this.stopTransmit();
+    await this._capture.shutdown();
   }
 
   getRoom(channelName) { return this.rooms.get(channelName) || null; }

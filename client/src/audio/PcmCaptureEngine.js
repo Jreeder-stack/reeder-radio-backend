@@ -1,19 +1,38 @@
 import { PCM_SPEC } from './PcmPacket.js';
 
+const PRE_BUFFER_MS = 400;
+const PRE_BUFFER_FRAMES = Math.ceil(
+  (PCM_SPEC.sampleRate * PRE_BUFFER_MS / 1000) / PCM_SPEC.frameSamples
+);
+
 export class PcmCaptureEngine {
   constructor() {
     this.audioContext = null;
     this.stream = null;
     this.source = null;
     this._workletNode = null;
+    this._fallbackProcessor = null;
+    this._fallbackBuffer = new Int16Array(0);
     this.running = false;
     this.onFrame = null;
     this._generation = 0;
+    this._warmedUp = false;
+    this._warmupPromise = null;
+    this._preBuffer = [];
   }
 
-  async start(onFrame) {
-    if (this.running) return;
-    this.onFrame = onFrame;
+  async warmup() {
+    if (this._warmedUp) return;
+    if (this._warmupPromise) return this._warmupPromise;
+    this._warmupPromise = this._doWarmup();
+    try {
+      await this._warmupPromise;
+    } finally {
+      this._warmupPromise = null;
+    }
+  }
+
+  async _doWarmup() {
 
     const gen = ++this._generation;
 
@@ -69,9 +88,12 @@ export class PcmCaptureEngine {
       this._workletNode = new AudioWorkletNode(this.audioContext, 'pcm-capture-processor');
 
       this._workletNode.port.onmessage = (event) => {
-        if (!this.running) return;
-        if (event.data.type === 'pcmFrame' && this.onFrame) {
-          this.onFrame(event.data.samples);
+        if (event.data.type === 'pcmFrame') {
+          if (this.running && this.onFrame) {
+            this.onFrame(event.data.samples);
+          } else {
+            this._pushPreBuffer(event.data.samples);
+          }
         }
       };
 
@@ -91,7 +113,16 @@ export class PcmCaptureEngine {
       return;
     }
 
-    this.running = true;
+    this._warmedUp = true;
+    this._preBuffer = [];
+    console.log('[PcmCaptureEngine] Warmed up – mic and AudioContext ready');
+  }
+
+  _pushPreBuffer(samples) {
+    this._preBuffer.push(samples);
+    if (this._preBuffer.length > PRE_BUFFER_FRAMES) {
+      this._preBuffer.shift();
+    }
   }
 
   _cleanupPartial() {
@@ -118,6 +149,8 @@ export class PcmCaptureEngine {
       this.audioContext.close().catch(() => {});
       this.audioContext = null;
     }
+    this._warmedUp = false;
+    this._preBuffer = [];
   }
 
   _useFallback() {
@@ -125,7 +158,6 @@ export class PcmCaptureEngine {
     this._fallbackBuffer = new Int16Array(0);
 
     this._fallbackProcessor.onaudioprocess = (event) => {
-      if (!this.running) return;
       const input = event.inputBuffer.getChannelData(0);
       const pcmChunk = new Int16Array(input.length);
       for (let i = 0; i < input.length; i++) {
@@ -141,7 +173,12 @@ export class PcmCaptureEngine {
       while (this._fallbackBuffer.length >= PCM_SPEC.frameSamples) {
         const frame = this._fallbackBuffer.slice(0, PCM_SPEC.frameSamples);
         this._fallbackBuffer = this._fallbackBuffer.slice(PCM_SPEC.frameSamples);
-        if (this.onFrame) this.onFrame(frame);
+
+        if (this.running && this.onFrame) {
+          this.onFrame(frame);
+        } else {
+          this._pushPreBuffer(frame);
+        }
       }
     };
 
@@ -149,9 +186,36 @@ export class PcmCaptureEngine {
     this._fallbackProcessor.connect(this.audioContext.destination);
   }
 
+  async start(onFrame) {
+    if (this.running) return;
+
+    if (!this._warmedUp) {
+      await this.warmup();
+    }
+
+    this.onFrame = onFrame;
+    this.running = true;
+
+    const buffered = this._preBuffer;
+    this._preBuffer = [];
+    for (const frame of buffered) {
+      if (this.onFrame) this.onFrame(frame);
+    }
+  }
+
   async stop() {
     this._generation++;
     this.running = false;
+    this.onFrame = null;
+  }
+
+  async shutdown() {
+    this._generation++;
+    this.running = false;
+    this.onFrame = null;
+    this._warmedUp = false;
+    this._warmupPromise = null;
+    this._preBuffer = [];
 
     if (this._workletNode) {
       this._workletNode.disconnect();
@@ -180,5 +244,7 @@ export class PcmCaptureEngine {
       await this.audioContext.close().catch(() => {});
       this.audioContext = null;
     }
+
+    console.log('[PcmCaptureEngine] Shut down – mic and AudioContext released');
   }
 }
