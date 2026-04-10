@@ -276,12 +276,17 @@ class AudioPlayback(
                         lastDataTimeMs = System.currentTimeMillis()
 
                         if (data != null) {
+                            val isPcmFallback = data.size > 1 && data[0] == OpusCodec.CODEC_MARKER_PCM
                             try {
-                                val pcm = opusCodec.decode(data)
+                                val pcm = if (isPcmFallback) {
+                                    data.copyOfRange(1, data.size)
+                                } else {
+                                    opusCodec.decode(data)
+                                }
                                 if (pcm != null && pcm.isNotEmpty()) {
                                     onFrameDecoded?.invoke()
                                     if (!firstRxDecodeLogged) {
-                                        Log.d(TAG, "LATENCY_FIRST_RX_FRAME_DECODED seq=$expectedSeq opusBytes=${data.size} pcmBytes=${pcm.size} ${RadioDiagLog.elapsedTag()}")
+                                        Log.d(TAG, "LATENCY_FIRST_RX_FRAME_DECODED seq=$expectedSeq opusBytes=${data.size} pcmBytes=${pcm.size} pcmFallback=$isPcmFallback ${RadioDiagLog.elapsedTag()}")
                                         firstRxDecodeLogged = true
                                     }
                                     applyRxDspChain(pcm)
@@ -291,7 +296,7 @@ class AudioPlayback(
                                     summaryWriteBytes += pcm.size
 
                                     if (writeRateLimiter.shouldLogDetail()) {
-                                        Log.d(TAG, "WRITE frame=${writeRateLimiter.frameCount} seq=$expectedSeq pcmBytes=${pcm.size} trackState=${track.playState} ${RadioDiagLog.elapsedTag()}")
+                                        Log.d(TAG, "WRITE frame=${writeRateLimiter.frameCount} seq=$expectedSeq pcmBytes=${pcm.size} pcmFallback=$isPcmFallback trackState=${track.playState} ${RadioDiagLog.elapsedTag()}")
                                     } else if (writeRateLimiter.shouldLogSummary()) {
                                         val cnt = writeRateLimiter.resetSummaryAccumulator()
                                         val underrunCount = try { track.underrunCount } catch (_: Exception) { -1 }

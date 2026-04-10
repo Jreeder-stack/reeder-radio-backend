@@ -141,6 +141,7 @@ object RadioDiagLog {
         var stopReason: String = "unknown"
         var assertionFailures: Long = 0
         var encodeFailures: Long = 0
+        var pcmFallbackFrames: Long = 0
         val probeResults: MutableMap<String, Double> = mutableMapOf()
         val firstFrameRmsValues: MutableList<Double> = mutableListOf()
 
@@ -148,12 +149,12 @@ object RadioDiagLog {
             val durationMs = System.currentTimeMillis() - startTimeMs
             val probeStr = probeResults.entries.joinToString(",") { "${it.key}=${String.format("%.1f", it.value)}" }
             val rmsStr = firstFrameRmsValues.joinToString(",") { String.format("%.1f", it) }
-            return "TX_SESSION_END duration=${durationMs}ms reqRate=$requestedRate actRate=$actualRate ch=$channels src=$audioSource framesRead=$framesRead framesEncoded=$framesEncoded pktSent=$packetsSent failures=$failures encodeFailures=$encodeFailures assertionFailures=$assertionFailures silentFrames=$silentFrames partials=$partialReads zeros=$zeroReads probeRms=[$probeStr] first10rms=[$rmsStr] stop=$stopReason"
+            return "TX_SESSION_END duration=${durationMs}ms reqRate=$requestedRate actRate=$actualRate ch=$channels src=$audioSource framesRead=$framesRead framesEncoded=$framesEncoded pktSent=$packetsSent failures=$failures encodeFailures=$encodeFailures assertionFailures=$assertionFailures pcmFallback=$pcmFallbackFrames silentFrames=$silentFrames partials=$partialReads zeros=$zeroReads probeRms=[$probeStr] first10rms=[$rmsStr] stop=$stopReason"
         }
 
         fun summaryJson(): String {
             val durationMs = System.currentTimeMillis() - startTimeMs
-            return """"durationMs":$durationMs,"framesRead":$framesRead,"framesEncoded":$framesEncoded,"pktSent":$packetsSent,"failures":$failures,"silentFrames":$silentFrames,"stopReason":"$stopReason""""
+            return """"durationMs":$durationMs,"framesRead":$framesRead,"framesEncoded":$framesEncoded,"pktSent":$packetsSent,"failures":$failures,"pcmFallback":$pcmFallbackFrames,"silentFrames":$silentFrames,"stopReason":"$stopReason""""
         }
 
         fun reset() {
@@ -161,7 +162,7 @@ object RadioDiagLog {
             requestedRate = 0; actualRate = 0; channels = 0; audioSource = ""
             framesRead = 0; framesEncoded = 0; packetsSent = 0; failures = 0
             silentFrames = 0; partialReads = 0; zeroReads = 0; stopReason = "unknown"
-            assertionFailures = 0; encodeFailures = 0
+            assertionFailures = 0; encodeFailures = 0; pcmFallbackFrames = 0
             probeResults.clear(); firstFrameRmsValues.clear()
         }
     }

@@ -25,6 +25,7 @@ const PCM_FRAME_SAMPLES = 960;
 const WS_BINARY_MARKER = 0x01;
 const WS_BINARY_MARKER_OPUS = 0x02;
 const PLC_MAX_CONSECUTIVE = 3;
+const CODEC_MARKER_PCM = 0x01;
 
 class AudioRelayService {
   constructor() {
@@ -284,6 +285,27 @@ class AudioRelayService {
     return buf;
   }
 
+  _buildBinaryWsFrameRawPcm(sequence, channelKey, senderUnitId, pcmPayload) {
+    const channelBytes = Buffer.from(channelKey.slice(0, 255), 'utf8');
+    const senderBytes = Buffer.from(senderUnitId.slice(0, 255), 'utf8');
+    const headerLen = 1 + 4 + 1 + channelBytes.length + 1 + senderBytes.length;
+    const payloadLen = pcmPayload.length;
+    const buf = Buffer.alloc(headerLen + payloadLen);
+    let offset = 0;
+    buf[offset++] = WS_BINARY_MARKER;
+    buf.writeUInt32LE(sequence, offset); offset += 4;
+    buf[offset++] = channelBytes.length;
+    channelBytes.copy(buf, offset); offset += channelBytes.length;
+    buf[offset++] = senderBytes.length;
+    senderBytes.copy(buf, offset); offset += senderBytes.length;
+    if (Buffer.isBuffer(pcmPayload)) {
+      pcmPayload.copy(buf, offset);
+    } else {
+      buf.set(pcmPayload, offset);
+    }
+    return buf;
+  }
+
   _broadcastToAll(channelKey, senderUnitId, rxPayload, sequence, opusPayload, channelIdNumeric = null, resolvedSender = null, rawPcmSamples = null) {
     if (AUDIO_DIAG && sequence % 100 === 0) {
       const udpKeys = [...this.subscribers.keys()];
@@ -307,10 +329,13 @@ class AudioRelayService {
 
     const listeners = this._audioListeners.get(channelKey);
     if (listeners) {
+      const isPcmForListeners = opusPayload.length > 1 && opusPayload[0] === CODEC_MARKER_PCM;
+      const listenerPayload = isPcmForListeners ? opusPayload.subarray(1) : opusPayload;
+      const listenerCodec = isPcmForListeners ? 'pcm' : 'opus';
       for (const [listenerId, callback] of listeners) {
         if (listenerId === senderUnitId) continue;
         try {
-          callback({ channelId: channelKey, unitId: senderUnitId, sequence, opusPayload, timestamp: Date.now() });
+          callback({ channelId: channelKey, unitId: senderUnitId, sequence, opusPayload: listenerPayload, codec: listenerCodec, timestamp: Date.now() });
         } catch (err) {
           console.error(`[AudioRelay] Listener error for ${listenerId}:`, err.message);
         }
@@ -320,14 +345,24 @@ class AudioRelayService {
     {
       const wsSubs = this._wsSubscribers.get(channelKey);
       if (wsSubs && wsSubs.size > 0) {
-        const binaryFrame = this._buildBinaryWsFrameOpus(sequence, channelKey, senderUnitId, opusPayload);
+        const isPcmFallback = opusPayload.length > 1 && opusPayload[0] === CODEC_MARKER_PCM;
+        let binaryFrame;
+        if (isPcmFallback) {
+          const pcmPayload = opusPayload.subarray(1);
+          binaryFrame = this._buildBinaryWsFrameRawPcm(sequence, channelKey, senderUnitId, pcmPayload);
+        } else {
+          binaryFrame = this._buildBinaryWsFrameOpus(sequence, channelKey, senderUnitId, opusPayload);
+        }
         this._enqueueWsFrame(channelKey, senderUnitId, binaryFrame);
       }
     }
 
     if (this._recordingTap) {
       try {
-        this._recordingTap({ channelId: channelKey, unitId: senderUnitId, sequence, opusPayload, timestamp: Date.now() });
+        const isPcmFallback = opusPayload.length > 1 && opusPayload[0] === CODEC_MARKER_PCM;
+        const tapPayload = isPcmFallback ? opusPayload.subarray(1) : opusPayload;
+        const tapCodec = isPcmFallback ? 'pcm' : 'opus';
+        this._recordingTap({ channelId: channelKey, unitId: senderUnitId, sequence, opusPayload: tapPayload, codec: tapCodec, timestamp: Date.now() });
       } catch (err) {
         console.error('[AudioRelay] Recording tap error:', err.message);
       }
