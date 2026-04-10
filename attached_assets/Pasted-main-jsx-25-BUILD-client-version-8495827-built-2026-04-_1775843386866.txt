@@ -1,0 +1,64 @@
+main.jsx:25 [BUILD] client version=8495827 built=2026-04-10T17:37:49.319Z
+AudioConnectionContext.jsx:589 [AudioConnection] Dispatcher mode - idle timeout disabled (audio must persist)
+AudioConnectionContext.jsx:702 [AudioConnection] Init check - user: undefined lastUser: null initializing: false path: /dispatcher
+AudioConnectionContext.jsx:711 [AudioConnection] No user, skipping init
+AuthContext.jsx:127 [PTT-DIAG] [JS] Auth: pushed early connection info to service: server=https://comms.reeder-systems.com unit=DISPATCH-1
+dispatcher:1 <meta name="apple-mobile-web-app-capable" content="yes"> is deprecated. Please include <meta name="mobile-web-app-capable" content="yes">
+AudioConnectionContext.jsx:702 [AudioConnection] Init check - user: DISPATCH-1 lastUser: null initializing: false path: /dispatcher
+AudioConnectionContext.jsx:729 [AudioConnection] Fetching channels...
+SignalingManager.js:76 [Signaling] Connection already in progress, returning existing promise
+AuthContext.jsx:127 [PTT-DIAG] [JS] Auth: pushed early connection info to service: server=https://comms.reeder-systems.com unit=DISPATCH-1
+AudioConnectionContext.jsx:732 [AudioConnection] Fetched 0 channels
+AudioConnectionContext.jsx:740 [AudioConnection] No channels to connect to
+websocket.js:119 WebSocket connection to 'wss://comms.reeder-systems.com/signaling/?EIO=4&transport=websocket' failed: 
+createSocket @ websocket.js:119
+SignalingManager.js:149 [Signaling] Connection error: websocket error
+(anonymous) @ SignalingManager.js:149
+websocket.js:119 WebSocket connection to 'wss://comms.reeder-systems.com/signaling/?EIO=4&transport=websocket' failed: 
+createSocket @ websocket.js:119
+doOpen @ websocket.js:24
+open @ transport.js:47
+_open @ socket.js:197
+Pa @ socket.js:150
+U5 @ socket.js:565
+G5 @ socket.js:725
+open @ manager.js:111
+(anonymous) @ manager.js:337
+SignalingManager.js:149 [Signaling] Connection error: websocket error
+(anonymous) @ SignalingManager.js:149
+Wr.emit @ index.js:136
+onerror @ socket.js:437
+Wr.emit @ index.js:136
+_ @ manager.js:124
+Wr.emit @ index.js:136
+_onError @ socket.js:495
+Wr.emit @ index.js:136
+onError @ transport.js:39
+ws.onerror @ websocket.js:49
+SignalingContext.jsx:49 [SignalingContext] Connection failed: Error: Connection timeout
+    at SignalingManager.js:104:18
+(anonymous) @ SignalingContext.jsx:49
+SignalingContext.jsx:49 [SignalingContext] Connection failed: Error: Connection timeout
+    at SignalingManager.js:104:18
+(anonymous) @ SignalingContext.jsx:49
+websocket.js:119 WebSocket connection to 'wss://comms.reeder-systems.com/signaling/?EIO=4&transport=websocket' failed: 
+createSocket @ websocket.js:119
+doOpen @ websocket.js:24
+open @ transport.js:47
+_open @ socket.js:197
+Pa @ socket.js:150
+U5 @ socket.js:565
+G5 @ socket.js:725
+open @ manager.js:111
+(anonymous) @ manager.js:337
+SignalingManager.js:149 [Signaling] Connection error: websocket error
+(anonymous) @ SignalingManager.js:149
+Wr.emit @ index.js:136
+onerror @ socket.js:437
+Wr.emit @ index.js:136
+_ @ manager.js:124
+Wr.emit @ index.js:136
+_onError @ socket.js:495
+Wr.emit @ index.js:136
+onError @ transport.js:39
+ws.onerror @ websocket.js:49
