@@ -1,0 +1,52 @@
+09:51:21 Apr 10 13:49:29 CommandComms rsyslogd[23557]: action 'action-0-builtin:omfile' suspended (module 'builtin:omfile'), retry 0. There should be messages before this one giving the reason for suspension. [v8.2312.0 try https://www.rsyslog.com/e/2007 ]
+09:51:21 Apr 10 13:49:29 CommandComms rsyslogd[23557]: action 'action-0-builtin:omfile' resumed (module 'builtin:omfile') [v8.2312.0 try https://www.rsyslog.com/e/2359 ]
+09:51:21 Apr 10 13:49:29 CommandComms rsyslogd[23557]: action 'action-0-builtin:omfile' suspended (module 'builtin:omfile'), retry 0. There should be messages before this one giving the reason for suspension. [v8.2312.0 try https://www.rsyslog.com/e/2007 ]
+09:51:21 Apr 10 13:49:29 CommandComms rsyslogd[23557]: action 'action-0-builtin:omfile' resumed (module 'builtin:omfile') [v8.2312.0 try https://www.rsyslog.com/e/2359 ]
+09:51:21 Apr 10 13:49:29 CommandComms rsyslogd[23557]: action 'action-0-builtin:omfile' suspended (module 'builtin:omfile'), retry 0. There should be messages before this one giving the reason for suspension. [v8.2312.0 try https://www.rsyslog.com/e/2007 ]
+09:51:21 Apr 10 13:49:29 CommandComms rsyslogd[23557]: action 'action-0-builtin:omfile' resumed (module 'builtin:omfile') [v8.2312.0 try https://www.rsyslog.com/e/2359 ]
+09:51:21 Apr 10 13:49:29 CommandComms rsyslogd[23557]: action 'action-0-builtin:omfile' suspended (module 'builtin:omfile'), retry 0. There should be messages before this one giving the reason for suspension. [v8.2312.0 try https://www.rsyslog.com/e/2007 ]
+09:51:21 Apr 10 13:49:29 CommandComms rsyslogd[23557]: action 'action-0-builtin:omfile' resumed (module 'builtin:omfile') [v8.2312.0 try https://www.rsyslog.com/e/2359 ]
+09:51:21 Apr 10 13:49:29 CommandComms rsyslogd[23557]: action 'action-0-builtin:omfile' suspended (module 'builtin:omfile'), retry 0. There should be messages before this one giving the reason for suspension. [v8.2312.0 try https://www.rsyslog.com/e/2007 ]
+09:51:21 Apr 10 13:49:29 CommandComms rsyslogd[23557]: action 'action-0-builtin:omfile' suspended (module 'builtin:omfile'), next retry is Fri Apr 10 13:49:59 2026, retry nbr 0. There should be messages before this one giving the reason for suspension. [v8.2312.0 try https://www.rsyslog.com/e/2007 ]
+09:51:21 Apr 10 13:49:31 CommandComms kernel: [UFW BLOCK] IN=eth0 OUT= MAC=00:22:48:31:0c:b1:12:34:56:78:9a:bc:08:00 SRC=10.0.0.5 DST=10.0.0.4 LEN=40 TOS=0x00 PREC=0x00 TTL=128 ID=1 DF PROTO=TCP SPT=5432 DPT=51024 WINDOW=0 RES=0x00 ACK RST URGP=0 
+09:51:21 Apr 10 13:49:31 CommandComms kernel: [UFW BLOCK] IN=eth0 OUT= MAC=00:22:48:31:0c:b1:2c:dd:e9:d1:3f:78:08:00 SRC=10.0.0.5 DST=10.0.0.4 LEN=40 TOS=0x00 PREC=0x00 TTL=128 ID=11206 PROTO=TCP SPT=5432 DPT=51024 WINDOW=0 RES=0x00 ACK RST URGP=0 
+09:51:21 Apr 10 13:49:34 CommandComms sshd[1224711]: Connection closed by authenticating user root 110.35.80.116 port 48012 [preauth]
+09:51:21 Apr 10 13:49:36 CommandComms kernel: [UFW BLOCK] IN=eth0 OUT= MAC=00:22:48:31:0c:b1:12:34:56:78:9a:bc:08:00 SRC=10.0.0.5 DST=10.0.0.4 LEN=40 TOS=0x00 PREC=0x00 TTL=128 ID=1 DF PROTO=TCP SPT=5432 DPT=51010 WINDOW=0 RES=0x00 ACK RST URGP=0 
+09:51:21 Apr 10 13:49:36 CommandComms kernel: [UFW BLOCK] IN=eth0 OUT= MAC=00:22:48:31:0c:b1:2c:dd:e9:d1:3f:78:08:00 SRC=10.0.0.5 DST=10.0.0.4 LEN=40 TOS=0x00 PREC=0x00 TTL=128 ID=11207 PROTO=TCP SPT=5432 DPT=51010 WINDOW=0 RES=0x00 ACK RST URGP=0 
+09:51:21 Apr 10 13:49:45 CommandComms sshd[1224713]: Invalid user admin from 115.191.32.57 port 41502
+09:51:21 Apr 10 13:49:46 CommandComms sshd[1224713]: Connection closed by invalid user admin 115.191.32.57 port 41502 [preauth]
+09:51:21 Apr 10 13:50:08 CommandComms systemd[1]: Starting sysstat-collect.service - system activity accounting tool...
+09:51:21 Apr 10 13:50:08 CommandComms systemd[1]: sysstat-collect.service: Deactivated successfully.
+09:51:21 Apr 10 13:50:08 CommandComms systemd[1]: Finished sysstat-collect.service - system activity accounting tool.
+09:51:21 Apr 10 13:50:24 CommandComms sshd[1224723]: Invalid user orangepi from 115.191.32.57 port 38206
+09:51:21 Apr 10 13:50:25 CommandComms sshd[1224723]: Connection closed by invalid user orangepi 115.191.32.57 port 38206 [preauth]
+09:51:21 Apr 10 13:50:37 CommandComms sshd[1224725]: Invalid user openhabian from 5.78.206.136 port 46450
+09:51:21 Apr 10 13:50:37 CommandComms sshd[1224725]: Connection closed by invalid user openhabian 5.78.206.136 port 46450 [preauth]
+09:51:21 Apr 10 13:50:56 CommandComms python3[1218112]: 2026-04-10T13:50:56.076067Z INFO ExtHandler ExtHandler [HEARTBEAT] Agent WALinuxAgent-2.15.1.3 is running as the goal state agent [DEBUG HeartbeatCounter: 15;HeartbeatId: 9FB3AD70-7BFD-4C70-8CF8-898F23B6E0F4;UpdateGSErrors: 0;AutoUpdate: 1;UpdateMode: SelfUpdate;]
+09:51:21 Apr 10 13:51:11 CommandComms sshd[1224727]: Connection closed by authenticating user root 115.191.32.57 port 41832 [preauth]
+09:51:21 Apr 10 13:51:16 CommandComms kernel: [UFW BLOCK] IN=eth0 OUT= MAC=00:22:48:31:0c:b1:12:34:56:78:9a:bc:08:00 SRC=10.0.0.5 DST=10.0.0.4 LEN=40 TOS=0x00 PREC=0x00 TTL=128 ID=1 DF PROTO=TCP SPT=5432 DPT=47984 WINDOW=0 RES=0x00 ACK RST URGP=0 
+09:51:21 Apr 10 13:51:16 CommandComms rsyslogd[23557]: action 'action-0-builtin:omfile' resumed (module 'builtin:omfile') [v8.2312.0 try https://www.rsyslog.com/e/2359 ]
+09:51:21 Apr 10 13:51:16 CommandComms rsyslogd[23557]: action 'action-0-builtin:omfile' suspended (module 'builtin:omfile'), retry 0. There should be messages before this one giving the reason for suspension. [v8.2312.0 try https://www.rsyslog.com/e/2007 ]
+09:51:21 Apr 10 13:51:16 CommandComms rsyslogd[23557]: action 'action-0-builtin:omfile' resumed (module 'builtin:omfile') [v8.2312.0 try https://www.rsyslog.com/e/2359 ]
+09:51:21 Apr 10 13:51:16 CommandComms rsyslogd[23557]: action 'action-0-builtin:omfile' suspended (module 'builtin:omfile'), retry 0. There should be messages before this one giving the reason for suspension. [v8.2312.0 try https://www.rsyslog.com/e/2007 ]
+09:51:21 Apr 10 13:51:16 CommandComms rsyslogd[23557]: action 'action-0-builtin:omfile' resumed (module 'builtin:omfile') [v8.2312.0 try https://www.rsyslog.com/e/2359 ]
+09:51:21 Apr 10 13:51:16 CommandComms rsyslogd[23557]: action 'action-0-builtin:omfile' suspended (module 'builtin:omfile'), retry 0. There should be messages before this one giving the reason for suspension. [v8.2312.0 try https://www.rsyslog.com/e/2007 ]
+09:51:21 Apr 10 13:51:16 CommandComms rsyslogd[23557]: action 'action-0-builtin:omfile' resumed (module 'builtin:omfile') [v8.2312.0 try https://www.rsyslog.com/e/2359 ]
+09:51:21 Apr 10 13:51:16 CommandComms rsyslogd[23557]: action 'action-0-builtin:omfile' suspended (module 'builtin:omfile'), retry 0. There should be messages before this one giving the reason for suspension. [v8.2312.0 try https://www.rsyslog.com/e/2007 ]
+09:51:21 Apr 10 13:51:16 CommandComms rsyslogd[23557]: action 'action-0-builtin:omfile' resumed (module 'builtin:omfile') [v8.2312.0 try https://www.rsyslog.com/e/2359 ]
+09:51:21 Apr 10 13:51:16 CommandComms rsyslogd[23557]: action 'action-0-builtin:omfile' suspended (module 'builtin:omfile'), retry 0. There should be messages before this one giving the reason for suspension. [v8.2312.0 try https://www.rsyslog.com/e/2007 ]
+09:51:21 Apr 10 13:51:16 CommandComms rsyslogd[23557]: action 'action-0-builtin:omfile' resumed (module 'builtin:omfile') [v8.2312.0 try https://www.rsyslog.com/e/2359 ]
+09:51:21 Apr 10 13:51:16 CommandComms rsyslogd[23557]: action 'action-0-builtin:omfile' suspended (module 'builtin:omfile'), retry 0. There should be messages before this one giving the reason for suspension. [v8.2312.0 try https://www.rsyslog.com/e/2007 ]
+09:51:21 Apr 10 13:51:16 CommandComms rsyslogd[23557]: action 'action-0-builtin:omfile' resumed (module 'builtin:omfile') [v8.2312.0 try https://www.rsyslog.com/e/2359 ]
+09:51:21 Apr 10 13:51:16 CommandComms rsyslogd[23557]: action 'action-0-builtin:omfile' suspended (module 'builtin:omfile'), retry 0. There should be messages before this one giving the reason for suspension. [v8.2312.0 try https://www.rsyslog.com/e/2007 ]
+09:51:21 Apr 10 13:51:16 CommandComms rsyslogd[23557]: action 'action-0-builtin:omfile' resumed (module 'builtin:omfile') [v8.2312.0 try https://www.rsyslog.com/e/2359 ]
+09:51:21 Apr 10 13:51:16 CommandComms rsyslogd[23557]: action 'action-0-builtin:omfile' suspended (module 'builtin:omfile'), retry 0. There should be messages before this one giving the reason for suspension. [v8.2312.0 try https://www.rsyslog.com/e/2007 ]
+09:51:21 Apr 10 13:51:16 CommandComms rsyslogd[23557]: action 'action-0-builtin:omfile' resumed (module 'builtin:omfile') [v8.2312.0 try https://www.rsyslog.com/e/2359 ]
+09:51:21 Apr 10 13:51:16 CommandComms rsyslogd[23557]: action 'action-0-builtin:omfile' suspended (module 'builtin:omfile'), retry 0. There should be messages before this one giving the reason for suspension. [v8.2312.0 try https://www.rsyslog.com/e/2007 ]
+09:51:21 Apr 10 13:51:16 CommandComms rsyslogd[23557]: action 'action-0-builtin:omfile' resumed (module 'builtin:omfile') [v8.2312.0 try https://www.rsyslog.com/e/2359 ]
+09:51:21 Apr 10 13:51:16 CommandComms rsyslogd[23557]: action 'action-0-builtin:omfile' suspended (module 'builtin:omfile'), retry 0. There should be messages before this one giving the reason for suspension. [v8.2312.0 try https://www.rsyslog.com/e/2007 ]
+09:51:21 Apr 10 13:51:16 CommandComms rsyslogd[23557]: action 'action-0-builtin:omfile' suspended (module 'builtin:omfile'), next retry is Fri Apr 10 13:51:46 2026, retry nbr 0. There should be messages before this one giving the reason for suspension. [v8.2312.0 try https://www.rsyslog.com/e/2007 ]
+09:51:21 Apr 10 13:51:16 CommandComms kernel: [UFW BLOCK] IN=eth0 OUT= MAC=00:22:48:31:0c:b1:2c:dd:e9:d1:3f:78:08:00 SRC=10.0.0.5 DST=10.0.0.4 LEN=40 TOS=0x00 PREC=0x00 TTL=128 ID=11210 PROTO=TCP SPT=5432 DPT=47984 WINDOW=0 RES=0x00 ACK RST URGP=0 
+09:51:21 Apr 10 13:51:16 CommandComms sshd[1224729]: Connection closed by authenticating user root 110.35.80.116 port 48758 [preauth]
+09:51:40 Apr 10 13:51:40 CommandComms sshd[1224732]: Invalid user niu from 147.224.62.110 port 41320
+09:51:41 Apr 10 13:51:40 CommandComms sshd[1224732]: Connection closed by invalid user niu 147.224.62.110 port 41320 [preauth]

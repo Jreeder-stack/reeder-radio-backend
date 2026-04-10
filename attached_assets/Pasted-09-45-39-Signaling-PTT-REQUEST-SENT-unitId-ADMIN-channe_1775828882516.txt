@@ -1,0 +1,24 @@
+09:45:39 [Signaling] PTT_REQUEST_SENT unitId=ADMIN channelId=DISPATCH__DISPATCH
+09:45:39 [FloorControl] requestFloor: raw="DISPATCH__DISPATCH" canonical="DISPATCH__DISPATCH" unitId="ADMIN"
+09:45:39 [Signaling] PTT_GRANTED unitId=ADMIN channelId=DISPATCH__DISPATCH
+09:45:39 [AI-Dispatcher] PTT_START callback matched: channelId=DISPATCH__DISPATCH, unitId=ADMIN
+09:45:39 [AI-Dispatcher-Signaling] 2026-04-10T13:45:39.457Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"ADMIN","isEmergency":false}
+09:45:39 [Signaling] PTT_READY sent for ADMIN on DISPATCH__DISPATCH
+09:45:39 [AI-Dispatcher-Signaling] 2026-04-10T13:45:39.457Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"ADMIN","alreadyConnected":true}
+09:45:39 [Signaling] PTT granted: ADMIN on DISPATCH__DISPATCH
+09:45:39 [RecordingTap] TX recording started: unit=ADMIN channel=DISPATCH__DISPATCH
+09:45:44 [Signaling] KEEPALIVE_OK unitId=ADMIN channelKey=DISPATCH__DISPATCH addr=166.137.146.53:50763
+09:45:48 [RecordingTap] Finalizing recording: unit=ADMIN channel=DISPATCH__DISPATCH frames=224 duration=7208ms
+09:45:48 [AI-Dispatcher] 2026-04-10T13:45:48.825Z | DATA_MESSAGE_SENT {"type":"new_message","message":{"id":2461,"channel":"DISPATCH__DISPATCH","sender":"ADMIN","message_type":"audio","content":null,"audio_url":"/api/messages/audio/DISPATCH__DISPATCH_1775828748766_ADMIN.wav","audio_duration":7208,"transcription":null,"created_at":"2026-04-10T13:45:48.778Z"}}
+09:45:48 [RecordingTap] Audio message saved: id=2461 channel=DISPATCH__DISPATCH sender=ADMIN duration=7208ms
+09:45:48 [AI-Dispatcher] Broadcast message to DISPATCH__DISPATCH: 2461
+09:45:49 [Signaling] PTT_RELEASE_SENT unitId=ADMIN channelId=DISPATCH__DISPATCH
+09:45:49 [AI-Dispatcher-Signaling] 2026-04-10T13:45:49.314Z | PTT_END_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"ADMIN"}
+09:45:49 [Signaling] PTT released: ADMIN on DISPATCH__DISPATCH
+09:45:50 [AI-Dispatcher] 2026-04-10T13:45:50.119Z | STT_RESULT {"transcript":"12345.","participant":"ADMIN"}
+09:45:50 [AI-Dispatcher] 2026-04-10T13:45:50.119Z | LLM_CLASSIFY_START {"participant":"ADMIN","state":"IDLE","transcript":"12345."}
+09:45:50 [LLM-Intent] Classifying: unit=ADMIN, state=IDLE, transcript="12345."
+09:45:50 [AI-Dispatcher] 2026-04-10T13:45:50.253Z | LLM_ERROR {"error":"404 The API deployment for this resource does not exist. If you created the deployment within the last 5 minutes, please wait a moment and try again."}
+09:45:50 [AI-Dispatcher] 2026-04-10T13:45:50.255Z | LLM_FALLBACK_TO_REGEX {"participant":"ADMIN"}
+09:45:50 [CommandMatcher] Unit: ADMIN, State: IDLE, Transcript: "12345."
+09:45:50 [AI-Dispatcher] 2026-04-10T13:45:50.256Z | COMMAND_NO_MATCH {"transcript":"12345."}
