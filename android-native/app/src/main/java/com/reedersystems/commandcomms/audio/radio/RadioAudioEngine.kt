@@ -16,7 +16,7 @@ import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 
 private const val TAG = "[RadioEngine]"
-private const val DEFAULT_MIC_SAMPLE_RATE = 48000
+private const val DEFAULT_MIC_SAMPLE_RATE = 16000
 private const val CAPTURE_INTERVAL_MS = 20L
 private const val RX_DIAG_INTERVAL_MS = 5_000L
 private const val PRE_BUFFER_MAX_FRAMES = 150
@@ -735,7 +735,6 @@ class RadioAudioEngine(private val context: Context) {
                     Log.e("[RadioError]", "PRE_CAPTURE_LOOP_EXCEPTION ${e::class.simpleName}: ${e.message} method=preCaptureLoop", e)
                     txSessionStats.stopReason = "capture_loop_exception"
                 }
-                queue.clear()
                 queue.offer(poisonPill)
             }
             Log.d(TAG, "Pre-capture started — buffering audio (sampleRate=$actualSampleRate channels=$actualChannelCount buffer=$bufferSize) ${RadioDiagLog.elapsedTag()}")
@@ -1137,7 +1136,6 @@ class RadioAudioEngine(private val context: Context) {
                     Log.e("[RadioError]", "TX_CAPTURE_LOOP_EXCEPTION ${e::class.simpleName}: ${e.message} method=captureLoop", e)
                     txSessionStats.stopReason = "capture_loop_exception"
                 }
-                queue.clear()
                 queue.offer(poisonPill)
             }
             Log.d(TAG, "TX started — audio capture active (sampleRate=$actualSampleRate channels=$actualChannelCount buffer=$bufferSize bitrate=${OpusCodec.BITRATE}) ${RadioDiagLog.elapsedTag()}")
@@ -1191,10 +1189,11 @@ class RadioAudioEngine(private val context: Context) {
             Log.w(TAG, """{"event":"CAPTURE_JOIN_TIMEOUT","caller":"stopTransmit","timeoutMs":$CAPTURE_JOIN_TIMEOUT_MS}""")
         }
         captureJob = null
-        encodeQueue?.clear()
-        val encodeJoinResult = withTimeoutOrNull(CAPTURE_JOIN_TIMEOUT_MS) { encodeJob?.join() }
+        val drainTimeoutMs = 2000L
+        val encodeJoinResult = withTimeoutOrNull(drainTimeoutMs) { encodeJob?.join() }
         if (encodeJoinResult == null && encodeJob != null) {
-            Log.w(TAG, """{"event":"ENCODE_JOIN_TIMEOUT","caller":"stopTransmit","timeoutMs":$CAPTURE_JOIN_TIMEOUT_MS}""")
+            Log.w(TAG, """{"event":"ENCODE_DRAIN_TIMEOUT","caller":"stopTransmit","timeoutMs":$drainTimeoutMs,"remainingFrames":${encodeQueue?.size ?: -1}}""")
+            encodeQueue?.clear()
             encodeJob?.cancel()
         }
         encodeJob = null

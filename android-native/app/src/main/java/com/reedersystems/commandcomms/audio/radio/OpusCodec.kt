@@ -11,11 +11,13 @@ private const val TAG = "[OpusCodec]"
 
 class OpusCodec {
     companion object {
-        const val DEFAULT_SAMPLE_RATE = 48000
+        const val DEFAULT_SAMPLE_RATE = 16000
+        const val DECODER_SAMPLE_RATE = 48000
         const val SAMPLE_RATE = DEFAULT_SAMPLE_RATE
         const val CHANNELS = 1
         const val BITRATE = 64000
-        const val FRAME_SIZE = 960
+        const val FRAME_SIZE = 320
+        const val DECODER_FRAME_SIZE = 960
         const val FRAME_DURATION_MS = 20
         const val MAX_ENCODED_SIZE = 512
         const val COMPLEXITY = 5
@@ -73,9 +75,9 @@ class OpusCodec {
             val enc = OpusEncoder(sampleRate, channels, OpusApplication.OPUS_APPLICATION_VOIP)
             configureEncoder(enc, BITRATE)
             encoder = enc
-            decoder = OpusDecoder(DEFAULT_SAMPLE_RATE, CHANNELS)
+            decoder = OpusDecoder(DECODER_SAMPLE_RATE, CHANNELS)
             initialized = true
-            Log.d(TAG, "OpusCodec initialized rate=$sampleRate channels=$channels frameSize=$encoderFrameSize bitrate=$BITRATE VBR=false complexity=$COMPLEXITY FEC=true lossPercent=10 decoderRate=$DEFAULT_SAMPLE_RATE ${RadioDiagLog.elapsedTag()}")
+            Log.d(TAG, "OpusCodec initialized rate=$sampleRate channels=$channels frameSize=$encoderFrameSize bitrate=$BITRATE VBR=false complexity=$COMPLEXITY FEC=true lossPercent=10 decoderRate=$DECODER_SAMPLE_RATE ${RadioDiagLog.elapsedTag()}")
         } catch (e: Exception) {
             Log.e("[RadioError]", "OpusCodec initialization failed: ${e::class.simpleName}: ${e.message} rate=$sampleRate channels=$channels", e)
         }
@@ -138,10 +140,10 @@ class OpusCodec {
             return
         }
         try {
-            decoder = OpusDecoder(DEFAULT_SAMPLE_RATE, CHANNELS)
+            decoder = OpusDecoder(DECODER_SAMPLE_RATE, CHANNELS)
             decodeRateLimiter.reset()
             decodeSummaryBytes = 0; decodeSummaryPcmBytes = 0; decodePlcCount = 0
-            Log.d(TAG, "DECODER_RESET OpusDecoder recreated rate=$DEFAULT_SAMPLE_RATE channels=$CHANNELS ${RadioDiagLog.elapsedTag()}")
+            Log.d(TAG, "DECODER_RESET OpusDecoder recreated rate=$DECODER_SAMPLE_RATE channels=$CHANNELS ${RadioDiagLog.elapsedTag()}")
         } catch (e: Exception) {
             Log.e("[RadioError]", "DECODER_RESET_FAILED: ${e::class.simpleName}: ${e.message}", e)
         }
@@ -351,13 +353,13 @@ class OpusCodec {
             Log.w("[RadioError]", "OPUS_DECODE_NULL_DECODER method=decode isNull=${opusData == null}")
             return null
         }
-        val pcmBuffer = ShortArray(FRAME_SIZE * CHANNELS)
+        val pcmBuffer = ShortArray(DECODER_FRAME_SIZE * CHANNELS)
         return try {
             val decodedSamples = if (opusData != null) {
-                dec.decode(opusData, 0, opusData.size, pcmBuffer, 0, FRAME_SIZE, false)
+                dec.decode(opusData, 0, opusData.size, pcmBuffer, 0, DECODER_FRAME_SIZE, false)
             } else {
                 decodePlcCount++
-                dec.decode(null, 0, 0, pcmBuffer, 0, FRAME_SIZE, false)
+                dec.decode(null, 0, 0, pcmBuffer, 0, DECODER_FRAME_SIZE, false)
             }
             if (decodedSamples > 0) {
                 val result = ByteArray(decodedSamples * CHANNELS * 2)
@@ -397,6 +399,6 @@ class OpusCodec {
         expectedFrameBytes = FRAME_SIZE * CHANNELS * 2
         encodeRateLimiter.reset()
         decodeRateLimiter.reset()
-        Log.d(TAG, "OpusCodec released ${RadioDiagLog.elapsedTag()}")
+        Log.d(TAG, "OpusCodec released (encoderDefaults: rate=$DEFAULT_SAMPLE_RATE frameSize=$FRAME_SIZE decoderRate=$DECODER_SAMPLE_RATE decoderFrameSize=$DECODER_FRAME_SIZE) ${RadioDiagLog.elapsedTag()}")
     }
 }

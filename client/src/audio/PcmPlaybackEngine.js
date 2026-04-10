@@ -38,7 +38,10 @@ export class PcmPlaybackEngine {
             underrunCount: event.data.underrunCount,
             bufferDepth: event.data.bufferDepth,
             avgBufferDepth: event.data.avgBufferDepth,
+            smoothedDepth: event.data.smoothedDepth,
           });
+        } else if (event.data.type === 'drain_complete') {
+          console.log('AUDIO_PLAYBACK_DRAIN_COMPLETE');
         }
       };
       this._workletNode.connect(this.audioContext.destination);
@@ -120,6 +123,12 @@ export class PcmPlaybackEngine {
       this._fallbackQueue.push(samples);
     }
     return true;
+  }
+
+  drain() {
+    if (this._workletNode) {
+      this._workletNode.port.postMessage({ type: 'drain' });
+    }
   }
 
   async close() {

@@ -112,9 +112,9 @@ class AudioTransportManager {
     }
   }
 
-  _ensureTxEncoder() {
+  async _ensureTxEncoder() {
     if (!this._txEncoder.isReady()) {
-      this._txEncoder.init();
+      await this._txEncoder.init();
     }
     return this._txEncoder.isReady();
   }
@@ -502,24 +502,30 @@ class AudioTransportManager {
     this._loopbackOk = true;
     await this._playback.ensureAudioContextResumed('pttActivity');
 
-    const opusTxReady = this._ensureTxEncoder();
+    if (!OpusBrowserEncoder.isSupported()) {
+      console.error('AUDIO_TX_BLOCKED: WebCodecs AudioEncoder not available — cannot transmit');
+      this._setPttState(PTT_STATES.IDLE);
+      return false;
+    }
+
+    const opusTxReady = await this._ensureTxEncoder();
+
+    if (!opusTxReady) {
+      console.error('AUDIO_TX_BLOCKED: Opus encoder failed to initialize');
+      this._setPttState(PTT_STATES.IDLE);
+      return false;
+    }
+
+    this._txEncoder.setOnEncoded((encoded) => {
+      if (!this._loopbackOk) return;
+      if (!room || !room.ws || room.ws.readyState !== WebSocket.OPEN) return;
+      const binFrame = buildBinaryFrameOpus(this._txSequence++, txChannel, room.unitId, encoded);
+      room.ws.send(binFrame);
+    });
 
     await this._capture.start(async (frame) => {
       if (!this._loopbackOk) return;
-
-      if (opusTxReady) {
-        const encoded = this._txEncoder.encode(frame);
-        if (encoded) {
-          const binFrame = buildBinaryFrameOpus(this._txSequence++, txChannel, room.unitId, encoded);
-          room.ws.send(binFrame);
-        } else {
-          const binFrame = buildBinaryFrame(this._txSequence++, txChannel, room.unitId, frame);
-          room.ws.send(binFrame);
-        }
-      } else {
-        const binFrame = buildBinaryFrame(this._txSequence++, txChannel, room.unitId, frame);
-        room.ws.send(binFrame);
-      }
+      this._txEncoder.encode(frame);
     });
 
     if (this.pttState !== PTT_STATES.ARMING) {
@@ -536,6 +542,10 @@ class AudioTransportManager {
   async stopTransmit() {
     if (this.pttState === PTT_STATES.IDLE) return;
     await this._capture.stop();
+    if (this._txEncoder && this._txEncoder.isReady()) {
+      await this._txEncoder.flush();
+    }
+    this._txEncoder.setOnEncoded(null);
     this._setPttState(PTT_STATES.COOLDOWN);
     this._setPttState(PTT_STATES.IDLE);
   }
@@ -544,6 +554,9 @@ class AudioTransportManager {
 
   forceReleaseTransmit() {
     this._capture.stop().catch(() => {});
+    if (this._txEncoder) {
+      this._txEncoder.setOnEncoded(null);
+    }
     this._setPttState(PTT_STATES.IDLE);
   }
 

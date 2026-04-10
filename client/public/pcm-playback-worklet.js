@@ -16,12 +16,15 @@ class PcmPlaybackProcessor extends AudioWorkletProcessor {
     this._underrunCount = 0;
     this._lastUnderrunReport = 0;
 
-    this._LOW_WATER_MARK = 8;
-    this._HIGH_WATER_MARK = 60;
-    this._STRETCH_PERIOD = 48;
-    this._SKIP_PERIOD = 48;
-    this._stretchCounter = 0;
-    this._skipCounter = 0;
+    this._TARGET_BUFFER_DEPTH = 25;
+    this._smoothedDepth = 0;
+    this._smoothAlpha = 0.05;
+    this._MAX_STRETCH_RATIO = 0.25;
+    this._MAX_COMPRESS_RATIO = 0.25;
+    this._stretchAccumulator = 0;
+    this._skipAccumulator = 0;
+
+    this._draining = false;
 
     this._totalFramesReceived = 0;
     this._totalFramesPlayed = 0;
@@ -35,6 +38,7 @@ class PcmPlaybackProcessor extends AudioWorkletProcessor {
       if (event.data.type === 'enqueue') {
         this._ringBuffer.push(event.data.samples);
         this._totalFramesReceived++;
+        this._draining = false;
       } else if (event.data.type === 'clear') {
         this._ringBuffer = [];
         this._currentFrame = null;
@@ -45,6 +49,10 @@ class PcmPlaybackProcessor extends AudioWorkletProcessor {
         this._underrunFading = false;
         this._underrunFadeSamplesLeft = 0;
         this._underrunFadeStart = 0;
+        this._draining = false;
+        this._smoothedDepth = 0;
+      } else if (event.data.type === 'drain') {
+        this._draining = true;
       } else if (event.data.type === 'setGain') {
         this._gain = event.data.gain;
       }
@@ -66,8 +74,11 @@ class PcmPlaybackProcessor extends AudioWorkletProcessor {
     const outChannel = output[0];
     const gain = this._gain;
 
-    this._bufferDepthSum += this._ringBuffer.length;
+    const currentDepth = this._ringBuffer.length + (this._currentFrame ? 1 : 0);
+    this._bufferDepthSum += currentDepth;
     this._bufferDepthSamples++;
+
+    this._smoothedDepth += this._smoothAlpha * (currentDepth - this._smoothedDepth);
 
     const now = currentTime;
     if (now - this._lastDiagReport >= this._diagIntervalSec) {
@@ -83,6 +94,7 @@ class PcmPlaybackProcessor extends AudioWorkletProcessor {
           underrunCount: this._underrunCount,
           bufferDepth: this._ringBuffer.length,
           avgBufferDepth: parseFloat(avgDepth),
+          smoothedDepth: this._smoothedDepth.toFixed(1),
         });
       }
       this._totalFramesReceived = 0;
@@ -113,7 +125,7 @@ class PcmPlaybackProcessor extends AudioWorkletProcessor {
       return true;
     }
 
-    if (!this._primed) {
+    if (!this._primed && !this._draining) {
       const requiredFrames = this._ringBuffer.length === 0
         ? this._PRE_BUFFER_FRAMES
         : (this._hasEverPlayed ? this._REPRIME_FRAMES : this._PRE_BUFFER_FRAMES);
@@ -126,10 +138,18 @@ class PcmPlaybackProcessor extends AudioWorkletProcessor {
       this._primed = true;
     }
 
+    let stretchRatio = 0;
+    let compressRatio = 0;
+    if (!this._draining) {
+      const depthError = this._TARGET_BUFFER_DEPTH - this._smoothedDepth;
+      if (depthError > 2) {
+        stretchRatio = Math.min(depthError / this._TARGET_BUFFER_DEPTH, this._MAX_STRETCH_RATIO);
+      } else if (depthError < -2) {
+        compressRatio = Math.min(-depthError / this._TARGET_BUFFER_DEPTH, this._MAX_COMPRESS_RATIO);
+      }
+    }
+
     let written = 0;
-    const bufferDepth = this._ringBuffer.length + (this._currentFrame ? 1 : 0);
-    const stretching = bufferDepth < this._LOW_WATER_MARK;
-    const compressing = bufferDepth > this._HIGH_WATER_MARK;
 
     while (written < outChannel.length) {
       if (!this._currentFrame) {
@@ -146,28 +166,26 @@ class PcmPlaybackProcessor extends AudioWorkletProcessor {
         outChannel[written] = sample;
         written++;
 
-        if (stretching) {
-          this._stretchCounter++;
-          if (this._stretchCounter >= this._STRETCH_PERIOD) {
-            this._stretchCounter = 0;
-            if (written < outChannel.length) {
-              outChannel[written] = sample;
-              written++;
-            }
+        if (stretchRatio > 0) {
+          this._stretchAccumulator += stretchRatio;
+          while (this._stretchAccumulator >= 1.0 && written < outChannel.length) {
+            outChannel[written] = sample;
+            written++;
+            this._stretchAccumulator -= 1.0;
           }
         } else {
-          this._stretchCounter = 0;
+          this._stretchAccumulator = 0;
         }
 
-        if (compressing) {
-          this._skipCounter++;
-          if (this._skipCounter >= this._SKIP_PERIOD) {
-            this._skipCounter = 0;
+        if (compressRatio > 0) {
+          this._skipAccumulator += compressRatio;
+          while (this._skipAccumulator >= 1.0) {
             this._offset++;
+            this._skipAccumulator -= 1.0;
             if (this._offset >= this._currentFrame.length) break;
           }
         } else {
-          this._skipCounter = 0;
+          this._skipAccumulator = 0;
         }
 
         this._offset++;
@@ -183,34 +201,46 @@ class PcmPlaybackProcessor extends AudioWorkletProcessor {
     }
 
     if (written < outChannel.length) {
-      this._underrunFading = true;
-      this._underrunFadeSamplesLeft = this._UNDERRUN_FADE_SAMPLES;
-      this._underrunFadeStart = this._lastSampleValue;
-      this._primed = false;
-
-      for (let i = written; i < outChannel.length; i++) {
-        if (this._underrunFadeSamplesLeft > 0) {
-          const t = this._underrunFadeSamplesLeft / this._UNDERRUN_FADE_SAMPLES;
-          outChannel[i] = this._underrunFadeStart * t;
-          this._underrunFadeSamplesLeft--;
-        } else {
+      if (this._draining || !this._hasEverPlayed) {
+        for (let i = written; i < outChannel.length; i++) {
           outChannel[i] = 0;
         }
-      }
+        if (this._draining && this._ringBuffer.length === 0 && !this._currentFrame) {
+          this._draining = false;
+          this._primed = false;
+          this._smoothedDepth = 0;
+          this.port.postMessage({ type: 'drain_complete' });
+        }
+      } else {
+        this._underrunFading = true;
+        this._underrunFadeSamplesLeft = this._UNDERRUN_FADE_SAMPLES;
+        this._underrunFadeStart = this._lastSampleValue;
+        this._primed = false;
 
-      if (this._underrunFadeSamplesLeft <= 0) {
-        this._underrunFading = false;
-        this._lastSampleValue = 0;
-      }
+        for (let i = written; i < outChannel.length; i++) {
+          if (this._underrunFadeSamplesLeft > 0) {
+            const t = this._underrunFadeSamplesLeft / this._UNDERRUN_FADE_SAMPLES;
+            outChannel[i] = this._underrunFadeStart * t;
+            this._underrunFadeSamplesLeft--;
+          } else {
+            outChannel[i] = 0;
+          }
+        }
 
-      this._underrunCount++;
-      if (now - this._lastUnderrunReport > 2) {
-        this._lastUnderrunReport = now;
-        this.port.postMessage({
-          type: 'underrun',
-          count: this._underrunCount,
-          bufferDepth: this._ringBuffer.length,
-        });
+        if (this._underrunFadeSamplesLeft <= 0) {
+          this._underrunFading = false;
+          this._lastSampleValue = 0;
+        }
+
+        this._underrunCount++;
+        if (now - this._lastUnderrunReport > 2) {
+          this._lastUnderrunReport = now;
+          this.port.postMessage({
+            type: 'underrun',
+            count: this._underrunCount,
+            bufferDepth: this._ringBuffer.length,
+          });
+        }
       }
     }
 

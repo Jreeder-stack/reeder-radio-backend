@@ -151,7 +151,7 @@ class AudioPlayback(
         val channelConfig = AudioFormat.CHANNEL_OUT_MONO
         val audioFormat = AudioFormat.ENCODING_PCM_16BIT
         val minBufferSize = AudioTrack.getMinBufferSize(SAMPLE_RATE, channelConfig, audioFormat)
-        val bufferSize = maxOf(minBufferSize, OpusCodec.FRAME_SIZE * 2 * 4)
+        val bufferSize = maxOf(minBufferSize, OpusCodec.DECODER_FRAME_SIZE * 2 * 4)
 
         Log.d(TAG, "AUDIOTRACK_INIT rate=$SAMPLE_RATE channelConfig=MONO format=PCM_16BIT minBufSize=$minBufferSize allocBufSize=$bufferSize perfMode=LOW_LATENCY ${RadioDiagLog.elapsedTag()}")
 
