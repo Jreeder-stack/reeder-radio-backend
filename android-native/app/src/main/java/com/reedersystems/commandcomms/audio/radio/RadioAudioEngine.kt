@@ -91,9 +91,22 @@ class RadioAudioEngine(private val context: Context) {
     @Volatile
     private var lastSuccessfulSendMs: Long = 0L
     private var txHeartbeatJob: Job? = null
-    private companion object TxHeartbeat {
+    companion object {
         const val TX_HEARTBEAT_CHECK_INTERVAL_MS = 500L
         const val TX_STALL_THRESHOLD_MS = 1000L
+        private const val PROBE_SILENCE_RMS_THRESHOLD = 2.0
+        private const val PROBE_FRAME_COUNT = 10
+        private const val PROBE_RATE = DEFAULT_MIC_SAMPLE_RATE
+
+        @Volatile
+        var bypassSourceCache: Boolean = false
+
+        @Volatile
+        private var cachedSourceKey: String? = null
+        @Volatile
+        private var cachedSourceValue: Int? = null
+        @Volatile
+        private var cachedSourceName: String? = null
     }
 
     val isConnected: Boolean get() = started
@@ -204,22 +217,6 @@ class RadioAudioEngine(private val context: Context) {
     }
 
     private val OPUS_SUPPORTED_RATES = setOf(8000, 12000, 16000, 24000, 48000)
-
-    companion object {
-        private const val PROBE_SILENCE_RMS_THRESHOLD = 2.0
-        private const val PROBE_FRAME_COUNT = 10
-        private const val PROBE_RATE = DEFAULT_MIC_SAMPLE_RATE
-
-        @Volatile
-        var bypassSourceCache: Boolean = false
-
-        @Volatile
-        private var cachedSourceKey: String? = null
-        @Volatile
-        private var cachedSourceValue: Int? = null
-        @Volatile
-        private var cachedSourceName: String? = null
-    }
 
     private data class SourceProbeResult(
         val source: Int,
