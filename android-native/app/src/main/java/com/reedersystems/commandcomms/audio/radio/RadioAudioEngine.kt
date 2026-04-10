@@ -1281,9 +1281,6 @@ class RadioAudioEngine(private val context: Context) {
         audioPlayback.start()
         stateManager.rxPipelineRunning = true
         Log.d(TAG, "RX_SESSION_START ${RadioDiagLog.elapsedTag()}")
-        if (stateManager.state.value != RadioState.TRANSMITTING) {
-            stateManager.transitionTo(RadioState.RECEIVING, "rx_started")
-        }
         startRxDiagnostics()
         Log.d(TAG, "RX started — playback active ${RadioDiagLog.elapsedTag()}")
     }

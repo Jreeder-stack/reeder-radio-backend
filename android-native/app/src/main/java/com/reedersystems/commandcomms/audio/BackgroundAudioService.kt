@@ -473,6 +473,7 @@ class BackgroundAudioService : Service() {
         radioEngine = engine
         observeRadioFloorEvents(engine)
         observeTransportHealth(engine)
+        observeSignalingConnection(engine)
         Log.d(TAG, "RadioAudioEngine initialized (custom-radio transport) — RX always-on")
     }
 
@@ -488,6 +489,21 @@ class BackgroundAudioService : Service() {
                     }
                     TransportHealth.CONNECTED -> {
                         Log.d(TAG, """{"event":"TRANSPORT_HEALTH_CONNECTED"}""")
+                    }
+                }
+            }
+        }
+    }
+
+    private fun observeSignalingConnection(engine: RadioAudioEngine) {
+        scope.launch {
+            app.signalingClient.connectionState.collect { state ->
+                if (state == ConnectionState.DISCONNECTED) {
+                    val radioState = engine.stateManager.currentState
+                    if (radioState != RadioState.TRANSMITTING) {
+                        Log.w(TAG, """{"event":"SIGNALING_DISCONNECTED_RESET","previousState":"$radioState"}""")
+                        engine.stateManager.transitionTo(RadioState.IDLE, "signaling_disconnected")
+                        engine.stateManager.setTransmittingUnit(null)
                     }
                 }
             }
@@ -672,8 +688,7 @@ class BackgroundAudioService : Service() {
         val selfUnitId = servicePrefs.unitId ?: app.sessionPrefs.unitId
         val radioState = stateManager?.currentState
         val channelBusy = (transmittingUnit != null && transmittingUnit != selfUnitId) ||
-            radioState == RadioState.CHANNEL_BUSY ||
-            radioState == RadioState.RECEIVING
+            radioState == RadioState.CHANNEL_BUSY
         if (channelBusy) {
             Log.w(TAG, """{"event":"RADIO_PTT_DOWN_CHANNEL_BUSY","transmittingUnit":"$transmittingUnit","radioState":"$radioState"}""")
             Log.d("[ToneEvent]", """{"tone":"denied","trigger":"channel_busy","transmittingUnit":"$transmittingUnit","radioState":"$radioState","state":"$pttState","ts":${System.currentTimeMillis()}}""")
