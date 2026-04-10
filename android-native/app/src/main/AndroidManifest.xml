@@ -68,6 +68,13 @@
                 <action android:name="android.intent.action.PTT.down" />
                 <action android:name="android.intent.action.PTT.up" />
             </intent-filter>
+            <!-- Inrico T320 firmware — longpress (consumed to suppress built-in beep sounds) -->
+            <intent-filter android:priority="999">
+                <action android:name="android.intent.action.PTT.longpress" />
+                <action android:name="android.intent.action.PTT_LONGPRESS" />
+                <action android:name="com.inrico.ptt.longpress" />
+                <action android:name="com.inrico.intent.action.PTT_LONGPRESS" />
+            </intent-filter>
             <!-- Inrico T320 firmware — underscore variant -->
             <intent-filter>
                 <action android:name="android.intent.action.PTT_DOWN" />

@@ -52,6 +52,21 @@ class PttHardwareReceiver : BroadcastReceiver() {
                 else null
             }
 
+            // Inrico T320 firmware — longpress (consume + abort to suppress built-in beep sounds)
+            "android.intent.action.PTT.longpress",
+            "android.intent.action.PTT_LONGPRESS",
+            "com.inrico.ptt.longpress",
+            "com.inrico.intent.action.PTT_LONGPRESS"  -> {
+                Log.d(TAG, "PttHardwareReceiver: longpress consumed action=$action ordered=${isOrderedBroadcast} — suppressing T320 default beep")
+                if (isOrderedBroadcast) {
+                    abortBroadcast()
+                    Log.d(TAG, "PttHardwareReceiver: ordered broadcast ABORTED for action=$action")
+                } else {
+                    Log.w(TAG, "PttHardwareReceiver: longpress is NORMAL broadcast (not ordered) — abortBroadcast not possible for action=$action")
+                }
+                null
+            }
+
             // Inrico T320 firmware — confirmed primary actions from Zello logcat (dot-separated, lowercase)
             "android.intent.action.PTT.down"      -> BackgroundAudioService.ACTION_PTT_DOWN
             "android.intent.action.PTT.up"        -> BackgroundAudioService.ACTION_PTT_UP
