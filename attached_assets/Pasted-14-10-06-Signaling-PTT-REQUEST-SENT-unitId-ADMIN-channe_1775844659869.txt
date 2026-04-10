@@ -1,0 +1,44 @@
+14:10:06 [Signaling] PTT_REQUEST_SENT unitId=ADMIN channelId=DISPATCH__DISPATCH
+14:10:06 [FloorControl] requestFloor: raw="DISPATCH__DISPATCH" canonical="DISPATCH__DISPATCH" unitId="ADMIN"
+14:10:06 [Signaling] PTT_GRANTED unitId=ADMIN channelId=DISPATCH__DISPATCH
+14:10:06 [AI-Dispatcher] PTT_START callback matched: channelId=DISPATCH__DISPATCH, unitId=ADMIN
+14:10:06 [AI-Dispatcher-Signaling] 2026-04-10T18:10:06.792Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"ADMIN","isEmergency":false}
+14:10:06 [Signaling] PTT_READY sent for ADMIN on DISPATCH__DISPATCH
+14:10:06 [AI-Dispatcher-Signaling] 2026-04-10T18:10:06.792Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"ADMIN","alreadyConnected":true}
+14:10:06 [Signaling] PTT granted: ADMIN on DISPATCH__DISPATCH
+14:10:06 [AudioRelay] PACKET_DETAIL unitId=ADMIN channelKey=DISPATCH__DISPATCH seq=5836 packetBytes=161 frame=1
+14:10:06 [RecordingTap] TX recording started: unit=ADMIN channel=DISPATCH__DISPATCH
+14:10:06 [AudioRelay] PACKET_DETAIL unitId=ADMIN channelKey=DISPATCH__DISPATCH seq=5837 packetBytes=147 frame=2
+14:10:06 [AudioRelay] PACKET_DETAIL unitId=ADMIN channelKey=DISPATCH__DISPATCH seq=5838 packetBytes=146 frame=3
+14:10:06 [AudioRelay] PACKET_DETAIL unitId=ADMIN channelKey=DISPATCH__DISPATCH seq=5839 packetBytes=185 frame=4
+14:10:06 [AudioRelay] PACKET_DETAIL unitId=ADMIN channelKey=DISPATCH__DISPATCH seq=5840 packetBytes=168 frame=5
+14:10:06 [AudioRelay] PACKET_SUMMARY unitId=ADMIN channelKey=DISPATCH__DISPATCH intervalFrames=5 intervalAvgBytes=161 totalFrames=6 lastSeq=5841
+14:10:06 [AudioRelay] WS_PACING_BURST channelKey=DISPATCH__DISPATCH queueDepth=6 draining=3
+14:10:07 [AudioRelay] PACKET_SUMMARY unitId=ADMIN channelKey=DISPATCH__DISPATCH intervalFrames=29 intervalAvgBytes=169 totalFrames=35 lastSeq=5870
+14:10:09 [AudioRelay] PACKET_SUMMARY unitId=ADMIN channelKey=DISPATCH__DISPATCH intervalFrames=32 intervalAvgBytes=162 totalFrames=67 lastSeq=5902
+14:10:09 [AudioRelay] WS_RELAY_STATS {"channelKey":"DISPATCH__DISPATCH","reason":"periodic","framesEnqueued":74,"framesDropped":0,"framesDrained":73,"burstDrains":1,"queueDepth":1,"wsSubscribers":1}
+14:10:10 [AudioRelay] PACKET_SUMMARY unitId=ADMIN channelKey=DISPATCH__DISPATCH intervalFrames=34 intervalAvgBytes=170 totalFrames=101 lastSeq=5936
+14:10:11 [AudioRelay] PACKET_SUMMARY unitId=ADMIN channelKey=DISPATCH__DISPATCH intervalFrames=33 intervalAvgBytes=156 totalFrames=134 lastSeq=5969
+14:10:12 [AudioRelay] PACKET_SUMMARY unitId=ADMIN channelKey=DISPATCH__DISPATCH intervalFrames=32 intervalAvgBytes=174 totalFrames=166 lastSeq=6001
+14:10:12 [Signaling] KEEPALIVE_OK unitId=ADMIN channelKey=DISPATCH__DISPATCH addr=166.137.146.66:26219
+14:10:13 [AudioRelay] PACKET_SUMMARY unitId=ADMIN channelKey=DISPATCH__DISPATCH intervalFrames=39 intervalAvgBytes=176 totalFrames=205 lastSeq=6040
+14:10:14 [AudioRelay] PACKET_SUMMARY unitId=ADMIN channelKey=DISPATCH__DISPATCH intervalFrames=36 intervalAvgBytes=175 totalFrames=241 lastSeq=6076
+14:10:14 [AudioRelay] WS_RELAY_STATS {"channelKey":"DISPATCH__DISPATCH","reason":"periodic","framesEnqueued":170,"framesDropped":0,"framesDrained":170,"burstDrains":0,"queueDepth":1,"wsSubscribers":1}
+14:10:15 [AudioRelay] PACKET_SUMMARY unitId=ADMIN channelKey=DISPATCH__DISPATCH intervalFrames=38 intervalAvgBytes=184 totalFrames=279 lastSeq=6114
+14:10:15 [Signaling] PTT_RELEASE_SENT unitId=ADMIN channelId=DISPATCH__DISPATCH
+14:10:15 [AudioRelay] TX_SESSION_STATS {"channelKey":"DISPATCH__DISPATCH","unitId":"ADMIN","reason":"ptt_release","durationMs":8309,"firstSeq":5836,"lastSeq":6114,"totalFrames":279,"expectedFrames":279,"lossCount":0,"lossPct":0,"maxConsecutiveGap":0,"avgInterArrivalMs":29.7,"minPacketBytes":123,"maxPacketBytes":305}
+14:10:15 [AudioRelay] WS_RELAY_STATS {"channelKey":"DISPATCH__DISPATCH","reason":"tx_session_end","framesEnqueued":35,"framesDropped":0,"framesDrained":36,"burstDrains":0,"queueDepth":0,"wsSubscribers":1}
+14:10:15 [AI-Dispatcher-Signaling] 2026-04-10T18:10:15.220Z | PTT_END_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"ADMIN"}
+14:10:15 [Signaling] PTT released: ADMIN on DISPATCH__DISPATCH
+14:10:15 [RecordingTap] Finalizing recording: unit=ADMIN channel=DISPATCH__DISPATCH frames=279 duration=8246ms
+14:10:15 [AI-Dispatcher] 2026-04-10T18:10:15.714Z | DATA_MESSAGE_SENT {"type":"new_message","message":{"id":2518,"channel":"DISPATCH__DISPATCH","sender":"ADMIN","message_type":"audio","content":null,"audio_url":"/api/messages/audio/DISPATCH__DISPATCH_1775844615538_ADMIN.wav","audio_duration":8246,"transcription":null,"created_at":"2026-04-10T18:10:15.639Z"}}
+14:10:15 [RecordingTap] Audio message saved: id=2518 channel=DISPATCH__DISPATCH sender=ADMIN duration=8246ms
+14:10:15 [AI-Dispatcher] Broadcast message to DISPATCH__DISPATCH: 2518
+14:10:18 [AI-Dispatcher] 2026-04-10T18:10:18.750Z | STT_RESULT {"transcript":"Settings 12345678910.","participant":"ADMIN"}
+14:10:18 [AI-Dispatcher] 2026-04-10T18:10:18.752Z | LLM_CLASSIFY_START {"participant":"ADMIN","state":"IDLE","transcript":"Settings 12345678910."}
+14:10:18 [LLM-Intent] Classifying: unit=ADMIN, state=IDLE, transcript="Settings 12345678910."
+14:10:18 [AI-Dispatcher] 2026-04-10T18:10:18.888Z | LLM_ERROR {"error":"404 The API deployment for this resource does not exist. If you created the deployment within the last 5 minutes, please wait a moment and try again."}
+14:10:18 [AI-Dispatcher] 2026-04-10T18:10:18.888Z | LLM_FALLBACK_TO_REGEX {"participant":"ADMIN"}
+14:10:18 [CommandMatcher] Unit: ADMIN, State: IDLE, Transcript: "Settings 12345678910."
+14:10:18 [AI-Dispatcher] 2026-04-10T18:10:18.889Z | COMMAND_NO_MATCH {"transcript":"Settings 12345678910."}
+14:10:20 [Signaling] KEEPALIVE_OK unitId=ADMIN channelKey=DISPATCH__DISPATCH addr=166.137.146.66:26219
