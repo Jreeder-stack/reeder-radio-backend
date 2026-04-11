@@ -24,6 +24,7 @@ class ToneEngine(private val context: Context) {
     private val beepTrackLock = Any()
     private var deniedPlayer: MediaPlayer? = null
     private val deniedLock = Any()
+    private var endOfTxJob: Job? = null
     private var talkPermitJob: Job? = null
     private var talkPermitPlayer: MediaPlayer? = null
     private val talkPermitLock = Any()
@@ -121,8 +122,10 @@ class ToneEngine(private val context: Context) {
     }
 
     fun playEndOfTxTone() {
-        scope.launch {
+        if (endOfTxJob?.isActive == true) return
+        endOfTxJob = scope.launch {
             playBeeps(800f, count = 1, durationMs = 150, gapMs = 0, volume = 0.35f)
+            endOfTxJob = null
         }
     }
 

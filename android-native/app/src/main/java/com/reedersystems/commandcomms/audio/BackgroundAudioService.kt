@@ -10,6 +10,7 @@ import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import android.net.wifi.WifiManager
 import android.os.Build
+import android.os.SystemClock
 import android.os.IBinder
 import android.os.PowerManager
 import android.util.Log
@@ -61,6 +62,7 @@ class BackgroundAudioService : Service() {
     @Volatile private var joinedSignalingChannelId: String? = null
     @Volatile private var lastAuthenticatedTimeMs: Long = 0L
     @Volatile private var cleaningUpSinceMs: Long = 0L
+    @Volatile private var lastPttUpTimeMs: Long = 0L
     @Volatile private var pendingSignalingChannelId: String? = null
 
     private var emergencyActivatingJob: Job? = null
@@ -793,6 +795,13 @@ class BackgroundAudioService : Service() {
     }
 
     private fun handleRadioPttUp() {
+        val now = SystemClock.elapsedRealtime()
+        if (now - lastPttUpTimeMs < PTT_UP_DEBOUNCE_MS) {
+            Log.d(TAG, """{"event":"RADIO_PTT_UP_DEBOUNCED","deltaMs":${now - lastPttUpTimeMs}}""")
+            return
+        }
+        lastPttUpTimeMs = now
+
         val channelKey = servicePrefs.channelRoomKey
         Log.d(TAG, """{"event":"RADIO_PTT_UP","pttState":"$pttState","channelKey":"${channelKey ?: "none"}"}""")
 
@@ -1104,5 +1113,6 @@ class BackgroundAudioService : Service() {
         const val EXTRA_EMERGENCY_KEY_DOWN = "emergency_key_down"
 
         private const val WAKE_LOCK_TAG = "CommandComms:PttService"
+        private const val PTT_UP_DEBOUNCE_MS = 200L
     }
 }
