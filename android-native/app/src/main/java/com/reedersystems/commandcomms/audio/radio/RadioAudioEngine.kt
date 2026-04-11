@@ -412,10 +412,10 @@ class RadioAudioEngine(private val context: Context) {
     private fun computeDspCoefficients(sampleRate: Int) {
         val sr = sampleRate.toDouble()
 
-        val hpCutoff = 250.0
+        val hpCutoff = 150.0
         txHpAlpha = 1.0 / (1.0 + (2.0 * Math.PI * hpCutoff / sr))
 
-        val lpCutoff = if (sampleRate <= 16000) 3200.0 else 7500.0
+        val lpCutoff = if (sampleRate <= 16000) 3400.0 else 7500.0
         val omega = 2.0 * Math.PI * lpCutoff / sr
         val sinOmega = Math.sin(omega)
         val cosOmega = Math.cos(omega)
@@ -1397,7 +1397,7 @@ class RadioAudioEngine(private val context: Context) {
     private val compAttackCoeff: Double get() = 1.0 - Math.exp(-1.0 / (actualSampleRate * txCompAttackMs))
     private val compReleaseCoeff: Double get() = 1.0 - Math.exp(-1.0 / (actualSampleRate * txCompReleaseMs))
 
-    var txGain: Double = 1.8
+    var txGain: Double = 2.0
 
     var txGateThresholdDb: Double = -42.0
     var txGateCloseThresholdDb: Double = -46.0
