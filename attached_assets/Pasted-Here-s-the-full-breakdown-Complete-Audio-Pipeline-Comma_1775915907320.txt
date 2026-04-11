@@ -1,0 +1,228 @@
+Here's the full breakdown:
+
+Complete Audio Pipeline — Command Communications
+GLOBAL SPECS
+Sample Rate: 16,000 Hz (16 kHz) everywhere — T320 capture, T320 playback, server relay, browser capture, browser playback, Opus encode/decode
+Channels: 1 (mono)
+Bit Depth: 16-bit signed integer (PCM Int16, Little Endian)
+Frame Duration: 20 ms
+Frame Size: 320 samples per frame (16000 × 0.020)
+Frame Size (bytes): 640 bytes raw PCM (320 samples × 2 bytes)
+OPUS CODEC SETTINGS
+T320 (Android Native — via concentus Java Opus library):
+
+Application Mode: VOIP
+Bitrate: 64,000 bps (64 kbps) — adjustable at runtime via admin panel
+VBR: OFF (Constant Bitrate)
+Complexity: 3
+FEC (Forward Error Correction): ON
+Expected Packet Loss: 10%
+Encoder sample rate: 16 kHz (adapts if HAL negotiates different rate)
+Decoder sample rate: always 16 kHz
+Warmup: 8 silent frames encoded on fresh encoder creation (up to 2 retries)
+Typical encoded frame size: ~100-200 bytes per 20ms frame
+Desktop Browser (WebCodecs AudioEncoder):
+
+Codec: opus
+Sample Rate: 16,000 Hz
+Channels: 1
+Bitrate: 64,000 bps (64 kbps)
+Note: If WebCodecs is unavailable (older browser), TX is blocked entirely — no PCM fallback from browser side
+Browser Decoder (opus-decoder WASM package):
+
+Decoder sample rate: 16,000 Hz
+Channels: 1
+Output: Float32 → converted to Int16 for playback worklet
+One decoder instance per sender (keyed by unit ID)
+TRANSPORT
+T320 → Server:
+
+Protocol: UDP
+Server port: 5100
+Binary frame format: Opus payload bytes with sequence number, channel key, sender unit ID
+Codec marker byte: 0x02 = Opus, 0x01 = PCM (fallback on encoder failure)
+Subscriber timeout: 60 seconds
+Server → Desktop Browser:
+
+Protocol: WebSocket (binary frames)
+Binary header: [codec_marker(1)] [sequence(4, LE)] [channel_len(1)] [channel_bytes] [sender_len(1)] [sender_bytes] [payload...]
+Codec marker 0x02 = Opus passthrough (server does NOT decode/re-encode — raw Opus bytes forwarded)
+Codec marker 0x01 = raw PCM Int16
+Server pacing queue: 75 frames max (~1500ms), 20ms interval, burst drain of 3 frames if queue > 5
+Desktop Browser → Server → T320:
+
+Browser captures at 16 kHz → Opus encode via WebCodecs → WebSocket binary to server → server relays via UDP to T320
+Signaling (non-audio):
+
+Socket.IO v4.x server, allowEIO3: true for Android client compatibility (EIO=3 protocol)
+Used for: PTT floor control, presence, emergency, DSP config push, channel management
+T320 TX DSP CHAIN (order of processing)
+Raw mic capture (Android AudioRecord, VOICE_COMMUNICATION source, 16 kHz, mono) →
+
+Hardware Audio Effects (Android AudioFX):
+
+AGC (AutomaticGainControl): DISABLED (enabled = false)
+NoiseSuppressor: ENABLED (enabled = true)
+Stereo-to-Mono Downmix (only if HAL returns 2 channels despite requesting mono)
+
+High-Pass Filter (1st order, DC blocker):
+
+Cutoff: ~300 Hz (default txHpAlpha = 0.9889)
+Formula: y = α × (prevOut + x - prevIn)
+Low-Pass Filter (2nd order IIR / biquad):
+
+Cutoff: 3400 Hz (when sample rate ≤ 16 kHz)
+Default coefficients: B0=0.1555, B1=0.3110, B2=0.1555, A1=-0.5766, A2=0.1985
+YOUR CURRENT LIVE VALUES: B0=0.3804, B1=0.2185, B2=0.8449 (sum = 1.44, passband gain > 1)
+Compressor (feed-forward, sample-by-sample):
+
+Default: threshold = -12 dBFS, ratio = 3:1, attack = 3ms, release = 150ms
+YOUR CURRENT LIVE VALUES: threshold = -18 dBFS, ratio = 1:1 (= no compression), attack = 16ms, release = 10ms
+Noise Gate / Expander:
+
+Gate open threshold: -42 dBFS (default)
+Gate close threshold: -46 dBFS (default, 4dB hysteresis)
+Expander ratio: 2.0:1 (below threshold, signal is attenuated by expander)
+Gate attack: 2ms, release: 150ms
+Output Gain:
+
+Default: 2.0×
+YOUR CURRENT LIVE VALUE: 5.0×
+→ Output: 320 PCM Int16 samples → Opus encode → UDP to server
+
+T320 RX DSP CHAIN (receiving audio from server)
+UDP Opus packet from server →
+
+Jitter Buffer:
+
+Target depth: 3 frames (60ms)
+Max buffer: 50 frames (1000ms)
+Adaptive jitter estimation (alpha = 0.07)
+Opus Decode → 320 PCM Int16 samples at 16 kHz
+
+High-Pass Filter (same 1st-order structure):
+
+Default rxHpAlpha = 0.9673 (cutoff ~850 Hz — higher than TX)
+Low-Pass Filter (2nd order IIR):
+
+Default: B0=0.0605, B1=0.1210, B2=0.0605, A1=-1.1939, A2=0.4359
+This is a tighter LP (~2.5 kHz cutoff)
+Noise Gate:
+
+Threshold: -50 dBFS (code default) / -40 dBFS (server default pushed)
+Simple on/off gate, no expander
+Software Gain:
+
+Default: 2.5×
+YOUR CURRENT LIVE VALUE: 2.5×
+→ Output to AudioTrack (low-latency mode, 16 kHz, mono, PCM 16-bit)
+
+DESKTOP BROWSER TX CHAIN (dispatcher transmitting)
+Mic Capture via getUserMedia:
+
+Sample rate: 16,000 Hz
+Channels: 1 (mono)
+echoCancellation: false
+autoGainControl: false
+noiseSuppression: controlled by Audio Settings toggle (default OFF)
+Capture Worklet (pcm-capture-worklet.js):
+
+Resamples AudioContext output to 16 kHz Int16, buffers into 320-sample frames
+Software Gain (applied per-frame in JavaScript):
+
+Base: micVolume / 100 (slider, 0–150%)
+If Recording Amplifier ON: multiplied by 2.0×
+Applied sample-by-sample with hard clip at ±32767
+Opus Encode (WebCodecs AudioEncoder):
+
+Int16 → Float32 → AudioData → encoder → Opus bytes
+64 kbps, 16 kHz, mono
+WebSocket send → Server → relays to all subscribers (UDP to T320, WS to other browsers)
+
+DESKTOP BROWSER RX CHAIN (dispatcher receiving)
+WebSocket binary frame from server →
+
+Parse header → extract codec marker, sequence, channel, sender
+
+Reorder Buffer:
+
+Buffer size: 20 frames
+Max late tolerance: 20 frames
+Flush timer: 90ms (forces delivery of buffered frames if no new frames arrive)
+Packet Loss Concealment (PLC):
+
+Max consecutive PLC frames: 7
+Uses Opus decoder's built-in PLC (fed empty frames on sequence gaps)
+Opus Decode (opus-decoder WASM):
+
+Output: Float32 samples → converted to Int16
+Playback Worklet (pcm-playback-worklet.js) — ring buffer:
+
+Pre-buffer (initial): 50 frames (1000ms)
+Re-prime (after underrun): 25 frames (500ms)
+Underrun handling: quadratic fade (10 steps)
+DSP via Web Audio API (radioVoiceDSP.js):
+
+Gain Node:
+Base: incomingVolume / 100 (slider, 0–150%)
+If Playback Amplifier ON: multiplied by 2.0×
+So max possible = 1.5 × 2.0 = 3.0×
+Limiter (DynamicsCompressor used as brick-wall limiter):
+Threshold: -3 dBFS
+Knee: 1 dB
+Ratio: 20:1
+Attack: 1ms
+Release: 50ms
+→ Output to speakers
+
+AUDIO SETTINGS PANEL (Desktop, Zello-style)
+Persists to localStorage, applies in real-time.
+
+Control	Range	What it does	Where it acts
+Incoming Volume	0–150%	Gain multiplier on RX playback	radioVoiceDSP.js gain node
+Playback Amplifier	ON/OFF	2× multiplier on incoming	radioVoiceDSP.js gain node (stacks with volume)
+Mic Volume	0–150%	Gain multiplier on TX capture	_applyCaptureGain() on Int16 PCM frames
+Recording Amplifier	ON/OFF	2× multiplier on outgoing	_applyCaptureGain() (stacks with mic volume)
+Noise Suppression	ON/OFF	Browser noiseSuppression constraint	getUserMedia / applyConstraints
+ADMIN AUDIO TUNING (Server → T320, via Socket.IO push)
+These values are pushed live from the admin panel to connected T320 devices. Server resets to DSP_DEFAULTS on every PM2 restart.
+
+Current Server DSP_DEFAULTS (what T320 gets after fresh PM2 restart):
+
+Parameter	Default	Your Live Value
+txHpAlpha	0.9889	0.999
+txLpB0	0.1555	0.3804
+txLpB1	0.3110	0.2185
+txLpB2	0.1555	0.8449
+txLpA1	-0.5766	-0.5766
+txLpA2	0.1985	0.1985
+txCompThresholdDb	-18 dBFS	-18 dBFS
+txCompRatio	3.0:1	1.0:1 (NO compression)
+txCompAttackMs	3ms	16ms
+txCompReleaseMs	150ms	10ms
+txGain	1.4×	5.0×
+rxHpAlpha	0.9673	0.9673
+rxLp*	(as above)	(as above)
+rxGateThresholdDb	-40 dBFS	-40 dBFS
+rxGain	2.5×	2.5×
+opusBitrate	48000	48000
+T320 CODE DEFAULTS (in APK, before admin push overrides)
+Parameter	Value
+txGain	2.0×
+txCompThresholdDb	-12 dBFS
+txCompRatio	3.0:1
+txGateThresholdDb	-42 dBFS
+txGateCloseThresholdDb	-46 dBFS
+txExpanderRatio	2.0:1
+AGC	Disabled
+NoiseSuppressor	Enabled
+KEY OBSERVATIONS FOR YOUR AUDIO PERSON
+The compressor ratio is set to 1:1 in the live config — that means zero dynamic range compression. Quiet signals stay quiet. This is probably the single biggest reason for low volume at distance. Should be at least 3:1 or 4:1 for radio voice.
+
+The LP filter coefficients have been modified — B0+B1+B2 = 1.44 in the live config (should sum to ~0.62 for unity gain at the passband). This means the filter is adding gain at some frequencies but the overall shaping may be wrong.
+
+AGC is disabled on the T320 — the Android hardware automatic gain control is explicitly turned off. This means the raw mic level from the T320 hardware is what you get, with no automatic amplification of quiet input. The T320's mic is designed for close-range PTT use.
+
+The desktop Playback Amplifier toggle works but hits the -3 dB limiter — at 150% incoming + 2x amplifier = 3x total gain, but the limiter has a -3 dBFS threshold with 20:1 ratio, so anything above -3 dB gets crushed. This makes the amplifier less noticeable when incoming volume is already high.
+
+End-to-end latency budget: T320 pre-buffer + Opus encode (20ms frame) + UDP transit + server pacing (20ms interval) + browser reorder buffer (up to 90ms flush) + browser pre-buffer (1000ms initial / 500ms re-prime) + Web Audio processing = roughly 1.1–1.5 seconds first-frame latency.
