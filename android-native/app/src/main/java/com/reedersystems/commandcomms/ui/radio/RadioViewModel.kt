@@ -377,7 +377,6 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         pttStartJob = null
         val channel = state.currentChannel ?: return
         Log.d(TAG, "onPttUp roomKey=${channel.roomKey}")
-        app.toneEngine.playEndOfTxTone()
         _uiState.update { it.copy(pttState = PttState.IDLE) }
         sendServiceIntent(BackgroundAudioService.ACTION_PTT_UP)
     }
