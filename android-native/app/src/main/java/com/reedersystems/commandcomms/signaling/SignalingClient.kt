@@ -28,6 +28,8 @@ class SignalingClient(var serverUrl: String, private var radioToken: String? = n
     private val _events = MutableSharedFlow<SignalingEvent>(extraBufferCapacity = 32)
     val events: SharedFlow<SignalingEvent> = _events.asSharedFlow()
 
+    private val pendingEmergencyEndKeys = mutableSetOf<String>()
+
     private var unitId: String = ""
     private var username: String = ""
 
@@ -79,6 +81,7 @@ class SignalingClient(var serverUrl: String, private var radioToken: String? = n
             Log.d(TAG, "Signaling authenticated: $unitId")
             Log.d(STARTUP_TAG, "SIGNALING_AUTH_SUCCESS unitId=$unitId")
             _connectionState.value = ConnectionState.AUTHENTICATED
+            flushPendingEmergencyEnds()
         }
 
         s.on("unauthorized") { args ->
@@ -333,8 +336,17 @@ class SignalingClient(var serverUrl: String, private var radioToken: String? = n
     }
 
     fun emitEmergencyEnd(channelKey: String) {
-        if (!isReady()) return
+        if (!isReady()) {
+            Log.w(TAG, "emitEmergencyEnd: not authenticated — queuing channelKey=$channelKey for retry on reconnect")
+            synchronized(pendingEmergencyEndKeys) {
+                pendingEmergencyEndKeys.add(channelKey)
+            }
+            return
+        }
         Log.d(TAG, "emitEmergencyEnd $channelKey")
+        synchronized(pendingEmergencyEndKeys) {
+            pendingEmergencyEndKeys.remove(channelKey)
+        }
         socket?.emit("emergency:end", JSONObject().put("channelId", channelKey))
     }
 
@@ -413,6 +425,25 @@ class SignalingClient(var serverUrl: String, private var radioToken: String? = n
     }
 
     private fun isReady() = _connectionState.value == ConnectionState.AUTHENTICATED
+
+    private fun flushPendingEmergencyEnds() {
+        val keys: List<String>
+        synchronized(pendingEmergencyEndKeys) {
+            keys = pendingEmergencyEndKeys.toList()
+        }
+        if (keys.isEmpty()) return
+        for (key in keys) {
+            if (!isReady()) {
+                Log.w(TAG, "flushPendingEmergencyEnds: lost auth mid-flush — keeping remaining keys")
+                return
+            }
+            Log.d(TAG, "flushPendingEmergencyEnds: emitting emergency:end for channelKey=$key")
+            socket?.emit("emergency:end", JSONObject().put("channelId", key))
+            synchronized(pendingEmergencyEndKeys) {
+                pendingEmergencyEndKeys.remove(key)
+            }
+        }
+    }
 
     private inline fun parseAndEmit(
         args: Array<Any>,

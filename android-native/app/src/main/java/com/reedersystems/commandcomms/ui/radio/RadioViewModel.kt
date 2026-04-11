@@ -151,7 +151,15 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                     cancelArmingJob?.cancel()
                     cancelArmingJob = null
                     app.toneEngine.stopCountdownBeep()
-                    _uiState.update { it.copy(emergencyHoldProgress = null, isEmergencyCancelling = false) }
+                    _uiState.update {
+                        it.copy(
+                            emergencyHoldProgress = null,
+                            isEmergencyCancelling = false,
+                            myEmergencyActive = false,
+                            channelEmergencyActive = false
+                        )
+                    }
+                    locationTracker.stopTracking()
                 }
             }
         }

@@ -414,7 +414,27 @@ class BackgroundAudioService : Service() {
         return true
     }
 
+    private var radioEngineRetryJob: Job? = null
+    @Volatile private var radioEngineInitInProgress = false
+
     private fun initRadioEngine() {
+        if (radioEngine != null) {
+            Log.d(TAG, "initRadioEngine: engine already initialized — skipping")
+            return
+        }
+        if (radioEngineInitInProgress) {
+            Log.d(TAG, "initRadioEngine: init already in progress — skipping")
+            return
+        }
+        radioEngineInitInProgress = true
+        try {
+            initRadioEngineInternal()
+        } finally {
+            radioEngineInitInProgress = false
+        }
+    }
+
+    private fun initRadioEngineInternal() {
         val engine = RadioAudioEngine(applicationContext)
 
         val appStateManager = app.radioStateManager
@@ -433,12 +453,14 @@ class BackgroundAudioService : Service() {
 
         val relayHost = servicePrefs.relayHost
         if (relayHost.isNullOrBlank()) {
-            Log.e(TAG, "Radio transport config missing audioRelayHost from backend; aborting radio engine init")
+            Log.e(TAG, "Radio transport config missing audioRelayHost from backend; scheduling config fetch and retry")
+            scheduleRadioEngineRetry()
             return
         }
         val relayPort = servicePrefs.relayPort
         if (relayPort <= 0) {
-            Log.e(TAG, "Radio transport config invalid audioRelayPort=$relayPort; aborting radio engine init")
+            Log.e(TAG, "Radio transport config invalid audioRelayPort=$relayPort; scheduling config fetch and retry")
+            scheduleRadioEngineRetry()
             return
         }
         engine.udpTransport.configure(relayHost, relayPort)
@@ -474,10 +496,83 @@ class BackgroundAudioService : Service() {
         engine.start()
         engine.startReceive()
         radioEngine = engine
+        radioEngineRetryJob?.cancel()
+        radioEngineRetryJob = null
         observeRadioFloorEvents(engine)
         observeTransportHealth(engine)
         observeSignalingConnection(engine)
         Log.d(TAG, "RadioAudioEngine initialized (custom-radio transport) — RX always-on")
+    }
+
+    private fun scheduleRadioEngineRetry() {
+        if (radioEngineRetryJob?.isActive == true) {
+            Log.d(TAG, "radioEngine retry already scheduled — skipping duplicate")
+            return
+        }
+        radioEngineRetryJob = scope.launch {
+            val initialDelays = longArrayOf(2_000L, 5_000L, 10_000L, 30_000L)
+            val maxDelay = 60_000L
+            var attempt = 0
+
+            Log.d(TAG, "radioEngine retry: attempting immediate config fetch before backoff")
+            try {
+                fetchAndStoreRadioConfig()
+                val host = servicePrefs.relayHost
+                val port = servicePrefs.relayPort
+                if (!host.isNullOrBlank() && port > 0) {
+                    Log.d(TAG, "radioEngine retry: immediate fetch succeeded host=$host port=$port — reinitializing")
+                    initRadioEngine()
+                    if (radioEngine != null) return@launch
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "radioEngine retry immediate fetch failed: ${e.message}")
+            }
+
+            while (true) {
+                val delayMs = if (attempt < initialDelays.size) initialDelays[attempt] else maxDelay
+                delay(delayMs)
+                attempt++
+                Log.d(TAG, "radioEngine retry attempt=$attempt — fetching config from server")
+                try {
+                    fetchAndStoreRadioConfig()
+                } catch (e: Exception) {
+                    Log.e(TAG, "radioEngine retry config fetch failed: ${e.message}")
+                }
+                val host = servicePrefs.relayHost
+                val port = servicePrefs.relayPort
+                if (!host.isNullOrBlank() && port > 0) {
+                    Log.d(TAG, "radioEngine retry: config now available host=$host port=$port — reinitializing")
+                    updateNotification("Radio — Reconnecting")
+                    initRadioEngine()
+                    if (radioEngine != null) {
+                        updateNotification("Radio — Standby")
+                        return@launch
+                    }
+                }
+                Log.w(TAG, "radioEngine retry attempt=$attempt failed — config still missing, retrying in ${if (attempt < initialDelays.size) initialDelays.getOrElse(attempt) { maxDelay } else maxDelay}ms")
+                if (attempt == initialDelays.size) {
+                    updateNotification("Radio — No Config (retrying)")
+                }
+            }
+        }
+    }
+
+    private suspend fun fetchAndStoreRadioConfig() {
+        val result = app.radioConfigRepository.fetchConfig()
+        if (result.isSuccess) {
+            val config = result.getOrThrow()
+            Log.d(TAG, "Service fetchRadioConfig SUCCESS host=${config.audioRelayHost} port=${config.audioRelayPort}")
+            app.radioTransportConfig = config
+            servicePrefs.transportMode = config.transportMode
+            servicePrefs.relayHost = config.audioRelayHost
+            servicePrefs.relayPort = config.audioRelayPort
+            servicePrefs.signalingUrl = config.signalingUrl
+            servicePrefs.useTls = config.useTls
+            app.signalingClient.serverUrl = config.signalingUrl
+        } else {
+            Log.e(TAG, "Service fetchRadioConfig FAILED: ${result.exceptionOrNull()?.message}")
+            throw result.exceptionOrNull() ?: Exception("Unknown fetch error")
+        }
     }
 
     private fun observeTransportHealth(engine: RadioAudioEngine) {
@@ -709,7 +804,11 @@ class BackgroundAudioService : Service() {
         }
 
         val engine = radioEngine ?: run {
-            Log.e(TAG, "Radio PTT DOWN: radioEngine not initialized")
+            Log.w(TAG, "Radio PTT DOWN: radioEngine not initialized — attempting one-shot re-init")
+            initRadioEngine()
+            radioEngine
+        } ?: run {
+            Log.e(TAG, "Radio PTT DOWN: radioEngine re-init failed — sending TX_FAILED")
             sendPttTxFailed()
             return
         }
@@ -1064,6 +1163,7 @@ class BackgroundAudioService : Service() {
             dynamicPttReceiver = null
             Log.d(TAG, "Dynamic PttHardwareReceiver unregistered")
         }
+        radioEngineRetryJob?.cancel()
         signalingConnectionJob?.cancel()
         signalingEventsJob?.cancel()
         radioEngine?.release()
