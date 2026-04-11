@@ -13,6 +13,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -43,11 +44,28 @@ private val White     = Color.White
 fun RadioScreen(
     onLogout: () -> Unit,
     onOpenSettings: () -> Unit = {},
+    onLocked: (() -> Unit)? = null,
+    assignedFromUnit: String? = null,
     viewModel: RadioViewModel = viewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var showLogoutDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
+    var showAssignedOverlay by remember { mutableStateOf(assignedFromUnit != null) }
+
+    LaunchedEffect(assignedFromUnit) {
+        if (assignedFromUnit != null) {
+            showAssignedOverlay = true
+            kotlinx.coroutines.delay(2_000)
+            showAssignedOverlay = false
+        }
+    }
+
+    LaunchedEffect(state.isRadioLocked) {
+        if (state.isRadioLocked) {
+            onLocked?.invoke()
+        }
+    }
 
     LifecycleResumeEffect(Unit) {
         val granted = ContextCompat.checkSelfPermission(
@@ -127,6 +145,24 @@ fun RadioScreen(
                 onToggleChannel = viewModel::toggleScanChannel,
                 onDismiss = { viewModel.setShowScanOverlay(false) }
             )
+        }
+
+        if (showAssignedOverlay && assignedFromUnit != null) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(0xCC000000)),
+                contentAlignment = Alignment.Center
+            ) {
+                androidx.compose.material3.Text(
+                    text = "Assigned — Unit $assignedFromUnit",
+                    color = Color.White,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = FontFamily.Monospace,
+                    textAlign = TextAlign.Center
+                )
+            }
         }
     }
 }

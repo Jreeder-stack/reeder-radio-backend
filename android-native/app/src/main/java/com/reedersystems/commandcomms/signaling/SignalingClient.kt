@@ -18,7 +18,7 @@ private const val STARTUP_TAG = "[APP-STARTUP]"
 
 enum class ConnectionState { DISCONNECTED, CONNECTING, CONNECTED, AUTHENTICATED }
 
-class SignalingClient(var serverUrl: String) {
+class SignalingClient(var serverUrl: String, private var radioToken: String? = null) {
 
     private var socket: Socket? = null
 
@@ -31,6 +31,10 @@ class SignalingClient(var serverUrl: String) {
     private var unitId: String = ""
     private var username: String = ""
 
+    fun setRadioToken(token: String?) {
+        radioToken = token
+    }
+
     fun connect(unitId: String, username: String) {
         if (_connectionState.value != ConnectionState.DISCONNECTED) return
         this.unitId = unitId
@@ -40,14 +44,20 @@ class SignalingClient(var serverUrl: String) {
         Log.d(STARTUP_TAG, "SIGNALING_CONNECT_ATTEMPT url=$serverUrl unitId=$unitId")
         _connectionState.value = ConnectionState.CONNECTING
 
-        val options = IO.Options.builder()
+        val optionsBuilder = IO.Options.builder()
             .setPath("/signaling")
             .setTransports(arrayOf(WebSocket.NAME))
             .setReconnection(true)
             .setReconnectionDelay(2_000)
             .setReconnectionAttempts(Integer.MAX_VALUE)
-            .build()
 
+        val token = radioToken
+        if (token != null) {
+            Log.d(STARTUP_TAG, "SIGNALING_CONNECT_RADIO_AUTH radioToken present")
+            optionsBuilder.setQuery("radioToken=$token")
+        }
+
+        val options = optionsBuilder.build()
         val s = IO.socket(serverUrl, options)
         socket = s
 
@@ -259,6 +269,16 @@ class SignalingClient(var serverUrl: String) {
                 silenceMs = json.optLong("silenceMs", 0)
             )
         }}
+
+        s.on("radio:locked") { _ ->
+            Log.d(TAG, "radio:locked received on main signaling socket")
+            _events.tryEmit(SignalingEvent.RadioLocked)
+        }
+
+        s.on("radio:unlocked") { _ ->
+            Log.d(TAG, "radio:unlocked received on main signaling socket")
+            _events.tryEmit(SignalingEvent.RadioUnlocked)
+        }
 
         s.on("ping") { s.emit("pong") }
 

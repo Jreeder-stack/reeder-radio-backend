@@ -67,6 +67,7 @@ data class RadioUiState(
     val micPermissionGranted: Boolean = false,
     val radioState: RadioState = RadioState.IDLE,
     val isChannelBusy: Boolean = false,
+    val isRadioLocked: Boolean = false,
 ) {
     val currentZone: Zone? get() = zones.getOrNull(currentZoneIndex)
     val currentChannel: Channel? get() = currentZone?.channels?.getOrNull(currentChannelIndex)
@@ -291,6 +292,14 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                         if (event.unitId == _uiState.value.unitId) {
                             Log.d(STARTUP_TAG, "CHANNEL_JOIN_SUCCESS channel=${event.channelId}")
                         }
+                    }
+                    is SignalingEvent.RadioLocked -> {
+                        Log.d(TAG, "radio:locked — suspending radio functionality")
+                        _uiState.update { it.copy(isRadioLocked = true) }
+                    }
+                    is SignalingEvent.RadioUnlocked -> {
+                        Log.d(TAG, "radio:unlocked — resuming radio functionality")
+                        _uiState.update { it.copy(isRadioLocked = false) }
                     }
                     else -> {}
                 }

@@ -11,6 +11,7 @@ import com.reedersystems.commandcomms.audio.ToneEngine
 import com.reedersystems.commandcomms.audio.radio.RadioStateManager
 import com.reedersystems.commandcomms.data.api.ApiClient
 import com.reedersystems.commandcomms.data.prefs.PttKeyPrefs
+import com.reedersystems.commandcomms.data.prefs.RadioTokenStore
 import com.reedersystems.commandcomms.data.prefs.ServiceConnectionPrefs
 import com.reedersystems.commandcomms.data.prefs.SessionPrefs
 import com.reedersystems.commandcomms.data.model.RadioTransportConfig
@@ -51,6 +52,9 @@ class CommandCommsApp : Application() {
     lateinit var pttKeyPrefs: PttKeyPrefs
         private set
 
+    lateinit var radioTokenStore: RadioTokenStore
+        private set
+
     lateinit var toneEngine: ToneEngine
         private set
 
@@ -81,9 +85,19 @@ class CommandCommsApp : Application() {
             sessionPrefs.lastVersionCode = currentVersionCode
         }
 
+        radioTokenStore = RadioTokenStore(this)
+        val storedRadioToken = radioTokenStore.getToken()
+        if (storedRadioToken != null) {
+            apiClient.radioToken = storedRadioToken
+        }
+        val assignedUnit = radioTokenStore.getAssignedUnitId()
+        if (assignedUnit != null) {
+            if (sessionPrefs.unitId.isNullOrBlank()) sessionPrefs.unitId = assignedUnit
+            if (sessionPrefs.username.isNullOrBlank()) sessionPrefs.username = assignedUnit
+        }
         authRepository = AuthRepository(apiClient)
         channelRepository = ChannelRepository(apiClient)
-        signalingClient = SignalingClient(apiClient.baseUrl)
+        signalingClient = SignalingClient(apiClient.baseUrl, storedRadioToken)
         signalingRepository = SignalingRepository(signalingClient)
         radioConfigRepository = RadioConfigRepository(apiClient)
         toneEngine = ToneEngine(this)

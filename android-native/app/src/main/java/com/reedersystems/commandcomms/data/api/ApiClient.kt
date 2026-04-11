@@ -8,6 +8,7 @@ import com.reedersystems.commandcomms.BuildConfig
 import okhttp3.Cookie
 import okhttp3.CookieJar
 import okhttp3.HttpUrl
+import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
 
@@ -19,8 +20,24 @@ class ApiClient private constructor(context: Context) {
         context.getSharedPreferences(COOKIE_PREFS, Context.MODE_PRIVATE)
     )
 
+    @Volatile
+    var radioToken: String? = null
+
+    private val radioTokenInterceptor = Interceptor { chain ->
+        val token = radioToken
+        if (token != null) {
+            val request = chain.request().newBuilder()
+                .addHeader("x-radio-token", token)
+                .build()
+            chain.proceed(request)
+        } else {
+            chain.proceed(chain.request())
+        }
+    }
+
     val httpClient: OkHttpClient = OkHttpClient.Builder()
         .cookieJar(cookieJar)
+        .addInterceptor(radioTokenInterceptor)
         .callTimeout(20, TimeUnit.SECONDS)
         .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
