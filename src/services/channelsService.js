@@ -23,8 +23,8 @@ export async function getAccessibleChannels(userId, userRole) {
   console.log(`[CHANNELS] User id=${userId} has ${userAccess.length} channel access entries`);
   
   if (userAccess.length === 0) {
-    console.log(`[CHANNELS] No specific access for user id=${userId}, fallback: all ${enabledChannels.length} enabled channels`);
-    return enabledChannels;
+    console.log(`[CHANNELS] No channel access entries for user id=${userId}, deny-by-default: returning 0 channels`);
+    return [];
   }
   
   const filtered = enabledChannels.filter(ch => userAccess.includes(ch.id));
