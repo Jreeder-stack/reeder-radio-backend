@@ -34,7 +34,7 @@ app.use(cors({
   credentials: true
 }));
 
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
 const PgSession = pgSession(session);
 app.use(session({

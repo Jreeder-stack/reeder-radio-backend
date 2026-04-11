@@ -7,7 +7,9 @@ export default function VoiceMessage({ audioUrl, duration, transcription, onTran
   const [isLoading, setIsLoading] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
   const [showTranscription, setShowTranscription] = useState(false);
+  const [audioSrc, setAudioSrc] = useState(null);
   const audioRef = useRef(null);
+  const loadingTimeoutRef = useRef(null);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -28,32 +30,27 @@ export default function VoiceMessage({ audioUrl, duration, transcription, onTran
       setIsPlaying(true);
       setIsLoading(false);
       setPlaybackError(null);
-      if (loadingTimeoutRef.current) {
-        clearTimeout(loadingTimeoutRef.current);
-        loadingTimeoutRef.current = null;
-      }
+      clearLoadingTimeout();
     };
+
     const handlePause = () => setIsPlaying(false);
 
     const handleError = () => {
       setIsPlaying(false);
       setIsLoading(false);
-      if (loadingTimeoutRef.current) {
-        clearTimeout(loadingTimeoutRef.current);
-        loadingTimeoutRef.current = null;
-      }
+      clearLoadingTimeout();
       const err = audio.error;
       let msg = 'Playback failed';
       if (err) {
         switch (err.code) {
-          case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
+          case MediaError.MEDIA_ERR_DECODE:
             msg = 'Audio format not supported';
+            break;
+          case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
+            msg = 'Audio decode error';
             break;
           case MediaError.MEDIA_ERR_NETWORK:
             msg = 'Network error';
-            break;
-          case MediaError.MEDIA_ERR_DECODE:
-            msg = 'Audio decode error';
             break;
           default:
             msg = 'Playback failed';
@@ -83,8 +80,6 @@ export default function VoiceMessage({ audioUrl, duration, transcription, onTran
     };
   }, []);
 
-  const loadingTimeoutRef = useRef(null);
-
   const clearLoadingTimeout = () => {
     if (loadingTimeoutRef.current) {
       clearTimeout(loadingTimeoutRef.current);
@@ -96,6 +91,66 @@ export default function VoiceMessage({ audioUrl, duration, transcription, onTran
     return () => clearLoadingTimeout();
   }, []);
 
+  const checkAudioUrl = async (url) => {
+    try {
+      const response = await fetch(url, { method: 'HEAD' });
+      if (response.status === 404) {
+        return { ok: false, error: 'Audio not available' };
+      }
+      if (!response.ok) {
+        return { ok: false, error: 'Playback failed' };
+      }
+      const contentType = response.headers.get('content-type') || '';
+      if (!contentType.startsWith('audio/')) {
+        return { ok: false, error: 'Audio not available' };
+      }
+      return { ok: true };
+    } catch {
+      return { ok: false, error: 'Network error' };
+    }
+  };
+
+  const startPlayback = async () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    setIsLoading(true);
+    setPlaybackError(null);
+    clearLoadingTimeout();
+
+    const encodedUrl = encodeURI(audioUrl);
+    const check = await checkAudioUrl(encodedUrl);
+    if (!check.ok) {
+      setIsLoading(false);
+      setPlaybackError(check.error);
+      return;
+    }
+
+    setAudioSrc(encodedUrl);
+    audio.src = encodedUrl;
+
+    loadingTimeoutRef.current = setTimeout(() => {
+      setIsLoading(false);
+      setPlaybackError('Load timed out');
+    }, 10000);
+
+    const onReady = () => {
+      clearLoadingTimeout();
+      audio.play().catch(err => {
+        console.error('Playback failed:', err);
+        setIsLoading(false);
+        setPlaybackError('Playback failed');
+      });
+    };
+
+    if (audio.readyState >= 3) {
+      onReady();
+    } else {
+      audio.addEventListener('canplay', onReady, { once: true });
+      audio.load();
+    }
+  };
+
   const togglePlay = () => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -105,42 +160,12 @@ export default function VoiceMessage({ audioUrl, duration, transcription, onTran
       return;
     }
 
-    if (playbackError) {
-      setPlaybackError(null);
-      setIsLoading(true);
-      clearLoadingTimeout();
-      loadingTimeoutRef.current = setTimeout(() => {
-        setIsLoading(false);
-        setPlaybackError('Load timed out');
-      }, 10000);
+    startPlayback();
+  };
 
-      const onReady = () => {
-        audio.removeEventListener('canplay', onReady);
-        clearLoadingTimeout();
-        audio.play().catch(err => {
-          console.error('Playback failed:', err);
-          setIsLoading(false);
-          setPlaybackError('Playback failed');
-        });
-      };
-      audio.addEventListener('canplay', onReady, { once: true });
-      audio.load();
-      return;
-    }
-
-    setIsLoading(true);
-    clearLoadingTimeout();
-    loadingTimeoutRef.current = setTimeout(() => {
-      setIsLoading(false);
-      setPlaybackError('Load timed out');
-    }, 10000);
-
-    audio.play().catch(err => {
-      console.error('Playback failed:', err);
-      clearLoadingTimeout();
-      setIsLoading(false);
-      setPlaybackError('Playback failed');
-    });
+  const handleRetry = () => {
+    setPlaybackError(null);
+    startPlayback();
   };
 
   const handleTranscribe = async () => {
@@ -166,9 +191,11 @@ export default function VoiceMessage({ audioUrl, duration, transcription, onTran
     return `${mins}:${remainingSecs.toString().padStart(2, '0')}`;
   };
 
+  const isRetryable = playbackError === 'Network error' || playbackError === 'Load timed out' || playbackError === 'Playback failed';
+
   return (
     <div className="min-w-[200px]">
-      <audio ref={audioRef} src={encodeURI(audioUrl)} preload="metadata" />
+      <audio ref={audioRef} src={audioSrc || undefined} preload="none" />
       
       <div className="flex items-center gap-3">
         <button
@@ -211,8 +238,17 @@ export default function VoiceMessage({ audioUrl, duration, transcription, onTran
               style={{ width: `${progress}%` }}
             />
           </div>
-          <div className={`text-xs mt-1 ${playbackError ? 'text-red-400' : isOwn ? 'text-blue-200' : 'text-gray-500 dark:text-gray-400'}`}>
-            {playbackError || formatDuration(duration)}
+          <div className={`text-xs mt-1 flex items-center gap-2 ${playbackError ? 'text-red-400' : isOwn ? 'text-blue-200' : 'text-gray-500 dark:text-gray-400'}`}>
+            <span>{playbackError || formatDuration(duration)}</span>
+            {playbackError && isRetryable && (
+              <button
+                onClick={handleRetry}
+                className="underline hover:no-underline text-xs"
+                title="Retry"
+              >
+                Retry
+              </button>
+            )}
           </div>
         </div>
 

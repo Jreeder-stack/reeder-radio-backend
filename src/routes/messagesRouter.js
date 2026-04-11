@@ -1,12 +1,41 @@
 import { Router } from 'express';
 import { sendTextMessage, sendAudioMessage, getMessages, transcribeMessage, getAudioFilePath } from '../services/messagesService.js';
-import { getMessagesByDateRange, getAudioDataByFilename } from '../db/index.js';
+import { getMessagesByDateRange, getAudioDataByFilename, getAudioMessageDiagnostics } from '../db/index.js';
 import { requireDispatcher } from '../middleware/auth.js';
 import archiver from 'archiver';
 import fs from 'fs';
 import path from 'path';
 
 const router = Router();
+
+function isValidWav(buf) {
+  return Buffer.isBuffer(buf) && buf.length > 12
+    && buf.slice(0, 4).toString('ascii') === 'RIFF'
+    && buf.slice(8, 12).toString('ascii') === 'WAVE';
+}
+
+function wrapPcmInWav(pcmData, sampleRate = 16000, numChannels = 1, bitsPerSample = 16) {
+  const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
+  const blockAlign = numChannels * (bitsPerSample / 8);
+  const dataSize = pcmData.length;
+  const headerSize = 44;
+  const buffer = Buffer.alloc(headerSize + dataSize);
+  buffer.write('RIFF', 0);
+  buffer.writeUInt32LE(36 + dataSize, 4);
+  buffer.write('WAVE', 8);
+  buffer.write('fmt ', 12);
+  buffer.writeUInt32LE(16, 16);
+  buffer.writeUInt16LE(1, 20);
+  buffer.writeUInt16LE(numChannels, 22);
+  buffer.writeUInt32LE(sampleRate, 24);
+  buffer.writeUInt32LE(byteRate, 28);
+  buffer.writeUInt16LE(blockAlign, 30);
+  buffer.writeUInt16LE(bitsPerSample, 32);
+  buffer.write('data', 36);
+  buffer.writeUInt32LE(dataSize, 40);
+  pcmData.copy(buffer, 44);
+  return buffer;
+}
 
 const AUDIO_DIR = path.join(process.cwd(), 'uploads', 'audio');
 
@@ -69,6 +98,17 @@ router.get('/export/audio', requireDispatcher, async (req, res) => {
   }
 });
 
+function serveAudioBuffer(res, buf) {
+  let audioData = buf;
+  if (!isValidWav(audioData)) {
+    console.warn('[AudioRoute] Audio data missing WAV headers — wrapping as PCM 16kHz mono 16-bit');
+    audioData = wrapPcmInWav(audioData);
+  }
+  res.setHeader('Content-Type', 'audio/wav');
+  res.setHeader('Content-Length', audioData.length);
+  return res.send(audioData);
+}
+
 router.get('/audio/:filename', async (req, res) => {
   try {
     const { filename } = req.params;
@@ -79,9 +119,7 @@ router.get('/audio/:filename', async (req, res) => {
     
     const audioData = await getAudioDataByFilename(filename);
     if (audioData) {
-      res.setHeader('Content-Type', 'audio/wav');
-      res.setHeader('Content-Length', audioData.length);
-      return res.send(audioData);
+      return serveAudioBuffer(res, audioData);
     }
 
     let decodedFilename;
@@ -98,9 +136,7 @@ router.get('/audio/:filename', async (req, res) => {
     if (isSafeDecoded) {
       const decodedAudioData = await getAudioDataByFilename(decodedFilename);
       if (decodedAudioData) {
-        res.setHeader('Content-Type', 'audio/wav');
-        res.setHeader('Content-Length', decodedAudioData.length);
-        return res.send(decodedAudioData);
+        return serveAudioBuffer(res, decodedAudioData);
       }
     }
 
@@ -118,11 +154,28 @@ router.get('/audio/:filename', async (req, res) => {
       }
     }
 
-    console.warn(`[AudioRoute] Audio file not found: filename="${filename}"${isSafeDecoded ? `, decoded="${decodedFilename}"` : ''} — no match in DB or filesystem`);
-    return res.status(404).json({ success: false, error: 'Audio file not found' });
+    try {
+      const diag = await getAudioMessageDiagnostics(filename);
+      console.warn(
+        `[AudioRoute] Audio file not found: filename="${filename}"${isSafeDecoded ? `, decoded="${decodedFilename}"` : ''} — no match in DB or filesystem`,
+        JSON.stringify({
+          attemptedUrl: diag.attemptedUrl,
+          urlMatchFound: diag.urlMatchFound,
+          urlMatchHasData: diag.urlMatchRow?.has_data ?? null,
+          urlMatchChannel: diag.urlMatchRow?.channel ?? null,
+          urlMatchSender: diag.urlMatchRow?.sender ?? null,
+          totalAudioMessages: diag.totalAudioMessages
+        })
+      );
+    } catch (diagErr) {
+      console.warn(`[AudioRoute] Audio file not found: filename="${filename}"${isSafeDecoded ? `, decoded="${decodedFilename}"` : ''} — no match in DB or filesystem (diagnostics failed: ${diagErr.message})`);
+    }
+    res.setHeader('Content-Type', 'audio/wav');
+    return res.status(404).end();
   } catch (error) {
     console.error('Error serving audio:', error);
-    res.status(500).json({ success: false, error: error.message });
+    res.setHeader('Content-Type', 'audio/wav');
+    res.status(500).end();
   }
 });
 
@@ -180,7 +233,12 @@ router.post('/:channel/audio', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Audio data is required' });
     }
     
-    const audioBuffer = Buffer.from(req.body.audio, 'base64');
+    let audioBuffer = Buffer.from(req.body.audio, 'base64');
+    
+    if (!isValidWav(audioBuffer)) {
+      console.warn('[AudioRoute] POST audio: buffer missing WAV headers — wrapping as PCM 16kHz mono 16-bit');
+      audioBuffer = wrapPcmInWav(audioBuffer);
+    }
     
     const message = await sendAudioMessage(channel, sender, audioBuffer, duration);
     res.json({ success: true, message });

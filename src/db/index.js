@@ -693,6 +693,25 @@ export async function getAudioDataByFilename(filename) {
   return result.rows[0]?.audio_data || null;
 }
 
+export async function getAudioMessageDiagnostics(filename) {
+  const audioUrl = `/api/messages/audio/${filename}`;
+  const [urlMatch, totalAudio] = await Promise.all([
+    pool.query(
+      `SELECT id, channel, sender, created_at, (audio_data IS NOT NULL) AS has_data FROM channel_messages WHERE audio_url = $1 LIMIT 1`,
+      [audioUrl]
+    ),
+    pool.query(
+      `SELECT COUNT(*) AS cnt FROM channel_messages WHERE message_type = 'audio'`
+    )
+  ]);
+  return {
+    attemptedUrl: audioUrl,
+    urlMatchFound: urlMatch.rows.length > 0,
+    urlMatchRow: urlMatch.rows[0] || null,
+    totalAudioMessages: parseInt(totalAudio.rows[0]?.cnt || '0', 10)
+  };
+}
+
 export async function getAudioDataById(messageId) {
   const result = await pool.query(
     `SELECT audio_data FROM channel_messages WHERE id = $1`,
