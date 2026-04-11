@@ -80,7 +80,24 @@ router.post('/register', async (req, res) => {
 router.post('/ping', radioAuth, async (req, res) => {
   try {
     await updateRadioLastSeen(req.radio.radio_id);
-    return res.json({ ok: true });
+    const radio = req.radio;
+    let assignedUnitId = radio.assigned_unit_id || null;
+    let unitId = null;
+    if (assignedUnitId) {
+      try {
+        const userRow = await pool.query(
+          'SELECT unit_id, username FROM users WHERE id = $1',
+          [assignedUnitId]
+        );
+        if (userRow.rows.length > 0) {
+          const u = userRow.rows[0];
+          unitId = u.unit_id || u.username || null;
+        }
+      } catch (e) {
+        console.warn('[Radios] Could not resolve assigned user for ping:', e.message);
+      }
+    }
+    return res.json({ ok: true, assignedUnitId, unitId });
   } catch (err) {
     console.error('[Radios] Ping error:', err);
     return res.status(500).json({ error: 'Ping failed — server error' });

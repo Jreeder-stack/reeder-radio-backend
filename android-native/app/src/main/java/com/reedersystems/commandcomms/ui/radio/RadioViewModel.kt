@@ -69,6 +69,7 @@ data class RadioUiState(
     val isChannelBusy: Boolean = false,
     val isRadioLocked: Boolean = false,
     val isRadioUnassigned: Boolean = false,
+    val reassignedUnitId: String? = null,
 ) {
     val currentZone: Zone? get() = zones.getOrNull(currentZoneIndex)
     val currentChannel: Channel? get() = currentZone?.channels?.getOrNull(currentChannelIndex)
@@ -314,6 +315,17 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                         Log.d(TAG, "radio:unassigned — navigating to unassigned screen")
                         _uiState.update { it.copy(isRadioUnassigned = true) }
                     }
+                    is SignalingEvent.RadioAssigned -> {
+                        val newUnitId = event.unitId
+                        val currentUnitId = _uiState.value.unitId
+                        Log.d(TAG, "radio:assigned — newUnitId=$newUnitId currentUnitId=$currentUnitId")
+                        if (newUnitId != currentUnitId && newUnitId.isNotBlank()) {
+                            app.radioTokenStore.saveAssignedUnit(newUnitId)
+                            app.sessionPrefs.unitId = newUnitId
+                            app.sessionPrefs.username = newUnitId
+                            _uiState.update { it.copy(reassignedUnitId = newUnitId) }
+                        }
+                    }
                     else -> {}
                 }
             }
@@ -522,6 +534,10 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
 
     fun consumeRadioUnassigned() {
         _uiState.update { it.copy(isRadioUnassigned = false) }
+    }
+
+    fun consumeReassigned() {
+        _uiState.update { it.copy(reassignedUnitId = null) }
     }
 
     fun toggleKeyLock() {

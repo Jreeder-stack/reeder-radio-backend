@@ -75,6 +75,7 @@ fun AppNavigation() {
 
     if (!needsRegistration && !tokenValidated) {
         LaunchedEffect(Unit) {
+            val localUnitBefore = app.radioTokenStore.getAssignedUnitId()
             val isValid = validateTokenWithServer(app)
             if (!isValid) {
                 Log.w(TAG, "Stored token failed server validation — clearing prefs")
@@ -82,6 +83,20 @@ fun AppNavigation() {
                 app.apiClient.radioToken = null
                 navController.navigate(Routes.DEVICE_REGISTRATION) {
                     popUpTo(0) { inclusive = true }
+                }
+            } else {
+                val localUnitAfter = app.radioTokenStore.getAssignedUnitId()
+                if (localUnitAfter != null && localUnitAfter != localUnitBefore) {
+                    Log.d(TAG, "Ping discovered assignment $localUnitAfter — navigating to RadioScreen")
+                    navController.navigate(Routes.radio(localUnitAfter)) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                } else if (localUnitAfter == null && localUnitBefore != null) {
+                    val rid = app.radioTokenStore.getRadioId() ?: ""
+                    Log.d(TAG, "Ping cleared stale assignment — navigating to UnassignedScreen")
+                    navController.navigate(Routes.unassigned(rid)) {
+                        popUpTo(0) { inclusive = true }
+                    }
                 }
             }
             tokenValidated = true
@@ -141,6 +156,19 @@ fun AppNavigation() {
                         app.sessionPrefs.unitId = null
                         app.sessionPrefs.username = null
                         navController.navigate(Routes.unassigned(currentRadioId)) {
+                            popUpTo(Routes.RADIO) { inclusive = true }
+                        }
+                    }
+                } else null,
+                onReassigned = if (isRadioDevice) {
+                    { newUnitId ->
+                        Log.d(TAG, "Re-assigned to unit $newUnitId — tearing down and navigating")
+                        val stopIntent = Intent(context, BackgroundAudioService::class.java).apply {
+                            action = BackgroundAudioService.ACTION_STOP
+                        }
+                        context.startForegroundService(stopIntent)
+                        app.signalingClient.disconnect()
+                        navController.navigate(Routes.radio(newUnitId)) {
                             popUpTo(Routes.RADIO) { inclusive = true }
                         }
                     }
@@ -211,6 +239,30 @@ private suspend fun validateTokenWithServer(app: CommandCommsApp): Boolean =
             when {
                 code in 200..299 -> {
                     Log.d(TAG, "Token validation succeeded ($code)")
+                    try {
+                        val json = org.json.JSONObject(body)
+                        val serverUnitId = json.optString("unitId", "").ifBlank { null }
+                        val serverAssignedId = if (json.isNull("assignedUnitId")) null else json.optString("assignedUnitId", "").ifBlank { null }
+                        val localUnitId = app.radioTokenStore.getAssignedUnitId()
+                        if (serverAssignedId != null && serverUnitId != null && serverUnitId != localUnitId) {
+                            Log.d(TAG, "Ping reports assignment unitId=$serverUnitId (local=$localUnitId) — syncing")
+                            app.radioTokenStore.saveAssignedUnit(serverUnitId)
+                            app.sessionPrefs.unitId = serverUnitId
+                            app.sessionPrefs.username = serverUnitId
+                        } else if (serverAssignedId != null && serverUnitId == null) {
+                            Log.w(TAG, "Ping reports assignedUnitId=$serverAssignedId but unitId unresolved — clearing local assignment")
+                            app.radioTokenStore.clearAssignedUnit()
+                            app.sessionPrefs.unitId = null
+                            app.sessionPrefs.username = null
+                        } else if (serverAssignedId == null && localUnitId != null) {
+                            Log.d(TAG, "Ping reports no assignment but local has $localUnitId — clearing")
+                            app.radioTokenStore.clearAssignedUnit()
+                            app.sessionPrefs.unitId = null
+                            app.sessionPrefs.username = null
+                        }
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Failed to parse ping assignment data: ${e.message}")
+                    }
                     true
                 }
                 (code == 401 || code == 403) && body.contains("RADIO_LOCKED") -> {

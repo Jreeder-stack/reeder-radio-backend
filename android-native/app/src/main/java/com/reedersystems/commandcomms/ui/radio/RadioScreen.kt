@@ -42,6 +42,7 @@ private val White     = Color.White
 fun RadioScreen(
     onLocked: (() -> Unit)? = null,
     onUnassigned: (() -> Unit)? = null,
+    onReassigned: ((String) -> Unit)? = null,
     assignedFromUnit: String? = null,
     viewModel: RadioViewModel = viewModel()
 ) {
@@ -67,6 +68,14 @@ fun RadioScreen(
         if (state.isRadioUnassigned) {
             viewModel.consumeRadioUnassigned()
             onUnassigned?.invoke()
+        }
+    }
+
+    LaunchedEffect(state.reassignedUnitId) {
+        val newUnitId = state.reassignedUnitId
+        if (newUnitId != null) {
+            viewModel.consumeReassigned()
+            onReassigned?.invoke(newUnitId)
         }
     }
 

@@ -288,6 +288,19 @@ class SignalingClient(var serverUrl: String, private var radioToken: String? = n
             _events.tryEmit(SignalingEvent.RadioUnassigned)
         }
 
+        s.on("radio:assigned") { args ->
+            try {
+                val json = args.firstOrNull() as? JSONObject
+                val assignedUnitId = json?.optString("unitId").orEmpty().trim()
+                Log.d(TAG, "radio:assigned received on main signaling socket unitId=$assignedUnitId")
+                if (assignedUnitId.isNotBlank()) {
+                    _events.tryEmit(SignalingEvent.RadioAssigned(assignedUnitId))
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "radio:assigned parse error: ${e.message}")
+            }
+        }
+
         s.on("ping") { s.emit("pong") }
 
         s.connect()

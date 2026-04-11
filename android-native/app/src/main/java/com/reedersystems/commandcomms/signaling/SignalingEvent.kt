@@ -27,4 +27,5 @@ sealed class SignalingEvent {
     object RadioLocked : SignalingEvent()
     object RadioUnlocked : SignalingEvent()
     object RadioUnassigned : SignalingEvent()
+    data class RadioAssigned(val unitId: String) : SignalingEvent()
 }

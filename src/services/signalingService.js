@@ -165,6 +165,29 @@ class SignalingService {
 
           await updateRadioLastSeen(radio.radio_id);
           console.log(`[Signaling] Radio authenticated: radioId=${radio.radio_id} unitId=${socket.unitId} socket=${socket.id}`);
+
+          if (radio.assigned_unit_id) {
+            let channelConfig = null;
+            try {
+              const cfgRow = await pool.query(
+                `SELECT u.unit_id, uca.channel_id, ch.name AS channel_name, ch.zone,
+                        COALESCE(ch.zone, 'Default') || '__' || ch.name AS room_key
+                 FROM users u
+                 LEFT JOIN user_channel_access uca ON uca.user_id = u.id
+                 LEFT JOIN channels ch ON ch.id = uca.channel_id
+                 WHERE u.id = $1`,
+                [radio.assigned_unit_id]
+              );
+              channelConfig = cfgRow.rows;
+            } catch (e) {
+              console.warn('[Signaling] Could not fetch channel config for radio:assigned on connect:', e.message);
+            }
+            socket.emit('radio:assigned', {
+              unitId: unitIdentity,
+              channelConfig,
+            });
+            console.log(`[Signaling] Emitted radio:assigned on connect for radioId=${radio.radio_id} unitId=${unitIdentity}`);
+          }
         } catch (err) {
           console.error('[Signaling] Radio token validation error:', err);
           socket.emit('auth:error', { message: 'Radio authentication error' });
