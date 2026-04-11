@@ -63,6 +63,7 @@ class BackgroundAudioService : Service() {
     @Volatile private var lastAuthenticatedTimeMs: Long = 0L
     @Volatile private var cleaningUpSinceMs: Long = 0L
     @Volatile private var lastPttUpTimeMs: Long = 0L
+    @Volatile private var lastErrorToneMs: Long = 0L
     @Volatile private var pendingSignalingChannelId: String? = null
 
     private var emergencyActivatingJob: Job? = null
@@ -665,7 +666,7 @@ class BackgroundAudioService : Service() {
         if (!app.sessionPrefs.micPermissionGranted) {
             Log.w(TAG, "Radio PTT DOWN: mic permission denied — blocked")
             Log.d("[ToneEvent]", """{"tone":"error","trigger":"mic_permission_denied","state":"$pttState","ts":${System.currentTimeMillis()}}""")
-            app.toneEngine.playErrorTone()
+            playErrorToneDebounced()
             return
         }
 
@@ -801,6 +802,7 @@ class BackgroundAudioService : Service() {
             return
         }
         lastPttUpTimeMs = now
+        lastErrorToneMs = 0L
 
         val channelKey = servicePrefs.channelRoomKey
         Log.d(TAG, """{"event":"RADIO_PTT_UP","pttState":"$pttState","channelKey":"${channelKey ?: "none"}"}""")
@@ -868,11 +870,22 @@ class BackgroundAudioService : Service() {
         }
     }
 
+    private fun playErrorToneDebounced(): Boolean {
+        val now = SystemClock.elapsedRealtime()
+        if (now - lastErrorToneMs < ERROR_TONE_DEBOUNCE_MS) {
+            Log.d(TAG, "playErrorToneDebounced: suppressed duplicate (${now - lastErrorToneMs}ms since last)")
+            return false
+        }
+        lastErrorToneMs = now
+        app.toneEngine.playErrorTone()
+        return true
+    }
+
     private fun evaluateReadinessForPttSync(signaling: Boolean, roomKey: String): Boolean? {
         if (radioEngine == null) {
             Log.w(TAG, "RADIO_READY_BLOCKED_REASON reason=radio_engine_missing")
             Log.d("[ToneEvent]", """{"tone":"error","trigger":"ready_sync_blocked","reason":"radio_engine_missing","ts":${System.currentTimeMillis()}}""")
-            app.toneEngine.playErrorTone()
+            playErrorToneDebounced()
             sendPttTxFailed()
             return false
         }
@@ -882,7 +895,7 @@ class BackgroundAudioService : Service() {
             if (joinedSignalingChannelId != roomKey) {
                 Log.w(TAG, "RADIO_READY_BLOCKED_REASON reason=channel_not_joined joined=$joinedSignalingChannelId target=$roomKey")
                 Log.d("[ToneEvent]", """{"tone":"error","trigger":"ready_sync_blocked","reason":"channel_not_joined","ts":${System.currentTimeMillis()}}""")
-                app.toneEngine.playErrorTone()
+                playErrorToneDebounced()
                 sendPttTxFailed()
                 return false
             }
@@ -894,7 +907,7 @@ class BackgroundAudioService : Service() {
         }
         Log.w(TAG, "RADIO_READY_BLOCKED_REASON reason=signaling_not_authenticated:$state")
         Log.d("[ToneEvent]", """{"tone":"error","trigger":"ready_sync_blocked","reason":"signaling_not_authenticated","ts":${System.currentTimeMillis()}}""")
-        app.toneEngine.playErrorTone()
+        playErrorToneDebounced()
         sendPttTxFailed()
         return false
     }
@@ -1115,5 +1128,6 @@ class BackgroundAudioService : Service() {
 
         private const val WAKE_LOCK_TAG = "CommandComms:PttService"
         private const val PTT_UP_DEBOUNCE_MS = 200L
+        private const val ERROR_TONE_DEBOUNCE_MS = 300L
     }
 }
