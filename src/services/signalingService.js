@@ -979,16 +979,10 @@ class SignalingService {
     });
   }
 
-  _handleDisconnect(socket) {
-    if (!socket.unitId) {
-      console.log(`[Signaling] Anonymous client disconnected: ${socket.id}`);
-      return;
-    }
-
-    const cleanedChannels = new Set();
+  removeSocketFromChannels(socket, reason = 'unassign') {
+    if (!socket.unitId) return;
 
     for (const channelId of socket.channels || []) {
-      cleanedChannels.add(channelId);
       const members = this.channelMembers.get(channelId);
       if (members) {
         members.delete(socket.unitId);
@@ -996,17 +990,19 @@ class SignalingService {
           this.channelMembers.delete(channelId);
         }
       }
-      
+
       this.io.to(`channel:${channelId}`).emit(SIGNALING_EVENTS.CHANNEL_LEAVE, {
         unitId: socket.unitId,
         agencyId: socket.agencyId,
         channelId,
         timestamp: Date.now(),
-        reason: 'disconnect',
+        reason,
       });
 
+      socket.leave(`channel:${channelId}`);
       audioRelayService.removeSubscriber(channelId, socket.unitId);
     }
+    if (socket.channels) socket.channels.clear();
 
     for (const [channelId, transmission] of this.activeTransmissions) {
       if (transmission.unitId === socket.unitId) {
@@ -1015,13 +1011,13 @@ class SignalingService {
           unitId: socket.unitId,
           channelId,
           timestamp: Date.now(),
-          reason: 'disconnect',
+          reason,
         });
         this.io.to(`channel:${channelId}`).emit(RADIO_EVENTS.TX_STOP, {
           senderUnitId: socket.unitId,
           channelId,
           timestamp: Date.now(),
-          reason: 'disconnect',
+          reason,
         });
         this.io.to(`channel:${channelId}`).emit(RADIO_EVENTS.CHANNEL_IDLE, {
           channelId,
@@ -1041,6 +1037,15 @@ class SignalingService {
     }
 
     audioRelayService.removeAllSubscriptions(socket.unitId);
+  }
+
+  _handleDisconnect(socket) {
+    if (!socket.unitId) {
+      console.log(`[Signaling] Anonymous client disconnected: ${socket.id}`);
+      return;
+    }
+
+    this.removeSocketFromChannels(socket, 'disconnect');
     
     this.unitPresence.delete(socket.unitId);
     console.log(`[Signaling] Unit disconnected: ${socket.unitId}`);

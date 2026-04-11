@@ -9,7 +9,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import android.content.Intent
 import com.reedersystems.commandcomms.CommandCommsApp
+import com.reedersystems.commandcomms.audio.BackgroundAudioService
 import com.reedersystems.commandcomms.ui.login.LoginScreen
 import com.reedersystems.commandcomms.ui.radio.DeviceRegistrationScreen
 import com.reedersystems.commandcomms.ui.radio.LockedScreen
@@ -92,6 +94,10 @@ fun AppNavigation() {
                 } else null,
                 onUnassigned = if (isRadioDevice) {
                     {
+                        val stopIntent = Intent(context, BackgroundAudioService::class.java).apply {
+                            action = BackgroundAudioService.ACTION_STOP
+                        }
+                        context.startForegroundService(stopIntent)
                         app.radioTokenStore.clearAssignedUnit()
                         app.sessionPrefs.unitId = null
                         app.sessionPrefs.username = null

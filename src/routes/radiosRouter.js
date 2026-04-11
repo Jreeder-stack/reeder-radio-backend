@@ -13,6 +13,7 @@ import {
   getAllUsers,
 } from '../db/index.js';
 import pool from '../db/index.js';
+import { signalingService } from '../services/signalingService.js';
 
 let _io = null;
 export function setRadiosIo(io) {
@@ -157,6 +158,7 @@ router.patch('/:radioId/assign', requireDispatcher, async (req, res) => {
         radioSocket.unitId = resolvedUnitIdentity;
         radioSocket.assignedUnitId = resolvedUserId;
       } else {
+        signalingService.removeSocketFromChannels(radioSocket, 'unassign');
         radioSocket.emit('radio:unassigned', {});
         radioSocket.unitId = radioSocket.radioId;
         radioSocket.assignedUnitId = null;
