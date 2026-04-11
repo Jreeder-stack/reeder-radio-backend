@@ -338,6 +338,10 @@ class AIDispatcher {
     this._turnContextByUnit = new Map();
     this._boloPollingInterval = null;
     this._seenBoloIds = new Set();
+    this._reconnectTimer = null;
+    this._reconnectAttempts = 0;
+    this._healthCheckInterval = null;
+    this._intentionalLeave = false;
   }
 
   log(action, details = {}) {
@@ -454,20 +458,46 @@ class AIDispatcher {
 
     if (this.connected) {
       this.log('CHANNEL_SWITCH', { from: this.channelName, to: channelName });
+      this._intentionalLeave = true;
       await this.leaveChannel();
+      this._intentionalLeave = false;
     }
 
     this.configuredChannel = roomKey || channelName;
     this.displayChannel = channelName;
     this.isRunning = true;
     this.stoppedByUser = false;
+    this._reconnectAttempts = 0;
     this.errorCounts.clear();
     this.errorCooldowns.clear();
     this._errorLastSeen.clear();
     this._startErrorCleanup();
     
-    await this._resolveChannelAliases(channelName, roomKey);
-    await this._ensureSignalingService();
+    try {
+      await this._resolveChannelAliases(channelName, roomKey);
+    } catch (err) {
+      this.log('START_FAILED', { phase: 'resolveChannelAliases', error: err.message, stack: err.stack });
+      this.isRunning = false;
+      this._stopErrorCleanup();
+      return;
+    }
+
+    try {
+      await this._ensureSignalingService();
+    } catch (err) {
+      this.log('START_FAILED', { phase: 'ensureSignalingService', error: err.message, stack: err.stack });
+      this.isRunning = false;
+      this._stopErrorCleanup();
+      return;
+    }
+
+    const opusOk = this._opusSelfTest();
+    if (!opusOk) {
+      this.log('START_FAILED', { phase: 'opusSelfTest', reason: 'Opus decoder failed 16kHz self-test — cannot process audio' });
+      this.isRunning = false;
+      this._stopErrorCleanup();
+      return;
+    }
     
     if (cadService.isConfigured()) {
       cadService.getCallNatures().catch(err => {
@@ -475,10 +505,19 @@ class AIDispatcher {
       });
     }
 
-    await this.joinChannel(this.configuredChannel);
+    try {
+      await this.joinChannel(this.configuredChannel);
+    } catch (err) {
+      this.log('START_FAILED', { phase: 'joinChannel', error: err.message, stack: err.stack });
+      this.isRunning = false;
+      this._scheduleReconnect();
+      return;
+    }
+
     this.log('STARTED_CONNECTED', { channel: channelName, roomKey: this.configuredChannel, numericId: this.numericChannelId, aliases: Array.from(this.channelAliases), mode: 'always-on' });
 
     this._startBoloPolling();
+    this._startHealthCheck();
   }
 
   _removeAllAudioListeners() {
@@ -486,6 +525,7 @@ class AIDispatcher {
   }
 
   async leaveChannel() {
+    const previousChannel = this.channelName;
     if (this.connected) {
       try {
         this._removeAllAudioListeners();
@@ -497,12 +537,113 @@ class AIDispatcher {
       this.channelName = null;
       this._clearAllRecordings();
     }
+
+    if (this.isRunning && !this.stoppedByUser && !this._intentionalLeave) {
+      this.log('UNEXPECTED_DISCONNECT', { channel: previousChannel });
+      this._scheduleReconnect();
+    }
+  }
+
+  _opusSelfTest() {
+    try {
+      const silentPcm = Buffer.alloc(OPUS_FRAME_SIZE * 2, 0);
+      const encodedFrames = opusCodec.encodePcmToOpus(silentPcm);
+      if (!encodedFrames || encodedFrames.length === 0) {
+        this.log('OPUS_SELF_TEST_FAILED', { reason: 'Encoder produced no frames', sampleRate: 16000 });
+        return false;
+      }
+      const decoded = opusCodec.decodeOpusToPcm(encodedFrames[0]);
+      if (!decoded || decoded.length === 0) {
+        this.log('OPUS_SELF_TEST_FAILED', { reason: 'Decoder produced empty output', sampleRate: 16000 });
+        return false;
+      }
+      this.log('OPUS_SELF_TEST_PASSED', { sampleRate: 16000, channels: 1, encodedBytes: encodedFrames[0].length, decodedBytes: decoded.length });
+      return true;
+    } catch (err) {
+      this.log('OPUS_SELF_TEST_FAILED', { error: err.message, stack: err.stack, sampleRate: 16000 });
+      return false;
+    }
+  }
+
+  _scheduleReconnect() {
+    if (this.stoppedByUser) return;
+    if (this._reconnectTimer) return;
+
+    const MAX_RECONNECT_ATTEMPTS = 10;
+    const BASE_DELAY_MS = 2000;
+    const MAX_DELAY_MS = 60000;
+
+    if (!this._reconnectAttempts) this._reconnectAttempts = 0;
+    if (this._reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+      this.log('RECONNECT_EXHAUSTED', { attempts: this._reconnectAttempts, channel: this.configuredChannel });
+      return;
+    }
+
+    const delay = Math.min(BASE_DELAY_MS * Math.pow(2, this._reconnectAttempts), MAX_DELAY_MS);
+    this._reconnectAttempts++;
+
+    this.log('RECONNECT_SCHEDULED', { attempt: this._reconnectAttempts, delayMs: delay, channel: this.configuredChannel });
+
+    this._reconnectTimer = setTimeout(async () => {
+      this._reconnectTimer = null;
+      if (this.stoppedByUser || this.connected) return;
+
+      this.log('RECONNECT_ATTEMPTING', { attempt: this._reconnectAttempts, channel: this.configuredChannel });
+
+      try {
+        await this._resolveChannelAliases(this.displayChannel, this.configuredChannel);
+        await this._ensureSignalingService();
+        await this.joinChannel(this.configuredChannel);
+        this._reconnectAttempts = 0;
+        this.isRunning = true;
+        this.log('RECONNECT_SUCCESS', { channel: this.configuredChannel });
+        this._startHealthCheck();
+        this._startBoloPolling();
+      } catch (err) {
+        this.log('RECONNECT_FAILED', { attempt: this._reconnectAttempts, error: err.message });
+        this._scheduleReconnect();
+      }
+    }, delay);
+    if (this._reconnectTimer.unref) this._reconnectTimer.unref();
+  }
+
+  _stopReconnect() {
+    if (this._reconnectTimer) {
+      clearTimeout(this._reconnectTimer);
+      this._reconnectTimer = null;
+    }
+    this._reconnectAttempts = 0;
+  }
+
+  _startHealthCheck() {
+    this._stopHealthCheck();
+    const HEALTH_CHECK_INTERVAL_MS = 30000;
+    this._healthCheckInterval = setInterval(() => {
+      if (this.stoppedByUser) {
+        this._stopHealthCheck();
+        return;
+      }
+      if (!this.connected && this.isRunning) {
+        this.log('HEALTH_CHECK_DISCONNECTED', { channel: this.configuredChannel });
+        this._scheduleReconnect();
+      }
+    }, HEALTH_CHECK_INTERVAL_MS);
+    if (this._healthCheckInterval.unref) this._healthCheckInterval.unref();
+  }
+
+  _stopHealthCheck() {
+    if (this._healthCheckInterval) {
+      clearInterval(this._healthCheckInterval);
+      this._healthCheckInterval = null;
+    }
   }
 
   async stop() {
     this.log('STOPPING', { channel: this.channelName });
     this.isRunning = false;
     this.stoppedByUser = true;
+    this._stopReconnect();
+    this._stopHealthCheck();
     this._stopBoloPolling();
     this._stopErrorCleanup();
     this.errorCounts.clear();
@@ -3228,20 +3369,16 @@ export async function restartDispatcher(channelName, roomKey = null) {
 }
 
 export async function broadcastMessage(channelName, message) {
-  const dispatcher = getDispatcher();
-  if (dispatcher.connected && dispatcher.channelName === channelName) {
-    try {
-      await dispatcher.sendDataMessage({
-        type: 'new_message',
-        message
-      });
-      console.log(`[AI-Dispatcher] Broadcast message to ${channelName}:`, message.id);
-      return true;
-    } catch (error) {
-      console.error(`[AI-Dispatcher] Failed to broadcast to ${channelName}:`, error.message);
-      return false;
-    }
+  try {
+    const { signalingService } = await import('./signalingService.js');
+    signalingService.broadcastDataToChannel(channelName, {
+      type: 'new_message',
+      message
+    });
+    console.log(`[broadcastMessage] Broadcast message to ${channelName}:`, message.id);
+    return true;
+  } catch (error) {
+    console.error(`[broadcastMessage] Failed to broadcast to ${channelName}:`, error.message);
+    return false;
   }
-  console.log(`[AI-Dispatcher] Cannot broadcast to ${channelName}: dispatcher is on ${dispatcher.channelName || 'no channel'}`);
-  return false;
 }
