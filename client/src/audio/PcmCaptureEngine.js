@@ -5,6 +5,8 @@ const PRE_BUFFER_FRAMES = Math.ceil(
   (PCM_SPEC.sampleRate * PRE_BUFFER_MS / 1000) / PCM_SPEC.frameSamples
 );
 
+const AUDIO_CONTEXT_RESUME_TIMEOUT_MS = 3000;
+
 export class PcmCaptureEngine {
   constructor() {
     this.audioContext = null;
@@ -15,6 +17,8 @@ export class PcmCaptureEngine {
     this._fallbackBuffer = new Int16Array(0);
     this.running = false;
     this.onFrame = null;
+    this.onTrackEnded = null;
+    this._trackEndedError = false;
     this._generation = 0;
     this._warmedUp = false;
     this._warmupPromise = null;
@@ -53,6 +57,24 @@ export class PcmCaptureEngine {
     }
 
     this.stream = stream;
+    this._trackEndedError = false;
+
+    const micTrack = stream.getAudioTracks()[0];
+    if (micTrack) {
+      micTrack.addEventListener('ended', () => {
+        console.error('[PcmCaptureEngine] Mic track ended unexpectedly');
+        this._trackEndedError = true;
+        if (this.running) {
+          this.running = false;
+          this.onFrame = null;
+          if (this.onTrackEnded) {
+            try { this.onTrackEnded(); } catch (e) {
+              console.error('[PcmCaptureEngine] onTrackEnded callback error:', e);
+            }
+          }
+        }
+      });
+    }
 
     const audioContext = new (window.AudioContext || window.webkitAudioContext)({
       sampleRate: PCM_SPEC.sampleRate,
@@ -194,6 +216,38 @@ export class PcmCaptureEngine {
       await this.warmup();
     }
 
+    if (this._trackEndedError) {
+      console.warn('[PcmCaptureEngine] Mic track previously ended, re-acquiring mic');
+      this._trackEndedError = false;
+      this._cleanupPartial();
+      await this.warmup();
+    }
+
+    if (this.audioContext) {
+      if (this.audioContext.state === 'closed') {
+        console.error('[PcmCaptureEngine] Cannot start: AudioContext is closed');
+        throw new Error('audio_context_closed');
+      }
+      if (this.audioContext.state === 'suspended') {
+        console.log('[PcmCaptureEngine] AudioContext suspended, attempting resume...');
+        try {
+          await Promise.race([
+            this.audioContext.resume(),
+            new Promise((_, reject) =>
+              setTimeout(() => reject(new Error('audio_context_resume_timeout')), AUDIO_CONTEXT_RESUME_TIMEOUT_MS)
+            ),
+          ]);
+        } catch (err) {
+          console.error('[PcmCaptureEngine] Failed to resume AudioContext:', err.message);
+          throw new Error('audio_context_suspended');
+        }
+        if (this.audioContext.state !== 'running') {
+          console.error('[PcmCaptureEngine] AudioContext still not running after resume attempt, state:', this.audioContext.state);
+          throw new Error('audio_context_suspended');
+        }
+      }
+    }
+
     this.onFrame = onFrame;
     this.running = true;
 
@@ -210,6 +264,7 @@ export class PcmCaptureEngine {
     this._generation++;
     this.running = false;
     this.onFrame = null;
+    this._trackEndedError = false;
     this._warmedUp = false;
     this._warmupPromise = null;
     this._preBuffer = [];

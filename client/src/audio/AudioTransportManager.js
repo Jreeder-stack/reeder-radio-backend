@@ -18,6 +18,7 @@ const RX_DIAG_SUMMARY_INTERVAL_MS = 2000;
 const RECONNECT_BASE_MS = 1000;
 const RECONNECT_MAX_MS = 10000;
 const TX_WATCHDOG_TIMEOUT_MS = 20000;
+const TX_FRAME_DELIVERY_TIMEOUT_MS = 2000;
 
 function float32ToInt16(float32) {
   const int16 = new Int16Array(float32.length);
@@ -54,6 +55,15 @@ class AudioTransportManager {
     this._playback = new PcmPlaybackEngine();
     this._txSequence = 0;
     this._loopbackOk = false;
+    this._lastFrameDeliveryTime = 0;
+    this._frameDeliveryWatchdog = null;
+
+    this._capture.onTrackEnded = () => {
+      console.error('[AudioTransport] Mic track ended during capture');
+      if (this.pttState === PTT_STATES.TRANSMITTING || this.pttState === PTT_STATES.ARMING) {
+        this._abortTxWithError('mic_track_ended');
+      }
+    };
 
     this._opusDecoders = new Map();
     this._opusDecoderReady = new Map();
@@ -275,6 +285,51 @@ class AudioTransportManager {
     }
   }
 
+  _abortTxWithError(reason) {
+    if (this.pttState === PTT_STATES.IDLE) return;
+    console.error('[AudioTransport] TX_ABORT:', reason);
+    this._capture.stop().catch(() => {});
+    if (this._txEncoder) {
+      this._txEncoder.setOnEncoded(null);
+    }
+    this._clearFrameDeliveryWatchdog();
+    const txChannel = this.primaryTxChannel;
+    this._setPttState(PTT_STATES.IDLE);
+    if (this.onDisconnectDuringTx) {
+      try { this.onDisconnectDuringTx(reason); } catch (_) {}
+    }
+    if (txChannel) {
+      try {
+        signalingManager.signalPttEnd(txChannel);
+      } catch (e) {
+        console.error('[AudioTransport] TX_ABORT signalPttEnd failed:', e.message);
+      }
+    }
+  }
+
+  _startFrameDeliveryWatchdog() {
+    this._clearFrameDeliveryWatchdog();
+    this._lastFrameDeliveryTime = Date.now();
+    this._frameDeliveryWatchdog = setInterval(() => {
+      if (this.pttState !== PTT_STATES.TRANSMITTING) {
+        this._clearFrameDeliveryWatchdog();
+        return;
+      }
+      const elapsed = Date.now() - this._lastFrameDeliveryTime;
+      if (elapsed > TX_FRAME_DELIVERY_TIMEOUT_MS) {
+        console.error('[AudioTransport] TX_FRAME_WATCHDOG: no frames delivered for', elapsed, 'ms — aborting TX');
+        this._abortTxWithError('frame_delivery_timeout');
+      }
+    }, 500);
+  }
+
+  _clearFrameDeliveryWatchdog() {
+    if (this._frameDeliveryWatchdog) {
+      clearInterval(this._frameDeliveryWatchdog);
+      this._frameDeliveryWatchdog = null;
+    }
+  }
+
   setAutoPlayback(_enabled) {}
   startSettingsListener() {}
   async prepareConnection() {
@@ -375,6 +430,12 @@ class AudioTransportManager {
       ws.onclose = () => {
         this.rooms.delete(channelName);
         this._emitConnectionStateChange(channelName, 'disconnected');
+        if (
+          this.primaryTxChannel === channelName &&
+          (this.pttState === PTT_STATES.TRANSMITTING || this.pttState === PTT_STATES.ARMING)
+        ) {
+          this._abortTxWithError('ws_closed_during_tx');
+        }
         this._scheduleReconnect(channelName);
       };
 
@@ -554,16 +615,28 @@ class AudioTransportManager {
     this._txEncoder.setOnEncoded((encoded) => {
       if (!this._loopbackOk) return;
       const liveRoom = this.rooms.get(txChannel);
-      if (!liveRoom || !liveRoom.ws || liveRoom.ws.readyState !== WebSocket.OPEN) return;
+      if (!liveRoom || !liveRoom.ws || liveRoom.ws.readyState !== WebSocket.OPEN) {
+        console.error('[AudioTransport] WS not open during TX, aborting');
+        this._abortTxWithError('ws_dead_during_tx');
+        return;
+      }
       const binFrame = buildBinaryFrameOpus(this._txSequence++, txChannel, liveRoom.unitId, encoded);
       liveRoom.ws.send(binFrame);
+      this._lastFrameDeliveryTime = Date.now();
     });
 
-    await this._capture.start(async (frame) => {
-      if (!this._loopbackOk) return;
-      const adjusted = this._applyCaptureGain(frame);
-      this._txEncoder.encode(adjusted);
-    });
+    try {
+      await this._capture.start(async (frame) => {
+        if (!this._loopbackOk) return;
+        const adjusted = this._applyCaptureGain(frame);
+        this._txEncoder.encode(adjusted);
+      });
+    } catch (captureErr) {
+      console.error('[AudioTransport] Capture start failed:', captureErr.message);
+      this._txEncoder.setOnEncoded(null);
+      this._setPttState(PTT_STATES.IDLE);
+      return false;
+    }
 
     if (this.pttState !== PTT_STATES.ARMING) {
       await this._capture.stop();
@@ -571,6 +644,7 @@ class AudioTransportManager {
     }
 
     this._setPttState(PTT_STATES.TRANSMITTING);
+    this._startFrameDeliveryWatchdog();
     return true;
   }
 
@@ -578,6 +652,7 @@ class AudioTransportManager {
 
   async stopTransmit() {
     if (this.pttState === PTT_STATES.IDLE) return;
+    this._clearFrameDeliveryWatchdog();
     await this._capture.stop();
     if (this._txEncoder && this._txEncoder.isReady()) {
       await this._txEncoder.flush();
@@ -590,6 +665,7 @@ class AudioTransportManager {
   async stop() { return this.stopTransmit(); }
 
   forceReleaseTransmit() {
+    this._clearFrameDeliveryWatchdog();
     this._capture.stop().catch(() => {});
     if (this._txEncoder) {
       this._txEncoder.setOnEncoded(null);

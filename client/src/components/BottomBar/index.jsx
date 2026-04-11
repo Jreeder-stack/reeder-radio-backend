@@ -61,13 +61,11 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
       setPttState(newState);
     };
 
-    // Handle disconnect during transmission
-    audioTransportManager.onDisconnectDuringTx = () => {
-      console.warn('[BottomBar] Disconnect during transmission detected');
+    audioTransportManager.onDisconnectDuringTx = (reason) => {
+      console.warn('[BottomBar] TX aborted during transmission:', reason || 'unknown');
       toneEngine.playErrorTone();
-      // Reset gesture state since transmission was force-released
+      flashPttError();
       gestureActiveRef.current = false;
-      // Unmute channels
       if (mutedChannelsRef.current.length > 0) {
         audioTransportManager.unmuteChannels(mutedChannelsRef.current);
         mutedChannelsRef.current = [];
