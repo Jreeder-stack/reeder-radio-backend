@@ -722,9 +722,15 @@ class BackgroundAudioService : Service() {
         transitionPttState(PttState.CONNECTING)
         updateNotification("Requesting floor…")
         Log.d("[ToneEvent]", """{"tone":"talk-permit","trigger":"ptt_down","state":"$pttState","channelKey":"${servicePrefs.channelRoomKey}","ts":${System.currentTimeMillis()}}""")
-        app.toneEngine.playTalkPermitTone()
 
         scope.launch {
+            app.toneEngine.playTalkPermitToneAndAwait()
+
+            if (pttState != PttState.CONNECTING || pttUpWhileConnecting) {
+                Log.d(TAG, "Radio PTT: state changed during tone — aborting (pttState=$pttState pttUpWhileConnecting=$pttUpWhileConnecting)")
+                return@launch
+            }
+
             if (readySync == null) {
                 val (ready, blockedReason) = evaluateReadinessForPtt(signaling, roomKey)
                 if (!ready) {
@@ -746,10 +752,10 @@ class BackgroundAudioService : Service() {
                 }
             }
 
-            delay(200)
+            delay(50)
 
             if (pttState != PttState.CONNECTING || pttUpWhileConnecting) {
-                Log.d(TAG, "Radio PTT: state changed during tone delay — aborting (pttState=$pttState pttUpWhileConnecting=$pttUpWhileConnecting)")
+                Log.d(TAG, "Radio PTT: state changed during post-tone safety margin — aborting (pttState=$pttState pttUpWhileConnecting=$pttUpWhileConnecting)")
                 engine.abortPreCapture()
                 preCaptureSetupJob?.cancel()
                 preCaptureSetupJob?.join()

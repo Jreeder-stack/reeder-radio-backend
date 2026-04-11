@@ -780,7 +780,14 @@ class RadioAudioEngine(private val context: Context) {
         }
 
         var flushedFrames = 0
+        var discardedFrames = 0
+        val safetyTrimMs = 50L
+        val safetyTrimFrames = ((safetyTrimMs + CAPTURE_INTERVAL_MS - 1) / CAPTURE_INTERVAL_MS).toInt()
         synchronized(preBufferLock) {
+            while (discardedFrames < safetyTrimFrames && preBuffer.isNotEmpty()) {
+                preBuffer.removeFirst()
+                discardedFrames++
+            }
             while (preBuffer.isNotEmpty()) {
                 val frame = preBuffer.removeFirst()
                 udpTransport.send(frame)
@@ -794,7 +801,7 @@ class RadioAudioEngine(private val context: Context) {
 
         stateManager.txPipelineRunning = true
         stateManager.transitionTo(RadioState.TRANSMITTING, "tx_promoted_from_prebuffer")
-        Log.d(TAG, "PRE_BUFFER_FLUSHED flushedFrames=$flushedFrames durationMs=${flushedFrames * CAPTURE_INTERVAL_MS} — live TX active ${RadioDiagLog.elapsedTag()}")
+        Log.d(TAG, "PRE_BUFFER_FLUSHED flushedFrames=$flushedFrames discardedFrames=$discardedFrames durationMs=${flushedFrames * CAPTURE_INTERVAL_MS} — live TX active ${RadioDiagLog.elapsedTag()}")
         return true
         } finally {
             transmitMutex.unlock()
