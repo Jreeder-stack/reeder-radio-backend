@@ -1,4 +1,5 @@
 import { PCM_SPEC } from './PcmPacket.js';
+import { processRadioVoice, cleanup as cleanupDSP } from './radioVoiceDSP.js';
 
 export class PcmPlaybackEngine {
   constructor() {
@@ -10,6 +11,7 @@ export class PcmPlaybackEngine {
     this.started = false;
     this._speakerRouteLogged = false;
     this._processorConnected = false;
+    this._dspOutput = null;
   }
 
   async init() {
@@ -44,7 +46,10 @@ export class PcmPlaybackEngine {
           console.log('AUDIO_PLAYBACK_DRAIN_COMPLETE');
         }
       };
-      this._workletNode.connect(this.audioContext.destination);
+      this._dspOutput = processRadioVoice(this.audioContext, this._workletNode);
+      this._dspOutput.connect(this.audioContext.destination);
+
+      this._workletNode.port.postMessage({ type: 'setGain', gain: 1.5 });
     } catch (err) {
       console.warn('AudioWorklet not supported for playback, falling back to ScriptProcessor:', err.message);
       this._useFallback();
@@ -67,7 +72,7 @@ export class PcmPlaybackEngine {
         const count = Math.min(available, needed);
 
         for (let i = 0; i < count; i++) {
-          let sample = (current[this._fallbackOffset + i] / 32768) * 1.0;
+          let sample = (current[this._fallbackOffset + i] / 32768) * 3.0;
           const abs = Math.abs(sample);
           if (abs >= 0.9) {
             const over = abs - 0.9;
@@ -132,6 +137,11 @@ export class PcmPlaybackEngine {
   }
 
   async close() {
+    cleanupDSP();
+    if (this._dspOutput) {
+      try { this._dspOutput.disconnect(); } catch (_) {}
+      this._dspOutput = null;
+    }
     if (this._workletNode) {
       this._workletNode.port.postMessage({ type: 'clear' });
       this._workletNode.disconnect();

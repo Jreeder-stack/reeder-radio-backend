@@ -583,8 +583,8 @@ class RadioAudioEngine(private val context: Context) {
             val sessionId = record.audioSessionId
             try {
                 if (AutomaticGainControl.isAvailable()) {
-                    autoGainControl = AutomaticGainControl.create(sessionId)?.also { it.enabled = false }
-                    Log.d("[AudioCapture]", "AGC attached=true enabled=false sessionId=$sessionId ${RadioDiagLog.elapsedTag()}")
+                    autoGainControl = AutomaticGainControl.create(sessionId)?.also { it.enabled = true }
+                    Log.d("[AudioCapture]", "AGC attached=true enabled=true sessionId=$sessionId ${RadioDiagLog.elapsedTag()}")
                 } else {
                     Log.d("[AudioCapture]", "AGC attached=false reason=unavailable ${RadioDiagLog.elapsedTag()}")
                 }
@@ -1009,8 +1009,8 @@ class RadioAudioEngine(private val context: Context) {
             val sessionId = record.audioSessionId
             try {
                 if (AutomaticGainControl.isAvailable()) {
-                    autoGainControl = AutomaticGainControl.create(sessionId)?.also { it.enabled = false }
-                    Log.d("[AudioCapture]", "AGC attached=true enabled=false sessionId=$sessionId ${RadioDiagLog.elapsedTag()}")
+                    autoGainControl = AutomaticGainControl.create(sessionId)?.also { it.enabled = true }
+                    Log.d("[AudioCapture]", "AGC attached=true enabled=true sessionId=$sessionId ${RadioDiagLog.elapsedTag()}")
                 } else {
                     Log.d("[AudioCapture]", "AGC attached=false reason=unavailable ${RadioDiagLog.elapsedTag()}")
                 }
@@ -1388,7 +1388,7 @@ class RadioAudioEngine(private val context: Context) {
     private var lpY1: Double = 0.0
     private var lpY2: Double = 0.0
 
-    var txCompThresholdDb: Double = -12.0
+    var txCompThresholdDb: Double = -18.0
     var txCompRatio: Double = 3.0
     var txCompAttackMs: Double = 0.003
     var txCompReleaseMs: Double = 0.15
@@ -1397,13 +1397,13 @@ class RadioAudioEngine(private val context: Context) {
     private val compAttackCoeff: Double get() = 1.0 - Math.exp(-1.0 / (actualSampleRate * txCompAttackMs))
     private val compReleaseCoeff: Double get() = 1.0 - Math.exp(-1.0 / (actualSampleRate * txCompReleaseMs))
 
-    var txGain: Double = 2.0
+    var txGain: Double = 5.0
 
-    var txGateThresholdDb: Double = -42.0
-    var txGateCloseThresholdDb: Double = -46.0
+    var txGateThresholdDb: Double = -32.0
+    var txGateCloseThresholdDb: Double = -36.0
     var txGateAttackMs: Double = 0.002
     var txGateReleaseMs: Double = 0.15
-    var txExpanderRatio: Double = 2.0
+    var txExpanderRatio: Double = 3.5
     private var txGateEnvelopeDb: Double = -90.0
     private var txGateAttenuation: Double = 0.0
     private var txGateOpen: Boolean = false
