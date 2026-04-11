@@ -20,7 +20,7 @@ class OpusCodec {
         const val DECODER_FRAME_SIZE = 320
         const val FRAME_DURATION_MS = 20
         const val MAX_ENCODED_SIZE = 512
-        const val COMPLEXITY = 5
+        const val COMPLEXITY = 3
         const val CONSECUTIVE_FAILURE_THRESHOLD = 10
         const val BACKOFF_FRAMES = 3
         const val TOTAL_ASSERTION_FAILURE_LIMIT = 50
@@ -114,8 +114,14 @@ class OpusCodec {
         val silentFrame = ShortArray(frameSize)
         val outputBuffer = ByteArray(MAX_ENCODED_SIZE)
         return try {
-            val result = enc.encode(silentFrame, 0, frameSize, outputBuffer, 0, outputBuffer.size)
-            result > 0
+            for (i in 1..8) {
+                val result = enc.encode(silentFrame, 0, frameSize, outputBuffer, 0, outputBuffer.size)
+                if (result <= 0) {
+                    Log.w(TAG, "ENCODER_WARMUP_FRAME_FAILED frame=$i result=$result")
+                    return false
+                }
+            }
+            true
         } catch (e: Throwable) {
             Log.w(TAG, "ENCODER_WARMUP_FAILED: ${e::class.simpleName}: ${e.message}")
             false
@@ -124,6 +130,7 @@ class OpusCodec {
 
     fun createFreshEncoder(sampleRate: Int, channels: Int) {
         synchronized(encodeLock) {
+            resetFailureCounts()
             encoderSampleRate = sampleRate
             encoderChannels = channels
             encoderFrameSize = (sampleRate * FRAME_DURATION_MS) / 1000
