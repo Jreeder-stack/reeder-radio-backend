@@ -150,25 +150,25 @@ export default function VmLogs({ isMobile }) {
 
   const btnStyle = (active) => ({
     padding: isMobile ? "6px 12px" : "6px 16px",
-    border: "1px solid #444",
+    border: "1px solid var(--dispatch-border)",
     borderRadius: 6,
     cursor: "pointer",
     fontSize: 13,
     fontWeight: 500,
-    background: active ? "#3b82f6" : "#1e1e2e",
-    color: active ? "#fff" : "#aaa",
+    background: active ? "var(--dispatch-accent)" : "var(--dispatch-panel)",
+    color: active ? "#fff" : "var(--dispatch-text-tertiary)",
     transition: "all 0.15s",
   });
 
   const filterBtnStyle = (active) => ({
     padding: isMobile ? "4px 8px" : "4px 12px",
-    border: active ? "1px solid #3b82f6" : "1px solid #333",
+    border: active ? "1px solid var(--dispatch-accent)" : "1px solid var(--dispatch-border)",
     borderRadius: 4,
     cursor: "pointer",
     fontSize: 11,
     fontWeight: 500,
-    background: active ? "#1e3a5f" : "#161622",
-    color: active ? "#93c5fd" : "#666",
+    background: active ? "var(--dispatch-accent-glow)" : "var(--dispatch-panel)",
+    color: active ? "var(--dispatch-accent)" : "var(--dispatch-text-tertiary)",
     transition: "all 0.15s",
   });
 
@@ -182,7 +182,7 @@ export default function VmLogs({ isMobile }) {
             display: "inline-block",
             marginRight: 4,
           }} />
-          <span style={{ fontSize: 13, color: "#888" }}>
+          <span style={{ fontSize: 13, color: "var(--dispatch-text-tertiary)" }}>
             {connected ? "Connected" : "Disconnected"}
           </span>
         </div>
@@ -215,10 +215,10 @@ export default function VmLogs({ isMobile }) {
             minWidth: isMobile ? 120 : 200,
             maxWidth: 400,
             padding: "6px 10px",
-            border: "1px solid #333",
+            border: "1px solid var(--dispatch-border)",
             borderRadius: 6,
-            background: "#161622",
-            color: "#c9d1d9",
+            background: "var(--dispatch-panel)",
+            color: "var(--dispatch-text)",
             fontSize: 13,
             outline: "none",
           }}
@@ -240,7 +240,7 @@ export default function VmLogs({ isMobile }) {
         style={{
           flex: 1,
           background: "#0d1117",
-          border: "1px solid #333",
+          border: "1px solid var(--dispatch-border)",
           borderRadius: 8,
           padding: 12,
           overflowY: "auto",
@@ -269,7 +269,7 @@ export default function VmLogs({ isMobile }) {
         ))}
       </div>
 
-      <div style={{ fontSize: 11, color: "#555", marginTop: 6, textAlign: "right" }}>
+      <div style={{ fontSize: 11, color: "var(--dispatch-text-tertiary)", marginTop: 6, textAlign: "right" }}>
         {filteredLines.length !== lines.length
           ? `${filteredLines.length} / ${lines.length} lines`
           : `${lines.length} lines`

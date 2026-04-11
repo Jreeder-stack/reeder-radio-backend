@@ -277,18 +277,18 @@ export default function RecordingLogs({ isMobile }) {
   const inputStyle = {
     padding: "8px 12px",
     borderRadius: 6,
-    border: "1px solid #444",
-    background: "#2a2a3e",
-    color: "#fff",
+    border: "1px solid var(--dispatch-border)",
+    background: "var(--dispatch-panel-elevated)",
+    color: "var(--dispatch-text)",
     fontSize: 13,
   };
 
   const chipStyle = (active) => ({
     padding: "4px 12px",
     borderRadius: 20,
-    border: active ? "1px solid #3b82f6" : "1px solid #444",
-    background: active ? "#3b82f633" : "transparent",
-    color: active ? "#3b82f6" : "#aaa",
+    border: active ? "1px solid var(--dispatch-accent)" : "1px solid var(--dispatch-border)",
+    background: active ? "var(--dispatch-accent-glow)" : "transparent",
+    color: active ? "var(--dispatch-accent)" : "var(--dispatch-text-tertiary)",
     fontSize: 12,
     cursor: "pointer",
     whiteSpace: "nowrap",
@@ -297,9 +297,9 @@ export default function RecordingLogs({ isMobile }) {
   const quickBtnStyle = (active) => ({
     padding: "6px 14px",
     borderRadius: 6,
-    border: "none",
-    background: active ? "#3b82f6" : "#333",
-    color: active ? "#fff" : "#aaa",
+    border: active ? "none" : "1px solid var(--dispatch-border)",
+    background: active ? "var(--dispatch-accent)" : "var(--dispatch-panel)",
+    color: active ? "#fff" : "var(--dispatch-text-tertiary)",
     fontSize: 12,
     cursor: "pointer",
     whiteSpace: "nowrap",
@@ -309,10 +309,10 @@ export default function RecordingLogs({ isMobile }) {
     <div style={{ overflowY: "auto", WebkitOverflowScrolling: "touch" }}>
       <h2 style={{ margin: "0 0 16px", fontSize: 20 }}>Recording Logs</h2>
 
-      <div style={{ background: "#1e1e2e", borderRadius: 12, padding: isMobile ? 12 : 20, marginBottom: 16 }}>
+      <div style={{ background: "var(--dispatch-panel)", borderRadius: 12, padding: isMobile ? 12 : 20, marginBottom: 16, border: "1px solid var(--dispatch-border)" }}>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 12 }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            <label style={{ fontSize: 11, color: "#888" }}>Date From</label>
+            <label style={{ fontSize: 11, color: "var(--dispatch-text-tertiary)" }}>Date From</label>
             <input
               type="date"
               value={dateFrom}
@@ -321,7 +321,7 @@ export default function RecordingLogs({ isMobile }) {
             />
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            <label style={{ fontSize: 11, color: "#888" }}>Time From (24hr)</label>
+            <label style={{ fontSize: 11, color: "var(--dispatch-text-tertiary)" }}>Time From (24hr)</label>
             <input
               type="time"
               value={timeFrom}
@@ -330,7 +330,7 @@ export default function RecordingLogs({ isMobile }) {
             />
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            <label style={{ fontSize: 11, color: "#888" }}>Date To</label>
+            <label style={{ fontSize: 11, color: "var(--dispatch-text-tertiary)" }}>Date To</label>
             <input
               type="date"
               value={dateTo}
@@ -339,7 +339,7 @@ export default function RecordingLogs({ isMobile }) {
             />
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            <label style={{ fontSize: 11, color: "#888" }}>Time To (24hr)</label>
+            <label style={{ fontSize: 11, color: "var(--dispatch-text-tertiary)" }}>Time To (24hr)</label>
             <input
               type="time"
               value={timeTo}
@@ -351,7 +351,7 @@ export default function RecordingLogs({ isMobile }) {
 
         {availableUnits.length > 0 && (
           <div style={{ marginBottom: 12 }}>
-            <label style={{ fontSize: 11, color: "#888", display: "block", marginBottom: 4 }}>Units</label>
+            <label style={{ fontSize: 11, color: "var(--dispatch-text-tertiary)", display: "block", marginBottom: 4 }}>Units</label>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
               {availableUnits.map((u) => (
                 <button key={u} style={chipStyle(filterUnits.includes(u))} onClick={() => handleUnitToggle(u)}>
@@ -364,7 +364,7 @@ export default function RecordingLogs({ isMobile }) {
 
         {availableChannels.length > 0 && (
           <div style={{ marginBottom: 12 }}>
-            <label style={{ fontSize: 11, color: "#888", display: "block", marginBottom: 4 }}>Channels</label>
+            <label style={{ fontSize: 11, color: "var(--dispatch-text-tertiary)", display: "block", marginBottom: 4 }}>Channels</label>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
               {availableChannels.map((c) => (
                 <button key={c} style={chipStyle(filterChannels.includes(c))} onClick={() => handleChannelToggle(c)}>
@@ -428,9 +428,9 @@ export default function RecordingLogs({ isMobile }) {
             style={{
               padding: "8px 16px",
               borderRadius: 6,
-              border: "1px solid #444",
+              border: "1px solid var(--dispatch-border)",
               background: "transparent",
-              color: "#aaa",
+              color: "var(--dispatch-text-tertiary)",
               fontSize: 13,
               cursor: "pointer",
             }}
@@ -473,18 +473,18 @@ export default function RecordingLogs({ isMobile }) {
         >
           {exportingZip ? "Generating..." : "Download All (ZIP)"}
         </button>
-        <span style={{ color: "#888", fontSize: 13, alignSelf: "center" }}>
+        <span style={{ color: "var(--dispatch-text-tertiary)", fontSize: 13, alignSelf: "center" }}>
           {total} transmission{total !== 1 ? "s" : ""} found
         </span>
       </div>
 
       {loading ? (
-        <div style={{ textAlign: "center", padding: 40, color: "#888" }}>Loading...</div>
+        <div style={{ textAlign: "center", padding: 40, color: "var(--dispatch-text-tertiary)" }}>Loading...</div>
       ) : logs.length === 0 ? (
-        <div style={{ textAlign: "center", padding: 60, color: "#666" }}>
+        <div style={{ textAlign: "center", padding: 60, color: "var(--dispatch-text-tertiary)" }}>
           <div style={{ fontSize: 40, marginBottom: 12 }}>🎙️</div>
           <div style={{ fontSize: 16, fontWeight: 500 }}>No recordings found</div>
-          <div style={{ fontSize: 13, color: "#555", marginTop: 8 }}>
+          <div style={{ fontSize: 13, color: "var(--dispatch-text-tertiary)", marginTop: 8 }}>
             Adjust your filters or select a different date range
           </div>
         </div>
@@ -494,24 +494,24 @@ export default function RecordingLogs({ isMobile }) {
             <div
               key={log.id}
               style={{
-                background: "#1e1e2e",
+                background: "var(--dispatch-panel)",
                 borderRadius: 10,
                 padding: 14,
-                border: playingId === log.id ? "1px solid #3b82f6" : "1px solid transparent",
+                border: playingId === log.id ? "1px solid var(--dispatch-accent)" : "1px solid var(--dispatch-border)",
               }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
                 <div>
-                  <span style={{ fontSize: 13, color: "#ccc" }}>{formatDate(log.created_at)}</span>
+                  <span style={{ fontSize: 13, color: "var(--dispatch-text-secondary)" }}>{formatDate(log.created_at)}</span>
                   <span style={{ fontSize: 15, fontWeight: 600, marginLeft: 8, fontFamily: "monospace" }}>
                     {formatMilitaryTime(log.created_at)}
                   </span>
                 </div>
-                <span style={{ fontSize: 12, color: "#888" }}>{formatDuration(log.audio_duration)}</span>
+                <span style={{ fontSize: 12, color: "var(--dispatch-text-tertiary)" }}>{formatDuration(log.audio_duration)}</span>
               </div>
-              <div style={{ fontSize: 13, color: "#aaa", marginBottom: 10 }}>
+              <div style={{ fontSize: 13, color: "var(--dispatch-text-secondary)", marginBottom: 10 }}>
                 <span>{log.sender}</span>
-                <span style={{ margin: "0 6px", color: "#555" }}>•</span>
+                <span style={{ margin: "0 6px", color: "var(--dispatch-text-tertiary)" }}>•</span>
                 <span>{log.channel}</span>
               </div>
               <div style={{ display: "flex", gap: 8 }}>
@@ -523,12 +523,12 @@ export default function RecordingLogs({ isMobile }) {
                     flex: 1,
                     padding: "8px",
                     borderRadius: 6,
-                    border: "none",
-                    background: !isAudioPlayable(log) ? "#222" : playingId === log.id ? "#3b82f6" : "#333",
-                    color: !isAudioPlayable(log) ? "#555" : "#fff",
+                    background: !isAudioPlayable(log) ? "var(--dispatch-bg)" : playingId === log.id ? "var(--dispatch-accent)" : "var(--dispatch-panel-elevated)",
+                    color: !isAudioPlayable(log) ? "var(--dispatch-text-tertiary)" : playingId === log.id ? "#fff" : "var(--dispatch-text)",
                     fontSize: 13,
                     cursor: !isAudioPlayable(log) ? "not-allowed" : "pointer",
                     opacity: !isAudioPlayable(log) ? 0.6 : 1,
+                    border: "1px solid var(--dispatch-border)",
                   }}
                 >
                   {!isAudioPlayable(log) ? (log.audio_duration === 0 ? "0s" : "Unavailable") : playingId === log.id ? "⏹ Stop" : "▶ Play"}
@@ -540,9 +540,9 @@ export default function RecordingLogs({ isMobile }) {
                     flex: 1,
                     padding: "8px",
                     borderRadius: 6,
-                    border: "1px solid #444",
+                    border: "1px solid var(--dispatch-border)",
                     background: "transparent",
-                    color: !log.audio_available ? "#555" : "#aaa",
+                    color: !log.audio_available ? "var(--dispatch-text-tertiary)" : "var(--dispatch-text-secondary)",
                     fontSize: 13,
                     cursor: !log.audio_available ? "not-allowed" : "pointer",
                     opacity: !log.audio_available ? 0.6 : 1,
@@ -558,13 +558,13 @@ export default function RecordingLogs({ isMobile }) {
         <div style={{ overflowX: "auto", overflowY: "auto", maxHeight: "calc(100vh - 300px)", WebkitOverflowScrolling: "touch" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
             <thead>
-              <tr style={{ borderBottom: "1px solid #333" }}>
-                <th style={{ textAlign: "left", padding: "10px 12px", color: "#888", fontWeight: 500, fontSize: 12, position: "sticky", top: 0, zIndex: 1, background: "#1a1a2e" }}>Date</th>
-                <th style={{ textAlign: "left", padding: "10px 12px", color: "#888", fontWeight: 500, fontSize: 12, position: "sticky", top: 0, zIndex: 1, background: "#1a1a2e" }}>Time</th>
-                <th style={{ textAlign: "left", padding: "10px 12px", color: "#888", fontWeight: 500, fontSize: 12, position: "sticky", top: 0, zIndex: 1, background: "#1a1a2e" }}>Unit</th>
-                <th style={{ textAlign: "left", padding: "10px 12px", color: "#888", fontWeight: 500, fontSize: 12, position: "sticky", top: 0, zIndex: 1, background: "#1a1a2e" }}>Channel</th>
-                <th style={{ textAlign: "left", padding: "10px 12px", color: "#888", fontWeight: 500, fontSize: 12, position: "sticky", top: 0, zIndex: 1, background: "#1a1a2e" }}>Length</th>
-                <th style={{ textAlign: "right", padding: "10px 12px", color: "#888", fontWeight: 500, fontSize: 12, position: "sticky", top: 0, zIndex: 1, background: "#1a1a2e" }}>Actions</th>
+              <tr style={{ borderBottom: "1px solid var(--dispatch-border)" }}>
+                <th style={{ textAlign: "left", padding: "10px 12px", color: "var(--dispatch-text-tertiary)", fontWeight: 500, fontSize: 12, position: "sticky", top: 0, zIndex: 1, background: "var(--dispatch-panel)" }}>Date</th>
+                <th style={{ textAlign: "left", padding: "10px 12px", color: "var(--dispatch-text-tertiary)", fontWeight: 500, fontSize: 12, position: "sticky", top: 0, zIndex: 1, background: "var(--dispatch-panel)" }}>Time</th>
+                <th style={{ textAlign: "left", padding: "10px 12px", color: "var(--dispatch-text-tertiary)", fontWeight: 500, fontSize: 12, position: "sticky", top: 0, zIndex: 1, background: "var(--dispatch-panel)" }}>Unit</th>
+                <th style={{ textAlign: "left", padding: "10px 12px", color: "var(--dispatch-text-tertiary)", fontWeight: 500, fontSize: 12, position: "sticky", top: 0, zIndex: 1, background: "var(--dispatch-panel)" }}>Channel</th>
+                <th style={{ textAlign: "left", padding: "10px 12px", color: "var(--dispatch-text-tertiary)", fontWeight: 500, fontSize: 12, position: "sticky", top: 0, zIndex: 1, background: "var(--dispatch-panel)" }}>Length</th>
+                <th style={{ textAlign: "right", padding: "10px 12px", color: "var(--dispatch-text-tertiary)", fontWeight: 500, fontSize: 12, position: "sticky", top: 0, zIndex: 1, background: "var(--dispatch-panel)" }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -572,7 +572,7 @@ export default function RecordingLogs({ isMobile }) {
                 <tr
                   key={log.id}
                   style={{
-                    borderBottom: "1px solid #1e1e2e",
+                    borderBottom: "1px solid var(--dispatch-border)",
                     background: playingId === log.id ? "#3b82f611" : "transparent",
                   }}
                 >
@@ -582,7 +582,7 @@ export default function RecordingLogs({ isMobile }) {
                   </td>
                   <td style={{ padding: "10px 12px" }}>{log.sender}</td>
                   <td style={{ padding: "10px 12px" }}>{log.channel}</td>
-                  <td style={{ padding: "10px 12px", color: "#888" }}>{formatDuration(log.audio_duration)}</td>
+                  <td style={{ padding: "10px 12px", color: "var(--dispatch-text-tertiary)" }}>{formatDuration(log.audio_duration)}</td>
                   <td style={{ padding: "10px 12px", textAlign: "right" }}>
                     <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
                       <button
@@ -592,9 +592,9 @@ export default function RecordingLogs({ isMobile }) {
                         style={{
                           padding: "5px 12px",
                           borderRadius: 5,
-                          border: "none",
-                          background: !isAudioPlayable(log) ? "#222" : playingId === log.id ? "#3b82f6" : "#333",
-                          color: !isAudioPlayable(log) ? "#555" : "#fff",
+                          border: "1px solid var(--dispatch-border)",
+                          background: !isAudioPlayable(log) ? "var(--dispatch-bg)" : playingId === log.id ? "var(--dispatch-accent)" : "var(--dispatch-panel-elevated)",
+                          color: !isAudioPlayable(log) ? "var(--dispatch-text-tertiary)" : playingId === log.id ? "#fff" : "var(--dispatch-text)",
                           fontSize: 12,
                           cursor: !isAudioPlayable(log) ? "not-allowed" : "pointer",
                           opacity: !isAudioPlayable(log) ? 0.6 : 1,
@@ -608,9 +608,9 @@ export default function RecordingLogs({ isMobile }) {
                         style={{
                           padding: "5px 12px",
                           borderRadius: 5,
-                          border: "1px solid #444",
+                          border: "1px solid var(--dispatch-border)",
                           background: "transparent",
-                          color: !log.audio_available ? "#555" : "#aaa",
+                          color: !log.audio_available ? "var(--dispatch-text-tertiary)" : "var(--dispatch-text-secondary)",
                           fontSize: 12,
                           cursor: !log.audio_available ? "not-allowed" : "pointer",
                           opacity: !log.audio_available ? 0.6 : 1,
@@ -635,16 +635,16 @@ export default function RecordingLogs({ isMobile }) {
             style={{
               padding: "6px 14px",
               borderRadius: 6,
-              border: "1px solid #444",
+              border: "1px solid var(--dispatch-border)",
               background: "transparent",
-              color: page === 0 ? "#555" : "#aaa",
+              color: page === 0 ? "var(--dispatch-text-tertiary)" : "var(--dispatch-text-secondary)",
               fontSize: 13,
               cursor: page === 0 ? "not-allowed" : "pointer",
             }}
           >
             Previous
           </button>
-          <span style={{ color: "#888", fontSize: 13 }}>
+          <span style={{ color: "var(--dispatch-text-tertiary)", fontSize: 13 }}>
             Page {page + 1} of {totalPages}
           </span>
           <button
@@ -653,9 +653,9 @@ export default function RecordingLogs({ isMobile }) {
             style={{
               padding: "6px 14px",
               borderRadius: 6,
-              border: "1px solid #444",
+              border: "1px solid var(--dispatch-border)",
               background: "transparent",
-              color: page >= totalPages - 1 ? "#555" : "#aaa",
+              color: page >= totalPages - 1 ? "var(--dispatch-text-tertiary)" : "var(--dispatch-text-secondary)",
               fontSize: 13,
               cursor: page >= totalPages - 1 ? "not-allowed" : "pointer",
             }}
