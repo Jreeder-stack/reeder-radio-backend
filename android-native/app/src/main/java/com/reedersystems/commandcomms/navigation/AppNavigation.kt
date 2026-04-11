@@ -1,8 +1,13 @@
 package com.reedersystems.commandcomms.navigation
 
+import android.util.Log
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -18,6 +23,9 @@ import com.reedersystems.commandcomms.ui.radio.LockedScreen
 import com.reedersystems.commandcomms.ui.radio.RadioScreen
 import com.reedersystems.commandcomms.ui.radio.UnassignedScreen
 import com.reedersystems.commandcomms.ui.settings.SettingsScreen
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import okhttp3.Request
 
 object Routes {
     const val LOGIN = "login"
@@ -33,20 +41,51 @@ object Routes {
         if (assignedUnit != null) "radio?assignedUnit=$assignedUnit" else "radio"
 }
 
+private const val TAG = "[AppNav]"
+
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
     val context = LocalContext.current
     val app = context.applicationContext as CommandCommsApp
 
+    var tokenValidated by remember { mutableStateOf(false) }
+
     val radioToken = app.radioTokenStore.getToken()
-    val radioId = app.radioTokenStore.getRadioId() ?: ""
+    val radioId = app.radioTokenStore.getRadioId()
     val assignedUnitId = app.radioTokenStore.getAssignedUnitId()
 
-    val startDestination = when {
-        radioToken == null -> Routes.DEVICE_REGISTRATION
-        assignedUnitId != null -> Routes.radio(assignedUnitId)
-        else -> Routes.unassigned(radioId)
+    val startDestination = remember {
+        val needsRegistration = radioToken == null || radioId.isNullOrBlank()
+
+        if (needsRegistration && radioToken != null) {
+            Log.w(TAG, "Token present but radioId missing/blank — clearing stale prefs")
+            app.radioTokenStore.clear()
+            app.apiClient.radioToken = null
+        }
+
+        when {
+            needsRegistration -> Routes.DEVICE_REGISTRATION
+            assignedUnitId != null -> Routes.radio(assignedUnitId)
+            else -> Routes.unassigned(radioId!!)
+        }
+    }
+
+    val needsRegistration = radioToken == null || radioId.isNullOrBlank()
+
+    if (!needsRegistration && !tokenValidated) {
+        LaunchedEffect(Unit) {
+            val isValid = validateTokenWithServer(app)
+            if (!isValid) {
+                Log.w(TAG, "Stored token failed server validation — clearing prefs")
+                app.radioTokenStore.clear()
+                app.apiClient.radioToken = null
+                navController.navigate(Routes.DEVICE_REGISTRATION) {
+                    popUpTo(0) { inclusive = true }
+                }
+            }
+            tokenValidated = true
+        }
     }
 
     NavHost(navController = navController, startDestination = startDestination) {
@@ -157,3 +196,38 @@ fun AppNavigation() {
         }
     }
 }
+
+private suspend fun validateTokenWithServer(app: CommandCommsApp): Boolean =
+    withContext(Dispatchers.IO) {
+        try {
+            val request = Request.Builder()
+                .url("${app.apiClient.baseUrl}/api/radios/ping")
+                .post(okhttp3.RequestBody.create(null, ByteArray(0)))
+                .build()
+            val response = app.apiClient.httpClient.newCall(request).execute()
+            val code = response.code
+            val body = response.body?.string() ?: ""
+            response.close()
+            when {
+                code in 200..299 -> {
+                    Log.d(TAG, "Token validation succeeded ($code)")
+                    true
+                }
+                (code == 401 || code == 403) && body.contains("RADIO_LOCKED") -> {
+                    Log.d(TAG, "Token valid but radio is locked — keeping prefs")
+                    true
+                }
+                code == 401 || code == 403 -> {
+                    Log.w(TAG, "Token validation failed with $code — invalid token")
+                    false
+                }
+                else -> {
+                    Log.w(TAG, "Token validation got unexpected status $code — assuming valid")
+                    true
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Token validation network error, assuming valid: ${e.message}")
+            true
+        }
+    }
