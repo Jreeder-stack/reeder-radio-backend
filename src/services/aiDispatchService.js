@@ -561,12 +561,26 @@ class AIDispatcher {
   }
 
   async rejoinIfNeeded() {
-    if (this.connected || !this.isRunning || this.stoppedByUser || !this.configuredChannel) {
+    if (this.connected) {
+      this.log('REJOIN_SKIPPED', { reason: 'Already connected' });
+      return;
+    }
+    if (!this.isRunning) {
+      this.log('REJOIN_SKIPPED', { reason: 'Dispatcher is not running' });
+      return;
+    }
+    if (this.stoppedByUser) {
+      this.log('REJOIN_SKIPPED', { reason: 'Stopped by user' });
+      return;
+    }
+    if (!this.configuredChannel) {
+      this.log('REJOIN_SKIPPED', { reason: 'No channel configured' });
       return;
     }
 
     const enabled = await isAiDispatchEnabled();
     if (!enabled) {
+      this.log('REJOIN_SKIPPED', { reason: 'AI Dispatch disabled in settings' });
       return;
     }
 

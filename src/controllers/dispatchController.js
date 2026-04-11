@@ -221,8 +221,16 @@ export async function notifyJoin(req, res) {
     
     if (dispatcher) {
       try {
-        await dispatcher.rejoinIfNeeded();
-        triggered = !!dispatcher.room;
+        if (!dispatcher.isRunning) {
+          console.log(`[AI-Dispatcher] Dispatcher not running, attempting full start for channel ${channel}`);
+          const allChannels = await getAllChannels();
+          const channelData = allChannels.find(ch => ch.room_key === configuredChannel || ch.name === configuredChannel);
+          const roomKey = channelData?.room_key || configuredChannel;
+          await startDispatcher(channelData?.name || configuredChannel, roomKey);
+        } else {
+          await dispatcher.rejoinIfNeeded();
+        }
+        triggered = !!dispatcher.connected;
         console.log(`[AI-Dispatcher] Dispatcher ${triggered ? 'connected' : 'not connected'} for channel ${channel}`);
       } catch (err) {
         console.error(`[AI-Dispatcher] Failed to connect dispatcher for channel ${channel}:`, err.message);
