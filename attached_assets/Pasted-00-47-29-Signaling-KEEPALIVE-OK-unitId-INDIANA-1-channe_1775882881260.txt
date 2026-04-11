@@ -1,0 +1,27 @@
+00:47:29 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=DISPATCH__DISPATCH addr=166.137.146.66:42999
+00:47:32 [OpusCodec] Idle decoder swept for sender=INDIANA-1
+00:47:33 [Signaling] PTT_REQUEST_SENT unitId=INDIANA-1 channelId=DISPATCH__DISPATCH
+00:47:33 [FloorControl] requestFloor: raw="DISPATCH__DISPATCH" canonical="DISPATCH__DISPATCH" unitId="INDIANA-1"
+00:47:33 [Signaling] PTT_GRANTED unitId=INDIANA-1 channelId=DISPATCH__DISPATCH
+00:47:33 [Signaling] PTT granted: INDIANA-1 on DISPATCH__DISPATCH
+00:47:33 [AudioRelay] PACKET_DETAIL unitId=INDIANA-1 channelKey=DISPATCH__DISPATCH seq=2748 packetBytes=182 frame=1
+00:47:33 [RecordingTap] TX recording started: unit=INDIANA-1 channel=DISPATCH__DISPATCH
+00:47:33 [AudioRelay] PACKET_DETAIL unitId=INDIANA-1 channelKey=DISPATCH__DISPATCH seq=2749 packetBytes=182 frame=2
+00:47:33 [AudioRelay] PACKET_DETAIL unitId=INDIANA-1 channelKey=DISPATCH__DISPATCH seq=2750 packetBytes=182 frame=3
+00:47:33 [AudioRelay] PACKET_DETAIL unitId=INDIANA-1 channelKey=DISPATCH__DISPATCH seq=2751 packetBytes=182 frame=4
+00:47:33 [AudioRelay] PACKET_DETAIL unitId=INDIANA-1 channelKey=DISPATCH__DISPATCH seq=2752 packetBytes=182 frame=5
+00:47:33 [AudioRelay] PACKET_SUMMARY unitId=INDIANA-1 channelKey=DISPATCH__DISPATCH intervalFrames=5 intervalAvgBytes=182 totalFrames=6 lastSeq=2753
+00:47:33 [AudioRelay] WS_PACING_BURST channelKey=DISPATCH__DISPATCH queueDepth=9 draining=3
+00:47:33 [AudioRelay] WS_PACING_BURST channelKey=DISPATCH__DISPATCH queueDepth=8 draining=3
+00:47:33 [AudioRelay] WS_PACING_BURST channelKey=DISPATCH__DISPATCH queueDepth=6 draining=3
+00:47:33 [AudioRelay] WS_PACING_BURST channelKey=DISPATCH__DISPATCH queueDepth=6 draining=3
+00:47:34 [AudioRelay] PACKET_SUMMARY unitId=INDIANA-1 channelKey=DISPATCH__DISPATCH intervalFrames=56 intervalAvgBytes=182 totalFrames=62 lastSeq=2809
+00:47:35 [AudioRelay] PACKET_SUMMARY unitId=INDIANA-1 channelKey=DISPATCH__DISPATCH intervalFrames=51 intervalAvgBytes=182 totalFrames=113 lastSeq=2860
+00:47:36 [Signaling] PTT_RELEASE_SENT unitId=INDIANA-1 channelId=DISPATCH__DISPATCH
+00:47:36 [AudioRelay] TX_SESSION_STATS {"channelKey":"DISPATCH__DISPATCH","unitId":"INDIANA-1","reason":"ptt_release","durationMs":2878,"firstSeq":2748,"lastSeq":2897,"totalFrames":150,"expectedFrames":150,"lossCount":0,"lossPct":0,"maxConsecutiveGap":0,"avgInterArrivalMs":18.7,"minPacketBytes":182,"maxPacketBytes":182}
+00:47:36 [AudioRelay] WS_RELAY_STATS {"channelKey":"DISPATCH__DISPATCH","reason":"tx_session_end","framesEnqueued":150,"framesDropped":0,"framesDrained":150,"burstDrains":4,"queueDepth":0,"wsSubscribers":1}
+00:47:36 [Signaling] PTT released: INDIANA-1 on DISPATCH__DISPATCH
+00:47:36 [RecordingTap] Finalizing recording: unit=INDIANA-1 channel=DISPATCH__DISPATCH frames=150 duration=2790ms
+00:47:36 [AI-Dispatcher] Cannot broadcast to DISPATCH__DISPATCH: dispatcher is on no channel
+00:47:36 [RecordingTap] Audio message saved: id=2854 channel=DISPATCH__DISPATCH sender=INDIANA-1 duration=2790ms
+00:47:37 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=DISPATCH__DISPATCH addr=166.137.146.66:42999
