@@ -9,8 +9,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import kotlinx.coroutines.delay
@@ -42,14 +40,11 @@ private val White     = Color.White
 
 @Composable
 fun RadioScreen(
-    onLogout: () -> Unit,
-    onOpenSettings: () -> Unit = {},
     onLocked: (() -> Unit)? = null,
     assignedFromUnit: String? = null,
     viewModel: RadioViewModel = viewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    var showLogoutDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
     var showAssignedOverlay by remember { mutableStateOf(assignedFromUnit != null) }
 
@@ -86,25 +81,6 @@ fun RadioScreen(
         BgEmerg.copy(alpha = flashAlpha)
     else BgWhite
 
-    if (showLogoutDialog) {
-        AlertDialog(
-            onDismissRequest = { showLogoutDialog = false },
-            title = { androidx.compose.material3.Text("Are you sure?") },
-            text = { androidx.compose.material3.Text("Sign out of Command Comms?") },
-            confirmButton = {
-                TextButton(onClick = {
-                    showLogoutDialog = false
-                    viewModel.logout(onLogout)
-                }) { androidx.compose.material3.Text("ACCEPT") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showLogoutDialog = false }) {
-                    androidx.compose.material3.Text("DENY")
-                }
-            }
-        )
-    }
-
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -132,9 +108,7 @@ fun RadioScreen(
 
             BottomBar(
                 state = state,
-                onScnl = { viewModel.setShowScanOverlay(true) },
-                onLogoutRequest = { showLogoutDialog = true },
-                onOpenSettings = onOpenSettings
+                onScnl = { viewModel.setShowScanOverlay(true) }
             )
         }
 
@@ -308,9 +282,7 @@ private fun CenterDisplay(
 @Composable
 private fun BottomBar(
     state: RadioUiState,
-    onScnl: () -> Unit,
-    onLogoutRequest: () -> Unit,
-    onOpenSettings: () -> Unit
+    onScnl: () -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -327,22 +299,10 @@ private fun BottomBar(
             onClick = onScnl
         )
         BottomBarButton(
-            text = "SET",
-            color = Color(0xFFE0E0E0),
-            onClick = onOpenSettings
+            text = "${state.batteryLevel ?: "--"}%",
+            color = if ((state.batteryLevel ?: 100) <= 20) Color(0xFFFF3333) else White,
+            onClick = {}
         )
-        BottomBarButton(
-            text = "LOGOUT",
-            color = Color(0xFFFF4444),
-            onClick = onLogoutRequest
-        )
-        state.batteryLevel?.let { bat ->
-            BottomBarButton(
-                text = "$bat%",
-                color = if (bat <= 20) Color(0xFFFF3333) else White,
-                onClick = {}
-            )
-        }
     }
 }
 

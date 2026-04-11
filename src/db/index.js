@@ -301,6 +301,14 @@ export async function getUser(username) {
   return result.rows[0];
 }
 
+export async function getUserById(id) {
+  const result = await pool.query(
+    'SELECT id, username, role, unit_id, is_dispatcher FROM users WHERE id = $1',
+    [id]
+  );
+  return result.rows[0];
+}
+
 export async function createUser(username, password, role = 'user', email = null, unit_id = null) {
   const hash = await bcrypt.hash(password, 10);
   const result = await pool.query(

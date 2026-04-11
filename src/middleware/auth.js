@@ -1,3 +1,5 @@
+import { getRadioByToken, getUserById } from '../db/index.js';
+
 export function requireAuth(req, res, next) {
   if (!req.session?.user) {
     console.log(`[AUTH-MW] Blocked: ${req.method} ${req.originalUrl} — no session user | sessionID=${req.sessionID?.substring(0, 8) || 'none'}... | cookie=${!!req.headers.cookie} | ip=${req.ip}`);
@@ -5,6 +7,35 @@ export function requireAuth(req, res, next) {
   }
   req.user = req.session.user;
   next();
+}
+
+export async function requireAuthOrRadioToken(req, res, next) {
+  if (req.session?.user) {
+    req.user = req.session.user;
+    return next();
+  }
+
+  const radioToken = req.headers['x-radio-token'];
+  if (radioToken) {
+    try {
+      const radio = await getRadioByToken(radioToken);
+      if (radio && !radio.is_locked) {
+        req.radio = radio;
+        if (radio.assigned_unit_id) {
+          const user = await getUserById(radio.assigned_unit_id);
+          req.user = user || { id: radio.assigned_unit_id, role: 'user', username: `radio:${radio.radio_id}` };
+        } else {
+          req.user = { id: null, role: 'user', username: `radio:${radio.radio_id}` };
+        }
+        return next();
+      }
+    } catch (err) {
+      console.error('[AUTH-MW] Radio token lookup error:', err);
+    }
+  }
+
+  console.log(`[AUTH-MW] Blocked: ${req.method} ${req.originalUrl} — no session/radio-token | sessionID=${req.sessionID?.substring(0, 8) || 'none'}... | cookie=${!!req.headers.cookie} | ip=${req.ip}`);
+  return res.status(401).json({ error: 'Not authenticated' });
 }
 
 export function requireAdmin(req, res, next) {

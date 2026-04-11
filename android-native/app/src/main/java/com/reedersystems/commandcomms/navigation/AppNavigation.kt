@@ -82,21 +82,6 @@ fun AppNavigation() {
             val isRadioDevice = app.radioTokenStore.getToken() != null
             val currentRadioId = app.radioTokenStore.getRadioId() ?: ""
             RadioScreen(
-                onLogout = {
-                    if (isRadioDevice) {
-                        app.radioTokenStore.clearAssignedUnit()
-                        navController.navigate(Routes.unassigned(currentRadioId)) {
-                            popUpTo(Routes.RADIO) { inclusive = true }
-                        }
-                    } else {
-                        navController.navigate(Routes.LOGIN) {
-                            popUpTo(Routes.RADIO) { inclusive = true }
-                        }
-                    }
-                },
-                onOpenSettings = {
-                    navController.navigate(Routes.SETTINGS)
-                },
                 onLocked = if (isRadioDevice) {
                     {
                         app.radioTokenStore.clearAssignedUnit()

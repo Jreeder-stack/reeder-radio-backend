@@ -3,9 +3,9 @@ import { success, error } from '../utils/response.js';
 
 export async function getAccessibleChannels(req, res) {
   try {
-    const userId = req.session.user.id;
-    const userRole = req.session.user.role;
-    const username = req.session.user.username;
+    const userId = req.user?.id ?? req.session?.user?.id;
+    const userRole = req.user?.role ?? req.session?.user?.role ?? 'user';
+    const username = req.user?.username ?? req.session?.user?.username ?? (req.radio ? `radio:${req.radio.radio_id}` : 'unknown');
     console.log(`[API /channels] Request from user="${username}" id=${userId} role=${userRole} sessionID=${req.sessionID?.substring(0, 8)}...`);
     
     const channels = await channelsService.getAccessibleChannels(userId, userRole);
