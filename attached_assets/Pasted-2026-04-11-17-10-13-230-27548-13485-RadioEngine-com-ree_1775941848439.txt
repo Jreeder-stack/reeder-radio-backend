@@ -1,0 +1,55 @@
+2026-04-11 17:10:13.230 27548-13485 [RadioEngine]           com.reedersystems.commandcomms       D  RX_DIAG rxTotal=0 rxNew=0 jbSize=0 jbDepth=3 jbPlaying=false channelIdx=169 t=4132314ms
+2026-04-11 17:10:13.231 27548-13209 [RadioEngine]           com.reedersystems.commandcomms       D  RX_DIAG rxTotal=0 rxNew=0 jbSize=0 jbDepth=3 jbPlaying=false channelIdx=169 t=4132314ms
+2026-04-11 17:10:13.331 27548-27548 [PTT-DIAG]              com.reedersystems.commandcomms       D  PttHardwareReceiver.onReceive action=android.intent.action.PTT.down extras=null source=broadcast
+2026-04-11 17:10:13.332 27548-27548 [PTT-DIAG]              com.reedersystems.commandcomms       D  PttHardwareReceiver: mapped action=android.intent.action.PTT.down -> svcAction=com.reedersystems.commandcomms.SVC_PTT_DOWN
+2026-04-11 17:10:13.336 27548-27548 [PTT-DIAG]              com.reedersystems.commandcomms       D  PttHardwareReceiver: WakeLock acquired (auto-releases in 5000ms)
+2026-04-11 17:10:13.343 27548-27548 [PTT-DIAG]              com.reedersystems.commandcomms       D  {"event":"RADIO_PTT_DOWN","pttState":"IDLE","signaling":true,"channelKey":"DISPATCH__DISPATCH","channelId":"169"}
+2026-04-11 17:10:13.343 27548-27548 [PTT-DIAG]              com.reedersystems.commandcomms       W  RADIO_READY_BLOCKED_REASON reason=signaling_not_authenticated:CONNECTED
+2026-04-11 17:10:13.343 27548-27548 [ToneEvent]             com.reedersystems.commandcomms       D  {"tone":"error","trigger":"ready_sync_blocked","reason":"signaling_not_authenticated","ts":1775941813343}
+2026-04-11 17:10:13.345 27548-27548 [PTT-DIAG]              com.reedersystems.commandcomms       D  Sending PTT_TX_FAILED broadcast
+2026-04-11 17:10:13.354 27548-27548 [PTT-DIAG]              com.reedersystems.commandcomms       D  MainActivity PTT DOWN source=MainActivity code=230 action=DOWN repeat=0 ts=1775941813354
+2026-04-11 17:10:13.354 27548-27548 [PTT-DIAG]              com.reedersystems.commandcomms       D  MainActivity PTT DOWN — forwarding to BackgroundAudioService (signaling=true)
+2026-04-11 17:10:13.369 27548-27548 [PTT-DIAG]              com.reedersystems.commandcomms       D  {"event":"RADIO_PTT_DOWN","pttState":"IDLE","signaling":true,"channelKey":"DISPATCH__DISPATCH","channelId":"169"}
+2026-04-11 17:10:13.369 27548-27548 [PTT-DIAG]              com.reedersystems.commandcomms       W  RADIO_READY_BLOCKED_REASON reason=signaling_not_authenticated:CONNECTED
+2026-04-11 17:10:13.369 27548-27548 [ToneEvent]             com.reedersystems.commandcomms       D  {"tone":"error","trigger":"ready_sync_blocked","reason":"signaling_not_authenticated","ts":1775941813369}
+2026-04-11 17:10:13.371 27548-27548 [PTT-DIAG]              com.reedersystems.commandcomms       D  Sending PTT_TX_FAILED broadcast
+2026-04-11 17:10:13.373 27548-13011 AudioTrack              com.reedersystems.commandcomms       W  releaseBuffer() track 0xa3ce1000 disabled due to previous underrun, restarting
+2026-04-11 17:10:13.679 27548-27548 [PTT-DIAG]              com.reedersystems.commandcomms       D  MainActivity PTT UP source=MainActivity code=230 action=UP ts=1775941813679
+2026-04-11 17:10:13.679 27548-27548 [PTT-DIAG]              com.reedersystems.commandcomms       D  MainActivity PTT UP — forwarding to BackgroundAudioService (signaling=true)
+2026-04-11 17:10:13.685 27548-27548 [PTT-DIAG]              com.reedersystems.commandcomms       D  PttHardwareReceiver.onReceive action=android.intent.action.PTT.up extras=null source=broadcast
+2026-04-11 17:10:13.685 27548-27548 [PTT-DIAG]              com.reedersystems.commandcomms       D  PttHardwareReceiver: mapped action=android.intent.action.PTT.up -> svcAction=com.reedersystems.commandcomms.SVC_PTT_UP
+2026-04-11 17:10:13.687 27548-27548 [PTT-DIAG]              com.reedersystems.commandcomms       D  PttHardwareReceiver: WakeLock acquired (auto-releases in 5000ms)
+2026-04-11 17:10:13.690 27548-27548 [PTT-DIAG]              com.reedersystems.commandcomms       D  {"event":"RADIO_PTT_UP","pttState":"IDLE","channelKey":"DISPATCH__DISPATCH"}
+2026-04-11 17:10:13.691 27548-27548 [PTT-DIAG]              com.reedersystems.commandcomms       D  {"event":"RADIO_PTT_UP_DEBOUNCED","deltaMs":2}
+2026-04-11 17:10:14.389 27548-27548 [PTT-DIAG]              com.reedersystems.commandcomms       D  PttHardwareReceiver.onReceive action=android.intent.action.PTT.down extras=null source=broadcast
+2026-04-11 17:10:14.389 27548-27548 [PTT-DIAG]              com.reedersystems.commandcomms       D  PttHardwareReceiver: mapped action=android.intent.action.PTT.down -> svcAction=com.reedersystems.commandcomms.SVC_PTT_DOWN
+2026-04-11 17:10:14.392 27548-27548 [PTT-DIAG]              com.reedersystems.commandcomms       D  PttHardwareReceiver: WakeLock acquired (auto-releases in 5000ms)
+2026-04-11 17:10:14.400 27548-27548 [PTT-DIAG]              com.reedersystems.commandcomms       D  MainActivity PTT DOWN source=MainActivity code=230 action=DOWN repeat=0 ts=1775941814399
+2026-04-11 17:10:14.400 27548-27548 [PTT-DIAG]              com.reedersystems.commandcomms       D  MainActivity PTT DOWN — forwarding to BackgroundAudioService (signaling=true)
+2026-04-11 17:10:14.405 27548-27548 [PTT-DIAG]              com.reedersystems.commandcomms       D  {"event":"RADIO_PTT_DOWN","pttState":"IDLE","signaling":true,"channelKey":"DISPATCH__DISPATCH","channelId":"169"}
+2026-04-11 17:10:14.406 27548-27548 [PTT-DIAG]              com.reedersystems.commandcomms       W  RADIO_READY_BLOCKED_REASON reason=signaling_not_authenticated:CONNECTED
+2026-04-11 17:10:14.406 27548-27548 [ToneEvent]             com.reedersystems.commandcomms       D  {"tone":"error","trigger":"ready_sync_blocked","reason":"signaling_not_authenticated","ts":1775941814406}
+2026-04-11 17:10:14.408 27548-27548 [PTT-DIAG]              com.reedersystems.commandcomms       D  Sending PTT_TX_FAILED broadcast
+2026-04-11 17:10:14.413 27548-27548 [PTT-DIAG]              com.reedersystems.commandcomms       D  {"event":"RADIO_PTT_DOWN","pttState":"IDLE","signaling":true,"channelKey":"DISPATCH__DISPATCH","channelId":"169"}
+2026-04-11 17:10:14.414 27548-27548 [PTT-DIAG]              com.reedersystems.commandcomms       W  RADIO_READY_BLOCKED_REASON reason=signaling_not_authenticated:CONNECTED
+2026-04-11 17:10:14.414 27548-27548 [ToneEvent]             com.reedersystems.commandcomms       D  {"tone":"error","trigger":"ready_sync_blocked","reason":"signaling_not_authenticated","ts":1775941814414}
+2026-04-11 17:10:14.416 27548-27548 [PTT-DIAG]              com.reedersystems.commandcomms       D  Sending PTT_TX_FAILED broadcast
+2026-04-11 17:10:14.426 27548-13011 AudioTrack              com.reedersystems.commandcomms       W  releaseBuffer() track 0xa3ce1000 disabled due to previous underrun, restarting
+2026-04-11 17:10:14.562 27548-27548 [PTT-DIAG]              com.reedersystems.commandcomms       D  PttHardwareReceiver.onReceive action=android.intent.action.PTT.up extras=null source=broadcast
+2026-04-11 17:10:14.563 27548-27548 [PTT-DIAG]              com.reedersystems.commandcomms       D  PttHardwareReceiver: mapped action=android.intent.action.PTT.up -> svcAction=com.reedersystems.commandcomms.SVC_PTT_UP
+2026-04-11 17:10:14.567 27548-27548 [PTT-DIAG]              com.reedersystems.commandcomms       D  PttHardwareReceiver: WakeLock acquired (auto-releases in 5000ms)
+2026-04-11 17:10:14.573 27548-27548 [PTT-DIAG]              com.reedersystems.commandcomms       D  {"event":"RADIO_PTT_UP","pttState":"IDLE","channelKey":"DISPATCH__DISPATCH"}
+2026-04-11 17:10:14.578 27548-27548 [PTT-DIAG]              com.reedersystems.commandcomms       D  MainActivity PTT UP source=MainActivity code=230 action=UP ts=1775941814577
+2026-04-11 17:10:14.578 27548-27548 [PTT-DIAG]              com.reedersystems.commandcomms       D  MainActivity PTT UP — forwarding to BackgroundAudioService (signaling=true)
+2026-04-11 17:10:14.584 27548-27548 [PTT-DIAG]              com.reedersystems.commandcomms       D  {"event":"RADIO_PTT_UP_DEBOUNCED","deltaMs":11}
+2026-04-11 17:10:15.558 27548-9175  [UdpTransport]          com.reedersystems.commandcomms       D  {"event":"UDP_KEEPALIVE_SENT","dest":"comms.reeder-systems.com:5100","fast":false,"intervalMs":8000}
+2026-04-11 17:10:18.232 27548-13485 [RadioEngine]           com.reedersystems.commandcomms       D  RX_DIAG rxTotal=0 rxNew=0 jbSize=0 jbDepth=3 jbPlaying=false channelIdx=169 t=4137315ms
+2026-04-11 17:10:18.233 27548-13485 [RadioEngine]           com.reedersystems.commandcomms       D  RX_DIAG rxTotal=0 rxNew=0 jbSize=0 jbDepth=3 jbPlaying=false channelIdx=169 t=4137317ms
+2026-04-11 17:10:23.234 27548-13011 [RadioEngine]           com.reedersystems.commandcomms       D  RX_DIAG rxTotal=0 rxNew=0 jbSize=0 jbDepth=3 jbPlaying=false channelIdx=169 t=4142317ms
+2026-04-11 17:10:23.234 27548-13011 [RadioEngine]           com.reedersystems.commandcomms       D  RX_DIAG rxTotal=0 rxNew=0 jbSize=0 jbDepth=3 jbPlaying=false channelIdx=169 t=4142318ms
+2026-04-11 17:10:23.562 27548-13485 [UdpTransport]          com.reedersystems.commandcomms       D  {"event":"UDP_KEEPALIVE_SENT","dest":"comms.reeder-systems.com:5100","fast":false,"intervalMs":8000}
+2026-04-11 17:10:28.235 27548-13485 [RadioEngine]           com.reedersystems.commandcomms       D  RX_DIAG rxTotal=0 rxNew=0 jbSize=0 jbDepth=3 jbPlaying=false channelIdx=169 t=4147319ms
+2026-04-11 17:10:28.236 27548-13011 [RadioEngine]           com.reedersystems.commandcomms       D  RX_DIAG rxTotal=0 rxNew=0 jbSize=0 jbDepth=3 jbPlaying=false channelIdx=169 t=4147319ms
+2026-04-11 17:10:31.565 27548-13011 [UdpTransport]          com.reedersystems.commandcomms       D  {"event":"UDP_KEEPALIVE_SENT","dest":"comms.reeder-systems.com:5100","fast":false,"intervalMs":8000}
+2026-04-11 17:10:33.237 27548-13011 [RadioEngine]           com.reedersystems.commandcomms       D  RX_DIAG rxTotal=0 rxNew=0 jbSize=0 jbDepth=3 jbPlaying=false channelIdx=169 t=4152320ms
+2026-04-11 17:10:33.237 27548-13485 [RadioEngine]           com.reedersystems.commandcomms       D  RX_DIAG rxTotal=0 rxNew=0 jbSize=0 jbDepth=3 jbPlaying=false channelIdx=169 t=4152321ms
