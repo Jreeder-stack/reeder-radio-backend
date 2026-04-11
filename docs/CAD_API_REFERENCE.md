@@ -2,7 +2,7 @@
 
 > **This document must be updated whenever API changes are made.**
 
-`last_updated: 2026-04-10T13:30:00Z`
+`last_updated: 2026-04-11T12:00:00Z`
 
 ---
 
@@ -18,11 +18,15 @@
 8. [Channel Endpoints](#channel-endpoints) (`/api/channels/*`)
 9. [Location Endpoints](#location-endpoints) (`/api/location/*`)
 10. [Message Endpoints](#message-endpoints) (`/api/messages/*`)
-11. [Internal CAD Proxy Endpoints](#internal-cad-proxy-endpoints) (`/api/cad/*`)
-12. [Socket.IO Signaling](#socketio-signaling)
-13. [Audio WebSocket](#audio-websocket)
-14. [Embeddable Radio Client](#embeddable-radio-client)
-15. [Changelog / Maintenance](#changelog--maintenance)
+11. [Unit Endpoints](#unit-endpoints) (`/api/unit/*`)
+12. [Radio Config Endpoints](#radio-config-endpoints) (`/api/radio/*`)
+13. [Recording Log Endpoints](#recording-log-endpoints) (`/api/recording-logs/*`)
+14. [Admin Endpoints](#admin-endpoints) (`/api/admin/*`)
+15. [Internal CAD Proxy Endpoints](#internal-cad-proxy-endpoints) (`/api/cad/*`)
+16. [Socket.IO Signaling](#socketio-signaling)
+17. [Audio WebSocket](#audio-websocket)
+18. [Embeddable Radio Client](#embeddable-radio-client)
+19. [Changelog / Maintenance](#changelog--maintenance)
 
 ---
 
@@ -63,8 +67,9 @@ The session cookie is:
 | API Key only | `x-radio-api-key` header | `/api/cad-integration/verify-user`, `/api/cad-integration/unit/:unitId/*`, `/api/cad-integration/ptt-status`, `/api/cad-integration/units` |
 | API Key or Session | `x-radio-api-key` header **or** `connect.sid` cookie | `/api/cad-integration/zones`, `/api/cad-integration/channels` |
 | API Key + Session creation | `x-radio-api-key` header (creates session) | `POST /api/auth/cad-login` |
-| Session required | `connect.sid` cookie | `/api/dispatch/*` (except `/health`), `/api/ptt/*`, `/api/channels/*`, `/api/cad/*` |
-| Session + Dispatcher role | `connect.sid` cookie (dispatcher) | `/api/messages/export/audio` |
+| Session required | `connect.sid` cookie | `/api/dispatch/*` (except `/health`), `/api/ptt/*`, `/api/channels/*`, `/api/cad/*`, `/api/unit/*`, `/api/radio/*` |
+| Session + Dispatcher role | `connect.sid` cookie (dispatcher) | `/api/messages/export/audio`, `/api/recording-logs/*` |
+| Session + Admin role | `connect.sid` cookie (admin) | `/api/admin/*` |
 | No auth | None | `/api/dispatch/health`, `/api/location/*`, `/api/messages/*` (except `export/audio`) |
 
 ---
@@ -120,8 +125,8 @@ or
 
 The actual response shape varies slightly by endpoint family:
 
-- **CAD Integration, Auth, Dispatch, Channels** endpoints use a `success()` helper that sends the data object directly (e.g., `{ "zones": [...] }` rather than wrapping in `{ "success": true, "data": { "zones": [...] } }`). Errors are returned as `{ "error": "..." }`.
-- **Internal CAD proxy** (`/api/cad/*`) and **Messages** (`/api/messages/*`) endpoints use explicit `{ "success": true|false, "message": "..." }` patterns.
+- **CAD Integration, Auth, Dispatch, Channels, Radio Config, Admin** endpoints use a `success()` helper that sends the data object directly (e.g., `{ "zones": [...] }` rather than wrapping in `{ "success": true, "data": { "zones": [...] } }`). Errors are returned as `{ "error": "..." }`.
+- **Unit** (`/api/unit/*`), **Internal CAD proxy** (`/api/cad/*`), **Messages** (`/api/messages/*`), and **Recording Logs** (`/api/recording-logs/*`) endpoints use explicit `{ "success": true|false, ... }` patterns.
 - **PTT and Dispatch helpers** return `{ "success": true }` directly for simple confirmations.
 
 The individual endpoint sections below show the **exact** response shapes returned by each endpoint.
@@ -1395,6 +1400,890 @@ Export audio messages as a ZIP archive. **Requires dispatcher role.**
 
 ---
 
+## Unit Endpoints
+
+All endpoints are under `/api/unit`. All require session authentication (`connect.sid` cookie) via the `requireAuth` middleware.
+
+### POST `/api/unit/status`
+
+Update the authenticated user's unit status. Also syncs the status to the external CAD system and updates the local database.
+
+- **Auth:** Session required
+- **Request Body:**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `status` | string | Yes | The new unit status (e.g., `"available"`, `"busy"`, `"off_duty"`) |
+
+- **Success Response:**
+
+```json
+{
+  "success": true,
+  "status": "available",
+  "cadResult": { ... }
+}
+```
+
+- **Error Responses:**
+
+| Status | Body | Condition |
+|---|---|---|
+| `400` | `{ "success": false, "message": "Unit ID not found" }` | Session has no unit_id or username |
+| `400` | `{ "success": false, "message": "Status is required" }` | Missing `status` field |
+
+- **curl:**
+
+```bash
+curl -X POST https://<host>/api/unit/status \
+  -H "Content-Type: application/json" \
+  -b cookies.txt \
+  -d '{"status":"available"}'
+```
+
+---
+
+### GET `/api/unit/status`
+
+Get the authenticated user's current unit status from the local database.
+
+- **Auth:** Session required
+- **Success Response:**
+
+```json
+{
+  "success": true,
+  "status": "available"
+}
+```
+
+- **Error Response (HTTP 400):**
+
+```json
+{ "success": false, "message": "Unit ID not found" }
+```
+
+- **curl:**
+
+```bash
+curl https://<host>/api/unit/status \
+  -b cookies.txt
+```
+
+---
+
+### GET `/api/unit/contacts`
+
+Returns a list of all non-blocked users with a unit ID, suitable for building contact lists.
+
+- **Auth:** Session required
+- **Success Response:**
+
+```json
+{
+  "success": true,
+  "contacts": [
+    {
+      "id": 1,
+      "name": "U-101",
+      "role": "user",
+      "status": "available"
+    }
+  ]
+}
+```
+
+- **curl:**
+
+```bash
+curl https://<host>/api/unit/contacts \
+  -b cookies.txt
+```
+
+---
+
+## Radio Config Endpoints
+
+All endpoints are under `/api/radio`. All require session authentication (`connect.sid` cookie) via the `requireAuth` middleware.
+
+### GET `/api/radio/config`
+
+Returns the radio transport configuration needed for clients to connect to the audio system.
+
+- **Auth:** Session required
+- **Success Response:**
+
+```json
+{
+  "transportMode": "custom-radio",
+  "signalingUrl": "https://your-radio-server.replit.app",
+  "audioRelayHost": "your-radio-server.replit.app",
+  "audioRelayPort": 5100,
+  "useTls": true
+}
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `transportMode` | string | Radio transport mode (default: `"custom-radio"`, from `RADIO_TRANSPORT_MODE` env var) |
+| `signalingUrl` | string | Full URL for Socket.IO signaling (auto-detected or from `RADIO_SIGNALING_URL` env var) |
+| `audioRelayHost` | string | Hostname for the audio relay (from `AUDIO_RELAY_HOST` env var or request hostname) |
+| `audioRelayPort` | number | Port for the audio relay (from `AUDIO_RELAY_PORT` env var, default: `5100`) |
+| `useTls` | boolean | Whether TLS is enabled (auto-detected from protocol or `RADIO_USE_TLS` env var) |
+
+- **curl:**
+
+```bash
+curl https://<host>/api/radio/config \
+  -b cookies.txt
+```
+
+---
+
+## Recording Log Endpoints
+
+All endpoints are under `/api/recording-logs`. All require session authentication with the **dispatcher role** via the `requireDispatcher` middleware.
+
+### GET `/api/recording-logs/filters`
+
+Returns the available filter options (distinct units and channels) for the recording log search.
+
+- **Auth:** Session required (dispatcher role)
+- **Success Response:**
+
+```json
+{
+  "success": true,
+  "units": ["U-101", "U-102", "DISPATCH"],
+  "channels": ["North__Dispatch", "South__Patrol"]
+}
+```
+
+- **curl:**
+
+```bash
+curl https://<host>/api/recording-logs/filters \
+  -b cookies.txt
+```
+
+---
+
+### GET `/api/recording-logs/search`
+
+Search and paginate through audio transmission logs.
+
+- **Auth:** Session required (dispatcher role)
+- **Query Parameters:**
+
+| Param | Type | Required | Description |
+|---|---|---|---|
+| `channels` | string | No | Comma-separated list of channel room keys to filter by |
+| `units` | string | No | Comma-separated list of unit IDs to filter by |
+| `from` | string | No | Start date (ISO format) |
+| `to` | string | No | End date (ISO format) |
+| `limit` | integer | No | Max results (default: `100`, max: `500`) |
+| `offset` | integer | No | Pagination offset (default: `0`) |
+
+- **Success Response:**
+
+```json
+{
+  "success": true,
+  "logs": [
+    {
+      "id": 1,
+      "sender": "U-101",
+      "channel": "North__Dispatch",
+      "audio_url": "/api/messages/audio/audio_1234.wav",
+      "audio_duration": 5000,
+      "transcription": "10-4 copy",
+      "created_at": "2026-04-10T12:00:00.000Z",
+      "audio_available": true
+    }
+  ],
+  "total": 150
+}
+```
+
+- **Error Response (HTTP 400):**
+
+```json
+{ "success": false, "error": "Invalid date format" }
+```
+
+- **curl:**
+
+```bash
+curl "https://<host>/api/recording-logs/search?channels=North__Dispatch&from=2026-04-01&to=2026-04-11&limit=50" \
+  -b cookies.txt
+```
+
+---
+
+### GET `/api/recording-logs/export/pdf`
+
+Export a transmission log as a PDF document.
+
+- **Auth:** Session required (dispatcher role)
+- **Query Parameters:**
+
+| Param | Type | Required | Description |
+|---|---|---|---|
+| `channels` | string | No | Comma-separated list of channel room keys |
+| `units` | string | No | Comma-separated list of unit IDs |
+| `from` | string | No | Start date (ISO format) |
+| `to` | string | No | End date (ISO format) |
+| `tz` | integer | No | Timezone offset in minutes (for display formatting) |
+
+- **Response:** PDF file (`Content-Type: application/pdf`) containing a tabular transmission log with date, time, unit, channel, and duration columns.
+
+- **curl:**
+
+```bash
+curl "https://<host>/api/recording-logs/export/pdf?channels=North__Dispatch&from=2026-04-01&to=2026-04-11&tz=-300" \
+  -b cookies.txt \
+  -o transmission_log.pdf
+```
+
+---
+
+### GET `/api/recording-logs/export/zip`
+
+Export audio recordings and a PDF log as a ZIP archive.
+
+- **Auth:** Session required (dispatcher role)
+- **Query Parameters:**
+
+| Param | Type | Required | Description |
+|---|---|---|---|
+| `channels` | string | No | Comma-separated list of channel room keys |
+| `units` | string | No | Comma-separated list of unit IDs |
+| `from` | string | No | Start date (ISO format) |
+| `to` | string | No | End date (ISO format) |
+| `tz` | integer | No | Timezone offset in minutes (for display formatting) |
+
+- **Response:** ZIP file (`Content-Type: application/zip`) containing:
+  - A PDF transmission log
+  - Individual `.wav` audio files named by date and time
+
+- **Error Response (HTTP 404):**
+
+```json
+{ "success": false, "error": "No audio messages found" }
+```
+
+- **curl:**
+
+```bash
+curl "https://<host>/api/recording-logs/export/zip?channels=North__Dispatch&from=2026-04-01&to=2026-04-11&tz=-300" \
+  -b cookies.txt \
+  -o recordings.zip
+```
+
+---
+
+## Admin Endpoints
+
+> **Note:** These are internal administration endpoints. All endpoints are under `/api/admin` and require session authentication with the **admin role** via the `requireAdmin` middleware. These endpoints use the `success(res, data)` helper which sends data directly. Resource creation endpoints return HTTP `201`.
+
+### User Management
+
+#### GET `/api/admin/users`
+
+List all users.
+
+- **Success Response:**
+
+```json
+{
+  "users": [
+    {
+      "id": 1,
+      "username": "officer1",
+      "email": "officer1@dept.gov",
+      "role": "user",
+      "unit_id": "U-101",
+      "is_dispatcher": false,
+      "status": "active"
+    }
+  ]
+}
+```
+
+---
+
+#### POST `/api/admin/users`
+
+Create a new user.
+
+- **Request Body:**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `username` | string | Yes | Username |
+| `password` | string | Yes | Password |
+| `role` | string | No | Role (default: `"user"`) |
+| `email` | string | No | Email address |
+| `unit_id` | string | No | Unit identifier |
+| `channelIds` | array | No | Array of channel IDs to grant access to |
+| `is_dispatcher` | boolean | No | Whether user is a dispatcher (default: `false`) |
+
+- **Success Response (HTTP 201):**
+
+```json
+{
+  "user": { ... }
+}
+```
+
+- **Error Responses:**
+
+| Status | Body | Condition |
+|---|---|---|
+| `400` | `{ "error": "Username and password required" }` | Missing required fields |
+| `400` | `{ "error": "Username already exists" }` | Duplicate username |
+
+---
+
+#### PUT `/api/admin/users/:id`
+
+Update a user.
+
+- **Path Parameters:**
+
+| Param | Type | Description |
+|---|---|---|
+| `id` | integer | User ID |
+
+- **Request Body:** Any user fields to update (e.g., `role`, `email`, `unit_id`, `is_dispatcher`).
+
+- **Success Response:**
+
+```json
+{
+  "user": { ... }
+}
+```
+
+- **Error Response (HTTP 404):**
+
+```json
+{ "error": "User not found" }
+```
+
+---
+
+#### DELETE `/api/admin/users/:id`
+
+Delete a user.
+
+- **Path Parameters:**
+
+| Param | Type | Description |
+|---|---|---|
+| `id` | integer | User ID |
+
+- **Success Response:**
+
+```json
+{ "success": true }
+```
+
+- **Error Response (HTTP 404):**
+
+```json
+{ "error": "User not found" }
+```
+
+---
+
+#### PUT `/api/admin/users/:id/password`
+
+Reset a user's password.
+
+- **Path Parameters:**
+
+| Param | Type | Description |
+|---|---|---|
+| `id` | integer | User ID |
+
+- **Request Body:**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `password` | string | Yes | New password |
+
+- **Success Response:**
+
+```json
+{ "success": true }
+```
+
+- **Error Responses:**
+
+| Status | Body | Condition |
+|---|---|---|
+| `400` | `{ "error": "Password required" }` | Missing password |
+| `404` | `{ "error": "User not found" }` | User not found |
+
+---
+
+#### GET `/api/admin/users/:id/channels`
+
+Get the channel IDs a user has access to.
+
+- **Path Parameters:**
+
+| Param | Type | Description |
+|---|---|---|
+| `id` | integer | User ID |
+
+- **Success Response:**
+
+```json
+{
+  "channelIds": [1, 2, 3]
+}
+```
+
+---
+
+#### PUT `/api/admin/users/:id/channels`
+
+Set the channels a user has access to (replaces all existing access).
+
+- **Path Parameters:**
+
+| Param | Type | Description |
+|---|---|---|
+| `id` | integer | User ID |
+
+- **Request Body:**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `channelIds` | array | No | Array of channel IDs (default: `[]`) |
+
+- **Success Response:**
+
+```json
+{ "success": true }
+```
+
+---
+
+### Channel Management
+
+#### GET `/api/admin/channels`
+
+List all channels.
+
+- **Success Response:**
+
+```json
+{
+  "channels": [ ... ]
+}
+```
+
+---
+
+#### POST `/api/admin/channels`
+
+Create a new channel.
+
+- **Request Body:**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `name` | string | Yes | Channel name |
+| `zone` | string | Yes | Zone name |
+| `zone_id` | integer | No | Zone ID (alternative: `zoneId`) |
+
+- **Success Response (HTTP 201):**
+
+```json
+{
+  "channel": { ... }
+}
+```
+
+- **Error Responses:**
+
+| Status | Body | Condition |
+|---|---|---|
+| `400` | `{ "error": "Name and zone required" }` | Missing required fields |
+| `400` | `{ "error": "Channel name already exists in this zone" }` | Duplicate channel |
+
+---
+
+#### PUT `/api/admin/channels/:id`
+
+Update a channel.
+
+- **Path Parameters:**
+
+| Param | Type | Description |
+|---|---|---|
+| `id` | integer | Channel ID |
+
+- **Request Body:** Any channel fields to update.
+
+- **Success Response:**
+
+```json
+{
+  "channel": { ... }
+}
+```
+
+- **Error Response (HTTP 404):**
+
+```json
+{ "error": "Channel not found" }
+```
+
+---
+
+#### DELETE `/api/admin/channels/:id`
+
+Delete a channel.
+
+- **Path Parameters:**
+
+| Param | Type | Description |
+|---|---|---|
+| `id` | integer | Channel ID |
+
+- **Success Response:**
+
+```json
+{ "success": true }
+```
+
+- **Error Response (HTTP 404):**
+
+```json
+{ "error": "Channel not found" }
+```
+
+---
+
+### Zone Management
+
+#### GET `/api/admin/zones`
+
+List all zones.
+
+- **Success Response:**
+
+```json
+{
+  "zones": [ ... ]
+}
+```
+
+---
+
+#### POST `/api/admin/zones`
+
+Create a new zone.
+
+- **Request Body:**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `name` | string | Yes | Zone name |
+
+- **Success Response (HTTP 201):**
+
+```json
+{
+  "zone": { ... }
+}
+```
+
+- **Error Responses:**
+
+| Status | Body | Condition |
+|---|---|---|
+| `400` | `{ "error": "Zone name required" }` | Missing name |
+| `400` | `{ "error": "Zone name already exists" }` | Duplicate zone |
+
+---
+
+#### PUT `/api/admin/zones/:id`
+
+Update a zone.
+
+- **Path Parameters:**
+
+| Param | Type | Description |
+|---|---|---|
+| `id` | integer | Zone ID |
+
+- **Request Body:**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `name` | string | Yes | New zone name |
+
+- **Success Response:**
+
+```json
+{
+  "zone": { ... }
+}
+```
+
+- **Error Responses:**
+
+| Status | Body | Condition |
+|---|---|---|
+| `400` | `{ "error": "Zone name required" }` | Missing name |
+| `404` | `{ "error": "Zone not found" }` | Zone not found |
+
+---
+
+#### DELETE `/api/admin/zones/:id`
+
+Delete a zone.
+
+- **Path Parameters:**
+
+| Param | Type | Description |
+|---|---|---|
+| `id` | integer | Zone ID |
+
+- **Success Response:**
+
+```json
+{ "success": true }
+```
+
+- **Error Response (HTTP 404):**
+
+```json
+{ "error": "Zone not found" }
+```
+
+---
+
+### AI Dispatch
+
+#### GET `/api/admin/ai-dispatch`
+
+Get AI dispatch configuration.
+
+- **Success Response:**
+
+```json
+{
+  "enabled": true,
+  "channel": "North__Dispatch"
+}
+```
+
+---
+
+#### PUT `/api/admin/ai-dispatch`
+
+Enable or disable the AI dispatcher.
+
+- **Request Body:**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `enabled` | boolean | Yes | Whether to enable AI dispatch |
+| `channel` | string | No | Dispatch channel room key (required if enabling and not previously set) |
+
+- **Success Response:**
+
+```json
+{
+  "enabled": true,
+  "channel": "North__Dispatch"
+}
+```
+
+- **Error Responses:**
+
+| Status | Body | Condition |
+|---|---|---|
+| `400` | `{ "error": "enabled must be a boolean" }` | Invalid type |
+| `400` | `{ "error": "Dispatch channel is required to enable AI" }` | No channel specified |
+
+---
+
+### Audio Tuning
+
+#### GET `/api/admin/audio-tuning`
+
+Get the current DSP audio tuning configuration and defaults.
+
+- **Success Response:**
+
+```json
+{
+  "config": {
+    "txHpAlpha": 0.9889,
+    "txCompThresholdDb": -18.0,
+    "txGain": 1.4,
+    "rxGain": 2.5,
+    "opusBitrate": 48000
+  },
+  "defaults": {
+    "txHpAlpha": 0.9889,
+    "txCompThresholdDb": -18.0,
+    "txGain": 1.4,
+    "rxGain": 2.5,
+    "opusBitrate": 48000
+  }
+}
+```
+
+---
+
+#### PUT `/api/admin/audio-tuning`
+
+Update DSP audio tuning parameters. Updated config is broadcast to all connected clients via the `radio:dsp_config` Socket.IO event.
+
+- **Request Body:** An object with DSP parameter keys and numeric values. Only recognized keys from the defaults are applied.
+
+- **Success Response:**
+
+```json
+{
+  "config": { ... }
+}
+```
+
+- **Error Response (HTTP 400):**
+
+```json
+{ "error": "Invalid config object" }
+```
+
+---
+
+#### POST `/api/admin/audio-tuning/reset`
+
+Reset all DSP audio tuning parameters to defaults and broadcast to all connected clients.
+
+- **Success Response:**
+
+```json
+{
+  "config": { ... }
+}
+```
+
+---
+
+### Scanner Feed
+
+#### GET `/api/admin/scanner`
+
+Get the current scanner feed status.
+
+- **Success Response:**
+
+```json
+{
+  "enabled": false,
+  "streamUrl": null,
+  "channelName": null
+}
+```
+
+---
+
+#### POST `/api/admin/scanner`
+
+Enable or disable the scanner feed.
+
+- **Request Body:**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `enabled` | boolean | Yes | Whether to enable the scanner feed |
+| `streamUrl` | string | Yes* | HTTP/HTTPS stream URL (*required if enabling) |
+| `channelName` | string | Yes* | Target channel name or room key (*required if enabling) |
+
+- **Success Response:**
+
+```json
+{
+  "enabled": true,
+  "streamUrl": "https://stream.example.com/feed",
+  "channelName": "North__Dispatch"
+}
+```
+
+- **Error Responses:**
+
+| Status | Body | Condition |
+|---|---|---|
+| `400` | `{ "error": "enabled must be a boolean" }` | Invalid type |
+| `400` | `{ "error": "streamUrl and channelName are required to enable scanner" }` | Missing fields |
+| `400` | `{ "error": "Stream URL must use http or https protocol" }` | Invalid protocol |
+| `400` | `{ "error": "Invalid stream URL" }` | Malformed URL |
+| `400` | `{ "error": "Channel not found or not enabled" }` | Channel doesn't exist |
+
+---
+
+### Activity Logs
+
+#### GET `/api/admin/logs`
+
+Get the last 100 admin activity log entries.
+
+- **Success Response:**
+
+```json
+{
+  "logs": [
+    {
+      "id": 1,
+      "user_id": 1,
+      "username": "admin",
+      "action": "admin_create_user",
+      "details": { "newUser": "officer2" },
+      "created_at": "2026-04-10T12:00:00.000Z"
+    }
+  ]
+}
+```
+
+---
+
+### VM Logs
+
+#### GET `/api/admin/vm-logs`
+
+Stream server or system logs as Server-Sent Events (SSE).
+
+- **Query Parameters:**
+
+| Param | Type | Required | Description |
+|---|---|---|---|
+| `source` | string | No | `"server"` (default, pm2 logs) or `"system"` (journalctl) |
+
+- **Headers set by server:**
+  - `Content-Type: text/event-stream`
+  - `Cache-Control: no-cache`
+  - `Connection: keep-alive`
+
+- **SSE Event Format:**
+
+```
+data: {"line":"[info] Server started on port 3000","source":"server","ts":1712764800000}
+```
+
+The connection stays open; the server pushes log lines as they are produced. The server sends `": ping\n\n"` heartbeats every 20 seconds.
+
+---
+
 ## Internal CAD Proxy Endpoints
 
 All endpoints are under `/api/cad`. All require session authentication (`connect.sid` cookie) via the `requireAuth` middleware. These endpoints proxy requests to an external CAD system configured via `CAD_URL` and `CAD_API_KEY` environment variables.
@@ -2111,6 +3000,8 @@ socket.on('auth:error', (data) => {
 | `channel:idle` | `{ channelId, timestamp }` | Channel became idle (radio protocol) |
 | `tx:start` | `{ senderUnitId, channelId, timestamp, isEmergency }` | Transmission started (radio protocol) |
 | `tx:stop` | `{ senderUnitId, channelId, timestamp, reason? }` | Transmission stopped (radio protocol). `reason` may be `"timeout"`, `"leave"`, or `"disconnect"`. |
+| `tx:silence_warning` | `{ channelId, unitId, silenceMs, timestamp }` | Warning that a transmitting unit has been silent for an extended period |
+| `radio:dsp_config` | `{ txHpAlpha, txGain, rxGain, opusBitrate, ... }` | DSP audio tuning configuration broadcast (sent when admin updates audio tuning) |
 | `pong` | _(none)_ | Response to client `ping` |
 
 ---
@@ -2352,5 +3243,6 @@ radio.destroy();
 
 | Date | Change |
 |---|---|
+| 2026-04-11 | Full documentation audit. Added 4 missing endpoint families: Unit Endpoints (`/api/unit/*` — 3 endpoints), Radio Config Endpoints (`/api/radio/*` — 1 endpoint), Recording Log Endpoints (`/api/recording-logs/*` — 4 endpoints), Admin Endpoints (`/api/admin/*` — 24 endpoints). Added 2 missing Socket.IO outbound events: `tx:silence_warning` and `radio:dsp_config`. Updated Auth Modes Summary table to include new endpoint families. Updated Table of Contents. |
 | 2026-04-10 | Audio WebSocket: Added Opus end-to-end passthrough (`0x02` marker). Server now sends Opus frames by default instead of PCM. Clients may TX with either `0x02` (Opus, preferred) or `0x01` (PCM, legacy). Updated Audio Specification table. |
 | 2026-04-10 | Initial version — complete API reference covering all endpoints, Socket.IO events, Audio WebSocket protocol, and embeddable RadioClient. |
