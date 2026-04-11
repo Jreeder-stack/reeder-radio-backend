@@ -1,0 +1,104 @@
+10:41:53 [1m[90m[TAILING] Tailing last 50 lines for [all] processes (change the value with --lines option)[39m[22m
+10:41:53 [90m/home/Jreeder5029/.pm2/logs/command-comms-error.log last 50 lines:[39m
+10:41:53 fatal: not a git repository (or any of the parent directories): .git
+10:41:53 fatal: not a git repository (or any of the parent directories): .git
+10:41:53 [OpusCodec] Sender-pinned decode error for INDIANA-1: Decode error: Invalid packet
+10:41:53 [OpusCodec] Sender-pinned decode error for INDIANA-1: Decode error: Invalid packet
+10:41:53 [SHUTDOWN] Hard shutdown timeout reached, forcing exit.
+10:41:53 fatal: not a git repository (or any of the parent directories): .git
+10:41:53 fatal: not a git repository (or any of the parent directories): .git
+10:41:53 AUDIO_WS_PING_TIMEOUT {
+10:41:53   channelId: 'TESTING__TESTING 1',
+10:41:53   unitId: 'DISPATCH-1',
+10:41:53   elapsed: 10072,
+10:41:53   missedPongs: 1
+10:41:53 }
+10:41:53 AUDIO_WS_PING_TIMEOUT {
+10:41:53   channelId: 'DISPATCH__DISPATCH',
+10:41:53   unitId: 'DISPATCH-1',
+10:41:53   elapsed: 10072,
+10:41:53   missedPongs: 1
+10:41:53 }
+10:41:53 AUDIO_WS_PING_TIMEOUT {
+10:41:53   channelId: 'TESTING__TESTING 1',
+10:41:53   unitId: 'DISPATCH-1',
+10:41:53   elapsed: 10075,
+10:41:53   missedPongs: 2
+10:41:53 }
+10:41:53 [SHUTDOWN] Hard shutdown timeout reached, forcing exit.
+10:41:53 fatal: not a git repository (or any of the parent directories): .git
+10:41:53 fatal: not a git repository (or any of the parent directories): .git
+10:41:53 [AudioRelay] TX_WATCHDOG_SILENCE unitId=DISPATCH-1 channelId=DISPATCH__DISPATCH silenceMs=5844 hadAudio=true
+10:41:53 [Signaling] TX_SILENCE_WARNING unitId=DISPATCH-1 channelId=DISPATCH__DISPATCH silenceMs=5844
+10:41:53 [SHUTDOWN] Hard shutdown timeout reached, forcing exit.
+10:41:53 fatal: not a git repository (or any of the parent directories): .git
+10:41:53 fatal: not a git repository (or any of the parent directories): .git
+10:41:53 [SHUTDOWN] Hard shutdown timeout reached, forcing exit.
+10:41:53 fatal: not a git repository (or any of the parent directories): .git
+10:41:53 fatal: not a git repository (or any of the parent directories): .git
+10:41:53 [AudioRelay] TX_WATCHDOG_SILENCE unitId=DISPATCH-1 channelId=DISPATCH__DISPATCH silenceMs=11858 hadAudio=true
+10:41:53 [Signaling] TX_SILENCE_WARNING unitId=DISPATCH-1 channelId=DISPATCH__DISPATCH silenceMs=11858
+10:41:53 [SHUTDOWN] Hard shutdown timeout reached, forcing exit.
+10:41:53 fatal: not a git repository (or any of the parent directories): .git
+10:41:53 fatal: not a git repository (or any of the parent directories): .git
+10:41:53 [SHUTDOWN] Hard shutdown timeout reached, forcing exit.
+10:41:53 fatal: not a git repository (or any of the parent directories): .git
+10:41:53 fatal: not a git repository (or any of the parent directories): .git
+10:41:53 [SHUTDOWN] Hard shutdown timeout reached, forcing exit.
+10:41:53 fatal: not a git repository (or any of the parent directories): .git
+10:41:53 fatal: not a git repository (or any of the parent directories): .git
+10:41:53 [SHUTDOWN] Hard shutdown timeout reached, forcing exit.
+10:41:53 fatal: not a git repository (or any of the parent directories): .git
+10:41:53 fatal: not a git repository (or any of the parent directories): .git
+10:41:53 [90m/home/Jreeder5029/.pm2/logs/command-comms-out.log last 50 lines:[39m
+10:41:53 [Signaling] DISPATCH-1 joined channel DISPATCH__DISPATCH
+10:41:53 [DISPATCH] getUnits: 0 units returned | user=DISPATCH-1 | sessionID=33uxhodD... (logged 1/60)
+10:41:53 [API] GET /api/dispatch/units | user=DISPATCH-1(id:7) | sid=33uxhodD... | 304 | 20ms (logged 1/60)
+10:41:53 [Signaling] DISPATCH-1 left channel TESTING__TESTING 1
+10:41:53 [Signaling] DISPATCH-1 left channel DISPATCH__DISPATCH
+10:41:53 [Signaling] DISPATCH-1 joined channel TESTING__TESTING 1
+10:41:53 [Signaling] DISPATCH-1 joined channel DISPATCH__DISPATCH
+10:41:53 AUDIO_WS_ACCEPTED { username: 'DISPATCH-1', unitId: 'DISPATCH-1' }
+10:41:53 [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=33uxhodD... | 200 | 25ms
+10:41:53 [Signaling] PTT START request: unitId=DISPATCH-1 channelId=DISPATCH__DISPATCH
+10:41:53 [FloorControl] requestFloor: raw="DISPATCH__DISPATCH" canonical="DISPATCH__DISPATCH" unitId="DISPATCH-1"
+10:41:53 [Signaling] PTT START granted: DISPATCH-1 on DISPATCH__DISPATCH (floor granted for holdsFloor check)
+10:41:53 [RecordingTap] TX recording started: unit=DISPATCH-1 channel=DISPATCH__DISPATCH
+10:41:53 [Signaling] PTT END: DISPATCH-1 on DISPATCH__DISPATCH (1060ms)
+10:41:53 [Signaling] PTT START request: unitId=DISPATCH-1 channelId=DISPATCH__DISPATCH
+10:41:53 [FloorControl] requestFloor: raw="DISPATCH__DISPATCH" canonical="DISPATCH__DISPATCH" unitId="DISPATCH-1"
+10:41:53 [Signaling] PTT START granted: DISPATCH-1 on DISPATCH__DISPATCH (floor granted for holdsFloor check)
+10:41:53 [RecordingTap] Finalizing recording: unit=DISPATCH-1 channel=DISPATCH__DISPATCH frames=41 duration=784ms
+10:41:53 [RecordingTap] Audio message saved: id=2953 channel=DISPATCH__DISPATCH sender=DISPATCH-1 duration=784ms
+10:41:53 [broadcastMessage] Broadcast message to DISPATCH__DISPATCH: 2953
+10:41:53 [RecordingTap] TX recording started: unit=DISPATCH-1 channel=DISPATCH__DISPATCH
+10:41:53 [Signaling] PTT END: DISPATCH-1 on DISPATCH__DISPATCH (3905ms)
+10:41:53 [AudioRelay] WS_RELAY_STATS {"channelKey":"DISPATCH__DISPATCH","reason":"periodic","framesEnqueued":222,"framesDropped":0,"framesDrained":222,"burstDrains":0,"queueDepth":0,"wsSubscribers":1}
+10:41:53 [RecordingTap] Finalizing recording: unit=DISPATCH-1 channel=DISPATCH__DISPATCH frames=181 duration=3590ms
+10:41:53 [RecordingTap] Audio message saved: id=2954 channel=DISPATCH__DISPATCH sender=DISPATCH-1 duration=3590ms
+10:41:53 [broadcastMessage] Broadcast message to DISPATCH__DISPATCH: 2954
+10:41:53 [Signaling] PTT START request: unitId=DISPATCH-1 channelId=DISPATCH__DISPATCH
+10:41:53 [FloorControl] requestFloor: raw="DISPATCH__DISPATCH" canonical="DISPATCH__DISPATCH" unitId="DISPATCH-1"
+10:41:53 [Signaling] PTT START granted: DISPATCH-1 on DISPATCH__DISPATCH (floor granted for holdsFloor check)
+10:41:53 [RecordingTap] TX recording started: unit=DISPATCH-1 channel=DISPATCH__DISPATCH
+10:41:53 [Signaling] PTT END: DISPATCH-1 on DISPATCH__DISPATCH (2539ms)
+10:41:53 [RecordingTap] Finalizing recording: unit=DISPATCH-1 channel=DISPATCH__DISPATCH frames=112 duration=2205ms
+10:41:53 [RecordingTap] Audio message saved: id=2955 channel=DISPATCH__DISPATCH sender=DISPATCH-1 duration=2205ms
+10:41:53 [broadcastMessage] Broadcast message to DISPATCH__DISPATCH: 2955
+10:41:53 [AudioRelay] WS_RELAY_STATS {"channelKey":"DISPATCH__DISPATCH","reason":"periodic","framesEnqueued":112,"framesDropped":0,"framesDrained":112,"burstDrains":0,"queueDepth":0,"wsSubscribers":1}
+10:41:53 [Signaling] Grace period ended for DISPATCH__DISPATCH
+10:41:53 [API] GET /api/messages/DISPATCH__DISPATCH?limit=50&offset=0 | user=DISPATCH-1(id:7) | sid=33uxhodD... | 200 | 19ms
+10:41:53 [API] HEAD /api/messages/audio/DISPATCH__DISPATCH_1775918490809_DISPATCH_1.wav | user=DISPATCH-1(id:7) | sid=33uxhodD... | 200 | 33ms
+10:41:53 [API] HEAD /api/messages/audio/DISPATCH__DISPATCH_1775918486811_DISPATCH_1.wav | user=DISPATCH-1(id:7) | sid=33uxhodD... | 200 | 26ms
+10:41:53 [API] GET /api/messages/DISPATCH__DISPATCH?limit=50&offset=0 | user=DISPATCH-1(id:7) | sid=33uxhodD... | 304 | 17ms
+10:41:53 [Signaling] DISPATCH-1 left channel TESTING__TESTING 1
+10:41:53 [Signaling] DISPATCH-1 left channel DISPATCH__DISPATCH
+10:41:53 [API] GET /api/admin/users | user=DISPATCH-1(id:7) | sid=33uxhodD... | 304 | 16ms
+10:41:53 [API] GET /api/admin/scanner | user=DISPATCH-1(id:7) | sid=33uxhodD... | 304 | 9ms
+10:41:53 [API] GET /api/admin/channels | user=DISPATCH-1(id:7) | sid=33uxhodD... | 304 | 17ms
+10:41:53 [API] GET /api/admin/zones | user=DISPATCH-1(id:7) | sid=33uxhodD... | 304 | 17ms
+10:41:53 [API] GET /api/admin/logs?limit=200 | user=DISPATCH-1(id:7) | sid=33uxhodD... | 304 | 20ms
+10:41:53 [API] GET /api/admin/ai-dispatch | user=DISPATCH-1(id:7) | sid=33uxhodD... | 304 | 29ms
+10:41:53 [DISPATCH] getChannels: 4 radio channels returned
+10:41:53 [API] GET /api/dispatch/channels | user=DISPATCH-1(id:7) | sid=33uxhodD... | 304 | 17ms
+10:42:04 [OpusCodec] Idle decoder swept for sender=DISPATCH-1
