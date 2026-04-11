@@ -151,7 +151,7 @@ router.patch('/:radioId/assign', requireDispatcher, async (req, res) => {
           console.warn('[Radios] Could not fetch channel config for radio:assigned event:', e.message);
         }
         radioSocket.emit('radio:assigned', {
-          unit_id: resolvedUnitIdentity,
+          unitId: resolvedUnitIdentity,
           channelConfig,
         });
         radioSocket.unitId = resolvedUnitIdentity;
