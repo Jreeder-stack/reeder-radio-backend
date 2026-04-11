@@ -583,8 +583,8 @@ class RadioAudioEngine(private val context: Context) {
             val sessionId = record.audioSessionId
             try {
                 if (AutomaticGainControl.isAvailable()) {
-                    autoGainControl = AutomaticGainControl.create(sessionId)?.also { it.enabled = false }
-                    Log.d("[AudioCapture]", "AGC attached=true enabled=false sessionId=$sessionId ${RadioDiagLog.elapsedTag()}")
+                    autoGainControl = AutomaticGainControl.create(sessionId)?.also { it.enabled = true }
+                    Log.d("[AudioCapture]", "AGC attached=true enabled=true sessionId=$sessionId ${RadioDiagLog.elapsedTag()}")
                 } else {
                     Log.d("[AudioCapture]", "AGC attached=false reason=unavailable ${RadioDiagLog.elapsedTag()}")
                 }
@@ -1009,8 +1009,8 @@ class RadioAudioEngine(private val context: Context) {
             val sessionId = record.audioSessionId
             try {
                 if (AutomaticGainControl.isAvailable()) {
-                    autoGainControl = AutomaticGainControl.create(sessionId)?.also { it.enabled = false }
-                    Log.d("[AudioCapture]", "AGC attached=true enabled=false sessionId=$sessionId ${RadioDiagLog.elapsedTag()}")
+                    autoGainControl = AutomaticGainControl.create(sessionId)?.also { it.enabled = true }
+                    Log.d("[AudioCapture]", "AGC attached=true enabled=true sessionId=$sessionId ${RadioDiagLog.elapsedTag()}")
                 } else {
                     Log.d("[AudioCapture]", "AGC attached=false reason=unavailable ${RadioDiagLog.elapsedTag()}")
                 }
