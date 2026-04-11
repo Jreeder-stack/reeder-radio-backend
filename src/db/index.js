@@ -251,6 +251,28 @@ export async function initializeDatabase() {
     await client.query(`CREATE INDEX IF NOT EXISTS idx_activity_logs_created_at ON activity_logs (created_at)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_activity_logs_username ON activity_logs (username)`);
 
+    await client.query(`
+      CREATE SEQUENCE IF NOT EXISTS radios_radio_id_seq START 1
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS radios (
+        id SERIAL PRIMARY KEY,
+        radio_id VARCHAR(6) UNIQUE NOT NULL,
+        serial_number VARCHAR(255) UNIQUE NOT NULL,
+        imei VARCHAR(20),
+        assigned_unit_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        is_locked BOOLEAN DEFAULT false,
+        token VARCHAR(255) UNIQUE NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        last_seen TIMESTAMP
+      )
+    `);
+
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_radios_serial_number ON radios (serial_number)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_radios_token ON radios (token)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_radios_assigned_unit_id ON radios (assigned_unit_id)`);
+
     const existingAdmin = await client.query(
       'SELECT id FROM users WHERE username = $1',
       [config.adminUsername]
@@ -819,6 +841,85 @@ export async function deleteChannelMessages(channel, olderThanDays = 30) {
     [channel, olderThanDays]
   );
   return result.rows;
+}
+
+export async function getRadioBySerial(serialNumber) {
+  const result = await pool.query(
+    'SELECT * FROM radios WHERE serial_number = $1',
+    [serialNumber]
+  );
+  return result.rows[0];
+}
+
+export async function getRadioByToken(token) {
+  const result = await pool.query(
+    'SELECT * FROM radios WHERE token = $1',
+    [token]
+  );
+  return result.rows[0];
+}
+
+export async function getRadioById(radioId) {
+  const result = await pool.query(
+    'SELECT * FROM radios WHERE radio_id = $1',
+    [radioId]
+  );
+  return result.rows[0];
+}
+
+export async function createRadio(serialNumber, imei, token) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const seqResult = await client.query(`SELECT nextval('radios_radio_id_seq') AS next_id`);
+    const nextId = parseInt(seqResult.rows[0].next_id, 10);
+    const radioId = String(nextId).padStart(6, '0');
+    const result = await client.query(
+      `INSERT INTO radios (radio_id, serial_number, imei, token)
+       VALUES ($1, $2, $3, $4) RETURNING *`,
+      [radioId, serialNumber, imei || null, token]
+    );
+    await client.query('COMMIT');
+    return result.rows[0];
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+export async function updateRadioLastSeen(radioId) {
+  await pool.query(
+    'UPDATE radios SET last_seen = CURRENT_TIMESTAMP WHERE radio_id = $1',
+    [radioId]
+  );
+}
+
+export async function getAllRadios() {
+  const result = await pool.query(
+    `SELECT r.*, u.unit_id AS assigned_unit_identity
+     FROM radios r
+     LEFT JOIN users u ON r.assigned_unit_id = u.id
+     ORDER BY r.radio_id`
+  );
+  return result.rows;
+}
+
+export async function assignRadioUnit(radioId, unitId) {
+  const result = await pool.query(
+    `UPDATE radios SET assigned_unit_id = $1 WHERE radio_id = $2 RETURNING *`,
+    [unitId, radioId]
+  );
+  return result.rows[0];
+}
+
+export async function setRadioLocked(radioId, isLocked) {
+  const result = await pool.query(
+    `UPDATE radios SET is_locked = $1 WHERE radio_id = $2 RETURNING *`,
+    [isLocked, radioId]
+  );
+  return result.rows[0];
 }
 
 export default pool;

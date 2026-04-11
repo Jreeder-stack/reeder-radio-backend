@@ -5,7 +5,7 @@ import { opusCodec } from './opusCodec.js';
 import { canonicalChannelKey } from './channelKeyUtils.js';
 import cookie from 'cookie';
 import signature from 'cookie-signature';
-import pool, { clearUnitEmergencyByIdentity } from '../db/index.js';
+import pool, { clearUnitEmergencyByIdentity, getRadioByToken, updateRadioLastSeen } from '../db/index.js';
 import { config } from '../config/env.js';
 
 const SIGNALING_EVENTS = {
@@ -123,8 +123,55 @@ class SignalingService {
       pingTimeout: 60000,
     });
 
-    this.io.on('connection', (socket) => {
+    this.io.on('connection', async (socket) => {
       console.log(`[Signaling] Client connected: ${socket.id}`);
+
+      const radioToken = socket.handshake?.query?.radioToken;
+      if (radioToken) {
+        try {
+          const radio = await getRadioByToken(radioToken);
+          if (!radio) {
+            console.warn(`[Signaling] Radio connection rejected — invalid token: ${socket.id}`);
+            socket.emit('auth:error', { message: 'Invalid radio token' });
+            socket.disconnect(true);
+            return;
+          }
+          if (radio.is_locked) {
+            console.warn(`[Signaling] Radio connection rejected — locked radioId=${radio.radio_id}: ${socket.id}`);
+            socket.emit('radio:locked', { radioId: radio.radio_id });
+            socket.disconnect(true);
+            return;
+          }
+          socket.radioId = radio.radio_id;
+          socket.assignedUnitId = radio.assigned_unit_id;
+          socket.isRadioDevice = true;
+
+          let unitIdentity = radio.radio_id;
+          if (radio.assigned_unit_id) {
+            try {
+              const userRow = await pool.query(
+                'SELECT unit_id, username FROM users WHERE id = $1',
+                [radio.assigned_unit_id]
+              );
+              if (userRow.rows.length > 0) {
+                const u = userRow.rows[0];
+                unitIdentity = u.unit_id || u.username || radio.radio_id;
+              }
+            } catch (e) {
+              console.warn('[Signaling] Could not resolve assigned user for radio:', e.message);
+            }
+          }
+          socket.unitId = unitIdentity;
+
+          await updateRadioLastSeen(radio.radio_id);
+          console.log(`[Signaling] Radio authenticated: radioId=${radio.radio_id} unitId=${socket.unitId} socket=${socket.id}`);
+        } catch (err) {
+          console.error('[Signaling] Radio token validation error:', err);
+          socket.emit('auth:error', { message: 'Radio authentication error' });
+          socket.disconnect(true);
+          return;
+        }
+      }
       
       socket.on('authenticate', (data) => this._handleAuthenticate(socket, data));
       socket.on(SIGNALING_EVENTS.CHANNEL_JOIN, (data) => this._handleChannelJoin(socket, data));
@@ -151,6 +198,11 @@ class SignalingService {
       socket.on(RADIO_EVENTS.TX_STOP, (data) => this._handleTxStop(socket, data));
       socket.on('ping', () => {
         socket.emit('pong');
+        if (socket.isRadioDevice && socket.radioId) {
+          updateRadioLastSeen(socket.radioId).catch(err => {
+            console.warn(`[Signaling] Failed to update radio last_seen for radioId=${socket.radioId}:`, err.message);
+          });
+        }
         if (socket.isRadioClient && socket.channels) {
           for (const ch of socket.channels) {
             const refreshed = audioRelayService.refreshSubscriber(ch, socket.unitId);

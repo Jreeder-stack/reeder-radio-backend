@@ -71,6 +71,9 @@ async function start() {
   audioRelayService.setSignalingService(signalingService);
   console.log('Signaling service initialized');
 
+  const { setRadiosIo } = await import('./routes/radiosRouter.js');
+  setRadiosIo(signalingService.io);
+
   wsAudioBridge.setSignalingService(signalingService);
   wsAudioBridge.attach(httpServer);
   console.log('WebSocket audio bridge attached');
