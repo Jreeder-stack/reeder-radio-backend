@@ -78,6 +78,8 @@ class AudioTransportManager {
     this._reconnectAttempts = new Map();
     this._reconnectTimers = new Map();
     this._txWatchdogTimer = null;
+    this._captureGain = 1.0;
+    this._audioSettings = null;
     this._startHealthCheck();
   }
 
@@ -559,7 +561,8 @@ class AudioTransportManager {
 
     await this._capture.start(async (frame) => {
       if (!this._loopbackOk) return;
-      this._txEncoder.encode(frame);
+      const adjusted = this._applyCaptureGain(frame);
+      this._txEncoder.encode(adjusted);
     });
 
     if (this.pttState !== PTT_STATES.ARMING) {
@@ -893,6 +896,46 @@ class AudioTransportManager {
     for (const [channelName] of this.rooms) {
       this.sendData(channelName, data);
     }
+  }
+
+  applyAudioSettings(settings) {
+    this._audioSettings = settings;
+    this._playback.updateDspSettings({
+      incomingVolume: settings.incomingVolume ?? 100,
+      playbackAmplifier: settings.playbackAmplifier ?? false,
+    });
+    this._captureGain = this._computeCaptureGain(settings);
+    this._capture.noiseSuppression = !!settings.noiseSuppression;
+
+    if (this._capture && this._capture.stream) {
+      const tracks = this._capture.stream.getAudioTracks();
+      if (tracks.length > 0) {
+        try {
+          tracks[0].applyConstraints({
+            noiseSuppression: !!settings.noiseSuppression,
+          }).catch(() => {});
+        } catch (_) {}
+      }
+    }
+  }
+
+  _computeCaptureGain(s) {
+    let gain = (s.micVolume ?? 100) / 100;
+    if (s.recordingAmplifier) gain *= 2.0;
+    return gain;
+  }
+
+  _applyCaptureGain(frame) {
+    const gain = this._captureGain;
+    if (!gain || gain === 1.0) return frame;
+    const out = new Int16Array(frame.length);
+    for (let i = 0; i < frame.length; i++) {
+      let s = frame[i] * gain;
+      if (s > 32767) s = 32767;
+      else if (s < -32768) s = -32768;
+      out[i] = s;
+    }
+    return out;
   }
 }
 

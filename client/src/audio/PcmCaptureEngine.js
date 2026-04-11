@@ -19,6 +19,7 @@ export class PcmCaptureEngine {
     this._warmedUp = false;
     this._warmupPromise = null;
     this._preBuffer = [];
+    this.noiseSuppression = false;
   }
 
   async warmup() {
@@ -41,7 +42,7 @@ export class PcmCaptureEngine {
         channelCount: 1,
         sampleRate: PCM_SPEC.sampleRate,
         echoCancellation: false,
-        noiseSuppression: false,
+        noiseSuppression: this.noiseSuppression,
         autoGainControl: false,
       },
     });

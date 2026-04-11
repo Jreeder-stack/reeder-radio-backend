@@ -1,5 +1,5 @@
 import { PCM_SPEC } from './PcmPacket.js';
-import { processRadioVoice, cleanup as cleanupDSP } from './radioVoiceDSP.js';
+import { processRadioVoice, cleanup as cleanupDSP, updateSettings as updateDSPSettings } from './radioVoiceDSP.js';
 
 export class PcmPlaybackEngine {
   constructor() {
@@ -12,6 +12,7 @@ export class PcmPlaybackEngine {
     this._speakerRouteLogged = false;
     this._processorConnected = false;
     this._dspOutput = null;
+    this._dspSettings = null;
   }
 
   async init() {
@@ -46,10 +47,8 @@ export class PcmPlaybackEngine {
           console.log('AUDIO_PLAYBACK_DRAIN_COMPLETE');
         }
       };
-      this._dspOutput = processRadioVoice(this.audioContext, this._workletNode);
+      this._dspOutput = processRadioVoice(this.audioContext, this._workletNode, this._dspSettings);
       this._dspOutput.connect(this.audioContext.destination);
-
-      this._workletNode.port.postMessage({ type: 'setGain', gain: 1.5 });
     } catch (err) {
       console.warn('AudioWorklet not supported for playback, falling back to ScriptProcessor:', err.message);
       this._useFallback();
@@ -71,13 +70,16 @@ export class PcmPlaybackEngine {
         const needed = output.length - written;
         const count = Math.min(available, needed);
 
+        const fallbackGain = this._dspSettings
+          ? ((this._dspSettings.incomingVolume ?? 100) / 100) * (this._dspSettings.playbackAmplifier ? 2.0 : 1.0)
+          : 1.0;
         for (let i = 0; i < count; i++) {
-          let sample = (current[this._fallbackOffset + i] / 32768) * 3.0;
+          let sample = (current[this._fallbackOffset + i] / 32768) * fallbackGain;
           const abs = Math.abs(sample);
-          if (abs >= 0.9) {
+          if (abs > 0.9) {
             const over = abs - 0.9;
-            const compressed = 0.9 + over / (1.0 + over * 10.0);
-            sample = sample < 0 ? -compressed : compressed;
+            const limited = 0.9 + over / (1.0 + over * 10.0);
+            sample = sample < 0 ? -limited : limited;
           }
           output[written + i] = sample;
         }
@@ -134,6 +136,11 @@ export class PcmPlaybackEngine {
     if (this._workletNode) {
       this._workletNode.port.postMessage({ type: 'drain' });
     }
+  }
+
+  updateDspSettings(settings) {
+    this._dspSettings = settings;
+    updateDSPSettings(settings);
   }
 
   async close() {

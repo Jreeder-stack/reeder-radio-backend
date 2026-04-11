@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import useDispatchStore from '../../state/dispatchStore.js';
 import ConnectionIndicator from '../ConnectionIndicator.jsx';
 
-export default function TopBar({ user, onLogout, agencyName = "REEDER-SYSTEMS", darkMode, onToggleTheme }) {
+export default function TopBar({ user, onLogout, agencyName = "REEDER-SYSTEMS", darkMode, onToggleTheme, onOpenAudioSettings }) {
   const navigate = useNavigate();
   const [time, setTime] = useState(new Date());
   const { dispatcherName, isTalking } = useDispatchStore();
@@ -45,6 +45,18 @@ export default function TopBar({ user, onLogout, agencyName = "REEDER-SYSTEMS", 
         </div>
 
         <div className="flex items-center gap-1.5">
+          {onOpenAudioSettings && (
+            <button
+              onClick={onOpenAudioSettings}
+              className="topbar-btn topbar-btn-secondary"
+              title="Audio Settings"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072M12 6a7.975 7.975 0 015.657 2.343M12 6a7.975 7.975 0 00-5.657 2.343M6.343 15.536a5 5 0 010-7.072M9 12a3 3 0 106 0 3 3 0 00-6 0z" />
+              </svg>
+              Audio
+            </button>
+          )}
           {typeof window !== "undefined" && window.electronAPI && (
             <button
               onClick={() => window.electronAPI.openSettings()}

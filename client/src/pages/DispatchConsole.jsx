@@ -30,6 +30,7 @@ import { useAudioConnection } from '../context/AudioConnectionContext.jsx';
 import audioTransportManager from '../audio/AudioTransportManager.js';
 import { useSignalingContext } from '../context/SignalingContext.jsx';
 import formatChannelDisplay from '../utils/formatChannelDisplay.js';
+import AudioSettings, { getAudioSettings } from '../components/AudioSettings/index.jsx';
 
 export default function DispatchConsole({ user, onLogout }) {
   const [rightTab, setRightTab] = useState('emergency');
@@ -39,6 +40,12 @@ export default function DispatchConsole({ user, onLogout }) {
     const saved = localStorage.getItem('dispatchDarkMode');
     return saved !== null ? JSON.parse(saved) : true;
   });
+  const [showAudioSettings, setShowAudioSettings] = useState(false);
+
+  useEffect(() => {
+    const initial = getAudioSettings();
+    audioTransportManager.applyAudioSettings(initial);
+  }, []);
 
   const MIN_LEFT = 180;
   const MIN_CENTER = 300;
@@ -363,8 +370,14 @@ export default function DispatchConsole({ user, onLogout }) {
 
   return (
     <div className="flex flex-col h-screen bg-dispatch-bg">
-      <TopBar user={user} onLogout={onLogout} darkMode={darkMode} onToggleTheme={toggleTheme} />
+      <TopBar user={user} onLogout={onLogout} darkMode={darkMode} onToggleTheme={toggleTheme} onOpenAudioSettings={() => setShowAudioSettings(true)} />
       
+      <AudioSettings
+        open={showAudioSettings}
+        onClose={() => setShowAudioSettings(false)}
+        onChange={(settings) => audioTransportManager.applyAudioSettings(settings)}
+      />
+
       <div className="flex flex-1 overflow-hidden" ref={containerRef}>
         <div className="p-3 overflow-y-auto scrollbar-thin" style={{ width: panelWidths.left, minWidth: MIN_LEFT, flexShrink: 0 }}>
           <UnitList />

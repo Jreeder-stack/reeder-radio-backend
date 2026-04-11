@@ -4,7 +4,8 @@
 This project is a Push-to-Talk (PTT) radio communication application for real-time audio streaming between field units and dispatch operations. It aims to enhance operational efficiency and communication reliability through features like a talkgroup system, unit presence tracking, advanced audio processing, emergency signaling, and an AI Voice Dispatcher. The AI Voice Dispatcher provides automated acknowledgments and voice-driven interactions for tasks such as status changes, records checks, traffic stops, and emergency escalations, acting as a robust and intuitive communication platform for critical field operations.
 
 ## User Preferences
-Not specified.
+- **Audio transport is locked down**: Do not change any audio encoding, decoding, DSP, Opus, WebSocket audio relay, or transport code unless the user specifically requests it.
+- **Audio Settings**: Zello-style per-user audio settings accessible from Dispatch Console TopBar ("Audio" button). Settings persist in localStorage and apply in real-time. Controls: Incoming Volume (0-150%), Mic Volume (0-150%), Playback Amplifier (2x boost toggle), Recording Amplifier (2x boost toggle), Noise Suppression toggle.
 
 ## System Architecture
 
