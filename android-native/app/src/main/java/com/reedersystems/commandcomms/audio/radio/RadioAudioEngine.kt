@@ -412,10 +412,10 @@ class RadioAudioEngine(private val context: Context) {
     private fun computeDspCoefficients(sampleRate: Int) {
         val sr = sampleRate.toDouble()
 
-        val hpCutoff = 80.0
+        val hpCutoff = 250.0
         txHpAlpha = 1.0 / (1.0 + (2.0 * Math.PI * hpCutoff / sr))
 
-        val lpCutoff = if (sampleRate <= 16000) 3500.0 else 7500.0
+        val lpCutoff = if (sampleRate <= 16000) 3200.0 else 7500.0
         val omega = 2.0 * Math.PI * lpCutoff / sr
         val sinOmega = Math.sin(omega)
         val cosOmega = Math.cos(omega)
@@ -430,7 +430,7 @@ class RadioAudioEngine(private val context: Context) {
         txCompAttackMs = 0.003
         txCompReleaseMs = 0.15
 
-        Log.d("[AudioDSP]", "TX_DSP_COEFFICIENTS sampleRate=$sampleRate hpCutoff=$hpCutoff hpAlpha=$txHpAlpha lpCutoff=$lpCutoff lpB0=$txLpB0 lpB1=$txLpB1 lpB2=$txLpB2 lpA1=$txLpA1 lpA2=$txLpA2 compThreshold=$txCompThresholdDb compRatio=$txCompRatio compAttack=$txCompAttackMs compRelease=$txCompReleaseMs gain=$txGain ${RadioDiagLog.elapsedTag()}")
+        Log.d("[AudioDSP]", "TX_DSP_COEFFICIENTS sampleRate=$sampleRate hpCutoff=$hpCutoff hpAlpha=$txHpAlpha lpCutoff=$lpCutoff lpB0=$txLpB0 lpB1=$txLpB1 lpB2=$txLpB2 lpA1=$txLpA1 lpA2=$txLpA2 compThreshold=$txCompThresholdDb compRatio=$txCompRatio compAttack=$txCompAttackMs compRelease=$txCompReleaseMs gain=$txGain gateOpen=$txGateThresholdDb gateClose=$txGateCloseThresholdDb expanderRatio=$txExpanderRatio ${RadioDiagLog.elapsedTag()}")
     }
 
     fun abortPreCapture() {
@@ -1397,11 +1397,13 @@ class RadioAudioEngine(private val context: Context) {
     private val compAttackCoeff: Double get() = 1.0 - Math.exp(-1.0 / (actualSampleRate * txCompAttackMs))
     private val compReleaseCoeff: Double get() = 1.0 - Math.exp(-1.0 / (actualSampleRate * txCompReleaseMs))
 
-    var txGain: Double = 2.5
+    var txGain: Double = 1.8
 
-    var txGateThresholdDb: Double = -50.0
+    var txGateThresholdDb: Double = -42.0
+    var txGateCloseThresholdDb: Double = -46.0
     var txGateAttackMs: Double = 0.002
     var txGateReleaseMs: Double = 0.15
+    var txExpanderRatio: Double = 2.0
     private var txGateEnvelopeDb: Double = -90.0
     private var txGateAttenuation: Double = 0.0
     private var txGateOpen: Boolean = false
@@ -1494,6 +1496,9 @@ class RadioAudioEngine(private val context: Context) {
         val sampleCount = length / 2
         var envelope = txGateEnvelopeDb
         var atten = txGateAttenuation
+        val openThreshold = txGateThresholdDb
+        val closeThreshold = txGateCloseThresholdDb
+        var gateOpen = txGateOpen
         for (i in 0 until sampleCount) {
             val sample = buf.getShort(i * 2).toDouble()
             val absSample = Math.abs(sample) + 1e-10
@@ -1502,7 +1507,26 @@ class RadioAudioEngine(private val context: Context) {
             val envCoeff = if (inputDb > envelope) txGateAttackCoeff else txGateReleaseCoeff
             envelope += envCoeff * (inputDb - envelope)
 
-            val targetAtten = if (envelope < txGateThresholdDb) 0.0 else 1.0
+            val gateDecision = if (gateOpen) {
+                envelope >= closeThreshold
+            } else {
+                envelope >= openThreshold
+            }
+            gateOpen = gateDecision
+
+            val targetAtten: Double
+            if (gateDecision) {
+                targetAtten = 1.0
+            } else {
+                val belowDb = openThreshold - envelope
+                if (belowDb <= 0.0) {
+                    targetAtten = 1.0
+                } else {
+                    val expandGainDb = -belowDb * (txExpanderRatio - 1.0)
+                    targetAtten = Math.pow(10.0, expandGainDb / 20.0).coerceIn(0.0, 1.0)
+                }
+            }
+
             val smoothCoeff = if (targetAtten > atten) txGateAttackCoeff else txGateReleaseCoeff
             atten += smoothCoeff * (targetAtten - atten)
 
@@ -1510,14 +1534,13 @@ class RadioAudioEngine(private val context: Context) {
             buf.putShort(i * 2, output.coerceIn(-32768.0, 32767.0).toInt().toShort())
         }
         val wasOpen = txGateOpen
-        val nowOpen = atten > 0.5
-        if (nowOpen != wasOpen) {
+        if (gateOpen != wasOpen) {
             txGateLogCount++
             if (txGateLogCount <= 200) {
-                Log.d("[AudioDSP]", "TX_GATE ${if (nowOpen) "OPEN" else "CLOSED"} envelope=${String.format("%.1f", envelope)}dB threshold=${txGateThresholdDb}dB frame=${dspRateLimiter.frameCount} ${RadioDiagLog.elapsedTag()}")
+                Log.d("[AudioDSP]", "TX_GATE ${if (gateOpen) "OPEN" else "CLOSED"} envelope=${String.format("%.1f", envelope)}dB openThreshold=${openThreshold}dB closeThreshold=${closeThreshold}dB frame=${dspRateLimiter.frameCount} ${RadioDiagLog.elapsedTag()}")
             }
         }
-        txGateOpen = nowOpen
+        txGateOpen = gateOpen
         txGateEnvelopeDb = envelope
         txGateAttenuation = atten
     }
