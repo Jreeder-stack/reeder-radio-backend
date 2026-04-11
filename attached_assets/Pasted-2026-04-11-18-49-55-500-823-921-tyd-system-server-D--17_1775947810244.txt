@@ -1,0 +1,90 @@
+2026-04-11 18:49:55.500   823-921   tyd                     system_server                        D  sendBroadcast: android.intent.action.PTT.down
+2026-04-11 18:49:55.500   823-921   ContextImpl             system_server                        W  Calling a method in the system process without a qualified user: android.app.ContextImpl.sendBroadcast:967 com.android.server.policy.PhoneWindowManager.sendBC:6496 com.android.server.policy.PhoneWindowManager.interceptKeyBeforeQueueing:6843 com.freeme.server.policy.FreemePhoneWindowManager.interceptKeyBeforeQueueing:301 com.android.server.wm.InputMonitor.interceptKeyBeforeQueueing:449 
+2026-04-11 18:49:55.502   823-921   ActivityManager         system_server                        E  Sending non-protected broadcast android.intent.action.PTT.down from system 823:system/1000 pkg android (Explain with AI)
+                                                                                                    java.lang.Throwable
+                                                                                                    	at com.android.server.am.ActivityManagerService.checkBroadcastFromSystem(ActivityManagerService.java:19307)
+                                                                                                    	at com.android.server.am.ActivityManagerService.broadcastIntentLocked(ActivityManagerService.java:19827)
+                                                                                                    	at com.android.server.am.ActivityManagerService.broadcastIntent(ActivityManagerService.java:20062)
+                                                                                                    	at android.app.ContextImpl.sendBroadcast(ContextImpl.java:971)
+                                                                                                    	at com.android.server.policy.PhoneWindowManager.sendBC(PhoneWindowManager.java:6496)
+                                                                                                    	at com.android.server.policy.PhoneWindowManager.interceptKeyBeforeQueueing(PhoneWindowManager.java:6843)
+                                                                                                    	at com.freeme.server.policy.FreemePhoneWindowManager.interceptKeyBeforeQueueing(FreemePhoneWindowManager.java:301)
+                                                                                                    	at com.android.server.wm.InputMonitor.interceptKeyBeforeQueueing(InputMonitor.java:449)
+                                                                                                    	at com.android.server.input.InputManagerService.interceptKeyBeforeQueueing(InputManagerService.java:1975)
+2026-04-11 18:49:55.514   823-921   AEE_LIBAEE              system_server                        D  shell: raise_exp(11, 823, -1361051648, system_server, 0x0x9276cbc0, 0x0x0)
+2026-04-11 18:49:55.515   823-921   AEE_LIBAEE              system_server                        D  com.mtk.aee.aedshell: connected with AED OK
+2026-04-11 18:49:55.526   823-921   AEE_LIBAEE              system_server                        D  shell: got the request (cmd:Ind,AE_IND_LOG_CLOSE)
+2026-04-11 18:49:55.527   823-921   AEE_LIBAEE              system_server                        D  shell: Got session close ind from AED
+2026-04-11 18:49:55.528   823-921   ActivityManager         system_server                        E  Sending non-protected broadcast android.intent.action.PTT.down from system 823:system/1000 pkg android (Explain with AI)
+                                                                                                    java.lang.Throwable
+                                                                                                    	at com.android.server.am.ActivityManagerService.checkBroadcastFromSystem(ActivityManagerService.java:19307)
+                                                                                                    	at com.android.server.am.ActivityManagerService.broadcastIntentLocked(ActivityManagerService.java:19920)
+                                                                                                    	at com.android.server.am.ActivityManagerService.broadcastIntent(ActivityManagerService.java:20062)
+                                                                                                    	at android.app.ContextImpl.sendBroadcast(ContextImpl.java:971)
+                                                                                                    	at com.android.server.policy.PhoneWindowManager.sendBC(PhoneWindowManager.java:6496)
+                                                                                                    	at com.android.server.policy.PhoneWindowManager.interceptKeyBeforeQueueing(PhoneWindowManager.java:6843)
+                                                                                                    	at com.freeme.server.policy.FreemePhoneWindowManager.interceptKeyBeforeQueueing(FreemePhoneWindowManager.java:301)
+                                                                                                    	at com.android.server.wm.InputMonitor.interceptKeyBeforeQueueing(InputMonitor.java:449)
+                                                                                                    	at com.android.server.input.InputManagerService.interceptKeyBeforeQueueing(InputManagerService.java:1975)
+2026-04-11 18:49:55.540   823-921   AEE_LIBAEE              system_server                        D  shell: raise_exp(11, 823, -1361051648, system_server, 0x0x9276ce60, 0x0x0)
+2026-04-11 18:49:55.541   823-921   AEE_LIBAEE              system_server                        D  com.mtk.aee.aedshell: connected with AED OK
+2026-04-11 18:49:55.552   823-921   AEE_LIBAEE              system_server                        D  shell: got the request (cmd:Ind,AE_IND_LOG_CLOSE)
+2026-04-11 18:49:55.553   823-921   AEE_LIBAEE              system_server                        D  shell: Got session close ind from AED
+2026-04-11 18:49:55.557  7727-7727  [PTT-DIAG]              com.reedersystems.commandcomms       D  MainActivity PTT DOWN source=MainActivity code=230 action=DOWN repeat=0 ts=1775947795557
+2026-04-11 18:49:55.557  7727-7727  [PTT-DIAG]              com.reedersystems.commandcomms       D  MainActivity PTT DOWN — forwarding to BackgroundAudioService (signaling=true)
+2026-04-11 18:49:55.559   823-837   BroadcastQueue          system_server                        W  Background execution not allowed: receiving Intent { act=android.intent.action.DROPBOX_ENTRY_ADDED flg=0x10 (has extras) } to com.google.android.gms/.stats.service.DropBoxEntryAddedReceiver
+2026-04-11 18:49:55.562  7727-7727  [PTT-DIAG]              com.reedersystems.commandcomms       D  PttHardwareReceiver.onReceive action=android.intent.action.PTT.down extras=null source=broadcast
+2026-04-11 18:49:55.562  7727-7727  [PTT-DIAG]              com.reedersystems.commandcomms       D  PttHardwareReceiver: mapped action=android.intent.action.PTT.down -> svcAction=com.reedersystems.commandcomms.SVC_PTT_DOWN
+2026-04-11 18:49:55.564  7727-7727  [PTT-DIAG]              com.reedersystems.commandcomms       D  PttHardwareReceiver: WakeLock acquired (auto-releases in 5000ms)
+2026-04-11 18:49:55.568  7727-7727  [PTT-DIAG]              com.reedersystems.commandcomms       D  {"event":"RADIO_PTT_DOWN","pttState":"IDLE","signaling":true,"channelKey":"TESTING__TESTING 1","channelId":"535"}
+2026-04-11 18:49:55.569  7727-7727  [PTT-DIAG]              com.reedersystems.commandcomms       E  Radio PTT DOWN: radioEngine not initialized
+2026-04-11 18:49:55.569  7727-7727  [PTT-DIAG]              com.reedersystems.commandcomms       D  Sending PTT_TX_FAILED broadcast
+2026-04-11 18:49:55.574  7727-7727  [PTT-DIAG]              com.reedersystems.commandcomms       D  {"event":"RADIO_PTT_DOWN","pttState":"IDLE","signaling":true,"channelKey":"TESTING__TESTING 1","channelId":"535"}
+2026-04-11 18:49:55.575  7727-7727  [PTT-DIAG]              com.reedersystems.commandcomms       E  Radio PTT DOWN: radioEngine not initialized
+2026-04-11 18:49:55.575  7727-7727  [PTT-DIAG]              com.reedersystems.commandcomms       D  Sending PTT_TX_FAILED broadcast
+2026-04-11 18:49:55.578  7727-7727  [PTT-DIAG]              com.reedersystems.commandcomms       D  PTT_TX_FAILED received — resetting to IDLE
+2026-04-11 18:49:55.579  7727-7727  [PTT-DIAG]              com.reedersystems.commandcomms       D  PTT_TX_FAILED received — resetting to IDLE
+2026-04-11 18:49:55.752   823-921   tyd                     system_server                        D  sendBroadcast: android.intent.action.PTT.up
+2026-04-11 18:49:55.564   823-837   BroadcastQueue          system_server                        W  Background execution not allowed: receiving Intent { act=android.intent.action.DROPBOX_ENTRY_ADDED flg=0x10 (has extras) } to com.google.android.gms/.stats.service.DropBoxEntryAddedReceiver
+2026-04-11 18:49:55.753   823-921   ContextImpl             system_server                        W  Calling a method in the system process without a qualified user: android.app.ContextImpl.sendBroadcast:967 com.android.server.policy.PhoneWindowManager.sendBC:6496 com.android.server.policy.PhoneWindowManager.interceptKeyBeforeQueueing:6852 com.freeme.server.policy.FreemePhoneWindowManager.interceptKeyBeforeQueueing:301 com.android.server.wm.InputMonitor.interceptKeyBeforeQueueing:449 
+2026-04-11 18:49:55.755   823-921   ActivityManager         system_server                        E  Sending non-protected broadcast android.intent.action.PTT.up from system 823:system/1000 pkg android (Explain with AI)
+                                                                                                    java.lang.Throwable
+                                                                                                    	at com.android.server.am.ActivityManagerService.checkBroadcastFromSystem(ActivityManagerService.java:19307)
+                                                                                                    	at com.android.server.am.ActivityManagerService.broadcastIntentLocked(ActivityManagerService.java:19827)
+                                                                                                    	at com.android.server.am.ActivityManagerService.broadcastIntent(ActivityManagerService.java:20062)
+                                                                                                    	at android.app.ContextImpl.sendBroadcast(ContextImpl.java:971)
+                                                                                                    	at com.android.server.policy.PhoneWindowManager.sendBC(PhoneWindowManager.java:6496)
+                                                                                                    	at com.android.server.policy.PhoneWindowManager.interceptKeyBeforeQueueing(PhoneWindowManager.java:6852)
+                                                                                                    	at com.freeme.server.policy.FreemePhoneWindowManager.interceptKeyBeforeQueueing(FreemePhoneWindowManager.java:301)
+                                                                                                    	at com.android.server.wm.InputMonitor.interceptKeyBeforeQueueing(InputMonitor.java:449)
+                                                                                                    	at com.android.server.input.InputManagerService.interceptKeyBeforeQueueing(InputManagerService.java:1975)
+2026-04-11 18:49:55.770   823-921   AEE_LIBAEE              system_server                        D  shell: raise_exp(11, 823, -1361051648, system_server, 0x0x927c14a0, 0x0x0)
+2026-04-11 18:49:55.771   823-921   AEE_LIBAEE              system_server                        D  com.mtk.aee.aedshell: connected with AED OK
+2026-04-11 18:49:55.782   823-921   AEE_LIBAEE              system_server                        D  shell: got the request (cmd:Ind,AE_IND_LOG_CLOSE)
+2026-04-11 18:49:55.782   823-921   AEE_LIBAEE              system_server                        D  shell: Got session close ind from AED
+2026-04-11 18:49:55.784   823-921   ActivityManager         system_server                        E  Sending non-protected broadcast android.intent.action.PTT.up from system 823:system/1000 pkg android (Explain with AI)
+                                                                                                    java.lang.Throwable
+                                                                                                    	at com.android.server.am.ActivityManagerService.checkBroadcastFromSystem(ActivityManagerService.java:19307)
+                                                                                                    	at com.android.server.am.ActivityManagerService.broadcastIntentLocked(ActivityManagerService.java:19920)
+                                                                                                    	at com.android.server.am.ActivityManagerService.broadcastIntent(ActivityManagerService.java:20062)
+                                                                                                    	at android.app.ContextImpl.sendBroadcast(ContextImpl.java:971)
+                                                                                                    	at com.android.server.policy.PhoneWindowManager.sendBC(PhoneWindowManager.java:6496)
+                                                                                                    	at com.android.server.policy.PhoneWindowManager.interceptKeyBeforeQueueing(PhoneWindowManager.java:6852)
+                                                                                                    	at com.freeme.server.policy.FreemePhoneWindowManager.interceptKeyBeforeQueueing(FreemePhoneWindowManager.java:301)
+                                                                                                    	at com.android.server.wm.InputMonitor.interceptKeyBeforeQueueing(InputMonitor.java:449)
+                                                                                                    	at com.android.server.input.InputManagerService.interceptKeyBeforeQueueing(InputManagerService.java:1975)
+2026-04-11 18:49:55.797   823-921   AEE_LIBAEE              system_server                        D  shell: raise_exp(11, 823, -1361051648, system_server, 0x0x927c1640, 0x0x0)
+2026-04-11 18:49:55.798   823-921   AEE_LIBAEE              system_server                        D  com.mtk.aee.aedshell: connected with AED OK
+2026-04-11 18:49:55.809   823-921   AEE_LIBAEE              system_server                        D  shell: got the request (cmd:Ind,AE_IND_LOG_CLOSE)
+2026-04-11 18:49:55.809   823-921   AEE_LIBAEE              system_server                        D  shell: Got session close ind from AED
+2026-04-11 18:49:55.813  7727-7727  [PTT-DIAG]              com.reedersystems.commandcomms       D  PttHardwareReceiver.onReceive action=android.intent.action.PTT.up extras=null source=broadcast
+2026-04-11 18:49:55.813  7727-7727  [PTT-DIAG]              com.reedersystems.commandcomms       D  PttHardwareReceiver: mapped action=android.intent.action.PTT.up -> svcAction=com.reedersystems.commandcomms.SVC_PTT_UP
+2026-04-11 18:49:55.814   823-837   BroadcastQueue          system_server                        W  Background execution not allowed: receiving Intent { act=android.intent.action.DROPBOX_ENTRY_ADDED flg=0x10 (has extras) } to com.google.android.gms/.stats.service.DropBoxEntryAddedReceiver
+2026-04-11 18:49:55.815  7727-7727  [PTT-DIAG]              com.reedersystems.commandcomms       D  PttHardwareReceiver: WakeLock acquired (auto-releases in 5000ms)
+2026-04-11 18:49:55.818  7727-7727  [PTT-DIAG]              com.reedersystems.commandcomms       D  MainActivity PTT UP source=MainActivity code=230 action=UP ts=1775947795818
+2026-04-11 18:49:55.818  7727-7727  [PTT-DIAG]              com.reedersystems.commandcomms       D  MainActivity PTT UP — forwarding to BackgroundAudioService (signaling=true)
+2026-04-11 18:49:55.823  7727-7727  [PTT-DIAG]              com.reedersystems.commandcomms       D  {"event":"RADIO_PTT_UP","pttState":"IDLE","channelKey":"TESTING__TESTING 1"}
+2026-04-11 18:49:55.823  7727-7727  [PTT-DIAG]              com.reedersystems.commandcomms       D  {"event":"RADIO_PTT_UP_DEBOUNCED","deltaMs":1}
+2026-04-11 18:50:00.297  1464-1464  GED Service             ged_srv                              D  signo=49, event_notify=00000410
+2026-04-11 18:50:00.299   354-380   libPerfService          merged_hal_service                   I  gameNotifyDisplayType - type:0
+2026-04-11 18:50:03.300   365-375   SurfaceFlinger          surfaceflinger                       I  Adjust vsync offset: 0
