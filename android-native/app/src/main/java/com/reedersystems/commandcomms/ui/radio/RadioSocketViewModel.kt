@@ -20,6 +20,7 @@ sealed class RadioSocketEvent {
     data class Assigned(val unitId: String) : RadioSocketEvent()
     object Locked : RadioSocketEvent()
     object Unlocked : RadioSocketEvent()
+    object Unassigned : RadioSocketEvent()
 }
 
 class RadioSocketViewModel(application: Application) : AndroidViewModel(application) {
@@ -99,6 +100,16 @@ class RadioSocketViewModel(application: Application) : AndroidViewModel(applicat
                 Log.d(TAG, "radio:unlocked event")
                 viewModelScope.launch {
                     _radioEvent.value = RadioSocketEvent.Unlocked
+                }
+            }
+
+            s.on("radio:unassigned") { _ ->
+                Log.d(TAG, "radio:unassigned event — clearing assigned unit")
+                app.radioTokenStore.clearAssignedUnit()
+                app.sessionPrefs.unitId = null
+                app.sessionPrefs.username = null
+                viewModelScope.launch {
+                    _radioEvent.value = RadioSocketEvent.Unassigned
                 }
             }
 

@@ -26,4 +26,5 @@ sealed class SignalingEvent {
     data class TxSilenceWarning(val unitId: String, val channelId: String, val silenceMs: Long) : SignalingEvent()
     object RadioLocked : SignalingEvent()
     object RadioUnlocked : SignalingEvent()
+    object RadioUnassigned : SignalingEvent()
 }

@@ -41,6 +41,7 @@ private val White     = Color.White
 @Composable
 fun RadioScreen(
     onLocked: (() -> Unit)? = null,
+    onUnassigned: (() -> Unit)? = null,
     assignedFromUnit: String? = null,
     viewModel: RadioViewModel = viewModel()
 ) {
@@ -59,6 +60,13 @@ fun RadioScreen(
     LaunchedEffect(state.isRadioLocked) {
         if (state.isRadioLocked) {
             onLocked?.invoke()
+        }
+    }
+
+    LaunchedEffect(state.isRadioUnassigned) {
+        if (state.isRadioUnassigned) {
+            viewModel.consumeRadioUnassigned()
+            onUnassigned?.invoke()
         }
     }
 

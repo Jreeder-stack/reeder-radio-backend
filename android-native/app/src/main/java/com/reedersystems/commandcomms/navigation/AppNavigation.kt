@@ -90,6 +90,16 @@ fun AppNavigation() {
                         }
                     }
                 } else null,
+                onUnassigned = if (isRadioDevice) {
+                    {
+                        app.radioTokenStore.clearAssignedUnit()
+                        app.sessionPrefs.unitId = null
+                        app.sessionPrefs.username = null
+                        navController.navigate(Routes.unassigned(currentRadioId)) {
+                            popUpTo(Routes.RADIO) { inclusive = true }
+                        }
+                    }
+                } else null,
                 assignedFromUnit = assignedUnit
             )
         }
