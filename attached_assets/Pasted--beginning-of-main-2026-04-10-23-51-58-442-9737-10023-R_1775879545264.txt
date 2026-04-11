@@ -1,0 +1,429 @@
+--------- beginning of main
+2026-04-10 23:51:58.442  9737-10023 [RadioEngine]           com.reedersystems.commandcomms       D  RX_DIAG rxTotal=0 rxNew=0 jbSize=0 jbDepth=3 jbPlaying=false channelIdx=169 t=43715ms
+--------- beginning of system
+2026-04-10 23:52:00.873  9737-9737  [PTT-DIAG]              com.reedersystems.commandcomms       D  PttHardwareReceiver.onReceive action=android.intent.action.PTT.down extras=null source=broadcast
+2026-04-10 23:52:00.873  9737-9737  [PTT-DIAG]              com.reedersystems.commandcomms       D  PttHardwareReceiver: mapped action=android.intent.action.PTT.down -> svcAction=com.reedersystems.commandcomms.SVC_PTT_DOWN
+2026-04-10 23:52:00.876  9737-9737  [PTT-DIAG]              com.reedersystems.commandcomms       D  PttHardwareReceiver: WakeLock acquired (auto-releases in 5000ms)
+2026-04-10 23:52:00.880  9737-9737  [PTT-DIAG]              com.reedersystems.commandcomms       D  MainActivity PTT DOWN source=MainActivity code=230 action=DOWN repeat=0 ts=1775879520880
+2026-04-10 23:52:00.881  9737-9737  [PTT-DIAG]              com.reedersystems.commandcomms       D  MainActivity PTT DOWN — forwarding to BackgroundAudioService (signaling=true)
+2026-04-10 23:52:00.886  9737-9737  [PTT-DIAG]              com.reedersystems.commandcomms       D  {"event":"RADIO_PTT_DOWN","pttState":"IDLE","signaling":true,"channelKey":"DISPATCH__DISPATCH","channelId":"169"}
+2026-04-10 23:52:00.886  9737-9737  [PTT-DIAG]              com.reedersystems.commandcomms       D  PTT_STATE IDLE -> CONNECTING channelKey=DISPATCH__DISPATCH
+2026-04-10 23:52:00.900  9737-9737  [ToneEvent]             com.reedersystems.commandcomms       D  {"tone":"talk-permit","trigger":"ptt_down","state":"CONNECTING","channelKey":"DISPATCH__DISPATCH","ts":1775879520900}
+2026-04-10 23:52:00.952  9737-10023 [PTT-DIAG]              com.reedersystems.commandcomms       D  {"event":"RADIO_READY_FOR_PTT","roomKey":"DISPATCH__DISPATCH","signaling":true}
+2026-04-10 23:52:00.954  9737-9737  [PTT-DIAG]              com.reedersystems.commandcomms       D  {"event":"RADIO_PTT_DOWN","pttState":"CONNECTING","signaling":true,"channelKey":"DISPATCH__DISPATCH","channelId":"169"}
+2026-04-10 23:52:00.954  9737-9737  [PTT-DIAG]              com.reedersystems.commandcomms       D  Radio PTT DOWN ignored: pttState=CONNECTING
+2026-04-10 23:52:00.956  9737-10023 [RadioEngine]           com.reedersystems.commandcomms       D  PRE_CAPTURE_SESSION_START t=0ms
+2026-04-10 23:52:00.956  9737-10023 [AudioCapture]          com.reedersystems.commandcomms       D  TX_AUDIO_SOURCE_SELECTED source=VOICE_COMMUNICATION reason=cached_for_device device=ZRK/T320/API27
+2026-04-10 23:52:00.957  9737-9737  MediaPlayer             com.reedersystems.commandcomms       D  handleMessage msg:(1, 0, 0)
+2026-04-10 23:52:00.957  9737-10023 [AudioCapture]          com.reedersystems.commandcomms       D  PRE_CAPTURE_AUDIORECORD_INIT requestedRate=16000 source=VOICE_COMMUNICATION minBufSize=1280 allocBufSize=2560 frameMs=20 t=1ms
+2026-04-10 23:52:00.959  9737-10023 AudioRecord             com.reedersystems.commandcomms       D  set(): 0x842a3600, inputSource 7, sampleRate 16000, format 0x1, channelMask 0x10, frameCount 1280, notificationFrames 0, sessionId 0, transferType 0, flags 0, opPackageName com.reedersystems.commandcomms uid -1, pid -1
+2026-04-10 23:52:01.015  9737-10023 AudioRecord             com.reedersystems.commandcomms       D  openRecord_l: 0x842a3600, mCblk = 0x854761c0
+2026-04-10 23:52:01.016  9737-10023 [AudioCapture]          com.reedersystems.commandcomms       D  PRE_CAPTURE_HAL_NEGOTIATED requestedRate=16000 actualRate=16000 actualChannels=1 needsStereoDownmix=false bufferSize=2560 monoFrameSamples=320 monoFrameBytes=640 t=60ms
+2026-04-10 23:52:01.028  9737-10023 [OpusCodec]             com.reedersystems.commandcomms       D  ENCODER_FRESH_CREATE rate=16000 frameSize=320 channels=1 bitrate=64000 attempt=0 warmup=passed t=72ms
+2026-04-10 23:52:01.031  9737-10023 [AudioDSP]              com.reedersystems.commandcomms       D  TX_DSP_COEFFICIENTS sampleRate=16000 hpCutoff=150.0 hpAlpha=0.9443719031288819 lpCutoff=3400.0 lpB0=0.22711707651421756 lpB1=0.4542341530284351 lpB2=0.22711707651421756 lpA1=-0.2766635335033555 lpA2=0.18513183956022572 compThreshold=-12.0 compRatio=3.0 compAttack=0.003 compRelease=0.15 gain=2.0 gateOpen=-42.0 gateClose=-46.0 expanderRatio=2.0 t=73ms
+2026-04-10 23:52:01.031  9737-10023 AudioRecord             com.reedersystems.commandcomms       D  start: 0x842a3600, sync event 0 trigger session 0
+2026-04-10 23:52:01.047  9737-10023 AudioRecord             com.reedersystems.commandcomms       D  start return status 0
+2026-04-10 23:52:01.155  9737-9866  [PTT-DIAG]              com.reedersystems.commandcomms       D  emitPttPre DISPATCH__DISPATCH
+2026-04-10 23:52:01.157  9737-9866  [PTT-DIAG]              com.reedersystems.commandcomms       D  Radio PTT: transmitPre sent for roomKey DISPATCH__DISPATCH
+2026-04-10 23:52:01.157  9737-9866  [PTT-DIAG]              com.reedersystems.commandcomms       D  PTT_REQUEST_SENT channelId=DISPATCH__DISPATCH
+2026-04-10 23:52:01.157  9737-9866  [PTT-DIAG]              com.reedersystems.commandcomms       D  RADIO_PTT_REQUEST_SENT channelId=DISPATCH__DISPATCH
+2026-04-10 23:52:01.157  9737-9866  [FloorCtrl]             com.reedersystems.commandcomms       D  requestFloor channelKey=DISPATCH__DISPATCH previousPending=false state=IDLE t=202ms
+2026-04-10 23:52:01.158  9737-9866  [RadioState]            com.reedersystems.commandcomms       D  State transition: IDLE -> REQUESTING_FLOOR reason=floor_request activeChannel=DISPATCH__DISPATCH txPipeline=false rxPipeline=true t=202ms
+2026-04-10 23:52:01.158  9737-9737  [PTT-DIAG]              com.reedersystems.commandcomms       D  RadioState updated: REQUESTING_FLOOR
+2026-04-10 23:52:01.158  9737-9866  [RadioSigGW]            com.reedersystems.commandcomms       D  requestFloor channelKey=DISPATCH__DISPATCH signalingReady=AUTHENTICATED t=202ms
+2026-04-10 23:52:01.158  9737-9866  [PTT-DIAG]              com.reedersystems.commandcomms       D  [FloorCtrl] SIGNALING_FLOOR_REQUEST channelKey=DISPATCH__DISPATCH unitId=INDIANA-1 sessionTokenPresent=true
+2026-04-10 23:52:01.210  9737-10023 [AudioCapture]          com.reedersystems.commandcomms       D  AGC attached=true enabled=false sessionId=13281 t=254ms
+2026-04-10 23:52:01.216  9737-9737  MediaPlayer             com.reedersystems.commandcomms       D  handleMessage msg:(6, 0, 0)
+2026-04-10 23:52:01.231  9737-10023 [AudioCapture]          com.reedersystems.commandcomms       D  NoiseSuppressor attached=true enabled=true sessionId=13281 t=276ms
+2026-04-10 23:52:01.232  9737-10023 [AudioCapture]          com.reedersystems.commandcomms       D  PRE_CAPTURE_STARTED sampleRate=16000 channelCount=1 frameMs=20 frameSizeSamples=320 maxBufferFrames=150 t=276ms
+2026-04-10 23:52:01.234  9737-10023 [RadioEngine]           com.reedersystems.commandcomms       D  Pre-capture started — buffering audio (sampleRate=16000 channels=1 buffer=2560) t=278ms
+2026-04-10 23:52:01.236  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       D  PCM_FRAME frame=1 readRet=640 samples=320 min=-6 max=4 rms=1.3 silent=true zeros=149 downmix=false source=VOICE_COMMUNICATION sampleRate=16000 channels=1 t=279ms
+2026-04-10 23:52:01.236  9737-10022 [AudioDSP]              com.reedersystems.commandcomms       D  DSP_STATE_RESET reason=encoder_reinitialized frame=1 t=281ms
+2026-04-10 23:52:01.247  9737-10022 [AudioDSP]              com.reedersystems.commandcomms       D  DSP_FRAME frame=1 pre=[samples=320 min=-6 max=4 rms=1.3 silent=true zeros=149] post=[samples=320 min=0 max=0 rms=0.0 silent=true zeros=320] gate=closed gateEnv=-92.7dB gateThreshold=-42.0dB t=286ms
+2026-04-10 23:52:01.250  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       D  PCM_FRAME frame=2 readRet=640 samples=320 min=-6 max=7 rms=2.5 silent=true zeros=49 downmix=false source=VOICE_COMMUNICATION sampleRate=16000 channels=1 t=292ms
+2026-04-10 23:52:01.256  9737-9869  [RadioError]            com.reedersystems.commandcomms       E  OPUS_ENCODE_ASSERTION_FAILURE frame=0 source=VOICE_COMMUNICATION samples=320 bytes=640 expectedBytes=640 sampleRate=16000 frameSize=320 consecutiveFailures=1 assertionFailures=1 method=encode
+2026-04-10 23:52:01.258  9737-9869  [OpusCodec]             com.reedersystems.commandcomms       D  Encoder re-initialized after assertion failure (sampleRate=16000 frameSize=320 complexity=5 VBR=false bitrate=64000) t=303ms
+2026-04-10 23:52:01.258  9737-10022 [AudioDSP]              com.reedersystems.commandcomms       D  DSP_FRAME frame=2 pre=[samples=320 min=-6 max=7 rms=2.5 silent=true zeros=49] post=[samples=320 min=0 max=0 rms=0.0 silent=true zeros=320] gate=closed gateEnv=-84.7dB gateThreshold=-42.0dB t=300ms
+2026-04-10 23:52:01.259  9737-9869  [AudioDSP]              com.reedersystems.commandcomms       D  DSP_STATE_RESET_PENDING reason=encoder_reinitialized frame=0 t=303ms
+2026-04-10 23:52:01.261  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       D  PCM_FRAME frame=3 readRet=640 samples=320 min=-4 max=5 rms=1.8 silent=true zeros=90 downmix=false source=VOICE_COMMUNICATION sampleRate=16000 channels=1 t=304ms
+2026-04-10 23:52:01.261  9737-10022 [AudioDSP]              com.reedersystems.commandcomms       D  DSP_STATE_RESET reason=encoder_reinitialized frame=3 t=305ms
+2026-04-10 23:52:01.262  9737-9869  [RadioError]            com.reedersystems.commandcomms       E  OPUS_ENCODE_ASSERTION_FAILURE frame=0 source=VOICE_COMMUNICATION samples=320 bytes=640 expectedBytes=640 sampleRate=16000 frameSize=320 consecutiveFailures=2 assertionFailures=2 method=encode
+2026-04-10 23:52:01.265  9737-9869  [OpusCodec]             com.reedersystems.commandcomms       D  Encoder re-initialized after assertion failure (sampleRate=16000 frameSize=320 complexity=5 VBR=false bitrate=64000) t=309ms
+2026-04-10 23:52:01.266  9737-9869  [AudioDSP]              com.reedersystems.commandcomms       D  DSP_STATE_RESET_PENDING reason=encoder_reinitialized frame=1 t=310ms
+2026-04-10 23:52:01.270  9737-10022 [AudioDSP]              com.reedersystems.commandcomms       D  DSP_FRAME frame=3 pre=[samples=320 min=-4 max=5 rms=1.8 silent=true zeros=90] post=[samples=320 min=0 max=0 rms=0.0 silent=true zeros=320] gate=closed gateEnv=-89.3dB gateThreshold=-42.0dB t=312ms
+2026-04-10 23:52:01.273  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       D  PCM_FRAME frame=4 readRet=640 samples=320 min=-27 max=27 rms=10.7 silent=true zeros=24 downmix=false source=VOICE_COMMUNICATION sampleRate=16000 channels=1 t=315ms
+2026-04-10 23:52:01.274  9737-10022 [AudioDSP]              com.reedersystems.commandcomms       D  DSP_STATE_RESET reason=encoder_reinitialized frame=4 t=318ms
+2026-04-10 23:52:01.274  9737-9869  [RadioError]            com.reedersystems.commandcomms       E  OPUS_ENCODE_ASSERTION_FAILURE frame=0 source=VOICE_COMMUNICATION samples=320 bytes=640 expectedBytes=640 sampleRate=16000 frameSize=320 consecutiveFailures=3 assertionFailures=3 method=encode
+2026-04-10 23:52:01.277  9737-9869  [OpusCodec]             com.reedersystems.commandcomms       D  Encoder re-initialized after assertion failure (sampleRate=16000 frameSize=320 complexity=5 VBR=false bitrate=64000) t=321ms
+2026-04-10 23:52:01.277  9737-9869  [AudioDSP]              com.reedersystems.commandcomms       D  DSP_STATE_RESET_PENDING reason=encoder_reinitialized frame=2 t=321ms
+2026-04-10 23:52:01.281  9737-9869  [RadioError]            com.reedersystems.commandcomms       E  OPUS_ENCODE_ASSERTION_FAILURE frame=0 source=VOICE_COMMUNICATION samples=320 bytes=640 expectedBytes=640 sampleRate=16000 frameSize=320 consecutiveFailures=4 assertionFailures=4 method=encode
+2026-04-10 23:52:01.284  9737-9869  [OpusCodec]             com.reedersystems.commandcomms       D  Encoder re-initialized after assertion failure (sampleRate=16000 frameSize=320 complexity=5 VBR=false bitrate=64000) t=329ms
+2026-04-10 23:52:01.285  9737-9869  [AudioDSP]              com.reedersystems.commandcomms       D  DSP_STATE_RESET_PENDING reason=encoder_reinitialized frame=3 t=329ms
+2026-04-10 23:52:01.285  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       D  PCM_FRAME frame=5 readRet=640 samples=320 min=-25 max=22 rms=10.4 silent=true zeros=23 downmix=false source=VOICE_COMMUNICATION sampleRate=16000 channels=1 t=328ms
+2026-04-10 23:52:01.285  9737-10022 [AudioDSP]              com.reedersystems.commandcomms       D  DSP_STATE_RESET reason=encoder_reinitialized frame=5 t=329ms
+2026-04-10 23:52:01.294  9737-9869  [RadioError]            com.reedersystems.commandcomms       E  OPUS_ENCODE_ASSERTION_FAILURE frame=0 source=VOICE_COMMUNICATION samples=320 bytes=640 expectedBytes=640 sampleRate=16000 frameSize=320 consecutiveFailures=5 assertionFailures=5 method=encode
+2026-04-10 23:52:01.296  9737-9869  [OpusCodec]             com.reedersystems.commandcomms       D  Encoder re-initialized after assertion failure (sampleRate=16000 frameSize=320 complexity=5 VBR=false bitrate=64000) t=340ms
+2026-04-10 23:52:01.297  9737-9869  [AudioDSP]              com.reedersystems.commandcomms       D  DSP_STATE_RESET_PENDING reason=encoder_reinitialized frame=4 t=341ms
+2026-04-10 23:52:01.304  9737-10285 [PTT-DIAG]              com.reedersystems.commandcomms       D  [FloorCtrl] SIGNALING_FLOOR_GRANTED channelId=DISPATCH__DISPATCH senderUnitId=INDIANA-1
+2026-04-10 23:52:01.305  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       D  PCM_FRAME frame=6 readRet=640 samples=320 min=-33 max=33 rms=11.5 silent=true zeros=24 downmix=false source=VOICE_COMMUNICATION sampleRate=16000 channels=1 t=348ms
+2026-04-10 23:52:01.306  9737-10022 [AudioDSP]              com.reedersystems.commandcomms       D  DSP_STATE_RESET reason=encoder_reinitialized frame=6 t=350ms
+2026-04-10 23:52:01.309  9737-10023 [PTT-DIAG]              com.reedersystems.commandcomms       D  RADIO_PTT_GRANTED channelId=DISPATCH__DISPATCH senderUnitId=INDIANA-1
+2026-04-10 23:52:01.309  9737-10023 [FloorCtrl]             com.reedersystems.commandcomms       D  Floor GRANTED channelKey=DISPATCH__DISPATCH latencyMs=152 t=353ms
+2026-04-10 23:52:01.310  9737-10023 [RadioState]            com.reedersystems.commandcomms       D  State transition: REQUESTING_FLOOR -> TRANSMITTING reason=floor_granted activeChannel=DISPATCH__DISPATCH txPipeline=false rxPipeline=true t=354ms
+2026-04-10 23:52:01.310  9737-9737  [PTT-DIAG]              com.reedersystems.commandcomms       D  RadioState updated: TRANSMITTING
+2026-04-10 23:52:01.313  9737-9866  [PTT-DIAG]              com.reedersystems.commandcomms       D  Floor GRANTED — promoting pre-capture to live TX
+2026-04-10 23:52:01.319  9737-9870  [UdpTransport]          com.reedersystems.commandcomms       D  TX_PACKET seq=436 payloadBytes=641 framedBytes=663 dest=comms.reeder-systems.com:5100 channelIdx=169 t=364ms
+2026-04-10 23:52:01.322  9737-9866  [RadioEngine]           com.reedersystems.commandcomms       D  PRE_BUFFER_FLUSHED flushedFrames=5 durationMs=100 — live TX active t=366ms
+2026-04-10 23:52:01.324  9737-9870  [UdpTransport]          com.reedersystems.commandcomms       D  TX_PACKET seq=440 payloadBytes=641 framedBytes=663 dest=comms.reeder-systems.com:5100 channelIdx=169 t=368ms
+2026-04-10 23:52:01.324  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       D  PCM_FRAME frame=7 readRet=640 samples=320 min=-38 max=28 rms=13.3 silent=true zeros=25 downmix=false source=VOICE_COMMUNICATION sampleRate=16000 channels=1 t=368ms
+2026-04-10 23:52:01.325  9737-9870  [UdpTransport]          com.reedersystems.commandcomms       D  TX_PACKET seq=440 payloadBytes=641 framedBytes=663 dest=comms.reeder-systems.com:5100 channelIdx=169 t=369ms
+2026-04-10 23:52:01.327  9737-9866  [PTT-DIAG]              com.reedersystems.commandcomms       D  PTT_STATE CONNECTING -> TRANSMITTING channelKey=DISPATCH__DISPATCH
+2026-04-10 23:52:01.329  9737-9870  [UdpTransport]          com.reedersystems.commandcomms       D  TX_PACKET seq=440 payloadBytes=641 framedBytes=663 dest=comms.reeder-systems.com:5100 channelIdx=169 t=371ms
+2026-04-10 23:52:01.330  9737-9870  [UdpTransport]          com.reedersystems.commandcomms       D  TX_PACKET seq=440 payloadBytes=641 framedBytes=663 dest=comms.reeder-systems.com:5100 channelIdx=169 t=374ms
+2026-04-10 23:52:01.345  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       D  PCM_FRAME frame=8 readRet=640 samples=320 min=-32 max=27 rms=10.7 silent=true zeros=19 downmix=false source=VOICE_COMMUNICATION sampleRate=16000 channels=1 t=388ms
+2026-04-10 23:52:01.351  9737-9870  [FloorCtrl]             com.reedersystems.commandcomms       D  Channel busy — transmitting unit: INDIANA-1 state=TRANSMITTING t=396ms
+2026-04-10 23:52:01.356  9737-9869  [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=1 pcmBytes=640 encodedBytes=160 seq=1 t=400ms
+2026-04-10 23:52:01.360  9737-9867  [UdpTransport]          com.reedersystems.commandcomms       D  TX_SUMMARY packets=6 totalPkts=442 totalBytes=95836 failures=0 dest=comms.reeder-systems.com:5100 t=404ms
+2026-04-10 23:52:01.361  9737-9869  [RadioError]            com.reedersystems.commandcomms       E  OPUS_ENCODE_ASSERTION_FAILURE frame=1 source=VOICE_COMMUNICATION samples=320 bytes=640 expectedBytes=640 sampleRate=16000 frameSize=320 consecutiveFailures=1 assertionFailures=6 method=encode
+2026-04-10 23:52:01.365  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       D  PCM_FRAME frame=9 readRet=640 samples=320 min=-41 max=37 rms=14.7 silent=true zeros=23 downmix=false source=VOICE_COMMUNICATION sampleRate=16000 channels=1 t=408ms
+2026-04-10 23:52:01.370  9737-9869  [OpusCodec]             com.reedersystems.commandcomms       D  Encoder re-initialized after assertion failure (sampleRate=16000 frameSize=320 complexity=5 VBR=false bitrate=64000) t=415ms
+2026-04-10 23:52:01.372  9737-9869  [AudioDSP]              com.reedersystems.commandcomms       D  DSP_STATE_RESET_PENDING reason=encoder_reinitialized frame=6 t=416ms
+2026-04-10 23:52:01.378  9737-9869  [RadioError]            com.reedersystems.commandcomms       E  OPUS_ENCODE_ASSERTION_FAILURE frame=1 source=VOICE_COMMUNICATION samples=320 bytes=640 expectedBytes=640 sampleRate=16000 frameSize=320 consecutiveFailures=2 assertionFailures=7 method=encode
+2026-04-10 23:52:01.385  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       D  PCM_FRAME frame=10 readRet=640 samples=320 min=-52 max=48 rms=20.3 silent=true zeros=8 downmix=false source=VOICE_COMMUNICATION sampleRate=16000 channels=1 t=428ms
+2026-04-10 23:52:01.386  9737-10022 [AudioDSP]              com.reedersystems.commandcomms       D  DSP_STATE_RESET reason=encoder_reinitialized frame=10 t=430ms
+2026-04-10 23:52:01.389  9737-9869  [OpusCodec]             com.reedersystems.commandcomms       D  Encoder re-initialized after assertion failure (sampleRate=16000 frameSize=320 complexity=5 VBR=false bitrate=64000) t=433ms
+2026-04-10 23:52:01.390  9737-9869  [AudioDSP]              com.reedersystems.commandcomms       D  DSP_STATE_RESET_PENDING reason=encoder_reinitialized frame=7 t=434ms
+2026-04-10 23:52:01.396  9737-9869  [RadioError]            com.reedersystems.commandcomms       E  OPUS_ENCODE_ASSERTION_FAILURE frame=1 source=VOICE_COMMUNICATION samples=320 bytes=640 expectedBytes=640 sampleRate=16000 frameSize=320 consecutiveFailures=3 assertionFailures=8 method=encode
+2026-04-10 23:52:01.398  9737-9869  [OpusCodec]             com.reedersystems.commandcomms       D  Encoder re-initialized after assertion failure (sampleRate=16000 frameSize=320 complexity=5 VBR=false bitrate=64000) t=442ms
+2026-04-10 23:52:01.403  9737-9869  [AudioDSP]              com.reedersystems.commandcomms       D  DSP_STATE_RESET_PENDING reason=encoder_reinitialized frame=8 t=443ms
+2026-04-10 23:52:01.405  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       D  PCM_SUMMARY frames=11 totalFrames=11 silentFrames=11 partials=0 zeros=0 t=450ms
+2026-04-10 23:52:01.406  9737-10022 [AudioDSP]              com.reedersystems.commandcomms       D  DSP_STATE_RESET reason=encoder_reinitialized frame=11 t=450ms
+2026-04-10 23:52:01.407  9737-9869  [RadioError]            com.reedersystems.commandcomms       E  OPUS_ENCODE_ASSERTION_FAILURE frame=1 source=VOICE_COMMUNICATION samples=320 bytes=640 expectedBytes=640 sampleRate=16000 frameSize=320 consecutiveFailures=4 assertionFailures=9 method=encode
+2026-04-10 23:52:01.409  9737-9869  [OpusCodec]             com.reedersystems.commandcomms       D  Encoder re-initialized after assertion failure (sampleRate=16000 frameSize=320 complexity=5 VBR=false bitrate=64000) t=453ms
+2026-04-10 23:52:01.410  9737-9869  [AudioDSP]              com.reedersystems.commandcomms       D  DSP_STATE_RESET_PENDING reason=encoder_reinitialized frame=9 t=454ms
+2026-04-10 23:52:01.414  9737-9866  [PTT-DIAG]              com.reedersystems.commandcomms       D  Sending PTT_TX_STARTED broadcast
+2026-04-10 23:52:01.420  9737-9737  [PTT-DIAG]              com.reedersystems.commandcomms       D  PTT_TX_STARTED received — setting pttState = TRANSMITTING
+2026-04-10 23:52:01.421  9737-9869  [RadioError]            com.reedersystems.commandcomms       E  OPUS_ENCODE_ASSERTION_FAILURE frame=1 source=VOICE_COMMUNICATION samples=320 bytes=640 expectedBytes=640 sampleRate=16000 frameSize=320 consecutiveFailures=5 assertionFailures=10 method=encode
+2026-04-10 23:52:01.423  9737-9869  [OpusCodec]             com.reedersystems.commandcomms       D  Encoder re-initialized after assertion failure (sampleRate=16000 frameSize=320 complexity=5 VBR=false bitrate=64000) t=467ms
+2026-04-10 23:52:01.424  9737-9869  [AudioDSP]              com.reedersystems.commandcomms       D  DSP_STATE_RESET_PENDING reason=encoder_reinitialized frame=10 t=468ms
+2026-04-10 23:52:01.427  9737-10022 [AudioDSP]              com.reedersystems.commandcomms       D  DSP_STATE_RESET reason=encoder_reinitialized frame=12 t=471ms
+2026-04-10 23:52:01.453  9737-9869  [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=2 pcmBytes=640 encodedBytes=160 seq=2 t=497ms
+2026-04-10 23:52:01.474  9737-10022 [AudioDSP]              com.reedersystems.commandcomms       D  TX_GATE OPEN envelope=-34.8dB openThreshold=-42.0dB closeThreshold=-46.0dB frame=14 t=518ms
+2026-04-10 23:52:01.509  9737-10022 [AudioDSP]              com.reedersystems.commandcomms       D  TX_GATE CLOSED envelope=-48.4dB openThreshold=-42.0dB closeThreshold=-46.0dB frame=16 t=553ms
+2026-04-10 23:52:01.524  9737-9869  [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=3 pcmBytes=640 encodedBytes=160 seq=3 t=568ms
+2026-04-10 23:52:01.555  9737-9737  MediaPlayer             com.reedersystems.commandcomms       D  handleMessage msg:(2, 0, 0)
+2026-04-10 23:52:01.557  9737-9737  MediaPlayer             com.reedersystems.commandcomms       V  resetDrmState:  mDrmInfo=null mDrmProvisioningThread=null mPrepareDrmInProgress=false mActiveDrmScheme=false
+2026-04-10 23:52:01.557  9737-9737  MediaPlayer             com.reedersystems.commandcomms       V  cleanDrmObj: mDrmObj=null mDrmSessionId=null
+2026-04-10 23:52:01.583  9737-9869  [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=4 pcmBytes=640 encodedBytes=160 seq=4 t=627ms
+2026-04-10 23:52:01.618  9737-9869  [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=5 pcmBytes=640 encodedBytes=160 seq=5 t=662ms
+2026-04-10 23:52:01.646  9737-9869  [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE_SUMMARY frames=6 totalFrames=6 totalPcmBytes=3840 totalEncodedBytes=960 t=690ms
+2026-04-10 23:52:01.743  9737-9869  [OpusCodec]             com.reedersystems.commandcomms       D  ASSERTION_FAILURE_COUNT_RESET after 10 consecutive successes (was 10) t=787ms
+2026-04-10 23:52:02.026  9737-10022 [AudioDSP]              com.reedersystems.commandcomms       D  TX_GATE OPEN envelope=-28.2dB openThreshold=-42.0dB closeThreshold=-46.0dB frame=42 t=1070ms
+2026-04-10 23:52:02.227  9737-10022 [AudioDSP]              com.reedersystems.commandcomms       D  TX_GATE CLOSED envelope=-49.3dB openThreshold=-42.0dB closeThreshold=-46.0dB frame=52 t=1271ms
+2026-04-10 23:52:02.246  9737-10022 [AudioDSP]              com.reedersystems.commandcomms       D  TX_GATE OPEN envelope=-38.4dB openThreshold=-42.0dB closeThreshold=-46.0dB frame=53 t=1290ms
+2026-04-10 23:52:02.363  9737-9865  [UdpTransport]          com.reedersystems.commandcomms       D  TX_SUMMARY packets=48 totalPkts=490 totalBytes=106977 failures=0 dest=comms.reeder-systems.com:5100 t=1407ms
+2026-04-10 23:52:02.409  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       D  PCM_SUMMARY frames=50 totalFrames=61 silentFrames=40 partials=0 zeros=0 t=1453ms
+2026-04-10 23:52:02.653  9737-9869  [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE_SUMMARY frames=48 totalFrames=54 totalPcmBytes=34560 totalEncodedBytes=8640 t=1697ms
+2026-04-10 23:52:02.966  9737-9737  [PTT-DIAG]              com.reedersystems.commandcomms       D  PttHardwareReceiver.onReceive action=android.intent.action.PTT.longpress extras=null source=broadcast
+2026-04-10 23:52:02.966  9737-9737  [PTT-DIAG]              com.reedersystems.commandcomms       D  PttHardwareReceiver: longpress consumed action=android.intent.action.PTT.longpress ordered=false — suppressing T320 default beep
+2026-04-10 23:52:02.967  9737-9737  [PTT-DIAG]              com.reedersystems.commandcomms       W  PttHardwareReceiver: longpress is NORMAL broadcast (not ordered) — abortBroadcast not possible for action=android.intent.action.PTT.longpress
+2026-04-10 23:52:02.971  9737-9737  [PTT-DIAG]              com.reedersystems.commandcomms       D  PttHardwareReceiver.onReceive action=android.intent.action.PTT.longpress extras=null source=broadcast
+2026-04-10 23:52:02.972  9737-9737  [PTT-DIAG]              com.reedersystems.commandcomms       D  PttHardwareReceiver: longpress consumed action=android.intent.action.PTT.longpress ordered=false — suppressing T320 default beep
+2026-04-10 23:52:02.972  9737-9737  [PTT-DIAG]              com.reedersystems.commandcomms       W  PttHardwareReceiver: longpress is NORMAL broadcast (not ordered) — abortBroadcast not possible for action=android.intent.action.PTT.longpress
+2026-04-10 23:52:03.370  9737-9865  [UdpTransport]          com.reedersystems.commandcomms       D  TX_SUMMARY packets=34 totalPkts=524 totalBytes=113165 failures=0 dest=comms.reeder-systems.com:5100 t=2414ms
+2026-04-10 23:52:03.386  9737-10022 [AudioDSP]              com.reedersystems.commandcomms       D  TX_GATE CLOSED envelope=-46.6dB openThreshold=-42.0dB closeThreshold=-46.0dB frame=110 t=2430ms
+2026-04-10 23:52:03.427  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       D  PCM_SUMMARY frames=51 totalFrames=112 silentFrames=41 partials=0 zeros=0 t=2471ms
+2026-04-10 23:52:03.428  9737-9866  [UdpTransport]          com.reedersystems.commandcomms       D  {"event":"UDP_KEEPALIVE_SENT","dest":"comms.reeder-systems.com:5100","fast":false,"intervalMs":8000}
+2026-04-10 23:52:03.444  9737-9866  [RadioEngine]           com.reedersystems.commandcomms       D  RX_DIAG rxTotal=0 rxNew=0 jbSize=0 jbDepth=3 jbPlaying=false channelIdx=169 t=2488ms
+2026-04-10 23:52:03.455  9737-10022 [AudioDSP]              com.reedersystems.commandcomms       D  TX_GATE OPEN envelope=-35.4dB openThreshold=-42.0dB closeThreshold=-46.0dB frame=113 t=2499ms
+2026-04-10 23:52:03.679  9737-9869  [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE_SUMMARY frames=35 totalFrames=89 totalPcmBytes=56960 totalEncodedBytes=14240 t=2723ms
+2026-04-10 23:52:03.850  9737-10022 [AudioDSP]              com.reedersystems.commandcomms       D  TX_GATE CLOSED envelope=-47.4dB openThreshold=-42.0dB closeThreshold=-46.0dB frame=133 t=2894ms
+2026-04-10 23:52:03.927  9737-10022 [AudioDSP]              com.reedersystems.commandcomms       D  TX_GATE OPEN envelope=-35.1dB openThreshold=-42.0dB closeThreshold=-46.0dB frame=137 t=2971ms
+2026-04-10 23:52:04.289  9737-10022 [AudioDSP]              com.reedersystems.commandcomms       D  TX_GATE CLOSED envelope=-50.1dB openThreshold=-42.0dB closeThreshold=-46.0dB frame=155 t=3333ms
+2026-04-10 23:52:04.348  9737-10022 [AudioDSP]              com.reedersystems.commandcomms       D  TX_GATE OPEN envelope=-29.4dB openThreshold=-42.0dB closeThreshold=-46.0dB frame=158 t=3392ms
+2026-04-10 23:52:04.381  9737-9867  [UdpTransport]          com.reedersystems.commandcomms       D  TX_SUMMARY packets=38 totalPkts=562 totalBytes=120081 failures=0 dest=comms.reeder-systems.com:5100 t=3426ms
+2026-04-10 23:52:04.445  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       D  PCM_SUMMARY frames=51 totalFrames=163 silentFrames=49 partials=0 zeros=0 t=3489ms
+2026-04-10 23:52:04.692  9737-9869  [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE_SUMMARY frames=40 totalFrames=129 totalPcmBytes=82560 totalEncodedBytes=20640 t=3736ms
+2026-04-10 23:52:04.807  9737-10022 [AudioDSP]              com.reedersystems.commandcomms       D  TX_GATE CLOSED envelope=-46.7dB openThreshold=-42.0dB closeThreshold=-46.0dB frame=181 t=3851ms
+2026-04-10 23:52:05.071  9737-9737  [PTT-DIAG]              com.reedersystems.commandcomms       D  MainActivity PTT UP source=MainActivity code=230 action=UP ts=1775879525071
+2026-04-10 23:52:05.071  9737-9737  [PTT-DIAG]              com.reedersystems.commandcomms       D  MainActivity PTT UP — forwarding to BackgroundAudioService (signaling=true)
+2026-04-10 23:52:05.084  9737-9737  [PTT-DIAG]              com.reedersystems.commandcomms       D  PttHardwareReceiver.onReceive action=android.intent.action.PTT.up extras=null source=broadcast
+2026-04-10 23:52:05.084  9737-9737  [PTT-DIAG]              com.reedersystems.commandcomms       D  PttHardwareReceiver: mapped action=android.intent.action.PTT.up -> svcAction=com.reedersystems.commandcomms.SVC_PTT_UP
+2026-04-10 23:52:05.086  9737-9737  [PTT-DIAG]              com.reedersystems.commandcomms       D  PttHardwareReceiver: WakeLock acquired (auto-releases in 5000ms)
+2026-04-10 23:52:05.088  9737-9737  [PTT-DIAG]              com.reedersystems.commandcomms       D  {"event":"RADIO_PTT_UP","pttState":"TRANSMITTING","channelKey":"DISPATCH__DISPATCH"}
+2026-04-10 23:52:05.089  9737-9737  [PTT-DIAG]              com.reedersystems.commandcomms       D  PTT_STATE TRANSMITTING -> CLEANING_UP channelKey=DISPATCH__DISPATCH
+2026-04-10 23:52:05.115  9737-9737  [PTT-DIAG]              com.reedersystems.commandcomms       D  {"event":"RADIO_PTT_UP_DEBOUNCED","deltaMs":26}
+2026-04-10 23:52:05.385  9737-9866  [UdpTransport]          com.reedersystems.commandcomms       D  TX_SUMMARY packets=37 totalPkts=599 totalBytes=126815 failures=0 dest=comms.reeder-systems.com:5100 t=4429ms
+2026-04-10 23:52:05.698  9737-9869  [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE_SUMMARY frames=36 totalFrames=165 totalPcmBytes=105600 totalEncodedBytes=26400 t=4742ms
+2026-04-10 23:52:06.220  9737-9869  [RadioEngine]           com.reedersystems.commandcomms       D  ENCODE_THREAD_EXIT framesEncoded=196 t=5264ms
+2026-04-10 23:52:06.226  9737-9869  AudioRecord             com.reedersystems.commandcomms       D  stop: 0x842a3600
+2026-04-10 23:52:06.284  9737-9869  AudioRecord             com.reedersystems.commandcomms       D  stop done
+2026-04-10 23:52:06.284  9737-9869  AudioRecord             com.reedersystems.commandcomms       D  stop: 0x842a3600
+2026-04-10 23:52:06.284  9737-9869  AudioRecord             com.reedersystems.commandcomms       D  stop: 0x842a3600
+2026-04-10 23:52:06.286  9737-9869  [RadioState]            com.reedersystems.commandcomms       D  State transition: TRANSMITTING -> IDLE reason=tx_stopped activeChannel=DISPATCH__DISPATCH txPipeline=false rxPipeline=true t=5331ms
+2026-04-10 23:52:06.287  9737-9737  [PTT-DIAG]              com.reedersystems.commandcomms       D  RadioState updated: IDLE
+2026-04-10 23:52:06.287  9737-9869  [RadioEngine]           com.reedersystems.commandcomms       D  {"event":"TX_STOPPED","cleanupMs":1174,"lastSendGapMs":67,"durationMs":5332,"framesRead":196,"framesEncoded":196,"pktSent":196,"failures":0,"pcmFallback":10,"silentFrames":58,"stopReason":"ptt_release"}
+2026-04-10 23:52:06.298  9737-9869  [RadioEngine]           com.reedersystems.commandcomms       D  TX_SESSION_END duration=5332ms reqRate=16000 actRate=16000 ch=1 src=VOICE_COMMUNICATION framesRead=196 framesEncoded=196 pktSent=196 failures=0 encodeFailures=0 assertionFailures=0 pcmFallback=10 silentFrames=58 partials=0 zeros=0 probeRms=[] first10rms=[1.3,2.5,1.8,10.7,10.4,11.5,13.3,10.7,14.7,20.3] stop=ptt_release lastSendGapMs=67 t=5342ms
+2026-04-10 23:52:06.299  9737-9869  [FloorCtrl]             com.reedersystems.commandcomms       D  releaseFloor channelKey=DISPATCH__DISPATCH state=IDLE t=5343ms
+2026-04-10 23:52:06.299  9737-9869  [RadioSigGW]            com.reedersystems.commandcomms       D  releaseFloor channelKey=DISPATCH__DISPATCH t=5343ms
+2026-04-10 23:52:06.299  9737-9869  [PTT-DIAG]              com.reedersystems.commandcomms       D  [FloorCtrl] SIGNALING_FLOOR_RELEASE channelKey=DISPATCH__DISPATCH unitId=INDIANA-1
+2026-04-10 23:52:06.302  9737-9869  [PTT-DIAG]              com.reedersystems.commandcomms       D  {"event":"PTT_RELEASE_SENT","channelId":"DISPATCH__DISPATCH"}
+2026-04-10 23:52:06.302  9737-9869  [PTT-DIAG]              com.reedersystems.commandcomms       D  Sending PTT_TX_ENDED broadcast
+2026-04-10 23:52:06.304  9737-9869  [PTT-DIAG]              com.reedersystems.commandcomms       D  Floor RELEASED
+2026-04-10 23:52:06.319  9737-9737  [PTT-DIAG]              com.reedersystems.commandcomms       D  PTT_TX_ENDED received — setting pttState = IDLE
+2026-04-10 23:52:06.383  9737-9866  [FloorCtrl]             com.reedersystems.commandcomms       D  Channel idle state=IDLE t=5427ms
+2026-04-10 23:52:06.385  9737-10022 [ToneEvent]             com.reedersystems.commandcomms       D  {"tone":"end-of-tx","trigger":"ptt_up","state":"CLEANING_UP","signaling":true,"ts":1775879526384}
+2026-04-10 23:52:06.386  9737-10022 [PTT-DIAG]              com.reedersystems.commandcomms       D  Radio PTT UP: end-of-TX tone for roomKey DISPATCH__DISPATCH
+2026-04-10 23:52:06.386  9737-10022 [PTT-DIAG]              com.reedersystems.commandcomms       D  PTT_STATE CLEANING_UP -> IDLE channelKey=DISPATCH__DISPATCH
+2026-04-10 23:52:06.386  9737-10022 [PTT-DIAG]              com.reedersystems.commandcomms       D  {"event":"PTT_CLEANUP_COMPLETE","state":"IDLE","cleanupMs":1297}
+2026-04-10 23:52:06.393  9737-9866  AudioTrack              com.reedersystems.commandcomms       D  set(): 0x842b8500, streamType -1, sampleRate 16000, format 0x1, channelMask 0x1, frameCount 2400, flags #0, notificationFrames 0, sessionId 0, transferType 4, uid -1, pid -1
+2026-04-10 23:52:06.393  9737-9866  AudioTrack              com.reedersystems.commandcomms       D  Building AudioTrack with attributes: usage = 3, content = 4, flags = 0x0, tags = []
+2026-04-10 23:52:06.397  9737-9866  AudioTrack              com.reedersystems.commandcomms       D  set: Create AudioTrackThread, tid = 10314
+2026-04-10 23:52:06.403  9737-9866  AudioTrack              com.reedersystems.commandcomms       D  createTrack_l: 0x842b8500, mCblk = 0x854761c0, mLatency = 202, mAfLatency = 52, frameCount = 2400, mSampleRate = 16000, mFlags = 0, mReqFrameCount = 2400, mNotificationFramesAct = 0
+2026-04-10 23:52:06.411  9737-9866  AudioTrack              com.reedersystems.commandcomms       D  start(): 0x842b8500, mState = 1
+2026-04-10 23:52:06.637  9737-9870  AudioTrack              com.reedersystems.commandcomms       D  stop(): 0x842b8500, mState = 0
+2026-04-10 23:52:06.638  9737-9870  AudioTrack              com.reedersystems.commandcomms       D  audiotrack 0x842b8500 stop done
+2026-04-10 23:52:06.638  9737-9870  AudioTrack              com.reedersystems.commandcomms       D  stop(): 0x842b8500, mState = 1
+2026-04-10 23:52:06.642  9737-9870  AudioTrack              com.reedersystems.commandcomms       D  ~AudioTrack(): 0x842b8500
+2026-04-10 23:52:06.642  9737-9870  AudioTrack              com.reedersystems.commandcomms       D  stop(): 0x842b8500, mState = 1
+2026-04-10 23:52:06.896  9737-9737  [PTT-DIAG]              com.reedersystems.commandcomms       D  PttHardwareReceiver.onReceive action=android.intent.action.PTT.down extras=null source=broadcast
+2026-04-10 23:52:06.896  9737-9737  [PTT-DIAG]              com.reedersystems.commandcomms       D  PttHardwareReceiver: mapped action=android.intent.action.PTT.down -> svcAction=com.reedersystems.commandcomms.SVC_PTT_DOWN
+2026-04-10 23:52:06.898  9737-9737  [PTT-DIAG]              com.reedersystems.commandcomms       D  PttHardwareReceiver: WakeLock acquired (auto-releases in 5000ms)
+2026-04-10 23:52:06.902  9737-9737  [PTT-DIAG]              com.reedersystems.commandcomms       D  {"event":"RADIO_PTT_DOWN","pttState":"IDLE","signaling":true,"channelKey":"DISPATCH__DISPATCH","channelId":"169"}
+2026-04-10 23:52:06.903  9737-9737  [PTT-DIAG]              com.reedersystems.commandcomms       D  PTT_STATE IDLE -> CONNECTING channelKey=DISPATCH__DISPATCH
+2026-04-10 23:52:06.916  9737-9737  [ToneEvent]             com.reedersystems.commandcomms       D  {"tone":"talk-permit","trigger":"ptt_down","state":"CONNECTING","channelKey":"DISPATCH__DISPATCH","ts":1775879526916}
+2026-04-10 23:52:06.980  9737-9866  [PTT-DIAG]              com.reedersystems.commandcomms       D  {"event":"RADIO_READY_FOR_PTT","roomKey":"DISPATCH__DISPATCH","signaling":true}
+2026-04-10 23:52:06.982  9737-9737  [PTT-DIAG]              com.reedersystems.commandcomms       D  MainActivity PTT DOWN source=MainActivity code=230 action=DOWN repeat=0 ts=1775879526982
+2026-04-10 23:52:06.982  9737-9737  [PTT-DIAG]              com.reedersystems.commandcomms       D  MainActivity PTT DOWN — forwarding to BackgroundAudioService (signaling=true)
+2026-04-10 23:52:06.982  9737-9866  [RadioEngine]           com.reedersystems.commandcomms       D  PRE_CAPTURE_SESSION_START t=0ms
+2026-04-10 23:52:06.983  9737-9866  [AudioCapture]          com.reedersystems.commandcomms       D  TX_AUDIO_SOURCE_SELECTED source=VOICE_COMMUNICATION reason=cached_for_device device=ZRK/T320/API27
+2026-04-10 23:52:06.983  9737-9866  [AudioCapture]          com.reedersystems.commandcomms       D  PRE_CAPTURE_AUDIORECORD_INIT requestedRate=16000 source=VOICE_COMMUNICATION minBufSize=1280 allocBufSize=2560 frameMs=20 t=0ms
+2026-04-10 23:52:06.984  9737-9866  AudioRecord             com.reedersystems.commandcomms       D  set(): 0x842a3600, inputSource 7, sampleRate 16000, format 0x1, channelMask 0x10, frameCount 1280, notificationFrames 0, sessionId 0, transferType 0, flags 0, opPackageName com.reedersystems.commandcomms uid -1, pid -1
+2026-04-10 23:52:06.987  9737-9737  MediaPlayer             com.reedersystems.commandcomms       D  handleMessage msg:(1, 0, 0)
+2026-04-10 23:52:06.994  9737-9737  [PTT-DIAG]              com.reedersystems.commandcomms       D  {"event":"RADIO_PTT_DOWN","pttState":"CONNECTING","signaling":true,"channelKey":"DISPATCH__DISPATCH","channelId":"169"}
+2026-04-10 23:52:06.995  9737-9737  [PTT-DIAG]              com.reedersystems.commandcomms       D  Radio PTT DOWN ignored: pttState=CONNECTING
+2026-04-10 23:52:07.043  9737-9866  AudioRecord             com.reedersystems.commandcomms       D  openRecord_l: 0x842a3600, mCblk = 0x854761c0
+2026-04-10 23:52:07.044  9737-9866  [AudioCapture]          com.reedersystems.commandcomms       D  PRE_CAPTURE_HAL_NEGOTIATED requestedRate=16000 actualRate=16000 actualChannels=1 needsStereoDownmix=false bufferSize=2560 monoFrameSamples=320 monoFrameBytes=640 t=61ms
+2026-04-10 23:52:07.057  9737-9866  [OpusCodec]             com.reedersystems.commandcomms       D  ENCODER_FRESH_CREATE rate=16000 frameSize=320 channels=1 bitrate=64000 attempt=0 warmup=passed t=74ms
+2026-04-10 23:52:07.060  9737-9866  [AudioDSP]              com.reedersystems.commandcomms       D  TX_DSP_COEFFICIENTS sampleRate=16000 hpCutoff=150.0 hpAlpha=0.9443719031288819 lpCutoff=3400.0 lpB0=0.22711707651421756 lpB1=0.4542341530284351 lpB2=0.22711707651421756 lpA1=-0.2766635335033555 lpA2=0.18513183956022572 compThreshold=-12.0 compRatio=3.0 compAttack=0.003 compRelease=0.15 gain=2.0 gateOpen=-42.0 gateClose=-46.0 expanderRatio=2.0 t=75ms
+2026-04-10 23:52:07.060  9737-9866  AudioRecord             com.reedersystems.commandcomms       D  start: 0x842a3600, sync event 0 trigger session 0
+2026-04-10 23:52:07.076  9737-9866  AudioRecord             com.reedersystems.commandcomms       D  start return status 0
+2026-04-10 23:52:07.184  9737-9870  [PTT-DIAG]              com.reedersystems.commandcomms       D  emitPttPre DISPATCH__DISPATCH
+2026-04-10 23:52:07.189  9737-9870  [PTT-DIAG]              com.reedersystems.commandcomms       D  Radio PTT: transmitPre sent for roomKey DISPATCH__DISPATCH
+2026-04-10 23:52:07.189  9737-9870  [PTT-DIAG]              com.reedersystems.commandcomms       D  PTT_REQUEST_SENT channelId=DISPATCH__DISPATCH
+2026-04-10 23:52:07.189  9737-9870  [PTT-DIAG]              com.reedersystems.commandcomms       D  RADIO_PTT_REQUEST_SENT channelId=DISPATCH__DISPATCH
+2026-04-10 23:52:07.190  9737-9870  [FloorCtrl]             com.reedersystems.commandcomms       D  requestFloor channelKey=DISPATCH__DISPATCH previousPending=false state=IDLE t=207ms
+2026-04-10 23:52:07.190  9737-9870  [RadioState]            com.reedersystems.commandcomms       D  State transition: IDLE -> REQUESTING_FLOOR reason=floor_request activeChannel=DISPATCH__DISPATCH txPipeline=false rxPipeline=true t=207ms
+2026-04-10 23:52:07.190  9737-9737  [PTT-DIAG]              com.reedersystems.commandcomms       D  RadioState updated: REQUESTING_FLOOR
+2026-04-10 23:52:07.190  9737-9870  [RadioSigGW]            com.reedersystems.commandcomms       D  requestFloor channelKey=DISPATCH__DISPATCH signalingReady=AUTHENTICATED t=208ms
+2026-04-10 23:52:07.191  9737-9870  [PTT-DIAG]              com.reedersystems.commandcomms       D  [FloorCtrl] SIGNALING_FLOOR_REQUEST channelKey=DISPATCH__DISPATCH unitId=INDIANA-1 sessionTokenPresent=true
+2026-04-10 23:52:07.220  9737-9866  [AudioCapture]          com.reedersystems.commandcomms       D  AGC attached=true enabled=false sessionId=13313 t=237ms
+2026-04-10 23:52:07.230  9737-9737  MediaPlayer             com.reedersystems.commandcomms       D  handleMessage msg:(6, 0, 0)
+2026-04-10 23:52:07.242  9737-9866  [AudioCapture]          com.reedersystems.commandcomms       D  NoiseSuppressor attached=true enabled=true sessionId=13313 t=259ms
+2026-04-10 23:52:07.242  9737-9866  [AudioCapture]          com.reedersystems.commandcomms       D  PRE_CAPTURE_STARTED sampleRate=16000 channelCount=1 frameMs=20 frameSizeSamples=320 maxBufferFrames=150 t=259ms
+2026-04-10 23:52:07.244  9737-9866  [RadioEngine]           com.reedersystems.commandcomms       D  Pre-capture started — buffering audio (sampleRate=16000 channels=1 buffer=2560) t=261ms
+2026-04-10 23:52:07.247  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       D  PCM_FRAME frame=1 readRet=640 samples=320 min=-6 max=4 rms=1.3 silent=true zeros=149 downmix=false source=VOICE_COMMUNICATION sampleRate=16000 channels=1 t=262ms
+2026-04-10 23:52:07.254  9737-10022 [AudioDSP]              com.reedersystems.commandcomms       D  DSP_FRAME frame=1 pre=[samples=320 min=-6 max=4 rms=1.3 silent=true zeros=149] post=[samples=320 min=0 max=0 rms=0.0 silent=true zeros=320] gate=closed gateEnv=-92.7dB gateThreshold=-42.0dB t=269ms
+2026-04-10 23:52:07.256  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       D  PCM_FRAME frame=2 readRet=640 samples=320 min=-6 max=6 rms=2.6 silent=true zeros=59 downmix=false source=VOICE_COMMUNICATION sampleRate=16000 channels=1 t=272ms
+2026-04-10 23:52:07.258  9737-9869  [RadioError]            com.reedersystems.commandcomms       E  OPUS_ENCODE_ASSERTION_FAILURE frame=0 source=VOICE_COMMUNICATION samples=320 bytes=640 expectedBytes=640 sampleRate=16000 frameSize=320 consecutiveFailures=1 assertionFailures=1 method=encode
+2026-04-10 23:52:07.264  9737-9869  [OpusCodec]             com.reedersystems.commandcomms       D  Encoder re-initialized after assertion failure (sampleRate=16000 frameSize=320 complexity=5 VBR=false bitrate=64000) t=281ms
+2026-04-10 23:52:07.264  9737-9869  [AudioDSP]              com.reedersystems.commandcomms       D  DSP_STATE_RESET_PENDING reason=encoder_reinitialized frame=0 t=281ms
+2026-04-10 23:52:07.264  9737-10022 [AudioDSP]              com.reedersystems.commandcomms       D  DSP_FRAME frame=2 pre=[samples=320 min=-6 max=6 rms=2.6 silent=true zeros=59] post=[samples=320 min=0 max=0 rms=0.0 silent=true zeros=320] gate=closed gateEnv=-84.7dB gateThreshold=-42.0dB t=279ms
+2026-04-10 23:52:07.266  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       D  PCM_FRAME frame=3 readRet=640 samples=320 min=-5 max=5 rms=1.8 silent=true zeros=86 downmix=false source=VOICE_COMMUNICATION sampleRate=16000 channels=1 t=282ms
+2026-04-10 23:52:07.266  9737-10022 [AudioDSP]              com.reedersystems.commandcomms       D  DSP_STATE_RESET reason=encoder_reinitialized frame=3 t=284ms
+2026-04-10 23:52:07.273  9737-10022 [AudioDSP]              com.reedersystems.commandcomms       D  DSP_FRAME frame=3 pre=[samples=320 min=-5 max=5 rms=1.8 silent=true zeros=86] post=[samples=320 min=0 max=0 rms=0.0 silent=true zeros=320] gate=closed gateEnv=-89.7dB gateThreshold=-42.0dB t=288ms
+2026-04-10 23:52:07.275  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       D  PCM_FRAME frame=4 readRet=640 samples=320 min=-44 max=42 rms=18.4 silent=true zeros=0 downmix=false source=VOICE_COMMUNICATION sampleRate=16000 channels=1 t=291ms
+2026-04-10 23:52:07.285  9737-9869  [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=1 pcmBytes=640 encodedBytes=160 seq=1 t=303ms
+2026-04-10 23:52:07.292  9737-9869  [RadioError]            com.reedersystems.commandcomms       E  OPUS_ENCODE_ASSERTION_FAILURE frame=1 source=VOICE_COMMUNICATION samples=320 bytes=640 expectedBytes=640 sampleRate=16000 frameSize=320 consecutiveFailures=1 assertionFailures=2 method=encode
+2026-04-10 23:52:07.294  9737-9869  [OpusCodec]             com.reedersystems.commandcomms       D  Encoder re-initialized after assertion failure (sampleRate=16000 frameSize=320 complexity=5 VBR=false bitrate=64000) t=312ms
+2026-04-10 23:52:07.295  9737-9869  [AudioDSP]              com.reedersystems.commandcomms       D  DSP_STATE_RESET_PENDING reason=encoder_reinitialized frame=2 t=312ms
+2026-04-10 23:52:07.296  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       D  PCM_FRAME frame=5 readRet=640 samples=320 min=-41 max=38 rms=15.1 silent=true zeros=11 downmix=false source=VOICE_COMMUNICATION sampleRate=16000 channels=1 t=311ms
+2026-04-10 23:52:07.296  9737-10022 [AudioDSP]              com.reedersystems.commandcomms       D  DSP_STATE_RESET reason=encoder_reinitialized frame=5 t=313ms
+2026-04-10 23:52:07.297  9737-9869  [RadioError]            com.reedersystems.commandcomms       E  OPUS_ENCODE_ASSERTION_FAILURE frame=1 source=VOICE_COMMUNICATION samples=320 bytes=640 expectedBytes=640 sampleRate=16000 frameSize=320 consecutiveFailures=2 assertionFailures=3 method=encode
+2026-04-10 23:52:07.299  9737-9869  [OpusCodec]             com.reedersystems.commandcomms       D  Encoder re-initialized after assertion failure (sampleRate=16000 frameSize=320 complexity=5 VBR=false bitrate=64000) t=316ms
+2026-04-10 23:52:07.300  9737-9869  [AudioDSP]              com.reedersystems.commandcomms       D  DSP_STATE_RESET_PENDING reason=encoder_reinitialized frame=3 t=317ms
+2026-04-10 23:52:07.306  9737-9869  [RadioError]            com.reedersystems.commandcomms       E  OPUS_ENCODE_ASSERTION_FAILURE frame=1 source=VOICE_COMMUNICATION samples=320 bytes=640 expectedBytes=640 sampleRate=16000 frameSize=320 consecutiveFailures=3 assertionFailures=4 method=encode
+2026-04-10 23:52:07.308  9737-9869  [OpusCodec]             com.reedersystems.commandcomms       D  Encoder re-initialized after assertion failure (sampleRate=16000 frameSize=320 complexity=5 VBR=false bitrate=64000) t=325ms
+2026-04-10 23:52:07.308  9737-9869  [AudioDSP]              com.reedersystems.commandcomms       D  DSP_STATE_RESET_PENDING reason=encoder_reinitialized frame=4 t=325ms
+2026-04-10 23:52:07.313  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       D  PCM_FRAME frame=6 readRet=640 samples=320 min=-52 max=37 rms=16.6 silent=true zeros=29 downmix=false source=VOICE_COMMUNICATION sampleRate=16000 channels=1 t=329ms
+2026-04-10 23:52:07.314  9737-10022 [AudioDSP]              com.reedersystems.commandcomms       D  DSP_STATE_RESET reason=encoder_reinitialized frame=6 t=331ms
+2026-04-10 23:52:07.333  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       D  PCM_FRAME frame=7 readRet=640 samples=320 min=-42 max=47 rms=17.0 silent=true zeros=11 downmix=false source=VOICE_COMMUNICATION sampleRate=16000 channels=1 t=349ms
+2026-04-10 23:52:07.335  9737-9869  [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=2 pcmBytes=640 encodedBytes=160 seq=2 t=352ms
+2026-04-10 23:52:07.360  9737-9869  [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=3 pcmBytes=640 encodedBytes=160 seq=3 t=377ms
+2026-04-10 23:52:07.361  9737-10334 [PTT-DIAG]              com.reedersystems.commandcomms       D  [FloorCtrl] SIGNALING_FLOOR_GRANTED channelId=DISPATCH__DISPATCH senderUnitId=INDIANA-1
+2026-04-10 23:52:07.363  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       D  PCM_FRAME frame=8 readRet=640 samples=320 min=-43 max=53 rms=15.9 silent=true zeros=11 downmix=false source=VOICE_COMMUNICATION sampleRate=16000 channels=1 t=377ms
+2026-04-10 23:52:07.364  9737-9870  [PTT-DIAG]              com.reedersystems.commandcomms       D  RADIO_PTT_GRANTED channelId=DISPATCH__DISPATCH senderUnitId=INDIANA-1
+2026-04-10 23:52:07.365  9737-9870  [FloorCtrl]             com.reedersystems.commandcomms       D  Floor GRANTED channelKey=DISPATCH__DISPATCH latencyMs=176 t=382ms
+2026-04-10 23:52:07.366  9737-9870  [RadioState]            com.reedersystems.commandcomms       D  State transition: REQUESTING_FLOOR -> TRANSMITTING reason=floor_granted activeChannel=DISPATCH__DISPATCH txPipeline=false rxPipeline=true t=383ms
+2026-04-10 23:52:07.366  9737-9737  [PTT-DIAG]              com.reedersystems.commandcomms       D  RadioState updated: TRANSMITTING
+2026-04-10 23:52:07.370  9737-9869  [RadioError]            com.reedersystems.commandcomms       E  OPUS_ENCODE_ASSERTION_FAILURE frame=3 source=VOICE_COMMUNICATION samples=320 bytes=640 expectedBytes=640 sampleRate=16000 frameSize=320 consecutiveFailures=1 assertionFailures=5 method=encode
+2026-04-10 23:52:07.372  9737-9869  [OpusCodec]             com.reedersystems.commandcomms       D  Encoder re-initialized after assertion failure (sampleRate=16000 frameSize=320 complexity=5 VBR=false bitrate=64000) t=389ms
+2026-04-10 23:52:07.372  9737-9869  [AudioDSP]              com.reedersystems.commandcomms       D  DSP_STATE_RESET_PENDING reason=encoder_reinitialized frame=7 t=390ms
+2026-04-10 23:52:07.374  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       D  PCM_FRAME frame=9 readRet=640 samples=320 min=-19 max=22 rms=7.7 silent=true zeros=34 downmix=false source=VOICE_COMMUNICATION sampleRate=16000 channels=1 t=390ms
+2026-04-10 23:52:07.375  9737-10022 [AudioDSP]              com.reedersystems.commandcomms       D  DSP_STATE_RESET reason=encoder_reinitialized frame=9 t=392ms
+2026-04-10 23:52:07.381  9737-9869  [RadioError]            com.reedersystems.commandcomms       E  OPUS_ENCODE_ASSERTION_FAILURE frame=3 source=VOICE_COMMUNICATION samples=320 bytes=640 expectedBytes=640 sampleRate=16000 frameSize=320 consecutiveFailures=2 assertionFailures=6 method=encode
+2026-04-10 23:52:07.383  9737-9869  [OpusCodec]             com.reedersystems.commandcomms       D  Encoder re-initialized after assertion failure (sampleRate=16000 frameSize=320 complexity=5 VBR=false bitrate=64000) t=400ms
+2026-04-10 23:52:07.384  9737-9869  [AudioDSP]              com.reedersystems.commandcomms       D  DSP_STATE_RESET_PENDING reason=encoder_reinitialized frame=8 t=401ms
+2026-04-10 23:52:07.386  9737-9870  [PTT-DIAG]              com.reedersystems.commandcomms       D  Floor GRANTED — promoting pre-capture to live TX
+2026-04-10 23:52:07.391  9737-9870  [RadioEngine]           com.reedersystems.commandcomms       D  PRE_BUFFER_FLUSHED flushedFrames=9 durationMs=180 — live TX active t=408ms
+2026-04-10 23:52:07.391  9737-9870  [PTT-DIAG]              com.reedersystems.commandcomms       D  PTT_STATE CONNECTING -> TRANSMITTING channelKey=DISPATCH__DISPATCH
+2026-04-10 23:52:07.401  9737-9867  [UdpTransport]          com.reedersystems.commandcomms       D  TX_PACKET seq=640 payloadBytes=641 framedBytes=663 dest=comms.reeder-systems.com:5100 channelIdx=169 t=418ms
+2026-04-10 23:52:07.402  9737-9867  [UdpTransport]          com.reedersystems.commandcomms       D  TX_PACKET seq=640 payloadBytes=160 framedBytes=182 dest=comms.reeder-systems.com:5100 channelIdx=169 t=420ms
+2026-04-10 23:52:07.404  9737-9867  [UdpTransport]          com.reedersystems.commandcomms       D  TX_PACKET seq=640 payloadBytes=641 framedBytes=663 dest=comms.reeder-systems.com:5100 channelIdx=169 t=421ms
+2026-04-10 23:52:07.405  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       D  PCM_FRAME frame=10 readRet=640 samples=320 min=-467 max=521 rms=111.9 silent=false zeros=9 downmix=false source=VOICE_COMMUNICATION sampleRate=16000 channels=1 t=421ms
+2026-04-10 23:52:07.406  9737-10022 [AudioDSP]              com.reedersystems.commandcomms       D  DSP_STATE_RESET reason=encoder_reinitialized frame=10 t=423ms
+2026-04-10 23:52:07.414  9737-9867  [UdpTransport]          com.reedersystems.commandcomms       D  TX_PACKET seq=640 payloadBytes=641 framedBytes=663 dest=comms.reeder-systems.com:5100 channelIdx=169 t=431ms
+2026-04-10 23:52:07.416  9737-9867  [UdpTransport]          com.reedersystems.commandcomms       D  TX_PACKET seq=640 payloadBytes=641 framedBytes=663 dest=comms.reeder-systems.com:5100 channelIdx=169 t=433ms
+2026-04-10 23:52:07.417  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       D  PCM_SUMMARY frames=11 totalFrames=11 silentFrames=9 partials=0 zeros=0 t=434ms
+2026-04-10 23:52:07.426  9737-9867  [UdpTransport]          com.reedersystems.commandcomms       D  TX_SUMMARY packets=6 totalPkts=638 totalBytes=135837 failures=0 dest=comms.reeder-systems.com:5100 t=443ms
+2026-04-10 23:52:07.430  9737-9869  [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=4 pcmBytes=640 encodedBytes=160 seq=4 t=447ms
+2026-04-10 23:52:07.442  9737-10022 [AudioDSP]              com.reedersystems.commandcomms       D  TX_GATE OPEN envelope=-37.8dB openThreshold=-42.0dB closeThreshold=-46.0dB frame=12 t=458ms
+2026-04-10 23:52:07.455  9737-9870  [PTT-DIAG]              com.reedersystems.commandcomms       D  Sending PTT_TX_STARTED broadcast
+2026-04-10 23:52:07.466  9737-9867  [FloorCtrl]             com.reedersystems.commandcomms       D  Channel busy — transmitting unit: INDIANA-1 state=TRANSMITTING t=483ms
+2026-04-10 23:52:07.487  9737-9869  [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE frame=5 pcmBytes=640 encodedBytes=160 seq=5 t=504ms
+2026-04-10 23:52:07.497  9737-9737  MediaPlayer             com.reedersystems.commandcomms       D  handleMessage msg:(2, 0, 0)
+2026-04-10 23:52:07.499  9737-9737  MediaPlayer             com.reedersystems.commandcomms       V  resetDrmState:  mDrmInfo=null mDrmProvisioningThread=null mPrepareDrmInProgress=false mActiveDrmScheme=false
+2026-04-10 23:52:07.499  9737-9737  MediaPlayer             com.reedersystems.commandcomms       V  cleanDrmObj: mDrmObj=null mDrmSessionId=null
+2026-04-10 23:52:07.504  9737-10022 [AudioDSP]              com.reedersystems.commandcomms       D  TX_GATE CLOSED envelope=-49.8dB openThreshold=-42.0dB closeThreshold=-46.0dB frame=15 t=513ms
+2026-04-10 23:52:07.526  9737-9737  [PTT-DIAG]              com.reedersystems.commandcomms       D  PTT_TX_STARTED received — setting pttState = TRANSMITTING
+2026-04-10 23:52:07.547  9737-9869  [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE_SUMMARY frames=6 totalFrames=6 totalPcmBytes=3840 totalEncodedBytes=960 t=565ms
+2026-04-10 23:52:07.849  9737-9869  [OpusCodec]             com.reedersystems.commandcomms       D  ASSERTION_FAILURE_COUNT_RESET after 10 consecutive successes (was 6) t=866ms
+2026-04-10 23:52:08.043  9737-10022 [AudioDSP]              com.reedersystems.commandcomms       D  TX_GATE OPEN envelope=-36.2dB openThreshold=-42.0dB closeThreshold=-46.0dB frame=42 t=1060ms
+2026-04-10 23:52:08.195  9737-10022 [AudioDSP]              com.reedersystems.commandcomms       D  TX_GATE CLOSED envelope=-48.7dB openThreshold=-42.0dB closeThreshold=-46.0dB frame=50 t=1212ms
+2026-04-10 23:52:08.277  9737-10022 [AudioDSP]              com.reedersystems.commandcomms       D  TX_GATE OPEN envelope=-38.1dB openThreshold=-42.0dB closeThreshold=-46.0dB frame=54 t=1294ms
+2026-04-10 23:52:08.436  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       D  PCM_SUMMARY frames=51 totalFrames=62 silentFrames=40 partials=0 zeros=0 t=1453ms
+2026-04-10 23:52:08.446  9737-9865  [RadioEngine]           com.reedersystems.commandcomms       D  RX_DIAG rxTotal=0 rxNew=0 jbSize=0 jbDepth=3 jbPlaying=false channelIdx=169 t=1463ms
+2026-04-10 23:52:08.449  9737-9867  [UdpTransport]          com.reedersystems.commandcomms       D  TX_SUMMARY packets=47 totalPkts=685 totalBytes=145353 failures=0 dest=comms.reeder-systems.com:5100 t=1466ms
+2026-04-10 23:52:08.559  9737-9869  [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE_SUMMARY frames=45 totalFrames=51 totalPcmBytes=32640 totalEncodedBytes=8160 t=1577ms
+2026-04-10 23:52:08.823  9737-10022 [AudioDSP]              com.reedersystems.commandcomms       D  TX_GATE CLOSED envelope=-49.5dB openThreshold=-42.0dB closeThreshold=-46.0dB frame=81 t=1839ms
+2026-04-10 23:52:08.903  9737-10022 [AudioDSP]              com.reedersystems.commandcomms       D  TX_GATE OPEN envelope=-40.8dB openThreshold=-42.0dB closeThreshold=-46.0dB frame=85 t=1920ms
+2026-04-10 23:52:08.928  9737-9737  [PTT-DIAG]              com.reedersystems.commandcomms       D  PttHardwareReceiver.onReceive action=android.intent.action.PTT.longpress extras=null source=broadcast
+2026-04-10 23:52:08.928  9737-9737  [PTT-DIAG]              com.reedersystems.commandcomms       D  PttHardwareReceiver: longpress consumed action=android.intent.action.PTT.longpress ordered=false — suppressing T320 default beep
+2026-04-10 23:52:08.928  9737-9737  [PTT-DIAG]              com.reedersystems.commandcomms       W  PttHardwareReceiver: longpress is NORMAL broadcast (not ordered) — abortBroadcast not possible for action=android.intent.action.PTT.longpress
+2026-04-10 23:52:08.944  9737-9737  [PTT-DIAG]              com.reedersystems.commandcomms       D  PttHardwareReceiver.onReceive action=android.intent.action.PTT.longpress extras=null source=broadcast
+2026-04-10 23:52:08.944  9737-9737  [PTT-DIAG]              com.reedersystems.commandcomms       D  PttHardwareReceiver: longpress consumed action=android.intent.action.PTT.longpress ordered=false — suppressing T320 default beep
+2026-04-10 23:52:08.944  9737-9737  [PTT-DIAG]              com.reedersystems.commandcomms       W  PttHardwareReceiver: longpress is NORMAL broadcast (not ordered) — abortBroadcast not possible for action=android.intent.action.PTT.longpress
+2026-04-10 23:52:09.216  9737-10022 [AudioDSP]              com.reedersystems.commandcomms       D  TX_GATE CLOSED envelope=-46.9dB openThreshold=-42.0dB closeThreshold=-46.0dB frame=101 t=2233ms
+2026-04-10 23:52:09.338  9737-10022 [AudioDSP]              com.reedersystems.commandcomms       D  TX_GATE OPEN envelope=-41.5dB openThreshold=-42.0dB closeThreshold=-46.0dB frame=107 t=2355ms
+2026-04-10 23:52:09.452  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       D  PCM_SUMMARY frames=51 totalFrames=113 silentFrames=46 partials=0 zeros=0 t=2469ms
+2026-04-10 23:52:09.461  9737-9870  [UdpTransport]          com.reedersystems.commandcomms       D  TX_SUMMARY packets=37 totalPkts=722 totalBytes=152087 failures=0 dest=comms.reeder-systems.com:5100 t=2478ms
+2026-04-10 23:52:09.580  9737-9869  [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE_SUMMARY frames=37 totalFrames=88 totalPcmBytes=56320 totalEncodedBytes=14080 t=2597ms
+2026-04-10 23:52:09.704  9737-10022 [AudioDSP]              com.reedersystems.commandcomms       D  TX_GATE CLOSED envelope=-46.8dB openThreshold=-42.0dB closeThreshold=-46.0dB frame=125 t=2716ms
+2026-04-10 23:52:09.799  9737-10022 [AudioDSP]              com.reedersystems.commandcomms       D  TX_GATE OPEN envelope=-41.4dB openThreshold=-42.0dB closeThreshold=-46.0dB frame=130 t=2816ms
+2026-04-10 23:52:10.276  9737-10022 [AudioDSP]              com.reedersystems.commandcomms       D  TX_GATE CLOSED envelope=-47.4dB openThreshold=-42.0dB closeThreshold=-46.0dB frame=154 t=3293ms
+2026-04-10 23:52:10.295  9737-10022 [AudioDSP]              com.reedersystems.commandcomms       D  TX_GATE OPEN envelope=-32.0dB openThreshold=-42.0dB closeThreshold=-46.0dB frame=155 t=3312ms
+2026-04-10 23:52:10.453  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       D  PCM_SUMMARY frames=50 totalFrames=163 silentFrames=51 partials=0 zeros=0 t=3470ms
+2026-04-10 23:52:10.487  9737-9777  [UdpTransport]          com.reedersystems.commandcomms       D  TX_SUMMARY packets=40 totalPkts=762 totalBytes=159367 failures=0 dest=comms.reeder-systems.com:5100 t=3504ms
+2026-04-10 23:52:10.586  9737-9869  [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE_SUMMARY frames=40 totalFrames=128 totalPcmBytes=81920 totalEncodedBytes=20480 t=3603ms
+2026-04-10 23:52:10.718  9737-10022 [AudioDSP]              com.reedersystems.commandcomms       D  TX_GATE CLOSED envelope=-46.3dB openThreshold=-42.0dB closeThreshold=-46.0dB frame=176 t=3735ms
+2026-04-10 23:52:10.895  9737-10022 [AudioDSP]              com.reedersystems.commandcomms       D  TX_GATE OPEN envelope=-36.5dB openThreshold=-42.0dB closeThreshold=-46.0dB frame=185 t=3911ms
+2026-04-10 23:52:11.198  9737-10022 [AudioDSP]              com.reedersystems.commandcomms       D  TX_GATE CLOSED envelope=-48.0dB openThreshold=-42.0dB closeThreshold=-46.0dB frame=200 t=4215ms
+2026-04-10 23:52:11.335  9737-10022 [AudioDSP]              com.reedersystems.commandcomms       D  TX_GATE OPEN envelope=-37.4dB openThreshold=-42.0dB closeThreshold=-46.0dB frame=207 t=4352ms
+2026-04-10 23:52:11.433  9737-9865  [UdpTransport]          com.reedersystems.commandcomms       D  {"event":"UDP_KEEPALIVE_SENT","dest":"comms.reeder-systems.com:5100","fast":false,"intervalMs":8000}
+2026-04-10 23:52:11.474  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       D  PCM_SUMMARY frames=51 totalFrames=214 silentFrames=65 partials=0 zeros=0 t=4491ms
+2026-04-10 23:52:11.499  9737-9867  [UdpTransport]          com.reedersystems.commandcomms       D  TX_SUMMARY packets=38 totalPkts=800 totalBytes=166283 failures=0 dest=comms.reeder-systems.com:5100 t=4517ms
+2026-04-10 23:52:11.598  9737-9869  [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE_SUMMARY frames=38 totalFrames=166 totalPcmBytes=106240 totalEncodedBytes=26560 t=4615ms
+2026-04-10 23:52:11.776  9737-10022 [AudioDSP]              com.reedersystems.commandcomms       D  TX_GATE CLOSED envelope=-46.2dB openThreshold=-42.0dB closeThreshold=-46.0dB frame=229 t=4793ms
+2026-04-10 23:52:11.856  9737-10022 [AudioDSP]              com.reedersystems.commandcomms       D  TX_GATE OPEN envelope=-40.9dB openThreshold=-42.0dB closeThreshold=-46.0dB frame=233 t=4873ms
+2026-04-10 23:52:12.037  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       W  ENCODE_QUEUE_FULL dropping frame 242 t=5054ms
+2026-04-10 23:52:12.095  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       W  ENCODE_QUEUE_FULL dropping frame 245 t=5112ms
+2026-04-10 23:52:12.179  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       W  ENCODE_QUEUE_FULL dropping frame 249 t=5196ms
+2026-04-10 23:52:12.235  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       W  ENCODE_QUEUE_FULL dropping frame 252 t=5252ms
+2026-04-10 23:52:12.278  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       W  ENCODE_QUEUE_FULL dropping frame 254 t=5295ms
+2026-04-10 23:52:12.398  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       W  ENCODE_QUEUE_FULL dropping frame 260 t=5415ms
+2026-04-10 23:52:12.493  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       D  PCM_SUMMARY frames=51 totalFrames=265 silentFrames=65 partials=0 zeros=0 t=5510ms
+2026-04-10 23:52:12.508  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       W  ENCODE_QUEUE_FULL dropping frame 265 t=5525ms
+2026-04-10 23:52:12.520  9737-9870  [UdpTransport]          com.reedersystems.commandcomms       D  TX_SUMMARY packets=40 totalPkts=840 totalBytes=173563 failures=0 dest=comms.reeder-systems.com:5100 t=5537ms
+2026-04-10 23:52:12.537  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       W  ENCODE_QUEUE_FULL dropping frame 267 t=5555ms
+2026-04-10 23:52:12.555  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       W  ENCODE_QUEUE_FULL dropping frame 268 t=5572ms
+2026-04-10 23:52:12.595  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       W  ENCODE_QUEUE_FULL dropping frame 270 t=5612ms
+2026-04-10 23:52:12.597  9737-9869  [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE_SUMMARY frames=38 totalFrames=204 totalPcmBytes=130560 totalEncodedBytes=32640 t=5614ms
+2026-04-10 23:52:12.658  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       W  ENCODE_QUEUE_FULL dropping frame 273 t=5675ms
+2026-04-10 23:52:12.698  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       W  ENCODE_QUEUE_FULL dropping frame 275 t=5715ms
+2026-04-10 23:52:12.755  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       W  ENCODE_QUEUE_FULL dropping frame 278 t=5772ms
+2026-04-10 23:52:12.818  9737-10022 [AudioDSP]              com.reedersystems.commandcomms       D  TX_GATE CLOSED envelope=-46.2dB openThreshold=-42.0dB closeThreshold=-46.0dB frame=279 t=5835ms
+2026-04-10 23:52:12.839  9737-10022 [AudioDSP]              com.reedersystems.commandcomms       D  TX_GATE OPEN envelope=-39.6dB openThreshold=-42.0dB closeThreshold=-46.0dB frame=282 t=5856ms
+2026-04-10 23:52:12.856  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       W  ENCODE_QUEUE_FULL dropping frame 283 t=5873ms
+2026-04-10 23:52:12.917  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       W  ENCODE_QUEUE_FULL dropping frame 286 t=5934ms
+2026-04-10 23:52:13.043  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       W  ENCODE_QUEUE_FULL dropping frame 292 t=6060ms
+2026-04-10 23:52:13.097  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       W  ENCODE_QUEUE_FULL dropping frame 295 t=6114ms
+2026-04-10 23:52:13.205  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       W  ENCODE_QUEUE_FULL dropping frame 300 t=6222ms
+2026-04-10 23:52:13.238  9737-10022 [AudioDSP]              com.reedersystems.commandcomms       D  TX_GATE CLOSED envelope=-47.0dB openThreshold=-42.0dB closeThreshold=-46.0dB frame=302 t=6255ms
+2026-04-10 23:52:13.256  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       W  ENCODE_QUEUE_FULL dropping frame 303 t=6274ms
+2026-04-10 23:52:13.319  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       W  ENCODE_QUEUE_FULL dropping frame 306 t=6336ms
+2026-04-10 23:52:13.419  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       W  ENCODE_QUEUE_FULL dropping frame 311 t=6436ms
+2026-04-10 23:52:13.448  9737-9777  [RadioEngine]           com.reedersystems.commandcomms       D  RX_DIAG rxTotal=0 rxNew=0 jbSize=0 jbDepth=3 jbPlaying=false channelIdx=169 t=6465ms
+2026-04-10 23:52:13.504  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       W  ENCODE_QUEUE_FULL dropping frame 315 t=6522ms
+2026-04-10 23:52:13.512  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       D  PCM_SUMMARY frames=51 totalFrames=316 silentFrames=80 partials=0 zeros=0 t=6529ms
+2026-04-10 23:52:13.539  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       W  ENCODE_QUEUE_FULL dropping frame 317 t=6557ms
+2026-04-10 23:52:13.544  9737-9865  [UdpTransport]          com.reedersystems.commandcomms       D  TX_SUMMARY packets=36 totalPkts=876 totalBytes=180115 failures=0 dest=comms.reeder-systems.com:5100 t=6561ms
+2026-04-10 23:52:13.577  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       W  ENCODE_QUEUE_FULL dropping frame 319 t=6594ms
+2026-04-10 23:52:13.619  9737-9869  [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE_SUMMARY frames=36 totalFrames=240 totalPcmBytes=153600 totalEncodedBytes=38400 t=6636ms
+2026-04-10 23:52:13.644  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       W  ENCODE_QUEUE_FULL dropping frame 322 t=6661ms
+2026-04-10 23:52:13.745  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       W  ENCODE_QUEUE_FULL dropping frame 327 t=6762ms
+2026-04-10 23:52:13.757  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       W  ENCODE_QUEUE_FULL dropping frame 328 t=6774ms
+2026-04-10 23:52:13.796  9737-10022 [AudioDSP]              com.reedersystems.commandcomms       D  TX_GATE OPEN envelope=-40.8dB openThreshold=-42.0dB closeThreshold=-46.0dB frame=330 t=6812ms
+2026-04-10 23:52:13.836  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       W  ENCODE_QUEUE_FULL dropping frame 332 t=6853ms
+2026-04-10 23:52:13.894  9737-10022 [AudioDSP]              com.reedersystems.commandcomms       D  TX_GATE CLOSED envelope=-46.6dB openThreshold=-42.0dB closeThreshold=-46.0dB frame=335 t=6911ms
+2026-04-10 23:52:13.896  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       W  ENCODE_QUEUE_FULL dropping frame 335 t=6913ms
+2026-04-10 23:52:13.976  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       W  ENCODE_QUEUE_FULL dropping frame 339 t=6993ms
+2026-04-10 23:52:14.075  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       W  ENCODE_QUEUE_FULL dropping frame 344 t=7092ms
+2026-04-10 23:52:14.176  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       W  ENCODE_QUEUE_FULL dropping frame 349 t=7193ms
+2026-04-10 23:52:14.335  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       W  ENCODE_QUEUE_FULL dropping frame 357 t=7353ms
+2026-04-10 23:52:14.416  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       W  ENCODE_QUEUE_FULL dropping frame 361 t=7433ms
+2026-04-10 23:52:14.496  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       W  ENCODE_QUEUE_FULL dropping frame 365 t=7513ms
+2026-04-10 23:52:14.513  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       D  PCM_SUMMARY frames=50 totalFrames=366 silentFrames=123 partials=0 zeros=0 t=7530ms
+2026-04-10 23:52:14.548  9737-9870  [UdpTransport]          com.reedersystems.commandcomms       D  TX_SUMMARY packets=38 totalPkts=914 totalBytes=187031 failures=0 dest=comms.reeder-systems.com:5100 t=7565ms
+2026-04-10 23:52:14.576  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       W  ENCODE_QUEUE_FULL dropping frame 369 t=7594ms
+2026-04-10 23:52:14.626  9737-9869  [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE_SUMMARY frames=39 totalFrames=279 totalPcmBytes=178560 totalEncodedBytes=44640 t=7643ms
+2026-04-10 23:52:14.683  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       W  ENCODE_QUEUE_FULL dropping frame 374 t=7699ms
+2026-04-10 23:52:14.755  9737-10022 [AudioCapture]          com.reedersystems.commandcomms       W  ENCODE_QUEUE_FULL dropping frame 378 t=7772ms
+2026-04-10 23:52:14.836  9737-10022 [AudioDSP]              com.reedersystems.commandcomms       D  TX_GATE OPEN envelope=-40.1dB openThreshold=-42.0dB closeThreshold=-46.0dB frame=382 t=7853ms
+2026-04-10 23:52:14.915  9737-10022 [AudioDSP]              com.reedersystems.commandcomms       D  TX_GATE CLOSED envelope=-48.4dB openThreshold=-42.0dB closeThreshold=-46.0dB frame=386 t=7932ms
+2026-04-10 23:52:15.095  9737-10022 [AudioDSP]              com.reedersystems.commandcomms       D  TX_GATE OPEN envelope=-41.7dB openThreshold=-42.0dB closeThreshold=-46.0dB frame=395 t=8112ms
+2026-04-10 23:52:15.234  9737-10022 [AudioDSP]              com.reedersystems.commandcomms       D  TX_GATE CLOSED envelope=-47.6dB openThreshold=-42.0dB closeThreshold=-46.0dB frame=402 t=8251ms
+2026-04-10 23:52:15.254  9737-10022 [AudioDSP]              com.reedersystems.commandcomms       D  TX_GATE OPEN envelope=-39.0dB openThreshold=-42.0dB closeThreshold=-46.0dB frame=403 t=8271ms
+2026-04-10 23:52:15.338  9737-10022 [AudioDSP]              com.reedersystems.commandcomms       D  TX_GATE CLOSED envelope=-45.4dB openThreshold=-42.0dB closeThreshold=-46.0dB frame=407 t=8355ms
+2026-04-10 23:52:15.380  9737-9737  [PTT-DIAG]              com.reedersystems.commandcomms       D  MainActivity PTT UP source=MainActivity code=230 action=UP ts=1775879535379
+2026-04-10 23:52:15.380  9737-9737  [PTT-DIAG]              com.reedersystems.commandcomms       D  MainActivity PTT UP — forwarding to BackgroundAudioService (signaling=true)
+2026-04-10 23:52:15.383  9737-9737  [PTT-DIAG]              com.reedersystems.commandcomms       D  PttHardwareReceiver.onReceive action=android.intent.action.PTT.up extras=null source=broadcast
+2026-04-10 23:52:15.384  9737-9737  [PTT-DIAG]              com.reedersystems.commandcomms       D  PttHardwareReceiver: mapped action=android.intent.action.PTT.up -> svcAction=com.reedersystems.commandcomms.SVC_PTT_UP
+2026-04-10 23:52:15.386  9737-9737  [PTT-DIAG]              com.reedersystems.commandcomms       D  PttHardwareReceiver: WakeLock acquired (auto-releases in 5000ms)
+2026-04-10 23:52:15.389  9737-9737  [PTT-DIAG]              com.reedersystems.commandcomms       D  {"event":"RADIO_PTT_UP","pttState":"TRANSMITTING","channelKey":"DISPATCH__DISPATCH"}
+2026-04-10 23:52:15.390  9737-9737  [PTT-DIAG]              com.reedersystems.commandcomms       D  PTT_STATE TRANSMITTING -> CLEANING_UP channelKey=DISPATCH__DISPATCH
+2026-04-10 23:52:15.414  9737-9737  [PTT-DIAG]              com.reedersystems.commandcomms       D  {"event":"RADIO_PTT_UP_DEBOUNCED","deltaMs":24}
+2026-04-10 23:52:15.553  9737-10022 [UdpTransport]          com.reedersystems.commandcomms       D  TX_SUMMARY packets=51 totalPkts=965 totalBytes=196313 failures=0 dest=comms.reeder-systems.com:5100 t=8570ms
+2026-04-10 23:52:15.635  9737-9869  [OpusCodec]             com.reedersystems.commandcomms       D  ENCODE_SUMMARY frames=51 totalFrames=330 totalPcmBytes=211200 totalEncodedBytes=52800 t=8652ms
+2026-04-10 23:52:16.519  9737-9869  [RadioEngine]           com.reedersystems.commandcomms       D  ENCODE_THREAD_EXIT framesEncoded=372 t=9536ms
+2026-04-10 23:52:16.536  9737-10022 AudioRecord             com.reedersystems.commandcomms       D  stop: 0x842a3600
+2026-04-10 23:52:16.568  9737-10022 AudioRecord             com.reedersystems.commandcomms       D  stop done
+2026-04-10 23:52:16.568  9737-10022 AudioRecord             com.reedersystems.commandcomms       D  stop: 0x842a3600
+2026-04-10 23:52:16.569  9737-10022 AudioRecord             com.reedersystems.commandcomms       D  stop: 0x842a3600
+2026-04-10 23:52:16.575  9737-9737  [PTT-DIAG]              com.reedersystems.commandcomms       D  RadioState updated: IDLE
+2026-04-10 23:52:16.575  9737-10022 [RadioState]            com.reedersystems.commandcomms       D  State transition: TRANSMITTING -> IDLE reason=tx_stopped activeChannel=DISPATCH__DISPATCH txPipeline=false rxPipeline=true t=9592ms
+2026-04-10 23:52:16.575  9737-10022 [RadioEngine]           com.reedersystems.commandcomms       D  {"event":"TX_STOPPED","cleanupMs":1153,"lastSendGapMs":56,"durationMs":9593,"framesRead":410,"framesEncoded":372,"pktSent":372,"failures":0,"pcmFallback":6,"silentFrames":129,"stopReason":"ptt_release"}
+2026-04-10 23:52:16.588  9737-10022 [RadioEngine]           com.reedersystems.commandcomms       D  TX_SESSION_END duration=9593ms reqRate=16000 actRate=16000 ch=1 src=VOICE_COMMUNICATION framesRead=410 framesEncoded=372 pktSent=372 failures=0 encodeFailures=0 assertionFailures=0 pcmFallback=6 silentFrames=129 partials=0 zeros=0 probeRms=[] first10rms=[1.3,2.6,1.8,18.4,15.1,16.6,17.0,15.9,7.7,111.9] stop=ptt_release lastSendGapMs=56 t=9605ms
+2026-04-10 23:52:16.588  9737-10022 [FloorCtrl]             com.reedersystems.commandcomms       D  releaseFloor channelKey=DISPATCH__DISPATCH state=IDLE t=9605ms
+2026-04-10 23:52:16.589  9737-10022 [RadioSigGW]            com.reedersystems.commandcomms       D  releaseFloor channelKey=DISPATCH__DISPATCH t=9606ms
+2026-04-10 23:52:16.589  9737-10022 [PTT-DIAG]              com.reedersystems.commandcomms       D  [FloorCtrl] SIGNALING_FLOOR_RELEASE channelKey=DISPATCH__DISPATCH unitId=INDIANA-1
+2026-04-10 23:52:16.591  9737-10022 [PTT-DIAG]              com.reedersystems.commandcomms       D  {"event":"PTT_RELEASE_SENT","channelId":"DISPATCH__DISPATCH"}
+2026-04-10 23:52:16.592  9737-10022 [PTT-DIAG]              com.reedersystems.commandcomms       D  Sending PTT_TX_ENDED broadcast
+2026-04-10 23:52:16.592  9737-9865  [PTT-DIAG]              com.reedersystems.commandcomms       D  Floor RELEASED
+2026-04-10 23:52:16.595  9737-9737  [PTT-DIAG]              com.reedersystems.commandcomms       D  PTT_TX_ENDED received — setting pttState = IDLE
+2026-04-10 23:52:16.659  9737-10022 [FloorCtrl]             com.reedersystems.commandcomms       D  Channel idle state=IDLE t=9676ms
+2026-04-10 23:52:16.681  9737-10022 [ToneEvent]             com.reedersystems.commandcomms       D  {"tone":"end-of-tx","trigger":"ptt_up","state":"CLEANING_UP","signaling":true,"ts":1775879536681}
+2026-04-10 23:52:16.684  9737-10022 [PTT-DIAG]              com.reedersystems.commandcomms       D  Radio PTT UP: end-of-TX tone for roomKey DISPATCH__DISPATCH
+2026-04-10 23:52:16.685  9737-10022 [PTT-DIAG]              com.reedersystems.commandcomms       D  PTT_STATE CLEANING_UP -> IDLE channelKey=DISPATCH__DISPATCH
+2026-04-10 23:52:16.685  9737-10022 [PTT-DIAG]              com.reedersystems.commandcomms       D  {"event":"PTT_CLEANUP_COMPLETE","state":"IDLE","cleanupMs":1294}
+2026-04-10 23:52:16.704  9737-9777  AudioTrack              com.reedersystems.commandcomms       D  set(): 0x84b6c700, streamType -1, sampleRate 16000, format 0x1, channelMask 0x1, frameCount 2400, flags #0, notificationFrames 0, sessionId 0, transferType 4, uid -1, pid -1
+2026-04-10 23:52:16.705  9737-9777  AudioTrack              com.reedersystems.commandcomms       D  Building AudioTrack with attributes: usage = 3, content = 4, flags = 0x0, tags = []
+2026-04-10 23:52:16.705  9737-9777  AudioTrack              com.reedersystems.commandcomms       D  set: Create AudioTrackThread, tid = 10410
+2026-04-10 23:52:16.709  9737-9777  AudioTrack              com.reedersystems.commandcomms       D  createTrack_l: 0x84b6c700, mCblk = 0x854761c0, mLatency = 202, mAfLatency = 52, frameCount = 2400, mSampleRate = 16000, mFlags = 0, mReqFrameCount = 2400, mNotificationFramesAct = 0
+2026-04-10 23:52:16.718  9737-9777  AudioTrack              com.reedersystems.commandcomms       D  start(): 0x84b6c700, mState = 1
+2026-04-10 23:52:16.927  9737-9777  AudioTrack              com.reedersystems.commandcomms       D  stop(): 0x84b6c700, mState = 0
+2026-04-10 23:52:16.928  9737-9777  AudioTrack              com.reedersystems.commandcomms       D  audiotrack 0x84b6c700 stop done
+2026-04-10 23:52:16.928  9737-9777  AudioTrack              com.reedersystems.commandcomms       D  stop(): 0x84b6c700, mState = 1
+2026-04-10 23:52:16.929  9737-9777  AudioTrack              com.reedersystems.commandcomms       D  ~AudioTrack(): 0x84b6c700
+2026-04-10 23:52:16.930  9737-9777  AudioTrack              com.reedersystems.commandcomms       D  stop(): 0x84b6c700, mState = 1
+2026-04-10 23:52:18.449  9737-10022 [RadioEngine]           com.reedersystems.commandcomms       D  RX_DIAG rxTotal=0 rxNew=0 jbSize=0 jbDepth=3 jbPlaying=false channelIdx=169 t=11466ms
+2026-04-10 23:52:19.435  9737-10022 [UdpTransport]          com.reedersystems.commandcomms       D  {"event":"UDP_KEEPALIVE_SENT","dest":"comms.reeder-systems.com:5100","fast":false,"intervalMs":8000}
