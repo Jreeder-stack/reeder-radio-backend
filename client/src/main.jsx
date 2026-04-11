@@ -14,6 +14,7 @@ import DispatchConsole from "./pages/DispatchConsole.jsx";
 import DispatcherMap from "./pages/DispatcherMap.jsx";
 import RadioApp from "./pages/RadioApp.jsx";
 import RecordingLogsPage from "./pages/RecordingLogsPage.jsx";
+import RadioManagement from "./pages/RadioManagement.jsx";
 import { RadioDeckView } from "./components/MobileRadio/RadioDeckView.jsx";
 import { MobileLogin } from "./components/MobileRadio/MobileLogin.jsx";
 import { MobileSettings } from "./components/MobileRadio/MobileSettings.jsx";
@@ -199,6 +200,11 @@ function RecordingLogsWrapper() {
   return <RecordingLogsPage user={user} onLogout={handleLogout} />;
 }
 
+function RadioManagementWrapper() {
+  const { user } = useAuth();
+  return <RadioManagement user={user} />;
+}
+
 function MobileSettingsWrapper() {
   const { logout } = useAuth();
   const { disconnectAll } = useAudioConnection();
@@ -282,6 +288,14 @@ function ConnectedRoutes() {
               element={
                 <ProtectedRoute dispatcherOnly>
                   <RecordingLogsWrapper />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/radios"
+              element={
+                <ProtectedRoute dispatcherOnly>
+                  <RadioManagementWrapper />
                 </ProtectedRoute>
               }
             />

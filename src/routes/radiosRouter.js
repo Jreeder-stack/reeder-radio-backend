@@ -10,6 +10,7 @@ import {
   getRadioById,
   assignRadioUnit,
   setRadioLocked,
+  getAllUsers,
 } from '../db/index.js';
 import pool from '../db/index.js';
 
@@ -92,6 +93,16 @@ router.get('/', requireDispatcher, async (req, res) => {
   } catch (err) {
     console.error('[Radios] List error:', err);
     return res.status(500).json({ error: 'Failed to fetch radio list' });
+  }
+});
+
+router.get('/users', requireDispatcher, async (req, res) => {
+  try {
+    const users = await getAllUsers();
+    return res.json({ users });
+  } catch (err) {
+    console.error('[Radios] Users list error:', err);
+    return res.status(500).json({ error: 'Failed to fetch users' });
   }
 });
 
