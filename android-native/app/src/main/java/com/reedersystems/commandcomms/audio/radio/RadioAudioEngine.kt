@@ -8,6 +8,7 @@ import android.media.AudioManager
 import android.media.AudioRecord
 import android.media.MediaRecorder
 import android.media.audiofx.AutomaticGainControl
+import android.media.audiofx.NoiseSuppressor
 import android.os.Build
 import android.util.Log
 import kotlinx.coroutines.*
@@ -42,6 +43,7 @@ class RadioAudioEngine(private val context: Context) {
 
     private var audioRecord: AudioRecord? = null
     private var autoGainControl: AutomaticGainControl? = null
+    private var noiseSuppressor: NoiseSuppressor? = null
     private var captureJob: Job? = null
     private var encodeJob: Job? = null
     private var encodeQueue: LinkedBlockingQueue<ByteArray>? = null
@@ -155,6 +157,8 @@ class RadioAudioEngine(private val context: Context) {
         }
         try { autoGainControl?.release() } catch (_: Exception) {}
         autoGainControl = null
+        try { noiseSuppressor?.release() } catch (_: Exception) {}
+        noiseSuppressor = null
         try { audioRecord?.stop() } catch (_: Exception) {}
         try { audioRecord?.release() } catch (_: Exception) {}
         audioRecord = null
@@ -352,9 +356,9 @@ class RadioAudioEngine(private val context: Context) {
 
         data class Candidate(val source: Int, val name: String)
         val candidates = mutableListOf(
-            Candidate(MediaRecorder.AudioSource.MIC, "MIC"),
+            Candidate(MediaRecorder.AudioSource.VOICE_COMMUNICATION, "VOICE_COMMUNICATION"),
             Candidate(MediaRecorder.AudioSource.VOICE_RECOGNITION, "VOICE_RECOGNITION"),
-            Candidate(MediaRecorder.AudioSource.VOICE_COMMUNICATION, "VOICE_COMMUNICATION")
+            Candidate(MediaRecorder.AudioSource.MIC, "MIC")
         )
         if (Build.VERSION.SDK_INT >= 24) {
             candidates.add(Candidate(MediaRecorder.AudioSource.UNPROCESSED, "UNPROCESSED"))
@@ -587,6 +591,16 @@ class RadioAudioEngine(private val context: Context) {
             } catch (e: Exception) {
                 Log.w("[RadioError]", "AutomaticGainControl unavailable: ${e.message} method=startPreCapture")
             }
+            try {
+                if (NoiseSuppressor.isAvailable()) {
+                    noiseSuppressor = NoiseSuppressor.create(sessionId)?.also { it.enabled = true }
+                    Log.d("[AudioCapture]", "NoiseSuppressor attached=true enabled=true sessionId=$sessionId ${RadioDiagLog.elapsedTag()}")
+                } else {
+                    Log.d("[AudioCapture]", "NoiseSuppressor attached=false reason=unavailable ${RadioDiagLog.elapsedTag()}")
+                }
+            } catch (e: Exception) {
+                Log.w("[RadioError]", "NoiseSuppressor unavailable: ${e.message} method=startPreCapture")
+            }
 
             synchronized(preBufferLock) {
                 preBuffer.clear()
@@ -813,7 +827,7 @@ class RadioAudioEngine(private val context: Context) {
         synchronized(preBufferLock) {
             preCapturingToBuffer = false
         }
-        val hasResources = audioRecord != null || autoGainControl != null
+        val hasResources = audioRecord != null || autoGainControl != null || noiseSuppressor != null
         if (!wasPreCapturing && !hasResources) {
             val discardedOrphan: Int
             synchronized(preBufferLock) {
@@ -830,6 +844,12 @@ class RadioAudioEngine(private val context: Context) {
             Log.w("[RadioError]", "AGC release threw: ${e.message} method=stopPreCapture")
         }
         autoGainControl = null
+        try {
+            noiseSuppressor?.release()
+        } catch (e: Exception) {
+            Log.w("[RadioError]", "NoiseSuppressor release threw: ${e.message} method=stopPreCapture")
+        }
+        noiseSuppressor = null
         try {
             audioRecord?.stop()
         } catch (e: IllegalStateException) {
@@ -996,6 +1016,16 @@ class RadioAudioEngine(private val context: Context) {
                 }
             } catch (e: Exception) {
                 Log.w("[RadioError]", "AutomaticGainControl unavailable: ${e.message} method=startTransmit")
+            }
+            try {
+                if (NoiseSuppressor.isAvailable()) {
+                    noiseSuppressor = NoiseSuppressor.create(sessionId)?.also { it.enabled = true }
+                    Log.d("[AudioCapture]", "NoiseSuppressor attached=true enabled=true sessionId=$sessionId ${RadioDiagLog.elapsedTag()}")
+                } else {
+                    Log.d("[AudioCapture]", "NoiseSuppressor attached=false reason=unavailable ${RadioDiagLog.elapsedTag()}")
+                }
+            } catch (e: Exception) {
+                Log.w("[RadioError]", "NoiseSuppressor unavailable: ${e.message} method=startTransmit")
             }
 
             isTransmitting = true
@@ -1208,6 +1238,12 @@ class RadioAudioEngine(private val context: Context) {
         }
         autoGainControl = null
         try {
+            noiseSuppressor?.release()
+        } catch (e: Exception) {
+            Log.w("[RadioError]", "NoiseSuppressor release threw: ${e.message} method=stopTransmit")
+        }
+        noiseSuppressor = null
+        try {
             audioRecord?.stop()
         } catch (e: IllegalStateException) {
             Log.w("[RadioError]", "AudioRecord stop failed: ${e.message} method=stopTransmit")
@@ -1363,9 +1399,9 @@ class RadioAudioEngine(private val context: Context) {
 
     var txGain: Double = 2.5
 
-    var txGateThresholdDb: Double = -36.0
+    var txGateThresholdDb: Double = -50.0
     var txGateAttackMs: Double = 0.002
-    var txGateReleaseMs: Double = 0.08
+    var txGateReleaseMs: Double = 0.15
     private var txGateEnvelopeDb: Double = -90.0
     private var txGateAttenuation: Double = 0.0
     private var txGateOpen: Boolean = false

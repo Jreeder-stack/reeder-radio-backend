@@ -249,21 +249,21 @@ class AudioCapture(
     }
 
     private fun selectAudioSource(): Int? {
-        data class Candidate(val source: Int, val name: String)
+        data class Candidate(val source: Int, val name: String, val priority: Int)
         val candidates = mutableListOf(
-            Candidate(MediaRecorder.AudioSource.MIC, "MIC"),
-            Candidate(MediaRecorder.AudioSource.VOICE_RECOGNITION, "VOICE_RECOGNITION"),
-            Candidate(MediaRecorder.AudioSource.VOICE_COMMUNICATION, "VOICE_COMMUNICATION")
+            Candidate(MediaRecorder.AudioSource.VOICE_COMMUNICATION, "VOICE_COMMUNICATION", 3),
+            Candidate(MediaRecorder.AudioSource.VOICE_RECOGNITION, "VOICE_RECOGNITION", 2),
+            Candidate(MediaRecorder.AudioSource.MIC, "MIC", 1)
         )
         if (Build.VERSION.SDK_INT >= 24) {
-            candidates.add(Candidate(MediaRecorder.AudioSource.UNPROCESSED, "UNPROCESSED"))
+            candidates.add(Candidate(MediaRecorder.AudioSource.UNPROCESSED, "UNPROCESSED", 0))
         }
 
         Log.d(DIAG_TAG, "CAPTURE_AUDIO_SOURCE_PROBE_BEGIN candidates=${candidates.map { it.name }}")
 
         val allResults = candidates.map { c -> probeAudioSource(c.source, c.name) }
         val validResults = allResults.filter { it.accepted }
-        val best = validResults.maxByOrNull { it.avgRms }
+        val best = validResults.maxByOrNull { candidates.first { c -> c.source == it.source }.priority }
 
         if (best != null) {
             Log.d(DIAG_TAG, "CAPTURE_AUDIO_SOURCE selected=${best.sourceName} avgRms=${String.format("%.1f", best.avgRms)} reason=best_valid_source")
