@@ -9,9 +9,10 @@ router.get('/config', (req, res) => {
   const audioRelayPort = parseInt(process.env.AUDIO_RELAY_PORT, 10) || 5100;
   const audioRelayHost = process.env.AUDIO_RELAY_HOST || req.hostname;
   const transportMode = process.env.RADIO_TRANSPORT_MODE || 'custom-radio';
+  const forwardedProto = req.get('x-forwarded-proto');
   const useTls = process.env.RADIO_USE_TLS
     ? process.env.RADIO_USE_TLS === 'true'
-    : process.env.NODE_ENV === 'production';
+    : forwardedProto === 'https' || process.env.NODE_ENV === 'production';
 
   let signalingUrl;
   if (process.env.RADIO_SIGNALING_URL) {

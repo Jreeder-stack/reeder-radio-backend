@@ -1,0 +1,578 @@
+--------- beginning of main
+2026-04-10 21:06:52.213   365-434   chatty                  surfaceflinger                       I  uid=1000(system) HwBinder:365_1 expire 1 line
+2026-04-10 21:06:52.244  1482-20343 ADB_SERVICES            adbd                                 I  post waitpid (pid=20342) status=0000
+2026-04-10 21:06:52.267   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337467): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:06:52.310   737-928   WifiStateMachine        system_server                        D   MtkL2ConnectedState { when=-3ms what=131155 arg1=150 target=com.android.internal.util.StateMachine$SmHandler } 150 0, mShouldDeferDisableWifi = false, mState = MONITORING
+2026-04-10 21:06:52.370   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337468): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:06:52.610   365-434   chatty                  surfaceflinger                       I  uid=1000(system) HwBinder:365_1 identical 3 lines
+2026-04-10 21:06:52.647   356-356   NxpExtns                vendor.nxp.nxpnfc@1.0-service        D  find found NXP_SYS_CLK_SRC_SEL=(0x2)
+2026-04-10 21:06:52.647   356-356   NxpExtns                vendor.nxp.nxpnfc@1.0-service        D  find found NXP_SYS_CLK_FREQ_SEL=(0x4)
+2026-04-10 21:06:52.647   356-356   NxpExtns                vendor.nxp.nxpnfc@1.0-service        D  find found NXP_SYS_CLOCK_TO_CFG=(0x1)
+2026-04-10 21:06:52.797   365-434   chatty                  surfaceflinger                       I  uid=1000(system) HwBinder:365_1 identical 6 lines
+2026-04-10 21:06:52.827   356-356   NxpExtns                vendor.nxp.nxpnfc@1.0-service        D  find found NXP_FW_NAME=libpn553_fw.so
+2026-04-10 21:06:53.313   365-434   chatty                  surfaceflinger                       I  uid=1000(system) HwBinder:365_1 identical 4 lines
+2026-04-10 21:06:53.643   365-434   chatty                  surfaceflinger                       I  uid=1000(system) HwBinder:365_1 identical 3 lines
+2026-04-10 21:06:53.683   356-356   NxpExtns                vendor.nxp.nxpnfc@1.0-service        D  find found NXP_SYS_CLK_SRC_SEL=(0x2)
+2026-04-10 21:06:53.684   356-356   NxpExtns                vendor.nxp.nxpnfc@1.0-service        D  find found NXP_SYS_CLK_FREQ_SEL=(0x4)
+2026-04-10 21:06:53.684   356-356   NxpExtns                vendor.nxp.nxpnfc@1.0-service        D  find found NXP_SYS_CLOCK_TO_CFG=(0x1)
+2026-04-10 21:06:53.783   365-434   chatty                  surfaceflinger                       I  uid=1000(system) HwBinder:365_1 identical 4 lines
+2026-04-10 21:06:53.818   354-373   powerd                  merged_hal_service                   I  [powerd_req] POWER_MSG_QUERY_INFO: cmd:6, param:0
+2026-04-10 21:06:53.864   356-356   NxpExtns                vendor.nxp.nxpnfc@1.0-service        D  find found NXP_FW_NAME=libpn553_fw.so
+2026-04-10 21:06:54.068   401-401   thermal_repeater        thermal                              I  [recvMdThermalInfo] ret=34, strLen=127,  3, 47, -127, 25232, 32767, -28551
+2026-04-10 21:06:54.227   365-434   chatty                  surfaceflinger                       I  uid=1000(system) HwBinder:365_1 identical 1 line
+2026-04-10 21:06:54.343   365-434   chatty                  surfaceflinger                       I  uid=1000(system) HwBinder:365_1 identical 3 lines
+2026-04-10 21:06:54.602   325-20358 libc-netbsd             netd                                 D  [getaddrinfo]: netid=238; mark=262382; ai_flags=1024; ai_family=0
+2026-04-10 21:06:54.603   325-20358 libc-netbsd             netd                                 D  default dns: query_ipv6=1, query_ipv4=1
+2026-04-10 21:06:54.611   325-20359 libc-netbsd             netd                                 D  [getaddrinfo]: netid=238; mark=262382; ai_flags=1024; ai_family=0
+2026-04-10 21:06:54.612   325-20359 libc-netbsd             netd                                 D  default dns: query_ipv6=1, query_ipv4=1
+2026-04-10 21:06:54.657   325-20358 libc-netbsd             netd                                 D  res_queryN succeed
+2026-04-10 21:06:54.658 19019-19802 libc-netbsd             com.reedersystems.commandcomms       D  getaddrinfo: get result from proxy gai_error = 0
+2026-04-10 21:06:54.664 19019-20360 [PTT-DIAG]              com.reedersystems.commandcomms       W  Socket connect error: io.socket.engineio.client.EngineIOException: websocket error
+2026-04-10 21:06:54.664 19019-20360 [APP-STARTUP]           com.reedersystems.commandcomms       E  SIGNALING_AUTH_FAILED reason=connect_error io.socket.engineio.client.EngineIOException: websocket error
+2026-04-10 21:06:54.695   325-20359 libc-netbsd             netd                                 D  res_queryN succeed
+2026-04-10 21:06:54.696 19019-19097 libc-netbsd             com.reedersystems.commandcomms       D  getaddrinfo: get result from proxy gai_error = 0
+2026-04-10 21:06:54.701 19019-20362 [PTT-DIAG]              com.reedersystems.commandcomms       W  Socket connect error: io.socket.engineio.client.EngineIOException: websocket error
+2026-04-10 21:06:54.701 19019-20362 [APP-STARTUP]           com.reedersystems.commandcomms       E  SIGNALING_AUTH_FAILED reason=connect_error io.socket.engineio.client.EngineIOException: websocket error
+2026-04-10 21:06:54.717   356-356   NxpExtns                vendor.nxp.nxpnfc@1.0-service        D  find found NXP_SYS_CLK_SRC_SEL=(0x2)
+2026-04-10 21:06:54.717   356-356   NxpExtns                vendor.nxp.nxpnfc@1.0-service        D  find found NXP_SYS_CLK_FREQ_SEL=(0x4)
+2026-04-10 21:06:54.717   356-356   NxpExtns                vendor.nxp.nxpnfc@1.0-service        D  find found NXP_SYS_CLOCK_TO_CFG=(0x1)
+2026-04-10 21:06:54.860   365-434   chatty                  surfaceflinger                       I  uid=1000(system) HwBinder:365_1 identical 6 lines
+2026-04-10 21:06:54.897   356-356   NxpExtns                vendor.nxp.nxpnfc@1.0-service        D  find found NXP_FW_NAME=libpn553_fw.so
+2026-04-10 21:06:55.260   365-434   chatty                  surfaceflinger                       I  uid=1000(system) HwBinder:365_1 identical 1 line
+2026-04-10 21:06:55.326   737-928   WifiStateMachine        system_server                        D   MtkL2ConnectedState { when=-3ms what=131155 arg1=150 target=com.android.internal.util.StateMachine$SmHandler } 150 0, mShouldDeferDisableWifi = false, mState = MONITORING
+2026-04-10 21:06:55.349   365-832   BufferQueueProducer     surfaceflinger                       I  [StatusBar#0](this:0xaf6db000,id:4,api:1,p:967,c:365) queueBuffer: fps=0.25 dur=3997.78 max=3997.78 min=3997.78
+2026-04-10 21:06:55.364   352-352   hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 21:06:55.366   365-365   DisplayDevice           surfaceflinger                       I  [studio.screen.sharing:0 (type:2)] fps:0.250030,dur:3999.51,max:3999.51,min:3999.51
+2026-04-10 21:06:55.366   365-365   DisplayDevice           surfaceflinger                       I  [Built-in Screen (type:0)] fps:0.250022,dur:3999.64,max:3999.64,min:3999.64
+2026-04-10 21:06:55.367   397-6403  BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa99c8000,id:504,api:1,p:397,c:397) queueBuffer: fps=0.25 dur=3999.52 max=3999.52 min=3999.52
+2026-04-10 21:06:55.405   352-9293  MDP                     and...graphics.composer@2.1-service  W  DpDriver::waitFramedone takes 38ms
+2026-04-10 21:06:55.405   352-9293  MDP                     and...graphics.composer@2.1-service  W  DpAsyncBlitStream: 0xab085820, 38 ms
+2026-04-10 21:06:55.400   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337469): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:06:55.464   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337470): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:06:55.564 19019-19118 [RadioEngine]           com.reedersystems.commandcomms       D  RX_DIAG rxTotal=0 rxNew=0 jbSize=0 jbDepth=3 jbPlaying=false channelIdx=535 t=200065ms
+2026-04-10 21:06:55.564   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337471): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:06:55.592 19019-19118 [UdpTransport]          com.reedersystems.commandcomms       D  {"event":"UDP_KEEPALIVE_SENT","dest":"comms.reeder-systems.com:5100","fast":false,"intervalMs":8000}
+2026-04-10 21:06:55.664   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337472): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:06:55.730   365-434   chatty                  surfaceflinger                       I  uid=1000(system) HwBinder:365_1 identical 2 lines
+2026-04-10 21:06:55.754   356-356   NxpExtns                vendor.nxp.nxpnfc@1.0-service        D  find found NXP_SYS_CLK_SRC_SEL=(0x2)
+2026-04-10 21:06:55.754   356-356   NxpExtns                vendor.nxp.nxpnfc@1.0-service        D  find found NXP_SYS_CLK_FREQ_SEL=(0x4)
+2026-04-10 21:06:55.754   356-356   NxpExtns                vendor.nxp.nxpnfc@1.0-service        D  find found NXP_SYS_CLOCK_TO_CFG=(0x1)
+2026-04-10 21:06:55.764   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337473): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:06:55.800   365-434   chatty                  surfaceflinger                       I  uid=1000(system) HwBinder:365_1 identical 1 line
+2026-04-10 21:06:55.829   354-373   powerd                  merged_hal_service                   I  [powerd_req] POWER_MSG_QUERY_INFO: cmd:6, param:0
+2026-04-10 21:06:55.867   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337474): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:06:55.934   356-356   NxpExtns                vendor.nxp.nxpnfc@1.0-service        D  find found NXP_FW_NAME=libpn553_fw.so
+2026-04-10 21:06:55.967   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337475): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:06:56.067   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337476): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:06:56.167   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337477): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:06:56.267   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337478): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:06:56.351   365-832   BufferQueueProducer     surfaceflinger                       I  [StatusBar#0](this:0xaf6db000,id:4,api:1,p:967,c:365) queueBuffer: fps=1.00 dur=1002.42 max=1002.42 min=1002.42
+2026-04-10 21:06:56.364   352-352   hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 21:06:56.366   365-365   DisplayDevice           surfaceflinger                       I  [studio.screen.sharing:0 (type:2)] fps:0.999686,dur:1000.31,max:1000.31,min:1000.31
+2026-04-10 21:06:56.366   365-365   DisplayDevice           surfaceflinger                       I  [Built-in Screen (type:0)] fps:0.999807,dur:1000.19,max:1000.19,min:1000.19
+2026-04-10 21:06:56.367   397-6403  BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa99c8000,id:504,api:1,p:397,c:397) queueBuffer: fps=1.00 dur=1000.26 max=1000.26 min=1000.26
+2026-04-10 21:06:56.364   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337479): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:06:56.407   365-434   chatty                  surfaceflinger                       I  uid=1000(system) HwBinder:365_1 identical 1 line
+2026-04-10 21:06:56.464   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337480): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:06:56.564   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337481): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:06:56.640   365-434   chatty                  surfaceflinger                       I  uid=1000(system) HwBinder:365_1 identical 1 line
+2026-04-10 21:06:56.664   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337482): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:06:56.733   365-434   chatty                  surfaceflinger                       I  uid=1000(system) HwBinder:365_1 identical 2 lines
+2026-04-10 21:06:56.767   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337483): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:06:56.790   356-356   NxpExtns                vendor.nxp.nxpnfc@1.0-service        D  find found NXP_SYS_CLK_SRC_SEL=(0x2)
+2026-04-10 21:06:56.790   356-356   NxpExtns                vendor.nxp.nxpnfc@1.0-service        D  find found NXP_SYS_CLK_FREQ_SEL=(0x4)
+2026-04-10 21:06:56.790   356-356   NxpExtns                vendor.nxp.nxpnfc@1.0-service        D  find found NXP_SYS_CLOCK_TO_CFG=(0x1)
+2026-04-10 21:06:56.827   365-434   chatty                  surfaceflinger                       I  uid=1000(system) HwBinder:365_1 identical 1 line
+2026-04-10 21:06:56.867   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337484): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:06:56.943   365-434   chatty                  surfaceflinger                       I  uid=1000(system) HwBinder:365_1 identical 3 lines
+2026-04-10 21:06:56.970   356-356   NxpExtns                vendor.nxp.nxpnfc@1.0-service        D  find found NXP_FW_NAME=libpn553_fw.so
+2026-04-10 21:06:56.967   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337485): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:06:57.067   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337486): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:06:57.167   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337487): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:06:57.267   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337488): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:06:57.340   365-434   chatty                  surfaceflinger                       I  uid=1000(system) HwBinder:365_1 identical 1 line
+2026-04-10 21:06:57.364   352-352   hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 21:06:57.364   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337489): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:06:57.433   365-434   chatty                  surfaceflinger                       I  uid=1000(system) HwBinder:365_1 identical 2 lines
+2026-04-10 21:06:57.464   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337490): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:06:57.564   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337491): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:06:57.664   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337492): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:06:57.737   365-434   chatty                  surfaceflinger                       I  uid=1000(system) HwBinder:365_1 identical 1 line
+2026-04-10 21:06:57.764   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337493): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:06:57.824   356-356   NxpExtns                vendor.nxp.nxpnfc@1.0-service        D  find found NXP_SYS_CLK_SRC_SEL=(0x2)
+2026-04-10 21:06:57.824   356-356   NxpExtns                vendor.nxp.nxpnfc@1.0-service        D  find found NXP_SYS_CLK_FREQ_SEL=(0x4)
+2026-04-10 21:06:57.824   356-356   NxpExtns                vendor.nxp.nxpnfc@1.0-service        D  find found NXP_SYS_CLOCK_TO_CFG=(0x1)
+2026-04-10 21:06:57.839   354-373   powerd                  merged_hal_service                   I  [powerd_req] POWER_MSG_QUERY_INFO: cmd:6, param:0
+2026-04-10 21:06:57.864   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337494): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:06:57.947   365-434   chatty                  surfaceflinger                       I  uid=1000(system) HwBinder:365_1 identical 3 lines
+2026-04-10 21:06:57.967   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337495): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:06:58.003   356-356   NxpExtns                vendor.nxp.nxpnfc@1.0-service        D  find found NXP_FW_NAME=libpn553_fw.so
+2026-04-10 21:06:58.067   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337496): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:06:58.167   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337497): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:06:58.188   737-916   zhouzhe                 system_server                        D  keyCode111 = 230
+--------- beginning of system
+2026-04-10 21:06:58.189   737-916   tyd                     system_server                        D  sendBroadcast: android.intent.action.PTT.down
+2026-04-10 21:06:58.189   737-916   ContextImpl             system_server                        W  Calling a method in the system process without a qualified user: android.app.ContextImpl.sendBroadcast:967 com.android.server.policy.PhoneWindowManager.sendBC:6496 com.android.server.policy.PhoneWindowManager.interceptKeyBeforeQueueing:6843 com.freeme.server.policy.FreemePhoneWindowManager.interceptKeyBeforeQueueing:301 com.android.server.wm.InputMonitor.interceptKeyBeforeQueueing:449 
+2026-04-10 21:06:58.190   737-916   ActivityManager         system_server                        E  Sending non-protected broadcast android.intent.action.PTT.down from system 737:system/1000 pkg android (Explain with AI)
+                                                                                                    java.lang.Throwable
+                                                                                                    	at com.android.server.am.ActivityManagerService.checkBroadcastFromSystem(ActivityManagerService.java:19307)
+                                                                                                    	at com.android.server.am.ActivityManagerService.broadcastIntentLocked(ActivityManagerService.java:19827)
+                                                                                                    	at com.android.server.am.ActivityManagerService.broadcastIntent(ActivityManagerService.java:20062)
+                                                                                                    	at android.app.ContextImpl.sendBroadcast(ContextImpl.java:971)
+                                                                                                    	at com.android.server.policy.PhoneWindowManager.sendBC(PhoneWindowManager.java:6496)
+                                                                                                    	at com.android.server.policy.PhoneWindowManager.interceptKeyBeforeQueueing(PhoneWindowManager.java:6843)
+                                                                                                    	at com.freeme.server.policy.FreemePhoneWindowManager.interceptKeyBeforeQueueing(FreemePhoneWindowManager.java:301)
+                                                                                                    	at com.android.server.wm.InputMonitor.interceptKeyBeforeQueueing(InputMonitor.java:449)
+                                                                                                    	at com.android.server.input.InputManagerService.interceptKeyBeforeQueueing(InputManagerService.java:1975)
+2026-04-10 21:06:58.199   737-916   AES                     system_server                        W  Exception Log handling...
+2026-04-10 21:06:58.201   737-916   AES                     system_server                        D  ExceptionLog: notify aed (process:system_server pid:737 cause:system_server_wtf )
+2026-04-10 21:06:58.201   737-916   AEE_LIBAEE              system_server                        D  shell: raise_exp(11, 737, -1361051648, system_server, 0x0x8b9fd240, 0x0x0)
+2026-04-10 21:06:58.202   737-916   AEE_LIBAEE              system_server                        D  com.mtk.aee.aedshell: connected with AED OK
+2026-04-10 21:06:58.203   684-684   AEE_AED                 aee_aed                              D  $===AEE===AEE===AEE===$
+2026-04-10 21:06:58.203   684-684   AEE_AED                 aee_aed                              D  p 1 poll events 1 revents 1
+2026-04-10 21:06:58.203   684-684   AEE_AED                 aee_aed                              D  PPM cpu cores:4, online:4
+2026-04-10 21:06:58.205   684-684   AEE_AED                 aee_aed                              D  aed_main_fork_worker: generator 0xaca09440, worker 0xbea22798, recv_fd 10
+2026-04-10 21:06:58.207 20380-20380 AEE_AED                 pid-20380                            D  read success, handling msg (Ind, AE_IND_WRN_RAISED)
+2026-04-10 21:06:58.207 20380-20380 AEE_AED                 pid-20380                            I  [preset_info] pid: 737, tid: -1361051648, name: UNKNOWN  >>> system_server <<<
+2026-04-10 21:06:58.208 20380-20380 AEE_AED                 pid-20380                            D  u:r:system_server:s0
+2026-04-10 21:06:58.208 20380-20380 AEE_AED                 pid-20380                            V  dashboard_record_update() : rec->module = system_server 
+2026-04-10 21:06:58.208 20380-20380 AEE_AED                 pid-20380                            D  Skip duplicated exception ! 
+2026-04-10 21:06:58.208 20380-20380 AEE_AED                 pid-20380                            D  Exception Class: 11 
+2026-04-10 21:06:58.208 20380-20380 AEE_AED                 pid-20380                            D  Module: system_server 
+2026-04-10 21:06:58.208 20380-20380 AEE_AED                 pid-20380                            D  Count: 3083 
+2026-04-10 21:06:58.208 20380-20380 AEE_AED                 pid-20380                            D  Last exception time: 1775869579 
+                                                                                                     
+2026-04-10 21:06:58.208 20380-20380 AEE_AED                 pid-20380                            V  process session - skipped 
+2026-04-10 21:06:58.208   737-916   AEE_LIBAEE              system_server                        D  shell: got the request (cmd:Ind,AE_IND_LOG_CLOSE)
+2026-04-10 21:06:58.208   737-916   AEE_LIBAEE              system_server                        D  shell: Got session close ind from AED
+2026-04-10 21:06:58.209   737-916   ActivityManager         system_server                        E  Sending non-protected broadcast android.intent.action.PTT.down from system 737:system/1000 pkg android (Explain with AI)
+                                                                                                    java.lang.Throwable
+                                                                                                    	at com.android.server.am.ActivityManagerService.checkBroadcastFromSystem(ActivityManagerService.java:19307)
+                                                                                                    	at com.android.server.am.ActivityManagerService.broadcastIntentLocked(ActivityManagerService.java:19920)
+                                                                                                    	at com.android.server.am.ActivityManagerService.broadcastIntent(ActivityManagerService.java:20062)
+                                                                                                    	at android.app.ContextImpl.sendBroadcast(ContextImpl.java:971)
+                                                                                                    	at com.android.server.policy.PhoneWindowManager.sendBC(PhoneWindowManager.java:6496)
+                                                                                                    	at com.android.server.policy.PhoneWindowManager.interceptKeyBeforeQueueing(PhoneWindowManager.java:6843)
+                                                                                                    	at com.freeme.server.policy.FreemePhoneWindowManager.interceptKeyBeforeQueueing(FreemePhoneWindowManager.java:301)
+                                                                                                    	at com.android.server.wm.InputMonitor.interceptKeyBeforeQueueing(InputMonitor.java:449)
+                                                                                                    	at com.android.server.input.InputManagerService.interceptKeyBeforeQueueing(InputManagerService.java:1975)
+2026-04-10 21:06:58.210   684-684   AEE_AED                 aee_aed                              D  clear ppm settings
+2026-04-10 21:06:58.212   684-684   AEE_AED                 aee_aed                              D  $===AEE===AEE===AEE===$
+2026-04-10 21:06:58.215   737-916   AES                     system_server                        W  Exception Log handling...
+2026-04-10 21:06:58.217   737-916   AES                     system_server                        D  ExceptionLog: notify aed (process:system_server pid:737 cause:system_server_wtf )
+2026-04-10 21:06:58.217   737-916   AEE_LIBAEE              system_server                        D  shell: raise_exp(11, 737, -1361051648, system_server, 0x0x8b9fde20, 0x0x0)
+2026-04-10 21:06:58.218   737-916   AEE_LIBAEE              system_server                        D  com.mtk.aee.aedshell: connected with AED OK
+2026-04-10 21:06:58.218   684-684   AEE_AED                 aee_aed                              D  $===AEE===AEE===AEE===$
+2026-04-10 21:06:58.219   684-684   AEE_AED                 aee_aed                              D  p 1 poll events 1 revents 1
+2026-04-10 21:06:58.219   684-684   AEE_AED                 aee_aed                              D  PPM cpu cores:4, online:4
+2026-04-10 21:06:58.221   684-684   AEE_AED                 aee_aed                              D  aed_main_fork_worker: generator 0xaca09440, worker 0xbea22798, recv_fd 10
+2026-04-10 21:06:58.223 20381-20381 AEE_AED                 pid-20381                            D  read success, handling msg (Ind, AE_IND_WRN_RAISED)
+2026-04-10 21:06:58.223 20381-20381 AEE_AED                 pid-20381                            I  [preset_info] pid: 737, tid: -1361051648, name: UNKNOWN  >>> system_server <<<
+2026-04-10 21:06:58.224 20381-20381 AEE_AED                 pid-20381                            D  u:r:system_server:s0
+2026-04-10 21:06:58.224 20381-20381 AEE_AED                 pid-20381                            V  dashboard_record_update() : rec->module = system_server 
+2026-04-10 21:06:58.224 20381-20381 AEE_AED                 pid-20381                            D  Skip duplicated exception ! 
+2026-04-10 21:06:58.224 20381-20381 AEE_AED                 pid-20381                            D  Exception Class: 11 
+2026-04-10 21:06:58.224 20381-20381 AEE_AED                 pid-20381                            D  Module: system_server 
+2026-04-10 21:06:58.224 20381-20381 AEE_AED                 pid-20381                            D  Count: 3084 
+2026-04-10 21:06:58.224 20381-20381 AEE_AED                 pid-20381                            D  Last exception time: 1775869618 
+                                                                                                     
+2026-04-10 21:06:58.224 20381-20381 AEE_AED                 pid-20381                            V  process session - skipped 
+2026-04-10 21:06:58.224   737-916   AEE_LIBAEE              system_server                        D  shell: got the request (cmd:Ind,AE_IND_LOG_CLOSE)
+2026-04-10 21:06:58.224   737-916   AEE_LIBAEE              system_server                        D  shell: Got session close ind from AED
+2026-04-10 21:06:58.225   684-684   AEE_AED                 aee_aed                              D  clear ppm settings
+2026-04-10 21:06:58.226   737-915   zhouzhe                 system_server                        D  keyCode222 = 230
+2026-04-10 21:06:58.226   737-835   BroadcastQueue          system_server                        W  Background execution not allowed: receiving Intent { act=android.intent.action.DROPBOX_ENTRY_ADDED flg=0x10 (has extras) } to com.google.android.gms/.stats.service.DropBoxEntryAddedReceiver
+2026-04-10 21:06:58.228 19019-19019 [PTT-DIAG]              com.reedersystems.commandcomms       D  PttHardwareReceiver.onReceive action=android.intent.action.PTT.down extras=null source=broadcast
+2026-04-10 21:06:58.228 19019-19019 [PTT-DIAG]              com.reedersystems.commandcomms       D  PttHardwareReceiver: mapped action=android.intent.action.PTT.down -> svcAction=com.reedersystems.commandcomms.SVC_PTT_DOWN
+2026-04-10 21:06:58.229   684-684   AEE_AED                 aee_aed                              D  $===AEE===AEE===AEE===$
+2026-04-10 21:06:58.231 19019-19019 [PTT-DIAG]              com.reedersystems.commandcomms       D  PttHardwareReceiver: WakeLock acquired (auto-releases in 5000ms)
+2026-04-10 21:06:58.247 19019-19019 [PTT-DIAG]              com.reedersystems.commandcomms       D  MainActivity PTT DOWN source=MainActivity code=230 action=DOWN repeat=0 ts=1775869618247
+2026-04-10 21:06:58.248 19019-19019 [PTT-DIAG]              com.reedersystems.commandcomms       D  MainActivity PTT DOWN — forwarding to BackgroundAudioService (signaling=true)
+2026-04-10 21:06:58.253 19019-19019 [PTT-DIAG]              com.reedersystems.commandcomms       D  {"event":"RADIO_PTT_DOWN","pttState":"IDLE","signaling":true,"channelKey":"TESTING__TESTING 1","channelId":"535"}
+2026-04-10 21:06:58.253 19019-19019 [PTT-DIAG]              com.reedersystems.commandcomms       W  RADIO_READY_BLOCKED_REASON reason=signaling_not_authenticated:DISCONNECTED
+2026-04-10 21:06:58.254 19019-19019 [ToneEvent]             com.reedersystems.commandcomms       D  {"tone":"error","trigger":"ready_sync_blocked","reason":"signaling_not_authenticated","ts":1775869618254}
+2026-04-10 21:06:58.255 19019-19019 [PTT-DIAG]              com.reedersystems.commandcomms       D  Sending PTT_TX_FAILED broadcast
+2026-04-10 21:06:58.262 19019-19019 [PTT-DIAG]              com.reedersystems.commandcomms       D  {"event":"RADIO_PTT_DOWN","pttState":"IDLE","signaling":true,"channelKey":"TESTING__TESTING 1","channelId":"535"}
+2026-04-10 21:06:58.263 19019-19019 [PTT-DIAG]              com.reedersystems.commandcomms       W  RADIO_READY_BLOCKED_REASON reason=signaling_not_authenticated:DISCONNECTED
+2026-04-10 21:06:58.263 19019-19019 [ToneEvent]             com.reedersystems.commandcomms       D  {"tone":"error","trigger":"ready_sync_blocked","reason":"signaling_not_authenticated","ts":1775869618263}
+2026-04-10 21:06:58.264 19019-19019 [PTT-DIAG]              com.reedersystems.commandcomms       D  Sending PTT_TX_FAILED broadcast
+2026-04-10 21:06:58.267 19019-19019 [PTT-DIAG]              com.reedersystems.commandcomms       D  PTT_TX_FAILED received — resetting to IDLE
+2026-04-10 21:06:58.269 19019-19019 [PTT-DIAG]              com.reedersystems.commandcomms       D  PTT_TX_FAILED received — resetting to IDLE
+2026-04-10 21:06:58.267   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337498): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:06:58.278 19019-19063 AudioTrack              com.reedersystems.commandcomms       W  releaseBuffer() track 0x9a667000 disabled due to previous underrun, restarting
+2026-04-10 21:06:58.279   381-5022  APM_AudioPolicyManager  audioserver                          D  startOutput() output 13, stream 8, session 9673
+2026-04-10 21:06:58.279   381-5022  APM::Audio...Descriptor audioserver                          V  changeRefCount() stream 8, count 1
+2026-04-10 21:06:58.281   332-2693  AudioALSAStreamManager  and...re.audio@2.0-service-mediatek  D  +syncSharedOutDevice(), routingSharedOutDevice: 2
+2026-04-10 21:06:58.281   332-2693  AudioALSAStreamManager  and...re.audio@2.0-service-mediatek  D  setMasterVolume(), volume = 1.000000
+2026-04-10 21:06:58.281   332-2693  AudioMTKGainController  and...re.audio@2.0-service-mediatek  D  setNormalVolume(), mSceneIndex = 0, stream 0, devices 0x2, index 6, mode 0x3
+2026-04-10 21:06:58.282   332-2693  AudioMTKGainController  and...re.audio@2.0-service-mediatek  D  setSpeakerGain(), gain = 9, spkAnaType = 3, spkLMixerName = Lineout_PGAL_GAIN, spkRMixerName = Lineout_PGAR_GAIN
+2026-04-10 21:06:58.282   332-2693  AudioALSAStreamOut      and...re.audio@2.0-service-mediatek  D  open(), flags 6
+2026-04-10 21:06:58.282   332-2693  AudioUtility            and...re.audio@2.0-service-mediatek  D  power_hal_hint - custPowerHint 0, data 268435455
+2026-04-10 21:06:58.282   354-374   vendor.med...r@1.1-impl merged_hal_service                   I  mtkCusPowerHint hint:0, data:268435455
+2026-04-10 21:06:58.282   332-2693  AudioALSAStreamManager  and...re.audio@2.0-service-mediatek  D  +createPlaybackHandler(), mAudioMode = 3, output_devices = 0x2
+2026-04-10 21:06:58.282   332-2693  NVRAM                   and...re.audio@2.0-service-mediatek  D  getNumMicSupport(), dualMicFlag 1, numMicString 2
+2026-04-10 21:06:58.282   332-2693  NVRAM                   and...re.audio@2.0-service-mediatek  D  QueryFeatureSupportInfo(), feature support bit 0x1a097c57 
+2026-04-10 21:06:58.282   332-2693  AudioSpeechEnhanceInfo  and...re.audio@2.0-service-mediatek  D  IsAPDMNRTuningEnable(), 0
+2026-04-10 21:06:58.282   332-2693  AudioALSAP...dlerNormal and...re.audio@2.0-service-mediatek  D  AudioALSAPlaybackHandlerNormal()
+2026-04-10 21:06:58.282   332-2693  AudioALSAP...dlerNormal and...re.audio@2.0-service-mediatek  D  +setFilterMng() mAudioFilterManagerHandler [0xb5d16260]
+2026-04-10 21:06:58.282   332-2693  AudioALSAP...dlerNormal and...re.audio@2.0-service-mediatek  D  +open(), flag 6, mDevice = 0x2
+2026-04-10 21:06:58.282   332-2693  AudioALSADeviceParser   and...re.audio@2.0-service-mediatek  D  compare pcm success = 7, stringpair = I2S0DL1_PLayback
+2026-04-10 21:06:58.282   354-373   powerd                  merged_hal_service                   I  [powerd_req] POWER_MSG_MTK_CUS_HINT: hint:0, hdl:36, data:268435455
+2026-04-10 21:06:58.283   354-373   libPerfService          merged_hal_service                   I  perfCusUserScnEnable - handle:36
+2026-04-10 21:06:58.283   332-2693  <no-tag>                and...re.audio@2.0-service-mediatek  D  -AssignDRAM() retval 0
+2026-04-10 21:06:58.283   332-2693  AudioALSAP...andlerBase and...re.audio@2.0-service-mediatek  D  transferAudioFormatToPcmFormat(), audio_format(0x4) => pcm_format(0x1)
+2026-04-10 21:06:58.283   332-2693  AudioALSAP...dlerNormal and...re.audio@2.0-service-mediatek  D  open(), mConfig: channels = 2, rate = 48000, period_size = 256, period_count = 4, format = 1 avail_min = 256
+2026-04-10 21:06:58.283   332-2693  AudioALSADriverUtility  and...re.audio@2.0-service-mediatek  D  GetPropertyValue key = af.resouce.extdac_support value = 0
+2026-04-10 21:06:58.283   332-2693  AudioALSAP...dlerNormal and...re.audio@2.0-service-mediatek  D  SetLowJitterMode(), bypass low jitter mode, bEnable = 1, device = 0x2, SampleRate = 48000
+2026-04-10 21:06:58.283   332-2693  AudioALSAP...andlerBase and...re.audio@2.0-service-mediatek  D  openPcmDriverWithFlag(), pcm device = 7 flag = 0x8
+2026-04-10 21:06:58.284   332-2693  AudioALSAP...andlerBase and...re.audio@2.0-service-mediatek  D  initBitConverter(), audio_format: 0x3 => 0x4, bcv_pcm_format = 0x3
+2026-04-10 21:06:58.284   332-2693  MtkAudioBitConverter    and...re.audio@2.0-service-mediatek  D  +open(), format 3, CH 2, SR 48000
+2026-04-10 21:06:58.284   332-2693  MtkAudioBitConverter    and...re.audio@2.0-service-mediatek  D  +resetBuffer()
+2026-04-10 21:06:58.284   332-2693  AudioALSAH...rceManager and...re.audio@2.0-service-mediatek  D  +startOutputDevice(), new_devices = 0x2, mOutputDevices = 0x0, mStartOutputDevicesCount = 0 SampleRate = 48000
+2026-04-10 21:06:58.284   332-2693  AudioALSADriverUtility  and...re.audio@2.0-service-mediatek  D  GetPropertyValue key = af.resouce.extdac_support value = 0
+2026-04-10 21:06:58.285   332-2693  AudioALSAD...figManager and...re.audio@2.0-service-mediatek  D  ApplyDeviceTurnonSequenceByName() DeviceName = speaker_output descriptor->DeviceStatusCounte = 0
+2026-04-10 21:06:58.286   332-2693  AudioALSAD...figManager and...re.audio@2.0-service-mediatek  D  ApplyDeviceTurnonSequenceByName() DeviceName = ext_speaker_output descriptor->DeviceStatusCounte = 0
+2026-04-10 21:06:58.291   332-2693  AudioVoiceUIDL          and...re.audio@2.0-service-mediatek  D  [GetSRCInputParameter] mOutputSampleRate 16000,  mInputSampleRate 48000, mInChannel 2, mOutChannel, 0 format 4
+2026-04-10 21:06:58.291   332-2693  AudioVoiceUIDL          and...re.audio@2.0-service-mediatek  D  [GetSRCInputParameter] create SRC handle fail
+2026-04-10 21:06:58.291   332-2693  AudioALSAP...dlerNormal and...re.audio@2.0-service-mediatek  D  -open()
+2026-04-10 21:06:58.335   737-928   WifiStateMachine        system_server                        D   MtkL2ConnectedState { when=-2ms what=131155 arg1=150 target=com.android.internal.util.StateMachine$SmHandler } 150 0, mShouldDeferDisableWifi = false, mState = MONITORING
+2026-04-10 21:06:58.367   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337499): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:06:58.507   365-434   chatty                  surfaceflinger                       I  uid=1000(system) HwBinder:365_1 identical 3 lines
+2026-04-10 21:06:58.690   737-915   zhouzhe                 system_server                        D  keyCode222 = 230
+2026-04-10 21:06:58.740   737-915   zhouzhe                 system_server                        D  keyCode222 = 230
+2026-04-10 21:06:58.791   737-915   zhouzhe                 system_server                        D  keyCode222 = 230
+2026-04-10 21:06:58.828   381-620   AudioFlinger_Threads    audioserver                          I  BUFFER TIMEOUT: remove(4097) from active list on thread 0xa8803c00
+2026-04-10 21:06:58.840   381-527   APM_AudioPolicyManager  audioserver                          D  stopOutput() output 13, stream 8, session 9673
+2026-04-10 21:06:58.840   381-527   APM::Audio...Descriptor audioserver                          V  changeRefCount() stream 8, count 0
+2026-04-10 21:06:58.841   737-915   zhouzhe                 system_server                        D  keyCode222 = 230
+2026-04-10 21:06:58.877   356-356   NxpExtns                vendor.nxp.nxpnfc@1.0-service        D  find found NXP_SYS_CLK_SRC_SEL=(0x2)
+2026-04-10 21:06:58.877   356-356   NxpExtns                vendor.nxp.nxpnfc@1.0-service        D  find found NXP_SYS_CLK_FREQ_SEL=(0x4)
+2026-04-10 21:06:58.877   356-356   NxpExtns                vendor.nxp.nxpnfc@1.0-service        D  find found NXP_SYS_CLOCK_TO_CFG=(0x1)
+2026-04-10 21:06:58.892   737-915   zhouzhe                 system_server                        D  keyCode222 = 230
+2026-04-10 21:06:58.942   737-915   zhouzhe                 system_server                        D  keyCode222 = 230
+2026-04-10 21:06:58.993   737-915   zhouzhe                 system_server                        D  keyCode222 = 230
+2026-04-10 21:06:59.044   737-915   zhouzhe                 system_server                        D  keyCode222 = 230
+2026-04-10 21:06:59.057   356-356   NxpExtns                vendor.nxp.nxpnfc@1.0-service        D  find found NXP_FW_NAME=libpn553_fw.so
+2026-04-10 21:06:59.095   737-915   zhouzhe                 system_server                        D  keyCode222 = 230
+2026-04-10 21:06:59.145   737-915   zhouzhe                 system_server                        D  keyCode222 = 230
+2026-04-10 21:06:59.196   737-915   zhouzhe                 system_server                        D  keyCode222 = 230
+2026-04-10 21:06:59.246   737-915   zhouzhe                 system_server                        D  keyCode222 = 230
+2026-04-10 21:06:59.297   737-915   zhouzhe                 system_server                        D  keyCode222 = 230
+2026-04-10 21:06:59.347   737-915   zhouzhe                 system_server                        D  keyCode222 = 230
+2026-04-10 21:06:59.399   737-915   zhouzhe                 system_server                        D  keyCode222 = 230
+2026-04-10 21:06:59.442   737-916   zhouzhe                 system_server                        D  keyCode111 = 230
+2026-04-10 21:06:59.443   737-916   tyd                     system_server                        D  sendBroadcast: android.intent.action.PTT.up
+2026-04-10 21:06:58.234   737-835   BroadcastQueue          system_server                        W  Background execution not allowed: receiving Intent { act=android.intent.action.DROPBOX_ENTRY_ADDED flg=0x10 (has extras) } to com.google.android.gms/.stats.service.DropBoxEntryAddedReceiver
+2026-04-10 21:06:59.444   737-916   ContextImpl             system_server                        W  Calling a method in the system process without a qualified user: android.app.ContextImpl.sendBroadcast:967 com.android.server.policy.PhoneWindowManager.sendBC:6496 com.android.server.policy.PhoneWindowManager.interceptKeyBeforeQueueing:6852 com.freeme.server.policy.FreemePhoneWindowManager.interceptKeyBeforeQueueing:301 com.android.server.wm.InputMonitor.interceptKeyBeforeQueueing:449 
+2026-04-10 21:06:59.445   737-916   ActivityManager         system_server                        E  Sending non-protected broadcast android.intent.action.PTT.up from system 737:system/1000 pkg android (Explain with AI)
+                                                                                                    java.lang.Throwable
+                                                                                                    	at com.android.server.am.ActivityManagerService.checkBroadcastFromSystem(ActivityManagerService.java:19307)
+                                                                                                    	at com.android.server.am.ActivityManagerService.broadcastIntentLocked(ActivityManagerService.java:19827)
+                                                                                                    	at com.android.server.am.ActivityManagerService.broadcastIntent(ActivityManagerService.java:20062)
+                                                                                                    	at android.app.ContextImpl.sendBroadcast(ContextImpl.java:971)
+                                                                                                    	at com.android.server.policy.PhoneWindowManager.sendBC(PhoneWindowManager.java:6496)
+                                                                                                    	at com.android.server.policy.PhoneWindowManager.interceptKeyBeforeQueueing(PhoneWindowManager.java:6852)
+                                                                                                    	at com.freeme.server.policy.FreemePhoneWindowManager.interceptKeyBeforeQueueing(FreemePhoneWindowManager.java:301)
+                                                                                                    	at com.android.server.wm.InputMonitor.interceptKeyBeforeQueueing(InputMonitor.java:449)
+                                                                                                    	at com.android.server.input.InputManagerService.interceptKeyBeforeQueueing(InputManagerService.java:1975)
+2026-04-10 21:06:59.450   737-915   zhouzhe                 system_server                        D  keyCode222 = 230
+2026-04-10 21:06:59.451   737-916   AES                     system_server                        W  Exception Log handling...
+2026-04-10 21:06:59.453   737-916   AES                     system_server                        D  ExceptionLog: notify aed (process:system_server pid:737 cause:system_server_wtf )
+2026-04-10 21:06:59.453   737-916   AEE_LIBAEE              system_server                        D  shell: raise_exp(11, 737, -1361051648, system_server, 0x0x8b9fe140, 0x0x0)
+2026-04-10 21:06:59.454   737-916   AEE_LIBAEE              system_server                        D  com.mtk.aee.aedshell: connected with AED OK
+2026-04-10 21:06:59.455   684-684   AEE_AED                 aee_aed                              D  $===AEE===AEE===AEE===$
+2026-04-10 21:06:59.455   684-684   AEE_AED                 aee_aed                              D  p 1 poll events 1 revents 1
+2026-04-10 21:06:59.455   684-684   AEE_AED                 aee_aed                              D  PPM cpu cores:4, online:4
+2026-04-10 21:06:59.457   684-684   AEE_AED                 aee_aed                              D  aed_main_fork_worker: generator 0xaca09440, worker 0xbea22798, recv_fd 10
+2026-04-10 21:06:59.459 20388-20388 AEE_AED                 pid-20388                            D  read success, handling msg (Ind, AE_IND_WRN_RAISED)
+2026-04-10 21:06:59.460 20388-20388 AEE_AED                 pid-20388                            I  [preset_info] pid: 737, tid: -1361051648, name: UNKNOWN  >>> system_server <<<
+2026-04-10 21:06:59.460 20388-20388 AEE_AED                 pid-20388                            D  u:r:system_server:s0
+2026-04-10 21:06:59.460 20388-20388 AEE_AED                 pid-20388                            V  dashboard_record_update() : rec->module = system_server 
+2026-04-10 21:06:59.460 20388-20388 AEE_AED                 pid-20388                            D  Skip duplicated exception ! 
+2026-04-10 21:06:59.460 20388-20388 AEE_AED                 pid-20388                            D  Exception Class: 11 
+2026-04-10 21:06:59.460 20388-20388 AEE_AED                 pid-20388                            D  Module: system_server 
+2026-04-10 21:06:59.460 20388-20388 AEE_AED                 pid-20388                            D  Count: 3085 
+2026-04-10 21:06:59.460 20388-20388 AEE_AED                 pid-20388                            D  Last exception time: 1775869618 
+                                                                                                     
+2026-04-10 21:06:59.460 20388-20388 AEE_AED                 pid-20388                            V  process session - skipped 
+2026-04-10 21:06:59.460   737-916   AEE_LIBAEE              system_server                        D  shell: got the request (cmd:Ind,AE_IND_LOG_CLOSE)
+2026-04-10 21:06:59.461   737-916   AEE_LIBAEE              system_server                        D  shell: Got session close ind from AED
+2026-04-10 21:06:59.461   737-916   ActivityManager         system_server                        E  Sending non-protected broadcast android.intent.action.PTT.up from system 737:system/1000 pkg android (Explain with AI)
+                                                                                                    java.lang.Throwable
+                                                                                                    	at com.android.server.am.ActivityManagerService.checkBroadcastFromSystem(ActivityManagerService.java:19307)
+                                                                                                    	at com.android.server.am.ActivityManagerService.broadcastIntentLocked(ActivityManagerService.java:19920)
+                                                                                                    	at com.android.server.am.ActivityManagerService.broadcastIntent(ActivityManagerService.java:20062)
+                                                                                                    	at android.app.ContextImpl.sendBroadcast(ContextImpl.java:971)
+                                                                                                    	at com.android.server.policy.PhoneWindowManager.sendBC(PhoneWindowManager.java:6496)
+                                                                                                    	at com.android.server.policy.PhoneWindowManager.interceptKeyBeforeQueueing(PhoneWindowManager.java:6852)
+                                                                                                    	at com.freeme.server.policy.FreemePhoneWindowManager.interceptKeyBeforeQueueing(FreemePhoneWindowManager.java:301)
+                                                                                                    	at com.android.server.wm.InputMonitor.interceptKeyBeforeQueueing(InputMonitor.java:449)
+                                                                                                    	at com.android.server.input.InputManagerService.interceptKeyBeforeQueueing(InputManagerService.java:1975)
+2026-04-10 21:06:59.462   684-684   AEE_AED                 aee_aed                              D  clear ppm settings
+2026-04-10 21:06:59.463   684-684   AEE_AED                 aee_aed                              D  $===AEE===AEE===AEE===$
+2026-04-10 21:06:59.467   737-916   AES                     system_server                        W  Exception Log handling...
+2026-04-10 21:06:59.469   737-916   AES                     system_server                        D  ExceptionLog: notify aed (process:system_server pid:737 cause:system_server_wtf )
+2026-04-10 21:06:59.469   737-916   AEE_LIBAEE              system_server                        D  shell: raise_exp(11, 737, -1361051648, system_server, 0x0x8b9fe480, 0x0x0)
+2026-04-10 21:06:59.470   737-916   AEE_LIBAEE              system_server                        D  com.mtk.aee.aedshell: connected with AED OK
+2026-04-10 21:06:59.471   684-684   AEE_AED                 aee_aed                              D  $===AEE===AEE===AEE===$
+2026-04-10 21:06:59.471   684-684   AEE_AED                 aee_aed                              D  p 1 poll events 1 revents 1
+2026-04-10 21:06:59.472   684-684   AEE_AED                 aee_aed                              D  PPM cpu cores:4, online:4
+2026-04-10 21:06:59.473   684-684   AEE_AED                 aee_aed                              D  aed_main_fork_worker: generator 0xaca09440, worker 0xbea22798, recv_fd 10
+2026-04-10 21:06:59.475 20389-20389 AEE_AED                 pid-20389                            D  read success, handling msg (Ind, AE_IND_WRN_RAISED)
+2026-04-10 21:06:59.476 20389-20389 AEE_AED                 pid-20389                            I  [preset_info] pid: 737, tid: -1361051648, name: UNKNOWN  >>> system_server <<<
+2026-04-10 21:06:59.476 20389-20389 AEE_AED                 pid-20389                            D  u:r:system_server:s0
+2026-04-10 21:06:59.476 20389-20389 AEE_AED                 pid-20389                            V  dashboard_record_update() : rec->module = system_server 
+2026-04-10 21:06:59.476 20389-20389 AEE_AED                 pid-20389                            D  Skip duplicated exception ! 
+2026-04-10 21:06:59.476 20389-20389 AEE_AED                 pid-20389                            D  Exception Class: 11 
+2026-04-10 21:06:59.476 20389-20389 AEE_AED                 pid-20389                            D  Module: system_server 
+2026-04-10 21:06:59.476 20389-20389 AEE_AED                 pid-20389                            D  Count: 3086 
+2026-04-10 21:06:59.476 20389-20389 AEE_AED                 pid-20389                            D  Last exception time: 1775869619 
+                                                                                                     
+2026-04-10 21:06:59.476 20389-20389 AEE_AED                 pid-20389                            V  process session - skipped 
+2026-04-10 21:06:59.476   737-916   AEE_LIBAEE              system_server                        D  shell: got the request (cmd:Ind,AE_IND_LOG_CLOSE)
+2026-04-10 21:06:59.476   737-916   AEE_LIBAEE              system_server                        D  shell: Got session close ind from AED
+2026-04-10 21:06:59.477   737-915   zhouzhe                 system_server                        D  keyCode222 = 230
+2026-04-10 21:06:59.478   684-684   AEE_AED                 aee_aed                              D  clear ppm settings
+2026-04-10 21:06:59.479   684-684   AEE_AED                 aee_aed                              D  $===AEE===AEE===AEE===$
+2026-04-10 21:06:59.481   737-835   BroadcastQueue          system_server                        W  Background execution not allowed: receiving Intent { act=android.intent.action.DROPBOX_ENTRY_ADDED flg=0x10 (has extras) } to com.google.android.gms/.stats.service.DropBoxEntryAddedReceiver
+2026-04-10 21:06:59.486 19019-19019 [PTT-DIAG]              com.reedersystems.commandcomms       D  MainActivity PTT UP source=MainActivity code=230 action=UP ts=1775869619485
+2026-04-10 21:06:59.486 19019-19019 [PTT-DIAG]              com.reedersystems.commandcomms       D  MainActivity PTT UP — forwarding to BackgroundAudioService (signaling=true)
+2026-04-10 21:06:59.490 19019-19019 [PTT-DIAG]              com.reedersystems.commandcomms       D  PttHardwareReceiver.onReceive action=android.intent.action.PTT.up extras=null source=broadcast
+2026-04-10 21:06:59.490 19019-19019 [PTT-DIAG]              com.reedersystems.commandcomms       D  PttHardwareReceiver: mapped action=android.intent.action.PTT.up -> svcAction=com.reedersystems.commandcomms.SVC_PTT_UP
+2026-04-10 21:06:59.492 19019-19019 [PTT-DIAG]              com.reedersystems.commandcomms       D  PttHardwareReceiver: WakeLock acquired (auto-releases in 5000ms)
+2026-04-10 21:06:59.495 19019-19019 [PTT-DIAG]              com.reedersystems.commandcomms       D  {"event":"RADIO_PTT_UP","pttState":"IDLE","channelKey":"TESTING__TESTING 1"}
+2026-04-10 21:06:59.498 19019-19019 [PTT-DIAG]              com.reedersystems.commandcomms       D  {"event":"RADIO_PTT_UP","pttState":"IDLE","channelKey":"TESTING__TESTING 1"}
+2026-04-10 21:06:59.537   365-434   chatty                  surfaceflinger                       I  uid=1000(system) HwBinder:365_1 identical 1 line
+2026-04-10 21:06:59.689   325-20392 libc-netbsd             netd                                 D  [getaddrinfo]: netid=238; mark=262382; ai_flags=1024; ai_family=0
+2026-04-10 21:06:59.690   325-20392 libc-netbsd             netd                                 D  default dns: query_ipv6=1, query_ipv4=1
+2026-04-10 21:06:59.726   325-20395 libc-netbsd             netd                                 D  [getaddrinfo]: netid=238; mark=262382; ai_flags=1024; ai_family=0
+2026-04-10 21:06:59.729   325-20395 libc-netbsd             netd                                 D  default dns: query_ipv6=1, query_ipv4=1
+2026-04-10 21:06:59.770   365-434   chatty                  surfaceflinger                       I  uid=1000(system) HwBinder:365_1 identical 1 line
+2026-04-10 21:06:59.821   325-20392 libc-netbsd             netd                                 D  res_queryN succeed
+2026-04-10 21:06:59.822 19019-19097 libc-netbsd             com.reedersystems.commandcomms       D  getaddrinfo: get result from proxy gai_error = 0
+2026-04-10 21:06:59.831 19019-20396 [PTT-DIAG]              com.reedersystems.commandcomms       W  Socket connect error: io.socket.engineio.client.EngineIOException: websocket error
+2026-04-10 21:06:59.831 19019-20396 [APP-STARTUP]           com.reedersystems.commandcomms       E  SIGNALING_AUTH_FAILED reason=connect_error io.socket.engineio.client.EngineIOException: websocket error
+2026-04-10 21:06:59.836   325-20395 libc-netbsd             netd                                 D  res_queryN succeed
+2026-04-10 21:06:59.838 19019-19802 libc-netbsd             com.reedersystems.commandcomms       D  getaddrinfo: get result from proxy gai_error = 0
+2026-04-10 21:06:59.845 19019-20398 [PTT-DIAG]              com.reedersystems.commandcomms       W  Socket connect error: io.socket.engineio.client.EngineIOException: websocket error
+2026-04-10 21:06:59.845 19019-20398 [APP-STARTUP]           com.reedersystems.commandcomms       E  SIGNALING_AUTH_FAILED reason=connect_error io.socket.engineio.client.EngineIOException: websocket error
+2026-04-10 21:06:59.849   354-373   powerd                  merged_hal_service                   I  [powerd_req] POWER_MSG_QUERY_INFO: cmd:6, param:0
+2026-04-10 21:06:59.887   365-434   chatty                  surfaceflinger                       I  uid=1000(system) HwBinder:365_1 identical 1 line
+2026-04-10 21:06:59.917   356-356   NxpExtns                vendor.nxp.nxpnfc@1.0-service        D  find found NXP_SYS_CLK_SRC_SEL=(0x2)
+2026-04-10 21:06:59.917   356-356   NxpExtns                vendor.nxp.nxpnfc@1.0-service        D  find found NXP_SYS_CLK_FREQ_SEL=(0x4)
+2026-04-10 21:06:59.917   356-356   NxpExtns                vendor.nxp.nxpnfc@1.0-service        D  find found NXP_SYS_CLOCK_TO_CFG=(0x1)
+2026-04-10 21:06:59.957   365-434   chatty                  surfaceflinger                       I  uid=1000(system) HwBinder:365_1 identical 1 line
+2026-04-10 21:07:00.000   737-910   MtkDataShapingUtils     system_server                        D  openLteGateByDataShaping datashaping instance is null
+2026-04-10 21:07:00.018   365-853   BufferQueueProducer     surfaceflinger                       I  [StatusBar#0](this:0xaf6db000,id:4,api:1,p:967,c:365) queueBuffer: fps=0.55 dur=3666.71 max=2667.61 min=999.10
+2026-04-10 21:07:00.032   365-365   DisplayDevice           surfaceflinger                       I  [studio.screen.sharing:0 (type:2)] fps:0.545543,dur:3666.07,max:2666.55,min:999.52
+2026-04-10 21:07:00.032   365-365   DisplayDevice           surfaceflinger                       I  [Built-in Screen (type:0)] fps:0.545547,dur:3666.05,max:2666.75,min:999.30
+2026-04-10 21:07:00.033   352-352   hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 21:07:00.035   397-6403  BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa99c8000,id:504,api:1,p:397,c:397) queueBuffer: fps=0.55 dur=3668.08 max=2668.68 min=999.41
+2026-04-10 21:07:00.034   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337500): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:07:00.064   352-352   hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 21:07:00.064   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337501): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:07:00.080   352-352   hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 21:07:00.080   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337502): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:07:00.097   356-356   NxpExtns                vendor.nxp.nxpnfc@1.0-service        D  find found NXP_FW_NAME=libpn553_fw.so
+2026-04-10 21:07:00.180   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337503): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:07:00.280   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337504): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:07:00.304   737-5266  tydtech                 system_server                        D  Sending ACTION_BATTERY_CHANGED.  level:100, scale:100, status:2, health:2, present:true, voltage: 4354, temperature: 350, technology: Li-ion, AC powered:false, USB powered:true, Wireless powered:false, icon:17303460, invalid charger:0, maxChargingCurrent:5000000, maxChargingVoltage:500000, chargeCounter:100, chargeCURRENT:0
+2026-04-10 21:07:00.304   737-5266  tydtech                 system_server                        I  updateLightsLocked ,  level = 100 , mLowBatteryWarningLevel = 15  mLightflag: false
+2026-04-10 21:06:59.484   737-835   BroadcastQueue          system_server                        W  Background execution not allowed: receiving Intent { act=android.intent.action.DROPBOX_ENTRY_ADDED flg=0x10 (has extras) } to com.google.android.gms/.stats.service.DropBoxEntryAddedReceiver
+2026-04-10 21:07:00.308   967-967   nowtemp                 com.android.systemui                 D  powerUI nowtemp is 350
+2026-04-10 21:07:00.309   967-967   nowtemp                 com.android.systemui                 D  powerUI BatteryLevel is 100
+2026-04-10 21:07:00.309   737-927   WifiController          system_server                        D  DeviceActiveState CMD_BATTERY_CHANGED{ when=-3ms what=155652 arg1=2 target=com.android.internal.util.StateMachine$SmHandler }
+2026-04-10 21:07:00.309   737-927   WifiController          system_server                        D  StaEnabledState CMD_BATTERY_CHANGED{ when=-4ms what=155652 arg1=2 target=com.android.internal.util.StateMachine$SmHandler }
+2026-04-10 21:07:00.309   737-927   WifiController          system_server                        D  DefaultState CMD_BATTERY_CHANGED{ when=-4ms what=155652 arg1=2 target=com.android.internal.util.StateMachine$SmHandler }
+2026-04-10 21:07:00.309   737-927   WifiController          system_server                        D  battery changed pluggedType: 2
+2026-04-10 21:07:00.347   352-352   hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 21:07:00.347   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337505): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:07:00.364   352-352   hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 21:07:00.370   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337506): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:07:00.383   352-352   hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 21:07:00.394   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337507): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:07:00.480   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337508): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:07:00.515   737-916   zhouzhe                 system_server                        D  keyCode111 = 230
+2026-04-10 21:07:00.515   737-916   tyd                     system_server                        D  sendBroadcast: android.intent.action.PTT.down
+2026-04-10 21:07:00.516   737-916   ContextImpl             system_server                        W  Calling a method in the system process without a qualified user: android.app.ContextImpl.sendBroadcast:967 com.android.server.policy.PhoneWindowManager.sendBC:6496 com.android.server.policy.PhoneWindowManager.interceptKeyBeforeQueueing:6843 com.freeme.server.policy.FreemePhoneWindowManager.interceptKeyBeforeQueueing:301 com.android.server.wm.InputMonitor.interceptKeyBeforeQueueing:449 
+2026-04-10 21:07:00.517   737-916   ActivityManager         system_server                        E  Sending non-protected broadcast android.intent.action.PTT.down from system 737:system/1000 pkg android (Explain with AI)
+                                                                                                    java.lang.Throwable
+                                                                                                    	at com.android.server.am.ActivityManagerService.checkBroadcastFromSystem(ActivityManagerService.java:19307)
+                                                                                                    	at com.android.server.am.ActivityManagerService.broadcastIntentLocked(ActivityManagerService.java:19827)
+                                                                                                    	at com.android.server.am.ActivityManagerService.broadcastIntent(ActivityManagerService.java:20062)
+                                                                                                    	at android.app.ContextImpl.sendBroadcast(ContextImpl.java:971)
+                                                                                                    	at com.android.server.policy.PhoneWindowManager.sendBC(PhoneWindowManager.java:6496)
+                                                                                                    	at com.android.server.policy.PhoneWindowManager.interceptKeyBeforeQueueing(PhoneWindowManager.java:6843)
+                                                                                                    	at com.freeme.server.policy.FreemePhoneWindowManager.interceptKeyBeforeQueueing(FreemePhoneWindowManager.java:301)
+                                                                                                    	at com.android.server.wm.InputMonitor.interceptKeyBeforeQueueing(InputMonitor.java:449)
+                                                                                                    	at com.android.server.input.InputManagerService.interceptKeyBeforeQueueing(InputManagerService.java:1975)
+2026-04-10 21:07:00.522   737-916   AES                     system_server                        W  Exception Log handling...
+2026-04-10 21:07:00.524   737-916   AES                     system_server                        D  ExceptionLog: notify aed (process:system_server pid:737 cause:system_server_wtf )
+2026-04-10 21:07:00.524   737-916   AEE_LIBAEE              system_server                        D  shell: raise_exp(11, 737, -1361051648, system_server, 0x0x8b9fe760, 0x0x0)
+2026-04-10 21:07:00.525   737-916   AEE_LIBAEE              system_server                        D  com.mtk.aee.aedshell: connected with AED OK
+2026-04-10 21:07:00.526   684-684   AEE_AED                 aee_aed                              D  $===AEE===AEE===AEE===$
+2026-04-10 21:07:00.526   684-684   AEE_AED                 aee_aed                              D  p 1 poll events 1 revents 1
+2026-04-10 21:07:00.527   684-684   AEE_AED                 aee_aed                              D  PPM cpu cores:4, online:4
+2026-04-10 21:07:00.529   684-684   AEE_AED                 aee_aed                              D  aed_main_fork_worker: generator 0xaca09440, worker 0xbea22798, recv_fd 10
+2026-04-10 21:07:00.531 20405-20405 AEE_AED                 pid-20405                            D  read success, handling msg (Ind, AE_IND_WRN_RAISED)
+2026-04-10 21:07:00.531 20405-20405 AEE_AED                 pid-20405                            I  [preset_info] pid: 737, tid: -1361051648, name: UNKNOWN  >>> system_server <<<
+2026-04-10 21:07:00.532 20405-20405 AEE_AED                 pid-20405                            D  u:r:system_server:s0
+2026-04-10 21:07:00.532 20405-20405 AEE_AED                 pid-20405                            V  dashboard_record_update() : rec->module = system_server 
+2026-04-10 21:07:00.532 20405-20405 AEE_AED                 pid-20405                            D  Skip duplicated exception ! 
+2026-04-10 21:07:00.532 20405-20405 AEE_AED                 pid-20405                            D  Exception Class: 11 
+2026-04-10 21:07:00.532 20405-20405 AEE_AED                 pid-20405                            D  Module: system_server 
+2026-04-10 21:07:00.532 20405-20405 AEE_AED                 pid-20405                            D  Count: 3087 
+2026-04-10 21:07:00.532 20405-20405 AEE_AED                 pid-20405                            D  Last exception time: 1775869619 
+                                                                                                     
+2026-04-10 21:07:00.532 20405-20405 AEE_AED                 pid-20405                            V  process session - skipped 
+2026-04-10 21:07:00.532   737-916   AEE_LIBAEE              system_server                        D  shell: got the request (cmd:Ind,AE_IND_LOG_CLOSE)
+2026-04-10 21:07:00.533   737-916   AEE_LIBAEE              system_server                        D  shell: Got session close ind from AED
+2026-04-10 21:07:00.534   737-916   ActivityManager         system_server                        E  Sending non-protected broadcast android.intent.action.PTT.down from system 737:system/1000 pkg android (Explain with AI)
+                                                                                                    java.lang.Throwable
+                                                                                                    	at com.android.server.am.ActivityManagerService.checkBroadcastFromSystem(ActivityManagerService.java:19307)
+                                                                                                    	at com.android.server.am.ActivityManagerService.broadcastIntentLocked(ActivityManagerService.java:19920)
+                                                                                                    	at com.android.server.am.ActivityManagerService.broadcastIntent(ActivityManagerService.java:20062)
+                                                                                                    	at android.app.ContextImpl.sendBroadcast(ContextImpl.java:971)
+                                                                                                    	at com.android.server.policy.PhoneWindowManager.sendBC(PhoneWindowManager.java:6496)
+                                                                                                    	at com.android.server.policy.PhoneWindowManager.interceptKeyBeforeQueueing(PhoneWindowManager.java:6843)
+                                                                                                    	at com.freeme.server.policy.FreemePhoneWindowManager.interceptKeyBeforeQueueing(FreemePhoneWindowManager.java:301)
+                                                                                                    	at com.android.server.wm.InputMonitor.interceptKeyBeforeQueueing(InputMonitor.java:449)
+                                                                                                    	at com.android.server.input.InputManagerService.interceptKeyBeforeQueueing(InputManagerService.java:1975)
+2026-04-10 21:07:00.534   684-684   AEE_AED                 aee_aed                              D  clear ppm settings
+2026-04-10 21:07:00.535   684-684   AEE_AED                 aee_aed                              D  $===AEE===AEE===AEE===$
+2026-04-10 21:07:00.537 19019-19019 [PTT-DIAG]              com.reedersystems.commandcomms       D  PttHardwareReceiver.onReceive action=android.intent.action.PTT.down extras=null source=broadcast
+2026-04-10 21:07:00.538 19019-19019 [PTT-DIAG]              com.reedersystems.commandcomms       D  PttHardwareReceiver: mapped action=android.intent.action.PTT.down -> svcAction=com.reedersystems.commandcomms.SVC_PTT_DOWN
+2026-04-10 21:07:00.538   737-835   BroadcastQueue          system_server                        W  Background execution not allowed: receiving Intent { act=android.intent.action.DROPBOX_ENTRY_ADDED flg=0x10 (has extras) } to com.google.android.gms/.stats.service.DropBoxEntryAddedReceiver
+2026-04-10 21:07:00.538   737-915   zhouzhe                 system_server                        D  keyCode222 = 230
+2026-04-10 21:07:00.540 19019-19019 [PTT-DIAG]              com.reedersystems.commandcomms       D  PttHardwareReceiver: WakeLock acquired (auto-releases in 5000ms)
+2026-04-10 21:07:00.545 19019-19019 [PTT-DIAG]              com.reedersystems.commandcomms       D  {"event":"RADIO_PTT_DOWN","pttState":"IDLE","signaling":true,"channelKey":"TESTING__TESTING 1","channelId":"535"}
+2026-04-10 21:07:00.546 19019-19019 [PTT-DIAG]              com.reedersystems.commandcomms       W  RADIO_READY_BLOCKED_REASON reason=signaling_not_authenticated:DISCONNECTED
+2026-04-10 21:07:00.546 19019-19019 [ToneEvent]             com.reedersystems.commandcomms       D  {"tone":"error","trigger":"ready_sync_blocked","reason":"signaling_not_authenticated","ts":1775869620546}
+2026-04-10 21:07:00.547 19019-19019 [PTT-DIAG]              com.reedersystems.commandcomms       D  Sending PTT_TX_FAILED broadcast
+2026-04-10 21:07:00.552 19019-19019 [PTT-DIAG]              com.reedersystems.commandcomms       D  MainActivity PTT DOWN source=MainActivity code=230 action=DOWN repeat=0 ts=1775869620552
+2026-04-10 21:07:00.553 19019-19019 [PTT-DIAG]              com.reedersystems.commandcomms       D  MainActivity PTT DOWN — forwarding to BackgroundAudioService (signaling=true)
+2026-04-10 21:07:00.555 19019-20384 AudioTrack              com.reedersystems.commandcomms       W  releaseBuffer() track 0x9a667000 disabled due to previous underrun, restarting
+2026-04-10 21:07:00.556   381-5022  APM_AudioPolicyManager  audioserver                          D  startOutput() output 13, stream 8, session 9673
+2026-04-10 21:07:00.556   381-5022  APM::Audio...Descriptor audioserver                          V  changeRefCount() stream 8, count 1
+2026-04-10 21:07:00.558 19019-19019 [PTT-DIAG]              com.reedersystems.commandcomms       D  PTT_TX_FAILED received — resetting to IDLE
+2026-04-10 21:07:00.559 19019-19019 [PTT-DIAG]              com.reedersystems.commandcomms       D  {"event":"RADIO_PTT_DOWN","pttState":"IDLE","signaling":true,"channelKey":"TESTING__TESTING 1","channelId":"535"}
+2026-04-10 21:07:00.561 19019-19019 [PTT-DIAG]              com.reedersystems.commandcomms       W  RADIO_READY_BLOCKED_REASON reason=signaling_not_authenticated:DISCONNECTED
+2026-04-10 21:07:00.561 19019-19019 [ToneEvent]             com.reedersystems.commandcomms       D  {"tone":"error","trigger":"ready_sync_blocked","reason":"signaling_not_authenticated","ts":1775869620561}
+2026-04-10 21:07:00.562 19019-19019 [PTT-DIAG]              com.reedersystems.commandcomms       D  Sending PTT_TX_FAILED broadcast
+2026-04-10 21:07:00.565 19019-20383 [RadioEngine]           com.reedersystems.commandcomms       D  RX_DIAG rxTotal=0 rxNew=0 jbSize=0 jbDepth=3 jbPlaying=false channelIdx=535 t=205066ms
+2026-04-10 21:07:00.568 19019-19019 [PTT-DIAG]              com.reedersystems.commandcomms       D  PTT_TX_FAILED received — resetting to IDLE
+2026-04-10 21:07:00.584   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337509): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:07:00.684   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337510): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:07:00.784   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337511): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:07:00.884   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337512): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:07:00.937   365-434   chatty                  surfaceflinger                       I  uid=1000(system) HwBinder:365_1 identical 2 lines
+2026-04-10 21:07:00.977   356-356   NxpExtns                vendor.nxp.nxpnfc@1.0-service        D  find found NXP_SYS_CLK_SRC_SEL=(0x2)
+2026-04-10 21:07:00.977   356-356   NxpExtns                vendor.nxp.nxpnfc@1.0-service        D  find found NXP_SYS_CLK_FREQ_SEL=(0x4)
+2026-04-10 21:07:00.977   356-356   NxpExtns                vendor.nxp.nxpnfc@1.0-service        D  find found NXP_SYS_CLOCK_TO_CFG=(0x1)
+2026-04-10 21:07:00.984   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337513): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:07:01.016   737-915   zhouzhe                 system_server                        D  keyCode222 = 230
+2026-04-10 21:07:01.066   737-915   zhouzhe                 system_server                        D  keyCode222 = 230
+2026-04-10 21:07:01.084   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337514): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:07:01.117   737-915   zhouzhe                 system_server                        D  keyCode222 = 230
+2026-04-10 21:07:01.157   356-356   NxpExtns                vendor.nxp.nxpnfc@1.0-service        D  find found NXP_FW_NAME=libpn553_fw.so
+2026-04-10 21:07:01.167   737-915   zhouzhe                 system_server                        D  keyCode222 = 230
+2026-04-10 21:07:01.184   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337515): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:07:01.219   737-915   zhouzhe                 system_server                        D  keyCode222 = 230
+2026-04-10 21:07:01.269   737-915   zhouzhe                 system_server                        D  keyCode222 = 230
+2026-04-10 21:07:01.287   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337516): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:07:01.320   737-915   zhouzhe                 system_server                        D  keyCode222 = 230
+2026-04-10 21:07:01.340   737-916   zhouzhe                 system_server                        D  keyCode111 = 230
+2026-04-10 21:07:01.341   737-916   tyd                     system_server                        D  sendBroadcast: android.intent.action.PTT.up
+2026-04-10 21:07:01.341   737-916   ContextImpl             system_server                        W  Calling a method in the system process without a qualified user: android.app.ContextImpl.sendBroadcast:967 com.android.server.policy.PhoneWindowManager.sendBC:6496 com.android.server.policy.PhoneWindowManager.interceptKeyBeforeQueueing:6852 com.freeme.server.policy.FreemePhoneWindowManager.interceptKeyBeforeQueueing:301 com.android.server.wm.InputMonitor.interceptKeyBeforeQueueing:449 
+2026-04-10 21:07:01.342   737-916   ActivityManager         system_server                        E  Sending non-protected broadcast android.intent.action.PTT.up from system 737:system/1000 pkg android (Explain with AI)
+                                                                                                    java.lang.Throwable
+                                                                                                    	at com.android.server.am.ActivityManagerService.checkBroadcastFromSystem(ActivityManagerService.java:19307)
+                                                                                                    	at com.android.server.am.ActivityManagerService.broadcastIntentLocked(ActivityManagerService.java:19827)
+                                                                                                    	at com.android.server.am.ActivityManagerService.broadcastIntent(ActivityManagerService.java:20062)
+                                                                                                    	at android.app.ContextImpl.sendBroadcast(ContextImpl.java:971)
+                                                                                                    	at com.android.server.policy.PhoneWindowManager.sendBC(PhoneWindowManager.java:6496)
+                                                                                                    	at com.android.server.policy.PhoneWindowManager.interceptKeyBeforeQueueing(PhoneWindowManager.java:6852)
+                                                                                                    	at com.freeme.server.policy.FreemePhoneWindowManager.interceptKeyBeforeQueueing(FreemePhoneWindowManager.java:301)
+                                                                                                    	at com.android.server.wm.InputMonitor.interceptKeyBeforeQueueing(InputMonitor.java:449)
+                                                                                                    	at com.android.server.input.InputManagerService.interceptKeyBeforeQueueing(InputManagerService.java:1975)
+2026-04-10 21:07:01.344   737-928   WifiStateMachine        system_server                        D   MtkL2ConnectedState { when=-2ms what=131155 arg1=150 target=com.android.internal.util.StateMachine$SmHandler } 150 0, mShouldDeferDisableWifi = false, mState = MONITORING
+2026-04-10 21:07:01.345   737-916   ActivityManager         system_server                        E  Sending non-protected broadcast android.intent.action.PTT.up from system 737:system/1000 pkg android (Explain with AI)
+                                                                                                    java.lang.Throwable
+                                                                                                    	at com.android.server.am.ActivityManagerService.checkBroadcastFromSystem(ActivityManagerService.java:19307)
+                                                                                                    	at com.android.server.am.ActivityManagerService.broadcastIntentLocked(ActivityManagerService.java:19920)
+                                                                                                    	at com.android.server.am.ActivityManagerService.broadcastIntent(ActivityManagerService.java:20062)
+                                                                                                    	at android.app.ContextImpl.sendBroadcast(ContextImpl.java:971)
+                                                                                                    	at com.android.server.policy.PhoneWindowManager.sendBC(PhoneWindowManager.java:6496)
+                                                                                                    	at com.android.server.policy.PhoneWindowManager.interceptKeyBeforeQueueing(PhoneWindowManager.java:6852)
+                                                                                                    	at com.freeme.server.policy.FreemePhoneWindowManager.interceptKeyBeforeQueueing(FreemePhoneWindowManager.java:301)
+                                                                                                    	at com.android.server.wm.InputMonitor.interceptKeyBeforeQueueing(InputMonitor.java:449)
+                                                                                                    	at com.android.server.input.InputManagerService.interceptKeyBeforeQueueing(InputManagerService.java:1975)
+2026-04-10 21:07:01.347   737-915   zhouzhe                 system_server                        D  keyCode222 = 230
+2026-04-10 21:07:01.352 19019-19019 [PTT-DIAG]              com.reedersystems.commandcomms       D  MainActivity PTT UP source=MainActivity code=230 action=UP ts=1775869621351
+2026-04-10 21:07:01.352 19019-19019 [PTT-DIAG]              com.reedersystems.commandcomms       D  MainActivity PTT UP — forwarding to BackgroundAudioService (signaling=true)
+2026-04-10 21:07:01.355 19019-19019 [PTT-DIAG]              com.reedersystems.commandcomms       D  PttHardwareReceiver.onReceive action=android.intent.action.PTT.up extras=null source=broadcast
+2026-04-10 21:07:01.355 19019-19019 [PTT-DIAG]              com.reedersystems.commandcomms       D  PttHardwareReceiver: mapped action=android.intent.action.PTT.up -> svcAction=com.reedersystems.commandcomms.SVC_PTT_UP
+2026-04-10 21:07:01.357 19019-19019 [PTT-DIAG]              com.reedersystems.commandcomms       D  PttHardwareReceiver: WakeLock acquired (auto-releases in 5000ms)
+2026-04-10 21:07:01.361 19019-19019 [PTT-DIAG]              com.reedersystems.commandcomms       D  {"event":"RADIO_PTT_UP","pttState":"IDLE","channelKey":"TESTING__TESTING 1"}
+2026-04-10 21:07:01.363 19019-19019 [PTT-DIAG]              com.reedersystems.commandcomms       D  {"event":"RADIO_PTT_UP","pttState":"IDLE","channelKey":"TESTING__TESTING 1"}
+2026-04-10 21:07:01.370   365-832   BufferQueueProducer     surfaceflinger                       I  [StatusBar#0](this:0xaf6db000,id:4,api:1,p:967,c:365) queueBuffer: fps=4.44 dur=1352.18 max=993.41 min=7.19
+2026-04-10 21:07:01.381   352-352   hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 21:07:01.382   365-365   DisplayDevice           surfaceflinger                       I  [studio.screen.sharing:0 (type:2)] fps:4.443228,dur:1350.37,max:1000.22,min:16.22
+2026-04-10 21:07:01.383   365-365   DisplayDevice           surfaceflinger                       I  [Built-in Screen (type:0)] fps:4.443201,dur:1350.38,max:1000.43,min:16.21
+2026-04-10 21:07:01.384   397-6403  BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa99c8000,id:504,api:1,p:397,c:397) queueBuffer: fps=4.45 dur=1348.60 max=998.92 min=16.78
+2026-04-10 21:07:01.380   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337517): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:07:01.480   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337518): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:07:01.543   365-434   chatty                  surfaceflinger                       I  uid=1000(system) HwBinder:365_1 identical 1 line
+2026-04-10 21:07:01.580   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337519): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:07:01.660   365-434   chatty                  surfaceflinger                       I  uid=1000(system) HwBinder:365_1 identical 3 lines
+2026-04-10 21:07:01.680   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337520): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:07:01.784   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337521): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:07:01.879   354-373   powerd                  merged_hal_service                   I  [powerd_req] POWER_MSG_QUERY_INFO: cmd:6, param:0
+2026-04-10 21:07:01.884   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337522): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:07:01.963   365-434   chatty                  surfaceflinger                       I  uid=1000(system) HwBinder:365_1 identical 1 line
+2026-04-10 21:07:01.984   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337523): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:07:02.033   356-356   NxpExtns                vendor.nxp.nxpnfc@1.0-service        D  find found NXP_SYS_CLK_SRC_SEL=(0x2)
+2026-04-10 21:07:02.034   356-356   NxpExtns                vendor.nxp.nxpnfc@1.0-service        D  find found NXP_SYS_CLK_FREQ_SEL=(0x4)
+2026-04-10 21:07:02.034   356-356   NxpExtns                vendor.nxp.nxpnfc@1.0-service        D  find found NXP_SYS_CLOCK_TO_CFG=(0x1)
+2026-04-10 21:07:02.084   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337524): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:07:02.150   365-434   chatty                  surfaceflinger                       I  uid=1000(system) HwBinder:365_1 identical 2 lines
+2026-04-10 21:07:02.184   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337525): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:07:02.214   356-356   NxpExtns                vendor.nxp.nxpnfc@1.0-service        D  find found NXP_FW_NAME=libpn553_fw.so
+2026-04-10 21:07:02.284   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337526): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:07:02.387   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337527): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:07:02.442   381-620   AudioFlinger_Threads    audioserver                          I  BUFFER TIMEOUT: remove(4097) from active list on thread 0xa8803c00
+2026-04-10 21:07:02.458   381-527   APM_AudioPolicyManager  audioserver                          D  stopOutput() output 13, stream 8, session 9673
+2026-04-10 21:07:02.458   381-527   APM::Audio...Descriptor audioserver                          V  changeRefCount() stream 8, count 0
+2026-04-10 21:07:02.570   365-434   chatty                  surfaceflinger                       I  uid=1000(system) HwBinder:365_1 identical 1 line
+2026-04-10 21:07:02.687   365-434   chatty                  surfaceflinger                       I  uid=1000(system) HwBinder:365_1 identical 3 lines
+2026-04-10 21:07:02.837   737-5404  tydtech                 system_server                        D  Sending ACTION_BATTERY_CHANGED.  level:100, scale:100, status:2, health:2, present:true, voltage: 4354, temperature: 350, technology: Li-ion, AC powered:false, USB powered:true, Wireless powered:false, icon:17303460, invalid charger:0, maxChargingCurrent:5000000, maxChargingVoltage:500000, chargeCounter:100, chargeCURRENT:0
+2026-04-10 21:07:02.838   737-5404  tydtech                 system_server                        I  updateLightsLocked ,  level = 100 , mLowBatteryWarningLevel = 15  mLightflag: false
+2026-04-10 21:07:02.841   737-927   WifiController          system_server                        D  DeviceActiveState CMD_BATTERY_CHANGED{ when=0 what=155652 arg1=2 target=com.android.internal.util.StateMachine$SmHandler }
+2026-04-10 21:07:02.841   737-927   WifiController          system_server                        D  StaEnabledState CMD_BATTERY_CHANGED{ when=-1ms what=155652 arg1=2 target=com.android.internal.util.StateMachine$SmHandler }
+2026-04-10 21:07:02.841   737-927   WifiController          system_server                        D  DefaultState CMD_BATTERY_CHANGED{ when=-1ms what=155652 arg1=2 target=com.android.internal.util.StateMachine$SmHandler }
+2026-04-10 21:07:02.841   737-927   WifiController          system_server                        D  battery changed pluggedType: 2
+2026-04-10 21:07:02.846   967-967   nowtemp                 com.android.systemui                 D  powerUI nowtemp is 350
+2026-04-10 21:07:02.846   967-967   nowtemp                 com.android.systemui                 D  powerUI BatteryLevel is 100
+2026-04-10 21:07:02.862   365-853   BufferQueueProducer     surfaceflinger                       I  [StatusBar#0](this:0xaf6db000,id:4,api:1,p:967,c:365) queueBuffer: fps=0.67 dur=1492.35 max=1492.35 min=1492.35
+2026-04-10 21:07:02.881   365-365   DisplayDevice           surfaceflinger                       I  [studio.screen.sharing:0 (type:2)] fps:0.667136,dur:1498.95,max:1498.95,min:1498.95
+2026-04-10 21:07:02.882   365-365   DisplayDevice           surfaceflinger                       I  [Built-in Screen (type:0)] fps:0.667149,dur:1498.92,max:1498.92,min:1498.92
+2026-04-10 21:07:02.883   352-352   hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 21:07:02.885   397-6403  BufferQueueProducer     media.codec                          I  [GraphicBufferSource](this:0xa99c8000,id:504,api:1,p:397,c:397) queueBuffer: fps=0.67 dur=1500.71 max=1500.71 min=1500.71
+2026-04-10 21:07:02.880   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337528): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:07:02.898   352-352   hwcomposer              and...graphics.composer@2.1-service  W  [JOB] (2) copyvds is ture but vir buffer format is not HAL_PIXEL_FORMAT_YV12  
+2026-04-10 21:07:02.897   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337529): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:07:02.997   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337530): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:07:03.003  1482-1482  ADB_SERVICES            adbd                                 I  g_pending_list length=1
+2026-04-10 21:07:03.003  1482-1482  ADB_SERVICES            adbd                                 I  +read_data=264365 local_socket_list_len=8
+2026-04-10 21:07:03.037   365-434   chatty                  surfaceflinger                       I  uid=1000(system) HwBinder:365_1 identical 1 line
+2026-04-10 21:07:03.073   356-356   NxpExtns                vendor.nxp.nxpnfc@1.0-service        D  find found NXP_SYS_CLK_SRC_SEL=(0x2)
+2026-04-10 21:07:03.074   356-356   NxpExtns                vendor.nxp.nxpnfc@1.0-service        D  find found NXP_SYS_CLK_FREQ_SEL=(0x4)
+2026-04-10 21:07:03.074   356-356   NxpExtns                vendor.nxp.nxpnfc@1.0-service        D  find found NXP_SYS_CLOCK_TO_CFG=(0x1)
+2026-04-10 21:07:03.097   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337531): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:07:03.153   365-434   chatty                  surfaceflinger                       I  uid=1000(system) HwBinder:365_1 identical 2 lines
+2026-04-10 21:07:03.197   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337532): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:07:03.227   365-434   chatty                  surfaceflinger                       I  uid=1000(system) HwBinder:365_1 identical 1 line
+2026-04-10 21:07:03.254   356-356   NxpExtns                vendor.nxp.nxpnfc@1.0-service        D  find found NXP_FW_NAME=libpn553_fw.so
+2026-04-10 21:07:03.300   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337533): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:07:03.400   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337534): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
+2026-04-10 21:07:03.500   397-397   gle.vp8.encoder         media.codec                          W  type=1400 audit(0.0:337535): avc: denied { getattr } for path="/dev/sw_sync" dev="tmpfs" ino=266 scontext=u:r:mediacodec:s0 tcontext=u:object_r:sw_sync_device:s0 tclass=chr_file permissive=0
