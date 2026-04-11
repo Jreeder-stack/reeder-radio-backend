@@ -7,7 +7,7 @@ import android.util.Log
 import kotlinx.coroutines.*
 
 private const val TAG = "[AudioPlay]"
-private const val SAMPLE_RATE = 48000
+private const val SAMPLE_RATE = 16000
 private const val FRAME_INTERVAL_MS = 20L
 private const val FRAME_INTERVAL_NS = FRAME_INTERVAL_MS * 1_000_000L
 private const val DEFAULT_SOFTWARE_GAIN = 2.5f

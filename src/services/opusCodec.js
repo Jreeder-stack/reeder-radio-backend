@@ -1,8 +1,9 @@
 import OpusScript from 'opusscript';
 
-const SAMPLE_RATE = 48000;
+const SAMPLE_RATE = 16000;
 const CHANNELS = 1;
-const FRAME_SIZE = 960;
+const FRAME_SIZE = 320;
+const BITRATE = 48000;
 const SENDER_DECODER_IDLE_MS = 30000;
 
 class OpusCodecPool {
@@ -16,7 +17,7 @@ class OpusCodecPool {
   _createEncoder() {
     const encoder = new OpusScript(SAMPLE_RATE, CHANNELS, OpusScript.Application.VOIP);
     try {
-      encoder.encoderCTL(4002, 48000);
+      encoder.encoderCTL(4002, BITRATE);
       encoder.encoderCTL(4012, 1);
       encoder.encoderCTL(4014, 10);
     } catch (e) {

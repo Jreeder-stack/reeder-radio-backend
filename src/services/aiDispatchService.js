@@ -62,16 +62,16 @@ function createWavHeader(dataLength, sampleRate, channels, bitsPerSample) {
   return buffer;
 }
 
-function pcmToWav(pcmBuffer, sampleRate = 48000, channels = 1, bitsPerSample = 16) {
+function pcmToWav(pcmBuffer, sampleRate = 16000, channels = 1, bitsPerSample = 16) {
   const wavHeader = createWavHeader(pcmBuffer.length, sampleRate, channels, bitsPerSample);
   return Buffer.concat([wavHeader, pcmBuffer]);
 }
 
 const AI_IDENTITY = 'AI-Dispatcher';
-const RELAY_SAMPLE_RATE = 48000;
+const RELAY_SAMPLE_RATE = 16000;
 const AZURE_SAMPLE_RATE = 16000;
 const CHANNELS = 1;
-const SAMPLES_PER_FRAME = 960;
+const SAMPLES_PER_FRAME = 320;
 const FRAME_DURATION_MS = Math.floor((SAMPLES_PER_FRAME / RELAY_SAMPLE_RATE) * 1000);
 const EMERGENCY_STATUS_CHECK_TIMEOUT_MS = 5000;
 const MAX_RECORDING_DURATION_MS = 60000;

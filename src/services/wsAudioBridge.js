@@ -13,9 +13,9 @@ const AUDIO_DIAG = process.env.AUDIO_DIAG === 'true';
 const PCM_SHAPE = {
   type: 'audio',
   codec: 'pcm',
-  sampleRate: 48000,
+  sampleRate: 16000,
   channels: 1,
-  frameSamples: 960,
+  frameSamples: 320,
 };
 
 function isValidPcmPacket(packet) {

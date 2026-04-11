@@ -90,7 +90,7 @@ class AudioTransportManager {
         this._opusDecoderReady.delete(senderKey);
       }
     }
-    const decoder = new OpusDecoder({ channels: 1, sampleRate: 48000 });
+    const decoder = new OpusDecoder({ channels: 1, sampleRate: 16000 });
     const readyPromise = decoder.ready.then(() => decoder).catch((err) => {
       this._opusDecoders.delete(senderKey);
       this._opusDecoderReady.delete(senderKey);

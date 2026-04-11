@@ -70,9 +70,9 @@
   var PCM_SPEC = {
     type: 'audio',
     codec: 'pcm',
-    sampleRate: 48000,
+    sampleRate: 16000,
     channels: 1,
-    frameSamples: 960,
+    frameSamples: 320,
   };
 
   function buildPcmPacket(sequence, channelId, int16Frame) {

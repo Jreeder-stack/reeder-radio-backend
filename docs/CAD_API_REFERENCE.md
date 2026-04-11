@@ -2187,16 +2187,16 @@ If binary mode is unavailable, audio can be sent as JSON:
 {
   "type": "audio",
   "codec": "pcm",
-  "sampleRate": 48000,
+  "sampleRate": 16000,
   "channels": 1,
-  "frameSamples": 960,
+  "frameSamples": 320,
   "sequence": 42,
   "channelId": "North__Dispatch",
   "payload": [0, 128, -256, ...]
 }
 ```
 
-The `payload` array must contain exactly 960 `int16` sample values. All six fields (`type`, `codec`, `sampleRate`, `channels`, `frameSamples`, `payload`) are validated and must match exactly.
+The `payload` array must contain exactly 320 `int16` sample values. All six fields (`type`, `codec`, `sampleRate`, `channels`, `frameSamples`, `payload`) are validated and must match exactly.
 
 ### Heartbeat / Keep-alive Protocol
 
@@ -2219,14 +2219,14 @@ The server sends heartbeats at 30-second intervals:
 
 | Parameter | Value |
 |---|---|
-| **Sample Rate** | 48,000 Hz |
+| **Sample Rate** | 16,000 Hz |
 | **Channels** | 1 (mono) |
 | **Sample Format** | int16 (signed 16-bit, little-endian) |
-| **Frame Size** | 960 samples |
-| **Frame Duration** | 20 ms (960 / 48000) |
+| **Frame Size** | 320 samples |
+| **Frame Duration** | 20 ms (320 / 16000) |
 | **Codec (RX wire)** | Opus passthrough (`0x02` marker); ~100–200 bytes/frame |
 | **Codec (TX wire)** | Opus (`0x02`, preferred) or PCM (`0x01`, legacy fallback) |
-| **Opus Encoding** | VOIP application, 48 kHz, mono, 960 samples/frame |
+| **Opus Encoding** | VOIP application, 16 kHz, mono, 320 samples/frame |
 
 ---
 

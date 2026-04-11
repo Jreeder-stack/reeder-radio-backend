@@ -1,6 +1,6 @@
-const SAMPLE_RATE = 48000;
+const SAMPLE_RATE = 16000;
 const CHANNELS = 1;
-const FRAME_SIZE = 960;
+const FRAME_SIZE = 320;
 const BITRATE = 64000;
 
 export class OpusBrowserEncoder {
@@ -69,7 +69,7 @@ export class OpusBrowserEncoder {
       });
 
       this._ready = true;
-      console.log('[OpusBrowserEncoder] WebCodecs AudioEncoder initialized (opus, 48kHz, mono)');
+      console.log('[OpusBrowserEncoder] WebCodecs AudioEncoder initialized (opus, 16kHz, mono)');
       return true;
     } catch (err) {
       console.error('[OpusBrowserEncoder] Failed to initialize WebCodecs encoder:', err.message);

@@ -1,9 +1,9 @@
 export const PCM_SPEC = {
   type: 'audio',
   codec: 'pcm',
-  sampleRate: 48000,
+  sampleRate: 16000,
   channels: 1,
-  frameSamples: 960,
+  frameSamples: 320,
 };
 
 export const WS_BINARY_MARKER = 0x01;
