@@ -226,14 +226,13 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
     try {
       await audioTransportManager.stop();
       console.log('[PTT] Transmission stopped');
-      
-      if (signalPttEnd && primaryChannel) {
-        signalPttEnd(primaryChannel);
-      }
     } catch (err) {
       console.error('[PTT] Failed to stop transmission:', err);
       audioTransportManager.forceRelease();
     } finally {
+      if (signalPttEnd && primaryChannel) {
+        signalPttEnd(primaryChannel);
+      }
       if (channelsToUnmute.length > 0) {
         audioTransportManager.unmuteChannels(channelsToUnmute);
         console.log('[PTT] Unmuted channels:', channelsToUnmute);

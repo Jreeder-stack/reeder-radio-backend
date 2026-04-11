@@ -8,6 +8,7 @@ import { canonicalChannelKey } from './channelKeyUtils.js';
 import { floorControlService } from './floorControlService.js';
 import { audioRelayService } from './audioRelayService.js';
 import { opusCodec } from './opusCodec.js';
+let _signalingServiceRef = null;
 const AUDIO_DIAG = process.env.AUDIO_DIAG === 'true';
 
 const PCM_SHAPE = {
@@ -41,6 +42,10 @@ class WsAudioBridge {
     this.channelClients = new Map();
     this._pingInterval = null;
     this._pongCheckInterval = null;
+  }
+
+  setSignalingService(signalingService) {
+    _signalingServiceRef = signalingService;
   }
 
   attach(httpServer) {
@@ -274,6 +279,14 @@ class WsAudioBridge {
       if (!map) return;
       map.delete(unitId);
       if (map.size === 0) this.channelClients.delete(channelId);
+
+      if (_signalingServiceRef) {
+        const transmission = _signalingServiceRef.activeTransmissions?.get(channelId);
+        if (transmission && transmission.unitId === unitId) {
+          console.warn(`[WsAudioBridge] Audio WS closed during active TX — forcing ptt:end for unitId=${unitId} channelId=${channelId}`);
+          _signalingServiceRef.forceEndTransmission(channelId, unitId, 'audio_ws_disconnect');
+        }
+      }
     });
   }
 

@@ -457,10 +457,56 @@ class SignalingManager {
   }
 
   signalPttEnd(channelId) {
-    if (!this.socket?.connected) return false;
+    if (!this.socket?.connected || !this.authenticated) {
+      console.warn('[Signaling] signalPttEnd: socket disconnected or unauthenticated, queuing retry for', channelId);
+      this._queuePttEndRetry(channelId);
+      return false;
+    }
 
     this.socket.emit(SIGNALING_EVENTS.PTT_END, { channelId });
     return true;
+  }
+
+  _queuePttEndRetry(channelId) {
+    if (this._pendingPttEnds) {
+      this._pendingPttEnds.add(channelId);
+    } else {
+      this._pendingPttEnds = new Set([channelId]);
+    }
+
+    if (!this._pttEndRetryHandler) {
+      this._pttEndRetryHandler = () => {
+        if (!this._pendingPttEnds || this._pendingPttEnds.size === 0) return;
+        if (!this.socket?.connected || !this.authenticated) return;
+        const channels = [...this._pendingPttEnds];
+        this._pendingPttEnds.clear();
+        for (const ch of channels) {
+          console.log('[Signaling] Retrying queued ptt:end for', ch);
+          this.socket.emit(SIGNALING_EVENTS.PTT_END, { channelId: ch });
+        }
+      };
+      this.on('connectionChange', (e) => {
+        if (e.connected && this._pttEndRetryHandler) {
+          setTimeout(() => {
+            if (this.authenticated) {
+              this._pttEndRetryHandler();
+            }
+          }, 500);
+        }
+      });
+    }
+
+    setTimeout(() => {
+      if (this._pendingPttEnds && this._pendingPttEnds.has(channelId)) {
+        if (this.socket?.connected && this.authenticated) {
+          console.log('[Signaling] Delayed retry ptt:end for', channelId);
+          this.socket.emit(SIGNALING_EVENTS.PTT_END, { channelId });
+          this._pendingPttEnds.delete(channelId);
+        } else {
+          console.warn('[Signaling] ptt:end retry failed, still disconnected/unauthenticated for', channelId);
+        }
+      }
+    }, 3000);
   }
 
   signalEmergencyStart(channelId) {

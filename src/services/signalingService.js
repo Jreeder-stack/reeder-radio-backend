@@ -598,6 +598,36 @@ class SignalingService {
     console.log(`[Signaling] PTT END: ${socket.unitId} on ${channelId} (${endData.duration}ms)`);
   }
 
+  forceEndTransmission(channelId, unitId, reason = 'forced') {
+    const key = canonicalChannelKey(channelId);
+    const transmission = this.activeTransmissions.get(key);
+    if (!transmission || transmission.unitId !== unitId) return false;
+
+    console.warn(`[Signaling] forceEndTransmission: unitId=${unitId} channelId=${key} reason=${reason}`);
+
+    const endData = {
+      unitId,
+      channelId: key,
+      timestamp: Date.now(),
+      duration: Date.now() - transmission.timestamp,
+      reason,
+    };
+
+    this.activeTransmissions.delete(key);
+    floorControlService.releaseFloor(key, unitId);
+
+    const presence = this.unitPresence.get(unitId);
+    if (presence) {
+      presence.status = 'online';
+    }
+
+    this.io.to(`channel:${key}`).emit(SIGNALING_EVENTS.PTT_END, endData);
+    this.io.to(`channel:${key}`).emit(RADIO_EVENTS.CHANNEL_IDLE, { channelId: key, timestamp: Date.now() });
+
+    this._emitCallback('pttEnd', endData);
+    return true;
+  }
+
   _handleEmergencyStart(socket, data) {
     const channelId = canonicalChannelKey(data.channelId);
     

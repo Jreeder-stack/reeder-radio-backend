@@ -17,6 +17,7 @@ const RX_DIAG_SUMMARY_INTERVAL_MS = 2000;
 
 const RECONNECT_BASE_MS = 1000;
 const RECONNECT_MAX_MS = 10000;
+const TX_WATCHDOG_TIMEOUT_MS = 20000;
 
 function float32ToInt16(float32) {
   const int16 = new Int16Array(float32.length);
@@ -76,6 +77,7 @@ class AudioTransportManager {
     this._healthCheckInterval = null;
     this._reconnectAttempts = new Map();
     this._reconnectTimers = new Map();
+    this._txWatchdogTimer = null;
     this._startHealthCheck();
   }
 
@@ -232,11 +234,42 @@ class AudioTransportManager {
   _setPttState(next) {
     const prev = this.pttState;
     this.pttState = next;
+
+    if (next === PTT_STATES.TRANSMITTING) {
+      this._startTxWatchdog();
+    } else if (prev === PTT_STATES.TRANSMITTING || next === PTT_STATES.IDLE) {
+      this._clearTxWatchdog();
+    }
+
     if (this.onStateChange) {
       try { this.onStateChange(next, prev); } catch (_) {}
     }
     for (const cb of this._pttListeners) {
       try { cb(next, prev); } catch (_) {}
+    }
+  }
+
+  _startTxWatchdog() {
+    this._clearTxWatchdog();
+    this._txWatchdogTimer = setTimeout(() => {
+      if (this.pttState === PTT_STATES.TRANSMITTING) {
+        console.warn('[AudioTransport] TX_WATCHDOG: transmission exceeded max duration, force-stopping');
+        this.forceReleaseTransmit();
+        if (this.primaryTxChannel) {
+          try {
+            signalingManager.signalPttEnd(this.primaryTxChannel);
+          } catch (e) {
+            console.error('[AudioTransport] TX_WATCHDOG: signalPttEnd failed:', e.message);
+          }
+        }
+      }
+    }, TX_WATCHDOG_TIMEOUT_MS);
+  }
+
+  _clearTxWatchdog() {
+    if (this._txWatchdogTimer) {
+      clearTimeout(this._txWatchdogTimer);
+      this._txWatchdogTimer = null;
     }
   }
 
@@ -518,9 +551,10 @@ class AudioTransportManager {
 
     this._txEncoder.setOnEncoded((encoded) => {
       if (!this._loopbackOk) return;
-      if (!room || !room.ws || room.ws.readyState !== WebSocket.OPEN) return;
-      const binFrame = buildBinaryFrameOpus(this._txSequence++, txChannel, room.unitId, encoded);
-      room.ws.send(binFrame);
+      const liveRoom = this.rooms.get(txChannel);
+      if (!liveRoom || !liveRoom.ws || liveRoom.ws.readyState !== WebSocket.OPEN) return;
+      const binFrame = buildBinaryFrameOpus(this._txSequence++, txChannel, liveRoom.unitId, encoded);
+      liveRoom.ws.send(binFrame);
     });
 
     await this._capture.start(async (frame) => {
