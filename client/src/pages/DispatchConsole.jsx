@@ -336,7 +336,7 @@ export default function DispatchConsole({ user, onLogout }) {
 
   if (!isConnected && !isConnecting && connectionError) {
     return (
-      <div className="flex flex-col h-screen bg-dispatch-bg">
+      <div className="dispatch-viewport bg-dispatch-bg">
         <TopBar user={user} onLogout={onLogout} darkMode={darkMode} onToggleTheme={toggleTheme} />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
@@ -356,7 +356,7 @@ export default function DispatchConsole({ user, onLogout }) {
 
   if (isConnecting) {
     return (
-      <div className="flex flex-col h-screen bg-dispatch-bg">
+      <div className="dispatch-viewport bg-dispatch-bg">
         <TopBar user={user} onLogout={onLogout} darkMode={darkMode} onToggleTheme={toggleTheme} />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
@@ -369,7 +369,7 @@ export default function DispatchConsole({ user, onLogout }) {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-dispatch-bg">
+    <div className="dispatch-viewport bg-dispatch-bg">
       <TopBar user={user} onLogout={onLogout} darkMode={darkMode} onToggleTheme={toggleTheme} onOpenAudioSettings={() => setShowAudioSettings(true)} />
       
       <AudioSettings
