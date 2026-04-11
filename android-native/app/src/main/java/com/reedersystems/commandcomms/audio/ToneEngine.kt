@@ -124,8 +124,55 @@ class ToneEngine(private val context: Context) {
     fun playEndOfTxTone() {
         if (endOfTxJob?.isActive == true) return
         endOfTxJob = scope.launch {
-            playBeeps(800f, count = 1, durationMs = 150, gapMs = 0, volume = 0.35f)
+            playEndOfTxBeep()
             endOfTxJob = null
+        }
+    }
+
+    private suspend fun playEndOfTxBeep() = withContext(Dispatchers.IO) {
+        val rate = 16000
+        val durationMs = 150
+        val freqHz = 800.0
+        val volume = 0.5
+        val sampleCount = rate * durationMs / 1000
+        val buf = ShortArray(sampleCount)
+        val inc = 2.0 * PI * freqHz / rate
+        var phase = 0.0
+        for (i in buf.indices) {
+            val env = when {
+                i < sampleCount * 0.05 -> i / (sampleCount * 0.05)
+                i > sampleCount * 0.85 -> (sampleCount - i) / (sampleCount * 0.15)
+                else -> 1.0
+            }
+            buf[i] = (sin(phase) * volume * env * Short.MAX_VALUE).toInt().toShort()
+            phase += inc
+            if (phase > 2.0 * PI) phase -= 2.0 * PI
+        }
+        var track: AudioTrack? = null
+        try {
+            val minBuf = AudioTrack.getMinBufferSize(
+                rate, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT
+            )
+            track = AudioTrack.Builder()
+                .setAudioAttributes(audioAttribs())
+                .setAudioFormat(
+                    AudioFormat.Builder()
+                        .setSampleRate(rate)
+                        .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                        .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                        .build()
+                )
+                .setBufferSizeInBytes(maxOf(minBuf, sampleCount * 2))
+                .setTransferMode(AudioTrack.MODE_STATIC)
+                .build()
+            track.write(buf, 0, buf.size)
+            track.play()
+            delay(durationMs.toLong() + 50)
+        } catch (e: Exception) {
+            Log.w(TAG, "End-of-TX beep error: ${e.message}")
+        } finally {
+            runCatching { track?.stop() }
+            runCatching { track?.release() }
         }
     }
 

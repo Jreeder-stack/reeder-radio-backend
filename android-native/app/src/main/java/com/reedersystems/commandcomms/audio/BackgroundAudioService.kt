@@ -840,6 +840,7 @@ class BackgroundAudioService : Service() {
                 radioEngine?.floorControl?.releaseFloor(roomKey)
                 Log.d(TAG, """{"event":"PTT_RELEASE_SENT","channelId":"$roomKey"}""")
                 sendPttTxEnded()
+                delay(80)
                 Log.d("[ToneEvent]", """{"tone":"end-of-tx","trigger":"ptt_up","state":"$pttState","signaling":$wasSignaling,"ts":${System.currentTimeMillis()}}""")
                 app.toneEngine.playEndOfTxTone()
                 Log.d(TAG, "Radio PTT UP: end-of-TX tone for roomKey $roomKey")
