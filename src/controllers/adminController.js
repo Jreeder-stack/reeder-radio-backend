@@ -2,7 +2,7 @@ import { spawn } from 'child_process';
 import * as adminService from '../services/adminService.js';
 import * as authService from '../services/authService.js';
 import { success, error, created } from '../utils/response.js';
-import { startDispatcher, stopDispatcher } from '../services/aiDispatchService.js';
+import { startDispatcher, stopDispatcher, getDispatcher } from '../services/aiDispatchService.js';
 import { getAiDispatchChannel, setAiDispatchChannel, getAllChannels } from '../db/index.js';
 import { signalingService } from '../services/signalingService.js';
 import { scannerFeedService } from '../services/scannerFeedService.js';
@@ -263,7 +263,9 @@ export async function getAiDispatch(req, res) {
   try {
     const enabled = await adminService.getAiDispatchEnabled();
     const channel = await getAiDispatchChannel();
-    success(res, { enabled, channel });
+    const dispatcher = getDispatcher();
+    const pipeline = dispatcher.getPipelineStatus();
+    success(res, { enabled, channel, pipeline });
   } catch (err) {
     console.error('Get AI dispatch error:', err);
     error(res, 'Failed to get AI dispatch status', 500);
@@ -351,7 +353,8 @@ export async function setAiDispatch(req, res) {
       'admin_toggle_ai_dispatch',
       { enabled, channel: dispatchChannel }
     );
-    success(res, { enabled, channel: dispatchChannel });
+    const pipeline = getDispatcher().getPipelineStatus();
+    success(res, { enabled, channel: dispatchChannel, pipeline });
   } catch (err) {
     console.error('Set AI dispatch error:', err);
     error(res, 'Failed to set AI dispatch status', 500);

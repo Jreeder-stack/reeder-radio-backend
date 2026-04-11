@@ -87,6 +87,14 @@ class AIDispatcherSignaling {
       log.endTime = Date.now();
       log.duration = log.endTime - log.startTime;
     }
+
+    if (this.dispatcher && typeof this.dispatcher.flushRecordingForUnit === 'function') {
+      try {
+        this.dispatcher.flushRecordingForUnit(unitId);
+      } catch (err) {
+        this.log('PTT_END_FLUSH_ERROR', { channelId, unitId, error: err.message });
+      }
+    }
   }
 
   async handleEmergencyStart(channelId, unitId) {

@@ -342,6 +342,13 @@ class AIDispatcher {
     this._reconnectAttempts = 0;
     this._healthCheckInterval = null;
     this._intentionalLeave = false;
+    this.pipelineStatus = 'idle';
+    this.pipelineError = null;
+    this._decodeErrorCounts = new Map();
+    this._sttErrorCount = 0;
+    this._lastSuccessfulSttAt = null;
+    this._framesReceivedCount = 0;
+    this._decodeSuccessCount = 0;
   }
 
   log(action, details = {}) {
@@ -535,6 +542,7 @@ class AIDispatcher {
       }
       this.connected = false;
       this.channelName = null;
+      this.pipelineStatus = 'idle';
       this._clearAllRecordings();
     }
 
@@ -664,6 +672,22 @@ class AIDispatcher {
     }
 
     this._clearAllRecordings();
+    this.pipelineStatus = 'idle';
+    this.pipelineError = null;
+    this._decodeErrorCounts.clear();
+  }
+
+  getPipelineStatus() {
+    return {
+      connected: this.connected,
+      pipelineStatus: this.pipelineStatus,
+      pipelineError: this.pipelineError,
+      framesReceived: this._framesReceivedCount,
+      decodeSuccesses: this._decodeSuccessCount,
+      sttErrors: this._sttErrorCount,
+      lastSuccessfulSttAt: this._lastSuccessfulSttAt,
+      channel: this.channelName || this.configuredChannel,
+    };
   }
 
   _startErrorCleanup() {
@@ -773,13 +797,19 @@ class AIDispatcher {
 
     this.connected = true;
     this.channelName = channelName;
+    this.pipelineStatus = 'awaiting_audio';
+    this.pipelineError = null;
+    this._framesReceivedCount = 0;
+    this._decodeSuccessCount = 0;
+    this._decodeErrorCounts.clear();
+    this._sttErrorCount = 0;
     
     this.log('CHANNEL_JOINED', { channel: channelName, audioListenerKeys: Array.from(listenKeys), registeredNumericId: this.numericChannelId });
     this.verboseLog('OPUS_TRANSPORT_VERIFIED', { mode: 'server-side decode', note: 'AI dispatcher receives Opus from relay listeners and decodes server-side for STT' });
   }
 
   _onAudioFrame(audioEvent) {
-    const { channelId, unitId, opusPayload, sequence } = audioEvent;
+    const { channelId, unitId, opusPayload, sequence, codec } = audioEvent;
     if (unitId === AI_IDENTITY) return;
     if (!this.isHumanParticipant(unitId)) {
       if (sequence === 0) {
@@ -787,16 +817,40 @@ class AIDispatcher {
       }
       return;
     }
+
+    this._framesReceivedCount++;
     if (sequence === 0 || (!this._activeRecordings.has(unitId) && sequence % 50 === 0)) {
-      this.verboseLog('AUDIO_FRAME_RECEIVED', { unitId, channelId, sequence, payloadBytes: opusPayload?.length });
+      this.verboseLog('AUDIO_FRAME_RECEIVED', { unitId, channelId, sequence, codec: codec || 'opus', payloadBytes: opusPayload?.length });
     }
 
     let pcmFrame;
-    try {
-      pcmFrame = opusCodec.decodeOpusToPcm(opusPayload, unitId);
-    } catch (err) {
-      this.verboseLog('OPUS_DECODE_ERROR', { unitId, error: err.message });
-      return;
+    if (codec === 'pcm') {
+      pcmFrame = Buffer.isBuffer(opusPayload) ? opusPayload : Buffer.from(opusPayload);
+      this._decodeSuccessCount++;
+    } else {
+      try {
+        pcmFrame = opusCodec.decodeOpusToPcm(opusPayload, unitId);
+        this._decodeSuccessCount++;
+        const errCount = this._decodeErrorCounts.get(unitId) || 0;
+        if (errCount > 0) {
+          this._decodeErrorCounts.set(unitId, 0);
+          this.log('OPUS_DECODE_RECOVERED', { unitId });
+        }
+        if (this.pipelineStatus === 'decode_error') {
+          this.pipelineStatus = 'healthy';
+          this.pipelineError = null;
+        }
+      } catch (err) {
+        const errCount = (this._decodeErrorCounts.get(unitId) || 0) + 1;
+        this._decodeErrorCounts.set(unitId, errCount);
+        this.log('OPUS_DECODE_ERROR', { unitId, error: err.message, consecutiveErrors: errCount, sampleRate: OPUS_SAMPLE_RATE });
+        if (errCount >= 3) {
+          this.pipelineStatus = 'decode_error';
+          this.pipelineError = `Opus decode failed for ${unitId}: ${err.message}`;
+          this.log('PIPELINE_DECODE_DEGRADED', { unitId, consecutiveErrors: errCount });
+        }
+        return;
+      }
     }
 
     let recording = this._activeRecordings.get(unitId);
@@ -839,20 +893,21 @@ class AIDispatcher {
     if (recording.maxTimer) clearTimeout(recording.maxTimer);
 
     if (recording.chunks.length === 0) {
-      this.verboseLog('AUDIO_EMPTY', { participant: unitId });
+      this.log('AUDIO_EMPTY', { participant: unitId, frameCount: recording.frameCount });
       return;
     }
 
     const audioBuffer = Buffer.concat(recording.chunks);
-    this.verboseLog('AUDIO_BUFFERING_COMPLETE', {
+    this.log('AUDIO_BUFFERING_COMPLETE', {
       participant: unitId,
       frames: recording.frameCount,
-      bytes: audioBuffer.length
+      bytes: audioBuffer.length,
+      durationMs: Math.round((audioBuffer.length / (RELAY_SAMPLE_RATE * 2)) * 1000)
     });
 
     const MIN_AUDIO_BYTES = RELAY_SAMPLE_RATE * 2 * 0.5;
     if (audioBuffer.length < MIN_AUDIO_BYTES) {
-      this.verboseLog('AUDIO_TOO_SHORT', { bytes: audioBuffer.length, minBytes: MIN_AUDIO_BYTES });
+      this.log('AUDIO_TOO_SHORT', { participant: unitId, bytes: audioBuffer.length, minBytes: MIN_AUDIO_BYTES });
       return;
     }
 
@@ -868,6 +923,16 @@ class AIDispatcher {
         });
       }
     });
+  }
+
+  flushRecordingForUnit(unitId) {
+    const recording = this._activeRecordings.get(unitId);
+    if (!recording) {
+      this.verboseLog('PTT_END_FLUSH_SKIPPED', { unitId, reason: 'No active recording' });
+      return;
+    }
+    this.log('PTT_END_FLUSH', { unitId, frames: recording.frameCount, chunks: recording.chunks.length });
+    this._finishRecording(unitId);
   }
 
   _clearAllRecordings() {
@@ -973,14 +1038,34 @@ class AIDispatcher {
 
       this.verboseLog('AUDIO_PROCESSING', { bytes: audioBuffer.length, channel: this.channelName, participant: participantId });
 
+      this.log('STT_INVOKE', { participant: participantId, audioBytes: audioBuffer.length, sampleRate: RELAY_SAMPLE_RATE });
+
       const resampledAudio = resampleAudio(audioBuffer, RELAY_SAMPLE_RATE, AZURE_SAMPLE_RATE);
 
-      const transcript = await speechToText(resampledAudio);
+      let transcript;
+      try {
+        transcript = await speechToText(resampledAudio);
+      } catch (sttErr) {
+        this._sttErrorCount++;
+        this.pipelineStatus = 'stt_error';
+        this.pipelineError = `STT failed: ${sttErr.message}`;
+        this.log('STT_ERROR', { participant: participantId, error: sttErr.message, totalSttErrors: this._sttErrorCount });
+        throw sttErr;
+      }
+
       if (!transcript) {
         this.verboseLog('STT_NO_SPEECH', { participant: participantId });
         return;
       }
 
+      this._lastSuccessfulSttAt = Date.now();
+      this._sttErrorCount = 0;
+      if (this.pipelineStatus !== 'healthy') {
+        const prevStatus = this.pipelineStatus;
+        this.pipelineStatus = 'healthy';
+        this.pipelineError = null;
+        this.log('PIPELINE_HEALTHY', { participant: participantId, previousStatus: prevStatus });
+      }
       this.log('STT_RESULT', { transcript, participant: participantId });
 
       if (this.errorCounts.has(participantId)) {

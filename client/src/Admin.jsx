@@ -16,6 +16,7 @@ export default function Admin({ user, onLogout }) {
   const [aiDispatchEnabled, setAiDispatchEnabled] = useState(false);
   const [aiDispatchChannel, setAiDispatchChannel] = useState("");
   const [aiDispatchLoading, setAiDispatchLoading] = useState(false);
+  const [aiDispatchPipeline, setAiDispatchPipeline] = useState(null);
 
   const [scannerEnabled, setScannerEnabled] = useState(false);
   const [scannerChannel, setScannerChannel] = useState("");
@@ -58,6 +59,24 @@ export default function Admin({ user, onLogout }) {
     loadData();
   }, []);
 
+  useEffect(() => {
+    let interval;
+    if (activeTab === "settings" && aiDispatchEnabled) {
+      interval = setInterval(async () => {
+        try {
+          const res = await fetch("/api/admin/ai-dispatch", { credentials: "include" });
+          if (res.ok) {
+            const data = await res.json();
+            setAiDispatchPipeline(data.pipeline || null);
+          }
+        } catch (err) {
+          console.error("Failed to poll AI dispatch status:", err);
+        }
+      }, 10000);
+    }
+    return () => clearInterval(interval);
+  }, [activeTab, aiDispatchEnabled]);
+
   const loadData = async () => {
     setLoading(true);
     try {
@@ -89,6 +108,7 @@ export default function Admin({ user, onLogout }) {
       setLogs(logsData.logs);
       setAiDispatchEnabled(aiDispatchData.enabled);
       setAiDispatchChannel(aiDispatchData.channel || "");
+      setAiDispatchPipeline(aiDispatchData.pipeline || null);
       setScannerEnabled(scannerData.running || false);
       setScannerChannel(scannerData.channelName || "");
       setScannerUrl(scannerData.streamUrl || "");
@@ -317,6 +337,7 @@ export default function Admin({ user, onLogout }) {
       const data = await res.json();
       setAiDispatchEnabled(data.enabled);
       setAiDispatchChannel(data.channel || "");
+      setAiDispatchPipeline(data.pipeline || null);
     } catch (err) {
       alert("Failed to toggle AI Dispatch: " + err.message);
     } finally {
@@ -773,11 +794,39 @@ export default function Admin({ user, onLogout }) {
                   </select>
                 </div>
 
-                {aiDispatchEnabled && aiDispatchChannel && (
-                  <div className="admin-status-banner admin-status-banner-success">
-                    AI Dispatcher is active on channel: <strong>{aiDispatchChannel}</strong>
-                  </div>
-                )}
+                {aiDispatchEnabled && aiDispatchChannel && (() => {
+                  const ps = aiDispatchPipeline;
+                  const isDisconnected = !ps || !ps.connected;
+                  const isError = ps && (ps.pipelineStatus === 'decode_error' || ps.pipelineStatus === 'stt_error');
+                  const isHealthy = ps && ps.pipelineStatus === 'healthy' && ps.connected;
+
+                  let statusClass = "admin-status-banner-sub"; // Default/Amber
+                  let statusLabel = "Connected — awaiting audio";
+
+                  if (isDisconnected) {
+                    statusClass = "admin-status-banner-danger";
+                    statusLabel = "Disconnected — not listening";
+                  } else if (isError) {
+                    statusClass = "admin-status-banner-danger";
+                    statusLabel = ps.pipelineStatus === 'decode_error' ? "Audio decode error" : "Speech recognition error";
+                  } else if (isHealthy) {
+                    statusClass = "admin-status-banner-success";
+                    statusLabel = "Listening — pipeline healthy";
+                  }
+
+                  return (
+                    <div className={`admin-status-banner ${statusClass}`} style={{ marginTop: 16 }}>
+                      <div>
+                        <strong>{statusLabel}</strong> — channel: <strong>{aiDispatchChannel}</strong>
+                      </div>
+                      {isError && ps.pipelineError && (
+                        <div style={{ marginTop: 4, fontSize: '0.85em', opacity: 0.8 }}>
+                          {ps.pipelineError}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
 
               <div className="admin-settings-card">
