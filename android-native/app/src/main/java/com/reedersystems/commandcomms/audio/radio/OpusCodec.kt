@@ -21,9 +21,11 @@ class OpusCodec {
         const val FRAME_DURATION_MS = 20
         const val MAX_ENCODED_SIZE = 512
         const val COMPLEXITY = 5
-        const val CONSECUTIVE_FAILURE_THRESHOLD = 3
-        const val BACKOFF_FRAMES = 5
-        const val TOTAL_ASSERTION_FAILURE_LIMIT = 10
+        const val CONSECUTIVE_FAILURE_THRESHOLD = 10
+        const val BACKOFF_FRAMES = 3
+        const val TOTAL_ASSERTION_FAILURE_LIMIT = 50
+        const val SUCCESS_STREAK_RESET_THRESHOLD = 10
+        const val WARMUP_MAX_RETRIES = 2
         const val CODEC_MARKER_PCM: Byte = 0x01
         const val CODEC_MARKER_OPUS: Byte = 0x02
         private const val COMFORT_NOISE_AMPLITUDE: Short = 10
@@ -104,14 +106,57 @@ class OpusCodec {
 
     fun reinitializeEncoderIfNeeded(sampleRate: Int, channels: Int) {
         synchronized(encodeLock) {
-            val enc = encoder
-            if (enc != null && encoderSampleRate == sampleRate && encoderChannels == channels) {
-                encodeRateLimiter.reset()
-                encodeSummaryBytes = 0; encodeSummaryPcmBytes = 0
-                Log.d(TAG, "ENCODER_REUSE rate=$sampleRate frameSize=$encoderFrameSize channels=$channels — encoder already initialized with matching params ${RadioDiagLog.elapsedTag()}")
-                return
-            }
             reinitializeEncoderOnly(sampleRate, channels)
+        }
+    }
+
+    private fun warmUpEncoder(enc: OpusEncoder, frameSize: Int): Boolean {
+        val silentFrame = ShortArray(frameSize)
+        val outputBuffer = ByteArray(MAX_ENCODED_SIZE)
+        return try {
+            val result = enc.encode(silentFrame, 0, frameSize, outputBuffer, 0, outputBuffer.size)
+            result > 0
+        } catch (e: Throwable) {
+            Log.w(TAG, "ENCODER_WARMUP_FAILED: ${e::class.simpleName}: ${e.message}")
+            false
+        }
+    }
+
+    fun createFreshEncoder(sampleRate: Int, channels: Int) {
+        synchronized(encodeLock) {
+            encoderSampleRate = sampleRate
+            encoderChannels = channels
+            encoderFrameSize = (sampleRate * FRAME_DURATION_MS) / 1000
+            expectedFrameBytes = encoderFrameSize * channels * 2
+            encodeRateLimiter.reset()
+            encodeSummaryBytes = 0; encodeSummaryPcmBytes = 0
+
+            for (attempt in 0..WARMUP_MAX_RETRIES) {
+                try {
+                    val enc = OpusEncoder(sampleRate, channels, OpusApplication.OPUS_APPLICATION_VOIP)
+                    configureEncoder(enc, currentBitrate)
+
+                    if (warmUpEncoder(enc, encoderFrameSize)) {
+                        encoder = enc
+                        Log.d(TAG, "ENCODER_FRESH_CREATE rate=$sampleRate frameSize=$encoderFrameSize channels=$channels bitrate=$currentBitrate attempt=$attempt warmup=passed ${RadioDiagLog.elapsedTag()}")
+                        return
+                    } else {
+                        Log.w(TAG, "ENCODER_WARMUP_RETRY attempt=$attempt rate=$sampleRate — silent frame encode failed, retrying ${RadioDiagLog.elapsedTag()}")
+                    }
+                } catch (e: Exception) {
+                    Log.e("[RadioError]", "ENCODER_FRESH_CREATE_FAILED attempt=$attempt: ${e::class.simpleName}: ${e.message} rate=$sampleRate channels=$channels", e)
+                }
+            }
+
+            Log.e("[RadioError]", "ENCODER_FRESH_CREATE_EXHAUSTED all ${WARMUP_MAX_RETRIES + 1} attempts failed — falling back to unvalidated encoder ${RadioDiagLog.elapsedTag()}")
+            try {
+                val enc = OpusEncoder(sampleRate, channels, OpusApplication.OPUS_APPLICATION_VOIP)
+                configureEncoder(enc, currentBitrate)
+                encoder = enc
+            } catch (e: Exception) {
+                Log.e("[RadioError]", "ENCODER_FALLBACK_CREATE_FAILED: ${e::class.simpleName}: ${e.message}", e)
+                encoder = null
+            }
         }
     }
 
@@ -194,10 +239,13 @@ class OpusCodec {
     @Volatile
     var currentAudioSource: String = ""
 
+    private val _consecutiveSuccesses = AtomicLong(0)
+
     fun resetFailureCounts() {
         _assertionFailureCount.set(0)
         _encodeFailureCount.set(0)
         _consecutiveAssertionFailures.set(0)
+        _consecutiveSuccesses.set(0)
         circuitBreakerTripped = false
         backoffFramesRemaining = 0
         encoderReinitialized = false
@@ -266,6 +314,12 @@ class OpusCodec {
             return try {
                 val encodedBytes = enc.encode(pcmFrame, 0, lockedFrameSize, outputBuffer, 0, outputBuffer.size)
                 _consecutiveAssertionFailures.set(0)
+                val successes = _consecutiveSuccesses.incrementAndGet()
+                if (successes >= SUCCESS_STREAK_RESET_THRESHOLD && _assertionFailureCount.get() > 0) {
+                    val prevCount = _assertionFailureCount.getAndSet(0)
+                    _consecutiveSuccesses.set(0)
+                    Log.d(TAG, "ASSERTION_FAILURE_COUNT_RESET after $successes consecutive successes (was $prevCount) ${RadioDiagLog.elapsedTag()}")
+                }
                 if (encodedBytes > 0) {
                     val result = outputBuffer.copyOf(encodedBytes)
                     encodeRateLimiter.tick()
@@ -287,6 +341,7 @@ class OpusCodec {
                     wrapPcmFallback(pcmData)
                 }
             } catch (e: AssertionError) {
+                _consecutiveSuccesses.set(0)
                 val assertCount = _assertionFailureCount.incrementAndGet()
                 val consecutiveCount = _consecutiveAssertionFailures.incrementAndGet()
                 if (assertCount >= TOTAL_ASSERTION_FAILURE_LIMIT) {

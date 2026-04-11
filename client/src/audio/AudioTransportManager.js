@@ -739,6 +739,20 @@ class AudioTransportManager {
     if (codec === 'opus') {
       try {
         const decoderKey = `${channelId}::${senderUnitId}`;
+        const streamKey = decoderKey;
+        const stream = this._reorderStreams.get(streamKey);
+        if (stream && stream._lastCodec && stream._lastCodec !== 'opus') {
+          console.log('CODEC_SWITCH_DETECTED', { from: stream._lastCodec, to: 'opus', channelId, sender: senderUnitId });
+          try {
+            const existingDecoder = this._opusDecoders.get(decoderKey);
+            if (existingDecoder) {
+              try { existingDecoder.free(); } catch (_) {}
+              this._opusDecoders.delete(decoderKey);
+              this._opusDecoderReady.delete(decoderKey);
+            }
+          } catch (_) {}
+        }
+        if (stream) stream._lastCodec = 'opus';
         const decoder = await this._getOpusDecoder(decoderKey);
         const decoded = decoder.decodeFrame(payload);
         if (decoded.samplesDecoded > 0 && decoded.channelData && decoded.channelData[0]) {
@@ -766,6 +780,9 @@ class AudioTransportManager {
         console.warn('OPUS_DECODE_ERROR', err.message);
       }
     } else {
+      const decoderKey = `${channelId}::${senderUnitId}`;
+      const stream = this._reorderStreams.get(decoderKey);
+      if (stream) stream._lastCodec = 'pcm';
       await this._playbackFrame(payload);
     }
   }

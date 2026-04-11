@@ -544,7 +544,7 @@ class RadioAudioEngine(private val context: Context) {
             }
 
             opusCodec.currentAudioSource = txSessionStats.audioSource
-            opusCodec.reinitializeEncoderIfNeeded(actualSampleRate, 1)
+            opusCodec.createFreshEncoder(actualSampleRate, 1)
             computeDspCoefficients(actualSampleRate)
 
             record.startRecording()
@@ -565,7 +565,7 @@ class RadioAudioEngine(private val context: Context) {
                 }
                 actualFrameSizeSamples = (actualSampleRate * CAPTURE_INTERVAL_MS.toInt()) / 1000
                 actualFrameSizeBytes = actualFrameSizeSamples * actualChannelCount * 2
-                opusCodec.reinitializeEncoderIfNeeded(actualSampleRate, 1)
+                opusCodec.createFreshEncoder(actualSampleRate, 1)
                 computeDspCoefficients(actualSampleRate)
             }
 
@@ -974,7 +974,7 @@ class RadioAudioEngine(private val context: Context) {
 
             resetDspState()
             opusCodec.currentAudioSource = txSessionStats.audioSource
-            opusCodec.reinitializeEncoderIfNeeded(actualSampleRate, 1)
+            opusCodec.createFreshEncoder(actualSampleRate, 1)
             Log.d("[OpusCodec]", "OPUS_TX_INIT sampleRate=$actualSampleRate channels=1 frameMs=$CAPTURE_INTERVAL_MS frameSize=${opusCodec.encoderFrameSize} bitrate=${OpusCodec.BITRATE} ${RadioDiagLog.elapsedTag()}")
 
             computeDspCoefficients(actualSampleRate)
@@ -997,7 +997,7 @@ class RadioAudioEngine(private val context: Context) {
                 }
                 actualFrameSizeSamples = (actualSampleRate * CAPTURE_INTERVAL_MS.toInt()) / 1000
                 actualFrameSizeBytes = actualFrameSizeSamples * actualChannelCount * 2
-                opusCodec.reinitializeEncoderIfNeeded(actualSampleRate, 1)
+                opusCodec.createFreshEncoder(actualSampleRate, 1)
                 computeDspCoefficients(actualSampleRate)
                 Log.d("[AudioCapture]", "TX_PIPELINE_READAPTED postStartRate=$actualSampleRate frameSize=$actualFrameSizeSamples ${RadioDiagLog.elapsedTag()}")
             }
