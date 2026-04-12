@@ -1,0 +1,112 @@
+19:47:27 [1m[90m[TAILING] Tailing last 50 lines for [all] processes (change the value with --lines option)[39m[22m
+19:47:27 [90m/home/Jreeder5029/.pm2/logs/command-comms-error.log last 50 lines:[39m
+19:47:27 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+19:47:27 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+19:47:27 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+19:47:27 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+19:47:27 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+19:47:27 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+19:47:27 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+19:47:27 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+19:47:27 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+19:47:27 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+19:47:27 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+19:47:27 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+19:47:27 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+19:47:27 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+19:47:27 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+19:47:27 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+19:47:27 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+19:47:27 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+19:47:27 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+19:47:27 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+19:47:27 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+19:47:27 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+19:47:27 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+19:47:27 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+19:47:27 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+19:47:27 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+19:47:27 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+19:47:27 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+19:47:27 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+19:47:27 [SHUTDOWN] Hard shutdown timeout reached, forcing exit.
+19:47:27 fatal: not a git repository (or any of the parent directories): .git
+19:47:27 fatal: not a git repository (or any of the parent directories): .git
+19:47:27 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+19:47:27 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+19:47:27 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+19:47:27 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+19:47:27 [Signaling] SUBSCRIBER_REGISTRATION_FAILED unitId=INDIANA-1 channelId=DISPATCH__DISPATCH udpPort=missing udpAddress=missing peerAddress=127.0.0.1
+19:47:27 [Signaling] SUBSCRIBER_REGISTRATION_FAILED unitId=INDIANA-1 channelId=DISPATCH__DISPATCH udpPort=missing udpAddress=missing peerAddress=127.0.0.1
+19:47:27 [Signaling] SUBSCRIBER_REGISTRATION_FAILED unitId=INDIANA-1 channelId=DISPATCH__DISPATCH udpPort=missing udpAddress=missing peerAddress=127.0.0.1
+19:47:27 [Signaling] SUBSCRIBER_REGISTRATION_FAILED unitId=INDIANA-1 channelId=DISPATCH__DISPATCH udpPort=missing udpAddress=missing peerAddress=127.0.0.1
+19:47:27 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+19:47:27 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+19:47:27 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+19:47:27 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+19:47:27 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+19:47:27 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+19:47:27 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+19:47:27 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+19:47:27 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+19:47:27 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+19:47:27 [90m/home/Jreeder5029/.pm2/logs/command-comms-out.log last 50 lines:[39m
+19:47:27   connection: 'upgrade'
+19:47:27 }
+19:47:27 AUDIO_WS_UPGRADE_HIT {
+19:47:27   method: 'GET',
+19:47:27   path: '/api/audio-ws',
+19:47:27   query: '?channelId=DISPATCH__DISPATCH&unitId=CHESTER-2',
+19:47:27   host: 'comms.reeder-systems.com',
+19:47:27   upgrade: 'websocket',
+19:47:27   connection: 'upgrade'
+19:47:27 }
+19:47:27 [Signaling] DISPATCH-1 joined channel TESTING__TESTING 1
+19:47:27 [DISPATCH] getChannels: 4 radio channels returned
+19:47:27 [API] GET /api/dispatch/channels | user=DISPATCH-1(id:7) | sid=_eUszxmz... | 200 | 16ms
+19:47:27 [Signaling] DISPATCH-1 joined channel DISPATCH__DISPATCH
+19:47:27 [DISPATCH] getChannels: 4 radio channels returned
+19:47:27 [API] GET /api/dispatch/channels | user=DISPATCH-1(id:7) | sid=_eUszxmz... | 200 | 16ms
+19:47:27 [Signaling] DISPATCH-1 left channel TESTING__TESTING 1
+19:47:27 [Signaling] DISPATCH-1 left channel DISPATCH__DISPATCH
+19:47:27 [Signaling] DISPATCH-1 joined channel TESTING__TESTING 1
+19:47:27 [Signaling] DISPATCH-1 joined channel DISPATCH__DISPATCH
+19:47:27 [Signaling] DISPATCH-1 left channel TESTING__TESTING 1
+19:47:27 [Signaling] DISPATCH-1 left channel DISPATCH__DISPATCH
+19:47:27 [Signaling] DISPATCH-1 joined channel TESTING__TESTING 1
+19:47:27 [Signaling] DISPATCH-1 joined channel DISPATCH__DISPATCH
+19:47:27 [Signaling] DISPATCH-1 left channel TESTING__TESTING 1
+19:47:27 [Signaling] DISPATCH-1 left channel DISPATCH__DISPATCH
+19:47:27 [API] GET /api/radios/users | user=DISPATCH-1(id:7) | sid=_eUszxmz... | 200 | 20ms
+19:47:27 [API] GET /api/radios/ | user=DISPATCH-1(id:7) | sid=_eUszxmz... | 200 | 20ms
+19:47:27 [API] PATCH /api/radios/000001/assign | user=DISPATCH-1(id:7) | sid=_eUszxmz... | 200 | 26ms
+19:47:27 AUDIO_WS_UPGRADE_HIT {
+19:47:27   method: 'GET',
+19:47:27   path: '/api/audio-ws',
+19:47:27   query: '?channelId=DISPATCH__DISPATCH&unitId=CHESTER-2',
+19:47:27   host: 'comms.reeder-systems.com',
+19:47:27   upgrade: 'websocket',
+19:47:27   connection: 'upgrade'
+19:47:27 }
+19:47:27 [API] PATCH /api/radios/000001/assign | user=DISPATCH-1(id:7) | sid=_eUszxmz... | 200 | 38ms
+19:47:27 [Signaling] DISPATCH-1 joined channel TESTING__TESTING 1
+19:47:27 [Signaling] DISPATCH-1 joined channel DISPATCH__DISPATCH
+19:47:27 [Signaling] DISPATCH-1 left channel TESTING__TESTING 1
+19:47:27 [Signaling] DISPATCH-1 left channel DISPATCH__DISPATCH
+19:47:27 [API] GET /api/admin/channels | user=DISPATCH-1(id:7) | sid=_eUszxmz... | 200 | 20ms
+19:47:27 [API] GET /api/admin/scanner | user=DISPATCH-1(id:7) | sid=_eUszxmz... | 200 | 12ms
+19:47:27 [API] GET /api/admin/zones | user=DISPATCH-1(id:7) | sid=_eUszxmz... | 200 | 21ms
+19:47:27 [API] GET /api/admin/logs?limit=200 | user=DISPATCH-1(id:7) | sid=_eUszxmz... | 200 | 18ms
+19:47:27 [API] GET /api/admin/users | user=DISPATCH-1(id:7) | sid=_eUszxmz... | 200 | 19ms
+19:47:27 [API] GET /api/admin/ai-dispatch | user=DISPATCH-1(id:7) | sid=_eUszxmz... | 200 | 25ms
+19:47:27 [DISPATCH] getChannels: 4 radio channels returned
+19:47:27 [API] GET /api/dispatch/channels | user=DISPATCH-1(id:7) | sid=_eUszxmz... | 200 | 16ms
+19:47:31 AUDIO_WS_UPGRADE_HIT {
+19:47:31   method: 'GET',
+19:47:31   path: '/api/audio-ws',
+19:47:31   query: '?channelId=DISPATCH__DISPATCH&unitId=CHESTER-2',
+19:47:31   host: 'comms.reeder-systems.com',
+19:47:31   upgrade: 'websocket',
+19:47:31   connection: 'upgrade'
+19:47:31 }
+19:47:31 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
