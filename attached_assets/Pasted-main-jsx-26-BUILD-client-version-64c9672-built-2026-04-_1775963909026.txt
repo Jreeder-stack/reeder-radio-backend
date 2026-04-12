@@ -1,0 +1,218 @@
+main.jsx:26 [BUILD] client version=64c9672 built=2026-04-12T03:03:44.328Z
+radios:1 <meta name="apple-mobile-web-app-capable" content="yes"> is deprecated. Please include <meta name="mobile-web-app-capable" content="yes">
+AudioConnectionContext.jsx:702 [AudioConnection] Init check - user: undefined lastUser: null initializing: false path: /radios
+AudioConnectionContext.jsx:706 [AudioConnection] Not on radio, dispatcher, or admin route, skipping auto-connect
+AuthContext.jsx:127 [PTT-DIAG] [JS] Auth: pushed early connection info to service: server=https://comms.reeder-systems.com unit=DISPATCH-1
+AudioConnectionContext.jsx:702 [AudioConnection] Init check - user: DISPATCH-1 lastUser: null initializing: false path: /radios
+AudioConnectionContext.jsx:706 [AudioConnection] Not on radio, dispatcher, or admin route, skipping auto-connect
+SignalingManager.js:76 [Signaling] Connection already in progress, returning existing promise
+AuthContext.jsx:127 [PTT-DIAG] [JS] Auth: pushed early connection info to service: server=https://comms.reeder-systems.com unit=DISPATCH-1
+SignalingManager.js:110 [Signaling] Connected to signaling server
+SignalingManager.js:337 [Signaling] Authentication request sent for DISPATCH-1
+SignalingManager.js:296 [Signaling] Authentication already in progress, returning existing promise
+SignalingManager.js:160 [Signaling] Authenticated as DISPATCH-1
+SignalingContext.jsx:47 [SignalingContext] Connected and authenticated as DISPATCH-1
+SignalingContext.jsx:47 [SignalingContext] Connected and authenticated as DISPATCH-1
+AudioConnectionContext.jsx:620 [AudioConnection] Page became visible — running recovery sequence
+AudioConnectionContext.jsx:624 [AudioConnection] Status is idle — skipping visibility recovery
+AudioConnectionContext.jsx:702 [AudioConnection] Init check - user: DISPATCH-1 lastUser: null initializing: false path: /radios
+AudioConnectionContext.jsx:706 [AudioConnection] Not on radio, dispatcher, or admin route, skipping auto-connect
+SignalingManager.js:71 [Signaling] Already connected
+AuthContext.jsx:127 [PTT-DIAG] [JS] Auth: pushed early connection info to service: server=https://comms.reeder-systems.com unit=DISPATCH-1
+SignalingManager.js:291 [Signaling] Already authenticated
+SignalingContext.jsx:47 [SignalingContext] Connected and authenticated as DISPATCH-1
+AudioConnectionContext.jsx:589 [AudioConnection] Dispatcher mode - idle timeout disabled (audio must persist)
+AudioConnectionContext.jsx:702 [AudioConnection] Init check - user: DISPATCH-1 lastUser: null initializing: false path: /dispatcher
+AudioConnectionContext.jsx:729 [AudioConnection] Fetching channels...
+AudioConnectionContext.jsx:732 [AudioConnection] Fetched 4 channels
+AudioConnectionContext.jsx:490 [AudioConnection] Dispatcher mode - skipping audio connections at init; monitoring effect will drive connections
+SignalingManager.js:376 [Signaling] Joined channel: TESTING__TESTING 1
+AudioTransportManager.js:354 AUDIO_WS_CONNECT_ATTEMPT {channelName: 'TESTING__TESTING 1', identity: 'DISPATCH-1', url: 'wss://comms.reeder-systems.com/api/audio-ws?channelId=TESTING__TESTING%201&unitId=DISPATCH-1'}
+AudioTransportManager.js:354 AUDIO_WS_CONNECT_ATTEMPT {channelName: 'DISPATCH__DISPATCH', identity: 'DISPATCH-1', url: 'wss://comms.reeder-systems.com/api/audio-ws?channelId=DISPATCH__DISPATCH&unitId=DISPATCH-1'}
+SignalingManager.js:376 [Signaling] Joined channel: DISPATCH__DISPATCH
+AudioTransportManager.js:359 AUDIO_WS_ONOPEN {channelName: 'TESTING__TESTING 1', identity: 'DISPATCH-1'}
+AudioConnectionContext.jsx:293 [AudioConnection] TESTING__TESTING 1 state: connected
+AudioConnectionContext.jsx:349 [AudioConnection] connectToChannel total for TESTING__TESTING 1: 149.7ms
+AudioConnectionContext.jsx:356 [AudioConnection] Connected to TESTING__TESTING 1
+AudioTransportManager.js:359 AUDIO_WS_ONOPEN {channelName: 'DISPATCH__DISPATCH', identity: 'DISPATCH-1'}
+AudioConnectionContext.jsx:293 [AudioConnection] DISPATCH__DISPATCH state: connected
+AudioConnectionContext.jsx:349 [AudioConnection] connectToChannel total for DISPATCH__DISPATCH: 296.0ms
+AudioConnectionContext.jsx:356 [AudioConnection] Connected to DISPATCH__DISPATCH
+PcmCaptureEngine.js:141 [PcmCaptureEngine] Warmed up – mic and AudioContext ready
+AudioTransportManager.js:878 AUDIO_RX_DECODE_DETAIL {opusBytes: 160, pcmSamples: 320, channelId: 'DISPATCH__DISPATCH', sender: 'INDIANA-1', frame: 1}
+AudioTransportManager.js:878 AUDIO_RX_DECODE_DETAIL {opusBytes: 160, pcmSamples: 320, channelId: 'DISPATCH__DISPATCH', sender: 'INDIANA-1', frame: 2}
+AudioTransportManager.js:878 AUDIO_RX_DECODE_DETAIL {opusBytes: 160, pcmSamples: 320, channelId: 'DISPATCH__DISPATCH', sender: 'INDIANA-1', frame: 3}
+AudioTransportManager.js:878 AUDIO_RX_DECODE_DETAIL {opusBytes: 160, pcmSamples: 320, channelId: 'DISPATCH__DISPATCH', sender: 'INDIANA-1', frame: 4}
+AudioTransportManager.js:878 AUDIO_RX_DECODE_DETAIL {opusBytes: 160, pcmSamples: 320, channelId: 'DISPATCH__DISPATCH', sender: 'INDIANA-1', frame: 5}
+AudioTransportManager.js:882 AUDIO_RX_DECODE_SUMMARY {frames: 6, totalBytes: 960, plcFrames: 0, reorderFlushes: 0}
+PcmPlaybackEngine.js:38 AUDIO_PLAYBACK_DIAG {framesReceived: 21, framesPlayed: 0, underrunCount: 0, bufferDepth: 21, avgBufferDepth: 5.6, …}
+AudioTransportManager.js:882 AUDIO_RX_DECODE_SUMMARY {frames: 16, totalBytes: 2560, plcFrames: 0, reorderFlushes: 0}
+PcmPlaybackEngine.js:38 AUDIO_PLAYBACK_DIAG {framesReceived: 77, framesPlayed: 48, underrunCount: 0, bufferDepth: 49, avgBufferDepth: 38, …}
+PcmPlaybackEngine.js:33 AUDIO_PLAYBACK_UNDERRUN {count: 1, bufferDepth: 0}
+(anonymous) @ PcmPlaybackEngine.js:33
+postMessage
+process @ pcm-playback-worklet.js:239
+PcmPlaybackEngine.js:38 AUDIO_PLAYBACK_DIAG {framesReceived: 24, framesPlayed: 74, underrunCount: 1, bufferDepth: 0, avgBufferDepth: 23.3, …}
+AudioTransportManager.js:882 AUDIO_RX_DECODE_SUMMARY {frames: 101, totalBytes: 16160, plcFrames: 0, reorderFlushes: 0}
+PcmPlaybackEngine.js:38 AUDIO_PLAYBACK_DIAG {framesReceived: 55, framesPlayed: 30, underrunCount: 0, bufferDepth: 25, avgBufferDepth: 10.3, …}
+PcmPlaybackEngine.js:33 AUDIO_PLAYBACK_UNDERRUN {count: 1, bufferDepth: 0}
+(anonymous) @ PcmPlaybackEngine.js:33
+postMessage
+process @ pcm-playback-worklet.js:239
+PcmPlaybackEngine.js:38 AUDIO_PLAYBACK_DIAG {framesReceived: 31, framesPlayed: 56, underrunCount: 1, bufferDepth: 0, avgBufferDepth: 11, …}
+AudioTransportManager.js:882 AUDIO_RX_DECODE_SUMMARY {frames: 86, totalBytes: 13760, plcFrames: 0, reorderFlushes: 0}
+PcmPlaybackEngine.js:38 AUDIO_PLAYBACK_DIAG {framesReceived: 59, framesPlayed: 34, underrunCount: 0, bufferDepth: 25, avgBufferDepth: 11.5, …}
+PcmPlaybackEngine.js:33 AUDIO_PLAYBACK_UNDERRUN {count: 1, bufferDepth: 0}
+(anonymous) @ PcmPlaybackEngine.js:33
+postMessage
+process @ pcm-playback-worklet.js:239
+PcmPlaybackEngine.js:38 AUDIO_PLAYBACK_DIAG {framesReceived: 37, framesPlayed: 62, underrunCount: 1, bufferDepth: 0, avgBufferDepth: 12.5, …}
+AudioTransportManager.js:882 AUDIO_RX_DECODE_SUMMARY {frames: 96, totalBytes: 15360, plcFrames: 0, reorderFlushes: 0}
+PcmPlaybackEngine.js:38 AUDIO_PLAYBACK_DIAG {framesReceived: 102, framesPlayed: 76, underrunCount: 0, bufferDepth: 26, avgBufferDepth: 22.1, …}
+AudioTransportManager.js:882 AUDIO_RX_DECODE_SUMMARY {frames: 102, totalBytes: 16320, plcFrames: 0, reorderFlushes: 0}
+PcmPlaybackEngine.js:33 AUDIO_PLAYBACK_UNDERRUN {count: 1, bufferDepth: 0}
+(anonymous) @ PcmPlaybackEngine.js:33
+postMessage
+process @ pcm-playback-worklet.js:239
+PcmPlaybackEngine.js:38 AUDIO_PLAYBACK_DIAG {framesReceived: 4, framesPlayed: 30, underrunCount: 1, bufferDepth: 0, avgBufferDepth: 4.6, …}
+AudioTransportManager.js:882 AUDIO_RX_DECODE_SUMMARY {frames: 4, totalBytes: 640, plcFrames: 0, reorderFlushes: 0}
+PcmPlaybackEngine.js:38 AUDIO_PLAYBACK_DIAG {framesReceived: 66, framesPlayed: 41, underrunCount: 0, bufferDepth: 24, avgBufferDepth: 13.5, …}
+AudioTransportManager.js:882 AUDIO_RX_DECODE_SUMMARY {frames: 100, totalBytes: 16000, plcFrames: 0, reorderFlushes: 0}
+PcmPlaybackEngine.js:38 AUDIO_PLAYBACK_DIAG {framesReceived: 100, framesPlayed: 100, underrunCount: 0, bufferDepth: 24, avgBufferDepth: 25.1, …}
+AudioTransportManager.js:882 AUDIO_RX_DECODE_SUMMARY {frames: 100, totalBytes: 16000, plcFrames: 0, reorderFlushes: 0}
+PcmPlaybackEngine.js:38 AUDIO_PLAYBACK_DIAG {framesReceived: 100, framesPlayed: 100, underrunCount: 0, bufferDepth: 24, avgBufferDepth: 25, …}
+AudioTransportManager.js:882 AUDIO_RX_DECODE_SUMMARY {frames: 100, totalBytes: 16000, plcFrames: 0, reorderFlushes: 0}
+PcmPlaybackEngine.js:38 AUDIO_PLAYBACK_DIAG {framesReceived: 87, framesPlayed: 99, underrunCount: 0, bufferDepth: 12, avgBufferDepth: 24.2, …}
+PcmPlaybackEngine.js:33 AUDIO_PLAYBACK_UNDERRUN {count: 1, bufferDepth: 0}
+(anonymous) @ PcmPlaybackEngine.js:33
+postMessage
+process @ pcm-playback-worklet.js:239
+PcmPlaybackEngine.js:38 AUDIO_PLAYBACK_DIAG {framesReceived: 0, framesPlayed: 13, underrunCount: 1, bufferDepth: 0, avgBufferDepth: 0.8, …}
+index.jsx:266 [PTT] PTT_UP {gestureActive: false}
+index.jsx:247 [PTT] PTT_DOWN {eventType: 'keydown'}
+index.jsx:249 [PTT] PTT_GESTURE_ACTIVE_TRUE
+index.jsx:250 [PTT] PTT_START
+index.jsx:84 [PTT] startTransmission called, channels: ['DISPATCH__DISPATCH']
+index.jsx:155 [PTT] Requesting floor grant for channel=DISPATCH__DISPATCH unit=DISPATCH-1
+index.jsx:156 [PTT] PTT_FLOOR_REQUEST_SENT {channel: 'DISPATCH__DISPATCH', unit: 'DISPATCH-1'}
+index.jsx:158 [PTT] Floor granted for channel=DISPATCH__DISPATCH
+index.jsx:159 [PTT] PTT_FLOOR_GRANTED {channel: 'DISPATCH__DISPATCH', unit: 'DISPATCH-1'}
+index.jsx:172 [PTT] Playing talk permit tone before mic goes live
+talkPermitTone.js:21 [TalkPermit] WAV preloaded
+index.jsx:174 [PTT] Talk permit tone finished, opening mic
+OpusBrowserEncoder.js:72 [OpusBrowserEncoder] WebCodecs AudioEncoder initialized (opus, 16kHz, mono)
+index.jsx:197 [PTT] Transmission started successfully
+index.jsx:266 [PTT] PTT_UP {gestureActive: true}
+index.jsx:269 [PTT] PTT_STOP
+index.jsx:271 [PTT] PTT_GESTURE_ACTIVE_FALSE
+index.jsx:212 [PTT] stopTransmission called
+index.jsx:226 [PTT] Transmission stopped
+index.jsx:236 [PTT] Unmuted channels: ['DISPATCH__DISPATCH']
+index.jsx:247 [PTT] PTT_DOWN {eventType: 'keydown'}
+index.jsx:249 [PTT] PTT_GESTURE_ACTIVE_TRUE
+index.jsx:250 [PTT] PTT_START
+index.jsx:84 [PTT] startTransmission called, channels: ['DISPATCH__DISPATCH']
+index.jsx:155 [PTT] Requesting floor grant for channel=DISPATCH__DISPATCH unit=DISPATCH-1
+index.jsx:156 [PTT] PTT_FLOOR_REQUEST_SENT {channel: 'DISPATCH__DISPATCH', unit: 'DISPATCH-1'}
+index.jsx:158 [PTT] Floor granted for channel=DISPATCH__DISPATCH
+index.jsx:159 [PTT] PTT_FLOOR_GRANTED {channel: 'DISPATCH__DISPATCH', unit: 'DISPATCH-1'}
+index.jsx:172 [PTT] Playing talk permit tone before mic goes live
+index.jsx:174 [PTT] Talk permit tone finished, opening mic
+index.jsx:197 [PTT] Transmission started successfully
+index.jsx:266 [PTT] PTT_UP {gestureActive: true}
+index.jsx:269 [PTT] PTT_STOP
+index.jsx:271 [PTT] PTT_GESTURE_ACTIVE_FALSE
+index.jsx:212 [PTT] stopTransmission called
+index.jsx:226 [PTT] Transmission stopped
+index.jsx:236 [PTT] Unmuted channels: ['DISPATCH__DISPATCH']
+index.jsx:247 [PTT] PTT_DOWN {eventType: 'keydown'}
+index.jsx:249 [PTT] PTT_GESTURE_ACTIVE_TRUE
+index.jsx:250 [PTT] PTT_START
+index.jsx:84 [PTT] startTransmission called, channels: ['DISPATCH__DISPATCH']
+index.jsx:155 [PTT] Requesting floor grant for channel=DISPATCH__DISPATCH unit=DISPATCH-1
+index.jsx:156 [PTT] PTT_FLOOR_REQUEST_SENT {channel: 'DISPATCH__DISPATCH', unit: 'DISPATCH-1'}
+index.jsx:158 [PTT] Floor granted for channel=DISPATCH__DISPATCH
+index.jsx:159 [PTT] PTT_FLOOR_GRANTED {channel: 'DISPATCH__DISPATCH', unit: 'DISPATCH-1'}
+index.jsx:172 [PTT] Playing talk permit tone before mic goes live
+index.jsx:174 [PTT] Talk permit tone finished, opening mic
+index.jsx:197 [PTT] Transmission started successfully
+index.jsx:266 [PTT] PTT_UP {gestureActive: true}
+index.jsx:269 [PTT] PTT_STOP
+index.jsx:271 [PTT] PTT_GESTURE_ACTIVE_FALSE
+index.jsx:212 [PTT] stopTransmission called
+index.jsx:226 [PTT] Transmission stopped
+index.jsx:236 [PTT] Unmuted channels: ['DISPATCH__DISPATCH']
+index.jsx:247 [PTT] PTT_DOWN {eventType: 'keydown'}
+index.jsx:249 [PTT] PTT_GESTURE_ACTIVE_TRUE
+index.jsx:250 [PTT] PTT_START
+index.jsx:84 [PTT] startTransmission called, channels: ['DISPATCH__DISPATCH']
+index.jsx:155 [PTT] Requesting floor grant for channel=DISPATCH__DISPATCH unit=DISPATCH-1
+index.jsx:156 [PTT] PTT_FLOOR_REQUEST_SENT {channel: 'DISPATCH__DISPATCH', unit: 'DISPATCH-1'}
+index.jsx:158 [PTT] Floor granted for channel=DISPATCH__DISPATCH
+index.jsx:159 [PTT] PTT_FLOOR_GRANTED {channel: 'DISPATCH__DISPATCH', unit: 'DISPATCH-1'}
+index.jsx:172 [PTT] Playing talk permit tone before mic goes live
+index.jsx:174 [PTT] Talk permit tone finished, opening mic
+index.jsx:197 [PTT] Transmission started successfully
+index.jsx:266 [PTT] PTT_UP {gestureActive: true}
+index.jsx:269 [PTT] PTT_STOP
+index.jsx:271 [PTT] PTT_GESTURE_ACTIVE_FALSE
+index.jsx:212 [PTT] stopTransmission called
+index.jsx:226 [PTT] Transmission stopped
+index.jsx:236 [PTT] Unmuted channels: ['DISPATCH__DISPATCH']
+AudioConnectionContext.jsx:589 [AudioConnection] Admin mode - idle timeout disabled (audio must persist)
+AudioConnectionContext.jsx:702 [AudioConnection] Init check - user: DISPATCH-1 lastUser: DISPATCH-1 initializing: false path: /admin
+AudioConnectionContext.jsx:729 [AudioConnection] Fetching channels...
+AudioConnectionContext.jsx:732 [AudioConnection] Fetched 4 channels
+AudioConnectionContext.jsx:497 [AudioConnection] Radio mode - setting active channel to DISPATCH__DISPATCH
+AudioConnectionContext.jsx:349 [AudioConnection] connectToChannel total for DISPATCH__DISPATCH: 0.4ms
+AudioConnectionContext.jsx:356 [AudioConnection] Connected to DISPATCH__DISPATCH
+[Violation] 'click' handler took 2187ms
+AudioConnectionContext.jsx:620 [AudioConnection] Page became visible — running recovery sequence
+SignalingManager.js:665 [Signaling] Connection verified — alive and authenticated
+AudioConnectionContext.jsx:644 [AudioConnection] Signaling connection verified
+AudioConnectionContext.jsx:660 [AudioConnection] All audio channels healthy after visibility restore
+AudioConnectionContext.jsx:702 [AudioConnection] Init check - user: DISPATCH-1 lastUser: DISPATCH-1 initializing: false path: /admin
+AudioConnectionContext.jsx:721 [AudioConnection] Already initialized for this user on this path, skipping
+SignalingManager.js:71 [Signaling] Already connected
+AuthContext.jsx:127 [PTT-DIAG] [JS] Auth: pushed early connection info to service: server=https://comms.reeder-systems.com unit=DISPATCH-1
+SignalingManager.js:291 [Signaling] Already authenticated
+SignalingContext.jsx:47 [SignalingContext] Connected and authenticated as DISPATCH-1
+Admin.jsx:377  POST https://comms.reeder-systems.com/api/admin/scanner 500 (Internal Server Error)
+(anonymous) @ Admin.jsx:377
+Nb @ react-dom.production.min.js:54
+Tb @ react-dom.production.min.js:54
+Ub @ react-dom.production.min.js:55
+nf @ react-dom.production.min.js:105
+se @ react-dom.production.min.js:106
+(anonymous) @ react-dom.production.min.js:117
+Qk @ react-dom.production.min.js:273
+Jb @ react-dom.production.min.js:52
+hd @ react-dom.production.min.js:109
+fd @ react-dom.production.min.js:74
+ed @ react-dom.production.min.js:73
+Admin.jsx:377  POST https://comms.reeder-systems.com/api/admin/scanner 500 (Internal Server Error)
+(anonymous) @ Admin.jsx:377
+Nb @ react-dom.production.min.js:54
+Tb @ react-dom.production.min.js:54
+Ub @ react-dom.production.min.js:55
+nf @ react-dom.production.min.js:105
+se @ react-dom.production.min.js:106
+(anonymous) @ react-dom.production.min.js:117
+Qk @ react-dom.production.min.js:273
+Jb @ react-dom.production.min.js:52
+hd @ react-dom.production.min.js:109
+fd @ react-dom.production.min.js:74
+ed @ react-dom.production.min.js:73
+Admin.jsx:377  POST https://comms.reeder-systems.com/api/admin/scanner 500 (Internal Server Error)
+(anonymous) @ Admin.jsx:377
+Nb @ react-dom.production.min.js:54
+Tb @ react-dom.production.min.js:54
+Ub @ react-dom.production.min.js:55
+nf @ react-dom.production.min.js:105
+se @ react-dom.production.min.js:106
+(anonymous) @ react-dom.production.min.js:117
+Qk @ react-dom.production.min.js:273
+Jb @ react-dom.production.min.js:52
+hd @ react-dom.production.min.js:109
+fd @ react-dom.production.min.js:74
+ed @ react-dom.production.min.js:73
