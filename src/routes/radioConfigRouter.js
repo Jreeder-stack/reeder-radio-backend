@@ -1,9 +1,9 @@
 import { Router } from 'express';
-import { requireAuth } from '../middleware/auth.js';
+import { requireAuthOrRadioToken } from '../middleware/auth.js';
 
 const router = Router();
 
-router.use(requireAuth);
+router.use(requireAuthOrRadioToken);
 
 router.get('/config', (req, res) => {
   const audioRelayPort = parseInt(process.env.AUDIO_RELAY_PORT, 10) || 5100;
