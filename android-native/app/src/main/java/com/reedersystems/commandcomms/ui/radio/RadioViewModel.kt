@@ -21,6 +21,7 @@ import com.reedersystems.commandcomms.signaling.ConnectionState
 import com.reedersystems.commandcomms.signaling.SignalingEvent
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -93,6 +94,11 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
     private var emergencyJob: Job? = null
     private var cancelArmingJob: Job? = null
     private var pttStartJob: Job? = null
+    private var emergencySelfHealJob: Job? = null
+
+    companion object {
+        private const val EMERGENCY_SELF_HEAL_TIMEOUT_MS = 10_000L
+    }
 
     /**
      * Receives PTT_TX_FAILED and PTT_TX_ABORTED broadcasts from BackgroundAudioService.
@@ -126,10 +132,12 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                 BackgroundAudioService.ACTION_PTT_TX_STARTED -> {
                     Log.d(TAG, "PTT_TX_STARTED received — setting pttState = TRANSMITTING")
                     _uiState.update { it.copy(pttState = PttState.TRANSMITTING) }
+                    restartEmergencySelfHealIfActive()
                 }
                 BackgroundAudioService.ACTION_PTT_TX_ENDED -> {
                     Log.d(TAG, "PTT_TX_ENDED received — setting pttState = IDLE")
                     _uiState.update { it.copy(pttState = PttState.IDLE) }
+                    restartEmergencySelfHealIfActive()
                 }
 
                 // Emergency broadcasts — service owns signaling/PTT, ViewModel owns UI only
@@ -143,7 +151,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                         )
                     }
                     locationTracker.startTracking()
-                    // Service already started PTT via handlePttDown() — no TX needed here
+                    startEmergencySelfHealTimer()
                 }
                 BackgroundAudioService.ACTION_EMERGENCY_CANCELLED -> {
                     Log.d(TAG, "EMERGENCY_CANCELLED received — dismissing emergency UI")
@@ -151,6 +159,8 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                     emergencyJob = null
                     cancelArmingJob?.cancel()
                     cancelArmingJob = null
+                    emergencySelfHealJob?.cancel()
+                    emergencySelfHealJob = null
                     app.toneEngine.stopCountdownBeep()
                     _uiState.update {
                         it.copy(
@@ -245,11 +255,17 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         val username = state.username.ifBlank { unitId }
         Log.d(STARTUP_TAG, "SIGNALING_CONNECT_ATTEMPT url=${app.signalingClient.serverUrl} unitId=$unitId")
         app.signalingRepository.connect(unitId, username)
+    }
 
+    private fun observeSignaling() {
         viewModelScope.launch {
+            var hadPriorAuth = false
             app.signalingRepository.connectionState.collect { connState ->
                 _uiState.update { it.copy(signalingState = connState) }
                 if (connState == ConnectionState.AUTHENTICATED) {
+                    val wasReconnect = hadPriorAuth
+                    val hadEmergency = _uiState.value.myEmergencyActive
+                    hadPriorAuth = true
                     val roomKey = _uiState.value.currentChannel?.roomKey
                     if (roomKey != null) {
                         Log.d(STARTUP_TAG, "CHANNEL_JOIN_ATTEMPT channel=$roomKey")
@@ -258,12 +274,18 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                     } else {
                         Log.e(STARTUP_TAG, "CHANNEL_JOIN_FAILED reason=no_current_channel")
                     }
+                    if (wasReconnect && hadEmergency) {
+                        viewModelScope.launch {
+                            delay(3_000L)
+                            if (_uiState.value.myEmergencyActive) {
+                                Log.d(TAG, "Signaling reconnected — emergency still active after resync window, force-resetting")
+                                forceResetEmergencyState()
+                            }
+                        }
+                    }
                 }
             }
         }
-    }
-
-    private fun observeSignaling() {
         viewModelScope.launch {
             app.signalingRepository.events.collect { event ->
                 when (event) {
@@ -283,6 +305,8 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                         _uiState.update { it.copy(channelEmergencyActive = true, channelEmergencyUnitId = event.unitId) }
                     }
                     is SignalingEvent.EmergencyEnd -> {
+                        emergencySelfHealJob?.cancel()
+                        emergencySelfHealJob = null
                         _uiState.update { it.copy(channelEmergencyActive = false, myEmergencyActive = false, channelEmergencyUnitId = null) }
                     }
                     is SignalingEvent.ClearAirStart -> {
@@ -415,10 +439,51 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         sendServiceIntent(BackgroundAudioService.ACTION_PTT_UP)
     }
 
+    private fun startEmergencySelfHealTimer() {
+        emergencySelfHealJob?.cancel()
+        emergencySelfHealJob = viewModelScope.launch {
+            while (isActive) {
+                delay(EMERGENCY_SELF_HEAL_TIMEOUT_MS)
+                val state = _uiState.value
+                if (!state.myEmergencyActive) return@launch
+                if (state.pttState == PttState.IDLE) {
+                    Log.w(TAG, "Emergency self-heal: myEmergencyActive=true but idle for ${EMERGENCY_SELF_HEAL_TIMEOUT_MS}ms — force-resetting")
+                    forceResetEmergencyState()
+                    return@launch
+                }
+            }
+        }
+    }
+
+    private fun restartEmergencySelfHealIfActive() {
+        if (_uiState.value.myEmergencyActive && emergencySelfHealJob?.isActive == true) {
+            startEmergencySelfHealTimer()
+        }
+    }
+
+    private fun forceResetEmergencyState() {
+        emergencyJob?.cancel()
+        emergencyJob = null
+        cancelArmingJob?.cancel()
+        cancelArmingJob = null
+        emergencySelfHealJob?.cancel()
+        emergencySelfHealJob = null
+        app.toneEngine.stopCountdownBeep()
+        _uiState.update {
+            it.copy(
+                emergencyHoldProgress = null,
+                isEmergencyCancelling = false,
+                myEmergencyActive = false,
+                channelEmergencyActive = false,
+                channelEmergencyUnitId = null
+            )
+        }
+        locationTracker.stopTracking()
+        Log.d(TAG, "Emergency state force-reset complete")
+    }
+
     private fun onEmergencyDown() {
         val state = _uiState.value
-        // Activation is handled entirely by BackgroundAudioService (immediate, no arming phase).
-        // The ViewModel only needs to manage the cancel-hold UI when an emergency is already active.
         if (state.myEmergencyActive && !state.isEmergencyCancelling) {
             startCancelHold()
         }
@@ -659,6 +724,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
     override fun onCleared() {
         emergencyJob?.cancel()
         cancelArmingJob?.cancel()
+        emergencySelfHealJob?.cancel()
         app.toneEngine.stopCountdownBeep()
         locationTracker.stopTracking()
         runCatching { getApplication<Application>().unregisterReceiver(pttTxFailedReceiver) }

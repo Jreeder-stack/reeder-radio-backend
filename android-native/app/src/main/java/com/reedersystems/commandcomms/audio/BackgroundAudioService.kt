@@ -229,7 +229,7 @@ class BackgroundAudioService : Service() {
         emergencyActivatingJob = null
 
         if (pttState == PttState.TRANSMITTING || pttState == PttState.CONNECTING || pttState == PttState.CLEANING_UP) {
-            handleRadioPttUp()
+            handleRadioPttUp(bypassDebounce = true)
         }
 
         sendEmergencyCancelled()
@@ -942,9 +942,9 @@ class BackgroundAudioService : Service() {
         }
     }
 
-    private fun handleRadioPttUp() {
+    private fun handleRadioPttUp(bypassDebounce: Boolean = false) {
         val now = SystemClock.elapsedRealtime()
-        if (now - lastPttUpTimeMs < PTT_UP_DEBOUNCE_MS) {
+        if (!bypassDebounce && now - lastPttUpTimeMs < PTT_UP_DEBOUNCE_MS) {
             Log.d(TAG, """{"event":"RADIO_PTT_UP_DEBOUNCED","deltaMs":${now - lastPttUpTimeMs}}""")
             return
         }

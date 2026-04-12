@@ -1068,6 +1068,36 @@ class SignalingService {
       return;
     }
 
+    for (const [channelId, emergency] of this.emergencyStates) {
+      if (emergency.unitId === socket.unitId) {
+        this.emergencyStates.delete(channelId);
+
+        const presence = this.unitPresence.get(emergency.unitId);
+        if (presence) {
+          presence.status = 'online';
+        }
+
+        clearUnitEmergencyByIdentity(emergency.unitId).catch(err => {
+          console.error(`[Signaling] Failed to clear DB emergency on disconnect for ${emergency.unitId}:`, err);
+        });
+
+        const endData = {
+          unitId: emergency.unitId,
+          agencyId: emergency.agencyId,
+          channelId,
+          timestamp: Date.now(),
+          clearedBy: 'system:disconnect',
+          duration: Date.now() - emergency.timestamp,
+        };
+
+        this._emitToChannelDispatchers(channelId, SIGNALING_EVENTS.EMERGENCY_END, endData);
+        this._emitCallback('emergencyEnd', endData);
+        this._emitToDispatchers('emergency:cleared', endData);
+
+        console.log(`[Signaling] Emergency auto-cleared on disconnect: ${socket.unitId} on ${channelId}`);
+      }
+    }
+
     this.removeSocketFromChannels(socket, 'disconnect');
     
     this.unitPresence.delete(socket.unitId);

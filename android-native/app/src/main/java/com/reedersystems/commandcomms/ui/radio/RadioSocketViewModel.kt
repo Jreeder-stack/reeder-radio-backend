@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.reedersystems.commandcomms.CommandCommsApp
+import com.reedersystems.commandcomms.data.prefs.ServiceConnectionPrefs
 import io.socket.client.IO
 import io.socket.client.Socket
 import io.socket.engineio.client.transports.WebSocket
@@ -82,6 +83,15 @@ class RadioSocketViewModel(application: Application) : AndroidViewModel(applicat
                     app.sessionPrefs.username = unitId
                     app.signalingClient.setRadioToken(app.radioTokenStore.getToken())
                     viewModelScope.launch {
+                        val configReady = fetchAndStoreRadioConfig()
+                        if (!configReady) {
+                            Log.w(TAG, "Radio config not available after assignment — retrying before navigation")
+                            for (attempt in 1..3) {
+                                kotlinx.coroutines.delay(2_000L)
+                                if (fetchAndStoreRadioConfig()) break
+                                Log.w(TAG, "Radio config retry attempt $attempt failed")
+                            }
+                        }
                         _radioEvent.value = RadioSocketEvent.Assigned(unitId)
                     }
                 } catch (e: Exception) {
@@ -116,6 +126,32 @@ class RadioSocketViewModel(application: Application) : AndroidViewModel(applicat
             s.connect()
         } catch (e: Exception) {
             Log.e(TAG, "Failed to create radio socket: ${e.message}")
+        }
+    }
+
+    private suspend fun fetchAndStoreRadioConfig(): Boolean {
+        Log.d(TAG, "Fetching radio config before assignment navigation")
+        return try {
+            val result = app.radioConfigRepository.fetchConfig()
+            if (result.isSuccess) {
+                val config = result.getOrThrow()
+                val servicePrefs = ServiceConnectionPrefs(getApplication())
+                servicePrefs.transportMode = config.transportMode
+                servicePrefs.relayHost = config.audioRelayHost
+                servicePrefs.relayPort = config.audioRelayPort
+                servicePrefs.signalingUrl = config.signalingUrl
+                servicePrefs.useTls = config.useTls
+                app.radioTransportConfig = config
+                app.signalingClient.serverUrl = config.signalingUrl
+                Log.d(TAG, "Radio config fetched: host=${config.audioRelayHost} port=${config.audioRelayPort}")
+                true
+            } else {
+                Log.w(TAG, "Radio config fetch failed: ${result.exceptionOrNull()?.message}")
+                false
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Radio config fetch exception: ${e.message}")
+            false
         }
     }
 
