@@ -517,8 +517,8 @@ class BackgroundAudioService : Service() {
         }
         engine.onTxStall = { reason ->
             Log.e(TAG, "TX_STALL_DETECTED reason=$reason — playing error tone and stopping TX")
-            Log.d("[ToneEvent]", """{"tone":"error","trigger":"tx_stall","reason":"$reason","state":"$pttState","ts":${System.currentTimeMillis()}}""")
-            app.toneEngine.playErrorTone()
+            Log.d("[ToneEvent]", """{"tone":"denied_bonk","trigger":"tx_stall","reason":"$reason","state":"$pttState","ts":${System.currentTimeMillis()}}""")
+            app.toneEngine.playDeniedBonk()
             scope.launch {
                 transitionPttState(PttState.IDLE)
                 updateNotification("Radio — TX Stall")
@@ -802,7 +802,7 @@ class BackgroundAudioService : Service() {
 
         if (!app.sessionPrefs.micPermissionGranted) {
             Log.w(TAG, "Radio PTT DOWN: mic permission denied — blocked")
-            Log.d("[ToneEvent]", """{"tone":"error","trigger":"mic_permission_denied","state":"$pttState","ts":${System.currentTimeMillis()}}""")
+            Log.d("[ToneEvent]", """{"tone":"denied_bonk","trigger":"mic_permission_denied","state":"$pttState","ts":${System.currentTimeMillis()}}""")
             playErrorToneDebounced()
             return
         }
@@ -841,6 +841,8 @@ class BackgroundAudioService : Service() {
 
         val roomKey = servicePrefs.channelRoomKey ?: run {
             Log.w(TAG, "Radio PTT DOWN ignored: no room key")
+            Log.d("[ToneEvent]", """{"tone":"denied_bonk","trigger":"no_room_key","state":"$pttState","ts":${System.currentTimeMillis()}}""")
+            app.toneEngine.playDeniedBonk()
             sendPttTxFailed()
             return
         }
@@ -1024,14 +1026,14 @@ class BackgroundAudioService : Service() {
             return false
         }
         lastErrorToneMs = now
-        app.toneEngine.playErrorTone()
+        app.toneEngine.playDeniedBonk()
         return true
     }
 
     private fun evaluateReadinessForPttSync(signaling: Boolean, roomKey: String): Boolean? {
         if (radioEngine == null) {
             Log.w(TAG, "RADIO_READY_BLOCKED_REASON reason=radio_engine_missing")
-            Log.d("[ToneEvent]", """{"tone":"error","trigger":"ready_sync_blocked","reason":"radio_engine_missing","ts":${System.currentTimeMillis()}}""")
+            Log.d("[ToneEvent]", """{"tone":"denied_bonk","trigger":"ready_sync_blocked","reason":"radio_engine_missing","ts":${System.currentTimeMillis()}}""")
             playErrorToneDebounced()
             sendPttTxFailed()
             return false
@@ -1041,7 +1043,7 @@ class BackgroundAudioService : Service() {
         if (state == ConnectionState.AUTHENTICATED) {
             if (joinedSignalingChannelId != roomKey) {
                 Log.w(TAG, "RADIO_READY_BLOCKED_REASON reason=channel_not_joined joined=$joinedSignalingChannelId target=$roomKey")
-                Log.d("[ToneEvent]", """{"tone":"error","trigger":"ready_sync_blocked","reason":"channel_not_joined","ts":${System.currentTimeMillis()}}""")
+                Log.d("[ToneEvent]", """{"tone":"denied_bonk","trigger":"ready_sync_blocked","reason":"channel_not_joined","ts":${System.currentTimeMillis()}}""")
                 playErrorToneDebounced()
                 sendPttTxFailed()
                 return false
@@ -1053,7 +1055,7 @@ class BackgroundAudioService : Service() {
             return null
         }
         Log.w(TAG, "RADIO_READY_BLOCKED_REASON reason=signaling_not_authenticated:$state")
-        Log.d("[ToneEvent]", """{"tone":"error","trigger":"ready_sync_blocked","reason":"signaling_not_authenticated","ts":${System.currentTimeMillis()}}""")
+        Log.d("[ToneEvent]", """{"tone":"denied_bonk","trigger":"ready_sync_blocked","reason":"signaling_not_authenticated","ts":${System.currentTimeMillis()}}""")
         playErrorToneDebounced()
         sendPttTxFailed()
         return false

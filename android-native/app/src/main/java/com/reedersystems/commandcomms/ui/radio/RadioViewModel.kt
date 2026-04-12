@@ -116,7 +116,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                         // clean up server signaling, then reset. If pttState is already IDLE
                         // (race-condition cancellation path), no error tone and no duplicate
                         // transmitEnd — the UP handler already cleaned both up.
-                        app.toneEngine.playErrorTone()
+                        app.toneEngine.playDeniedBonk()
                         _uiState.update { it.copy(pttState = PttState.IDLE) }
                     }
                 }
@@ -405,12 +405,12 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         if (state.pttState != PttState.IDLE) return
         if (!state.micPermissionGranted) {
             Log.w(TAG, "PTT DOWN: mic permission denied — blocked")
-            app.toneEngine.playErrorTone()
+            app.toneEngine.playDeniedBonk()
             return
         }
         val channel = state.currentChannel ?: run {
             Log.w(TAG, "PTT DOWN: no channel selected")
-            app.toneEngine.playErrorTone()
+            app.toneEngine.playDeniedBonk()
             return
         }
         if (state.activeTransmittingUnit != null && state.activeTransmittingUnit != state.unitId) {

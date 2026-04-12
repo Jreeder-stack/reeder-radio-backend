@@ -358,7 +358,7 @@ class MainActivity : ComponentActivity() {
                         forwardPttToBackgroundService(BackgroundAudioService.ACTION_PTT_DOWN)
                     } else {
                         Log.w(TAG, "PTT DOWN source=MainActivity code=$keyCode: mic permission denied")
-                        app.toneEngine.playErrorTone()
+                        app.toneEngine.playDeniedBonk()
                     }
                 }
                 return true

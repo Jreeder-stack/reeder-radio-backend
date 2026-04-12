@@ -28,6 +28,8 @@ class ToneEngine(private val context: Context) {
     private var talkPermitJob: Job? = null
     private var talkPermitPlayer: MediaPlayer? = null
     private val talkPermitLock = Any()
+    private var bonkPlayer: MediaPlayer? = null
+    private val bonkLock = Any()
 
     init {
         initBeepTrack()
@@ -231,6 +233,45 @@ class ToneEngine(private val context: Context) {
         }
     }
 
+    fun playDeniedBonk() {
+        synchronized(bonkLock) {
+            bonkPlayer?.let { mp ->
+                runCatching { mp.stop() }
+                runCatching { mp.release() }
+            }
+            bonkPlayer = null
+            try {
+                val mp = MediaPlayer.create(
+                    context,
+                    R.raw.apx_denied,
+                    audioAttribs(),
+                    AudioManager.AUDIO_SESSION_ID_GENERATE
+                )
+                if (mp != null) {
+                    try {
+                        mp.isLooping = false
+                        mp.setOnCompletionListener { player ->
+                            runCatching { player.release() }
+                            synchronized(bonkLock) {
+                                if (bonkPlayer === player) bonkPlayer = null
+                            }
+                        }
+                        mp.start()
+                        bonkPlayer = mp
+                        Log.d(TAG, "Denied bonk played (one-shot)")
+                    } catch (e: Exception) {
+                        runCatching { mp.release() }
+                        Log.w(TAG, "Failed to start denied bonk: ${e.message}")
+                    }
+                } else {
+                    Log.w(TAG, "Failed to create denied bonk MediaPlayer")
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to play denied bonk: ${e.message}")
+            }
+        }
+    }
+
     fun startBusyTone() {
         stopBusyTone()
         busyJob = scope.launch {
@@ -369,6 +410,13 @@ class ToneEngine(private val context: Context) {
         stopDeniedTone()
         stopTalkPermitTone()
         stopCountdownBeep()
+        synchronized(bonkLock) {
+            bonkPlayer?.let { mp ->
+                runCatching { mp.stop() }
+                runCatching { mp.release() }
+            }
+            bonkPlayer = null
+        }
         synchronized(beepTrackLock) {
             try { beepTrack?.stop() } catch (_: Exception) {}
             try { beepTrack?.release() } catch (_: Exception) {}
