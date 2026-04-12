@@ -153,6 +153,7 @@ router.patch('/:radioId/assign', requireDispatcher, async (req, res) => {
     const radioSocket = _findRadioSocket(radioId);
     if (radioSocket) {
       if (resolvedUserId !== null) {
+        signalingService.removeSocketFromChannels(radioSocket, 'reassign');
         let channelConfig = null;
         try {
           const userRow = await pool.query(

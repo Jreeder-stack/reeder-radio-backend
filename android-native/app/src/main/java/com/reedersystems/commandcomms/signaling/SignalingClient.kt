@@ -374,12 +374,13 @@ class SignalingClient(var serverUrl: String, private var radioToken: String? = n
         })
     }
 
-    fun emitRadioJoinChannel(channelKey: String, udpPort: Int? = null) {
+    fun emitRadioJoinChannel(channelKey: String, udpPort: Int? = null, udpAddress: String? = null) {
         if (!isReady()) return
-        Log.d(TAG, "emitRadioJoinChannel $channelKey udpPort=${udpPort ?: "none"}")
+        Log.d(TAG, "emitRadioJoinChannel $channelKey udpPort=${udpPort ?: "none"} udpAddress=${udpAddress ?: "none"}")
         socket?.emit("radio:joinChannel", JSONObject().apply {
             put("channelId", channelKey)
             if (udpPort != null && udpPort > 0) put("udpPort", udpPort)
+            if (!udpAddress.isNullOrBlank() && udpAddress != "0.0.0.0" && udpAddress != "::") put("udpAddress", udpAddress)
         })
     }
 

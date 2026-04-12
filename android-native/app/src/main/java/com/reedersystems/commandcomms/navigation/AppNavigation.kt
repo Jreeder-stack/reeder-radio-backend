@@ -162,12 +162,7 @@ fun AppNavigation() {
                 } else null,
                 onReassigned = if (isRadioDevice) {
                     { newUnitId ->
-                        Log.d(TAG, "Re-assigned to unit $newUnitId — tearing down and navigating")
-                        val stopIntent = Intent(context, BackgroundAudioService::class.java).apply {
-                            action = BackgroundAudioService.ACTION_STOP
-                        }
-                        context.startForegroundService(stopIntent)
-                        app.signalingClient.disconnect()
+                        Log.d(TAG, "Re-assigned to unit $newUnitId — navigating (keeping signaling alive)")
                         navController.navigate(Routes.radio(newUnitId)) {
                             popUpTo(Routes.RADIO) { inclusive = true }
                         }

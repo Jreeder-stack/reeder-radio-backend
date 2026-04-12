@@ -68,6 +68,9 @@ class UdpAudioTransport(
     val localPort: Int?
         get() = socket?.localPort
 
+    val localAddress: String?
+        get() = socket?.localAddress?.hostAddress
+
     private val txRateLimiter = RadioDiagLog.RateLimiter(detailCount = 5)
     private val rxRateLimiter = RadioDiagLog.RateLimiter(detailCount = 5)
 

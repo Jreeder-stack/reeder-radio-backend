@@ -392,6 +392,27 @@ class BackgroundAudioService : Service() {
 
     private fun currentTargetRoomKey(): String? = servicePrefs.channelRoomKey
 
+    private var deferredSignalingJoinJob: Job? = null
+
+    private fun scheduleDeferredSignalingJoin(targetRoomKey: String) {
+        deferredSignalingJoinJob?.cancel()
+        deferredSignalingJoinJob = scope.launch {
+            val maxAttempts = 10
+            val retryDelayMs = 1000L
+            for (attempt in 1..maxAttempts) {
+                kotlinx.coroutines.delay(retryDelayMs)
+                val port = radioEngine?.udpTransport?.localPort
+                if (port != null && port > 0) {
+                    Log.d(TAG, "Deferred signaling join: UDP socket bound (port=$port) on attempt $attempt — joining $targetRoomKey")
+                    syncBackgroundSignalingChannel()
+                    return@launch
+                }
+                Log.d(TAG, "Deferred signaling join: attempt $attempt/$maxAttempts — UDP port still null")
+            }
+            Log.e(TAG, "Deferred signaling join: UDP socket never bound after $maxAttempts attempts — giving up for $targetRoomKey")
+        }
+    }
+
     private suspend fun syncBackgroundSignalingChannel(): Boolean {
         if (app.signalingRepository.connectionState.value != ConnectionState.AUTHENTICATED) {
             return false
@@ -404,12 +425,33 @@ class BackgroundAudioService : Service() {
         if (previousRoomKey != null) {
             app.signalingRepository.leaveRadioChannel(previousRoomKey)
         }
-        val udpPort = radioEngine?.udpTransport?.localPort
-        app.signalingRepository.joinRadioChannel(targetRoomKey, udpPort)
+
+        var udpPort = radioEngine?.udpTransport?.localPort
+        var udpAddress = radioEngine?.udpTransport?.localAddress
+        if (udpPort == null || udpPort <= 0) {
+            Log.d(TAG, "UDP socket not yet bound — waiting for socket (up to 3s)")
+            val maxWaitMs = 3000L
+            val pollIntervalMs = 100L
+            var waited = 0L
+            while (waited < maxWaitMs) {
+                kotlinx.coroutines.delay(pollIntervalMs)
+                waited += pollIntervalMs
+                udpPort = radioEngine?.udpTransport?.localPort
+                udpAddress = radioEngine?.udpTransport?.localAddress
+                if (udpPort != null && udpPort > 0) break
+            }
+            if (udpPort == null || udpPort <= 0) {
+                Log.e(TAG, "UDP socket still not bound after ${waited}ms — scheduling deferred rejoin")
+                scheduleDeferredSignalingJoin(targetRoomKey)
+                return false
+            }
+        }
+
+        app.signalingRepository.joinRadioChannel(targetRoomKey, udpPort, udpAddress)
         pendingSignalingChannelId = targetRoomKey
         radioEngine?.startReceive()
         Log.d(TAG, "RADIO_CHANNEL_JOINED requested channelId=$targetRoomKey")
-        Log.d(TAG, "RADIO_SUBSCRIBER_REGISTERED channelId=$targetRoomKey udpPort=${udpPort ?: "none"}")
+        Log.d(TAG, "RADIO_SUBSCRIBER_REGISTERED channelId=$targetRoomKey udpPort=${udpPort ?: "none"} udpAddress=${udpAddress ?: "none"}")
         Log.d(TAG, "Background signaling join requested for RADIO channel $targetRoomKey (udpPort=${udpPort ?: "none"}) — awaiting join ack")
         return true
     }
