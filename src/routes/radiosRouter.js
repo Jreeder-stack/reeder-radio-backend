@@ -126,7 +126,7 @@ router.get('/users', requireDispatcher, async (req, res) => {
 
 router.patch('/:radioId/assign', requireDispatcher, async (req, res) => {
   const { radioId } = req.params;
-  const { unit_id } = req.body;
+  const { unit_id, force } = req.body;
 
   try {
     const radio = await getRadioById(radioId);
@@ -152,8 +152,9 @@ router.patch('/:radioId/assign', requireDispatcher, async (req, res) => {
 
     const radioSocket = _findRadioSocket(radioId);
     if (radioSocket) {
+      signalingService.removeSocketFromChannels(radioSocket, force ? 'force-reassign' : 'reassign');
+
       if (resolvedUserId !== null) {
-        signalingService.removeSocketFromChannels(radioSocket, 'reassign');
         let channelConfig = null;
         try {
           const userRow = await pool.query(
@@ -176,7 +177,6 @@ router.patch('/:radioId/assign', requireDispatcher, async (req, res) => {
         radioSocket.unitId = resolvedUnitIdentity;
         radioSocket.assignedUnitId = resolvedUserId;
       } else {
-        signalingService.removeSocketFromChannels(radioSocket, 'unassign');
         radioSocket.emit('radio:unassigned', {});
         radioSocket.unitId = radioSocket.radioId;
         radioSocket.assignedUnitId = null;

@@ -105,6 +105,7 @@ export default function RadioManagement({ user }) {
   const [toastVisible, setToastVisible] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState({ open: false, radioId: null, radioDisplayId: '' });
   const [savingRows, setSavingRows] = useState({});
+  const [pendingSelections, setPendingSelections] = useState({});
 
   const showToast = useCallback((msg) => {
     setToastMsg(msg);
@@ -128,10 +129,13 @@ export default function RadioManagement({ user }) {
     loadData();
   }, [loadData]);
 
-  const handleAssign = useCallback(async (radioId, userId) => {
+  const handleSubmitAssign = useCallback(async (radioId) => {
+    const pendingValue = pendingSelections[radioId];
+    if (pendingValue === undefined) return;
+    const userId = pendingValue || null;
     setSavingRows(prev => ({ ...prev, [radioId]: true }));
     try {
-      const result = await assignRadioUnit(radioId, userId || null);
+      const result = await assignRadioUnit(radioId, userId, { force: true });
       const updatedRadio = result.radio;
       if (userId) {
         const assignedUser = users.find(u => String(u.id) === String(userId));
@@ -140,6 +144,11 @@ export default function RadioManagement({ user }) {
         updatedRadio.assigned_unit_identity = null;
       }
       setRadios(prev => prev.map(r => r.radio_id === radioId ? updatedRadio : r));
+      setPendingSelections(prev => {
+        const next = { ...prev };
+        delete next[radioId];
+        return next;
+      });
       const label = updatedRadio.assigned_unit_identity || (userId ? String(userId) : null);
       showToast(label ? `Assigned — ${label}` : 'Unassigned');
     } catch (err) {
@@ -147,7 +156,7 @@ export default function RadioManagement({ user }) {
     } finally {
       setSavingRows(prev => ({ ...prev, [radioId]: false }));
     }
-  }, [showToast, users]);
+  }, [showToast, users, pendingSelections]);
 
   const handleLockClick = useCallback((radio) => {
     if (radio.is_locked) {
@@ -296,31 +305,60 @@ export default function RadioManagement({ user }) {
                       {radio.serial_number}
                     </td>
                     <td style={{ padding: '12px 14px' }}>
-                      <select
-                        value={radio.assigned_unit_id || ''}
-                        disabled={savingRows[radio.radio_id]}
-                        onChange={e => handleAssign(radio.radio_id, e.target.value)}
-                        style={{
-                          background: '#1a1d2e',
-                          border: '1px solid #2d3148',
-                          borderRadius: 6,
-                          color: radio.assigned_unit_id ? '#e2e8f0' : '#64748b',
-                          padding: '5px 10px',
-                          fontSize: 13,
-                          cursor: savingRows[radio.radio_id] ? 'not-allowed' : 'pointer',
-                          minWidth: 140,
-                          outline: 'none',
-                        }}
-                      >
-                        <option value="">Unassigned</option>
-                        {users
-                          .filter(u => u.unit_id)
-                          .map(u => (
-                            <option key={u.id} value={u.id}>
-                              {u.unit_id}
-                            </option>
-                          ))}
-                      </select>
+                      {(() => {
+                        const currentVal = String(radio.assigned_unit_id || '');
+                        const hasPending = radio.radio_id in pendingSelections;
+                        const pendingVal = hasPending ? pendingSelections[radio.radio_id] : currentVal;
+                        const hasChange = hasPending;
+                        const isSaving = savingRows[radio.radio_id];
+                        return (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <select
+                              value={pendingVal}
+                              disabled={isSaving}
+                              onChange={e => setPendingSelections(prev => ({ ...prev, [radio.radio_id]: e.target.value }))}
+                              style={{
+                                background: '#1a1d2e',
+                                border: '1px solid #2d3148',
+                                borderRadius: 6,
+                                color: pendingVal ? '#e2e8f0' : '#64748b',
+                                padding: '5px 10px',
+                                fontSize: 13,
+                                cursor: isSaving ? 'not-allowed' : 'pointer',
+                                minWidth: 140,
+                                outline: 'none',
+                              }}
+                            >
+                              <option value="">Unassigned</option>
+                              {users
+                                .filter(u => u.unit_id)
+                                .map(u => (
+                                  <option key={u.id} value={u.id}>
+                                    {u.unit_id}
+                                  </option>
+                                ))}
+                            </select>
+                            <button
+                              onClick={() => handleSubmitAssign(radio.radio_id)}
+                              disabled={!hasChange || isSaving}
+                              style={{
+                                padding: '5px 12px',
+                                fontSize: 12,
+                                fontWeight: 600,
+                                borderRadius: 6,
+                                border: 'none',
+                                cursor: (!hasChange || isSaving) ? 'not-allowed' : 'pointer',
+                                background: '#4f46e5',
+                                color: '#fff',
+                                opacity: (!hasChange || isSaving) ? 0.4 : 1,
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              {isSaving ? 'Saving…' : 'Submit'}
+                            </button>
+                          </div>
+                        );
+                      })()}
                     </td>
                     <td style={{ padding: '12px 14px', color: '#64748b', fontSize: 13, whiteSpace: 'nowrap' }}>
                       {formatLastSeen(radio.last_seen)}

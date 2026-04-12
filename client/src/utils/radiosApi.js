@@ -20,10 +20,10 @@ export async function getRadios() {
   return fetchRadios('/');
 }
 
-export async function assignRadioUnit(radioId, unitId) {
+export async function assignRadioUnit(radioId, unitId, { force = false } = {}) {
   return fetchRadios(`/${radioId}/assign`, {
     method: 'PATCH',
-    body: JSON.stringify({ unit_id: unitId || null }),
+    body: JSON.stringify({ unit_id: unitId || null, force }),
   });
 }
 
