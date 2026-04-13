@@ -396,20 +396,12 @@ export function AudioConnectionProvider({ children, user }) {
       ? [newChannelName, ...scanChannels.filter(ch => ch !== newChannelName)]
       : [newChannelName];
     
-    const currentChannels = audioTransportManager.getConnectedChannels();
-    for (const ch of currentChannels) {
-      if (!channelsToKeep.includes(ch)) {
-        await disconnectFromChannel(ch);
-      }
-    }
-    
-    if (switchId !== switchCounterRef.current) {
-      console.log(`[AudioConnection] switchChannel superseded (wanted ${newChannelName}, newer switch pending)`);
-      return;
-    }
-    
     if (!audioTransportManager.isConnected(newChannelName)) {
-      await connectToChannel(newChannelName, resolvedIdentity);
+      const connectSuccess = await connectToChannel(newChannelName, resolvedIdentity);
+      if (!connectSuccess) {
+        console.warn(`[AudioConnection] switchChannel: failed to connect new channel ${newChannelName}, keeping existing connections`);
+        return;
+      }
     }
     
     if (switchId !== switchCounterRef.current) {
@@ -420,7 +412,25 @@ export function AudioConnectionProvider({ children, user }) {
       return;
     }
     
+    if (!audioTransportManager.isConnected(newChannelName)) {
+      console.warn(`[AudioConnection] switchChannel: new channel ${newChannelName} not connected after attempt, keeping existing connections`);
+      return;
+    }
+    
     setActiveChannel(newChannelName);
+    audioTransportManager.setChannelActive(newChannelName);
+    
+    const currentChannels = audioTransportManager.getConnectedChannels();
+    for (const ch of currentChannels) {
+      if (switchId !== switchCounterRef.current) {
+        console.log(`[AudioConnection] switchChannel superseded during disconnect phase (wanted ${newChannelName})`);
+        return;
+      }
+      if (!channelsToKeep.includes(ch)) {
+        await disconnectFromChannel(ch);
+      }
+    }
+    
     setConnectionHealth(audioTransportManager.getConnectionStatus());
     
     const connectedCount = audioTransportManager.getConnectedChannels().length;
@@ -452,7 +462,7 @@ export function AudioConnectionProvider({ children, user }) {
       console.log(`[AudioConnection] Scan mode ON - connecting to ${newScanChannels.length} channels`);
       for (const ch of newScanChannels) {
         if (!audioTransportManager.isConnected(ch)) {
-          await connectToChannel(ch, identity);
+          await connectToChannel(ch, identity, false);
         }
       }
     }
@@ -487,10 +497,25 @@ export function AudioConnectionProvider({ children, user }) {
       const isDispatcher = currentPath === '/dispatcher';
       
       if (isDispatcher) {
-        console.log(`[AudioConnection] Dispatcher mode - skipping audio connections at init; monitoring effect will drive connections`);
         audioTransportManager.setDispatcherMode(true);
         setConnected(true);
         setConnectionStatus('connected');
+
+        const monitoredKeys = getMonitoredRoomKeys();
+        if (monitoredKeys.size > 0) {
+          console.log(`[AudioConnection] Dispatcher mode - immediately connecting ${monitoredKeys.size} monitored channels`);
+          const connectPromises = [];
+          for (const rk of monitoredKeys) {
+            connectPromises.push(
+              connectToChannel(rk, identity, false).catch(err => {
+                console.warn(`[AudioConnection] Dispatcher init connect failed for ${rk}:`, err.message);
+              })
+            );
+          }
+          await Promise.all(connectPromises);
+        } else {
+          console.log(`[AudioConnection] Dispatcher mode - no monitored channels to connect at init`);
+        }
       } else {
         const firstChannel = initialChannel || enabledChannels[0]?.room_key || enabledChannels[0]?.name;
         if (firstChannel) {
@@ -516,7 +541,7 @@ export function AudioConnectionProvider({ children, user }) {
       initializingRef.current = false;
       setConnecting(false);
     }
-  }, [setupEventHandlers, setConnected, setConnecting, setConnectionError, connectToChannel, location.pathname]);
+  }, [setupEventHandlers, setConnected, setConnecting, setConnectionError, connectToChannel, getMonitoredRoomKeys, location.pathname]);
 
   const disconnectAll = useCallback(async () => {
     console.log('[AudioConnection] Disconnecting all');

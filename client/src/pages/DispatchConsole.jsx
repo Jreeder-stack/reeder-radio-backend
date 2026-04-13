@@ -261,7 +261,7 @@ export default function DispatchConsole({ user, onLogout }) {
     const toDisconnect = prevRoomKeys.filter(rk => !monitoredRoomKeys.includes(rk));
 
     toConnect.forEach(rk => {
-      connectToChannel(rk, identity, true);
+      connectToChannel(rk, identity, false);
     });
 
     toDisconnect.forEach(rk => {

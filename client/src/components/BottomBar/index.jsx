@@ -121,11 +121,11 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
       
       let room = audioTransportManager.getRoom(primaryChannel);
       
-      if (!room && isDispatcher && audioTransportManager.isChannelReconnecting(primaryChannel)) {
-        console.log('[PTT] Room not ready, waiting for reconnect...');
+      if (!room && audioTransportManager.isChannelReconnecting(primaryChannel)) {
+        console.warn('[PTT] FALLBACK: Room not ready at PTT press — waiting for reconnect (channel should already be connected)');
         try {
           room = await audioTransportManager.waitForRoom(primaryChannel, 5000);
-          console.log('[PTT] Room became available after reconnect');
+          console.warn('[PTT] FALLBACK: Room became available after reconnect wait — investigate why channel was not pre-connected');
         } catch (waitErr) {
           console.error('[PTT] Timed out waiting for room reconnect:', waitErr.message);
           toneEngine.playErrorTone?.();

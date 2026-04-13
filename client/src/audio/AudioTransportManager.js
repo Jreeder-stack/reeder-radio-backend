@@ -8,7 +8,9 @@ import { OpusDecoder } from 'opus-decoder';
 import { OpusBrowserEncoder } from './OpusBrowserEncoder.js';
 
 const WS_HEALTH_CHECK_INTERVAL = 5000;
+const WS_HEALTH_CHECK_INTERVAL_AGGRESSIVE = 2000;
 const WS_LIVENESS_TIMEOUT = 45000;
+const WS_LIVENESS_TIMEOUT_AGGRESSIVE = 20000;
 const REORDER_BUFFER_SIZE = 20;
 const REORDER_MAX_LATE = 20;
 const PLC_MAX_CONSECUTIVE = 7;
@@ -36,6 +38,7 @@ class AudioTransportManager {
     this.mutedChannels = new Set();
     this._dispatcherMode = false;
     this.primaryTxChannel = null;
+    this._activeChannelName = null;
 
     this.pttState = PTT_STATES.IDLE;
     this.onStateChange = null;
@@ -136,13 +139,16 @@ class AudioTransportManager {
 
   _startHealthCheck() {
     if (this._healthCheckInterval) clearInterval(this._healthCheckInterval);
+    const interval = this._dispatcherMode ? WS_HEALTH_CHECK_INTERVAL_AGGRESSIVE : WS_HEALTH_CHECK_INTERVAL;
     this._healthCheckInterval = setInterval(() => {
       const now = Date.now();
       for (const [channelName, conn] of this.rooms) {
         const isDead = !conn.ws || conn.ws.readyState !== WebSocket.OPEN;
-        const isStale = conn.ws && conn.ws.readyState === WebSocket.OPEN && conn._lastActivity && (now - conn._lastActivity) > WS_LIVENESS_TIMEOUT;
+        const isAlwaysReady = this._dispatcherMode || this._activeChannelName === channelName;
+        const timeout = isAlwaysReady ? WS_LIVENESS_TIMEOUT_AGGRESSIVE : WS_LIVENESS_TIMEOUT;
+        const isStale = conn.ws && conn.ws.readyState === WebSocket.OPEN && conn._lastActivity && (now - conn._lastActivity) > timeout;
         if (isDead || isStale) {
-          console.warn('AUDIO_WS_HEALTH_CHECK_DEAD', { channelName, readyState: conn.ws?.readyState, stale: isStale, lastActivity: conn._lastActivity });
+          console.warn('AUDIO_WS_HEALTH_CHECK_DEAD', { channelName, readyState: conn.ws?.readyState, stale: isStale, lastActivity: conn._lastActivity, alwaysReady: isAlwaysReady });
           try { conn.ws.close(); } catch (_) {}
           this.rooms.delete(channelName);
           const errMsg = isStale ? 'Connection timed out (no activity)' : 'WebSocket connection lost';
@@ -150,7 +156,7 @@ class AudioTransportManager {
           this._scheduleReconnect(channelName);
         }
       }
-    }, WS_HEALTH_CHECK_INTERVAL);
+    }, interval);
   }
 
   _scheduleReconnect(channelName) {
@@ -160,7 +166,10 @@ class AudioTransportManager {
 
     const attempt = (this._reconnectAttempts.get(channelName) || 0) + 1;
     this._reconnectAttempts.set(channelName, attempt);
-    const delay = Math.min(RECONNECT_BASE_MS * Math.pow(2, attempt - 1), RECONNECT_MAX_MS);
+    const isAlwaysReady = this._dispatcherMode || this._activeChannelName === channelName;
+    const delay = isAlwaysReady
+      ? Math.min(250 * attempt, 2000)
+      : Math.min(RECONNECT_BASE_MS * Math.pow(2, attempt - 1), RECONNECT_MAX_MS);
 
     console.log('AUDIO_WS_RECONNECT_SCHEDULED', { channelName, attempt, delayMs: delay });
     this._emitConnectionStateChange(channelName, 'reconnecting');
@@ -477,6 +486,12 @@ class AudioTransportManager {
     this.pendingConnections.set(channelName, pending);
     try {
       return await pending;
+    } catch (err) {
+      if (this._targetChannels.has(channelName)) {
+        console.warn('AUDIO_WS_CONNECT_FAILED_SCHEDULING_RETRY', { channelName, error: err.message });
+        this._scheduleReconnect(channelName);
+      }
+      throw err;
     } finally {
       this.pendingConnections.delete(channelName);
     }
@@ -531,8 +546,8 @@ class AudioTransportManager {
   getRoom(channelName) { return this.rooms.get(channelName) || null; }
   getConnectedChannels() { return [...this.rooms.keys()]; }
   isConnected(channelName) { return this.rooms.has(channelName); }
-  setChannelActive(_channelName) {}
-  setChannelInactive(_channelName) {}
+  setChannelActive(channelName) { this._activeChannelName = channelName; }
+  setChannelInactive(channelName) { if (this._activeChannelName === channelName) this._activeChannelName = null; }
 
   waitForRoom(channelName, timeoutMs = 5000) {
     return new Promise((resolve, reject) => {
@@ -741,7 +756,10 @@ class AudioTransportManager {
     };
   }
 
-  setDispatcherMode(enabled) { this._dispatcherMode = !!enabled; }
+  setDispatcherMode(enabled) {
+    this._dispatcherMode = !!enabled;
+    this._startHealthCheck();
+  }
   isDispatcherMode() { return this._dispatcherMode; }
   scheduleDispatcherReconnect(_channelName, _identity) {}
 
