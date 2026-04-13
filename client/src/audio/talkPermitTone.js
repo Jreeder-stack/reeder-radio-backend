@@ -1,6 +1,6 @@
 let permitCtx = null;
 let permitBuffer = null;
-let bufferLoading = false;
+let preloadPromise = null;
 
 function getPermitContext() {
   if (!permitCtx || permitCtx.state === 'closed') {
@@ -10,20 +10,25 @@ function getPermitContext() {
 }
 
 export function preloadPermitBuffer() {
-  if (permitBuffer || bufferLoading) return;
-  bufferLoading = true;
+  if (permitBuffer) return Promise.resolve(permitBuffer);
+  if (preloadPromise) return preloadPromise;
+
   var ctx = getPermitContext();
-  fetch('/sounds/talk-permit.wav')
+  preloadPromise = fetch('/sounds/talk-permit.wav')
     .then(function (res) { return res.arrayBuffer(); })
     .then(function (buf) { return ctx.decodeAudioData(buf); })
     .then(function (decoded) {
       permitBuffer = decoded;
       console.log('[TalkPermit] WAV preloaded');
+      return decoded;
     })
     .catch(function (e) {
       console.warn('[TalkPermit] WAV preload failed:', e.message);
-      bufferLoading = false;
+      preloadPromise = null;
+      return null;
     });
+
+  return preloadPromise;
 }
 
 function playOscillatorFallback(ctx) {
@@ -58,7 +63,21 @@ export function playPermitTone() {
         await ctx.resume();
       }
 
-      preloadPermitBuffer();
+      if (!permitBuffer) {
+        var loadPromise = preloadPermitBuffer();
+        if (loadPromise) {
+          var result = await Promise.race([
+            loadPromise,
+            new Promise(function (resolve) {
+              setTimeout(function () { resolve('__timeout__'); }, 500);
+            })
+          ]);
+          if (result === '__timeout__') {
+            console.warn('[TalkPermit] WAV load timed out after 500ms, using fallback');
+            preloadPromise = null;
+          }
+        }
+      }
 
       if (permitBuffer) {
         var source = ctx.createBufferSource();
