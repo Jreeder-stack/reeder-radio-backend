@@ -8,6 +8,7 @@ import { preloadPermitBuffer } from "./audio/talkPermitTone.js";
 import { setupAppLifecycle } from "./lib/capacitor";
 import { signalingManager } from "./signaling/SignalingManager";
 import { useMobileRadioContext } from "./context/MobileRadioContext.jsx";
+import { useTheme } from "./context/ThemeContext.jsx";
 
 // Track audio elements that have already been connected to a MediaElementSource
 // This prevents the "HTMLMediaElement already connected" error on reconnection
@@ -172,10 +173,7 @@ export default function App({ user, onLogout }) {
   
   const { setIsEmergency: setContextIsEmergency } = useMobileRadioContext();
   
-  const [darkMode, setDarkMode] = useState(() => {
-    const saved = localStorage.getItem('darkMode');
-    return saved !== null ? JSON.parse(saved) : true;
-  });
+  const { darkMode, toggleDarkMode } = useTheme();
   const theme = darkMode ? THEMES.dark : THEMES.light;
   
   const connected = connectionStatus === 'connected';
@@ -207,13 +205,6 @@ export default function App({ user, onLogout }) {
   const [showSettings, setShowSettings] = useState(false);
   const [showUnits, setShowUnits] = useState(false);
 
-  const toggleDarkMode = () => {
-    setDarkMode(prev => {
-      const next = !prev;
-      localStorage.setItem('darkMode', JSON.stringify(next));
-      return next;
-    });
-  };
 
   const audioContextRef = useRef(null);
   const txAnalyserRef = useRef(null);

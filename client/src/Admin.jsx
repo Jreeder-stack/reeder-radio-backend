@@ -2,9 +2,11 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import RecordingLogs from "./RecordingLogs.jsx";
 import VmLogs from "./VmLogs.jsx";
+import { useTheme } from "./context/ThemeContext.jsx";
 
 export default function Admin({ user, onLogout }) {
   const navigate = useNavigate();
+  const { darkMode, toggleDarkMode } = useTheme();
   const [activeTab, setActiveTab] = useState("users");
   const [users, setUsers] = useState([]);
   const [channels, setChannels] = useState([]);
@@ -479,6 +481,9 @@ export default function Admin({ user, onLogout }) {
               Desktop Settings
             </button>
           )}
+          <button onClick={toggleDarkMode} className="admin-btn admin-btn-ghost">
+            {darkMode ? "☀️" : "🌙"}
+          </button>
           <button onClick={() => navigate("/")} className="admin-btn admin-btn-secondary">
             Back to Radio
           </button>

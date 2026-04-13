@@ -31,15 +31,13 @@ import audioTransportManager from '../audio/AudioTransportManager.js';
 import { useSignalingContext } from '../context/SignalingContext.jsx';
 import formatChannelDisplay from '../utils/formatChannelDisplay.js';
 import AudioSettings, { getAudioSettings } from '../components/AudioSettings/index.jsx';
+import { useTheme } from '../context/ThemeContext.jsx';
 
 export default function DispatchConsole({ user, onLogout }) {
   const [rightTab, setRightTab] = useState('emergency');
   const [showChannelPicker, setShowChannelPicker] = useState(false);
   const [selectedChatChannel, setSelectedChatChannel] = useState(null);
-  const [darkMode, setDarkMode] = useState(() => {
-    const saved = localStorage.getItem('dispatchDarkMode');
-    return saved !== null ? JSON.parse(saved) : true;
-  });
+  const { darkMode, toggleDarkMode: toggleTheme } = useTheme();
   const [showAudioSettings, setShowAudioSettings] = useState(false);
 
   useEffect(() => {
@@ -144,21 +142,6 @@ export default function DispatchConsole({ user, onLogout }) {
     signalPttEnd,
   } = useSignalingContext();
 
-  useEffect(() => {
-    if (darkMode) {
-      document.documentElement.classList.remove('light-theme');
-    } else {
-      document.documentElement.classList.add('light-theme');
-    }
-  }, [darkMode]);
-
-  const toggleTheme = () => {
-    setDarkMode(prev => {
-      const next = !prev;
-      localStorage.setItem('dispatchDarkMode', JSON.stringify(next));
-      return next;
-    });
-  };
   
   const {
     channels,
