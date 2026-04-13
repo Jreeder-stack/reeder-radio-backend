@@ -849,19 +849,79 @@ class AIDispatcher {
     return null;
   }
 
-  async resolveUnitLocation(unitId) {
+  _looksLikeAddress(value) {
+    if (!value || value.trim().length < 5) return false;
+    const v = value.trim();
+    if (/^\d+\s+\w/.test(v)) return true;
+    if (/\b(st|street|ave|avenue|blvd|boulevard|rd|road|dr|drive|ln|lane|ct|court|way|pl|place|pike|hwy|highway)\b/i.test(v)) return true;
+    return false;
+  }
+
+  _isOnDetailOrAssignment(status) {
+    if (!status) return false;
+    const s = status.toLowerCase();
+    return s === 'detail' || s === 'on_scene' || s === 'en_route' || s === 'ondispatched';
+  }
+
+  async resolveUnitLocationFromCAD(unitId) {
+    try {
+      if (!cadService.isConfigured()) return null;
+      const unitInfo = await cadService.getUnitInfo(unitId);
+      if (!unitInfo) return null;
+
+      if (!this._isOnDetailOrAssignment(unitInfo.status)) {
+        this.log('UNIT_CAD_NOT_ON_DETAIL', { unitId, status: unitInfo.status });
+        return null;
+      }
+
+      if (unitInfo.currentLocation && this._looksLikeAddress(unitInfo.currentLocation)) {
+        this.log('UNIT_LOCATION_FROM_CAD', { unitId, location: unitInfo.currentLocation, zone: unitInfo.zone, status: unitInfo.status });
+        return unitInfo.currentLocation.trim();
+      }
+
+      if (unitInfo.zone && this._looksLikeAddress(unitInfo.zone)) {
+        this.log('UNIT_ZONE_AS_LOCATION', { unitId, zone: unitInfo.zone, status: unitInfo.status });
+        return unitInfo.zone.trim();
+      }
+
+      this.log('UNIT_CAD_NO_ADDRESS', { unitId, status: unitInfo.status, zone: unitInfo.zone, currentLocation: unitInfo.currentLocation });
+      return null;
+    } catch (error) {
+      this.log('UNIT_CAD_LOCATION_ERROR', { unitId, error: error.message });
+      return null;
+    }
+  }
+
+  async resolveUnitLocationFromGPS(unitId) {
     try {
       const result = await locationService.getUnitAddress(unitId);
       if (result && result.address) {
-        this.log('UNIT_LOCATION_RESOLVED', { unitId, address: result.address, lat: result.lat, lng: result.lng });
+        this.log('UNIT_LOCATION_FROM_GPS', { unitId, address: result.address, lat: result.lat, lng: result.lng });
         return result.address;
       }
-      this.log('UNIT_LOCATION_NO_ADDRESS', { unitId, hasLocation: !!result });
+      this.log('UNIT_GPS_NO_ADDRESS', { unitId, hasLocation: !!result });
       return null;
     } catch (error) {
-      this.log('UNIT_LOCATION_RESOLVE_ERROR', { unitId, error: error.message });
+      this.log('UNIT_GPS_RESOLVE_ERROR', { unitId, error: error.message });
       return null;
     }
+  }
+
+  async resolveUnitLocation(unitId) {
+    const cadAddress = await this.resolveUnitLocationFromCAD(unitId);
+    if (cadAddress) {
+      this.log('UNIT_LOCATION_RESOLVED', { unitId, source: 'cad', address: cadAddress });
+      return cadAddress;
+    }
+
+    const gpsAddress = await this.resolveUnitLocationFromGPS(unitId);
+    if (gpsAddress) {
+      this.log('UNIT_LOCATION_RESOLVED', { unitId, source: 'gps', address: gpsAddress });
+      return gpsAddress;
+    }
+
+    this.log('UNIT_LOCATION_UNRESOLVABLE', { unitId });
+    return null;
   }
 
   async handleEmergencyPhraseAssist(unitId, distressType) {
@@ -1739,11 +1799,11 @@ class AIDispatcher {
           const additionalUnits = result.slots?.additionalUnits || [];
           const priority = result.slots?.priority || 'medium';
 
-          if (!address && isMyLocationPhrase(transcript)) {
-            const gpsAddress = await this.resolveUnitLocation(participantId);
-            if (gpsAddress) {
-              address = gpsAddress;
-              this.log('CREATE_CALL_ADDRESS_FROM_GPS', { participantId, address: gpsAddress });
+          if (!address) {
+            const resolvedAddress = await this.resolveUnitLocation(participantId);
+            if (resolvedAddress) {
+              address = resolvedAddress;
+              this.log('CREATE_CALL_ADDRESS_AUTO_RESOLVED', { participantId, address: resolvedAddress });
             }
           }
 
@@ -2505,7 +2565,15 @@ class AIDispatcher {
     const matchedNature = await cadService.findBestNature(nature);
     this.log('CALL_NATURE_MATCHED', { spoken: nature, matched: matchedNature });
 
-    const address = savedSlots?.address;
+    let address = savedSlots?.address;
+    if (!address) {
+      const resolvedAddress = await this.resolveUnitLocation(participantId);
+      if (resolvedAddress) {
+        address = resolvedAddress;
+        this.log('CALL_NATURE_ADDRESS_AUTO_RESOLVED', { participantId, address: resolvedAddress });
+      }
+    }
+
     if (address) {
       setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_CALL_CONFIRM, null, {
         nature: matchedNature,
@@ -2540,10 +2608,10 @@ class AIDispatcher {
 
     let address = null;
     if (isMyLocationPhrase(transcript)) {
-      const gpsAddress = await this.resolveUnitLocation(participantId);
-      if (gpsAddress) {
-        address = gpsAddress;
-        this.log('CALL_ADDRESS_FROM_GPS', { participantId, address: gpsAddress });
+      const resolvedAddress = await this.resolveUnitLocation(participantId);
+      if (resolvedAddress) {
+        address = resolvedAddress;
+        this.log('CALL_ADDRESS_FROM_LOCATION', { participantId, address: resolvedAddress });
       }
     }
     if (!address) {
@@ -2641,6 +2709,7 @@ class AIDispatcher {
       }
 
       const callId = callResult.call_id;
+      const callNumber = callResult.call_number || callId;
 
       try {
         await cadService.assignUnitToCall(participantId, callId);
@@ -2669,7 +2738,8 @@ class AIDispatcher {
 
       setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
       const timeStr = this.formatMilitaryTime();
-      const resp = `${participantId}, 10-4. Call created, ${nature.toLowerCase()} at ${address}. ${timeStr}.`;
+      const callRef = callNumber ? `, call number ${callNumber}` : '';
+      const resp = `${participantId}, 10-4. Call created${callRef}, ${nature.toLowerCase()} at ${address}. ${timeStr}.`;
       await this.speak(resp, participantId);
 
     } catch (error) {

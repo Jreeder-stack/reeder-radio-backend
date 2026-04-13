@@ -97,15 +97,78 @@ export async function cycleUnitStatus(unitId) {
   return cadRequest(`/api/radio/unit/${encodeURIComponent(unitId)}/status/cycle`, 'POST');
 }
 
+const PRIORITY_MAP = {
+  'low': 5,
+  'medium': 3,
+  'high': 2,
+  'critical': 1,
+  'emergency': 1
+};
+
+function parseMunicipalityFromAddress(address) {
+  if (!address) return '';
+  const parts = address.split(',').map(p => p.trim()).filter(Boolean);
+  if (parts.length >= 2) {
+    const candidate = parts[1].replace(/\b[A-Z]{2}\b\s*\d{0,5}$/, '').trim();
+    if (candidate.length > 1) return candidate;
+  }
+  return '';
+}
+
+function normalizePriority(priority) {
+  if (typeof priority === 'number' && priority >= 1 && priority <= 5) return priority;
+  if (typeof priority === 'string') {
+    const num = parseInt(priority, 10);
+    if (!isNaN(num) && num >= 1 && num <= 5) return num;
+    return PRIORITY_MAP[priority.toLowerCase()] || 3;
+  }
+  return 3;
+}
+
 export async function createCall(type, priority, location, municipality, notes = '') {
   console.log(`[CAD] Creating call: ${type} at ${location}`);
-  return cadRequest('/api/radio/call', 'POST', {
+  const resolvedMunicipality = (municipality && municipality.trim()) ? municipality.trim() : parseMunicipalityFromAddress(location);
+  const numericPriority = normalizePriority(priority);
+  const body = {
     type: type.toUpperCase(),
-    priority,
+    priority: numericPriority,
     location: location.toUpperCase(),
-    municipality: municipality.toUpperCase(),
     notes
-  });
+  };
+  if (resolvedMunicipality) {
+    body.municipality = resolvedMunicipality.toUpperCase();
+  }
+  return cadRequest('/api/radio/call', 'POST', body);
+}
+
+export async function getUnitInfo(unitId) {
+  if (!unitId) {
+    console.warn('[CAD] getUnitInfo: No unit ID provided');
+    return null;
+  }
+  try {
+    const result = await getStatusCheck();
+    if (result.success && Array.isArray(result.units)) {
+      const unit = result.units.find(u =>
+        u.unit_id && u.unit_id.toUpperCase() === unitId.toUpperCase()
+      );
+      if (unit) {
+        return {
+          unitId: unit.unit_id,
+          status: unit.status,
+          zone: unit.zone || null,
+          currentLocation: unit.current_location || null,
+          latitude: unit.latitude ? parseFloat(unit.latitude) : null,
+          longitude: unit.longitude ? parseFloat(unit.longitude) : null,
+          agency: unit.agency || null
+        };
+      }
+    }
+    return null;
+  } catch (error) {
+    console.error('[CAD] getUnitInfo failed:', error.message);
+    return null;
+  }
 }
 
 export async function getActiveCalls(status = null) {
