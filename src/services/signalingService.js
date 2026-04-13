@@ -195,6 +195,7 @@ class SignalingService {
           socket.radioId = radio.radio_id;
           socket.assignedUnitId = radio.assigned_unit_id;
           socket.isRadioDevice = true;
+          if (!socket.channels) socket.channels = new Set();
 
           let unitIdentity = radio.radio_id;
           if (radio.assigned_unit_id) {
