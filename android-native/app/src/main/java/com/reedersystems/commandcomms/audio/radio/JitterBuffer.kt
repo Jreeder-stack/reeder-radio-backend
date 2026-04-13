@@ -7,6 +7,7 @@ private const val MAX_BUFFER_SIZE = 50
 private const val MIN_DEPTH = 2
 private const val MAX_DEPTH = 8
 private const val INITIAL_DEPTH = 3
+private const val WARM_IDLE_DEPTH = 1
 private const val JITTER_ALPHA = 0.07
 private const val SEQ_MOD = 65536
 private const val SEQ_HALF = 32768
@@ -30,6 +31,9 @@ class JitterBuffer {
     private var reconnectProtection = false
     private var reconnectProtectionDepth = RECONNECT_PROTECTION_FRAMES
 
+    @Volatile
+    private var warmIdle = false
+
     private val enqueueRateLimiter = RadioDiagLog.RateLimiter(detailCount = 5)
     private var summaryLateDrops: Long = 0
     private var summaryOverflows: Long = 0
@@ -48,6 +52,7 @@ class JitterBuffer {
             lastArrivalTimeNs = 0L
             estimatedJitterMs = 0.0
             reconnectProtection = false
+            warmIdle = false
         }
         enqueueRateLimiter.reset()
         summaryLateDrops = 0; summaryOverflows = 0; summaryUnderruns = 0; summaryReorders = 0; summaryEnqueued = 0
@@ -62,6 +67,7 @@ class JitterBuffer {
             nextPlaybackSeq = -1
             preBuffering = true
             reconnectProtection = false
+            warmIdle = false
         }
         Log.d(TAG, "JitterBuffer stopped totalEnqueued=$summaryEnqueued lateDrops=$summaryLateDrops overflows=$summaryOverflows underruns=$summaryUnderruns reorders=$summaryReorders ${RadioDiagLog.elapsedTag()}")
     }
@@ -78,6 +84,7 @@ class JitterBuffer {
             targetDepth = INITIAL_DEPTH
             reconnectProtection = true
             reconnectProtectionDepth = RECONNECT_PROTECTION_FRAMES
+            warmIdle = false
             Log.d(TAG, "FLUSH_FOR_RECONNECT staleFrames=$staleCount protectionFrames=$RECONNECT_PROTECTION_FRAMES resetDepth=$INITIAL_DEPTH ${RadioDiagLog.elapsedTag()}")
         }
         enqueueRateLimiter.reset()
@@ -161,6 +168,8 @@ class JitterBuffer {
 
             val requiredDepth = if (reconnectProtection) {
                 maxOf(targetDepth, reconnectProtectionDepth)
+            } else if (warmIdle) {
+                WARM_IDLE_DEPTH
             } else {
                 targetDepth
             }
@@ -174,6 +183,9 @@ class JitterBuffer {
             if (reconnectProtection) {
                 Log.d(TAG, "RECONNECT_PROTECTION_COMPLETE — playback starting at seq=$nextPlaybackSeq (protectionDepth=$reconnectProtectionDepth buffered=${buffer.size}) ${RadioDiagLog.elapsedTag()}")
                 reconnectProtection = false
+            } else if (warmIdle) {
+                Log.d(TAG, "WARM_IDLE_RESUME startSeq=$nextPlaybackSeq requiredDepth=$WARM_IDLE_DEPTH buffered=${buffer.size} ${RadioDiagLog.elapsedTag()}")
+                warmIdle = false
             } else {
                 Log.d(TAG, "PRE_BUFFER_COMPLETE startSeq=$nextPlaybackSeq targetDepth=$targetDepth buffered=${buffer.size} ${RadioDiagLog.elapsedTag()}")
             }
@@ -192,10 +204,21 @@ class JitterBuffer {
             nextPlaybackSeq = -1
             preBuffering = true
             playbackActive = false
+            warmIdle = false
             lastArrivalTimeNs = 0L
             estimatedJitterMs = 0.0
             targetDepth = MIN_DEPTH
             Log.d(TAG, "ENTER_IDLE depth=$MIN_DEPTH keptFrames=${buffer.size} ${RadioDiagLog.elapsedTag()}")
+        }
+    }
+
+    fun enterWarmIdle() {
+        synchronized(lock) {
+            nextPlaybackSeq = -1
+            preBuffering = true
+            playbackActive = false
+            warmIdle = true
+            Log.d(TAG, "ENTER_WARM_IDLE warmDepth=$WARM_IDLE_DEPTH keptFrames=${buffer.size} ${RadioDiagLog.elapsedTag()}")
         }
     }
 

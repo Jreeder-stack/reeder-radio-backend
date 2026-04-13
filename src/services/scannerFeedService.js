@@ -4,6 +4,7 @@ import { audioRelayService } from './audioRelayService.js';
 import { floorControlService } from './floorControlService.js';
 import { signalingService, SIGNALING_EVENTS, RADIO_EVENTS } from './signalingService.js';
 import { canonicalChannelKey } from './channelKeyUtils.js';
+import { getAllChannels } from '../db/index.js';
 
 const SCANNER_IDENTITY = 'SCANNER';
 const SCANNER_SAMPLE_RATE = 16000;
@@ -111,6 +112,22 @@ class ScannerFeedService {
     }
 
     this._registerPttCallbacks();
+
+    const channelKey = canonicalChannelKey(channelRoomKey);
+    audioRelayService.clearScannerInjectLog(SCANNER_IDENTITY, channelKey);
+
+    try {
+      const channels = await getAllChannels();
+      const matched = channels.find(ch => canonicalChannelKey(ch.room_key) === channelKey);
+      if (matched && matched.id) {
+        audioRelayService.registerChannelNumeric(channelKey, matched.id);
+        console.log(`[ScannerFeed] Registered channel numeric: key=${channelKey} numericId=${matched.id}`);
+      } else {
+        console.warn(`[ScannerFeed] Could not resolve numeric ID for channel key=${channelKey} — T320 UDP packets may carry channelId=0`);
+      }
+    } catch (e) {
+      console.warn(`[ScannerFeed] Failed to register channel numeric: ${e.message}`);
+    }
 
     const maskedUrl = streamUrl.length > 40 ? streamUrl.substring(0, 30) + '...' + streamUrl.substring(streamUrl.length - 8) : streamUrl;
     console.log(`[ScannerFeed] Starting stream: url=${maskedUrl} channel=${channelRoomKey} (${this._channelDisplayName})`);

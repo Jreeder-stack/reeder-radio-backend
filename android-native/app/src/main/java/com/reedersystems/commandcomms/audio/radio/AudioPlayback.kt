@@ -11,7 +11,8 @@ private const val SAMPLE_RATE = 16000
 private const val FRAME_INTERVAL_MS = 20L
 private const val FRAME_INTERVAL_NS = FRAME_INTERVAL_MS * 1_000_000L
 private const val DEFAULT_SOFTWARE_GAIN = 2.5f
-private const val IDLE_TIMEOUT_MS = 500L
+private const val WARM_IDLE_TIMEOUT_MS = 500L
+private const val IDLE_TIMEOUT_MS = 2000L
 private const val WAIT_WINDOW_MS = 5L
 private const val MAX_CATCHUP_FRAMES = 2
 private const val SOFT_CLIP_THRESHOLD = 0.8
@@ -246,6 +247,12 @@ class AudioPlayback(
 
                             if (!jitterBuffer.isEmpty) {
                                 lastDataTimeMs = System.currentTimeMillis()
+                            } else {
+                                val silenceMs = System.currentTimeMillis() - lastDataTimeMs
+                                if (silenceMs >= IDLE_TIMEOUT_MS) {
+                                    jitterBuffer.enterIdle()
+                                    lastDataTimeMs = System.currentTimeMillis()
+                                }
                             }
                             continue
                         }
@@ -403,12 +410,15 @@ class AudioPlayback(
                                 catchupCount = 0
                             }
 
-                            if (jitterBuffer.isEmpty) {
+                            if (jitterBuffer.isEmpty && jitterBuffer.isPlaybackActive) {
                                 val silenceMs = now - lastDataTimeMs
                                 if (silenceMs >= IDLE_TIMEOUT_MS) {
                                     jitterBuffer.enterIdle()
                                     lastDataTimeMs = now
                                     Log.d(TAG, "Idle — buffer empty for ${IDLE_TIMEOUT_MS}ms, reset pre-buffer plcTotal=$plcCount ${RadioDiagLog.elapsedTag()}")
+                                } else if (silenceMs >= WARM_IDLE_TIMEOUT_MS) {
+                                    jitterBuffer.enterWarmIdle()
+                                    Log.d(TAG, "WarmIdle — buffer empty for ${WARM_IDLE_TIMEOUT_MS}ms, minimal pre-buffer plcTotal=$plcCount ${RadioDiagLog.elapsedTag()}")
                                 }
                             }
                         }

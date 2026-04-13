@@ -61,6 +61,13 @@ class AudioRelayService {
     this._recordingTap = callback;
   }
 
+  clearScannerInjectLog(senderUnitId, channelId) {
+    if (this._scannerFirstPacketLogged) {
+      const channelKey = canonicalChannelKey(channelId);
+      this._scannerFirstPacketLogged.delete(`${senderUnitId}:${channelKey}`);
+    }
+  }
+
   registerChannelNumeric(channelId, channelNumeric) {
     const key = canonicalChannelKey(channelId);
     const resolved = this._resolveChannelIdNumeric({ channelKey: key, channelIdNumeric: channelNumeric });
@@ -229,6 +236,21 @@ class AudioRelayService {
     const channelKey = canonicalChannelKey(channelId);
     const resolvedChannelId = this._resolveChannelIdNumeric({ channelKey, channelIdNumeric: channelId });
     this.trackAudioReceived(channelKey, senderUnitId);
+
+    if (senderUnitId === 'SCANNER') {
+      if (!this._scannerFirstPacketLogged) {
+        this._scannerFirstPacketLogged = new Set();
+      }
+      const sessionKey = `${senderUnitId}:${channelKey}`;
+      if (!this._scannerFirstPacketLogged.has(sessionKey)) {
+        this._scannerFirstPacketLogged.add(sessionKey);
+        const udpSubs = this.subscribers.get(channelKey);
+        const wsSubs = this._wsSubscribers.get(channelKey);
+        const udpCount = udpSubs ? udpSubs.size : 0;
+        const wsCount = wsSubs ? wsSubs.size : 0;
+        console.log(`[AudioRelay] SCANNER_INJECT_START sender=${senderUnitId} channelKey=${channelKey} channelIdNumeric=${resolvedChannelId} udpSubscribers=${udpCount} wsSubscribers=${wsCount}`);
+      }
+    }
 
     if (AUDIO_DIAG && sequence % 100 === 0) {
       console.log(`[AudioRelay] INJECT_AUDIO channelKey=${channelKey} sender=${senderUnitId} seq=${sequence} numericId=${resolvedChannelId}`);

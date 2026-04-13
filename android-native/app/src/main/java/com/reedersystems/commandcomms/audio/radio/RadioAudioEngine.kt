@@ -1317,6 +1317,8 @@ class RadioAudioEngine(private val context: Context) {
             return
         }
         rxSessionStats.reset()
+        rxPacketRateLimiter.reset()
+        rxSummaryDropped = 0
         audioPlayback.onFrameDecoded = { rxSessionStats.packetsDecoded++ }
         audioPlayback.onUnderrun = { rxSessionStats.underruns++ }
         audioPlayback.onDecodeFailure = { rxSessionStats.failures++ }
@@ -1362,15 +1364,32 @@ class RadioAudioEngine(private val context: Context) {
         }
     }
 
+    private val rxPacketRateLimiter = RadioDiagLog.RateLimiter(detailCount = 5, summaryIntervalMs = 1000L)
+    private var rxSummaryDropped: Long = 0
+
     private fun onAudioPacketReceived(packet: OpusRadioPacket) {
         rxSessionStats.packetsReceived++
+        rxPacketRateLimiter.tick()
         if (packet.channelIndex != udpTransport.channelIndex) {
             rxSessionStats.packetsDropped++
-            Log.d(TAG, "RX_DROP_WRONG_CHANNEL packetChannel=${packet.channelIndex} local=${udpTransport.channelIndex} seq=${packet.sequence}")
+            rxSummaryDropped++
+            if (rxPacketRateLimiter.shouldLogDetail()) {
+                Log.d(TAG, "RX_DROP_WRONG_CHANNEL packetChannel=${packet.channelIndex} local=${udpTransport.channelIndex} seq=${packet.sequence}")
+            } else if (rxPacketRateLimiter.shouldLogSummary()) {
+                val cnt = rxPacketRateLimiter.resetSummaryAccumulator()
+                Log.d(TAG, "RX_PACKET_SUMMARY frames=$cnt totalReceived=${rxSessionStats.packetsReceived} dropped=$rxSummaryDropped jbSize=${jitterBuffer.size} ${RadioDiagLog.elapsedTag()}")
+                rxSummaryDropped = 0
+            }
             return
         }
-        Log.d(TAG, "RADIO_RX_CHANNEL_MATCH packetChannel=${packet.channelIndex} local=${udpTransport.channelIndex}")
-        Log.d(TAG, "RADIO_RX_PACKET_RECEIVED seq=${packet.sequence} sender=${packet.senderUnitId} payload=${packet.opusPayload.size}")
+        if (rxPacketRateLimiter.shouldLogDetail()) {
+            Log.d(TAG, "RADIO_RX_CHANNEL_MATCH packetChannel=${packet.channelIndex} local=${udpTransport.channelIndex}")
+            Log.d(TAG, "RADIO_RX_PACKET_RECEIVED seq=${packet.sequence} sender=${packet.senderUnitId} payload=${packet.opusPayload.size}")
+        } else if (rxPacketRateLimiter.shouldLogSummary()) {
+            val cnt = rxPacketRateLimiter.resetSummaryAccumulator()
+            Log.d(TAG, "RX_PACKET_SUMMARY frames=$cnt totalReceived=${rxSessionStats.packetsReceived} dropped=$rxSummaryDropped jbSize=${jitterBuffer.size} ${RadioDiagLog.elapsedTag()}")
+            rxSummaryDropped = 0
+        }
         rxSessionStats.totalJitterDepth += jitterBuffer.size
         rxSessionStats.jitterSamples++
         if (udpTransport.rxPacketCount == 1L) {
