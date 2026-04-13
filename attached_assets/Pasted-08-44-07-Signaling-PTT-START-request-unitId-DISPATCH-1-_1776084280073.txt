@@ -1,0 +1,72 @@
+08:44:07 [Signaling] PTT START request: unitId=DISPATCH-1 channelId=DISPATCH__DISPATCH
+08:44:07 [FloorControl] requestFloor: raw="DISPATCH__DISPATCH" canonical="DISPATCH__DISPATCH" unitId="DISPATCH-1"
+08:44:07 [AI-Dispatcher] PTT_START callback matched: channelId=DISPATCH__DISPATCH, unitId=DISPATCH-1
+08:44:07 [AI-Dispatcher-Signaling] 2026-04-13T12:44:07.996Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"DISPATCH-1","isEmergency":false}
+08:44:07 [Signaling] PTT_READY sent for DISPATCH-1 on DISPATCH__DISPATCH
+08:44:07 [AI-Dispatcher-Signaling] 2026-04-13T12:44:07.997Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"DISPATCH-1","alreadyConnected":true}
+08:44:07 [Signaling] PTT START granted: DISPATCH-1 on DISPATCH__DISPATCH (floor granted for holdsFloor check)
+08:44:08 [RecordingTap] TX recording started: unit=DISPATCH-1 channel=DISPATCH__DISPATCH codec=opus
+08:44:08 [AudioRelay] WS_RELAY_STATS {"channelKey":"DISPATCH__DISPATCH","reason":"periodic","framesEnqueued":7,"framesDropped":0,"framesDrained":4,"burstDrains":0,"queueDepth":3,"wsSubscribers":1}
+08:44:10 [AI-Dispatcher-Signaling] 2026-04-13T12:44:10.329Z | PTT_END_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"DISPATCH-1"}
+08:44:10 [AI-Dispatcher] 2026-04-13T12:44:10.329Z | PTT_END_FLUSH {"unitId":"DISPATCH-1","frames":101,"chunks":101}
+08:44:10 [AI-Dispatcher] 2026-04-13T12:44:10.330Z | AUDIO_BUFFERING_COMPLETE {"participant":"DISPATCH-1","frames":101,"bytes":64640,"durationMs":2020}
+08:44:10 [Signaling] PTT END: DISPATCH-1 on DISPATCH__DISPATCH (2332ms)
+08:44:10 [AI-Dispatcher] 2026-04-13T12:44:10.345Z | STT_INVOKE {"participant":"DISPATCH-1","audioBytes":64640,"sampleRate":16000}
+08:44:10 [RecordingTap] Finalizing recording: unit=DISPATCH-1 channel=DISPATCH__DISPATCH frames=102 duration=1986ms codec=opus
+08:44:10 [RecordingTap] Decode summary: unit=DISPATCH-1 channel=DISPATCH__DISPATCH total=102 decoded=102 failed=0 failureRatio=0.0%
+08:44:10 [RecordingTap] Audio message saved: id=3117 channel=DISPATCH__DISPATCH sender=DISPATCH-1 duration=1986ms frames=102 failed=0
+08:44:10 [broadcastMessage] Broadcast message to DISPATCH__DISPATCH: 3117
+08:44:11 [AI-Dispatcher] 2026-04-13T12:44:11.240Z | STT_RESULT {"transcript":"Central from dispatch.","participant":"DISPATCH-1"}
+08:44:11 [AI-Dispatcher] 2026-04-13T12:44:11.240Z | LLM_CLASSIFY_START {"participant":"DISPATCH-1","state":"AWAITING_COMMAND","transcript":"Central from dispatch."}
+08:44:11 [LLM-Intent] Classifying: unit=DISPATCH-1, state=AWAITING_COMMAND, transcript="Central from dispatch."
+08:44:11 [AI-Dispatcher] 2026-04-13T12:44:11.354Z | LLM_ERROR {"error":"404 The API deployment for this resource does not exist. If you created the deployment within the last 5 minutes, please wait a moment and try again."}
+08:44:11 [AI-Dispatcher] 2026-04-13T12:44:11.354Z | LLM_FALLBACK_TO_REGEX {"participant":"DISPATCH-1"}
+08:44:11 [CommandMatcher] Unit: DISPATCH-1, State: AWAITING_COMMAND, Transcript: "Central from dispatch."
+08:44:11 [AI-Dispatcher] 2026-04-13T12:44:11.355Z | COMMAND_MATCHED {"transcript":"Central from dispatch.","response":"DISPATCH-1, go ahead.","cadStatus":null}
+08:44:11 [AI-DISPATCH-SPEECH] 2026-04-13T12:44:11.479Z | unit=DISPATCH-1 | heard="Central from dispatch." | intent=undefined | response="DISPATCH-1, go ahead."
+08:44:11 [FloorControl] requestFloor: raw="DISPATCH__DISPATCH" canonical="DISPATCH__DISPATCH" unitId="AI-Dispatcher"
+08:44:11 [AI-Dispatcher] 2026-04-13T12:44:11.831Z | AUDIO_BUFFERING_COMPLETE {"participant":"DISPATCH-1","frames":1,"bytes":640,"durationMs":20}
+08:44:11 [AI-Dispatcher] 2026-04-13T12:44:11.832Z | AUDIO_TOO_SHORT {"participant":"DISPATCH-1","bytes":640,"minBytes":16000}
+08:44:11 [RecordingTap] TX recording started: unit=AI-Dispatcher channel=DISPATCH__DISPATCH codec=opus
+08:44:13 [Signaling] Grace period ended for DISPATCH__DISPATCH
+08:44:13 [AudioRelay] WS_RELAY_STATS {"channelKey":"DISPATCH__DISPATCH","reason":"periodic","framesEnqueued":174,"framesDropped":0,"framesDrained":176,"burstDrains":0,"queueDepth":1,"wsSubscribers":1}
+08:44:15 [AI-Dispatcher] 2026-04-13T12:44:15.261Z | CHAT_RECORDED {"channel":"DISPATCH__DISPATCH","messageId":3118}
+08:44:15 [broadcastMessage] Broadcast message to DISPATCH__DISPATCH: 3118
+08:44:16 [Signaling] PTT START request: unitId=DISPATCH-1 channelId=DISPATCH__DISPATCH
+08:44:16 [FloorControl] requestFloor: raw="DISPATCH__DISPATCH" canonical="DISPATCH__DISPATCH" unitId="DISPATCH-1"
+08:44:16 [AI-Dispatcher] PTT_START callback matched: channelId=DISPATCH__DISPATCH, unitId=DISPATCH-1
+08:44:16 [AI-Dispatcher-Signaling] 2026-04-13T12:44:16.086Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"DISPATCH-1","isEmergency":false}
+08:44:16 [Signaling] PTT_READY sent for DISPATCH-1 on DISPATCH__DISPATCH
+08:44:16 [AI-Dispatcher-Signaling] 2026-04-13T12:44:16.087Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"DISPATCH-1","alreadyConnected":true}
+08:44:16 [Signaling] PTT START granted: DISPATCH-1 on DISPATCH__DISPATCH (floor granted for holdsFloor check)
+08:44:16 [RecordingTap] Finalizing recording: unit=AI-Dispatcher channel=DISPATCH__DISPATCH frames=128 duration=2541ms codec=opus
+08:44:16 [RecordingTap] Decode summary: unit=AI-Dispatcher channel=DISPATCH__DISPATCH total=128 decoded=128 failed=0 failureRatio=0.0%
+08:44:16 [RecordingTap] TX recording started: unit=DISPATCH-1 channel=DISPATCH__DISPATCH codec=opus
+08:44:16 [RecordingTap] Audio message saved: id=3120 channel=DISPATCH__DISPATCH sender=AI-Dispatcher duration=2541ms frames=128 failed=0
+08:44:16 [broadcastMessage] Broadcast message to DISPATCH__DISPATCH: 3120
+08:44:18 [AudioRelay] WS_RELAY_STATS {"channelKey":"DISPATCH__DISPATCH","reason":"periodic","framesEnqueued":151,"framesDropped":0,"framesDrained":150,"burstDrains":0,"queueDepth":2,"wsSubscribers":1}
+08:44:18 [AI-Dispatcher-Signaling] 2026-04-13T12:44:18.864Z | PTT_END_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"DISPATCH-1"}
+08:44:18 [AI-Dispatcher] 2026-04-13T12:44:18.865Z | PTT_END_FLUSH {"unitId":"DISPATCH-1","frames":123,"chunks":123}
+08:44:18 [AI-Dispatcher] 2026-04-13T12:44:18.865Z | AUDIO_BUFFERING_COMPLETE {"participant":"DISPATCH-1","frames":123,"bytes":78720,"durationMs":2460}
+08:44:18 [Signaling] PTT END: DISPATCH-1 on DISPATCH__DISPATCH (2778ms)
+08:44:18 [AI-Dispatcher] 2026-04-13T12:44:18.878Z | STT_INVOKE {"participant":"DISPATCH-1","audioBytes":78720,"sampleRate":16000}
+08:44:19 [RecordingTap] Finalizing recording: unit=DISPATCH-1 channel=DISPATCH__DISPATCH frames=124 duration=2442ms codec=opus
+08:44:19 [RecordingTap] Decode summary: unit=DISPATCH-1 channel=DISPATCH__DISPATCH total=124 decoded=124 failed=0 failureRatio=0.0%
+08:44:19 [RecordingTap] Audio message saved: id=3121 channel=DISPATCH__DISPATCH sender=DISPATCH-1 duration=2442ms frames=124 failed=0
+08:44:19 [broadcastMessage] Broadcast message to DISPATCH__DISPATCH: 3121
+08:44:19 [AI-Dispatcher] 2026-04-13T12:44:19.819Z | STT_RESULT {"transcript":"Radio check.","participant":"DISPATCH-1"}
+08:44:19 [AI-Dispatcher] 2026-04-13T12:44:19.820Z | LLM_CLASSIFY_START {"participant":"DISPATCH-1","state":"AWAITING_COMMAND","transcript":"Radio check."}
+08:44:19 [LLM-Intent] Classifying: unit=DISPATCH-1, state=AWAITING_COMMAND, transcript="Radio check."
+08:44:19 [AI-Dispatcher] 2026-04-13T12:44:19.962Z | LLM_ERROR {"error":"404 The API deployment for this resource does not exist. If you created the deployment within the last 5 minutes, please wait a moment and try again."}
+08:44:19 [AI-Dispatcher] 2026-04-13T12:44:19.962Z | LLM_FALLBACK_TO_REGEX {"participant":"DISPATCH-1"}
+08:44:19 [CommandMatcher] Unit: DISPATCH-1, State: AWAITING_COMMAND, Transcript: "Radio check."
+08:44:19 [AI-Dispatcher] 2026-04-13T12:44:19.963Z | COMMAND_MATCHED {"transcript":"Radio check.","response":"DISPATCH-1, loud and clear.","cadStatus":null,"cadAction":null}
+08:44:20 [AI-DISPATCH-SPEECH] 2026-04-13T12:44:20.099Z | unit=DISPATCH-1 | heard="Radio check." | intent=undefined | response="DISPATCH-1, loud and clear."
+08:44:20 [FloorControl] requestFloor: raw="DISPATCH__DISPATCH" canonical="DISPATCH__DISPATCH" unitId="AI-Dispatcher"
+08:44:20 [AI-Dispatcher] 2026-04-13T12:44:20.365Z | AUDIO_BUFFERING_COMPLETE {"participant":"DISPATCH-1","frames":1,"bytes":640,"durationMs":20}
+08:44:20 [AI-Dispatcher] 2026-04-13T12:44:20.365Z | AUDIO_TOO_SHORT {"participant":"DISPATCH-1","bytes":640,"minBytes":16000}
+08:44:20 [RecordingTap] TX recording started: unit=AI-Dispatcher channel=DISPATCH__DISPATCH codec=opus
+08:44:21 [Signaling] Grace period ended for DISPATCH__DISPATCH
+08:44:23 [AudioRelay] WS_RELAY_STATS {"channelKey":"DISPATCH__DISPATCH","reason":"periodic","framesEnqueued":157,"framesDropped":0,"framesDrained":159,"burstDrains":0,"queueDepth":0,"wsSubscribers":1}
+08:44:24 [AI-Dispatcher] 2026-04-13T12:44:24.011Z | CHAT_RECORDED {"channel":"DISPATCH__DISPATCH","messageId":3122}
+08:44:24 [broadcastMessage] Broadcast message to DISPATCH__DISPATCH: 3122
