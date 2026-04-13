@@ -1,9 +1,161 @@
+import { useState, useEffect, useRef } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import useDispatchStore from '../../state/dispatchStore.js';
 import audioTransportManager from '../../audio/AudioTransportManager.js';
 import { PTT_STATES } from '../../constants/pttStates.js';
 import { useAuth } from '../../AuthContext.jsx';
+
+function ConnectionStatusIndicator({ roomKey, isMonitored }) {
+  const [connState, setConnState] = useState(null);
+  const [errorMsg, setErrorMsg] = useState(null);
+  const [showError, setShowError] = useState(false);
+  const tooltipRef = useRef(null);
+  const latchedErrorRef = useRef(null);
+
+  useEffect(() => {
+    if (!isMonitored || !roomKey) {
+      setConnState(null);
+      setErrorMsg(null);
+      setShowError(false);
+      latchedErrorRef.current = null;
+      return;
+    }
+
+    setConnState(null);
+    setErrorMsg(null);
+    setShowError(false);
+    latchedErrorRef.current = null;
+
+    const status = audioTransportManager.getConnectionStatus();
+    const chStatus = status.channels.find(c => c.channel === roomKey);
+    if (chStatus) {
+      if (chStatus.state === 'connected') {
+        setConnState('connected');
+      } else if (chStatus.error) {
+        latchedErrorRef.current = chStatus.error;
+        setConnState('error');
+        setErrorMsg(chStatus.error);
+      } else {
+        setConnState('reconnecting');
+      }
+    }
+
+    const removeListener = audioTransportManager.addConnectionStateChangeListener((channelName, state, error) => {
+      if (channelName !== roomKey) return;
+      if (state === 'connected') {
+        setConnState('connected');
+        latchedErrorRef.current = null;
+        setErrorMsg(null);
+        setShowError(false);
+      } else if (error) {
+        const msg = typeof error === 'string' ? error : error?.message || 'Connection failed';
+        latchedErrorRef.current = msg;
+        setConnState('error');
+        setErrorMsg(msg);
+      } else if (latchedErrorRef.current) {
+        setConnState('error');
+        setErrorMsg(latchedErrorRef.current);
+      } else {
+        setConnState('reconnecting');
+      }
+    });
+
+    const removeHealthListener = audioTransportManager.addHealthChangeListener((channelName, health) => {
+      if (channelName !== roomKey) return;
+      const s = audioTransportManager.getConnectionStatus();
+      const ch = s.channels.find(c => c.channel === roomKey);
+      if (ch) {
+        if (ch.state === 'connected') {
+          setConnState('connected');
+          latchedErrorRef.current = null;
+          setErrorMsg(null);
+          setShowError(false);
+        } else if (ch.error || latchedErrorRef.current) {
+          if (ch.error) latchedErrorRef.current = ch.error;
+          setConnState('error');
+          setErrorMsg(latchedErrorRef.current);
+        } else {
+          setConnState('reconnecting');
+        }
+      }
+    });
+
+    return () => {
+      removeListener();
+      removeHealthListener();
+    };
+  }, [roomKey, isMonitored]);
+
+  useEffect(() => {
+    if (!showError) return;
+    const handleClickOutside = (e) => {
+      if (tooltipRef.current && !tooltipRef.current.contains(e.target)) {
+        setShowError(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showError]);
+
+  if (!isMonitored || !connState) return null;
+
+  const handleErrorClick = (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setShowError(prev => !prev);
+  };
+
+  if (connState === 'connected') {
+    return (
+      <span title="Connected" className="inline-flex items-center text-green-500">
+        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+        </svg>
+      </span>
+    );
+  }
+
+  if (connState === 'reconnecting') {
+    return (
+      <span title="Connecting..." className="inline-flex items-center text-yellow-500">
+        <svg className="w-3.5 h-3.5 animate-pulse" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="6" />
+        </svg>
+      </span>
+    );
+  }
+
+  if (connState === 'error') {
+    return (
+      <span className="relative inline-flex items-center" ref={tooltipRef}>
+        <button
+          type="button"
+          onClick={handleErrorClick}
+          onPointerDown={(e) => e.stopPropagation()}
+          className="inline-flex items-center text-red-500 hover:text-red-400 cursor-pointer"
+          title="Connection error — click for details"
+          aria-label="Connection error details"
+        >
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+        {showError && errorMsg && (
+          <div className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 text-xs text-white bg-gray-900 border border-red-500/50 rounded-lg shadow-lg whitespace-nowrap max-w-[200px] text-center" style={{ whiteSpace: 'normal', wordBreak: 'break-word' }}>
+            <div className="font-semibold text-red-400 mb-0.5">Connection Error</div>
+            {errorMsg}
+            <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px">
+              <div className="w-2 h-2 bg-gray-900 border-r border-b border-red-500/50 rotate-45" />
+            </div>
+          </div>
+        )}
+      </span>
+    );
+  }
+
+  return null;
+}
 
 function AudioLevelMeter({ level }) {
   const barCount = 8;
@@ -101,7 +253,10 @@ export default function ChannelTile({ channel, onRemove }) {
             {channel.zone && (
               <p className="text-xs text-dispatch-secondary leading-tight">ZN-{channel.zone}</p>
             )}
-            <h3 className="font-bold text-dispatch-text leading-tight">CH-{channel.name}</h3>
+            <div className="flex items-center gap-1.5">
+              <h3 className="font-bold text-dispatch-text leading-tight">CH-{channel.name}</h3>
+              <ConnectionStatusIndicator roomKey={roomKey} isMonitored={isMonitored} />
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">

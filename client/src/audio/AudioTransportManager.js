@@ -50,6 +50,7 @@ class AudioTransportManager {
     this._levelUpdateListeners = new Set();
     this._connectionStateChangeListeners = new Set();
     this._healthChangeListeners = new Set();
+    this._channelErrors = new Map();
 
     this._capture = new PcmCaptureEngine();
     this._playback = new PcmPlaybackEngine();
@@ -144,7 +145,8 @@ class AudioTransportManager {
           console.warn('AUDIO_WS_HEALTH_CHECK_DEAD', { channelName, readyState: conn.ws?.readyState, stale: isStale, lastActivity: conn._lastActivity });
           try { conn.ws.close(); } catch (_) {}
           this.rooms.delete(channelName);
-          this._emitConnectionStateChange(channelName, 'disconnected');
+          const errMsg = isStale ? 'Connection timed out (no activity)' : 'WebSocket connection lost';
+          this._emitConnectionStateChange(channelName, 'disconnected', errMsg);
           this._scheduleReconnect(channelName);
         }
       }
@@ -174,6 +176,7 @@ class AudioTransportManager {
         console.log('AUDIO_WS_RECONNECT_SUCCESS', { channelName, attempt });
       } catch (err) {
         console.warn('AUDIO_WS_RECONNECT_FAILED', { channelName, attempt, error: err.message });
+        this._emitConnectionStateChange(channelName, 'disconnected', err.message || 'Reconnect failed');
         this._scheduleReconnect(channelName);
       }
     }, delay);
@@ -189,7 +192,8 @@ class AudioTransportManager {
         console.warn('AUDIO_WS_FORCE_HEALTH_CHECK_DEAD', { channelName, readyState: conn.ws?.readyState, stale: isStale, lastActivity: conn._lastActivity });
         try { conn.ws.close(); } catch (_) {}
         this.rooms.delete(channelName);
-        this._emitConnectionStateChange(channelName, 'disconnected');
+        const errMsg = isStale ? 'Connection timed out (no activity)' : 'WebSocket connection lost';
+        this._emitConnectionStateChange(channelName, 'disconnected', errMsg);
       }
     }
   }
@@ -238,8 +242,21 @@ class AudioTransportManager {
   addHealthChangeListener(cb) { this._healthChangeListeners.add(cb); return () => this._healthChangeListeners.delete(cb); }
 
   _emitConnectionStateChange(channelName, state, error) {
+    if (error) {
+      this._channelErrors.set(channelName, typeof error === 'string' ? error : error?.message || 'Connection failed');
+    } else if (state === 'connected') {
+      this._channelErrors.delete(channelName);
+    }
     for (const cb of this._connectionStateChangeListeners) {
       try { cb(channelName, state, error); } catch (_) {}
+    }
+    this._emitHealthChange(channelName);
+  }
+
+  _emitHealthChange(channelName) {
+    const health = { channel: channelName, error: this._channelErrors.get(channelName) || null };
+    for (const cb of this._healthChangeListeners) {
+      try { cb(channelName, health); } catch (_) {}
     }
   }
 
@@ -427,9 +444,10 @@ class AudioTransportManager {
         await this._enqueueWithReorder(msg.sequence, frame, msg.channelId || channelName, msg.senderUnitId || 'unknown', 'pcm');
       };
 
-      ws.onclose = () => {
+      ws.onclose = (event) => {
         this.rooms.delete(channelName);
-        this._emitConnectionStateChange(channelName, 'disconnected');
+        const errMsg = event?.wasClean ? null : ('WebSocket closed unexpectedly' + (event?.reason ? ': ' + event.reason : '') + (event?.code ? ' (code ' + event.code + ')' : ''));
+        this._emitConnectionStateChange(channelName, 'disconnected', errMsg);
         if (
           this.primaryTxChannel === channelName &&
           (this.pttState === PTT_STATES.TRANSMITTING || this.pttState === PTT_STATES.ARMING)
@@ -473,6 +491,7 @@ class AudioTransportManager {
     this._cancelReconnect(channelName);
     this._resetReorderForChannel(channelName);
     this._resetOpusDecoderForChannel(channelName);
+    this._channelErrors.delete(channelName);
     const conn = this.rooms.get(channelName);
     if (!conn) return;
     this.rooms.delete(channelName);
@@ -694,16 +713,23 @@ class AudioTransportManager {
     for (const [ch, conn] of this.rooms) {
       const isOpen = conn.ws && conn.ws.readyState === WebSocket.OPEN;
       if (isOpen) healthy++;
+      const lastError = this._channelErrors.get(ch) || null;
       channels.push({
         channel: ch,
         connected: isOpen,
         quality: isOpen ? 'good' : 'poor',
         state: isOpen ? 'connected' : 'reconnecting',
+        error: isOpen ? null : lastError,
       });
     }
     for (const ch of this.pendingConnections.keys()) {
       if (!this.rooms.has(ch)) {
-        channels.push({ channel: ch, connected: false, quality: 'poor', state: 'reconnecting' });
+        channels.push({ channel: ch, connected: false, quality: 'poor', state: 'reconnecting', error: this._channelErrors.get(ch) || null });
+      }
+    }
+    for (const [ch, errMsg] of this._channelErrors) {
+      if (!this.rooms.has(ch) && !this.pendingConnections.has(ch)) {
+        channels.push({ channel: ch, connected: false, quality: 'poor', state: 'disconnected', error: errMsg });
       }
     }
     const reconnecting = this.pendingConnections.size > 0 || (total > 0 && healthy < total);
@@ -747,6 +773,7 @@ class AudioTransportManager {
         await this.connect(channelName, unitId);
       } catch (err) {
         console.error('AUDIO_WS_VERIFY_RECONNECT_FAILED', { channelName, error: err.message });
+        this._emitConnectionStateChange(channelName, 'disconnected', err.message || 'Reconnect verification failed');
       }
     }
     return toReconnect.length;
