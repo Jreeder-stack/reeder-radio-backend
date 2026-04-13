@@ -1,0 +1,118 @@
+main.jsx:28 [BUILD] client version=590a847 built=2026-04-13T15:15:29.936Z
+admin:1 <meta name="apple-mobile-web-app-capable" content="yes"> is deprecated. Please include <meta name="mobile-web-app-capable" content="yes">
+AudioConnectionContext.jsx:614 [AudioConnection] Admin mode - idle timeout disabled (audio must persist)
+AudioConnectionContext.jsx:727 [AudioConnection] Init check - user: undefined lastUser: null initializing: false path: /admin
+AudioConnectionContext.jsx:736 [AudioConnection] No user, skipping init
+AuthContext.jsx:127 [PTT-DIAG] [JS] Auth: pushed early connection info to service: server=https://comms.reeder-systems.com unit=DISPATCH-1
+AudioConnectionContext.jsx:727 [AudioConnection] Init check - user: DISPATCH-1 lastUser: null initializing: false path: /admin
+AudioConnectionContext.jsx:754 [AudioConnection] Fetching channels...
+SignalingManager.js:76 [Signaling] Connection already in progress, returning existing promise
+AuthContext.jsx:127 [PTT-DIAG] [JS] Auth: pushed early connection info to service: server=https://comms.reeder-systems.com unit=DISPATCH-1
+SignalingManager.js:110 [Signaling] Connected to signaling server
+SignalingManager.js:337 [Signaling] Authentication request sent for DISPATCH-1
+SignalingManager.js:296 [Signaling] Authentication already in progress, returning existing promise
+SignalingManager.js:160 [Signaling] Authenticated as DISPATCH-1
+SignalingContext.jsx:47 [SignalingContext] Connected and authenticated as DISPATCH-1
+SignalingContext.jsx:47 [SignalingContext] Connected and authenticated as DISPATCH-1
+AudioConnectionContext.jsx:757 [AudioConnection] Fetched 4 channels
+AudioConnectionContext.jsx:522 [AudioConnection] Radio mode - setting active channel to DISPATCH__DISPATCH
+AudioTransportManager.js:380 AUDIO_WS_CONNECT_ATTEMPT {channelName: 'DISPATCH__DISPATCH', identity: 'DISPATCH-1', url: 'wss://comms.reeder-systems.com/api/audio-ws?channelId=DISPATCH__DISPATCH&unitId=DISPATCH-1'}
+AudioTransportManager.js:385 AUDIO_WS_ONOPEN {channelName: 'DISPATCH__DISPATCH', identity: 'DISPATCH-1'}
+AudioConnectionContext.jsx:293 [AudioConnection] DISPATCH__DISPATCH state: connected
+AudioConnectionContext.jsx:318 [AudioConnection] Health change for DISPATCH__DISPATCH: {channel: 'DISPATCH__DISPATCH', error: null}
+AudioConnectionContext.jsx:349 [AudioConnection] connectToChannel total for DISPATCH__DISPATCH: 144.9ms
+AudioConnectionContext.jsx:356 [AudioConnection] Connected to DISPATCH__DISPATCH
+PcmCaptureEngine.js:141 [PcmCaptureEngine] Warmed up – mic and AudioContext ready
+admin:1 [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) <input type=​"password" placeholder=​"Broadcastify password (optional)​" class=​"admin-input" value=​"Dispatch-0702">​
+AudioTransportManager.js:151 AUDIO_WS_HEALTH_CHECK_DEAD {channelName: 'DISPATCH__DISPATCH', readyState: 1, stale: true, lastActivity: 1776094075898, alwaysReady: true}
+(anonymous) @ AudioTransportManager.js:151
+setInterval
+_startHealthCheck @ AudioTransportManager.js:143
+setDispatcherMode @ AudioTransportManager.js:761
+(anonymous) @ AudioConnectionContext.jsx:611
+Qj @ react-dom.production.min.js:243
+Hk @ react-dom.production.min.js:285
+(anonymous) @ react-dom.production.min.js:281
+J @ scheduler.production.min.js:13
+R @ scheduler.production.min.js:14
+postMessage
+(anonymous) @ scheduler.production.min.js:14
+R @ scheduler.production.min.js:14
+postMessage
+(anonymous) @ scheduler.production.min.js:14
+I @ scheduler.production.min.js:14
+(anonymous) @ scheduler.production.min.js:18
+Fk @ react-dom.production.min.js:296
+Dk @ react-dom.production.min.js:266
+gi @ react-dom.production.min.js:265
+fl @ react-dom.production.min.js:307
+(anonymous) @ react-dom.production.min.js:309
+(anonymous) @ main.jsx:313
+AudioConnectionContext.jsx:293 [AudioConnection] DISPATCH__DISPATCH state: disconnected
+AudioConnectionContext.jsx:81 [AudioConnection] Connection to DISPATCH__DISPATCH was stable, resetting attempts
+AudioConnectionContext.jsx:98 [AudioConnection] Scheduling reconnect for DISPATCH__DISPATCH in 1535ms (attempt 1)
+AudioConnectionContext.jsx:318 [AudioConnection] Health change for DISPATCH__DISPATCH: {channel: 'DISPATCH__DISPATCH', error: 'Connection timed out (no activity)'}
+AudioTransportManager.js:174 AUDIO_WS_RECONNECT_SCHEDULED {channelName: 'DISPATCH__DISPATCH', attempt: 1, delayMs: 250}
+AudioConnectionContext.jsx:293 [AudioConnection] DISPATCH__DISPATCH state: reconnecting
+AudioConnectionContext.jsx:318 [AudioConnection] Health change for DISPATCH__DISPATCH: {channel: 'DISPATCH__DISPATCH', error: 'Connection timed out (no activity)'}
+AudioConnectionContext.jsx:293 [AudioConnection] DISPATCH__DISPATCH state: disconnected
+AudioConnectionContext.jsx:98 [AudioConnection] Scheduling reconnect for DISPATCH__DISPATCH in 1527ms (attempt 1)
+AudioConnectionContext.jsx:318 [AudioConnection] Health change for DISPATCH__DISPATCH: {channel: 'DISPATCH__DISPATCH', error: 'Connection timed out (no activity)'}
+AudioTransportManager.js:380 AUDIO_WS_CONNECT_ATTEMPT {channelName: 'DISPATCH__DISPATCH', identity: 'DISPATCH-1', url: 'wss://comms.reeder-systems.com/api/audio-ws?channelId=DISPATCH__DISPATCH&unitId=DISPATCH-1'}
+AudioTransportManager.js:385 AUDIO_WS_ONOPEN {channelName: 'DISPATCH__DISPATCH', identity: 'DISPATCH-1'}
+AudioConnectionContext.jsx:293 [AudioConnection] DISPATCH__DISPATCH state: connected
+AudioConnectionContext.jsx:318 [AudioConnection] Health change for DISPATCH__DISPATCH: {channel: 'DISPATCH__DISPATCH', error: null}
+AudioTransportManager.js:185 AUDIO_WS_RECONNECT_SUCCESS {channelName: 'DISPATCH__DISPATCH', attempt: 1}
+AudioConnectionContext.jsx:112 [AudioConnection] Reconnected to DISPATCH__DISPATCH
+Admin.jsx:381  POST https://comms.reeder-systems.com/api/admin/scanner 500 (Internal Server Error)
+(anonymous) @ Admin.jsx:381
+Nb @ react-dom.production.min.js:54
+Tb @ react-dom.production.min.js:54
+Ub @ react-dom.production.min.js:55
+nf @ react-dom.production.min.js:105
+se @ react-dom.production.min.js:106
+(anonymous) @ react-dom.production.min.js:117
+Qk @ react-dom.production.min.js:273
+Jb @ react-dom.production.min.js:52
+hd @ react-dom.production.min.js:109
+fd @ react-dom.production.min.js:74
+ed @ react-dom.production.min.js:73
+AudioTransportManager.js:151 AUDIO_WS_HEALTH_CHECK_DEAD {channelName: 'DISPATCH__DISPATCH', readyState: 1, stale: true, lastActivity: 1776094105898, alwaysReady: true}
+(anonymous) @ AudioTransportManager.js:151
+setInterval
+_startHealthCheck @ AudioTransportManager.js:143
+setDispatcherMode @ AudioTransportManager.js:761
+(anonymous) @ AudioConnectionContext.jsx:611
+Qj @ react-dom.production.min.js:243
+Hk @ react-dom.production.min.js:285
+(anonymous) @ react-dom.production.min.js:281
+J @ scheduler.production.min.js:13
+R @ scheduler.production.min.js:14
+postMessage
+(anonymous) @ scheduler.production.min.js:14
+R @ scheduler.production.min.js:14
+postMessage
+(anonymous) @ scheduler.production.min.js:14
+I @ scheduler.production.min.js:14
+(anonymous) @ scheduler.production.min.js:18
+Fk @ react-dom.production.min.js:296
+Dk @ react-dom.production.min.js:266
+gi @ react-dom.production.min.js:265
+fl @ react-dom.production.min.js:307
+(anonymous) @ react-dom.production.min.js:309
+(anonymous) @ main.jsx:313
+AudioConnectionContext.jsx:293 [AudioConnection] DISPATCH__DISPATCH state: disconnected
+AudioConnectionContext.jsx:81 [AudioConnection] Connection to DISPATCH__DISPATCH was stable, resetting attempts
+AudioConnectionContext.jsx:98 [AudioConnection] Scheduling reconnect for DISPATCH__DISPATCH in 1584ms (attempt 1)
+AudioConnectionContext.jsx:318 [AudioConnection] Health change for DISPATCH__DISPATCH: {channel: 'DISPATCH__DISPATCH', error: 'Connection timed out (no activity)'}
+AudioTransportManager.js:174 AUDIO_WS_RECONNECT_SCHEDULED {channelName: 'DISPATCH__DISPATCH', attempt: 1, delayMs: 250}
+AudioConnectionContext.jsx:293 [AudioConnection] DISPATCH__DISPATCH state: reconnecting
+AudioConnectionContext.jsx:318 [AudioConnection] Health change for DISPATCH__DISPATCH: {channel: 'DISPATCH__DISPATCH', error: 'Connection timed out (no activity)'}
+AudioConnectionContext.jsx:293 [AudioConnection] DISPATCH__DISPATCH state: disconnected
+AudioConnectionContext.jsx:98 [AudioConnection] Scheduling reconnect for DISPATCH__DISPATCH in 1806ms (attempt 1)
+AudioConnectionContext.jsx:318 [AudioConnection] Health change for DISPATCH__DISPATCH: {channel: 'DISPATCH__DISPATCH', error: 'Connection timed out (no activity)'}
+AudioTransportManager.js:380 AUDIO_WS_CONNECT_ATTEMPT {channelName: 'DISPATCH__DISPATCH', identity: 'DISPATCH-1', url: 'wss://comms.reeder-systems.com/api/audio-ws?channelId=DISPATCH__DISPATCH&unitId=DISPATCH-1'}
+AudioTransportManager.js:385 AUDIO_WS_ONOPEN {channelName: 'DISPATCH__DISPATCH', identity: 'DISPATCH-1'}
+AudioConnectionContext.jsx:293 [AudioConnection] DISPATCH__DISPATCH state: connected
+AudioConnectionContext.jsx:318 [AudioConnection] Health change for DISPATCH__DISPATCH: {channel: 'DISPATCH__DISPATCH', error: null}
+AudioTransportManager.js:185 AUDIO_WS_RECONNECT_SUCCESS {channelName: 'DISPATCH__DISPATCH', attempt: 1}

@@ -1,0 +1,906 @@
+11:30:58 [1m[90m[TAILING] Tailing last 50 lines for [all] processes (change the value with --lines option)[39m[22m
+11:30:58 [90m/home/Jreeder5029/.pm2/logs/command-comms-error.log last 50 lines:[39m
+11:30:58 fatal: not a git repository (or any of the parent directories): .git
+11:30:58 [AudioRelay] TX_WATCHDOG_SILENCE unitId=DISPATCH-1 channelId=DISPATCH__DISPATCH silenceMs=19386 hadAudio=true
+11:30:58 [Signaling] TX_SILENCE_WARNING unitId=DISPATCH-1 channelId=DISPATCH__DISPATCH silenceMs=19386
+11:30:58 [AudioRelay] TX_WATCHDOG_SILENCE unitId=DISPATCH-1 channelId=DISPATCH__DISPATCH silenceMs=43446 hadAudio=true
+11:30:58 [Signaling] TX_SILENCE_WARNING unitId=DISPATCH-1 channelId=DISPATCH__DISPATCH silenceMs=43446
+11:30:58 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+11:30:58 [SHUTDOWN] Hard shutdown timeout reached, forcing exit.
+11:30:58 fatal: not a git repository (or any of the parent directories): .git
+11:30:58 fatal: not a git repository (or any of the parent directories): .git
+11:30:58 [CAD] Integration not configured - missing CAD_URL or CAD_API_KEY
+11:30:58 [CAD] Integration not configured - missing CAD_URL or CAD_API_KEY
+11:30:58 [AudioRelay] TX_WATCHDOG_SILENCE unitId=DISPATCH-1 channelId=DISPATCH__DISPATCH silenceMs=8860 hadAudio=true
+11:30:58 [Signaling] TX_SILENCE_WARNING unitId=DISPATCH-1 channelId=DISPATCH__DISPATCH silenceMs=8860
+11:30:58 [AudioRelay] TX_WATCHDOG_SILENCE unitId=DISPATCH-1 channelId=DISPATCH__DISPATCH silenceMs=8985 hadAudio=true
+11:30:58 [Signaling] TX_SILENCE_WARNING unitId=DISPATCH-1 channelId=DISPATCH__DISPATCH silenceMs=8985
+11:30:58 [SHUTDOWN] Hard shutdown timeout reached, forcing exit.
+11:30:58 fatal: not a git repository (or any of the parent directories): .git
+11:30:58 fatal: not a git repository (or any of the parent directories): .git
+11:30:58 fatal: not a git repository (or any of the parent directories): .git
+11:30:58 fatal: not a git repository (or any of the parent directories): .git
+11:30:58 [SHUTDOWN] Hard shutdown timeout reached, forcing exit.
+11:30:58 fatal: not a git repository (or any of the parent directories): .git
+11:30:58 fatal: not a git repository (or any of the parent directories): .git
+11:30:58 [AudioRelay] TX_WATCHDOG_SILENCE unitId=DISPATCH-1 channelId=DISPATCH__DISPATCH silenceMs=10155 hadAudio=true
+11:30:58 [Signaling] TX_SILENCE_WARNING unitId=DISPATCH-1 channelId=DISPATCH__DISPATCH silenceMs=10155
+11:30:58 [AudioRelay] TX_WATCHDOG_SILENCE unitId=DISPATCH-1 channelId=DISPATCH__DISPATCH silenceMs=8508 hadAudio=true
+11:30:58 [Signaling] TX_SILENCE_WARNING unitId=DISPATCH-1 channelId=DISPATCH__DISPATCH silenceMs=8508
+11:30:58 [AudioRelay] TX_WATCHDOG_SILENCE unitId=DISPATCH-1 channelId=DISPATCH__DISPATCH silenceMs=18330 hadAudio=true
+11:30:58 [Signaling] TX_SILENCE_WARNING unitId=DISPATCH-1 channelId=DISPATCH__DISPATCH silenceMs=18330
+11:30:58 [ScannerFeed] ffmpeg error: [https @ 0x57a2ddff1540] HTTP error 401 Authentication Required
+11:30:58 [ScannerFeed] ffmpeg error: [in#0 @ 0x57a2de02fe40] Error opening input: Server returned 401 Unauthorized (authorization failed)
+11:30:58 Error opening input file https://audio.broadcastify.com/4603.mp3.
+11:30:58 Error opening input files: Server returned 401 Unauthorized (authorization failed)
+11:30:58 [ScannerFeed] ffmpeg error: [https @ 0x5874d0649540] HTTP error 401 Authentication Required
+11:30:58 [ScannerFeed] ffmpeg error: [in#0 @ 0x5874d0687e40] Error opening input: Server returned 401 Unauthorized (authorization failed)
+11:30:58 Error opening input file https://audio.broadcastify.com/4603.mp3.
+11:30:58 Error opening input files: Server returned 401 Unauthorized (authorization failed)
+11:30:58 [SHUTDOWN] Hard shutdown timeout reached, forcing exit.
+11:30:58 fatal: not a git repository (or any of the parent directories): .git
+11:30:58 fatal: not a git repository (or any of the parent directories): .git
+11:30:58 [CAD] Integration not configured - missing CAD_URL or CAD_API_KEY
+11:30:58 [CAD] Integration not configured - missing CAD_URL or CAD_API_KEY
+11:30:58 [ScannerFeed] ffmpeg error: [https @ 0x6523bc8a9540] HTTP error 401 Authentication Required
+11:30:58 [ScannerFeed] ffmpeg error: [in#0 @ 0x6523bc8e7e80] Error opening input: Server returned 401 Unauthorized (authorization failed)
+11:30:58 Error opening input file https://audio.broadcastify.com/4603.mp3.
+11:30:58 Error opening input files: Server returned 401 Unauthorized (authorization failed)
+11:30:58 [ScannerFeed] ffmpeg error: [https @ 0x59cb5f3b9540] HTTP error 401 Authentication Required
+11:30:58 [ScannerFeed] ffmpeg error: [in#0 @ 0x59cb5f3f7e80] Error opening input: Server returned 401 Unauthorized (authorization failed)
+11:30:58 Error opening input file https://audio.broadcastify.com/4603.mp3.
+11:30:58 Error opening input files: Server returned 401 Unauthorized (authorization failed)
+11:30:58 [90m/home/Jreeder5029/.pm2/logs/command-comms-out.log last 50 lines:[39m
+11:30:58 [Signaling] INDIANA-1 joined channel TESTING__TESTING 1
+11:30:58 [AudioRelay] SUBSCRIBER_REMOVED unitId=INDIANA-1 channelId=PHILADELPHIA__OPS-1
+11:30:58 [Signaling] Radio INDIANA-1 left channel PHILADELPHIA__OPS-1
+11:30:58 [AudioRelay] SUBSCRIBER_ADDED unitId=INDIANA-1 channelId=TESTING__TESTING 1 addr=127.0.0.1:45263
+11:30:58 [Signaling] SUBSCRIBER_REGISTERED (replaced stale) unitId=INDIANA-1 channelId=TESTING__TESTING 1 address=127.0.0.1 port=45263
+11:30:58 [Signaling] CHANNEL_JOINED unitId=INDIANA-1 channelId=TESTING__TESTING 1
+11:30:58 [AudioRelay] SUBSCRIBER_NAT_CHANGE unitId=INDIANA-1 channelId=TESTING__TESTING 1 oldAddr=127.0.0.1:45263 newAddr=166.137.146.74:34315
+11:30:58 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:30:58 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:30:58 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:30:58 AUDIO_WS_UPGRADE_HIT {
+11:30:58   method: 'GET',
+11:30:58   path: '/api/audio-ws',
+11:30:58   query: '?channelId=TESTING__TESTING%201&unitId=DISPATCH-1',
+11:30:58   host: 'comms.reeder-systems.com',
+11:30:58   upgrade: 'websocket',
+11:30:58   connection: 'upgrade'
+11:30:58 }
+11:30:58 AUDIO_WS_ACCEPTED { username: 'DISPATCH-1', unitId: 'DISPATCH-1' }
+11:30:58 [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 21ms
+11:30:58 AUDIO_WS_UPGRADE_HIT {
+11:30:58   method: 'GET',
+11:30:58   path: '/api/audio-ws',
+11:30:58   query: '?channelId=DISPATCH__DISPATCH&unitId=DISPATCH-1',
+11:30:58   host: 'comms.reeder-systems.com',
+11:30:58   upgrade: 'websocket',
+11:30:58   connection: 'upgrade'
+11:30:58 }
+11:30:58 AUDIO_WS_ACCEPTED { username: 'DISPATCH-1', unitId: 'DISPATCH-1' }
+11:30:58 [AI-Dispatcher] Notify join received: DISPATCH-1 on DISPATCH__DISPATCH - connecting dispatcher
+11:30:58 [AI-Dispatcher] 2026-04-13T15:30:47.562Z | REJOIN_SKIPPED {"reason":"Already connected"}
+11:30:58 [AI-Dispatcher] Dispatcher connected for channel DISPATCH__DISPATCH
+11:30:58 [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 21ms
+11:30:58 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:30:58 [Signaling] DISPATCH-1 left channel TESTING__TESTING 1
+11:30:58 [Signaling] DISPATCH-1 left channel DISPATCH__DISPATCH
+11:30:58 [API] GET /api/admin/users | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 16ms
+11:30:58 [API] GET /api/admin/logs?limit=200 | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 21ms
+11:30:58 [API] GET /api/admin/channels | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 20ms
+11:30:58 [API] GET /api/admin/zones | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 22ms
+11:30:58 [DISPATCH] getChannels: 4 radio channels returned
+11:30:58 [API] GET /api/admin/ai-dispatch | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 23ms
+11:30:58 [API] GET /api/admin/scanner | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 9ms
+11:30:58 [API] GET /api/dispatch/channels | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 17ms
+11:30:58 [AUTH] /me check: hasSession=true sessionID=NXGwxI-f... cookie=true
+11:30:58 [AUTH] /me: session has user="DISPATCH-1" id=7, refreshing from DB...
+11:30:58 [AUTH] /me: returning fresh user data for "DISPATCH-1" role=admin unit_id=DISPATCH-1
+11:30:58 [API] GET /api/auth/me | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 304 | 17ms
+11:30:58 [Signaling] Client connected: cYN7Dkqo6UcZFIH_AAAL
+11:30:58 [Signaling] Unit authenticated: DISPATCH-1 (DISPATCH-1) [session-verified]
+11:30:59 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:31:07 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:31:15 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:31:21 AUDIO_WS_UPGRADE_HIT {
+11:31:21   method: 'GET',
+11:31:21   path: '/api/audio-ws',
+11:31:21   query: '?channelId=DISPATCH__DISPATCH&unitId=DISPATCH-1',
+11:31:21   host: 'comms.reeder-systems.com',
+11:31:21   upgrade: 'websocket',
+11:31:21   connection: 'upgrade'
+11:31:21 }
+11:31:21 AUDIO_WS_ACCEPTED { username: 'DISPATCH-1', unitId: 'DISPATCH-1' }
+11:31:21 [AI-Dispatcher] Notify join received: DISPATCH-1 on DISPATCH__DISPATCH - connecting dispatcher
+11:31:21 [AI-Dispatcher] 2026-04-13T15:31:21.265Z | REJOIN_SKIPPED {"reason":"Already connected"}
+11:31:21 [AI-Dispatcher] Dispatcher connected for channel DISPATCH__DISPATCH
+11:31:21 [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 24ms
+11:31:23 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:31:31 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:31:39 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:31:47 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:31:51 AUDIO_WS_UPGRADE_HIT {
+11:31:51   method: 'GET',
+11:31:51   path: '/api/audio-ws',
+11:31:51   query: '?channelId=DISPATCH__DISPATCH&unitId=DISPATCH-1',
+11:31:51   host: 'comms.reeder-systems.com',
+11:31:51   upgrade: 'websocket',
+11:31:51   connection: 'upgrade'
+11:31:51 }
+11:31:51 AUDIO_WS_ACCEPTED { username: 'DISPATCH-1', unitId: 'DISPATCH-1' }
+11:31:51 [AI-Dispatcher] Notify join received: DISPATCH-1 on DISPATCH__DISPATCH - connecting dispatcher
+11:31:51 [AI-Dispatcher] 2026-04-13T15:31:51.241Z | REJOIN_SKIPPED {"reason":"Already connected"}
+11:31:51 [AI-Dispatcher] Dispatcher connected for channel DISPATCH__DISPATCH
+11:31:51 [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 23ms
+11:31:55 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:32:03 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:32:11 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:32:19 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:32:21 AUDIO_WS_UPGRADE_HIT {
+11:32:21   method: 'GET',
+11:32:21   path: '/api/audio-ws',
+11:32:21   query: '?channelId=DISPATCH__DISPATCH&unitId=DISPATCH-1',
+11:32:21   host: 'comms.reeder-systems.com',
+11:32:21   upgrade: 'websocket',
+11:32:21   connection: 'upgrade'
+11:32:21 }
+11:32:21 AUDIO_WS_ACCEPTED { username: 'DISPATCH-1', unitId: 'DISPATCH-1' }
+11:32:21 [AI-Dispatcher] Notify join received: DISPATCH-1 on DISPATCH__DISPATCH - connecting dispatcher
+11:32:21 [AI-Dispatcher] 2026-04-13T15:32:21.287Z | REJOIN_SKIPPED {"reason":"Already connected"}
+11:32:21 [AI-Dispatcher] Dispatcher connected for channel DISPATCH__DISPATCH
+11:32:21 [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 22ms
+11:32:27 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:32:35 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:32:40 [API] GET /api/radio-client.js | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 304 | 10ms
+11:32:40 [CAD-CHANNELS] Returning 4 channels
+11:32:40 [API] GET /api/cad-integration/channels | session=none | sid=XJjA24LC... | 200 | 8ms
+11:32:40 [CAD-LOGIN] Success: username="Jreeder5029" id=2 role=admin unit_id=INDIANA-1 is_dispatcher=true sessionID=vBKTgCNR...
+11:32:40 [API] POST /api/auth/cad-login | session=none | sid=vBKTgCNR... | 200 | 25ms
+11:32:43 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:32:44 [API] GET /api/radio-client.js | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 304 | 10ms
+11:32:44 [CAD-CHANNELS] Returning 4 channels
+11:32:44 [API] GET /api/cad-integration/channels | session=none | sid=_g5ksmkn... | 200 | 89ms
+11:32:44 [CAD-LOGIN] Success: username="Jreeder5029" id=2 role=admin unit_id=INDIANA-1 is_dispatcher=true sessionID=KapiKQ0J...
+11:32:44 [API] POST /api/auth/cad-login | session=none | sid=KapiKQ0J... | 200 | 25ms
+11:32:51 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:32:51 AUDIO_WS_UPGRADE_HIT {
+11:32:51   method: 'GET',
+11:32:51   path: '/api/audio-ws',
+11:32:51   query: '?channelId=DISPATCH__DISPATCH&unitId=DISPATCH-1',
+11:32:51   host: 'comms.reeder-systems.com',
+11:32:51   upgrade: 'websocket',
+11:32:51   connection: 'upgrade'
+11:32:51 }
+11:32:51 AUDIO_WS_ACCEPTED { username: 'DISPATCH-1', unitId: 'DISPATCH-1' }
+11:32:51 [AI-Dispatcher] Notify join received: DISPATCH-1 on DISPATCH__DISPATCH - connecting dispatcher
+11:32:51 [AI-Dispatcher] 2026-04-13T15:32:51.167Z | REJOIN_SKIPPED {"reason":"Already connected"}
+11:32:51 [AI-Dispatcher] Dispatcher connected for channel DISPATCH__DISPATCH
+11:32:51 [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 20ms
+11:32:59 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:33:03 [AUTH] /me check: hasSession=true sessionID=NXGwxI-f... cookie=true
+11:33:03 [AUTH] /me: session has user="DISPATCH-1" id=7, refreshing from DB...
+11:33:03 [AUTH] /me: returning fresh user data for "DISPATCH-1" role=admin unit_id=DISPATCH-1
+11:33:03 [API] GET /api/auth/me | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 17ms
+11:33:03 [AUTH] /me check: hasSession=true sessionID=NXGwxI-f... cookie=true
+11:33:03 [AUTH] /me: session has user="DISPATCH-1" id=7, refreshing from DB...
+11:33:03 [AUTH] /me: returning fresh user data for "DISPATCH-1" role=admin unit_id=DISPATCH-1
+11:33:03 [API] GET /api/auth/me | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 304 | 18ms
+11:33:07 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:33:15 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:33:21 AUDIO_WS_UPGRADE_HIT {
+11:33:21   method: 'GET',
+11:33:21   path: '/api/audio-ws',
+11:33:21   query: '?channelId=DISPATCH__DISPATCH&unitId=DISPATCH-1',
+11:33:21   host: 'comms.reeder-systems.com',
+11:33:21   upgrade: 'websocket',
+11:33:21   connection: 'upgrade'
+11:33:21 }
+11:33:21 AUDIO_WS_ACCEPTED { username: 'DISPATCH-1', unitId: 'DISPATCH-1' }
+11:33:21 [AI-Dispatcher] Notify join received: DISPATCH-1 on DISPATCH__DISPATCH - connecting dispatcher
+11:33:21 [AI-Dispatcher] 2026-04-13T15:33:21.234Z | REJOIN_SKIPPED {"reason":"Already connected"}
+11:33:21 [AI-Dispatcher] Dispatcher connected for channel DISPATCH__DISPATCH
+11:33:21 [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 104ms
+11:33:23 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:33:31 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:33:39 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:33:47 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:33:51 AUDIO_WS_UPGRADE_HIT {
+11:33:51   method: 'GET',
+11:33:51   path: '/api/audio-ws',
+11:33:51   query: '?channelId=DISPATCH__DISPATCH&unitId=DISPATCH-1',
+11:33:51   host: 'comms.reeder-systems.com',
+11:33:51   upgrade: 'websocket',
+11:33:51   connection: 'upgrade'
+11:33:51 }
+11:33:51 AUDIO_WS_ACCEPTED { username: 'DISPATCH-1', unitId: 'DISPATCH-1' }
+11:33:51 [AI-Dispatcher] Notify join received: DISPATCH-1 on DISPATCH__DISPATCH - connecting dispatcher
+11:33:51 [AI-Dispatcher] 2026-04-13T15:33:51.244Z | REJOIN_SKIPPED {"reason":"Already connected"}
+11:33:51 [AI-Dispatcher] Dispatcher connected for channel DISPATCH__DISPATCH
+11:33:51 [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 23ms
+11:33:55 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:34:03 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:34:11 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:34:19 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:34:21 AUDIO_WS_UPGRADE_HIT {
+11:34:21   method: 'GET',
+11:34:21   path: '/api/audio-ws',
+11:34:21   query: '?channelId=DISPATCH__DISPATCH&unitId=DISPATCH-1',
+11:34:21   host: 'comms.reeder-systems.com',
+11:34:21   upgrade: 'websocket',
+11:34:21   connection: 'upgrade'
+11:34:21 }
+11:34:21 AUDIO_WS_ACCEPTED { username: 'DISPATCH-1', unitId: 'DISPATCH-1' }
+11:34:21 [AI-Dispatcher] Notify join received: DISPATCH-1 on DISPATCH__DISPATCH - connecting dispatcher
+11:34:21 [AI-Dispatcher] 2026-04-13T15:34:21.244Z | REJOIN_SKIPPED {"reason":"Already connected"}
+11:34:21 [AI-Dispatcher] Dispatcher connected for channel DISPATCH__DISPATCH
+11:34:21 [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 23ms
+11:34:27 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:34:35 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:34:43 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:34:51 AUDIO_WS_UPGRADE_HIT {
+11:34:51   method: 'GET',
+11:34:51   path: '/api/audio-ws',
+11:34:51   query: '?channelId=DISPATCH__DISPATCH&unitId=DISPATCH-1',
+11:34:51   host: 'comms.reeder-systems.com',
+11:34:51   upgrade: 'websocket',
+11:34:51   connection: 'upgrade'
+11:34:51 }
+11:34:51 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:34:51 AUDIO_WS_ACCEPTED { username: 'DISPATCH-1', unitId: 'DISPATCH-1' }
+11:34:51 [AI-Dispatcher] Notify join received: DISPATCH-1 on DISPATCH__DISPATCH - connecting dispatcher
+11:34:51 [AI-Dispatcher] 2026-04-13T15:34:51.251Z | REJOIN_SKIPPED {"reason":"Already connected"}
+11:34:51 [AI-Dispatcher] Dispatcher connected for channel DISPATCH__DISPATCH
+11:34:51 [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 20ms
+11:34:59 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:35:07 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:35:15 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:35:21 AUDIO_WS_UPGRADE_HIT {
+11:35:21   method: 'GET',
+11:35:21   path: '/api/audio-ws',
+11:35:21   query: '?channelId=DISPATCH__DISPATCH&unitId=DISPATCH-1',
+11:35:21   host: 'comms.reeder-systems.com',
+11:35:21   upgrade: 'websocket',
+11:35:21   connection: 'upgrade'
+11:35:21 }
+11:35:21 AUDIO_WS_ACCEPTED { username: 'DISPATCH-1', unitId: 'DISPATCH-1' }
+11:35:21 [AI-Dispatcher] Notify join received: DISPATCH-1 on DISPATCH__DISPATCH - connecting dispatcher
+11:35:21 [AI-Dispatcher] 2026-04-13T15:35:21.213Z | REJOIN_SKIPPED {"reason":"Already connected"}
+11:35:21 [AI-Dispatcher] Dispatcher connected for channel DISPATCH__DISPATCH
+11:35:21 [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 23ms
+11:35:23 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:35:28 [FloorControl] requestFloor: raw="TESTING__TESTING 1" canonical="TESTING__TESTING 1" unitId="SCANNER"
+11:35:28 [ScannerFeed] TX START on TESTING__TESTING 1
+11:35:28 [RecordingTap] TX recording started: unit=SCANNER channel=TESTING__TESTING 1 codec=opus
+11:35:31 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:35:33 [AudioRelay] WS_RELAY_STATS {"channelKey":"TESTING__TESTING 1","reason":"periodic","framesEnqueued":239,"framesDropped":0,"framesDrained":238,"burstDrains":0,"queueDepth":1,"wsSubscribers":1}
+11:35:34 [ScannerFeed] TX END on TESTING__TESTING 1
+11:35:36 [RecordingTap] Finalizing recording: unit=SCANNER channel=TESTING__TESTING 1 frames=263 duration=5487ms codec=opus
+11:35:36 [RecordingTap] Decode summary: unit=SCANNER channel=TESTING__TESTING 1 total=263 decoded=263 failed=0 failureRatio=0.0%
+11:35:36 [RecordingTap] Audio message saved: id=3157 channel=TESTING__TESTING 1 sender=SCANNER duration=5487ms frames=263 failed=0
+11:35:36 [broadcastMessage] Broadcast message to TESTING__TESTING 1: 3157
+11:35:36 [FloorControl] requestFloor: raw="TESTING__TESTING 1" canonical="TESTING__TESTING 1" unitId="SCANNER"
+11:35:36 [ScannerFeed] TX START on TESTING__TESTING 1
+11:35:36 [RecordingTap] TX recording started: unit=SCANNER channel=TESTING__TESTING 1 codec=opus
+11:35:37 [ScannerFeed] TX END on TESTING__TESTING 1
+11:35:37 [FloorControl] requestFloor: raw="TESTING__TESTING 1" canonical="TESTING__TESTING 1" unitId="SCANNER"
+11:35:37 [ScannerFeed] TX START on TESTING__TESTING 1
+11:35:38 [AudioRelay] WS_RELAY_STATS {"channelKey":"TESTING__TESTING 1","reason":"periodic","framesEnqueued":61,"framesDropped":0,"framesDrained":62,"burstDrains":0,"queueDepth":0,"wsSubscribers":1}
+11:35:39 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:35:39 [ScannerFeed] TX END on TESTING__TESTING 1
+11:35:41 [RecordingTap] Finalizing recording: unit=SCANNER channel=TESTING__TESTING 1 frames=63 duration=2559ms codec=opus
+11:35:41 [RecordingTap] Decode summary: unit=SCANNER channel=TESTING__TESTING 1 total=63 decoded=63 failed=0 failureRatio=0.0%
+11:35:41 [RecordingTap] Audio message saved: id=3158 channel=TESTING__TESTING 1 sender=SCANNER duration=2559ms frames=63 failed=0
+11:35:41 [broadcastMessage] Broadcast message to TESTING__TESTING 1: 3158
+11:35:41 [FloorControl] requestFloor: raw="TESTING__TESTING 1" canonical="TESTING__TESTING 1" unitId="SCANNER"
+11:35:41 [ScannerFeed] TX START on TESTING__TESTING 1
+11:35:41 [RecordingTap] TX recording started: unit=SCANNER channel=TESTING__TESTING 1 codec=opus
+11:35:42 [ScannerFeed] TX END on TESTING__TESTING 1
+11:35:43 [AudioRelay] WS_RELAY_STATS {"channelKey":"TESTING__TESTING 1","reason":"periodic","framesEnqueued":69,"framesDropped":0,"framesDrained":69,"burstDrains":0,"queueDepth":0,"wsSubscribers":1}
+11:35:44 [RecordingTap] Finalizing recording: unit=SCANNER channel=TESTING__TESTING 1 frames=43 duration=1650ms codec=opus
+11:35:44 [RecordingTap] Decode summary: unit=SCANNER channel=TESTING__TESTING 1 total=43 decoded=43 failed=0 failureRatio=0.0%
+11:35:44 [RecordingTap] Audio message saved: id=3159 channel=TESTING__TESTING 1 sender=SCANNER duration=1650ms frames=43 failed=0
+11:35:44 [broadcastMessage] Broadcast message to TESTING__TESTING 1: 3159
+11:35:47 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:35:49 AUDIO_WS_UPGRADE_HIT {
+11:35:49   method: 'GET',
+11:35:49   path: '/api/audio-ws',
+11:35:49   query: '?channelId=DISPATCH__DISPATCH&unitId=DISPATCH-1',
+11:35:49   host: 'comms.reeder-systems.com',
+11:35:49   upgrade: 'websocket',
+11:35:49   connection: 'upgrade'
+11:35:49 }
+11:35:49 AUDIO_WS_ACCEPTED { username: 'DISPATCH-1', unitId: 'DISPATCH-1' }
+11:35:49 [AI-Dispatcher] Notify join received: DISPATCH-1 on DISPATCH__DISPATCH - connecting dispatcher
+11:35:49 [AI-Dispatcher] 2026-04-13T15:35:49.991Z | REJOIN_SKIPPED {"reason":"Already connected"}
+11:35:49 [AI-Dispatcher] Dispatcher connected for channel DISPATCH__DISPATCH
+11:35:50 [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 22ms
+11:35:55 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:36:03 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:36:11 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:36:19 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:36:19 [OpusCodec] Idle decoder swept for sender=SCANNER
+11:36:21 AUDIO_WS_UPGRADE_HIT {
+11:36:21   method: 'GET',
+11:36:21   path: '/api/audio-ws',
+11:36:21   query: '?channelId=DISPATCH__DISPATCH&unitId=DISPATCH-1',
+11:36:21   host: 'comms.reeder-systems.com',
+11:36:21   upgrade: 'websocket',
+11:36:21   connection: 'upgrade'
+11:36:21 }
+11:36:21 AUDIO_WS_ACCEPTED { username: 'DISPATCH-1', unitId: 'DISPATCH-1' }
+11:36:21 [AI-Dispatcher] Notify join received: DISPATCH-1 on DISPATCH__DISPATCH - connecting dispatcher
+11:36:21 [AI-Dispatcher] 2026-04-13T15:36:21.309Z | REJOIN_SKIPPED {"reason":"Already connected"}
+11:36:21 [AI-Dispatcher] Dispatcher connected for channel DISPATCH__DISPATCH
+11:36:21 [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 25ms
+11:36:27 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:36:35 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:36:43 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:36:51 AUDIO_WS_UPGRADE_HIT {
+11:36:51   method: 'GET',
+11:36:51   path: '/api/audio-ws',
+11:36:51   query: '?channelId=DISPATCH__DISPATCH&unitId=DISPATCH-1',
+11:36:51   host: 'comms.reeder-systems.com',
+11:36:51   upgrade: 'websocket',
+11:36:51   connection: 'upgrade'
+11:36:51 }
+11:36:51 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:36:51 AUDIO_WS_ACCEPTED { username: 'DISPATCH-1', unitId: 'DISPATCH-1' }
+11:36:51 [AI-Dispatcher] Notify join received: DISPATCH-1 on DISPATCH__DISPATCH - connecting dispatcher
+11:36:51 [AI-Dispatcher] 2026-04-13T15:36:51.261Z | REJOIN_SKIPPED {"reason":"Already connected"}
+11:36:51 [AI-Dispatcher] Dispatcher connected for channel DISPATCH__DISPATCH
+11:36:51 [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 37ms
+11:36:59 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:37:07 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:37:15 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:37:21 AUDIO_WS_UPGRADE_HIT {
+11:37:21   method: 'GET',
+11:37:21   path: '/api/audio-ws',
+11:37:21   query: '?channelId=DISPATCH__DISPATCH&unitId=DISPATCH-1',
+11:37:21   host: 'comms.reeder-systems.com',
+11:37:21   upgrade: 'websocket',
+11:37:21   connection: 'upgrade'
+11:37:21 }
+11:37:21 AUDIO_WS_ACCEPTED { username: 'DISPATCH-1', unitId: 'DISPATCH-1' }
+11:37:21 [AI-Dispatcher] Notify join received: DISPATCH-1 on DISPATCH__DISPATCH - connecting dispatcher
+11:37:21 [AI-Dispatcher] 2026-04-13T15:37:21.234Z | REJOIN_SKIPPED {"reason":"Already connected"}
+11:37:21 [AI-Dispatcher] Dispatcher connected for channel DISPATCH__DISPATCH
+11:37:21 [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 27ms
+11:37:23 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:37:31 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:37:39 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:37:43 [FloorControl] requestFloor: raw="TESTING__TESTING 1" canonical="TESTING__TESTING 1" unitId="SCANNER"
+11:37:43 [ScannerFeed] TX START on TESTING__TESTING 1
+11:37:43 [RecordingTap] TX recording started: unit=SCANNER channel=TESTING__TESTING 1 codec=opus
+11:37:43 [AudioRelay] WS_RELAY_STATS {"channelKey":"TESTING__TESTING 1","reason":"periodic","framesEnqueued":7,"framesDropped":0,"framesDrained":6,"burstDrains":0,"queueDepth":1,"wsSubscribers":1}
+11:37:46 [ScannerFeed] TX END on TESTING__TESTING 1
+11:37:47 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:37:48 [RecordingTap] Finalizing recording: unit=SCANNER channel=TESTING__TESTING 1 frames=111 duration=2922ms codec=opus
+11:37:48 [RecordingTap] Decode summary: unit=SCANNER channel=TESTING__TESTING 1 total=111 decoded=111 failed=0 failureRatio=0.0%
+11:37:48 [RecordingTap] Audio message saved: id=3160 channel=TESTING__TESTING 1 sender=SCANNER duration=2922ms frames=111 failed=0
+11:37:48 [broadcastMessage] Broadcast message to TESTING__TESTING 1: 3160
+11:37:48 [FloorControl] requestFloor: raw="TESTING__TESTING 1" canonical="TESTING__TESTING 1" unitId="SCANNER"
+11:37:48 [ScannerFeed] TX START on TESTING__TESTING 1
+11:37:48 [RecordingTap] TX recording started: unit=SCANNER channel=TESTING__TESTING 1 codec=opus
+11:37:48 [AudioRelay] WS_RELAY_STATS {"channelKey":"TESTING__TESTING 1","reason":"periodic","framesEnqueued":107,"framesDropped":0,"framesDrained":107,"burstDrains":0,"queueDepth":1,"wsSubscribers":1}
+11:37:49 [ScannerFeed] TX END on TESTING__TESTING 1
+11:37:49 AUDIO_WS_UPGRADE_HIT {
+11:37:49   method: 'GET',
+11:37:49   path: '/api/audio-ws',
+11:37:49   query: '?channelId=DISPATCH__DISPATCH&unitId=DISPATCH-1',
+11:37:49   host: 'comms.reeder-systems.com',
+11:37:49   upgrade: 'websocket',
+11:37:49   connection: 'upgrade'
+11:37:49 }
+11:37:49 AUDIO_WS_ACCEPTED { username: 'DISPATCH-1', unitId: 'DISPATCH-1' }
+11:37:50 [AI-Dispatcher] Notify join received: DISPATCH-1 on DISPATCH__DISPATCH - connecting dispatcher
+11:37:50 [AI-Dispatcher] 2026-04-13T15:37:49.999Z | REJOIN_SKIPPED {"reason":"Already connected"}
+11:37:50 [AI-Dispatcher] Dispatcher connected for channel DISPATCH__DISPATCH
+11:37:50 [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 22ms
+11:37:50 [FloorControl] requestFloor: raw="TESTING__TESTING 1" canonical="TESTING__TESTING 1" unitId="SCANNER"
+11:37:50 [ScannerFeed] TX START on TESTING__TESTING 1
+11:37:53 [AudioRelay] WS_RELAY_STATS {"channelKey":"TESTING__TESTING 1","reason":"periodic","framesEnqueued":196,"framesDropped":0,"framesDrained":196,"burstDrains":0,"queueDepth":1,"wsSubscribers":1}
+11:37:54 [ScannerFeed] TX END on TESTING__TESTING 1
+11:37:54 [FloorControl] requestFloor: raw="TESTING__TESTING 1" canonical="TESTING__TESTING 1" unitId="SCANNER"
+11:37:54 [ScannerFeed] TX START on TESTING__TESTING 1
+11:37:55 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:37:57 [ScannerFeed] TX END on TESTING__TESTING 1
+11:37:58 [AudioRelay] WS_RELAY_STATS {"channelKey":"TESTING__TESTING 1","reason":"periodic","framesEnqueued":147,"framesDropped":0,"framesDrained":148,"burstDrains":0,"queueDepth":0,"wsSubscribers":1}
+11:37:59 [FloorControl] requestFloor: raw="TESTING__TESTING 1" canonical="TESTING__TESTING 1" unitId="SCANNER"
+11:37:59 [ScannerFeed] TX START on TESTING__TESTING 1
+11:38:01 [ScannerFeed] TX END on TESTING__TESTING 1
+11:38:02 [RecordingTap] Finalizing recording: unit=SCANNER channel=TESTING__TESTING 1 frames=400 duration=12481ms codec=opus
+11:38:02 [RecordingTap] Decode summary: unit=SCANNER channel=TESTING__TESTING 1 total=400 decoded=400 failed=0 failureRatio=0.0%
+11:38:03 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:38:03 [RecordingTap] Audio message saved: id=3161 channel=TESTING__TESTING 1 sender=SCANNER duration=12481ms frames=400 failed=0
+11:38:03 [broadcastMessage] Broadcast message to TESTING__TESTING 1: 3161
+11:38:03 [AudioRelay] WS_RELAY_STATS {"channelKey":"TESTING__TESTING 1","reason":"periodic","framesEnqueued":54,"framesDropped":0,"framesDrained":54,"burstDrains":0,"queueDepth":0,"wsSubscribers":1}
+11:38:11 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:38:19 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:38:19 AUDIO_WS_UPGRADE_HIT {
+11:38:19   method: 'GET',
+11:38:19   path: '/api/audio-ws',
+11:38:19   query: '?channelId=DISPATCH__DISPATCH&unitId=DISPATCH-1',
+11:38:19   host: 'comms.reeder-systems.com',
+11:38:19   upgrade: 'websocket',
+11:38:19   connection: 'upgrade'
+11:38:19 }
+11:38:20 AUDIO_WS_ACCEPTED { username: 'DISPATCH-1', unitId: 'DISPATCH-1' }
+11:38:20 [AI-Dispatcher] Notify join received: DISPATCH-1 on DISPATCH__DISPATCH - connecting dispatcher
+11:38:20 [AI-Dispatcher] 2026-04-13T15:38:20.099Z | REJOIN_SKIPPED {"reason":"Already connected"}
+11:38:20 [AI-Dispatcher] Dispatcher connected for channel DISPATCH__DISPATCH
+11:38:20 [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 24ms
+11:38:27 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:38:34 [OpusCodec] Idle decoder swept for sender=SCANNER
+11:38:35 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:38:43 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:38:51 AUDIO_WS_UPGRADE_HIT {
+11:38:51   method: 'GET',
+11:38:51   path: '/api/audio-ws',
+11:38:51   query: '?channelId=DISPATCH__DISPATCH&unitId=DISPATCH-1',
+11:38:51   host: 'comms.reeder-systems.com',
+11:38:51   upgrade: 'websocket',
+11:38:51   connection: 'upgrade'
+11:38:51 }
+11:38:51 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:38:51 AUDIO_WS_ACCEPTED { username: 'DISPATCH-1', unitId: 'DISPATCH-1' }
+11:38:51 [AI-Dispatcher] Notify join received: DISPATCH-1 on DISPATCH__DISPATCH - connecting dispatcher
+11:38:51 [AI-Dispatcher] 2026-04-13T15:38:51.247Z | REJOIN_SKIPPED {"reason":"Already connected"}
+11:38:51 [AI-Dispatcher] Dispatcher connected for channel DISPATCH__DISPATCH
+11:38:51 [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 20ms
+11:38:59 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:39:01 [AUTH] /me check: hasSession=true sessionID=NXGwxI-f... cookie=true
+11:39:01 [AUTH] /me: session has user="DISPATCH-1" id=7, refreshing from DB...
+11:39:01 [AUTH] /me: returning fresh user data for "DISPATCH-1" role=admin unit_id=DISPATCH-1
+11:39:01 [API] GET /api/auth/me | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 17ms
+11:39:02 [AUTH] /me check: hasSession=true sessionID=NXGwxI-f... cookie=true
+11:39:02 [AUTH] /me: session has user="DISPATCH-1" id=7, refreshing from DB...
+11:39:02 [AUTH] /me: returning fresh user data for "DISPATCH-1" role=admin unit_id=DISPATCH-1
+11:39:02 [API] GET /api/auth/me | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 304 | 16ms
+11:39:07 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:39:15 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:39:21 AUDIO_WS_UPGRADE_HIT {
+11:39:21   method: 'GET',
+11:39:21   path: '/api/audio-ws',
+11:39:21   query: '?channelId=DISPATCH__DISPATCH&unitId=DISPATCH-1',
+11:39:21   host: 'comms.reeder-systems.com',
+11:39:21   upgrade: 'websocket',
+11:39:21   connection: 'upgrade'
+11:39:21 }
+11:39:21 AUDIO_WS_ACCEPTED { username: 'DISPATCH-1', unitId: 'DISPATCH-1' }
+11:39:21 [AI-Dispatcher] Notify join received: DISPATCH-1 on DISPATCH__DISPATCH - connecting dispatcher
+11:39:21 [AI-Dispatcher] 2026-04-13T15:39:21.229Z | REJOIN_SKIPPED {"reason":"Already connected"}
+11:39:21 [AI-Dispatcher] Dispatcher connected for channel DISPATCH__DISPATCH
+11:39:21 [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 22ms
+11:39:23 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:39:31 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:39:39 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:39:40 [AUTH] /me check: hasSession=true sessionID=NXGwxI-f... cookie=true
+11:39:40 [AUTH] /me: session has user="DISPATCH-1" id=7, refreshing from DB...
+11:39:40 [AUTH] /me: returning fresh user data for "DISPATCH-1" role=admin unit_id=DISPATCH-1
+11:39:40 [API] GET /api/auth/me | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 17ms
+11:39:47 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:39:51 AUDIO_WS_UPGRADE_HIT {
+11:39:51   method: 'GET',
+11:39:51   path: '/api/audio-ws',
+11:39:51   query: '?channelId=DISPATCH__DISPATCH&unitId=DISPATCH-1',
+11:39:51   host: 'comms.reeder-systems.com',
+11:39:51   upgrade: 'websocket',
+11:39:51   connection: 'upgrade'
+11:39:51 }
+11:39:51 AUDIO_WS_ACCEPTED { username: 'DISPATCH-1', unitId: 'DISPATCH-1' }
+11:39:51 [AI-Dispatcher] Notify join received: DISPATCH-1 on DISPATCH__DISPATCH - connecting dispatcher
+11:39:51 [AI-Dispatcher] 2026-04-13T15:39:51.236Z | REJOIN_SKIPPED {"reason":"Already connected"}
+11:39:51 [AI-Dispatcher] Dispatcher connected for channel DISPATCH__DISPATCH
+11:39:51 [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 19ms
+11:39:55 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:40:03 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:40:11 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:40:19 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:40:21 AUDIO_WS_UPGRADE_HIT {
+11:40:21   method: 'GET',
+11:40:21   path: '/api/audio-ws',
+11:40:21   query: '?channelId=DISPATCH__DISPATCH&unitId=DISPATCH-1',
+11:40:21   host: 'comms.reeder-systems.com',
+11:40:21   upgrade: 'websocket',
+11:40:21   connection: 'upgrade'
+11:40:21 }
+11:40:21 AUDIO_WS_ACCEPTED { username: 'DISPATCH-1', unitId: 'DISPATCH-1' }
+11:40:21 [AI-Dispatcher] Notify join received: DISPATCH-1 on DISPATCH__DISPATCH - connecting dispatcher
+11:40:21 [AI-Dispatcher] 2026-04-13T15:40:21.294Z | REJOIN_SKIPPED {"reason":"Already connected"}
+11:40:21 [AI-Dispatcher] Dispatcher connected for channel DISPATCH__DISPATCH
+11:40:21 [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 23ms
+11:40:27 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:40:35 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:40:43 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:40:48 [AUTH] /me check: hasSession=true sessionID=NXGwxI-f... cookie=true
+11:40:48 [AUTH] /me: session has user="DISPATCH-1" id=7, refreshing from DB...
+11:40:48 [AUTH] /me: returning fresh user data for "DISPATCH-1" role=admin unit_id=DISPATCH-1
+11:40:48 [API] GET /api/auth/me | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 18ms
+11:40:48 [AUTH] /me check: hasSession=true sessionID=NXGwxI-f... cookie=true
+11:40:48 [AUTH] /me: session has user="DISPATCH-1" id=7, refreshing from DB...
+11:40:48 [AUTH] /me: returning fresh user data for "DISPATCH-1" role=admin unit_id=DISPATCH-1
+11:40:48 [API] GET /api/auth/me | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 304 | 17ms
+11:40:51 AUDIO_WS_UPGRADE_HIT {
+11:40:51   method: 'GET',
+11:40:51   path: '/api/audio-ws',
+11:40:51   query: '?channelId=DISPATCH__DISPATCH&unitId=DISPATCH-1',
+11:40:51   host: 'comms.reeder-systems.com',
+11:40:51   upgrade: 'websocket',
+11:40:51   connection: 'upgrade'
+11:40:51 }
+11:40:51 AUDIO_WS_ACCEPTED { username: 'DISPATCH-1', unitId: 'DISPATCH-1' }
+11:40:51 [AI-Dispatcher] Notify join received: DISPATCH-1 on DISPATCH__DISPATCH - connecting dispatcher
+11:40:51 [AI-Dispatcher] 2026-04-13T15:40:51.149Z | REJOIN_SKIPPED {"reason":"Already connected"}
+11:40:51 [AI-Dispatcher] Dispatcher connected for channel DISPATCH__DISPATCH
+11:40:51 [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 23ms
+11:40:51 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:40:59 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:41:07 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:41:10 [AUTH] /me check: hasSession=true sessionID=NXGwxI-f... cookie=true
+11:41:10 [AUTH] /me: session has user="DISPATCH-1" id=7, refreshing from DB...
+11:41:10 [AUTH] /me: returning fresh user data for "DISPATCH-1" role=admin unit_id=DISPATCH-1
+11:41:10 [API] GET /api/auth/me | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 15ms
+11:41:15 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:41:21 AUDIO_WS_UPGRADE_HIT {
+11:41:21   method: 'GET',
+11:41:21   path: '/api/audio-ws',
+11:41:21   query: '?channelId=DISPATCH__DISPATCH&unitId=DISPATCH-1',
+11:41:21   host: 'comms.reeder-systems.com',
+11:41:21   upgrade: 'websocket',
+11:41:21   connection: 'upgrade'
+11:41:21 }
+11:41:21 AUDIO_WS_ACCEPTED { username: 'DISPATCH-1', unitId: 'DISPATCH-1' }
+11:41:21 [AI-Dispatcher] Notify join received: DISPATCH-1 on DISPATCH__DISPATCH - connecting dispatcher
+11:41:21 [AI-Dispatcher] 2026-04-13T15:41:21.242Z | REJOIN_SKIPPED {"reason":"Already connected"}
+11:41:21 [AI-Dispatcher] Dispatcher connected for channel DISPATCH__DISPATCH
+11:41:21 [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 24ms
+11:41:23 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:41:27 [AUTH] /me check: hasSession=true sessionID=NXGwxI-f... cookie=true
+11:41:27 [AUTH] /me: session has user="DISPATCH-1" id=7, refreshing from DB...
+11:41:27 [AUTH] /me: returning fresh user data for "DISPATCH-1" role=admin unit_id=DISPATCH-1
+11:41:28 [API] GET /api/auth/me | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 105ms
+11:41:28 [AUTH] /me check: hasSession=true sessionID=NXGwxI-f... cookie=true
+11:41:28 [AUTH] /me: session has user="DISPATCH-1" id=7, refreshing from DB...
+11:41:28 [AUTH] /me: returning fresh user data for "DISPATCH-1" role=admin unit_id=DISPATCH-1
+11:41:28 [API] GET /api/auth/me | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 304 | 46ms
+11:41:31 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:41:39 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:41:45 [FloorControl] requestFloor: raw="TESTING__TESTING 1" canonical="TESTING__TESTING 1" unitId="SCANNER"
+11:41:45 [ScannerFeed] TX START on TESTING__TESTING 1
+11:41:45 [RecordingTap] TX recording started: unit=SCANNER channel=TESTING__TESTING 1 codec=opus
+11:41:47 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:41:48 [AudioRelay] WS_RELAY_STATS {"channelKey":"TESTING__TESTING 1","reason":"periodic","framesEnqueued":132,"framesDropped":0,"framesDrained":131,"burstDrains":0,"queueDepth":1,"wsSubscribers":1}
+11:41:48 [ScannerFeed] TX END on TESTING__TESTING 1
+11:41:48 [FloorControl] requestFloor: raw="TESTING__TESTING 1" canonical="TESTING__TESTING 1" unitId="SCANNER"
+11:41:48 [ScannerFeed] TX START on TESTING__TESTING 1
+11:41:49 [ScannerFeed] TX END on TESTING__TESTING 1
+11:41:49 [FloorControl] requestFloor: raw="TESTING__TESTING 1" canonical="TESTING__TESTING 1" unitId="SCANNER"
+11:41:49 [ScannerFeed] TX START on TESTING__TESTING 1
+11:41:49 AUDIO_WS_UPGRADE_HIT {
+11:41:49   method: 'GET',
+11:41:49   path: '/api/audio-ws',
+11:41:49   query: '?channelId=DISPATCH__DISPATCH&unitId=DISPATCH-1',
+11:41:49   host: 'comms.reeder-systems.com',
+11:41:49   upgrade: 'websocket',
+11:41:49   connection: 'upgrade'
+11:41:49 }
+11:41:50 AUDIO_WS_ACCEPTED { username: 'DISPATCH-1', unitId: 'DISPATCH-1' }
+11:41:50 [AI-Dispatcher] Notify join received: DISPATCH-1 on DISPATCH__DISPATCH - connecting dispatcher
+11:41:50 [AI-Dispatcher] 2026-04-13T15:41:50.159Z | REJOIN_SKIPPED {"reason":"Already connected"}
+11:41:50 [AI-Dispatcher] Dispatcher connected for channel DISPATCH__DISPATCH
+11:41:50 [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 23ms
+11:41:51 [ScannerFeed] TX END on TESTING__TESTING 1
+11:41:51 [FloorControl] requestFloor: raw="TESTING__TESTING 1" canonical="TESTING__TESTING 1" unitId="SCANNER"
+11:41:51 [ScannerFeed] TX START on TESTING__TESTING 1
+11:41:53 [AudioRelay] WS_RELAY_STATS {"channelKey":"TESTING__TESTING 1","reason":"periodic","framesEnqueued":209,"framesDropped":0,"framesDrained":209,"burstDrains":0,"queueDepth":1,"wsSubscribers":1}
+11:41:55 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:41:58 [AudioRelay] WS_RELAY_STATS {"channelKey":"TESTING__TESTING 1","reason":"periodic","framesEnqueued":242,"framesDropped":0,"framesDrained":242,"burstDrains":0,"queueDepth":1,"wsSubscribers":1}
+11:42:03 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:42:03 [AudioRelay] WS_RELAY_STATS {"channelKey":"TESTING__TESTING 1","reason":"periodic","framesEnqueued":243,"framesDropped":0,"framesDrained":243,"burstDrains":0,"queueDepth":1,"wsSubscribers":1}
+11:42:06 [FloorControl] requestFloor: raw="TESTING__TESTING 1" canonical="TESTING__TESTING 1" unitId="SCANNER"
+11:42:06 [ScannerFeed] TX END on TESTING__TESTING 1
+11:42:06 [FloorControl] requestFloor: raw="TESTING__TESTING 1" canonical="TESTING__TESTING 1" unitId="SCANNER"
+11:42:06 [ScannerFeed] TX START on TESTING__TESTING 1
+11:42:08 [AudioRelay] WS_RELAY_STATS {"channelKey":"TESTING__TESTING 1","reason":"periodic","framesEnqueued":221,"framesDropped":0,"framesDrained":221,"burstDrains":0,"queueDepth":1,"wsSubscribers":1}
+11:42:11 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:42:13 [AudioRelay] WS_RELAY_STATS {"channelKey":"TESTING__TESTING 1","reason":"periodic","framesEnqueued":243,"framesDropped":0,"framesDrained":243,"burstDrains":0,"queueDepth":1,"wsSubscribers":1}
+11:42:13 [ScannerFeed] TX END on TESTING__TESTING 1
+11:42:13 [FloorControl] requestFloor: raw="TESTING__TESTING 1" canonical="TESTING__TESTING 1" unitId="SCANNER"
+11:42:13 [ScannerFeed] TX START on TESTING__TESTING 1
+11:42:17 [ScannerFeed] TX END on TESTING__TESTING 1
+11:42:18 [AudioRelay] WS_RELAY_STATS {"channelKey":"TESTING__TESTING 1","reason":"periodic","framesEnqueued":186,"framesDropped":0,"framesDrained":187,"burstDrains":0,"queueDepth":0,"wsSubscribers":1}
+11:42:19 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:42:19 [FloorControl] requestFloor: raw="TESTING__TESTING 1" canonical="TESTING__TESTING 1" unitId="SCANNER"
+11:42:19 [ScannerFeed] TX START on TESTING__TESTING 1
+11:42:19 AUDIO_WS_UPGRADE_HIT {
+11:42:19   method: 'GET',
+11:42:19   path: '/api/audio-ws',
+11:42:19   query: '?channelId=DISPATCH__DISPATCH&unitId=DISPATCH-1',
+11:42:19   host: 'comms.reeder-systems.com',
+11:42:19   upgrade: 'websocket',
+11:42:19   connection: 'upgrade'
+11:42:19 }
+11:42:20 [ScannerFeed] TX END on TESTING__TESTING 1
+11:42:20 AUDIO_WS_ACCEPTED { username: 'DISPATCH-1', unitId: 'DISPATCH-1' }
+11:42:20 [AI-Dispatcher] Notify join received: DISPATCH-1 on DISPATCH__DISPATCH - connecting dispatcher
+11:42:20 [AI-Dispatcher] 2026-04-13T15:42:20.165Z | REJOIN_SKIPPED {"reason":"Already connected"}
+11:42:20 [AI-Dispatcher] Dispatcher connected for channel DISPATCH__DISPATCH
+11:42:20 [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 24ms
+11:42:21 [RecordingTap] Finalizing recording: unit=SCANNER channel=TESTING__TESTING 1 frames=1491 duration=34229ms codec=opus
+11:42:21 [RecordingTap] Decode summary: unit=SCANNER channel=TESTING__TESTING 1 total=1491 decoded=1491 failed=0 failureRatio=0.0%
+11:42:21 [RecordingTap] Audio message saved: id=3162 channel=TESTING__TESTING 1 sender=SCANNER duration=34229ms frames=1491 failed=0
+11:42:21 [broadcastMessage] Broadcast message to TESTING__TESTING 1: 3162
+11:42:23 [AudioRelay] WS_RELAY_STATS {"channelKey":"TESTING__TESTING 1","reason":"periodic","framesEnqueued":15,"framesDropped":0,"framesDrained":15,"burstDrains":0,"queueDepth":0,"wsSubscribers":1}
+11:42:26 [FloorControl] requestFloor: raw="TESTING__TESTING 1" canonical="TESTING__TESTING 1" unitId="SCANNER"
+11:42:26 [ScannerFeed] TX START on TESTING__TESTING 1
+11:42:26 [RecordingTap] TX recording started: unit=SCANNER channel=TESTING__TESTING 1 codec=opus
+11:42:27 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:42:28 [AudioRelay] WS_RELAY_STATS {"channelKey":"TESTING__TESTING 1","reason":"periodic","framesEnqueued":110,"framesDropped":0,"framesDrained":109,"burstDrains":0,"queueDepth":1,"wsSubscribers":1}
+11:42:33 [AudioRelay] WS_RELAY_STATS {"channelKey":"TESTING__TESTING 1","reason":"periodic","framesEnqueued":243,"framesDropped":0,"framesDrained":243,"burstDrains":0,"queueDepth":1,"wsSubscribers":1}
+11:42:33 [ScannerFeed] TX END on TESTING__TESTING 1
+11:42:35 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:42:35 [RecordingTap] Finalizing recording: unit=SCANNER channel=TESTING__TESTING 1 frames=356 duration=7584ms codec=opus
+11:42:35 [RecordingTap] Decode summary: unit=SCANNER channel=TESTING__TESTING 1 total=356 decoded=356 failed=0 failureRatio=0.0%
+11:42:35 [RecordingTap] Audio message saved: id=3163 channel=TESTING__TESTING 1 sender=SCANNER duration=7584ms frames=356 failed=0
+11:42:35 [broadcastMessage] Broadcast message to TESTING__TESTING 1: 3163
+11:42:35 [FloorControl] requestFloor: raw="TESTING__TESTING 1" canonical="TESTING__TESTING 1" unitId="SCANNER"
+11:42:35 [ScannerFeed] TX START on TESTING__TESTING 1
+11:42:35 [RecordingTap] TX recording started: unit=SCANNER channel=TESTING__TESTING 1 codec=opus
+11:42:36 [AUTH] /me check: hasSession=true sessionID=NXGwxI-f... cookie=true
+11:42:36 [AUTH] /me: session has user="DISPATCH-1" id=7, refreshing from DB...
+11:42:36 [AUTH] /me: returning fresh user data for "DISPATCH-1" role=admin unit_id=DISPATCH-1
+11:42:36 [API] GET /api/auth/me | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 16ms
+11:42:37 [ScannerFeed] TX END on TESTING__TESTING 1
+11:42:37 [AUTH] /me check: hasSession=true sessionID=NXGwxI-f... cookie=true
+11:42:37 [AUTH] /me: session has user="DISPATCH-1" id=7, refreshing from DB...
+11:42:37 [AUTH] /me: returning fresh user data for "DISPATCH-1" role=admin unit_id=DISPATCH-1
+11:42:37 [API] GET /api/auth/me | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 304 | 19ms
+11:42:38 [AUTH] /me check: hasSession=true sessionID=NXGwxI-f... cookie=true
+11:42:38 [AUTH] /me: session has user="DISPATCH-1" id=7, refreshing from DB...
+11:42:38 [AUTH] /me: returning fresh user data for "DISPATCH-1" role=admin unit_id=DISPATCH-1
+11:42:38 [API] GET /api/auth/me | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 16ms
+11:42:38 [AUTH] /me check: hasSession=true sessionID=NXGwxI-f... cookie=true
+11:42:38 [AUTH] /me: session has user="DISPATCH-1" id=7, refreshing from DB...
+11:42:38 [AUTH] /me: returning fresh user data for "DISPATCH-1" role=admin unit_id=DISPATCH-1
+11:42:38 [API] GET /api/auth/me | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 304 | 17ms
+11:42:38 [AudioRelay] WS_RELAY_STATS {"channelKey":"TESTING__TESTING 1","reason":"periodic","framesEnqueued":42,"framesDropped":0,"framesDrained":43,"burstDrains":0,"queueDepth":0,"wsSubscribers":1}
+11:42:38 [RecordingTap] Finalizing recording: unit=SCANNER channel=TESTING__TESTING 1 frames=39 duration=901ms codec=opus
+11:42:38 [RecordingTap] Decode summary: unit=SCANNER channel=TESTING__TESTING 1 total=39 decoded=39 failed=0 failureRatio=0.0%
+11:42:38 [RecordingTap] Audio message saved: id=3164 channel=TESTING__TESTING 1 sender=SCANNER duration=901ms frames=39 failed=0
+11:42:38 [broadcastMessage] Broadcast message to TESTING__TESTING 1: 3164
+11:42:40 [FloorControl] requestFloor: raw="TESTING__TESTING 1" canonical="TESTING__TESTING 1" unitId="SCANNER"
+11:42:40 [ScannerFeed] TX START on TESTING__TESTING 1
+11:42:40 [RecordingTap] TX recording started: unit=SCANNER channel=TESTING__TESTING 1 codec=opus
+11:42:42 [DISPATCH] getChannels: 4 radio channels returned
+11:42:42 [API] GET /api/dispatch/channels | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 18ms
+11:42:42 [Signaling] DISPATCH-1 joined channel TESTING__TESTING 1
+11:42:42 [Signaling] DISPATCH-1 joined channel DISPATCH__DISPATCH
+11:42:42 [Signaling] DISPATCH-1 left channel TESTING__TESTING 1
+11:42:42 [Signaling] DISPATCH-1 left channel DISPATCH__DISPATCH
+11:42:42 [Signaling] DISPATCH-1 joined channel TESTING__TESTING 1
+11:42:42 [Signaling] DISPATCH-1 joined channel DISPATCH__DISPATCH
+11:42:42 [DISPATCH] getChannels: 4 radio channels returned
+11:42:42 [API] GET /api/dispatch/channels | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 18ms
+11:42:42 [Signaling] DISPATCH-1 left channel TESTING__TESTING 1
+11:42:42 [Signaling] DISPATCH-1 left channel DISPATCH__DISPATCH
+11:42:42 [Signaling] DISPATCH-1 joined channel TESTING__TESTING 1
+11:42:42 [Signaling] DISPATCH-1 joined channel DISPATCH__DISPATCH
+11:42:43 [ScannerFeed] TX END on TESTING__TESTING 1
+11:42:43 [FloorControl] requestFloor: raw="TESTING__TESTING 1" canonical="TESTING__TESTING 1" unitId="SCANNER"
+11:42:43 [ScannerFeed] TX START on TESTING__TESTING 1
+11:42:43 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:42:43 [AudioRelay] WS_RELAY_STATS {"channelKey":"TESTING__TESTING 1","reason":"periodic","framesEnqueued":128,"framesDropped":0,"framesDrained":127,"burstDrains":0,"queueDepth":1,"wsSubscribers":1}
+11:42:46 [ScannerFeed] TX END on TESTING__TESTING 1
+11:42:46 [FloorControl] requestFloor: raw="TESTING__TESTING 1" canonical="TESTING__TESTING 1" unitId="SCANNER"
+11:42:46 [ScannerFeed] TX START on TESTING__TESTING 1
+11:42:47 AUDIO_WS_UPGRADE_HIT {
+11:42:47   method: 'GET',
+11:42:47   path: '/api/audio-ws',
+11:42:47   query: '?channelId=DISPATCH__DISPATCH&unitId=DISPATCH-1',
+11:42:47   host: 'comms.reeder-systems.com',
+11:42:47   upgrade: 'websocket',
+11:42:47   connection: 'upgrade'
+11:42:47 }
+11:42:47 AUDIO_WS_ACCEPTED { username: 'DISPATCH-1', unitId: 'DISPATCH-1' }
+11:42:47 [AI-Dispatcher] Notify join received: DISPATCH-1 on DISPATCH__DISPATCH - connecting dispatcher
+11:42:47 [AI-Dispatcher] 2026-04-13T15:42:47.113Z | REJOIN_SKIPPED {"reason":"Already connected"}
+11:42:47 [AI-Dispatcher] Dispatcher connected for channel DISPATCH__DISPATCH
+11:42:47 [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 26ms
+11:42:48 [ScannerFeed] TX END on TESTING__TESTING 1
+11:42:48 [FloorControl] requestFloor: raw="TESTING__TESTING 1" canonical="TESTING__TESTING 1" unitId="SCANNER"
+11:42:48 [ScannerFeed] TX START on TESTING__TESTING 1
+11:42:48 [AudioRelay] WS_RELAY_STATS {"channelKey":"TESTING__TESTING 1","reason":"periodic","framesEnqueued":212,"framesDropped":0,"framesDrained":212,"burstDrains":0,"queueDepth":1,"wsSubscribers":1}
+11:42:51 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:42:53 [ScannerFeed] TX END on TESTING__TESTING 1
+11:42:53 [AudioRelay] WS_RELAY_STATS {"channelKey":"TESTING__TESTING 1","reason":"periodic","framesEnqueued":192,"framesDropped":0,"framesDrained":193,"burstDrains":0,"queueDepth":0,"wsSubscribers":1}
+11:42:55 [RecordingTap] Finalizing recording: unit=SCANNER channel=TESTING__TESTING 1 frames=532 duration=12275ms codec=opus
+11:42:55 [RecordingTap] Decode summary: unit=SCANNER channel=TESTING__TESTING 1 total=532 decoded=532 failed=0 failureRatio=0.0%
+11:42:55 [RecordingTap] Audio message saved: id=3165 channel=TESTING__TESTING 1 sender=SCANNER duration=12275ms frames=532 failed=0
+11:42:55 [broadcastMessage] Broadcast message to TESTING__TESTING 1: 3165
+11:42:55 [FloorControl] requestFloor: raw="TESTING__TESTING 1" canonical="TESTING__TESTING 1" unitId="SCANNER"
+11:42:55 [ScannerFeed] TX START on TESTING__TESTING 1
+11:42:55 [RecordingTap] TX recording started: unit=SCANNER channel=TESTING__TESTING 1 codec=opus
+11:42:57 [ScannerFeed] TX END on TESTING__TESTING 1
+11:42:58 [AudioRelay] WS_RELAY_STATS {"channelKey":"TESTING__TESTING 1","reason":"periodic","framesEnqueued":42,"framesDropped":0,"framesDrained":42,"burstDrains":0,"queueDepth":0,"wsSubscribers":1}
+11:42:59 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:42:59 [RecordingTap] Finalizing recording: unit=SCANNER channel=TESTING__TESTING 1 frames=42 duration=1660ms codec=opus
+11:42:59 [RecordingTap] Decode summary: unit=SCANNER channel=TESTING__TESTING 1 total=42 decoded=42 failed=0 failureRatio=0.0%
+11:42:59 [RecordingTap] Audio message saved: id=3166 channel=TESTING__TESTING 1 sender=SCANNER duration=1660ms frames=42 failed=0
+11:42:59 [broadcastMessage] Broadcast message to TESTING__TESTING 1: 3166
+11:43:03 [AUTH] /me check: hasSession=true sessionID=NXGwxI-f... cookie=true
+11:43:03 [AUTH] /me: session has user="DISPATCH-1" id=7, refreshing from DB...
+11:43:03 [AUTH] /me: returning fresh user data for "DISPATCH-1" role=admin unit_id=DISPATCH-1
+11:43:04 [API] GET /api/auth/me | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 304 | 16ms
+11:43:07 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:43:15 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:43:17 AUDIO_WS_UPGRADE_HIT {
+11:43:17   method: 'GET',
+11:43:17   path: '/api/audio-ws',
+11:43:17   query: '?channelId=DISPATCH__DISPATCH&unitId=DISPATCH-1',
+11:43:17   host: 'comms.reeder-systems.com',
+11:43:17   upgrade: 'websocket',
+11:43:17   connection: 'upgrade'
+11:43:17 }
+11:43:17 AUDIO_WS_ACCEPTED { username: 'DISPATCH-1', unitId: 'DISPATCH-1' }
+11:43:17 [AI-Dispatcher] Notify join received: DISPATCH-1 on DISPATCH__DISPATCH - connecting dispatcher
+11:43:17 [AI-Dispatcher] 2026-04-13T15:43:17.123Z | REJOIN_SKIPPED {"reason":"Already connected"}
+11:43:17 [AI-Dispatcher] Dispatcher connected for channel DISPATCH__DISPATCH
+11:43:17 [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 23ms
+11:43:19 AUDIO_WS_UPGRADE_HIT {
+11:43:19   method: 'GET',
+11:43:19   path: '/api/audio-ws',
+11:43:19   query: '?channelId=TESTING__TESTING%201&unitId=DISPATCH-1',
+11:43:19   host: 'comms.reeder-systems.com',
+11:43:19   upgrade: 'websocket',
+11:43:19   connection: 'upgrade'
+11:43:19 }
+11:43:19 AUDIO_WS_ACCEPTED { username: 'DISPATCH-1', unitId: 'DISPATCH-1' }
+11:43:19 [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 23ms
+11:43:22 [AUTH] /me check: hasSession=true sessionID=NXGwxI-f... cookie=true
+11:43:22 [AUTH] /me: session has user="DISPATCH-1" id=7, refreshing from DB...
+11:43:22 [AUTH] /me: returning fresh user data for "DISPATCH-1" role=admin unit_id=DISPATCH-1
+11:43:22 [API] GET /api/auth/me | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 18ms
+11:43:22 [AUTH] /me check: hasSession=true sessionID=NXGwxI-f... cookie=true
+11:43:22 [AUTH] /me: session has user="DISPATCH-1" id=7, refreshing from DB...
+11:43:22 [AUTH] /me: returning fresh user data for "DISPATCH-1" role=admin unit_id=DISPATCH-1
+11:43:22 [API] GET /api/auth/me | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 18ms
+11:43:23 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:43:31 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:43:34 [OpusCodec] Idle decoder swept for sender=SCANNER
+11:43:35 [AUTH] /me check: hasSession=true sessionID=NXGwxI-f... cookie=true
+11:43:35 [AUTH] /me: session has user="DISPATCH-1" id=7, refreshing from DB...
+11:43:35 [AUTH] /me: returning fresh user data for "DISPATCH-1" role=admin unit_id=DISPATCH-1
+11:43:35 [API] GET /api/auth/me | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 18ms
+11:43:35 [AUTH] /me check: hasSession=true sessionID=NXGwxI-f... cookie=true
+11:43:35 [AUTH] /me: session has user="DISPATCH-1" id=7, refreshing from DB...
+11:43:35 [AUTH] /me: returning fresh user data for "DISPATCH-1" role=admin unit_id=DISPATCH-1
+11:43:35 [API] GET /api/auth/me | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 304 | 19ms
+11:43:39 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:43:47 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:43:48 AUDIO_WS_UPGRADE_HIT {
+11:43:48   method: 'GET',
+11:43:48   path: '/api/audio-ws',
+11:43:48   query: '?channelId=DISPATCH__DISPATCH&unitId=DISPATCH-1',
+11:43:48   host: 'comms.reeder-systems.com',
+11:43:48   upgrade: 'websocket',
+11:43:48   connection: 'upgrade'
+11:43:48 }
+11:43:48 AUDIO_WS_ACCEPTED { username: 'DISPATCH-1', unitId: 'DISPATCH-1' }
+11:43:48 [AI-Dispatcher] Notify join received: DISPATCH-1 on DISPATCH__DISPATCH - connecting dispatcher
+11:43:48 [AI-Dispatcher] 2026-04-13T15:43:48.318Z | REJOIN_SKIPPED {"reason":"Already connected"}
+11:43:48 [AI-Dispatcher] Dispatcher connected for channel DISPATCH__DISPATCH
+11:43:48 [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 24ms
+11:43:48 AUDIO_WS_UPGRADE_HIT {
+11:43:48   method: 'GET',
+11:43:48   path: '/api/audio-ws',
+11:43:48   query: '?channelId=TESTING__TESTING%201&unitId=DISPATCH-1',
+11:43:48   host: 'comms.reeder-systems.com',
+11:43:48   upgrade: 'websocket',
+11:43:48   connection: 'upgrade'
+11:43:48 }
+11:43:48 AUDIO_WS_ACCEPTED { username: 'DISPATCH-1', unitId: 'DISPATCH-1' }
+11:43:48 [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 27ms
+11:43:55 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:43:55 [AUTH] /me check: hasSession=true sessionID=NXGwxI-f... cookie=true
+11:43:55 [AUTH] /me: session has user="DISPATCH-1" id=7, refreshing from DB...
+11:43:55 [AUTH] /me: returning fresh user data for "DISPATCH-1" role=admin unit_id=DISPATCH-1
+11:43:55 [API] GET /api/auth/me | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 15ms
+11:43:56 [AUTH] /me check: hasSession=true sessionID=NXGwxI-f... cookie=true
+11:43:56 [AUTH] /me: session has user="DISPATCH-1" id=7, refreshing from DB...
+11:43:56 [AUTH] /me: returning fresh user data for "DISPATCH-1" role=admin unit_id=DISPATCH-1
+11:43:56 [API] GET /api/auth/me | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 304 | 17ms
+11:44:03 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:44:11 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:44:16 [AUTH] /me check: hasSession=true sessionID=NXGwxI-f... cookie=true
+11:44:16 [AUTH] /me: session has user="DISPATCH-1" id=7, refreshing from DB...
+11:44:16 [AUTH] /me: returning fresh user data for "DISPATCH-1" role=admin unit_id=DISPATCH-1
+11:44:16 [API] GET /api/auth/me | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 17ms
+11:44:18 AUDIO_WS_UPGRADE_HIT {
+11:44:18   method: 'GET',
+11:44:18   path: '/api/audio-ws',
+11:44:18   query: '?channelId=DISPATCH__DISPATCH&unitId=DISPATCH-1',
+11:44:18   host: 'comms.reeder-systems.com',
+11:44:18   upgrade: 'websocket',
+11:44:18   connection: 'upgrade'
+11:44:18 }
+11:44:18 AUDIO_WS_ACCEPTED { username: 'DISPATCH-1', unitId: 'DISPATCH-1' }
+11:44:18 [AI-Dispatcher] Notify join received: DISPATCH-1 on DISPATCH__DISPATCH - connecting dispatcher
+11:44:18 [AI-Dispatcher] 2026-04-13T15:44:18.183Z | REJOIN_SKIPPED {"reason":"Already connected"}
+11:44:18 [AI-Dispatcher] Dispatcher connected for channel DISPATCH__DISPATCH
+11:44:18 [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 21ms
+11:44:18 AUDIO_WS_UPGRADE_HIT {
+11:44:18   method: 'GET',
+11:44:18   path: '/api/audio-ws',
+11:44:18   query: '?channelId=TESTING__TESTING%201&unitId=DISPATCH-1',
+11:44:18   host: 'comms.reeder-systems.com',
+11:44:18   upgrade: 'websocket',
+11:44:18   connection: 'upgrade'
+11:44:18 }
+11:44:18 AUDIO_WS_ACCEPTED { username: 'DISPATCH-1', unitId: 'DISPATCH-1' }
+11:44:18 [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 24ms
+11:44:19 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:44:27 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:44:35 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:44:43 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:44:48 AUDIO_WS_UPGRADE_HIT {
+11:44:48   method: 'GET',
+11:44:48   path: '/api/audio-ws',
+11:44:48   query: '?channelId=DISPATCH__DISPATCH&unitId=DISPATCH-1',
+11:44:48   host: 'comms.reeder-systems.com',
+11:44:48   upgrade: 'websocket',
+11:44:48   connection: 'upgrade'
+11:44:48 }
+11:44:48 AUDIO_WS_ACCEPTED { username: 'DISPATCH-1', unitId: 'DISPATCH-1' }
+11:44:48 [AI-Dispatcher] Notify join received: DISPATCH-1 on DISPATCH__DISPATCH - connecting dispatcher
+11:44:48 [AI-Dispatcher] 2026-04-13T15:44:48.149Z | REJOIN_SKIPPED {"reason":"Already connected"}
+11:44:48 [AI-Dispatcher] Dispatcher connected for channel DISPATCH__DISPATCH
+11:44:48 [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 22ms
+11:44:48 AUDIO_WS_UPGRADE_HIT {
+11:44:48   method: 'GET',
+11:44:48   path: '/api/audio-ws',
+11:44:48   query: '?channelId=TESTING__TESTING%201&unitId=DISPATCH-1',
+11:44:48   host: 'comms.reeder-systems.com',
+11:44:48   upgrade: 'websocket',
+11:44:48   connection: 'upgrade'
+11:44:48 }
+11:44:48 AUDIO_WS_ACCEPTED { username: 'DISPATCH-1', unitId: 'DISPATCH-1' }
+11:44:48 [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 28ms
+11:44:51 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:44:59 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:45:07 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:45:15 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:45:18 AUDIO_WS_UPGRADE_HIT {
+11:45:18   method: 'GET',
+11:45:18   path: '/api/audio-ws',
+11:45:18   query: '?channelId=DISPATCH__DISPATCH&unitId=DISPATCH-1',
+11:45:18   host: 'comms.reeder-systems.com',
+11:45:18   upgrade: 'websocket',
+11:45:18   connection: 'upgrade'
+11:45:18 }
+11:45:18 AUDIO_WS_ACCEPTED { username: 'DISPATCH-1', unitId: 'DISPATCH-1' }
+11:45:18 [AI-Dispatcher] Notify join received: DISPATCH-1 on DISPATCH__DISPATCH - connecting dispatcher
+11:45:18 [AI-Dispatcher] 2026-04-13T15:45:18.172Z | REJOIN_SKIPPED {"reason":"Already connected"}
+11:45:18 [AI-Dispatcher] Dispatcher connected for channel DISPATCH__DISPATCH
+11:45:18 [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 22ms
+11:45:18 AUDIO_WS_UPGRADE_HIT {
+11:45:18   method: 'GET',
+11:45:18   path: '/api/audio-ws',
+11:45:18   query: '?channelId=TESTING__TESTING%201&unitId=DISPATCH-1',
+11:45:18   host: 'comms.reeder-systems.com',
+11:45:18   upgrade: 'websocket',
+11:45:18   connection: 'upgrade'
+11:45:18 }
+11:45:18 AUDIO_WS_ACCEPTED { username: 'DISPATCH-1', unitId: 'DISPATCH-1' }
+11:45:18 [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 21ms
+11:45:23 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
+11:45:28 [AUTH] /me check: hasSession=true sessionID=NXGwxI-f... cookie=true
+11:45:28 [AUTH] /me: session has user="DISPATCH-1" id=7, refreshing from DB...
+11:45:28 [AUTH] /me: returning fresh user data for "DISPATCH-1" role=admin unit_id=DISPATCH-1
+11:45:28 [API] GET /api/auth/me | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 15ms
+11:45:28 [AUTH] /me check: hasSession=true sessionID=NXGwxI-f... cookie=true
+11:45:28 [AUTH] /me: session has user="DISPATCH-1" id=7, refreshing from DB...
+11:45:28 [AUTH] /me: returning fresh user data for "DISPATCH-1" role=admin unit_id=DISPATCH-1
+11:45:28 [API] GET /api/auth/me | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 304 | 16ms
+11:45:31 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=TESTING__TESTING 1 addr=166.137.146.74:34315
