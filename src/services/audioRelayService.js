@@ -177,39 +177,46 @@ class AudioRelayService {
     }
   }
 
-  addWsSubscriber(channelId, unitId, ws, format = 'pcm') {
+  addWsSubscriber(channelId, subscriberKey, ws, format = 'pcm') {
     const key = canonicalChannelKey(channelId);
     if (!this._wsSubscribers.has(key)) this._wsSubscribers.set(key, new Map());
     const preferredFormat = (format === 'opus') ? 'opus' : 'pcm';
-    this._wsSubscribers.get(key).set(unitId, { ws, format: preferredFormat });
-    if (AUDIO_DIAG) console.log(`[AudioRelay] WS_SUBSCRIBER_ADDED channelKey=${key} unitId=${unitId} format=${preferredFormat} totalWsSubs=${this._wsSubscribers.get(key).size}`);
+    this._wsSubscribers.get(key).set(subscriberKey, { ws, format: preferredFormat });
+    const unitId = ws._audioUnitId || subscriberKey;
+    console.log(`[AudioRelay] WS_SUBSCRIBER_ADDED channelKey=${key} subscriberKey=${subscriberKey} unitId=${unitId} format=${preferredFormat} totalWsSubs=${this._wsSubscribers.get(key).size}`);
   }
 
-  removeWsSubscriber(channelId, unitId, wsInstance = null) {
+  removeWsSubscriber(channelId, subscriberKey, wsInstance = null) {
     const key = canonicalChannelKey(channelId);
     const subs = this._wsSubscribers.get(key);
-    if (subs && subs.has(unitId)) {
-      subs.delete(unitId);
+    if (subs && subs.has(subscriberKey)) {
+      subs.delete(subscriberKey);
       if (subs.size === 0) this._wsSubscribers.delete(key);
-      if (AUDIO_DIAG) console.log(`[AudioRelay] WS_SUBSCRIBER_REMOVED channelKey=${key} unitId=${unitId}`);
+      console.log(`[AudioRelay] WS_SUBSCRIBER_REMOVED channelKey=${key} subscriberKey=${subscriberKey}`);
       return;
     }
     for (const [k, s] of this._wsSubscribers) {
-      if (s.has(unitId)) {
-        const entry = s.get(unitId);
+      if (s.has(subscriberKey)) {
+        const entry = s.get(subscriberKey);
         const entryWs = entry && entry.ws ? entry.ws : entry;
         if (wsInstance && entryWs !== wsInstance) continue;
-        s.delete(unitId);
+        s.delete(subscriberKey);
         if (s.size === 0) this._wsSubscribers.delete(k);
-        if (AUDIO_DIAG) console.log(`[AudioRelay] WS_SUBSCRIBER_REMOVED channelKey=${k} unitId=${unitId} (fallback from requested key=${key})`);
+        console.log(`[AudioRelay] WS_SUBSCRIBER_REMOVED channelKey=${k} subscriberKey=${subscriberKey} (fallback from requested key=${key})`);
         return;
       }
     }
   }
 
-  removeAllWsSubscriptions(unitId) {
+  removeAllWsSubscriptions(identifierToMatch) {
     for (const [key, subs] of this._wsSubscribers) {
-      subs.delete(unitId);
+      for (const [subKey, subEntry] of subs) {
+        const ws = subEntry && subEntry.ws ? subEntry.ws : subEntry;
+        const subUnitId = ws._audioUnitId || subKey;
+        if (subKey === identifierToMatch || subUnitId === identifierToMatch || subKey.startsWith(`${identifierToMatch}::`)) {
+          subs.delete(subKey);
+        }
+      }
       if (subs.size === 0) this._wsSubscribers.delete(key);
     }
   }
@@ -337,7 +344,12 @@ class AudioRelayService {
       const udpKeys = [...this.subscribers.keys()];
       const wsKeys = [...this._wsSubscribers.keys()];
       const listenerKeys = [...this._audioListeners.keys()];
-      console.log(`[AudioRelay] BROADCAST channelKey=${channelKey} sender=${senderUnitId} seq=${sequence} udpChannels=[${udpKeys.join(',')}] wsChannels=[${wsKeys.join(',')}] listenerChannels=[${listenerKeys.join(',')}]`);
+      const wsSubDetail = [];
+      for (const [ch, subs] of this._wsSubscribers) {
+        const subIds = [...subs.keys()];
+        wsSubDetail.push(`${ch}:[${subIds.join(',')}]`);
+      }
+      console.log(`[AudioRelay] BROADCAST channelKey=${channelKey} sender=${senderUnitId} seq=${sequence} udpChannels=[${udpKeys.join(',')}] wsChannels=[${wsKeys.join(',')}] listenerChannels=[${listenerKeys.join(',')}] wsSubscribers={${wsSubDetail.join('; ')}}`);
     }
 
     const udpSubs = this.subscribers.get(channelKey);
@@ -381,7 +393,9 @@ class AudioRelayService {
 
         let needsOpus = false;
         let needsPcm = false;
-        for (const [subUnitId, subEntry] of wsSubs) {
+        for (const [subKey, subEntry] of wsSubs) {
+          const subWs = subEntry.ws || subEntry;
+          const subUnitId = subWs._audioUnitId || subKey;
           if (subUnitId === senderUnitId) continue;
           if (subEntry.format === 'opus') needsOpus = true;
           else needsPcm = true;
@@ -514,9 +528,15 @@ class AudioRelayService {
       if (!wsSubs) {
         continue;
       }
-      for (const [subUnitId, subEntry] of wsSubs) {
-        if (subUnitId === frame.senderUnitId) continue;
+      for (const [subKey, subEntry] of wsSubs) {
         const ws = subEntry.ws || subEntry;
+        const subUnitId = ws._audioUnitId || subKey;
+        if (subUnitId === frame.senderUnitId) {
+          if (AUDIO_DIAG && queue.length % 200 === 0) {
+            console.log(`[AudioRelay] WS_ECHO_SUPPRESSED channelKey=${channelKey} sender=${frame.senderUnitId} subKey=${subKey}`);
+          }
+          continue;
+        }
         const preferredFormat = subEntry.format || 'pcm';
         const packetBuf = preferredFormat === 'opus'
           ? (frame.opusFrame || frame.pcmFrame || frame.packetBuf)
@@ -528,11 +548,12 @@ class AudioRelayService {
             wsSentCount++;
           }
         } catch (err) {
-          console.error(`[AudioRelay] WS send error to ${subUnitId}:`, err.message);
+          console.error(`[AudioRelay] WS send error to ${subKey}:`, err.message);
         }
       }
       if (AUDIO_DIAG && wsSentCount > 0 && queue.length % 50 === 0) {
-        console.log(`[AudioRelay] WS_RELAY channelKey=${channelKey} sender=${frame.senderUnitId} recipients=${wsSentCount} queueRemaining=${queue.length}`);
+        const subKeys = wsSubs ? [...wsSubs.keys()] : [];
+        console.log(`[AudioRelay] WS_RELAY channelKey=${channelKey} sender=${frame.senderUnitId} recipients=${wsSentCount} totalSubs=${subKeys.length} subKeys=[${subKeys.join(',')}] queueRemaining=${queue.length}`);
       }
     }
 

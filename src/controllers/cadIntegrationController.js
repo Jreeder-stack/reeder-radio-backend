@@ -98,6 +98,15 @@ export async function cadLogin(req, res) {
 
       console.log(`[CAD-LOGIN] Success: username="${username}" id=${userData.id} role=${userData.role} unit_id=${userData.unit_id} is_dispatcher=${userData.is_dispatcher} sessionID=${req.sessionID?.substring(0, 8)}...`);
 
+      if (userData.unit_id) {
+        db.getUsersWithDuplicateUnitId(userData.unit_id).then(dupes => {
+          if (dupes.length > 1) {
+            const otherUsers = dupes.filter(d => d.id !== userData.id).map(d => d.username);
+            console.warn(`[CAD-LOGIN] DUPLICATE_UNIT_ID unit_id="${userData.unit_id}" user="${username}" also_used_by=[${otherUsers.join(',')}] — this will cause audio routing failures`);
+          }
+        }).catch(() => {});
+      }
+
       authService.logUserActivity(userData.id, userData.username, 'cad-login', {});
 
       success(res, { user: userData });

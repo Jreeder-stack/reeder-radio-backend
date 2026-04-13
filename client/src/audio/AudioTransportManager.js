@@ -439,9 +439,27 @@ class AudioTransportManager {
           if (!parsed) return;
           conn._lastRxDataTime = Date.now();
           conn._noRxWarned = false;
-          if (this.mutedChannels.has(channelName)) return;
-          if (this.priorityChannelRoomKey && this.priorityChannelRoomKey !== channelName) return;
-          if (parsed.senderUnitId && parsed.senderUnitId === conn.unitId) return;
+          if (this.mutedChannels.has(channelName)) {
+            if (!conn._muteFilterLogCount) conn._muteFilterLogCount = 0;
+            if (conn._muteFilterLogCount++ % 200 === 0) {
+              console.log('AUDIO_FRAME_FILTERED', { reason: 'muted', channelName, senderUnitId: parsed.senderUnitId });
+            }
+            return;
+          }
+          if (this.priorityChannelRoomKey && this.priorityChannelRoomKey !== channelName) {
+            if (!conn._priorityFilterLogCount) conn._priorityFilterLogCount = 0;
+            if (conn._priorityFilterLogCount++ % 200 === 0) {
+              console.log('AUDIO_FRAME_FILTERED', { reason: 'priority_override', channelName, priorityChannel: this.priorityChannelRoomKey, senderUnitId: parsed.senderUnitId });
+            }
+            return;
+          }
+          if (parsed.senderUnitId && parsed.senderUnitId === conn.unitId) {
+            if (!conn._echoFilterLogCount) conn._echoFilterLogCount = 0;
+            if (conn._echoFilterLogCount++ % 200 === 0) {
+              console.log('AUDIO_FRAME_FILTERED', { reason: 'self_echo', channelName, senderUnitId: parsed.senderUnitId, localUnitId: conn.unitId });
+            }
+            return;
+          }
           const chId = parsed.channelId || channelName;
           if (parsed.codec === 'opus') {
             await this._enqueueWithReorder(parsed.sequence, parsed.opusData, chId, parsed.senderUnitId, 'opus');
@@ -467,9 +485,27 @@ class AudioTransportManager {
         }
 
         if (!validatePcmPacket(msg)) return;
-        if (this.mutedChannels.has(channelName)) return;
-        if (this.priorityChannelRoomKey && this.priorityChannelRoomKey !== channelName) return;
-        if (msg.senderUnitId && msg.senderUnitId === conn.unitId) return;
+        if (this.mutedChannels.has(channelName)) {
+          if (!conn._muteFilterLogCountJson) conn._muteFilterLogCountJson = 0;
+          if (conn._muteFilterLogCountJson++ % 200 === 0) {
+            console.log('AUDIO_FRAME_FILTERED', { reason: 'muted', channelName, senderUnitId: msg.senderUnitId, format: 'json' });
+          }
+          return;
+        }
+        if (this.priorityChannelRoomKey && this.priorityChannelRoomKey !== channelName) {
+          if (!conn._priorityFilterLogCountJson) conn._priorityFilterLogCountJson = 0;
+          if (conn._priorityFilterLogCountJson++ % 200 === 0) {
+            console.log('AUDIO_FRAME_FILTERED', { reason: 'priority_override', channelName, priorityChannel: this.priorityChannelRoomKey, senderUnitId: msg.senderUnitId, format: 'json' });
+          }
+          return;
+        }
+        if (msg.senderUnitId && msg.senderUnitId === conn.unitId) {
+          if (!conn._echoFilterLogCountJson) conn._echoFilterLogCountJson = 0;
+          if (conn._echoFilterLogCountJson++ % 200 === 0) {
+            console.log('AUDIO_FRAME_FILTERED', { reason: 'self_echo', channelName, senderUnitId: msg.senderUnitId, localUnitId: conn.unitId, format: 'json' });
+          }
+          return;
+        }
 
         const frame = new Int16Array(msg.payload);
         await this._enqueueWithReorder(msg.sequence, frame, msg.channelId || channelName, msg.senderUnitId || 'unknown', 'pcm');

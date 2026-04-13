@@ -32,6 +32,25 @@ export async function initializeDatabase() {
       ALTER TABLE users ADD COLUMN IF NOT EXISTS is_dispatcher BOOLEAN DEFAULT false
     `);
 
+    try {
+      const dupeCheck = await client.query(
+        `SELECT unit_id, COUNT(*) AS cnt FROM users WHERE unit_id IS NOT NULL AND unit_id != '' GROUP BY unit_id HAVING COUNT(*) > 1`
+      );
+      if (dupeCheck.rows.length > 0) {
+        for (const row of dupeCheck.rows) {
+          console.warn(`[DB-INIT] DUPLICATE_UNIT_ID_FOUND unit_id="${row.unit_id}" count=${row.cnt} — cannot create unique index until resolved`);
+        }
+        console.warn(`[DB-INIT] Skipping unique index on users.unit_id due to ${dupeCheck.rows.length} duplicate(s). Fix duplicates to enable constraint.`);
+      } else {
+        await client.query(`
+          CREATE UNIQUE INDEX IF NOT EXISTS idx_users_unit_id_unique
+          ON users (unit_id) WHERE unit_id IS NOT NULL AND unit_id != ''
+        `);
+      }
+    } catch (idxErr) {
+      console.warn(`[DB-INIT] Could not create unique index on users.unit_id: ${idxErr.message}`);
+    }
+
     await client.query(`
       CREATE TABLE IF NOT EXISTS zones (
         id SERIAL PRIMARY KEY,

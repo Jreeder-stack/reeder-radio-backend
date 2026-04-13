@@ -36,6 +36,8 @@ const PING_INTERVAL = 30000;
 const PONG_TIMEOUT = 10000;
 const MAX_MISSED_PONGS = 3;
 
+let _wsConnectionCounter = 0;
+
 class WsAudioBridge {
   constructor() {
     this.wss = null;
@@ -147,27 +149,38 @@ class WsAudioBridge {
 
   _onConnection(ws, request, user) {
     const url = new URL(request.url, `http://${request.headers.host}`);
-    const channelId = canonicalChannelKey(url.searchParams.get('channelId'));
+    const rawChannelId = url.searchParams.get('channelId');
+    const channelId = canonicalChannelKey(rawChannelId);
     const unitId = user.unit_id || user.username;
     const formatParam = (url.searchParams.get('format') || 'pcm').toLowerCase();
     const audioFormat = (formatParam === 'opus') ? 'opus' : 'pcm';
+
+    const connId = ++_wsConnectionCounter;
+    const subscriberKey = `${unitId}::${user.id || 0}::${connId}`;
+
+    if (rawChannelId !== channelId) {
+      console.log(`[WsAudioBridge] CHANNEL_KEY_NORMALIZED raw="${rawChannelId}" canonical="${channelId}" unitId=${unitId} userId=${user.id}`);
+    }
+    console.log(`[WsAudioBridge] AUDIO_WS_CONN channelId="${channelId}" unitId="${unitId}" subscriberKey="${subscriberKey}" userId=${user.id} username="${user.username}" connId=${connId}`);
 
     if (!channelId || !unitId) {
       console.warn('AUDIO_WS_REJECTED', {
         reason: 'missing_channel_or_unit',
         channelId,
         unitId,
+        rawChannelId,
       });
       ws.close();
       return;
     }
 
     if (!this.channelClients.has(channelId)) this.channelClients.set(channelId, new Map());
-    this.channelClients.get(channelId).set(unitId, ws);
+    this.channelClients.get(channelId).set(subscriberKey, ws);
 
     ws._audioChannelId = channelId;
     ws._audioUnitId = unitId;
     ws._audioFormat = audioFormat;
+    ws._audioSubscriberKey = subscriberKey;
     ws._audioPongPending = false;
     ws._missedPongs = 0;
 
@@ -176,7 +189,7 @@ class WsAudioBridge {
       ws._missedPongs = 0;
     });
 
-    audioRelayService.addWsSubscriber(channelId, unitId, ws, audioFormat);
+    audioRelayService.addWsSubscriber(channelId, subscriberKey, ws, audioFormat);
 
     pool.query(
       "SELECT id FROM channels WHERE COALESCE(zone, 'Default') || '__' || name = $1 LIMIT 1",
@@ -277,10 +290,10 @@ class WsAudioBridge {
     });
 
     ws.on('close', () => {
-      audioRelayService.removeWsSubscriber(channelId, unitId, ws);
+      audioRelayService.removeWsSubscriber(channelId, subscriberKey, ws);
       const map = this.channelClients.get(channelId);
       if (!map) return;
-      map.delete(unitId);
+      map.delete(subscriberKey);
       if (map.size === 0) this.channelClients.delete(channelId);
 
       if (_signalingServiceRef) {

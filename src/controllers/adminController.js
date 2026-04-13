@@ -52,6 +52,9 @@ export async function updateUser(req, res) {
     await authService.logUserActivity(req.session.user.id, req.session.user.username, 'admin_update_user', { targetUserId: id, updates: req.body });
     success(res, { user });
   } catch (err) {
+    if (err.code === '23505' && (err.constraint === 'idx_users_unit_id_unique' || (err.detail && err.detail.includes('unit_id')))) {
+      return error(res, 'Unit ID is already assigned to another user', 400);
+    }
     console.error('Update user error:', err);
     error(res, 'Failed to update user', 500);
   }
@@ -85,6 +88,9 @@ export async function createUser(req, res) {
     created(res, { user });
   } catch (err) {
     if (err.code === '23505') {
+      if (err.constraint === 'idx_users_unit_id_unique' || (err.detail && err.detail.includes('unit_id'))) {
+        return error(res, 'Unit ID is already assigned to another user', 400);
+      }
       return error(res, 'Username already exists', 400);
     }
     console.error('Create user error:', err);

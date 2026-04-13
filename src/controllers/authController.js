@@ -35,6 +35,15 @@ export async function login(req, res) {
         }
         console.log(`[AUTH] Login success: username="${username}" id=${result.user.id} role=${result.user.role} unit_id=${result.user.unit_id} is_dispatcher=${result.user.is_dispatcher} sessionID=${req.sessionID?.substring(0, 8)}...`);
 
+        if (result.user.unit_id) {
+          db.getUsersWithDuplicateUnitId(result.user.unit_id).then(dupes => {
+            if (dupes.length > 1) {
+              const otherUsers = dupes.filter(d => d.id !== result.user.id).map(d => d.username);
+              console.warn(`[AUTH] DUPLICATE_UNIT_ID unit_id="${result.user.unit_id}" user="${username}" also_used_by=[${otherUsers.join(',')}] — this will cause audio routing failures`);
+            }
+          }).catch(() => {});
+        }
+
         authService.logUserActivity(result.user.id, result.user.username, 'login', {});
         success(res, { user: result.user });
       });
