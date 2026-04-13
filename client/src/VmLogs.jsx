@@ -15,6 +15,7 @@ export default function VmLogs({ isMobile, standalone = false }) {
   const [connected, setConnected] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [activeFilters, setActiveFilters] = useState(new Set());
+  const [copied, setCopied] = useState(false);
   const containerRef = useRef(null);
   const autoScrollRef = useRef(true);
   const pausedRef = useRef(false);
@@ -172,6 +173,17 @@ export default function VmLogs({ isMobile, standalone = false }) {
     transition: "all 0.15s",
   });
 
+  const copyLogs = async () => {
+    const text = filteredLines
+      .map((entry) => `${formatTimestamp(entry.ts)} ${entry.line}`)
+      .join("\n");
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (_) {}
+  };
+
   const handlePopOut = () => {
     window.open("/vm-logs", "vm-logs-popout", "width=1200,height=800,menubar=no,toolbar=no,location=no,status=no");
   };
@@ -213,6 +225,9 @@ export default function VmLogs({ isMobile, standalone = false }) {
           </button>
           <button style={btnStyle(false)} onClick={clearLogs}>
             Clear
+          </button>
+          <button style={btnStyle(copied)} onClick={copyLogs}>
+            {copied ? "Copied!" : "Copy Logs"}
           </button>
           {!standalone && (
             <button style={btnStyle(false)} onClick={handlePopOut} title="Open in new window">
