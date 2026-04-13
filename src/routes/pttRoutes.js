@@ -197,7 +197,7 @@ router.post('/end', async (req, res) => {
       channelId,
       timestamp: Date.now(),
       duration,
-      gracePeriodMs: signalingService.GRACE_PERIOD_MS || 3000,
+      gracePeriodMs: signalingService.GRACE_PERIOD_MS || 1000,
       source: 'native-service',
     };
 
@@ -206,7 +206,7 @@ router.post('/end', async (req, res) => {
     if (signalingService.graceChannels) {
       signalingService.graceChannels.set(channelId, {
         unitId,
-        expiresAt: Date.now() + (signalingService.GRACE_PERIOD_MS || 3000),
+        expiresAt: Date.now() + (signalingService.GRACE_PERIOD_MS || 1000),
       });
 
       setTimeout(() => {
@@ -214,7 +214,7 @@ router.post('/end', async (req, res) => {
         if (grace && grace.unitId === unitId) {
           signalingService.graceChannels.delete(channelId);
         }
-      }, signalingService.GRACE_PERIOD_MS || 3000);
+      }, signalingService.GRACE_PERIOD_MS || 1000);
     }
 
     const presence = signalingService.unitPresence.get(unitId);
@@ -229,7 +229,7 @@ router.post('/end', async (req, res) => {
             signalingService.unitPresence.delete(unitId);
             console.log(`[PTT-HTTP] Removed synthesized presence for "${unitId}"`);
           }
-        }, (signalingService.GRACE_PERIOD_MS || 3000) + 1000);
+        }, (signalingService.GRACE_PERIOD_MS || 1000) + 1000);
       }
     }
 

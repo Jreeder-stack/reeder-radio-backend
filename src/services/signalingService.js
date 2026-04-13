@@ -51,7 +51,7 @@ class SignalingService {
     this.clearAirStates = new Map();
     this.connectionTimes = new Map();
     this.trackedUnitLocations = new Map();
-    this.GRACE_PERIOD_MS = 3000;
+    this.GRACE_PERIOD_MS = 1000;
     
     this._eventCallbacks = {
       pttAttempt: [],
