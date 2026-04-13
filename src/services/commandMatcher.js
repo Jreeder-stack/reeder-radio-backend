@@ -22,6 +22,14 @@ const DISPATCHER_STATE = {
   AWAITING_DL_STATE: 'AWAITING_DL_STATE',
   AWAITING_DL_NUMBER: 'AWAITING_DL_NUMBER',
   AWAITING_SSN: 'AWAITING_SSN',
+  AWAITING_DISPOSITION: 'AWAITING_DISPOSITION',
+  AWAITING_WARRANT_NAME: 'AWAITING_WARRANT_NAME',
+  AWAITING_CALL_UPDATE_CONFIRM: 'AWAITING_CALL_UPDATE_CONFIRM',
+  AWAITING_ANIMAL_SEARCH_TYPE: 'AWAITING_ANIMAL_SEARCH_TYPE',
+  AWAITING_STATUS_CHECK_RESPONSE: 'AWAITING_STATUS_CHECK_RESPONSE',
+  AWAITING_CALL_UPDATE_DETAILS: 'AWAITING_CALL_UPDATE_DETAILS',
+  AWAITING_CLEAR_CONFIRM: 'AWAITING_CLEAR_CONFIRM',
+  AWAITING_DISPOSE_CONFIRM: 'AWAITING_DISPOSE_CONFIRM',
   SIGNAL_100_ACTIVE: 'SIGNAL_100_ACTIVE'
 };
 
@@ -136,10 +144,8 @@ const STATUS_COMMANDS = [
   },
   { 
     phrases: [
-      'clear', 'clear call', 'clear of call', 'clear the call',
-      'i am clear', "i'm clear", 'im clear',
-      'done', 'finished',
-      '10-98', '10/98', '10 98', 'ten ninety eight', 'ten-ninety-eight', '1098'
+      'clear and available',
+      'done', 'finished'
     ], 
     status: 'clear',
     cadStatus: 'available',
@@ -310,6 +316,56 @@ const IMMEDIATE_COMMANDS = [
     intent: 'STANDBY',
     phrases: ['standing by', 'on standby', 'holding position', 'staging'],
     response: (unitId) => `${unitId}, copy standby.`,
+    isEmergency: false
+  },
+  {
+    intent: 'CLEAR_UNIT',
+    phrases: [
+      'clear me from the call', 'clear me from call', 'clear me', 'clear from call',
+      'clear of call', 'clear the call', 'show me clear',
+      "i'm clear", 'i am clear', 'im clear',
+      '10-98', '10/98', '10 98', 'ten ninety eight', 'ten-ninety-eight', '1098',
+      '10-98 from call'
+    ],
+    response: null,
+    isEmergency: false
+  },
+  {
+    intent: 'DISPOSE_CALL',
+    phrases: [
+      'close the call', 'close call', 'dispose call', 'dispose the call',
+      'close out the call', 'close it out', 'finalize call', 'finalize the call'
+    ],
+    response: null,
+    isEmergency: false
+  },
+  {
+    intent: 'CALL_DETAILS',
+    phrases: [
+      'call details', 'call information', 'call info', 'details on the call',
+      'whats on the call', "what's on the call", 'pull up the call',
+      'give me the call', 'read back the call'
+    ],
+    response: null,
+    isEmergency: false
+  },
+  {
+    intent: 'UPDATE_CALL',
+    phrases: [
+      'update the call', 'update call', 'add to the call', 'add info to call',
+      'change priority', 'upgrade the call', 'downgrade the call'
+    ],
+    response: null,
+    isEmergency: false
+  },
+  {
+    intent: 'ANIMAL_SEARCH',
+    phrases: [
+      'animal search', 'search animal', 'animal check', 'run an animal',
+      'check a dog', 'check a cat', 'run a tag', 'microchip check',
+      'check microchip', 'animal control check'
+    ],
+    response: null,
     isEmergency: false
   }
 ];

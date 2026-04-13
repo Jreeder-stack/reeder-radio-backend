@@ -338,6 +338,8 @@ class AIDispatcher {
     this._turnContextByUnit = new Map();
     this._boloPollingInterval = null;
     this._seenBoloIds = new Set();
+    this._statusCheckPollingInterval = null;
+    this._seenStatusCheckIds = new Set();
     this._reconnectTimer = null;
     this._reconnectAttempts = 0;
     this._isReconnecting = false;
@@ -524,6 +526,7 @@ class AIDispatcher {
     this.log('STARTED_CONNECTED', { channel: channelName, roomKey: this.configuredChannel, numericId: this.numericChannelId, aliases: Array.from(this.channelAliases), mode: 'always-on' });
 
     this._startBoloPolling();
+    this._startStatusCheckPolling();
     this._startHealthCheck();
   }
 
@@ -632,6 +635,7 @@ class AIDispatcher {
         this.log('RECONNECT_SUCCESS', { channel: this.configuredChannel });
         this._startHealthCheck();
         this._startBoloPolling();
+        this._startStatusCheckPolling();
       } catch (err) {
         this.log('RECONNECT_FAILED', { attempt: this._reconnectAttempts, error: err.message });
         this._scheduleReconnect();
@@ -697,6 +701,7 @@ class AIDispatcher {
     this._stopReconnect();
     this._stopHealthCheck();
     this._stopBoloPolling();
+    this._stopStatusCheckPolling();
     this._stopErrorCleanup();
     this.errorCounts.clear();
     this.errorCooldowns.clear();
@@ -1281,9 +1286,44 @@ class AIDispatcher {
         return;
       }
 
+      if (state === DISPATCHER_STATE.AWAITING_DISPOSITION) {
+        this.log('DISPOSITION_FAST_PATH', { participant: participantId, transcript });
+        this._turnContextByUnit.set(participantId, { transcript, intent: 'DISPOSE_CALL' });
+        await this.handleDispositionInput(participantId, transcript, slots);
+        return;
+      }
+
+      if (state === DISPATCHER_STATE.AWAITING_WARRANT_NAME) {
+        this.log('WARRANT_NAME_FAST_PATH', { participant: participantId, transcript });
+        this._turnContextByUnit.set(participantId, { transcript, intent: 'WARRANT_CHECK' });
+        await this.handleWarrantNameInput(participantId, transcript, slots);
+        return;
+      }
+
+      if (state === DISPATCHER_STATE.AWAITING_ANIMAL_SEARCH_TYPE) {
+        this.log('ANIMAL_SEARCH_FAST_PATH', { participant: participantId, transcript });
+        this._turnContextByUnit.set(participantId, { transcript, intent: 'ANIMAL_SEARCH' });
+        await this.handleAnimalSearchInput(participantId, transcript, slots);
+        return;
+      }
+
+      if (state === DISPATCHER_STATE.AWAITING_STATUS_CHECK_RESPONSE) {
+        this.log('STATUS_CHECK_RESPONSE_FAST_PATH', { participant: participantId, transcript });
+        this._turnContextByUnit.set(participantId, { transcript, intent: 'STATUS_CHECK_RESPONSE' });
+        await this.handleStatusCheckResponse(participantId, transcript, slots);
+        return;
+      }
+
+      if (state === DISPATCHER_STATE.AWAITING_CALL_UPDATE_DETAILS) {
+        this.log('CALL_UPDATE_DETAILS_FAST_PATH', { participant: participantId, transcript });
+        this._turnContextByUnit.set(participantId, { transcript, intent: 'UPDATE_CALL' });
+        await this.handleCallUpdateDetailsInput(participantId, transcript, slots);
+        return;
+      }
+
       const normalizedTranscript = transcript.trim().toLowerCase().replace(/[.,!?]+/g, '');
       const hasUnitToUnit = /\b\w+[\s-]*\d+\s+from\s+\w+[\s-]*\d+\b/i.test(normalizedTranscript);
-      const hasCommandContent = /\b(10-\d+|run\b|plate\b|check\b|backup\b|service\b|zone\b|status\b|detail\b|stop\b|traffic\b|radio\b|time\b)/i.test(normalizedTranscript);
+      const hasCommandContent = /\b(10-\d+|run\b|plate\b|check\b|backup\b|service\b|zone\b|status\b|detail\b|stop\b|traffic\b|radio\b|time\b|clear\b|close\b|dispose\b|warrant\b|update\b|priority\b|animal\b|microchip\b|tag\b|call\b)/i.test(normalizedTranscript);
       if (!hasUnitToUnit && !hasCommandContent) {
         const isCentralHail =
           /^central\b/.test(normalizedTranscript) ||
@@ -1426,6 +1466,14 @@ class AIDispatcher {
             await this.handleSecureConfirmResponse(participantId, transcript, slots);
           } else if (state === DISPATCHER_STATE.AWAITING_CALL_CONFIRM) {
             await this.handleCallConfirm(participantId, transcript, slots);
+          } else if (state === DISPATCHER_STATE.AWAITING_CLEAR_CONFIRM) {
+            await this.handleClearConfirm(participantId, transcript);
+          } else if (state === DISPATCHER_STATE.AWAITING_DISPOSE_CONFIRM) {
+            await this.handleDisposeConfirm(participantId, transcript, slots);
+          } else if (state === DISPATCHER_STATE.AWAITING_CALL_UPDATE_CONFIRM) {
+            await this.handleCallUpdateConfirm(participantId, transcript, slots);
+          } else if (state === DISPATCHER_STATE.AWAITING_STATUS_CHECK_RESPONSE) {
+            await this.handleStatusCheckResponse(participantId, transcript, slots);
           } else {
             const resp = result.response || `${participantId}, 10-4.`;
             await this.speak(resp, participantId);
@@ -1445,6 +1493,21 @@ class AIDispatcher {
             await this.handleSecureConfirmResponse(participantId, transcript, slots);
           } else if (state === DISPATCHER_STATE.AWAITING_CALL_CONFIRM) {
             await this.handleCallDeny(participantId);
+          } else if (state === DISPATCHER_STATE.AWAITING_CLEAR_CONFIRM) {
+            setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+            const clearDenyResp = `${participantId}, 10-4, disregard.`;
+            await this.speak(clearDenyResp, participantId);
+            this.addConversationExchange(participantId, transcript, clearDenyResp);
+          } else if (state === DISPATCHER_STATE.AWAITING_DISPOSE_CONFIRM) {
+            setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+            const disposeDenyResp = `${participantId}, 10-4, disregard.`;
+            await this.speak(disposeDenyResp, participantId);
+            this.addConversationExchange(participantId, transcript, disposeDenyResp);
+          } else if (state === DISPATCHER_STATE.AWAITING_CALL_UPDATE_CONFIRM) {
+            setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+            const denyResp = `${participantId}, 10-4, disregard call update.`;
+            await this.speak(denyResp, participantId);
+            this.addConversationExchange(participantId, transcript, denyResp);
           } else {
             const resp = result.response || `${participantId}, 10-4. Disregard.`;
             await this.speak(resp, participantId);
@@ -1668,6 +1731,36 @@ class AIDispatcher {
 
         case 'PERSON_CHECK_SSN': {
           await this.handlePersonCheckSSN(participantId, transcript, result.slots);
+          break;
+        }
+
+        case 'CLEAR_UNIT': {
+          await this.handleClearUnit(participantId, transcript);
+          break;
+        }
+
+        case 'DISPOSE_CALL': {
+          await this.handleDisposeCall(participantId, transcript, result.slots);
+          break;
+        }
+
+        case 'WARRANT_CHECK': {
+          await this.handleWarrantCheck(participantId, transcript, result.slots);
+          break;
+        }
+
+        case 'UPDATE_CALL': {
+          await this.handleUpdateCall(participantId, transcript, result.slots);
+          break;
+        }
+
+        case 'CALL_DETAILS': {
+          await this.handleCallDetails(participantId, transcript, result.slots);
+          break;
+        }
+
+        case 'ANIMAL_SEARCH': {
+          await this.handleAnimalSearch(participantId, transcript, result.slots);
           break;
         }
 
@@ -3217,6 +3310,681 @@ class AIDispatcher {
       const resp = `${participantId}, Central. System error on social check.`;
       await this.speak(resp, participantId);
       setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+    }
+  }
+
+  async handleClearUnit(participantId, transcript) {
+    this.log('CLEAR_UNIT', { participant: participantId, transcript });
+
+    if (!cadService.isConfigured()) {
+      const resp = `${participantId}, CAD system not available.`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+      return;
+    }
+
+    setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_CLEAR_CONFIRM, null, {}, true);
+    const resp = `${participantId}, confirm clear from call?`;
+    await this.speak(resp, participantId);
+    this.addConversationExchange(participantId, transcript, resp);
+  }
+
+  async handleClearConfirm(participantId, transcript) {
+    this.log('CLEAR_CONFIRM', { participant: participantId, transcript });
+
+    try {
+      const clearResult = await cadService.clearUnit(participantId);
+      if (clearResult?.success === false) {
+        const resp = `${participantId}, unable to clear you from call. ${clearResult.error || 'Try your MDT.'}`;
+        await this.speak(resp, participantId);
+        this.addConversationExchange(participantId, transcript, resp);
+        setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+        return;
+      }
+      this.log('UNIT_CLEARED', { unitId: participantId });
+
+      try {
+        await cadService.updateUnitStatus(participantId, 'available');
+      } catch (statusErr) {
+        this.log('CAD_STATUS_UPDATE_AFTER_CLEAR_ERROR', { error: statusErr.message });
+      }
+
+      const timeStr = this.formatMilitaryTime();
+      const resp = `${participantId}, 10-4, clear. ${timeStr}.`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+    } catch (error) {
+      this.log('CLEAR_UNIT_ERROR', { error: error.message });
+      const resp = `${participantId}, unable to clear. System error.`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+    }
+  }
+
+  async handleDisposeCall(participantId, transcript, slots) {
+    this.log('DISPOSE_CALL', { participant: participantId, transcript, slots });
+
+    const disposition = slots?.disposition;
+
+    if (disposition && disposition.trim().length > 1) {
+      let callNumber = slots?.callNumber;
+      if (!callNumber) {
+        try {
+          const currentCall = await cadService.getUnitCurrentCallById(participantId);
+          callNumber = currentCall?.call_id || currentCall?.call_number || currentCall?.callNumber;
+        } catch (e) { /* ignore */ }
+      }
+      setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_DISPOSE_CONFIRM, null, {
+        callNumber,
+        disposition: disposition.trim()
+      }, true);
+      const resp = `${participantId}, confirm close call, ${disposition.trim()}?`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+    } else {
+      const savedSlots = {};
+      if (slots?.callNumber) savedSlots.callNumber = slots.callNumber;
+      setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_DISPOSITION, null, savedSlots, true);
+      const resp = `${participantId}, go ahead with disposition.`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+    }
+  }
+
+  async handleDispositionInput(participantId, transcript, savedSlots) {
+    this.log('DISPOSITION_INPUT', { participant: participantId, transcript });
+
+    const normalized = transcript.toLowerCase().trim();
+    const disregardPhrases = ['disregard', 'cancel', 'cancel that', 'nevermind', 'never mind', '10-22', 'scratch that'];
+    if (disregardPhrases.some(p => normalized.includes(p))) {
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+      const resp = `${participantId}, 10-4, disregard.`;
+      await this.speak(resp, participantId);
+      return;
+    }
+
+    const disposition = transcript.trim();
+    if (!disposition || disposition.length < 2) {
+      const resp = `${participantId}, did not copy disposition. Go ahead.`;
+      await this.speak(resp, participantId);
+      return;
+    }
+
+    let callNumber = savedSlots?.callNumber;
+    if (!callNumber) {
+      try {
+        const currentCall = await cadService.getUnitCurrentCallById(participantId);
+        callNumber = currentCall?.call_id || currentCall?.call_number || currentCall?.callNumber;
+      } catch (e) { /* ignore */ }
+    }
+
+    setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_DISPOSE_CONFIRM, null, {
+      callNumber,
+      disposition
+    }, true);
+    const resp = `${participantId}, confirm close call, ${disposition}?`;
+    await this.speak(resp, participantId);
+    this.addConversationExchange(participantId, transcript, resp);
+  }
+
+  async handleDisposeConfirm(participantId, transcript, slots) {
+    this.log('DISPOSE_CONFIRM', { participant: participantId, transcript, slots });
+    await this.executeDisposeCall(participantId, transcript, slots?.callNumber, slots?.disposition);
+  }
+
+  async executeDisposeCall(participantId, transcript, callNumber, disposition) {
+    this.log('EXECUTE_DISPOSE_CALL', { participantId, callNumber, disposition });
+
+    if (!cadService.isConfigured()) {
+      const resp = `${participantId}, CAD system not available.`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+      return;
+    }
+
+    try {
+      let callId = callNumber;
+      if (!callId) {
+        const currentCall = await cadService.getUnitCurrentCallById(participantId);
+        callId = currentCall?.call_id || currentCall?.call_number || currentCall?.callNumber;
+      }
+
+      if (!callId) {
+        const resp = `${participantId}, no active call to close.`;
+        await this.speak(resp, participantId);
+        this.addConversationExchange(participantId, transcript, resp);
+        setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+        return;
+      }
+
+      const result = await cadService.disposeCall(callId, disposition);
+      if (result?.success === false) {
+        const resp = `${participantId}, unable to close call. ${result.error || 'Try your MDT.'}`;
+        await this.speak(resp, participantId);
+        this.addConversationExchange(participantId, transcript, resp);
+        setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+        return;
+      }
+      this.log('CALL_DISPOSED', { unitId: participantId, callId, disposition });
+
+      const resp = `${participantId}, 10-4. Call closed, ${disposition}.`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+    } catch (error) {
+      this.log('DISPOSE_CALL_ERROR', { error: error.message });
+      const resp = `${participantId}, unable to close call. System error.`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+    }
+  }
+
+  async handleWarrantCheck(participantId, transcript, slots) {
+    this.log('WARRANT_CHECK', { participant: participantId, transcript, slots });
+
+    const firstName = slots?.firstName;
+    const lastName = slots?.lastName;
+
+    if (firstName && lastName) {
+      await this.executeWarrantCheck(participantId, transcript, firstName, lastName);
+    } else {
+      const savedSlots = {};
+      if (firstName) savedSlots.firstName = firstName;
+      if (lastName) savedSlots.lastName = lastName;
+      setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_WARRANT_NAME, null, savedSlots, true);
+      const resp = `${participantId}, 10-29, go ahead with the name.`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+    }
+  }
+
+  async handleWarrantNameInput(participantId, transcript, savedSlots) {
+    this.log('WARRANT_NAME_INPUT', { participant: participantId, transcript, savedSlots });
+
+    const normalized = transcript.toLowerCase().trim();
+    const disregardPhrases = ['disregard', 'cancel', 'nevermind', 'never mind'];
+    if (disregardPhrases.some(p => normalized.includes(p))) {
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+      const resp = `${participantId}, 10-4, disregard.`;
+      await this.speak(resp, participantId);
+      return;
+    }
+
+    const personDetails = parsePersonDetails(transcript);
+    const lastName = personDetails?.lastName || savedSlots?.lastName;
+    const firstName = personDetails?.firstName || savedSlots?.firstName;
+
+    if (!lastName) {
+      const resp = `${participantId}, did not copy last name. Go ahead with first and last name.`;
+      await this.speak(resp, participantId);
+      return;
+    }
+
+    if (!firstName) {
+      const resp = `${participantId}, did not copy first name. Go ahead with first name.`;
+      await this.speak(resp, participantId);
+      setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_WARRANT_NAME, null, { lastName }, false);
+      return;
+    }
+
+    await this.executeWarrantCheck(participantId, transcript, firstName, lastName);
+  }
+
+  async executeWarrantCheck(participantId, transcript, firstName, lastName) {
+    this.log('EXECUTE_WARRANT_CHECK', { participantId, firstName, lastName });
+
+    const standbyResp = `${participantId}, 10-4. Standby on warrant check.`;
+    await this.speak(standbyResp, participantId);
+
+    try {
+      if (!cadService.isConfigured()) {
+        const resp = `${participantId}, CAD system not available.`;
+        await this.speak(resp, participantId);
+        setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+        return;
+      }
+
+      const result = await cadService.queryWarrant(firstName, lastName);
+      this.log('CAD_WARRANT_QUERY_RESULT', { participantId, success: result.success });
+
+      if (!result.success) {
+        const resp = `${participantId}, Central. Unable to complete warrant check.`;
+        await this.speak(resp, participantId);
+        setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+        return;
+      }
+
+      const warrants = result.warrants || result.results || [];
+      if (warrants.length > 0) {
+        const warrantDetails = warrants.map(w => {
+          const type = w.type || w.charge || 'warrant';
+          const county = w.county || w.jurisdiction || 'unknown jurisdiction';
+          return `${type} out of ${county}`;
+        });
+        const resp = `${participantId}, Central. ${lastName}, ${firstName} shows ${warrants.length} active warrant${warrants.length > 1 ? 's' : ''}. ${warrantDetails.join(', ')}. Use caution.`;
+        await this.speak(resp, participantId);
+        this.addConversationExchange(participantId, transcript, resp);
+      } else {
+        const resp = `${participantId}, Central. ${lastName}, ${firstName}, negative warrants.`;
+        await this.speak(resp, participantId);
+        this.addConversationExchange(participantId, transcript, resp);
+      }
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+    } catch (error) {
+      this.log('WARRANT_CHECK_ERROR', { error: error.message });
+      const resp = `${participantId}, Central. System error on warrant check.`;
+      await this.speak(resp, participantId);
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+    }
+  }
+
+  async handleUpdateCall(participantId, transcript, slots) {
+    this.log('UPDATE_CALL', { participant: participantId, transcript, slots });
+
+    if (!cadService.isConfigured()) {
+      const resp = `${participantId}, CAD system not available.`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+      return;
+    }
+
+    try {
+      let callId = slots?.callNumber;
+      if (!callId) {
+        const currentCall = await cadService.getUnitCurrentCallById(participantId);
+        callId = currentCall?.call_id || currentCall?.call_number || currentCall?.callNumber;
+      }
+
+      if (!callId) {
+        const resp = `${participantId}, no active call to update.`;
+        await this.speak(resp, participantId);
+        this.addConversationExchange(participantId, transcript, resp);
+        setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+        return;
+      }
+
+      const updates = {};
+      if (slots?.priority) updates.priority = slots.priority;
+      if (slots?.details) updates.notes = slots.details;
+
+      if (Object.keys(updates).length === 0) {
+        setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_CALL_UPDATE_DETAILS, null, {
+          callId
+        }, true);
+        const resp = `${participantId}, what would you like to update on the call?`;
+        await this.speak(resp, participantId);
+        this.addConversationExchange(participantId, transcript, resp);
+        return;
+      }
+
+      setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_CALL_UPDATE_CONFIRM, null, {
+        callId,
+        updates
+      }, true);
+
+      const updateDesc = [];
+      if (updates.priority) updateDesc.push(`priority to ${updates.priority}`);
+      if (updates.notes) updateDesc.push(`add info`);
+      const confirmResp = `${participantId}, confirm update ${updateDesc.join(' and ')} on the call?`;
+      await this.speak(confirmResp, participantId);
+      this.addConversationExchange(participantId, transcript, confirmResp);
+    } catch (error) {
+      this.log('UPDATE_CALL_ERROR', { error: error.message });
+      const resp = `${participantId}, unable to update call. System error.`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+    }
+  }
+
+  async handleCallUpdateConfirm(participantId, transcript, slots) {
+    this.log('CALL_UPDATE_CONFIRM', { participant: participantId, transcript, slots });
+
+    if (!cadService.isConfigured()) {
+      const resp = `${participantId}, CAD system not available.`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+      return;
+    }
+
+    const callId = slots?.callId;
+    const updates = slots?.updates;
+
+    if (!callId || !updates) {
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+      const resp = `${participantId}, unable to complete update. Missing info.`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+      return;
+    }
+
+    try {
+      const result = await cadService.updateCall(callId, updates);
+      if (result?.success === false) {
+        const resp = `${participantId}, unable to update call. ${result.error || 'Try your MDT.'}`;
+        await this.speak(resp, participantId);
+        this.addConversationExchange(participantId, transcript, resp);
+        setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+        return;
+      }
+      this.log('CALL_UPDATED', { unitId: participantId, callId, updates });
+
+      const resp = `${participantId}, 10-4. Call updated.`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+    } catch (error) {
+      this.log('CALL_UPDATE_CONFIRM_ERROR', { error: error.message });
+      const resp = `${participantId}, unable to update call. System error.`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+    }
+  }
+
+  async handleCallUpdateDetailsInput(participantId, transcript, savedSlots) {
+    this.log('CALL_UPDATE_DETAILS_INPUT', { participant: participantId, transcript, savedSlots });
+
+    const normalized = transcript.toLowerCase().trim();
+    const disregardPhrases = ['disregard', 'cancel', 'nevermind', 'never mind'];
+    if (disregardPhrases.some(p => normalized.includes(p))) {
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+      const resp = `${participantId}, 10-4, disregard.`;
+      await this.speak(resp, participantId);
+      return;
+    }
+
+    const callId = savedSlots?.callId;
+    if (!callId) {
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+      const resp = `${participantId}, unable to update. No active call.`;
+      await this.speak(resp, participantId);
+      return;
+    }
+
+    const updates = {};
+    const priorityMatch = normalized.match(/priority\s+(\d|one|two|three|four|five|high|low|routine|emergency|urgent)/i);
+    if (priorityMatch) {
+      updates.priority = priorityMatch[1];
+    }
+
+    updates.notes = transcript.trim();
+
+    setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_CALL_UPDATE_CONFIRM, null, {
+      callId,
+      updates
+    }, true);
+
+    const confirmResp = `${participantId}, confirm update on the call?`;
+    await this.speak(confirmResp, participantId);
+    this.addConversationExchange(participantId, transcript, confirmResp);
+  }
+
+  async handleCallDetails(participantId, transcript, slots) {
+    this.log('CALL_DETAILS', { participant: participantId, transcript, slots });
+
+    if (!cadService.isConfigured()) {
+      const resp = `${participantId}, CAD system not available.`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+      return;
+    }
+
+    try {
+      let callId = slots?.callNumber;
+
+      if (!callId) {
+        const currentCall = await cadService.getUnitCurrentCallById(participantId);
+        callId = currentCall?.call_id || currentCall?.call_number || currentCall?.callNumber;
+      }
+
+      if (callId) {
+        const activeCalls = await cadService.getActiveCalls();
+        const calls = activeCalls.calls || activeCalls.results || [];
+        const resolved = this.resolveShorthandCallNumber(callId, calls);
+        if (resolved) {
+          callId = resolved.call_id || resolved.id || resolved.call_number;
+        }
+      }
+
+      if (!callId) {
+        const resp = `${participantId}, unable to locate that call.`;
+        await this.speak(resp, participantId);
+        this.addConversationExchange(participantId, transcript, resp);
+        setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+        return;
+      }
+
+      const callDetails = await cadService.getCallDetails(callId);
+      if (!callDetails || callDetails.success === false) {
+        const resp = `${participantId}, unable to pull details on that call.`;
+        await this.speak(resp, participantId);
+        this.addConversationExchange(participantId, transcript, resp);
+        setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+        return;
+      }
+
+      const call = callDetails.call || callDetails;
+      const callNum = call.call_number || call.callNumber || callId;
+      const nature = call.nature || call.type || call.call_type || 'Unknown';
+      const location = call.location || call.address || 'Unknown location';
+      const priority = call.priority || 'routine';
+      const status = call.status || 'active';
+      const notes = call.notes || call.additional_info || '';
+      const units = call.assigned_units || call.units || [];
+
+      let resp = `${participantId}, ${callNum}. ${nature.toLowerCase()} at ${location}, priority ${priority}, status ${status}.`;
+      if (units.length > 0) {
+        const unitList = Array.isArray(units) ? units.map(u => typeof u === 'string' ? u : u.unit_id || u.id).join(', ') : '';
+        if (unitList) resp += ` Units on scene: ${unitList}.`;
+      }
+      if (notes && notes.length > 0 && notes.length < 200) {
+        resp += ` Notes: ${notes}.`;
+      }
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+    } catch (error) {
+      this.log('CALL_DETAILS_ERROR', { error: error.message });
+      const resp = `${participantId}, unable to pull call details. System error.`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+    }
+  }
+
+  async handleAnimalSearch(participantId, transcript, slots) {
+    this.log('ANIMAL_SEARCH', { participant: participantId, transcript, slots });
+
+    const hasSearchCriteria = slots?.tag || slots?.microchip || slots?.ownerLast || slots?.name;
+
+    if (hasSearchCriteria) {
+      await this.executeAnimalSearch(participantId, transcript, slots);
+    } else {
+      setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_ANIMAL_SEARCH_TYPE, null, {
+        animalType: slots?.animalType || ''
+      }, true);
+      const resp = `${participantId}, go ahead with the tag number, microchip, or owner name.`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+    }
+  }
+
+  async handleAnimalSearchInput(participantId, transcript, savedSlots) {
+    this.log('ANIMAL_SEARCH_INPUT', { participant: participantId, transcript, savedSlots });
+
+    const normalized = transcript.toLowerCase().trim();
+    const disregardPhrases = ['disregard', 'cancel', 'nevermind', 'never mind'];
+    if (disregardPhrases.some(p => normalized.includes(p))) {
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+      const resp = `${participantId}, 10-4, disregard.`;
+      await this.speak(resp, participantId);
+      return;
+    }
+
+    const searchSlots = { ...savedSlots };
+
+    if (/\b(tag|license)\b/i.test(normalized)) {
+      const tagMatch = transcript.match(/\b([A-Z0-9]{3,})\b/i);
+      if (tagMatch) searchSlots.tag = tagMatch[1].toUpperCase();
+    } else if (/\b(microchip|chip)\b/i.test(normalized)) {
+      const chipMatch = transcript.match(/\b(\d{9,15})\b/);
+      if (chipMatch) searchSlots.microchip = chipMatch[1];
+    } else {
+      const personDetails = parsePersonDetails(transcript);
+      if (personDetails?.lastName) searchSlots.ownerLast = personDetails.lastName;
+      if (personDetails?.firstName) searchSlots.ownerFirst = personDetails.firstName;
+      if (!searchSlots.ownerLast) {
+        searchSlots.tag = transcript.trim().replace(/\s+/g, '').toUpperCase();
+      }
+    }
+
+    if (!searchSlots.tag && !searchSlots.microchip && !searchSlots.ownerLast) {
+      const resp = `${participantId}, did not copy. Go ahead with tag number, microchip, or owner name.`;
+      await this.speak(resp, participantId);
+      return;
+    }
+
+    await this.executeAnimalSearch(participantId, transcript, searchSlots);
+  }
+
+  async executeAnimalSearch(participantId, transcript, searchParams) {
+    this.log('EXECUTE_ANIMAL_SEARCH', { participantId, searchParams });
+
+    const standbyResp = `${participantId}, 10-4. Standby on animal search.`;
+    await this.speak(standbyResp, participantId);
+
+    try {
+      if (!cadService.isConfigured()) {
+        const resp = `${participantId}, CAD system not available.`;
+        await this.speak(resp, participantId);
+        setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+        return;
+      }
+
+      const result = await cadService.searchAnimal(searchParams);
+      this.log('CAD_ANIMAL_SEARCH_RESULT', { participantId, success: result.success });
+
+      if (!result.success) {
+        const resp = `${participantId}, Central. Unable to complete animal search.`;
+        await this.speak(resp, participantId);
+        setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+        return;
+      }
+
+      const animals = result.animals || result.results || [];
+      if (animals.length === 0) {
+        const resp = `${participantId}, Central. No results on that animal search.`;
+        await this.speak(resp, participantId);
+        this.addConversationExchange(participantId, transcript, resp);
+        setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+        return;
+      }
+
+      const animal = animals[0];
+      const type = animal.animal_type || animal.type || 'animal';
+      const name = animal.name || '';
+      const ownerName = [animal.owner_first || '', animal.owner_last || ''].filter(Boolean).join(' ') || 'unknown owner';
+      const tag = animal.tag || '';
+      let resp = `${participantId}, Central. ${type}`;
+      if (name) resp += ` named ${name}`;
+      resp += `, registered to ${ownerName}`;
+      if (tag) resp += `, tag ${tag}`;
+      resp += '.';
+      if (animals.length > 1) resp += ` ${animals.length} total results, check your MDT for details.`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+    } catch (error) {
+      this.log('ANIMAL_SEARCH_ERROR', { error: error.message });
+      const resp = `${participantId}, Central. System error on animal search.`;
+      await this.speak(resp, participantId);
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+    }
+  }
+
+  async handleStatusCheckResponse(participantId, transcript, slots) {
+    this.log('STATUS_CHECK_RESPONSE', { participant: participantId, transcript, slots });
+
+    const checkId = slots?.statusCheckId;
+    const normalized = transcript.toLowerCase().trim();
+    const okPhrases = ['10-4', '10/4', 'ten four', 'copy', 'roger', 'yes', 'affirmative', 'good', 'okay', 'ok', 'clear'];
+    const isOk = okPhrases.some(p => normalized.includes(p));
+    const status = isOk ? 'ok' : transcript.trim();
+
+    if (cadService.isConfigured() && checkId) {
+      try {
+        await cadService.respondToStatusCheck(participantId, status);
+        this.log('STATUS_CHECK_RESPONDED', { unitId: participantId, checkId, status });
+      } catch (error) {
+        this.log('STATUS_CHECK_RESPOND_ERROR', { error: error.message });
+      }
+    }
+
+    const resp = `${participantId}, 10-4.`;
+    await this.speak(resp, participantId);
+    this.addConversationExchange(participantId, transcript, resp);
+    setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+  }
+
+  _startStatusCheckPolling() {
+    this._stopStatusCheckPolling();
+    if (!cadService.isConfigured()) {
+      this.log('STATUS_CHECK_POLLING_SKIPPED', { reason: 'CAD not configured' });
+      return;
+    }
+
+    const STATUS_CHECK_POLL_INTERVAL_MS = 30000;
+    this._statusCheckPollingInterval = setInterval(async () => {
+      if (!this.isRunning || !this.connected) return;
+      try {
+        const result = await cadService.getPendingChecks();
+        if (!result.success) return;
+        const checks = result.checks || result.pending_checks || [];
+        if (checks.length === 0) return;
+
+        for (const check of checks) {
+          const unitId = check.unit_id || check.unitId;
+          if (!unitId) continue;
+
+          const checkId = check.id || check.check_id || `${unitId}-${Date.now()}`;
+          if (this._seenStatusCheckIds.has(checkId)) continue;
+          this._seenStatusCheckIds.add(checkId);
+
+          this.log('STATUS_CHECK_PENDING', { unitId, checkId });
+
+          setUnitSessionState(unitId, DISPATCHER_STATE.AWAITING_STATUS_CHECK_RESPONSE, null, {
+            statusCheckId: checkId
+          }, true);
+
+          const resp = `${unitId}, status check. Respond when able.`;
+          await this.speak(resp, unitId);
+        }
+      } catch (error) {
+        this.log('STATUS_CHECK_POLL_ERROR', { error: error.message });
+      }
+    }, STATUS_CHECK_POLL_INTERVAL_MS);
+
+    if (this._statusCheckPollingInterval.unref) {
+      this._statusCheckPollingInterval.unref();
+    }
+    this.log('STATUS_CHECK_POLLING_STARTED', { intervalMs: STATUS_CHECK_POLL_INTERVAL_MS });
+  }
+
+  _stopStatusCheckPolling() {
+    if (this._statusCheckPollingInterval) {
+      clearInterval(this._statusCheckPollingInterval);
+      this._statusCheckPollingInterval = null;
+      this._seenStatusCheckIds.clear();
+      this.log('STATUS_CHECK_POLLING_STOPPED');
     }
   }
 
