@@ -123,6 +123,7 @@ class BackgroundAudioService : Service() {
 
         initRadioEngine()
         observeRadioSignalingEvents()
+        startStaleFloorHealLoop()
 
         startForeground(NOTIFICATION_ID, buildNotification("Radio — Standby"))
         registerDynamicPttReceiver()
@@ -512,6 +513,11 @@ class BackgroundAudioService : Service() {
         engine.stateManager.activeChannelKey = servicePrefs.channelRoomKey
         engine.udpTransport.unitId = servicePrefs.unitId ?: app.sessionPrefs.unitId ?: ""
 
+        engine.udpTransport.onSocketRecreated = {
+            Log.d(TAG, """{"event":"UDP_SOCKET_RECREATED_CALLBACK","newPort":${engine.udpTransport.localPort}}""")
+            joinedSignalingChannelId = null
+            scope.launch { syncBackgroundSignalingChannel() }
+        }
         engine.onDisconnected = {
             Log.d(TAG, "RadioAudioEngine unexpected stop — resetting state")
         }
@@ -617,6 +623,33 @@ class BackgroundAudioService : Service() {
         }
     }
 
+    private var staleFloorHealJob: Job? = null
+
+    private fun startStaleFloorHealLoop() {
+        staleFloorHealJob?.cancel()
+        staleFloorHealJob = scope.launch {
+            while (isActive) {
+                delay(STALE_FLOOR_CHECK_INTERVAL_MS)
+                val engine = radioEngine ?: continue
+                val sm = engine.stateManager
+                val txUnit = sm.transmittingUnitId.value ?: continue
+                val setAtMs = sm.transmittingUnitSetAtMs
+                if (setAtMs <= 0L) continue
+                val staleMs = System.currentTimeMillis() - setAtMs
+                if (staleMs > STALE_FLOOR_MAX_TX_MS) {
+                    Log.w(TAG, """{"event":"STALE_FLOOR_HEALED","transmittingUnit":"$txUnit","staleMs":$staleMs}""")
+                    sm.setTransmittingUnit(null)
+                    if (sm.currentState == RadioState.RECEIVING || sm.currentState == RadioState.CHANNEL_BUSY) {
+                        sm.transitionTo(RadioState.IDLE, "stale_floor_heal")
+                    }
+                }
+            }
+        }
+    }
+
+    @Volatile private var transportRecoveryAttempts = 0
+    private var transportRecoveryJob: Job? = null
+
     private fun observeTransportHealth(engine: RadioAudioEngine) {
         scope.launch {
             engine.udpTransport.connectionHealth.collect { health ->
@@ -626,10 +659,43 @@ class BackgroundAudioService : Service() {
                     }
                     TransportHealth.DISCONNECTED -> {
                         Log.e(TAG, """{"event":"TRANSPORT_HEALTH_DISCONNECTED"}""")
+                        scheduleTransportRecovery(engine)
                     }
                     TransportHealth.CONNECTED -> {
                         Log.d(TAG, """{"event":"TRANSPORT_HEALTH_CONNECTED"}""")
+                        transportRecoveryAttempts = 0
                     }
+                }
+            }
+        }
+    }
+
+    private fun scheduleTransportRecovery(engine: RadioAudioEngine) {
+        if (transportRecoveryJob?.isActive == true) {
+            Log.d(TAG, "TRANSPORT_RECOVERY already in progress — skipping")
+            return
+        }
+        transportRecoveryJob = scope.launch {
+            while (isActive && engine.udpTransport.connectionHealth.value == TransportHealth.DISCONNECTED) {
+                transportRecoveryAttempts++
+                val backoffMs = (2_000L * (1L shl (transportRecoveryAttempts - 1).coerceAtMost(5))).coerceAtMost(60_000L)
+                Log.d(TAG, """{"event":"TRANSPORT_RECOVERY_SCHEDULED","attempt":$transportRecoveryAttempts,"backoffMs":$backoffMs}""")
+                delay(backoffMs)
+                try {
+                    engine.udpTransport.stop()
+                    engine.udpTransport.start()
+                    delay(500)
+                    val healthAfterRestart = engine.udpTransport.connectionHealth.value
+                    if (healthAfterRestart == TransportHealth.DISCONNECTED) {
+                        Log.e(TAG, """{"event":"TRANSPORT_RECOVERY_START_FAILED","attempt":$transportRecoveryAttempts,"health":"$healthAfterRestart"}""")
+                        continue
+                    }
+                    Log.d(TAG, """{"event":"TRANSPORT_RECOVERY_RESTARTED","attempt":$transportRecoveryAttempts,"health":"$healthAfterRestart"}""")
+                    joinedSignalingChannelId = null
+                    syncBackgroundSignalingChannel()
+                    break
+                } catch (e: Exception) {
+                    Log.e(TAG, """{"event":"TRANSPORT_RECOVERY_FAILED","attempt":$transportRecoveryAttempts,"error":"${e.message}"}""")
                 }
             }
         }
@@ -824,9 +890,20 @@ class BackgroundAudioService : Service() {
         }
 
         val stateManager = radioEngine?.stateManager
-        val transmittingUnit = stateManager?.transmittingUnitId?.value
+        var transmittingUnit = stateManager?.transmittingUnitId?.value
         val selfUnitId = servicePrefs.unitId ?: app.sessionPrefs.unitId
         val radioState = stateManager?.currentState
+        if (transmittingUnit != null && transmittingUnit != selfUnitId && stateManager != null) {
+            val setAtMs = stateManager.transmittingUnitSetAtMs
+            if (setAtMs > 0L && (System.currentTimeMillis() - setAtMs) > STALE_FLOOR_MAX_TX_MS) {
+                Log.w(TAG, """{"event":"STALE_FLOOR_CLEARED_ON_PTT","transmittingUnit":"$transmittingUnit","staleMs":${System.currentTimeMillis() - setAtMs}}""")
+                stateManager.setTransmittingUnit(null)
+                if (stateManager.currentState == RadioState.RECEIVING || stateManager.currentState == RadioState.CHANNEL_BUSY) {
+                    stateManager.transitionTo(RadioState.IDLE, "stale_floor_ptt_clear")
+                }
+                transmittingUnit = null
+            }
+        }
         val channelBusy = (transmittingUnit != null && transmittingUnit != selfUnitId) ||
             radioState == RadioState.CHANNEL_BUSY
         if (channelBusy) {
@@ -1091,6 +1168,14 @@ class BackgroundAudioService : Service() {
         Log.d(TAG, "RECONNECT_AUTH_PIPELINE_RESET — transport cleanup on signaling re-auth, codec preserved")
         engine.jitterBuffer.flushForReconnect()
         engine.audioPlayback.clearStaleFrames()
+        val transportHealth = engine.udpTransport.connectionHealth.value
+        Log.d(TAG, """{"event":"RECONNECT_TRANSPORT_CHECK","health":"$transportHealth","localPort":${engine.udpTransport.localPort}}""")
+        if (transportHealth == TransportHealth.DISCONNECTED) {
+            scheduleTransportRecovery(engine)
+        } else {
+            joinedSignalingChannelId = null
+            scope.launch { syncBackgroundSignalingChannel() }
+        }
         Log.d(TAG, "RECONNECT_AUTH_PIPELINE_RESET_COMPLETE — jitter, playback reset — codec untouched")
     }
 
@@ -1210,6 +1295,8 @@ class BackgroundAudioService : Service() {
         radioEngineRetryJob?.cancel()
         signalingConnectionJob?.cancel()
         signalingEventsJob?.cancel()
+        staleFloorHealJob?.cancel()
+        transportRecoveryJob?.cancel()
         radioEngine?.release()
         radioEngine = null
         cancelPendingFloorTimeout()
@@ -1279,5 +1366,7 @@ class BackgroundAudioService : Service() {
         private const val WAKE_LOCK_TAG = "CommandComms:PttService"
         private const val PTT_UP_DEBOUNCE_MS = 200L
         private const val ERROR_TONE_DEBOUNCE_MS = 300L
+        private const val STALE_FLOOR_CHECK_INTERVAL_MS = 12_000L
+        private const val STALE_FLOOR_MAX_TX_MS = 45_000L
     }
 }

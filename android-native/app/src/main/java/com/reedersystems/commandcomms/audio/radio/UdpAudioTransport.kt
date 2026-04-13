@@ -21,6 +21,7 @@ private const val KEEPALIVE_INTERVAL_MS = 8_000L
 private const val KEEPALIVE_FAST_INTERVAL_MS = 3_000L
 private const val KEEPALIVE_FAST_DURATION_MS = 30_000L
 private const val MAX_RECEIVE_RECONNECT_ATTEMPTS = 5
+private const val RECEIVE_RECONNECT_COOLDOWN_MS = 30_000L
 
 enum class TransportHealth { CONNECTED, RECONNECTING, DISCONNECTED }
 
@@ -65,6 +66,7 @@ class UdpAudioTransport(
     var channelIndex: Int = 0
     var unitId: String = ""
     var onPacketReceived: ((packet: OpusRadioPacket) -> Unit)? = null
+    var onSocketRecreated: (() -> Unit)? = null
     val localPort: Int?
         get() = socket?.localPort
 
@@ -175,6 +177,7 @@ class UdpAudioTransport(
             cachedAddress = null
             cachedHost = ""
             Log.d(TAG, """{"event":"SOCKET_RECREATED","localPort":${sock.localPort}}""")
+            onSocketRecreated?.invoke()
             sock
         } catch (e: Exception) {
             Log.e("[RadioError]", """{"event":"SOCKET_RECREATE_FAILED","error":"${e::class.simpleName}","message":"${e.message}"}""")
@@ -200,7 +203,20 @@ class UdpAudioTransport(
         sendJob = scope.launch {
             try {
                 for (qp in sendPacketQueue) {
-                    val sock = socket ?: break
+                    var sock = socket
+                    if (sock == null) {
+                        var waitedMs = 0L
+                        while (sock == null && waitedMs < 2000L) {
+                            delay(100)
+                            waitedMs += 100
+                            sock = socket
+                        }
+                        if (sock == null) {
+                            txFailures++
+                            Log.w("[RadioError]", "TX_SEND_SKIPPED reason=socket_null_after_wait method=sendLoop")
+                            continue
+                        }
+                    }
                     val framed = qp.framed
                     try {
                         val address = resolveAddress()
@@ -282,7 +298,11 @@ class UdpAudioTransport(
             var reconnectAttempts = 0
             try {
                 while (isActive) {
-                    val sock = socket ?: break
+                    val sock = socket
+                    if (sock == null) {
+                        delay(500)
+                        continue
+                    }
                     try {
                         val packet = DatagramPacket(buffer, buffer.size)
                         sock.receive(packet)
@@ -333,9 +353,12 @@ class UdpAudioTransport(
                         if (!isActive) break
                         reconnectAttempts++
                         if (reconnectAttempts > MAX_RECEIVE_RECONNECT_ATTEMPTS) {
-                            Log.e("[RadioError]", """{"event":"RECEIVE_LOOP_RECONNECT_EXHAUSTED","attempts":$reconnectAttempts}""")
+                            Log.e("[RadioError]", """{"event":"RECEIVE_LOOP_RECONNECT_COOLDOWN","attempts":$reconnectAttempts}""")
                             _connectionHealth.value = TransportHealth.DISCONNECTED
-                            break
+                            delay(RECEIVE_RECONNECT_COOLDOWN_MS)
+                            reconnectAttempts = 0
+                            Log.d(TAG, """{"event":"RECEIVE_LOOP_RECONNECT_RESET_AFTER_COOLDOWN"}""")
+                            continue
                         }
                         _connectionHealth.value = TransportHealth.RECONNECTING
                         val backoffMs = 500L * (1L shl (reconnectAttempts - 1).coerceAtMost(4))
@@ -377,7 +400,10 @@ class UdpAudioTransport(
                 val isFast = now < fastKeepaliveUntilMs
                 val interval = if (isFast) KEEPALIVE_FAST_INTERVAL_MS else KEEPALIVE_INTERVAL_MS
                 delay(interval)
-                val sock = socket ?: break
+                val sock = socket
+                if (sock == null) {
+                    continue
+                }
                 try {
                     val keepalivePacket = buildKeepalivePacket()
                     val address = resolveAddress() ?: continue

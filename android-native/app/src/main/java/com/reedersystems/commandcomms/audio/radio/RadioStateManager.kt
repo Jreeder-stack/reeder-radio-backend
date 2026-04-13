@@ -15,6 +15,10 @@ class RadioStateManager {
     private val _transmittingUnitId = MutableStateFlow<String?>(null)
     val transmittingUnitId: StateFlow<String?> = _transmittingUnitId.asStateFlow()
 
+    @Volatile
+    var transmittingUnitSetAtMs: Long = 0L
+        private set
+
     val currentState: RadioState
         get() = _state.value
 
@@ -36,6 +40,7 @@ class RadioStateManager {
 
     fun setTransmittingUnit(unitId: String?) {
         _transmittingUnitId.value = unitId
+        transmittingUnitSetAtMs = if (unitId != null) System.currentTimeMillis() else 0L
     }
 
     fun isTransmitting(): Boolean = _state.value == RadioState.TRANSMITTING
@@ -48,6 +53,7 @@ class RadioStateManager {
         val old = _state.value
         _state.value = RadioState.IDLE
         _transmittingUnitId.value = null
+        transmittingUnitSetAtMs = 0L
         txPipelineRunning = false
         rxPipelineRunning = false
         Log.d(TAG, "State RESET: $old -> IDLE activeChannel=${activeChannelKey ?: "none"}")
