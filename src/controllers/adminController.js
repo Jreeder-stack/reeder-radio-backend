@@ -373,10 +373,17 @@ export function getScannerFeed(req, res) {
 
 export async function setScannerFeed(req, res) {
   try {
-    const { enabled, streamUrl, channelName } = req.body;
+    const { enabled, streamUrl, channelName, username, password } = req.body;
 
     if (typeof enabled !== 'boolean') {
       return error(res, 'enabled must be a boolean', 400);
+    }
+
+    if (username !== undefined && typeof username !== 'string') {
+      return error(res, 'username must be a string', 400);
+    }
+    if (password !== undefined && typeof password !== 'string') {
+      return error(res, 'password must be a string', 400);
     }
 
     if (enabled) {
@@ -402,7 +409,7 @@ export async function setScannerFeed(req, res) {
       const roomKey = channelData.room_key || channelName;
 
       try {
-        await scannerFeedService.start(streamUrl, roomKey, channelData.name);
+        await scannerFeedService.start(streamUrl, roomKey, channelData.name, { username, password });
       } catch (startErr) {
         return error(res, `Failed to start scanner: ${startErr.message}`, 500);
       }
@@ -414,7 +421,7 @@ export async function setScannerFeed(req, res) {
       req.session.user.id,
       req.session.user.username,
       'admin_toggle_scanner_feed',
-      { enabled, streamUrl, channelName }
+      { enabled, streamUrl, channelName, username: username || undefined, password: password ? '***REDACTED***' : undefined }
     );
 
     const status = scannerFeedService.getStatus();

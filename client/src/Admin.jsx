@@ -23,6 +23,8 @@ export default function Admin({ user, onLogout }) {
   const [scannerEnabled, setScannerEnabled] = useState(false);
   const [scannerChannel, setScannerChannel] = useState("");
   const [scannerUrl, setScannerUrl] = useState("");
+  const [scannerUsername, setScannerUsername] = useState("");
+  const [scannerPassword, setScannerPassword] = useState("");
   const [scannerLoading, setScannerLoading] = useState(false);
   const [scannerTransmitting, setScannerTransmitting] = useState(false);
 
@@ -384,6 +386,8 @@ export default function Admin({ user, onLogout }) {
           enabled: !scannerEnabled,
           streamUrl: scannerUrl,
           channelName: scannerChannel,
+          username: scannerUsername || undefined,
+          password: scannerPassword || undefined,
         }),
       });
       if (!res.ok) throw new Error("Failed to toggle scanner feed");
@@ -888,6 +892,30 @@ export default function Admin({ user, onLogout }) {
                     onChange={(e) => setScannerUrl(e.target.value)}
                     disabled={scannerLoading || scannerEnabled}
                     placeholder="https://broadcastify.cdnstream1.com/FEED_ID"
+                    className="admin-input"
+                  />
+                </div>
+
+                <div className="admin-field">
+                  <label className="admin-field-label">Username</label>
+                  <input
+                    type="text"
+                    value={scannerUsername}
+                    onChange={(e) => setScannerUsername(e.target.value)}
+                    disabled={scannerLoading || scannerEnabled}
+                    placeholder="Broadcastify username (optional)"
+                    className="admin-input"
+                  />
+                </div>
+
+                <div className="admin-field">
+                  <label className="admin-field-label">Password</label>
+                  <input
+                    type="password"
+                    value={scannerPassword}
+                    onChange={(e) => setScannerPassword(e.target.value)}
+                    disabled={scannerLoading || scannerEnabled}
+                    placeholder="Broadcastify password (optional)"
                     className="admin-input"
                   />
                 </div>

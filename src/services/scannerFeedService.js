@@ -58,7 +58,7 @@ class ScannerFeedService {
     };
   }
 
-  async start(streamUrl, channelRoomKey, channelDisplayName) {
+  async start(streamUrl, channelRoomKey, channelDisplayName, { username, password } = {}) {
     if (this._running) {
       await this.stop();
     }
@@ -69,6 +69,7 @@ class ScannerFeedService {
     this._configuredStreamUrl = streamUrl;
     this._configuredChannelName = channelRoomKey;
     this._configuredDisplayName = channelDisplayName || channelRoomKey;
+    this._authHeader = (username && password) ? 'Authorization: Basic ' + Buffer.from(`${username}:${password}`).toString('base64') : null;
     this._running = true;
     this._sequence = 0;
     this._transmitting = false;
@@ -154,11 +155,17 @@ class ScannerFeedService {
 
   _startFfmpeg() {
     return new Promise((resolve, reject) => {
-      this._ffmpeg = spawn('ffmpeg', [
+      const ffmpegArgs = [
         '-reconnect', '1',
         '-reconnect_streamed', '1',
         '-reconnect_delay_max', '5',
-        '-i', this._streamUrl,
+      ];
+      if (this._authHeader) {
+        ffmpegArgs.push('-headers', this._authHeader + '\r\n');
+      }
+      ffmpegArgs.push('-i', this._streamUrl);
+      this._ffmpeg = spawn('ffmpeg', [
+        ...ffmpegArgs,
         '-f', 's16le',
         '-acodec', 'pcm_s16le',
         '-ar', String(SCANNER_SAMPLE_RATE),
