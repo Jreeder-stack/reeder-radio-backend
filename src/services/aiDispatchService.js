@@ -1323,16 +1323,31 @@ class AIDispatcher {
         }
 
         case 'STATUS_CHANGE': {
-          if (result.cadStatus && cadService.isConfigured()) {
-            try {
-              const cadResult = await cadService.updateUnitStatus(participantId, result.cadStatus);
-              this.log('CAD_STATUS_UPDATE', { unitId: participantId, status: result.cadStatus, success: cadResult.success });
-            } catch (cadError) {
-              this.log('CAD_ERROR', { error: cadError.message });
+          let statusUpdateFailed = false;
+          if (result.cadStatus) {
+            if (!cadService.isConfigured()) {
+              statusUpdateFailed = true;
+              this.log('CAD_NOT_CONFIGURED', { unitId: participantId, status: result.cadStatus });
+            } else {
+              try {
+                const cadResult = await cadService.updateUnitStatus(participantId, result.cadStatus);
+                if (!cadResult || !cadResult.success) {
+                  statusUpdateFailed = true;
+                }
+                this.log('CAD_STATUS_UPDATE', { unitId: participantId, status: result.cadStatus, success: cadResult?.success });
+              } catch (cadError) {
+                statusUpdateFailed = true;
+                this.log('CAD_ERROR', { error: cadError.message });
+              }
             }
           }
           setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
-          const statusResp = result.response || `${participantId}, 10-4.`;
+          let statusResp;
+          if (statusUpdateFailed) {
+            statusResp = `${participantId}, system is down, update your status via the MDT.`;
+          } else {
+            statusResp = result.response || `${participantId}, 10-4.`;
+          }
           await this.speak(statusResp, participantId);
           this.addConversationExchange(participantId, transcript, statusResp);
           break;
@@ -1936,6 +1951,20 @@ class AIDispatcher {
   }
 
   formatMilitaryTime() {
+    const SPOKEN_HOURS = [
+      'zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine',
+      'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen',
+      'eighteen', 'nineteen', 'twenty', 'twenty-one', 'twenty-two', 'twenty-three'
+    ];
+    const SPOKEN_MINUTES = [
+      'hundred', 'oh-one', 'oh-two', 'oh-three', 'oh-four', 'oh-five', 'oh-six', 'oh-seven', 'oh-eight', 'oh-nine',
+      'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen',
+      'twenty', 'twenty-one', 'twenty-two', 'twenty-three', 'twenty-four', 'twenty-five', 'twenty-six', 'twenty-seven',
+      'twenty-eight', 'twenty-nine', 'thirty', 'thirty-one', 'thirty-two', 'thirty-three', 'thirty-four', 'thirty-five',
+      'thirty-six', 'thirty-seven', 'thirty-eight', 'thirty-nine', 'forty', 'forty-one', 'forty-two', 'forty-three',
+      'forty-four', 'forty-five', 'forty-six', 'forty-seven', 'forty-eight', 'forty-nine', 'fifty', 'fifty-one',
+      'fifty-two', 'fifty-three', 'fifty-four', 'fifty-five', 'fifty-six', 'fifty-seven', 'fifty-eight', 'fifty-nine'
+    ];
     const options = {
       timeZone: 'America/New_York',
       hour: '2-digit',
@@ -1944,9 +1973,19 @@ class AIDispatcher {
     };
     const formatter = new Intl.DateTimeFormat('en-US', options);
     const parts = formatter.formatToParts(new Date());
-    const hour = parts.find(p => p.type === 'hour').value;
-    const minute = parts.find(p => p.type === 'minute').value;
-    return `${hour}${minute} hours`;
+    const hourNum = parseInt(parts.find(p => p.type === 'hour').value, 10);
+    const minuteNum = parseInt(parts.find(p => p.type === 'minute').value, 10);
+
+    const hourWord = SPOKEN_HOURS[hourNum] || 'zero';
+    const minuteWord = SPOKEN_MINUTES[minuteNum] || 'hundred';
+
+    if (minuteNum === 0) {
+      if (hourNum === 0) {
+        return 'zero hundred hours';
+      }
+      return `${hourWord} hundred hours`;
+    }
+    return `${hourWord} ${minuteWord} hours`;
   }
 
   async handleZoneConfirmPrompt(participantId, zone) {
@@ -2016,13 +2055,28 @@ class AIDispatcher {
     
     const zone = slots.zone;
     
-    try {
-      if (cadService.isConfigured()) {
-        await cadService.updateUnitZone(participantId, zone);
-        this.log('CAD_ZONE_UPDATED', { participantId, zone });
+    let zoneUpdateFailed = false;
+    if (!cadService.isConfigured()) {
+      zoneUpdateFailed = true;
+      this.log('CAD_NOT_CONFIGURED', { participantId, zone });
+    } else {
+      try {
+        const cadResult = await cadService.updateUnitZone(participantId, zone);
+        if (!cadResult || !cadResult.success) {
+          zoneUpdateFailed = true;
+        }
+        this.log('CAD_ZONE_UPDATED', { participantId, zone, success: cadResult?.success });
+      } catch (error) {
+        zoneUpdateFailed = true;
+        this.log('CAD_ZONE_UPDATE_ERROR', { error: error.message });
       }
-    } catch (error) {
-      this.log('CAD_ZONE_UPDATE_ERROR', { error: error.message });
+    }
+    
+    if (zoneUpdateFailed) {
+      const failResponse = `${participantId}, system is down, update your status via the MDT.`;
+      await this.speak(failResponse, participantId);
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+      return;
     }
     
     const timeStr = this.formatMilitaryTime();
@@ -2100,16 +2154,35 @@ class AIDispatcher {
     
     const location = slots.location;
     
-    try {
-      if (cadService.isConfigured()) {
-        await cadService.updateUnitStatus(participantId, 'detail');
-        this.log('CAD_DETAIL_STATUS_UPDATED', { participantId, status: 'detail' });
-        
-        await cadService.updateUnitZone(participantId, location);
-        this.log('CAD_DETAIL_ZONE_UPDATED', { participantId, location });
+    let detailUpdateFailed = false;
+    if (!cadService.isConfigured()) {
+      detailUpdateFailed = true;
+      this.log('CAD_NOT_CONFIGURED', { participantId, location });
+    } else {
+      try {
+        const statusResult = await cadService.updateUnitStatus(participantId, 'detail');
+        if (!statusResult || !statusResult.success) {
+          detailUpdateFailed = true;
+        } else {
+          this.log('CAD_DETAIL_STATUS_UPDATED', { participantId, status: 'detail' });
+          const zoneResult = await cadService.updateUnitZone(participantId, location);
+          if (!zoneResult || !zoneResult.success) {
+            detailUpdateFailed = true;
+          } else {
+            this.log('CAD_DETAIL_ZONE_UPDATED', { participantId, location });
+          }
+        }
+      } catch (error) {
+        detailUpdateFailed = true;
+        this.log('CAD_DETAIL_UPDATE_ERROR', { error: error.message });
       }
-    } catch (error) {
-      this.log('CAD_DETAIL_UPDATE_ERROR', { error: error.message });
+    }
+    
+    if (detailUpdateFailed) {
+      const failResponse = `${participantId}, system is down, update your status via the MDT.`;
+      await this.speak(failResponse, participantId);
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+      return;
     }
     
     const timeStr = this.formatMilitaryTime();
