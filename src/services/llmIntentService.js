@@ -223,6 +223,7 @@ Return: { "intent": "PERSON_CHECK_START", "response": "<natural acknowledgment, 
 
 ### PERSON_DETAILS
 Unit is providing person details (name, DOB) during a records check flow.
+CRITICAL: Preserve exact spelling from transcript. Do not correct or normalize name spellings. If the unit spells out a name letter by letter (e.g., "T-A-Y-L-E-R"), reproduce that exact spelling (e.g., "Tayler"), never change it to a common spelling (e.g., "Taylor").
 Return: { "intent": "PERSON_DETAILS", "response": null, "slots": { "lastName": "<if heard>", "firstName": "<if heard>", "dob": "<if heard, as MM/DD/YYYY>" } }
 
 ### RADIO_CHECK
@@ -312,6 +313,7 @@ Return: { "intent": "DISPOSE_CALL", "response": null, "slots": { "callNumber": "
 
 ### WARRANT_CHECK
 Unit requesting a warrant check (10-29). Phrases: "warrant check", "check for warrants", "10-29", "wants and warrants", "run for warrants".
+CRITICAL: Preserve exact spelling of names from transcript. Do not correct or normalize name spellings.
 Return: { "intent": "WARRANT_CHECK", "response": "<natural acknowledgment>", "slots": { "firstName": "<if provided>", "lastName": "<if provided>" } }
 
 ### UPDATE_CALL

@@ -2176,15 +2176,19 @@ class AIDispatcher {
     this.log('PERSON_DETAILS_PARSED', personDetails);
     
     if (llmSlots?.lastName) {
-      if (!personDetails.lastName || (llmSlots.lastName.length > 1 && personDetails.lastName !== llmSlots.lastName)) {
-        this.log('PERSON_DETAILS_LLM_PREFERRED', { field: 'lastName', llm: llmSlots.lastName, parser: personDetails.lastName });
+      if (!personDetails.lastName) {
+        this.log('PERSON_DETAILS_LLM_FALLBACK', { field: 'lastName', llm: llmSlots.lastName });
         personDetails.lastName = llmSlots.lastName;
+      } else {
+        this.log('PERSON_DETAILS_PARSER_WINS', { field: 'lastName', parser: personDetails.lastName, llm: llmSlots.lastName });
       }
     }
     if (llmSlots?.firstName) {
-      if (!personDetails.firstName || (llmSlots.firstName.length > 1 && personDetails.firstName !== llmSlots.firstName)) {
-        this.log('PERSON_DETAILS_LLM_PREFERRED', { field: 'firstName', llm: llmSlots.firstName, parser: personDetails.firstName });
+      if (!personDetails.firstName) {
+        this.log('PERSON_DETAILS_LLM_FALLBACK', { field: 'firstName', llm: llmSlots.firstName });
         personDetails.firstName = llmSlots.firstName;
+      } else {
+        this.log('PERSON_DETAILS_PARSER_WINS', { field: 'firstName', parser: personDetails.firstName, llm: llmSlots.firstName });
       }
     }
     if (llmSlots?.dob) {
@@ -2854,8 +2858,32 @@ class AIDispatcher {
       }
       
       this.log('CAD_PERSON_QUERY_SENDING', { participantId, firstName, lastName, dob });
-      const cadResult = await cadService.queryPerson(firstName, lastName, dob);
+      let cadResult = await cadService.queryPerson(firstName, lastName, dob);
       this.log('CAD_PERSON_QUERY_RESULT', { participantId, result: cadResult });
+
+      let broadened = false;
+      let broadenedDescription = '';
+
+      if (cadResult.success && this._personResultCount(cadResult) === 0 && (firstName || dob)) {
+        if (dob) {
+          this.log('PERSON_CHECK_BROADENING', { step: 'lastName+dob', lastName, dob });
+          const retry1 = await cadService.queryPerson('', lastName, dob);
+          if (retry1.success && this._personResultCount(retry1) > 0) {
+            cadResult = retry1;
+            broadened = true;
+            broadenedDescription = `No exact match for ${firstName} ${lastName}, but I have`;
+          }
+        }
+        if (this._personResultCount(cadResult) === 0) {
+          this.log('PERSON_CHECK_BROADENING', { step: 'lastNameOnly', lastName });
+          const retry2 = await cadService.queryPerson('', lastName);
+          if (retry2.success && this._personResultCount(retry2) > 0) {
+            cadResult = retry2;
+            broadened = true;
+            broadenedDescription = `No exact match for ${firstName} ${lastName}, but I have`;
+          }
+        }
+      }
       
       if (!cadResult.success) {
         const errorResponse = `${participantId}, Central. Unable to complete records check. Try again.`;
@@ -2863,34 +2891,56 @@ class AIDispatcher {
         setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
         return;
       }
-      
-      const person = (cadResult.results && cadResult.results.length > 0) ? cadResult.results[0] 
+
+      const results = cadResult.results || [];
+      const person = results.length > 0 ? results[0] 
                    : (cadResult.person || cadResult.record || cadResult.data || null);
       const hasRecord = !!(cadResult.count > 0) || 
-                        !!(cadResult.results && cadResult.results.length > 0) ||
+                        !!(results.length > 0) ||
                         !!(cadResult.found) ||
                         !!(person && Object.keys(person).length > 0);
       const hasFlags = person && (person.wanted || person.warrant || person.bolo || 
                        (person.warrants && person.warrants.length > 0) ||
                        (person.flags && person.flags.length > 0));
       
-      this.log('PERSON_CHECK_ANALYSIS', { hasRecord, hasFlags, personKeys: person ? Object.keys(person) : [] });
+      this.log('PERSON_CHECK_ANALYSIS', { hasRecord, hasFlags, broadened, personKeys: person ? Object.keys(person) : [] });
       
       const lastSearchResult = { lastName, firstName, dob, status: hasFlags ? 'flagged' : hasRecord ? 'local file' : 'no record' };
 
-      if (hasFlags) {
+      if (broadened && results.length > 1) {
+        const nameList = results.map(r => {
+          const fn = r.first_name || r.firstName || '';
+          const ln = r.last_name || r.lastName || '';
+          const rdob = r.dob || r.date_of_birth || '';
+          return rdob ? `${fn} ${ln}, DOB ${rdob}` : `${fn} ${ln}`;
+        }).join('; ');
+        const resp = `${participantId}, Central. ${broadenedDescription} ${results.length} results under last name ${lastName}. ${nameList}. Advise which subject.`;
+        await this.speak(resp, participantId);
+        await this.logToCallNotes(participantId, `Records check: ${lastName}, ${firstName}, DOB ${dob} - Broadened search, ${results.length} results`);
+        setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, { lastSearchResult }, true);
+      } else if (hasFlags) {
         setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_SECURE_CONFIRM, null, {
           lastName,
           firstName,
           dob,
           personData: person,
+          broadened,
           lastSearchResult
         }, true);
         
-        const securePrompt = `${participantId}, Central. Is your mic secure?`;
-        await this.speak(securePrompt, participantId);
+        if (broadened) {
+          const fn = person.first_name || person.firstName || '';
+          const ln = person.last_name || person.lastName || lastName;
+          const broadenedNote = `${participantId}, Central. No exact match for ${firstName} ${lastName}, but I have a result for ${fn} ${ln}. Is your mic secure?`;
+          await this.speak(broadenedNote, participantId);
+        } else {
+          const securePrompt = `${participantId}, Central. Is your mic secure?`;
+          await this.speak(securePrompt, participantId);
+        }
       } else if (hasRecord) {
-        const clearResponse = `${participantId}, Central. Local file, no wants or warrants.`;
+        const clearResponse = broadened
+          ? `${participantId}, Central. ${broadenedDescription} 1 result under last name ${lastName}. Local file, no wants or warrants.`
+          : `${participantId}, Central. Local file, no wants or warrants.`;
         await this.speak(clearResponse, participantId);
         
         await this.logToCallNotes(participantId, `Records check: ${lastName}, ${firstName}, DOB ${dob} - Local file, no wants or warrants`);
@@ -2909,6 +2959,14 @@ class AIDispatcher {
       await this.speak(errorResponse, participantId);
       setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
     }
+  }
+
+  _personResultCount(cadResult) {
+    if (cadResult.count !== undefined) return cadResult.count;
+    if (cadResult.results) return cadResult.results.length;
+    if (cadResult.found) return 1;
+    if (cadResult.person || cadResult.record || cadResult.data) return 1;
+    return 0;
   }
 
   async handleSecureConfirmResponse(participantId, rawTranscript, slots) {
@@ -3929,8 +3987,22 @@ class AIDispatcher {
         return;
       }
 
-      const result = await cadService.queryWarrant(firstName, lastName);
+      let result = await cadService.queryWarrant(firstName, lastName);
       this.log('CAD_WARRANT_QUERY_RESULT', { participantId, success: result.success });
+
+      let broadened = false;
+      const warrants = result.warrants || result.results || [];
+      if (result.success && warrants.length === 0 && firstName) {
+        this.log('WARRANT_CHECK_BROADENING', { step: 'lastNameOnly', lastName });
+        const retry = await cadService.queryWarrant('', lastName);
+        if (retry.success) {
+          const retryWarrants = retry.warrants || retry.results || [];
+          if (retryWarrants.length > 0) {
+            result = retry;
+            broadened = true;
+          }
+        }
+      }
 
       if (!result.success) {
         const resp = `${participantId}, Central. Unable to complete warrant check.`;
@@ -3939,16 +4011,30 @@ class AIDispatcher {
         return;
       }
 
-      const warrants = result.warrants || result.results || [];
-      if (warrants.length > 0) {
-        const warrantDetails = warrants.map(w => {
-          const type = w.type || w.charge || 'warrant';
-          const county = w.county || w.jurisdiction || 'unknown jurisdiction';
-          return `${type} out of ${county}`;
-        });
-        const resp = `${participantId}, Central. ${lastName}, ${firstName} shows ${warrants.length} active warrant${warrants.length > 1 ? 's' : ''}. ${warrantDetails.join(', ')}. Use caution.`;
-        await this.speak(resp, participantId);
-        this.addConversationExchange(participantId, transcript, resp);
+      const finalWarrants = result.warrants || result.results || [];
+      if (finalWarrants.length > 0) {
+        if (broadened && finalWarrants.length > 1) {
+          const nameList = finalWarrants.map(w => {
+            const fn = w.first_name || w.firstName || '';
+            const ln = w.last_name || w.lastName || lastName;
+            return `${fn} ${ln}`;
+          }).join('; ');
+          const resp = `${participantId}, Central. No exact match for ${firstName} ${lastName}, but I have ${finalWarrants.length} warrant results under last name ${lastName}. ${nameList}. Advise which subject.`;
+          await this.speak(resp, participantId);
+          this.addConversationExchange(participantId, transcript, resp);
+        } else {
+          const warrantDetails = finalWarrants.map(w => {
+            const type = w.type || w.charge || 'warrant';
+            const county = w.county || w.jurisdiction || 'unknown jurisdiction';
+            return `${type} out of ${county}`;
+          });
+          const prefix = broadened
+            ? `${participantId}, Central. No exact match for ${firstName} ${lastName}, but ${lastName} shows`
+            : `${participantId}, Central. ${lastName}, ${firstName} shows`;
+          const resp = `${prefix} ${finalWarrants.length} active warrant${finalWarrants.length > 1 ? 's' : ''}. ${warrantDetails.join(', ')}. Use caution.`;
+          await this.speak(resp, participantId);
+          this.addConversationExchange(participantId, transcript, resp);
+        }
       } else {
         const resp = `${participantId}, Central. ${lastName}, ${firstName}, negative warrants.`;
         await this.speak(resp, participantId);
