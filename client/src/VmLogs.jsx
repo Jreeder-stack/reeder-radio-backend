@@ -8,7 +8,7 @@ const QUICK_FILTERS = [
   { label: "TX/RX Stats", patterns: ["TX_SESSION", "WS_RELAY_STATS", "PACKET_"] },
 ];
 
-export default function VmLogs({ isMobile }) {
+export default function VmLogs({ isMobile, standalone = false }) {
   const [source, setSource] = useState("server");
   const [lines, setLines] = useState([]);
   const [paused, setPaused] = useState(false);
@@ -172,8 +172,21 @@ export default function VmLogs({ isMobile }) {
     transition: "all 0.15s",
   });
 
+  const handlePopOut = () => {
+    window.open("/vm-logs", "vm-logs-popout", "width=1200,height=800,menubar=no,toolbar=no,location=no,status=no");
+  };
+
+  const containerStyle = standalone
+    ? { display: "flex", flexDirection: "column", height: "100vh", background: "#0d1117", padding: 16, boxSizing: "border-box" }
+    : { display: "flex", flexDirection: "column", height: "calc(100vh - 180px)" };
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 180px)" }}>
+    <div style={containerStyle}>
+      {standalone && (
+        <div style={{ marginBottom: 12, fontSize: 18, fontWeight: 600, color: "#c9d1d9" }}>
+          VM Logs
+        </div>
+      )}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, flexWrap: "wrap", gap: 8 }}>
         <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
           <span style={{
@@ -201,6 +214,11 @@ export default function VmLogs({ isMobile }) {
           <button style={btnStyle(false)} onClick={clearLogs}>
             Clear
           </button>
+          {!standalone && (
+            <button style={btnStyle(false)} onClick={handlePopOut} title="Open in new window">
+              ⧉ Pop Out
+            </button>
+          )}
         </div>
       </div>
 
