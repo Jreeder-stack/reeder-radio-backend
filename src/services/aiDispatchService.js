@@ -332,6 +332,11 @@ function resampleAudio(inputBuffer, fromRate, toRate) {
   return Buffer.from(outputSamples.buffer);
 }
 
+function isCallPending(call) {
+  const units = call.units || call.assigned_units || [];
+  return !Array.isArray(units) || units.length === 0;
+}
+
 class AIDispatcher {
   constructor() {
     this.connected = false;
@@ -3121,6 +3126,9 @@ class AIDispatcher {
           if (calls.length === 0) {
             dataContext = 'No active calls on the board.';
           } else {
+            const questionLower = (originalQuestion || '').toLowerCase();
+            const askingPending = /\bpending\b|\bholding\b|\bunassigned\b|\bcalls\s+waiting\b/.test(questionLower);
+
             const callSummaries = calls.map((c, i) => {
               const num = c.call_number || c.id || (i + 1);
               const nature = c.type || c.nature || 'Unknown';
@@ -3128,10 +3136,31 @@ class AIDispatcher {
               const priority = c.priority || '';
               const status = c.status || '';
               const units = c.units || c.assigned_units || [];
-              const unitStr = Array.isArray(units) && units.length > 0 ? units.join(', ') : 'none';
-              return `Call ${num}: ${nature} at ${location}, priority ${priority}, status ${status}, units: ${unitStr}`;
+              const unitCount = Array.isArray(units) ? units.length : 0;
+              const unitStr = unitCount > 0 ? units.join(', ') : 'none';
+              const assignmentLabel = isCallPending(c) ? 'PENDING (no units assigned)' : `${unitCount} unit(s) assigned`;
+              return `Call ${num}: ${nature} at ${location}, priority ${priority}, status ${status}, units: ${unitStr} — ${assignmentLabel}`;
             });
-            dataContext = `${calls.length} active call(s):\n${callSummaries.join('\n')}`;
+
+            const pendingCount = calls.filter(isCallPending).length;
+
+            if (askingPending) {
+              const pendingCalls = calls.filter(isCallPending);
+              if (pendingCalls.length === 0) {
+                dataContext = 'No pending calls — all active calls have units assigned.';
+              } else {
+                const pendingSummaries = pendingCalls.map((c, i) => {
+                  const num = c.call_number || c.id || (i + 1);
+                  const nature = c.type || c.nature || 'Unknown';
+                  const location = c.location || 'Unknown location';
+                  const priority = c.priority || '';
+                  return `Call ${num}: ${nature} at ${location}, priority ${priority} — PENDING (no units assigned)`;
+                });
+                dataContext = `${pendingCalls.length} of ${calls.length} active call(s) are pending (no units assigned):\n${pendingSummaries.join('\n')}`;
+              }
+            } else {
+              dataContext = `${calls.length} active call(s) (${pendingCount} pending with no units assigned):\n${callSummaries.join('\n')}`;
+            }
           }
         }
       } else if (dataNeeded.startsWith('unit_call:')) {
@@ -3428,8 +3457,9 @@ class AIDispatcher {
     }
 
     try {
-      const callsResult = await cadService.getActiveCalls('pending');
-      const pendingCalls = callsResult.calls || callsResult.results || [];
+      const callsResult = await cadService.getActiveCalls();
+      const allCalls = callsResult.calls || callsResult.results || [];
+      const pendingCalls = allCalls.filter(isCallPending);
       const count = pendingCalls.length;
 
       let resp;

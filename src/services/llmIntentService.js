@@ -331,6 +331,8 @@ Return: { "intent": "ANIMAL_SEARCH", "response": null, "slots": { "tag": "<if pr
 ### GENERAL_INQUIRY
 Unit is asking a question or making a conversational statement that doesn't match any existing dispatch command. This includes questions about the date, time of day, how many calls are pending, what call a unit is on, what township an address is in, or any other informational question.
 
+IMPORTANT OPERATIONAL TERMINOLOGY — "pending calls" means calls with NO units assigned. This is NOT the same as the CAD status field. A call is "pending" in operational terms when its assigned_units list is empty (no officers dispatched to it yet). Calls that already have units assigned are NOT pending, even if their CAD status says "pending." When a unit asks about "pending" calls, "calls holding," or "what's pending," always use dataNeeded: "active_calls" — the system will provide pre-filtered data showing only unassigned calls.
+
 CRITICAL: Requests for business contact info, phone numbers, store hours, addresses of businesses, directions, non-emergency numbers for agencies, or any real-world general knowledge question are GENERAL_INQUIRY with web_search — they are NEVER CREATE_CALL. Only use CREATE_CALL when a unit is reporting an incident that needs a CAD call.
 
 CRITICAL RULES — you must NEVER fabricate, guess, or infer operational data. If you need data to answer a question, set dataNeeded and leave response null. If no lookup is available for what the unit is asking, respond honestly that you don't have that information. Never make up call counts, unit assignments, locations, or any other operational details.
@@ -494,7 +496,10 @@ RULES:
 - If the data is empty, null, or shows no results, say you don't have that information — never guess.
 - Keep it short, professional, terse — one to two sentences max, like a real dispatcher on the radio.
 - Do NOT include the unit ID at the start of your response — the system adds it automatically.
-- Use dispatcher radio voice. Be helpful but brief.`;
+- Use dispatcher radio voice. Be helpful but brief.
+
+OPERATIONAL TERMINOLOGY:
+- "Pending" calls means calls with NO units assigned — not the CAD status field. When the data labels a call as "PENDING (no units assigned)", that is a pending call. Calls with units assigned are NOT pending regardless of their CAD status.`;
 
   const userMessage = `Unit ${unitId} asked: "${originalQuestion}"
 
