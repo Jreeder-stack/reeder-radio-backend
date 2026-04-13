@@ -10,12 +10,14 @@ const SCANNER_SAMPLE_RATE = 16000;
 const SCANNER_CHANNELS = 1;
 const SCANNER_FRAME_SIZE = 320;
 const FRAME_MS = 20;
-const SILENCE_TIMEOUT_MS = 500;
+const SILENCE_TIMEOUT_MS = 1500;
+const MIN_TX_DURATION_MS = 300;
 const VAD_THRESHOLD_RMS = 300;
 const VAD_SPEECH_THRESHOLD_RMS = 400;
 const FFMPEG_STARTUP_TIMEOUT_MS = 10000;
 const FLOOR_REARM_INTERVAL_MS = 15000;
 const FLOOR_YIELD_RESUME_CHECK_MS = 500;
+const SCANNER_FRAME_DIAG = process.env.SCANNER_FRAME_DIAG === '1';
 
 const RECONNECT_INITIAL_DELAY_MS = 2000;
 const RECONNECT_MAX_DELAY_MS = 60000;
@@ -38,6 +40,9 @@ class ScannerFeedService {
     this._startedAt = null;
     this._floorRearmTimer = null;
     this._yielded = false;
+    this._txStartTime = null;
+    this._framesInjected = 0;
+    this._framesQueued = 0;
     this._yieldResumeTimer = null;
     this._pttAttemptUnsub = null;
     this._pttEndUnsub = null;
@@ -307,7 +312,11 @@ class ScannerFeedService {
       this._opusQueue = [];
       this._injecting = false;
       this._transmitting = false;
+      this._silenceStart = null;
       this._yielded = false;
+      this._txStartTime = null;
+      this._framesInjected = 0;
+      this._framesQueued = 0;
 
       if (this._encoder) {
         try { this._encoder.delete(); } catch (_) {}
@@ -378,7 +387,11 @@ class ScannerFeedService {
     this._opusQueue = [];
     this._injecting = false;
     this._transmitting = false;
+    this._silenceStart = null;
     this._yielded = false;
+    this._txStartTime = null;
+    this._framesInjected = 0;
+    this._framesQueued = 0;
   }
 
   _processPcmChunk(chunk) {
@@ -420,7 +433,14 @@ class ScannerFeedService {
 
         this._encodeAndQueue(pcmFrame);
 
-        if (Date.now() - this._silenceStart >= SILENCE_TIMEOUT_MS) {
+        const silenceElapsed = Date.now() - this._silenceStart;
+        const txDuration = Date.now() - this._txStartTime;
+
+        if (txDuration < MIN_TX_DURATION_MS) {
+          return;
+        }
+
+        if (silenceElapsed >= SILENCE_TIMEOUT_MS) {
           this._endTransmission();
         }
       }
@@ -465,6 +485,9 @@ class ScannerFeedService {
 
     this._transmitting = true;
     this._silenceStart = null;
+    this._txStartTime = Date.now();
+    this._framesInjected = 0;
+    this._framesQueued = 0;
     console.log(`[ScannerFeed] TX START on ${channelKey}`);
 
     if (signalingService.io) {
@@ -517,10 +540,6 @@ class ScannerFeedService {
     if (!this._transmitting) return;
 
     const channelKey = canonicalChannelKey(this._channelName);
-    this._transmitting = false;
-    this._silenceStart = null;
-    this._opusQueue = [];
-    this._injecting = false;
 
     if (this._pacingTimer) {
       clearInterval(this._pacingTimer);
@@ -532,7 +551,30 @@ class ScannerFeedService {
       this._floorRearmTimer = null;
     }
 
-    console.log(`[ScannerFeed] TX END on ${channelKey}`);
+    const remainingFrames = this._opusQueue.length;
+    while (this._opusQueue.length > 0) {
+      const frame = this._opusQueue.shift();
+      this._sequence = (this._sequence + 1) & 0xFFFF;
+      audioRelayService.injectAudio(channelKey, SCANNER_IDENTITY, this._sequence, frame);
+      this._framesInjected++;
+    }
+
+    const txDuration = this._txStartTime ? Date.now() - this._txStartTime : 0;
+    const queued = this._framesQueued;
+    const injected = this._framesInjected;
+    const discarded = queued - injected;
+
+    this._transmitting = false;
+    this._silenceStart = null;
+    this._opusQueue = [];
+    this._injecting = false;
+    this._txStartTime = null;
+
+    if (SCANNER_FRAME_DIAG || discarded > 0) {
+      console.log(`[ScannerFeed] TX END on ${channelKey} duration=${txDuration}ms queued=${queued} injected=${injected} drained=${remainingFrames} discarded=${discarded}`);
+    } else {
+      console.log(`[ScannerFeed] TX END on ${channelKey} duration=${txDuration}ms frames=${injected}`);
+    }
 
     floorControlService.releaseFloor(channelKey, SCANNER_IDENTITY);
 
@@ -559,6 +601,7 @@ class ScannerFeedService {
     try {
       const encoded = this._encoder.encode(pcmFrame, SCANNER_FRAME_SIZE);
       this._opusQueue.push(Buffer.from(encoded));
+      this._framesQueued++;
     } catch (err) {
       console.warn('[ScannerFeed] Opus encode error:', err.message);
     }
@@ -589,6 +632,7 @@ class ScannerFeedService {
       if (frame) {
         this._sequence = (this._sequence + 1) & 0xFFFF;
         audioRelayService.injectAudio(channelKey, SCANNER_IDENTITY, this._sequence, frame);
+        this._framesInjected++;
       }
     }, FRAME_MS);
   }
@@ -645,6 +689,9 @@ class ScannerFeedService {
     this._channelName = null;
     this._channelDisplayName = null;
     this._yielded = false;
+    this._txStartTime = null;
+    this._framesInjected = 0;
+    this._framesQueued = 0;
   }
 }
 
