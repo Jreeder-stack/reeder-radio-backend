@@ -26,6 +26,17 @@ async function cadRequest(endpoint, method = 'GET', body = null) {
 
   try {
     const response = await fetch(url, options);
+
+    if (response.status === 204) {
+      return { success: true };
+    }
+
+    const contentType = response.headers.get('content-type') || '';
+    if (!contentType.includes('json')) {
+      console.error(`[CAD] Non-JSON response from ${url} (status ${response.status}, content-type: ${contentType})`);
+      return { success: false, error: `Non-JSON response (status ${response.status}, content-type: ${contentType})` };
+    }
+
     const data = await response.json();
     
     if (!response.ok) {

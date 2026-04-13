@@ -3082,6 +3082,134 @@ class AIDispatcher {
     }
   }
 
+  _formatSpokenDate(dateStr) {
+    const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const ones = ['','first','second','third','fourth','fifth','sixth','seventh','eighth','ninth','tenth','eleventh','twelfth','thirteenth','fourteenth','fifteenth','sixteenth','seventeenth','eighteenth','nineteenth'];
+    const tens = ['','','twentieth','thirtieth'];
+    const tensPrefix = ['','','twenty','thirty'];
+
+    const formatDay = (d) => {
+      if (d >= 1 && d <= 19) return ones[d];
+      const t = Math.floor(d / 10);
+      const o = d % 10;
+      return o === 0 ? tens[t] : `${tensPrefix[t]} ${ones[o]}`.trim();
+    };
+
+    const formatYear = (y) => {
+      const cardinals = ['','one','two','three','four','five','six','seven','eight','nine','ten','eleven','twelve','thirteen','fourteen','fifteen','sixteen','seventeen','eighteen','nineteen'];
+      const decadeWords = ['','ten','twenty','thirty','forty','fifty','sixty','seventy','eighty','ninety'];
+      const cardinalUnder100 = (n) => {
+        if (n === 0) return '';
+        if (n < 20) return cardinals[n];
+        const t = Math.floor(n / 10);
+        const o = n % 10;
+        return o === 0 ? decadeWords[t] : `${decadeWords[t]} ${cardinals[o]}`;
+      };
+
+      if (y >= 2000 && y <= 2009) return `two thousand ${y === 2000 ? '' : cardinals[y - 2000]}`.trim();
+      if (y >= 2010 && y <= 2019) return `two thousand ${cardinals[y - 2000]}`;
+      if (y >= 2020 && y <= 2099) {
+        const decade = Math.floor((y - 2000) / 10);
+        const unit = y % 10;
+        return `twenty ${decadeWords[decade]}${unit > 0 ? ' ' + cardinals[unit] : ''}`.trim();
+      }
+      const century = Math.floor(y / 100);
+      const remainder = y % 100;
+      const centuryWord = cardinalUnder100(century);
+      if (remainder === 0) return `${centuryWord} hundred`;
+      return `${centuryWord} ${cardinalUnder100(remainder)}`.trim();
+    };
+
+    try {
+      const parts = dateStr.split(/[-\/]/);
+      if (parts.length < 3) return dateStr;
+      let month, day, year;
+      if (parts[0].length === 4) {
+        year = parseInt(parts[0]); month = parseInt(parts[1]); day = parseInt(parts[2]);
+      } else {
+        month = parseInt(parts[0]); day = parseInt(parts[1]); year = parseInt(parts[2]);
+      }
+      if (isNaN(month) || isNaN(day) || isNaN(year)) return dateStr;
+      if (month < 1 || month > 12 || day < 1 || day > 31 || year < 1) return dateStr;
+      return `${months[month - 1]} ${formatDay(day)}, ${formatYear(year)}`;
+    } catch {
+      return dateStr;
+    }
+  }
+
+  _formatSpokenTime24(date) {
+    const ones = ['zero','one','two','three','four','five','six','seven','eight','nine','ten','eleven','twelve','thirteen','fourteen','fifteen','sixteen','seventeen','eighteen','nineteen'];
+    const decadeWords = ['','','twenty','thirty','forty','fifty'];
+
+    const h = date.getHours();
+    const m = date.getMinutes();
+
+    const formatNum = (n) => {
+      if (n < 20) return ones[n];
+      const t = Math.floor(n / 10);
+      const o = n % 10;
+      return o === 0 ? decadeWords[t] : `${decadeWords[t]} ${ones[o]}`;
+    };
+
+    let hourWord = formatNum(h);
+    let minuteWord;
+    if (m === 0) {
+      minuteWord = 'hundred';
+    } else if (m < 10) {
+      minuteWord = `oh ${ones[m]}`;
+    } else {
+      minuteWord = formatNum(m);
+    }
+    return `${hourWord} ${minuteWord} hours`;
+  }
+
+  _buildBoloAnnouncementParts(bolo) {
+    const agency = bolo.agency || 'an unknown agency';
+    const firstName = bolo.first_name || '';
+    const middleName = bolo.middle_name || '';
+    const lastName = bolo.last_name || '';
+    const fullName = [firstName, middleName, lastName].filter(Boolean).join(' ') || 'an unidentified individual';
+    const dob = bolo.dob ? this._formatSpokenDate(bolo.dob) : 'unknown';
+    const reason = bolo.reason || 'No reason provided';
+    const lastSeen = bolo.last_seen || 'an unknown location';
+    const contactAgency = bolo.contact_agency || agency;
+
+    const now = new Date();
+    const currentDate = this._formatSpokenDate(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`);
+    const currentTime = this._formatSpokenTime24(now);
+
+    const openLine = `Attention all receiving units, prepare to copy a BOLO from ${agency}.`;
+
+    const boloParagraph = `${agency} has issued a BOLO for ${fullName}, date of birth ${dob}. ${reason}. The individual was last seen ${lastSeen}. If any units come in contact with this individual, please contact ${contactAgency}. Check your MDT for additional info.`;
+
+    const signOff = `Statewide Constable Communications Center, ${currentDate}, ${currentTime}.`;
+
+    return { openLine, boloParagraph, signOff };
+  }
+
+  async _announcePersonBolo(bolo) {
+    const { openLine, boloParagraph, signOff } = this._buildBoloAnnouncementParts(bolo);
+
+    await this.playToneAndSpeak('A', null);
+
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
+    await this.speak(openLine);
+
+    await new Promise(resolve => setTimeout(resolve, 3500));
+
+    await this.speak(boloParagraph);
+
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    await this.speak('Repeating.');
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
+    await this.speak(boloParagraph);
+
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    await this.speak(signOff);
+  }
+
   _startBoloPolling() {
     this._stopBoloPolling();
     if (!cadService.isConfigured()) {
@@ -3115,11 +3243,20 @@ class AIDispatcher {
           const idStr = String(boloId);
           if (this._seenBoloIds.has(idStr)) continue;
           this._seenBoloIds.add(idStr);
-          this.log('BOLO_NEW_DETECTED', { boloId: idStr });
 
-          const description = bolo.description || bolo.text || bolo.message || 'No description available';
-          const boloMessage = `Attention all units, new BOLO. ${description}.`;
-          await this.speak(boloMessage);
+          const boloType = (bolo.bolo_type || '').toString().toLowerCase().trim();
+          if (boloType !== 'person') {
+            this.log('BOLO_SKIPPED_NON_PERSON', { boloId: idStr, bolo_type: boloType || 'unknown' });
+            continue;
+          }
+
+          this.log('BOLO_NEW_DETECTED', { boloId: idStr, bolo_type: boloType, priority: bolo.priority || 'normal' });
+
+          try {
+            await this._announcePersonBolo(bolo);
+          } catch (announceErr) {
+            this.log('BOLO_ANNOUNCE_ERROR', { boloId: idStr, error: announceErr.message });
+          }
         }
       } catch (error) {
         this.log('BOLO_POLL_ERROR', { error: error.message });
