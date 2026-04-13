@@ -1,0 +1,103 @@
+15:44:37 [1m[90m[TAILING] Tailing last 50 lines for [all] processes (change the value with --lines option)[39m[22m
+15:44:37 [90m/home/Jreeder5029/.pm2/logs/command-comms-error.log last 50 lines:[39m
+15:44:37 AUDIO_WS_PING_TIMEOUT {
+15:44:37   channelId: 'TESTING__TESTING 1',
+15:44:37   unitId: 'DISPATCH-1',
+15:44:37   elapsed: 10070,
+15:44:37   missedPongs: 2
+15:44:37 }
+15:44:37 AUDIO_WS_PING_TIMEOUT {
+15:44:37   channelId: 'DISPATCH__DISPATCH',
+15:44:37   unitId: 'DISPATCH-1',
+15:44:37   elapsed: 10070,
+15:44:37   missedPongs: 2
+15:44:37 }
+15:44:37 AUDIO_WS_PING_TIMEOUT {
+15:44:37   channelId: 'TESTING__TESTING 1',
+15:44:37   unitId: 'DISPATCH-1',
+15:44:37   elapsed: 10072,
+15:44:37   missedPongs: 3
+15:44:37 }
+15:44:37 AUDIO_WS_TERMINATING {
+15:44:37   channelId: 'TESTING__TESTING 1',
+15:44:37   unitId: 'DISPATCH-1',
+15:44:37   missedPongs: 3
+15:44:37 }
+15:44:37 AUDIO_WS_PING_TIMEOUT {
+15:44:37   channelId: 'DISPATCH__DISPATCH',
+15:44:37   unitId: 'DISPATCH-1',
+15:44:37   elapsed: 10072,
+15:44:37   missedPongs: 3
+15:44:37 }
+15:44:37 AUDIO_WS_TERMINATING {
+15:44:37   channelId: 'DISPATCH__DISPATCH',
+15:44:37   unitId: 'DISPATCH-1',
+15:44:37   missedPongs: 3
+15:44:37 }
+15:44:37 [WsAudioBridge] Audio WS closed during active TX — forcing ptt:end for unitId=DISPATCH-1 channelId=DISPATCH__DISPATCH
+15:44:37 [Signaling] forceEndTransmission: unitId=DISPATCH-1 channelId=DISPATCH__DISPATCH reason=audio_ws_disconnect
+15:44:37 [AudioRelay] TX_WATCHDOG_SILENCE unitId=DISPATCH-1 channelId=DISPATCH__DISPATCH silenceMs=13157 hadAudio=true
+15:44:37 [Signaling] TX_SILENCE_WARNING unitId=DISPATCH-1 channelId=DISPATCH__DISPATCH silenceMs=13157
+15:44:37 [AudioRelay] TX_WATCHDOG_SILENCE unitId=CHESTER-2 channelId=DISPATCH__DISPATCH silenceMs=8143 hadAudio=true
+15:44:37 [Signaling] TX_SILENCE_WARNING unitId=CHESTER-2 channelId=DISPATCH__DISPATCH silenceMs=8143
+15:44:37 [AudioRelay] TX_WATCHDOG_SILENCE unitId=CHESTER-2 channelId=DISPATCH__DISPATCH silenceMs=8129 hadAudio=true
+15:44:37 [Signaling] TX_SILENCE_WARNING unitId=CHESTER-2 channelId=DISPATCH__DISPATCH silenceMs=8129
+15:44:37 [AudioRelay] TX_WATCHDOG_SILENCE unitId=CHESTER-2 channelId=DISPATCH__DISPATCH silenceMs=18485 hadAudio=true
+15:44:37 [AudioRelay] TX_WATCHDOG_AUTO_RELEASE unitId=CHESTER-2 channelId=DISPATCH__DISPATCH silenceMs=18485
+15:44:37 [Signaling] forceEndTransmission: unitId=CHESTER-2 channelId=DISPATCH__DISPATCH reason=silence_auto_release
+15:44:37 [AudioRelay] TX_WATCHDOG_SILENCE unitId=CHESTER-2 channelId=DISPATCH__DISPATCH silenceMs=322032 hadAudio=true
+15:44:37 [AudioRelay] TX_WATCHDOG_AUTO_RELEASE unitId=CHESTER-2 channelId=DISPATCH__DISPATCH silenceMs=322032
+15:44:37 [Signaling] forceEndTransmission: unitId=CHESTER-2 channelId=DISPATCH__DISPATCH reason=silence_auto_release
+15:44:37 [SHUTDOWN] Step "HTTP server" timed out after 4000ms, moving on.
+15:44:37 [SHUTDOWN] Step "HTTP server" timed out after 4000ms, moving on.
+15:44:37 [90m/home/Jreeder5029/.pm2/logs/command-comms-out.log last 50 lines:[39m
+15:44:37   path: '/api/audio-ws',
+15:44:37   query: '?channelId=TESTING__TESTING%201&unitId=DISPATCH-1',
+15:44:37   host: 'comms.reeder-systems.com',
+15:44:37   upgrade: 'websocket',
+15:44:37   connection: 'upgrade'
+15:44:37 }
+15:44:37 AUDIO_WS_ACCEPTED { username: 'DISPATCH-1', unitId: 'DISPATCH-1' }
+15:44:37 [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 22ms
+15:44:37 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=DISPATCH__DISPATCH addr=107.115.97.65:62158
+15:44:37 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=DISPATCH__DISPATCH addr=107.115.97.65:62158
+15:44:37 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=DISPATCH__DISPATCH addr=107.115.97.65:62158
+15:44:37 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=DISPATCH__DISPATCH addr=107.115.97.65:62158
+15:44:37 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=DISPATCH__DISPATCH addr=107.115.97.65:62158
+15:44:37 [AudioRelay] UDP_SUBSCRIBER_STATS channelId=DISPATCH__DISPATCH udpActive=1 udpGoingStale=0 wsSubscribers=2
+15:44:37 [AudioRelay] SUBSCRIBER_NAT_CHANGE unitId=INDIANA-1 channelId=DISPATCH__DISPATCH oldAddr=107.115.97.65:62158 newAddr=107.115.97.65:62159
+15:44:37 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=DISPATCH__DISPATCH addr=107.115.97.65:62159
+15:44:37 [AudioRelay] SUBSCRIBER_REMOVED unitId=INDIANA-1 channelId=DISPATCH__DISPATCH
+15:44:37 [AudioRelay] SUBSCRIBER_ADDED unitId=INDIANA-1 channelId=DISPATCH__DISPATCH addr=127.0.0.1:40945
+15:44:37 [Signaling] SUBSCRIBER_REGISTERED (replaced stale) unitId=INDIANA-1 channelId=DISPATCH__DISPATCH address=127.0.0.1 port=40945
+15:44:37 [Signaling] CHANNEL_JOINED unitId=INDIANA-1 channelId=DISPATCH__DISPATCH
+15:44:37 [AudioRelay] SUBSCRIBER_NAT_CHANGE unitId=INDIANA-1 channelId=DISPATCH__DISPATCH oldAddr=127.0.0.1:40945 newAddr=107.115.97.65:62159
+15:44:37 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=DISPATCH__DISPATCH addr=107.115.97.65:62159
+15:44:37 [AUTH] /me check: hasSession=true sessionID=NXGwxI-f... cookie=true
+15:44:37 [AUTH] /me: session has user="DISPATCH-1" id=7, refreshing from DB...
+15:44:37 [AUTH] /me: returning fresh user data for "DISPATCH-1" role=admin unit_id=DISPATCH-1
+15:44:37 [API] GET /api/auth/me | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 16ms
+15:44:37 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=DISPATCH__DISPATCH addr=107.115.97.65:62159
+15:44:37 [AUTH] /me check: hasSession=true sessionID=NXGwxI-f... cookie=true
+15:44:37 [AUTH] /me: session has user="DISPATCH-1" id=7, refreshing from DB...
+15:44:37 [AUTH] /me: returning fresh user data for "DISPATCH-1" role=admin unit_id=DISPATCH-1
+15:44:37 [API] GET /api/auth/me | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 15ms
+15:44:37 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=DISPATCH__DISPATCH addr=107.115.97.65:62159
+15:44:37 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=DISPATCH__DISPATCH addr=107.115.97.65:62159
+15:44:37 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=DISPATCH__DISPATCH addr=107.115.97.65:62159
+15:44:37 [AUTH] /me check: hasSession=true sessionID=NXGwxI-f... cookie=true
+15:44:37 [AUTH] /me: session has user="DISPATCH-1" id=7, refreshing from DB...
+15:44:37 [AUTH] /me: returning fresh user data for "DISPATCH-1" role=admin unit_id=DISPATCH-1
+15:44:37 [API] GET /api/auth/me | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 15ms
+15:44:37 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=DISPATCH__DISPATCH addr=107.115.97.65:62159
+15:44:37 [Signaling] DISPATCH-1 left channel TESTING__TESTING 1
+15:44:37 [Signaling] DISPATCH-1 left channel DISPATCH__DISPATCH
+15:44:37 [API] GET /api/admin/users | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 14ms
+15:44:37 [API] GET /api/admin/channels | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 15ms
+15:44:37 [DISPATCH] getChannels: 4 radio channels returned
+15:44:37 [API] GET /api/admin/scanner | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 10ms
+15:44:37 [API] GET /api/admin/zones | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 19ms
+15:44:37 [API] GET /api/admin/ai-dispatch | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 25ms
+15:44:37 [API] GET /api/dispatch/channels | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 22ms
+15:44:37 [API] GET /api/admin/logs?limit=200 | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 22ms
+15:44:37 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=DISPATCH__DISPATCH addr=107.115.97.65:62159
