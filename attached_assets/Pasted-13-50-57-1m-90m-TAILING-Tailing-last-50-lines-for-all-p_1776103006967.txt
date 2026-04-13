@@ -1,0 +1,109 @@
+13:50:57 [1m[90m[TAILING] Tailing last 50 lines for [all] processes (change the value with --lines option)[39m[22m
+13:50:57 [90m/home/Jreeder5029/.pm2/logs/command-comms-error.log last 50 lines:[39m
+13:50:57   channelId: 'TESTING__TESTING 1',
+13:50:57   unitId: 'CHESTER-2',
+13:50:57   missedPongs: 3
+13:50:57 }
+13:50:57 AUDIO_WS_PING_TIMEOUT {
+13:50:57   channelId: 'PHILADELPHIA__OPS-1',
+13:50:57   unitId: 'CHESTER-2',
+13:50:57   elapsed: 10120,
+13:50:57   missedPongs: 3
+13:50:57 }
+13:50:57 AUDIO_WS_TERMINATING {
+13:50:57   channelId: 'PHILADELPHIA__OPS-1',
+13:50:57   unitId: 'CHESTER-2',
+13:50:57   missedPongs: 3
+13:50:57 }
+13:50:57 AUDIO_WS_PING_TIMEOUT {
+13:50:57   channelId: 'DISPATCH__DISPATCH',
+13:50:57   unitId: 'CHESTER-2',
+13:50:57   elapsed: 10120,
+13:50:57   missedPongs: 3
+13:50:57 }
+13:50:57 AUDIO_WS_TERMINATING {
+13:50:57   channelId: 'DISPATCH__DISPATCH',
+13:50:57   unitId: 'CHESTER-2',
+13:50:57   missedPongs: 3
+13:50:57 }
+13:50:57 AUDIO_WS_PING_TIMEOUT {
+13:50:57   channelId: 'OPS__OPS-1',
+13:50:57   unitId: 'CHESTER-2',
+13:50:57   elapsed: 10120,
+13:50:57   missedPongs: 3
+13:50:57 }
+13:50:57 AUDIO_WS_TERMINATING { channelId: 'OPS__OPS-1', unitId: 'CHESTER-2', missedPongs: 3 }
+13:50:57 [SHUTDOWN] Step "HTTP server" timed out after 4000ms, moving on.
+13:50:57 [AudioRelay] TX_WATCHDOG_SILENCE unitId=DISPATCH-1 channelId=DISPATCH__DISPATCH silenceMs=12975 hadAudio=true
+13:50:57 [Signaling] TX_SILENCE_WARNING unitId=DISPATCH-1 channelId=DISPATCH__DISPATCH silenceMs=12975
+13:50:57 [AudioRelay] TX_WATCHDOG_SILENCE unitId=DISPATCH-1 channelId=DISPATCH__DISPATCH silenceMs=52774 hadAudio=true
+13:50:57 [AudioRelay] TX_WATCHDOG_AUTO_RELEASE unitId=DISPATCH-1 channelId=DISPATCH__DISPATCH silenceMs=52774
+13:50:57 [Signaling] forceEndTransmission: unitId=DISPATCH-1 channelId=DISPATCH__DISPATCH reason=silence_auto_release
+13:50:57 [AudioRelay] TX_WATCHDOG_SILENCE unitId=CHESTER-2 channelId=DISPATCH__DISPATCH silenceMs=13124 hadAudio=true
+13:50:57 [Signaling] TX_SILENCE_WARNING unitId=CHESTER-2 channelId=DISPATCH__DISPATCH silenceMs=13124
+13:50:57 [AudioRelay] TX_WATCHDOG_SILENCE unitId=CHESTER-2 channelId=DISPATCH__DISPATCH silenceMs=20556 hadAudio=true
+13:50:57 [AudioRelay] TX_WATCHDOG_AUTO_RELEASE unitId=CHESTER-2 channelId=DISPATCH__DISPATCH silenceMs=20556
+13:50:57 [Signaling] forceEndTransmission: unitId=CHESTER-2 channelId=DISPATCH__DISPATCH reason=silence_auto_release
+13:50:57 [AudioRelay] TX_WATCHDOG_SILENCE unitId=DISPATCH-1 channelId=DISPATCH__DISPATCH silenceMs=9046 hadAudio=true
+13:50:57 [Signaling] TX_SILENCE_WARNING unitId=DISPATCH-1 channelId=DISPATCH__DISPATCH silenceMs=9046
+13:50:57 [AudioRelay] TX_WATCHDOG_SILENCE unitId=DISPATCH-1 channelId=DISPATCH__DISPATCH silenceMs=14541 hadAudio=true
+13:50:57 [Signaling] TX_SILENCE_WARNING unitId=DISPATCH-1 channelId=DISPATCH__DISPATCH silenceMs=14541
+13:50:57 [AudioRelay] TX_WATCHDOG_SILENCE unitId=SCANNER channelId=TESTING__TESTING 1 silenceMs=7228 hadAudio=true
+13:50:57 [Signaling] TX_SILENCE_WARNING unitId=SCANNER channelId=TESTING__TESTING 1 silenceMs=7228
+13:50:57 [90m/home/Jreeder5029/.pm2/logs/command-comms-out.log last 50 lines:[39m
+13:50:57 [API] GET /api/auth/me | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 17ms
+13:50:57 [Signaling] DISPATCH-1 joined channel TESTING__TESTING 1
+13:50:57 [Signaling] DISPATCH-1 joined channel DISPATCH__DISPATCH
+13:50:57 [DISPATCH] getChannels: 4 radio channels returned
+13:50:57 [API] GET /api/dispatch/channels | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 18ms
+13:50:57 [Signaling] DISPATCH-1 left channel TESTING__TESTING 1
+13:50:57 [Signaling] DISPATCH-1 left channel DISPATCH__DISPATCH
+13:50:57 [Signaling] DISPATCH-1 joined channel TESTING__TESTING 1
+13:50:57 [Signaling] DISPATCH-1 joined channel DISPATCH__DISPATCH
+13:50:57 [DISPATCH] getChannels: 4 radio channels returned
+13:50:57 [API] GET /api/dispatch/channels | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 18ms
+13:50:57 [Signaling] DISPATCH-1 left channel TESTING__TESTING 1
+13:50:57 [Signaling] DISPATCH-1 left channel DISPATCH__DISPATCH
+13:50:57 [Signaling] DISPATCH-1 joined channel TESTING__TESTING 1
+13:50:57 [Signaling] DISPATCH-1 joined channel DISPATCH__DISPATCH
+13:50:57 [AudioRelay] WS_RELAY_STATS {"channelKey":"TESTING__TESTING 1","reason":"periodic","framesEnqueued":243,"framesDropped":0,"framesDrained":243,"burstDrains":0,"queueDepth":1,"wsSubscribers":1}
+13:50:57 AUDIO_WS_UPGRADE_HIT {
+13:50:57   method: 'GET',
+13:50:57   path: '/api/audio-ws',
+13:50:57   query: '?channelId=TESTING__TESTING%201&unitId=DISPATCH-1',
+13:50:57   host: 'comms.reeder-systems.com',
+13:50:57   upgrade: 'websocket',
+13:50:57   connection: 'upgrade'
+13:50:57 }
+13:50:57 AUDIO_WS_ACCEPTED { username: 'DISPATCH-1', unitId: 'DISPATCH-1' }
+13:50:57 [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 22ms
+13:50:57 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=DISPATCH__DISPATCH addr=166.137.146.74:34315
+13:50:57 [AudioRelay] WS_RELAY_STATS {"channelKey":"TESTING__TESTING 1","reason":"periodic","framesEnqueued":244,"framesDropped":0,"framesDrained":244,"burstDrains":0,"queueDepth":1,"wsSubscribers":1}
+13:50:57 [ScannerFeed] TX END on TESTING__TESTING 1 duration=11873ms frames=566
+13:50:57 [AudioRelay] WS_PACING_BURST channelKey=TESTING__TESTING 1 queueDepth=29 draining=3
+13:50:57 [AudioRelay] WS_PACING_BURST channelKey=TESTING__TESTING 1 queueDepth=26 draining=3
+13:50:57 [AudioRelay] WS_PACING_BURST channelKey=TESTING__TESTING 1 queueDepth=23 draining=3
+13:50:57 [AudioRelay] WS_PACING_BURST channelKey=TESTING__TESTING 1 queueDepth=20 draining=3
+13:50:57 [AudioRelay] WS_PACING_BURST channelKey=TESTING__TESTING 1 queueDepth=17 draining=3
+13:50:57 [AudioRelay] WS_PACING_BURST channelKey=TESTING__TESTING 1 queueDepth=14 draining=3
+13:50:57 [AudioRelay] WS_PACING_BURST channelKey=TESTING__TESTING 1 queueDepth=11 draining=3
+13:50:57 [AudioRelay] WS_PACING_BURST channelKey=TESTING__TESTING 1 queueDepth=8 draining=3
+13:50:57 [FloorControl] requestFloor: raw="TESTING__TESTING 1" canonical="TESTING__TESTING 1" unitId="SCANNER"
+13:50:57 [ScannerFeed] TX START on TESTING__TESTING 1
+13:50:57 [Signaling] DISPATCH-1 left channel TESTING__TESTING 1
+13:50:57 [Signaling] DISPATCH-1 left channel DISPATCH__DISPATCH
+13:50:57 [API] GET /api/admin/users | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 16ms
+13:50:57 [API] GET /api/admin/channels | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 17ms
+13:50:57 [API] GET /api/admin/scanner | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 12ms
+13:50:57 [API] GET /api/admin/logs?limit=200 | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 21ms
+13:50:57 [API] GET /api/admin/zones | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 17ms
+13:50:57 [DISPATCH] getChannels: 4 radio channels returned
+13:50:57 [API] GET /api/dispatch/channels | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 16ms
+13:50:57 [API] GET /api/admin/ai-dispatch | user=DISPATCH-1(id:7) | sid=NXGwxI-f... | 200 | 22ms
+13:50:57 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=DISPATCH__DISPATCH addr=166.137.146.74:34315
+13:50:57 [ScannerFeed] TX END on TESTING__TESTING 1 duration=2121ms frames=89
+13:50:57 [AudioRelay] WS_PACING_BURST channelKey=TESTING__TESTING 1 queueDepth=16 draining=3
+13:50:57 [AudioRelay] WS_PACING_BURST channelKey=TESTING__TESTING 1 queueDepth=13 draining=3
+13:50:57 [AudioRelay] WS_PACING_BURST channelKey=TESTING__TESTING 1 queueDepth=10 draining=3
+13:50:57 [AudioRelay] WS_PACING_BURST channelKey=TESTING__TESTING 1 queueDepth=7 draining=3
+13:50:57 [AudioRelay] WS_RELAY_STATS {"channelKey":"TESTING__TESTING 1","reason":"periodic","framesEnqueued":165,"framesDropped":0,"framesDrained":166,"burstDrains":12,"queueDepth":0,"wsSubscribers":1}
