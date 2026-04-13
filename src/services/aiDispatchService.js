@@ -1155,6 +1155,27 @@ class AIDispatcher {
         }
       }
 
+      const currentSession = getUnitSessionState(participantId);
+      const currentState = currentSession?.state || DISPATCHER_STATE.IDLE;
+      if (currentState === DISPATCHER_STATE.IDLE) {
+        const normalizedForGate = transcript.trim().toLowerCase();
+        const isAddressingDispatch =
+          /\bcentral\b/i.test(normalizedForGate) ||
+          /\bdispatch\b/i.test(normalizedForGate) ||
+          /\bbase\b/i.test(normalizedForGate);
+        const isEmergencyPhrase = [
+          'officer needs assistance', 'officer down', 'shots fired',
+          'code 3 backup', 'emergency backup', '10-33', '10/33', 'ten thirty three',
+          'foot pursuit', 'in foot pursuit', 'pursuing on foot',
+          'need ems', 'request ems', 'send ems', 'need an ambulance',
+          'need fire', 'request fire', 'send fire'
+        ].some(p => normalizedForGate.includes(p));
+        if (!isAddressingDispatch && !isEmergencyPhrase) {
+          this.verboseLog('IDLE_NO_CENTRAL_SKIP', { participant: participantId, transcript });
+          return;
+        }
+      }
+
       if (isLlmConfigured()) {
         await this.processTranscriptWithLLM(transcript, participantId);
       } else {
@@ -3489,6 +3510,8 @@ class AIDispatcher {
 
       await new Promise(resolve => setTimeout(resolve, 800));
 
+      floorControlService.releaseFloor(this.channelName, AI_IDENTITY);
+
       if (responseText && this.channelName) {
         try {
           const wavHeader = createWavHeader(audioBuffer.length, AZURE_SAMPLE_RATE, CHANNELS, 16);
@@ -3509,8 +3532,6 @@ class AIDispatcher {
           this.log('CHAT_RECORD_ERROR', { error: chatErr.message });
         }
       }
-
-      floorControlService.releaseFloor(this.channelName, AI_IDENTITY);
 
     } catch (error) {
       floorControlService.releaseFloor(this.channelName, AI_IDENTITY);
