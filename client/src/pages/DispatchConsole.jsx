@@ -157,6 +157,7 @@ export default function DispatchConsole({ user, onLogout }) {
     isConnecting,
     connectionError,
     monitoredChannelIds,
+    priorityChannelId,
   } = useDispatchStore();
 
   const sensors = useSensors(
@@ -224,6 +225,16 @@ export default function DispatchConsole({ user, onLogout }) {
       });
     };
   }, [signalingAuthenticated, gridChannelIds, channels, joinChannel, leaveChannel]);
+
+  useEffect(() => {
+    if (!priorityChannelId) {
+      audioTransportManager.setPriorityChannelRoomKey(null);
+      return;
+    }
+    const ch = channels.find(c => c.id === priorityChannelId);
+    const roomKey = ch ? (ch.room_key || ((ch.zone || 'Default') + '__' + ch.name)) : null;
+    audioTransportManager.setPriorityChannelRoomKey(roomKey);
+  }, [priorityChannelId, channels]);
 
   const prevMonitoredRef = useRef([]);
   useEffect(() => {

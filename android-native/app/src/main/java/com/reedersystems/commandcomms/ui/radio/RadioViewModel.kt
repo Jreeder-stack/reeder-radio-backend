@@ -292,13 +292,19 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                     is SignalingEvent.PttStart -> {
                         val state = _uiState.value
                         if (event.unitId != state.unitId) {
-                            _uiState.update { it.copy(activeTransmittingUnit = event.unitId) }
+                            val currentRoomKey = state.currentChannel?.roomKey
+                            if (!state.isScanning || event.channelId == currentRoomKey) {
+                                _uiState.update { it.copy(activeTransmittingUnit = event.unitId) }
+                            }
                         }
                     }
                     is SignalingEvent.PttEnd -> {
                         val state = _uiState.value
                         if (event.unitId == state.activeTransmittingUnit) {
-                            _uiState.update { it.copy(activeTransmittingUnit = null) }
+                            val currentRoomKey = state.currentChannel?.roomKey
+                            if (!state.isScanning || event.channelId == currentRoomKey) {
+                                _uiState.update { it.copy(activeTransmittingUnit = null) }
+                            }
                         }
                     }
                     is SignalingEvent.EmergencyStart -> {
@@ -698,11 +704,15 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun onChannelChanged(oldRoomKey: String? = null) {
         val newRoomKey = _uiState.value.currentChannel?.roomKey
-        if (oldRoomKey != null && oldRoomKey != newRoomKey &&
-            app.signalingRepository.connectionState.value == ConnectionState.AUTHENTICATED) {
-            app.signalingRepository.leaveChannel(oldRoomKey)
-            if (newRoomKey != null) {
-                app.signalingRepository.joinChannel(newRoomKey)
+        if (oldRoomKey != null && oldRoomKey != newRoomKey) {
+            if (_uiState.value.isScanning) {
+                _uiState.update { it.copy(activeTransmittingUnit = null) }
+            }
+            if (app.signalingRepository.connectionState.value == ConnectionState.AUTHENTICATED) {
+                app.signalingRepository.leaveChannel(oldRoomKey)
+                if (newRoomKey != null) {
+                    app.signalingRepository.joinChannel(newRoomKey)
+                }
             }
         }
         updateServiceChannel()

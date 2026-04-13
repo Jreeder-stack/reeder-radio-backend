@@ -276,6 +276,11 @@ html, body {
   box-shadow: 0 0 0 2px var(--dispatch-accent-glow);
 }
 
+.tile-btn-priority {
+  background: #d97706;
+  box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.4);
+}
+
 /* Premium Panel Styling */
 .panel {
   background: linear-gradient(180deg, var(--dispatch-panel) 0%, var(--dispatch-panel-elevated) 100%);

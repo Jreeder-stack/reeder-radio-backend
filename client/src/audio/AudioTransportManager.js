@@ -36,6 +36,7 @@ class AudioTransportManager {
     this.rooms = new Map();
     this.pendingConnections = new Map();
     this.mutedChannels = new Set();
+    this.priorityChannelRoomKey = null;
     this._dispatcherMode = false;
     this.primaryTxChannel = null;
     this._activeChannelName = null;
@@ -420,6 +421,7 @@ class AudioTransportManager {
           const parsed = parseBinaryAudioFrame(evt.data);
           if (!parsed) return;
           if (this.mutedChannels.has(channelName)) return;
+          if (this.priorityChannelRoomKey && this.priorityChannelRoomKey !== channelName) return;
           if (parsed.senderUnitId && parsed.senderUnitId === conn.unitId) return;
           const chId = parsed.channelId || channelName;
           if (parsed.codec === 'opus') {
@@ -447,6 +449,7 @@ class AudioTransportManager {
 
         if (!validatePcmPacket(msg)) return;
         if (this.mutedChannels.has(channelName)) return;
+        if (this.priorityChannelRoomKey && this.priorityChannelRoomKey !== channelName) return;
         if (msg.senderUnitId && msg.senderUnitId === conn.unitId) return;
 
         const frame = new Int16Array(msg.payload);
@@ -564,6 +567,7 @@ class AudioTransportManager {
 
   muteChannel(ch) { this.mutedChannels.add(ch); }
   unmuteChannel(ch) { this.mutedChannels.delete(ch); }
+  setPriorityChannelRoomKey(roomKey) { this.priorityChannelRoomKey = roomKey; }
   muteChannels(chs) { chs.forEach((c) => this.muteChannel(c)); }
   unmuteChannels(chs) { chs.forEach((c) => this.unmuteChannel(c)); }
 

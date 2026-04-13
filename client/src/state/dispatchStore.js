@@ -31,6 +31,7 @@ const useDispatchStore = create(
       toneState: null,
       clearAirEnabled: {},
       clearAirChannel: null,
+      priorityChannelId: null,
 
       setChannels: (newChannels) => {
         const validIds = new Set(newChannels.map(ch => ch.id));
@@ -42,7 +43,8 @@ const useDispatchStore = create(
           gridChannelIds: state.gridChannelIds.filter(id => validIds.has(id)),
           txChannelIds: state.txChannelIds.filter(id => validIds.has(id)),
           mutedChannelIds: state.mutedChannelIds.filter(id => validIds.has(id)),
-          monitoredChannelIds: state.monitoredChannelIds.filter(id => validIds.has(id))
+          monitoredChannelIds: state.monitoredChannelIds.filter(id => validIds.has(id)),
+          priorityChannelId: state.priorityChannelId && validIds.has(state.priorityChannelId) ? state.priorityChannelId : null
         });
       },
       
@@ -58,7 +60,8 @@ const useDispatchStore = create(
         gridChannelIds: state.gridChannelIds.filter(id => id !== channelId),
         txChannelIds: state.txChannelIds.filter(id => id !== channelId),
         mutedChannelIds: state.mutedChannelIds.filter(id => id !== channelId),
-        monitoredChannelIds: state.monitoredChannelIds.filter(id => id !== channelId)
+        monitoredChannelIds: state.monitoredChannelIds.filter(id => id !== channelId),
+        priorityChannelId: state.priorityChannelId === channelId ? null : state.priorityChannelId
       })),
       
       toggleTx: (channelId) => set((state) => ({
@@ -227,6 +230,10 @@ const useDispatchStore = create(
       })),
 
       setClearAirChannel: (channelId) => set({ clearAirChannel: channelId }),
+
+      setPriorityChannel: (channelId) => set((state) => ({
+        priorityChannelId: state.priorityChannelId === channelId ? null : channelId
+      })),
       
       getChannelById: (id) => get().channels.find(ch => ch.id === id),
       
@@ -268,7 +275,8 @@ const useDispatchStore = create(
         isTalking: false,
         activeTxChannelId: null,
         toneState: null,
-        clearAirChannel: null
+        clearAirChannel: null,
+        priorityChannelId: null
       })
     }),
     {
@@ -280,7 +288,8 @@ const useDispatchStore = create(
         mutedChannelIds: state.mutedChannelIds,
         monitoredChannelIds: state.monitoredChannelIds,
         channelLevels: state.channelLevels,
-        clearAirEnabled: state.clearAirEnabled
+        clearAirEnabled: state.clearAirEnabled,
+        priorityChannelId: state.priorityChannelId
       })
     }
   )
