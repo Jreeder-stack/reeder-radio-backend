@@ -62,6 +62,17 @@ function formatMilitaryTime() {
   return `${hourWord} ${minuteWord}`;
 }
 
+function formatCurrentDate() {
+  const options = {
+    timeZone: 'America/New_York',
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  };
+  return new Intl.DateTimeFormat('en-US', options).format(new Date());
+}
+
 const SYSTEM_PROMPT = `You are "Central", a professional police radio dispatcher. You handle radio communications for field units.
 
 ## CRITICAL RULE: ALWAYS INCLUDE A "response" FIELD
@@ -109,7 +120,7 @@ For these intents, use a SHORT fixed format. Do NOT include the unit ID — the 
 The current time is provided to you as spoken words (e.g., "fourteen thirty" not "1430"). Use it exactly as provided — do not convert it to numbers or reformat it.
 
 ### TIER 2 — NATURAL AI PERSONALITY (complex interactions)
-For all other intents (PERSON_CHECK_START, REQUEST_BACKUP, CREATE_CALL_PROMPT, WAKE_ONLY, UNKNOWN, SIGNAL_100, records results, CAD calls, multi-step flows), you ARE a real dispatcher with personality:
+For all other intents (PERSON_CHECK_START, REQUEST_BACKUP, CREATE_CALL_PROMPT, WAKE_ONLY, UNKNOWN, GENERAL_INQUIRY, SIGNAL_100, records results, CAD calls, multi-step flows), you ARE a real dispatcher with personality:
 - You can address units by ID when calling out or initiating contact
 - Be terse and professional but sound like a real person on the radio
 - VARY your responses — mix phrasing naturally. Never give the same response twice in a row
@@ -315,8 +326,24 @@ Return: { "intent": "CALL_DETAILS", "response": null, "slots": { "callNumber": "
 Unit wants to search for an animal by tag, microchip, or owner. Phrases: "run a dog tag", "check a microchip", "animal search", "check a tag number", "search by pet owner".
 Return: { "intent": "ANIMAL_SEARCH", "response": null, "slots": { "tag": "<if provided>", "microchip": "<if provided>", "ownerLast": "<if provided>", "ownerFirst": "<if provided>", "animalType": "<if provided: Dog/Cat/etc>", "name": "<animal name if provided>" } }
 
+### GENERAL_INQUIRY
+Unit is asking a question or making a conversational statement that doesn't match any existing dispatch command. This includes questions about the date, time of day, how many calls are pending, what call a unit is on, what township an address is in, or any other informational question.
+
+CRITICAL RULES — you must NEVER fabricate, guess, or infer operational data. If you need data to answer a question, set dataNeeded and leave response null. If no lookup is available for what the unit is asking, respond honestly that you don't have that information. Never make up call counts, unit assignments, locations, or any other operational details.
+
+Content policy: If the question is sexual, offensive, or inappropriate, set dataNeeded to "none" and respond with a brief professional redirect such as "Keep this channel clear for official traffic."
+
+The dataNeeded field tells the system what live data you need:
+- "none" — for date/time questions (answerable from the clock data provided to you), honest "I don't have that information" responses, or content policy redirects. You MUST provide the response directly.
+- "active_calls" — to answer questions about pending calls, call counts, what's on the screen
+- "unit_call:UNIT_ID" — to look up what call a specific unit is assigned to (use the exact unit ID in uppercase, e.g., "unit_call:LINCOLN-3")
+- "unit_list" — to get a list of online units and their statuses
+- "geocode:ADDRESS" — to look up township/municipality/county for an address (e.g., "geocode:1200 Main Street")
+
+Return: { "intent": "GENERAL_INQUIRY", "dataNeeded": "<type>", "response": "<draft answer ONLY if dataNeeded is none, otherwise null>", "originalQuestion": "<the unit's question in plain text>" }
+
 ### UNKNOWN
-Cannot determine what the unit is saying. Respond naturally asking them to repeat.
+Transmission is truly unintelligible, garbled audio, or pure noise where you cannot make out any words or meaning. Do NOT use UNKNOWN for answerable questions — use GENERAL_INQUIRY instead. UNKNOWN is only for audio you literally cannot understand.
 Return: { "intent": "UNKNOWN", "response": "<natural request to repeat>" }
 
 ## STATE-AWARE BEHAVIOR
@@ -367,8 +394,9 @@ export async function classifyIntent(transcript, unitId, currentState = 'IDLE', 
   }
 
   const currentTime = formatMilitaryTime();
+  const currentDate = formatCurrentDate();
 
-  let userMessage = `Unit ID: ${unitId}\nCurrent time: ${currentTime}\nConversation state: ${currentState}`;
+  let userMessage = `Unit ID: ${unitId}\nCurrent time: ${currentTime}\nCurrent date: ${currentDate}\nConversation state: ${currentState}`;
 
   if (Object.keys(currentSlots).length > 0) {
     const filteredSlots = { ...currentSlots };
@@ -445,5 +473,48 @@ export async function classifyIntent(transcript, unitId, currentState = 'IDLE', 
   } catch (parseError) {
     console.error(`[LLM-Intent] JSON parse error (${elapsed}ms):`, parseError.message, 'Raw:', content);
     return { intent: 'UNKNOWN', response: `${unitId}, Central, say again?` };
+  }
+}
+
+export async function answerWithData(originalQuestion, unitId, dataContext) {
+  const openai = getClient();
+  if (!openai) {
+    return null;
+  }
+
+  const systemMessage = `You are "Central", a professional police radio dispatcher. A unit asked a question and you now have the live system data to answer it.
+
+RULES:
+- Answer ONLY based on the data provided below. Do NOT add, infer, or fabricate any details beyond what the data shows.
+- If the data is empty, null, or shows no results, say you don't have that information — never guess.
+- Keep it short, professional, terse — one to two sentences max, like a real dispatcher on the radio.
+- Do NOT include the unit ID at the start of your response — the system adds it automatically.
+- Use dispatcher radio voice. Be helpful but brief.`;
+
+  const userMessage = `Unit ${unitId} asked: "${originalQuestion}"
+
+Live system data:
+${dataContext}
+
+Answer the question using ONLY the data above. If the data doesn't contain the answer, say you don't have that information.`;
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: AZURE_OPENAI_DEPLOYMENT,
+      messages: [
+        { role: 'system', content: systemMessage },
+        { role: 'user', content: userMessage }
+      ],
+      temperature: 0.3,
+      max_tokens: 200
+    });
+
+    const content = response.choices[0]?.message?.content;
+    if (!content) return null;
+
+    return content.trim();
+  } catch (error) {
+    console.error(`[LLM-Intent] answerWithData error:`, error.message);
+    return null;
   }
 }

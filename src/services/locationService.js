@@ -1,5 +1,6 @@
 const TTL_MS = 2 * 60 * 1000; // 2 minutes
 const GEOCODE_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const FORWARD_GEOCODE_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 const GEOCODE_PRECISION = 4; // ~11m precision for cache keys
 
 class LocationService {
@@ -7,6 +8,7 @@ class LocationService {
     this.locations = new Map();
     this.sseClients = new Set();
     this._geocodeCache = new Map();
+    this._forwardGeocodeCache = new Map();
     
     setInterval(() => this.cleanExpired(), 30000);
     setInterval(() => this._cleanGeocodeCache(), 60000);
@@ -94,6 +96,65 @@ class LocationService {
       if (now - entry.timestamp >= GEOCODE_CACHE_TTL_MS) {
         this._geocodeCache.delete(key);
       }
+    }
+    for (const [key, entry] of this._forwardGeocodeCache) {
+      if (now - entry.timestamp >= FORWARD_GEOCODE_CACHE_TTL_MS) {
+        this._forwardGeocodeCache.delete(key);
+      }
+    }
+  }
+
+  async forwardGeocode(address) {
+    if (!address || typeof address !== 'string') {
+      return null;
+    }
+
+    const cacheKey = address.trim().toLowerCase();
+    const cached = this._forwardGeocodeCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < FORWARD_GEOCODE_CACHE_TTL_MS) {
+      return cached.result;
+    }
+
+    try {
+      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&addressdetails=1&limit=1`;
+      const response = await fetch(url, {
+        headers: {
+          'User-Agent': 'CommandComms-Dispatcher/1.0',
+          'Accept-Language': 'en'
+        },
+        signal: AbortSignal.timeout(5000)
+      });
+
+      if (!response.ok) {
+        console.log(`[LocationService] Forward geocode HTTP error: ${response.status}`);
+        return null;
+      }
+
+      const data = await response.json();
+      if (!Array.isArray(data) || data.length === 0) {
+        this._forwardGeocodeCache.set(cacheKey, { result: null, timestamp: Date.now() });
+        return null;
+      }
+
+      const top = data[0];
+      const a = top.address || {};
+
+      const result = {
+        displayName: top.display_name || null,
+        lat: parseFloat(top.lat),
+        lng: parseFloat(top.lon),
+        township: a.township || a.village || null,
+        municipality: a.city || a.town || a.village || a.municipality || null,
+        county: a.county || null,
+        state: a.state || null,
+        postcode: a.postcode || null
+      };
+
+      this._forwardGeocodeCache.set(cacheKey, { result, timestamp: Date.now() });
+      return result;
+    } catch (error) {
+      console.log(`[LocationService] Forward geocode error: ${error.message}`);
+      return null;
     }
   }
 

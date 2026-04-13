@@ -1,6 +1,6 @@
 import { speechToText, textToSpeech, isConfigured as isAzureConfigured } from './azureSpeechService.js';
 import { matchCommand, resetDispatcherState, matchEmergencyResponse, matchSecureConfirmation, getUnitSessionState, setUnitSessionState, DISPATCHER_STATE, EMERGENCY_DISTRESS_PHRASES } from './commandMatcher.js';
-import { isConfigured as isLlmConfigured, classifyIntent } from './llmIntentService.js';
+import { isConfigured as isLlmConfigured, classifyIntent, answerWithData } from './llmIntentService.js';
 import { parsePersonDetails, parseDOB, extractNameFromTranscript } from './phoneticParser.js';
 import pool, { isAiDispatchEnabled, getAiDispatchChannel, createChannelMessage } from '../db/index.js';
 import { audioRelayService } from './audioRelayService.js';
@@ -1738,6 +1738,11 @@ class AIDispatcher {
           break;
         }
 
+        case 'GENERAL_INQUIRY': {
+          await this.handleGeneralInquiry(participantId, transcript, result);
+          break;
+        }
+
         case 'WAKE_ONLY': {
           const wakeResp = result.response || `${participantId}, go ahead.`;
           await this.speak(wakeResp, participantId);
@@ -3028,6 +3033,150 @@ class AIDispatcher {
       this.addConversationExchange(participantId, transcript, resp);
       setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
     }
+  }
+
+  async handleGeneralInquiry(participantId, transcript, result) {
+    const dataNeeded = result.dataNeeded || 'none';
+    const originalQuestion = result.originalQuestion || transcript;
+
+    this.log('GENERAL_INQUIRY', { participant: participantId, transcript, dataNeeded, originalQuestion });
+
+    if (dataNeeded === 'none') {
+      const resp = result.response || `${participantId}, I don't have that information.`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+      return;
+    }
+
+    let dataContext = null;
+    let fetchFailed = false;
+
+    try {
+      if (dataNeeded === 'active_calls') {
+        if (!cadService.isConfigured()) {
+          fetchFailed = true;
+        } else {
+          const callsResult = await cadService.getActiveCalls();
+          const calls = callsResult.calls || callsResult.results || [];
+          if (calls.length === 0) {
+            dataContext = 'No active calls on the board.';
+          } else {
+            const callSummaries = calls.map((c, i) => {
+              const num = c.call_number || c.id || (i + 1);
+              const nature = c.type || c.nature || 'Unknown';
+              const location = c.location || 'Unknown location';
+              const priority = c.priority || '';
+              const status = c.status || '';
+              const units = c.units || c.assigned_units || [];
+              const unitStr = Array.isArray(units) && units.length > 0 ? units.join(', ') : 'none';
+              return `Call ${num}: ${nature} at ${location}, priority ${priority}, status ${status}, units: ${unitStr}`;
+            });
+            dataContext = `${calls.length} active call(s):\n${callSummaries.join('\n')}`;
+          }
+        }
+      } else if (dataNeeded.startsWith('unit_call:')) {
+        const targetUnitId = dataNeeded.substring('unit_call:'.length).trim();
+        if (!cadService.isConfigured()) {
+          fetchFailed = true;
+        } else {
+          const callData = await cadService.getUnitCurrentCallById(targetUnitId);
+          if (callData && (callData.call_number || callData.callNumber || callData.call_id)) {
+            const callNum = callData.call_number || callData.callNumber || callData.call_id;
+            const nature = callData.type || callData.nature || '';
+            const location = callData.location || '';
+            dataContext = `${targetUnitId} is currently on call ${callNum}${nature ? ', ' + nature : ''}${location ? ' at ' + location : ''}.`;
+          } else {
+            dataContext = `${targetUnitId} does not appear to be assigned to any call.`;
+          }
+        }
+      } else if (dataNeeded === 'unit_list') {
+        try {
+          if (cadService.isConfigured()) {
+            const statusResult = await cadService.getStatusCheck();
+            if (statusResult.success && Array.isArray(statusResult.units)) {
+              const units = statusResult.units;
+              if (units.length === 0) {
+                dataContext = 'No units currently online.';
+              } else {
+                const unitSummaries = units.map(u => `${u.unit_id}: ${u.status || 'unknown'}${u.zone ? ', zone ' + u.zone : ''}`);
+                dataContext = `${units.length} unit(s) online:\n${unitSummaries.join('\n')}`;
+              }
+            } else {
+              fetchFailed = true;
+            }
+          } else {
+            const dbResult = await pool.query(
+              `SELECT unit_identity, status FROM units WHERE last_seen > NOW() - INTERVAL '10 minutes' ORDER BY unit_identity`
+            );
+            if (dbResult.rows.length === 0) {
+              dataContext = 'No units currently online.';
+            } else {
+              const unitSummaries = dbResult.rows.map(u => `${u.unit_identity}: ${u.status || 'unknown'}`);
+              dataContext = `${dbResult.rows.length} unit(s) online:\n${unitSummaries.join('\n')}`;
+            }
+          }
+        } catch (dbErr) {
+          console.error('[GENERAL_INQUIRY] unit_list query error:', dbErr.message);
+          fetchFailed = true;
+        }
+      } else if (dataNeeded.startsWith('geocode:')) {
+        const address = dataNeeded.substring('geocode:'.length).trim();
+        if (!address) {
+          fetchFailed = true;
+        } else {
+          const geoResult = await locationService.forwardGeocode(address);
+          if (geoResult) {
+            const parts = [];
+            if (geoResult.displayName) parts.push(geoResult.displayName);
+            if (geoResult.township) parts.push(`Township: ${geoResult.township}`);
+            if (geoResult.municipality) parts.push(`Municipality: ${geoResult.municipality}`);
+            if (geoResult.county) parts.push(`County: ${geoResult.county}`);
+            if (geoResult.state) parts.push(`State: ${geoResult.state}`);
+            dataContext = parts.length > 0 ? parts.join('\n') : 'Address found but no township/municipality data available.';
+          } else {
+            dataContext = 'Geocoding lookup returned no results for that address.';
+          }
+        }
+      } else {
+        const resp = `${participantId}, I don't have that information.`;
+        await this.speak(resp, participantId);
+        this.addConversationExchange(participantId, transcript, resp);
+        setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+        return;
+      }
+    } catch (error) {
+      console.error('[GENERAL_INQUIRY] Data fetch error:', error.message);
+      fetchFailed = true;
+    }
+
+    if (fetchFailed || !dataContext) {
+      const resp = `${participantId}, I don't have that information right now.`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+      return;
+    }
+
+    try {
+      const answer = await answerWithData(originalQuestion, participantId, dataContext);
+      if (answer) {
+        const resp = `${participantId}, ${answer}`;
+        await this.speak(resp, participantId);
+        this.addConversationExchange(participantId, transcript, resp);
+      } else {
+        const resp = `${participantId}, I don't have that information right now.`;
+        await this.speak(resp, participantId);
+        this.addConversationExchange(participantId, transcript, resp);
+      }
+    } catch (llmError) {
+      console.error('[GENERAL_INQUIRY] Second LLM call error:', llmError.message);
+      const resp = `${participantId}, I don't have that information right now.`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+    }
+
+    setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
   }
 
   async handleAssignOtherUnit(participantId, transcript, slots) {
