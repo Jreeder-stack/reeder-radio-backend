@@ -1,0 +1,100 @@
+15:14:19 [Signaling] PTT START request: unitId=CHESTER-2 channelId=DISPATCH__DISPATCH
+15:14:19 [FloorControl] requestFloor: raw="DISPATCH__DISPATCH" canonical="DISPATCH__DISPATCH" unitId="CHESTER-2"
+15:14:19 [AI-Dispatcher] PTT_START callback matched: channelId=DISPATCH__DISPATCH, unitId=CHESTER-2
+15:14:19 [AI-Dispatcher-Signaling] 2026-04-13T19:14:19.292Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"CHESTER-2","isEmergency":false}
+15:14:19 [Signaling] PTT_READY sent for CHESTER-2 on DISPATCH__DISPATCH
+15:14:19 [AI-Dispatcher-Signaling] 2026-04-13T19:14:19.292Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"CHESTER-2","alreadyConnected":true}
+15:14:19 [Signaling] PTT START granted: CHESTER-2 on DISPATCH__DISPATCH (floor granted for holdsFloor check)
+15:14:19 [AudioRelay] TX_WATCHDOG_SILENCE unitId=CHESTER-2 channelId=DISPATCH__DISPATCH silenceMs=8129 hadAudio=true
+15:14:19 [Signaling] TX_SILENCE_WARNING unitId=CHESTER-2 channelId=DISPATCH__DISPATCH silenceMs=8129
+15:14:19 [AudioRelay] WS_RELAY_STATS {"channelKey":"DISPATCH__DISPATCH","reason":"tx_session_end_watchdog","framesEnqueued":10,"framesDropped":0,"framesDrained":11,"burstDrains":0,"queueDepth":0,"wsSubscribers":1}
+15:14:19 [AudioRelay] TX_WATCHDOG_RECOVERED unitId=CHESTER-2 channelKey=DISPATCH__DISPATCH
+15:14:19 [RecordingTap] TX recording started: unit=CHESTER-2 channel=DISPATCH__DISPATCH codec=opus
+15:14:20 [AudioRelay] WS_RELAY_STATS {"channelKey":"DISPATCH__DISPATCH","reason":"periodic","framesEnqueued":68,"framesDropped":0,"framesDrained":66,"burstDrains":0,"queueDepth":2,"wsSubscribers":1}
+15:14:21 [AI-Dispatcher-Signaling] 2026-04-13T19:14:21.779Z | PTT_END_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"CHESTER-2"}
+15:14:21 [AI-Dispatcher] 2026-04-13T19:14:21.780Z | PTT_END_FLUSH {"unitId":"CHESTER-2","frames":107,"chunks":107}
+15:14:21 [AI-Dispatcher] 2026-04-13T19:14:21.780Z | AUDIO_BUFFERING_COMPLETE {"participant":"CHESTER-2","frames":107,"bytes":68480,"durationMs":2140}
+15:14:21 [Signaling] PTT END: CHESTER-2 on DISPATCH__DISPATCH (2487ms)
+15:14:21 [AI-Dispatcher] 2026-04-13T19:14:21.792Z | STT_INVOKE {"participant":"CHESTER-2","audioBytes":68480,"sampleRate":16000}
+15:14:22 [RecordingTap] Finalizing recording: unit=CHESTER-2 channel=DISPATCH__DISPATCH frames=109 duration=2138ms codec=opus
+15:14:22 [RecordingTap] Decode summary: unit=CHESTER-2 channel=DISPATCH__DISPATCH total=109 decoded=109 failed=0 failureRatio=0.0%
+15:14:22 [RecordingTap] Audio message saved: id=3504 channel=DISPATCH__DISPATCH sender=CHESTER-2 duration=2138ms frames=109 failed=0
+15:14:22 [broadcastMessage] Broadcast message to DISPATCH__DISPATCH: 3504
+15:14:22 [AI-Dispatcher] 2026-04-13T19:14:22.685Z | STT_RESULT {"transcript":"Chester 2.","participant":"CHESTER-2"}
+15:14:23 [AI-Dispatcher] 2026-04-13T19:14:23.289Z | AUDIO_BUFFERING_COMPLETE {"participant":"CHESTER-2","frames":2,"bytes":1280,"durationMs":40}
+15:14:23 [AI-Dispatcher] 2026-04-13T19:14:23.289Z | AUDIO_TOO_SHORT {"participant":"CHESTER-2","bytes":1280,"minBytes":16000}
+15:14:24 [Signaling] Grace period ended for DISPATCH__DISPATCH
+15:14:25 [AudioRelay] WS_RELAY_STATS {"channelKey":"DISPATCH__DISPATCH","reason":"periodic","framesEnqueued":41,"framesDropped":0,"framesDrained":43,"burstDrains":0,"queueDepth":0,"wsSubscribers":1}
+15:14:26 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=DISPATCH__DISPATCH addr=107.115.97.65:62152
+15:14:29 [Signaling] PTT_REQUEST_SENT unitId=INDIANA-1 channelId=DISPATCH__DISPATCH
+15:14:29 [FloorControl] requestFloor: raw="DISPATCH__DISPATCH" canonical="DISPATCH__DISPATCH" unitId="INDIANA-1"
+15:14:29 [Signaling] PTT_GRANTED unitId=INDIANA-1 channelId=DISPATCH__DISPATCH
+15:14:29 [AI-Dispatcher] PTT_START callback matched: channelId=DISPATCH__DISPATCH, unitId=INDIANA-1
+15:14:29 [AI-Dispatcher-Signaling] 2026-04-13T19:14:29.692Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","isEmergency":false}
+15:14:29 [Signaling] PTT_READY sent for INDIANA-1 on DISPATCH__DISPATCH
+15:14:29 [AI-Dispatcher-Signaling] 2026-04-13T19:14:29.692Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1","alreadyConnected":true}
+15:14:29 [Signaling] PTT granted: INDIANA-1 on DISPATCH__DISPATCH
+15:14:29 [AudioRelay] PACKET_DETAIL unitId=INDIANA-1 channelKey=DISPATCH__DISPATCH seq=2570 packetBytes=182 frame=1
+15:14:29 [RecordingTap] TX recording started: unit=INDIANA-1 channel=DISPATCH__DISPATCH codec=opus
+15:14:29 [AudioRelay] PACKET_DETAIL unitId=INDIANA-1 channelKey=DISPATCH__DISPATCH seq=2571 packetBytes=182 frame=2
+15:14:29 [AudioRelay] PACKET_DETAIL unitId=INDIANA-1 channelKey=DISPATCH__DISPATCH seq=2572 packetBytes=182 frame=3
+15:14:30 [AudioRelay] PACKET_DETAIL unitId=INDIANA-1 channelKey=DISPATCH__DISPATCH seq=2573 packetBytes=182 frame=4
+15:14:30 [AudioRelay] PACKET_DETAIL unitId=INDIANA-1 channelKey=DISPATCH__DISPATCH seq=2574 packetBytes=182 frame=5
+15:14:30 [AudioRelay] PACKET_SUMMARY unitId=INDIANA-1 channelKey=DISPATCH__DISPATCH intervalFrames=5 intervalAvgBytes=182 totalFrames=6 lastSeq=2575
+15:14:30 [AudioRelay] WS_PACING_BURST channelKey=DISPATCH__DISPATCH queueDepth=6 draining=3
+15:14:30 [AudioRelay] WS_PACING_BURST channelKey=DISPATCH__DISPATCH queueDepth=7 draining=3
+15:14:30 [AudioRelay] WS_PACING_BURST channelKey=DISPATCH__DISPATCH queueDepth=7 draining=3
+15:14:30 [AudioRelay] WS_PACING_BURST channelKey=DISPATCH__DISPATCH queueDepth=8 draining=3
+15:14:30 [AudioRelay] WS_PACING_BURST channelKey=DISPATCH__DISPATCH queueDepth=7 draining=3
+15:14:30 [AudioRelay] WS_PACING_BURST channelKey=DISPATCH__DISPATCH queueDepth=6 draining=3
+15:14:30 [AudioRelay] WS_RELAY_STATS {"channelKey":"DISPATCH__DISPATCH","reason":"periodic","framesEnqueued":61,"framesDropped":0,"framesDrained":59,"burstDrains":6,"queueDepth":2,"wsSubscribers":1}
+15:14:31 [AudioRelay] PACKET_SUMMARY unitId=INDIANA-1 channelKey=DISPATCH__DISPATCH intervalFrames=64 intervalAvgBytes=182 totalFrames=70 lastSeq=2639
+15:14:32 [AudioRelay] PACKET_SUMMARY unitId=INDIANA-1 channelKey=DISPATCH__DISPATCH intervalFrames=51 intervalAvgBytes=182 totalFrames=121 lastSeq=2690
+15:14:32 [Signaling] PTT_RELEASE_SENT unitId=INDIANA-1 channelId=DISPATCH__DISPATCH
+15:14:32 [AudioRelay] TX_SESSION_STATS {"channelKey":"DISPATCH__DISPATCH","unitId":"INDIANA-1","reason":"ptt_release","durationMs":2839,"firstSeq":2570,"lastSeq":2712,"totalFrames":143,"expectedFrames":143,"lossCount":0,"lossPct":0,"maxConsecutiveGap":0,"avgInterArrivalMs":19.4,"minPacketBytes":182,"maxPacketBytes":182}
+15:14:32 [AudioRelay] WS_RELAY_STATS {"channelKey":"DISPATCH__DISPATCH","reason":"tx_session_end","framesEnqueued":82,"framesDropped":0,"framesDrained":84,"burstDrains":0,"queueDepth":0,"wsSubscribers":1}
+15:14:32 [AI-Dispatcher-Signaling] 2026-04-13T19:14:32.691Z | PTT_END_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"INDIANA-1"}
+15:14:32 [AI-Dispatcher] 2026-04-13T19:14:32.691Z | PTT_END_FLUSH {"unitId":"INDIANA-1","frames":143,"chunks":143}
+15:14:32 [AI-Dispatcher] 2026-04-13T19:14:32.692Z | AUDIO_BUFFERING_COMPLETE {"participant":"INDIANA-1","frames":143,"bytes":91520,"durationMs":2860}
+15:14:32 [Signaling] PTT released: INDIANA-1 on DISPATCH__DISPATCH
+15:14:32 [AI-Dispatcher] 2026-04-13T19:14:32.705Z | STT_INVOKE {"participant":"INDIANA-1","audioBytes":91520,"sampleRate":16000}
+15:14:32 [RecordingTap] Finalizing recording: unit=INDIANA-1 channel=DISPATCH__DISPATCH frames=143 duration=2760ms codec=opus
+15:14:32 [RecordingTap] Decode summary: unit=INDIANA-1 channel=DISPATCH__DISPATCH total=143 decoded=143 failed=0 failureRatio=0.0%
+15:14:33 [RecordingTap] Audio message saved: id=3505 channel=DISPATCH__DISPATCH sender=INDIANA-1 duration=2760ms frames=143 failed=0
+15:14:33 [broadcastMessage] Broadcast message to DISPATCH__DISPATCH: 3505
+15:14:33 [AI-Dispatcher] 2026-04-13T19:14:33.839Z | STT_RESULT {"transcript":"Testing 1-2 three.","participant":"INDIANA-1"}
+15:14:33 [AI-Dispatcher] 2026-04-13T19:14:33.840Z | LLM_CLASSIFY_START {"participant":"INDIANA-1","state":"AWAITING_COMMAND","transcript":"Testing 1-2 three."}
+15:14:33 [LLM-Intent] Classifying: unit=INDIANA-1, state=AWAITING_COMMAND, transcript="Testing 1-2 three."
+15:14:34 [Signaling] PTT START request: unitId=CHESTER-2 channelId=DISPATCH__DISPATCH
+15:14:34 [FloorControl] requestFloor: raw="DISPATCH__DISPATCH" canonical="DISPATCH__DISPATCH" unitId="CHESTER-2"
+15:14:34 [AI-Dispatcher] PTT_START callback matched: channelId=DISPATCH__DISPATCH, unitId=CHESTER-2
+15:14:34 [AI-Dispatcher-Signaling] 2026-04-13T19:14:34.142Z | PTT_START_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"CHESTER-2","isEmergency":false}
+15:14:34 [Signaling] PTT_READY sent for CHESTER-2 on DISPATCH__DISPATCH
+15:14:34 [AI-Dispatcher-Signaling] 2026-04-13T19:14:34.142Z | PTT_READY_SENT {"channelId":"DISPATCH__DISPATCH","unitId":"CHESTER-2","alreadyConnected":true}
+15:14:34 [Signaling] PTT START granted: CHESTER-2 on DISPATCH__DISPATCH (floor granted for holdsFloor check)
+15:14:34 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=DISPATCH__DISPATCH addr=107.115.97.65:62152
+15:14:34 [LLM-Intent] Result (660ms): intent=UNKNOWN, response="I didn't catch that. Could you please repeat?"
+15:14:34 [AI-Dispatcher] 2026-04-13T19:14:34.502Z | LLM_CLASSIFY_RESULT {"participant":"INDIANA-1","intent":"UNKNOWN","response":"I didn't catch that. Could you please repeat?"}
+15:14:34 [AI-Dispatcher] 2026-04-13T19:14:34.502Z | SPEAK {"text":"I didn't catch that. Could you please repeat?","unit":"INDIANA-1"}
+15:14:34 [AI-DISPATCH-SPEECH] 2026-04-13T19:14:34.502Z | unit=INDIANA-1 | heard="Testing 1-2 three." | intent=UNKNOWN | response="I didn't catch that. Could you please repeat?"
+15:14:34 [RecordingTap] TX recording started: unit=CHESTER-2 channel=DISPATCH__DISPATCH codec=opus
+15:14:34 [FloorControl] requestFloor: raw="DISPATCH__DISPATCH" canonical="DISPATCH__DISPATCH" unitId="AI-Dispatcher"
+15:14:34 [AI-Dispatcher] 2026-04-13T19:14:34.689Z | PUBLISH_SKIPPED {"reason":"Floor busy","heldBy":"CHESTER-2"}
+15:14:34 [SESSION] INDIANA-1: AWAITING_COMMAND → AWAITING_COMMAND | oldSlotKeys=[lastSpokenText,conversationHistory] | newSlotKeys=[lastSpokenText,conversationHistory] | replace=false
+15:14:34 [SESSION] INDIANA-1: AWAITING_COMMAND → AWAITING_COMMAND | oldSlotKeys=[lastSpokenText,conversationHistory] | newSlotKeys=[lastSpokenText,conversationHistory] | replace=false
+15:14:34 [AudioRelay] WS_PACING_BURST channelKey=DISPATCH__DISPATCH queueDepth=8 draining=3
+15:14:34 [AudioRelay] WS_PACING_BURST channelKey=DISPATCH__DISPATCH queueDepth=6 draining=3
+15:14:35 [AudioRelay] WS_RELAY_STATS {"channelKey":"DISPATCH__DISPATCH","reason":"periodic","framesEnqueued":77,"framesDropped":0,"framesDrained":73,"burstDrains":2,"queueDepth":4,"wsSubscribers":1}
+15:14:37 [AI-Dispatcher-Signaling] 2026-04-13T19:14:37.608Z | PTT_END_DETECTED {"channelId":"DISPATCH__DISPATCH","unitId":"CHESTER-2"}
+15:14:37 [AI-Dispatcher] 2026-04-13T19:14:37.608Z | PTT_END_FLUSH {"unitId":"CHESTER-2","frames":158,"chunks":158}
+15:14:37 [AI-Dispatcher] 2026-04-13T19:14:37.608Z | AUDIO_BUFFERING_COMPLETE {"participant":"CHESTER-2","frames":158,"bytes":101120,"durationMs":3160}
+15:14:37 [Signaling] PTT END: CHESTER-2 on DISPATCH__DISPATCH (3466ms)
+15:14:37 [AI-Dispatcher] 2026-04-13T19:14:37.621Z | STT_INVOKE {"participant":"CHESTER-2","audioBytes":101120,"sampleRate":16000}
+15:14:37 [RecordingTap] Finalizing recording: unit=CHESTER-2 channel=DISPATCH__DISPATCH frames=158 duration=3099ms codec=opus
+15:14:37 [RecordingTap] Decode summary: unit=CHESTER-2 channel=DISPATCH__DISPATCH total=158 decoded=158 failed=0 failureRatio=0.0%
+15:14:37 [RecordingTap] Audio message saved: id=3506 channel=DISPATCH__DISPATCH sender=CHESTER-2 duration=3099ms frames=158 failed=0
+15:14:37 [broadcastMessage] Broadcast message to DISPATCH__DISPATCH: 3506
+15:14:38 [AI-Dispatcher] 2026-04-13T19:14:38.878Z | STT_RESULT {"transcript":"Receive loud and clear 1514 hours.","participant":"CHESTER-2"}
+15:14:40 [Signaling] Grace period ended for DISPATCH__DISPATCH
+15:14:40 [AudioRelay] WS_RELAY_STATS {"channelKey":"DISPATCH__DISPATCH","reason":"periodic","framesEnqueued":81,"framesDropped":0,"framesDrained":85,"burstDrains":0,"queueDepth":0,"wsSubscribers":1}
+15:14:42 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=DISPATCH__DISPATCH addr=107.115.97.65:62152
