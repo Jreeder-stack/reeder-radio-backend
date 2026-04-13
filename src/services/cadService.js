@@ -8,7 +8,7 @@ async function cadRequest(endpoint, method = 'GET', body = null) {
   
   if (!CAD_URL || !CAD_API_KEY) {
     console.warn('[CAD] Integration not configured - missing CAD_URL or CAD_API_KEY');
-    return { success: false, error: 'CAD integration not configured', failureType: 'NOT_CONFIGURED' };
+    return { success: false, error: 'CAD integration not configured', failureType: 'NOT_CONFIGURED', statusCode: null, responseBody: null };
   }
 
   const url = `${CAD_URL}${endpoint}`;
@@ -22,39 +22,46 @@ async function cadRequest(endpoint, method = 'GET', body = null) {
 
   if (body && method !== 'GET') {
     options.body = JSON.stringify(body);
+    console.log(`[CAD] Outgoing ${method} ${endpoint} payload: ${options.body}`);
   }
 
   try {
     const response = await fetch(url, options);
 
     if (response.status === 204) {
-      return { success: true };
+      return { success: true, statusCode: 204 };
     }
 
     const contentType = response.headers.get('content-type') || '';
     if (!contentType.includes('json')) {
-      console.error(`[CAD] Non-JSON response from ${url} (status ${response.status}, content-type: ${contentType})`);
-      return { success: false, error: `Non-JSON response (status ${response.status}, content-type: ${contentType})`, failureType: 'UNREACHABLE', statusCode: response.status };
+      const textBody = await response.text().catch(() => '(unable to read body)');
+      console.error(`[CAD] Non-JSON response from ${url} (status ${response.status}, content-type: ${contentType}), body: ${textBody}`);
+      return { success: false, error: `Non-JSON response (status ${response.status}, content-type: ${contentType})`, failureType: 'UNREACHABLE', statusCode: response.status, responseBody: textBody };
     }
 
     const data = await response.json();
     
     if (!response.ok) {
-      console.error(`[CAD] API error: ${response.status}`, data);
-      if (method !== 'GET') {
-        console.warn(`[CAD] Non-success response for ${method} ${endpoint}: status=${response.status}, error=${JSON.stringify(data)}`);
-      }
+      console.error(`[CAD] API error: ${method} ${endpoint} status=${response.status}, response=${JSON.stringify(data)}`);
       return { success: false, error: data.error || `HTTP ${response.status}`, failureType: 'API_REJECTION', statusCode: response.status, responseBody: data };
     }
     
-    if (method !== 'GET' && data && !data.success) {
-      console.warn(`[CAD] Non-success response for ${method} ${endpoint}: status=${response.status}, body=${JSON.stringify(data)}`);
+    if (data && data.success === false) {
+      console.warn(`[CAD] Application-level failure for ${method} ${endpoint}: status=${response.status}, body=${JSON.stringify(data)}`);
+      return {
+        ...data,
+        success: false,
+        error: data.error || 'Application-level failure',
+        failureType: data.failureType || 'API_REJECTION',
+        statusCode: response.status,
+        responseBody: data
+      };
     }
     
     return data;
   } catch (error) {
-    console.error('[CAD] Request failed:', error.message);
-    return { success: false, error: error.message, failureType: 'UNREACHABLE' };
+    console.error(`[CAD] Request failed for ${method} ${endpoint}:`, error.message);
+    return { success: false, error: error.message, failureType: 'UNREACHABLE', statusCode: null, responseBody: null };
   }
 }
 
@@ -126,18 +133,24 @@ function normalizePriority(priority) {
 }
 
 export async function createCall(type, priority, location, municipality, notes = '') {
-  console.log(`[CAD] Creating call: ${type} at ${location}`);
+  if (!type) {
+    console.error('[CAD] createCall: type is required but was', type);
+    return { success: false, error: 'Call type is required', failureType: 'INVALID_INPUT', statusCode: null, responseBody: null };
+  }
+  if (!location) {
+    console.error('[CAD] createCall: location is required but was', location);
+    return { success: false, error: 'Call location is required', failureType: 'INVALID_INPUT', statusCode: null, responseBody: null };
+  }
+  console.log(`[CAD] Creating call: type=${type}, priority=${priority}, location=${location}, municipality=${municipality}`);
   const resolvedMunicipality = (municipality && municipality.trim()) ? municipality.trim() : parseMunicipalityFromAddress(location);
   const numericPriority = normalizePriority(priority);
   const body = {
     type: type.toUpperCase(),
     priority: numericPriority,
     location: location.toUpperCase(),
-    notes
+    municipality: resolvedMunicipality ? resolvedMunicipality.toUpperCase() : '',
+    notes: notes || ''
   };
-  if (resolvedMunicipality) {
-    body.municipality = resolvedMunicipality.toUpperCase();
-  }
   return cadRequest('/api/radio/call', 'POST', body);
 }
 

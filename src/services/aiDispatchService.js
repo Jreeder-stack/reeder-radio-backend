@@ -2713,12 +2713,29 @@ class AIDispatcher {
         return;
       }
 
+      const outgoingPayload = { nature, priority: priority || 'medium', address, municipality: '', notes: `Created by AI Dispatcher for ${participantId}` };
+      this.log('CAD_CALL_REQUEST', { participantId, payload: outgoingPayload });
+
       const callResult = await cadService.createCall(nature, priority || 'medium', address, '', `Created by AI Dispatcher for ${participantId}`);
-      this.log('CAD_CALL_CREATED', { success: callResult.success, callId: callResult.call_id, error: callResult.error });
+      this.log('CAD_CALL_RESULT', {
+        success: callResult.success,
+        callId: callResult.call_id,
+        error: callResult.error,
+        failureType: callResult.failureType,
+        statusCode: callResult.statusCode,
+        responseBody: callResult.responseBody
+      });
 
       if (!callResult.success) {
         setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
-        const resp = `${participantId}, unable to create call. System error.`;
+        const reason = callResult.failureType === 'INVALID_INPUT'
+          ? callResult.error
+          : callResult.failureType === 'NOT_CONFIGURED'
+          ? 'CAD system is not configured'
+          : callResult.failureType === 'UNREACHABLE'
+          ? 'CAD system is unreachable'
+          : callResult.error || 'unknown error';
+        const resp = `${participantId}, unable to create call. ${reason}.`;
         await this.speak(resp, participantId);
         return;
       }
@@ -2758,9 +2775,9 @@ class AIDispatcher {
       await this.speak(resp, participantId);
 
     } catch (error) {
-      this.log('CALL_CREATION_ERROR', { error: error.message });
+      this.log('CALL_CREATION_ERROR', { error: error.message, stack: error.stack, nature, address, priority });
       setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
-      const resp = `${participantId}, unable to create call. System error.`;
+      const resp = `${participantId}, unable to create call. System error, please try again.`;
       await this.speak(resp, participantId);
     }
   }
