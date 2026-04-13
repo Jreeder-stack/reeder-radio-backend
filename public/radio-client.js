@@ -283,6 +283,7 @@
     });
 
     this._socket.on('ptt:start', function (data) {
+      if (data.unitId === self._unitId) return;
       self._emit('pttStart', data);
     });
     this._socket.on('ptt:end', function (data) {

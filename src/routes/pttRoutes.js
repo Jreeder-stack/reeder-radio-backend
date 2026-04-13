@@ -130,6 +130,16 @@ router.post('/start', async (req, res) => {
       return res.status(503).json({ error: 'Signaling not ready' });
     }
 
+    const existingTransmission = signalingService.activeTransmissions.get(channelId);
+    if (existingTransmission && existingTransmission.unitId === unitId) {
+      console.warn(`[PTT-HTTP] Floor denied for ${unitId} on ch${channelId}: already transmitting from another device`);
+      return res.status(409).json({
+        error: 'Channel busy',
+        heldBy: unitId,
+        reason: 'already_transmitting_other_device',
+      });
+    }
+
     const isEmergency = signalingService.emergencyStates?.has(channelId) || false;
     const floorResult = floorControlService.requestFloor(channelId, unitId, {
       isEmergency,
@@ -160,7 +170,7 @@ router.post('/start', async (req, res) => {
       presence.status = 'transmitting';
     }
 
-    io.to(`channel:${channelId}`).emit('ptt:start', transmissionData);
+    signalingService._emitToChannelExcludingUnit(channelId, 'ptt:start', transmissionData, unitId);
 
     if (signalingService._emitCallback) {
       signalingService._emitCallback('pttStart', transmissionData);
@@ -233,7 +243,7 @@ router.post('/end', async (req, res) => {
       }
     }
 
-    io.to(`channel:${channelId}`).emit('ptt:end', endData);
+    signalingService._emitToChannelExcludingUnit(channelId, 'ptt:end', endData, unitId);
 
     if (signalingService._emitCallback) {
       signalingService._emitCallback('pttEnd', endData);

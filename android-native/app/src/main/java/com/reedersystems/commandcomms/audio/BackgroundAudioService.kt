@@ -822,7 +822,8 @@ class BackgroundAudioService : Service() {
                         engine.floorControl?.onFloorDenied(event.channelId)
                     }
                     is SignalingEvent.RadioChannelBusy -> {
-                        if (event.channelId == currentRoomKey) {
+                        val selfUnitId = servicePrefs.unitId ?: app.sessionPrefs.unitId
+                        if (event.heldBy != selfUnitId && event.channelId == currentRoomKey) {
                             engine.floorControl?.onChannelBusy(event.heldBy)
                         }
                     }
