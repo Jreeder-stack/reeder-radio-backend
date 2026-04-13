@@ -244,10 +244,6 @@ class BackgroundAudioService : Service() {
         emergencyActivatingJob?.cancel()
         emergencyActivatingJob = null
 
-        if (pttState == PttState.TRANSMITTING || pttState == PttState.CONNECTING || pttState == PttState.CLEANING_UP) {
-            handleRadioPttUp(bypassDebounce = true)
-        }
-
         sendEmergencyCancelled()
         updateNotification("Radio — Standby")
         radioEngine?.startReceive()
@@ -305,8 +301,6 @@ class BackgroundAudioService : Service() {
         Log.d(TAG, "activateEmergency: emergencyStart signal sent for $channelKey")
 
         sendEmergencyActivated()
-
-        handleRadioPttDown(signaling = true)
     }
 
     private fun handleEmergencyUp() {

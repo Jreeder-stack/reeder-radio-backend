@@ -1,5 +1,5 @@
 import { speechToText, textToSpeech, isConfigured as isAzureConfigured } from './azureSpeechService.js';
-import { matchCommand, resetDispatcherState, matchEmergencyResponse, matchSecureConfirmation, getUnitSessionState, setUnitSessionState, DISPATCHER_STATE } from './commandMatcher.js';
+import { matchCommand, resetDispatcherState, matchEmergencyResponse, matchSecureConfirmation, getUnitSessionState, setUnitSessionState, DISPATCHER_STATE, EMERGENCY_DISTRESS_PHRASES } from './commandMatcher.js';
 import { isConfigured as isLlmConfigured, classifyIntent } from './llmIntentService.js';
 import { parsePersonDetails, parseDOB, extractNameFromTranscript } from './phoneticParser.js';
 import pool, { isAiDispatchEnabled, getAiDispatchChannel, createChannelMessage } from '../db/index.js';
@@ -832,6 +832,23 @@ class AIDispatcher {
     return true;
   }
 
+  _matchDistressPhrase(normalizedText) {
+    const SINGLE_WORD_PHRASES = new Set(['help', 'weapon', 'hostile', 'ambush']);
+    for (const distress of EMERGENCY_DISTRESS_PHRASES) {
+      if (SINGLE_WORD_PHRASES.has(distress.phrase)) {
+        const regex = new RegExp(`\\b${distress.phrase}\\b`);
+        if (regex.test(normalizedText)) {
+          return distress;
+        }
+      } else {
+        if (normalizedText.includes(distress.phrase)) {
+          return distress;
+        }
+      }
+    }
+    return null;
+  }
+
   async resolveUnitLocation(unitId) {
     try {
       const result = await locationService.getUnitAddress(unitId);
@@ -845,6 +862,62 @@ class AIDispatcher {
       this.log('UNIT_LOCATION_RESOLVE_ERROR', { unitId, error: error.message });
       return null;
     }
+  }
+
+  async handleEmergencyPhraseAssist(unitId, distressType) {
+    this.log('EMERGENCY_PHRASE_ASSIST_START', { unitId, distressType });
+
+    setUnitSessionState(unitId, DISPATCHER_STATE.IDLE, null, {}, true);
+
+    let address = null;
+
+    try {
+      if (cadService.isConfigured()) {
+        const callInfo = await cadService.getUnitCurrentCallById(unitId);
+        if (callInfo && callInfo.location && callInfo.status === 'ON_SCENE') {
+          address = callInfo.location;
+          this.log('EMERGENCY_PHRASE_ADDRESS_FROM_CALL', { unitId, address, callNumber: callInfo.callNumber });
+        }
+      }
+    } catch (e) {
+      this.log('EMERGENCY_PHRASE_CALL_LOOKUP_ERROR', { unitId, error: e.message });
+    }
+
+    if (!address) {
+      address = await this.resolveUnitLocation(unitId);
+    }
+
+    let broadcastMsg;
+    if (address) {
+      broadcastMsg = `Attention all units, priority assist ${unitId} at ${address}. ${unitId} is ${distressType}.`;
+    } else {
+      broadcastMsg = `Attention all units, priority assist ${unitId}. ${unitId} is ${distressType}. Location unknown, ${unitId} advise your location.`;
+    }
+
+    this.logSpeechEvent(unitId, `(emergency phrase: ${distressType})`, 'EMERGENCY_PHRASE_ASSIST', broadcastMsg);
+    await this.playToneAndSpeak('CONTINUOUS', broadcastMsg);
+
+    if (cadService.isConfigured()) {
+      try {
+        const cadMsg = `PRIORITY ASSIST: ${unitId} ${distressType}${address ? ` at ${address}` : ''}`;
+        await cadService.sendBroadcast(cadMsg, 'emergency');
+        this.log('EMERGENCY_PHRASE_CAD_BROADCAST', { unitId, message: cadMsg });
+      } catch (e) {
+        this.log('EMERGENCY_PHRASE_CAD_BROADCAST_ERROR', { unitId, error: e.message });
+      }
+    }
+
+    try {
+      const sigService = await this._ensureSignalingService();
+      const trackStarted = sigService.requestLocationTrackStart(unitId);
+      this.log('EMERGENCY_PHRASE_TRACK_START', { unitId, delivered: trackStarted });
+    } catch (e) {
+      this.log('EMERGENCY_PHRASE_TRACK_START_ERROR', { unitId, error: e.message });
+    }
+
+    this._turnContextByUnit.delete(unitId);
+
+    await this.emergencyEscalation.startEscalation(unitId, this.channelName);
   }
 
   async joinChannel(channelName) {
@@ -1246,6 +1319,18 @@ class AIDispatcher {
       const { state, slots } = sessionState;
 
       const normalized = transcript.toLowerCase();
+
+      if (state === DISPATCHER_STATE.IDLE) {
+        const normalizedForDistress = normalized.replace(/[.,!?]/g, '').replace(/\s+/g, ' ').trim();
+        const matchedDistressPhrase = this._matchDistressPhrase(normalizedForDistress);
+        if (matchedDistressPhrase && /\bcentral\b/i.test(transcript)) {
+          this.log('EMERGENCY_PHRASE_FAST_PATH', { participant: participantId, transcript, distressType: matchedDistressPhrase.distressType });
+          this._turnContextByUnit.set(participantId, { transcript, intent: 'EMERGENCY_PHRASE_ASSIST' });
+          await this.handleEmergencyPhraseAssist(participantId, matchedDistressPhrase.distressType);
+          return;
+        }
+      }
+
       const emergencyPhrases = [
         'officer needs assistance', 'officer down', 'shots fired',
         'code 3 backup', 'emergency backup', '10-33', '10/33', 'ten thirty three',
@@ -1350,6 +1435,17 @@ class AIDispatcher {
         this._turnContextByUnit.set(participantId, { transcript, intent: 'UPDATE_CALL' });
         await this.handleCallUpdateDetailsInput(participantId, transcript, slots);
         return;
+      }
+
+      if (state === DISPATCHER_STATE.AWAITING_COMMAND) {
+        const normalizedForEmergency = transcript.toLowerCase().replace(/[.,!?]/g, '').replace(/\s+/g, ' ').trim();
+        const matchedDistress = this._matchDistressPhrase(normalizedForEmergency);
+        if (matchedDistress) {
+          this.log('EMERGENCY_PHRASE_DETECTED', { participant: participantId, transcript, distressType: matchedDistress.distressType });
+          this._turnContextByUnit.set(participantId, { transcript, intent: 'EMERGENCY_PHRASE_ASSIST' });
+          await this.handleEmergencyPhraseAssist(participantId, matchedDistress.distressType);
+          return;
+        }
       }
 
       const normalizedTranscript = transcript.trim().toLowerCase().replace(/[.,!?]+/g, '');

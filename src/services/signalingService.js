@@ -1222,6 +1222,18 @@ class SignalingService {
     });
   }
 
+  requestLocationTrackStart(unitId) {
+    if (!this.io) return false;
+    const targetSocket = this._findSocketByUnitId(unitId);
+    if (targetSocket) {
+      targetSocket.emit('location:track_start', { requestedBy: 'ai-dispatcher', emergency: true });
+      console.log(`[Signaling] AI-Dispatcher GPS track_start sent to ${unitId}`);
+      return true;
+    }
+    console.log(`[Signaling] AI-Dispatcher GPS track_start: socket not found for ${unitId}`);
+    return false;
+  }
+
   broadcastDataToChannel(channelId, data) {
     if (!this.io) return;
     this.io.to(`channel:${channelId}`).emit('data:message', data);

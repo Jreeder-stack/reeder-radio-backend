@@ -577,7 +577,10 @@ const EMERGENCY_DISTRESS_PHRASES = [
   { phrase: 'weapon', distressType: 'reporting armed subject' },
   { phrase: 'armed subject', distressType: 'reporting armed subject' },
   { phrase: 'help', distressType: 'requesting immediate assistance' },
-  { phrase: 'ambush', distressType: 'reporting ambush' }
+  { phrase: 'ambush', distressType: 'reporting ambush' },
+  { phrase: '10-33', distressType: 'reporting emergency' },
+  { phrase: '10/33', distressType: 'reporting emergency' },
+  { phrase: 'ten thirty three', distressType: 'reporting emergency' }
 ];
 
 let signal100Active = false;
@@ -682,7 +685,7 @@ export function setUnitSessionState(unitId, state, pendingIntent = null, slots =
   console.log(`[SESSION] ${unitId}: ${oldState} → ${state} | oldSlotKeys=[${slotKeys(oldSlots)}] | newSlotKeys=[${slotKeys(session.slots)}] | replace=${replaceSlots}`);
 }
 
-export { DISPATCHER_STATE };
+export { DISPATCHER_STATE, EMERGENCY_DISTRESS_PHRASES };
 
 function extractPlate(transcript) {
   const normalized = normalizeText(transcript);
