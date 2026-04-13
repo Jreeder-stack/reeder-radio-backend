@@ -1,0 +1,85 @@
+Warning: Unexpected input(s) 'script_stop', valid inputs are ['host', 'port', 'passphrase', 'username', 'password', 'protocol', 'sync', 'use_insecure_cipher', 'cipher', 'timeout', 'command_timeout', 'key', 'key_path', 'fingerprint', 'proxy_host', 'proxy_port', 'proxy_username', 'proxy_password', 'proxy_protocol', 'proxy_passphrase', 'proxy_timeout', 'proxy_key', 'proxy_key_path', 'proxy_fingerprint', 'proxy_cipher', 'proxy_use_insecure_cipher', 'script', 'script_path', 'envs', 'envs_format', 'debug', 'allenvs', 'request_pty', 'capture_stdout']
+Run appleboy/ssh-action@v1.2.2
+Run echo "$GITHUB_ACTION_PATH" >> $GITHUB_PATH
+Run entrypoint.sh
+Will download drone-ssh-1.8.1-linux-amd64 from https://github.com/appleboy/drone-ssh/releases/download/v1.8.1
+======= CLI Version =======
+Drone SSH version 1.8.1
+===========================
+=== Command Comms — Deploy ===
+App directory: /home/***/command-comms
+[1/6] Pulling latest code from 'main'...
+From https://github.com/Jreeder-stack/reeder-radio-backend
+ * branch            main       -> FETCH_HEAD
+   fe29a46..13b165c  main       -> origin/main
+HEAD is now at 13b165c Wire up remaining CAD voice intents to AI dispatcher (Task #289)
+Removing .config/
+Removing .upm/
+Removing client/dist/assets/index-3sQK6EhO.js
+Removing client/dist/assets/index-3sQK6EhO.js.map
+Removing client/dist/assets/index-legacy-Cuu1Hj8l.js
+Removing client/dist/assets/index-legacy-Cuu1Hj8l.js.map
+[2/6] Fixing file ownership...
+[3/6] Installing backend dependencies...
+npm warn config production Use `--omit=dev` instead.
+up to date, audited 458 packages in 2s
+68 packages are looking for funding
+  run `npm fund` for details
+11 vulnerabilities (3 moderate, 8 high)
+To address all issues, run:
+  npm audit fix
+Run `npm audit` for details.
+[4/6] Installing client dependencies...
+up to date, audited 223 packages in 1s
+25 packages are looking for funding
+  run `npm fund` for details
+7 vulnerabilities (2 moderate, 5 high)
+To address issues that do not require attention, run:
+  npm audit fix
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+Run `npm audit` for details.
+[5/6] Building frontend...
+> reeder-radio-ui@0.0.0 build
+> vite build
+plugin-legacy 'modernTargets' option overrode the builtin targets of modern chunks. Some versions of browsers between legacy and modern may not be supported.
+vite v5.4.21 building for production...
+transforming...
+✓ 1743 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/assets/polyfills-legacy-BvM_nQpD.js    152.88 kB │ gzip:  60.04 kB │ map:   850.47 kB
+dist/assets/index-legacy-B6kP39ZG.js      1,127.43 kB │ gzip: 345.37 kB │ map: 3,505.69 kB
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+dist/index.html                   2.34 kB │ gzip:   1.01 kB
+dist/assets/index-CA70puuN.css  110.60 kB │ gzip:  22.99 kB
+dist/assets/index-CKsFrmoD.js   927.19 kB │ gzip: 309.84 kB │ map: 3,330.09 kB
+✓ built in 50.49s
+[6/6] Restarting application...
+[PM2] Applying action restartProcessId on app [command-comms](ids: [ 0 ])
+Error: RROR] Process 0 not found
+Process 0 not found
+/usr/lib/node_modules/pm2/lib/API.js:1719
+        acted.push(proc.pm2_env ? proc.pm2_env.pm_id : proc.pm_id)
+                        ^
+TypeError: Cannot read properties of undefined (reading 'pm2_env')
+    at /usr/lib/node_modules/pm2/lib/API.js:1719:25
+    at Array.forEach (<anonymous>)
+    at API.speedList (/usr/lib/node_modules/pm2/lib/API.js:1718:18)
+    at /usr/lib/node_modules/pm2/lib/binaries/CLI.js:385:11
+    at wrapper (/usr/lib/node_modules/pm2/node_modules/async/internal/once.js:12:16)
+    at replenish (/usr/lib/node_modules/pm2/node_modules/async/internal/eachOfLimit.js:76:25)
+    at iterateeCallback (/usr/lib/node_modules/pm2/node_modules/async/internal/eachOfLimit.js:65:17)
+    at /usr/lib/node_modules/pm2/node_modules/async/internal/onlyOnce.js:12:16
+    at /usr/lib/node_modules/pm2/lib/binaries/CLI.js:382:9
+    at /usr/lib/node_modules/pm2/lib/API.js:1096:23
+Node.js v20.20.1
+2026/04/13 21:32:34 Process exited with status 1
+Error: Process completed with exit code 1.
