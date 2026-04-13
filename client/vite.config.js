@@ -5,7 +5,7 @@ import { execSync } from "child_process";
 
 let gitHash = "unknown";
 try {
-  gitHash = execSync("git rev-parse --short HEAD").toString().trim();
+  gitHash = execSync("git rev-parse --short HEAD 2>/dev/null").toString().trim();
 } catch (e) {}
 
 const buildTime = new Date().toISOString();

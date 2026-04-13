@@ -20,6 +20,7 @@ const WS_PACING_INTERVAL_MS = 20;
 const WS_PACING_MAX_QUEUE = 75;
 const TX_WATCHDOG_INTERVAL_MS = 1000;
 const TX_WATCHDOG_SILENCE_THRESHOLD_MS = 5000;
+const TX_WATCHDOG_AUTO_RELEASE_MS = 15000;
 const TX_WATCHDOG_GRACE_MS = 6000;
 const PCM_FRAME_SAMPLES = 960;
 const WS_BINARY_MARKER = 0x01;
@@ -729,6 +730,22 @@ class AudioRelayService {
       if (!baseline) continue;
       if (!lastReceived && transmission.timestamp && (now - transmission.timestamp) < TX_WATCHDOG_GRACE_MS) continue;
       const silenceMs = now - baseline;
+
+      if (silenceMs >= TX_WATCHDOG_AUTO_RELEASE_MS) {
+        if (!this._txWatchdogAlerted.has(key)) {
+          console.warn(`[AudioRelay] TX_WATCHDOG_SILENCE unitId=${unitId} channelId=${channelId} silenceMs=${silenceMs} hadAudio=${!!lastReceived}`);
+        }
+        console.warn(`[AudioRelay] TX_WATCHDOG_AUTO_RELEASE unitId=${unitId} channelId=${channelId} silenceMs=${silenceMs}`);
+        this._txWatchdogAlerted.add(key);
+        try {
+          this._signalingService.forceEndTransmission(channelId, unitId, 'silence_auto_release');
+        } catch (err) {
+          console.error(`[AudioRelay] TX_WATCHDOG_AUTO_RELEASE_ERROR: ${err.message}`);
+        }
+        this.clearTxWatchdog(channelId, unitId, 'silence_auto_release');
+        continue;
+      }
+
       if (silenceMs >= TX_WATCHDOG_SILENCE_THRESHOLD_MS && !this._txWatchdogAlerted.has(key)) {
         this._txWatchdogAlerted.add(key);
         console.warn(`[AudioRelay] TX_WATCHDOG_SILENCE unitId=${unitId} channelId=${channelId} silenceMs=${silenceMs} hadAudio=${!!lastReceived}`);

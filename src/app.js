@@ -16,7 +16,7 @@ import * as authService from './services/authService.js';
 
 let _appBuildVersion = 'unknown';
 try {
-  _appBuildVersion = execSync('git rev-parse --short HEAD').toString().trim();
+  _appBuildVersion = execSync('git rev-parse --short HEAD 2>/dev/null').toString().trim();
 } catch (e) {}
 const _appBuildTime = new Date().toISOString();
 const _appStartTime = Date.now();

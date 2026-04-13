@@ -13,7 +13,7 @@ import { wsAudioBridge } from './services/wsAudioBridge.js';
 
 let _buildVersion = 'unknown';
 try {
-  _buildVersion = execSync('git rev-parse --short HEAD').toString().trim();
+  _buildVersion = execSync('git rev-parse --short HEAD 2>/dev/null').toString().trim();
 } catch (e) {}
 const _buildTime = new Date().toISOString();
 const _startTime = Date.now();
@@ -151,7 +151,28 @@ function listenWithRetry(server, port, host, retries = 3, delay = 3000) {
   });
 }
 
-const HARD_SHUTDOWN_TIMEOUT_MS = 8000;
+const HARD_SHUTDOWN_TIMEOUT_MS = 15000;
+const STEP_TIMEOUT_MS = 4000;
+
+function withStepTimeout(label, fn) {
+  let timer;
+  return Promise.race([
+    Promise.resolve()
+      .then(fn)
+      .catch((err) => {
+        console.error(`[SHUTDOWN] Step "${label}" error: ${err.message}`);
+      })
+      .finally(() => {
+        clearTimeout(timer);
+      }),
+    new Promise((resolve) => {
+      timer = setTimeout(() => {
+        console.warn(`[SHUTDOWN] Step "${label}" timed out after ${STEP_TIMEOUT_MS}ms, moving on.`);
+        resolve();
+      }, STEP_TIMEOUT_MS);
+    }),
+  ]);
+}
 
 function setupGracefulShutdown(httpServer) {
   let shuttingDown = false;
@@ -167,41 +188,31 @@ function setupGracefulShutdown(httpServer) {
     }, HARD_SHUTDOWN_TIMEOUT_MS);
     hardShutdownTimer.unref();
 
-    try {
+    await withStepTimeout('signaling service', () => {
       console.log('[SHUTDOWN] Stopping signaling service...');
       signalingService.stop();
-    } catch (err) {
-      console.error('[SHUTDOWN] Signaling service stop error:', err.message);
-    }
+    });
 
-    try {
+    await withStepTimeout('WS audio bridge', () => {
       console.log('[SHUTDOWN] Stopping WebSocket audio bridge...');
       wsAudioBridge.stop();
-    } catch (err) {
-      console.error('[SHUTDOWN] WS audio bridge stop error:', err.message);
-    }
+    });
 
-    try {
+    await withStepTimeout('audio relay', () => {
       console.log('[SHUTDOWN] Stopping audio relay service...');
       audioRelayService.stop();
-    } catch (err) {
-      console.error('[SHUTDOWN] Audio relay stop error:', err.message);
-    }
+    });
 
-    try {
+    await withStepTimeout('HTTP server', async () => {
       console.log('[SHUTDOWN] Closing HTTP server...');
       await new Promise((resolve) => httpServer.close(() => resolve()));
-    } catch (err) {
-      console.error('[SHUTDOWN] HTTP server close error:', err.message);
-    }
+    });
 
-    try {
+    await withStepTimeout('database pool', async () => {
       console.log('[SHUTDOWN] Closing database pool...');
       const pool = (await import('./db/index.js')).default;
       await pool.end();
-    } catch (err) {
-      console.error('[SHUTDOWN] Database pool close error:', err.message);
-    }
+    });
 
     console.log('[SHUTDOWN] Graceful shutdown complete.');
     clearTimeout(hardShutdownTimer);
