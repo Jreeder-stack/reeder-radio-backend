@@ -451,7 +451,7 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
     }
   };
 
-  const handleClearAirConfirmEnd = () => {
+  const handleClearAirConfirmEnd = async () => {
     if (!clearAirChannel) return;
     const channelId = String(clearAirChannel);
     const channel = channels.find(ch => String(ch.id) === channelId);
@@ -463,9 +463,11 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
     
     if (roomKey) {
       toneEngine.stopClearAir(channelId);
-      toneTransmitter.stopToneTransmission().catch(err => {
+      try {
+        await toneTransmitter.stopToneTransmission();
+      } catch (err) {
         console.warn('[BottomBar] ClearAir tone stop failed:', err);
-      });
+      }
       if (signalPttEnd) {
         signalPttEnd(roomKey);
       }
