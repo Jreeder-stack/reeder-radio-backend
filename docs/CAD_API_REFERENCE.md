@@ -3012,13 +3012,28 @@ socket.on('auth:error', (data) => {
 
 | Setting | Value |
 |---|---|
-| **URL** | `wss://<host>/api/audio-ws?channelId=<channelId>&unitId=<unitId>` |
+| **URL** | `wss://<host>/api/audio-ws?channelId=<channelId>&unitId=<unitId>&format=<pcm\|opus>` |
 | **Auth** | `connect.sid` session cookie (validated server-side) |
 | **Protocol** | Native WebSocket (not Socket.IO) |
 
+**Query Parameters:**
+
+| Param | Type | Default | Description |
+|---|---|---|---|
+| `channelId` | string | _(required)_ | Channel ID in `zone__channelName` room key format |
+| `unitId` | string | _(required)_ | Unit identifier (informational; server uses session identity) |
+| `format` | string | `pcm` | Preferred **receive** format: `pcm` (0x01 marker, 16 kHz int16 LE samples) or `opus` (0x02 marker, Opus-encoded bytes). External CAD systems should use the default `pcm`. Browser clients that decode Opus natively should pass `opus` for lower bandwidth. |
+
 ```javascript
+// External CAD (default — receives PCM at 16 kHz):
 const ws = new WebSocket(
   'wss://<host>/api/audio-ws?channelId=North__Dispatch&unitId=U-101'
+);
+ws.binaryType = 'arraybuffer';
+
+// Browser client (receives Opus for lower bandwidth):
+const ws = new WebSocket(
+  'wss://<host>/api/audio-ws?channelId=North__Dispatch&unitId=U-101&format=opus'
 );
 ws.binaryType = 'arraybuffer';
 ```
@@ -3031,8 +3046,8 @@ All audio is sent and received as binary WebSocket frames. The first byte is a *
 
 | Marker | Codec | Payload | Notes |
 |--------|-------|---------|-------|
-| `0x02` | **Opus** (preferred) | Raw Opus-encoded bytes (~100–200 bytes/frame) | End-to-end passthrough, best quality and lowest bandwidth |
-| `0x01` | PCM (legacy) | int16[] little-endian samples (~1,920 bytes/frame) | Supported for backward compatibility |
+| `0x02` | **Opus** | Raw Opus-encoded bytes (~100–200 bytes/frame) | Sent to clients that connect with `?format=opus`. Best quality and lowest bandwidth. |
+| `0x01` | **PCM** (default) | int16[] little-endian samples, 16 kHz mono (~1,920 bytes/frame) | Sent by default (no `format` param or `?format=pcm`). Compatible with external CAD systems. |
 
 The header layout is identical for both markers — only the payload interpretation differs:
 
@@ -3066,7 +3081,7 @@ Offset  Size         Field             Encoding
 └────────┴──────────┴───────────┴───────────┴───────────┴──────────┴─────────────┘
 ```
 
-**RX (receiving audio):** The server sends **Opus frames (`0x02`)** by default. Clients must decode Opus to PCM for playback (e.g., using the `opus-decoder` WASM package or equivalent). Clients should also handle legacy `0x01` PCM frames for backward compatibility.
+**RX (receiving audio):** The server sends frames in the format requested by the `?format=` query parameter on the WebSocket connection. The default is `pcm` (marker `0x01`, 16 kHz int16 LE samples). Clients that pass `?format=opus` receive Opus frames (marker `0x02`). Clients should handle both markers for robustness.
 
 **TX (transmitting audio):** Clients may send either `0x02` (Opus) or `0x01` (PCM) frames. Opus is strongly preferred — it avoids a server-side re-encode step and preserves audio fidelity end-to-end. If sending PCM (`0x01`), the server will encode to Opus before relaying.
 
@@ -3115,7 +3130,7 @@ The server sends heartbeats at 30-second intervals:
 | **Sample Format** | int16 (signed 16-bit, little-endian) |
 | **Frame Size** | 320 samples |
 | **Frame Duration** | 20 ms (320 / 16000) |
-| **Codec (RX wire)** | Opus passthrough (`0x02` marker); ~100–200 bytes/frame |
+| **Codec (RX wire)** | PCM (`0x01` marker, default) or Opus (`0x02` marker, via `?format=opus`); format depends on `?format=` query param |
 | **Codec (TX wire)** | Opus (`0x02`, preferred) or PCM (`0x01`, legacy fallback) |
 | **Opus Encoding** | VOIP application, 16 kHz, mono, 320 samples/frame |
 
@@ -3244,5 +3259,6 @@ radio.destroy();
 | Date | Change |
 |---|---|
 | 2026-04-11 | Full documentation audit. Added 4 missing endpoint families: Unit Endpoints (`/api/unit/*` — 3 endpoints), Radio Config Endpoints (`/api/radio/*` — 1 endpoint), Recording Log Endpoints (`/api/recording-logs/*` — 4 endpoints), Admin Endpoints (`/api/admin/*` — 24 endpoints). Added 2 missing Socket.IO outbound events: `tx:silence_warning` and `radio:dsp_config`. Updated Auth Modes Summary table to include new endpoint families. Updated Table of Contents. |
+| 2026-04-13 | Audio WebSocket: Added `?format=pcm\|opus` query parameter for per-connection receive format preference. Default is `pcm` (0x01 marker) for backward compatibility with external CAD systems. Browser clients request `?format=opus` for Opus frames. Updated Audio Specification table and connection docs. |
 | 2026-04-10 | Audio WebSocket: Added Opus end-to-end passthrough (`0x02` marker). Server now sends Opus frames by default instead of PCM. Clients may TX with either `0x02` (Opus, preferred) or `0x01` (PCM, legacy). Updated Audio Specification table. |
 | 2026-04-10 | Initial version — complete API reference covering all endpoints, Socket.IO events, Audio WebSocket protocol, and embeddable RadioClient. |

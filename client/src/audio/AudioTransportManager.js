@@ -383,7 +383,7 @@ class AudioTransportManager {
 
   async _openWebSocket(channelName, identity) {
     const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const url = `${proto}//${window.location.host}/api/audio-ws?channelId=${encodeURIComponent(channelName)}&unitId=${encodeURIComponent(identity)}`;
+    const url = `${proto}//${window.location.host}/api/audio-ws?channelId=${encodeURIComponent(channelName)}&unitId=${encodeURIComponent(identity)}&format=opus`;
     const redactedUrl = (() => {
       try {
         const parsed = new URL(url);

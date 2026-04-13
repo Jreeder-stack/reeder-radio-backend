@@ -149,6 +149,8 @@ class WsAudioBridge {
     const url = new URL(request.url, `http://${request.headers.host}`);
     const channelId = canonicalChannelKey(url.searchParams.get('channelId'));
     const unitId = user.unit_id || user.username;
+    const formatParam = (url.searchParams.get('format') || 'pcm').toLowerCase();
+    const audioFormat = (formatParam === 'opus') ? 'opus' : 'pcm';
 
     if (!channelId || !unitId) {
       console.warn('AUDIO_WS_REJECTED', {
@@ -165,6 +167,7 @@ class WsAudioBridge {
 
     ws._audioChannelId = channelId;
     ws._audioUnitId = unitId;
+    ws._audioFormat = audioFormat;
     ws._audioPongPending = false;
     ws._missedPongs = 0;
 
@@ -173,7 +176,7 @@ class WsAudioBridge {
       ws._missedPongs = 0;
     });
 
-    audioRelayService.addWsSubscriber(channelId, unitId, ws);
+    audioRelayService.addWsSubscriber(channelId, unitId, ws, audioFormat);
 
     pool.query(
       "SELECT id FROM channels WHERE COALESCE(zone, 'Default') || '__' || name = $1 LIMIT 1",

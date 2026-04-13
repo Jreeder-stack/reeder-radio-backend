@@ -177,11 +177,12 @@ class AudioRelayService {
     }
   }
 
-  addWsSubscriber(channelId, unitId, ws) {
+  addWsSubscriber(channelId, unitId, ws, format = 'pcm') {
     const key = canonicalChannelKey(channelId);
     if (!this._wsSubscribers.has(key)) this._wsSubscribers.set(key, new Map());
-    this._wsSubscribers.get(key).set(unitId, ws);
-    if (AUDIO_DIAG) console.log(`[AudioRelay] WS_SUBSCRIBER_ADDED channelKey=${key} unitId=${unitId} totalWsSubs=${this._wsSubscribers.get(key).size}`);
+    const preferredFormat = (format === 'opus') ? 'opus' : 'pcm';
+    this._wsSubscribers.get(key).set(unitId, { ws, format: preferredFormat });
+    if (AUDIO_DIAG) console.log(`[AudioRelay] WS_SUBSCRIBER_ADDED channelKey=${key} unitId=${unitId} format=${preferredFormat} totalWsSubs=${this._wsSubscribers.get(key).size}`);
   }
 
   removeWsSubscriber(channelId, unitId, wsInstance = null) {
@@ -195,7 +196,9 @@ class AudioRelayService {
     }
     for (const [k, s] of this._wsSubscribers) {
       if (s.has(unitId)) {
-        if (wsInstance && s.get(unitId) !== wsInstance) continue;
+        const entry = s.get(unitId);
+        const entryWs = entry && entry.ws ? entry.ws : entry;
+        if (wsInstance && entryWs !== wsInstance) continue;
         s.delete(unitId);
         if (s.size === 0) this._wsSubscribers.delete(k);
         if (AUDIO_DIAG) console.log(`[AudioRelay] WS_SUBSCRIBER_REMOVED channelKey=${k} unitId=${unitId} (fallback from requested key=${key})`);
@@ -375,14 +378,58 @@ class AudioRelayService {
       const wsSubs = this._wsSubscribers.get(channelKey);
       if (wsSubs && wsSubs.size > 0) {
         const isPcmFallback = opusPayload.length > 1 && opusPayload[0] === CODEC_MARKER_PCM;
-        let binaryFrame;
+
+        let needsOpus = false;
+        let needsPcm = false;
+        for (const [subUnitId, subEntry] of wsSubs) {
+          if (subUnitId === senderUnitId) continue;
+          if (subEntry.format === 'opus') needsOpus = true;
+          else needsPcm = true;
+        }
+
+        let opusFrame = null;
+        let pcmFrame = null;
+
         if (isPcmFallback) {
           const pcmPayload = opusPayload.subarray(1);
-          binaryFrame = this._buildBinaryWsFrameRawPcm(sequence, channelKey, senderUnitId, pcmPayload);
+          if (needsPcm) {
+            pcmFrame = this._buildBinaryWsFrameRawPcm(sequence, channelKey, senderUnitId, pcmPayload);
+          }
+          if (needsOpus) {
+            try {
+              const encodedOpusFrames = opusCodec.encodePcmToOpus(pcmPayload);
+              if (encodedOpusFrames.length === 1) {
+                opusFrame = this._buildBinaryWsFrameOpus(sequence, channelKey, senderUnitId, encodedOpusFrames[0]);
+              } else if (encodedOpusFrames.length > 1) {
+                opusFrame = this._buildBinaryWsFrameOpus(sequence, channelKey, senderUnitId, encodedOpusFrames[0]);
+                for (let i = 1; i < encodedOpusFrames.length; i++) {
+                  const extraOpusFrame = this._buildBinaryWsFrameOpus(sequence + i, channelKey, senderUnitId, encodedOpusFrames[i]);
+                  this._enqueueWsFrame(channelKey, senderUnitId, extraOpusFrame, null);
+                }
+              }
+            } catch (err) {
+              console.error(`[AudioRelay] PCM-to-Opus re-encode failed for opus subscribers ch=${channelKey} sender=${senderUnitId}:`, err.message);
+              opusFrame = this._buildBinaryWsFrameRawPcm(sequence, channelKey, senderUnitId, pcmPayload);
+            }
+          }
         } else {
-          binaryFrame = this._buildBinaryWsFrameOpus(sequence, channelKey, senderUnitId, opusPayload);
+          if (needsOpus) {
+            opusFrame = this._buildBinaryWsFrameOpus(sequence, channelKey, senderUnitId, opusPayload);
+          }
+          if (needsPcm) {
+            try {
+              const decodedPcm = opusCodec.decodeOpusToPcm(opusPayload, senderUnitId);
+              pcmFrame = this._buildBinaryWsFrameRawPcm(sequence, channelKey, senderUnitId, decodedPcm);
+            } catch (err) {
+              console.error(`[AudioRelay] Opus-to-PCM decode failed for CAD relay ch=${channelKey} sender=${senderUnitId}:`, err.message);
+              pcmFrame = null;
+            }
+          }
         }
-        this._enqueueWsFrame(channelKey, senderUnitId, binaryFrame);
+
+        if (opusFrame || pcmFrame) {
+          this._enqueueWsFrame(channelKey, senderUnitId, opusFrame, pcmFrame);
+        }
       }
     }
 
@@ -398,7 +445,7 @@ class AudioRelayService {
     }
   }
 
-  _enqueueWsFrame(channelKey, senderUnitId, packetBuf) {
+  _enqueueWsFrame(channelKey, senderUnitId, opusFrame, pcmFrame) {
     let queue = this._wsPacingQueues.get(channelKey);
     if (!queue) {
       queue = [];
@@ -409,7 +456,7 @@ class AudioRelayService {
       this._trackWsRelayFrame(channelKey, 'drop');
       console.warn(`[AudioRelay] WS_PACING_FRAME_DROPPED channelId=${channelKey} queueDepth=${queue.length} maxQueue=${WS_PACING_MAX_QUEUE}`);
     }
-    queue.push({ senderUnitId, packetBuf });
+    queue.push({ senderUnitId, opusFrame, pcmFrame });
     this._trackWsRelayFrame(channelKey, 'enqueue');
     this._startWsRelayStatsTimer();
 
@@ -467,11 +514,17 @@ class AudioRelayService {
       if (!wsSubs) {
         continue;
       }
-      for (const [subUnitId, ws] of wsSubs) {
+      for (const [subUnitId, subEntry] of wsSubs) {
         if (subUnitId === frame.senderUnitId) continue;
+        const ws = subEntry.ws || subEntry;
+        const preferredFormat = subEntry.format || 'pcm';
+        const packetBuf = preferredFormat === 'opus'
+          ? (frame.opusFrame || frame.pcmFrame || frame.packetBuf)
+          : (frame.pcmFrame || frame.opusFrame || frame.packetBuf);
+        if (!packetBuf) continue;
         try {
           if (ws.readyState === 1) {
-            ws.send(frame.packetBuf);
+            ws.send(packetBuf);
             wsSentCount++;
           }
         } catch (err) {
