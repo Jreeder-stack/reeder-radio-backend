@@ -1270,6 +1270,26 @@ class AIDispatcher {
         return;
       }
 
+      const normalizedTranscript = transcript.trim().toLowerCase().replace(/[.,!?]+/g, '');
+      const hasUnitToUnit = /\b\w+[\s-]*\d+\s+from\s+\w+[\s-]*\d+\b/i.test(normalizedTranscript);
+      const hasCommandContent = /\b(10-\d+|run\b|plate\b|check\b|backup\b|service\b|zone\b|status\b|detail\b|stop\b|traffic\b|radio\b|time\b)/i.test(normalizedTranscript);
+      if (!hasUnitToUnit && !hasCommandContent) {
+        const isCentralHail =
+          /^central\b/.test(normalizedTranscript) ||
+          /\bto\s+central\b/.test(normalizedTranscript) ||
+          /\bcentral\s*$/.test(normalizedTranscript);
+        if (isCentralHail) {
+          this.log('REGEX_WAKE_ONLY_PRECHECK', { participant: participantId, transcript });
+          const wakeResp = `${participantId}, go ahead.`;
+          this._turnContextByUnit.set(participantId, { transcript, intent: 'WAKE_ONLY' });
+          await this.speak(wakeResp, participantId);
+          this.addConversationExchange(participantId, transcript, wakeResp);
+          setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_COMMAND);
+          this.log('REGEX_WAKE_ONLY_AWAITING', { participant: participantId, newState: DISPATCHER_STATE.AWAITING_COMMAND });
+          return;
+        }
+      }
+
       this.log('LLM_CLASSIFY_START', { participant: participantId, state, transcript });
 
       const conversationHistory = slots?.conversationHistory || [];
@@ -1296,10 +1316,9 @@ class AIDispatcher {
 
         case 'DISREGARD': {
           this.log('LLM_DISREGARD', { participant: participantId, state });
-          setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+          setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, { conversationHistory: [] }, true);
           const resp = result.response || `${participantId}, 10-4, disregard.`;
           await this.speak(resp, participantId);
-          this.addConversationExchange(participantId, transcript, resp);
           break;
         }
 
