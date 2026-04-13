@@ -8,6 +8,7 @@ import { opusCodec, SAMPLE_RATE as OPUS_SAMPLE_RATE, FRAME_SIZE as OPUS_FRAME_SI
 import { floorControlService } from './floorControlService.js';
 import * as cadService from './cadService.js';
 import locationService from './locationService.js';
+import { webSearch, SEARCH_STATUS } from './webSearchService.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -3194,6 +3195,24 @@ class AIDispatcher {
             dataContext = parts.length > 0 ? parts.join('\n') : 'Address found but no township/municipality data available.';
           } else {
             dataContext = 'Geocoding lookup returned no results for that address.';
+          }
+        }
+      } else if (dataNeeded.startsWith('web_search:')) {
+        const searchQuery = dataNeeded.substring('web_search:'.length).trim();
+        if (!searchQuery) {
+          fetchFailed = true;
+        } else {
+          const searchResult = await webSearch(searchQuery);
+          if (searchResult.status === SEARCH_STATUS.OK && searchResult.text) {
+            dataContext = searchResult.text;
+          } else if (searchResult.status === SEARCH_STATUS.ERROR) {
+            fetchFailed = true;
+          } else {
+            const resp = `${participantId}, I wasn't able to find that information.`;
+            await this.speak(resp, participantId);
+            this.addConversationExchange(participantId, transcript, resp);
+            setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+            return;
           }
         }
       } else {
