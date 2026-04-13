@@ -95,9 +95,11 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
     private var cancelArmingJob: Job? = null
     private var pttStartJob: Job? = null
     private var emergencySelfHealJob: Job? = null
+    private var activeTransmittingUnitStaleJob: Job? = null
 
     companion object {
         private const val EMERGENCY_SELF_HEAL_TIMEOUT_MS = 10_000L
+        private const val ACTIVE_TX_UNIT_STALE_MS = 45_000L
     }
 
     /**
@@ -295,6 +297,14 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                             val currentRoomKey = state.currentChannel?.roomKey
                             if (!state.isScanning || event.channelId == currentRoomKey) {
                                 _uiState.update { it.copy(activeTransmittingUnit = event.unitId) }
+                                activeTransmittingUnitStaleJob?.cancel()
+                                activeTransmittingUnitStaleJob = viewModelScope.launch {
+                                    delay(ACTIVE_TX_UNIT_STALE_MS)
+                                    if (_uiState.value.activeTransmittingUnit == event.unitId) {
+                                        Log.w(TAG, """{"event":"ACTIVE_TX_UNIT_STALE_CLEAR","unit":"${event.unitId}"}""")
+                                        _uiState.update { it.copy(activeTransmittingUnit = null) }
+                                    }
+                                }
                             }
                         }
                     }
@@ -303,8 +313,17 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                         if (event.unitId == state.activeTransmittingUnit) {
                             val currentRoomKey = state.currentChannel?.roomKey
                             if (!state.isScanning || event.channelId == currentRoomKey) {
+                                activeTransmittingUnitStaleJob?.cancel()
                                 _uiState.update { it.copy(activeTransmittingUnit = null) }
                             }
+                        }
+                    }
+                    is SignalingEvent.RadioChannelIdle -> {
+                        val state = _uiState.value
+                        val currentRoomKey = state.currentChannel?.roomKey
+                        if (event.channelId == currentRoomKey && state.activeTransmittingUnit != null) {
+                            activeTransmittingUnitStaleJob?.cancel()
+                            _uiState.update { it.copy(activeTransmittingUnit = null) }
                         }
                     }
                     is SignalingEvent.EmergencyStart -> {
@@ -705,9 +724,8 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
     private fun onChannelChanged(oldRoomKey: String? = null) {
         val newRoomKey = _uiState.value.currentChannel?.roomKey
         if (oldRoomKey != null && oldRoomKey != newRoomKey) {
-            if (_uiState.value.isScanning) {
-                _uiState.update { it.copy(activeTransmittingUnit = null) }
-            }
+            activeTransmittingUnitStaleJob?.cancel()
+            _uiState.update { it.copy(activeTransmittingUnit = null) }
             if (app.signalingRepository.connectionState.value == ConnectionState.AUTHENTICATED) {
                 app.signalingRepository.leaveChannel(oldRoomKey)
                 if (newRoomKey != null) {
@@ -735,6 +753,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         emergencyJob?.cancel()
         cancelArmingJob?.cancel()
         emergencySelfHealJob?.cancel()
+        activeTransmittingUnitStaleJob?.cancel()
         app.toneEngine.stopCountdownBeep()
         locationTracker.stopTracking()
         runCatching { getApplication<Application>().unregisterReceiver(pttTxFailedReceiver) }

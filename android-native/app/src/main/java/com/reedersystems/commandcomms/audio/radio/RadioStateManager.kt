@@ -19,6 +19,10 @@ class RadioStateManager {
     var transmittingUnitSetAtMs: Long = 0L
         private set
 
+    @Volatile
+    var stateSetAtMs: Long = 0L
+        private set
+
     val currentState: RadioState
         get() = _state.value
 
@@ -35,6 +39,7 @@ class RadioStateManager {
         val old = _state.value
         if (old == newState) return
         _state.value = newState
+        stateSetAtMs = System.currentTimeMillis()
         Log.d(TAG, "State transition: $old -> $newState reason=${reason.ifEmpty { "direct" }} activeChannel=${activeChannelKey ?: "none"} txPipeline=$txPipelineRunning rxPipeline=$rxPipelineRunning ${RadioDiagLog.elapsedTag()}")
     }
 
@@ -54,6 +59,7 @@ class RadioStateManager {
         _state.value = RadioState.IDLE
         _transmittingUnitId.value = null
         transmittingUnitSetAtMs = 0L
+        stateSetAtMs = System.currentTimeMillis()
         txPipelineRunning = false
         rxPipelineRunning = false
         Log.d(TAG, "State RESET: $old -> IDLE activeChannel=${activeChannelKey ?: "none"}")

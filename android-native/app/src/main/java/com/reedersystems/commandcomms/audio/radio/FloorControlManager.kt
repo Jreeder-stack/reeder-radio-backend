@@ -1,9 +1,13 @@
 package com.reedersystems.commandcomms.audio.radio
 
 import android.util.Log
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.launch
 
 private const val TAG = "[FloorCtrl]"
 
@@ -15,7 +19,8 @@ enum class FloorControlEvent {
 
 class FloorControlManager(
     private val gateway: RadioSignalingGateway,
-    private val stateManager: RadioStateManager
+    private val stateManager: RadioStateManager,
+    private val scope: CoroutineScope
 ) {
 
     private val _events = MutableSharedFlow<FloorControlEvent>(extraBufferCapacity = 16)
@@ -31,6 +36,12 @@ class FloorControlManager(
 
     @Volatile
     private var requestTimestampMs: Long = 0L
+
+    private var deniedAutoResetJob: Job? = null
+
+    companion object {
+        private const val DENIED_AUTO_RESET_MS = 3_000L
+    }
 
     fun requestFloor(channelKey: String) {
         requestTimestampMs = System.currentTimeMillis()
@@ -89,10 +100,19 @@ class FloorControlManager(
         cancelled = true
         stateManager.transitionTo(RadioState.CHANNEL_BUSY, "floor_denied")
         _events.tryEmit(FloorControlEvent.DENIED)
+        deniedAutoResetJob?.cancel()
+        deniedAutoResetJob = scope.launch {
+            delay(DENIED_AUTO_RESET_MS)
+            if (stateManager.currentState == RadioState.CHANNEL_BUSY && stateManager.transmittingUnitId.value == null) {
+                Log.d(TAG, "Auto-reset from CHANNEL_BUSY after floor denial (${DENIED_AUTO_RESET_MS}ms) ${RadioDiagLog.elapsedTag()}")
+                stateManager.transitionTo(RadioState.IDLE, "denied_auto_reset")
+            }
+        }
     }
 
     fun onChannelBusy(transmittingUnitId: String) {
         Log.d(TAG, "Channel busy — transmitting unit: $transmittingUnitId state=${stateManager.currentState} ${RadioDiagLog.elapsedTag()}")
+        deniedAutoResetJob?.cancel()
         stateManager.setTransmittingUnit(transmittingUnitId)
         if (stateManager.state.value != RadioState.TRANSMITTING) {
             stateManager.transitionTo(RadioState.RECEIVING, "channel_busy")
@@ -101,6 +121,7 @@ class FloorControlManager(
 
     fun onChannelIdle() {
         Log.d(TAG, "Channel idle state=${stateManager.currentState} ${RadioDiagLog.elapsedTag()}")
+        deniedAutoResetJob?.cancel()
         stateManager.setTransmittingUnit(null)
         if (stateManager.state.value == RadioState.RECEIVING ||
             stateManager.state.value == RadioState.CHANNEL_BUSY) {

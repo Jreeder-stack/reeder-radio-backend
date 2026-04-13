@@ -201,13 +201,22 @@ class BackgroundAudioService : Service() {
                 val roomKey = intent.getStringExtra(EXTRA_ROOM_KEY)
                 val channelName = intent.getStringExtra(EXTRA_CHANNEL_NAME)
                 if (channelId >= 0 && roomKey != null) {
+                    val previousRoomKey = servicePrefs.channelRoomKey
                     servicePrefs.channelId = channelId
                     servicePrefs.channelRoomKey = roomKey
                     if (channelName != null) servicePrefs.channelName = channelName
-                    Log.d(TAG, "Channel updated: $channelId / $roomKey")
+                    Log.d(TAG, "Channel updated: $channelId / $roomKey (previous=$previousRoomKey)")
                     radioEngine?.udpTransport?.channelId = roomKey
                     radioEngine?.udpTransport?.channelIndex = channelId
                     radioEngine?.stateManager?.activeChannelKey = roomKey
+                    if (previousRoomKey != null && previousRoomKey != roomKey) {
+                        val sm = radioEngine?.stateManager
+                        if (sm != null && (sm.currentState == RadioState.CHANNEL_BUSY || sm.currentState == RadioState.RECEIVING)) {
+                            Log.d(TAG, """{"event":"CHANNEL_SWITCH_CLEAR_BUSY","oldChannel":"$previousRoomKey","newChannel":"$roomKey","oldState":"${sm.currentState}"}""")
+                            sm.setTransmittingUnit(null)
+                            sm.transitionTo(RadioState.IDLE, "channel_switch")
+                        }
+                    }
                     ensureBackgroundSignalingConnected()
                     scope.launch { syncBackgroundSignalingChannel() }
                 }
@@ -632,15 +641,24 @@ class BackgroundAudioService : Service() {
                 delay(STALE_FLOOR_CHECK_INTERVAL_MS)
                 val engine = radioEngine ?: continue
                 val sm = engine.stateManager
-                val txUnit = sm.transmittingUnitId.value ?: continue
-                val setAtMs = sm.transmittingUnitSetAtMs
-                if (setAtMs <= 0L) continue
-                val staleMs = System.currentTimeMillis() - setAtMs
-                if (staleMs > STALE_FLOOR_MAX_TX_MS) {
-                    Log.w(TAG, """{"event":"STALE_FLOOR_HEALED","transmittingUnit":"$txUnit","staleMs":$staleMs}""")
-                    sm.setTransmittingUnit(null)
-                    if (sm.currentState == RadioState.RECEIVING || sm.currentState == RadioState.CHANNEL_BUSY) {
-                        sm.transitionTo(RadioState.IDLE, "stale_floor_heal")
+                val txUnit = sm.transmittingUnitId.value
+                if (txUnit != null) {
+                    val setAtMs = sm.transmittingUnitSetAtMs
+                    if (setAtMs > 0L) {
+                        val staleMs = System.currentTimeMillis() - setAtMs
+                        if (staleMs > STALE_FLOOR_MAX_TX_MS) {
+                            Log.w(TAG, """{"event":"STALE_FLOOR_HEALED","transmittingUnit":"$txUnit","staleMs":$staleMs}""")
+                            sm.setTransmittingUnit(null)
+                            if (sm.currentState == RadioState.RECEIVING || sm.currentState == RadioState.CHANNEL_BUSY) {
+                                sm.transitionTo(RadioState.IDLE, "stale_floor_heal")
+                            }
+                        }
+                    }
+                } else if (sm.currentState == RadioState.CHANNEL_BUSY || sm.currentState == RadioState.RECEIVING) {
+                    val stateAge = System.currentTimeMillis() - sm.stateSetAtMs
+                    if (sm.stateSetAtMs > 0L && stateAge > STALE_BUSY_NO_TX_MAX_MS) {
+                        Log.w(TAG, """{"event":"STALE_BUSY_NO_TX_HEALED","radioState":"${sm.currentState}","stateAgeMs":$stateAge}""")
+                        sm.transitionTo(RadioState.IDLE, "stale_busy_no_tx_heal")
                     }
                 }
             }
@@ -904,8 +922,17 @@ class BackgroundAudioService : Service() {
                 transmittingUnit = null
             }
         }
+        var effectiveRadioState = stateManager?.currentState
+        if (effectiveRadioState == RadioState.CHANNEL_BUSY && transmittingUnit == null && stateManager != null) {
+            val stateAge = System.currentTimeMillis() - stateManager.stateSetAtMs
+            if (stateManager.stateSetAtMs > 0L && stateAge > STALE_BUSY_NO_TX_MAX_MS) {
+                Log.w(TAG, """{"event":"STALE_BUSY_NO_TX_CLEARED_ON_PTT","stateAgeMs":$stateAge}""")
+                stateManager.transitionTo(RadioState.IDLE, "stale_busy_no_tx_ptt_clear")
+                effectiveRadioState = RadioState.IDLE
+            }
+        }
         val channelBusy = (transmittingUnit != null && transmittingUnit != selfUnitId) ||
-            radioState == RadioState.CHANNEL_BUSY
+            effectiveRadioState == RadioState.CHANNEL_BUSY
         if (channelBusy) {
             Log.w(TAG, """{"event":"RADIO_PTT_DOWN_CHANNEL_BUSY","transmittingUnit":"$transmittingUnit","radioState":"$radioState"}""")
             Log.d("[ToneEvent]", """{"tone":"denied","trigger":"channel_busy","transmittingUnit":"$transmittingUnit","radioState":"$radioState","state":"$pttState","ts":${System.currentTimeMillis()}}""")
@@ -1368,5 +1395,6 @@ class BackgroundAudioService : Service() {
         private const val ERROR_TONE_DEBOUNCE_MS = 300L
         private const val STALE_FLOOR_CHECK_INTERVAL_MS = 12_000L
         private const val STALE_FLOOR_MAX_TX_MS = 45_000L
+        private const val STALE_BUSY_NO_TX_MAX_MS = 5_000L
     }
 }

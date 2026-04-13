@@ -173,7 +173,7 @@ class RadioAudioEngine(private val context: Context) {
     }
 
     fun wireFloorControl(gateway: RadioSignalingGateway) {
-        floorControl = FloorControlManager(gateway, stateManager)
+        floorControl = FloorControlManager(gateway, stateManager, scope)
     }
 
     fun start() {
