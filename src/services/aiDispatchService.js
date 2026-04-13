@@ -340,6 +340,7 @@ class AIDispatcher {
     this._seenBoloIds = new Set();
     this._reconnectTimer = null;
     this._reconnectAttempts = 0;
+    this._isReconnecting = false;
     this._healthCheckInterval = null;
     this._intentionalLeave = false;
     this.pipelineStatus = 'idle';
@@ -515,8 +516,7 @@ class AIDispatcher {
     try {
       await this.joinChannel(this.configuredChannel);
     } catch (err) {
-      this.log('START_FAILED', { phase: 'joinChannel', error: err.message, stack: err.stack });
-      this.isRunning = false;
+      this.log('START_FAILED', { phase: 'joinChannel', error: err.message, stack: err.stack, note: 'Will attempt reconnect — dispatcher remains assigned' });
       this._scheduleReconnect();
       return;
     }
@@ -533,10 +533,10 @@ class AIDispatcher {
 
   async leaveChannel() {
     const previousChannel = this.channelName;
+    const wasConnected = this.connected;
     if (this.connected) {
       try {
         this._removeAllAudioListeners();
-        this.log('CHANNEL_LEFT', { channel: this.channelName });
       } catch (error) {
         this.log('CHANNEL_LEAVE_ERROR', { channel: this.channelName, error: error.message });
       }
@@ -546,8 +546,18 @@ class AIDispatcher {
       this._clearAllRecordings();
     }
 
-    if (this.isRunning && !this.stoppedByUser && !this._intentionalLeave) {
-      this.log('UNEXPECTED_DISCONNECT', { channel: previousChannel });
+    if (this._intentionalLeave || this.stoppedByUser) {
+      this.log('CHANNEL_LEFT_INTENTIONAL', {
+        channel: previousChannel,
+        reason: this.stoppedByUser ? 'stopped_by_user' : 'channel_switch',
+        wasConnected
+      });
+    } else if (this.isRunning && wasConnected) {
+      this.log('CHANNEL_LEFT_UNEXPECTED', {
+        channel: previousChannel,
+        state: 'recovering',
+        note: 'Dispatcher is still assigned — will attempt to reconnect'
+      });
       this._scheduleReconnect();
     }
   }
@@ -576,25 +586,39 @@ class AIDispatcher {
   _scheduleReconnect() {
     if (this.stoppedByUser) return;
     if (this._reconnectTimer) return;
+    if (!this.isRunning) return;
 
-    const MAX_RECONNECT_ATTEMPTS = 10;
     const BASE_DELAY_MS = 2000;
-    const MAX_DELAY_MS = 60000;
+    const MAX_DELAY_MS = 120000;
+    const ATTEMPT_RESET_THRESHOLD = 10;
 
     if (!this._reconnectAttempts) this._reconnectAttempts = 0;
-    if (this._reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
-      this.log('RECONNECT_EXHAUSTED', { attempts: this._reconnectAttempts, channel: this.configuredChannel });
-      return;
+
+    if (this._reconnectAttempts >= ATTEMPT_RESET_THRESHOLD) {
+      this.log('RECONNECT_CYCLE_RESET', {
+        previousAttempts: this._reconnectAttempts,
+        channel: this.configuredChannel,
+        note: 'Resetting attempt counter — dispatcher will keep retrying indefinitely while assigned'
+      });
+      this._reconnectAttempts = 0;
     }
 
     const delay = Math.min(BASE_DELAY_MS * Math.pow(2, this._reconnectAttempts), MAX_DELAY_MS);
     this._reconnectAttempts++;
 
+    this._isReconnecting = true;
     this.log('RECONNECT_SCHEDULED', { attempt: this._reconnectAttempts, delayMs: delay, channel: this.configuredChannel });
 
     this._reconnectTimer = setTimeout(async () => {
       this._reconnectTimer = null;
-      if (this.stoppedByUser || this.connected) return;
+      if (this.stoppedByUser || this.connected) {
+        this._isReconnecting = false;
+        return;
+      }
+      if (!this.isRunning) {
+        this._isReconnecting = false;
+        return;
+      }
 
       this.log('RECONNECT_ATTEMPTING', { attempt: this._reconnectAttempts, channel: this.configuredChannel });
 
@@ -603,6 +627,7 @@ class AIDispatcher {
         await this._ensureSignalingService();
         await this.joinChannel(this.configuredChannel);
         this._reconnectAttempts = 0;
+        this._isReconnecting = false;
         this.isRunning = true;
         this.log('RECONNECT_SUCCESS', { channel: this.configuredChannel });
         this._startHealthCheck();
@@ -621,6 +646,7 @@ class AIDispatcher {
       this._reconnectTimer = null;
     }
     this._reconnectAttempts = 0;
+    this._isReconnecting = false;
   }
 
   _startHealthCheck() {
@@ -631,9 +657,27 @@ class AIDispatcher {
         this._stopHealthCheck();
         return;
       }
-      if (!this.connected && this.isRunning) {
-        this.log('HEALTH_CHECK_DISCONNECTED', { channel: this.configuredChannel });
+      if (!this.isRunning) {
+        this._stopHealthCheck();
+        return;
+      }
+      if (!this.connected) {
+        this.log('HEALTH_CHECK_DISCONNECTED', { channel: this.configuredChannel, state: 'not_connected' });
         this._scheduleReconnect();
+        return;
+      }
+      if (this.connected && this.channelName && this._audioListenerBound) {
+        const listenKeys = new Set();
+        listenKeys.add(this.channelName);
+        for (const alias of this.channelAliases) {
+          listenKeys.add(alias);
+        }
+        if (this.numericChannelId != null) {
+          listenKeys.add(String(this.numericChannelId));
+        }
+        for (const key of listenKeys) {
+          audioRelayService.addAudioListener(key, AI_IDENTITY, this._audioListenerBound);
+        }
       }
     }, HEALTH_CHECK_INTERVAL_MS);
     if (this._healthCheckInterval.unref) this._healthCheckInterval.unref();
@@ -663,7 +707,7 @@ class AIDispatcher {
     if (this.connected) {
       try {
         this._removeAllAudioListeners();
-        this.log('CHANNEL_LEFT', { channel: this.channelName });
+        this.log('CHANNEL_LEFT_INTENTIONAL', { channel: this.channelName, reason: 'stopped_by_user' });
       } catch (error) {
         this.log('CHANNEL_LEAVE_ERROR', { channel: this.channelName, error: error.message });
       }
@@ -680,13 +724,14 @@ class AIDispatcher {
   getPipelineStatus() {
     return {
       connected: this.connected,
-      pipelineStatus: this.pipelineStatus,
+      pipelineStatus: this._isReconnecting ? 'reconnecting' : this.pipelineStatus,
       pipelineError: this.pipelineError,
       framesReceived: this._framesReceivedCount,
       decodeSuccesses: this._decodeSuccessCount,
       sttErrors: this._sttErrorCount,
       lastSuccessfulSttAt: this._lastSuccessfulSttAt,
       channel: this.channelName || this.configuredChannel,
+      reconnectAttempts: this._reconnectAttempts || 0,
     };
   }
 
@@ -773,7 +818,9 @@ class AIDispatcher {
     }
 
     if (this.connected) {
+      this._intentionalLeave = true;
       await this.leaveChannel();
+      this._intentionalLeave = false;
     }
 
     this._audioListenerBound = this._onAudioFrame.bind(this);
