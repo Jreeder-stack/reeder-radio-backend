@@ -29,6 +29,7 @@ import { getUnits } from '../utils/api.js';
 import { useAudioConnection } from '../context/AudioConnectionContext.jsx';
 import audioTransportManager from '../audio/AudioTransportManager.js';
 import { useSignalingContext } from '../context/SignalingContext.jsx';
+import { signalingManager } from '../signaling/SignalingManager.js';
 import formatChannelDisplay from '../utils/formatChannelDisplay.js';
 import AudioSettings, { getAudioSettings } from '../components/AudioSettings/index.jsx';
 import { useTheme } from '../context/ThemeContext.jsx';
@@ -37,6 +38,7 @@ export default function DispatchConsole({ user, onLogout }) {
   const [rightTab, setRightTab] = useState('emergency');
   const [showChannelPicker, setShowChannelPicker] = useState(false);
   const [selectedChatChannel, setSelectedChatChannel] = useState(null);
+  const [clearAirAlerts, setClearAirAlerts] = useState({});
   const { darkMode, toggleDarkMode: toggleTheme } = useTheme();
   const [showAudioSettings, setShowAudioSettings] = useState(false);
 
@@ -158,7 +160,49 @@ export default function DispatchConsole({ user, onLogout }) {
     connectionError,
     monitoredChannelIds,
     priorityChannelId,
+    clearAirChannel,
   } = useDispatchStore();
+
+  useEffect(() => {
+    const handleClearAirAlert = (data) => {
+      const { channelId, channelName } = data;
+      setClearAirAlerts(prev => ({ ...prev, [channelId]: channelName || channelId }));
+    };
+    const handleClearAirCleared = (data) => {
+      const { channelId } = data;
+      setClearAirAlerts(prev => {
+        const next = { ...prev };
+        delete next[channelId];
+        return next;
+      });
+    };
+
+    const removeClearAirAlert = signalingManager.on('clear_air:alert', handleClearAirAlert);
+    const removeClearAirStart = signalingManager.on('clearAirStart', handleClearAirAlert);
+    const removeClearAirCleared = signalingManager.on('clear_air:cleared', handleClearAirCleared);
+    const removeClearAirEnd = signalingManager.on('clearAirEnd', handleClearAirCleared);
+
+    return () => {
+      removeClearAirAlert();
+      removeClearAirStart();
+      removeClearAirCleared();
+      removeClearAirEnd();
+    };
+  }, []);
+
+  const isClearAirActiveOnConsole = !!clearAirChannel || Object.keys(clearAirAlerts).length > 0;
+
+  const clearAirDisplayName = (() => {
+    if (clearAirChannel) {
+      const ch = channels.find(c => String(c.id) === String(clearAirChannel));
+      return ch ? formatChannelDisplay(ch.zone, ch.name) : '';
+    }
+    const alertKeys = Object.keys(clearAirAlerts);
+    if (alertKeys.length > 0) {
+      return clearAirAlerts[alertKeys[0]];
+    }
+    return '';
+  })();
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -364,6 +408,11 @@ export default function DispatchConsole({ user, onLogout }) {
 
   return (
     <div className="dispatch-viewport bg-dispatch-bg">
+      {isClearAirActiveOnConsole && (
+        <div className="w-full bg-blue-700 text-white text-center font-bold py-2 px-4 shadow-lg animate-pulse text-sm tracking-widest uppercase flex-shrink-0">
+          CLEAR AIR — EMERGENCY TRAFFIC ONLY{clearAirDisplayName ? ` (${clearAirDisplayName})` : ''}
+        </div>
+      )}
       <TopBar user={user} onLogout={onLogout} darkMode={darkMode} onToggleTheme={toggleTheme} onOpenAudioSettings={() => setShowAudioSettings(true)} />
       
       <AudioSettings

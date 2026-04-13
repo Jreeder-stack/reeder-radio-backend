@@ -832,7 +832,7 @@ class SignalingService {
     
     this.clearAirStates.set(channelId, clearAirData);
     
-    this._emitToChannelDispatchers(channelId, SIGNALING_EVENTS.CLEAR_AIR_START, clearAirData);
+    this._emitToChannelAll(channelId, SIGNALING_EVENTS.CLEAR_AIR_START, clearAirData);
     
     this._emitToDispatchers('clear_air:alert', {
       ...clearAirData,
@@ -863,7 +863,7 @@ class SignalingService {
       duration: Date.now() - clearAir.timestamp,
     };
     
-    this._emitToChannelDispatchers(channelId, SIGNALING_EVENTS.CLEAR_AIR_END, endData);
+    this._emitToChannelAll(channelId, SIGNALING_EVENTS.CLEAR_AIR_END, endData);
     this._emitToDispatchers('clear_air:cleared', endData);
     
     console.log(`[Signaling] CLEAR AIR END: ${channelId} released by ${socket.unitId}`);
@@ -996,6 +996,16 @@ class SignalingService {
     const room = `channel:${channelId}`;
     this.io.sockets.sockets.forEach((s) => {
       if (s.isDispatcher && s.rooms && s.rooms.has(room)) {
+        s.emit(event, data);
+      }
+    });
+  }
+
+  _emitToChannelAll(channelId, event, data) {
+    if (!this.io) return;
+    const room = `channel:${channelId}`;
+    this.io.sockets.sockets.forEach((s) => {
+      if (s.rooms && s.rooms.has(room)) {
         s.emit(event, data);
       }
     });

@@ -589,7 +589,7 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
               className="w-full bg-dispatch-bg border border-dispatch-border text-white rounded px-3 py-2 mb-4 text-sm"
             >
               {channels.map(ch => (
-                <option key={ch.id} value={ch.id}>{formatChannelDisplay(ch.zone, ch.name)}</option>
+                <option key={ch.id} value={ch.id} className="text-black bg-white">{formatChannelDisplay(ch.zone, ch.name)}</option>
               ))}
             </select>
             <div className="flex gap-3 justify-end">
