@@ -1,0 +1,923 @@
+Here's the complete Radio API reference with every endpoint, request body, and response format:
+
+Authentication
+All endpoints require:
+
+Header: x-api-key: <RADIO_API_KEY>
+
+Error responses always follow:
+
+{ "error": "Error message" }
+
+1. UNIT STATUS MANAGEMENT
+POST /api/radio/status — Update unit status
+Request:
+
+{
+  "unit_id": "INDIANA-1",
+  "status": "on duty",
+  "timestamp": "1423",
+  "channel": "OPS1"
+}
+
+Required: unit_id, status
+Valid statuses: on duty, off duty, busy, en route, on scene, available, assign, court, training, out of service, unavailable, special duty, not available, out of vehicle, detail
+
+Response:
+
+{
+  "success": true,
+  "unit_id": "INDIANA-1",
+  "status": "on_duty",
+  "timestamp": "1423",
+  "channel": "OPS1"
+}
+
+POST /api/radio/unit/:unitId/status/cycle — Single-button status cycle
+Cycles automatically:
+
+Without active call: off_duty ↔ on_duty
+With active call: on_duty → en_route → on_scene → on_duty
+Request: (no body required, unitId is in the URL)
+
+Response:
+
+{
+  "success": true,
+  "unitId": "INDIANA-1",
+  "previousStatus": "on_duty",
+  "newStatus": "en_route",
+  "hasActiveCall": true,
+  "callId": "uuid-here",
+  "callNumber": "041325-143022",
+  "timestamp": "2026-04-13T14:30:22.000Z"
+}
+
+POST /api/radio/zone — Update unit zone
+Request:
+
+{
+  "unit_id": "INDIANA-1",
+  "zone": "Zone 5"
+}
+
+Required: unit_id, zone
+
+Response:
+
+{
+  "success": true,
+  "unit_id": "INDIANA-1",
+  "zone": "ZONE 5"
+}
+
+GET /api/radio/status-check — Get all units with status
+Response:
+
+{
+  "success": true,
+  "count": 5,
+  "units": [
+    {
+      "unit_id": "INDIANA-1",
+      "name": "John Smith",
+      "status": "on_duty",
+      "zone": "ZONE 3",
+      "current_location": null,
+      "latitude": null,
+      "longitude": null,
+      "last_update": "04/13/2026, 14:30",
+      "agency": "Springfield PD"
+    }
+  ],
+  "timestamp": "2026-04-13T14:30:22.000Z"
+}
+
+2. CALL MANAGEMENT
+POST /api/radio/call — Create a new call
+Request:
+
+{
+  "type": "Traffic Stop",
+  "location": "123 Main St",
+  "city": "Springfield",
+  "zone": "Zone 3",
+  "units": ["INDIANA-1", "INDIANA-2"],
+  "priority": "routine",
+  "description": "Vehicle pulled over for speeding",
+  "caller_name": "Dispatch",
+  "caller_phone": "555-1234"
+}
+
+Required: type, location
+Priority values: emergency/urgent/high → high, priority/medium → medium, routine/low → low
+
+Response:
+
+{
+  "success": true,
+  "call_id": "uuid-here",
+  "call_number": "041325-143022",
+  "type": "TRAFFIC STOP",
+  "location": "123 MAIN ST",
+  "city": "SPRINGFIELD",
+  "priority": "low",
+  "assigned_units": ["INDIANA-1", "INDIANA-2"],
+  "status": "pending",
+  "created_at": "2026-04-13T14:30:22.000Z"
+}
+
+GET /api/radio/calls — List active calls
+Response:
+
+{
+  "success": true,
+  "count": 3,
+  "calls": [
+    {
+      "call_id": "uuid",
+      "call_number": "041325-143022",
+      "type": "TRAFFIC STOP",
+      "location": "123 MAIN ST",
+      "city": "SPRINGFIELD",
+      "zone": "ZONE 3",
+      "priority": "low",
+      "status": "assigned",
+      "assigned_units": ["INDIANA-1"],
+      "description": "VEHICLE PULLED OVER",
+      "caller_name": "DISPATCH",
+      "created_at": "04/13/2026, 14:30",
+      "elapsed_minutes": 15
+    }
+  ],
+  "timestamp": "2026-04-13T14:45:00.000Z"
+}
+
+GET /api/radio/call/:id — Get call details
+Response:
+
+{
+  "success": true,
+  "call": {
+    "call_id": "uuid",
+    "call_number": "041325-143022",
+    "type": "TRAFFIC STOP",
+    "location": "123 MAIN ST",
+    "city": "SPRINGFIELD",
+    "zone": "ZONE 3",
+    "priority": "low",
+    "status": "assigned",
+    "assigned_units": ["INDIANA-1"],
+    "caller_name": "DISPATCH",
+    "callback_number": "555-1234",
+    "description": "VEHICLE PULLED OVER",
+    "call_notes": [
+      {
+        "text": "UNIT ARRIVED ON SCENE",
+        "created_by": "user-uuid",
+        "created_at": "04/13/2026, 14:35"
+      }
+    ],
+    "disposition": null,
+    "disposition_notes": null,
+    "created_at": "04/13/2026, 14:30",
+    "last_status_update": "04/13/2026, 14:35"
+  }
+}
+
+PATCH /api/radio/call/:id — Update a call
+Request: (all fields optional)
+
+{
+  "type": "Domestic",
+  "location": "456 Oak Ave",
+  "city": "Springfield",
+  "zone": "Zone 1",
+  "priority": "high",
+  "status": "active",
+  "description": "Updated description"
+}
+
+Valid statuses: pending, active, assigned, en_route, on_scene, cleared, closed, cancelled
+
+Response:
+
+{
+  "success": true,
+  "call_id": "uuid",
+  "updates": { "nature": "DOMESTIC", "priority": "high" }
+}
+
+POST /api/radio/assign — Assign unit to call
+Request:
+
+{
+  "unit_id": "INDIANA-1",
+  "call_id": "uuid-here"
+}
+
+Required: unit_id, call_id
+
+Response:
+
+{
+  "success": true,
+  "unit_id": "INDIANA-1",
+  "call_id": "uuid",
+  "call_number": "041325-143022",
+  "assigned_units": ["INDIANA-1", "INDIANA-2"]
+}
+
+POST /api/radio/clear — Clear unit from call
+Request:
+
+{
+  "unit_id": "INDIANA-1",
+  "call_id": "uuid-here"
+}
+
+Required: unit_id. call_id is optional (if omitted, just sets status to available).
+
+Response:
+
+{
+  "success": true,
+  "unit_id": "INDIANA-1",
+  "status": "available",
+  "cleared_from_call": "uuid-here"
+}
+
+POST /api/radio/dispose — Close/dispose a call
+Request:
+
+{
+  "call_id": "uuid-here",
+  "disposition": "Report Filed",
+  "notes": "All units cleared, report pending"
+}
+
+Required: call_id, disposition
+
+Response:
+
+{
+  "success": true,
+  "call_id": "uuid",
+  "call_number": "041325-143022",
+  "disposition": "REPORT FILED",
+  "status": "closed"
+}
+
+POST /api/radio/note — Add note to a call
+Request:
+
+{
+  "call_id": "uuid-here",
+  "note": "Unit arrived on scene, making contact"
+}
+
+Required: call_id, note
+
+Response:
+
+{
+  "success": true,
+  "call_id": "uuid",
+  "note_id": "note-uuid",
+  "note": "UNIT ARRIVED ON SCENE, MAKING CONTACT",
+  "timestamp": "2026-04-13T14:35:00.000Z"
+}
+
+GET /api/radio/unit/:unitId/call — Get unit's current call
+Response (with active call):
+
+{
+  "unit_id": "INDIANA-1",
+  "has_active_call": true,
+  "call": {
+    "call_id": "uuid",
+    "call_number": "041325-143022",
+    "nature": "TRAFFIC STOP",
+    "priority": "low",
+    "status": "assigned",
+    "location": "123 MAIN ST",
+    "city": "SPRINGFIELD",
+    "zone": "ZONE 3",
+    "caller_name": "DISPATCH",
+    "callback_number": "555-1234",
+    "assigned_at": "04/13/2026, 14:30",
+    "arrived_at": null,
+    "ondt_at": null
+  }
+}
+
+Response (no active call):
+
+{
+  "unit_id": "INDIANA-1",
+  "has_active_call": false,
+  "call": null
+}
+
+3. QUERIES / LOOKUPS
+POST /api/radio/query/person — Person query
+Request:
+
+{
+  "last_name": "Smith",
+  "first_name": "John",
+  "dob": "1990-01-15"
+}
+
+Required: last_name
+
+Response:
+
+{
+  "success": true,
+  "count": 2,
+  "results": [
+    {
+      "person_id": "uuid",
+      "name": "SMITH, JOHN A",
+      "dob": "1990-01-15",
+      "ssn": "XXX-XX-1234",
+      "dl_number": "12345678",
+      "dl_state": "PA",
+      "sex": "M",
+      "race": "W",
+      "height": "5'10\"",
+      "weight": "180 lbs",
+      "hair": "BRO",
+      "eyes": "BLU",
+      "has_warrants": true,
+      "warrant_count": 1,
+      "alerts": ["CAUTION - ARMED"],
+      "caution_indicators": ["CAUTION - ARMED"]
+    }
+  ],
+  "query": { "last_name": "Smith", "first_name": "John", "dob": "1990-01-15" },
+  "timestamp": "2026-04-13T14:30:22.000Z"
+}
+
+POST /api/radio/query/vehicle — Vehicle query
+Request:
+
+{
+  "plate": "ABC1234",
+  "state": "PA",
+  "vin": "1HGCM82633A004352"
+}
+
+Required: plate or vin
+
+Response:
+
+{
+  "success": true,
+  "count": 1,
+  "results": [
+    {
+      "vehicle_id": "uuid",
+      "plate": "ABC1234",
+      "state": "PA",
+      "year": "2020",
+      "make": "FORD",
+      "model": "F150",
+      "color": "BLACK",
+      "vin": "1HGCM82633A004352",
+      "registered_owner_id": "person-uuid",
+      "is_stolen": false,
+      "towed": false,
+      "impounded": false
+    }
+  ],
+  "query": { "plate": "ABC1234", "state": "PA", "vin": null },
+  "timestamp": "2026-04-13T14:30:22.000Z"
+}
+
+POST /api/radio/query/warrant — Warrant check
+Request:
+
+{
+  "last_name": "Smith",
+  "first_name": "John",
+  "dob": "1990-01-15"
+}
+
+Required: last_name
+
+Response:
+
+{
+  "success": true,
+  "count": 1,
+  "has_active_warrants": true,
+  "results": [
+    {
+      "warrant_id": "uuid",
+      "warrant_number": "abc12345",
+      "type": "Bench Warrant",
+      "status": "Active",
+      "defendant_name": "SMITH, JOHN",
+      "dob": "1990-01-15",
+      "charges": "Failure to Appear",
+      "issuing_court": "Springfield Municipal",
+      "issued_date": "01/15/2026, 09:00",
+      "bail_amount": "5000",
+      "is_extraditable": true
+    }
+  ],
+  "query": { "last_name": "Smith", "first_name": "John", "dob": "1990-01-15" },
+  "timestamp": "2026-04-13T14:30:22.000Z"
+}
+
+4. MESSAGING & BROADCASTS
+POST /api/radio/broadcast — Broadcast message
+Request:
+
+{
+  "message": "All units standby for traffic",
+  "priority": "routine",
+  "target_units": "all"
+}
+
+Required: message
+
+Response:
+
+{
+  "success": true,
+  "message": "ALL UNITS STANDBY FOR TRAFFIC",
+  "priority": "routine",
+  "broadcast_time": "2026-04-13T14:30:22.000Z"
+}
+
+GET /api/radio/contacts — List all personnel
+Response:
+
+{
+  "success": true,
+  "count": 10,
+  "contacts": [
+    {
+      "id": "user-uuid",
+      "unit_id": "INDIANA-1",
+      "first_name": "John",
+      "last_name": "Smith",
+      "full_name": "John Smith",
+      "role": "officer",
+      "status": "on_duty",
+      "agency_id": "agency-uuid",
+      "is_active": true,
+      "phone": "555-1234",
+      "email": "jsmith@dept.gov"
+    }
+  ]
+}
+
+GET /api/radio/chats — List chat groups
+Response:
+
+{
+  "success": true,
+  "count": 3,
+  "chats": [
+    {
+      "id": "group-uuid",
+      "name": "ALL UNITS",
+      "type": "system_wide",
+      "description": null,
+      "created_at": "04/01/2026, 08:00",
+      "is_active": true
+    }
+  ]
+}
+
+POST /api/radio/chats — Create chat group
+Request:
+
+{
+  "name": "Night Shift",
+  "type": "private",
+  "creator_unit": "INDIANA-1",
+  "member_ids": ["user-uuid-1", "user-uuid-2"],
+  "description": "Night shift coordination"
+}
+
+Required: name, plus creator_id or creator_unit
+
+Response:
+
+{
+  "success": true,
+  "chat_id": "group-uuid",
+  "name": "NIGHT SHIFT",
+  "type": "private",
+  "created_at": "04/13/2026, 14:30"
+}
+
+DELETE /api/radio/chats/:id — Delete chat group
+Response:
+
+{
+  "success": true,
+  "chat_id": "group-uuid",
+  "message": "Chat group deactivated"
+}
+
+GET /api/radio/chats/:id/messages — Get chat messages
+Response:
+
+{
+  "success": true,
+  "chat_id": "group-uuid",
+  "count": 5,
+  "messages": [
+    {
+      "id": "msg-uuid",
+      "chat_id": "group-uuid",
+      "sender_id": "user-uuid",
+      "sender_name": "INDIANA-1",
+      "message": "10-4 en route",
+      "type": "text",
+      "timestamp": "04/13/2026, 14:30"
+    }
+  ]
+}
+
+POST /api/radio/chats/:id/messages — Send chat message
+Request:
+
+{
+  "sender_unit": "INDIANA-1",
+  "message": "10-4 en route to location"
+}
+
+Required: message, plus sender_id or sender_unit
+
+Response:
+
+{
+  "success": true,
+  "message_id": "msg-uuid",
+  "chat_id": "group-uuid",
+  "sender_id": "user-uuid",
+  "sender_name": "INDIANA-1",
+  "message": "10-4 en route to location",
+  "timestamp": "04/13/2026, 14:30"
+}
+
+GET /api/radio/messages/unread?unit_id=INDIANA-1 — Unread count
+Response:
+
+{
+  "unit_id": "INDIANA-1",
+  "unread_count": 3
+}
+
+5. STATUS CHECKS
+GET /api/radio/pending-checks — Pending checks
+Response:
+
+{
+  "success": true,
+  "count": 0,
+  "pending_checks": [],
+  "message": "Status check system integrated with unit polling",
+  "timestamp": "2026-04-13T14:30:22.000Z"
+}
+
+POST /api/radio/respond-check — Respond to status check
+Request:
+
+{
+  "unit_id": "INDIANA-1",
+  "response": "10-4 All Clear",
+  "status": "available"
+}
+
+Required: unit_id
+
+Response:
+
+{
+  "success": true,
+  "unit_id": "INDIANA-1",
+  "response": "10-4 All Clear",
+  "status": "available",
+  "timestamp": "2026-04-13T14:30:22.000Z"
+}
+
+6. RECORDS / FIELD WORK
+POST /api/radio/citation/new — Create citation/warning
+Request:
+
+{
+  "type": "citation",
+  "officer_unit": "INDIANA-1",
+  "person": {
+    "first_name": "John",
+    "last_name": "Doe",
+    "dob": "1990-01-01"
+  },
+  "vehicle": {
+    "plate": "ABC123",
+    "state": "PA",
+    "make": "Ford",
+    "model": "F150"
+  },
+  "violations": ["Speeding", "Failure to signal"],
+  "location": "123 Main St",
+  "notes": "Clocked at 55 in a 35",
+  "call_number": "041325-143022"
+}
+
+Required: officer_unit
+
+Response:
+
+{
+  "success": true,
+  "citation_number": "CIT2026-143022",
+  "type": "citation",
+  "data": {
+    "citation_number": "CIT2026-143022",
+    "type": "citation",
+    "officer_unit": "INDIANA-1",
+    "officer_name": "John Smith",
+    "date": "2026-04-13",
+    "time": "1430",
+    "location": "123 Main St",
+    "person": { "first_name": "John", "last_name": "Doe", "dob": "1990-01-01" },
+    "vehicle": { "plate": "ABC123", "state": "PA", "make": "Ford", "model": "F150" },
+    "violations": ["Speeding", "Failure to signal"],
+    "notes": "Clocked at 55 in a 35",
+    "call_number": "041325-143022"
+  }
+}
+
+POST /api/radio/fi/create — Create field interview
+Request:
+
+{
+  "officer_unit": "INDIANA-1",
+  "call_number": "041325-143022",
+  "location": "123 Main St",
+  "x_street": "Oak Ave",
+  "city": "Pittsburgh",
+  "state": "PA",
+  "zip_code": "15201",
+  "county": "Allegheny",
+  "reason": "Suspicious activity",
+  "person": {
+    "first_name": "John",
+    "last_name": "Doe",
+    "dob": "1990-01-01",
+    "sex": "M",
+    "race": "W",
+    "height": "510",
+    "weight": "180",
+    "eye_color": "BLU",
+    "hair_color": "BRO",
+    "address": "456 Elm St",
+    "city": "Pittsburgh",
+    "state": "PA",
+    "zip": "15201",
+    "phone": "555-9876"
+  },
+  "vehicle": {
+    "plate": "ABC123",
+    "state": "PA",
+    "make": "Ford",
+    "model": "F150",
+    "color": "Black",
+    "year": "2020",
+    "vin": "1HGCM82633A004352"
+  },
+  "trespass": {
+    "was_trespassed": true,
+    "type": "verbal",
+    "address": "789 Pine St",
+    "city": "Pittsburgh",
+    "state": "PA",
+    "business_or_residential": "business",
+    "business_name": "Corner Store",
+    "reason": "Loitering",
+    "expires": "2027-01-01",
+    "indefinite": false
+  }
+}
+
+Required: officer_unit
+
+Response:
+
+{
+  "success": true,
+  "fi_number": "FI-2026-0001",
+  "fi_id": "fi-uuid",
+  "data": {
+    "fi_number": "FI-2026-0001",
+    "officer": "John Smith",
+    "date": "2026-04-13",
+    "time": "1430",
+    "location": "123 Main St",
+    "person_name": "JOHN DOE",
+    "vehicle_info": "ABC123 PA",
+    "was_trespassed": true
+  }
+}
+
+7. ANIMAL SEARCH
+GET /api/radio/animal/types
+Response:
+
+{
+  "success": true,
+  "types": ["Dog", "Cat", "Bird", "Reptile", "Horse", "Livestock", "Wildlife", "Other"]
+}
+
+POST /api/radio/animal/search
+Request:
+
+{
+  "owner_name": "Smith",
+  "animal_type": "Dog",
+  "tag_number": "12345",
+  "microchip": "900123456789"
+}
+
+Response:
+
+{
+  "success": true,
+  "count": 1,
+  "animals": [
+    {
+      "id": "uuid",
+      "owner_name": "John Smith",
+      "owner_address": "123 Main St",
+      "owner_phone": "555-1234",
+      "animal_type": "Dog",
+      "animal_name": "Rex",
+      "breed": "German Shepherd",
+      "color": "Black/Tan",
+      "tag_number": "12345",
+      "microchip": "900123456789",
+      "rabies_tag": "R-2026-001"
+    }
+  ]
+}
+
+8. FLEET MANAGEMENT
+GET /api/radio/fleet/units
+Response:
+
+{
+  "success": true,
+  "count": 5,
+  "vehicles": [
+    {
+      "id": "vehicle-uuid",
+      "unit_number": "PATROL-1",
+      "vehicle_type": "Sedan",
+      "make": "Ford",
+      "model": "Explorer",
+      "year": "2024",
+      "color": "Black/White",
+      "plate": "MUN-1234",
+      "vin": "1FM5K8D8...",
+      "status": "in_service",
+      "mileage": "45678",
+      "fuel_type": "Regular",
+      "agency": "Springfield PD"
+    }
+  ]
+}
+
+POST /api/radio/fleet/unit/:id/status
+Request:
+
+{
+  "status": "out_of_service",
+  "notes": "Flat tire",
+  "mileage": 45700
+}
+
+Required: status
+Valid values: in_service, out_of_service, maintenance, reserved, decommissioned
+
+Response:
+
+{
+  "success": true,
+  "vehicle_id": "uuid",
+  "unit_number": "PATROL-1",
+  "previous_status": "in_service",
+  "new_status": "out_of_service",
+  "mileage": 45700
+}
+
+POST /api/radio/fleet/unit/:id/fuel
+Request:
+
+{
+  "gallons": 15.5,
+  "price_per_gallon": 3.45,
+  "total_cost": 53.48,
+  "mileage": 45678,
+  "fuel_type": "Regular",
+  "station": "Shell Main St",
+  "notes": "Full tank"
+}
+
+Required: gallons, total_cost
+
+Response:
+
+{
+  "success": true,
+  "fuel_log_id": "log-uuid",
+  "vehicle_id": "uuid",
+  "unit_number": "PATROL-1",
+  "gallons": 15.5,
+  "total_cost": 53.48,
+  "mileage": 45678
+}
+
+9. REFERENCE DATA
+GET /api/radio/dropdowns — All dropdown categories
+Response:
+
+{
+  "success": true,
+  "categories": [
+    {
+      "id": "cat-uuid",
+      "key": "call_natures",
+      "name": "Call Natures",
+      "description": "Types of calls for service",
+      "is_system": true
+    }
+  ]
+}
+
+GET /api/radio/dropdowns/:categoryKey — Options by category
+Example: /api/radio/dropdowns/call_natures
+
+Response:
+
+{
+  "success": true,
+  "category": {
+    "id": "cat-uuid",
+    "key": "call_natures",
+    "name": "Call Natures",
+    "description": "Types of calls for service"
+  },
+  "options": [
+    {
+      "id": "opt-uuid",
+      "key": "traffic_stop",
+      "name": "Traffic Stop",
+      "sort_order": 1,
+      "is_active": true
+    }
+  ]
+}
+
+GET /api/radio/call-natures — Active call natures (shortcut)
+Response:
+
+{
+  "success": true,
+  "count": 25,
+  "call_natures": [
+    { "key": "traffic_stop", "name": "Traffic Stop", "sort_order": 1 },
+    { "key": "domestic", "name": "Domestic", "sort_order": 2 }
+  ]
+}
+
+GET /api/radio/bolo/recent — Active BOLOs
+Response:
+
+{
+  "success": true,
+  "bolos": [
+    {
+      "id": "bolo-uuid",
+      "message": "Wanted BOLO - Person: JOHN DOE. Armed and dangerous.",
+      "priority": "emergency",
+      "created_at": "2026-04-13T10:00:00.000Z"
+    },
+    {
+      "id": "bolo-uuid-2",
+      "message": "Missing BOLO - Vehicle: 2020 Ford F150 Black, plate ABC1234 PA. Last seen heading east on Route 30.",
+      "priority": "urgent",
+      "created_at": "2026-04-12T22:00:00.000Z"
+    }
+  ]
+}
+
+That's every endpoint with its exact request and response format. The most critical ones for basic radio operations are status, call (create), assign, clear, and dispose.

@@ -1,0 +1,59 @@
+Here are all the Radio API endpoints your radio server can call to interact with the CAD system. They all require the x-radio-api-key header matching the CAD_INTEGRATION_KEY secret.
+
+
+2 actions
+Here's the full list of Radio API endpoints. All require the x-radio-api-key header.
+
+Unit Status & Location
+Method	Endpoint	Body	Description
+POST	/api/radio/status	{ unitId, status, latitude?, longitude? }	Set unit status (on_duty, off_duty, en_route, on_scene, out_of_vehicle, etc.)
+POST	/api/radio/unit/:unitId/status/cycle	{ latitude?, longitude? }	Cycle status with a single button press (off→on→out_of_vehicle→off)
+POST	/api/radio/zone	{ unitId, zone }	Update unit zone/assignment
+GET	/api/radio/status-check	—	Get all units and their current status
+Calls for Service
+Method	Endpoint	Body / Params	Description
+POST	/api/radio/call	{ nature, address, priority?, description?, ... }	Create a new call
+GET	/api/radio/calls	?status=active	List active calls
+GET	/api/radio/call/:id	—	Get details of a specific call
+PATCH	/api/radio/call/:id	{ priority?, address?, nature?, ... }	Update a call
+POST	/api/radio/assign	{ unitId, callId }	Assign unit to a call
+POST	/api/radio/clear	{ unitId, callId? }	Clear unit from a call
+POST	/api/radio/dispose	{ callId, disposition }	Close/dispose a call
+POST	/api/radio/note	{ callId, note, unitId? }	Add a note to a call
+GET	/api/radio/unit/:unitId/call	—	Get a unit's current call assignment
+Queries / Lookups
+Method	Endpoint	Body	Description
+POST	/api/radio/query/person	{ firstName?, lastName?, dob? }	Person query
+POST	/api/radio/query/vehicle	{ plate?, vin?, make?, model? }	Vehicle query
+POST	/api/radio/query/warrant	{ firstName?, lastName? }	Warrant check
+POST	/api/radio/animal/search	{ species?, breed?, color? }	Animal search
+GET	/api/radio/animal/types	—	List animal types
+Messaging & Broadcasts
+Method	Endpoint	Body / Params	Description
+POST	/api/radio/broadcast	{ message, fromUnitId? }	Broadcast message to all units
+GET	/api/radio/contacts	—	List all personnel
+GET	/api/radio/chats	—	List chat groups
+POST	/api/radio/chats	{ name, memberIds[] }	Create chat group
+DELETE	/api/radio/chats/:id	—	Delete chat group
+GET	/api/radio/chats/:id/messages	—	Get messages in a chat
+POST	/api/radio/chats/:id/messages	{ content, senderUnitId }	Send a chat message
+GET	/api/radio/messages/unread	?unitId=...	Unread message count
+Status Checks
+Method	Endpoint	Body	Description
+GET	/api/radio/pending-checks	—	Get pending status check requests from CAD
+POST	/api/radio/respond-check	{ checkId, response }	Respond to a status check
+Records / Field Work
+Method	Endpoint	Body	Description
+POST	/api/radio/citation/new	{ violatorName, violation, ... }	Create citation/warning
+POST	/api/radio/fi/create	{ subject, location, ... }	Create field interview
+Fleet Management
+Method	Endpoint	Body	Description
+GET	/api/radio/fleet/units	—	List all fleet vehicles
+POST	/api/radio/fleet/unit/:id/status	{ status, mileage? }	Update fleet vehicle status
+POST	/api/radio/fleet/unit/:id/fuel	{ gallons, cost, mileage }	Log fuel entry
+Reference Data
+Method	Endpoint	Description
+GET	/api/radio/dropdowns	List all dropdown categories
+GET	/api/radio/dropdowns/:categoryKey	Get options for a category (e.g., call_natures)
+GET	/api/radio/call-natures	Get all active call natures
+GET	/api/radio/bolo/recent	Get recent active BOLOs
