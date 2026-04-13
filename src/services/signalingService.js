@@ -128,6 +128,56 @@ class SignalingService {
 
       const radioToken = socket.handshake?.query?.radioToken;
       if (radioToken) {
+        socket.radioTokenPending = true;
+      }
+
+      socket.on('authenticate', (data) => this._handleAuthenticate(socket, data));
+      socket.on(SIGNALING_EVENTS.CHANNEL_JOIN, (data) => this._handleChannelJoin(socket, data));
+      socket.on(SIGNALING_EVENTS.CHANNEL_LEAVE, (data) => this._handleChannelLeave(socket, data));
+      socket.on('ptt:pre', (data) => this._handlePttPre(socket, data));
+      socket.on(SIGNALING_EVENTS.PTT_START, (data) => this._handlePttStart(socket, data));
+      socket.on(SIGNALING_EVENTS.PTT_END, (data) => this._handlePttEnd(socket, data));
+      socket.on(SIGNALING_EVENTS.EMERGENCY_START, (data) => this._handleEmergencyStart(socket, data));
+      socket.on(SIGNALING_EVENTS.EMERGENCY_END, (data) => this._handleEmergencyEnd(socket, data));
+      socket.on(SIGNALING_EVENTS.CLEAR_AIR_START, (data) => this._handleClearAirStart(socket, data));
+      socket.on(SIGNALING_EVENTS.CLEAR_AIR_END, (data) => this._handleClearAirEnd(socket, data));
+      socket.on(SIGNALING_EVENTS.UNIT_STATUS_UPDATE, (data) => this._handleStatusUpdate(socket, data));
+      socket.on(SIGNALING_EVENTS.LOCATION_UPDATE, (data) => this._handleLocationUpdate(socket, data));
+      socket.on(SIGNALING_EVENTS.TOKEN_REQUEST, (data) => this._handleTokenRequest(socket, data));
+      socket.on('data:send', (data) => this._handleDataSend(socket, data));
+      socket.on('location:track_start', (data) => this._handleLocationTrackStart(socket, data));
+      socket.on('location:track_stop', (data) => this._handleLocationTrackStop(socket, data));
+      socket.on('location:update', (data) => this._handleGpsLocationUpdate(socket, data));
+      socket.on(RADIO_EVENTS.JOIN_CHANNEL, (data) => this._handleRadioJoinChannel(socket, data));
+      socket.on(RADIO_EVENTS.LEAVE_CHANNEL, (data) => this._handleRadioLeaveChannel(socket, data));
+      socket.on(RADIO_EVENTS.PTT_REQUEST, (data) => this._handlePttRequest(socket, data));
+      socket.on(RADIO_EVENTS.PTT_RELEASE, (data) => this._handlePttRelease(socket, data));
+      socket.on(RADIO_EVENTS.TX_START, (data) => this._handleTxStart(socket, data));
+      socket.on(RADIO_EVENTS.TX_STOP, (data) => this._handleTxStop(socket, data));
+      socket.on('ping', () => {
+        socket.emit('pong');
+        if (socket.isRadioDevice && socket.radioId) {
+          updateRadioLastSeen(socket.radioId).catch(err => {
+            console.warn(`[Signaling] Failed to update radio last_seen for radioId=${socket.radioId}:`, err.message);
+          });
+        }
+        if (socket.isRadioClient && socket.channels) {
+          for (const ch of socket.channels) {
+            const refreshed = audioRelayService.refreshSubscriber(ch, socket.unitId);
+            if (refreshed) {
+              if (!socket._lastRefreshLogMs || Date.now() - socket._lastRefreshLogMs > 60000) {
+                socket._lastRefreshLogMs = Date.now();
+                console.log(`[Signaling] KEEPALIVE_SUBSCRIBER_REFRESH_OK unitId=${socket.unitId} channelId=${ch}`);
+              }
+            } else {
+              console.log(`[Signaling] KEEPALIVE_SUBSCRIBER_REFRESH_FAILED unitId=${socket.unitId} channelId=${ch}`);
+            }
+          }
+        }
+      });
+      socket.on('disconnect', () => this._handleDisconnect(socket));
+
+      if (radioToken) {
         try {
           const radio = await getRadioByToken(radioToken);
           if (!radio) {
@@ -188,59 +238,18 @@ class SignalingService {
             });
             console.log(`[Signaling] Emitted radio:assigned on connect for radioId=${radio.radio_id} unitId=${unitIdentity}`);
           }
+
+          socket.radioTokenPending = false;
+          socket.emit('authenticated', { unitId: socket.unitId });
+          console.log(`[Signaling] Emitted authenticated for radio device: radioId=${radio.radio_id} unitId=${socket.unitId} socket=${socket.id}`);
         } catch (err) {
           console.error('[Signaling] Radio token validation error:', err);
+          socket.radioTokenPending = false;
           socket.emit('auth:error', { message: 'Radio authentication error' });
           socket.disconnect(true);
           return;
         }
       }
-      
-      socket.on('authenticate', (data) => this._handleAuthenticate(socket, data));
-      socket.on(SIGNALING_EVENTS.CHANNEL_JOIN, (data) => this._handleChannelJoin(socket, data));
-      socket.on(SIGNALING_EVENTS.CHANNEL_LEAVE, (data) => this._handleChannelLeave(socket, data));
-      socket.on('ptt:pre', (data) => this._handlePttPre(socket, data));
-      socket.on(SIGNALING_EVENTS.PTT_START, (data) => this._handlePttStart(socket, data));
-      socket.on(SIGNALING_EVENTS.PTT_END, (data) => this._handlePttEnd(socket, data));
-      socket.on(SIGNALING_EVENTS.EMERGENCY_START, (data) => this._handleEmergencyStart(socket, data));
-      socket.on(SIGNALING_EVENTS.EMERGENCY_END, (data) => this._handleEmergencyEnd(socket, data));
-      socket.on(SIGNALING_EVENTS.CLEAR_AIR_START, (data) => this._handleClearAirStart(socket, data));
-      socket.on(SIGNALING_EVENTS.CLEAR_AIR_END, (data) => this._handleClearAirEnd(socket, data));
-      socket.on(SIGNALING_EVENTS.UNIT_STATUS_UPDATE, (data) => this._handleStatusUpdate(socket, data));
-      socket.on(SIGNALING_EVENTS.LOCATION_UPDATE, (data) => this._handleLocationUpdate(socket, data));
-      socket.on(SIGNALING_EVENTS.TOKEN_REQUEST, (data) => this._handleTokenRequest(socket, data));
-      socket.on('data:send', (data) => this._handleDataSend(socket, data));
-      socket.on('location:track_start', (data) => this._handleLocationTrackStart(socket, data));
-      socket.on('location:track_stop', (data) => this._handleLocationTrackStop(socket, data));
-      socket.on('location:update', (data) => this._handleGpsLocationUpdate(socket, data));
-      socket.on(RADIO_EVENTS.JOIN_CHANNEL, (data) => this._handleRadioJoinChannel(socket, data));
-      socket.on(RADIO_EVENTS.LEAVE_CHANNEL, (data) => this._handleRadioLeaveChannel(socket, data));
-      socket.on(RADIO_EVENTS.PTT_REQUEST, (data) => this._handlePttRequest(socket, data));
-      socket.on(RADIO_EVENTS.PTT_RELEASE, (data) => this._handlePttRelease(socket, data));
-      socket.on(RADIO_EVENTS.TX_START, (data) => this._handleTxStart(socket, data));
-      socket.on(RADIO_EVENTS.TX_STOP, (data) => this._handleTxStop(socket, data));
-      socket.on('ping', () => {
-        socket.emit('pong');
-        if (socket.isRadioDevice && socket.radioId) {
-          updateRadioLastSeen(socket.radioId).catch(err => {
-            console.warn(`[Signaling] Failed to update radio last_seen for radioId=${socket.radioId}:`, err.message);
-          });
-        }
-        if (socket.isRadioClient && socket.channels) {
-          for (const ch of socket.channels) {
-            const refreshed = audioRelayService.refreshSubscriber(ch, socket.unitId);
-            if (refreshed) {
-              if (!socket._lastRefreshLogMs || Date.now() - socket._lastRefreshLogMs > 60000) {
-                socket._lastRefreshLogMs = Date.now();
-                console.log(`[Signaling] KEEPALIVE_SUBSCRIBER_REFRESH_OK unitId=${socket.unitId} channelId=${ch}`);
-              }
-            } else {
-              console.log(`[Signaling] KEEPALIVE_SUBSCRIBER_REFRESH_FAILED unitId=${socket.unitId} channelId=${ch}`);
-            }
-          }
-        }
-      });
-      socket.on('disconnect', () => this._handleDisconnect(socket));
     });
 
     floorControlService.onTimeout((channelId, unitId) => {
@@ -344,6 +353,16 @@ class SignalingService {
   }
 
   async _handleAuthenticate(socket, data) {
+    if (socket.radioTokenPending) {
+      console.warn(`[Signaling] Ignoring authenticate event — radioToken validation in progress: ${socket.id}`);
+      return;
+    }
+
+    if (socket.isRadioDevice) {
+      console.warn(`[Signaling] Ignoring authenticate event — radio device uses token auth: ${socket.id}`);
+      return;
+    }
+
     const { unitId, agencyId, username, isDispatcher } = data;
     
     if (!unitId || !username) {

@@ -12,6 +12,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import org.json.JSONObject
+import java.util.Timer
+import kotlin.concurrent.schedule
 
 private const val TAG = "[PTT-DIAG]"
 private const val STARTUP_TAG = "[APP-STARTUP]"
@@ -29,6 +31,7 @@ class SignalingClient(var serverUrl: String, private var radioToken: String? = n
     val events: SharedFlow<SignalingEvent> = _events.asSharedFlow()
 
     private val pendingEmergencyEndKeys = mutableSetOf<String>()
+    private var authRetryTimer: Timer? = null
 
     private var unitId: String = ""
     private var username: String = ""
@@ -75,11 +78,23 @@ class SignalingClient(var serverUrl: String, private var radioToken: String? = n
             }
             Log.d(STARTUP_TAG, "SIGNALING_AUTH_SENT unitId=$unitId")
             s.emit("authenticate", auth)
+
+            authRetryTimer?.cancel()
+            authRetryTimer = Timer("auth-retry", true).apply {
+                schedule(3_000L) {
+                    if (_connectionState.value == ConnectionState.CONNECTED) {
+                        Log.w(STARTUP_TAG, "SIGNALING_AUTH_RETRY state still CONNECTED after 3s, re-emitting authenticate")
+                        s.emit("authenticate", auth)
+                    }
+                }
+            }
         }
 
         s.on("authenticated") { _ ->
             Log.d(TAG, "Signaling authenticated: $unitId")
             Log.d(STARTUP_TAG, "SIGNALING_AUTH_SUCCESS unitId=$unitId")
+            authRetryTimer?.cancel()
+            authRetryTimer = null
             _connectionState.value = ConnectionState.AUTHENTICATED
             flushPendingEmergencyEnds()
         }
@@ -307,6 +322,8 @@ class SignalingClient(var serverUrl: String, private var radioToken: String? = n
     }
 
     fun disconnect() {
+        authRetryTimer?.cancel()
+        authRetryTimer = null
         socket?.disconnect()
         socket?.off()
         socket = null
