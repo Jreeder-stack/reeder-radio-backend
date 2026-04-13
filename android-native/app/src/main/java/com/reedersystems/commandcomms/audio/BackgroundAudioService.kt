@@ -28,6 +28,8 @@ import com.reedersystems.commandcomms.audio.radio.RadioState
 import com.reedersystems.commandcomms.audio.radio.TransportHealth
 import com.reedersystems.commandcomms.signaling.ConnectionState
 import com.reedersystems.commandcomms.signaling.SignalingEvent
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.FusedLocationProviderClient
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
@@ -70,6 +72,8 @@ class BackgroundAudioService : Service() {
 
     @Volatile private var emergencyActive = false
 
+    private lateinit var fusedLocationClient: FusedLocationProviderClient
+
     private var signalingConnectionJob: Job? = null
     private var signalingEventsJob: Job? = null
     private var pendingFloorTimeoutJob: Job? = null
@@ -97,6 +101,8 @@ class BackgroundAudioService : Service() {
         ).apply { setReferenceCounted(false) }
         wifiLock.acquire()
         Log.d(TAG, "BackgroundAudioService: WiFi WakeLock acquired")
+
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
         audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
         previousAudioMode = audioManager.mode
@@ -1025,6 +1031,31 @@ class BackgroundAudioService : Service() {
                 updateNotification("Radio — Standby")
                 sendPttTxFailed()
                 return@launch
+            }
+
+            try {
+                @android.annotation.SuppressLint("MissingPermission")
+                val locTask = fusedLocationClient.lastLocation
+                val location = try {
+                    com.google.android.gms.tasks.Tasks.await(locTask, 500, java.util.concurrent.TimeUnit.MILLISECONDS)
+                } catch (e: Exception) {
+                    Log.w(TAG, """{"event":"PTT_GPS_FIX_TIMEOUT","error":"${e.message}"}""")
+                    null
+                }
+                if (location != null) {
+                    Log.d(TAG, """{"event":"PTT_GPS_FIX","accuracy":${location.accuracy}}""")
+                    app.signalingRepository.sendLocationUpdate(
+                        lat = location.latitude,
+                        lon = location.longitude,
+                        accuracy = location.accuracy,
+                        heading = if (location.hasBearing()) location.bearing else null,
+                        speed = if (location.hasSpeed()) location.speed else null
+                    )
+                } else {
+                    Log.d(TAG, """{"event":"PTT_GPS_FIX","status":"unavailable"}""")
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, """{"event":"PTT_GPS_FIX_ERROR","error":"${e.message}"}""")
             }
 
             if (signaling) {

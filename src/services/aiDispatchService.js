@@ -7,12 +7,20 @@ import { audioRelayService } from './audioRelayService.js';
 import { opusCodec, SAMPLE_RATE as OPUS_SAMPLE_RATE, FRAME_SIZE as OPUS_FRAME_SIZE } from './opusCodec.js';
 import { floorControlService } from './floorControlService.js';
 import * as cadService from './cadService.js';
+import locationService from './locationService.js';
 import fs from 'fs';
 import path from 'path';
 
 const AUDIO_DIR = path.join(process.cwd(), 'uploads', 'audio');
 if (!fs.existsSync(AUDIO_DIR)) {
   fs.mkdirSync(AUDIO_DIR, { recursive: true });
+}
+
+const MY_LOCATION_PATTERN = /\b(at my location|my location|at my current location|my current location|my GPS|my gps|at my GPS|at my gps|where I am|where i am|my position|at my position|my current position)\b/i;
+
+function isMyLocationPhrase(text) {
+  if (!text) return false;
+  return MY_LOCATION_PATTERN.test(text);
 }
 
 function normalizeAddress(raw) {
@@ -176,7 +184,15 @@ class EmergencyEscalationController {
   async broadcastNoResponse(unitId) {
     this.log('NO_RESPONSE_BROADCAST', { unitId });
 
-    const message = `Attention all receiving units, ${unitId} pressed their emergency key with no response.`;
+    let locationInfo = '';
+    try {
+      const unitLoc = await locationService.getUnitAddress(unitId);
+      if (unitLoc && unitLoc.address) {
+        locationInfo = ` Last known location: ${unitLoc.address}.`;
+      }
+    } catch (e) {}
+
+    const message = `Attention all receiving units, ${unitId} pressed their emergency key with no response.${locationInfo}`;
     this.logSpeechEvent(unitId, '(no response to status check)', 'NO_RESPONSE_BROADCAST', message);
     
     if (this._audioQueueDepth >= MAX_AUDIO_QUEUE_DEPTH) {
@@ -816,6 +832,21 @@ class AIDispatcher {
     return true;
   }
 
+  async resolveUnitLocation(unitId) {
+    try {
+      const result = await locationService.getUnitAddress(unitId);
+      if (result && result.address) {
+        this.log('UNIT_LOCATION_RESOLVED', { unitId, address: result.address, lat: result.lat, lng: result.lng });
+        return result.address;
+      }
+      this.log('UNIT_LOCATION_NO_ADDRESS', { unitId, hasLocation: !!result });
+      return null;
+    } catch (error) {
+      this.log('UNIT_LOCATION_RESOLVE_ERROR', { unitId, error: error.message });
+      return null;
+    }
+  }
+
   async joinChannel(channelName) {
     if (this.connected && this.channelName === channelName) {
       this.log('JOIN_SKIPPED', { reason: 'Already connected to this channel', channel: channelName });
@@ -1435,7 +1466,14 @@ class AIDispatcher {
         }
 
         case 'DETAIL': {
-          const location = normalizeAddress(result.slots?.location);
+          let location = normalizeAddress(result.slots?.location);
+          if (!location && isMyLocationPhrase(transcript)) {
+            const gpsAddress = await this.resolveUnitLocation(participantId);
+            if (gpsAddress) {
+              location = gpsAddress;
+              this.log('DETAIL_LOCATION_FROM_GPS', { participantId, address: gpsAddress });
+            }
+          }
           if (location) {
             await this.handleDetailConfirmPrompt(participantId, location);
           } else {
@@ -1601,9 +1639,17 @@ class AIDispatcher {
 
         case 'CREATE_CALL': {
           const nature = result.slots?.nature;
-          const address = normalizeAddress(result.slots?.address);
+          let address = normalizeAddress(result.slots?.address);
           const additionalUnits = result.slots?.additionalUnits || [];
           const priority = result.slots?.priority || 'medium';
+
+          if (!address && isMyLocationPhrase(transcript)) {
+            const gpsAddress = await this.resolveUnitLocation(participantId);
+            if (gpsAddress) {
+              address = gpsAddress;
+              this.log('CREATE_CALL_ADDRESS_FROM_GPS', { participantId, address: gpsAddress });
+            }
+          }
 
           if (nature && address) {
             const matchedNature = await cadService.findBestNature(nature);
@@ -2223,6 +2269,15 @@ class AIDispatcher {
 
   async handleDetailLocation(participantId, rawTranscript) {
     this.log('DETAIL_LOCATION', { participant: participantId, transcript: rawTranscript });
+
+    if (isMyLocationPhrase(rawTranscript)) {
+      const gpsAddress = await this.resolveUnitLocation(participantId);
+      if (gpsAddress) {
+        this.log('DETAIL_LOCATION_FROM_GPS', { participantId, address: gpsAddress });
+        await this.handleDetailConfirmPrompt(participantId, gpsAddress);
+        return;
+      }
+    }
     
     const location = cleanTranscript(rawTranscript);
     
@@ -2387,7 +2442,17 @@ class AIDispatcher {
       return;
     }
 
-    const address = normalizeAddress(cleanTranscript(transcript));
+    let address = null;
+    if (isMyLocationPhrase(transcript)) {
+      const gpsAddress = await this.resolveUnitLocation(participantId);
+      if (gpsAddress) {
+        address = gpsAddress;
+        this.log('CALL_ADDRESS_FROM_GPS', { participantId, address: gpsAddress });
+      }
+    }
+    if (!address) {
+      address = normalizeAddress(cleanTranscript(transcript));
+    }
     if (!address || address.length < 2) {
       const resp = `${participantId}, did not copy address. Go ahead with address.`;
       await this.speak(resp, participantId);

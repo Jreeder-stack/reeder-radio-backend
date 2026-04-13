@@ -1,11 +1,15 @@
 const TTL_MS = 2 * 60 * 1000; // 2 minutes
+const GEOCODE_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const GEOCODE_PRECISION = 4; // ~11m precision for cache keys
 
 class LocationService {
   constructor() {
     this.locations = new Map();
     this.sseClients = new Set();
+    this._geocodeCache = new Map();
     
     setInterval(() => this.cleanExpired(), 30000);
+    setInterval(() => this._cleanGeocodeCache(), 60000);
   }
 
   updateLocation(unitId, lat, lng, accuracy = null, channel = null) {
@@ -78,6 +82,86 @@ class LocationService {
     for (const client of this.sseClients) {
       client.write(message);
     }
+  }
+
+  _geocodeCacheKey(lat, lng) {
+    return `${lat.toFixed(GEOCODE_PRECISION)},${lng.toFixed(GEOCODE_PRECISION)}`;
+  }
+
+  _cleanGeocodeCache() {
+    const now = Date.now();
+    for (const [key, entry] of this._geocodeCache) {
+      if (now - entry.timestamp >= GEOCODE_CACHE_TTL_MS) {
+        this._geocodeCache.delete(key);
+      }
+    }
+  }
+
+  async reverseGeocode(lat, lng) {
+    if (typeof lat !== 'number' || typeof lng !== 'number') {
+      return null;
+    }
+
+    const cacheKey = this._geocodeCacheKey(lat, lng);
+    const cached = this._geocodeCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < GEOCODE_CACHE_TTL_MS) {
+      return cached.address;
+    }
+
+    try {
+      const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`;
+      const response = await fetch(url, {
+        headers: {
+          'User-Agent': 'CommandComms-Dispatcher/1.0',
+          'Accept-Language': 'en'
+        },
+        signal: AbortSignal.timeout(5000)
+      });
+
+      if (!response.ok) {
+        console.log(`[LocationService] Reverse geocode HTTP error: ${response.status}`);
+        return null;
+      }
+
+      const data = await response.json();
+      let address = null;
+
+      if (data && data.address) {
+        const a = data.address;
+        const parts = [];
+        if (a.house_number) parts.push(a.house_number);
+        if (a.road) parts.push(a.road);
+        if (!a.road && a.pedestrian) parts.push(a.pedestrian);
+        if (a.city || a.town || a.village) parts.push(a.city || a.town || a.village);
+        if (a.state) parts.push(a.state);
+        address = parts.length > 0 ? parts.join(', ') : (data.display_name || null);
+      } else if (data && data.display_name) {
+        address = data.display_name;
+      }
+
+      if (address) {
+        this._geocodeCache.set(cacheKey, { address, timestamp: Date.now() });
+      }
+
+      return address;
+    } catch (error) {
+      console.log(`[LocationService] Reverse geocode error: ${error.message}`);
+      return null;
+    }
+  }
+
+  async getUnitAddress(unitId) {
+    const loc = this.getLocation(unitId);
+    if (!loc) return null;
+
+    const address = await this.reverseGeocode(loc.lat, loc.lng);
+    return {
+      lat: loc.lat,
+      lng: loc.lng,
+      accuracy: loc.accuracy,
+      address: address,
+      timestamp: loc.timestamp
+    };
   }
 }
 

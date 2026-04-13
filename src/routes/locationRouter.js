@@ -34,6 +34,19 @@ router.get('/stream', (req, res) => {
   locationService.addSSEClient(res);
 });
 
+router.get('/:unitId/address', async (req, res) => {
+  try {
+    const result = await locationService.getUnitAddress(req.params.unitId);
+    if (result) {
+      res.json(result);
+    } else {
+      res.status(404).json({ error: 'Unit not found or location expired' });
+    }
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to resolve address' });
+  }
+});
+
 router.get('/:unitId', (req, res) => {
   const location = locationService.getLocation(req.params.unitId);
   if (location) {

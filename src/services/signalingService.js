@@ -3,6 +3,7 @@ import { floorControlService } from './floorControlService.js';
 import { audioRelayService } from './audioRelayService.js';
 import { opusCodec } from './opusCodec.js';
 import { canonicalChannelKey } from './channelKeyUtils.js';
+import locationService from './locationService.js';
 import cookie from 'cookie';
 import signature from 'cookie-signature';
 import pool, { clearUnitEmergencyByIdentity, getRadioByToken, updateRadioLastSeen } from '../db/index.js';
@@ -911,6 +912,11 @@ class SignalingService {
       presence.location = { latitude, longitude, accuracy, heading, speed };
       presence.lastSeen = Date.now();
     }
+
+    if (typeof latitude === 'number' && typeof longitude === 'number') {
+      const channel = socket.channels ? Array.from(socket.channels)[0] : null;
+      locationService.updateLocation(socket.unitId, latitude, longitude, accuracy, channel);
+    }
     
     for (const channelId of socket.channels) {
       this._emitToChannelDispatchers(channelId, SIGNALING_EVENTS.LOCATION_UPDATE, {
@@ -962,10 +968,15 @@ class SignalingService {
   _handleGpsLocationUpdate(socket, data) {
     if (!socket.unitId) return;
 
+    const lat = data.lat ?? data.latitude;
+    const lng = data.lng ?? data.longitude;
+
+    if (typeof lat !== 'number' || typeof lng !== 'number') return;
+
     const locationEntry = {
       unitId: socket.unitId,
-      lat: data.lat,
-      lng: data.lng,
+      lat,
+      lng,
       accuracy: data.accuracy,
       heading: data.heading,
       speed: data.speed,
@@ -974,14 +985,7 @@ class SignalingService {
 
     this.trackedUnitLocations.set(socket.unitId, locationEntry);
 
-    try {
-      import('../services/locationService.js').then(mod => {
-        const locationService = mod.default;
-        if (locationService && locationService.updateLocation) {
-          locationService.updateLocation(socket.unitId, data.lat, data.lng, data.accuracy);
-        }
-      }).catch(() => {});
-    } catch (e) {}
+    locationService.updateLocation(socket.unitId, lat, lng, data.accuracy);
 
     if (this.io) {
       this.io.sockets.sockets.forEach((s) => {
