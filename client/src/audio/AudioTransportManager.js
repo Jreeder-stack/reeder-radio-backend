@@ -9,8 +9,10 @@ import { OpusBrowserEncoder } from './OpusBrowserEncoder.js';
 
 const WS_HEALTH_CHECK_INTERVAL = 5000;
 const WS_HEALTH_CHECK_INTERVAL_AGGRESSIVE = 2000;
-const WS_LIVENESS_TIMEOUT = 45000;
-const WS_LIVENESS_TIMEOUT_AGGRESSIVE = 45000;
+const WS_LIVENESS_TIMEOUT = 20000;
+const WS_LIVENESS_TIMEOUT_AGGRESSIVE = 20000;
+const NO_RX_DATA_WARN_MS = 30000;
+const NO_RX_DATA_RECONNECT_MS = 60000;
 const REORDER_BUFFER_SIZE = 20;
 const REORDER_MAX_LATE = 20;
 const PLC_MAX_CONSECUTIVE = 7;
@@ -155,6 +157,21 @@ class AudioTransportManager {
           const errMsg = isStale ? 'Connection timed out (no activity)' : 'WebSocket connection lost';
           this._emitConnectionStateChange(channelName, 'disconnected', errMsg);
           this._scheduleReconnect(channelName);
+        } else if (conn._lastRxDataTime > 0 && conn.ws && conn.ws.readyState === WebSocket.OPEN) {
+          const noRxMs = now - conn._lastRxDataTime;
+          const MAX_WATCHDOG_WINDOW_MS = 300000;
+          if (noRxMs < MAX_WATCHDOG_WINDOW_MS) {
+            if (noRxMs >= NO_RX_DATA_RECONNECT_MS) {
+              console.warn('AUDIO_WS_NO_RX_DATA_RECONNECT', { channelName, noRxMs, lastRxDataTime: conn._lastRxDataTime });
+              try { conn.ws.close(); } catch (_) {}
+              this.rooms.delete(channelName);
+              this._emitConnectionStateChange(channelName, 'disconnected', 'No RX audio data received — reconnecting');
+              this._scheduleReconnect(channelName);
+            } else if (noRxMs >= NO_RX_DATA_WARN_MS && !conn._noRxWarned) {
+              conn._noRxWarned = true;
+              console.warn('AUDIO_WS_NO_RX_DATA_WARNING', { channelName, noRxMs, lastRxDataTime: conn._lastRxDataTime });
+            }
+          }
         }
       }
     }, interval);
@@ -410,7 +427,7 @@ class AudioTransportManager {
 
     const pending = (async () => {
       const ws = await this._openWebSocket(channelName, identity);
-      const conn = { channelName, unitId: identity, ws, state: 'connected', _lastActivity: Date.now() };
+      const conn = { channelName, unitId: identity, ws, state: 'connected', _lastActivity: Date.now(), _lastRxDataTime: 0, _noRxWarned: false };
 
       ws.binaryType = 'arraybuffer';
 
@@ -420,6 +437,8 @@ class AudioTransportManager {
         if (evt.data instanceof ArrayBuffer) {
           const parsed = parseBinaryAudioFrame(evt.data);
           if (!parsed) return;
+          conn._lastRxDataTime = Date.now();
+          conn._noRxWarned = false;
           if (this.mutedChannels.has(channelName)) return;
           if (this.priorityChannelRoomKey && this.priorityChannelRoomKey !== channelName) return;
           if (parsed.senderUnitId && parsed.senderUnitId === conn.unitId) return;
@@ -805,7 +824,7 @@ class AudioTransportManager {
     const key = `${channelId}::${senderUnitId}`;
     let stream = this._reorderStreams.get(key);
     if (!stream) {
-      stream = { expectedSequence: -1, buffer: [], flushTimer: null };
+      stream = { expectedSequence: -1, buffer: [], flushTimer: null, lastDeliveredTime: 0 };
       this._reorderStreams.set(key, stream);
     }
     return stream;
@@ -823,8 +842,18 @@ class AudioTransportManager {
   async _enqueueWithReorder(sequence, payload, channelId, senderUnitId, codec = 'pcm') {
     const stream = this._getReorderStream(channelId, senderUnitId);
 
+    const SEQ_RESYNC_THRESHOLD = 1000;
+    const IDLE_RESYNC_MS = 2000;
     if (stream.expectedSequence === -1 || sequence < stream.expectedSequence - REORDER_MAX_LATE * 5) {
       stream.expectedSequence = sequence;
+    } else if (stream.lastDeliveredTime > 0 && (Date.now() - stream.lastDeliveredTime) > IDLE_RESYNC_MS) {
+      const gap = sequence - stream.expectedSequence;
+      if (gap > SEQ_RESYNC_THRESHOLD || gap < -REORDER_MAX_LATE) {
+        console.log('AUDIO_RX_SEQ_RESYNC', { seq: sequence, expected: stream.expectedSequence, gap, idleMs: Date.now() - stream.lastDeliveredTime, channelId, sender: senderUnitId });
+        stream.expectedSequence = sequence;
+        stream.buffer = [];
+        if (stream.flushTimer) { clearTimeout(stream.flushTimer); stream.flushTimer = null; }
+      }
     }
 
     if (sequence < stream.expectedSequence - REORDER_MAX_LATE) {
@@ -894,6 +923,7 @@ class AudioTransportManager {
       }
     }
     stream.lastDeliveredSeq = sequence;
+    stream.lastDeliveredTime = Date.now();
     await this._decodeAndPlayback(payload, codec, channelId, senderUnitId);
   }
 

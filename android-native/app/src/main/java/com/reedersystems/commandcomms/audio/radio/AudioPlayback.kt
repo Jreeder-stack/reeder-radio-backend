@@ -245,14 +245,15 @@ class AudioPlayback(
                         if (!jitterBuffer.tryStartPlayback()) {
                             delay(FRAME_INTERVAL_MS)
 
-                            if (!jitterBuffer.isEmpty) {
-                                lastDataTimeMs = System.currentTimeMillis()
-                            } else {
-                                val silenceMs = System.currentTimeMillis() - lastDataTimeMs
-                                if (silenceMs >= IDLE_TIMEOUT_MS) {
+                            val silenceMs = System.currentTimeMillis() - lastDataTimeMs
+                            if (silenceMs >= IDLE_TIMEOUT_MS) {
+                                if (!jitterBuffer.isEmpty) {
+                                    Log.d(TAG, "IDLE_TIMEOUT_FLUSH orphanFrames=${jitterBuffer.size} silenceMs=$silenceMs — flushing stale buffer ${RadioDiagLog.elapsedTag()}")
+                                    jitterBuffer.flushAndEnterIdle()
+                                } else {
                                     jitterBuffer.enterIdle()
-                                    lastDataTimeMs = System.currentTimeMillis()
                                 }
+                                lastDataTimeMs = System.currentTimeMillis()
                             }
                             continue
                         }
@@ -384,7 +385,7 @@ class AudioPlayback(
                                     } catch (e: Exception) {
                                         Log.e("[RadioError]", "AudioTrack write error in PLC path: ${e::class.simpleName}: ${e.message} method=playbackLoop")
                                     }
-                                    if (plcCount % 10 == 1) {
+                                    if (plcCount % 50 == 1) {
                                         Log.d(TAG, "PLC frame for seq=$expectedSeq (total=$plcCount) jbSize=${jitterBuffer.size} ${RadioDiagLog.elapsedTag()}")
                                     }
                                 } else {
@@ -410,13 +411,18 @@ class AudioPlayback(
                                 catchupCount = 0
                             }
 
-                            if (jitterBuffer.isEmpty && jitterBuffer.isPlaybackActive) {
+                            if (jitterBuffer.isPlaybackActive) {
                                 val silenceMs = now - lastDataTimeMs
                                 if (silenceMs >= IDLE_TIMEOUT_MS) {
-                                    jitterBuffer.enterIdle()
+                                    if (!jitterBuffer.isEmpty) {
+                                        Log.d(TAG, "IDLE_TIMEOUT_FLUSH_ACTIVE orphanFrames=${jitterBuffer.size} silenceMs=$silenceMs plcTotal=$plcCount — flushing stale buffer ${RadioDiagLog.elapsedTag()}")
+                                        jitterBuffer.flushAndEnterIdle()
+                                    } else {
+                                        jitterBuffer.enterIdle()
+                                    }
                                     lastDataTimeMs = now
-                                    Log.d(TAG, "Idle — buffer empty for ${IDLE_TIMEOUT_MS}ms, reset pre-buffer plcTotal=$plcCount ${RadioDiagLog.elapsedTag()}")
-                                } else if (silenceMs >= WARM_IDLE_TIMEOUT_MS) {
+                                    Log.d(TAG, "Idle — no new data for ${IDLE_TIMEOUT_MS}ms, reset pre-buffer plcTotal=$plcCount ${RadioDiagLog.elapsedTag()}")
+                                } else if (jitterBuffer.isEmpty && silenceMs >= WARM_IDLE_TIMEOUT_MS) {
                                     jitterBuffer.enterWarmIdle()
                                     Log.d(TAG, "WarmIdle — buffer empty for ${WARM_IDLE_TIMEOUT_MS}ms, minimal pre-buffer plcTotal=$plcCount ${RadioDiagLog.elapsedTag()}")
                                 }

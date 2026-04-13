@@ -1347,9 +1347,14 @@ class RadioAudioEngine(private val context: Context) {
         Log.d(TAG, "RX stopped")
     }
 
+    private var noRxDataStartMs: Long = 0L
+    private var noRxSocketRecreated: Boolean = false
+
     private fun startRxDiagnostics() {
         rxDiagJob?.cancel()
         lastDiagRxCount = udpTransport.rxPacketCount
+        noRxDataStartMs = 0L
+        noRxSocketRecreated = false
         rxDiagJob = scope.launch {
             while (isActive) {
                 delay(RX_DIAG_INTERVAL_MS)
@@ -1360,6 +1365,28 @@ class RadioAudioEngine(private val context: Context) {
                 val bufDepth = jitterBuffer.currentTargetDepth
                 val bufPlaying = jitterBuffer.isPlaybackActive
                 Log.d(TAG, "RX_DIAG rxTotal=$currentRxCount rxNew=$newPackets jbSize=$bufSize jbDepth=$bufDepth jbPlaying=$bufPlaying channelIdx=${udpTransport.channelIndex} ${RadioDiagLog.elapsedTag()}")
+
+                if (newPackets == 0L && currentRxCount > 0 && udpTransport.connectionHealth.value == TransportHealth.CONNECTED) {
+                    if (noRxDataStartMs == 0L) {
+                        noRxDataStartMs = System.currentTimeMillis()
+                    }
+                    val noRxDurationMs = System.currentTimeMillis() - noRxDataStartMs
+                    if (noRxDurationMs >= 60_000L && !noRxSocketRecreated) {
+                        Log.w(TAG, "RX_WATCHDOG_SOCKET_RECREATE noRxMs=$noRxDurationMs rxTotal=$currentRxCount — forcing UDP socket recreate and re-register ${RadioDiagLog.elapsedTag()}")
+                        noRxSocketRecreated = true
+                        udpTransport.forceSocketRecreate()
+                    } else if (noRxDurationMs >= 30_000L) {
+                        Log.w(TAG, "RX_WATCHDOG_NO_DATA noRxMs=$noRxDurationMs rxTotal=$currentRxCount — triggering fast keepalive burst ${RadioDiagLog.elapsedTag()}")
+                        udpTransport.activateFastKeepaliveExternal()
+                    }
+                } else if (newPackets > 0L) {
+                    if (noRxDataStartMs > 0L) {
+                        val recoveredAfterMs = System.currentTimeMillis() - noRxDataStartMs
+                        Log.d(TAG, "RX_WATCHDOG_RECOVERED rxNew=$newPackets afterMs=$recoveredAfterMs ${RadioDiagLog.elapsedTag()}")
+                    }
+                    noRxDataStartMs = 0L
+                    noRxSocketRecreated = false
+                }
             }
         }
     }

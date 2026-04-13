@@ -168,6 +168,25 @@ class UdpAudioTransport(
         Log.d(TAG, """{"event":"FAST_KEEPALIVE_ACTIVATED","durationMs":$KEEPALIVE_FAST_DURATION_MS}""")
     }
 
+    fun activateFastKeepaliveExternal() {
+        activateFastKeepalive()
+        sendImmediateKeepalive()
+    }
+
+    fun forceSocketRecreate() {
+        scope.launch {
+            Log.d(TAG, """{"event":"FORCE_SOCKET_RECREATE_START"}""")
+            val newSock = recreateSocket()
+            if (newSock != null) {
+                activateFastKeepalive()
+                sendImmediateKeepalive()
+                Log.d(TAG, """{"event":"FORCE_SOCKET_RECREATE_SUCCESS","localPort":${newSock.localPort}}""")
+            } else {
+                Log.e("[RadioError]", """{"event":"FORCE_SOCKET_RECREATE_FAILED"}""")
+            }
+        }
+    }
+
     private fun recreateSocket(): DatagramSocket? {
         return try {
             socket?.close()

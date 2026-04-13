@@ -339,14 +339,20 @@ class AudioRelayService {
 
     const udpSubs = this.subscribers.get(channelKey);
     if (udpSubs) {
+      let udpSendCount = 0;
+      let udpSendErrors = 0;
       for (const [subUnitId, subInfo] of udpSubs) {
         if (subUnitId === senderUnitId) continue;
-        subInfo.lastSeen = Date.now();
         try {
           this.socket.send(rxPayload, 0, rxPayload.length, subInfo.port, subInfo.address);
+          udpSendCount++;
         } catch (err) {
+          udpSendErrors++;
           console.error(`[AudioRelay] Send error to ${subUnitId}:`, err.message);
         }
+      }
+      if (AUDIO_DIAG && sequence % 100 === 0) {
+        console.log(`[AudioRelay] UDP_DELIVERY channelKey=${channelKey} sender=${senderUnitId} seq=${sequence} udpRecipients=${udpSendCount} udpErrors=${udpSendErrors} totalUdpSubs=${udpSubs.size}`);
       }
     }
 
@@ -784,7 +790,10 @@ class AudioRelayService {
 
   _sweepStaleSubscribers() {
     const now = Date.now();
+    const STALE_WARNING_MS = SUBSCRIBER_TIMEOUT_MS / 2;
     for (const [channelId, subs] of this.subscribers) {
+      let activeCount = 0;
+      let staleWarningCount = 0;
       for (const [unitId, sub] of subs) {
         if (now - sub.lastSeen > SUBSCRIBER_TIMEOUT_MS) {
           const staleMs = now - sub.lastSeen;
@@ -797,9 +806,19 @@ class AudioRelayService {
               console.warn(`[AudioRelay] Failed to notify signaling of stale subscriber: ${err.message}`);
             }
           }
+        } else {
+          activeCount++;
+          if (now - sub.lastSeen > STALE_WARNING_MS) {
+            staleWarningCount++;
+            console.warn(`[AudioRelay] UDP_SUBSCRIBER_GOING_STALE unitId=${unitId} channelId=${channelId} lastSeenAgoMs=${now - sub.lastSeen} addr=${sub.address}:${sub.port}`);
+          }
         }
       }
       if (subs.size === 0) this.subscribers.delete(channelId);
+      if (activeCount > 0 || staleWarningCount > 0) {
+        const wsSubCount = this._wsSubscribers.get(channelId)?.size || 0;
+        console.log(`[AudioRelay] UDP_SUBSCRIBER_STATS channelId=${channelId} udpActive=${activeCount} udpGoingStale=${staleWarningCount} wsSubscribers=${wsSubCount}`);
+      }
     }
     for (const [key, ts] of this._senderLastSeqTime) {
       if (now - ts > SUBSCRIBER_TIMEOUT_MS) {

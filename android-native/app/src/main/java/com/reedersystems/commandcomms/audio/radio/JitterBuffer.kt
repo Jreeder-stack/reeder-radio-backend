@@ -12,6 +12,7 @@ private const val JITTER_ALPHA = 0.07
 private const val SEQ_MOD = 65536
 private const val SEQ_HALF = 32768
 private const val RECONNECT_PROTECTION_FRAMES = 3
+private const val SEQ_RESYNC_THRESHOLD = 1000
 
 class JitterBuffer {
 
@@ -98,9 +99,28 @@ class JitterBuffer {
             }
 
             if (playbackActive && nextPlaybackSeq >= 0 && seqBefore(sequence, nextPlaybackSeq)) {
-                summaryLateDrops++
-                Log.d(TAG, "Late packet seq=$sequence (playing=$nextPlaybackSeq), discarded totalLateDrops=$summaryLateDrops")
-                return
+                val backwardDistance = (nextPlaybackSeq - sequence + SEQ_MOD) % SEQ_MOD
+                if (backwardDistance > SEQ_RESYNC_THRESHOLD) {
+                    Log.d(TAG, "SEQ_RESYNC new seq=$sequence far behind playback=$nextPlaybackSeq backwardDist=$backwardDistance — flushing and resyncing ${RadioDiagLog.elapsedTag()}")
+                    buffer.clear()
+                    nextPlaybackSeq = -1
+                    preBuffering = true
+                    playbackActive = false
+                } else {
+                    summaryLateDrops++
+                    Log.d(TAG, "Late packet seq=$sequence (playing=$nextPlaybackSeq), discarded totalLateDrops=$summaryLateDrops")
+                    return
+                }
+            }
+
+            if (!playbackActive && nextPlaybackSeq >= 0) {
+                val forwardDistance = seqDistance(nextPlaybackSeq, sequence)
+                val backwardDistance = (nextPlaybackSeq - sequence + SEQ_MOD) % SEQ_MOD
+                if (forwardDistance > SEQ_RESYNC_THRESHOLD && backwardDistance > SEQ_RESYNC_THRESHOLD) {
+                    Log.d(TAG, "SEQ_RESYNC_IDLE new seq=$sequence far from expected=$nextPlaybackSeq fwdDist=$forwardDistance bwdDist=$backwardDistance — resetting expected seq ${RadioDiagLog.elapsedTag()}")
+                    buffer.clear()
+                    nextPlaybackSeq = -1
+                }
             }
 
             if (buffer.size >= MAX_BUFFER_SIZE) {
@@ -209,6 +229,21 @@ class JitterBuffer {
             estimatedJitterMs = 0.0
             targetDepth = MIN_DEPTH
             Log.d(TAG, "ENTER_IDLE depth=$MIN_DEPTH keptFrames=${buffer.size} ${RadioDiagLog.elapsedTag()}")
+        }
+    }
+
+    fun flushAndEnterIdle() {
+        synchronized(lock) {
+            val staleCount = buffer.size
+            buffer.clear()
+            nextPlaybackSeq = -1
+            preBuffering = true
+            playbackActive = false
+            warmIdle = false
+            lastArrivalTimeNs = 0L
+            estimatedJitterMs = 0.0
+            targetDepth = MIN_DEPTH
+            Log.d(TAG, "FLUSH_AND_ENTER_IDLE flushedOrphans=$staleCount depth=$MIN_DEPTH ${RadioDiagLog.elapsedTag()}")
         }
     }
 
