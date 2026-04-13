@@ -8,7 +8,7 @@ async function cadRequest(endpoint, method = 'GET', body = null) {
   
   if (!CAD_URL || !CAD_API_KEY) {
     console.warn('[CAD] Integration not configured - missing CAD_URL or CAD_API_KEY');
-    return { success: false, error: 'CAD integration not configured' };
+    return { success: false, error: 'CAD integration not configured', failureType: 'NOT_CONFIGURED' };
   }
 
   const url = `${CAD_URL}${endpoint}`;
@@ -34,20 +34,27 @@ async function cadRequest(endpoint, method = 'GET', body = null) {
     const contentType = response.headers.get('content-type') || '';
     if (!contentType.includes('json')) {
       console.error(`[CAD] Non-JSON response from ${url} (status ${response.status}, content-type: ${contentType})`);
-      return { success: false, error: `Non-JSON response (status ${response.status}, content-type: ${contentType})` };
+      return { success: false, error: `Non-JSON response (status ${response.status}, content-type: ${contentType})`, failureType: 'UNREACHABLE', statusCode: response.status };
     }
 
     const data = await response.json();
     
     if (!response.ok) {
       console.error(`[CAD] API error: ${response.status}`, data);
-      return { success: false, error: data.error || `HTTP ${response.status}` };
+      if (method !== 'GET') {
+        console.warn(`[CAD] Non-success response for ${method} ${endpoint}: status=${response.status}, error=${JSON.stringify(data)}`);
+      }
+      return { success: false, error: data.error || `HTTP ${response.status}`, failureType: 'API_REJECTION', statusCode: response.status, responseBody: data };
+    }
+    
+    if (method !== 'GET' && data && !data.success) {
+      console.warn(`[CAD] Non-success response for ${method} ${endpoint}: status=${response.status}, body=${JSON.stringify(data)}`);
     }
     
     return data;
   } catch (error) {
     console.error('[CAD] Request failed:', error.message);
-    return { success: false, error: error.message };
+    return { success: false, error: error.message, failureType: 'UNREACHABLE' };
   }
 }
 

@@ -1345,27 +1345,36 @@ class AIDispatcher {
 
         case 'STATUS_CHANGE': {
           let statusUpdateFailed = false;
+          let statusFailureType = null;
           if (result.cadStatus) {
             if (!cadService.isConfigured()) {
               statusUpdateFailed = true;
+              statusFailureType = 'NOT_CONFIGURED';
               this.log('CAD_NOT_CONFIGURED', { unitId: participantId, status: result.cadStatus });
             } else {
               try {
                 const cadResult = await cadService.updateUnitStatus(participantId, result.cadStatus);
                 if (!cadResult || !cadResult.success) {
                   statusUpdateFailed = true;
+                  statusFailureType = cadResult?.failureType || 'API_REJECTION';
+                  this.log('CAD_STATUS_UPDATE_FAILED', { unitId: participantId, status: result.cadStatus, failureType: statusFailureType, error: cadResult?.error, statusCode: cadResult?.statusCode, responseBody: cadResult?.responseBody });
                 }
                 this.log('CAD_STATUS_UPDATE', { unitId: participantId, status: result.cadStatus, success: cadResult?.success });
               } catch (cadError) {
                 statusUpdateFailed = true;
-                this.log('CAD_ERROR', { error: cadError.message });
+                statusFailureType = 'UNREACHABLE';
+                this.log('CAD_ERROR', { error: cadError.message, stack: cadError.stack });
               }
             }
           }
           setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
           let statusResp;
-          if (statusUpdateFailed) {
-            statusResp = `${participantId}, system is down, update your status via the MDT.`;
+          if (statusUpdateFailed && statusFailureType === 'NOT_CONFIGURED') {
+            statusResp = `${participantId}, 10-4. CAD is not available, update your status via the MDT.`;
+          } else if (statusUpdateFailed && statusFailureType === 'UNREACHABLE') {
+            statusResp = `${participantId}, 10-4. Unable to reach CAD, update your status via the MDT.`;
+          } else if (statusUpdateFailed) {
+            statusResp = `${participantId}, 10-4. CAD update did not go through, try your MDT.`;
           } else {
             statusResp = result.response || `${participantId}, 10-4.`;
           }
@@ -2077,24 +2086,36 @@ class AIDispatcher {
     const zone = slots.zone;
     
     let zoneUpdateFailed = false;
+    let zoneFailureType = null;
     if (!cadService.isConfigured()) {
       zoneUpdateFailed = true;
+      zoneFailureType = 'NOT_CONFIGURED';
       this.log('CAD_NOT_CONFIGURED', { participantId, zone });
     } else {
       try {
         const cadResult = await cadService.updateUnitZone(participantId, zone);
         if (!cadResult || !cadResult.success) {
           zoneUpdateFailed = true;
+          zoneFailureType = cadResult?.failureType || 'API_REJECTION';
+          this.log('CAD_ZONE_UPDATE_FAILED', { participantId, zone, failureType: zoneFailureType, error: cadResult?.error, statusCode: cadResult?.statusCode, responseBody: cadResult?.responseBody });
         }
         this.log('CAD_ZONE_UPDATED', { participantId, zone, success: cadResult?.success });
       } catch (error) {
         zoneUpdateFailed = true;
-        this.log('CAD_ZONE_UPDATE_ERROR', { error: error.message });
+        zoneFailureType = 'UNREACHABLE';
+        this.log('CAD_ZONE_UPDATE_ERROR', { error: error.message, stack: error.stack });
       }
     }
     
     if (zoneUpdateFailed) {
-      const failResponse = `${participantId}, system is down, update your status via the MDT.`;
+      let failResponse;
+      if (zoneFailureType === 'NOT_CONFIGURED') {
+        failResponse = `${participantId}, 10-4. CAD is not available, update your status via the MDT.`;
+      } else if (zoneFailureType === 'UNREACHABLE') {
+        failResponse = `${participantId}, 10-4. Unable to reach CAD, update your status via the MDT.`;
+      } else {
+        failResponse = `${participantId}, 10-4. CAD update did not go through, try your MDT.`;
+      }
       await this.speak(failResponse, participantId);
       setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
       return;
@@ -2176,31 +2197,45 @@ class AIDispatcher {
     const location = slots.location;
     
     let detailUpdateFailed = false;
+    let detailFailureType = null;
     if (!cadService.isConfigured()) {
       detailUpdateFailed = true;
+      detailFailureType = 'NOT_CONFIGURED';
       this.log('CAD_NOT_CONFIGURED', { participantId, location });
     } else {
       try {
         const statusResult = await cadService.updateUnitStatus(participantId, 'detail');
         if (!statusResult || !statusResult.success) {
           detailUpdateFailed = true;
+          detailFailureType = statusResult?.failureType || 'API_REJECTION';
+          this.log('CAD_DETAIL_STATUS_FAILED', { participantId, status: 'detail', failureType: detailFailureType, error: statusResult?.error, statusCode: statusResult?.statusCode, responseBody: statusResult?.responseBody });
         } else {
           this.log('CAD_DETAIL_STATUS_UPDATED', { participantId, status: 'detail' });
           const zoneResult = await cadService.updateUnitZone(participantId, location);
           if (!zoneResult || !zoneResult.success) {
             detailUpdateFailed = true;
+            detailFailureType = zoneResult?.failureType || 'API_REJECTION';
+            this.log('CAD_DETAIL_ZONE_FAILED', { participantId, location, failureType: detailFailureType, error: zoneResult?.error, statusCode: zoneResult?.statusCode, responseBody: zoneResult?.responseBody });
           } else {
             this.log('CAD_DETAIL_ZONE_UPDATED', { participantId, location });
           }
         }
       } catch (error) {
         detailUpdateFailed = true;
-        this.log('CAD_DETAIL_UPDATE_ERROR', { error: error.message });
+        detailFailureType = 'UNREACHABLE';
+        this.log('CAD_DETAIL_UPDATE_ERROR', { error: error.message, stack: error.stack });
       }
     }
     
     if (detailUpdateFailed) {
-      const failResponse = `${participantId}, system is down, update your status via the MDT.`;
+      let failResponse;
+      if (detailFailureType === 'NOT_CONFIGURED') {
+        failResponse = `${participantId}, 10-4. CAD is not available, update your status via the MDT.`;
+      } else if (detailFailureType === 'UNREACHABLE') {
+        failResponse = `${participantId}, 10-4. Unable to reach CAD, update your status via the MDT.`;
+      } else {
+        failResponse = `${participantId}, 10-4. CAD update did not go through, try your MDT.`;
+      }
       await this.speak(failResponse, participantId);
       setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
       return;
