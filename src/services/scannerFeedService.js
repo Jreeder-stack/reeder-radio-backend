@@ -17,6 +17,10 @@ const FFMPEG_STARTUP_TIMEOUT_MS = 10000;
 const FLOOR_REARM_INTERVAL_MS = 15000;
 const FLOOR_YIELD_RESUME_CHECK_MS = 500;
 
+const RECONNECT_INITIAL_DELAY_MS = 2000;
+const RECONNECT_MAX_DELAY_MS = 60000;
+const RECONNECT_MAX_ATTEMPTS = 10;
+
 class ScannerFeedService {
   constructor() {
     this._running = false;
@@ -41,6 +45,11 @@ class ScannerFeedService {
     this._configuredChannelName = null;
     this._configuredDisplayName = null;
     this._channelDisplayName = null;
+
+    this._state = 'stopped';
+    this._retryCount = 0;
+    this._lastError = null;
+    this._reconnectTimer = null;
   }
 
   get isRunning() {
@@ -48,13 +57,18 @@ class ScannerFeedService {
   }
 
   getStatus() {
+    const isActive = this._running || this._state === 'reconnecting';
     return {
       running: this._running,
-      streamUrl: this._running ? this._streamUrl : (this._configuredStreamUrl || null),
-      channelName: this._running ? (this._channelDisplayName || this._channelName) : (this._configuredDisplayName || this._configuredChannelName || null),
-      channelRoomKey: this._running ? this._channelName : (this._configuredChannelName || null),
+      state: this._state,
+      streamUrl: isActive ? this._streamUrl : (this._configuredStreamUrl || null),
+      channelName: isActive ? (this._channelDisplayName || this._channelName) : (this._configuredDisplayName || this._configuredChannelName || null),
+      channelRoomKey: isActive ? this._channelName : (this._configuredChannelName || null),
       startedAt: this._startedAt,
       transmitting: this._transmitting,
+      retryCount: this._retryCount,
+      maxReconnectAttempts: RECONNECT_MAX_ATTEMPTS,
+      lastError: this._lastError,
     };
   }
 
@@ -71,6 +85,7 @@ class ScannerFeedService {
     this._configuredDisplayName = channelDisplayName || channelRoomKey;
     this._authHeader = (username && password) ? 'Authorization: Basic ' + Buffer.from(`${username}:${password}`).toString('base64') : null;
     this._running = true;
+    this._state = 'running';
     this._sequence = 0;
     this._transmitting = false;
     this._silenceStart = null;
@@ -79,6 +94,8 @@ class ScannerFeedService {
     this._injecting = false;
     this._startedAt = Date.now();
     this._yielded = false;
+    this._retryCount = 0;
+    this._lastError = null;
 
     this._encoder = new OpusScript(SCANNER_SAMPLE_RATE, SCANNER_CHANNELS, OpusScript.Application.VOIP);
     try {
@@ -181,9 +198,14 @@ class ScannerFeedService {
       const startupTimeout = setTimeout(() => {
         if (!resolved) {
           resolved = true;
-          console.error('[ScannerFeed] ffmpeg startup timed out');
-          this._cleanup();
-          reject(new Error('ffmpeg startup timed out — check stream URL'));
+          const errorMsg = 'ffmpeg startup timed out — check stream URL';
+          console.error(`[ScannerFeed] ${errorMsg}`);
+          this._lastError = errorMsg;
+          this._killFfmpegProcess();
+          if (this._running) {
+            this._scheduleReconnect(errorMsg);
+          }
+          resolve();
         }
       }, FFMPEG_STARTUP_TIMEOUT_MS);
 
@@ -192,6 +214,9 @@ class ScannerFeedService {
           resolved = true;
           clearTimeout(startupTimeout);
           console.log('[ScannerFeed] ffmpeg producing audio data, stream connected');
+          this._retryCount = 0;
+          this._lastError = null;
+          this._state = 'running';
           resolve();
         }
         if (!this._running) return;
@@ -213,14 +238,20 @@ class ScannerFeedService {
         if (!resolved) {
           resolved = true;
           clearTimeout(startupTimeout);
-          reject(new Error(`ffmpeg exited with code ${code} before producing audio`));
-          this._cleanup();
+          const errorMsg = `ffmpeg exited with code ${code} before producing audio`;
+          this._lastError = errorMsg;
+          this._killFfmpegProcess();
+          if (this._running) {
+            this._scheduleReconnect(errorMsg);
+          }
+          resolve();
           return;
         }
         if (this._running) {
           this._endTransmission();
-          console.log('[ScannerFeed] ffmpeg exited unexpectedly, stopping scanner');
-          this._cleanup();
+          const errorMsg = `ffmpeg exited with code ${code}`;
+          this._lastError = errorMsg;
+          this._scheduleReconnect(errorMsg);
         }
       });
 
@@ -229,13 +260,125 @@ class ScannerFeedService {
         if (!resolved) {
           resolved = true;
           clearTimeout(startupTimeout);
-          reject(new Error(`ffmpeg spawn error: ${err.message}`));
+          this._lastError = err.message;
+          this._killFfmpegProcess();
+          if (this._running) {
+            this._scheduleReconnect(err.message);
+          }
+          resolve();
+          return;
         }
         if (this._running) {
-          this._cleanup();
+          this._lastError = err.message;
+          this._scheduleReconnect(err.message);
         }
       });
     });
+  }
+
+  _scheduleReconnect(reason) {
+    this._killFfmpegProcess();
+
+    if (this._reconnectTimer) {
+      return;
+    }
+
+    if (this._retryCount >= RECONNECT_MAX_ATTEMPTS) {
+      console.error(`[ScannerFeed] Max reconnect attempts (${RECONNECT_MAX_ATTEMPTS}) reached, giving up. Last error: ${reason}`);
+      this._state = 'errored';
+      this._lastError = reason;
+      this._running = false;
+      this._cleanupTimersAndCallbacks();
+      return;
+    }
+
+    this._retryCount++;
+    const delay = Math.min(RECONNECT_INITIAL_DELAY_MS * Math.pow(2, this._retryCount - 1), RECONNECT_MAX_DELAY_MS);
+    this._state = 'reconnecting';
+    console.log(`[ScannerFeed] Scheduling reconnect attempt ${this._retryCount}/${RECONNECT_MAX_ATTEMPTS} in ${delay}ms (reason: ${reason})`);
+
+    this._reconnectTimer = setTimeout(async () => {
+      this._reconnectTimer = null;
+      if (!this._running) return;
+
+      console.log(`[ScannerFeed] Reconnect attempt ${this._retryCount}/${RECONNECT_MAX_ATTEMPTS}`);
+
+      this._pcmBuffer = Buffer.alloc(0);
+      this._opusQueue = [];
+      this._injecting = false;
+      this._transmitting = false;
+      this._yielded = false;
+
+      if (this._encoder) {
+        try { this._encoder.delete(); } catch (_) {}
+      }
+      this._encoder = new OpusScript(SCANNER_SAMPLE_RATE, SCANNER_CHANNELS, OpusScript.Application.VOIP);
+      try {
+        this._encoder.encoderCTL(4002, 24000);
+        this._encoder.encoderCTL(4012, 1);
+      } catch (e) {
+        console.warn('[ScannerFeed] Failed to configure encoder on reconnect:', e.message);
+      }
+
+      try {
+        await this._startFfmpeg();
+        if (this._state === 'running') {
+          console.log(`[ScannerFeed] Reconnect successful`);
+        }
+      } catch (err) {
+        console.error(`[ScannerFeed] Reconnect attempt ${this._retryCount} failed: ${err.message}`);
+        this._lastError = err.message;
+        if (this._running) {
+          this._scheduleReconnect(err.message);
+        }
+      }
+    }, delay);
+  }
+
+  _killFfmpegProcess() {
+    if (this._ffmpeg) {
+      try {
+        this._ffmpeg.stdout.removeAllListeners();
+        this._ffmpeg.stderr.removeAllListeners();
+        this._ffmpeg.removeAllListeners();
+        this._ffmpeg.kill('SIGTERM');
+        const ffmpegRef = this._ffmpeg;
+        setTimeout(() => {
+          try { ffmpegRef.kill('SIGKILL'); } catch (_) {}
+        }, 3000);
+      } catch (_) {}
+      this._ffmpeg = null;
+    }
+  }
+
+  _cleanupTimersAndCallbacks() {
+    if (this._pacingTimer) {
+      clearInterval(this._pacingTimer);
+      this._pacingTimer = null;
+    }
+
+    if (this._floorRearmTimer) {
+      clearInterval(this._floorRearmTimer);
+      this._floorRearmTimer = null;
+    }
+
+    if (this._yieldResumeTimer) {
+      clearTimeout(this._yieldResumeTimer);
+      this._yieldResumeTimer = null;
+    }
+
+    this._unregisterPttCallbacks();
+
+    if (this._encoder) {
+      try { this._encoder.delete(); } catch (_) {}
+      this._encoder = null;
+    }
+
+    this._pcmBuffer = Buffer.alloc(0);
+    this._opusQueue = [];
+    this._injecting = false;
+    this._transmitting = false;
+    this._yielded = false;
   }
 
   _processPcmChunk(chunk) {
@@ -451,7 +594,7 @@ class ScannerFeedService {
   }
 
   async stop() {
-    if (!this._running) return;
+    if (!this._running && this._state !== 'reconnecting' && this._state !== 'errored') return;
     console.log('[ScannerFeed] Stopping scanner feed');
     this._running = false;
     this._endTransmission();
@@ -460,6 +603,14 @@ class ScannerFeedService {
 
   _cleanup() {
     this._running = false;
+    this._state = 'stopped';
+    this._retryCount = 0;
+    this._lastError = null;
+
+    if (this._reconnectTimer) {
+      clearTimeout(this._reconnectTimer);
+      this._reconnectTimer = null;
+    }
 
     if (this._pacingTimer) {
       clearInterval(this._pacingTimer);
@@ -478,18 +629,7 @@ class ScannerFeedService {
 
     this._unregisterPttCallbacks();
 
-    if (this._ffmpeg) {
-      try {
-        this._ffmpeg.stdout.removeAllListeners();
-        this._ffmpeg.stderr.removeAllListeners();
-        this._ffmpeg.kill('SIGTERM');
-        const ffmpegRef = this._ffmpeg;
-        setTimeout(() => {
-          try { ffmpegRef.kill('SIGKILL'); } catch (_) {}
-        }, 3000);
-      } catch (_) {}
-      this._ffmpeg = null;
-    }
+    this._killFfmpegProcess();
 
     if (this._encoder) {
       try { this._encoder.delete(); } catch (_) {}

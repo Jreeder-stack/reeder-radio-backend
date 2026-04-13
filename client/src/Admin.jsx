@@ -27,6 +27,10 @@ export default function Admin({ user, onLogout }) {
   const [scannerPassword, setScannerPassword] = useState("");
   const [scannerLoading, setScannerLoading] = useState(false);
   const [scannerTransmitting, setScannerTransmitting] = useState(false);
+  const [scannerState, setScannerState] = useState("stopped");
+  const [scannerRetryCount, setScannerRetryCount] = useState(0);
+  const [scannerMaxRetries, setScannerMaxRetries] = useState(10);
+  const [scannerLastError, setScannerLastError] = useState(null);
 
   /* --- Audio Tuning (temporary) --- */
   const [dspConfig, setDspConfig] = useState(null);
@@ -81,6 +85,30 @@ export default function Admin({ user, onLogout }) {
     return () => clearInterval(interval);
   }, [activeTab, aiDispatchEnabled]);
 
+  useEffect(() => {
+    let interval;
+    const shouldPoll = activeTab === "settings" && (scannerEnabled || scannerState === "reconnecting");
+    if (shouldPoll) {
+      interval = setInterval(async () => {
+        try {
+          const res = await fetch("/api/admin/scanner", { credentials: "include" });
+          if (res.ok) {
+            const data = await res.json();
+            setScannerEnabled(data.running || false);
+            setScannerTransmitting(data.transmitting || false);
+            setScannerState(data.state || "stopped");
+            setScannerRetryCount(data.retryCount || 0);
+            setScannerMaxRetries(data.maxReconnectAttempts || 10);
+            setScannerLastError(data.lastError || null);
+          }
+        } catch (err) {
+          console.error("Failed to poll scanner status:", err);
+        }
+      }, 5000);
+    }
+    return () => clearInterval(interval);
+  }, [activeTab, scannerEnabled, scannerState]);
+
   const loadData = async () => {
     setLoading(true);
     try {
@@ -117,6 +145,10 @@ export default function Admin({ user, onLogout }) {
       setScannerChannel(scannerData.channelName || "");
       setScannerUrl(scannerData.streamUrl || "");
       setScannerTransmitting(scannerData.transmitting || false);
+      setScannerState(scannerData.state || "stopped");
+      setScannerRetryCount(scannerData.retryCount || 0);
+      setScannerMaxRetries(scannerData.maxReconnectAttempts || 10);
+      setScannerLastError(scannerData.lastError || null);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -372,7 +404,8 @@ export default function Admin({ user, onLogout }) {
   };
 
   const toggleScanner = async () => {
-    if (!scannerEnabled && (!scannerChannel || !scannerUrl)) {
+    const isActive = scannerEnabled || scannerState === "reconnecting";
+    if (!isActive && (!scannerChannel || !scannerUrl)) {
       alert("Please select a channel and enter a stream URL first");
       return;
     }
@@ -383,7 +416,7 @@ export default function Admin({ user, onLogout }) {
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
-          enabled: !scannerEnabled,
+          enabled: !isActive,
           streamUrl: scannerUrl,
           channelName: scannerChannel,
           username: scannerUsername || undefined,
@@ -396,6 +429,10 @@ export default function Admin({ user, onLogout }) {
       if (data.channelName) setScannerChannel(data.channelName);
       if (data.streamUrl) setScannerUrl(data.streamUrl);
       setScannerTransmitting(data.transmitting || false);
+      setScannerState(data.state || "stopped");
+      setScannerRetryCount(data.retryCount || 0);
+      setScannerMaxRetries(data.maxReconnectAttempts || 10);
+      setScannerLastError(data.lastError || null);
     } catch (err) {
       alert("Failed to toggle scanner feed: " + err.message);
     } finally {
@@ -867,16 +904,16 @@ export default function Admin({ user, onLogout }) {
                   <button
                     onClick={toggleScanner}
                     disabled={scannerLoading}
-                    className={`admin-toggle-btn ${scannerEnabled ? "admin-toggle-btn-on" : "admin-toggle-btn-off"}`}
+                    className={`admin-toggle-btn ${(scannerEnabled || scannerState === "reconnecting") ? "admin-toggle-btn-on" : "admin-toggle-btn-off"}`}
                     style={{ opacity: scannerLoading ? 0.6 : 1, cursor: scannerLoading ? "not-allowed" : "pointer" }}
                   >
-                    {scannerLoading ? "..." : scannerEnabled ? "ON" : "OFF"}
+                    {scannerLoading ? "..." : (scannerEnabled || scannerState === "reconnecting") ? "ON" : scannerState === "errored" ? "ERR" : "OFF"}
                   </button>
                 </div>
 
                 <div className="admin-field">
                   <label className="admin-field-label">Scanner Channel</label>
-                  <select value={scannerChannel} onChange={(e) => setScannerChannel(e.target.value)} disabled={scannerLoading || scannerEnabled} className="admin-select">
+                  <select value={scannerChannel} onChange={(e) => setScannerChannel(e.target.value)} disabled={scannerLoading || scannerEnabled || scannerState === "reconnecting"} className="admin-select">
                     <option value="">Select a channel...</option>
                     {channels.filter(c => c.enabled).map((c) => (
                       <option key={c.id} value={c.name}>{c.name}</option>
@@ -890,7 +927,7 @@ export default function Admin({ user, onLogout }) {
                     type="text"
                     value={scannerUrl}
                     onChange={(e) => setScannerUrl(e.target.value)}
-                    disabled={scannerLoading || scannerEnabled}
+                    disabled={scannerLoading || scannerEnabled || scannerState === "reconnecting"}
                     placeholder="https://broadcastify.cdnstream1.com/FEED_ID"
                     className="admin-input"
                   />
@@ -902,7 +939,7 @@ export default function Admin({ user, onLogout }) {
                     type="text"
                     value={scannerUsername}
                     onChange={(e) => setScannerUsername(e.target.value)}
-                    disabled={scannerLoading || scannerEnabled}
+                    disabled={scannerLoading || scannerEnabled || scannerState === "reconnecting"}
                     placeholder="Broadcastify username (optional)"
                     className="admin-input"
                   />
@@ -914,13 +951,30 @@ export default function Admin({ user, onLogout }) {
                     type="password"
                     value={scannerPassword}
                     onChange={(e) => setScannerPassword(e.target.value)}
-                    disabled={scannerLoading || scannerEnabled}
+                    disabled={scannerLoading || scannerEnabled || scannerState === "reconnecting"}
                     placeholder="Broadcastify password (optional)"
                     className="admin-input"
                   />
                 </div>
 
-                {scannerEnabled && scannerChannel && (
+                {scannerState === "errored" && (
+                  <div className="admin-status-banner" style={{ background: "rgba(239, 68, 68, 0.15)", border: "1px solid rgba(239, 68, 68, 0.4)", color: "#fca5a5", borderRadius: 8, padding: "12px 16px", marginTop: 12 }}>
+                    <div style={{ fontWeight: 600, marginBottom: 4 }}>Scanner Feed Error</div>
+                    <div>The scanner failed after {scannerRetryCount} reconnect attempts and has stopped.</div>
+                    {scannerLastError && <div style={{ marginTop: 4, fontSize: "0.85em", opacity: 0.85 }}>Last error: {scannerLastError}</div>}
+                    <div style={{ marginTop: 8, fontSize: "0.85em", opacity: 0.7 }}>Check the stream URL and credentials, then click the toggle to restart.</div>
+                  </div>
+                )}
+
+                {scannerState === "reconnecting" && (
+                  <div className="admin-status-banner" style={{ background: "rgba(251, 191, 36, 0.15)", border: "1px solid rgba(251, 191, 36, 0.4)", color: "#fde68a", borderRadius: 8, padding: "12px 16px", marginTop: 12 }}>
+                    <div style={{ fontWeight: 600, marginBottom: 4 }}>Reconnecting...</div>
+                    <div>The scanner stream disconnected and is attempting to reconnect (attempt {scannerRetryCount} of {scannerMaxRetries}).</div>
+                    {scannerLastError && <div style={{ marginTop: 4, fontSize: "0.85em", opacity: 0.85 }}>Reason: {scannerLastError}</div>}
+                  </div>
+                )}
+
+                {scannerEnabled && scannerState === "running" && scannerChannel && (
                   <div className="admin-status-banner admin-status-banner-success">
                     Scanner feed is active on channel: <strong>{scannerChannel}</strong>
                     {scannerTransmitting && <span className="admin-tx-badge">TX</span>}
