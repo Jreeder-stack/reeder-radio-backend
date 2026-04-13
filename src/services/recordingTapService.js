@@ -21,7 +21,7 @@ function txKey(channelId, unitId) {
   return `${channelId}::${unitId}`;
 }
 
-function handleRecordingFrame({ channelId, unitId, sequence, opusPayload, timestamp }) {
+function handleRecordingFrame({ channelId, unitId, sequence, opusPayload, codec, timestamp }) {
   const key = txKey(channelId, unitId);
   let recording = activeTxRecordings.get(key);
 
@@ -32,11 +32,12 @@ function handleRecordingFrame({ channelId, unitId, sequence, opusPayload, timest
       startTime: timestamp,
       lastFrameTime: timestamp,
       frames: [],
+      codec: codec || 'opus',
       idleTimer: null,
       maxTimer: null,
     };
     activeTxRecordings.set(key, recording);
-    console.log(`[RecordingTap] TX recording started: unit=${unitId} channel=${channelId}`);
+    console.log(`[RecordingTap] TX recording started: unit=${unitId} channel=${channelId} codec=${recording.codec}`);
 
     recording.maxTimer = setTimeout(() => {
       console.log(`[RecordingTap] TX max duration reached: unit=${unitId} channel=${channelId}`);
@@ -76,25 +77,50 @@ function finalizeRecording(key) {
     return;
   }
 
-  console.log(`[RecordingTap] Finalizing recording: unit=${unitId} channel=${channelId} frames=${frames.length} duration=${durationMs}ms`);
+  const recordingCodec = recording.codec || 'opus';
+  console.log(`[RecordingTap] Finalizing recording: unit=${unitId} channel=${channelId} frames=${frames.length} duration=${durationMs}ms codec=${recordingCodec}`);
 
   try {
     const pcmChunks = [];
-    for (const opusFrame of frames) {
-      try {
-        const pcm = opusCodec.decodeOpusToPcm(opusFrame, unitId);
-        pcmChunks.push(pcm);
-      } catch (decErr) {
-        // skip corrupted frames
+    let decodeFailures = 0;
+
+    if (recordingCodec === 'pcm') {
+      for (const frame of frames) {
+        pcmChunks.push(Buffer.isBuffer(frame) ? frame : Buffer.from(frame));
+      }
+    } else {
+      for (let i = 0; i < frames.length; i++) {
+        try {
+          const pcm = opusCodec.decodeOpusToPcm(frames[i], unitId);
+          pcmChunks.push(pcm);
+        } catch (decErr) {
+          decodeFailures++;
+          console.warn(`[RecordingTap] Opus decode error at frame ${i}/${frames.length} for unit=${unitId}: ${decErr.message}`);
+        }
       }
     }
+
+    const failureRatio = frames.length > 0 ? decodeFailures / frames.length : 0;
+    console.log(`[RecordingTap] Decode summary: unit=${unitId} channel=${channelId} total=${frames.length} decoded=${pcmChunks.length} failed=${decodeFailures} failureRatio=${(failureRatio * 100).toFixed(1)}%`);
 
     if (pcmChunks.length === 0) {
       console.warn(`[RecordingTap] All frames failed to decode for unit=${unitId} channel=${channelId}`);
       return;
     }
 
+    if (failureRatio > 0.5) {
+      console.error(`[RecordingTap] Too many decode failures (${(failureRatio * 100).toFixed(1)}% > 50%) for unit=${unitId} channel=${channelId} — skipping save to avoid broken WAV`);
+      return;
+    }
+
     const pcmData = Buffer.concat(pcmChunks);
+
+    const expectedPcmBytes = frames.length * 20 / 1000 * SAMPLE_RATE * 2;
+    if (pcmData.length < expectedPcmBytes * 0.25) {
+      console.warn(`[RecordingTap] PCM data suspiciously small: ${pcmData.length} bytes vs expected ~${Math.round(expectedPcmBytes)} bytes for unit=${unitId} channel=${channelId} — skipping save`);
+      return;
+    }
+
     const wavBuffer = createWavBuffer(pcmData, SAMPLE_RATE, CHANNELS);
 
     if (!validateWavBuffer(wavBuffer)) {
@@ -104,7 +130,7 @@ function finalizeRecording(key) {
 
     sendAudioMessage(channelId, unitId, wavBuffer, durationMs, false)
       .then((msg) => {
-        console.log(`[RecordingTap] Audio message saved: id=${msg.id} channel=${channelId} sender=${unitId} duration=${durationMs}ms`);
+        console.log(`[RecordingTap] Audio message saved: id=${msg.id} channel=${channelId} sender=${unitId} duration=${durationMs}ms frames=${frames.length} failed=${decodeFailures}`);
       })
       .catch((err) => {
         console.error(`[RecordingTap] Failed to save audio message:`, err.message);

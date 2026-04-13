@@ -3,6 +3,7 @@ import OpusScript from 'opusscript';
 const SAMPLE_RATE = 16000;
 const CHANNELS = 1;
 const FRAME_SIZE = 320;
+const MAX_OPUS_FRAME_SAMPLES = 5760;
 const BITRATE = 48000;
 const SENDER_DECODER_IDLE_MS = 30000;
 
@@ -130,19 +131,19 @@ class OpusCodecPool {
     if (senderId) {
       const decoder = this.acquireSenderDecoder(senderId);
       try {
-        const decoded = decoder.decode(opusBuffer);
+        const decoded = decoder.decode(opusBuffer, MAX_OPUS_FRAME_SAMPLES);
         return Buffer.from(decoded);
       } catch (e) {
         console.warn(`[OpusCodec] Sender-pinned decode error for ${senderId}:`, e.message);
         this.releaseSenderDecoder(senderId);
         const freshDecoder = this.acquireSenderDecoder(senderId);
-        const decoded = freshDecoder.decode(opusBuffer);
+        const decoded = freshDecoder.decode(opusBuffer, MAX_OPUS_FRAME_SAMPLES);
         return Buffer.from(decoded);
       }
     }
     const decoder = this._createDecoder();
     try {
-      const decoded = decoder.decode(opusBuffer);
+      const decoded = decoder.decode(opusBuffer, MAX_OPUS_FRAME_SAMPLES);
       return Buffer.from(decoded);
     } finally {
       try { decoder.delete(); } catch (e) {}

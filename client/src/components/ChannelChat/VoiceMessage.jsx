@@ -44,10 +44,10 @@ export default function VoiceMessage({ audioUrl, duration, transcription, onTran
       if (err) {
         switch (err.code) {
           case MediaError.MEDIA_ERR_DECODE:
-            msg = 'Audio format not supported';
+            msg = 'Audio not available';
             break;
           case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
-            msg = 'Audio decode error';
+            msg = 'Audio not available';
             break;
           case MediaError.MEDIA_ERR_NETWORK:
             msg = 'Network error';
