@@ -322,7 +322,7 @@ const IMMEDIATE_COMMANDS = [
     intent: 'CLEAR_UNIT',
     phrases: [
       'clear me from the call', 'clear me from call', 'clear me', 'clear from call',
-      'clear of call', 'clear the call', 'show me clear',
+      'clear of call', 'show me clear',
       "i'm clear", 'i am clear', 'im clear',
       '10-98', '10/98', '10 98', 'ten ninety eight', 'ten-ninety-eight', '1098',
       '10-98 from call'
@@ -333,7 +333,7 @@ const IMMEDIATE_COMMANDS = [
   {
     intent: 'DISPOSE_CALL',
     phrases: [
-      'close the call', 'close call', 'dispose call', 'dispose the call',
+      'clear the call', 'close the call', 'close call', 'dispose call', 'dispose the call',
       'close out the call', 'close it out', 'finalize call', 'finalize the call'
     ],
     response: null,

@@ -144,11 +144,18 @@ export async function createCall(type, priority, location, municipality, notes =
   const safeUnits = Array.isArray(units) ? units : [];
   console.log(`[CAD] Creating call: type=${type}, priority=${priority}, location=${location}, municipality=${municipality}, units=${JSON.stringify(safeUnits)}`);
   const resolvedMunicipality = (municipality && municipality.trim()) ? municipality.trim() : parseMunicipalityFromAddress(location);
+  let finalLocation = location;
+  if (resolvedMunicipality && location.includes(',')) {
+    const parts = location.split(',').map(p => p.trim()).filter(Boolean);
+    if (parts.length >= 2) {
+      finalLocation = parts[0];
+    }
+  }
   const numericPriority = normalizePriority(priority);
   const body = {
     type: type.toUpperCase(),
     priority: numericPriority,
-    location: location.toUpperCase(),
+    location: finalLocation.toUpperCase(),
     municipality: resolvedMunicipality ? resolvedMunicipality.toUpperCase() : '',
     notes: notes || '',
     units: safeUnits

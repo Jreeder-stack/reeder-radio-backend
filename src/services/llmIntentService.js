@@ -302,13 +302,15 @@ Unit wants to search a person by social security number. Phrases: "run a social"
 Return: { "intent": "PERSON_CHECK_SSN", "response": "<natural acknowledgment>", "slots": { "ssn": "<if provided>" } }
 
 ### CLEAR_UNIT
-Unit wants to clear themselves from their current call. Phrases: "clear me from the call", "clear me", "10-98", "10-98 from call", "clear the call", "show me clear", "clear of call", "I'm clear".
+Unit wants to clear THEMSELVES from their current call (but not close the call). Phrases: "clear me from the call", "clear me", "10-98", "10-98 from call", "show me clear", "clear of call", "I'm clear".
 10-98 ALWAYS maps to CLEAR_UNIT, never STATUS_CHANGE. CLEAR_UNIT clears the unit from their assigned call and sets them available.
+IMPORTANT: "clear the call" / "close the call" / "close it out" are NOT CLEAR_UNIT — those are DISPOSE_CALL (closing the entire call).
 Return: { "intent": "CLEAR_UNIT", "response": null }
 
 ### DISPOSE_CALL
-Unit wants to close/dispose a call with a disposition. Phrases: "close the call", "dispose the call", "call is closed", "close it out", "report filed".
-If the disposition text is provided inline, extract it. Otherwise leave disposition null.
+Unit wants to close/dispose the ENTIRE call. Phrases: "clear the call", "close the call", "dispose the call", "call is closed", "close it out", "close out the call", "report filed".
+"Clear the call" means close/dispose the entire call — it is DISPOSE_CALL, not CLEAR_UNIT.
+If the disposition text is provided inline (e.g., "clear the call, report filed"), extract it. Otherwise leave disposition null.
 Return: { "intent": "DISPOSE_CALL", "response": null, "slots": { "callNumber": "<if provided>", "disposition": "<if provided, e.g. 'report filed', 'unfounded', 'gone on arrival'>" } }
 
 ### WARRANT_CHECK

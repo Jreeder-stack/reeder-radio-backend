@@ -919,6 +919,15 @@ class AIDispatcher {
     return null;
   }
 
+  _detectArrivalStatus(transcript) {
+    if (!transcript) return 'on_scene';
+    const t = transcript.toLowerCase();
+    if (/\b(en route|enroute|en-route|responding to|rolling to|heading to|10-76|10\/76|10 76)\b/.test(t)) {
+      return 'en_route';
+    }
+    return 'on_scene';
+  }
+
   _looksLikeAddress(value) {
     if (!value || value.trim().length < 5) return false;
     const v = value.trim();
@@ -1879,6 +1888,8 @@ class AIDispatcher {
           const additionalUnits = result.slots?.additionalUnits || [];
           const priority = result.slots?.priority || 'medium';
 
+          const arrivalStatus = this._detectArrivalStatus(transcript);
+
           if (address && isMyLocationPhrase(address)) {
             this.log('CREATE_CALL_ADDRESS_SELF_REF', { participantId, rawAddress: address });
             address = null;
@@ -1899,12 +1910,13 @@ class AIDispatcher {
 
           if (nature && address) {
             const matchedNature = await cadService.findBestNature(nature);
-            this.log('CREATE_CALL_MATCHED', { spoken: nature, matched: matchedNature, address, additionalUnits });
+            this.log('CREATE_CALL_MATCHED', { spoken: nature, matched: matchedNature, address, additionalUnits, arrivalStatus });
             setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_CALL_CONFIRM, null, {
               nature: matchedNature,
               address,
               additionalUnits,
-              priority
+              priority,
+              arrivalStatus
             }, true);
             const confirmResp = `${participantId}, confirm, ${matchedNature.toLowerCase()} at ${address}?`;
             await this.speak(confirmResp, participantId);
@@ -1914,7 +1926,8 @@ class AIDispatcher {
             setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_CALL_ADDRESS, null, {
               nature: matchedNature,
               additionalUnits,
-              priority
+              priority,
+              arrivalStatus
             }, true);
             const resp = result.response || `${participantId}, go ahead with address.`;
             await this.speak(resp, participantId);
@@ -1923,7 +1936,8 @@ class AIDispatcher {
             setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_CALL_NATURE, null, {
               address: address || null,
               additionalUnits,
-              priority
+              priority,
+              arrivalStatus
             }, true);
             const resp = result.response || `${participantId}, go ahead with call nature.`;
             await this.speak(resp, participantId);
@@ -1937,13 +1951,15 @@ class AIDispatcher {
           const promptAddress = normalizeAddress(result.slots?.address);
           const promptUnits = result.slots?.additionalUnits || [];
           const promptPriority = result.slots?.priority || 'medium';
+          const promptArrivalStatus = this._detectArrivalStatus(transcript);
 
           if (promptNature && !promptAddress) {
             const matchedNature = await cadService.findBestNature(promptNature);
             setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_CALL_ADDRESS, null, {
               nature: matchedNature,
               additionalUnits: promptUnits,
-              priority: promptPriority
+              priority: promptPriority,
+              arrivalStatus: promptArrivalStatus
             }, true);
             const resp = result.response || `${participantId}, go ahead with address for ${matchedNature.toLowerCase()}.`;
             await this.speak(resp, participantId);
@@ -1952,7 +1968,8 @@ class AIDispatcher {
             setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_CALL_NATURE, null, {
               address: promptAddress,
               additionalUnits: promptUnits,
-              priority: promptPriority
+              priority: promptPriority,
+              arrivalStatus: promptArrivalStatus
             }, true);
             const resp = result.response || `${participantId}, go ahead with call nature.`;
             await this.speak(resp, participantId);
@@ -1961,7 +1978,8 @@ class AIDispatcher {
             setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_CALL_NATURE, null, {
               address: null,
               additionalUnits: promptUnits,
-              priority: promptPriority
+              priority: promptPriority,
+              arrivalStatus: promptArrivalStatus
             }, true);
             const resp = result.response || `${participantId}, go ahead with call nature and address.`;
             await this.speak(resp, participantId);
@@ -2375,7 +2393,7 @@ class AIDispatcher {
       'fifty-two', 'fifty-three', 'fifty-four', 'fifty-five', 'fifty-six', 'fifty-seven', 'fifty-eight', 'fifty-nine'
     ];
     const options = {
-      timeZone: 'America/New_York',
+      timeZone: 'UTC',
       hour: '2-digit',
       minute: '2-digit',
       hour12: false
@@ -2673,7 +2691,8 @@ class AIDispatcher {
         nature: matchedNature,
         address,
         additionalUnits: savedSlots?.additionalUnits || [],
-        priority: savedSlots?.priority || 'medium'
+        priority: savedSlots?.priority || 'medium',
+        arrivalStatus: savedSlots?.arrivalStatus || 'on_scene'
       }, true);
       const confirmResp = `${participantId}, confirm, ${matchedNature.toLowerCase()} at ${address}?`;
       await this.speak(confirmResp, participantId);
@@ -2681,7 +2700,8 @@ class AIDispatcher {
       setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_CALL_ADDRESS, null, {
         nature: matchedNature,
         additionalUnits: savedSlots?.additionalUnits || [],
-        priority: savedSlots?.priority || 'medium'
+        priority: savedSlots?.priority || 'medium',
+        arrivalStatus: savedSlots?.arrivalStatus || 'on_scene'
       }, true);
       const resp = `${participantId}, go ahead with address.`;
       await this.speak(resp, participantId);
@@ -2723,7 +2743,8 @@ class AIDispatcher {
       nature,
       address,
       additionalUnits: savedSlots?.additionalUnits || [],
-      priority: savedSlots?.priority || 'medium'
+      priority: savedSlots?.priority || 'medium',
+      arrivalStatus: savedSlots?.arrivalStatus || 'on_scene'
     }, true);
     const confirmResp = `${participantId}, confirm, ${nature.toLowerCase()} at ${address}?`;
     await this.speak(confirmResp, participantId);
@@ -2780,7 +2801,8 @@ class AIDispatcher {
   }
 
   async executeCallCreation(participantId, slots) {
-    const { nature, address, additionalUnits, priority } = slots;
+    const { nature, address, additionalUnits, priority, arrivalStatus } = slots;
+    const unitStatus = arrivalStatus || 'on_scene';
     this.log('CALL_CREATION_EXECUTING', { participantId, nature, address, priority, additionalUnits });
 
     try {
@@ -2845,8 +2867,8 @@ class AIDispatcher {
       }
 
       try {
-        await cadService.updateUnitStatus(participantId, 'en_route');
-        this.log('CAD_STATUS_UPDATED_EN_ROUTE', { unitId: participantId });
+        await cadService.updateUnitStatus(participantId, unitStatus);
+        this.log('CAD_STATUS_UPDATED', { unitId: participantId, status: unitStatus });
       } catch (statusError) {
         this.log('CAD_STATUS_UPDATE_ERROR', { unitId: participantId, error: statusError.message });
       }
@@ -3921,6 +3943,19 @@ class AIDispatcher {
     this.log('CLEAR_CONFIRM', { participant: participantId, transcript });
 
     try {
+      let callInfo = null;
+      let wasLastUnit = false;
+      try {
+        callInfo = await cadService.getUnitCurrentCallById(participantId);
+        if (callInfo && callInfo.assigned_units) {
+          const unitList = Array.isArray(callInfo.assigned_units) ? callInfo.assigned_units : [];
+          wasLastUnit = unitList.length <= 1;
+          this.log('CLEAR_UNIT_CHECK_LAST', { unitId: participantId, assignedUnits: unitList, wasLastUnit });
+        }
+      } catch (e) {
+        this.log('CLEAR_UNIT_CHECK_LAST_ERROR', { error: e.message });
+      }
+
       const clearResult = await cadService.clearUnit(participantId);
       if (clearResult?.success === false) {
         const resp = `${participantId}, unable to clear you from call. ${clearResult.error || 'Try your MDT.'}`;
@@ -3938,10 +3973,21 @@ class AIDispatcher {
       }
 
       const timeStr = this.formatMilitaryTime();
-      const resp = `${participantId}, 10-4, clear. ${timeStr}.`;
-      await this.speak(resp, participantId);
-      this.addConversationExchange(participantId, transcript, resp);
-      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+
+      if (wasLastUnit && callInfo) {
+        const callNumber = callInfo.call_id || callInfo.call_number || callInfo.callNumber;
+        const resp = `${participantId}, 10-4, clear. ${timeStr}. You were the last unit, go ahead with disposition.`;
+        await this.speak(resp, participantId);
+        this.addConversationExchange(participantId, transcript, resp);
+        setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_DISPOSITION, null, {
+          callNumber
+        }, true);
+      } else {
+        const resp = `${participantId}, 10-4, clear. ${timeStr}.`;
+        await this.speak(resp, participantId);
+        this.addConversationExchange(participantId, transcript, resp);
+        setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+      }
     } catch (error) {
       this.log('CLEAR_UNIT_ERROR', { error: error.message });
       const resp = `${participantId}, unable to clear. System error.`;
