@@ -611,7 +611,9 @@ function formatTimestamp() {
 
 function containsWakePhrase(transcript) {
   const normalized = normalizeText(transcript);
-  return normalized.includes('central');
+  return /^central\b/.test(normalized) ||
+         /\bto\s+central\b/.test(normalized) ||
+         /\bcentral\s*$/.test(normalized);
 }
 
 function containsCancelPhrase(transcript) {

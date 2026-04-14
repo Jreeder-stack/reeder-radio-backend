@@ -1399,7 +1399,10 @@ class AIDispatcher {
       const currentState = currentSession?.state || DISPATCHER_STATE.IDLE;
       if (currentState === DISPATCHER_STATE.IDLE) {
         const normalizedForGate = transcript.trim().toLowerCase();
-        const isAddressingDispatch = /\bcentral\b/i.test(normalizedForGate);
+        const isAddressingDispatch =
+          /^central\b/.test(normalizedForGate) ||
+          /\bto\s+central\b/.test(normalizedForGate) ||
+          /\bcentral\s*$/.test(normalizedForGate);
         if (!isAddressingDispatch) {
           this.verboseLog('IDLE_NO_CENTRAL_SKIP', { participant: participantId, transcript });
           return;
