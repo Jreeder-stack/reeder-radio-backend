@@ -18,6 +18,8 @@ class ToneTransmitter {
     this._ws = null;
     this._channelId = null;
     this._unitId = null;
+    this._roomKey = null;
+    this._audioTransportManager = null;
     this.isTransmitting = false;
     this._txState = TX_STATE.IDLE;
     this._encoder = null;
@@ -27,6 +29,10 @@ class ToneTransmitter {
     this._captureProcessor = null;
     this._pcmBuffer = new Int16Array(0);
     this._txSequence = 0;
+  }
+
+  setAudioTransportManager(atm) {
+    this._audioTransportManager = atm;
   }
 
   setWsTransport(ws, channelId, unitId) {
@@ -40,9 +46,23 @@ class ToneTransmitter {
       this._ws = room.ws;
       this._channelId = room.channelName || '';
       this._unitId = room.unitId || '';
+      this._roomKey = room.channelName || '';
     } else if (room && typeof room === 'object' && room instanceof WebSocket) {
       this._ws = room;
     }
+  }
+
+  _getCurrentWs() {
+    if (this._audioTransportManager && this._roomKey) {
+      const room = this._audioTransportManager.getRoom(this._roomKey);
+      if (room && room.ws) {
+        this._ws = room.ws;
+        this._channelId = room.channelName || this._channelId;
+        this._unitId = room.unitId || this._unitId;
+        return room;
+      }
+    }
+    return null;
   }
 
   async _ensureEncoder() {
@@ -131,8 +151,12 @@ class ToneTransmitter {
   _wireEncoderOutput() {
     this._encoder.setOnEncoded((encoded) => {
       if (!this._isSendingAllowed()) return;
-      if (!this._ws || this._ws.readyState !== WebSocket.OPEN) {
-        console.warn('[ToneTransmitter] WebSocket closed during tone TX');
+
+      const room = this._getCurrentWs();
+      const ws = room ? room.ws : this._ws;
+
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
+        console.warn('[ToneTransmitter] WebSocket closed during tone TX, skipping frame');
         return;
       }
       const binFrame = buildBinaryFrameOpus(
@@ -141,7 +165,10 @@ class ToneTransmitter {
         this._unitId,
         encoded
       );
-      this._ws.send(binFrame);
+      ws.send(binFrame);
+      if (room) {
+        room._lastSendActivity = Date.now();
+      }
     });
   }
 
@@ -150,7 +177,10 @@ class ToneTransmitter {
       return this._txState === TX_STATE.CONTINUOUS;
     }
 
-    if (!this._ws || this._ws.readyState !== WebSocket.OPEN) {
+    const room = this._getCurrentWs();
+    const ws = room ? room.ws : this._ws;
+
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
       console.error('[ToneTransmitter] No open WebSocket for tone transmission');
       return false;
     }
@@ -211,7 +241,10 @@ class ToneTransmitter {
       return false;
     }
 
-    if (!this._ws || this._ws.readyState !== WebSocket.OPEN) {
+    const room = this._getCurrentWs();
+    const ws = room ? room.ws : this._ws;
+
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
       console.warn('[ToneTransmitter] No open WebSocket, playing tone locally only');
       toneEngine.playEmergencyTone(type, duration);
       return false;
@@ -286,6 +319,7 @@ class ToneTransmitter {
     this._ws = null;
     this._channelId = null;
     this._unitId = null;
+    this._roomKey = null;
     this._txSequence = 0;
   }
 }

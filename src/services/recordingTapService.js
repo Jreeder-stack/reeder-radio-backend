@@ -16,6 +16,7 @@ if (!fs.existsSync(AUDIO_DIR)) {
 }
 
 const activeTxRecordings = new Map();
+const clearAirChannels = new Set();
 
 function txKey(channelId, unitId) {
   return `${channelId}::${unitId}`;
@@ -24,6 +25,7 @@ function txKey(channelId, unitId) {
 function handleRecordingFrame({ channelId, unitId, sequence, opusPayload, codec, timestamp }) {
   const key = txKey(channelId, unitId);
   let recording = activeTxRecordings.get(key);
+  const isClearAir = clearAirChannels.has(channelId);
 
   if (!recording) {
     recording = {
@@ -35,25 +37,30 @@ function handleRecordingFrame({ channelId, unitId, sequence, opusPayload, codec,
       codec: codec || 'opus',
       idleTimer: null,
       maxTimer: null,
+      clearAir: isClearAir,
     };
     activeTxRecordings.set(key, recording);
-    console.log(`[RecordingTap] TX recording started: unit=${unitId} channel=${channelId} codec=${recording.codec}`);
+    console.log(`[RecordingTap] TX recording started: unit=${unitId} channel=${channelId} codec=${recording.codec} clearAir=${isClearAir}`);
 
-    recording.maxTimer = setTimeout(() => {
-      console.log(`[RecordingTap] TX max duration reached: unit=${unitId} channel=${channelId}`);
-      finalizeRecording(key);
-    }, MAX_TX_DURATION_MS);
-    if (recording.maxTimer.unref) recording.maxTimer.unref();
+    if (!isClearAir) {
+      recording.maxTimer = setTimeout(() => {
+        console.log(`[RecordingTap] TX max duration reached: unit=${unitId} channel=${channelId}`);
+        finalizeRecording(key);
+      }, MAX_TX_DURATION_MS);
+      if (recording.maxTimer.unref) recording.maxTimer.unref();
+    }
   }
 
   recording.frames.push(opusPayload);
   recording.lastFrameTime = timestamp;
 
-  if (recording.idleTimer) clearTimeout(recording.idleTimer);
-  recording.idleTimer = setTimeout(() => {
-    finalizeRecording(key);
-  }, TX_IDLE_TIMEOUT_MS);
-  if (recording.idleTimer.unref) recording.idleTimer.unref();
+  if (!recording.clearAir) {
+    if (recording.idleTimer) clearTimeout(recording.idleTimer);
+    recording.idleTimer = setTimeout(() => {
+      finalizeRecording(key);
+    }, TX_IDLE_TIMEOUT_MS);
+    if (recording.idleTimer.unref) recording.idleTimer.unref();
+  }
 }
 
 function finalizeRecording(key) {
@@ -78,7 +85,7 @@ function finalizeRecording(key) {
   }
 
   const recordingCodec = recording.codec || 'opus';
-  console.log(`[RecordingTap] Finalizing recording: unit=${unitId} channel=${channelId} frames=${frames.length} duration=${durationMs}ms codec=${recordingCodec}`);
+  console.log(`[RecordingTap] Finalizing recording: unit=${unitId} channel=${channelId} frames=${frames.length} duration=${durationMs}ms codec=${recordingCodec} clearAir=${recording.clearAir || false}`);
 
   try {
     const pcmChunks = [];
@@ -144,6 +151,38 @@ function handlePttEnd({ channelId, unitId }) {
   const key = txKey(channelId, unitId);
   if (activeTxRecordings.has(key)) {
     setTimeout(() => finalizeRecording(key), 300);
+  }
+}
+
+function handleClearAirStart({ channelId, dispatcherId }) {
+  clearAirChannels.add(channelId);
+  console.log(`[RecordingTap] Clear Air mode started: channel=${channelId} dispatcher=${dispatcherId}`);
+
+  for (const [key, recording] of activeTxRecordings) {
+    if (recording.channelId === channelId && !recording.clearAir) {
+      recording.clearAir = true;
+      if (recording.idleTimer) {
+        clearTimeout(recording.idleTimer);
+        recording.idleTimer = null;
+      }
+      if (recording.maxTimer) {
+        clearTimeout(recording.maxTimer);
+        recording.maxTimer = null;
+      }
+      console.log(`[RecordingTap] Promoted existing recording to Clear Air mode: key=${key}`);
+    }
+  }
+}
+
+function handleClearAirEnd({ channelId, dispatcherId }) {
+  clearAirChannels.delete(channelId);
+  console.log(`[RecordingTap] Clear Air mode ended: channel=${channelId} dispatcher=${dispatcherId}`);
+
+  for (const [key, recording] of activeTxRecordings) {
+    if (recording.channelId === channelId && recording.clearAir) {
+      console.log(`[RecordingTap] Finalizing Clear Air recording: key=${key}`);
+      finalizeRecording(key);
+    }
   }
 }
 
@@ -217,7 +256,6 @@ async function cleanupOldAudioFiles() {
           cleaned++;
         }
       } catch {
-        // skip files that fail lookup
       }
     }
 
@@ -232,7 +270,9 @@ async function cleanupOldAudioFiles() {
 export function setupRecordingTap(audioRelayService, signalingService) {
   audioRelayService.onRecordingTap(handleRecordingFrame);
   signalingService.onPttEnd(handlePttEnd);
-  console.log('[RecordingTap] Recording tap and PTT end handler registered');
+  signalingService.onClearAirStart(handleClearAirStart);
+  signalingService.onClearAirEnd(handleClearAirEnd);
+  console.log('[RecordingTap] Recording tap, PTT end, and Clear Air handlers registered');
 
   const cleanupTimer = setInterval(cleanupOldAudioFiles, CLEANUP_INTERVAL_MS);
   if (cleanupTimer.unref) cleanupTimer.unref();

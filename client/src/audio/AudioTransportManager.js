@@ -182,10 +182,11 @@ class AudioTransportManager {
         const isAlwaysReady = this._dispatcherMode || this._activeChannelName === channelName;
         const baseTimeout = isAlwaysReady ? WS_LIVENESS_TIMEOUT_AGGRESSIVE : WS_LIVENESS_TIMEOUT;
         const timeout = this._isDegraded ? WS_LIVENESS_TIMEOUT_DEGRADED : baseTimeout;
-        const isStale = conn.ws && conn.ws.readyState === WebSocket.OPEN && conn._lastActivity && (now - conn._lastActivity) > timeout;
+        const lastAnyActivity = Math.max(conn._lastActivity || 0, conn._lastSendActivity || 0);
+        const isStale = conn.ws && conn.ws.readyState === WebSocket.OPEN && lastAnyActivity && (now - lastAnyActivity) > timeout;
         if (isDead || isStale) {
           this._rttSamples.delete(channelName);
-          console.warn('AUDIO_WS_HEALTH_CHECK_DEAD', { channelName, readyState: conn.ws?.readyState, stale: isStale, lastActivity: conn._lastActivity, alwaysReady: isAlwaysReady });
+          console.warn('AUDIO_WS_HEALTH_CHECK_DEAD', { channelName, readyState: conn.ws?.readyState, stale: isStale, lastActivity: conn._lastActivity, lastSendActivity: conn._lastSendActivity, alwaysReady: isAlwaysReady });
           try { conn.ws.close(); } catch (_) {}
           this.rooms.delete(channelName);
           const errMsg = isStale ? 'Connection timed out (no activity)' : 'WebSocket connection lost';
@@ -249,9 +250,10 @@ class AudioTransportManager {
     const now = Date.now();
     for (const [channelName, conn] of this.rooms) {
       const isDead = !conn.ws || conn.ws.readyState !== WebSocket.OPEN;
-      const isStale = conn.ws && conn.ws.readyState === WebSocket.OPEN && conn._lastActivity && (now - conn._lastActivity) > WS_LIVENESS_TIMEOUT;
+      const lastAnyActivity = Math.max(conn._lastActivity || 0, conn._lastSendActivity || 0);
+      const isStale = conn.ws && conn.ws.readyState === WebSocket.OPEN && lastAnyActivity && (now - lastAnyActivity) > WS_LIVENESS_TIMEOUT;
       if (isDead || isStale) {
-        console.warn('AUDIO_WS_FORCE_HEALTH_CHECK_DEAD', { channelName, readyState: conn.ws?.readyState, stale: isStale, lastActivity: conn._lastActivity });
+        console.warn('AUDIO_WS_FORCE_HEALTH_CHECK_DEAD', { channelName, readyState: conn.ws?.readyState, stale: isStale, lastActivity: conn._lastActivity, lastSendActivity: conn._lastSendActivity });
         try { conn.ws.close(); } catch (_) {}
         this.rooms.delete(channelName);
         const errMsg = isStale ? 'Connection timed out (no activity)' : 'WebSocket connection lost';
@@ -464,7 +466,7 @@ class AudioTransportManager {
 
     const pending = (async () => {
       const ws = await this._openWebSocket(channelName, identity);
-      const conn = { channelName, unitId: identity, ws, state: 'connected', _lastActivity: Date.now(), _lastRxDataTime: 0, _noRxWarned: false };
+      const conn = { channelName, unitId: identity, ws, state: 'connected', _lastActivity: Date.now(), _lastSendActivity: 0, _lastRxDataTime: 0, _noRxWarned: false };
 
       ws.binaryType = 'arraybuffer';
 
@@ -773,6 +775,7 @@ class AudioTransportManager {
       if (liveRoom.ws.readyState === WebSocket.OPEN) {
         this._flushTxBuffer(liveRoom.ws);
         liveRoom.ws.send(binFrame);
+        liveRoom._lastSendActivity = Date.now();
         this._lastFrameDeliveryTime = Date.now();
         return;
       }

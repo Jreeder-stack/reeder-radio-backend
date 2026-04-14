@@ -32,7 +32,7 @@ function isValidPcmPacket(packet) {
   return true;
 }
 
-const PING_INTERVAL = 30000;
+const PING_INTERVAL = 15000;
 const PONG_TIMEOUT = 10000;
 const MAX_MISSED_PONGS = 3;
 

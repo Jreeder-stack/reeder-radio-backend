@@ -31,6 +31,7 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
   const [showClearAirConfirm, setShowClearAirConfirm] = useState(false);
   const [selectedClearAirChannelId, setSelectedClearAirChannelId] = useState(null);
   const clearAirAudioRoomRef = useRef(null);
+  const clearAirFloorRearmRef = useRef(null);
   const pttRef = useRef(null);
   const gestureActiveRef = useRef(false);
   const mutedChannelsRef = useRef([]);
@@ -46,6 +47,10 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
   useEffect(() => {
     return () => {
       if (pttErrorTimerRef.current) clearTimeout(pttErrorTimerRef.current);
+      if (clearAirFloorRearmRef.current) {
+        clearInterval(clearAirFloorRearmRef.current);
+        clearAirFloorRearmRef.current = null;
+      }
     };
   }, []);
 
@@ -422,6 +427,7 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
 
       const room = audioTransportManager.getRoom(roomKey);
       if (room) {
+        toneTransmitter.setAudioTransportManager(audioTransportManager);
         toneTransmitter.setRoom(room);
         const started = await toneTransmitter.startToneTransmission();
         if (started) {
@@ -444,6 +450,15 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
         return;
       }
 
+      if (clearAirFloorRearmRef.current) clearInterval(clearAirFloorRearmRef.current);
+      clearAirFloorRearmRef.current = setInterval(() => {
+        if (signalPttStart) {
+          signalPttStart(roomKey).catch(err => {
+            console.warn('[BottomBar] Clear Air floor re-arm failed:', err.message);
+          });
+        }
+      }, 20000);
+
       toggleClearAir(channelId);
       setClearAirChannel(channelId);
       toneEngine.startClearAir(channelId);
@@ -457,6 +472,11 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
     const channel = channels.find(ch => String(ch.id) === channelId);
     const roomKey = channel ? (channel.room_key || ((channel.zone || 'Default') + '__' + channel.name)) : null;
     
+    if (clearAirFloorRearmRef.current) {
+      clearInterval(clearAirFloorRearmRef.current);
+      clearAirFloorRearmRef.current = null;
+    }
+
     toggleClearAir(channelId);
     setClearAirChannel(null);
     setShowClearAirConfirm(false);

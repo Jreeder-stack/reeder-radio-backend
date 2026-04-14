@@ -60,6 +60,8 @@ class SignalingService {
       pttEnd: [],
       emergencyStart: [],
       emergencyEnd: [],
+      clearAirStart: [],
+      clearAirEnd: [],
     };
   }
 
@@ -100,6 +102,22 @@ class SignalingService {
     return () => {
       const idx = this._eventCallbacks.emergencyEnd.indexOf(callback);
       if (idx > -1) this._eventCallbacks.emergencyEnd.splice(idx, 1);
+    };
+  }
+
+  onClearAirStart(callback) {
+    this._eventCallbacks.clearAirStart.push(callback);
+    return () => {
+      const idx = this._eventCallbacks.clearAirStart.indexOf(callback);
+      if (idx > -1) this._eventCallbacks.clearAirStart.splice(idx, 1);
+    };
+  }
+
+  onClearAirEnd(callback) {
+    this._eventCallbacks.clearAirEnd.push(callback);
+    return () => {
+      const idx = this._eventCallbacks.clearAirEnd.indexOf(callback);
+      if (idx > -1) this._eventCallbacks.clearAirEnd.splice(idx, 1);
     };
   }
 
@@ -850,6 +868,7 @@ class SignalingService {
       message: `CLEAR AIR: Dispatcher ${socket.unitId} activated Clear Air on ${channelId}`,
     });
     
+    this._emitCallback('clearAirStart', { channelId, dispatcherId: socket.unitId });
     console.log(`[Signaling] CLEAR AIR START: dispatcher ${socket.unitId} on ${channelId}`);
   }
 
@@ -876,6 +895,7 @@ class SignalingService {
     
     this._emitToChannelAll(channelId, SIGNALING_EVENTS.CLEAR_AIR_END, endData);
     this._emitToDispatchers('clear_air:cleared', endData);
+    this._emitCallback('clearAirEnd', { channelId, dispatcherId: clearAir.dispatcherId });
     
     console.log(`[Signaling] CLEAR AIR END: ${channelId} released by ${socket.unitId}`);
   }
