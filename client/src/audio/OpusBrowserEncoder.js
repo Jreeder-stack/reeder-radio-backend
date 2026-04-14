@@ -1,7 +1,7 @@
 const SAMPLE_RATE = 16000;
 const CHANNELS = 1;
 const FRAME_SIZE = 320;
-const BITRATE = 64000;
+const BITRATE = 32000;
 
 export class OpusBrowserEncoder {
   constructor() {

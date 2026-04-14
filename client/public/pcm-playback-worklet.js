@@ -55,6 +55,8 @@ class PcmPlaybackProcessor extends AudioWorkletProcessor {
         this._draining = true;
       } else if (event.data.type === 'setGain') {
         this._gain = event.data.gain;
+      } else if (event.data.type === 'setTargetDepth') {
+        this._TARGET_BUFFER_DEPTH = event.data.depth;
       }
     };
   }

@@ -24,6 +24,19 @@ const RECONNECT_MAX_MS = 10000;
 const TX_WATCHDOG_TIMEOUT_MS = 20000;
 const TX_FRAME_DELIVERY_TIMEOUT_MS = 2000;
 
+const TX_BUFFER_MAX_FRAMES = 10;
+const TX_BUFFER_MAX_AGE_MS = 200;
+
+const RTT_DEGRADED_THRESHOLD_MS = 500;
+const RTT_NORMAL_THRESHOLD_MS = 300;
+const WS_HEALTH_CHECK_INTERVAL_DEGRADED = 2000;
+const WS_LIVENESS_TIMEOUT_DEGRADED = 40000;
+
+const PLC_MAX_CONSECUTIVE_DEGRADED = 12;
+const REORDER_BUFFER_SIZE_DEGRADED = 30;
+
+const NETWORK_DIAG_INTERVAL_MS = 30000;
+
 function float32ToInt16(float32) {
   const int16 = new Int16Array(float32.length);
   for (let i = 0; i < float32.length; i++) {
@@ -90,6 +103,23 @@ class AudioTransportManager {
     this._rxDiagPlcCount = 0;
     this._rxDiagReorderFlushes = 0;
 
+    this._txFrameBuffer = [];
+    this._txBufferRetryTimer = null;
+
+    this._rttSamples = new Map();
+    this._isDegraded = false;
+    this._currentPlcMax = PLC_MAX_CONSECUTIVE;
+    this._currentReorderSize = REORDER_BUFFER_SIZE;
+
+    this._netDiagLastTime = 0;
+    this._netDiagRxSequences = new Map();
+    this._netDiagSeqGaps = 0;
+    this._netDiagSeqTotal = 0;
+    this._netDiagJitterSamples = [];
+    this._netDiagLastArrival = 0;
+    this._netDiagTimer = null;
+    this._startNetDiagTimer();
+
     this._targetChannels = new Map();
     this._healthCheckInterval = null;
     this._reconnectAttempts = new Map();
@@ -142,15 +172,19 @@ class AudioTransportManager {
 
   _startHealthCheck() {
     if (this._healthCheckInterval) clearInterval(this._healthCheckInterval);
-    const interval = this._dispatcherMode ? WS_HEALTH_CHECK_INTERVAL_AGGRESSIVE : WS_HEALTH_CHECK_INTERVAL;
+    const interval = this._isDegraded
+      ? WS_HEALTH_CHECK_INTERVAL_DEGRADED
+      : (this._dispatcherMode ? WS_HEALTH_CHECK_INTERVAL_AGGRESSIVE : WS_HEALTH_CHECK_INTERVAL);
     this._healthCheckInterval = setInterval(() => {
       const now = Date.now();
       for (const [channelName, conn] of this.rooms) {
         const isDead = !conn.ws || conn.ws.readyState !== WebSocket.OPEN;
         const isAlwaysReady = this._dispatcherMode || this._activeChannelName === channelName;
-        const timeout = isAlwaysReady ? WS_LIVENESS_TIMEOUT_AGGRESSIVE : WS_LIVENESS_TIMEOUT;
+        const baseTimeout = isAlwaysReady ? WS_LIVENESS_TIMEOUT_AGGRESSIVE : WS_LIVENESS_TIMEOUT;
+        const timeout = this._isDegraded ? WS_LIVENESS_TIMEOUT_DEGRADED : baseTimeout;
         const isStale = conn.ws && conn.ws.readyState === WebSocket.OPEN && conn._lastActivity && (now - conn._lastActivity) > timeout;
         if (isDead || isStale) {
+          this._rttSamples.delete(channelName);
           console.warn('AUDIO_WS_HEALTH_CHECK_DEAD', { channelName, readyState: conn.ws?.readyState, stale: isStale, lastActivity: conn._lastActivity, alwaysReady: isAlwaysReady });
           try { conn.ws.close(); } catch (_) {}
           this.rooms.delete(channelName);
@@ -174,6 +208,7 @@ class AudioTransportManager {
           }
         }
       }
+      this._evaluateDegradedMode();
     }, interval);
   }
 
@@ -337,6 +372,8 @@ class AudioTransportManager {
       this._txEncoder.setOnEncoded(null);
     }
     this._clearFrameDeliveryWatchdog();
+    this._clearTxBufferRetry();
+    this._txFrameBuffer = [];
     const txChannel = this.primaryTxChannel;
     this._setPttState(PTT_STATES.IDLE);
     if (this.onDisconnectDuringTx) {
@@ -481,6 +518,18 @@ class AudioTransportManager {
           try {
             ws.send(JSON.stringify({ type: 'pong', ts: msg.ts }));
           } catch (_) {}
+          try {
+            ws.send(JSON.stringify({ type: 'ping', ts: Date.now() }));
+          } catch (_) {}
+          this._logNetworkDiagnostics();
+          return;
+        }
+
+        if (msg.type === 'pong_reply' && msg.ts) {
+          const rtt = Date.now() - msg.ts;
+          if (rtt >= 0 && rtt < 30000) {
+            this._recordRtt(channelName, rtt);
+          }
           return;
         }
 
@@ -565,6 +614,8 @@ class AudioTransportManager {
     this._resetReorderForChannel(channelName);
     this._resetOpusDecoderForChannel(channelName);
     this._channelErrors.delete(channelName);
+    this._rttSamples.delete(channelName);
+    this._evaluateDegradedMode();
     const conn = this.rooms.get(channelName);
     if (!conn) return;
     this.rooms.delete(channelName);
@@ -705,17 +756,59 @@ class AudioTransportManager {
       return false;
     }
 
+    this._txFrameBuffer = [];
+    this._txBufferRetryTimer = null;
+
     this._txEncoder.setOnEncoded((encoded) => {
       if (!this._loopbackOk) return;
       const liveRoom = this.rooms.get(txChannel);
-      if (!liveRoom || !liveRoom.ws || liveRoom.ws.readyState !== WebSocket.OPEN) {
-        console.error('[AudioTransport] WS not open during TX, aborting');
+      if (!liveRoom || !liveRoom.ws) {
+        console.error('[AudioTransport] WS gone during TX, aborting');
         this._abortTxWithError('ws_dead_during_tx');
         return;
       }
+
       const binFrame = buildBinaryFrameOpus(this._txSequence++, txChannel, liveRoom.unitId, encoded);
-      liveRoom.ws.send(binFrame);
-      this._lastFrameDeliveryTime = Date.now();
+
+      if (liveRoom.ws.readyState === WebSocket.OPEN) {
+        this._flushTxBuffer(liveRoom.ws);
+        liveRoom.ws.send(binFrame);
+        this._lastFrameDeliveryTime = Date.now();
+        return;
+      }
+
+      this._txFrameBuffer.push({ frame: binFrame, ts: Date.now() });
+      if (this._txFrameBuffer.length > TX_BUFFER_MAX_FRAMES) {
+        console.error('[AudioTransport] TX buffer overflow during network hiccup, aborting');
+        this._txFrameBuffer = [];
+        this._clearTxBufferRetry();
+        this._abortTxWithError('ws_dead_during_tx');
+        return;
+      }
+
+      if (!this._txBufferRetryTimer) {
+        this._txBufferRetryTimer = setInterval(() => {
+          const room = this.rooms.get(txChannel);
+          if (!room || !room.ws) {
+            this._clearTxBufferRetry();
+            this._txFrameBuffer = [];
+            this._abortTxWithError('ws_dead_during_tx');
+            return;
+          }
+          if (room.ws.readyState === WebSocket.OPEN) {
+            this._flushTxBuffer(room.ws);
+            this._clearTxBufferRetry();
+            return;
+          }
+          const oldest = this._txFrameBuffer[0];
+          if (oldest && (Date.now() - oldest.ts) > TX_BUFFER_MAX_AGE_MS) {
+            console.error('[AudioTransport] TX buffer age exceeded during network hiccup, aborting');
+            this._txFrameBuffer = [];
+            this._clearTxBufferRetry();
+            this._abortTxWithError('ws_dead_during_tx');
+          }
+        }, 20);
+      }
     });
 
     try {
@@ -746,6 +839,8 @@ class AudioTransportManager {
   async stopTransmit() {
     if (this.pttState === PTT_STATES.IDLE) return;
     this._clearFrameDeliveryWatchdog();
+    this._clearTxBufferRetry();
+    this._txFrameBuffer = [];
     await this._capture.stop();
     if (this._txEncoder && this._txEncoder.isReady()) {
       await this._txEncoder.flush();
@@ -759,6 +854,8 @@ class AudioTransportManager {
 
   forceReleaseTransmit() {
     this._clearFrameDeliveryWatchdog();
+    this._clearTxBufferRetry();
+    this._txFrameBuffer = [];
     this._capture.stop().catch(() => {});
     if (this._txEncoder) {
       this._txEncoder.setOnEncoded(null);
@@ -788,12 +885,16 @@ class AudioTransportManager {
       const isOpen = conn.ws && conn.ws.readyState === WebSocket.OPEN;
       if (isOpen) healthy++;
       const lastError = this._channelErrors.get(ch) || null;
+      const rttEntry = this._rttSamples.get(ch);
+      const quality = !isOpen ? 'poor' : (this._isDegraded ? 'degraded' : 'good');
       channels.push({
         channel: ch,
         connected: isOpen,
-        quality: isOpen ? 'good' : 'poor',
+        quality,
         state: isOpen ? 'connected' : 'reconnecting',
         error: isOpen ? null : lastError,
+        rttMs: rttEntry?.rtt ?? null,
+        degraded: this._isDegraded,
       });
     }
     for (const ch of this.pendingConnections.keys()) {
@@ -876,7 +977,9 @@ class AudioTransportManager {
   }
 
   async _enqueueWithReorder(sequence, payload, channelId, senderUnitId, codec = 'pcm') {
+    this._trackRxSequence(channelId, senderUnitId, sequence);
     const stream = this._getReorderStream(channelId, senderUnitId);
+    const reorderSize = this._currentReorderSize;
 
     const SEQ_RESYNC_THRESHOLD = 1000;
     const IDLE_RESYNC_MS = 2000;
@@ -917,7 +1020,7 @@ class AudioTransportManager {
     stream.buffer.push({ sequence, payload, codec });
     stream.buffer.sort((a, b) => a.sequence - b.sequence);
 
-    if (stream.buffer.length > REORDER_BUFFER_SIZE) {
+    if (stream.buffer.length > reorderSize) {
       const oldest = stream.buffer.shift();
       stream.expectedSequence = oldest.sequence + 1;
       await this._deliverFrame(stream, oldest.sequence, oldest.payload, oldest.codec, channelId, senderUnitId);
@@ -954,7 +1057,7 @@ class AudioTransportManager {
     const lastSeq = stream.lastDeliveredSeq;
     if (lastSeq !== undefined && codec === 'opus') {
       const gap = sequence - lastSeq - 1;
-      if (gap > 0 && gap <= PLC_MAX_CONSECUTIVE) {
+      if (gap > 0 && gap <= this._currentPlcMax) {
         await this._generatePlc(channelId, senderUnitId, gap);
       }
     }
@@ -1033,6 +1136,134 @@ class AudioTransportManager {
         }
       }
     } catch (_) {}
+  }
+
+  _flushTxBuffer(ws) {
+    while (this._txFrameBuffer.length > 0) {
+      try {
+        ws.send(this._txFrameBuffer[0].frame);
+        this._txFrameBuffer.shift();
+        this._lastFrameDeliveryTime = Date.now();
+      } catch (_) {
+        break;
+      }
+    }
+  }
+
+  _clearTxBufferRetry() {
+    if (this._txBufferRetryTimer) {
+      clearInterval(this._txBufferRetryTimer);
+      this._txBufferRetryTimer = null;
+    }
+  }
+
+  _recordRtt(channelName, rttMs) {
+    this._rttSamples.set(channelName, { rtt: rttMs, ts: Date.now() });
+    this._evaluateDegradedMode();
+  }
+
+  _pruneStaleRtt() {
+    const now = Date.now();
+    for (const [ch, entry] of this._rttSamples) {
+      if (now - entry.ts > 90000 || !this.rooms.has(ch)) {
+        this._rttSamples.delete(ch);
+      }
+    }
+  }
+
+  _evaluateDegradedMode() {
+    this._pruneStaleRtt();
+    let maxRtt = 0;
+    for (const [, entry] of this._rttSamples) {
+      if (entry.rtt > maxRtt) maxRtt = entry.rtt;
+    }
+    if (maxRtt >= RTT_DEGRADED_THRESHOLD_MS && !this._isDegraded) {
+      this._isDegraded = true;
+      this._currentPlcMax = PLC_MAX_CONSECUTIVE_DEGRADED;
+      this._currentReorderSize = REORDER_BUFFER_SIZE_DEGRADED;
+      this._startHealthCheck();
+      this._updateWorkletTargetDepth(40);
+      console.warn('NETWORK_DEGRADED_MODE_ON', { rttMs: maxRtt, plcMax: this._currentPlcMax, reorderSize: this._currentReorderSize });
+    } else if (maxRtt < RTT_NORMAL_THRESHOLD_MS && this._isDegraded) {
+      this._isDegraded = false;
+      this._currentPlcMax = PLC_MAX_CONSECUTIVE;
+      this._currentReorderSize = REORDER_BUFFER_SIZE;
+      this._startHealthCheck();
+      this._updateWorkletTargetDepth(25);
+      console.log('NETWORK_DEGRADED_MODE_OFF', { rttMs: maxRtt, plcMax: this._currentPlcMax, reorderSize: this._currentReorderSize });
+    }
+  }
+
+  _updateWorkletTargetDepth(depth) {
+    if (this._playback && this._playback._workletNode) {
+      try {
+        this._playback._workletNode.port.postMessage({ type: 'setTargetDepth', depth });
+      } catch (_) {}
+    }
+  }
+
+  _trackRxSequence(channelId, senderUnitId, sequence) {
+    const key = `${channelId}::${senderUnitId}`;
+    const last = this._netDiagRxSequences.get(key);
+    this._netDiagSeqTotal++;
+    if (last !== undefined) {
+      const gap = sequence - last - 1;
+      if (gap > 0 && gap < 100) {
+        this._netDiagSeqGaps += gap;
+      }
+      const arrivalNow = Date.now();
+      if (this._netDiagLastArrival) {
+        const jitter = Math.abs(arrivalNow - this._netDiagLastArrival - 20);
+        this._netDiagJitterSamples.push(jitter);
+        if (this._netDiagJitterSamples.length > 100) {
+          this._netDiagJitterSamples.shift();
+        }
+      }
+      this._netDiagLastArrival = arrivalNow;
+    }
+    this._netDiagRxSequences.set(key, sequence);
+  }
+
+  _startNetDiagTimer() {
+    if (this._netDiagTimer) clearInterval(this._netDiagTimer);
+    this._netDiagTimer = setInterval(() => {
+      this._logNetworkDiagnostics();
+    }, NETWORK_DIAG_INTERVAL_MS);
+  }
+
+  _logNetworkDiagnostics() {
+    const now = Date.now();
+    if (now - this._netDiagLastTime < NETWORK_DIAG_INTERVAL_MS) return;
+    this._netDiagLastTime = now;
+
+    if (this.rooms.size === 0) return;
+
+    const rttEntries = {};
+    for (const [ch, entry] of this._rttSamples) {
+      rttEntries[ch] = entry.rtt;
+    }
+
+    const lossRate = this._netDiagSeqTotal > 0
+      ? (this._netDiagSeqGaps / this._netDiagSeqTotal * 100).toFixed(2)
+      : '0.00';
+
+    let avgJitter = 0;
+    if (this._netDiagJitterSamples.length > 0) {
+      avgJitter = (this._netDiagJitterSamples.reduce((a, b) => a + b, 0) / this._netDiagJitterSamples.length).toFixed(1);
+    }
+
+    console.log('NETWORK_QUALITY_DIAG', {
+      rttByChannel: rttEntries,
+      degraded: this._isDegraded,
+      packetLossPercent: lossRate,
+      avgJitterMs: avgJitter,
+      rxStreams: this._netDiagRxSequences.size,
+      seqGaps: this._netDiagSeqGaps,
+      seqTotal: this._netDiagSeqTotal,
+    });
+
+    this._netDiagSeqGaps = 0;
+    this._netDiagSeqTotal = 0;
   }
 
   _logReorderStats() {

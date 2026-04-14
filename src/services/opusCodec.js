@@ -4,7 +4,7 @@ const SAMPLE_RATE = 16000;
 const CHANNELS = 1;
 const FRAME_SIZE = 320;
 const MAX_OPUS_FRAME_SAMPLES = 5760;
-const BITRATE = 48000;
+const BITRATE = 32000;
 const SENDER_DECODER_IDLE_MS = 30000;
 
 class OpusCodecPool {
@@ -20,7 +20,7 @@ class OpusCodecPool {
     try {
       encoder.encoderCTL(4002, BITRATE);
       encoder.encoderCTL(4012, 1);
-      encoder.encoderCTL(4014, 10);
+      encoder.encoderCTL(4014, 15);
     } catch (e) {
       console.warn('[OpusCodec] Failed to configure encoder:', e.message);
     }

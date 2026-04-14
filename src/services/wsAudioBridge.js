@@ -268,6 +268,13 @@ class WsAudioBridge {
         return;
       }
 
+      if (packet.type === 'ping' && packet.ts) {
+        try {
+          ws.send(JSON.stringify({ type: 'pong_reply', ts: packet.ts }));
+        } catch (_) {}
+        return;
+      }
+
       if (!isValidPcmPacket(packet)) return;
       if (packet.channelId !== channelId) {
         console.warn(`[WsAudioBridge] CHANNEL_MISMATCH wsChannel=${channelId} packetChannel=${packet.channelId} unitId=${unitId}`);
