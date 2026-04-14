@@ -123,13 +123,13 @@ function parseMunicipalityFromAddress(address) {
 }
 
 function normalizePriority(priority) {
-  if (typeof priority === 'number' && priority >= 1 && priority <= 5) return priority;
+  if (typeof priority === 'number' && priority >= 1 && priority <= 5) return String(priority);
   if (typeof priority === 'string') {
     const num = parseInt(priority, 10);
-    if (!isNaN(num) && num >= 1 && num <= 5) return num;
-    return PRIORITY_MAP[priority.toLowerCase()] || 3;
+    if (!isNaN(num) && num >= 1 && num <= 5) return String(num);
+    return String(PRIORITY_MAP[priority.toLowerCase()] || 3);
   }
-  return 3;
+  return String(3);
 }
 
 export async function createCall(type, priority, location, municipality, notes = '', units = []) {
