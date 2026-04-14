@@ -27,7 +27,7 @@ function isMyLocationPhrase(text) {
 function normalizeAddress(raw) {
   if (!raw) return raw;
   let addr = raw.trim();
-  addr = addr.replace(/^(at the|over at|down at|at)\s+/i, '');
+  addr = addr.replace(/^(it'?s going to be|it'?s at|it'?s over at|it'?s|that'?s going to be|that'?s at|going to be|over at|down at|at the|at)\s+/i, '');
   addr = addr.replace(/\s+in\s+(\w)/gi, ', $1');
   addr = addr.replace(/\b(\d+(?:st|nd|rd|th)?)\s+and\s+(\w)/gi, '$1 & $2');
   addr = addr.replace(/\b([A-Z][a-z]+)\s+and\s+([A-Z][a-z]+)/g, '$1 & $2');
@@ -2713,10 +2713,20 @@ class AIDispatcher {
         return;
       }
 
-      const outgoingPayload = { nature, priority: priority || 'medium', address, municipality: '', notes: `Created by AI Dispatcher for ${participantId}` };
+      const cleanedAddress = normalizeAddress(address) || address;
+      const units = [participantId];
+      if (additionalUnits && additionalUnits.length > 0) {
+        for (const unitId of additionalUnits) {
+          if (!units.includes(unitId)) {
+            units.push(unitId);
+          }
+        }
+      }
+
+      const outgoingPayload = { nature, priority: priority || 'medium', address: cleanedAddress, municipality: '', notes: `Created by AI Dispatcher for ${participantId}`, units };
       this.log('CAD_CALL_REQUEST', { participantId, payload: outgoingPayload });
 
-      const callResult = await cadService.createCall(nature, priority || 'medium', address, '', `Created by AI Dispatcher for ${participantId}`);
+      const callResult = await cadService.createCall(nature, priority || 'medium', cleanedAddress, '', `Created by AI Dispatcher for ${participantId}`, units);
       this.log('CAD_CALL_RESULT', {
         success: callResult.success,
         callId: callResult.call_id,
@@ -2743,14 +2753,7 @@ class AIDispatcher {
       const callId = callResult.call_id;
       const callNumber = callResult.call_number || callId;
 
-      try {
-        await cadService.assignUnitToCall(participantId, callId);
-        this.log('CAD_UNIT_ASSIGNED', { unitId: participantId, callId });
-      } catch (assignError) {
-        this.log('CAD_UNIT_ASSIGN_ERROR', { unitId: participantId, callId, error: assignError.message });
-      }
-
-      if (additionalUnits && additionalUnits.length > 0) {
+      if (additionalUnits && additionalUnits.length > 0 && units.length <= 1) {
         for (const unitId of additionalUnits) {
           try {
             await cadService.assignUnitToCall(unitId, callId);

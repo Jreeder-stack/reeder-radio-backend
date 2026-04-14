@@ -132,7 +132,7 @@ function normalizePriority(priority) {
   return 3;
 }
 
-export async function createCall(type, priority, location, municipality, notes = '') {
+export async function createCall(type, priority, location, municipality, notes = '', units = []) {
   if (!type) {
     console.error('[CAD] createCall: type is required but was', type);
     return { success: false, error: 'Call type is required', failureType: 'INVALID_INPUT', statusCode: null, responseBody: null };
@@ -141,7 +141,8 @@ export async function createCall(type, priority, location, municipality, notes =
     console.error('[CAD] createCall: location is required but was', location);
     return { success: false, error: 'Call location is required', failureType: 'INVALID_INPUT', statusCode: null, responseBody: null };
   }
-  console.log(`[CAD] Creating call: type=${type}, priority=${priority}, location=${location}, municipality=${municipality}`);
+  const safeUnits = Array.isArray(units) ? units : [];
+  console.log(`[CAD] Creating call: type=${type}, priority=${priority}, location=${location}, municipality=${municipality}, units=${JSON.stringify(safeUnits)}`);
   const resolvedMunicipality = (municipality && municipality.trim()) ? municipality.trim() : parseMunicipalityFromAddress(location);
   const numericPriority = normalizePriority(priority);
   const body = {
@@ -149,7 +150,8 @@ export async function createCall(type, priority, location, municipality, notes =
     priority: numericPriority,
     location: location.toUpperCase(),
     municipality: resolvedMunicipality ? resolvedMunicipality.toUpperCase() : '',
-    notes: notes || ''
+    notes: notes || '',
+    units: safeUnits
   };
   return cadRequest('/api/radio/call', 'POST', body);
 }
