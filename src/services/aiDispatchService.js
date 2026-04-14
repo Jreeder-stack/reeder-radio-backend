@@ -24,6 +24,69 @@ function isMyLocationPhrase(text) {
   return MY_LOCATION_PATTERN.test(text);
 }
 
+const STATE_ABBREVIATIONS = {
+  'alabama': 'AL', 'alaska': 'AK', 'arizona': 'AZ', 'arkansas': 'AR',
+  'california': 'CA', 'colorado': 'CO', 'connecticut': 'CT', 'delaware': 'DE',
+  'florida': 'FL', 'georgia': 'GA', 'hawaii': 'HI', 'idaho': 'ID',
+  'illinois': 'IL', 'indiana': 'IN', 'iowa': 'IA', 'kansas': 'KS',
+  'kentucky': 'KY', 'louisiana': 'LA', 'maine': 'ME', 'maryland': 'MD',
+  'massachusetts': 'MA', 'michigan': 'MI', 'minnesota': 'MN', 'mississippi': 'MS',
+  'missouri': 'MO', 'montana': 'MT', 'nebraska': 'NE', 'nevada': 'NV',
+  'new hampshire': 'NH', 'new jersey': 'NJ', 'new mexico': 'NM', 'new york': 'NY',
+  'north carolina': 'NC', 'north dakota': 'ND', 'ohio': 'OH', 'oklahoma': 'OK',
+  'oregon': 'OR', 'pennsylvania': 'PA', 'rhode island': 'RI', 'south carolina': 'SC',
+  'south dakota': 'SD', 'tennessee': 'TN', 'texas': 'TX', 'utah': 'UT',
+  'vermont': 'VT', 'virginia': 'VA', 'washington': 'WA', 'west virginia': 'WV',
+  'wisconsin': 'WI', 'wyoming': 'WY', 'district of columbia': 'DC',
+  'puerto rico': 'PR', 'guam': 'GU', 'american samoa': 'AS',
+  'u.s. virgin islands': 'VI', 'us virgin islands': 'VI',
+  'northern mariana islands': 'MP',
+};
+
+const STATE_NAMES_SORTED = Object.keys(STATE_ABBREVIATIONS)
+  .sort((a, b) => b.length - a.length);
+
+const STATE_NAME_PATTERN = new RegExp(
+  '^(' + STATE_NAMES_SORTED
+    .map(s => s.replace(/\./g, '\\.'))
+    .join('|') + ')(?:\\s+(\\d{5}(?:-\\d{4})?))?[.,;]?$',
+  'i'
+);
+
+const STATE_TRAILING_PATTERN = new RegExp(
+  '\\s(' + STATE_NAMES_SORTED
+    .map(s => s.replace(/\./g, '\\.'))
+    .join('|') + ')(?:\\s+(\\d{5}(?:-\\d{4})?))?[.,;]?$',
+  'i'
+);
+
+function abbreviateState(addr) {
+  const commaIdx = addr.lastIndexOf(',');
+  if (commaIdx !== -1) {
+    const before = addr.substring(0, commaIdx + 1);
+    const after = addr.substring(commaIdx + 1).trim();
+    const match = after.match(STATE_NAME_PATTERN);
+    if (match) {
+      const abbr = STATE_ABBREVIATIONS[match[1].toLowerCase()];
+      if (abbr) {
+        const zip = match[2] ? ` ${match[2]}` : '';
+        return `${before} ${abbr}${zip}`;
+      }
+    }
+    return addr;
+  }
+  const trailingMatch = addr.match(STATE_TRAILING_PATTERN);
+  if (trailingMatch) {
+    const abbr = STATE_ABBREVIATIONS[trailingMatch[1].toLowerCase()];
+    if (abbr) {
+      const zip = trailingMatch[2] ? ` ${trailingMatch[2]}` : '';
+      const idx = trailingMatch.index;
+      return addr.substring(0, idx) + ' ' + abbr + zip;
+    }
+  }
+  return addr;
+}
+
 function normalizeAddress(raw) {
   if (!raw) return raw;
   let addr = raw.trim();
@@ -31,6 +94,7 @@ function normalizeAddress(raw) {
   addr = addr.replace(/\s+in\s+(\w)/gi, ', $1');
   addr = addr.replace(/\b(\d+(?:st|nd|rd|th)?)\s+and\s+(\w)/gi, '$1 & $2');
   addr = addr.replace(/\b([A-Z][a-z]+)\s+and\s+([A-Z][a-z]+)/g, '$1 & $2');
+  addr = abbreviateState(addr);
   return addr;
 }
 
