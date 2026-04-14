@@ -876,15 +876,19 @@ class AIDispatcher {
       if (!unitInfo) return null;
 
       if (this._isOnDetailOrAssignment(unitInfo.status)) {
+        if (unitInfo.zone && this._looksLikeAddress(unitInfo.zone)) {
+          this.log('UNIT_DETAIL_ZONE_ADDRESS', { unitId, zone: unitInfo.zone, status: unitInfo.status });
+          return unitInfo.zone.trim();
+        }
         if (unitInfo.currentLocation && this._looksLikeAddress(unitInfo.currentLocation)) {
-          this.log('UNIT_LOCATION_FROM_CAD', { unitId, location: unitInfo.currentLocation, zone: unitInfo.zone, status: unitInfo.status });
+          this.log('UNIT_DETAIL_CURRENT_LOCATION', { unitId, location: unitInfo.currentLocation, zone: unitInfo.zone, status: unitInfo.status });
           return unitInfo.currentLocation.trim();
         }
-      }
-
-      if (unitInfo.zone && this._looksLikeAddress(unitInfo.zone)) {
-        this.log('UNIT_ZONE_AS_LOCATION', { unitId, zone: unitInfo.zone, status: unitInfo.status });
-        return unitInfo.zone.trim();
+      } else {
+        if (unitInfo.zone && this._looksLikeAddress(unitInfo.zone)) {
+          this.log('UNIT_ZONE_AS_LOCATION', { unitId, zone: unitInfo.zone, status: unitInfo.status });
+          return unitInfo.zone.trim();
+        }
       }
 
       this.log('UNIT_CAD_NO_ADDRESS', { unitId, status: unitInfo.status, zone: unitInfo.zone, currentLocation: unitInfo.currentLocation });
