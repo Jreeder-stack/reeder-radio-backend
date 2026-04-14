@@ -372,6 +372,8 @@ class ToneEngine {
         return this.playToneC(duration);
       case 'CONTINUOUS':
         return this.playContinuousTone(duration);
+      case 'CLEAR_AIR':
+        return this.playClearAirBeep();
       default:
         return this.playToneA(duration);
     }

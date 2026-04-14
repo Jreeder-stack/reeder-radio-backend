@@ -581,16 +581,35 @@ class SignalingService {
       timestamp: Date.now(),
     });
     
+    const clearAirState = this.clearAirStates.get(channelId);
+    const isClearAirRequest = !!(clearAirState && socket.isDispatcher && socket.unitId === clearAirState.dispatcherId && data.isClearAir);
+
+    let clearAirAlreadyPreempted = false;
     const existingTransmission = this.activeTransmissions.get(channelId);
     if (existingTransmission && existingTransmission.unitId !== socket.unitId) {
-      socket.emit('ptt:busy', { 
-        channelId, 
-        transmittingUnit: existingTransmission.unitId,
-      });
-      return;
+      if (existingTransmission.isClearAir && !isClearAirRequest) {
+        this.activeTransmissions.delete(channelId);
+        clearAirAlreadyPreempted = true;
+        const preemptedSocket = this._findSocketByUnitId(existingTransmission.unitId);
+        if (preemptedSocket) {
+          preemptedSocket.emit('clearair:preempted', { channelId });
+        }
+        this.io.to(`channel:${channelId}`).emit(SIGNALING_EVENTS.PTT_END, {
+          unitId: existingTransmission.unitId,
+          channelId,
+          timestamp: Date.now(),
+          reason: 'clearair_preempted',
+        });
+      } else {
+        socket.emit('ptt:busy', { 
+          channelId, 
+          transmittingUnit: existingTransmission.unitId,
+        });
+        return;
+      }
     }
 
-    if (existingTransmission && existingTransmission.unitId === socket.unitId) {
+    if (existingTransmission && existingTransmission.unitId === socket.unitId && !isClearAirRequest) {
       socket.emit('ptt:busy', {
         channelId,
         transmittingUnit: socket.unitId,
@@ -614,10 +633,11 @@ class SignalingService {
     }
 
     const isEmergency = this.emergencyStates.has(channelId);
-    console.log(`[Signaling] PTT START request: unitId=${socket.unitId} channelId=${channelId}`);
+    console.log(`[Signaling] PTT START request: unitId=${socket.unitId} channelId=${channelId} isClearAir=${isClearAirRequest}`);
 
     const floorResult = floorControlService.requestFloor(channelId, socket.unitId, {
       isEmergency,
+      isClearAir: isClearAirRequest,
       emergencyStates: this.emergencyStates,
     });
 
@@ -629,6 +649,14 @@ class SignalingService {
       });
       return;
     }
+
+    if (floorResult.preemptedClearAir && !clearAirAlreadyPreempted) {
+      const preemptedSocket = this._findSocketByUnitId(floorResult.preemptedUnit);
+      if (preemptedSocket) {
+        preemptedSocket.emit('clearair:preempted', { channelId });
+      }
+      console.log(`[Signaling] Clear Air preempted on ${channelId} by ${socket.unitId}`);
+    }
     
     opusCodec.resetSenderDecoder(socket.unitId);
 
@@ -638,6 +666,7 @@ class SignalingService {
       channelId,
       timestamp: Date.now(),
       isEmergency,
+      isClearAir: isClearAirRequest,
     };
     
     this.activeTransmissions.set(channelId, transmissionData);

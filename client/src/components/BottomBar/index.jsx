@@ -47,9 +47,10 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
   useEffect(() => {
     return () => {
       if (pttErrorTimerRef.current) clearTimeout(pttErrorTimerRef.current);
-      if (clearAirFloorRearmRef.current) {
-        clearInterval(clearAirFloorRearmRef.current);
-        clearAirFloorRearmRef.current = null;
+      const pendingTimer = clearAirFloorRearmRef.current;
+      clearAirFloorRearmRef.current = null;
+      if (typeof pendingTimer === 'number') {
+        clearTimeout(pendingTimer);
       }
     };
   }, []);
@@ -387,6 +388,45 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
     }
   };
 
+  const clearAirBurstCycle = useCallback(async (roomKey, channelId) => {
+    const TONE_BURST_DURATION = 2000;
+    const BURST_GAP = 5000;
+
+    const runBurst = async () => {
+      if (!clearAirFloorRearmRef.current) return;
+
+      if (signalPttStart) {
+        try {
+          await signalPttStart(roomKey, { isClearAir: true });
+        } catch (grantErr) {
+          console.warn('[BottomBar] Clear Air burst floor denied:', grantErr.message);
+          if (clearAirFloorRearmRef.current) {
+            clearAirFloorRearmRef.current = setTimeout(runBurst, BURST_GAP);
+          }
+          return;
+        }
+      }
+
+      const room = audioTransportManager.getRoom(roomKey);
+      if (room) {
+        toneTransmitter.setAudioTransportManager(audioTransportManager);
+        toneTransmitter.setRoom(room);
+        await toneTransmitter.transmitTone('CLEAR_AIR', TONE_BURST_DURATION);
+      }
+
+      if (signalPttEnd) {
+        signalPttEnd(roomKey);
+      }
+
+      if (clearAirFloorRearmRef.current) {
+        clearAirFloorRearmRef.current = setTimeout(runBurst, BURST_GAP);
+      }
+    };
+
+    clearAirFloorRearmRef.current = true;
+    await runBurst();
+  }, [signalPttStart, signalPttEnd]);
+
   const handleClearAirConfirmStart = async () => {
     if (!selectedClearAirChannelId) return;
     const channelId = String(selectedClearAirChannelId);
@@ -410,59 +450,12 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
         clearAirAudioRoomRef.current = null;
       }
 
-      if (signalPttStart) {
-        try {
-          await signalPttStart(roomKey);
-        } catch (grantErr) {
-          console.warn('[BottomBar] Clear Air floor denied:', grantErr.message);
-          toneEngine.startBusyTone();
-          setTimeout(() => toneEngine.stopBusyTone(), 1000);
-          if (clearAirAudioRoomRef.current === roomKey) {
-            clearAirAudioRoomRef.current = null;
-            audioTransportManager.disconnect(roomKey).catch(() => {});
-          }
-          return;
-        }
-      }
-
-      const room = audioTransportManager.getRoom(roomKey);
-      if (room) {
-        toneTransmitter.setAudioTransportManager(audioTransportManager);
-        toneTransmitter.setRoom(room);
-        const started = await toneTransmitter.startToneTransmission();
-        if (started) {
-          console.log('[BottomBar] Clear Air tone broadcasting over air on', roomKey);
-        } else {
-          if (signalPttEnd) signalPttEnd(roomKey);
-          if (clearAirAudioRoomRef.current === roomKey) {
-            clearAirAudioRoomRef.current = null;
-            audioTransportManager.disconnect(roomKey).catch(() => {});
-          }
-          return;
-        }
-      } else {
-        console.warn('[BottomBar] No room available for Clear Air on', roomKey);
-        if (signalPttEnd) signalPttEnd(roomKey);
-        if (clearAirAudioRoomRef.current === roomKey) {
-          clearAirAudioRoomRef.current = null;
-          audioTransportManager.disconnect(roomKey).catch(() => {});
-        }
-        return;
-      }
-
-      if (clearAirFloorRearmRef.current) clearInterval(clearAirFloorRearmRef.current);
-      clearAirFloorRearmRef.current = setInterval(() => {
-        if (signalPttStart) {
-          signalPttStart(roomKey).catch(err => {
-            console.warn('[BottomBar] Clear Air floor re-arm failed:', err.message);
-          });
-        }
-      }, 20000);
-
       toggleClearAir(channelId);
       setClearAirChannel(channelId);
       toneEngine.startClearAir(channelId);
       signalClearAirStart(roomKey);
+
+      clearAirBurstCycle(roomKey, channelId);
     }
   };
 
@@ -472,9 +465,10 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
     const channel = channels.find(ch => String(ch.id) === channelId);
     const roomKey = channel ? (channel.room_key || ((channel.zone || 'Default') + '__' + channel.name)) : null;
     
-    if (clearAirFloorRearmRef.current) {
-      clearInterval(clearAirFloorRearmRef.current);
-      clearAirFloorRearmRef.current = null;
+    const pendingTimer = clearAirFloorRearmRef.current;
+    clearAirFloorRearmRef.current = null;
+    if (typeof pendingTimer === 'number') {
+      clearTimeout(pendingTimer);
     }
 
     toggleClearAir(channelId);
@@ -483,11 +477,6 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
     
     if (roomKey) {
       toneEngine.stopClearAir(channelId);
-      try {
-        await toneTransmitter.stopToneTransmission();
-      } catch (err) {
-        console.warn('[BottomBar] ClearAir tone stop failed:', err);
-      }
       if (signalPttEnd) {
         signalPttEnd(roomKey);
       }

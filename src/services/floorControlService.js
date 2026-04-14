@@ -8,9 +8,9 @@ class FloorControlService {
     this.floorTimers = new Map();
   }
 
-  requestFloor(channelId, unitId, { isEmergency = false, emergencyStates = null } = {}) {
+  requestFloor(channelId, unitId, { isEmergency = false, isClearAir = false, emergencyStates = null } = {}) {
     const key = canonicalChannelKey(channelId);
-    console.log(`[FloorControl] requestFloor: raw="${channelId}" canonical="${key}" unitId="${unitId}"`);
+    console.log(`[FloorControl] requestFloor: raw="${channelId}" canonical="${key}" unitId="${unitId}" isClearAir=${isClearAir}`);
 
     const current = this.floorHolders.get(key);
 
@@ -21,11 +21,12 @@ class FloorControlService {
 
     if (current) {
       const currentIsEmergency = current.isEmergency;
+      const currentIsClearAir = current.isClearAir;
 
       if (isEmergency && !currentIsEmergency) {
         this._clearTimer(key);
         const preempted = current.unitId;
-        this._setFloor(key, unitId, true);
+        this._setFloor(key, unitId, true, false);
         return {
           granted: true,
           channelId: key,
@@ -33,6 +34,20 @@ class FloorControlService {
           timestamp: Date.now(),
           preemptedUnit: preempted,
           isEmergency: true,
+        };
+      }
+
+      if (currentIsClearAir && !isClearAir) {
+        this._clearTimer(key);
+        const preempted = current.unitId;
+        this._setFloor(key, unitId, isEmergency, false);
+        return {
+          granted: true,
+          channelId: key,
+          unitId,
+          timestamp: Date.now(),
+          preemptedUnit: preempted,
+          preemptedClearAir: true,
         };
       }
 
@@ -46,8 +61,8 @@ class FloorControlService {
       };
     }
 
-    this._setFloor(key, unitId, isEmergency);
-    return { granted: true, channelId: key, unitId, timestamp: Date.now(), isEmergency };
+    this._setFloor(key, unitId, isEmergency, isClearAir);
+    return { granted: true, channelId: key, unitId, timestamp: Date.now(), isEmergency, isClearAir };
   }
 
   releaseFloor(channelId, unitId) {
@@ -107,10 +122,11 @@ class FloorControlService {
     return released;
   }
 
-  _setFloor(key, unitId, isEmergency) {
+  _setFloor(key, unitId, isEmergency, isClearAir = false) {
     this.floorHolders.set(key, {
       unitId,
       isEmergency,
+      isClearAir,
       grantedAt: Date.now(),
     });
 

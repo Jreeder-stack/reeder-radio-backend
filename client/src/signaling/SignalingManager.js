@@ -406,7 +406,7 @@ class SignalingManager {
     return true;
   }
 
-  signalPttStart(channelId) {
+  signalPttStart(channelId, { isClearAir = false } = {}) {
     if (!this.socket?.connected || !this.authenticated) {
       console.error('[Signaling] Cannot signal PTT start: not connected/authenticated');
       return Promise.reject(new Error('Not connected'));
@@ -452,7 +452,7 @@ class SignalingManager {
       this.socket.once('ptt:granted', onGranted);
       this.socket.once('ptt:busy', onBusy);
       this.socket.once('disconnect', onDisconnect);
-      this.socket.emit(SIGNALING_EVENTS.PTT_START, { channelId });
+      this.socket.emit(SIGNALING_EVENTS.PTT_START, { channelId, isClearAir });
     });
   }
 

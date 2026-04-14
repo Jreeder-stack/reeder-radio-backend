@@ -285,8 +285,8 @@ export function SignalingProvider({ children }) {
     return result;
   }, []);
 
-  const signalPttStart = useCallback((channelId) => {
-    return signalingManager.signalPttStart(channelId);
+  const signalPttStart = useCallback((channelId, options) => {
+    return signalingManager.signalPttStart(channelId, options);
   }, []);
 
   const signalPttEnd = useCallback((channelId) => {
