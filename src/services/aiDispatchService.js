@@ -17,7 +17,7 @@ if (!fs.existsSync(AUDIO_DIR)) {
   fs.mkdirSync(AUDIO_DIR, { recursive: true });
 }
 
-const MY_LOCATION_PATTERN = /\b(at my location|my location|at my current location|my current location|my GPS|my gps|at my GPS|at my gps|where I am|where i am|my position|at my position|my current position)\b/i;
+const MY_LOCATION_PATTERN = /\b(at my location|my location|at my current location|my current location|my GPS|my gps|at my GPS|at my gps|where I am|where i am|my position|at my position|my current position|my address|at my address|this address|at this address|this location|at this location)\b/i;
 
 function isMyLocationPhrase(text) {
   if (!text) return false;
@@ -1810,6 +1810,11 @@ class AIDispatcher {
           const additionalUnits = result.slots?.additionalUnits || [];
           const priority = result.slots?.priority || 'medium';
 
+          if (address && isMyLocationPhrase(address)) {
+            this.log('CREATE_CALL_ADDRESS_SELF_REF', { participantId, rawAddress: address });
+            address = null;
+          }
+
           if (!address) {
             const resolvedAddress = await this.resolveUnitLocation(participantId);
             if (resolvedAddress) {
@@ -2622,14 +2627,15 @@ class AIDispatcher {
     }
 
     let address = null;
-    if (isMyLocationPhrase(transcript)) {
+    const isSelfRef = isMyLocationPhrase(transcript);
+    if (isSelfRef) {
       const resolvedAddress = await this.resolveUnitLocation(participantId);
       if (resolvedAddress) {
         address = resolvedAddress;
         this.log('CALL_ADDRESS_FROM_LOCATION', { participantId, address: resolvedAddress });
       }
     }
-    if (!address) {
+    if (!address && !isSelfRef) {
       address = normalizeAddress(cleanTranscript(transcript));
     }
     if (!address || address.length < 2) {
