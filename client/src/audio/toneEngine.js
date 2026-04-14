@@ -80,7 +80,7 @@ class ToneEngine {
     
     if (this.customDestination) {
       const localGain = ctx.createGain();
-      localGain.gain.value = 0.5;
+      localGain.gain.value = 0.125;
       oscillator.connect(localGain);
       localGain.connect(ctx.destination);
     }
@@ -125,7 +125,7 @@ class ToneEngine {
     
     if (this.customDestination) {
       const localGain = ctx.createGain();
-      localGain.gain.value = 0.4;
+      localGain.gain.value = 0.1;
       oscillator.connect(localGain);
       localGain.connect(ctx.destination);
     }
@@ -185,7 +185,7 @@ class ToneEngine {
       gainNode.gain.setValueAtTime(0, stopTime);
       
       if (localGain) {
-        localGain.gain.setValueAtTime(0.5, startTime);
+        localGain.gain.setValueAtTime(0.125, startTime);
         localGain.gain.setValueAtTime(0, stopTime);
       }
     }
@@ -226,7 +226,7 @@ class ToneEngine {
       
       if (this.customDestination) {
         const localGain = ctx.createGain();
-        localGain.gain.value = 0.4;
+        localGain.gain.value = 0.1;
         oscillator.connect(localGain);
         localGain.connect(ctx.destination);
       }
@@ -338,7 +338,7 @@ class ToneEngine {
     
     if (this.customDestination) {
       const localGain = ctx.createGain();
-      localGain.gain.value = 0.6;
+      localGain.gain.value = 0.15;
       gainNode.connect(localGain);
       localGain.connect(ctx.destination);
     }
@@ -392,7 +392,7 @@ class ToneEngine {
     
     if (this.customDestination) {
       const localGain = ctx.createGain();
-      localGain.gain.value = 0.3;
+      localGain.gain.value = 0.075;
       oscillator.connect(localGain);
       localGain.connect(ctx.destination);
     }
