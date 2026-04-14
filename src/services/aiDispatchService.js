@@ -17,7 +17,7 @@ if (!fs.existsSync(AUDIO_DIR)) {
   fs.mkdirSync(AUDIO_DIR, { recursive: true });
 }
 
-const MY_LOCATION_PATTERN = /\b(at my location|my location|at my current location|my current location|my GPS|my gps|at my GPS|at my gps|where I am|where i am|my position|at my position|my current position|my address|at my address|this address|at this address|this location|at this location)\b/i;
+const MY_LOCATION_PATTERN = /\b(at my location|my location|at my current location|my current location|my GPS|my gps|at my GPS|at my gps|where I am|where i am|my position|at my position|my current position|my address|at my address|this address|at this address|this location|at this location|my detail|at my detail|my detail address|at my detail address|my detail location|at my detail location|my assigned location|at my assigned location|my zone|at my zone)\b/i;
 
 function isMyLocationPhrase(text) {
   if (!text) return false;
@@ -875,14 +875,11 @@ class AIDispatcher {
       const unitInfo = await cadService.getUnitInfo(unitId);
       if (!unitInfo) return null;
 
-      if (!this._isOnDetailOrAssignment(unitInfo.status)) {
-        this.log('UNIT_CAD_NOT_ON_DETAIL', { unitId, status: unitInfo.status });
-        return null;
-      }
-
-      if (unitInfo.currentLocation && this._looksLikeAddress(unitInfo.currentLocation)) {
-        this.log('UNIT_LOCATION_FROM_CAD', { unitId, location: unitInfo.currentLocation, zone: unitInfo.zone, status: unitInfo.status });
-        return unitInfo.currentLocation.trim();
+      if (this._isOnDetailOrAssignment(unitInfo.status)) {
+        if (unitInfo.currentLocation && this._looksLikeAddress(unitInfo.currentLocation)) {
+          this.log('UNIT_LOCATION_FROM_CAD', { unitId, location: unitInfo.currentLocation, zone: unitInfo.zone, status: unitInfo.status });
+          return unitInfo.currentLocation.trim();
+        }
       }
 
       if (unitInfo.zone && this._looksLikeAddress(unitInfo.zone)) {
@@ -1812,6 +1809,11 @@ class AIDispatcher {
 
           if (address && isMyLocationPhrase(address)) {
             this.log('CREATE_CALL_ADDRESS_SELF_REF', { participantId, rawAddress: address });
+            address = null;
+          }
+
+          if (address && !this._looksLikeAddress(address)) {
+            this.log('CREATE_CALL_ADDRESS_NOT_REAL', { participantId, rawAddress: address });
             address = null;
           }
 
