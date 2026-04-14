@@ -94,11 +94,9 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
     private var emergencyJob: Job? = null
     private var cancelArmingJob: Job? = null
     private var pttStartJob: Job? = null
-    private var emergencySelfHealJob: Job? = null
     private var activeTransmittingUnitStaleJob: Job? = null
 
     companion object {
-        private const val EMERGENCY_SELF_HEAL_TIMEOUT_MS = 10_000L
         private const val ACTIVE_TX_UNIT_STALE_MS = 45_000L
     }
 
@@ -134,12 +132,10 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                 BackgroundAudioService.ACTION_PTT_TX_STARTED -> {
                     Log.d(TAG, "PTT_TX_STARTED received — setting pttState = TRANSMITTING")
                     _uiState.update { it.copy(pttState = PttState.TRANSMITTING) }
-                    restartEmergencySelfHealIfActive()
                 }
                 BackgroundAudioService.ACTION_PTT_TX_ENDED -> {
                     Log.d(TAG, "PTT_TX_ENDED received — setting pttState = IDLE")
                     _uiState.update { it.copy(pttState = PttState.IDLE) }
-                    restartEmergencySelfHealIfActive()
                 }
 
                 // Emergency broadcasts — service owns signaling/PTT, ViewModel owns UI only
@@ -153,7 +149,6 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                         )
                     }
                     locationTracker.startTracking()
-                    startEmergencySelfHealTimer()
                 }
                 BackgroundAudioService.ACTION_EMERGENCY_CANCELLED -> {
                     Log.d(TAG, "EMERGENCY_CANCELLED received — dismissing emergency UI")
@@ -161,8 +156,6 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                     emergencyJob = null
                     cancelArmingJob?.cancel()
                     cancelArmingJob = null
-                    emergencySelfHealJob?.cancel()
-                    emergencySelfHealJob = null
                     app.toneEngine.stopCountdownBeep()
                     _uiState.update {
                         it.copy(
@@ -276,14 +269,9 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                     } else {
                         Log.e(STARTUP_TAG, "CHANNEL_JOIN_FAILED reason=no_current_channel")
                     }
-                    if (wasReconnect && hadEmergency) {
-                        viewModelScope.launch {
-                            delay(3_000L)
-                            if (_uiState.value.myEmergencyActive) {
-                                Log.d(TAG, "Signaling reconnected — emergency still active after resync window, force-resetting")
-                                forceResetEmergencyState()
-                            }
-                        }
+                    if (wasReconnect && hadEmergency && _uiState.value.myEmergencyActive && roomKey != null) {
+                        Log.d(TAG, "Signaling reconnected — querying server for emergency status to reconcile local state")
+                        app.signalingRepository.queryEmergencyStatus(roomKey)
                     }
                 }
             }
@@ -330,9 +318,19 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                         _uiState.update { it.copy(channelEmergencyActive = true, channelEmergencyUnitId = event.unitId) }
                     }
                     is SignalingEvent.EmergencyEnd -> {
-                        emergencySelfHealJob?.cancel()
-                        emergencySelfHealJob = null
                         _uiState.update { it.copy(channelEmergencyActive = false, myEmergencyActive = false, channelEmergencyUnitId = null) }
+                        locationTracker.stopTracking()
+                    }
+                    is SignalingEvent.EmergencyStatusResponse -> {
+                        val currentChannel = _uiState.value.currentChannel?.roomKey
+                        if (event.channelId == currentChannel) {
+                            if (!event.active && _uiState.value.myEmergencyActive) {
+                                Log.d(TAG, "Server reports emergency no longer active — clearing local emergency state")
+                                forceResetEmergencyState()
+                            } else if (event.active) {
+                                Log.d(TAG, "Server confirms emergency still active for unit=${event.unitId}")
+                            }
+                        }
                     }
                     is SignalingEvent.ClearAirStart -> {
                         _uiState.update { it.copy(isClearAir = true) }
@@ -464,35 +462,11 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         sendServiceIntent(BackgroundAudioService.ACTION_PTT_UP)
     }
 
-    private fun startEmergencySelfHealTimer() {
-        emergencySelfHealJob?.cancel()
-        emergencySelfHealJob = viewModelScope.launch {
-            while (isActive) {
-                delay(EMERGENCY_SELF_HEAL_TIMEOUT_MS)
-                val state = _uiState.value
-                if (!state.myEmergencyActive) return@launch
-                if (state.pttState == PttState.IDLE) {
-                    Log.w(TAG, "Emergency self-heal: myEmergencyActive=true but idle for ${EMERGENCY_SELF_HEAL_TIMEOUT_MS}ms — force-resetting")
-                    forceResetEmergencyState()
-                    return@launch
-                }
-            }
-        }
-    }
-
-    private fun restartEmergencySelfHealIfActive() {
-        if (_uiState.value.myEmergencyActive && emergencySelfHealJob?.isActive == true) {
-            startEmergencySelfHealTimer()
-        }
-    }
-
     private fun forceResetEmergencyState() {
         emergencyJob?.cancel()
         emergencyJob = null
         cancelArmingJob?.cancel()
         cancelArmingJob = null
-        emergencySelfHealJob?.cancel()
-        emergencySelfHealJob = null
         app.toneEngine.stopCountdownBeep()
         _uiState.update {
             it.copy(
@@ -752,7 +726,6 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
     override fun onCleared() {
         emergencyJob?.cancel()
         cancelArmingJob?.cancel()
-        emergencySelfHealJob?.cancel()
         activeTransmittingUnitStaleJob?.cancel()
         app.toneEngine.stopCountdownBeep()
         locationTracker.stopTracking()

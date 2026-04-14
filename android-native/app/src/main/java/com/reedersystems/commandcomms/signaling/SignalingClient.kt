@@ -455,6 +455,30 @@ class SignalingClient(var serverUrl: String, private var radioToken: String? = n
         })
     }
 
+    fun queryEmergencyStatus(channelKey: String) {
+        if (!isReady()) return
+        Log.d(TAG, "queryEmergencyStatus channelKey=$channelKey")
+        socket?.emit("emergency:status", JSONObject().put("channelId", channelKey),
+            io.socket.client.Ack { args ->
+                try {
+                    val json = args.firstOrNull() as? JSONObject ?: return@Ack
+                    val active = json.optBoolean("active", false)
+                    val emergencyUnitId = json.optString("unitId", "").ifBlank { null }
+                    Log.d(TAG, "emergency:status response channelKey=$channelKey active=$active unitId=$emergencyUnitId")
+                    _events.tryEmit(
+                        SignalingEvent.EmergencyStatusResponse(
+                            channelId = channelKey,
+                            active = active,
+                            unitId = emergencyUnitId
+                        )
+                    )
+                } catch (e: Exception) {
+                    Log.w(TAG, "emergency:status ack parse error: ${e.message}")
+                }
+            }
+        )
+    }
+
     private fun isReady() = _connectionState.value == ConnectionState.AUTHENTICATED
 
     private fun flushPendingEmergencyEnds() {

@@ -23,6 +23,7 @@ class SignalingRepository(private val client: SignalingClient) {
 
     fun emergencyStart(channelKey: String) = client.emitEmergencyStart(channelKey)
     fun emergencyEnd(channelKey: String) = client.emitEmergencyEnd(channelKey)
+    fun queryEmergencyStatus(channelKey: String) = client.queryEmergencyStatus(channelKey)
 
     fun sendLocationUpdate(lat: Double, lon: Double, accuracy: Float, heading: Float?, speed: Float?) =
         client.emitLocationUpdate(lat, lon, accuracy, heading, speed)
