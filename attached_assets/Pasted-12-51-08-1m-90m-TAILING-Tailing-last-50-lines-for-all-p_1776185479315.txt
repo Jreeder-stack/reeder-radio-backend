@@ -1,0 +1,104 @@
+12:51:08 [1m[90m[TAILING] Tailing last 50 lines for [all] processes (change the value with --lines option)[39m[22m
+12:51:08 [90m/home/Jreeder5029/.pm2/logs/command-comms-error.log last 50 lines:[39m
+12:51:08 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+12:51:08 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+12:51:08 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+12:51:08 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+12:51:08 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+12:51:08 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+12:51:08 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+12:51:08 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+12:51:08 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+12:51:08 [AudioRelay] TX_WATCHDOG_SILENCE unitId=CHESTER-2 channelId=DISPATCH__DISPATCH silenceMs=9453 hadAudio=true
+12:51:08 [Signaling] TX_SILENCE_WARNING unitId=CHESTER-2 channelId=DISPATCH__DISPATCH silenceMs=9453
+12:51:08 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+12:51:08 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+12:51:08 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+12:51:08 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+12:51:08 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+12:51:08 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+12:51:08 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+12:51:08 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+12:51:08 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+12:51:08 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+12:51:08 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+12:51:08 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+12:51:08 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+12:51:08 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+12:51:08 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+12:51:08 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+12:51:08 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+12:51:08 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+12:51:08 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+12:51:08 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+12:51:08 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+12:51:08 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+12:51:08 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+12:51:08 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+12:51:08 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+12:51:08 AUDIO_WS_REJECTED { reason: 'unauthorized_session' }
+12:51:08 [SHUTDOWN] Step "HTTP server" timed out after 4000ms, moving on.
+12:51:08 [Signaling] Ignoring authenticate event — radio device uses token auth: 9Vz8vnFnlf7HsLU9AAAJ
+12:51:08 [Signaling] Ignoring authenticate event — radio device uses token auth: zhBrUsBCapW6XOd8AAAb
+12:51:08 [AudioRelay] TX_WATCHDOG_SILENCE unitId=INDIANA-1 channelId=DISPATCH__DISPATCH silenceMs=44986 hadAudio=true
+12:51:08 [AudioRelay] TX_WATCHDOG_AUTO_RELEASE unitId=INDIANA-1 channelId=DISPATCH__DISPATCH silenceMs=44986
+12:51:08 [Signaling] forceEndTransmission: unitId=INDIANA-1 channelId=DISPATCH__DISPATCH reason=silence_auto_release
+12:51:08 [AudioRelay] TX_WATCHDOG_SILENCE unitId=INDIANA-1 channelId=DISPATCH__DISPATCH silenceMs=75368 hadAudio=true
+12:51:08 [AudioRelay] TX_WATCHDOG_AUTO_RELEASE unitId=INDIANA-1 channelId=DISPATCH__DISPATCH silenceMs=75368
+12:51:08 [Signaling] forceEndTransmission: unitId=INDIANA-1 channelId=DISPATCH__DISPATCH reason=silence_auto_release
+12:51:08 [CAD] API error: POST /api/radio/call status=400, response={"error":"field 'priority' must be a string","validation_errors":["field 'priority' must be a string"]}
+12:51:08 [AudioRelay] TX_WATCHDOG_SILENCE unitId=CHESTER-2 channelId=DISPATCH__DISPATCH silenceMs=183229 hadAudio=true
+12:51:08 [AudioRelay] TX_WATCHDOG_AUTO_RELEASE unitId=CHESTER-2 channelId=DISPATCH__DISPATCH silenceMs=183229
+12:51:08 [Signaling] forceEndTransmission: unitId=CHESTER-2 channelId=DISPATCH__DISPATCH reason=silence_auto_release
+12:51:08 [90m/home/Jreeder5029/.pm2/logs/command-comms-out.log last 50 lines:[39m
+12:51:08 [API] GET /api/dispatch/units | user=DISPATCH-1(id:7) | sid=rlIua4vr... | 304 | 17ms (logged 1/60)
+12:51:08 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=DISPATCH__DISPATCH addr=107.115.97.113:5854
+12:51:08 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=DISPATCH__DISPATCH addr=107.115.97.113:5854
+12:51:08 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=DISPATCH__DISPATCH addr=107.115.97.113:5854
+12:51:08 [AudioRelay] SUBSCRIBER_REMOVED unitId=INDIANA-1 channelId=DISPATCH__DISPATCH
+12:51:08 [AudioRelay] SUBSCRIBER_ADDED unitId=INDIANA-1 channelId=DISPATCH__DISPATCH addr=127.0.0.1:55140
+12:51:08 [Signaling] SUBSCRIBER_REGISTERED (replaced stale) unitId=INDIANA-1 channelId=DISPATCH__DISPATCH address=127.0.0.1 port=55140
+12:51:08 [Signaling] CHANNEL_JOINED unitId=INDIANA-1 channelId=DISPATCH__DISPATCH
+12:51:08 [AudioRelay] SUBSCRIBER_NAT_CHANGE unitId=INDIANA-1 channelId=DISPATCH__DISPATCH oldAddr=127.0.0.1:55140 newAddr=107.115.97.113:5848
+12:51:08 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=DISPATCH__DISPATCH addr=107.115.97.113:5848
+12:51:08 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=DISPATCH__DISPATCH addr=107.115.97.113:5848
+12:51:08 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=DISPATCH__DISPATCH addr=107.115.97.113:5848
+12:51:08 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=DISPATCH__DISPATCH addr=107.115.97.113:5848
+12:51:08 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=DISPATCH__DISPATCH addr=107.115.97.113:5848
+12:51:08 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=DISPATCH__DISPATCH addr=107.115.97.113:5848
+12:51:08 [AudioRelay] UDP_SUBSCRIBER_STATS channelId=DISPATCH__DISPATCH udpActive=1 udpGoingStale=0 wsSubscribers=1
+12:51:08 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=DISPATCH__DISPATCH addr=107.115.97.113:5848
+12:51:08 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=DISPATCH__DISPATCH addr=107.115.97.113:5848
+12:51:08 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=DISPATCH__DISPATCH addr=107.115.97.113:5848
+12:51:08 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=DISPATCH__DISPATCH addr=107.115.97.113:5848
+12:51:08 [AUTH] /me check: hasSession=true sessionID=rlIua4vr... cookie=true
+12:51:08 [AUTH] /me: session has user="DISPATCH-1" id=7, refreshing from DB...
+12:51:08 [AUTH] /me: returning fresh user data for "DISPATCH-1" role=admin unit_id=DISPATCH-1
+12:51:08 [API] GET /api/auth/me | user=DISPATCH-1(id:7) | sid=rlIua4vr... | 304 | 16ms
+12:51:08 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=DISPATCH__DISPATCH addr=107.115.97.113:5848
+12:51:08 [Signaling] DISPATCH-1 left channel TESTING__TESTING 1
+12:51:08 [Signaling] DISPATCH-1 left channel DISPATCH__DISPATCH
+12:51:08 [API] GET /api/admin/users | user=DISPATCH-1(id:7) | sid=rlIua4vr... | 200 | 17ms
+12:51:08 [API] GET /api/admin/channels | user=DISPATCH-1(id:7) | sid=rlIua4vr... | 200 | 14ms
+12:51:08 [API] GET /api/admin/zones | user=DISPATCH-1(id:7) | sid=rlIua4vr... | 200 | 19ms
+12:51:08 [DISPATCH] getChannels: 4 radio channels returned
+12:51:08 [API] GET /api/admin/scanner | user=DISPATCH-1(id:7) | sid=rlIua4vr... | 200 | 8ms
+12:51:08 [API] GET /api/admin/logs?limit=200 | user=DISPATCH-1(id:7) | sid=rlIua4vr... | 200 | 19ms
+12:51:08 [API] GET /api/dispatch/channels | user=DISPATCH-1(id:7) | sid=rlIua4vr... | 200 | 18ms
+12:51:08 [API] GET /api/admin/ai-dispatch | user=DISPATCH-1(id:7) | sid=rlIua4vr... | 200 | 23ms
+12:51:08 AUDIO_WS_UPGRADE_HIT {
+12:51:08   method: 'GET',
+12:51:08   path: '/api/audio-ws',
+12:51:08   query: '?channelId=DISPATCH__DISPATCH&unitId=DISPATCH-1&format=opus',
+12:51:08   host: 'comms.reeder-systems.com',
+12:51:08   upgrade: 'websocket',
+12:51:08   connection: 'upgrade'
+12:51:08 }
+12:51:08 AUDIO_WS_ACCEPTED { username: 'DISPATCH-1', unitId: 'DISPATCH-1' }
+12:51:08 [WsAudioBridge] AUDIO_WS_CONN channelId="DISPATCH__DISPATCH" unitId="DISPATCH-1" subscriberKey="DISPATCH-1::7::23" userId=7 username="DISPATCH-1" connId=23
+12:51:08 [AudioRelay] WS_SUBSCRIBER_ADDED channelKey=DISPATCH__DISPATCH subscriberKey=DISPATCH-1::7::23 unitId=DISPATCH-1 format=opus totalWsSubs=2
+12:51:08 [AI-Dispatcher] Notify join received: DISPATCH-1 on DISPATCH__DISPATCH - connecting dispatcher
+12:51:08 [AI-Dispatcher] 2026-04-14T16:51:07.471Z | REJOIN_SKIPPED {"reason":"Already connected"}
+12:51:08 [AI-Dispatcher] Dispatcher connected for channel DISPATCH__DISPATCH
+12:51:08 [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=rlIua4vr... | 200 | 27ms
+12:51:08 [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=DISPATCH__DISPATCH addr=107.115.97.113:5848
