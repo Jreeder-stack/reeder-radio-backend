@@ -319,6 +319,12 @@ class SignalingService {
         if (!floorHolder || floorHolder.unitId !== transmission.unitId) {
           this.activeTransmissions.delete(channelId);
 
+          this.io.to(`channel:${channelId}`).emit(RADIO_EVENTS.TX_STOP, {
+            senderUnitId: transmission.unitId,
+            channelId,
+            timestamp: Date.now(),
+          });
+
           this.io.to(`channel:${channelId}`).emit(SIGNALING_EVENTS.PTT_END, {
             unitId: transmission.unitId,
             channelId,
@@ -643,7 +649,20 @@ class SignalingService {
     
     socket.emit('ptt:granted', { channelId, unitId: socket.unitId, timestamp: Date.now() });
 
+    this._emitToChannelExcludingUnit(channelId, RADIO_EVENTS.TX_START, {
+      senderUnitId: socket.unitId,
+      channelId,
+      timestamp: Date.now(),
+      isEmergency: isEmergency || false,
+    }, socket.unitId);
+
     this._emitToChannelExcludingUnit(channelId, SIGNALING_EVENTS.PTT_START, transmissionData, socket.unitId);
+
+    this._emitToChannelExcludingUnit(channelId, RADIO_EVENTS.CHANNEL_BUSY, {
+      channelId,
+      heldBy: socket.unitId,
+      timestamp: Date.now(),
+    }, socket.unitId);
     
     this._emitCallback('pttStart', transmissionData);
     
@@ -664,6 +683,12 @@ class SignalingService {
       console.warn(`[Signaling] PTT END unitId mismatch: socket=${socket.unitId} transmission=${transmission.unitId} on ${channelId} — cleaning up anyway`);
       this.activeTransmissions.delete(channelId);
       floorControlService.releaseFloor(channelId, transmission.unitId);
+
+      this._emitToChannelExcludingUnit(channelId, RADIO_EVENTS.TX_STOP, {
+        senderUnitId: transmission.unitId,
+        channelId,
+        timestamp: Date.now(),
+      }, transmission.unitId);
 
       this._emitToChannelExcludingUnit(channelId, SIGNALING_EVENTS.PTT_END, {
         unitId: transmission.unitId,
@@ -714,7 +739,18 @@ class SignalingService {
       presence.status = 'online';
     }
     
+    this._emitToChannelExcludingUnit(channelId, RADIO_EVENTS.TX_STOP, {
+      senderUnitId: socket.unitId,
+      channelId,
+      timestamp: Date.now(),
+    }, socket.unitId);
+
     this._emitToChannelExcludingUnit(channelId, SIGNALING_EVENTS.PTT_END, endData, socket.unitId);
+
+    this._emitToChannelExcludingUnit(channelId, RADIO_EVENTS.CHANNEL_IDLE, {
+      channelId,
+      timestamp: Date.now(),
+    }, socket.unitId);
     
     this._emitCallback('pttEnd', endData);
     
@@ -744,6 +780,11 @@ class SignalingService {
       presence.status = 'online';
     }
 
+    this._emitToChannelExcludingUnit(key, RADIO_EVENTS.TX_STOP, {
+      senderUnitId: unitId,
+      channelId: key,
+      timestamp: Date.now(),
+    }, unitId);
     this._emitToChannelExcludingUnit(key, SIGNALING_EVENTS.PTT_END, endData, unitId);
     this._emitToChannelExcludingUnit(key, RADIO_EVENTS.CHANNEL_IDLE, { channelId: key, timestamp: Date.now() }, unitId);
 

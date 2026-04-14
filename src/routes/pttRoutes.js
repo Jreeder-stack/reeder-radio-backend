@@ -170,7 +170,20 @@ router.post('/start', async (req, res) => {
       presence.status = 'transmitting';
     }
 
+    signalingService._emitToChannelExcludingUnit(channelId, 'tx:start', {
+      senderUnitId: unitId,
+      channelId,
+      timestamp: Date.now(),
+      isEmergency: isEmergency || false,
+    }, unitId);
+
     signalingService._emitToChannelExcludingUnit(channelId, 'ptt:start', transmissionData, unitId);
+
+    signalingService._emitToChannelExcludingUnit(channelId, 'channel:busy', {
+      channelId,
+      heldBy: unitId,
+      timestamp: Date.now(),
+    }, unitId);
 
     if (signalingService._emitCallback) {
       signalingService._emitCallback('pttStart', transmissionData);
@@ -243,7 +256,18 @@ router.post('/end', async (req, res) => {
       }
     }
 
+    signalingService._emitToChannelExcludingUnit(channelId, 'tx:stop', {
+      senderUnitId: unitId,
+      channelId,
+      timestamp: Date.now(),
+    }, unitId);
+
     signalingService._emitToChannelExcludingUnit(channelId, 'ptt:end', endData, unitId);
+
+    signalingService._emitToChannelExcludingUnit(channelId, 'channel:idle', {
+      channelId,
+      timestamp: Date.now(),
+    }, unitId);
 
     if (signalingService._emitCallback) {
       signalingService._emitCallback('pttEnd', endData);
