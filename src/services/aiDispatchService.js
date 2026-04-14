@@ -1441,6 +1441,13 @@ class AIDispatcher {
         return;
       }
 
+      if (state === DISPATCHER_STATE.AWAITING_CALL_CONFIRM) {
+        this.log('CALL_CONFIRM_FAST_PATH', { participant: participantId, transcript });
+        this._turnContextByUnit.set(participantId, { transcript, intent: 'CALL_CONFIRM' });
+        await this.handleCallConfirm(participantId, transcript, slots);
+        return;
+      }
+
       if (state === DISPATCHER_STATE.AWAITING_NOTE_CONTENT) {
         this.log('NOTE_CONTENT_FAST_PATH', { participant: participantId, transcript });
         this._turnContextByUnit.set(participantId, { transcript, intent: 'ADD_NOTE' });
