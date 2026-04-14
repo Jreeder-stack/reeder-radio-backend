@@ -1399,10 +1399,7 @@ class AIDispatcher {
       const currentState = currentSession?.state || DISPATCHER_STATE.IDLE;
       if (currentState === DISPATCHER_STATE.IDLE) {
         const normalizedForGate = transcript.trim().toLowerCase();
-        const isAddressingDispatch =
-          /^central\b/.test(normalizedForGate) ||
-          /\bto\s+central\b/.test(normalizedForGate) ||
-          /\bcentral\s*$/.test(normalizedForGate);
+        const isAddressingDispatch = /^central\b/i.test(normalizedForGate);
         if (!isAddressingDispatch) {
           this.verboseLog('IDLE_NO_CENTRAL_SKIP', { participant: participantId, transcript });
           return;
@@ -1457,7 +1454,7 @@ class AIDispatcher {
       if (state === DISPATCHER_STATE.IDLE) {
         const normalizedForDistress = normalized.replace(/[.,!?]/g, '').replace(/\s+/g, ' ').trim();
         const matchedDistressPhrase = this._matchDistressPhrase(normalizedForDistress);
-        if (matchedDistressPhrase && /\bcentral\b/i.test(transcript)) {
+        if (matchedDistressPhrase && /^central\b/.test(normalizedForDistress)) {
           this.log('EMERGENCY_PHRASE_FAST_PATH', { participant: participantId, transcript, distressType: matchedDistressPhrase.distressType });
           this._turnContextByUnit.set(participantId, { transcript, intent: 'EMERGENCY_PHRASE_ASSIST' });
           await this.handleEmergencyPhraseAssist(participantId, matchedDistressPhrase.distressType);
@@ -1593,10 +1590,7 @@ class AIDispatcher {
       const hasUnitToUnit = /\b\w+[\s-]*\d+\s+from\s+\w+[\s-]*\d+\b/i.test(normalizedTranscript);
       const hasCommandContent = /\b(10-\d+|run\b|plate\b|check\b|backup\b|service\b|zone\b|status\b|detail\b|stop\b|traffic\b|radio\b|time\b|clear\b|close\b|dispose\b|warrant\b|update\b|priority\b|animal\b|microchip\b|tag\b|call\b)/i.test(normalizedTranscript);
       if (!hasUnitToUnit && !hasCommandContent) {
-        const isCentralHail =
-          /^central\b/.test(normalizedTranscript) ||
-          /\bto\s+central\b/.test(normalizedTranscript) ||
-          /\bcentral\s*$/.test(normalizedTranscript);
+        const isCentralHail = /^central\b/.test(normalizedTranscript);
         if (isCentralHail) {
           this.log('REGEX_WAKE_ONLY_PRECHECK', { participant: participantId, transcript });
           const wakeResp = `${participantId}, go ahead.`;
