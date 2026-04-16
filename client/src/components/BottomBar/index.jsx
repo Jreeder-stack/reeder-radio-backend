@@ -297,14 +297,14 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
 
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.code === 'Space' && !e.repeat && e.target.tagName !== 'INPUT') {
+      if (e.code === 'Space' && !e.repeat && !['INPUT', 'TEXTAREA'].includes(e.target.tagName)) {
         e.preventDefault();
         handlePTTDown(e);
       }
     };
 
     const handleKeyUp = (e) => {
-      if (e.code === 'Space') {
+      if (e.code === 'Space' && !['INPUT', 'TEXTAREA'].includes(e.target.tagName)) {
         e.preventDefault();
         handlePTTUp();
       }

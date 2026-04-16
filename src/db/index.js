@@ -1219,7 +1219,10 @@ export async function createPage(message, sender, targetType, targetId) {
 
 export async function getAllFcmTokensForUnit(unitId) {
   const result = await pool.query(
-    `SELECT fcm_token, radio_id, assigned_unit_id AS unit_identity FROM radios WHERE fcm_token IS NOT NULL AND assigned_unit_id = $1`,
+    `SELECT r.fcm_token, r.radio_id, u.unit_id AS unit_identity
+     FROM radios r
+     JOIN users u ON u.id = r.assigned_unit_id
+     WHERE r.fcm_token IS NOT NULL AND u.unit_id = $1`,
     [unitId]
   );
   return result.rows;
@@ -1227,7 +1230,10 @@ export async function getAllFcmTokensForUnit(unitId) {
 
 export async function getAllFcmTokens() {
   const result = await pool.query(
-    `SELECT fcm_token, radio_id, assigned_unit_id AS unit_identity FROM radios WHERE fcm_token IS NOT NULL`
+    `SELECT r.fcm_token, r.radio_id, u.unit_id AS unit_identity
+     FROM radios r
+     LEFT JOIN users u ON u.id = r.assigned_unit_id
+     WHERE r.fcm_token IS NOT NULL`
   );
   return result.rows;
 }

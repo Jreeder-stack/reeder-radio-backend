@@ -112,7 +112,7 @@ export default function PageModal({ target, onClose }) {
                 background: 'var(--dispatch-surface, #222)',
                 border: '1px solid var(--dispatch-border, #333)',
                 borderRadius: 8,
-                color: 'var(--dispatch-text, #eee)',
+                color: '#eee',
                 padding: '10px 12px',
                 fontSize: 14,
                 resize: 'vertical',
