@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useTheme } from "./context/ThemeContext.jsx";
 
 const QUICK_FILTERS = [
   { label: "Audio", patterns: ["[AudioRelay]", "[RecordingTap]", "WS_RELAY"] },
@@ -9,6 +10,7 @@ const QUICK_FILTERS = [
 ];
 
 export default function VmLogs({ isMobile, standalone = false }) {
+  const { darkMode, toggleDarkMode } = useTheme();
   const [source, setSource] = useState("server");
   const [lines, setLines] = useState([]);
   const [paused, setPaused] = useState(false);
@@ -189,14 +191,32 @@ export default function VmLogs({ isMobile, standalone = false }) {
   };
 
   const containerStyle = standalone
-    ? { display: "flex", flexDirection: "column", height: "100vh", background: "#0d1117", padding: 16, boxSizing: "border-box" }
+    ? { display: "flex", flexDirection: "column", height: "100vh", background: "var(--dispatch-bg)", padding: 16, boxSizing: "border-box" }
     : { display: "flex", flexDirection: "column", height: "calc(100vh - 180px)" };
 
   return (
     <div style={containerStyle}>
       {standalone && (
-        <div style={{ marginBottom: 12, fontSize: 18, fontWeight: 600, color: "#c9d1d9" }}>
-          VM Logs
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+          <div style={{ fontSize: 18, fontWeight: 600, color: "var(--dispatch-text)" }}>
+            VM Logs
+          </div>
+          <button
+            onClick={toggleDarkMode}
+            title={darkMode ? "Switch to light mode" : "Switch to dark mode"}
+            style={{
+              padding: "6px 10px",
+              background: "transparent",
+              color: "var(--dispatch-text-secondary)",
+              border: "1px solid var(--dispatch-border)",
+              borderRadius: 6,
+              cursor: "pointer",
+              fontSize: 15,
+              lineHeight: 1,
+            }}
+          >
+            {darkMode ? "☀️" : "🌙"}
+          </button>
         </div>
       )}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, flexWrap: "wrap", gap: 8 }}>
