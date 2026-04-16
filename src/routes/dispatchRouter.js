@@ -130,10 +130,12 @@ router.post('/page/:id/ack', radioAuth, async (req, res) => {
   if (!radioId) return res.status(400).json({ error: 'Radio identification required' });
 
   try {
+    console.log('[Dispatch] Page ACK arrived: pageId=' + pageId + ' radio=' + radioId + ' unit=' + unitId);
     const page = await getPage(pageId);
     if (!page) return res.status(404).json({ error: 'Page not found' });
 
     const ack = await recordPageAck(pageId, unitId, radioId);
+    console.log('[Dispatch] Page ACK recorded: pageId=' + pageId + ' radio=' + radioId + ' unit=' + unitId);
     res.json({ success: true, ack });
   } catch (err) {
     console.error('[Dispatch] Page ACK error:', err);
