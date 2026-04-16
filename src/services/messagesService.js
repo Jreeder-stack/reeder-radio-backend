@@ -1,6 +1,6 @@
 import { createChannelMessage, getChannelMessages, updateMessageTranscription, getMessageById, getAudioDataById } from '../db/index.js';
 import pool from '../db/index.js';
-import * as sdk from 'microsoft-cognitiveservices-speech-sdk';
+import { speechToText } from './azureSpeechService.js';
 import { broadcastMessage } from './aiDispatchService.js';
 import fs from 'fs';
 import path from 'path';
@@ -86,69 +86,21 @@ export async function transcribeMessage(messageId) {
   }
   
   const audioData = await getAudioDataById(message.id);
-  let filepath;
+  let audioBuffer;
   if (audioData) {
-    filepath = path.join(AUDIO_DIR, `tmp_transcribe_${message.id}.wav`);
-    fs.writeFileSync(filepath, audioData);
+    audioBuffer = audioData;
   } else {
     const filename = message.audio_url.split('/').pop();
-    filepath = path.join(AUDIO_DIR, filename);
+    const filepath = path.join(AUDIO_DIR, filename);
     if (!fs.existsSync(filepath)) {
       throw new Error('Audio file not found');
     }
+    audioBuffer = fs.readFileSync(filepath);
   }
   
-  const transcription = await transcribeAudioFile(filepath);
+  const transcription = await speechToText(audioBuffer);
   
-  if (audioData) {
-    try { fs.unlinkSync(filepath); } catch(e) {}
-  }
-  
-  return await updateMessageTranscription(messageId, transcription);
-}
-
-async function transcribeAudioFile(filepath) {
-  const speechKey = process.env.AZURE_SPEECH_KEY;
-  const speechRegion = process.env.AZURE_SPEECH_REGION || 'eastus';
-  
-  if (!speechKey || !speechRegion) {
-    throw new Error('Azure Speech credentials not configured');
-  }
-  
-  return new Promise((resolve, reject) => {
-    const speechConfig = sdk.SpeechConfig.fromSubscription(speechKey, speechRegion);
-    speechConfig.speechRecognitionLanguage = 'en-US';
-    
-    const audioConfig = sdk.AudioConfig.fromWavFileInput(fs.readFileSync(filepath));
-    const recognizer = new sdk.SpeechRecognizer(speechConfig, audioConfig);
-    
-    let fullText = '';
-    
-    recognizer.recognizing = (s, e) => {};
-    
-    recognizer.recognized = (s, e) => {
-      if (e.result.reason === sdk.ResultReason.RecognizedSpeech) {
-        fullText += e.result.text + ' ';
-      }
-    };
-    
-    recognizer.canceled = (s, e) => {
-      recognizer.stopContinuousRecognitionAsync();
-      if (e.reason === sdk.CancellationReason.Error) {
-        reject(new Error(`Transcription error: ${e.errorDetails}`));
-      }
-    };
-    
-    recognizer.sessionStopped = (s, e) => {
-      recognizer.stopContinuousRecognitionAsync();
-      resolve(fullText.trim() || '(No speech detected)');
-    };
-    
-    recognizer.startContinuousRecognitionAsync(
-      () => {},
-      (err) => reject(new Error(`Failed to start recognition: ${err}`))
-    );
-  });
+  return await updateMessageTranscription(messageId, transcription || '(No speech detected)');
 }
 
 export function getAudioFilePath(filename) {

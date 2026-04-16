@@ -52,6 +52,8 @@ export default function RecordingLogs({ isMobile }) {
   const [exportingPdf, setExportingPdf] = useState(false);
   const [exportingZip, setExportingZip] = useState(false);
   const audioRef = useRef(null);
+  const fetchAbortRef = useRef(null);
+  const fetchTokenRef = useRef(0);
   const PAGE_SIZE = 50;
 
   useEffect(() => {
@@ -64,8 +66,16 @@ export default function RecordingLogs({ isMobile }) {
 
   useEffect(() => {
     return () => {
+      fetchTokenRef.current = Infinity;
+      if (fetchAbortRef.current) {
+        fetchAbortRef.current.abort();
+        fetchAbortRef.current = null;
+      }
       if (audioRef.current) {
         audioRef.current.pause();
+        if (audioRef.current._blobUrl) {
+          URL.revokeObjectURL(audioRef.current._blobUrl);
+        }
         audioRef.current = null;
       }
     };
@@ -171,34 +181,84 @@ export default function RecordingLogs({ isMobile }) {
     return true;
   };
 
-  const handlePlay = (log) => {
+  const stopCurrent = () => {
+    if (fetchAbortRef.current) {
+      fetchAbortRef.current.abort();
+      fetchAbortRef.current = null;
+    }
+    if (audioRef.current) {
+      audioRef.current.pause();
+      if (audioRef.current._blobUrl) {
+        URL.revokeObjectURL(audioRef.current._blobUrl);
+      }
+      audioRef.current = null;
+    }
+  };
+
+  const handlePlay = async (log) => {
     if (!isAudioPlayable(log)) return;
 
     if (playingId === log.id) {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current = null;
-      }
+      stopCurrent();
       setPlayingId(null);
       return;
     }
 
-    if (audioRef.current) {
-      audioRef.current.pause();
-    }
-
-    const audio = new Audio(encodeURI(log.audio_url));
-    audio.onended = () => setPlayingId(null);
-    audio.onerror = () => {
-      setPlayingId(null);
-      alert("Playback failed — audio may be unavailable.");
-    };
-    audio.play().catch(() => {
-      setPlayingId(null);
-      alert("Playback failed — audio may be unavailable.");
-    });
-    audioRef.current = audio;
+    stopCurrent();
     setPlayingId(log.id);
+
+    const token = ++fetchTokenRef.current;
+    const controller = new AbortController();
+    fetchAbortRef.current = controller;
+
+    let blobUrl = null;
+    try {
+      const response = await fetch(log.audio_url, {
+        credentials: "include",
+        signal: controller.signal,
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const blob = await response.blob();
+
+      if (token !== fetchTokenRef.current) {
+        return;
+      }
+
+      blobUrl = URL.createObjectURL(blob);
+      const audio = new Audio(blobUrl);
+      audio._blobUrl = blobUrl;
+      audio.onended = () => {
+        URL.revokeObjectURL(blobUrl);
+        setPlayingId(null);
+      };
+      audio.onerror = () => {
+        URL.revokeObjectURL(blobUrl);
+        setPlayingId(null);
+        alert("Playback failed — audio may be unavailable.");
+      };
+
+      try {
+        await audio.play();
+      } catch (playErr) {
+        URL.revokeObjectURL(blobUrl);
+        setPlayingId(null);
+        alert("Playback failed — audio may be unavailable.");
+        return;
+      }
+
+      if (token !== fetchTokenRef.current) {
+        audio.pause();
+        URL.revokeObjectURL(blobUrl);
+        return;
+      }
+
+      audioRef.current = audio;
+    } catch (err) {
+      if (err && err.name === "AbortError") return;
+      if (blobUrl) URL.revokeObjectURL(blobUrl);
+      setPlayingId(null);
+      alert("Playback failed — audio may be unavailable.");
+    }
   };
 
   const handleDownload = (log) => {

@@ -135,6 +135,52 @@ function serveAudioBuffer(res, buf) {
   return res.send(audioData);
 }
 
+router.head('/audio/:filename', async (req, res) => {
+  try {
+    const { filename } = req.params;
+    if (filename.includes('..') || filename.includes('/')) {
+      return res.status(400).end();
+    }
+
+    const audioData = await getAudioDataByFilename(filename);
+    if (audioData && audioData.length > 0) {
+      let size = audioData.length;
+      if (!isValidWav(audioData)) {
+        size = audioData.length + 44;
+      }
+      res.setHeader('Content-Type', 'audio/wav');
+      res.setHeader('Content-Length', size);
+      return res.status(200).end();
+    }
+
+    let decodedFilename;
+    try { decodedFilename = decodeURIComponent(filename); } catch { decodedFilename = filename; }
+    const isSafeDecoded = decodedFilename !== filename && !decodedFilename.includes('..') && !decodedFilename.includes('/') && !decodedFilename.includes('\\');
+
+    if (isSafeDecoded) {
+      const decoded = await getAudioDataByFilename(decodedFilename);
+      if (decoded && decoded.length > 0) {
+        res.setHeader('Content-Type', 'audio/wav');
+        res.setHeader('Content-Length', decoded.length);
+        return res.status(200).end();
+      }
+    }
+
+    const filepath = getAudioFilePath(filename) || (isSafeDecoded ? getAudioFilePath(decodedFilename) : null);
+    if (filepath) {
+      const stat = fs.statSync(filepath);
+      res.setHeader('Content-Type', 'audio/wav');
+      res.setHeader('Content-Length', stat.size);
+      return res.status(200).end();
+    }
+
+    return res.status(404).end();
+  } catch (error) {
+    console.error('Error handling HEAD for audio:', error);
+    res.status(500).end();
+  }
+});
+
 router.get('/audio/:filename', async (req, res) => {
   try {
     const { filename } = req.params;

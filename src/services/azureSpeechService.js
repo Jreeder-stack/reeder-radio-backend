@@ -229,6 +229,23 @@ export function isConfigured() {
   return !!(AZURE_SPEECH_KEY && AZURE_SPEECH_REGION);
 }
 
+function extractPcmFromWav(buffer) {
+  if (!Buffer.isBuffer(buffer) || buffer.length < 44) return buffer;
+  if (buffer.slice(0, 4).toString('ascii') !== 'RIFF') return buffer;
+  if (buffer.slice(8, 12).toString('ascii') !== 'WAVE') return buffer;
+  let offset = 12;
+  while (offset + 8 <= buffer.length) {
+    const chunkId = buffer.slice(offset, offset + 4).toString('ascii');
+    const chunkSize = buffer.readUInt32LE(offset + 4);
+    if (chunkId === 'data') {
+      return buffer.slice(offset + 8, offset + 8 + chunkSize);
+    }
+    offset += 8 + chunkSize;
+    if (chunkSize % 2 !== 0) offset += 1;
+  }
+  return buffer.slice(44);
+}
+
 export async function speechToText(audioBuffer) {
   if (!isConfigured()) {
     throw new Error('Azure Speech not configured');
@@ -242,7 +259,8 @@ export async function speechToText(audioBuffer) {
       const pushStream = sdk.AudioInputStream.createPushStream(
         sdk.AudioStreamFormat.getWaveFormatPCM(16000, 16, 1)
       );
-      pushStream.write(audioBuffer);
+      const pcmBuffer = extractPcmFromWav(audioBuffer);
+      pushStream.write(pcmBuffer);
       pushStream.close();
 
       const audioConfig = sdk.AudioConfig.fromStreamInput(pushStream);
