@@ -1170,7 +1170,19 @@ export default function Admin({ user, onLogout }) {
                         credentials: "include",
                         body: fd,
                       });
-                      if (!res.ok) { const d = await res.json(); throw new Error(d.error || "Upload failed"); }
+                      if (!res.ok) {
+                        let errMsg = `Upload failed (HTTP ${res.status})`;
+                        try {
+                          const d = await res.json();
+                          if (d?.error) errMsg = d.error;
+                        } catch {
+                          if (res.status === 413) errMsg = "File too large. The server rejected it (check nginx/server size limit).";
+                          else if (res.status === 401) errMsg = "Not signed in. Please log in and try again.";
+                          else if (res.status === 403) errMsg = "Admin access required.";
+                          else if (res.status >= 500) errMsg = `Server error (HTTP ${res.status}). Check backend logs.`;
+                        }
+                        throw new Error(errMsg);
+                      }
                       setPagingToneFile(null);
                       setPagingToneName("");
                       e.target.reset();
