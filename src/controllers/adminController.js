@@ -3,9 +3,32 @@ import * as adminService from '../services/adminService.js';
 import * as authService from '../services/authService.js';
 import { success, error, created } from '../utils/response.js';
 import { startDispatcher, stopDispatcher, getDispatcher } from '../services/aiDispatchService.js';
-import { getAiDispatchChannel, setAiDispatchChannel, getAllChannels } from '../db/index.js';
+import { getAiDispatchChannel, setAiDispatchChannel, getAllChannels, setChannelAnnouncementAudio, setZoneAnnouncementAudio } from '../db/index.js';
 import { signalingService } from '../services/signalingService.js';
 import { scannerFeedService } from '../services/scannerFeedService.js';
+import { textToSpeech, isConfigured as isSpeechConfigured } from '../services/azureSpeechService.js';
+
+async function generateAndStoreChannelAnnouncement(channelId, channelName) {
+  if (!isSpeechConfigured()) return;
+  try {
+    const audioBuffer = await textToSpeech(channelName);
+    await setChannelAnnouncementAudio(channelId, audioBuffer);
+    console.log(`[TTS] Generated announcement audio for channel "${channelName}" (id=${channelId})`);
+  } catch (err) {
+    console.warn(`[TTS] Failed to generate announcement audio for channel "${channelName}":`, err.message);
+  }
+}
+
+async function generateAndStoreZoneAnnouncement(zoneId, zoneName) {
+  if (!isSpeechConfigured()) return;
+  try {
+    const audioBuffer = await textToSpeech(`Zone ${zoneName}`);
+    await setZoneAnnouncementAudio(zoneId, audioBuffer);
+    console.log(`[TTS] Generated announcement audio for zone "${zoneName}" (id=${zoneId})`);
+  } catch (err) {
+    console.warn(`[TTS] Failed to generate announcement audio for zone "${zoneName}":`, err.message);
+  }
+}
 
 const DSP_DEFAULTS = {
   txHpAlpha: 0.9889,
@@ -157,6 +180,7 @@ export async function updateChannel(req, res) {
     if (!channel) {
       return error(res, 'Channel not found', 404);
     }
+    generateAndStoreChannelAnnouncement(channel.id, channel.name).catch(() => {});
     success(res, { channel });
   } catch (err) {
     console.error('Update channel error:', err);
@@ -172,6 +196,7 @@ export async function createChannel(req, res) {
       return error(res, 'Name and zone required', 400);
     }
     const channel = await adminService.createChannel(name, zone, resolvedZoneId);
+    generateAndStoreChannelAnnouncement(channel.id, channel.name).catch(() => {});
     created(res, { channel });
   } catch (err) {
     if (err.code === '23505') {
@@ -213,6 +238,7 @@ export async function createZone(req, res) {
       return error(res, 'Zone name required', 400);
     }
     const zone = await adminService.createZone(name);
+    generateAndStoreZoneAnnouncement(zone.id, zone.name).catch(() => {});
     created(res, { zone });
   } catch (err) {
     if (err.code === '23505') {
@@ -234,6 +260,7 @@ export async function updateZone(req, res) {
     if (!zone) {
       return error(res, 'Zone not found', 404);
     }
+    generateAndStoreZoneAnnouncement(zone.id, zone.name).catch(() => {});
     success(res, { zone });
   } catch (err) {
     console.error('Update zone error:', err);

@@ -17,6 +17,7 @@ class ChannelRepository(private val api: ApiClient) {
 
     private companion object {
         const val AUTH_TAG = "[AUTH-TRACE]"
+        const val ANNOUNCE_TAG = "[Announce]"
     }
 
     suspend fun getChannels(): Result<List<Channel>> =
@@ -52,4 +53,42 @@ class ChannelRepository(private val api: ApiClient) {
 
     suspend fun getZones(): Result<List<Zone>> =
         getChannels().map { channels -> channels.toZones() }
+
+    suspend fun fetchChannelAnnouncementAudio(channelId: Int): Result<ByteArray> =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val request = Request.Builder()
+                    .url("${api.baseUrl}/api/channels/$channelId/announcement")
+                    .get()
+                    .build()
+                val response = api.httpClient.newCall(request).execute()
+                response.use { resp ->
+                    if (!resp.isSuccessful) {
+                        error("Channel announcement fetch failed (${resp.code})")
+                    }
+                    val bytes = resp.body?.bytes() ?: error("Empty announcement response")
+                    Log.d(ANNOUNCE_TAG, "Fetched channel announcement audio channelId=$channelId size=${bytes.size}")
+                    bytes
+                }
+            }
+        }
+
+    suspend fun fetchZoneAnnouncementAudio(zoneId: Int): Result<ByteArray> =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val request = Request.Builder()
+                    .url("${api.baseUrl}/api/zones/$zoneId/announcement")
+                    .get()
+                    .build()
+                val response = api.httpClient.newCall(request).execute()
+                response.use { resp ->
+                    if (!resp.isSuccessful) {
+                        error("Zone announcement fetch failed (${resp.code})")
+                    }
+                    val bytes = resp.body?.bytes() ?: error("Empty announcement response")
+                    Log.d(ANNOUNCE_TAG, "Fetched zone announcement audio zoneId=$zoneId size=${bytes.size}")
+                    bytes
+                }
+            }
+        }
 }

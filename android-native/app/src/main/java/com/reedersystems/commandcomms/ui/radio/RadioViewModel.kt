@@ -5,6 +5,9 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.media.AudioAttributes
+import android.media.AudioFormat
+import android.media.AudioTrack
 import android.os.BatteryManager
 import android.util.Log
 import androidx.core.content.ContextCompat
@@ -735,7 +738,11 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         val next = (_uiState.value.currentZoneIndex + 1) % zones.size
         val oldRoomKey = _uiState.value.currentChannel?.roomKey
         _uiState.update { it.copy(currentZoneIndex = next, currentChannelIndex = 0) }
-        onChannelChanged(oldRoomKey)
+        val newZone = _uiState.value.currentZone
+        val newChannel = _uiState.value.currentChannel
+        onChannelChangedWithAnnouncement(oldRoomKey) {
+            playZoneThenChannelAnnouncement(newZone?.id, newChannel?.id)
+        }
     }
 
     fun prevZone() {
@@ -744,7 +751,11 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         val p = (_uiState.value.currentZoneIndex - 1 + zones.size) % zones.size
         val oldRoomKey = _uiState.value.currentChannel?.roomKey
         _uiState.update { it.copy(currentZoneIndex = p, currentChannelIndex = 0) }
-        onChannelChanged(oldRoomKey)
+        val newZone = _uiState.value.currentZone
+        val newChannel = _uiState.value.currentChannel
+        onChannelChangedWithAnnouncement(oldRoomKey) {
+            playZoneThenChannelAnnouncement(newZone?.id, newChannel?.id)
+        }
     }
 
     fun nextChannel() {
@@ -753,7 +764,10 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         val next = (_uiState.value.currentChannelIndex + 1) % channels.size
         val oldRoomKey = _uiState.value.currentChannel?.roomKey
         _uiState.update { it.copy(currentChannelIndex = next) }
-        onChannelChanged(oldRoomKey)
+        val newChannel = _uiState.value.currentChannel
+        onChannelChangedWithAnnouncement(oldRoomKey) {
+            newChannel?.id?.let { playChannelAnnouncement(it) }
+        }
     }
 
     fun prevChannel() {
@@ -762,7 +776,10 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         val p = (_uiState.value.currentChannelIndex - 1 + channels.size) % channels.size
         val oldRoomKey = _uiState.value.currentChannel?.roomKey
         _uiState.update { it.copy(currentChannelIndex = p) }
-        onChannelChanged(oldRoomKey)
+        val newChannel = _uiState.value.currentChannel
+        onChannelChangedWithAnnouncement(oldRoomKey) {
+            newChannel?.id?.let { playChannelAnnouncement(it) }
+        }
     }
 
     private fun onChannelChanged(oldRoomKey: String? = null) {
@@ -780,6 +797,30 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         updateServiceChannel()
     }
 
+    private fun onChannelChangedWithAnnouncement(
+        oldRoomKey: String?,
+        announcementBlock: suspend () -> Unit
+    ) {
+        val newRoomKey = _uiState.value.currentChannel?.roomKey
+        if (oldRoomKey != null && oldRoomKey != newRoomKey) {
+            activeTransmittingUnitStaleJob?.cancel()
+            _uiState.update { it.copy(activeTransmittingUnit = null) }
+            if (app.signalingRepository.connectionState.value == ConnectionState.AUTHENTICATED) {
+                app.signalingRepository.leaveChannel(oldRoomKey)
+            }
+        }
+        viewModelScope.launch {
+            announcementBlock()
+            val activeRoomKey = _uiState.value.currentChannel?.roomKey
+            if (activeRoomKey != null && activeRoomKey != oldRoomKey &&
+                app.signalingRepository.connectionState.value == ConnectionState.AUTHENTICATED
+            ) {
+                app.signalingRepository.joinChannel(activeRoomKey)
+            }
+            updateServiceChannel()
+        }
+    }
+
     fun logout(onComplete: () -> Unit) {
         viewModelScope.launch {
             if (_uiState.value.myEmergencyActive) onEmergencyClear()
@@ -790,6 +831,71 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
             app.sessionPrefs.clear()
             app.serviceConnectionPrefs.clear()
             onComplete()
+        }
+    }
+
+    private suspend fun playPcmAudio(pcmBytes: ByteArray) = kotlinx.coroutines.withContext(
+        kotlinx.coroutines.Dispatchers.IO
+    ) {
+        val sampleRate = 16000
+        val channelConfig = AudioFormat.CHANNEL_OUT_MONO
+        val encoding = AudioFormat.ENCODING_PCM_16BIT
+        val minBuf = AudioTrack.getMinBufferSize(sampleRate, channelConfig, encoding)
+        val bufSize = maxOf(minBuf, pcmBytes.size)
+        var track: AudioTrack? = null
+        try {
+            val attrs = AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION_SIGNALLING)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                .build()
+            val format = AudioFormat.Builder()
+                .setSampleRate(sampleRate)
+                .setChannelMask(channelConfig)
+                .setEncoding(encoding)
+                .build()
+            track = AudioTrack.Builder()
+                .setAudioAttributes(attrs)
+                .setAudioFormat(format)
+                .setBufferSizeInBytes(bufSize)
+                .setTransferMode(AudioTrack.MODE_STATIC)
+                .build()
+            track.write(pcmBytes, 0, pcmBytes.size)
+            track.play()
+            val durationMs = (pcmBytes.size.toLong() * 1000L) / (sampleRate * 2)
+            kotlinx.coroutines.delay(durationMs + 100)
+        } catch (e: Exception) {
+            Log.w(TAG, "Announcement PCM playback error: ${e.message}")
+        } finally {
+            runCatching { track?.stop() }
+            runCatching { track?.release() }
+        }
+    }
+
+    private suspend fun playChannelAnnouncement(channelId: Int) {
+        val result = app.channelRepository.fetchChannelAnnouncementAudio(channelId)
+        result.onSuccess { bytes ->
+            playPcmAudio(bytes)
+        }.onFailure { err ->
+            Log.w(TAG, "Channel announcement fetch failed channelId=$channelId: ${err.message}")
+        }
+    }
+
+    private suspend fun playZoneThenChannelAnnouncement(zoneId: Int?, channelId: Int?) {
+        if (zoneId != null) {
+            val zoneResult = app.channelRepository.fetchZoneAnnouncementAudio(zoneId)
+            zoneResult.onSuccess { bytes ->
+                playPcmAudio(bytes)
+            }.onFailure { err ->
+                Log.w(TAG, "Zone announcement fetch failed zoneId=$zoneId: ${err.message}")
+            }
+        }
+        if (channelId != null) {
+            val channelResult = app.channelRepository.fetchChannelAnnouncementAudio(channelId)
+            channelResult.onSuccess { bytes ->
+                playPcmAudio(bytes)
+            }.onFailure { err ->
+                Log.w(TAG, "Channel announcement fetch failed channelId=$channelId: ${err.message}")
+            }
         }
     }
 

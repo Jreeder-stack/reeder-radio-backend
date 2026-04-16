@@ -266,6 +266,9 @@ export async function initializeDatabase() {
       console.warn('[DB] Audio data migration from disk skipped:', err.message);
     }
 
+    await client.query(`ALTER TABLE channels ADD COLUMN IF NOT EXISTS announcement_audio BYTEA`);
+    await client.query(`ALTER TABLE zones ADD COLUMN IF NOT EXISTS announcement_audio BYTEA`);
+
     await client.query(`CREATE INDEX IF NOT EXISTS idx_units_last_seen ON units (last_seen)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_activity_logs_created_at ON activity_logs (created_at)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_activity_logs_username ON activity_logs (username)`);
@@ -956,6 +959,36 @@ export async function setRadioLocked(radioId, isLocked) {
     [isLocked, radioId]
   );
   return result.rows[0];
+}
+
+export async function setChannelAnnouncementAudio(channelId, audioBuffer) {
+  await pool.query(
+    `UPDATE channels SET announcement_audio = $1 WHERE id = $2`,
+    [audioBuffer, channelId]
+  );
+}
+
+export async function getChannelAnnouncementAudio(channelId) {
+  const result = await pool.query(
+    `SELECT announcement_audio FROM channels WHERE id = $1`,
+    [channelId]
+  );
+  return result.rows[0]?.announcement_audio || null;
+}
+
+export async function setZoneAnnouncementAudio(zoneId, audioBuffer) {
+  await pool.query(
+    `UPDATE zones SET announcement_audio = $1 WHERE id = $2`,
+    [audioBuffer, zoneId]
+  );
+}
+
+export async function getZoneAnnouncementAudio(zoneId) {
+  const result = await pool.query(
+    `SELECT announcement_audio FROM zones WHERE id = $1`,
+    [zoneId]
+  );
+  return result.rows[0]?.announcement_audio || null;
 }
 
 export default pool;

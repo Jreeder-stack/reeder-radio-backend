@@ -1,5 +1,6 @@
 import * as channelsService from '../services/channelsService.js';
 import { success, error } from '../utils/response.js';
+import { getChannelAnnouncementAudio, getZoneAnnouncementAudio } from '../db/index.js';
 
 export async function getAccessibleChannels(req, res) {
   try {
@@ -19,5 +20,37 @@ export async function getAccessibleChannels(req, res) {
       console.error('[API /channels] Session user is undefined — session may be invalid or expired');
     }
     error(res, 'Failed to get channels', 500);
+  }
+}
+
+export async function getChannelAnnouncement(req, res) {
+  try {
+    const { id } = req.params;
+    const audio = await getChannelAnnouncementAudio(parseInt(id, 10));
+    if (!audio) {
+      return res.status(404).json({ error: 'No announcement audio found for this channel' });
+    }
+    res.set('Content-Type', 'audio/L16;rate=16000;channels=1');
+    res.set('Cache-Control', 'public, max-age=3600');
+    res.send(audio);
+  } catch (err) {
+    console.error('[API /channels/:id/announcement] Error:', err);
+    error(res, 'Failed to get channel announcement', 500);
+  }
+}
+
+export async function getZoneAnnouncement(req, res) {
+  try {
+    const { id } = req.params;
+    const audio = await getZoneAnnouncementAudio(parseInt(id, 10));
+    if (!audio) {
+      return res.status(404).json({ error: 'No announcement audio found for this zone' });
+    }
+    res.set('Content-Type', 'audio/L16;rate=16000;channels=1');
+    res.set('Cache-Control', 'public, max-age=3600');
+    res.send(audio);
+  } catch (err) {
+    console.error('[API /zones/:id/announcement] Error:', err);
+    error(res, 'Failed to get zone announcement', 500);
   }
 }

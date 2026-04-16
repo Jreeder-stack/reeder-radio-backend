@@ -6,7 +6,6 @@ const router = express.Router();
 
 router.use(requireAuthOrRadioToken);
 
-router.get('/', channelsController.getAccessibleChannels);
-router.get('/:id/announcement', channelsController.getChannelAnnouncement);
+router.get('/:id/announcement', channelsController.getZoneAnnouncement);
 
 export default router;
