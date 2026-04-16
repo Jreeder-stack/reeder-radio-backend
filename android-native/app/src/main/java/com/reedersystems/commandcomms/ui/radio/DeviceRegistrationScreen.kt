@@ -47,7 +47,9 @@ fun DeviceRegistrationScreen(
         val alreadyGranted = ContextCompat.checkSelfPermission(
             context, Manifest.permission.READ_PHONE_STATE
         ) == PackageManager.PERMISSION_GRANTED
-        if (!alreadyGranted) {
+        if (alreadyGranted) {
+            viewModel.refreshDeviceIdentity()
+        } else {
             permissionLauncher.launch(Manifest.permission.READ_PHONE_STATE)
         }
     }
