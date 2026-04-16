@@ -5,4 +5,11 @@
         <item name="android:statusBarColor">#F0F0F0</item>
         <item name="android:navigationBarColor">#1A1A1A</item>
     </style>
+    <style name="Theme.CommandComms.PageAlert" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:windowBackground">#CC0000</item>
+        <item name="android:statusBarColor">#CC0000</item>
+        <item name="android:navigationBarColor">#CC0000</item>
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowNoTitle">true</item>
+    </style>
 </resources>

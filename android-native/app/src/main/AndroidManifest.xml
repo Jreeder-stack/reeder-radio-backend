@@ -44,6 +44,16 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".ui.paging.PageAlertActivity"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:excludeFromRecents="true"
+            android:showOnLockScreen="true"
+            android:turnScreenOn="true"
+            android:showForAllUsers="true"
+            android:theme="@style/Theme.CommandComms.PageAlert" />
+
         <service
             android:name=".audio.BackgroundAudioService"
             android:exported="false"

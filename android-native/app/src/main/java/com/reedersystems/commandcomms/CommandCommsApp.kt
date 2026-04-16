@@ -210,7 +210,7 @@ class CommandCommsApp : Application() {
             enableVibration(true)
             setBypassDnd(true)
             setShowBadge(true)
-            setSound(alarmSound, alarmAudioAttrs)
+            setSound(null, null)
         }
 
         nm.createNotificationChannels(listOf(emergency, pttService, pttConnected, pttDisconnected, pttDegraded, messages, system, paging))
