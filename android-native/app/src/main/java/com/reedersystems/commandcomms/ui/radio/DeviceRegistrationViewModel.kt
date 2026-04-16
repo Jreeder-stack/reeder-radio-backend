@@ -53,8 +53,8 @@ class DeviceRegistrationViewModel(application: Application) : AndroidViewModel(a
         val serialTrimmed = serial.trim()
         val imeiTrimmed = imei.trim()
 
-        if (serialTrimmed.isBlank()) {
-            _uiState.value = RegistrationUiState.Error("Serial number is required")
+        if (serialTrimmed.isBlank() || imeiTrimmed.isBlank()) {
+            _uiState.value = RegistrationUiState.Error("Serial number and IMEI are required")
             return
         }
 

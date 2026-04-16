@@ -156,7 +156,7 @@ fun DeviceRegistrationScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = "IMEI (OPTIONAL — AUTO-FILLED IF AVAILABLE)",
+                text = "IMEI",
                 color = ColorTextSecondary,
                 fontSize = 11.sp,
                 fontFamily = FontFamily.Monospace,
@@ -175,7 +175,7 @@ fun DeviceRegistrationScreen(
                 },
                 placeholder = {
                     Text(
-                        text = "Optional — enter manually or leave blank",
+                        text = "Unable to read automatically — please enter manually",
                         color = ColorTextSecondary,
                         fontSize = 12.sp
                     )
