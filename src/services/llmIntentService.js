@@ -173,6 +173,12 @@ Return: { "intent": "SILENCE" }
 Unit is requesting a status change from dispatch. TIER 1: Use fixed short format — no unit ID, just status and time.
 Return: { "intent": "STATUS_CHANGE", "response": "<short: Copy/10-4, status, time>", "cadStatus": "<status_value>" }
 
+### STATUS_CHANGE_OTHER
+A unit is requesting a status change for A DIFFERENT unit. Phrases: "show Chester-1 off duty", "put Lincoln-3 in service", "Chester-1 is 10-8", "mark Beaver-2 out of service".
+The calling unit is telling dispatch to change ANOTHER unit's status. Extract the target unit ID and the desired status.
+TIER 1: Use fixed short format including the target unit name — "Copy, [target unit] [status], [time]."
+Return: { "intent": "STATUS_CHANGE_OTHER", "response": "<short: Copy, target unit status, time>", "cadStatus": "<status_value>", "slots": { "targetUnit": "<target unit ID>" } }
+
 ### ZONE_CHANGE
 Unit wants to change their zone/area AND provides the zone name inline.
 Return: { "intent": "ZONE_CHANGE", "response": null, "slots": { "zone": "<extracted zone>" } }
@@ -215,7 +221,8 @@ Return: { "intent": "CONFIRM", "response": null }
 
 ### DENY
 Unit is denying/rejecting something in response to YOUR question. ONLY in AWAITING_* states.
-Return: { "intent": "DENY", "response": null }
+If the unit includes a partial correction along with their denial (e.g., "negative, it's Chalfont PA" or "no, that's 1500 Main Street"), extract the correction into the optional slots. This lets the system merge the correction without asking for the full address again.
+Return: { "intent": "DENY", "response": null, "slots": { "correctedCity": "<if city was corrected>", "correctedAddress": "<if street address was corrected>", "correctedState": "<if state was corrected>" } }
 
 ### PERSON_CHECK_START
 Unit is requesting a records/person check (10-27).
@@ -362,7 +369,7 @@ You will be told the current conversation state. Use it to interpret ambiguous i
 - AWAITING_ZONE: Unit is providing a zone name. Treat their entire transcript as the zone name → return ZONE_CHANGE with that zone.
 - AWAITING_ZONE_CONFIRM: Unit is confirming or denying a zone change → return CONFIRM or DENY.
 - AWAITING_DETAIL_LOCATION: Unit is providing a detail location. Treat their entire transcript as the location → return DETAIL with that location.
-- AWAITING_DETAIL_CONFIRM: Unit is confirming or denying a detail → return CONFIRM or DENY.
+- AWAITING_DETAIL_CONFIRM: Unit is confirming or denying a detail → return CONFIRM or DENY. If the unit denies and provides a partial correction (e.g., "negative, it's Chalfont PA"), return DENY with correction slots (correctedCity, correctedAddress, correctedState as applicable).
 - AWAITING_PERSON_DETAILS: Unit is providing name/DOB → return PERSON_DETAILS with extracted fields.
 - AWAITING_PERSON_DOB: Unit is providing DOB → return PERSON_DETAILS with dob slot.
 - AWAITING_PERSON_FIRSTNAME: Unit is providing first name → return PERSON_DETAILS with firstName slot.

@@ -17,6 +17,34 @@ if (!fs.existsSync(AUDIO_DIR)) {
   fs.mkdirSync(AUDIO_DIR, { recursive: true });
 }
 
+const SPEECH_LOG_DIR = path.join(process.cwd(), 'logs');
+if (!fs.existsSync(SPEECH_LOG_DIR)) {
+  fs.mkdirSync(SPEECH_LOG_DIR, { recursive: true });
+}
+const SPEECH_LOG_FILE = path.join(SPEECH_LOG_DIR, 'ai-dispatch-speech.log');
+const SPEECH_LOG_MAX_SIZE = 5 * 1024 * 1024;
+
+let _speechLogWarnedAt = 0;
+function writeSpeechLogLine(line) {
+  try {
+    if (fs.existsSync(SPEECH_LOG_FILE)) {
+      const stats = fs.statSync(SPEECH_LOG_FILE);
+      if (stats.size > SPEECH_LOG_MAX_SIZE) {
+        const rotated = SPEECH_LOG_FILE + '.1';
+        if (fs.existsSync(rotated)) fs.unlinkSync(rotated);
+        fs.renameSync(SPEECH_LOG_FILE, rotated);
+      }
+    }
+    fs.appendFileSync(SPEECH_LOG_FILE, line + '\n');
+  } catch (err) {
+    const now = Date.now();
+    if (now - _speechLogWarnedAt > 60000) {
+      _speechLogWarnedAt = now;
+      console.warn(`[AI-DISPATCH-SPEECH] Log file write failed: ${err.message}`);
+    }
+  }
+}
+
 const MY_LOCATION_PATTERN = /\b(at my location|my location|at my current location|my current location|my GPS|my gps|at my GPS|at my gps|where I am|where i am|my position|at my position|my current position|my address|at my address|this address|at this address|this location|at this location|my detail|at my detail|my detail address|at my detail address|my detail location|at my detail location|my assigned location|at my assigned location|my zone|at my zone)\b/i;
 
 function isMyLocationPhrase(text) {
@@ -175,7 +203,9 @@ class EmergencyEscalationController {
 
   logSpeechEvent(unitId, heard, intent, response) {
     const timestamp = new Date().toISOString();
-    console.log(`[AI-DISPATCH-SPEECH] ${timestamp} | unit=${unitId} | heard="${heard}" | intent=${intent} | response="${response || '(none)'}"`);
+    const line = `[AI-DISPATCH-SPEECH] ${timestamp} | unit=${unitId} | heard="${heard}" | intent=${intent} | response="${response || '(none)'}"`; 
+    console.log(line);
+    writeSpeechLogLine(line);
   }
 
   hasActiveEscalation(unitId) {
@@ -453,7 +483,9 @@ class AIDispatcher {
 
   logSpeechEvent(unitId, transcript, intent, response) {
     const timestamp = new Date().toISOString();
-    console.log(`[AI-DISPATCH-SPEECH] ${timestamp} | unit=${unitId} | heard="${transcript}" | intent=${intent} | response="${response || '(none)'}"`);
+    const line = `[AI-DISPATCH-SPEECH] ${timestamp} | unit=${unitId} | heard="${transcript}" | intent=${intent} | response="${response || '(none)'}"`; 
+    console.log(line);
+    writeSpeechLogLine(line);
   }
 
   get humanParticipantCount() {
@@ -1684,6 +1716,53 @@ class AIDispatcher {
           break;
         }
 
+        case 'STATUS_CHANGE_OTHER': {
+          const targetUnit = result.slots?.targetUnit?.toUpperCase().replace(/\s+/g, '-') || null;
+          if (!targetUnit) {
+            const noTargetResp = result.response || `${participantId}, say again, which unit?`;
+            await this.speak(noTargetResp, participantId);
+            this.addConversationExchange(participantId, transcript, noTargetResp);
+            break;
+          }
+          let otherStatusFailed = false;
+          let otherStatusFailureType = null;
+          if (result.cadStatus) {
+            if (!cadService.isConfigured()) {
+              otherStatusFailed = true;
+              otherStatusFailureType = 'NOT_CONFIGURED';
+              this.log('CAD_NOT_CONFIGURED', { unitId: targetUnit, requestedBy: participantId, status: result.cadStatus });
+            } else {
+              try {
+                const cadResult = await cadService.updateUnitStatus(targetUnit, result.cadStatus);
+                if (!cadResult || !cadResult.success) {
+                  otherStatusFailed = true;
+                  otherStatusFailureType = cadResult?.failureType || 'API_REJECTION';
+                  this.log('CAD_STATUS_OTHER_FAILED', { targetUnit, requestedBy: participantId, status: result.cadStatus, failureType: otherStatusFailureType, error: cadResult?.error });
+                }
+                this.log('CAD_STATUS_OTHER_UPDATE', { targetUnit, requestedBy: participantId, status: result.cadStatus, success: cadResult?.success });
+              } catch (cadError) {
+                otherStatusFailed = true;
+                otherStatusFailureType = 'UNREACHABLE';
+                this.log('CAD_ERROR', { error: cadError.message, stack: cadError.stack });
+              }
+            }
+          }
+          setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+          let otherStatusResp;
+          if (otherStatusFailed && otherStatusFailureType === 'NOT_CONFIGURED') {
+            otherStatusResp = `${participantId}, 10-4. CAD is not available, update via the MDT.`;
+          } else if (otherStatusFailed && otherStatusFailureType === 'UNREACHABLE') {
+            otherStatusResp = `${participantId}, 10-4. Unable to reach CAD, update via the MDT.`;
+          } else if (otherStatusFailed) {
+            otherStatusResp = `${participantId}, 10-4. CAD update for ${targetUnit} did not go through.`;
+          } else {
+            otherStatusResp = result.response || `Copy, ${targetUnit} ${result.cadStatus || 'updated'}, ${this.formatMilitaryTime()}.`;
+          }
+          await this.speak(otherStatusResp, participantId);
+          this.addConversationExchange(participantId, transcript, otherStatusResp);
+          break;
+        }
+
         case 'ZONE_CHANGE': {
           const zone = normalizeAddress(result.slots?.zone);
           if (zone) {
@@ -1764,7 +1843,7 @@ class AIDispatcher {
           if (state === DISPATCHER_STATE.AWAITING_ZONE_CONFIRM) {
             await this.handleZoneConfirm(participantId, transcript, slots);
           } else if (state === DISPATCHER_STATE.AWAITING_DETAIL_CONFIRM) {
-            await this.handleDetailConfirm(participantId, transcript, slots);
+            await this.handleDetailConfirm(participantId, transcript, slots, result.slots);
           } else if (state === DISPATCHER_STATE.AWAITING_PERSON_CONFIRM) {
             await this.handlePersonCheckConfirm(participantId, transcript, slots);
           } else if (state === DISPATCHER_STATE.AWAITING_SECURE_CONFIRM) {
@@ -2529,9 +2608,38 @@ class AIDispatcher {
   async handleDetailConfirmPrompt(participantId, location) {
     this.log('DETAIL_CONFIRM_PROMPT', { participant: participantId, location });
     
-    setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_DETAIL_CONFIRM, null, { location }, true);
+    let geocodeWarning = null;
+    let geocodedCity = null;
+    try {
+      const geoResult = await locationService.forwardGeocode(location);
+      if (geoResult) {
+        geocodedCity = geoResult.municipality || geoResult.township || null;
+        const addressParts = location.split(',').map(p => p.trim()).filter(Boolean);
+        const spokenCity = addressParts.length >= 2
+          ? addressParts[1].replace(/\b[A-Z]{2}\b\s*\d{0,5}$/i, '').trim()
+          : null;
+        if (spokenCity && geocodedCity && spokenCity.toLowerCase() !== geocodedCity.toLowerCase()) {
+          geocodeWarning = `Note: that address geocodes to ${geocodedCity}`;
+          this.log('GEOCODE_CITY_MISMATCH', { participant: participantId, location, spokenCity, geocodedCity });
+        }
+      } else {
+        geocodeWarning = 'address could not be verified';
+        this.log('GEOCODE_NO_RESULT', { participant: participantId, location });
+      }
+    } catch (geoErr) {
+      this.log('GEOCODE_ERROR', { participant: participantId, error: geoErr.message });
+    }
+
+    setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_DETAIL_CONFIRM, null, { location, geocodedCity }, true);
     
-    const confirmResponse = `${participantId}, just to confirm, detail at ${location}?`;
+    let confirmResponse;
+    if (geocodeWarning && geocodeWarning.startsWith('Note:')) {
+      confirmResponse = `${participantId}, just to confirm, detail at ${location}? ${geocodeWarning}.`;
+    } else if (geocodeWarning) {
+      confirmResponse = `${participantId}, just to confirm, detail at ${location}? Be advised, ${geocodeWarning}.`;
+    } else {
+      confirmResponse = `${participantId}, just to confirm, detail at ${location}?`;
+    }
     await this.speak(confirmResponse, participantId);
   }
 
@@ -2558,8 +2666,8 @@ class AIDispatcher {
     await this.handleDetailConfirmPrompt(participantId, location);
   }
 
-  async handleDetailConfirm(participantId, rawTranscript, slots) {
-    this.log('DETAIL_CONFIRM', { participant: participantId, transcript: rawTranscript, slots });
+  async handleDetailConfirm(participantId, rawTranscript, slots, llmCorrectionSlots = null) {
+    this.log('DETAIL_CONFIRM', { participant: participantId, transcript: rawTranscript, slots, llmCorrectionSlots });
     
     const normalized = rawTranscript.toLowerCase().trim();
     
@@ -2588,6 +2696,36 @@ class AIDispatcher {
     }
     
     if (isDenied) {
+      const existingLocation = slots.location || '';
+      
+      if (llmCorrectionSlots && existingLocation) {
+        const { correctedCity, correctedAddress, correctedState } = llmCorrectionSlots;
+        if (correctedAddress) {
+          const fullCorrection = normalizeAddress(correctedAddress);
+          this.log('DETAIL_LLM_CORRECTION', { participantId, existing: existingLocation, correctedAddress: fullCorrection });
+          await this.handleDetailConfirmPrompt(participantId, fullCorrection);
+          return;
+        }
+        if (correctedCity) {
+          const existParts = existingLocation.split(',').map(p => p.trim()).filter(Boolean);
+          const street = existParts[0] || '';
+          const cityPart = correctedState ? `${correctedCity}, ${correctedState}` : correctedCity;
+          const merged = street ? `${street}, ${cityPart}` : cityPart;
+          this.log('DETAIL_LLM_CITY_CORRECTION', { participantId, existing: existingLocation, correctedCity, merged });
+          await this.handleDetailConfirmPrompt(participantId, merged);
+          return;
+        }
+      }
+
+      const correctionText = this.extractPartialCorrection(normalized);
+      
+      if (correctionText && existingLocation) {
+        const mergedLocation = this.mergeAddressCorrection(existingLocation, correctionText);
+        this.log('DETAIL_PARTIAL_CORRECTION', { participantId, existing: existingLocation, correction: correctionText, merged: mergedLocation });
+        await this.handleDetailConfirmPrompt(participantId, mergedLocation);
+        return;
+      }
+      
       setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_DETAIL_LOCATION, null, {}, true);
       const retryResponse = `${participantId}, can you repeat the location?`;
       await this.speak(retryResponse, participantId);
@@ -2653,6 +2791,60 @@ class AIDispatcher {
     
     await this.logToCallNotes(participantId, `Detail at: ${location}`);
     setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+  }
+
+  extractPartialCorrection(denialText) {
+    const denyPrefixes = [
+      'negative', 'neg', 'no', 'nope', 'incorrect', 'wrong',
+      'not correct', 'that is wrong', "that's wrong", 'thats wrong',
+      'repeat', 'say again', 'try again'
+    ];
+    let remaining = denialText.trim();
+    for (const prefix of denyPrefixes) {
+      if (remaining.startsWith(prefix)) {
+        remaining = remaining.slice(prefix.length);
+        break;
+      }
+    }
+    remaining = remaining.replace(/^[,.\s]+/, '').trim();
+    remaining = remaining.replace(/^(it'?s\s+going\s+to\s+be|it'?s\s+at|it'?s|that'?s|it\s+should\s+be|should\s+be|make\s+it|make\s+that)\s+/i, '').trim();
+    if (remaining.length < 2) return null;
+    return remaining;
+  }
+
+  mergeAddressCorrection(existingAddress, correction) {
+    const correctionNorm = normalizeAddress(correction);
+    const corrParts = correctionNorm.split(',').map(p => p.trim()).filter(Boolean);
+    const existParts = existingAddress.split(',').map(p => p.trim()).filter(Boolean);
+    
+    const stateAbbrevPattern = /\b[A-Z]{2}$/;
+    const hasStreetNumber = /^\d+\s+/.test(corrParts[0]);
+    
+    if (hasStreetNumber) {
+      return correctionNorm;
+    }
+    
+    if (corrParts.length === 1 && existParts.length >= 2) {
+      const corrToken = corrParts[0];
+      const corrHasState = stateAbbrevPattern.test(corrToken);
+      if (corrHasState) {
+        const cityState = corrToken;
+        existParts[1] = cityState;
+        return existParts.slice(0, 2).join(', ');
+      }
+      existParts[1] = corrToken;
+      if (existParts.length > 2) {
+        return existParts.join(', ');
+      }
+      return existParts.join(', ');
+    }
+    
+    if (corrParts.length >= 2 && existParts.length >= 1 && !hasStreetNumber) {
+      existParts.splice(1, existParts.length - 1, ...corrParts);
+      return existParts.join(', ');
+    }
+    
+    return correctionNorm;
   }
 
   async handleCallNatureInput(participantId, transcript, savedSlots) {
