@@ -13,6 +13,9 @@ import android.util.Log
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.messaging.FirebaseMessaging
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
 import com.reedersystems.commandcomms.CommandCommsApp
 import com.reedersystems.commandcomms.KeyAction
 import com.reedersystems.commandcomms.audio.BackgroundAudioService
@@ -20,6 +23,7 @@ import com.reedersystems.commandcomms.audio.radio.RadioState
 import com.reedersystems.commandcomms.data.model.Channel
 import com.reedersystems.commandcomms.data.model.PttState
 import com.reedersystems.commandcomms.data.model.Zone
+import com.reedersystems.commandcomms.messaging.CommandCommsFirebaseService
 import com.reedersystems.commandcomms.signaling.ConnectionState
 import com.reedersystems.commandcomms.signaling.SignalingEvent
 import kotlinx.coroutines.Job
@@ -30,6 +34,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 
 private const val TAG = "[PTT-DIAG]"
 private const val STARTUP_TAG = "[APP-STARTUP]"
@@ -76,6 +81,9 @@ data class RadioUiState(
     val reassignedUnitId: String? = null,
     val scanActiveChannel: String? = null,
     val scanActiveUnit: String? = null,
+    val showPageAlert: Boolean = false,
+    val pageAlertMessage: String = "",
+    val pageAlertSender: String = "DISPATCH",
 ) {
     val currentZone: Zone? get() = zones.getOrNull(currentZoneIndex)
     val currentChannel: Channel? get() = currentZone?.channels?.getOrNull(currentChannelIndex)
@@ -198,7 +206,94 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         observeSignaling()
         collectKeyEvents()
         registerPttFailureReceiver()
+        registerPageReceiver()
         observeRadioState()
+        checkPendingPage()
+        registerFcmToken()
+    }
+
+    private fun checkPendingPage() {
+        val pageId = app.pendingPageId ?: return
+        val message = app.pendingPageMessage ?: return
+        val sender = app.pendingPageSender ?: "DISPATCH"
+        val channelId = app.pendingPageChannelId
+        app.pendingPageId = null
+        app.pendingPageMessage = null
+        app.pendingPageSender = null
+        app.pendingPageChannelId = null
+        Log.d(TAG, "[PAGE] Consuming pending page id=$pageId")
+        _uiState.update { it.copy(showPageAlert = true, pageAlertMessage = message, pageAlertSender = sender) }
+        if (!channelId.isNullOrBlank()) {
+            channelId.toIntOrNull()?.let { switchToChannelById(it) }
+        }
+    }
+
+    private val pageReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (intent.action != CommandCommsFirebaseService.ACTION_PAGE_RECEIVED) return
+            val message = intent.getStringExtra(CommandCommsFirebaseService.EXTRA_PAGE_MESSAGE) ?: return
+            val sender = intent.getStringExtra(CommandCommsFirebaseService.EXTRA_PAGE_SENDER) ?: "DISPATCH"
+            val channelId = intent.getStringExtra(CommandCommsFirebaseService.EXTRA_PAGING_CHANNEL_ID) ?: ""
+            Log.d(TAG, "[PAGE] Broadcast received: message=$message sender=$sender channel=$channelId")
+            _uiState.update { it.copy(showPageAlert = true, pageAlertMessage = message, pageAlertSender = sender) }
+            if (channelId.isNotBlank()) {
+                channelId.toIntOrNull()?.let { switchToChannelById(it) }
+            }
+        }
+    }
+
+    private fun registerPageReceiver() {
+        val filter = IntentFilter(CommandCommsFirebaseService.ACTION_PAGE_RECEIVED)
+        ContextCompat.registerReceiver(
+            getApplication(),
+            pageReceiver,
+            filter,
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
+        Log.d(TAG, "Page broadcast receiver registered")
+    }
+
+    fun dismissPageAlert() {
+        _uiState.update { it.copy(showPageAlert = false) }
+    }
+
+    fun switchToChannelById(targetChannelId: Int) {
+        val zones = _uiState.value.zones
+        for (zoneIdx in zones.indices) {
+            val channels = zones[zoneIdx].channels
+            for (chIdx in channels.indices) {
+                if (channels[chIdx].id == targetChannelId) {
+                    val oldRoomKey = _uiState.value.currentChannel?.roomKey
+                    _uiState.update { it.copy(currentZoneIndex = zoneIdx, currentChannelIndex = chIdx) }
+                    onChannelChangedWithAnnouncement(oldRoomKey)
+                    Log.d(TAG, "[PAGE] Switched to paging channel id=$targetChannelId zone=$zoneIdx ch=$chIdx")
+                    return
+                }
+            }
+        }
+        Log.w(TAG, "[PAGE] Paging channel id=$targetChannelId not found in zones")
+    }
+
+    private fun registerFcmToken() {
+        viewModelScope.launch {
+            try {
+                val token = FirebaseMessaging.getInstance().token.await()
+                Log.d(TAG, "[FCM] Got token, registering with backend")
+                val body = org.json.JSONObject().apply { put("fcmToken", token) }
+                    .toString()
+                    .toByteArray()
+                val mediaType = "application/json".toMediaType()
+                val request = okhttp3.Request.Builder()
+                    .url("${app.apiClient.baseUrl}/api/radios/fcm-token")
+                    .post(body.toRequestBody(mediaType))
+                    .build()
+                app.apiClient.httpClient.newCall(request).execute().use { resp ->
+                    Log.d(TAG, "[FCM] Token registration response: ${resp.code}")
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "[FCM] Token registration failed: ${e.message}")
+            }
+        }
     }
 
     private fun registerPttFailureReceiver() {
@@ -907,6 +1002,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         app.toneEngine.stopCountdownBeep()
         locationTracker.stopTracking()
         runCatching { getApplication<Application>().unregisterReceiver(pttTxFailedReceiver) }
+        runCatching { getApplication<Application>().unregisterReceiver(pageReceiver) }
         super.onCleared()
     }
 }

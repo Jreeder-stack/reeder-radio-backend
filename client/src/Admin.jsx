@@ -20,6 +20,12 @@ export default function Admin({ user, onLogout }) {
   const [aiDispatchLoading, setAiDispatchLoading] = useState(false);
   const [aiDispatchPipeline, setAiDispatchPipeline] = useState(null);
 
+  const [pagingTones, setPagingTones] = useState([]);
+  const [pagingChannelId, setPagingChannelId] = useState("");
+  const [pagingLoading, setPagingLoading] = useState(false);
+  const [pagingToneFile, setPagingToneFile] = useState(null);
+  const [pagingToneName, setPagingToneName] = useState("");
+
   const [scannerEnabled, setScannerEnabled] = useState(false);
   const [scannerChannel, setScannerChannel] = useState("");
   const [scannerUrl, setScannerUrl] = useState("");
@@ -65,7 +71,27 @@ export default function Admin({ user, onLogout }) {
 
   useEffect(() => {
     loadData();
+    loadPagingData();
   }, []);
+
+  const loadPagingData = async () => {
+    try {
+      const [tonesRes, channelRes] = await Promise.all([
+        fetch("/api/paging-tone/", { credentials: "include" }),
+        fetch("/api/paging-tone/channel", { credentials: "include" }),
+      ]);
+      if (tonesRes.ok) {
+        const data = await tonesRes.json();
+        setPagingTones(data.tones || []);
+      }
+      if (channelRes.ok) {
+        const data = await channelRes.json();
+        setPagingChannelId(data.channelId || "");
+      }
+    } catch (err) {
+      console.error("Failed to load paging data:", err);
+    }
+  };
 
   useEffect(() => {
     let interval;
@@ -543,6 +569,7 @@ export default function Admin({ user, onLogout }) {
             { id: "settings", label: "Settings" },
             { id: "recordings", label: "Recording Logs" },
             { id: "audioTuning", label: "Audio Tuning", onClick: () => { setActiveTab("audioTuning"); loadAudioTuning(); } },
+            { id: "paging", label: "Paging" },
             { id: "vmLogs", label: "VM Logs" },
           ].map(({ id, label, onClick }) => (
             <button
@@ -1043,6 +1070,142 @@ export default function Admin({ user, onLogout }) {
                 <pre className="admin-json-pre">{JSON.stringify(dspConfig, null, 2)}</pre>
               </div>
             )}
+          </div>
+        )}
+
+        {activeTab === "paging" && (
+          <div className="admin-tab-content">
+            <h2 className="admin-section-title" style={{ marginBottom: 24 }}>Paging Settings</h2>
+            <div className="admin-settings-grid">
+              <div className="admin-settings-card">
+                <h3 className="admin-settings-card-title" style={{ marginBottom: 16 }}>Paging Channel</h3>
+                <p className="admin-settings-card-desc" style={{ marginBottom: 12 }}>
+                  When a page is received, the T320 automatically switches to this channel so the unit is ready to hear the dispatcher.
+                </p>
+                <div className="admin-field">
+                  <label className="admin-field-label">Auto-Switch Channel</label>
+                  <select
+                    value={pagingChannelId}
+                    onChange={async (e) => {
+                      const val = e.target.value;
+                      setPagingChannelId(val);
+                      try {
+                        await fetch("/api/paging-tone/channel", {
+                          method: "PUT",
+                          headers: { "Content-Type": "application/json" },
+                          credentials: "include",
+                          body: JSON.stringify({ channelId: val }),
+                        });
+                      } catch (err) {
+                        alert("Failed to save paging channel: " + err.message);
+                      }
+                    }}
+                    className="admin-select"
+                  >
+                    <option value="">-- No channel selected --</option>
+                    {channels.filter(c => c.enabled).map(c => (
+                      <option key={c.id} value={String(c.id)}>{c.zone ? `${c.zone} / ${c.name}` : c.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="admin-settings-card">
+                <h3 className="admin-settings-card-title" style={{ marginBottom: 4 }}>Paging Tones</h3>
+                <p className="admin-settings-card-desc" style={{ marginBottom: 16 }}>
+                  Upload audio tone files. Select the active tone with the radio button — it plays once on every page receipt.
+                </p>
+
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    if (!pagingToneFile) { alert("Select an audio file first"); return; }
+                    setPagingLoading(true);
+                    const fd = new FormData();
+                    fd.append("tone", pagingToneFile);
+                    fd.append("name", pagingToneName || pagingToneFile.name);
+                    try {
+                      const res = await fetch("/api/paging-tone/upload", {
+                        method: "POST",
+                        credentials: "include",
+                        body: fd,
+                      });
+                      if (!res.ok) { const d = await res.json(); throw new Error(d.error || "Upload failed"); }
+                      setPagingToneFile(null);
+                      setPagingToneName("");
+                      e.target.reset();
+                      await loadPagingData();
+                    } catch (err) {
+                      alert("Upload failed: " + err.message);
+                    } finally {
+                      setPagingLoading(false);
+                    }
+                  }}
+                  style={{ marginBottom: 20 }}
+                >
+                  <div className="admin-field">
+                    <label className="admin-field-label">Tone Name (optional)</label>
+                    <input
+                      type="text"
+                      value={pagingToneName}
+                      onChange={e => setPagingToneName(e.target.value)}
+                      placeholder="e.g., Two-Tone Alert"
+                      className="admin-input"
+                    />
+                  </div>
+                  <div className="admin-field">
+                    <label className="admin-field-label">Audio File</label>
+                    <input
+                      type="file"
+                      accept="audio/*"
+                      onChange={e => setPagingToneFile(e.target.files[0] || null)}
+                      className="admin-input"
+                      style={{ padding: "6px 8px" }}
+                    />
+                  </div>
+                  <button type="submit" disabled={pagingLoading || !pagingToneFile} className="admin-btn admin-btn-primary">
+                    {pagingLoading ? "Uploading..." : "Upload Tone"}
+                  </button>
+                </form>
+
+                {pagingTones.length === 0 ? (
+                  <div className="admin-empty-state" style={{ padding: "16px 0" }}>No tones uploaded yet.</div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {pagingTones.map(tone => (
+                      <div key={tone.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: "var(--dispatch-surface)", borderRadius: 8, border: tone.is_active ? "1px solid var(--dispatch-success)" : "1px solid var(--dispatch-border)" }}>
+                        <input
+                          type="radio"
+                          name="activeTone"
+                          checked={tone.is_active}
+                          onChange={async () => {
+                            try {
+                              const res = await fetch(`/api/paging-tone/${tone.id}/activate`, { method: "PATCH", credentials: "include" });
+                              if (!res.ok) throw new Error("Failed to activate");
+                              await loadPagingData();
+                            } catch (err) { alert(err.message); }
+                          }}
+                          style={{ accentColor: "var(--dispatch-success)", cursor: "pointer", width: 16, height: 16 }}
+                        />
+                        <span style={{ flex: 1, fontSize: 14, color: "var(--dispatch-text)" }}>{tone.name}</span>
+                        {tone.is_active && <span className="admin-badge admin-badge-success" style={{ fontSize: 11 }}>ACTIVE</span>}
+                        <button
+                          onClick={async () => {
+                            if (!confirm(`Delete tone "${tone.name}"?`)) return;
+                            try {
+                              const res = await fetch(`/api/paging-tone/${tone.id}`, { method: "DELETE", credentials: "include" });
+                              if (!res.ok) throw new Error("Failed to delete");
+                              await loadPagingData();
+                            } catch (err) { alert(err.message); }
+                          }}
+                          className="admin-btn-sm admin-btn-sm-danger"
+                        >Delete</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         )}
 

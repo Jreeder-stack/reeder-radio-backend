@@ -168,6 +168,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        setIntent(intent)
         // Re-assert screen-on/lock flags for a singleTop Activity brought to front
         setTurnScreenOn(true)
         setShowWhenLocked(true)
@@ -175,6 +176,26 @@ class MainActivity : ComponentActivity() {
             Log.d(TAG, "onNewIntent: emergency DOWN — routing to ViewModel")
             app.keyEventFlow.tryEmit(KeyAction.EmergencyDown)
         }
+        handlePageIntent(intent)
+    }
+
+    private fun handlePageIntent(intent: Intent) {
+        val pageId = intent.getStringExtra(EXTRA_PAGE_ID) ?: return
+        val message = intent.getStringExtra(EXTRA_PAGE_MESSAGE) ?: return
+        val sender = intent.getStringExtra(EXTRA_PAGE_SENDER) ?: "DISPATCH"
+        val channelId = intent.getStringExtra(EXTRA_PAGING_CHANNEL_ID) ?: ""
+        Log.d(TAG, "Page intent received: id=$pageId message=$message")
+        app.pendingPageId = pageId
+        app.pendingPageMessage = message
+        app.pendingPageSender = sender
+        app.pendingPageChannelId = channelId
+    }
+
+    companion object {
+        const val EXTRA_PAGE_ID = "page_id"
+        const val EXTRA_PAGE_MESSAGE = "page_message"
+        const val EXTRA_PAGE_SENDER = "page_sender"
+        const val EXTRA_PAGING_CHANNEL_ID = "paging_channel_id"
     }
 
     private fun requestAppPermissions() {

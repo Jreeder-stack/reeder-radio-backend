@@ -309,6 +309,46 @@ export async function initializeDatabase() {
       console.log(`Default admin account created: ${config.adminUsername}`);
     }
 
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS paging_tones (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        audio_data BYTEA NOT NULL,
+        is_active BOOLEAN DEFAULT false,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    await client.query(`
+      INSERT INTO ai_settings (key, value) VALUES ('paging_channel_id', '')
+      ON CONFLICT (key) DO NOTHING
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS pages (
+        id SERIAL PRIMARY KEY,
+        message TEXT NOT NULL,
+        sender VARCHAR(100) NOT NULL,
+        target_type VARCHAR(20) NOT NULL,
+        target_id VARCHAR(100) NOT NULL,
+        sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS page_acks (
+        id SERIAL PRIMARY KEY,
+        page_id INTEGER REFERENCES pages(id) ON DELETE CASCADE,
+        unit_id VARCHAR(100),
+        radio_id VARCHAR(20),
+        acked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(page_id, radio_id)
+      )
+    `);
+
+    await client.query(`ALTER TABLE radios ADD COLUMN IF NOT EXISTS fcm_token TEXT`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_radios_fcm_token ON radios (fcm_token) WHERE fcm_token IS NOT NULL`);
+
     console.log('Database initialized successfully');
   } finally {
     client.release();
@@ -989,6 +1029,137 @@ export async function getZoneAnnouncementAudio(zoneId) {
     [zoneId]
   );
   return result.rows[0]?.announcement_audio || null;
+}
+
+export async function updateRadioFcmToken(radioId, fcmToken) {
+  await pool.query(
+    'UPDATE radios SET fcm_token = $1 WHERE radio_id = $2',
+    [fcmToken, radioId]
+  );
+}
+
+export async function getAllFcmTokensForUnit(unitIdentity) {
+  const result = await pool.query(
+    `SELECT r.fcm_token, r.radio_id FROM radios r
+     JOIN users u ON r.assigned_unit_id = u.id
+     WHERE (u.unit_id = $1 OR u.username = $1) AND r.fcm_token IS NOT NULL`,
+    [unitIdentity]
+  );
+  return result.rows;
+}
+
+export async function getAllFcmTokensForChannel(channelName) {
+  const result = await pool.query(
+    `SELECT r.fcm_token, r.radio_id, u.unit_id AS unit_identity
+     FROM radios r
+     JOIN users u ON r.assigned_unit_id = u.id
+     WHERE r.fcm_token IS NOT NULL`,
+    []
+  );
+  return result.rows;
+}
+
+export async function getAllFcmTokens() {
+  const result = await pool.query(
+    `SELECT r.fcm_token, r.radio_id, COALESCE(u.unit_id, u.username) AS unit_identity
+     FROM radios r
+     LEFT JOIN users u ON r.assigned_unit_id = u.id
+     WHERE r.fcm_token IS NOT NULL`
+  );
+  return result.rows;
+}
+
+export async function createPage(message, sender, targetType, targetId) {
+  const result = await pool.query(
+    `INSERT INTO pages (message, sender, target_type, target_id)
+     VALUES ($1, $2, $3, $4) RETURNING *`,
+    [message, sender, targetType, targetId]
+  );
+  return result.rows[0];
+}
+
+export async function recordPageAck(pageId, unitId, radioId) {
+  const result = await pool.query(
+    `INSERT INTO page_acks (page_id, unit_id, radio_id)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (page_id, radio_id) DO UPDATE SET acked_at = CURRENT_TIMESTAMP
+     RETURNING *`,
+    [pageId, unitId || null, radioId || null]
+  );
+  return result.rows[0];
+}
+
+export async function getPageAcks(pageId) {
+  const result = await pool.query(
+    `SELECT pa.*, p.target_type, p.target_id FROM page_acks pa
+     JOIN pages p ON pa.page_id = p.id
+     WHERE pa.page_id = $1
+     ORDER BY pa.acked_at ASC`,
+    [pageId]
+  );
+  return result.rows;
+}
+
+export async function getPage(pageId) {
+  const result = await pool.query(
+    'SELECT * FROM pages WHERE id = $1',
+    [pageId]
+  );
+  return result.rows[0];
+}
+
+export async function listPagingTones() {
+  const result = await pool.query(
+    'SELECT id, name, is_active, created_at FROM paging_tones ORDER BY created_at DESC'
+  );
+  return result.rows;
+}
+
+export async function savePagingTone(name, audioData) {
+  const result = await pool.query(
+    `INSERT INTO paging_tones (name, audio_data, is_active) VALUES ($1, $2, false) RETURNING id, name, is_active, created_at`,
+    [name, audioData]
+  );
+  return result.rows[0];
+}
+
+export async function activatePagingTone(id) {
+  await pool.query('UPDATE paging_tones SET is_active = false');
+  const result = await pool.query(
+    'UPDATE paging_tones SET is_active = true WHERE id = $1 RETURNING id, name, is_active, created_at',
+    [id]
+  );
+  return result.rows[0];
+}
+
+export async function deletePagingTone(id) {
+  const result = await pool.query(
+    'DELETE FROM paging_tones WHERE id = $1 RETURNING *',
+    [id]
+  );
+  return result.rows[0];
+}
+
+export async function getActivePagingTone() {
+  const result = await pool.query(
+    'SELECT * FROM paging_tones WHERE is_active = true LIMIT 1'
+  );
+  return result.rows[0];
+}
+
+export async function getPagingChannelId() {
+  const result = await pool.query(
+    "SELECT value FROM ai_settings WHERE key = 'paging_channel_id'"
+  );
+  return result.rows[0]?.value || null;
+}
+
+export async function setPagingChannelId(channelId) {
+  await pool.query(
+    `INSERT INTO ai_settings (key, value, updated_at) VALUES ('paging_channel_id', $1, CURRENT_TIMESTAMP)
+     ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = CURRENT_TIMESTAMP`,
+    [channelId ? String(channelId) : '']
+  );
 }
 
 export default pool;

@@ -13,6 +13,7 @@ import pttRouter from './pttRoutes.js';
 import radioConfigRouter from './radioConfigRouter.js';
 import recordingLogsRouter from './recordingLogsRouter.js';
 import radiosRouter from './radiosRouter.js';
+import pagingRouter from './pagingRouter.js';
 
 export function setupRoutes(app) {
   app.use('/api/auth', authRouter);
@@ -29,4 +30,5 @@ export function setupRoutes(app) {
   app.use('/api/radio', radioConfigRouter);
   app.use('/api/recording-logs', recordingLogsRouter);
   app.use('/api/radios', radiosRouter);
+  app.use('/api/paging-tone', pagingRouter);
 }

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import useDispatchStore from '../../state/dispatchStore.js';
 import { useSignalingContext } from '../../context/SignalingContext.jsx';
+import PageModal from '../PageModal/index.jsx';
 
 function StatusDot({ status, isEmergency }) {
   const color = isEmergency 
@@ -38,6 +39,7 @@ export default function UnitList() {
   const { units, emergencies } = useDispatchStore();
   const { trackedUnits, emitTrackStart, emitTrackStop } = useSignalingContext();
   const [filter, setFilter] = useState('all');
+  const [pageTarget, setPageTarget] = useState(null);
   
   const getFilteredUnits = () => {
     switch (filter) {
@@ -100,6 +102,13 @@ export default function UnitList() {
         </button>
       </div>
 
+      {pageTarget && (
+        <PageModal
+          target={pageTarget}
+          onClose={() => setPageTarget(null)}
+        />
+      )}
+
       <div className="flex-1 overflow-y-auto space-y-1 scrollbar-thin">
         {filteredUnits.length === 0 ? (
           <div className="text-xs text-dispatch-secondary text-center py-4">
@@ -139,6 +148,13 @@ export default function UnitList() {
                     >
                       <LocationIcon tracking={isTracking} />
                       {isTracking ? 'Stop' : 'Track'}
+                    </button>
+                    <button
+                      onClick={() => setPageTarget({ type: 'unit', id: unit.unit_identity, label: unit.unit_identity })}
+                      className="text-xs px-1.5 py-0.5 rounded transition-colors bg-amber-900/40 text-amber-400 hover:bg-amber-800/50"
+                      title="Send Page"
+                    >
+                      PAGE
                     </button>
                     <span className="text-xs px-1.5 py-0.5 rounded bg-dispatch-border text-dispatch-secondary">
                       {(() => {

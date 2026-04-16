@@ -189,6 +189,23 @@ class CommandCommsApp : Application() {
             setShowBadge(true)
         }
 
-        nm.createNotificationChannels(listOf(emergency, pttService, pttConnected, pttDisconnected, pttDegraded, messages, system))
+        val paging = NotificationChannel(
+            "channel_paging",
+            "Paging",
+            NotificationManager.IMPORTANCE_HIGH
+        ).apply {
+            description = "Dispatch paging alerts — plays tone and shows full-screen overlay"
+            enableVibration(true)
+            setBypassDnd(true)
+            setShowBadge(true)
+            setSound(alarmSound, alarmAudioAttrs)
+        }
+
+        nm.createNotificationChannels(listOf(emergency, pttService, pttConnected, pttDisconnected, pttDegraded, messages, system, paging))
     }
+
+    @Volatile var pendingPageId: String? = null
+    @Volatile var pendingPageMessage: String? = null
+    @Volatile var pendingPageSender: String? = null
+    @Volatile var pendingPageChannelId: String? = null
 }

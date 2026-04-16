@@ -11,6 +11,7 @@ import {
   assignRadioUnit,
   setRadioLocked,
   getAllUsers,
+  updateRadioFcmToken,
 } from '../db/index.js';
 import pool from '../db/index.js';
 import { signalingService } from '../services/signalingService.js';
@@ -187,6 +188,20 @@ router.patch('/:radioId/assign', requireDispatcher, async (req, res) => {
   } catch (err) {
     console.error('[Radios] Assign error:', err);
     return res.status(500).json({ error: 'Assignment failed — server error' });
+  }
+});
+
+router.post('/fcm-token', radioAuth, async (req, res) => {
+  const { fcmToken } = req.body;
+  if (!fcmToken || typeof fcmToken !== 'string') {
+    return res.status(400).json({ error: 'fcmToken is required' });
+  }
+  try {
+    await updateRadioFcmToken(req.radio.radio_id, fcmToken);
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('[Radios] FCM token update error:', err);
+    return res.status(500).json({ error: 'Failed to update FCM token' });
   }
 });
 

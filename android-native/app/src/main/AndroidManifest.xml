@@ -49,6 +49,14 @@
             android:exported="false"
             android:foregroundServiceType="microphone|location" />
 
+        <service
+            android:name=".messaging.CommandCommsFirebaseService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
         <!--
             Exported so Inrico T320 firmware broadcasts reach this receiver regardless of
             screen state or app lifecycle. No accessibility service required for screen-off PTT.

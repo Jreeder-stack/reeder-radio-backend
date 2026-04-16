@@ -155,6 +155,14 @@ fun RadioScreen(
                 )
             }
         }
+
+        if (state.showPageAlert) {
+            PageAlertOverlay(
+                message = state.pageAlertMessage,
+                sender = state.pageAlertSender,
+                onDismiss = viewModel::dismissPageAlert
+            )
+        }
     }
 }
 
