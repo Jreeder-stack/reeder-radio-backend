@@ -52,6 +52,30 @@ The dispatch console is a PWA with responsive design, featuring auto-login, dark
 - **Clear Air:** Dispatcher-activated mode for emergency traffic, forcing units onto a channel.
 - **Live Scanner Feed:** Streams audio from HTTP sources into a channel as a virtual unit, applying VAD and integrating with floor control.
 
+## FCM Push Notifications (Paging)
+
+Device paging uses Firebase Cloud Messaging via the Firebase Admin SDK. The
+server needs a **Firebase Admin service account JSON** to obtain OAuth2 tokens
+— `android-native/app/google-services.json` is a client config and is **not**
+sufficient.
+
+### Setup
+1. Firebase Console → Project Settings → Service Accounts → **Generate New
+   Private Key**. Download the JSON.
+2. Store it as a secret so it is not committed:
+   - **Replit:** add secret `FIREBASE_SERVICE_ACCOUNT_JSON` with the full JSON
+     string as the value.
+   - **Azure VM (PM2):** either export `FIREBASE_SERVICE_ACCOUNT_JSON` in the
+     PM2 ecosystem env, or save the file on disk (e.g.
+     `/etc/command-comms/firebase-sa.json`, `chmod 600`) and set
+     `FIREBASE_SERVICE_ACCOUNT_PATH=/etc/command-comms/firebase-sa.json`.
+3. Restart the backend. On startup you should see
+   `[FCM] Firebase Admin SDK initialized from FIREBASE_SERVICE_ACCOUNT_JSON for project: command-comms`.
+
+If neither env var is set, the backend logs
+`[STARTUP] FCM push notifications DISABLED: ...` and paging returns
+`0 success, N failed` (no crash) until credentials are provided.
+
 ## External Dependencies
 - **opusscript:** Opus audio codec (server-side).
 - **opus-decoder:** WASM Opus decoder (browser-side).

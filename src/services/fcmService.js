@@ -9,33 +9,85 @@ const __dirname = dirname(__filename);
 
 let app = null;
 
+function loadServiceAccount() {
+  const jsonEnv = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+  if (jsonEnv && jsonEnv.trim().length > 0) {
+    try {
+      return { sa: JSON.parse(jsonEnv), source: 'FIREBASE_SERVICE_ACCOUNT_JSON' };
+    } catch (err) {
+      console.warn('[FCM] FIREBASE_SERVICE_ACCOUNT_JSON is set but not valid JSON:', err.message);
+      return null;
+    }
+  }
+
+  const pathEnv = process.env.FIREBASE_SERVICE_ACCOUNT_PATH;
+  if (pathEnv && pathEnv.trim().length > 0) {
+    try {
+      if (!existsSync(pathEnv)) {
+        console.warn('[FCM] FIREBASE_SERVICE_ACCOUNT_PATH set but file not found:', pathEnv);
+        return null;
+      }
+      return { sa: JSON.parse(readFileSync(pathEnv, 'utf8')), source: `FIREBASE_SERVICE_ACCOUNT_PATH (${pathEnv})` };
+    } catch (err) {
+      console.warn('[FCM] Failed to read FIREBASE_SERVICE_ACCOUNT_PATH:', err.message);
+      return null;
+    }
+  }
+
+  return null;
+}
+
 function initFcm() {
   if (app) return app;
 
-  const serviceAccountPath = join(__dirname, '../../android-native/app/google-services.json');
-
-  if (!existsSync(serviceAccountPath)) {
-    console.warn('[FCM] google-services.json not found at', serviceAccountPath, '— FCM disabled');
-    return null;
+  const googleServicesPath = join(__dirname, '../../android-native/app/google-services.json');
+  let googleServicesProjectId = null;
+  if (existsSync(googleServicesPath)) {
+    try {
+      const googleServices = JSON.parse(readFileSync(googleServicesPath, 'utf8'));
+      googleServicesProjectId = googleServices.project_info?.project_id || null;
+    } catch (err) {
+      console.warn('[FCM] Could not parse google-services.json:', err.message);
+    }
+  } else {
+    console.warn('[FCM] google-services.json not found at', googleServicesPath);
   }
 
+  const loaded = loadServiceAccount();
+
   try {
-    const googleServices = JSON.parse(readFileSync(serviceAccountPath, 'utf8'));
-    const projectId = googleServices.project_info?.project_id;
-    if (!projectId) {
-      console.warn('[FCM] Could not find project_id in google-services.json — FCM disabled');
+    if (admin.apps.length > 0) {
+      app = admin.apps[0];
+      return app;
+    }
+
+    if (loaded) {
+      const { sa, source } = loaded;
+      const projectId = sa.project_id || googleServicesProjectId;
+      if (!projectId) {
+        console.warn('[FCM] No project_id found in service account or google-services.json — FCM disabled');
+        return null;
+      }
+      app = admin.initializeApp({
+        credential: admin.credential.cert(sa),
+        projectId,
+      });
+      console.log(`[FCM] Firebase Admin SDK initialized from ${source} for project:`, projectId);
+      return app;
+    }
+
+    console.warn('[FCM] FIREBASE_SERVICE_ACCOUNT_JSON / FIREBASE_SERVICE_ACCOUNT_PATH not set — falling back to applicationDefault(). Push will fail on non-GCP hosts. To enable FCM, generate a Firebase Admin service account JSON (Firebase Console → Project Settings → Service Accounts → Generate New Private Key) and store it in the FIREBASE_SERVICE_ACCOUNT_JSON secret.');
+
+    if (!googleServicesProjectId) {
+      console.warn('[FCM] Could not determine project_id — FCM disabled');
       return null;
     }
 
-    if (admin.apps.length === 0) {
-      app = admin.initializeApp({
-        credential: admin.credential.applicationDefault(),
-        projectId,
-      });
-    } else {
-      app = admin.apps[0];
-    }
-    console.log('[FCM] Firebase Admin SDK initialized for project:', projectId);
+    app = admin.initializeApp({
+      credential: admin.credential.applicationDefault(),
+      projectId: googleServicesProjectId,
+    });
+    console.log('[FCM] Firebase Admin SDK initialized via applicationDefault() for project:', googleServicesProjectId);
     return app;
   } catch (err) {
     console.warn('[FCM] Failed to initialize Firebase Admin SDK:', err.message, '— FCM disabled');

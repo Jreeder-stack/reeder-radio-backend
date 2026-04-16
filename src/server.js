@@ -124,6 +124,12 @@ async function start() {
     console.error('AI Dispatcher auto-start failed:', err.message);
   }
 
+  if (!process.env.FIREBASE_SERVICE_ACCOUNT_JSON && !process.env.FIREBASE_SERVICE_ACCOUNT_PATH) {
+    console.warn('[STARTUP] FCM push notifications DISABLED: set FIREBASE_SERVICE_ACCOUNT_JSON secret (raw JSON) or FIREBASE_SERVICE_ACCOUNT_PATH to enable device paging.');
+  } else {
+    console.log('[STARTUP] FCM service account credential detected.');
+  }
+
   console.log(`Signaling endpoint: ws://0.0.0.0:${config.port}/signaling`);
 
   setupGracefulShutdown(httpServer);
