@@ -28,8 +28,15 @@ class CommandCommsFirebaseService : FirebaseMessagingService() {
 
     override fun onNewToken(token: String) {
         super.onNewToken(token)
-        Log.d(TAG, "New FCM token received, registering with backend")
-        registerTokenWithBackend(token)
+        Log.d(TAG, "New FCM token received, persisting to SharedPreferences")
+        val app = applicationContext as CommandCommsApp
+        app.apiClient.saveFcmToken(token)
+        if (app.apiClient.radioToken != null) {
+            Log.d(TAG, "Radio token already present — registering FCM token with backend immediately")
+            registerTokenWithBackend(token)
+        } else {
+            Log.d(TAG, "No radio token yet — FCM token saved, will re-register after authentication")
+        }
     }
 
     private fun registerTokenWithBackend(token: String) {

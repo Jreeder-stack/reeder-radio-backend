@@ -36,6 +36,8 @@ class SignalingClient(var serverUrl: String, private var radioToken: String? = n
     private var unitId: String = ""
     private var username: String = ""
 
+    var onAuthenticated: (() -> Unit)? = null
+
     fun setRadioToken(token: String?) {
         radioToken = token
     }
@@ -100,6 +102,7 @@ class SignalingClient(var serverUrl: String, private var radioToken: String? = n
             authRetryTimer = null
             _connectionState.value = ConnectionState.AUTHENTICATED
             flushPendingEmergencyEnds()
+            onAuthenticated?.invoke()
         }
 
         s.on("unauthorized") { args ->

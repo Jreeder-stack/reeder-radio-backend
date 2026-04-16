@@ -22,10 +22,15 @@ import com.reedersystems.commandcomms.data.repository.ChannelRepository
 import com.reedersystems.commandcomms.data.repository.RadioConfigRepository
 import com.reedersystems.commandcomms.signaling.SignalingClient
 import com.reedersystems.commandcomms.signaling.SignalingRepository
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 
 class CommandCommsApp : Application() {
+
+    val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     lateinit var apiClient: ApiClient
         private set
@@ -101,6 +106,10 @@ class CommandCommsApp : Application() {
         channelRepository = ChannelRepository(apiClient)
         val persistedDeviceId = getOrCreateDeviceId()
         signalingClient = SignalingClient(apiClient.baseUrl, storedRadioToken, persistedDeviceId)
+        signalingClient.onAuthenticated = {
+            Log.d("CommandCommsApp", "Socket authenticated — re-registering persisted FCM token")
+            apiClient.registerPersistedFcmToken(appScope)
+        }
         signalingRepository = SignalingRepository(signalingClient)
         radioConfigRepository = RadioConfigRepository(apiClient)
         toneEngine = ToneEngine(this)

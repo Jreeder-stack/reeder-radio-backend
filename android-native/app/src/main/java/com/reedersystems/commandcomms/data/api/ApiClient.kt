@@ -5,12 +5,21 @@ import android.content.SharedPreferences
 import android.util.Log
 import com.google.gson.Gson
 import com.reedersystems.commandcomms.BuildConfig
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import okhttp3.Cookie
 import okhttp3.CookieJar
 import okhttp3.HttpUrl
 import okhttp3.Interceptor
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONObject
 import java.util.concurrent.TimeUnit
+
+private const val TAG = "[ApiClient]"
 
 class ApiClient private constructor(context: Context) {
 
@@ -22,6 +31,9 @@ class ApiClient private constructor(context: Context) {
 
     @Volatile
     var radioToken: String? = null
+
+    private val fcmPrefs: SharedPreferences =
+        context.getSharedPreferences(FCM_PREFS, Context.MODE_PRIVATE)
 
     private val radioTokenInterceptor = Interceptor { chain ->
         val token = radioToken
@@ -46,8 +58,48 @@ class ApiClient private constructor(context: Context) {
 
     val baseUrl: String = BuildConfig.BASE_URL
 
+    fun saveFcmToken(token: String) {
+        fcmPrefs.edit().putString(FCM_TOKEN_KEY, token).apply()
+        Log.d(TAG, "FCM token persisted to SharedPreferences")
+    }
+
+    fun getPersistedFcmToken(): String? = fcmPrefs.getString(FCM_TOKEN_KEY, null)
+
+    fun registerPersistedFcmToken(scope: CoroutineScope) {
+        val token = getPersistedFcmToken() ?: run {
+            Log.d(TAG, "registerPersistedFcmToken: no persisted FCM token found, skipping")
+            return
+        }
+        if (radioToken == null) {
+            Log.d(TAG, "registerPersistedFcmToken: no radio token set yet, skipping")
+            return
+        }
+        scope.launch(Dispatchers.IO) {
+            try {
+                val body = JSONObject().apply { put("fcmToken", token) }
+                    .toString()
+                    .toRequestBody("application/json".toMediaType())
+                val request = Request.Builder()
+                    .url("$baseUrl/api/radios/fcm-token")
+                    .post(body)
+                    .build()
+                httpClient.newCall(request).execute().use { response ->
+                    if (response.isSuccessful) {
+                        Log.d(TAG, "Persisted FCM token registered successfully after auth")
+                    } else {
+                        Log.w(TAG, "FCM token re-registration failed: ${response.code}")
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "FCM token re-registration error: ${e.message}")
+            }
+        }
+    }
+
     companion object {
         private const val COOKIE_PREFS = "commandcomms_cookies"
+        private const val FCM_PREFS = "commandcomms_fcm"
+        private const val FCM_TOKEN_KEY = "fcm_token"
 
         @Volatile
         private var instance: ApiClient? = null
