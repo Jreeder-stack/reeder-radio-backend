@@ -88,9 +88,26 @@ export function playPermitTone() {
         gain.connect(ctx.destination);
         source.start(0);
         var duration = permitBuffer.duration * 1000;
-        await new Promise(function (resolve) {
-          source.onended = function () { resolve(duration); };
-        });
+        var waitMs = Math.max(duration, 300);
+        var safetyTimer = null;
+        await Promise.race([
+          Promise.all([
+            new Promise(function (resolve) {
+              source.onended = function () { resolve(); };
+            }),
+            new Promise(function (resolve) {
+              setTimeout(resolve, waitMs);
+            })
+          ]).then(function () {
+            clearTimeout(safetyTimer);
+          }),
+          new Promise(function (resolve) {
+            safetyTimer = setTimeout(function () {
+              console.warn('[TalkPermit] Safety timeout reached, proceeding after', waitMs + 500, 'ms');
+              resolve();
+            }, waitMs + 500);
+          })
+        ]);
         return duration;
       } else {
         var beepDuration = 0.040;
