@@ -47,8 +47,8 @@ function ProtectedRoute({ children, adminOnly = false, dispatcherOnly = false })
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "#1a1a2e",
-          color: "#fff",
+          background: "var(--dispatch-bg)",
+          color: "var(--dispatch-text)",
           fontFamily: "system-ui, -apple-system, sans-serif",
         }}
       >
@@ -84,8 +84,8 @@ function LoginRoute() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "#1a1a2e",
-          color: "#fff",
+          background: "var(--dispatch-bg)",
+          color: "var(--dispatch-text)",
           fontFamily: "system-ui, -apple-system, sans-serif",
         }}
       >

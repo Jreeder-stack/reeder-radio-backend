@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useTheme } from '../context/ThemeContext.jsx';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -58,6 +59,7 @@ function formatAge(timestamp) {
 }
 
 export default function DispatcherMap() {
+  const { darkMode, toggleDarkMode } = useTheme();
   const [locations, setLocations] = useState([]);
   const [connected, setConnected] = useState(false);
   const eventSourceRef = useRef(null);
@@ -126,12 +128,12 @@ export default function DispatcherMap() {
       height: '100vh', 
       display: 'flex', 
       flexDirection: 'column',
-      background: '#1a1a2e'
+      background: 'var(--dispatch-bg)'
     }}>
       <header style={{
         padding: '12px 20px',
-        background: '#16213e',
-        borderBottom: '1px solid #0f3460',
+        background: 'var(--dispatch-panel)',
+        borderBottom: '1px solid var(--dispatch-border)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between'
@@ -139,7 +141,7 @@ export default function DispatcherMap() {
         <h1 style={{ 
           margin: 0, 
           fontSize: '20px', 
-          color: '#fff',
+          color: 'var(--dispatch-text)',
           fontFamily: 'system-ui, -apple-system, sans-serif'
         }}>
           Unit Location Map
@@ -160,9 +162,25 @@ export default function DispatcherMap() {
             }} />
             {connected ? 'Connected' : 'Reconnecting...'}
           </span>
-          <span style={{ color: '#94a3b8', fontSize: '14px' }}>
+          <span style={{ color: 'var(--dispatch-text-secondary)', fontSize: '14px' }}>
             {locations.length} unit{locations.length !== 1 ? 's' : ''} active
           </span>
+          <button
+            onClick={toggleDarkMode}
+            title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+            style={{
+              padding: '5px 10px',
+              background: 'transparent',
+              color: 'var(--dispatch-text-secondary)',
+              border: '1px solid var(--dispatch-border)',
+              borderRadius: 6,
+              cursor: 'pointer',
+              fontSize: 15,
+              lineHeight: 1,
+            }}
+          >
+            {darkMode ? '☀️' : '🌙'}
+          </button>
         </div>
       </header>
 

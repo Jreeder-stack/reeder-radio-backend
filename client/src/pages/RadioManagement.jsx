@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getRadios, assignRadioUnit, lockRadio, getRadioUsers } from '../utils/radiosApi.js';
+import { useTheme } from '../context/ThemeContext.jsx';
 
 function formatLastSeen(ts) {
   if (!ts) return '—';
@@ -47,24 +48,24 @@ function ConfirmDialog({ open, title, message, onConfirm, onCancel }) {
       zIndex: 9998,
     }}>
       <div style={{
-        background: '#1e1e2e',
-        border: '1px solid #333',
+        background: 'var(--dispatch-panel)',
+        border: '1px solid var(--dispatch-border)',
         borderRadius: 10,
         padding: '28px 32px',
         minWidth: 340,
         maxWidth: 440,
         boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
       }}>
-        <h3 style={{ margin: '0 0 12px', color: '#fff', fontSize: 17 }}>{title}</h3>
-        <p style={{ margin: '0 0 24px', color: '#aaa', fontSize: 14, lineHeight: 1.5 }}>{message}</p>
+        <h3 style={{ margin: '0 0 12px', color: 'var(--dispatch-text)', fontSize: 17 }}>{title}</h3>
+        <p style={{ margin: '0 0 24px', color: 'var(--dispatch-text-secondary)', fontSize: 14, lineHeight: 1.5 }}>{message}</p>
         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
           <button
             onClick={onCancel}
             style={{
               padding: '8px 18px',
-              background: '#333',
-              color: '#fff',
-              border: 'none',
+              background: 'var(--dispatch-panel-elevated)',
+              color: 'var(--dispatch-text)',
+              border: '1px solid var(--dispatch-border)',
               borderRadius: 6,
               cursor: 'pointer',
               fontSize: 14,
@@ -95,6 +96,7 @@ function ConfirmDialog({ open, title, message, onConfirm, onCancel }) {
 
 export default function RadioManagement({ user }) {
   const navigate = useNavigate();
+  const { darkMode, toggleDarkMode } = useTheme();
   const isAdmin = user?.role === 'admin';
 
   const [radios, setRadios] = useState([]);
@@ -197,10 +199,10 @@ export default function RadioManagement({ user }) {
   });
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0f1117', color: '#e2e8f0', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--dispatch-bg)', color: 'var(--dispatch-text)', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
       <header style={{
-        background: '#1a1d2e',
-        borderBottom: '1px solid #2d3148',
+        background: 'var(--dispatch-panel)',
+        borderBottom: '1px solid var(--dispatch-border)',
         padding: '14px 24px',
         display: 'flex',
         alignItems: 'center',
@@ -210,25 +212,42 @@ export default function RadioManagement({ user }) {
           <button
             onClick={() => navigate(-1)}
             style={{
-              background: '#2d3148', color: '#94a3b8', border: 'none',
+              background: 'var(--dispatch-panel-elevated)', color: 'var(--dispatch-text-secondary)',
+              border: '1px solid var(--dispatch-border)',
               borderRadius: 6, padding: '6px 12px', cursor: 'pointer', fontSize: 13,
               display: 'flex', alignItems: 'center', gap: 6,
             }}
           >
             ← Back
           </button>
-          <h1 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#f1f5f9' }}>
+          <h1 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--dispatch-text)' }}>
             Radio Management
           </h1>
-          <span style={{ fontSize: 13, color: '#64748b', fontWeight: 500 }}>
+          <span style={{ fontSize: 13, color: 'var(--dispatch-text-tertiary)', fontWeight: 500 }}>
             {radios.length} {radios.length === 1 ? 'device' : 'devices'}
           </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 13, color: '#64748b' }}>
+          <span style={{ fontSize: 13, color: 'var(--dispatch-text-tertiary)' }}>
             {user?.username}
             {isAdmin && <span style={{ marginLeft: 6, color: '#6366f1', fontWeight: 600 }}>Admin</span>}
           </span>
+          <button
+            onClick={toggleDarkMode}
+            title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+            style={{
+              padding: '6px 10px',
+              background: 'transparent',
+              color: 'var(--dispatch-text-secondary)',
+              border: '1px solid var(--dispatch-border)',
+              borderRadius: 6,
+              cursor: 'pointer',
+              fontSize: 15,
+              lineHeight: 1,
+            }}
+          >
+            {darkMode ? '☀️' : '🌙'}
+          </button>
         </div>
       </header>
 
@@ -243,10 +262,10 @@ export default function RadioManagement({ user }) {
               width: '100%',
               maxWidth: 400,
               padding: '9px 14px',
-              background: '#1a1d2e',
-              border: '1px solid #2d3148',
+              background: 'var(--dispatch-panel)',
+              border: '1px solid var(--dispatch-border)',
               borderRadius: 8,
-              color: '#e2e8f0',
+              color: 'var(--dispatch-text)',
               fontSize: 14,
               outline: 'none',
               boxSizing: 'border-box',
@@ -255,25 +274,25 @@ export default function RadioManagement({ user }) {
         </div>
 
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '60px 0', color: '#64748b', fontSize: 15 }}>
+          <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--dispatch-text-tertiary)', fontSize: 15 }}>
             Loading radios...
           </div>
         ) : filtered.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '60px 0', color: '#64748b', fontSize: 15 }}>
+          <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--dispatch-text-tertiary)', fontSize: 15 }}>
             {radios.length === 0 ? 'No radios registered yet.' : 'No radios match your search.'}
           </div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
               <thead>
-                <tr style={{ borderBottom: '1px solid #2d3148' }}>
+                <tr style={{ borderBottom: '1px solid var(--dispatch-border)' }}>
                   {['Radio ID', 'IMEI', 'Serial #', 'Assigned Unit', 'Last Seen', 'Lock'].map(col => (
                     <th
                       key={col}
                       style={{
                         padding: '10px 14px',
                         textAlign: 'left',
-                        color: '#64748b',
+                        color: 'var(--dispatch-text-tertiary)',
                         fontWeight: 600,
                         fontSize: 12,
                         textTransform: 'uppercase',
@@ -291,17 +310,17 @@ export default function RadioManagement({ user }) {
                   <tr
                     key={radio.radio_id}
                     style={{
-                      borderBottom: '1px solid #1e2235',
+                      borderBottom: '1px solid var(--dispatch-border)',
                       background: radio.is_locked ? 'rgba(220,38,38,0.05)' : 'transparent',
                     }}
                   >
-                    <td style={{ padding: '12px 14px', fontFamily: 'monospace', fontWeight: 600, color: '#e2e8f0' }}>
+                    <td style={{ padding: '12px 14px', fontFamily: 'monospace', fontWeight: 600, color: 'var(--dispatch-text)' }}>
                       {radio.radio_id}
                     </td>
-                    <td style={{ padding: '12px 14px', color: '#94a3b8', fontFamily: 'monospace' }}>
+                    <td style={{ padding: '12px 14px', color: 'var(--dispatch-text-secondary)', fontFamily: 'monospace' }}>
                       {radio.imei || '—'}
                     </td>
-                    <td style={{ padding: '12px 14px', color: '#94a3b8', fontFamily: 'monospace', fontSize: 13 }}>
+                    <td style={{ padding: '12px 14px', color: 'var(--dispatch-text-secondary)', fontFamily: 'monospace', fontSize: 13 }}>
                       {radio.serial_number}
                     </td>
                     <td style={{ padding: '12px 14px' }}>
@@ -318,10 +337,10 @@ export default function RadioManagement({ user }) {
                               disabled={isSaving}
                               onChange={e => setPendingSelections(prev => ({ ...prev, [radio.radio_id]: e.target.value }))}
                               style={{
-                                background: '#1a1d2e',
-                                border: '1px solid #2d3148',
+                                background: 'var(--dispatch-panel)',
+                                border: '1px solid var(--dispatch-border)',
                                 borderRadius: 6,
-                                color: pendingVal ? '#e2e8f0' : '#64748b',
+                                color: pendingVal ? 'var(--dispatch-text)' : 'var(--dispatch-text-tertiary)',
                                 padding: '5px 10px',
                                 fontSize: 13,
                                 cursor: isSaving ? 'not-allowed' : 'pointer',
@@ -360,7 +379,7 @@ export default function RadioManagement({ user }) {
                         );
                       })()}
                     </td>
-                    <td style={{ padding: '12px 14px', color: '#64748b', fontSize: 13, whiteSpace: 'nowrap' }}>
+                    <td style={{ padding: '12px 14px', color: 'var(--dispatch-text-tertiary)', fontSize: 13, whiteSpace: 'nowrap' }}>
                       {formatLastSeen(radio.last_seen)}
                     </td>
                     <td style={{ padding: '12px 14px' }}>
