@@ -292,7 +292,7 @@ export default function VmLogs({ isMobile, standalone = false }) {
         onScroll={handleScroll}
         style={{
           flex: 1,
-          background: "#0d1117",
+          background: "var(--dispatch-bg)",
           border: "1px solid var(--dispatch-border)",
           borderRadius: 8,
           padding: 12,
@@ -300,23 +300,23 @@ export default function VmLogs({ isMobile, standalone = false }) {
           fontFamily: "'Courier New', Courier, monospace",
           fontSize: isMobile ? 11 : 13,
           lineHeight: 1.6,
-          color: "#c9d1d9",
+          color: "var(--dispatch-text)",
           WebkitOverflowScrolling: "touch",
         }}
       >
         {filteredLines.length === 0 && lines.length === 0 && (
-          <div style={{ color: "#555", textAlign: "center", padding: 40 }}>
+          <div style={{ color: "var(--dispatch-text-tertiary)", textAlign: "center", padding: 40 }}>
             Waiting for log output...
           </div>
         )}
         {filteredLines.length === 0 && lines.length > 0 && (
-          <div style={{ color: "#555", textAlign: "center", padding: 40 }}>
+          <div style={{ color: "var(--dispatch-text-tertiary)", textAlign: "center", padding: 40 }}>
             No matching lines ({lines.length} total lines filtered out)
           </div>
         )}
         {filteredLines.map((entry, i) => (
           <div key={i} style={{ whiteSpace: "pre-wrap", wordBreak: "break-all" }}>
-            <span style={{ color: "#555" }}>{formatTimestamp(entry.ts)}</span>{" "}
+            <span style={{ color: "var(--dispatch-text-tertiary)" }}>{formatTimestamp(entry.ts)}</span>{" "}
             <span>{entry.line}</span>
           </div>
         ))}
