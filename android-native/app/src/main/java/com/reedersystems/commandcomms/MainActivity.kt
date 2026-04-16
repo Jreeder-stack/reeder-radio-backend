@@ -15,6 +15,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -115,6 +118,7 @@ class MainActivity : ComponentActivity() {
         setTurnScreenOn(true)
         setShowWhenLocked(true)
         enableEdgeToEdge()
+        hideSystemBars()
         requestAppPermissions()
         setContent {
             CommandCommsTheme {
@@ -146,6 +150,19 @@ class MainActivity : ComponentActivity() {
         } else if (pendingOverlayPromptAfterBattery) {
             pendingOverlayPromptAfterBattery = false
             requestOverlayPermissionIfNeeded()
+        }
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) hideSystemBars()
+    }
+
+    private fun hideSystemBars() {
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        WindowInsetsControllerCompat(window, window.decorView).apply {
+            hide(WindowInsetsCompat.Type.systemBars())
+            systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         }
     }
 
