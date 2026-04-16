@@ -234,6 +234,14 @@ class BackgroundAudioService : Service() {
                     scope.launch { syncBackgroundSignalingChannel() }
                 }
             }
+            ACTION_STOP_SCAN_RX -> {
+                Log.d(TAG, "ACTION_STOP_SCAN_RX — flushing scanned channel audio playback")
+                val engine = radioEngine
+                if (engine != null) {
+                    engine.jitterBuffer.flushAndEnterIdle()
+                    engine.audioPlayback.clearStaleFrames()
+                }
+            }
             ACTION_STOP -> {
                 Log.d(TAG, "Service stop requested")
                 updateLedState(LedState.OFF)
@@ -1455,6 +1463,7 @@ class BackgroundAudioService : Service() {
         const val ACTION_EMERGENCY_UP = "com.reedersystems.commandcomms.SVC_EMERGENCY_UP"
         const val ACTION_UPDATE_CHANNEL = "com.reedersystems.commandcomms.UPDATE_CHANNEL"
         const val ACTION_STOP = "com.reedersystems.commandcomms.STOP"
+        const val ACTION_STOP_SCAN_RX = "com.reedersystems.commandcomms.STOP_SCAN_RX"
         const val ACTION_PTT_TX_FAILED = "com.reedersystems.commandcomms.PTT_TX_FAILED"
         const val ACTION_PTT_TX_ABORTED = "com.reedersystems.commandcomms.PTT_TX_ABORTED"
         const val ACTION_PTT_TX_STARTED = "com.reedersystems.commandcomms.PTT_TX_STARTED"

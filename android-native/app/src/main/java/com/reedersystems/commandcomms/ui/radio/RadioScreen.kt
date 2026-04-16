@@ -243,6 +243,18 @@ private fun CenterDisplay(
             } else if (state.error != null) {
                 T320Text("ERROR", color = Red, bold = true, size = 16)
                 T320Text(state.error, color = if (isEmergency) White else TextMuted, size = 10)
+            } else if (state.scanActiveChannel != null && !isEmergency) {
+                T320Text(
+                    state.scanActiveChannel,
+                    color = Orange,
+                    bold = true, size = 50
+                )
+                Spacer(Modifier.height(6.dp))
+                T320Text(
+                    state.scanActiveUnit ?: "",
+                    color = Orange,
+                    bold = true, size = 14
+                )
             } else {
                 T320Text(
                     "ZN",

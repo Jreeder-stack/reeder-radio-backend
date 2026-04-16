@@ -71,6 +71,8 @@ data class RadioUiState(
     val isRadioLocked: Boolean = false,
     val isRadioUnassigned: Boolean = false,
     val reassignedUnitId: String? = null,
+    val scanActiveChannel: String? = null,
+    val scanActiveUnit: String? = null,
 ) {
     val currentZone: Zone? get() = zones.getOrNull(currentZoneIndex)
     val currentChannel: Channel? get() = currentZone?.channels?.getOrNull(currentChannelIndex)
@@ -95,9 +97,11 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
     private var cancelArmingJob: Job? = null
     private var pttStartJob: Job? = null
     private var activeTransmittingUnitStaleJob: Job? = null
+    private var scanClearJob: Job? = null
 
     companion object {
         private const val ACTIVE_TX_UNIT_STALE_MS = 45_000L
+        private const val SCAN_DISPLAY_HOLD_MS = 2_000L
     }
 
     /**
@@ -284,6 +288,11 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                         if (event.unitId != state.unitId) {
                             val currentRoomKey = state.currentChannel?.roomKey
                             if (!state.isScanning || event.channelId == currentRoomKey) {
+                                // Priority channel is transmitting — clear any active scan display and stop audio
+                                if (state.isScanning && state.scanActiveUnit != null) {
+                                    clearScanDisplay()
+                                    sendServiceIntent(BackgroundAudioService.ACTION_STOP_SCAN_RX)
+                                }
                                 _uiState.update { it.copy(activeTransmittingUnit = event.unitId) }
                                 activeTransmittingUnitStaleJob?.cancel()
                                 activeTransmittingUnitStaleJob = viewModelScope.launch {
@@ -293,16 +302,46 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                                         _uiState.update { it.copy(activeTransmittingUnit = null) }
                                     }
                                 }
+                            } else {
+                                // Non-priority scanned channel — update scan display when:
+                                // - no scanned channel is actively transmitting (scanActiveUnit == null), OR
+                                // - we are in the 2s hold window after previous scanned RX ended (scanClearJob != null),
+                                //   in which case the new transmission takes over and hold timer is cancelled.
+                                // In both cases, priority channel must not be active.
+                                if ((state.scanActiveUnit == null || scanClearJob != null) && state.activeTransmittingUnit == null) {
+                                    val channelName = state.zones.flatMap { it.channels }
+                                        .firstOrNull { it.roomKey == event.channelId }?.name
+                                    if (channelName != null) {
+                                        Log.d(TAG, """{"event":"SCAN_DISPLAY_ACTIVATE","channel":"$channelName","unit":"${event.unitId}"}""")
+                                        scanClearJob?.cancel()
+                                        scanClearJob = null
+                                        _uiState.update {
+                                            it.copy(scanActiveChannel = channelName, scanActiveUnit = event.unitId)
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
                     is SignalingEvent.PttEnd -> {
                         val state = _uiState.value
+                        val currentRoomKey = state.currentChannel?.roomKey
                         if (event.unitId == state.activeTransmittingUnit) {
-                            val currentRoomKey = state.currentChannel?.roomKey
                             if (!state.isScanning || event.channelId == currentRoomKey) {
                                 activeTransmittingUnitStaleJob?.cancel()
                                 _uiState.update { it.copy(activeTransmittingUnit = null) }
+                            }
+                        }
+                        // Check if the ended transmission was on the active scanned channel
+                        if (state.isScanning && event.unitId == state.scanActiveUnit
+                            && event.channelId != currentRoomKey) {
+                            Log.d(TAG, """{"event":"SCAN_DISPLAY_HOLD_START","unit":"${event.unitId}"}""")
+                            scanClearJob?.cancel()
+                            scanClearJob = viewModelScope.launch {
+                                delay(SCAN_DISPLAY_HOLD_MS)
+                                Log.d(TAG, """{"event":"SCAN_DISPLAY_CLEAR","unit":"${event.unitId}"}""")
+                                _uiState.update { it.copy(scanActiveChannel = null, scanActiveUnit = null) }
+                                scanClearJob = null
                             }
                         }
                     }
@@ -438,6 +477,12 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         Log.d(TAG, "Mic permission granted=$granted")
     }
 
+    private fun clearScanDisplay() {
+        scanClearJob?.cancel()
+        scanClearJob = null
+        _uiState.update { it.copy(scanActiveChannel = null, scanActiveUnit = null) }
+    }
+
     fun onPttDown() {
         val state = _uiState.value
         if (state.pttState != PttState.IDLE) return
@@ -451,6 +496,13 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
             app.toneEngine.playDeniedBonk()
             return
         }
+        // If a scanned channel is currently playing audio, stop it immediately
+        if (state.scanActiveUnit != null) {
+            Log.d(TAG, "PTT DOWN: stopping scanned channel audio, clearing scan display")
+            clearScanDisplay()
+            sendServiceIntent(BackgroundAudioService.ACTION_STOP_SCAN_RX)
+        }
+        // Busy check is always against the priority (selected) channel only
         if (state.activeTransmittingUnit != null && state.activeTransmittingUnit != state.unitId) {
             Log.w(TAG, "PTT DOWN: channel busy — unit=${state.activeTransmittingUnit}")
             app.toneEngine.startDeniedTone()
@@ -626,6 +678,9 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
     fun toggleScanning() {
         val next = !_uiState.value.isScanning
         scanPrefs.edit().putBoolean(KEY_SCAN_ACTIVE, next).apply()
+        if (!next) {
+            clearScanDisplay()
+        }
         _uiState.update { it.copy(isScanning = next) }
     }
 
@@ -742,6 +797,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         emergencyJob?.cancel()
         cancelArmingJob?.cancel()
         activeTransmittingUnitStaleJob?.cancel()
+        scanClearJob?.cancel()
         app.toneEngine.stopCountdownBeep()
         locationTracker.stopTracking()
         runCatching { getApplication<Application>().unregisterReceiver(pttTxFailedReceiver) }
