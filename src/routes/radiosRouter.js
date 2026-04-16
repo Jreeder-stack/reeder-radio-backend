@@ -1,7 +1,7 @@
 import express from 'express';
 import crypto from 'crypto';
 import { radioAuth } from '../middleware/radioAuth.js';
-import { requireAdmin, requireDispatcher } from '../middleware/auth.js';
+import { requireAdmin, requireDispatcher, requireAuthOrRadioToken } from '../middleware/auth.js';
 import {
   getRadioBySerial,
   createRadio,
@@ -191,13 +191,53 @@ router.patch('/:radioId/assign', requireDispatcher, async (req, res) => {
   }
 });
 
-router.post('/fcm-token', radioAuth, async (req, res) => {
-  const { fcmToken } = req.body;
+router.post('/fcm-token', requireAuthOrRadioToken, async (req, res) => {
+  const { fcmToken, radioId: bodyRadioId } = req.body;
   if (!fcmToken || typeof fcmToken !== 'string') {
     return res.status(400).json({ error: 'fcmToken is required' });
   }
+
+  let targetRadioId;
+
+  if (req.radio?.radio_id) {
+    // Radio-token auth: use the authenticated radio directly
+    targetRadioId = req.radio.radio_id;
+  } else {
+    // Session auth: only dispatchers/admins may specify an arbitrary radioId;
+    // regular users may only update their own assigned radio.
+    const isPrivileged = req.user?.is_dispatcher || req.user?.role === 'admin';
+    if (bodyRadioId && isPrivileged) {
+      targetRadioId = bodyRadioId;
+    } else {
+      // Resolve via user's own assigned radio
+      const userId = req.user?.id;
+      if (userId) {
+        const row = await pool.query(
+          'SELECT radio_id FROM radios WHERE assigned_unit_id = $1 ORDER BY last_seen DESC LIMIT 1',
+          [userId]
+        );
+        if (row.rows.length > 0) {
+          targetRadioId = row.rows[0].radio_id;
+        }
+      }
+      // If a non-privileged user specified a bodyRadioId and it differs from their own radio, deny
+      if (bodyRadioId && targetRadioId !== bodyRadioId) {
+        console.warn(`[Radios] FCM token registration denied: session user ${req.user?.username} tried to target radioId=${bodyRadioId} (owns ${targetRadioId})`);
+        return res.status(403).json({ error: 'Not authorized to register FCM token for this radio' });
+      }
+    }
+  }
+
+  if (!targetRadioId) {
+    return res.status(400).json({ error: 'Could not determine radio — provide radioId or authenticate with a radio token' });
+  }
+
   try {
-    await updateRadioFcmToken(req.radio.radio_id, fcmToken);
+    console.log(`[Radios] Registering FCM token for radio_id=${targetRadioId} | authType=${req.radio ? 'radioToken' : 'session'} | user=${req.user?.username || 'unknown'}`);
+    const updated = await updateRadioFcmToken(targetRadioId, fcmToken);
+    if (!updated) {
+      return res.status(404).json({ error: 'Radio not found' });
+    }
     return res.json({ success: true });
   } catch (err) {
     console.error('[Radios] FCM token update error:', err);

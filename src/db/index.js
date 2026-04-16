@@ -627,19 +627,21 @@ export async function upsertUnitPresence(identity, channel, status, location = n
 }
 
 export async function getAllUnitPresence() {
-  // Only return units seen in the last 5 minutes
+  // Return units seen in the last 8 hours; mark units older than 5 minutes as stale
   const result = await pool.query(
-    `SELECT * FROM units 
-     WHERE last_seen > NOW() - INTERVAL '5 minutes'
+    `SELECT *,
+       (last_seen < NOW() - INTERVAL '5 minutes') AS is_stale
+     FROM units 
+     WHERE last_seen > NOW() - INTERVAL '8 hours'
      ORDER BY unit_identity`
   );
   return result.rows;
 }
 
 export async function cleanupStaleUnits() {
-  // Remove units not seen in 10 minutes
+  // Remove units not seen in 8 hours (aligned with getAllUnitPresence retention window)
   const result = await pool.query(
-    `DELETE FROM units WHERE last_seen < NOW() - INTERVAL '10 minutes' RETURNING *`
+    `DELETE FROM units WHERE last_seen < NOW() - INTERVAL '8 hours' RETURNING *`
   );
   return result.rows;
 }

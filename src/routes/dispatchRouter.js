@@ -96,16 +96,24 @@ router.post('/page', requireDispatcher, async (req, res) => {
     let tokenRows = [];
     if (targetType === 'unit') {
       tokenRows = await getAllFcmTokensForUnit(targetId);
+      console.log(`[Dispatch] Page to unit "${targetId}": found ${tokenRows.length} FCM token(s) | pageId=${page.id} | sender=${sender}`);
     } else {
       tokenRows = await getAllFcmTokens();
+      console.log(`[Dispatch] Page to ${targetType} "${targetId}": found ${tokenRows.length} FCM token(s) across all units | pageId=${page.id} | sender=${sender}`);
+    }
+
+    if (tokenRows.length === 0) {
+      console.warn(`[Dispatch] No FCM tokens found for targetType="${targetType}" targetId="${targetId}" — page will not be delivered via FCM`);
     }
 
     const tokens = tokenRows.map(r => r.fcm_token);
     const fcmResult = await sendPageToTokens(tokens, page.id, message, sender, pagingChannelId);
+    console.log(`[Dispatch] FCM result for pageId=${page.id}: successCount=${fcmResult.successCount} failureCount=${fcmResult.failureCount}`);
 
     res.json({
       page,
       fcm: { successCount: fcmResult.successCount, failureCount: fcmResult.failureCount },
+      targetedDeviceCount: tokenRows.length,
       targetedUnits: tokenRows.map(r => ({ unitId: r.unit_identity || r.radio_id, radioId: r.radio_id })),
     });
   } catch (err) {

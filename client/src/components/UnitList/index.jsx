@@ -3,15 +3,20 @@ import useDispatchStore from '../../state/dispatchStore.js';
 import { useSignalingContext } from '../../context/SignalingContext.jsx';
 import PageModal from '../PageModal/index.jsx';
 
-function StatusDot({ status, isEmergency }) {
+function StatusDot({ status, isEmergency, isStale }) {
   const color = isEmergency 
     ? 'bg-red-500' 
-    : status === 'transmitting' 
-      ? 'bg-yellow-500' 
-      : 'bg-green-500';
+    : isStale
+      ? 'bg-amber-500'
+      : status === 'transmitting' 
+        ? 'bg-yellow-500' 
+        : 'bg-green-500';
   
   return (
-    <span className={`inline-block w-2 h-2 rounded-full ${color} ${isEmergency ? 'animate-pulse' : ''}`} />
+    <span
+      className={`inline-block w-2 h-2 rounded-full ${color} ${isEmergency ? 'animate-pulse' : ''} ${isStale ? 'opacity-60' : ''}`}
+      title={isStale ? 'Last seen > 5 min ago' : undefined}
+    />
   );
 }
 
@@ -36,35 +41,9 @@ function LocationIcon({ tracking }) {
 }
 
 export default function UnitList() {
-  const { units, emergencies } = useDispatchStore();
+  const { units } = useDispatchStore();
   const { trackedUnits, emitTrackStart, emitTrackStop } = useSignalingContext();
-  const [filter, setFilter] = useState('all');
   const [pageTarget, setPageTarget] = useState(null);
-  
-  const getFilteredUnits = () => {
-    switch (filter) {
-      case 'ondt':
-        return units.filter(u => {
-          const status = (u.status || '').toUpperCase();
-          return status !== 'OFF';
-        });
-      case 'connected':
-        return units.filter(u => {
-          const lastSeen = new Date(u.last_seen);
-          const now = new Date();
-          return (now - lastSeen) < 60000;
-        });
-      default:
-        return units;
-    }
-  };
-  
-  const filteredUnits = getFilteredUnits();
-  const connectedCount = units.filter(u => {
-    const lastSeen = new Date(u.last_seen);
-    const now = new Date();
-    return (now - lastSeen) < 60000;
-  }).length;
 
   const handleToggleTracking = (unitIdentity) => {
     if (trackedUnits.includes(unitIdentity)) {
@@ -78,28 +57,7 @@ export default function UnitList() {
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-sm font-bold text-dispatch-text uppercase tracking-wide">Units</h2>
-        <span className="text-xs text-dispatch-secondary">{filteredUnits.length} total</span>
-      </div>
-
-      <div className="flex gap-1 mb-3">
-        <button
-          onClick={() => setFilter('all')}
-          className={`tile-btn ${filter === 'all' ? 'tile-btn-active tile-btn-tx' : 'tile-btn-default'}`}
-        >
-          ALL
-        </button>
-        <button
-          onClick={() => setFilter('ondt')}
-          className={`tile-btn ${filter === 'ondt' ? 'tile-btn-active tile-btn-monitor' : 'tile-btn-default'}`}
-        >
-          ONDT
-        </button>
-        <button
-          onClick={() => setFilter('connected')}
-          className={`tile-btn ${filter === 'connected' ? 'tile-btn-active tile-btn-mute' : 'tile-btn-default'}`}
-        >
-          Connected ({connectedCount})
-        </button>
+        <span className="text-xs text-dispatch-secondary">{units.length} total</span>
       </div>
 
       {pageTarget && (
@@ -110,13 +68,14 @@ export default function UnitList() {
       )}
 
       <div className="flex-1 overflow-y-auto space-y-1 scrollbar-thin">
-        {filteredUnits.length === 0 ? (
+        {units.length === 0 ? (
           <div className="text-xs text-dispatch-secondary text-center py-4">
             No units found
           </div>
         ) : (
-          filteredUnits.map(unit => {
+          units.map(unit => {
             const isTracking = trackedUnits.includes(unit.unit_identity);
+            const isStale = unit.is_stale === true || unit.is_stale === 't';
             return (
               <div
                 key={unit.id}
@@ -128,8 +87,10 @@ export default function UnitList() {
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <StatusDot status={unit.status} isEmergency={unit.is_emergency} />
-                    <span className="font-medium text-dispatch-text">{unit.unit_identity}</span>
+                    <StatusDot status={unit.status} isEmergency={unit.is_emergency} isStale={isStale} />
+                    <span className={`font-medium ${isStale ? 'text-dispatch-secondary' : 'text-dispatch-text'}`}>
+                      {unit.unit_identity}
+                    </span>
                     {isTracking && <LocationIcon tracking={true} />}
                   </div>
                   <span className="text-xs text-dispatch-tertiary font-mono">{formatTime(unit.last_seen)}</span>
@@ -151,7 +112,7 @@ export default function UnitList() {
                     </button>
                     <button
                       onClick={() => setPageTarget({ type: 'unit', id: unit.unit_identity, label: unit.unit_identity })}
-                      className="text-xs px-1.5 py-0.5 rounded transition-colors bg-amber-900/40 text-amber-400 hover:bg-amber-800/50"
+                      className="text-xs px-1.5 py-0.5 rounded transition-colors bg-amber-600 text-white hover:bg-amber-500"
                       title="Send Page"
                     >
                       PAGE
