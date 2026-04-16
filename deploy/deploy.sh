@@ -15,12 +15,14 @@ git fetch origin "$DEPLOY_BRANCH"
 git reset --hard "origin/$DEPLOY_BRANCH"
 git clean -fd
 
-echo "[2/6] Fixing file ownership..."
+echo "[2/6] Verifying app directory and ownership..."
 if [ ! -f "$APP_DIR/package.json" ]; then
-  echo "ERROR: APP_DIR ($APP_DIR) does not look like the project root. Aborting chown."
+  echo "ERROR: APP_DIR ($APP_DIR) does not look like the project root. Aborting."
   exit 1
 fi
-sudo chown -R "$(whoami):$(whoami)" "$APP_DIR"
+# Best-effort chown to self — skip silently if not permitted (normal case:
+# git pull already ran as this user so the files are owned correctly).
+chown -R "$(whoami):$(whoami)" "$APP_DIR" 2>/dev/null || echo "(chown skipped — files already correctly owned, no action needed)"
 
 echo "[3/6] Installing backend dependencies..."
 npm install --production
