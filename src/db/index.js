@@ -627,10 +627,8 @@ export async function upsertUnitPresence(identity, channel, status, location = n
 }
 
 export async function getAllUnitPresence() {
-  // Return units seen in the last 8 hours; mark units older than 5 minutes as stale
   const result = await pool.query(
-    `SELECT *,
-       (last_seen < NOW() - INTERVAL '5 minutes') AS is_stale
+    `SELECT *
      FROM units 
      WHERE last_seen > NOW() - INTERVAL '8 hours'
      ORDER BY unit_identity`

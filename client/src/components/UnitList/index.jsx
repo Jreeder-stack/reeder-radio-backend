@@ -3,19 +3,20 @@ import useDispatchStore from '../../state/dispatchStore.js';
 import { useSignalingContext } from '../../context/SignalingContext.jsx';
 import PageModal from '../PageModal/index.jsx';
 
-function StatusDot({ status, isEmergency, isStale }) {
+function StatusDot({ status, isEmergency }) {
+  const isOffline = status === 'offline';
   const color = isEmergency 
     ? 'bg-red-500' 
-    : isStale
-      ? 'bg-amber-500'
+    : isOffline
+      ? 'bg-gray-500'
       : status === 'transmitting' 
         ? 'bg-yellow-500' 
         : 'bg-green-500';
   
   return (
     <span
-      className={`inline-block w-2 h-2 rounded-full ${color} ${isEmergency ? 'animate-pulse' : ''} ${isStale ? 'opacity-60' : ''}`}
-      title={isStale ? 'Last seen > 5 min ago' : undefined}
+      className={`inline-block w-2 h-2 rounded-full ${color} ${isEmergency ? 'animate-pulse' : ''} ${isOffline ? 'opacity-50' : ''}`}
+      title={isOffline ? 'Offline' : undefined}
     />
   );
 }
@@ -74,8 +75,8 @@ export default function UnitList() {
           </div>
         ) : (
           units.map(unit => {
+            const isOffline = unit.status === 'offline';
             const isTracking = trackedUnits.includes(unit.unit_identity);
-            const isStale = unit.is_stale === true || unit.is_stale === 't';
             return (
               <div
                 key={unit.id}
@@ -87,8 +88,8 @@ export default function UnitList() {
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <StatusDot status={unit.status} isEmergency={unit.is_emergency} isStale={isStale} />
-                    <span className={`font-medium ${isStale ? 'text-dispatch-secondary' : 'text-dispatch-text'}`}>
+                    <StatusDot status={unit.status} isEmergency={unit.is_emergency} />
+                    <span className={`font-medium ${isOffline ? 'text-dispatch-secondary' : 'text-dispatch-text'}`}>
                       {unit.unit_identity}
                     </span>
                     {isTracking && <LocationIcon tracking={true} />}

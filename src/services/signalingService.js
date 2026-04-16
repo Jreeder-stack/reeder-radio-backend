@@ -1371,6 +1371,23 @@ class SignalingService {
     
     this.unitPresence.delete(socket.unitId);
     console.log(`[Signaling] Unit disconnected: ${socket.unitId}`);
+
+    if (!socket.isDispatcher) {
+      upsertUnitPresence(socket.unitId, null, 'offline').then((unit) => {
+        if (unit) {
+          this._emitToDispatchers('unit:presence', {
+            unitId: socket.unitId,
+            username: socket.username,
+            status: 'offline',
+            channel: null,
+            lastSeen: Date.now(),
+            unit,
+          });
+        }
+      }).catch(err => {
+        console.warn('[Signaling] upsertUnitPresence on disconnect failed:', err.message);
+      });
+    }
   }
 
   _getChannelMemberDetails(channelId) {
