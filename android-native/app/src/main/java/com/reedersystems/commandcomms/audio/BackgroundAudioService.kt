@@ -904,6 +904,25 @@ class BackgroundAudioService : Service() {
                             updateNotification("Radio — Standby")
                         }
                     }
+                    is SignalingEvent.PttRevoked -> {
+                        Log.d(TAG, "PTT_REVOKED channelId=${event.channelId} reason=${event.reason} pttState=$pttState")
+                        if (pttState == PttState.TRANSMITTING || pttState == PttState.CONNECTING) {
+                            Log.d("[ToneEvent]", """{"tone":"denied","trigger":"ptt_revoked","channelId":"${event.channelId}","reason":"${event.reason}","state":"$pttState","ts":${System.currentTimeMillis()}}""")
+                            app.toneEngine.startDeniedTone()
+                            transitionPttState(PttState.IDLE)
+                            updateNotification("Radio — Standby")
+                            try {
+                                engine.stopTransmit()
+                            } catch (e: Exception) {
+                                Log.e(TAG, "PTT_REVOKED_STOP_TRANSMIT_ERROR: ${e.message}")
+                            }
+                            val channelKey = servicePrefs.channelRoomKey
+                            if (channelKey != null) {
+                                engine.floorControl?.releaseFloor(channelKey)
+                            }
+                            sendPttTxFailed()
+                        }
+                    }
                     else -> {}
                 }
             }

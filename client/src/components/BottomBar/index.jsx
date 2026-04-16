@@ -7,6 +7,7 @@ import toneTransmitter from '../../audio/ToneTransmitter.js';
 import { playTalkPermitTone } from '../../lib/audioTones.js';
 import { useSignalingContext } from '../../context/SignalingContext.jsx';
 import formatChannelDisplay from '../../utils/formatChannelDisplay.js';
+import { signalingManager } from '../../signaling/SignalingManager.js';
 
 export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identity = 'Dispatch', signalPttStart, signalPttEnd }) {
   const { 
@@ -244,6 +245,18 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
       mutedChannelsRef.current = [];
     }
   }, [channelBusy, selectedChannelNames, signalPttEnd]);
+
+  useEffect(() => {
+    const handlePttRevoked = async (data) => {
+      if (!gestureActiveRef.current) return;
+      console.log('[PTT] PTT revoked by dispatcher:', data);
+      gestureActiveRef.current = false;
+      toneEngine.playErrorTone?.();
+      await stopTransmission();
+    };
+    const unsubscribe = signalingManager.on('pttRevoked', handlePttRevoked);
+    return () => { unsubscribe(); };
+  }, [stopTransmission]);
 
   const handlePTTDown = useCallback(async (e) => {
     if (e.type === 'keydown' && e.repeat) return;

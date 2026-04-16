@@ -30,4 +30,5 @@ sealed class SignalingEvent {
     object RadioUnassigned : SignalingEvent()
     data class RadioAssigned(val unitId: String) : SignalingEvent()
     data class EmergencyStatusResponse(val channelId: String, val active: Boolean, val unitId: String?) : SignalingEvent()
+    data class PttRevoked(val channelId: String, val reason: String) : SignalingEvent()
 }

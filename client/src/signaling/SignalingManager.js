@@ -46,6 +46,8 @@ class SignalingManager {
     this.agencyId = null;
     this.username = null;
     this.isDispatcher = false;
+    this.clientType = '';
+    this.consoleActive = false;
     this.subscribedChannels = new Set();
     this.channelMembers = new Map();
     this._keepaliveInterval = null;
@@ -62,6 +64,7 @@ class SignalingManager {
       pttEnd: new Set(),
       pttReady: new Set(),
       pttBusy: new Set(),
+      pttRevoked: new Set(),
       emergencyStart: new Set(),
       emergencyEnd: new Set(),
       'emergency:force_connect': new Set(),
@@ -134,8 +137,17 @@ class SignalingManager {
         if (this.unitId && !this.authenticated) {
           console.log('[Signaling] Re-authenticating as', this.unitId);
           this._authPromise = null;
-          this.authenticate(this.unitId, this.username, this.agencyId, this.isDispatcher)
+          this.authenticate(this.unitId, this.username, this.agencyId, this.isDispatcher, this.clientType)
+            .then(() => {
+              if (this.consoleActive) {
+                this.socket.emit('client:setConsoleActive', { active: true });
+              }
+            })
             .catch(err => console.error('[Signaling] Auto re-auth failed:', err.message));
+        }
+
+        if (this.consoleActive) {
+          this.setConsoleActive(true);
         }
 
         this._startKeepalive();
@@ -287,6 +299,10 @@ class SignalingManager {
       this._emit('data:message', data);
     });
 
+    this.socket.on('ptt:revoked', (data) => {
+      this._emit('pttRevoked', data);
+    });
+
     this.socket.on('location:track_start', (data) => {
       this._emit('location:track_start', data);
     });
@@ -300,11 +316,12 @@ class SignalingManager {
     });
   }
 
-  async authenticate(unitId, username, agencyId = 'default', isDispatcher = false) {
+  async authenticate(unitId, username, agencyId = 'default', isDispatcher = false, clientType = '') {
     this.unitId = unitId;
     this.username = username;
     this.agencyId = agencyId;
     this.isDispatcher = isDispatcher;
+    this.clientType = clientType;
 
     if (this.authenticated) {
       console.log('[Signaling] Already authenticated');
@@ -355,6 +372,7 @@ class SignalingManager {
         username,
         agencyId,
         isDispatcher,
+        clientType: this.clientType,
         deviceId,
         deviceType,
       });
@@ -371,6 +389,13 @@ class SignalingManager {
     }
   }
 
+  setConsoleActive(active) {
+    this.consoleActive = !!active;
+    if (this.socket?.connected && this.authenticated) {
+      this.socket.emit('client:setConsoleActive', { active: this.consoleActive });
+    }
+  }
+
   async joinChannel(channelId) {
     if (this.subscribedChannels.has(channelId) && this.socket?.connected && this.authenticated) {
       return true;
@@ -384,7 +409,7 @@ class SignalingManager {
       if (!this.authenticated) {
         console.log('[Signaling] Not authenticated, waiting for authentication before joining', channelId);
         if (this.unitId) {
-          await this.authenticate(this.unitId, this.username, this.agencyId, this.isDispatcher);
+          await this.authenticate(this.unitId, this.username, this.agencyId, this.isDispatcher, this.clientType);
         } else {
           console.error('[Signaling] Cannot join channel: no credentials available');
           return false;
@@ -416,7 +441,7 @@ class SignalingManager {
     if (!this.unitId) {
       throw new Error('Cannot ensureReady: no credentials stored. Call authenticate() first.');
     }
-    await this.authenticate(this.unitId, this.username, this.agencyId, this.isDispatcher);
+    await this.authenticate(this.unitId, this.username, this.agencyId, this.isDispatcher, this.clientType);
     if (channelId) {
       await this.joinChannel(channelId);
     }
@@ -694,7 +719,7 @@ class SignalingManager {
     if (this.socket?.connected && !this.authenticated && this.unitId) {
       console.log('[Signaling] Socket connected but not authenticated — re-authenticating');
       try {
-        await this.authenticate(this.unitId, this.username, this.agencyId, this.isDispatcher);
+        await this.authenticate(this.unitId, this.username, this.agencyId, this.isDispatcher, this.clientType);
         return true;
       } catch (err) {
         console.error('[Signaling] Re-authentication failed:', err.message);

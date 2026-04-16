@@ -175,7 +175,7 @@ export default function App({ user, onLogout }) {
   
   const { darkMode, toggleDarkMode } = useTheme();
   const theme = darkMode ? THEMES.dark : THEMES.light;
-  
+
   const connected = connectionStatus === 'connected';
   const connecting = connectionStatus === 'connecting';
   const [zonesData, setZonesData] = useState({});

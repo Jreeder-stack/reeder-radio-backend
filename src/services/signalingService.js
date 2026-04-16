@@ -161,6 +161,12 @@ class SignalingService {
       }
 
       socket.on('authenticate', (data) => this._handleAuthenticate(socket, data));
+      socket.on('client:setConsoleActive', (data) => {
+        if (!socket.authenticated) return;
+        const active = data && data.active === true;
+        socket.isDispatchConsole = active;
+        console.log(`[Signaling] ${socket.unitId} dispatch console active: ${active}`);
+      });
       socket.on(SIGNALING_EVENTS.CHANNEL_JOIN, (data) => this._handleChannelJoin(socket, data));
       socket.on(SIGNALING_EVENTS.CHANNEL_LEAVE, (data) => this._handleChannelLeave(socket, data));
       socket.on('ptt:pre', (data) => this._handlePttPre(socket, data));
@@ -472,6 +478,7 @@ class SignalingService {
     socket.agencyId = agencyId || 'default';
     socket.username = validatedUsername;
     socket.isDispatcher = validatedIsDispatcher;
+    socket.isDispatchConsole = (data.clientType === 'dispatch-console');
     socket.channels = new Set();
 
     const deviceType = clientDeviceType || 'browser';
@@ -686,11 +693,46 @@ class SignalingService {
           reason: 'clearair_preempted',
         });
       } else {
-        socket.emit('ptt:busy', { 
-          channelId, 
-          transmittingUnit: existingTransmission.unitId,
-        });
-        return;
+        const transmissionAgeMs = Date.now() - (existingTransmission.timestamp || 0);
+        const holderIsDispatchConsole = existingTransmission.isDispatchConsole === true;
+        const canTalkOver = (
+          socket.isDispatcher === true &&
+          socket.isDispatchConsole === true &&
+          transmissionAgeMs >= 3000 &&
+          !holderIsDispatchConsole
+        );
+
+        if (canTalkOver) {
+          const holderSocket = this._findSocketByUnitId(existingTransmission.unitId);
+          if (holderSocket) {
+            holderSocket.emit('ptt:revoked', { channelId, reason: 'dispatcher_takeover' });
+          }
+          floorControlService.forceRelease(channelId);
+          this.activeTransmissions.delete(channelId);
+          const prevPresence = this.unitPresence.get(existingTransmission.unitId);
+          if (prevPresence) {
+            prevPresence.status = 'online';
+          }
+          this._emitToChannelExcludingUnit(channelId, RADIO_EVENTS.TX_STOP, {
+            senderUnitId: existingTransmission.unitId,
+            channelId,
+            timestamp: Date.now(),
+            reason: 'dispatcher_takeover',
+          }, existingTransmission.unitId);
+          this._emitToChannelExcludingUnit(channelId, SIGNALING_EVENTS.PTT_END, {
+            unitId: existingTransmission.unitId,
+            channelId,
+            timestamp: Date.now(),
+            reason: 'dispatcher_takeover',
+          }, existingTransmission.unitId);
+          console.log(`[Signaling] Dispatcher talk-over: ${socket.unitId} revoked floor from ${existingTransmission.unitId} on ${channelId} (held ${transmissionAgeMs}ms)`);
+        } else {
+          socket.emit('ptt:busy', { 
+            channelId, 
+            transmittingUnit: existingTransmission.unitId,
+          });
+          return;
+        }
       }
     }
 
@@ -753,6 +795,7 @@ class SignalingService {
       timestamp: Date.now(),
       isEmergency,
       isClearAir: isClearAirRequest,
+      isDispatchConsole: socket.isDispatchConsole === true,
     };
     
     this.activeTransmissions.set(channelId, transmissionData);
@@ -795,32 +838,7 @@ class SignalingService {
     }
 
     if (transmission.unitId !== socket.unitId) {
-      console.warn(`[Signaling] PTT END unitId mismatch: socket=${socket.unitId} transmission=${transmission.unitId} on ${channelId} — cleaning up anyway`);
-      this.activeTransmissions.delete(channelId);
-      floorControlService.releaseFloor(channelId, transmission.floorKey || transmission.unitId);
-
-      this._emitToChannelExcludingUnit(channelId, RADIO_EVENTS.TX_STOP, {
-        senderUnitId: transmission.unitId,
-        channelId,
-        timestamp: Date.now(),
-      }, transmission.unitId);
-
-      this._emitToChannelExcludingUnit(channelId, SIGNALING_EVENTS.PTT_END, {
-        unitId: transmission.unitId,
-        channelId,
-        timestamp: Date.now(),
-        reason: 'unitId_mismatch_cleanup',
-      }, transmission.unitId);
-
-      this._emitToChannelExcludingUnit(channelId, RADIO_EVENTS.CHANNEL_IDLE, {
-        channelId,
-        timestamp: Date.now(),
-      }, transmission.unitId);
-
-      const presenceData = this.unitPresence.get(transmission.unitId);
-      if (presenceData) {
-        presenceData.status = 'online';
-      }
+      console.warn(`[Signaling] PTT END unitId mismatch: socket=${socket.unitId} transmission=${transmission.unitId} on ${channelId} — ignoring to protect active floor holder`);
       return;
     }
     

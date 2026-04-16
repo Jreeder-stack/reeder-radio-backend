@@ -36,11 +36,13 @@ export function SignalingProvider({ children }) {
         setConnected(true);
         
         const unitId = user.unit_id || user.username;
+        const onDispatchScreen = window.location.pathname.startsWith('/dispatcher');
         await signalingManager.authenticate(
           unitId,
           user.username,
           'default',
-          user.is_dispatcher || user.role === 'admin'
+          user.is_dispatcher || user.role === 'admin',
+          onDispatchScreen ? 'dispatch-console' : ''
         );
         setAuthenticated(true);
         

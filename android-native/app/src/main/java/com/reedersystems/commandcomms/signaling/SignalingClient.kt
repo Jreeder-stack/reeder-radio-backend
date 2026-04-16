@@ -77,6 +77,7 @@ class SignalingClient(var serverUrl: String, private var radioToken: String? = n
                 put("isDispatcher", false)
                 deviceId?.let { put("deviceId", it) }
                 put("deviceType", if (radioToken != null) "radio" else "desktop")
+                put("clientType", "radio")
             }
             Log.d(STARTUP_TAG, "SIGNALING_AUTH_SENT unitId=$unitId deviceId=${deviceId ?: "none"}")
             s.emit("authenticate", auth)
@@ -324,6 +325,13 @@ class SignalingClient(var serverUrl: String, private var radioToken: String? = n
                 Log.w(TAG, "radio:assigned parse error: ${e.message}")
             }
         }
+
+        s.on("ptt:revoked") { args -> parseAndEmit(args) { json ->
+            SignalingEvent.PttRevoked(
+                channelId = json.optString("channelId"),
+                reason = json.optString("reason", "dispatcher_takeover")
+            )
+        }}
 
         s.on("ping") { s.emit("pong") }
 

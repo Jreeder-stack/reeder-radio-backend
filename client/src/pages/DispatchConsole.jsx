@@ -47,6 +47,11 @@ export default function DispatchConsole({ user, onLogout }) {
     audioTransportManager.applyAudioSettings(initial);
   }, []);
 
+  useEffect(() => {
+    signalingManager.setConsoleActive(true);
+    return () => { signalingManager.setConsoleActive(false); };
+  }, []);
+
   const MIN_LEFT = 180;
   const MIN_CENTER = 300;
   const MIN_RIGHT = 200;
