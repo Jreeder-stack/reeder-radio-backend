@@ -363,6 +363,17 @@ export async function initializeDatabase() {
     await client.query(`ALTER TABLE radios ADD COLUMN IF NOT EXISTS fcm_token TEXT`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_radios_fcm_token ON radios (fcm_token) WHERE fcm_token IS NOT NULL`);
 
+    try {
+      const resetResult = await client.query(
+        `UPDATE units SET status = 'offline' WHERE status != 'offline' RETURNING unit_identity`
+      );
+      if (resetResult.rowCount > 0) {
+        console.log(`[DB-INIT] Reset ${resetResult.rowCount} stale unit(s) to offline on startup`);
+      }
+    } catch (resetErr) {
+      console.warn(`[DB-INIT] Could not reset stale unit statuses: ${resetErr.message}`);
+    }
+
     console.log('Database initialized successfully');
   } finally {
     client.release();

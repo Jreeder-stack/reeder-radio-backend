@@ -295,6 +295,21 @@ class SignalingService {
           socket.radioTokenPending = false;
           socket.emit('authenticated', { unitId: socket.unitId });
           console.log(`[Signaling] Emitted authenticated for radio device: radioId=${radio.radio_id} unitId=${socket.unitId} socket=${socket.id}`);
+
+          upsertUnitPresence(socket.unitId, null, 'online').then((unit) => {
+            if (unit) {
+              this._emitToDispatchers('unit:presence', {
+                unitId: socket.unitId,
+                username: socket.unitId,
+                status: 'online',
+                channel: null,
+                lastSeen: Date.now(),
+                unit,
+              });
+            }
+          }).catch(err => {
+            console.warn('[Signaling] upsertUnitPresence on radio token auth failed:', err.message);
+          });
         } catch (err) {
           console.error('[Signaling] Radio token validation error:', err);
           socket.radioTokenPending = false;
