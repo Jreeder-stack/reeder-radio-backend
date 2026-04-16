@@ -29,9 +29,18 @@ router.get('/stream', (req, res) => {
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
   res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('X-Accel-Buffering', 'no');
   res.flushHeaders();
-  
+
   locationService.addSSEClient(res);
+
+  const heartbeat = setInterval(() => {
+    res.write(': heartbeat\n\n');
+  }, 30000);
+
+  res.on('close', () => {
+    clearInterval(heartbeat);
+  });
 });
 
 router.get('/:unitId/address', async (req, res) => {

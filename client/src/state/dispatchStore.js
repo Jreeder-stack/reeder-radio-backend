@@ -147,6 +147,22 @@ const useDispatchStore = create(
         set({ units, unitsByChannel, emergencies: deduplicated });
       },
       
+      upsertDispatchUnit: (unit) => set((state) => {
+        const exists = state.units.find(u => u.unit_identity === unit.unit_identity);
+        const units = exists
+          ? state.units.map(u => u.unit_identity === unit.unit_identity ? { ...u, ...unit } : u)
+          : [...state.units, unit];
+
+        const unitsByChannel = {};
+        units.forEach(u => {
+          const channel = u.channel || 'unknown';
+          if (!unitsByChannel[channel]) unitsByChannel[channel] = [];
+          unitsByChannel[channel].push(u);
+        });
+
+        return { units, unitsByChannel };
+      }),
+
       updateUnit: (identity, updates) => set((state) => {
         const units = state.units.map(u => 
           u.unit_identity === identity ? { ...u, ...updates } : u

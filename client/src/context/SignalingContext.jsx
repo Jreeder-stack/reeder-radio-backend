@@ -240,11 +240,31 @@ export function SignalingProvider({ children }) {
       }));
     });
 
+    const onUnitPresence = (data) => {
+      if (data && data.unit) {
+        useDispatchStore.getState().upsertDispatchUnit(data.unit);
+      }
+    };
+    const registerUnitPresenceListener = () => {
+      if (signalingManager.socket) {
+        signalingManager.socket.off('unit:presence', onUnitPresence);
+        signalingManager.socket.on('unit:presence', onUnitPresence);
+      }
+    };
+    registerUnitPresenceListener();
+    const removeUnitPresenceReconnectListener = signalingManager.on('connectionChange', (data) => {
+      if (data.connected) {
+        registerUnitPresenceListener();
+      }
+    });
+
     return () => {
       removeConnectionListener();
       removeReconnectAuthListener();
+      removeUnitPresenceReconnectListener();
       if (signalingManager.socket) {
         signalingManager.socket.off('authenticated', onSocketAuthenticated);
+        signalingManager.socket.off('unit:presence', onUnitPresence);
       }
       removeMembersListener();
       removeJoinListener();

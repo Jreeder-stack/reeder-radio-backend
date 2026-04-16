@@ -6,7 +6,7 @@ import { canonicalChannelKey } from './channelKeyUtils.js';
 import locationService from './locationService.js';
 import cookie from 'cookie';
 import signature from 'cookie-signature';
-import pool, { clearUnitEmergencyByIdentity, getRadioByToken, updateRadioLastSeen } from '../db/index.js';
+import pool, { clearUnitEmergencyByIdentity, getRadioByToken, updateRadioLastSeen, upsertUnitPresence } from '../db/index.js';
 import { config } from '../config/env.js';
 
 const SIGNALING_EVENTS = {
@@ -463,6 +463,23 @@ class SignalingService {
       voiceAvailable: true,
     });
 
+    if (!validatedIsDispatcher) {
+      upsertUnitPresence(validatedUnitId, null, 'online').then((unit) => {
+        if (unit) {
+          this._emitToDispatchers('unit:presence', {
+            unitId: validatedUnitId,
+            username: validatedUsername,
+            status: 'online',
+            channel: null,
+            lastSeen: Date.now(),
+            unit,
+          });
+        }
+      }).catch(err => {
+        console.warn('[Signaling] upsertUnitPresence on authenticate failed:', err.message);
+      });
+    }
+
     if (this.clearAirStates.size > 0) {
       for (const clearAirData of this.clearAirStates.values()) {
         socket.emit('clear_air:alert', {
@@ -494,6 +511,23 @@ class SignalingService {
     const presence = this.unitPresence.get(socket.unitId);
     if (presence) {
       presence.channels = Array.from(socket.channels);
+    }
+
+    if (!socket.isDispatcher) {
+      upsertUnitPresence(socket.unitId, channelId, 'online').then((unit) => {
+        if (unit) {
+          this._emitToDispatchers('unit:presence', {
+            unitId: socket.unitId,
+            username: socket.username,
+            status: 'online',
+            channel: channelId,
+            lastSeen: Date.now(),
+            unit,
+          });
+        }
+      }).catch(err => {
+        console.warn('[Signaling] upsertUnitPresence on channel join failed:', err.message);
+      });
     }
     
     this.io.to(`channel:${channelId}`).emit(SIGNALING_EVENTS.CHANNEL_JOIN, {
