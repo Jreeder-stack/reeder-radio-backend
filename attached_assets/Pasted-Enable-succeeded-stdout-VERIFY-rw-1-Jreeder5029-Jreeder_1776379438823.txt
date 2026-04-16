@@ -1,0 +1,23 @@
+Enable succeeded: 
+[stdout]
+=== VERIFY ===
+-rw------- 1 Jreeder5029 Jreeder5029 2379 Apr 16 22:43 /home/Jreeder5029/firebase-service-account.json
+type: service_account
+project_id: command-comms
+client_email: firebase-adminsdk-fbsvc@command-comms.iam.gserviceaccount.com
+=== RESTART ===
+[PM2] Applying action restartProcessId on app [command-comms](ids: [ 0 ])
+[PM2] [command-comms](0) ✓
+┌────┬──────────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐
+│ id │ name             │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │
+├────┼──────────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤
+│ 0  │ command-comms    │ default     │ 1.0.0   │ fork    │ 6125     │ 0s     │ 5    │ online    │ 0%       │ 19.7mb   │ Jreeder… │ disabled │
+└────┴──────────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘
+=== STARTUP LOGS ===
+[STARTUP] FCM push notifications DISABLED: set FIREBASE_SERVICE_ACCOUNT_JSON secret (raw JSON) or FIREBASE_SERVICE_ACCOUNT_PATH to enable device paging.
+[FCM] FIREBASE_SERVICE_ACCOUNT_JSON / FIREBASE_SERVICE_ACCOUNT_PATH not set — falling back to applicationDefault(). Push will fail on non-GCP hosts. To enable FCM, generate a Firebase Admin service account JSON (Firebase Console → Project Settings → Service Accounts → Generate New Private Key) and store it in the FIREBASE_SERVICE_ACCOUNT_JSON secret.
+[FCM] Failed to send to token: eBXY8KuSSRKlY2eWvvdl... Credential implementation provided to initializeApp() via the "credential" property failed to fetch a valid Google OAuth2 access token with the following error: "Could not load the default credentials. Browse to https://cloud.google.com/docs/authentication/getting-started for more information.".
+[FCM] Failed to send to token: eBXY8KuSSRKlY2eWvvdl... Credential implementation provided to initializeApp() via the "credential" property failed to fetch a valid Google OAuth2 access token with the following error: "Could not load the default credentials. Browse to https://cloud.google.com/docs/authentication/getting-started for more information.".
+[STARTUP] FCM push notifications DISABLED: set FIREBASE_SERVICE_ACCOUNT_JSON secret (raw JSON) or FIREBASE_SERVICE_ACCOUNT_PATH to enable device paging.
+
+[stderr]

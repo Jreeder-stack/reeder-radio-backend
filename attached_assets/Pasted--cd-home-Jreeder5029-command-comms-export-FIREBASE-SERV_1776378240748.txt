@@ -1,0 +1,56 @@
+                            cd /home/Jreeder5029/command-comms
+export FIREBASE_SERVICE_ACCOUNT_PATH=/home/Jreeder5029/firebase-service-account.json
+echo 'export FIREBASE_SERVICE_ACCOUNT_PATH=/home/Jreeder5029/firebase-service-account.json' >> ~/.bashrc
+pm2 restart command-comms --update-envhome/Jreeder5029/firebase-service-account.json?
+pm2 logs command-comms --lines 20 --nostreamhome/Jreeder5029/firebase-service-account.json' >> ~/.bashrc?
+[PM2] Applying action restartProcessId on app [command-comms](ids: [ 0 ])
+[PM2] [command-comms](0) ✓ines 20 --nostream
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+├────┼────────────────────┼──────────┼──────┼───────────┼──────────┼──────────┤
+│ 0  │ command-comms      │ fork     │ 1    │ online    │ 0%       │ 19.4mb   │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+[TAILING] Tailing last 20 lines for [command-comms] process (change the value with --lines option)
+/home/Jreeder5029/.pm2/logs/command-comms-error.log last 20 lines:
+0|command- | [Dispatch] No FCM tokens found for targetType="unit" targetId="INDIANA-1" — page will not be delivered via FCM
+0|command- | [SHUTDOWN] Step "HTTP server" timed out after 4000ms, moving on.
+0|command- | [Signaling] Ignoring authenticate event — radio device uses token auth: CmpYU6jSQd1e3mdSAAAD
+0|command- | [Signaling] Ignoring authenticate event — radio device uses token auth: x-IpTCdBvvPKkIk9AAAH
+0|command- | [FCM] Failed to send to token: eBXY8KuSSRKlY2eWvvdl... Credential implementation provided to initializeApp() via the "credential" property failed to fetch a valid Google OAuth2 access token with the following error: "Could not load the default credentials. Browse to https://cloud.google.com/docs/authentication/getting-started for more information.".
+0|command- | (node:1787843) MetadataLookupWarning: received unexpected error = All promises were rejected code = UNKNOWN
+0|command- | (Use `node --trace-warnings ...` to show where the warning was created)
+0|command- | [FCM] Failed to send to token: eBXY8KuSSRKlY2eWvvdl... Credential implementation provided to initializeApp() via the "credential" property failed to fetch a valid Google OAuth2 access token with the following error: "Could not load the default credentials. Browse to https://cloud.google.com/docs/authentication/getting-started for more information.".
+0|command- | [SHUTDOWN] Step "HTTP server" timed out after 4000ms, moving on.
+0|command- | [STARTUP] FCM push notifications DISABLED: set FIREBASE_SERVICE_ACCOUNT_JSON secret (raw JSON) or FIREBASE_SERVICE_ACCOUNT_PATH to enable device paging.
+0|command- | [Signaling] Ignoring authenticate event — radio device uses token auth: Omxe5vvInXOx9cYxAAAF
+0|command- | [Signaling] Ignoring authenticate event — radio device uses token auth: aSwm9tkXNJ4lZ9xWAAAH
+0|command- | [FCM] FIREBASE_SERVICE_ACCOUNT_JSON / FIREBASE_SERVICE_ACCOUNT_PATH not set — falling back to applicationDefault(). Push will fail on non-GCP hosts. To enable FCM, generate a Firebase Admin service account JSON (Firebase Console → Project Settings → Service Accounts → Generate New Private Key) and store it in the FIREBASE_SERVICE_ACCOUNT_JSON secret.
+0|command- | [FCM] Failed to send to token: eBXY8KuSSRKlY2eWvvdl... Credential implementation provided to initializeApp() via the "credential" property failed to fetch a valid Google OAuth2 access token with the following error: "Could not load the default credentials. Browse to https://cloud.google.com/docs/authentication/getting-started for more information.".
+0|command- | (node:1791108) MetadataLookupWarning: received unexpected error = All promises were rejected code = UNKNOWN
+0|command- | (Use `node --trace-warnings ...` to show where the warning was created)
+0|command- | [FCM] Failed to send to token: eBXY8KuSSRKlY2eWvvdl... Credential implementation provided to initializeApp() via the "credential" property failed to fetch a valid Google OAuth2 access token with the following error: "Could not load the default credentials. Browse to https://cloud.google.com/docs/authentication/getting-started for more information.".
+0|command- | [STARTUP] FCM push notifications DISABLED: set FIREBASE_SERVICE_ACCOUNT_JSON secret (raw JSON) or FIREBASE_SERVICE_ACCOUNT_PATH to enable device paging.
+0|command- | [Signaling] Ignoring authenticate event — radio device uses token auth: MRv05qEwrp12fk60AAAF
+0|command- | [SHUTDOWN] Step "HTTP server" timed out after 4000ms, moving on.
+
+/home/Jreeder5029/.pm2/logs/command-comms-out.log last 20 lines:
+0|command- | [API] GET /api/dispatch/page/10/acks | user=DISPATCH-1(id:7) | sid=kXcbjyHv... | 304 | 16ms
+0|command- | [API] GET /api/dispatch/page/10/acks | user=DISPATCH-1(id:7) | sid=kXcbjyHv... | 304 | 31ms
+0|command- | [API] GET /api/dispatch/page/10/acks | user=DISPATCH-1(id:7) | sid=kXcbjyHv... | 304 | 15ms
+0|command- | [API] GET /api/dispatch/page/10/acks | user=DISPATCH-1(id:7) | sid=kXcbjyHv... | 304 | 15ms
+0|command- | [Signaling] KEEPALIVE_OK unitId=INDIANA-1 channelKey=DISPATCH__DISPATCH addr=166.137.146.157:15935
+0|command- | [API] GET /api/dispatch/page/10/acks | user=DISPATCH-1(id:7) | sid=kXcbjyHv... | 304 | 15ms
+0|command- | [API] GET /api/dispatch/page/10/acks | user=DISPATCH-1(id:7) | sid=kXcbjyHv... | 304 | 16ms
+0|command- | [SHUTDOWN] Received SIGINT, starting graceful shutdown...
+0|command- | [SHUTDOWN] Stopping signaling service...
+0|command- | [Signaling] Unit disconnected: DISPATCH-1
+0|command- | [AudioRelay] SUBSCRIBER_REMOVED unitId=DISPATCH-1 channelId=DISPATCH__DISPATCH
+0|command- | [Signaling] Unit disconnected: DISPATCH-1
+0|command- | [AudioRelay] SUBSCRIBER_REMOVED unitId=INDIANA-1 channelId=DISPATCH__DISPATCH
+0|command- | [Signaling] Unit disconnected: INDIANA-1
+0|command- | [Signaling] Socket.IO server closed
+0|command- | [SHUTDOWN] Stopping WebSocket audio bridge...
+0|command- | [SHUTDOWN] Stopping audio relay service...
+0|command- | [SHUTDOWN] Closing HTTP server...
+0|command- | [SHUTDOWN] Closing database pool...
+0|command- | [SHUTDOWN] Graceful shutdown complete.

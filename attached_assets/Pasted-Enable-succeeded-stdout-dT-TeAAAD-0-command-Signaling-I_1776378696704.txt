@@ -1,0 +1,29 @@
+Enable succeeded: 
+[stdout]
+-dT_TeAAAD
+0|command- | [Signaling] Ignoring authenticate event — radio device uses token auth: 3hC6yatjjhryD9HMAAAF
+0|command- | [Dispatch] No FCM tokens found for targetType="unit" targetId="INDIANA-1" — page will not be delivered via FCM
+0|command- | [Dispatch] No FCM tokens found for targetType="unit" targetId="INDIANA-1" — page will not be delivered via FCM
+0|command- | [SHUTDOWN] Step "HTTP server" timed out after 4000ms, moving on.
+0|command- | [Signaling] Ignoring authenticate event — radio device uses token auth: CmpYU6jSQd1e3mdSAAAD
+0|command- | [Signaling] Ignoring authenticate event — radio device uses token auth: x-IpTCdBvvPKkIk9AAAH
+0|command- | [FCM] Failed to send to token: eBXY8KuSSRKlY2eWvvdl... Credential implementation provided to initializeApp() via the "credential" property failed to fetch a valid Google OAuth2 access token with the following error: "Could not load the default credentials. Browse to https://cloud.google.com/docs/authentication/getting-started for more information.".
+0|command- | (node:1787843) MetadataLookupWarning: received unexpected error = All promises were rejected code = UNKNOWN
+0|command- | (Use `node --trace-warnings ...` to show where the warning was created)
+0|command- | [FCM] Failed to send to token: eBXY8KuSSRKlY2eWvvdl... Credential implementation provided to initializeApp() via the "credential" property failed to fetch a valid Google OAuth2 access token with the following error: "Could not load the default credentials. Browse to https://cloud.google.com/docs/authentication/getting-started for more information.".
+0|command- | [SHUTDOWN] Step "HTTP server" timed out after 4000ms, moving on.
+0|command- | [STARTUP] FCM push notifications DISABLED: set FIREBASE_SERVICE_ACCOUNT_JSON secret (raw JSON) or FIREBASE_SERVICE_ACCOUNT_PATH to enable device paging.
+0|command- | [Signaling] Ignoring authenticate event — radio device uses token auth: Omxe5vvInXOx9cYxAAAF
+0|command- | [Signaling] Ignoring authenticate event — radio device uses token auth: aSwm9tkXNJ4lZ9xWAAAH
+0|command- | [FCM] FIREBASE_SERVICE_ACCOUNT_JSON / FIREBASE_SERVICE_ACCOUNT_PATH not set — falling back to applicationDefault(). Push will fail on non-GCP hosts. To enable FCM, generate a Firebase Admin service account JSON (Firebase Console → Project Settings → Service Accounts → Generate New Private Key) and store it in the FIREBASE_SERVICE_ACCOUNT_JSON secret.
+0|command- | [FCM] Failed to send to token: eBXY8KuSSRKlY2eWvvdl... Credential implementation provided to initializeApp() via the "credential" property failed to fetch a valid Google OAuth2 access token with the following error: "Could not load the default credentials. Browse to https://cloud.google.com/docs/authentication/getting-started for more information.".
+0|command- | (node:1791108) MetadataLookupWarning: received unexpected error = All promises were rejected code = UNKNOWN
+0|command- | (Use `node --trace-warnings ...` to show where the warning was created)
+0|command- | [FCM] Failed to send to token: eBXY8KuSSRKlY2eWvvdl... Credential implementation provided to initializeApp() via the "credential" property failed to fetch a valid Google OAuth2 access token with the following error: "Could not load the default credentials. Browse to https://cloud.google.com/docs/authentication/getting-started for more information.".
+0|command- | [STARTUP] FCM push notifications DISABLED: set FIREBASE_SERVICE_ACCOUNT_JSON secret (raw JSON) or FIREBASE_SERVICE_ACCOUNT_PATH to enable device paging.
+0|command- | [Signaling] Ignoring authenticate event — radio device uses token auth: MRv05qEwrp12fk60AAAF
+0|command- | [SHUTDOWN] Step "HTTP server" timed out after 4000ms, moving on.
+0|command- | [Signaling] Ignoring authenticate event — radio device uses token auth: PmEBGqD-Tt0uudL7AAAF
+0|command- | [SHUTDOWN] Step "HTTP server" timed out after 4000ms, moving on.
+0|command- | [Signaling] Ignoring authenticate event — radio device uses token auth: -glu9I_pkTOKvq4XAAAF
+0|command- | [SHUTDOWN] Step "HTTP server" timed out after 4000ms, moving on.

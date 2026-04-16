@@ -1,0 +1,48 @@
+Enable succeeded: 
+[stdout]
+=== FILE CHECK ===
+-rw------- 1 Jreeder5029 Jreeder5029 2351 Apr 16 22:21 /home/Jreeder5029/firebase-service-account.json
+
+=== JSON VALIDITY ===
+
+=== RESTART PM2 WITH ENV ===
+[PM2] Applying action restartProcessId on app [command-comms](ids: [ 0 ])
+[PM2] [command-comms](0) ✓
+┌────┬──────────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐
+│ id │ name             │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │
+├────┼──────────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤
+│ 0  │ command-comms    │ default     │ 1.0.0   │ fork    │ 4752     │ 0s     │ 4    │ online    │ 0%       │ 22.3mb   │ Jreeder… │ disabled │
+└────┴──────────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘
+
+=== PM2 CHILD ENV (should show FIREBASE_SERVICE_ACCOUNT_PATH) ===
+server.js PID: 4752
+SUDO_COMMAND=/usr/bin/bash -lc export FIREBASE_SERVICE_ACCOUNT_PATH=/home/Jreeder5029/firebase-service-account.json && pm2 restart command-comms --update-env
+FIREBASE_SERVICE_ACCOUNT_PATH=/home/Jreeder5029/firebase-service-account.json
+NODE_ENV=production
+
+=== LAST 8 ERROR LOG LINES ===
+[Signaling] Ignoring authenticate event — radio device uses token auth: MRv05qEwrp12fk60AAAF
+[SHUTDOWN] Step "HTTP server" timed out after 4000ms, moving on.
+[Signaling] Ignoring authenticate event — radio device uses token auth: PmEBGqD-Tt0uudL7AAAF
+[SHUTDOWN] Step "HTTP server" timed out after 4000ms, moving on.
+[Signaling] Ignoring authenticate event — radio device uses token auth: -glu9I_pkTOKvq4XAAAF
+[SHUTDOWN] Step "HTTP server" timed out after 4000ms, moving on.
+[Signaling] Ignoring authenticate event — radioToken validation in progress: Pt7IFab_r9lvcWwlAAAF
+[SHUTDOWN] Step "HTTP server" timed out after 4000ms, moving on.
+
+[stderr]
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+  File "/usr/lib/python3.12/json/__init__.py", line 293, in load
+    return loads(fp.read(),
+           ^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/decoder.py", line 353, in raw_decode
+    obj, end = self.scan_once(s, idx)
+               ^^^^^^^^^^^^^^^^^^^^^^
+json.decoder.JSONDecodeError: Invalid control character at: line 5 column 46 (char 173)
