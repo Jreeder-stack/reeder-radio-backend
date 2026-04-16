@@ -210,6 +210,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         observeRadioState()
         checkPendingPage()
         registerFcmToken()
+        app.toneEngine.playStartupTone()
     }
 
     private fun checkPendingPage() {
@@ -265,7 +266,9 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                 if (channels[chIdx].id == targetChannelId) {
                     val oldRoomKey = _uiState.value.currentChannel?.roomKey
                     _uiState.update { it.copy(currentZoneIndex = zoneIdx, currentChannelIndex = chIdx) }
-                    onChannelChangedWithAnnouncement(oldRoomKey)
+                    onChannelChangedWithAnnouncement(oldRoomKey) {
+                        playChannelAnnouncement(targetChannelId)
+                    }
                     Log.d(TAG, "[PAGE] Switched to paging channel id=$targetChannelId zone=$zoneIdx ch=$chIdx")
                     return
                 }

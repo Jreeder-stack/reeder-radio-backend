@@ -405,6 +405,37 @@ class ToneEngine(private val context: Context) {
         .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
         .build()
 
+    fun playStartupTone() {
+        scope.launch(Dispatchers.Main.immediate) {
+            var mp: MediaPlayer? = null
+            try {
+                mp = MediaPlayer.create(
+                    context,
+                    R.raw.startup_tone,
+                    audioAttribs(),
+                    AudioManager.AUDIO_SESSION_ID_GENERATE
+                )
+                if (mp == null) {
+                    Log.w(TAG, "Startup tone: MediaPlayer.create returned null")
+                    return@launch
+                }
+                val deferred = CompletableDeferred<Unit>()
+                mp.setOnCompletionListener {
+                    it.release()
+                    deferred.complete(Unit)
+                }
+                mp.start()
+                deferred.await()
+            } catch (e: CancellationException) {
+                mp?.let { runCatching { it.stop() }; runCatching { it.release() } }
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Startup tone playback failed: ${e.message}")
+                mp?.let { runCatching { it.stop() }; runCatching { it.release() } }
+            }
+        }
+    }
+
     fun release() {
         stopBusyTone()
         stopDeniedTone()
