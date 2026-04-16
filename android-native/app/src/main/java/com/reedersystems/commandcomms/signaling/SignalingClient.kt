@@ -20,7 +20,7 @@ private const val STARTUP_TAG = "[APP-STARTUP]"
 
 enum class ConnectionState { DISCONNECTED, CONNECTING, CONNECTED, AUTHENTICATED }
 
-class SignalingClient(var serverUrl: String, private var radioToken: String? = null) {
+class SignalingClient(var serverUrl: String, private var radioToken: String? = null, var deviceId: String? = null) {
 
     private var socket: Socket? = null
 
@@ -75,8 +75,10 @@ class SignalingClient(var serverUrl: String, private var radioToken: String? = n
                 put("username", username)
                 put("agencyId", "default")
                 put("isDispatcher", false)
+                deviceId?.let { put("deviceId", it) }
+                put("deviceType", if (radioToken != null) "radio" else "desktop")
             }
-            Log.d(STARTUP_TAG, "SIGNALING_AUTH_SENT unitId=$unitId")
+            Log.d(STARTUP_TAG, "SIGNALING_AUTH_SENT unitId=$unitId deviceId=${deviceId ?: "none"}")
             s.emit("authenticate", auth)
 
             authRetryTimer?.cancel()

@@ -291,9 +291,23 @@ export async function initializeDatabase() {
       )
     `);
 
+    await client.query(`ALTER TABLE radios ADD COLUMN IF NOT EXISTS device_uuid UUID`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_radios_serial_number ON radios (serial_number)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_radios_token ON radios (token)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_radios_assigned_unit_id ON radios (assigned_unit_id)`);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS devices (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        unit_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        device_type VARCHAR(20) NOT NULL DEFAULT 'browser',
+        device_label VARCHAR(255),
+        last_seen TIMESTAMP,
+        registered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_devices_unit_id ON devices (unit_id)`);
 
     const existingAdmin = await client.query(
       'SELECT id FROM users WHERE username = $1',
@@ -1031,53 +1045,6 @@ export async function getZoneAnnouncementAudio(zoneId) {
   return result.rows[0]?.announcement_audio || null;
 }
 
-export async function updateRadioFcmToken(radioId, fcmToken) {
-  await pool.query(
-    'UPDATE radios SET fcm_token = $1 WHERE radio_id = $2',
-    [fcmToken, radioId]
-  );
-}
-
-export async function getAllFcmTokensForUnit(unitIdentity) {
-  const result = await pool.query(
-    `SELECT r.fcm_token, r.radio_id FROM radios r
-     JOIN users u ON r.assigned_unit_id = u.id
-     WHERE (u.unit_id = $1 OR u.username = $1) AND r.fcm_token IS NOT NULL`,
-    [unitIdentity]
-  );
-  return result.rows;
-}
-
-export async function getAllFcmTokensForChannel(channelName) {
-  const result = await pool.query(
-    `SELECT r.fcm_token, r.radio_id, u.unit_id AS unit_identity
-     FROM radios r
-     JOIN users u ON r.assigned_unit_id = u.id
-     WHERE r.fcm_token IS NOT NULL`,
-    []
-  );
-  return result.rows;
-}
-
-export async function getAllFcmTokens() {
-  const result = await pool.query(
-    `SELECT r.fcm_token, r.radio_id, COALESCE(u.unit_id, u.username) AS unit_identity
-     FROM radios r
-     LEFT JOIN users u ON r.assigned_unit_id = u.id
-     WHERE r.fcm_token IS NOT NULL`
-  );
-  return result.rows;
-}
-
-export async function createPage(message, sender, targetType, targetId) {
-  const result = await pool.query(
-    `INSERT INTO pages (message, sender, target_type, target_id)
-     VALUES ($1, $2, $3, $4) RETURNING *`,
-    [message, sender, targetType, targetId]
-  );
-  return result.rows[0];
-}
-
 export async function recordPageAck(pageId, unitId, radioId) {
   const result = await pool.query(
     `INSERT INTO page_acks (page_id, unit_id, radio_id)
@@ -1085,6 +1052,33 @@ export async function recordPageAck(pageId, unitId, radioId) {
      ON CONFLICT (page_id, radio_id) DO UPDATE SET acked_at = CURRENT_TIMESTAMP
      RETURNING *`,
     [pageId, unitId || null, radioId || null]
+  );
+  return result.rows[0];
+}
+
+export async function getOrSetRadioDeviceUUID(radioId) {
+  const existing = await pool.query(
+    'SELECT device_uuid FROM radios WHERE radio_id = $1',
+    [radioId]
+  );
+  if (!existing.rows[0]) return null;
+  if (existing.rows[0].device_uuid) return existing.rows[0].device_uuid;
+  const newUUID = (await pool.query('SELECT gen_random_uuid() AS uuid')).rows[0].uuid;
+  await pool.query('UPDATE radios SET device_uuid = $1 WHERE radio_id = $2', [newUUID, radioId]);
+  return newUUID;
+}
+
+export async function upsertDevice(deviceId, unitUserId, deviceType, deviceLabel) {
+  const result = await pool.query(
+    `INSERT INTO devices (id, unit_id, device_type, device_label, last_seen)
+     VALUES ($1::uuid, $2, $3, $4, CURRENT_TIMESTAMP)
+     ON CONFLICT (id) DO UPDATE SET
+       unit_id = COALESCE(EXCLUDED.unit_id, devices.unit_id),
+       device_type = EXCLUDED.device_type,
+       device_label = COALESCE(EXCLUDED.device_label, devices.device_label),
+       last_seen = CURRENT_TIMESTAMP
+     RETURNING *`,
+    [deviceId, unitUserId || null, deviceType || 'browser', deviceLabel || null]
   );
   return result.rows[0];
 }
@@ -1162,4 +1156,48 @@ export async function setPagingChannelId(channelId) {
   );
 }
 
+export async function updateDeviceLastSeen(deviceId) {
+  await pool.query(
+    `UPDATE devices SET last_seen = CURRENT_TIMESTAMP WHERE id = $1::uuid`,
+    [deviceId]
+  );
+}
+
+export async function getAllDevices() {
+  const result = await pool.query(
+    `SELECT d.id, d.device_type, d.device_label, d.last_seen, d.registered_at,
+            u.id AS user_id, u.username, u.unit_id AS unit_identity
+     FROM devices d
+     LEFT JOIN users u ON d.unit_id = u.id
+     ORDER BY d.last_seen DESC NULLS LAST`
+  );
+  return result.rows;
+}
+
+export async function getDeviceById(deviceId) {
+  const result = await pool.query(
+    `SELECT d.*, u.username, u.unit_id AS unit_identity
+     FROM devices d
+     LEFT JOIN users u ON d.unit_id = u.id
+     WHERE d.id = $1::uuid`,
+    [deviceId]
+  );
+  return result.rows[0];
+}
+
+export async function updateDeviceLabel(deviceId, label) {
+  const result = await pool.query(
+    `UPDATE devices SET device_label = $1 WHERE id = $2::uuid RETURNING *`,
+    [label, deviceId]
+  );
+  return result.rows[0];
+}
+
+export async function deleteDevice(deviceId) {
+  const result = await pool.query(
+    `DELETE FROM devices WHERE id = $1::uuid RETURNING *`,
+    [deviceId]
+  );
+  return result.rows[0];
+}
 export default pool;

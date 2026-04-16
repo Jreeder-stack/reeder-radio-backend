@@ -3,7 +3,16 @@ import * as adminService from '../services/adminService.js';
 import * as authService from '../services/authService.js';
 import { success, error, created } from '../utils/response.js';
 import { startDispatcher, stopDispatcher, getDispatcher } from '../services/aiDispatchService.js';
-import { getAiDispatchChannel, setAiDispatchChannel, getAllChannels, setChannelAnnouncementAudio, setZoneAnnouncementAudio } from '../db/index.js';
+import { 
+  getAiDispatchChannel, 
+  setAiDispatchChannel, 
+  getAllChannels, 
+  setChannelAnnouncementAudio, 
+  setZoneAnnouncementAudio,
+  getAllDevices as dbGetAllDevices,
+  updateDeviceLabel as dbUpdateDeviceLabel,
+  deleteDevice as dbDeleteDevice
+} from '../db/index.js';
 import { signalingService } from '../services/signalingService.js';
 import { scannerFeedService } from '../services/scannerFeedService.js';
 import { textToSpeech, isConfigured as isSpeechConfigured } from '../services/azureSpeechService.js';
@@ -543,4 +552,46 @@ export function streamVmLogs(req, res) {
 
   req.on('close', cleanup);
   req.on('error', cleanup);
+}
+
+export async function listDevices(req, res) {
+  try {
+    const devices = await dbGetAllDevices();
+    success(res, { devices });
+  } catch (err) {
+    console.error('List devices error:', err);
+    error(res, 'Failed to list devices', 500);
+  }
+}
+
+export async function deleteDevice(req, res) {
+  try {
+    const { id } = req.params;
+    const device = await dbDeleteDevice(id);
+    if (!device) {
+      return error(res, 'Device not found', 404);
+    }
+    success(res, { device });
+  } catch (err) {
+    console.error('Delete device error:', err);
+    error(res, 'Failed to delete device', 500);
+  }
+}
+
+export async function updateDeviceLabel(req, res) {
+  try {
+    const { id } = req.params;
+    const { device_label } = req.body;
+    if (!device_label || typeof device_label !== 'string') {
+      return error(res, 'device_label is required', 400);
+    }
+    const device = await dbUpdateDeviceLabel(id, device_label.trim());
+    if (!device) {
+      return error(res, 'Device not found', 404);
+    }
+    success(res, { device });
+  } catch (err) {
+    console.error('Update device label error:', err);
+    error(res, 'Failed to update device label', 500);
+  }
 }

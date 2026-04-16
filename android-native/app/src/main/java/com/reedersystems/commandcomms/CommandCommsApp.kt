@@ -3,10 +3,12 @@ package com.reedersystems.commandcomms
 import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.content.Context
 import android.media.AudioAttributes
 import android.media.RingtoneManager
 import android.os.Build
 import android.util.Log
+import java.util.UUID
 import com.reedersystems.commandcomms.audio.ToneEngine
 import com.reedersystems.commandcomms.audio.radio.RadioStateManager
 import com.reedersystems.commandcomms.data.api.ApiClient
@@ -97,7 +99,8 @@ class CommandCommsApp : Application() {
         }
         authRepository = AuthRepository(apiClient)
         channelRepository = ChannelRepository(apiClient)
-        signalingClient = SignalingClient(apiClient.baseUrl, storedRadioToken)
+        val persistedDeviceId = getOrCreateDeviceId()
+        signalingClient = SignalingClient(apiClient.baseUrl, storedRadioToken, persistedDeviceId)
         signalingRepository = SignalingRepository(signalingClient)
         radioConfigRepository = RadioConfigRepository(apiClient)
         toneEngine = ToneEngine(this)
@@ -208,4 +211,14 @@ class CommandCommsApp : Application() {
     @Volatile var pendingPageMessage: String? = null
     @Volatile var pendingPageSender: String? = null
     @Volatile var pendingPageChannelId: String? = null
+
+    private fun getOrCreateDeviceId(): String {
+        val prefs = getSharedPreferences("commandcomms_device", Context.MODE_PRIVATE)
+        val existing = prefs.getString("device_id", null)
+        if (existing != null) return existing
+        val newId = UUID.randomUUID().toString()
+        prefs.edit().putString("device_id", newId).apply()
+        Log.d("CommandCommsApp", "Generated new device ID: $newId")
+        return newId
+    }
 }

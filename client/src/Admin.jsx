@@ -43,6 +43,10 @@ export default function Admin({ user, onLogout }) {
   const [dspDefaults, setDspDefaults] = useState(null);
   const [dspLoading, setDspLoading] = useState(false);
   
+  const [devices, setDevices] = useState([]);
+  const [editingDeviceId, setEditingDeviceId] = useState(null);
+  const [editingDeviceLabel, setEditingDeviceLabel] = useState("");
+
   const [showAddUser, setShowAddUser] = useState(false);
   const [showEditUser, setShowEditUser] = useState(null);
   const [showAddZone, setShowAddZone] = useState(false);
@@ -138,26 +142,28 @@ export default function Admin({ user, onLogout }) {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [usersRes, channelsRes, zonesRes, logsRes, aiDispatchRes, scannerRes] = await Promise.all([
+      const [usersRes, channelsRes, zonesRes, logsRes, aiDispatchRes, scannerRes, devicesRes] = await Promise.all([
         fetch("/api/admin/users", { credentials: "include" }),
         fetch("/api/admin/channels", { credentials: "include" }),
         fetch("/api/admin/zones", { credentials: "include" }),
         fetch("/api/admin/logs?limit=200", { credentials: "include" }),
         fetch("/api/admin/ai-dispatch", { credentials: "include" }),
         fetch("/api/admin/scanner", { credentials: "include" }),
+        fetch("/api/admin/devices", { credentials: "include" }),
       ]);
 
       if (!usersRes.ok || !channelsRes.ok || !zonesRes.ok || !logsRes.ok) {
         throw new Error("Failed to load data");
       }
 
-      const [usersData, channelsData, zonesData, logsData, aiDispatchData, scannerData] = await Promise.all([
+      const [usersData, channelsData, zonesData, logsData, aiDispatchData, scannerData, devicesData] = await Promise.all([
         usersRes.json(),
         channelsRes.json(),
         zonesRes.json(),
         logsRes.json(),
         aiDispatchRes.ok ? aiDispatchRes.json() : { enabled: false },
         scannerRes.ok ? scannerRes.json() : { running: false },
+        devicesRes.ok ? devicesRes.json() : { devices: [] },
       ]);
 
       setUsers(usersData.users);
@@ -175,10 +181,43 @@ export default function Admin({ user, onLogout }) {
       setScannerRetryCount(scannerData.retryCount || 0);
       setScannerMaxRetries(scannerData.maxReconnectAttempts || 10);
       setScannerLastError(scannerData.lastError || null);
+      setDevices(devicesData.devices || []);
     } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const deleteDeviceHandler = async (deviceId) => {
+    if (!confirm("Remove this device registration?")) return;
+    try {
+      const res = await fetch(`/api/admin/devices/${deviceId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to delete device");
+      setDevices((prev) => prev.filter((d) => d.id !== deviceId));
+    } catch (err) {
+      alert("Failed to remove device: " + err.message);
+    }
+  };
+
+  const saveDeviceLabel = async (deviceId) => {
+    try {
+      const res = await fetch(`/api/admin/devices/${deviceId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ device_label: editingDeviceLabel }),
+      });
+      if (!res.ok) throw new Error("Failed to update device label");
+      const data = await res.json();
+      setDevices((prev) => prev.map((d) => d.id === deviceId ? { ...d, device_label: data.device.device_label } : d));
+      setEditingDeviceId(null);
+      setEditingDeviceLabel("");
+    } catch (err) {
+      alert("Failed to update label: " + err.message);
     }
   };
 
@@ -571,6 +610,7 @@ export default function Admin({ user, onLogout }) {
             { id: "audioTuning", label: "Audio Tuning", onClick: () => { setActiveTab("audioTuning"); loadAudioTuning(); } },
             { id: "paging", label: "Paging" },
             { id: "vmLogs", label: "VM Logs" },
+            { id: "devices", label: `Devices (${devices.length})` },
           ].map(({ id, label, onClick }) => (
             <button
               key={id}
@@ -1212,6 +1252,90 @@ export default function Admin({ user, onLogout }) {
         {activeTab === "vmLogs" && (
           <div className="admin-tab-content">
             <VmLogs isMobile={isMobile} />
+          </div>
+        )}
+
+        {activeTab === "devices" && (
+          <div className="admin-tab-content">
+            <div className="admin-section-header">
+              <h2 className="admin-section-title">Registered Devices</h2>
+              <button className="admin-btn admin-btn-secondary" onClick={loadData}>Refresh</button>
+            </div>
+            {devices.length === 0 ? (
+              <div className="admin-muted-text" style={{ padding: "24px 0" }}>No devices registered yet. Devices are registered automatically when clients connect.</div>
+            ) : isMobile ? (
+              <div>
+                {devices.map((d) => (
+                  <div key={d.id} className="admin-card">
+                    <div className="admin-card-row" style={{ marginBottom: 8 }}>
+                      <span className="admin-card-title">{d.device_label || d.id.slice(0, 8) + "..."}</span>
+                      <span className={`admin-badge ${d.device_type === "radio" ? "admin-badge-blue" : d.device_type === "desktop" ? "admin-badge-success" : "admin-badge-muted"}`}>{d.device_type}</span>
+                    </div>
+                    <div style={{ fontSize: 12, color: "#888", marginBottom: 6 }}>{d.unit_identity || d.username || "Unassigned"}</div>
+                    <div style={{ fontSize: 11, color: "#aaa", marginBottom: 8, wordBreak: "break-all" }}>{d.id}</div>
+                    <div style={{ fontSize: 12, color: "#888", marginBottom: 8 }}>Last seen: {d.last_seen ? formatDate(d.last_seen) : "Never"}</div>
+                    <div className="admin-action-row">
+                      <button onClick={() => { setEditingDeviceId(d.id); setEditingDeviceLabel(d.device_label || ""); }} className="admin-btn-sm admin-btn-sm-green">Edit Label</button>
+                      <button onClick={() => deleteDeviceHandler(d.id)} className="admin-btn-sm admin-btn-sm-danger">Remove</button>
+                    </div>
+                    {editingDeviceId === d.id && (
+                      <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
+                        <input className="admin-input" style={{ flex: 1, padding: "4px 8px", fontSize: 13 }} value={editingDeviceLabel} onChange={(e) => setEditingDeviceLabel(e.target.value)} placeholder="Device label" />
+                        <button className="admin-btn-sm admin-btn-sm-green" onClick={() => saveDeviceLabel(d.id)}>Save</button>
+                        <button className="admin-btn-sm" onClick={() => setEditingDeviceId(null)}>Cancel</button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="admin-table-wrap">
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th>Label / ID</th>
+                      <th>Type</th>
+                      <th>Unit</th>
+                      <th>Last Seen</th>
+                      <th>Registered</th>
+                      <th style={{ textAlign: "right" }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {devices.map((d) => (
+                      <tr key={d.id}>
+                        <td>
+                          {editingDeviceId === d.id ? (
+                            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                              <input className="admin-input" style={{ padding: "2px 6px", fontSize: 13, minWidth: 160 }} value={editingDeviceLabel} onChange={(e) => setEditingDeviceLabel(e.target.value)} placeholder="Device label" autoFocus />
+                              <button className="admin-btn-sm admin-btn-sm-green" onClick={() => saveDeviceLabel(d.id)}>Save</button>
+                              <button className="admin-btn-sm" onClick={() => { setEditingDeviceId(null); setEditingDeviceLabel(""); }}>Cancel</button>
+                            </div>
+                          ) : (
+                            <div>
+                              <div className="admin-td-bold">{d.device_label || <span className="admin-muted-text">No label</span>}</div>
+                              <div className="admin-td-muted admin-td-sm" style={{ fontFamily: "monospace", fontSize: 11 }}>{d.id}</div>
+                            </div>
+                          )}
+                        </td>
+                        <td>
+                          <span className={`admin-badge ${d.device_type === "radio" ? "admin-badge-blue" : d.device_type === "desktop" ? "admin-badge-success" : "admin-badge-muted"}`}>{d.device_type}</span>
+                        </td>
+                        <td className="admin-td-muted">{d.unit_identity || d.username || <span style={{ color: "#aaa" }}>Unassigned</span>}</td>
+                        <td className="admin-td-muted admin-td-sm">{d.last_seen ? formatDate(d.last_seen) : "Never"}</td>
+                        <td className="admin-td-muted admin-td-sm">{d.registered_at ? formatDate(d.registered_at) : "-"}</td>
+                        <td style={{ textAlign: "right" }}>
+                          <div className="admin-action-row" style={{ justifyContent: "flex-end" }}>
+                            <button onClick={() => { setEditingDeviceId(d.id); setEditingDeviceLabel(d.device_label || ""); }} className="admin-btn-sm admin-btn-sm-green">Edit</button>
+                            <button onClick={() => deleteDeviceHandler(d.id)} className="admin-btn-sm admin-btn-sm-danger">Remove</button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
       </div>

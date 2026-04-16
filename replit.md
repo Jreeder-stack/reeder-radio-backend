@@ -23,7 +23,8 @@ The dispatch console is a PWA with responsive design, featuring auto-login, dark
 - **Real-time Communication:** WebSockets for audio streaming; Socket.IO v4.x server for signaling (presence, PTT floor control, data messages, emergency, location).
 - **Audio Processing:** Web Audio API DSP for AGC, noise suppression, transmit compression, PTT release reliability, and feedback loop prevention.
 - **Authentication & Authorization:** Username/password authentication with bcrypt, session management, and role-based access control. CAD integration uses an API key for trusted server-to-server authentication.
-- **Radio Device Auth (T320):** Hardware radios use device-identity-based authentication with permanent Radio IDs and tokens.
+- **Radio Device Auth (T320):** Hardware radios use device-identity-based authentication with permanent Radio IDs and tokens. Each radio has a persistent `device_uuid` stored in the `radios` table, linked to a record in the `devices` table.
+- **Persistent Device ID System:** Every connection type (T320 radio, browser CAD, browser dispatch, Electron desktop, Android) gets a UUID stored persistently — localStorage for web, SharedPreferences for Android, `radios.device_uuid` for T320 radios. Floor control uses `socket.floorKey = socket.deviceId` as the lock key. Admin panel includes a Devices tab for managing all registered devices.
 - **CAD-to-Radio PTT Integration:** External CAD systems can authenticate, verify users, fetch channels, and utilize an embeddable JavaScript client for PTT functionality.
 - **AI Voice Dispatcher:** Integrates Azure Speech Services (STT/TTS) and Azure OpenAI (GPT-4o-mini) for natural language processing, enabling voice commands for operational tasks (e.g., unit assignment, call notes, person/warrant checks, status changes). Includes location awareness and handles common STT misrecognitions.
 - **Radio Diagnostic Logging:** Comprehensive diagnostic logging across the Android radio TX/RX pipeline.

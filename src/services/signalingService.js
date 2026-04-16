@@ -6,7 +6,16 @@ import { canonicalChannelKey } from './channelKeyUtils.js';
 import locationService from './locationService.js';
 import cookie from 'cookie';
 import signature from 'cookie-signature';
-import pool, { clearUnitEmergencyByIdentity, getRadioByToken, updateRadioLastSeen, upsertUnitPresence } from '../db/index.js';
+import pool, { 
+  clearUnitEmergencyByIdentity, 
+  getRadioByToken, 
+  updateRadioLastSeen, 
+  upsertUnitPresence, 
+  upsertDevice, 
+  updateDeviceLastSeen, 
+  getOrSetRadioDeviceUUID 
+} from '../db/index.js';
+import { randomUUID } from 'crypto';
 import { config } from '../config/env.js';
 
 const SIGNALING_EVENTS = {
@@ -235,7 +244,24 @@ class SignalingService {
           socket.unitId = unitIdentity;
 
           await updateRadioLastSeen(radio.radio_id);
-          console.log(`[Signaling] Radio authenticated: radioId=${radio.radio_id} unitId=${socket.unitId} socket=${socket.id}`);
+
+          try {
+            const persistentDeviceUUID = await getOrSetRadioDeviceUUID(radio.radio_id);
+            const deviceUUID = persistentDeviceUUID || randomUUID();
+            const radioDevice = await upsertDevice(
+              deviceUUID,
+              radio.assigned_unit_id || null,
+              'radio',
+              `Radio ${radio.radio_id}${radio.imei ? ` (${radio.imei})` : ''}`
+            );
+            socket.deviceId = radioDevice.id;
+          } catch (devErr) {
+            console.warn('[Signaling] Radio device registration failed (non-fatal):', devErr.message);
+            socket.deviceId = randomUUID();
+          }
+          socket.floorKey = socket.deviceId;
+
+          console.log(`[Signaling] Radio authenticated: radioId=${radio.radio_id} unitId=${socket.unitId} deviceId=${socket.deviceId} socket=${socket.id}`);
 
           if (radio.assigned_unit_id) {
             let channelConfig = null;
@@ -273,21 +299,23 @@ class SignalingService {
       }
     });
 
-    floorControlService.onTimeout((channelId, unitId) => {
-      const unitSocket = this._findSocketByUnitId(unitId);
+    floorControlService.onTimeout((channelId, floorKey) => {
+      const transmission = this.activeTransmissions.get(channelId);
+      const displayUnitId = transmission?.unitId || floorKey;
+      const unitSocket = this._findSocketByFloorKey(floorKey);
 
-      audioRelayService.clearTxWatchdog(channelId, unitId, 'floor_timeout');
+      audioRelayService.clearTxWatchdog(channelId, displayUnitId, 'floor_timeout');
       this.activeTransmissions.delete(channelId);
 
       this.io.to(`channel:${channelId}`).emit(RADIO_EVENTS.TX_STOP, {
-        senderUnitId: unitId,
+        senderUnitId: displayUnitId,
         channelId,
         timestamp: Date.now(),
         reason: 'timeout',
       });
 
       this.io.to(`channel:${channelId}`).emit(SIGNALING_EVENTS.PTT_END, {
-        unitId,
+        unitId: displayUnitId,
         channelId,
         timestamp: Date.now(),
       });
@@ -297,12 +325,12 @@ class SignalingService {
         timestamp: Date.now(),
       });
 
-      const presenceData = this.unitPresence.get(unitId);
+      const presenceData = this.unitPresence.get(displayUnitId);
       if (presenceData) {
         presenceData.status = 'online';
       }
 
-      console.log(`[Signaling] Floor timeout: cleaned up activeTransmissions and floor for ${unitId} on ${channelId}`);
+      console.log(`[Signaling] Floor timeout: cleaned up activeTransmissions and floor for ${displayUnitId} (floorKey=${floorKey}) on ${channelId}`);
     });
 
 
@@ -390,7 +418,7 @@ class SignalingService {
       return;
     }
 
-    const { unitId, agencyId, username, isDispatcher } = data;
+    const { unitId, agencyId, username, isDispatcher, deviceId: clientDeviceId, deviceType: clientDeviceType } = data;
     
     if (!unitId || !username) {
       socket.emit('auth:error', { message: 'unitId and username required' });
@@ -445,6 +473,27 @@ class SignalingService {
     socket.username = validatedUsername;
     socket.isDispatcher = validatedIsDispatcher;
     socket.channels = new Set();
+
+    const deviceType = clientDeviceType || 'browser';
+    if (clientDeviceId) {
+      const deviceLabel = `${validatedUnitId} ${deviceType.toUpperCase()}`;
+      try {
+        let unitUserId = sessionUser?.id || null;
+        if (!unitUserId) {
+          const uRow = await pool.query('SELECT id FROM users WHERE unit_id = $1 OR username = $1 LIMIT 1', [validatedUnitId]);
+          unitUserId = uRow.rows[0]?.id || null;
+        }
+        await upsertDevice(clientDeviceId, unitUserId, deviceType, deviceLabel);
+        socket.deviceId = clientDeviceId;
+      } catch (devErr) {
+        console.warn('[Signaling] Device registration failed (non-fatal):', devErr.message);
+        socket.deviceId = clientDeviceId;
+      }
+    } else {
+      socket.deviceId = randomUUID();
+    }
+
+    socket.floorKey = socket.deviceId;
     
     this.unitPresence.set(validatedUnitId, {
       socketId: socket.id,
@@ -459,7 +508,8 @@ class SignalingService {
     });
     
     socket.emit('authenticated', { 
-      unitId: validatedUnitId, 
+      unitId: validatedUnitId,
+      deviceId: socket.deviceId,
       timestamp: Date.now(),
       voiceAvailable: true,
     });
@@ -490,7 +540,7 @@ class SignalingService {
       }
     }
     
-    console.log(`[Signaling] Unit authenticated: ${validatedUnitId} (${validatedUsername})${sessionUser ? ' [session-verified]' : ' [client-claimed]'}`);
+    console.log(`[Signaling] Unit authenticated: ${validatedUnitId} (${validatedUsername}) deviceId=${socket.deviceId}${sessionUser ? ' [session-verified]' : ' [client-claimed]'}`);
   }
 
   _handleChannelJoin(socket, data) {
@@ -670,7 +720,7 @@ class SignalingService {
     const isEmergency = this.emergencyStates.has(channelId);
     console.log(`[Signaling] PTT START request: unitId=${socket.unitId} channelId=${channelId} isClearAir=${isClearAirRequest}`);
 
-    const floorResult = floorControlService.requestFloor(channelId, socket.unitId, {
+    const floorResult = floorControlService.requestFloor(channelId, socket.floorKey || socket.unitId, {
       isEmergency,
       isClearAir: isClearAirRequest,
       emergencyStates: this.emergencyStates,
@@ -686,7 +736,7 @@ class SignalingService {
     }
 
     if (floorResult.preemptedClearAir && !clearAirAlreadyPreempted) {
-      const preemptedSocket = this._findSocketByUnitId(floorResult.preemptedUnit);
+      const preemptedSocket = this._findSocketByFloorKey(floorResult.preemptedUnit);
       if (preemptedSocket) {
         preemptedSocket.emit('clearair:preempted', { channelId });
       }
@@ -697,6 +747,7 @@ class SignalingService {
 
     const transmissionData = {
       unitId: socket.unitId,
+      floorKey: socket.floorKey || socket.unitId,
       agencyId: socket.agencyId,
       channelId,
       timestamp: Date.now(),
@@ -746,7 +797,7 @@ class SignalingService {
     if (transmission.unitId !== socket.unitId) {
       console.warn(`[Signaling] PTT END unitId mismatch: socket=${socket.unitId} transmission=${transmission.unitId} on ${channelId} — cleaning up anyway`);
       this.activeTransmissions.delete(channelId);
-      floorControlService.releaseFloor(channelId, transmission.unitId);
+      floorControlService.releaseFloor(channelId, transmission.floorKey || transmission.unitId);
 
       this._emitToChannelExcludingUnit(channelId, RADIO_EVENTS.TX_STOP, {
         senderUnitId: transmission.unitId,
@@ -783,7 +834,7 @@ class SignalingService {
     };
     
     this.activeTransmissions.delete(channelId);
-    floorControlService.releaseFloor(channelId, socket.unitId);
+    floorControlService.releaseFloor(channelId, socket.floorKey || socket.unitId);
     
     this.graceChannels.set(channelId, {
       unitId: socket.unitId,
@@ -837,7 +888,7 @@ class SignalingService {
     };
 
     this.activeTransmissions.delete(key);
-    floorControlService.releaseFloor(key, unitId);
+    floorControlService.releaseFloor(key, transmission.floorKey || unitId);
 
     const presence = this.unitPresence.get(unitId);
     if (presence) {
@@ -1182,6 +1233,14 @@ class SignalingService {
     return null;
   }
 
+  _findSocketByFloorKey(key) {
+    if (!this.io) return null;
+    for (const [, s] of this.io.sockets.sockets) {
+      if (s.floorKey === key || s.deviceId === key || s.unitId === key) return s;
+    }
+    return null;
+  }
+
   getTrackedLocations() {
     return Array.from(this.trackedUnitLocations.values());
   }
@@ -1242,13 +1301,13 @@ class SignalingService {
       }
     }
 
-    const releasedChannels = floorControlService.releaseAllForUnit(socket.unitId);
+    const releasedChannels = floorControlService.releaseAllForUnit(socket.floorKey || socket.unitId);
     for (const channelId of releasedChannels) {
       this.io.to(`channel:${channelId}`).emit(RADIO_EVENTS.CHANNEL_IDLE, {
         channelId,
         timestamp: Date.now(),
       });
-      console.log(`[Signaling] Released floor for ${socket.unitId} on ${channelId}`);
+      console.log(`[Signaling] Released floor for ${socket.unitId} (floorKey=${socket.floorKey}) on ${channelId}`);
     }
 
     audioRelayService.removeAllSubscriptions(socket.unitId);
@@ -1554,8 +1613,8 @@ class SignalingService {
       this.activeTransmissions.delete(channelId);
     }
 
-    if (floorControlService.holdsFloor(channelId, socket.unitId)) {
-      floorControlService.releaseFloor(channelId, socket.unitId);
+    if (floorControlService.holdsFloor(channelId, socket.floorKey || socket.unitId)) {
+      floorControlService.releaseFloor(channelId, socket.floorKey || socket.unitId);
       this.io.to(`channel:${channelId}`).emit(RADIO_EVENTS.TX_STOP, {
         senderUnitId: socket.unitId,
         channelId,
@@ -1613,7 +1672,7 @@ class SignalingService {
     const isEmergency = this.emergencyStates.has(channelId) &&
       this.emergencyStates.get(channelId).unitId === socket.unitId;
 
-    const result = floorControlService.requestFloor(channelId, socket.unitId, {
+    const result = floorControlService.requestFloor(channelId, socket.floorKey || socket.unitId, {
       isEmergency,
       emergencyStates: this.emergencyStates,
     });
@@ -1623,6 +1682,7 @@ class SignalingService {
 
       this.activeTransmissions.set(channelId, {
         unitId: socket.unitId,
+        floorKey: socket.floorKey || socket.unitId,
         agencyId: socket.agencyId,
         channelId,
         timestamp: Date.now(),
@@ -1658,7 +1718,7 @@ class SignalingService {
       }, socket.unitId);
 
       if (result.preemptedUnit) {
-        const preemptedSocket = this._findSocketByUnitId(result.preemptedUnit);
+        const preemptedSocket = this._findSocketByFloorKey(result.preemptedUnit);
         if (preemptedSocket) {
           preemptedSocket.emit(RADIO_EVENTS.PTT_DENIED, {
             channelId,
@@ -1704,9 +1764,10 @@ class SignalingService {
     audioRelayService.clearTxWatchdog(channelId, socket.unitId);
 
     const floorHolder = floorControlService.getFloorHolder(channelId);
-    const grantedAt = floorHolder && floorHolder.unitId === socket.unitId ? floorHolder.grantedAt : null;
+    const myFloorKey = socket.floorKey || socket.unitId;
+    const grantedAt = floorHolder && floorHolder.unitId === myFloorKey ? floorHolder.grantedAt : null;
 
-    const released = floorControlService.releaseFloor(channelId, socket.unitId);
+    const released = floorControlService.releaseFloor(channelId, myFloorKey);
     if (!released) return;
 
     this.activeTransmissions.delete(channelId);
@@ -1750,7 +1811,7 @@ class SignalingService {
     const channelId = socket._channelKeyMap?.get(rawChannelId) || rawChannelId;
     if (!socket.unitId) return;
 
-    if (!floorControlService.holdsFloor(channelId, socket.unitId)) {
+    if (!floorControlService.holdsFloor(channelId, socket.floorKey || socket.unitId)) {
       socket.emit('error', { message: 'Cannot start TX without floor grant' });
       return;
     }
@@ -1772,11 +1833,11 @@ class SignalingService {
 
     audioRelayService.clearTxWatchdog(channelId, socket.unitId);
 
-    if (floorControlService.holdsFloor(channelId, socket.unitId)) {
+    if (floorControlService.holdsFloor(channelId, socket.floorKey || socket.unitId)) {
       const floorHolder = floorControlService.getFloorHolder(channelId);
       const grantedAt = floorHolder ? floorHolder.grantedAt : null;
 
-      floorControlService.releaseFloor(channelId, socket.unitId);
+      floorControlService.releaseFloor(channelId, socket.floorKey || socket.unitId);
       this.activeTransmissions.delete(channelId);
 
       const presenceData = this.unitPresence.get(socket.unitId);

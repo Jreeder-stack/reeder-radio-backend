@@ -38,4 +38,8 @@ router.post('/scanner', adminController.setScannerFeed);
 
 router.get('/vm-logs', adminController.streamVmLogs);
 
+router.get('/devices', adminController.listDevices);
+router.delete('/devices/:id', adminController.deleteDevice);
+router.patch('/devices/:id', adminController.updateDeviceLabel);
+
 export default router;

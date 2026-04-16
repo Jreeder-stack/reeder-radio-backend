@@ -1,5 +1,24 @@
 import { io } from 'socket.io-client';
 
+function getOrCreateDeviceId(deviceType = 'browser') {
+  const storageKey = `commandcomms_device_id_${deviceType}`;
+  let deviceId = null;
+  try {
+    deviceId = localStorage.getItem(storageKey);
+  } catch (_) {}
+  if (!deviceId) {
+    deviceId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+      const r = Math.random() * 16 | 0;
+      const v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+    try {
+      localStorage.setItem(storageKey, deviceId);
+    } catch (_) {}
+  }
+  return deviceId;
+}
+
 const SIGNALING_EVENTS = {
   CHANNEL_JOIN: 'channel:join',
   CHANNEL_LEAVE: 'channel:leave',
@@ -327,14 +346,20 @@ class SignalingManager {
         originalReject(err);
       };
 
+      const deviceType = this._deviceType || 'browser';
+      const deviceId = getOrCreateDeviceId(deviceType);
+      this._deviceId = deviceId;
+
       this.socket.emit('authenticate', {
         unitId,
         username,
         agencyId,
         isDispatcher,
+        deviceId,
+        deviceType,
       });
 
-      console.log('[Signaling] Authentication request sent for', unitId);
+      console.log('[Signaling] Authentication request sent for', unitId, 'deviceId:', deviceId);
     });
 
     try {
