@@ -1200,4 +1200,36 @@ export async function deleteDevice(deviceId) {
   );
   return result.rows[0];
 }
+
+export async function updateRadioFcmToken(radioId, fcmToken) {
+  const result = await pool.query(
+    `UPDATE radios SET fcm_token = $2 WHERE radio_id = $1 RETURNING *`,
+    [radioId, fcmToken]
+  );
+  return result.rows[0];
+}
+
+export async function createPage(message, sender, targetType, targetId) {
+  const result = await pool.query(
+    `INSERT INTO pages (message, sender, target_type, target_id) VALUES ($1, $2, $3, $4) RETURNING *`,
+    [message, sender, targetType, targetId]
+  );
+  return result.rows[0];
+}
+
+export async function getAllFcmTokensForUnit(unitId) {
+  const result = await pool.query(
+    `SELECT fcm_token, radio_id, assigned_unit_id AS unit_identity FROM radios WHERE fcm_token IS NOT NULL AND assigned_unit_id = $1`,
+    [unitId]
+  );
+  return result.rows;
+}
+
+export async function getAllFcmTokens() {
+  const result = await pool.query(
+    `SELECT fcm_token, radio_id, assigned_unit_id AS unit_identity FROM radios WHERE fcm_token IS NOT NULL`
+  );
+  return result.rows;
+}
+
 export default pool;
