@@ -306,6 +306,21 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                             }
                         }
                     }
+                    is SignalingEvent.RadioFloorTaken -> {
+                        val state = _uiState.value
+                        val currentRoomKey = state.currentChannel?.roomKey
+                        if (event.channelId == currentRoomKey && event.heldBy != state.unitId) {
+                            _uiState.update { it.copy(activeTransmittingUnit = event.heldBy) }
+                            activeTransmittingUnitStaleJob?.cancel()
+                            activeTransmittingUnitStaleJob = viewModelScope.launch {
+                                delay(ACTIVE_TX_UNIT_STALE_MS)
+                                if (_uiState.value.activeTransmittingUnit == event.heldBy) {
+                                    Log.w(TAG, """{"event":"ACTIVE_TX_UNIT_STALE_CLEAR","unit":"${event.heldBy}"}""")
+                                    _uiState.update { it.copy(activeTransmittingUnit = null) }
+                                }
+                            }
+                        }
+                    }
                     is SignalingEvent.RadioChannelIdle -> {
                         val state = _uiState.value
                         val currentRoomKey = state.currentChannel?.roomKey

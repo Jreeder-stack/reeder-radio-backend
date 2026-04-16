@@ -264,6 +264,13 @@ class SignalingClient(var serverUrl: String, private var radioToken: String? = n
             )
         }}
 
+        s.on("channel:floor_taken") { args -> parseAndEmit(args) { json ->
+            SignalingEvent.RadioFloorTaken(
+                channelId = json.optString("channelId"),
+                heldBy = json.optString("heldBy")
+            )
+        }}
+
         s.on("channel:idle") { args -> parseAndEmit(args) { json ->
             SignalingEvent.RadioChannelIdle(
                 channelId = json.optString("channelId")

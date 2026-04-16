@@ -846,6 +846,13 @@ class BackgroundAudioService : Service() {
                             engine.floorControl?.onChannelBusy(event.heldBy)
                         }
                     }
+                    is SignalingEvent.RadioFloorTaken -> {
+                        val selfUnitId = servicePrefs.unitId ?: app.sessionPrefs.unitId
+                        if (event.heldBy != selfUnitId && event.channelId == currentRoomKey) {
+                            Log.d(TAG, "RADIO_FLOOR_TAKEN channelId=${event.channelId} heldBy=${event.heldBy} — UI-only, no deny tone")
+                            engine.floorControl?.onChannelBusy(event.heldBy)
+                        }
+                    }
                     is SignalingEvent.RadioChannelIdle -> {
                         if (event.channelId == currentRoomKey) {
                             engine.floorControl?.onChannelIdle()

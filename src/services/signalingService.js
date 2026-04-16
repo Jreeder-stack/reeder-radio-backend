@@ -38,6 +38,7 @@ const RADIO_EVENTS = {
   TX_START: 'tx:start',
   TX_STOP: 'tx:stop',
   CHANNEL_BUSY: 'channel:busy',
+  CHANNEL_FLOOR_TAKEN: 'channel:floor_taken',
   CHANNEL_IDLE: 'channel:idle',
 };
 
@@ -721,7 +722,7 @@ class SignalingService {
 
     this._emitToChannelExcludingUnit(channelId, SIGNALING_EVENTS.PTT_START, transmissionData, socket.unitId);
 
-    this._emitToChannelExcludingUnit(channelId, RADIO_EVENTS.CHANNEL_BUSY, {
+    this._emitChannelFloorTakenToRoom(channelId, {
       channelId,
       heldBy: socket.unitId,
       timestamp: Date.now(),
@@ -1159,6 +1160,20 @@ class SignalingService {
     });
   }
 
+  _emitChannelFloorTakenToRoom(channelId, data, excludeUnitId) {
+    if (!this.io) return;
+    const room = `channel:${channelId}`;
+    this.io.sockets.sockets.forEach((s) => {
+      if (!s.rooms || !s.rooms.has(room)) return;
+      if (s.unitId === excludeUnitId) return;
+      if (s.isRadioDevice) {
+        s.emit(RADIO_EVENTS.CHANNEL_FLOOR_TAKEN, data);
+      } else {
+        s.emit(RADIO_EVENTS.CHANNEL_BUSY, data);
+      }
+    });
+  }
+
   _findSocketByUnitId(unitId) {
     if (!this.io) return null;
     for (const [, s] of this.io.sockets.sockets) {
@@ -1498,7 +1513,7 @@ class SignalingService {
 
     const floorHolder = floorControlService.getFloorHolder(channelId);
     if (floorHolder) {
-      socket.emit(RADIO_EVENTS.CHANNEL_BUSY, {
+      socket.emit(RADIO_EVENTS.CHANNEL_FLOOR_TAKEN, {
         channelId,
         heldBy: floorHolder.unitId,
         timestamp: Date.now(),
@@ -1636,7 +1651,7 @@ class SignalingService {
         isEmergency: isEmergency || false,
       }, socket.unitId);
 
-      this._emitToChannelExcludingUnit(channelId, RADIO_EVENTS.CHANNEL_BUSY, {
+      this._emitChannelFloorTakenToRoom(channelId, {
         channelId,
         heldBy: socket.unitId,
         timestamp: Date.now(),

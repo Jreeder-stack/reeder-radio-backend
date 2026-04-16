@@ -21,6 +21,7 @@ sealed class SignalingEvent {
     data class RadioTxStart(val senderUnitId: String, val channelId: String) : SignalingEvent()
     data class RadioTxStop(val senderUnitId: String, val channelId: String) : SignalingEvent()
     data class RadioChannelBusy(val channelId: String, val heldBy: String) : SignalingEvent()
+    data class RadioFloorTaken(val channelId: String, val heldBy: String) : SignalingEvent()
     data class RadioChannelIdle(val channelId: String) : SignalingEvent()
     data class RadioDspConfig(val config: org.json.JSONObject) : SignalingEvent()
     data class TxSilenceWarning(val unitId: String, val channelId: String, val silenceMs: Long) : SignalingEvent()
