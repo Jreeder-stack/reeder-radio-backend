@@ -16,17 +16,35 @@ import {
 
 const router = express.Router();
 
+const ALLOWED_TONE_EXTENSIONS = /\.(mp3|wav|ogg|oga|aac|m4a|flac|wma)$/i;
+
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith('audio/') || file.originalname.match(/\.(mp3|wav|ogg|aac|m4a|flac)$/i)) {
+    const mime = (file.mimetype || '').toLowerCase();
+    const name = file.originalname || '';
+    const hasAllowedExt = ALLOWED_TONE_EXTENSIONS.test(name);
+    const isAudioMime = mime.startsWith('audio/') || mime === 'application/ogg';
+    const isGenericMime = mime === 'application/octet-stream' || mime === '';
+    if (isAudioMime || (isGenericMime && hasAllowedExt) || hasAllowedExt) {
       cb(null, true);
     } else {
-      cb(new Error('Only audio files are allowed'));
+      cb(new Error('Unsupported audio format. Please upload MP3, WAV, OGG, AAC, M4A, FLAC, or WMA.'));
     }
   },
 });
+
+function runUploadMiddleware(req, res, next) {
+  upload.single('tone')(req, res, (err) => {
+    if (err) {
+      console.error('[Paging] Upload middleware error:', err.message);
+      const status = err.code === 'LIMIT_FILE_SIZE' ? 413 : 400;
+      return res.status(status).json({ error: err.message || 'Upload failed' });
+    }
+    next();
+  });
+}
 
 router.get('/active', async (req, res) => {
   try {
@@ -55,7 +73,7 @@ router.get('/', requireAdmin, async (req, res) => {
   }
 });
 
-router.post('/upload', requireAdmin, upload.single('tone'), async (req, res) => {
+router.post('/upload', requireAdmin, runUploadMiddleware, async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No audio file provided' });
