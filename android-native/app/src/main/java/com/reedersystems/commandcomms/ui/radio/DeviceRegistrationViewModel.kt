@@ -38,8 +38,12 @@ class DeviceRegistrationViewModel(application: Application) : AndroidViewModel(a
     val deviceIdentity: StateFlow<DeviceIdentity?> = _deviceIdentity.asStateFlow()
 
     init {
+        refreshDeviceIdentity()
+    }
+
+    fun refreshDeviceIdentity() {
         viewModelScope.launch(Dispatchers.IO) {
-            val identity = readDeviceIdentity(application)
+            val identity = readDeviceIdentity(getApplication())
             _deviceIdentity.value = identity
             Log.d(TAG, "DeviceIdentity read: serialPresent=${identity.serial != null} imeiPresent=${identity.imei != null}")
         }
