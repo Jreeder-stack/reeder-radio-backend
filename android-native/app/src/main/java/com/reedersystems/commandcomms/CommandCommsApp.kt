@@ -136,6 +136,39 @@ class CommandCommsApp : Application() {
             setShowBadge(false)
         }
 
+        val pttConnected = NotificationChannel(
+            "ptt_service_connected",
+            "PTT Service — Connected",
+            NotificationManager.IMPORTANCE_LOW
+        ).apply {
+            description = "PTT service LED: connected (green)"
+            setShowBadge(false)
+            enableLights(true)
+            lightColor = 0xFF00FF00.toInt()
+        }
+
+        val pttDisconnected = NotificationChannel(
+            "ptt_service_disconnected",
+            "PTT Service — Disconnected",
+            NotificationManager.IMPORTANCE_LOW
+        ).apply {
+            description = "PTT service LED: disconnected (red)"
+            setShowBadge(false)
+            enableLights(true)
+            lightColor = 0xFFFF0000.toInt()
+        }
+
+        val pttDegraded = NotificationChannel(
+            "ptt_service_degraded",
+            "PTT Service — Degraded",
+            NotificationManager.IMPORTANCE_LOW
+        ).apply {
+            description = "PTT service LED: degraded connection (amber)"
+            setShowBadge(false)
+            enableLights(true)
+            lightColor = 0xFFFF8800.toInt()
+        }
+
         val messages = NotificationChannel(
             "channel_messages",
             "Messages",
@@ -156,6 +189,6 @@ class CommandCommsApp : Application() {
             setShowBadge(true)
         }
 
-        nm.createNotificationChannels(listOf(emergency, pttService, messages, system))
+        nm.createNotificationChannels(listOf(emergency, pttService, pttConnected, pttDisconnected, pttDegraded, messages, system))
     }
 }

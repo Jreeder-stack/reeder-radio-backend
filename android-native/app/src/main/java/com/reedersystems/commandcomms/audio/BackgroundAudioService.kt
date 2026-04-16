@@ -37,6 +37,9 @@ import kotlinx.coroutines.flow.first
 private const val TAG = "[PTT-DIAG]"
 private const val NOTIFICATION_ID = 1001
 private const val CHANNEL_ID = "ptt_service"
+private const val CHANNEL_ID_CONNECTED = "ptt_service_connected"
+private const val CHANNEL_ID_DISCONNECTED = "ptt_service_disconnected"
+private const val CHANNEL_ID_DEGRADED = "ptt_service_degraded"
 
 class BackgroundAudioService : Service() {
 
@@ -71,6 +74,10 @@ class BackgroundAudioService : Service() {
     private var emergencyActivatingJob: Job? = null
 
     @Volatile private var emergencyActive = false
+
+    private enum class LedState { OFF, GREEN, RED, AMBER }
+    @Volatile private var currentLedState = LedState.OFF
+    @Volatile private var lastNotificationStatus = "Radio — Standby"
 
     private lateinit var fusedLocationClient: FusedLocationProviderClient
 
@@ -229,6 +236,7 @@ class BackgroundAudioService : Service() {
             }
             ACTION_STOP -> {
                 Log.d(TAG, "Service stop requested")
+                updateLedState(LedState.OFF)
                 restoreSpeakerState()
                 radioEngine?.stop()
                 stopSelf()
@@ -315,6 +323,7 @@ class BackgroundAudioService : Service() {
                     when (state) {
                         ConnectionState.AUTHENTICATED -> {
                             lastAuthenticatedTimeMs = System.currentTimeMillis()
+                            updateLedState(LedState.GREEN)
                             val isReconnect = hadPriorAuthentication
                             if (isReconnect) {
                                 val reconnectDurationMs = if (reconnectStartTimeMs > 0) {
@@ -331,12 +340,16 @@ class BackgroundAudioService : Service() {
                             hadPriorAuthentication = true
                         }
                         ConnectionState.DISCONNECTED -> {
+                            updateLedState(LedState.RED)
                             if (hadPriorAuthentication) {
                                 reconnectStartTimeMs = System.currentTimeMillis()
                                 Log.d(TAG, "RECONNECT_SIGNALING_DISCONNECTED — tracking reconnect latency")
                             }
                             joinedSignalingChannelId = null
                             pendingSignalingChannelId = null
+                        }
+                        ConnectionState.CONNECTING -> {
+                            updateLedState(LedState.AMBER)
                         }
                         else -> Unit
                     }
@@ -674,14 +687,20 @@ class BackgroundAudioService : Service() {
                 when (health) {
                     TransportHealth.RECONNECTING -> {
                         Log.w(TAG, """{"event":"TRANSPORT_HEALTH_RECONNECTING"}""")
+                        updateLedState(LedState.AMBER)
                     }
                     TransportHealth.DISCONNECTED -> {
                         Log.e(TAG, """{"event":"TRANSPORT_HEALTH_DISCONNECTED"}""")
+                        updateLedState(LedState.RED)
                         scheduleTransportRecovery(engine)
                     }
                     TransportHealth.CONNECTED -> {
                         Log.d(TAG, """{"event":"TRANSPORT_HEALTH_CONNECTED"}""")
                         transportRecoveryAttempts = 0
+                        val signalingState = app.signalingRepository.connectionState.value
+                        if (signalingState == ConnectionState.AUTHENTICATED) {
+                            updateLedState(LedState.GREEN)
+                        }
                     }
                 }
             }
@@ -1294,13 +1313,38 @@ class BackgroundAudioService : Service() {
         nm.notify(NOTIFICATION_ID, buildNotification(status))
     }
 
-    private fun buildNotification(status: String) =
-        NotificationCompat.Builder(this, CHANNEL_ID)
+    private fun updateLedState(newState: LedState) {
+        if (currentLedState == newState) return
+        val oldState = currentLedState
+        currentLedState = newState
+        Log.d(TAG, """{"event":"LED_STATE_CHANGED","old":"$oldState","new":"$newState"}""")
+        val nm = getSystemService(NotificationManager::class.java)
+        nm.notify(NOTIFICATION_ID, buildNotification(null))
+    }
+
+    private fun ledChannelId(): String = when (currentLedState) {
+        LedState.GREEN -> CHANNEL_ID_CONNECTED
+        LedState.RED -> CHANNEL_ID_DISCONNECTED
+        LedState.AMBER -> CHANNEL_ID_DEGRADED
+        LedState.OFF -> CHANNEL_ID
+    }
+
+    private fun buildNotification(status: String?) =
+        NotificationCompat.Builder(this, ledChannelId())
             .setSmallIcon(android.R.drawable.ic_btn_speak_now)
             .setContentTitle("Command Comms")
-            .setContentText(status)
+            .setContentText(status ?: lastNotificationStatus)
             .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
+            .apply {
+                when (currentLedState) {
+                    LedState.GREEN -> setLights(0xFF00FF00.toInt(), 1000, 3000)
+                    LedState.RED -> setLights(0xFFFF0000.toInt(), 500, 500)
+                    LedState.AMBER -> setLights(0xFFFF8800.toInt(), 1000, 1000)
+                    LedState.OFF -> {}
+                }
+                if (status != null) lastNotificationStatus = status
+            }
             .setContentIntent(
                 PendingIntent.getActivity(
                     this, 0,
@@ -1339,6 +1383,7 @@ class BackgroundAudioService : Service() {
 
     override fun onDestroy() {
         Log.d(TAG, "BackgroundAudioService destroyed")
+        updateLedState(LedState.OFF)
         restoreSpeakerState()
         dynamicPttReceiver?.let {
             unregisterReceiver(it)
