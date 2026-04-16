@@ -7,11 +7,33 @@ export default function VoiceMessage({ audioUrl, duration, transcription, onTran
   const [isLoading, setIsLoading] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
   const [showTranscription, setShowTranscription] = useState(false);
-  const [audioSrc, setAudioSrc] = useState(null);
   const audioRef = useRef(null);
-  const loadingTimeoutRef = useRef(null);
+  const blobUrlRef = useRef(null);
+  const abortRef = useRef(null);
+  const mountedRef = useRef(true);
+
+  const revokeBlobUrl = () => {
+    if (blobUrlRef.current) {
+      URL.revokeObjectURL(blobUrlRef.current);
+      blobUrlRef.current = null;
+    }
+  };
+
+  const stopAudio = () => {
+    if (abortRef.current) {
+      abortRef.current.abort();
+      abortRef.current = null;
+    }
+    const audio = audioRef.current;
+    if (audio) {
+      audio.pause();
+      audio.src = '';
+    }
+    revokeBlobUrl();
+  };
 
   useEffect(() => {
+    mountedRef.current = true;
     const audio = audioRef.current;
     if (!audio) return;
 
@@ -20,47 +42,28 @@ export default function VoiceMessage({ audioUrl, duration, transcription, onTran
         setProgress((audio.currentTime / audio.duration) * 100);
       }
     };
-
     const handleEnded = () => {
       setIsPlaying(false);
       setProgress(0);
+      revokeBlobUrl();
     };
-
-    const handlePlay = () => {
-      setIsPlaying(true);
-      setIsLoading(false);
-      setPlaybackError(null);
-      clearLoadingTimeout();
-    };
-
+    const handlePlay = () => setIsPlaying(true);
     const handlePause = () => setIsPlaying(false);
-
     const handleError = () => {
+      if (!mountedRef.current) return;
       setIsPlaying(false);
       setIsLoading(false);
-      clearLoadingTimeout();
+      revokeBlobUrl();
       const err = audio.error;
       let msg = 'Playback failed';
       if (err) {
-        switch (err.code) {
-          case MediaError.MEDIA_ERR_DECODE:
-            msg = 'Audio not available';
-            break;
-          case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
-            msg = 'Audio not available';
-            break;
-          case MediaError.MEDIA_ERR_NETWORK:
-            msg = 'Network error';
-            break;
-          default:
-            msg = 'Playback failed';
+        if (err.code === MediaError.MEDIA_ERR_DECODE || err.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED) {
+          msg = 'Audio not available';
+        } else if (err.code === MediaError.MEDIA_ERR_NETWORK) {
+          msg = 'Network error';
         }
       }
       setPlaybackError(msg);
-    };
-
-    const handleCanPlay = () => {
-      setIsLoading(false);
     };
 
     audio.addEventListener('timeupdate', handleTimeUpdate);
@@ -68,86 +71,61 @@ export default function VoiceMessage({ audioUrl, duration, transcription, onTran
     audio.addEventListener('play', handlePlay);
     audio.addEventListener('pause', handlePause);
     audio.addEventListener('error', handleError);
-    audio.addEventListener('canplay', handleCanPlay);
 
     return () => {
+      mountedRef.current = false;
       audio.removeEventListener('timeupdate', handleTimeUpdate);
       audio.removeEventListener('ended', handleEnded);
       audio.removeEventListener('play', handlePlay);
       audio.removeEventListener('pause', handlePause);
       audio.removeEventListener('error', handleError);
-      audio.removeEventListener('canplay', handleCanPlay);
+      stopAudio();
     };
   }, []);
-
-  const clearLoadingTimeout = () => {
-    if (loadingTimeoutRef.current) {
-      clearTimeout(loadingTimeoutRef.current);
-      loadingTimeoutRef.current = null;
-    }
-  };
-
-  useEffect(() => {
-    return () => clearLoadingTimeout();
-  }, []);
-
-  const checkAudioUrl = async (url) => {
-    try {
-      const response = await fetch(url, { method: 'HEAD' });
-      if (response.status === 404) {
-        return { ok: false, error: 'Audio not available' };
-      }
-      if (!response.ok) {
-        return { ok: false, error: 'Playback failed' };
-      }
-      const contentType = response.headers.get('content-type') || '';
-      if (!contentType.startsWith('audio/')) {
-        return { ok: false, error: 'Audio not available' };
-      }
-      return { ok: true };
-    } catch {
-      return { ok: false, error: 'Network error' };
-    }
-  };
 
   const startPlayback = async () => {
     const audio = audioRef.current;
     if (!audio) return;
 
+    stopAudio();
     setIsLoading(true);
     setPlaybackError(null);
-    clearLoadingTimeout();
+    setProgress(0);
 
-    const encodedUrl = encodeURI(audioUrl);
-    const check = await checkAudioUrl(encodedUrl);
-    if (!check.ok) {
-      setIsLoading(false);
-      setPlaybackError(check.error);
-      return;
-    }
+    const controller = new AbortController();
+    abortRef.current = controller;
 
-    setAudioSrc(encodedUrl);
-    audio.src = encodedUrl;
-
-    loadingTimeoutRef.current = setTimeout(() => {
-      setIsLoading(false);
-      setPlaybackError('Load timed out');
-    }, 10000);
-
-    const onReady = () => {
-      clearLoadingTimeout();
-      audio.play().catch(err => {
-        console.error('Playback failed:', err);
-        setIsLoading(false);
-        setPlaybackError('Playback failed');
+    try {
+      const response = await fetch(audioUrl, {
+        credentials: 'include',
+        signal: controller.signal,
       });
-    };
 
-    if (audio.readyState >= 3) {
-      onReady();
-    } else {
-      audio.addEventListener('canplay', onReady, { once: true });
-      audio.load();
+      if (!mountedRef.current) return;
+
+      if (!response.ok) {
+        setIsLoading(false);
+        setPlaybackError(response.status === 404 ? 'Audio not available' : 'Network error');
+        return;
+      }
+
+      const blob = await response.blob();
+      if (!mountedRef.current) return;
+
+      const blobUrl = URL.createObjectURL(blob);
+      blobUrlRef.current = blobUrl;
+      abortRef.current = null;
+
+      audio.src = blobUrl;
+      setIsLoading(false);
+
+      await audio.play();
+    } catch (err) {
+      if (!mountedRef.current) return;
+      if (err && err.name === 'AbortError') return;
+      revokeBlobUrl();
+      setIsLoading(false);
+      setPlaybackError('Network error');
     }
   };
 
@@ -173,7 +151,6 @@ export default function VoiceMessage({ audioUrl, duration, transcription, onTran
       setShowTranscription(!showTranscription);
       return;
     }
-
     setTranscribing(true);
     try {
       await onTranscribe();
@@ -187,16 +164,16 @@ export default function VoiceMessage({ audioUrl, duration, transcription, onTran
     if (!ms) return '0:00';
     const totalSecs = Math.round(ms / 1000);
     const mins = Math.floor(totalSecs / 60);
-    const remainingSecs = totalSecs % 60;
-    return `${mins}:${remainingSecs.toString().padStart(2, '0')}`;
+    const secs = totalSecs % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const isRetryable = playbackError === 'Network error' || playbackError === 'Load timed out' || playbackError === 'Playback failed';
+  const isRetryable = playbackError === 'Network error' || playbackError === 'Playback failed';
 
   return (
     <div className="min-w-[200px]">
-      <audio ref={audioRef} src={audioSrc || undefined} preload="none" />
-      
+      <audio ref={audioRef} preload="none" />
+
       <div className="flex items-center gap-3">
         <button
           onClick={togglePlay}
@@ -204,16 +181,16 @@ export default function VoiceMessage({ audioUrl, duration, transcription, onTran
           className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
             playbackError
               ? 'bg-red-500 hover:bg-red-400'
-              : isOwn 
-                ? 'bg-blue-500 hover:bg-blue-400' 
+              : isOwn
+                ? 'bg-blue-500 hover:bg-blue-400'
                 : 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600'
           } ${isLoading ? 'opacity-60 cursor-wait' : ''}`}
           title={playbackError || (isPlaying ? 'Pause' : 'Play')}
         >
           {isLoading ? (
             <svg className={`w-5 h-5 animate-spin ${isOwn ? 'text-white' : 'text-gray-700 dark:text-gray-200'}`} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
             </svg>
           ) : playbackError ? (
             <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -233,7 +210,7 @@ export default function VoiceMessage({ audioUrl, duration, transcription, onTran
 
         <div className="flex-1">
           <div className="h-1 bg-gray-300 dark:bg-gray-600 rounded-full overflow-hidden">
-            <div 
+            <div
               className={`h-full transition-all ${playbackError ? 'bg-red-400' : isOwn ? 'bg-blue-300' : 'bg-blue-500'}`}
               style={{ width: `${progress}%` }}
             />
@@ -256,16 +233,16 @@ export default function VoiceMessage({ audioUrl, duration, transcription, onTran
           onClick={handleTranscribe}
           disabled={transcribing}
           className={`p-2 rounded-full transition-colors ${
-            isOwn 
-              ? 'hover:bg-blue-500 text-blue-200' 
+            isOwn
+              ? 'hover:bg-blue-500 text-blue-200'
               : 'hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400'
           } ${transcription ? 'opacity-100' : 'opacity-70'}`}
           title={transcription ? (showTranscription ? 'Hide transcript' : 'Show transcript') : 'Transcribe'}
         >
           {transcribing ? (
             <svg className="w-5 h-5 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
             </svg>
           ) : (
             <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -277,8 +254,8 @@ export default function VoiceMessage({ audioUrl, duration, transcription, onTran
 
       {showTranscription && transcription && (
         <div className={`mt-2 p-2 rounded text-sm italic ${
-          isOwn 
-            ? 'bg-blue-500/50 text-blue-100' 
+          isOwn
+            ? 'bg-blue-500/50 text-blue-100'
             : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
         }`}>
           "{transcription}"
