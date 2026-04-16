@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import RecordingLogs from "../RecordingLogs.jsx";
+import { useTheme } from "../context/ThemeContext.jsx";
 
 export default function RecordingLogsPage({ user, onLogout }) {
   const navigate = useNavigate();
+  const { darkMode, toggleDarkMode } = useTheme();
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   useEffect(() => {
@@ -16,36 +18,52 @@ export default function RecordingLogsPage({ user, onLogout }) {
     <div
       style={{
         minHeight: "100vh",
-        background: "#1a1a2e",
+        background: "var(--dispatch-bg)",
         fontFamily: "system-ui, -apple-system, sans-serif",
-        color: "#fff",
+        color: "var(--dispatch-text)",
         overflowY: "auto",
       }}
     >
       <header
         style={{
-          background: "#1e1e2e",
+          background: "var(--dispatch-panel)",
           padding: isMobile ? "12px 16px" : "16px 24px",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          borderBottom: "1px solid #333",
+          borderBottom: "1px solid var(--dispatch-border)",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <span style={{ fontSize: 24 }}>🎙️</span>
-          <h1 style={{ margin: 0, fontSize: isMobile ? 18 : 20, fontWeight: 600 }}>
+          <h1 style={{ margin: 0, fontSize: isMobile ? 18 : 20, fontWeight: 600, color: "var(--dispatch-text)" }}>
             Recording Logs
           </h1>
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <button
+            onClick={toggleDarkMode}
+            title={darkMode ? "Switch to light mode" : "Switch to dark mode"}
+            style={{
+              padding: "8px 12px",
+              background: "transparent",
+              color: "var(--dispatch-text-secondary)",
+              border: "1px solid var(--dispatch-border)",
+              borderRadius: 6,
+              cursor: "pointer",
+              fontSize: 16,
+              lineHeight: 1,
+            }}
+          >
+            {darkMode ? "☀️" : "🌙"}
+          </button>
           <button
             onClick={() => navigate(-1)}
             style={{
               padding: "8px 16px",
-              background: "#333",
-              color: "#fff",
-              border: "none",
+              background: "var(--dispatch-panel-elevated)",
+              color: "var(--dispatch-text)",
+              border: "1px solid var(--dispatch-border)",
               borderRadius: 6,
               cursor: "pointer",
               fontSize: 14,
