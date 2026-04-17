@@ -21,7 +21,7 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
     getTxChannelNames 
   } = useDispatchStore();
 
-  const { signalClearAirStart, signalClearAirEnd, isInGracePeriod } = useSignalingContext();
+  const { signalClearAirStart, signalClearAirEnd } = useSignalingContext();
   
   const [disabledTones, setDisabledTones] = useState({});
   const [toneTransmitting, setToneTransmitting] = useState(false);
@@ -102,15 +102,6 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
     }
     
     const primaryChannel = selectedChannelNames[0];
-    const anyGraceBusy = selectedChannelNames.some(function (ch) {
-      return isInGracePeriod(ch, identity);
-    });
-    if (anyGraceBusy) {
-      console.log('[PTT] Channel in grace period, playing busy tone');
-      setChannelBusy(true);
-      toneEngine.startBusyTone();
-      return false;
-    }
 
     const isBusy = audioTransportManager.areAnyChannelsBusy(selectedChannelNames);
     
@@ -213,7 +204,7 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
       mutedChannelsRef.current = [];
       return false;
     }
-  }, [selectedChannelNames, identity, signalPttStart, flashPttError, isInGracePeriod]);
+  }, [selectedChannelNames, identity, signalPttStart, flashPttError]);
 
   const stopTransmission = useCallback(async () => {
     console.log('[PTT] stopTransmission called');

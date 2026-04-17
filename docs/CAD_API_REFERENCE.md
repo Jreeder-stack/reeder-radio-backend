@@ -2970,10 +2970,10 @@ socket.on('auth:error', (data) => {
 | `channel:leave` | `{ unitId, agencyId, channelId, timestamp, reason? }` | A unit left the channel. `reason` may be `"disconnect"`. |
 | `channel:members` | `{ channelId, members }` | Current channel member list (sent on join). `members` is `[{ unitId, username, status, isDispatcher }]`. |
 | `ptt:start` | `{ unitId, agencyId, channelId, timestamp, isEmergency }` | PTT transmission started |
-| `ptt:end` | `{ unitId, agencyId?, channelId, timestamp, duration?, gracePeriodMs?, reason? }` | PTT transmission ended. `reason` may be `"timeout"`, `"consistency_sweep"`, `"unitId_mismatch_cleanup"`, or `"disconnect"`. |
+| `ptt:end` | `{ unitId, agencyId?, channelId, timestamp, duration?, reason? }` | PTT transmission ended. `reason` may be `"timeout"`, `"consistency_sweep"`, `"unitId_mismatch_cleanup"`, or `"disconnect"`. The legacy `gracePeriodMs` field is no longer emitted (the post-PTT grace period was removed; the channel is busy from PTT grant until the last audio packet arrives plus an ~80 ms drain window). |
 | `ptt:granted` | `{ channelId, unitId, timestamp }` | PTT floor granted to you (standard protocol) |
 | `ptt:ready` | `{ channelId, unitId, timestamp }` | PTT ready signal (floor available after end) |
-| `ptt:busy` | `{ channelId, transmittingUnit, inGracePeriod? }` | PTT denied — channel is busy (standard protocol) |
+| `ptt:busy` | `{ channelId, transmittingUnit }` | PTT denied — channel is busy (standard protocol). The legacy `inGracePeriod` field is no longer emitted (grace period was removed). |
 | `ptt:pre` | `{ unitId, channelId }` | Pre-PTT notification from another unit |
 | `ptt:granted` (radio) | `{ channelId, senderUnitId, timestamp }` | PTT floor granted (radio client protocol) |
 | `ptt:denied` | `{ channelId, reason, heldBy?, senderUnitId?, timestamp }` | PTT denied (radio protocol). Reasons: `"not_on_channel"`, `"preempted_emergency"`, `"floor_request_failed"`, or from `floorControlService`. |
@@ -3190,8 +3190,8 @@ await radio.init({
 | Event Name | Payload | Description |
 |---|---|---|
 | `pttStart` | `{ unitId, channelId, timestamp, isEmergency }` | A unit started transmitting |
-| `pttEnd` | `{ unitId, channelId, timestamp, duration, gracePeriodMs }` | A unit stopped transmitting |
-| `pttBusy` | `{ channelId, transmittingUnit, inGracePeriod? }` | PTT denied — channel busy |
+| `pttEnd` | `{ unitId, channelId, timestamp, duration }` | A unit stopped transmitting. The legacy `gracePeriodMs` field is no longer emitted. |
+| `pttBusy` | `{ channelId, transmittingUnit }` | PTT denied — channel busy. The legacy `inGracePeriod` field is no longer emitted. |
 | `pttGranted` | `{ channelId, unitId, timestamp }` | PTT granted to you |
 | `connectionChange` | `{ connected: boolean, reason? }` | Socket connection state changed |
 | `channelJoin` | `{ unitId, channelId, timestamp }` | A unit joined the channel |

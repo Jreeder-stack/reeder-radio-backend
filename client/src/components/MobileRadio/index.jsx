@@ -27,7 +27,6 @@ export default function MobileRadioView({ user, onLogout }) {
     activeTransmissions,
     isTransmitting: isChannelTransmitting,
     getTransmittingUnit,
-    isInGracePeriod,
     joinChannel: signalingJoinChannel,
     leaveChannel: signalingLeaveChannel,
     signalPttStart,
@@ -420,9 +419,8 @@ export default function MobileRadioView({ user, onLogout }) {
     if (isTransmitting) return 'clear';
     if (pttRejectedBusy) return 'busy';
     if (channelIsBusy && transmittingUnitId !== identity) return 'busy';
-    if (currentRoomKey && isInGracePeriod(currentRoomKey, identity)) return 'busy';
     return 'clear';
-  }, [connectionStatus, connected, connecting, channelIsBusy, transmittingUnitId, identity, isTransmitting, pttRejectedBusy, currentRoomKey, isInGracePeriod]);
+  }, [connectionStatus, connected, connecting, channelIsBusy, transmittingUnitId, identity, isTransmitting, pttRejectedBusy]);
   
   const unitPresence = useMemo(() => {
     if (!currentRoomKey) return [];

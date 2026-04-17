@@ -630,6 +630,11 @@ class AudioRelayService {
     }
   }
 
+  getLastPacketAt(channelId, unitId) {
+    const key = `${canonicalChannelKey(channelId)}::${unitId}`;
+    return this._lastAudioReceived.get(key) || null;
+  }
+
   trackAudioReceived(channelKey, unitId) {
     const key = `${channelKey}::${unitId}`;
     this._lastAudioReceived.set(key, Date.now());

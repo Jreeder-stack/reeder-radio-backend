@@ -57,12 +57,12 @@ class SignalingService {
     this.channelMembers = new Map();
     this.unitPresence = new Map();
     this.activeTransmissions = new Map();
-    this.graceChannels = new Map();
+    this.drainingTransmissions = new Map();
     this.emergencyStates = new Map();
     this.clearAirStates = new Map();
     this.connectionTimes = new Map();
     this.trackedUnitLocations = new Map();
-    this.GRACE_PERIOD_MS = 1000;
+    this.TX_DRAIN_MS = 80;
     
     this._eventCallbacks = {
       pttAttempt: [],
@@ -760,18 +760,17 @@ class SignalingService {
       return;
     }
     
-    const graceState = this.graceChannels.get(channelId);
-    if (graceState && graceState.unitId !== socket.unitId) {
-      socket.emit('ptt:busy', { 
-        channelId, 
-        transmittingUnit: graceState.unitId,
-        inGracePeriod: true,
+    const draining = this.drainingTransmissions.get(channelId);
+    if (draining && draining.unitId !== socket.unitId) {
+      socket.emit('ptt:busy', {
+        channelId,
+        transmittingUnit: draining.unitId,
       });
       return;
     }
-    
-    if (graceState && graceState.unitId === socket.unitId) {
-      this.graceChannels.delete(channelId);
+
+    if (draining && draining.unitId === socket.unitId) {
+      this._cancelDrain(channelId);
     }
 
     const isEmergency = this.emergencyStates.has(channelId);
@@ -863,46 +862,111 @@ class SignalingService {
       channelId,
       timestamp: Date.now(),
       duration: Date.now() - transmission.timestamp,
-      gracePeriodMs: this.GRACE_PERIOD_MS,
     };
-    
-    this.activeTransmissions.delete(channelId);
-    floorControlService.releaseFloor(channelId, socket.floorKey || socket.unitId);
-    
-    this.graceChannels.set(channelId, {
+
+    this._beginTransmissionDrain({
+      channelId,
       unitId: socket.unitId,
-      expiresAt: Date.now() + this.GRACE_PERIOD_MS,
+      floorKey: socket.floorKey || socket.unitId,
+      endData,
     });
-    
-    setTimeout(() => {
-      const grace = this.graceChannels.get(channelId);
-      if (grace && grace.unitId === socket.unitId) {
-        this.graceChannels.delete(channelId);
-        console.log(`[Signaling] Grace period ended for ${channelId}`);
-      }
-    }, this.GRACE_PERIOD_MS);
-    
+
     const presence = this.unitPresence.get(socket.unitId);
     if (presence) {
       presence.status = 'online';
     }
-    
+
+    console.log(`[Signaling] PTT END (draining): ${socket.unitId} on ${channelId} (${endData.duration}ms)`);
+  }
+
+  _beginTransmissionDrain({ channelId, unitId, floorKey, endData, presenceSynthesized = false }) {
+    this.activeTransmissions.delete(channelId);
+
+    const existing = this.drainingTransmissions.get(channelId);
+    if (existing && existing.timer) {
+      clearTimeout(existing.timer);
+    }
+
+    this.drainingTransmissions.set(channelId, {
+      unitId,
+      floorKey: floorKey || unitId,
+      endData,
+      drainStartedAt: Date.now(),
+      presenceSynthesized,
+      timer: null,
+    });
+
+    this._scheduleDrainCheck(channelId);
+  }
+
+  _scheduleDrainCheck(channelId) {
+    const entry = this.drainingTransmissions.get(channelId);
+    if (!entry) return;
+    if (entry.timer) clearTimeout(entry.timer);
+    entry.timer = setTimeout(() => this._checkDrain(channelId), this.TX_DRAIN_MS);
+  }
+
+  _checkDrain(channelId) {
+    const entry = this.drainingTransmissions.get(channelId);
+    if (!entry) return;
+    entry.timer = null;
+
+    const lastPacketAt = audioRelayService.getLastPacketAt
+      ? audioRelayService.getLastPacketAt(channelId, entry.unitId)
+      : null;
+    const baseline = (lastPacketAt && lastPacketAt > entry.drainStartedAt)
+      ? lastPacketAt
+      : entry.drainStartedAt;
+    const sinceBaseline = Date.now() - baseline;
+
+    if (sinceBaseline >= this.TX_DRAIN_MS) {
+      this._finalizeDrain(channelId);
+    } else {
+      const remaining = Math.max(10, this.TX_DRAIN_MS - sinceBaseline);
+      entry.timer = setTimeout(() => this._checkDrain(channelId), remaining);
+    }
+  }
+
+  _cancelDrain(channelId) {
+    const entry = this.drainingTransmissions.get(channelId);
+    if (!entry) return false;
+    if (entry.timer) clearTimeout(entry.timer);
+    this.drainingTransmissions.delete(channelId);
+    return true;
+  }
+
+  _finalizeDrain(channelId) {
+    const entry = this.drainingTransmissions.get(channelId);
+    if (!entry) return;
+    if (entry.timer) clearTimeout(entry.timer);
+    this.drainingTransmissions.delete(channelId);
+
+    floorControlService.releaseFloor(channelId, entry.floorKey);
+
     this._emitToChannelExcludingUnit(channelId, RADIO_EVENTS.TX_STOP, {
-      senderUnitId: socket.unitId,
+      senderUnitId: entry.unitId,
       channelId,
       timestamp: Date.now(),
-    }, socket.unitId);
+    }, entry.unitId);
 
-    this._emitToChannelExcludingUnit(channelId, SIGNALING_EVENTS.PTT_END, endData, socket.unitId);
+    this._emitToChannelExcludingUnit(channelId, SIGNALING_EVENTS.PTT_END, entry.endData, entry.unitId);
 
     this._emitToChannelExcludingUnit(channelId, RADIO_EVENTS.CHANNEL_IDLE, {
       channelId,
       timestamp: Date.now(),
-    }, socket.unitId);
-    
-    this._emitCallback('pttEnd', endData);
-    
-    console.log(`[Signaling] PTT END: ${socket.unitId} on ${channelId} (${endData.duration}ms)`);
+    }, entry.unitId);
+
+    this._emitCallback('pttEnd', entry.endData);
+
+    if (entry.presenceSynthesized) {
+      const p = this.unitPresence.get(entry.unitId);
+      if (p?.synthesized) {
+        this.unitPresence.delete(entry.unitId);
+        console.log(`[Signaling] Removed synthesized presence for "${entry.unitId}" after drain`);
+      }
+    }
+
+    console.log(`[Signaling] DRAIN_COMPLETE channelId=${channelId} unitId=${entry.unitId} drainAgeMs=${Date.now() - entry.drainStartedAt}`);
   }
 
   forceEndTransmission(channelId, unitId, reason = 'forced') {
@@ -1752,6 +1816,21 @@ class SignalingService {
         timestamp: Date.now(),
       });
       return;
+    }
+
+    const drainingTx = this.drainingTransmissions.get(channelId);
+    if (drainingTx && drainingTx.unitId !== socket.unitId) {
+      socket.emit(RADIO_EVENTS.PTT_DENIED, {
+        channelId,
+        reason: 'channel_busy',
+        heldBy: drainingTx.unitId,
+        senderUnitId: socket.unitId,
+        timestamp: Date.now(),
+      });
+      return;
+    }
+    if (drainingTx && drainingTx.unitId === socket.unitId) {
+      this._cancelDrain(channelId);
     }
 
     console.log(`[Signaling] PTT_REQUEST_SENT unitId=${socket.unitId} channelId=${channelId}`);
