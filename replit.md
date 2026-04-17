@@ -76,6 +76,23 @@ If neither env var is set, the backend logs
 `[STARTUP] FCM push notifications DISABLED: ...` and paging returns
 `0 success, N failed` (no crash) until credentials are provided.
 
+## Automated Testing
+
+The project uses **Vitest** (v4.x) for unit and integration tests, run from the workspace root.
+
+- **Test command:** `npm test` (runs `vitest run`)
+- **Config file:** `vitest.config.js` (root)
+- **Test files:** `client/src/**/__tests__/**/*.test.js`
+- **Coverage provider:** v8
+
+### Test Coverage
+- `client/src/audio/__tests__/OpusBrowserEncoder.test.js` — 9 unit tests for `OpusBrowserEncoder` (init, isReady, destroy, idempotency, unsupported browser)
+- `client/src/audio/__tests__/AudioTransportManager.ptt.test.js` — 8 integration tests verifying fast PTT start regression prevention:
+  - Encoder is pre-warmed immediately after `connect()` succeeds
+  - Encoder is re-warmed after `stopTransmit()` returns
+  - `prewarmAudioContext()` correctly calls/skips encoder init
+  - Guards against regression to the 3–4 s Opus encoder init delay (fixed in Task #359)
+
 ## External Dependencies
 - **opusscript:** Opus audio codec (server-side).
 - **opus-decoder:** WASM Opus decoder (browser-side).
