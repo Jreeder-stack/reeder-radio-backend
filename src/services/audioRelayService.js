@@ -170,6 +170,14 @@ class AudioRelayService {
     this._signalingService = signalingService;
   }
 
+  getChannelsForSubscriber(unitId) {
+    const channels = [];
+    for (const [channelId, subs] of this.subscribers) {
+      if (subs.has(unitId)) channels.push(channelId);
+    }
+    return channels;
+  }
+
   removeAllSubscriptions(unitId) {
     for (const [channelId, subs] of this.subscribers) {
       subs.delete(unitId);

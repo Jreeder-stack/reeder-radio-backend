@@ -1266,6 +1266,17 @@ class SignalingService {
     return null;
   }
 
+  _isUnitStillInChannel(unitId, channelId, excludeSocket) {
+    if (!this.io) return false;
+    const excludeId = excludeSocket && excludeSocket.id;
+    for (const [, s] of this.io.sockets.sockets) {
+      if (excludeId && s.id === excludeId) continue;
+      if (s.unitId !== unitId) continue;
+      if (s.channels && s.channels.has(channelId)) return true;
+    }
+    return false;
+  }
+
   _findSocketByFloorKey(key) {
     if (!this.io) return null;
     for (const [, s] of this.io.sockets.sockets) {
@@ -1290,6 +1301,14 @@ class SignalingService {
     if (!socket.unitId) return;
 
     for (const channelId of socket.channels || []) {
+      const otherDeviceStillPresent = this._isUnitStillInChannel(socket.unitId, channelId, socket);
+
+      if (otherDeviceStillPresent) {
+        console.log(`[Signaling] Skipping channel-leave/audio-relay removal for ${socket.unitId} on ${channelId}: another device for the same unit is still present`);
+        socket.leave(`channel:${channelId}`);
+        continue;
+      }
+
       const members = this.channelMembers.get(channelId);
       if (members) {
         members.delete(socket.unitId);
@@ -1311,29 +1330,38 @@ class SignalingService {
     }
     if (socket.channels) socket.channels.clear();
 
+    const thisFloorKey = socket.floorKey || socket.unitId;
     for (const [channelId, transmission] of this.activeTransmissions) {
-      if (transmission.unitId === socket.unitId) {
-        this.activeTransmissions.delete(channelId);
-        this.io.to(`channel:${channelId}`).emit(SIGNALING_EVENTS.PTT_END, {
-          unitId: socket.unitId,
-          channelId,
-          timestamp: Date.now(),
-          reason,
-        });
-        this.io.to(`channel:${channelId}`).emit(RADIO_EVENTS.TX_STOP, {
-          senderUnitId: socket.unitId,
-          channelId,
-          timestamp: Date.now(),
-          reason,
-        });
-        this.io.to(`channel:${channelId}`).emit(RADIO_EVENTS.CHANNEL_IDLE, {
-          channelId,
-          timestamp: Date.now(),
-        });
-        console.log(`[Signaling] Cleaned up transmission for ${socket.unitId} on ${channelId}`);
+      if (transmission.unitId !== socket.unitId) continue;
+      const transmissionFloorKey = transmission.floorKey || transmission.unitId;
+      if (transmissionFloorKey !== thisFloorKey) {
+        console.log(`[Signaling] Skipping activeTransmissions delete for ${socket.unitId} on ${channelId}: transmission belongs to another device (floorKey=${transmissionFloorKey}, this=${thisFloorKey})`);
+        continue;
       }
+      this.activeTransmissions.delete(channelId);
+      this.io.to(`channel:${channelId}`).emit(SIGNALING_EVENTS.PTT_END, {
+        unitId: socket.unitId,
+        channelId,
+        timestamp: Date.now(),
+        reason,
+      });
+      this.io.to(`channel:${channelId}`).emit(RADIO_EVENTS.TX_STOP, {
+        senderUnitId: socket.unitId,
+        channelId,
+        timestamp: Date.now(),
+        reason,
+      });
+      this.io.to(`channel:${channelId}`).emit(RADIO_EVENTS.CHANNEL_IDLE, {
+        channelId,
+        timestamp: Date.now(),
+      });
+      console.log(`[Signaling] Cleaned up transmission for ${socket.unitId} on ${channelId}`);
     }
 
+    // Floor keys are per-device (socket.deviceId), so this only releases
+    // floors actually held by *this* device. The fallback to socket.unitId
+    // is only hit for legacy/un-deviced sockets, which by definition have
+    // no peer device to confuse with.
     const releasedChannels = floorControlService.releaseAllForUnit(socket.floorKey || socket.unitId);
     for (const channelId of releasedChannels) {
       this.io.to(`channel:${channelId}`).emit(RADIO_EVENTS.CHANNEL_IDLE, {
@@ -1343,7 +1371,16 @@ class SignalingService {
       console.log(`[Signaling] Released floor for ${socket.unitId} (floorKey=${socket.floorKey}) on ${channelId}`);
     }
 
-    audioRelayService.removeAllSubscriptions(socket.unitId);
+    // Per-channel guarded sweep instead of unconditional removal: handles
+    // subscriptions in channels this socket never joined (e.g. stale state).
+    const subscribedChannels = audioRelayService.getChannelsForSubscriber(socket.unitId);
+    for (const channelId of subscribedChannels) {
+      if (this._isUnitStillInChannel(socket.unitId, channelId, socket)) {
+        console.log(`[Signaling] Skipping audio relay removal for ${socket.unitId} on ${channelId}: another device for the same unit is still present`);
+        continue;
+      }
+      audioRelayService.removeSubscriber(channelId, socket.unitId);
+    }
   }
 
   _handleDisconnect(socket) {
