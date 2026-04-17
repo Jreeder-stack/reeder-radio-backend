@@ -88,6 +88,7 @@ class BackgroundAudioService : Service() {
     @Volatile private var hadPriorAuthentication = false
     @Volatile private var reconnectStartTimeMs: Long = 0L
     @Volatile private var pendingFirstPttAfterReconnect = false
+    @Volatile private var radioRouteActive = false
 
     override fun onCreate() {
         super.onCreate()
@@ -548,6 +549,7 @@ class BackgroundAudioService : Service() {
             Log.d("[ToneEvent]", """{"tone":"denied_bonk","trigger":"tx_stall","reason":"$reason","state":"$pttState","ts":${System.currentTimeMillis()}}""")
             app.toneEngine.playDeniedBonk()
             scope.launch {
+                releaseRadioAudioRoute()
                 transitionPttState(PttState.IDLE)
                 updateNotification("Radio — TX Stall")
                 try {
@@ -778,6 +780,7 @@ class BackgroundAudioService : Service() {
                         Log.d(TAG, "Floor GRANTED — promoting pre-capture to live TX")
                         preCaptureSetupJob?.join()
                         preCaptureSetupJob = null
+                        applyRadioAudioRoute()
                         val txStarted = engine.promoteToLiveTransmit() || engine.startTransmit()
                         if (txStarted) {
                             transitionPttState(PttState.TRANSMITTING)
@@ -788,6 +791,7 @@ class BackgroundAudioService : Service() {
                             engine.stopPreCapture()
                             Log.d("[ToneEvent]", """{"tone":"denied","trigger":"floor_granted_tx_fail","state":"$pttState","ts":${System.currentTimeMillis()}}""")
                             app.toneEngine.startDeniedTone()
+                            releaseRadioAudioRoute()
                             transitionPttState(PttState.IDLE)
                             updateNotification("Radio — Standby")
                             sendPttTxFailed()
@@ -855,6 +859,7 @@ class BackgroundAudioService : Service() {
                     }
                     is SignalingEvent.RadioChannelIdle -> {
                         if (event.channelId == currentRoomKey) {
+                            releaseRadioAudioRoute()
                             engine.floorControl?.onChannelIdle()
                         }
                     }
@@ -862,12 +867,14 @@ class BackgroundAudioService : Service() {
                         val selfUnitId = servicePrefs.unitId ?: app.sessionPrefs.unitId
                         if (event.senderUnitId != selfUnitId && event.channelId == currentRoomKey) {
                             Log.d(TAG, "RADIO_STATE_RX_ENTER channelId=${event.channelId} senderUnitId=${event.senderUnitId}")
+                            applyRadioAudioRoute()
                             engine.floorControl?.onChannelBusy(event.senderUnitId)
                         }
                     }
                     is SignalingEvent.RadioTxStop -> {
                         val selfUnitId = servicePrefs.unitId ?: app.sessionPrefs.unitId
                         if (event.senderUnitId != selfUnitId && event.channelId == currentRoomKey) {
+                            releaseRadioAudioRoute()
                             engine.floorControl?.onChannelIdle()
                         }
                     }
@@ -881,6 +888,7 @@ class BackgroundAudioService : Service() {
                             Log.e(TAG, "TX_SILENCE_WARNING_FROM_SERVER channelId=${event.channelId} silenceMs=${event.silenceMs} — playing denied tone and stopping TX")
                             Log.d("[ToneEvent]", """{"tone":"denied","trigger":"tx_silence_warning","channelId":"${event.channelId}","silenceMs":${event.silenceMs},"state":"$pttState","ts":${System.currentTimeMillis()}}""")
                             app.toneEngine.startDeniedTone()
+                            releaseRadioAudioRoute()
                             transitionPttState(PttState.IDLE)
                             updateNotification("Radio — TX Silence Warning")
                             try {
@@ -901,6 +909,7 @@ class BackgroundAudioService : Service() {
                         if (pttState == PttState.TRANSMITTING || pttState == PttState.CONNECTING) {
                             Log.d("[ToneEvent]", """{"tone":"denied","trigger":"ptt_revoked","channelId":"${event.channelId}","reason":"${event.reason}","state":"$pttState","ts":${System.currentTimeMillis()}}""")
                             app.toneEngine.startDeniedTone()
+                            releaseRadioAudioRoute()
                             transitionPttState(PttState.IDLE)
                             updateNotification("Radio — Standby")
                             try {
@@ -1174,6 +1183,7 @@ class BackgroundAudioService : Service() {
                 Log.e(TAG, """{"event":"PTT_CLEANUP_ERROR","error":"${e::class.simpleName}","message":"${e.message}"}""")
             } finally {
                 val cleanupDurationMs = if (cleaningUpSinceMs > 0) System.currentTimeMillis() - cleaningUpSinceMs else 0L
+                releaseRadioAudioRoute()
                 transitionPttState(PttState.IDLE)
                 cleaningUpSinceMs = 0L
                 Log.d(TAG, """{"event":"PTT_CLEANUP_COMPLETE","state":"IDLE","cleanupMs":$cleanupDurationMs}""")
@@ -1381,6 +1391,46 @@ class BackgroundAudioService : Service() {
             .build()
 
     override fun onBind(intent: Intent?): IBinder? = null
+
+    private fun applyRadioAudioRoute() {
+        if (radioRouteActive) return
+        radioRouteActive = true
+        if (!::audioManager.isInitialized) return
+        audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val speakerDevice = audioManager.availableCommunicationDevices
+                .firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
+            if (speakerDevice != null) {
+                audioManager.setCommunicationDevice(speakerDevice)
+            }
+        } else {
+            @Suppress("DEPRECATION")
+            audioManager.isSpeakerphoneOn = true
+        }
+        Log.d(TAG, "BackgroundAudioService: radio audio route applied (MODE_IN_COMMUNICATION + speaker)")
+    }
+
+    private fun releaseRadioAudioRoute() {
+        if (!radioRouteActive) return
+        radioRouteActive = false
+        if (!::audioManager.isInitialized) return
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (previousSpeakerphoneOn) {
+                val speakerDevice = audioManager.availableCommunicationDevices
+                    .firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
+                if (speakerDevice != null) {
+                    audioManager.setCommunicationDevice(speakerDevice)
+                }
+            } else {
+                audioManager.clearCommunicationDevice()
+            }
+        } else {
+            @Suppress("DEPRECATION")
+            audioManager.isSpeakerphoneOn = previousSpeakerphoneOn
+        }
+        audioManager.mode = previousAudioMode
+        Log.d(TAG, "BackgroundAudioService: radio audio route released (mode=$previousAudioMode, speaker=$previousSpeakerphoneOn)")
+    }
 
     private var speakerStateRestored = false
 

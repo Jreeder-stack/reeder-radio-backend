@@ -1,0 +1,126 @@
+We found the root cause of the ringtone fallback issue on the T320.
+
+What we removed:
+In `BackgroundAudioService.onCreate()`, we removed the code that immediately forced global radio audio routing on service startup.
+
+Removed behavior:
+
+* `audioManager.mode = AudioManager.MODE_IN_COMMUNICATION`
+* forcing speaker/communication device on at startup
+
+Why we removed it:
+On this device, forcing communication mode and speaker globally as soon as the service starts causes the system ringtone/notification path to break and fall back to the built-in vendor beep. With the app uninstalled, tones work normally. With the app installed and that startup audio override active, tones stop working. After removing that startup override, tones work again.
+
+What fixed:
+
+* system tones/ringtones now work correctly again
+
+New issue after removing it:
+
+* after receiving transmissions, there is now a weird “open air” / lingering speaker-path sound after RX ends
+
+Conclusion:
+The app should NOT globally force communication mode and speaker in `onCreate()`.
+Instead, it should apply radio audio routing only during active TX/RX, and release it immediately when RX/TX ends.
+
+Please make a minimal change only. Do not refactor unrelated code. Do not touch verified hardware mapping logic.
+
+What to implement:
+
+1. Keep the `audioManager` initialization and previous-state capture in `onCreate()`, but do NOT force mode or speaker there.
+
+Desired `onCreate()` behavior:
+
+* initialize `audioManager`
+* store:
+
+  * `previousAudioMode = audioManager.mode`
+  * previous speaker/communication-device state
+* do not call `MODE_IN_COMMUNICATION`
+* do not force speaker there
+
+2. Add two helper methods in `BackgroundAudioService`:
+
+`applyRadioAudioRoute()`
+Behavior:
+
+* set `audioManager.mode = AudioManager.MODE_IN_COMMUNICATION`
+* route to built-in speaker
+
+  * Android S+:
+
+    * use `availableCommunicationDevices`
+    * select `TYPE_BUILTIN_SPEAKER`
+    * call `setCommunicationDevice(...)`
+  * pre-S:
+
+    * use deprecated `isSpeakerphoneOn = true`
+* add a log line
+
+`releaseRadioAudioRoute()`
+Behavior:
+
+* restore previous speaker/communication-device state
+
+  * Android S+:
+
+    * if previous state was speaker, restore built-in speaker
+    * else call `clearCommunicationDevice()`
+  * pre-S:
+
+    * restore previous `isSpeakerphoneOn`
+* restore `audioManager.mode = previousAudioMode`
+* add a log line
+
+3. Call `applyRadioAudioRoute()` only when radio audio actually becomes active:
+
+A. TX start:
+Inside floor-granted handling, right before promoting/starting live TX.
+Specifically in the `FloorControlEvent.GRANTED` path, before:
+
+* `engine.promoteToLiveTransmit()`
+* or `engine.startTransmit()`
+
+B. RX start:
+Inside signaling-event handling when another unit starts transmitting on the current channel.
+Specifically in the `SignalingEvent.RadioTxStart` path, before calling channel-busy / receive-state logic.
+
+4. Call `releaseRadioAudioRoute()` when radio audio is no longer active:
+
+A. RX end:
+Inside:
+
+* `SignalingEvent.RadioTxStop`
+* `SignalingEvent.RadioChannelIdle`
+
+B. TX end:
+Inside `handleRadioPttUp()` cleanup `finally` block, before transitioning back to idle.
+
+5. Leave the existing `restoreSpeakerState()` / `onDestroy()` cleanup in place for final service shutdown.
+   This should remain as last-resort cleanup, but normal route release should now happen at RX/TX end rather than only on service destroy.
+
+Why this is the correct direction:
+
+* global audio hijack on service startup breaks system tones on this ROM
+* removing it fixes tones
+* but then radio routing needs to be managed precisely around actual TX/RX lifecycle
+* the correct model is:
+
+  * apply route on live RX/TX
+  * release route on idle
+
+Please keep the change as small and targeted as possible.
+Do not alter:
+
+* PTT key mappings
+* signaling flow
+* transport logic
+* verified hardware mapping code
+* unrelated service behavior
+
+Goal after patch:
+
+* ringtone/system tones still work
+* RX audio still works
+* no lingering “open air” sound after RX ends
+* TX still works normally
