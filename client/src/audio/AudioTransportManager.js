@@ -88,6 +88,14 @@ class AudioTransportManager {
     this._opusDecoders = new Map();
     this._opusDecoderReady = new Map();
     this._txEncoder = new OpusBrowserEncoder();
+    if (typeof AudioEncoder !== 'undefined') {
+      const t0 = Date.now();
+      this._txEncoder.init().then((ok) => {
+        console.log('[AudioTransport] Boot encoder init', { ok, ms: Date.now() - t0 });
+      }).catch((err) => {
+        console.warn('[AudioTransport] Boot encoder init failed:', err?.message);
+      });
+    }
 
     this._reorderStreams = new Map();
     this._latePackets = 0;
@@ -745,9 +753,11 @@ class AudioTransportManager {
       }
     }
 
+    const _txT0 = Date.now();
     this._setPttState(PTT_STATES.ARMING);
     this._loopbackOk = true;
     await this._playback.ensureAudioContextResumed('pttActivity');
+    const _txT1 = Date.now();
 
     if (!OpusBrowserEncoder.isSupported()) {
       console.error('AUDIO_TX_BLOCKED: WebCodecs AudioEncoder not available — cannot transmit');
@@ -755,7 +765,15 @@ class AudioTransportManager {
       return false;
     }
 
+    const _encReadyAtEntry = this._txEncoder.isReady();
     const opusTxReady = await this._ensureTxEncoder();
+    const _txT2 = Date.now();
+    console.log('[AudioTransport] PTT timing', {
+      playbackResumeMs: _txT1 - _txT0,
+      ensureEncoderMs: _txT2 - _txT1,
+      encoderReadyAtEntry: _encReadyAtEntry,
+      encoderReadyAfter: this._txEncoder.isReady(),
+    });
 
     if (!opusTxReady) {
       console.error('AUDIO_TX_BLOCKED: Opus encoder failed to initialize');

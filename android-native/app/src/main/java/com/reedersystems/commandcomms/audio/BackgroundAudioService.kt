@@ -1028,11 +1028,14 @@ class BackgroundAudioService : Service() {
         updateNotification("Requesting floor…")
         Log.d("[ToneEvent]", """{"tone":"talk-permit","trigger":"ptt_down","state":"$pttState","channelKey":"${servicePrefs.channelRoomKey}","ts":${System.currentTimeMillis()}}""")
 
+        applyRadioAudioRoute()
+
         scope.launch {
             app.toneEngine.playTalkPermitToneAndAwait()
 
             if (pttState != PttState.CONNECTING || pttUpWhileConnecting) {
                 Log.d(TAG, "Radio PTT: state changed during tone — aborting (pttState=$pttState pttUpWhileConnecting=$pttUpWhileConnecting)")
+                releaseRadioAudioRoute()
                 return@launch
             }
 
