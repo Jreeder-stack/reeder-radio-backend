@@ -140,6 +140,19 @@ router.post('/start', async (req, res) => {
       });
     }
 
+    const drainingTx = signalingService.drainingTransmissions?.get(channelId);
+    if (drainingTx && drainingTx.unitId !== unitId) {
+      console.warn(`[PTT-HTTP] Floor denied for ${unitId} on ch${channelId}: channel draining (held by ${drainingTx.unitId})`);
+      return res.status(409).json({
+        error: 'Channel busy',
+        heldBy: drainingTx.unitId,
+        reason: 'channel_busy',
+      });
+    }
+    if (drainingTx && drainingTx.unitId === unitId) {
+      signalingService._cancelDrain(channelId);
+    }
+
     const isEmergency = signalingService.emergencyStates?.has(channelId) || false;
     const floorResult = floorControlService.requestFloor(channelId, unitId, {
       isEmergency,
@@ -213,67 +226,28 @@ router.post('/end', async (req, res) => {
     const transmission = signalingService.activeTransmissions.get(channelId);
     const duration = transmission ? Date.now() - transmission.timestamp : 0;
 
-    floorControlService.releaseFloor(channelId, unitId);
-
     const endData = {
       unitId,
       channelId,
       timestamp: Date.now(),
       duration,
-      gracePeriodMs: signalingService.GRACE_PERIOD_MS || 1000,
       source: 'native-service',
     };
-
-    signalingService.activeTransmissions.delete(channelId);
-
-    if (signalingService.graceChannels) {
-      signalingService.graceChannels.set(channelId, {
-        unitId,
-        expiresAt: Date.now() + (signalingService.GRACE_PERIOD_MS || 1000),
-      });
-
-      setTimeout(() => {
-        const grace = signalingService.graceChannels.get(channelId);
-        if (grace && grace.unitId === unitId) {
-          signalingService.graceChannels.delete(channelId);
-        }
-      }, signalingService.GRACE_PERIOD_MS || 1000);
-    }
 
     const presence = signalingService.unitPresence.get(unitId);
     if (presence) {
       presence.status = 'online';
-      // Clean up synthesized presence entries after PTT end — the unit's socket
-      // will re-populate presence properly when its Socket.IO reconnects.
-      if (presenceSynthesized) {
-        setTimeout(() => {
-          const p = signalingService.unitPresence.get(unitId);
-          if (p?.synthesized) {
-            signalingService.unitPresence.delete(unitId);
-            console.log(`[PTT-HTTP] Removed synthesized presence for "${unitId}"`);
-          }
-        }, (signalingService.GRACE_PERIOD_MS || 1000) + 1000);
-      }
     }
 
-    signalingService._emitToChannelExcludingUnit(channelId, 'tx:stop', {
-      senderUnitId: unitId,
+    signalingService._beginTransmissionDrain({
       channelId,
-      timestamp: Date.now(),
-    }, unitId);
+      unitId,
+      floorKey: unitId,
+      endData,
+      presenceSynthesized: !!presenceSynthesized,
+    });
 
-    signalingService._emitToChannelExcludingUnit(channelId, 'ptt:end', endData, unitId);
-
-    signalingService._emitToChannelExcludingUnit(channelId, 'channel:idle', {
-      channelId,
-      timestamp: Date.now(),
-    }, unitId);
-
-    if (signalingService._emitCallback) {
-      signalingService._emitCallback('pttEnd', endData);
-    }
-
-    console.log(`[PTT-HTTP] PTT END: ${unitId} on ch${channelId} (${duration}ms)`);
+    console.log(`[PTT-HTTP] PTT END (draining): ${unitId} on ch${channelId} (${duration}ms)`);
     res.json({ success: true });
   } catch (err) {
     console.error('[PTT-HTTP] Error on ptt/end:', err);
