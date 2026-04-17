@@ -225,7 +225,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         Log.d(TAG, "[PAGE] Consuming pending page id=$pageId")
         _uiState.update { it.copy(showPageAlert = true, pageAlertMessage = message, pageAlertSender = sender) }
         if (!channelId.isNullOrBlank()) {
-            channelId.toIntOrNull()?.let { switchToChannelById(it) }
+            channelId.toIntOrNull()?.let { switchToChannelById(it, playAnnouncement = false) }
         }
     }
 
@@ -238,7 +238,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
             Log.d(TAG, "[PAGE] Broadcast received: message=$message sender=$sender channel=$channelId")
             _uiState.update { it.copy(showPageAlert = true, pageAlertMessage = message, pageAlertSender = sender) }
             if (channelId.isNotBlank()) {
-                channelId.toIntOrNull()?.let { switchToChannelById(it) }
+                channelId.toIntOrNull()?.let { switchToChannelById(it, playAnnouncement = false) }
             }
         }
     }
@@ -258,7 +258,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { it.copy(showPageAlert = false) }
     }
 
-    fun switchToChannelById(targetChannelId: Int) {
+    fun switchToChannelById(targetChannelId: Int, playAnnouncement: Boolean = true) {
         val zones = _uiState.value.zones
         for (zoneIdx in zones.indices) {
             val channels = zones[zoneIdx].channels
@@ -267,9 +267,13 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                     val oldRoomKey = _uiState.value.currentChannel?.roomKey
                     _uiState.update { it.copy(currentZoneIndex = zoneIdx, currentChannelIndex = chIdx) }
                     onChannelChangedWithAnnouncement(oldRoomKey) {
-                        playChannelAnnouncement(targetChannelId)
+                        if (playAnnouncement) {
+                            playChannelAnnouncement(targetChannelId)
+                        } else {
+                            Log.d(TAG, "[PAGE] Skipping channel announcement for page-triggered switch id=$targetChannelId")
+                        }
                     }
-                    Log.d(TAG, "[PAGE] Switched to paging channel id=$targetChannelId zone=$zoneIdx ch=$chIdx")
+                    Log.d(TAG, "[PAGE] Switched to paging channel id=$targetChannelId zone=$zoneIdx ch=$chIdx announcement=$playAnnouncement")
                     return
                 }
             }
