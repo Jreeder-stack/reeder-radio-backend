@@ -20,11 +20,7 @@ export default function Admin({ user, onLogout }) {
   const [aiDispatchLoading, setAiDispatchLoading] = useState(false);
   const [aiDispatchPipeline, setAiDispatchPipeline] = useState(null);
 
-  const [pagingTones, setPagingTones] = useState([]);
   const [pagingChannelId, setPagingChannelId] = useState("");
-  const [pagingLoading, setPagingLoading] = useState(false);
-  const [pagingToneFile, setPagingToneFile] = useState(null);
-  const [pagingToneName, setPagingToneName] = useState("");
 
   const [scannerEnabled, setScannerEnabled] = useState(false);
   const [scannerChannel, setScannerChannel] = useState("");
@@ -80,14 +76,7 @@ export default function Admin({ user, onLogout }) {
 
   const loadPagingData = async () => {
     try {
-      const [tonesRes, channelRes] = await Promise.all([
-        fetch("/api/paging-tone/", { credentials: "include" }),
-        fetch("/api/paging-tone/channel", { credentials: "include" }),
-      ]);
-      if (tonesRes.ok) {
-        const data = await tonesRes.json();
-        setPagingTones(data.tones || []);
-      }
+      const channelRes = await fetch("/api/paging-tone/channel", { credentials: "include" });
       if (channelRes.ok) {
         const data = await channelRes.json();
         setPagingChannelId(data.channelId || "");
@@ -1151,111 +1140,10 @@ export default function Admin({ user, onLogout }) {
               </div>
 
               <div className="admin-settings-card">
-                <h3 className="admin-settings-card-title" style={{ marginBottom: 4 }}>Paging Tones</h3>
-                <p className="admin-settings-card-desc" style={{ marginBottom: 16 }}>
-                  Upload audio tone files. Select the active tone with the radio button — it plays once on every page receipt.
+                <h3 className="admin-settings-card-title" style={{ marginBottom: 4 }}>Page Alert Tone</h3>
+                <p className="admin-settings-card-desc" style={{ marginBottom: 0 }}>
+                  All pages play the built-in dispatch "Alert" tone — a 2.5-second 1000 Hz alert — directly on the T320. No upload is needed and the tone is identical on every device.
                 </p>
-
-                <form
-                  onSubmit={async (e) => {
-                    e.preventDefault();
-                    if (!pagingToneFile) { alert("Select an audio file first"); return; }
-                    setPagingLoading(true);
-                    const fd = new FormData();
-                    fd.append("tone", pagingToneFile);
-                    fd.append("name", pagingToneName || pagingToneFile.name);
-                    try {
-                      const res = await fetch("/api/paging-tone/upload", {
-                        method: "POST",
-                        credentials: "include",
-                        body: fd,
-                      });
-                      if (!res.ok) {
-                        let errMsg = `Upload failed (HTTP ${res.status})`;
-                        try {
-                          const d = await res.json();
-                          if (d?.error) errMsg = d.error;
-                        } catch {
-                          if (res.status === 413) errMsg = "File too large. The server rejected it (check nginx/server size limit).";
-                          else if (res.status === 401) errMsg = "Not signed in. Please log in and try again.";
-                          else if (res.status === 403) errMsg = "Admin access required.";
-                          else if (res.status >= 500) errMsg = `Server error (HTTP ${res.status}). Check backend logs.`;
-                        }
-                        throw new Error(errMsg);
-                      }
-                      setPagingToneFile(null);
-                      setPagingToneName("");
-                      e.target.reset();
-                      await loadPagingData();
-                    } catch (err) {
-                      alert("Upload failed: " + err.message);
-                    } finally {
-                      setPagingLoading(false);
-                    }
-                  }}
-                  style={{ marginBottom: 20 }}
-                >
-                  <div className="admin-field">
-                    <label className="admin-field-label">Tone Name (optional)</label>
-                    <input
-                      type="text"
-                      value={pagingToneName}
-                      onChange={e => setPagingToneName(e.target.value)}
-                      placeholder="e.g., Two-Tone Alert"
-                      className="admin-input"
-                    />
-                  </div>
-                  <div className="admin-field">
-                    <label className="admin-field-label">Audio File</label>
-                    <input
-                      type="file"
-                      accept="audio/*"
-                      onChange={e => setPagingToneFile(e.target.files[0] || null)}
-                      className="admin-input"
-                      style={{ padding: "6px 8px" }}
-                    />
-                  </div>
-                  <button type="submit" disabled={pagingLoading || !pagingToneFile} className="admin-btn admin-btn-primary">
-                    {pagingLoading ? "Uploading..." : "Upload Tone"}
-                  </button>
-                </form>
-
-                {pagingTones.length === 0 ? (
-                  <div className="admin-empty-state" style={{ padding: "16px 0" }}>No tones uploaded yet.</div>
-                ) : (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {pagingTones.map(tone => (
-                      <div key={tone.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: "var(--dispatch-surface)", borderRadius: 8, border: tone.is_active ? "1px solid var(--dispatch-success)" : "1px solid var(--dispatch-border)" }}>
-                        <input
-                          type="radio"
-                          name="activeTone"
-                          checked={tone.is_active}
-                          onChange={async () => {
-                            try {
-                              const res = await fetch(`/api/paging-tone/${tone.id}/activate`, { method: "PATCH", credentials: "include" });
-                              if (!res.ok) throw new Error("Failed to activate");
-                              await loadPagingData();
-                            } catch (err) { alert(err.message); }
-                          }}
-                          style={{ accentColor: "var(--dispatch-success)", cursor: "pointer", width: 16, height: 16 }}
-                        />
-                        <span style={{ flex: 1, fontSize: 14, color: "var(--dispatch-text)" }}>{tone.name}</span>
-                        {tone.is_active && <span className="admin-badge admin-badge-success" style={{ fontSize: 11 }}>ACTIVE</span>}
-                        <button
-                          onClick={async () => {
-                            if (!confirm(`Delete tone "${tone.name}"?`)) return;
-                            try {
-                              const res = await fetch(`/api/paging-tone/${tone.id}`, { method: "DELETE", credentials: "include" });
-                              if (!res.ok) throw new Error("Failed to delete");
-                              await loadPagingData();
-                            } catch (err) { alert(err.message); }
-                          }}
-                          className="admin-btn-sm admin-btn-sm-danger"
-                        >Delete</button>
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
             </div>
           </div>
