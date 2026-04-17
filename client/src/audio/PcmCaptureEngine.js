@@ -24,7 +24,6 @@ export class PcmCaptureEngine {
     this._warmupPromise = null;
     this._preBuffer = [];
     this.noiseSuppression = false;
-    this._keepaliveNode = null;
   }
 
   async warmup() {
@@ -139,34 +138,7 @@ export class PcmCaptureEngine {
 
     this._warmedUp = true;
     this._preBuffer = [];
-    this._startKeepalive();
     console.log('[PcmCaptureEngine] Warmed up – mic and AudioContext ready');
-  }
-
-  _startKeepalive() {
-    if (!this.audioContext || this._keepaliveNode) return;
-    try {
-      const gain = this.audioContext.createGain();
-      gain.gain.value = 0;
-      gain.connect(this.audioContext.destination);
-      const src = this.audioContext.createConstantSource();
-      src.offset.value = 0;
-      src.connect(gain);
-      src.start();
-      this._keepaliveNode = { src, gain };
-    } catch (err) {
-      console.warn('[PcmCaptureEngine] Keepalive node setup failed:', err.message);
-    }
-  }
-
-  _stopKeepalive() {
-    if (!this._keepaliveNode) return;
-    try {
-      this._keepaliveNode.src.stop();
-      this._keepaliveNode.src.disconnect();
-      this._keepaliveNode.gain.disconnect();
-    } catch (_) {}
-    this._keepaliveNode = null;
   }
 
   prewarmAudioContext() {
@@ -185,7 +157,6 @@ export class PcmCaptureEngine {
   }
 
   _cleanupPartial() {
-    this._stopKeepalive();
     if (this._workletNode) {
       this._workletNode.disconnect();
       this._workletNode.port.onmessage = null;
@@ -305,7 +276,6 @@ export class PcmCaptureEngine {
     this._warmedUp = false;
     this._warmupPromise = null;
     this._preBuffer = [];
-    this._stopKeepalive();
 
     if (this._workletNode) {
       this._workletNode.disconnect();

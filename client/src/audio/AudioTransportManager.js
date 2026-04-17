@@ -586,6 +586,11 @@ class AudioTransportManager {
       this._capture.warmup().catch((err) => {
         console.warn('[AudioTransport] Capture warmup failed:', err.message);
       });
+      if (!this._txEncoder.isReady()) {
+        this._txEncoder.init().catch((err) => {
+          console.warn('[AudioTransport] Encoder pre-warm failed:', err?.message);
+        });
+      }
       this._resetReorderForChannel(channelName);
       notifyChannelJoin(channelName, identity);
       this._emitConnectionStateChange(channelName, 'connected');
@@ -841,6 +846,11 @@ class AudioTransportManager {
     if (this._capture) {
       this._capture.prewarmAudioContext();
     }
+    if (this._txEncoder && !this._txEncoder.isReady()) {
+      this._txEncoder.init().catch((err) => {
+        console.warn('[AudioTransport] Encoder prewarm failed:', err?.message);
+      });
+    }
   }
 
   async start() { return this.startTransmit(); }
@@ -857,6 +867,9 @@ class AudioTransportManager {
     this._txEncoder.setOnEncoded(null);
     this._setPttState(PTT_STATES.COOLDOWN);
     this._setPttState(PTT_STATES.IDLE);
+    this._txEncoder.init().catch((err) => {
+      console.warn('[AudioTransport] Post-TX encoder re-init failed:', err?.message);
+    });
   }
 
   async stop() { return this.stopTransmit(); }
