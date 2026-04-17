@@ -174,8 +174,18 @@ Unit is requesting a status change from dispatch. TIER 1: Use fixed short format
 Return: { "intent": "STATUS_CHANGE", "response": "<short: Copy/10-4, status, time>", "cadStatus": "<status_value>" }
 
 ### STATUS_CHANGE_OTHER
-A unit is requesting a status change for A DIFFERENT unit. Phrases: "show Chester-1 off duty", "put Lincoln-3 in service", "Chester-1 is 10-8", "mark Beaver-2 out of service".
-The calling unit is telling dispatch to change ANOTHER unit's status. Extract the target unit ID and the desired status.
+A unit (often the dispatcher) is requesting a status change for A DIFFERENT unit. The unit ID being changed is NOT the speaker's own unit ID — it is some other unit named in the transcript.
+Phrases include (but are not limited to):
+- "put 5021 on duty"
+- "put Lincoln-3 in service"
+- "show 5012 off duty"
+- "show Chester-1 off duty"
+- "mark Beaver-2 out of service"
+- "5021 on duty"
+- "5012 is 10-8"
+- "Lincoln-3 is 10-7"
+- "change Beaver-2 to off duty"
+CRITICAL: If the transcript contains a unit ID (alpha-numeric like "Lincoln-3" / "Beaver-2" or a 4-digit number like "5021" / "5012") that is DIFFERENT from the speaker's "Unit ID:" provided above, this is STATUS_CHANGE_OTHER, not STATUS_CHANGE. Always populate slots.targetUnit with that other unit ID exactly as spoken (uppercased, hyphenated like "LINCOLN-3" or numeric like "5021"). Never omit the targetUnit slot for this intent.
 TIER 1: Use fixed short format including the target unit name — "Copy, [target unit] [status], [time]."
 Return: { "intent": "STATUS_CHANGE_OTHER", "response": "<short: Copy, target unit status, time>", "cadStatus": "<status_value>", "slots": { "targetUnit": "<target unit ID>" } }
 

@@ -52,6 +52,32 @@ function isMyLocationPhrase(text) {
   return MY_LOCATION_PATTERN.test(text);
 }
 
+const STATUS_VERB_RX = '(?:on[\\s-]?duty|off[\\s-]?duty|in\\s+service|out\\s+of\\s+service|available|en[\\s-]?route|on[\\s-]?scene|10[-\\s]?\\d{1,2}|ten[-\\s]\\w+)';
+const UNIT_TOKEN_RX = '([a-z]+[\\s-]?\\d{1,3}|\\d{4})';
+
+const TARGET_UNIT_PATTERNS = [
+  new RegExp(`\\b(?:put|show|mark|set|place|change|update)\\s+${UNIT_TOKEN_RX}\\s+(?:to\\s+)?(?:as\\s+)?(?:${STATUS_VERB_RX})\\b`, 'i'),
+  new RegExp(`\\b${UNIT_TOKEN_RX}\\s+is\\s+(?:${STATUS_VERB_RX})\\b`, 'i'),
+  new RegExp(`\\b${UNIT_TOKEN_RX}\\s+(?:${STATUS_VERB_RX})\\b`, 'i'),
+];
+
+function normalizeUnitId(s) {
+  if (!s) return null;
+  return String(s).trim().toUpperCase().replace(/\s+/g, '-');
+}
+
+function detectTargetUnitFromTranscript(transcript) {
+  if (!transcript) return null;
+  const text = transcript.toLowerCase().replace(/[.,!?]/g, ' ').replace(/\s+/g, ' ').trim();
+  for (const rx of TARGET_UNIT_PATTERNS) {
+    const m = text.match(rx);
+    if (m && m[1]) {
+      return normalizeUnitId(m[1]);
+    }
+  }
+  return null;
+}
+
 const STATE_ABBREVIATIONS = {
   'alabama': 'AL', 'alaska': 'AK', 'arizona': 'AZ', 'arkansas': 'AR',
   'california': 'CA', 'colorado': 'CO', 'connecticut': 'CT', 'delaware': 'DE',
@@ -1649,8 +1675,37 @@ class AIDispatcher {
       const conversationHistory = slots?.conversationHistory || [];
       const result = await classifyIntent(transcript, participantId, state, slots, conversationHistory);
 
-      this.log('LLM_CLASSIFY_RESULT', { participant: participantId, intent: result.intent, response: result.response });
+      this.log('LLM_CLASSIFY_RESULT', { participant: participantId, intent: result.intent, response: result.response, slots: result.slots });
       this._turnContextByUnit.set(participantId, { transcript, intent: result.intent });
+
+      const speakerNorm = normalizeUnitId(participantId);
+      if (result.intent === 'STATUS_CHANGE') {
+        const detected = detectTargetUnitFromTranscript(transcript);
+        if (detected && detected !== speakerNorm) {
+          this.log('STATUS_CHANGE_OTHER_REROUTED', {
+            from: 'STATUS_CHANGE',
+            detectedTarget: detected,
+            speaker: speakerNorm,
+            transcript,
+          });
+          result.intent = 'STATUS_CHANGE_OTHER';
+          result.slots = { ...(result.slots || {}), targetUnit: detected };
+          if (result.response) {
+            const time = this.formatMilitaryTime();
+            const statusText = result.cadStatus ? result.cadStatus.replace(/_/g, ' ') : 'updated';
+            result.response = `Copy, ${detected} ${statusText}, ${time}.`;
+          }
+        }
+      } else if (result.intent === 'STATUS_CHANGE_OTHER') {
+        const llmTarget = result.slots?.targetUnit ? normalizeUnitId(result.slots.targetUnit) : null;
+        if (!llmTarget) {
+          const detected = detectTargetUnitFromTranscript(transcript);
+          if (detected) {
+            this.log('STATUS_CHANGE_OTHER_TARGET_RECOVERED', { detectedTarget: detected, transcript });
+            result.slots = { ...(result.slots || {}), targetUnit: detected };
+          }
+        }
+      }
 
       switch (result.intent) {
         case 'SILENCE': {
@@ -1718,9 +1773,16 @@ class AIDispatcher {
 
         case 'STATUS_CHANGE_OTHER': {
           const targetUnit = result.slots?.targetUnit?.toUpperCase().replace(/\s+/g, '-') || null;
+          this.log('STATUS_CHANGE_OTHER_HANDLER', {
+            targetUnit,
+            requestedBy: participantId,
+            channel: this.channelName,
+            cadStatus: result.cadStatus,
+            transcript,
+          });
           if (!targetUnit) {
             const noTargetResp = result.response || `${participantId}, say again, which unit?`;
-            await this.speak(noTargetResp, participantId);
+            await this.speak(noTargetResp, participantId, { retryOnBusy: true, retryContext: 'STATUS_CHANGE_OTHER_NO_TARGET' });
             this.addConversationExchange(participantId, transcript, noTargetResp);
             break;
           }
@@ -1758,7 +1820,8 @@ class AIDispatcher {
           } else {
             otherStatusResp = result.response || `Copy, ${targetUnit} ${result.cadStatus || 'updated'}, ${this.formatMilitaryTime()}.`;
           }
-          await this.speak(otherStatusResp, participantId);
+          this.log('STATUS_CHANGE_OTHER_SPEAK', { targetUnit, requestedBy: participantId, channel: this.channelName, text: otherStatusResp });
+          await this.speak(otherStatusResp, participantId, { retryOnBusy: true, retryContext: `STATUS_CHANGE_OTHER:${targetUnit}` });
           this.addConversationExchange(participantId, transcript, otherStatusResp);
           break;
         }
@@ -2298,11 +2361,14 @@ class AIDispatcher {
     this.log('COMMAND_MATCHED', { transcript, response: finalResponse, cadStatus: finalCadStatus, cadAction: finalCadAction });
 
     if (finalCadStatus && commandResult.unitId) {
+      const cadTargetUnit = commandResult.targetUnit || commandResult.unitId;
       try {
-        const cadResult = await cadService.updateUnitStatus(commandResult.unitId, finalCadStatus);
-        this.log('CAD_STATUS_UPDATE', { 
-          unitId: commandResult.unitId, 
-          status: finalCadStatus, 
+        const cadResult = await cadService.updateUnitStatus(cadTargetUnit, finalCadStatus);
+        this.log('CAD_STATUS_UPDATE', {
+          unitId: cadTargetUnit,
+          requestedBy: commandResult.unitId,
+          isOtherUnit: !!commandResult.targetUnit,
+          status: finalCadStatus,
           success: cadResult.success,
           error: cadResult.error
         });
@@ -5053,15 +5119,15 @@ class AIDispatcher {
     }
   }
 
-  async speak(text, participantId = null) {
-    this.log('SPEAK', { text, unit: participantId || '(broadcast)' });
+  async speak(text, participantId = null, options = {}) {
+    this.log('SPEAK', { text, unit: participantId || '(broadcast)', channel: this.channelName, options });
     const turnCtx = participantId ? this._turnContextByUnit.get(participantId) : null;
     if (turnCtx) {
       this.logSpeechEvent(participantId, turnCtx.transcript, turnCtx.intent, text);
       this._turnContextByUnit.delete(participantId);
     }
     const audio = await textToSpeech(text);
-    await this.publishAudio(audio, text);
+    await this.publishAudio(audio, text, options);
     if (participantId) {
       const session = getUnitSessionState(participantId);
       setUnitSessionState(participantId, session?.state || 'IDLE', null, {
@@ -5080,7 +5146,8 @@ class AIDispatcher {
     }, false);
   }
 
-  async publishAudio(audioBuffer, responseText = null) {
+  async publishAudio(audioBuffer, responseText = null, options = {}) {
+    const { retryOnBusy = false, retryWaitMs = 1500, retryContext = null } = options;
     try {
       if (!await this.shouldRespond()) {
         this.log('PUBLISH_SKIPPED', { reason: 'Disabled' });
@@ -5104,12 +5171,30 @@ class AIDispatcher {
 
       this.verboseLog('AUDIO_STREAMING', { opusFrames: opusFrames.length, channel: this.channelName });
 
-      const floorResult = floorControlService.requestFloor(this.channelName, AI_IDENTITY, {
+      let floorResult = floorControlService.requestFloor(this.channelName, AI_IDENTITY, {
         isEmergency: false,
         emergencyStates: null,
       });
+      if (!floorResult.granted && retryOnBusy) {
+        this.log('PUBLISH_FLOOR_BUSY_WAITING', { heldBy: floorResult.heldBy, retryWaitMs, context: retryContext });
+        const start = Date.now();
+        while (!floorResult.granted && (Date.now() - start) < retryWaitMs) {
+          await new Promise(r => setTimeout(r, 100));
+          floorResult = floorControlService.requestFloor(this.channelName, AI_IDENTITY, {
+            isEmergency: false,
+            emergencyStates: null,
+          });
+        }
+        if (floorResult.granted) {
+          this.log('PUBLISH_FLOOR_ACQUIRED_AFTER_WAIT', { waitedMs: Date.now() - start, context: retryContext });
+        }
+      }
       if (!floorResult.granted) {
-        this.log('PUBLISH_SKIPPED', { reason: 'Floor busy', heldBy: floorResult.heldBy });
+        if (retryOnBusy) {
+          this.log('AI_ACK_DROPPED', { reason: 'Floor busy after retry', heldBy: floorResult.heldBy, context: retryContext, responseText });
+        } else {
+          this.log('PUBLISH_SKIPPED', { reason: 'Floor busy', heldBy: floorResult.heldBy });
+        }
         return;
       }
 

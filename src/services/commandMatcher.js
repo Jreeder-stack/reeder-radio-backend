@@ -744,6 +744,29 @@ function matchStatusCommand(transcript) {
   return null;
 }
 
+const _STATUS_VERB_RX = '(?:on[\\s-]?duty|off[\\s-]?duty|in\\s+service|out\\s+of\\s+service|available|en[\\s-]?route|on[\\s-]?scene|10[-\\s]?\\d{1,2})';
+const _UNIT_TOKEN_RX = '([a-z]+[\\s-]?\\d{1,3}|\\d{4})';
+const _TARGET_UNIT_PATTERNS = [
+  new RegExp(`\\b(?:put|show|mark|set|place|change|update)\\s+${_UNIT_TOKEN_RX}\\s+(?:to\\s+)?(?:as\\s+)?(?:${_STATUS_VERB_RX})\\b`, 'i'),
+  new RegExp(`\\b${_UNIT_TOKEN_RX}\\s+is\\s+(?:${_STATUS_VERB_RX})\\b`, 'i'),
+  new RegExp(`\\b${_UNIT_TOKEN_RX}\\s+(?:${_STATUS_VERB_RX})\\b`, 'i'),
+];
+
+function _normalizeUnitId(s) {
+  if (!s) return null;
+  return String(s).trim().toUpperCase().replace(/\s+/g, '-');
+}
+
+function detectTargetUnitInTranscript(transcript) {
+  if (!transcript) return null;
+  const text = String(transcript).toLowerCase().replace(/[.,!?]/g, ' ').replace(/\s+/g, ' ').trim();
+  for (const rx of _TARGET_UNIT_PATTERNS) {
+    const m = text.match(rx);
+    if (m && m[1]) return _normalizeUnitId(m[1]);
+  }
+  return null;
+}
+
 function matchImmediateCommand(transcript) {
   const normalized = normalizeText(transcript);
   
@@ -1089,6 +1112,18 @@ export function matchCommand(transcript, participantId = null) {
 
       const statusResult = matchStatusCommand(transcript);
       if (statusResult) {
+        const targetOther = detectTargetUnitInTranscript(transcript);
+        const speakerNorm = _normalizeUnitId(unitId);
+        if (targetOther && targetOther !== speakerNorm) {
+          console.log(`[CommandMatcher] STATUS_CHANGE_OTHER fast-path: speaker=${speakerNorm} target=${targetOther} status=${statusResult.cadStatus}`);
+          return {
+            intent: 'STATUS_CHANGE_OTHER',
+            response: `Copy, ${targetOther} ${statusResult.status}, ${formatTimestamp()}.`,
+            unitId,
+            targetUnit: targetOther,
+            cadStatus: statusResult.cadStatus
+          };
+        }
         return {
           response: `${unitId}, ${statusResult.status}, ${formatTimestamp()}.`,
           unitId,
@@ -1216,6 +1251,19 @@ export function matchCommand(transcript, participantId = null) {
 
     const statusResult = matchStatusCommand(transcript);
     if (statusResult) {
+      const targetOther = detectTargetUnitInTranscript(transcript);
+      const speakerNorm = _normalizeUnitId(unitId);
+      if (targetOther && targetOther !== speakerNorm) {
+        resetUnitSession(unitId);
+        console.log(`[CommandMatcher] STATUS_CHANGE_OTHER fast-path (AWAITING): speaker=${speakerNorm} target=${targetOther} status=${statusResult.cadStatus}`);
+        return {
+          intent: 'STATUS_CHANGE_OTHER',
+          response: `Copy, ${targetOther} ${statusResult.status}, ${formatTimestamp()}.`,
+          unitId,
+          targetUnit: targetOther,
+          cadStatus: statusResult.cadStatus
+        };
+      }
       resetUnitSession(unitId);
       return {
         response: `${unitId}, ${statusResult.status}, ${formatTimestamp()}.`,
