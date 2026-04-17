@@ -27,7 +27,7 @@ router.get('/health', (req, res) => {
 router.post('/page/:id/ack', requireAuthOrRadioToken, async (req, res) => {
   const pageId = parseInt(req.params.id, 10);
 
-  let radioId = req.radio?.radio_id || null;
+  let radioId = req.radio?.radio_id || req.user?.radio_id || req.session?.radio_id || null;
   let unitId = req.radio?.assigned_unit_id || null;
 
   if (!radioId && req.user?.id) {
@@ -44,7 +44,7 @@ router.post('/page/:id/ack', requireAuthOrRadioToken, async (req, res) => {
 
   if (!radioId) {
     console.log('[Dispatch] Page ACK rejected: no mapped radio for user=' + (req.user?.username || 'unknown'));
-    return res.status(403).json({ error: 'No radio mapped to this user' });
+    return res.status(400).json({ error: 'Radio identification required' });
   }
 
   try {

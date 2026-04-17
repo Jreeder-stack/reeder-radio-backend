@@ -211,7 +211,7 @@ class CommandCommsApp : Application() {
             NotificationManager.IMPORTANCE_HIGH
         ).apply {
             description = "Dispatch paging alerts — plays tone and shows full-screen overlay"
-            enableVibration(true)
+            enableVibration(false)
             setBypassDnd(true)
             setShowBadge(true)
             setSound(null, null)
