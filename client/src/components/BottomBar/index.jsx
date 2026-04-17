@@ -89,6 +89,7 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
 
   const startTransmission = useCallback(async () => {
     console.log('[PTT] startTransmission called, channels:', selectedChannelNames);
+    audioTransportManager.prewarmAudioContext();
     if (selectedChannelNames.length === 0) return false;
     
     const isDispatcher = audioTransportManager.isDispatcherMode();

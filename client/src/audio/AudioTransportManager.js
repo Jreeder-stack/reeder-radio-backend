@@ -837,6 +837,12 @@ class AudioTransportManager {
     return true;
   }
 
+  prewarmAudioContext() {
+    if (this._capture) {
+      this._capture.prewarmAudioContext();
+    }
+  }
+
   async start() { return this.startTransmit(); }
 
   async stopTransmit() {
