@@ -772,6 +772,7 @@ class BackgroundAudioService : Service() {
                             preCaptureSetupJob?.join()
                             preCaptureSetupJob = null
                             engine.stopPreCapture()
+                            releaseRadioAudioRoute()
                             val roomKey = servicePrefs.channelRoomKey
                             if (roomKey != null) {
                                 engine.floorControl?.releaseFloor(roomKey)
@@ -805,6 +806,7 @@ class BackgroundAudioService : Service() {
                         preCaptureSetupJob?.join()
                         preCaptureSetupJob = null
                         engine.stopPreCapture()
+                        releaseRadioAudioRoute()
                         Log.d("[ToneEvent]", """{"tone":"denied","trigger":"floor_denied","state":"$pttState","ts":${System.currentTimeMillis()}}""")
                         app.toneEngine.startDeniedTone()
                         transitionPttState(PttState.IDLE)
@@ -1048,6 +1050,8 @@ class BackgroundAudioService : Service() {
             }
             Log.d(TAG, """{"event":"RADIO_READY_FOR_PTT","roomKey":"$roomKey","signaling":$signaling}""")
 
+            applyRadioAudioRoute()
+
             preCaptureSetupJob = scope.launch {
                 val preStarted = engine.startPreCapture()
                 if (!preStarted) {
@@ -1064,6 +1068,7 @@ class BackgroundAudioService : Service() {
                 preCaptureSetupJob?.join()
                 preCaptureSetupJob = null
                 engine.stopPreCapture()
+                releaseRadioAudioRoute()
                 return@launch
             }
 
@@ -1074,6 +1079,7 @@ class BackgroundAudioService : Service() {
                 preCaptureSetupJob?.join()
                 preCaptureSetupJob = null
                 engine.stopPreCapture()
+                releaseRadioAudioRoute()
                 Log.d("[ToneEvent]", """{"tone":"denied","trigger":"signaling_not_ready","state":"$pttState","ts":${System.currentTimeMillis()}}""")
                 app.toneEngine.startDeniedTone()
                 transitionPttState(PttState.IDLE)
@@ -1119,6 +1125,7 @@ class BackgroundAudioService : Service() {
                 preCaptureSetupJob?.join()
                 preCaptureSetupJob = null
                 engine.stopPreCapture()
+                releaseRadioAudioRoute()
                 return@launch
             }
 
@@ -1156,6 +1163,7 @@ class BackgroundAudioService : Service() {
                     setupJob?.join()
                     radioEngine?.stopPreCapture()
                 }
+                releaseRadioAudioRoute()
                 transitionPttState(PttState.IDLE)
                 updateNotification("Radio — Standby")
                 sendPttTxAborted()
@@ -1299,6 +1307,7 @@ class BackgroundAudioService : Service() {
                 preCaptureSetupJob?.join()
                 preCaptureSetupJob = null
                 radioEngine?.stopPreCapture()
+                releaseRadioAudioRoute()
                 Log.d("[ToneEvent]", """{"tone":"denied","trigger":"floor_response_timeout","channelId":"$roomKey","state":"$pttState","ts":${System.currentTimeMillis()}}""")
                 app.toneEngine.startDeniedTone()
                 transitionPttState(PttState.IDLE)
