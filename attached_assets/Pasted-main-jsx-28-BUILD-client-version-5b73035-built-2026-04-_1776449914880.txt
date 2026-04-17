@@ -1,0 +1,57 @@
+main.jsx:28 [BUILD] client version=5b73035 built=2026-04-17T17:35:57.527Z
+dispatcher:1 <meta name="apple-mobile-web-app-capable" content="yes"> is deprecated. Please include <meta name="mobile-web-app-capable" content="yes">
+AudioConnectionContext.jsx:614 [AudioConnection] Dispatcher mode - idle timeout disabled (audio must persist)
+AudioConnectionContext.jsx:727 [AudioConnection] Init check - user: undefined lastUser: null initializing: false path: /dispatcher
+AudioConnectionContext.jsx:736 [AudioConnection] No user, skipping init
+AuthContext.jsx:127 [PTT-DIAG] [JS] Auth: pushed early connection info to service: server=https://comms.reeder-systems.com unit=DISPATCH-1
+AudioConnectionContext.jsx:727 [AudioConnection] Init check - user: DISPATCH-1 lastUser: null initializing: false path: /dispatcher
+AudioConnectionContext.jsx:754 [AudioConnection] Fetching channels...
+SignalingManager.js:98 [Signaling] Connection already in progress, returning existing promise
+AuthContext.jsx:127 [PTT-DIAG] [JS] Auth: pushed early connection info to service: server=https://comms.reeder-systems.com unit=DISPATCH-1
+SignalingManager.js:132 [Signaling] Connected to signaling server
+SignalingManager.js:380 [Signaling] Authentication request sent for DISPATCH-1 deviceId: 3574017b-d3e4-40a7-a5a9-133833c252f9
+SignalingManager.js:332 [Signaling] Authentication already in progress, returning existing promise
+AudioConnectionContext.jsx:757 [AudioConnection] Fetched 4 channels
+AudioConnectionContext.jsx:506 [AudioConnection] Dispatcher mode - immediately connecting 2 monitored channels
+AudioTransportManager.js:437 AUDIO_WS_CONNECT_ATTEMPT {channelName: 'TESTING__TESTING 1', identity: 'DISPATCH-1', url: 'wss://comms.reeder-systems.com/api/audio-ws?channe…ESTING__TESTING%201&unitId=DISPATCH-1&format=opus'}
+AudioTransportManager.js:437 AUDIO_WS_CONNECT_ATTEMPT {channelName: 'DISPATCH__DISPATCH', identity: 'DISPATCH-1', url: 'wss://comms.reeder-systems.com/api/audio-ws?channe…=DISPATCH__DISPATCH&unitId=DISPATCH-1&format=opus'}
+SignalingManager.js:191 [Signaling] Authenticated as DISPATCH-1
+SignalingContext.jsx:47 [SignalingContext] Connected and authenticated as DISPATCH-1
+SignalingContext.jsx:47 [SignalingContext] Connected and authenticated as DISPATCH-1
+SignalingManager.js:426 [Signaling] Joined channel: TESTING__TESTING 1
+SignalingManager.js:426 [Signaling] Joined channel: DISPATCH__DISPATCH
+AudioTransportManager.js:442 AUDIO_WS_ONOPEN {channelName: 'TESTING__TESTING 1', identity: 'DISPATCH-1'}
+AudioConnectionContext.jsx:293 [AudioConnection] TESTING__TESTING 1 state: connected
+AudioConnectionContext.jsx:318 [AudioConnection] Health change for TESTING__TESTING 1: {channel: 'TESTING__TESTING 1', error: null}
+AudioConnectionContext.jsx:349 [AudioConnection] connectToChannel total for TESTING__TESTING 1: 328.0ms
+AudioConnectionContext.jsx:356 [AudioConnection] Connected to TESTING__TESTING 1
+AudioConnectionContext.jsx:349 [AudioConnection] connectToChannel total for TESTING__TESTING 1: 313.6ms
+AudioConnectionContext.jsx:356 [AudioConnection] Connected to TESTING__TESTING 1
+PcmCaptureEngine.js:143 [PcmCaptureEngine] Warmed up – mic and AudioContext ready
+AudioTransportManager.js:442 AUDIO_WS_ONOPEN {channelName: 'DISPATCH__DISPATCH', identity: 'DISPATCH-1'}
+AudioConnectionContext.jsx:293 [AudioConnection] DISPATCH__DISPATCH state: connected
+AudioConnectionContext.jsx:318 [AudioConnection] Health change for DISPATCH__DISPATCH: {channel: 'DISPATCH__DISPATCH', error: null}
+AudioConnectionContext.jsx:349 [AudioConnection] connectToChannel total for DISPATCH__DISPATCH: 758.5ms
+AudioConnectionContext.jsx:356 [AudioConnection] Connected to DISPATCH__DISPATCH
+AudioConnectionContext.jsx:349 [AudioConnection] connectToChannel total for DISPATCH__DISPATCH: 744.7ms
+AudioConnectionContext.jsx:356 [AudioConnection] Connected to DISPATCH__DISPATCH
+index.jsx:258 [PTT] PTT_DOWN {eventType: 'keydown'}
+index.jsx:260 [PTT] PTT_GESTURE_ACTIVE_TRUE
+index.jsx:261 [PTT] PTT_START
+index.jsx:91 [PTT] startTransmission called, channels: ['DISPATCH__DISPATCH']
+index.jsx:154 [PTT] Requesting floor grant for channel=DISPATCH__DISPATCH unit=DISPATCH-1
+index.jsx:155 [PTT] PTT_FLOOR_REQUEST_SENT {channel: 'DISPATCH__DISPATCH', unit: 'DISPATCH-1'}
+index.jsx:157 [PTT] Floor granted for channel=DISPATCH__DISPATCH
+index.jsx:158 [PTT] PTT_FLOOR_GRANTED {channel: 'DISPATCH__DISPATCH', unit: 'DISPATCH-1'}
+index.jsx:171 [PTT] Playing talk permit tone before mic goes live
+talkPermitTone.js:22 [TalkPermit] WAV preloaded
+index.jsx:173 [PTT] Talk permit tone finished, opening mic
+OpusBrowserEncoder.js:72 [OpusBrowserEncoder] WebCodecs AudioEncoder initialized (opus, 16kHz, mono)
+index.jsx:196 [PTT] Transmission started successfully
+AudioTransportManager.js:1264 NETWORK_QUALITY_DIAG {rttByChannel: {…}, degraded: false, packetLossPercent: '0.00', avgJitterMs: 0, rxStreams: 0, …}
+index.jsx:277 [PTT] PTT_UP {gestureActive: true}
+index.jsx:280 [PTT] PTT_STOP
+index.jsx:282 [PTT] PTT_GESTURE_ACTIVE_FALSE
+index.jsx:211 [PTT] stopTransmission called
+index.jsx:225 [PTT] Transmission stopped
+index.jsx:235 [PTT] Unmuted channels: ['DISPATCH__DISPATCH']
