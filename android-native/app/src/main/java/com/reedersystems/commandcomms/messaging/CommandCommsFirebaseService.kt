@@ -70,7 +70,7 @@ class CommandCommsFirebaseService : FirebaseMessagingService() {
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
         super.onMessageReceived(remoteMessage)
-        Log.d(TAG, "FCM message received: ${remoteMessage.data}")
+        Log.d(TAG, "[BUILD-TONE-A-V2] FCM message received: ${remoteMessage.data}")
 
         val data = remoteMessage.data
         val type = data["type"] ?: return
@@ -109,11 +109,14 @@ class CommandCommsFirebaseService : FirebaseMessagingService() {
             .setContentText(message)
             .setStyle(NotificationCompat.BigTextStyle().bigText(message))
             .setPriority(NotificationCompat.PRIORITY_MAX)
-            .setCategory(NotificationCompat.CATEGORY_ALARM)
+            .setCategory(NotificationCompat.CATEGORY_MESSAGE)
             .setColorized(true)
             .setColor(0xFFCC0000.toInt())
             .setAutoCancel(false)
             .setOngoing(true)
+            .setSound(null)
+            .setDefaults(0)
+            .setVibrate(longArrayOf(0L))
             .setContentIntent(pageAlertPendingIntent)
             .setFullScreenIntent(pageAlertPendingIntent, true)
             .build()
@@ -129,6 +132,8 @@ class CommandCommsFirebaseService : FirebaseMessagingService() {
 
         if (app.apiClient.radioToken != null) {
             playPagingTone(app)
+        } else {
+            Log.w(TAG, "[BUILD-TONE-A-V2] Skipping tone: radioToken is null (radio not authenticated)")
         }
 
         sendBroadcast(Intent(ACTION_PAGE_RECEIVED).apply {
@@ -170,7 +175,8 @@ class CommandCommsFirebaseService : FirebaseMessagingService() {
      * on every device and matches client/src/audio/toneEngine.js#playToneA exactly.
      */
     private fun playPagingTone(app: CommandCommsApp) {
-        scope.launch(Dispatchers.Main) {
+        Log.d(TAG, "[BUILD-TONE-A-V2] playPagingTone ENTER — synthesized 1000Hz sine (not MediaPlayer, not HTTP fetch)")
+        scope.launch(Dispatchers.IO) {
             var track: AudioTrack? = null
             var raisedVolume = false
             val am = applicationContext.getSystemService(Context.AUDIO_SERVICE) as AudioManager
@@ -186,14 +192,13 @@ class CommandCommsFirebaseService : FirebaseMessagingService() {
                 for (i in 0 until numSamples) {
                     pcm[i] = (amplitude * sin(2.0 * Math.PI * frequencyHz * i / sampleRate)).toInt().toShort()
                 }
-                val pcmByteSize = numSamples * 2
 
                 val maxVolume = am.getStreamMaxVolume(AudioManager.STREAM_ALARM)
                 try {
                     am.setStreamVolume(AudioManager.STREAM_ALARM, maxVolume, 0)
                     raisedVolume = true
                 } catch (e: SecurityException) {
-                    Log.w(TAG, "Cannot override alarm volume (DnD policy?): ${e.message}")
+                    Log.w(TAG, "[BUILD-TONE-A-V2] Cannot override alarm volume (DnD policy?): ${e.message}")
                 }
 
                 val attributes = AudioAttributes.Builder()
@@ -206,25 +211,21 @@ class CommandCommsFirebaseService : FirebaseMessagingService() {
                     .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
                     .build()
 
+                val minBuf = AudioTrack.getMinBufferSize(
+                    sampleRate, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT
+                )
+                val streamBufBytes = maxOf(minBuf, 8192)
+
                 val newTrack = AudioTrack.Builder()
                     .setAudioAttributes(attributes)
                     .setAudioFormat(format)
-                    .setBufferSizeInBytes(pcmByteSize)
-                    .setTransferMode(AudioTrack.MODE_STATIC)
+                    .setBufferSizeInBytes(streamBufBytes)
+                    .setTransferMode(AudioTrack.MODE_STREAM)
                     .build()
                 track = newTrack
                 runCatching { newTrack.setVolume(AudioTrack.getMaxVolume()) }
-                newTrack.write(pcm, 0, numSamples)
 
                 val restoreVolume = raisedVolume
-                newTrack.setNotificationMarkerPosition(numSamples)
-                newTrack.setPlaybackPositionUpdateListener(object : AudioTrack.OnPlaybackPositionUpdateListener {
-                    override fun onMarkerReached(t: AudioTrack) {
-                        finishPagingPlayback(t, am, prevVolume, restoreVolume)
-                    }
-                    override fun onPeriodicNotification(t: AudioTrack) { /* unused */ }
-                })
-
                 synchronized(playerLock) {
                     currentPagingTrack?.let { prev ->
                         runCatching { prev.pause() }
@@ -237,9 +238,30 @@ class CommandCommsFirebaseService : FirebaseMessagingService() {
                 }
 
                 newTrack.play()
-                Log.d(TAG, "Paging tone playing: synthesized 1000Hz sine ${durationMs}ms at STREAM_ALARM max=$maxVolume (was $prevVolume)")
+                Log.d(TAG, "[BUILD-TONE-A-V2] Tone A playing: 1000Hz sine ${durationMs}ms STREAM_ALARM max=$maxVolume (was $prevVolume) minBuf=$minBuf")
+
+                var written = 0
+                val chunk = 4096
+                while (written < numSamples) {
+                    val toWrite = minOf(chunk, numSamples - written)
+                    val n = newTrack.write(pcm, written, toWrite)
+                    if (n <= 0) {
+                        Log.w(TAG, "[BUILD-TONE-A-V2] AudioTrack.write returned $n — aborting")
+                        break
+                    }
+                    written += n
+                    val stillActive = synchronized(playerLock) { currentPagingTrack === newTrack }
+                    if (!stillActive) break
+                }
+
+                runCatching {
+                    if (synchronized(playerLock) { currentPagingTrack === newTrack }) {
+                        newTrack.stop()
+                    }
+                }
+                finishPagingPlayback(newTrack, am, prevVolume, restoreVolume)
             } catch (e: Exception) {
-                Log.w(TAG, "Paging tone playback exception: ${e.message}")
+                Log.w(TAG, "[BUILD-TONE-A-V2] Paging tone playback exception: ${e.message}", e)
                 runCatching { track?.release() }
                 if (raisedVolume) {
                     runCatching { am.setStreamVolume(AudioManager.STREAM_ALARM, prevVolume, 0) }
