@@ -114,24 +114,16 @@ class BackgroundAudioService : Service() {
         audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
         previousAudioMode = audioManager.mode
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            previousSpeakerphoneOn = audioManager.communicationDevice?.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER
+            previousSpeakerphoneOn =
+                audioManager.communicationDevice?.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER
         } else {
             @Suppress("DEPRECATION")
             previousSpeakerphoneOn = audioManager.isSpeakerphoneOn
         }
-        audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val speakerDevice = audioManager.availableCommunicationDevices
-                .firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
-            if (speakerDevice != null) {
-                audioManager.setCommunicationDevice(speakerDevice)
-            }
-        } else {
-            @Suppress("DEPRECATION")
-            audioManager.isSpeakerphoneOn = true
-        }
-        Log.d(TAG, "BackgroundAudioService: loudspeaker forced on (prev mode=$previousAudioMode, prev speaker=$previousSpeakerphoneOn)")
-
+        Log.d(
+            TAG,
+            "BackgroundAudioService: captured initial audio state only (mode=$previousAudioMode, speaker=$previousSpeakerphoneOn)"
+        )
         servicePrefs = ServiceConnectionPrefs(applicationContext)
 
         initRadioEngine()
