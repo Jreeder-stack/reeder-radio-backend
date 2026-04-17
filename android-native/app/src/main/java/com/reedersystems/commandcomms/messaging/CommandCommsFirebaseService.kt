@@ -212,6 +212,7 @@ class CommandCommsFirebaseService : FirebaseMessagingService() {
                 )
                 player.setDataSource(tmpFile.absolutePath)
                 player.isLooping = false
+                runCatching { player.setVolume(1f, 1f) }
 
                 val capturedTmp = tmpFile
                 val restoreVolume = raisedVolume
@@ -338,7 +339,7 @@ class CommandCommsFirebaseService : FirebaseMessagingService() {
     }
 
     companion object {
-        const val PAGING_CHANNEL_ID = "channel_paging"
+        const val PAGING_CHANNEL_ID = "channel_paging_v2"
         const val PAGE_NOTIFICATION_ID = 7777
         const val ACTION_PAGE_RECEIVED = "com.reedersystems.commandcomms.PAGE_RECEIVED"
         const val EXTRA_PAGE_ID = "page_id"

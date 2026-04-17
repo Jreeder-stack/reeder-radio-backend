@@ -201,8 +201,12 @@ class CommandCommsApp : Application() {
             setShowBadge(true)
         }
 
+        try {
+            nm.deleteNotificationChannel("channel_paging")
+        } catch (_: Exception) {}
+
         val paging = NotificationChannel(
-            "channel_paging",
+            "channel_paging_v2",
             "Paging",
             NotificationManager.IMPORTANCE_HIGH
         ).apply {

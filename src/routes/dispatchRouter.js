@@ -1,9 +1,8 @@
 import express from 'express';
 import * as dispatchController from '../controllers/dispatchController.js';
-import { requireAuth } from '../middleware/auth.js';
+import { requireAuth, requireAuthOrRadioToken } from '../middleware/auth.js';
 import { requireDispatcher } from '../middleware/auth.js';
 import { signalingService } from '../services/signalingService.js';
-import { radioAuth } from '../middleware/radioAuth.js';
 import {
   createPage,
   recordPageAck,
@@ -12,6 +11,7 @@ import {
   getAllFcmTokensForUnit,
   getAllFcmTokens,
   getPagingChannelId,
+  getRadioByAssignedUserId,
 } from '../db/index.js';
 import { sendPageToTokens } from '../services/fcmService.js';
 
@@ -22,6 +22,43 @@ router.get('/health', (req, res) => {
     status: 'ok',
     timestamp: Date.now(),
   });
+});
+
+router.post('/page/:id/ack', requireAuthOrRadioToken, async (req, res) => {
+  const pageId = parseInt(req.params.id, 10);
+
+  let radioId = req.radio?.radio_id || null;
+  let unitId = req.radio?.assigned_unit_id || null;
+
+  if (!radioId && req.user?.id) {
+    try {
+      const radio = await getRadioByAssignedUserId(req.user.id);
+      if (radio) {
+        radioId = radio.radio_id;
+        unitId = radio.assigned_unit_id || null;
+      }
+    } catch (err) {
+      console.warn('[Dispatch] Page ACK radio lookup failed:', err.message);
+    }
+  }
+
+  if (!radioId) {
+    console.log('[Dispatch] Page ACK rejected: no mapped radio for user=' + (req.user?.username || 'unknown'));
+    return res.status(403).json({ error: 'No radio mapped to this user' });
+  }
+
+  try {
+    console.log('[Dispatch] Page ACK arrived: pageId=' + pageId + ' radio=' + radioId + ' unit=' + unitId);
+    const page = await getPage(pageId);
+    if (!page) return res.status(404).json({ error: 'Page not found' });
+
+    const ack = await recordPageAck(pageId, unitId, radioId);
+    console.log('[Dispatch] Page ACK recorded: pageId=' + pageId + ' radio=' + radioId + ' unit=' + unitId);
+    res.json({ success: true, ack });
+  } catch (err) {
+    console.error('[Dispatch] Page ACK error:', err);
+    res.status(500).json({ error: 'Failed to record acknowledgment' });
+  }
 });
 
 router.use(requireAuth);
@@ -119,27 +156,6 @@ router.post('/page', requireDispatcher, async (req, res) => {
   } catch (err) {
     console.error('[Dispatch] Page send error:', err);
     res.status(500).json({ error: 'Failed to send page' });
-  }
-});
-
-router.post('/page/:id/ack', radioAuth, async (req, res) => {
-  const pageId = parseInt(req.params.id, 10);
-  const radioId = req.radio?.radio_id;
-  const unitId = req.body?.unitId || req.radio?.assigned_unit_id || null;
-
-  if (!radioId) return res.status(400).json({ error: 'Radio identification required' });
-
-  try {
-    console.log('[Dispatch] Page ACK arrived: pageId=' + pageId + ' radio=' + radioId + ' unit=' + unitId);
-    const page = await getPage(pageId);
-    if (!page) return res.status(404).json({ error: 'Page not found' });
-
-    const ack = await recordPageAck(pageId, unitId, radioId);
-    console.log('[Dispatch] Page ACK recorded: pageId=' + pageId + ' radio=' + radioId + ' unit=' + unitId);
-    res.json({ success: true, ack });
-  } catch (err) {
-    console.error('[Dispatch] Page ACK error:', err);
-    res.status(500).json({ error: 'Failed to record acknowledgment' });
   }
 });
 

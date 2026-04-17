@@ -1056,6 +1056,14 @@ export async function getZoneAnnouncementAudio(zoneId) {
   return result.rows[0]?.announcement_audio || null;
 }
 
+export async function getRadioByAssignedUserId(userId) {
+  const result = await pool.query(
+    'SELECT * FROM radios WHERE assigned_unit_id = $1 ORDER BY last_seen DESC NULLS LAST LIMIT 1',
+    [userId]
+  );
+  return result.rows[0] || null;
+}
+
 export async function recordPageAck(pageId, unitId, radioId) {
   const result = await pool.query(
     `INSERT INTO page_acks (page_id, unit_id, radio_id)
