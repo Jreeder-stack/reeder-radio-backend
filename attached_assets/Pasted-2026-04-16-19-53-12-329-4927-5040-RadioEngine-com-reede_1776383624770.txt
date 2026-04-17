@@ -1,0 +1,391 @@
+2026-04-16 19:53:12.329  4927-5040  [RadioEngine]           com.reedersystems.commandcomms       D  RX_DIAG rxTotal=0 rxNew=0 jbSize=0 jbDepth=2 jbPlaying=false channelIdx=169 t=73741ms
+2026-04-16 19:53:12.354  4927-5040  [RadioEngine]           com.reedersystems.commandcomms       D  RX_DIAG rxTotal=0 rxNew=0 jbSize=0 jbDepth=2 jbPlaying=false channelIdx=169 t=73766ms
+2026-04-16 19:53:13.705  4927-4995  [JitterBuf]             com.reedersystems.commandcomms       D  ENTER_IDLE depth=2 keptFrames=0 t=75117ms
+2026-04-16 19:53:15.258  4927-4995  [UdpTransport]          com.reedersystems.commandcomms       D  {"event":"UDP_KEEPALIVE_SENT","dest":"comms.reeder-systems.com:5100","fast":false,"intervalMs":8000}
+2026-04-16 19:53:15.715  4927-5040  [JitterBuf]             com.reedersystems.commandcomms       D  ENTER_IDLE depth=2 keptFrames=0 t=77127ms
+2026-04-16 19:53:17.332  4927-4995  [RadioEngine]           com.reedersystems.commandcomms       D  RX_DIAG rxTotal=0 rxNew=0 jbSize=0 jbDepth=2 jbPlaying=false channelIdx=169 t=78744ms
+2026-04-16 19:53:17.360  4927-5040  [RadioEngine]           com.reedersystems.commandcomms       D  RX_DIAG rxTotal=0 rxNew=0 jbSize=0 jbDepth=2 jbPlaying=false channelIdx=169 t=78770ms
+2026-04-16 19:53:17.715  4927-5040  [JitterBuf]             com.reedersystems.commandcomms       D  ENTER_IDLE depth=2 keptFrames=0 t=79128ms
+2026-04-16 19:53:19.415   824-908   ActivityManager         system_server                        E  Sending non-protected broadcast idm.intent.action.connect_alarm from system uid 1000 pkg com.jzcqi.com (Explain with AI)
+                                                                                                    java.lang.Throwable
+                                                                                                    	at com.android.server.am.ActivityManagerService.checkBroadcastFromSystem(ActivityManagerService.java:19312)
+                                                                                                    	at com.android.server.am.ActivityManagerService.broadcastIntentLocked(ActivityManagerService.java:19920)
+                                                                                                    	at com.android.server.am.ActivityManagerService.broadcastIntentInPackage(ActivityManagerService.java:20084)
+                                                                                                    	at com.android.server.am.PendingIntentRecord.sendInner(PendingIntentRecord.java:357)
+                                                                                                    	at com.android.server.am.PendingIntentRecord.sendWithResult(PendingIntentRecord.java:240)
+                                                                                                    	at com.android.server.am.ActivityManagerService.sendIntentSender(ActivityManagerService.java:7862)
+                                                                                                    	at android.app.PendingIntent.send(PendingIntent.java:874)
+                                                                                                    	at com.android.server.AlarmManagerService$DeliveryTracker.deliverLocked(AlarmManagerService.java:3341)
+                                                                                                    	at com.android.server.AlarmManagerService.deliverAlarmsLocked(AlarmManagerService.java:2732)
+                                                                                                    	at com.android.server.AlarmManagerService$AlarmThread.run(AlarmManagerService.java:2865)
+2026-04-16 19:53:19.431   824-908   AEE_LIBAEE              system_server                        D  shell: raise_exp(11, 824, -1361051648, system_server, 0x0x8c37ffe0, 0x0x0)
+2026-04-16 19:53:19.433   824-908   AEE_LIBAEE              system_server                        D  com.mtk.aee.aedshell: connected with AED OK
+2026-04-16 19:53:19.447   824-908   AEE_LIBAEE              system_server                        D  shell: got the request (cmd:Ind,AE_IND_LOG_CLOSE)
+2026-04-16 19:53:19.448   824-908   AEE_LIBAEE              system_server                        D  shell: Got session close ind from AED
+2026-04-16 19:53:19.453  2511-2511  IDM/CmdNetHandler       com.jzcqi.com                        I  com.myapi.idm.sdk.cmd.CmdNetHandler$1.onReceive().120:---> alarmReceiver onReceive isConnected: true
+2026-04-16 19:53:19.456  2511-2511  IDM/AlarmUtils          com.jzcqi.com                        D  com.myapi.utils.AlarmUtils.startAlarm().14:---> startAlarm interval: 60000
+2026-04-16 19:53:19.457  2511-17936 IDM/TCPClient           com.jzcqi.com                        V  com.myapi.idm.sdk.cmd.TCPClient.lambda$sendMessage$0$TCPClient().79:---> client sent message: 0B 0A 0C 00 00 01 E9 02 00 00 0F 0E 
+2026-04-16 19:53:19.468   824-3303  BroadcastQueue          system_server                        W  Background execution not allowed: receiving Intent { act=android.intent.action.DROPBOX_ENTRY_ADDED flg=0x10 (has extras) } to com.google.android.gms/.stats.service.DropBoxEntryAddedReceiver
+2026-04-16 19:53:19.716  4927-5040  [JitterBuf]             com.reedersystems.commandcomms       D  ENTER_IDLE depth=2 keptFrames=0 t=81129ms
+2026-04-16 19:53:19.867   354-563   IMGMemtrackHAL          merged_hal_service                   W  hal_get_memory: memtrack cache rebuild was required
+2026-04-16 19:53:19.961   354-563   IMGMemtrackHAL          merged_hal_service                   W  hal_get_memory: memtrack cache rebuild was required
+2026-04-16 19:53:20.039   824-925   WifiConnectivityManager system_server                        D  periodicScanTimerHandler
+2026-04-16 19:53:20.040   824-925   WifiConnectivityManager system_server                        D  schedulePeriodicScanTimer, intervalMs: 160000
+2026-04-16 19:53:20.040   824-929   WifiScanningService     system_server                        D  addSingleScanRequest: ClientInfo[uid=1000,android.os.Messenger@a47e900],Id=243,WorkSource{1010}, ScanSettings {  band:7 period:0 reportEvents:3 numBssidsPerScan:0 maxScansToCache:0 channels:[  ]  hiddenNetworks:[  ]  } 
+2026-04-16 19:53:21.718  4927-5040  [JitterBuf]             com.reedersystems.commandcomms       D  ENTER_IDLE depth=2 keptFrames=0 t=83130ms
+2026-04-16 19:53:22.335  4927-5041  [RadioEngine]           com.reedersystems.commandcomms       D  RX_DIAG rxTotal=0 rxNew=0 jbSize=0 jbDepth=2 jbPlaying=false channelIdx=169 t=83747ms
+2026-04-16 19:53:22.362  4927-5041  [RadioEngine]           com.reedersystems.commandcomms       D  RX_DIAG rxTotal=0 rxNew=0 jbSize=0 jbDepth=2 jbPlaying=false channelIdx=169 t=83774ms
+2026-04-16 19:53:23.262  4927-5040  [UdpTransport]          com.reedersystems.commandcomms       D  {"event":"UDP_KEEPALIVE_SENT","dest":"comms.reeder-systems.com:5100","fast":false,"intervalMs":8000}
+2026-04-16 19:53:23.677   416-416   agps                    wifi2agps                            D  [WIFI2AGPS] wifi2agps_scanned
+2026-04-16 19:53:23.681   603-623   [BIP]                   bip                                  I   [BIP NL] event newlink match dev 0, interface index 28
+2026-04-16 19:53:23.681   606-612   VoLTE IMSM              volte_imsm_93                        D  send CTRL_CMD_GET_SCAN (module/mdagent/volte_imsm_93/src/wireless.c:584)
+2026-04-16 19:53:23.682   603-623   [BIP]                   bip                                  I   [BIP NL] the link status of interface(index:0) changes to 1
+2026-04-16 19:53:23.685   824-3303  WificondControl         system_server                        D  Scan result ready event
+2026-04-16 19:53:23.720   824-929   WifiScanningService     system_server                        D  singleScanResults: ClientInfo[uid=1000,android.os.Messenger@a47e900],Id=243,results=7
+2026-04-16 19:53:23.721   824-929   WifiScanningService     system_server                        D  singleScanResults: ClientInfo[uid=1000,android.os.Messenger@a47e900],Id=1,results=7
+2026-04-16 19:53:23.723   824-925   WifiScanner             system_server                        D  removing listener for single scan
+2026-04-16 19:53:23.725   824-925   WifiConnectivityManager system_server                        D  AllSingleScanListener onResults: start network selection
+2026-04-16 19:53:23.726   824-925   WifiNetworkSelector     system_server                        D  Current connected network: "CTCO-702" , ID: 4
+2026-04-16 19:53:23.727   824-925   WifiNetworkSelector     system_server                        D  Current connected network already sufficient. Skip network selection.
+2026-04-16 19:53:23.736  4927-5041  [JitterBuf]             com.reedersystems.commandcomms       D  ENTER_IDLE depth=2 keptFrames=0 t=85148ms
+2026-04-16 19:53:25.046  1272-5246  AlarmManager            com.google.android.gms.persistent    I  setExactAndAllowWhileIdle [name: GCM_HB_ALARM type: 2 triggerAtMillis: 48109625]
+2026-04-16 19:53:25.075  1272-5245  AlarmManager            com.google.android.gms.persistent    I  setExactAndAllowWhileIdle [name: FcmRetry type: 2 triggerAtMillis: 46429650]
+2026-04-16 19:53:25.141  4927-5569  [FCM-Service]           com.reedersystems.commandcomms       D  FCM message received: {pageId=15, sender=DISPATCH-1, type=page, pagingChannelId=169, message=TESTT}
+2026-04-16 19:53:25.163   824-17958 ActivityManager         system_server                        I  START u0 {flg=0x14000000 cmp=com.reedersystems.commandcomms/.ui.paging.PageAlertActivity (has extras)} from uid 10204
+2026-04-16 19:53:25.168   354-563   vendor.med...r@1.1-impl merged_hal_service                   I  PowerHint hint:8, data:1
+2026-04-16 19:53:25.169   354-426   libPerfService          merged_hal_service                   I  8: legacy set freq: 1274000 -1
+2026-04-16 19:53:25.176   964-964   StatusBar               com.android.systemui                 D  onNotificationPosted: StatusBarNotification(pkg=com.reedersystems.commandcomms user=UserHandle{0} id=7777 tag=null key=0|com.reedersystems.commandcomms|7777|null|10204: Notification(channel=channel_paging pri=2 contentView=null vibrate=null sound=null defaults=0x0 flags=0x82 color=0xffcc0000 category=alarm vis=PRIVATE))
+2026-04-16 19:53:25.177   964-964   StatusBar               com.android.systemui                 D  addNotification key=0|com.reedersystems.commandcomms|7777|null|10204
+2026-04-16 19:53:25.177   394-32386 DrmMtkUtil/DrmUtil      mediaserver                          E  checkDcf: not dcf type, dcf version value [79]
+2026-04-16 19:53:25.177   394-32386 Cta5File                mediaserver                          E  Cta5File::isCta5NormalFile false, bad magic:OggS
+2026-04-16 19:53:25.177   394-32386 Cta5File                mediaserver                          E  Cta5File::isCta5MultimediaFile false, bad magic:u}??kL
+2026-04-16 19:53:25.177   394-32386 NuPlayerDriver          mediaserver                          D  NuPlayerDriver(0xb07a53f0) created, clientPid(964)
+2026-04-16 19:53:25.192   824-848   DuraSpeed/...eedService system_server                        D  [onPlaybackConfigChanged], play music packageNames:[com.reedersystems.commandcomms]
+2026-04-16 19:53:25.193   824-848   DuraSpeed/...icyFactory system_server                        D  packageName: com.android.providers.media, delay about 924482ms by now
+2026-04-16 19:53:25.193   824-848   DuraSpeed/...icyFactory system_server                        D  packageName: com.android.systemui, delay about 34013ms by now
+2026-04-16 19:53:25.198   824-1081  WindowManager           system_server                        V  Set focused app to: AppWindowToken{6fc8797 token=Token{cafc216 ActivityRecord{1a2fabb u0 com.reedersystems.commandcomms/.ui.paging.PageAlertActivity t518}}} old focus=AppWindowToken{c23ee3d token=Token{261c3c9 ActivityRecord{60467d0 u0 com.reedersystems.commandcomms/.MainActivity t518}}} moveFocusNow=true
+2026-04-16 19:53:25.199   824-1081  WindowManager           system_server                        V  Changing focus from Window{1178456 u0 com.reedersystems.commandcomms/com.reedersystems.commandcomms.MainActivity} to null Callers=com.android.server.wm.WindowManagerService.setFocusedApp:2763 com.android.server.am.ActivityManagerService.setResumedActivityUncheckLocked:3249 com.android.server.am.ActivityStack.setResumedActivityLocked:2292 com.android.server.am.ActivityStack.minimalResumeActivityLocked:1101 
+2026-04-16 19:53:25.199   824-1081  WindowManager           system_server                        D  Input focus has changed to null
+2026-04-16 19:53:25.202   824-845   WindowManager           system_server                        I  Focus moving from Window{1178456 u0 com.reedersystems.commandcomms/com.reedersystems.commandcomms.MainActivity} to null
+2026-04-16 19:53:25.204   354-563   vendor.med...r@1.1-impl merged_hal_service                   I  notifyAppState pack:com.reedersystems.commandcomms, act:com.reedersystems.commandcomms.ui.paging.PageAlertActivity, pid:4927, state:1
+2026-04-16 19:53:25.226  4927-5040  [FCM-Service]           com.reedersystems.commandcomms       W  Page ACK failed: 401
+2026-04-16 19:53:25.235   964-964   StatusBar               com.android.systemui                 D  disable<e i a s b h r c s q >
+2026-04-16 19:53:25.237   964-964   StatusBarK...iewManager com.android.systemui                 D  setOccluded() - setKeyguardOccluded(false)
+2026-04-16 19:53:25.237   964-964   StatusBarK...iewManager com.android.systemui                 D  reset() is called, mShowing = false ,mOccluded = falsehideBouncerWhenShowing = false
+2026-04-16 19:53:25.230   394-5575  GenericSource           mediaserver                          D  FileSource remote
+2026-04-16 19:53:25.246   824-4953  ActivityManager         system_server                        I  Activity requesting to dismiss Keyguard: ActivityRecord{1a2fabb u0 com.reedersystems.commandcomms/.ui.paging.PageAlertActivity t518}
+2026-04-16 19:53:25.266   393-1196  MediaExtractor          media.extractor                      D  Autodetected media content as 'application/ogg' with confidence 0.20
+2026-04-16 19:53:25.272   394-5573  NuPlayerDriver          mediaserver                          D  notifyListener_l(0xb07a53f0), (1, 0, 0, -1), loop setting(0, 0)
+2026-04-16 19:53:25.279   824-4953  MediaFocusControl       system_server                        I  requestAudioFocus() from uid/pid 10036/964 clientId=android.media.AudioManager@80666f4 callingPack=com.android.systemui req=3 flags=0x0 sdk=27
+2026-04-16 19:53:25.280   824-4953  AudioServi...ityMonitor system_server                        I  ducking player piid:5775 uid/pid:10204/4927 skip ramp:false
+2026-04-16 19:53:25.308  4927-4927  PhoneWindow             com.reedersystems.commandcomms       V  DecorView setVisiblity: visibility = 4, Parent = null, this = DecorView@982cc8c[]
+2026-04-16 19:53:25.311  4927-4927  WindowClient            com.reedersystems.commandcomms       D  Add to mViews: DecorView@982cc8c[PageAlertActivity], this = android.view.WindowManagerGlobal@b149940
+2026-04-16 19:53:25.318  4927-4927  ViewRootIm...tActivity] com.reedersystems.commandcomms       D  hardware acceleration = true , fakeHwAccelerated = false, sRendererDisabled = false, forceHwAccelerated = false, sSystemRendererDisabled = false
+2026-04-16 19:53:25.324   964-964   StatusBar               com.android.systemui                 D  disable<e i a s b h r c s q >
+2026-04-16 19:53:25.324  4927-4927  PhoneWindow             com.reedersystems.commandcomms       V  DecorView setVisiblity: visibility = 0, Parent = ViewRoot{f1196db com.reedersystems.commandcomms/com.reedersystems.commandcomms.ui.paging.PageAlertActivity,ident = 2}, this = DecorView@982cc8c[PageAlertActivity]
+2026-04-16 19:53:25.324   964-964   StatusBarK...iewManager com.android.systemui                 D  setOccluded() - setKeyguardOccluded(true)
+2026-04-16 19:53:25.325   964-964   StatusBarK...iewManager com.android.systemui                 D  reset() is called, mShowing = false ,mOccluded = truehideBouncerWhenShowing = true
+2026-04-16 19:53:25.463   964-964   StatusBar               com.android.systemui                 D  disable<e i a s b h r c s q >
+2026-04-16 19:53:25.628   824-1081  WindowManager           system_server                        I  Relayout Window{a974f69 u0 com.reedersystems.commandcomms/com.reedersystems.commandcomms.ui.paging.PageAlertActivity}: oldVis=4 newVis=0 focusMayChange = true
+2026-04-16 19:53:25.629   365-365   BufferQueue             surfaceflinger                       I  [unnamed-365-832](this:0xa7208000,id:832,api:0,p:-1,c:-1) BufferQueue core=(365:/system/bin/surfaceflinger)
+2026-04-16 19:53:25.630   365-365   GuiExt                  surfaceflinger                       W  Cannot find GuiExtService
+2026-04-16 19:53:25.630   365-365   BufferQueueConsumer     surfaceflinger                       I  [unnamed-365-832](this:0xa7208000,id:832,api:0,p:-1,c:365) connect(C): consumer=(365:/system/bin/surfaceflinger) controlledByApp=false
+2026-04-16 19:53:25.631   365-365   BufferQueueConsumer     surfaceflinger                       I  [unnamed-365-542](this:0xa7208000,id:832,api:0,p:-1,c:365) setConsumerName: unnamed-365-542
+2026-04-16 19:53:25.631   365-365   BufferQueueConsumer     surfaceflinger                       I  [com.reedersystems.commandcomms/com.reedersystems.commandcomms.ui.paging.PageAlertActivity#0](this:0xa7208000,id:832,api:0,p:-1,c:365) setConsumerName: com.reedersystems.commandcomms/com.reedersystems.commandcomms.ui.paging.PageAlertActivity#0
+2026-04-16 19:53:25.631   365-365   BufferQueueConsumer     surfaceflinger                       I  [com.reedersystems.commandcomms/com.reedersystems.commandcomms.ui.paging.PageAlertActivity#0](this:0xa7208000,id:832,api:0,p:-1,c:365) setDefaultBufferSize: width=240 height=320
+2026-04-16 19:53:25.633   824-1081  WindowManager           system_server                        V  Changing focus from null to Window{a974f69 u0 com.reedersystems.commandcomms/com.reedersystems.commandcomms.ui.paging.PageAlertActivity} Callers=com.android.server.wm.WindowManagerService.relayoutWindow:2195 com.android.server.wm.Session.relayout:246 android.view.IWindowSession$Stub.onTransact:286 com.android.server.wm.Session.onTransact:170 
+2026-04-16 19:53:25.634   824-1081  WindowManager           system_server                        D  Input focus has changed to Window{a974f69 u0 com.reedersystems.commandcomms/com.reedersystems.commandcomms.ui.paging.PageAlertActivity}
+2026-04-16 19:53:25.645   824-845   WindowManager           system_server                        I  Focus moving from null to Window{a974f69 u0 com.reedersystems.commandcomms/com.reedersystems.commandcomms.ui.paging.PageAlertActivity}
+2026-04-16 19:53:25.649  4927-4927  Surface                 com.reedersystems.commandcomms       D  Surface::allocateBuffers(this=0x86605800)
+2026-04-16 19:53:25.649  4927-4988  Surface                 com.reedersystems.commandcomms       D  Surface::connect(this=0x86605800,api=1)
+2026-04-16 19:53:25.680   365-365   BufferQueueConsumer     surfaceflinger                       I  [StatusBar#0](this:0xa71db000,id:4,api:1,p:964,c:365) setDefaultBufferSize: width=240 height=320
+2026-04-16 19:53:25.688   964-1322  Surface                 com.android.systemui                 D  Surface::disconnect(this=0x9d956800,api=1)
+2026-04-16 19:53:25.690   365-1193  BufferQueueConsumer     surfaceflinger                       I  [StatusBar#0](this:0xa71db000,id:4,api:1,p:-1,c:365) getReleasedBuffers: returning mask 0xffffffffffffffff
+2026-04-16 19:53:25.691   964-1322  Surface                 com.android.systemui                 D  Surface::connect(this=0x9d956800,api=1)
+2026-04-16 19:53:25.699   964-964   StatusBar               com.android.systemui                 D  disable<e i a s b h r c s q >
+2026-04-16 19:53:25.746  4927-5040  [JitterBuf]             com.reedersystems.commandcomms       D  ENTER_IDLE depth=2 keptFrames=0 t=87159ms
+2026-04-16 19:53:25.768  4927-4927  Compose Focus           com.reedersystems.commandcomms       D  Owner FocusChanged(true)
+2026-04-16 19:53:25.796  1479-1479  GED Service             ged_srv                              D  signo=49, event_notify=00000410
+2026-04-16 19:53:25.797   354-426   libPerfService          merged_hal_service                   I  gameNotifyDisplayType - type:0
+2026-04-16 19:53:25.853   824-845   ActivityManager         system_server                        I  Displayed com.reedersystems.commandcomms/.ui.paging.PageAlertActivity: +645ms
+2026-04-16 19:53:25.881   952-952   GoogleInpu...hodService com...gle.android.inputmethod.latin  I  GoogleInputMethodService.onFinishInput():2159 
+2026-04-16 19:53:25.884   952-952   Module                  com...gle.android.inputmethod.latin  I  DeviceLockedStatusModuleProvider$Module.updateDeviceLockedStatus():103 repeatCheckTimes = 0, locked = false
+2026-04-16 19:53:25.885   952-952   GoogleInpu...hodService com...gle.android.inputmethod.latin  I  GoogleInputMethodService.onStartInput():1434 onStartInput(EditorInfo{EditorInfo{packageName=com.reedersystems.commandcomms, inputType=0, inputTypeString=NULL, enableLearning=false, autoCorrection=false, autoComplete=false, imeOptions=0, privateImeOptions=null, actionName=UNSPECIFIED, actionLabel=null, initialSelStart=-1, initialSelEnd=-1, initialCapsMode=0, label=null, fieldId=-1, fieldName=null, extras=null, hintText=null, hintLocales=[]}}, false)
+2026-04-16 19:53:25.888   952-952   Module                  com...gle.android.inputmethod.latin  I  DeviceLockedStatusModuleProvider$Module.updateDeviceLockedStatus():103 repeatCheckTimes = 1, locked = false
+2026-04-16 19:53:25.897   365-365   Layer                   surfaceflinger                       W  [com.reedersystems.commandcomms/com.reedersystems.commandcomms.MainActivity#0] opaque layer with plane alpha:1.00 cannot be handled by hwcomposer
+2026-04-16 19:53:25.898   365-365   Layer                   surfaceflinger                       W  [com.reedersystems.commandcomms/com.reedersystems.commandcomms.ui.paging.PageAlertActivity#0] opaque layer with plane alpha:0.28 cannot be handled by hwcomposer
+2026-04-16 19:53:25.898   365-365   Layer                   surfaceflinger                       W  [com.reedersystems.commandcomms/com.reedersystems.commandcomms.MainActivity#0] opaque layer with plane alpha:1.00 cannot be handled by hwcomposer
+2026-04-16 19:53:25.899   365-365   Layer                   surfaceflinger                       W  [com.reedersystems.commandcomms/com.reedersystems.commandcomms.ui.paging.PageAlertActivity#0] opaque layer with plane alpha:0.28 cannot be handled by hwcomposer
+2026-04-16 19:53:25.906   365-365   SurfaceFlinger          surfaceflinger                       E  getUniqueId not supported on VirtualDisplaySurface
+2026-04-16 19:53:25.911   365-365   SurfaceFlinger          surfaceflinger                       E  getUniqueId not supported on VirtualDisplaySurface
+2026-04-16 19:53:25.935   365-365   Layer                   surfaceflinger                       W  [com.reedersystems.commandcomms/com.reedersystems.commandcomms.MainActivity#0] opaque layer with plane alpha:0.96 cannot be handled by hwcomposer
+2026-04-16 19:53:25.935   365-365   Layer                   surfaceflinger                       W  [com.reedersystems.commandcomms/com.reedersystems.commandcomms.ui.paging.PageAlertActivity#0] opaque layer with plane alpha:0.70 cannot be handled by hwcomposer
+2026-04-16 19:53:25.935   365-365   Layer                   surfaceflinger                       W  [com.reedersystems.commandcomms/com.reedersystems.commandcomms.MainActivity#0] opaque layer with plane alpha:0.96 cannot be handled by hwcomposer
+2026-04-16 19:53:25.935   365-365   Layer                   surfaceflinger                       W  [com.reedersystems.commandcomms/com.reedersystems.commandcomms.ui.paging.PageAlertActivity#0] opaque layer with plane alpha:0.70 cannot be handled by hwcomposer
+2026-04-16 19:53:25.941   365-365   SurfaceFlinger          surfaceflinger                       E  getUniqueId not supported on VirtualDisplaySurface
+2026-04-16 19:53:25.947   365-365   SurfaceFlinger          surfaceflinger                       E  getUniqueId not supported on VirtualDisplaySurface
+2026-04-16 19:53:25.969   365-365   Layer                   surfaceflinger                       W  [com.reedersystems.commandcomms/com.reedersystems.commandcomms.MainActivity#0] opaque layer with plane alpha:0.90 cannot be handled by hwcomposer
+2026-04-16 19:53:25.969   365-365   Layer                   surfaceflinger                       W  [com.reedersystems.commandcomms/com.reedersystems.commandcomms.ui.paging.PageAlertActivity#0] opaque layer with plane alpha:0.90 cannot be handled by hwcomposer
+2026-04-16 19:53:25.969   365-365   Layer                   surfaceflinger                       W  [com.reedersystems.commandcomms/com.reedersystems.commandcomms.MainActivity#0] opaque layer with plane alpha:0.90 cannot be handled by hwcomposer
+2026-04-16 19:53:25.969   365-365   Layer                   surfaceflinger                       W  [com.reedersystems.commandcomms/com.reedersystems.commandcomms.ui.paging.PageAlertActivity#0] opaque layer with plane alpha:0.90 cannot be handled by hwcomposer
+2026-04-16 19:53:25.976   365-365   SurfaceFlinger          surfaceflinger                       E  getUniqueId not supported on VirtualDisplaySurface
+2026-04-16 19:53:25.979  4927-4988  Surface                 com.reedersystems.commandcomms       D  Surface::disconnect(this=0x881e6800,api=1)
+2026-04-16 19:53:25.980   365-379   BufferQueueConsumer     surfaceflinger                       I  [com.reedersystems.commandcomms/com.reedersystems.commandcomms.MainActivity#0](this:0xa7215000,id:831,api:1,p:-1,c:365) getReleasedBuffers: returning mask 0xffffffffffffffff
+2026-04-16 19:53:25.982   365-365   SurfaceFlinger          surfaceflinger                       E  getUniqueId not supported on VirtualDisplaySurface
+2026-04-16 19:53:25.993   394-32386 NuPlayerDriver          mediaserver                          D  start(0xb07a53f0), state is 4, eos is 0
+2026-04-16 19:53:25.993   394-5573  GenericSource           mediaserver                          I  start
+2026-04-16 19:53:25.994   964-5572  MediaPlayer             com.android.systemui                 D  handleMessage msg:(1, 0, 0)
+2026-04-16 19:53:25.994   824-848   DuraSpeed/...eedService system_server                        D  [onPlaybackConfigChanged], play music packageNames:[com.reedersystems.commandcomms, com.android.systemui]
+2026-04-16 19:53:25.995   824-848   DuraSpeed/...icyFactory system_server                        D  packageName: com.android.providers.media, delay about 925284ms by now
+2026-04-16 19:53:26.002   354-563   vendor.med...r@1.1-impl merged_hal_service                   I  PowerHint hint:8, data:0
+2026-04-16 19:53:26.005   964-964   MediaRouter             com.android.systemui                 V  onRestoreRoute() : route=RouteInfo{ name=Phone, description=null, status=null, category=RouteCategory{ name=System types=ROUTE_TYPE_LIVE_AUDIO ROUTE_TYPE_LIVE_VIDEO  groupable=false }, supportedTypes=ROUTE_TYPE_LIVE_AUDIO ROUTE_TYPE_LIVE_VIDEO , presentationDisplay=null }
+2026-04-16 19:53:26.006   964-964   MediaRouter             com.android.systemui                 V  Selecting route: RouteInfo{ name=Phone, description=null, status=null, category=RouteCategory{ name=System types=ROUTE_TYPE_LIVE_AUDIO ROUTE_TYPE_LIVE_VIDEO  groupable=false }, supportedTypes=ROUTE_TYPE_LIVE_AUDIO ROUTE_TYPE_LIVE_VIDEO , presentationDisplay=null }
+2026-04-16 19:53:26.006   824-4953  IdleScreen              system_server                        D  activityIdleScreen: android.app.ContextImpl@fe4b9f3 mNotifyNeeded: false idleIntent: Intent { flg=0x14800000 cmp=com.reedersystems.commandcomms/.ui.paging.PageAlertActivity (has extras) }
+2026-04-16 19:53:26.006   365-365   Layer                   surfaceflinger                       W  [com.reedersystems.commandcomms/com.reedersystems.commandcomms.MainActivity#0] opaque layer with plane alpha:0.82 cannot be handled by hwcomposer
+2026-04-16 19:53:26.007   365-365   Layer                   surfaceflinger                       W  [com.reedersystems.commandcomms/com.reedersystems.commandcomms.ui.paging.PageAlertActivity#0] opaque layer with plane alpha:0.98 cannot be handled by hwcomposer
+2026-04-16 19:53:26.007   365-365   Layer                   surfaceflinger                       W  [com.reedersystems.commandcomms/com.reedersystems.commandcomms.MainActivity#0] opaque layer with plane alpha:0.82 cannot be handled by hwcomposer
+2026-04-16 19:53:26.007   365-365   Layer                   surfaceflinger                       W  [com.reedersystems.commandcomms/com.reedersystems.commandcomms.ui.paging.PageAlertActivity#0] opaque layer with plane alpha:0.98 cannot be handled by hwcomposer
+2026-04-16 19:53:26.012   365-365   SurfaceFlinger          surfaceflinger                       E  getUniqueId not supported on VirtualDisplaySurface
+2026-04-16 19:53:26.017   365-365   SurfaceFlinger          surfaceflinger                       E  getUniqueId not supported on VirtualDisplaySurface
+2026-04-16 19:53:26.040   365-365   Layer                   surfaceflinger                       W  [com.reedersystems.commandcomms/com.reedersystems.commandcomms.MainActivity#0] opaque layer with plane alpha:0.75 cannot be handled by hwcomposer
+2026-04-16 19:53:26.040   365-365   Layer                   surfaceflinger                       W  [com.reedersystems.commandcomms/com.reedersystems.commandcomms.ui.paging.PageAlertActivity#0] opaque layer with plane alpha:1.00 cannot be handled by hwcomposer
+2026-04-16 19:53:26.040   365-365   Layer                   surfaceflinger                       W  [com.reedersystems.commandcomms/com.reedersystems.commandcomms.MainActivity#0] opaque layer with plane alpha:0.75 cannot be handled by hwcomposer
+2026-04-16 19:53:26.040   365-365   Layer                   surfaceflinger                       W  [com.reedersystems.commandcomms/com.reedersystems.commandcomms.ui.paging.PageAlertActivity#0] opaque layer with plane alpha:1.00 cannot be handled by hwcomposer
+2026-04-16 19:53:26.045   365-365   SurfaceFlinger          surfaceflinger                       E  getUniqueId not supported on VirtualDisplaySurface
+2026-04-16 19:53:26.051   365-365   SurfaceFlinger          surfaceflinger                       E  getUniqueId not supported on VirtualDisplaySurface
+2026-04-16 19:53:26.074   394-5589  OMXClient               mediaserver                          I  Treble IOmx obtained
+2026-04-16 19:53:26.075   401-19178 OMXMaster               media.codec                          I  makeComponentInstance(OMX.google.vorbis.decoder) in omx@1.0-service process
+2026-04-16 19:53:26.076   365-365   Layer                   surfaceflinger                       W  [com.reedersystems.commandcomms/com.reedersystems.commandcomms.MainActivity#0] opaque layer with plane alpha:0.71 cannot be handled by hwcomposer
+2026-04-16 19:53:26.076   365-365   Layer                   surfaceflinger                       W  [com.reedersystems.commandcomms/com.reedersystems.commandcomms.ui.paging.PageAlertActivity#0] opaque layer with plane alpha:1.00 cannot be handled by hwcomposer
+2026-04-16 19:53:26.076   365-365   Layer                   surfaceflinger                       W  [com.reedersystems.commandcomms/com.reedersystems.commandcomms.MainActivity#0] opaque layer with plane alpha:0.71 cannot be handled by hwcomposer
+2026-04-16 19:53:26.076   365-365   Layer                   surfaceflinger                       W  [com.reedersystems.commandcomms/com.reedersystems.commandcomms.ui.paging.PageAlertActivity#0] opaque layer with plane alpha:1.00 cannot be handled by hwcomposer
+2026-04-16 19:53:26.081   365-365   SurfaceFlinger          surfaceflinger                       E  getUniqueId not supported on VirtualDisplaySurface
+2026-04-16 19:53:26.085   394-5589  MtkACodec               mediaserver                          D  setupAudioCodec: mime audio/vorbis, encoder 0, msg.get() 0xb07edc00
+2026-04-16 19:53:26.085   401-1141  OMXNodeInstance         media.codec                          E  setConfig(0xacf21200:google.vorbis.decoder, ConfigPriority(0x6f800002)) ERROR: Undefined(0x80001001)
+2026-04-16 19:53:26.086   394-5589  ACodec                  mediaserver                          I  codec does not support config priority (err -2147483648)
+2026-04-16 19:53:26.086   365-365   SurfaceFlinger          surfaceflinger                       E  getUniqueId not supported on VirtualDisplaySurface
+2026-04-16 19:53:26.087   401-1141  OMXNodeInstance         media.codec                          E  getConfig(0xacf21200:google.vorbis.decoder, ConfigAndroidVendorExtension(0x6f100004)) ERROR: Undefined(0x80001001)
+2026-04-16 19:53:26.089   394-5589  MediaCodec              mediaserver                          I  MediaCodec will operate in async mode
+2026-04-16 19:53:26.096   329-329   /system/bi....0-service android.hidl.allocator@1.0-service   W  ashmem_create_region(32768) returning hidl_memory(0xaf918300, 32768)
+2026-04-16 19:53:26.105   329-329   /system/bi....0-service android.hidl.allocator@1.0-service   W  ashmem_create_region(32768) returning hidl_memory(0xaf918300, 32768)
+2026-04-16 19:53:26.106   329-329   /system/bi....0-service android.hidl.allocator@1.0-service   W  ashmem_create_region(32768) returning hidl_memory(0xaf918300, 32768)
+2026-04-16 19:53:26.108   329-329   /system/bi....0-service android.hidl.allocator@1.0-service   W  ashmem_create_region(32768) returning hidl_memory(0xaf918300, 32768)
+2026-04-16 19:53:26.116   329-329   /system/bi....0-service android.hidl.allocator@1.0-service   W  ashmem_create_region(32768) returning hidl_memory(0xaf918300, 32768)
+2026-04-16 19:53:26.134   394-5588  NuPlayerDecoder         mediaserver                          D  handleOutputFormatChange set flag AUDIO_OUTPUT_FLAG_DEEP_BUFFER
+2026-04-16 19:53:26.135   394-5587  AudioTrack              mediaserver                          D  set(): 0xae92b000, streamType 4, sampleRate 48000, format 0x1, channelMask 0x1, frameCount 24576, flags #8, notificationFrames 0, sessionId 2969, transferType 0, uid 10036, pid 964
+2026-04-16 19:53:26.136   394-5587  AudioTrack              mediaserver                          D  Building AudioTrack with attributes: usage = 4, content = 4, flags = 0x0, tags = []
+2026-04-16 19:53:26.137   385-29781 AudioFlinger_Threads    audioserver                          W  createTrack_l(): mismatch between requested flags (00000008) and output flags (00200006)
+2026-04-16 19:53:26.138   385-29781 AudioFlinger            audioserver                          D  track(0xb2ee9980): mIsOut 1, mFrameCount 24576, mSampleRate 48000, mFormat 1, mChannelCount 1, mTrackCount 221, thread 0xb2683f40, sessionId 2969
+2026-04-16 19:53:26.138   385-29781 AudioFlinger            audioserver                          D  track(0xb2ee9980): mFastIndex -1, mStreamType 4, mName 4101
+2026-04-16 19:53:26.139   394-5587  AudioTrack              mediaserver                          D  Client defaulted notificationFrames to 12288 for frameCount 24576
+2026-04-16 19:53:26.139   394-5587  AudioTrack              mediaserver                          D  createTrack_l: 0xae92b000, mCblk = 0xade1e000, mLatency = 564, mAfLatency = 52, frameCount = 24576, mSampleRate = 48000, mFlags = 0, mReqFrameCount = 24576, mNotificationFramesAct = 12288
+2026-04-16 19:53:26.140   394-5587  AudioTrack              mediaserver                          D  start(): 0xae92b000, mState = 1
+2026-04-16 19:53:26.141   385-29781 APM_AudioPolicyManager  audioserver                          D  startOutput() output 13, stream 4, session 2969
+2026-04-16 19:53:26.141   385-29781 APM::Audio...Descriptor audioserver                          V  changeRefCount() stream 4, count 1
+2026-04-16 19:53:26.142   385-510   AudioTrack              audioserver                          D  set(): 0xb209a000, streamType 0, sampleRate 0, format 0x1, channelMask 0x1, frameCount 960, flags #4, notificationFrames 0, sessionId 0, transferType 1, uid -1, pid -1
+2026-04-16 19:53:26.142   385-510   AudioTrack              audioserver                          D  set: Create AudioTrackThread, tid = 5593
+2026-04-16 19:53:26.143   394-5573  NuPlayerDriver          mediaserver                          D  notifyListener_l(0xb07a53f0), (6, 0, 0, -1), loop setting(1, 0)
+2026-04-16 19:53:26.143   385-510   AudioTrack              audioserver                          D  mNotificationFramesReq 0, notificationFrames 1024
+2026-04-16 19:53:26.145   385-510   AudioFlinger            audioserver                          D  track(0xb2eea880): mIsOut 1, mFrameCount 960, mSampleRate 48000, mFormat 1, mChannelCount 1, mTrackCount 222, thread 0xb2683f40, sessionId 2977
+2026-04-16 19:53:26.145   330-1478  AudioMTKGainController  and...re.audio@2.0-service-mediatek  D  setNormalVolume(), mSceneIndex = 0, stream 0, devices 0x2, index 15, mode 0x3
+2026-04-16 19:53:26.145   385-510   AudioFlinger            audioserver                          D  track(0xb2eea880): mFastIndex 1, mStreamType 0, mName 4102
+2026-04-16 19:53:26.145   330-1478  AudioMTKGainController  and...re.audio@2.0-service-mediatek  D  setSpeakerGain(), gain = 0, spkAnaType = 3, spkLMixerName = Lineout_PGAL_GAIN, spkRMixerName = Lineout_PGAR_GAIN
+2026-04-16 19:53:26.145   385-510   AudioTrack              audioserver                          I  AUDIO_OUTPUT_FLAG_FAST successful; frameCount 960 -> 960
+2026-04-16 19:53:26.145   385-510   AudioTrack              audioserver                          W  Client adjusted notificationFrames from 1024 to 256 for frameCount 960
+2026-04-16 19:53:26.145   330-1478  AudioALSAStreamOut      and...re.audio@2.0-service-mediatek  D  open(), flags 6
+2026-04-16 19:53:26.145   385-510   AudioTrack              audioserver                          D  createTrack_l: 0xb209a000, mCblk = 0xb0a92000, mLatency = 72, mAfLatency = 52, frameCount = 960, mSampleRate = 48000, mFlags = 0x4, mReqFrameCount = 960, mNotificationFramesAct = 256
+2026-04-16 19:53:26.146   330-1478  NVRAM                   and...re.audio@2.0-service-mediatek  D  getNumMicSupport(), dualMicFlag 1, numMicString 2
+2026-04-16 19:53:26.146   385-510   AudioTrack              audioserver                          D  start(): 0xb209a000, mState = 1
+2026-04-16 19:53:26.146   330-1478  NVRAM                   and...re.audio@2.0-service-mediatek  D  QueryFeatureSupportInfo(), feature support bit 0x1a097c57 
+2026-04-16 19:53:26.146   330-1478  AudioSpeechEnhanceInfo  and...re.audio@2.0-service-mediatek  D  IsAPDMNRTuningEnable(), 0
+2026-04-16 19:53:26.146   385-510   APM_AudioPolicyManager  audioserver                          D  startOutput() output 13, stream 0, session 2977
+2026-04-16 19:53:26.146   385-510   APM::Audio...Descriptor audioserver                          V  changeRefCount() stream 0, count 1
+2026-04-16 19:53:26.146   330-1478  AudioALSADeviceParser   and...re.audio@2.0-service-mediatek  D  compare pcm success = 7, stringpair = I2S0DL1_PLayback
+2026-04-16 19:53:26.146   354-563   vendor.med...r@1.1-impl merged_hal_service                   I  mtkCusPowerHint hint:0, data:268435455
+2026-04-16 19:53:26.143   964-5572  MediaPlayer             com.android.systemui                 D  handleMessage msg:(6, 0, 0)
+2026-04-16 19:53:26.146   330-1478  <no-tag>                and...re.audio@2.0-service-mediatek  D  -AssignDRAM() retval 0
+2026-04-16 19:53:26.146   354-426   libPerfService          merged_hal_service                   I  perfCusUserScnEnable - handle:36
+2026-04-16 19:53:26.149   330-1478  AudioALSAH...rceManager and...re.audio@2.0-service-mediatek  D  +startOutputDevice(), new_devices = 0x2, mOutputDevices = 0x0, mStartOutputDevicesCount = 0 SampleRate = 48000
+2026-04-16 19:53:26.155   330-1478  AudioVoiceUIDL          and...re.audio@2.0-service-mediatek  D  [GetSRCInputParameter] mOutputSampleRate 16000,  mInputSampleRate 48000, mInChannel 2, mOutChannel, 0 format 4
+2026-04-16 19:53:26.156   330-1478  AudioVoiceUIDL          and...re.audio@2.0-service-mediatek  D  [GetSRCInputParameter] create SRC handle fail
+2026-04-16 19:53:26.249   385-618   MtkAudioLoud            audioserver                          D  +close()
+2026-04-16 19:53:26.250   385-618   NVRAM                   audioserver                          D  getPlaybackPostProcessParameterFromXML Type/Name [5]/[PlaybackDRC]
+2026-04-16 19:53:26.250   385-618   NVRAM                   audioserver                          D  bes_loudness_L_hpf_fc = 0
+2026-04-16 19:53:26.250   385-618   NVRAM                   audioserver                          D  bes_loudness_L_hpf_order = 0
+2026-04-16 19:53:26.250   385-618   NVRAM                   audioserver                          D  bes_loudness_L_lpf_fc = 0
+2026-04-16 19:53:26.250   385-618   NVRAM                   audioserver                          D  bes_loudness_L_lpf_order = 0
+2026-04-16 19:53:26.250   385-618   NVRAM                   audioserver                          D  bes_loudness_R_hpf_fc = 0
+2026-04-16 19:53:26.250   385-618   NVRAM                   audioserver                          D  bes_loudness_R_hpf_order = 0
+2026-04-16 19:53:26.250   385-618   NVRAM                   audioserver                          D  bes_loudness_R_lpf_fc = 0
+2026-04-16 19:53:26.250   385-618   NVRAM                   audioserver                          D  bes_loudness_R_lpf_order = 0
+2026-04-16 19:53:26.250   385-618   NVRAM                   audioserver                          D  bes_loudness_Sep_LR_Filter = 0
+2026-04-16 19:53:26.250   385-618   NVRAM                   audioserver                          D  bes_loudness_WS_Gain_Max = 0
+2026-04-16 19:53:26.250   385-618   NVRAM                   audioserver                          D  bes_loudness_WS_Gain_Min = 0
+2026-04-16 19:53:26.250   385-618   NVRAM                   audioserver                          D  bes_loudness_Filter_First = 0
+2026-04-16 19:53:26.250   385-618   NVRAM                   audioserver                          D  bes_loudness_Num_Bands = 8
+2026-04-16 19:53:26.250   385-618   NVRAM                   audioserver                          D  bes_loudness_Flt_Bank_Order = 0
+2026-04-16 19:53:26.250   385-618   NVRAM                   audioserver                          D  DRC_Delay = 0
+2026-04-16 19:53:26.250   385-618   NVRAM                   audioserver                          D  Lim_Th = 32767
+2026-04-16 19:53:26.250   385-618   NVRAM                   audioserver                          D  Lim_Gn = 32767
+2026-04-16 19:53:26.250   385-618   NVRAM                   audioserver                          D  Lim_Const = 4
+2026-04-16 19:53:26.250   385-618   NVRAM                   audioserver                          D  Lim_Delay = 0
+2026-04-16 19:53:26.250   385-618   NVRAM                   audioserver                          D  SWIPRev = 0x520
+2026-04-16 19:53:26.250   385-618   NVRAM                   audioserver                          D  getPlaybackPostProcessParameterFromXML Parameter 5 returnValue 0
+2026-04-16 19:53:26.250   385-618   MtkAudioLoud            audioserver                          D  mIsZeroCoeff 1 mFilterType 5
+2026-04-16 19:53:26.250   385-618   MtkAudioLoud            audioserver                          D  setParameter 382 mInitParam.Initial_State 2
+2026-04-16 19:53:26.250   385-618   MtkAudioLoud            audioserver                          D  +open()
+2026-04-16 19:53:26.250   385-618   MtkAudioLoud            audioserver                          D  -open() result 0
+2026-04-16 19:53:26.250   385-618   MtkAudioLoud            audioserver                          D  +change2Normal()
+2026-04-16 19:53:26.250   385-618   MtkAudioLoud            audioserver                          D  -change2Normal()
+2026-04-16 19:53:26.295  4927-4927  PhoneWindow             com.reedersystems.commandcomms       V  DecorView setVisiblity: visibility = 4, Parent = ViewRoot{5f6f079 com.reedersystems.commandcomms/com.reedersystems.commandcomms.MainActivity,ident = 0}, this = DecorView@385dcc3[MainActivity]
+2026-04-16 19:53:26.323   365-365   BufferQueueConsumer     surfaceflinger                       I  [com.reedersystems.commandcomms/com.reedersystems.commandcomms.MainActivity#0](this:0xa7215000,id:831,api:1,p:-1,c:-1) disconnect(C)
+2026-04-16 19:53:26.323   365-365   BufferQueue             surfaceflinger                       I  [com.reedersystems.commandcomms/com.reedersystems.commandcomms.MainActivity#0](this:0xa7215000,id:831,api:1,p:-1,c:-1) ~BufferQueueCore
+2026-04-16 19:53:26.432  4927-4927  [FCM-Service]           com.reedersystems.commandcomms       D  Paging tone fetched: 1490988 bytes, content-type=audio/mpeg, ext=mp3
+2026-04-16 19:53:26.434  4927-4927  AudioManager            com.reedersystems.commandcomms       D  setStreamVolume: StreamType = 4, index = 15
+2026-04-16 19:53:26.448   824-848   DuraSpeed/...eedService system_server                        D  [onPlaybackConfigChanged], play music packageNames:[com.reedersystems.commandcomms, com.android.systemui]
+2026-04-16 19:53:26.448   394-32386 DrmMtkUtil/DrmUtil      mediaserver                          E  checkDcf: not dcf type, dcf version value [82]
+2026-04-16 19:53:26.448   394-32386 Cta5File                mediaserver                          E  Cta5File::isCta5NormalFile false, bad magic:RIFF$?
+2026-04-16 19:53:26.448   394-32386 Cta5File                mediaserver                          E  Cta5File::isCta5MultimediaFile false, bad magic:
+2026-04-16 19:53:26.448   824-848   DuraSpeed/...icyFactory system_server                        D  packageName: com.android.providers.media, delay about 925737ms by now
+2026-04-16 19:53:26.448   394-32386 NuPlayerDriver          mediaserver                          D  NuPlayerDriver(0xb07a55b0) created, clientPid(4927)
+2026-04-16 19:53:26.456   394-5596  GenericSource           mediaserver                          D  FileSource remote
+2026-04-16 19:53:26.476   393-1196  MediaExtractor          media.extractor                      D  Autodetected media content as 'audio/x-wav' with confidence 0.30
+2026-04-16 19:53:26.478   393-1196  MediaBufferGroup        media.extractor                      D  creating MemoryDealer
+2026-04-16 19:53:26.478   393-995   MediaAnalyticsItem      media.extractor                      W  Unable to record: (extractor:0:-1:-11:0:3:android.media.mediaextractor.fmt=WAVExtractor:android.media.mediaextractor.ntrk=1:android.media.mediaextractor.mime=audio/x-wav:) [forcenew=0]
+2026-04-16 19:53:26.479   394-5595  NuPlayerDriver          mediaserver                          D  notifyListener_l(0xb07a55b0), (1, 0, 0, -1), loop setting(0, 0)
+2026-04-16 19:53:26.486   824-4953  AudioServi...ityMonitor system_server                        I  ducking player piid:5847 uid/pid:10204/4927 skip ramp:true
+2026-04-16 19:53:26.486   394-1089  NuPlayerDriver          mediaserver                          D  start(0xb07a55b0), state is 4, eos is 0
+2026-04-16 19:53:26.486   394-5595  GenericSource           mediaserver                          I  start
+2026-04-16 19:53:26.487   824-4953  MediaRouterService      system_server                        V  restoreBluetoothA2dp(false)
+2026-04-16 19:53:26.487  4927-4927  [FCM-Service]           com.reedersystems.commandcomms       D  Paging tone playing from https://comms.reeder-systems.com/api/paging-tone/active at STREAM_ALARM max=15 (was 15)
+2026-04-16 19:53:26.487  4927-4927  MediaPlayer             com.reedersystems.commandcomms       D  handleMessage msg:(1, 0, 0)
+2026-04-16 19:53:26.489   824-848   DuraSpeed/...eedService system_server                        D  [onPlaybackConfigChanged], play music packageNames:[com.reedersystems.commandcomms, com.reedersystems.commandcomms, com.android.systemui]
+2026-04-16 19:53:26.490   824-848   DuraSpeed/...icyFactory system_server                        D  packageName: com.android.providers.media, delay about 925779ms by now
+2026-04-16 19:53:26.492   394-5595  Utils_MTK               mediaserver                          D  kKeyBitWidth in utils is 32
+2026-04-16 19:53:26.492   394-5595  Utils_MTK               mediaserver                          D  kKeyEndian in utils is 2
+2026-04-16 19:53:26.492   394-5595  Utils_MTK               mediaserver                          D  kKeyNumericalType in utils is 1
+2026-04-16 19:53:26.492   394-5595  Utils_MTK               mediaserver                          D  kKeyPCMType in utils is 1
+2026-04-16 19:53:26.495   394-5595  Utils_MTK               mediaserver                          D  kKeyBitWidth in utils is 32
+2026-04-16 19:53:26.495   394-5595  Utils_MTK               mediaserver                          D  kKeyEndian in utils is 2
+2026-04-16 19:53:26.495   394-5595  Utils_MTK               mediaserver                          D  kKeyNumericalType in utils is 1
+2026-04-16 19:53:26.495   394-5595  Utils_MTK               mediaserver                          D  kKeyPCMType in utils is 1
+2026-04-16 19:53:26.500   394-5600  OMXClient               mediaserver                          I  Treble IOmx obtained
+2026-04-16 19:53:26.500   401-1141  OMXMaster               media.codec                          I  makeComponentInstance(OMX.MTK.AUDIO.DECODER.RAW) in omx@1.0-service process
+2026-04-16 19:53:26.501   401-1141  MtkOmxRawDec            media.codec                          D  MtkOmxComponentCreate +++ !!!
+2026-04-16 19:53:26.502   401-1141  MtkOmxRawDec            media.codec                          D  MtkOmxRawDec Construct !!!
+2026-04-16 19:53:26.503   401-1141  MtkOmxRawDec            media.codec                          D  fileTableSize is 55
+2026-04-16 19:53:26.503   401-1141  MtkOmxRawDec            media.codec                          D  Init Audio(Raw PCM) Params!!!
+2026-04-16 19:53:26.514   394-5600  ACodec                  mediaserver                          D  endian is 2, bitWidth is 32, pcmType is 1, channelAssignment is 0, numericalType is 1
+2026-04-16 19:53:26.514   394-5600  ACodec                  mediaserver                          D  Config raw codec, pcmType is 1
+2026-04-16 19:53:26.514   401-18182 MtkOmxRawDec            media.codec                          D  checkInputParameter !
+2026-04-16 19:53:26.515   401-18182 OMXNodeInstance         media.codec                          E  setConfig(0xac8c4404:MTK.DECODER.RAW, ConfigPriority(0x6f800002)) ERROR: Undefined(0x80001001)
+2026-04-16 19:53:26.515   394-5600  ACodec                  mediaserver                          I  codec does not support config priority (err -2147483648)
+2026-04-16 19:53:26.516   394-5600  ACodec                  mediaserver                          D  PCM BitPerSample(32)
+2026-04-16 19:53:26.516   401-19049 OMXNodeInstance         media.codec                          E  getConfig(0xac8c4404:MTK.DECODER.RAW, ConfigAndroidVendorExtension(0x6f100004)) ERROR: Undefined(0x80001001)
+2026-04-16 19:53:26.518   394-5600  MediaCodec              mediaserver                          I  MediaCodec will operate in async mode
+2026-04-16 19:53:26.521   401-5601  MtkOmxAudioDecBase      media.codec                          D  # Got general command (OMX_CommandStateSet)
+2026-04-16 19:53:26.523   401-5601  MtkOmxAudioDecBase      media.codec                          D  wait on mInPortAllocDoneSem(0), mOutPortAllocDoneSem(0)!!
+2026-04-16 19:53:26.526   329-329   /system/bi....0-service android.hidl.allocator@1.0-service   W  ashmem_create_region(65536) returning hidl_memory(0xaf918300, 65536)
+2026-04-16 19:53:26.537   329-329   /system/bi....0-service android.hidl.allocator@1.0-service   W  ashmem_create_region(65536) returning hidl_memory(0xaf918300, 65536)
+2026-04-16 19:53:26.541   329-329   /system/bi....0-service android.hidl.allocator@1.0-service   W  ashmem_create_region(65536) returning hidl_memory(0xaf918300, 65536)
+2026-04-16 19:53:26.545   329-329   /system/bi....0-service android.hidl.allocator@1.0-service   W  ashmem_create_region(65536) returning hidl_memory(0xaf918300, 65536)
+2026-04-16 19:53:26.546   329-329   /system/bi....0-service android.hidl.allocator@1.0-service   W  ashmem_create_region(65536) returning hidl_memory(0xaf918300, 65536)
+2026-04-16 19:53:26.550   329-329   /system/bi....0-service android.hidl.allocator@1.0-service   W  ashmem_create_region(65536) returning hidl_memory(0xaf918300, 65536)
+2026-04-16 19:53:26.551   329-329   /system/bi....0-service android.hidl.allocator@1.0-service   W  ashmem_create_region(65536) returning hidl_memory(0xaf918300, 65536)
+2026-04-16 19:53:26.553   401-5601  MtkOmxAudioDecBase      media.codec                          D  # Got general command (OMX_CommandStateSet)
+2026-04-16 19:53:26.553   401-5601  MtkOmxAudioDecBase      media.codec                          D  state changes to OMX_StateExecuting
+2026-04-16 19:53:26.567   394-5598  AudioTrack              mediaserver                          D  set(): 0xae92b380, streamType 4, sampleRate 48000, format 0x1, channelMask 0x3, frameCount 24576, flags #0, notificationFrames 0, sessionId 2985, transferType 0, uid 10204, pid 4927
+2026-04-16 19:53:26.567   394-5598  AudioTrack              mediaserver                          D  Building AudioTrack with attributes: usage = 4, content = 4, flags = 0x0, tags = []
+2026-04-16 19:53:26.568   385-29781 AudioFlinger            audioserver                          D  track(0xb2eeaa00): mIsOut 1, mFrameCount 24576, mSampleRate 48000, mFormat 1, mChannelCount 2, mTrackCount 223, thread 0xb2683f40, sessionId 2985
+2026-04-16 19:53:26.569   385-29781 AudioFlinger            audioserver                          D  track(0xb2eeaa00): mFastIndex -1, mStreamType 4, mName 4103
+2026-04-16 19:53:26.570   394-5598  AudioTrack              mediaserver                          D  Client defaulted notificationFrames to 12288 for frameCount 24576
+2026-04-16 19:53:26.570   394-5598  AudioTrack              mediaserver                          D  createTrack_l: 0xae92b380, mCblk = 0xad7241c0, mLatency = 575, mAfLatency = 63, frameCount = 24576, mSampleRate = 48000, mFlags = 0, mReqFrameCount = 24576, mNotificationFramesAct = 12288
+2026-04-16 19:53:26.571   394-5598  AudioTrack              mediaserver                          D  start(): 0xae92b380, mState = 1
+2026-04-16 19:53:26.571   385-29781 APM_AudioPolicyManager  audioserver                          D  startOutput() output 13, stream 4, session 2985
+2026-04-16 19:53:26.571   385-29781 APM::Audio...Descriptor audioserver                          V  changeRefCount() stream 4, count 2
+2026-04-16 19:53:26.572   385-29781 APM_AudioPolicyManager  audioserver                          D  AOSP HandleIncallSonification Flow Issue:Fixed
+2026-04-16 19:53:26.573   394-5595  NuPlayerDriver          mediaserver                          D  notifyListener_l(0xb07a55b0), (6, 0, 0, -1), loop setting(0, 0)
+2026-04-16 19:53:26.573  4927-4927  MediaPlayer             com.reedersystems.commandcomms       D  handleMessage msg:(6, 0, 0)
+2026-04-16 19:53:26.591   385-618   MtkAudioLoud            audioserver                          D  +close()
+2026-04-16 19:53:26.591   385-618   NVRAM                   audioserver                          D  getPlaybackPostProcessParameterFromXML Type/Name [5]/[PlaybackDRC]
+2026-04-16 19:53:26.591   385-618   NVRAM                   audioserver                          D  bes_loudness_L_hpf_fc = 0
+2026-04-16 19:53:26.591   385-618   NVRAM                   audioserver                          D  bes_loudness_L_hpf_order = 0
+2026-04-16 19:53:26.591   385-618   NVRAM                   audioserver                          D  bes_loudness_L_lpf_fc = 0
+2026-04-16 19:53:26.591   385-618   NVRAM                   audioserver                          D  bes_loudness_L_lpf_order = 0
+2026-04-16 19:53:26.591   385-618   NVRAM                   audioserver                          D  bes_loudness_R_hpf_fc = 0
+2026-04-16 19:53:26.591   385-618   NVRAM                   audioserver                          D  bes_loudness_R_hpf_order = 0
+2026-04-16 19:53:26.591   385-618   NVRAM                   audioserver                          D  bes_loudness_R_lpf_fc = 0
+2026-04-16 19:53:26.591   385-618   NVRAM                   audioserver                          D  bes_loudness_R_lpf_order = 0
+2026-04-16 19:53:26.591   385-618   NVRAM                   audioserver                          D  bes_loudness_Sep_LR_Filter = 0
+2026-04-16 19:53:26.591   385-618   NVRAM                   audioserver                          D  bes_loudness_WS_Gain_Max = 0
+2026-04-16 19:53:26.591   385-618   NVRAM                   audioserver                          D  bes_loudness_WS_Gain_Min = 0
+2026-04-16 19:53:26.591   385-618   NVRAM                   audioserver                          D  bes_loudness_Filter_First = 0
+2026-04-16 19:53:26.591   385-618   NVRAM                   audioserver                          D  bes_loudness_Num_Bands = 8
+2026-04-16 19:53:26.591   385-618   NVRAM                   audioserver                          D  bes_loudness_Flt_Bank_Order = 0
+2026-04-16 19:53:26.591   385-618   NVRAM                   audioserver                          D  DRC_Delay = 0
+2026-04-16 19:53:26.591   385-618   NVRAM                   audioserver                          D  Lim_Th = 32767
+2026-04-16 19:53:26.591   385-618   NVRAM                   audioserver                          D  Lim_Gn = 32767
+2026-04-16 19:53:26.591   385-618   NVRAM                   audioserver                          D  Lim_Const = 4
+2026-04-16 19:53:26.591   385-618   NVRAM                   audioserver                          D  Lim_Delay = 0
+2026-04-16 19:53:26.591   385-618   NVRAM                   audioserver                          D  SWIPRev = 0x520
+2026-04-16 19:53:26.591   385-618   NVRAM                   audioserver                          D  getPlaybackPostProcessParameterFromXML Parameter 5 returnValue 0
+2026-04-16 19:53:26.591   385-618   MtkAudioLoud            audioserver                          D  mIsZeroCoeff 1 mFilterType 5
+2026-04-16 19:53:26.591   385-618   MtkAudioLoud            audioserver                          D  setParameter 382 mInitParam.Initial_State 2
+2026-04-16 19:53:26.592   385-618   MtkAudioLoud            audioserver                          D  +open()
+2026-04-16 19:53:26.592   385-618   MtkAudioLoud            audioserver                          D  -open() result 0
+2026-04-16 19:53:26.592   385-618   MtkAudioLoud            audioserver                          D  +change2Normal()
+2026-04-16 19:53:26.592   385-618   MtkAudioLoud            audioserver                          D  -change2Normal()
+2026-04-16 19:53:27.088   394-5599  NuPlayerDecoder         mediaserver                          I  [audio] saw output EOS
+2026-04-16 19:53:27.338  4927-4994  [RadioEngine]           com.reedersystems.commandcomms       D  RX_DIAG rxTotal=0 rxNew=0 jbSize=0 jbDepth=2 jbPlaying=false channelIdx=169 t=88751ms
+2026-04-16 19:53:27.363  4927-4994  [RadioEngine]           com.reedersystems.commandcomms       D  RX_DIAG rxTotal=0 rxNew=0 jbSize=0 jbDepth=2 jbPlaying=false channelIdx=169 t=88776ms
+2026-04-16 19:53:27.756  4927-4994  [JitterBuf]             com.reedersystems.commandcomms       D  ENTER_IDLE depth=2 keptFrames=0 t=89168ms
+2026-04-16 19:53:28.797   365-379   SurfaceFlinger          surfaceflinger                       I  Adjust vsync offset: 0
+2026-04-16 19:53:29.767  4927-4994  [JitterBuf]             com.reedersystems.commandcomms       D  ENTER_IDLE depth=2 keptFrames=0 t=91180ms
+2026-04-16 19:53:30.167   394-5598  AudioTrack              mediaserver                          D  stop(): 0xae92b380, mState = 0
+2026-04-16 19:53:30.167   394-5598  AudioTrack              mediaserver                          D  stop() called with 186368 frames delivered
+2026-04-16 19:53:30.167   394-5598  AudioTrack              mediaserver                          D  audiotrack 0xae92b380 stop done
+2026-04-16 19:53:30.530   394-5595  NuPlayerDriver          mediaserver                          D  notifyListener_l(0xb07a55b0), (2, 0, 0, -1), loop setting(0, 0)
+2026-04-16 19:53:30.530   394-5598  AudioTrack              mediaserver                          D  pause(): 0xae92b380, mState = 1
+2026-04-16 19:53:30.531  4927-4927  MediaPlayer             com.reedersystems.commandcomms       D  handleMessage msg:(2, 0, 0)
+2026-04-16 19:53:30.532   824-1081  MediaRouterService      system_server                        V  restoreBluetoothA2dp(false)
+2026-04-16 19:53:30.533  4927-4927  MediaPlayer             com.reedersystems.commandcomms       V  resetDrmState:  mDrmInfo=null mDrmProvisioningThread=null mPrepareDrmInProgress=false mActiveDrmScheme=false
+2026-04-16 19:53:30.533  4927-4927  MediaPlayer             com.reedersystems.commandcomms       V  cleanDrmObj: mDrmObj=null mDrmSessionId=null
+2026-04-16 19:53:30.533   394-1089  NuPlayerDriver          mediaserver                          D  reset(0xb07a55b0) at state 6
+2026-04-16 19:53:30.533   394-1089  NuPlayerDriver          mediaserver                          D  notifyListener_l(0xb07a55b0), (8, 0, 0, -1), loop setting(0, 0)
+2026-04-16 19:53:30.534   394-1089  GenericSource           mediaserver                          D  disconnect: mDataSource 0xae96f580 mHttpSource 0x0
+2026-04-16 19:53:30.534   394-5598  AudioTrack              mediaserver                          D  pause(): 0xae92b380, mState = 1
+2026-04-16 19:53:30.535   394-5598  AudioTrack              mediaserver                          D  stop(): 0xae92b380, mState = 4
+2026-04-16 19:53:30.535   824-848   DuraSpeed/...eedService system_server                        D  [onPlaybackConfigChanged], play music packageNames:[com.reedersystems.commandcomms, com.android.systemui]
+2026-04-16 19:53:30.535   401-5601  MtkOmxAudioDecBase      media.codec                          D  # Got general command (OMX_CommandFlush)
+2026-04-16 19:53:30.536   824-848   DuraSpeed/...icyFactory system_server                        D  packageName: com.android.providers.media, delay about 929825ms by now
+2026-04-16 19:53:30.537   401-5601  MtkOmxAudioDecBase      media.codec                          D  # Got general command (OMX_CommandStateSet)
+2026-04-16 19:53:30.538   401-5601  MtkOmxAudioDecBase      media.codec                          D  # Got general command (OMX_CommandStateSet)
+2026-04-16 19:53:30.544   401-18182 MtkOmxRawDec            media.codec                          D  MtkOmxRawDec Deconstruct !!!
+2026-04-16 19:53:30.545   394-5599  MediaAnalyticsItem      mediaserver                          W  Unable to record: (codec:0:-1:-11:0:6:android.media.mediacodec.mime=audio/raw:android.media.mediacodec.mode=audio:android.media.mediacodec.encoder=0:android.media.mediacodec.codec=OMX.MTK.AUDIO.DECODER.RAW:android.media.mediacodec.secure=0:android.media.mediacodec.bytesin=1490944:) [forcenew=0]
+2026-04-16 19:53:30.545   394-5595  NuPlayer                mediaserver                          D  audio shutdown completed
+2026-04-16 19:53:30.548   394-5595  NuPlayerDriver          mediaserver                          D  notifyResetComplete(0xb07a55b0)
+2026-04-16 19:53:30.549   394-1089  AudioTrack              mediaserver                          D  ~AudioTrack(): 0xae92b380
+2026-04-16 19:53:30.549   394-1089  AudioTrack              mediaserver                          D  stop(): 0xae92b380, mState = 4
+2026-04-16 19:53:30.549  4927-4927  AudioManager            com.reedersystems.commandcomms       D  setStreamVolume: StreamType = 4, index = 15
+2026-04-16 19:53:30.559   385-618   MtkAudioLoud            audioserver                          D  +close()
+2026-04-16 19:53:30.559   385-618   MtkAudioLoud            audioserver                          D  -close()
+2026-04-16 19:53:30.580   385-512   APM_AudioPolicyManager  audioserver                          D  stopOutput() output 13, stream 4, session 2985
+2026-04-16 19:53:30.580   385-512   APM::Audio...Descriptor audioserver                          V  changeRefCount() stream 4, count 1
+2026-04-16 19:53:31.264  4927-4994  [UdpTransport]          com.reedersystems.commandcomms       D  {"event":"UDP_KEEPALIVE_SENT","dest":"comms.reeder-systems.com:5100","fast":false,"intervalMs":8000}
+2026-04-16 19:53:31.781  4927-4994  [JitterBuf]             com.reedersystems.commandcomms       D  ENTER_IDLE depth=2 keptFrames=0 t=93194ms
+2026-04-16 19:53:32.340  4927-4994  [RadioEngine]           com.reedersystems.commandcomms       D  RX_DIAG rxTotal=0 rxNew=0 jbSize=0 jbDepth=2 jbPlaying=false channelIdx=169 t=93753ms
+2026-04-16 19:53:32.364  4927-4994  [RadioEngine]           com.reedersystems.commandcomms       D  RX_DIAG rxTotal=0 rxNew=0 jbSize=0 jbDepth=2 jbPlaying=false channelIdx=169 t=93777ms
+2026-04-16 19:53:32.538   394-5588  NuPlayerDecoder         mediaserver                          I  [audio] saw output EOS
+2026-04-16 19:53:32.539   394-5587  AudioTrack              mediaserver                          D  stop(): 0xae92b000, mState = 0
+2026-04-16 19:53:32.539   394-5587  AudioTrack              mediaserver                          D  stop() called with 322271 frames delivered
+2026-04-16 19:53:32.540   394-5587  AudioTrack              mediaserver                          D  audiotrack 0xae92b000 stop done
+2026-04-16 19:53:33.020   394-5573  NuPlayerDriver          mediaserver                          D  notifyListener_l(0xb07a53f0), (2, 0, 0, -1), loop setting(1, 0)
+2026-04-16 19:53:33.020   394-5573  AudioTrack              mediaserver                          D  start(): 0xae92b000, mState = 1
+2026-04-16 19:53:33.021   394-5587  AudioTrack              mediaserver                          D  pause(): 0xae92b000, mState = 0
+2026-04-16 19:53:33.033   385-618   AudioFlinger_Threads    audioserver                          D  pause signal - [NOT READY] on thread
+2026-04-16 19:53:33.034   394-5587  AudioTrack              mediaserver                          D  stop(): 0xae92b000, mState = 4
+2026-04-16 19:53:33.034   394-5587  AudioTrack              mediaserver                          D  start(): 0xae92b000, mState = 4
+2026-04-16 19:53:33.049   394-5573  NuPlayerDriver          mediaserver                          D  notifyListener_l(0xb07a53f0), (6, 0, 0, -1), loop setting(1, 0)
+2026-04-16 19:53:33.049   964-5572  MediaPlayer             com.android.systemui                 D  handleMessage msg:(6, 0, 0)
+2026-04-16 19:53:33.795  4927-5040  [JitterBuf]             com.reedersystems.commandcomms       D  ENTER_IDLE depth=2 keptFrames=0 t=95208ms
+2026-04-16 19:53:35.206   354-426   libPerfService          merged_hal_service                   I  13: legacy set freq: -1 -1
