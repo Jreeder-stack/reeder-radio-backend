@@ -5,6 +5,7 @@ import { useAudioConnection } from "./context/AudioConnectionContext.jsx";
 import { useSignalingContext } from "./context/SignalingContext.jsx";
 import { unlockAudio } from "./audio/iosAudioUnlock";
 import { preloadPermitBuffer } from "./audio/talkPermitTone.js";
+import toneEngine from "./audio/toneEngine.js";
 import { setupAppLifecycle } from "./lib/capacitor";
 import { signalingManager } from "./signaling/SignalingManager";
 import { useMobileRadioContext } from "./context/MobileRadioContext.jsx";
@@ -273,6 +274,7 @@ export default function App({ user, onLogout }) {
 
   useEffect(() => {
     preloadPermitBuffer();
+    toneEngine.preloadPagerTone();
   }, []);
 
   useEffect(() => {

@@ -281,7 +281,8 @@ class ToneTransmitter {
     try {
       toneEngine.playEmergencyTone(type, duration);
 
-      const paddedDuration = duration + 200;
+      const effectiveDuration = type === 'A' ? toneEngine.getToneADuration(duration) : duration;
+      const paddedDuration = effectiveDuration + 200;
       await new Promise((resolve) => setTimeout(resolve, paddedDuration));
 
       this._txState = TX_STATE.DRAINING;

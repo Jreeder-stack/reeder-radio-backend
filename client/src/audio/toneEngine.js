@@ -10,6 +10,32 @@ class ToneEngine {
     this.externalContext = null;
     this.busyToneOscillator = null;
     this.busyToneGain = null;
+    this._pagerToneBuffer = null;
+    this._pagerTonePreloadPromise = null;
+  }
+
+  preloadPagerTone() {
+    if (this._pagerToneBuffer) return Promise.resolve(this._pagerToneBuffer);
+    if (this._pagerTonePreloadPromise) return this._pagerTonePreloadPromise;
+
+    this._pagerTonePreloadPromise = fetch('/sounds/pager-tone.wav')
+      .then(function (res) { return res.arrayBuffer(); })
+      .then((buf) => {
+        const tempCtx = new (window.AudioContext || window.webkitAudioContext)();
+        return tempCtx.decodeAudioData(buf).then((decoded) => {
+          tempCtx.close().catch(() => {});
+          this._pagerToneBuffer = decoded;
+          console.log('[ToneEngine] Pager WAV preloaded');
+          return decoded;
+        });
+      })
+      .catch((e) => {
+        console.warn('[ToneEngine] Pager WAV preload failed:', e.message);
+        this._pagerTonePreloadPromise = null;
+        return null;
+      });
+
+    return this._pagerTonePreloadPromise;
   }
 
   getContext() {
@@ -63,39 +89,78 @@ class ToneEngine {
     return this.playingTones.size > 0;
   }
 
-  // Alert tone - 2.5 second 1000Hz sine, abrupt start/stop
+  getToneADuration(fallbackMs = 2500) {
+    if (this._pagerToneBuffer) {
+      return Math.ceil(this._pagerToneBuffer.duration * 1000);
+    }
+    return fallbackMs;
+  }
+
+  // Alert tone - plays custom WAV pager tone, falls back to 1000Hz sine
   playToneA(duration = 2500) {
     if (this.isTonePlaying('A')) return null;
-    
+
     const ctx = this.getContext();
+
+    if (this._pagerToneBuffer) {
+      const source = ctx.createBufferSource();
+      source.buffer = this._pagerToneBuffer;
+
+      const gainNode = ctx.createGain();
+      gainNode.gain.value = 0.9;
+
+      source.connect(gainNode);
+      gainNode.connect(this.getDestinationNode());
+
+      if (this.customDestination) {
+        const localGain = ctx.createGain();
+        localGain.gain.value = 0.2;
+        source.connect(localGain);
+        localGain.connect(ctx.destination);
+      }
+
+      this.playingTones.add('A');
+      if (this.onToneStart) this.onToneStart('A');
+
+      source.start();
+
+      source.onended = () => {
+        this.playingTones.delete('A');
+        if (this.onToneEnd) this.onToneEnd('A');
+      };
+
+      return source;
+    }
+
+    // Fallback: synthesized 1000Hz sine wave
     const oscillator = ctx.createOscillator();
     const gainNode = ctx.createGain();
-    
+
     oscillator.type = 'sine';
     oscillator.frequency.value = 1000;
     gainNode.gain.value = 0.5;
-    
+
     oscillator.connect(gainNode);
     gainNode.connect(this.getDestinationNode());
-    
+
     if (this.customDestination) {
       const localGain = ctx.createGain();
       localGain.gain.value = 0.125;
       oscillator.connect(localGain);
       localGain.connect(ctx.destination);
     }
-    
+
     this.playingTones.add('A');
     if (this.onToneStart) this.onToneStart('A');
-    
+
     oscillator.start();
     oscillator.stop(ctx.currentTime + duration / 1000);
-    
+
     oscillator.onended = () => {
       this.playingTones.delete('A');
       if (this.onToneEnd) this.onToneEnd('A');
     };
-    
+
     return oscillator;
   }
 
