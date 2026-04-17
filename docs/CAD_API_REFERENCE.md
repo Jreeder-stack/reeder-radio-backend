@@ -2979,7 +2979,7 @@ socket.on('auth:error', (data) => {
 | `ptt:denied` | `{ channelId, reason, heldBy?, senderUnitId?, timestamp }` | PTT denied (radio protocol). Reasons: `"not_on_channel"`, `"preempted_emergency"`, `"floor_request_failed"`, or from `floorControlService`. |
 | `emergency:start` | `{ unitId, agencyId, channelId, timestamp }` | Emergency declared on channel (sent to channel dispatchers) |
 | `emergency:end` | `{ unitId, agencyId, channelId, timestamp, clearedBy, duration }` | Emergency ended (sent to channel dispatchers) |
-| `emergency:force_connect` | `{ channelId, unitId, agencyId, timestamp, bypassGracePeriod, priority }` | Force-connect signal for emergency (sent to channel dispatchers) |
+| `emergency:force_connect` | `{ channelId, unitId, agencyId, timestamp, priority }` | Force-connect signal for emergency (sent to channel dispatchers) |
 | `emergency:alert` | `{ unitId, agencyId, channelId, timestamp, message }` | Emergency alert broadcast to all dispatchers |
 | `emergency:cleared` | `{ unitId, agencyId, channelId, timestamp, clearedBy, duration }` | Emergency cleared broadcast to all dispatchers |
 | `clear_air:start` | `{ channelId, channelName, dispatcherId, agencyId, timestamp }` | Clear-air mode started (sent to channel dispatchers) |

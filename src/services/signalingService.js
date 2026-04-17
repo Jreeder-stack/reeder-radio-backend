@@ -1033,7 +1033,6 @@ class SignalingService {
       unitId: socket.unitId,
       agencyId: socket.agencyId,
       timestamp: Date.now(),
-      bypassGracePeriod: true,
       priority: 'emergency',
     });
     
