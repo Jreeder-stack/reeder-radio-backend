@@ -41,6 +41,8 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.HOME" />
+                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
 
@@ -67,80 +69,62 @@
             </intent-filter>
         </service>
 
-        <!--
-            Exported so Inrico T320 firmware broadcasts reach this receiver regardless of
-            screen state or app lifecycle. No accessibility service required for screen-off PTT.
-        -->
         <receiver
             android:name=".audio.PttHardwareReceiver"
             android:exported="true">
-            <!-- Internal self-sent actions (foreground / legacy callers) -->
             <intent-filter>
                 <action android:name="com.reedersystems.commandcomms.PTT_DOWN" />
                 <action android:name="com.reedersystems.commandcomms.PTT_UP" />
             </intent-filter>
-            <!-- Generic Android PTT broadcast (pttKeyState extra) -->
             <intent-filter>
                 <action android:name="android.intent.action.PTT" />
             </intent-filter>
-            <!-- Inrico T320 firmware — confirmed primary actions from Zello logcat (dot-separated, lowercase) -->
             <intent-filter>
                 <action android:name="android.intent.action.PTT.down" />
                 <action android:name="android.intent.action.PTT.up" />
             </intent-filter>
-            <!-- Inrico T320 firmware — longpress (consumed to suppress built-in beep sounds) -->
             <intent-filter android:priority="999">
                 <action android:name="android.intent.action.PTT.longpress" />
                 <action android:name="android.intent.action.PTT_LONGPRESS" />
                 <action android:name="com.inrico.ptt.longpress" />
                 <action android:name="com.inrico.intent.action.PTT_LONGPRESS" />
             </intent-filter>
-            <!-- Inrico T320 firmware — underscore variant -->
             <intent-filter>
                 <action android:name="android.intent.action.PTT_DOWN" />
                 <action android:name="android.intent.action.PTT_UP" />
             </intent-filter>
-            <!-- Inrico T320 firmware — standard Android namespace (_KEY_ variant) -->
             <intent-filter>
                 <action android:name="android.intent.action.PTT_KEY_DOWN" />
                 <action android:name="android.intent.action.PTT_KEY_UP" />
             </intent-filter>
-            <!-- Inrico T320 firmware — vendor namespace (lowercase, confirmed) -->
             <intent-filter>
                 <action android:name="com.inrico.ptt.down" />
                 <action android:name="com.inrico.ptt.up" />
             </intent-filter>
-            <!-- Inrico T320 firmware — vendor namespace (PTT_KEY_ prefix variant) -->
             <intent-filter>
                 <action android:name="com.inrico.ptt.PTT_KEY_DOWN" />
                 <action android:name="com.inrico.ptt.PTT_KEY_UP" />
             </intent-filter>
-            <!-- Inrico T320 firmware — vendor namespace with intent.action prefix -->
             <intent-filter>
                 <action android:name="com.inrico.intent.action.PTT_DOWN" />
                 <action android:name="com.inrico.intent.action.PTT_UP" />
             </intent-filter>
-            <!-- Inrico T320 firmware — telecom namespace (some ROM versions) -->
             <intent-filter>
                 <action android:name="com.android.server.telecom.PushToTalk.action.PTT_KEY_DOWN" />
                 <action android:name="com.android.server.telecom.PushToTalk.action.PTT_KEY_UP" />
             </intent-filter>
-            <!-- Internal emergency actions -->
             <intent-filter>
                 <action android:name="com.reedersystems.commandcomms.EMERGENCY_DOWN" />
                 <action android:name="com.reedersystems.commandcomms.EMERGENCY_UP" />
             </intent-filter>
-            <!-- Android generic emergency broadcasts -->
             <intent-filter>
                 <action android:name="android.intent.action.EMERGENCY_DOWN" />
                 <action android:name="android.intent.action.EMERGENCY_UP" />
             </intent-filter>
-            <!-- Inrico T320 emergency — dot-separated lowercase (mirrors PTT.down / PTT.up) -->
             <intent-filter>
                 <action android:name="android.intent.action.EMERGENCY.down" />
                 <action android:name="android.intent.action.EMERGENCY.up" />
             </intent-filter>
-            <!-- Inrico T320 vendor emergency broadcasts -->
             <intent-filter>
                 <action android:name="com.inrico.emergency.down" />
                 <action android:name="com.inrico.emergency.up" />
@@ -157,7 +141,6 @@
                 <action android:name="com.inrico.intent.action.EMERGENCY.down" />
                 <action android:name="com.inrico.intent.action.EMERGENCY.up" />
             </intent-filter>
-            <!-- SOS variants — some Inrico firmware labels the emergency button as SOS -->
             <intent-filter>
                 <action android:name="android.intent.action.SOS_KEY_DOWN" />
                 <action android:name="android.intent.action.SOS_KEY_UP" />
@@ -170,7 +153,6 @@
                 <action android:name="com.inrico.intent.action.SOS_KEY_DOWN" />
                 <action android:name="com.inrico.intent.action.SOS_KEY_UP" />
             </intent-filter>
-            <!-- Confirmed SOS broadcasts from PhoneWindowManager on Inrico T320 (screen-off emergency button) -->
             <intent-filter>
                 <action android:name="android.intent.action.SOS.down" />
                 <action android:name="android.intent.action.SOS.up" />
@@ -185,6 +167,22 @@
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.QUICKBOOT_POWERON" />
             </intent-filter>
+        </receiver>
+
+        <!-- ✅ DEVICE ADMIN RECEIVER (ONLY ADDITION) -->
+        <receiver
+            android:name=".RadioDeviceAdminReceiver"
+            android:permission="android.permission.BIND_DEVICE_ADMIN"
+            android:exported="true">
+
+            <meta-data
+                android:name="android.app.device_admin"
+                android:resource="@xml/device_admin_receiver" />
+
+            <intent-filter>
+                <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
+            </intent-filter>
+
         </receiver>
 
     </application>

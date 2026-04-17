@@ -15,9 +15,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.WindowInsetsControllerCompat
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -26,26 +23,29 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.launch
+import androidx.compose.ui.input.key.type
 import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
+import androidx.lifecycle.lifecycleScope
 import com.reedersystems.commandcomms.audio.BackgroundAudioService
 import com.reedersystems.commandcomms.data.prefs.formatKeyLabel
 import com.reedersystems.commandcomms.data.prefs.isNonCapturableKey
 import com.reedersystems.commandcomms.navigation.AppNavigation
 import com.reedersystems.commandcomms.ui.theme.CommandCommsTheme
+import kotlinx.coroutines.launch
 
 private const val TAG = "[PTT-DIAG]"
 
-private const val KEY_PTT_F11       = 141
-private const val KEY_PTT           = 230
-private const val KEY_EMERGENCY     = 233
-private const val KEY_TV_TELETEXT   = 349
-private const val KEY_ACC           = 231
-private const val KEY_STAR      = 17
-private const val KEY_DPAD_UP   = 19
+private const val KEY_PTT_F11 = 141
+private const val KEY_PTT = 230
+private const val KEY_EMERGENCY = 233
+private const val KEY_TV_TELETEXT = 349
+private const val KEY_ACC = 231
+private const val KEY_STAR = 17
+private const val KEY_DPAD_UP = 19
 private const val KEY_DPAD_DOWN = 20
 private const val KEY_DPAD_LEFT = 21
 private const val KEY_DPAD_RIGHT = 22
@@ -90,9 +90,7 @@ class MainActivity : ComponentActivity() {
 
         val micGranted = isGranted(Manifest.permission.RECORD_AUDIO)
         val locationGranted = isGranted(Manifest.permission.ACCESS_FINE_LOCATION)
-        val notifGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
-            isGranted(Manifest.permission.POST_NOTIFICATIONS)
-        else true
+        val notifGranted = isGranted(Manifest.permission.POST_NOTIFICATIONS)
 
         Log.d(TAG, "Multi-permission results: mic=$micGranted location=$locationGranted notif=$notifGranted")
 
@@ -100,7 +98,8 @@ class MainActivity : ComponentActivity() {
         app.sessionPrefs.locationPermissionGranted = locationGranted
         app.sessionPrefs.notificationPermissionGranted = notifGranted
 
-        if (locationGranted &&
+        if (
+            locationGranted &&
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
             ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_BACKGROUND_LOCATION)
             != PackageManager.PERMISSION_GRANTED
@@ -114,7 +113,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Log.d(TAG, "APP_START")
-        // Allow emergency activation to wake the screen and show over the lockscreen
         setTurnScreenOn(true)
         setShowWhenLocked(true)
         enableEdgeToEdge()
@@ -142,7 +140,10 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         logDiagnostics()
         lifecycleScope.launch {
-            try { rootFocusRequester.requestFocus() } catch (_: Exception) {}
+            try {
+                rootFocusRequester.requestFocus()
+            } catch (_: Exception) {
+            }
         }
         if (pendingBatteryPromptAfterFullScreenIntent) {
             pendingBatteryPromptAfterFullScreenIntent = false
@@ -169,7 +170,6 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        // Re-assert screen-on/lock flags for a singleTop Activity brought to front
         setTurnScreenOn(true)
         setShowWhenLocked(true)
         if (intent.getBooleanExtra(BackgroundAudioService.EXTRA_EMERGENCY_KEY_DOWN, false)) {
@@ -199,25 +199,36 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun requestAppPermissions() {
-        val micGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) ==
-            PackageManager.PERMISSION_GRANTED
-        val locationGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) ==
-            PackageManager.PERMISSION_GRANTED
-        val notifGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
-            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) ==
-                PackageManager.PERMISSION_GRANTED
-        else true
+        val micGranted = ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.RECORD_AUDIO
+        ) == PackageManager.PERMISSION_GRANTED
+
+        val locationGranted = ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+
+        val notifGranted = ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.POST_NOTIFICATIONS
+        ) == PackageManager.PERMISSION_GRANTED
+
         val bgLocationGranted = Build.VERSION.SDK_INT < Build.VERSION_CODES.Q ||
-            ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_BACKGROUND_LOCATION) ==
-            PackageManager.PERMISSION_GRANTED
-        val btConnectGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
-            ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) ==
-                PackageManager.PERMISSION_GRANTED
-        else true
-        val btScanGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
-            ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) ==
-                PackageManager.PERMISSION_GRANTED
-        else true
+                ContextCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.ACCESS_BACKGROUND_LOCATION
+                ) == PackageManager.PERMISSION_GRANTED
+
+        val btConnectGranted = ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.BLUETOOTH_CONNECT
+        ) == PackageManager.PERMISSION_GRANTED
+
+        val btScanGranted = ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.BLUETOOTH_SCAN
+        ) == PackageManager.PERMISSION_GRANTED
 
         app.sessionPrefs.micPermissionGranted = micGranted
         app.sessionPrefs.locationPermissionGranted = locationGranted
@@ -227,12 +238,9 @@ class MainActivity : ComponentActivity() {
 
         if (!micGranted) permissionsToRequest.add(Manifest.permission.RECORD_AUDIO)
         if (!locationGranted) permissionsToRequest.add(Manifest.permission.ACCESS_FINE_LOCATION)
-        if (!notifGranted && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
-            permissionsToRequest.add(Manifest.permission.POST_NOTIFICATIONS)
-        if (!btConnectGranted && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
-            permissionsToRequest.add(Manifest.permission.BLUETOOTH_CONNECT)
-        if (!btScanGranted && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
-            permissionsToRequest.add(Manifest.permission.BLUETOOTH_SCAN)
+        if (!notifGranted) permissionsToRequest.add(Manifest.permission.POST_NOTIFICATIONS)
+        if (!btConnectGranted) permissionsToRequest.add(Manifest.permission.BLUETOOTH_CONNECT)
+        if (!btScanGranted) permissionsToRequest.add(Manifest.permission.BLUETOOTH_SCAN)
 
         if (permissionsToRequest.isNotEmpty()) {
             requestMultiplePermissionsLauncher.launch(permissionsToRequest.toTypedArray())
@@ -251,7 +259,7 @@ class MainActivity : ComponentActivity() {
                 pendingBatteryPromptAfterFullScreenIntent = true
                 startActivity(
                     Intent(ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENTS).apply {
-                        setData(Uri.parse("package:$packageName"))
+                        data = Uri.parse("package:$packageName")
                     }
                 )
                 return
@@ -263,7 +271,6 @@ class MainActivity : ComponentActivity() {
     private fun openBatteryOptimizationSettingsIfNeeded() {
         val pm = getSystemService(POWER_SERVICE) as PowerManager
         if (pm.isIgnoringBatteryOptimizations(packageName)) {
-            // Battery opt already exempted — go straight to overlay check
             requestOverlayPermissionIfNeeded()
             return
         }
@@ -276,7 +283,7 @@ class MainActivity : ComponentActivity() {
                     data = Uri.parse("package:$packageName")
                 }
             )
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             Log.w(TAG, "Direct battery opt request unavailable — falling back to settings list")
             startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
         }
@@ -317,8 +324,12 @@ class MainActivity : ComponentActivity() {
     private fun isOurKey(keyCode: Int): Boolean {
         if (isPttKey(keyCode)) return true
         if (isEmergencyKey(keyCode)) return true
-        if (keyCode == KEY_DPAD_UP || keyCode == KEY_DPAD_DOWN ||
-            keyCode == KEY_DPAD_LEFT || keyCode == KEY_DPAD_RIGHT) return true
+        if (
+            keyCode == KEY_DPAD_UP ||
+            keyCode == KEY_DPAD_DOWN ||
+            keyCode == KEY_DPAD_LEFT ||
+            keyCode == KEY_DPAD_RIGHT
+        ) return true
         if (keyCode == KEY_ACC || keyCode == KEY_STAR) return true
         return false
     }
@@ -401,6 +412,7 @@ class MainActivity : ComponentActivity() {
                 }
                 return true
             }
+
             isEmergencyKey(keyCode) -> {
                 if (event?.repeatCount == 0) {
                     Log.d(TAG, "MainActivity EMERGENCY DOWN (keyCode=$keyCode) — forwarding to BackgroundAudioService")
@@ -408,28 +420,34 @@ class MainActivity : ComponentActivity() {
                 }
                 return true
             }
+
             keyCode == KEY_DPAD_UP -> {
                 if (event?.repeatCount == 0) app.keyEventFlow.tryEmit(KeyAction.DpadUp)
                 return true
             }
+
             keyCode == KEY_DPAD_DOWN -> {
                 if (event?.repeatCount == 0) app.keyEventFlow.tryEmit(KeyAction.DpadDown)
                 return true
             }
+
             keyCode == KEY_DPAD_LEFT -> {
                 if (event?.repeatCount == 0) app.keyEventFlow.tryEmit(KeyAction.DpadLeft)
                 return true
             }
+
             keyCode == KEY_DPAD_RIGHT -> {
                 if (event?.repeatCount == 0) app.keyEventFlow.tryEmit(KeyAction.DpadRight)
                 return true
             }
+
             keyCode == KEY_ACC -> {
                 if (event?.repeatCount == 0) {
                     app.keyEventFlow.tryEmit(KeyAction.AccToggle)
                 }
                 return true
             }
+
             keyCode == KEY_STAR -> {
                 if (event?.repeatCount == 0) {
                     starDownTime = SystemClock.uptimeMillis()
@@ -440,6 +458,7 @@ class MainActivity : ComponentActivity() {
         return false
     }
 
+    @Suppress("UNUSED_PARAMETER")
     private fun handleKeyUp(keyCode: Int, event: KeyEvent?): Boolean {
         when {
             isPttKey(keyCode) -> {
@@ -449,11 +468,13 @@ class MainActivity : ComponentActivity() {
                 forwardPttToBackgroundService(BackgroundAudioService.ACTION_PTT_UP)
                 return true
             }
+
             isEmergencyKey(keyCode) -> {
                 Log.d(TAG, "MainActivity EMERGENCY UP (keyCode=$keyCode) — forwarding to BackgroundAudioService")
                 forwardEmergencyToBackgroundService(BackgroundAudioService.ACTION_EMERGENCY_UP)
                 return true
             }
+
             keyCode == KEY_STAR -> {
                 val held = SystemClock.uptimeMillis() - starDownTime
                 if (held >= 1000L) {
@@ -466,6 +487,7 @@ class MainActivity : ComponentActivity() {
         return false
     }
 
+    @Suppress("unused")
     private fun isDeviceInteractive(): Boolean {
         val pm = getSystemService(POWER_SERVICE) as PowerManager
         return pm.isInteractive
@@ -486,5 +508,4 @@ class MainActivity : ComponentActivity() {
         ContextCompat.startForegroundService(this, intent)
     }
     // ── END DO NOT MODIFY — VERIFIED HARDWARE MAPPING ──────────────────
-
 }
