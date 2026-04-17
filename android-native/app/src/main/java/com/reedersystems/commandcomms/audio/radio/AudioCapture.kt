@@ -27,6 +27,7 @@ private const val DIAG_TAG = "[AudioCapture]"
 class AudioCapture(
     private val sampleRate: Int = OpusCodec.DEFAULT_SAMPLE_RATE,
     private val frameSizeSamples: Int = OpusCodec.FRAME_SIZE,
+    private val micGainMultiplier: Float = 2.0f,
     private val onFrame: (ShortArray) -> Unit
 ) {
     private var audioRecord: AudioRecord? = null
@@ -125,13 +126,19 @@ class AudioCapture(
                             monoFrame = buffer.copyOf()
                         }
 
+                        if (micGainMultiplier != 1.0f) {
+                            for (i in monoFrame.indices) {
+                                monoFrame[i] = (monoFrame[i] * micGainMultiplier).toInt().coerceIn(-32767, 32767).toShort()
+                            }
+                        }
+
                         readRateLimiter.tick()
                         summaryTotalFrames++
                         val stats = RadioDiagLog.pcmStatsShort(monoFrame, monoFrame.size)
                         if (stats.silent) summarySilentFrames++
 
                         if (readRateLimiter.shouldLogDetail()) {
-                            Log.d(DIAG_TAG, "CAPTURE_FRAME frame=${readRateLimiter.frameCount} read=$read $stats downmix=$needsStereoDownmix ${RadioDiagLog.elapsedTag()}")
+                            Log.d(DIAG_TAG, "CAPTURE_FRAME frame=${readRateLimiter.frameCount} read=$read $stats downmix=$needsStereoDownmix gain=$micGainMultiplier ${RadioDiagLog.elapsedTag()}")
                         } else if (readRateLimiter.shouldLogSummary()) {
                             val cnt = readRateLimiter.resetSummaryAccumulator()
                             Log.d(DIAG_TAG, "CAPTURE_SUMMARY frames=$cnt totalFrames=$summaryTotalFrames partials=$summaryPartials zeros=$summaryZeros silentFrames=$summarySilentFrames ${RadioDiagLog.elapsedTag()}")

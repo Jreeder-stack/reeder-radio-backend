@@ -54,6 +54,7 @@ class BackgroundAudioService : Service() {
     private lateinit var audioManager: AudioManager
     private var previousAudioMode: Int = AudioManager.MODE_NORMAL
     private var previousSpeakerphoneOn: Boolean = false
+    private var savedVoiceCallVolume: Int = -1
 
     private var dynamicPttReceiver: BroadcastReceiver? = null
 
@@ -1407,13 +1408,21 @@ class BackgroundAudioService : Service() {
             @Suppress("DEPRECATION")
             audioManager.isSpeakerphoneOn = true
         }
-        Log.d(TAG, "BackgroundAudioService: radio audio route applied (MODE_IN_COMMUNICATION + speaker)")
+        val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_VOICE_CALL)
+        savedVoiceCallVolume = audioManager.getStreamVolume(AudioManager.STREAM_VOICE_CALL)
+        audioManager.setStreamVolume(AudioManager.STREAM_VOICE_CALL, maxVolume, 0)
+        Log.d(TAG, "BackgroundAudioService: radio audio route applied (MODE_IN_COMMUNICATION + speaker) voiceCallVol=$savedVoiceCallVolume→$maxVolume")
     }
 
     private fun releaseRadioAudioRoute() {
         if (!radioRouteActive) return
         radioRouteActive = false
         if (!::audioManager.isInitialized) return
+        if (savedVoiceCallVolume >= 0) {
+            audioManager.setStreamVolume(AudioManager.STREAM_VOICE_CALL, savedVoiceCallVolume, 0)
+            Log.d(TAG, "BackgroundAudioService: STREAM_VOICE_CALL volume restored to $savedVoiceCallVolume")
+            savedVoiceCallVolume = -1
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             if (previousSpeakerphoneOn) {
                 val speakerDevice = audioManager.availableCommunicationDevices
@@ -1438,6 +1447,11 @@ class BackgroundAudioService : Service() {
         if (speakerStateRestored) return
         speakerStateRestored = true
         if (::audioManager.isInitialized) {
+            if (savedVoiceCallVolume >= 0) {
+                audioManager.setStreamVolume(AudioManager.STREAM_VOICE_CALL, savedVoiceCallVolume, 0)
+                Log.d(TAG, "BackgroundAudioService: STREAM_VOICE_CALL volume restored to $savedVoiceCallVolume (teardown path)")
+                savedVoiceCallVolume = -1
+            }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 if (previousSpeakerphoneOn) {
                     val speakerDevice = audioManager.availableCommunicationDevices
@@ -1499,6 +1513,7 @@ class BackgroundAudioService : Service() {
             if (config.has("txCompAttackMs")) engine.txCompAttackMs = config.getDouble("txCompAttackMs")
             if (config.has("txCompReleaseMs")) engine.txCompReleaseMs = config.getDouble("txCompReleaseMs")
             if (config.has("txGain")) engine.txGain = config.getDouble("txGain")
+            if (config.has("txMicGain")) engine.txMicGain = config.getDouble("txMicGain")
             if (config.has("txGateThresholdDb")) engine.txGateThresholdDb = config.getDouble("txGateThresholdDb")
             if (config.has("txGateAttackMs")) engine.txGateAttackMs = config.getDouble("txGateAttackMs")
             if (config.has("txGateReleaseMs")) engine.txGateReleaseMs = config.getDouble("txGateReleaseMs")

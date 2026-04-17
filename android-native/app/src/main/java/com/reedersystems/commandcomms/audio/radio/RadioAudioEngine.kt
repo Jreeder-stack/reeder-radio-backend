@@ -430,7 +430,7 @@ class RadioAudioEngine(private val context: Context) {
         txCompAttackMs = 0.003
         txCompReleaseMs = 0.15
 
-        Log.d("[AudioDSP]", "TX_DSP_COEFFICIENTS sampleRate=$sampleRate hpCutoff=$hpCutoff hpAlpha=$txHpAlpha lpCutoff=$lpCutoff lpB0=$txLpB0 lpB1=$txLpB1 lpB2=$txLpB2 lpA1=$txLpA1 lpA2=$txLpA2 compThreshold=$txCompThresholdDb compRatio=$txCompRatio compAttack=$txCompAttackMs compRelease=$txCompReleaseMs gain=$txGain gateOpen=$txGateThresholdDb gateClose=$txGateCloseThresholdDb expanderRatio=$txExpanderRatio ${RadioDiagLog.elapsedTag()}")
+        Log.d("[AudioDSP]", "TX_DSP_COEFFICIENTS sampleRate=$sampleRate hpCutoff=$hpCutoff hpAlpha=$txHpAlpha lpCutoff=$lpCutoff lpB0=$txLpB0 lpB1=$txLpB1 lpB2=$txLpB2 lpA1=$txLpA1 lpA2=$txLpA2 compThreshold=$txCompThresholdDb compRatio=$txCompRatio compAttack=$txCompAttackMs compRelease=$txCompReleaseMs micGain=$txMicGain gain=$txGain gateOpen=$txGateThresholdDb gateClose=$txGateCloseThresholdDb expanderRatio=$txExpanderRatio ${RadioDiagLog.elapsedTag()}")
     }
 
     fun abortPreCapture() {
@@ -714,6 +714,7 @@ class RadioAudioEngine(private val context: Context) {
                                         dspRateLimiter.tick()
                                         val preStats = if (dspRateLimiter.shouldLogDetail()) RadioDiagLog.pcmStats(monoFrame, monoFrameSizeBytes) else null
 
+                                        applyGain(monoFrame, monoFrameSizeBytes, txMicGain)
                                         highPassFilter(monoFrame, monoFrameSizeBytes)
                                         txNoiseGate(monoFrame, monoFrameSizeBytes)
                                         lowPassFilter(monoFrame, monoFrameSizeBytes)
@@ -722,7 +723,7 @@ class RadioAudioEngine(private val context: Context) {
 
                                         if (preStats != null) {
                                             val postStats = RadioDiagLog.pcmStats(monoFrame, monoFrameSizeBytes)
-                                            Log.d("[AudioDSP]", "DSP_FRAME frame=${dspRateLimiter.frameCount} pre=[$preStats] post=[$postStats] gate=${if (txGateOpen) "open" else "closed"} gateEnv=${String.format("%.1f", txGateEnvelopeDb)}dB gateThreshold=${txGateThresholdDb}dB ${RadioDiagLog.elapsedTag()}")
+                                            Log.d("[AudioDSP]", "DSP_FRAME frame=${dspRateLimiter.frameCount} pre=[$preStats] post=[$postStats] gate=${if (txGateOpen) "open" else "closed"} gateEnv=${String.format("%.1f", txGateEnvelopeDb)}dB gateThreshold=${txGateThresholdDb}dB micGain=$txMicGain ${RadioDiagLog.elapsedTag()}")
                                         }
 
                                         if (!queue.offer(monoFrame)) {
@@ -1139,6 +1140,7 @@ class RadioAudioEngine(private val context: Context) {
                                         dspRateLimiter.tick()
                                         val preStats = if (dspRateLimiter.shouldLogDetail()) RadioDiagLog.pcmStats(monoFrame, monoFrameSizeBytes) else null
 
+                                        applyGain(monoFrame, monoFrameSizeBytes, txMicGain)
                                         highPassFilter(monoFrame, monoFrameSizeBytes)
                                         txNoiseGate(monoFrame, monoFrameSizeBytes)
                                         lowPassFilter(monoFrame, monoFrameSizeBytes)
@@ -1147,7 +1149,7 @@ class RadioAudioEngine(private val context: Context) {
 
                                         if (preStats != null) {
                                             val postStats = RadioDiagLog.pcmStats(monoFrame, monoFrameSizeBytes)
-                                            Log.d("[AudioDSP]", "DSP_FRAME frame=${dspRateLimiter.frameCount} pre=[$preStats] post=[$postStats] gate=${if (txGateOpen) "open" else "closed"} gateEnv=${String.format("%.1f", txGateEnvelopeDb)}dB gateThreshold=${txGateThresholdDb}dB ${RadioDiagLog.elapsedTag()}")
+                                            Log.d("[AudioDSP]", "DSP_FRAME frame=${dspRateLimiter.frameCount} pre=[$preStats] post=[$postStats] gate=${if (txGateOpen) "open" else "closed"} gateEnv=${String.format("%.1f", txGateEnvelopeDb)}dB gateThreshold=${txGateThresholdDb}dB micGain=$txMicGain ${RadioDiagLog.elapsedTag()}")
                                         }
 
                                         if (!queue.offer(monoFrame)) {
@@ -1451,6 +1453,8 @@ class RadioAudioEngine(private val context: Context) {
     private val compReleaseCoeff: Double get() = 1.0 - Math.exp(-1.0 / (actualSampleRate * txCompReleaseMs))
 
     var txGain: Double = 2.0
+
+    var txMicGain: Double = 2.0
 
     var txGateThresholdDb: Double = -42.0
     var txGateCloseThresholdDb: Double = -46.0
