@@ -20,6 +20,10 @@ export default function Admin({ user, onLogout }) {
   const [aiDispatchLoading, setAiDispatchLoading] = useState(false);
   const [aiDispatchPipeline, setAiDispatchPipeline] = useState(null);
 
+  const [hourlyBroadcastEnabled, setHourlyBroadcastEnabled] = useState(true);
+  const [hourlyBroadcastNextFireAt, setHourlyBroadcastNextFireAt] = useState(null);
+  const [hourlyBroadcastLoading, setHourlyBroadcastLoading] = useState(false);
+
   const [pagingChannelId, setPagingChannelId] = useState("");
 
   const [scannerEnabled, setScannerEnabled] = useState(false);
@@ -72,7 +76,42 @@ export default function Admin({ user, onLogout }) {
   useEffect(() => {
     loadData();
     loadPagingData();
+    loadHourlyBroadcast();
   }, []);
+
+  const loadHourlyBroadcast = async () => {
+    try {
+      const res = await fetch("/api/admin/hourly-time-broadcast", { credentials: "include" });
+      if (res.ok) {
+        const data = await res.json();
+        setHourlyBroadcastEnabled(!!data.enabled);
+        setHourlyBroadcastNextFireAt(data.nextFireAt || null);
+      }
+    } catch (err) {
+      console.error("Failed to load hourly time broadcast status:", err);
+    }
+  };
+
+  const toggleHourlyBroadcast = async () => {
+    setHourlyBroadcastLoading(true);
+    try {
+      const res = await fetch("/api/admin/hourly-time-broadcast", {
+        method: "PUT",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled: !hourlyBroadcastEnabled }),
+      });
+      if (!res.ok) throw new Error("Failed to update hourly time broadcast");
+      const data = await res.json();
+      setHourlyBroadcastEnabled(!!data.enabled);
+      setHourlyBroadcastNextFireAt(data.nextFireAt || null);
+    } catch (err) {
+      console.error(err);
+      setError("Failed to update hourly time broadcast");
+    } finally {
+      setHourlyBroadcastLoading(false);
+    }
+  };
 
   const loadPagingData = async () => {
     try {
@@ -929,6 +968,30 @@ export default function Admin({ user, onLogout }) {
                     </div>
                   );
                 })()}
+              </div>
+
+              <div className="admin-settings-card">
+                <div className="admin-settings-card-header">
+                  <div>
+                    <h3 className="admin-settings-card-title">Hourly Time Broadcast</h3>
+                    <p className="admin-settings-card-desc">
+                      At the top of every hour, the AI voice announces the day, date, and time on the configured AI dispatch channel. Skipped automatically if the channel is busy.
+                    </p>
+                  </div>
+                  <button
+                    onClick={toggleHourlyBroadcast}
+                    disabled={hourlyBroadcastLoading}
+                    className={`admin-toggle-btn ${hourlyBroadcastEnabled ? "admin-toggle-btn-on" : "admin-toggle-btn-off"}`}
+                    style={{ opacity: hourlyBroadcastLoading ? 0.6 : 1, cursor: hourlyBroadcastLoading ? "not-allowed" : "pointer" }}
+                  >
+                    {hourlyBroadcastLoading ? "..." : hourlyBroadcastEnabled ? "ON" : "OFF"}
+                  </button>
+                </div>
+                {hourlyBroadcastNextFireAt && (
+                  <div style={{ marginTop: 8, fontSize: 13, color: "#888" }}>
+                    Next broadcast scheduled at {new Date(hourlyBroadcastNextFireAt).toLocaleString()}
+                  </div>
+                )}
               </div>
 
               <div className="admin-settings-card">

@@ -10,6 +10,7 @@ import { signalingService } from './services/signalingService.js';
 import { audioRelayService } from './services/audioRelayService.js';
 import { setupRecordingTap } from './services/recordingTapService.js';
 import { wsAudioBridge } from './services/wsAudioBridge.js';
+import { hourlyTimeBroadcastScheduler } from './services/hourlyTimeBroadcastService.js';
 
 let _buildVersion = 'unknown';
 try {
@@ -124,6 +125,14 @@ async function start() {
     console.error('AI Dispatcher auto-start failed:', err.message);
   }
 
+  try {
+    hourlyTimeBroadcastScheduler.start();
+    const next = hourlyTimeBroadcastScheduler.getNextFireAt();
+    console.log(`[STARTUP] Hourly time broadcast scheduler armed; next fire at ${next ? next.toISOString() : 'unknown'} (TZ=${process.env.TZ || 'system-default'})`);
+  } catch (err) {
+    console.error('[STARTUP] Failed to start hourly time broadcast scheduler:', err.message);
+  }
+
   if (!process.env.FIREBASE_SERVICE_ACCOUNT_JSON && !process.env.FIREBASE_SERVICE_ACCOUNT_PATH) {
     console.warn('[STARTUP] FCM push notifications DISABLED: set FIREBASE_SERVICE_ACCOUNT_JSON secret (raw JSON) or FIREBASE_SERVICE_ACCOUNT_PATH to enable device paging.');
   } else {
@@ -193,6 +202,11 @@ function setupGracefulShutdown(httpServer) {
       process.exit(1);
     }, HARD_SHUTDOWN_TIMEOUT_MS);
     hardShutdownTimer.unref();
+
+    await withStepTimeout('hourly time broadcast scheduler', () => {
+      console.log('[SHUTDOWN] Stopping hourly time broadcast scheduler...');
+      hourlyTimeBroadcastScheduler.stop();
+    });
 
     await withStepTimeout('signaling service', () => {
       console.log('[SHUTDOWN] Stopping signaling service...');

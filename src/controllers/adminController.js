@@ -16,6 +16,11 @@ import {
 import { signalingService } from '../services/signalingService.js';
 import { scannerFeedService } from '../services/scannerFeedService.js';
 import { textToSpeech, isConfigured as isSpeechConfigured } from '../services/azureSpeechService.js';
+import {
+  isHourlyTimeBroadcastEnabled,
+  setHourlyTimeBroadcastEnabled,
+  hourlyTimeBroadcastScheduler,
+} from '../services/hourlyTimeBroadcastService.js';
 
 async function generateAndStoreChannelAnnouncement(channelId, channelName) {
   if (!isSpeechConfigured()) return;
@@ -311,6 +316,38 @@ export async function getAiDispatch(req, res) {
   } catch (err) {
     console.error('Get AI dispatch error:', err);
     error(res, 'Failed to get AI dispatch status', 500);
+  }
+}
+
+export async function getHourlyTimeBroadcast(req, res) {
+  try {
+    const enabled = await isHourlyTimeBroadcastEnabled();
+    const nextFireAt = hourlyTimeBroadcastScheduler.getNextFireAt();
+    success(res, { enabled, nextFireAt: nextFireAt ? nextFireAt.toISOString() : null });
+  } catch (err) {
+    console.error('Get hourly time broadcast error:', err);
+    error(res, 'Failed to get hourly time broadcast status', 500);
+  }
+}
+
+export async function setHourlyTimeBroadcast(req, res) {
+  try {
+    const { enabled } = req.body;
+    if (typeof enabled !== 'boolean') {
+      return error(res, 'enabled must be a boolean', 400);
+    }
+    await setHourlyTimeBroadcastEnabled(enabled);
+    await authService.logUserActivity(
+      req.session.user.id,
+      req.session.user.username,
+      'admin_toggle_hourly_time_broadcast',
+      { enabled }
+    );
+    const nextFireAt = hourlyTimeBroadcastScheduler.getNextFireAt();
+    success(res, { enabled, nextFireAt: nextFireAt ? nextFireAt.toISOString() : null });
+  } catch (err) {
+    console.error('Set hourly time broadcast error:', err);
+    error(res, 'Failed to set hourly time broadcast status', 500);
   }
 }
 
