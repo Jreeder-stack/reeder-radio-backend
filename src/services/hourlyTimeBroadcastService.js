@@ -4,6 +4,18 @@ import { textToSpeech, isConfigured as isAzureConfigured } from './azureSpeechSe
 import { floorControlService } from './floorControlService.js';
 
 const SETTING_KEY = 'hourly_time_broadcast_enabled';
+const TZ_SETTING_KEY = 'hourly_time_broadcast_timezone';
+const DEFAULT_TZ = 'America/Chicago';
+
+function isValidTimeZone(tz) {
+  if (!tz || typeof tz !== 'string') return false;
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: tz });
+    return true;
+  } catch {
+    return false;
+  }
+}
 const HOUR_WORDS = [
   'zero hundred hours',
   'oh one hundred hours',
@@ -49,27 +61,41 @@ export async function setHourlyTimeBroadcastEnabled(enabled) {
   return setAiSetting(SETTING_KEY, enabled ? 'true' : 'false');
 }
 
-function localPartsForBroadcast(now = new Date()) {
-  const tz = process.env.TZ || undefined;
+export async function getHourlyTimeBroadcastTimezone() {
+  const value = await getAiSetting(TZ_SETTING_KEY);
+  if (isValidTimeZone(value)) return value;
+  if (isValidTimeZone(process.env.TZ)) return process.env.TZ;
+  return DEFAULT_TZ;
+}
+
+export async function setHourlyTimeBroadcastTimezone(tz) {
+  if (!isValidTimeZone(tz)) {
+    throw new RangeError(`invalid IANA time zone: ${tz}`);
+  }
+  return setAiSetting(TZ_SETTING_KEY, tz);
+}
+
+function localPartsForBroadcast(now = new Date(), tz = DEFAULT_TZ) {
+  const timeZone = isValidTimeZone(tz) ? tz : undefined;
   const dateFmt = new Intl.DateTimeFormat('en-US', {
     weekday: 'long',
     month: 'long',
     day: 'numeric',
     year: 'numeric',
-    timeZone: tz,
+    timeZone,
   });
   const hourFmt = new Intl.DateTimeFormat('en-US', {
     hour: 'numeric',
     hour12: false,
-    timeZone: tz,
+    timeZone,
   });
   let hour = parseInt(hourFmt.format(now), 10);
   if (hour === 24) hour = 0;
   return { hour, dateText: dateFmt.format(now) };
 }
 
-export function buildBroadcastMessage(now = new Date()) {
-  const { hour, dateText } = localPartsForBroadcast(now);
+export function buildBroadcastMessage(now = new Date(), tz = DEFAULT_TZ) {
+  const { hour, dateText } = localPartsForBroadcast(now, tz);
   return `Statewide Constable Communications System. Today is ${dateText}. The time is ${hourToSpokenPhrase(hour)}.`;
 }
 
@@ -167,7 +193,14 @@ class HourlyTimeBroadcastScheduler {
       return;
     }
 
-    const message = buildBroadcastMessage(new Date());
+    let tz;
+    try {
+      tz = await getHourlyTimeBroadcastTimezone();
+    } catch (err) {
+      this.log('TZ_READ_ERROR', { error: err.message });
+      tz = DEFAULT_TZ;
+    }
+    const message = buildBroadcastMessage(new Date(), tz);
     this.log('BROADCAST_START', { channel: channelKey, message });
 
     try {

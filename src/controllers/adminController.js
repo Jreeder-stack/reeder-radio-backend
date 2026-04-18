@@ -19,6 +19,8 @@ import { textToSpeech, isConfigured as isSpeechConfigured } from '../services/az
 import {
   isHourlyTimeBroadcastEnabled,
   setHourlyTimeBroadcastEnabled,
+  getHourlyTimeBroadcastTimezone,
+  setHourlyTimeBroadcastTimezone,
   hourlyTimeBroadcastScheduler,
 } from '../services/hourlyTimeBroadcastService.js';
 
@@ -322,8 +324,13 @@ export async function getAiDispatch(req, res) {
 export async function getHourlyTimeBroadcast(req, res) {
   try {
     const enabled = await isHourlyTimeBroadcastEnabled();
+    const timezone = await getHourlyTimeBroadcastTimezone();
     const nextFireAt = hourlyTimeBroadcastScheduler.getNextFireAt();
-    success(res, { enabled, nextFireAt: nextFireAt ? nextFireAt.toISOString() : null });
+    success(res, {
+      enabled,
+      timezone,
+      nextFireAt: nextFireAt ? nextFireAt.toISOString() : null,
+    });
   } catch (err) {
     console.error('Get hourly time broadcast error:', err);
     error(res, 'Failed to get hourly time broadcast status', 500);
@@ -332,19 +339,37 @@ export async function getHourlyTimeBroadcast(req, res) {
 
 export async function setHourlyTimeBroadcast(req, res) {
   try {
-    const { enabled } = req.body;
-    if (typeof enabled !== 'boolean') {
+    const { enabled, timezone } = req.body;
+    if (enabled !== undefined && typeof enabled !== 'boolean') {
       return error(res, 'enabled must be a boolean', 400);
     }
-    await setHourlyTimeBroadcastEnabled(enabled);
+    if (timezone !== undefined && typeof timezone !== 'string') {
+      return error(res, 'timezone must be a string', 400);
+    }
+    if (enabled !== undefined) {
+      await setHourlyTimeBroadcastEnabled(enabled);
+    }
+    if (timezone !== undefined) {
+      try {
+        await setHourlyTimeBroadcastTimezone(timezone);
+      } catch (err) {
+        return error(res, `Invalid IANA time zone: ${timezone}`, 400);
+      }
+    }
     await authService.logUserActivity(
       req.session.user.id,
       req.session.user.username,
       'admin_toggle_hourly_time_broadcast',
-      { enabled }
+      { enabled, timezone }
     );
+    const finalEnabled = await isHourlyTimeBroadcastEnabled();
+    const finalTimezone = await getHourlyTimeBroadcastTimezone();
     const nextFireAt = hourlyTimeBroadcastScheduler.getNextFireAt();
-    success(res, { enabled, nextFireAt: nextFireAt ? nextFireAt.toISOString() : null });
+    success(res, {
+      enabled: finalEnabled,
+      timezone: finalTimezone,
+      nextFireAt: nextFireAt ? nextFireAt.toISOString() : null,
+    });
   } catch (err) {
     console.error('Set hourly time broadcast error:', err);
     error(res, 'Failed to set hourly time broadcast status', 500);
