@@ -23,8 +23,6 @@ export default function Admin({ user, onLogout }) {
   const [hourlyBroadcastEnabled, setHourlyBroadcastEnabled] = useState(true);
   const [hourlyBroadcastNextFireAt, setHourlyBroadcastNextFireAt] = useState(null);
   const [hourlyBroadcastLoading, setHourlyBroadcastLoading] = useState(false);
-  const [hourlyBroadcastTimezone, setHourlyBroadcastTimezone] = useState("America/Chicago");
-  const [hourlyBroadcastTimezoneDraft, setHourlyBroadcastTimezoneDraft] = useState("America/Chicago");
 
   const [pagingChannelId, setPagingChannelId] = useState("");
 
