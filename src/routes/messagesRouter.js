@@ -9,29 +9,6 @@ import path from 'path';
 
 const router = Router();
 
-function wrapPcmInWav(pcmData, sampleRate = 16000, numChannels = 1, bitsPerSample = 16) {
-  const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
-  const blockAlign = numChannels * (bitsPerSample / 8);
-  const dataSize = pcmData.length;
-  const headerSize = 44;
-  const buffer = Buffer.alloc(headerSize + dataSize);
-  buffer.write('RIFF', 0);
-  buffer.writeUInt32LE(36 + dataSize, 4);
-  buffer.write('WAVE', 8);
-  buffer.write('fmt ', 12);
-  buffer.writeUInt32LE(16, 16);
-  buffer.writeUInt16LE(1, 20);
-  buffer.writeUInt16LE(numChannels, 22);
-  buffer.writeUInt32LE(sampleRate, 24);
-  buffer.writeUInt32LE(byteRate, 28);
-  buffer.writeUInt16LE(blockAlign, 30);
-  buffer.writeUInt16LE(bitsPerSample, 32);
-  buffer.write('data', 36);
-  buffer.writeUInt32LE(dataSize, 40);
-  pcmData.copy(buffer, 44);
-  return buffer;
-}
-
 const AUDIO_DIR = path.join(process.cwd(), 'uploads', 'audio');
 
 router.get('/export/audio', requireDispatcher, async (req, res) => {
@@ -93,13 +70,6 @@ router.get('/export/audio', requireDispatcher, async (req, res) => {
   }
 });
 
-function looksLikeRawOpusOrOgg(buf) {
-  if (!Buffer.isBuffer(buf) || buf.length < 4) return false;
-  if (buf.slice(0, 4).toString('ascii') === 'OggS') return true;
-  if (buf.length >= 8 && buf.slice(0, 8).toString('ascii') === 'OpusHead') return true;
-  return false;
-}
-
 function serveAudioBuffer(res, buf) {
   if (!Buffer.isBuffer(buf) || buf.length === 0) {
     console.warn('[AudioRoute] Empty or missing audio data — returning 404');
@@ -107,20 +77,9 @@ function serveAudioBuffer(res, buf) {
     return res.status(404).end();
   }
 
-  if (looksLikeRawOpusOrOgg(buf)) {
-    console.warn(`[AudioRoute] Audio data appears to be raw Opus/Ogg (${buf.length} bytes) — not playable as WAV, returning 415`);
-    res.setHeader('Content-Type', 'audio/wav');
-    return res.status(415).end();
-  }
-
-  let audioData = buf;
-  if (!isValidWav(audioData)) {
-    console.warn('[AudioRoute] Audio data missing WAV headers — wrapping as PCM 16kHz mono 16-bit');
-    audioData = wrapPcmInWav(audioData);
-  }
   res.setHeader('Content-Type', 'audio/wav');
-  res.setHeader('Content-Length', audioData.length);
-  return res.send(audioData);
+  res.setHeader('Content-Length', buf.length);
+  return res.send(buf);
 }
 
 router.head('/audio/:filename', async (req, res) => {
@@ -132,12 +91,8 @@ router.head('/audio/:filename', async (req, res) => {
 
     const audioData = await getAudioDataByFilename(filename);
     if (audioData && audioData.length > 0) {
-      let size = audioData.length;
-      if (!isValidWav(audioData)) {
-        size = audioData.length + 44;
-      }
       res.setHeader('Content-Type', 'audio/wav');
-      res.setHeader('Content-Length', size);
+      res.setHeader('Content-Length', audioData.length);
       return res.status(200).end();
     }
 
