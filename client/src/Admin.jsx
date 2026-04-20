@@ -81,6 +81,27 @@ export default function Admin({ user, onLogout }) {
     loadHourlyBroadcast();
   }, []);
 
+  useEffect(() => {
+    const interval = setInterval(() => {
+      loadHourlyBroadcast();
+    }, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    if (!hourlyBroadcastNextFireAt) return;
+    const fireMs = new Date(hourlyBroadcastNextFireAt).getTime();
+    const delay = fireMs - Date.now() + 2000;
+    if (delay <= 0) {
+      loadHourlyBroadcast();
+      return;
+    }
+    const timeout = setTimeout(() => {
+      loadHourlyBroadcast();
+    }, delay);
+    return () => clearTimeout(timeout);
+  }, [hourlyBroadcastNextFireAt]);
+
   const loadHourlyBroadcast = async () => {
     try {
       const res = await fetch("/api/admin/hourly-time-broadcast", { credentials: "include" });
@@ -1070,7 +1091,15 @@ export default function Admin({ user, onLogout }) {
                 )}
                 {hourlyBroadcastNextFireAt && (
                   <div style={{ marginTop: 8, fontSize: 13, color: "#888" }}>
-                    Next broadcast scheduled at {new Date(hourlyBroadcastNextFireAt).toLocaleString()}
+                    Next broadcast scheduled at {new Date(hourlyBroadcastNextFireAt).toLocaleString(undefined, {
+                      year: "numeric",
+                      month: "numeric",
+                      day: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      second: "2-digit",
+                      hour12: false,
+                    })}
                   </div>
                 )}
               </div>
