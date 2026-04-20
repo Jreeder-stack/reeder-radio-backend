@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { sendTextMessage, sendAudioMessage, getMessages, transcribeMessage, getAudioFilePath } from '../services/messagesService.js';
+import { isValidWav, InvalidAudioBufferError } from '../services/wavValidator.js';
 import { getMessagesByDateRange, getAudioDataByFilename, getAudioMessageDiagnostics } from '../db/index.js';
 import { requireDispatcher } from '../middleware/auth.js';
 import archiver from 'archiver';
@@ -7,12 +8,6 @@ import fs from 'fs';
 import path from 'path';
 
 const router = Router();
-
-function isValidWav(buf) {
-  return Buffer.isBuffer(buf) && buf.length > 12
-    && buf.slice(0, 4).toString('ascii') === 'RIFF'
-    && buf.slice(8, 12).toString('ascii') === 'WAVE';
-}
 
 function wrapPcmInWav(pcmData, sampleRate = 16000, numChannels = 1, bitsPerSample = 16) {
   const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
@@ -299,15 +294,18 @@ router.post('/:channel/audio', async (req, res) => {
     }
     
     let audioBuffer = Buffer.from(req.body.audio, 'base64');
-    
+
     if (!isValidWav(audioBuffer)) {
-      console.warn('[AudioRoute] POST audio: buffer missing WAV headers — wrapping as PCM 16kHz mono 16-bit');
-      audioBuffer = wrapPcmInWav(audioBuffer);
+      console.warn(`[AudioRoute] POST audio rejected: buffer is not a valid WAV (size=${audioBuffer.length}, channel=${channel}, sender=${sender})`);
+      return res.status(415).json({ success: false, error: 'Audio must be a valid WAV (RIFF/WAVE) buffer' });
     }
-    
+
     const message = await sendAudioMessage(channel, sender, audioBuffer, duration);
     res.json({ success: true, message });
   } catch (error) {
+    if (error instanceof InvalidAudioBufferError) {
+      return res.status(415).json({ success: false, error: error.message });
+    }
     console.error('Error sending audio message:', error);
     res.status(500).json({ success: false, error: error.message });
   }

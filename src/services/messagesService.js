@@ -2,6 +2,7 @@ import { createChannelMessage, getChannelMessages, updateMessageTranscription, g
 import pool from '../db/index.js';
 import { speechToText } from './azureSpeechService.js';
 import { broadcastMessage } from './aiDispatchService.js';
+import { isValidWav, InvalidAudioBufferError } from './wavValidator.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -41,6 +42,12 @@ export async function sendTextMessage(channel, sender, content) {
 }
 
 export async function sendAudioMessage(channel, sender, audioBuffer, duration = null, skipBroadcast = false) {
+  if (!isValidWav(audioBuffer)) {
+    const size = Buffer.isBuffer(audioBuffer) ? audioBuffer.length : 0;
+    console.warn(`[MessagesService] Refusing to persist invalid audio buffer for channel=${channel} sender=${sender} size=${size}`);
+    throw new InvalidAudioBufferError('not a valid WAV', { channel, sender, size });
+  }
+
   const normalizedChannel = await normalizeChannelToRoomKey(channel);
   const sanitizedChannel = normalizedChannel.replace(/[^a-zA-Z0-9_\-]/g, '_');
   const sanitizedSender = sender.replace(/[^a-zA-Z0-9]/g, '_');

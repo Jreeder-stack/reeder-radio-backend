@@ -3,6 +3,7 @@ import { matchCommand, resetDispatcherState, matchEmergencyResponse, matchSecure
 import { isConfigured as isLlmConfigured, classifyIntent, answerWithData } from './llmIntentService.js';
 import { parsePersonDetails, parseDOB, extractNameFromTranscript } from './phoneticParser.js';
 import pool, { isAiDispatchEnabled, getAiDispatchChannel, createChannelMessage } from '../db/index.js';
+import { isValidWav } from './wavValidator.js';
 import { audioRelayService } from './audioRelayService.js';
 import { opusCodec, SAMPLE_RATE as OPUS_SAMPLE_RATE, FRAME_SIZE as OPUS_FRAME_SIZE } from './opusCodec.js';
 import { floorControlService } from './floorControlService.js';
@@ -1311,9 +1312,7 @@ class AIDispatcher {
         return;
       }
 
-      if (wavBuffer.length < 44 ||
-          wavBuffer.toString('ascii', 0, 4) !== 'RIFF' ||
-          wavBuffer.toString('ascii', 8, 12) !== 'WAVE') {
+      if (!isValidWav(wavBuffer)) {
         this.log('VOICE_MESSAGE_CORRUPT_WAV', { channel: channelName, sender, size: wavBuffer.length });
         return;
       }
@@ -5226,6 +5225,10 @@ class AIDispatcher {
         try {
           const wavHeader = createWavHeader(audioBuffer.length, AZURE_SAMPLE_RATE, CHANNELS, 16);
           const wavBuffer = Buffer.concat([wavHeader, audioBuffer]);
+          if (!isValidWav(wavBuffer)) {
+            this.log('CHAT_RECORD_INVALID_WAV', { channel: this.channelName, size: wavBuffer.length });
+            return;
+          }
           const filename = `${this.channelName}_${Date.now()}_AI-DISPATCHER.wav`;
           const filepath = path.join(AUDIO_DIR, filename);
           fs.writeFileSync(filepath, wavBuffer);
