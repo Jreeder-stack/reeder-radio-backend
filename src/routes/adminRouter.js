@@ -31,6 +31,7 @@ router.put('/ai-dispatch', adminController.setAiDispatch);
 
 router.get('/hourly-time-broadcast', adminController.getHourlyTimeBroadcast);
 router.put('/hourly-time-broadcast', adminController.setHourlyTimeBroadcast);
+router.post('/hourly-time-broadcast/play-now', adminController.playHourlyTimeBroadcastNow);
 
 router.get('/audio-tuning', adminController.getAudioTuning);
 router.put('/audio-tuning', adminController.setAudioTuning);

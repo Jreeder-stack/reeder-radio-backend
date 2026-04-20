@@ -330,6 +330,22 @@ export async function getHourlyTimeBroadcast(req, res) {
   }
 }
 
+export async function playHourlyTimeBroadcastNow(req, res) {
+  try {
+    const result = await hourlyTimeBroadcastScheduler.playNow();
+    await authService.logUserActivity(
+      req.session.user.id,
+      req.session.user.username,
+      'admin_play_hourly_time_broadcast_now',
+      { status: result.status, played: result.played }
+    );
+    success(res, result);
+  } catch (err) {
+    console.error('Play hourly time broadcast error:', err);
+    error(res, 'Failed to play hourly time broadcast', 500);
+  }
+}
+
 export async function setHourlyTimeBroadcast(req, res) {
   try {
     const { enabled } = req.body;

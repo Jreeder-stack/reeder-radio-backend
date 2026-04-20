@@ -40,6 +40,47 @@ export function hourToSpokenPhrase(hour) {
   return HOUR_WORDS[h];
 }
 
+const SPOKEN_NUM_ONES = ['zero','one','two','three','four','five','six','seven','eight','nine','ten','eleven','twelve','thirteen','fourteen','fifteen','sixteen','seventeen','eighteen','nineteen'];
+const SPOKEN_NUM_DECADES = ['','','twenty','thirty','forty','fifty'];
+
+function spokenNum(n) {
+  if (n < 20) return SPOKEN_NUM_ONES[n];
+  const t = Math.floor(n / 10);
+  const o = n % 10;
+  return o === 0 ? SPOKEN_NUM_DECADES[t] : `${SPOKEN_NUM_DECADES[t]} ${SPOKEN_NUM_ONES[o]}`;
+}
+
+function getEasternHourMinute(now = new Date()) {
+  const fmt = new Intl.DateTimeFormat('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: BROADCAST_TZ,
+  });
+  const parts = fmt.formatToParts(now);
+  let hour = 0, minute = 0;
+  for (const p of parts) {
+    if (p.type === 'hour') hour = parseInt(p.value, 10);
+    else if (p.type === 'minute') minute = parseInt(p.value, 10);
+  }
+  if (hour === 24) hour = 0;
+  return { hour, minute };
+}
+
+export function formatSpokenTime24(date = new Date()) {
+  const { hour, minute } = getEasternHourMinute(date);
+  const hourWord = hour < 10 ? `oh ${SPOKEN_NUM_ONES[hour]}` : spokenNum(hour);
+  let minuteWord;
+  if (minute === 0) {
+    minuteWord = 'hundred';
+  } else if (minute < 10) {
+    minuteWord = `oh ${SPOKEN_NUM_ONES[minute]}`;
+  } else {
+    minuteWord = spokenNum(minute);
+  }
+  return `${hourWord} ${minuteWord} hours`;
+}
+
 export async function isHourlyTimeBroadcastEnabled() {
   const value = await getAiSetting(SETTING_KEY);
   if (value === undefined || value === null) return true;
@@ -58,19 +99,13 @@ function localPartsForBroadcast(now = new Date()) {
     year: 'numeric',
     timeZone: BROADCAST_TZ,
   });
-  const hourFmt = new Intl.DateTimeFormat('en-US', {
-    hour: 'numeric',
-    hour12: false,
-    timeZone: BROADCAST_TZ,
-  });
-  let hour = parseInt(hourFmt.format(now), 10);
-  if (hour === 24) hour = 0;
-  return { hour, dateText: dateFmt.format(now) };
+  return { dateText: dateFmt.format(now) };
 }
 
 export function buildBroadcastMessage(now = new Date()) {
-  const { hour, dateText } = localPartsForBroadcast(now);
-  return `Statewide Constable Communications System. Today is ${dateText}. The time is ${hourToSpokenPhrase(hour)}.`;
+  const { dateText } = localPartsForBroadcast(now);
+  const timeText = formatSpokenTime24(now);
+  return `Statewide Constable Communications System. Today is ${dateText}. The time is ${timeText}.`;
 }
 
 function nextHourBoundaryDelayMs(now = Date.now()) {
@@ -134,10 +169,15 @@ class HourlyTimeBroadcastScheduler {
       this.log('SKIPPED', { reason: 'disabled_by_setting' });
       return;
     }
+    const result = await this._broadcastNow({ source: 'scheduled' });
+    if (!result.played) {
+      this.log('SKIPPED', { reason: result.status, ...result.details });
+    }
+  }
 
+  async _broadcastNow({ source }) {
     if (!isAzureConfigured()) {
-      this.log('SKIPPED', { reason: 'azure_not_configured' });
-      return;
+      return { played: false, status: 'azure_not_configured', details: {} };
     }
 
     let aiEnabled = false;
@@ -146,37 +186,40 @@ class HourlyTimeBroadcastScheduler {
       aiEnabled = await isAiDispatchEnabled();
       dispatchChannel = await getAiDispatchChannel();
     } catch (err) {
-      this.log('AI_STATE_READ_ERROR', { error: err.message });
-      return;
+      this.log('AI_STATE_READ_ERROR', { error: err.message, source });
+      return { played: false, status: 'ai_not_configured', details: { error: err.message } };
     }
     if (!aiEnabled || !dispatchChannel) {
-      this.log('SKIPPED', { reason: 'ai_dispatch_not_configured', aiEnabled, dispatchChannel });
-      return;
+      return { played: false, status: 'ai_not_configured', details: { aiEnabled, dispatchChannel } };
     }
 
     const dispatcher = getDispatcher();
     if (!dispatcher.isRunning || !dispatcher.connected || !dispatcher.channelName) {
-      this.log('SKIPPED', { reason: 'dispatcher_not_connected', channel: dispatchChannel });
-      return;
+      return { played: false, status: 'dispatcher_not_connected', details: { channel: dispatchChannel } };
     }
 
     const channelKey = dispatcher.channelName;
     const holder = floorControlService.getFloorHolder(channelKey);
     if (holder && holder.unitId !== 'AI-Dispatcher') {
-      this.log('SKIPPED', { reason: 'channel_busy', channel: channelKey, heldBy: holder.unitId });
-      return;
+      return { played: false, status: 'channel_busy', details: { channel: channelKey, heldBy: holder.unitId } };
     }
 
     const message = buildBroadcastMessage(new Date());
-    this.log('BROADCAST_START', { channel: channelKey, message });
+    this.log('BROADCAST_START', { channel: channelKey, message, source });
 
     try {
       const audio = await textToSpeech(message);
       await dispatcher.publishAudio(audio, message);
-      this.log('BROADCAST_COMPLETE', { channel: channelKey });
+      this.log('BROADCAST_COMPLETE', { channel: channelKey, source });
+      return { played: true, status: 'played', details: { channel: channelKey, message } };
     } catch (err) {
-      this.log('BROADCAST_ERROR', { error: err.message });
+      this.log('BROADCAST_ERROR', { error: err.message, source });
+      return { played: false, status: 'broadcast_error', details: { error: err.message } };
     }
+  }
+
+  async playNow() {
+    return this._broadcastNow({ source: 'manual' });
   }
 }
 

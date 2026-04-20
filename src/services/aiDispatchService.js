@@ -6,6 +6,7 @@ import pool, { isAiDispatchEnabled, getAiDispatchChannel, createChannelMessage }
 import { audioRelayService } from './audioRelayService.js';
 import { opusCodec, SAMPLE_RATE as OPUS_SAMPLE_RATE, FRAME_SIZE as OPUS_FRAME_SIZE } from './opusCodec.js';
 import { floorControlService } from './floorControlService.js';
+import { formatSpokenTime24 } from './hourlyTimeBroadcastService.js';
 import * as cadService from './cadService.js';
 import locationService from './locationService.js';
 import { webSearch, SEARCH_STATUS } from './webSearchService.js';
@@ -4963,29 +4964,7 @@ class AIDispatcher {
   }
 
   _formatSpokenTime24(date) {
-    const ones = ['zero','one','two','three','four','five','six','seven','eight','nine','ten','eleven','twelve','thirteen','fourteen','fifteen','sixteen','seventeen','eighteen','nineteen'];
-    const decadeWords = ['','','twenty','thirty','forty','fifty'];
-
-    const h = date.getHours();
-    const m = date.getMinutes();
-
-    const formatNum = (n) => {
-      if (n < 20) return ones[n];
-      const t = Math.floor(n / 10);
-      const o = n % 10;
-      return o === 0 ? decadeWords[t] : `${decadeWords[t]} ${ones[o]}`;
-    };
-
-    let hourWord = formatNum(h);
-    let minuteWord;
-    if (m === 0) {
-      minuteWord = 'hundred';
-    } else if (m < 10) {
-      minuteWord = `oh ${ones[m]}`;
-    } else {
-      minuteWord = formatNum(m);
-    }
-    return `${hourWord} ${minuteWord} hours`;
+    return formatSpokenTime24(date);
   }
 
   _buildBoloAnnouncementParts(bolo) {

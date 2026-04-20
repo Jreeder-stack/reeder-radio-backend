@@ -23,6 +23,8 @@ export default function Admin({ user, onLogout }) {
   const [hourlyBroadcastEnabled, setHourlyBroadcastEnabled] = useState(true);
   const [hourlyBroadcastNextFireAt, setHourlyBroadcastNextFireAt] = useState(null);
   const [hourlyBroadcastLoading, setHourlyBroadcastLoading] = useState(false);
+  const [hourlyBroadcastPlayNowDisabled, setHourlyBroadcastPlayNowDisabled] = useState(false);
+  const [hourlyBroadcastPlayNowStatus, setHourlyBroadcastPlayNowStatus] = useState(null);
 
   const [pagingChannelId, setPagingChannelId] = useState("");
 
@@ -89,6 +91,51 @@ export default function Admin({ user, onLogout }) {
       }
     } catch (err) {
       console.error("Failed to load hourly time broadcast status:", err);
+    }
+  };
+
+  const playHourlyBroadcastNow = async () => {
+    if (hourlyBroadcastPlayNowDisabled) return;
+    setHourlyBroadcastPlayNowDisabled(true);
+    setHourlyBroadcastPlayNowStatus({ kind: "loading", message: "Playing..." });
+    try {
+      const res = await fetch("/api/admin/hourly-time-broadcast/play-now", {
+        method: "POST",
+        credentials: "include",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || "Failed to play broadcast");
+      const status = data?.status || (data?.played ? "played" : "unknown");
+      let message;
+      let kind = "info";
+      switch (status) {
+        case "played":
+          message = "Played";
+          kind = "success";
+          break;
+        case "channel_busy":
+          message = "Channel busy — try again";
+          kind = "warn";
+          break;
+        case "ai_not_configured":
+        case "dispatcher_not_connected":
+          message = "AI not configured";
+          kind = "warn";
+          break;
+        case "azure_not_configured":
+          message = "TTS not configured";
+          kind = "warn";
+          break;
+        default:
+          message = `Skipped (${status})`;
+          kind = "warn";
+      }
+      setHourlyBroadcastPlayNowStatus({ kind, message });
+      setTimeout(() => setHourlyBroadcastPlayNowDisabled(false), 3000);
+    } catch (err) {
+      console.error(err);
+      setHourlyBroadcastPlayNowStatus({ kind: "error", message: "Failed to play" });
+      setHourlyBroadcastPlayNowDisabled(false);
     }
   };
 
@@ -978,15 +1025,49 @@ export default function Admin({ user, onLogout }) {
                       At the top of every hour, the AI voice announces the day, date, and time on the configured AI dispatch channel. Skipped automatically if the channel is busy.
                     </p>
                   </div>
-                  <button
-                    onClick={toggleHourlyBroadcast}
-                    disabled={hourlyBroadcastLoading}
-                    className={`admin-toggle-btn ${hourlyBroadcastEnabled ? "admin-toggle-btn-on" : "admin-toggle-btn-off"}`}
-                    style={{ opacity: hourlyBroadcastLoading ? 0.6 : 1, cursor: hourlyBroadcastLoading ? "not-allowed" : "pointer" }}
-                  >
-                    {hourlyBroadcastLoading ? "..." : hourlyBroadcastEnabled ? "ON" : "OFF"}
-                  </button>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    <button
+                      onClick={playHourlyBroadcastNow}
+                      disabled={hourlyBroadcastPlayNowDisabled}
+                      className="admin-toggle-btn"
+                      style={{
+                        opacity: hourlyBroadcastPlayNowDisabled ? 0.6 : 1,
+                        cursor: hourlyBroadcastPlayNowDisabled ? "not-allowed" : "pointer",
+                      }}
+                      title="Speak the current date and time on the AI dispatch channel now"
+                    >
+                      {hourlyBroadcastPlayNowDisabled && hourlyBroadcastPlayNowStatus?.kind === "loading"
+                        ? "..."
+                        : "Play Now"}
+                    </button>
+                    <button
+                      onClick={toggleHourlyBroadcast}
+                      disabled={hourlyBroadcastLoading}
+                      className={`admin-toggle-btn ${hourlyBroadcastEnabled ? "admin-toggle-btn-on" : "admin-toggle-btn-off"}`}
+                      style={{ opacity: hourlyBroadcastLoading ? 0.6 : 1, cursor: hourlyBroadcastLoading ? "not-allowed" : "pointer" }}
+                    >
+                      {hourlyBroadcastLoading ? "..." : hourlyBroadcastEnabled ? "ON" : "OFF"}
+                    </button>
+                  </div>
                 </div>
+                {hourlyBroadcastPlayNowStatus && (
+                  <div
+                    style={{
+                      marginTop: 8,
+                      fontSize: 13,
+                      color:
+                        hourlyBroadcastPlayNowStatus.kind === "success"
+                          ? "#3a8a3a"
+                          : hourlyBroadcastPlayNowStatus.kind === "error"
+                          ? "#c0392b"
+                          : hourlyBroadcastPlayNowStatus.kind === "warn"
+                          ? "#b07d10"
+                          : "#888",
+                    }}
+                  >
+                    {hourlyBroadcastPlayNowStatus.message}
+                  </div>
+                )}
                 {hourlyBroadcastNextFireAt && (
                   <div style={{ marginTop: 8, fontSize: 13, color: "#888" }}>
                     Next broadcast scheduled at {new Date(hourlyBroadcastNextFireAt).toLocaleString()}
