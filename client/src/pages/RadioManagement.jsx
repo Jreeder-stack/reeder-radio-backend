@@ -199,7 +199,7 @@ export default function RadioManagement({ user }) {
   });
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--dispatch-bg)', color: 'var(--dispatch-text)', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+    <div className="min-h-screen-safe" style={{ background: 'var(--dispatch-bg)', color: 'var(--dispatch-text)', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
       <header style={{
         background: 'var(--dispatch-panel)',
         borderBottom: '1px solid var(--dispatch-border)',

@@ -509,7 +509,14 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
                          toneTransmitting;
 
   return (
-    <div className="flex items-center justify-between px-4 py-3 bg-dispatch-panel border-t border-dispatch-border">
+    <div
+      className="flex items-center justify-between px-4 py-3 bg-dispatch-panel border-t border-dispatch-border"
+      style={{
+        paddingLeft: 'max(env(safe-area-inset-left, 0px), 16px)',
+        paddingRight: 'max(env(safe-area-inset-right, 0px), 16px)',
+        paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 12px)',
+      }}
+    >
       <div className="flex items-center gap-3">
         <button
           ref={pttRef}

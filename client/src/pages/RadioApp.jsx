@@ -24,8 +24,8 @@ export default function RadioApp({ user, onLogout }) {
 
   return (
     <div
+      className="min-h-screen-safe"
       style={{
-        minHeight: "100vh",
         background: "#1a1a2e",
         color: "#fff",
         fontFamily: "system-ui, -apple-system, sans-serif",

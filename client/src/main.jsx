@@ -42,8 +42,8 @@ function ProtectedRoute({ children, adminOnly = false, dispatcherOnly = false })
   if (loading) {
     return (
       <div
+        className="min-h-screen-safe"
         style={{
-          minHeight: "100vh",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -79,8 +79,8 @@ function LoginRoute() {
   if (loading) {
     return (
       <div
+        className="min-h-screen-safe"
         style={{
-          minHeight: "100vh",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",

@@ -32,8 +32,7 @@ export class ErrorBoundary extends Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{
-          minHeight: '100vh',
+        <div className="min-h-screen-safe" style={{
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',

@@ -14,7 +14,13 @@ export default function TopBar({ user, onLogout, agencyName = "REEDER-SYSTEMS", 
   }, []);
 
   return (
-    <div className="topbar flex items-center justify-between px-4 py-2.5">
+    <div
+      className="topbar flex items-center justify-between px-4 py-2.5"
+      style={{
+        paddingLeft: 'max(env(safe-area-inset-left, 0px), 16px)',
+        paddingRight: 'max(env(safe-area-inset-right, 0px), 16px)',
+      }}
+    >
       <div className="flex items-center gap-4">
         <h1 className="text-lg font-bold text-dispatch-text tracking-tight">{agencyName}</h1>
         <div className="h-4 w-px bg-dispatch-border"></div>

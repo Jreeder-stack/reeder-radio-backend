@@ -7,6 +7,7 @@ import { unlockAudio } from "./audio/iosAudioUnlock";
 import { preloadPermitBuffer } from "./audio/talkPermitTone.js";
 import toneEngine from "./audio/toneEngine.js";
 import { setupAppLifecycle } from "./lib/capacitor";
+import { acquireWakeLock, releaseWakeLock } from "./plugins/backgroundService";
 import { signalingManager } from "./signaling/SignalingManager";
 import { useMobileRadioContext } from "./context/MobileRadioContext.jsx";
 import { useTheme } from "./context/ThemeContext.jsx";
@@ -270,6 +271,53 @@ export default function App({ user, onLogout }) {
       }
     );
     return cleanup;
+  }, []);
+
+  // iOS / web Wake Lock: keep the screen awake while the app is in the
+  // foreground. Released automatically when the page is hidden, re-acquired
+  // on visibility change. No-op if the API is unavailable (older iOS).
+  useEffect(() => {
+    let cancelled = false;
+
+    const tryAcquire = async () => {
+      try {
+        await acquireWakeLock();
+      } catch (_) { /* best-effort */ }
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        if (cancelled) return;
+        tryAcquire();
+        // Resume audio context after returning to the page (iOS Safari
+        // suspends it when the tab/PWA is backgrounded).
+        if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
+          audioContextRef.current.resume().catch(() => {});
+        }
+      } else {
+        releaseWakeLock().catch(() => {});
+      }
+    };
+
+    const handlePageShow = () => {
+      // iOS Safari restores from bfcache via 'pageshow' rather than
+      // 'visibilitychange'; ensure audio + wake lock recover here too.
+      tryAcquire();
+      if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
+        audioContextRef.current.resume().catch(() => {});
+      }
+    };
+
+    if (document.visibilityState === 'visible') tryAcquire();
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('pageshow', handlePageShow);
+
+    return () => {
+      cancelled = true;
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('pageshow', handlePageShow);
+      releaseWakeLock().catch(() => {});
+    };
   }, []);
 
   useEffect(() => {

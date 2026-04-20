@@ -35,6 +35,7 @@ The dispatch console is a PWA with responsive design, featuring auto-login, dark
 - **Global Emergency Alerts:** Application-wide display and acknowledgment of emergency alarms.
 - **Monitor-Only Audio Connections:** Dispatch Console can monitor channels without immediate audio resource consumption.
 - **Cost Optimization:** On-demand audio connection activation and idle timeouts.
+- **iOS / PWA polish (Task #376):** `viewport-fit=cover` + iOS safe-area insets on `.dispatch-viewport`, `.admin-root`, TopBar, and BottomBar so UI clears the iPhone notch and Home Indicator. Full-height layouts use `100svh` (with `100vh` fallback) via `.h-screen-safe` / `.min-h-screen-safe` utilities to avoid clipping behind Safari's collapsing address bar. Apple PWA tags include `mobile-web-app-capable`, `apple-touch-startup-image`, and `format-detection=telephone=no`. Web Wake Lock is acquired while the page is visible (and re-acquired on `visibilitychange` / `pageshow`) so iPhones don't sleep mid-monitor; same handlers also resume the AudioContext after returning from background. `client/src/lib/iosUtils.js` exposes `isIOS()`, `isSafari()`, `isStandalonePWA()` helpers. Audio transport code remains untouched per project rule.
 
 ### Feature Specifications
 - **Core PTT:** Unit ID-based authentication and Push-to-Talk.

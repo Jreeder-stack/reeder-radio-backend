@@ -191,11 +191,12 @@ export default function VmLogs({ isMobile, standalone = false }) {
   };
 
   const containerStyle = standalone
-    ? { display: "flex", flexDirection: "column", height: "100vh", background: "var(--dispatch-bg)", padding: 16, boxSizing: "border-box" }
-    : { display: "flex", flexDirection: "column", height: "calc(100vh - 180px)" };
+    ? { display: "flex", flexDirection: "column", background: "var(--dispatch-bg)", padding: 16, boxSizing: "border-box" }
+    : { display: "flex", flexDirection: "column" };
+  const containerClass = standalone ? "h-screen-safe" : "h-screen-minus-180";
 
   return (
-    <div style={containerStyle}>
+    <div className={containerClass} style={containerStyle}>
       {standalone && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
           <div style={{ fontSize: 18, fontWeight: 600, color: "var(--dispatch-text)" }}>

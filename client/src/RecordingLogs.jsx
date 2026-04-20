@@ -549,7 +549,7 @@ export default function RecordingLogs({ isMobile }) {
           </div>
         </div>
       ) : isMobile ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: "calc(100vh - 300px)", overflowY: "auto", WebkitOverflowScrolling: "touch" }}>
+        <div className="maxh-screen-minus-300" style={{ display: "flex", flexDirection: "column", gap: 8, overflowY: "auto", WebkitOverflowScrolling: "touch" }}>
           {logs.map((log) => (
             <div
               key={log.id}
@@ -615,7 +615,7 @@ export default function RecordingLogs({ isMobile }) {
           ))}
         </div>
       ) : (
-        <div style={{ overflowX: "auto", overflowY: "auto", maxHeight: "calc(100vh - 300px)", WebkitOverflowScrolling: "touch" }}>
+        <div className="maxh-screen-minus-300" style={{ overflowX: "auto", overflowY: "auto", WebkitOverflowScrolling: "touch" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
             <thead>
               <tr style={{ borderBottom: "1px solid var(--dispatch-border)" }}>
