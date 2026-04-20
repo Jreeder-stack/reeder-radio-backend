@@ -2,6 +2,7 @@ import { Mic, MicOff, Ban, Volume2 } from "lucide-react";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { cn } from "../../lib/utils";
 import { playTalkPermitTone } from "../../lib/audioTones";
+import { isIOS } from "../../lib/platform";
 
 export function PTTButton({ 
   onTransmitStart, 
@@ -22,6 +23,7 @@ export function PTTButton({
   const lastActionTimeRef = useRef(0);
   const buttonRef = useRef(null);
   const activePointerIdRef = useRef(null);
+  const lastInputAtRef = useRef(0);
   
   const onTransmitStartRef = useRef(onTransmitStart);
   const onTransmitEndRef = useRef(onTransmitEnd);
@@ -179,6 +181,46 @@ export function PTTButton({
       document.removeEventListener('pointercancel', handleGlobalPointerUp);
       document.removeEventListener('touchend', handleGlobalTouchEnd);
       document.removeEventListener('touchcancel', handleGlobalTouchEnd);
+    };
+  }, [stopTransmit]);
+
+  // iOS Safari fallback: attach native touch listeners with passive:false so we
+  // can preventDefault() and suppress the iOS callout/scroll/double-tap zoom.
+  // Pointer Events handle the actual start/stop on modern iOS, so this is
+  // de-duplicated by `lastInputAtRef`.
+  useEffect(() => {
+    if (!isIOS()) return;
+    const btn = buttonRef.current;
+    if (!btn) return;
+
+    const recentlyHandled = () => {
+      return Date.now() - lastInputAtRef.current < 250;
+    };
+
+    const handleTouchStart = (e) => {
+      e.preventDefault();
+      if (recentlyHandled()) return;
+      lastInputAtRef.current = Date.now();
+      startTransmit();
+    };
+    const handleTouchEnd = (e) => {
+      e.preventDefault();
+      lastInputAtRef.current = Date.now();
+      stopTransmit();
+    };
+    const handleTouchCancel = () => {
+      lastInputAtRef.current = Date.now();
+      stopTransmit();
+    };
+
+    btn.addEventListener('touchstart', handleTouchStart, { passive: false });
+    btn.addEventListener('touchend', handleTouchEnd, { passive: false });
+    btn.addEventListener('touchcancel', handleTouchCancel, { passive: false });
+
+    return () => {
+      btn.removeEventListener('touchstart', handleTouchStart);
+      btn.removeEventListener('touchend', handleTouchEnd);
+      btn.removeEventListener('touchcancel', handleTouchCancel);
     };
   }, [stopTransmit]);
 

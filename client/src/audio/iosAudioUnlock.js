@@ -67,6 +67,20 @@ export async function unlockAudio() {
   }
 }
 
+export async function resumeSharedAudio() {
+  if (!audioContext) return false;
+  try {
+    if (audioContext.state === 'suspended') {
+      await audioContext.resume();
+      console.log('[iOS Audio] AudioContext resumed via resumeSharedAudio');
+    }
+    return audioContext.state === 'running';
+  } catch (e) {
+    console.warn('[iOS Audio] resumeSharedAudio failed:', e.message);
+    return false;
+  }
+}
+
 export function getSharedAudioContext() {
   if (!audioContext || audioContext.state === 'closed') {
     audioContext = new (window.AudioContext || window.webkitAudioContext)();

@@ -19,6 +19,7 @@ export default function TopBar({ user, onLogout, agencyName = "REEDER-SYSTEMS", 
       style={{
         paddingLeft: 'max(env(safe-area-inset-left, 0px), 16px)',
         paddingRight: 'max(env(safe-area-inset-right, 0px), 16px)',
+        paddingTop: 'max(env(safe-area-inset-top, 0px), 10px)',
       }}
     >
       <div className="flex items-center gap-4">

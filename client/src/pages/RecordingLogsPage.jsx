@@ -18,6 +18,7 @@ export default function RecordingLogsPage({ user, onLogout }) {
     <div
       className="min-h-screen-safe"
       style={{
+        minHeight: "100dvh",
         background: "var(--dispatch-bg)",
         fontFamily: "system-ui, -apple-system, sans-serif",
         color: "var(--dispatch-text)",

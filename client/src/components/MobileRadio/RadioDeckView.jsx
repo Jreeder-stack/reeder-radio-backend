@@ -1562,7 +1562,7 @@ export function RadioDeckView({ user, onLogout }) {
 
   return (
     <div 
-      className="min-h-screen w-full bg-gray-100 flex flex-col p-2 space-y-2 font-body"
+      className="min-h-screen full-viewport w-full bg-gray-100 flex flex-col p-2 space-y-2 font-body"
       style={{
         paddingTop: 'max(env(safe-area-inset-top, 0px), 8px)',
         paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 16px)',

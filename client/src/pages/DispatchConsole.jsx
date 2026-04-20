@@ -33,6 +33,7 @@ import { signalingManager } from '../signaling/SignalingManager.js';
 import formatChannelDisplay from '../utils/formatChannelDisplay.js';
 import AudioSettings, { getAudioSettings } from '../components/AudioSettings/index.jsx';
 import { useTheme } from '../context/ThemeContext.jsx';
+import { acquireWakeLock, releaseWakeLock } from '../lib/wakeLock.js';
 
 export default function DispatchConsole({ user, onLogout }) {
   const [rightTab, setRightTab] = useState('emergency');
@@ -134,6 +135,21 @@ export default function DispatchConsole({ user, onLogout }) {
   }, []);
 
   const { retryConnection, connectToChannel, disconnectFromChannel } = useAudioConnection();
+
+  // Hold a screen wake lock while at least one channel is actively being
+  // monitored. The helper itself is a no-op outside iOS (Chrome/desktop is
+  // unchanged) and re-acquires automatically on visibilitychange.
+  const monitoredCount = useDispatchStore(s => (s.monitoredChannelIds || []).length);
+  useEffect(() => {
+    if (monitoredCount === 0) return undefined;
+    let released = false;
+    acquireWakeLock().catch(() => {});
+    return () => {
+      if (released) return;
+      released = true;
+      releaseWakeLock().catch(() => {});
+    };
+  }, [monitoredCount > 0]);
   const { 
     connected: signalingConnected,
     authenticated: signalingAuthenticated,

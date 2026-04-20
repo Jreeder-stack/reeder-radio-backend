@@ -44,6 +44,7 @@ function ProtectedRoute({ children, adminOnly = false, dispatcherOnly = false })
       <div
         className="min-h-screen-safe"
         style={{
+          minHeight: "100dvh",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -81,6 +82,7 @@ function LoginRoute() {
       <div
         className="min-h-screen-safe"
         style={{
+          minHeight: "100dvh",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -309,6 +311,18 @@ function ConnectedRoutes() {
 }
 
 window.__APP_BOOT.steps.push('rendering');
+
+// Remove the inline boot splash once React takes over, so we don't show the
+// app behind a frozen splash. Kept until the first paint to mask the white
+// flash on iOS PWA cold-start.
+const __bootSplash = document.getElementById('__boot_splash');
+if (__bootSplash) {
+  requestAnimationFrame(() => {
+    __bootSplash.style.transition = 'opacity 200ms ease';
+    __bootSplash.style.opacity = '0';
+    setTimeout(() => __bootSplash.remove(), 250);
+  });
+}
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>

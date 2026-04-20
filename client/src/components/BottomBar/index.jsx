@@ -8,6 +8,8 @@ import { playTalkPermitTone } from '../../lib/audioTones.js';
 import { useSignalingContext } from '../../context/SignalingContext.jsx';
 import formatChannelDisplay from '../../utils/formatChannelDisplay.js';
 import { signalingManager } from '../../signaling/SignalingManager.js';
+import { acquireWakeLock, releaseWakeLock } from '../../lib/wakeLock.js';
+import { isIOS } from '../../lib/platform.js';
 
 export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identity = 'Dispatch', signalPttStart, signalPttEnd }) {
   const { 
@@ -36,6 +38,7 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
   const pttRef = useRef(null);
   const gestureActiveRef = useRef(false);
   const mutedChannelsRef = useRef([]);
+  const lastTouchInputAtRef = useRef(0);
 
   const selectedChannelNames = getTxChannelNames();
 
@@ -259,6 +262,7 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
     gestureActiveRef.current = true;
     console.log('[PTT] PTT_GESTURE_ACTIVE_TRUE');
     console.log('[PTT] PTT_START');
+    acquireWakeLock().catch(() => {});
     
     const success = await startTransmission();
     
@@ -280,12 +284,53 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
     console.log('[PTT] PTT_STOP');
     gestureActiveRef.current = false;
     console.log('[PTT] PTT_GESTURE_ACTIVE_FALSE');
+    releaseWakeLock().catch(() => {});
     await stopTransmission();
     
     if (onPTTEnd) {
       onPTTEnd(selectedChannelNames);
     }
   }, [selectedChannelNames, onPTTEnd, stopTransmission]);
+
+  // iOS Safari fallback: native touchstart/touchend/touchcancel listeners on
+  // the dispatch PTT button with passive:false + preventDefault to suppress
+  // iOS callout / scroll / double-tap zoom. Pointer Events still drive
+  // start/stop on modern browsers; these touch handlers are de-duplicated
+  // against the pointer flow via lastTouchInputAtRef so they don't
+  // double-fire.
+  useEffect(() => {
+    if (!isIOS()) return undefined;
+    const btn = pttRef.current;
+    if (!btn) return undefined;
+
+    const recentlyHandled = () => Date.now() - lastTouchInputAtRef.current < 250;
+
+    const handleTouchStart = (e) => {
+      e.preventDefault();
+      if (recentlyHandled()) return;
+      lastTouchInputAtRef.current = Date.now();
+      handlePTTDown({ type: 'touchstart' });
+    };
+    const handleTouchEnd = (e) => {
+      e.preventDefault();
+      lastTouchInputAtRef.current = Date.now();
+      handlePTTUp();
+    };
+    const handleTouchCancel = () => {
+      lastTouchInputAtRef.current = Date.now();
+      handlePTTUp();
+    };
+
+    btn.addEventListener('touchstart', handleTouchStart, { passive: false });
+    btn.addEventListener('touchend', handleTouchEnd, { passive: false });
+    btn.addEventListener('touchcancel', handleTouchCancel, { passive: false });
+
+    return () => {
+      btn.removeEventListener('touchstart', handleTouchStart);
+      btn.removeEventListener('touchend', handleTouchEnd);
+      btn.removeEventListener('touchcancel', handleTouchCancel);
+    };
+  }, [handlePTTDown, handlePTTUp]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -523,6 +568,8 @@ export default function BottomBar({ onPTTStart, onPTTEnd, onToneTransmit, identi
           onPointerDown={handlePTTDown}
           onPointerUp={handlePTTUp}
           onPointerCancel={handlePTTUp}
+          onContextMenu={(e) => e.preventDefault()}
+          style={{ touchAction: 'none', WebkitTouchCallout: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
           disabled={!hasTxChannels || toneTransmitting}
           className={`px-8 py-3 rounded-lg font-bold text-lg transition-all select-none ${
             pttError

@@ -125,6 +125,7 @@ export default function DispatcherMap() {
   return (
     <div className="h-screen-safe" style={{ 
       width: '100vw', 
+      height: '100dvh',
       display: 'flex', 
       flexDirection: 'column',
       background: 'var(--dispatch-bg)'

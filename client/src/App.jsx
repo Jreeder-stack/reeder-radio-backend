@@ -3,7 +3,7 @@ import { PTT_STATES } from "./constants/pttStates";
 import { updateUnitStatus } from "./utils/api.js";
 import { useAudioConnection } from "./context/AudioConnectionContext.jsx";
 import { useSignalingContext } from "./context/SignalingContext.jsx";
-import { unlockAudio } from "./audio/iosAudioUnlock";
+import { unlockAudio, resumeSharedAudio } from "./audio/iosAudioUnlock";
 import { preloadPermitBuffer } from "./audio/talkPermitTone.js";
 import toneEngine from "./audio/toneEngine.js";
 import { setupAppLifecycle } from "./lib/capacitor";
@@ -273,9 +273,11 @@ export default function App({ user, onLogout }) {
     return cleanup;
   }, []);
 
-  // iOS / web Wake Lock: keep the screen awake while the app is in the
-  // foreground. Released automatically when the page is hidden, re-acquired
-  // on visibility change. No-op if the API is unavailable (older iOS).
+  // iOS / web Wake Lock + audio resume: keep the screen awake while the app
+  // is in the foreground, and on return-from-background also re-unlock the
+  // iOS audio path and resume any paused RX <audio> elements. Released
+  // automatically when the page is hidden. No-op when the wake-lock API is
+  // unavailable (older iOS / non-iOS).
   useEffect(() => {
     let cancelled = false;
 
@@ -285,15 +287,25 @@ export default function App({ user, onLogout }) {
       } catch (_) { /* best-effort */ }
     };
 
+    const resumeAudio = () => {
+      // iOS Safari suspends audio when the tab/PWA is backgrounded; recover.
+      unlockAudio().catch(() => {});
+      resumeSharedAudio().catch(() => {});
+      if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
+        audioContextRef.current.resume().catch(() => {});
+      }
+      rxAudioElementsRef.current.forEach(el => {
+        if (el.paused) {
+          el.play().catch(() => {});
+        }
+      });
+    };
+
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
         if (cancelled) return;
         tryAcquire();
-        // Resume audio context after returning to the page (iOS Safari
-        // suspends it when the tab/PWA is backgrounded).
-        if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
-          audioContextRef.current.resume().catch(() => {});
-        }
+        resumeAudio();
       } else {
         releaseWakeLock().catch(() => {});
       }
@@ -303,9 +315,7 @@ export default function App({ user, onLogout }) {
       // iOS Safari restores from bfcache via 'pageshow' rather than
       // 'visibilitychange'; ensure audio + wake lock recover here too.
       tryAcquire();
-      if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
-        audioContextRef.current.resume().catch(() => {});
-      }
+      resumeAudio();
     };
 
     if (document.visibilityState === 'visible') tryAcquire();

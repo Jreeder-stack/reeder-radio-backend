@@ -129,11 +129,14 @@ html, body {
   background-color: var(--dispatch-bg);
   color: var(--dispatch-text);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  /* Prevent iOS rubber-band scroll bleed-through on PWA */
+  overscroll-behavior-y: none;
 }
 
 #root {
   min-height: 100vh;
   min-height: 100svh;
+  min-height: 100dvh;
 }
 
 /* Viewport-locked layout for dispatch console (fixed height, no page scroll) */
@@ -143,12 +146,15 @@ html, body {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  /* Honor iOS safe areas (notch / Home Indicator) when installed as PWA */
-  padding-top: env(safe-area-inset-top, 0px);
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  /* Respect iOS horizontal safe areas. Top/bottom insets are applied by
+     TopBar / BottomBar so we don't double-pad those edges. */
   padding-left: env(safe-area-inset-left, 0px);
   padding-right: env(safe-area-inset-right, 0px);
   box-sizing: border-box;
+  /* Stable viewport height fallbacks */
+  height: 100vh;
+  height: 100svh;
+  height: 100dvh;
 }
 
 /* iOS-safe full-height utility: prefers small/dynamic viewport units to
@@ -156,10 +162,27 @@ html, body {
 .h-screen-safe {
   height: 100vh;
   height: 100svh;
+  height: 100dvh;
 }
 .min-h-screen-safe {
   min-height: 100vh;
   min-height: 100svh;
+  min-height: 100dvh;
+}
+
+/* Generic full-screen container helper using dynamic viewport units */
+.full-viewport {
+  min-height: 100vh;
+  min-height: 100svh;
+  min-height: 100dvh;
+}
+
+/* Top/bottom bar safe-area helpers */
+.safe-top { padding-top: env(safe-area-inset-top); }
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+.safe-x {
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
 }
 
 /* Height utilities used by panels that subtract surrounding chrome.
@@ -901,6 +924,7 @@ html, body {
 .admin-root {
   min-height: 100vh;
   min-height: 100svh;
+  min-height: 100dvh;
   background: var(--dispatch-bg);
   color: var(--dispatch-text);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -919,6 +943,7 @@ html, body {
   justify-content: center;
   min-height: 100vh;
   min-height: 100svh;
+  min-height: 100dvh;
   color: var(--dispatch-text-secondary);
   font-size: 16px;
   background: var(--dispatch-bg);
