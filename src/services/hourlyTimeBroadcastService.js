@@ -167,14 +167,7 @@ class HourlyTimeBroadcastScheduler {
       return;
     }
 
-    let tz;
-    try {
-      tz = await getHourlyTimeBroadcastTimezone();
-    } catch (err) {
-      this.log('TZ_READ_ERROR', { error: err.message });
-      tz = DEFAULT_TZ;
-    }
-    const message = buildBroadcastMessage(new Date(), tz);
+    const message = buildBroadcastMessage(new Date());
     this.log('BROADCAST_START', { channel: channelKey, message });
 
     try {
