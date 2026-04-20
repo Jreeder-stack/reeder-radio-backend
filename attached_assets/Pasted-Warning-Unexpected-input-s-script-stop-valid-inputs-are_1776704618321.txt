@@ -1,0 +1,99 @@
+Warning: Unexpected input(s) 'script_stop', valid inputs are ['host', 'port', 'passphrase', 'username', 'password', 'protocol', 'sync', 'use_insecure_cipher', 'cipher', 'timeout', 'command_timeout', 'key', 'key_path', 'fingerprint', 'proxy_host', 'proxy_port', 'proxy_username', 'proxy_password', 'proxy_protocol', 'proxy_passphrase', 'proxy_timeout', 'proxy_key', 'proxy_key_path', 'proxy_fingerprint', 'proxy_cipher', 'proxy_use_insecure_cipher', 'script', 'script_path', 'envs', 'envs_format', 'debug', 'allenvs', 'request_pty', 'capture_stdout']
+Run appleboy/ssh-action@v1.2.2
+Run echo "$GITHUB_ACTION_PATH" >> $GITHUB_PATH
+Run entrypoint.sh
+Will download drone-ssh-1.8.1-linux-amd64 from https://github.com/appleboy/drone-ssh/releases/download/v1.8.1
+======= CLI Version =======
+Drone SSH version 1.8.1
+===========================
+=== Command Comms — Deploy ===
+App directory: /home/***/command-comms
+[1/6] Pulling latest code from 'main'...
+From https://github.com/Jreeder-stack/reeder-radio-backend
+ * branch            main       -> FETCH_HEAD
+   48463c8..d8539b2  main       -> origin/main
+HEAD is now at d8539b2 Task #375: Remove audio fallback wrappers from messagesRouter
+Removing client/dist/assets/index-CO1jYfLe.js
+Removing client/dist/assets/index-CO1jYfLe.js.map
+Removing client/dist/assets/index-Dg1zsenr.css
+Removing client/dist/assets/index-legacy-C37vrOxP.js
+Removing client/dist/assets/index-legacy-C37vrOxP.js.map
+Removing client/dist/sounds/pager-tone.wav
+Removing logs/
+[2/6] Verifying app directory and ownership...
+[3/6] Installing backend dependencies...
+npm warn config production Use `--omit=dev` instead.
+npm warn ERESOLVE overriding peer dependency
+npm warn While resolving: @react-leaflet/core@3.0.0
+npm warn Found: react@18.3.1
+npm warn node_modules/react
+npm warn   dev react@"^18.3.1" from the root project
+npm warn   11 more (@dnd-kit/accessibility, @dnd-kit/core, ...)
+npm warn
+npm warn Could not resolve dependency:
+npm warn peer react@"^19.0.0" from @react-leaflet/core@3.0.0
+npm warn node_modules/@react-leaflet/core
+npm warn   @react-leaflet/core@"^3.0.0" from react-leaflet@5.0.0
+npm warn   node_modules/react-leaflet
+npm warn
+npm warn Conflicting peer dependency: react@19.2.5
+npm warn node_modules/react
+npm warn   peer react@"^19.0.0" from @react-leaflet/core@3.0.0
+npm warn   node_modules/@react-leaflet/core
+npm warn     @react-leaflet/core@"^3.0.0" from react-leaflet@5.0.0
+npm warn     node_modules/react-leaflet
+npm warn ERESOLVE overriding peer dependency
+npm warn While resolving: @react-leaflet/core@3.0.0
+npm warn Found: react-dom@18.3.1
+npm warn node_modules/react-dom
+npm warn   dev react-dom@"^18.3.1" from the root project
+npm warn   5 more (@dnd-kit/core, @testing-library/react, framer-motion, ...)
+npm warn
+npm warn Could not resolve dependency:
+npm warn peer react-dom@"^19.0.0" from @react-leaflet/core@3.0.0
+npm warn node_modules/@react-leaflet/core
+npm warn   @react-leaflet/core@"^3.0.0" from react-leaflet@5.0.0
+npm warn   node_modules/react-leaflet
+npm warn
+npm warn Conflicting peer dependency: react-dom@19.2.5
+npm warn node_modules/react-dom
+npm warn   peer react-dom@"^19.0.0" from @react-leaflet/core@3.0.0
+npm warn   node_modules/@react-leaflet/core
+npm warn     @react-leaflet/core@"^3.0.0" from react-leaflet@5.0.0
+npm warn     node_modules/react-leaflet
+npm error code ERESOLVE
+npm error ERESOLVE could not resolve
+npm error
+npm error While resolving: react-leaflet@5.0.0
+npm error Found: react@18.3.1
+npm error node_modules/react
+npm error   dev react@"^18.3.1" from the root project
+npm error   peer react@">=16.8.0" from @dnd-kit/accessibility@3.1.1
+npm error   node_modules/@dnd-kit/accessibility
+npm error     @dnd-kit/accessibility@"^3.1.1" from @dnd-kit/core@6.3.1
+npm error     node_modules/@dnd-kit/core
+npm error       @dnd-kit/core@"^6.3.1" from the root project
+npm error       1 more (@dnd-kit/sortable)
+npm error   10 more (@dnd-kit/core, @dnd-kit/sortable, @dnd-kit/utilities, ...)
+npm error
+npm error Could not resolve dependency:
+npm error peer react@"^19.0.0" from react-leaflet@5.0.0
+npm error node_modules/react-leaflet
+npm error   react-leaflet@"^5.0.0" from the root project
+npm error
+npm error Conflicting peer dependency: react@19.2.5
+npm error node_modules/react
+npm error   peer react@"^19.0.0" from react-leaflet@5.0.0
+npm error   node_modules/react-leaflet
+npm error     react-leaflet@"^5.0.0" from the root project
+npm error
+npm error Fix the upstream dependency conflict, or retry
+npm error this command with --force or --legacy-peer-deps
+npm error to accept an incorrect (and potentially broken) dependency resolution.
+npm error
+npm error
+npm error For a full report see:
+npm error /home/***/.npm/_logs/2026-04-20T17_02_25_676Z-eresolve-report.txt
+npm error A complete log of this run can be found in: /home/***/.npm/_logs/2026-04-20T17_02_25_676Z-debug-0.log
+2026/04/20 17:02:27 Process exited with status 1
+Error: Process completed with exit code 1.
