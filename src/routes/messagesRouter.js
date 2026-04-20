@@ -105,24 +105,17 @@ function looksLikeRawOpusOrOgg(buf) {
   return false;
 }
 
-function generateSilenceWav(durationMs = 100, sampleRate = 16000) {
-  const numSamples = Math.floor(sampleRate * durationMs / 1000);
-  const pcmData = Buffer.alloc(numSamples * 2);
-  return wrapPcmInWav(pcmData, sampleRate);
-}
-
 function serveAudioBuffer(res, buf) {
   if (!Buffer.isBuffer(buf) || buf.length === 0) {
     console.warn('[AudioRoute] Empty or missing audio data — returning 404');
-    return res.status(404).json({ success: false, error: 'Audio not available' });
+    res.setHeader('Content-Type', 'audio/wav');
+    return res.status(404).end();
   }
 
   if (looksLikeRawOpusOrOgg(buf)) {
-    console.warn(`[AudioRoute] Audio data appears to be raw Opus/Ogg (${buf.length} bytes) — not playable as WAV, serving silence`);
-    const silenceWav = generateSilenceWav();
+    console.warn(`[AudioRoute] Audio data appears to be raw Opus/Ogg (${buf.length} bytes) — not playable as WAV, returning 415`);
     res.setHeader('Content-Type', 'audio/wav');
-    res.setHeader('Content-Length', silenceWav.length);
-    return res.send(silenceWav);
+    return res.status(415).end();
   }
 
   let audioData = buf;
