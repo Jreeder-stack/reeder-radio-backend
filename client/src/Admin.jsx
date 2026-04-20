@@ -1046,11 +1046,11 @@ export default function Admin({ user, onLogout }) {
                       At the top of every hour, the AI voice announces the day, date, and time on the configured AI dispatch channel. Skipped automatically if the channel is busy.
                     </p>
                   </div>
-                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
                     <button
                       onClick={playHourlyBroadcastNow}
                       disabled={hourlyBroadcastPlayNowDisabled}
-                      className="admin-toggle-btn"
+                      className="admin-toggle-btn admin-toggle-btn-action"
                       style={{
                         opacity: hourlyBroadcastPlayNowDisabled ? 0.6 : 1,
                         cursor: hourlyBroadcastPlayNowDisabled ? "not-allowed" : "pointer",

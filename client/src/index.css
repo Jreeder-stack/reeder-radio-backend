@@ -1318,6 +1318,17 @@ html, body {
   border: 1px solid var(--dispatch-border);
 }
 
+.admin-toggle-btn-action {
+  background: var(--dispatch-panel-elevated);
+  color: var(--dispatch-text);
+  border: 1px solid var(--dispatch-border);
+  cursor: pointer;
+}
+
+.admin-toggle-btn-action:hover:not(:disabled) {
+  background: var(--dispatch-border);
+}
+
 /* --- Status Banner --- */
 .admin-status-banner {
   margin-top: 14px;
