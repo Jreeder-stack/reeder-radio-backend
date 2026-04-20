@@ -1,8 +1,18 @@
-import { preloadPermitBuffer } from './talkPermitTone.js';
+import { PCM_SPEC } from './PcmPacket.js';
 
 let unlocked = false;
 let audioContext = null;
 let unlockAttempts = 0;
+
+function createSharedContext() {
+  const Ctor = window.AudioContext || window.webkitAudioContext;
+  try {
+    return new Ctor({ sampleRate: PCM_SPEC.sampleRate });
+  } catch (e) {
+    console.warn('[iOS Audio] AudioContext sampleRate option not supported, using default:', e.message);
+    return new Ctor();
+  }
+}
 
 export function isAudioUnlocked() {
   return unlocked;
@@ -18,7 +28,7 @@ export async function unlockAudio() {
 
   try {
     if (!audioContext || audioContext.state === 'closed') {
-      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      audioContext = createSharedContext();
     }
 
     if (audioContext.state === 'suspended') {
@@ -49,14 +59,12 @@ export async function unlockAudio() {
       await silentAudio.play();
       console.log('[iOS Audio] Silent audio element played - audio unlocked');
       unlocked = true;
-      preloadPermitBuffer();
       return true;
     } catch (e) {
       console.log('[iOS Audio] Silent audio play failed:', e.message);
       if (audioContext && audioContext.state === 'running') {
         console.log('[iOS Audio] AudioContext is running, marking as unlocked');
         unlocked = true;
-        preloadPermitBuffer();
         return true;
       }
       return false;
@@ -83,7 +91,7 @@ export async function resumeSharedAudio() {
 
 export function getSharedAudioContext() {
   if (!audioContext || audioContext.state === 'closed') {
-    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    audioContext = createSharedContext();
   }
   if (audioContext.state === 'suspended') {
     audioContext.resume().catch(() => {});

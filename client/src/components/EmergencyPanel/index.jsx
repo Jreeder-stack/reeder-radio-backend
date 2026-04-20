@@ -4,6 +4,7 @@ import { toggleUnitEmergency, resetEmergency as resetEmergencyApi } from '../../
 import { useAuth } from '../../AuthContext.jsx';
 import { useSignalingContext } from '../../context/SignalingContext.jsx';
 import { formatRoomKey } from '../../utils/formatChannelDisplay.js';
+import { getSharedAudioContext } from '../../audio/iosAudioUnlock.js';
 
 function formatTime(timestamp) {
   if (!timestamp) return '';
@@ -13,7 +14,7 @@ function formatTime(timestamp) {
 
 function startAlarmTone() {
   try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const ctx = getSharedAudioContext();
     const gainNode = ctx.createGain();
     gainNode.gain.value = 0.4;
     gainNode.connect(ctx.destination);
@@ -65,7 +66,7 @@ function startAlarmTone() {
         osc1.stop();
         osc2.stop();
         lfo.stop();
-        ctx.close();
+        // AudioContext is shared (see iosAudioUnlock.getSharedAudioContext) — do not close it here.
       } catch (e) {}
     };
   } catch (e) {

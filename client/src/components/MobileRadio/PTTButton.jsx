@@ -3,6 +3,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { cn } from "../../lib/utils";
 import { playTalkPermitTone } from "../../lib/audioTones";
 import { isIOS } from "../../lib/platform";
+import { getSharedAudioContext } from "../../audio/iosAudioUnlock";
 
 export function PTTButton({ 
   onTransmitStart, 
@@ -16,7 +17,6 @@ export function PTTButton({
   setTransmitting
 }) {
   const [isDenying, setIsDenying] = useState(false);
-  const audioContextRef = useRef(null);
   const busyOscillatorRef = useRef(null);
   const busyGainRef = useRef(null);
   const isActiveRef = useRef(false);
@@ -35,18 +35,8 @@ export function PTTButton({
     channelStatusRef.current = channelStatus;
   }, [onTransmitStart, onTransmitEnd, channelStatus]);
 
-  const initAudioContext = () => {
-    if (!audioContextRef.current) {
-      audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
-    }
-    if (audioContextRef.current.state === 'suspended') {
-      audioContextRef.current.resume();
-    }
-    return audioContextRef.current;
-  };
-
   const startBusyTone = () => {
-    const ctx = initAudioContext();
+    const ctx = getSharedAudioContext();
     const volume = 0.4;
     if (busyOscillatorRef.current) return;
     const osc = ctx.createOscillator();
@@ -78,7 +68,7 @@ export function PTTButton({
   };
 
   const playErrorTone = () => {
-    const ctx = initAudioContext();
+    const ctx = getSharedAudioContext();
     const now = ctx.currentTime;
     const volume = 0.4;
     const playBeep = (freq, startTime) => {
@@ -232,9 +222,7 @@ export function PTTButton({
         onTransmitEndRef.current?.();
         isActiveRef.current = false;
       }
-      if (audioContextRef.current?.state === 'running') {
-        audioContextRef.current.suspend();
-      }
+      // AudioContext is shared (see iosAudioUnlock.getSharedAudioContext) — do not suspend/close here.
     };
   }, [setTransmitting]);
 

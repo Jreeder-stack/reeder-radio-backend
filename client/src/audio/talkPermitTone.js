@@ -1,12 +1,10 @@
-let permitCtx = null;
+import { getSharedAudioContext } from './iosAudioUnlock.js';
+
 let permitBuffer = null;
 let preloadPromise = null;
 
 function getPermitContext() {
-  if (!permitCtx || permitCtx.state === 'closed') {
-    permitCtx = new (window.AudioContext || window.webkitAudioContext)();
-  }
-  return permitCtx;
+  return getSharedAudioContext();
 }
 
 export function preloadPermitBuffer() {
@@ -128,14 +126,10 @@ export function playPermitTone() {
 
 let bonkOscillator = null;
 let bonkGain = null;
-let bonkCtx = null;
 let bonkEpoch = 0;
 
 function getBonkContext() {
-  if (!bonkCtx || bonkCtx.state === 'closed') {
-    bonkCtx = new (window.AudioContext || window.webkitAudioContext)();
-  }
-  return bonkCtx;
+  return getSharedAudioContext();
 }
 
 export function startBonkLoop() {

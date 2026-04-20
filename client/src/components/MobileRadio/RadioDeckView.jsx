@@ -13,6 +13,7 @@ import { signalingManager } from '../../signaling/SignalingManager';
 import { useClearAir } from './useClearAir';
 import { startTracking as gpsStartTracking, stopTracking as gpsStopTracking } from '../../services/gpsService.js';
 import { PTTButton } from './PTTButton';
+import { getSharedAudioContext } from '../../audio/iosAudioUnlock';
 import { 
   AnimalSearchModal, 
   CitationModal, 
@@ -192,7 +193,7 @@ export function RadioDeckView({ user, onLogout }) {
   useEffect(() => {
     if (emergencyAlerts && emergencyAlerts.length > 0 && !isEmergency && !emergencyAlarmRef.current) {
       try {
-        var ctx = new (window.AudioContext || window.webkitAudioContext)();
+        var ctx = getSharedAudioContext();
         var gain = ctx.createGain();
         gain.gain.value = 0.5;
         gain.connect(ctx.destination);
@@ -220,7 +221,8 @@ export function RadioDeckView({ user, onLogout }) {
         }, 500);
         emergencyAlarmRef.current = function() {
           clearInterval(iv);
-          try { osc1.stop(); osc2.stop(); ctx.close(); } catch(e) {}
+          // AudioContext is shared (see iosAudioUnlock.getSharedAudioContext) — do not close it here.
+          try { osc1.stop(); osc2.stop(); } catch(e) {}
         };
         setTimeout(function() {
           if (emergencyAlarmRef.current) {
@@ -303,9 +305,11 @@ export function RadioDeckView({ user, onLogout }) {
           }
         });
         try {
-          const ac = window._sharedAudioContext || (typeof AudioContext !== 'undefined' && new AudioContext());
+          // Shared AudioContext is the single resume entrypoint — every audio engine and
+          // tone helper uses getSharedAudioContext(), so this one call covers all of them.
+          const ac = getSharedAudioContext();
           if (ac && ac.state === 'suspended') {
-            ac.resume().then(() => console.log('[RadioDeck] AudioContext resumed'));
+            ac.resume().then(() => console.log('[RadioDeck] Shared AudioContext resumed'));
           }
         } catch (e) {
           console.warn('[RadioDeck] AudioContext resume failed:', e.message);

@@ -1,4 +1,5 @@
 import { PCM_SPEC } from './PcmPacket.js';
+import { getSharedAudioContext } from './iosAudioUnlock.js';
 
 const PRE_BUFFER_MS = 400;
 const PRE_BUFFER_FRAMES = Math.ceil(
@@ -76,14 +77,14 @@ export class PcmCaptureEngine {
       });
     }
 
-    const audioContext = new (window.AudioContext || window.webkitAudioContext)({
-      sampleRate: PCM_SPEC.sampleRate,
-    });
+    // Reuse the shared AudioContext (created at PCM_SPEC.sampleRate by iosAudioUnlock)
+    // so iOS PWA `visibilitychange`/`pageshow` resumes recover capture via resumeSharedAudio()
+    // without needing a per-engine resume path. Mic stream lifecycle is still managed here.
+    const audioContext = getSharedAudioContext();
 
     if (this._generation !== gen) {
       this.stream.getTracks().forEach((t) => t.stop());
       this.stream = null;
-      await audioContext.close().catch(() => {});
       return;
     }
 
@@ -176,10 +177,8 @@ export class PcmCaptureEngine {
       this.stream.getTracks().forEach((t) => t.stop());
       this.stream = null;
     }
-    if (this.audioContext) {
-      this.audioContext.close().catch(() => {});
-      this.audioContext = null;
-    }
+    // AudioContext is shared (see iosAudioUnlock.getSharedAudioContext) — do not close it here.
+    this.audioContext = null;
     this._warmedUp = false;
     this._preBuffer = [];
   }
@@ -300,11 +299,9 @@ export class PcmCaptureEngine {
       this.stream = null;
     }
 
-    if (this.audioContext) {
-      await this.audioContext.close().catch(() => {});
-      this.audioContext = null;
-    }
+    // AudioContext is shared (see iosAudioUnlock.getSharedAudioContext) — do not close it here.
+    this.audioContext = null;
 
-    console.log('[PcmCaptureEngine] Shut down – mic and AudioContext released');
+    console.log('[PcmCaptureEngine] Shut down – mic released (shared AudioContext kept alive)');
   }
 }

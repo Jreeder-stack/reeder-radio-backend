@@ -1,6 +1,7 @@
 import toneEngine from './toneEngine.js';
 import { OpusBrowserEncoder } from './OpusBrowserEncoder.js';
 import { buildBinaryFrameOpus } from './PcmPacket.js';
+import { getSharedAudioContext } from './iosAudioUnlock.js';
 
 const SAMPLE_RATE = 16000;
 const FRAME_SIZE = 320;
@@ -83,9 +84,9 @@ class ToneTransmitter {
   }
 
   _setupCapturePipeline() {
-    this._captureCtx = new (window.AudioContext || window.webkitAudioContext)({
-      sampleRate: SAMPLE_RATE,
-    });
+    // Reuse the shared AudioContext (created at SAMPLE_RATE by iosAudioUnlock) so iOS PWA
+    // visibilitychange/pageshow resumes recover via resumeSharedAudio() — no per-engine context.
+    this._captureCtx = getSharedAudioContext();
 
     this._captureDestination = this._captureCtx.createMediaStreamDestination();
 
@@ -141,10 +142,8 @@ class ToneTransmitter {
     if (this._captureDestination) {
       this._captureDestination = null;
     }
-    if (this._captureCtx) {
-      this._captureCtx.close().catch(() => {});
-      this._captureCtx = null;
-    }
+    // AudioContext is shared (see iosAudioUnlock.getSharedAudioContext) — do not close it here.
+    this._captureCtx = null;
     this._pcmBuffer = new Int16Array(0);
   }
 

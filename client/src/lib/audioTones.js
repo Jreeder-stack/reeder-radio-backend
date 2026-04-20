@@ -1,12 +1,8 @@
 import { playPermitTone } from '../audio/talkPermitTone.js';
-
-let audioContext = null;
+import { getSharedAudioContext } from '../audio/iosAudioUnlock.js';
 
 function getAudioContext() {
-  if (!audioContext) {
-    audioContext = new (window.AudioContext || window.webkitAudioContext)();
-  }
-  return audioContext;
+  return getSharedAudioContext();
 }
 
 export function playTalkPermitTone() {

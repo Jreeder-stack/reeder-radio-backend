@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { getSharedAudioContext } from '../audio/iosAudioUnlock.js';
 
 const SCAN_CHANNELS_KEY = 'radio_scan_channels';
 const SCAN_ACTIVE_KEY = 'radio_scan_active';
@@ -25,8 +26,8 @@ export function MobileRadioProvider({ children }) {
 
   const triggerEmergency = useCallback(async () => {
     setIsEmergency(true);
-    
-    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+    const audioContext = getSharedAudioContext();
     const now = audioContext.currentTime;
     const volume = 0.7;
     const beepDuration = 0.1;

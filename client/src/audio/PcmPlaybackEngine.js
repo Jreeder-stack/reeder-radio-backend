@@ -1,5 +1,6 @@
 import { PCM_SPEC } from './PcmPacket.js';
 import { processRadioVoice, cleanup as cleanupDSP, updateSettings as updateDSPSettings } from './radioVoiceDSP.js';
+import { getSharedAudioContext } from './iosAudioUnlock.js';
 
 export class PcmPlaybackEngine {
   constructor() {
@@ -17,9 +18,13 @@ export class PcmPlaybackEngine {
 
   async init() {
     if (this.audioContext) return;
-    this.audioContext = new (window.AudioContext || window.webkitAudioContext)({
-      sampleRate: PCM_SPEC.sampleRate,
-    });
+    this.audioContext = getSharedAudioContext();
+    if (this.audioContext.sampleRate !== PCM_SPEC.sampleRate) {
+      console.warn('[PcmPlaybackEngine] Shared AudioContext sampleRate mismatch', {
+        expected: PCM_SPEC.sampleRate,
+        actual: this.audioContext.sampleRate,
+      });
+    }
 
     await this.ensureAudioContextResumed('init');
 
@@ -161,10 +166,8 @@ export class PcmPlaybackEngine {
       this._fallbackQueue = [];
       this._fallbackOffset = 0;
     }
-    if (this.audioContext) {
-      await this.audioContext.close().catch(() => {});
-      this.audioContext = null;
-    }
+    // AudioContext is shared (see iosAudioUnlock.getSharedAudioContext) — do not close it here.
+    this.audioContext = null;
     this.started = false;
     this._processorConnected = false;
   }

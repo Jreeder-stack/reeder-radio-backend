@@ -1,3 +1,5 @@
+import { getSharedAudioContext } from './iosAudioUnlock.js';
+
 class ToneEngine {
   constructor() {
     this.audioContext = null;
@@ -21,9 +23,8 @@ class ToneEngine {
     this._pagerTonePreloadPromise = fetch('/sounds/pager-tone.wav')
       .then(function (res) { return res.arrayBuffer(); })
       .then((buf) => {
-        const tempCtx = new (window.AudioContext || window.webkitAudioContext)();
-        return tempCtx.decodeAudioData(buf).then((decoded) => {
-          tempCtx.close().catch(() => {});
+        const ctx = getSharedAudioContext();
+        return ctx.decodeAudioData(buf).then((decoded) => {
           this._pagerToneBuffer = decoded;
           console.log('[ToneEngine] Pager WAV preloaded');
           return decoded;
@@ -45,13 +46,8 @@ class ToneEngine {
       }
       return this.externalContext;
     }
-    
-    if (!this.audioContext || this.audioContext.state === 'closed') {
-      this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    }
-    if (this.audioContext.state === 'suspended') {
-      this.audioContext.resume();
-    }
+
+    this.audioContext = getSharedAudioContext();
     return this.audioContext;
   }
 
@@ -500,9 +496,8 @@ class ToneEngine {
     this.playingTones.clear();
     this.customDestination = null;
     this.externalContext = null;
-    if (this.audioContext && this.audioContext.state !== 'closed') {
-      this.audioContext.close();
-    }
+    // AudioContext is shared (see iosAudioUnlock.getSharedAudioContext) — do not close it here.
+    this.audioContext = null;
   }
 }
 

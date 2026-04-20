@@ -3,7 +3,7 @@ import { PTT_STATES } from "./constants/pttStates";
 import { updateUnitStatus } from "./utils/api.js";
 import { useAudioConnection } from "./context/AudioConnectionContext.jsx";
 import { useSignalingContext } from "./context/SignalingContext.jsx";
-import { unlockAudio, resumeSharedAudio } from "./audio/iosAudioUnlock";
+import { unlockAudio, resumeSharedAudio, getSharedAudioContext } from "./audio/iosAudioUnlock";
 import { preloadPermitBuffer } from "./audio/talkPermitTone.js";
 import toneEngine from "./audio/toneEngine.js";
 import { setupAppLifecycle } from "./lib/capacitor";
@@ -262,9 +262,9 @@ export default function App({ user, onLogout }) {
             console.warn('[App] Signaling connection could not be restored');
           }
         });
-        if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
-          audioContextRef.current.resume().then(() => console.log('[App] AudioContext resumed'));
-        }
+        // AudioContext is shared (see iosAudioUnlock.getSharedAudioContext); the
+        // visibilitychange/pageshow handler below calls resumeSharedAudio() — no per-component
+        // resume is needed.
       },
       () => {
         console.log('[App] App paused — keeping connections alive');
@@ -290,10 +290,9 @@ export default function App({ user, onLogout }) {
     const resumeAudio = () => {
       // iOS Safari suspends audio when the tab/PWA is backgrounded; recover.
       unlockAudio().catch(() => {});
+      // Shared AudioContext is the single resume entrypoint — every audio engine and
+      // tone helper uses getSharedAudioContext(), so this one call covers all of them.
       resumeSharedAudio().catch(() => {});
-      if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
-        audioContextRef.current.resume().catch(() => {});
-      }
       rxAudioElementsRef.current.forEach(el => {
         if (el.paused) {
           el.play().catch(() => {});
@@ -610,7 +609,7 @@ export default function App({ user, onLogout }) {
     return () => {
       if (txAnimationRef.current) cancelAnimationFrame(txAnimationRef.current);
       if (rxAnimationRef.current) cancelAnimationFrame(rxAnimationRef.current);
-      if (audioContextRef.current) audioContextRef.current.close();
+      // AudioContext is shared (see iosAudioUnlock.getSharedAudioContext) — do not close it here.
       audioTransportManager.disconnect();
     };
   }, [broadcastStatus, identity, userLocation]);
@@ -644,12 +643,7 @@ export default function App({ user, onLogout }) {
   }, []);
 
   const getAudioContext = useCallback(() => {
-    if (!audioContextRef.current || audioContextRef.current.state === "closed") {
-      audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
-    }
-    if (audioContextRef.current.state === "suspended") {
-      audioContextRef.current.resume();
-    }
+    audioContextRef.current = getSharedAudioContext();
     return audioContextRef.current;
   }, []);
 
@@ -1057,8 +1051,8 @@ export default function App({ user, onLogout }) {
 
   const playEmergencyAlertSound = () => {
     try {
-      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      
+      const audioContext = getSharedAudioContext();
+
       const playTone = (startTime, frequency, duration) => {
         const oscillator = audioContext.createOscillator();
         const gainNode = audioContext.createGain();
@@ -1080,8 +1074,8 @@ export default function App({ user, onLogout }) {
       playTone(now, 1800, 0.1);
       playTone(now + 0.12, 2200, 0.1);
       playTone(now + 0.24, 1800, 0.1);
-      
-      setTimeout(() => audioContext.close(), 500);
+
+      // AudioContext is shared (see iosAudioUnlock.getSharedAudioContext) — do not close it here.
     } catch (e) {
       console.error('Failed to play emergency alert sound:', e);
     }

@@ -9,6 +9,7 @@ import { useSignalingContext } from '../../context/SignalingContext';
 import { PTT_STATES } from '../../constants/pttStates';
 import { updateUnitStatus } from '../../utils/api';
 import { useClearAir } from './useClearAir';
+import { getSharedAudioContext } from '../../audio/iosAudioUnlock';
 
 export default function MobileRadioView({ user, onLogout }) {
   const identity = (user?.unit_id && user.unit_id.trim()) || user?.username || 'Unknown';
@@ -245,7 +246,7 @@ export default function MobileRadioView({ user, onLogout }) {
 
     if (!room) {
       setIsTransmitting(false);
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const ctx = getSharedAudioContext();
       const now = ctx.currentTime;
       const volume = 0.4;
       const playBeep = (freq, startTime) => {
@@ -278,7 +279,7 @@ export default function MobileRadioView({ user, onLogout }) {
       setPttRejectedBusy(true);
       if (pttRejectedTimerRef.current) clearTimeout(pttRejectedTimerRef.current);
       pttRejectedTimerRef.current = setTimeout(() => setPttRejectedBusy(false), 2000);
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const ctx = getSharedAudioContext();
       const now = ctx.currentTime;
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
@@ -289,7 +290,7 @@ export default function MobileRadioView({ user, onLogout }) {
       gain.gain.setValueAtTime(0.3, now);
       osc.start(now);
       osc.stop(now + 0.5);
-      osc.onended = () => ctx.close();
+      // AudioContext is shared (see iosAudioUnlock.getSharedAudioContext) — do not close it here.
       return;
     }
     try {
@@ -336,7 +337,7 @@ export default function MobileRadioView({ user, onLogout }) {
   };
 
   const playEmergencyTone = () => {
-    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const audioContext = getSharedAudioContext();
     const now = audioContext.currentTime;
     const volume = 0.7;
     const beepDuration = 0.1;
