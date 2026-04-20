@@ -1,0 +1,103 @@
+12:38:45 [1m[90m[TAILING] Tailing last 50 lines for [all] processes (change the value with --lines option)[39m[22m
+12:38:45 [90m/home/Jreeder5029/.pm2/logs/command-comms-error.log last 50 lines:[39m
+12:38:45   unitId: 'CHESTER-2',
+12:38:45   elapsed: 10502,
+12:38:45   missedPongs: 2
+12:38:45 }
+12:38:45 AUDIO_WS_PING_TIMEOUT {
+12:38:45   channelId: 'PHILADELPHIA__OPS-1',
+12:38:45   unitId: 'CHESTER-2',
+12:38:45   elapsed: 10502,
+12:38:45   missedPongs: 2
+12:38:45 }
+12:38:45 AUDIO_WS_PING_TIMEOUT {
+12:38:45   channelId: 'TESTING__TESTING 1',
+12:38:45   unitId: 'CHESTER-2',
+12:38:45   elapsed: 10501,
+12:38:45   missedPongs: 3
+12:38:45 }
+12:38:45 AUDIO_WS_TERMINATING {
+12:38:45   channelId: 'TESTING__TESTING 1',
+12:38:45   unitId: 'CHESTER-2',
+12:38:45   missedPongs: 3
+12:38:45 }
+12:38:45 AUDIO_WS_PING_TIMEOUT {
+12:38:45   channelId: 'DISPATCH__DISPATCH',
+12:38:45   unitId: 'CHESTER-2',
+12:38:45   elapsed: 10501,
+12:38:45   missedPongs: 3
+12:38:45 }
+12:38:45 AUDIO_WS_TERMINATING {
+12:38:45   channelId: 'DISPATCH__DISPATCH',
+12:38:45   unitId: 'CHESTER-2',
+12:38:45   missedPongs: 3
+12:38:45 }
+12:38:45 AUDIO_WS_PING_TIMEOUT {
+12:38:45   channelId: 'OPS__OPS-1',
+12:38:45   unitId: 'CHESTER-2',
+12:38:45   elapsed: 10501,
+12:38:45   missedPongs: 3
+12:38:45 }
+12:38:45 AUDIO_WS_TERMINATING { channelId: 'OPS__OPS-1', unitId: 'CHESTER-2', missedPongs: 3 }
+12:38:45 AUDIO_WS_PING_TIMEOUT {
+12:38:45   channelId: 'PHILADELPHIA__OPS-1',
+12:38:45   unitId: 'CHESTER-2',
+12:38:45   elapsed: 10501,
+12:38:45   missedPongs: 3
+12:38:45 }
+12:38:45 AUDIO_WS_TERMINATING {
+12:38:45   channelId: 'PHILADELPHIA__OPS-1',
+12:38:45   unitId: 'CHESTER-2',
+12:38:45   missedPongs: 3
+12:38:45 }
+12:38:45 [90m/home/Jreeder5029/.pm2/logs/command-comms-out.log last 50 lines:[39m
+12:38:45 [DISPATCH] getChannels: 4 radio channels returned
+12:38:45 [API] GET /api/dispatch/channels | user=DISPATCH-1(id:7) | sid=MJ7Z0i54... | 200 | 15ms
+12:38:45 [Signaling] Client connected: wPzkdtnMUdvmS4wxAAAz
+12:38:45 [Signaling] Unit authenticated: DISPATCH-1 (DISPATCH-1) deviceId=3574017b-d3e4-40a7-a5a9-133833c252f9 [session-verified]
+12:38:45 AUDIO_WS_UPGRADE_HIT {
+12:38:45   method: 'GET',
+12:38:45   path: '/api/audio-ws',
+12:38:45   query: '?channelId=TESTING__TESTING%201&unitId=DISPATCH-1&format=opus',
+12:38:45   host: 'comms.reeder-systems.com',
+12:38:45   upgrade: 'websocket',
+12:38:45   connection: 'upgrade'
+12:38:45 }
+12:38:45 AUDIO_WS_ACCEPTED { username: 'DISPATCH-1', unitId: 'DISPATCH-1' }
+12:38:45 [WsAudioBridge] AUDIO_WS_CONN channelId="TESTING__TESTING 1" unitId="DISPATCH-1" subscriberKey="DISPATCH-1::7::46" userId=7 username="DISPATCH-1" connId=46
+12:38:45 [AudioRelay] WS_SUBSCRIBER_ADDED channelKey=TESTING__TESTING 1 subscriberKey=DISPATCH-1::7::46 unitId=DISPATCH-1 format=opus totalWsSubs=1
+12:38:45 [Signaling] DISPATCH-1 joined channel TESTING__TESTING 1
+12:38:45 [Signaling] DISPATCH-1 joined channel DISPATCH__DISPATCH
+12:38:45 [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=MJ7Z0i54... | 200 | 20ms
+12:38:45 AUDIO_WS_UPGRADE_HIT {
+12:38:45   method: 'GET',
+12:38:45   path: '/api/audio-ws',
+12:38:45   query: '?channelId=DISPATCH__DISPATCH&unitId=DISPATCH-1&format=opus',
+12:38:45   host: 'comms.reeder-systems.com',
+12:38:45   upgrade: 'websocket',
+12:38:45   connection: 'upgrade'
+12:38:45 }
+12:38:45 AUDIO_WS_ACCEPTED { username: 'DISPATCH-1', unitId: 'DISPATCH-1' }
+12:38:45 [WsAudioBridge] AUDIO_WS_CONN channelId="DISPATCH__DISPATCH" unitId="DISPATCH-1" subscriberKey="DISPATCH-1::7::47" userId=7 username="DISPATCH-1" connId=47
+12:38:45 [AudioRelay] WS_SUBSCRIBER_ADDED channelKey=DISPATCH__DISPATCH subscriberKey=DISPATCH-1::7::47 unitId=DISPATCH-1 format=opus totalWsSubs=2
+12:38:45 [AI-Dispatcher] Notify join received: DISPATCH-1 on DISPATCH__DISPATCH - connecting dispatcher
+12:38:45 [AI-Dispatcher] 2026-04-20T16:38:20.348Z | REJOIN_SKIPPED {"reason":"Already connected"}
+12:38:45 [AI-Dispatcher] Dispatcher connected for channel DISPATCH__DISPATCH
+12:38:45 [API] POST /api/dispatch/notify-join | user=DISPATCH-1(id:7) | sid=MJ7Z0i54... | 200 | 20ms
+12:38:45 [API] GET /api/messages/TESTING__TESTING%201?limit=50&offset=0 | user=DISPATCH-1(id:7) | sid=MJ7Z0i54... | 200 | 17ms
+12:38:45 [API] GET /api/messages/DISPATCH__DISPATCH?limit=50&offset=0 | user=DISPATCH-1(id:7) | sid=MJ7Z0i54... | 200 | 18ms
+12:38:45 [API] GET /api/messages/audio/DISPATCH__DISPATCH_1776703055436_DISPATCH_1.wav | user=DISPATCH-1(id:7) | sid=MJ7Z0i54... | 200 | 104ms
+12:38:45 [API] GET /api/messages/audio/DISPATCH__DISPATCH_1776683305975_AI_Dispatcher.wav | user=DISPATCH-1(id:7) | sid=MJ7Z0i54... | 200 | 63ms
+12:38:45 [Signaling] DISPATCH-1 left channel TESTING__TESTING 1
+12:38:45 [Signaling] DISPATCH-1 left channel DISPATCH__DISPATCH
+12:38:45 [API] GET /api/admin/users | user=DISPATCH-1(id:7) | sid=MJ7Z0i54... | 200 | 29ms
+12:38:45 [API] GET /api/admin/devices | user=DISPATCH-1(id:7) | sid=MJ7Z0i54... | 200 | 15ms
+12:38:45 [API] GET /api/paging-tone/channel | user=DISPATCH-1(id:7) | sid=MJ7Z0i54... | 200 | 25ms
+12:38:45 [API] GET /api/admin/scanner | user=DISPATCH-1(id:7) | sid=MJ7Z0i54... | 200 | 9ms
+12:38:45 [API] GET /api/admin/zones | user=DISPATCH-1(id:7) | sid=MJ7Z0i54... | 200 | 16ms
+12:38:45 [API] GET /api/admin/logs?limit=200 | user=DISPATCH-1(id:7) | sid=MJ7Z0i54... | 200 | 17ms
+12:38:45 [API] GET /api/admin/channels | user=DISPATCH-1(id:7) | sid=MJ7Z0i54... | 200 | 21ms
+12:38:45 [API] GET /api/admin/ai-dispatch | user=DISPATCH-1(id:7) | sid=MJ7Z0i54... | 200 | 22ms
+12:38:45 [API] GET /api/admin/hourly-time-broadcast | user=DISPATCH-1(id:7) | sid=MJ7Z0i54... | 200 | 15ms
+12:38:45 [DISPATCH] getChannels: 4 radio channels returned
+12:38:45 [API] GET /api/dispatch/channels | user=DISPATCH-1(id:7) | sid=MJ7Z0i54... | 200 | 15ms
