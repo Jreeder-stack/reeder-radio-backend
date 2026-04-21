@@ -301,7 +301,14 @@ export default function DispatchConsole({ user, onLogout }) {
     audioTransportManager.setPriorityChannelRoomKey(roomKey);
   }, [priorityChannelId, channels]);
 
-  const prevMonitoredRef = useRef([]);
+  // Reconcile the live audio WebSocket set against `monitoredChannelIds`
+  // on every change. Treating the monitored set as the single source of
+  // truth (rather than diffing against a previous-value ref) makes this
+  // immune to startup-vs-toggle ordering races — e.g. when
+  // `initializeConnections` opens a WebSocket for a channel before the
+  // DispatchConsole monitor effect has ever observed it as "previously
+  // monitored." Without reconcile, toggling that channel off would not
+  // emit a disconnect and audio would continue to flow. (Task #428)
   useEffect(() => {
     if (!channels.length) return;
 
@@ -313,22 +320,35 @@ export default function DispatchConsole({ user, onLogout }) {
         return ch ? (ch.room_key || ((ch.zone || 'Default') + '__' + ch.name)) : null;
       })
       .filter(Boolean);
+    const monitoredSet = new Set(monitoredRoomKeys);
 
-    const prevRoomKeys = prevMonitoredRef.current;
+    // Whitelist override owners that legitimately keep an audio
+    // connection open even when the channel isn't monitored. Currently
+    // only this-console clear-air qualifies; if patches/scanner-feed
+    // ever own a connection here in the future, add their room keys to
+    // this set as well.
+    const overrideKeys = new Set();
+    if (clearAirChannel) {
+      const ch = channels.find(c => String(c.id) === String(clearAirChannel));
+      if (ch) {
+        overrideKeys.add(ch.room_key || ((ch.zone || 'Default') + '__' + ch.name));
+      }
+    }
 
-    const toConnect = monitoredRoomKeys.filter(rk => !prevRoomKeys.includes(rk));
-    const toDisconnect = prevRoomKeys.filter(rk => !monitoredRoomKeys.includes(rk));
+    const connected = audioTransportManager.getConnectedChannels();
 
-    toConnect.forEach(rk => {
-      connectToChannel(rk, identity, false);
-    });
+    for (const rk of connected) {
+      if (!monitoredSet.has(rk) && !overrideKeys.has(rk)) {
+        disconnectFromChannel(rk);
+      }
+    }
 
-    toDisconnect.forEach(rk => {
-      disconnectFromChannel(rk);
-    });
-
-    prevMonitoredRef.current = monitoredRoomKeys;
-  }, [monitoredChannelIds, channels, user, connectToChannel, disconnectFromChannel]);
+    for (const rk of monitoredRoomKeys) {
+      if (!audioTransportManager.isConnected(rk)) {
+        connectToChannel(rk, identity, false);
+      }
+    }
+  }, [monitoredChannelIds, channels, user, clearAirChannel, connectToChannel, disconnectFromChannel]);
 
   const handleDragEnd = (event) => {
     const { active, over } = event;
