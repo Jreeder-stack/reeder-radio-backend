@@ -1,0 +1,158 @@
+Multiple commands produce '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/Info.plist'
+
+Multiple commands produce '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/favicon.png'
+
+Multiple commands produce '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/ic_launcher.png'
+
+Multiple commands produce '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/ic_launcher_round.png'
+
+Multiple commands produce '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/icon-192.png'
+
+Multiple commands produce '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/icon-512.png'
+
+Multiple commands produce '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/.gitignore'
+
+Multiple commands produce '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/.npmrc'
+
+Multiple commands produce '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/README.md'
+
+Multiple commands produce '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/assetlinks.json'
+
+Multiple commands produce '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/build.gradle.kts'
+
+Multiple commands produce '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/dispatchRouter.js'
+
+Multiple commands produce '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/index.html'
+
+Multiple commands produce '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/index.js'
+
+Multiple commands produce '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/index.jsx'
+
+Multiple commands produce '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/manifest.json'
+
+Multiple commands produce '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/package-lock.json'
+
+Multiple commands produce '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/package.json'
+
+Multiple commands produce '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/pager-tone.wav'
+
+Multiple commands produce '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/pcm-capture-worklet.js'
+
+Multiple commands produce '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/pcm-playback-worklet.js'
+
+Multiple commands produce '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/server.js'
+
+Multiple commands produce '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/sw.js'
+
+Multiple commands produce '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/talk-permit.mp3'
+
+Multiple commands produce '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/talk-permit.wav'
+
+Command Comms
+duplicate output file '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/favicon.png' on task: CopyPNGFile /Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/favicon.png /Users/jamesschaeffer-patton/Desktop/Reeder-Systems/Command Comms/Command Comms/reeder-radio-backend/client/public/favicon.png
+
+There are multiple stickers icon set, app icon set, or icon stack instances named "AppIcon".
+
+duplicate output file '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/ic_launcher.png' on task: CopyPNGFile /Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/ic_launcher.png /Users/jamesschaeffer-patton/Desktop/Reeder-Systems/Command Comms/Command Comms/reeder-radio-backend/android-native/app/src/main/res/mipmap-mdpi/ic_launcher.png
+
+duplicate output file '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/ic_launcher.png' on task: CopyPNGFile /Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/ic_launcher.png /Users/jamesschaeffer-patton/Desktop/Reeder-Systems/Command Comms/Command Comms/reeder-radio-backend/android-native/app/src/main/res/mipmap-xhdpi/ic_launcher.png
+
+duplicate output file '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/ic_launcher.png' on task: CopyPNGFile /Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/ic_launcher.png /Users/jamesschaeffer-patton/Desktop/Reeder-Systems/Command Comms/Command Comms/reeder-radio-backend/android-native/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+
+duplicate output file '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/ic_launcher.png' on task: CopyPNGFile /Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/ic_launcher.png /Users/jamesschaeffer-patton/Desktop/Reeder-Systems/Command Comms/Command Comms/reeder-radio-backend/android-native/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+
+duplicate output file '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/ic_launcher_round.png' on task: CopyPNGFile /Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/ic_launcher_round.png /Users/jamesschaeffer-patton/Desktop/Reeder-Systems/Command Comms/Command Comms/reeder-radio-backend/android-native/app/src/main/res/mipmap-mdpi/ic_launcher_round.png
+
+duplicate output file '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/ic_launcher_round.png' on task: CopyPNGFile /Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/ic_launcher_round.png /Users/jamesschaeffer-patton/Desktop/Reeder-Systems/Command Comms/Command Comms/reeder-radio-backend/android-native/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png
+
+duplicate output file '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/ic_launcher_round.png' on task: CopyPNGFile /Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/ic_launcher_round.png /Users/jamesschaeffer-patton/Desktop/Reeder-Systems/Command Comms/Command Comms/reeder-radio-backend/android-native/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
+
+duplicate output file '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/ic_launcher_round.png' on task: CopyPNGFile /Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/ic_launcher_round.png /Users/jamesschaeffer-patton/Desktop/Reeder-Systems/Command Comms/Command Comms/reeder-radio-backend/android-native/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
+
+duplicate output file '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/icon-192.png' on task: CopyPNGFile /Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/icon-192.png /Users/jamesschaeffer-patton/Desktop/Reeder-Systems/Command Comms/Command Comms/reeder-radio-backend/client/public/icons/icon-192.png
+
+duplicate output file '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/icon-512.png' on task: CopyPNGFile /Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/icon-512.png /Users/jamesschaeffer-patton/Desktop/Reeder-Systems/Command Comms/Command Comms/reeder-radio-backend/client/public/icons/icon-512.png
+
+duplicate output file '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/.gitignore' on task: CpResource /Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/.gitignore /Users/jamesschaeffer-patton/Desktop/Reeder-Systems/Command Comms/Command Comms/reeder-radio-backend/android-native/.gitignore
+
+duplicate output file '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/.gitignore' on task: CpResource /Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/.gitignore /Users/jamesschaeffer-patton/Desktop/Reeder-Systems/Command Comms/Command Comms/reeder-radio-backend/desktop-app/.gitignore
+
+duplicate output file '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/.gitignore' on task: CpResource /Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/.gitignore /Users/jamesschaeffer-patton/Desktop/Reeder-Systems/Command Comms/Command Comms/reeder-radio-backend/ios-native/.gitignore
+
+duplicate output file '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/.npmrc' on task: CpResource /Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/.npmrc /Users/jamesschaeffer-patton/Desktop/Reeder-Systems/Command Comms/Command Comms/reeder-radio-backend/client/.npmrc
+
+duplicate output file '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/README.md' on task: CpResource /Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/README.md /Users/jamesschaeffer-patton/Desktop/Reeder-Systems/Command Comms/Command Comms/reeder-radio-backend/desktop-app/README.md
+
+duplicate output file '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/README.md' on task: CpResource /Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/README.md /Users/jamesschaeffer-patton/Desktop/Reeder-Systems/Command Comms/Command Comms/reeder-radio-backend/ios-native/README.md
+
+duplicate output file '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/assetlinks.json' on task: CpResource /Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/assetlinks.json /Users/jamesschaeffer-patton/Desktop/Reeder-Systems/Command Comms/Command Comms/reeder-radio-backend/client/public/.well-known/assetlinks.json
+
+duplicate output file '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/build.gradle.kts' on task: CpResource /Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/build.gradle.kts /Users/jamesschaeffer-patton/Desktop/Reeder-Systems/Command Comms/Command Comms/reeder-radio-backend/android-native/build.gradle.kts
+
+duplicate output file '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/dispatchRouter.js' on task: CpResource /Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/dispatchRouter.js /Users/jamesschaeffer-patton/Desktop/Reeder-Systems/Command Comms/Command Comms/reeder-radio-backend/src/routes/dispatchRouter.js
+
+duplicate output file '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/index.html' on task: CpResource /Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/index.html /Users/jamesschaeffer-patton/Desktop/Reeder-Systems/Command Comms/Command Comms/reeder-radio-backend/client/index.html
+
+duplicate output file '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/index.js' on task: CpResource /Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/index.js /Users/jamesschaeffer-patton/Desktop/Reeder-Systems/Command Comms/Command Comms/reeder-radio-backend/client/src/signaling/index.js
+
+duplicate output file '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/index.js' on task: CpResource /Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/index.js /Users/jamesschaeffer-patton/Desktop/Reeder-Systems/Command Comms/Command Comms/reeder-radio-backend/src/db/index.js
+
+duplicate output file '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/index.js' on task: CpResource /Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/index.js /Users/jamesschaeffer-patton/Desktop/Reeder-Systems/Command Comms/Command Comms/reeder-radio-backend/src/routes/index.js
+
+duplicate output file '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/index.jsx' on task: CpResource /Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/index.jsx /Users/jamesschaeffer-patton/Desktop/Reeder-Systems/Command Comms/Command Comms/reeder-radio-backend/client/src/components/BottomBar/index.jsx
+
+duplicate output file '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/index.jsx' on task: CpResource /Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/index.jsx /Users/jamesschaeffer-patton/Desktop/Reeder-Systems/Command Comms/Command Comms/reeder-radio-backend/client/src/components/ChannelChat/index.jsx
+
+duplicate output file '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/index.jsx' on task: CpResource /Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/index.jsx /Users/jamesschaeffer-patton/Desktop/Reeder-Systems/Command Comms/Command Comms/reeder-radio-backend/client/src/components/ChannelTile/index.jsx
+
+duplicate output file '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/index.jsx' on task: CpResource /Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/index.jsx /Users/jamesschaeffer-patton/Desktop/Reeder-Systems/Command Comms/Command Comms/reeder-radio-backend/client/src/components/EmergencyPanel/index.jsx
+
+duplicate output file '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/index.jsx' on task: CpResource /Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/index.jsx /Users/jamesschaeffer-patton/Desktop/Reeder-Systems/Command Comms/Command Comms/reeder-radio-backend/client/src/components/EventLog/index.jsx
+
+duplicate output file '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/index.jsx' on task: CpResource /Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/index.jsx /Users/jamesschaeffer-patton/Desktop/Reeder-Systems/Command Comms/Command Comms/reeder-radio-backend/client/src/components/MobileRadio/index.jsx
+
+duplicate output file '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/index.jsx' on task: CpResource /Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/index.jsx /Users/jamesschaeffer-patton/Desktop/Reeder-Systems/Command Comms/Command Comms/reeder-radio-backend/client/src/components/PageModal/index.jsx
+
+duplicate output file '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/index.jsx' on task: CpResource /Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/index.jsx /Users/jamesschaeffer-patton/Desktop/Reeder-Systems/Command Comms/Command Comms/reeder-radio-backend/client/src/components/PatchPanel/index.jsx
+
+duplicate output file '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/index.jsx' on task: CpResource /Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/index.jsx /Users/jamesschaeffer-patton/Desktop/Reeder-Systems/Command Comms/Command Comms/reeder-radio-backend/client/src/components/TopBar/index.jsx
+
+duplicate output file '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/index.jsx' on task: CpResource /Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/index.jsx /Users/jamesschaeffer-patton/Desktop/Reeder-Systems/Command Comms/Command Comms/reeder-radio-backend/client/src/components/UnitList/index.jsx
+
+duplicate output file '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/manifest.json' on task: CpResource /Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/manifest.json /Users/jamesschaeffer-patton/Desktop/Reeder-Systems/Command Comms/Command Comms/reeder-radio-backend/client/public/manifest.json
+
+duplicate output file '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/package-lock.json' on task: CpResource /Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/package-lock.json /Users/jamesschaeffer-patton/Desktop/Reeder-Systems/Command Comms/Command Comms/reeder-radio-backend/package-lock.json
+
+duplicate output file '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/package.json' on task: CpResource /Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/package.json /Users/jamesschaeffer-patton/Desktop/Reeder-Systems/Command Comms/Command Comms/reeder-radio-backend/desktop-app/package.json
+
+duplicate output file '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/package.json' on task: CpResource /Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/package.json /Users/jamesschaeffer-patton/Desktop/Reeder-Systems/Command Comms/Command Comms/reeder-radio-backend/package.json
+
+duplicate output file '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/pager-tone.wav' on task: CpResource /Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/pager-tone.wav /Users/jamesschaeffer-patton/Desktop/Reeder-Systems/Command Comms/Command Comms/reeder-radio-backend/client/public/sounds/pager-tone.wav
+
+duplicate output file '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/pcm-capture-worklet.js' on task: CpResource /Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/pcm-capture-worklet.js /Users/jamesschaeffer-patton/Desktop/Reeder-Systems/Command Comms/Command Comms/reeder-radio-backend/client/public/pcm-capture-worklet.js
+
+duplicate output file '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/pcm-playback-worklet.js' on task: CpResource /Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/pcm-playback-worklet.js /Users/jamesschaeffer-patton/Desktop/Reeder-Systems/Command Comms/Command Comms/reeder-radio-backend/client/public/pcm-playback-worklet.js
+
+duplicate output file '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/server.js' on task: CpResource /Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/server.js /Users/jamesschaeffer-patton/Desktop/Reeder-Systems/Command Comms/Command Comms/reeder-radio-backend/src/server.js
+
+duplicate output file '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/sw.js' on task: CpResource /Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/sw.js /Users/jamesschaeffer-patton/Desktop/Reeder-Systems/Command Comms/Command Comms/reeder-radio-backend/client/public/sw.js
+
+duplicate output file '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/talk-permit.mp3' on task: CpResource /Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/talk-permit.mp3 /Users/jamesschaeffer-patton/Desktop/Reeder-Systems/Command Comms/Command Comms/reeder-radio-backend/client/public/sounds/talk-permit.mp3
+
+duplicate output file '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/talk-permit.wav' on task: CpResource /Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/talk-permit.wav /Users/jamesschaeffer-patton/Desktop/Reeder-Systems/Command Comms/Command Comms/reeder-radio-backend/client/public/sounds/talk-permit.wav
+
+duplicate output file '/Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/Info.plist' on task: ProcessInfoPlistFile /Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Products/Debug-iphonesimulator/Command Comms.app/Info.plist /Users/jamesschaeffer-patton/Library/Developer/Xcode/DerivedData/Command_Comms-eltafpsclibzqkaucenjgokyhfvu/Build/Intermediates.noindex/Command Comms.build/Debug-iphonesimulator/Command Comms.build/empty-Command Comms.plist
+
+/Users/jamesschaeffer-patton/Desktop/Reeder-Systems/Command Comms/Command Comms/reeder-radio-backend/ios-native/CommandComms/Audio/OpusCodec.swift
+/Users/jamesschaeffer-patton/Desktop/Reeder-Systems/Command Comms/Command Comms/reeder-radio-backend/ios-native/CommandComms/Audio/OpusCodec.swift:3:8 Unable to resolve module dependency: 'Opus'
+import Opus
+       ^
+
+/Users/jamesschaeffer-patton/Desktop/Reeder-Systems/Command Comms/Command Comms/reeder-radio-backend/ios-native/CommandComms/Networking/SignalingClient.swift
+/Users/jamesschaeffer-patton/Desktop/Reeder-Systems/Command Comms/Command Comms/reeder-radio-backend/ios-native/CommandComms/Networking/SignalingClient.swift:3:8 Unable to resolve module dependency: 'SocketIO'
+import SocketIO
+       ^
+
+/Users/jamesschaeffer-patton/Desktop/Reeder-Systems/Command Comms/Command Comms/reeder-radio-backend/ios-native/CommandComms/Storage/KeychainStore.swift
+/Users/jamesschaeffer-patton/Desktop/Reeder-Systems/Command Comms/Command Comms/reeder-radio-backend/ios-native/CommandComms/Storage/KeychainStore.swift:2:8 Unable to resolve module dependency: 'KeychainAccess'
+import KeychainAccess
