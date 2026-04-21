@@ -24,6 +24,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.reedersystems.commandcomms.audio.radio.SignalQuality
 import com.reedersystems.commandcomms.data.model.PttState
 
 private val BgWhite   = Color(0xFFFFFFFF)
@@ -294,7 +295,13 @@ private fun CenterDisplay(
                     state.activeTransmittingUnit != null -> {
                         val rxUnitId = state.activeTransmittingUnit
                         Spacer(Modifier.height(6.dp))
-                        T320Text(rxUnitId, color = Orange, bold = true, size = 14)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            SignalQualityIndicator(state.signalQuality)
+                            T320Text(rxUnitId, color = Orange, bold = true, size = 14)
+                        }
                     }
                     isEmergency -> {
                         Spacer(Modifier.height(6.dp))
@@ -443,6 +450,39 @@ private fun ScanOverlay(
                     }
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun SignalQualityIndicator(quality: SignalQuality) {
+    if (quality == SignalQuality.NONE) return
+    val activeBars = when (quality) {
+        SignalQuality.EXCELLENT -> 3
+        SignalQuality.GOOD -> 2
+        SignalQuality.FAIR -> 1
+        SignalQuality.POOR -> 1
+        SignalQuality.NONE -> 0
+    }
+    val activeColor = when (quality) {
+        SignalQuality.EXCELLENT, SignalQuality.GOOD -> Green
+        SignalQuality.FAIR -> Amber
+        SignalQuality.POOR -> Red
+        SignalQuality.NONE -> Color.Transparent
+    }
+    val inactiveColor = Color(0xFFCCCCCC)
+    Row(
+        verticalAlignment = Alignment.Bottom,
+        horizontalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        for (i in 0 until 3) {
+            val barHeight = (6 + i * 4).dp
+            Box(
+                modifier = Modifier
+                    .width(4.dp)
+                    .height(barHeight)
+                    .background(if (i < activeBars) activeColor else inactiveColor)
+            )
         }
     }
 }

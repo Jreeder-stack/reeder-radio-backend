@@ -20,6 +20,7 @@ import com.reedersystems.commandcomms.CommandCommsApp
 import com.reedersystems.commandcomms.KeyAction
 import com.reedersystems.commandcomms.audio.BackgroundAudioService
 import com.reedersystems.commandcomms.audio.radio.RadioState
+import com.reedersystems.commandcomms.audio.radio.SignalQuality
 import com.reedersystems.commandcomms.data.model.Channel
 import com.reedersystems.commandcomms.data.model.PttState
 import com.reedersystems.commandcomms.data.model.Zone
@@ -84,6 +85,7 @@ data class RadioUiState(
     val showPageAlert: Boolean = false,
     val pageAlertMessage: String = "",
     val pageAlertSender: String = "DISPATCH",
+    val signalQuality: SignalQuality = SignalQuality.NONE,
 ) {
     val currentZone: Zone? get() = zones.getOrNull(currentZoneIndex)
     val currentChannel: Channel? get() = currentZone?.channels?.getOrNull(currentChannelIndex)
@@ -572,6 +574,11 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                     )
                 }
                 Log.d(TAG, "RadioState updated: $radioState")
+            }
+        }
+        viewModelScope.launch {
+            radioStateManager.signalQuality.collect { quality ->
+                _uiState.update { it.copy(signalQuality = quality) }
             }
         }
     }

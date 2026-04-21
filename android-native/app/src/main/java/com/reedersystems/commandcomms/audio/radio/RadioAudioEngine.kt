@@ -48,6 +48,7 @@ class RadioAudioEngine(private val context: Context) {
     private var encodeJob: Job? = null
     private var encodeQueue: LinkedBlockingQueue<ByteArray>? = null
     private var rxDiagJob: Job? = null
+    private var signalQualityJob: Job? = null
     @Volatile
     private var isTransmitting = false
     @Volatile
@@ -1380,12 +1381,16 @@ class RadioAudioEngine(private val context: Context) {
         stateManager.rxPipelineRunning = true
         Log.d(TAG, "RX_SESSION_START ${RadioDiagLog.elapsedTag()}")
         startRxDiagnostics()
+        startSignalQualityMonitor()
         Log.d(TAG, "RX started — playback active ${RadioDiagLog.elapsedTag()}")
     }
 
     fun stopReceive() {
         rxDiagJob?.cancel()
         rxDiagJob = null
+        signalQualityJob?.cancel()
+        signalQualityJob = null
+        stateManager.updateSignalQuality(SignalQuality.NONE)
         audioPlayback.stop()
         audioPlayback.onFrameDecoded = null
         audioPlayback.onUnderrun = null
@@ -1404,6 +1409,46 @@ class RadioAudioEngine(private val context: Context) {
 
     private var noRxDataStartMs: Long = 0L
     private var noRxSocketRecreated: Boolean = false
+
+    private fun startSignalQualityMonitor() {
+        signalQualityJob?.cancel()
+        var lastDecoded = rxSessionStats.packetsDecoded
+        var lastFec = audioPlayback.rxFecRecoveries
+        var lastPlc = audioPlayback.rxPlcFrames
+        var idleCycles = 0
+        signalQualityJob = scope.launch {
+            stateManager.updateSignalQuality(SignalQuality.NONE)
+            while (isActive) {
+                delay(1000L)
+                val decodedNow = rxSessionStats.packetsDecoded
+                val fecNow = audioPlayback.rxFecRecoveries
+                val plcNow = audioPlayback.rxPlcFrames
+                val deltaDecoded = decodedNow - lastDecoded
+                val deltaFec = fecNow - lastFec
+                val deltaPlc = plcNow - lastPlc
+                lastDecoded = decodedNow
+                lastFec = fecNow
+                lastPlc = plcNow
+
+                val totalFrames = deltaDecoded + deltaFec + deltaPlc
+                if (totalFrames < 5) {
+                    // No meaningful RX in this window — clear the indicator
+                    // after a short hold so brief inter-burst gaps don't drop it.
+                    idleCycles++
+                    if (idleCycles >= 2) {
+                        stateManager.updateSignalQuality(SignalQuality.NONE)
+                    }
+                    continue
+                }
+                idleCycles = 0
+                val lostFrames = deltaFec + deltaPlc
+                val lossPct = if (totalFrames > 0) lostFrames * 100.0 / totalFrames else 0.0
+                val jitterMs = jitterBuffer.estimatedJitterMsValue
+                val quality = SignalQuality.classify(lossPct, jitterMs, totalFrames)
+                stateManager.updateSignalQuality(quality)
+            }
+        }
+    }
 
     private fun startRxDiagnostics() {
         rxDiagJob?.cancel()

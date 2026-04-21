@@ -15,6 +15,15 @@ class RadioStateManager {
     private val _transmittingUnitId = MutableStateFlow<String?>(null)
     val transmittingUnitId: StateFlow<String?> = _transmittingUnitId.asStateFlow()
 
+    private val _signalQuality = MutableStateFlow(SignalQuality.NONE)
+    val signalQuality: StateFlow<SignalQuality> = _signalQuality.asStateFlow()
+
+    fun updateSignalQuality(quality: SignalQuality) {
+        if (_signalQuality.value != quality) {
+            _signalQuality.value = quality
+        }
+    }
+
     @Volatile
     var transmittingUnitSetAtMs: Long = 0L
         private set
@@ -62,6 +71,7 @@ class RadioStateManager {
         stateSetAtMs = System.currentTimeMillis()
         txPipelineRunning = false
         rxPipelineRunning = false
+        _signalQuality.value = SignalQuality.NONE
         Log.d(TAG, "State RESET: $old -> IDLE activeChannel=${activeChannelKey ?: "none"}")
     }
 }
