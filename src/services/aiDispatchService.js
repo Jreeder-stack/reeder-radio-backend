@@ -1,6 +1,8 @@
 import { speechToText, textToSpeech, isConfigured as isAzureConfigured } from './azureSpeechService.js';
-import { matchCommand, resetDispatcherState, matchEmergencyResponse, matchSecureConfirmation, getUnitSessionState, setUnitSessionState, DISPATCHER_STATE, EMERGENCY_DISTRESS_PHRASES } from './commandMatcher.js';
-import { isConfigured as isLlmConfigured, classifyIntent, answerWithData } from './llmIntentService.js';
+import { matchCommand, resetDispatcherState, matchEmergencyResponse, matchSecureConfirmation, getUnitSessionState, setUnitSessionState, DISPATCHER_STATE, EMERGENCY_DISTRESS_PHRASES, ownsInFlight, clearPromptTimeout } from './commandMatcher.js';
+import { RADIO_STATUS, extractActualStatusFromRejection } from './cadService.js';
+import { resolveDestination, KNOWN_PLACES } from './agencyKnowledge.js';
+import { isConfigured as isLlmConfigured, classifyIntent, answerWithData, composeNatural } from './llmIntentService.js';
 import { parsePersonDetails, parseDOB, extractNameFromTranscript } from './phoneticParser.js';
 import pool, { isAiDispatchEnabled, getAiDispatchChannel, createChannelMessage } from '../db/index.js';
 import { isValidWav } from './wavValidator.js';
@@ -1587,6 +1589,34 @@ class AIDispatcher {
         return;
       }
 
+      if (state === DISPATCHER_STATE.AWAITING_DESTINATION_CLARIFY) {
+        this.log('DESTINATION_CLARIFY_FAST_PATH', { participant: participantId, transcript });
+        this._turnContextByUnit.set(participantId, { transcript, intent: 'DESTINATION_CLARIFY' });
+        await this.handleDestinationClarify(participantId, transcript, slots);
+        return;
+      }
+
+      if (state === DISPATCHER_STATE.AWAITING_SECONDARY_MILEAGE) {
+        this.log('SECONDARY_MILEAGE_FAST_PATH', { participant: participantId, transcript });
+        this._turnContextByUnit.set(participantId, { transcript, intent: 'SECONDARY_MILEAGE_INPUT' });
+        await this.handleSecondaryMileageInput(participantId, transcript, slots);
+        return;
+      }
+
+      if (state === DISPATCHER_STATE.AWAITING_ENDING_MILEAGE) {
+        this.log('ENDING_MILEAGE_FAST_PATH', { participant: participantId, transcript });
+        this._turnContextByUnit.set(participantId, { transcript, intent: 'ENDING_MILEAGE_INPUT' });
+        await this.handleEndingMileageInput(participantId, transcript, slots);
+        return;
+      }
+
+      if (state === DISPATCHER_STATE.AWAITING_MILEAGE_CONFIRM) {
+        this.log('MILEAGE_CONFIRM_FAST_PATH', { participant: participantId, transcript });
+        this._turnContextByUnit.set(participantId, { transcript, intent: 'MILEAGE_CONFIRM' });
+        await this.handleMileageConfirm(participantId, transcript, slots);
+        return;
+      }
+
       if (state === DISPATCHER_STATE.AWAITING_DL_STATE) {
         this.log('DL_STATE_FAST_PATH', { participant: participantId, transcript });
         this._turnContextByUnit.set(participantId, { transcript, intent: 'PERSON_CHECK_DL' });
@@ -1725,10 +1755,25 @@ class AIDispatcher {
         }
 
         case 'DISREGARD': {
+          if (!ownsInFlight(participantId)) {
+            this.log('LLM_DISREGARD_NO_OWNER', { participant: participantId, state, reason: 'speaker has no in-flight flow; ignoring to avoid cross-talk cancel' });
+            this._turnContextByUnit.delete(participantId);
+            break;
+          }
           this.log('LLM_DISREGARD', { participant: participantId, state });
           setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, { conversationHistory: [] }, true);
           const resp = result.response || `${participantId}, 10-4, disregard.`;
           await this.speak(resp, participantId);
+          break;
+        }
+
+        case 'SECONDARY_TRIP_START': {
+          await this.handleSecondaryTripStart(participantId, transcript, result.slots || {});
+          break;
+        }
+
+        case 'SECONDARY_TRIP_ARRIVE': {
+          await this.handleSecondaryTripArrive(participantId, transcript, result.slots || {});
           break;
         }
 
@@ -2912,7 +2957,7 @@ class AIDispatcher {
 
     const normalized = transcript.toLowerCase().trim();
     const disregardPhrases = ['disregard', 'cancel', 'cancel that', 'nevermind', 'never mind', '10-22', 'scratch that'];
-    if (disregardPhrases.some(p => normalized.includes(p))) {
+    if (disregardPhrases.some(p => normalized.includes(p)) && ownsInFlight(participantId)) {
       setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
       const resp = `${participantId}, 10-4, disregard.`;
       await this.speak(resp, participantId);
@@ -2965,7 +3010,7 @@ class AIDispatcher {
 
     const normalized = transcript.toLowerCase().trim();
     const disregardPhrases = ['disregard', 'cancel', 'cancel that', 'nevermind', 'never mind', '10-22', 'scratch that'];
-    if (disregardPhrases.some(p => normalized.includes(p))) {
+    if (disregardPhrases.some(p => normalized.includes(p)) && ownsInFlight(participantId)) {
       setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
       const resp = `${participantId}, 10-4, disregard.`;
       await this.speak(resp, participantId);
@@ -3789,7 +3834,7 @@ class AIDispatcher {
 
     const normalized = transcript.toLowerCase().trim();
     const disregardPhrases = ['disregard', 'cancel', 'cancel that', 'nevermind', 'never mind', '10-22', 'scratch that'];
-    if (disregardPhrases.some(p => normalized.includes(p))) {
+    if (disregardPhrases.some(p => normalized.includes(p)) && ownsInFlight(participantId)) {
       setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
       const resp = `${participantId}, 10-4, disregard.`;
       await this.speak(resp, participantId);
@@ -3848,6 +3893,391 @@ class AIDispatcher {
       this.addConversationExchange(participantId, transcript, resp);
       setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
     }
+  }
+
+  _spokenDigits(num) {
+    if (num === null || num === undefined) return '';
+    return String(num).split('').map(d => {
+      switch (d) {
+        case '0': return 'zero';
+        case '1': return 'one';
+        case '2': return 'two';
+        case '3': return 'three';
+        case '4': return 'four';
+        case '5': return 'five';
+        case '6': return 'six';
+        case '7': return 'seven';
+        case '8': return 'eight';
+        case '9': return 'nine';
+        default: return d;
+      }
+    }).join('-');
+  }
+
+  _parseMileage(text) {
+    if (!text) return null;
+    const cleaned = String(text).replace(/[^0-9]/g, '');
+    if (!cleaned) return null;
+    const n = parseInt(cleaned, 10);
+    if (Number.isNaN(n)) return null;
+    return n;
+  }
+
+  async _composeAck(participantId, draftPrompt, contextHint = null) {
+    try {
+      return await composeNatural(participantId, draftPrompt, contextHint);
+    } catch (e) {
+      this.log('COMPOSE_ACK_FALLBACK', { error: e.message });
+      return draftPrompt;
+    }
+  }
+
+  async _ensureCallId(participantId) {
+    if (!cadService.isConfigured()) return { configured: false, callId: null };
+    const currentCall = await cadService.getUnitCurrentCallById(participantId);
+    const callId = currentCall?.call_id || currentCall?.call_number || currentCall?.callNumber || null;
+    return { configured: true, callId };
+  }
+
+  async handleSecondaryTripStart(participantId, transcript, slots) {
+    this.log('SECONDARY_TRIP_START', { participant: participantId, transcript, slots });
+
+    const destinationRaw = slots.destination ? String(slots.destination).trim() : null;
+    const startingMileage = this._parseMileage(slots.startingMileage);
+    const subjectCount = slots.subjectCount ? parseInt(String(slots.subjectCount).replace(/[^0-9]/g, ''), 10) || 1 : 1;
+    const subjectDescription = (slots.subjectDescription ? String(slots.subjectDescription).trim() : 'subject') || 'subject';
+
+    if (!destinationRaw) {
+      const resp = await this._composeAck(participantId, `${participantId}, what's your destination?`);
+      setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_DESTINATION_CLARIFY, 'SECONDARY_TRIP_START',
+        { startingMileage, subjectCount, subjectDescription, awaiting: 'destination' }, true);
+      await this.speak(resp, participantId, { retryOnBusy: true });
+      return;
+    }
+
+    if (startingMileage === null) {
+      setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_SECONDARY_MILEAGE, 'SECONDARY_TRIP_START',
+        { destination: destinationRaw, subjectCount, subjectDescription }, true);
+      const resp = await this._composeAck(participantId, `${participantId}, starting mileage?`);
+      await this.speak(resp, participantId, { retryOnBusy: true });
+      return;
+    }
+
+    const resolved = resolveDestination(destinationRaw);
+    if (resolved.kind === 'ambiguous') {
+      const names = resolved.candidates.map(c => c.name).join(' or ');
+      const draft = `${participantId}, did you mean ${names}?`;
+      const resp = await this._composeAck(participantId, draft);
+      setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_DESTINATION_CLARIFY, 'SECONDARY_TRIP_START', {
+        startingMileage, subjectCount, subjectDescription,
+        candidates: resolved.candidates.map(c => ({ name: c.name, address: c.address })),
+        spokenDestination: destinationRaw,
+        awaiting: 'choice'
+      }, true);
+      await this.speak(resp, participantId, { retryOnBusy: true });
+      return;
+    }
+
+    let resolvedDestination = destinationRaw;
+    let resolvedAddress = null;
+    if (resolved.kind === 'unique') {
+      resolvedDestination = resolved.place.name;
+      resolvedAddress = resolved.place.address || null;
+    } else {
+      const draft = `${participantId}, copy en route to "${destinationRaw}", confirm address or city?`;
+      const resp = await this._composeAck(participantId, draft);
+      setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_DESTINATION_CLARIFY, 'SECONDARY_TRIP_START', {
+        startingMileage, subjectCount, subjectDescription,
+        spokenDestination: destinationRaw,
+        awaiting: 'confirm-unknown'
+      }, true);
+      await this.speak(resp, participantId, { retryOnBusy: true });
+      return;
+    }
+
+    await this._executeSecondaryTripStart(participantId, transcript, {
+      destination: resolvedDestination,
+      destinationAddress: resolvedAddress,
+      startingMileage,
+      subjectCount,
+      subjectDescription,
+    });
+  }
+
+  async _executeSecondaryTripStart(participantId, transcript, payload) {
+    const { destination, destinationAddress, startingMileage, subjectCount, subjectDescription } = payload;
+
+    const { configured, callId } = await this._ensureCallId(participantId);
+
+    let cadOk = true;
+    let cadCorrection = null;
+    if (configured) {
+      const statusResult = await cadService.updateUnitStatus(participantId, RADIO_STATUS.EN_ROUTE_SECONDARY, this.channelName);
+      if (!statusResult || statusResult.success === false) {
+        cadOk = false;
+        const actual = extractActualStatusFromRejection(statusResult);
+        cadCorrection = { failureType: statusResult?.failureType, statusCode: statusResult?.statusCode, actual };
+        this.log('SECONDARY_TRIP_START_STATUS_FAILED', { unitId: participantId, statusResult });
+      }
+    }
+
+    if (configured && callId && cadOk) {
+      const note = `STARTING MILEAGE - ${startingMileage}, en route to ${destination.toUpperCase()} with ${subjectCount} ${subjectDescription}`;
+      const noteResult = await cadService.addCallNote(callId, note);
+      if (!noteResult || noteResult.success === false) {
+        this.log('SECONDARY_TRIP_START_NOTE_FAILED', { unitId: participantId, callId, noteResult });
+      } else {
+        this.log('SECONDARY_TRIP_START_NOTE_ADDED', { unitId: participantId, callId, note });
+      }
+    }
+
+    if (cadOk) {
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {
+        secondaryTrip: {
+          destination,
+          destinationAddress,
+          startingMileage,
+          subjectCount,
+          subjectDescription,
+          callId: callId || null,
+          startedAt: Date.now(),
+        }
+      }, false);
+      const draft = `${participantId}, 10-4, en route to ${destination} with ${subjectCount === 1 ? 'one' : subjectCount} ${subjectDescription}, starting mileage ${this._spokenDigits(startingMileage)}.`;
+      const resp = await this._composeAck(participantId, draft);
+      await this.speak(resp, participantId, { retryOnBusy: true });
+      this.addConversationExchange(participantId, transcript, resp);
+      return;
+    }
+
+    setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, false);
+    let draft;
+    if (cadCorrection?.actual) {
+      const actualHuman = String(cadCorrection.actual).toLowerCase();
+      draft = `${participantId}, I show you ${actualHuman}. Mark on scene first, then go ahead with the transport.`;
+    } else if (cadCorrection?.failureType === 'NOT_CONFIGURED') {
+      draft = `${participantId}, 10-4, en route to ${destination} with ${subjectCount} ${subjectDescription}, starting mileage ${this._spokenDigits(startingMileage)}. CAD unavailable, log it on your MDT.`;
+    } else {
+      draft = `${participantId}, CAD didn't accept that transition. Try your MDT.`;
+    }
+    const resp = await this._composeAck(participantId, draft);
+    await this.speak(resp, participantId, { retryOnBusy: true });
+    this.addConversationExchange(participantId, transcript, resp);
+  }
+
+  async handleSecondaryMileageInput(participantId, transcript, savedSlots) {
+    this.log('SECONDARY_MILEAGE_INPUT', { participant: participantId, transcript });
+    const normalized = transcript.toLowerCase().trim();
+    const disregardPhrases = ['disregard', 'cancel', 'nevermind', 'never mind'];
+    if (disregardPhrases.some(p => normalized.includes(p)) && ownsInFlight(participantId)) {
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+      const resp = `${participantId}, 10-4, disregard.`;
+      await this.speak(resp, participantId);
+      return;
+    }
+    const startingMileage = this._parseMileage(transcript);
+    if (startingMileage === null) {
+      const resp = await this._composeAck(participantId, `${participantId}, didn't catch that, starting mileage?`);
+      await this.speak(resp, participantId);
+      return;
+    }
+    const destination = savedSlots?.destination;
+    const subjectCount = savedSlots?.subjectCount || 1;
+    const subjectDescription = savedSlots?.subjectDescription || 'subject';
+    if (!destination) {
+      setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_DESTINATION_CLARIFY, 'SECONDARY_TRIP_START', {
+        startingMileage, subjectCount, subjectDescription, awaiting: 'destination'
+      }, true);
+      const resp = await this._composeAck(participantId, `${participantId}, copy starting mileage. Where to?`);
+      await this.speak(resp, participantId);
+      return;
+    }
+    const resolved = resolveDestination(destination);
+    let dest = destination, destAddr = null;
+    if (resolved.kind === 'unique') { dest = resolved.place.name; destAddr = resolved.place.address; }
+    await this._executeSecondaryTripStart(participantId, transcript, {
+      destination: dest, destinationAddress: destAddr, startingMileage, subjectCount, subjectDescription
+    });
+  }
+
+  async handleDestinationClarify(participantId, transcript, savedSlots) {
+    this.log('DESTINATION_CLARIFY_INPUT', { participant: participantId, transcript, savedSlots });
+    const normalized = transcript.toLowerCase().trim();
+    const disregardPhrases = ['disregard', 'cancel', 'nevermind', 'never mind'];
+    if (disregardPhrases.some(p => normalized.includes(p)) && ownsInFlight(participantId)) {
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+      const resp = `${participantId}, 10-4, disregard.`;
+      await this.speak(resp, participantId);
+      return;
+    }
+
+    const candidates = savedSlots?.candidates || [];
+    const startingMileage = savedSlots?.startingMileage;
+    const subjectCount = savedSlots?.subjectCount || 1;
+    const subjectDescription = savedSlots?.subjectDescription || 'subject';
+
+    let chosen = null;
+    if (candidates.length > 0) {
+      const txt = normalized;
+      for (const c of candidates) {
+        if (txt.includes(c.name.toLowerCase())) { chosen = c; break; }
+      }
+      if (!chosen) {
+        const resolved = resolveDestination(transcript, candidates.map(c => ({ name: c.name, aliases: [], address: c.address })));
+        if (resolved.kind === 'unique') chosen = resolved.place;
+      }
+    }
+    if (chosen) {
+      await this._executeSecondaryTripStart(participantId, transcript, {
+        destination: chosen.name,
+        destinationAddress: chosen.address || null,
+        startingMileage,
+        subjectCount,
+        subjectDescription,
+      });
+      return;
+    }
+
+    const dest = transcript.trim();
+    if (!dest) {
+      const resp = await this._composeAck(participantId, `${participantId}, didn't catch that, where to?`);
+      await this.speak(resp, participantId);
+      return;
+    }
+    if (startingMileage === null || startingMileage === undefined) {
+      setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_SECONDARY_MILEAGE, 'SECONDARY_TRIP_START', {
+        destination: dest, subjectCount, subjectDescription
+      }, true);
+      const resp = await this._composeAck(participantId, `${participantId}, 10-4, en route to ${dest}, starting mileage?`);
+      await this.speak(resp, participantId);
+      return;
+    }
+    await this._executeSecondaryTripStart(participantId, transcript, {
+      destination: dest, destinationAddress: null, startingMileage, subjectCount, subjectDescription,
+    });
+  }
+
+  async handleSecondaryTripArrive(participantId, transcript, slots) {
+    this.log('SECONDARY_TRIP_ARRIVE', { participant: participantId, transcript, slots });
+    const session = getUnitSessionState(participantId);
+    const trip = session?.slots?.secondaryTrip || null;
+    const endingMileage = this._parseMileage(slots.endingMileage);
+    const destination = (slots.destination && String(slots.destination).trim()) || trip?.destination || null;
+
+    if (endingMileage === null) {
+      setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_ENDING_MILEAGE, 'SECONDARY_TRIP_ARRIVE',
+        { destination }, true);
+      const resp = await this._composeAck(participantId, `${participantId}, ending mileage?`);
+      await this.speak(resp, participantId, { retryOnBusy: true });
+      return;
+    }
+
+    if (trip && typeof trip.startingMileage === 'number' && endingMileage <= trip.startingMileage) {
+      setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_MILEAGE_CONFIRM, 'SECONDARY_TRIP_ARRIVE', {
+        endingMileage, destination, startingMileage: trip.startingMileage,
+      }, true);
+      const draft = `${participantId}, confirm ending mileage ${this._spokenDigits(endingMileage)}, that's lower than your starting mileage of ${this._spokenDigits(trip.startingMileage)}?`;
+      const resp = await this._composeAck(participantId, draft);
+      await this.speak(resp, participantId, { retryOnBusy: true });
+      return;
+    }
+
+    await this._executeSecondaryTripArrive(participantId, transcript, { endingMileage, destination, trip });
+  }
+
+  async _executeSecondaryTripArrive(participantId, transcript, payload) {
+    const { endingMileage, destination, trip } = payload;
+
+    const { configured, callId: liveCallId } = await this._ensureCallId(participantId);
+    const callId = liveCallId || trip?.callId || null;
+
+    let cadOk = true;
+    let cadCorrection = null;
+    if (configured) {
+      const statusResult = await cadService.updateUnitStatus(participantId, RADIO_STATUS.ARRIVED_SECONDARY, this.channelName);
+      if (!statusResult || statusResult.success === false) {
+        cadOk = false;
+        cadCorrection = { failureType: statusResult?.failureType, actual: extractActualStatusFromRejection(statusResult) };
+        this.log('SECONDARY_TRIP_ARRIVE_STATUS_FAILED', { unitId: participantId, statusResult });
+      }
+    }
+
+    if (configured && callId && cadOk) {
+      const dest = destination ? destination.toUpperCase() : null;
+      const note = dest
+        ? `ENDING MILEAGE - ${endingMileage}, arrived at ${dest}`
+        : `ENDING MILEAGE - ${endingMileage}, arrived`;
+      const noteResult = await cadService.addCallNote(callId, note);
+      if (!noteResult || noteResult.success === false) {
+        this.log('SECONDARY_TRIP_ARRIVE_NOTE_FAILED', { unitId: participantId, callId, noteResult });
+      } else {
+        this.log('SECONDARY_TRIP_ARRIVE_NOTE_ADDED', { unitId: participantId, callId, note });
+      }
+    }
+
+    setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, { secondaryTrip: null }, false);
+
+    let draft;
+    if (cadOk) {
+      const destText = destination ? ` arrived at ${destination},` : '';
+      draft = `${participantId}, 10-4,${destText} ending mileage ${this._spokenDigits(endingMileage)}.`;
+    } else if (cadCorrection?.actual) {
+      draft = `${participantId}, I show you ${String(cadCorrection.actual).toLowerCase()}. Log the arrival on your MDT.`;
+    } else {
+      draft = `${participantId}, CAD didn't accept that, log the arrival on your MDT.`;
+    }
+    const resp = await this._composeAck(participantId, draft);
+    await this.speak(resp, participantId, { retryOnBusy: true });
+    this.addConversationExchange(participantId, transcript, resp);
+  }
+
+  async handleEndingMileageInput(participantId, transcript, savedSlots) {
+    this.log('ENDING_MILEAGE_INPUT', { participant: participantId, transcript });
+    const normalized = transcript.toLowerCase().trim();
+    const disregardPhrases = ['disregard', 'cancel', 'nevermind', 'never mind'];
+    if (disregardPhrases.some(p => normalized.includes(p)) && ownsInFlight(participantId)) {
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+      const resp = `${participantId}, 10-4, disregard.`;
+      await this.speak(resp, participantId);
+      return;
+    }
+    const endingMileage = this._parseMileage(transcript);
+    if (endingMileage === null) {
+      const resp = await this._composeAck(participantId, `${participantId}, didn't catch that, ending mileage?`);
+      await this.speak(resp, participantId);
+      return;
+    }
+    await this.handleSecondaryTripArrive(participantId, transcript, {
+      endingMileage,
+      destination: savedSlots?.destination || null,
+    });
+  }
+
+  async handleMileageConfirm(participantId, transcript, savedSlots) {
+    this.log('MILEAGE_CONFIRM_INPUT', { participant: participantId, transcript });
+    const normalized = transcript.toLowerCase().trim();
+    const yesPhrases = ['yes', 'yeah', 'yep', 'affirmative', '10-4', '10/4', 'ten four', 'copy', 'roger', 'confirm'];
+    const noPhrases = ['no', 'negative', 'wrong', 'incorrect', 'disregard', 'cancel'];
+    const isYes = yesPhrases.some(p => normalized === p || normalized.includes(p));
+    const isNo = noPhrases.some(p => normalized === p || normalized.includes(p));
+    const session = getUnitSessionState(participantId);
+    const trip = session?.slots?.secondaryTrip || null;
+
+    if (isYes && !isNo) {
+      const endingMileage = savedSlots?.endingMileage;
+      const destination = savedSlots?.destination || trip?.destination || null;
+      await this._executeSecondaryTripArrive(participantId, transcript, { endingMileage, destination, trip });
+      return;
+    }
+    if (isNo) {
+      setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_ENDING_MILEAGE, 'SECONDARY_TRIP_ARRIVE',
+        { destination: savedSlots?.destination || null }, true);
+      const resp = await this._composeAck(participantId, `${participantId}, 10-4, go ahead with the correct ending mileage.`);
+      await this.speak(resp, participantId);
+      return;
+    }
+    const resp = await this._composeAck(participantId, `${participantId}, confirm yes or no on the ending mileage?`);
+    await this.speak(resp, participantId);
   }
 
   async handleQueryCalls(participantId, transcript) {
@@ -4008,7 +4438,7 @@ class AIDispatcher {
     this.log('DL_STATE_INPUT', { participant: participantId, transcript, savedSlots });
     const normalized = transcript.toLowerCase().trim();
     const disregardPhrases = ['disregard', 'cancel', 'nevermind', 'never mind'];
-    if (disregardPhrases.some(p => normalized.includes(p))) {
+    if (disregardPhrases.some(p => normalized.includes(p)) && ownsInFlight(participantId)) {
       setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
       const resp = `${participantId}, 10-4, disregard.`;
       await this.speak(resp, participantId);
@@ -4027,7 +4457,7 @@ class AIDispatcher {
     this.log('DL_NUMBER_INPUT', { participant: participantId, transcript, savedSlots });
     const normalized = transcript.toLowerCase().trim();
     const disregardPhrases = ['disregard', 'cancel', 'nevermind', 'never mind'];
-    if (disregardPhrases.some(p => normalized.includes(p))) {
+    if (disregardPhrases.some(p => normalized.includes(p)) && ownsInFlight(participantId)) {
       setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
       const resp = `${participantId}, 10-4, disregard.`;
       await this.speak(resp, participantId);
@@ -4130,7 +4560,7 @@ class AIDispatcher {
     this.log('SSN_INPUT', { participant: participantId, transcript });
     const normalized = transcript.toLowerCase().trim();
     const disregardPhrases = ['disregard', 'cancel', 'nevermind', 'never mind'];
-    if (disregardPhrases.some(p => normalized.includes(p))) {
+    if (disregardPhrases.some(p => normalized.includes(p)) && ownsInFlight(participantId)) {
       setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
       const resp = `${participantId}, 10-4, disregard.`;
       await this.speak(resp, participantId);
@@ -4319,7 +4749,7 @@ class AIDispatcher {
 
     const normalized = transcript.toLowerCase().trim();
     const disregardPhrases = ['disregard', 'cancel', 'cancel that', 'nevermind', 'never mind', '10-22', 'scratch that'];
-    if (disregardPhrases.some(p => normalized.includes(p))) {
+    if (disregardPhrases.some(p => normalized.includes(p)) && ownsInFlight(participantId)) {
       setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
       const resp = `${participantId}, 10-4, disregard.`;
       await this.speak(resp, participantId);
@@ -4428,7 +4858,7 @@ class AIDispatcher {
 
     const normalized = transcript.toLowerCase().trim();
     const disregardPhrases = ['disregard', 'cancel', 'nevermind', 'never mind'];
-    if (disregardPhrases.some(p => normalized.includes(p))) {
+    if (disregardPhrases.some(p => normalized.includes(p)) && ownsInFlight(participantId)) {
       setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
       const resp = `${participantId}, 10-4, disregard.`;
       await this.speak(resp, participantId);
@@ -4642,7 +5072,7 @@ class AIDispatcher {
 
     const normalized = transcript.toLowerCase().trim();
     const disregardPhrases = ['disregard', 'cancel', 'nevermind', 'never mind'];
-    if (disregardPhrases.some(p => normalized.includes(p))) {
+    if (disregardPhrases.some(p => normalized.includes(p)) && ownsInFlight(participantId)) {
       setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
       const resp = `${participantId}, 10-4, disregard.`;
       await this.speak(resp, participantId);
@@ -4771,7 +5201,7 @@ class AIDispatcher {
 
     const normalized = transcript.toLowerCase().trim();
     const disregardPhrases = ['disregard', 'cancel', 'nevermind', 'never mind'];
-    if (disregardPhrases.some(p => normalized.includes(p))) {
+    if (disregardPhrases.some(p => normalized.includes(p)) && ownsInFlight(participantId)) {
       setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
       const resp = `${participantId}, 10-4, disregard.`;
       await this.speak(resp, participantId);

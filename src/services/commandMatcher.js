@@ -32,8 +32,20 @@ const DISPATCHER_STATE = {
   AWAITING_CALL_UPDATE_DETAILS: 'AWAITING_CALL_UPDATE_DETAILS',
   AWAITING_CLEAR_CONFIRM: 'AWAITING_CLEAR_CONFIRM',
   AWAITING_DISPOSE_CONFIRM: 'AWAITING_DISPOSE_CONFIRM',
+  AWAITING_DESTINATION_CLARIFY: 'AWAITING_DESTINATION_CLARIFY',
+  AWAITING_SECONDARY_MILEAGE: 'AWAITING_SECONDARY_MILEAGE',
+  AWAITING_ENDING_MILEAGE: 'AWAITING_ENDING_MILEAGE',
+  AWAITING_MILEAGE_CONFIRM: 'AWAITING_MILEAGE_CONFIRM',
   SIGNAL_100_ACTIVE: 'SIGNAL_100_ACTIVE'
 };
+
+const EMERGENCY_INTENTS = new Set([
+  'EMERGENCY', 'STATUS_CHECK', 'WELFARE_CHECK', 'EMERGENCY_BACKUP',
+  'REQUEST_BACKUP', 'FOOT_PURSUIT', 'VEHICLE_PURSUIT', 'BOLO',
+  'SIGNAL_100', 'OFFICER_DOWN', 'SHOTS_FIRED'
+]);
+
+const PER_PROMPT_TIMEOUT_MS = parseInt(process.env.AI_PER_PROMPT_TIMEOUT_MS || '40000', 10);
 
 const unitSessions = new Map();
 
@@ -58,16 +70,22 @@ function resetUnitSession(unitId) {
   if (session?.timeout) {
     clearTimeout(session.timeout);
   }
+  if (session?.promptTimeout) {
+    clearTimeout(session.promptTimeout);
+  }
   const preservedHistory = session?.slots?.conversationHistory || [];
   const preservedLastSpoken = session?.slots?.lastSpokenText || null;
+  const preservedSecondaryTrip = session?.slots?.secondaryTrip || null;
   unitSessions.set(unitId, {
     state: DISPATCHER_STATE.IDLE,
     pendingIntent: null,
     slots: {
       ...(preservedLastSpoken ? { lastSpokenText: preservedLastSpoken } : {}),
-      ...(preservedHistory.length > 0 ? { conversationHistory: preservedHistory } : {})
+      ...(preservedHistory.length > 0 ? { conversationHistory: preservedHistory } : {}),
+      ...(preservedSecondaryTrip ? { secondaryTrip: preservedSecondaryTrip } : {})
     },
     timeout: null,
+    promptTimeout: null,
     lastActivity: Date.now()
   });
 }
@@ -657,6 +675,48 @@ export function matchSecureConfirmation(transcript) {
   return null;
 }
 
+export function ownsInFlight(participantId, session = null) {
+  const s = session || getUnitSession(participantId);
+  if (!s) return false;
+  if (!s.state || s.state === DISPATCHER_STATE.IDLE) return false;
+  return true;
+}
+
+function isEmergencyPending(session) {
+  if (!session) return false;
+  const pi = session.pendingIntent;
+  if (!pi) return false;
+  const intent = (typeof pi === 'string') ? pi : (pi.intent || pi.name);
+  return EMERGENCY_INTENTS.has(intent);
+}
+
+function startPromptTimeout(unitId) {
+  const session = getUnitSession(unitId);
+  if (session.promptTimeout) {
+    clearTimeout(session.promptTimeout);
+    session.promptTimeout = null;
+  }
+  if (isEmergencyPending(session)) {
+    console.log(`[SESSION] ${unitId}: per-prompt timeout SKIPPED (emergency pendingIntent=${typeof session.pendingIntent === 'string' ? session.pendingIntent : session.pendingIntent?.intent})`);
+    return;
+  }
+  session.promptTimeout = setTimeout(() => {
+    const cur = unitSessions.get(unitId);
+    if (!cur) return;
+    if (cur.state === DISPATCHER_STATE.IDLE) return;
+    console.log(`[SESSION] ${unitId}: per-prompt timeout fired in state=${cur.state}; releasing to IDLE (no speak)`);
+    resetUnitSession(unitId);
+  }, PER_PROMPT_TIMEOUT_MS);
+}
+
+export function clearPromptTimeout(unitId) {
+  const session = unitSessions.get(unitId);
+  if (session?.promptTimeout) {
+    clearTimeout(session.promptTimeout);
+    session.promptTimeout = null;
+  }
+}
+
 export function getUnitSessionState(unitId) {
   const session = getUnitSession(unitId);
   return {
@@ -677,12 +737,21 @@ export function setUnitSessionState(unitId, state, pendingIntent = null, slots =
     if (oldSlots.lastSpokenText) preserved.lastSpokenText = oldSlots.lastSpokenText;
     if (oldSlots.conversationHistory) preserved.conversationHistory = oldSlots.conversationHistory;
     if (oldSlots.lastSearchResult) preserved.lastSearchResult = oldSlots.lastSearchResult;
+    if (oldSlots.secondaryTrip) preserved.secondaryTrip = oldSlots.secondaryTrip;
     session.slots = { ...preserved, ...slots };
   } else {
     session.slots = { ...session.slots, ...slots };
   }
   session.lastActivity = Date.now();
   startSessionTimeout(unitId);
+  if (state === DISPATCHER_STATE.IDLE) {
+    if (session.promptTimeout) {
+      clearTimeout(session.promptTimeout);
+      session.promptTimeout = null;
+    }
+  } else {
+    startPromptTimeout(unitId);
+  }
   const slotKeys = (obj) => Object.keys(obj).length > 0 ? Object.keys(obj).join(',') : 'empty';
   console.log(`[SESSION] ${unitId}: ${oldState} → ${state} | oldSlotKeys=[${slotKeys(oldSlots)}] | newSlotKeys=[${slotKeys(session.slots)}] | replace=${replaceSlots}`);
 }

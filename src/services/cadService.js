@@ -2,6 +2,46 @@ function getUnitId(user) {
   return user?.unit_id || user?.username || null;
 }
 
+export const RADIO_STATUS = {
+  AVAILABLE:          'OD',
+  OFF_DUTY:           'OFDTY',
+  EN_ROUTE_PRIMARY:   'ENRT',
+  ON_SCENE:           'ARVD',
+  EN_ROUTE_SECONDARY: 'ENRTS',
+  ARRIVED_SECONDARY:  'ARRVDS',
+  OUT_OF_VEHICLE:     'OOV',
+  OUT_OF_SERVICE:     'OOS',
+  COURT:              'COURT',
+  TRAINING:           'TRAIN',
+};
+
+export function extractActualStatusFromRejection(cadResult) {
+  if (!cadResult || cadResult.success !== false) return null;
+  const rb = cadResult.responseBody;
+  if (!rb || typeof rb !== 'object') return null;
+  const raw = rb.current_status
+    || rb.currentStatus
+    || rb.actual_status
+    || rb.unit_status
+    || rb.status
+    || null;
+  if (!raw) return null;
+  const code = String(raw).toUpperCase().trim();
+  const SPOKEN = {
+    OD:     'available',
+    OFDTY:  'off duty',
+    ENRT:   'en route',
+    ARVD:   'on scene',
+    ENRTS:  'en route to a secondary',
+    ARRVDS: 'arrived at a secondary',
+    OOV:    'out of vehicle',
+    OOS:    'out of service',
+    COURT:  'in court',
+    TRAIN:  'in training',
+  };
+  return SPOKEN[code] || raw;
+}
+
 async function cadRequest(endpoint, method = 'GET', body = null) {
   const CAD_URL = process.env.CAD_URL;
   const CAD_API_KEY = process.env.CAD_API_KEY;

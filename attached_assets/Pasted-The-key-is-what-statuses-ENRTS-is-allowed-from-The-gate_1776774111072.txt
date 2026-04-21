@@ -1,0 +1,119 @@
+The key is what statuses ENRTS is allowed from. The gate accepts ENRTS from either:
+
+ARVD (on scene), or
+ARRVDS (already arrived at a previous secondary)
+That second one is what makes repeat trips work. Each time you send ENRTS, the server opens a new transport leg; each ARRVDS stamps the arrival time on the leg that's currently open. So the cycle can repeat as many times as you need.
+
+Example flow — transport from scene to hospital, then to county jail:
+
+ARVD — on scene of the original call
+ENRTS — leaving scene with subject (leg 1 opens)
+ARRVDS — arrived at hospital (leg 1 closes with arrival time)
+ENRTS — leaving hospital for county (leg 2 opens) ✅ allowed because you're currently ARRVDS
+ARRVDS — arrived at county (leg 2 closes)
+ENRTS — leaving county for HQ (leg 3 opens) ✅ still allowed
+ARRVDS — arrived at HQ (leg 3 closes)
+AVAIL — clear and back in service
+What's not allowed:
+
+ENRTS → ENRTS (you have to arrive somewhere before starting the next leg)
+ENRT (primary en route) → ENRTS (you must reach the original scene first — ARVD is required before any secondary leg)
+AVAIL → ENRTS (no active call)
+Net effect: the legs stack up in order on the call record, each with its own depart/arrive timestamps, so the full transport history (scene → hospital → jail → HQ) is preserved for the report.
+
+CAN YOU ALSO DETAIL WHAT THE RADIO HAS TO SEND IN THE API SO THEY CAN SEND THE RIGHT STATUS NAMES FOR THE BACKEND?
+
+2 minutes ago
+
+4 actions
+Here's the full radio API contract for status updates:
+
+Endpoint
+POST /api/radio/status
+Content-Type: application/json
+
+Request body
+{
+  "unit_id": "INDIANA-1",
+  "status": "ENRTS",
+  "timestamp": "1423",
+  "channel": "OPS1"
+}
+
+Field	Required	Notes
+unit_id	yes	Unit number, case-insensitive (e.g. INDIANA-1)
+status	yes	Status code — see table below. Case-insensitive
+timestamp	no	Optional clock time (e.g. "1423"); server stamps its own if omitted
+channel	no	Channel/talkgroup label (e.g. "OPS1"); echoed back
+Status codes the radio should send
+The backend accepts the short radio code; it normalizes to the internal enum automatically. Always send the short code from the left column — that's what radios already speak.
+
+Send this	Meaning	Internal enum
+OFF, OFDTY, OFFD	Off duty	off_duty
+OD, ONDTY, ONDT	On duty / available	on_duty
+ENR, ENRT, ENRTE	En route to call (primary)	en_route
+ARVD, SCN, ONSCN, ONSC	On scene	on_scene
+ENRTS	En route to secondary	en_route_secondary
+ARRVDS	Arrived at secondary	arrived_secondary
+OOV	Out of vehicle	out_of_vehicle
+OOS	Out of service	out_of_service
+NA, NAVL, NOTAV, NOTAVL	Not available	not_available
+UNAVAIL	Unavailable	unavailable
+COURT	Court	court
+TRAIN	Training	training
+DETAIL	Detail	detail
+SPCLDTY	Special duty	special_duty
+Successful response (200)
+{
+  "success": true,
+  "unit_id": "INDIANA-1",
+  "status": "en_route_secondary",
+  "timestamp": "1423",
+  "channel": "OPS1"
+}
+
+Note the status field comes back as the internal enum (e.g. en_route_secondary), not the radio code. The radio shouldn't depend on this echo for display — it should keep showing what it sent.
+
+Error responses
+400 — missing fields
+
+{ "error": "unit_id and status are required" }
+
+404 — unit not found
+
+{ "error": "Unit INDIANA-1 not found" }
+
+400 — illegal transition (most important for ENRTS/ARRVDS)
+
+{
+  "error": "ENRTS is only valid when unit is on scene (ARVD) or arrived secondary (ARRVDS)",
+  "unit_id": "INDIANA-1",
+  "status": "on_scene"
+}
+
+or
+
+{
+  "error": "ARRVDS is only valid when unit is en route to secondary (ENRTS)",
+  "unit_id": "INDIANA-1",
+  "status": "arrived_secondary"
+}
+
+On a 400, the status field in the response is the unit's current status (the change was rejected). The radio should treat that as the source of truth and display it instead of the rejected one.
+
+Side effects the radio doesn't need to do anything for
+The backend handles these automatically when it accepts the status:
+
+ARVD → stamps arrived_at on the active call assignment.
+ENRTS → opens a new transport leg (enrtsAt set, arrvdsAt null).
+ARRVDS → closes the most recent open transport leg (arrvdsAt set).
+AVAIL / OD after ARVD (primary unit) → triggers disposition prompt on the dispatcher CAD; for secondary units it just clears.
+Each ENRTS always opens a brand-new leg, so repeating ENRTS → ARRVDS → ENRTS → ARRVDS stacks legs in order on the call record — no extra fields needed in the request.
+
+Quick reference for the secondary-transport flow
+POST /api/radio/status  { unit_id: "INDIANA-1", status: "ARVD"   }   → on scene
+POST /api/radio/status  { unit_id: "INDIANA-1", status: "ENRTS"  }   → leg 1 opens
+POST /api/radio/status  { unit_id: "INDIANA-1", status: "ARRVDS" }   → leg 1 closes
+POST /api/radio/status  { unit_id: "INDIANA-1", status: "ENRTS"  }   → leg 2 opens
+POST /api/radio/status  { unit_id: "INDIANA-1", status: "ARRVDS" }   → leg 2 closes
+POST /api/radio/status  { unit_id: "INDIANA-1", status: "OD"     }   → clear, available

@@ -223,8 +223,17 @@ Unit wants a call created but is missing nature and/or address.
 Return: { "intent": "CREATE_CALL_PROMPT", "response": "<natural prompt for missing info>", "slots": { "nature": "<if heard>", "address": "<if heard>" } }
 
 ### DISREGARD
-Unit is cancelling or disregarding their current request. TIER 1: Keep it short.
+Unit is cancelling or disregarding their OWN current request. Each unit has its own conversation; a "disregard" from a unit cancels only THAT unit's pending flow. If a different unit speaks "disregard" while another unit is mid-flow, treat it as a normal hail from that different unit (NOT a cross-unit cancel).
 Return: { "intent": "DISREGARD", "response": "10-4, disregard." }
+
+### SECONDARY_TRIP_START
+Unit is starting a transport leg from the original call scene to a secondary destination, reading off a starting mileage. Trigger phrases include: "en route to / heading to / 10-76 to / transporting to / taking [subject(s)] to [destination], starting mileage N". Free-text destinations are valid (e.g. "the Walmart", "555 Main", "the holding facility", "MDJ", "the jail", "county jail", "hospital", "magistrate"). DO NOT normalize or rewrite the destination — capture verbatim.
+Slots: destination (free text), startingMileage (digits as-spoken, no commas), subjectCount (digit, default 1), subjectDescription (e.g. "male", "juvenile female", "two males"; default "subject"). If destination or startingMileage is missing, still return SECONDARY_TRIP_START with whatever you have — the system will prompt for the missing slot.
+Return: { "intent": "SECONDARY_TRIP_START", "response": null, "slots": { "destination": "<verbatim>", "startingMileage": "<digits>", "subjectCount": "<digit>", "subjectDescription": "<text>" } }
+
+### SECONDARY_TRIP_ARRIVE
+Unit has arrived at the secondary destination and is reading off ending mileage. Trigger phrases: "arriving at [destination], ending mileage N" OR bare "ending mileage N". Destination is OPTIONAL — if the unit only says ending mileage, omit the destination slot (the system will fall back to the destination captured at trip start).
+Return: { "intent": "SECONDARY_TRIP_ARRIVE", "response": null, "slots": { "destination": "<verbatim if heard>", "endingMileage": "<digits>" } }
 
 ### CONFIRM
 Unit is confirming something in response to YOUR question. ONLY in AWAITING_* states.
@@ -500,6 +509,32 @@ export async function classifyIntent(transcript, unitId, currentState = 'IDLE', 
   } catch (parseError) {
     console.error(`[LLM-Intent] JSON parse error (${elapsed}ms):`, parseError.message, 'Raw:', content);
     return { intent: 'UNKNOWN', response: `${unitId}, Central, say again?` };
+  }
+}
+
+export async function composeNatural(unitId, draftPrompt, contextHint = null) {
+  const openai = getClient();
+  if (!openai) return draftPrompt;
+  try {
+    const sys = `You are "Central", a real police radio dispatcher. Speak naturally, briefly, professionally — no TV-dispatcher voice, no theatrics, no slang. One short sentence. Always start with the unit ID. Never invent facts beyond the draft. Reply with just the spoken text, no quotes.`;
+    const userMsg = `Unit: ${unitId}\nDraft (rephrase naturally without changing meaning): ${draftPrompt}` +
+      (contextHint ? `\nContext: ${contextHint}` : '') +
+      `\n\nReturn only the spoken sentence.`;
+    const r = await openai.chat.completions.create({
+      model: AZURE_OPENAI_DEPLOYMENT,
+      messages: [
+        { role: 'system', content: sys },
+        { role: 'user', content: userMsg }
+      ],
+      temperature: 0.5,
+      max_tokens: 90,
+    });
+    const out = r.choices?.[0]?.message?.content?.trim();
+    if (!out) return draftPrompt;
+    return out.replace(/^["']|["']$/g, '').trim();
+  } catch (e) {
+    console.warn('[LLM-Intent] composeNatural failed:', e.message);
+    return draftPrompt;
   }
 }
 
