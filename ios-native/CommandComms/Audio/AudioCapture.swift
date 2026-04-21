@@ -3,6 +3,10 @@ import AVFoundation
 import os.log
 
 /// Captures microphone PCM at 16 kHz mono and emits 320-sample (20 ms) Int16 frames.
+///
+/// The shared AVAudioSession is owned by `AudioSessionManager` — capture only
+/// starts/stops the AVAudioEngine. Toggling the session active flag here would
+/// tear down the parallel playback path, breaking background RX.
 final class AudioCapture {
     private let log = Logger(subsystem: "CommandComms", category: "AudioCapture")
     private let engine = AVAudioEngine()
@@ -20,13 +24,6 @@ final class AudioCapture {
 
     func start() throws {
         if engine.isRunning { return }
-        let session = AVAudioSession.sharedInstance()
-        try session.setCategory(.playAndRecord,
-                                mode: .voiceChat,
-                                options: [.defaultToSpeaker, .allowBluetooth, .mixWithOthers])
-        try session.setPreferredSampleRate(OpusCodec.sampleRate)
-        try session.setPreferredIOBufferDuration(0.02)
-        try session.setActive(true)
 
         let input = engine.inputNode
         let inputFormat = input.outputFormat(forBus: 0)
@@ -50,7 +47,13 @@ final class AudioCapture {
         }
         pendingSamples.removeAll(keepingCapacity: false)
         converter = nil
-        try? AVAudioSession.sharedInstance().setActive(false, options: [.notifyOthersOnDeactivation])
+    }
+
+    /// Tear the engine down without releasing the shared session. Used by the
+    /// session manager when iOS resets media services and we have to rebuild
+    /// the AVAudioEngine from scratch.
+    func reset() {
+        stop()
     }
 
     private func handleInput(_ buffer: AVAudioPCMBuffer) {

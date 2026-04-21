@@ -1,6 +1,8 @@
 import Foundation
 import Combine
 import AVFoundation
+import MediaPlayer
+import UIKit
 import os.log
 
 enum RadioState: String {
@@ -20,6 +22,7 @@ final class RadioAudioEngine: ObservableObject {
     let codec = OpusCodec()
     let capture = AudioCapture()
     let playback = AudioPlayback()
+    private let session = AudioSessionManager()
     private let jitter = JitterBuffer(targetDepth: 3, maxDepth: 32)
 
     private weak var signaling: SignalingClient?
@@ -27,6 +30,8 @@ final class RadioAudioEngine: ObservableObject {
     private var rxTimer: DispatchSourceTimer?
     private let rxQueue = DispatchQueue(label: "radio.rx")
     private var codecReady = false
+    private var sessionReady = false
+    private var nowPlayingArmed = false
 
     private var qualityTimer: DispatchSourceTimer?
     private let qualityQueue = DispatchQueue(label: "radio.quality")
@@ -54,6 +59,7 @@ final class RadioAudioEngine: ObservableObject {
                 transport.channelIndex = 0
                 log.info("channelId set to \(self.channelId, privacy: .public); awaiting server channelIndex")
             }
+            updateNowPlaying()
         }
     }
 
@@ -63,6 +69,21 @@ final class RadioAudioEngine: ObservableObject {
         }
         transport.onPacketReceived = { [weak self] pkt in
             self?.handleRxPacket(pkt)
+        }
+
+        session.onInterruptionBegan = { [weak self] in
+            Task { @MainActor in self?.handleInterruptionBegan() }
+        }
+        session.onShouldRestartEngines = { [weak self] in
+            Task { @MainActor in self?.restartAudioEngines() }
+        }
+        session.onInterruptionEnded = { [weak self] shouldResume in
+            // We deliberately ignore `shouldResume`: this is a radio
+            // monitoring app, so RX must continue after every interruption
+            // (call, Siri, alarm) regardless of whether iOS thinks audio
+            // should auto-resume. The user expects to keep hearing traffic.
+            _ = shouldResume
+            Task { @MainActor in self?.restartAudioEngines() }
         }
     }
 
@@ -81,6 +102,10 @@ final class RadioAudioEngine: ObservableObject {
     func startRadio() {
         if !codecReady {
             do {
+                if !sessionReady {
+                    try session.activate()
+                    sessionReady = true
+                }
                 try codec.initialize()
                 try playback.start()
                 codecReady = true
@@ -93,6 +118,8 @@ final class RadioAudioEngine: ObservableObject {
         transport.start()
         startRxLoop()
         startQualityMonitor()
+        armNowPlaying()
+        updateNowPlaying()
     }
 
     func stopRadio() {
@@ -103,6 +130,11 @@ final class RadioAudioEngine: ObservableObject {
         codec.release()
         transport.stop()
         codecReady = false
+        if sessionReady {
+            session.deactivate()
+            sessionReady = false
+        }
+        clearNowPlaying()
         state = .idle
         transmittingUnitId = nil
     }
@@ -143,6 +175,7 @@ final class RadioAudioEngine: ObservableObject {
             log.error("capture.start error: \(error.localizedDescription)")
             stopTransmit()
         }
+        updateNowPlaying()
     }
 
     private func stopTransmit() {
@@ -152,6 +185,7 @@ final class RadioAudioEngine: ObservableObject {
             signaling?.emitTxStop(channelId: channelId)
             state = transmittingUnitId != nil ? .receiving : .idle
         }
+        updateNowPlaying()
     }
 
     private func encodeAndSend(_ pcm: [Int16]) {
@@ -281,6 +315,73 @@ final class RadioAudioEngine: ObservableObject {
         }
     }
 
+    // MARK: - Audio session recovery
+
+    private func handleInterruptionBegan() {
+        // Treat the interruption like a forced PTT release so we don't keep
+        // emitting TX events into the void. Playback will be paused by iOS.
+        if state == .transmitting {
+            stopTransmit()
+        }
+    }
+
+    private func restartAudioEngines() {
+        guard codecReady else { return }
+        let wasTransmitting = (state == .transmitting)
+        if wasTransmitting { capture.stop() }
+        playback.restart()
+        if wasTransmitting {
+            do { try capture.start() }
+            catch { log.error("capture restart failed: \(error.localizedDescription)") }
+        }
+    }
+
+    // MARK: - Now Playing presence
+    //
+    // Registering Now Playing info (and grabbing remote-control events) gives
+    // iOS an explicit signal that we are an active audio app. Combined with
+    // the `audio` UIBackgroundMode and the silent keep-alive in
+    // AudioPlayback, this prevents the system from suspending the engine
+    // during quiet periods between transmissions.
+
+    private func armNowPlaying() {
+        guard !nowPlayingArmed else { return }
+        UIApplication.shared.beginReceivingRemoteControlEvents()
+        let cc = MPRemoteCommandCenter.shared()
+        cc.playCommand.isEnabled = false
+        cc.pauseCommand.isEnabled = false
+        cc.togglePlayPauseCommand.isEnabled = false
+        cc.nextTrackCommand.isEnabled = false
+        cc.previousTrackCommand.isEnabled = false
+        nowPlayingArmed = true
+    }
+
+    private func updateNowPlaying() {
+        guard nowPlayingArmed else { return }
+        var info: [String: Any] = [
+            MPMediaItemPropertyTitle: channelId.isEmpty ? "Radio" : "Channel \(channelId)",
+            MPMediaItemPropertyArtist: "Command Comms",
+            MPNowPlayingInfoPropertyIsLiveStream: true,
+            MPNowPlayingInfoPropertyPlaybackRate: 1.0
+        ]
+        if state == .transmitting {
+            info[MPMediaItemPropertyAlbumTitle] = "Transmitting"
+        } else if let sender = transmittingUnitId {
+            info[MPMediaItemPropertyAlbumTitle] = "Receiving \(sender)"
+        } else {
+            info[MPMediaItemPropertyAlbumTitle] = "Monitoring"
+        }
+        MPNowPlayingInfoCenter.default().nowPlayingInfo = info
+    }
+
+    private func clearNowPlaying() {
+        if nowPlayingArmed {
+            UIApplication.shared.endReceivingRemoteControlEvents()
+            nowPlayingArmed = false
+        }
+        MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
+    }
+
     // MARK: - Signaling
 
     private func handleSignalingEvent(_ event: RadioSignalingEvent) {
@@ -320,18 +421,22 @@ final class RadioAudioEngine: ObservableObject {
             guard channel == channelId else { return }
             transmittingUnitId = sender
             if state != .transmitting { state = .receiving }
+            updateNowPlaying()
         case .txStop(let sender, let channel):
             guard channel == channelId else { return }
             if transmittingUnitId == sender { transmittingUnitId = nil }
             if state == .receiving { state = .idle }
+            updateNowPlaying()
         case .channelBusy(let channel, let heldBy):
             guard channel == channelId else { return }
             transmittingUnitId = heldBy
             if state != .transmitting { state = .channelBusy }
+            updateNowPlaying()
         case .channelIdle(let channel):
             guard channel == channelId else { return }
             transmittingUnitId = nil
             if state == .channelBusy || state == .receiving { state = .idle }
+            updateNowPlaying()
         }
     }
 }
