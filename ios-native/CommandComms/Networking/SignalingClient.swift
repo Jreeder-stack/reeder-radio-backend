@@ -367,6 +367,19 @@ final class SignalingClient: ObservableObject {
         socket.emit("tx:stop", ["channelId": channelId, "unitId": unitId])
     }
 
+    func emitRadioSignalQuality(channelId: String, quality: String, lossPct: Double, jitterMs: Double) {
+        guard state == .authenticated, let socket else { return }
+        let payload: [String: Any] = [
+            "channelId": channelId,
+            "unitId": unitId,
+            "quality": quality,
+            "lossPct": lossPct,
+            "jitterMs": jitterMs,
+            "timestamp": Int(Date().timeIntervalSince1970 * 1000)
+        ]
+        socket.emit("radio:signalQuality", payload)
+    }
+
     private func sendAuth() {
         guard let socket else { return }
         let payload: [String: Any] = [

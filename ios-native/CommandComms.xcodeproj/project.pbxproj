@@ -41,6 +41,7 @@
                 DD0000000000000000000035 /* AudioPlayback.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC0000000000000000000035 /* AudioPlayback.swift */; };
                 DD0000000000000000000036 /* RadioAudioEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC0000000000000000000036 /* RadioAudioEngine.swift */; };
                 DD0000000000000000000037 /* RadioConfigService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC0000000000000000000037 /* RadioConfigService.swift */; };
+                DD0000000000000000000038 /* SignalQuality.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC0000000000000000000038 /* SignalQuality.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -76,6 +77,7 @@
                 CC0000000000000000000035 /* AudioPlayback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioPlayback.swift; sourceTree = "<group>"; };
                 CC0000000000000000000036 /* RadioAudioEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadioAudioEngine.swift; sourceTree = "<group>"; };
                 CC0000000000000000000037 /* RadioConfigService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadioConfigService.swift; sourceTree = "<group>"; };
+                CC0000000000000000000038 /* SignalQuality.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignalQuality.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -133,6 +135,7 @@
                                 CC0000000000000000000034 /* AudioCapture.swift */,
                                 CC0000000000000000000035 /* AudioPlayback.swift */,
                                 CC0000000000000000000036 /* RadioAudioEngine.swift */,
+                                CC0000000000000000000038 /* SignalQuality.swift */,
                         );
                         path = Audio;
                         sourceTree = "<group>";
@@ -351,6 +354,7 @@
                                 DD0000000000000000000035 /* AudioPlayback.swift in Sources */,
                                 DD0000000000000000000036 /* RadioAudioEngine.swift in Sources */,
                                 DD0000000000000000000037 /* RadioConfigService.swift in Sources */,
+                                DD0000000000000000000038 /* SignalQuality.swift in Sources */,
                         );
                         runOnlyForDeploymentPostprocessing = 0;
                 };

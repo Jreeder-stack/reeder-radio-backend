@@ -28,6 +28,17 @@ final class RadioAudioEngine: ObservableObject {
     private let rxQueue = DispatchQueue(label: "radio.rx")
     private var codecReady = false
 
+    private var qualityTimer: DispatchSourceTimer?
+    private let qualityQueue = DispatchQueue(label: "radio.quality")
+    private var rxDecodedCount: UInt64 = 0
+    private var rxPlcCount: UInt64 = 0
+    private var lastQualityDecoded: UInt64 = 0
+    private var lastQualityPlc: UInt64 = 0
+    private var qualityIdleCycles: Int = 0
+    private var lastReportedQuality: SignalQuality?
+    private var lastReportTimeMs: Int64 = 0
+    private var currentQuality: SignalQuality = .none
+
     var unitId: String = "" {
         didSet { transport.unitId = unitId }
     }
@@ -81,9 +92,11 @@ final class RadioAudioEngine: ObservableObject {
         }
         transport.start()
         startRxLoop()
+        startQualityMonitor()
     }
 
     func stopRadio() {
+        stopQualityMonitor()
         stopRxLoop()
         capture.stop()
         playback.stop()
@@ -174,11 +187,97 @@ final class RadioAudioEngine: ObservableObject {
         if let pkt {
             if let pcm = codec.decode(pkt.opusPayload) {
                 playback.enqueue(pcm: pcm)
+                qualityQueue.async { [weak self] in self?.rxDecodedCount &+= 1 }
             }
         } else if plc {
             if let pcm = codec.decode(nil) {
                 playback.enqueue(pcm: pcm)
+                qualityQueue.async { [weak self] in self?.rxPlcCount &+= 1 }
             }
+        }
+    }
+
+    // MARK: - Signal-quality monitor
+
+    private func startQualityMonitor() {
+        stopQualityMonitor()
+        qualityQueue.async { [weak self] in
+            guard let self else { return }
+            self.lastQualityDecoded = self.rxDecodedCount
+            self.lastQualityPlc = self.rxPlcCount
+            self.qualityIdleCycles = 0
+            self.lastReportedQuality = nil
+            self.lastReportTimeMs = 0
+            self.currentQuality = .none
+        }
+        let t = DispatchSource.makeTimerSource(queue: qualityQueue)
+        t.schedule(deadline: .now() + 1.0, repeating: 1.0)
+        t.setEventHandler { [weak self] in self?.tickQuality() }
+        t.resume()
+        qualityTimer = t
+    }
+
+    private func stopQualityMonitor() {
+        qualityTimer?.cancel()
+        qualityTimer = nil
+        qualityQueue.async { [weak self] in
+            guard let self else { return }
+            self.rxDecodedCount = 0
+            self.rxPlcCount = 0
+            self.lastQualityDecoded = 0
+            self.lastQualityPlc = 0
+            self.qualityIdleCycles = 0
+            self.lastReportedQuality = nil
+            self.lastReportTimeMs = 0
+            self.currentQuality = .none
+        }
+    }
+
+    private func tickQuality() {
+        let decodedNow = rxDecodedCount
+        let plcNow = rxPlcCount
+        let deltaDecoded = decodedNow &- lastQualityDecoded
+        let deltaPlc = plcNow &- lastQualityPlc
+        lastQualityDecoded = decodedNow
+        lastQualityPlc = plcNow
+        let totalFrames = Int(deltaDecoded &+ deltaPlc)
+
+        let quality: SignalQuality
+        let lossPct: Double
+        let jitterMs: Double
+        if totalFrames < 5 {
+            qualityIdleCycles += 1
+            if qualityIdleCycles < 2 { return }
+            quality = .none
+            lossPct = 0
+            jitterMs = 0
+        } else {
+            qualityIdleCycles = 0
+            let lostFrames = Int(deltaPlc)
+            lossPct = totalFrames > 0 ? Double(lostFrames) * 100.0 / Double(totalFrames) : 0.0
+            jitterMs = jitter.estimatedJitterMs
+            quality = SignalQuality.classify(lossPct: lossPct, jitterMs: jitterMs, framesInWindow: totalFrames)
+        }
+        currentQuality = quality
+
+        let now = Int64(Date().timeIntervalSince1970 * 1000)
+        let changed = lastReportedQuality != quality
+        let heartbeatDue = quality != .none && (now - lastReportTimeMs) >= 5_000
+        if !changed && !heartbeatDue { return }
+        lastReportedQuality = quality
+        lastReportTimeMs = now
+
+        let qStr = quality.rawValue
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            let channel = self.channelId
+            guard !channel.isEmpty, let sig = self.signaling else { return }
+            sig.emitRadioSignalQuality(
+                channelId: channel,
+                quality: qStr,
+                lossPct: lossPct,
+                jitterMs: jitterMs
+            )
         }
     }
 

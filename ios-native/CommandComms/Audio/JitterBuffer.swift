@@ -9,6 +9,11 @@ final class JitterBuffer {
     private(set) var plcCount: Int = 0
     private(set) var dropCount: Int = 0
 
+    private static let frameDurationMs: Double = 20.0
+    private static let jitterAlpha: Double = 0.07
+    private var lastArrivalNs: UInt64 = 0
+    private var _estimatedJitterMs: Double = 0
+
     let targetDepth: Int
     let maxDepth: Int
 
@@ -22,6 +27,11 @@ final class JitterBuffer {
         return packets.count
     }
 
+    var estimatedJitterMs: Double {
+        lock.lock(); defer { lock.unlock() }
+        return _estimatedJitterMs
+    }
+
     func reset() {
         lock.lock(); defer { lock.unlock() }
         packets.removeAll()
@@ -29,10 +39,19 @@ final class JitterBuffer {
         lastDeliveredTimestamp = 0
         plcCount = 0
         dropCount = 0
+        lastArrivalNs = 0
+        _estimatedJitterMs = 0
     }
 
     func push(_ packet: OpusRadioPacket) {
         lock.lock(); defer { lock.unlock() }
+        let now = DispatchTime.now().uptimeNanoseconds
+        if lastArrivalNs > 0 {
+            let intervalMs = Double(now - lastArrivalNs) / 1_000_000.0
+            let deviation = abs(intervalMs - Self.frameDurationMs)
+            _estimatedJitterMs = (1 - Self.jitterAlpha) * _estimatedJitterMs + Self.jitterAlpha * deviation
+        }
+        lastArrivalNs = now
         if packets.count >= maxDepth {
             // drop oldest
             if let minSeq = packets.keys.min() {
