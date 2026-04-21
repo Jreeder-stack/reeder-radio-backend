@@ -4,6 +4,7 @@ struct SettingsView: View {
     @EnvironmentObject var appState: AppState
     @State private var signalingURL: String = ""
     @State private var defaultChannel: String = ""
+    @State private var pttAccessoryModel: PTTAccessoryModel = .generic
     @State private var saved = false
 
     var body: some View {
@@ -21,6 +22,7 @@ struct SettingsView: View {
                         appState.updateSignalingURL(signalingURL)
                         var prefs = appState.settings
                         prefs.defaultChannelId = defaultChannel
+                        prefs.pttAccessoryModel = pttAccessoryModel
                         prefs.save()
                         appState.settings = prefs
                         saved = true
@@ -29,6 +31,18 @@ struct SettingsView: View {
                     if saved {
                         Text("Saved").font(.caption).foregroundColor(.green)
                     }
+                }
+
+                Section {
+                    Picker("PTT Accessory", selection: $pttAccessoryModel) {
+                        ForEach(PTTAccessoryModel.allCases) { model in
+                            Text(model.displayName).tag(model)
+                        }
+                    }
+                } header: {
+                    Text("Bluetooth PTT Button")
+                } footer: {
+                    Text("Pick the model of your Bluetooth push-to-talk accessory so its button presses are decoded correctly. Choose Generic if your model isn't listed.")
                 }
 
                 Section("Account") {
@@ -54,6 +68,7 @@ struct SettingsView: View {
             .onAppear {
                 signalingURL = appState.settings.signalingURL
                 defaultChannel = appState.settings.defaultChannelId
+                pttAccessoryModel = appState.settings.pttAccessoryModel
             }
         }
     }

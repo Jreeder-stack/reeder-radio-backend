@@ -19,6 +19,7 @@
                 DD000000000000000000000A /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC000000000000000000000A /* AuthService.swift */; };
                 DD000000000000000000000B /* SignalingClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC000000000000000000000B /* SignalingClient.swift */; };
                 DD000000000000000000001F /* MFiPTTAccessoryManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC000000000000000000001F /* MFiPTTAccessoryManager.swift */; };
+                DD0000000000000000000030 /* PTTAccessoryModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC0000000000000000000030 /* PTTAccessoryModel.swift */; };
                 DD000000000000000000000C /* User.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC000000000000000000000C /* User.swift */; };
                 DD000000000000000000000D /* KeychainStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC000000000000000000000D /* KeychainStore.swift */; };
                 DD000000000000000000000E /* AppPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC000000000000000000000E /* AppPreferences.swift */; };
@@ -58,6 +59,7 @@
                 CC000000000000000000000A /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
                 CC000000000000000000000B /* SignalingClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignalingClient.swift; sourceTree = "<group>"; };
                 CC000000000000000000001F /* MFiPTTAccessoryManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MFiPTTAccessoryManager.swift; sourceTree = "<group>"; };
+                CC0000000000000000000030 /* PTTAccessoryModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PTTAccessoryModel.swift; sourceTree = "<group>"; };
                 CC000000000000000000000C /* User.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = User.swift; sourceTree = "<group>"; };
                 CC000000000000000000000D /* KeychainStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainStore.swift; sourceTree = "<group>"; };
                 CC000000000000000000000E /* AppPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPreferences.swift; sourceTree = "<group>"; };
@@ -211,6 +213,7 @@
                                 CC000000000000000000000B /* SignalingClient.swift */,
                                 CC000000000000000000001F /* MFiPTTAccessoryManager.swift */,
                                 CC0000000000000000000037 /* RadioConfigService.swift */,
+                                CC0000000000000000000030 /* PTTAccessoryModel.swift */,
                         );
                         path = Networking;
                         sourceTree = "<group>";
@@ -339,6 +342,7 @@
                                 DD000000000000000000000A /* AuthService.swift in Sources */,
                                 DD000000000000000000000B /* SignalingClient.swift in Sources */,
                                 DD000000000000000000001F /* MFiPTTAccessoryManager.swift in Sources */,
+                                DD0000000000000000000030 /* PTTAccessoryModel.swift in Sources */,
                                 DD000000000000000000000C /* User.swift in Sources */,
                                 DD000000000000000000000D /* KeychainStore.swift in Sources */,
                                 DD000000000000000000000E /* AppPreferences.swift in Sources */,

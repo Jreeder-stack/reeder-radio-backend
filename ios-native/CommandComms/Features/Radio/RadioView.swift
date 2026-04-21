@@ -9,7 +9,8 @@ struct RadioView: View {
         RadioContent(
             signaling: appState.signaling,
             radio: appState.radio,
-            defaultChannel: appState.settings.defaultChannelId
+            defaultChannel: appState.settings.defaultChannelId,
+            accessoryModel: appState.settings.pttAccessoryModel
         )
     }
 }
@@ -22,11 +23,18 @@ private struct RadioContent: View {
     @State private var micPermissionDenied: Bool = false
     @StateObject private var ptt: PTTBinding
 
-    init(signaling: SignalingClient, radio: RadioAudioEngine, defaultChannel: String) {
+    let accessoryModel: PTTAccessoryModel
+
+    init(signaling: SignalingClient,
+         radio: RadioAudioEngine,
+         defaultChannel: String,
+         accessoryModel: PTTAccessoryModel) {
         self.signaling = signaling
         self.radio = radio
         self.defaultChannel = defaultChannel
-        _ptt = StateObject(wrappedValue: PTTBinding(radio: radio))
+        self.accessoryModel = accessoryModel
+        _ptt = StateObject(wrappedValue: PTTBinding(radio: radio,
+                                                    accessoryModel: accessoryModel))
     }
 
     var body: some View {
@@ -52,6 +60,10 @@ private struct RadioContent: View {
                 channelInput = signaling.currentChannel ?? defaultChannel
                 requestMicPermission()
                 ptt.start()
+                ptt.updateAccessoryModel(accessoryModel)
+            }
+            .onChange(of: accessoryModel) { newModel in
+                ptt.updateAccessoryModel(newModel)
             }
             .onDisappear {
                 ptt.stop()
@@ -243,15 +255,23 @@ private final class PTTBinding: ObservableObject {
 
     private let radio: RadioAudioEngine
     private var manager: MFiPTTAccessoryManager?
+    private var accessoryModel: PTTAccessoryModel
     private var cancellables = Set<AnyCancellable>()
 
-    init(radio: RadioAudioEngine) {
+    init(radio: RadioAudioEngine, accessoryModel: PTTAccessoryModel) {
         self.radio = radio
+        self.accessoryModel = accessoryModel
+    }
+
+    func updateAccessoryModel(_ model: PTTAccessoryModel) {
+        accessoryModel = model
+        manager?.setAccessoryModel(model)
     }
 
     func start() {
         guard manager == nil else { return }
         let mgr = MFiPTTAccessoryManager(
+            accessoryModel: accessoryModel,
             onPress: { [weak self] in
                 self?.radio.pttPressed()
             },

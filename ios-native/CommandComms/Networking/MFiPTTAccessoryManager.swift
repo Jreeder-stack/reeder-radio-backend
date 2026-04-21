@@ -14,11 +14,25 @@ final class MFiPTTAccessoryManager: NSObject, ObservableObject {
 
     private let onPress: @MainActor () -> Void
     private let onRelease: @MainActor () -> Void
+    private(set) var accessoryModel: PTTAccessoryModel
 
-    init(onPress: @escaping @MainActor () -> Void, onRelease: @escaping @MainActor () -> Void) {
+    init(accessoryModel: PTTAccessoryModel = .generic,
+         onPress: @escaping @MainActor () -> Void,
+         onRelease: @escaping @MainActor () -> Void) {
+        self.accessoryModel = accessoryModel
         self.onPress = onPress
         self.onRelease = onRelease
         super.init()
+    }
+
+    /// Update the parser used for newly opened sessions and rebind any
+    /// already-open ones so a Settings change takes effect immediately.
+    func setAccessoryModel(_ model: PTTAccessoryModel) {
+        guard model != accessoryModel else { return }
+        accessoryModel = model
+        for delegate in streamDelegates.values {
+            delegate.replaceParser(with: model.makeParser())
+        }
     }
 
     deinit {
@@ -98,6 +112,7 @@ final class MFiPTTAccessoryManager: NSObject, ObservableObject {
         let press = self.onPress
         let release = self.onRelease
         let delegate = PTTStreamDelegate(
+            parser: accessoryModel.makeParser(),
             onPress: { Task { @MainActor in press() } },
             onRelease: { Task { @MainActor in release() } }
         )
@@ -125,12 +140,26 @@ final class MFiPTTAccessoryManager: NSObject, ObservableObject {
 private final class PTTStreamDelegate: NSObject, StreamDelegate {
     private let onPress: () -> Void
     private let onRelease: () -> Void
+    private var parser: PTTFrameParser
     private(set) var isPressed: Bool = false
     private var buffer = [UInt8](repeating: 0, count: 64)
 
-    init(onPress: @escaping () -> Void, onRelease: @escaping () -> Void) {
+    init(parser: PTTFrameParser,
+         onPress: @escaping () -> Void,
+         onRelease: @escaping () -> Void) {
+        self.parser = parser
         self.onPress = onPress
         self.onRelease = onRelease
+    }
+
+    func replaceParser(with newParser: PTTFrameParser) {
+        parser = newParser
+        // The new parser starts in the released state, so emit a synthetic
+        // release if we were previously holding the floor.
+        if isPressed {
+            isPressed = false
+            DispatchQueue.main.async { [onRelease] in onRelease() }
+        }
     }
 
     func stream(_ aStream: Stream, handle eventCode: Stream.Event) {
@@ -138,12 +167,18 @@ private final class PTTStreamDelegate: NSObject, StreamDelegate {
         while input.hasBytesAvailable {
             let n = input.read(&buffer, maxLength: buffer.count)
             guard n > 0 else { break }
-            // Common MFi PTT byte protocol: first byte non-zero == pressed, zero == released.
-            let pressed = buffer[0] != 0
-            if pressed != isPressed {
-                isPressed = pressed
-                DispatchQueue.main.async { [self] in
-                    if pressed { onPress() } else { onRelease() }
+            let events = buffer.withUnsafeBufferPointer { ptr -> [PTTEvent] in
+                guard let base = ptr.baseAddress else { return [] }
+                return parser.parse(base, count: n)
+            }
+            for event in events {
+                switch event {
+                case .pressed:
+                    isPressed = true
+                    DispatchQueue.main.async { [onPress] in onPress() }
+                case .released:
+                    isPressed = false
+                    DispatchQueue.main.async { [onRelease] in onRelease() }
                 }
             }
         }
