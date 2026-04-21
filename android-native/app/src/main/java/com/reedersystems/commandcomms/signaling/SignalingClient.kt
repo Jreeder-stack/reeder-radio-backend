@@ -475,6 +475,18 @@ class SignalingClient(var serverUrl: String, private var radioToken: String? = n
         })
     }
 
+    fun emitRadioSignalQuality(channelKey: String, quality: String, lossPct: Double, jitterMs: Double) {
+        if (!isReady()) return
+        socket?.emit("radio:signalQuality", JSONObject().apply {
+            put("channelId", channelKey)
+            put("unitId", unitId)
+            put("quality", quality)
+            put("lossPct", lossPct)
+            put("jitterMs", jitterMs)
+            put("timestamp", System.currentTimeMillis())
+        })
+    }
+
     fun queryEmergencyStatus(channelKey: String) {
         if (!isReady()) return
         Log.d(TAG, "queryEmergencyStatus channelKey=$channelKey")

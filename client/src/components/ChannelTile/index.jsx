@@ -6,6 +6,34 @@ import audioTransportManager from '../../audio/AudioTransportManager.js';
 import { PTT_STATES } from '../../constants/pttStates.js';
 import { useAuth } from '../../AuthContext.jsx';
 
+const SIGNAL_QUALITY_LEVELS = {
+  EXCELLENT: { bars: 4, color: 'bg-green-400', label: 'Excellent' },
+  GOOD: { bars: 3, color: 'bg-green-400', label: 'Good' },
+  FAIR: { bars: 2, color: 'bg-yellow-400', label: 'Fair' },
+  POOR: { bars: 1, color: 'bg-red-400', label: 'Poor' },
+  NONE: { bars: 0, color: 'bg-gray-500', label: 'No signal' },
+};
+
+function SignalBars({ quality, lossPct, jitterMs }) {
+  const info = SIGNAL_QUALITY_LEVELS[quality] || SIGNAL_QUALITY_LEVELS.NONE;
+  const tooltip = `Link: ${info.label} (loss ${Number(lossPct ?? 0).toFixed(1)}% / jitter ${Number(jitterMs ?? 0).toFixed(0)}ms)`;
+  return (
+    <span
+      className="inline-flex items-end gap-0.5 ml-1 align-middle"
+      title={tooltip}
+      aria-label={tooltip}
+    >
+      {[1, 2, 3, 4].map((i) => (
+        <span
+          key={i}
+          className={`w-1 rounded-sm ${i <= info.bars ? info.color : 'bg-gray-700 opacity-50'}`}
+          style={{ height: `${4 + i * 2}px` }}
+        />
+      ))}
+    </span>
+  );
+}
+
 function ConnectionStatusIndicator({ roomKey, isMonitored }) {
   const [connState, setConnState] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
@@ -188,6 +216,7 @@ export default function ChannelTile({ channel, onRemove }) {
     channelLevels,
     setChannelLevel,
     activeTransmissions,
+    unitSignalQuality,
     emergencies,
     pttState,
     priorityChannelId,
@@ -296,7 +325,24 @@ export default function ChannelTile({ channel, onRemove }) {
 
       {activeTransmission && activeTransmission.from !== localIdentity && activeTransmission.from !== user?.username && !((pttState === PTT_STATES.TRANSMITTING || pttState === PTT_STATES.ARMING) && isTxSelected) && (
         <div className="px-2 py-1 mb-2 text-xs text-center text-yellow-200 bg-yellow-900 rounded">
-          RX: {activeTransmission.from}
+          <span>RX: {activeTransmission.from}</span>
+          {(() => {
+            const sq = unitSignalQuality?.[activeTransmission.from];
+            if (!sq) return null;
+            // Only show bars from a fresh report on the same channel,
+            // so stale or cross-channel telemetry never misleads the
+            // dispatcher.
+            const sameChannel = !sq.channelId || sq.channelId === roomKey;
+            const fresh = !sq.timestamp || Date.now() - sq.timestamp < 15_000;
+            if (!sameChannel || !fresh) return null;
+            return (
+              <SignalBars
+                quality={sq.quality}
+                lossPct={sq.lossPct}
+                jitterMs={sq.jitterMs}
+              />
+            );
+          })()}
         </div>
       )}
 

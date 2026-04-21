@@ -49,6 +49,7 @@ const RADIO_EVENTS = {
   CHANNEL_BUSY: 'channel:busy',
   CHANNEL_FLOOR_TAKEN: 'channel:floor_taken',
   CHANNEL_IDLE: 'channel:idle',
+  SIGNAL_QUALITY: 'radio:signalQuality',
 };
 
 class SignalingService {
@@ -189,6 +190,7 @@ class SignalingService {
       socket.on(RADIO_EVENTS.PTT_RELEASE, (data) => this._handlePttRelease(socket, data));
       socket.on(RADIO_EVENTS.TX_START, (data) => this._handleTxStart(socket, data));
       socket.on(RADIO_EVENTS.TX_STOP, (data) => this._handleTxStop(socket, data));
+      socket.on(RADIO_EVENTS.SIGNAL_QUALITY, (data) => this._handleSignalQuality(socket, data));
       socket.on('ping', () => {
         socket.emit('pong');
         if (socket.isRadioDevice && socket.radioId) {
@@ -1969,6 +1971,35 @@ class SignalingService {
     });
 
     console.log(`[Signaling] PTT released: ${socket.unitId} on ${channelId}`);
+  }
+
+  _handleSignalQuality(socket, data) {
+    if (!socket.unitId || !data) return;
+    const rawChannelId = canonicalChannelKey(data.channelId);
+    if (!rawChannelId) return;
+    const channelId = socket._channelKeyMap?.get(rawChannelId) || rawChannelId;
+    const memberOf = socket.channels;
+    const isMember =
+      (memberOf instanceof Set && (memberOf.has(channelId) || memberOf.has(rawChannelId))) ||
+      (Array.isArray(memberOf) && (memberOf.includes(channelId) || memberOf.includes(rawChannelId)));
+    if (!isMember) {
+      return;
+    }
+    const allowed = new Set(['NONE', 'EXCELLENT', 'GOOD', 'FAIR', 'POOR']);
+    const quality = typeof data.quality === 'string' && allowed.has(data.quality)
+      ? data.quality
+      : 'NONE';
+    const lossPct = Number.isFinite(Number(data.lossPct)) ? Number(data.lossPct) : 0;
+    const jitterMs = Number.isFinite(Number(data.jitterMs)) ? Number(data.jitterMs) : 0;
+    const payload = {
+      unitId: socket.unitId,
+      channelId,
+      quality,
+      lossPct,
+      jitterMs,
+      timestamp: Date.now(),
+    };
+    this.io.to(`channel:${channelId}`).emit(RADIO_EVENTS.SIGNAL_QUALITY, payload);
   }
 
   _handleTxStart(socket, data) {

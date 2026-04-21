@@ -38,4 +38,13 @@ class RadioSignalingGatewayImpl(
         Log.d(TAG, "notifyTxStop channelKey=$channelKey ${RadioDiagLog.elapsedTag()}")
         signalingClient.emitRadioTxStop(channelKey)
     }
+
+    override fun reportSignalQuality(
+        channelKey: String,
+        quality: SignalQuality,
+        lossPct: Double,
+        jitterMs: Double
+    ) {
+        signalingClient.emitRadioSignalQuality(channelKey, quality.name, lossPct, jitterMs)
+    }
 }

@@ -288,6 +288,19 @@ export function AudioConnectionProvider({ children, user }) {
     });
     listenerRemoversRef.current.push(removeSignalingPttEnd);
 
+    const removeSignalingSignalQuality = signalingManager.on('radioSignalQuality', (data) => {
+      if (!data || !data.unitId) return;
+      const store = useDispatchStore.getState();
+      store.setUnitSignalQuality(data.unitId, {
+        quality: data.quality || 'NONE',
+        lossPct: data.lossPct ?? 0,
+        jitterMs: data.jitterMs ?? 0,
+        channelId: data.channelId,
+        timestamp: data.timestamp || Date.now(),
+      });
+    });
+    listenerRemoversRef.current.push(removeSignalingSignalQuality);
+
     listenerRemoversRef.current.push(
       audioTransportManager.addConnectionStateChangeListener((channelName, state, error) => {
         console.log(`[AudioConnection] ${channelName} state: ${state}`);

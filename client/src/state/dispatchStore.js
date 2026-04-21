@@ -12,6 +12,7 @@ const useDispatchStore = create(
       monitoredChannelIds: [],
       channelLevels: {},
       activeTransmissions: {},
+      unitSignalQuality: {},
       
       units: [],
       unitsByChannel: {},
@@ -97,6 +98,13 @@ const useDispatchStore = create(
         delete updated[channelId];
         return { activeTransmissions: updated };
       }),
+
+      setUnitSignalQuality: (unitId, info) => set((state) => ({
+        unitSignalQuality: {
+          ...state.unitSignalQuality,
+          [unitId]: { ...info, updatedAt: Date.now() },
+        },
+      })),
       
       setUnits: (units) => {
         const unitsByChannel = {};
@@ -277,6 +285,7 @@ const useDispatchStore = create(
       resetStore: () => set({
         channels: [],
         activeTransmissions: {},
+        unitSignalQuality: {},
         units: [],
         unitsByChannel: {},
         emergencies: [],

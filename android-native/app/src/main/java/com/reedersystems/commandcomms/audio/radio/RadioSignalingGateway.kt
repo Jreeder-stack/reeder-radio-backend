@@ -7,4 +7,5 @@ interface RadioSignalingGateway {
     fun leaveChannel(channelKey: String)
     fun notifyTxStart(channelKey: String)
     fun notifyTxStop(channelKey: String)
+    fun reportSignalQuality(channelKey: String, quality: SignalQuality, lossPct: Double, jitterMs: Double)
 }

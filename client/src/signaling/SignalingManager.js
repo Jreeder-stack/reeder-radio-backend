@@ -82,6 +82,7 @@ class SignalingManager {
       connectionChange: new Set(),
       emergencyAlert: new Set(),
       'data:message': new Set(),
+      radioSignalQuality: new Set(),
     };
     
     this.reconnectAttempts = 0;
@@ -313,6 +314,10 @@ class SignalingManager {
 
     this.socket.on('location:update', (data) => {
       this._emit('location:update', data);
+    });
+
+    this.socket.on('radio:signalQuality', (data) => {
+      this._emit('radioSignalQuality', data);
     });
   }
 

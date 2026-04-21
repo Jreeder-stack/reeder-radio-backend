@@ -36,6 +36,8 @@ class RadioAudioEngine(private val context: Context) {
     var floorControl: FloorControlManager? = null
         private set
 
+    private var signalingGateway: RadioSignalingGateway? = null
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
     private var audioFocusRequest: AudioFocusRequest? = null
@@ -175,6 +177,7 @@ class RadioAudioEngine(private val context: Context) {
 
     fun wireFloorControl(gateway: RadioSignalingGateway) {
         floorControl = FloorControlManager(gateway, stateManager, scope)
+        signalingGateway = gateway
     }
 
     fun start() {
@@ -1416,6 +1419,8 @@ class RadioAudioEngine(private val context: Context) {
         var lastFec = audioPlayback.rxFecRecoveries
         var lastPlc = audioPlayback.rxPlcFrames
         var idleCycles = 0
+        var lastReportedQuality: SignalQuality? = null
+        var lastReportTimeMs = 0L
         signalQualityJob = scope.launch {
             stateManager.updateSignalQuality(SignalQuality.NONE)
             while (isActive) {
@@ -1437,6 +1442,13 @@ class RadioAudioEngine(private val context: Context) {
                     idleCycles++
                     if (idleCycles >= 2) {
                         stateManager.updateSignalQuality(SignalQuality.NONE)
+                        maybeReportSignalQuality(
+                            SignalQuality.NONE, 0.0, 0.0,
+                            lastReportedQuality, lastReportTimeMs
+                        )?.let {
+                            lastReportedQuality = SignalQuality.NONE
+                            lastReportTimeMs = it
+                        }
                     }
                     continue
                 }
@@ -1446,7 +1458,45 @@ class RadioAudioEngine(private val context: Context) {
                 val jitterMs = jitterBuffer.estimatedJitterMsValue
                 val quality = SignalQuality.classify(lossPct, jitterMs, totalFrames)
                 stateManager.updateSignalQuality(quality)
+                maybeReportSignalQuality(
+                    quality, lossPct, jitterMs,
+                    lastReportedQuality, lastReportTimeMs
+                )?.let {
+                    lastReportedQuality = quality
+                    lastReportTimeMs = it
+                }
             }
+        }
+    }
+
+    /**
+     * Emit a signal-quality update to the dispatcher backend through the
+     * signaling gateway. To keep traffic low we only emit when the
+     * classified quality changes, or as a 5-second heartbeat while the
+     * value is stable. Returns the timestamp of the emit, or null if no
+     * emit happened.
+     */
+    private fun maybeReportSignalQuality(
+        quality: SignalQuality,
+        lossPct: Double,
+        jitterMs: Double,
+        lastReportedQuality: SignalQuality?,
+        lastReportTimeMs: Long
+    ): Long? {
+        val gateway = signalingGateway ?: return null
+        val channelKey = stateManager.activeChannelKey
+        if (channelKey.isNullOrBlank()) return null
+        val now = System.currentTimeMillis()
+        val changed = lastReportedQuality != quality
+        val heartbeatDue = quality != SignalQuality.NONE &&
+            (now - lastReportTimeMs) >= 5_000L
+        if (!changed && !heartbeatDue) return null
+        return try {
+            gateway.reportSignalQuality(channelKey, quality, lossPct, jitterMs)
+            now
+        } catch (e: Exception) {
+            Log.w(TAG, "reportSignalQuality failed: ${e.message}")
+            null
         }
     }
 
