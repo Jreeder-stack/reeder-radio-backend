@@ -1,0 +1,115 @@
+Status Checks — what the CAD now exposes
+Auth (same as the rest of the radio API): X-API-Key: <key> header. The new endpoints below need scopes status_check.read and status_check.write on a DB-stored key (or * on the env key).
+
+Concept: Every call assignment carries its own status-check timer with a tiny state machine, persisted in the DB before anything is broadcast (so a CAD restart can't replay or duplicate events, and any missed WebSocket event is recoverable by polling).
+
+idle ─(due)─► pending ─(grace expires)─► escalated
+  ▲              │                            │
+  │              └─(ack)──┬───────────────────┘
+  │                       ▼
+  └──────────────────── idle
+any ─(snooze)─► snoozed ─(snooze ends)─► idle
+any ─(cancel | clear | dispose)─► cancelled (terminal)
+
+Defaults (configurable on the CAD via env): interval = 900 s, grace = 120 s, scheduler tick = 1 s.
+
+REST endpoints
+1. Poll for pending/escalated/upcoming checks
+GET /api/radio/pending-checks?lookahead_sec=30 — scope status_check.read
+
+Returns every assignment that is currently pending or escalated, plus any idle/snoozed assignment whose dueAt falls inside lookahead_sec (default 30, max 3600). This is the polling fallback for any consumer that misses a WS event.
+
+Response (camelCase, exactly as the server emits):
+
+{
+  "success": true,
+  "count": 1,
+  "lookahead_sec": 30,
+  "pending_checks": [
+    {
+      "assignmentId": "uuid",
+      "callId": "uuid",
+      "callNumber": "2026-000123",
+      "unitId": "uuid",
+      "unitNumber": "UNIT-1",
+      "enabled": true,
+      "state": "pending",
+      "intervalSec": 900,
+      "graceSec": 120,
+      "dueAt": "2026-04-21T15:15:00.000Z",
+      "remainingSec": 873,
+      "lastAckAt": "2026-04-21T14:45:00.000Z",
+      "snoozedUntil": null,
+      "cancelledAt": null
+    }
+  ],
+  "timestamp": "2026-04-21T15:00:27.000Z"
+}
+
+2. Get all status-check state for one call
+GET /api/radio/call/:id/status-check — scope status_check.read
+
+Returns the current state for every active assignment on that call.
+
+3. Acknowledge / respond
+POST /api/radio/respond-check — scope status_check.write
+
+{ "unit_id": "UNIT-1", "call_id": "uuid", "status": "10-4" }
+
+unit_id may be either the user UUID or the unit number (e.g. "UNIT-1", "INDIANA-1") — both resolve.
+If call_id is supplied, that one assignment's timer resets to now + interval. If omitted, every active assignment for that unit is acknowledged.
+4. Snooze
+POST /api/radio/call/:id/status-check/snooze — scope status_check.write
+
+{ "unit_id": "UNIT-1", "duration_sec": 300, "reason": "phone followup" }
+
+duration_sec is a positive integer (seconds). Pushes the next due time out by that amount.
+
+5. Cancel
+POST /api/radio/call/:id/status-check/cancel — scope status_check.write
+
+{ "unit_id": "UNIT-1" }
+
+Stops the per-call timer entirely. The CAD also auto-cancels when the assignment is cleared (/api/radio/clear) or the call is closed (/api/radio/dispose), so the radio side does not need to call this on normal call closure.
+
+WebSocket — push events
+Connect to wss://<cad-url>/ws?api_key=<key> (or send X-API-Key header). Server pings every 20 s. Reconnect with exponential backoff (1 s → 30 s).
+
+Important: the WS handshake requires the key to hold at least one read scope (status_check.read, call.read, unit.read, query.read, or *). A write-only key will be rejected at handshake with close(4403, "insufficient_scope: status_check.read"). If a key is revoked while connected, the socket is closed immediately with code 4401.
+
+All five status-check events share one envelope (camelCase):
+
+{
+  "type": "status_check_due",
+  "agencyId": "uuid",
+  "dispatchCenterId": "uuid|null",
+  "data": {
+    "assignmentId": "uuid",
+    "callId": "uuid",
+    "callNumber": "2026-000123",
+    "unitId": "uuid",
+    "unitNumber": "UNIT-1",
+    "intervalSec": 900,
+    "graceSec": 120,
+    "dueAt": "2026-04-21T15:00:00.000Z",
+    "overdueSec": 0,
+    "agencyId": "uuid",
+    "dispatchCenterId": "uuid|null"
+  }
+}
+
+type	Fires when
+status_check_due	Timer first fires (idle → pending). Exactly once per cycle.
+status_check_escalated	Grace expired without an ack (pending → escalated).
+status_check_acknowledged	Unit responded via /respond-check.
+status_check_snoozed	/snooze was called.
+status_check_cancelled	/cancel was called, or the assignment was cleared/disposed.
+State is persisted before broadcast. Tenant isolation is enforced — events for one agency are never delivered to another.
+
+Recommended radio-side flow
+On startup, open the WS and call GET /pending-checks?lookahead_sec=30 to seed any in-flight pending/escalated checks. Keep the lookahead poll running every ~15 s as a safety net.
+On status_check_due: prompt the unit on the radio to respond. If they answer, hit POST /respond-check with unit_id + call_id.
+On status_check_escalated: treat as overdue — louder/different prompt, alert the dispatcher, etc.
+Use snooze for "I'm on the phone with them, give me 5 minutes" cases. Don't use cancel for normal call closure — the CAD auto-cancels when the call is cleared/disposed.
+Ignore status_check_acknowledged events that you generated yourself; treat ones you didn't generate (e.g. dispatcher-side ack) as confirmation to silence the radio prompt.
+The full reference (with all the other radio endpoints) is in RADIO_API_INTEGRATION_GUIDE.md at the repo root if they want to pull it directly.
