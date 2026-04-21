@@ -7,10 +7,60 @@ const STATUS_CHECK_EVENTS = new Set([
   'status_check_acknowledged',
   'status_check_snoozed',
   'status_check_cancelled',
+  // Defensive: CAD has historically used several names for the "fire" event;
+  // accept any of them and normalize to status_check_due / _escalated below.
+  'status_check_overdue',
+  'status_check_fired',
+  'status_check_pending',
+  'status_check_notification',
+  'status_check_alert',
+  'status_check_unacknowledged',
 ]);
 
-const POLL_INTERVAL_MS = 15000;
-const POLL_LOOKAHEAD_SEC = 30;
+// Map the alternate "fire" event names onto the canonical pair the rest of
+// the system understands. Strict allowlists — unknown variants return null
+// so we never accidentally prompt on a terminal event we didn't recognize.
+const FIRE_EVENT_TYPES = new Set([
+  'status_check_due',
+  'status_check_pending',
+  'status_check_fired',
+  'status_check_notification',
+  'status_check_alert',
+]);
+const ESCALATED_EVENT_TYPES = new Set([
+  'status_check_escalated',
+  'status_check_overdue',
+  'status_check_unacknowledged',
+  'status_check_expired',
+]);
+const TERMINAL_EVENT_TYPES = new Set([
+  'status_check_acknowledged',
+  'status_check_ack',
+  'status_check_acked',
+  'status_check_snoozed',
+  'status_check_cancelled',
+  'status_check_canceled',
+  'status_check_resolved',
+  'status_check_closed',
+  'status_check_completed',
+]);
+function canonicalEventType(rawType) {
+  if (!rawType) return null;
+  const t = String(rawType).toLowerCase();
+  if (TERMINAL_EVENT_TYPES.has(t)) {
+    // Normalize all terminal/clear events to status_check_acknowledged so the
+    // pending-prompt cleanup path runs (snoozed/cancelled also clear it).
+    if (t === 'status_check_snoozed') return 'status_check_snoozed';
+    if (t === 'status_check_cancelled' || t === 'status_check_canceled') return 'status_check_cancelled';
+    return 'status_check_acknowledged';
+  }
+  if (ESCALATED_EVENT_TYPES.has(t)) return 'status_check_escalated';
+  if (FIRE_EVENT_TYPES.has(t)) return 'status_check_due';
+  return null;
+}
+
+const POLL_INTERVAL_MS = 10000;
+const POLL_LOOKAHEAD_SEC = 60;
 const RECONNECT_BASE_MS = 1000;
 const RECONNECT_MAX_MS = 30000;
 const PING_TIMEOUT_MS = 30000;
@@ -179,6 +229,22 @@ class CadStatusCheckClient {
         log('PARSE_ERROR', { error: err.message });
         return;
       }
+      // Log every CAD WS message type so we can see if CAD is using an event
+      // name we don't yet recognize. (Status-check related events get a more
+      // detailed log in _handleEvent.)
+      const msgType = msg?.type || msg?.event;
+      if (msgType) {
+        const isStatusCheck = String(msgType).toLowerCase().includes('status_check') ||
+                               String(msgType).toLowerCase().includes('statuscheck');
+        if (isStatusCheck) {
+          log('WS_MSG_STATUS_CHECK', {
+            type: msgType,
+            unitId: msg?.data?.unit_id || msg?.data?.unitId || msg?.unit_id || msg?.unitId,
+            callId: msg?.data?.call_id || msg?.data?.callId || msg?.call_id || msg?.callId,
+            state: msg?.data?.state || msg?.data?.status || msg?.state || msg?.status,
+          });
+        }
+      }
       this._handleEvent(msg);
     });
 
@@ -229,27 +295,46 @@ class CadStatusCheckClient {
       if (!result || result.success === false) return;
       const checks = result.checks || result.pending_checks || [];
       const now = Date.now();
+      log('POLL_RESULT', {
+        count: checks.length,
+        states: checks.map(c => String(c.state || c.status || 'unknown').toLowerCase()),
+      });
       for (const check of checks) {
         const state = String(check.state || check.status || '').toLowerCase();
         const dueAtRaw = check.due_at || check.dueAt;
         const dueAtMs = dueAtRaw ? new Date(dueAtRaw).getTime() : null;
 
-        // Map CAD state -> event type. Skip anything not currently
-        // due/escalated (e.g. snoozed, idle) — we only synthesize
-        // status_check_due if the timer has actually elapsed.
+        // Map CAD state -> event type. Be permissive: any state that suggests
+        // the check is currently demanding a response should trigger a prompt.
+        // Acknowledged/snoozed/cancelled/idle states are explicitly skipped.
         let eventType = null;
-        if (state === 'escalated') {
+        const ESCALATED_STATES = new Set(['escalated', 'overdue', 'expired', 'unacknowledged', 'alert']);
+        const DUE_STATES = new Set(['pending', 'due', 'awaiting', 'awaiting_response', 'active', 'fired', 'notified', 'open']);
+        const SKIP_STATES = new Set(['acknowledged', 'ack', 'acked', 'snoozed', 'cancelled', 'canceled', 'idle', 'completed', 'closed', 'resolved']);
+
+        if (ESCALATED_STATES.has(state)) {
           eventType = 'status_check_escalated';
-        } else if (state === 'pending' || state === 'due') {
+        } else if (DUE_STATES.has(state)) {
           if (dueAtMs == null || dueAtMs <= now) {
             eventType = 'status_check_due';
           } else {
             // Within lookahead window but not yet due — do not prompt early.
             continue;
           }
-        } else {
-          // unknown state (snoozed, ack'd, cancelled, idle, etc.) — skip
+        } else if (SKIP_STATES.has(state)) {
           continue;
+        } else {
+          // Unknown state — log it so we can extend the mapping, but if we
+          // have a unit + call + due_at that's already elapsed, treat it as
+          // due. This prevents silent drops when CAD adds new state names.
+          log('POLL_UNKNOWN_STATE', {
+            state, unitId: check.unit_id || check.unitId, callId: check.call_id || check.callId, dueAt: dueAtRaw,
+          });
+          if ((check.unit_id || check.unitId) && dueAtMs != null && dueAtMs <= now) {
+            eventType = 'status_check_due';
+          } else {
+            continue;
+          }
         }
 
         const synthesized = {
@@ -275,8 +360,16 @@ class CadStatusCheckClient {
   _handleEvent(rawEvt) {
     const evt = normalizeEvent(rawEvt);
     if (!evt) return;
-    const type = evt.event;
-    if (!STATUS_CHECK_EVENTS.has(type)) return;
+    const rawType = evt.event;
+    if (!rawType) return;
+    // Accept any status_check_* event from CAD; canonicalize to the small
+    // set the rest of the system understands (due / escalated / ack / snooze / cancel).
+    if (!STATUS_CHECK_EVENTS.has(rawType) && !String(rawType).toLowerCase().startsWith('status_check_')) {
+      return;
+    }
+    const type = canonicalEventType(rawType);
+    if (!type) return;
+    evt.event = type;
 
     // Optional tenant guard: drop events for other agencies if AGENCY_ID set.
     const agencyFilter = process.env.CAD_AGENCY_ID;

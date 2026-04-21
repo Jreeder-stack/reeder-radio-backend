@@ -6461,9 +6461,16 @@ export class AIDispatcher {
 
     if (type === 'status_check_due' || type === 'status_check_escalated') {
       // Don't double-prompt for the same assignment if we're still waiting.
+      // For escalated events, allow a single upgrade from a pending due ->
+      // escalated (so the dispatcher hears the higher-priority prompt), but
+      // suppress further duplicates (e.g. WS + poll racing on the same check).
       const existing = this._pendingStatusChecks.get(key);
       if (existing && type === 'status_check_due') {
         this.log('STATUS_CHECK_DUE_DEDUPED', { unitId, callId });
+        return;
+      }
+      if (existing && type === 'status_check_escalated' && existing.escalated) {
+        this.log('STATUS_CHECK_ESCALATED_DEDUPED', { unitId, callId });
         return;
       }
       this._pendingStatusChecks.set(key, { unitId, callId, escalated: type === 'status_check_escalated', at: Date.now() });
