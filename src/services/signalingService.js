@@ -1845,8 +1845,15 @@ class SignalingService {
       console.warn(`[Signaling] SUBSCRIBER_REGISTRATION_FAILED unitId=${socket.unitId} channelId=${channelId} udpPort=${udpPort ?? 'missing'} udpAddress=${udpAddress ?? 'missing'} peerAddress=${peerAddress || 'missing'}`);
     }
 
+    const channelIndexNumeric = socket.lastAuthorizedRadioChannelNumeric;
+    if (!Number.isInteger(channelIndexNumeric) || channelIndexNumeric < 0) {
+      console.warn(`[Signaling] CHANNEL_JOINED missing/invalid numeric index unitId=${socket.unitId} channelId=${channelId} value=${channelIndexNumeric}`);
+    }
     socket.emit(RADIO_EVENTS.CHANNEL_JOINED, {
       channelId,
+      channelIndex: Number.isInteger(channelIndexNumeric) && channelIndexNumeric >= 0
+        ? channelIndexNumeric
+        : null,
       timestamp: Date.now(),
       members: this._getChannelMemberDetails(channelId),
     });

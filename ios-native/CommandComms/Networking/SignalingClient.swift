@@ -15,6 +15,7 @@ enum LocationTrackEvent {
 }
 
 enum RadioSignalingEvent {
+    case channelJoined(channelId: String, channelIndex: Int)
     case pttGranted(channelId: String, senderUnitId: String)
     case pttDenied(channelId: String, reason: String)
     case pttRevoked(channelId: String, reason: String)
@@ -154,6 +155,24 @@ final class SignalingClient: ObservableObject {
                    payload["unitId"] as? String == self?.unitId {
                     self?.currentChannel = channelId
                 }
+            }
+        }
+
+        socket.on("radio:channelJoined") { [weak self] data, _ in
+            Task { @MainActor in
+                guard let self else { return }
+                let payload = data.first as? [String: Any]
+                let channel = (payload?["channelId"] as? String) ?? (self.currentChannel ?? "")
+                let idxAny = payload?["channelIndex"]
+                let channelIndex: Int
+                if let n = idxAny as? Int { channelIndex = n }
+                else if let n = idxAny as? NSNumber { channelIndex = n.intValue }
+                else if let s = idxAny as? String, let n = Int(s) { channelIndex = n }
+                else { channelIndex = -1 }
+                if !channel.isEmpty {
+                    self.currentChannel = channel
+                }
+                self.radioSubject.send(.channelJoined(channelId: channel, channelIndex: channelIndex))
             }
         }
 

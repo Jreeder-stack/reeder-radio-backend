@@ -33,7 +33,16 @@ final class RadioAudioEngine: ObservableObject {
     }
     var channelId: String = "" {
         didSet {
-            transport.channelIndex = Self.channelIndex(for: channelId)
+            // The authoritative numeric channel index is supplied by the
+            // server via `radio:channelJoined`. Until that arrives we leave
+            // transport.channelIndex untouched (0 by default), which causes
+            // the RX channel-match check to drop packets — that's safer
+            // than guessing via a hash and routing audio to the wrong
+            // listeners. See handleSignalingEvent / .channelJoined below.
+            if channelId != oldValue {
+                transport.channelIndex = 0
+                log.info("channelId set to \(self.channelId, privacy: .public); awaiting server channelIndex")
+            }
         }
     }
 
@@ -44,12 +53,6 @@ final class RadioAudioEngine: ObservableObject {
         transport.onPacketReceived = { [weak self] pkt in
             self?.handleRxPacket(pkt)
         }
-    }
-
-    static func channelIndex(for channelId: String) -> Int {
-        // Map channel string to numeric index. Match Android: numeric prefix or hash.
-        if let n = Int(channelId.prefix { $0.isNumber }) { return n }
-        return abs(channelId.hashValue) % 0xFFFF
     }
 
     func attach(signaling: SignalingClient) {
@@ -183,6 +186,23 @@ final class RadioAudioEngine: ObservableObject {
 
     private func handleSignalingEvent(_ event: RadioSignalingEvent) {
         switch event {
+        case .channelJoined(let channel, let index):
+            guard !channel.isEmpty else { return }
+            guard index >= 0 else {
+                log.error("channelJoined for \(channel, privacy: .public) has no channelIndex; RX will drop until server supplies one")
+                return
+            }
+            // The server may canonicalize the channel ID (e.g. "Alpha" ->
+            // "default__alpha"). Adopt the canonical key so subsequent
+            // signaling events (pttGranted/txStart/...) match. Setting
+            // channelId triggers didSet which zeros channelIndex; we then
+            // immediately overwrite with the server's authoritative value.
+            if channel != channelId {
+                log.info("adopting canonical channelId from server: \(channel, privacy: .public) (was \(self.channelId, privacy: .public))")
+                channelId = channel
+            }
+            transport.channelIndex = index
+            log.info("channelIndex set from server: channel=\(channel, privacy: .public) index=\(index)")
         case .pttGranted(let channel, _):
             guard channel == channelId else { return }
             log.info("Floor granted on \(channel)")
