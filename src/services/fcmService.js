@@ -3,6 +3,13 @@ import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import {
+  getPagingListMembers,
+  getPagingListByType,
+  getAllFcmTokensForUnit,
+  getPagingChannelId,
+  createPage,
+} from '../db/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -139,4 +146,62 @@ export async function sendPageToTokens(tokens, pageId, message, sender, pagingCh
 
   console.log(`[FCM] Page ${pageId} sent: ${successCount} success, ${failureCount} failed`);
   return { successCount, failureCount, results };
+}
+
+/**
+ * Send a page to every member of an admin-managed paging list (e.g. 'backup_request', 'emergency').
+ * Used by AI dispatch flows so they don't have to wire roster lookup + FCM delivery themselves.
+ *
+ * Returns { listType, memberCount, tokenCount, page, fcm }.
+ * If the roster is empty or no members have FCM tokens, the page row is still recorded but no
+ * FCM messages are sent.
+ */
+export async function sendPageToList(listType, message, sender) {
+  if (!listType) throw new Error('listType is required');
+  if (!message) throw new Error('message is required');
+  const senderName = sender || 'AI-DISPATCH';
+
+  const list = await getPagingListByType(listType);
+  if (!list) {
+    throw new Error(`Unknown paging list type: ${listType}`);
+  }
+
+  const members = await getPagingListMembers(listType);
+  if (!members || members.length === 0) {
+    console.warn(`[FCM] sendPageToList: paging list "${listType}" has no members — nothing to page`);
+  }
+
+  const tokenSet = new Map();
+  for (const member of members) {
+    if (!member.unit_id) continue;
+    const rows = await getAllFcmTokensForUnit(member.unit_id);
+    for (const row of rows) {
+      if (row.fcm_token) tokenSet.set(row.fcm_token, row);
+    }
+  }
+  const tokens = Array.from(tokenSet.keys());
+
+  const page = await createPage(message, senderName, 'list', listType);
+  const pagingChannelId = await getPagingChannelId();
+
+  if (tokens.length === 0) {
+    console.warn(`[FCM] sendPageToList: no FCM tokens for list "${listType}" (members=${members.length}) — page recorded id=${page.id} but not delivered`);
+    return {
+      listType,
+      memberCount: members.length,
+      tokenCount: 0,
+      page,
+      fcm: { successCount: 0, failureCount: 0, results: [] },
+    };
+  }
+
+  const fcmResult = await sendPageToTokens(tokens, page.id, message, senderName, pagingChannelId);
+  console.log(`[FCM] sendPageToList "${listType}": members=${members.length} tokens=${tokens.length} success=${fcmResult.successCount} failure=${fcmResult.failureCount} pageId=${page.id}`);
+  return {
+    listType,
+    memberCount: members.length,
+    tokenCount: tokens.length,
+    page,
+    fcm: fcmResult,
+  };
 }

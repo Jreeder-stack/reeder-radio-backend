@@ -363,6 +363,33 @@ export async function initializeDatabase() {
     await client.query(`ALTER TABLE radios ADD COLUMN IF NOT EXISTS fcm_token TEXT`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_radios_fcm_token ON radios (fcm_token) WHERE fcm_token IS NOT NULL`);
 
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS paging_lists (
+        id SERIAL PRIMARY KEY,
+        list_type VARCHAR(50) UNIQUE NOT NULL,
+        label VARCHAR(100) NOT NULL,
+        description TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS paging_list_members (
+        id SERIAL PRIMARY KEY,
+        list_id INTEGER NOT NULL REFERENCES paging_lists(id) ON DELETE CASCADE,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(list_id, user_id)
+      )
+    `);
+
+    await client.query(`
+      INSERT INTO paging_lists (list_type, label, description) VALUES
+        ('backup_request', 'Backup Request', 'Paged when a unit asks the AI to start them another unit.'),
+        ('emergency', 'Emergency', 'Paged on emergency events (pursuit, shots fired, gunpoint, taser point/deployed, fighting, officer down, etc.).')
+      ON CONFLICT (list_type) DO NOTHING
+    `);
+
     try {
       const resetResult = await client.query(
         `UPDATE units SET status = 'offline' WHERE status != 'offline' RETURNING unit_identity`
@@ -1255,6 +1282,53 @@ export async function getAllFcmTokens() {
      WHERE r.fcm_token IS NOT NULL`
   );
   return result.rows;
+}
+
+export async function getAllPagingLists() {
+  const result = await pool.query(
+    `SELECT id, list_type, label, description FROM paging_lists ORDER BY id ASC`
+  );
+  return result.rows;
+}
+
+export async function getPagingListByType(listType) {
+  const result = await pool.query(
+    `SELECT id, list_type, label, description FROM paging_lists WHERE list_type = $1`,
+    [listType]
+  );
+  return result.rows[0] || null;
+}
+
+export async function getPagingListMembers(listType) {
+  const result = await pool.query(
+    `SELECT u.id, u.username, u.email, u.unit_id, u.role, u.is_dispatcher, u.status, m.added_at
+     FROM paging_list_members m
+     JOIN paging_lists l ON l.id = m.list_id
+     JOIN users u ON u.id = m.user_id
+     WHERE l.list_type = $1
+     ORDER BY u.username ASC`,
+    [listType]
+  );
+  return result.rows;
+}
+
+export async function addPagingListMember(listType, userId) {
+  const list = await getPagingListByType(listType);
+  if (!list) throw new Error(`Unknown paging list type: ${listType}`);
+  await pool.query(
+    `INSERT INTO paging_list_members (list_id, user_id) VALUES ($1, $2)
+     ON CONFLICT (list_id, user_id) DO NOTHING`,
+    [list.id, userId]
+  );
+}
+
+export async function removePagingListMember(listType, userId) {
+  const list = await getPagingListByType(listType);
+  if (!list) throw new Error(`Unknown paging list type: ${listType}`);
+  await pool.query(
+    `DELETE FROM paging_list_members WHERE list_id = $1 AND user_id = $2`,
+    [list.id, userId]
+  );
 }
 
 export default pool;

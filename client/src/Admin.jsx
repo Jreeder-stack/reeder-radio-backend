@@ -28,6 +28,12 @@ export default function Admin({ user, onLogout }) {
 
   const [pagingChannelId, setPagingChannelId] = useState("");
 
+  const [pagingLists, setPagingLists] = useState([]);
+  const [pagingListMembers, setPagingListMembers] = useState({});
+  const [pagingListLoading, setPagingListLoading] = useState(false);
+  const [pagingListError, setPagingListError] = useState("");
+  const [pagingListAddSelection, setPagingListAddSelection] = useState({});
+
   const [scannerEnabled, setScannerEnabled] = useState(false);
   const [scannerChannel, setScannerChannel] = useState("");
   const [scannerUrl, setScannerUrl] = useState("");
@@ -190,6 +196,82 @@ export default function Admin({ user, onLogout }) {
       }
     } catch (err) {
       console.error("Failed to load paging data:", err);
+    }
+  };
+
+  const loadPagingLists = async () => {
+    setPagingListLoading(true);
+    setPagingListError("");
+    try {
+      const res = await fetch("/api/paging-tone/lists", { credentials: "include" });
+      if (!res.ok) throw new Error(`Failed to load paging lists (${res.status})`);
+      const data = await res.json();
+      const lists = data.lists || [];
+      setPagingLists(lists);
+      const membersByType = {};
+      await Promise.all(
+        lists.map(async (list) => {
+          try {
+            const mRes = await fetch(`/api/paging-tone/lists/${encodeURIComponent(list.list_type)}/members`, {
+              credentials: "include",
+            });
+            if (mRes.ok) {
+              const mData = await mRes.json();
+              membersByType[list.list_type] = mData.members || [];
+            } else {
+              membersByType[list.list_type] = [];
+            }
+          } catch (e) {
+            membersByType[list.list_type] = [];
+          }
+        })
+      );
+      setPagingListMembers(membersByType);
+    } catch (err) {
+      console.error("Failed to load paging lists:", err);
+      setPagingListError(err.message || "Failed to load paging lists");
+    } finally {
+      setPagingListLoading(false);
+    }
+  };
+
+  const addPagingListMembers = async (listType) => {
+    const selected = pagingListAddSelection[listType] || [];
+    if (selected.length === 0) return;
+    try {
+      const res = await fetch(`/api/paging-tone/lists/${encodeURIComponent(listType)}/members`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ userIds: selected }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.error || `Failed (${res.status})`);
+      }
+      const data = await res.json();
+      setPagingListMembers((prev) => ({ ...prev, [listType]: data.members || [] }));
+      setPagingListAddSelection((prev) => ({ ...prev, [listType]: [] }));
+    } catch (err) {
+      alert("Failed to add members: " + err.message);
+    }
+  };
+
+  const removePagingListMember = async (listType, userId) => {
+    if (!window.confirm("Remove this user from the list?")) return;
+    try {
+      const res = await fetch(
+        `/api/paging-tone/lists/${encodeURIComponent(listType)}/members/${userId}`,
+        { method: "DELETE", credentials: "include" }
+      );
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.error || `Failed (${res.status})`);
+      }
+      const data = await res.json();
+      setPagingListMembers((prev) => ({ ...prev, [listType]: data.members || [] }));
+    } catch (err) {
+      alert("Failed to remove member: " + err.message);
     }
   };
 
@@ -705,6 +787,7 @@ export default function Admin({ user, onLogout }) {
             { id: "recordings", label: "Recording Logs" },
             { id: "audioTuning", label: "Audio Tuning", onClick: () => { setActiveTab("audioTuning"); loadAudioTuning(); } },
             { id: "paging", label: "Paging" },
+            { id: "pagingLists", label: "Paging Lists", onClick: () => { setActiveTab("pagingLists"); loadPagingLists(); } },
             { id: "vmLogs", label: "VM Logs" },
             { id: "devices", label: `Devices (${devices.length})` },
           ].map(({ id, label, onClick }) => (
@@ -1318,6 +1401,112 @@ export default function Admin({ user, onLogout }) {
                   All pages play the built-in dispatch "Alert" tone — a 2.5-second 1000 Hz alert — directly on the T320. No upload is needed and the tone is identical on every device.
                 </p>
               </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "pagingLists" && (
+          <div className="admin-tab-content">
+            <div className="admin-section-header">
+              <h2 className="admin-section-title">Paging Lists</h2>
+              <button className="admin-btn admin-btn-secondary" onClick={loadPagingLists} disabled={pagingListLoading}>
+                {pagingListLoading ? "Loading..." : "Refresh"}
+              </button>
+            </div>
+            <p className="admin-muted-text" style={{ marginBottom: 16 }}>
+              These rosters control who gets paged for AI-driven flows. Membership is system-wide and admin-managed — users cannot opt themselves in or out.
+            </p>
+            {pagingListError && (
+              <div className="admin-error-banner" style={{ marginBottom: 12 }}>{pagingListError}</div>
+            )}
+            {pagingLists.length === 0 && !pagingListLoading && !pagingListError && (
+              <div className="admin-muted-text">No paging lists configured.</div>
+            )}
+            <div className="admin-settings-grid">
+              {pagingLists.map((list) => {
+                const members = pagingListMembers[list.list_type] || [];
+                const memberIds = new Set(members.map((m) => m.id));
+                const candidateUsers = users.filter((u) => !memberIds.has(u.id));
+                const selection = pagingListAddSelection[list.list_type] || [];
+                return (
+                  <div key={list.list_type} className="admin-settings-card">
+                    <h3 className="admin-settings-card-title" style={{ marginBottom: 4 }}>{list.label}</h3>
+                    {list.description && (
+                      <p className="admin-settings-card-desc" style={{ marginBottom: 12 }}>{list.description}</p>
+                    )}
+                    <div style={{ marginBottom: 16 }}>
+                      <div className="admin-label" style={{ marginBottom: 6 }}>
+                        Current members ({members.length})
+                      </div>
+                      {members.length === 0 ? (
+                        <div className="admin-muted-text" style={{ fontSize: 13 }}>No users on this list yet.</div>
+                      ) : (
+                        <div className="admin-card-list" style={{ gap: 6 }}>
+                          {members.map((m) => (
+                            <div
+                              key={m.id}
+                              className="admin-card"
+                              style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px" }}
+                            >
+                              <div>
+                                <div className="admin-td-bold">{m.username}</div>
+                                <div className="admin-td-muted admin-td-sm">
+                                  {m.unit_id ? `Unit ${m.unit_id}` : "No unit"}{m.email ? ` • ${m.email}` : ""}
+                                </div>
+                              </div>
+                              <button
+                                className="admin-btn-sm admin-btn-sm-danger"
+                                onClick={() => removePagingListMember(list.list_type, m.id)}
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <div className="admin-label" style={{ marginBottom: 6 }}>Add users</div>
+                      {candidateUsers.length === 0 ? (
+                        <div className="admin-muted-text" style={{ fontSize: 13 }}>All users are already on this list.</div>
+                      ) : (
+                        <>
+                          <div className="admin-checkbox-list" style={{ maxHeight: 220, overflowY: "auto", marginBottom: 8 }}>
+                            {candidateUsers.map((u) => (
+                              <label key={u.id} className="admin-checkbox-label">
+                                <input
+                                  type="checkbox"
+                                  checked={selection.includes(u.id)}
+                                  onChange={(e) => {
+                                    setPagingListAddSelection((prev) => {
+                                      const cur = prev[list.list_type] || [];
+                                      const next = e.target.checked
+                                        ? [...cur, u.id]
+                                        : cur.filter((id) => id !== u.id);
+                                      return { ...prev, [list.list_type]: next };
+                                    });
+                                  }}
+                                />
+                                <span>{u.username}</span>
+                                <span className="admin-muted-text">
+                                  {u.unit_id ? `(Unit ${u.unit_id})` : "(no unit)"}
+                                </span>
+                              </label>
+                            ))}
+                          </div>
+                          <button
+                            className="admin-btn admin-btn-primary"
+                            disabled={selection.length === 0}
+                            onClick={() => addPagingListMembers(list.list_type)}
+                          >
+                            Add Selected ({selection.length})
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
