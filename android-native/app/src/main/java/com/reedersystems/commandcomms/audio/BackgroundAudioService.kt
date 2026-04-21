@@ -568,6 +568,12 @@ class BackgroundAudioService : Service() {
         }
         engine.start()
         engine.startReceive()
+        // Pay the audio HAL cold-start cost once now, at engine init, instead
+        // of on every burst. This is the "playback warm-up" layer paired with
+        // the lazy comms-route layer (applyRadioAudioRoute) below — it does
+        // NOT touch AudioManager.mode or speakerphone, so paging tones keep
+        // working between radio sessions.
+        engine.warmupRadioPlaybackPath()
         radioEngine = engine
         radioEngineRetryJob?.cancel()
         radioEngineRetryJob = null
@@ -1405,6 +1411,17 @@ class BackgroundAudioService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
+    /**
+     * Lazy comms-route layer (paired with RadioAudioEngine.warmupRadioPlaybackPath
+     * which runs once at engine init). Called only at PTT-down / RX_ENTER.
+     * Kept intentionally small: just flip AudioManager.mode, force the
+     * built-in speaker as the communication device, and bump STREAM_VOICE_CALL
+     * volume to max. The receive AudioTrack already plays on STREAM_VOICE_CALL
+     * (USAGE_VOICE_COMMUNICATION attributes), so the volume bump now applies
+     * to the stream actually being written to. Mode is left at MODE_NORMAL
+     * between radio sessions so paging tones (USAGE_ALARM on STREAM_ALARM)
+     * keep working.
+     */
     private fun applyRadioAudioRoute() {
         if (radioRouteActive) return
         radioRouteActive = true

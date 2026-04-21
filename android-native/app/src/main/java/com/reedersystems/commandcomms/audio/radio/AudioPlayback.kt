@@ -24,6 +24,7 @@ class AudioPlayback(
 
     private var audioTrack: AudioTrack? = null
     private var playbackJob: Job? = null
+    val isStarted: Boolean get() = playbackJob != null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     var softwareGain: Float = DEFAULT_SOFTWARE_GAIN
     var onFrameDecoded: (() -> Unit)? = null
@@ -160,8 +161,8 @@ class AudioPlayback(
             AudioTrack.Builder()
                 .setAudioAttributes(
                     AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_MEDIA)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                        .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
                         .build()
                 )
                 .setAudioFormat(
@@ -231,6 +232,26 @@ class AudioPlayback(
         summaryWriteBytes = 0
         lastDepthSnapshotMs = System.currentTimeMillis()
         rxPlcTotal = 0
+
+        // Pre-warm the playback HAL: prime the Opus decoder with a PLC frame
+        // and write a small chunk of silence so the audio HAL is fully spun up
+        // before the first real RX packet arrives. This avoids the multi-second
+        // cold-start gap on devices like the T320 where MODE_IN_COMMUNICATION is
+        // applied lazily at RX_ENTER.
+        try {
+            val primed = opusCodec.decode(null)
+            if (primed != null && primed.isNotEmpty()) {
+                Log.d(TAG, "PLAYBACK_DECODER_PRIMED bytes=${primed.size} ${RadioDiagLog.elapsedTag()}")
+            }
+            val silentMs = 100
+            val silentBytes = (SAMPLE_RATE / 1000) * silentMs * 2
+            val silence = ByteArray(silentBytes)
+            track.write(silence, 0, silence.size)
+            Log.d(TAG, "PLAYBACK_HAL_WARMED silentBytes=$silentBytes ${RadioDiagLog.elapsedTag()}")
+        } catch (e: Exception) {
+            Log.w("[RadioError]", "PLAYBACK_WARMUP_FAILED: ${e::class.simpleName}: ${e.message}")
+        }
+
         Log.d(TAG, "AudioPlayback started: ${SAMPLE_RATE}Hz mono, low-latency playState=${track.playState} ${RadioDiagLog.elapsedTag()}")
 
         playbackJob = scope.launch {

@@ -191,6 +191,35 @@ class RadioAudioEngine(private val context: Context) {
         Log.d(TAG, "RadioAudioEngine started ${RadioDiagLog.elapsedTag()}")
     }
 
+    /**
+     * Playback warm-up layer (paired with the lazy comms-route layer in
+     * BackgroundAudioService.applyRadioAudioRoute). Pays the audio HAL
+     * cold-start cost once, at engine init, instead of on every burst:
+     *  - ensures the AudioTrack is built and in PLAYING state
+     *  - primes the Opus decoder with a PLC frame
+     *  - writes a small chunk of silence so the HAL pipeline is fully
+     *    spun up before the first real RX packet arrives
+     *
+     * Safe to call repeatedly. Does NOT change AudioManager.mode or
+     * speaker selection — those remain lazy at PTT-down / RX_ENTER so
+     * paging tones (USAGE_ALARM on STREAM_ALARM) keep working between
+     * radio sessions.
+     */
+    fun warmupRadioPlaybackPath() {
+        if (!started) {
+            Log.w("[RadioError]", "warmupRadioPlaybackPath: engine not started — ignoring")
+            return
+        }
+        audioPlayback.ensureTrackReady()
+        // AudioPlayback.start() performs the decoder prime + silent-frame
+        // HAL warm-up. Skip if startReceive() already started it to avoid
+        // a noisy "playbackJob already active" warning.
+        if (!audioPlayback.isStarted) {
+            audioPlayback.start()
+        }
+        Log.d(TAG, "WARMUP_RADIO_PLAYBACK_PATH alreadyStarted=${audioPlayback.isStarted} ${RadioDiagLog.elapsedTag()}")
+    }
+
     fun stop() {
         if (!started) {
             Log.w("[RadioError]", "stop() called but engine not started — ignoring")
@@ -780,9 +809,30 @@ class RadioAudioEngine(private val context: Context) {
             return false
         }
 
+        // TX promotion gating: wait briefly for at least one encoded frame to
+        // land in the pre-buffer before we drain/trim. Without this, on a slow
+        // HAL warm-up the pre-buffer can be empty when promote runs, so the
+        // safety-trim discards nothing and the first real frames are then sent
+        // late — head-of-burst clipping on the receiver. Cap the wait so a
+        // truly broken capture path still fails fast.
+        val gateStartMs = System.currentTimeMillis()
+        val gateMaxWaitMs = 200L
+        var preBufferReady = false
+        while (System.currentTimeMillis() - gateStartMs < gateMaxWaitMs) {
+            val sz = synchronized(preBufferLock) { preBuffer.size }
+            if (sz >= 1) { preBufferReady = true; break }
+            delay(5L)
+        }
+        val gateWaitedMs = System.currentTimeMillis() - gateStartMs
+        Log.d(TAG, "PROMOTE_GATE preBufferReady=$preBufferReady waitedMs=$gateWaitedMs ${RadioDiagLog.elapsedTag()}")
+
         var flushedFrames = 0
         var discardedFrames = 0
-        val safetyTrimMs = 50L
+        // Trim only the first HAL warm-up frame (20ms). The previous 50ms trim
+        // was discarding ~3 frames of real user speech at the head of the
+        // burst on devices like the T320 where the audio route flip happens
+        // late and pre-capture frames are valid much sooner than assumed.
+        val safetyTrimMs = 20L
         val safetyTrimFrames = ((safetyTrimMs + CAPTURE_INTERVAL_MS - 1) / CAPTURE_INTERVAL_MS).toInt()
         synchronized(preBufferLock) {
             while (discardedFrames < safetyTrimFrames && preBuffer.isNotEmpty()) {
@@ -1607,6 +1657,15 @@ class RadioAudioEngine(private val context: Context) {
             val req = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
                 .setAudioAttributes(
                     AudioAttributes.Builder()
+                        // Keep audio-focus attributes as MEDIA on purpose: focus is
+                        // held continuously by the engine, and using
+                        // USAGE_VOICE_COMMUNICATION here would risk interfering
+                        // with paging tones (USAGE_ALARM on STREAM_ALARM) which
+                        // must remain audible while the engine is running. The
+                        // playback AudioTrack itself uses VOICE_COMMUNICATION
+                        // attributes so STREAM_VOICE_CALL volume routing is
+                        // applied — that does not require matching focus
+                        // attributes.
                         .setUsage(AudioAttributes.USAGE_MEDIA)
                         .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
                         .build()
