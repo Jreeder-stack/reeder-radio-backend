@@ -284,6 +284,25 @@ export async function addCallNote(callId, note) {
   });
 }
 
+export async function deleteCallNote(noteId) {
+  if (!noteId) {
+    return { success: false, error: 'No note ID', failureType: 'INVALID_INPUT' };
+  }
+  console.log(`[CAD] Deleting call note ${noteId}`);
+  return cadRequest(`/api/radio/note/${encodeURIComponent(noteId)}`, 'DELETE');
+}
+
+export async function cancelCall(callId, reason = 'Created in error') {
+  if (!callId) {
+    return { success: false, error: 'No call ID', failureType: 'INVALID_INPUT' };
+  }
+  console.log(`[CAD] Cancelling call ${callId}: ${reason}`);
+  return cadRequest('/api/radio/dispose', 'POST', {
+    call_id: callId,
+    disposition: reason
+  });
+}
+
 export async function queryPerson(firstName, lastName, dob = null) {
   const body = {
     first_name: firstName.toUpperCase(),

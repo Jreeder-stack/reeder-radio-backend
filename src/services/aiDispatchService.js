@@ -14,6 +14,7 @@ import { floorControlService } from './floorControlService.js';
 import { formatSpokenTime24 } from './hourlyTimeBroadcastService.js';
 import * as cadService from './cadService.js';
 import { cadStatusCheckClient } from './cadStatusCheckClient.js';
+import { recordAction, findMostRecentAction, removeAction, getActionsForUnit, DISREGARD_WINDOW_MS } from './unitActionLog.js';
 import { DISPATCHER_TZ, utcDateToLocalDate, localDateToUtcDate, formatLocalSpokenTime24, maybeUtcToLocalForSpeech } from '../utils/timezone.js';
 import locationService from './locationService.js';
 import { webSearch, SEARCH_STATUS } from './webSearchService.js';
@@ -1882,15 +1883,7 @@ class AIDispatcher {
         }
 
         case 'DISREGARD': {
-          if (!ownsInFlight(participantId)) {
-            this.log('LLM_DISREGARD_NO_OWNER', { participant: participantId, state, reason: 'speaker has no in-flight flow; ignoring to avoid cross-talk cancel' });
-            this._turnContextByUnit.delete(participantId);
-            break;
-          }
-          this.log('LLM_DISREGARD', { participant: participantId, state });
-          setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, { conversationHistory: [] }, true);
-          const resp = result.response || `${participantId}, 10-4, disregard.`;
-          await this.speak(resp, participantId);
+          await this.handleDisregard(participantId, transcript, result.slots || {});
           break;
         }
 
@@ -1914,6 +1907,8 @@ class AIDispatcher {
           }
           let statusUpdateFailed = false;
           let statusFailureType = null;
+          let priorStatus = null;
+          let priorZone = null;
           if (result.cadStatus) {
             if (!cadService.isConfigured()) {
               statusUpdateFailed = true;
@@ -1921,6 +1916,11 @@ class AIDispatcher {
               this.log('CAD_NOT_CONFIGURED', { unitId: participantId, status: result.cadStatus });
             } else {
               try {
+                try {
+                  const info = await cadService.getUnitInfo(participantId);
+                  priorStatus = info?.status || info?.unit_status || info?.current_status || null;
+                  priorZone = info?.zone || null;
+                } catch (e) { /* best effort */ }
                 const cadResult = await cadService.updateUnitStatus(participantId, result.cadStatus);
                 if (!cadResult || !cadResult.success) {
                   statusUpdateFailed = true;
@@ -1928,6 +1928,12 @@ class AIDispatcher {
                   this.log('CAD_STATUS_UPDATE_FAILED', { unitId: participantId, status: result.cadStatus, failureType: statusFailureType, error: cadResult?.error, statusCode: cadResult?.statusCode, responseBody: cadResult?.responseBody });
                 }
                 this.log('CAD_STATUS_UPDATE', { unitId: participantId, status: result.cadStatus, success: cadResult?.success });
+                if (cadResult?.success) {
+                  recordAction(participantId, 'STATUS_CHANGE', {
+                    summary: `status change to ${result.cadStatus}`,
+                    data: { newStatus: result.cadStatus, priorStatus, priorZone }
+                  });
+                }
               } catch (cadError) {
                 statusUpdateFailed = true;
                 statusFailureType = 'UNREACHABLE';
@@ -1968,6 +1974,7 @@ class AIDispatcher {
           }
           let otherStatusFailed = false;
           let otherStatusFailureType = null;
+          let otherPriorStatus = null;
           if (result.cadStatus) {
             if (!cadService.isConfigured()) {
               otherStatusFailed = true;
@@ -1975,6 +1982,10 @@ class AIDispatcher {
               this.log('CAD_NOT_CONFIGURED', { unitId: targetUnit, requestedBy: participantId, status: result.cadStatus });
             } else {
               try {
+                try {
+                  const info = await cadService.getUnitInfo(targetUnit);
+                  otherPriorStatus = info?.status || info?.unit_status || info?.current_status || null;
+                } catch (e) { /* best effort */ }
                 const cadResult = await cadService.updateUnitStatus(targetUnit, result.cadStatus);
                 if (!cadResult || !cadResult.success) {
                   otherStatusFailed = true;
@@ -1982,6 +1993,12 @@ class AIDispatcher {
                   this.log('CAD_STATUS_OTHER_FAILED', { targetUnit, requestedBy: participantId, status: result.cadStatus, failureType: otherStatusFailureType, error: cadResult?.error });
                 }
                 this.log('CAD_STATUS_OTHER_UPDATE', { targetUnit, requestedBy: participantId, status: result.cadStatus, success: cadResult?.success });
+                if (cadResult?.success) {
+                  recordAction(participantId, 'STATUS_CHANGE_OTHER', {
+                    summary: `${targetUnit} status to ${result.cadStatus}`,
+                    data: { targetUnit, newStatus: result.cadStatus, priorStatus: otherPriorStatus }
+                  });
+                }
               } catch (cadError) {
                 otherStatusFailed = true;
                 otherStatusFailureType = 'UNREACHABLE';
@@ -2848,12 +2865,17 @@ class AIDispatcher {
     
     let zoneUpdateFailed = false;
     let zoneFailureType = null;
+    let priorZone = null;
     if (!cadService.isConfigured()) {
       zoneUpdateFailed = true;
       zoneFailureType = 'NOT_CONFIGURED';
       this.log('CAD_NOT_CONFIGURED', { participantId, zone });
     } else {
       try {
+        try {
+          const info = await cadService.getUnitInfo(participantId);
+          priorZone = info?.zone || null;
+        } catch (e) { /* best effort */ }
         const cadResult = await cadService.updateUnitZone(participantId, zone);
         if (!cadResult || !cadResult.success) {
           zoneUpdateFailed = true;
@@ -2861,6 +2883,12 @@ class AIDispatcher {
           this.log('CAD_ZONE_UPDATE_FAILED', { participantId, zone, failureType: zoneFailureType, error: cadResult?.error, statusCode: cadResult?.statusCode, responseBody: cadResult?.responseBody });
         }
         this.log('CAD_ZONE_UPDATED', { participantId, zone, success: cadResult?.success });
+        if (cadResult?.success) {
+          recordAction(participantId, 'ZONE_CHANGE', {
+            summary: `zone change to ${zone}`,
+            data: { newZone: zone, priorZone }
+          });
+        }
       } catch (error) {
         zoneUpdateFailed = true;
         zoneFailureType = 'UNREACHABLE';
@@ -3027,12 +3055,19 @@ class AIDispatcher {
     
     let detailUpdateFailed = false;
     let detailFailureType = null;
+    let priorDetailStatus = null;
+    let priorDetailZone = null;
     if (!cadService.isConfigured()) {
       detailUpdateFailed = true;
       detailFailureType = 'NOT_CONFIGURED';
       this.log('CAD_NOT_CONFIGURED', { participantId, location });
     } else {
       try {
+        try {
+          const info = await cadService.getUnitInfo(participantId);
+          priorDetailStatus = info?.status || info?.unit_status || info?.current_status || null;
+          priorDetailZone = info?.zone || null;
+        } catch (e) { /* best effort */ }
         const statusResult = await cadService.updateUnitStatus(participantId, 'detail');
         if (!statusResult || !statusResult.success) {
           detailUpdateFailed = true;
@@ -3047,6 +3082,10 @@ class AIDispatcher {
             this.log('CAD_DETAIL_ZONE_FAILED', { participantId, location, failureType: detailFailureType, error: zoneResult?.error, statusCode: zoneResult?.statusCode, responseBody: zoneResult?.responseBody });
           } else {
             this.log('CAD_DETAIL_ZONE_UPDATED', { participantId, location });
+            recordAction(participantId, 'DETAIL', {
+              summary: `detail at ${location}`,
+              data: { location, priorStatus: priorDetailStatus, priorZone: priorDetailZone }
+            });
           }
         }
       } catch (error) {
@@ -3331,6 +3370,11 @@ class AIDispatcher {
 
       const callId = callResult.call_id;
       const callNumber = callResult.call_number || callId;
+
+      recordAction(participantId, 'CREATE_CALL', {
+        summary: `call ${callNumber} (${nature.toLowerCase()})`,
+        data: { callId, callNumber, nature, address }
+      });
 
       if (additionalUnits && additionalUnits.length > 0 && units.length <= 1) {
         for (const unitId of additionalUnits) {
@@ -3804,6 +3848,10 @@ class AIDispatcher {
       return;
     }
     this.log('UNIT_ASSIGNED_TO_CALL', { unitId: participantId, callId, callDisplay, verb });
+    recordAction(participantId, 'ASSIGN_CALL', {
+      summary: `attached to ${callDisplay}`,
+      data: { callId, callDisplay }
+    });
 
     let cadStatus = null;
     let statusWord = '';
@@ -4295,6 +4343,10 @@ class AIDispatcher {
         return;
       }
       this.log('OTHER_UNIT_ASSIGNED_TO_CALL', { unitId: targetUnit, callId, callDisplay, requestedBy: participantId });
+      recordAction(participantId, 'ASSIGN_OTHER_UNIT', {
+        summary: `${targetUnit} attached to ${callDisplay}`,
+        data: { targetUnit, callId, callDisplay }
+      });
 
       const resp = `${participantId}, 10-4. ${targetUnit} added to ${callDisplay}.`;
       await this.speak(resp, participantId);
@@ -4703,7 +4755,11 @@ class AIDispatcher {
         setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
         return;
       }
-      this.log('CALL_NOTE_ADDED_VOICE', { unitId: participantId, callId });
+      this.log('CALL_NOTE_ADDED_VOICE', { unitId: participantId, callId, noteId: noteResult?.note_id });
+      recordAction(participantId, 'ADD_NOTE', {
+        summary: `note on call ${noteResult?.call_number || callId}`,
+        data: { callId, noteId: noteResult?.note_id || null, noteText: noteContent }
+      });
 
       const resp = `${participantId}, 10-4. Note added.`;
       await this.speak(resp, participantId);
@@ -5462,6 +5518,175 @@ class AIDispatcher {
     }
   }
 
+  async handleDisregard(participantId, transcript, slots = {}) {
+    const qualifier = (slots && typeof slots.targetQualifier === 'string') ? slots.targetQualifier : null;
+    this.log('LLM_DISREGARD', { participant: participantId, transcript, qualifier });
+
+    // If a specific target was named, try the action log first so a
+    // qualifier like "disregard that note" wins over an in-flight prompt.
+    let action = qualifier ? findMostRecentAction(participantId, qualifier) : null;
+
+    if (!action && ownsInFlight(participantId)) {
+      this.log('DISREGARD_CANCEL_INFLIGHT', { participant: participantId, qualifier });
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, { conversationHistory: [] }, true);
+      const resp = `${participantId}, 10-4, disregard.`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+      return;
+    }
+
+    if (!action) {
+      action = findMostRecentAction(participantId, null);
+    }
+
+    if (!action) {
+      this.log('DISREGARD_NO_MATCH', { participant: participantId, qualifier });
+      const resp = qualifier
+        ? `${participantId}, nothing recent to disregard for ${qualifier}.`
+        : `${participantId}, nothing to disregard.`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+      return;
+    }
+
+    const ageMs = Date.now() - action.timestamp;
+    if (ageMs > DISREGARD_WINDOW_MS) {
+      this.log('DISREGARD_TOO_OLD', { participant: participantId, action: action.type, ageMs });
+      const resp = `${participantId}, that ${action.summary || action.type} is older than the auto-undo window. Update via the MDT.`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+      return;
+    }
+
+    let undoResult;
+    try {
+      undoResult = await this._undoAction(participantId, action);
+    } catch (err) {
+      this.log('DISREGARD_UNDO_ERROR', { participant: participantId, action: action.type, error: err.message, stack: err.stack });
+      undoResult = { success: false, message: 'system error' };
+    }
+
+    if (undoResult.success) {
+      removeAction(participantId, action.id);
+      this.log('DISREGARD_UNDO_OK', { participant: participantId, action: action.type, message: undoResult.message });
+      const resp = `${participantId}, 10-4. ${undoResult.message}`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+    } else {
+      this.log('DISREGARD_UNDO_FAILED', { participant: participantId, action: action.type, message: undoResult.message });
+      const resp = `${participantId}, unable to undo that ${action.summary || action.type}. ${undoResult.message || 'Update via the MDT.'}`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+    }
+  }
+
+  async _undoAction(unitId, action) {
+    if (!cadService.isConfigured()) {
+      return { success: false, message: 'CAD is not available.' };
+    }
+    const data = action.data || {};
+    switch (action.type) {
+      case 'STATUS_CHANGE': {
+        if (!data.priorStatus) {
+          return { success: false, message: `prior status unknown` };
+        }
+        const r = await cadService.updateUnitStatus(unitId, data.priorStatus);
+        if (r?.success === false) return { success: false, message: r?.error || 'CAD rejected the revert' };
+        return { success: true, message: `Status reverted to ${data.priorStatus}.` };
+      }
+      case 'STATUS_CHANGE_OTHER': {
+        if (!data.targetUnit || !data.priorStatus) {
+          return { success: false, message: `prior status unknown` };
+        }
+        const r = await cadService.updateUnitStatus(data.targetUnit, data.priorStatus);
+        if (r?.success === false) return { success: false, message: r?.error || 'CAD rejected the revert' };
+        return { success: true, message: `${data.targetUnit} reverted to ${data.priorStatus}.` };
+      }
+      case 'ZONE_CHANGE': {
+        if (!data.priorZone) {
+          return { success: false, message: `prior zone unknown` };
+        }
+        const r = await cadService.updateUnitZone(unitId, data.priorZone);
+        if (r?.success === false) return { success: false, message: r?.error || 'CAD rejected the revert' };
+        return { success: true, message: `Zone reverted to ${data.priorZone}.` };
+      }
+      case 'DETAIL': {
+        let zoneOk = true;
+        if (data.priorZone) {
+          const zr = await cadService.updateUnitZone(unitId, data.priorZone);
+          if (zr?.success === false) zoneOk = false;
+        }
+        if (data.priorStatus) {
+          const sr = await cadService.updateUnitStatus(unitId, data.priorStatus);
+          if (sr?.success === false) return { success: false, message: sr?.error || 'CAD rejected the revert' };
+        } else {
+          const sr = await cadService.updateUnitStatus(unitId, 'available');
+          if (sr?.success === false) return { success: false, message: sr?.error || 'CAD rejected the revert' };
+        }
+        return { success: true, message: zoneOk ? `Detail backed out.` : `Detail status reverted, but zone could not be restored.` };
+      }
+      case 'ASSIGN_CALL': {
+        const r = await cadService.clearUnit(unitId);
+        if (r?.success === false) return { success: false, message: r?.error || 'CAD rejected the revert' };
+        return { success: true, message: `Detached you from ${data.callDisplay || 'that call'}.` };
+      }
+      case 'ASSIGN_OTHER_UNIT': {
+        if (!data.targetUnit) return { success: false, message: 'target unit unknown' };
+        const r = await cadService.clearUnit(data.targetUnit);
+        if (r?.success === false) return { success: false, message: r?.error || 'CAD rejected the revert' };
+        return { success: true, message: `Detached ${data.targetUnit} from ${data.callDisplay || 'that call'}.` };
+      }
+      case 'ADD_NOTE': {
+        if (!data.noteId) {
+          if (data.callId) {
+            const fallback = await cadService.addCallNote(data.callId, `${unitId}: DISREGARD previous note: ${data.noteText || ''}`);
+            if (fallback?.success === false) return { success: false, message: 'unable to flag note' };
+            return { success: true, message: `Flagged the note as disregarded on call ${data.callId}.` };
+          }
+          return { success: false, message: 'note ID unavailable' };
+        }
+        const r = await cadService.deleteCallNote(data.noteId);
+        if (r?.success === false) {
+          if (data.callId) {
+            const fallback = await cadService.addCallNote(data.callId, `${unitId}: DISREGARD previous note: ${data.noteText || ''}`);
+            if (fallback?.success === false) return { success: false, message: 'unable to remove or flag the note' };
+            return { success: true, message: `Note couldn't be deleted, flagged it as disregarded.` };
+          }
+          return { success: false, message: r?.error || 'CAD rejected delete' };
+        }
+        return { success: true, message: `Note removed from call.` };
+      }
+      case 'CREATE_CALL': {
+        if (!data.callId) return { success: false, message: 'call ID unknown' };
+        const r = await cadService.cancelCall(data.callId, 'Created in error');
+        if (r?.success === false) return { success: false, message: r?.error || 'CAD rejected the cancel' };
+        return { success: true, message: `Call ${data.callNumber || data.callId} cancelled.` };
+      }
+      case 'CLEAR_UNIT': {
+        if (!data.priorCallId) return { success: false, message: 'prior call unknown' };
+        const r = await cadService.assignUnitToCall(unitId, data.priorCallId);
+        if (r?.success === false) return { success: false, message: r?.error || 'CAD rejected the re-attach' };
+        return { success: true, message: `Re-attached you to ${data.priorCallDisplay || data.priorCallId}.` };
+      }
+      case 'UPDATE_CALL': {
+        const priorValues = data.priorValues || {};
+        const updates = data.updates || {};
+        const revert = {};
+        if ('priority' in updates && priorValues.priority) {
+          revert.priority = priorValues.priority;
+        }
+        if (Object.keys(revert).length === 0) {
+          return { success: false, message: 'prior call values unknown' };
+        }
+        const r = await cadService.updateCall(data.callId, revert);
+        if (r?.success === false) return { success: false, message: r?.error || 'CAD rejected the revert' };
+        return { success: true, message: `Call update reverted.` };
+      }
+      default:
+        return { success: false, message: 'no inverse available' };
+    }
+  }
+
   async handleClearUnit(participantId, transcript) {
     this.log('CLEAR_UNIT', { participant: participantId, transcript });
 
@@ -5496,6 +5721,8 @@ class AIDispatcher {
         this.log('CLEAR_UNIT_CHECK_LAST_ERROR', { error: e.message });
       }
 
+      const priorCallId = callInfo?.call_id || callInfo?.call_number || callInfo?.callNumber || null;
+      const priorCallDisplay = callInfo?.call_number || priorCallId;
       const clearResult = await cadService.clearUnit(participantId);
       if (clearResult?.success === false) {
         const resp = `${participantId}, unable to clear you from call. ${clearResult.error || 'Try your MDT.'}`;
@@ -5505,6 +5732,12 @@ class AIDispatcher {
         return;
       }
       this.log('UNIT_CLEARED', { unitId: participantId });
+      if (priorCallId) {
+        recordAction(participantId, 'CLEAR_UNIT', {
+          summary: `cleared from ${priorCallDisplay}`,
+          data: { priorCallId, priorCallDisplay }
+        });
+      }
 
       try {
         await cadService.updateUnitStatus(participantId, 'available');
@@ -5867,6 +6100,11 @@ class AIDispatcher {
     }
 
     try {
+      let priorCallSnapshot = null;
+      try {
+        const detailRes = await cadService.getCallDetails(callId);
+        priorCallSnapshot = detailRes?.call || detailRes || null;
+      } catch (e) { /* best effort */ }
       const result = await cadService.updateCall(callId, updates);
       if (result?.success === false) {
         const resp = `${participantId}, unable to update call. ${result.error || 'Try your MDT.'}`;
@@ -5876,6 +6114,14 @@ class AIDispatcher {
         return;
       }
       this.log('CALL_UPDATED', { unitId: participantId, callId, updates });
+      const priorValues = {};
+      if (priorCallSnapshot) {
+        if ('priority' in updates) priorValues.priority = priorCallSnapshot.priority || null;
+      }
+      recordAction(participantId, 'UPDATE_CALL', {
+        summary: `update on call ${priorCallSnapshot?.call_number || callId}`,
+        data: { callId, updates, priorValues }
+      });
 
       const resp = `${participantId}, 10-4. Call updated.`;
       await this.speak(resp, participantId);

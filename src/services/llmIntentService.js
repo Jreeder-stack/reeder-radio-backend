@@ -224,8 +224,10 @@ Unit wants a call created but is missing nature and/or address.
 Return: { "intent": "CREATE_CALL_PROMPT", "response": "<natural prompt for missing info>", "slots": { "nature": "<if heard>", "address": "<if heard>" } }
 
 ### DISREGARD
-Unit is cancelling or disregarding their OWN current request. Each unit has its own conversation; a "disregard" from a unit cancels only THAT unit's pending flow. If a different unit speaks "disregard" while another unit is mid-flow, treat it as a normal hail from that different unit (NOT a cross-unit cancel).
-Return: { "intent": "DISREGARD", "response": "10-4, disregard." }
+Unit is cancelling, disregarding, or undoing their OWN most recent action / pending request. Phrases include: "disregard", "disregard that", "cancel last", "cancel that", "scratch that", "nevermind", "10-22", "undo that", "back that out".
+Each unit has its own conversation; a "disregard" from a unit cancels only THAT unit's pending or most recently-committed action. If a different unit speaks "disregard" while another unit is mid-flow, treat it as a normal hail from that different unit (NOT a cross-unit cancel).
+If the unit specifies WHAT to undo (e.g. "disregard that note", "cancel the call I just created", "scratch that traffic stop", "back out my zone change"), capture the target word(s) verbatim into the optional targetQualifier slot. Otherwise omit the slot — the system will undo the most recent action.
+Return: { "intent": "DISREGARD", "response": "10-4, disregard.", "slots": { "targetQualifier": "<optional verbatim target like 'note', 'call', 'traffic stop', 'zone', 'status', 'detail'>" } }
 
 ### SECONDARY_TRIP_START
 Unit is starting a transport leg from the original call scene to a secondary destination, reading off a starting mileage. Trigger phrases include: "en route to / heading to / 10-76 to / transporting to / taking [subject(s)] to [destination], starting mileage N". Free-text destinations are valid (e.g. "the Walmart", "555 Main", "the holding facility", "MDJ", "the jail", "county jail", "hospital", "magistrate"). DO NOT normalize or rewrite the destination — capture verbatim.
