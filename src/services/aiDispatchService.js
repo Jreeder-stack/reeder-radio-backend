@@ -466,7 +466,7 @@ function isCallPending(call) {
   return !Array.isArray(units) || units.length === 0;
 }
 
-class AIDispatcher {
+export class AIDispatcher {
   constructor() {
     this.connected = false;
     this.channelName = null;
@@ -506,6 +506,7 @@ class AIDispatcher {
     this._framesReceivedCount = 0;
     this._decodeSuccessCount = 0;
     this._aiClearAirSessions = new Map();
+    this._speakQueue = Promise.resolve();
   }
 
   log(action, details = {}) {
@@ -6819,20 +6820,28 @@ class AIDispatcher {
   }
 
   async speak(text, participantId = null, options = {}) {
-    this.log('SPEAK', { text, unit: participantId || '(broadcast)', channel: this.channelName, options });
-    const turnCtx = participantId ? this._turnContextByUnit.get(participantId) : null;
-    if (turnCtx) {
-      this.logSpeechEvent(participantId, turnCtx.transcript, turnCtx.intent, text);
-      this._turnContextByUnit.delete(participantId);
-    }
-    const audio = await textToSpeech(text);
-    await this.publishAudio(audio, text, options);
-    if (participantId) {
-      const session = getUnitSessionState(participantId);
-      setUnitSessionState(participantId, session?.state || 'IDLE', null, {
-        lastSpokenText: text
-      }, false);
-    }
+    const enqueued = this._speakQueue.then(async () => {
+      this.log('SPEAK', { text, unit: participantId || '(broadcast)', channel: this.channelName, options });
+      const turnCtx = participantId ? this._turnContextByUnit.get(participantId) : null;
+      if (turnCtx) {
+        this.logSpeechEvent(participantId, turnCtx.transcript, turnCtx.intent, text);
+        this._turnContextByUnit.delete(participantId);
+      }
+      try {
+        const audio = await textToSpeech(text);
+        await this.publishAudio(audio, text, { retryOnBusy: true, retryWaitMs: 3000, ...options });
+      } catch (err) {
+        this.log('SPEAK_ERROR', { error: err.message });
+      }
+      if (participantId) {
+        const session = getUnitSessionState(participantId);
+        setUnitSessionState(participantId, session?.state || 'IDLE', null, {
+          lastSpokenText: text
+        }, false);
+      }
+    });
+    this._speakQueue = enqueued.catch(() => {});
+    return enqueued;
   }
 
   addConversationExchange(participantId, unitText, dispatchText) {
