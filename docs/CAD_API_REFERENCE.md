@@ -375,11 +375,15 @@ Returns the current PTT floor state across all channels (who is currently transm
       "unitId": "U-101",
       "username": "officer1",
       "startTime": 1712764800000,
-      "isEmergency": false
+      "isEmergency": false,
+      "source": "cad",
+      "deviceId": "9c1b3f0e-2c3d-4ec5-8b6a-3a8a9f7c5b2e"
     }
   ]
 }
 ```
+
+`source` is `"cad"` for transmissions originated by an external CAD client (HTTP `/api/ptt/*` or socket-authenticated CAD device) and `"radio"` for radio-originated transmissions. `deviceId` is the originating device's UUID.
 
 - **curl:**
 
@@ -425,7 +429,9 @@ curl https://<host>/api/cad-integration/units \
 
 ### POST `/api/auth/cad-login`
 
-Establishes a session for a CAD user. This is how external CAD systems authenticate users without a password — the shared API key acts as the trust boundary.
+Establishes a session for a CAD user and registers the CAD as a distinct device under the user's unit. This is how external CAD systems authenticate users without a password — the shared API key acts as the trust boundary.
+
+The login also issues (or accepts) a `deviceId` that uniquely identifies the CAD client. This is what lets the same user be logged in on a CAD console **and** on a T320 radio at the same time without their PTT events colliding — each device gets its own row in Admin → Devices and its own floor key.
 
 - **Auth:** API Key required (`x-radio-api-key` header)
 - **Request Body:**
@@ -433,6 +439,7 @@ Establishes a session for a CAD user. This is how external CAD systems authentic
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `username` | string | Yes | The username to log in |
+| `deviceId` | string (UUID) | No | Stable device UUID from the CAD client. If omitted (or not a valid UUID) the server generates one and returns it; CAD clients should persist it locally and replay it on subsequent logins so the same Devices row is reused. |
 
 - **Success Response (HTTP 200):**
 
@@ -445,11 +452,14 @@ Establishes a session for a CAD user. This is how external CAD systems authentic
     "role": "user",
     "unit_id": "U-101",
     "is_dispatcher": false
-  }
+  },
+  "deviceId": "9c1b3f0e-2c3d-4ec5-8b6a-3a8a9f7c5b2e"
 }
 ```
 
-The response also sets the `connect.sid` session cookie.
+The response also sets the `connect.sid` session cookie. The session now also carries `deviceId` and `deviceType: 'cad'`, so subsequent `/api/ptt/*` calls from the same session pick up the CAD device identity automatically.
+
+The CAD device is upserted into the `devices` table with `device_type = 'cad'` and a label of `"<unit_id> CAD"`; it shows up in Admin → Devices alongside any radios the same user is signed into.
 
 - **Error Responses:**
 
@@ -1053,6 +1063,8 @@ All endpoints are under `/api/ptt`.
 
 Request to start a PTT transmission. The unit must either have live Socket.IO presence or a valid session with DB-verified channel access.
 
+PTT calls are scoped by **device**, not just by unit. The originating device's `deviceId` is used as the floor key and as the broadcast-exclusion key, which means a single user can be signed into multiple devices on the same `unit_id` (e.g. an external CAD console plus a T320 radio) and each device hears the other transmit normally.
+
 - **Auth:** Socket.IO presence **or** Session + DB channel access
 - **Request Body:**
 
@@ -1060,12 +1072,21 @@ Request to start a PTT transmission. The unit must either have live Socket.IO pr
 |---|---|---|---|
 | `channelId` | string | Yes | Channel ID (numeric ID or `zone__channelName` room key) |
 | `unitId` | string | Yes | Unit ID of the transmitting unit |
+| `deviceId` | string (UUID) | No | Originating device UUID. Optional in the body — usually picked up from the session (set by `/api/auth/cad-login`) or from the `x-device-id` header. If none are supplied the server mints a per-call UUID and writes it back into the session. |
+
+- **Optional Headers:**
+
+| Header | Description |
+|---|---|
+| `x-device-id` | Originating device UUID. Takes precedence over the body field, but session-stored `deviceId` wins over both. |
 
 - **Success Response:**
 
 ```json
-{ "success": true }
+{ "success": true, "deviceId": "9c1b3f0e-2c3d-4ec5-8b6a-3a8a9f7c5b2e" }
 ```
+
+The returned `deviceId` is the one the server used for floor and broadcast scoping. CAD clients that didn't supply one should persist it and replay it on subsequent calls so their entry in Admin → Devices stays stable.
 
 - **Error Responses:**
 
@@ -1075,6 +1096,7 @@ Request to start a PTT transmission. The unit must either have live Socket.IO pr
 | `400` | `{ "error": "Invalid channelId or roomKey" }` | Channel not found |
 | `403` | `{ "error": "Unit not authenticated" }` | No presence and no valid session |
 | `403` | `{ "error": "Unit does not have access to this channel" }` | Session valid but no channel access |
+| `409` | `{ "error": "Channel busy", "heldBy": "U-102", "reason": "already_transmitting_other_device" }` | Another device on the same unit already holds the floor |
 | `409` | `{ "error": "Channel busy", "heldBy": "U-102", "reason": "..." }` | Another unit holds the floor |
 | `503` | `{ "error": "Signaling not ready" }` | Socket.IO not initialized |
 
@@ -1091,6 +1113,7 @@ End a PTT transmission.
 |---|---|---|---|
 | `channelId` | string | Yes | Channel ID (numeric ID or `zone__channelName` room key) |
 | `unitId` | string | Yes | Unit ID of the transmitting unit |
+| `deviceId` | string (UUID) | No | Originating device UUID — must match the `deviceId` that started the transmission, otherwise the call is ignored to protect the active floor holder. Resolved from session / `x-device-id` header / body in that order. |
 
 - **Success Response:**
 

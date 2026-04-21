@@ -52,14 +52,17 @@
  * =============================================================================
  */
 
+import { randomUUID } from 'crypto';
 import * as db from '../db/index.js';
 import * as authService from '../services/authService.js';
 import { signalingService } from '../services/signalingService.js';
 import { success, error } from '../utils/response.js';
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export async function cadLogin(req, res) {
   try {
-    const { username } = req.body;
+    const { username, deviceId: requestedDeviceId } = req.body;
 
     if (!username) {
       return error(res, 'Username is required', 400);
@@ -88,7 +91,20 @@ export async function cadLogin(req, res) {
       is_dispatcher: user.is_dispatcher,
     };
 
+    const deviceId = (typeof requestedDeviceId === 'string' && UUID_RE.test(requestedDeviceId))
+      ? requestedDeviceId
+      : randomUUID();
+    const deviceLabel = `${user.unit_id || user.username} CAD`;
+
+    try {
+      await db.upsertDevice(deviceId, user.id, 'cad', deviceLabel);
+    } catch (devErr) {
+      console.warn(`[CAD-LOGIN] Device upsert failed (non-fatal) for "${username}":`, devErr.message);
+    }
+
     req.session.user = userData;
+    req.session.deviceId = deviceId;
+    req.session.deviceType = 'cad';
 
     req.session.save((saveErr) => {
       if (saveErr) {
@@ -96,7 +112,7 @@ export async function cadLogin(req, res) {
         return error(res, 'Session creation failed', 500);
       }
 
-      console.log(`[CAD-LOGIN] Success: username="${username}" id=${userData.id} role=${userData.role} unit_id=${userData.unit_id} is_dispatcher=${userData.is_dispatcher} sessionID=${req.sessionID?.substring(0, 8)}...`);
+      console.log(`[CAD-LOGIN] Success: username="${username}" id=${userData.id} role=${userData.role} unit_id=${userData.unit_id} is_dispatcher=${userData.is_dispatcher} deviceId=${deviceId.substring(0, 8)}... sessionID=${req.sessionID?.substring(0, 8)}...`);
 
       if (userData.unit_id) {
         db.getUsersWithDuplicateUnitId(userData.unit_id).then(dupes => {
@@ -107,9 +123,9 @@ export async function cadLogin(req, res) {
         }).catch(() => {});
       }
 
-      authService.logUserActivity(userData.id, userData.username, 'cad-login', {});
+      authService.logUserActivity(userData.id, userData.username, 'cad-login', { deviceId });
 
-      success(res, { user: userData });
+      success(res, { user: userData, deviceId });
     });
   } catch (err) {
     console.error('[CAD-LOGIN] Error:', err);
@@ -305,6 +321,8 @@ export async function getPttStatus(req, res) {
         username: transmission.username,
         startTime: transmission.startTime || transmission.timestamp,
         isEmergency: transmission.isEmergency || false,
+        source: transmission.source || 'radio',
+        deviceId: transmission.deviceId || null,
       });
     }
 

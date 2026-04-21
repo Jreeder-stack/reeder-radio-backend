@@ -157,6 +157,32 @@
     return true;
   }
 
+  var DEVICE_ID_STORAGE_KEY = 'radioClient.deviceId';
+  var UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+  function generateUUID() {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      return crypto.randomUUID();
+    }
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+      var r = (Math.random() * 16) | 0;
+      var v = c === 'x' ? r : (r & 0x3) | 0x8;
+      return v.toString(16);
+    });
+  }
+
+  function getOrCreateDeviceId() {
+    try {
+      var existing = window.localStorage && window.localStorage.getItem(DEVICE_ID_STORAGE_KEY);
+      if (existing && UUID_RE.test(existing)) return existing;
+    } catch (_) {}
+    var fresh = generateUUID();
+    try {
+      if (window.localStorage) window.localStorage.setItem(DEVICE_ID_STORAGE_KEY, fresh);
+    } catch (_) {}
+    return fresh;
+  }
+
   function RadioClient() {
     this._serverUrl = '';
     this._channelId = null;
@@ -172,6 +198,8 @@
     this._playback = null;
     this._listeners = {};
     this._destroyed = false;
+    this._deviceId = getOrCreateDeviceId();
+    this._deviceType = 'cad';
   }
 
   RadioClient.prototype.init = async function (options) {
@@ -181,6 +209,13 @@
 
     this._serverUrl = options.serverUrl.replace(/\/$/, '');
     this._channelId = options.channelId || null;
+    if (options.deviceId && UUID_RE.test(options.deviceId)) {
+      this._deviceId = options.deviceId;
+      try {
+        if (window.localStorage) window.localStorage.setItem(DEVICE_ID_STORAGE_KEY, options.deviceId);
+      } catch (_) {}
+    }
+    if (options.deviceType) this._deviceType = options.deviceType;
 
     await this._fetchUserInfo();
     await this._connectSignaling();
@@ -256,6 +291,8 @@
         username: self._username,
         agencyId: 'default',
         isDispatcher: self._isDispatcher,
+        deviceId: self._deviceId,
+        deviceType: self._deviceType,
       });
     });
 
@@ -723,6 +760,10 @@
 
   RadioClient.prototype.getUsername = function () {
     return this._username;
+  };
+
+  RadioClient.prototype.getDeviceId = function () {
+    return this._deviceId;
   };
 
   global.RadioClient = RadioClient;

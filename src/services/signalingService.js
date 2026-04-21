@@ -499,6 +499,7 @@ class SignalingService {
     socket.channels = new Set();
 
     const deviceType = clientDeviceType || 'browser';
+    socket.deviceType = deviceType;
     if (clientDeviceId) {
       const deviceLabel = `${validatedUnitId} ${deviceType.toUpperCase()}`;
       try {
@@ -730,18 +731,20 @@ class SignalingService {
           if (prevPresence) {
             prevPresence.status = 'online';
           }
-          this._emitToChannelExcludingUnit(channelId, RADIO_EVENTS.TX_STOP, {
+          this._emitToChannelExcludingDevice(channelId, RADIO_EVENTS.TX_STOP, {
             senderUnitId: existingTransmission.unitId,
+            senderDeviceId: existingTransmission.deviceId || existingTransmission.floorKey,
             channelId,
             timestamp: Date.now(),
             reason: 'dispatcher_takeover',
-          }, existingTransmission.unitId);
-          this._emitToChannelExcludingUnit(channelId, SIGNALING_EVENTS.PTT_END, {
+          }, existingTransmission.deviceId || existingTransmission.floorKey);
+          this._emitToChannelExcludingDevice(channelId, SIGNALING_EVENTS.PTT_END, {
             unitId: existingTransmission.unitId,
+            senderDeviceId: existingTransmission.deviceId || existingTransmission.floorKey,
             channelId,
             timestamp: Date.now(),
             reason: 'dispatcher_takeover',
-          }, existingTransmission.unitId);
+          }, existingTransmission.deviceId || existingTransmission.floorKey);
           console.log(`[Signaling] Dispatcher talk-over: ${socket.unitId} revoked floor from ${existingTransmission.unitId} on ${channelId} (held ${transmissionAgeMs}ms)`);
         } else {
           socket.emit('ptt:busy', { 
@@ -805,38 +808,42 @@ class SignalingService {
 
     const transmissionData = {
       unitId: socket.unitId,
-      floorKey: socket.floorKey || socket.unitId,
+      deviceId: socket.deviceId,
+      floorKey: socket.floorKey || socket.deviceId || socket.unitId,
       agencyId: socket.agencyId,
       channelId,
       timestamp: Date.now(),
       isEmergency,
       isClearAir: isClearAirRequest,
       isDispatchConsole: socket.isDispatchConsole === true,
+      source: socket.deviceType === 'cad' ? 'cad' : 'radio',
     };
-    
+
     this.activeTransmissions.set(channelId, transmissionData);
-    
+
     const presence = this.unitPresence.get(socket.unitId);
-    if (presence) {
+    if (presence && presence.socketId === socket.id) {
       presence.status = 'transmitting';
     }
-    
+
     socket.emit('ptt:granted', { channelId, unitId: socket.unitId, timestamp: Date.now() });
 
-    this._emitToChannelExcludingUnit(channelId, RADIO_EVENTS.TX_START, {
+    this._emitToChannelExcludingDevice(channelId, RADIO_EVENTS.TX_START, {
       senderUnitId: socket.unitId,
+      senderDeviceId: socket.deviceId,
       channelId,
       timestamp: Date.now(),
       isEmergency: isEmergency || false,
-    }, socket.unitId);
+    }, socket.deviceId);
 
-    this._emitToChannelExcludingUnit(channelId, SIGNALING_EVENTS.PTT_START, transmissionData, socket.unitId);
+    this._emitToChannelExcludingDevice(channelId, SIGNALING_EVENTS.PTT_START, transmissionData, socket.deviceId);
 
-    this._emitChannelFloorTakenToRoom(channelId, {
+    this._emitChannelFloorTakenToRoomExcludingDevice(channelId, {
       channelId,
       heldBy: socket.unitId,
+      heldByDeviceId: socket.deviceId,
       timestamp: Date.now(),
-    }, socket.unitId);
+    }, socket.deviceId);
     
     this._emitCallback('pttStart', transmissionData);
     
@@ -860,6 +867,7 @@ class SignalingService {
     
     const endData = {
       unitId: socket.unitId,
+      senderDeviceId: socket.deviceId,
       agencyId: socket.agencyId,
       channelId,
       timestamp: Date.now(),
@@ -869,19 +877,20 @@ class SignalingService {
     this._beginTransmissionDrain({
       channelId,
       unitId: socket.unitId,
-      floorKey: socket.floorKey || socket.unitId,
+      deviceId: socket.deviceId,
+      floorKey: socket.floorKey || socket.deviceId || socket.unitId,
       endData,
     });
 
     const presence = this.unitPresence.get(socket.unitId);
-    if (presence) {
+    if (presence && presence.socketId === socket.id) {
       presence.status = 'online';
     }
 
     console.log(`[Signaling] PTT END (draining): ${socket.unitId} on ${channelId} (${endData.duration}ms)`);
   }
 
-  _beginTransmissionDrain({ channelId, unitId, floorKey, endData, presenceSynthesized = false }) {
+  _beginTransmissionDrain({ channelId, unitId, deviceId, floorKey, endData, presenceSynthesized = false }) {
     this.activeTransmissions.delete(channelId);
 
     const existing = this.drainingTransmissions.get(channelId);
@@ -891,7 +900,8 @@ class SignalingService {
 
     this.drainingTransmissions.set(channelId, {
       unitId,
-      floorKey: floorKey || unitId,
+      deviceId: deviceId || floorKey || null,
+      floorKey: floorKey || deviceId || unitId,
       endData,
       drainStartedAt: Date.now(),
       presenceSynthesized,
@@ -945,18 +955,19 @@ class SignalingService {
 
     floorControlService.releaseFloor(channelId, entry.floorKey);
 
-    this._emitToChannelExcludingUnit(channelId, RADIO_EVENTS.TX_STOP, {
+    this._emitToChannelExcludingDevice(channelId, RADIO_EVENTS.TX_STOP, {
       senderUnitId: entry.unitId,
+      senderDeviceId: entry.deviceId,
       channelId,
       timestamp: Date.now(),
-    }, entry.unitId);
+    }, entry.deviceId);
 
-    this._emitToChannelExcludingUnit(channelId, SIGNALING_EVENTS.PTT_END, entry.endData, entry.unitId);
+    this._emitToChannelExcludingDevice(channelId, SIGNALING_EVENTS.PTT_END, entry.endData, entry.deviceId);
 
-    this._emitToChannelExcludingUnit(channelId, RADIO_EVENTS.CHANNEL_IDLE, {
+    this._emitToChannelExcludingDevice(channelId, RADIO_EVENTS.CHANNEL_IDLE, {
       channelId,
       timestamp: Date.now(),
-    }, entry.unitId);
+    }, entry.deviceId);
 
     this._emitCallback('pttEnd', entry.endData);
 
@@ -994,13 +1005,15 @@ class SignalingService {
       presence.status = 'online';
     }
 
-    this._emitToChannelExcludingUnit(key, RADIO_EVENTS.TX_STOP, {
+    const excludeDeviceId = transmission.deviceId || transmission.floorKey || null;
+    this._emitToChannelExcludingDevice(key, RADIO_EVENTS.TX_STOP, {
       senderUnitId: unitId,
+      senderDeviceId: excludeDeviceId,
       channelId: key,
       timestamp: Date.now(),
-    }, unitId);
-    this._emitToChannelExcludingUnit(key, SIGNALING_EVENTS.PTT_END, endData, unitId);
-    this._emitToChannelExcludingUnit(key, RADIO_EVENTS.CHANNEL_IDLE, { channelId: key, timestamp: Date.now() }, unitId);
+    }, excludeDeviceId);
+    this._emitToChannelExcludingDevice(key, SIGNALING_EVENTS.PTT_END, endData, excludeDeviceId);
+    this._emitToChannelExcludingDevice(key, RADIO_EVENTS.CHANNEL_IDLE, { channelId: key, timestamp: Date.now() }, excludeDeviceId);
 
     this._emitCallback('pttEnd', endData);
     return true;
@@ -1309,12 +1322,43 @@ class SignalingService {
     });
   }
 
+  /**
+   * Like _emitToChannelExcludingUnit but skips only the originating device's
+   * sockets. This lets multiple devices on the same unitId (e.g. a T320 radio
+   * and an external CAD client) coexist: the device that initiated the PTT is
+   * skipped, while sibling devices on the same unitId still receive the event
+   * and can enter RX.
+   */
+  _emitToChannelExcludingDevice(channelId, event, data, excludeDeviceId) {
+    if (!this.io) return;
+    const room = `channel:${channelId}`;
+    this.io.sockets.sockets.forEach((s) => {
+      if (!s.rooms || !s.rooms.has(room)) return;
+      if (excludeDeviceId && s.deviceId === excludeDeviceId) return;
+      s.emit(event, data);
+    });
+  }
+
   _emitChannelFloorTakenToRoom(channelId, data, excludeUnitId) {
     if (!this.io) return;
     const room = `channel:${channelId}`;
     this.io.sockets.sockets.forEach((s) => {
       if (!s.rooms || !s.rooms.has(room)) return;
       if (s.unitId === excludeUnitId) return;
+      if (s.isRadioDevice) {
+        s.emit(RADIO_EVENTS.CHANNEL_FLOOR_TAKEN, data);
+      } else {
+        s.emit(RADIO_EVENTS.CHANNEL_BUSY, data);
+      }
+    });
+  }
+
+  _emitChannelFloorTakenToRoomExcludingDevice(channelId, data, excludeDeviceId) {
+    if (!this.io) return;
+    const room = `channel:${channelId}`;
+    this.io.sockets.sockets.forEach((s) => {
+      if (!s.rooms || !s.rooms.has(room)) return;
+      if (excludeDeviceId && s.deviceId === excludeDeviceId) return;
       if (s.isRadioDevice) {
         s.emit(RADIO_EVENTS.CHANNEL_FLOOR_TAKEN, data);
       } else {
@@ -1849,11 +1893,13 @@ class SignalingService {
 
       this.activeTransmissions.set(channelId, {
         unitId: socket.unitId,
-        floorKey: socket.floorKey || socket.unitId,
+        deviceId: socket.deviceId,
+        floorKey: socket.floorKey || socket.deviceId || socket.unitId,
         agencyId: socket.agencyId,
         channelId,
         timestamp: Date.now(),
         isEmergency: result.isEmergency || false,
+        source: socket.deviceType === 'cad' ? 'cad' : 'radio',
       });
 
       socket.emit(RADIO_EVENTS.PTT_GRANTED, {
@@ -1863,26 +1909,29 @@ class SignalingService {
       });
       console.log(`[Signaling] PTT_GRANTED unitId=${socket.unitId} channelId=${channelId}`);
 
-      this._emitToChannelExcludingUnit(channelId, RADIO_EVENTS.TX_START, {
+      this._emitToChannelExcludingDevice(channelId, RADIO_EVENTS.TX_START, {
         senderUnitId: socket.unitId,
+        senderDeviceId: socket.deviceId,
         channelId,
         timestamp: Date.now(),
         isEmergency: result.isEmergency || false,
-      }, socket.unitId);
+      }, socket.deviceId);
 
-      this._emitToChannelExcludingUnit(channelId, SIGNALING_EVENTS.PTT_START, {
+      this._emitToChannelExcludingDevice(channelId, SIGNALING_EVENTS.PTT_START, {
         unitId: socket.unitId,
+        senderDeviceId: socket.deviceId,
         agencyId: socket.agencyId,
         channelId,
         timestamp: Date.now(),
         isEmergency: isEmergency || false,
-      }, socket.unitId);
+      }, socket.deviceId);
 
-      this._emitChannelFloorTakenToRoom(channelId, {
+      this._emitChannelFloorTakenToRoomExcludingDevice(channelId, {
         channelId,
         heldBy: socket.unitId,
+        heldByDeviceId: socket.deviceId,
         timestamp: Date.now(),
-      }, socket.unitId);
+      }, socket.deviceId);
 
       if (result.preemptedUnit) {
         const preemptedSocket = this._findSocketByFloorKey(result.preemptedUnit);
@@ -1946,23 +1995,25 @@ class SignalingService {
 
     const now = Date.now();
 
-    this._emitToChannelExcludingUnit(channelId, RADIO_EVENTS.TX_STOP, {
+    this._emitToChannelExcludingDevice(channelId, RADIO_EVENTS.TX_STOP, {
       senderUnitId: socket.unitId,
+      senderDeviceId: socket.deviceId,
       channelId,
       timestamp: now,
-    }, socket.unitId);
+    }, socket.deviceId);
 
-    this._emitToChannelExcludingUnit(channelId, SIGNALING_EVENTS.PTT_END, {
+    this._emitToChannelExcludingDevice(channelId, SIGNALING_EVENTS.PTT_END, {
       unitId: socket.unitId,
+      senderDeviceId: socket.deviceId,
       channelId,
       timestamp: now,
       duration: grantedAt ? now - grantedAt : undefined,
-    }, socket.unitId);
+    }, socket.deviceId);
 
-    this._emitToChannelExcludingUnit(channelId, RADIO_EVENTS.CHANNEL_IDLE, {
+    this._emitToChannelExcludingDevice(channelId, RADIO_EVENTS.CHANNEL_IDLE, {
       channelId,
       timestamp: Date.now(),
-    }, socket.unitId);
+    }, socket.deviceId);
 
     this._emitCallback('pttEnd', {
       unitId: socket.unitId,
@@ -2043,23 +2094,25 @@ class SignalingService {
 
       const now = Date.now();
 
-      this._emitToChannelExcludingUnit(channelId, RADIO_EVENTS.TX_STOP, {
+      this._emitToChannelExcludingDevice(channelId, RADIO_EVENTS.TX_STOP, {
         senderUnitId: socket.unitId,
+        senderDeviceId: socket.deviceId,
         channelId,
         timestamp: now,
-      }, socket.unitId);
+      }, socket.deviceId);
 
-      this._emitToChannelExcludingUnit(channelId, SIGNALING_EVENTS.PTT_END, {
+      this._emitToChannelExcludingDevice(channelId, SIGNALING_EVENTS.PTT_END, {
         unitId: socket.unitId,
+        senderDeviceId: socket.deviceId,
         channelId,
         timestamp: now,
         duration: grantedAt ? now - grantedAt : undefined,
-      }, socket.unitId);
+      }, socket.deviceId);
 
-      this._emitToChannelExcludingUnit(channelId, RADIO_EVENTS.CHANNEL_IDLE, {
+      this._emitToChannelExcludingDevice(channelId, RADIO_EVENTS.CHANNEL_IDLE, {
         channelId,
         timestamp: Date.now(),
-      }, socket.unitId);
+      }, socket.deviceId);
     }
 
     console.log(`[Signaling] TX stop ack: ${socket.unitId} on ${channelId}`);
