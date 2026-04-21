@@ -1,9 +1,12 @@
 package com.reedersystems.commandcomms.audio.radio
 
+import android.content.SharedPreferences
 import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioTrack
+import android.media.audiofx.LoudnessEnhancer
 import android.util.Log
+import com.reedersystems.commandcomms.data.prefs.SpeakerBoostPrefs
 import kotlinx.coroutines.*
 
 private const val TAG = "[AudioPlay]"
@@ -24,14 +27,66 @@ private const val POST_LOSS_CROSSFADE_SAMPLES = 80
 
 class AudioPlayback(
     private val jitterBuffer: JitterBuffer,
-    private val opusCodec: OpusCodec
+    private val opusCodec: OpusCodec,
+    private val speakerBoostPrefs: SpeakerBoostPrefs? = null
 ) {
 
     private var audioTrack: AudioTrack? = null
+    private var loudnessEnhancer: LoudnessEnhancer? = null
     private var playbackJob: Job? = null
     val isStarted: Boolean get() = playbackJob != null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    var softwareGain: Float = DEFAULT_SOFTWARE_GAIN
+    var softwareGain: Float = speakerBoostPrefs?.softwareAmplifier ?: DEFAULT_SOFTWARE_GAIN
+
+    private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        val prefs = speakerBoostPrefs ?: return@OnSharedPreferenceChangeListener
+        when (key) {
+            SpeakerBoostPrefs.KEY_RECEIVE_BOOST_MB -> {
+                val mb = prefs.receiveBoostMb
+                val le = loudnessEnhancer
+                if (le != null) {
+                    try {
+                        le.setTargetGain(mb)
+                        Log.d(TAG, "[LOUDNESS] LoudnessEnhancer gain updated mb=$mb")
+                    } catch (e: Exception) {
+                        Log.w(TAG, "[LOUDNESS-FALLBACK] gain update failed: ${e::class.simpleName}: ${e.message}")
+                    }
+                }
+            }
+            SpeakerBoostPrefs.KEY_SOFTWARE_AMPLIFIER -> {
+                val newGain = prefs.softwareAmplifier
+                softwareGain = newGain
+                Log.d(TAG, "[LOUDNESS] amplifier=${newGain}x")
+            }
+        }
+    }
+
+    init {
+        speakerBoostPrefs?.registerOnChange(prefsListener)
+    }
+
+    private fun attachLoudnessEnhancer(track: AudioTrack) {
+        releaseLoudnessEnhancer()
+        val gainMb = speakerBoostPrefs?.receiveBoostMb ?: 0
+        try {
+            val le = LoudnessEnhancer(track.audioSessionId)
+            le.setTargetGain(gainMb)
+            le.enabled = true
+            loudnessEnhancer = le
+            Log.d(TAG, "[LOUDNESS] LoudnessEnhancer attached sessionId=${track.audioSessionId} gainMb=$gainMb")
+        } catch (e: Exception) {
+            loudnessEnhancer = null
+            Log.w(TAG, "[LOUDNESS-FALLBACK] LoudnessEnhancer attach failed sessionId=${track.audioSessionId}: ${e::class.simpleName}: ${e.message} — using PCM gain only")
+        }
+    }
+
+    private fun releaseLoudnessEnhancer() {
+        val le = loudnessEnhancer ?: return
+        try { le.enabled = false } catch (_: Exception) {}
+        try { le.release() } catch (_: Exception) {}
+        loudnessEnhancer = null
+        Log.d(TAG, "[LOUDNESS] LoudnessEnhancer released")
+    }
     var onFrameDecoded: (() -> Unit)? = null
     var onUnderrun: (() -> Unit)? = null
     var onDecodeFailure: (() -> Unit)? = null
@@ -229,6 +284,7 @@ class AudioPlayback(
 
         audioTrack = track
         Log.d(TAG, "AUDIOTRACK_READY rate=$SAMPLE_RATE mono low-latency sessionId=${track.audioSessionId} ${RadioDiagLog.elapsedTag()}")
+        attachLoudnessEnhancer(track)
     }
 
     fun clearStaleFrames() {
@@ -584,6 +640,7 @@ class AudioPlayback(
     fun release() {
         playbackJob?.cancel()
         playbackJob = null
+        releaseLoudnessEnhancer()
         try {
             audioTrack?.stop()
         } catch (e: Exception) {
@@ -595,6 +652,7 @@ class AudioPlayback(
             Log.e("[RadioError]", "AudioTrack release threw: ${e::class.simpleName}: ${e.message} method=release")
         }
         audioTrack = null
+        try { speakerBoostPrefs?.unregisterOnChange(prefsListener) } catch (_: Exception) {}
         scope.cancel()
         Log.d(TAG, "AudioPlayback released ${RadioDiagLog.elapsedTag()}")
     }

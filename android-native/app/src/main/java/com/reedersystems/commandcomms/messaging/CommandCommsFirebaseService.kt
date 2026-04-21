@@ -9,6 +9,7 @@ import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioTrack
 import android.media.MediaPlayer
+import android.media.audiofx.LoudnessEnhancer
 import android.util.Log
 import kotlin.math.sin
 import androidx.core.app.NotificationCompat
@@ -16,6 +17,7 @@ import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import com.reedersystems.commandcomms.CommandCommsApp
 import com.reedersystems.commandcomms.R
+import com.reedersystems.commandcomms.data.prefs.SpeakerBoostPrefs
 import com.reedersystems.commandcomms.ui.paging.PageAlertActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -217,9 +219,23 @@ class CommandCommsFirebaseService : FirebaseMessagingService() {
                 return@launch
             }
 
+            val pagerBoostMb = SpeakerBoostPrefs(applicationContext).pagerBoostMb
+            val playerLE: LoudnessEnhancer? = try {
+                LoudnessEnhancer(player.audioSessionId).apply {
+                    setTargetGain(pagerBoostMb)
+                    enabled = true
+                }.also {
+                    Log.d(TAG, "[LOUDNESS] LoudnessEnhancer attached sessionId=${player.audioSessionId} gainMb=$pagerBoostMb (pager-wav)")
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "[LOUDNESS-FALLBACK] pager LoudnessEnhancer attach failed sessionId=${player.audioSessionId}: ${e::class.simpleName}: ${e.message} — paging tone plays without effect")
+                null
+            }
+
             synchronized(playerLock) {
                 cancelCurrentPagingPlaybackLocked()
                 currentPagingPlayer = player
+                currentPagingLoudnessEnhancer = playerLE
                 pagingAudioManager = am
                 previousAlarmVolume = prevVolume
             }
@@ -287,9 +303,23 @@ class CommandCommsFirebaseService : FirebaseMessagingService() {
             track = newTrack
             runCatching { newTrack.setVolume(AudioTrack.getMaxVolume()) }
 
+            val pagerBoostMb = SpeakerBoostPrefs(applicationContext).pagerBoostMb
+            val trackLE: LoudnessEnhancer? = try {
+                LoudnessEnhancer(newTrack.audioSessionId).apply {
+                    setTargetGain(pagerBoostMb)
+                    enabled = true
+                }.also {
+                    Log.d(TAG, "[LOUDNESS] LoudnessEnhancer attached sessionId=${newTrack.audioSessionId} gainMb=$pagerBoostMb (pager-synth)")
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "[LOUDNESS-FALLBACK] pager-synth LoudnessEnhancer attach failed sessionId=${newTrack.audioSessionId}: ${e::class.simpleName}: ${e.message}")
+                null
+            }
+
             synchronized(playerLock) {
                 cancelCurrentPagingPlaybackLocked()
                 currentPagingTrack = newTrack
+                currentPagingLoudnessEnhancer = trackLE
                 pagingAudioManager = am
                 previousAlarmVolume = prevVolume
             }
@@ -338,6 +368,11 @@ class CommandCommsFirebaseService : FirebaseMessagingService() {
         prevVolume: Int,
         restoreVolume: Boolean
     ) {
+        synchronized(playerLock) {
+            if (currentPagingTrack === track) {
+                releasePagingLoudnessEnhancerLocked()
+            }
+        }
         runCatching { track.release() }
         if (restoreVolume) {
             runCatching { am.setStreamVolume(AudioManager.STREAM_ALARM, prevVolume, 0) }
@@ -357,6 +392,11 @@ class CommandCommsFirebaseService : FirebaseMessagingService() {
         prevVolume: Int,
         restoreVolume: Boolean
     ) {
+        synchronized(playerLock) {
+            if (currentPagingPlayer === player) {
+                releasePagingLoudnessEnhancerLocked()
+            }
+        }
         runCatching { player.release() }
         if (restoreVolume) {
             runCatching { am.setStreamVolume(AudioManager.STREAM_ALARM, prevVolume, 0) }
@@ -382,8 +422,18 @@ class CommandCommsFirebaseService : FirebaseMessagingService() {
         private val playerLock = Any()
         @Volatile private var currentPagingTrack: AudioTrack? = null
         @Volatile private var currentPagingPlayer: MediaPlayer? = null
+        @Volatile private var currentPagingLoudnessEnhancer: LoudnessEnhancer? = null
         @Volatile private var pagingAudioManager: AudioManager? = null
         @Volatile private var previousAlarmVolume: Int = -1
+
+        private fun releasePagingLoudnessEnhancerLocked() {
+            currentPagingLoudnessEnhancer?.let { le ->
+                runCatching { le.enabled = false }
+                runCatching { le.release() }
+                Log.d(TAG, "[LOUDNESS] paging LoudnessEnhancer released")
+            }
+            currentPagingLoudnessEnhancer = null
+        }
 
         /**
          * Stop and release any active paging playback (WAV via MediaPlayer or
@@ -392,6 +442,7 @@ class CommandCommsFirebaseService : FirebaseMessagingService() {
          * overwritten by the new playback that follows.
          */
         private fun cancelCurrentPagingPlaybackLocked() {
+            releasePagingLoudnessEnhancerLocked()
             currentPagingTrack?.let { prev ->
                 runCatching { prev.pause() }
                 runCatching { prev.flush() }

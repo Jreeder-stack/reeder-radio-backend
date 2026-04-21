@@ -11,6 +11,7 @@ import android.media.audiofx.AutomaticGainControl
 import android.media.audiofx.NoiseSuppressor
 import android.os.Build
 import android.util.Log
+import com.reedersystems.commandcomms.data.prefs.SpeakerBoostPrefs
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
 import java.util.concurrent.LinkedBlockingQueue
@@ -30,7 +31,8 @@ class RadioAudioEngine(private val context: Context) {
         private set
     val opusCodec = OpusCodec()
     val jitterBuffer = JitterBuffer()
-    val audioPlayback = AudioPlayback(jitterBuffer, opusCodec)
+    val speakerBoostPrefs = SpeakerBoostPrefs(context)
+    val audioPlayback = AudioPlayback(jitterBuffer, opusCodec, speakerBoostPrefs)
     val udpTransport = UdpAudioTransport()
 
     var floorControl: FloorControlManager? = null

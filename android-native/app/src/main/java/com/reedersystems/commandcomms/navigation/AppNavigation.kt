@@ -176,6 +176,7 @@ fun AppNavigation() {
             val isCapturing by app.keyCapturingFlow.collectAsState()
             SettingsScreen(
                 pttKeyPrefs = app.pttKeyPrefs,
+                speakerBoostPrefs = app.speakerBoostPrefs,
                 isCapturing = isCapturing,
                 onStartCapture = { app.keyCapturingFlow.value = true },
                 onStopCapture = { app.keyCapturingFlow.value = false },

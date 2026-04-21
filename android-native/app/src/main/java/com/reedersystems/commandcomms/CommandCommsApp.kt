@@ -14,6 +14,7 @@ import com.reedersystems.commandcomms.audio.radio.RadioStateManager
 import com.reedersystems.commandcomms.data.api.ApiClient
 import com.reedersystems.commandcomms.data.prefs.PttKeyPrefs
 import com.reedersystems.commandcomms.data.prefs.RadioTokenStore
+import com.reedersystems.commandcomms.data.prefs.SpeakerBoostPrefs
 import com.reedersystems.commandcomms.data.prefs.ServiceConnectionPrefs
 import com.reedersystems.commandcomms.data.prefs.SessionPrefs
 import com.reedersystems.commandcomms.data.model.RadioTransportConfig
@@ -59,6 +60,9 @@ class CommandCommsApp : Application() {
     lateinit var pttKeyPrefs: PttKeyPrefs
         private set
 
+    lateinit var speakerBoostPrefs: SpeakerBoostPrefs
+        private set
+
     lateinit var radioTokenStore: RadioTokenStore
         private set
 
@@ -81,6 +85,7 @@ class CommandCommsApp : Application() {
         sessionPrefs = SessionPrefs(this)
         serviceConnectionPrefs = ServiceConnectionPrefs(this)
         pttKeyPrefs = PttKeyPrefs(this)
+        speakerBoostPrefs = SpeakerBoostPrefs(this)
         val currentVersionCode = packageManager
             .getPackageInfo(packageName, 0)
             .let { if (Build.VERSION.SDK_INT >= 28) it.longVersionCode else it.versionCode.toLong() }
