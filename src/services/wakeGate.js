@@ -37,19 +37,10 @@ export function detectEmergencyBypass(transcript, { hasActiveEscalation = false 
       return { phrase };
     }
   }
-  if (sendMeAnotherWithEmergencyContext(transcript, hasActiveEscalation)) {
+  if (SEND_ME_ANOTHER_RX.test(transcript)) {
     return { phrase: 'send me another' };
   }
   return null;
-}
-
-function sendMeAnotherWithEmergencyContext(transcript, hasActiveEscalation) {
-  if (!SEND_ME_ANOTHER_RX.test(transcript)) return false;
-  if (hasActiveEscalation) return true;
-  for (const { rx } of EMERGENCY_BYPASS_PATTERNS) {
-    if (rx.test(transcript)) return true;
-  }
-  return false;
 }
 
 export const WAKE_RESULT = {

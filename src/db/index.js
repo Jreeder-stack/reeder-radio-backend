@@ -348,6 +348,7 @@ export async function initializeDatabase() {
         sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
+    await client.query(`ALTER TABLE pages ADD COLUMN IF NOT EXISTS audio_url TEXT`).catch(() => {});
 
     await client.query(`
       CREATE TABLE IF NOT EXISTS page_acks (
@@ -1255,12 +1256,25 @@ export async function updateRadioFcmToken(radioId, fcmToken) {
   return result.rows[0];
 }
 
-export async function createPage(message, sender, targetType, targetId) {
+export async function createPage(message, sender, targetType, targetId, audioUrl = null) {
   const result = await pool.query(
-    `INSERT INTO pages (message, sender, target_type, target_id) VALUES ($1, $2, $3, $4) RETURNING *`,
-    [message, sender, targetType, targetId]
+    `INSERT INTO pages (message, sender, target_type, target_id, audio_url) VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+    [message, sender, targetType, targetId, audioUrl]
   );
   return result.rows[0];
+}
+
+export async function getRecentAudioMessageBySender(channel, sender, sinceMs = 30000) {
+  const result = await pool.query(
+    `SELECT id, channel, sender, message_type, audio_url, audio_duration, created_at
+       FROM channel_messages
+      WHERE channel = $1 AND sender = $2 AND message_type = 'audio'
+        AND created_at >= NOW() - ($3::int || ' milliseconds')::interval
+      ORDER BY created_at DESC
+      LIMIT 1`,
+    [channel, sender, sinceMs]
+  );
+  return result.rows[0] || null;
 }
 
 export async function getAllFcmTokensForUnit(unitId) {

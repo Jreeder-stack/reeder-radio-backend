@@ -102,7 +102,7 @@ function initFcm() {
   }
 }
 
-export async function sendPageToTokens(tokens, pageId, message, sender, pagingChannelId) {
+export async function sendPageToTokens(tokens, pageId, message, sender, pagingChannelId, audioUrl = null) {
   const firebaseApp = initFcm();
   if (!firebaseApp) {
     console.warn('[FCM] sendPageToTokens called but FCM not initialized — skipping');
@@ -129,6 +129,7 @@ export async function sendPageToTokens(tokens, pageId, message, sender, pagingCh
           message,
           sender,
           pagingChannelId: pagingChannelId ? String(pagingChannelId) : '',
+          ...(audioUrl ? { audioUrl: String(audioUrl) } : {}),
         },
         android: {
           priority: 'high',
@@ -156,7 +157,7 @@ export async function sendPageToTokens(tokens, pageId, message, sender, pagingCh
  * If the roster is empty or no members have FCM tokens, the page row is still recorded but no
  * FCM messages are sent.
  */
-export async function sendPageToList(listType, message, sender) {
+export async function sendPageToList(listType, message, sender, audioUrl = null) {
   if (!listType) throw new Error('listType is required');
   if (!message) throw new Error('message is required');
   const senderName = sender || 'AI-DISPATCH';
@@ -181,7 +182,7 @@ export async function sendPageToList(listType, message, sender) {
   }
   const tokens = Array.from(tokenSet.keys());
 
-  const page = await createPage(message, senderName, 'list', listType);
+  const page = await createPage(message, senderName, 'list', listType, audioUrl);
   const pagingChannelId = await getPagingChannelId();
 
   if (tokens.length === 0) {
@@ -195,7 +196,7 @@ export async function sendPageToList(listType, message, sender) {
     };
   }
 
-  const fcmResult = await sendPageToTokens(tokens, page.id, message, senderName, pagingChannelId);
+  const fcmResult = await sendPageToTokens(tokens, page.id, message, senderName, pagingChannelId, audioUrl);
   console.log(`[FCM] sendPageToList "${listType}": members=${members.length} tokens=${tokens.length} success=${fcmResult.successCount} failure=${fcmResult.failureCount} pageId=${page.id}`);
   return {
     listType,

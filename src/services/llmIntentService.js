@@ -266,8 +266,18 @@ Unit requesting the time. TIER 1: Just the spoken time with "hours" appended.
 Return: { "intent": "TIME_CHECK", "response": "<current spoken time> hours." }
 
 ### REQUEST_BACKUP
-Unit requesting backup.
+Unit requesting general backup (not the AI-brokered "start me another unit" flow). Use this for general "I need backup", "code 3 backup", "10-78", or other generic backup requests where the unit is not specifically asking the AI to broker / page out a request for an additional unit. If the transcript matches the BACKUP_REQUEST_START phrasings, prefer BACKUP_REQUEST_START.
 Return: { "intent": "REQUEST_BACKUP", "response": "<natural backup acknowledgment>", "cadAction": "broadcast", "cadData": { "message": "<unit> requesting backup", "priority": "high" } }
+
+### BACKUP_REQUEST_START
+Unit is asking the AI to broker an additional unit to assist them on their currently-assigned call. The AI will broadcast the request on this channel, page the Backup Request roster, and listen for volunteers. Trigger phrasings (any of these or close variants):
+- "Central, start me another unit"
+- "Central, send me another unit"
+- "Central, I need another unit"
+- "Send me another" (also recognized as an emergency-bypass phrase upstream)
+- "I need an additional unit", "start me another", "send another unit my way", "request another unit"
+Do NOT classify here if the unit is asking to ASSIGN a specific named unit ("send Lincoln-3 to me") — that's ASSIGN_OTHER_UNIT.
+Return: { "intent": "BACKUP_REQUEST_START", "response": null }
 
 ### TRAFFIC_STOP
 Unit initiating a traffic stop (10-38). TIER 1: Use fixed short format — no unit ID, just time.

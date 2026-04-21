@@ -5,7 +5,8 @@ import { RADIO_STATUS, extractActualStatusFromRejection } from './cadService.js'
 import { resolveDestination, KNOWN_PLACES } from './agencyKnowledge.js';
 import { isConfigured as isLlmConfigured, classifyIntent, answerWithData, composeNatural, rewriteCallNote } from './llmIntentService.js';
 import { parsePersonDetails, parseDOB, extractNameFromTranscript } from './phoneticParser.js';
-import pool, { isAiDispatchEnabled, getAiDispatchChannel, createChannelMessage } from '../db/index.js';
+import pool, { isAiDispatchEnabled, getAiDispatchChannel, createChannelMessage, getRecentAudioMessageBySender } from '../db/index.js';
+import { sendPageToList } from './fcmService.js';
 import { isValidWav } from './wavValidator.js';
 import { audioRelayService } from './audioRelayService.js';
 import { formatEventNote, formatDescriptionNote, isClearAirEventType, getEventSpokenLabel, matchEventFromTranscript, isAllClearPhrase } from './eventNoteFormatter.js';
@@ -487,6 +488,7 @@ export class AIDispatcher {
     this._publishSequence = 0;
     this.verboseLogging = process.env.AI_DISPATCH_VERBOSE === 'true';
     this._turnContextByUnit = new Map();
+    this.openBackupRequests = new Map();
     this._identifyTimeouts = new Map();
     this._boloPollingInterval = null;
     this._seenBoloIds = new Set();
@@ -1830,6 +1832,14 @@ export class AIDispatcher {
         }
       }
 
+      if (this.openBackupRequests.size > 0) {
+        const intercepted = await this._handleOpenBackupRequestUtterance(participantId, transcript);
+        if (intercepted) {
+          this._turnContextByUnit.delete(participantId);
+          return;
+        }
+      }
+
       this.log('LLM_CLASSIFY_START', { participant: participantId, state, transcript });
 
       const conversationHistory = slots?.conversationHistory || [];
@@ -2173,6 +2183,11 @@ export class AIDispatcher {
           this.addConversationExchange(participantId, transcript, wakeResp);
           setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_COMMAND);
           this.log('WAKE_ONLY_AWAITING', { participant: participantId, newState: DISPATCHER_STATE.AWAITING_COMMAND });
+          break;
+        }
+
+        case 'BACKUP_REQUEST_START': {
+          await this.handleBackupRequestStart(participantId, transcript);
           break;
         }
 
@@ -6817,6 +6832,428 @@ export class AIDispatcher {
     } catch (error) {
       this.log('CALL_NOTE_ERROR', { error: error.message });
     }
+  }
+
+  _backupRequestKey(callId) {
+    const channel = this.channelName || this.configuredChannel || '_default_';
+    return `${channel}::${callId}`;
+  }
+
+  _findActiveBackupRequestForChannel() {
+    const channel = this.channelName || this.configuredChannel || '_default_';
+    let oldest = null;
+    for (const req of this.openBackupRequests.values()) {
+      if (req.channel !== channel) continue;
+      if (!oldest || req.createdAt < oldest.createdAt) oldest = req;
+    }
+    return oldest;
+  }
+
+  _normalizeForBackupMatch(text) {
+    return String(text || '').toLowerCase().replace(/[.,!?]+/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+
+  _isBackupVolunteerPhrase(text) {
+    const t = this._normalizeForBackupMatch(text);
+    if (!t) return false;
+    const patterns = [
+      /\bi(?:'| a)?ll head that way\b/,
+      /\bi(?:'| a)?ll head over\b/,
+      /\bi(?:'| a)?ll take (?:it|that)\b/,
+      /\bi(?:'| a)?ll grab (?:it|that)\b/,
+      /\bi(?:'| a)?ll get (?:it|that)\b/,
+      /\bi(?:'| a)?ll respond\b/,
+      /\bi(?:'| a)?ll roll\b/,
+      /\bi can take (?:it|that)\b/,
+      /\bi can head that way\b/,
+      /\bi got (?:it|that one|this)\b/,
+      /\bi'?ve got (?:it|that)\b/,
+      /\bshow me (?:en[-\s]?route|10[-\s]?76)(?:\s+to\s+that)?\b/,
+      /\b10[-\s]?76 to (?:that|it|the call|the backup)\b/,
+      /\b10[-\s]?76,? backup\b/,
+      /\bput me en[-\s]?route\b/,
+      /\bcopy(?:,)? (?:i'?ll|i can|i'?ve got)\b/,
+      /\bon my way\b/,
+    ];
+    return patterns.some(rx => rx.test(t));
+  }
+
+  _isBackupQuestionPhrase(text) {
+    const t = this._normalizeForBackupMatch(text);
+    if (!t) return null;
+    if (/\b(repeat|say again|10[-\s]?9)\b.*\b(address|location|nature|call)\b/.test(t)) return 'all';
+    if (/\b(what(?:'s| is) the (?:address|location)|where (?:is|was) (?:that|the call|it))\b/.test(t)) return 'address';
+    if (/\b(what(?:'s| is) the nature|what kind of call|what type of call|what(?:'s| is) the call)\b/.test(t)) return 'nature';
+    if (/\b(cross street|cross[-\s]?streets)\b/.test(t)) return 'cross';
+    if (/\b(how far(?: is (?:that|it|this))?|distance|closest cross street)\b/.test(t)) return 'distance';
+    if (/\b(repeat (?:that|it)|say again)\b/.test(t)) return 'all';
+    return null;
+  }
+
+  _isBackupDisregardPhrase(text) {
+    const t = this._normalizeForBackupMatch(text);
+    if (!t) return false;
+    return /\b(disregard|cancel|negative)\b.*\b(backup|another unit|the (?:request|call for backup))\b/.test(t)
+      || /\b(disregard|cancel) the backup request\b/.test(t)
+      || /\bbackup request,?\s*disregard\b/.test(t);
+  }
+
+  async _handleOpenBackupRequestUtterance(speakerUnitId, transcript) {
+    const req = this._findActiveBackupRequestForChannel();
+    if (!req) return false;
+    const key = this._backupRequestKey(req.callId);
+    const speakerNorm = String(speakerUnitId || '').toUpperCase();
+    const requesterNorm = String(req.requesterUnit || '').toUpperCase();
+
+    if (this._isBackupDisregardPhrase(transcript)) {
+      this.log('BACKUP_REQUEST_DISREGARD', { key, speaker: speakerNorm, requester: requesterNorm });
+      const isRequester = speakerNorm === requesterNorm;
+      const ackTarget = isRequester ? requesterNorm : speakerNorm;
+      this._clearBackupRequest(key, 'disregard');
+      const resp = `${ackTarget}, 10-4, backup request disregarded.`;
+      await this.speak(resp, speakerUnitId);
+      this.addConversationExchange(speakerUnitId, transcript, resp);
+      return true;
+    }
+
+    if (speakerNorm === requesterNorm) {
+      return false;
+    }
+
+    if (this._isBackupVolunteerPhrase(transcript)) {
+      this.log('BACKUP_REQUEST_VOLUNTEER', { key, volunteer: speakerNorm, requester: requesterNorm, callId: req.callId });
+      await this._assignBackupVolunteer(speakerUnitId, transcript, req);
+      return true;
+    }
+
+    const qType = this._isBackupQuestionPhrase(transcript);
+    if (qType) {
+      this.log('BACKUP_REQUEST_QUESTION', { key, asker: speakerNorm, questionType: qType });
+      await this._answerBackupQuestion(speakerUnitId, transcript, req, qType);
+      return true;
+    }
+
+    return false;
+  }
+
+  async _assignBackupVolunteer(volunteerUnitId, transcript, req) {
+    const volunteerDisplay = String(volunteerUnitId).toUpperCase();
+    let assigned = false;
+    let enRouteOk = false;
+
+    try {
+      if (cadService.isConfigured() && req.callId) {
+        const assignResult = await cadService.assignUnitToCall(volunteerDisplay, req.callId);
+        assigned = assignResult?.success !== false;
+        if (assigned) {
+          try {
+            const statusResult = await cadService.updateUnitStatus(volunteerDisplay, 'en_route');
+            enRouteOk = !!statusResult?.success;
+          } catch (statusErr) {
+            this.log('BACKUP_VOLUNTEER_STATUS_ERROR', { volunteer: volunteerDisplay, error: statusErr.message });
+          }
+        } else {
+          this.log('BACKUP_VOLUNTEER_ASSIGN_FAILED', { volunteer: volunteerDisplay, callId: req.callId, error: assignResult?.error });
+        }
+      }
+    } catch (err) {
+      this.log('BACKUP_VOLUNTEER_ERROR', { volunteer: volunteerDisplay, error: err.message });
+    }
+
+    req.assignedVolunteers = req.assignedVolunteers || [];
+    req.assignedVolunteers.push(volunteerDisplay);
+
+    let resp;
+    if (assigned) {
+      resp = `${volunteerDisplay} copy en route to ${req.location || 'the call'} for ${req.nature || 'the call'}, assisting ${req.requesterUnit}.`;
+      if (!enRouteOk) {
+        resp += ' Update your status via the MDT.';
+      }
+    } else {
+      resp = `${volunteerDisplay}, 10-4, copy en route to assist ${req.requesterUnit}. CAD assignment failed, attach via MDT.`;
+    }
+
+    await this.speak(resp, volunteerUnitId);
+    this.addConversationExchange(volunteerUnitId, transcript, resp);
+  }
+
+  async _answerBackupQuestion(askerUnitId, transcript, req, qType) {
+    let answer;
+    const loc = req.location || 'unknown location';
+    const nat = req.nature || 'unknown nature';
+    const cross = req.crossStreets;
+    const priority = req.priority;
+
+    switch (qType) {
+      case 'address':
+        answer = cross
+          ? `${askerUnitId}, address is ${loc}, cross of ${cross}.`
+          : `${askerUnitId}, address is ${loc}.`;
+        break;
+      case 'nature':
+        answer = priority
+          ? `${askerUnitId}, call nature is ${nat}, priority ${priority}.`
+          : `${askerUnitId}, call nature is ${nat}.`;
+        break;
+      case 'cross':
+        answer = cross
+          ? `${askerUnitId}, cross streets ${cross}.`
+          : `${askerUnitId}, no cross streets on file.`;
+        break;
+      case 'distance': {
+        const dd = await this._computeDistanceAndDirection(askerUnitId, req).catch(() => null);
+        if (dd && dd.miles != null) {
+          const milesStr = dd.miles < 0.1 ? 'less than a tenth of a mile' : `${dd.miles.toFixed(1)} miles`;
+          answer = `${askerUnitId}, you are approximately ${milesStr}${dd.bearing ? ` ${dd.bearing}` : ''} of the call at ${loc}.`;
+        } else {
+          answer = `${askerUnitId}, unable to determine your distance, call is at ${loc}.`;
+        }
+        break;
+      }
+      case 'all':
+      default: {
+        const parts = [`${askerUnitId},`, nat, `at ${loc}`];
+        if (cross) parts.push(`cross of ${cross}`);
+        if (priority) parts.push(`priority ${priority}`);
+        parts.push(`assisting ${req.requesterUnit}.`);
+        answer = parts.join(' ').replace(/\s+,/g, ',');
+        break;
+      }
+    }
+
+    await this.speak(answer, askerUnitId);
+    this.addConversationExchange(askerUnitId, transcript, answer);
+  }
+
+  async _computeDistanceAndDirection(askerUnitId, req) {
+    let askerCoords = null;
+    try {
+      const loc = locationService.getLocation(askerUnitId);
+      if (loc && typeof loc.lat === 'number' && typeof loc.lng === 'number') {
+        askerCoords = { lat: loc.lat, lng: loc.lng };
+      }
+    } catch (_) {}
+
+    let callCoords = null;
+    if (typeof req.callLat === 'number' && typeof req.callLng === 'number') {
+      callCoords = { lat: req.callLat, lng: req.callLng };
+    } else if (req.location) {
+      try {
+        const geo = await locationService.forwardGeocode(req.location);
+        if (geo && typeof geo.lat === 'number' && typeof geo.lng === 'number') {
+          callCoords = { lat: geo.lat, lng: geo.lng };
+          req.callLat = geo.lat;
+          req.callLng = geo.lng;
+        }
+      } catch (_) {}
+    }
+
+    if (!askerCoords || !callCoords) return null;
+
+    const toRad = (d) => (d * Math.PI) / 180;
+    const R = 3958.8;
+    const dLat = toRad(callCoords.lat - askerCoords.lat);
+    const dLng = toRad(callCoords.lng - askerCoords.lng);
+    const a = Math.sin(dLat / 2) ** 2 +
+      Math.cos(toRad(askerCoords.lat)) * Math.cos(toRad(callCoords.lat)) * Math.sin(dLng / 2) ** 2;
+    const miles = 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    const y = Math.sin(toRad(callCoords.lng - askerCoords.lng)) * Math.cos(toRad(callCoords.lat));
+    const x = Math.cos(toRad(askerCoords.lat)) * Math.sin(toRad(callCoords.lat)) -
+      Math.sin(toRad(askerCoords.lat)) * Math.cos(toRad(callCoords.lat)) * Math.cos(toRad(callCoords.lng - askerCoords.lng));
+    const bearingDeg = (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+    const dirs = ['north', 'northeast', 'east', 'southeast', 'south', 'southwest', 'west', 'northwest'];
+    const compass = dirs[Math.round(bearingDeg / 45) % 8];
+    const opposite = { north: 'south', northeast: 'southwest', east: 'west', southeast: 'northwest', south: 'north', southwest: 'northeast', west: 'east', northwest: 'southeast' };
+    return { miles, bearing: opposite[compass] + ' of' };
+  }
+
+  async handleBackupRequestStart(participantId, transcript) {
+    this.log('BACKUP_REQUEST_START', { participant: participantId, transcript });
+
+    if (!cadService.isConfigured()) {
+      const resp = `${participantId}, CAD system not available.`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+      return;
+    }
+
+    let currentCall;
+    try {
+      currentCall = await cadService.getUnitCurrentCallById(participantId);
+    } catch (err) {
+      this.log('BACKUP_REQUEST_CAD_ERROR', { participant: participantId, error: err.message });
+    }
+    const callId = currentCall?.call_id || currentCall?.call_number || currentCall?.callNumber;
+    if (!callId) {
+      const resp = `${participantId}, you're not assigned to a call.`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+      return;
+    }
+
+    const reqKey = this._backupRequestKey(callId);
+    if (this.openBackupRequests.has(reqKey)) {
+      const existing = this.openBackupRequests.get(reqKey);
+      const resp = `${participantId}, backup request already open for ${existing.requesterUnit} on this call, standby.`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+      return;
+    }
+
+    const location = currentCall?.location || currentCall?.address || null;
+    const nature = currentCall?.nature || currentCall?.call_nature || currentCall?.type || null;
+    const crossStreets = currentCall?.cross_streets || currentCall?.crossStreets || null;
+    const priority = currentCall?.priority || currentCall?.call_priority || null;
+    const channel = this.channelName || this.configuredChannel || '_default_';
+
+    const req = {
+      requesterUnit: String(participantId).toUpperCase(),
+      channel,
+      key: reqKey,
+      callId,
+      callDisplay: currentCall?.call_number || callId,
+      location,
+      nature,
+      crossStreets,
+      priority,
+      callLat: typeof currentCall?.lat === 'number' ? currentCall.lat : null,
+      callLng: typeof currentCall?.lng === 'number' ? currentCall.lng : null,
+      requesterTranscript: transcript,
+      requestText: transcript,
+      audioUrl: null,
+      recordingMessageId: null,
+      retriesLeft: 1,
+      timer: null,
+      assignedVolunteers: [],
+      createdAt: Date.now(),
+    };
+    this.openBackupRequests.set(reqKey, req);
+    setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+
+    const broadcast = `Any unit in the area of ${location || 'unknown location'} available to assist ${req.requesterUnit} with a ${nature || 'call'}?`;
+    req.airBroadcast = broadcast;
+    await this.speak(broadcast, participantId);
+    this.addConversationExchange(participantId, transcript, broadcast);
+
+    this._pageBackupRosterAfterRecording(req).catch(err => {
+      this.log('BACKUP_REQUEST_PAGE_ERROR', { error: err.message });
+    });
+
+    this._scheduleBackupRequestTimeout(reqKey);
+  }
+
+  async _pageBackupRosterAfterRecording(req) {
+    const audioMsg = await this._findRecentRecordingFor(req.requesterUnit);
+    if (audioMsg) {
+      req.audioUrl = audioMsg.audio_url;
+      req.recordingMessageId = audioMsg.id;
+    }
+
+    const pageMessage = [
+      `BACKUP REQUEST from ${req.requesterUnit}`,
+      req.location ? `Location: ${req.location}` : null,
+      req.nature ? `Nature: ${req.nature}` : null,
+      req.priority ? `Priority: ${req.priority}` : null,
+      req.crossStreets ? `Cross: ${req.crossStreets}` : null,
+      req.requesterTranscript ? `Request: "${req.requesterTranscript}"` : null,
+    ].filter(Boolean).join(' | ');
+
+    try {
+      const result = await sendPageToList('backup_request', pageMessage, req.requesterUnit, req.audioUrl);
+      this.log('BACKUP_REQUEST_PAGE_SENT', {
+        requester: req.requesterUnit,
+        callId: req.callId,
+        audioUrl: req.audioUrl,
+        memberCount: result?.memberCount,
+        tokenCount: result?.tokenCount,
+        pageId: result?.page?.id,
+      });
+    } catch (err) {
+      this.log('BACKUP_REQUEST_PAGE_ERROR', { requester: req.requesterUnit, error: err.message });
+    }
+  }
+
+  async _findRecentRecordingFor(unitId, maxWaitMs = 5000) {
+    const channel = this.channelName;
+    if (!channel) return null;
+    const start = Date.now();
+    while (Date.now() - start < maxWaitMs) {
+      try {
+        const msg = await getRecentAudioMessageBySender(channel, unitId, 30000);
+        if (msg) return msg;
+      } catch (err) {
+        this.log('BACKUP_REQUEST_RECORDING_LOOKUP_ERROR', { error: err.message });
+        return null;
+      }
+      await new Promise(r => setTimeout(r, 500));
+    }
+    return null;
+  }
+
+  _scheduleBackupRequestTimeout(reqKey) {
+    const req = this.openBackupRequests.get(reqKey);
+    if (!req) return;
+    const timeoutMs = parseInt(process.env.AI_BACKUP_REQUEST_TIMEOUT_MS || '60000', 10);
+    if (req.timer) clearTimeout(req.timer);
+    req.timer = setTimeout(() => {
+      this._onBackupRequestTimeout(reqKey).catch(err => {
+        this.log('BACKUP_REQUEST_TIMEOUT_HANDLER_ERROR', { error: err.message });
+      });
+    }, timeoutMs);
+  }
+
+  async _onBackupRequestTimeout(reqKey) {
+    const req = this.openBackupRequests.get(reqKey);
+    if (!req) return;
+    if (req.assignedVolunteers && req.assignedVolunteers.length > 0) {
+      this.log('BACKUP_REQUEST_TIMEOUT_BUT_HAS_VOLUNTEERS', { key: reqKey, volunteers: req.assignedVolunteers });
+      this._clearBackupRequest(reqKey, 'volunteers_responded');
+      return;
+    }
+    if (req.retriesLeft > 0) {
+      req.retriesLeft -= 1;
+      this.log('BACKUP_REQUEST_REBROADCAST', { key: reqKey, requester: req.requesterUnit, retriesLeft: req.retriesLeft });
+      const rebroadcast = `Repeat: any unit in the area of ${req.location || 'unknown location'} available to assist ${req.requesterUnit} with a ${req.nature || 'call'}?`;
+      try {
+        await this.speak(rebroadcast);
+      } catch (err) {
+        this.log('BACKUP_REQUEST_REBROADCAST_ERROR', { error: err.message });
+      }
+      try {
+        const pageMessage = [
+          `BACKUP REQUEST (repeat) from ${req.requesterUnit}`,
+          req.location ? `Location: ${req.location}` : null,
+          req.nature ? `Nature: ${req.nature}` : null,
+          req.priority ? `Priority: ${req.priority}` : null,
+          req.requesterTranscript ? `Request: "${req.requesterTranscript}"` : null,
+        ].filter(Boolean).join(' | ');
+        await sendPageToList('backup_request', pageMessage, req.requesterUnit, req.audioUrl);
+      } catch (err) {
+        this.log('BACKUP_REQUEST_REPAGE_ERROR', { error: err.message });
+      }
+      this._scheduleBackupRequestTimeout(reqKey);
+      return;
+    }
+
+    this.log('BACKUP_REQUEST_NEGATIVE', { key: reqKey, requester: req.requesterUnit });
+    const final = `${req.requesterUnit}, negative response on the channel.`;
+    this._clearBackupRequest(reqKey, 'negative_response');
+    try {
+      await this.speak(final, req.requesterUnit);
+    } catch (err) {
+      this.log('BACKUP_REQUEST_FINAL_SPEAK_ERROR', { error: err.message });
+    }
+  }
+
+  _clearBackupRequest(reqKey, reason) {
+    const req = this.openBackupRequests.get(reqKey);
+    if (!req) return;
+    if (req.timer) clearTimeout(req.timer);
+    this.openBackupRequests.delete(reqKey);
+    this.log('BACKUP_REQUEST_CLEARED', { key: reqKey, requester: req.requesterUnit, reason });
   }
 
   async speak(text, participantId = null, options = {}) {
