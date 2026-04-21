@@ -3342,7 +3342,7 @@ export class AIDispatcher {
         this.log('CALL_CREATION_SKIPPED', { reason: 'CAD not configured' });
         setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
         const timeStr = this.formatMilitaryTime();
-        const resp = `${participantId}, 10-4. ${nature.toLowerCase()} at ${address}. ${timeStr}.`;
+        const resp = `${participantId}, 10-4, ${timeStr}.`;
         await this.speak(resp, participantId);
         return;
       }
@@ -3412,8 +3412,7 @@ export class AIDispatcher {
 
       setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
       const timeStr = this.formatMilitaryTime();
-      const callRef = callNumber ? `, call number ${callNumber}` : '';
-      const resp = `${participantId}, 10-4. Call created${callRef}, ${nature.toLowerCase()} at ${address}. ${timeStr}.`;
+      const resp = `${participantId}, 10-4, ${timeStr}.`;
       await this.speak(resp, participantId);
 
     } catch (error) {
