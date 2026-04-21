@@ -2,7 +2,7 @@ import { speechToText, textToSpeech, isConfigured as isAzureConfigured } from '.
 import { matchCommand, resetDispatcherState, matchEmergencyResponse, matchSecureConfirmation, getUnitSessionState, setUnitSessionState, DISPATCHER_STATE, EMERGENCY_DISTRESS_PHRASES, ownsInFlight, clearPromptTimeout } from './commandMatcher.js';
 import { RADIO_STATUS, extractActualStatusFromRejection } from './cadService.js';
 import { resolveDestination, KNOWN_PLACES } from './agencyKnowledge.js';
-import { isConfigured as isLlmConfigured, classifyIntent, answerWithData, composeNatural } from './llmIntentService.js';
+import { isConfigured as isLlmConfigured, classifyIntent, answerWithData, composeNatural, rewriteCallNote } from './llmIntentService.js';
 import { parsePersonDetails, parseDOB, extractNameFromTranscript } from './phoneticParser.js';
 import pool, { isAiDispatchEnabled, getAiDispatchChannel, createChannelMessage } from '../db/index.js';
 import { isValidWav } from './wavValidator.js';
@@ -1616,6 +1616,28 @@ class AIDispatcher {
         return;
       }
 
+      if (state === DISPATCHER_STATE.AWAITING_BE_ADVISED_NOTE) {
+        this.log('BE_ADVISED_RETRY_FAST_PATH', { participant: participantId, transcript });
+        const lower = (transcript || '').toLowerCase();
+        if (/\b(disregard|cancel|nevermind|never mind|10-22|scratch that)\b/.test(lower)) {
+          setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+          const resp = `${participantId}, 10-4, disregard.`;
+          await this.speak(resp, participantId);
+          this.addConversationExchange(participantId, transcript, resp);
+          return;
+        }
+        this._turnContextByUnit.set(participantId, { transcript, intent: 'ADD_NOTE' });
+        await this.executeBeAdvisedNote(participantId, transcript, transcript.trim());
+        return;
+      }
+
+      if (state === DISPATCHER_STATE.AWAITING_CALL_DISAMBIG) {
+        this.log('CALL_DISAMBIG_FAST_PATH', { participant: participantId, transcript });
+        this._turnContextByUnit.set(participantId, { transcript, intent: 'CALL_DISAMBIG' });
+        await this.handleCallDisambigResponse(participantId, transcript, slots);
+        return;
+      }
+
       if (state === DISPATCHER_STATE.AWAITING_DESTINATION_CLARIFY) {
         this.log('DESTINATION_CLARIFY_FAST_PATH', { participant: participantId, transcript });
         this._turnContextByUnit.set(participantId, { transcript, intent: 'DESTINATION_CLARIFY' });
@@ -1805,6 +1827,13 @@ class AIDispatcher {
         }
 
         case 'STATUS_CHANGE': {
+          const descriptorSlots = result.slots || {};
+          const hasDescriptor = !!(descriptorSlots.callNature || descriptorSlots.callLocation || descriptorSlots.callCity || descriptorSlots.callNumber);
+          const statusForDescriptor = result.cadStatus === 'en_route' || result.cadStatus === 'on_scene';
+          if (hasDescriptor && statusForDescriptor) {
+            const handled = await this.applyStatusByDescriptor(participantId, transcript, result.cadStatus, descriptorSlots);
+            if (handled) break;
+          }
           let statusUpdateFailed = false;
           let statusFailureType = null;
           if (result.cadStatus) {
@@ -2221,6 +2250,11 @@ class AIDispatcher {
 
         case 'ASSIGN_CALL': {
           await this.handleAssignCall(participantId, transcript, result.slots);
+          break;
+        }
+
+        case 'SHOW_OUT_WITH': {
+          await this.handleShowOutWith(participantId, transcript, result.slots);
           break;
         }
 
@@ -3551,6 +3585,169 @@ class AIDispatcher {
     return null;
   }
 
+  resolveCallByDescriptor(activeCalls, descriptor, restrictTo = null) {
+    const pool = restrictTo && restrictTo.length ? restrictTo : (activeCalls || []);
+    if (!pool.length) return { match: null, candidates: [] };
+
+    if (descriptor?.callNumber) {
+      const direct = this.resolveShorthandCallNumber(descriptor.callNumber, pool);
+      if (direct) return { match: direct, candidates: [direct] };
+    }
+
+    const natureLower = (descriptor?.callNature || '').toLowerCase().trim();
+    const locLower = (descriptor?.callLocation || '').toLowerCase().trim();
+    const cityLower = (descriptor?.callCity || '').toLowerCase().trim();
+
+    if (!natureLower && !locLower && !cityLower) {
+      return { match: null, candidates: [] };
+    }
+
+    const scored = pool.map(call => {
+      const cNature = (call.nature || call.type || call.call_type || '').toLowerCase();
+      const cLoc = (call.location || call.address || '').toLowerCase();
+      let score = 0;
+      let constraints = 0;
+      let matched = 0;
+
+      if (natureLower) {
+        constraints++;
+        if (cNature.includes(natureLower)) {
+          score += 4;
+          matched++;
+        } else {
+          const tokens = natureLower.split(/\s+/).filter(t => t.length > 2);
+          if (tokens.length && tokens.every(t => cNature.includes(t))) {
+            score += 3;
+            matched++;
+          }
+        }
+      }
+
+      if (locLower) {
+        constraints++;
+        if (cLoc.includes(locLower)) {
+          score += 4;
+          matched++;
+        } else {
+          const tokens = locLower.split(/\s+/).filter(t => t.length > 2);
+          if (tokens.length && tokens.every(t => cLoc.includes(t))) {
+            score += 2;
+            matched++;
+          }
+        }
+      }
+
+      if (cityLower) {
+        constraints++;
+        if (cLoc.includes(cityLower)) {
+          score += 3;
+          matched++;
+        }
+      }
+
+      return { call, score, matched, constraints };
+    }).filter(s => s.constraints > 0 && s.matched === s.constraints);
+
+    if (!scored.length) return { match: null, candidates: [] };
+
+    scored.sort((a, b) => b.score - a.score);
+    const topScore = scored[0].score;
+    const winners = scored.filter(s => s.score === topScore).map(s => s.call);
+
+    if (winners.length === 1) return { match: winners[0], candidates: winners };
+    return { match: null, candidates: winners };
+  }
+
+  _describeCallShort(call) {
+    const nature = call.nature || call.type || call.call_type || 'call';
+    const loc = call.location || call.address || '';
+    return loc ? `the ${nature.toLowerCase()} at ${loc}` : `the ${nature.toLowerCase()}`;
+  }
+
+  _describeNoun(slots) {
+    if (slots?.callNature) return `${slots.callNature.toLowerCase()}`;
+    if (slots?.callLocation) return `call at ${slots.callLocation}`;
+    if (slots?.callCity) return `call in ${slots.callCity}`;
+    return 'call';
+  }
+
+  _packCandidate(call) {
+    return {
+      call_id: call.call_id || call.id || call.call_number,
+      call_number: call.call_number || call.id,
+      nature: call.nature || call.type || call.call_type || null,
+      location: call.location || call.address || null,
+    };
+  }
+
+  async _promptCallDisambig(participantId, transcript, candidates, descriptorSlots, verb) {
+    const packed = candidates.slice(0, 4).map(c => this._packCandidate(c));
+    const optionsSpoken = packed.map(c => {
+      if (c.location) return `the one at ${c.location}`;
+      if (c.nature) return `the ${c.nature.toLowerCase()}`;
+      return `call ${c.call_number}`;
+    });
+
+    const noun = descriptorSlots?.callNature ? `${descriptorSlots.callNature.toLowerCase()}s` : 'matching calls';
+    const list = optionsSpoken.length === 2
+      ? `${optionsSpoken[0]} or ${optionsSpoken[1]}`
+      : optionsSpoken.slice(0, -1).join(', ') + `, or ${optionsSpoken[optionsSpoken.length - 1]}`;
+    const resp = `${participantId}, ${packed.length} ${noun} active — ${list}?`;
+
+    setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_CALL_DISAMBIG, null, {
+      disambigCandidates: packed,
+      disambigVerb: verb,
+      disambigOriginalSlots: descriptorSlots || {},
+    }, true);
+    await this.speak(resp, participantId);
+    this.addConversationExchange(participantId, transcript, resp);
+  }
+
+  async _executeCallVerb(participantId, transcript, targetCall, verb) {
+    const callId = targetCall.call_id || targetCall.id || targetCall.call_number;
+    const callDisplay = targetCall.call_number || callId;
+
+    const assignResult = await cadService.assignUnitToCall(participantId, callId);
+    if (assignResult?.success === false) {
+      const resp = `${participantId}, unable to assign to ${callDisplay}.`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+      return;
+    }
+    this.log('UNIT_ASSIGNED_TO_CALL', { unitId: participantId, callId, callDisplay, verb });
+
+    let cadStatus = null;
+    let statusWord = '';
+    if (verb === 'en_route') {
+      cadStatus = 'en_route';
+      statusWord = 'en route';
+    } else if (verb === 'on_scene') {
+      cadStatus = 'on_scene';
+      statusWord = 'on scene';
+    }
+
+    if (cadStatus) {
+      try {
+        const statusResult = await cadService.updateUnitStatus(participantId, cadStatus);
+        this.log('CAD_STATUS_UPDATE', { unitId: participantId, status: cadStatus, success: statusResult?.success, callId });
+      } catch (e) {
+        this.log('CAD_ERROR', { error: e.message });
+      }
+    }
+
+    const time = this.formatMilitaryTime();
+    let resp;
+    if (verb === 'assign') {
+      resp = `${participantId}, 10-4. Showing you on ${callDisplay}.`;
+    } else {
+      resp = `${participantId}, copy, ${statusWord} on ${callDisplay}, ${time}.`;
+    }
+    await this.speak(resp, participantId);
+    this.addConversationExchange(participantId, transcript, resp);
+    setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+  }
+
   async handleAssignCall(participantId, transcript, slots) {
     this.log('ASSIGN_CALL', { participant: participantId, transcript, slots });
 
@@ -3566,41 +3763,192 @@ class AIDispatcher {
       const callsResult = await cadService.getActiveCalls();
       const activeCalls = callsResult.calls || callsResult.results || [];
 
-      let targetCall = null;
-      if (slots?.callNumber) {
-        targetCall = this.resolveShorthandCallNumber(slots.callNumber, activeCalls);
-      }
-      if (!targetCall && (slots?.callLocation || slots?.callNature)) {
-        targetCall = this.findCallByDescription(activeCalls, slots.callLocation, slots.callNature);
-      }
+      const { match, candidates } = this.resolveCallByDescriptor(activeCalls, slots);
 
-      if (!targetCall) {
-        const resp = `${participantId}, unable to locate that call.`;
-        await this.speak(resp, participantId);
-        this.addConversationExchange(participantId, transcript, resp);
-        setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+      if (match) {
+        await this._executeCallVerb(participantId, transcript, match, 'assign');
         return;
       }
 
-      const callId = targetCall.call_id || targetCall.id || targetCall.call_number;
-      const callDisplay = targetCall.call_number || callId;
-      const assignResult = await cadService.assignUnitToCall(participantId, callId);
-      if (assignResult?.success === false) {
-        const resp = `${participantId}, unable to assign to that call.`;
-        await this.speak(resp, participantId);
-        this.addConversationExchange(participantId, transcript, resp);
-        setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+      if (candidates.length > 1) {
+        await this._promptCallDisambig(participantId, transcript, candidates, slots, 'assign');
         return;
       }
-      this.log('UNIT_ASSIGNED_TO_CALL', { unitId: participantId, callId, callDisplay });
 
-      const resp = `${participantId}, 10-4. Showing you on ${callDisplay}.`;
+      const resp = `${participantId}, no active ${this._describeNoun(slots)} found.`;
       await this.speak(resp, participantId);
       this.addConversationExchange(participantId, transcript, resp);
       setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
     } catch (error) {
       this.log('ASSIGN_CALL_ERROR', { error: error.message });
       const resp = `${participantId}, unable to assign to call. System error.`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+    }
+  }
+
+  async applyStatusByDescriptor(participantId, transcript, cadStatus, slots) {
+    if (!cadService.isConfigured()) return false;
+    const verb = cadStatus === 'en_route' ? 'en_route' : 'on_scene';
+    this.log('STATUS_BY_DESCRIPTOR', { participant: participantId, cadStatus, slots });
+    try {
+      const callsResult = await cadService.getActiveCalls();
+      const activeCalls = callsResult.calls || callsResult.results || [];
+      const { match, candidates } = this.resolveCallByDescriptor(activeCalls, slots);
+      if (match) {
+        await this._executeCallVerb(participantId, transcript, match, verb);
+        return true;
+      }
+      if (candidates.length > 1) {
+        await this._promptCallDisambig(participantId, transcript, candidates, slots, verb);
+        return true;
+      }
+      const resp = `${participantId}, no active ${this._describeNoun(slots)} found.`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+      return true;
+    } catch (e) {
+      this.log('STATUS_BY_DESCRIPTOR_ERROR', { error: e.message });
+      return false;
+    }
+  }
+
+  async handleCallDisambigResponse(participantId, transcript, savedSlots) {
+    const candidates = savedSlots?.disambigCandidates || [];
+    const verb = savedSlots?.disambigVerb || 'assign';
+    const original = savedSlots?.disambigOriginalSlots || {};
+
+    if (!candidates.length) {
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+      return;
+    }
+
+    const lower = (transcript || '').toLowerCase();
+    if (/\b(disregard|cancel|nevermind|never mind|10-22|scratch that)\b/.test(lower)) {
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+      const resp = `${participantId}, 10-4, disregard.`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+      return;
+    }
+
+    const ordinal = lower.match(/\b(first|second|third|fourth|one|two|three|four|1st|2nd|3rd|4th)\b/);
+    let chosen = null;
+    if (ordinal) {
+      const idxMap = { first:0,one:0,'1st':0, second:1,two:1,'2nd':1, third:2,three:2,'3rd':2, fourth:3,four:3,'4th':3 };
+      const idx = idxMap[ordinal[1]];
+      if (idx != null && idx < candidates.length) chosen = candidates[idx];
+    }
+
+    if (!chosen) {
+      const directNum = transcript.match(/\b(\d{2,7})\b/);
+      if (directNum) {
+        const c = this.resolveShorthandCallNumber(directNum[1], candidates.map(p => ({
+          call_number: p.call_number,
+          call_id: p.call_id,
+        })));
+        if (c) chosen = candidates.find(p => (p.call_id || p.call_number) === (c.call_id || c.call_number));
+      }
+    }
+
+    if (!chosen) {
+      const merged = {
+        callNature: original.callNature,
+        callLocation: original.callLocation,
+        callCity: original.callCity,
+      };
+      const txt = lower;
+      const numberedStreet = txt.match(/\b(\d+\s+[a-z][a-z\s]{2,}?)\b(?:\s+(?:street|st|avenue|ave|road|rd|drive|dr|lane|ln|boulevard|blvd|court|ct|place|pl)\b)?/i);
+      if (numberedStreet) merged.callLocation = numberedStreet[1].trim();
+      const cityHint = txt.match(/\bin\s+([a-z][a-z\s]{2,30})$/i);
+      if (cityHint) merged.callCity = cityHint[1].trim();
+
+      const restrictPool = candidates.map(p => ({
+        call_id: p.call_id,
+        call_number: p.call_number,
+        nature: p.nature,
+        location: p.location,
+      }));
+      const { match, candidates: stillMulti } = this.resolveCallByDescriptor(restrictPool, merged, restrictPool);
+      if (match) {
+        chosen = candidates.find(p => (p.call_id || p.call_number) === (match.call_id || match.call_number)) || match;
+      } else if (stillMulti.length > 1) {
+        await this._promptCallDisambig(participantId, transcript, stillMulti, merged, verb);
+        return;
+      }
+    }
+
+    if (!chosen) {
+      const resp = `${participantId}, didn't catch which one — say the address or the city.`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+      return;
+    }
+
+    await this._executeCallVerb(participantId, transcript, chosen, verb);
+  }
+
+  async handleShowOutWith(participantId, transcript, slots) {
+    this.log('SHOW_OUT_WITH', { participant: participantId, transcript, slots });
+
+    if (!cadService.isConfigured()) {
+      const resp = `${participantId}, CAD system not available.`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+      return;
+    }
+
+    let targetUnit = slots?.targetUnit ? normalizeUnitId(slots.targetUnit) : null;
+    if (!targetUnit) {
+      targetUnit = detectTargetUnitFromTranscript(transcript);
+    }
+    if (!targetUnit) {
+      const resp = `${participantId}, say again — out with which unit?`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+      return;
+    }
+
+    try {
+      const targetCall = await cadService.getUnitCurrentCallById(targetUnit);
+      const callId = targetCall?.call_id || targetCall?.call_number || targetCall?.callNumber;
+      if (!callId) {
+        const resp = `${participantId}, ${targetUnit} is not currently on a call.`;
+        await this.speak(resp, participantId);
+        this.addConversationExchange(participantId, transcript, resp);
+        setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+        return;
+      }
+
+      const callDisplay = targetCall.call_number || callId;
+      const assignResult = await cadService.assignUnitToCall(participantId, callId);
+      if (assignResult?.success === false) {
+        const resp = `${participantId}, unable to attach you to ${targetUnit}'s call.`;
+        await this.speak(resp, participantId);
+        this.addConversationExchange(participantId, transcript, resp);
+        setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+        return;
+      }
+
+      try {
+        await cadService.updateUnitStatus(participantId, 'on_scene');
+      } catch (e) {
+        this.log('CAD_ERROR', { error: e.message });
+      }
+
+      this.log('SHOW_OUT_WITH_OK', { unitId: participantId, withUnit: targetUnit, callId, callDisplay });
+      const time = this.formatMilitaryTime();
+      const resp = `${participantId}, copy, on scene with ${targetUnit} on ${callDisplay}, ${time}.`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+    } catch (error) {
+      this.log('SHOW_OUT_WITH_ERROR', { error: error.message });
+      const resp = `${participantId}, unable to attach to ${targetUnit}'s call. System error.`;
       await this.speak(resp, participantId);
       this.addConversationExchange(participantId, transcript, resp);
       setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
@@ -3877,6 +4225,14 @@ class AIDispatcher {
     this.log('ADD_NOTE', { participant: participantId, transcript, slots });
 
     const noteContent = slots?.noteContent;
+    const beAdvised = !!slots?.beAdvised;
+
+    if (beAdvised) {
+      const raw = (noteContent && noteContent.trim().length > 2) ? noteContent.trim() : transcript.trim();
+      await this.executeBeAdvisedNote(participantId, transcript, raw);
+      return;
+    }
+
     if (noteContent && noteContent.trim().length > 2) {
       await this.executeAddNote(participantId, transcript, noteContent.trim());
     } else {
@@ -3884,6 +4240,66 @@ class AIDispatcher {
       const resp = `${participantId}, go ahead with your note.`;
       await this.speak(resp, participantId);
       this.addConversationExchange(participantId, transcript, resp);
+    }
+  }
+
+  async executeBeAdvisedNote(participantId, transcript, rawContent) {
+    try {
+      if (!cadService.isConfigured()) {
+        const resp = `${participantId}, CAD system not available.`;
+        await this.speak(resp, participantId);
+        this.addConversationExchange(participantId, transcript, resp);
+        setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+        return;
+      }
+
+      const currentCall = await cadService.getUnitCurrentCallById(participantId);
+      const callId = currentCall?.call_id || currentCall?.call_number || currentCall?.callNumber;
+      if (!callId) {
+        const resp = `${participantId}, you're not assigned to a call.`;
+        await this.speak(resp, participantId);
+        this.addConversationExchange(participantId, transcript, resp);
+        setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+        return;
+      }
+
+      let rewriteResult;
+      try {
+        rewriteResult = await rewriteCallNote(participantId, rawContent);
+      } catch (e) {
+        this.log('BE_ADVISED_REWRITE_ERROR', { error: e.message });
+        rewriteResult = { note: rawContent, confidence: 'medium', rewritten: false };
+      }
+
+      this.log('BE_ADVISED_REWRITE', { participantId, raw: rawContent, note: rewriteResult.note, confidence: rewriteResult.confidence });
+
+      if (rewriteResult.confidence === 'low' || !rewriteResult.note) {
+        const resp = `${participantId}, didn't catch that note — say again?`;
+        setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_BE_ADVISED_NOTE, null, {}, true);
+        await this.speak(resp, participantId);
+        this.addConversationExchange(participantId, transcript, resp);
+        return;
+      }
+
+      const noteText = `${participantId}: ${rewriteResult.note}`;
+      const noteResult = await cadService.addCallNote(callId, noteText);
+      if (noteResult?.success === false) {
+        const resp = `${participantId}, unable to add note — try again.`;
+        await this.speak(resp, participantId);
+        this.addConversationExchange(participantId, transcript, resp);
+        setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+        return;
+      }
+
+      this.log('BE_ADVISED_NOTE_ADDED', { unitId: participantId, callId, note: rewriteResult.note });
+      this.logSpeechEvent(participantId, transcript, 'ADD_NOTE_BE_ADVISED', null);
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+    } catch (error) {
+      this.log('BE_ADVISED_ERROR', { error: error.message });
+      const resp = `${participantId}, unable to add note. System error.`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
     }
   }
 

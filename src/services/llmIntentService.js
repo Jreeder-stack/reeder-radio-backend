@@ -172,7 +172,8 @@ Return: { "intent": "SILENCE" }
 
 ### STATUS_CHANGE
 Unit is requesting a status change from dispatch. TIER 1: Use fixed short format — no unit ID, just status and time.
-Return: { "intent": "STATUS_CHANGE", "response": "<short: Copy/10-4, status, time>", "cadStatus": "<status_value>" }
+For en_route ("en route", "10-76", "responding") and on_scene ("on scene", "arrived", "10-97") status changes, the unit MAY also describe which call they're going to/arriving at by nature, address, or city — e.g. "10-76 to the warrant service on Apple Street", "10-97 on the disturbance in Bedford", "en route to the alarm". When they do, extract those descriptor pieces into slots.callNature / slots.callLocation / slots.callCity. The handler will resolve the call and attach the unit before applying the status. Leave slots out entirely if the unit only changed status without naming a call.
+Return: { "intent": "STATUS_CHANGE", "response": "<short: Copy/10-4, status, time>", "cadStatus": "<status_value>", "slots": { "callNature": "<if mentioned>", "callLocation": "<if mentioned>", "callCity": "<if mentioned>" } }
 
 ### STATUS_CHANGE_OTHER
 A unit (often the dispatcher) is requesting a status change for A DIFFERENT unit. The unit ID being changed is NOT the speaker's own unit ID — it is some other unit named in the transcript.
@@ -295,18 +296,29 @@ Use the exact unit ID string from the "Unit ID:" field provided in the prompt. D
 Return: { "intent": "WAKE_ONLY", "response": "<UNIT_ID>, go ahead." }
 
 ### ASSIGN_CALL
-Unit wants to attach/assign THEMSELVES to a call. Phrases: "attach me to call 456", "show me on the call on Adams Street", "put me on call 456", "add me to the warrant service on Polk".
-If they give a call number (even shorthand like "456"), extract it. If they describe a call by location/nature, extract that.
-Return: { "intent": "ASSIGN_CALL", "response": null, "slots": { "callNumber": "<if provided, raw number like '456' or '26-1-000456'>", "callLocation": "<if described by location>", "callNature": "<if described by nature/type>" } }
+Unit wants to attach/assign THEMSELVES to a call. Phrases: "attach me to call 456", "show me on the call on Adams Street", "put me on call 456", "add me to the warrant service on Polk", "assign me to the disturbance in Bedford", "attach me to the warrant service on the screen".
+If they give a call number (even shorthand like "456"), extract it. If they describe a call by nature/address/city, extract whichever pieces they gave you into the appropriate slot. callNature is the incident type ("warrant service", "disturbance", "alarm", "domestic"). callLocation is a street address or partial street ("123 Apple Street", "Apple Street"). callCity is a municipality / township / borough name ("Bedford", "Chalfont").
+Slots are independent — fill any combination the unit gave. The system will resolve the descriptor against active calls.
+Return: { "intent": "ASSIGN_CALL", "response": null, "slots": { "callNumber": "<if provided, raw number like '456' or '26-1-000456'>", "callLocation": "<street address or partial address if mentioned>", "callNature": "<call type/nature if mentioned>", "callCity": "<city/township/borough if mentioned>" } }
+
+### SHOW_OUT_WITH
+Unit is putting THEMSELVES on the same call as another unit AND marking themselves on-scene. Phrases: "show me out with [unit]", "put me out with [unit]", "I'm on scene with [unit]", "show me 10-97 with [unit]", "show me with [unit] on scene", "out with [unit]".
+The system will look up the target unit's currently assigned call and attach the speaker to that call + mark them on scene in one step.
+Return: { "intent": "SHOW_OUT_WITH", "response": null, "slots": { "targetUnit": "<other unit ID exactly as spoken, uppercased and hyphenated like 'INDIANA-2' or numeric like '5021'>" } }
 
 ### ASSIGN_OTHER_UNIT
 Unit wants to attach/assign A DIFFERENT unit to a call. Phrases: "add Beaver-2 to my call", "attach Lincoln-3 to call 456", "put Beaver-2 on the call on Adams Street".
 Return: { "intent": "ASSIGN_OTHER_UNIT", "response": null, "slots": { "targetUnit": "<unit ID to assign>", "callNumber": "<if provided>", "callLocation": "<if described>", "callNature": "<if described>", "useMyCall": true/false } }
 
 ### ADD_NOTE
-Unit wants to add a note to their current call. Phrases: "make a note", "note this", "can you note", "add a note".
-If the note content is provided inline (after the trigger phrase), extract it. Otherwise leave noteContent null.
-Return: { "intent": "ADD_NOTE", "response": null, "slots": { "noteContent": "<if provided inline, otherwise null>" } }
+Unit wants to add a note to their current call. Two flavors:
+
+A) Plain note request — phrases: "make a note", "note this", "can you note", "add a note", "add a note that ...". Extract any inline content into noteContent.
+
+B) "Be advised" / informational note — the unit is reporting something they want logged on the call without changing status. Phrases: "be advised [...]", "advise the call [...]", "for the record [...]", "make a note that [...]", "note this [...]", "let it be known [...]". Set slots.beAdvised = true and put EVERYTHING the unit said after the trigger phrase verbatim into slots.noteContent. Do NOT rewrite, summarize, or paraphrase — preserve the raw words. The handler will run a separate professional rewrite step.
+
+If the speaker is not on a call, the handler will reject — you do not need to check that.
+Return: { "intent": "ADD_NOTE", "response": null, "slots": { "noteContent": "<verbatim content if provided inline, otherwise null>", "beAdvised": true/false } }
 
 ### LOG_EVENT_NOTE
 Unit reports a situational tactical event without saying "add a note". This intent auto-logs a structured call note AND (for non-custody events) auto-activates Clear Air. Bias toward classifying as LOG_EVENT_NOTE — when in doubt, prefer "more notes than nothing".
@@ -439,6 +451,8 @@ You will be told the current conversation state. Use it to interpret ambiguous i
 - AWAITING_CALL_UPDATE_CONFIRM: Unit is confirming or denying a call update → return CONFIRM or DENY.
 - AWAITING_ANIMAL_SEARCH_TYPE: Unit is providing animal search criteria. Extract any search fields → return ANIMAL_SEARCH with available slots.
 - AWAITING_STATUS_CHECK_RESPONSE: Unit is responding to a status check from CAD. Treat their response as a status → return CONFIRM (if OK/10-4) or provide new status info.
+- AWAITING_BE_ADVISED_NOTE: You just asked the unit to repeat their "be advised" note because the previous attempt was unintelligible. Treat their entire transcript as the raw note and return ADD_NOTE with beAdvised=true and noteContent set to the transcript.
+- AWAITING_CALL_DISAMBIG: You just asked the unit to pick between multiple matching active calls. Their entire transcript is the clarifying answer (e.g. "the one at 123 Apple Street", "Bedford", "the second one"). Return ASSIGN_CALL with whatever descriptor pieces they gave (callNumber, callLocation, callNature, callCity). The handler will re-resolve against the saved candidate set.
 
 IMPORTANT: In AWAITING_* states, "10-4", "copy", "roger" mean CONFIRM (the unit is answering your question). In IDLE state, they mean SILENCE (the unit is just acknowledging, not talking to you).
 
@@ -563,6 +577,62 @@ export async function composeNatural(unitId, draftPrompt, contextHint = null) {
   } catch (e) {
     console.warn('[LLM-Intent] composeNatural failed:', e.message);
     return draftPrompt;
+  }
+}
+
+export async function rewriteCallNote(unitId, rawTranscript) {
+  const openai = getClient();
+  if (!openai) {
+    return { note: rawTranscript, confidence: 'medium', rewritten: false };
+  }
+
+  const systemMessage = `You convert raw radio chatter into a professional CAD call note.
+
+RULES:
+- Convert to third person, past tense, attributed to the speaking unit (refer to them by their unit ID).
+- Keep it concise — one or two sentences. Plain professional CAD language.
+- Preserve every fact verbatim — names, addresses, statements. Do NOT add details, do NOT speculate.
+- Do NOT include the unit ID prefix at the start (the system adds the unit attribution itself).
+- If the raw text is mostly unintelligible, garbled, or you cannot make sense of what was reported, set confidence to "low" so the dispatcher asks the unit to repeat.
+- Otherwise set confidence to "high" or "medium" based on how clear the report is.
+
+Examples:
+RAW (unit INDIANA-1): "I talked to the homeowner and they advised John Smith no longer lives here."
+NOTE: "Was advised by homeowner that John Smith no longer lives at this address."
+CONFIDENCE: high
+
+RAW (unit LINCOLN-3): "be advised the vehicle left westbound on Main"
+NOTE: "Reported the vehicle left westbound on Main."
+CONFIDENCE: high
+
+RAW (unit BEAVER-2): "uh be advised the the the [garbled]"
+NOTE: ""
+CONFIDENCE: low
+
+Return ONLY a JSON object: { "note": "<rewritten note text, or empty string if confidence is low>", "confidence": "low" | "medium" | "high" }`;
+
+  const userMessage = `Speaking unit: ${unitId}\nRaw transcript: "${rawTranscript}"`;
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: AZURE_OPENAI_DEPLOYMENT,
+      messages: [
+        { role: 'system', content: systemMessage },
+        { role: 'user', content: userMessage }
+      ],
+      response_format: { type: 'json_object' },
+      temperature: 0.2,
+      max_tokens: 200
+    });
+    const content = response.choices[0]?.message?.content;
+    if (!content) return { note: rawTranscript, confidence: 'medium', rewritten: false };
+    const parsed = JSON.parse(content);
+    const note = (parsed.note || '').trim();
+    const confidence = parsed.confidence === 'low' || parsed.confidence === 'high' ? parsed.confidence : 'medium';
+    return { note, confidence, rewritten: !!note };
+  } catch (e) {
+    console.warn('[LLM-Intent] rewriteCallNote failed:', e.message);
+    return { note: rawTranscript, confidence: 'medium', rewritten: false };
   }
 }
 
