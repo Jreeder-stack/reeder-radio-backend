@@ -346,6 +346,17 @@ export async function getUnitCurrentCallById(unitId) {
   if (result.success === false) {
     return { callNumber: null };
   }
+  if (result && result.has_active_call === true && result.call && typeof result.call === 'object') {
+    return {
+      ...result.call,
+      unit_id: result.unit_id,
+      has_active_call: true,
+      call: result.call,
+    };
+  }
+  if (result && result.has_active_call === false) {
+    return { callNumber: null, has_active_call: false };
+  }
   return result;
 }
 
