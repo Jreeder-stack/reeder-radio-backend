@@ -9,11 +9,18 @@ enum SignalingState: String {
     case authenticated
 }
 
+enum LocationTrackEvent {
+    case start
+    case stop
+}
+
 @MainActor
 final class SignalingClient: ObservableObject {
     @Published var state: SignalingState = .disconnected
     @Published var currentChannel: String?
     @Published var lastError: String?
+
+    let locationTrackEvents = PassthroughSubject<LocationTrackEvent, Never>()
 
     var serverURL: String
     var sessionCookieHeader: String?
@@ -109,6 +116,18 @@ final class SignalingClient: ObservableObject {
             }
         }
 
+        socket.on("location:track_start") { [weak self] _, _ in
+            Task { @MainActor in
+                self?.locationTrackEvents.send(.start)
+            }
+        }
+
+        socket.on("location:track_stop") { [weak self] _, _ in
+            Task { @MainActor in
+                self?.locationTrackEvents.send(.stop)
+            }
+        }
+
         socket.on("channel:join") { [weak self] data, _ in
             Task { @MainActor in
                 if let payload = data.first as? [String: Any],
@@ -137,6 +156,18 @@ final class SignalingClient: ObservableObject {
         manager = nil
         state = .disconnected
         currentChannel = nil
+    }
+
+    func emitLocationUpdate(latitude: Double, longitude: Double, accuracy: Double, heading: Double?, speed: Double?) {
+        guard state == .authenticated, let socket else { return }
+        var payload: [String: Any] = [
+            "latitude": latitude,
+            "longitude": longitude,
+            "accuracy": accuracy
+        ]
+        if let heading { payload["heading"] = heading }
+        if let speed { payload["speed"] = speed }
+        socket.emit("location:update", payload)
     }
 
     private func sendAuth() {

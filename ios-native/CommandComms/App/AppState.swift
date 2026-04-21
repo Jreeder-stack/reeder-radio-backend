@@ -16,6 +16,9 @@ final class AppState: ObservableObject {
     let api: ApiClient
     let auth: AuthService
     let signaling: SignalingClient
+    let locationTracker: LocationTracker
+
+    private var cancellables = Set<AnyCancellable>()
 
     init() {
         let prefs = AppPreferences.load()
@@ -23,7 +26,33 @@ final class AppState: ObservableObject {
         let api = ApiClient(baseURL: prefs.signalingURL)
         self.api = api
         self.auth = AuthService(api: api, keychain: KeychainStore())
-        self.signaling = SignalingClient(serverURL: prefs.signalingURL)
+        let signaling = SignalingClient(serverURL: prefs.signalingURL)
+        self.signaling = signaling
+        let tracker = LocationTracker()
+        self.locationTracker = tracker
+        tracker.signaling = signaling
+
+        signaling.locationTrackEvents
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] event in
+                guard let self else { return }
+                switch event {
+                case .start:
+                    self.locationTracker.startTracking()
+                case .stop:
+                    self.locationTracker.stopTracking()
+                }
+            }
+            .store(in: &cancellables)
+
+        signaling.$state
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] state in
+                if state == .disconnected {
+                    self?.locationTracker.stopTracking()
+                }
+            }
+            .store(in: &cancellables)
 
         Task { await restoreSession() }
     }
@@ -46,6 +75,7 @@ final class AppState: ObservableObject {
         Task {
             await auth.logout()
             signaling.disconnect()
+            locationTracker.stopTracking()
             authStatus = .signedOut
         }
     }
@@ -59,6 +89,12 @@ final class AppState: ObservableObject {
         signaling.updateServerURL(url)
     }
 
+    /// Captures a single fix and emits it to dispatch. Future PTT code should
+    /// call this on PTT press alongside TX start to mirror Android behavior.
+    func requestOneShotLocationFix() {
+        locationTracker.requestOneShotFix()
+    }
+
     private func connectSignaling(for user: User) {
         signaling.serverURL = settings.signalingURL
         let cookie = keychain.sessionCookie
@@ -67,5 +103,6 @@ final class AppState: ObservableObject {
                           username: user.username,
                           defaultChannel: settings.defaultChannelId,
                           sessionCookie: cookie)
+        locationTracker.requestWhenInUse()
     }
 }
