@@ -8,6 +8,7 @@ import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioTrack
+import android.media.MediaPlayer
 import android.util.Log
 import kotlin.math.sin
 import androidx.core.app.NotificationCompat
@@ -169,109 +170,163 @@ class CommandCommsFirebaseService : FirebaseMessagingService() {
     }
 
     /**
-     * Plays the dispatch console's "Tone A" alert — a 2.5s, 1000 Hz sine wave — by
-     * synthesizing PCM on-device and rendering it through an AudioTrack on
-     * STREAM_ALARM. No file download, no codec, no resampler: the tone is identical
-     * on every device and matches client/src/audio/toneEngine.js#playToneA exactly.
+     * Plays the dispatcher's pager tone on STREAM_ALARM. Primary path decodes the
+     * bundled R.raw.pager_tone WAV via MediaPlayer so the handset and the dispatch
+     * console play identical audio. If the bundled WAV cannot be opened/prepared,
+     * we fall back to the synthesized 1 kHz sine via AudioTrack so paging is never
+     * silent. In both paths the alarm volume is bumped to max and restored on
+     * completion, and any prior paging playback is cancelled before a new one starts.
      */
     private fun playPagingTone(app: CommandCommsApp) {
-        Log.d(TAG, "[BUILD-TONE-A-V2] playPagingTone ENTER — synthesized 1000Hz sine (not MediaPlayer, not HTTP fetch)")
+        Log.d(TAG, "[PAGER-WAV] playPagingTone ENTER — attempting bundled pager_tone.wav via MediaPlayer")
         scope.launch(Dispatchers.IO) {
-            var track: AudioTrack? = null
-            var raisedVolume = false
             val am = applicationContext.getSystemService(Context.AUDIO_SERVICE) as AudioManager
             val prevVolume = am.getStreamVolume(AudioManager.STREAM_ALARM)
+            var raisedVolume = false
+            val maxVolume = am.getStreamMaxVolume(AudioManager.STREAM_ALARM)
+            try {
+                am.setStreamVolume(AudioManager.STREAM_ALARM, maxVolume, 0)
+                raisedVolume = true
+            } catch (e: SecurityException) {
+                Log.w(TAG, "[PAGER-WAV] Cannot override alarm volume (DnD policy?): ${e.message}")
+            }
+            val restoreVolume = raisedVolume
+
+            val player = MediaPlayer()
+            val attributes = AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_ALARM)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build()
+
+            val prepared = try {
+                player.setAudioAttributes(attributes)
+                applicationContext.resources.openRawResourceFd(R.raw.pager_tone).use { afd ->
+                    player.setDataSource(afd.fileDescriptor, afd.startOffset, afd.length)
+                }
+                player.setVolume(1.0f, 1.0f)
+                player.prepare()
+                true
+            } catch (e: Exception) {
+                Log.w(TAG, "[PAGER-WAV] Failed to open/prepare bundled WAV — falling back to synth: ${e.message}", e)
+                runCatching { player.release() }
+                false
+            }
+
+            if (!prepared) {
+                playSynthesizedFallback(am, prevVolume, restoreVolume)
+                return@launch
+            }
+
+            synchronized(playerLock) {
+                cancelCurrentPagingPlaybackLocked()
+                currentPagingPlayer = player
+                pagingAudioManager = am
+                previousAlarmVolume = prevVolume
+            }
+
+            player.setOnCompletionListener {
+                Log.d(TAG, "[PAGER-WAV] WAV playback completed")
+                finishPagingPlayer(player, am, prevVolume, restoreVolume)
+            }
+            player.setOnErrorListener { _, what, extra ->
+                Log.w(TAG, "[PAGER-WAV] MediaPlayer error what=$what extra=$extra")
+                finishPagingPlayer(player, am, prevVolume, restoreVolume)
+                true
+            }
 
             try {
-                val sampleRate = 48000
-                val frequencyHz = 1000.0
-                val durationMs = 2500
-                val numSamples = sampleRate * durationMs / 1000
-                val amplitude = (Short.MAX_VALUE * 0.5).toInt()
-                val pcm = ShortArray(numSamples)
-                for (i in 0 until numSamples) {
-                    pcm[i] = (amplitude * sin(2.0 * Math.PI * frequencyHz * i / sampleRate)).toInt().toShort()
-                }
-
-                val maxVolume = am.getStreamMaxVolume(AudioManager.STREAM_ALARM)
-                try {
-                    am.setStreamVolume(AudioManager.STREAM_ALARM, maxVolume, 0)
-                    raisedVolume = true
-                } catch (e: SecurityException) {
-                    Log.w(TAG, "[BUILD-TONE-A-V2] Cannot override alarm volume (DnD policy?): ${e.message}")
-                }
-
-                val attributes = AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_ALARM)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                    .build()
-                val format = AudioFormat.Builder()
-                    .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-                    .setSampleRate(sampleRate)
-                    .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
-                    .build()
-
-                val minBuf = AudioTrack.getMinBufferSize(
-                    sampleRate, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT
-                )
-                val streamBufBytes = maxOf(minBuf, 8192)
-
-                val newTrack = AudioTrack.Builder()
-                    .setAudioAttributes(attributes)
-                    .setAudioFormat(format)
-                    .setBufferSizeInBytes(streamBufBytes)
-                    .setTransferMode(AudioTrack.MODE_STREAM)
-                    .build()
-                track = newTrack
-                runCatching { newTrack.setVolume(AudioTrack.getMaxVolume()) }
-
-                val restoreVolume = raisedVolume
-                synchronized(playerLock) {
-                    currentPagingTrack?.let { prev ->
-                        runCatching { prev.pause() }
-                        runCatching { prev.flush() }
-                        runCatching { prev.release() }
-                    }
-                    currentPagingTrack = newTrack
-                    pagingAudioManager = am
-                    previousAlarmVolume = prevVolume
-                }
-
-                newTrack.play()
-                Log.d(TAG, "[BUILD-TONE-A-V2] Tone A playing: 1000Hz sine ${durationMs}ms STREAM_ALARM max=$maxVolume (was $prevVolume) minBuf=$minBuf")
-
-                var written = 0
-                val chunk = 4096
-                while (written < numSamples) {
-                    val toWrite = minOf(chunk, numSamples - written)
-                    val n = newTrack.write(pcm, written, toWrite)
-                    if (n <= 0) {
-                        Log.w(TAG, "[BUILD-TONE-A-V2] AudioTrack.write returned $n — aborting")
-                        break
-                    }
-                    written += n
-                    val stillActive = synchronized(playerLock) { currentPagingTrack === newTrack }
-                    if (!stillActive) break
-                }
-
-                runCatching {
-                    if (synchronized(playerLock) { currentPagingTrack === newTrack }) {
-                        newTrack.stop()
-                    }
-                }
-                finishPagingPlayback(newTrack, am, prevVolume, restoreVolume)
+                player.start()
+                Log.d(TAG, "[PAGER-WAV] WAV playing: STREAM_ALARM max=$maxVolume (was $prevVolume) durationMs=${player.duration}")
             } catch (e: Exception) {
-                Log.w(TAG, "[BUILD-TONE-A-V2] Paging tone playback exception: ${e.message}", e)
-                runCatching { track?.release() }
-                if (raisedVolume) {
-                    runCatching { am.setStreamVolume(AudioManager.STREAM_ALARM, prevVolume, 0) }
+                Log.w(TAG, "[PAGER-WAV] MediaPlayer.start failed — falling back to synth: ${e.message}", e)
+                finishPagingPlayer(player, am, prevVolume, restoreVolume = false)
+                playSynthesizedFallback(am, prevVolume, restoreVolume)
+            }
+        }
+    }
+
+    /**
+     * Synthesized 1 kHz sine fallback that runs only when the bundled WAV cannot be
+     * loaded. Mirrors the previous AudioTrack path so paging is never silent.
+     */
+    private fun playSynthesizedFallback(am: AudioManager, prevVolume: Int, restoreVolume: Boolean) {
+        Log.d(TAG, "[PAGER-SYNTH-FALLBACK] Playing synthesized 1000Hz sine fallback")
+        var track: AudioTrack? = null
+        try {
+            val sampleRate = 48000
+            val frequencyHz = 1000.0
+            val durationMs = 2500
+            val numSamples = sampleRate * durationMs / 1000
+            val amplitude = (Short.MAX_VALUE * 0.5).toInt()
+            val pcm = ShortArray(numSamples)
+            for (i in 0 until numSamples) {
+                pcm[i] = (amplitude * sin(2.0 * Math.PI * frequencyHz * i / sampleRate)).toInt().toShort()
+            }
+
+            val attributes = AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_ALARM)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build()
+            val format = AudioFormat.Builder()
+                .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                .setSampleRate(sampleRate)
+                .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                .build()
+
+            val minBuf = AudioTrack.getMinBufferSize(
+                sampleRate, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT
+            )
+            val streamBufBytes = maxOf(minBuf, 8192)
+
+            val newTrack = AudioTrack.Builder()
+                .setAudioAttributes(attributes)
+                .setAudioFormat(format)
+                .setBufferSizeInBytes(streamBufBytes)
+                .setTransferMode(AudioTrack.MODE_STREAM)
+                .build()
+            track = newTrack
+            runCatching { newTrack.setVolume(AudioTrack.getMaxVolume()) }
+
+            synchronized(playerLock) {
+                cancelCurrentPagingPlaybackLocked()
+                currentPagingTrack = newTrack
+                pagingAudioManager = am
+                previousAlarmVolume = prevVolume
+            }
+
+            newTrack.play()
+
+            var written = 0
+            val chunk = 4096
+            while (written < numSamples) {
+                val toWrite = minOf(chunk, numSamples - written)
+                val n = newTrack.write(pcm, written, toWrite)
+                if (n <= 0) {
+                    Log.w(TAG, "[PAGER-SYNTH-FALLBACK] AudioTrack.write returned $n — aborting")
+                    break
                 }
-                synchronized(playerLock) {
-                    if (currentPagingTrack === track) {
-                        currentPagingTrack = null
-                        pagingAudioManager = null
-                        previousAlarmVolume = -1
-                    }
+                written += n
+                val stillActive = synchronized(playerLock) { currentPagingTrack === newTrack }
+                if (!stillActive) break
+            }
+
+            runCatching {
+                if (synchronized(playerLock) { currentPagingTrack === newTrack }) {
+                    newTrack.stop()
+                }
+            }
+            finishPagingPlayback(newTrack, am, prevVolume, restoreVolume)
+        } catch (e: Exception) {
+            Log.w(TAG, "[PAGER-SYNTH-FALLBACK] playback exception: ${e.message}", e)
+            runCatching { track?.release() }
+            if (restoreVolume) {
+                runCatching { am.setStreamVolume(AudioManager.STREAM_ALARM, prevVolume, 0) }
+            }
+            synchronized(playerLock) {
+                if (currentPagingTrack === track) {
+                    currentPagingTrack = null
+                    pagingAudioManager = null
+                    previousAlarmVolume = -1
                 }
             }
         }
@@ -296,6 +351,25 @@ class CommandCommsFirebaseService : FirebaseMessagingService() {
         }
     }
 
+    private fun finishPagingPlayer(
+        player: MediaPlayer,
+        am: AudioManager,
+        prevVolume: Int,
+        restoreVolume: Boolean
+    ) {
+        runCatching { player.release() }
+        if (restoreVolume) {
+            runCatching { am.setStreamVolume(AudioManager.STREAM_ALARM, prevVolume, 0) }
+        }
+        synchronized(playerLock) {
+            if (currentPagingPlayer === player) {
+                currentPagingPlayer = null
+                pagingAudioManager = null
+                previousAlarmVolume = -1
+            }
+        }
+    }
+
     companion object {
         const val PAGING_CHANNEL_ID = "channel_paging_v2"
         const val PAGE_NOTIFICATION_ID = 7777
@@ -307,17 +381,33 @@ class CommandCommsFirebaseService : FirebaseMessagingService() {
 
         private val playerLock = Any()
         @Volatile private var currentPagingTrack: AudioTrack? = null
+        @Volatile private var currentPagingPlayer: MediaPlayer? = null
         @Volatile private var pagingAudioManager: AudioManager? = null
         @Volatile private var previousAlarmVolume: Int = -1
 
+        /**
+         * Stop and release any active paging playback (WAV via MediaPlayer or
+         * synthesized PCM via AudioTrack). Caller must already hold playerLock.
+         * Leaves alarm-volume bookkeeping fields intact so they can be
+         * overwritten by the new playback that follows.
+         */
+        private fun cancelCurrentPagingPlaybackLocked() {
+            currentPagingTrack?.let { prev ->
+                runCatching { prev.pause() }
+                runCatching { prev.flush() }
+                runCatching { prev.release() }
+            }
+            currentPagingTrack = null
+            currentPagingPlayer?.let { prev ->
+                runCatching { prev.stop() }
+                runCatching { prev.release() }
+            }
+            currentPagingPlayer = null
+        }
+
         fun stopPagingTone() {
             synchronized(playerLock) {
-                currentPagingTrack?.let { t ->
-                    runCatching { t.pause() }
-                    runCatching { t.flush() }
-                    runCatching { t.release() }
-                }
-                currentPagingTrack = null
+                cancelCurrentPagingPlaybackLocked()
                 val am = pagingAudioManager
                 val prev = previousAlarmVolume
                 if (am != null && prev >= 0) {
