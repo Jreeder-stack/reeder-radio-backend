@@ -1,5 +1,6 @@
 import { speechToText, textToSpeech, isConfigured as isAzureConfigured } from './azureSpeechService.js';
 import { matchCommand, resetDispatcherState, matchEmergencyResponse, matchSecureConfirmation, getUnitSessionState, setUnitSessionState, DISPATCHER_STATE, EMERGENCY_DISTRESS_PHRASES, ownsInFlight, clearPromptTimeout } from './commandMatcher.js';
+import { detectEmergencyBypass, parseWake, parseIdentify, WAKE_RESULT, IDENTIFY_RESULT, IDENTIFY_TIMEOUT_MS } from './wakeGate.js';
 import { RADIO_STATUS, extractActualStatusFromRejection } from './cadService.js';
 import { resolveDestination, KNOWN_PLACES } from './agencyKnowledge.js';
 import { isConfigured as isLlmConfigured, classifyIntent, answerWithData, composeNatural, rewriteCallNote } from './llmIntentService.js';
@@ -485,6 +486,7 @@ class AIDispatcher {
     this._publishSequence = 0;
     this.verboseLogging = process.env.AI_DISPATCH_VERBOSE === 'true';
     this._turnContextByUnit = new Map();
+    this._identifyTimeouts = new Map();
     this._boloPollingInterval = null;
     this._seenBoloIds = new Set();
     this._statusCheckPollingInterval = null;
@@ -860,6 +862,10 @@ class AIDispatcher {
     this.errorCooldowns.clear();
     this._errorLastSeen.clear();
     this.emergencyEscalation.clearAllEscalations();
+    for (const handle of this._identifyTimeouts.values()) {
+      clearTimeout(handle);
+    }
+    this._identifyTimeouts.clear();
     resetDispatcherState();
 
     if (this.connected) {
@@ -973,6 +979,28 @@ class AIDispatcher {
     if (!distressType) return false;
     const t = String(distressType).toLowerCase();
     return t.includes('officer down') || t.includes('emergency backup') || t.includes('immediate assistance') || t === 'reporting emergency';
+  }
+
+  _enterAwaitingIdentify(participantId) {
+    this._clearIdentifyTimeout(participantId);
+    setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_IDENTIFY);
+    const handle = setTimeout(() => {
+      this._identifyTimeouts.delete(participantId);
+      const cur = getUnitSessionState(participantId);
+      if (cur?.state === DISPATCHER_STATE.AWAITING_IDENTIFY) {
+        this.log('WAKE_IDENTIFY_TIMEOUT', { participant: participantId });
+        setUnitSessionState(participantId, DISPATCHER_STATE.IDLE);
+      }
+    }, IDENTIFY_TIMEOUT_MS);
+    this._identifyTimeouts.set(participantId, handle);
+  }
+
+  _clearIdentifyTimeout(participantId) {
+    const t = this._identifyTimeouts.get(participantId);
+    if (t) {
+      clearTimeout(t);
+      this._identifyTimeouts.delete(participantId);
+    }
   }
 
   _matchDistressPhrase(normalizedText) {
@@ -1477,24 +1505,89 @@ class AIDispatcher {
 
       const currentSession = getUnitSessionState(participantId);
       const currentState = currentSession?.state || DISPATCHER_STATE.IDLE;
-      if (currentState === DISPATCHER_STATE.IDLE) {
-        const normalizedForGate = transcript.trim().toLowerCase();
-        const isAddressingDispatch = /^central\b/i.test(normalizedForGate);
+
+      let effectiveTranscript = transcript;
+
+      const bypass = detectEmergencyBypass(transcript, {
+        hasActiveEscalation: this.emergencyEscalation.hasActiveEscalation(participantId)
+      });
+
+      if (currentState === DISPATCHER_STATE.IDLE || currentState === DISPATCHER_STATE.AWAITING_IDENTIFY) {
         const eventBypass = !!matchEventFromTranscript(transcript);
         const allClearBypass = isAllClearPhrase(transcript) && this._hasActiveAiClearAir();
-        if (!isAddressingDispatch && !eventBypass && !allClearBypass) {
-          this.verboseLog('IDLE_NO_CENTRAL_SKIP', { participant: participantId, transcript });
-          return;
-        }
-        if (!isAddressingDispatch && (eventBypass || allClearBypass)) {
-          this.log('IDLE_GATE_BYPASS', { participant: participantId, transcript, reason: eventBypass ? 'event' : 'all_clear' });
+
+        if (bypass) {
+          this.log('EMERGENCY_BYPASS', { participant: participantId, transcript, phrase: bypass.phrase, fromState: currentState });
+          this._clearIdentifyTimeout(participantId);
+          setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_COMMAND);
+        } else if (eventBypass || allClearBypass) {
+          this.log('IDLE_GATE_BYPASS', { participant: participantId, transcript, reason: eventBypass ? 'event' : 'all_clear', fromState: currentState });
+          this._clearIdentifyTimeout(participantId);
+          setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_COMMAND);
+        } else if (currentState === DISPATCHER_STATE.AWAITING_IDENTIFY) {
+          const id = parseIdentify(transcript);
+          this._clearIdentifyTimeout(participantId);
+          if (id.kind === IDENTIFY_RESULT.REJECTED) {
+            this.log('IDENTIFY_REJECTED', { participant: participantId, transcript });
+            setUnitSessionState(participantId, DISPATCHER_STATE.IDLE);
+            return;
+          }
+          if (id.kind === IDENTIFY_RESULT.IDENTIFY_UNIT_ONLY) {
+            const reply = `${id.unit}, go ahead.`;
+            this.logSpeechEvent(participantId, transcript, 'WAKE_IDENTIFY_UNIT_ONLY', reply);
+            await this.speak(reply, participantId);
+            this.addConversationExchange(participantId, transcript, reply);
+            setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_COMMAND);
+            return;
+          }
+          if (id.kind === IDENTIFY_RESULT.IDENTIFY_CENTRAL_UNIT) {
+            const reply = `Go ahead ${id.unit}.`;
+            this.logSpeechEvent(participantId, transcript, 'WAKE_IDENTIFY_CENTRAL_UNIT', reply);
+            await this.speak(reply, participantId);
+            this.addConversationExchange(participantId, transcript, reply);
+            setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_COMMAND);
+            return;
+          }
+          if (id.kind === IDENTIFY_RESULT.IDENTIFY_UNIT_WITH_REQUEST) {
+            this.log('WAKE_IDENTIFY_UNIT_WITH_REQUEST', { participant: participantId, spokenUnit: id.unit, remainder: id.remainder });
+            setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_COMMAND);
+            effectiveTranscript = id.remainder;
+          }
+        } else {
+          // currentState === IDLE
+          const wake = parseWake(transcript);
+          if (wake.kind === WAKE_RESULT.REJECTED) {
+            this.verboseLog('IDLE_WAKE_REJECTED', { participant: participantId, transcript });
+            return;
+          }
+          if (wake.kind === WAKE_RESULT.BARE_CENTRAL) {
+            const prompt = 'Unit calling Central, identify.';
+            this.logSpeechEvent(participantId, transcript, 'WAKE_BARE_CENTRAL', prompt);
+            await this.speak(prompt, participantId);
+            this.addConversationExchange(participantId, transcript, prompt);
+            this._enterAwaitingIdentify(participantId);
+            return;
+          }
+          if (wake.kind === WAKE_RESULT.WAKE_WITH_UNIT) {
+            const reply = `${wake.unit}, go ahead.`;
+            this.logSpeechEvent(participantId, transcript, 'WAKE_WITH_UNIT', reply);
+            await this.speak(reply, participantId);
+            this.addConversationExchange(participantId, transcript, reply);
+            setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_COMMAND);
+            return;
+          }
+          if (wake.kind === WAKE_RESULT.WAKE_WITH_REQUEST) {
+            this.log('WAKE_WITH_REQUEST', { participant: participantId, spokenUnit: wake.unit, remainder: wake.remainder });
+            setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_COMMAND);
+            effectiveTranscript = wake.remainder;
+          }
         }
       }
 
       if (isLlmConfigured()) {
-        await this.processTranscriptWithLLM(transcript, participantId);
+        await this.processTranscriptWithLLM(effectiveTranscript, participantId);
       } else {
-        await this.processTranscriptWithRegex(transcript, participantId);
+        await this.processTranscriptWithRegex(effectiveTranscript, participantId);
       }
 
     } catch (error) {
@@ -1731,23 +1824,6 @@ class AIDispatcher {
           this.log('EMERGENCY_PHRASE_DETECTED', { participant: participantId, transcript, distressType: matchedDistress.distressType });
           this._turnContextByUnit.set(participantId, { transcript, intent: 'EMERGENCY_PHRASE_ASSIST' });
           await this.handleEmergencyPhraseAssist(participantId, matchedDistress.distressType);
-          return;
-        }
-      }
-
-      const normalizedTranscript = transcript.trim().toLowerCase().replace(/[.,!?]+/g, '');
-      const hasUnitToUnit = /\b\w+[\s-]*\d+\s+from\s+\w+[\s-]*\d+\b/i.test(normalizedTranscript);
-      const hasCommandContent = /\b(10-\d+|run\b|plate\b|check\b|backup\b|service\b|zone\b|status\b|detail\b|stop\b|traffic\b|radio\b|time\b|clear\b|close\b|dispose\b|warrant\b|update\b|priority\b|animal\b|microchip\b|tag\b|call\b)/i.test(normalizedTranscript);
-      if (!hasUnitToUnit && !hasCommandContent) {
-        const isCentralHail = /^central\b/.test(normalizedTranscript);
-        if (isCentralHail) {
-          this.log('REGEX_WAKE_ONLY_PRECHECK', { participant: participantId, transcript });
-          const wakeResp = `${participantId}, go ahead.`;
-          this._turnContextByUnit.set(participantId, { transcript, intent: 'WAKE_ONLY' });
-          await this.speak(wakeResp, participantId);
-          this.addConversationExchange(participantId, transcript, wakeResp);
-          setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_COMMAND);
-          this.log('REGEX_WAKE_ONLY_AWAITING', { participant: participantId, newState: DISPATCHER_STATE.AWAITING_COMMAND });
           return;
         }
       }
