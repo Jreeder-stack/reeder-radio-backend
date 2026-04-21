@@ -1167,6 +1167,91 @@ class SignalingService {
     console.log(`[Signaling] CLEAR AIR END: ${channelId} released by ${socket.unitId}`);
   }
 
+  startClearAirInternal(rawChannelId, options = {}) {
+    const channelId = canonicalChannelKey(rawChannelId);
+    if (!channelId) return null;
+
+    if (this.clearAirStates.has(channelId)) {
+      return { alreadyActive: true, state: this.clearAirStates.get(channelId) };
+    }
+
+    const channelNamePart = channelId.includes('__') ? channelId.split('__').slice(1).join('__') : channelId;
+    const dispatcherId = options.dispatcherId || 'AI-DISPATCHER';
+    const clearAirData = {
+      channelId,
+      channelName: channelNamePart,
+      dispatcherId,
+      agencyId: options.agencyId || null,
+      timestamp: Date.now(),
+      initiator: options.initiator || 'ai',
+      originUnit: options.originUnit || null,
+      eventType: options.eventType || null,
+      auto: true,
+    };
+
+    this.clearAirStates.set(channelId, clearAirData);
+
+    this._emitToChannelAll(channelId, SIGNALING_EVENTS.CLEAR_AIR_START, clearAirData);
+
+    this._emitToDispatchers('clear_air:alert', {
+      ...clearAirData,
+      message: `CLEAR AIR (AI): ${dispatcherId} activated Clear Air on ${channelId}` +
+        (options.originUnit ? ` — originating unit ${options.originUnit}` : '') +
+        (options.eventType ? ` — event ${options.eventType}` : ''),
+    });
+
+    this._emitCallback('clearAirStart', { channelId, dispatcherId });
+    console.log(`[Signaling] CLEAR AIR START (internal): ${dispatcherId} on ${channelId} originUnit=${options.originUnit || 'n/a'} eventType=${options.eventType || 'n/a'}`);
+
+    return { alreadyActive: false, state: clearAirData };
+  }
+
+  endClearAirInternal(rawChannelId, options = {}) {
+    const channelId = canonicalChannelKey(rawChannelId);
+    if (!channelId) return null;
+
+    const clearAir = this.clearAirStates.get(channelId);
+    if (!clearAir) return null;
+
+    if (options.requireInitiator && clearAir.initiator !== options.requireInitiator) {
+      return { skipped: true, reason: 'initiator_mismatch', state: clearAir };
+    }
+
+    this.clearAirStates.delete(channelId);
+
+    const endData = {
+      channelId,
+      dispatcherId: clearAir.dispatcherId,
+      agencyId: clearAir.agencyId,
+      timestamp: Date.now(),
+      duration: Date.now() - clearAir.timestamp,
+      initiator: clearAir.initiator || 'manual',
+      originUnit: clearAir.originUnit || null,
+      eventType: clearAir.eventType || null,
+      releasedBy: options.releasedBy || clearAir.dispatcherId,
+      releaseReason: options.releaseReason || null,
+    };
+
+    this._emitToChannelAll(channelId, SIGNALING_EVENTS.CLEAR_AIR_END, endData);
+    this._emitToDispatchers('clear_air:cleared', endData);
+    this._emitCallback('clearAirEnd', { channelId, dispatcherId: clearAir.dispatcherId });
+
+    console.log(`[Signaling] CLEAR AIR END (internal): ${channelId} released by ${endData.releasedBy} reason=${endData.releaseReason || 'n/a'}`);
+    return { skipped: false, state: endData };
+  }
+
+  isClearAirActive(rawChannelId) {
+    const channelId = canonicalChannelKey(rawChannelId);
+    if (!channelId) return false;
+    return this.clearAirStates.has(channelId);
+  }
+
+  getClearAirState(rawChannelId) {
+    const channelId = canonicalChannelKey(rawChannelId);
+    if (!channelId) return null;
+    return this.clearAirStates.get(channelId) || null;
+  }
+
   _handleStatusUpdate(socket, data) {
     const { status } = data;
     

@@ -7,6 +7,7 @@ import { parsePersonDetails, parseDOB, extractNameFromTranscript } from './phone
 import pool, { isAiDispatchEnabled, getAiDispatchChannel, createChannelMessage } from '../db/index.js';
 import { isValidWav } from './wavValidator.js';
 import { audioRelayService } from './audioRelayService.js';
+import { formatEventNote, formatDescriptionNote, isClearAirEventType, getEventSpokenLabel, matchEventFromTranscript, isAllClearPhrase } from './eventNoteFormatter.js';
 import { opusCodec, SAMPLE_RATE as OPUS_SAMPLE_RATE, FRAME_SIZE as OPUS_FRAME_SIZE } from './opusCodec.js';
 import { floorControlService } from './floorControlService.js';
 import { formatSpokenTime24 } from './hourlyTimeBroadcastService.js';
@@ -499,6 +500,7 @@ class AIDispatcher {
     this._lastSuccessfulSttAt = null;
     this._framesReceivedCount = 0;
     this._decodeSuccessCount = 0;
+    this._aiClearAirSessions = new Map();
   }
 
   log(action, details = {}) {
@@ -963,6 +965,12 @@ class AIDispatcher {
     if (identity.startsWith('PIPELINE_')) return false;
     if (identity.startsWith('pipeline-')) return false;
     return true;
+  }
+
+  _isOfficerHelpDistressType(distressType) {
+    if (!distressType) return false;
+    const t = String(distressType).toLowerCase();
+    return t.includes('officer down') || t.includes('emergency backup') || t.includes('immediate assistance') || t === 'reporting emergency';
   }
 
   _matchDistressPhrase(normalizedText) {
@@ -1470,9 +1478,14 @@ class AIDispatcher {
       if (currentState === DISPATCHER_STATE.IDLE) {
         const normalizedForGate = transcript.trim().toLowerCase();
         const isAddressingDispatch = /^central\b/i.test(normalizedForGate);
-        if (!isAddressingDispatch) {
+        const eventBypass = !!matchEventFromTranscript(transcript);
+        const allClearBypass = isAllClearPhrase(transcript) && this._hasActiveAiClearAir();
+        if (!isAddressingDispatch && !eventBypass && !allClearBypass) {
           this.verboseLog('IDLE_NO_CENTRAL_SKIP', { participant: participantId, transcript });
           return;
+        }
+        if (!isAddressingDispatch && (eventBypass || allClearBypass)) {
+          this.log('IDLE_GATE_BYPASS', { participant: participantId, transcript, reason: eventBypass ? 'event' : 'all_clear' });
         }
       }
 
@@ -1499,6 +1512,14 @@ class AIDispatcher {
   _normalizeSTTMisrecognitions(transcript) {
     const sttCorrections = [
       { patterns: [/\bradio\s+shack\b/gi, /\bradio\s+shaq\b/gi, /\bready\s+a\s+check\b/gi, /\bradio\s+cheque\b/gi, /\bradio\s+shek\b/gi, /\bradio\s+sheck\b/gi, /\bradio\s+shak\b/gi], replacement: 'radio check' },
+      { patterns: [/\btasor\s+point\b/gi, /\btazer\s+point\b/gi], replacement: 'taser point' },
+      { patterns: [/\btasor\s+deployed\b/gi, /\btazer\s+deployed\b/gi], replacement: 'taser deployed' },
+      { patterns: [/\bfoot\s+suit\b/gi], replacement: 'foot pursuit' },
+      { patterns: [/\bin\s+custom\b/gi, /\bincome\s+study\b/gi, /\bin\s+custodian\b/gi], replacement: 'in custody' },
+      { patterns: [/\bcode\s+for\b/gi, /\bcode\s+fore\b/gi], replacement: 'code 4' },
+      { patterns: [/\bofficers\s+down\b/gi], replacement: 'officer down' },
+      { patterns: [/\bofficer\s+need\s+help\b/gi], replacement: 'officer needs help' },
+      { patterns: [/\bgun\s+point\b/gi], replacement: 'gunpoint' },
     ];
     let corrected = transcript;
     for (const { patterns, replacement } of sttCorrections) {
@@ -1525,6 +1546,12 @@ class AIDispatcher {
         const normalizedForDistress = normalized.replace(/[.,!?]/g, '').replace(/\s+/g, ' ').trim();
         const matchedDistressPhrase = this._matchDistressPhrase(normalizedForDistress);
         if (matchedDistressPhrase && /^central\b/.test(normalizedForDistress)) {
+          if (this._isOfficerHelpDistressType(matchedDistressPhrase.distressType)) {
+            this.log('EMERGENCY_OFFICER_HELP_REROUTE_TO_LOG_EVENT_NOTE', { participant: participantId, transcript });
+            this._turnContextByUnit.set(participantId, { transcript, intent: 'LOG_EVENT_NOTE' });
+            await this.executeLogEventNote(participantId, transcript, { eventType: 'OFFICER_NEEDS_HELP', entries: [], description: null });
+            return;
+          }
           this.log('EMERGENCY_PHRASE_FAST_PATH', { participant: participantId, transcript, distressType: matchedDistressPhrase.distressType });
           this._turnContextByUnit.set(participantId, { transcript, intent: 'EMERGENCY_PHRASE_ASSIST' });
           await this.handleEmergencyPhraseAssist(participantId, matchedDistressPhrase.distressType);
@@ -2207,6 +2234,23 @@ class AIDispatcher {
           break;
         }
 
+        case 'LOG_EVENT_NOTE': {
+          const slots = result.slots || {};
+          await this.executeLogEventNote(participantId, transcript, {
+            eventType: slots.eventType || result.eventType,
+            entries: slots.entries || result.entries || [],
+            description: slots.description || result.description || null,
+            vehicleConfidence: slots.vehicleConfidence ?? result.vehicleConfidence,
+            response: result.response,
+          });
+          break;
+        }
+
+        case 'EVENT_ALL_CLEAR': {
+          await this.executeEventAllClear(participantId, transcript, 'llm_all_clear');
+          break;
+        }
+
         case 'QUERY_CALLS': {
           await this.handleQueryCalls(participantId, transcript);
           break;
@@ -2327,6 +2371,20 @@ class AIDispatcher {
     }
 
     this._turnContextByUnit.set(participantId, { transcript, intent: commandResult.intent });
+
+    if (commandResult.intent === 'LOG_EVENT_NOTE') {
+      await this.executeLogEventNote(participantId, transcript, {
+        eventType: commandResult.eventType,
+        entries: commandResult.entries || [],
+        description: commandResult.description || null,
+      });
+      return;
+    }
+
+    if (commandResult.intent === 'EVENT_ALL_CLEAR') {
+      await this.executeEventAllClear(participantId, transcript, 'regex_all_clear');
+      return;
+    }
 
     if (commandResult.intent === 'PERSON_CHECK_DETAILS') {
       await this.handlePersonCheckDetails(participantId, commandResult.rawTranscript);
@@ -3849,6 +3907,267 @@ class AIDispatcher {
     }
 
     await this.executeAddNote(participantId, transcript, noteContent);
+  }
+
+  async _activateAiClearAir(originUnit, eventType) {
+    const channelKey = this.channelName;
+    if (!channelKey) {
+      this.log('AI_CLEAR_AIR_NO_CHANNEL', { originUnit, eventType });
+      return false;
+    }
+
+    let sigService = null;
+    try {
+      sigService = await this._ensureSignalingService();
+    } catch (e) {
+      this.log('AI_CLEAR_AIR_NO_SIGNALING_SERVICE', { channelKey, error: e.message });
+    }
+    if (!sigService || typeof sigService.startClearAirInternal !== 'function') {
+      this.log('AI_CLEAR_AIR_NO_SIGNALING', { channelKey });
+      return false;
+    }
+
+    const existingState = typeof sigService.getClearAirState === 'function'
+      ? sigService.getClearAirState(channelKey)
+      : null;
+    if (existingState && existingState.initiator !== 'ai') {
+      this.log('AI_CLEAR_AIR_SKIPPED_MANUAL_ACTIVE', { channelKey, dispatcherId: existingState.dispatcherId });
+      return false;
+    }
+    if (existingState && existingState.initiator === 'ai') {
+      if (!this._aiClearAirSessions.has(channelKey)) {
+        this._aiClearAirSessions.set(channelKey, {
+          originUnit: existingState.originUnit || originUnit,
+          eventType: existingState.eventType || eventType,
+          startedAt: existingState.timestamp || Date.now(),
+        });
+      }
+      this.log('AI_CLEAR_AIR_ALREADY_ACTIVE', { channelKey, originUnit, eventType });
+      return false;
+    }
+
+    let started;
+    try {
+      started = sigService.startClearAirInternal(channelKey, {
+        dispatcherId: AI_IDENTITY,
+        initiator: 'ai',
+        originUnit,
+        eventType,
+      });
+    } catch (e) {
+      this.log('AI_CLEAR_AIR_START_ERROR', { channelKey, error: e.message });
+      return false;
+    }
+
+    if (!started || started.alreadyActive) {
+      this.log('AI_CLEAR_AIR_START_NOOP', { channelKey, alreadyActive: !!started?.alreadyActive });
+      return false;
+    }
+
+    this._aiClearAirSessions.set(channelKey, {
+      originUnit,
+      eventType,
+      startedAt: Date.now(),
+    });
+    this.log('AI_CLEAR_AIR_ACTIVATED', { channelKey, originUnit, eventType });
+
+    try {
+      await this.playToneAndSpeak('CONTINUOUS', 'All units, hold the air. Emergency traffic only.');
+    } catch (e) {
+      this.log('AI_CLEAR_AIR_TTS_ERROR', { channelKey, error: e.message });
+    }
+
+    return true;
+  }
+
+  async _releaseAiClearAir(releasedBy, releaseReason) {
+    const channelKey = this.channelName;
+    if (!channelKey) return false;
+
+    const session = this._aiClearAirSessions.get(channelKey);
+    if (!session) {
+      this.log('AI_CLEAR_AIR_RELEASE_NO_SESSION', { channelKey });
+      return false;
+    }
+
+    let sigService = null;
+    try {
+      sigService = await this._ensureSignalingService();
+    } catch (e) {
+      this.log('AI_CLEAR_AIR_RELEASE_SIG_LOOKUP_ERROR', { channelKey, error: e.message });
+    }
+
+    let endResult = null;
+    if (sigService && typeof sigService.endClearAirInternal === 'function') {
+      try {
+        endResult = sigService.endClearAirInternal(channelKey, {
+          requireInitiator: 'ai',
+          releasedBy,
+          releaseReason,
+        });
+      } catch (e) {
+        this.log('AI_CLEAR_AIR_END_ERROR', { channelKey, error: e.message });
+        return false;
+      }
+    } else {
+      this.log('AI_CLEAR_AIR_RELEASE_NO_SIGNALING', { channelKey });
+      return false;
+    }
+
+    if (!endResult || endResult.skipped) {
+      this.log('AI_CLEAR_AIR_RELEASE_SKIPPED', {
+        channelKey,
+        reason: endResult?.reason || 'no_active_session',
+      });
+      this._aiClearAirSessions.delete(channelKey);
+      return false;
+    }
+
+    this._aiClearAirSessions.delete(channelKey);
+    this.log('AI_CLEAR_AIR_RELEASED', { channelKey, releasedBy, releaseReason, originUnit: session.originUnit, eventType: session.eventType });
+
+    try {
+      const time = this.formatMilitaryTime();
+      await this.playToneAndSpeak('CONTINUOUS', `All units, you can resume normal radio traffic on this channel, ${time}.`);
+    } catch (e) {
+      this.log('AI_CLEAR_AIR_RESUME_TTS_ERROR', { channelKey, error: e.message });
+    }
+
+    return true;
+  }
+
+  async executeLogEventNote(participantId, transcript, payload = {}) {
+    const eventTypeRaw = payload.eventType || (payload.slots && payload.slots.eventType);
+    const eventType = String(eventTypeRaw || '').toUpperCase();
+    let entries = payload.entries || [];
+    let description = payload.description || null;
+    const vehicleConfidence = typeof payload.vehicleConfidence === 'number' ? payload.vehicleConfidence : null;
+
+    if (!eventType) {
+      this.log('EVENT_NOTE_MISSING_TYPE', { participant: participantId, transcript });
+      return;
+    }
+
+    let effectiveType = eventType;
+    if (effectiveType === 'VEHICLE_PURSUIT' && vehicleConfidence !== null && vehicleConfidence < 0.85) {
+      this.log('EVENT_NOTE_VEHICLE_CONFIDENCE_FALLBACK', { participant: participantId, vehicleConfidence });
+      effectiveType = 'FOOT_PURSUIT';
+    }
+
+    const noteText = formatEventNote(effectiveType, entries);
+    const descNote = formatDescriptionNote(effectiveType, description);
+    const spokenLabel = getEventSpokenLabel(effectiveType);
+    const time = this.formatMilitaryTime();
+    const ack = `Copy, ${spokenLabel}, ${time}.`;
+
+    const isClearAirEvent = isClearAirEventType(effectiveType);
+    const isCustody = effectiveType === 'CUSTODY';
+
+    let callId = null;
+    let cadAvailable = cadService.isConfigured();
+    let noteWritten = false;
+    let noActiveCall = false;
+    let cadWriteFailed = false;
+
+    if (cadAvailable) {
+      try {
+        const currentCall = await cadService.getUnitCurrentCallById(participantId);
+        callId = currentCall?.call_id || currentCall?.call_number || currentCall?.callNumber || null;
+        if (callId && noteText) {
+          const noteResult = await cadService.addCallNote(callId, `${participantId}: ${noteText}`);
+          if (noteResult?.success !== false) {
+            noteWritten = true;
+            this.log('CALL_NOTE_AUTO_EVENT', { unitId: participantId, callId, eventType: effectiveType, note: noteText });
+            if (descNote) {
+              try {
+                await cadService.addCallNote(callId, `${participantId}: ${descNote}`);
+                this.log('CALL_NOTE_AUTO_EVENT_DESCRIPTION', { unitId: participantId, callId, descNote });
+              } catch (descErr) {
+                this.log('CALL_NOTE_AUTO_EVENT_DESC_ERROR', { error: descErr.message });
+              }
+            }
+          } else {
+            cadWriteFailed = true;
+            this.log('CALL_NOTE_AUTO_EVENT_FAILED', { unitId: participantId, callId });
+          }
+        } else if (!callId) {
+          noActiveCall = true;
+        }
+      } catch (e) {
+        cadWriteFailed = true;
+        this.log('CALL_NOTE_AUTO_EVENT_ERROR', { unitId: participantId, error: e.message });
+      }
+    } else {
+      this.log('CALL_NOTE_AUTO_EVENT_NO_CAD', { unitId: participantId });
+    }
+
+    let spokenResp = ack;
+    if (!cadAvailable) {
+      spokenResp = `${participantId}, copy ${spokenLabel}. CAD system not available, no note logged.`;
+    } else if (noActiveCall) {
+      spokenResp = `${participantId}, copy ${spokenLabel}. You don't have an active call to add a note to.`;
+    } else if (cadWriteFailed) {
+      spokenResp = `${participantId}, copy ${spokenLabel}. Unable to log note, try again.`;
+    }
+
+    if (isClearAirEvent) {
+      try {
+        await this._activateAiClearAir(participantId, effectiveType);
+      } catch (e) {
+        this.log('AI_CLEAR_AIR_ACTIVATE_THROW', { error: e.message });
+      }
+    } else if (isCustody && this._aiClearAirSessions.has(this.channelName)) {
+      try {
+        await this._releaseAiClearAir(participantId, 'custody_during_clear_air');
+      } catch (e) {
+        this.log('AI_CLEAR_AIR_RELEASE_THROW', { error: e.message });
+      }
+    }
+
+    await this.speak(spokenResp, participantId);
+    this.addConversationExchange(participantId, transcript, spokenResp);
+    this.logSpeechEvent(participantId, transcript, `LOG_EVENT_NOTE:${effectiveType}`, spokenResp);
+    setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+
+    return { noteWritten, callId, eventType: effectiveType };
+  }
+
+  _hasActiveAiClearAir() {
+    if (!this.channelName) return false;
+    return this._aiClearAirSessions.has(this.channelName);
+  }
+
+  async executeEventAllClear(participantId, transcript, reason) {
+    let sigService = null;
+    try {
+      sigService = await this._ensureSignalingService();
+    } catch (_) {}
+
+    let sigState = null;
+    if (sigService && typeof sigService.getClearAirState === 'function') {
+      try { sigState = sigService.getClearAirState(this.channelName); } catch (_) {}
+    }
+
+    const localHasSession = this._aiClearAirSessions.has(this.channelName);
+    const sigHasAiSession = !!(sigState && sigState.initiator === 'ai');
+
+    if (!localHasSession && !sigHasAiSession) {
+      this.log('EVENT_ALL_CLEAR_NO_SESSION', { participant: participantId, transcript, reason });
+      return;
+    }
+
+    if (!localHasSession && sigHasAiSession) {
+      this._aiClearAirSessions.set(this.channelName, {
+        originUnit: sigState.originUnit || null,
+        eventType: sigState.eventType || null,
+        startedAt: sigState.timestamp || Date.now(),
+      });
+      this.log('AI_CLEAR_AIR_SYNCED_FROM_SIGNALING', { channelKey: this.channelName });
+    }
+
+    await this._releaseAiClearAir(participantId, reason || 'all_clear');
+    this.logSpeechEvent(participantId, transcript, 'EVENT_ALL_CLEAR', '(clear air released)');
+    setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
   }
 
   async executeAddNote(participantId, transcript, noteContent) {

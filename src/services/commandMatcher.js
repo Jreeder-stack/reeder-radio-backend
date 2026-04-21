@@ -1,4 +1,5 @@
 import { DISPATCHER_TZ } from '../utils/timezone.js';
+import { matchEventFromTranscript, isAllClearPhrase } from './eventNoteFormatter.js';
 
 const DISPATCHER_STATE = {
   IDLE: 'IDLE',
@@ -275,28 +276,12 @@ const IMMEDIATE_COMMANDS = [
     isEmergency: false
   },
   {
-    intent: 'FOOT_PURSUIT',
-    phrases: ['foot pursuit', 'on foot', 'subject running', 'in foot pursuit', 'pursuing on foot', '10-80 foot', '10/80 foot'],
-    response: (unitId) => `All units, ${unitId} in foot pursuit. Additional units respond.`,
-    cadAction: 'broadcast',
-    cadData: (unitId) => ({ message: `${unitId} in FOOT PURSUIT`, priority: 'high' }),
-    isEmergency: true
-  },
-  {
     intent: 'PURSUIT_TERMINATED',
     phrases: ['pursuit terminated', 'terminating pursuit', 'breaking off pursuit', 'ending pursuit', 'pursuit ended'],
     response: (unitId) => `${unitId}, copy pursuit terminated. ${formatTimestamp()}.`,
     cadAction: 'broadcast',
     cadData: (unitId) => ({ message: `${unitId} pursuit terminated`, priority: 'routine' }),
     isEmergency: false
-  },
-  {
-    intent: 'SUBJECT_IN_CUSTODY',
-    phrases: ['subject in custody', 'one in custody', 'suspect in custody', 'subject detained', '10-15', '10/15', 'ten fifteen', 'have one'],
-    response: (unitId) => `${unitId}, copy one in custody. ${formatTimestamp()}.`,
-    cadAction: 'status',
-    cadStatus: 'on_scene',
-    isEmergency: true
   },
   {
     intent: 'NEGATIVE_CONTACT',
@@ -474,19 +459,6 @@ const MULTI_STEP_COMMANDS = [
       response: `All units, BOLO from ${unitId}. ${slots.description}. ${formatTimestamp()}.`,
       cadAction: 'broadcast',
       cadData: { message: `BOLO: ${slots.description}`, priority: 'high' }
-    })
-  },
-  {
-    intent: 'VEHICLE_PURSUIT',
-    phrases: ['vehicle pursuit', 'in pursuit', 'starting pursuit', '10-80', '10/80', 'ten eighty'],
-    nextState: DISPATCHER_STATE.AWAITING_DESCRIPTION,
-    prompt: (unitId) => `${unitId}, go ahead with vehicle and direction.`,
-    slotName: 'description',
-    isEmergency: true,
-    completion: (unitId, slots) => ({
-      response: `All units, ${unitId} in vehicle pursuit. ${slots.description}. All units clear the channel.`,
-      cadAction: 'broadcast',
-      cadData: { message: `VEHICLE PURSUIT: ${unitId} - ${slots.description}`, priority: 'emergency' }
     })
   },
   {
@@ -897,6 +869,15 @@ export function matchCommand(transcript, participantId = null) {
   if (containsCancelPhrase(transcript) && !confirmStates.includes(session.state)) {
     resetUnitSession(unitId);
     return null;
+  }
+
+  const eventMatch = matchEventFromTranscript(transcript);
+  if (eventMatch) {
+    return { ...eventMatch, unitId, transcript };
+  }
+
+  if (isAllClearPhrase(transcript)) {
+    return { intent: 'EVENT_ALL_CLEAR', unitId, transcript };
   }
 
   if (signal100Active) {

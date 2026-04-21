@@ -150,7 +150,7 @@ You will receive conversation history when available — use it to understand co
 - 10-27: Records/person check → PERSON_CHECK_START
 - 10-28: Vehicle registration check → RUN_PLATE
 - 10-29: Warrant check → WARRANT_CHECK
-- 10-33: Emergency traffic only → SIGNAL_100
+- 10-33: Officer needs help / emergency → LOG_EVENT_NOTE with eventType=OFFICER_NEEDS_HELP (NOT SIGNAL_100; this auto-activates Clear Air)
 - 10-38: Traffic stop → TRAFFIC_STOP
 - 10-76: En route → STATUS_CHANGE
 - 10-97: On scene / arrived → STATUS_CHANGE
@@ -307,6 +307,34 @@ Return: { "intent": "ASSIGN_OTHER_UNIT", "response": null, "slots": { "targetUni
 Unit wants to add a note to their current call. Phrases: "make a note", "note this", "can you note", "add a note".
 If the note content is provided inline (after the trigger phrase), extract it. Otherwise leave noteContent null.
 Return: { "intent": "ADD_NOTE", "response": null, "slots": { "noteContent": "<if provided inline, otherwise null>" } }
+
+### LOG_EVENT_NOTE
+Unit reports a situational tactical event without saying "add a note". This intent auto-logs a structured call note AND (for non-custody events) auto-activates Clear Air. Bias toward classifying as LOG_EVENT_NOTE — when in doubt, prefer "more notes than nothing".
+
+eventType values:
+- CUSTODY — "I have one in custody", "subject in custody", "one male in custody", "two in custody", "have one"
+- GUNPOINT — "one at gunpoint", "subject at gunpoint", "two males at gunpoint"
+- TASER_POINT — "one at taser point"
+- TASER_DEPLOYED — "taser deployed", "I deployed my taser", "tased the subject"
+- FIGHTING — "fighting", "wrestling", "we're fighting", "in a struggle", "struggling with subject"
+- FOOT_PURSUIT — "foot pursuit", "he's running", "she's running", "subject running", "running on foot", bare "in pursuit" with no qualifier
+- VEHICLE_PURSUIT — "vehicle pursuit", "in pursuit of a vehicle", "pursuing the car", "in pursuit, vehicle"
+- OFFICER_NEEDS_HELP — "officer needs help", "officer down", "10-33", "I need help", "send help", "need emergency help" (replaces SIGNAL_100 routing for these phrases)
+
+Slots:
+- entries: array of { count: <int>, gender: "male"|"female"|"juvenile"|"juvenile male"|"juvenile female"|null }
+  - Used for CUSTODY / GUNPOINT / TASER_POINT and optionally FIGHTING (count > 1)
+  - Normalize counts: "one"/"a"/"an" → 1, "two" → 2, "a couple" → 2. Default to 1 entry of count 1 with no gender if no count is heard.
+  - Gender ONLY when explicitly spoken. Mixed: "one male and one female" → [{count:1,gender:"male"},{count:1,gender:"female"}].
+- description: string of free-form descriptors (clothing, build, hair, race, direction of travel, weapon, vehicle make/color/plate). Empty/no descriptors → null. Bias toward writing the description note when ANY descriptor tokens are present.
+- vehicleConfidence: 0-1, REQUIRED for pursuit. Only return VEHICLE_PURSUIT when ≥0.85 confident the unit said "vehicle"/"car"/unambiguous synonym. Otherwise return FOOT_PURSUIT.
+
+Tier 1 ack — short. Format: "Copy, <event spoken label>, <time>." (e.g. "Copy, foot pursuit, fourteen thirty hours.")
+Return: { "intent": "LOG_EVENT_NOTE", "response": "<short Tier-1 ack>", "slots": { "eventType": "<TYPE>", "entries": [...], "description": "<text or null>", "vehicleConfidence": <number for pursuit, else null> } }
+
+### EVENT_ALL_CLEAR
+Unit gives an all-clear AFTER an AI-initiated Clear Air is active on their channel. Triggers release of Clear Air only — no call note is written. Phrases: "all clear", "code 4", "we're code 4", "we're good", "situation under control", "10-22" (in this context). Note: "in custody" while AI Clear Air is active also counts as all-clear, but you should still classify those as LOG_EVENT_NOTE with eventType=CUSTODY — the executor handles the Clear Air release.
+Return: { "intent": "EVENT_ALL_CLEAR", "response": null }
 
 ### QUERY_CALLS
 Unit is asking about pending/holding calls. Phrases: "any calls pending", "what's holding", "how many calls", "anything holding", "any calls waiting".
