@@ -17,6 +17,8 @@ final class AppState: ObservableObject {
     let auth: AuthService
     let signaling: SignalingClient
     let locationTracker: LocationTracker
+    let radio: RadioAudioEngine
+    let radioConfig: RadioConfigService
 
     private var cancellables = Set<AnyCancellable>()
 
@@ -31,6 +33,9 @@ final class AppState: ObservableObject {
         let tracker = LocationTracker()
         self.locationTracker = tracker
         tracker.signaling = signaling
+        self.radio = RadioAudioEngine()
+        self.radioConfig = RadioConfigService(api: api)
+        self.radio.attach(signaling: signaling)
 
         signaling.locationTrackEvents
             .receive(on: DispatchQueue.main)
@@ -74,6 +79,7 @@ final class AppState: ObservableObject {
     func signOut() {
         Task {
             await auth.logout()
+            radio.stopRadio()
             signaling.disconnect()
             locationTracker.stopTracking()
             authStatus = .signedOut
@@ -104,5 +110,21 @@ final class AppState: ObservableObject {
                           defaultChannel: settings.defaultChannelId,
                           sessionCookie: cookie)
         locationTracker.requestWhenInUse()
+
+        radio.unitId = user.unitId ?? user.username
+        radio.channelId = settings.defaultChannelId
+
+        Task { await fetchAndStartRadio() }
+    }
+
+    private func fetchAndStartRadio() async {
+        do {
+            let cfg = try await radioConfig.fetchConfig()
+            radio.configureRelay(host: cfg.audioRelayHost, port: cfg.audioRelayPort)
+            radio.startRadio()
+        } catch {
+            // No relay config yet — skip audio start; UI will report.
+            print("RadioConfig fetch failed: \(error.localizedDescription)")
+        }
     }
 }

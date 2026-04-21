@@ -12,6 +12,7 @@ This project is a Push-to-Talk (PTT) radio communication application for real-ti
 ### Client Architecture
 - **Dispatch Console:** A React/Vite web application, also available as an Electron desktop app for global PTT hotkeys.
 - **Radio Client (Field Units / T320):** A native Kotlin Android app utilizing custom UDP radio transport with Opus encoding and native PTT hardware key handling.
+- **iOS Radio Client:** A native SwiftUI app (`ios-native/`) with login, signaling (Socket.IO), and an Opus-over-UDP audio path that mirrors the Android packet format. Audio is captured by AVAudioEngine at 16 kHz mono, encoded with libopus via the `swift-opus` SwiftPM package, sent through `Network.framework` (NWConnection UDP) to the audio relay, and on RX is sequence-buffered (`JitterBuffer`), Opus-decoded, and played through AVAudioEngine. Floor control wires `ptt:request`/`ptt:granted`/`tx:start`/`tx:stop`/`channel:busy`/`channel:idle`/`ptt:revoked` through `SignalingClient`.
 
 ### UI/UX Decisions
 The dispatch console is a PWA with responsive design, featuring auto-login, dark/light themes, and built with React, TailwindCSS v4, and `dnd-kit`. The native Android app uses Jetpack Compose with a dark cyan theme.

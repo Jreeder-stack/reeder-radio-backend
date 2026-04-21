@@ -1,25 +1,32 @@
 import SwiftUI
 import Combine
+import AVFoundation
 
 struct RadioView: View {
     @EnvironmentObject var appState: AppState
 
     var body: some View {
-        RadioContent(signaling: appState.signaling, defaultChannel: appState.settings.defaultChannelId)
+        RadioContent(
+            signaling: appState.signaling,
+            radio: appState.radio,
+            defaultChannel: appState.settings.defaultChannelId
+        )
     }
 }
 
 private struct RadioContent: View {
     @ObservedObject var signaling: SignalingClient
+    @ObservedObject var radio: RadioAudioEngine
     let defaultChannel: String
     @State private var channelInput: String = ""
-    @State private var isPressing: Bool = false
+    @State private var micPermissionDenied: Bool = false
     @StateObject private var ptt: PTTBinding
 
-    init(signaling: SignalingClient, defaultChannel: String) {
+    init(signaling: SignalingClient, radio: RadioAudioEngine, defaultChannel: String) {
         self.signaling = signaling
+        self.radio = radio
         self.defaultChannel = defaultChannel
-        _ptt = StateObject(wrappedValue: PTTBinding(signaling: signaling))
+        _ptt = StateObject(wrappedValue: PTTBinding(radio: radio))
     }
 
     var body: some View {
@@ -43,6 +50,7 @@ private struct RadioContent: View {
             .toolbarColorScheme(.dark, for: .navigationBar)
             .onAppear {
                 channelInput = signaling.currentChannel ?? defaultChannel
+                requestMicPermission()
                 ptt.start()
             }
             .onDisappear {
@@ -62,9 +70,17 @@ private struct RadioContent: View {
                 Text(signaling.state.rawValue.uppercased())
                     .font(.system(.title3, design: .monospaced))
                     .foregroundColor(.cyan)
+                Spacer()
+                Text("UDP \(radio.transportHealth.rawValue.uppercased())")
+                    .font(.caption2)
+                    .foregroundColor(udpColor)
             }
-            if let err = signaling.lastError {
+            if let err = signaling.lastError ?? radio.lastError {
                 Text(err).font(.footnote).foregroundColor(.red)
+            }
+            if micPermissionDenied {
+                Text("Microphone access denied — enable it in Settings to transmit.")
+                    .font(.footnote).foregroundColor(.orange)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -83,6 +99,7 @@ private struct RadioContent: View {
                     .disableAutocorrection(true)
                 Button("Join") {
                     signaling.joinChannel(channelInput)
+                    radio.channelId = channelInput
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(.cyan)
@@ -93,6 +110,16 @@ private struct RadioContent: View {
                     .font(.system(.body, design: .monospaced))
                     .foregroundColor(.cyan)
             }
+            if let tx = radio.transmittingUnitId {
+                Text("Transmitting: \(tx)")
+                    .font(.caption)
+                    .foregroundColor(.green)
+            }
+            if let denial = signaling.lastFloorDenialReason {
+                Text("Floor denied: \(denial)")
+                    .font(.footnote)
+                    .foregroundColor(.orange)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
@@ -102,10 +129,55 @@ private struct RadioContent: View {
 
     private var indicators: some View {
         HStack(spacing: 16) {
-            indicator(label: "TX", color: .red, active: signaling.isTransmitting)
-            indicator(label: "RX", color: .green, active: signaling.isReceiving)
-            indicator(label: "PTT", color: .cyan, active: signaling.isFloorRequestPending || signaling.isTransmitting)
+            indicator(label: "TX", color: .red, active: radio.state == .transmitting)
+            indicator(label: "RX", color: .green, active: radio.transmittingUnitId != nil && radio.state != .transmitting)
+            indicator(label: "REQ", color: .yellow, active: radio.state == .requestingFloor)
+            indicator(label: "BUSY", color: .orange, active: radio.state == .channelBusy)
         }
+    }
+
+    private var pttButton: some View {
+        let pressed = radio.state == .transmitting || radio.state == .requestingFloor
+        return ZStack {
+            Circle()
+                .fill(pressed ? Color.red : Color.red.opacity(0.25))
+                .frame(width: 200, height: 200)
+                .overlay(Circle().stroke(Color.red, lineWidth: 4))
+                .shadow(color: pressed ? Color.red.opacity(0.6) : .clear, radius: 24)
+            VStack(spacing: 4) {
+                Image(systemName: "mic.fill")
+                    .font(.system(size: 48))
+                    .foregroundColor(.white)
+                Text(pressed ? "TRANSMITTING" : "PUSH TO TALK")
+                    .font(.system(.headline, design: .monospaced))
+                    .foregroundColor(.white)
+                Text(radio.state.rawValue.uppercased())
+                    .font(.caption2)
+                    .foregroundColor(.white.opacity(0.8))
+            }
+        }
+        .contentShape(Circle())
+        .scaleEffect(pressed ? 1.04 : 1.0)
+        .animation(.easeInOut(duration: 0.1), value: pressed)
+        .gesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { _ in
+                    if !pressed { radio.pttPressed() }
+                }
+                .onEnded { _ in
+                    radio.pttReleased()
+                }
+        )
+        .opacity(pttEnabled ? 1.0 : 0.4)
+        .allowsHitTesting(pttEnabled)
+        .padding(.top, 12)
+    }
+
+    private var pttEnabled: Bool {
+        signaling.state == .authenticated &&
+        signaling.currentChannel != nil &&
+        radio.transportHealth == .connected &&
+        !micPermissionDenied
     }
 
     private func indicator(label: String, color: Color, active: Bool) -> some View {
@@ -119,50 +191,6 @@ private struct RadioContent: View {
                 .foregroundColor(.gray)
         }
         .frame(maxWidth: .infinity)
-    }
-
-    private var pttButton: some View {
-        let canTransmit = signaling.state == .authenticated && (signaling.currentChannel?.isEmpty == false)
-        let active = signaling.isTransmitting || signaling.isFloorRequestPending || isPressing
-        return VStack(spacing: 8) {
-            ZStack {
-                Circle()
-                    .fill(active ? Color.red : Color.red.opacity(0.25))
-                    .frame(width: 200, height: 200)
-                    .overlay(Circle().stroke(Color.red, lineWidth: 4))
-                    .shadow(color: active ? Color.red.opacity(0.6) : .clear, radius: 24)
-                VStack(spacing: 4) {
-                    Image(systemName: "mic.fill")
-                        .font(.system(size: 56))
-                        .foregroundColor(.white)
-                    Text(active ? "TRANSMIT" : "PUSH TO TALK")
-                        .font(.system(.headline, design: .monospaced))
-                        .foregroundColor(.white)
-                }
-            }
-            .opacity(canTransmit ? 1.0 : 0.4)
-            .scaleEffect(active ? 1.04 : 1.0)
-            .animation(.easeInOut(duration: 0.1), value: active)
-            .gesture(
-                DragGesture(minimumDistance: 0)
-                    .onChanged { _ in
-                        guard canTransmit, !isPressing else { return }
-                        isPressing = true
-                        signaling.requestFloor()
-                    }
-                    .onEnded { _ in
-                        guard isPressing else { return }
-                        isPressing = false
-                        signaling.releaseFloor()
-                    }
-            )
-            if let denial = signaling.lastFloorDenialReason {
-                Text("Floor denied: \(denial)")
-                    .font(.footnote)
-                    .foregroundColor(.orange)
-            }
-        }
-        .padding(.top, 12)
     }
 
     private var accessoryStatus: some View {
@@ -187,28 +215,48 @@ private struct RadioContent: View {
         case .disconnected: return .red
         }
     }
+
+    private var udpColor: Color {
+        switch radio.transportHealth {
+        case .connected: return .green
+        case .reconnecting: return .yellow
+        case .disconnected: return .gray
+        }
+    }
+
+    private func requestMicPermission() {
+        if #available(iOS 17.0, *) {
+            AVAudioApplication.requestRecordPermission { granted in
+                Task { @MainActor in micPermissionDenied = !granted }
+            }
+        } else {
+            AVAudioSession.sharedInstance().requestRecordPermission { granted in
+                Task { @MainActor in micPermissionDenied = !granted }
+            }
+        }
+    }
 }
 
 @MainActor
 private final class PTTBinding: ObservableObject {
     @Published var accessoryName: String?
 
-    private let signaling: SignalingClient
+    private let radio: RadioAudioEngine
     private var manager: MFiPTTAccessoryManager?
     private var cancellables = Set<AnyCancellable>()
 
-    init(signaling: SignalingClient) {
-        self.signaling = signaling
+    init(radio: RadioAudioEngine) {
+        self.radio = radio
     }
 
     func start() {
         guard manager == nil else { return }
         let mgr = MFiPTTAccessoryManager(
             onPress: { [weak self] in
-                self?.signaling.requestFloor()
+                self?.radio.pttPressed()
             },
             onRelease: { [weak self] in
-                self?.signaling.releaseFloor()
+                self?.radio.pttReleased()
             }
         )
         self.manager = mgr

@@ -14,6 +14,16 @@ enum LocationTrackEvent {
     case stop
 }
 
+enum RadioSignalingEvent {
+    case pttGranted(channelId: String, senderUnitId: String)
+    case pttDenied(channelId: String, reason: String)
+    case pttRevoked(channelId: String, reason: String)
+    case txStart(senderUnitId: String, channelId: String)
+    case txStop(senderUnitId: String, channelId: String)
+    case channelBusy(channelId: String, heldBy: String)
+    case channelIdle(channelId: String)
+}
+
 @MainActor
 final class SignalingClient: ObservableObject {
     @Published var state: SignalingState = .disconnected
@@ -34,6 +44,11 @@ final class SignalingClient: ObservableObject {
     private var unitId: String = ""
     private var username: String = ""
     private var pendingChannel: String?
+
+    private let radioSubject = PassthroughSubject<RadioSignalingEvent, Never>()
+    var radioEvents: AnyPublisher<RadioSignalingEvent, Never> {
+        radioSubject.eraseToAnyPublisher()
+    }
 
     init(serverURL: String) {
         self.serverURL = serverURL
@@ -147,12 +162,13 @@ final class SignalingClient: ObservableObject {
                 guard let self else { return }
                 let payload = data.first as? [String: Any]
                 let sender = payload?["senderUnitId"] as? String
+                let channel = (payload?["channelId"] as? String) ?? (self.currentChannel ?? "")
                 self.isFloorRequestPending = false
                 self.lastFloorDenialReason = nil
                 if sender == nil || sender == self.unitId {
                     self.isTransmitting = true
-                    self.emitTxStart()
                 }
+                self.radioSubject.send(.pttGranted(channelId: channel, senderUnitId: sender ?? self.unitId))
             }
         }
 
@@ -160,16 +176,24 @@ final class SignalingClient: ObservableObject {
             Task { @MainActor in
                 guard let self else { return }
                 let payload = data.first as? [String: Any]
+                let channel = (payload?["channelId"] as? String) ?? (self.currentChannel ?? "")
+                let reason = (payload?["reason"] as? String) ?? "denied"
                 self.isFloorRequestPending = false
                 self.isTransmitting = false
-                self.lastFloorDenialReason = (payload?["reason"] as? String) ?? "denied"
+                self.lastFloorDenialReason = reason
+                self.radioSubject.send(.pttDenied(channelId: channel, reason: reason))
             }
         }
 
-        socket.on("ptt:revoked") { [weak self] _, _ in
+        socket.on("ptt:revoked") { [weak self] data, _ in
             Task { @MainActor in
-                self?.isFloorRequestPending = false
-                self?.isTransmitting = false
+                guard let self else { return }
+                let payload = data.first as? [String: Any]
+                let channel = (payload?["channelId"] as? String) ?? (self.currentChannel ?? "")
+                let reason = (payload?["reason"] as? String) ?? "dispatcher_takeover"
+                self.isFloorRequestPending = false
+                self.isTransmitting = false
+                self.radioSubject.send(.pttRevoked(channelId: channel, reason: reason))
             }
         }
 
@@ -177,10 +201,12 @@ final class SignalingClient: ObservableObject {
             Task { @MainActor in
                 guard let self else { return }
                 let payload = data.first as? [String: Any]
-                let sender = payload?["senderUnitId"] as? String
+                let sender = (payload?["senderUnitId"] as? String) ?? ""
+                let channel = (payload?["channelId"] as? String) ?? (self.currentChannel ?? "")
                 if sender != self.unitId {
                     self.isReceiving = true
                 }
+                self.radioSubject.send(.txStart(senderUnitId: sender, channelId: channel))
             }
         }
 
@@ -188,24 +214,45 @@ final class SignalingClient: ObservableObject {
             Task { @MainActor in
                 guard let self else { return }
                 let payload = data.first as? [String: Any]
-                let sender = payload?["senderUnitId"] as? String
+                let sender = (payload?["senderUnitId"] as? String) ?? ""
+                let channel = (payload?["channelId"] as? String) ?? (self.currentChannel ?? "")
                 if sender == self.unitId {
                     self.isTransmitting = false
                 } else {
                     self.isReceiving = false
                 }
+                self.radioSubject.send(.txStop(senderUnitId: sender, channelId: channel))
             }
         }
 
-        socket.on("channel:floor_taken") { [weak self] _, _ in
+        socket.on("channel:floor_taken") { [weak self] data, _ in
             Task { @MainActor in
-                self?.isReceiving = true
+                guard let self else { return }
+                let payload = data.first as? [String: Any]
+                let channel = (payload?["channelId"] as? String) ?? (self.currentChannel ?? "")
+                let heldBy = (payload?["heldBy"] as? String) ?? ""
+                self.isReceiving = true
+                self.radioSubject.send(.channelBusy(channelId: channel, heldBy: heldBy))
             }
         }
 
-        socket.on("channel:idle") { [weak self] _, _ in
+        socket.on("channel:busy") { [weak self] data, _ in
             Task { @MainActor in
-                self?.isReceiving = false
+                guard let self else { return }
+                let payload = data.first as? [String: Any]
+                let channel = (payload?["channelId"] as? String) ?? (self.currentChannel ?? "")
+                let heldBy = (payload?["heldBy"] as? String) ?? ""
+                self.radioSubject.send(.channelBusy(channelId: channel, heldBy: heldBy))
+            }
+        }
+
+        socket.on("channel:idle") { [weak self] data, _ in
+            Task { @MainActor in
+                guard let self else { return }
+                let payload = data.first as? [String: Any]
+                let channel = (payload?["channelId"] as? String) ?? (self.currentChannel ?? "")
+                self.isReceiving = false
+                self.radioSubject.send(.channelIdle(channelId: channel))
             }
         }
 
@@ -218,7 +265,13 @@ final class SignalingClient: ObservableObject {
             return
         }
         socket.emit("channel:join", ["channelId": channelId])
+        socket.emit("radio:joinChannel", ["channelId": channelId])
         currentChannel = channelId
+    }
+
+    func leaveChannel(_ channelId: String) {
+        guard let socket else { return }
+        socket.emit("radio:leaveChannel", ["channelId": channelId])
     }
 
     func disconnect() {
@@ -257,11 +310,6 @@ final class SignalingClient: ObservableObject {
         socket.emit("ptt:release", ["channelId": channel, "unitId": unitId])
     }
 
-    private func emitTxStart() {
-        guard let socket, let channel = currentChannel, !channel.isEmpty else { return }
-        socket.emit("tx:start", ["channelId": channel, "unitId": unitId])
-    }
-
     func emitLocationUpdate(latitude: Double, longitude: Double, accuracy: Double, heading: Double?, speed: Double?) {
         guard state == .authenticated, let socket else { return }
         var payload: [String: Any] = [
@@ -272,6 +320,32 @@ final class SignalingClient: ObservableObject {
         if let heading { payload["heading"] = heading }
         if let speed { payload["speed"] = speed }
         socket.emit("location:update", payload)
+    }
+
+    // MARK: - Floor / TX events (used by RadioAudioEngine)
+
+    func emitPttRequest(channelId: String) {
+        guard state == .authenticated, let socket else { return }
+        isFloorRequestPending = true
+        lastFloorDenialReason = nil
+        socket.emit("ptt:request", ["channelId": channelId, "unitId": unitId])
+    }
+
+    func emitPttRelease(channelId: String) {
+        guard state == .authenticated, let socket else { return }
+        isFloorRequestPending = false
+        isTransmitting = false
+        socket.emit("ptt:release", ["channelId": channelId, "unitId": unitId])
+    }
+
+    func emitTxStart(channelId: String) {
+        guard state == .authenticated, let socket else { return }
+        socket.emit("tx:start", ["channelId": channelId, "unitId": unitId])
+    }
+
+    func emitTxStop(channelId: String) {
+        guard state == .authenticated, let socket else { return }
+        socket.emit("tx:stop", ["channelId": channelId, "unitId": unitId])
     }
 
     private func sendAuth() {

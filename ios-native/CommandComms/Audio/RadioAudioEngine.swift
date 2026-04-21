@@ -1,0 +1,218 @@
+import Foundation
+import Combine
+import AVFoundation
+import os.log
+
+enum RadioState: String {
+    case idle, requestingFloor, transmitting, receiving, channelBusy
+}
+
+@MainActor
+final class RadioAudioEngine: ObservableObject {
+    private let log = Logger(subsystem: "CommandComms", category: "RadioEngine")
+
+    @Published private(set) var state: RadioState = .idle
+    @Published private(set) var transportHealth: TransportHealth = .disconnected
+    @Published private(set) var transmittingUnitId: String?
+    @Published private(set) var lastError: String?
+
+    let transport = UdpAudioTransport()
+    let codec = OpusCodec()
+    let capture = AudioCapture()
+    let playback = AudioPlayback()
+    private let jitter = JitterBuffer(targetDepth: 3, maxDepth: 32)
+
+    private weak var signaling: SignalingClient?
+    private var subs = Set<AnyCancellable>()
+    private var rxTimer: DispatchSourceTimer?
+    private let rxQueue = DispatchQueue(label: "radio.rx")
+    private var codecReady = false
+
+    var unitId: String = "" {
+        didSet { transport.unitId = unitId }
+    }
+    var channelId: String = "" {
+        didSet {
+            transport.channelIndex = Self.channelIndex(for: channelId)
+        }
+    }
+
+    init() {
+        transport.onHealthChange = { [weak self] h in
+            Task { @MainActor in self?.transportHealth = h }
+        }
+        transport.onPacketReceived = { [weak self] pkt in
+            self?.handleRxPacket(pkt)
+        }
+    }
+
+    static func channelIndex(for channelId: String) -> Int {
+        // Map channel string to numeric index. Match Android: numeric prefix or hash.
+        if let n = Int(channelId.prefix { $0.isNumber }) { return n }
+        return abs(channelId.hashValue) % 0xFFFF
+    }
+
+    func attach(signaling: SignalingClient) {
+        self.signaling = signaling
+        signaling.radioEvents
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] ev in self?.handleSignalingEvent(ev) }
+            .store(in: &subs)
+    }
+
+    func configureRelay(host: String, port: Int) {
+        transport.configure(host: host, port: port)
+    }
+
+    func startRadio() {
+        if !codecReady {
+            do {
+                try codec.initialize()
+                try playback.start()
+                codecReady = true
+            } catch {
+                lastError = "Audio init failed: \(error.localizedDescription)"
+                log.error("startRadio failed: \(error.localizedDescription)")
+                return
+            }
+        }
+        transport.start()
+        startRxLoop()
+    }
+
+    func stopRadio() {
+        stopRxLoop()
+        capture.stop()
+        playback.stop()
+        codec.release()
+        transport.stop()
+        codecReady = false
+        state = .idle
+        transmittingUnitId = nil
+    }
+
+    // MARK: - PTT
+
+    func pttPressed() {
+        guard !channelId.isEmpty else {
+            lastError = "No channel selected"
+            return
+        }
+        guard state == .idle || state == .receiving else { return }
+        state = .requestingFloor
+        signaling?.emitPttRequest(channelId: channelId)
+    }
+
+    func pttReleased() {
+        if state == .transmitting {
+            stopTransmit()
+        }
+        signaling?.emitPttRelease(channelId: channelId)
+        if state == .requestingFloor {
+            state = .idle
+        }
+    }
+
+    private func startTransmit() {
+        guard state == .requestingFloor || state == .transmitting else { return }
+        state = .transmitting
+        signaling?.emitTxStart(channelId: channelId)
+        capture.onFrame = { [weak self] frame in
+            self?.encodeAndSend(frame)
+        }
+        do {
+            try capture.start()
+        } catch {
+            lastError = "Mic start failed: \(error.localizedDescription)"
+            log.error("capture.start error: \(error.localizedDescription)")
+            stopTransmit()
+        }
+    }
+
+    private func stopTransmit() {
+        capture.stop()
+        capture.onFrame = nil
+        if state == .transmitting {
+            signaling?.emitTxStop(channelId: channelId)
+            state = transmittingUnitId != nil ? .receiving : .idle
+        }
+    }
+
+    private func encodeAndSend(_ pcm: [Int16]) {
+        guard let payload = codec.encode(pcm: pcm) else { return }
+        transport.sendOpusPayload(payload)
+    }
+
+    // MARK: - RX
+
+    private func startRxLoop() {
+        stopRxLoop()
+        let t = DispatchSource.makeTimerSource(queue: rxQueue)
+        t.schedule(deadline: .now() + 0.02, repeating: 0.02)
+        t.setEventHandler { [weak self] in self?.tickRx() }
+        t.resume()
+        rxTimer = t
+    }
+
+    private func stopRxLoop() {
+        rxTimer?.cancel()
+        rxTimer = nil
+        jitter.reset()
+    }
+
+    private func handleRxPacket(_ pkt: OpusRadioPacket) {
+        // accept only matching channel index
+        if pkt.channelIndex != transport.channelIndex { return }
+        jitter.push(pkt)
+    }
+
+    private func tickRx() {
+        let (pkt, plc) = jitter.pop()
+        if let pkt {
+            if let pcm = codec.decode(pkt.opusPayload) {
+                playback.enqueue(pcm: pcm)
+            }
+        } else if plc {
+            if let pcm = codec.decode(nil) {
+                playback.enqueue(pcm: pcm)
+            }
+        }
+    }
+
+    // MARK: - Signaling
+
+    private func handleSignalingEvent(_ event: RadioSignalingEvent) {
+        switch event {
+        case .pttGranted(let channel, _):
+            guard channel == channelId else { return }
+            log.info("Floor granted on \(channel)")
+            startTransmit()
+        case .pttDenied(let channel, let reason):
+            guard channel == channelId else { return }
+            lastError = "PTT denied: \(reason)"
+            if state == .requestingFloor {
+                state = transmittingUnitId != nil ? .channelBusy : .idle
+            }
+        case .pttRevoked(let channel, _):
+            guard channel == channelId else { return }
+            if state == .transmitting { stopTransmit() }
+            state = .idle
+        case .txStart(let sender, let channel):
+            guard channel == channelId else { return }
+            transmittingUnitId = sender
+            if state != .transmitting { state = .receiving }
+        case .txStop(let sender, let channel):
+            guard channel == channelId else { return }
+            if transmittingUnitId == sender { transmittingUnitId = nil }
+            if state == .receiving { state = .idle }
+        case .channelBusy(let channel, let heldBy):
+            guard channel == channelId else { return }
+            transmittingUnitId = heldBy
+            if state != .transmitting { state = .channelBusy }
+        case .channelIdle(let channel):
+            guard channel == channelId else { return }
+            transmittingUnitId = nil
+            if state == .channelBusy || state == .receiving { state = .idle }
+        }
+    }
+}
