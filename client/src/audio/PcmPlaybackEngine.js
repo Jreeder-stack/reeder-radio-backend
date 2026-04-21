@@ -14,10 +14,21 @@ export class PcmPlaybackEngine {
     this._processorConnected = false;
     this._dspOutput = null;
     this._dspSettings = null;
+    this._initPromise = null;
+    this._pendingFrames = [];
+    this._framesEnqueuedDuringInit = 0;
   }
 
-  async init() {
-    if (this.audioContext) return;
+  init() {
+    if (this.started) return Promise.resolve();
+    if (this._initPromise) return this._initPromise;
+    this._initPromise = this._doInit().finally(() => {
+      this._initPromise = null;
+    });
+    return this._initPromise;
+  }
+
+  async _doInit() {
     this.audioContext = getSharedAudioContext();
     if (this.audioContext.sampleRate !== PCM_SPEC.sampleRate) {
       console.warn('[PcmPlaybackEngine] Shared AudioContext sampleRate mismatch', {
@@ -61,6 +72,19 @@ export class PcmPlaybackEngine {
 
     this._processorConnected = true;
     this.started = true;
+
+    if (this._pendingFrames.length > 0) {
+      console.log('[PcmPlaybackEngine] Flushing pending frames captured during init', {
+        flushed: this._pendingFrames.length,
+        framesEnqueuedDuringInit: this._framesEnqueuedDuringInit,
+      });
+      const pending = this._pendingFrames;
+      this._pendingFrames = [];
+      for (const samples of pending) {
+        this._deliverFrame(samples);
+      }
+    }
+    this._framesEnqueuedDuringInit = 0;
   }
 
   _useFallback() {
@@ -120,20 +144,33 @@ export class PcmPlaybackEngine {
     }
   }
 
-  async enqueue(int16Frame) {
-    if (!this.started) {
-      await this.init();
-    }
-    if (this.audioContext && this.audioContext.state === 'suspended') {
-      this.audioContext.resume().catch(() => {});
-    }
-
-    const samples = (int16Frame instanceof Int16Array) ? int16Frame : new Int16Array(int16Frame);
+  _deliverFrame(samples) {
     if (this._workletNode) {
       this._workletNode.port.postMessage({ type: 'enqueue', samples });
     } else if (this._fallbackProcessor) {
       this._fallbackQueue.push(samples);
     }
+  }
+
+  async enqueue(int16Frame) {
+    const samples = (int16Frame instanceof Int16Array) ? int16Frame : new Int16Array(int16Frame);
+
+    if (!this.started) {
+      // Buffer frames synchronously so concurrent callers during init don't lose audio.
+      this._pendingFrames.push(samples);
+      this._framesEnqueuedDuringInit++;
+      // Kick off (or join) init; do not await here so we don't block the producer.
+      this.init().catch((err) => {
+        console.warn('[PcmPlaybackEngine] init() failed during enqueue:', err?.message);
+      });
+      return true;
+    }
+
+    if (this.audioContext && this.audioContext.state === 'suspended') {
+      this.audioContext.resume().catch(() => {});
+    }
+
+    this._deliverFrame(samples);
     return true;
   }
 
@@ -170,5 +207,8 @@ export class PcmPlaybackEngine {
     this.audioContext = null;
     this.started = false;
     this._processorConnected = false;
+    this._initPromise = null;
+    this._pendingFrames = [];
+    this._framesEnqueuedDuringInit = 0;
   }
 }

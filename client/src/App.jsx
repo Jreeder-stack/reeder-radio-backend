@@ -293,8 +293,13 @@ export default function App({ user, onLogout }) {
       // Shared AudioContext is the single resume entrypoint — every audio engine and
       // tone helper uses getSharedAudioContext(), so this one call covers all of them.
       resumeSharedAudio().catch(() => {});
+      // Only resume <audio> elements backed by a live MediaStream (track.attach()
+      // sets srcObject). Skip any element with a regular `src=` since calling
+      // play() on those after foregrounding can replay stale audio mid-stream
+      // (Task #380). MediaStream-backed elements cannot replay buffered audio
+      // — play() just unpauses the live track — so this is the safe gate.
       rxAudioElementsRef.current.forEach(el => {
-        if (el.paused) {
+        if (el.paused && el.srcObject) {
           el.play().catch(() => {});
         }
       });

@@ -757,8 +757,14 @@ export function AudioConnectionProvider({ children, user }) {
         console.log('[AudioConnection] Fetched', fetchedChannels.length, 'channels');
         setChannels(fetchedChannels);
 
-        audioTransportManager.prepareConnection();
-        
+        try {
+          // Awaited so the playback worklet finishes loading before any
+          // WebSocket can deliver the first RX packet (Task #380).
+          await audioTransportManager.prepareConnection();
+        } catch (prepErr) {
+          console.warn('[AudioConnection] prepareConnection failed:', prepErr?.message);
+        }
+
         if (fetchedChannels.length > 0) {
           await initializeConnections(identity, fetchedChannels);
         } else {
