@@ -636,6 +636,9 @@ class AudioTransportManager {
     this.rooms.delete(channelName);
     try { conn.ws.close(); } catch (_) {}
     this._emitConnectionStateChange(channelName, 'disconnected');
+    if (this._playback && typeof this._playback.removeChannel === 'function') {
+      try { this._playback.removeChannel(channelName); } catch (_) {}
+    }
 
     if (this.rooms.size === 0) {
       await this._capture.shutdown();
@@ -1145,7 +1148,7 @@ class AudioTransportManager {
               this._rxDiagReorderFlushes = 0;
             }
           }
-          await this._playbackFrame(int16);
+          await this._playbackFrame(int16, channelId);
         }
       } catch (err) {
         console.warn('OPUS_DECODE_ERROR', err.message);
@@ -1154,7 +1157,7 @@ class AudioTransportManager {
       const decoderKey = `${channelId}::${senderUnitId}`;
       const stream = this._reorderStreams.get(decoderKey);
       if (stream) stream._lastCodec = 'pcm';
-      await this._playbackFrame(payload);
+      await this._playbackFrame(payload, channelId);
     }
   }
 
@@ -1169,7 +1172,7 @@ class AudioTransportManager {
           const plc = decoder.decodeFrame(new Uint8Array(0));
           if (plc.samplesDecoded > 0 && plc.channelData && plc.channelData[0]) {
             const int16 = float32ToInt16(plc.channelData[0]);
-            await this._playbackFrame(int16);
+            await this._playbackFrame(int16, channelId);
           }
         } catch (_) {
           break;
@@ -1235,11 +1238,23 @@ class AudioTransportManager {
   }
 
   _updateWorkletTargetDepth(depth) {
-    if (this._playback && this._playback._workletNode) {
-      try {
-        this._playback._workletNode.port.postMessage({ type: 'setTargetDepth', depth });
-      } catch (_) {}
+    if (this._playback && typeof this._playback.postToAllWorklets === 'function') {
+      this._playback.postToAllWorklets({ type: 'setTargetDepth', depth });
     }
+  }
+
+  setChannelVolume(channelName, percent) {
+    if (!channelName) return;
+    const pct = Math.max(0, Math.min(150, Number(percent)));
+    const gain = pct / 100;
+    if (this._playback && typeof this._playback.setChannelGain === 'function') {
+      this._playback.setChannelGain(channelName, gain);
+    }
+  }
+
+  getChannelVolume(channelName) {
+    if (!this._playback || typeof this._playback.getChannelGain !== 'function') return 100;
+    return Math.round(this._playback.getChannelGain(channelName) * 100);
   }
 
   _trackRxSequence(channelId, senderUnitId, sequence) {
@@ -1322,13 +1337,13 @@ class AudioTransportManager {
     }
   }
 
-  async _playbackFrame(samples) {
+  async _playbackFrame(samples, channelKey) {
     if (!this._playback.started) {
       await this._playback.init();
     }
 
     if (this._playback.audioContext && this._playback.audioContext.state === 'suspended') {
-      this._suspendedBuffer.push(samples);
+      this._suspendedBuffer.push({ samples, channelKey });
       if (this._suspendedBuffer.length > 50) {
         this._suspendedBuffer.splice(0, this._suspendedBuffer.length - 25);
       }
@@ -1337,8 +1352,8 @@ class AudioTransportManager {
       } catch (_) {}
       if (this._playback.audioContext.state === 'running' && this._suspendedBuffer.length > 0) {
         const buffered = this._suspendedBuffer.splice(0);
-        for (const frame of buffered) {
-          await this._playback.enqueue(frame);
+        for (const item of buffered) {
+          await this._playback.enqueue(item.samples, item.channelKey);
         }
       }
       return;
@@ -1346,12 +1361,12 @@ class AudioTransportManager {
 
     if (this._suspendedBuffer.length > 0) {
       const buffered = this._suspendedBuffer.splice(0);
-      for (const frame of buffered) {
-        await this._playback.enqueue(frame);
+      for (const item of buffered) {
+        await this._playback.enqueue(item.samples, item.channelKey);
       }
     }
 
-    await this._playback.enqueue(samples);
+    await this._playback.enqueue(samples, channelKey);
   }
 
   broadcastData(data) {

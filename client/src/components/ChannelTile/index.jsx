@@ -252,7 +252,11 @@ export default function ChannelTile({ channel, onRemove }) {
   const hasEmergency = emergencies.some(e => e.channel === roomKey);
 
   const handleVolumeChange = (e) => {
-    setChannelLevel(`volume_${channel.id}`, parseInt(e.target.value, 10));
+    const value = parseInt(e.target.value, 10);
+    setChannelLevel(`volume_${channel.id}`, value);
+    if (roomKey) {
+      audioTransportManager.setChannelVolume(roomKey, value);
+    }
   };
 
   const handleRemoveClick = (e) => {
@@ -422,7 +426,7 @@ export default function ChannelTile({ channel, onRemove }) {
         <input
           type="range"
           min="0"
-          max="100"
+          max="150"
           value={volumeLevel}
           onChange={handleVolumeChange}
           className="volume-slider flex-1 min-w-0"

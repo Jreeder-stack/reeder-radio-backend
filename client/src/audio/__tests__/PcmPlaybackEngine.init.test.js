@@ -9,6 +9,16 @@ vi.mock('../iosAudioUnlock.js', () => {
     audioWorklet: { addModule },
     destination: {},
     resume: vi.fn().mockResolvedValue(undefined),
+    createGain: vi.fn(() => ({
+      gain: { value: 1.0 },
+      connect: vi.fn(),
+      disconnect: vi.fn(),
+    })),
+    createScriptProcessor: vi.fn(() => ({
+      connect: vi.fn(),
+      disconnect: vi.fn(),
+      onaudioprocess: null,
+    })),
   };
   return {
     getSharedAudioContext: () => ctx,

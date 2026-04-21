@@ -36,8 +36,19 @@ const useDispatchStore = create(
 
       setChannels: (newChannels) => {
         const validIds = new Set(newChannels.map(ch => ch.id));
+        const validIdStrings = new Set(newChannels.map(ch => String(ch.id)));
         const state = get();
-        
+
+        const cleanedLevels = {};
+        for (const [key, value] of Object.entries(state.channelLevels || {})) {
+          if (key.startsWith('volume_')) {
+            const id = key.slice('volume_'.length);
+            if (validIdStrings.has(String(id))) cleanedLevels[key] = value;
+          } else if (validIdStrings.has(String(key))) {
+            cleanedLevels[key] = value;
+          }
+        }
+
         set({
           channels: newChannels,
           channelOrder: state.channelOrder.filter(id => validIds.has(id)),
@@ -45,6 +56,7 @@ const useDispatchStore = create(
           txChannelIds: state.txChannelIds.filter(id => validIds.has(id)),
           mutedChannelIds: state.mutedChannelIds.filter(id => validIds.has(id)),
           monitoredChannelIds: state.monitoredChannelIds.filter(id => validIds.has(id)),
+          channelLevels: cleanedLevels,
           priorityChannelId: state.priorityChannelId && validIds.has(state.priorityChannelId) ? state.priorityChannelId : null
         });
       },

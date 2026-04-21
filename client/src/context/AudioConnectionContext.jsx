@@ -109,6 +109,16 @@ export function AudioConnectionProvider({ children, user }) {
         reconnectAttempts.current.delete(channelName);
         connectionStartTimes.current.set(channelName, Date.now());
         lastActivityRef.current = Date.now();
+        try {
+          const state = useDispatchStore.getState();
+          const channel = (state.channels || []).find(c => (c.room_key || ((c.zone || 'Default') + '__' + c.name)) === channelName);
+          if (channel) {
+            const persisted = state.channelLevels?.[`volume_${channel.id}`];
+            if (typeof persisted === 'number') {
+              audioTransportManager.setChannelVolume(channelName, persisted);
+            }
+          }
+        } catch (_) {}
         console.log(`[AudioConnection] Reconnected to ${channelName}`);
       } catch (err) {
         console.error(`[AudioConnection] Reconnect failed for ${channelName}:`, err);
@@ -361,7 +371,18 @@ export function AudioConnectionProvider({ children, user }) {
       ]);
       console.log(`[AudioConnection] connectToChannel total for ${channelName}: ${(performance.now() - tConnect).toFixed(1)}ms`);
       connectionStartTimes.current.set(channelName, Date.now());
-      
+
+      try {
+        const state = useDispatchStore.getState();
+        const channel = (state.channels || []).find(c => (c.room_key || ((c.zone || 'Default') + '__' + c.name)) === channelName);
+        if (channel) {
+          const persisted = state.channelLevels?.[`volume_${channel.id}`];
+          if (typeof persisted === 'number') {
+            audioTransportManager.setChannelVolume(channelName, persisted);
+          }
+        }
+      } catch (_) {}
+
       if (markActive) {
         audioTransportManager.setChannelActive(channelName);
       }
