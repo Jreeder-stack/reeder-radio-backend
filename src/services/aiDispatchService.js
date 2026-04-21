@@ -489,6 +489,8 @@ export class AIDispatcher {
     this.verboseLogging = process.env.AI_DISPATCH_VERBOSE === 'true';
     this._turnContextByUnit = new Map();
     this.openBackupRequests = new Map();
+    this._recentAssignments = new Map();
+    this.RECENT_ASSIGNMENT_TTL_MS = 120000;
     this._identifyTimeouts = new Map();
     this._boloPollingInterval = null;
     this._seenBoloIds = new Set();
@@ -3392,11 +3394,20 @@ export class AIDispatcher {
         data: { callId, callNumber, nature, address }
       });
 
+      const createdCallSnapshot = { call_id: callId, call_number: callNumber, location: address, nature, priority };
+      this._recordRecentAssignment(participantId, createdCallSnapshot);
+      for (const unitId of (units || [])) {
+        if (normalizeUnitId(unitId) !== normalizeUnitId(participantId)) {
+          this._recordRecentAssignment(unitId, createdCallSnapshot);
+        }
+      }
+
       if (additionalUnits && additionalUnits.length > 0 && units.length <= 1) {
         for (const unitId of additionalUnits) {
           try {
             await cadService.assignUnitToCall(unitId, callId);
             this.log('CAD_ADDITIONAL_UNIT_ASSIGNED', { unitId, callId });
+            this._recordRecentAssignment(unitId, createdCallSnapshot);
           } catch (assignError) {
             this.log('CAD_ADDITIONAL_UNIT_ASSIGN_ERROR', { unitId, callId, error: assignError.message });
           }
@@ -3867,6 +3878,7 @@ export class AIDispatcher {
       summary: `attached to ${callDisplay}`,
       data: { callId, callDisplay }
     });
+    this._recordRecentAssignment(participantId, targetCall, { callId, callDisplay });
 
     let cadStatus = null;
     let statusWord = '';
@@ -4092,6 +4104,7 @@ export class AIDispatcher {
       }
 
       this.log('SHOW_OUT_WITH_OK', { unitId: participantId, withUnit: targetUnit, callId, callDisplay });
+      this._recordRecentAssignment(participantId, targetCall, { callId, callDisplay });
       const time = this.formatMilitaryTime();
       const resp = `${participantId}, copy, on scene with ${targetUnit} on ${callDisplay}, ${time}.`;
       await this.speak(resp, participantId);
@@ -4362,6 +4375,7 @@ export class AIDispatcher {
         summary: `${targetUnit} attached to ${callDisplay}`,
         data: { targetUnit, callId, callDisplay }
       });
+      this._recordRecentAssignment(targetUnit, targetCall || {}, { callId, callDisplay });
 
       const resp = `${participantId}, 10-4. ${targetUnit} added to ${callDisplay}.`;
       await this.speak(resp, participantId);
@@ -5643,12 +5657,14 @@ export class AIDispatcher {
       case 'ASSIGN_CALL': {
         const r = await cadService.clearUnit(unitId);
         if (r?.success === false) return { success: false, message: r?.error || 'CAD rejected the revert' };
+        this._clearRecentAssignment(unitId);
         return { success: true, message: `Detached you from ${data.callDisplay || 'that call'}.` };
       }
       case 'ASSIGN_OTHER_UNIT': {
         if (!data.targetUnit) return { success: false, message: 'target unit unknown' };
         const r = await cadService.clearUnit(data.targetUnit);
         if (r?.success === false) return { success: false, message: r?.error || 'CAD rejected the revert' };
+        this._clearRecentAssignment(data.targetUnit);
         return { success: true, message: `Detached ${data.targetUnit} from ${data.callDisplay || 'that call'}.` };
       }
       case 'ADD_NOTE': {
@@ -5681,6 +5697,7 @@ export class AIDispatcher {
         if (!data.priorCallId) return { success: false, message: 'prior call unknown' };
         const r = await cadService.assignUnitToCall(unitId, data.priorCallId);
         if (r?.success === false) return { success: false, message: r?.error || 'CAD rejected the re-attach' };
+        this._recordRecentAssignment(unitId, {}, { callId: data.priorCallId, callDisplay: data.priorCallDisplay });
         return { success: true, message: `Re-attached you to ${data.priorCallDisplay || data.priorCallId}.` };
       }
       case 'UPDATE_CALL': {
@@ -5747,6 +5764,7 @@ export class AIDispatcher {
         return;
       }
       this.log('UNIT_CLEARED', { unitId: participantId });
+      this._clearRecentAssignment(participantId);
       if (priorCallId) {
         recordAction(participantId, 'CLEAR_UNIT', {
           summary: `cleared from ${priorCallDisplay}`,
@@ -6840,6 +6858,49 @@ export class AIDispatcher {
     }
   }
 
+  _recentAssignmentKey(unitId) {
+    return normalizeUnitId(unitId) || String(unitId || '').toUpperCase();
+  }
+
+  _recordRecentAssignment(unitId, callInfo, extras = {}) {
+    if (!unitId || !callInfo) return;
+    const callId = callInfo.call_id || callInfo.call_number || callInfo.callNumber || extras.callId;
+    if (!callId) return;
+    const key = this._recentAssignmentKey(unitId);
+    const entry = {
+      callId,
+      callDisplay: callInfo.call_number || extras.callDisplay || callId,
+      location: callInfo.location || callInfo.address || extras.location || null,
+      nature: callInfo.nature || callInfo.call_nature || callInfo.type || extras.nature || null,
+      crossStreets: callInfo.cross_streets || callInfo.crossStreets || extras.crossStreets || null,
+      priority: callInfo.priority || callInfo.call_priority || extras.priority || null,
+      lat: typeof callInfo.lat === 'number' ? callInfo.lat : (typeof extras.lat === 'number' ? extras.lat : null),
+      lng: typeof callInfo.lng === 'number' ? callInfo.lng : (typeof extras.lng === 'number' ? extras.lng : null),
+      channel: extras.channel || this.channelName || this.configuredChannel || '_default_',
+      assignedAt: Date.now(),
+    };
+    this._recentAssignments.set(key, entry);
+    this.log('RECENT_ASSIGNMENT_CACHED', { unitId: key, callId, callDisplay: entry.callDisplay });
+  }
+
+  _getRecentAssignment(unitId) {
+    const key = this._recentAssignmentKey(unitId);
+    const entry = this._recentAssignments.get(key);
+    if (!entry) return null;
+    if (Date.now() - entry.assignedAt > this.RECENT_ASSIGNMENT_TTL_MS) {
+      this._recentAssignments.delete(key);
+      return null;
+    }
+    return entry;
+  }
+
+  _clearRecentAssignment(unitId) {
+    const key = this._recentAssignmentKey(unitId);
+    if (this._recentAssignments.delete(key)) {
+      this.log('RECENT_ASSIGNMENT_CLEARED', { unitId: key });
+    }
+  }
+
   _backupRequestKey(callId) {
     const channel = this.channelName || this.configuredChannel || '_default_';
     return `${channel}::${callId}`;
@@ -6952,6 +7013,17 @@ export class AIDispatcher {
         const assignResult = await cadService.assignUnitToCall(volunteerDisplay, req.callId);
         assigned = assignResult?.success !== false;
         if (assigned) {
+          this._recordRecentAssignment(volunteerDisplay, {}, {
+            callId: req.callId,
+            callDisplay: req.callDisplay,
+            location: req.location,
+            nature: req.nature,
+            crossStreets: req.crossStreets,
+            priority: req.priority,
+            lat: req.callLat,
+            lng: req.callLng,
+            channel: req.channel,
+          });
           try {
             const statusResult = await cadService.updateUnitStatus(volunteerDisplay, 'en_route');
             enRouteOk = !!statusResult?.success;
@@ -7086,12 +7158,37 @@ export class AIDispatcher {
     }
 
     let currentCall;
+    let callSource = 'cad';
     try {
       currentCall = await cadService.getUnitCurrentCallById(participantId);
     } catch (err) {
-      this.log('BACKUP_REQUEST_CAD_ERROR', { participant: participantId, error: err.message });
+      this.log('BACKUP_REQUEST_CAD_ERROR', { participant: participantId, error: err.message, attempt: 1 });
     }
-    const callId = currentCall?.call_id || currentCall?.call_number || currentCall?.callNumber;
+    let callId = currentCall?.call_id || currentCall?.call_number || currentCall?.callNumber;
+
+    if (!callId) {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      try {
+        currentCall = await cadService.getUnitCurrentCallById(participantId);
+      } catch (err) {
+        this.log('BACKUP_REQUEST_CAD_ERROR', { participant: participantId, error: err.message, attempt: 2 });
+        currentCall = null;
+      }
+      callId = currentCall?.call_id || currentCall?.call_number || currentCall?.callNumber;
+      if (callId) callSource = 'cad-retry';
+    }
+
+    let cachedAssignment = null;
+    if (!callId) {
+      cachedAssignment = this._getRecentAssignment(participantId);
+      if (cachedAssignment) {
+        callId = cachedAssignment.callId;
+        callSource = 'recent-assignment-cache';
+      }
+    }
+
+    this.log('BACKUP_REQUEST_CALL_LOOKUP', { participant: participantId, callId: callId || null, source: callId ? callSource : 'none' });
+
     if (!callId) {
       const resp = `${participantId}, you're not assigned to a call.`;
       await this.speak(resp, participantId);
@@ -7109,24 +7206,31 @@ export class AIDispatcher {
       return;
     }
 
-    const location = currentCall?.location || currentCall?.address || null;
-    const nature = currentCall?.nature || currentCall?.call_nature || currentCall?.type || null;
-    const crossStreets = currentCall?.cross_streets || currentCall?.crossStreets || null;
-    const priority = currentCall?.priority || currentCall?.call_priority || null;
+    const location = currentCall?.location || currentCall?.address || cachedAssignment?.location || null;
+    const nature = currentCall?.nature || currentCall?.call_nature || currentCall?.type || cachedAssignment?.nature || null;
+    const crossStreets = currentCall?.cross_streets || currentCall?.crossStreets || cachedAssignment?.crossStreets || null;
+    const priority = currentCall?.priority || currentCall?.call_priority || cachedAssignment?.priority || null;
     const channel = this.channelName || this.configuredChannel || '_default_';
+    const callLat = typeof currentCall?.lat === 'number'
+      ? currentCall.lat
+      : (typeof cachedAssignment?.lat === 'number' ? cachedAssignment.lat : null);
+    const callLng = typeof currentCall?.lng === 'number'
+      ? currentCall.lng
+      : (typeof cachedAssignment?.lng === 'number' ? cachedAssignment.lng : null);
+    const callDisplay = currentCall?.call_number || cachedAssignment?.callDisplay || callId;
 
     const req = {
       requesterUnit: String(participantId).toUpperCase(),
       channel,
       key: reqKey,
       callId,
-      callDisplay: currentCall?.call_number || callId,
+      callDisplay,
       location,
       nature,
       crossStreets,
       priority,
-      callLat: typeof currentCall?.lat === 'number' ? currentCall.lat : null,
-      callLng: typeof currentCall?.lng === 'number' ? currentCall.lng : null,
+      callLat,
+      callLng,
       requesterTranscript: transcript,
       requestText: transcript,
       audioUrl: null,
