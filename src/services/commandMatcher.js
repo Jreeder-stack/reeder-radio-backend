@@ -1,3 +1,5 @@
+import { DISPATCHER_TZ } from '../utils/timezone.js';
+
 const DISPATCHER_STATE = {
   IDLE: 'IDLE',
   AWAITING_COMMAND: 'AWAITING_COMMAND',
@@ -597,7 +599,7 @@ function normalizeText(text) {
 
 function formatTimestamp() {
   const options = {
-    timeZone: 'America/New_York',
+    timeZone: DISPATCHER_TZ,
     hour: '2-digit',
     minute: '2-digit',
     hour12: false

@@ -1,10 +1,11 @@
 import { getAiSetting, setAiSetting, isAiDispatchEnabled, getAiDispatchChannel } from '../db/index.js';
+import { DISPATCHER_TZ } from '../utils/timezone.js';
 import { getDispatcher } from './aiDispatchService.js';
 import { textToSpeech, isConfigured as isAzureConfigured } from './azureSpeechService.js';
 import { floorControlService } from './floorControlService.js';
 
 const SETTING_KEY = 'hourly_time_broadcast_enabled';
-const BROADCAST_TZ = 'America/New_York';
+const BROADCAST_TZ = DISPATCHER_TZ;
 const HOUR_WORDS = [
   'zero hundred hours',
   'oh one hundred hours',

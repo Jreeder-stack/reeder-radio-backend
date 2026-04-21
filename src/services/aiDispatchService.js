@@ -9,6 +9,7 @@ import { opusCodec, SAMPLE_RATE as OPUS_SAMPLE_RATE, FRAME_SIZE as OPUS_FRAME_SI
 import { floorControlService } from './floorControlService.js';
 import { formatSpokenTime24 } from './hourlyTimeBroadcastService.js';
 import * as cadService from './cadService.js';
+import { DISPATCHER_TZ, utcDateToLocalDate, localDateToUtcDate, formatLocalSpokenTime24, maybeUtcToLocalForSpeech } from '../utils/timezone.js';
 import locationService from './locationService.js';
 import { webSearch, SEARCH_STATUS } from './webSearchService.js';
 import fs from 'fs';
@@ -2484,7 +2485,8 @@ class AIDispatcher {
       dob
     }, true);
     
-    const confirmResponse = `${participantId}, confirming. Last ${lastName}, first ${firstName}, date of birth ${dob}. 10-4?`;
+    const dobSpoken = this._formatSpokenDate(dob);
+    const confirmResponse = `${participantId}, confirming. Last ${lastName}, first ${firstName}, date of birth ${dobSpoken || dob}. 10-4?`;
     await this.speak(confirmResponse, participantId);
   }
 
@@ -2518,7 +2520,8 @@ class AIDispatcher {
       dob: dobFormatted
     }, true);
     
-    const confirmResponse = `${participantId}, confirming. Last ${lastName}, first ${firstName}, date of birth ${dobFormatted}. 10-4?`;
+    const dobSpoken = this._formatSpokenDate(dobFormatted);
+    const confirmResponse = `${participantId}, confirming. Last ${lastName}, first ${firstName}, date of birth ${dobSpoken || dobFormatted}. 10-4?`;
     await this.speak(confirmResponse, participantId);
   }
 
@@ -2537,16 +2540,7 @@ class AIDispatcher {
       'forty-four', 'forty-five', 'forty-six', 'forty-seven', 'forty-eight', 'forty-nine', 'fifty', 'fifty-one',
       'fifty-two', 'fifty-three', 'fifty-four', 'fifty-five', 'fifty-six', 'fifty-seven', 'fifty-eight', 'fifty-nine'
     ];
-    const options = {
-      timeZone: 'UTC',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false
-    };
-    const formatter = new Intl.DateTimeFormat('en-US', options);
-    const parts = formatter.formatToParts(new Date());
-    const hourNum = parseInt(parts.find(p => p.type === 'hour').value, 10);
-    const minuteNum = parseInt(parts.find(p => p.type === 'minute').value, 10);
+    const { hour: hourNum, minute: minuteNum } = formatLocalSpokenTime24(new Date());
 
     const hourWord = SPOKEN_HOURS[hourNum] || 'zero';
     const minuteWord = SPOKEN_MINUTES[minuteNum] || 'hundred';
@@ -3180,7 +3174,8 @@ class AIDispatcher {
       dob
     }, true);
     
-    const confirmResponse = `${participantId}, confirming. Last ${lastName}, first ${firstName}, date of birth ${dob}. 10-4?`;
+    const dobSpoken = this._formatSpokenDate(dob);
+    const confirmResponse = `${participantId}, confirming. Last ${lastName}, first ${firstName}, date of birth ${dobSpoken || dob}. 10-4?`;
     await this.speak(confirmResponse, participantId);
   }
 
@@ -3243,17 +3238,43 @@ class AIDispatcher {
         return;
       }
       
-      this.log('CAD_PERSON_QUERY_SENDING', { participantId, firstName, lastName, dob });
-      let cadResult = await cadService.queryPerson(firstName, lastName, dob);
+      const dobUtc = dob ? localDateToUtcDate(dob) : null;
+      const outboundBody = {
+        first_name: (firstName || '').toUpperCase(),
+        last_name: (lastName || '').toUpperCase(),
+        ...(dobUtc ? { dob: dobUtc } : {})
+      };
+      this.log('PERSON_SEARCH_TRACE', {
+        participantId,
+        tz: DISPATCHER_TZ,
+        finalSlots: { firstName, lastName, dobLocal: dob, dobUtc },
+        outboundCadBody: outboundBody
+      });
+      this.log('CAD_PERSON_QUERY_SENDING', { participantId, firstName, lastName, dobLocal: dob, dobUtc, tz: DISPATCHER_TZ });
+      let cadResult = await cadService.queryPerson(firstName, lastName, dobUtc);
       this.log('CAD_PERSON_QUERY_RESULT', { participantId, result: cadResult });
+
+      try {
+        const firstResult = (cadResult.results && cadResult.results[0]) || cadResult.person || cadResult.record || null;
+        const returnedDobRaw = firstResult ? (firstResult.dob || firstResult.date_of_birth || null) : null;
+        const returnedDobLocal = returnedDobRaw ? (utcDateToLocalDate(returnedDobRaw) || returnedDobRaw) : null;
+        this.log('PERSON_SEARCH_TRACE_RESULT', {
+          participantId,
+          returnedDobUtc: returnedDobRaw,
+          returnedDobLocal,
+          spokenDob: returnedDobLocal ? this._formatSpokenDate(returnedDobLocal) : (dob ? this._formatSpokenDate(dob) : null)
+        });
+      } catch (traceErr) {
+        this.log('PERSON_SEARCH_TRACE_RESULT_ERROR', { error: traceErr.message });
+      }
 
       let broadened = false;
       let broadenedDescription = '';
 
       if (cadResult.success && this._personResultCount(cadResult) === 0 && (firstName || dob)) {
-        if (dob) {
-          this.log('PERSON_CHECK_BROADENING', { step: 'lastName+dob', lastName, dob });
-          const retry1 = await cadService.queryPerson('', lastName, dob);
+        if (dobUtc) {
+          this.log('PERSON_CHECK_BROADENING', { step: 'lastName+dob', lastName, dobLocal: dob, dobUtc });
+          const retry1 = await cadService.queryPerson('', lastName, dobUtc);
           if (retry1.success && this._personResultCount(retry1) > 0) {
             cadResult = retry1;
             broadened = true;
@@ -3293,12 +3314,15 @@ class AIDispatcher {
       
       const lastSearchResult = { lastName, firstName, dob, status: hasFlags ? 'flagged' : hasRecord ? 'local file' : 'no record' };
 
+      const spokenDob = dob ? this._formatSpokenDate(dob) : '';
       if (broadened && results.length > 1) {
         const nameList = results.map(r => {
           const fn = r.first_name || r.firstName || '';
           const ln = r.last_name || r.lastName || '';
-          const rdob = r.dob || r.date_of_birth || '';
-          return rdob ? `${fn} ${ln}, DOB ${rdob}` : `${fn} ${ln}`;
+          const rawRdob = r.dob || r.date_of_birth || '';
+          const rdobLocal = rawRdob ? utcDateToLocalDate(rawRdob) : '';
+          const rdobSpoken = rdobLocal ? this._formatSpokenDate(rdobLocal) : '';
+          return rdobSpoken ? `${fn} ${ln}, date of birth ${rdobSpoken}` : `${fn} ${ln}`;
         }).join('; ');
         const resp = `${participantId}, Central. ${broadenedDescription} ${results.length} results under last name ${lastName}. ${nameList}. Advise which subject.`;
         await this.speak(resp, participantId);
@@ -3389,7 +3413,8 @@ class AIDispatcher {
     }
     
     const flagText = flagDetails.length > 0 ? flagDetails.join(', ') : 'flag on file';
-    const flagResponse = `${participantId}, Central. ${lastName}, ${firstName}, date of birth ${dob} returns ${flagText}. Use caution.`;
+    const dobSpoken = dob ? this._formatSpokenDate(dob) : '';
+    const flagResponse = `${participantId}, Central. ${lastName}, ${firstName}, date of birth ${dobSpoken || dob} returns ${flagText}. Use caution.`;
     await this.speak(flagResponse, participantId);
     
     await this.logToCallNotes(participantId, `Records check: ${lastName}, ${firstName}, DOB ${dob} - ${flagText}`);
@@ -4058,10 +4083,12 @@ class AIDispatcher {
                        (person.flags && person.flags.length > 0));
 
       if (hasFlags) {
+        const personDobUtc = person.dob || '';
+        const personDobLocal = personDobUtc ? (utcDateToLocalDate(personDobUtc) || personDobUtc) : '';
         setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_SECURE_CONFIRM, null, {
           lastName: person.last_name || person.lastName || '',
           firstName: person.first_name || person.firstName || '',
-          dob: person.dob || '',
+          dob: personDobLocal,
           personData: person,
           lastSearchResult: { dlNumber, dlState, status: 'flagged' }
         }, true);
@@ -4153,10 +4180,12 @@ class AIDispatcher {
                        (person.flags && person.flags.length > 0));
 
       if (hasFlags) {
+        const personDobUtc = person.dob || '';
+        const personDobLocal = personDobUtc ? (utcDateToLocalDate(personDobUtc) || personDobUtc) : '';
         setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_SECURE_CONFIRM, null, {
           lastName: person.last_name || person.lastName || '',
           firstName: person.first_name || person.firstName || '',
-          dob: person.dob || '',
+          dob: personDobLocal,
           personData: person,
           lastSearchResult: { ssn: '***', status: 'flagged' }
         }, true);
@@ -4972,13 +5001,15 @@ class AIDispatcher {
     const middleName = bolo.middle_name || '';
     const lastName = bolo.last_name || '';
     const fullName = [firstName, middleName, lastName].filter(Boolean).join(' ') || 'an unidentified individual';
-    const dob = bolo.dob ? this._formatSpokenDate(bolo.dob) : 'unknown';
+    const boloDobLocal = bolo.dob ? (utcDateToLocalDate(bolo.dob) || bolo.dob) : '';
+    const dob = boloDobLocal ? this._formatSpokenDate(boloDobLocal) : 'unknown';
     const reason = bolo.reason || 'No reason provided';
-    const lastSeen = bolo.last_seen || 'an unknown location';
+    const lastSeen = maybeUtcToLocalForSpeech(bolo.last_seen) || 'an unknown location';
     const contactAgency = bolo.contact_agency || agency;
 
     const now = new Date();
-    const currentDate = this._formatSpokenDate(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`);
+    const localToday = utcDateToLocalDate(now);
+    const currentDate = this._formatSpokenDate(localToday);
     const currentTime = this._formatSpokenTime24(now);
 
     const openLine = `Attention all receiving units, prepare to copy a BOLO from ${agency}.`;

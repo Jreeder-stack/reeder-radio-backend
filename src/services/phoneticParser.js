@@ -675,20 +675,27 @@ export function parsePersonDetails(transcript) {
       const part2Words = part2.split(/\s+/).filter(w => w.length > 0 && !['first', 'name', 'is'].includes(w.toLowerCase()));
 
       if (part1Words.length >= 1) {
-        result.lastName = capitalizeFirst(part1Words[part1Words.length - 1]);
+        const lastNameRaw = part1Words.join(' ');
+        const extractedLast = extractNameFromTranscript(lastNameRaw);
+        result.lastName = extractedLast || capitalizeFirst(part1Words[part1Words.length - 1]);
       }
       if (part2Words.length >= 1) {
         const potentialDob = parseDOB(part2);
         if (potentialDob && !result.dob) {
           result.dob = potentialDob;
         } else {
-          result.firstName = capitalizeFirst(part2Words[0]);
+          const firstNameRaw = part2Words.join(' ');
+          const extractedFirst = extractNameFromTranscript(firstNameRaw);
+          result.firstName = extractedFirst || capitalizeFirst(part2Words[0]);
         }
       }
       if (part3 && !result.dob) {
         const dobFromPart3 = parseDOB(part3);
         if (dobFromPart3) {
           result.dob = dobFromPart3;
+        } else if (!result.firstName) {
+          const extractedFromPart3 = extractNameFromTranscript(part3);
+          if (extractedFromPart3) result.firstName = extractedFromPart3;
         }
       }
       if (result.lastName) return result;

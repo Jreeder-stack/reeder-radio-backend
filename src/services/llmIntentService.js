@@ -1,4 +1,5 @@
 import { AzureOpenAI } from 'openai';
+import { DISPATCHER_TZ } from '../utils/timezone.js';
 
 const AZURE_OPENAI_API_KEY = process.env.AZURE_OPENAI_API_KEY;
 const AZURE_OPENAI_ENDPOINT = process.env.AZURE_OPENAI_ENDPOINT;
@@ -40,7 +41,7 @@ const SPOKEN_MINUTES = [
 
 function formatMilitaryTime() {
   const options = {
-    timeZone: 'America/New_York',
+    timeZone: DISPATCHER_TZ,
     hour: '2-digit',
     minute: '2-digit',
     hour12: false
@@ -64,7 +65,7 @@ function formatMilitaryTime() {
 
 function formatCurrentDate() {
   const options = {
-    timeZone: 'America/New_York',
+    timeZone: DISPATCHER_TZ,
     weekday: 'long',
     year: 'numeric',
     month: 'long',
