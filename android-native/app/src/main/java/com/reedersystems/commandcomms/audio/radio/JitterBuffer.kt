@@ -5,8 +5,9 @@ import android.util.Log
 private const val TAG = "[JitterBuf]"
 private const val MAX_BUFFER_SIZE = 50
 private const val MIN_DEPTH = 2
-private const val MAX_DEPTH = 8
+private const val MAX_DEPTH = 15
 private const val INITIAL_DEPTH = 2
+private const val LOSS_DEPTH_DECAY_AFTER_GOOD_FRAMES = 50
 private const val WARM_IDLE_DEPTH = 1
 private const val JITTER_ALPHA = 0.07
 private const val SEQ_MOD = 65536
@@ -27,6 +28,8 @@ class JitterBuffer {
 
     private var lastArrivalTimeNs: Long = 0L
     private var estimatedJitterMs: Double = 0.0
+    private var lossDrivenDepth: Int = MIN_DEPTH
+    private var goodFrameStreak: Int = 0
 
     @Volatile
     private var reconnectProtection = false
@@ -52,12 +55,14 @@ class JitterBuffer {
             targetDepth = INITIAL_DEPTH
             lastArrivalTimeNs = 0L
             estimatedJitterMs = 0.0
+            lossDrivenDepth = MIN_DEPTH
+            goodFrameStreak = 0
             reconnectProtection = false
             warmIdle = false
         }
         enqueueRateLimiter.reset()
         summaryLateDrops = 0; summaryOverflows = 0; summaryUnderruns = 0; summaryReorders = 0; summaryEnqueued = 0
-        Log.d(TAG, "JitterBuffer started targetDepth=$INITIAL_DEPTH maxBuf=$MAX_BUFFER_SIZE ${RadioDiagLog.elapsedTag()}")
+        Log.d(TAG, "JitterBuffer started targetDepth=$INITIAL_DEPTH maxBuf=$MAX_BUFFER_SIZE maxDepth=$MAX_DEPTH ${RadioDiagLog.elapsedTag()}")
     }
 
     fun stop() {
@@ -160,6 +165,26 @@ class JitterBuffer {
         }
     }
 
+    fun peekNextPacket(currentSeq: Int): ByteArray? {
+        synchronized(lock) {
+            val nextSeq = (currentSeq + 1) % SEQ_MOD
+            return buffer[nextSeq]
+        }
+    }
+
+    val estimatedJitterMsValue: Double get() = synchronized(lock) { estimatedJitterMs }
+
+    fun recordSuccessfulRealFrame() {
+        synchronized(lock) {
+            goodFrameStreak++
+            if (goodFrameStreak >= LOSS_DEPTH_DECAY_AFTER_GOOD_FRAMES && lossDrivenDepth > MIN_DEPTH) {
+                lossDrivenDepth--
+                goodFrameStreak = 0
+                recomputeTargetDepth("loss_depth_decay")
+            }
+        }
+    }
+
     fun take(sequence: Int): ByteArray? {
         synchronized(lock) {
             if (!running) return null
@@ -214,7 +239,14 @@ class JitterBuffer {
     }
 
     fun recordUnderrun() {
-        summaryUnderruns++
+        synchronized(lock) {
+            summaryUnderruns++
+            goodFrameStreak = 0
+            if (lossDrivenDepth < MAX_DEPTH) {
+                lossDrivenDepth = (lossDrivenDepth + 1).coerceAtMost(MAX_DEPTH)
+                recomputeTargetDepth("loss_growth")
+            }
+        }
     }
 
     val isPlaybackActive: Boolean get() = synchronized(lock) { playbackActive }
@@ -291,14 +323,18 @@ class JitterBuffer {
             val intervalMs = (now - lastArrivalTimeNs) / 1_000_000.0
             val deviation = kotlin.math.abs(intervalMs - OpusCodec.FRAME_DURATION_MS)
             estimatedJitterMs = (1 - JITTER_ALPHA) * estimatedJitterMs + JITTER_ALPHA * deviation
-            val newDepth = (estimatedJitterMs / OpusCodec.FRAME_DURATION_MS + 1.5).toInt()
-                .coerceIn(MIN_DEPTH, MAX_DEPTH)
-            if (newDepth != targetDepth) {
-                Log.d(TAG, "Adaptive depth: $targetDepth → $newDepth (jitter=${String.format("%.1f", estimatedJitterMs)}ms)")
-                targetDepth = newDepth
-            }
+            recomputeTargetDepth("jitter_update")
         }
         lastArrivalTimeNs = now
+    }
+
+    private fun recomputeTargetDepth(reason: String) {
+        val jitterDepth = (estimatedJitterMs / OpusCodec.FRAME_DURATION_MS + 1.5).toInt()
+        val newDepth = maxOf(jitterDepth, lossDrivenDepth).coerceIn(MIN_DEPTH, MAX_DEPTH)
+        if (newDepth != targetDepth) {
+            Log.d(TAG, "Adaptive depth: $targetDepth → $newDepth (jitter=${String.format("%.1f", estimatedJitterMs)}ms lossDepth=$lossDrivenDepth reason=$reason)")
+            targetDepth = newDepth
+        }
     }
 
     private fun seqBefore(a: Int, b: Int): Boolean {

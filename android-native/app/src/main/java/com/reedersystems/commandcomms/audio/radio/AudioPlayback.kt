@@ -14,8 +14,13 @@ private const val DEFAULT_SOFTWARE_GAIN = 2.5f
 private const val WARM_IDLE_TIMEOUT_MS = 500L
 private const val IDLE_TIMEOUT_MS = 2000L
 private const val WAIT_WINDOW_MS = 5L
+private const val WAIT_WINDOW_LOOKAHEAD_MS = 25L
+private const val LOOKAHEAD_JITTER_THRESHOLD_MS = 5.0
 private const val MAX_CATCHUP_FRAMES = 2
 private const val SOFT_CLIP_THRESHOLD = 0.8
+private const val MAX_CONSECUTIVE_PLC_BEFORE_FADE = 10
+private const val PLC_FADE_FRAMES = 5
+private const val POST_LOSS_CROSSFADE_SAMPLES = 80
 
 class AudioPlayback(
     private val jitterBuffer: JitterBuffer,
@@ -30,6 +35,13 @@ class AudioPlayback(
     var onFrameDecoded: (() -> Unit)? = null
     var onUnderrun: (() -> Unit)? = null
     var onDecodeFailure: (() -> Unit)? = null
+    var onFecRecovery: (() -> Unit)? = null
+    @Volatile
+    var rxFecRecoveries: Long = 0
+        private set
+    @Volatile
+    var rxPlcFrames: Long = 0
+        private set
     @Volatile
     private var firstRxDecodeLogged = false
     @Volatile
@@ -141,6 +153,34 @@ class AudioPlayback(
         return pcmBytes
     }
 
+    private fun applyPostLossFadeIn(pcmBytes: ByteArray) {
+        // Short cross-fade-in over the first ~5ms of the first decoded frame
+        // following a loss burst, so it doesn't pop against the trailing PLC.
+        val buf = java.nio.ByteBuffer.wrap(pcmBytes).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+        val sampleCount = pcmBytes.size / 2
+        val fadeSamples = minOf(POST_LOSS_CROSSFADE_SAMPLES, sampleCount)
+        if (fadeSamples <= 0) return
+        for (i in 0 until fadeSamples) {
+            val gain = (i + 1).toDouble() / (fadeSamples + 1).toDouble()
+            val sample = buf.getShort(i * 2).toDouble() * gain
+            buf.putShort(i * 2, sample.coerceIn(-32768.0, 32767.0).toInt().toShort())
+        }
+    }
+
+    private fun applyPlcFade(pcmBytes: ByteArray, fadeFrameIndex: Int) {
+        // Linearly attenuate this PLC frame so a sustained outage cleanly
+        // fades to silence instead of producing extended robotic noise.
+        if (fadeFrameIndex <= 0) return
+        val gain = (1.0 - (fadeFrameIndex.toDouble() / PLC_FADE_FRAMES.toDouble())).coerceIn(0.0, 1.0)
+        if (gain >= 0.999) return
+        val buf = java.nio.ByteBuffer.wrap(pcmBytes).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+        val sampleCount = pcmBytes.size / 2
+        for (i in 0 until sampleCount) {
+            val sample = buf.getShort(i * 2).toDouble() * gain
+            buf.putShort(i * 2, sample.coerceIn(-32768.0, 32767.0).toInt().toShort())
+        }
+    }
+
     private fun applyRxDspChain(pcmBytes: ByteArray) {
         val length = pcmBytes.size
         rxHighPassFilter(pcmBytes, length)
@@ -232,6 +272,8 @@ class AudioPlayback(
         summaryWriteBytes = 0
         lastDepthSnapshotMs = System.currentTimeMillis()
         rxPlcTotal = 0
+        rxFecRecoveries = 0
+        rxPlcFrames = 0
 
         // Pre-warm the playback HAL: prime the Opus decoder with a PLC frame
         // and write a small chunk of silence so the audio HAL is fully spun up
@@ -258,8 +300,14 @@ class AudioPlayback(
             var lastDataTimeMs = System.currentTimeMillis()
             var missWaitStartMs = 0L
             var plcCount = 0
+            var consecutivePlc = 0
+            var lastWasConcealment = false
             var nextFrameTimeNs = System.nanoTime()
             var catchupCount = 0
+            var lastQualityLogMs = System.currentTimeMillis()
+            var lastQualityWriteCount = 0L
+            var lastQualityFecCount = 0L
+            var lastQualityPlcCount = 0L
             try {
                 while (isActive) {
                     if (!jitterBuffer.isPlaybackActive) {
@@ -320,6 +368,13 @@ class AudioPlayback(
                                     }
                                     applyRxDspChain(pcm)
                                     applyGain(pcm)
+
+                                    if (lastWasConcealment) {
+                                        applyPostLossFadeIn(pcm)
+                                        lastWasConcealment = false
+                                    }
+                                    consecutivePlc = 0
+                                    jitterBuffer.recordSuccessfulRealFrame()
 
                                     writeRateLimiter.tick()
                                     summaryWriteBytes += pcm.size
@@ -388,37 +443,99 @@ class AudioPlayback(
                         }
 
                         val waited = now - missWaitStartMs
+                        val jitterMs = jitterBuffer.estimatedJitterMsValue
+                        val effectiveWaitWindowMs = if (jitterMs >= LOOKAHEAD_JITTER_THRESHOLD_MS) {
+                            WAIT_WINDOW_LOOKAHEAD_MS
+                        } else {
+                            WAIT_WINDOW_MS
+                        }
 
-                        if (waited < WAIT_WINDOW_MS) {
+                        if (waited < effectiveWaitWindowMs) {
                             delay(1L)
                         } else {
-                            plcCount++
-                            rxPlcTotal++
-                            jitterBuffer.recordUnderrun()
-                            onUnderrun?.invoke()
-                            try {
-                                val pcm = opusCodec.decode(null)
-                                if (pcm != null && pcm.isNotEmpty()) {
-                                    applyRxDspChain(pcm)
-                                    applyGain(pcm)
-                                    try {
-                                        track.write(pcm, 0, pcm.size)
-                                    } catch (e: Exception) {
-                                        Log.e("[RadioError]", "AudioTrack write error in PLC path: ${e::class.simpleName}: ${e.message} method=playbackLoop")
+                            // Try Opus inband FEC recovery using the next packet, if available.
+                            val nextPacket = jitterBuffer.peekNextPacket(expectedSeq)
+                            val fecCandidate = nextPacket?.takeIf {
+                                it.isNotEmpty() && it[0] != OpusCodec.CODEC_MARKER_PCM
+                            }
+                            val fecPcm = if (fecCandidate != null) {
+                                try { opusCodec.decodeFec(fecCandidate) } catch (_: Exception) { null }
+                            } else null
+
+                            if (fecPcm != null && fecPcm.isNotEmpty()) {
+                                rxFecRecoveries++
+                                onFecRecovery?.invoke()
+                                applyRxDspChain(fecPcm)
+                                applyGain(fecPcm)
+                                if (lastWasConcealment) {
+                                    applyPostLossFadeIn(fecPcm)
+                                }
+                                lastWasConcealment = false
+                                consecutivePlc = 0
+                                jitterBuffer.recordSuccessfulRealFrame()
+                                try {
+                                    track.write(fecPcm, 0, fecPcm.size)
+                                } catch (e: Exception) {
+                                    Log.e("[RadioError]", "AudioTrack write error in FEC path: ${e::class.simpleName}: ${e.message} method=playbackLoop")
+                                }
+                                if (rxFecRecoveries % 25 == 1L) {
+                                    Log.d(TAG, "FEC_RECOVERY seq=$expectedSeq totalFec=$rxFecRecoveries jbSize=${jitterBuffer.size} jitterMs=${String.format("%.1f", jitterMs)} ${RadioDiagLog.elapsedTag()}")
+                                }
+                            } else {
+                                plcCount++
+                                rxPlcTotal++
+                                rxPlcFrames++
+                                consecutivePlc++
+                                lastWasConcealment = true
+                                jitterBuffer.recordUnderrun()
+                                onUnderrun?.invoke()
+                                try {
+                                    val pcm = opusCodec.decode(null)
+                                    if (pcm != null && pcm.isNotEmpty()) {
+                                        applyRxDspChain(pcm)
+                                        applyGain(pcm)
+                                        // After many consecutive PLC frames, fade the
+                                        // concealment toward silence so a long outage
+                                        // doesn't keep producing extended robotic noise.
+                                        if (consecutivePlc > MAX_CONSECUTIVE_PLC_BEFORE_FADE) {
+                                            val fadeIdx = consecutivePlc - MAX_CONSECUTIVE_PLC_BEFORE_FADE
+                                            applyPlcFade(pcm, fadeIdx)
+                                        }
+                                        try {
+                                            track.write(pcm, 0, pcm.size)
+                                        } catch (e: Exception) {
+                                            Log.e("[RadioError]", "AudioTrack write error in PLC path: ${e::class.simpleName}: ${e.message} method=playbackLoop")
+                                        }
+                                        if (plcCount % 50 == 1) {
+                                            Log.d(TAG, "PLC frame for seq=$expectedSeq (total=$plcCount consec=$consecutivePlc) jbSize=${jitterBuffer.size} ${RadioDiagLog.elapsedTag()}")
+                                        }
+                                    } else {
+                                        delay(FRAME_INTERVAL_MS)
                                     }
-                                    if (plcCount % 50 == 1) {
-                                        Log.d(TAG, "PLC frame for seq=$expectedSeq (total=$plcCount) jbSize=${jitterBuffer.size} ${RadioDiagLog.elapsedTag()}")
-                                    }
-                                } else {
+                                } catch (e: Exception) {
+                                    Log.e("[RadioError]", "PLC decode error: ${e::class.simpleName}: ${e.message} method=playbackLoop", e)
                                     delay(FRAME_INTERVAL_MS)
                                 }
-                            } catch (e: Exception) {
-                                Log.e("[RadioError]", "PLC decode error: ${e::class.simpleName}: ${e.message} method=playbackLoop", e)
-                                delay(FRAME_INTERVAL_MS)
                             }
 
                             jitterBuffer.advancePlaybackSeq()
                             missWaitStartMs = 0L
+
+                            // Periodic RX quality summary (every ~5s of playback).
+                            val qNow = System.currentTimeMillis()
+                            if (qNow - lastQualityLogMs >= 5000) {
+                                val frames = writeRateLimiter.frameCount
+                                val deltaWrites = frames - lastQualityWriteCount
+                                val deltaFec = rxFecRecoveries - lastQualityFecCount
+                                val deltaPlc = rxPlcFrames - lastQualityPlcCount
+                                val totalAttempts = deltaWrites + deltaPlc
+                                val lossPct = if (totalAttempts > 0) (deltaPlc * 100.0 / totalAttempts) else 0.0
+                                Log.d(TAG, "RX_QUALITY winFrames=$totalAttempts lossPct=${String.format("%.1f", lossPct)} fecRecoveries=$deltaFec plcFrames=$deltaPlc jitterMs=${String.format("%.1f", jitterMs)} jbDepth=${jitterBuffer.currentTargetDepth} jbSize=${jitterBuffer.size} totalFec=$rxFecRecoveries totalPlc=$rxPlcFrames ${RadioDiagLog.elapsedTag()}")
+                                lastQualityLogMs = qNow
+                                lastQualityWriteCount = frames
+                                lastQualityFecCount = rxFecRecoveries
+                                lastQualityPlcCount = rxPlcFrames
+                            }
 
                             nextFrameTimeNs += FRAME_INTERVAL_NS
                             val drift = System.nanoTime() - nextFrameTimeNs
@@ -461,7 +578,7 @@ class AudioPlayback(
         playbackJob?.cancel()
         playbackJob = null
         val underrunCount = try { audioTrack?.underrunCount ?: -1 } catch (_: Exception) { -1 }
-        Log.d(TAG, "RX_SESSION_END totalWrites=${writeRateLimiter.frameCount} totalBytes=$summaryWriteBytes plcTotal=$rxPlcTotal underruns=$underrunCount jbDepth=${jitterBuffer.currentTargetDepth} jbSize=${jitterBuffer.size} ${RadioDiagLog.elapsedTag()}")
+        Log.d(TAG, "RX_SESSION_END totalWrites=${writeRateLimiter.frameCount} totalBytes=$summaryWriteBytes plcTotal=$rxPlcTotal fecRecoveries=$rxFecRecoveries underruns=$underrunCount jbDepth=${jitterBuffer.currentTargetDepth} jbSize=${jitterBuffer.size} ${RadioDiagLog.elapsedTag()}")
     }
 
     fun release() {

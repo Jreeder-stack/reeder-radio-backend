@@ -1374,6 +1374,7 @@ class RadioAudioEngine(private val context: Context) {
         audioPlayback.onFrameDecoded = { rxSessionStats.packetsDecoded++ }
         audioPlayback.onUnderrun = { rxSessionStats.underruns++ }
         audioPlayback.onDecodeFailure = { rxSessionStats.failures++ }
+        audioPlayback.onFecRecovery = { rxSessionStats.fecRecoveries++ }
         jitterBuffer.start()
         audioPlayback.start()
         stateManager.rxPipelineRunning = true
@@ -1389,12 +1390,14 @@ class RadioAudioEngine(private val context: Context) {
         audioPlayback.onFrameDecoded = null
         audioPlayback.onUnderrun = null
         audioPlayback.onDecodeFailure = null
+        audioPlayback.onFecRecovery = null
         jitterBuffer.stop()
         stateManager.rxPipelineRunning = false
         if (stateManager.state.value == RadioState.RECEIVING) {
             stateManager.transitionTo(RadioState.IDLE, "rx_stopped")
         }
         rxSessionStats.stopReason = "explicit_stop"
+        rxSessionStats.plcFrames = audioPlayback.rxPlcFrames
         Log.d(TAG, rxSessionStats.summary() + " ${RadioDiagLog.elapsedTag()}")
         Log.d(TAG, "RX stopped")
     }
@@ -1407,6 +1410,10 @@ class RadioAudioEngine(private val context: Context) {
         lastDiagRxCount = udpTransport.rxPacketCount
         noRxDataStartMs = 0L
         noRxSocketRecreated = false
+        var lastDiagPlcCount = audioPlayback.rxPlcFrames
+        var lastDiagFecCount = audioPlayback.rxFecRecoveries
+        var lastDiagDecodedCount = rxSessionStats.packetsDecoded
+        var lastEncoderLossHint = -1
         rxDiagJob = scope.launch {
             while (isActive) {
                 delay(RX_DIAG_INTERVAL_MS)
@@ -1416,7 +1423,41 @@ class RadioAudioEngine(private val context: Context) {
                 val bufSize = jitterBuffer.size
                 val bufDepth = jitterBuffer.currentTargetDepth
                 val bufPlaying = jitterBuffer.isPlaybackActive
-                Log.d(TAG, "RX_DIAG rxTotal=$currentRxCount rxNew=$newPackets jbSize=$bufSize jbDepth=$bufDepth jbPlaying=$bufPlaying channelIdx=${udpTransport.channelIndex} ${RadioDiagLog.elapsedTag()}")
+
+                val plcNow = audioPlayback.rxPlcFrames
+                val fecNow = audioPlayback.rxFecRecoveries
+                val decodedNow = rxSessionStats.packetsDecoded
+                val deltaPlc = plcNow - lastDiagPlcCount
+                val deltaFec = fecNow - lastDiagFecCount
+                val deltaDecoded = decodedNow - lastDiagDecodedCount
+                lastDiagPlcCount = plcNow
+                lastDiagFecCount = fecNow
+                lastDiagDecodedCount = decodedNow
+                val totalAttempts = deltaPlc + deltaDecoded
+                // Count FEC recoveries as loss events too: they represent
+                // packets that were actually missing on the wire but were
+                // reconstructed from the next packet's inband redundancy.
+                // Without this, FEC successes mask real loss and the
+                // encoder hint under-adapts on a degrading link.
+                val lostFrames = deltaPlc + deltaFec
+                val lossPct = if (totalAttempts > 0) (lostFrames * 100.0 / totalAttempts) else 0.0
+                val jitterMs = jitterBuffer.estimatedJitterMsValue
+
+                Log.d(TAG, "RX_DIAG rxTotal=$currentRxCount rxNew=$newPackets jbSize=$bufSize jbDepth=$bufDepth jbPlaying=$bufPlaying channelIdx=${udpTransport.channelIndex} winLossPct=${String.format("%.1f", lossPct)} winFec=$deltaFec winPlc=$deltaPlc jitterMs=${String.format("%.1f", jitterMs)} ${RadioDiagLog.elapsedTag()}")
+
+                // Loss-feedback proxy: when our RX is seeing packet loss on
+                // this link, bump our own encoder's OPUS_SET_PACKET_LOSS_PERC
+                // so that any TX we do on the same link includes more inband
+                // FEC redundancy. Treats the RX loss as a proxy for "this
+                // link is bad in both directions" since we don't have a
+                // back-channel feedback message in the wire protocol.
+                if (totalAttempts >= 25) {
+                    val hint = lossPct.toInt().coerceIn(0, 25)
+                    if (hint != lastEncoderLossHint) {
+                        opusCodec.setEncoderPacketLossPercent(hint)
+                        lastEncoderLossHint = hint
+                    }
+                }
 
                 if (newPackets == 0L && currentRxCount > 0 && udpTransport.connectionHealth.value == TransportHealth.CONNECTED) {
                     if (noRxDataStartMs == 0L) {

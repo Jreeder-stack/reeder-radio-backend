@@ -176,6 +176,8 @@ object RadioDiagLog {
         var totalJitterDepth: Long = 0
         var jitterSamples: Long = 0
         var underruns: Long = 0
+        var fecRecoveries: Long = 0
+        var plcFrames: Long = 0
         var stopReason: String = "unknown"
 
         fun avgJitterDepth(): Double =
@@ -183,13 +185,14 @@ object RadioDiagLog {
 
         fun summary(): String {
             val durationMs = System.currentTimeMillis() - startTimeMs
-            return "RX_SESSION_END duration=${durationMs}ms pktsRecv=$packetsReceived pktsDrop=$packetsDropped pktsDec=$packetsDecoded failures=$failures avgJitter=${String.format("%.1f", avgJitterDepth())} underruns=$underruns stop=$stopReason"
+            return "RX_SESSION_END duration=${durationMs}ms pktsRecv=$packetsReceived pktsDrop=$packetsDropped pktsDec=$packetsDecoded failures=$failures avgJitter=${String.format("%.1f", avgJitterDepth())} underruns=$underruns fec=$fecRecoveries plc=$plcFrames stop=$stopReason"
         }
 
         fun reset() {
             startTimeMs = System.currentTimeMillis()
             packetsReceived = 0; packetsDropped = 0; packetsDecoded = 0
             failures = 0; totalJitterDepth = 0; jitterSamples = 0; underruns = 0
+            fecRecoveries = 0; plcFrames = 0
             stopReason = "unknown"
         }
     }

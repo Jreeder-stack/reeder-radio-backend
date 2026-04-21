@@ -409,6 +409,40 @@ class OpusCodec {
         }
     }
 
+    @Volatile
+    var fecRecoveryCount: Long = 0
+        private set
+
+    fun decodeFec(nextOpusData: ByteArray): ByteArray? {
+        val dec = decoder ?: return null
+        if (nextOpusData.isEmpty()) return null
+        val pcmBuffer = ShortArray(DECODER_FRAME_SIZE * CHANNELS)
+        return try {
+            val decodedSamples = dec.decode(nextOpusData, 0, nextOpusData.size, pcmBuffer, 0, DECODER_FRAME_SIZE, true)
+            if (decodedSamples > 0) {
+                fecRecoveryCount++
+                val result = ByteArray(decodedSamples * CHANNELS * 2)
+                java.nio.ByteBuffer.wrap(result).order(java.nio.ByteOrder.LITTLE_ENDIAN).asShortBuffer().put(pcmBuffer, 0, decodedSamples * CHANNELS)
+                result
+            } else null
+        } catch (t: Throwable) {
+            Log.w("[RadioError]", "OPUS_FEC_DECODE_ERROR: ${t::class.simpleName}: ${t.message} nextBytes=${nextOpusData.size} method=decodeFec")
+            null
+        }
+    }
+
+    fun setEncoderPacketLossPercent(percent: Int) {
+        val clamped = percent.coerceIn(0, 25)
+        synchronized(encodeLock) {
+            try {
+                encoder?.setPacketLossPercent(clamped)
+                Log.d(TAG, "ENCODER_LOSS_HINT_UPDATED percent=$clamped ${RadioDiagLog.elapsedTag()}")
+            } catch (e: Exception) {
+                Log.w("[RadioError]", "Failed to set encoder loss percent: ${e.message} method=setEncoderPacketLossPercent")
+            }
+        }
+    }
+
     fun decode(opusData: ByteArray?): ByteArray? {
         val dec = decoder
         if (dec == null) {
