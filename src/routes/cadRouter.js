@@ -397,8 +397,8 @@ router.get('/system/config', async (req, res) => {
 
 router.post('/respond-check', async (req, res) => {
   try {
-    const { unitId, status } = req.body;
-    const result = await cadService.respondToStatusCheck(unitId, status);
+    const { unitId, callId, status } = req.body;
+    const result = await cadService.respondToStatusCheck(unitId, callId, status);
     if (result.success === false) {
       return res.status(500).json({ success: false, message: result.error });
     }

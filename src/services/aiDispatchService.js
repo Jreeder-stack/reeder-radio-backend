@@ -12,6 +12,7 @@ import { opusCodec, SAMPLE_RATE as OPUS_SAMPLE_RATE, FRAME_SIZE as OPUS_FRAME_SI
 import { floorControlService } from './floorControlService.js';
 import { formatSpokenTime24 } from './hourlyTimeBroadcastService.js';
 import * as cadService from './cadService.js';
+import { cadStatusCheckClient } from './cadStatusCheckClient.js';
 import { DISPATCHER_TZ, utcDateToLocalDate, localDateToUtcDate, formatLocalSpokenTime24, maybeUtcToLocalForSpeech } from '../utils/timezone.js';
 import locationService from './locationService.js';
 import { webSearch, SEARCH_STATUS } from './webSearchService.js';
@@ -488,6 +489,7 @@ class AIDispatcher {
     this._seenBoloIds = new Set();
     this._statusCheckPollingInterval = null;
     this._seenStatusCheckIds = new Set();
+    this._pendingStatusChecks = new Map();
     this._reconnectTimer = null;
     this._reconnectAttempts = 0;
     this._isReconnecting = false;
@@ -2337,6 +2339,16 @@ class AIDispatcher {
 
         case 'ANIMAL_SEARCH': {
           await this.handleAnimalSearch(participantId, transcript, result.slots);
+          break;
+        }
+
+        case 'SNOOZE_STATUS_CHECKS': {
+          await this.handleSnoozeStatusChecks(participantId, transcript, result.slots || {});
+          break;
+        }
+
+        case 'CANCEL_STATUS_CHECKS': {
+          await this.handleCancelStatusChecks(participantId, transcript, result.slots || {});
           break;
         }
 
@@ -6028,24 +6040,132 @@ class AIDispatcher {
     this.log('STATUS_CHECK_RESPONSE', { participant: participantId, transcript, slots });
 
     const checkId = slots?.statusCheckId;
+    const callId = slots?.statusCheckCallId || null;
+    const unitUuid = slots?.statusCheckUnitUuid || null;
     const normalized = transcript.toLowerCase().trim();
+
+    // Allow units to snooze or cancel status checks directly from the
+    // AWAITING_STATUS_CHECK_RESPONSE fast path (otherwise speech here is
+    // always treated as an acknowledgment).
+    const cancelPhrases = ['stop status check', 'stop the status check', 'cancel status check', 'cancel the status check', 'no more status check', 'kill status check', 'kill the status check'];
+    if (cancelPhrases.some(p => normalized.includes(p))) {
+      this.log('STATUS_CHECK_RESPONSE_CANCEL_BRANCH', { participant: participantId });
+      await this.handleCancelStatusChecks(participantId, transcript, {});
+      return;
+    }
+    const snoozePhrases = ['snooze status check', 'snooze the status check', 'snooze checks', 'pause status check', 'pause the status check', 'hold status check', 'hold the status check'];
+    if (snoozePhrases.some(p => normalized.includes(p))) {
+      this.log('STATUS_CHECK_RESPONSE_SNOOZE_BRANCH', { participant: participantId });
+      // Try to extract a duration (digits or simple words).
+      const m = normalized.match(/(\d+)\s*(?:minute|min|m\b)/);
+      const wordMap = { five: 5, ten: 10, fifteen: 15, twenty: 20, thirty: 30, sixty: 60 };
+      let mins = m ? parseInt(m[1], 10) : null;
+      if (!mins) {
+        for (const [w, v] of Object.entries(wordMap)) {
+          if (normalized.includes(w)) { mins = v; break; }
+        }
+      }
+      await this.handleSnoozeStatusChecks(participantId, transcript, { durationMinutes: mins || 15 });
+      return;
+    }
+
     const okPhrases = ['10-4', '10/4', 'ten four', 'copy', 'roger', 'yes', 'affirmative', 'good', 'okay', 'ok', 'clear'];
     const isOk = okPhrases.some(p => normalized.includes(p));
     const status = isOk ? 'ok' : transcript.trim();
 
-    if (cadService.isConfigured() && checkId) {
+    if (cadService.isConfigured()) {
       try {
-        await cadService.respondToStatusCheck(participantId, status);
-        this.log('STATUS_CHECK_RESPONDED', { unitId: participantId, checkId, status });
+        // Tag this round-trip so the inbound acknowledged event from CAD is
+        // suppressed. Pass both the radio callsign and the UUID so we match
+        // whichever identifier CAD echoes back.
+        if (callId) cadStatusCheckClient.markSelfResponded([participantId, unitUuid], callId);
+        await cadService.respondToStatusCheck(participantId, callId, status);
+        this.log('STATUS_CHECK_RESPONDED', { unitId: participantId, checkId, callId, status });
       } catch (error) {
         this.log('STATUS_CHECK_RESPOND_ERROR', { error: error.message });
       }
     }
 
+    this._clearPendingStatusCheck(participantId, callId);
     const resp = `${participantId}, 10-4.`;
     await this.speak(resp, participantId);
     this.addConversationExchange(participantId, transcript, resp);
     setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+  }
+
+  _pendingStatusCheckKey(unitId, callId) {
+    return `${String(unitId || '').toUpperCase()}|${callId || ''}`;
+  }
+
+  _clearPendingStatusCheck(unitId, callId) {
+    if (!unitId) return;
+    const key = this._pendingStatusCheckKey(unitId, callId);
+    if (this._pendingStatusChecks.has(key)) {
+      this._pendingStatusChecks.delete(key);
+    }
+    // If the unit is currently in AWAITING_STATUS_CHECK_RESPONSE for this assignment, drop it.
+    const session = getUnitSessionState(unitId);
+    if (session?.state === DISPATCHER_STATE.AWAITING_STATUS_CHECK_RESPONSE) {
+      const sessionCallId = session?.slots?.statusCheckCallId || null;
+      if (!callId || sessionCallId === callId) {
+        setUnitSessionState(unitId, DISPATCHER_STATE.IDLE, null, {}, true);
+      }
+    }
+  }
+
+  async _onCadStatusCheckEvent(evt) {
+    const { type, callId } = evt;
+    // Prefer the radio callsign (unitNumber) for session/speech targeting;
+    // fall back to unitId only if the callsign is missing.
+    const unitId = evt.unitNumber || evt.unitId;
+    if (!unitId) return;
+    const key = this._pendingStatusCheckKey(unitId, callId);
+
+    if (type === 'status_check_due' || type === 'status_check_escalated') {
+      // Don't double-prompt for the same assignment if we're still waiting.
+      const existing = this._pendingStatusChecks.get(key);
+      if (existing && type === 'status_check_due') {
+        this.log('STATUS_CHECK_DUE_DEDUPED', { unitId, callId });
+        return;
+      }
+      this._pendingStatusChecks.set(key, { unitId, callId, escalated: type === 'status_check_escalated', at: Date.now() });
+
+      setUnitSessionState(unitId, DISPATCHER_STATE.AWAITING_STATUS_CHECK_RESPONSE, null, {
+        statusCheckId: evt.raw?.id || evt.raw?.check_id || null,
+        statusCheckCallId: callId,
+        statusCheckUnitUuid: evt.unitId || null,
+      }, true);
+
+      // Prefer human-friendly call_number for speech; fall back to call_id only if needed.
+      const spokenCall = evt.raw?.call_number || evt.raw?.callNumber || null;
+      const callTag = spokenCall ? `, call ${spokenCall}` : '';
+      const resp = type === 'status_check_escalated'
+        ? `${unitId}, status check${callTag}. Respond now.`
+        : `${unitId}, status check${callTag}.`;
+
+      if (type === 'status_check_escalated') {
+        this.log('STATUS_CHECK_ESCALATED_ALERT', { unitId, callId, severity: 'high' });
+        try {
+          if (cadService.isConfigured()) {
+            const tag = spokenCall ? ` (call ${spokenCall})` : '';
+            await cadService.sendBroadcast(`Status check escalated for ${unitId}${tag}`, 'high');
+          }
+        } catch (err) {
+          this.log('STATUS_CHECK_ESCALATED_BROADCAST_ERROR', { error: err.message });
+        }
+      }
+
+      await this.speak(resp, unitId, { retryOnBusy: true, retryContext: `STATUS_CHECK:${type}:${unitId}` });
+      return;
+    }
+
+    if (type === 'status_check_acknowledged'
+        || type === 'status_check_snoozed'
+        || type === 'status_check_cancelled') {
+      this.log('STATUS_CHECK_PROMPT_SUPPRESSED', { reason: type, unitId, callId });
+      this._clearPendingStatusCheck(unitId, callId);
+      return;
+    }
   }
 
   _startStatusCheckPolling() {
@@ -6054,51 +6174,134 @@ class AIDispatcher {
       this.log('STATUS_CHECK_POLLING_SKIPPED', { reason: 'CAD not configured' });
       return;
     }
-
-    const STATUS_CHECK_POLL_INTERVAL_MS = 30000;
-    this._statusCheckPollingInterval = setInterval(async () => {
-      if (!this.isRunning || !this.connected) return;
-      try {
-        const result = await cadService.getPendingChecks();
-        if (!result.success) return;
-        const checks = result.checks || result.pending_checks || [];
-        if (checks.length === 0) return;
-
-        for (const check of checks) {
-          const unitId = check.unit_id || check.unitId;
-          if (!unitId) continue;
-
-          const checkId = check.id || check.check_id || `${unitId}-${Date.now()}`;
-          if (this._seenStatusCheckIds.has(checkId)) continue;
-          this._seenStatusCheckIds.add(checkId);
-
-          this.log('STATUS_CHECK_PENDING', { unitId, checkId });
-
-          setUnitSessionState(unitId, DISPATCHER_STATE.AWAITING_STATUS_CHECK_RESPONSE, null, {
-            statusCheckId: checkId
-          }, true);
-
-          const resp = `${unitId}, status check. Respond when able.`;
-          await this.speak(resp, unitId);
-        }
-      } catch (error) {
-        this.log('STATUS_CHECK_POLL_ERROR', { error: error.message });
-      }
-    }, STATUS_CHECK_POLL_INTERVAL_MS);
-
-    if (this._statusCheckPollingInterval.unref) {
-      this._statusCheckPollingInterval.unref();
-    }
-    this.log('STATUS_CHECK_POLLING_STARTED', { intervalMs: STATUS_CHECK_POLL_INTERVAL_MS });
+    cadStatusCheckClient.start((evt) => {
+      this._onCadStatusCheckEvent(evt).catch(err => {
+        this.log('STATUS_CHECK_HANDLER_ERROR', { error: err.message });
+      });
+    });
+    this.log('STATUS_CHECK_CLIENT_STARTED');
   }
 
   _stopStatusCheckPolling() {
-    if (this._statusCheckPollingInterval) {
-      clearInterval(this._statusCheckPollingInterval);
-      this._statusCheckPollingInterval = null;
-      this._seenStatusCheckIds.clear();
-      this.log('STATUS_CHECK_POLLING_STOPPED');
+    cadStatusCheckClient.stop();
+    this._pendingStatusChecks.clear();
+    this._seenStatusCheckIds.clear();
+  }
+
+  async handleSnoozeStatusChecks(participantId, transcript, slots) {
+    // Prefer the call_id of the currently-prompted status check (multi-call safety),
+    // and fall back to the unit's current CAD assignment.
+    const session = getUnitSessionState(participantId);
+    const sessionCallId = (session?.state === DISPATCHER_STATE.AWAITING_STATUS_CHECK_RESPONSE)
+      ? (session?.slots?.statusCheckCallId || null)
+      : null;
+    const callId = sessionCallId || await this._lookupCurrentCallId(participantId);
+    const durationMin = parseInt(slots?.durationMinutes ?? slots?.minutes ?? '15', 10) || 15;
+    const durationSec = durationMin * 60;
+    if (!cadService.isConfigured()) {
+      const resp = `${participantId}, CAD is not available.`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+      return;
     }
+    // Snooze is per-call only — refuse if we can't scope it.
+    if (!callId) {
+      const resp = `${participantId}, no active call to snooze checks for.`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+      return;
+    }
+    try {
+      const result = await cadService.snoozeStatusCheck(participantId, callId, durationSec);
+      if (!result || result.success === false) {
+        const resp = `${participantId}, snooze did not go through.`;
+        await this.speak(resp, participantId);
+        this.addConversationExchange(participantId, transcript, resp);
+      } else {
+        this._clearPendingStatusCheck(participantId, callId);
+        const resp = `${participantId}, status checks snoozed ${durationMin} minutes.`;
+        await this.speak(resp, participantId);
+        this.addConversationExchange(participantId, transcript, resp);
+      }
+    } catch (err) {
+      this.log('STATUS_CHECK_SNOOZE_ERROR', { error: err.message });
+      const resp = `${participantId}, snooze failed.`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+    }
+    setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+  }
+
+  async handleCancelStatusChecks(participantId, transcript, _slots) {
+    // Prefer the call_id of the currently-prompted status check (multi-call
+    // safety), then fall back to the unit's current CAD assignment.
+    // Slot data from LLM is at most a display call number and is unsafe
+    // to forward to CAD, which expects the call_id UUID.
+    const session = getUnitSessionState(participantId);
+    const sessionCallId = (session?.state === DISPATCHER_STATE.AWAITING_STATUS_CHECK_RESPONSE)
+      ? (session?.slots?.statusCheckCallId || null)
+      : null;
+    const callInfo = await this._lookupCurrentCallInfo(participantId);
+    const callId = sessionCallId || callInfo?.callId || null;
+    const callNumber = callInfo?.callNumber || null;
+    if (!callId) {
+      const resp = `${participantId}, no active call to cancel checks for.`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+      return;
+    }
+    if (!cadService.isConfigured()) {
+      const resp = `${participantId}, CAD is not available.`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+      return;
+    }
+    try {
+      const result = await cadService.cancelStatusCheck(participantId, callId);
+      if (!result || result.success === false) {
+        const resp = `${participantId}, cancel did not go through.`;
+        await this.speak(resp, participantId);
+        this.addConversationExchange(participantId, transcript, resp);
+      } else {
+        this._clearPendingStatusCheck(participantId, callId);
+        const spoken = callNumber || callId;
+        const resp = `${participantId}, status checks cancelled for call ${spoken}.`;
+        await this.speak(resp, participantId);
+        this.addConversationExchange(participantId, transcript, resp);
+      }
+    } catch (err) {
+      this.log('STATUS_CHECK_CANCEL_ERROR', { error: err.message });
+      const resp = `${participantId}, cancel failed.`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+    }
+    setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+  }
+
+  async _lookupCurrentCallInfo(unitId) {
+    try {
+      if (!cadService.isConfigured()) return null;
+      const data = await cadService.getUnitCurrentCallById(unitId);
+      if (!data) return null;
+      return {
+        // Prefer the true CAD call_id (UUID) for API calls — never call_number,
+        // which is only a display value.
+        callId: data.call_id || data.callId || data.id || null,
+        callNumber: data.call_number || data.callNumber || null,
+      };
+    } catch (err) {
+      this.log('LOOKUP_CALL_INFO_ERROR', { unitId, error: err.message });
+      return null;
+    }
+  }
+
+  async _lookupCurrentCallId(unitId) {
+    const info = await this._lookupCurrentCallInfo(unitId);
+    return info?.callId || null;
   }
 
   _formatSpokenDate(dateStr) {

@@ -354,18 +354,44 @@ export async function sendBroadcast(message, priority = 'routine') {
   });
 }
 
-export async function getPendingChecks() {
-  return cadRequest('/api/radio/pending-checks', 'GET');
+export async function getPendingChecks(lookaheadSec = null) {
+  const qs = lookaheadSec ? `?lookahead_sec=${encodeURIComponent(lookaheadSec)}` : '';
+  return cadRequest(`/api/radio/pending-checks${qs}`, 'GET');
 }
 
-export async function respondToStatusCheck(unitId, status) {
+export async function respondToStatusCheck(unitId, callId, status = 'ok') {
   if (!unitId) {
     console.warn('[CAD] respondToStatusCheck: No unit ID provided');
     return { success: false, error: 'No unit ID' };
   }
-  return cadRequest('/api/radio/respond-check', 'POST', {
+  const body = { unit_id: unitId };
+  if (callId) body.call_id = callId;
+  if (status) body.status = status;
+  return cadRequest('/api/radio/respond-check', 'POST', body);
+}
+
+export async function snoozeStatusCheck(unitId, callId, durationSec) {
+  if (!unitId) {
+    console.warn('[CAD] snoozeStatusCheck: No unit ID provided');
+    return { success: false, error: 'No unit ID' };
+  }
+  const body = { unit_id: unitId, duration_sec: durationSec };
+  if (callId) body.call_id = callId;
+  return cadRequest('/api/radio/snooze-check', 'POST', body);
+}
+
+export async function cancelStatusCheck(unitId, callId) {
+  if (!unitId) {
+    console.warn('[CAD] cancelStatusCheck: No unit ID provided');
+    return { success: false, error: 'No unit ID' };
+  }
+  if (!callId) {
+    console.warn('[CAD] cancelStatusCheck: No call ID provided — refusing to cancel');
+    return { success: false, error: 'No call ID' };
+  }
+  return cadRequest('/api/radio/cancel-check', 'POST', {
     unit_id: unitId,
-    status
+    call_id: callId
   });
 }
 

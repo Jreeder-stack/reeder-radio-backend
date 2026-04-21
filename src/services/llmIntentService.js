@@ -393,6 +393,14 @@ Return: { "intent": "UPDATE_CALL", "response": null, "slots": { "callNumber": "<
 Unit is asking for details on a specific call. Phrases: "what's the info on call 456", "give me the details on that call", "what do we have on call 456", "read me the call".
 Return: { "intent": "CALL_DETAILS", "response": null, "slots": { "callNumber": "<if provided>" } }
 
+### SNOOZE_STATUS_CHECKS
+Unit wants to delay periodic status checks for their current call. Phrases: "snooze status checks", "snooze checks fifteen minutes", "hold status checks for thirty", "pause my status checks". Default duration is 15 minutes if unspecified.
+Return: { "intent": "SNOOZE_STATUS_CHECKS", "response": null, "slots": { "durationMinutes": "<integer minutes if provided, else 15>" } }
+
+### CANCEL_STATUS_CHECKS
+Unit wants to STOP automatic status checks ONLY for the call they are currently on. Phrases: "stop status checks", "cancel status checks on this call", "no more status checks", "kill the status checks on this call". This is NOT clearing or disposing the call — only the periodic check timer for the unit's current call. Scoping is always the unit's current call; do not extract a call number.
+Return: { "intent": "CANCEL_STATUS_CHECKS", "response": null, "slots": {} }
+
 ### ANIMAL_SEARCH
 Unit wants to search for an animal by tag, microchip, or owner. Phrases: "run a dog tag", "check a microchip", "animal search", "check a tag number", "search by pet owner".
 Return: { "intent": "ANIMAL_SEARCH", "response": null, "slots": { "tag": "<if provided>", "microchip": "<if provided>", "ownerLast": "<if provided>", "ownerFirst": "<if provided>", "animalType": "<if provided: Dog/Cat/etc>", "name": "<animal name if provided>" } }
@@ -450,7 +458,7 @@ You will be told the current conversation state. Use it to interpret ambiguous i
 - AWAITING_CALL_UPDATE_DETAILS: Unit is providing what they want to update on the call (priority, notes, details). Pass through their response as-is; the handler will parse it. Return UPDATE_CALL with any extracted slots (priority, details).
 - AWAITING_CALL_UPDATE_CONFIRM: Unit is confirming or denying a call update → return CONFIRM or DENY.
 - AWAITING_ANIMAL_SEARCH_TYPE: Unit is providing animal search criteria. Extract any search fields → return ANIMAL_SEARCH with available slots.
-- AWAITING_STATUS_CHECK_RESPONSE: Unit is responding to a status check from CAD. Treat their response as a status → return CONFIRM (if OK/10-4) or provide new status info.
+- AWAITING_STATUS_CHECK_RESPONSE: Unit is responding to a status check from CAD. Treat their response as a status → return CONFIRM (if OK/10-4) or provide new status info. Exceptions: if the unit asks to stop/cancel status checks, return CANCEL_STATUS_CHECKS; if they ask to snooze/pause/hold status checks, return SNOOZE_STATUS_CHECKS with the spoken duration in minutes.
 - AWAITING_BE_ADVISED_NOTE: You just asked the unit to repeat their "be advised" note because the previous attempt was unintelligible. Treat their entire transcript as the raw note and return ADD_NOTE with beAdvised=true and noteContent set to the transcript.
 - AWAITING_CALL_DISAMBIG: You just asked the unit to pick between multiple matching active calls. Their entire transcript is the clarifying answer (e.g. "the one at 123 Apple Street", "Bedford", "the second one"). Return ASSIGN_CALL with whatever descriptor pieces they gave (callNumber, callLocation, callNature, callCity). The handler will re-resolve against the saved candidate set.
 
