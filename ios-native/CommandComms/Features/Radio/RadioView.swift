@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 struct RadioView: View {
     @EnvironmentObject var appState: AppState
@@ -12,6 +13,14 @@ private struct RadioContent: View {
     @ObservedObject var signaling: SignalingClient
     let defaultChannel: String
     @State private var channelInput: String = ""
+    @State private var isPressing: Bool = false
+    @StateObject private var ptt: PTTBinding
+
+    init(signaling: SignalingClient, defaultChannel: String) {
+        self.signaling = signaling
+        self.defaultChannel = defaultChannel
+        _ptt = StateObject(wrappedValue: PTTBinding(signaling: signaling))
+    }
 
     var body: some View {
         NavigationStack {
@@ -22,6 +31,8 @@ private struct RadioContent: View {
                         statusCard
                         channelCard
                         indicators
+                        pttButton
+                        accessoryStatus
                         Spacer(minLength: 40)
                     }
                     .padding()
@@ -32,6 +43,10 @@ private struct RadioContent: View {
             .toolbarColorScheme(.dark, for: .navigationBar)
             .onAppear {
                 channelInput = signaling.currentChannel ?? defaultChannel
+                ptt.start()
+            }
+            .onDisappear {
+                ptt.stop()
             }
         }
         .foregroundColor(.white)
@@ -87,9 +102,9 @@ private struct RadioContent: View {
 
     private var indicators: some View {
         HStack(spacing: 16) {
-            indicator(label: "TX", color: .red, active: false)
-            indicator(label: "RX", color: .green, active: false)
-            indicator(label: "PTT", color: .cyan, active: false)
+            indicator(label: "TX", color: .red, active: signaling.isTransmitting)
+            indicator(label: "RX", color: .green, active: signaling.isReceiving)
+            indicator(label: "PTT", color: .cyan, active: signaling.isFloorRequestPending || signaling.isTransmitting)
         }
     }
 
@@ -106,6 +121,64 @@ private struct RadioContent: View {
         .frame(maxWidth: .infinity)
     }
 
+    private var pttButton: some View {
+        let canTransmit = signaling.state == .authenticated && (signaling.currentChannel?.isEmpty == false)
+        let active = signaling.isTransmitting || signaling.isFloorRequestPending || isPressing
+        return VStack(spacing: 8) {
+            ZStack {
+                Circle()
+                    .fill(active ? Color.red : Color.red.opacity(0.25))
+                    .frame(width: 200, height: 200)
+                    .overlay(Circle().stroke(Color.red, lineWidth: 4))
+                    .shadow(color: active ? Color.red.opacity(0.6) : .clear, radius: 24)
+                VStack(spacing: 4) {
+                    Image(systemName: "mic.fill")
+                        .font(.system(size: 56))
+                        .foregroundColor(.white)
+                    Text(active ? "TRANSMIT" : "PUSH TO TALK")
+                        .font(.system(.headline, design: .monospaced))
+                        .foregroundColor(.white)
+                }
+            }
+            .opacity(canTransmit ? 1.0 : 0.4)
+            .scaleEffect(active ? 1.04 : 1.0)
+            .animation(.easeInOut(duration: 0.1), value: active)
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { _ in
+                        guard canTransmit, !isPressing else { return }
+                        isPressing = true
+                        signaling.requestFloor()
+                    }
+                    .onEnded { _ in
+                        guard isPressing else { return }
+                        isPressing = false
+                        signaling.releaseFloor()
+                    }
+            )
+            if let denial = signaling.lastFloorDenialReason {
+                Text("Floor denied: \(denial)")
+                    .font(.footnote)
+                    .foregroundColor(.orange)
+            }
+        }
+        .padding(.top, 12)
+    }
+
+    private var accessoryStatus: some View {
+        Group {
+            if let name = ptt.accessoryName {
+                Label("MFi PTT: \(name)", systemImage: "antenna.radiowaves.left.and.right")
+                    .font(.footnote)
+                    .foregroundColor(.cyan)
+            } else {
+                Label("No MFi PTT accessory", systemImage: "antenna.radiowaves.left.and.right.slash")
+                    .font(.footnote)
+                    .foregroundColor(.gray)
+            }
+        }
+    }
+
     private var stateColor: Color {
         switch signaling.state {
         case .authenticated: return .green
@@ -113,6 +186,46 @@ private struct RadioContent: View {
         case .connecting: return .orange
         case .disconnected: return .red
         }
+    }
+}
+
+@MainActor
+private final class PTTBinding: ObservableObject {
+    @Published var accessoryName: String?
+
+    private let signaling: SignalingClient
+    private var manager: MFiPTTAccessoryManager?
+    private var cancellables = Set<AnyCancellable>()
+
+    init(signaling: SignalingClient) {
+        self.signaling = signaling
+    }
+
+    func start() {
+        guard manager == nil else { return }
+        let mgr = MFiPTTAccessoryManager(
+            onPress: { [weak self] in
+                self?.signaling.requestFloor()
+            },
+            onRelease: { [weak self] in
+                self?.signaling.releaseFloor()
+            }
+        )
+        self.manager = mgr
+        mgr.start()
+        mgr.$connectedAccessoryName
+            .receive(on: RunLoop.main)
+            .sink { [weak self] name in
+                self?.accessoryName = name
+            }
+            .store(in: &cancellables)
+    }
+
+    func stop() {
+        manager?.stop()
+        manager = nil
+        cancellables.removeAll()
+        accessoryName = nil
     }
 }
 

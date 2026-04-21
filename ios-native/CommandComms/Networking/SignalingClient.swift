@@ -19,6 +19,10 @@ final class SignalingClient: ObservableObject {
     @Published var state: SignalingState = .disconnected
     @Published var currentChannel: String?
     @Published var lastError: String?
+    @Published var isTransmitting: Bool = false
+    @Published var isReceiving: Bool = false
+    @Published var isFloorRequestPending: Bool = false
+    @Published var lastFloorDenialReason: String?
 
     let locationTrackEvents = PassthroughSubject<LocationTrackEvent, Never>()
 
@@ -138,6 +142,73 @@ final class SignalingClient: ObservableObject {
             }
         }
 
+        socket.on("ptt:granted") { [weak self] data, _ in
+            Task { @MainActor in
+                guard let self else { return }
+                let payload = data.first as? [String: Any]
+                let sender = payload?["senderUnitId"] as? String
+                self.isFloorRequestPending = false
+                self.lastFloorDenialReason = nil
+                if sender == nil || sender == self.unitId {
+                    self.isTransmitting = true
+                    self.emitTxStart()
+                }
+            }
+        }
+
+        socket.on("ptt:denied") { [weak self] data, _ in
+            Task { @MainActor in
+                guard let self else { return }
+                let payload = data.first as? [String: Any]
+                self.isFloorRequestPending = false
+                self.isTransmitting = false
+                self.lastFloorDenialReason = (payload?["reason"] as? String) ?? "denied"
+            }
+        }
+
+        socket.on("ptt:revoked") { [weak self] _, _ in
+            Task { @MainActor in
+                self?.isFloorRequestPending = false
+                self?.isTransmitting = false
+            }
+        }
+
+        socket.on("tx:start") { [weak self] data, _ in
+            Task { @MainActor in
+                guard let self else { return }
+                let payload = data.first as? [String: Any]
+                let sender = payload?["senderUnitId"] as? String
+                if sender != self.unitId {
+                    self.isReceiving = true
+                }
+            }
+        }
+
+        socket.on("tx:stop") { [weak self] data, _ in
+            Task { @MainActor in
+                guard let self else { return }
+                let payload = data.first as? [String: Any]
+                let sender = payload?["senderUnitId"] as? String
+                if sender == self.unitId {
+                    self.isTransmitting = false
+                } else {
+                    self.isReceiving = false
+                }
+            }
+        }
+
+        socket.on("channel:floor_taken") { [weak self] _, _ in
+            Task { @MainActor in
+                self?.isReceiving = true
+            }
+        }
+
+        socket.on("channel:idle") { [weak self] _, _ in
+            Task { @MainActor in
+                self?.isReceiving = false
+            }
+        }
+
         socket.connect()
     }
 
@@ -156,6 +227,39 @@ final class SignalingClient: ObservableObject {
         manager = nil
         state = .disconnected
         currentChannel = nil
+        isTransmitting = false
+        isReceiving = false
+        isFloorRequestPending = false
+    }
+
+    func requestFloor() {
+        guard state == .authenticated, let socket, let channel = currentChannel, !channel.isEmpty else {
+            lastFloorDenialReason = "not_ready"
+            return
+        }
+        guard !isTransmitting && !isFloorRequestPending else { return }
+        isFloorRequestPending = true
+        lastFloorDenialReason = nil
+        socket.emit("ptt:request", ["channelId": channel, "unitId": unitId])
+    }
+
+    func releaseFloor() {
+        guard let socket, let channel = currentChannel, !channel.isEmpty else {
+            isFloorRequestPending = false
+            isTransmitting = false
+            return
+        }
+        let wasActive = isTransmitting || isFloorRequestPending
+        isFloorRequestPending = false
+        isTransmitting = false
+        guard wasActive else { return }
+        socket.emit("tx:stop", ["channelId": channel, "unitId": unitId])
+        socket.emit("ptt:release", ["channelId": channel, "unitId": unitId])
+    }
+
+    private func emitTxStart() {
+        guard let socket, let channel = currentChannel, !channel.isEmpty else { return }
+        socket.emit("tx:start", ["channelId": channel, "unitId": unitId])
     }
 
     func emitLocationUpdate(latitude: Double, longitude: Double, accuracy: Double, heading: Double?, speed: Double?) {

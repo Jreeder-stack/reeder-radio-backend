@@ -61,7 +61,13 @@
                 <string>remote-notification</string>
         </array>
         <key>UISupportedExternalAccessoryProtocols</key>
-        <array/>
+        <array>
+                <string>com.bluparrott.bp200</string>
+                <string>com.bluparrott.b150</string>
+                <string>com.savoxcommunications.bt</string>
+                <string>com.pryme.btn</string>
+                <string>com.reedersystems.commandcomms.ptt</string>
+        </array>
         <key>NSAppTransportSecurity</key>
         <dict>
                 <key>NSAllowsArbitraryLoadsInWebContent</key>
