@@ -1,605 +1,582 @@
 // !$*UTF8*$!
 {
-        archiveVersion = 1;
-        classes = {
-        };
-        objectVersion = 56;
-        objects = {
-
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
 /* Begin PBXBuildFile section */
-                DD0000000000000000000001 /* CommandCommsApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC0000000000000000000001 /* CommandCommsApp.swift */; };
-                DD0000000000000000000002 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC0000000000000000000002 /* AppState.swift */; };
-                DD0000000000000000000003 /* MainShellView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC0000000000000000000003 /* MainShellView.swift */; };
-                DD0000000000000000000004 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC0000000000000000000004 /* LoginView.swift */; };
-                DD0000000000000000000005 /* LoginViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC0000000000000000000005 /* LoginViewModel.swift */; };
-                DD0000000000000000000006 /* RadioView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC0000000000000000000006 /* RadioView.swift */; };
-                DD0000000000000000000007 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC0000000000000000000007 /* SettingsView.swift */; };
-                DD0000000000000000000008 /* DeviceRegistrationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC0000000000000000000008 /* DeviceRegistrationView.swift */; };
-                DD0000000000000000000009 /* ApiClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC0000000000000000000009 /* ApiClient.swift */; };
-                DD000000000000000000000A /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC000000000000000000000A /* AuthService.swift */; };
-                DD000000000000000000000B /* SignalingClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC000000000000000000000B /* SignalingClient.swift */; };
-                DD000000000000000000001F /* MFiPTTAccessoryManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC000000000000000000001F /* MFiPTTAccessoryManager.swift */; };
-                DD0000000000000000000030 /* PTTAccessoryModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC0000000000000000000030 /* PTTAccessoryModel.swift */; };
-                DD000000000000000000000C /* User.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC000000000000000000000C /* User.swift */; };
-                DD000000000000000000000D /* KeychainStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC000000000000000000000D /* KeychainStore.swift */; };
-                DD000000000000000000000E /* AppPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC000000000000000000000E /* AppPreferences.swift */; };
-                DD000000000000000000000F /* LocationTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC000000000000000000000F /* LocationTracker.swift */; };
-                DD0000000000000000000020 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = CC0000000000000000000020 /* Assets.xcassets */; };
-                DD000000000000000000F001 /* SocketIO in Frameworks */ = {isa = PBXBuildFile; productRef = FF0000000000000000000001 /* SocketIO */; };
-                DD000000000000000000F002 /* KeychainAccess in Frameworks */ = {isa = PBXBuildFile; productRef = FF0000000000000000000002 /* KeychainAccess */; };
-                DD000000000000000000000C /* User.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC000000000000000000000C /* User.swift */; };
-                DD000000000000000000000D /* KeychainStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC000000000000000000000D /* KeychainStore.swift */; };
-                DD000000000000000000000E /* AppPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC000000000000000000000E /* AppPreferences.swift */; };
-                DD0000000000000000000020 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = CC0000000000000000000020 /* Assets.xcassets */; };
-                DD000000000000000000F001 /* SocketIO in Frameworks */ = {isa = PBXBuildFile; productRef = FF0000000000000000000001 /* SocketIO */; };
-                DD000000000000000000F002 /* KeychainAccess in Frameworks */ = {isa = PBXBuildFile; productRef = FF0000000000000000000002 /* KeychainAccess */; };
-                DD000000000000000000F003 /* Opus in Frameworks */ = {isa = PBXBuildFile; productRef = FF0000000000000000000003 /* Opus */; };
-                DD0000000000000000000030 /* RadioPacket.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC0000000000000000000030 /* RadioPacket.swift */; };
-                DD0000000000000000000031 /* UdpAudioTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC0000000000000000000031 /* UdpAudioTransport.swift */; };
-                DD0000000000000000000032 /* OpusCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC0000000000000000000032 /* OpusCodec.swift */; };
-                DD0000000000000000000033 /* JitterBuffer.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC0000000000000000000033 /* JitterBuffer.swift */; };
-                DD0000000000000000000034 /* AudioCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC0000000000000000000034 /* AudioCapture.swift */; };
-                DD0000000000000000000035 /* AudioPlayback.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC0000000000000000000035 /* AudioPlayback.swift */; };
-                DD0000000000000000000036 /* RadioAudioEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC0000000000000000000036 /* RadioAudioEngine.swift */; };
-                DD0000000000000000000037 /* RadioConfigService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC0000000000000000000037 /* RadioConfigService.swift */; };
-                DD0000000000000000000038 /* AudioSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC0000000000000000000038 /* AudioSessionManager.swift */; };
-                DD0000000000000000000039 /* SignalQuality.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC0000000000000000000039 /* SignalQuality.swift */; };
+		0D95174456FA8FD1C2D3547C /* AudioCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45FAC8815729B01FCD6083E4 /* AudioCapture.swift */; };
+		1029A0BE8FBD5986A9935B4D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5B15DB5AF2A709DD87F02198 /* Assets.xcassets */; };
+		10ED8F814DB83EE761EADF9D /* SocketIO in Frameworks */ = {isa = PBXBuildFile; productRef = 8A6BB41565B1EE5299BCE3BA /* SocketIO */; };
+		110B7A549778A434D139EB20 /* AppPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF61291602D304CC0FDD12FC /* AppPreferences.swift */; };
+		1197219D6F7301FA576F495E /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC4AAAAA13F1C0F1285CD1E0 /* AppState.swift */; };
+		13ACF72BC418EB0DBCE9745C /* RadioPacket.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8425FE382D5A5ACBB5EC4C29 /* RadioPacket.swift */; };
+		247B06696C61CBDB1ADA4BFA /* MFiPTTAccessoryManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B17C01BA396F5F34FCC462BD /* MFiPTTAccessoryManager.swift */; };
+		2CB49AEF864D93D0D445BC7A /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66BECB6358075C6FB5CA7F48 /* SettingsView.swift */; };
+		2FD5EBAA1DFC926CAE43474C /* LoginViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = DCF07922D4EE55DE1C9B18C1 /* LoginViewModel.swift */; };
+		3046E53944B2FB16FF18E7A3 /* SignalQuality.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69F15680A17080E554244F40 /* SignalQuality.swift */; };
+		3D50E0B01D9FA3296579EC70 /* LocationTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6EA82154BE3BAAB09BAEAE68 /* LocationTracker.swift */; };
+		3EE36304E2F974642EA6CEB6 /* CommandCommsApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E0E93E0CB8F95FBE4D566B7 /* CommandCommsApp.swift */; };
+		4B8EE5AD662902CACF97DD6D /* Opus in Frameworks */ = {isa = PBXBuildFile; productRef = A961587136AB4E3965430680 /* Opus */; };
+		52F597D211D46FD53A86F610 /* JitterBuffer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83E77CF7103C1FA273C25BC4 /* JitterBuffer.swift */; };
+		566235E077C832CD4E3F1411 /* PTTAccessoryModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0906DC874B5BF85CB4E380EB /* PTTAccessoryModel.swift */; };
+		5B51A699DC85C4D2BC359440 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 259ECB7838DDD9435BD4B748 /* LoginView.swift */; };
+		5F115AAA9433364356EB1B6B /* OpusCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F55B82700E587A0E142F3DB /* OpusCodec.swift */; };
+		63B9224785F959B20B48ACBA /* User.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4ED272410090A68CDF5A2E4E /* User.swift */; };
+		81287B5D85AF2B301D4D35BB /* RadioConfigService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33B52589A1CB2EC51DA0090F /* RadioConfigService.swift */; };
+		8159B1D76E1275EDB9777540 /* KeychainStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3FF86C03AE11E6587FACC26 /* KeychainStore.swift */; };
+		95C78874757E529C9AAEE92F /* SignalingClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F00986C72EEF211A188DAC0 /* SignalingClient.swift */; };
+		96EAF04B5BCF41804DF89532 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99B09AF9E75B56D88BD8D06C /* AuthService.swift */; };
+		99726885343D9AC7F38C4333 /* KeychainAccess in Frameworks */ = {isa = PBXBuildFile; productRef = CB2E23367B81402C0CEE0150 /* KeychainAccess */; };
+		99C3F8038724787880624DB7 /* RadioView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2F6D71A8CC134B7CD6E9947 /* RadioView.swift */; };
+		9B1CB0E0EFA293336950C986 /* DeviceRegistrationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E7A504FD4DFCEB608C6D05E /* DeviceRegistrationView.swift */; };
+		A0756A04FFDC2082D387D051 /* ApiClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA6AD6271635FF2711CB0E90 /* ApiClient.swift */; };
+		BFECAF55B9F2557443BB059A /* AudioPlayback.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4218C7CE9BFF49409819B41 /* AudioPlayback.swift */; };
+		C10EDCB6E48A6C9A9019309C /* UdpAudioTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB957B0D60628F8A4A746DF6 /* UdpAudioTransport.swift */; };
+		D56B6F608A7E76D45AE0ED5E /* MainShellView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69E9DD8B4D33E50C8037F76B /* MainShellView.swift */; };
+		F0D5938D7EBCC83BD099714B /* RadioAudioEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFF3F81AFDD434C2C0D4A37D /* RadioAudioEngine.swift */; };
+		FCAF8FD7D8CC25063CFA1EB6 /* AudioSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C32803B4D64241698EC3E79E /* AudioSessionManager.swift */; };
 /* End PBXBuildFile section */
-
 /* Begin PBXFileReference section */
-                AA0000000000000000000011 /* CommandComms.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CommandComms.app; sourceTree = BUILT_PRODUCTS_DIR; };
-                CC0000000000000000000001 /* CommandCommsApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandCommsApp.swift; sourceTree = "<group>"; };
-                CC0000000000000000000002 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
-                CC0000000000000000000003 /* MainShellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainShellView.swift; sourceTree = "<group>"; };
-                CC0000000000000000000004 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
-                CC0000000000000000000005 /* LoginViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginViewModel.swift; sourceTree = "<group>"; };
-                CC0000000000000000000006 /* RadioView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadioView.swift; sourceTree = "<group>"; };
-                CC0000000000000000000007 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
-                CC0000000000000000000008 /* DeviceRegistrationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceRegistrationView.swift; sourceTree = "<group>"; };
-                CC0000000000000000000009 /* ApiClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApiClient.swift; sourceTree = "<group>"; };
-                CC000000000000000000000A /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
-                CC000000000000000000000B /* SignalingClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignalingClient.swift; sourceTree = "<group>"; };
-                CC000000000000000000001F /* MFiPTTAccessoryManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MFiPTTAccessoryManager.swift; sourceTree = "<group>"; };
-                CC0000000000000000000030 /* PTTAccessoryModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PTTAccessoryModel.swift; sourceTree = "<group>"; };
-                CC000000000000000000000C /* User.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = User.swift; sourceTree = "<group>"; };
-                CC000000000000000000000D /* KeychainStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainStore.swift; sourceTree = "<group>"; };
-                CC000000000000000000000E /* AppPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPreferences.swift; sourceTree = "<group>"; };
-                CC000000000000000000000F /* LocationTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationTracker.swift; sourceTree = "<group>"; };
-                CC0000000000000000000020 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-                CC0000000000000000000021 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-                CC000000000000000000000C /* User.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = User.swift; sourceTree = "<group>"; };
-                CC000000000000000000000D /* KeychainStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainStore.swift; sourceTree = "<group>"; };
-                CC000000000000000000000E /* AppPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPreferences.swift; sourceTree = "<group>"; };
-                CC0000000000000000000020 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-                CC0000000000000000000021 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-                CC0000000000000000000030 /* RadioPacket.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadioPacket.swift; sourceTree = "<group>"; };
-                CC0000000000000000000031 /* UdpAudioTransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UdpAudioTransport.swift; sourceTree = "<group>"; };
-                CC0000000000000000000032 /* OpusCodec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpusCodec.swift; sourceTree = "<group>"; };
-                CC0000000000000000000033 /* JitterBuffer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JitterBuffer.swift; sourceTree = "<group>"; };
-                CC0000000000000000000034 /* AudioCapture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioCapture.swift; sourceTree = "<group>"; };
-                CC0000000000000000000035 /* AudioPlayback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioPlayback.swift; sourceTree = "<group>"; };
-                CC0000000000000000000036 /* RadioAudioEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadioAudioEngine.swift; sourceTree = "<group>"; };
-                CC0000000000000000000037 /* RadioConfigService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadioConfigService.swift; sourceTree = "<group>"; };
-                CC0000000000000000000038 /* AudioSessionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioSessionManager.swift; sourceTree = "<group>"; };
-                CC0000000000000000000039 /* SignalQuality.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignalQuality.swift; sourceTree = "<group>"; };
+		0906DC874B5BF85CB4E380EB /* PTTAccessoryModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PTTAccessoryModel.swift; sourceTree = "<group>"; };
+		1E0E93E0CB8F95FBE4D566B7 /* CommandCommsApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandCommsApp.swift; sourceTree = "<group>"; };
+		1E7A504FD4DFCEB608C6D05E /* DeviceRegistrationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceRegistrationView.swift; sourceTree = "<group>"; };
+		259ECB7838DDD9435BD4B748 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
+		33B52589A1CB2EC51DA0090F /* RadioConfigService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadioConfigService.swift; sourceTree = "<group>"; };
+		3D5A74A67305FE021866B291 /* CommandComms.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CommandComms.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		45FAC8815729B01FCD6083E4 /* AudioCapture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioCapture.swift; sourceTree = "<group>"; };
+		4ED272410090A68CDF5A2E4E /* User.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = User.swift; sourceTree = "<group>"; };
+		5B15DB5AF2A709DD87F02198 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		5F55B82700E587A0E142F3DB /* OpusCodec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpusCodec.swift; sourceTree = "<group>"; };
+		66BECB6358075C6FB5CA7F48 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		69E9DD8B4D33E50C8037F76B /* MainShellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainShellView.swift; sourceTree = "<group>"; };
+		69F15680A17080E554244F40 /* SignalQuality.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignalQuality.swift; sourceTree = "<group>"; };
+		6EA82154BE3BAAB09BAEAE68 /* LocationTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationTracker.swift; sourceTree = "<group>"; };
+		83E77CF7103C1FA273C25BC4 /* JitterBuffer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JitterBuffer.swift; sourceTree = "<group>"; };
+		8425FE382D5A5ACBB5EC4C29 /* RadioPacket.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadioPacket.swift; sourceTree = "<group>"; };
+		99B09AF9E75B56D88BD8D06C /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
+		9F00986C72EEF211A188DAC0 /* SignalingClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignalingClient.swift; sourceTree = "<group>"; };
+		B17C01BA396F5F34FCC462BD /* MFiPTTAccessoryManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MFiPTTAccessoryManager.swift; sourceTree = "<group>"; };
+		BFF3F81AFDD434C2C0D4A37D /* RadioAudioEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadioAudioEngine.swift; sourceTree = "<group>"; };
+		C32803B4D64241698EC3E79E /* AudioSessionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioSessionManager.swift; sourceTree = "<group>"; };
+		CA6AD6271635FF2711CB0E90 /* ApiClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApiClient.swift; sourceTree = "<group>"; };
+		CC4AAAAA13F1C0F1285CD1E0 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
+		D3FF86C03AE11E6587FACC26 /* KeychainStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainStore.swift; sourceTree = "<group>"; };
+		D4218C7CE9BFF49409819B41 /* AudioPlayback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioPlayback.swift; sourceTree = "<group>"; };
+		DCF07922D4EE55DE1C9B18C1 /* LoginViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginViewModel.swift; sourceTree = "<group>"; };
+		EB957B0D60628F8A4A746DF6 /* UdpAudioTransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UdpAudioTransport.swift; sourceTree = "<group>"; };
+		EF61291602D304CC0FDD12FC /* AppPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPreferences.swift; sourceTree = "<group>"; };
+		F2C5B33075AEB8DD4A529EF8 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		F2F6D71A8CC134B7CD6E9947 /* RadioView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadioView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
-
 /* Begin PBXFrameworksBuildPhase section */
-                AA0000000000000000000022 /* Frameworks */ = {
-                        isa = PBXFrameworksBuildPhase;
-                        buildActionMask = 2147483647;
-                        files = (
-                                DD000000000000000000F001 /* SocketIO in Frameworks */,
-                                DD000000000000000000F002 /* KeychainAccess in Frameworks */,
-                                DD000000000000000000F003 /* Opus in Frameworks */,
-                        );
-                        runOnlyForDeploymentPostprocessing = 0;
-                };
+		CA8003021206097066E984FF /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				10ED8F814DB83EE761EADF9D /* SocketIO in Frameworks */,
+				99726885343D9AC7F38C4333 /* KeychainAccess in Frameworks */,
+				4B8EE5AD662902CACF97DD6D /* Opus in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
-
 /* Begin PBXGroup section */
-                AA0000000000000000000002 /* */ = {
-                        isa = PBXGroup;
-                        children = (
-                                BB0000000000000000000001 /* CommandComms */,
-                                AA0000000000000000000003 /* Products */,
-                                BB000000000000000000000C /* Frameworks */,
-                        );
-                        sourceTree = "<group>";
-                };
-                AA0000000000000000000003 /* Products */ = {
-                        isa = PBXGroup;
-                        children = (
-                                AA0000000000000000000011 /* CommandComms.app */,
-                        );
-                        name = Products;
-                        sourceTree = "<group>";
-                };
-                BB0000000000000000000001 /* CommandComms */ = {
-                        isa = PBXGroup;
-                        children = (
-                                BB0000000000000000000002 /* App */,
-                                BB0000000000000000000003 /* Features */,
-                                BB0000000000000000000008 /* Networking */,
-                                BB0000000000000000000009 /* Models */,
-                                BB000000000000000000000A /* Storage */,
-                                BB000000000000000000000D /* Audio */,
-                                BB000000000000000000000B /* Resources */,
-                        );
-                        path = CommandComms;
-                        sourceTree = "<group>";
-                };
-                BB000000000000000000000D /* Audio */ = {
-                        isa = PBXGroup;
-                        children = (
-                                CC0000000000000000000030 /* RadioPacket.swift */,
-                                CC0000000000000000000031 /* UdpAudioTransport.swift */,
-                                CC0000000000000000000032 /* OpusCodec.swift */,
-                                CC0000000000000000000033 /* JitterBuffer.swift */,
-                                CC0000000000000000000034 /* AudioCapture.swift */,
-                                CC0000000000000000000035 /* AudioPlayback.swift */,
-                                CC0000000000000000000036 /* RadioAudioEngine.swift */,
-                                CC0000000000000000000038 /* AudioSessionManager.swift */,
-                                CC0000000000000000000039 /* SignalQuality.swift */,
-                        );
-                        path = Audio;
-                        sourceTree = "<group>";
-                };
-                BB0000000000000000000002 /* App */ = {
-                        isa = PBXGroup;
-                        children = (
-                                CC0000000000000000000001 /* CommandCommsApp.swift */,
-                                CC0000000000000000000002 /* AppState.swift */,
-                                CC0000000000000000000003 /* MainShellView.swift */,
-                        );
-                        path = App;
-                        sourceTree = "<group>";
-                };
-                BB0000000000000000000003 /* Features */ = {
-                        isa = PBXGroup;
-                        children = (
-                                BB0000000000000000000004 /* Login */,
-                                BB0000000000000000000005 /* Radio */,
-                                BB0000000000000000000006 /* Settings */,
-                                BB0000000000000000000007 /* DeviceRegistration */,
-                                BB000000000000000000000D /* Location */,
-                        );
-                        path = Features;
-                        sourceTree = "<group>";
-                };
-                BB0000000000000000000004 /* Login */ = {
-                        isa = PBXGroup;
-                        children = (
-                                CC0000000000000000000004 /* LoginView.swift */,
-                                CC0000000000000000000005 /* LoginViewModel.swift */,
-                        );
-                        path = Login;
-                        sourceTree = "<group>";
-                };
-                BB0000000000000000000005 /* Radio */ = {
-                        isa = PBXGroup;
-                        children = (
-                                CC0000000000000000000006 /* RadioView.swift */,
-                        );
-                        path = Radio;
-                        sourceTree = "<group>";
-                };
-                BB0000000000000000000006 /* Settings */ = {
-                        isa = PBXGroup;
-                        children = (
-                                CC0000000000000000000007 /* SettingsView.swift */,
-                        );
-                        path = Settings;
-                        sourceTree = "<group>";
-                };
-                BB0000000000000000000007 /* DeviceRegistration */ = {
-                        isa = PBXGroup;
-                        children = (
-                                CC0000000000000000000008 /* DeviceRegistrationView.swift */,
-                        );
-                        path = DeviceRegistration;
-                        sourceTree = "<group>";
-                };
-                BB000000000000000000000D /* Location */ = {
-                        isa = PBXGroup;
-                        children = (
-                                CC000000000000000000000F /* LocationTracker.swift */,
-                        );
-                        path = Location;
-                        sourceTree = "<group>";
-                };
-                BB0000000000000000000008 /* Networking */ = {
-                        isa = PBXGroup;
-                        children = (
-                                CC0000000000000000000009 /* ApiClient.swift */,
-                                CC000000000000000000000A /* AuthService.swift */,
-                                CC000000000000000000000B /* SignalingClient.swift */,
-                                CC000000000000000000001F /* MFiPTTAccessoryManager.swift */,
-                                CC0000000000000000000037 /* RadioConfigService.swift */,
-                                CC0000000000000000000030 /* PTTAccessoryModel.swift */,
-                        );
-                        path = Networking;
-                        sourceTree = "<group>";
-                };
-                BB0000000000000000000009 /* Models */ = {
-                        isa = PBXGroup;
-                        children = (
-                                CC000000000000000000000C /* User.swift */,
-                        );
-                        path = Models;
-                        sourceTree = "<group>";
-                };
-                BB000000000000000000000A /* Storage */ = {
-                        isa = PBXGroup;
-                        children = (
-                                CC000000000000000000000D /* KeychainStore.swift */,
-                                CC000000000000000000000E /* AppPreferences.swift */,
-                        );
-                        path = Storage;
-                        sourceTree = "<group>";
-                };
-                BB000000000000000000000B /* Resources */ = {
-                        isa = PBXGroup;
-                        children = (
-                                CC0000000000000000000020 /* Assets.xcassets */,
-                                CC0000000000000000000021 /* Info.plist */,
-                        );
-                        path = Resources;
-                        sourceTree = "<group>";
-                };
-                BB000000000000000000000C /* Frameworks */ = {
-                        isa = PBXGroup;
-                        children = (
-                        );
-                        name = Frameworks;
-                        sourceTree = "<group>";
-                };
+		A92C54CDD34F93AD528C20E1 = {
+			isa = PBXGroup;
+			children = (
+				7C95C0C5D80650A2A8769A0E /* CommandComms */,
+				5151B46607EBC8890D8DFCC2 /* Products */,
+				2D17C89EB2C5B87E8B0EC3B6 /* Frameworks */,
+			);
+			sourceTree = "<group>";
+		};
+		5151B46607EBC8890D8DFCC2 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				3D5A74A67305FE021866B291 /* CommandComms.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		2D17C89EB2C5B87E8B0EC3B6 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		7C95C0C5D80650A2A8769A0E /* CommandComms */ = {
+			isa = PBXGroup;
+			children = (
+				1C48CE29E4E135EE62951B22 /* App */,
+				B004BFC2FCDED9668B2721B3 /* Audio */,
+				1F26A8704D8CDB03D5D3D4BB /* Features */,
+				BF657CFE8769AAE6C0570C29 /* Models */,
+				8BBABE581696A816F7BD4AB8 /* Networking */,
+				3E66E30771BD9259F8DDECBC /* Storage */,
+				A024F06580C79B7582C3806A /* Resources */,
+			);
+			path = CommandComms;
+			sourceTree = "<group>";
+		};
+		1C48CE29E4E135EE62951B22 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				1E0E93E0CB8F95FBE4D566B7 /* CommandCommsApp.swift */,
+				CC4AAAAA13F1C0F1285CD1E0 /* AppState.swift */,
+				69E9DD8B4D33E50C8037F76B /* MainShellView.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		B004BFC2FCDED9668B2721B3 /* Audio */ = {
+			isa = PBXGroup;
+			children = (
+				45FAC8815729B01FCD6083E4 /* AudioCapture.swift */,
+				D4218C7CE9BFF49409819B41 /* AudioPlayback.swift */,
+				C32803B4D64241698EC3E79E /* AudioSessionManager.swift */,
+				83E77CF7103C1FA273C25BC4 /* JitterBuffer.swift */,
+				5F55B82700E587A0E142F3DB /* OpusCodec.swift */,
+				BFF3F81AFDD434C2C0D4A37D /* RadioAudioEngine.swift */,
+				8425FE382D5A5ACBB5EC4C29 /* RadioPacket.swift */,
+				69F15680A17080E554244F40 /* SignalQuality.swift */,
+				EB957B0D60628F8A4A746DF6 /* UdpAudioTransport.swift */,
+			);
+			path = Audio;
+			sourceTree = "<group>";
+		};
+		1F26A8704D8CDB03D5D3D4BB /* Features */ = {
+			isa = PBXGroup;
+			children = (
+				33A942862257CC07A29327CD /* DeviceRegistration */,
+				26854CC0EF5F453B68AB48C7 /* Location */,
+				EA560976D0A7AB61F07DF0F7 /* Login */,
+				14FB591E3179FBD7E7C80757 /* Radio */,
+				7FFC8385737531CEF5DC9B19 /* Settings */,
+			);
+			path = Features;
+			sourceTree = "<group>";
+		};
+		33A942862257CC07A29327CD /* DeviceRegistration */ = {
+			isa = PBXGroup;
+			children = (
+				1E7A504FD4DFCEB608C6D05E /* DeviceRegistrationView.swift */,
+			);
+			path = DeviceRegistration;
+			sourceTree = "<group>";
+		};
+		26854CC0EF5F453B68AB48C7 /* Location */ = {
+			isa = PBXGroup;
+			children = (
+				6EA82154BE3BAAB09BAEAE68 /* LocationTracker.swift */,
+			);
+			path = Location;
+			sourceTree = "<group>";
+		};
+		EA560976D0A7AB61F07DF0F7 /* Login */ = {
+			isa = PBXGroup;
+			children = (
+				259ECB7838DDD9435BD4B748 /* LoginView.swift */,
+				DCF07922D4EE55DE1C9B18C1 /* LoginViewModel.swift */,
+			);
+			path = Login;
+			sourceTree = "<group>";
+		};
+		14FB591E3179FBD7E7C80757 /* Radio */ = {
+			isa = PBXGroup;
+			children = (
+				F2F6D71A8CC134B7CD6E9947 /* RadioView.swift */,
+			);
+			path = Radio;
+			sourceTree = "<group>";
+		};
+		7FFC8385737531CEF5DC9B19 /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				66BECB6358075C6FB5CA7F48 /* SettingsView.swift */,
+			);
+			path = Settings;
+			sourceTree = "<group>";
+		};
+		BF657CFE8769AAE6C0570C29 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				4ED272410090A68CDF5A2E4E /* User.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		8BBABE581696A816F7BD4AB8 /* Networking */ = {
+			isa = PBXGroup;
+			children = (
+				CA6AD6271635FF2711CB0E90 /* ApiClient.swift */,
+				99B09AF9E75B56D88BD8D06C /* AuthService.swift */,
+				B17C01BA396F5F34FCC462BD /* MFiPTTAccessoryManager.swift */,
+				0906DC874B5BF85CB4E380EB /* PTTAccessoryModel.swift */,
+				33B52589A1CB2EC51DA0090F /* RadioConfigService.swift */,
+				9F00986C72EEF211A188DAC0 /* SignalingClient.swift */,
+			);
+			path = Networking;
+			sourceTree = "<group>";
+		};
+		3E66E30771BD9259F8DDECBC /* Storage */ = {
+			isa = PBXGroup;
+			children = (
+				EF61291602D304CC0FDD12FC /* AppPreferences.swift */,
+				D3FF86C03AE11E6587FACC26 /* KeychainStore.swift */,
+			);
+			path = Storage;
+			sourceTree = "<group>";
+		};
+		A024F06580C79B7582C3806A /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				5B15DB5AF2A709DD87F02198 /* Assets.xcassets */,
+				F2C5B33075AEB8DD4A529EF8 /* Info.plist */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
-
 /* Begin PBXNativeTarget section */
-                AA0000000000000000000010 /* CommandComms */ = {
-                        isa = PBXNativeTarget;
-                        buildConfigurationList = AA0000000000000000000040 /* Build configuration list for PBXNativeTarget "CommandComms" */;
-                        buildPhases = (
-                                AA0000000000000000000020 /* Sources */,
-                                AA0000000000000000000022 /* Frameworks */,
-                                AA0000000000000000000021 /* Resources */,
-                        );
-                        buildRules = (
-                        );
-                        dependencies = (
-                        );
-                        name = CommandComms;
-                        packageProductDependencies = (
-                                FF0000000000000000000001 /* SocketIO */,
-                                FF0000000000000000000002 /* KeychainAccess */,
-                                FF0000000000000000000003 /* Opus */,
-                        );
-                        productName = CommandComms;
-                        productReference = AA0000000000000000000011 /* CommandComms.app */;
-                        productType = "com.apple.product-type.application";
-                };
+		ACD2F2AD89BC1B94CD708B69 /* CommandComms */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D28A2B497FA98060CD1B56AC /* Build configuration list for PBXNativeTarget "CommandComms" */;
+			buildPhases = (
+				28BE49E1E42D704C38EEA420 /* Sources */,
+				CA8003021206097066E984FF /* Frameworks */,
+				E26E44B743A848DED8844ED9 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = CommandComms;
+			packageProductDependencies = (
+				8A6BB41565B1EE5299BCE3BA /* SocketIO */,
+				CB2E23367B81402C0CEE0150 /* KeychainAccess */,
+				A961587136AB4E3965430680 /* Opus */,
+			);
+			productName = CommandComms;
+			productReference = 3D5A74A67305FE021866B291 /* CommandComms.app */;
+			productType = "com.apple.product-type.application";
+		};
 /* End PBXNativeTarget section */
-
 /* Begin PBXProject section */
-                AA0000000000000000000001 /* Project object */ = {
-                        isa = PBXProject;
-                        attributes = {
-                                BuildIndependentTargetsInParallel = 1;
-                                LastSwiftUpdateCheck = 1500;
-                                LastUpgradeCheck = 1500;
-                                TargetAttributes = {
-                                        AA0000000000000000000010 = {
-                                                CreatedOnToolsVersion = 15.0;
-                                        };
-                                };
-                        };
-                        buildConfigurationList = AA0000000000000000000030 /* Build configuration list for PBXProject "CommandComms" */;
-                        compatibilityVersion = "Xcode 14.0";
-                        developmentRegion = en;
-                        hasScannedForEncodings = 0;
-                        knownRegions = (
-                                en,
-                                Base,
-                        );
-                        mainGroup = AA0000000000000000000002;
-                        packageReferences = (
-                                EE0000000000000000000001 /* XCRemoteSwiftPackageReference "socket.io-client-swift" */,
-                                EE0000000000000000000002 /* XCRemoteSwiftPackageReference "KeychainAccess" */,
-                                EE0000000000000000000003 /* XCRemoteSwiftPackageReference "swift-opus" */,
-                        );
-                        productRefGroup = AA0000000000000000000003 /* Products */;
-                        projectDirPath = "";
-                        projectRoot = "";
-                        targets = (
-                                AA0000000000000000000010 /* CommandComms */,
-                        );
-                };
+		EB01B02F5384983649751D8E /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1500;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					ACD2F2AD89BC1B94CD708B69 = {
+						CreatedOnToolsVersion = 15.0;
+					};
+				};
+			};
+			buildConfigurationList = 3D29D9F3A882C4202964FB56 /* Build configuration list for PBXProject "CommandComms" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = A92C54CDD34F93AD528C20E1;
+			packageReferences = (
+				FA0924928605B9FBE6150AA8 /* XCRemoteSwiftPackageReference "socket.io-client-swift" */,
+				6F62C21BB5385286782C3AF6 /* XCRemoteSwiftPackageReference "KeychainAccess" */,
+				CB6EBA415AC04D359ED3C7B2 /* XCRemoteSwiftPackageReference "swift-opus" */,
+			);
+			productRefGroup = 5151B46607EBC8890D8DFCC2 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				ACD2F2AD89BC1B94CD708B69 /* CommandComms */,
+			);
+		};
 /* End PBXProject section */
-
 /* Begin PBXResourcesBuildPhase section */
-                AA0000000000000000000021 /* Resources */ = {
-                        isa = PBXResourcesBuildPhase;
-                        buildActionMask = 2147483647;
-                        files = (
-                                DD0000000000000000000020 /* Assets.xcassets in Resources */,
-                        );
-                        runOnlyForDeploymentPostprocessing = 0;
-                };
+		E26E44B743A848DED8844ED9 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1029A0BE8FBD5986A9935B4D /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
-
 /* Begin PBXSourcesBuildPhase section */
-                AA0000000000000000000020 /* Sources */ = {
-                        isa = PBXSourcesBuildPhase;
-                        buildActionMask = 2147483647;
-                        files = (
-                                DD0000000000000000000001 /* CommandCommsApp.swift in Sources */,
-                                DD0000000000000000000002 /* AppState.swift in Sources */,
-                                DD0000000000000000000003 /* MainShellView.swift in Sources */,
-                                DD0000000000000000000004 /* LoginView.swift in Sources */,
-                                DD0000000000000000000005 /* LoginViewModel.swift in Sources */,
-                                DD0000000000000000000006 /* RadioView.swift in Sources */,
-                                DD0000000000000000000007 /* SettingsView.swift in Sources */,
-                                DD0000000000000000000008 /* DeviceRegistrationView.swift in Sources */,
-                                DD0000000000000000000009 /* ApiClient.swift in Sources */,
-                                DD000000000000000000000A /* AuthService.swift in Sources */,
-                                DD000000000000000000000B /* SignalingClient.swift in Sources */,
-                                DD000000000000000000001F /* MFiPTTAccessoryManager.swift in Sources */,
-                                DD0000000000000000000030 /* PTTAccessoryModel.swift in Sources */,
-                                DD000000000000000000000C /* User.swift in Sources */,
-                                DD000000000000000000000D /* KeychainStore.swift in Sources */,
-                                DD000000000000000000000E /* AppPreferences.swift in Sources */,
-                                DD000000000000000000000F /* LocationTracker.swift in Sources */,
-                                DD0000000000000000000030 /* RadioPacket.swift in Sources */,
-                                DD0000000000000000000031 /* UdpAudioTransport.swift in Sources */,
-                                DD0000000000000000000032 /* OpusCodec.swift in Sources */,
-                                DD0000000000000000000033 /* JitterBuffer.swift in Sources */,
-                                DD0000000000000000000034 /* AudioCapture.swift in Sources */,
-                                DD0000000000000000000035 /* AudioPlayback.swift in Sources */,
-                                DD0000000000000000000036 /* RadioAudioEngine.swift in Sources */,
-                                DD0000000000000000000037 /* RadioConfigService.swift in Sources */,
-                                DD0000000000000000000038 /* AudioSessionManager.swift in Sources */,
-                                DD0000000000000000000039 /* SignalQuality.swift in Sources */,
-                        );
-                        runOnlyForDeploymentPostprocessing = 0;
-                };
+		28BE49E1E42D704C38EEA420 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0D95174456FA8FD1C2D3547C /* AudioCapture.swift in Sources */,
+				110B7A549778A434D139EB20 /* AppPreferences.swift in Sources */,
+				1197219D6F7301FA576F495E /* AppState.swift in Sources */,
+				13ACF72BC418EB0DBCE9745C /* RadioPacket.swift in Sources */,
+				247B06696C61CBDB1ADA4BFA /* MFiPTTAccessoryManager.swift in Sources */,
+				2CB49AEF864D93D0D445BC7A /* SettingsView.swift in Sources */,
+				2FD5EBAA1DFC926CAE43474C /* LoginViewModel.swift in Sources */,
+				3046E53944B2FB16FF18E7A3 /* SignalQuality.swift in Sources */,
+				3D50E0B01D9FA3296579EC70 /* LocationTracker.swift in Sources */,
+				3EE36304E2F974642EA6CEB6 /* CommandCommsApp.swift in Sources */,
+				52F597D211D46FD53A86F610 /* JitterBuffer.swift in Sources */,
+				566235E077C832CD4E3F1411 /* PTTAccessoryModel.swift in Sources */,
+				5B51A699DC85C4D2BC359440 /* LoginView.swift in Sources */,
+				5F115AAA9433364356EB1B6B /* OpusCodec.swift in Sources */,
+				63B9224785F959B20B48ACBA /* User.swift in Sources */,
+				81287B5D85AF2B301D4D35BB /* RadioConfigService.swift in Sources */,
+				8159B1D76E1275EDB9777540 /* KeychainStore.swift in Sources */,
+				95C78874757E529C9AAEE92F /* SignalingClient.swift in Sources */,
+				96EAF04B5BCF41804DF89532 /* AuthService.swift in Sources */,
+				99C3F8038724787880624DB7 /* RadioView.swift in Sources */,
+				9B1CB0E0EFA293336950C986 /* DeviceRegistrationView.swift in Sources */,
+				A0756A04FFDC2082D387D051 /* ApiClient.swift in Sources */,
+				BFECAF55B9F2557443BB059A /* AudioPlayback.swift in Sources */,
+				C10EDCB6E48A6C9A9019309C /* UdpAudioTransport.swift in Sources */,
+				D56B6F608A7E76D45AE0ED5E /* MainShellView.swift in Sources */,
+				F0D5938D7EBCC83BD099714B /* RadioAudioEngine.swift in Sources */,
+				FCAF8FD7D8CC25063CFA1EB6 /* AudioSessionManager.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
-
 /* Begin XCBuildConfiguration section */
-                AA0000000000000000000031 /* Debug */ = {
-                        isa = XCBuildConfiguration;
-                        buildSettings = {
-                                ALWAYS_SEARCH_USER_PATHS = NO;
-                                ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
-                                CLANG_ANALYZER_NONNULL = YES;
-                                CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
-                                CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
-                                CLANG_ENABLE_MODULES = YES;
-                                CLANG_ENABLE_OBJC_ARC = YES;
-                                CLANG_ENABLE_OBJC_WEAK = YES;
-                                CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
-                                CLANG_WARN_BOOL_CONVERSION = YES;
-                                CLANG_WARN_COMMA = YES;
-                                CLANG_WARN_CONSTANT_CONVERSION = YES;
-                                CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
-                                CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-                                CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
-                                CLANG_WARN_EMPTY_BODY = YES;
-                                CLANG_WARN_ENUM_CONVERSION = YES;
-                                CLANG_WARN_INFINITE_RECURSION = YES;
-                                CLANG_WARN_INT_CONVERSION = YES;
-                                CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
-                                CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
-                                CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
-                                CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-                                CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
-                                CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
-                                CLANG_WARN_STRICT_PROTOTYPES = YES;
-                                CLANG_WARN_SUSPICIOUS_MOVE = YES;
-                                CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
-                                CLANG_WARN_UNREACHABLE_CODE = YES;
-                                CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-                                COPY_PHASE_STRIP = NO;
-                                DEBUG_INFORMATION_FORMAT = dwarf;
-                                ENABLE_STRICT_OBJC_MSGSEND = YES;
-                                ENABLE_TESTABILITY = YES;
-                                ENABLE_USER_SCRIPT_SANDBOXING = YES;
-                                GCC_C_LANGUAGE_STANDARD = gnu17;
-                                GCC_DYNAMIC_NO_PIC = NO;
-                                GCC_NO_COMMON_BLOCKS = YES;
-                                GCC_OPTIMIZATION_LEVEL = 0;
-                                GCC_PREPROCESSOR_DEFINITIONS = (
-                                        "DEBUG=1",
-                                        "$(inherited)",
-                                );
-                                GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-                                GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-                                GCC_WARN_UNDECLARED_SELECTOR = YES;
-                                GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-                                GCC_WARN_UNUSED_FUNCTION = YES;
-                                GCC_WARN_UNUSED_VARIABLE = YES;
-                                IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-                                LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-                                MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
-                                MTL_FAST_MATH = YES;
-                                ONLY_ACTIVE_ARCH = YES;
-                                SDKROOT = iphoneos;
-                                SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
-                                SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-                        };
-                        name = Debug;
-                };
-                AA0000000000000000000032 /* Release */ = {
-                        isa = XCBuildConfiguration;
-                        buildSettings = {
-                                ALWAYS_SEARCH_USER_PATHS = NO;
-                                ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
-                                CLANG_ANALYZER_NONNULL = YES;
-                                CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
-                                CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
-                                CLANG_ENABLE_MODULES = YES;
-                                CLANG_ENABLE_OBJC_ARC = YES;
-                                CLANG_ENABLE_OBJC_WEAK = YES;
-                                CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
-                                CLANG_WARN_BOOL_CONVERSION = YES;
-                                CLANG_WARN_COMMA = YES;
-                                CLANG_WARN_CONSTANT_CONVERSION = YES;
-                                CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
-                                CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-                                CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
-                                CLANG_WARN_EMPTY_BODY = YES;
-                                CLANG_WARN_ENUM_CONVERSION = YES;
-                                CLANG_WARN_INFINITE_RECURSION = YES;
-                                CLANG_WARN_INT_CONVERSION = YES;
-                                CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
-                                CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
-                                CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
-                                CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-                                CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
-                                CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
-                                CLANG_WARN_STRICT_PROTOTYPES = YES;
-                                CLANG_WARN_SUSPICIOUS_MOVE = YES;
-                                CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
-                                CLANG_WARN_UNREACHABLE_CODE = YES;
-                                CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-                                COPY_PHASE_STRIP = NO;
-                                DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-                                ENABLE_NS_ASSERTIONS = NO;
-                                ENABLE_STRICT_OBJC_MSGSEND = YES;
-                                ENABLE_USER_SCRIPT_SANDBOXING = YES;
-                                GCC_C_LANGUAGE_STANDARD = gnu17;
-                                GCC_NO_COMMON_BLOCKS = YES;
-                                GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-                                GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-                                GCC_WARN_UNDECLARED_SELECTOR = YES;
-                                GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-                                GCC_WARN_UNUSED_FUNCTION = YES;
-                                GCC_WARN_UNUSED_VARIABLE = YES;
-                                IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-                                LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-                                MTL_ENABLE_DEBUG_INFO = NO;
-                                MTL_FAST_MATH = YES;
-                                SDKROOT = iphoneos;
-                                SWIFT_COMPILATION_MODE = wholemodule;
-                                VALIDATE_PRODUCT = YES;
-                        };
-                        name = Release;
-                };
-                AA0000000000000000000041 /* Debug */ = {
-                        isa = XCBuildConfiguration;
-                        buildSettings = {
-                                ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-                                ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-                                CODE_SIGN_STYLE = Automatic;
-                                CURRENT_PROJECT_VERSION = 1;
-                                DEVELOPMENT_ASSET_PATHS = "";
-                                ENABLE_PREVIEWS = YES;
-                                GENERATE_INFOPLIST_FILE = NO;
-                                INFOPLIST_FILE = CommandComms/Resources/Info.plist;
-                                LD_RUNPATH_SEARCH_PATHS = (
-                                        "$(inherited)",
-                                        "@executable_path/Frameworks",
-                                );
-                                MARKETING_VERSION = 1.0;
-                                PRODUCT_BUNDLE_IDENTIFIER = com.reedersystems.commandcomms;
-                                PRODUCT_NAME = "$(TARGET_NAME)";
-                                SWIFT_EMIT_LOC_STRINGS = YES;
-                                SWIFT_VERSION = 5.0;
-                                TARGETED_DEVICE_FAMILY = "1,2";
-                        };
-                        name = Debug;
-                };
-                AA0000000000000000000042 /* Release */ = {
-                        isa = XCBuildConfiguration;
-                        buildSettings = {
-                                ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-                                ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-                                CODE_SIGN_STYLE = Automatic;
-                                CURRENT_PROJECT_VERSION = 1;
-                                DEVELOPMENT_ASSET_PATHS = "";
-                                ENABLE_PREVIEWS = YES;
-                                GENERATE_INFOPLIST_FILE = NO;
-                                INFOPLIST_FILE = CommandComms/Resources/Info.plist;
-                                LD_RUNPATH_SEARCH_PATHS = (
-                                        "$(inherited)",
-                                        "@executable_path/Frameworks",
-                                );
-                                MARKETING_VERSION = 1.0;
-                                PRODUCT_BUNDLE_IDENTIFIER = com.reedersystems.commandcomms;
-                                PRODUCT_NAME = "$(TARGET_NAME)";
-                                SWIFT_EMIT_LOC_STRINGS = YES;
-                                SWIFT_VERSION = 5.0;
-                                TARGETED_DEVICE_FAMILY = "1,2";
-                        };
-                        name = Release;
-                };
+		BE14C1FEB1E6415641951A37 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		24183CCB75AA159A54FE24B4 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		434E626610E9771C43BDB30C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = CommandComms/Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.reedersystems.commandcomms;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		CA06DF95D8BB7FD3F7A66D60 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = CommandComms/Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.reedersystems.commandcomms;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
-
 /* Begin XCConfigurationList section */
-                AA0000000000000000000030 /* Build configuration list for PBXProject "CommandComms" */ = {
-                        isa = XCConfigurationList;
-                        buildConfigurations = (
-                                AA0000000000000000000031 /* Debug */,
-                                AA0000000000000000000032 /* Release */,
-                        );
-                        defaultConfigurationIsVisible = 0;
-                        defaultConfigurationName = Release;
-                };
-                AA0000000000000000000040 /* Build configuration list for PBXNativeTarget "CommandComms" */ = {
-                        isa = XCConfigurationList;
-                        buildConfigurations = (
-                                AA0000000000000000000041 /* Debug */,
-                                AA0000000000000000000042 /* Release */,
-                        );
-                        defaultConfigurationIsVisible = 0;
-                        defaultConfigurationName = Release;
-                };
+		3D29D9F3A882C4202964FB56 /* Build configuration list for PBXProject "CommandComms" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BE14C1FEB1E6415641951A37 /* Debug */,
+				24183CCB75AA159A54FE24B4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D28A2B497FA98060CD1B56AC /* Build configuration list for PBXNativeTarget "CommandComms" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				434E626610E9771C43BDB30C /* Debug */,
+				CA06DF95D8BB7FD3F7A66D60 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
-
 /* Begin XCRemoteSwiftPackageReference section */
-                EE0000000000000000000001 /* XCRemoteSwiftPackageReference "socket.io-client-swift" */ = {
-                        isa = XCRemoteSwiftPackageReference;
-                        repositoryURL = "https://github.com/socketio/socket.io-client-swift";
-                        requirement = {
-                                kind = upToNextMajorVersion;
-                                minimumVersion = 16.1.0;
-                        };
-                };
-                EE0000000000000000000002 /* XCRemoteSwiftPackageReference "KeychainAccess" */ = {
-                        isa = XCRemoteSwiftPackageReference;
-                        repositoryURL = "https://github.com/kishikawakatsumi/KeychainAccess";
-                        requirement = {
-                                kind = upToNextMajorVersion;
-                                minimumVersion = 4.2.2;
-                        };
-                };
-                EE0000000000000000000003 /* XCRemoteSwiftPackageReference "swift-opus" */ = {
-                        isa = XCRemoteSwiftPackageReference;
-                        repositoryURL = "https://github.com/alta/swift-opus.git";
-                        requirement = {
-                                kind = upToNextMajorVersion;
-                                minimumVersion = 0.1.0;
-                        };
-                };
+		FA0924928605B9FBE6150AA8 /* XCRemoteSwiftPackageReference "socket.io-client-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/socketio/socket.io-client-swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 16.1.0;
+			};
+		};
+		6F62C21BB5385286782C3AF6 /* XCRemoteSwiftPackageReference "KeychainAccess" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/kishikawakatsumi/KeychainAccess";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 4.2.2;
+			};
+		};
+		CB6EBA415AC04D359ED3C7B2 /* XCRemoteSwiftPackageReference "swift-opus" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/alta/swift-opus.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.1.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
-
 /* Begin XCSwiftPackageProductDependency section */
-                FF0000000000000000000001 /* SocketIO */ = {
-                        isa = XCSwiftPackageProductDependency;
-                        package = EE0000000000000000000001 /* XCRemoteSwiftPackageReference "socket.io-client-swift" */;
-                        productName = SocketIO;
-                };
-                FF0000000000000000000002 /* KeychainAccess */ = {
-                        isa = XCSwiftPackageProductDependency;
-                        package = EE0000000000000000000002 /* XCRemoteSwiftPackageReference "KeychainAccess" */;
-                        productName = KeychainAccess;
-                };
-                FF0000000000000000000003 /* Opus */ = {
-                        isa = XCSwiftPackageProductDependency;
-                        package = EE0000000000000000000003 /* XCRemoteSwiftPackageReference "swift-opus" */;
-                        productName = Opus;
-                };
+		8A6BB41565B1EE5299BCE3BA /* SocketIO */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FA0924928605B9FBE6150AA8 /* XCRemoteSwiftPackageReference "socket.io-client-swift" */;
+			productName = SocketIO;
+		};
+		CB2E23367B81402C0CEE0150 /* KeychainAccess */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6F62C21BB5385286782C3AF6 /* XCRemoteSwiftPackageReference "KeychainAccess" */;
+			productName = KeychainAccess;
+		};
+		A961587136AB4E3965430680 /* Opus */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CB6EBA415AC04D359ED3C7B2 /* XCRemoteSwiftPackageReference "swift-opus" */;
+			productName = Opus;
+		};
 /* End XCSwiftPackageProductDependency section */
-        };
-        rootObject = AA0000000000000000000001 /* Project object */;
+	};
+	rootObject = EB01B02F5384983649751D8E /* Project object */;
 }

@@ -188,6 +188,49 @@ to a longer note in the PR description if needed.
 > be filled into the table above before this verification is
 > considered complete.
 
+## Regenerating the Xcode project
+
+`CommandComms.xcodeproj/project.pbxproj` is **generated**, not hand-edited.
+Earlier hand-merges of the pbxproj across Tasks #438–#449 produced
+duplicate object IDs that triggered "Multiple commands produce" errors in
+Xcode 16 (every file got two copy commands, including stray monorepo
+files like `server.js`, `favicon.png`, and `build.gradle.kts`). To
+prevent the failure mode from recurring, the project file is now emitted
+from a deterministic Node script with an explicit file inventory and no
+folder synchronization.
+
+### When to regenerate
+
+Re-run the script whenever you:
+- add or remove a Swift source under `CommandComms/`,
+- add or remove a resource (asset catalog, plist), or
+- change the SPM dependency list.
+
+### How
+
+1. Drop the new `.swift` file into the appropriate folder under
+   `ios-native/CommandComms/` (e.g. `Networking/`, `Audio/`,
+   `Features/Radio/`).
+2. Add the filename to the matching `GROUPS` entry in
+   `ios-native/scripts/generate-pbxproj.mjs`. SPM packages live in
+   `PACKAGES` in the same file.
+3. Run:
+   ```bash
+   node ios-native/scripts/generate-pbxproj.mjs
+   ```
+   The script validates that every declared file exists on disk, emits a
+   fresh `project.pbxproj` with deterministic SHA-derived 24-char IDs,
+   and self-lints (no duplicate `PBXFileReference` IDs, every
+   `PBXBuildFile` resolves, no `lastKnownFileType = folder` entries, no
+   paths escaping the source root, `INFOPLIST_FILE` set, `Info.plist`
+   never emitted as a copy resource).
+4. Commit the regenerated `project.pbxproj`.
+
+`project.xcworkspace/` and `xcshareddata/` reference the project by name,
+not by object ID, so they are left untouched by the regenerator. Do not
+edit `project.pbxproj` by hand — any manual change will be overwritten on
+the next regeneration.
+
 ## Out of scope for this task
 UDP audio transport, Opus encode/decode, jitter buffer, AGC/noise
 suppression, hardware/MFi PTT, scan monitor, paging tone overlay,
