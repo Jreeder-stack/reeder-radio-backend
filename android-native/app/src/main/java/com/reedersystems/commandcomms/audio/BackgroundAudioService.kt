@@ -940,6 +940,13 @@ class BackgroundAudioService : Service() {
     }
 
     private fun handleRadioPttDown(signaling: Boolean) {
+        // Reset the PTT-up debounce window on every fresh press. The window is
+        // only meant to suppress duplicate releases within the same press
+        // cycle (mechanical bounce); a release that follows a new press must
+        // always be allowed through, even if it lands within PTT_UP_DEBOUNCE_MS
+        // of the previous release. Without this reset a quick tap after a
+        // prior release was being dropped, leaving the radio keyed open.
+        lastPttUpTimeMs = 0L
         val channelKey = servicePrefs.channelRoomKey
         val channelId = servicePrefs.channelId
         Log.d(TAG, """{"event":"RADIO_PTT_DOWN","pttState":"$pttState","signaling":$signaling,"channelKey":"${channelKey ?: "none"}","channelId":"$channelId"}""")
@@ -1452,22 +1459,28 @@ class BackgroundAudioService : Service() {
             Log.d(TAG, "BackgroundAudioService: STREAM_VOICE_CALL volume restored to $savedVoiceCallVolume")
             savedVoiceCallVolume = -1
         }
+        // Restore AudioManager.mode to MODE_NORMAL so that paging tones
+        // (USAGE_ALARM on STREAM_ALARM) which intentionally play outside
+        // MODE_IN_COMMUNICATION work correctly between radio sessions.
+        // However, do NOT restore the speakerphone state captured at service
+        // start-up — that snapshot was taken in MODE_NORMAL before any radio
+        // route had been established and effectively forces the loudspeaker
+        // off, sending the next incoming radio audio out the earpiece. The
+        // route used here for the silent gap between RX bursts must match the
+        // route applied when RX is active (built-in loudspeaker), so we
+        // explicitly leave the loudspeaker selected.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            if (previousSpeakerphoneOn) {
-                val speakerDevice = audioManager.availableCommunicationDevices
-                    .firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
-                if (speakerDevice != null) {
-                    audioManager.setCommunicationDevice(speakerDevice)
-                }
-            } else {
-                audioManager.clearCommunicationDevice()
+            val speakerDevice = audioManager.availableCommunicationDevices
+                .firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
+            if (speakerDevice != null) {
+                audioManager.setCommunicationDevice(speakerDevice)
             }
         } else {
             @Suppress("DEPRECATION")
-            audioManager.isSpeakerphoneOn = previousSpeakerphoneOn
+            audioManager.isSpeakerphoneOn = true
         }
         audioManager.mode = previousAudioMode
-        Log.d(TAG, "BackgroundAudioService: radio audio route released (mode=$previousAudioMode, speaker=$previousSpeakerphoneOn)")
+        Log.d(TAG, "BackgroundAudioService: radio audio route released (mode=$previousAudioMode, speaker=loudspeaker_kept_on)")
     }
 
     private var speakerStateRestored = false
