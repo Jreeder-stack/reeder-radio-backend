@@ -16,6 +16,7 @@ import {
 import { signalingService } from '../services/signalingService.js';
 import { scannerFeedService } from '../services/scannerFeedService.js';
 import { textToSpeech, isConfigured as isSpeechConfigured } from '../services/azureSpeechService.js';
+import * as dispatcherLearning from '../services/dispatcherLearning.js';
 import {
   isHourlyTimeBroadcastEnabled,
   setHourlyTimeBroadcastEnabled,
@@ -646,5 +647,92 @@ export async function updateDeviceLabel(req, res) {
   } catch (err) {
     console.error('Update device label error:', err);
     error(res, 'Failed to update device label', 500);
+  }
+}
+
+export async function listLearningCandidates(req, res) {
+  try {
+    const status = req.query.status || 'pending';
+    const items = await dispatcherLearning.listCandidates({ agencyId: dispatcherLearning.getDefaultAgencyId(), status });
+    success(res, { candidates: items });
+  } catch (err) {
+    console.error('listLearningCandidates error:', err);
+    error(res, 'Failed to list learning candidates', 500);
+  }
+}
+
+export async function getLearningPendingCount(req, res) {
+  try {
+    const count = await dispatcherLearning.getPendingCount(dispatcherLearning.getDefaultAgencyId());
+    success(res, { count });
+  } catch (err) {
+    error(res, 'Failed to get pending count', 500);
+  }
+}
+
+export async function approveLearningCandidate(req, res) {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (!id) return error(res, 'Invalid candidate id', 400);
+    const { editedOriginal, editedCorrection, editedCategory } = req.body || {};
+    const reviewedBy = req.user?.username || req.user?.id || 'admin';
+    const result = await dispatcherLearning.approveCandidate(id, {
+      editedOriginal, editedCorrection, editedCategory, reviewedBy,
+    });
+    if (!result.ok) return error(res, result.reason || 'Failed to approve', 400);
+    try {
+      const dispatcher = getDispatcher();
+      if (dispatcher && typeof dispatcher._refreshLearnedKnowledge === 'function') {
+        await dispatcher._refreshLearnedKnowledge();
+      }
+    } catch (_) {}
+    success(res, { ok: true });
+  } catch (err) {
+    console.error('approveLearningCandidate error:', err);
+    error(res, 'Failed to approve candidate', 500);
+  }
+}
+
+export async function rejectLearningCandidate(req, res) {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (!id) return error(res, 'Invalid candidate id', 400);
+    const { reason } = req.body || {};
+    const reviewedBy = req.user?.username || req.user?.id || 'admin';
+    const result = await dispatcherLearning.rejectCandidate(id, { reason, reviewedBy });
+    if (!result.ok) return error(res, result.reason || 'Failed to reject', 400);
+    success(res, { ok: true });
+  } catch (err) {
+    console.error('rejectLearningCandidate error:', err);
+    error(res, 'Failed to reject candidate', 500);
+  }
+}
+
+export async function listLearningItems(req, res) {
+  try {
+    const items = await dispatcherLearning.listLearnedItems(dispatcherLearning.getDefaultAgencyId());
+    success(res, { items });
+  } catch (err) {
+    error(res, 'Failed to list learned items', 500);
+  }
+}
+
+export async function deleteLearningItem(req, res) {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (!id) return error(res, 'Invalid item id', 400);
+    const reviewedBy = req.user?.username || req.user?.id || 'admin';
+    const result = await dispatcherLearning.deleteLearnedItem(id, { reviewedBy });
+    if (!result.ok) return error(res, result.reason || 'Failed to delete', 404);
+    try {
+      const dispatcher = getDispatcher();
+      if (dispatcher && typeof dispatcher._refreshLearnedKnowledge === 'function') {
+        await dispatcher._refreshLearnedKnowledge();
+      }
+    } catch (_) {}
+    success(res, { ok: true });
+  } catch (err) {
+    console.error('deleteLearningItem error:', err);
+    error(res, 'Failed to delete learned item', 500);
   }
 }

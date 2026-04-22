@@ -59,7 +59,18 @@ function normalize(s) {
   return String(s || '').toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
-export function resolveDestination(spokenDestination, places = KNOWN_PLACES) {
+let _learnedPlacesByAgency = new Map();
+
+export function setLearnedPlaces(agencyId, places) {
+  _learnedPlacesByAgency.set(agencyId || 'default', Array.isArray(places) ? places : []);
+}
+
+export function getEffectivePlaces(agencyId = 'default') {
+  const learned = _learnedPlacesByAgency.get(agencyId) || [];
+  return [...learned, ...KNOWN_PLACES];
+}
+
+export function resolveDestination(spokenDestination, places = getEffectivePlaces('default')) {
   const text = normalize(spokenDestination);
   if (!text) return { kind: 'unknown', text: spokenDestination };
 

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import RecordingLogs from "./RecordingLogs.jsx";
 import VmLogs from "./VmLogs.jsx";
+import AiLearningReview from "./AiLearningReview.jsx";
 import { useTheme } from "./context/ThemeContext.jsx";
 
 export default function Admin({ user, onLogout }) {
@@ -1120,6 +1121,8 @@ export default function Admin({ user, onLogout }) {
                   );
                 })()}
               </div>
+
+              <AiLearningReview />
 
               <div className="admin-settings-card">
                 <div className="admin-settings-card-header">

@@ -404,6 +404,42 @@ export async function initializeDatabase() {
       ON CONFLICT (list_type) DO NOTHING
     `);
 
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS dispatch_learning_candidates (
+        id SERIAL PRIMARY KEY,
+        agency_id VARCHAR(64) NOT NULL DEFAULT 'default',
+        unit_id VARCHAR(100),
+        channel VARCHAR(200),
+        category VARCHAR(50) NOT NULL,
+        original_text VARCHAR(255) NOT NULL,
+        correction_text VARCHAR(255) NOT NULL,
+        transcript TEXT,
+        source_intent VARCHAR(50),
+        status VARCHAR(20) NOT NULL DEFAULT 'pending',
+        reject_reason TEXT,
+        reviewed_at TIMESTAMP,
+        reviewed_by VARCHAR(100),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_dlc_status ON dispatch_learning_candidates (agency_id, status, created_at DESC)`);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS dispatch_learned_items (
+        id SERIAL PRIMARY KEY,
+        agency_id VARCHAR(64) NOT NULL DEFAULT 'default',
+        category VARCHAR(50) NOT NULL,
+        key_text VARCHAR(255) NOT NULL,
+        value_text VARCHAR(255) NOT NULL,
+        source_candidate_id INTEGER REFERENCES dispatch_learning_candidates(id) ON DELETE SET NULL,
+        created_by VARCHAR(100),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(agency_id, category, key_text)
+      )
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_dli_agency_cat ON dispatch_learned_items (agency_id, category)`);
+
     try {
       const resetResult = await client.query(
         `UPDATE units SET status = 'offline' WHERE status != 'offline' RETURNING unit_identity`

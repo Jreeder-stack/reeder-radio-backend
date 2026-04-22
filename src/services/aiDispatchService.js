@@ -2,7 +2,8 @@ import { speechToText, textToSpeech, isConfigured as isAzureConfigured } from '.
 import { matchCommand, resetDispatcherState, matchEmergencyResponse, matchSecureConfirmation, getUnitSessionState, setUnitSessionState, DISPATCHER_STATE, EMERGENCY_DISTRESS_PHRASES, ownsInFlight, clearPromptTimeout } from './commandMatcher.js';
 import { detectEmergencyBypass, parseWake, parseIdentify, WAKE_RESULT, IDENTIFY_RESULT, IDENTIFY_TIMEOUT_MS } from './wakeGate.js';
 import { RADIO_STATUS, extractActualStatusFromRejection } from './cadService.js';
-import { resolveDestination, KNOWN_PLACES } from './agencyKnowledge.js';
+import { resolveDestination, KNOWN_PLACES, setLearnedPlaces } from './agencyKnowledge.js';
+import * as dispatcherLearning from './dispatcherLearning.js';
 import { isConfigured as isLlmConfigured, classifyIntent, answerWithData, composeNatural, rewriteCallNote } from './llmIntentService.js';
 import { parsePersonDetails, parseDOB, extractNameFromTranscript } from './phoneticParser.js';
 import pool, { isAiDispatchEnabled, getAiDispatchChannel, createChannelMessage, getRecentAudioMessageBySender } from '../db/index.js';
@@ -693,6 +694,88 @@ export class AIDispatcher {
     this._startBoloPolling();
     this._startStatusCheckPolling();
     this._startHealthCheck();
+
+    try {
+      const agencyId = dispatcherLearning.getDefaultAgencyId();
+      this._agencyId = agencyId;
+      const idx = await dispatcherLearning.refreshRuntimeIndex(agencyId);
+      setLearnedPlaces(agencyId, idx.places);
+      this.log('LEARNING_LOADED', { agencyId, placeCount: idx.places.length, callsignCount: idx.callsigns.size, phrasingCount: idx.phrasings.size, tenCodeCount: idx.tenCodes.size });
+    } catch (err) {
+      this.log('LEARNING_LOAD_ERROR', { error: err.message });
+    }
+  }
+
+  _getAgencyId() {
+    return this._agencyId || dispatcherLearning.getDefaultAgencyId();
+  }
+
+  _captureLearningCorrection(participantId, original, correction, transcript, sourceIntent) {
+    try {
+      if (!original || !correction) return;
+      const o = String(original).trim();
+      const c = String(correction).trim();
+      if (!o || !c || o.toLowerCase() === c.toLowerCase()) return;
+      const category = dispatcherLearning.inferCategory({ original: o, correction: c });
+      dispatcherLearning.recordCandidate({
+        agencyId: this._getAgencyId(),
+        unitId: participantId || null,
+        channel: this.configuredChannel || null,
+        category,
+        original: o,
+        correction: c,
+        transcript: transcript || null,
+        sourceIntent: sourceIntent || null,
+      }).then(res => {
+        if (res?.ok && !res.duplicate) {
+          this.log('LEARNING_CANDIDATE_CAPTURED', { id: res.candidateId, category, original: o, correction: c, sourceIntent });
+        } else if (!res?.ok) {
+          this.log('LEARNING_CANDIDATE_BLOCKED', { reason: res?.reason, category, original: o, correction: c });
+        }
+      }).catch(err => this.log('LEARNING_CAPTURE_ERROR', { error: err.message }));
+    } catch (err) {
+      this.log('LEARNING_CAPTURE_ERROR', { error: err.message });
+    }
+  }
+
+  async _handleTeachingPhrase(participantId, transcript) {
+    try {
+      const detected = dispatcherLearning.detectTeachingPhrase(transcript);
+      if (!detected) return false;
+      const category = dispatcherLearning.inferCategory(detected);
+      const res = await dispatcherLearning.recordCandidate({
+        agencyId: this._getAgencyId(),
+        unitId: participantId || null,
+        channel: this.configuredChannel || null,
+        category,
+        original: detected.original,
+        correction: detected.correction,
+        transcript,
+        sourceIntent: 'EXPLICIT_TEACHING',
+      });
+      if (res?.ok) {
+        this.log('LEARNING_TEACHING_CAPTURED', { id: res.candidateId, category, ...detected });
+        await this.speak("Noted. I'll add that to the review list.", participantId);
+      } else {
+        this.log('LEARNING_TEACHING_BLOCKED', { reason: res?.reason, ...detected });
+        await this.speak("I can't accept that change.", participantId);
+      }
+      return true;
+    } catch (err) {
+      this.log('LEARNING_TEACHING_ERROR', { error: err.message });
+      return false;
+    }
+  }
+
+  async _refreshLearnedKnowledge() {
+    try {
+      const agencyId = this._getAgencyId();
+      const idx = await dispatcherLearning.refreshRuntimeIndex(agencyId);
+      setLearnedPlaces(agencyId, idx.places);
+      this.log('LEARNING_REFRESHED', { agencyId, placeCount: idx.places.length, callsignCount: idx.callsigns.size, phrasingCount: idx.phrasings.size, tenCodeCount: idx.tenCodes.size });
+    } catch (err) {
+      this.log('LEARNING_REFRESH_ERROR', { error: err.message });
+    }
   }
 
   _removeAllAudioListeners() {
@@ -1846,10 +1929,27 @@ export class AIDispatcher {
         }
       }
 
-      this.log('LLM_CLASSIFY_START', { participant: participantId, state, transcript });
+      if (state === DISPATCHER_STATE.AWAITING_COMMAND) {
+        const handled = await this._handleTeachingPhrase(participantId, transcript);
+        if (handled) {
+          this._turnContextByUnit.delete(participantId);
+          return;
+        }
+      }
+
+      const agencyIdForApply = this._getAgencyId();
+      let normalizedTranscript = transcript;
+      const afterPhrasing = dispatcherLearning.applyLearnedPhrasing(normalizedTranscript, agencyIdForApply);
+      const afterTenCode = dispatcherLearning.applyLearnedTenCodeSynonyms(afterPhrasing, agencyIdForApply);
+      if (afterTenCode !== transcript) {
+        this.log('LEARNING_TRANSCRIPT_NORMALIZED', { participant: participantId, original: transcript, normalized: afterTenCode });
+        normalizedTranscript = afterTenCode;
+      }
+
+      this.log('LLM_CLASSIFY_START', { participant: participantId, state, transcript: normalizedTranscript });
 
       const conversationHistory = slots?.conversationHistory || [];
-      const result = await classifyIntent(transcript, participantId, state, slots, conversationHistory);
+      const result = await classifyIntent(normalizedTranscript, participantId, state, slots, conversationHistory);
 
       this.log('LLM_CLASSIFY_RESULT', { participant: participantId, intent: result.intent, response: result.response, slots: result.slots });
       this._turnContextByUnit.set(participantId, { transcript, intent: result.intent });
@@ -1864,6 +1964,7 @@ export class AIDispatcher {
             speaker: speakerNorm,
             transcript,
           });
+          this._captureLearningCorrection(participantId, speakerNorm, detected, transcript, 'STATUS_CHANGE_OTHER_REROUTED');
           result.intent = 'STATUS_CHANGE_OTHER';
           result.slots = { ...(result.slots || {}), targetUnit: detected };
           if (result.response) {
@@ -1873,7 +1974,15 @@ export class AIDispatcher {
           }
         }
       } else if (result.intent === 'STATUS_CHANGE_OTHER') {
-        const llmTarget = result.slots?.targetUnit ? normalizeUnitId(result.slots.targetUnit) : null;
+        let llmTarget = result.slots?.targetUnit ? normalizeUnitId(result.slots.targetUnit) : null;
+        if (llmTarget) {
+          const aliased = dispatcherLearning.applyLearnedCallsign(llmTarget, agencyIdForApply);
+          if (aliased && aliased !== llmTarget) {
+            this.log('LEARNING_CALLSIGN_APPLIED', { from: llmTarget, to: aliased });
+            llmTarget = normalizeUnitId(aliased);
+            result.slots = { ...(result.slots || {}), targetUnit: llmTarget };
+          }
+        }
         if (!llmTarget) {
           const detected = detectTargetUnitFromTranscript(transcript);
           if (detected) {
@@ -3158,6 +3267,7 @@ export class AIDispatcher {
         if (correctedAddress) {
           const fullCorrection = normalizeAddress(correctedAddress);
           this.log('DETAIL_LLM_CORRECTION', { participantId, existing: existingLocation, correctedAddress: fullCorrection });
+          this._captureLearningCorrection(participantId, existingLocation, fullCorrection, rawTranscript, 'DETAIL_LLM_CORRECTION');
           await this.handleDetailConfirmPrompt(participantId, fullCorrection);
           return;
         }
@@ -3167,6 +3277,7 @@ export class AIDispatcher {
           const cityPart = correctedState ? `${correctedCity}, ${correctedState}` : correctedCity;
           const merged = street ? `${street}, ${cityPart}` : cityPart;
           this.log('DETAIL_LLM_CITY_CORRECTION', { participantId, existing: existingLocation, correctedCity, merged });
+          this._captureLearningCorrection(participantId, existingLocation, merged, rawTranscript, 'DETAIL_LLM_CITY_CORRECTION');
           await this.handleDetailConfirmPrompt(participantId, merged);
           return;
         }
@@ -3177,6 +3288,7 @@ export class AIDispatcher {
       if (correctionText && existingLocation) {
         const mergedLocation = this.mergeAddressCorrection(existingLocation, correctionText);
         this.log('DETAIL_PARTIAL_CORRECTION', { participantId, existing: existingLocation, correction: correctionText, merged: mergedLocation });
+        this._captureLearningCorrection(participantId, existingLocation, mergedLocation, rawTranscript, 'DETAIL_PARTIAL_CORRECTION');
         await this.handleDetailConfirmPrompt(participantId, mergedLocation);
         return;
       }
