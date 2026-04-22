@@ -22,3 +22,6 @@ jobs:
 
       - name: Verify pbxproj matches generator and inventory
         run: node ios-native/scripts/check-pbxproj.mjs
+
+      - name: Verify PACKAGES inventory matches Package.resolved
+        run: node ios-native/scripts/check-package-resolved.mjs
