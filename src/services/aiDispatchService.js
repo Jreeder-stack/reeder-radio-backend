@@ -502,6 +502,11 @@ export class AIDispatcher {
     this._statusCheckPollingInterval = null;
     this._seenStatusCheckIds = new Set();
     this._pendingStatusChecks = new Map();
+    // Per-(unit+call) timestamp of the last status-check prompt we actually
+    // spoke, used to rate-limit duplicate prompts even when CAD fires a fresh
+    // `due` or escalates within the minimum interval. Value:
+    // { at: number, escalated: boolean }.
+    this._lastSpokenStatusCheck = new Map();
     this._reconnectTimer = null;
     this._reconnectAttempts = 0;
     this._isReconnecting = false;
@@ -6989,22 +6994,64 @@ export class AIDispatcher {
 
     const okPhrases = ['10-4', '10/4', 'ten four', 'copy', 'roger', 'yes', 'affirmative', 'good', 'okay', 'ok', 'clear'];
     const isOk = okPhrases.some(p => normalized.includes(p));
-    const status = isOk ? 'ok' : transcript.trim();
+    // CAD spec example uses "10-4" for the OK status; matching that exactly
+    // avoids ambiguity (the previous "ok" string was not aligned with the
+    // documented value and may have caused CAD not to treat it as an ack —
+    // which in turn meant the per-assignment timer never reset).
+    const status = isOk ? '10-4' : transcript.trim();
 
-    if (cadService.isConfigured()) {
+    // Make sure we have a real call_id before relying on it. If the session
+    // slot is missing one (e.g. the session expired before the user spoke),
+    // fall back to the unit's currently assigned call so we ack one specific
+    // assignment rather than every active assignment for the unit.
+    let resolvedCallId = callId;
+    if (!resolvedCallId) {
       try {
-        // Tag this round-trip so the inbound acknowledged event from CAD is
-        // suppressed. Pass both the radio callsign and the UUID so we match
-        // whichever identifier CAD echoes back.
-        if (callId) cadStatusCheckClient.markSelfResponded([participantId, unitUuid], callId);
-        await cadService.respondToStatusCheck(participantId, callId, status);
-        this.log('STATUS_CHECK_RESPONDED', { unitId: participantId, checkId, callId, status });
-      } catch (error) {
-        this.log('STATUS_CHECK_RESPOND_ERROR', { error: error.message });
+        resolvedCallId = await this._lookupCurrentCallId(participantId);
+      } catch (err) {
+        this.log('STATUS_CHECK_CALLID_LOOKUP_ERROR', { error: err.message });
       }
     }
 
-    this._clearPendingStatusCheck(participantId, callId);
+    if (cadService.isConfigured()) {
+      // Tag this round-trip so the inbound acknowledged event from CAD is
+      // suppressed. Pass both the radio callsign and the UUID so we match
+      // whichever identifier CAD echoes back.
+      if (resolvedCallId) cadStatusCheckClient.markSelfResponded([participantId, unitUuid], resolvedCallId);
+
+      let attempts = 0;
+      let lastError = null;
+      let lastBody = null;
+      let succeeded = false;
+      while (attempts < 2 && !succeeded) {
+        attempts += 1;
+        try {
+          const result = await cadService.respondToStatusCheck(participantId, resolvedCallId, status);
+          lastBody = result;
+          if (result && result.success !== false) {
+            succeeded = true;
+            this.log('STATUS_CHECK_RESPONDED', {
+              unitId: participantId, checkId, callId: resolvedCallId, status, attempts, body: result,
+            });
+            break;
+          }
+          lastError = (result && (result.error || result.message)) || 'CAD respond returned non-success';
+        } catch (error) {
+          lastError = error?.message || String(error);
+          lastBody = null;
+        }
+        if (!succeeded && attempts < 2) {
+          await new Promise((r) => setTimeout(r, 500));
+        }
+      }
+      if (!succeeded) {
+        this.log('STATUS_CHECK_RESPOND_FAILED', {
+          unitId: participantId, callId: resolvedCallId, status, attempts, error: lastError, body: lastBody,
+        });
+      }
+    }
+
+    this._clearPendingStatusCheck(participantId, resolvedCallId);
     const resp = `${participantId}, 10-4.`;
     await this.speak(resp, participantId);
     this.addConversationExchange(participantId, transcript, resp);
@@ -7020,6 +7067,11 @@ export class AIDispatcher {
     const key = this._pendingStatusCheckKey(unitId, callId);
     if (this._pendingStatusChecks.has(key)) {
       this._pendingStatusChecks.delete(key);
+    }
+    // Clear the rate-limit timestamp so a fresh check after the unit acks /
+    // snoozes / cancels is not throttled by the previous prompt.
+    if (this._lastSpokenStatusCheck.has(key)) {
+      this._lastSpokenStatusCheck.delete(key);
     }
     // If the unit is currently in AWAITING_STATUS_CHECK_RESPONSE for this assignment, drop it.
     const session = getUnitSessionState(unitId);
@@ -7061,12 +7113,13 @@ export class AIDispatcher {
         statusCheckUnitUuid: evt.unitId || null,
       }, true);
 
-      // Prefer human-friendly call_number for speech; fall back to call_id only if needed.
+      // Speech-only: do NOT announce the call number. The unit already knows
+      // what call they're on; CAD broadcasts and structured logs still carry
+      // the call number for dispatcher context.
       const spokenCall = evt.raw?.call_number || evt.raw?.callNumber || null;
-      const callTag = spokenCall ? `, call ${spokenCall}` : '';
       const resp = type === 'status_check_escalated'
-        ? `${unitId}, status check${callTag}. Respond now.`
-        : `${unitId}, status check${callTag}.`;
+        ? `${unitId}, status check. Respond now.`
+        : `${unitId}, status check.`;
 
       if (type === 'status_check_escalated') {
         this.log('STATUS_CHECK_ESCALATED_ALERT', { unitId, callId, severity: 'high' });
@@ -7080,7 +7133,27 @@ export class AIDispatcher {
         }
       }
 
+      // Rate-limit back-to-back spoken prompts for the same unit+call. CAD can
+      // fire `status_check_due` followed shortly by `status_check_escalated`
+      // (or another `due` on a different check id) — we don't want to talk
+      // over ourselves. Exception: an escalation upgrade from a recent
+      // non-escalated prompt is still allowed.
+      const minIntervalMs = (() => {
+        const env = parseInt(process.env.AI_STATUS_CHECK_MIN_INTERVAL_MS, 10);
+        return Number.isFinite(env) && env >= 0 ? env : 5 * 60 * 1000;
+      })();
+      const lastSpoken = this._lastSpokenStatusCheck.get(key);
+      if (lastSpoken) {
+        const sinceLastMs = Date.now() - lastSpoken.at;
+        const escalationUpgrade = (type === 'status_check_escalated') && !lastSpoken.escalated;
+        if (sinceLastMs < minIntervalMs && !escalationUpgrade) {
+          this.log('STATUS_CHECK_RATE_LIMITED', { unitId, callId, sinceLastMs, type });
+          return;
+        }
+      }
+
       await this.speak(resp, unitId, { retryOnBusy: true, retryContext: `STATUS_CHECK:${type}:${unitId}` });
+      this._lastSpokenStatusCheck.set(key, { at: Date.now(), escalated: type === 'status_check_escalated' });
       return;
     }
 
@@ -7111,6 +7184,7 @@ export class AIDispatcher {
     cadStatusCheckClient.stop();
     this._pendingStatusChecks.clear();
     this._seenStatusCheckIds.clear();
+    this._lastSpokenStatusCheck.clear();
   }
 
   async handleSnoozeStatusChecks(participantId, transcript, slots) {
