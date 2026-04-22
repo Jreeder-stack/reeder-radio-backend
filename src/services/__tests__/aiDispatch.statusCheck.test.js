@@ -50,11 +50,20 @@ vi.mock('../agencyKnowledge.js', () => ({
   KNOWN_PLACES: [],
 }));
 
-vi.mock('../db/index.js', () => ({
+vi.mock('../../db/index.js', () => ({
   default: {},
   isAiDispatchEnabled: async () => true,
   getAiDispatchChannel: async () => null,
   createChannelMessage: async () => null,
+  getRecentAudioMessageBySender: async () => null,
+  getAllFcmTokensForUnit: vi.fn(async () => [{ fcm_token: 'TOKEN-1', radio_id: 'R1' }]),
+  getPagingChannelId: vi.fn(async () => 'PAGING-CH-1'),
+  createPage: vi.fn(async () => ({ id: 42 })),
+}));
+
+vi.mock('../fcmService.js', () => ({
+  sendPageToList: vi.fn(async () => ({ memberCount: 1, tokenCount: 1, page: { id: 1 } })),
+  sendPageToTokens: vi.fn(async () => ({ successCount: 1, failureCount: 0, results: [] })),
 }));
 
 let AIDispatcher;
@@ -108,84 +117,225 @@ function escalatedEvent(unitId, callId, callNumber = 'CALL-1') {
   };
 }
 
-describe('Task #490: status-check spoken prompts drop call number', () => {
-  it('status_check_due speaks "<unit>, status check." with no call number', async () => {
+describe('Task #501: AI-driven routine status check escalation', () => {
+  it('status_check_due hails "<unit>, central." (no longer "status check") and starts the controller', async () => {
     const d = makeDispatcher();
     await d._onCadStatusCheckEvent(dueEvent('INDIANA-1', 'call-uuid-1', 'CALL-1'));
     expect(d.spoken).toHaveLength(1);
-    expect(d.spoken[0]).toBe('INDIANA-1, status check.');
-    expect(d.spoken[0]).not.toMatch(/call/i);
+    expect(d.spoken[0]).toBe('INDIANA-1, central.');
+    expect(d.routineStatusCheckEscalation.has('INDIANA-1', 'call-uuid-1')).toBe(true);
+    expect(d.logs.some(l => l.action === 'STATUS_CHECK_ESCALATION_HAIL_1')).toBe(true);
   });
 
-  it('status_check_escalated speaks "<unit>, status check. Respond now." with no call number', async () => {
-    const d = makeDispatcher();
-    await d._onCadStatusCheckEvent(escalatedEvent('INDIANA-1', 'call-uuid-1', 'CALL-1'));
-    expect(d.spoken).toHaveLength(1);
-    expect(d.spoken[0]).toBe('INDIANA-1, status check. Respond now.');
-    expect(d.spoken[0]).not.toMatch(/call CALL-1/);
-  });
-
-  it('CAD broadcast for escalation still includes the call number for dispatcher context', async () => {
-    const d = makeDispatcher();
-    await d._onCadStatusCheckEvent(escalatedEvent('INDIANA-1', 'call-uuid-1', 'CALL-1'));
-    expect(cadService.sendBroadcast).toHaveBeenCalledWith(
-      'Status check escalated for INDIANA-1 (call CALL-1)', 'high',
-    );
-  });
-});
-
-describe('Task #490: rate-limits duplicate spoken prompts', () => {
-  it('two status_check_due events for the same unit+call within the interval => one spoken prompt + RATE_LIMITED log', async () => {
-    const d = makeDispatcher();
-    await d._onCadStatusCheckEvent(dueEvent('INDIANA-1', 'call-uuid-1'));
-    // Simulate the unit not having responded yet — clear the pending entry to
-    // emulate a fresh `due` on a new check id (e.g. WS + poll race) without
-    // hitting the existing per-key dedupe.
-    d._pendingStatusChecks.clear();
-    await d._onCadStatusCheckEvent(dueEvent('INDIANA-1', 'call-uuid-1'));
-    expect(d.spoken).toHaveLength(1);
-    expect(d.logs.some(l => l.action === 'STATUS_CHECK_RATE_LIMITED')).toBe(true);
-  });
-
-  it('escalation upgrade after a recent non-escalated due is still spoken', async () => {
+  it('CAD status_check_escalated event is ignored (no second prompt) when controller is driving', async () => {
     const d = makeDispatcher();
     await d._onCadStatusCheckEvent(dueEvent('INDIANA-1', 'call-uuid-1'));
     expect(d.spoken).toHaveLength(1);
     await d._onCadStatusCheckEvent(escalatedEvent('INDIANA-1', 'call-uuid-1'));
-    expect(d.spoken).toHaveLength(2);
-    expect(d.spoken[1]).toBe('INDIANA-1, status check. Respond now.');
+    expect(d.spoken).toHaveLength(1);
+    expect(d.logs.some(l => l.action === 'STATUS_CHECK_ESCALATED_CAD_EVENT_IGNORED')).toBe(true);
+    expect(cadService.sendBroadcast).not.toHaveBeenCalled();
   });
 
-  it('after status_check_acknowledged, a new status_check_due for the same unit+call speaks immediately', async () => {
+  it('after the unit answers "go ahead", controller speaks "Status check." and waits for ack', async () => {
     const d = makeDispatcher();
     await d._onCadStatusCheckEvent(dueEvent('INDIANA-1', 'call-uuid-1'));
     expect(d.spoken).toHaveLength(1);
-    // CAD acknowledged event — clears pending + rate limit window
-    await d._onCadStatusCheckEvent({
-      type: 'status_check_acknowledged',
-      unitId: 'unit-uuid-INDIANA-1',
-      unitNumber: 'INDIANA-1',
-      callId: 'call-uuid-1',
-      raw: {},
+    cm.setUnitSessionState('INDIANA-1', cm.DISPATCHER_STATE.AWAITING_STATUS_CHECK_RESPONSE, null, {
+      statusCheckCallId: 'call-uuid-1', statusCheckHailStage: 'AWAITING_GO_AHEAD',
+      statusCheckEscalationActive: true,
+    }, true);
+    await d.handleStatusCheckResponse('INDIANA-1', 'go ahead', {
+      statusCheckCallId: 'call-uuid-1', statusCheckHailStage: 'AWAITING_GO_AHEAD',
     });
-    await d._onCadStatusCheckEvent(dueEvent('INDIANA-1', 'call-uuid-1'));
-    expect(d.spoken).toHaveLength(2);
-    expect(d.spoken[1]).toBe('INDIANA-1, status check.');
+    // give the queued speak() microtask a chance to land
+    await Promise.resolve(); await Promise.resolve();
+    expect(d.spoken).toContain('Status check.');
+    expect(d.logs.some(l => l.action === 'STATUS_CHECK_ESCALATION_GO_AHEAD')).toBe(true);
   });
 
-  it('respects AI_STATUS_CHECK_MIN_INTERVAL_MS env override (0 disables rate limit)', async () => {
-    const prev = process.env.AI_STATUS_CHECK_MIN_INTERVAL_MS;
-    process.env.AI_STATUS_CHECK_MIN_INTERVAL_MS = '0';
-    try {
-      const d = makeDispatcher();
-      await d._onCadStatusCheckEvent(dueEvent('INDIANA-1', 'call-uuid-1'));
-      d._pendingStatusChecks.clear();
-      await d._onCadStatusCheckEvent(dueEvent('INDIANA-1', 'call-uuid-1'));
-      expect(d.spoken).toHaveLength(2);
-    } finally {
-      if (prev === undefined) delete process.env.AI_STATUS_CHECK_MIN_INTERVAL_MS;
-      else process.env.AI_STATUS_CHECK_MIN_INTERVAL_MS = prev;
-    }
+  it('OK ack from the unit cancels the escalation and replies "10-4, HH:MM."', async () => {
+    const d = makeDispatcher();
+    await d._onCadStatusCheckEvent(dueEvent('INDIANA-1', 'call-uuid-1'));
+    cm.setUnitSessionState('INDIANA-1', cm.DISPATCHER_STATE.AWAITING_STATUS_CHECK_RESPONSE, null, {
+      statusCheckCallId: 'call-uuid-1', statusCheckHailStage: 'AWAITING_RESPONSE',
+      statusCheckEscalationActive: true,
+    }, true);
+    await d.handleStatusCheckResponse('INDIANA-1', '10-4', {
+      statusCheckCallId: 'call-uuid-1', statusCheckHailStage: 'AWAITING_RESPONSE',
+    });
+    expect(d.routineStatusCheckEscalation.has('INDIANA-1', 'call-uuid-1')).toBe(false);
+    expect(d.logs.some(l => l.action === 'STATUS_CHECK_ESCALATION_CANCELLED'
+      && l.details.reason === 'acknowledged')).toBe(true);
+    const ack = d.spoken[d.spoken.length - 1];
+    expect(ack).toMatch(/^10-4, .+\.$/);
+    expect(ack).not.toBe('INDIANA-1, 10-4.');
+  });
+});
+
+describe('Task #501: escalation timer cadence', () => {
+  beforeEach(() => { vi.useFakeTimers(); });
+  afterEach(() => { vi.useRealTimers(); });
+
+  it('escalates through hail-2 → unit page → roster page+all-call → completed', async () => {
+    const d = makeDispatcher();
+    const tones = [];
+    d.playToneAndSpeak = async (tone, msg) => { tones.push({ tone, msg }); };
+    d.resolveUnitLocation = async () => '123 Main St';
+    const fcm = await import('../fcmService.js');
+    const db = await import('../../db/index.js');
+
+    await d._onCadStatusCheckEvent(dueEvent('INDIANA-1', 'call-uuid-1'));
+    expect(d.spoken[0]).toBe('INDIANA-1, central.');
+
+    // Hail #2 at 30s
+    await vi.advanceTimersByTimeAsync(30000);
+    expect(d.spoken.filter(s => s === 'INDIANA-1, central.')).toHaveLength(2);
+    expect(d.logs.some(l => l.action === 'STATUS_CHECK_ESCALATION_HAIL_2')).toBe(true);
+
+    // Unit page + tone at 60s
+    await vi.advanceTimersByTimeAsync(30000);
+    expect(d.logs.some(l => l.action === 'STATUS_CHECK_ESCALATION_UNIT_PAGE')).toBe(true);
+    expect(db.getAllFcmTokensForUnit).toHaveBeenCalledWith('INDIANA-1');
+    expect(db.createPage).toHaveBeenCalledWith('STATUS CHECK — INDIANA-1', 'AI-DISPATCH', 'unit', 'INDIANA-1', null);
+    expect(fcm.sendPageToTokens).toHaveBeenCalled();
+    expect(tones.some(t => t.tone === 'A' && t.msg === 'INDIANA-1, status check.')).toBe(true);
+
+    // Roster page + all-call at 90s
+    await vi.advanceTimersByTimeAsync(30000);
+    expect(d.logs.some(l => l.action === 'STATUS_CHECK_ESCALATION_ROSTER_PAGE_ALLCALL'
+      && l.details.location === '123 Main St')).toBe(true);
+    expect(fcm.sendPageToList).toHaveBeenCalledWith(
+      'emergency', 'STATUS CHECK ESCALATION — INDIANA-1 — 123 Main St', 'AI-DISPATCH', null,
+    );
+    expect(tones.some(t => t.tone === 'CONTINUOUS' && /Attention all units, status check escalation, INDIANA-1 at 123 Main St/.test(t.msg))).toBe(true);
+    expect(d.logs.some(l => l.action === 'STATUS_CHECK_ESCALATION_AWAITING_BACKUP')).toBe(true);
+
+    // Completed after 60s waiting for another unit en-route
+    await vi.advanceTimersByTimeAsync(60000);
+    expect(d.logs.some(l => l.action === 'STATUS_CHECK_ESCALATION_COMPLETED')).toBe(true);
+    expect(d.routineStatusCheckEscalation.has('INDIANA-1', 'call-uuid-1')).toBe(false);
+  });
+
+  it('roster page falls back to "location unknown" when location resolution fails', async () => {
+    const d = makeDispatcher();
+    d.playToneAndSpeak = async () => {};
+    d.resolveUnitLocation = async () => null;
+    const fcm = await import('../fcmService.js');
+
+    await d._onCadStatusCheckEvent(dueEvent('INDIANA-1', 'call-uuid-1'));
+    await vi.advanceTimersByTimeAsync(90000); // through hail-2 + unit-page → roster step
+
+    expect(fcm.sendPageToList).toHaveBeenCalledWith(
+      'emergency', 'STATUS CHECK ESCALATION — INDIANA-1 — location unknown', 'AI-DISPATCH', null,
+    );
+  });
+
+  it('OK ack cancels the timer chain — no further escalation steps fire', async () => {
+    const d = makeDispatcher();
+    d.playToneAndSpeak = async () => {};
+    d.resolveUnitLocation = async () => null;
+    const fcm = await import('../fcmService.js');
+
+    await d._onCadStatusCheckEvent(dueEvent('INDIANA-1', 'call-uuid-1'));
+    cm.setUnitSessionState('INDIANA-1', cm.DISPATCHER_STATE.AWAITING_STATUS_CHECK_RESPONSE, null, {
+      statusCheckCallId: 'call-uuid-1', statusCheckHailStage: 'AWAITING_RESPONSE',
+      statusCheckEscalationActive: true,
+    }, true);
+    await d.handleStatusCheckResponse('INDIANA-1', '10-4', {
+      statusCheckCallId: 'call-uuid-1', statusCheckHailStage: 'AWAITING_RESPONSE',
+    });
+
+    await vi.advanceTimersByTimeAsync(120000);
+    expect(fcm.sendPageToList).not.toHaveBeenCalled();
+    expect(d.logs.some(l => l.action === 'STATUS_CHECK_ESCALATION_HAIL_2')).toBe(false);
+  });
+});
+
+describe('Task #501: en-route volunteer cancels escalation', () => {
+  beforeEach(() => { vi.useFakeTimers(); });
+  afterEach(() => { vi.useRealTimers(); });
+
+  it('another unit going en-route during the 60s backup window cancels the escalation immediately', async () => {
+    const d = makeDispatcher();
+    d.playToneAndSpeak = async () => {};
+    d.resolveUnitLocation = async () => '500 Oak';
+
+    await d._onCadStatusCheckEvent(dueEvent('INDIANA-1', 'call-uuid-1'));
+    // Advance through HAIL_1 (0s) -> HAIL_2 (30s) -> UNIT_PAGE (60s) -> ROSTER (90s)
+    await vi.advanceTimersByTimeAsync(90000);
+    expect(d.routineStatusCheckEscalation.has('INDIANA-1', 'call-uuid-1')).toBe(true);
+    const esc = d.routineStatusCheckEscalation.get('INDIANA-1', 'call-uuid-1');
+    expect(esc.step).toBe(4);
+
+    const intercepted = await d.routineStatusCheckEscalation.onUtterance('INDIANA-2', "I'll head that way");
+    expect(intercepted).toBe(true);
+    expect(d.routineStatusCheckEscalation.has('INDIANA-1', 'call-uuid-1')).toBe(false);
+    expect(d.logs.some(l => l.action === 'STATUS_CHECK_ESCALATION_VOLUNTEER'
+      && l.details.volunteer === 'INDIANA-2')).toBe(true);
+    expect(d.logs.some(l => l.action === 'STATUS_CHECK_ESCALATION_CANCELLED'
+      && l.details.reason === 'volunteer_en_route')).toBe(true);
+    expect(d.spoken.some(s => /^INDIANA-2, 10-4, copy en route to check on INDIANA-1/.test(s))).toBe(true);
+
+    // Confirm the 60s timer was cleared — no COMPLETED log fires.
+    await vi.advanceTimersByTimeAsync(120000);
+    expect(d.logs.some(l => l.action === 'STATUS_CHECK_ESCALATION_COMPLETED')).toBe(false);
+  });
+
+  it('the silent unit responding does not count as a volunteer', async () => {
+    const d = makeDispatcher();
+    d.playToneAndSpeak = async () => {};
+    d.resolveUnitLocation = async () => null;
+
+    await d._onCadStatusCheckEvent(dueEvent('INDIANA-1', 'call-uuid-1'));
+    await vi.advanceTimersByTimeAsync(90000);
+    const intercepted = await d.routineStatusCheckEscalation.onUtterance('INDIANA-1', "I'll respond");
+    expect(intercepted).toBe(false);
+    expect(d.routineStatusCheckEscalation.has('INDIANA-1', 'call-uuid-1')).toBe(true);
+  });
+
+  it('AWAITING_BACKUP log records elapsed time at the transition', async () => {
+    const d = makeDispatcher();
+    d.playToneAndSpeak = async () => {};
+    d.resolveUnitLocation = async () => null;
+
+    await d._onCadStatusCheckEvent(dueEvent('INDIANA-1', 'call-uuid-1'));
+    await vi.advanceTimersByTimeAsync(90000);
+    const awaiting = d.logs.find(l => l.action === 'STATUS_CHECK_ESCALATION_AWAITING_BACKUP');
+    expect(awaiting).toBeDefined();
+    expect(awaiting.details.elapsedMs).toBeGreaterThanOrEqual(90000);
+  });
+});
+
+describe('Task #501: CAD status_check_escalated fallback', () => {
+  it('starts the AI escalation when no controller is active for that unit/call', async () => {
+    const d = makeDispatcher();
+    expect(d.routineStatusCheckEscalation.has('INDIANA-1', 'call-uuid-1')).toBe(false);
+    await d._onCadStatusCheckEvent(escalatedEvent('INDIANA-1', 'call-uuid-1'));
+    expect(d.routineStatusCheckEscalation.has('INDIANA-1', 'call-uuid-1')).toBe(true);
+    expect(d.spoken[0]).toBe('INDIANA-1, central.');
+    expect(d.logs.some(l => l.action === 'STATUS_CHECK_ESCALATED_CAD_FALLBACK')).toBe(true);
+  });
+});
+
+describe('Task #501: distress hand-off during escalation', () => {
+  it('distress phrase from the same unit cancels escalation and starts the backup request flow', async () => {
+    const d = makeDispatcher();
+    let backupCalled = null;
+    d.handleBackupRequestStart = async (unit, txt) => { backupCalled = { unit, txt }; };
+
+    await d._onCadStatusCheckEvent(dueEvent('INDIANA-1', 'call-uuid-1'));
+    cm.setUnitSessionState('INDIANA-1', cm.DISPATCHER_STATE.AWAITING_STATUS_CHECK_RESPONSE, null, {
+      statusCheckCallId: 'call-uuid-1', statusCheckHailStage: 'AWAITING_GO_AHEAD',
+      statusCheckEscalationActive: true,
+    }, true);
+    await d.handleStatusCheckResponse('INDIANA-1', 'I need backup', {
+      statusCheckCallId: 'call-uuid-1', statusCheckHailStage: 'AWAITING_GO_AHEAD',
+    });
+
+    expect(backupCalled).toEqual({ unit: 'INDIANA-1', txt: 'I need backup' });
+    expect(d.routineStatusCheckEscalation.has('INDIANA-1', 'call-uuid-1')).toBe(false);
+    expect(d.logs.some(l => l.action === 'STATUS_CHECK_ESCALATION_DISTRESS_HANDOFF')).toBe(true);
   });
 });
 
@@ -283,49 +433,21 @@ describe('Task #500: durable status-check ack after session timeout', () => {
   });
 });
 
-describe('Task #500: per-prompt timeout for status check', () => {
-  it('due-flow timeout speaks one re-prompt and re-arms the session (suppresses default reset)', async () => {
+describe('Task #501: per-prompt timeout suppressed when escalation controller is active', () => {
+  it('AWAITING_STATUS_CHECK_RESPONSE timeout is swallowed so the controller can drive timing', async () => {
     const d = makeDispatcher();
     await d._onCadStatusCheckEvent(dueEvent('INDIANA-1', 'call-uuid-1'));
-    expect(d.spoken).toEqual(['INDIANA-1, status check.']);
+    expect(d.spoken).toEqual(['INDIANA-1, central.']);
 
     const slots = { statusCheckCallId: 'call-uuid-1', statusCheckUnitUuid: 'unit-uuid-INDIANA-1' };
     const handled = await d._onSessionPromptTimeout('INDIANA-1', cm.DISPATCHER_STATE.AWAITING_STATUS_CHECK_RESPONSE, slots);
     expect(handled).toBe(true);
-    expect(d.spoken[1]).toBe('INDIANA-1, status check, second call.');
-    expect(d.logs.some(l => l.action === 'STATUS_CHECK_NO_RESPONSE' && l.details.prompt === 'due' && l.details.rePrompted === false)).toBe(true);
-
-    // Pending entry is now marked rePrompted; second timeout must NOT re-prompt.
-    const handled2 = await d._onSessionPromptTimeout('INDIANA-1', cm.DISPATCHER_STATE.AWAITING_STATUS_CHECK_RESPONSE, slots);
-    expect(handled2).toBe(false);
-    // Only the original prompt + the single re-prompt should have been spoken.
-    expect(d.spoken.filter(s => s.includes('second call')).length).toBe(1);
+    expect(d.logs.some(l => l.action === 'STATUS_CHECK_PROMPT_TIMEOUT_CONTROLLER_ACTIVE')).toBe(true);
+    // Should not have spoken anything beyond the original hail.
+    expect(d.spoken.filter(s => s.includes('second call')).length).toBe(0);
   });
 
-  it('escalated-flow timeout broadcasts a dispatcher alert and leaves pending entry for late ack', async () => {
-    const d = makeDispatcher();
-    await d._onCadStatusCheckEvent(escalatedEvent('INDIANA-1', 'call-uuid-1'));
-    cadService.sendBroadcast.mockClear();
-
-    const slots = { statusCheckCallId: 'call-uuid-1', statusCheckUnitUuid: 'unit-uuid-INDIANA-1' };
-    const handled = await d._onSessionPromptTimeout('INDIANA-1', cm.DISPATCHER_STATE.AWAITING_STATUS_CHECK_RESPONSE, slots);
-    expect(handled).toBe(false);
-
-    expect(d.logs.some(l => l.action === 'STATUS_CHECK_NO_RESPONSE' && l.details.prompt === 'escalated')).toBe(true);
-    expect(d.logs.some(l => l.action === 'STATUS_CHECK_ESCALATED_ALERT' && l.details.source === 'prompt_timeout')).toBe(true);
-    expect(cadService.sendBroadcast).toHaveBeenCalledWith(
-      expect.stringMatching(/Status check no response from INDIANA-1.*escalated/), 'high',
-    );
-    // Pending entry remains so a late "10-4" can still ack.
-    expect(d._pendingStatusChecks.size).toBe(1);
-
-    // And the durable ack path can still close it out.
-    const acked = await d._maybeAckPendingStatusCheck('INDIANA-1', '10-4');
-    expect(acked).toBe(true);
-    expect(cadService.respondToStatusCheck).toHaveBeenCalledWith('INDIANA-1', 'call-uuid-1', '10-4');
-  });
-
-  it('non-status-check states fall through to default reset behavior', async () => {
+  it('non-status-check states still fall through to default reset behavior', async () => {
     const d = makeDispatcher();
     const handled = await d._onSessionPromptTimeout('INDIANA-1', cm.DISPATCHER_STATE.AWAITING_LOCATION, {});
     expect(handled).toBe(false);

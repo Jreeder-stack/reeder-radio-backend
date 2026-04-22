@@ -6,8 +6,8 @@ import { resolveDestination, KNOWN_PLACES, setLearnedPlaces } from './agencyKnow
 import * as dispatcherLearning from './dispatcherLearning.js';
 import { isConfigured as isLlmConfigured, classifyIntent, answerWithData, composeNatural, rewriteCallNote } from './llmIntentService.js';
 import { parsePersonDetails, parseDOB, extractNameFromTranscript } from './phoneticParser.js';
-import pool, { isAiDispatchEnabled, getAiDispatchChannel, createChannelMessage, getRecentAudioMessageBySender } from '../db/index.js';
-import { sendPageToList } from './fcmService.js';
+import pool, { isAiDispatchEnabled, getAiDispatchChannel, createChannelMessage, getRecentAudioMessageBySender, getAllFcmTokensForUnit, createPage, getPagingChannelId } from '../db/index.js';
+import { sendPageToList, sendPageToTokens } from './fcmService.js';
 import { isValidWav } from './wavValidator.js';
 import { audioRelayService } from './audioRelayService.js';
 import { formatEventNote, formatDescriptionNote, isClearAirEventType, getEventSpokenLabel, matchEventFromTranscript, isAllClearPhrase } from './eventNoteFormatter.js';
@@ -447,6 +447,252 @@ class EmergencyEscalationController {
   }
 }
 
+const ROUTINE_STATUS_CHECK_HAIL_TIMEOUT_MS = (() => {
+  const v = parseInt(process.env.AI_ROUTINE_STATUS_CHECK_HAIL_TIMEOUT_MS, 10);
+  return Number.isFinite(v) && v > 0 ? v : 30000;
+})();
+const ROUTINE_STATUS_CHECK_BACKUP_TIMEOUT_MS = (() => {
+  const v = parseInt(process.env.AI_ROUTINE_STATUS_CHECK_BACKUP_TIMEOUT_MS, 10);
+  return Number.isFinite(v) && v > 0 ? v : 60000;
+})();
+
+class RoutineStatusCheckEscalation {
+  constructor(dispatcher) {
+    this.dispatcher = dispatcher;
+    this.active = new Map();
+  }
+
+  log(action, details = {}) { this.dispatcher.log(action, details); }
+
+  _key(unitId, callId) { return `${String(unitId || '').toUpperCase()}|${callId || ''}`; }
+
+  has(unitId, callId) { return this.active.has(this._key(unitId, callId)); }
+  get(unitId, callId) { return this.active.get(this._key(unitId, callId)); }
+  hasAnyForUnit(unitId) {
+    const u = String(unitId || '').toUpperCase();
+    for (const e of this.active.values()) {
+      if (e.unitId.toUpperCase() === u) return e;
+    }
+    return null;
+  }
+
+  async start(unitId, callId, opts = {}) {
+    const key = this._key(unitId, callId);
+    if (this.active.has(key)) {
+      this.log('STATUS_CHECK_ESCALATION_ALREADY_ACTIVE', { unitId, callId });
+      return;
+    }
+    const esc = {
+      unitId: String(unitId),
+      callId,
+      key,
+      step: 1,
+      startTime: Date.now(),
+      timer: null,
+      checkId: opts.checkId || null,
+      unitUuid: opts.unitUuid || null,
+      callNumber: opts.callNumber || null,
+    };
+    this.active.set(key, esc);
+    this.log('STATUS_CHECK_ESCALATION_HAIL_1', {
+      unitId: esc.unitId, callId, elapsedMs: 0, nextTimerMs: ROUTINE_STATUS_CHECK_HAIL_TIMEOUT_MS,
+    });
+    await this._performHail(esc, 1);
+  }
+
+  async _performHail(esc, attempt) {
+    setUnitSessionState(esc.unitId, DISPATCHER_STATE.AWAITING_STATUS_CHECK_RESPONSE, null, {
+      statusCheckId: esc.checkId,
+      statusCheckCallId: esc.callId,
+      statusCheckUnitUuid: esc.unitUuid,
+      statusCheckHailStage: 'AWAITING_GO_AHEAD',
+      statusCheckEscalationActive: true,
+    }, true);
+    try {
+      await this.dispatcher.speak(`${esc.unitId}, central.`, esc.unitId, {
+        retryOnBusy: true,
+        retryContext: `STATUS_CHECK_HAIL_${attempt}:${esc.unitId}`,
+      });
+    } catch (err) {
+      this.log('STATUS_CHECK_ESCALATION_SPEAK_ERROR', { unitId: esc.unitId, error: err.message });
+    }
+    this._armStepTimer(esc, ROUTINE_STATUS_CHECK_HAIL_TIMEOUT_MS);
+  }
+
+  _armStepTimer(esc, ms) {
+    if (esc.timer) clearTimeout(esc.timer);
+    esc.timer = setTimeout(() => {
+      this._onStepTimeout(esc).catch(err => {
+        this.log('STATUS_CHECK_ESCALATION_TIMER_ERROR', { unitId: esc.unitId, error: err.message });
+      });
+    }, ms);
+    if (esc.timer.unref) esc.timer.unref();
+  }
+
+  async _onStepTimeout(esc) {
+    if (!this.active.has(esc.key)) return;
+    const elapsedMs = Date.now() - esc.startTime;
+    if (esc.step === 1) {
+      esc.step = 2;
+      this.log('STATUS_CHECK_ESCALATION_HAIL_2', {
+        unitId: esc.unitId, callId: esc.callId, elapsedMs, nextTimerMs: ROUTINE_STATUS_CHECK_HAIL_TIMEOUT_MS,
+      });
+      await this._performHail(esc, 2);
+      return;
+    }
+    if (esc.step === 2) {
+      esc.step = 3;
+      await this._unitPage(esc);
+      this._armStepTimer(esc, ROUTINE_STATUS_CHECK_HAIL_TIMEOUT_MS);
+      return;
+    }
+    if (esc.step === 3) {
+      esc.step = 4;
+      await this._rosterPageAllCall(esc);
+      this._armStepTimer(esc, ROUTINE_STATUS_CHECK_BACKUP_TIMEOUT_MS);
+      return;
+    }
+    if (esc.step === 4) {
+      this.log('STATUS_CHECK_ESCALATION_COMPLETED', {
+        unitId: esc.unitId, callId: esc.callId, elapsedMs, reason: 'no_backup_response',
+      });
+      this._clear(esc.key);
+    }
+  }
+
+  async _unitPage(esc) {
+    const elapsedMs = Date.now() - esc.startTime;
+    const message = `STATUS CHECK — ${esc.unitId}`;
+    this.log('STATUS_CHECK_ESCALATION_UNIT_PAGE', {
+      unitId: esc.unitId, callId: esc.callId, elapsedMs, nextTimerMs: ROUTINE_STATUS_CHECK_HAIL_TIMEOUT_MS,
+    });
+    try {
+      const rows = await getAllFcmTokensForUnit(esc.unitId);
+      const tokens = (rows || []).map(r => r.fcm_token).filter(Boolean);
+      if (tokens.length > 0) {
+        const page = await createPage(message, 'AI-DISPATCH', 'unit', esc.unitId, null);
+        const channelId = await getPagingChannelId();
+        await sendPageToTokens(tokens, page?.id, message, 'AI-DISPATCH', channelId, null);
+      } else {
+        this.log('STATUS_CHECK_ESCALATION_UNIT_PAGE_NO_TOKENS', { unitId: esc.unitId });
+      }
+    } catch (err) {
+      this.log('STATUS_CHECK_ESCALATION_UNIT_PAGE_ERROR', { unitId: esc.unitId, error: err.message });
+    }
+    try {
+      await this.dispatcher.playToneAndSpeak('A', `${esc.unitId}, status check.`);
+    } catch (err) {
+      this.log('STATUS_CHECK_ESCALATION_TONE_ERROR', { unitId: esc.unitId, error: err.message });
+    }
+  }
+
+  async _rosterPageAllCall(esc) {
+    const elapsedMs = Date.now() - esc.startTime;
+    let location = null;
+    try { location = await this.dispatcher.resolveUnitLocation(esc.unitId); } catch (_) { location = null; }
+    const loc = location || 'location unknown';
+    const message = `STATUS CHECK ESCALATION — ${esc.unitId} — ${loc}`;
+    this.log('STATUS_CHECK_ESCALATION_ROSTER_PAGE_ALLCALL', {
+      unitId: esc.unitId, callId: esc.callId, elapsedMs, location: loc,
+      nextTimerMs: ROUTINE_STATUS_CHECK_BACKUP_TIMEOUT_MS,
+    });
+    try {
+      await sendPageToList('emergency', message, 'AI-DISPATCH', null);
+    } catch (err) {
+      this.log('STATUS_CHECK_ESCALATION_ROSTER_PAGE_ERROR', { unitId: esc.unitId, error: err.message });
+    }
+    try {
+      await this.dispatcher.playToneAndSpeak(
+        'CONTINUOUS',
+        `Attention all units, status check escalation, ${esc.unitId} at ${loc}. Any unit available to respond?`,
+      );
+    } catch (err) {
+      this.log('STATUS_CHECK_ESCALATION_ALLCALL_ERROR', { unitId: esc.unitId, error: err.message });
+    }
+    this.log('STATUS_CHECK_ESCALATION_AWAITING_BACKUP', {
+      unitId: esc.unitId, callId: esc.callId, elapsedMs,
+      nextTimerMs: ROUTINE_STATUS_CHECK_BACKUP_TIMEOUT_MS,
+    });
+  }
+
+  /**
+   * Step-4 hook: while we're waiting for another unit to respond after the
+   * roster page + all-call, listen for an en-route volunteer from any unit
+   * other than the silent one. On a match we cancel the escalation timer
+   * immediately, ack the volunteer, and close the loop. Returns true when
+   * the utterance was intercepted.
+   */
+  async onUtterance(speakerUnitId, transcript) {
+    if (this.active.size === 0) return false;
+    const speakerNorm = String(speakerUnitId || '').toUpperCase();
+    for (const esc of this.active.values()) {
+      if (esc.step !== 4) continue;
+      if (speakerNorm === esc.unitId.toUpperCase()) continue;
+      if (!this.dispatcher._isBackupVolunteerPhrase(transcript)) continue;
+      const elapsedMs = Date.now() - esc.startTime;
+      this.log('STATUS_CHECK_ESCALATION_VOLUNTEER', {
+        unitId: esc.unitId, callId: esc.callId, volunteer: speakerNorm, elapsedMs,
+      });
+      this._clear(esc.key);
+      this.log('STATUS_CHECK_ESCALATION_CANCELLED', {
+        unitId: esc.unitId, callId: esc.callId, reason: 'volunteer_en_route', elapsedMs,
+      });
+      const ack = `${speakerNorm}, 10-4, copy en route to check on ${esc.unitId}, ${this.dispatcher.formatMilitaryTime()}.`;
+      try {
+        await this.dispatcher.speak(ack, speakerUnitId, {
+          retryOnBusy: true, retryContext: `STATUS_CHECK_VOLUNTEER:${speakerNorm}`,
+        });
+      } catch (err) {
+        this.log('STATUS_CHECK_ESCALATION_VOLUNTEER_SPEAK_ERROR', { error: err.message });
+      }
+      return true;
+    }
+    return false;
+  }
+
+  onGoAhead(unitId, callId) {
+    const esc = callId ? this.get(unitId, callId) : this.hasAnyForUnit(unitId);
+    if (!esc) return false;
+    setUnitSessionState(esc.unitId, DISPATCHER_STATE.AWAITING_STATUS_CHECK_RESPONSE, null, {
+      statusCheckId: esc.checkId,
+      statusCheckCallId: esc.callId,
+      statusCheckUnitUuid: esc.unitUuid,
+      statusCheckHailStage: 'AWAITING_RESPONSE',
+      statusCheckEscalationActive: true,
+    }, true);
+    this.log('STATUS_CHECK_ESCALATION_GO_AHEAD', { unitId: esc.unitId, callId: esc.callId, step: esc.step });
+    this._armStepTimer(esc, ROUTINE_STATUS_CHECK_HAIL_TIMEOUT_MS);
+    this.dispatcher.speak('Status check.', esc.unitId, {
+      retryOnBusy: true,
+      retryContext: `STATUS_CHECK_PROMPT:${esc.unitId}`,
+    }).catch(() => {});
+    return true;
+  }
+
+  cancel(unitId, callId, reason = 'acknowledged') {
+    let esc = callId ? this.active.get(this._key(unitId, callId)) : null;
+    if (!esc) esc = this.hasAnyForUnit(unitId);
+    if (!esc) return false;
+    const elapsedMs = Date.now() - esc.startTime;
+    this._clear(esc.key);
+    this.log('STATUS_CHECK_ESCALATION_CANCELLED', {
+      unitId: esc.unitId, callId: esc.callId, reason, elapsedMs,
+    });
+    return true;
+  }
+
+  _clear(key) {
+    const esc = this.active.get(key);
+    if (!esc) return;
+    if (esc.timer) clearTimeout(esc.timer);
+    this.active.delete(key);
+  }
+
+  clearAll() {
+    for (const key of [...this.active.keys()]) this._clear(key);
+  }
+}
+
 function resampleAudio(inputBuffer, fromRate, toRate) {
   const inputSamples = new Int16Array(inputBuffer.buffer, inputBuffer.byteOffset, inputBuffer.length / 2);
   const ratio = fromRate / toRate;
@@ -478,6 +724,7 @@ export class AIDispatcher {
     this.numericChannelId = null;
     this.displayChannel = null;
     this.emergencyEscalation = new EmergencyEscalationController(this);
+    this.routineStatusCheckEscalation = new RoutineStatusCheckEscalation(this);
     this.errorCounts = new Map();
     this.errorCooldowns = new Map();
     this._errorLastSeen = new Map();
@@ -963,6 +1210,7 @@ export class AIDispatcher {
     this.errorCooldowns.clear();
     this._errorLastSeen.clear();
     this.emergencyEscalation.clearAllEscalations();
+    this.routineStatusCheckEscalation.clearAll();
     for (const handle of this._identifyTimeouts.values()) {
       clearTimeout(handle);
     }
@@ -1938,6 +2186,14 @@ export class AIDispatcher {
 
       if (this.openBackupRequests.size > 0) {
         const intercepted = await this._handleOpenBackupRequestUtterance(participantId, transcript);
+        if (intercepted) {
+          this._turnContextByUnit.delete(participantId);
+          return;
+        }
+      }
+
+      if (this.routineStatusCheckEscalation.active.size > 0) {
+        const intercepted = await this.routineStatusCheckEscalation.onUtterance(participantId, transcript);
         if (intercepted) {
           this._turnContextByUnit.delete(participantId);
           return;
@@ -7084,6 +7340,33 @@ export class AIDispatcher {
     const callId = slots?.statusCheckCallId || null;
     const unitUuid = slots?.statusCheckUnitUuid || null;
     const normalized = transcript.toLowerCase().trim();
+    const escalationActive = this.routineStatusCheckEscalation.hasAnyForUnit(participantId);
+
+    // Task #501: while a routine status check escalation is in progress, a
+    // distress phrase from the same unit hands off to the existing backup
+    // request flow. The escalation is cancelled so we don't keep paging.
+    if (escalationActive) {
+      const emergencyResponse = matchEmergencyResponse(transcript);
+      if (emergencyResponse && emergencyResponse.type === 'DISTRESS') {
+        this.log('STATUS_CHECK_ESCALATION_DISTRESS_HANDOFF', {
+          participant: participantId,
+          callId: escalationActive.callId,
+          distressType: emergencyResponse.distressType,
+        });
+        this.routineStatusCheckEscalation.cancel(participantId, escalationActive.callId, 'distress');
+        this._clearPendingStatusCheck(participantId, escalationActive.callId);
+        await this.handleBackupRequestStart(participantId, transcript);
+        return;
+      }
+      // The first turn after the hail is the unit saying "go ahead"; advance
+      // the controller to AWAITING_RESPONSE and speak "Status check.".
+      const stage = slots?.statusCheckHailStage;
+      const isGoAhead = /\bgo\s*ahead\b/.test(normalized);
+      if (stage === 'AWAITING_GO_AHEAD' && isGoAhead) {
+        this.routineStatusCheckEscalation.onGoAhead(participantId, escalationActive.callId);
+        return;
+      }
+    }
 
     // Allow units to snooze or cancel status checks directly from the
     // AWAITING_STATUS_CHECK_RESPONSE fast path (otherwise speech here is
@@ -7170,7 +7453,12 @@ export class AIDispatcher {
     }
 
     this._clearPendingStatusCheck(participantId, resolvedCallId);
-    const resp = `${participantId}, 10-4.`;
+    if (escalationActive) {
+      this.routineStatusCheckEscalation.cancel(participantId, escalationActive.callId, 'acknowledged');
+    }
+    const resp = escalationActive
+      ? `10-4, ${this.formatMilitaryTime()}.`
+      : `${participantId}, 10-4.`;
     await this.speak(resp, participantId);
     this.addConversationExchange(participantId, transcript, resp);
     setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
@@ -7304,6 +7592,13 @@ export class AIDispatcher {
 
   async _onStatusCheckPromptTimeout(unitId, slots) {
     const sessionCallId = slots?.statusCheckCallId || null;
+    // Task #501: when the new RoutineStatusCheckEscalation controller is
+    // driving the cadence, the legacy per-prompt timeout must stay out of
+    // the way — it would talk over the controller's own hail timer.
+    if (this.routineStatusCheckEscalation.hasAnyForUnit(unitId)) {
+      this.log('STATUS_CHECK_PROMPT_TIMEOUT_CONTROLLER_ACTIVE', { unitId, callId: sessionCallId });
+      return true;
+    }
     const pending = this._findPendingStatusCheckForUnit(unitId, sessionCallId);
     const callId = pending?.callId || sessionCallId || null;
     const promptKind = pending?.escalated ? 'escalated' : 'due';
@@ -7367,18 +7662,14 @@ export class AIDispatcher {
     if (!unitId) return;
     const key = this._pendingStatusCheckKey(unitId, callId);
 
-    if (type === 'status_check_due' || type === 'status_check_escalated') {
-      // Don't double-prompt for the same assignment if we're still waiting.
-      // For escalated events, allow a single upgrade from a pending due ->
-      // escalated (so the dispatcher hears the higher-priority prompt), but
-      // suppress further duplicates (e.g. WS + poll racing on the same check).
+    if (type === 'status_check_due') {
       const existing = this._pendingStatusChecks.get(key);
-      if (existing && type === 'status_check_due') {
+      if (existing) {
         this.log('STATUS_CHECK_DUE_DEDUPED', { unitId, callId });
         return;
       }
-      if (existing && type === 'status_check_escalated' && existing.escalated) {
-        this.log('STATUS_CHECK_ESCALATED_DEDUPED', { unitId, callId });
+      if (this.routineStatusCheckEscalation.has(unitId, callId)) {
+        this.log('STATUS_CHECK_DUE_ESCALATION_ACTIVE', { unitId, callId });
         return;
       }
       const prevEntry = this._pendingStatusChecks.get(key);
@@ -7386,58 +7677,40 @@ export class AIDispatcher {
         unitId,
         callId,
         unitUuid: evt.unitId || prevEntry?.unitUuid || null,
-        escalated: type === 'status_check_escalated' || !!prevEntry?.escalated,
+        escalated: false,
         rePrompted: prevEntry?.rePrompted || false,
         at: Date.now(),
       });
+      await this.routineStatusCheckEscalation.start(unitId, callId, {
+        checkId: evt.raw?.id || evt.raw?.check_id || null,
+        unitUuid: evt.unitId || prevEntry?.unitUuid || null,
+        callNumber: evt.raw?.call_number || evt.raw?.callNumber || null,
+      });
+      this._lastSpokenStatusCheck.set(key, { at: Date.now(), escalated: false });
+      return;
+    }
 
-      setUnitSessionState(unitId, DISPATCHER_STATE.AWAITING_STATUS_CHECK_RESPONSE, null, {
-        statusCheckId: evt.raw?.id || evt.raw?.check_id || null,
-        statusCheckCallId: callId,
-        statusCheckUnitUuid: evt.unitId || null,
-      }, true);
-
-      // Speech-only: do NOT announce the call number. The unit already knows
-      // what call they're on; CAD broadcasts and structured logs still carry
-      // the call number for dispatcher context.
-      const spokenCall = evt.raw?.call_number || evt.raw?.callNumber || null;
-      const resp = type === 'status_check_escalated'
-        ? `${unitId}, status check. Respond now.`
-        : `${unitId}, status check.`;
-
-      if (type === 'status_check_escalated') {
-        this.log('STATUS_CHECK_ESCALATED_ALERT', { unitId, callId, severity: 'high' });
-        try {
-          if (cadService.isConfigured()) {
-            const tag = spokenCall ? ` (call ${spokenCall})` : '';
-            await cadService.sendBroadcast(`Status check escalated for ${unitId}${tag}`, 'high');
-          }
-        } catch (err) {
-          this.log('STATUS_CHECK_ESCALATED_BROADCAST_ERROR', { error: err.message });
-        }
+    if (type === 'status_check_escalated') {
+      // Task #501: routine status check escalation is normally driven end-to-end
+      // by the AI dispatcher's RoutineStatusCheckEscalation controller.
+      // When the controller is already running for this unit/call, the CAD
+      // escalation event is just informational — ignore it so we don't
+      // double-prompt. If no local controller is active (e.g. dispatcher
+      // restart, or this came in before status_check_due), fall back to
+      // bootstrapping the AI escalation now so the unit still gets the
+      // full hail / page / all-call sequence.
+      if (this.routineStatusCheckEscalation.has(unitId, callId)) {
+        this.log('STATUS_CHECK_ESCALATED_CAD_EVENT_IGNORED', { unitId, callId, controllerActive: true });
+        return;
       }
-
-      // Rate-limit back-to-back spoken prompts for the same unit+call. CAD can
-      // fire `status_check_due` followed shortly by `status_check_escalated`
-      // (or another `due` on a different check id) — we don't want to talk
-      // over ourselves. Exception: an escalation upgrade from a recent
-      // non-escalated prompt is still allowed.
-      const minIntervalMs = (() => {
-        const env = parseInt(process.env.AI_STATUS_CHECK_MIN_INTERVAL_MS, 10);
-        return Number.isFinite(env) && env >= 0 ? env : 5 * 60 * 1000;
-      })();
-      const lastSpoken = this._lastSpokenStatusCheck.get(key);
-      if (lastSpoken) {
-        const sinceLastMs = Date.now() - lastSpoken.at;
-        const escalationUpgrade = (type === 'status_check_escalated') && !lastSpoken.escalated;
-        if (sinceLastMs < minIntervalMs && !escalationUpgrade) {
-          this.log('STATUS_CHECK_RATE_LIMITED', { unitId, callId, sinceLastMs, type });
-          return;
-        }
-      }
-
-      await this.speak(resp, unitId, { retryOnBusy: true, retryContext: `STATUS_CHECK:${type}:${unitId}` });
-      this._lastSpokenStatusCheck.set(key, { at: Date.now(), escalated: type === 'status_check_escalated' });
+      this.log('STATUS_CHECK_ESCALATED_CAD_FALLBACK', { unitId, callId });
+      this._pendingStatusChecks.set(key, { unitId, callId, escalated: true, at: Date.now() });
+      await this.routineStatusCheckEscalation.start(unitId, callId, {
+        checkId: evt.raw?.id || evt.raw?.check_id || null,
+        unitUuid: evt.unitId || null,
+        callNumber: evt.raw?.call_number || evt.raw?.callNumber || null,
+      });
+      this._lastSpokenStatusCheck.set(key, { at: Date.now(), escalated: true });
       return;
     }
 
@@ -7445,6 +7718,7 @@ export class AIDispatcher {
         || type === 'status_check_snoozed'
         || type === 'status_check_cancelled') {
       this.log('STATUS_CHECK_PROMPT_SUPPRESSED', { reason: type, unitId, callId });
+      this.routineStatusCheckEscalation.cancel(unitId, callId, `cad_${type}`);
       this._clearPendingStatusCheck(unitId, callId);
       return;
     }
