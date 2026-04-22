@@ -245,3 +245,89 @@ describe('Task #490: ack round-trip resets CAD timer', () => {
     expect(cadService.respondToStatusCheck).toHaveBeenCalledWith('INDIANA-1', 'CALL-UUID-1', '10-4');
   });
 });
+
+describe('Task #500: durable status-check ack after session timeout', () => {
+  it('still posts ack to CAD when session is IDLE but pending entry exists', async () => {
+    const d = makeDispatcher();
+    // Simulate a status check that fired and timed out (session reset to IDLE)
+    // but the pending entry was intentionally left in place.
+    d._pendingStatusChecks.set(d._pendingStatusCheckKey('INDIANA-1', 'call-uuid-1'), {
+      unitId: 'INDIANA-1', callId: 'call-uuid-1', unitUuid: 'unit-uuid-1',
+      escalated: true, rePrompted: true, at: Date.now(),
+    });
+    cm.setUnitSessionState('INDIANA-1', cm.DISPATCHER_STATE.IDLE, null, {}, true);
+
+    const acked = await d._maybeAckPendingStatusCheck('INDIANA-1', '10-4');
+    expect(acked).toBe(true);
+    expect(cadService.respondToStatusCheck).toHaveBeenCalledWith('INDIANA-1', 'call-uuid-1', '10-4');
+    expect(d.logs.some(l => l.action === 'STATUS_CHECK_RESPONDED' && l.details.source === 'durable_ack')).toBe(true);
+    expect(d._pendingStatusChecks.size).toBe(0);
+  });
+
+  it('logs STATUS_CHECK_SPEECH_IN diagnostic on every speech-in while a check is pending', async () => {
+    const d = makeDispatcher();
+    d._pendingStatusChecks.set(d._pendingStatusCheckKey('INDIANA-1', 'call-uuid-1'), {
+      unitId: 'INDIANA-1', callId: 'call-uuid-1', escalated: false, rePrompted: false, at: Date.now(),
+    });
+    await d._maybeAckPendingStatusCheck('INDIANA-1', 'something not an ack');
+    expect(d.logs.some(l => l.action === 'STATUS_CHECK_SPEECH_IN' && l.details.handler === 'durable')).toBe(true);
+    expect(d.logs.some(l => l.action === 'STATUS_CHECK_DURABLE_ACK_NO_MATCH')).toBe(true);
+    expect(cadService.respondToStatusCheck).not.toHaveBeenCalled();
+  });
+
+  it('returns false when no pending entry exists for the unit', async () => {
+    const d = makeDispatcher();
+    const acked = await d._maybeAckPendingStatusCheck('INDIANA-1', '10-4');
+    expect(acked).toBe(false);
+    expect(cadService.respondToStatusCheck).not.toHaveBeenCalled();
+  });
+});
+
+describe('Task #500: per-prompt timeout for status check', () => {
+  it('due-flow timeout speaks one re-prompt and re-arms the session (suppresses default reset)', async () => {
+    const d = makeDispatcher();
+    await d._onCadStatusCheckEvent(dueEvent('INDIANA-1', 'call-uuid-1'));
+    expect(d.spoken).toEqual(['INDIANA-1, status check.']);
+
+    const slots = { statusCheckCallId: 'call-uuid-1', statusCheckUnitUuid: 'unit-uuid-INDIANA-1' };
+    const handled = await d._onSessionPromptTimeout('INDIANA-1', cm.DISPATCHER_STATE.AWAITING_STATUS_CHECK_RESPONSE, slots);
+    expect(handled).toBe(true);
+    expect(d.spoken[1]).toBe('INDIANA-1, status check, second call.');
+    expect(d.logs.some(l => l.action === 'STATUS_CHECK_NO_RESPONSE' && l.details.prompt === 'due' && l.details.rePrompted === false)).toBe(true);
+
+    // Pending entry is now marked rePrompted; second timeout must NOT re-prompt.
+    const handled2 = await d._onSessionPromptTimeout('INDIANA-1', cm.DISPATCHER_STATE.AWAITING_STATUS_CHECK_RESPONSE, slots);
+    expect(handled2).toBe(false);
+    // Only the original prompt + the single re-prompt should have been spoken.
+    expect(d.spoken.filter(s => s.includes('second call')).length).toBe(1);
+  });
+
+  it('escalated-flow timeout broadcasts a dispatcher alert and leaves pending entry for late ack', async () => {
+    const d = makeDispatcher();
+    await d._onCadStatusCheckEvent(escalatedEvent('INDIANA-1', 'call-uuid-1'));
+    cadService.sendBroadcast.mockClear();
+
+    const slots = { statusCheckCallId: 'call-uuid-1', statusCheckUnitUuid: 'unit-uuid-INDIANA-1' };
+    const handled = await d._onSessionPromptTimeout('INDIANA-1', cm.DISPATCHER_STATE.AWAITING_STATUS_CHECK_RESPONSE, slots);
+    expect(handled).toBe(false);
+
+    expect(d.logs.some(l => l.action === 'STATUS_CHECK_NO_RESPONSE' && l.details.prompt === 'escalated')).toBe(true);
+    expect(d.logs.some(l => l.action === 'STATUS_CHECK_ESCALATED_ALERT' && l.details.source === 'prompt_timeout')).toBe(true);
+    expect(cadService.sendBroadcast).toHaveBeenCalledWith(
+      expect.stringMatching(/Status check no response from INDIANA-1.*escalated/), 'high',
+    );
+    // Pending entry remains so a late "10-4" can still ack.
+    expect(d._pendingStatusChecks.size).toBe(1);
+
+    // And the durable ack path can still close it out.
+    const acked = await d._maybeAckPendingStatusCheck('INDIANA-1', '10-4');
+    expect(acked).toBe(true);
+    expect(cadService.respondToStatusCheck).toHaveBeenCalledWith('INDIANA-1', 'call-uuid-1', '10-4');
+  });
+
+  it('non-status-check states fall through to default reset behavior', async () => {
+    const d = makeDispatcher();
+    const handled = await d._onSessionPromptTimeout('INDIANA-1', cm.DISPATCHER_STATE.AWAITING_LOCATION, {});
+    expect(handled).toBe(false);
+  });
+});

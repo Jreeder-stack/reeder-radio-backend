@@ -1,5 +1,5 @@
 import { speechToText, textToSpeech, isConfigured as isAzureConfigured } from './azureSpeechService.js';
-import { matchCommand, resetDispatcherState, matchEmergencyResponse, matchSecureConfirmation, getUnitSessionState, setUnitSessionState, DISPATCHER_STATE, EMERGENCY_DISTRESS_PHRASES, ownsInFlight, clearPromptTimeout } from './commandMatcher.js';
+import { matchCommand, resetDispatcherState, matchEmergencyResponse, matchSecureConfirmation, getUnitSessionState, setUnitSessionState, DISPATCHER_STATE, EMERGENCY_DISTRESS_PHRASES, ownsInFlight, clearPromptTimeout, setPromptTimeoutHandler } from './commandMatcher.js';
 import { detectEmergencyBypass, parseWake, parseIdentify, WAKE_RESULT, IDENTIFY_RESULT, IDENTIFY_TIMEOUT_MS } from './wakeGate.js';
 import { RADIO_STATUS, extractActualStatusFromRejection } from './cadService.js';
 import { resolveDestination, KNOWN_PLACES, setLearnedPlaces } from './agencyKnowledge.js';
@@ -521,6 +521,9 @@ export class AIDispatcher {
     this._decodeSuccessCount = 0;
     this._aiClearAirSessions = new Map();
     this._speakQueue = Promise.resolve();
+    // Take ownership of per-prompt timeouts so we can re-prompt status checks
+    // and emit dispatcher alerts before the session is silently released.
+    setPromptTimeoutHandler((unitId, state, slots) => this._onSessionPromptTimeout(unitId, state, slots));
   }
 
   log(action, details = {}) {
@@ -1730,6 +1733,13 @@ export class AIDispatcher {
     try {
       transcript = this._normalizeSTTMisrecognitions(transcript);
 
+      // Durable status-check ack: if a status check is still pending for this
+      // unit (e.g. session was already released to IDLE by the per-prompt
+      // timeout), guarantee CAD sees the ack before normal handling runs.
+      try { await this._maybeAckPendingStatusCheck(participantId, transcript); } catch (e) {
+        this.log('STATUS_CHECK_DURABLE_ACK_ERROR', { error: e.message });
+      }
+
       const sessionState = getUnitSessionState(participantId);
       const { state, slots } = sessionState;
 
@@ -2745,6 +2755,10 @@ export class AIDispatcher {
   }
 
   async processTranscriptWithRegex(transcript, participantId) {
+    // Durable status-check ack: same guarantee as in the LLM path.
+    try { await this._maybeAckPendingStatusCheck(participantId, transcript); } catch (e) {
+      this.log('STATUS_CHECK_DURABLE_ACK_ERROR', { error: e.message });
+    }
     // SEQ-10/11 regex fallback: cancel/reopen call by number. Run before
     // matchCommand so these short commands fire even when the LLM is down.
     const lower = String(transcript || '').toLowerCase();
@@ -7058,6 +7072,12 @@ export class AIDispatcher {
   }
 
   async handleStatusCheckResponse(participantId, transcript, slots) {
+    this.log('STATUS_CHECK_SPEECH_IN', {
+      handler: 'handleStatusCheckResponse',
+      participant: participantId,
+      transcript,
+      pendingForUnit: this._listPendingStatusChecksForUnit(participantId).map(e => ({ callId: e.callId, escalated: !!e.escalated, rePrompted: !!e.rePrompted })),
+    });
     this.log('STATUS_CHECK_RESPONSE', { participant: participantId, transcript, slots });
 
     const checkId = slots?.statusCheckId;
@@ -7181,6 +7201,164 @@ export class AIDispatcher {
     }
   }
 
+  _listPendingStatusChecksForUnit(unitId) {
+    if (!unitId) return [];
+    const prefix = `${String(unitId).toUpperCase()}|`;
+    const out = [];
+    for (const [key, entry] of this._pendingStatusChecks.entries()) {
+      if (key.startsWith(prefix)) out.push(entry);
+    }
+    return out;
+  }
+
+  _findPendingStatusCheckForUnit(unitId, preferredCallId = null) {
+    if (!unitId) return null;
+    if (preferredCallId) {
+      const exact = this._pendingStatusChecks.get(this._pendingStatusCheckKey(unitId, preferredCallId));
+      if (exact) return exact;
+    }
+    const list = this._listPendingStatusChecksForUnit(unitId);
+    if (!list.length) return null;
+    return list.sort((a, b) => (b.at || 0) - (a.at || 0))[0];
+  }
+
+  _isStatusCheckAckPhrase(transcript) {
+    const t = String(transcript || '').toLowerCase().trim();
+    if (!t) return false;
+    const okPhrases = ['10-4', '10/4', 'ten four', 'copy', 'roger', 'yes', 'affirmative', 'good', 'okay', 'ok', 'clear'];
+    return okPhrases.some(p => t.includes(p));
+  }
+
+  /**
+   * Durable status-check ack: if a status check is still pending for this unit
+   * (even after the per-prompt session timeout fired), treat an ack-shaped
+   * inbound transcript as a response to the pending check and post it to CAD
+   * before any other handler runs. Returns true when an ack was posted and
+   * the pending entry was cleared, false otherwise. Callers do NOT short-
+   * circuit on the return value — normal routing continues either way; this
+   * helper just guarantees CAD sees the ack.
+   */
+  async _maybeAckPendingStatusCheck(participantId, transcript) {
+    if (!participantId) return false;
+    const pending = this._findPendingStatusCheckForUnit(participantId);
+    if (!pending) return false;
+    // Diagnostic: log every speech-in while a status check is pending so a
+    // failure to ack is obvious from the log alone.
+    this.log('STATUS_CHECK_SPEECH_IN', {
+      handler: 'durable',
+      participant: participantId,
+      transcript,
+      pendingCallId: pending.callId,
+      pendingEscalated: !!pending.escalated,
+      pendingRePrompted: !!pending.rePrompted,
+    });
+    if (!this._isStatusCheckAckPhrase(transcript)) {
+      this.log('STATUS_CHECK_DURABLE_ACK_NO_MATCH', { participant: participantId, transcript });
+      return false;
+    }
+    let resolvedCallId = pending.callId || null;
+    if (!resolvedCallId) {
+      try {
+        resolvedCallId = await this._lookupCurrentCallId(participantId);
+      } catch (err) {
+        this.log('STATUS_CHECK_DURABLE_ACK_CALLID_LOOKUP_ERROR', { error: err.message });
+      }
+    }
+    try {
+      if (cadService.isConfigured()) {
+        if (resolvedCallId) {
+          cadStatusCheckClient.markSelfResponded([participantId, pending.unitUuid].filter(Boolean), resolvedCallId);
+        }
+        const result = await cadService.respondToStatusCheck(participantId, resolvedCallId, '10-4');
+        if (result && result.success !== false) {
+          this.log('STATUS_CHECK_RESPONDED', {
+            unitId: participantId, callId: resolvedCallId, status: '10-4', source: 'durable_ack', body: result,
+          });
+        } else {
+          this.log('STATUS_CHECK_RESPOND_FAILED', {
+            unitId: participantId, callId: resolvedCallId, status: '10-4', source: 'durable_ack',
+            error: (result && (result.error || result.message)) || 'CAD respond returned non-success',
+          });
+        }
+      }
+    } catch (err) {
+      this.log('STATUS_CHECK_RESPOND_FAILED', {
+        unitId: participantId, callId: resolvedCallId, status: '10-4', source: 'durable_ack', error: err.message,
+      });
+    }
+    this._clearPendingStatusCheck(participantId, resolvedCallId);
+    return true;
+  }
+
+  async _onSessionPromptTimeout(unitId, state, slots) {
+    if (state === DISPATCHER_STATE.AWAITING_STATUS_CHECK_RESPONSE) {
+      try {
+        return await this._onStatusCheckPromptTimeout(unitId, slots || {});
+      } catch (err) {
+        this.log('STATUS_CHECK_PROMPT_TIMEOUT_ERROR', { unitId, error: err.message });
+        return false;
+      }
+    }
+    return false;
+  }
+
+  async _onStatusCheckPromptTimeout(unitId, slots) {
+    const sessionCallId = slots?.statusCheckCallId || null;
+    const pending = this._findPendingStatusCheckForUnit(unitId, sessionCallId);
+    const callId = pending?.callId || sessionCallId || null;
+    const promptKind = pending?.escalated ? 'escalated' : 'due';
+    const alreadyRePrompted = !!pending?.rePrompted;
+
+    this.log('STATUS_CHECK_NO_RESPONSE', {
+      unitId,
+      callId,
+      prompt: promptKind,
+      rePrompted: alreadyRePrompted,
+    });
+
+    // Due flow, no re-prompt yet → speak one re-prompt and re-arm the timer.
+    if (pending && !pending.escalated && !pending.rePrompted) {
+      pending.rePrompted = true;
+      pending.at = Date.now();
+      try {
+        await this.speak(`${unitId}, status check, second call.`, unitId, {
+          retryOnBusy: true, retryContext: `STATUS_CHECK:reprompt:${unitId}`,
+        });
+      } catch (err) {
+        this.log('STATUS_CHECK_REPROMPT_SPEAK_ERROR', { unitId, callId, error: err.message });
+      }
+      // Re-arm by re-asserting the awaiting state with the same slots.
+      setUnitSessionState(unitId, DISPATCHER_STATE.AWAITING_STATUS_CHECK_RESPONSE, null, {
+        statusCheckId: slots?.statusCheckId || null,
+        statusCheckCallId: callId,
+        statusCheckUnitUuid: slots?.statusCheckUnitUuid || null,
+      }, true);
+      return true; // suppress default reset
+    }
+
+    // Escalated flow, OR due-after-reprompt → surface to dispatcher console
+    // and leave the pending entry in place so a late inbound ack can still
+    // close the check via the durable speech-in fast path.
+    try {
+      if (cadService.isConfigured()) {
+        const tag = callId ? ` (call ${callId})` : '';
+        const reason = pending?.escalated ? 'escalated' : 'after re-prompt';
+        await cadService.sendBroadcast(
+          `Status check no response from ${unitId}${tag} (${reason})`,
+          'high',
+        );
+      }
+    } catch (err) {
+      this.log('STATUS_CHECK_NO_RESPONSE_BROADCAST_ERROR', { unitId, callId, error: err.message });
+    }
+    this.log('STATUS_CHECK_ESCALATED_ALERT', {
+      unitId, callId, severity: 'high', source: 'prompt_timeout', prompt: promptKind,
+    });
+    // Do not clear pending — durable ack should still work if the unit speaks
+    // shortly after. Allow default reset to release the session to IDLE.
+    return false;
+  }
+
   async _onCadStatusCheckEvent(evt) {
     const { type, callId } = evt;
     // Prefer the radio callsign (unitNumber) for session/speech targeting;
@@ -7203,7 +7381,15 @@ export class AIDispatcher {
         this.log('STATUS_CHECK_ESCALATED_DEDUPED', { unitId, callId });
         return;
       }
-      this._pendingStatusChecks.set(key, { unitId, callId, escalated: type === 'status_check_escalated', at: Date.now() });
+      const prevEntry = this._pendingStatusChecks.get(key);
+      this._pendingStatusChecks.set(key, {
+        unitId,
+        callId,
+        unitUuid: evt.unitId || prevEntry?.unitUuid || null,
+        escalated: type === 'status_check_escalated' || !!prevEntry?.escalated,
+        rePrompted: prevEntry?.rePrompted || false,
+        at: Date.now(),
+      });
 
       setUnitSessionState(unitId, DISPATCHER_STATE.AWAITING_STATUS_CHECK_RESPONSE, null, {
         statusCheckId: evt.raw?.id || evt.raw?.check_id || null,

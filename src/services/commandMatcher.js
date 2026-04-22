@@ -56,6 +56,14 @@ const PER_PROMPT_TIMEOUT_MS = parseInt(process.env.AI_PER_PROMPT_TIMEOUT_MS || '
 
 const unitSessions = new Map();
 
+// Optional handler invoked when a per-prompt timeout fires. If it returns
+// (or resolves to) a truthy value, the default reset-to-IDLE is suppressed
+// so the handler can re-prompt or otherwise own the timeout.
+let promptTimeoutHandler = null;
+export function setPromptTimeoutHandler(fn) {
+  promptTimeoutHandler = (typeof fn === 'function') ? fn : null;
+}
+
 const SESSION_TIMEOUT_MS = 300000;
 const SIGNAL_100_TIMEOUT_MS = 300000;
 
@@ -694,10 +702,21 @@ function startPromptTimeout(unitId) {
     console.log(`[SESSION] ${unitId}: per-prompt timeout SKIPPED (emergency pendingIntent=${typeof session.pendingIntent === 'string' ? session.pendingIntent : session.pendingIntent?.intent})`);
     return;
   }
-  session.promptTimeout = setTimeout(() => {
+  session.promptTimeout = setTimeout(async () => {
     const cur = unitSessions.get(unitId);
     if (!cur) return;
     if (cur.state === DISPATCHER_STATE.IDLE) return;
+    if (promptTimeoutHandler) {
+      try {
+        const handled = await promptTimeoutHandler(unitId, cur.state, { ...cur.slots });
+        if (handled) {
+          console.log(`[SESSION] ${unitId}: per-prompt timeout in state=${cur.state} handled by registered handler (no reset)`);
+          return;
+        }
+      } catch (err) {
+        console.log(`[SESSION] ${unitId}: per-prompt timeout handler error: ${err?.message || err}`);
+      }
+    }
     console.log(`[SESSION] ${unitId}: per-prompt timeout fired in state=${cur.state}; releasing to IDLE (no speak)`);
     resetUnitSession(unitId);
   }, PER_PROMPT_TIMEOUT_MS);
