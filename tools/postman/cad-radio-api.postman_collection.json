@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "cad-radio-api-collection",
     "name": "CAD Radio API",
-    "description": "Full CAD Radio API surface for testing.\n\nAuth: every request sends `x-api-key: {{cad_key}}`.\nBase URL: `{{cad_url}}`.\n\nFill in `cad_url` and `cad_key` in the matching environment file before sending.",
+    "description": "Full CAD Radio API surface for testing.\n\nAuth: every request sends `x-radio-api-key: {{cad_key}}`.\nBase URL: `{{cad_url}}`.\n\nFill in `cad_url` and `cad_key` in the matching environment file before sending.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -79,7 +79,7 @@
                 "status"
               ]
             },
-            "description": "Required: unit_id, status. Valid statuses: on duty, off duty, busy, en route, on scene, available, assign, court, training, out of service, unavailable, special duty, not available, out of vehicle, detail.",
+            "description": "POST /api/radio/status — body: { unit_id, status, timestamp?, channel? }. Required: unit_id, status. Required: unit_id, status. Valid statuses: on duty, off duty, busy, en route, on scene, available, assign, court, training, out of service, unavailable, special duty, not available, out of vehicle, detail.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"unit_id\": \"{{unit_id}}\",\n  \"status\": \"on duty\",\n  \"timestamp\": \"1423\",\n  \"channel\": \"OPS1\"\n}",
@@ -121,7 +121,7 @@
                 "cycle"
               ]
             },
-            "description": "Cycles automatically: without active call off_duty <-> on_duty; with active call on_duty -> en_route -> on_scene -> on_duty.",
+            "description": "POST /api/radio/unit/:unitId/status/cycle — optional body: { latitude?, longitude? }. Cycles off_duty<->on_duty, or on_duty->en_route->on_scene->on_duty when on a call. Cycles automatically: without active call off_duty <-> on_duty; with active call on_duty -> en_route -> on_scene -> on_duty.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"latitude\": null,\n  \"longitude\": null\n}",
@@ -160,7 +160,7 @@
                 "zone"
               ]
             },
-            "description": "Required: unit_id, zone.",
+            "description": "POST /api/radio/zone — body: { unit_id, zone }. Required: unit_id, zone. Required: unit_id, zone.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"unit_id\": \"{{unit_id}}\",\n  \"zone\": \"Zone 5\"\n}",
@@ -194,7 +194,7 @@
                 "status-check"
               ]
             },
-            "description": "Returns every unit with current status, zone, and last update."
+            "description": "GET /api/radio/status-check — returns every unit with current status, zone, and last update. Returns every unit with current status, zone, and last update."
           }
         }
       ]
@@ -230,7 +230,7 @@
                 "call"
               ]
             },
-            "description": "Required: type, location. Priority values: emergency/urgent/high -> high, priority/medium -> medium, routine/low -> low.",
+            "description": "POST /api/radio/call — body: { type, location, city?, zone?, units?, priority?, description?, caller_name?, caller_phone? }. Required: type, location. Required: type, location. Priority values: emergency/urgent/high -> high, priority/medium -> medium, routine/low -> low.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"type\": \"Traffic Stop\",\n  \"location\": \"123 Main St\",\n  \"city\": \"Springfield\",\n  \"zone\": \"Zone 3\",\n  \"units\": [\n    \"INDIANA-1\"\n  ],\n  \"priority\": \"routine\",\n  \"description\": \"Vehicle pulled over for speeding\",\n  \"caller_name\": \"Dispatch\",\n  \"caller_phone\": \"555-1234\"\n}",
@@ -270,7 +270,7 @@
                 }
               ]
             },
-            "description": "Lists active calls."
+            "description": "GET /api/radio/calls?status=active — lists active calls with elapsed time and assigned units. Lists active calls."
           }
         },
         {
@@ -296,7 +296,7 @@
                 "{{call_id}}"
               ]
             },
-            "description": "Full call details including notes, disposition, assigned units."
+            "description": "GET /api/radio/call/:id — full call details including notes, disposition, assigned units. Full call details including notes, disposition, assigned units."
           }
         },
         {
@@ -327,7 +327,7 @@
                 "{{call_id}}"
               ]
             },
-            "description": "All fields optional. Valid statuses: pending, active, assigned, en_route, on_scene, cleared, closed, cancelled.",
+            "description": "PATCH /api/radio/call/:id — body: any of { type, location, city, zone, priority, status, description }. Valid statuses: pending, active, assigned, en_route, on_scene, cleared, closed, cancelled. All fields optional. Valid statuses: pending, active, assigned, en_route, on_scene, cleared, closed, cancelled.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"type\": \"Domestic\",\n  \"location\": \"456 Oak Ave\",\n  \"city\": \"Springfield\",\n  \"zone\": \"Zone 1\",\n  \"priority\": \"high\",\n  \"status\": \"active\",\n  \"description\": \"Updated description\"\n}",
@@ -366,7 +366,7 @@
                 "assign"
               ]
             },
-            "description": "Required: unit_id, call_id.",
+            "description": "POST /api/radio/assign — body: { unit_id, call_id }. Required: both. Required: unit_id, call_id.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"unit_id\": \"{{unit_id}}\",\n  \"call_id\": \"{{call_id}}\"\n}",
@@ -405,7 +405,7 @@
                 "clear"
               ]
             },
-            "description": "Required: unit_id. call_id is optional (if omitted, just sets status to available).",
+            "description": "POST /api/radio/clear — body: { unit_id, call_id? }. Required: unit_id. Omit call_id to just set the unit available. Required: unit_id. call_id is optional (if omitted, just sets status to available).",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"unit_id\": \"{{unit_id}}\",\n  \"call_id\": \"{{call_id}}\"\n}",
@@ -444,7 +444,7 @@
                 "dispose"
               ]
             },
-            "description": "Required: call_id, disposition.",
+            "description": "POST /api/radio/dispose — body: { call_id, disposition, notes? }. Required: call_id, disposition. Required: call_id, disposition.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"call_id\": \"{{call_id}}\",\n  \"disposition\": \"Report Filed\",\n  \"notes\": \"All units cleared, report pending\"\n}",
@@ -483,7 +483,7 @@
                 "note"
               ]
             },
-            "description": "Required: call_id, note.",
+            "description": "POST /api/radio/note — body: { call_id, note }. Required: both. Required: call_id, note.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"call_id\": \"{{call_id}}\",\n  \"note\": \"Unit arrived on scene, making contact\"\n}",
@@ -519,7 +519,7 @@
                 "call"
               ]
             },
-            "description": "Returns the unit's currently assigned call, or has_active_call=false."
+            "description": "GET /api/radio/unit/:unitId/call — returns the assigned call or has_active_call=false. Returns the unit's currently assigned call, or has_active_call=false."
           }
         }
       ]
@@ -556,7 +556,7 @@
                 "person"
               ]
             },
-            "description": "Required: last_name.",
+            "description": "POST /api/radio/query/person — body: { last_name, first_name?, dob? }. Required: last_name. Required: last_name.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"last_name\": \"Smith\",\n  \"first_name\": \"John\",\n  \"dob\": \"1990-01-15\"\n}",
@@ -596,7 +596,7 @@
                 "vehicle"
               ]
             },
-            "description": "Required: plate or vin.",
+            "description": "POST /api/radio/query/vehicle — body: { plate?, state?, vin?, make?, model? }. Required: plate or vin. Required: plate or vin.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"plate\": \"ABC1234\",\n  \"state\": \"PA\",\n  \"vin\": null\n}",
@@ -636,7 +636,7 @@
                 "warrant"
               ]
             },
-            "description": "Required: last_name.",
+            "description": "POST /api/radio/query/warrant — body: { last_name, first_name?, dob? }. Required: last_name. Required: last_name.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"last_name\": \"Smith\",\n  \"first_name\": \"John\",\n  \"dob\": \"1990-01-15\"\n}",
@@ -671,7 +671,7 @@
                 "types"
               ]
             },
-            "description": ""
+            "description": "GET /api/radio/animal/types — returns the list of supported animal type strings."
           }
         },
         {
@@ -702,7 +702,7 @@
                 "search"
               ]
             },
-            "description": "",
+            "description": "POST /api/radio/animal/search — body: { owner_name?, animal_type?, tag_number?, microchip?, species?, breed?, color? }.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"owner_name\": \"Smith\",\n  \"animal_type\": \"Dog\",\n  \"tag_number\": \"12345\",\n  \"microchip\": \"900123456789\"\n}",
@@ -747,7 +747,7 @@
                 "broadcast"
               ]
             },
-            "description": "Required: message.",
+            "description": "POST /api/radio/broadcast — body: { message, priority?, target_units? }. Required: message. Required: message.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"message\": \"All units standby for traffic\",\n  \"priority\": \"routine\",\n  \"target_units\": \"all\"\n}",
@@ -781,7 +781,7 @@
                 "contacts"
               ]
             },
-            "description": ""
+            "description": "GET /api/radio/contacts — returns all personnel/contacts with role, status, and unit_id."
           }
         },
         {
@@ -806,7 +806,7 @@
                 "chats"
               ]
             },
-            "description": ""
+            "description": "GET /api/radio/chats — lists active chat groups."
           }
         },
         {
@@ -836,7 +836,7 @@
                 "chats"
               ]
             },
-            "description": "Required: name, plus creator_id or creator_unit.",
+            "description": "POST /api/radio/chats — body: { name, type?, creator_unit OR creator_id, member_ids[], description? }. Required: name + creator. Required: name, plus creator_id or creator_unit.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Night Shift\",\n  \"type\": \"private\",\n  \"creator_unit\": \"{{unit_id}}\",\n  \"member_ids\": [],\n  \"description\": \"Night shift coordination\"\n}",
@@ -871,7 +871,7 @@
                 "{{chat_id}}"
               ]
             },
-            "description": ""
+            "description": "DELETE /api/radio/chats/:id — deactivates the chat group."
           }
         },
         {
@@ -898,7 +898,7 @@
                 "messages"
               ]
             },
-            "description": ""
+            "description": "GET /api/radio/chats/:id/messages — returns chat messages in chronological order."
           }
         },
         {
@@ -930,7 +930,7 @@
                 "messages"
               ]
             },
-            "description": "Required: message, plus sender_id or sender_unit.",
+            "description": "POST /api/radio/chats/:id/messages — body: { message, sender_unit OR sender_id }. Required: message + sender. Required: message, plus sender_id or sender_unit.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"sender_unit\": \"{{unit_id}}\",\n  \"message\": \"10-4 en route to location\"\n}",
@@ -971,7 +971,7 @@
                 }
               ]
             },
-            "description": ""
+            "description": "GET /api/radio/messages/unread?unit_id=... — returns unread_count for the given unit."
           }
         }
       ]
@@ -1002,7 +1002,7 @@
                 "pending-checks"
               ]
             },
-            "description": ""
+            "description": "GET /api/radio/pending-checks — returns pending CAD-side status check requests for units."
           }
         },
         {
@@ -1032,7 +1032,7 @@
                 "respond-check"
               ]
             },
-            "description": "Required: unit_id.",
+            "description": "POST /api/radio/respond-check — body: { unit_id, response?, status? }. Required: unit_id. Required: unit_id.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"unit_id\": \"{{unit_id}}\",\n  \"response\": \"10-4 All Clear\",\n  \"status\": \"available\"\n}",
@@ -1078,7 +1078,7 @@
                 "new"
               ]
             },
-            "description": "Required: officer_unit. type can be 'citation' or 'warning'.",
+            "description": "POST /api/radio/citation/new — body: { type, officer_unit, person?, vehicle?, violations?, location?, notes?, call_number? }. Required: officer_unit. Required: officer_unit. type can be 'citation' or 'warning'.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"type\": \"citation\",\n  \"officer_unit\": \"{{unit_id}}\",\n  \"person\": {\n    \"first_name\": \"John\",\n    \"last_name\": \"Doe\",\n    \"dob\": \"1990-01-01\"\n  },\n  \"vehicle\": {\n    \"plate\": \"ABC123\",\n    \"state\": \"PA\",\n    \"make\": \"Ford\",\n    \"model\": \"F150\"\n  },\n  \"violations\": [\n    \"Speeding\",\n    \"Failure to signal\"\n  ],\n  \"location\": \"123 Main St\",\n  \"notes\": \"Clocked at 55 in a 35\",\n  \"call_number\": \"041325-143022\"\n}",
@@ -1118,7 +1118,7 @@
                 "create"
               ]
             },
-            "description": "Required: officer_unit.",
+            "description": "POST /api/radio/fi/create — body: { officer_unit, call_number?, location?, person?, vehicle?, trespass?, ... }. Required: officer_unit. Required: officer_unit.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"officer_unit\": \"{{unit_id}}\",\n  \"call_number\": \"\",\n  \"location\": \"123 Main St\",\n  \"x_street\": \"Oak Ave\",\n  \"city\": \"Pittsburgh\",\n  \"state\": \"PA\",\n  \"zip_code\": \"15201\",\n  \"county\": \"Allegheny\",\n  \"reason\": \"Suspicious activity\",\n  \"person\": {\n    \"first_name\": \"John\",\n    \"last_name\": \"Doe\",\n    \"dob\": \"1990-01-01\",\n    \"sex\": \"M\",\n    \"race\": \"W\",\n    \"height\": \"510\",\n    \"weight\": \"180\",\n    \"eye_color\": \"BLU\",\n    \"hair_color\": \"BRO\",\n    \"address\": \"456 Elm St\",\n    \"city\": \"Pittsburgh\",\n    \"state\": \"PA\",\n    \"zip\": \"15201\",\n    \"phone\": \"555-9876\"\n  },\n  \"vehicle\": {\n    \"plate\": \"ABC123\",\n    \"state\": \"PA\",\n    \"make\": \"Ford\",\n    \"model\": \"F150\",\n    \"color\": \"Black\",\n    \"year\": \"2020\",\n    \"vin\": \"\"\n  },\n  \"trespass\": {\n    \"was_trespassed\": false\n  }\n}",
@@ -1159,7 +1159,7 @@
                 "units"
               ]
             },
-            "description": ""
+            "description": "GET /api/radio/fleet/units — returns fleet vehicles with status and mileage."
           }
         },
         {
@@ -1192,7 +1192,7 @@
                 "status"
               ]
             },
-            "description": "Required: status. Valid: in_service, out_of_service, maintenance, reserved, decommissioned.",
+            "description": "POST /api/radio/fleet/unit/:id/status — body: { status, notes?, mileage? }. Valid: in_service, out_of_service, maintenance, reserved, decommissioned. Required: status. Valid: in_service, out_of_service, maintenance, reserved, decommissioned.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"status\": \"out_of_service\",\n  \"notes\": \"Flat tire\",\n  \"mileage\": 45700\n}",
@@ -1234,7 +1234,7 @@
                 "fuel"
               ]
             },
-            "description": "Required: gallons, total_cost.",
+            "description": "POST /api/radio/fleet/unit/:id/fuel — body: { gallons, total_cost, price_per_gallon?, mileage?, fuel_type?, station?, notes? }. Required: gallons, total_cost. Required: gallons, total_cost.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"gallons\": 15.5,\n  \"price_per_gallon\": 3.45,\n  \"total_cost\": 53.48,\n  \"mileage\": 45678,\n  \"fuel_type\": \"Regular\",\n  \"station\": \"Shell Main St\",\n  \"notes\": \"Full tank\"\n}",
@@ -1274,7 +1274,7 @@
                 "dropdowns"
               ]
             },
-            "description": "All dropdown categories exposed via the radio API."
+            "description": "GET /api/radio/dropdowns — returns all dropdown categories defined in CAD. All dropdown categories exposed via the radio API."
           }
         },
         {
@@ -1300,7 +1300,7 @@
                 "{{category_key}}"
               ]
             },
-            "description": "Example category_key values: call_natures, dispositions."
+            "description": "GET /api/radio/dropdowns/:categoryKey — returns options for a category. Example category_key values: call_natures, dispositions. Example category_key values: call_natures, dispositions."
           }
         },
         {
@@ -1325,7 +1325,7 @@
                 "call-natures"
               ]
             },
-            "description": ""
+            "description": "GET /api/radio/call-natures — convenience shortcut returning the active call_natures list."
           }
         },
         {
@@ -1351,7 +1351,7 @@
                 "recent"
               ]
             },
-            "description": ""
+            "description": "GET /api/radio/bolo/recent — returns recent active BOLOs with priority and message."
           }
         },
         {
@@ -1381,7 +1381,7 @@
                 }
               ]
             },
-            "description": "Canonical disposition list used by the AI Voice Dispatcher. Outside /api/radio but uses the same x-api-key auth."
+            "description": "GET /api/dropdown-options?category=dispositions — canonical disposition list used by the AI Voice Dispatcher. Outside /api/radio but uses the same x-radio-api-key auth. Canonical disposition list used by the AI Voice Dispatcher. Outside /api/radio but uses the same x-api-key auth."
           }
         }
       ]
