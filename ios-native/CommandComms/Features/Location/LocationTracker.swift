@@ -36,6 +36,17 @@ final class LocationTracker: NSObject, ObservableObject {
         }
     }
 
+    /// Re-reads the current CoreLocation authorization status from the
+    /// system. The delegate normally pushes updates, but views can call
+    /// this on foreground to guarantee the published status is fresh after
+    /// the user toggles permissions in Settings.
+    func refreshAuthorizationStatus() {
+        let current = manager.authorizationStatus
+        if authorizationStatus != current {
+            authorizationStatus = current
+        }
+    }
+
     func startTracking() {
         wantsTracking = true
         switch authorizationStatus {

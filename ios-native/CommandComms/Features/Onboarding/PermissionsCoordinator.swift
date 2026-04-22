@@ -13,6 +13,11 @@ final class PermissionsCoordinator: ObservableObject {
     }
 
     @Published private(set) var isComplete: Bool
+    /// Latest known notifications authorization status. `nil` until first
+    /// refresh. Updated by `refreshNotificationStatus()` (call on appear and
+    /// when the app returns to the foreground so denial banners auto-clear
+    /// after the user toggles the setting).
+    @Published private(set) var notificationAuthorization: UNAuthorizationStatus?
 
     private let locationTracker: LocationTracker
     private let userDefaults: UserDefaults
@@ -68,6 +73,15 @@ final class PermissionsCoordinator: ObservableObject {
             UNUserNotificationCenter.current().getNotificationSettings { settings in
                 continuation.resume(returning: settings.authorizationStatus)
             }
+        }
+    }
+
+    /// Refreshes `notificationAuthorization` from the system. Safe to call
+    /// repeatedly; views should invoke it on appear and on foreground.
+    func refreshNotificationStatus() async {
+        let status = await notificationStatus()
+        if notificationAuthorization != status {
+            notificationAuthorization = status
         }
     }
 

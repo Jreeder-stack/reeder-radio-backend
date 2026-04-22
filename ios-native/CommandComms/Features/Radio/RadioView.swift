@@ -1,6 +1,8 @@
 import SwiftUI
 import Combine
 import AVFoundation
+import CoreLocation
+import UserNotifications
 
 struct RadioView: View {
     @EnvironmentObject var appState: AppState
@@ -9,6 +11,8 @@ struct RadioView: View {
         RadioContent(
             signaling: appState.signaling,
             radio: appState.radio,
+            locationTracker: appState.locationTracker,
+            permissions: appState.permissions,
             defaultChannel: appState.settings.defaultChannelId,
             accessoryModel: appState.settings.pttAccessoryModel
         )
@@ -18,19 +22,26 @@ struct RadioView: View {
 private struct RadioContent: View {
     @ObservedObject var signaling: SignalingClient
     @ObservedObject var radio: RadioAudioEngine
+    @ObservedObject var locationTracker: LocationTracker
+    @ObservedObject var permissions: PermissionsCoordinator
     let defaultChannel: String
     @State private var channelInput: String = ""
     @State private var micPermissionDenied: Bool = false
     @StateObject private var ptt: PTTBinding
+    @Environment(\.scenePhase) private var scenePhase
 
     let accessoryModel: PTTAccessoryModel
 
     init(signaling: SignalingClient,
          radio: RadioAudioEngine,
+         locationTracker: LocationTracker,
+         permissions: PermissionsCoordinator,
          defaultChannel: String,
          accessoryModel: PTTAccessoryModel) {
         self.signaling = signaling
         self.radio = radio
+        self.locationTracker = locationTracker
+        self.permissions = permissions
         self.defaultChannel = defaultChannel
         self.accessoryModel = accessoryModel
         _ptt = StateObject(wrappedValue: PTTBinding(radio: radio,
@@ -59,11 +70,19 @@ private struct RadioContent: View {
             .onAppear {
                 channelInput = signaling.currentChannel ?? defaultChannel
                 refreshMicPermissionStatus()
+                Task { await permissions.refreshNotificationStatus() }
                 ptt.start()
                 ptt.updateAccessoryModel(accessoryModel)
             }
             .onChange(of: accessoryModel) { newModel in
                 ptt.updateAccessoryModel(newModel)
+            }
+            .onChange(of: scenePhase) { phase in
+                if phase == .active {
+                    refreshMicPermissionStatus()
+                    locationTracker.refreshAuthorizationStatus()
+                    Task { await permissions.refreshNotificationStatus() }
+                }
             }
             .onDisappear {
                 ptt.stop()
@@ -91,18 +110,13 @@ private struct RadioContent: View {
                 Text(err).font(.footnote).foregroundColor(.red)
             }
             if micPermissionDenied {
-                HStack(spacing: 8) {
-                    Text("Microphone disabled — enable it to transmit.")
-                        .font(.footnote).foregroundColor(.orange)
-                    Spacer()
-                    Button("Open Settings") {
-                        if let url = URL(string: UIApplication.openSettingsURLString) {
-                            UIApplication.shared.open(url)
-                        }
-                    }
-                    .font(.footnote)
-                    .foregroundColor(.cyan)
-                }
+                permissionBanner(message: "Microphone disabled — enable it to transmit.")
+            }
+            if locationPermissionDenied {
+                permissionBanner(message: "Location disabled — dispatch can't see you on the map.")
+            }
+            if notificationsPermissionDenied {
+                permissionBanner(message: "Notifications disabled — you won't get alerts.")
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -244,6 +258,32 @@ private struct RadioContent: View {
         case .reconnecting: return .yellow
         case .disconnected: return .gray
         }
+    }
+
+    private func permissionBanner(message: String) -> some View {
+        HStack(spacing: 8) {
+            Text(message)
+                .font(.footnote).foregroundColor(.orange)
+            Spacer()
+            Button("Open Settings") {
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(url)
+                }
+            }
+            .font(.footnote)
+            .foregroundColor(.cyan)
+        }
+    }
+
+    private var locationPermissionDenied: Bool {
+        switch locationTracker.authorizationStatus {
+        case .denied, .restricted: return true
+        default: return false
+        }
+    }
+
+    private var notificationsPermissionDenied: Bool {
+        permissions.notificationAuthorization == .denied
     }
 
     private func refreshMicPermissionStatus() {
