@@ -1,0 +1,248 @@
+From 521ec5296f9b1736e54d17ffd808164d07433923 Mon Sep 17 00:00:00 2001
+From: jreeder1 <47234586-jreeder1@users.noreply.replit.com>
+Date: Tue, 21 Apr 2026 23:17:22 +0000
+Subject: [PATCH 1/2] Add CI check that catches broken iOS project files before
+ merge (Task #467)
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Problem
+- Task #466 introduced a deterministic pbxproj generator
+  (ios-native/scripts/generate-pbxproj.mjs), but nothing prevented
+  someone from hand-editing project.pbxproj or forgetting to re-run the
+  generator after adding a new Swift file.
+
+Changes
+- ios-native/scripts/generate-pbxproj.mjs: refactored to export GROUPS,
+  PACKAGES, SOURCE_ROOT, PBXPROJ_PATH, build, and lint. The disk-write
+  side effect is now gated on `import.meta.url === argv[1]`, so other
+  tools can import the module without overwriting the committed
+  project.pbxproj.
+- ios-native/scripts/check-pbxproj.mjs (new): walks
+  ios-native/CommandComms/ for *.swift files and fails if any are not
+  declared in GROUPS, then regenerates the pbxproj in memory and fails
+  if it differs from the committed copy. Prints actionable fix
+  instructions and exits non-zero on failure.
+- .github/workflows/ios-pbxproj-check.yml (new): runs the check on
+  every push and pull_request using Node 20.
+- ios-native/README.md: new "CI guard" subsection under "Regenerating
+  the Xcode project" describing the check and how to fix a failure
+  locally.
+
+Verification
+- node ios-native/scripts/check-pbxproj.mjs → OK on a clean tree.
+- Adding a stray Audio/Bogus.swift → fails with the missing-inventory
+  message and exit 1.
+- Hand-appending bytes to project.pbxproj → fails with the
+  out-of-date message and exit 1; re-running the generator restores
+  green.
+
+Follow-up proposed
+- #468: cross-check PACKAGES against Package.resolved so SPM version
+  drift is also caught at CI time.
+
+Replit-Task-Id: 59cc0cc6-4312-4a82-9279-7f557c5f97ed
+---
+ .github/workflows/ios-pbxproj-check.yml | 24 +++++++
+ ios-native/README.md                    | 25 +++++++
+ ios-native/scripts/check-pbxproj.mjs    | 87 +++++++++++++++++++++++++
+ ios-native/scripts/generate-pbxproj.mjs | 17 +++--
+ 4 files changed, 148 insertions(+), 5 deletions(-)
+ create mode 100644 .github/workflows/ios-pbxproj-check.yml
+ create mode 100644 ios-native/scripts/check-pbxproj.mjs
+
+diff --git a/.github/workflows/ios-pbxproj-check.yml b/.github/workflows/ios-pbxproj-check.yml
+new file mode 100644
+index 0000000..96e531b
+--- /dev/null
++++ b/.github/workflows/ios-pbxproj-check.yml
+@@ -0,0 +1,24 @@
++name: iOS pbxproj check
++
++on:
++  push:
++    branches:
++      - main
++  pull_request:
++
++jobs:
++  check-pbxproj:
++    name: Verify ios-native/CommandComms.xcodeproj/project.pbxproj is up to date
++    runs-on: ubuntu-latest
++
++    steps:
++      - name: Check out repository
++        uses: actions/checkout@v4
++
++      - name: Set up Node.js
++        uses: actions/setup-node@v4
++        with:
++          node-version: "20"
++
++      - name: Verify pbxproj matches generator and inventory
++        run: node ios-native/scripts/check-pbxproj.mjs
+diff --git a/ios-native/README.md b/ios-native/README.md
+index c31f77c..f1a84fc 100644
+--- a/ios-native/README.md
++++ b/ios-native/README.md
+@@ -231,6 +231,31 @@ not by object ID, so they are left untouched by the regenerator. Do not
+ edit `project.pbxproj` by hand — any manual change will be overwritten on
+ the next regeneration.
+ 
++### CI guard
++
++A GitHub Actions job (`.github/workflows/ios-pbxproj-check.yml`) runs
++`node ios-native/scripts/check-pbxproj.mjs` on every push and pull
++request. The check fails the build if either:
++
++- the committed `project.pbxproj` differs from what the generator would
++  produce now (i.e. it was hand-edited, or someone forgot to re-run the
++  generator after editing `GROUPS` / `PACKAGES`), or
++- a `.swift` file exists under `ios-native/CommandComms/` that is not
++  declared in any `GROUPS` entry in `generate-pbxproj.mjs`.
++
++If CI fails on this check:
++
++1. Add any new `.swift` files to the appropriate `GROUPS` entry in
++   `ios-native/scripts/generate-pbxproj.mjs`.
++2. Run `node ios-native/scripts/generate-pbxproj.mjs`.
++3. Commit the regenerated `project.pbxproj`.
++
++You can run the same check locally before pushing:
++
++```bash
++node ios-native/scripts/check-pbxproj.mjs
++```
++
+ ## Out of scope for this task
+ UDP audio transport, Opus encode/decode, jitter buffer, AGC/noise
+ suppression, hardware/MFi PTT, scan monitor, paging tone overlay,
+diff --git a/ios-native/scripts/check-pbxproj.mjs b/ios-native/scripts/check-pbxproj.mjs
+new file mode 100644
+index 0000000..619bba3
+--- /dev/null
++++ b/ios-native/scripts/check-pbxproj.mjs
+@@ -0,0 +1,87 @@
++#!/usr/bin/env node
++// CI check: fails if `ios-native/CommandComms.xcodeproj/project.pbxproj` is
++// out of date relative to `generate-pbxproj.mjs` or if any Swift source under
++// `ios-native/CommandComms/` is missing from the script's GROUPS inventory.
++//
++// Run locally with:
++//   node ios-native/scripts/check-pbxproj.mjs
++//
++// To fix a failure:
++//   1. Add the new .swift file to the appropriate GROUPS entry in
++//      ios-native/scripts/generate-pbxproj.mjs.
++//   2. Re-run `node ios-native/scripts/generate-pbxproj.mjs`.
++//   3. Commit the regenerated project.pbxproj.
++
++import { readFileSync, readdirSync, statSync } from "node:fs";
++import { join, relative, sep } from "node:path";
++
++import {
++  GROUPS,
++  SOURCE_ROOT,
++  PBXPROJ_PATH,
++  build,
++  lint,
++} from "./generate-pbxproj.mjs";
++
++const errors = [];
++
++// 1. Walk CommandComms/ for any .swift file not declared in GROUPS.
++const declared = new Set();
++for (const g of GROUPS) {
++  for (const f of g.files) {
++    if (f.endsWith(".swift")) {
++      declared.add(join(g.path, f).split(sep).join("/"));
++    }
++  }
++}
++
++function walk(dir) {
++  const out = [];
++  for (const entry of readdirSync(dir, { withFileTypes: true })) {
++    const p = join(dir, entry.name);
++    if (entry.isDirectory()) {
++      out.push(...walk(p));
++    } else if (entry.isFile() && entry.name.endsWith(".swift")) {
++      out.push(p);
++    }
++  }
++  return out;
++}
++
++const onDisk = walk(SOURCE_ROOT).map((p) =>
++  relative(SOURCE_ROOT, p).split(sep).join("/"),
++);
++
++const missing = onDisk.filter((p) => !declared.has(p));
++if (missing.length > 0) {
++  errors.push(
++    "The following Swift sources exist on disk but are NOT declared in " +
++      "GROUPS in ios-native/scripts/generate-pbxproj.mjs:\n" +
++      missing.map((p) => `  - CommandComms/${p}`).join("\n") +
++      "\nAdd them to the matching GROUPS entry and re-run the generator.",
++  );
++}
++
++// 2. Regenerate the pbxproj in memory (no disk write) and compare to the
++//    committed copy. A mismatch means either the committed file was hand
++//    edited, or someone forgot to re-run the generator after editing GROUPS.
++const generated = build();
++lint(generated);
++const committed = readFileSync(PBXPROJ_PATH, "utf8");
++if (generated !== committed) {
++  errors.push(
++    `Committed ${relative(process.cwd(), PBXPROJ_PATH)} is out of date or ` +
++      "was hand-edited. Run:\n" +
++      "  node ios-native/scripts/generate-pbxproj.mjs\n" +
++      "and commit the regenerated file.",
++  );
++}
++
++if (errors.length > 0) {
++  for (const e of errors) {
++    console.error("\n[check-pbxproj] " + e);
++  }
++  process.exit(1);
++}
++
++console.log("[check-pbxproj] OK — pbxproj matches generator and inventory is complete.");
+diff --git a/ios-native/scripts/generate-pbxproj.mjs b/ios-native/scripts/generate-pbxproj.mjs
+index f455fb0..46d0734 100644
+--- a/ios-native/scripts/generate-pbxproj.mjs
++++ b/ios-native/scripts/generate-pbxproj.mjs
+@@ -13,7 +13,7 @@
+ import { createHash } from "node:crypto";
+ import { readFileSync, writeFileSync, statSync } from "node:fs";
+ import { dirname, join, resolve } from "node:path";
+-import { fileURLToPath } from "node:url";
++import { fileURLToPath, pathToFileURL } from "node:url";
+ 
+ const __dirname = dirname(fileURLToPath(import.meta.url));
+ const PROJECT_ROOT = resolve(__dirname, "..");        // ios-native/
+@@ -862,7 +862,14 @@ function lint(text) {
+   }
+ }
+ 
+-const out = build();
+-lint(out);
+-writeFileSync(PBXPROJ_PATH, out);
+-console.log(`Wrote ${PBXPROJ_PATH} (${out.length} bytes)`);
++export { GROUPS, PACKAGES, SOURCE_ROOT, PROJECT_ROOT, PBXPROJ_PATH, build, lint };
++
++// Only emit the file when invoked as a script, so that other tools (e.g. the
++// CI check) can import GROUPS / build() without overwriting the committed
++// project file as a side effect.
++if (import.meta.url === pathToFileURL(process.argv[1]).href) {
++  const out = build();
++  lint(out);
++  writeFileSync(PBXPROJ_PATH, out);
++  console.log(`Wrote ${PBXPROJ_PATH} (${out.length} bytes)`);
++}
+-- 
+2.50.1
+

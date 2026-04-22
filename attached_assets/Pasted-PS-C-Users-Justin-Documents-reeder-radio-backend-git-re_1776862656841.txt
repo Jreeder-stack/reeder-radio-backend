@@ -1,0 +1,36 @@
+PS C:\Users\Justin\Documents\reeder-radio-backend> git rebase --abort
+PS C:\Users\Justin\Documents\reeder-radio-backend> git status
+On branch main
+Your branch is ahead of 'origin/main' by 2 commits.
+  (use "git push" to publish your local commits)
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+        0001-Add-CI-check-that-catches-broken-iOS-project-files-b.patch
+        0002-Catch-missing-or-stale-Swift-package-versions-before.patch
+
+nothing added to commit but untracked files presentgit rebase 8bb4cce --exec "git commit --amend --no-edit --reset-author"s\reeder-radio-backend>
+Executing: git commit --amend --no-edit --reset-author
+[detached HEAD ed0c0e9] Add CI check that catches broken iOS project files before merge (Task #467)
+ 4 files changed, 148 insertions(+), 5 deletions(-)
+ create mode 100644 .github/workflows/ios-pbxproj-check.yml
+ create mode 100644 ios-native/scripts/check-pbxproj.mjs
+Executing: git commit --amend --no-edit --reset-author
+[detached HEAD 003511a] Catch missing or stale Swift package versions before iOS build break
+ 2 files changed, 155 insertions(+)
+ create mode 100644 ios-native/scripts/check-package-resolved.mjs
+Successfully rebased and updated refs/heads/main.
+PS C:\Users\Justin\Documents\reeder-radio-backend> git log --format="%h %ae %s" -3
+003511a 227722155+Jreeder-stack@users.noreply.github.com Catch missing or stale Swift package versions before iOS build break
+ed0c0e9 227722155+Jreeder-stack@users.noreply.github.com Add CI check that catches broken iOS project files before merge (Task #467)
+8bb4cce 47234586-jreeder1@users.noreply.replit.com Task #466: Regenerate iOS Xcode project to fix "Multiple commands produce" build errors
+PS C:\Users\Justin\Documents\reeder-radio-backend> git push origin main
+Enumerating objects: 25, done.
+Counting objects: 100% (25/25), done.
+Delta compression using up to 4 threads
+Compressing objects: 100% (16/16), done.
+Writing objects: 100% (18/18), 7.17 KiB | 1.43 MiB/s, done.
+Total 18 (delta 7), reused 0 (delta 0), pack-reused 0 (from 0)
+remote: Resolving deltas: 100% (7/7), completed with 4 local objects.
+To https://github.com/Jreeder-stack/reeder-radio-backend.git
+   8bb4cce..003511a  main -> main
