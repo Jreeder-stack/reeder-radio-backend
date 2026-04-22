@@ -2667,6 +2667,11 @@ export class AIDispatcher {
           break;
         }
 
+        case 'MAKE_PRIMARY': {
+          await this.handleMakePrimary(participantId, transcript, result.slots || {});
+          break;
+        }
+
         case 'ANIMAL_SEARCH': {
           await this.handleAnimalSearch(participantId, transcript, result.slots);
           break;
@@ -4142,10 +4147,13 @@ export class AIDispatcher {
 
     const time = this.formatMilitaryTime();
     let resp;
+    // Task #486 (Step 3): keep routine acks short — drop call number; the
+    // unit just said it, no need to read it back. Only safety-critical paths
+    // (primary refusal, close confirms) still echo the call number.
     if (verb === 'assign') {
-      resp = `${participantId}, 10-4. Showing you on ${callDisplay}.`;
+      resp = `${participantId}, 10-4.`;
     } else {
-      resp = `${participantId}, copy, ${statusWord} on ${callDisplay}, ${time}.`;
+      resp = `${participantId}, copy, ${statusWord}, ${time}.`;
     }
     await this.speak(resp, participantId);
     this.addConversationExchange(participantId, transcript, resp);
@@ -4424,7 +4432,7 @@ export class AIDispatcher {
       this.log('SHOW_OUT_WITH_OK', { unitId: participantId, withUnit: targetUnit, callId, callDisplay });
       this._recordRecentAssignment(participantId, targetCall, { callId, callDisplay });
       const time = this.formatMilitaryTime();
-      const resp = `${participantId}, copy, on scene with ${targetUnit} on ${callDisplay}, ${time}.`;
+      const resp = `${participantId}, copy, on scene with ${targetUnit}, ${time}.`;
       await this.speak(resp, participantId);
       this.addConversationExchange(participantId, transcript, resp);
       setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
@@ -6829,20 +6837,107 @@ export class AIDispatcher {
       const notes = call.notes || call.additional_info || '';
       const units = call.assigned_units || call.units || [];
 
-      let resp = `${participantId}, ${callNum}. ${nature.toLowerCase()} at ${location}, priority ${priority}, status ${status}.`;
-      if (units.length > 0) {
-        const unitList = Array.isArray(units) ? units.map(u => typeof u === 'string' ? u : u.unit_id || u.id).join(', ') : '';
-        if (unitList) resp += ` Units on scene: ${unitList}.`;
-      }
-      if (notes && notes.length > 0 && notes.length < 200) {
-        resp += ` Notes: ${notes}.`;
-      }
+      // Task #486 (Step 4): respond per-field when the unit asked for a
+      // specific piece of information instead of dumping every field.
+      const field = this._resolveCallDetailsField(slots, transcript);
+      const unitList = this._formatCallsignList(units);
+      const resp = this._buildCallDetailsResponse(participantId, field, {
+        callNum, nature, location, priority, status, notes, unitList,
+      });
       await this.speak(resp, participantId);
       this.addConversationExchange(participantId, transcript, resp);
       setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
     } catch (error) {
       this.log('CALL_DETAILS_ERROR', { error: error.message });
       const resp = `${participantId}, unable to pull call details. System error.`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+    }
+  }
+
+  // Task #486 (Step 7): take primary on a call. Resolves the call from the
+  // speaker's current CAD assignment when no number is given (so shared
+  // calls work). Then promotes via cadService.setPrimaryUnit. Avoids the
+  // old "no active call found" bug, where the request was being routed
+  // through ASSIGN_CALL on a call the unit was already on.
+  async handleMakePrimary(participantId, transcript, slots) {
+    this.log('MAKE_PRIMARY', { participant: participantId, transcript, slots });
+
+    if (!cadService.isConfigured()) {
+      const resp = `${participantId}, CAD system not available.`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+      return;
+    }
+
+    // Task #486 (Step 7): support both "make me primary" and
+    // "make <unit> primary" — the latter promotes a different unit who is
+    // already on the call. The lookup unit (whose current call we resolve
+    // when no call number is given) is the unit being promoted.
+    const targetUnit = (slots?.targetUnit && String(slots.targetUnit).trim())
+      ? String(slots.targetUnit).trim().toUpperCase()
+      : participantId;
+    const isSelf = targetUnit === participantId;
+
+    try {
+      let callId = slots?.callNumber || null;
+
+      if (callId) {
+        try {
+          const activeCalls = await cadService.getActiveCalls();
+          const calls = activeCalls.calls || activeCalls.results || [];
+          const resolved = this.resolveShorthandCallNumber(callId, calls);
+          if (resolved) {
+            callId = resolved.call_id || resolved.id || resolved.call_number;
+          }
+        } catch (e) {
+          this.log('MAKE_PRIMARY_RESOLVE_ERROR', { error: e.message });
+        }
+      }
+
+      // "Make X primary on this call" — "this call" is the SPEAKER's
+      // active assignment, not the target's. Resolve from the speaker so
+      // we never cross-promote onto a different call the target happens
+      // to be on.
+      if (!callId) {
+        const currentCall = await cadService.getUnitCurrentCallById(participantId);
+        callId = currentCall?.call_id || currentCall?.call_number || currentCall?.callNumber || null;
+      }
+
+      if (!callId) {
+        const resp = `${participantId}, you're not on a call.`;
+        await this.speak(resp, participantId);
+        this.addConversationExchange(participantId, transcript, resp);
+        setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+        return;
+      }
+
+      const result = await cadService.setPrimaryUnit(callId, targetUnit);
+      if (result?.success === false) {
+        this.log('MAKE_PRIMARY_REJECTED', { unitId: targetUnit, requestedBy: participantId, callId, error: result.error });
+        const resp = isSelf
+          ? `${participantId}, unable to make you primary on that call.`
+          : `${participantId}, unable to make ${targetUnit} primary on that call.`;
+        await this.speak(resp, participantId);
+        this.addConversationExchange(participantId, transcript, resp);
+        setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+        return;
+      }
+
+      this.log('MAKE_PRIMARY_OK', { unitId: targetUnit, requestedBy: participantId, callId });
+      // Task #486 (Step 3): routine ack — drop the call number; the unit
+      // already has context for which call they meant.
+      const resp = isSelf
+        ? `${participantId}, 10-4. You have primary.`
+        : `${participantId}, 10-4. ${targetUnit} has primary.`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+    } catch (error) {
+      this.log('MAKE_PRIMARY_ERROR', { error: error.message });
+      const resp = `${participantId}, unable to set primary. System error.`;
       await this.speak(resp, participantId);
       this.addConversationExchange(participantId, transcript, resp);
       setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
@@ -7178,6 +7273,7 @@ export class AIDispatcher {
       });
     });
     this.log('STATUS_CHECK_CLIENT_STARTED');
+    this._startStatusCheckWatchdog();
   }
 
   _stopStatusCheckPolling() {
@@ -7185,6 +7281,90 @@ export class AIDispatcher {
     this._pendingStatusChecks.clear();
     this._seenStatusCheckIds.clear();
     this._lastSpokenStatusCheck.clear();
+    this._stopStatusCheckWatchdog();
+  }
+
+  // Task #486 (Step 6): backstop watchdog. CAD has occasionally failed to
+  // fire status checks for on-scene units past the cadence (notably when
+  // shared between channels). Once a minute we sweep active calls; for any
+  // unit that's been on-scene >WATCHDOG_THRESHOLD_MS with no pending check
+  // (and no snooze), we synthesize a status_check_due so the AI prompts.
+  _startStatusCheckWatchdog() {
+    this._stopStatusCheckWatchdog();
+    const TICK_MS = 60 * 1000;
+    this._statusCheckWatchdogFiredAt = this._statusCheckWatchdogFiredAt || new Map();
+    this._statusCheckWatchdogTimer = setInterval(() => {
+      this._runStatusCheckWatchdog().catch(err => {
+        this.log('STATUS_CHECK_WATCHDOG_ERROR', { error: err.message });
+      });
+    }, TICK_MS);
+    if (typeof this._statusCheckWatchdogTimer.unref === 'function') {
+      this._statusCheckWatchdogTimer.unref();
+    }
+    this.log('STATUS_CHECK_WATCHDOG_STARTED');
+  }
+
+  _stopStatusCheckWatchdog() {
+    if (this._statusCheckWatchdogTimer) {
+      clearInterval(this._statusCheckWatchdogTimer);
+      this._statusCheckWatchdogTimer = null;
+    }
+    if (this._statusCheckWatchdogFiredAt) this._statusCheckWatchdogFiredAt.clear();
+  }
+
+  async _runStatusCheckWatchdog() {
+    if (!cadService.isConfigured()) return;
+    if (!this._statusCheckWatchdogFiredAt) this._statusCheckWatchdogFiredAt = new Map();
+    const WATCHDOG_THRESHOLD_MS = 22 * 60 * 1000; // 22 min — first cadence + small grace
+    const COOLDOWN_MS = 5 * 60 * 1000;
+    let activeCalls;
+    try {
+      activeCalls = await cadService.getActiveCalls();
+    } catch (e) {
+      this.log('STATUS_CHECK_WATCHDOG_FETCH_ERROR', { error: e.message });
+      return;
+    }
+    const calls = activeCalls?.calls || activeCalls?.results || [];
+    const now = Date.now();
+    for (const call of calls) {
+      const callId = call.call_id || call.id || call.call_number;
+      const callNumber = call.call_number || call.callNumber || callId;
+      const units = call.assigned_units || call.units || [];
+      if (!Array.isArray(units) || units.length === 0) continue;
+      for (const u of units) {
+        if (!u || typeof u === 'string') continue;
+        const status = String(u.status || u.unit_status || '').toLowerCase();
+        if (status !== 'on_scene' && status !== 'on scene' && status !== 'onscene') continue;
+        const csRaw = u.callsign || u.unit_callsign || u.unit_name || u.unit_id || u.id;
+        if (!csRaw || this._looksLikeBackendId(String(csRaw))) continue;
+        const callsign = String(csRaw).toUpperCase();
+        const onSceneAtRaw = u.on_scene_at || u.onSceneAt || u.status_changed_at || u.statusChangedAt || u.assigned_at || u.assignedAt;
+        const onSceneAt = onSceneAtRaw ? new Date(onSceneAtRaw).getTime() : NaN;
+        if (!onSceneAt || isNaN(onSceneAt)) continue;
+        if (now - onSceneAt < WATCHDOG_THRESHOLD_MS) continue;
+        const key = this._pendingStatusCheckKey(callsign, callId);
+        if (this._pendingStatusChecks.has(key)) continue;
+        const lastFired = this._statusCheckWatchdogFiredAt.get(key) || 0;
+        if (now - lastFired < COOLDOWN_MS) continue;
+        // Snooze guard: if cadStatusCheckClient knows this unit is snoozed, skip.
+        try {
+          if (cadStatusCheckClient.isSnoozed && cadStatusCheckClient.isSnoozed(callsign, callId)) continue;
+        } catch (_) { /* optional API */ }
+        this._statusCheckWatchdogFiredAt.set(key, now);
+        this.log('STATUS_CHECK_WATCHDOG_FIRED', { unitId: callsign, callId, callNumber, onSceneAgeMs: now - onSceneAt });
+        try {
+          await this._onCadStatusCheckEvent({
+            type: 'status_check_due',
+            unitId: u.unit_id || u.id || null,
+            unitNumber: callsign,
+            callId,
+            raw: { call_number: callNumber, source: 'watchdog' },
+          });
+        } catch (e) {
+          this.log('STATUS_CHECK_WATCHDOG_DISPATCH_ERROR', { error: e.message, unitId: callsign });
+        }
+      }
+    }
   }
 
   async handleSnoozeStatusChecks(participantId, transcript, slots) {
@@ -7389,6 +7569,25 @@ export class AIDispatcher {
   }
 
   async _announcePersonBolo(bolo) {
+    // Task #486 (Step 1, generalized): timer-driven announcements must
+    // not talk over a live transmission. Defer if any non-AI unit has
+    // produced inbound audio in the last few seconds — the BOLO will be
+    // re-announced on the next poll if still unseen.
+    if (this.channelName) {
+      const recentRx = audioRelayService.hasRecentInbound(
+        this.channelName,
+        2500,
+        [AI_IDENTITY]
+      );
+      if (recentRx) {
+        const boloId = bolo.id || bolo.bolo_id || 'unknown';
+        this.log('BOLO_ANNOUNCE_DEFERRED_LIVE_RX', { boloId, channel: this.channelName, heldBy: recentRx.unitId });
+        // Drop from "seen" so we retry next poll cycle.
+        this._seenBoloIds.delete(String(boloId));
+        return;
+      }
+    }
+
     const { openLine, boloParagraph, signOff } = this._buildBoloAnnouncementParts(bolo);
 
     await this.playToneAndSpeak('A', null);
@@ -7536,6 +7735,105 @@ export class AIDispatcher {
     if (arr.length === 1) return arr[0];
     if (arr.length === 2) return `${arr[0]} and ${arr[1]}`;
     return arr.slice(0, -1).join(', ') + ', and ' + arr[arr.length - 1];
+  }
+
+  // Task #486 (Step 5): build a TTS-safe list of unit callsigns from a
+  // mixed array of strings or objects. Anything that looks like a raw
+  // backend ID (UUID, unit_<hex>, socket-style) is stripped so it never
+  // reaches text-to-speech.
+  _formatCallsignList(units) {
+    if (!units) return '';
+    const arr = Array.isArray(units) ? units : [units];
+    const callsigns = [];
+    for (const u of arr) {
+      if (!u) continue;
+      let cs;
+      if (typeof u === 'string') cs = u;
+      else cs = u.callsign || u.unit_callsign || u.unit_name || u.name || u.unit_id || u.id || '';
+      cs = String(cs || '').trim();
+      if (!cs) continue;
+      if (this._looksLikeBackendId(cs)) continue;
+      callsigns.push(cs.toUpperCase());
+    }
+    return this._formatUnitList(callsigns);
+  }
+
+  _looksLikeBackendId(s) {
+    if (!s) return false;
+    const t = String(s).trim();
+    // UUID
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(t)) return true;
+    // unit_<hex>, socket_<hex>, sess_<hex> style
+    if (/^(unit|socket|sess|sid|conn)_[0-9a-z]{6,}$/i.test(t)) return true;
+    // Long opaque hex blob
+    if (/^[0-9a-f]{16,}$/i.test(t)) return true;
+    return false;
+  }
+
+  // Task #486 (Step 5): scrub raw backend IDs from a string before TTS.
+  // Returns { text, replaced } so callers can log when sanitization fired.
+  _sanitizeForTts(text) {
+    if (!text) return { text: '', replaced: 0 };
+    let replaced = 0;
+    let out = String(text);
+    const patterns = [
+      /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi,
+      /\b(?:unit|socket|sess|sid|conn)_[0-9a-z]{6,}\b/gi,
+      /\b[0-9a-f]{24,}\b/gi,
+    ];
+    for (const p of patterns) {
+      out = out.replace(p, () => { replaced++; return 'unit'; });
+    }
+    return { text: out, replaced };
+  }
+
+  // Task #486 (Step 4): map slot/transcript hints to a single field key.
+  _resolveCallDetailsField(slots, transcript) {
+    const explicit = String(slots?.detailField || slots?.field || '').toLowerCase().trim();
+    if (explicit) return explicit;
+    const t = String(transcript || '').toLowerCase();
+    if (/\b(call\s*number|case\s*number|incident\s*number)\b/.test(t)) return 'call_number';
+    if (/\b(address|location|where)\b/.test(t)) return 'address';
+    if (/\b(nature|what.*for|what.*kind|type of call|reason)\b/.test(t)) return 'nature';
+    if (/\b(priority|prio)\b/.test(t)) return 'priority';
+    if (/\b(status)\b/.test(t)) return 'status';
+    if (/\b(units?|who.*on|who.*assigned|on scene)\b/.test(t)) return 'units';
+    if (/\b(notes?|comments?|remarks?|additional)\b/.test(t)) return 'notes';
+    if (/\b(everything|full|details|all|recap|readout)\b/.test(t)) return 'all';
+    return 'all';
+  }
+
+  _buildCallDetailsResponse(participantId, field, f) {
+    const { callNum, nature, location, priority, status, notes, unitList } = f;
+    switch (field) {
+      case 'call_number':
+        return `${participantId}, call number ${callNum}.`;
+      case 'address':
+        return `${participantId}, ${location}.`;
+      case 'nature':
+        return `${participantId}, ${String(nature).toLowerCase()}.`;
+      case 'priority':
+        return `${participantId}, priority ${priority}.`;
+      case 'status':
+        return `${participantId}, status ${status}.`;
+      case 'units':
+        return unitList
+          ? `${participantId}, ${unitList} assigned.`
+          : `${participantId}, no units assigned.`;
+      case 'notes':
+        return notes && String(notes).trim()
+          ? `${participantId}, notes: ${String(notes).slice(0, 240)}.`
+          : `${participantId}, no notes on the call.`;
+      case 'all':
+      default: {
+        let resp = `${participantId}, ${callNum}, ${String(nature).toLowerCase()} at ${location}, priority ${priority}, status ${status}.`;
+        if (unitList) resp += ` ${unitList} assigned.`;
+        if (notes && String(notes).length > 0 && String(notes).length < 200) {
+          resp += ` Notes: ${notes}.`;
+        }
+        return resp;
+      }
+    }
   }
 
   // Task #482: pull a disposition phrase out of a free-form transcript when
@@ -8150,8 +8448,15 @@ export class AIDispatcher {
         this._turnContextByUnit.delete(participantId);
       }
       try {
-        const audio = await textToSpeech(text);
-        await this.publishAudio(audio, text, { retryOnBusy: true, retryWaitMs: 3000, ...options });
+        // Task #486 (Step 5): final boundary scrub — if any caller leaks
+        // a UUID/socket/unit_<hex> ID into the TTS string, replace it with
+        // the word "unit" so we never speak raw backend identifiers.
+        const sanitized = this._sanitizeForTts(text);
+        if (sanitized.replaced > 0) {
+          this.log('TTS_SANITIZED_RAW_ID', { original: text, scrubbed: sanitized.text, count: sanitized.replaced });
+        }
+        const audio = await textToSpeech(sanitized.text);
+        await this.publishAudio(audio, sanitized.text, { retryOnBusy: true, retryWaitMs: 3000, ...options });
       } catch (err) {
         this.log('SPEAK_ERROR', { error: err.message });
       }

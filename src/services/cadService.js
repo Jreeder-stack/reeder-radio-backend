@@ -258,6 +258,19 @@ export async function assignUnitToCall(unitId, callId) {
   });
 }
 
+// Task #486 (Step 7): promote a unit already assigned to a call to be the
+// primary unit on that call. CAD does not expose a dedicated endpoint, so
+// patch the call record with primary_unit set to the unit id.
+export async function setPrimaryUnit(callId, unitId) {
+  if (!callId) return { success: false, error: 'No call ID' };
+  if (!unitId) return { success: false, error: 'No unit ID' };
+  console.log(`[CAD] Setting primary unit on call ${callId} to ${unitId}`);
+  return cadRequest(`/api/radio/call/${callId}`, 'PATCH', {
+    primary_unit: unitId,
+    primaryUnit: unitId,
+  });
+}
+
 export async function clearUnit(unitId) {
   if (!unitId) {
     console.warn('[CAD] clearUnit: No unit ID provided');

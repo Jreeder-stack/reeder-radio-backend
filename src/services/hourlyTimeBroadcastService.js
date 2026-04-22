@@ -3,6 +3,10 @@ import { DISPATCHER_TZ } from '../utils/timezone.js';
 import { getDispatcher } from './aiDispatchService.js';
 import { textToSpeech, isConfigured as isAzureConfigured } from './azureSpeechService.js';
 import { floorControlService } from './floorControlService.js';
+import { audioRelayService } from './audioRelayService.js';
+
+const AI_IDENTITY = 'AI-Dispatcher';
+const INBOUND_RX_LOOKBACK_MS = 2500;
 
 const SETTING_KEY = 'hourly_time_broadcast_enabled';
 const BROADCAST_TZ = DISPATCHER_TZ;
@@ -201,8 +205,20 @@ class HourlyTimeBroadcastScheduler {
 
     const channelKey = dispatcher.channelName;
     const holder = floorControlService.getFloorHolder(channelKey);
-    if (holder && holder.unitId !== 'AI-Dispatcher') {
+    if (holder && holder.unitId !== AI_IDENTITY) {
       return { played: false, status: 'channel_busy', details: { channel: channelKey, heldBy: holder.unitId } };
+    }
+    // Task #486 (Step 1): floor control may not have caught up yet on a
+    // brand-new transmission. Suppress when any non-AI unit has produced
+    // inbound audio in the last few seconds.
+    const recentRx = audioRelayService.hasRecentInbound(
+      channelKey,
+      INBOUND_RX_LOOKBACK_MS,
+      [AI_IDENTITY]
+    );
+    if (recentRx) {
+      this.log('BROADCAST_SKIPPED_LIVE_RX', { channel: channelKey, recentRx, source });
+      return { played: false, status: 'channel_busy', details: { channel: channelKey, heldBy: recentRx.unitId, lastSeenAt: recentRx.lastSeenAt } };
     }
 
     const message = buildBroadcastMessage(new Date());

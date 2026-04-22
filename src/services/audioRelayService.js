@@ -635,6 +635,25 @@ class AudioRelayService {
     return this._lastAudioReceived.get(key) || null;
   }
 
+  // Task #486: returns true if any non-excluded sender has produced inbound
+  // audio on the given channel within `withinMs`. Used by scheduled AI
+  // speech (e.g. the hourly time broadcast) to avoid talking over a unit
+  // that is actively transmitting even before floor control reflects it.
+  hasRecentInbound(channelId, withinMs = 2500, excludeUnits = []) {
+    const channelKey = canonicalChannelKey(channelId);
+    const prefix = `${channelKey}::`;
+    const cutoff = Date.now() - Math.max(0, Number(withinMs) || 0);
+    const exclude = new Set((excludeUnits || []).filter(Boolean).map(String));
+    for (const [k, ts] of this._lastAudioReceived) {
+      if (!k.startsWith(prefix)) continue;
+      if (ts < cutoff) continue;
+      const unitId = k.slice(prefix.length);
+      if (exclude.has(unitId)) continue;
+      return { unitId, lastSeenAt: ts };
+    }
+    return null;
+  }
+
   trackAudioReceived(channelKey, unitId) {
     const key = `${channelKey}::${unitId}`;
     this._lastAudioReceived.set(key, Date.now());

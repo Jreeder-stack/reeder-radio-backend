@@ -323,6 +323,8 @@ A) Plain note request — phrases: "make a note", "note this", "can you note", "
 
 B) "Be advised" / informational note — the unit is reporting something they want logged on the call without changing status. Phrases: "be advised [...]", "advise the call [...]", "for the record [...]", "make a note that [...]", "note this [...]", "let it be known [...]". Set slots.beAdvised = true and put EVERYTHING the unit said after the trigger phrase verbatim into slots.noteContent. Do NOT rewrite, summarize, or paraphrase — preserve the raw words. The handler will run a separate professional rewrite step.
 
+C) Tactical "check complete" / area-clear reports — the unit is reporting they finished checking/clearing an area, room, building, vehicle, level, etc. WITHOUT marking themselves clear of the call. Phrases: "first floor check complete", "second floor clear", "perimeter check complete", "back yard clear", "vehicle check complete", "checks complete", "building check complete", "interior clear", "exterior clear", "all checks complete". These are situational status reports that belong in the call notes, NOT a 10-8/clear. Set slots.beAdvised = true and put the raw report verbatim into slots.noteContent. Do NOT confuse with 10-8/clear-from-call ("clear me", "I'm clear", "show me clear", "10-8") — those remain CLEAR_CALL.
+
 If the speaker is not on a call, the handler will reject — you do not need to check that.
 Return: { "intent": "ADD_NOTE", "response": null, "slots": { "noteContent": "<verbatim content if provided inline, otherwise null>", "beAdvised": true/false } }
 
@@ -405,8 +407,16 @@ Unit wants to update a call's priority or details. Phrases: "upgrade the call", 
 Return: { "intent": "UPDATE_CALL", "response": null, "slots": { "callNumber": "<if provided>", "priority": "<if provided: low/medium/high/emergency>", "details": "<if provided>" } }
 
 ### CALL_DETAILS
-Unit is asking for details on a specific call. Phrases: "what's the info on call 456", "give me the details on that call", "what do we have on call 456", "read me the call".
-Return: { "intent": "CALL_DETAILS", "response": null, "slots": { "callNumber": "<if provided>" } }
+Unit is asking for details on a specific call. Phrases: "what's the info on call 456", "give me the details on that call", "what do we have on call 456", "read me the call", "what's the address on the call", "what's the call number", "who's assigned to the call", "what's the priority on the call", "any notes on the call".
+Use slots.detailField to identify WHICH field the unit asked for so the response can stay short. Values: "call_number" (call/case/incident number), "address" (location/where), "nature" (what kind/type/reason), "priority", "status", "units" (who is on/assigned), "notes" (notes/comments/remarks), "all" (full readout — only when the unit explicitly asked for "everything"/"the details"/"full readout"/"recap"). Default to "all" only if the question is generic.
+Return: { "intent": "CALL_DETAILS", "response": null, "slots": { "callNumber": "<if provided>", "detailField": "<one of: call_number|address|nature|priority|status|units|notes|all>" } }
+
+### MAKE_PRIMARY
+Unit wants to designate themselves OR another unit as primary on a call (typically a call shared between multiple units). This is NOT an assign request — the unit being promoted is already on the call.
+Phrases for self: "make me primary", "I'll take primary", "show me primary on this call", "I'll be primary on call 456", "give me primary on the call".
+Phrases for another unit: "make Lincoln-3 primary", "put Lincoln-3 primary on the call", "Lincoln-3 has primary", "give Lincoln-3 primary on call 456".
+If the speaker named another unit, fill targetUnit with that callsign exactly as spoken (uppercased/hyphenated). If the speaker meant themselves, leave targetUnit null.
+Return: { "intent": "MAKE_PRIMARY", "response": null, "slots": { "callNumber": "<if provided, otherwise null — handler will resolve from current call>", "targetUnit": "<other unit callsign if naming a different unit, else null>" } }
 
 ### SNOOZE_STATUS_CHECKS
 Unit wants to delay periodic status checks for their current call. Phrases: "snooze status checks", "snooze checks fifteen minutes", "hold status checks for thirty", "pause my status checks". Default duration is 15 minutes if unspecified.
