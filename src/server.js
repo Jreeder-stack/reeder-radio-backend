@@ -139,6 +139,39 @@ async function start() {
     console.log('[STARTUP] FCM service account credential detected.');
   }
 
+  try {
+    const apns = await import('./services/apnsService.js');
+    const dbMod = await import('./db/index.js');
+    if (apns.isApnsEnabled()) {
+      console.log('[STARTUP] APNs push notifications enabled (host=' +
+        (process.env.APNS_PRODUCTION === 'true' ? 'production' : 'sandbox') +
+        ', bundle=' + process.env.APNS_BUNDLE_ID + ')');
+    } else {
+      console.warn('[STARTUP] APNs push notifications DISABLED: set APNS_KEY_ID, APNS_TEAM_ID, APNS_BUNDLE_ID, and APNS_KEY_P8 (or APNS_KEY_PATH) to enable iOS pushes.');
+    }
+    signalingService.onEmergencyStart(async (data) => {
+      try {
+        const tokens = (await dbMod.getAllApnsTokens()).map(r => r.token).filter(Boolean);
+        if (tokens.length === 0) return;
+        const payload = apns.buildEmergencyPayload({
+          unitId: data.unitId,
+          channelId: data.channelId,
+          message: `EMERGENCY: Unit ${data.unitId} on ${data.channelId}`,
+        });
+        const result = await apns.sendApnsToTokens(tokens, payload, {
+          collapseId: `emerg-${data.channelId}`,
+          pushType: 'alert',
+          priority: 10,
+        });
+        console.log(`[APNs] Emergency push sent for unit=${data.unitId} channel=${data.channelId}: success=${result.successCount} failure=${result.failureCount}`);
+      } catch (err) {
+        console.warn('[APNs] Emergency push failed:', err.message);
+      }
+    });
+  } catch (err) {
+    console.warn('[STARTUP] APNs init failed:', err.message);
+  }
+
   console.log(`Signaling endpoint: ws://0.0.0.0:${config.port}/signaling`);
 
   setupGracefulShutdown(httpServer);

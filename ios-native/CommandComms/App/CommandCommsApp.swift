@@ -2,12 +2,14 @@ import SwiftUI
 
 @main
 struct CommandCommsApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var appState = AppState()
 
     var body: some Scene {
         WindowGroup {
             RootView()
                 .environmentObject(appState)
+                .environmentObject(NotificationRouter.shared)
                 .preferredColorScheme(.dark)
         }
     }

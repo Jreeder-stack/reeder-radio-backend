@@ -365,6 +365,19 @@ export async function initializeDatabase() {
     await client.query(`CREATE INDEX IF NOT EXISTS idx_radios_fcm_token ON radios (fcm_token) WHERE fcm_token IS NOT NULL`);
 
     await client.query(`
+      CREATE TABLE IF NOT EXISTS apns_tokens (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        token VARCHAR(255) NOT NULL UNIQUE,
+        bundle_id VARCHAR(255),
+        environment VARCHAR(20) NOT NULL DEFAULT 'production',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        last_seen_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_apns_tokens_user ON apns_tokens (user_id)`);
+
+    await client.query(`
       CREATE TABLE IF NOT EXISTS paging_lists (
         id SERIAL PRIMARY KEY,
         list_type VARCHAR(50) UNIQUE NOT NULL,
@@ -1294,6 +1307,68 @@ export async function getAllFcmTokens() {
      FROM radios r
      LEFT JOIN users u ON u.id = r.assigned_unit_id
      WHERE r.fcm_token IS NOT NULL`
+  );
+  return result.rows;
+}
+
+// ===== APNs token helpers =====
+
+export async function upsertApnsToken(userId, token, bundleId = null, environment = 'production') {
+  const result = await pool.query(
+    `INSERT INTO apns_tokens (user_id, token, bundle_id, environment, last_seen_at)
+       VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
+     ON CONFLICT (token) DO UPDATE SET
+       user_id = EXCLUDED.user_id,
+       bundle_id = COALESCE(EXCLUDED.bundle_id, apns_tokens.bundle_id),
+       environment = EXCLUDED.environment,
+       last_seen_at = CURRENT_TIMESTAMP
+     RETURNING *`,
+    [userId, token, bundleId, environment]
+  );
+  return result.rows[0];
+}
+
+export async function deleteApnsTokenByToken(token) {
+  const result = await pool.query(
+    `DELETE FROM apns_tokens WHERE token = $1 RETURNING id`,
+    [token]
+  );
+  return result.rowCount;
+}
+
+export async function deleteApnsTokenForUser(userId, token) {
+  const result = await pool.query(
+    `DELETE FROM apns_tokens WHERE token = $1 AND user_id = $2 RETURNING id`,
+    [token, userId]
+  );
+  return result.rowCount;
+}
+
+export async function getApnsTokensForUserId(userId) {
+  const result = await pool.query(
+    `SELECT id, user_id, token, bundle_id, environment, created_at, last_seen_at
+       FROM apns_tokens WHERE user_id = $1`,
+    [userId]
+  );
+  return result.rows;
+}
+
+export async function getApnsTokensForUnitId(unitId) {
+  const result = await pool.query(
+    `SELECT a.token, a.environment, a.bundle_id, u.unit_id, u.id AS user_id
+       FROM apns_tokens a
+       JOIN users u ON u.id = a.user_id
+      WHERE u.unit_id = $1`,
+    [unitId]
+  );
+  return result.rows;
+}
+
+export async function getAllApnsTokens() {
+  const result = await pool.query(
+    `SELECT a.token, a.environment, a.bundle_id, u.unit_id, u.id AS user_id
+       FROM apns_tokens a
+       LEFT JOIN users u ON u.id = a.user_id`
   );
   return result.rows;
 }

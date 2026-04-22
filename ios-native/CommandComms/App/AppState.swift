@@ -39,6 +39,8 @@ final class AppState: ObservableObject {
         self.permissions = PermissionsCoordinator(locationTracker: tracker)
         self.radio.attach(signaling: signaling)
 
+        PushNotificationService.shared.configure(api: api)
+
         signaling.locationTrackEvents
             .receive(on: DispatchQueue.main)
             .sink { [weak self] event in
@@ -67,14 +69,17 @@ final class AppState: ObservableObject {
     func restoreSession() async {
         if let user = await auth.restore() {
             authStatus = .signedIn(user)
+            PushNotificationService.shared.setAuthenticated(true)
             connectSignaling(for: user)
         } else {
             authStatus = .signedOut
+            PushNotificationService.shared.setAuthenticated(false)
         }
     }
 
     func signedIn(_ user: User) {
         authStatus = .signedIn(user)
+        PushNotificationService.shared.setAuthenticated(true)
         connectSignaling(for: user)
     }
 
@@ -84,6 +89,7 @@ final class AppState: ObservableObject {
             radio.stopRadio()
             signaling.disconnect()
             locationTracker.stopTracking()
+            PushNotificationService.shared.setAuthenticated(false)
             authStatus = .signedOut
         }
     }

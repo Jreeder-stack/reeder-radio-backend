@@ -12,8 +12,15 @@ import {
   getAllFcmTokens,
   getPagingChannelId,
   getRadioByAssignedUserId,
+  getApnsTokensForUnitId,
+  getAllApnsTokens,
 } from '../db/index.js';
 import { sendPageToTokens } from '../services/fcmService.js';
+import {
+  sendApnsToTokens,
+  buildPagePayload,
+  isApnsEnabled,
+} from '../services/apnsService.js';
 
 const router = express.Router();
 
@@ -147,10 +154,31 @@ router.post('/page', requireDispatcher, async (req, res) => {
     const fcmResult = await sendPageToTokens(tokens, page.id, message, sender, pagingChannelId);
     console.log(`[Dispatch] FCM result for pageId=${page.id}: successCount=${fcmResult.successCount} failureCount=${fcmResult.failureCount}`);
 
+    let apnsTokenRows = [];
+    if (targetType === 'unit') {
+      apnsTokenRows = await getApnsTokensForUnitId(targetId);
+    } else {
+      apnsTokenRows = await getAllApnsTokens();
+    }
+    const apnsTokens = apnsTokenRows.map(r => r.token).filter(Boolean);
+    const apnsResult = apnsTokens.length > 0
+      ? await sendApnsToTokens(
+          apnsTokens,
+          buildPagePayload({ pageId: page.id, message, sender, pagingChannelId }),
+          { collapseId: `page-${page.id}`, pushType: 'alert', priority: 10 }
+        )
+      : { successCount: 0, failureCount: 0, results: [] };
+    if (apnsTokens.length > 0) {
+      console.log(`[Dispatch] APNs result for pageId=${page.id}: successCount=${apnsResult.successCount} failureCount=${apnsResult.failureCount} (enabled=${isApnsEnabled()})`);
+    } else {
+      console.log(`[Dispatch] No APNs tokens for targetType="${targetType}" targetId="${targetId}" — iOS push skipped`);
+    }
+
     res.json({
       page,
       fcm: { successCount: fcmResult.successCount, failureCount: fcmResult.failureCount },
-      targetedDeviceCount: tokenRows.length,
+      apns: { successCount: apnsResult.successCount, failureCount: apnsResult.failureCount },
+      targetedDeviceCount: tokenRows.length + apnsTokens.length,
       targetedUnits: tokenRows.map(r => ({ unitId: r.unit_identity || r.radio_id, radioId: r.radio_id })),
     });
   } catch (err) {
