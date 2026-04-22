@@ -4788,6 +4788,9 @@ export class AIDispatcher {
 
       this.log('BE_ADVISED_NOTE_ADDED', { unitId: participantId, callId, note: rewriteResult.note });
       this.logSpeechEvent(participantId, transcript, 'ADD_NOTE_BE_ADVISED', null);
+      const ack = `${participantId}, 10-4.`;
+      await this.speak(ack, participantId);
+      this.addConversationExchange(participantId, transcript, ack);
       setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
     } catch (error) {
       this.log('BE_ADVISED_ERROR', { error: error.message });
