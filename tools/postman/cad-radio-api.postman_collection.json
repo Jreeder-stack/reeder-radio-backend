@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "cad-radio-api-collection",
     "name": "CAD Radio API",
-    "description": "Full CAD Radio API surface for testing.\n\nAuth: every request sends `x-radio-api-key: {{cad_key}}`.\nBase URL: `{{cad_url}}`.\n\nFill in `cad_url` and `cad_key` in the matching environment file before sending.",
+    "description": "Full CAD Radio API surface for testing.\n\nAuth: every request sends `X-API-Key: {{cad_key}}`.\nBase URL: `{{cad_url}}`.\n\nFill in `cad_url` and `cad_key` in the matching environment file before sending.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -10,7 +10,7 @@
     "apikey": [
       {
         "key": "key",
-        "value": "x-radio-api-key",
+        "value": "X-API-Key",
         "type": "string"
       },
       {
@@ -58,7 +58,7 @@
             "method": "POST",
             "header": [
               {
-                "key": "x-radio-api-key",
+                "key": "X-API-Key",
                 "value": "{{cad_key}}",
                 "type": "text"
               },
@@ -97,7 +97,7 @@
             "method": "POST",
             "header": [
               {
-                "key": "x-radio-api-key",
+                "key": "X-API-Key",
                 "value": "{{cad_key}}",
                 "type": "text"
               },
@@ -139,7 +139,7 @@
             "method": "POST",
             "header": [
               {
-                "key": "x-radio-api-key",
+                "key": "X-API-Key",
                 "value": "{{cad_key}}",
                 "type": "text"
               },
@@ -178,7 +178,7 @@
             "method": "GET",
             "header": [
               {
-                "key": "x-radio-api-key",
+                "key": "X-API-Key",
                 "value": "{{cad_key}}",
                 "type": "text"
               }
@@ -209,7 +209,7 @@
             "method": "POST",
             "header": [
               {
-                "key": "x-radio-api-key",
+                "key": "X-API-Key",
                 "value": "{{cad_key}}",
                 "type": "text"
               },
@@ -248,7 +248,7 @@
             "method": "GET",
             "header": [
               {
-                "key": "x-radio-api-key",
+                "key": "X-API-Key",
                 "value": "{{cad_key}}",
                 "type": "text"
               }
@@ -279,7 +279,7 @@
             "method": "GET",
             "header": [
               {
-                "key": "x-radio-api-key",
+                "key": "X-API-Key",
                 "value": "{{cad_key}}",
                 "type": "text"
               }
@@ -305,7 +305,7 @@
             "method": "PATCH",
             "header": [
               {
-                "key": "x-radio-api-key",
+                "key": "X-API-Key",
                 "value": "{{cad_key}}",
                 "type": "text"
               },
@@ -345,7 +345,7 @@
             "method": "POST",
             "header": [
               {
-                "key": "x-radio-api-key",
+                "key": "X-API-Key",
                 "value": "{{cad_key}}",
                 "type": "text"
               },
@@ -384,7 +384,7 @@
             "method": "POST",
             "header": [
               {
-                "key": "x-radio-api-key",
+                "key": "X-API-Key",
                 "value": "{{cad_key}}",
                 "type": "text"
               },
@@ -423,7 +423,7 @@
             "method": "POST",
             "header": [
               {
-                "key": "x-radio-api-key",
+                "key": "X-API-Key",
                 "value": "{{cad_key}}",
                 "type": "text"
               },
@@ -462,7 +462,7 @@
             "method": "POST",
             "header": [
               {
-                "key": "x-radio-api-key",
+                "key": "X-API-Key",
                 "value": "{{cad_key}}",
                 "type": "text"
               },
@@ -501,7 +501,7 @@
             "method": "GET",
             "header": [
               {
-                "key": "x-radio-api-key",
+                "key": "X-API-Key",
                 "value": "{{cad_key}}",
                 "type": "text"
               }
@@ -534,7 +534,7 @@
             "method": "POST",
             "header": [
               {
-                "key": "x-radio-api-key",
+                "key": "X-API-Key",
                 "value": "{{cad_key}}",
                 "type": "text"
               },
@@ -574,7 +574,7 @@
             "method": "POST",
             "header": [
               {
-                "key": "x-radio-api-key",
+                "key": "X-API-Key",
                 "value": "{{cad_key}}",
                 "type": "text"
               },
@@ -614,7 +614,7 @@
             "method": "POST",
             "header": [
               {
-                "key": "x-radio-api-key",
+                "key": "X-API-Key",
                 "value": "{{cad_key}}",
                 "type": "text"
               },
@@ -654,7 +654,7 @@
             "method": "GET",
             "header": [
               {
-                "key": "x-radio-api-key",
+                "key": "X-API-Key",
                 "value": "{{cad_key}}",
                 "type": "text"
               }
@@ -680,7 +680,7 @@
             "method": "POST",
             "header": [
               {
-                "key": "x-radio-api-key",
+                "key": "X-API-Key",
                 "value": "{{cad_key}}",
                 "type": "text"
               },
@@ -726,7 +726,7 @@
             "method": "POST",
             "header": [
               {
-                "key": "x-radio-api-key",
+                "key": "X-API-Key",
                 "value": "{{cad_key}}",
                 "type": "text"
               },
@@ -765,7 +765,7 @@
             "method": "GET",
             "header": [
               {
-                "key": "x-radio-api-key",
+                "key": "X-API-Key",
                 "value": "{{cad_key}}",
                 "type": "text"
               }
@@ -790,7 +790,7 @@
             "method": "GET",
             "header": [
               {
-                "key": "x-radio-api-key",
+                "key": "X-API-Key",
                 "value": "{{cad_key}}",
                 "type": "text"
               }
@@ -815,7 +815,7 @@
             "method": "POST",
             "header": [
               {
-                "key": "x-radio-api-key",
+                "key": "X-API-Key",
                 "value": "{{cad_key}}",
                 "type": "text"
               },
@@ -854,7 +854,7 @@
             "method": "DELETE",
             "header": [
               {
-                "key": "x-radio-api-key",
+                "key": "X-API-Key",
                 "value": "{{cad_key}}",
                 "type": "text"
               }
@@ -880,7 +880,7 @@
             "method": "GET",
             "header": [
               {
-                "key": "x-radio-api-key",
+                "key": "X-API-Key",
                 "value": "{{cad_key}}",
                 "type": "text"
               }
@@ -907,7 +907,7 @@
             "method": "POST",
             "header": [
               {
-                "key": "x-radio-api-key",
+                "key": "X-API-Key",
                 "value": "{{cad_key}}",
                 "type": "text"
               },
@@ -948,7 +948,7 @@
             "method": "GET",
             "header": [
               {
-                "key": "x-radio-api-key",
+                "key": "X-API-Key",
                 "value": "{{cad_key}}",
                 "type": "text"
               }
@@ -986,7 +986,7 @@
             "method": "GET",
             "header": [
               {
-                "key": "x-radio-api-key",
+                "key": "X-API-Key",
                 "value": "{{cad_key}}",
                 "type": "text"
               }
@@ -1011,7 +1011,7 @@
             "method": "POST",
             "header": [
               {
-                "key": "x-radio-api-key",
+                "key": "X-API-Key",
                 "value": "{{cad_key}}",
                 "type": "text"
               },
@@ -1056,7 +1056,7 @@
             "method": "POST",
             "header": [
               {
-                "key": "x-radio-api-key",
+                "key": "X-API-Key",
                 "value": "{{cad_key}}",
                 "type": "text"
               },
@@ -1096,7 +1096,7 @@
             "method": "POST",
             "header": [
               {
-                "key": "x-radio-api-key",
+                "key": "X-API-Key",
                 "value": "{{cad_key}}",
                 "type": "text"
               },
@@ -1142,7 +1142,7 @@
             "method": "GET",
             "header": [
               {
-                "key": "x-radio-api-key",
+                "key": "X-API-Key",
                 "value": "{{cad_key}}",
                 "type": "text"
               }
@@ -1168,7 +1168,7 @@
             "method": "POST",
             "header": [
               {
-                "key": "x-radio-api-key",
+                "key": "X-API-Key",
                 "value": "{{cad_key}}",
                 "type": "text"
               },
@@ -1210,7 +1210,7 @@
             "method": "POST",
             "header": [
               {
-                "key": "x-radio-api-key",
+                "key": "X-API-Key",
                 "value": "{{cad_key}}",
                 "type": "text"
               },
@@ -1258,7 +1258,7 @@
             "method": "GET",
             "header": [
               {
-                "key": "x-radio-api-key",
+                "key": "X-API-Key",
                 "value": "{{cad_key}}",
                 "type": "text"
               }
@@ -1283,7 +1283,7 @@
             "method": "GET",
             "header": [
               {
-                "key": "x-radio-api-key",
+                "key": "X-API-Key",
                 "value": "{{cad_key}}",
                 "type": "text"
               }
@@ -1309,7 +1309,7 @@
             "method": "GET",
             "header": [
               {
-                "key": "x-radio-api-key",
+                "key": "X-API-Key",
                 "value": "{{cad_key}}",
                 "type": "text"
               }
@@ -1334,7 +1334,7 @@
             "method": "GET",
             "header": [
               {
-                "key": "x-radio-api-key",
+                "key": "X-API-Key",
                 "value": "{{cad_key}}",
                 "type": "text"
               }
@@ -1360,7 +1360,7 @@
             "method": "GET",
             "header": [
               {
-                "key": "x-radio-api-key",
+                "key": "X-API-Key",
                 "value": "{{cad_key}}",
                 "type": "text"
               }
@@ -1381,7 +1381,7 @@
                 }
               ]
             },
-            "description": "GET /api/dropdown-options?category=dispositions — canonical disposition list used by the AI Voice Dispatcher. Outside /api/radio but uses the same x-radio-api-key auth."
+            "description": "GET /api/dropdown-options?category=dispositions — canonical disposition list used by the AI Voice Dispatcher. Outside /api/radio but uses the same X-API-Key auth."
           }
         }
       ]

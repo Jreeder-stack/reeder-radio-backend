@@ -24,7 +24,7 @@
 
   ## Auth
 
-  Every request sends the header `x-radio-api-key: {{cad_key}}` automatically
+  Every request sends the header `X-API-Key: {{cad_key}}` automatically
   (collection-level auth). You don't need to add it per request.
 
   ## Path-param helpers
