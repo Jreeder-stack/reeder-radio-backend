@@ -90,6 +90,7 @@ class BackgroundAudioService : Service() {
     @Volatile private var reconnectStartTimeMs: Long = 0L
     @Volatile private var pendingFirstPttAfterReconnect = false
     @Volatile private var radioRouteActive = false
+    private var pendingRouteReleaseJob: Job? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -868,7 +869,9 @@ class BackgroundAudioService : Service() {
                     }
                     is SignalingEvent.RadioChannelIdle -> {
                         if (event.channelId == currentRoomKey) {
-                            releaseRadioAudioRoute()
+                            // Defer the route release: a follow-up TxStart inside
+                            // the coalesce window keeps the existing route in place.
+                            scheduleRadioAudioRouteRelease()
                             engine.floorControl?.onChannelIdle()
                         }
                     }
@@ -883,7 +886,9 @@ class BackgroundAudioService : Service() {
                     is SignalingEvent.RadioTxStop -> {
                         val selfUnitId = servicePrefs.unitId ?: app.sessionPrefs.unitId
                         if (event.senderUnitId != selfUnitId && event.channelId == currentRoomKey) {
-                            releaseRadioAudioRoute()
+                            // Defer the route release so back-to-back transmissions
+                            // inside one logical RX session don't flap the route.
+                            scheduleRadioAudioRouteRelease()
                             engine.floorControl?.onChannelIdle()
                         }
                     }
@@ -1430,27 +1435,72 @@ class BackgroundAudioService : Service() {
      * keep working.
      */
     private fun applyRadioAudioRoute() {
+        // If a deferred release is pending (coalescing window between back-to-back
+        // RX bursts in one logical session), cancel it so we keep the existing
+        // route, mode and volume in place — no churn.
+        val pending = pendingRouteReleaseJob
+        if (pending != null) {
+            pending.cancel()
+            pendingRouteReleaseJob = null
+            Log.d(TAG, """{"event":"RADIO_ROUTE_RELEASE_COALESCED"}""")
+        }
         if (radioRouteActive) return
         radioRouteActive = true
         if (!::audioManager.isInitialized) return
-        audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
+        if (audioManager.mode != AudioManager.MODE_IN_COMMUNICATION) {
+            audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val speakerDevice = audioManager.availableCommunicationDevices
-                .firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
-            if (speakerDevice != null) {
-                audioManager.setCommunicationDevice(speakerDevice)
+            val currentDeviceType = audioManager.communicationDevice?.type
+            if (currentDeviceType != AudioDeviceInfo.TYPE_BUILTIN_SPEAKER) {
+                val speakerDevice = audioManager.availableCommunicationDevices
+                    .firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
+                if (speakerDevice != null) {
+                    audioManager.setCommunicationDevice(speakerDevice)
+                }
             }
         } else {
             @Suppress("DEPRECATION")
-            audioManager.isSpeakerphoneOn = true
+            if (!audioManager.isSpeakerphoneOn) {
+                @Suppress("DEPRECATION")
+                audioManager.isSpeakerphoneOn = true
+            }
         }
         val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_VOICE_CALL)
-        savedVoiceCallVolume = audioManager.getStreamVolume(AudioManager.STREAM_VOICE_CALL)
-        audioManager.setStreamVolume(AudioManager.STREAM_VOICE_CALL, maxVolume, 0)
-        Log.d(TAG, "BackgroundAudioService: radio audio route applied (MODE_IN_COMMUNICATION + speaker) voiceCallVol=$savedVoiceCallVolume→$maxVolume")
+        val currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_VOICE_CALL)
+        // Save once per session so release restores the operator's prior level.
+        savedVoiceCallVolume = currentVolume
+        if (currentVolume != maxVolume) {
+            audioManager.setStreamVolume(AudioManager.STREAM_VOICE_CALL, maxVolume, 0)
+        }
+        Log.d(TAG, "BackgroundAudioService: radio audio route applied (MODE_IN_COMMUNICATION + speaker) voiceCallVol=$currentVolume→$maxVolume")
+    }
+
+    /**
+     * Defer releaseRadioAudioRoute by [delayMs] so that a follow-up RX burst
+     * within the same logical receive session (e.g. back-to-back transmissions
+     * from the same sender, or RadioTxStop immediately followed by RadioTxStart)
+     * does not tear down and rebuild the audio route. If applyRadioAudioRoute
+     * is called before the delay elapses, the pending release is cancelled.
+     */
+    private fun scheduleRadioAudioRouteRelease(delayMs: Long = ROUTE_RELEASE_COALESCE_MS) {
+        if (!radioRouteActive) return
+        pendingRouteReleaseJob?.cancel()
+        pendingRouteReleaseJob = scope.launch {
+            try {
+                delay(delayMs)
+                if (!isActive) return@launch
+                pendingRouteReleaseJob = null
+                releaseRadioAudioRoute()
+            } catch (_: CancellationException) {
+                // coalesced — newer applyRadioAudioRoute won the race
+            }
+        }
     }
 
     private fun releaseRadioAudioRoute() {
+        pendingRouteReleaseJob?.cancel()
+        pendingRouteReleaseJob = null
         if (!radioRouteActive) return
         radioRouteActive = false
         if (!::audioManager.isInitialized) return
@@ -1601,5 +1651,10 @@ class BackgroundAudioService : Service() {
         private const val STALE_FLOOR_CHECK_INTERVAL_MS = 12_000L
         private const val STALE_FLOOR_MAX_TX_MS = 45_000L
         private const val STALE_BUSY_NO_TX_MAX_MS = 5_000L
+        // Window during which a release of the radio audio route is deferred
+        // so that a follow-up RX burst within the same logical receive session
+        // can re-use the existing route without tearing down and rebuilding
+        // AudioManager.mode / communication-device / STREAM_VOICE_CALL volume.
+        private const val ROUTE_RELEASE_COALESCE_MS = 800L
     }
 }

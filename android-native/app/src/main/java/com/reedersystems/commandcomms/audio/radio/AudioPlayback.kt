@@ -38,11 +38,22 @@ class AudioPlayback(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     var softwareGain: Float = speakerBoostPrefs?.softwareAmplifier ?: DEFAULT_SOFTWARE_GAIN
 
+    // Track the most recently applied values from SpeakerBoostPrefs so the
+    // listener only re-applies the LoudnessEnhancer / software-gain stage when
+    // the user actually changes the speaker-boost preference. SharedPreferences
+    // change callbacks can fire on any commit (including no-op writes and
+    // unrelated keys), and we don't want those to disturb in-flight RX.
+    private var lastAppliedReceiveBoostMb: Int = speakerBoostPrefs?.receiveBoostMb ?: -1
+    private var lastAppliedSoftwareGain: Float = speakerBoostPrefs?.softwareAmplifier
+        ?: DEFAULT_SOFTWARE_GAIN
+
     private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         val prefs = speakerBoostPrefs ?: return@OnSharedPreferenceChangeListener
         when (key) {
             SpeakerBoostPrefs.KEY_RECEIVE_BOOST_MB -> {
                 val mb = prefs.receiveBoostMb
+                if (mb == lastAppliedReceiveBoostMb) return@OnSharedPreferenceChangeListener
+                lastAppliedReceiveBoostMb = mb
                 val le = loudnessEnhancer
                 if (le != null) {
                     try {
@@ -55,6 +66,8 @@ class AudioPlayback(
             }
             SpeakerBoostPrefs.KEY_SOFTWARE_AMPLIFIER -> {
                 val newGain = prefs.softwareAmplifier
+                if (newGain == lastAppliedSoftwareGain) return@OnSharedPreferenceChangeListener
+                lastAppliedSoftwareGain = newGain
                 softwareGain = newGain
                 Log.d(TAG, "[LOUDNESS] amplifier=${newGain}x")
             }
@@ -73,6 +86,7 @@ class AudioPlayback(
             le.setTargetGain(gainMb)
             le.enabled = true
             loudnessEnhancer = le
+            lastAppliedReceiveBoostMb = gainMb
             Log.d(TAG, "[LOUDNESS] LoudnessEnhancer attached sessionId=${track.audioSessionId} gainMb=$gainMb")
         } catch (e: Exception) {
             loudnessEnhancer = null
