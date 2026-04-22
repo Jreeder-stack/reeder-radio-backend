@@ -19,6 +19,7 @@ final class AppState: ObservableObject {
     let locationTracker: LocationTracker
     let radio: RadioAudioEngine
     let radioConfig: RadioConfigService
+    let permissions: PermissionsCoordinator
 
     private var cancellables = Set<AnyCancellable>()
 
@@ -35,6 +36,7 @@ final class AppState: ObservableObject {
         tracker.signaling = signaling
         self.radio = RadioAudioEngine()
         self.radioConfig = RadioConfigService(api: api)
+        self.permissions = PermissionsCoordinator(locationTracker: tracker)
         self.radio.attach(signaling: signaling)
 
         signaling.locationTrackEvents
@@ -109,7 +111,6 @@ final class AppState: ObservableObject {
                           username: user.username,
                           defaultChannel: settings.defaultChannelId,
                           sessionCookie: cookie)
-        locationTracker.requestWhenInUse()
 
         radio.unitId = user.unitId ?? user.username
         radio.channelId = settings.defaultChannelId

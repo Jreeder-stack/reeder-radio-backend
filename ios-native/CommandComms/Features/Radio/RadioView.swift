@@ -58,7 +58,7 @@ private struct RadioContent: View {
             .toolbarColorScheme(.dark, for: .navigationBar)
             .onAppear {
                 channelInput = signaling.currentChannel ?? defaultChannel
-                requestMicPermission()
+                refreshMicPermissionStatus()
                 ptt.start()
                 ptt.updateAccessoryModel(accessoryModel)
             }
@@ -91,8 +91,18 @@ private struct RadioContent: View {
                 Text(err).font(.footnote).foregroundColor(.red)
             }
             if micPermissionDenied {
-                Text("Microphone access denied — enable it in Settings to transmit.")
-                    .font(.footnote).foregroundColor(.orange)
+                HStack(spacing: 8) {
+                    Text("Microphone disabled — enable it to transmit.")
+                        .font(.footnote).foregroundColor(.orange)
+                    Spacer()
+                    Button("Open Settings") {
+                        if let url = URL(string: UIApplication.openSettingsURLString) {
+                            UIApplication.shared.open(url)
+                        }
+                    }
+                    .font(.footnote)
+                    .foregroundColor(.cyan)
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -236,16 +246,19 @@ private struct RadioContent: View {
         }
     }
 
-    private func requestMicPermission() {
+    private func refreshMicPermissionStatus() {
+        let status: AVAudioSession.RecordPermission
         if #available(iOS 17.0, *) {
-            AVAudioApplication.requestRecordPermission { granted in
-                Task { @MainActor in micPermissionDenied = !granted }
+            switch AVAudioApplication.shared.recordPermission {
+            case .granted: status = .granted
+            case .denied: status = .denied
+            case .undetermined: status = .undetermined
+            @unknown default: status = .undetermined
             }
         } else {
-            AVAudioSession.sharedInstance().requestRecordPermission { granted in
-                Task { @MainActor in micPermissionDenied = !granted }
-            }
+            status = AVAudioSession.sharedInstance().recordPermission
         }
+        micPermissionDenied = (status == .denied)
     }
 }
 
