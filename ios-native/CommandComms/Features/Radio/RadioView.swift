@@ -6,6 +6,7 @@ import UserNotifications
 
 struct RadioView: View {
     @EnvironmentObject var appState: AppState
+    @EnvironmentObject var emergencyCenter: EmergencyAlertCenter
 
     var body: some View {
         RadioContent(
@@ -13,6 +14,7 @@ struct RadioView: View {
             radio: appState.radio,
             locationTracker: appState.locationTracker,
             permissions: appState.permissions,
+            emergencyCenter: emergencyCenter,
             defaultChannel: appState.settings.defaultChannelId,
             accessoryModel: appState.settings.pttAccessoryModel
         )
@@ -24,6 +26,7 @@ private struct RadioContent: View {
     @ObservedObject var radio: RadioAudioEngine
     @ObservedObject var locationTracker: LocationTracker
     @ObservedObject var permissions: PermissionsCoordinator
+    @ObservedObject var emergencyCenter: EmergencyAlertCenter
     let defaultChannel: String
     @State private var channelInput: String = ""
     @State private var micPermissionDenied: Bool = false
@@ -36,12 +39,14 @@ private struct RadioContent: View {
          radio: RadioAudioEngine,
          locationTracker: LocationTracker,
          permissions: PermissionsCoordinator,
+         emergencyCenter: EmergencyAlertCenter,
          defaultChannel: String,
          accessoryModel: PTTAccessoryModel) {
         self.signaling = signaling
         self.radio = radio
         self.locationTracker = locationTracker
         self.permissions = permissions
+        self.emergencyCenter = emergencyCenter
         self.defaultChannel = defaultChannel
         self.accessoryModel = accessoryModel
         _ptt = StateObject(wrappedValue: PTTBinding(radio: radio,
@@ -54,6 +59,9 @@ private struct RadioContent: View {
                 Color.black.ignoresSafeArea()
                 ScrollView {
                     VStack(spacing: 20) {
+                        if let alert = emergencyCenter.active {
+                            emergencyBanner(alert: alert)
+                        }
                         statusCard
                         channelCard
                         indicators
@@ -89,6 +97,43 @@ private struct RadioContent: View {
             }
         }
         .foregroundColor(.white)
+    }
+
+    private func emergencyBanner(alert: EmergencyAlert) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 10) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundColor(.white)
+                Text("EMERGENCY")
+                    .font(.system(.headline, design: .monospaced))
+                    .foregroundColor(.white)
+                Spacer()
+                Button {
+                    emergencyCenter.clear()
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(.white.opacity(0.85))
+                }
+                .buttonStyle(.plain)
+            }
+            Text("Unit \(alert.unitId) in distress")
+                .font(.title3.bold())
+                .foregroundColor(.white)
+            Text("Channel: \(alert.channelId)")
+                .font(.system(.footnote, design: .monospaced))
+                .foregroundColor(.white.opacity(0.85))
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.red.opacity(0.85))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.white.opacity(0.6), lineWidth: 1)
+        )
+        .shadow(color: Color.red.opacity(0.6), radius: 12)
     }
 
     private var statusCard: some View {
@@ -351,5 +396,7 @@ private final class PTTBinding: ObservableObject {
 }
 
 #Preview {
-    RadioView().environmentObject(AppState())
+    RadioView()
+        .environmentObject(AppState())
+        .environmentObject(EmergencyAlertCenter.shared)
 }

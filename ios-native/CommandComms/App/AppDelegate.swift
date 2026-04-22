@@ -63,12 +63,15 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         print("[Push] APNs registration failed: \(error.localizedDescription)")
     }
 
-    // Foreground presentation: still show the alert + play sound.
+    // Foreground presentation: still show the alert + play sound, and also
+    // capture the payload into the in-app history so the Pages tab is fresh
+    // even if the user hasn't tapped the notification yet.
     func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         willPresent notification: UNNotification,
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
+        recordIncoming(userInfo: notification.request.content.userInfo)
         completionHandler([.banner, .sound, .list])
     }
 
@@ -86,6 +89,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
             let message = (info["message"] as? String) ?? ""
             let sender = (info["sender"] as? String) ?? ""
             Task { @MainActor in
+                PageHistoryStore.shared.record(id: id, message: message, sender: sender)
                 NotificationRouter.shared.pending = .page(id: id, message: message, sender: sender)
             }
         case "emergency":
@@ -98,5 +102,22 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
             break
         }
         completionHandler()
+    }
+
+    /// Mirrors a notification payload into the in-app stores so the Pages tab
+    /// stays in sync with delivered notifications even before they're tapped.
+    private func recordIncoming(userInfo: [AnyHashable: Any]) {
+        let type = (userInfo["type"] as? String) ?? ""
+        switch type {
+        case "page":
+            let id = (userInfo["pageId"] as? String) ?? ""
+            let message = (userInfo["message"] as? String) ?? ""
+            let sender = (userInfo["sender"] as? String) ?? ""
+            Task { @MainActor in
+                PageHistoryStore.shared.record(id: id, message: message, sender: sender)
+            }
+        default:
+            break
+        }
     }
 }
