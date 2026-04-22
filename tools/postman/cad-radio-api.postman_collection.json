@@ -1,0 +1,1396 @@
+{
+  "info": {
+    "_postman_id": "cad-radio-api-collection",
+    "name": "CAD Radio API",
+    "description": "Full CAD Radio API surface for testing.\n\nAuth: every request sends `x-api-key: {{cad_key}}`.\nBase URL: `{{cad_url}}`.\n\nFill in `cad_url` and `cad_key` in the matching environment file before sending.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "apikey",
+    "apikey": [
+      {
+        "key": "key",
+        "value": "x-api-key",
+        "type": "string"
+      },
+      {
+        "key": "value",
+        "value": "{{cad_key}}",
+        "type": "string"
+      },
+      {
+        "key": "in",
+        "value": "header",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "unit_id",
+      "value": "INDIANA-1"
+    },
+    {
+      "key": "call_id",
+      "value": ""
+    },
+    {
+      "key": "chat_id",
+      "value": ""
+    },
+    {
+      "key": "vehicle_id",
+      "value": ""
+    },
+    {
+      "key": "category_key",
+      "value": "call_natures"
+    }
+  ],
+  "item": [
+    {
+      "name": "Unit Status & Location",
+      "description": "",
+      "item": [
+        {
+          "name": "Update unit status",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{cad_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{cad_url}}/api/radio/status",
+              "host": [
+                "{{cad_url}}"
+              ],
+              "path": [
+                "api",
+                "radio",
+                "status"
+              ]
+            },
+            "description": "Required: unit_id, status. Valid statuses: on duty, off duty, busy, en route, on scene, available, assign, court, training, out of service, unavailable, special duty, not available, out of vehicle, detail.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"unit_id\": \"{{unit_id}}\",\n  \"status\": \"on duty\",\n  \"timestamp\": \"1423\",\n  \"channel\": \"OPS1\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Cycle unit status (single button)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{cad_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{cad_url}}/api/radio/unit/{{unit_id}}/status/cycle",
+              "host": [
+                "{{cad_url}}"
+              ],
+              "path": [
+                "api",
+                "radio",
+                "unit",
+                "{{unit_id}}",
+                "status",
+                "cycle"
+              ]
+            },
+            "description": "Cycles automatically: without active call off_duty <-> on_duty; with active call on_duty -> en_route -> on_scene -> on_duty.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"latitude\": null,\n  \"longitude\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Update unit zone",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{cad_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{cad_url}}/api/radio/zone",
+              "host": [
+                "{{cad_url}}"
+              ],
+              "path": [
+                "api",
+                "radio",
+                "zone"
+              ]
+            },
+            "description": "Required: unit_id, zone.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"unit_id\": \"{{unit_id}}\",\n  \"zone\": \"Zone 5\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Get all units with status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{cad_key}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{cad_url}}/api/radio/status-check",
+              "host": [
+                "{{cad_url}}"
+              ],
+              "path": [
+                "api",
+                "radio",
+                "status-check"
+              ]
+            },
+            "description": "Returns every unit with current status, zone, and last update."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Calls for Service",
+      "description": "",
+      "item": [
+        {
+          "name": "Create a new call",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{cad_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{cad_url}}/api/radio/call",
+              "host": [
+                "{{cad_url}}"
+              ],
+              "path": [
+                "api",
+                "radio",
+                "call"
+              ]
+            },
+            "description": "Required: type, location. Priority values: emergency/urgent/high -> high, priority/medium -> medium, routine/low -> low.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"Traffic Stop\",\n  \"location\": \"123 Main St\",\n  \"city\": \"Springfield\",\n  \"zone\": \"Zone 3\",\n  \"units\": [\n    \"INDIANA-1\"\n  ],\n  \"priority\": \"routine\",\n  \"description\": \"Vehicle pulled over for speeding\",\n  \"caller_name\": \"Dispatch\",\n  \"caller_phone\": \"555-1234\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "List active calls",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{cad_key}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{cad_url}}/api/radio/calls?status=active",
+              "host": [
+                "{{cad_url}}"
+              ],
+              "path": [
+                "api",
+                "radio",
+                "calls"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "active"
+                }
+              ]
+            },
+            "description": "Lists active calls."
+          }
+        },
+        {
+          "name": "Get call details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{cad_key}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{cad_url}}/api/radio/call/{{call_id}}",
+              "host": [
+                "{{cad_url}}"
+              ],
+              "path": [
+                "api",
+                "radio",
+                "call",
+                "{{call_id}}"
+              ]
+            },
+            "description": "Full call details including notes, disposition, assigned units."
+          }
+        },
+        {
+          "name": "Update a call",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{cad_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{cad_url}}/api/radio/call/{{call_id}}",
+              "host": [
+                "{{cad_url}}"
+              ],
+              "path": [
+                "api",
+                "radio",
+                "call",
+                "{{call_id}}"
+              ]
+            },
+            "description": "All fields optional. Valid statuses: pending, active, assigned, en_route, on_scene, cleared, closed, cancelled.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"Domestic\",\n  \"location\": \"456 Oak Ave\",\n  \"city\": \"Springfield\",\n  \"zone\": \"Zone 1\",\n  \"priority\": \"high\",\n  \"status\": \"active\",\n  \"description\": \"Updated description\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Assign unit to call",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{cad_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{cad_url}}/api/radio/assign",
+              "host": [
+                "{{cad_url}}"
+              ],
+              "path": [
+                "api",
+                "radio",
+                "assign"
+              ]
+            },
+            "description": "Required: unit_id, call_id.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"unit_id\": \"{{unit_id}}\",\n  \"call_id\": \"{{call_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Clear unit from call",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{cad_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{cad_url}}/api/radio/clear",
+              "host": [
+                "{{cad_url}}"
+              ],
+              "path": [
+                "api",
+                "radio",
+                "clear"
+              ]
+            },
+            "description": "Required: unit_id. call_id is optional (if omitted, just sets status to available).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"unit_id\": \"{{unit_id}}\",\n  \"call_id\": \"{{call_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Dispose / close call",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{cad_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{cad_url}}/api/radio/dispose",
+              "host": [
+                "{{cad_url}}"
+              ],
+              "path": [
+                "api",
+                "radio",
+                "dispose"
+              ]
+            },
+            "description": "Required: call_id, disposition.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"call_id\": \"{{call_id}}\",\n  \"disposition\": \"Report Filed\",\n  \"notes\": \"All units cleared, report pending\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Add note to a call",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{cad_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{cad_url}}/api/radio/note",
+              "host": [
+                "{{cad_url}}"
+              ],
+              "path": [
+                "api",
+                "radio",
+                "note"
+              ]
+            },
+            "description": "Required: call_id, note.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"call_id\": \"{{call_id}}\",\n  \"note\": \"Unit arrived on scene, making contact\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Get unit's current call",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{cad_key}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{cad_url}}/api/radio/unit/{{unit_id}}/call",
+              "host": [
+                "{{cad_url}}"
+              ],
+              "path": [
+                "api",
+                "radio",
+                "unit",
+                "{{unit_id}}",
+                "call"
+              ]
+            },
+            "description": "Returns the unit's currently assigned call, or has_active_call=false."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Queries / Lookups",
+      "description": "",
+      "item": [
+        {
+          "name": "Person query",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{cad_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{cad_url}}/api/radio/query/person",
+              "host": [
+                "{{cad_url}}"
+              ],
+              "path": [
+                "api",
+                "radio",
+                "query",
+                "person"
+              ]
+            },
+            "description": "Required: last_name.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"last_name\": \"Smith\",\n  \"first_name\": \"John\",\n  \"dob\": \"1990-01-15\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Vehicle query",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{cad_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{cad_url}}/api/radio/query/vehicle",
+              "host": [
+                "{{cad_url}}"
+              ],
+              "path": [
+                "api",
+                "radio",
+                "query",
+                "vehicle"
+              ]
+            },
+            "description": "Required: plate or vin.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"plate\": \"ABC1234\",\n  \"state\": \"PA\",\n  \"vin\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Warrant check",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{cad_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{cad_url}}/api/radio/query/warrant",
+              "host": [
+                "{{cad_url}}"
+              ],
+              "path": [
+                "api",
+                "radio",
+                "query",
+                "warrant"
+              ]
+            },
+            "description": "Required: last_name.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"last_name\": \"Smith\",\n  \"first_name\": \"John\",\n  \"dob\": \"1990-01-15\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Animal Search",
+      "description": "",
+      "item": [
+        {
+          "name": "List animal types",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{cad_key}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{cad_url}}/api/radio/animal/types",
+              "host": [
+                "{{cad_url}}"
+              ],
+              "path": [
+                "api",
+                "radio",
+                "animal",
+                "types"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Search animals",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{cad_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{cad_url}}/api/radio/animal/search",
+              "host": [
+                "{{cad_url}}"
+              ],
+              "path": [
+                "api",
+                "radio",
+                "animal",
+                "search"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"owner_name\": \"Smith\",\n  \"animal_type\": \"Dog\",\n  \"tag_number\": \"12345\",\n  \"microchip\": \"900123456789\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Messaging & Broadcasts",
+      "description": "",
+      "item": [
+        {
+          "name": "Broadcast message",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{cad_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{cad_url}}/api/radio/broadcast",
+              "host": [
+                "{{cad_url}}"
+              ],
+              "path": [
+                "api",
+                "radio",
+                "broadcast"
+              ]
+            },
+            "description": "Required: message.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"All units standby for traffic\",\n  \"priority\": \"routine\",\n  \"target_units\": \"all\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "List all personnel (contacts)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{cad_key}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{cad_url}}/api/radio/contacts",
+              "host": [
+                "{{cad_url}}"
+              ],
+              "path": [
+                "api",
+                "radio",
+                "contacts"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "List chat groups",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{cad_key}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{cad_url}}/api/radio/chats",
+              "host": [
+                "{{cad_url}}"
+              ],
+              "path": [
+                "api",
+                "radio",
+                "chats"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Create chat group",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{cad_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{cad_url}}/api/radio/chats",
+              "host": [
+                "{{cad_url}}"
+              ],
+              "path": [
+                "api",
+                "radio",
+                "chats"
+              ]
+            },
+            "description": "Required: name, plus creator_id or creator_unit.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Night Shift\",\n  \"type\": \"private\",\n  \"creator_unit\": \"{{unit_id}}\",\n  \"member_ids\": [],\n  \"description\": \"Night shift coordination\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Delete chat group",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{cad_key}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{cad_url}}/api/radio/chats/{{chat_id}}",
+              "host": [
+                "{{cad_url}}"
+              ],
+              "path": [
+                "api",
+                "radio",
+                "chats",
+                "{{chat_id}}"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Get chat messages",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{cad_key}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{cad_url}}/api/radio/chats/{{chat_id}}/messages",
+              "host": [
+                "{{cad_url}}"
+              ],
+              "path": [
+                "api",
+                "radio",
+                "chats",
+                "{{chat_id}}",
+                "messages"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Send chat message",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{cad_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{cad_url}}/api/radio/chats/{{chat_id}}/messages",
+              "host": [
+                "{{cad_url}}"
+              ],
+              "path": [
+                "api",
+                "radio",
+                "chats",
+                "{{chat_id}}",
+                "messages"
+              ]
+            },
+            "description": "Required: message, plus sender_id or sender_unit.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sender_unit\": \"{{unit_id}}\",\n  \"message\": \"10-4 en route to location\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Unread message count",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{cad_key}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{cad_url}}/api/radio/messages/unread?unit_id={{unit_id}}",
+              "host": [
+                "{{cad_url}}"
+              ],
+              "path": [
+                "api",
+                "radio",
+                "messages",
+                "unread"
+              ],
+              "query": [
+                {
+                  "key": "unit_id",
+                  "value": "{{unit_id}}"
+                }
+              ]
+            },
+            "description": ""
+          }
+        }
+      ]
+    },
+    {
+      "name": "Status Checks",
+      "description": "",
+      "item": [
+        {
+          "name": "Get pending status checks",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{cad_key}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{cad_url}}/api/radio/pending-checks",
+              "host": [
+                "{{cad_url}}"
+              ],
+              "path": [
+                "api",
+                "radio",
+                "pending-checks"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Respond to a status check",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{cad_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{cad_url}}/api/radio/respond-check",
+              "host": [
+                "{{cad_url}}"
+              ],
+              "path": [
+                "api",
+                "radio",
+                "respond-check"
+              ]
+            },
+            "description": "Required: unit_id.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"unit_id\": \"{{unit_id}}\",\n  \"response\": \"10-4 All Clear\",\n  \"status\": \"available\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Records / Field Work",
+      "description": "",
+      "item": [
+        {
+          "name": "Create citation/warning",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{cad_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{cad_url}}/api/radio/citation/new",
+              "host": [
+                "{{cad_url}}"
+              ],
+              "path": [
+                "api",
+                "radio",
+                "citation",
+                "new"
+              ]
+            },
+            "description": "Required: officer_unit. type can be 'citation' or 'warning'.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"citation\",\n  \"officer_unit\": \"{{unit_id}}\",\n  \"person\": {\n    \"first_name\": \"John\",\n    \"last_name\": \"Doe\",\n    \"dob\": \"1990-01-01\"\n  },\n  \"vehicle\": {\n    \"plate\": \"ABC123\",\n    \"state\": \"PA\",\n    \"make\": \"Ford\",\n    \"model\": \"F150\"\n  },\n  \"violations\": [\n    \"Speeding\",\n    \"Failure to signal\"\n  ],\n  \"location\": \"123 Main St\",\n  \"notes\": \"Clocked at 55 in a 35\",\n  \"call_number\": \"041325-143022\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Create field interview (FI)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{cad_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{cad_url}}/api/radio/fi/create",
+              "host": [
+                "{{cad_url}}"
+              ],
+              "path": [
+                "api",
+                "radio",
+                "fi",
+                "create"
+              ]
+            },
+            "description": "Required: officer_unit.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"officer_unit\": \"{{unit_id}}\",\n  \"call_number\": \"\",\n  \"location\": \"123 Main St\",\n  \"x_street\": \"Oak Ave\",\n  \"city\": \"Pittsburgh\",\n  \"state\": \"PA\",\n  \"zip_code\": \"15201\",\n  \"county\": \"Allegheny\",\n  \"reason\": \"Suspicious activity\",\n  \"person\": {\n    \"first_name\": \"John\",\n    \"last_name\": \"Doe\",\n    \"dob\": \"1990-01-01\",\n    \"sex\": \"M\",\n    \"race\": \"W\",\n    \"height\": \"510\",\n    \"weight\": \"180\",\n    \"eye_color\": \"BLU\",\n    \"hair_color\": \"BRO\",\n    \"address\": \"456 Elm St\",\n    \"city\": \"Pittsburgh\",\n    \"state\": \"PA\",\n    \"zip\": \"15201\",\n    \"phone\": \"555-9876\"\n  },\n  \"vehicle\": {\n    \"plate\": \"ABC123\",\n    \"state\": \"PA\",\n    \"make\": \"Ford\",\n    \"model\": \"F150\",\n    \"color\": \"Black\",\n    \"year\": \"2020\",\n    \"vin\": \"\"\n  },\n  \"trespass\": {\n    \"was_trespassed\": false\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Fleet Management",
+      "description": "",
+      "item": [
+        {
+          "name": "List fleet vehicles",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{cad_key}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{cad_url}}/api/radio/fleet/units",
+              "host": [
+                "{{cad_url}}"
+              ],
+              "path": [
+                "api",
+                "radio",
+                "fleet",
+                "units"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Update fleet vehicle status",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{cad_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{cad_url}}/api/radio/fleet/unit/{{vehicle_id}}/status",
+              "host": [
+                "{{cad_url}}"
+              ],
+              "path": [
+                "api",
+                "radio",
+                "fleet",
+                "unit",
+                "{{vehicle_id}}",
+                "status"
+              ]
+            },
+            "description": "Required: status. Valid: in_service, out_of_service, maintenance, reserved, decommissioned.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"out_of_service\",\n  \"notes\": \"Flat tire\",\n  \"mileage\": 45700\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Log fuel entry",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{cad_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{cad_url}}/api/radio/fleet/unit/{{vehicle_id}}/fuel",
+              "host": [
+                "{{cad_url}}"
+              ],
+              "path": [
+                "api",
+                "radio",
+                "fleet",
+                "unit",
+                "{{vehicle_id}}",
+                "fuel"
+              ]
+            },
+            "description": "Required: gallons, total_cost.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"gallons\": 15.5,\n  \"price_per_gallon\": 3.45,\n  \"total_cost\": 53.48,\n  \"mileage\": 45678,\n  \"fuel_type\": \"Regular\",\n  \"station\": \"Shell Main St\",\n  \"notes\": \"Full tank\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reference Data",
+      "description": "",
+      "item": [
+        {
+          "name": "List dropdown categories (radio)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{cad_key}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{cad_url}}/api/radio/dropdowns",
+              "host": [
+                "{{cad_url}}"
+              ],
+              "path": [
+                "api",
+                "radio",
+                "dropdowns"
+              ]
+            },
+            "description": "All dropdown categories exposed via the radio API."
+          }
+        },
+        {
+          "name": "Get options for a dropdown category (radio)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{cad_key}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{cad_url}}/api/radio/dropdowns/{{category_key}}",
+              "host": [
+                "{{cad_url}}"
+              ],
+              "path": [
+                "api",
+                "radio",
+                "dropdowns",
+                "{{category_key}}"
+              ]
+            },
+            "description": "Example category_key values: call_natures, dispositions."
+          }
+        },
+        {
+          "name": "Get all active call natures (shortcut)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{cad_key}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{cad_url}}/api/radio/call-natures",
+              "host": [
+                "{{cad_url}}"
+              ],
+              "path": [
+                "api",
+                "radio",
+                "call-natures"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Get recent active BOLOs",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{cad_key}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{cad_url}}/api/radio/bolo/recent",
+              "host": [
+                "{{cad_url}}"
+              ],
+              "path": [
+                "api",
+                "radio",
+                "bolo",
+                "recent"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Get dispositions (general API)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{cad_key}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{cad_url}}/api/dropdown-options?category=dispositions",
+              "host": [
+                "{{cad_url}}"
+              ],
+              "path": [
+                "api",
+                "dropdown-options"
+              ],
+              "query": [
+                {
+                  "key": "category",
+                  "value": "dispositions"
+                }
+              ]
+            },
+            "description": "Canonical disposition list used by the AI Voice Dispatcher. Outside /api/radio but uses the same x-api-key auth."
+          }
+        }
+      ]
+    }
+  ]
+}
