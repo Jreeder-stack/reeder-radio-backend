@@ -78,9 +78,9 @@ describe('R9: dispose passes disposition AND notes', () => {
   });
 });
 
-describe('R8: primary-unit 409 cascade from clear → close confirm', () => {
-  it('on 409, asks to close call and parks unit in AWAITING_PRIMARY_CLOSE_CONFIRM', async () => {
-    cadService.clearUnit.mockResolvedValueOnce({ success: false, statusCode: 409, error: 'primary unit' });
+describe('R8: primary-unit cascade from clear → close confirm', () => {
+  it('with single unit (primary), asks to close call and parks unit in AWAITING_PRIMARY_CLOSE_CONFIRM', async () => {
+    // Task #482: classifier now detects primary upfront — no longer needs a CAD 409.
     const d = makeDispatcher();
     await d.handleClearConfirm('Indiana-1', '10-98');
     expect(d.spoken[0]).toMatch(/primary on call CALL-123\. Close the call\?/);
@@ -296,6 +296,12 @@ describe('R10: per-unit serial queue for status updates', () => {
 
   it('non-status lifecycle calls (clear) wait for in-flight status updates for the same unit', async () => {
     const d = makeDispatcher();
+    // Make the speaker non-primary on the call so handleClearConfirm takes the
+    // simple-clear path (which actually calls clearUnit).
+    cadService.getUnitCurrentCallById.mockResolvedValueOnce({
+      call_id: 'CALL-123', call_number: 'CALL-123',
+      assigned_units: ['LINCOLN-3', 'INDIANA-1'], primary_unit: 'LINCOLN-3',
+    });
     const order = [];
     let releaseStatus;
     cadService.updateUnitStatus.mockImplementationOnce(async () => {
@@ -319,3 +325,201 @@ describe('R10: per-unit serial queue for status updates', () => {
     expect(order.indexOf('clear')).toBeGreaterThan(order.indexOf('status-end'));
   });
 });
+
+describe('Task #482: clear/available cascades and disposition matching', () => {
+  it('classifyClearOutcome → primary_last when unit is the only one assigned', async () => {
+    const d = makeDispatcher();
+    const outcome = await d._classifyClearOutcome('Indiana-1');
+    expect(outcome.kind).toBe('primary_last');
+    expect(outcome.call?.callId).toBe('CALL-123');
+  });
+
+  it('classifyClearOutcome → primary_with_others when others are still on the call', async () => {
+    cadService.getUnitCurrentCallById.mockResolvedValueOnce({
+      call_id: 'CALL-9', call_number: 'CALL-9',
+      assigned_units: ['INDIANA-1', 'LINCOLN-3'], primary_unit: 'INDIANA-1',
+    });
+    const d = makeDispatcher();
+    const outcome = await d._classifyClearOutcome('Indiana-1');
+    expect(outcome.kind).toBe('primary_with_others');
+    expect(outcome.otherUnits).toEqual(['LINCOLN-3']);
+  });
+
+  it('classifyClearOutcome → simple when speaker is not primary', async () => {
+    cadService.getUnitCurrentCallById.mockResolvedValueOnce({
+      call_id: 'CALL-9', call_number: 'CALL-9',
+      assigned_units: ['LINCOLN-3', 'INDIANA-1'], primary_unit: 'LINCOLN-3',
+    });
+    const d = makeDispatcher();
+    const outcome = await d._classifyClearOutcome('Indiana-1');
+    expect(outcome.kind).toBe('simple');
+  });
+
+  it('handleClearConfirm refuses primary_with_others and stays IDLE without calling CAD', async () => {
+    cadService.getUnitCurrentCallById.mockResolvedValueOnce({
+      call_id: 'CALL-9', call_number: 'CALL-9',
+      assigned_units: ['INDIANA-1', 'LINCOLN-3', 'BEAVER-2'], primary_unit: 'INDIANA-1',
+    });
+    const d = makeDispatcher();
+    await d.handleClearConfirm('Indiana-1', '10-98');
+    expect(cadService.clearUnit).not.toHaveBeenCalled();
+    expect(d.spoken[0]).toMatch(/primary on call CALL-9/);
+    expect(d.spoken[0]).toMatch(/LINCOLN-3 and BEAVER-2 still on the call/);
+    const session = cm.getUnitSessionState('Indiana-1');
+    expect(session.state).toBe(cm.DISPATCHER_STATE.IDLE);
+  });
+
+  it('handleClearConfirm cascades primary_last with no inline disposition into AWAITING_PRIMARY_CLOSE_CONFIRM', async () => {
+    const d = makeDispatcher();
+    await d.handleClearConfirm('Indiana-1', '10-98');
+    expect(cadService.clearUnit).not.toHaveBeenCalled();
+    expect(d.spoken[0]).toMatch(/primary on call CALL-123\. Close the call\?/);
+    const session = cm.getUnitSessionState('Indiana-1');
+    expect(session.state).toBe(cm.DISPATCHER_STATE.AWAITING_PRIMARY_CLOSE_CONFIRM);
+    expect(session.slots.callNumber).toBe('CALL-123');
+  });
+
+  it('handleClearUnit captures inline disposition and handleClearConfirm jumps to AWAITING_DISPOSE_CONFIRM', async () => {
+    const d = makeDispatcher();
+    await d.handleClearUnit('Indiana-1', '10-98 with a report');
+    let session = cm.getUnitSessionState('Indiana-1');
+    expect(session.slots.inlineDisposition).toMatch(/report/i);
+    await d.handleClearConfirm('Indiana-1', '10-4');
+    session = cm.getUnitSessionState('Indiana-1');
+    expect(session.state).toBe(cm.DISPATCHER_STATE.AWAITING_DISPOSE_CONFIRM);
+    expect(session.slots.callNumber).toBe('CALL-123');
+    expect(session.slots.disposition).toBeTruthy();
+    expect(d.spoken[d.spoken.length - 1]).toMatch(/confirm close call/i);
+  });
+
+  it('executeDisposeCall canonicalizes spoken disposition through cadService.matchDisposition', async () => {
+    cadService.getDispositions = vi.fn(async () => ([
+      { value: 'Report Taken', label: 'Report Taken' },
+      { value: 'Warning Issued', label: 'Warning Issued' },
+    ]));
+    cadService.matchDisposition = (spoken, list) => {
+      if (/report/i.test(spoken)) return { canonical: 'Report Taken', score: 0.9 };
+      return null;
+    };
+    const d = makeDispatcher();
+    await d.executeDisposeCall('Indiana-1', 'with a report', 'CALL-123', 'wrote a report');
+    expect(cadService.disposeCall).toHaveBeenCalledWith('CALL-123', 'Report Taken', 'wrote a report');
+  });
+
+  it('executeDisposeCall falls back to raw text when matchDisposition returns null', async () => {
+    cadService.getDispositions = vi.fn(async () => ([{ value: 'Other', label: 'Other' }]));
+    cadService.matchDisposition = () => null;
+    const d = makeDispatcher();
+    await d.executeDisposeCall('Indiana-1', 'unique phrase', 'CALL-123', 'unique phrase');
+    expect(cadService.disposeCall).toHaveBeenCalledWith('CALL-123', 'unique phrase', 'unique phrase');
+  });
+
+  it('_handleImplicitReassign clears speaker off old call (simple) before attaching to new call', async () => {
+    cadService.getUnitCurrentCallById.mockResolvedValueOnce({
+      call_id: 'CALL-OLD', call_number: 'CALL-OLD',
+      assigned_units: ['LINCOLN-3', 'INDIANA-1'], primary_unit: 'LINCOLN-3',
+    }).mockResolvedValueOnce({
+      call_id: 'CALL-OLD', call_number: 'CALL-OLD',
+      assigned_units: ['LINCOLN-3', 'INDIANA-1'], primary_unit: 'LINCOLN-3',
+    });
+    const d = makeDispatcher();
+    const targetCall = { call_id: 'CALL-NEW', call_number: 'CALL-NEW' };
+    const handled = await d._handleImplicitReassign('Indiana-1', 'route to new', targetCall, 'assign');
+    expect(handled).toBe(true);
+    expect(cadService.clearUnit).toHaveBeenCalledWith('Indiana-1');
+    expect(cadService.assignUnitToCall).toHaveBeenCalledWith('Indiana-1', 'CALL-NEW');
+  });
+
+  it('_handleImplicitReassign refuses with primary_with_others and never touches CAD writes', async () => {
+    cadService.getUnitCurrentCallById.mockResolvedValueOnce({
+      call_id: 'CALL-OLD', call_number: 'CALL-OLD',
+      assigned_units: ['INDIANA-1', 'LINCOLN-3'], primary_unit: 'INDIANA-1',
+    }).mockResolvedValueOnce({
+      call_id: 'CALL-OLD', call_number: 'CALL-OLD',
+      assigned_units: ['INDIANA-1', 'LINCOLN-3'], primary_unit: 'INDIANA-1',
+    });
+    const d = makeDispatcher();
+    const handled = await d._handleImplicitReassign('Indiana-1', 'route to new',
+      { call_id: 'CALL-NEW', call_number: 'CALL-NEW' }, 'assign');
+    expect(handled).toBe(true);
+    expect(cadService.clearUnit).not.toHaveBeenCalled();
+    expect(cadService.assignUnitToCall).not.toHaveBeenCalled();
+    expect(d.spoken[0]).toMatch(/primary on call CALL-OLD/);
+  });
+
+  it('_handleImplicitReassign returns false when speaker is not on a call (normal assign path)', async () => {
+    cadService.getUnitCurrentCallById.mockResolvedValueOnce({});
+    const d = makeDispatcher();
+    const handled = await d._handleImplicitReassign('Indiana-1', 'route',
+      { call_id: 'CALL-NEW', call_number: 'CALL-NEW' }, 'assign');
+    expect(handled).toBe(false);
+  });
+
+  it('_handleImplicitReassign returns false when speaker is already on the target call', async () => {
+    cadService.getUnitCurrentCallById.mockResolvedValueOnce({
+      call_id: 'CALL-NEW', call_number: 'CALL-NEW', assigned_units: ['INDIANA-1'],
+    });
+    const d = makeDispatcher();
+    const handled = await d._handleImplicitReassign('Indiana-1', 'on scene',
+      { call_id: 'CALL-NEW', call_number: 'CALL-NEW' }, 'on_scene');
+    expect(handled).toBe(false);
+  });
+
+  it('_extractInlineDisposition pulls the phrase out of the transcript', () => {
+    const d = makeDispatcher();
+    expect(d._extractInlineDisposition('10-98 with a report')).toMatch(/report/);
+    expect(d._extractInlineDisposition('available, warning issued')).toMatch(/warning/);
+    expect(d._extractInlineDisposition('clear with citation')).toMatch(/citation/);
+    expect(d._extractInlineDisposition('10-8')).toBe(null);
+    expect(d._extractInlineDisposition('en route')).toBe(null);
+  });
+
+  it('_formatUnitList formats one, two, and many units cleanly', () => {
+    const d = makeDispatcher();
+    expect(d._formatUnitList([])).toBe('');
+    expect(d._formatUnitList(['lincoln-3'])).toBe('LINCOLN-3');
+    expect(d._formatUnitList(['lincoln-3', 'beaver-2'])).toBe('LINCOLN-3 and BEAVER-2');
+    expect(d._formatUnitList(['a-1', 'b-2', 'c-3'])).toBe('A-1, B-2, and C-3');
+  });
+
+  it('inline-disp cascade preserves raw spoken phrase as CAD notes, not the canonical value', async () => {
+    cadService.getDispositions = vi.fn(async () => ([{ value: 'Report Taken', label: 'Report Taken' }]));
+    cadService.matchDisposition = (spoken) => /report/i.test(spoken)
+      ? { canonical: 'Report Taken', score: 0.9 } : null;
+    const d = makeDispatcher();
+    await d.handleClearUnit('Indiana-1', '10-98 with a report');
+    await d.handleClearConfirm('Indiana-1', '10-4');
+    const session = cm.getUnitSessionState('Indiana-1');
+    expect(session.state).toBe(cm.DISPATCHER_STATE.AWAITING_DISPOSE_CONFIRM);
+    expect(session.slots.dispositionCanonical).toBe('Report Taken');
+    expect(session.slots.dispositionNotes).toMatch(/report/i);
+    expect(session.slots.dispositionNotes).not.toBe('Report Taken');
+    await d.handleDisposeConfirm('Indiana-1', '10-4', session.slots);
+    const [callId, code, notes] = cadService.disposeCall.mock.calls[0];
+    expect(callId).toBe('CALL-123');
+    expect(code).toBe('Report Taken');
+    expect(notes).toMatch(/report/i);
+    expect(notes).not.toBe('Report Taken');
+  });
+
+  it('_handleImplicitReassign refuses when CAD rejects the clear (success:false), does not assign', async () => {
+    cadService.getUnitCurrentCallById.mockResolvedValueOnce({
+      call_id: 'CALL-OLD', call_number: 'CALL-OLD',
+      assigned_units: ['LINCOLN-3', 'INDIANA-1'], primary_unit: 'LINCOLN-3',
+    }).mockResolvedValueOnce({
+      call_id: 'CALL-OLD', call_number: 'CALL-OLD',
+      assigned_units: ['LINCOLN-3', 'INDIANA-1'], primary_unit: 'LINCOLN-3',
+    });
+    cadService.clearUnit.mockResolvedValueOnce({ success: false, error: 'CAD down' });
+    const d = makeDispatcher();
+    const handled = await d._handleImplicitReassign('Indiana-1', 'route to new',
+      { call_id: 'CALL-NEW', call_number: 'CALL-NEW' }, 'assign');
+    expect(handled).toBe(true);
+    expect(cadService.clearUnit).toHaveBeenCalled();
+    expect(cadService.assignUnitToCall).not.toHaveBeenCalled();
+    expect(d.spoken[0]).toMatch(/unable to clear you from call CALL-OLD/);
+    const session = cm.getUnitSessionState('Indiana-1');
+    expect(session.state).toBe(cm.DISPATCHER_STATE.IDLE);
+  });
+});
+

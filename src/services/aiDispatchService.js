@@ -1922,6 +1922,79 @@ export class AIDispatcher {
             const handled = await this.applyStatusByDescriptor(participantId, transcript, result.cadStatus, descriptorSlots);
             if (handled) break;
           }
+          // Task #482: "available" / 10-8 needs human-style triage. If the
+          // unit is primary on a call with others, refuse and tell them to
+          // reassign. If primary AND last unit, cascade into close-the-call
+          // (with optional inline disposition). Otherwise fall through to a
+          // simple status update.
+          if (result.cadStatus === 'available' && cadService.isConfigured()) {
+            const outcome = await this._classifyClearOutcome(participantId);
+            this.log('AVAILABLE_CASCADE_OUTCOME', { unitId: participantId, kind: outcome.kind, callId: outcome.call?.callId });
+            if (outcome.kind === 'primary_with_others') {
+              const refuseResp = `${participantId}, you are primary on call ${outcome.call.callDisplay}, ${this._formatUnitList(outcome.otherUnits)} still on the call. Clear them first or have one take primary.`;
+              await this.speak(refuseResp, participantId);
+              this.addConversationExchange(participantId, transcript, refuseResp);
+              setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+              break;
+            }
+            if (outcome.kind === 'primary_last') {
+              const inlineDisp = this._extractInlineDisposition(transcript);
+              if (inlineDisp) {
+                // Task #482: preserve the raw spoken phrase for CAD notes;
+                // canonical is for prompt + disposition code only.
+                let canonical = inlineDisp;
+                try {
+                  const list = await cadService.getDispositions();
+                  const m = cadService.matchDisposition(inlineDisp, list);
+                  if (m && m.canonical) canonical = m.canonical;
+                } catch (e) { /* fallback */ }
+                setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_DISPOSE_CONFIRM, null, {
+                  callNumber: outcome.call.callId,
+                  disposition: inlineDisp,
+                  dispositionCanonical: canonical,
+                  dispositionNotes: inlineDisp,
+                }, true);
+                const dispResp = `${participantId}, confirm close call ${outcome.call.callDisplay}, ${canonical}?`;
+                await this.speak(dispResp, participantId);
+                this.addConversationExchange(participantId, transcript, dispResp);
+                break;
+              }
+              const closeResp = `${participantId}, you are primary on call ${outcome.call.callDisplay}. Close the call?`;
+              await this.speak(closeResp, participantId);
+              this.addConversationExchange(participantId, transcript, closeResp);
+              setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_PRIMARY_CLOSE_CONFIRM, null, {
+                callNumber: outcome.call.callId,
+                callDisplay: outcome.call.callDisplay,
+              }, true);
+              break;
+            }
+            // 'simple' → fall through to normal status update path. If we
+            // were on a call (non-primary), clear off it BEFORE marking the
+            // unit available so CAD never has a unit available-but-attached.
+            // If CAD rejects the clear, refuse the status change.
+            if (outcome.call?.callId) {
+              let clearRes = null;
+              try {
+                clearRes = await this._awaitStatusQueue(participantId, () => cadService.clearUnit(participantId));
+              } catch (e) {
+                this.log('AVAILABLE_CLEAR_ERROR', { error: e.message });
+                const resp = `${participantId}, unable to clear you from call ${outcome.call.callDisplay}. ${e.message || 'Try your MDT.'}`;
+                await this.speak(resp, participantId);
+                this.addConversationExchange(participantId, transcript, resp);
+                setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+                break;
+              }
+              if (clearRes?.success === false) {
+                this.log('AVAILABLE_CLEAR_REJECTED', { unitId: participantId, callId: outcome.call.callId, error: clearRes.error, statusCode: clearRes.statusCode });
+                const resp = `${participantId}, unable to clear you from call ${outcome.call.callDisplay}. ${clearRes.error || 'Try your MDT.'}`;
+                await this.speak(resp, participantId);
+                this.addConversationExchange(participantId, transcript, resp);
+                setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+                break;
+              }
+              this._clearRecentAssignment(participantId);
+            }
+          }
           let statusUpdateFailed = false;
           let statusFailureType = null;
           let priorStatus = null;
@@ -3962,6 +4035,75 @@ export class AIDispatcher {
     setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
   }
 
+  // Task #482: when a unit asks to attach/route to a call but is already on a
+  // *different* one, behave like a human dispatcher: refuse if they're primary
+  // with others on the old call, prompt for close if primary-last, otherwise
+  // silently clear them off the old call before attaching to the new one.
+  // Returns true when fully handled (caller must NOT proceed), false when the
+  // caller should fall through to its normal assign/status path.
+  async _handleImplicitReassign(participantId, transcript, targetCall, verb) {
+    const targetCallId = String(targetCall?.call_id || targetCall?.id || targetCall?.call_number || '');
+    if (!targetCallId) return false;
+    let currentInfo = null;
+    try {
+      currentInfo = await cadService.getUnitCurrentCallById(participantId);
+    } catch (e) {
+      this.log('IMPLICIT_REASSIGN_LOOKUP_ERROR', { error: e.message });
+      return false;
+    }
+    const currentId = currentInfo?.call_id || currentInfo?.call_number || currentInfo?.callNumber || null;
+    if (!currentId) return false; // not on any call → normal assign path
+    if (String(currentId).toUpperCase() === targetCallId.toUpperCase()) {
+      return false; // already on the target call → normal status update path
+    }
+    // Speaker is on a different call. Classify before mutating.
+    const outcome = await this._classifyClearOutcome(participantId);
+    this.log('IMPLICIT_REASSIGN_CLASSIFY', { unitId: participantId, kind: outcome.kind, fromCall: currentId, toCall: targetCallId });
+    if (outcome.kind === 'primary_with_others') {
+      const refuseResp = `${participantId}, you are primary on call ${outcome.call.callDisplay}, ${this._formatUnitList(outcome.otherUnits)} still on the call. Clear them first or have one take primary.`;
+      await this.speak(refuseResp, participantId);
+      this.addConversationExchange(participantId, transcript, refuseResp);
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+      return true;
+    }
+    if (outcome.kind === 'primary_last') {
+      const closeResp = `${participantId}, you are primary on call ${outcome.call.callDisplay}. Close the call first?`;
+      await this.speak(closeResp, participantId);
+      this.addConversationExchange(participantId, transcript, closeResp);
+      setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_PRIMARY_CLOSE_CONFIRM, null, {
+        callNumber: outcome.call.callId,
+        callDisplay: outcome.call.callDisplay,
+      }, true);
+      return true;
+    }
+    // 'simple' — clear off the old call BEFORE proceeding. If CAD rejects the
+    // clear (success:false or thrown), refuse the reassign rather than risk a
+    // half-state where the unit is attached to two calls.
+    let clearResult = null;
+    try {
+      clearResult = await this._awaitStatusQueue(participantId, () => cadService.clearUnit(participantId));
+    } catch (e) {
+      this.log('IMPLICIT_REASSIGN_CLEAR_ERROR', { error: e.message });
+      const resp = `${participantId}, unable to clear you from call ${currentId}. ${e.message || 'Try your MDT.'}`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+      return true;
+    }
+    if (clearResult?.success === false) {
+      this.log('IMPLICIT_REASSIGN_CLEAR_REJECTED', { unitId: participantId, fromCall: currentId, error: clearResult.error, statusCode: clearResult.statusCode });
+      const resp = `${participantId}, unable to clear you from call ${currentId}. ${clearResult.error || 'Try your MDT.'}`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+      return true;
+    }
+    this._clearRecentAssignment(participantId);
+    this.log('IMPLICIT_REASSIGN_CLEARED', { unitId: participantId, fromCall: currentId });
+    await this._executeCallVerb(participantId, transcript, targetCall, verb);
+    return true;
+  }
+
   async handleAssignCall(participantId, transcript, slots) {
     this.log('ASSIGN_CALL', { participant: participantId, transcript, slots });
 
@@ -3980,6 +4122,11 @@ export class AIDispatcher {
       const { match, candidates } = this.resolveCallByDescriptor(activeCalls, slots);
 
       if (match) {
+        // Task #482: implicit re-assignment — if the speaker is currently on a
+        // different call, treat this as "clear from old, attach to new" but
+        // refuse cleanly when they're primary with others still on the old call.
+        const handled = await this._handleImplicitReassign(participantId, transcript, match, 'assign');
+        if (handled) return;
         await this._executeCallVerb(participantId, transcript, match, 'assign');
         return;
       }
@@ -4011,6 +4158,9 @@ export class AIDispatcher {
       const activeCalls = callsResult.calls || callsResult.results || [];
       const { match, candidates } = this.resolveCallByDescriptor(activeCalls, slots);
       if (match) {
+        // Task #482: implicit re-assign when on a different call.
+        const handled = await this._handleImplicitReassign(participantId, transcript, match, verb);
+        if (handled) return true;
         await this._executeCallVerb(participantId, transcript, match, verb);
         return true;
       }
@@ -5782,7 +5932,11 @@ export class AIDispatcher {
       return;
     }
 
-    setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_CLEAR_CONFIRM, null, {}, true);
+    // Task #482: if the unit said e.g. "10-98 with a report", remember the
+    // inline disposition so handleClearConfirm can skip "go ahead with disposition".
+    const inlineDisposition = this._extractInlineDisposition(transcript);
+    const slots = inlineDisposition ? { inlineDisposition } : {};
+    setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_CLEAR_CONFIRM, null, slots, true);
     const resp = `${participantId}, confirm clear from call?`;
     await this.speak(resp, participantId);
     this.addConversationExchange(participantId, transcript, resp);
@@ -5792,21 +5946,59 @@ export class AIDispatcher {
     this.log('CLEAR_CONFIRM', { participant: participantId, transcript });
 
     try {
-      let callInfo = null;
-      let wasLastUnit = false;
-      try {
-        callInfo = await cadService.getUnitCurrentCallById(participantId);
-        if (callInfo && callInfo.assigned_units) {
-          const unitList = Array.isArray(callInfo.assigned_units) ? callInfo.assigned_units : [];
-          wasLastUnit = unitList.length <= 1;
-          this.log('CLEAR_UNIT_CHECK_LAST', { unitId: participantId, assignedUnits: unitList, wasLastUnit });
-        }
-      } catch (e) {
-        this.log('CLEAR_UNIT_CHECK_LAST_ERROR', { error: e.message });
+      // Task #482: classify the clear up front so we can refuse / cascade
+      // before mutating CAD. Falls through to the simple-clear path below.
+      const outcome = await this._classifyClearOutcome(participantId);
+      this.log('CLEAR_OUTCOME', { unitId: participantId, kind: outcome.kind, callId: outcome.call?.callId, others: outcome.otherUnits });
+
+      const session = getUnitSessionState(participantId);
+      const pendingDisposition = session?.slots?.inlineDisposition || null;
+
+      if (outcome.kind === 'primary_with_others') {
+        const resp = `${participantId}, you are primary on call ${outcome.call.callDisplay}, ${this._formatUnitList(outcome.otherUnits)} still on the call. Clear them first or have one take primary.`;
+        await this.speak(resp, participantId);
+        this.addConversationExchange(participantId, transcript, resp);
+        setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+        return;
       }
 
-      const priorCallId = callInfo?.call_id || callInfo?.call_number || callInfo?.callNumber || null;
-      const priorCallDisplay = callInfo?.call_number || priorCallId;
+      if (outcome.kind === 'primary_last') {
+        // Inline disposition? Skip the "Close the call?" prompt and go straight to confirm.
+        if (pendingDisposition) {
+          // Task #482: preserve the raw spoken phrase for CAD notes; the
+          // canonical value is only used for the disposition CODE and the
+          // prompt-back. executeDisposeCall does the canonicalization.
+          let canonical = pendingDisposition;
+          try {
+            const list = await cadService.getDispositions();
+            const m = cadService.matchDisposition(pendingDisposition, list);
+            if (m && m.canonical) canonical = m.canonical;
+          } catch (e) { /* fallback to raw */ }
+          setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_DISPOSE_CONFIRM, null, {
+            callNumber: outcome.call.callId,
+            disposition: pendingDisposition,
+            dispositionCanonical: canonical,
+            dispositionNotes: pendingDisposition,
+          }, true);
+          const resp = `${participantId}, confirm close call ${outcome.call.callDisplay}, ${canonical}?`;
+          await this.speak(resp, participantId);
+          this.addConversationExchange(participantId, transcript, resp);
+          return;
+        }
+        const resp = `${participantId}, you are primary on call ${outcome.call.callDisplay}. Close the call?`;
+        await this.speak(resp, participantId);
+        this.addConversationExchange(participantId, transcript, resp);
+        setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_PRIMARY_CLOSE_CONFIRM, null, {
+          callNumber: outcome.call.callId,
+          callDisplay: outcome.call.callDisplay,
+        }, true);
+        return;
+      }
+
+      // 'simple' path → call CAD clearUnit (preserves R8 409 fallback as a safety net)
+      const callInfo = outcome.call?.raw || null;
+      const priorCallId = outcome.call?.callId || null;
+      const priorCallDisplay = outcome.call?.callDisplay || priorCallId;
       // R10: wait for any in-flight status updates for this unit first.
       const clearResult = await this._awaitStatusQueue(participantId,
         () => cadService.clearUnit(participantId));
@@ -5845,21 +6037,13 @@ export class AIDispatcher {
       }
 
       const timeStr = this.formatMilitaryTime();
-
-      if (wasLastUnit && callInfo) {
-        const callNumber = callInfo.call_id || callInfo.call_number || callInfo.callNumber;
-        const resp = `${participantId}, 10-4, clear. ${timeStr}. You were the last unit, go ahead with disposition.`;
-        await this.speak(resp, participantId);
-        this.addConversationExchange(participantId, transcript, resp);
-        setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_DISPOSITION, null, {
-          callNumber
-        }, true);
-      } else {
-        const resp = `${participantId}, 10-4, clear. ${timeStr}.`;
-        await this.speak(resp, participantId);
-        this.addConversationExchange(participantId, transcript, resp);
-        setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
-      }
+      // Task #482: simple-clear path — speaker was not primary (or had no call),
+      // so we don't pull them into a disposition flow. The primary_last branch
+      // above handles the "last unit, do a disposition" cascade.
+      const resp = `${participantId}, 10-4, clear. ${timeStr}.`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
     } catch (error) {
       this.log('CLEAR_UNIT_ERROR', { error: error.message });
       const resp = `${participantId}, unable to clear. System error.`;
@@ -5937,10 +6121,18 @@ export class AIDispatcher {
 
   async handleDisposeConfirm(participantId, transcript, slots) {
     this.log('DISPOSE_CONFIRM', { participant: participantId, transcript, slots });
-    await this.executeDisposeCall(participantId, transcript, slots?.callNumber, slots?.disposition);
+    // Task #482: when a raw spoken phrase was captured (inline disposition),
+    // prefer it for CAD notes so we don't lose what the unit actually said.
+    await this.executeDisposeCall(
+      participantId,
+      transcript,
+      slots?.callNumber,
+      slots?.disposition,
+      { rawNotes: slots?.dispositionNotes || null, preCanonical: slots?.dispositionCanonical || null }
+    );
   }
 
-  async executeDisposeCall(participantId, transcript, callNumber, disposition) {
+  async executeDisposeCall(participantId, transcript, callNumber, disposition, opts = {}) {
     this.log('EXECUTE_DISPOSE_CALL', { participantId, callNumber, disposition });
 
     if (!cadService.isConfigured()) {
@@ -5966,11 +6158,27 @@ export class AIDispatcher {
         return;
       }
 
-      // R9: disposition + dispositionNotes are both required. We use the same
-      // spoken text for both (per user preference — radio brevity > note depth).
+      // R9: disposition + dispositionNotes are both required.
+      // Task #482: prefer raw spoken phrase for notes (passed via opts.rawNotes
+      // from inline-disposition cascades) so we never lose what the unit said.
+      // Canonicalize the disposition CODE against CAD's dropdown list. If the
+      // caller pre-canonicalized (opts.preCanonical), reuse that and skip the
+      // CAD round-trip.
+      let canonicalDisp = opts?.preCanonical || disposition;
+      const dispositionNotes = opts?.rawNotes || disposition;
+      if (!opts?.preCanonical) {
+        try {
+          const list = await cadService.getDispositions();
+          const matched = cadService.matchDisposition(disposition, list);
+          if (matched && matched.canonical) {
+            canonicalDisp = matched.canonical;
+            this.log('DISPOSITION_MATCHED', { spoken: disposition, canonical: canonicalDisp, score: matched.score });
+          }
+        } catch (e) { /* fallback to raw */ }
+      }
       // R10: wait for any in-flight status updates for this unit first.
       const result = await this._awaitStatusQueue(participantId,
-        () => cadService.disposeCall(callId, disposition, disposition));
+        () => cadService.disposeCall(callId, canonicalDisp, dispositionNotes));
       if (result?.success === false) {
         const resp = `${participantId}, unable to close call. ${result.error || 'Try your MDT.'}`;
         await this.speak(resp, participantId);
@@ -5980,7 +6188,7 @@ export class AIDispatcher {
       }
       this.log('CALL_DISPOSED', { unitId: participantId, callId, disposition });
 
-      const resp = `${participantId}, 10-4. Call closed, ${disposition}.`;
+      const resp = `${participantId}, 10-4. Call closed, ${canonicalDisp}.`;
       await this.speak(resp, participantId);
       this.addConversationExchange(participantId, transcript, resp);
       setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
@@ -7099,6 +7307,70 @@ export class AIDispatcher {
     } catch (error) {
       this.log('CALL_NOTE_ERROR', { error: error.message });
     }
+  }
+
+  // Task #482: shared classifier for "unit is going clear/available". Looks at
+  // the unit's current call (if any), determines whether they are primary,
+  // and whether they are the last unit on it. Three outcomes:
+  //   - 'simple'              : not on a call, or on a call but not primary → just clear them
+  //   - 'primary_last'        : primary AND last unit → close the call after clearing
+  //   - 'primary_with_others' : primary but other units still on it → refuse, ask them to reassign primary first
+  async _classifyClearOutcome(unitId) {
+    let callInfo = null;
+    try {
+      callInfo = await cadService.getUnitCurrentCallById(unitId);
+    } catch (e) {
+      this.log('CLEAR_OUTCOME_LOOKUP_ERROR', { error: e.message });
+      return { kind: 'simple', call: null, otherUnits: [] };
+    }
+    const callId = callInfo?.call_id || callInfo?.call_number || callInfo?.callNumber || null;
+    if (!callId) return { kind: 'simple', call: null, otherUnits: [] };
+    const callDisplay = callInfo.call_number || callInfo.callNumber || callId;
+    const assignedUnits = Array.isArray(callInfo.assigned_units) ? callInfo.assigned_units.map(String) : [];
+    const upperUnit = String(unitId).toUpperCase();
+    const others = assignedUnits.filter(u => String(u).toUpperCase() !== upperUnit);
+    const explicitPrimary = callInfo.primary_unit || callInfo.primaryUnit || null;
+    let isPrimary;
+    if (explicitPrimary) {
+      isPrimary = String(explicitPrimary).toUpperCase() === upperUnit;
+    } else {
+      // No explicit primary → assume the first assigned unit is primary
+      // (CAD convention). Single-unit cases are always primary.
+      isPrimary = assignedUnits.length > 0 && String(assignedUnits[0]).toUpperCase() === upperUnit;
+    }
+    const callObj = { callId, callDisplay, assignedUnits, raw: callInfo };
+    if (!isPrimary) return { kind: 'simple', call: callObj, otherUnits: others };
+    if (others.length === 0) return { kind: 'primary_last', call: callObj, otherUnits: [] };
+    return { kind: 'primary_with_others', call: callObj, otherUnits: others };
+  }
+
+  _formatUnitList(units) {
+    const arr = (units || []).map(u => String(u).toUpperCase());
+    if (arr.length === 0) return '';
+    if (arr.length === 1) return arr[0];
+    if (arr.length === 2) return `${arr[0]} and ${arr[1]}`;
+    return arr.slice(0, -1).join(', ') + ', and ' + arr[arr.length - 1];
+  }
+
+  // Task #482: pull a disposition phrase out of a free-form transcript when
+  // the unit says e.g. "10-8 with a report" or "available, warning issued".
+  // Returns the raw phrase the unit spoke, or null if nothing recognized.
+  _extractInlineDisposition(transcript) {
+    const t = String(transcript || '').toLowerCase();
+    if (!t) return null;
+    // Look for "with X", "with a X", or trailing ", X" after a clear/available cue
+    const patterns = [
+      /\b(?:10-?8|10-?98|clear|available|in service)\b[^a-z0-9]*(?:with|by|on)\s+(?:a\s+|an\s+|the\s+)?([a-z][a-z\s\-]{2,40}?)(?:\.|,|;|$)/i,
+      /\b(?:10-?8|10-?98|clear|available|in service)\s*[,-]\s*([a-z][a-z\s\-]{2,40}?)(?:\.|,|;|$)/i,
+    ];
+    for (const p of patterns) {
+      const m = t.match(p);
+      if (m && m[1]) {
+        const phrase = m[1].trim().replace(/\s+/g, ' ');
+        if (phrase.length >= 3) return phrase;
+      }
+    }
+    return null;
   }
 
   _recentAssignmentKey(unitId) {

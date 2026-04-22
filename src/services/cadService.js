@@ -553,6 +553,176 @@ export async function findBestNature(spokenNature) {
   return spoken;
 }
 
+// Task #482: CAD canonical dispositions list. Cached for 5 minutes,
+// stale-on-error fallback so the AI keeps working when CAD blips.
+let cachedDispositions = [];
+let dispositionsLastFetched = 0;
+const DISPOSITIONS_CACHE_TTL_MS = 5 * 60 * 1000;
+
+function _normalizeDispositionsResponse(result) {
+  if (!result) return null;
+  let arr = null;
+  if (Array.isArray(result)) arr = result;
+  else if (Array.isArray(result.options)) arr = result.options;
+  else if (Array.isArray(result.dispositions)) arr = result.dispositions;
+  else if (Array.isArray(result.results)) arr = result.results;
+  else if (Array.isArray(result.data)) arr = result.data;
+  if (!arr) return null;
+  const out = [];
+  for (const o of arr) {
+    if (typeof o === 'string') {
+      const v = o.trim();
+      if (v) out.push({ value: v, label: v });
+    } else if (o && typeof o === 'object') {
+      const value = o.value || o.key || o.code || o.name || o.label;
+      const label = o.label || o.name || o.value || o.key;
+      if (value) out.push({ value: String(value).trim(), label: String(label || value).trim() });
+    }
+  }
+  return out.length ? out : null;
+}
+
+export async function getDispositions(forceRefresh = false) {
+  const now = Date.now();
+  if (!forceRefresh && cachedDispositions.length > 0 && (now - dispositionsLastFetched) < DISPOSITIONS_CACHE_TTL_MS) {
+    return cachedDispositions;
+  }
+  try {
+    const result = await cadRequest('/api/dropdown-options?category=dispositions', 'GET');
+    if (result && result.success !== false) {
+      const norm = _normalizeDispositionsResponse(result);
+      if (norm && norm.length) {
+        cachedDispositions = norm;
+        dispositionsLastFetched = now;
+        console.log(`[CAD] Loaded ${cachedDispositions.length} dispositions from CAD`);
+        return cachedDispositions;
+      }
+    }
+  } catch (e) {
+    console.error('[CAD] Failed to fetch dispositions:', e.message);
+  }
+  if (cachedDispositions.length > 0) {
+    console.log('[CAD] Using previously cached dispositions (stale)');
+    return cachedDispositions;
+  }
+  return [];
+}
+
+const DISPOSITION_SYNONYMS = {
+  'report': 'report taken',
+  'reports': 'report taken',
+  'report taken': 'report taken',
+  'reports taken': 'report taken',
+  'report filed': 'report taken',
+  'wrote a report': 'report taken',
+  'with a report': 'report taken',
+  'warning': 'warning issued',
+  'warnings': 'warning issued',
+  'warning issued': 'warning issued',
+  'verbal warning': 'warning issued',
+  'gave a warning': 'warning issued',
+  'citation': 'citation issued',
+  'citations': 'citation issued',
+  'citation issued': 'citation issued',
+  'cite': 'citation issued',
+  'cited': 'citation issued',
+  'ticket': 'citation issued',
+  'arrest': 'arrest made',
+  'arrest made': 'arrest made',
+  'arrested': 'arrest made',
+  'in custody': 'arrest made',
+  'unfounded': 'unfounded',
+  'goa': 'gone on arrival',
+  'gone on arrival': 'gone on arrival',
+  'utl': 'unable to locate',
+  'unable to locate': 'unable to locate',
+  'no contact': 'negative contact',
+  'negative contact': 'negative contact',
+  '10-91': 'negative contact',
+  '1091': 'negative contact',
+  'cancel': 'cancelled',
+  'cancelled': 'cancelled',
+  'canceled': 'cancelled',
+  'no report': 'no report',
+};
+
+function _normDispText(s) {
+  return String(s || '')
+    .toLowerCase()
+    .replace(/[^\w\s-]/g, ' ')
+    .replace(/[-_]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+export function matchDisposition(spoken, list) {
+  if (!spoken || !Array.isArray(list) || list.length === 0) return null;
+  const normSpoken = _normDispText(spoken);
+  if (!normSpoken) return null;
+
+  const canonicalNorm = list.map(d => ({
+    item: d,
+    normValue: _normDispText(d.value),
+    normLabel: _normDispText(d.label),
+  }));
+
+  // 1. Exact match
+  for (const c of canonicalNorm) {
+    if (normSpoken === c.normValue || normSpoken === c.normLabel) {
+      return { canonical: c.item.value, score: 1.0 };
+    }
+  }
+
+  // 2. Synonym expansion (single-pass keyword lookup)
+  let expanded = DISPOSITION_SYNONYMS[normSpoken] || null;
+  if (!expanded) {
+    for (const key of Object.keys(DISPOSITION_SYNONYMS)) {
+      if (normSpoken.includes(key)) {
+        expanded = DISPOSITION_SYNONYMS[key];
+        break;
+      }
+    }
+  }
+  if (expanded) {
+    for (const c of canonicalNorm) {
+      if (expanded === c.normValue || expanded === c.normLabel) {
+        return { canonical: c.item.value, score: 0.95 };
+      }
+    }
+  }
+
+  const candidate = expanded || normSpoken;
+
+  // 3. Substring (either direction)
+  let bestSub = null;
+  for (const c of canonicalNorm) {
+    if (!c.normLabel && !c.normValue) continue;
+    const labelHit = c.normLabel && (c.normLabel.includes(candidate) || candidate.includes(c.normLabel));
+    const valueHit = c.normValue && (c.normValue.includes(candidate) || candidate.includes(c.normValue));
+    if (labelHit || valueHit) {
+      const score = 0.8;
+      if (!bestSub || score > bestSub.score) bestSub = { canonical: c.item.value, score };
+    }
+  }
+  if (bestSub) return bestSub;
+
+  // 4. Token overlap
+  const spokenTokens = new Set(candidate.split(/\s+/).filter(t => t.length > 1));
+  if (spokenTokens.size === 0) return null;
+  let bestTok = null;
+  for (const c of canonicalNorm) {
+    const labelTokens = new Set((c.normLabel || '').split(/\s+/).filter(t => t.length > 1));
+    if (!labelTokens.size) continue;
+    let overlap = 0;
+    for (const t of spokenTokens) if (labelTokens.has(t)) overlap++;
+    const score = overlap / Math.max(spokenTokens.size, labelTokens.size);
+    if (score >= 0.5 && (!bestTok || score > bestTok.score)) {
+      bestTok = { canonical: c.item.value, score };
+    }
+  }
+  return bestTok;
+}
+
 export async function getAnimalTypes() {
   const result = await cadRequest('/api/radio/animal/types', 'GET');
   if (result.success === false) {
