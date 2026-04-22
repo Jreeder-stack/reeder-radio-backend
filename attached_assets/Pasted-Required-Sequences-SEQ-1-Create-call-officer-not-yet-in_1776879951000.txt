@@ -1,0 +1,61 @@
+Required Sequences
+SEQ-1: Create call (officer not yet involved)
+POST /api/calls → store returned id, callNumber.
+SEQ-2: Create call with self already on scene
+POST /api/calls → store id.
+POST /api/calls/:id/assign-unit body {"unit":"<unitNumber>"}.
+POST /api/units/:unitId/status-progression body {"status":"on_scene"}.
+SEQ-3: Assign unit to existing call
+POST /api/calls/:callId/assign-unit body {"unit":"<unitNumber>"}.
+SEQ-4: Unit enroute
+POST /api/units/:unitId/status-progression body {"status":"en_route"}.
+SEQ-5: Unit arrived
+POST /api/units/:unitId/status-progression body {"status":"on_scene"}.
+SEQ-6: Unit begins transport (secondary enroute)
+POST /api/units/:unitId/status-progression body {"status":"en_route_secondary"}.
+SEQ-7: Unit arrives at transport destination
+POST /api/units/:unitId/status-progression body {"status":"arrived_secondary"}.
+SEQ-8: Clear one unit, leave call open
+POST /api/units/:unitId/status-progression body {"status":"available"}.
+SEQ-9: Close call (single command, cascades to all units)
+PUT /api/calls/:callId body {"status":"closed","disposition":"<value>","dispositionNotes":"<value>"}.
+SEQ-10: Cancel call
+PUT /api/calls/:callId body {"status":"cancelled","disposition":"<value>","dispositionNotes":"<value>"}.
+SEQ-11: Reopen closed call
+POST /api/unit-command body {"command":"REOPEN/<callNumber>"}.
+Ordering Rules
+R1. Call must exist before any unit can be assigned to it. SEQ-1 or SEQ-2 step 1 always precedes SEQ-3.
+R2. Unit must be assigned to the call before status en_route, on_scene, en_route_secondary, or arrived_secondary is set. SEQ-3 always precedes SEQ-4 / SEQ-5 / SEQ-6 / SEQ-7.
+R3. Status on_scene may follow status assign or en_route. The en_route step is optional.
+R4. Status en_route_secondary is valid only when unit's current status is on_scene or arrived_secondary.
+R5. Status arrived_secondary is valid only when unit's current status is en_route_secondary.
+R6. To finish a call, SEQ-9 is mandatory. SEQ-8 alone does not close the call.
+R7. SEQ-9 must not be preceded by SEQ-8 for units on that call. Closing the call cascades unit clears automatically.
+R8. If SEQ-8 returns HTTP 409, the unit is the Primary Unit and other units remain assigned. Resolution: run SEQ-8 for every other assigned unit first, then retry SEQ-8 for the primary; or run SEQ-9.
+R9. disposition and dispositionNotes are required string fields in SEQ-9 and SEQ-10. If unknown, do not send SEQ-9/SEQ-10.
+R10. Multiple status-progression calls for the same unit must be issued sequentially, not in parallel.
+Enum Values (use exactly these strings)
+status for /api/units/:id/status-progression:
+on_duty, available, assign, en_route, on_scene, en_route_secondary, arrived_secondary, busy, off_duty, out_of_service, out_of_vehicle, court, training, detail.
+
+status for PUT /api/calls/:id:
+pending, assigned, active, en_route, on_scene, cleared, cancelled, closed.
+
+priority for POST /api/calls:
+high, medium, low.
+
+Required Inputs Per Endpoint
+POST /api/calls — required: nature, location, city. Optional: priority, description, callerName, callbackNumber, latitude, longitude, apt, state, county, municipality, zone, zip.
+
+POST /api/calls/:callId/assign-unit — required: unit (unitNumber string or unitId UUID).
+
+POST /api/units/:id/status-progression — required: status.
+
+PUT /api/calls/:id — for closure: required status, disposition, dispositionNotes.
+
+Headers (all requests): Authorization: Bearer <token>, Content-Type: application/json.
+
+Error Handling
+HTTP 409 on status-progression to available → apply R8.
+HTTP 4xx on status-progression → unit is already in target status or transition is invalid per R4/R5. Do not retry.
+HTTP 4xx on PUT /api/calls/:id → call already in target status. Do not retry.

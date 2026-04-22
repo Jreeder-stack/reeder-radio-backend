@@ -1,0 +1,47 @@
+Q1 — URL surface (radio vs spec):
+Keep /api/radio/* as the wrapper. Don't migrate. The radio endpoints already do the right things in one shot (e.g. create-call-and-assign in one request, dispose with notes). Migrating to the lower-level spec endpoints would be a much bigger rewrite for no functional gain. What the AI dispatcher needs is to follow the flow rules (R1–R10) regardless of which URL surface is used.
+
+That said, there are two real gaps in the wrapper that need to be fixed or worked around:
+
+/api/radio/dispose only closes — it has no cancel path. For SEQ-10 (cancel) the AI must call PUT /api/calls/:callId with {"status":"cancelled","disposition":"…","dispositionNotes":"…"} directly.
+No /api/radio/reopen. Use POST /api/unit-command with {"command":"REOPEN/<callNumber>"}.
+What /api/radio/* enforces internally (so the AI doesn't have to):
+
+Primary Unit Guard (R8 / 409)
+Auto-stamps arrived_at and ondt_at on assignments
+Closing via /api/radio/dispose cascades unit clears
+What the AI is still responsible for:
+
+R1, R2 ordering (create → assign → status). The radio wrapper only saves you on /api/radio/call because it bundles create+assign. For pre-existing calls, you must still assign before status.
+R4, R5 (en_route_secondary / arrived_secondary valid prior states) — radio status endpoint does not block invalid transitions.
+R9 (disposition + notes presence) — Zod on the backend treats notes as optional, so the AI must enforce "don't send a close if notes is unknown."
+R10 (sequential per-unit calls)
+Q2 — Symptoms: I can't pick for you, but most likely (a), (b), (c), (e), (f) based on what was described to me earlier. Confirm with Replit which apply.
+
+Q3 — Disposition + notes capture: Choose A. One spoken field, used for both disposition and dispositionNotes. Reasons:
+
+Radio brevity matters more than note granularity for voice ops.
+The backend already uppercases both. No information is lost.
+Two-prompt (B) doubles the round-trips and creates a failure mode where the user forgets to answer prompt 2.
+C is fine in theory but separator-parsing in voice is error-prone.
+D constrains the dispatcher and will produce wrong notes when context doesn't match.
+If they push back, fall back to C as second choice.
+
+Q4 — Primary-unit 409: Choose A. Speak back, confirm, then run the close (SEQ-9). Reasons:
+
+B silently turns a "clear me" into a "close the call," which is dangerous — the other units on the call get cascaded off without their knowledge.
+C leaves an open call with no units assigned, which is exactly the orphaned-call state we're trying to prevent.
+A keeps the human in the loop on a destructive action and matches how real CAD systems behave.
+Q5 — Reopen voice command:
+
+Phrase: "reopen call <callNumber>" (e.g., "reopen call 1-26-000170"). Strict, unambiguous, parses cleanly.
+Do not auto-reassign the speaking unit. Reopen and re-assign are two distinct intents. After reopen succeeds, if the unit wants back on it they say "assign me to <callNumber>" — which is just SEQ-3.
+Q6 — Cancel voice command + flow:
+
+Phrase: "cancel call <callNumber>" with optional reason: "cancel call 1-26-000170, created in error."
+Flow:
+AI confirms back: "Cancel call <callNumber>, reason <reason>?"
+On confirmation, send PUT /api/calls/:callId with {"status":"cancelled","disposition":"<reason or 'CANCELLED'>","dispositionNotes":"<reason or 'CANCELLED'>"}.
+If no reason was spoken, AI must prompt for one before sending (same R9 rule as close — never send without disposition + notes).
+Q7 — Status-check timer: Keep it as a separate task. Agreed with Replit's instinct. Different concern, different surface area, different test path. Folding it in muddies the diff and risks regressing the timer fix that just merged.
+
