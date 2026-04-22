@@ -13,7 +13,7 @@
 import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync, statSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = resolve(__dirname, "..");        // ios-native/
@@ -862,7 +862,14 @@ function lint(text) {
   }
 }
 
-const out = build();
-lint(out);
-writeFileSync(PBXPROJ_PATH, out);
-console.log(`Wrote ${PBXPROJ_PATH} (${out.length} bytes)`);
+export { GROUPS, PACKAGES, SOURCE_ROOT, PROJECT_ROOT, PBXPROJ_PATH, build, lint };
+
+// Only emit the file when invoked as a script, so that other tools (e.g. the
+// CI check) can import GROUPS / build() without overwriting the committed
+// project file as a side effect.
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const out = build();
+  lint(out);
+  writeFileSync(PBXPROJ_PATH, out);
+  console.log(`Wrote ${PBXPROJ_PATH} (${out.length} bytes)`);
+}

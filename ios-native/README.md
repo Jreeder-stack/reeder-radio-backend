@@ -231,6 +231,31 @@ not by object ID, so they are left untouched by the regenerator. Do not
 edit `project.pbxproj` by hand — any manual change will be overwritten on
 the next regeneration.
 
+### CI guard
+
+A GitHub Actions job (`.github/workflows/ios-pbxproj-check.yml`) runs
+`node ios-native/scripts/check-pbxproj.mjs` on every push and pull
+request. The check fails the build if either:
+
+- the committed `project.pbxproj` differs from what the generator would
+  produce now (i.e. it was hand-edited, or someone forgot to re-run the
+  generator after editing `GROUPS` / `PACKAGES`), or
+- a `.swift` file exists under `ios-native/CommandComms/` that is not
+  declared in any `GROUPS` entry in `generate-pbxproj.mjs`.
+
+If CI fails on this check:
+
+1. Add any new `.swift` files to the appropriate `GROUPS` entry in
+   `ios-native/scripts/generate-pbxproj.mjs`.
+2. Run `node ios-native/scripts/generate-pbxproj.mjs`.
+3. Commit the regenerated `project.pbxproj`.
+
+You can run the same check locally before pushing:
+
+```bash
+node ios-native/scripts/check-pbxproj.mjs
+```
+
 ## Out of scope for this task
 UDP audio transport, Opus encode/decode, jitter buffer, AGC/noise
 suppression, hardware/MFi PTT, scan monitor, paging tone overlay,

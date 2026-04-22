@@ -1,0 +1,24 @@
+name: iOS pbxproj check
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  check-pbxproj:
+    name: Verify ios-native/CommandComms.xcodeproj/project.pbxproj is up to date
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Verify pbxproj matches generator and inventory
+        run: node ios-native/scripts/check-pbxproj.mjs
