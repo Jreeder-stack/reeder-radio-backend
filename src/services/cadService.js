@@ -269,11 +269,55 @@ export async function clearUnit(unitId) {
   });
 }
 
-export async function disposeCall(callId, disposition) {
-  console.log(`[CAD] Disposing call ${callId}: ${disposition}`);
+export async function disposeCall(callId, disposition, dispositionNotes = null) {
+  if (!callId) {
+    return { success: false, error: 'No call ID', failureType: 'INVALID_INPUT' };
+  }
+  if (!disposition || !String(disposition).trim()) {
+    return { success: false, error: 'Disposition required (R9)', failureType: 'INVALID_INPUT' };
+  }
+  const notes = (dispositionNotes && String(dispositionNotes).trim())
+    ? String(dispositionNotes).trim()
+    : String(disposition).trim();
+  console.log(`[CAD] Disposing call ${callId}: ${disposition} | notes=${notes}`);
   return cadRequest('/api/radio/dispose', 'POST', {
     call_id: callId,
-    disposition
+    disposition,
+    dispositionNotes: notes,
+    disposition_notes: notes
+  });
+}
+
+// SEQ-10: Cancel call. Bypass /api/radio/* (which only closes) and PUT
+// /api/calls/:callId directly so CAD records status=cancelled with both
+// disposition and dispositionNotes (R9).
+export async function cancelCallDirect(callId, disposition, dispositionNotes = null) {
+  if (!callId) {
+    return { success: false, error: 'No call ID', failureType: 'INVALID_INPUT' };
+  }
+  if (!disposition || !String(disposition).trim()) {
+    return { success: false, error: 'Disposition required (R9)', failureType: 'INVALID_INPUT' };
+  }
+  const notes = (dispositionNotes && String(dispositionNotes).trim())
+    ? String(dispositionNotes).trim()
+    : String(disposition).trim();
+  console.log(`[CAD] Cancelling call ${callId}: ${disposition} | notes=${notes}`);
+  return cadRequest(`/api/calls/${encodeURIComponent(callId)}`, 'PUT', {
+    status: 'cancelled',
+    disposition,
+    dispositionNotes: notes
+  });
+}
+
+// SEQ-11: Reopen a closed call. CAD has no /api/radio/reopen, so use the
+// generic unit-command channel with REOPEN/<callNumber>.
+export async function reopenCall(callNumber) {
+  if (!callNumber) {
+    return { success: false, error: 'No call number', failureType: 'INVALID_INPUT' };
+  }
+  console.log(`[CAD] Reopening call ${callNumber}`);
+  return cadRequest('/api/unit-command', 'POST', {
+    command: `REOPEN/${callNumber}`
   });
 }
 
@@ -293,14 +337,10 @@ export async function deleteCallNote(noteId) {
 }
 
 export async function cancelCall(callId, reason = 'Created in error') {
-  if (!callId) {
-    return { success: false, error: 'No call ID', failureType: 'INVALID_INPUT' };
-  }
-  console.log(`[CAD] Cancelling call ${callId}: ${reason}`);
-  return cadRequest('/api/radio/dispose', 'POST', {
-    call_id: callId,
-    disposition: reason
-  });
+  // Legacy entrypoint preserved for the CREATE_CALL inverse-action path.
+  // Routes through cancelCallDirect so the call lands in status=cancelled
+  // (not closed) with both R9-required fields populated.
+  return cancelCallDirect(callId, reason, reason);
 }
 
 export async function queryPerson(firstName, lastName, dob = null) {

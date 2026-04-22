@@ -491,6 +491,10 @@ export class AIDispatcher {
     this.openBackupRequests = new Map();
     this._recentAssignments = new Map();
     this.RECENT_ASSIGNMENT_TTL_MS = 120000;
+    // R10: per-unit serial queue so concurrent status-progression CAD calls
+    // (assign → enroute → on-scene → clear, etc.) cannot overlap and corrupt
+    // CAD state. Keyed by unitId, value is the tail Promise of that unit's chain.
+    this._statusUpdateQueues = new Map();
     this._identifyTimeouts = new Map();
     this._boloPollingInterval = null;
     this._seenBoloIds = new Set();
@@ -1934,7 +1938,7 @@ export class AIDispatcher {
                   priorStatus = info?.status || info?.unit_status || info?.current_status || null;
                   priorZone = info?.zone || null;
                 } catch (e) { /* best effort */ }
-                const cadResult = await cadService.updateUnitStatus(participantId, result.cadStatus);
+                const cadResult = await this._updateUnitStatusSerial(participantId, result.cadStatus);
                 if (!cadResult || !cadResult.success) {
                   statusUpdateFailed = true;
                   statusFailureType = cadResult?.failureType || 'API_REJECTION';
@@ -1999,7 +2003,7 @@ export class AIDispatcher {
                   const info = await cadService.getUnitInfo(targetUnit);
                   otherPriorStatus = info?.status || info?.unit_status || info?.current_status || null;
                 } catch (e) { /* best effort */ }
-                const cadResult = await cadService.updateUnitStatus(targetUnit, result.cadStatus);
+                const cadResult = await this._updateUnitStatusSerial(targetUnit, result.cadStatus);
                 if (!cadResult || !cadResult.success) {
                   otherStatusFailed = true;
                   otherStatusFailureType = cadResult?.failureType || 'API_REJECTION';
@@ -2100,6 +2104,10 @@ export class AIDispatcher {
             await this.handleClearConfirm(participantId, transcript);
           } else if (state === DISPATCHER_STATE.AWAITING_DISPOSE_CONFIRM) {
             await this.handleDisposeConfirm(participantId, transcript, slots);
+          } else if (state === DISPATCHER_STATE.AWAITING_PRIMARY_CLOSE_CONFIRM) {
+            await this.handlePrimaryCloseConfirm(participantId, transcript, slots);
+          } else if (state === DISPATCHER_STATE.AWAITING_CANCEL_CONFIRM) {
+            await this.handleCancelConfirm(participantId, transcript, slots);
           } else if (state === DISPATCHER_STATE.AWAITING_CALL_UPDATE_CONFIRM) {
             await this.handleCallUpdateConfirm(participantId, transcript, slots);
           } else if (state === DISPATCHER_STATE.AWAITING_STATUS_CHECK_RESPONSE) {
@@ -2133,6 +2141,16 @@ export class AIDispatcher {
             const disposeDenyResp = `${participantId}, 10-4, disregard.`;
             await this.speak(disposeDenyResp, participantId);
             this.addConversationExchange(participantId, transcript, disposeDenyResp);
+          } else if (state === DISPATCHER_STATE.AWAITING_PRIMARY_CLOSE_CONFIRM) {
+            setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+            const primDenyResp = `${participantId}, 10-4, leaving the call open.`;
+            await this.speak(primDenyResp, participantId);
+            this.addConversationExchange(participantId, transcript, primDenyResp);
+          } else if (state === DISPATCHER_STATE.AWAITING_CANCEL_CONFIRM) {
+            setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+            const cancelDenyResp = `${participantId}, 10-4, disregard cancel.`;
+            await this.speak(cancelDenyResp, participantId);
+            this.addConversationExchange(participantId, transcript, cancelDenyResp);
           } else if (state === DISPATCHER_STATE.AWAITING_CALL_UPDATE_CONFIRM) {
             setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
             const denyResp = `${participantId}, 10-4, disregard call update.`;
@@ -2211,7 +2229,7 @@ export class AIDispatcher {
         case 'TRAFFIC_STOP': {
           if (result.cadStatus && cadService.isConfigured()) {
             try {
-              await cadService.updateUnitStatus(participantId, result.cadStatus);
+              await this._updateUnitStatusSerial(participantId, result.cadStatus);
               this.log('CAD_STATUS_UPDATE', { unitId: participantId, status: result.cadStatus });
             } catch (cadError) {
               this.log('CAD_ERROR', { error: cadError.message });
@@ -2433,6 +2451,20 @@ export class AIDispatcher {
           break;
         }
 
+        case 'CANCEL_CALL': {
+          if (state === DISPATCHER_STATE.AWAITING_CANCEL_REASON) {
+            await this.handleCancelReasonInput(participantId, transcript, slots, result.slots);
+          } else {
+            await this.handleCancelCall(participantId, transcript, result.slots);
+          }
+          break;
+        }
+
+        case 'REOPEN_CALL': {
+          await this.handleReopenCall(participantId, transcript, result.slots);
+          break;
+        }
+
         case 'WARRANT_CHECK': {
           await this.handleWarrantCheck(participantId, transcript, result.slots);
           break;
@@ -2521,6 +2553,25 @@ export class AIDispatcher {
   }
 
   async processTranscriptWithRegex(transcript, participantId) {
+    // SEQ-10/11 regex fallback: cancel/reopen call by number. Run before
+    // matchCommand so these short commands fire even when the LLM is down.
+    const lower = String(transcript || '').toLowerCase();
+    const reopenMatch = lower.match(/\breopen(?:\s+the)?\s+call\s+([a-z0-9][a-z0-9\-]*)/i);
+    if (reopenMatch) {
+      const callNumber = reopenMatch[1].toUpperCase();
+      this._turnContextByUnit.set(participantId, { transcript, intent: 'REOPEN_CALL' });
+      await this.handleReopenCall(participantId, transcript, { callNumber });
+      return;
+    }
+    const cancelMatch = lower.match(/\b(?:cancel|void)(?:\s+the)?\s+call(?:\s+([a-z0-9][a-z0-9\-]*))?(?:[,\s]+(.+))?$/i);
+    if (cancelMatch) {
+      const callNumber = cancelMatch[1] ? cancelMatch[1].toUpperCase() : null;
+      const reason = (cancelMatch[2] || '').trim() || null;
+      this._turnContextByUnit.set(participantId, { transcript, intent: 'CANCEL_CALL' });
+      await this.handleCancelCall(participantId, transcript, { callNumber, reason });
+      return;
+    }
+
     const commandResult = matchCommand(transcript, participantId);
     if (!commandResult) {
       this.log('COMMAND_NO_MATCH', { transcript });
@@ -2624,7 +2675,7 @@ export class AIDispatcher {
     if (finalCadStatus && commandResult.unitId) {
       const cadTargetUnit = commandResult.targetUnit || commandResult.unitId;
       try {
-        const cadResult = await cadService.updateUnitStatus(cadTargetUnit, finalCadStatus);
+        const cadResult = await this._updateUnitStatusSerial(cadTargetUnit, finalCadStatus);
         this.log('CAD_STATUS_UPDATE', {
           unitId: cadTargetUnit,
           requestedBy: commandResult.unitId,
@@ -3086,7 +3137,7 @@ export class AIDispatcher {
           priorDetailStatus = info?.status || info?.unit_status || info?.current_status || null;
           priorDetailZone = info?.zone || null;
         } catch (e) { /* best effort */ }
-        const statusResult = await cadService.updateUnitStatus(participantId, 'detail');
+        const statusResult = await this._updateUnitStatusSerial(participantId, 'detail');
         if (!statusResult || !statusResult.success) {
           detailUpdateFailed = true;
           detailFailureType = statusResult?.failureType || 'API_REJECTION';
@@ -3405,7 +3456,7 @@ export class AIDispatcher {
       if (additionalUnits && additionalUnits.length > 0 && units.length <= 1) {
         for (const unitId of additionalUnits) {
           try {
-            await cadService.assignUnitToCall(unitId, callId);
+            await this._assignUnitToCallSerial(unitId, callId);
             this.log('CAD_ADDITIONAL_UNIT_ASSIGNED', { unitId, callId });
             this._recordRecentAssignment(unitId, createdCallSnapshot);
           } catch (assignError) {
@@ -3415,7 +3466,7 @@ export class AIDispatcher {
       }
 
       try {
-        await cadService.updateUnitStatus(participantId, unitStatus);
+        await this._updateUnitStatusSerial(participantId, unitStatus);
         this.log('CAD_STATUS_UPDATED', { unitId: participantId, status: unitStatus });
       } catch (statusError) {
         this.log('CAD_STATUS_UPDATE_ERROR', { unitId: participantId, error: statusError.message });
@@ -3865,7 +3916,7 @@ export class AIDispatcher {
     const callId = targetCall.call_id || targetCall.id || targetCall.call_number;
     const callDisplay = targetCall.call_number || callId;
 
-    const assignResult = await cadService.assignUnitToCall(participantId, callId);
+    const assignResult = await this._assignUnitToCallSerial(participantId, callId);
     if (assignResult?.success === false) {
       const resp = `${participantId}, unable to assign to ${callDisplay}.`;
       await this.speak(resp, participantId);
@@ -3892,7 +3943,7 @@ export class AIDispatcher {
 
     if (cadStatus) {
       try {
-        const statusResult = await cadService.updateUnitStatus(participantId, cadStatus);
+        const statusResult = await this._updateUnitStatusSerial(participantId, cadStatus);
         this.log('CAD_STATUS_UPDATE', { unitId: participantId, status: cadStatus, success: statusResult?.success, callId });
       } catch (e) {
         this.log('CAD_ERROR', { error: e.message });
@@ -4088,7 +4139,7 @@ export class AIDispatcher {
       }
 
       const callDisplay = targetCall.call_number || callId;
-      const assignResult = await cadService.assignUnitToCall(participantId, callId);
+      const assignResult = await this._assignUnitToCallSerial(participantId, callId);
       if (assignResult?.success === false) {
         const resp = `${participantId}, unable to attach you to ${targetUnit}'s call.`;
         await this.speak(resp, participantId);
@@ -4098,7 +4149,7 @@ export class AIDispatcher {
       }
 
       try {
-        await cadService.updateUnitStatus(participantId, 'on_scene');
+        await this._updateUnitStatusSerial(participantId, 'on_scene');
       } catch (e) {
         this.log('CAD_ERROR', { error: e.message });
       }
@@ -4362,7 +4413,7 @@ export class AIDispatcher {
       }
 
       const callDisplay = targetCall?.call_number || callId;
-      const assignResult = await cadService.assignUnitToCall(targetUnit, callId);
+      const assignResult = await this._assignUnitToCallSerial(targetUnit, callId);
       if (assignResult?.success === false) {
         const resp = `${participantId}, unable to assign ${targetUnit} to that call.`;
         await this.speak(resp, participantId);
@@ -4451,7 +4502,7 @@ export class AIDispatcher {
       }
 
       const noteText = `${participantId}: ${rewriteResult.note}`;
-      const noteResult = await cadService.addCallNote(callId, noteText);
+      const noteResult = await this._addCallNoteSerial(participantId, callId, noteText);
       if (noteResult?.success === false) {
         const resp = `${participantId}, unable to add note — try again.`;
         await this.speak(resp, participantId);
@@ -4659,13 +4710,13 @@ export class AIDispatcher {
         const currentCall = await cadService.getUnitCurrentCallById(participantId);
         callId = currentCall?.call_id || currentCall?.call_number || currentCall?.callNumber || null;
         if (callId && noteText) {
-          const noteResult = await cadService.addCallNote(callId, `${participantId}: ${noteText}`);
+          const noteResult = await this._addCallNoteSerial(participantId, callId, `${participantId}: ${noteText}`);
           if (noteResult?.success !== false) {
             noteWritten = true;
             this.log('CALL_NOTE_AUTO_EVENT', { unitId: participantId, callId, eventType: effectiveType, note: noteText });
             if (descNote) {
               try {
-                await cadService.addCallNote(callId, `${participantId}: ${descNote}`);
+                await this._addCallNoteSerial(participantId, callId, `${participantId}: ${descNote}`);
                 this.log('CALL_NOTE_AUTO_EVENT_DESCRIPTION', { unitId: participantId, callId, descNote });
               } catch (descErr) {
                 this.log('CALL_NOTE_AUTO_EVENT_DESC_ERROR', { error: descErr.message });
@@ -4776,7 +4827,7 @@ export class AIDispatcher {
         return;
       }
 
-      const noteResult = await cadService.addCallNote(callId, `${participantId}: ${noteContent}`);
+      const noteResult = await this._addCallNoteSerial(participantId, callId, `${participantId}: ${noteContent}`);
       if (noteResult?.success === false) {
         const resp = `${participantId}, unable to add note. Try again.`;
         await this.speak(resp, participantId);
@@ -4920,7 +4971,7 @@ export class AIDispatcher {
     let cadOk = true;
     let cadCorrection = null;
     if (configured) {
-      const statusResult = await cadService.updateUnitStatus(participantId, RADIO_STATUS.EN_ROUTE_SECONDARY, this.channelName);
+      const statusResult = await this._updateUnitStatusSerial(participantId, RADIO_STATUS.EN_ROUTE_SECONDARY, this.channelName);
       if (!statusResult || statusResult.success === false) {
         cadOk = false;
         const actual = extractActualStatusFromRejection(statusResult);
@@ -4931,7 +4982,7 @@ export class AIDispatcher {
 
     if (configured && callId && cadOk) {
       const note = `STARTING MILEAGE - ${startingMileage}, en route to ${destination.toUpperCase()} with ${subjectCount} ${subjectDescription}`;
-      const noteResult = await cadService.addCallNote(callId, note);
+      const noteResult = await this._addCallNoteSerial(participantId, callId, note);
       if (!noteResult || noteResult.success === false) {
         this.log('SECONDARY_TRIP_START_NOTE_FAILED', { unitId: participantId, callId, noteResult });
       } else {
@@ -5102,7 +5153,7 @@ export class AIDispatcher {
     let cadOk = true;
     let cadCorrection = null;
     if (configured) {
-      const statusResult = await cadService.updateUnitStatus(participantId, RADIO_STATUS.ARRIVED_SECONDARY, this.channelName);
+      const statusResult = await this._updateUnitStatusSerial(participantId, RADIO_STATUS.ARRIVED_SECONDARY, this.channelName);
       if (!statusResult || statusResult.success === false) {
         cadOk = false;
         cadCorrection = { failureType: statusResult?.failureType, actual: extractActualStatusFromRejection(statusResult) };
@@ -5115,7 +5166,7 @@ export class AIDispatcher {
       const note = dest
         ? `ENDING MILEAGE - ${endingMileage}, arrived at ${dest}`
         : `ENDING MILEAGE - ${endingMileage}, arrived`;
-      const noteResult = await cadService.addCallNote(callId, note);
+      const noteResult = await this._addCallNoteSerial(participantId, callId, note);
       if (!noteResult || noteResult.success === false) {
         this.log('SECONDARY_TRIP_ARRIVE_NOTE_FAILED', { unitId: participantId, callId, noteResult });
       } else {
@@ -5619,7 +5670,7 @@ export class AIDispatcher {
         if (!data.priorStatus) {
           return { success: false, message: `prior status unknown` };
         }
-        const r = await cadService.updateUnitStatus(unitId, data.priorStatus);
+        const r = await this._updateUnitStatusSerial(unitId, data.priorStatus);
         if (r?.success === false) return { success: false, message: r?.error || 'CAD rejected the revert' };
         return { success: true, message: `Status reverted to ${data.priorStatus}.` };
       }
@@ -5627,7 +5678,7 @@ export class AIDispatcher {
         if (!data.targetUnit || !data.priorStatus) {
           return { success: false, message: `prior status unknown` };
         }
-        const r = await cadService.updateUnitStatus(data.targetUnit, data.priorStatus);
+        const r = await this._updateUnitStatusSerial(data.targetUnit, data.priorStatus);
         if (r?.success === false) return { success: false, message: r?.error || 'CAD rejected the revert' };
         return { success: true, message: `${data.targetUnit} reverted to ${data.priorStatus}.` };
       }
@@ -5646,23 +5697,24 @@ export class AIDispatcher {
           if (zr?.success === false) zoneOk = false;
         }
         if (data.priorStatus) {
-          const sr = await cadService.updateUnitStatus(unitId, data.priorStatus);
+          const sr = await this._updateUnitStatusSerial(unitId, data.priorStatus);
           if (sr?.success === false) return { success: false, message: sr?.error || 'CAD rejected the revert' };
         } else {
-          const sr = await cadService.updateUnitStatus(unitId, 'available');
+          const sr = await this._updateUnitStatusSerial(unitId, 'available');
           if (sr?.success === false) return { success: false, message: sr?.error || 'CAD rejected the revert' };
         }
         return { success: true, message: zoneOk ? `Detail backed out.` : `Detail status reverted, but zone could not be restored.` };
       }
       case 'ASSIGN_CALL': {
-        const r = await cadService.clearUnit(unitId);
+        // R10: gate inverse-action clear behind the unit's status queue.
+        const r = await this._awaitStatusQueue(unitId, () => cadService.clearUnit(unitId));
         if (r?.success === false) return { success: false, message: r?.error || 'CAD rejected the revert' };
         this._clearRecentAssignment(unitId);
         return { success: true, message: `Detached you from ${data.callDisplay || 'that call'}.` };
       }
       case 'ASSIGN_OTHER_UNIT': {
         if (!data.targetUnit) return { success: false, message: 'target unit unknown' };
-        const r = await cadService.clearUnit(data.targetUnit);
+        const r = await this._awaitStatusQueue(data.targetUnit, () => cadService.clearUnit(data.targetUnit));
         if (r?.success === false) return { success: false, message: r?.error || 'CAD rejected the revert' };
         this._clearRecentAssignment(data.targetUnit);
         return { success: true, message: `Detached ${data.targetUnit} from ${data.callDisplay || 'that call'}.` };
@@ -5670,7 +5722,7 @@ export class AIDispatcher {
       case 'ADD_NOTE': {
         if (!data.noteId) {
           if (data.callId) {
-            const fallback = await cadService.addCallNote(data.callId, `${unitId}: DISREGARD previous note: ${data.noteText || ''}`);
+            const fallback = await this._addCallNoteSerial(unitId, data.callId, `${unitId}: DISREGARD previous note: ${data.noteText || ''}`);
             if (fallback?.success === false) return { success: false, message: 'unable to flag note' };
             return { success: true, message: `Flagged the note as disregarded on call ${data.callId}.` };
           }
@@ -5679,7 +5731,7 @@ export class AIDispatcher {
         const r = await cadService.deleteCallNote(data.noteId);
         if (r?.success === false) {
           if (data.callId) {
-            const fallback = await cadService.addCallNote(data.callId, `${unitId}: DISREGARD previous note: ${data.noteText || ''}`);
+            const fallback = await this._addCallNoteSerial(unitId, data.callId, `${unitId}: DISREGARD previous note: ${data.noteText || ''}`);
             if (fallback?.success === false) return { success: false, message: 'unable to remove or flag the note' };
             return { success: true, message: `Note couldn't be deleted, flagged it as disregarded.` };
           }
@@ -5695,7 +5747,7 @@ export class AIDispatcher {
       }
       case 'CLEAR_UNIT': {
         if (!data.priorCallId) return { success: false, message: 'prior call unknown' };
-        const r = await cadService.assignUnitToCall(unitId, data.priorCallId);
+        const r = await this._assignUnitToCallSerial(unitId, data.priorCallId);
         if (r?.success === false) return { success: false, message: r?.error || 'CAD rejected the re-attach' };
         this._recordRecentAssignment(unitId, {}, { callId: data.priorCallId, callDisplay: data.priorCallDisplay });
         return { success: true, message: `Re-attached you to ${data.priorCallDisplay || data.priorCallId}.` };
@@ -5755,8 +5807,22 @@ export class AIDispatcher {
 
       const priorCallId = callInfo?.call_id || callInfo?.call_number || callInfo?.callNumber || null;
       const priorCallDisplay = callInfo?.call_number || priorCallId;
-      const clearResult = await cadService.clearUnit(participantId);
+      // R10: wait for any in-flight status updates for this unit first.
+      const clearResult = await this._awaitStatusQueue(participantId,
+        () => cadService.clearUnit(participantId));
       if (clearResult?.success === false) {
+        // R8: CAD rejects clearing the primary unit (HTTP 409). Speak it back
+        // and offer to close the entire call instead.
+        if (clearResult.statusCode === 409 && priorCallId) {
+          const resp = `${participantId}, you are primary on call ${priorCallDisplay}. Close the call?`;
+          await this.speak(resp, participantId);
+          this.addConversationExchange(participantId, transcript, resp);
+          setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_PRIMARY_CLOSE_CONFIRM, null, {
+            callNumber: priorCallId,
+            callDisplay: priorCallDisplay
+          }, true);
+          return;
+        }
         const resp = `${participantId}, unable to clear you from call. ${clearResult.error || 'Try your MDT.'}`;
         await this.speak(resp, participantId);
         this.addConversationExchange(participantId, transcript, resp);
@@ -5773,7 +5839,7 @@ export class AIDispatcher {
       }
 
       try {
-        await cadService.updateUnitStatus(participantId, 'available');
+        await this._updateUnitStatusSerial(participantId, 'available');
       } catch (statusErr) {
         this.log('CAD_STATUS_UPDATE_AFTER_CLEAR_ERROR', { error: statusErr.message });
       }
@@ -5900,7 +5966,11 @@ export class AIDispatcher {
         return;
       }
 
-      const result = await cadService.disposeCall(callId, disposition);
+      // R9: disposition + dispositionNotes are both required. We use the same
+      // spoken text for both (per user preference — radio brevity > note depth).
+      // R10: wait for any in-flight status updates for this unit first.
+      const result = await this._awaitStatusQueue(participantId,
+        () => cadService.disposeCall(callId, disposition, disposition));
       if (result?.success === false) {
         const resp = `${participantId}, unable to close call. ${result.error || 'Try your MDT.'}`;
         await this.speak(resp, participantId);
@@ -5917,6 +5987,179 @@ export class AIDispatcher {
     } catch (error) {
       this.log('DISPOSE_CALL_ERROR', { error: error.message });
       const resp = `${participantId}, unable to close call. System error.`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+    }
+  }
+
+  // R8: After speaking back the primary-unit 409, the user confirmed they
+  // want to close the call instead. Flow into the normal disposition prompt.
+  async handlePrimaryCloseConfirm(participantId, transcript, savedSlots) {
+    this.log('PRIMARY_CLOSE_CONFIRM', { participant: participantId, transcript, savedSlots });
+    const callNumber = savedSlots?.callNumber || null;
+    setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_DISPOSITION, null, {
+      callNumber
+    }, true);
+    const resp = `${participantId}, 10-4. Go ahead with disposition.`;
+    await this.speak(resp, participantId);
+    this.addConversationExchange(participantId, transcript, resp);
+  }
+
+  // SEQ-10: Cancel call. Requires explicit callNumber from the speaker; reason
+  // is required (R9) — prompt for it if not spoken inline.
+  async handleCancelCall(participantId, transcript, slots) {
+    this.log('CANCEL_CALL', { participant: participantId, transcript, slots });
+    let callNumber = slots?.callNumber;
+    const reason = slots?.reason;
+
+    // Fallback: if the speaker did not say a call number, default to their
+    // current assigned call (R1 — units are cancelling the call they're on).
+    if (!callNumber) {
+      try {
+        const currentCall = await cadService.getUnitCurrentCallById(participantId);
+        callNumber = currentCall?.call_number || currentCall?.call_id || currentCall?.callNumber || null;
+      } catch (_e) { /* ignore */ }
+    }
+
+    if (!callNumber) {
+      const resp = `${participantId}, which call number to cancel?`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+      return;
+    }
+
+    if (reason && String(reason).trim().length > 1) {
+      setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_CANCEL_CONFIRM, null, {
+        callNumber,
+        reason: String(reason).trim()
+      }, true);
+      const resp = `${participantId}, confirm cancel call ${callNumber}, ${String(reason).trim()}?`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+    } else {
+      setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_CANCEL_REASON, null, {
+        callNumber
+      }, true);
+      const resp = `${participantId}, go ahead with the reason for cancel.`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+    }
+  }
+
+  async handleCancelReasonInput(participantId, transcript, savedSlots, slots) {
+    this.log('CANCEL_REASON_INPUT', { participant: participantId, transcript, savedSlots, slots });
+    const callNumber = savedSlots?.callNumber || slots?.callNumber;
+    const reason = (slots?.reason && String(slots.reason).trim()) || transcript.trim();
+    if (!callNumber) {
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+      const resp = `${participantId}, lost the call number, try again.`;
+      await this.speak(resp, participantId);
+      return;
+    }
+    if (!reason || reason.length < 2) {
+      const resp = `${participantId}, did not copy the reason. Go ahead.`;
+      await this.speak(resp, participantId);
+      return;
+    }
+    setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_CANCEL_CONFIRM, null, {
+      callNumber,
+      reason
+    }, true);
+    const resp = `${participantId}, confirm cancel call ${callNumber}, ${reason}?`;
+    await this.speak(resp, participantId);
+    this.addConversationExchange(participantId, transcript, resp);
+  }
+
+  async handleCancelConfirm(participantId, transcript, savedSlots) {
+    this.log('CANCEL_CONFIRM', { participant: participantId, transcript, savedSlots });
+    const callNumber = savedSlots?.callNumber;
+    const reason = savedSlots?.reason || 'CANCELLED';
+
+    if (!cadService.isConfigured()) {
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+      const resp = `${participantId}, CAD system not available.`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+      return;
+    }
+    if (!callNumber) {
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+      const resp = `${participantId}, lost the call number, try again.`;
+      await this.speak(resp, participantId);
+      return;
+    }
+
+    try {
+      // Resolve spoken call number → canonical CAD callId for PUT /api/calls/:callId
+      const resolvedCallId = await this._resolveCallId(callNumber);
+      // R10: wait for any in-flight status updates for this unit before
+      // issuing the cancel.
+      const result = await this._awaitStatusQueue(participantId,
+        () => cadService.cancelCallDirect(resolvedCallId, reason, reason));
+      if (result?.success === false) {
+        const resp = `${participantId}, unable to cancel call ${callNumber}. ${result.error || 'Try your MDT.'}`;
+        await this.speak(resp, participantId);
+        this.addConversationExchange(participantId, transcript, resp);
+        setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+        return;
+      }
+      this.log('CALL_CANCELLED', { unitId: participantId, callNumber, reason });
+      const resp = `${participantId}, 10-4. Call ${callNumber} cancelled, ${reason}.`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+    } catch (error) {
+      this.log('CANCEL_CALL_ERROR', { error: error.message });
+      const resp = `${participantId}, unable to cancel call. System error.`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+    }
+  }
+
+  // SEQ-11: Reopen a closed call. Strict phrase requires callNumber. Does NOT
+  // auto-assign the speaker — they must request assignment separately.
+  async handleReopenCall(participantId, transcript, slots) {
+    this.log('REOPEN_CALL', { participant: participantId, transcript, slots });
+    const callNumber = slots?.callNumber;
+
+    if (!callNumber) {
+      const resp = `${participantId}, which call number to reopen?`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+      return;
+    }
+
+    if (!cadService.isConfigured()) {
+      const resp = `${participantId}, CAD system not available.`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+      return;
+    }
+
+    try {
+      // SEQ-11: REOPEN command takes the spoken call NUMBER (not UUID),
+      // since CAD's POST /api/unit-command builds "REOPEN/<callNumber>".
+      // R10: wait for any in-flight status updates for this unit first.
+      const result = await this._awaitStatusQueue(participantId,
+        () => cadService.reopenCall(callNumber));
+      if (result?.success === false) {
+        const resp = `${participantId}, unable to reopen call ${callNumber}. ${result.error || 'Try your MDT.'}`;
+        await this.speak(resp, participantId);
+        this.addConversationExchange(participantId, transcript, resp);
+        setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+        return;
+      }
+      this.log('CALL_REOPENED', { unitId: participantId, callNumber });
+      const resp = `${participantId}, 10-4. Call ${callNumber} reopened.`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+    } catch (error) {
+      this.log('REOPEN_CALL_ERROR', { error: error.message });
+      const resp = `${participantId}, unable to reopen call. System error.`;
       await this.speak(resp, participantId);
       this.addConversationExchange(participantId, transcript, resp);
       setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
@@ -6849,7 +7092,7 @@ export class AIDispatcher {
       if (statusCheck.success && statusCheck.units) {
         const unitData = statusCheck.units.find(u => u.unit_id === unitId || u.id === unitId);
         if (unitData && unitData.call_id) {
-          await cadService.addCallNote(unitData.call_id, note);
+          await this._addCallNoteSerial(unitId, unitData.call_id, note);
           this.log('CALL_NOTE_ADDED', { unitId, callId: unitData.call_id, note });
         }
       }
@@ -6899,6 +7142,80 @@ export class AIDispatcher {
     if (this._recentAssignments.delete(key)) {
       this.log('RECENT_ASSIGNMENT_CLEARED', { unitId: key });
     }
+  }
+
+  // R10: Serialize CAD status updates per unit. Multiple in-flight calls for
+  // the same unit (e.g. an assign + a clear racing) chain head-to-tail so
+  // CAD never sees an out-of-order progression. Different units run in
+  // parallel.
+  _runStatusUpdateSerial(unitId, fn) {
+    const key = String(unitId || '_unknown_').toLowerCase();
+    const prev = this._statusUpdateQueues.get(key) || Promise.resolve();
+    const next = prev.catch(() => {}).then(() => fn());
+    this._statusUpdateQueues.set(key, next);
+    next.finally(() => {
+      if (this._statusUpdateQueues.get(key) === next) {
+        this._statusUpdateQueues.delete(key);
+      }
+    }).catch(() => {});
+    return next;
+  }
+
+  _updateUnitStatusSerial(unitId, status, ...rest) {
+    return this._runStatusUpdateSerial(unitId, () => cadService.updateUnitStatus(unitId, status, ...rest));
+  }
+
+  // R10 wrappers: route assigns and notes through the per-unit status queue so
+  // they can never land before an in-flight status update for the same unit.
+  _assignUnitToCallSerial(unitId, callId, ...rest) {
+    return this._runStatusUpdateSerial(unitId, () => cadService.assignUnitToCall(unitId, callId, ...rest));
+  }
+
+  _addCallNoteSerial(unitId, callId, note, ...rest) {
+    return this._runStatusUpdateSerial(unitId, () => cadService.addCallNote(callId, note, ...rest));
+  }
+
+  // R10: Non-status CAD lifecycle calls (clear/dispose/cancel/reopen/notes)
+  // must wait for any in-flight status updates for the same unit so CAD
+  // never sees, e.g., a "clear" land before its prerequisite "on_scene".
+  // Returns the tail Promise of that unit's queue, then chains onto it.
+  _awaitStatusQueue(unitId, fn) {
+    return this._runStatusUpdateSerial(unitId, fn);
+  }
+
+  // SEQ-10 helper: resolve a spoken call number to the canonical CAD callId
+  // before issuing PUT /api/calls/:callId. Tries getCallDetails first (cheap
+  // path when input is already an id); falls back to scanning active calls
+  // for a matching call_number; finally returns the input unchanged.
+  async _resolveCallId(callNumberOrId) {
+    if (!callNumberOrId) return null;
+    const input = String(callNumberOrId).trim();
+    if (!input) return null;
+    try {
+      if (typeof cadService.getCallDetails === 'function') {
+        const direct = await cadService.getCallDetails(input);
+        const directCall = direct?.call || direct?.data || direct;
+        const directId = directCall?.id || directCall?.call_id;
+        if (direct?.success !== false && directId) {
+          return String(directId);
+        }
+      }
+    } catch (_e) { /* fall through */ }
+    try {
+      const active = await cadService.getActiveCalls();
+      const list = Array.isArray(active?.calls) ? active.calls
+                  : Array.isArray(active?.data) ? active.data
+                  : Array.isArray(active) ? active
+                  : [];
+      const norm = input.toLowerCase();
+      const match = list.find(c => {
+        const cn = String(c?.call_number || c?.callNumber || '').toLowerCase();
+        const cid = String(c?.id || c?.call_id || '').toLowerCase();
+        return cn === norm || cid === norm;
+      });
+      if (match) return String(match.id || match.call_id || input);
+    } catch (_e) { /* ignore */ }
+    return input;
   }
 
   _backupRequestKey(callId) {
@@ -7010,7 +7327,7 @@ export class AIDispatcher {
 
     try {
       if (cadService.isConfigured() && req.callId) {
-        const assignResult = await cadService.assignUnitToCall(volunteerDisplay, req.callId);
+        const assignResult = await this._assignUnitToCallSerial(volunteerDisplay, req.callId);
         assigned = assignResult?.success !== false;
         if (assigned) {
           this._recordRecentAssignment(volunteerDisplay, {}, {
@@ -7025,7 +7342,7 @@ export class AIDispatcher {
             channel: req.channel,
           });
           try {
-            const statusResult = await cadService.updateUnitStatus(volunteerDisplay, 'en_route');
+            const statusResult = await this._updateUnitStatusSerial(volunteerDisplay, 'en_route');
             enRouteOk = !!statusResult?.success;
           } catch (statusErr) {
             this.log('BACKUP_VOLUNTEER_STATUS_ERROR', { volunteer: volunteerDisplay, error: statusErr.message });

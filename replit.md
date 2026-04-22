@@ -44,6 +44,7 @@ The dispatch console is a PWA with responsive design, featuring auto-login, dark
 - **Unit Presence:** Real-time unit status tracking.
 - **Emergency Button (E-Button):** Activates transmit lock, broadcasts emergency flag, and supports acknowledgment.
 - **AI-Powered Emergency Escalation:** AI Dispatcher automatically initiates status checks and escalates emergencies.
+- **Call Lifecycle Rules (R1, R2, R8, R9, R10):** AI Dispatcher enforces CAD call-lifecycle rules. Dispose requires both `disposition` and `dispositionNotes` (R9, same spoken text used for both). Voice cancel uses `PUT /api/calls/:id` with `status=cancelled` via `cadService.cancelCallDirect` (SEQ-10), prompting for a reason if not spoken inline. Voice reopen uses `POST /api/unit-command` with `REOPEN/<callNumber>` via `cadService.reopenCall` (SEQ-11) and never auto-reassigns the speaker. A primary-unit clear that returns HTTP 409 is spoken back and confirmed before cascading into the close-call flow (R8). All `cadService.updateUnitStatus` calls run through a per-unit serial queue (`_updateUnitStatusSerial`) so concurrent status progressions for the same unit can't interleave (R10).
 - **Dispatcher Console:** Multi-channel monitoring, unit management, audio controls, last transmission recall, emergency acknowledgment, channel patching, multi-channel TX, and tone broadcasting.
 - **Dispatcher Map:** Real-time unit location display using Leaflet with OpenStreetMap.
 - **Channel Chat:** Text and playable voice messages with transcription.

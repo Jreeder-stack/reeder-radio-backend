@@ -40,6 +40,9 @@ const DISPATCHER_STATE = {
   AWAITING_MILEAGE_CONFIRM: 'AWAITING_MILEAGE_CONFIRM',
   AWAITING_CALL_DISAMBIG: 'AWAITING_CALL_DISAMBIG',
   AWAITING_BE_ADVISED_NOTE: 'AWAITING_BE_ADVISED_NOTE',
+  AWAITING_PRIMARY_CLOSE_CONFIRM: 'AWAITING_PRIMARY_CLOSE_CONFIRM',
+  AWAITING_CANCEL_REASON: 'AWAITING_CANCEL_REASON',
+  AWAITING_CANCEL_CONFIRM: 'AWAITING_CANCEL_CONFIRM',
   SIGNAL_100_ACTIVE: 'SIGNAL_100_ACTIVE'
 };
 
@@ -344,6 +347,22 @@ const IMMEDIATE_COMMANDS = [
       'clear the call', 'close the call', 'close call', 'dispose call', 'dispose the call',
       'close out the call', 'close it out', 'finalize call', 'finalize the call'
     ],
+    response: null,
+    isEmergency: false
+  },
+  {
+    // SEQ-10: phrase recognition only — slot extraction (callNumber, reason)
+    // happens in aiDispatchService.processTranscriptWithRegex via regex.
+    intent: 'CANCEL_CALL',
+    phrases: ['cancel call', 'cancel the call', 'void call', 'void the call'],
+    response: null,
+    isEmergency: false
+  },
+  {
+    // SEQ-11: strict "reopen call <N>" — phrase recognition only here;
+    // callNumber slot is extracted in processTranscriptWithRegex.
+    intent: 'REOPEN_CALL',
+    phrases: ['reopen call', 'reopen the call'],
     response: null,
     isEmergency: false
   },

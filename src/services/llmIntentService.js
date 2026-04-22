@@ -386,6 +386,15 @@ Unit wants to close/dispose the ENTIRE call. Phrases: "clear the call", "close t
 If the disposition text is provided inline (e.g., "clear the call, report filed"), extract it. Otherwise leave disposition null.
 Return: { "intent": "DISPOSE_CALL", "response": null, "slots": { "callNumber": "<if provided>", "disposition": "<if provided, e.g. 'report filed', 'unfounded', 'gone on arrival'>" } }
 
+### CANCEL_CALL
+Unit wants to CANCEL (not close) a call — used when a call should never have been created or is being voided. Phrases: "cancel call <callNumber>", "cancel call <callNumber>, created in error", "void call <callNumber>".
+The callNumber is required from the speaker; do NOT default to their current call. If they speak a reason inline ("cancel call 1-26-000170, created in error"), capture it as the reason. Otherwise leave reason null and the handler will prompt for one (R9 requires both disposition and notes).
+Return: { "intent": "CANCEL_CALL", "response": null, "slots": { "callNumber": "<spoken call number>", "reason": "<inline reason if provided, else null>" } }
+
+### REOPEN_CALL
+Unit wants to REOPEN a previously closed call. Strict phrase only: "reopen call <callNumber>". Do NOT match generic "reopen" without a call number, and do NOT auto-assign the speaker — this only reopens the call.
+Return: { "intent": "REOPEN_CALL", "response": null, "slots": { "callNumber": "<spoken call number>" } }
+
 ### WARRANT_CHECK
 Unit requesting a warrant check (10-29). Phrases: "warrant check", "check for warrants", "10-29", "wants and warrants", "run for warrants".
 CRITICAL: Preserve exact spelling of names from transcript. Do not correct or normalize name spellings.
@@ -461,6 +470,9 @@ You will be told the current conversation state. Use it to interpret ambiguous i
 - AWAITING_WARRANT_NAME: Unit is providing name for a warrant check. Extract first/last name → return WARRANT_CHECK with firstName/lastName slots.
 - AWAITING_CLEAR_CONFIRM: Unit is confirming or denying clearing from their call → return CONFIRM or DENY.
 - AWAITING_DISPOSE_CONFIRM: Unit is confirming or denying closing/disposing a call → return CONFIRM or DENY.
+- AWAITING_PRIMARY_CLOSE_CONFIRM: You just told the unit they are the primary on the call (their clear was rejected with HTTP 409). They are answering whether to CLOSE the call instead → return CONFIRM or DENY.
+- AWAITING_CANCEL_REASON: Unit is providing the reason for a call cancellation. Treat their entire transcript as the reason → return CANCEL_CALL with the reason slot. If they answer "no reason" / "just cancel it" / "no", set reason to "CANCELLED".
+- AWAITING_CANCEL_CONFIRM: Unit is confirming or denying a call cancellation → return CONFIRM or DENY.
 - AWAITING_CALL_UPDATE_DETAILS: Unit is providing what they want to update on the call (priority, notes, details). Pass through their response as-is; the handler will parse it. Return UPDATE_CALL with any extracted slots (priority, details).
 - AWAITING_CALL_UPDATE_CONFIRM: Unit is confirming or denying a call update → return CONFIRM or DENY.
 - AWAITING_ANIMAL_SEARCH_TYPE: Unit is providing animal search criteria. Extract any search fields → return ANIMAL_SEARCH with available slots.
