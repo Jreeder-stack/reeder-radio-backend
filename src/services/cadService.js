@@ -334,11 +334,80 @@ export async function reopenCall(callNumber) {
   });
 }
 
-export async function addCallNote(callId, note) {
-  return cadRequest('/api/radio/note', 'POST', {
-    call_id: callId,
-    note
-  });
+// Task #502: classify a failed CAD note write into a stable category so
+// callers can speak a meaningful refusal and decide whether to retry.
+//   network        - fetch threw / DNS / connection refused
+//   timeout        - fetch aborted on timeout
+//   cad_5xx        - HTTP 5xx (transient server error)
+//   cad_4xx        - HTTP 4xx (client/payload reject, permanent)
+//   cad_app_error  - HTTP 2xx with success:false body (permanent)
+export function categorizeNoteFailure(result) {
+  if (!result || result.success !== false) return null;
+  const ft = result.failureType;
+  const status = result.statusCode;
+  const errMsg = String(result.error || '').toLowerCase();
+  if (ft === 'UNREACHABLE' || ft === 'NOT_CONFIGURED') {
+    if (errMsg.includes('timeout') || errMsg.includes('timed out') || errMsg.includes('aborted')) {
+      return 'timeout';
+    }
+    return 'network';
+  }
+  if (typeof status === 'number') {
+    if (status >= 500) return 'cad_5xx';
+    if (status >= 400) return 'cad_4xx';
+  }
+  return 'cad_app_error';
+}
+
+const TRANSIENT_NOTE_CATEGORIES = new Set(['network', 'timeout', 'cad_5xx']);
+
+function extractCadMessage(result) {
+  if (!result) return null;
+  const rb = result.responseBody;
+  if (rb && typeof rb === 'object') {
+    const msg = rb.error || rb.message || rb.detail || null;
+    if (msg) return String(msg);
+  }
+  if (typeof rb === 'string' && rb.trim()) return rb.trim().slice(0, 500);
+  return result.error || null;
+}
+
+export async function addCallNote(callId, note, options = {}) {
+  const { maxAttempts = 3, baseDelayMs = 200 } = options;
+  let lastEnriched = null;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const result = await cadRequest('/api/radio/note', 'POST', {
+      call_id: callId,
+      note
+    });
+    if (!result || result.success !== false) {
+      if (attempt > 1) {
+        console.log(`[CAD] addCallNote succeeded on attempt ${attempt}/${maxAttempts} for call ${callId}`);
+      }
+      return result;
+    }
+    const category = categorizeNoteFailure(result);
+    const cadMessage = extractCadMessage(result);
+    const enriched = {
+      ...result,
+      failureCategory: category,
+      cadMessage,
+      attempt,
+      maxAttempts,
+    };
+    console.warn(
+      `[CAD] addCallNote FAILED attempt=${attempt}/${maxAttempts} call=${callId} ` +
+      `category=${category} status=${result.statusCode || 'n/a'} ` +
+      `noteLength=${note ? String(note).length : 0} cadMessage=${cadMessage || '(none)'}`
+    );
+    lastEnriched = enriched;
+    if (!TRANSIENT_NOTE_CATEGORIES.has(category) || attempt >= maxAttempts) {
+      return enriched;
+    }
+    const delay = baseDelayMs * Math.pow(2, attempt - 1);
+    await new Promise((r) => setTimeout(r, delay));
+  }
+  return lastEnriched;
 }
 
 export async function deleteCallNote(noteId) {

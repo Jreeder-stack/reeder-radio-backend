@@ -5049,7 +5049,12 @@ export class AIDispatcher {
       const noteText = `${participantId}: ${rewriteResult.note}`;
       const noteResult = await this._addCallNoteSerial(participantId, callId, noteText);
       if (noteResult?.success === false) {
-        const resp = `${participantId}, unable to add note — try again.`;
+        const category = noteResult.failureCategory || cadService.categorizeNoteFailure(noteResult) || 'unknown';
+        await this._recordNoteFailure('be_advised', {
+          participantId, callId, noteLength: noteText.length, noteResult,
+        });
+        const reasonSpoken = this._noteFailureCategorySpoken(category);
+        const resp = `${participantId}, unable to add note — ${reasonSpoken}, try again.`;
         await this.speak(resp, participantId);
         this.addConversationExchange(participantId, transcript, resp);
         setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
@@ -5252,34 +5257,51 @@ export class AIDispatcher {
     let noteWritten = false;
     let noActiveCall = false;
     let cadWriteFailed = false;
+    let writeFailureCategory = null;
 
     if (cadAvailable) {
       try {
         const currentCall = await cadService.getUnitCurrentCallById(participantId);
         callId = currentCall?.call_id || currentCall?.call_number || currentCall?.callNumber || null;
         if (callId && noteText) {
-          const noteResult = await this._addCallNoteSerial(participantId, callId, `${participantId}: ${noteText}`);
+          const fullNote = `${participantId}: ${noteText}`;
+          const noteResult = await this._addCallNoteSerial(participantId, callId, fullNote);
           if (noteResult?.success !== false) {
             noteWritten = true;
             this.log('CALL_NOTE_AUTO_EVENT', { unitId: participantId, callId, eventType: effectiveType, note: noteText });
             if (descNote) {
               try {
-                await this._addCallNoteSerial(participantId, callId, `${participantId}: ${descNote}`);
-                this.log('CALL_NOTE_AUTO_EVENT_DESCRIPTION', { unitId: participantId, callId, descNote });
+                const descFull = `${participantId}: ${descNote}`;
+                const descResult = await this._addCallNoteSerial(participantId, callId, descFull);
+                if (descResult?.success === false) {
+                  await this._recordNoteFailure('event_note_description', {
+                    participantId, callId, noteLength: descFull.length, noteResult: descResult,
+                  });
+                } else {
+                  this.log('CALL_NOTE_AUTO_EVENT_DESCRIPTION', { unitId: participantId, callId, descNote });
+                }
               } catch (descErr) {
                 this.log('CALL_NOTE_AUTO_EVENT_DESC_ERROR', { error: descErr.message });
               }
             }
           } else {
             cadWriteFailed = true;
-            this.log('CALL_NOTE_AUTO_EVENT_FAILED', { unitId: participantId, callId });
+            writeFailureCategory = noteResult.failureCategory || cadService.categorizeNoteFailure(noteResult) || 'unknown';
+            await this._recordNoteFailure('event_note', {
+              participantId, callId, noteLength: fullNote.length, noteResult,
+            });
           }
         } else if (!callId) {
           noActiveCall = true;
         }
       } catch (e) {
         cadWriteFailed = true;
+        writeFailureCategory = 'network';
         this.log('CALL_NOTE_AUTO_EVENT_ERROR', { unitId: participantId, error: e.message });
+        await this._recordNoteFailure('event_note', {
+          participantId, callId, noteLength: noteText ? noteText.length : 0,
+          noteResult: { success: false, error: e.message, failureCategory: 'network' },
+        });
       }
     } else {
       this.log('CALL_NOTE_AUTO_EVENT_NO_CAD', { unitId: participantId });
@@ -5291,7 +5313,8 @@ export class AIDispatcher {
     } else if (noActiveCall) {
       spokenResp = `${participantId}, copy ${spokenLabel}. You don't have an active call to add a note to.`;
     } else if (cadWriteFailed) {
-      spokenResp = `${participantId}, copy ${spokenLabel}. Unable to log note, try again.`;
+      const reasonSpoken = this._noteFailureCategorySpoken(writeFailureCategory);
+      spokenResp = `${participantId}, copy ${spokenLabel}. Unable to log note — ${reasonSpoken}, try again.`;
     }
 
     if (isClearAirEvent) {
@@ -5375,9 +5398,15 @@ export class AIDispatcher {
         return;
       }
 
-      const noteResult = await this._addCallNoteSerial(participantId, callId, `${participantId}: ${noteContent}`);
+      const noteText = `${participantId}: ${noteContent}`;
+      const noteResult = await this._addCallNoteSerial(participantId, callId, noteText);
       if (noteResult?.success === false) {
-        const resp = `${participantId}, unable to add note. Try again.`;
+        const category = noteResult.failureCategory || cadService.categorizeNoteFailure(noteResult) || 'unknown';
+        await this._recordNoteFailure('add_note', {
+          participantId, callId, noteLength: noteText.length, noteResult,
+        });
+        const reasonSpoken = this._noteFailureCategorySpoken(category);
+        const resp = `${participantId}, unable to add note — ${reasonSpoken}, try again.`;
         await this.speak(resp, participantId);
         this.addConversationExchange(participantId, transcript, resp);
         setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
@@ -8392,6 +8421,67 @@ export class AIDispatcher {
 
   _addCallNoteSerial(unitId, callId, note, ...rest) {
     return this._runStatusUpdateSerial(unitId, () => cadService.addCallNote(callId, note, ...rest));
+  }
+
+  // Task #502: map a CAD note-failure category to a short, dispatcher-friendly
+  // phrase that's safe to put in spoken refusals and event-log entries.
+  _noteFailureCategorySpoken(category) {
+    switch (category) {
+      case 'network':
+      case 'timeout':
+      case 'cad_5xx':
+        return 'CAD unreachable';
+      case 'cad_4xx':
+      case 'cad_app_error':
+        return 'CAD rejected';
+      case 'no_active_call':
+        return 'no active call';
+      default:
+        return 'CAD error';
+    }
+  }
+
+  // Task #502: emit ONE structured log line + mirror the failure into the
+  // dispatcher channel log so a human can see what CAD actually said.
+  async _recordNoteFailure(path, info) {
+    const {
+      participantId,
+      callId,
+      noteLength,
+      noteResult,
+      reasonCategory,
+    } = info || {};
+    const category = reasonCategory
+      || (noteResult && noteResult.failureCategory)
+      || (noteResult ? cadService.categorizeNoteFailure(noteResult) : null)
+      || 'unknown';
+    const cadMessage = noteResult?.cadMessage
+      || noteResult?.error
+      || (noteResult?.responseBody && (noteResult.responseBody.error || noteResult.responseBody.message))
+      || null;
+    const statusCode = noteResult?.statusCode || null;
+    const attempts = noteResult?.attempt || null;
+    this.log('CAD_NOTE_FAILED', {
+      path,
+      unitId: participantId,
+      callId: callId || null,
+      category,
+      categorySpoken: this._noteFailureCategorySpoken(category),
+      cadMessage,
+      statusCode,
+      attempts,
+      noteLength: noteLength || 0,
+    });
+    try {
+      if (this.channelName) {
+        const parts = [`[AI] Unable to add note (${this._noteFailureCategorySpoken(category)})`];
+        if (callId) parts.push(`call ${callId}`);
+        if (participantId) parts.push(`unit ${participantId}`);
+        if (cadMessage) parts.push(`CAD: ${cadMessage}`);
+        const text = parts.join(' — ');
+        await createChannelMessage(this.channelName, 'AI-DISPATCHER', 'text', text).catch(() => {});
+      }
+    } catch (_) {}
   }
 
   // R10: Non-status CAD lifecycle calls (clear/dispose/cancel/reopen/notes)
