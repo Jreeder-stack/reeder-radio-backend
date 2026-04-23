@@ -423,7 +423,7 @@ Unit wants to delay periodic status checks for their current call. Phrases: "sno
 Return: { "intent": "SNOOZE_STATUS_CHECKS", "response": null, "slots": { "durationMinutes": "<integer minutes if provided, else 15>" } }
 
 ### CANCEL_STATUS_CHECKS
-Unit wants to STOP automatic status checks ONLY for the call they are currently on. Phrases: "stop status checks", "cancel status checks on this call", "no more status checks", "kill the status checks on this call". This is NOT clearing or disposing the call — only the periodic check timer for the unit's current call. Scoping is always the unit's current call; do not extract a call number.
+Unit wants to STOP automatic status checks ONLY for the call they are currently on. Phrases: "stop status checks", "cancel status checks on this call", "no more status checks", "kill the status checks on this call", "extended traffic stop", "extended scene", "long-term scene", "suspend status checks", "stop status checks for this call", "no status checks until I clear". This is NOT clearing or disposing the call — only the periodic check timer for the unit's current call. Scoping is always the unit's current call; do not extract a call number.
 Return: { "intent": "CANCEL_STATUS_CHECKS", "response": null, "slots": {} }
 
 ### ANIMAL_SEARCH

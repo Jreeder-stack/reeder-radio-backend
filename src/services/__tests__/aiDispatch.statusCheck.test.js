@@ -33,6 +33,9 @@ vi.mock('../cadService.js', () => {
     getActiveCalls: vi.fn(async () => ({ calls: [] })),
     assignUnitToCall: vi.fn(async () => ({ success: true })),
     respondToStatusCheck: vi.fn(async () => ({ success: true })),
+    cancelStatusCheck: vi.fn(async () => ({ success: true, statusCode: 200 })),
+    snoozeStatusCheck: vi.fn(async () => ({ success: true })),
+    categorizeNoteFailure: () => null,
     sendBroadcast: vi.fn(async () => ({ success: true })),
   };
 });
@@ -348,16 +351,16 @@ describe('Task #490: ack round-trip resets CAD timer', () => {
     await d.handleStatusCheckResponse('INDIANA-1', '10-4', {
       statusCheckId: 'check-1', statusCheckCallId: 'call-uuid-1', statusCheckUnitUuid: 'unit-uuid-1',
     });
-    expect(cadService.respondToStatusCheck).toHaveBeenCalledWith('INDIANA-1', 'call-uuid-1', '10-4');
-    expect(d.logs.some(l => l.action === 'STATUS_CHECK_RESPONDED' && l.details.status === '10-4')).toBe(true);
+    expect(cadService.respondToStatusCheck).toHaveBeenCalledWith('INDIANA-1', 'call-uuid-1', { response: '10-4' });
+    expect(d.logs.some(l => l.action === 'STATUS_CHECK_RESPONDED' && l.details.response === '10-4')).toBe(true);
   });
 
-  it('also normalizes "copy"/"roger"/"ten four" responses to status:"10-4"', async () => {
+  it('also normalizes "copy"/"roger"/"ten four" responses to response:"10-4" (no status field)', async () => {
     const d = makeDispatcher();
     await d.handleStatusCheckResponse('INDIANA-1', 'copy', {
       statusCheckCallId: 'call-uuid-1', statusCheckUnitUuid: 'unit-uuid-1',
     });
-    expect(cadService.respondToStatusCheck).toHaveBeenCalledWith('INDIANA-1', 'call-uuid-1', '10-4');
+    expect(cadService.respondToStatusCheck).toHaveBeenCalledWith('INDIANA-1', 'call-uuid-1', { response: '10-4' });
   });
 
   it('retries once on failure and logs STATUS_CHECK_RESPOND_FAILED (not RESPONDED) when both attempts fail', async () => {
@@ -392,7 +395,7 @@ describe('Task #490: ack round-trip resets CAD timer', () => {
       statusCheckId: 'check-1', statusCheckCallId: null, statusCheckUnitUuid: 'unit-uuid-1',
     });
     expect(cadService.getUnitCurrentCallById).toHaveBeenCalledWith('INDIANA-1');
-    expect(cadService.respondToStatusCheck).toHaveBeenCalledWith('INDIANA-1', 'CALL-UUID-1', '10-4');
+    expect(cadService.respondToStatusCheck).toHaveBeenCalledWith('INDIANA-1', 'CALL-UUID-1', { response: '10-4' });
   });
 });
 
@@ -409,7 +412,7 @@ describe('Task #500: durable status-check ack after session timeout', () => {
 
     const acked = await d._maybeAckPendingStatusCheck('INDIANA-1', '10-4');
     expect(acked).toBe(true);
-    expect(cadService.respondToStatusCheck).toHaveBeenCalledWith('INDIANA-1', 'call-uuid-1', '10-4');
+    expect(cadService.respondToStatusCheck).toHaveBeenCalledWith('INDIANA-1', 'call-uuid-1', { response: '10-4' });
     expect(d.logs.some(l => l.action === 'STATUS_CHECK_RESPONDED' && l.details.source === 'durable_ack')).toBe(true);
     expect(d._pendingStatusChecks.size).toBe(0);
   });
@@ -451,5 +454,38 @@ describe('Task #501: per-prompt timeout suppressed when escalation controller is
     const d = makeDispatcher();
     const handled = await d._onSessionPromptTimeout('INDIANA-1', cm.DISPATCHER_STATE.AWAITING_LOCATION, {});
     expect(handled).toBe(false);
+  });
+});
+
+describe('Task #509: per-call cancel ("extended traffic stop") suspends status checks', () => {
+  it('regex fast path on "extended traffic stop" routes to handleCancelStatusChecks and posts the new cancel URL', async () => {
+    const d = makeDispatcher();
+    cm.setUnitSessionState('INDIANA-1', cm.DISPATCHER_STATE.IDLE, null, {}, true);
+    await d.processTranscriptWithRegex('extended traffic stop', 'INDIANA-1');
+    expect(cadService.cancelStatusCheck).toHaveBeenCalledTimes(1);
+    const args = cadService.cancelStatusCheck.mock.calls[0];
+    expect(args[0]).toBe('INDIANA-1');
+    expect(args[1]).toBe('CALL-UUID-1');
+    expect(args[2]).toEqual({ reason: 'extended traffic stop' });
+    expect(d.spoken.some(s => /^INDIANA-1, 10-4, status checks suspended for call /.test(s))).toBe(true);
+    expect(d.logs.some(l => l.action === 'STATUS_CHECK_CANCEL_SENT' && l.details.success === true)).toBe(true);
+  });
+
+  it('cancels active escalation controller for the unit/call when CAD cancel succeeds', async () => {
+    const d = makeDispatcher();
+    await d._onCadStatusCheckEvent(dueEvent('INDIANA-1', 'CALL-UUID-1', 'CALL-1'));
+    expect(d.routineStatusCheckEscalation.has('INDIANA-1', 'CALL-UUID-1')).toBe(true);
+    await d.processTranscriptWithRegex('suspend status checks', 'INDIANA-1');
+    expect(d.routineStatusCheckEscalation.has('INDIANA-1', 'CALL-UUID-1')).toBe(false);
+  });
+
+  it('on failure speaks "unable to suspend status checks" and logs the failure', async () => {
+    const d = makeDispatcher();
+    cadService.cancelStatusCheck.mockResolvedValueOnce({
+      success: false, statusCode: 500, failureCategory: 'cad_5xx', error: 'boom',
+    });
+    await d.processTranscriptWithRegex('extended traffic stop', 'INDIANA-1');
+    expect(d.spoken.some(s => /^INDIANA-1, unable to suspend status checks/.test(s))).toBe(true);
+    expect(d.logs.some(l => l.action === 'STATUS_CHECK_CANCEL_SENT' && l.details.success === false)).toBe(true);
   });
 });

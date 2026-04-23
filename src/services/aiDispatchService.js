@@ -3034,6 +3034,15 @@ export class AIDispatcher {
       return;
     }
 
+    // Task #509: regex fast-path for per-call "suspend status checks"
+    // phrases so the cancel works even when the LLM classifier is down.
+    const suspendCheckRegex = /\b(extended\s+traffic\s+stop|extended\s+scene|long[-\s]term\s+scene|suspend\s+status\s+check(?:s)?|stop\s+status\s+check(?:s)?(?:\s+for\s+this\s+call)?|no\s+status\s+checks?\s+until\s+i\s+clear|no\s+more\s+status\s+check(?:s)?|cancel\s+(?:the\s+)?status\s+check(?:s)?|kill\s+(?:the\s+)?status\s+check(?:s)?)\b/i;
+    if (suspendCheckRegex.test(lower)) {
+      this._turnContextByUnit.set(participantId, { transcript, intent: 'CANCEL_STATUS_CHECKS' });
+      await this.handleCancelStatusChecks(participantId, transcript, {});
+      return;
+    }
+
     const commandResult = matchCommand(transcript, participantId);
     if (!commandResult) {
       this.log('COMMAND_NO_MATCH', { transcript });
@@ -7400,7 +7409,14 @@ export class AIDispatcher {
     // Allow units to snooze or cancel status checks directly from the
     // AWAITING_STATUS_CHECK_RESPONSE fast path (otherwise speech here is
     // always treated as an acknowledgment).
-    const cancelPhrases = ['stop status check', 'stop the status check', 'cancel status check', 'cancel the status check', 'no more status check', 'kill status check', 'kill the status check'];
+    const cancelPhrases = [
+      'stop status check', 'stop the status check', 'cancel status check', 'cancel the status check',
+      'no more status check', 'kill status check', 'kill the status check',
+      // Task #509: per-call "suspend status checks" phrases.
+      'extended traffic stop', 'extended scene', 'long-term scene', 'long term scene',
+      'suspend status check', 'suspend the status check',
+      'stop status checks for this call', 'no status checks until i clear',
+    ];
     if (cancelPhrases.some(p => normalized.includes(p))) {
       this.log('STATUS_CHECK_RESPONSE_CANCEL_BRANCH', { participant: participantId });
       await this.handleCancelStatusChecks(participantId, transcript, {});
@@ -7422,13 +7438,14 @@ export class AIDispatcher {
       return;
     }
 
-    const okPhrases = ['10-4', '10/4', 'ten four', 'copy', 'roger', 'yes', 'affirmative', 'good', 'okay', 'ok', 'clear'];
-    const isOk = okPhrases.some(p => normalized.includes(p));
-    // CAD spec example uses "10-4" for the OK status; matching that exactly
-    // avoids ambiguity (the previous "ok" string was not aligned with the
-    // documented value and may have caused CAD not to treat it as an ack —
-    // which in turn meant the per-assignment timer never reset).
-    const status = isOk ? '10-4' : transcript.trim();
+    // Per CAD spec the ack body is { unit_id, call_id?, response, status? }.
+    // `response` is the spoken text (free-form). We always send "10-4" as
+    // the response since this handler is only entered when the unit is
+    // acknowledging a status check — the ambiguous "transcript-as-status"
+    // path was the original bug that prevented CAD from resetting timers.
+    // Operational status changes (on_scene, en_route, …) flow through the
+    // dedicated status-change handlers, not here.
+    const ackResponse = '10-4';
 
     // Make sure we have a real call_id before relying on it. If the session
     // slot is missing one (e.g. the session expired before the user spoke),
@@ -7456,12 +7473,13 @@ export class AIDispatcher {
       while (attempts < 2 && !succeeded) {
         attempts += 1;
         try {
-          const result = await cadService.respondToStatusCheck(participantId, resolvedCallId, status);
+          const result = await cadService.respondToStatusCheck(participantId, resolvedCallId, { response: ackResponse });
           lastBody = result;
           if (result && result.success !== false) {
             succeeded = true;
             this.log('STATUS_CHECK_RESPONDED', {
-              unitId: participantId, checkId, callId: resolvedCallId, status, attempts, body: result,
+              unitId: participantId, checkId, callId: resolvedCallId, response: ackResponse,
+              statusCode: result?.statusCode ?? null, attempts, body: result,
             });
             break;
           }
@@ -7476,7 +7494,8 @@ export class AIDispatcher {
       }
       if (!succeeded) {
         this.log('STATUS_CHECK_RESPOND_FAILED', {
-          unitId: participantId, callId: resolvedCallId, status, attempts, error: lastError, body: lastBody,
+          unitId: participantId, callId: resolvedCallId, response: ackResponse, attempts,
+          statusCode: lastBody?.statusCode ?? null, error: lastError, body: lastBody,
         });
       }
     }
@@ -7586,21 +7605,23 @@ export class AIDispatcher {
         if (resolvedCallId) {
           cadStatusCheckClient.markSelfResponded([participantId, pending.unitUuid].filter(Boolean), resolvedCallId);
         }
-        const result = await cadService.respondToStatusCheck(participantId, resolvedCallId, '10-4');
+        const result = await cadService.respondToStatusCheck(participantId, resolvedCallId, { response: '10-4' });
         if (result && result.success !== false) {
           this.log('STATUS_CHECK_RESPONDED', {
-            unitId: participantId, callId: resolvedCallId, status: '10-4', source: 'durable_ack', body: result,
+            unitId: participantId, callId: resolvedCallId, response: '10-4', source: 'durable_ack',
+            statusCode: result?.statusCode ?? null, body: result,
           });
         } else {
           this.log('STATUS_CHECK_RESPOND_FAILED', {
-            unitId: participantId, callId: resolvedCallId, status: '10-4', source: 'durable_ack',
+            unitId: participantId, callId: resolvedCallId, response: '10-4', source: 'durable_ack',
+            statusCode: result?.statusCode ?? null, body: result,
             error: (result && (result.error || result.message)) || 'CAD respond returned non-success',
           });
         }
       }
     } catch (err) {
       this.log('STATUS_CHECK_RESPOND_FAILED', {
-        unitId: participantId, callId: resolvedCallId, status: '10-4', source: 'durable_ack', error: err.message,
+        unitId: participantId, callId: resolvedCallId, response: '10-4', source: 'durable_ack', error: err.message,
       });
     }
     this._clearPendingStatusCheck(participantId, resolvedCallId);
@@ -7931,22 +7952,45 @@ export class AIDispatcher {
       setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
       return;
     }
+    const reason = (typeof transcript === 'string' && transcript.trim()) ? transcript.trim() : null;
     try {
-      const result = await cadService.cancelStatusCheck(participantId, callId);
+      const result = await cadService.cancelStatusCheck(participantId, callId, { reason });
       if (!result || result.success === false) {
-        const resp = `${participantId}, cancel did not go through.`;
+        this.log('STATUS_CHECK_CANCEL_SENT', {
+          unitId: participantId, callId, reason, success: false,
+          statusCode: result?.statusCode ?? null, body: result,
+        });
+        const category = (result && (result.failureCategory || cadService.categorizeNoteFailure?.(result))) || null;
+        const tail = category ? ` — ${category.replace(/_/g, ' ')}` : '';
+        const resp = `${participantId}, unable to suspend status checks${tail}.`;
         await this.speak(resp, participantId);
         this.addConversationExchange(participantId, transcript, resp);
       } else {
+        this.log('STATUS_CHECK_CANCEL_SENT', {
+          unitId: participantId, callId, reason, success: true,
+          statusCode: result?.statusCode ?? null, body: result,
+        });
+        // Stop any active escalation controller for this unit/call so we
+        // don't keep paging while CAD has been told to stand down.
+        try {
+          if (this.routineStatusCheckEscalation?.has?.(participantId, callId)) {
+            this.routineStatusCheckEscalation.cancel(participantId, callId, 'suspended');
+          } else if (this.routineStatusCheckEscalation?.hasAnyForUnit?.(participantId)) {
+            const esc = this.routineStatusCheckEscalation.hasAnyForUnit(participantId);
+            this.routineStatusCheckEscalation.cancel(participantId, esc.callId, 'suspended');
+          }
+        } catch (e) {
+          this.log('STATUS_CHECK_ESCALATION_CANCEL_ERROR', { error: e.message });
+        }
         this._clearPendingStatusCheck(participantId, callId);
         const spoken = callNumber || callId;
-        const resp = `${participantId}, status checks cancelled for call ${spoken}.`;
+        const resp = `${participantId}, 10-4, status checks suspended for call ${spoken}.`;
         await this.speak(resp, participantId);
         this.addConversationExchange(participantId, transcript, resp);
       }
     } catch (err) {
       this.log('STATUS_CHECK_CANCEL_ERROR', { error: err.message });
-      const resp = `${participantId}, cancel failed.`;
+      const resp = `${participantId}, unable to suspend status checks — try again.`;
       await this.speak(resp, participantId);
       this.addConversationExchange(participantId, transcript, resp);
     }

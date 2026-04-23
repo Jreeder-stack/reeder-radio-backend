@@ -511,12 +511,36 @@ export async function getPendingChecks(lookaheadSec = null) {
   return cadRequest(`/api/radio/pending-checks${qs}`, 'GET');
 }
 
-export async function respondToStatusCheck(unitId, callId, status = 'ok') {
+// Per CAD spec, the ack body is:
+//   { unit_id, call_id?, response: "10-4 All Clear", status?: "on_scene" }
+// `response` is the free-text spoken acknowledgment. `status` is reserved for
+// real operational status enums (e.g. "on_scene") and must NOT be used to
+// carry the spoken text — doing so causes CAD to reject the body and the
+// per-assignment timer never resets.
+//
+// Accepts either the new options-object signature
+//   respondToStatusCheck(unitId, callId, { response: '10-4', status: 'on_scene' })
+// or, for backward compatibility, the legacy positional `status` string. When
+// a string is passed it is treated as the spoken response text — it is
+// NEVER forwarded as `status` (which is the source of the original bug).
+export async function respondToStatusCheck(unitId, callId, opts = {}) {
   if (!unitId) {
     console.warn('[CAD] respondToStatusCheck: No unit ID provided');
     return { success: false, error: 'No unit ID' };
   }
-  const body = { unit_id: unitId };
+  let response = '10-4';
+  let status; // intentionally undefined — only sent when explicitly provided
+  if (typeof opts === 'string') {
+    if (opts.trim()) response = opts.trim();
+  } else if (opts && typeof opts === 'object') {
+    if (typeof opts.response === 'string' && opts.response.trim()) {
+      response = opts.response.trim();
+    }
+    if (typeof opts.status === 'string' && opts.status.trim()) {
+      status = opts.status.trim();
+    }
+  }
+  const body = { unit_id: unitId, response };
   if (callId) body.call_id = callId;
   if (status) body.status = status;
   return cadRequest('/api/radio/respond-check', 'POST', body);
@@ -532,19 +556,33 @@ export async function snoozeStatusCheck(unitId, callId, durationSec) {
   return cadRequest('/api/radio/snooze-check', 'POST', body);
 }
 
-export async function cancelStatusCheck(unitId, callId) {
-  if (!unitId) {
-    console.warn('[CAD] cancelStatusCheck: No unit ID provided');
-    return { success: false, error: 'No unit ID' };
-  }
+// Per CAD spec the per-call cancel endpoint is
+//   POST /api/radio/call/:callId/status-check/cancel
+// with body `{ unit_id?, reason? }`. `unit_id` may be omitted to cancel for
+// every unit on the call. `callId` is mandatory (it is in the path).
+//
+// Accepts either the new options-object signature
+//   cancelStatusCheck(unitId, callId, { reason })
+// or the legacy 2-arg form (no reason). `unitId` may be null/undefined to
+// cancel for all units on the call.
+export async function cancelStatusCheck(unitId, callId, opts = {}) {
   if (!callId) {
     console.warn('[CAD] cancelStatusCheck: No call ID provided — refusing to cancel');
     return { success: false, error: 'No call ID' };
   }
-  return cadRequest('/api/radio/cancel-check', 'POST', {
-    unit_id: unitId,
-    call_id: callId
-  });
+  let reason = null;
+  if (typeof opts === 'string') {
+    if (opts.trim()) reason = opts.trim();
+  } else if (opts && typeof opts === 'object') {
+    if (typeof opts.reason === 'string' && opts.reason.trim()) {
+      reason = opts.reason.trim();
+    }
+  }
+  const body = {};
+  if (unitId) body.unit_id = unitId;
+  if (reason) body.reason = reason;
+  const path = `/api/radio/call/${encodeURIComponent(callId)}/status-check/cancel`;
+  return cadRequest(path, 'POST', body);
 }
 
 export function isConfigured() {
