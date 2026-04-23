@@ -203,6 +203,7 @@ class BackgroundAudioService : Service() {
             }
             ACTION_EMERGENCY_DOWN -> handleEmergencyDown()
             ACTION_EMERGENCY_UP -> handleEmergencyUp()
+            ACTION_EMERGENCY_ACTIVATE -> handleEmergencyActivate()
             ACTION_EMERGENCY_CLEAR -> handleEmergencyClear()
             ACTION_UPDATE_CHANNEL -> {
                 val channelId = intent.getIntExtra(EXTRA_CHANNEL_ID, -1)
@@ -262,18 +263,49 @@ class BackgroundAudioService : Service() {
     }
 
     private fun handleEmergencyDown() {
-        Log.d(TAG, "handleEmergencyDown emergencyActive=$emergencyActive")
+        Log.d(TAG, "handleEmergencyDown emergencyActive=$emergencyActive pttState=$pttState")
 
-        if (emergencyActive) {
-            if (pttState == PttState.IDLE) {
-                Log.w(TAG, "handleEmergencyDown: emergencyActive=true but pttState=IDLE — force-resetting stale flag")
-                emergencyActive = false
-            } else {
-                app.keyEventFlow.tryEmit(KeyAction.EmergencyDown)
-                return
+        // ALWAYS wake the screen + bring MainActivity to front so the arming /
+        // cancel-hold UI is visible. This must happen regardless of state so that
+        // a screen-off press immediately lights up the radio UI.
+        @Suppress("DEPRECATION")
+        val wl = (getSystemService(POWER_SERVICE) as PowerManager).newWakeLock(
+            PowerManager.SCREEN_BRIGHT_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP,
+            "CommandComms:EmergencyWake"
+        ).apply { setReferenceCounted(false) }
+        wl.acquire(5_000L)
+
+        try {
+            val launchIntent = Intent(this, MainActivity::class.java).apply {
+                addFlags(
+                    Intent.FLAG_ACTIVITY_NEW_TASK or
+                    Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or
+                    Intent.FLAG_ACTIVITY_SINGLE_TOP
+                )
+                // Note: do NOT pass EXTRA_EMERGENCY_KEY_DOWN — keyEventFlow.tryEmit
+                // below is the single delivery path. Passing the extra would cause
+                // the ViewModel to receive a duplicate EmergencyDown when the
+                // activity is already foreground (handled in onNewIntent).
             }
+            startActivity(launchIntent)
+        } catch (e: Exception) {
+            Log.w(TAG, "handleEmergencyDown: startActivity failed: ${e.message}")
         }
 
+        // ALWAYS forward to the ViewModel — it is the single source of truth for
+        // arming, cancel-arming-hold, repeat-press guard, and clear-hold logic.
+        // Service no longer auto-activates from a DOWN event; activation only
+        // happens via ACTION_EMERGENCY_ACTIVATE which the ViewModel sends after
+        // the 5-second arming countdown completes.
+        app.keyEventFlow.tryEmit(KeyAction.EmergencyDown)
+    }
+
+    private fun handleEmergencyActivate() {
+        Log.d(TAG, "handleEmergencyActivate emergencyActive=$emergencyActive")
+        if (emergencyActive) {
+            Log.d(TAG, "handleEmergencyActivate: already active — guard, no re-broadcast")
+            return
+        }
         if (emergencyActivatingJob != null) return
 
         val channelId = servicePrefs.channelId.takeIf { it >= 0 } ?: run {
@@ -284,13 +316,6 @@ class BackgroundAudioService : Service() {
             Log.w(TAG, "Emergency: no room key")
             return
         }
-
-        @Suppress("DEPRECATION")
-        val wl = (getSystemService(POWER_SERVICE) as PowerManager).newWakeLock(
-            PowerManager.SCREEN_BRIGHT_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP,
-            "CommandComms:EmergencyWake"
-        ).apply { setReferenceCounted(false) }
-        wl.acquire(5_000L)
 
         emergencyActivatingJob = scope.launch {
             try {
@@ -1637,6 +1662,7 @@ class BackgroundAudioService : Service() {
         const val ACTION_PTT_TX_STARTED = "com.reedersystems.commandcomms.PTT_TX_STARTED"
         const val ACTION_PTT_TX_ENDED = "com.reedersystems.commandcomms.PTT_TX_ENDED"
         const val ACTION_EMERGENCY_CLEAR = "com.reedersystems.commandcomms.SVC_EMERGENCY_CLEAR"
+        const val ACTION_EMERGENCY_ACTIVATE = "com.reedersystems.commandcomms.SVC_EMERGENCY_ACTIVATE"
         const val ACTION_EMERGENCY_ACTIVATED = "com.reedersystems.commandcomms.EMERGENCY_ACTIVATED"
         const val ACTION_EMERGENCY_CANCELLED = "com.reedersystems.commandcomms.EMERGENCY_CANCELLED"
         const val EXTRA_CHANNEL_ID = "channel_id"

@@ -365,6 +365,18 @@ class EmergencyEscalationController {
     } catch (error) {
       this.log('EMERGENCY_ACK_ERROR', { error: error.message });
     }
+
+    // Server-authoritative emergency clear: broadcast EMERGENCY_END to the
+    // originating unit, all other units in the channel, and every dispatcher.
+    // Without this the in-band ack only reaches the unit's data channel and the
+    // emergency state stays "stuck" everywhere else.
+    try {
+      const signaling = await this.dispatcher._ensureSignalingService();
+      const cleared = signaling.endEmergencyForUnit(targetUnit, `ai_ack:${reason}`);
+      this.log('EMERGENCY_END_BROADCAST', { targetUnit, reason, cleared });
+    } catch (error) {
+      this.log('EMERGENCY_END_BROADCAST_ERROR', { error: error.message });
+    }
   }
 
   async sendCadBroadcast(unitId, message, priority) {

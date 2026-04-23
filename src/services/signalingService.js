@@ -1095,7 +1095,9 @@ class SignalingService {
       duration: Date.now() - emergency.timestamp,
     };
     
-    this._emitToChannelDispatchers(channelId, SIGNALING_EVENTS.EMERGENCY_END, endData);
+    // Broadcast to ALL units in the channel (originating unit, other units, and
+    // every dispatcher viewing this channel) so emergency UI clears everywhere.
+    this._emitToChannelAll(channelId, SIGNALING_EVENTS.EMERGENCY_END, endData);
     this._emitCallback('emergencyEnd', endData);
     this._emitToDispatchers('emergency:cleared', endData);
 
@@ -1107,6 +1109,61 @@ class SignalingService {
     }
     
     console.log(`[Signaling] EMERGENCY END: ${channelId} cleared by ${socket.unitId}`);
+  }
+
+  /**
+   * Server-initiated clear (e.g. AI dispatcher acknowledging an emergency).
+   * Locates the active emergency for the given unit and tears it down on every
+   * surface — originating unit, other units in the channel, and dispatchers.
+   * Returns true when an emergency was found and cleared, false otherwise.
+   */
+  endEmergencyForUnit(unitId, reason = 'ai_ack') {
+    if (!unitId) return false;
+
+    let foundChannelId = null;
+    let emergency = null;
+    for (const [channelId, state] of this.emergencyStates) {
+      if (state.unitId === unitId) {
+        foundChannelId = channelId;
+        emergency = state;
+        break;
+      }
+    }
+    if (!emergency) {
+      console.log(`[Signaling] endEmergencyForUnit: no active emergency for ${unitId}`);
+      return false;
+    }
+
+    this.emergencyStates.delete(foundChannelId);
+
+    const presence = this.unitPresence.get(emergency.unitId);
+    if (presence) presence.status = 'online';
+
+    clearUnitEmergencyByIdentity(emergency.unitId).catch(err => {
+      console.error(`[Signaling] Failed to clear DB emergency for ${emergency.unitId}:`, err);
+    });
+
+    const endData = {
+      unitId: emergency.unitId,
+      agencyId: emergency.agencyId,
+      channelId: foundChannelId,
+      timestamp: Date.now(),
+      clearedBy: reason,
+      duration: Date.now() - emergency.timestamp,
+    };
+
+    this._emitToChannelAll(foundChannelId, SIGNALING_EVENTS.EMERGENCY_END, endData);
+    this._emitCallback('emergencyEnd', endData);
+    this._emitToDispatchers('emergency:cleared', endData);
+
+    const emergencyUnitSocket = this._findSocketByUnitId(emergency.unitId);
+    if (emergencyUnitSocket) {
+      emergencyUnitSocket.emit('location:track_stop', { requestedBy: reason });
+      this.trackedUnitLocations.delete(emergency.unitId);
+    }
+
+    console.log(`[Signaling] EMERGENCY END (server-initiated): ${foundChannelId} cleared by ${reason} for ${unitId}`);
+    return true;
   }
 
   _handleClearAirStart(socket, data) {

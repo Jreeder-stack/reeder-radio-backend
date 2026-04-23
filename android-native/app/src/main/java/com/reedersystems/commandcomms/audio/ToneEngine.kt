@@ -327,6 +327,18 @@ class ToneEngine(private val context: Context) {
         countdownBeepJob = null
     }
 
+    /**
+     * Single short beep used for the 5-second emergency arming countdown.
+     * One beep on press and one on each second tick (5 beeps over 5 seconds).
+     */
+    fun playArmingBeep() {
+        scope.launch {
+            runCatching {
+                playBeeps(660f, count = 1, durationMs = 120, gapMs = 0, volume = 0.7f)
+            }.onFailure { Log.w(TAG, "playArmingBeep error: ${it.message}") }
+        }
+    }
+
     private suspend fun playBeeps(
         freqHz: Float,
         count: Int,

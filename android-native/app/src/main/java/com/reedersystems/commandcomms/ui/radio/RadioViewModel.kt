@@ -9,6 +9,7 @@ import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioTrack
 import android.os.BatteryManager
+import android.os.SystemClock
 import android.util.Log
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
@@ -72,6 +73,8 @@ data class RadioUiState(
     val scanChannels: List<ScanChannelItem> = emptyList(),
     val emergencyHoldProgress: Float? = null,
     val isEmergencyCancelling: Boolean = false,
+    val emergencyArming: Boolean = false,
+    val emergencyArmingSecondsRemaining: Int = 0,
     val showScanOverlay: Boolean = false,
     val batteryLevel: Int? = null,
     val micPermissionGranted: Boolean = false,
@@ -108,6 +111,10 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
 
     private var emergencyJob: Job? = null
     private var cancelArmingJob: Job? = null
+    private var armingJob: Job? = null
+    @Volatile private var armingDeadlineMs: Long = 0L
+    @Volatile private var armingExpired: Boolean = false
+    @Volatile private var lastEmergencyDownAt: Long = 0L
     private var pttStartJob: Job? = null
     private var activeTransmittingUnitStaleJob: Job? = null
     private var scanClearJob: Job? = null
@@ -169,20 +176,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                 }
                 BackgroundAudioService.ACTION_EMERGENCY_CANCELLED -> {
                     Log.d(TAG, "EMERGENCY_CANCELLED received — dismissing emergency UI")
-                    emergencyJob?.cancel()
-                    emergencyJob = null
-                    cancelArmingJob?.cancel()
-                    cancelArmingJob = null
-                    app.toneEngine.stopCountdownBeep()
-                    _uiState.update {
-                        it.copy(
-                            emergencyHoldProgress = null,
-                            isEmergencyCancelling = false,
-                            myEmergencyActive = false,
-                            channelEmergencyActive = false
-                        )
-                    }
-                    locationTracker.stopTracking()
+                    forceResetEmergencyState()
                 }
             }
         }
@@ -479,8 +473,24 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                         _uiState.update { it.copy(channelEmergencyActive = true, channelEmergencyUnitId = event.unitId) }
                     }
                     is SignalingEvent.EmergencyEnd -> {
-                        _uiState.update { it.copy(channelEmergencyActive = false, myEmergencyActive = false, channelEmergencyUnitId = null) }
-                        locationTracker.stopTracking()
+                        val state = _uiState.value
+                        val cleared = event.unitId == state.unitId
+                        if (cleared || state.myEmergencyActive) {
+                            // Server-driven clear of THIS unit's emergency (e.g. AI-ack
+                            // after a 10-4 reply). Tear down all local state — arming
+                            // overlay, cancel-hold, beeps, auto-PTT, GPS, service flag.
+                            Log.d(TAG, "EmergencyEnd for own unit=${event.unitId} — full local reset")
+                            if (state.pttState != PttState.IDLE) onPttUp()
+                            sendServiceIntent(BackgroundAudioService.ACTION_EMERGENCY_CLEAR)
+                            forceResetEmergencyState()
+                        } else {
+                            _uiState.update {
+                                it.copy(
+                                    channelEmergencyActive = false,
+                                    channelEmergencyUnitId = null
+                                )
+                            }
+                        }
                     }
                     is SignalingEvent.EmergencyStatusResponse -> {
                         val currentChannel = _uiState.value.currentChannel?.roomKey
@@ -646,11 +656,17 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         emergencyJob = null
         cancelArmingJob?.cancel()
         cancelArmingJob = null
+        armingJob?.cancel()
+        armingJob = null
+        armingDeadlineMs = 0L
+        armingExpired = false
         app.toneEngine.stopCountdownBeep()
         _uiState.update {
             it.copy(
                 emergencyHoldProgress = null,
                 isEmergencyCancelling = false,
+                emergencyArming = false,
+                emergencyArmingSecondsRemaining = 0,
                 myEmergencyActive = false,
                 channelEmergencyActive = false,
                 channelEmergencyUnitId = null
@@ -661,36 +677,134 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun onEmergencyDown() {
+        // Dedup: BackgroundAudioService.handleEmergencyDown forwards to keyEventFlow
+        // AND brings MainActivity to front; if a stale duplicate intent arrives via
+        // onNewIntent we may see two events back-to-back. Drop any DOWN within 200ms
+        // of the previous one — a real T320 user can't physically tap that fast.
+        val now = SystemClock.elapsedRealtime()
+        if (now - lastEmergencyDownAt < 200L) {
+            Log.d(TAG, "onEmergencyDown: deduped (within 200ms of previous)")
+            return
+        }
+        lastEmergencyDownAt = now
+
         val state = _uiState.value
-        if (state.myEmergencyActive && !state.isEmergencyCancelling) {
-            startCancelHold()
+
+        // Repeat-press guard: if any cancel-hold is already in progress (cancelling
+        // either an arming countdown or an active emergency), additional presses
+        // must NOT restart it or trigger anything else.
+        if (cancelArmingJob != null || emergencyJob != null) {
+            Log.d(TAG, "onEmergencyDown: ignored — cancel hold already in progress")
+            return
+        }
+
+        when {
+            // 1) Active emergency → press starts the 3s hold-to-clear.
+            state.myEmergencyActive -> {
+                Log.d(TAG, "onEmergencyDown: emergency active → start cancel-hold")
+                startCancelHold()
+            }
+            // 2) Arming countdown running → press starts 3s hold-to-cancel-arming.
+            state.emergencyArming -> {
+                Log.d(TAG, "onEmergencyDown: arming → start cancel-arming hold")
+                startCancelArming()
+            }
+            // 3) Idle → start the 5s arming countdown.
+            else -> {
+                Log.d(TAG, "onEmergencyDown: idle → start 5s arming")
+                startArming()
+            }
         }
     }
 
     private fun onEmergencyUp() {
         val state = _uiState.value
         when {
+            // Releasing during the cancel-arming-hold debounce (<150ms): nothing
+            // user-visible happened. If arming already expired during the brief
+            // debounce, activate; otherwise arming keeps running to completion.
             cancelArmingJob != null && !state.isEmergencyCancelling -> {
                 cancelArmingJob?.cancel()
                 cancelArmingJob = null
-                Log.d(TAG, "CANCEL ARMING: quick release in debounce — arming unaffected")
+                if (armingExpired) {
+                    Log.d(TAG, "CANCEL ARMING: debounce release after deadline — activating")
+                    completeArmingAndActivate()
+                } else {
+                    Log.d(TAG, "CANCEL ARMING: quick release in debounce — arming continues")
+                }
             }
+            // Releasing mid-cancel-arming-hold (after debounce, before 3s done):
+            // abort the cancel. If the arming deadline elapsed during the hold,
+            // activate immediately per spec; otherwise the arming job is still
+            // counting down and will activate on its own.
             cancelArmingJob != null && state.isEmergencyCancelling -> {
                 cancelArmingJob?.cancel()
                 cancelArmingJob = null
                 app.toneEngine.stopCountdownBeep()
-                app.toneEngine.startCountdownBeep()
-                _uiState.update { it.copy(isEmergencyCancelling = false) }
-                Log.d(TAG, "CANCEL ARMING: aborted — arming resumes")
+                _uiState.update { it.copy(isEmergencyCancelling = false, emergencyHoldProgress = null) }
+                if (armingExpired) {
+                    Log.d(TAG, "CANCEL ARMING: released early but deadline elapsed — activating")
+                    completeArmingAndActivate()
+                } else {
+                    Log.d(TAG, "CANCEL ARMING: released early — arming continues")
+                }
             }
-            state.isEmergencyCancelling && state.myEmergencyActive -> {
+            // Releasing mid-cancel-hold for an ACTIVE emergency: abort the clear.
+            emergencyJob != null && state.isEmergencyCancelling && state.myEmergencyActive -> {
                 emergencyJob?.cancel()
                 emergencyJob = null
                 app.toneEngine.stopCountdownBeep()
                 _uiState.update { it.copy(isEmergencyCancelling = false, emergencyHoldProgress = null) }
                 Log.d(TAG, "CANCEL HOLD: aborted early")
             }
+            // Releasing while arming with no cancel-hold in progress: ignore (the
+            // arming runs autonomously to completion).
+            else -> {
+                Log.d(TAG, "onEmergencyUp: nothing to do (arming continues if running)")
+            }
         }
+    }
+
+    private fun startArming() {
+        armingExpired = false
+        armingDeadlineMs = SystemClock.elapsedRealtime() + 5000L
+        _uiState.update { it.copy(emergencyArming = true, emergencyArmingSecondsRemaining = 5) }
+        app.toneEngine.playArmingBeep()
+
+        armingJob = viewModelScope.launch {
+            var lastSecondBeeped = 5
+            while (true) {
+                delay(100)
+                val remaining = armingDeadlineMs - SystemClock.elapsedRealtime()
+                if (remaining <= 0L) {
+                    _uiState.update { it.copy(emergencyArmingSecondsRemaining = 0) }
+                    if (cancelArmingJob != null) {
+                        // User is holding to cancel — defer activation until we know
+                        // whether the hold completes (cancel) or is released (activate).
+                        Log.d(TAG, "ARMING: deadline reached during cancel-hold — deferring")
+                        armingExpired = true
+                        return@launch
+                    }
+                    break
+                }
+                val secsRemaining = ((remaining + 999) / 1000).toInt().coerceIn(1, 5)
+                if (secsRemaining < lastSecondBeeped) {
+                    lastSecondBeeped = secsRemaining
+                    app.toneEngine.playArmingBeep()
+                }
+                _uiState.update { it.copy(emergencyArmingSecondsRemaining = secsRemaining) }
+            }
+            completeArmingAndActivate()
+        }
+    }
+
+    private fun completeArmingAndActivate() {
+        armingJob?.cancel()
+        armingJob = null
+        armingDeadlineMs = 0L
+        armingExpired = false
+        _uiState.update { it.copy(emergencyArming = false, emergencyArmingSecondsRemaining = 0) }
+        onEmergencyActivate()
     }
 
     private fun startCancelArming() {
@@ -710,12 +824,23 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                 elapsed += 50
                 _uiState.update { it.copy(emergencyHoldProgress = elapsed / 3000f) }
             }
+            // Held the full 3 seconds — cancel arming entirely (even if the arming
+            // deadline elapsed mid-hold, holding to 3s ALWAYS wins per spec).
             cancelArmingJob = null
-            emergencyJob?.cancel()
-            emergencyJob = null
+            armingJob?.cancel()
+            armingJob = null
+            armingDeadlineMs = 0L
+            armingExpired = false
             app.toneEngine.stopCountdownBeep()
-            _uiState.update { it.copy(isEmergencyCancelling = false, emergencyHoldProgress = null) }
-            Log.d(TAG, "CANCEL ARMING: completed at ${elapsed}ms — arming cancelled")
+            _uiState.update {
+                it.copy(
+                    isEmergencyCancelling = false,
+                    emergencyHoldProgress = null,
+                    emergencyArming = false,
+                    emergencyArmingSecondsRemaining = 0
+                )
+            }
+            Log.d(TAG, "CANCEL ARMING: completed — arming cancelled")
         }
     }
 
@@ -742,7 +867,9 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         val channel = _uiState.value.currentChannel ?: return
         Log.d(TAG, "EMERGENCY ACTIVATE roomKey=${channel.roomKey}")
         _uiState.update { it.copy(myEmergencyActive = true, channelEmergencyActive = true) }
-        app.signalingRepository.emergencyStart(channel.roomKey)
+        // Service owns the signaling broadcast (single source of truth) so other
+        // surfaces — dispatchers + cross-channel units — are notified consistently.
+        sendServiceIntent(BackgroundAudioService.ACTION_EMERGENCY_ACTIVATE)
         locationTracker.startTracking()
         startEmergencyTx(channel.roomKey)
     }

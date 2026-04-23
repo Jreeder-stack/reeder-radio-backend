@@ -106,8 +106,12 @@ fun RadioScreen(
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
 
-            state.emergencyHoldProgress?.let { progress ->
-                EmergencyHoldBar(progress, state.isEmergencyCancelling)
+            // While arming, the cancel-hold bar is rendered inside the arming
+            // overlay so it stays visible above the flashing background.
+            if (!state.emergencyArming) {
+                state.emergencyHoldProgress?.let { progress ->
+                    EmergencyHoldBar(progress, state.isEmergencyCancelling)
+                }
             }
 
             if (state.isClearAir) {
@@ -163,6 +167,53 @@ fun RadioScreen(
                 sender = state.pageAlertSender,
                 onDismiss = viewModel::dismissPageAlert
             )
+        }
+
+        if (state.emergencyArming) {
+            EmergencyArmingOverlay(
+                secondsRemaining = state.emergencyArmingSecondsRemaining,
+                flashAlpha = flashAlpha,
+                holdProgress = state.emergencyHoldProgress,
+                isCancelling = state.isEmergencyCancelling
+            )
+        }
+    }
+}
+
+@Composable
+private fun EmergencyArmingOverlay(
+    secondsRemaining: Int,
+    flashAlpha: Float,
+    holdProgress: Float?,
+    isCancelling: Boolean
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(BgEmerg.copy(alpha = (0.55f * flashAlpha).coerceIn(0.2f, 0.85f)))
+    ) {
+        // Cancel-hold progress is layered on TOP so it remains visible while
+        // the user is holding to cancel arming.
+        if (holdProgress != null) {
+            Box(modifier = Modifier.align(Alignment.TopCenter)) {
+                EmergencyHoldBar(holdProgress, isCancelling)
+            }
+        }
+        Column(
+            modifier = Modifier.align(Alignment.Center),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            T320Text(
+                "EMERGENCY BROADCAST IN ${secondsRemaining.coerceAtLeast(1)}",
+                color = Color.White, bold = true, size = 20
+            )
+            Spacer(Modifier.height(8.dp))
+            T320Text(
+                secondsRemaining.coerceAtLeast(1).toString(),
+                color = Color.White, bold = true, size = 56
+            )
+            Spacer(Modifier.height(8.dp))
+            T320Text("HOLD TO CANCEL", color = Color.White, bold = true, size = 14)
         }
     }
 }
