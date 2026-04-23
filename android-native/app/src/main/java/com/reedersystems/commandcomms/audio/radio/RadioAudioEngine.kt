@@ -2,6 +2,7 @@ package com.reedersystems.commandcomms.audio.radio
 
 import android.content.Context
 import android.media.AudioAttributes
+import android.media.AudioDeviceInfo
 import android.media.AudioFormat
 import android.media.AudioFocusRequest
 import android.media.AudioManager
@@ -363,8 +364,84 @@ class RadioAudioEngine(private val context: Context) {
         return (manufacturer == "ZRK" && model == "T320")
     }
 
+    private val WIRED_INPUT_TYPES = intArrayOf(
+        AudioDeviceInfo.TYPE_WIRED_HEADSET,
+        AudioDeviceInfo.TYPE_USB_HEADSET,
+        AudioDeviceInfo.TYPE_USB_DEVICE
+    )
+
+    /**
+     * Look up the currently-attached wired input device (3.5mm or USB-C
+     * speaker mic). Returns null when nothing is plugged in.
+     */
+    private fun findWiredInputDevice(): AudioDeviceInfo? {
+        return try {
+            audioManager.getDevices(AudioManager.GET_DEVICES_INPUTS)
+                .firstOrNull { it.type in WIRED_INPUT_TYPES }
+        } catch (e: Exception) {
+            Log.w(TAG, "findWiredInputDevice failed: ${e.message}")
+            null
+        }
+    }
+
+    private fun isWiredAccessoryPresent(): Boolean = findWiredInputDevice() != null
+
+    /**
+     * Pin the live AudioRecord to the wired accessory mic when present, or
+     * clear the preferred device so the OS uses the default for the chosen
+     * audio source. Safe to call repeatedly.
+     */
+    private fun applyPreferredCaptureDeviceTo(record: AudioRecord) {
+        val wired = findWiredInputDevice()
+        try {
+            val ok = record.setPreferredDevice(wired)
+            Log.d("[AudioCapture]", "TX_PREFERRED_DEVICE accepted=$ok deviceType=${wired?.type ?: -1} accessoryPresent=${wired != null}")
+        } catch (e: Exception) {
+            Log.w("[AudioCapture]", "TX_PREFERRED_DEVICE_FAILED ${e.message}")
+        }
+    }
+
+    /**
+     * Called by BackgroundAudioService whenever the OS reports a wired
+     * accessory plug/unplug event. Invalidates the per-device cached audio
+     * source (because the right TX source is different with vs. without an
+     * accessory) and re-pins capture routing on any active AudioRecord.
+     */
+    fun onAccessoryStateChanged() {
+        val accessoryPresent = isWiredAccessoryPresent()
+        cachedSourceKey = null
+        cachedSourceValue = null
+        cachedSourceName = null
+        Log.d(TAG, """{"event":"TX_AUDIO_SOURCE_CACHE_INVALIDATED","reason":"accessory_state_changed","accessoryPresent":$accessoryPresent}""")
+        val record = audioRecord
+        if (record != null) {
+            applyPreferredCaptureDeviceTo(record)
+        }
+    }
+
     private fun selectAudioSource(): Int? {
         val deviceKey = "${Build.MANUFACTURER}/${Build.MODEL}/API${Build.VERSION.SDK_INT}"
+
+        // When a wired accessory mic is attached, vendor VOIP processing on
+        // the T320 is bound to the built-in mic and produces wrong/silent
+        // audio when the device-cached VOICE_COMMUNICATION source is used
+        // against the wired input. Force MIC (or UNPROCESSED when available)
+        // and bypass the per-device cache while the accessory is present.
+        if (isWiredAccessoryPresent()) {
+            val source: Int
+            val name: String
+            if (Build.VERSION.SDK_INT >= 24) {
+                source = MediaRecorder.AudioSource.UNPROCESSED
+                name = "UNPROCESSED"
+            } else {
+                source = MediaRecorder.AudioSource.MIC
+                name = "MIC"
+            }
+            Log.d("[AudioCapture]", "TX_AUDIO_SOURCE_SELECTED source=$name reason=wired_accessory_present device=$deviceKey")
+            txSessionStats.audioSource = name
+            return source
+        }
+
         if (!bypassSourceCache) {
             val cached = cachedSourceKey
             if (cached != null && cached == deviceKey && cachedSourceValue != null) {
@@ -582,6 +659,7 @@ class RadioAudioEngine(private val context: Context) {
             opusCodec.createFreshEncoder(actualSampleRate, 1)
             computeDspCoefficients(actualSampleRate)
 
+            applyPreferredCaptureDeviceTo(record)
             record.startRecording()
             audioRecord = record
 
@@ -1043,6 +1121,7 @@ class RadioAudioEngine(private val context: Context) {
 
             computeDspCoefficients(actualSampleRate)
 
+            applyPreferredCaptureDeviceTo(record)
             record.startRecording()
             audioRecord = record
 

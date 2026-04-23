@@ -6,6 +6,7 @@ import android.app.Service
 import android.content.BroadcastReceiver
 import android.content.Intent
 import android.content.IntentFilter
+import android.media.AudioDeviceCallback
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import android.net.wifi.WifiManager
@@ -91,6 +92,139 @@ class BackgroundAudioService : Service() {
     @Volatile private var pendingFirstPttAfterReconnect = false
     @Volatile private var radioRouteActive = false
     private var pendingRouteReleaseJob: Job? = null
+    private var audioDeviceCallback: AudioDeviceCallback? = null
+
+    private val WIRED_OUTPUT_TYPES = intArrayOf(
+        AudioDeviceInfo.TYPE_WIRED_HEADSET,
+        AudioDeviceInfo.TYPE_WIRED_HEADPHONES,
+        AudioDeviceInfo.TYPE_USB_HEADSET,
+        AudioDeviceInfo.TYPE_USB_DEVICE
+    )
+    private val WIRED_INPUT_TYPES = intArrayOf(
+        AudioDeviceInfo.TYPE_WIRED_HEADSET,
+        AudioDeviceInfo.TYPE_USB_HEADSET,
+        AudioDeviceInfo.TYPE_USB_DEVICE
+    )
+
+    private fun findWiredOutputDevice(): AudioDeviceInfo? {
+        if (!::audioManager.isInitialized) return null
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            audioManager.availableCommunicationDevices
+                .firstOrNull { it.type in WIRED_OUTPUT_TYPES }
+                ?.let { return it }
+        }
+        return audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
+            .firstOrNull { it.type in WIRED_OUTPUT_TYPES }
+    }
+
+    private fun findWiredInputDevice(): AudioDeviceInfo? {
+        if (!::audioManager.isInitialized) return null
+        return audioManager.getDevices(AudioManager.GET_DEVICES_INPUTS)
+            .firstOrNull { it.type in WIRED_INPUT_TYPES }
+    }
+
+    private fun deviceTypeName(type: Int?): String = when (type) {
+        null, -1 -> "NONE"
+        AudioDeviceInfo.TYPE_BUILTIN_SPEAKER -> "BUILTIN_SPEAKER"
+        AudioDeviceInfo.TYPE_BUILTIN_EARPIECE -> "BUILTIN_EARPIECE"
+        AudioDeviceInfo.TYPE_BUILTIN_MIC -> "BUILTIN_MIC"
+        AudioDeviceInfo.TYPE_WIRED_HEADSET -> "WIRED_HEADSET"
+        AudioDeviceInfo.TYPE_WIRED_HEADPHONES -> "WIRED_HEADPHONES"
+        AudioDeviceInfo.TYPE_USB_HEADSET -> "USB_HEADSET"
+        AudioDeviceInfo.TYPE_USB_DEVICE -> "USB_DEVICE"
+        AudioDeviceInfo.TYPE_BLUETOOTH_SCO -> "BLUETOOTH_SCO"
+        else -> "TYPE_$type"
+    }
+
+    /**
+     * Pick and apply the correct radio output device:
+     *   - Wired accessory (3.5mm / USB-C) when present
+     *   - Built-in loudspeaker otherwise (NEVER earpiece)
+     * Pure device-selection: does not touch audio mode, volume, or
+     * the radioRouteActive flag.
+     */
+    private fun applyOutputDeviceSelection(reason: String) {
+        if (!::audioManager.isInitialized) return
+        val wiredOut = findWiredOutputDevice()
+        val wiredIn = findWiredInputDevice()
+        // Treat the accessory as present whenever EITHER a wired output OR
+        // a wired input is enumerated — some corded mics on the T320 expose
+        // only one direction to AudioManager despite carrying both.
+        val accessoryPresent = wiredOut != null || wiredIn != null
+        val apiPath: String
+        val chosenOutType: Int?
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            apiPath = "setCommunicationDevice"
+            val targetDevice = wiredOut
+                ?: audioManager.availableCommunicationDevices
+                    .firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
+            chosenOutType = targetDevice?.type
+            if (targetDevice != null && audioManager.communicationDevice?.id != targetDevice.id) {
+                audioManager.setCommunicationDevice(targetDevice)
+            }
+        } else {
+            apiPath = "setSpeakerphoneOn"
+            @Suppress("DEPRECATION")
+            audioManager.isSpeakerphoneOn = wiredOut == null
+            chosenOutType =
+                if (wiredOut != null) wiredOut.type else AudioDeviceInfo.TYPE_BUILTIN_SPEAKER
+        }
+        Log.d(
+            TAG,
+            """{"event":"RADIO_ROUTE_DEVICE_SELECT","reason":"$reason","output":"${deviceTypeName(chosenOutType)}","input":"${deviceTypeName(wiredIn?.type)}","accessoryPresent":$accessoryPresent,"apiPath":"$apiPath"}"""
+        )
+    }
+
+    private fun registerAudioDeviceCallback() {
+        if (audioDeviceCallback != null) return
+        if (!::audioManager.isInitialized) return
+        val cb = object : AudioDeviceCallback() {
+            override fun onAudioDevicesAdded(addedDevices: Array<out AudioDeviceInfo>?) {
+                handleAudioDevicesChanged("added", addedDevices)
+            }
+
+            override fun onAudioDevicesRemoved(removedDevices: Array<out AudioDeviceInfo>?) {
+                handleAudioDevicesChanged("removed", removedDevices)
+            }
+        }
+        audioManager.registerAudioDeviceCallback(cb, null)
+        audioDeviceCallback = cb
+        Log.d(TAG, "AudioDeviceCallback registered")
+    }
+
+    private fun unregisterAudioDeviceCallback() {
+        val cb = audioDeviceCallback ?: return
+        if (::audioManager.isInitialized) {
+            try { audioManager.unregisterAudioDeviceCallback(cb) } catch (_: Exception) {}
+        }
+        audioDeviceCallback = null
+        Log.d(TAG, "AudioDeviceCallback unregistered")
+    }
+
+    private fun handleAudioDevicesChanged(action: String, devices: Array<out AudioDeviceInfo>?) {
+        if (devices == null || devices.isEmpty()) return
+        val relevantTypes = (WIRED_OUTPUT_TYPES.toSet() + WIRED_INPUT_TYPES.toSet())
+        val relevant = devices.filter { it.type in relevantTypes }
+        if (relevant.isEmpty()) return
+        val typeNames = relevant.joinToString(",", "[", "]") { "\"${deviceTypeName(it.type)}\"" }
+        val resolvedOut = findWiredOutputDevice()
+        val resolvedIn = findWiredInputDevice()
+        val accessoryNow = resolvedOut != null || resolvedIn != null
+        val chosenOutName = if (resolvedOut != null) deviceTypeName(resolvedOut.type)
+            else "BUILTIN_SPEAKER"
+        Log.d(
+            TAG,
+            """{"event":"AUDIO_DEVICE_$action","types":$typeNames,"accessoryPresent":$accessoryNow,"chosenOutput":"$chosenOutName","chosenInput":"${deviceTypeName(resolvedIn?.type)}","routeActive":$radioRouteActive}"""
+        )
+        // Tell the engine to invalidate its TX-source cache and re-pin the
+        // capture device on any active AudioRecord.
+        radioEngine?.onAccessoryStateChanged()
+        // If a radio audio route is currently active, re-select the output
+        // device so playback flips to/from the accessory immediately.
+        if (radioRouteActive) {
+            applyOutputDeviceSelection("device_$action")
+        }
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -135,6 +269,7 @@ class BackgroundAudioService : Service() {
 
         startForeground(NOTIFICATION_ID, buildNotification("Radio — Standby"))
         registerDynamicPttReceiver()
+        registerAudioDeviceCallback()
         startBackgroundSignalingObservers()
         ensureBackgroundSignalingConnected()
     }
@@ -1469,28 +1604,20 @@ class BackgroundAudioService : Service() {
             pendingRouteReleaseJob = null
             Log.d(TAG, """{"event":"RADIO_ROUTE_RELEASE_COALESCED"}""")
         }
-        if (radioRouteActive) return
+        if (radioRouteActive) {
+            // Route is already active. Re-verify device selection so an
+            // accessory plug/unplug or a stale earpiece selection is corrected
+            // before the next RX frame is written.
+            applyOutputDeviceSelection("apply_already_active")
+            verifyNoEarpiece("apply_already_active")
+            return
+        }
         radioRouteActive = true
         if (!::audioManager.isInitialized) return
         if (audioManager.mode != AudioManager.MODE_IN_COMMUNICATION) {
             audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val currentDeviceType = audioManager.communicationDevice?.type
-            if (currentDeviceType != AudioDeviceInfo.TYPE_BUILTIN_SPEAKER) {
-                val speakerDevice = audioManager.availableCommunicationDevices
-                    .firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
-                if (speakerDevice != null) {
-                    audioManager.setCommunicationDevice(speakerDevice)
-                }
-            }
-        } else {
-            @Suppress("DEPRECATION")
-            if (!audioManager.isSpeakerphoneOn) {
-                @Suppress("DEPRECATION")
-                audioManager.isSpeakerphoneOn = true
-            }
-        }
+        applyOutputDeviceSelection("apply")
         val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_VOICE_CALL)
         val currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_VOICE_CALL)
         // Save once per session so release restores the operator's prior level.
@@ -1498,7 +1625,28 @@ class BackgroundAudioService : Service() {
         if (currentVolume != maxVolume) {
             audioManager.setStreamVolume(AudioManager.STREAM_VOICE_CALL, maxVolume, 0)
         }
-        Log.d(TAG, "BackgroundAudioService: radio audio route applied (MODE_IN_COMMUNICATION + speaker) voiceCallVol=$currentVolume→$maxVolume")
+        verifyNoEarpiece("apply")
+        Log.d(TAG, "BackgroundAudioService: radio audio route applied (MODE_IN_COMMUNICATION) voiceCallVol=$currentVolume→$maxVolume")
+    }
+
+    /**
+     * Defensive re-check: if the OS ended up selecting the built-in earpiece
+     * for the communication device while we believe the radio route is
+     * active, immediately re-apply the wired-aware device selection. Logs a
+     * structured warning so the leak is visible in field captures.
+     */
+    private fun verifyNoEarpiece(reason: String) {
+        if (!radioRouteActive) return
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
+        if (!::audioManager.isInitialized) return
+        val current = audioManager.communicationDevice?.type
+        if (current == AudioDeviceInfo.TYPE_BUILTIN_EARPIECE) {
+            Log.w(
+                TAG,
+                """{"event":"RADIO_ROUTE_EARPIECE_DETECTED","reason":"$reason","action":"reapply"}"""
+            )
+            applyOutputDeviceSelection("earpiece_recovery_$reason")
+        }
     }
 
     /**
@@ -1542,20 +1690,12 @@ class BackgroundAudioService : Service() {
         // route had been established and effectively forces the loudspeaker
         // off, sending the next incoming radio audio out the earpiece. The
         // route used here for the silent gap between RX bursts must match the
-        // route applied when RX is active (built-in loudspeaker), so we
-        // explicitly leave the loudspeaker selected.
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val speakerDevice = audioManager.availableCommunicationDevices
-                .firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
-            if (speakerDevice != null) {
-                audioManager.setCommunicationDevice(speakerDevice)
-            }
-        } else {
-            @Suppress("DEPRECATION")
-            audioManager.isSpeakerphoneOn = true
-        }
+        // route applied when RX is active (wired accessory if present, else
+        // built-in loudspeaker), so we delegate to the same wired-aware
+        // selector and never leave earpiece selected.
+        applyOutputDeviceSelection("release")
         audioManager.mode = previousAudioMode
-        Log.d(TAG, "BackgroundAudioService: radio audio route released (mode=$previousAudioMode, speaker=loudspeaker_kept_on)")
+        Log.d(TAG, "BackgroundAudioService: radio audio route released (mode=$previousAudioMode)")
     }
 
     private var speakerStateRestored = false
@@ -1569,8 +1709,19 @@ class BackgroundAudioService : Service() {
                 Log.d(TAG, "BackgroundAudioService: STREAM_VOICE_CALL volume restored to $savedVoiceCallVolume (teardown path)")
                 savedVoiceCallVolume = -1
             }
+            // Service-shutdown teardown: hand the comms device back to the
+            // OS, but if a wired accessory is currently attached, prefer it
+            // so that any subsequent audio (paging tones, follow-up RX from
+            // a still-running engine, etc.) uses the accessory rather than
+            // falling back to earpiece. When no accessory is attached, the
+            // pre-service snapshot is honored.
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                if (previousSpeakerphoneOn) {
+                val wiredOut = findWiredOutputDevice()
+                if (wiredOut != null) {
+                    if (audioManager.communicationDevice?.id != wiredOut.id) {
+                        audioManager.setCommunicationDevice(wiredOut)
+                    }
+                } else if (previousSpeakerphoneOn) {
                     val speakerDevice = audioManager.availableCommunicationDevices
                         .firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
                     if (speakerDevice != null) {
@@ -1581,10 +1732,12 @@ class BackgroundAudioService : Service() {
                 }
             } else {
                 @Suppress("DEPRECATION")
-                audioManager.isSpeakerphoneOn = previousSpeakerphoneOn
+                audioManager.isSpeakerphoneOn =
+                    if (findWiredOutputDevice() != null) false else previousSpeakerphoneOn
             }
             audioManager.mode = previousAudioMode
-            Log.d(TAG, "BackgroundAudioService: loudspeaker restored (mode=$previousAudioMode, speaker=$previousSpeakerphoneOn)")
+            val accessoryPresent = findWiredOutputDevice() != null || findWiredInputDevice() != null
+            Log.d(TAG, "BackgroundAudioService: route restored (mode=$previousAudioMode, prevSpeaker=$previousSpeakerphoneOn, accessoryPresent=$accessoryPresent)")
         }
     }
 
@@ -1597,6 +1750,7 @@ class BackgroundAudioService : Service() {
             dynamicPttReceiver = null
             Log.d(TAG, "Dynamic PttHardwareReceiver unregistered")
         }
+        unregisterAudioDeviceCallback()
         radioEngineRetryJob?.cancel()
         signalingConnectionJob?.cancel()
         signalingEventsJob?.cancel()
