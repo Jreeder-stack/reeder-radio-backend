@@ -9069,6 +9069,7 @@ export class AIDispatcher {
         this.logSpeechEvent(participantId, turnCtx.transcript, turnCtx.intent, text);
         this._turnContextByUnit.delete(participantId);
       }
+      let playbackStartSent = false;
       try {
         // Task #486 (Step 5): final boundary scrub — if any caller leaks
         // a UUID/socket/unit_<hex> ID into the TTS string, replace it with
@@ -9078,9 +9079,17 @@ export class AIDispatcher {
           this.log('TTS_SANITIZED_RAW_ID', { original: text, scrubbed: sanitized.text, count: sanitized.replaced });
         }
         const audio = await textToSpeech(sanitized.text);
+        // Task #515: mirror playToneAndSpeak's ai-playback-start/end so any UI
+        // gating on those events sees the AI as "done" after a normal ack.
+        await this.sendDataMessage({ type: 'ai-playback-start' });
+        playbackStartSent = true;
         await this.publishAudio(audio, sanitized.text, { retryOnBusy: true, retryWaitMs: 3000, ...options });
+        await this.sendDataMessage({ type: 'ai-playback-end' });
       } catch (err) {
         this.log('SPEAK_ERROR', { error: err.message });
+        if (playbackStartSent) {
+          await this.sendDataMessage({ type: 'ai-playback-end' }).catch(() => {});
+        }
       }
       if (participantId) {
         const session = getUnitSessionState(participantId);
@@ -9105,6 +9114,12 @@ export class AIDispatcher {
 
   async publishAudio(audioBuffer, responseText = null, options = {}) {
     const { retryOnBusy = false, retryWaitMs = 1500, retryContext = null } = options;
+    let acquiredKey = null;
+    let acquiredAtMs = null;
+    let lastFrameAtMs = null;
+    let releaseSource = 'normal';
+    let framesSent = 0;
+    let silentFramesSent = 0;
     try {
       if (!await this.shouldRespond()) {
         this.log('PUBLISH_SKIPPED', { reason: 'Disabled' });
@@ -9155,50 +9170,62 @@ export class AIDispatcher {
         return;
       }
 
+      acquiredKey = this.channelName;
+      acquiredAtMs = Date.now();
+
       await new Promise(resolve => setTimeout(resolve, 300));
 
       const startTime = Date.now();
       const FRAME_MS = 20;
 
-      for (let i = 0; i < opusFrames.length; i++) {
-        if (i % 10 === 0 && !this.isRunning) {
-          this.log('PUBLISH_INTERRUPTED', { reason: 'Dispatcher stopped mid-publish' });
-          break;
-        }
-
-        this._publishSequence = (this._publishSequence + 1) & 0xFFFF;
-        audioRelayService.injectAudio(
-          this.channelName,
-          AI_IDENTITY,
-          this._publishSequence,
-          opusFrames[i]
-        );
-
-        const expectedTime = (i + 1) * FRAME_MS;
-        const elapsed = Date.now() - startTime;
-        const sleepTime = Math.max(0, expectedTime - elapsed);
-        if (sleepTime > 0) {
-          await new Promise(resolve => setTimeout(resolve, sleepTime));
-        }
-      }
-
-      const TRAILING_SILENT_FRAMES = 4;
-      const silentPcm = Buffer.alloc(OPUS_FRAME_SIZE * 2);
-      let silentOpusFrames;
       try {
-        silentOpusFrames = opusCodec.encodePcmToOpus(silentPcm);
-      } catch (_) {
-        silentOpusFrames = [];
-      }
-      for (const silentFrame of silentOpusFrames) {
-        this._publishSequence = (this._publishSequence + 1) & 0xFFFF;
-        audioRelayService.injectAudio(this.channelName, AI_IDENTITY, this._publishSequence, silentFrame);
-        await new Promise(resolve => setTimeout(resolve, FRAME_MS));
-      }
+        for (let i = 0; i < opusFrames.length; i++) {
+          if (i % 10 === 0 && !this.isRunning) {
+            this.log('PUBLISH_INTERRUPTED', { reason: 'Dispatcher stopped mid-publish' });
+            break;
+          }
 
-      await new Promise(resolve => setTimeout(resolve, 800));
+          this._publishSequence = (this._publishSequence + 1) & 0xFFFF;
+          audioRelayService.injectAudio(
+            this.channelName,
+            AI_IDENTITY,
+            this._publishSequence,
+            opusFrames[i]
+          );
+          framesSent++;
 
-      floorControlService.releaseFloor(this.channelName, AI_IDENTITY);
+          const expectedTime = (i + 1) * FRAME_MS;
+          const elapsed = Date.now() - startTime;
+          const sleepTime = Math.max(0, expectedTime - elapsed);
+          if (sleepTime > 0) {
+            await new Promise(resolve => setTimeout(resolve, sleepTime));
+          }
+        }
+
+        const silentPcm = Buffer.alloc(OPUS_FRAME_SIZE * 2);
+        let silentOpusFrames;
+        try {
+          silentOpusFrames = opusCodec.encodePcmToOpus(silentPcm);
+        } catch (_) {
+          silentOpusFrames = [];
+        }
+        for (const silentFrame of silentOpusFrames) {
+          this._publishSequence = (this._publishSequence + 1) & 0xFFFF;
+          audioRelayService.injectAudio(this.channelName, AI_IDENTITY, this._publishSequence, silentFrame);
+          silentFramesSent++;
+          await new Promise(resolve => setTimeout(resolve, FRAME_MS));
+        }
+
+        lastFrameAtMs = Date.now();
+
+        // Task #515: short post-roll (was 800ms — now 100ms). The trailing
+        // silent frames already act as a clean end-of-TX marker; 100 ms
+        // gives jitter buffers a little slack without holding the channel.
+        await new Promise(resolve => setTimeout(resolve, 100));
+      } catch (innerErr) {
+        releaseSource = 'catch';
+        this.log('PUBLISH_STREAM_ERROR', { error: innerErr.message });
+      }
 
       if (responseText && this.channelName) {
         try {
@@ -9206,28 +9233,56 @@ export class AIDispatcher {
           const wavBuffer = Buffer.concat([wavHeader, audioBuffer]);
           if (!isValidWav(wavBuffer)) {
             this.log('CHAT_RECORD_INVALID_WAV', { channel: this.channelName, size: wavBuffer.length });
-            return;
+          } else {
+            const filename = `${this.channelName}_${Date.now()}_AI-DISPATCHER.wav`;
+            const filepath = path.join(AUDIO_DIR, filename);
+            fs.writeFileSync(filepath, wavBuffer);
+            const audioUrl = `/api/messages/audio/${filename}`;
+            const samples = new Int16Array(audioBuffer.buffer, audioBuffer.byteOffset, audioBuffer.length / 2);
+            const durationMs = Math.round((samples.length / AZURE_SAMPLE_RATE) * 1000);
+            const msg = await createChannelMessage(this.channelName, 'AI-DISPATCHER', 'audio', null, audioUrl, durationMs, wavBuffer);
+            if (msg) {
+              await createChannelMessage(this.channelName, 'AI-DISPATCHER', 'text', responseText).catch(() => {});
+              broadcastMessage(this.channelName, msg).catch(() => {});
+            }
+            this.log('CHAT_RECORDED', { channel: this.channelName, messageId: msg?.id });
           }
-          const filename = `${this.channelName}_${Date.now()}_AI-DISPATCHER.wav`;
-          const filepath = path.join(AUDIO_DIR, filename);
-          fs.writeFileSync(filepath, wavBuffer);
-          const audioUrl = `/api/messages/audio/${filename}`;
-          const samples = new Int16Array(audioBuffer.buffer, audioBuffer.byteOffset, audioBuffer.length / 2);
-          const durationMs = Math.round((samples.length / AZURE_SAMPLE_RATE) * 1000);
-          const msg = await createChannelMessage(this.channelName, 'AI-DISPATCHER', 'audio', null, audioUrl, durationMs, wavBuffer);
-          if (msg) {
-            await createChannelMessage(this.channelName, 'AI-DISPATCHER', 'text', responseText).catch(() => {});
-            broadcastMessage(this.channelName, msg).catch(() => {});
-          }
-          this.log('CHAT_RECORDED', { channel: this.channelName, messageId: msg?.id });
         } catch (chatErr) {
           this.log('CHAT_RECORD_ERROR', { error: chatErr.message });
         }
       }
 
     } catch (error) {
-      floorControlService.releaseFloor(this.channelName, AI_IDENTITY);
+      releaseSource = 'catch';
       this.log('PUBLISH_ERROR', { error: error.message });
+    } finally {
+      if (acquiredKey) {
+        const releaseKey = this.channelName;
+        const released = floorControlService.releaseFloor(acquiredKey, AI_IDENTITY);
+        let fellBackToReleaseAll = false;
+        if (!released) {
+          const releasedKeys = floorControlService.releaseAllForUnit(AI_IDENTITY);
+          fellBackToReleaseAll = true;
+          if (releaseSource === 'normal') releaseSource = 'finally';
+          this.log('PUBLISH_FLOOR_KEY_DRIFT', {
+            acquiredKey,
+            releaseKey,
+            releasedKeys,
+          });
+        }
+        const releasedAtMs = Date.now();
+        this.log('AI_FLOOR_LIFECYCLE', {
+          acquiredAtMs,
+          lastFrameAtMs,
+          releasedAtMs,
+          releaseSource,
+          acquiredKey,
+          releaseKey,
+          framesSent,
+          silentFramesSent,
+          fellBackToReleaseAll,
+        });
+      }
     }
   }
 

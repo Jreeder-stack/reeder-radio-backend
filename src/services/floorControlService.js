@@ -1,6 +1,8 @@
 import { canonicalChannelKey } from './channelKeyUtils.js';
 
 const FLOOR_HOLD_TIMEOUT_MS = 30000;
+const AI_FLOOR_HOLD_TIMEOUT_MS = 3000;
+export const AI_FLOOR_IDENTITY = 'AI-Dispatcher';
 
 class FloorControlService {
   constructor() {
@@ -122,6 +124,10 @@ class FloorControlService {
     return released;
   }
 
+  _timeoutForUnit(unitId) {
+    return unitId === AI_FLOOR_IDENTITY ? AI_FLOOR_HOLD_TIMEOUT_MS : FLOOR_HOLD_TIMEOUT_MS;
+  }
+
   _setFloor(key, unitId, isEmergency, isClearAir = false) {
     this.floorHolders.set(key, {
       unitId,
@@ -131,17 +137,22 @@ class FloorControlService {
     });
 
     this._clearTimer(key);
+    const timeoutMs = this._timeoutForUnit(unitId);
     const timer = setTimeout(() => {
       const current = this.floorHolders.get(key);
       if (current && current.unitId === unitId) {
         this.floorHolders.delete(key);
         this.floorTimers.delete(key);
-        console.log(`[FloorControl] Timeout: released floor on ${key} from ${unitId}`);
+        if (unitId === AI_FLOOR_IDENTITY) {
+          console.log(`[FloorControl] AI watchdog released floor on ${key}`);
+        } else {
+          console.log(`[FloorControl] Timeout: released floor on ${key} from ${unitId}`);
+        }
         if (this._onTimeout) {
           this._onTimeout(key, unitId);
         }
       }
-    }, FLOOR_HOLD_TIMEOUT_MS);
+    }, timeoutMs);
 
     timer.unref?.();
     this.floorTimers.set(key, timer);
@@ -152,17 +163,22 @@ class FloorControlService {
     const current = this.floorHolders.get(key);
     if (!current) return;
     current.grantedAt = Date.now();
+    const timeoutMs = this._timeoutForUnit(unitId);
     const timer = setTimeout(() => {
       const cur = this.floorHolders.get(key);
       if (cur && cur.unitId === unitId) {
         this.floorHolders.delete(key);
         this.floorTimers.delete(key);
-        console.log(`[FloorControl] Timeout: released floor on ${key} from ${unitId}`);
+        if (unitId === AI_FLOOR_IDENTITY) {
+          console.log(`[FloorControl] AI watchdog released floor on ${key}`);
+        } else {
+          console.log(`[FloorControl] Timeout: released floor on ${key} from ${unitId}`);
+        }
         if (this._onTimeout) {
           this._onTimeout(key, unitId);
         }
       }
-    }, FLOOR_HOLD_TIMEOUT_MS);
+    }, timeoutMs);
     timer.unref?.();
     this.floorTimers.set(key, timer);
   }
@@ -181,3 +197,4 @@ class FloorControlService {
 }
 
 export const floorControlService = new FloorControlService();
+export { FLOOR_HOLD_TIMEOUT_MS, AI_FLOOR_HOLD_TIMEOUT_MS };
