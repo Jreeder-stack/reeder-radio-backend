@@ -139,6 +139,10 @@ export async function initializeDatabase() {
         is_emergency BOOLEAN DEFAULT false
       )
     `);
+    // Task #512: persist callsign → CAD unit UUID so close/cancel/update
+    // lookups can match UUID-only assigned_units even after a process
+    // restart (the in-memory cache in cadService is otherwise empty).
+    await client.query(`ALTER TABLE units ADD COLUMN IF NOT EXISTS cad_unit_uuid VARCHAR(64)`);
 
     await client.query(`
       CREATE TABLE IF NOT EXISTS radio_events (

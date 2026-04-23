@@ -482,6 +482,270 @@ export async function getUnitCurrentCallById(unitId) {
   return result;
 }
 
+// Task #512: small in-memory cache mapping callsign → CAD unit UUID. Populated
+// best-effort whenever we observe a UUID (e.g. CAD status-check events) so the
+// fallback list scan can match calls whose `assigned_units` carry UUIDs even
+// when callers don't have the UUID handy. Also persisted to the `units` table
+// so mappings survive process restarts and serve as a third resolution source
+// (alongside session slots and the in-memory cache).
+const _unitUuidByCallsign = new Map();
+
+// Lazy DB import so consumers (and tests) that mock cadService don't pull in
+// the database module. All DB writes are fire-and-forget; failures are logged
+// but never thrown — this is a best-effort cache.
+let _dbModulePromise = null;
+async function _getDb() {
+  if (!_dbModulePromise) {
+    _dbModulePromise = import('../db/index.js').catch(() => null);
+  }
+  return _dbModulePromise;
+}
+
+async function _persistUnitUuid(callsign, unitUuid) {
+  try {
+    const dbMod = await _getDb();
+    const pool = dbMod?.default || dbMod?.pool;
+    if (!pool?.query) return;
+    await pool.query(
+      `INSERT INTO units (unit_identity, cad_unit_uuid)
+       VALUES ($1, $2)
+       ON CONFLICT (unit_identity)
+       DO UPDATE SET cad_unit_uuid = EXCLUDED.cad_unit_uuid
+       WHERE units.cad_unit_uuid IS DISTINCT FROM EXCLUDED.cad_unit_uuid`,
+      [callsign, unitUuid],
+    );
+  } catch (err) {
+    // Best-effort persistence; surface but never throw.
+    try { console.warn(`[CAD] persistUnitUuid failed for ${callsign}: ${err.message}`); } catch (_) {}
+  }
+}
+
+async function _loadPersistedUnitUuid(callsign) {
+  try {
+    const dbMod = await _getDb();
+    const pool = dbMod?.default || dbMod?.pool;
+    if (!pool?.query) return null;
+    const res = await pool.query(
+      `SELECT cad_unit_uuid FROM units WHERE upper(unit_identity) = $1 LIMIT 1`,
+      [callsign],
+    );
+    return res?.rows?.[0]?.cad_unit_uuid || null;
+  } catch (_err) {
+    return null;
+  }
+}
+
+export function rememberUnitUuid(callsign, unitUuid) {
+  if (!callsign || !unitUuid) return;
+  const key = String(callsign).trim().toUpperCase();
+  const val = String(unitUuid).trim();
+  if (!key || !val) return;
+  const prev = _unitUuidByCallsign.get(key);
+  _unitUuidByCallsign.set(key, val);
+  // Only hit the DB when the value actually changed.
+  if (prev !== val) { _persistUnitUuid(key, val); }
+}
+
+export function getCachedUnitUuid(callsign) {
+  if (!callsign) return null;
+  return _unitUuidByCallsign.get(String(callsign).trim().toUpperCase()) || null;
+}
+
+// Task #512: async variant — checks the in-memory cache first, then falls back
+// to the persisted `units.cad_unit_uuid` column. Hydrates the in-memory cache
+// on a hit so subsequent calls are sync.
+export async function resolveCachedUnitUuid(callsign) {
+  if (!callsign) return null;
+  const key = String(callsign).trim().toUpperCase();
+  const inMem = _unitUuidByCallsign.get(key);
+  if (inMem) return inMem;
+  const fromDb = await _loadPersistedUnitUuid(key);
+  if (fromDb) {
+    _unitUuidByCallsign.set(key, fromDb);
+    return fromDb;
+  }
+  return null;
+}
+
+export function _clearUnitUuidCacheForTests() {
+  _unitUuidByCallsign.clear();
+  _dbModulePromise = null;
+}
+
+// Task #512: cross-check the per-unit endpoint against the active-calls list so
+// we don't go blind when CAD's per-unit endpoint filters out a particular
+// lifecycle status (e.g. `assigned`, before the unit is en-route/on-scene).
+//
+// Returns the same shape as getUnitCurrentCallById (so callers can keep reading
+// .call_id, .call_number, .status, etc.) plus a `source` marker:
+//   - 'per_unit'             — primary lookup hit
+//   - 'active_list_fallback' — primary missed; matched by scanning the list
+//   - 'none'                 — nothing matched in either source
+// Task #512: harvest callsign↔UUID pairs from rich assigned_units objects in
+// active-calls payloads. CAD sometimes returns each assigned unit as an object
+// carrying both fields; capturing these is "free intel" that lets later
+// lookups match UUID-only assigned_units entries even when the dispatcher
+// never observed a CAD event for that callsign.
+function _harvestUuidsFromCalls(calls) {
+  if (!Array.isArray(calls)) return;
+  for (const c of calls) {
+    const arr = Array.isArray(c?.assigned_units) ? c.assigned_units
+      : (Array.isArray(c?.assignedUnits) ? c.assignedUnits : []);
+    for (const entry of arr) {
+      if (entry && typeof entry === 'object') {
+        const callsign = entry.unit_id || entry.unitId || entry.callsign || entry.unit_number || entry.unitNumber || null;
+        const uuid = entry.uuid || entry.unit_uuid || entry.unitUuid || (entry.id && callsign && entry.id !== callsign ? entry.id : null);
+        if (callsign && uuid && String(callsign) !== String(uuid)) {
+          rememberUnitUuid(callsign, uuid);
+        }
+      }
+    }
+  }
+}
+
+export async function resolveUnitCurrentCall(unitId, { unitUuid } = {}) {
+  const lookupId = unitId ? String(unitId).trim() : '';
+  let uuid = unitUuid ? String(unitUuid).trim() : '';
+  let uuidSource = uuid ? 'caller' : 'none';
+  // Best-effort: if caller didn't pass a UUID, consult the local cache and the
+  // persisted units.cad_unit_uuid column so the fallback scan can still match
+  // UUID-only assigned_units entries even on a fresh process with no
+  // status-check event yet observed.
+  if (!uuid && lookupId) {
+    const cached = getCachedUnitUuid(lookupId);
+    if (cached) {
+      uuid = cached;
+      uuidSource = 'cache';
+    } else {
+      const persisted = await _loadPersistedUnitUuid(lookupId.toUpperCase());
+      if (persisted) {
+        uuid = persisted;
+        uuidSource = 'db';
+        _unitUuidByCallsign.set(lookupId.toUpperCase(), persisted);
+      }
+    }
+  }
+
+  const logEvent = (fields) => {
+    try {
+      console.log(`[CAD] UNIT_CURRENT_CALL_LOOKUP ${JSON.stringify({
+        unitId: lookupId || null,
+        unitUuid: uuid || null,
+        uuidSource,
+        primarySource: 'per_unit_endpoint',
+        primaryHasCall: false,
+        fallbackUsed: false,
+        fallbackHit: false,
+        resolvedCallId: null,
+        resolvedStatus: null,
+        ...fields,
+      })}`);
+    } catch (_e) { /* logging must never throw */ }
+  };
+
+  if (!lookupId) {
+    logEvent({});
+    return { callNumber: null, has_active_call: false, source: 'none' };
+  }
+
+  let primary = null;
+  try {
+    primary = await getUnitCurrentCallById(lookupId);
+  } catch (err) {
+    primary = null;
+  }
+
+  if (primary && primary.has_active_call === true) {
+    // Harvest free intel from any rich assigned_units objects on the primary
+    // response so subsequent UUID-only lookups don't have to wait on a CAD
+    // event.
+    _harvestUuidsFromCalls([primary, primary.call].filter(Boolean));
+    const callId = primary.call_id || primary.callId || primary.id || null;
+    const status = primary.status || primary?.call?.status || null;
+    logEvent({
+      primaryHasCall: true,
+      resolvedCallId: callId,
+      resolvedStatus: status,
+    });
+    return { ...primary, source: 'per_unit' };
+  }
+
+  // Per-unit endpoint came up empty — try the broader active-calls list.
+  let listResult = null;
+  try {
+    listResult = await getActiveCalls();
+  } catch (err) {
+    listResult = null;
+  }
+
+  const calls = Array.isArray(listResult?.calls)
+    ? listResult.calls
+    : (Array.isArray(listResult) ? listResult : []);
+
+  // Harvest free intel from rich assigned_units objects so this and future
+  // lookups can match UUID-only entries without prior CAD-event observation.
+  _harvestUuidsFromCalls(calls);
+  if (!uuid && lookupId) {
+    const cached = getCachedUnitUuid(lookupId);
+    if (cached) { uuid = cached; uuidSource = 'cache_harvested'; }
+  }
+
+  const callsignNorm = lookupId.toUpperCase();
+  const uuidNorm = uuid ? uuid.toLowerCase() : '';
+  const matchUnit = (entry) => {
+    if (entry == null) return false;
+    if (typeof entry === 'string') {
+      const e = entry.trim();
+      if (!e) return false;
+      if (e.toUpperCase() === callsignNorm) return true;
+      if (uuidNorm && e.toLowerCase() === uuidNorm) return true;
+      return false;
+    }
+    if (typeof entry === 'object') {
+      const idStr = entry.unit_id || entry.unitId || entry.callsign || entry.id || null;
+      if (idStr && String(idStr).toUpperCase() === callsignNorm) return true;
+      if (uuidNorm) {
+        const uuidField = entry.uuid || entry.unit_uuid || entry.unitUuid || entry.id || null;
+        if (uuidField && String(uuidField).toLowerCase() === uuidNorm) return true;
+      }
+    }
+    return false;
+  };
+
+  const matched = calls.find((c) => {
+    const arr = Array.isArray(c?.assigned_units) ? c.assigned_units
+      : (Array.isArray(c?.assignedUnits) ? c.assignedUnits : []);
+    return arr.some(matchUnit);
+  });
+
+  if (matched) {
+    const callId = matched.call_id || matched.callId || matched.id || null;
+    const callNumber = matched.call_number || matched.callNumber || null;
+    const status = matched.status || null;
+    logEvent({
+      fallbackUsed: true,
+      fallbackHit: true,
+      resolvedCallId: callId,
+      resolvedStatus: status,
+    });
+    return {
+      ...matched,
+      call_id: callId,
+      call_number: callNumber,
+      callNumber,
+      status,
+      assigned_units: matched.assigned_units || matched.assignedUnits || [],
+      unit_id: lookupId,
+      has_active_call: true,
+      call: matched,
+      source: 'active_list_fallback',
+    };
+  }
+
+  logEvent({ fallbackUsed: true, fallbackHit: false });
+  return { callNumber: null, has_active_call: false, source: 'none' };
+}
+
 export async function queryVehicle(plate, state = 'PA') {
   console.log(`[CAD] Vehicle query: ${plate} ${state}`);
   return cadRequest('/api/radio/query/vehicle', 'POST', {

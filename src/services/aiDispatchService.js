@@ -494,6 +494,9 @@ class RoutineStatusCheckEscalation {
       callNumber: opts.callNumber || null,
     };
     this.active.set(key, esc);
+    // Task #512: cache callsign → CAD unit UUID so close/cancel/update lookups
+    // can match UUID-only assigned_units entries via the active-list fallback.
+    if (esc.unitUuid) cadService.rememberUnitUuid(esc.unitId, esc.unitUuid);
     this.log('STATUS_CHECK_ESCALATION_HAIL_1', {
       unitId: esc.unitId, callId, elapsedMs: 0, nextTimerMs: ROUTINE_STATUS_CHECK_HAIL_TIMEOUT_MS,
     });
@@ -1463,7 +1466,7 @@ export class AIDispatcher {
 
     try {
       if (cadService.isConfigured()) {
-        const callInfo = await cadService.getUnitCurrentCallById(unitId);
+        const callInfo = await cadService.resolveUnitCurrentCall(unitId, { unitUuid: this._resolveUnitUuidForCallsign(unitId) });
         if (callInfo && callInfo.location && callInfo.status === 'ON_SCENE') {
           address = callInfo.location;
           this.log('EMERGENCY_PHRASE_ADDRESS_FROM_CALL', { unitId, address, callNumber: callInfo.callNumber });
@@ -4450,7 +4453,7 @@ export class AIDispatcher {
     if (!targetCallId) return false;
     let currentInfo = null;
     try {
-      currentInfo = await cadService.getUnitCurrentCallById(participantId);
+      currentInfo = await cadService.resolveUnitCurrentCall(participantId, { unitUuid: this._resolveUnitUuidForCallsign(participantId) });
     } catch (e) {
       this.log('IMPLICIT_REASSIGN_LOOKUP_ERROR', { error: e.message });
       return false;
@@ -4682,7 +4685,7 @@ export class AIDispatcher {
     }
 
     try {
-      const targetCall = await cadService.getUnitCurrentCallById(targetUnit);
+      const targetCall = await cadService.resolveUnitCurrentCall(targetUnit, { unitUuid: this._resolveUnitUuidForCallsign(targetUnit) });
       const callId = targetCall?.call_id || targetCall?.call_number || targetCall?.callNumber;
       if (!callId) {
         const resp = `${participantId}, ${targetUnit} is not currently on a call.`;
@@ -4793,7 +4796,7 @@ export class AIDispatcher {
         if (!cadService.isConfigured()) {
           fetchFailed = true;
         } else {
-          const callData = await cadService.getUnitCurrentCallById(targetUnitId);
+          const callData = await cadService.resolveUnitCurrentCall(targetUnitId, { unitUuid: this._resolveUnitUuidForCallsign(targetUnitId) });
           if (callData && (callData.call_number || callData.callNumber || callData.call_id)) {
             const callNum = callData.call_number || callData.callNumber || callData.call_id;
             const nature = callData.type || callData.nature || '';
@@ -4935,7 +4938,7 @@ export class AIDispatcher {
       let callId = null;
 
       if (slots?.useMyCall) {
-        const myCall = await cadService.getUnitCurrentCallById(participantId);
+        const myCall = await cadService.resolveUnitCurrentCall(participantId, { unitUuid: this._resolveUnitUuidForCallsign(participantId) });
         if (myCall && (myCall.call_id || myCall.callNumber || myCall.call_number)) {
           callId = myCall.call_id || myCall.call_number || myCall.callNumber;
           targetCall = myCall;
@@ -5027,7 +5030,7 @@ export class AIDispatcher {
         return;
       }
 
-      const currentCall = await cadService.getUnitCurrentCallById(participantId);
+      const currentCall = await cadService.resolveUnitCurrentCall(participantId, { unitUuid: this._resolveUnitUuidForCallsign(participantId) });
       const callId = currentCall?.call_id || currentCall?.call_number || currentCall?.callNumber;
       if (!callId) {
         const resp = `${participantId}, you're not assigned to a call.`;
@@ -5270,7 +5273,7 @@ export class AIDispatcher {
 
     if (cadAvailable) {
       try {
-        const currentCall = await cadService.getUnitCurrentCallById(participantId);
+        const currentCall = await cadService.resolveUnitCurrentCall(participantId, { unitUuid: this._resolveUnitUuidForCallsign(participantId) });
         callId = currentCall?.call_id || currentCall?.call_number || currentCall?.callNumber || null;
         if (callId && noteText) {
           const fullNote = `${participantId}: ${noteText}`;
@@ -5396,7 +5399,7 @@ export class AIDispatcher {
         return;
       }
 
-      const currentCall = await cadService.getUnitCurrentCallById(participantId);
+      const currentCall = await cadService.resolveUnitCurrentCall(participantId, { unitUuid: this._resolveUnitUuidForCallsign(participantId) });
       const callId = currentCall?.call_id || currentCall?.call_number || currentCall?.callNumber;
 
       if (!callId) {
@@ -5479,7 +5482,7 @@ export class AIDispatcher {
 
   async _ensureCallId(participantId) {
     if (!cadService.isConfigured()) return { configured: false, callId: null };
-    const currentCall = await cadService.getUnitCurrentCallById(participantId);
+    const currentCall = await cadService.resolveUnitCurrentCall(participantId, { unitUuid: this._resolveUnitUuidForCallsign(participantId) });
     const callId = currentCall?.call_id || currentCall?.call_number || currentCall?.callNumber || null;
     return { configured: true, callId };
   }
@@ -5924,7 +5927,7 @@ export class AIDispatcher {
     }
 
     try {
-      const currentCall = await cadService.getUnitCurrentCallById(participantId);
+      const currentCall = await cadService.resolveUnitCurrentCall(participantId, { unitUuid: this._resolveUnitUuidForCallsign(participantId) });
       const callNumber = currentCall?.call_number || currentCall?.callNumber;
 
       if (!callNumber) {
@@ -6498,7 +6501,7 @@ export class AIDispatcher {
       let callNumber = slots?.callNumber;
       if (!callNumber) {
         try {
-          const currentCall = await cadService.getUnitCurrentCallById(participantId);
+          const currentCall = await cadService.resolveUnitCurrentCall(participantId, { unitUuid: this._resolveUnitUuidForCallsign(participantId) });
           callNumber = currentCall?.call_id || currentCall?.call_number || currentCall?.callNumber;
         } catch (e) { /* ignore */ }
       }
@@ -6541,7 +6544,7 @@ export class AIDispatcher {
     let callNumber = savedSlots?.callNumber;
     if (!callNumber) {
       try {
-        const currentCall = await cadService.getUnitCurrentCallById(participantId);
+        const currentCall = await cadService.resolveUnitCurrentCall(participantId, { unitUuid: this._resolveUnitUuidForCallsign(participantId) });
         callNumber = currentCall?.call_id || currentCall?.call_number || currentCall?.callNumber;
       } catch (e) { /* ignore */ }
     }
@@ -6582,7 +6585,7 @@ export class AIDispatcher {
     try {
       let callId = callNumber;
       if (!callId) {
-        const currentCall = await cadService.getUnitCurrentCallById(participantId);
+        const currentCall = await cadService.resolveUnitCurrentCall(participantId, { unitUuid: this._resolveUnitUuidForCallsign(participantId) });
         callId = currentCall?.call_id || currentCall?.call_number || currentCall?.callNumber;
       }
 
@@ -6661,7 +6664,7 @@ export class AIDispatcher {
     // current assigned call (R1 — units are cancelling the call they're on).
     if (!callNumber) {
       try {
-        const currentCall = await cadService.getUnitCurrentCallById(participantId);
+        const currentCall = await cadService.resolveUnitCurrentCall(participantId, { unitUuid: this._resolveUnitUuidForCallsign(participantId) });
         callNumber = currentCall?.call_number || currentCall?.call_id || currentCall?.callNumber || null;
       } catch (_e) { /* ignore */ }
     }
@@ -6951,7 +6954,7 @@ export class AIDispatcher {
     try {
       let callId = slots?.callNumber;
       if (!callId) {
-        const currentCall = await cadService.getUnitCurrentCallById(participantId);
+        const currentCall = await cadService.resolveUnitCurrentCall(participantId, { unitUuid: this._resolveUnitUuidForCallsign(participantId) });
         callId = currentCall?.call_id || currentCall?.call_number || currentCall?.callNumber;
       }
 
@@ -7109,7 +7112,7 @@ export class AIDispatcher {
       let callId = slots?.callNumber;
 
       if (!callId) {
-        const currentCall = await cadService.getUnitCurrentCallById(participantId);
+        const currentCall = await cadService.resolveUnitCurrentCall(participantId, { unitUuid: this._resolveUnitUuidForCallsign(participantId) });
         callId = currentCall?.call_id || currentCall?.call_number || currentCall?.callNumber;
       }
 
@@ -7213,7 +7216,7 @@ export class AIDispatcher {
       // we never cross-promote onto a different call the target happens
       // to be on.
       if (!callId) {
-        const currentCall = await cadService.getUnitCurrentCallById(participantId);
+        const currentCall = await cadService.resolveUnitCurrentCall(participantId, { unitUuid: this._resolveUnitUuidForCallsign(participantId) });
         callId = currentCall?.call_id || currentCall?.call_number || currentCall?.callNumber || null;
       }
 
@@ -7710,6 +7713,12 @@ export class AIDispatcher {
     // fall back to unitId only if the callsign is missing.
     const unitId = evt.unitNumber || evt.unitId;
     if (!unitId) return;
+    // Task #512: opportunistically cache callsign → CAD unit UUID from any CAD
+    // status-check event so later close/cancel/update lookups can match
+    // UUID-only assigned_units even before our own escalation runs.
+    if (evt.unitNumber && evt.unitId && evt.unitNumber !== evt.unitId) {
+      cadService.rememberUnitUuid(evt.unitNumber, evt.unitId);
+    }
     const key = this._pendingStatusCheckKey(unitId, callId);
 
     if (type === 'status_check_due') {
@@ -7997,10 +8006,26 @@ export class AIDispatcher {
     setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
   }
 
+  // Task #512: best-effort callsign → CAD unit UUID resolver. Pulls from
+  // (1) any in-flight session slot we set up from a CAD event (e.g.
+  // statusCheckUnitUuid) and (2) the cadService callsign→UUID cache populated
+  // whenever we see a UUID. Returns null when nothing local is known.
+  _resolveUnitUuidForCallsign(unitId) {
+    if (!unitId) return null;
+    try {
+      const sess = getUnitSessionState(unitId);
+      const slotUuid = sess?.slots?.statusCheckUnitUuid;
+      if (slotUuid) return slotUuid;
+    } catch (_e) { /* best-effort */ }
+    try { return cadService.getCachedUnitUuid(unitId) || null; }
+    catch (_e) { return null; }
+  }
+
   async _lookupCurrentCallInfo(unitId) {
     try {
       if (!cadService.isConfigured()) return null;
-      const data = await cadService.getUnitCurrentCallById(unitId);
+      const unitUuid = this._resolveUnitUuidForCallsign(unitId);
+      const data = await cadService.resolveUnitCurrentCall(unitId, { unitUuid });
       if (!data) return null;
       return {
         // Prefer the true CAD call_id (UUID) for API calls — never call_number,
@@ -8239,7 +8264,7 @@ export class AIDispatcher {
   async _classifyClearOutcome(unitId) {
     let callInfo = null;
     try {
-      callInfo = await cadService.getUnitCurrentCallById(unitId);
+      callInfo = await cadService.resolveUnitCurrentCall(unitId, { unitUuid: this._resolveUnitUuidForCallsign(unitId) });
     } catch (e) {
       this.log('CLEAR_OUTCOME_LOOKUP_ERROR', { error: e.message });
       return { kind: 'simple', call: null, otherUnits: [] };
@@ -8830,7 +8855,7 @@ export class AIDispatcher {
     let currentCall;
     let callSource = 'cad';
     try {
-      currentCall = await cadService.getUnitCurrentCallById(participantId);
+      currentCall = await cadService.resolveUnitCurrentCall(participantId, { unitUuid: this._resolveUnitUuidForCallsign(participantId) });
     } catch (err) {
       this.log('BACKUP_REQUEST_CAD_ERROR', { participant: participantId, error: err.message, attempt: 1 });
     }
@@ -8839,7 +8864,7 @@ export class AIDispatcher {
     if (!callId) {
       await new Promise(resolve => setTimeout(resolve, 500));
       try {
-        currentCall = await cadService.getUnitCurrentCallById(participantId);
+        currentCall = await cadService.resolveUnitCurrentCall(participantId, { unitUuid: this._resolveUnitUuidForCallsign(participantId) });
       } catch (err) {
         this.log('BACKUP_REQUEST_CAD_ERROR', { participant: participantId, error: err.message, attempt: 2 });
         currentCall = null;

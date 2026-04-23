@@ -25,7 +25,9 @@ vi.mock('../cadService.js', () => {
     isConfigured: () => true,
     updateUnitStatus: vi.fn(async () => ({ success: true })),
     addCallNote: vi.fn(async () => ({ success: true })),
-    getUnitCurrentCallById: vi.fn(async () => ({ call_id: 'CALL-123' })),
+    resolveUnitCurrentCall: vi.fn(async () => ({ call_id: 'CALL-123' })),
+    rememberUnitUuid: vi.fn(),
+    getCachedUnitUuid: vi.fn(() => null),
   };
 });
 

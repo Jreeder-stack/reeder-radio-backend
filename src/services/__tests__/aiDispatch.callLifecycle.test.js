@@ -22,7 +22,9 @@ vi.mock('../cadService.js', () => {
     isConfigured: () => true,
     updateUnitStatus: vi.fn(async () => ({ success: true })),
     addCallNote: vi.fn(async () => ({ success: true })),
-    getUnitCurrentCallById: vi.fn(async () => ({ call_id: 'CALL-123', call_number: 'CALL-123', assigned_units: ['INDIANA-1'] })),
+    resolveUnitCurrentCall: vi.fn(async () => ({ call_id: 'CALL-123', call_number: 'CALL-123', assigned_units: ['INDIANA-1'] })),
+    rememberUnitUuid: vi.fn(),
+    getCachedUnitUuid: vi.fn(() => null),
     clearUnit: vi.fn(async () => ({ success: true })),
     disposeCall: vi.fn(async () => ({ success: true })),
     cancelCallDirect: vi.fn(async () => ({ success: true })),
@@ -75,6 +77,65 @@ describe('R9: dispose passes disposition AND notes', () => {
     const d = makeDispatcher();
     await d.executeDisposeCall('Indiana-1', 'report filed', 'CALL-123', 'report filed');
     expect(cadService.disposeCall).toHaveBeenCalledWith('CALL-123', 'report filed', 'report filed');
+  });
+});
+
+describe('Task #512: close-call uses active-list fallback when per-unit endpoint blanks out', () => {
+  it('does NOT say "no active call" when resolveUnitCurrentCall returns the call from the list fallback', async () => {
+    // Simulate the wrapper finding the call only via the active-calls list
+    // (e.g. CAD per-unit endpoint filtered out an "assigned" status call).
+    cadService.resolveUnitCurrentCall.mockResolvedValueOnce({
+      call_id: 'e9bc488f-16ed-4236-b839-b4e306897c7e',
+      call_number: '1-26-000171',
+      status: 'assigned',
+      assigned_units: ['INDIANA-1'],
+      has_active_call: true,
+      source: 'active_list_fallback',
+    });
+    const d = makeDispatcher();
+    // Call without an explicit callNumber so executeDisposeCall has to look it
+    // up through the wrapper.
+    await d.executeDisposeCall('INDIANA-1', 'report taken', null, 'report taken');
+    expect(cadService.disposeCall).toHaveBeenCalledTimes(1);
+    expect(cadService.disposeCall.mock.calls[0][0])
+      .toBe('e9bc488f-16ed-4236-b839-b4e306897c7e');
+    expect(d.spoken.some(s => /no active call/i.test(s))).toBe(false);
+  });
+
+  it('passes the cached unit UUID to the wrapper so UUID-only assigned_units resolve', async () => {
+    // Simulate an earlier CAD event that taught the dispatcher this callsign's
+    // CAD UUID via the rememberUnitUuid cache. The dispatcher must thread that
+    // UUID through to resolveUnitCurrentCall so the wrapper can match an
+    // assigned_units entry that contains ONLY the UUID (no callsign).
+    cadService.getCachedUnitUuid.mockReturnValueOnce('unit-uuid-abc');
+    cadService.resolveUnitCurrentCall.mockResolvedValueOnce({
+      call_id: 'call-uuid-xyz',
+      call_number: '1-26-000999',
+      status: 'assigned',
+      assigned_units: ['unit-uuid-abc'],
+      has_active_call: true,
+      source: 'active_list_fallback',
+    });
+    const d = makeDispatcher();
+    await d.executeDisposeCall('INDIANA-1', 'report taken', null, 'report taken');
+    expect(cadService.resolveUnitCurrentCall).toHaveBeenCalledWith(
+      'INDIANA-1',
+      expect.objectContaining({ unitUuid: 'unit-uuid-abc' }),
+    );
+    expect(cadService.disposeCall).toHaveBeenCalledWith(
+      'call-uuid-xyz', expect.anything(), expect.anything(),
+    );
+    expect(d.spoken.some(s => /no active call/i.test(s))).toBe(false);
+  });
+
+  it('still says "no active call" only when the wrapper itself returns nothing', async () => {
+    cadService.resolveUnitCurrentCall.mockResolvedValueOnce({
+      callNumber: null, has_active_call: false, source: 'none',
+    });
+    const d = makeDispatcher();
+    await d.executeDisposeCall('INDIANA-1', 'report taken', null, 'report taken');
+    expect(cadService.disposeCall).not.toHaveBeenCalled();
+    expect(d.spoken.some(s => /no active call to close/i.test(s))).toBe(true);
   });
 });
 
@@ -142,7 +203,7 @@ describe('SEQ-10: cancel call', () => {
     const d = makeDispatcher();
     await d.handleCancelCall('Indiana-1', 'cancel call', {});
     const session = cm.getUnitSessionState('Indiana-1');
-    // mocked getUnitCurrentCallById returns call_number CALL-123
+    // mocked resolveUnitCurrentCall returns call_number CALL-123
     expect(session.state).toBe(cm.DISPATCHER_STATE.AWAITING_CANCEL_REASON);
     expect(session.slots.callNumber).toBe('CALL-123');
   });
@@ -298,7 +359,7 @@ describe('R10: per-unit serial queue for status updates', () => {
     const d = makeDispatcher();
     // Make the speaker non-primary on the call so handleClearConfirm takes the
     // simple-clear path (which actually calls clearUnit).
-    cadService.getUnitCurrentCallById.mockResolvedValueOnce({
+    cadService.resolveUnitCurrentCall.mockResolvedValueOnce({
       call_id: 'CALL-123', call_number: 'CALL-123',
       assigned_units: ['LINCOLN-3', 'INDIANA-1'], primary_unit: 'LINCOLN-3',
     });
@@ -335,7 +396,7 @@ describe('Task #482: clear/available cascades and disposition matching', () => {
   });
 
   it('classifyClearOutcome → primary_with_others when others are still on the call', async () => {
-    cadService.getUnitCurrentCallById.mockResolvedValueOnce({
+    cadService.resolveUnitCurrentCall.mockResolvedValueOnce({
       call_id: 'CALL-9', call_number: 'CALL-9',
       assigned_units: ['INDIANA-1', 'LINCOLN-3'], primary_unit: 'INDIANA-1',
     });
@@ -346,7 +407,7 @@ describe('Task #482: clear/available cascades and disposition matching', () => {
   });
 
   it('classifyClearOutcome → simple when speaker is not primary', async () => {
-    cadService.getUnitCurrentCallById.mockResolvedValueOnce({
+    cadService.resolveUnitCurrentCall.mockResolvedValueOnce({
       call_id: 'CALL-9', call_number: 'CALL-9',
       assigned_units: ['LINCOLN-3', 'INDIANA-1'], primary_unit: 'LINCOLN-3',
     });
@@ -356,7 +417,7 @@ describe('Task #482: clear/available cascades and disposition matching', () => {
   });
 
   it('handleClearConfirm refuses primary_with_others and stays IDLE without calling CAD', async () => {
-    cadService.getUnitCurrentCallById.mockResolvedValueOnce({
+    cadService.resolveUnitCurrentCall.mockResolvedValueOnce({
       call_id: 'CALL-9', call_number: 'CALL-9',
       assigned_units: ['INDIANA-1', 'LINCOLN-3', 'BEAVER-2'], primary_unit: 'INDIANA-1',
     });
@@ -415,7 +476,7 @@ describe('Task #482: clear/available cascades and disposition matching', () => {
   });
 
   it('_handleImplicitReassign clears speaker off old call (simple) before attaching to new call', async () => {
-    cadService.getUnitCurrentCallById.mockResolvedValueOnce({
+    cadService.resolveUnitCurrentCall.mockResolvedValueOnce({
       call_id: 'CALL-OLD', call_number: 'CALL-OLD',
       assigned_units: ['LINCOLN-3', 'INDIANA-1'], primary_unit: 'LINCOLN-3',
     }).mockResolvedValueOnce({
@@ -431,7 +492,7 @@ describe('Task #482: clear/available cascades and disposition matching', () => {
   });
 
   it('_handleImplicitReassign refuses with primary_with_others and never touches CAD writes', async () => {
-    cadService.getUnitCurrentCallById.mockResolvedValueOnce({
+    cadService.resolveUnitCurrentCall.mockResolvedValueOnce({
       call_id: 'CALL-OLD', call_number: 'CALL-OLD',
       assigned_units: ['INDIANA-1', 'LINCOLN-3'], primary_unit: 'INDIANA-1',
     }).mockResolvedValueOnce({
@@ -448,7 +509,7 @@ describe('Task #482: clear/available cascades and disposition matching', () => {
   });
 
   it('_handleImplicitReassign returns false when speaker is not on a call (normal assign path)', async () => {
-    cadService.getUnitCurrentCallById.mockResolvedValueOnce({});
+    cadService.resolveUnitCurrentCall.mockResolvedValueOnce({});
     const d = makeDispatcher();
     const handled = await d._handleImplicitReassign('Indiana-1', 'route',
       { call_id: 'CALL-NEW', call_number: 'CALL-NEW' }, 'assign');
@@ -456,7 +517,7 @@ describe('Task #482: clear/available cascades and disposition matching', () => {
   });
 
   it('_handleImplicitReassign returns false when speaker is already on the target call', async () => {
-    cadService.getUnitCurrentCallById.mockResolvedValueOnce({
+    cadService.resolveUnitCurrentCall.mockResolvedValueOnce({
       call_id: 'CALL-NEW', call_number: 'CALL-NEW', assigned_units: ['INDIANA-1'],
     });
     const d = makeDispatcher();
@@ -503,7 +564,7 @@ describe('Task #482: clear/available cascades and disposition matching', () => {
   });
 
   it('_handleImplicitReassign refuses when CAD rejects the clear (success:false), does not assign', async () => {
-    cadService.getUnitCurrentCallById.mockResolvedValueOnce({
+    cadService.resolveUnitCurrentCall.mockResolvedValueOnce({
       call_id: 'CALL-OLD', call_number: 'CALL-OLD',
       assigned_units: ['LINCOLN-3', 'INDIANA-1'], primary_unit: 'LINCOLN-3',
     }).mockResolvedValueOnce({

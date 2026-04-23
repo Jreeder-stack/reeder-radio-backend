@@ -23,7 +23,9 @@ vi.mock('../cadService.js', () => {
     isConfigured: () => true,
     updateUnitStatus: vi.fn(async () => ({ success: true })),
     addCallNote: vi.fn(async () => ({ success: true })),
-    getUnitCurrentCallById: vi.fn(async () => ({ call_id: 'CALL-789', call_number: 'CALL-789', assigned_units: ['INDIANA-1'] })),
+    resolveUnitCurrentCall: vi.fn(async () => ({ call_id: 'CALL-789', call_number: 'CALL-789', assigned_units: ['INDIANA-1'] })),
+    rememberUnitUuid: vi.fn(),
+    getCachedUnitUuid: vi.fn(() => null),
     clearUnit: vi.fn(async () => ({ success: true })),
     disposeCall: vi.fn(async () => ({ success: true })),
     cancelCallDirect: vi.fn(async () => ({ success: true })),
@@ -116,7 +118,7 @@ describe('Task #498: be-advised success path speaks 10-4 ack', () => {
   });
 
   it('does NOT speak 10-4 when speaker has no current call', async () => {
-    cadService.getUnitCurrentCallById.mockResolvedValueOnce(null);
+    cadService.resolveUnitCurrentCall.mockResolvedValueOnce(null);
     const d = makeDispatcher();
     await d.executeBeAdvisedNote('INDIANA-9', 'be advised perimeter clear', 'be advised perimeter clear');
     expect(cadService.addCallNote).not.toHaveBeenCalled();

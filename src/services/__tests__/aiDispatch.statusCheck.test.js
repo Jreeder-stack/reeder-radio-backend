@@ -22,9 +22,11 @@ vi.mock('../cadService.js', () => {
     isConfigured: () => true,
     updateUnitStatus: vi.fn(async () => ({ success: true })),
     addCallNote: vi.fn(async () => ({ success: true })),
-    getUnitCurrentCallById: vi.fn(async () => ({
+    resolveUnitCurrentCall: vi.fn(async () => ({
       call_id: 'CALL-UUID-1', call_number: 'CALL-1', assigned_units: ['INDIANA-1'],
     })),
+    rememberUnitUuid: vi.fn(),
+    getCachedUnitUuid: vi.fn(() => null),
     clearUnit: vi.fn(async () => ({ success: true })),
     disposeCall: vi.fn(async () => ({ success: true })),
     cancelCallDirect: vi.fn(async () => ({ success: true })),
@@ -394,7 +396,7 @@ describe('Task #490: ack round-trip resets CAD timer', () => {
     await d.handleStatusCheckResponse('INDIANA-1', '10-4', {
       statusCheckId: 'check-1', statusCheckCallId: null, statusCheckUnitUuid: 'unit-uuid-1',
     });
-    expect(cadService.getUnitCurrentCallById).toHaveBeenCalledWith('INDIANA-1');
+    expect(cadService.resolveUnitCurrentCall).toHaveBeenCalledWith('INDIANA-1', expect.any(Object));
     expect(cadService.respondToStatusCheck).toHaveBeenCalledWith('INDIANA-1', 'CALL-UUID-1', { response: '10-4' });
   });
 });

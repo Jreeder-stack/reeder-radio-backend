@@ -29,7 +29,9 @@ vi.mock('../cadService.js', () => {
     isConfigured: () => true,
     updateUnitStatus: vi.fn(async () => ({ success: true })),
     addCallNote: vi.fn(async () => ({ success: true })),
-    getUnitCurrentCallById: vi.fn(async () => ({ call_id: 'CALL-789', call_number: 'CALL-789', assigned_units: ['INDIANA-1', 'INDIANA-2'] })),
+    resolveUnitCurrentCall: vi.fn(async () => ({ call_id: 'CALL-789', call_number: 'CALL-789', assigned_units: ['INDIANA-1', 'INDIANA-2'] })),
+    rememberUnitUuid: vi.fn(),
+    getCachedUnitUuid: vi.fn(() => null),
     clearUnit: vi.fn(async () => ({ success: true })),
     disposeCall: vi.fn(async () => ({ success: true })),
     cancelCallDirect: vi.fn(async () => ({ success: true })),
@@ -232,7 +234,7 @@ describe('Task #486 (Step 7): MAKE_PRIMARY handler', () => {
   });
 
   it('refuses cleanly when speaker has no current call', async () => {
-    cadService.getUnitCurrentCallById.mockResolvedValueOnce(null);
+    cadService.resolveUnitCurrentCall.mockResolvedValueOnce(null);
     const d = makeDispatcher();
     await d.handleMakePrimary('INDIANA-3', 'make me primary', {});
     expect(cadService.setPrimaryUnit).not.toHaveBeenCalled();
@@ -243,25 +245,25 @@ describe('Task #486 (Step 7): MAKE_PRIMARY handler', () => {
     // Speaker (INDIANA-1) is on CALL-100. Target (LINCOLN-3) is on a
     // DIFFERENT call CALL-999. "Make Lincoln-3 primary [on this call]"
     // must promote LINCOLN-3 onto CALL-100 (speaker's), not CALL-999.
-    // handleMakePrimary calls getUnitCurrentCallById ONCE — for the
+    // handleMakePrimary calls resolveUnitCurrentCall ONCE — for the
     // speaker. mockResolvedValueOnce proves we never look up the target.
-    cadService.getUnitCurrentCallById.mockResolvedValueOnce({
+    cadService.resolveUnitCurrentCall.mockResolvedValueOnce({
       call_id: 'CALL-100',
       call_number: 'CALL-100',
     });
     const d = makeDispatcher();
     await d.handleMakePrimary('INDIANA-1', 'make Lincoln-3 primary', { targetUnit: 'Lincoln-3' });
-    expect(cadService.getUnitCurrentCallById).toHaveBeenCalledWith('INDIANA-1');
-    expect(cadService.getUnitCurrentCallById).not.toHaveBeenCalledWith('LINCOLN-3');
+    expect(cadService.resolveUnitCurrentCall).toHaveBeenCalledWith('INDIANA-1', expect.any(Object));
+    expect(cadService.resolveUnitCurrentCall).not.toHaveBeenCalledWith('LINCOLN-3', expect.anything());
     expect(cadService.setPrimaryUnit).toHaveBeenCalledWith('CALL-100', 'LINCOLN-3');
     expect(cadService.setPrimaryUnit).not.toHaveBeenCalledWith('CALL-999', expect.anything());
   });
 
   it('refuses when SPEAKER has no call, even if target is on one', async () => {
-    cadService.getUnitCurrentCallById.mockResolvedValueOnce(null);
+    cadService.resolveUnitCurrentCall.mockResolvedValueOnce(null);
     const d = makeDispatcher();
     await d.handleMakePrimary('INDIANA-7', 'make Lincoln-3 primary', { targetUnit: 'Lincoln-3' });
-    expect(cadService.getUnitCurrentCallById).toHaveBeenCalledWith('INDIANA-7');
+    expect(cadService.resolveUnitCurrentCall).toHaveBeenCalledWith('INDIANA-7', expect.any(Object));
     expect(cadService.setPrimaryUnit).not.toHaveBeenCalled();
     expect(d.spoken.join(' ').toLowerCase()).toContain("not on a call");
   });
@@ -288,7 +290,7 @@ describe('Task #486 (Step 2): "check complete" routes through ADD_NOTE/be-advise
   });
 
   it('refuses cleanly when speaker is not on a call', async () => {
-    cadService.getUnitCurrentCallById.mockResolvedValueOnce(null);
+    cadService.resolveUnitCurrentCall.mockResolvedValueOnce(null);
     const d = makeDispatcher();
     await d.executeBeAdvisedNote('INDIANA-9', 'perimeter clear', 'perimeter clear');
     expect(cadService.addCallNote).not.toHaveBeenCalled();

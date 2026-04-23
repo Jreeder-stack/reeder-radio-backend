@@ -19,7 +19,9 @@ vi.mock('../cadService.js', () => {
     RADIO_STATUS: {},
     extractActualStatusFromRejection: () => null,
     isConfigured: () => true,
-    getUnitCurrentCallById: vi.fn(async () => ({ callNumber: null })),
+    resolveUnitCurrentCall: vi.fn(async () => ({ callNumber: null })),
+    rememberUnitUuid: vi.fn(),
+    getCachedUnitUuid: vi.fn(() => null),
     assignUnitToCall: vi.fn(async () => ({ success: true })),
     updateUnitStatus: vi.fn(async () => ({ success: true })),
     getActiveCalls: vi.fn(async () => ({ calls: [] })),
@@ -68,14 +70,14 @@ function makeDispatcher() {
 describe('handleBackupRequestStart — recent-assignment fallback', () => {
   it('(a) CAD returns the call: unchanged behavior, broadcasts and opens request', async () => {
     const d = makeDispatcher();
-    cadService.getUnitCurrentCallById.mockResolvedValueOnce({
+    cadService.resolveUnitCurrentCall.mockResolvedValueOnce({
       call_id: 'CALL-1', call_number: 'CALL-1',
       location: '123 Main St', nature: 'DISTURBANCE',
     });
 
     await d.handleBackupRequestStart('Indiana-1', 'send me another unit');
 
-    expect(cadService.getUnitCurrentCallById).toHaveBeenCalledTimes(1);
+    expect(cadService.resolveUnitCurrentCall).toHaveBeenCalledTimes(1);
     expect(d.openBackupRequests.size).toBe(1);
     const [req] = [...d.openBackupRequests.values()];
     expect(req.callId).toBe('CALL-1');
@@ -85,7 +87,7 @@ describe('handleBackupRequestStart — recent-assignment fallback', () => {
 
   it('(b) CAD lags then succeeds on retry', async () => {
     const d = makeDispatcher();
-    cadService.getUnitCurrentCallById
+    cadService.resolveUnitCurrentCall
       .mockResolvedValueOnce({ callNumber: null })
       .mockResolvedValueOnce({
         call_id: 'CALL-2', call_number: 'CALL-2',
@@ -94,7 +96,7 @@ describe('handleBackupRequestStart — recent-assignment fallback', () => {
 
     await d.handleBackupRequestStart('Indiana-1', 'send me another unit');
 
-    expect(cadService.getUnitCurrentCallById).toHaveBeenCalledTimes(2);
+    expect(cadService.resolveUnitCurrentCall).toHaveBeenCalledTimes(2);
     expect(d.openBackupRequests.size).toBe(1);
     const [req] = [...d.openBackupRequests.values()];
     expect(req.callId).toBe('CALL-2');
@@ -103,7 +105,7 @@ describe('handleBackupRequestStart — recent-assignment fallback', () => {
 
   it('(c) CAD stays empty but recent-assignment cache has unit: backup proceeds with cached snapshot', async () => {
     const d = makeDispatcher();
-    cadService.getUnitCurrentCallById.mockResolvedValue({ callNumber: null });
+    cadService.resolveUnitCurrentCall.mockResolvedValue({ callNumber: null });
 
     d._recordRecentAssignment('Indiana-1', {
       call_id: 'CALL-3', call_number: 'CALL-3',
@@ -112,7 +114,7 @@ describe('handleBackupRequestStart — recent-assignment fallback', () => {
 
     await d.handleBackupRequestStart('Indiana-1', 'send me another unit');
 
-    expect(cadService.getUnitCurrentCallById).toHaveBeenCalledTimes(2);
+    expect(cadService.resolveUnitCurrentCall).toHaveBeenCalledTimes(2);
     expect(d.openBackupRequests.size).toBe(1);
     const [req] = [...d.openBackupRequests.values()];
     expect(req.callId).toBe('CALL-3');
@@ -124,7 +126,7 @@ describe('handleBackupRequestStart — recent-assignment fallback', () => {
 
   it('(d) no CAD and no cache: existing not-assigned response', async () => {
     const d = makeDispatcher();
-    cadService.getUnitCurrentCallById.mockResolvedValue({ callNumber: null });
+    cadService.resolveUnitCurrentCall.mockResolvedValue({ callNumber: null });
 
     await d.handleBackupRequestStart('Indiana-1', 'send me another unit');
 
@@ -134,7 +136,7 @@ describe('handleBackupRequestStart — recent-assignment fallback', () => {
 
   it('(e) cache entry expired past TTL: existing not-assigned response', async () => {
     const d = makeDispatcher();
-    cadService.getUnitCurrentCallById.mockResolvedValue({ callNumber: null });
+    cadService.resolveUnitCurrentCall.mockResolvedValue({ callNumber: null });
 
     d._recordRecentAssignment('Indiana-1', {
       call_id: 'CALL-4', call_number: 'CALL-4',
