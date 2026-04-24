@@ -152,6 +152,31 @@ class MainActivity : ComponentActivity() {
             pendingOverlayPromptAfterBattery = false
             requestOverlayPermissionIfNeeded()
         }
+        applyKioskStateOnResume()
+    }
+
+    /**
+     * Re-assert kiosk state every time we come to the foreground. If kiosk is
+     * enabled and we are Device Owner, apply the policy bundle (idempotent) and
+     * re-enter lock-task mode in case the user was somehow ejected. If kiosk is
+     * disabled but we're still pinned for some reason, drop out cleanly AND
+     * clear the policy bundle so persistent home / keyguard-disable do not
+     * linger past the admin disabling kiosk.
+     */
+    private fun applyKioskStateOnResume() {
+        val policy = app.kioskPolicyManager
+        val wantKiosk = app.kioskPrefs.kioskEnabled && policy.isDeviceOwner
+        try {
+            if (wantKiosk) {
+                policy.applyKioskPolicies()
+                policy.enterLockTask(this)
+            } else {
+                policy.exitLockTask(this)
+                policy.clearKioskPolicies()
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "applyKioskStateOnResume failed: ${e.message}")
+        }
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {

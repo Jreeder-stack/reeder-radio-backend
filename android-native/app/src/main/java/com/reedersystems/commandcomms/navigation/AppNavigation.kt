@@ -174,9 +174,48 @@ fun AppNavigation() {
 
         composable(Routes.SETTINGS) {
             val isCapturing by app.keyCapturingFlow.collectAsState()
+            val kioskEnabled by app.kioskPrefs.kioskEnabledFlow.collectAsState()
+            val pinSet by app.kioskPrefs.pinSetFlow.collectAsState()
+            val activity = (LocalContext.current as? android.app.Activity)
+            // "Active" means strictly: the OS reports we are currently in
+            // lock-task mode. We deliberately do NOT fall back to a prefs-only
+            // signal here — if startLockTask failed (e.g. the lock-task
+            // allowlist was rejected) we want the UI to report "not active"
+            // even though the admin toggled kiosk on.
+            val isKioskActive = app.kioskPolicyManager.isInLockTaskMode
             SettingsScreen(
                 pttKeyPrefs = app.pttKeyPrefs,
                 speakerBoostPrefs = app.speakerBoostPrefs,
+                isDeviceOwner = app.kioskPolicyManager.isDeviceOwner,
+                isKioskActive = isKioskActive,
+                kioskEnabled = kioskEnabled,
+                pinSet = pinSet,
+                onKioskToggle = { enabled ->
+                    app.kioskPrefs.kioskEnabled = enabled
+                    val policy = app.kioskPolicyManager
+                    if (enabled && policy.isDeviceOwner) {
+                        policy.applyKioskPolicies()
+                        activity?.let { policy.enterLockTask(it) }
+                    } else if (!enabled) {
+                        activity?.let { policy.exitLockTask(it) }
+                        policy.clearKioskPolicies()
+                    }
+                },
+                onSetPin = { pin ->
+                    app.kioskPrefs.setPin(pin)
+                    app.kioskPrefs.isPinSet
+                },
+                onClearPin = { app.kioskPrefs.clearPin() },
+                onExitKiosk = { pin ->
+                    if (app.kioskPrefs.verifyPin(pin)) {
+                        app.kioskPrefs.kioskEnabled = false
+                        activity?.let { app.kioskPolicyManager.exitLockTask(it) }
+                        app.kioskPolicyManager.clearKioskPolicies()
+                        true
+                    } else {
+                        false
+                    }
+                },
                 isCapturing = isCapturing,
                 onStartCapture = { app.keyCapturingFlow.value = true },
                 onStopCapture = { app.keyCapturingFlow.value = false },

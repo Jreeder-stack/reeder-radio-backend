@@ -23,6 +23,18 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
     <uses-permission android:name="android.permission.BROADCAST_STICKY" />
+    <uses-permission android:name="android.permission.DISABLE_KEYGUARD" />
+    <uses-permission android:name="android.permission.REORDER_TASKS" />
+
+    <queries>
+        <!-- Allow the device-policy helper to look up the system Settings app
+             when toggling its hidden state during un-provisioning. -->
+        <package android:name="com.android.settings" />
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.HOME" />
+        </intent>
+    </queries>
 
     <application
         android:name=".CommandCommsApp"
@@ -169,7 +181,7 @@
             </intent-filter>
         </receiver>
 
-        <!-- ✅ DEVICE ADMIN RECEIVER (ONLY ADDITION) -->
+        <!-- Device Admin / Device Owner receiver — used for full kiosk lock mode. -->
         <receiver
             android:name=".RadioDeviceAdminReceiver"
             android:permission="android.permission.BIND_DEVICE_ADMIN"
@@ -181,9 +193,30 @@
 
             <intent-filter>
                 <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
+                <action android:name="android.app.action.DEVICE_ADMIN_DISABLED" />
+                <action android:name="android.app.action.PROFILE_PROVISIONING_COMPLETE" />
+                <action android:name="android.app.action.LOCK_TASK_ENTERING" />
+                <action android:name="android.app.action.LOCK_TASK_EXITING" />
             </intent-filter>
 
         </receiver>
+
+        <!--
+            QR-code Device Owner provisioning support.
+            The Setup Wizard's "tap 6 times" QR scanner reads a JSON payload that
+            references this app's package and a checksum of the APK; once the device
+            is enrolled, this trampoline is started so we can finish first-run setup.
+            See: KIOSK_PROVISIONING.md
+        -->
+        <activity
+            android:name=".kiosk.KioskProvisioningActivity"
+            android:exported="true"
+            android:permission="android.permission.BIND_DEVICE_ADMIN">
+            <intent-filter>
+                <action android:name="android.app.action.PROVISION_MANAGED_DEVICE" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
 
     </application>
 

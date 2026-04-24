@@ -1,7 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    Minimum policy set required for full kiosk lock mode.
+
+    `force-lock` lets the system force-lock the screen if needed for the
+    keyguard / wake flow.
+
+    `disable-keyguard-features` is required so the Device Owner can call
+    `setKeyguardDisabled(true)` while kiosk is active.
+
+    Anything more (wipe-data, reset-password, disable-camera, etc.) is NOT
+    needed for kiosk operation — keep this set minimal so the on-device
+    "device admin" disclosure stays accurate.
+-->
 <device-admin xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-policies>
         <force-lock />
-        <reset-password />
+        <disable-keyguard-features />
     </uses-policies>
 </device-admin>

@@ -12,11 +12,13 @@ import java.util.UUID
 import com.reedersystems.commandcomms.audio.ToneEngine
 import com.reedersystems.commandcomms.audio.radio.RadioStateManager
 import com.reedersystems.commandcomms.data.api.ApiClient
+import com.reedersystems.commandcomms.data.prefs.KioskPrefs
 import com.reedersystems.commandcomms.data.prefs.PttKeyPrefs
 import com.reedersystems.commandcomms.data.prefs.RadioTokenStore
 import com.reedersystems.commandcomms.data.prefs.SpeakerBoostPrefs
 import com.reedersystems.commandcomms.data.prefs.ServiceConnectionPrefs
 import com.reedersystems.commandcomms.data.prefs.SessionPrefs
+import com.reedersystems.commandcomms.device.KioskPolicyManager
 import com.reedersystems.commandcomms.data.model.RadioTransportConfig
 import com.reedersystems.commandcomms.data.repository.AuthRepository
 import com.reedersystems.commandcomms.data.repository.ChannelRepository
@@ -63,6 +65,12 @@ class CommandCommsApp : Application() {
     lateinit var speakerBoostPrefs: SpeakerBoostPrefs
         private set
 
+    lateinit var kioskPrefs: KioskPrefs
+        private set
+
+    lateinit var kioskPolicyManager: KioskPolicyManager
+        private set
+
     lateinit var radioTokenStore: RadioTokenStore
         private set
 
@@ -86,6 +94,8 @@ class CommandCommsApp : Application() {
         serviceConnectionPrefs = ServiceConnectionPrefs(this)
         pttKeyPrefs = PttKeyPrefs(this)
         speakerBoostPrefs = SpeakerBoostPrefs(this)
+        kioskPrefs = KioskPrefs(this)
+        kioskPolicyManager = KioskPolicyManager(this)
         val currentVersionCode = packageManager
             .getPackageInfo(packageName, 0)
             .let { if (Build.VERSION.SDK_INT >= 28) it.longVersionCode else it.versionCode.toLong() }
