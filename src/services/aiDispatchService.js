@@ -4907,6 +4907,16 @@ export class AIDispatcher {
         await this._promptCallDisambig(participantId, transcript, candidates, slots, verb);
         return true;
       }
+      // No matching call. If the unit gave us enough to create one
+      // (call nature + a real street address), pivot into the
+      // CREATE_CALL confirmation flow with arrivalStatus baked in so
+      // executeCallCreation marks them en_route (or on_scene) the
+      // moment they confirm. This prevents the dead-end "no active
+      // warrant service found" response when the unit is clearly
+      // asking us to spin up a new call and en-route them at once.
+      const pivoted = await this._maybePivotDescriptorToCreate(participantId, transcript, verb, slots);
+      if (pivoted) return true;
+
       const resp = `${participantId}, no active ${this._describeNoun(slots)} found.`;
       await this.speak(resp, participantId);
       this.addConversationExchange(participantId, transcript, resp);
@@ -4914,6 +4924,55 @@ export class AIDispatcher {
       return true;
     } catch (e) {
       this.log('STATUS_BY_DESCRIPTOR_ERROR', { error: e.message });
+      return false;
+    }
+  }
+
+  // When a STATUS_CHANGE (en_route/on_scene) descriptor doesn't match
+  // any active call but the unit gave us a usable nature + address,
+  // create the call with the speaker as primary and `arrivalStatus`
+  // set so executeCallCreation auto-applies the requested status.
+  // Returns true if we took the pivot (and queued a confirmation).
+  async _maybePivotDescriptorToCreate(participantId, transcript, arrivalStatus, slots) {
+    try {
+      const rawNature = slots?.callNature;
+      let address = normalizeAddress(slots?.callLocation);
+      if (!rawNature || !address) return false;
+      if (isMyLocationPhrase(address)) return false;
+      if (!this._looksLikeAddress(address)) return false;
+
+      this.log('STATUS_DESCRIPTOR_PIVOT_TO_CREATE', {
+        participantId, arrivalStatus, nature: rawNature, address,
+      });
+
+      const matchedNature = await cadService.findBestNature(rawNature);
+      const v = await this._verifyAddressForCall(address, { context: 'create', participantId });
+      const finalAddress = v?.canonical || address;
+      const addressUnverified = !(v && v.verified);
+      const addressLat = v?.lat ?? null;
+      const addressLng = v?.lng ?? null;
+
+      setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_CALL_CONFIRM, null, {
+        nature: matchedNature,
+        address: finalAddress,
+        addressUnverified,
+        addressLat,
+        addressLng,
+        additionalUnits: [],
+        priority: 'medium',
+        arrivalStatus,
+      }, true);
+
+      const verbPhrase = arrivalStatus === 'en_route' ? 'show you en route' : 'show you on scene';
+      const natureLower = matchedNature.toLowerCase();
+      const confirmResp = addressUnverified
+        ? `${participantId}, no active ${natureLower} on file. I couldn't verify ${finalAddress}. Create new ${natureLower} at ${finalAddress} and ${verbPhrase}?`
+        : `${participantId}, no active ${natureLower} on file. Create new ${natureLower} at ${finalAddress} and ${verbPhrase}?`;
+      await this.speak(confirmResp, participantId);
+      this.addConversationExchange(participantId, transcript, confirmResp);
+      return true;
+    } catch (e) {
+      this.log('STATUS_DESCRIPTOR_PIVOT_ERROR', { error: e.message });
       return false;
     }
   }
