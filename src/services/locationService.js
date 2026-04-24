@@ -143,11 +143,19 @@ class LocationService {
         displayName: top.display_name || null,
         lat: parseFloat(top.lat),
         lng: parseFloat(top.lon),
+        // Task #542: surface the raw street parts so the AI dispatcher can
+        // build a canonical "house# road, city, ST" address for CAD instead
+        // of trusting the spoken spelling.
+        houseNumber: a.house_number || null,
+        road: a.road || a.pedestrian || null,
+        city: a.city || a.town || a.village || null,
         township: a.township || a.village || null,
         municipality: a.city || a.town || a.village || a.municipality || null,
         county: a.county || null,
         state: a.state || null,
-        postcode: a.postcode || null
+        postcode: a.postcode || null,
+        importance: typeof top.importance === 'number' ? top.importance : null,
+        addressType: top.addresstype || top.type || null,
       };
 
       this._forwardGeocodeCache.set(cacheKey, { result, timestamp: Date.now() });

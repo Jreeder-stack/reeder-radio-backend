@@ -172,7 +172,7 @@ function normalizePriority(priority) {
   return String(3);
 }
 
-export async function createCall(type, priority, location, municipality, notes = '', units = []) {
+export async function createCall(type, priority, location, municipality, notes = '', units = [], extras = {}) {
   if (!type) {
     console.error('[CAD] createCall: type is required but was', type);
     return { success: false, error: 'Call type is required', failureType: 'INVALID_INPUT', statusCode: null, responseBody: null };
@@ -200,6 +200,15 @@ export async function createCall(type, priority, location, municipality, notes =
     notes: notes || '',
     units: safeUnits
   };
+  // Task #542: include geocoder-verified lat/lng so CAD can pin the call
+  // location without re-geocoding the cleaned address itself.
+  if (extras && typeof extras === 'object') {
+    if (typeof extras.lat === 'number' && !isNaN(extras.lat)
+        && typeof extras.lng === 'number' && !isNaN(extras.lng)) {
+      body.latitude = extras.lat;
+      body.longitude = extras.lng;
+    }
+  }
   return cadRequest('/api/radio/call', 'POST', body);
 }
 

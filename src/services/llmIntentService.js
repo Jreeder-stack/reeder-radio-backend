@@ -411,8 +411,8 @@ CRITICAL: Preserve exact spelling of names from transcript. Do not correct or no
 Return: { "intent": "WARRANT_CHECK", "response": "<natural acknowledgment>", "slots": { "firstName": "<if provided>", "lastName": "<if provided>" } }
 
 ### UPDATE_CALL
-Unit wants to update a call's priority or details. Phrases: "upgrade the call", "change priority", "update the call", "make it priority one", "add info to the call".
-Return: { "intent": "UPDATE_CALL", "response": null, "slots": { "callNumber": "<if provided>", "priority": "<if provided: low/medium/high/emergency>", "details": "<if provided>" } }
+Unit wants to update a call's priority, details, or address. Phrases: "upgrade the call", "change priority", "update the call", "make it priority one", "add info to the call", "update call N address to <new address>", "correct the address on call N to <new address>", "the address on that call is actually <new address>", "change the address on the call to <new address>", "fix the address on call N, it's actually <new address>". When the unit gives a new address, capture it verbatim into the address slot — do NOT canonicalize spelling here, the handler will geocode it. Capture the call number into the callNumber slot when spoken (otherwise leave null and the handler will resolve from context). An update may mix address with priority and/or details — populate every slot the unit named, and the handler will apply them all in one PATCH.
+Return: { "intent": "UPDATE_CALL", "response": null, "slots": { "callNumber": "<if provided>", "priority": "<if provided: low/medium/high/emergency>", "details": "<if provided>", "address": "<if provided>" } }
 
 ### CALL_DETAILS
 Unit is asking for details on a specific call. Phrases: "what's the info on call 456", "give me the details on that call", "what do we have on call 456", "read me the call", "what's the address on the call", "what's the call number", "who's assigned to the call", "what's the priority on the call", "any notes on the call".

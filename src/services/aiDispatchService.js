@@ -1469,6 +1469,89 @@ export class AIDispatcher {
     return null;
   }
 
+  // Task #542: forward-geocode a spoken call address before showing it to
+  // the unit on read-back or sending it to CAD. A "confident" hit means
+  // the geocoder returned both a road and a city/town/village; in that
+  // case we return the canonical "house# road, city, ST" spelling and
+  // the lat/lng. A miss or low-confidence hit returns the raw address
+  // unchanged with verified=false so the caller can warn the unit.
+  async _verifyAddressForCall(rawAddress, opts = {}) {
+    const ctx = opts.context === 'update' ? 'update' : 'create';
+    const participantId = opts.participantId || null;
+    const result = {
+      verified: false,
+      canonical: rawAddress || '',
+      lat: null,
+      lng: null,
+      geo: null,
+      reason: 'no_input',
+    };
+    if (!rawAddress || typeof rawAddress !== 'string' || !rawAddress.trim()) {
+      return result;
+    }
+
+    let geo = null;
+    try {
+      geo = await locationService.forwardGeocode(rawAddress);
+    } catch (e) {
+      result.reason = 'error';
+      this.log(ctx === 'update' ? 'GEOCODE_ERROR_UPDATE' : 'GEOCODE_ERROR_CREATE',
+        { participantId, address: rawAddress, error: e.message });
+      return result;
+    }
+
+    if (!geo) {
+      result.reason = 'no_match';
+      this.log(ctx === 'update' ? 'GEOCODE_MISS_UPDATE' : 'GEOCODE_MISS_CREATE',
+        { participantId, address: rawAddress, reason: 'no_match' });
+      return result;
+    }
+
+    result.geo = geo;
+    if (typeof geo.lat === 'number' && !isNaN(geo.lat)
+        && typeof geo.lng === 'number' && !isNaN(geo.lng)) {
+      result.lat = geo.lat;
+      result.lng = geo.lng;
+    }
+
+    const cityPart = geo.city || geo.municipality || geo.township || null;
+    const stateRaw = geo.state ? String(geo.state).toLowerCase() : null;
+    const stateAbbr = stateRaw ? (STATE_ABBREVIATIONS[stateRaw] || geo.state) : null;
+    const hasUsableStreet = !!geo.road;
+    const hasCity = !!cityPart;
+
+    if (!hasUsableStreet || !hasCity) {
+      result.reason = 'low_confidence';
+      this.log(ctx === 'update' ? 'GEOCODE_MISS_UPDATE' : 'GEOCODE_MISS_CREATE',
+        {
+          participantId,
+          address: rawAddress,
+          reason: 'low_confidence',
+          geo: { road: geo.road, city: cityPart, state: geo.state, importance: geo.importance },
+        });
+      return result;
+    }
+
+    const streetPart = geo.houseNumber ? `${geo.houseNumber} ${geo.road}` : geo.road;
+    let canonical = streetPart;
+    if (cityPart) canonical += `, ${cityPart}`;
+    if (stateAbbr) canonical += `, ${stateAbbr}`;
+
+    result.verified = true;
+    result.canonical = canonical;
+    result.reason = 'confident';
+    this.log(ctx === 'update' ? 'GEOCODE_HIT_UPDATE' : 'GEOCODE_HIT_CREATE',
+      {
+        participantId,
+        spoken: rawAddress,
+        canonical,
+        lat: result.lat,
+        lng: result.lng,
+        importance: geo.importance,
+      });
+    return result;
+  }
+
   async handleEmergencyPhraseAssist(unitId, distressType) {
     this.log('EMERGENCY_PHRASE_ASSIST_START', { unitId, distressType });
 
@@ -2833,10 +2916,15 @@ export class AIDispatcher {
             address = null;
           }
 
+          // Task #542: track whether the address came from the spoken
+          // transcript (needs geocoder verification) or from a CAD/GPS
+          // fallback (already canonical, skip verification).
+          let addressSource = address ? 'spoken' : null;
           if (!address) {
             const resolvedAddress = await this.resolveUnitLocation(participantId);
             if (resolvedAddress) {
               address = resolvedAddress;
+              addressSource = 'auto';
               this.log('CREATE_CALL_ADDRESS_AUTO_RESOLVED', { participantId, address: resolvedAddress });
             }
           }
@@ -2844,14 +2932,32 @@ export class AIDispatcher {
           if (nature && address) {
             const matchedNature = await cadService.findBestNature(nature);
             this.log('CREATE_CALL_MATCHED', { spoken: nature, matched: matchedNature, address, additionalUnits, arrivalStatus });
+            // Task #542: verify spoken addresses against the geocoder so
+            // the read-back uses the canonical spelling. Auto-resolved
+            // addresses came from CAD/GPS and don't need re-verification.
+            let finalAddress = address;
+            let addressUnverified = false;
+            let addressLat = null, addressLng = null;
+            if (addressSource === 'spoken') {
+              const v = await this._verifyAddressForCall(address, { context: 'create', participantId });
+              finalAddress = v.canonical || address;
+              addressUnverified = !v.verified;
+              addressLat = v.lat;
+              addressLng = v.lng;
+            }
             setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_CALL_CONFIRM, null, {
               nature: matchedNature,
-              address,
+              address: finalAddress,
+              addressUnverified,
+              addressLat,
+              addressLng,
               additionalUnits,
               priority,
               arrivalStatus
             }, true);
-            const confirmResp = `${participantId}, confirm, ${matchedNature.toLowerCase()} at ${address}?`;
+            const confirmResp = addressUnverified
+              ? `${participantId}, I couldn't verify ${finalAddress}, confirm to send as-is or correct it. ${matchedNature.toLowerCase()} at ${finalAddress}?`
+              : `${participantId}, confirm, ${matchedNature.toLowerCase()} at ${finalAddress}?`;
             await this.speak(confirmResp, participantId);
             this.addConversationExchange(participantId, transcript, confirmResp);
           } else if (nature && !address) {
@@ -2866,8 +2972,24 @@ export class AIDispatcher {
             await this.speak(resp, participantId);
             this.addConversationExchange(participantId, transcript, resp);
           } else {
+            // Task #542: address-only path (no nature yet) — verify the
+            // spoken address now and stash canonical/lat/lng/unverified
+            // so handleCallNatureInput doesn't have to re-verify.
+            let stashAddress = address || null;
+            let stashUnverified = false;
+            let stashLat = null, stashLng = null;
+            if (stashAddress && addressSource === 'spoken') {
+              const v = await this._verifyAddressForCall(stashAddress, { context: 'create', participantId });
+              stashAddress = v.canonical || stashAddress;
+              stashUnverified = !v.verified;
+              stashLat = v.lat;
+              stashLng = v.lng;
+            }
             setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_CALL_NATURE, null, {
-              address: address || null,
+              address: stashAddress,
+              addressUnverified: stashUnverified,
+              addressLat: stashLat,
+              addressLng: stashLng,
               additionalUnits,
               priority,
               arrivalStatus
@@ -2898,8 +3020,16 @@ export class AIDispatcher {
             await this.speak(resp, participantId);
             this.addConversationExchange(participantId, transcript, resp);
           } else if (!promptNature && promptAddress) {
+            // Task #542: verify the spoken address now so handleCallNatureInput
+            // (which fires on the unit's nature reply) can rely on the saved
+            // canonical/lat/lng/unverified slots without re-geocoding.
+            const v = await this._verifyAddressForCall(promptAddress, { context: 'create', participantId });
+            const stashAddress = v.canonical || promptAddress;
             setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_CALL_NATURE, null, {
-              address: promptAddress,
+              address: stashAddress,
+              addressUnverified: !v.verified,
+              addressLat: v.lat,
+              addressLng: v.lng,
               additionalUnits: promptUnits,
               priority: promptPriority,
               arrivalStatus: promptArrivalStatus
@@ -3850,23 +3980,52 @@ export class AIDispatcher {
     this.log('CALL_NATURE_MATCHED', { spoken: nature, matched: matchedNature });
 
     let address = savedSlots?.address;
+    // Task #542: prefer the verification metadata saved by the upstream
+    // entry that stashed the address (CREATE_CALL or CREATE_CALL_PROMPT).
+    let addressUnverified = !!savedSlots?.addressUnverified;
+    let addressLat = (typeof savedSlots?.addressLat === 'number') ? savedSlots.addressLat : null;
+    let addressLng = (typeof savedSlots?.addressLng === 'number') ? savedSlots.addressLng : null;
+    let addressIsAuto = false;
     if (!address) {
       const resolvedAddress = await this.resolveUnitLocation(participantId);
       if (resolvedAddress) {
         address = resolvedAddress;
+        addressIsAuto = true;
+        addressUnverified = false;
+        addressLat = null;
+        addressLng = null;
         this.log('CALL_NATURE_ADDRESS_AUTO_RESOLVED', { participantId, address: resolvedAddress });
       }
+    }
+    // Task #542: defensive re-verification — if a saved address came in
+    // without verification metadata (older flow or unexpected entry), run
+    // it through the geocoder now so we never confirm/CAD-write an
+    // unverified spoken address.
+    if (address && !addressIsAuto
+        && !('addressUnverified' in (savedSlots || {}))
+        && (typeof savedSlots?.addressLat !== 'number')
+        && (typeof savedSlots?.addressLng !== 'number')) {
+      const v = await this._verifyAddressForCall(address, { context: 'create', participantId });
+      address = v.canonical || address;
+      addressUnverified = !v.verified;
+      addressLat = v.lat;
+      addressLng = v.lng;
     }
 
     if (address) {
       setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_CALL_CONFIRM, null, {
         nature: matchedNature,
         address,
+        addressUnverified,
+        addressLat,
+        addressLng,
         additionalUnits: savedSlots?.additionalUnits || [],
         priority: savedSlots?.priority || 'medium',
         arrivalStatus: savedSlots?.arrivalStatus || 'on_scene'
       }, true);
-      const confirmResp = `${participantId}, confirm, ${matchedNature.toLowerCase()} at ${address}?`;
+      const confirmResp = addressUnverified
+        ? `${participantId}, I couldn't verify ${address}, confirm to send as-is or correct it. ${matchedNature.toLowerCase()} at ${address}?`
+        : `${participantId}, confirm, ${matchedNature.toLowerCase()} at ${address}?`;
       await this.speak(confirmResp, participantId);
     } else {
       setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_CALL_ADDRESS, null, {
@@ -3893,11 +4052,13 @@ export class AIDispatcher {
     }
 
     let address = null;
+    let addressFromAuto = false;
     const isSelfRef = isMyLocationPhrase(transcript);
     if (isSelfRef) {
       const resolvedAddress = await this.resolveUnitLocation(participantId);
       if (resolvedAddress) {
         address = resolvedAddress;
+        addressFromAuto = true;
         this.log('CALL_ADDRESS_FROM_LOCATION', { participantId, address: resolvedAddress });
       }
     }
@@ -3910,15 +4071,33 @@ export class AIDispatcher {
       return;
     }
 
+    // Task #542: verify spoken addresses against the geocoder before the
+    // confirm read-back. CAD/GPS-resolved fallbacks are already canonical.
+    let finalAddress = address;
+    let addressUnverified = false;
+    let addressLat = null, addressLng = null;
+    if (!addressFromAuto) {
+      const v = await this._verifyAddressForCall(address, { context: 'create', participantId });
+      finalAddress = v.canonical || address;
+      addressUnverified = !v.verified;
+      addressLat = v.lat;
+      addressLng = v.lng;
+    }
+
     const nature = savedSlots?.nature || 'UNKNOWN TYPE';
     setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_CALL_CONFIRM, null, {
       nature,
-      address,
+      address: finalAddress,
+      addressUnverified,
+      addressLat,
+      addressLng,
       additionalUnits: savedSlots?.additionalUnits || [],
       priority: savedSlots?.priority || 'medium',
       arrivalStatus: savedSlots?.arrivalStatus || 'on_scene'
     }, true);
-    const confirmResp = `${participantId}, confirm, ${nature.toLowerCase()} at ${address}?`;
+    const confirmResp = addressUnverified
+      ? `${participantId}, I couldn't verify ${finalAddress}, confirm to send as-is or correct it. ${nature.toLowerCase()} at ${finalAddress}?`
+      : `${participantId}, confirm, ${nature.toLowerCase()} at ${finalAddress}?`;
     await this.speak(confirmResp, participantId);
   }
 
@@ -3973,9 +4152,9 @@ export class AIDispatcher {
   }
 
   async executeCallCreation(participantId, slots) {
-    const { nature, address, additionalUnits, priority, arrivalStatus } = slots;
+    const { nature, address, additionalUnits, priority, arrivalStatus, addressLat, addressLng, addressUnverified } = slots;
     const unitStatus = arrivalStatus || 'on_scene';
-    this.log('CALL_CREATION_EXECUTING', { participantId, nature, address, priority, additionalUnits });
+    this.log('CALL_CREATION_EXECUTING', { participantId, nature, address, priority, additionalUnits, addressUnverified: !!addressUnverified });
 
     try {
       if (!cadService.isConfigured()) {
@@ -3997,10 +4176,18 @@ export class AIDispatcher {
         }
       }
 
-      const outgoingPayload = { nature, priority: priority || 'medium', address: cleanedAddress, municipality: '', notes: `Created by AI Dispatcher for ${participantId}`, units };
+      // Task #542: forward verified lat/lng to CAD when we have them.
+      const cadExtras = {};
+      if (typeof addressLat === 'number' && !isNaN(addressLat)
+          && typeof addressLng === 'number' && !isNaN(addressLng)) {
+        cadExtras.lat = addressLat;
+        cadExtras.lng = addressLng;
+      }
+
+      const outgoingPayload = { nature, priority: priority || 'medium', address: cleanedAddress, municipality: '', notes: `Created by AI Dispatcher for ${participantId}`, units, lat: cadExtras.lat ?? null, lng: cadExtras.lng ?? null, addressUnverified: !!addressUnverified };
       this.log('CAD_CALL_REQUEST', { participantId, payload: outgoingPayload });
 
-      const callResult = await cadService.createCall(nature, priority || 'medium', cleanedAddress, '', `Created by AI Dispatcher for ${participantId}`, units);
+      const callResult = await cadService.createCall(nature, priority || 'medium', cleanedAddress, '', `Created by AI Dispatcher for ${participantId}`, units, cadExtras);
       this.log('CAD_CALL_RESULT', {
         success: callResult.success,
         callId: callResult.call_id,
@@ -7337,6 +7524,23 @@ export class AIDispatcher {
       if (slots?.priority) updates.priority = slots.priority;
       if (slots?.details) updates.notes = slots.details;
 
+      // Task #542: verify the spoken address against the geocoder before
+      // we PATCH CAD. Build the canonical spelling (and lat/lng) for the
+      // updates payload, but track unverified addresses so the read-back
+      // and post-update ack can warn the unit.
+      let addressMeta = null;
+      const rawAddress = slots?.address ? normalizeAddress(slots.address) : null;
+      if (rawAddress) {
+        addressMeta = await this._verifyAddressForCall(rawAddress, { context: 'update', participantId });
+        // Mirror cadService.createCall — CAD's call body uses `location`.
+        updates.location = addressMeta.canonical || rawAddress;
+        if (typeof addressMeta.lat === 'number' && typeof addressMeta.lng === 'number') {
+          updates.latitude = addressMeta.lat;
+          updates.longitude = addressMeta.lng;
+        }
+      }
+      const addressUnverified = !!(addressMeta && !addressMeta.verified);
+
       if (resolution.source === 'sole_active' && resolution.requiresConfirmation) {
         const callDisplay = resolution.call.call_number || resolution.call.call_id;
         const loc = resolution.call.location || resolution.call.address || '';
@@ -7345,6 +7549,8 @@ export class AIDispatcher {
           callId: resolution.call.call_id,
           callNumber: callDisplay,
           updates: Object.keys(updates).length ? updates : null,
+          addressUnverified,
+          rawAddress: rawAddress || null,
         }, true);
         const resp = `${participantId}, only one call on the board, ${callDisplay}${where}. Update it?`;
         await this.speak(resp, participantId);
@@ -7376,13 +7582,18 @@ export class AIDispatcher {
 
       setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_CALL_UPDATE_CONFIRM, null, {
         callId,
-        updates
+        updates,
+        addressUnverified,
+        rawAddress: rawAddress || null,
       }, true);
 
       const updateDesc = [];
       if (updates.priority) updateDesc.push(`priority to ${updates.priority}`);
+      if (updates.location) updateDesc.push(`address to ${updates.location}`);
       if (updates.notes) updateDesc.push(`add info`);
-      const confirmResp = `${participantId}, confirm update ${updateDesc.join(' and ')} on the call?`;
+      const confirmResp = addressUnverified
+        ? `${participantId}, I couldn't verify ${rawAddress}, confirm to send as-is or correct it. Update ${updateDesc.join(' and ')} on the call?`
+        : `${participantId}, confirm update ${updateDesc.join(' and ')} on the call?`;
       await this.speak(confirmResp, participantId);
       this.addConversationExchange(participantId, transcript, confirmResp);
     } catch (error) {
@@ -7407,6 +7618,7 @@ export class AIDispatcher {
 
     const callId = slots?.callId;
     const updates = slots?.updates;
+    const addressUnverified = !!slots?.addressUnverified;
 
     if (!callId || !updates) {
       setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
@@ -7430,17 +7642,28 @@ export class AIDispatcher {
         setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
         return;
       }
-      this.log('CALL_UPDATED', { unitId: participantId, callId, updates });
+      // Task #542: capture the final address (and verification status) in
+      // the audit log so it's traceable end-to-end.
+      this.log('CALL_UPDATED', { unitId: participantId, callId, updates, addressUnverified });
       const priorValues = {};
       if (priorCallSnapshot) {
         if ('priority' in updates) priorValues.priority = priorCallSnapshot.priority || null;
+        if ('location' in updates) priorValues.location = priorCallSnapshot.location || priorCallSnapshot.address || null;
       }
       recordAction(participantId, 'UPDATE_CALL', {
         summary: `update on call ${priorCallSnapshot?.call_number || callId}`,
-        data: { callId, updates, priorValues }
+        data: { callId, updates, priorValues, addressUnverified }
       });
 
-      const resp = `${participantId}, 10-4. Call updated.`;
+      // Task #542: when the unit changed the address, mention the canonical
+      // spelling and warn if it couldn't be verified.
+      let resp;
+      if (updates.location) {
+        const warn = addressUnverified ? ' Be advised, address could not be verified.' : '';
+        resp = `${participantId}, 10-4. Address now ${updates.location}.${warn} Call updated.`;
+      } else {
+        resp = `${participantId}, 10-4. Call updated.`;
+      }
       await this.speak(resp, participantId);
       this.addConversationExchange(participantId, transcript, resp);
       setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
@@ -7534,6 +7757,12 @@ export class AIDispatcher {
     const callId = savedSlots?.callId;
     const callNumber = savedSlots?.callNumber;
     const updates = savedSlots?.updates || null;
+    // Task #542: forward the address verification status from the
+    // sole-call confirmation step so the next confirm read-back and the
+    // post-PATCH ack can mention the canonical address (and warn when
+    // it couldn't be verified).
+    const addressUnverified = !!savedSlots?.addressUnverified;
+    const rawAddress = savedSlots?.rawAddress || null;
     if (!callId) {
       setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
       const resp = `${participantId}, lost the call number, try again.`;
@@ -7545,11 +7774,17 @@ export class AIDispatcher {
       setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_CALL_UPDATE_CONFIRM, null, {
         callId,
         updates,
+        addressUnverified,
+        rawAddress,
       }, true);
       const updateDesc = [];
       if (updates.priority) updateDesc.push(`priority to ${updates.priority}`);
+      if (updates.location) updateDesc.push(`address to ${updates.location}`);
       if (updates.notes) updateDesc.push(`add info`);
-      const resp = `${participantId}, confirm update ${updateDesc.join(' and ') || 'the call'} on call ${callNumber}?`;
+      const baseDesc = updateDesc.join(' and ') || 'the call';
+      const resp = addressUnverified && rawAddress
+        ? `${participantId}, I couldn't verify ${rawAddress}, confirm to send as-is or correct it. Update ${baseDesc} on call ${callNumber}?`
+        : `${participantId}, confirm update ${baseDesc} on call ${callNumber}?`;
       await this.speak(resp, participantId);
       this.addConversationExchange(participantId, transcript, resp);
       return;
