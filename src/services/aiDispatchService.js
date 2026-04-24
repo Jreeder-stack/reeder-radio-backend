@@ -2215,14 +2215,6 @@ export class AIDispatcher {
         }
       }
 
-      if (state === DISPATCHER_STATE.AWAITING_COMMAND) {
-        const handled = await this._handleTeachingPhrase(participantId, transcript);
-        if (handled) {
-          this._turnContextByUnit.delete(participantId);
-          return;
-        }
-      }
-
       const agencyIdForApply = this._getAgencyId();
       let normalizedTranscript = transcript;
       const afterPhrasing = dispatcherLearning.applyLearnedPhrasing(normalizedTranscript, agencyIdForApply);
@@ -2239,6 +2231,19 @@ export class AIDispatcher {
 
       this.log('LLM_CLASSIFY_RESULT', { participant: participantId, intent: result.intent, response: result.response, slots: result.slots });
       this._turnContextByUnit.set(participantId, { transcript, intent: result.intent });
+
+      if (state === DISPATCHER_STATE.AWAITING_COMMAND) {
+        const llmIntent = result?.intent || null;
+        const isFallbackIntent = !llmIntent || llmIntent === 'OUT_OF_SCOPE' || llmIntent === 'UNKNOWN';
+        if (isFallbackIntent) {
+          this.log('LEARNING_TEACHING_FALLBACK_TRIGGERED', { participant: participantId, transcript, llmIntent });
+          const handled = await this._handleTeachingPhrase(participantId, transcript);
+          if (handled) {
+            this._turnContextByUnit.delete(participantId);
+            return;
+          }
+        }
+      }
 
       const speakerNorm = normalizeUnitId(participantId);
       if (result.intent === 'STATUS_CHANGE') {

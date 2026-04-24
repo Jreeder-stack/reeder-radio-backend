@@ -390,7 +390,7 @@ export function getDefaultAgencyId() {
 const TEACHING_PATTERNS = [
   /\bremember\s+that\s+(.+?)\s+(?:means?|is|equals?)\s+(.+)$/i,
   /\bfrom\s+now\s+on[, ]+(.+?)\s+(?:means?|is|equals?)\s+(.+)$/i,
-  /\bnote\s+that\s+(.+?)\s+(?:means?|is|equals?|=)\s+(.+)$/i,
+  /\bnote\s+that\s+(.+?)\s+(?:=|is\s+(?:an?\s+)?alias\s+for|is\s+shorthand\s+for)\s+(.+)$/i,
   /\bteach\s+you\s+(?:that\s+)?(.+?)\s+(?:means?|is)\s+(.+)$/i,
 ];
 
@@ -403,6 +403,7 @@ export function detectTeachingPhrase(transcript) {
       const original = m[1].trim().replace(/^["']|["']$/g, '');
       const correction = m[2].trim().replace(/^["']|["']$/g, '');
       if (original && correction && original.toLowerCase() !== correction.toLowerCase()) {
+        audit('LEARNING_TEACHING_PATTERN_MATCH', { transcript, original, correction });
         return { original, correction };
       }
     }

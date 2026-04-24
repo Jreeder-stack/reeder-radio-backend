@@ -96,6 +96,45 @@ describe('detectTeachingPhrase', () => {
   it('returns null for non-teaching utterances', () => {
     expect(dispatcherLearning.detectTeachingPhrase('Show me the call')).toBeNull();
   });
+
+  // Task #526: the loose "note that X is Y" pattern overlapped with normal
+  // call-note language ("make a note that the check is completed") and was
+  // dropped. Only an explicit alias verb / "=" should be treated as teaching.
+  it('does NOT match "make a note that the check is completed" (Task #526)', () => {
+    expect(
+      dispatcherLearning.detectTeachingPhrase('make a note that the check is completed')
+    ).toBeNull();
+  });
+
+  it('does NOT match "note that perimeter check is complete" (Task #526)', () => {
+    expect(
+      dispatcherLearning.detectTeachingPhrase('note that perimeter check is complete')
+    ).toBeNull();
+  });
+
+  it('still matches "note that the barn = 200 County Rd 5" via the tight = pattern', () => {
+    expect(
+      dispatcherLearning.detectTeachingPhrase('note that the barn = 200 County Rd 5')
+    ).toEqual({ original: 'the barn', correction: '200 County Rd 5' });
+  });
+
+  it('matches "note that sarge is an alias for unit-12"', () => {
+    expect(
+      dispatcherLearning.detectTeachingPhrase('note that sarge is an alias for unit-12')
+    ).toEqual({ original: 'sarge', correction: 'unit-12' });
+  });
+
+  it('matches "note that 10-29 is shorthand for warrant check"', () => {
+    expect(
+      dispatcherLearning.detectTeachingPhrase('note that 10-29 is shorthand for warrant check')
+    ).toEqual({ original: '10-29', correction: 'warrant check' });
+  });
+
+  it('still matches "teach you that X means Y"', () => {
+    expect(
+      dispatcherLearning.detectTeachingPhrase('Teach you that 10-29 means warrant check')
+    ).toEqual({ original: '10-29', correction: 'warrant check' });
+  });
 });
 
 describe('inferCategory', () => {

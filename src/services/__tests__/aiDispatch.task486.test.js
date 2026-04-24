@@ -61,7 +61,27 @@ vi.mock('../cadService.js', () => {
 vi.mock('../agencyKnowledge.js', () => ({
   resolveDestination: (text) => ({ kind: 'unique', place: { name: String(text).trim(), address: null } }),
   KNOWN_PLACES: [],
+  setLearnedPlaces: vi.fn(),
 }));
+
+// Task #526: spy on dispatcherLearning.recordCandidate while keeping the
+// real detectTeachingPhrase / inferCategory / runtime helpers intact so the
+// gating logic in processTranscriptWithLLM can be verified end-to-end.
+vi.mock('../dispatcherLearning.js', async () => {
+  const actual = await vi.importActual('../dispatcherLearning.js');
+  return {
+    ...actual,
+    recordCandidate: vi.fn(async () => ({ ok: true, candidateId: 1 })),
+    refreshRuntimeIndex: vi.fn(async () => ({
+      places: [],
+      callsigns: new Map(),
+      phrasings: new Map(),
+      tenCodes: new Map(),
+    })),
+    invalidateCache: vi.fn(),
+    getLearnedPlaces: vi.fn(async () => []),
+  };
+});
 
 vi.mock('../db/index.js', () => ({
   default: {},
@@ -75,6 +95,8 @@ vi.mock('../db/index.js', () => ({
 let AIDispatcher;
 let cadService;
 let cm;
+let dispatcherLearning;
+let llmIntentService;
 
 beforeEach(async () => {
   vi.resetModules();
@@ -84,6 +106,8 @@ beforeEach(async () => {
   const mod = await import('../aiDispatchService.js');
   AIDispatcher = mod.AIDispatcher;
   cadService = await import('../cadService.js');
+  dispatcherLearning = await import('../dispatcherLearning.js');
+  llmIntentService = await import('../llmIntentService.js');
 });
 
 function makeDispatcher() {
@@ -394,5 +418,59 @@ describe('Task #486 (Step 6): status check watchdog', () => {
     d._onCadStatusCheckEvent = async (evt) => { events.push(evt); };
     await d._runStatusCheckWatchdog();
     expect(events.length).toBe(0);
+  });
+});
+
+// Task #526: "make a note" requests must route through ADD_NOTE rather than
+// being intercepted as a learning candidate. The teaching detector now runs
+// only when the LLM has nothing concrete to do (OUT_OF_SCOPE / UNKNOWN / null).
+describe('Task #526: teaching-phrase detection is gated on the LLM', () => {
+  function setAwaitingCommand(unitId) {
+    cm.setUnitSessionState(unitId, cm.DISPATCHER_STATE.AWAITING_COMMAND, null, {}, true);
+  }
+
+  it('routes "make a note that the foot check is complete" to ADD_NOTE without recording a candidate', async () => {
+    llmIntentService.classifyIntent.mockResolvedValueOnce({
+      intent: 'ADD_NOTE',
+      slots: { noteContent: 'foot check is complete' },
+      response: null,
+    });
+    const d = makeDispatcher();
+    setAwaitingCommand('INDIANA-1');
+    await d.processTranscriptWithLLM('make a note that the foot check is complete', 'INDIANA-1');
+    expect(cadService.addCallNote).toHaveBeenCalled();
+    expect(dispatcherLearning.recordCandidate).not.toHaveBeenCalled();
+  });
+
+  it('falls through to teaching capture when LLM returns OUT_OF_SCOPE', async () => {
+    llmIntentService.classifyIntent.mockResolvedValueOnce({
+      intent: 'OUT_OF_SCOPE',
+      slots: {},
+      response: null,
+    });
+    const d = makeDispatcher();
+    setAwaitingCommand('INDIANA-1');
+    await d.processTranscriptWithLLM('remember that 10-29 means warrant check', 'INDIANA-1');
+    expect(dispatcherLearning.recordCandidate).toHaveBeenCalledTimes(1);
+    expect(cadService.addCallNote).not.toHaveBeenCalled();
+    const arg = dispatcherLearning.recordCandidate.mock.calls[0][0];
+    expect(arg.original).toBe('10-29');
+    expect(arg.correction).toBe('warrant check');
+    expect(arg.sourceIntent).toBe('EXPLICIT_TEACHING');
+  });
+
+  it('does not record a teaching candidate when the LLM picks any concrete intent', async () => {
+    llmIntentService.classifyIntent.mockResolvedValueOnce({
+      intent: 'STATUS_CHANGE',
+      slots: {},
+      cadStatus: 'AVAILABLE',
+      response: 'INDIANA-1, 10-4, available.',
+    });
+    const d = makeDispatcher();
+    setAwaitingCommand('INDIANA-1');
+    // Even an utterance that the old loose pattern would have matched
+    // should NOT reach the teaching detector when the LLM has decided.
+    await d.processTranscriptWithLLM('note that the check is completed', 'INDIANA-1');
+    expect(dispatcherLearning.recordCandidate).not.toHaveBeenCalled();
   });
 });
