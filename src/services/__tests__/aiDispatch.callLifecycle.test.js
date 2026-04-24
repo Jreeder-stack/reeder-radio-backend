@@ -151,18 +151,26 @@ describe('Task #512: close-call uses active-list fallback when per-unit endpoint
   });
 });
 
-describe('R8: primary-unit cascade from clear → close confirm', () => {
-  it('with single unit (primary), asks to close call and parks unit in AWAITING_PRIMARY_CLOSE_CONFIRM', async () => {
-    // Task #482: classifier now detects primary upfront — no longer needs a CAD 409.
+describe('R8 / Task #541: primary-unit clear goes straight to disposition', () => {
+  it('with single unit (primary), skips "Close the call?" hail and parks unit in AWAITING_DISPOSITION', async () => {
+    // Task #541: the redundant "Close the call?" hail is gone — the unit
+    // already said they were clearing and they're the last unit on the call,
+    // so the AI mirrors CAD's clear-and-close behavior by going straight to
+    // the disposition prompt.
     const d = makeDispatcher();
     await d.handleClearConfirm('Indiana-1', '10-98');
-    expect(d.spoken[0]).toMatch(/primary on call CALL-123\. Close the call\?/);
+    expect(d.spoken[0]).toMatch(/Indiana-1, 10-4\. Go ahead with disposition for call CALL-123\./);
+    expect(d.spoken[0]).not.toMatch(/Close the call\?/);
     const session = cm.getUnitSessionState('Indiana-1');
-    expect(session.state).toBe(cm.DISPATCHER_STATE.AWAITING_PRIMARY_CLOSE_CONFIRM);
+    expect(session.state).toBe(cm.DISPATCHER_STATE.AWAITING_DISPOSITION);
     expect(session.slots.callNumber).toBe('CALL-123');
   });
 
-  it('confirm cascades into AWAITING_DISPOSITION with the call number', async () => {
+  // The implicit-reassign primary_last branch (out of scope for #541) still
+  // uses handlePrimaryCloseConfirm, so the handler stays in place as a no-op
+  // shim. Asserting it still bridges into AWAITING_DISPOSITION proves we did
+  // not remove or break it.
+  it('handlePrimaryCloseConfirm shim still bridges into AWAITING_DISPOSITION', async () => {
     const d = makeDispatcher();
     await d.handlePrimaryCloseConfirm('Indiana-1', '10-4', { callNumber: 'CALL-123' });
     const session = cm.getUnitSessionState('Indiana-1');
@@ -442,13 +450,15 @@ describe('Task #482: clear/available cascades and disposition matching', () => {
     expect(session.state).toBe(cm.DISPATCHER_STATE.IDLE);
   });
 
-  it('handleClearConfirm cascades primary_last with no inline disposition into AWAITING_PRIMARY_CLOSE_CONFIRM', async () => {
+  it('handleClearConfirm cascades primary_last with no inline disposition straight into AWAITING_DISPOSITION (Task #541)', async () => {
     const d = makeDispatcher();
     await d.handleClearConfirm('Indiana-1', '10-98');
     expect(cadService.clearUnit).not.toHaveBeenCalled();
-    expect(d.spoken[0]).toMatch(/primary on call CALL-123\. Close the call\?/);
+    // Task #541: no "Close the call?" hail — straight to disposition prompt.
+    expect(d.spoken[0]).not.toMatch(/Close the call\?/);
+    expect(d.spoken[0]).toMatch(/Go ahead with disposition for call CALL-123/);
     const session = cm.getUnitSessionState('Indiana-1');
-    expect(session.state).toBe(cm.DISPATCHER_STATE.AWAITING_PRIMARY_CLOSE_CONFIRM);
+    expect(session.state).toBe(cm.DISPATCHER_STATE.AWAITING_DISPOSITION);
     expect(session.slots.callNumber).toBe('CALL-123');
   });
 

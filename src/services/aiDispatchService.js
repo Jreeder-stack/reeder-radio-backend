@@ -2416,13 +2416,16 @@ export class AIDispatcher {
                 this.addConversationExchange(participantId, transcript, dispResp);
                 break;
               }
-              const closeResp = `${participantId}, you are primary on call ${outcome.call.callDisplay}. Close the call?`;
-              await this.speak(closeResp, participantId);
-              this.addConversationExchange(participantId, transcript, closeResp);
-              setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_PRIMARY_CLOSE_CONFIRM, null, {
+              // Task #541: skip the redundant "Close the call?" hail — the
+              // unit already said they were going available and they're the
+              // last unit on the call. Go straight to the disposition prompt
+              // (same end state handlePrimaryCloseConfirm produced before).
+              setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_DISPOSITION, null, {
                 callNumber: outcome.call.callId,
-                callDisplay: outcome.call.callDisplay,
               }, true);
+              const dispResp = `${participantId}, 10-4. Go ahead with disposition for call ${outcome.call.callDisplay}.`;
+              await this.speak(dispResp, participantId);
+              this.addConversationExchange(participantId, transcript, dispResp);
               break;
             }
             // 'simple' → fall through to normal status update path. If we
@@ -2468,7 +2471,16 @@ export class AIDispatcher {
                   priorStatus = info?.status || info?.unit_status || info?.current_status || null;
                   priorZone = info?.zone || null;
                 } catch (e) { /* best effort */ }
-                const cadResult = await this._updateUnitStatusSerial(participantId, result.cadStatus);
+                // Task #541: simple-available also chains an on_duty write
+                // so the unit ends in-service-and-available the way CAD's own
+                // console expects. Any other status takes the single write.
+                let cadResult;
+                if (result.cadStatus === 'available') {
+                  const cascade = await this._availableThenOnDutyCascade(participantId);
+                  cadResult = cascade.availableResult;
+                } else {
+                  cadResult = await this._updateUnitStatusSerial(participantId, result.cadStatus);
+                }
                 if (!cadResult || !cadResult.success) {
                   statusUpdateFailed = true;
                   statusFailureType = cadResult?.failureType || 'API_REJECTION';
@@ -6689,13 +6701,15 @@ export class AIDispatcher {
           this.addConversationExchange(participantId, transcript, resp);
           return;
         }
-        const resp = `${participantId}, you are primary on call ${outcome.call.callDisplay}. Close the call?`;
+        // Task #541: skip the redundant "Close the call?" hail — the unit
+        // already said they were clearing and they're the last unit on the
+        // call. Go straight to the disposition prompt.
+        setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_DISPOSITION, null, {
+          callNumber: outcome.call.callId,
+        }, true);
+        const resp = `${participantId}, 10-4. Go ahead with disposition for call ${outcome.call.callDisplay}.`;
         await this.speak(resp, participantId);
         this.addConversationExchange(participantId, transcript, resp);
-        setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_PRIMARY_CLOSE_CONFIRM, null, {
-          callNumber: outcome.call.callId,
-          callDisplay: outcome.call.callDisplay,
-        }, true);
         return;
       }
 
@@ -6710,13 +6724,16 @@ export class AIDispatcher {
         // R8: CAD rejects clearing the primary unit (HTTP 409). Speak it back
         // and offer to close the entire call instead.
         if (clearResult.statusCode === 409 && priorCallId) {
-          const resp = `${participantId}, you are primary on call ${priorCallDisplay}. Close the call?`;
+          // Task #541: CAD says "you're primary, can't clear" → unit is the
+          // last+primary unit, just like the classifier branch above. Skip
+          // the "Close the call?" hail and go straight to the disposition
+          // prompt.
+          setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_DISPOSITION, null, {
+            callNumber: priorCallId,
+          }, true);
+          const resp = `${participantId}, 10-4. Go ahead with disposition for call ${priorCallDisplay}.`;
           await this.speak(resp, participantId);
           this.addConversationExchange(participantId, transcript, resp);
-          setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_PRIMARY_CLOSE_CONFIRM, null, {
-            callNumber: priorCallId,
-            callDisplay: priorCallDisplay
-          }, true);
           return;
         }
         const resp = `${participantId}, unable to clear you from call. ${clearResult.error || 'Try your MDT.'}`;
@@ -6735,7 +6752,9 @@ export class AIDispatcher {
       }
 
       try {
-        await this._updateUnitStatusSerial(participantId, 'available');
+        // Task #541: cascade available → on_duty so the unit ends
+        // in-service-and-available the way CAD's own console expects.
+        await this._availableThenOnDutyCascade(participantId);
       } catch (statusErr) {
         this.log('CAD_STATUS_UPDATE_AFTER_CLEAR_ERROR', { error: statusErr.message });
       }
@@ -6942,6 +6961,14 @@ export class AIDispatcher {
         return;
       }
       this.log('CALL_DISPOSED', { unitId: participantId, callId, disposition });
+
+      // Task #541: after the last+primary unit closes the call, leave them
+      // available + on_duty on CAD so the unit ends clear-and-in-service.
+      try {
+        await this._availableThenOnDutyCascade(participantId);
+      } catch (statusErr) {
+        this.log('CAD_STATUS_UPDATE_AFTER_DISPOSE_ERROR', { error: statusErr.message });
+      }
 
       const resp = `${participantId}, 10-4. Call closed, ${canonicalDisp}.`;
       await this.speak(resp, participantId);
@@ -9224,6 +9251,33 @@ export class AIDispatcher {
 
   _updateUnitStatusSerial(unitId, status, ...rest) {
     return this._runStatusUpdateSerial(unitId, () => cadService.updateUnitStatus(unitId, status, ...rest));
+  }
+
+  // Task #541: when a unit just went clear/available, CAD's console expects
+  // them to be progressed straight to on_duty so they show as
+  // in-service-and-available rather than just "available". This helper does
+  // that cascade through the per-unit serial queue so the two writes can't
+  // interleave with anything else. If the available leg fails we DO NOT
+  // attempt the on_duty leg — we don't want to compound CAD errors.
+  async _availableThenOnDutyCascade(unitId, ...rest) {
+    const availableResult = await this._updateUnitStatusSerial(unitId, 'available', ...rest);
+    let onDutyResult = null;
+    let onDutyAttempted = false;
+    if (availableResult?.success) {
+      onDutyAttempted = true;
+      try {
+        onDutyResult = await this._updateUnitStatusSerial(unitId, 'on_duty', ...rest);
+      } catch (e) {
+        onDutyResult = { success: false, error: e.message };
+      }
+    }
+    this.log('AVAILABLE_THEN_ON_DUTY_CASCADE', {
+      unitId,
+      availableSuccess: !!availableResult?.success,
+      onDutyAttempted,
+      onDutySuccess: !!onDutyResult?.success,
+    });
+    return { availableResult, onDutyResult, onDutyAttempted };
   }
 
   // R10 wrappers: route assigns and notes through the per-unit status queue so
