@@ -7245,19 +7245,47 @@ export class AIDispatcher {
         return;
       }
 
-      const result = await cadService.setPrimaryUnit(callId, targetUnit);
-      if (result?.success === false) {
-        this.log('MAKE_PRIMARY_REJECTED', { unitId: targetUnit, requestedBy: participantId, callId, error: result.error });
-        const resp = isSelf
-          ? `${participantId}, unable to make you primary on that call.`
-          : `${participantId}, unable to make ${targetUnit} primary on that call.`;
+      const targetUuid = this._resolveUnitUuidForCallsign(targetUnit);
+      const result = await cadService.setPrimaryUnitVerified(callId, targetUnit, { unitUuid: targetUuid });
+      if (!result || result.success !== true) {
+        const patchStatus = result?.patchStatus;
+        // Hard reject: any non-2xx status, OR an unknown/null status
+        // (network failure, CAD unreachable, missing config, etc.). Per
+        // task spec, only a *2xx with no effect* gets the special "MDT"
+        // wording; everything else falls back to the legacy refusal.
+        const isHardReject =
+          typeof patchStatus !== 'number' ||
+          patchStatus < 200 ||
+          patchStatus >= 300;
+        if (isHardReject) {
+          this.log('MAKE_PRIMARY_REJECTED', { unitId: targetUnit, requestedBy: participantId, callId, patchStatus, attempts: result?.attempts, beforePrimary: result?.beforePrimary, afterPrimary: result?.afterPrimary });
+          const resp = isSelf
+            ? `${participantId}, unable to make you primary on that call.`
+            : `${participantId}, unable to make ${targetUnit} primary on that call.`;
+          await this.speak(resp, participantId);
+          this.addConversationExchange(participantId, transcript, resp);
+          setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+          return;
+        }
+        // 2xx but verify shows primary did NOT change. Don't lie — say so
+        // and tell the field to update from the MDT. CAD likely needs a
+        // payload shape we don't know about; flag for vendor escalation
+        // by logging the full verify payload (every attempted body shape,
+        // every PATCH response, before/after primaries).
+        this.log('MAKE_PRIMARY_NO_EFFECT', {
+          unitId: targetUnit,
+          requestedBy: participantId,
+          callId,
+          verify: result,
+        });
+        const resp = `${targetUnit}, CAD didn't move primary — please update from your MDT.`;
         await this.speak(resp, participantId);
         this.addConversationExchange(participantId, transcript, resp);
         setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
         return;
       }
 
-      this.log('MAKE_PRIMARY_OK', { unitId: targetUnit, requestedBy: participantId, callId });
+      this.log('MAKE_PRIMARY_OK', { unitId: targetUnit, requestedBy: participantId, callId, attempts: result.attempts });
       // Task #486 (Step 3): routine ack — drop the call number; the unit
       // already has context for which call they meant.
       const resp = isSelf

@@ -55,6 +55,14 @@ vi.mock('../cadService.js', () => {
     getActiveCalls: vi.fn(async () => ({ calls: [] })),
     assignUnitToCall: vi.fn(async () => ({ success: true })),
     setPrimaryUnit: vi.fn(async () => ({ success: true })),
+    setPrimaryUnitVerified: vi.fn(async (callId, unitId) => ({
+      success: true,
+      attempts: 1,
+      beforePrimary: 'OTHER-1',
+      afterPrimary: unitId,
+      patchStatus: 200,
+      patchBody: { primary_unit: unitId, primaryUnit: unitId },
+    })),
   };
 });
 
@@ -230,11 +238,11 @@ describe('Task #486 (Step 5): TTS sanitizer scrubs backend IDs', () => {
   });
 });
 
-describe('Task #486 (Step 7): MAKE_PRIMARY handler', () => {
+describe('Task #486 (Step 7) / Task #528: MAKE_PRIMARY handler', () => {
   it('resolves the speaker\'s shared call and promotes them via CAD', async () => {
     const d = makeDispatcher();
     await d.handleMakePrimary('INDIANA-2', 'make me primary', {});
-    expect(cadService.setPrimaryUnit).toHaveBeenCalledWith('CALL-789', 'INDIANA-2');
+    expect(cadService.setPrimaryUnitVerified).toHaveBeenCalledWith('CALL-789', 'INDIANA-2', expect.any(Object));
     const said = d.spoken.join(' ');
     expect(said.toLowerCase()).toContain('primary');
     expect(said.toLowerCase()).not.toContain('no active call');
@@ -243,7 +251,7 @@ describe('Task #486 (Step 7): MAKE_PRIMARY handler', () => {
   it('promotes another unit when the speaker names a target', async () => {
     const d = makeDispatcher();
     await d.handleMakePrimary('INDIANA-1', 'make Lincoln-3 primary on the call', { targetUnit: 'Lincoln-3' });
-    expect(cadService.setPrimaryUnit).toHaveBeenCalledWith('CALL-789', 'LINCOLN-3');
+    expect(cadService.setPrimaryUnitVerified).toHaveBeenCalledWith('CALL-789', 'LINCOLN-3', expect.any(Object));
     const said = d.spoken.join(' ');
     expect(said).toContain('LINCOLN-3');
     expect(said.toLowerCase()).toContain('primary');
@@ -261,16 +269,11 @@ describe('Task #486 (Step 7): MAKE_PRIMARY handler', () => {
     cadService.resolveUnitCurrentCall.mockResolvedValueOnce(null);
     const d = makeDispatcher();
     await d.handleMakePrimary('INDIANA-3', 'make me primary', {});
-    expect(cadService.setPrimaryUnit).not.toHaveBeenCalled();
+    expect(cadService.setPrimaryUnitVerified).not.toHaveBeenCalled();
     expect(d.spoken.join(' ').toLowerCase()).toContain("not on a call");
   });
 
   it('"make X primary" uses the SPEAKER\'s current call, never the target\'s', async () => {
-    // Speaker (INDIANA-1) is on CALL-100. Target (LINCOLN-3) is on a
-    // DIFFERENT call CALL-999. "Make Lincoln-3 primary [on this call]"
-    // must promote LINCOLN-3 onto CALL-100 (speaker's), not CALL-999.
-    // handleMakePrimary calls resolveUnitCurrentCall ONCE — for the
-    // speaker. mockResolvedValueOnce proves we never look up the target.
     cadService.resolveUnitCurrentCall.mockResolvedValueOnce({
       call_id: 'CALL-100',
       call_number: 'CALL-100',
@@ -279,8 +282,8 @@ describe('Task #486 (Step 7): MAKE_PRIMARY handler', () => {
     await d.handleMakePrimary('INDIANA-1', 'make Lincoln-3 primary', { targetUnit: 'Lincoln-3' });
     expect(cadService.resolveUnitCurrentCall).toHaveBeenCalledWith('INDIANA-1', expect.any(Object));
     expect(cadService.resolveUnitCurrentCall).not.toHaveBeenCalledWith('LINCOLN-3', expect.anything());
-    expect(cadService.setPrimaryUnit).toHaveBeenCalledWith('CALL-100', 'LINCOLN-3');
-    expect(cadService.setPrimaryUnit).not.toHaveBeenCalledWith('CALL-999', expect.anything());
+    expect(cadService.setPrimaryUnitVerified).toHaveBeenCalledWith('CALL-100', 'LINCOLN-3', expect.any(Object));
+    expect(cadService.setPrimaryUnitVerified).not.toHaveBeenCalledWith('CALL-999', expect.anything(), expect.anything());
   });
 
   it('refuses when SPEAKER has no call, even if target is on one', async () => {
@@ -288,8 +291,79 @@ describe('Task #486 (Step 7): MAKE_PRIMARY handler', () => {
     const d = makeDispatcher();
     await d.handleMakePrimary('INDIANA-7', 'make Lincoln-3 primary', { targetUnit: 'Lincoln-3' });
     expect(cadService.resolveUnitCurrentCall).toHaveBeenCalledWith('INDIANA-7', expect.any(Object));
-    expect(cadService.setPrimaryUnit).not.toHaveBeenCalled();
+    expect(cadService.setPrimaryUnitVerified).not.toHaveBeenCalled();
     expect(d.spoken.join(' ').toLowerCase()).toContain("not on a call");
+  });
+
+  // Task #528: verified-success speaks the standard 10-4 ack.
+  it('speaks "10-4. You have primary." when verify reports success', async () => {
+    cadService.setPrimaryUnitVerified.mockResolvedValueOnce({
+      success: true,
+      attempts: 1,
+      beforePrimary: 'OTHER-1',
+      afterPrimary: 'INDIANA-2',
+      patchStatus: 200,
+      patchBody: { primary_unit: 'INDIANA-2', primaryUnit: 'INDIANA-2' },
+    });
+    const d = makeDispatcher();
+    await d.handleMakePrimary('INDIANA-2', 'make me primary', {});
+    const said = d.spoken.join(' ');
+    expect(said).toContain('10-4');
+    expect(said.toLowerCase()).toContain('you have primary');
+  });
+
+  // Task #528: 2xx but verify shows no change → don't lie, escalate to MDT.
+  it('says "CAD didn\'t move primary — please update from your MDT" on 2xx + no effect', async () => {
+    cadService.setPrimaryUnitVerified.mockResolvedValueOnce({
+      success: false,
+      attempts: 2,
+      beforePrimary: 'OTHER-1',
+      afterPrimary: 'OTHER-1',
+      patchStatus: 200,
+      patchBody: { primary_unit: 'INDIANA-2', primaryUnit: 'INDIANA-2', primary_unit_id: 'uuid-2' },
+    });
+    const d = makeDispatcher();
+    await d.handleMakePrimary('INDIANA-2', 'make me primary', {});
+    const said = d.spoken.join(' ');
+    expect(said).not.toContain('10-4');
+    expect(said.toLowerCase()).toContain("cad didn't move primary");
+    expect(said.toLowerCase()).toContain('mdt');
+  });
+
+  // Task #528: network/unreachable (null patchStatus) is a hard failure,
+  // not a 2xx no-effect. Must use the legacy refusal wording, never MDT.
+  it('treats null patchStatus (network failure) as a hard reject', async () => {
+    cadService.setPrimaryUnitVerified.mockResolvedValueOnce({
+      success: false,
+      attempts: 1,
+      beforePrimary: 'OTHER-1',
+      afterPrimary: null,
+      patchStatus: null,
+      patchBody: { primary_unit: 'INDIANA-2', primaryUnit: 'INDIANA-2' },
+    });
+    const d = makeDispatcher();
+    await d.handleMakePrimary('INDIANA-2', 'make me primary', {});
+    const said = d.spoken.join(' ').toLowerCase();
+    expect(said).toContain('unable to make you primary');
+    expect(said).not.toContain("cad didn't move primary");
+    expect(said).not.toContain('mdt');
+  });
+
+  // Task #528: hard 4xx still uses the legacy refusal wording.
+  it('says "unable to make you primary" on a 4xx hard reject', async () => {
+    cadService.setPrimaryUnitVerified.mockResolvedValueOnce({
+      success: false,
+      attempts: 1,
+      beforePrimary: 'OTHER-1',
+      afterPrimary: 'OTHER-1',
+      patchStatus: 422,
+      patchBody: { primary_unit: 'INDIANA-2', primaryUnit: 'INDIANA-2' },
+    });
+    const d = makeDispatcher();
+    await d.handleMakePrimary('INDIANA-2', 'make me primary', {});
+    const said = d.spoken.join(' ').toLowerCase();
+    expect(said).toContain('unable to make you primary');
+    expect(said).not.toContain("cad didn't move primary");
   });
 });
 

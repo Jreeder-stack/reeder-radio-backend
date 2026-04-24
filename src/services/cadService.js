@@ -271,6 +271,151 @@ export async function setPrimaryUnit(callId, unitId) {
   });
 }
 
+// Task #528: read whatever a CAD getCallDetails response looks like and
+// pull out the current "primary unit" identifier. CAD has been observed to
+// return the call payload either at the top level or under `.call`, and to
+// label the field `primary_unit`, `primaryUnit`, or `primary_unit_id` (or
+// nest the unit object). Returns whichever string-ish value exists, or null.
+function _extractPrimaryFromCallPayload(payload) {
+  if (!payload || typeof payload !== 'object') return null;
+  const candidates = [payload, payload.call, payload.data];
+  for (const obj of candidates) {
+    if (!obj || typeof obj !== 'object') continue;
+    const direct = obj.primary_unit ?? obj.primaryUnit ?? obj.primary_unit_id ?? obj.primaryUnitId;
+    if (direct == null) continue;
+    if (typeof direct === 'string' || typeof direct === 'number') {
+      const s = String(direct).trim();
+      if (s) return s;
+    } else if (typeof direct === 'object') {
+      const nested = direct.callsign || direct.unit_id || direct.unitId || direct.id || direct.name;
+      if (nested) return String(nested).trim();
+    }
+  }
+  return null;
+}
+
+function _primaryMatches(after, unitId, unitUuid) {
+  if (!after) return false;
+  const a = String(after).trim().toLowerCase();
+  if (unitId && a === String(unitId).trim().toLowerCase()) return true;
+  if (unitUuid && a === String(unitUuid).trim().toLowerCase()) return true;
+  return false;
+}
+
+// Task #528: wrap setPrimaryUnit with a verify-then-speak round trip so we
+// never tell a unit they have primary unless CAD's call record actually
+// reflects it. Tries one fallback body shape (with primary_unit_id=UUID)
+// when the first attempt is accepted by the API but doesn't move primary.
+//
+// Returns { success, attempts, beforePrimary, afterPrimary, patchStatus,
+//           patchBody, patchResults }. Never throws on a 2xx-with-no-effect.
+export async function setPrimaryUnitVerified(callId, unitId, { unitUuid } = {}) {
+  if (!callId) return { success: false, error: 'No call ID', attempts: 0 };
+  if (!unitId) return { success: false, error: 'No unit ID', attempts: 0 };
+
+  const beforeFetch = await getCallDetails(callId);
+  const beforePrimary = _extractPrimaryFromCallPayload(beforeFetch);
+
+  const attemptResults = [];
+
+  // Attempt #1 — current body shape.
+  const body1 = { primary_unit: unitId, primaryUnit: unitId };
+  const patch1 = await cadRequest(`/api/radio/call/${callId}`, 'PATCH', body1);
+  // cadRequest only exposes statusCode on failure paths; on a successful
+  // 2xx it returns the parsed body. Treat missing statusCode + no
+  // `success:false` as 200 so callers can branch on patchStatus cleanly.
+  const patchOk1 = !(patch1 && patch1.success === false);
+  const patchStatus1 = (patch1 && typeof patch1.statusCode === 'number')
+    ? patch1.statusCode
+    : (patchOk1 ? 200 : null);
+  attemptResults.push({ body: body1, status: patchStatus1, response: patch1 });
+
+  const after1Fetch = await getCallDetails(callId);
+  const afterPrimary1 = _extractPrimaryFromCallPayload(after1Fetch);
+
+  if (patchOk1 && _primaryMatches(afterPrimary1, unitId, unitUuid)) {
+    const out = {
+      success: true,
+      attempts: 1,
+      beforePrimary,
+      afterPrimary: afterPrimary1,
+      patchStatus: patchStatus1,
+      patchBody: body1,
+      patchResults: attemptResults,
+    };
+    console.log(`[CAD] MAKE_PRIMARY_VERIFY ${JSON.stringify({
+      callId, requestedUnit: unitId, patchStatus: patchStatus1, patchBody: body1,
+      beforePrimary, afterPrimary: afterPrimary1, attempts: 1, succeeded: true,
+    })}`);
+    return out;
+  }
+
+  // If the first PATCH failed with a hard error (4xx/5xx/non-2xx), don't
+  // retry with a different body — the endpoint rejected us, not the schema.
+  if (!patchOk1) {
+    const out = {
+      success: false,
+      attempts: 1,
+      beforePrimary,
+      afterPrimary: afterPrimary1,
+      patchStatus: patchStatus1,
+      patchBody: body1,
+      patchResults: attemptResults,
+    };
+    console.log(`[CAD] MAKE_PRIMARY_VERIFY ${JSON.stringify({
+      callId, requestedUnit: unitId, patchStatus: patchStatus1, patchBody: body1,
+      beforePrimary, afterPrimary: afterPrimary1, attempts: 1, succeeded: false,
+    })}`);
+    return out;
+  }
+
+  // Attempt #2 — only when we have a UUID to try the alternate body shape.
+  if (unitUuid) {
+    const body2 = { primary_unit: unitId, primaryUnit: unitId, primary_unit_id: unitUuid };
+    const patch2 = await cadRequest(`/api/radio/call/${callId}`, 'PATCH', body2);
+    const patchOk2 = !(patch2 && patch2.success === false);
+    const patchStatus2 = (patch2 && typeof patch2.statusCode === 'number')
+      ? patch2.statusCode
+      : (patchOk2 ? 200 : null);
+    attemptResults.push({ body: body2, status: patchStatus2, response: patch2 });
+
+    const after2Fetch = await getCallDetails(callId);
+    const afterPrimary2 = _extractPrimaryFromCallPayload(after2Fetch);
+    const succeeded2 = patchOk2 && _primaryMatches(afterPrimary2, unitId, unitUuid);
+
+    const out = {
+      success: succeeded2,
+      attempts: 2,
+      beforePrimary,
+      afterPrimary: afterPrimary2,
+      patchStatus: patchStatus2,
+      patchBody: body2,
+      patchResults: attemptResults,
+    };
+    console.log(`[CAD] MAKE_PRIMARY_VERIFY ${JSON.stringify({
+      callId, requestedUnit: unitId, patchStatus: patchStatus2, patchBody: body2,
+      beforePrimary, afterPrimary: afterPrimary2, attempts: 2, succeeded: succeeded2,
+    })}`);
+    return out;
+  }
+
+  // 2xx but no effect, no UUID for a second attempt.
+  const out = {
+    success: false,
+    attempts: 1,
+    beforePrimary,
+    afterPrimary: afterPrimary1,
+    patchStatus: patchStatus1,
+    patchBody: body1,
+    patchResults: attemptResults,
+  };
+  console.log(`[CAD] MAKE_PRIMARY_VERIFY ${JSON.stringify({
+    callId, requestedUnit: unitId, patchStatus: patchStatus1, patchBody: body1,
+    beforePrimary, afterPrimary: afterPrimary1, attempts: 1, succeeded: false,
+  })}`);
+  return out;
+}
+
 export async function clearUnit(unitId) {
   if (!unitId) {
     console.warn('[CAD] clearUnit: No unit ID provided');
