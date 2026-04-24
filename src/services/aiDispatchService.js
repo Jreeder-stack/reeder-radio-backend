@@ -4200,38 +4200,80 @@ export class AIDispatcher {
                         !!(results.length > 0) ||
                         !!(cadResult.found) ||
                         !!(person && Object.keys(person).length > 0);
-      const hasFlags = person && (person.wanted || person.warrant || person.bolo || 
-                       (person.warrants && person.warrants.length > 0) ||
-                       (person.flags && person.flags.length > 0));
-      
-      this.log('PERSON_CHECK_ANALYSIS', { hasRecord, hasFlags, broadened, personKeys: person ? Object.keys(person) : [] });
-      
+
+      // Task #533: detect flags via current API fields (`has_warrants`,
+      // `warrant_count`, `alerts`, `caution_indicators`) plus legacy fields.
+      // Without this, a record with `has_warrants: true` was being spoken
+      // as "no wants or warrants".
+      const flagInfo = this._extractWarrantInfo(person);
+      const hasFlags = hasRecord && flagInfo.hasFlags;
+
+      // Task #533: returned-record DOB must be UTC->local before being
+      // spoken on PA, and used for the exact-match guard below.
+      const returnedDobRaw = person ? (person.dob || person.date_of_birth || '') : '';
+      const returnedDobInfo = this._speakDobFromCadRecord(returnedDobRaw);
+
+      // Task #533: exact-match guard. If the API returned a single record
+      // whose first name or DOB does not match the queried subject, do not
+      // speak it as a confirmed local-file/flagged hit; surface as a
+      // near-match for confirmation, the same way the broadened path does.
+      let nearMatchSingle = false;
+      if (!broadened && results.length === 1 && person) {
+        const queriedFirstNorm = (firstName || '').toString().trim().toLowerCase();
+        const recFirstNorm = (person.first_name || person.firstName || '').toString().trim().toLowerCase();
+        const queriedDobNorm = this._normalizeDobForCompare(dob);
+        const recDobNorm = this._normalizeDobForCompare(returnedDobInfo.local);
+        const firstMismatch = queriedFirstNorm && recFirstNorm && queriedFirstNorm !== recFirstNorm;
+        const dobMismatch = queriedDobNorm && recDobNorm && queriedDobNorm !== recDobNorm;
+        if (firstMismatch || dobMismatch) {
+          nearMatchSingle = true;
+          broadened = true;
+          broadenedDescription = `No exact match for ${firstName} ${lastName}, but I have`;
+          this.log('PERSON_CHECK_NEAR_MATCH_GUARD', {
+            participantId, queriedFirstNorm, recFirstNorm, queriedDobNorm, recDobNorm,
+            firstMismatch, dobMismatch
+          });
+        }
+      }
+
+      this.log('PERSON_CHECK_ANALYSIS', {
+        hasRecord, hasFlags, broadened, nearMatchSingle,
+        flagDetails: flagInfo.details,
+        personKeys: person ? Object.keys(person) : []
+      });
+
       const lastSearchResult = { lastName, firstName, dob, status: hasFlags ? 'flagged' : hasRecord ? 'local file' : 'no record' };
 
-      const spokenDob = dob ? this._formatSpokenDate(dob) : '';
-      if (broadened && results.length > 1) {
-        const nameList = results.map(r => {
+      if ((broadened && results.length > 1) || nearMatchSingle) {
+        const list = nearMatchSingle ? [person] : results;
+        const nameList = list.map(r => {
           const fn = r.first_name || r.firstName || '';
           const ln = r.last_name || r.lastName || '';
           const rawRdob = r.dob || r.date_of_birth || '';
-          const rdobLocal = rawRdob ? utcDateToLocalDate(rawRdob) : '';
-          const rdobSpoken = rdobLocal ? this._formatSpokenDate(rdobLocal) : '';
+          const rdobSpoken = rawRdob ? this._speakDobFromCadRecord(rawRdob).spoken : '';
           return rdobSpoken ? `${fn} ${ln}, date of birth ${rdobSpoken}` : `${fn} ${ln}`;
         }).join('; ');
-        const resp = `${participantId}, Central. ${broadenedDescription} ${results.length} results under last name ${lastName}. ${nameList}. Advise which subject.`;
+        const countPhrase = nearMatchSingle
+          ? `1 result under last name ${lastName}`
+          : `${results.length} results under last name ${lastName}`;
+        const resp = `${participantId}, Central. ${broadenedDescription} ${countPhrase}. ${nameList}. Advise which subject.`;
         await this.speak(resp, participantId);
-        await this.logToCallNotes(participantId, `Records check: ${lastName}, ${firstName}, DOB ${dob} - Broadened search, ${results.length} results`);
+        await this.logToCallNotes(participantId, `Records check: ${lastName}, ${firstName}, DOB ${dob} - ${nearMatchSingle ? 'Near-match' : 'Broadened search'}, ${list.length} result${list.length > 1 ? 's' : ''}`);
         setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, { lastSearchResult }, true);
       } else if (hasFlags) {
+        // Task #533: store the UTC->local converted returned DOB on the
+        // session so the secure-confirm read-back speaks the record's
+        // actual DOB (in local time), not the queried DOB.
+        const slotDob = returnedDobInfo.local || dob;
         setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_SECURE_CONFIRM, null, {
           lastName,
           firstName,
-          dob,
+          dob: slotDob,
           personData: person,
           broadened,
           lastSearchResult
         }, true);
-        
+
         if (broadened) {
           const fn = person.first_name || person.firstName || '';
           const ln = person.last_name || person.lastName || lastName;
@@ -4292,21 +4334,14 @@ export class AIDispatcher {
     }
     
     const { lastName, firstName, dob, personData } = slots;
-    
-    let flagDetails = [];
-    if (personData.wanted) flagDetails.push(`wanted out of ${personData.wanted_county || 'unknown county'}`);
-    if (personData.warrant) flagDetails.push(`active warrant out of ${personData.warrant_county || 'unknown county'}`);
-    if (personData.warrants && personData.warrants.length > 0) {
-      personData.warrants.forEach(w => {
-        flagDetails.push(`${w.type || 'warrant'} out of ${w.county || 'unknown county'}`);
-      });
-    }
-    if (personData.bolo) flagDetails.push('active BOLO');
-    if (personData.flags && personData.flags.length > 0) {
-      personData.flags.forEach(f => flagDetails.push(f.description || f.type || 'flag on file'));
-    }
-    
-    const flagText = flagDetails.length > 0 ? flagDetails.join(', ') : 'flag on file';
+
+    // Task #533: use shared helper that recognizes both the current API
+    // fields (`has_warrants`, `warrant_count`, `alerts`,
+    // `caution_indicators`) and legacy fields. `dob` here is already the
+    // CAD record's UTC->local converted DOB (set by executePersonCheck);
+    // do not double-convert it.
+    const flagInfo = this._extractWarrantInfo(personData);
+    const flagText = flagInfo.details.length > 0 ? flagInfo.details.join(', ') : 'flag on file';
     const dobSpoken = dob ? this._formatSpokenDate(dob) : '';
     const flagResponse = `${participantId}, Central. ${lastName}, ${firstName}, date of birth ${dobSpoken || dob} returns ${flagText}. Use caution.`;
     await this.speak(flagResponse, participantId);
@@ -6127,13 +6162,13 @@ export class AIDispatcher {
                         !!(cadResult.results && cadResult.results.length > 0) ||
                         !!(cadResult.found) ||
                         !!(person && Object.keys(person).length > 0);
-      const hasFlags = person && (person.wanted || person.warrant || person.bolo ||
-                       (person.warrants && person.warrants.length > 0) ||
-                       (person.flags && person.flags.length > 0));
+      // Task #533: shared flag detection (current + legacy API fields).
+      const dlFlagInfo = this._extractWarrantInfo(person);
+      const hasFlags = hasRecord && dlFlagInfo.hasFlags;
 
       if (hasFlags) {
-        const personDobUtc = person.dob || '';
-        const personDobLocal = personDobUtc ? (utcDateToLocalDate(personDobUtc) || personDobUtc) : '';
+        // Task #533: convert UTC DOB to local before storing/speaking.
+        const personDobLocal = this._speakDobFromCadRecord(person.dob || '').local;
         setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_SECURE_CONFIRM, null, {
           lastName: person.last_name || person.lastName || '',
           firstName: person.first_name || person.firstName || '',
@@ -6224,13 +6259,13 @@ export class AIDispatcher {
                         !!(cadResult.results && cadResult.results.length > 0) ||
                         !!(cadResult.found) ||
                         !!(person && Object.keys(person).length > 0);
-      const hasFlags = person && (person.wanted || person.warrant || person.bolo ||
-                       (person.warrants && person.warrants.length > 0) ||
-                       (person.flags && person.flags.length > 0));
+      // Task #533: shared flag detection (current + legacy API fields).
+      const ssnFlagInfo = this._extractWarrantInfo(person);
+      const hasFlags = hasRecord && ssnFlagInfo.hasFlags;
 
       if (hasFlags) {
-        const personDobUtc = person.dob || '';
-        const personDobLocal = personDobUtc ? (utcDateToLocalDate(personDobUtc) || personDobUtc) : '';
+        // Task #533: convert UTC DOB to local before storing/speaking.
+        const personDobLocal = this._speakDobFromCadRecord(person.dob || '').local;
         setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_SECURE_CONFIRM, null, {
           lastName: person.last_name || person.lastName || '',
           firstName: person.first_name || person.firstName || '',
@@ -7056,7 +7091,10 @@ export class AIDispatcher {
           const nameList = finalWarrants.map(w => {
             const fn = w.first_name || w.firstName || '';
             const ln = w.last_name || w.lastName || lastName;
-            return `${fn} ${ln}`;
+            // Task #533: warrant DOBs come from CAD as UTC; convert before speaking.
+            const rawDob = w.dob || w.date_of_birth || '';
+            const dobSpoken = rawDob ? this._speakDobFromCadRecord(rawDob).spoken : '';
+            return dobSpoken ? `${fn} ${ln}, date of birth ${dobSpoken}` : `${fn} ${ln}`;
           }).join('; ');
           const resp = `${participantId}, Central. No exact match for ${firstName} ${lastName}, but I have ${finalWarrants.length} warrant results under last name ${lastName}. ${nameList}. Advise which subject.`;
           await this.speak(resp, participantId);
@@ -8442,6 +8480,98 @@ export class AIDispatcher {
   async _lookupCurrentCallId(unitId) {
     const info = await this._lookupCurrentCallInfo(unitId);
     return info?.callId || null;
+  }
+
+  // Task #533: normalize a date string ("YYYY-MM-DD" or "MM/DD/YYYY") into
+  // a comparable "YYYY-MM-DD" form. Returns '' when the input is unusable.
+  _normalizeDobForCompare(s) {
+    if (!s) return '';
+    const str = String(s).trim();
+    if (!str) return '';
+    const parts = str.split(/[-\/T\s]/);
+    if (parts.length < 3) return '';
+    let y, m, d;
+    if (parts[0].length === 4) {
+      y = parts[0]; m = parts[1]; d = parts[2];
+    } else {
+      m = parts[0]; d = parts[1]; y = parts[2];
+    }
+    const yi = parseInt(y, 10), mi = parseInt(m, 10), di = parseInt(d, 10);
+    if (isNaN(yi) || isNaN(mi) || isNaN(di)) return '';
+    return `${yi.toString().padStart(4,'0')}-${mi.toString().padStart(2,'0')}-${di.toString().padStart(2,'0')}`;
+  }
+
+  // Task #533: single helper for "spoken DOB sourced from a CAD record".
+  // Converts the CAD-returned (UTC) DOB to the dispatcher's local date and
+  // returns both the local "YYYY-MM-DD" and the spoken phrase. Pass the raw
+  // value as returned by the API; do NOT pre-convert.
+  _speakDobFromCadRecord(rawDob) {
+    if (!rawDob) return { local: '', spoken: '' };
+    const local = utcDateToLocalDate(rawDob) || String(rawDob);
+    const spoken = this._formatSpokenDate(local) || local;
+    return { local, spoken };
+  }
+
+  // Task #533: normalize person-result flag detection across both the
+  // current API fields (`has_warrants`, `warrant_count`, `alerts`,
+  // `caution_indicators`) and legacy fields (`wanted`, `warrant`,
+  // `warrants[]`, `flags[]`, `bolo`). Returns a single object with a
+  // hasFlags boolean and pre-formatted `details` strings ready for PA
+  // read-back, so the secure-confirm/disclosure code never has to know
+  // which schema a given record came back in.
+  _extractWarrantInfo(person) {
+    const empty = { hasFlags: false, warrantCount: 0, alerts: [], cautionIndicators: [], details: [] };
+    if (!person || typeof person !== 'object') return empty;
+
+    const explicitWarrantCount = Number(person.warrant_count);
+    const arrayWarrantCount = Array.isArray(person.warrants) ? person.warrants.length : 0;
+    const warrantCount = (!isNaN(explicitWarrantCount) && explicitWarrantCount > 0)
+      ? explicitWarrantCount
+      : arrayWarrantCount;
+
+    const hasWarrantsFlag = !!person.has_warrants
+      || warrantCount > 0
+      || !!person.wanted
+      || !!person.warrant;
+    const alerts = Array.isArray(person.alerts) ? person.alerts.filter(Boolean) : [];
+    const cautionIndicators = Array.isArray(person.caution_indicators)
+      ? person.caution_indicators.filter(Boolean)
+      : [];
+    const legacyFlags = Array.isArray(person.flags) ? person.flags.filter(Boolean) : [];
+    const bolo = !!person.bolo;
+
+    const hasFlags = hasWarrantsFlag
+      || bolo
+      || alerts.length > 0
+      || cautionIndicators.length > 0
+      || legacyFlags.length > 0;
+
+    const details = [];
+    if (person.wanted) details.push(`wanted out of ${person.wanted_county || 'unknown county'}`);
+    if (person.warrant) details.push(`active warrant out of ${person.warrant_county || 'unknown county'}`);
+    if (Array.isArray(person.warrants) && person.warrants.length > 0) {
+      person.warrants.forEach(w => {
+        details.push(`${w.type || w.charge || 'warrant'} out of ${w.county || w.jurisdiction || 'unknown county'}`);
+      });
+    } else if (warrantCount > 0 || person.has_warrants) {
+      const n = warrantCount || 1;
+      details.push(`${n} active warrant${n > 1 ? 's' : ''} on file`);
+    }
+    if (bolo) details.push('active BOLO');
+    alerts.forEach(a => {
+      const text = typeof a === 'string' ? a : (a.description || a.text || a.type || 'alert on file');
+      details.push(text);
+    });
+    cautionIndicators.forEach(c => {
+      const text = typeof c === 'string' ? c : (c.description || c.text || c.type || 'caution indicator');
+      details.push(`caution: ${text}`);
+    });
+    legacyFlags.forEach(f => {
+      const text = typeof f === 'string' ? f : (f.description || f.type || 'flag on file');
+      details.push(text);
+    });
+
+    return { hasFlags, warrantCount, alerts, cautionIndicators, details };
   }
 
   _formatSpokenDate(dateStr) {
