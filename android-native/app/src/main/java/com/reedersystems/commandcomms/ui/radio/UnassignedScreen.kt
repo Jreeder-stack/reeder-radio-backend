@@ -5,6 +5,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -26,6 +27,7 @@ fun UnassignedScreen(
     radioId: String,
     onAssigned: (unitId: String) -> Unit,
     onLocked: () -> Unit,
+    onSettings: (() -> Unit)? = null,
     viewModel: RadioSocketViewModel = viewModel()
 ) {
     val event by viewModel.radioEvent.collectAsStateWithLifecycle()
@@ -110,6 +112,26 @@ fun UnassignedScreen(
                 letterSpacing = 4.sp,
                 textAlign = TextAlign.Center
             )
+        }
+
+        if (onSettings != null) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 16.dp)
+                    .clickable(onClick = onSettings)
+                    .background(Color(0xFF1A1A1A))
+                    .padding(horizontal = 18.dp, vertical = 10.dp)
+            ) {
+                Text(
+                    text = "MENU",
+                    color = Color(0xFFE0E0E0),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = FontFamily.Monospace,
+                    letterSpacing = 3.sp
+                )
+            }
         }
 
         AnimatedVisibility(

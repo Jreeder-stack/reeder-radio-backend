@@ -44,6 +44,7 @@ fun RadioScreen(
     onLocked: (() -> Unit)? = null,
     onUnassigned: (() -> Unit)? = null,
     onReassigned: ((String) -> Unit)? = null,
+    onSettings: (() -> Unit)? = null,
     assignedFromUnit: String? = null,
     viewModel: RadioViewModel = viewModel()
 ) {
@@ -130,7 +131,8 @@ fun RadioScreen(
 
             BottomBar(
                 state = state,
-                onScnl = { viewModel.setShowScanOverlay(true) }
+                onScnl = { viewModel.setShowScanOverlay(true) },
+                onMenu = onSettings
             )
         }
 
@@ -377,7 +379,8 @@ private fun CenterDisplay(
 @Composable
 private fun BottomBar(
     state: RadioUiState,
-    onScnl: () -> Unit
+    onScnl: () -> Unit,
+    onMenu: (() -> Unit)? = null
 ) {
     Row(
         modifier = Modifier
@@ -393,6 +396,13 @@ private fun BottomBar(
             color = if (state.isScanning) Color(0xFF00FF77) else Color(0xFFE0E0E0),
             onClick = onScnl
         )
+        if (onMenu != null) {
+            BottomBarButton(
+                text = "MENU",
+                color = Color(0xFFE0E0E0),
+                onClick = onMenu
+            )
+        }
         BottomBarButton(
             text = "${state.batteryLevel ?: "--"}%",
             color = if ((state.batteryLevel ?: 100) <= 20) Color(0xFFFF3333) else White,

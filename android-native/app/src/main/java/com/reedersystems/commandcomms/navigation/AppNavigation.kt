@@ -168,6 +168,7 @@ fun AppNavigation() {
                         }
                     }
                 } else null,
+                onSettings = { navController.navigate(Routes.SETTINGS) },
                 assignedFromUnit = assignedUnit
             )
         }
@@ -239,7 +240,8 @@ fun AppNavigation() {
                     navController.navigate(Routes.locked(rid)) {
                         popUpTo(Routes.unassigned(rid)) { inclusive = true }
                     }
-                }
+                },
+                onSettings = { navController.navigate(Routes.SETTINGS) }
             )
         }
 
