@@ -34,6 +34,20 @@ export async function lockRadio(radioId, isLocked) {
   });
 }
 
+export async function kioskUnlockRadio(radioId, durationMinutes) {
+  return fetchRadios(`/${radioId}/kiosk-unlock`, {
+    method: 'POST',
+    body: JSON.stringify({ duration_minutes: durationMinutes }),
+  });
+}
+
+export async function kioskRelockRadio(radioId) {
+  return fetchRadios(`/${radioId}/kiosk-relock`, {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
+}
+
 export async function getRadioUsers() {
   return fetchRadios('/users');
 }

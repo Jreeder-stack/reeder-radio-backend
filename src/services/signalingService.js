@@ -298,6 +298,19 @@ class SignalingService {
           socket.emit('authenticated', { unitId: socket.unitId });
           console.log(`[Signaling] Emitted authenticated for radio device: radioId=${radio.radio_id} unitId=${socket.unitId} socket=${socket.id}`);
 
+          if (radio.kiosk_unlock_expires_at) {
+            const expiresMs = new Date(radio.kiosk_unlock_expires_at).getTime();
+            if (expiresMs > Date.now()) {
+              const remainingMin = Math.max(1, Math.ceil((expiresMs - Date.now()) / 60000));
+              socket.emit('radio:kiosk_unlock', {
+                radioId: radio.radio_id,
+                expiresAt: expiresMs,
+                durationMinutes: remainingMin,
+              });
+              console.log(`[Signaling] Re-sent active kiosk unlock window on connect: radioId=${radio.radio_id} expiresAt=${expiresMs}`);
+            }
+          }
+
           upsertUnitPresence(socket.unitId, null, 'online').then((unit) => {
             if (unit) {
               this._emitToDispatchers('unit:presence', {

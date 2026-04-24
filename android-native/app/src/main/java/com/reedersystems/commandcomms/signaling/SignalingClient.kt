@@ -316,6 +316,27 @@ class SignalingClient(var serverUrl: String, private var radioToken: String? = n
             _events.tryEmit(SignalingEvent.RadioUnassigned)
         }
 
+        s.on("radio:kiosk_unlock") { args ->
+            try {
+                val json = args.firstOrNull() as? JSONObject
+                val expiresAt = json?.optLong("expiresAt", 0L) ?: 0L
+                val durationMinutes = json?.optInt("durationMinutes", 0) ?: 0
+                Log.d(TAG, "radio:kiosk_unlock received expiresAt=$expiresAt durationMinutes=$durationMinutes")
+                if (expiresAt > 0L) {
+                    _events.tryEmit(SignalingEvent.RemoteKioskUnlock(expiresAt, durationMinutes))
+                } else {
+                    Log.w(TAG, "radio:kiosk_unlock missing expiresAt — ignoring")
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "radio:kiosk_unlock parse error: ${e.message}")
+            }
+        }
+
+        s.on("radio:kiosk_relock") { _ ->
+            Log.d(TAG, "radio:kiosk_relock received")
+            _events.tryEmit(SignalingEvent.RemoteKioskRelock)
+        }
+
         s.on("radio:assigned") { args ->
             try {
                 val json = args.firstOrNull() as? JSONObject

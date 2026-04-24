@@ -32,6 +32,15 @@ class KioskPrefs(context: Context) {
     )
     val pinSetFlow: StateFlow<Boolean> = _pinSetFlow.asStateFlow()
 
+    /**
+     * When > 0, dispatcher has remotely temporarily exited kiosk mode and the
+     * device should remain unlocked until this epoch-millisecond timestamp.
+     * Survives process death so the on-device tech still has a window after a
+     * crash/reboot. Cleared by `clearRemoteUnlock()` (manual relock or expiry).
+     */
+    private val _remoteUnlockUntilFlow = MutableStateFlow(prefs.getLong(KEY_REMOTE_UNLOCK_UNTIL, 0L))
+    val remoteUnlockUntilFlow: StateFlow<Long> = _remoteUnlockUntilFlow.asStateFlow()
+
     /** True when the admin has turned kiosk mode on. Default: false. */
     var kioskEnabled: Boolean
         get() = _kioskEnabledFlow.value
@@ -39,6 +48,38 @@ class KioskPrefs(context: Context) {
             prefs.edit().putBoolean(KEY_KIOSK_ENABLED, value).apply()
             _kioskEnabledFlow.value = value
         }
+
+    var remoteUnlockUntilMs: Long
+        get() = _remoteUnlockUntilFlow.value
+        private set(value) {
+            prefs.edit().putLong(KEY_REMOTE_UNLOCK_UNTIL, value).apply()
+            _remoteUnlockUntilFlow.value = value
+        }
+
+    fun setRemoteUnlock(expiresAtMs: Long) {
+        remoteUnlockUntilMs = expiresAtMs
+    }
+
+    fun clearRemoteUnlock() {
+        if (remoteUnlockUntilMs != 0L) {
+            remoteUnlockUntilMs = 0L
+        }
+    }
+
+    /**
+     * True when a dispatcher-initiated unlock window is currently in effect.
+     * Use this in any code that wants to know whether the device should be
+     * pinned right now, irrespective of the persistent `kioskEnabled` flag.
+     */
+    fun isRemoteUnlockActive(now: Long = System.currentTimeMillis()): Boolean =
+        remoteUnlockUntilMs > now
+
+    /**
+     * Effective pin-now state: kiosk is configured and we are NOT inside an
+     * active remote unlock window.
+     */
+    fun shouldPinNow(now: Long = System.currentTimeMillis()): Boolean =
+        kioskEnabled && !isRemoteUnlockActive(now)
 
     /** True if an admin PIN has been set. */
     val isPinSet: Boolean
@@ -90,6 +131,7 @@ class KioskPrefs(context: Context) {
         private const val KEY_KIOSK_ENABLED = "kiosk_enabled"
         private const val KEY_PIN_SALT = "admin_pin_salt"
         private const val KEY_PIN_HASH = "admin_pin_hash"
+        private const val KEY_REMOTE_UNLOCK_UNTIL = "kiosk_remote_unlock_until_ms"
         private const val SALT_BYTES = 16
     }
 }

@@ -85,7 +85,40 @@ class CommandCommsFirebaseService : FirebaseMessagingService() {
             val pagingChannelId = data["pagingChannelId"]
 
             handlePage(pageId, message, sender, pagingChannelId)
+        } else if (type == "kiosk_unlock") {
+            handleKioskUnlock(data["expiresAt"], data["durationMinutes"])
+        } else if (type == "kiosk_relock") {
+            handleKioskRelock()
         }
+    }
+
+    /**
+     * FCM fallback path for the dispatcher's "Unlock kiosk" action when the
+     * radio's signaling socket is offline. Persists the unlock window into
+     * [com.reedersystems.commandcomms.data.prefs.KioskPrefs] and broadcasts
+     * the change so MainActivity (if foreground) re-applies kiosk policies.
+     */
+    private fun handleKioskUnlock(expiresAtRaw: String?, durationRaw: String?) {
+        val expiresAt = expiresAtRaw?.toLongOrNull() ?: 0L
+        if (expiresAt <= System.currentTimeMillis()) {
+            Log.w(TAG, "kiosk_unlock ignored: expiresAt=$expiresAt is in the past or missing")
+            return
+        }
+        val app = applicationContext as CommandCommsApp
+        Log.d(TAG, "FCM kiosk_unlock until=$expiresAt durationMinutes=$durationRaw")
+        app.kioskPrefs.setRemoteUnlock(expiresAt)
+        sendBroadcast(
+            Intent(CommandCommsApp.ACTION_REMOTE_KIOSK_CHANGED).setPackage(packageName)
+        )
+    }
+
+    private fun handleKioskRelock() {
+        val app = applicationContext as CommandCommsApp
+        Log.d(TAG, "FCM kiosk_relock")
+        app.kioskPrefs.clearRemoteUnlock()
+        sendBroadcast(
+            Intent(CommandCommsApp.ACTION_REMOTE_KIOSK_CHANGED).setPackage(packageName)
+        )
     }
 
     private fun handlePage(pageId: String, message: String, sender: String, pagingChannelId: String?) {

@@ -12,9 +12,16 @@ import {
   setRadioLocked,
   getAllUsers,
   updateRadioFcmToken,
+  setRadioKioskUnlockExpiresAt,
+  clearRadioKioskUnlockExpiresAt,
+  logActivity,
 } from '../db/index.js';
 import pool from '../db/index.js';
 import { signalingService } from '../services/signalingService.js';
+import { sendDataToRadioToken } from '../services/fcmService.js';
+
+const DEFAULT_KIOSK_UNLOCK_MINUTES = 15;
+const MAX_KIOSK_UNLOCK_MINUTES = 240;
 
 let _io = null;
 export function setRadiosIo(io) {
@@ -98,7 +105,21 @@ router.post('/ping', radioAuth, async (req, res) => {
         console.warn('[Radios] Could not resolve assigned user for ping:', e.message);
       }
     }
-    return res.json({ ok: true, assignedUnitId, unitId });
+    let kioskUnlockExpiresAt = null;
+    if (radio.kiosk_unlock_expires_at) {
+      const expiresMs = new Date(radio.kiosk_unlock_expires_at).getTime();
+      if (expiresMs > Date.now()) {
+        kioskUnlockExpiresAt = expiresMs;
+      } else {
+        try {
+          await clearRadioKioskUnlockExpiresAt(radio.radio_id);
+        } catch (clearErr) {
+          console.warn('[Radios] Failed to clear expired kiosk unlock window:', clearErr.message);
+        }
+      }
+    }
+
+    return res.json({ ok: true, assignedUnitId, unitId, kioskUnlockExpiresAt });
   } catch (err) {
     console.error('[Radios] Ping error:', err);
     return res.status(500).json({ error: 'Ping failed — server error' });
@@ -242,6 +263,145 @@ router.post('/fcm-token', requireAuthOrRadioToken, async (req, res) => {
   } catch (err) {
     console.error('[Radios] FCM token update error:', err);
     return res.status(500).json({ error: 'Failed to update FCM token' });
+  }
+});
+
+/**
+ * Remotely exit kiosk (lock-task) mode on a radio for a configurable window.
+ * Stores the expiry on the radio row so a reconnecting radio can re-sync, emits
+ * the live `radio:kiosk_unlock` socket event to a connected radio, and falls
+ * back to a data-only FCM message so the command still reaches a radio whose
+ * socket happens to be offline.
+ *
+ * Audit row is written to `activity_logs` with action `radio_kiosk_unlock` and
+ * details containing the actor, target radio, duration, and computed expiry.
+ */
+router.post('/:radioId/kiosk-unlock', requireDispatcher, async (req, res) => {
+  const { radioId } = req.params;
+  const requested = Number(req.body?.duration_minutes);
+  let durationMinutes = Number.isFinite(requested) && requested > 0
+    ? Math.floor(requested)
+    : DEFAULT_KIOSK_UNLOCK_MINUTES;
+  if (durationMinutes > MAX_KIOSK_UNLOCK_MINUTES) {
+    durationMinutes = MAX_KIOSK_UNLOCK_MINUTES;
+  }
+
+  try {
+    const radio = await getRadioById(radioId);
+    if (!radio) {
+      return res.status(404).json({ error: 'Radio not found' });
+    }
+
+    const expiresAtMs = Date.now() + durationMinutes * 60 * 1000;
+    const expiresAtDate = new Date(expiresAtMs);
+    const updated = await setRadioKioskUnlockExpiresAt(radioId, expiresAtDate);
+
+    let socketDelivered = false;
+    const radioSocket = _findRadioSocket(radioId);
+    if (radioSocket) {
+      radioSocket.emit('radio:kiosk_unlock', {
+        radioId,
+        expiresAt: expiresAtMs,
+        durationMinutes,
+      });
+      socketDelivered = true;
+    }
+
+    let fcmDelivered = false;
+    if (radio.fcm_token) {
+      const fcmResult = await sendDataToRadioToken(radio.fcm_token, {
+        type: 'kiosk_unlock',
+        radioId,
+        expiresAt: expiresAtMs,
+        durationMinutes,
+      });
+      fcmDelivered = !!fcmResult?.success;
+    }
+
+    try {
+      await logActivity(
+        req.user?.id || null,
+        req.user?.username || 'system',
+        'radio_kiosk_unlock',
+        {
+          radioId,
+          durationMinutes,
+          expiresAt: expiresAtMs,
+          socketDelivered,
+          fcmDelivered,
+        },
+        null
+      );
+    } catch (auditErr) {
+      console.warn('[Radios] kiosk-unlock audit log failed:', auditErr.message);
+    }
+
+    console.log(`[Radios] kiosk-unlock radioId=${radioId} by=${req.user?.username || '?'} durationMin=${durationMinutes} socket=${socketDelivered} fcm=${fcmDelivered}`);
+
+    return res.json({
+      radio: updated,
+      kioskUnlockExpiresAt: expiresAtMs,
+      durationMinutes,
+      delivery: { socket: socketDelivered, fcm: fcmDelivered },
+    });
+  } catch (err) {
+    console.error('[Radios] kiosk-unlock error:', err);
+    return res.status(500).json({ error: 'Kiosk unlock failed — server error' });
+  }
+});
+
+/**
+ * Cancel an active remote-unlock window and tell the radio to re-enter kiosk
+ * (lock-task) mode immediately. Same delivery model as kiosk-unlock: live
+ * socket event + FCM fallback + audit log.
+ */
+router.post('/:radioId/kiosk-relock', requireDispatcher, async (req, res) => {
+  const { radioId } = req.params;
+  try {
+    const radio = await getRadioById(radioId);
+    if (!radio) {
+      return res.status(404).json({ error: 'Radio not found' });
+    }
+
+    const updated = await clearRadioKioskUnlockExpiresAt(radioId);
+
+    let socketDelivered = false;
+    const radioSocket = _findRadioSocket(radioId);
+    if (radioSocket) {
+      radioSocket.emit('radio:kiosk_relock', { radioId });
+      socketDelivered = true;
+    }
+
+    let fcmDelivered = false;
+    if (radio.fcm_token) {
+      const fcmResult = await sendDataToRadioToken(radio.fcm_token, {
+        type: 'kiosk_relock',
+        radioId,
+      });
+      fcmDelivered = !!fcmResult?.success;
+    }
+
+    try {
+      await logActivity(
+        req.user?.id || null,
+        req.user?.username || 'system',
+        'radio_kiosk_relock',
+        { radioId, socketDelivered, fcmDelivered },
+        null
+      );
+    } catch (auditErr) {
+      console.warn('[Radios] kiosk-relock audit log failed:', auditErr.message);
+    }
+
+    console.log(`[Radios] kiosk-relock radioId=${radioId} by=${req.user?.username || '?'} socket=${socketDelivered} fcm=${fcmDelivered}`);
+
+    return res.json({
+      radio: updated,
+      delivery: { socket: socketDelivered, fcm: fcmDelivered },
+    });
+  } catch (err) {
+    console.error('[Radios] kiosk-relock error:', err);
+    return res.status(500).json({ error: 'Kiosk relock failed — server error' });
   }
 });
 

@@ -1,7 +1,10 @@
 package com.reedersystems.commandcomms
 
 import android.Manifest
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
@@ -74,6 +77,23 @@ class MainActivity : ComponentActivity() {
      */
     private var pendingOverlayPromptAfterBattery = false
 
+    /**
+     * Receives [CommandCommsApp.ACTION_REMOTE_KIOSK_CHANGED] for the entire
+     * lifetime of the activity (registered in [onCreate], unregistered in
+     * [onDestroy]) so dispatcher Unlock/Re-lock commands trigger an
+     * immediate `startLockTask` / `stopLockTask` regardless of whether the
+     * activity is currently in `RESUMED` state. This avoids the race where
+     * `startActivity(SINGLE_TOP)` only delivers `onNewIntent` (not
+     * `onResume`) when MainActivity is already foregrounded.
+     */
+    private val remoteKioskReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action != CommandCommsApp.ACTION_REMOTE_KIOSK_CHANGED) return
+            Log.d(TAG, "ACTION_REMOTE_KIOSK_CHANGED received in MainActivity — applying lock-task transition")
+            applyKioskLockTaskTransition()
+        }
+    }
+
     private val requestBackgroundLocationLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
@@ -118,6 +138,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         hideSystemBars()
         requestAppPermissions()
+        registerRemoteKioskReceiver()
         setContent {
             CommandCommsTheme {
                 Box(
@@ -152,31 +173,57 @@ class MainActivity : ComponentActivity() {
             pendingOverlayPromptAfterBattery = false
             requestOverlayPermissionIfNeeded()
         }
-        applyKioskStateOnResume()
+        applyKioskLockTaskTransition()
+    }
+
+    override fun onDestroy() {
+        try {
+            unregisterReceiver(remoteKioskReceiver)
+        } catch (_: Exception) {
+        }
+        super.onDestroy()
+    }
+
+    private fun registerRemoteKioskReceiver() {
+        val filter = IntentFilter(CommandCommsApp.ACTION_REMOTE_KIOSK_CHANGED)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(remoteKioskReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            @Suppress("UnspecifiedRegisterReceiverFlag")
+            registerReceiver(remoteKioskReceiver, filter)
+        }
     }
 
     /**
-     * Re-assert kiosk state every time we come to the foreground. If kiosk is
-     * enabled and we are Device Owner, apply the policy bundle (idempotent) and
-     * re-enter lock-task mode in case the user was somehow ejected. If kiosk is
-     * disabled but we're still pinned for some reason, drop out cleanly AND
-     * clear the policy bundle so persistent home / keyguard-disable do not
-     * linger past the admin disabling kiosk.
+     * Activity-side complement to [CommandCommsApp.applyRemoteKioskState]:
+     * the Application owns persistent enforcement (apply/clear Device
+     * Owner policies, schedule auto-relock, react to dispatcher
+     * unlock/relock broadcasts at process level). MainActivity contributes
+     * the one piece that requires an Activity context —
+     * [android.app.Activity.startLockTask] / [android.app.Activity.stopLockTask].
+     *
+     * This runs from `onResume`, `onNewIntent`, and the in-activity
+     * broadcast receiver so the lock-task transition is guaranteed
+     * regardless of which lifecycle path delivers the dispatcher command.
      */
-    private fun applyKioskStateOnResume() {
+    private fun applyKioskLockTaskTransition() {
         val policy = app.kioskPolicyManager
-        val wantKiosk = app.kioskPrefs.kioskEnabled && policy.isDeviceOwner
+        val now = System.currentTimeMillis()
+        val remoteUnlockActive = app.kioskPrefs.isRemoteUnlockActive(now)
+        val wantKiosk = app.kioskPrefs.kioskEnabled && policy.isDeviceOwner && !remoteUnlockActive
         try {
             if (wantKiosk) {
                 policy.applyKioskPolicies()
                 policy.enterLockTask(this)
             } else {
                 policy.exitLockTask(this)
-                policy.clearKioskPolicies()
             }
         } catch (e: Exception) {
-            Log.w(TAG, "applyKioskStateOnResume failed: ${e.message}")
+            Log.w(TAG, "applyKioskLockTaskTransition failed: ${e.message}")
         }
+        // Re-run the process-level reconciler so timers and policy bundle
+        // stay in sync with what the activity just observed (idempotent).
+        app.applyRemoteKioskState(launchActivityIfPinning = false)
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
@@ -202,6 +249,12 @@ class MainActivity : ComponentActivity() {
             app.keyEventFlow.tryEmit(KeyAction.EmergencyDown)
         }
         handlePageIntent(intent)
+        // Cover the singleTop / reorder-to-front relock path: when
+        // CommandCommsApp.applyRemoteKioskState() brings an already-RESUMED
+        // MainActivity to the front, neither onCreate nor onResume fires —
+        // only onNewIntent. Triggering the lock-task transition here ensures
+        // dispatcher Re-lock takes effect immediately.
+        applyKioskLockTaskTransition()
     }
 
     private fun handlePageIntent(intent: Intent) {

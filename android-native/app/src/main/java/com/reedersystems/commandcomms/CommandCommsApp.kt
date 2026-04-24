@@ -3,10 +3,15 @@ package com.reedersystems.commandcomms
 import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.media.AudioAttributes
 import android.media.RingtoneManager
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import java.util.UUID
 import com.reedersystems.commandcomms.audio.ToneEngine
@@ -24,12 +29,14 @@ import com.reedersystems.commandcomms.data.repository.AuthRepository
 import com.reedersystems.commandcomms.data.repository.ChannelRepository
 import com.reedersystems.commandcomms.data.repository.RadioConfigRepository
 import com.reedersystems.commandcomms.signaling.SignalingClient
+import com.reedersystems.commandcomms.signaling.SignalingEvent
 import com.reedersystems.commandcomms.signaling.SignalingRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 
 class CommandCommsApp : Application() {
 
@@ -130,6 +137,142 @@ class CommandCommsApp : Application() {
         toneEngine = ToneEngine(this)
 
         radioStateManager = RadioStateManager()
+
+        registerRemoteKioskReceiver()
+        observeRemoteKioskEvents()
+        // Re-assert correct kiosk state on cold start in case the device
+        // rebooted while a remote-unlock window was still in effect (or just
+        // expired). Safe no-op on non-Device-Owner builds.
+        applyRemoteKioskState(launchActivityIfPinning = false)
+    }
+
+    /**
+     * Listen for dispatcher-issued kiosk override events on the signaling
+     * channel and persist them into [KioskPrefs] so the change survives
+     * process death / activity recreation. The matching local broadcast
+     * triggers our process-level enforcement so policies/lock-task are
+     * re-applied immediately regardless of whether MainActivity is in the
+     * foreground.
+     */
+    private fun observeRemoteKioskEvents() {
+        appScope.launch {
+            signalingClient.events.collect { event ->
+                when (event) {
+                    is SignalingEvent.RemoteKioskUnlock -> {
+                        Log.d(TAG, "Remote kiosk unlock until=${event.expiresAtMs} duration=${event.durationMinutes}m")
+                        kioskPrefs.setRemoteUnlock(event.expiresAtMs)
+                        sendBroadcast(Intent(ACTION_REMOTE_KIOSK_CHANGED).setPackage(packageName))
+                    }
+                    is SignalingEvent.RemoteKioskRelock -> {
+                        Log.d(TAG, "Remote kiosk relock")
+                        kioskPrefs.clearRemoteUnlock()
+                        sendBroadcast(Intent(ACTION_REMOTE_KIOSK_CHANGED).setPackage(packageName))
+                    }
+                    else -> {}
+                }
+            }
+        }
+    }
+
+    private val mainHandler = Handler(Looper.getMainLooper())
+
+    /**
+     * Process-level auto-relock. Fires at remote-unlock expiry and re-pins
+     * the device whether or not MainActivity is foregrounded. Owned by the
+     * Application so it survives activity destruction.
+     */
+    private val autoRelockRunnable = Runnable {
+        Log.d(TAG, "autoRelockRunnable fired — clearing remote unlock and re-applying kiosk")
+        try {
+            kioskPrefs.clearRemoteUnlock()
+        } catch (e: Exception) {
+            Log.w(TAG, "autoRelockRunnable clearRemoteUnlock failed: ${e.message}")
+        }
+        applyRemoteKioskState(launchActivityIfPinning = true)
+    }
+
+    /**
+     * Permanently-registered receiver that reacts to dispatcher kiosk
+     * commands regardless of activity lifecycle. This is what makes the
+     * "Re-lock" action take effect even when the radio app is backgrounded.
+     */
+    private val remoteKioskReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action != ACTION_REMOTE_KIOSK_CHANGED) return
+            Log.d(TAG, "ACTION_REMOTE_KIOSK_CHANGED received at app level")
+            applyRemoteKioskState(launchActivityIfPinning = true)
+        }
+    }
+
+    private fun registerRemoteKioskReceiver() {
+        val filter = IntentFilter(ACTION_REMOTE_KIOSK_CHANGED)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(remoteKioskReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            @Suppress("UnspecifiedRegisterReceiverFlag")
+            registerReceiver(remoteKioskReceiver, filter)
+        }
+    }
+
+    /**
+     * Apply (or clear) Device Owner kiosk policies based on the current
+     * effective state in [KioskPrefs]. Re-arms or cancels the auto-relock
+     * timer accordingly. When transitioning back into kiosk and
+     * [launchActivityIfPinning] is true, MainActivity is brought to the
+     * foreground so it can call [android.app.Activity.startLockTask] (which
+     * is the one piece that requires an Activity context).
+     *
+     * Idempotent: safe to call repeatedly. Silent no-op when the app is not
+     * Device Owner (per [KioskPolicyManager.applyKioskPolicies]).
+     */
+    fun applyRemoteKioskState(launchActivityIfPinning: Boolean) {
+        val now = System.currentTimeMillis()
+        val remoteUnlockUntil = kioskPrefs.remoteUnlockUntilMs
+        val remoteUnlockActive = remoteUnlockUntil > now
+        val shouldPin = kioskPrefs.kioskEnabled && kioskPolicyManager.isDeviceOwner && !remoteUnlockActive
+
+        // Always cancel any pending auto-relock; re-schedule below if still
+        // inside an active unlock window.
+        mainHandler.removeCallbacks(autoRelockRunnable)
+
+        try {
+            if (shouldPin) {
+                kioskPolicyManager.applyKioskPolicies()
+                if (launchActivityIfPinning) {
+                    val launchIntent = Intent(this, MainActivity::class.java).apply {
+                        addFlags(
+                            Intent.FLAG_ACTIVITY_NEW_TASK or
+                                Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or
+                                Intent.FLAG_ACTIVITY_SINGLE_TOP
+                        )
+                    }
+                    try {
+                        startActivity(launchIntent)
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Failed to bring MainActivity to front for relock: ${e.message}")
+                    }
+                }
+            } else {
+                kioskPolicyManager.clearKioskPolicies()
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "applyRemoteKioskState policy step failed: ${e.message}")
+        }
+
+        if (remoteUnlockActive) {
+            val delayMs = (remoteUnlockUntil - now).coerceAtLeast(0L)
+            Log.d(TAG, "Scheduling auto-relock in ${delayMs}ms (until=$remoteUnlockUntil)")
+            mainHandler.postDelayed(autoRelockRunnable, delayMs)
+        } else if (remoteUnlockUntil != 0L) {
+            // Window already expired by the time we got here — clear the
+            // stale value so the next event starts from a clean slate.
+            kioskPrefs.clearRemoteUnlock()
+        }
+    }
+
+    companion object {
+        const val ACTION_REMOTE_KIOSK_CHANGED = "com.reedersystems.commandcomms.REMOTE_KIOSK_CHANGED"
+        private const val TAG = "CommandCommsApp"
     }
 
     private fun createNotificationChannels() {

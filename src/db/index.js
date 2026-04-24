@@ -296,6 +296,7 @@ export async function initializeDatabase() {
     `);
 
     await client.query(`ALTER TABLE radios ADD COLUMN IF NOT EXISTS device_uuid UUID`);
+    await client.query(`ALTER TABLE radios ADD COLUMN IF NOT EXISTS kiosk_unlock_expires_at TIMESTAMP`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_radios_serial_number ON radios (serial_number)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_radios_token ON radios (token)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_radios_assigned_unit_id ON radios (assigned_unit_id)`);
@@ -1105,6 +1106,18 @@ export async function setRadioLocked(radioId, isLocked) {
     [isLocked, radioId]
   );
   return result.rows[0];
+}
+
+export async function setRadioKioskUnlockExpiresAt(radioId, expiresAt) {
+  const result = await pool.query(
+    `UPDATE radios SET kiosk_unlock_expires_at = $1 WHERE radio_id = $2 RETURNING *`,
+    [expiresAt, radioId]
+  );
+  return result.rows[0];
+}
+
+export async function clearRadioKioskUnlockExpiresAt(radioId) {
+  return setRadioKioskUnlockExpiresAt(radioId, null);
 }
 
 export async function setChannelAnnouncementAudio(channelId, audioBuffer) {

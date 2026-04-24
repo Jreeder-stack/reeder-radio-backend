@@ -29,6 +29,8 @@ sealed class SignalingEvent {
     object RadioUnlocked : SignalingEvent()
     object RadioUnassigned : SignalingEvent()
     data class RadioAssigned(val unitId: String) : SignalingEvent()
+    data class RemoteKioskUnlock(val expiresAtMs: Long, val durationMinutes: Int) : SignalingEvent()
+    object RemoteKioskRelock : SignalingEvent()
     data class EmergencyStatusResponse(val channelId: String, val active: Boolean, val unitId: String?) : SignalingEvent()
     data class PttRevoked(val channelId: String, val reason: String) : SignalingEvent()
 }

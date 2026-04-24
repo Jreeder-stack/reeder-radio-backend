@@ -1,7 +1,25 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getRadios, assignRadioUnit, lockRadio, getRadioUsers } from '../utils/radiosApi.js';
+import { getRadios, assignRadioUnit, lockRadio, kioskUnlockRadio, kioskRelockRadio, getRadioUsers } from '../utils/radiosApi.js';
 import { useTheme } from '../context/ThemeContext.jsx';
+
+const DEFAULT_KIOSK_UNLOCK_MINUTES = 15;
+
+function formatRemainingMinutes(expiresAt, nowMs) {
+  if (!expiresAt) return null;
+  const expiresMs = typeof expiresAt === 'number'
+    ? expiresAt
+    : new Date(expiresAt).getTime();
+  if (!Number.isFinite(expiresMs) || expiresMs <= nowMs) return null;
+  const remainingMs = expiresMs - nowMs;
+  const remainingSec = Math.ceil(remainingMs / 1000);
+  if (remainingSec < 60) return `${remainingSec}s`;
+  const remainingMin = Math.ceil(remainingSec / 60);
+  if (remainingMin < 60) return `${remainingMin}m`;
+  const hrs = Math.floor(remainingMin / 60);
+  const mins = remainingMin % 60;
+  return mins ? `${hrs}h ${mins}m` : `${hrs}h`;
+}
 
 function formatLastSeen(ts) {
   if (!ts) return '—';
@@ -108,6 +126,13 @@ export default function RadioManagement({ user }) {
   const [confirmDialog, setConfirmDialog] = useState({ open: false, radioId: null, radioDisplayId: '' });
   const [savingRows, setSavingRows] = useState({});
   const [pendingSelections, setPendingSelections] = useState({});
+  const [kioskDurations, setKioskDurations] = useState({});
+  const [nowMs, setNowMs] = useState(() => Date.now());
+
+  useEffect(() => {
+    const id = setInterval(() => setNowMs(Date.now()), 5000);
+    return () => clearInterval(id);
+  }, []);
 
   const showToast = useCallback((msg) => {
     setToastMsg(msg);
@@ -185,6 +210,48 @@ export default function RadioManagement({ user }) {
     setConfirmDialog({ open: false, radioId: null, radioDisplayId: '' });
     doLock(radioId, true);
   }, [confirmDialog, doLock]);
+
+  const handleKioskUnlock = useCallback(async (radioId) => {
+    const raw = kioskDurations[radioId];
+    const parsed = Number(raw);
+    const minutes = Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : DEFAULT_KIOSK_UNLOCK_MINUTES;
+    setSavingRows(prev => ({ ...prev, [radioId]: true }));
+    try {
+      const result = await kioskUnlockRadio(radioId, minutes);
+      const expires = result?.kioskUnlockExpiresAt || (Date.now() + minutes * 60 * 1000);
+      setRadios(prev => prev.map(r => r.radio_id === radioId
+        ? { ...r, kiosk_unlock_expires_at: new Date(expires).toISOString() }
+        : r));
+      const sock = result?.delivery?.socket ? 'socket' : null;
+      const fcm = result?.delivery?.fcm ? 'FCM' : null;
+      const via = [sock, fcm].filter(Boolean).join('+') || 'queued';
+      showToast(`Kiosk unlocked ${minutes}m (via ${via})`);
+    } catch (err) {
+      console.error('[RadioManagement] Kiosk unlock failed:', err);
+      showToast(`Unlock failed: ${err.message}`);
+    } finally {
+      setSavingRows(prev => ({ ...prev, [radioId]: false }));
+    }
+  }, [kioskDurations, showToast]);
+
+  const handleKioskRelock = useCallback(async (radioId) => {
+    setSavingRows(prev => ({ ...prev, [radioId]: true }));
+    try {
+      const result = await kioskRelockRadio(radioId);
+      setRadios(prev => prev.map(r => r.radio_id === radioId
+        ? { ...r, kiosk_unlock_expires_at: null }
+        : r));
+      const sock = result?.delivery?.socket ? 'socket' : null;
+      const fcm = result?.delivery?.fcm ? 'FCM' : null;
+      const via = [sock, fcm].filter(Boolean).join('+') || 'queued';
+      showToast(`Re-locked (via ${via})`);
+    } catch (err) {
+      console.error('[RadioManagement] Kiosk relock failed:', err);
+      showToast(`Re-lock failed: ${err.message}`);
+    } finally {
+      setSavingRows(prev => ({ ...prev, [radioId]: false }));
+    }
+  }, [showToast]);
 
   const searchLower = search.toLowerCase();
   const filtered = radios.filter(r => {
@@ -286,7 +353,7 @@ export default function RadioManagement({ user }) {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--dispatch-border)' }}>
-                  {['Radio ID', 'IMEI', 'Serial #', 'Assigned Unit', 'Last Seen', 'Lock'].map(col => (
+                  {['Radio ID', 'IMEI', 'Serial #', 'Assigned Unit', 'Last Seen', 'Kiosk', 'Lock'].map(col => (
                     <th
                       key={col}
                       style={{
@@ -381,6 +448,72 @@ export default function RadioManagement({ user }) {
                     </td>
                     <td style={{ padding: '12px 14px', color: 'var(--dispatch-text-tertiary)', fontSize: 13, whiteSpace: 'nowrap' }}>
                       {formatLastSeen(radio.last_seen)}
+                    </td>
+                    <td style={{ padding: '12px 14px' }}>
+                      {(() => {
+                        const remaining = formatRemainingMinutes(radio.kiosk_unlock_expires_at, nowMs);
+                        const isSaving = savingRows[radio.radio_id];
+                        if (remaining) {
+                          return (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <span title="Kiosk unlocked — auto re-lock in" style={{
+                                fontSize: 12, fontWeight: 600, color: '#15803d',
+                                background: 'rgba(21,128,61,0.12)', padding: '3px 8px', borderRadius: 4,
+                                whiteSpace: 'nowrap',
+                              }}>
+                                Unlocked · {remaining}
+                              </span>
+                              <button
+                                onClick={() => handleKioskRelock(radio.radio_id)}
+                                disabled={isSaving}
+                                style={{
+                                  padding: '5px 10px', fontSize: 12, fontWeight: 600,
+                                  borderRadius: 6, border: 'none',
+                                  cursor: isSaving ? 'not-allowed' : 'pointer',
+                                  background: '#b45309', color: '#fff',
+                                  opacity: isSaving ? 0.4 : 1, whiteSpace: 'nowrap',
+                                }}
+                              >
+                                {isSaving ? 'Saving…' : 'Re-lock'}
+                              </button>
+                            </div>
+                          );
+                        }
+                        const durationVal = kioskDurations[radio.radio_id] ?? '';
+                        return (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <input
+                              type="number"
+                              min={1}
+                              max={240}
+                              placeholder={String(DEFAULT_KIOSK_UNLOCK_MINUTES)}
+                              value={durationVal}
+                              disabled={isSaving}
+                              onChange={e => setKioskDurations(prev => ({ ...prev, [radio.radio_id]: e.target.value }))}
+                              title="Unlock duration in minutes (default 15)"
+                              style={{
+                                width: 56, padding: '5px 8px',
+                                background: 'var(--dispatch-panel)', border: '1px solid var(--dispatch-border)',
+                                borderRadius: 6, color: 'var(--dispatch-text)', fontSize: 13, outline: 'none',
+                              }}
+                            />
+                            <span style={{ fontSize: 11, color: 'var(--dispatch-text-tertiary)' }}>min</span>
+                            <button
+                              onClick={() => handleKioskUnlock(radio.radio_id)}
+                              disabled={isSaving}
+                              style={{
+                                padding: '5px 10px', fontSize: 12, fontWeight: 600,
+                                borderRadius: 6, border: 'none',
+                                cursor: isSaving ? 'not-allowed' : 'pointer',
+                                background: '#0369a1', color: '#fff',
+                                opacity: isSaving ? 0.4 : 1, whiteSpace: 'nowrap',
+                              }}
+                            >
+                              {isSaving ? 'Saving…' : 'Unlock kiosk'}
+                            </button>
+                          </div>
+                        );
+                      })()}
                     </td>
                     <td style={{ padding: '12px 14px' }}>
                       <button

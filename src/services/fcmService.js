@@ -102,6 +102,39 @@ function initFcm() {
   }
 }
 
+/**
+ * Send a generic data-only FCM message to a single radio token. Used for
+ * out-of-band commands like remote kiosk unlock/relock where the radio's
+ * socket may be offline. The message is data-only (no notification block) so
+ * `CommandCommsFirebaseService.onMessageReceived` always processes it.
+ */
+export async function sendDataToRadioToken(token, data) {
+  const firebaseApp = initFcm();
+  if (!firebaseApp) {
+    console.warn('[FCM] sendDataToRadioToken called but FCM not initialized — skipping');
+    return { success: false, error: 'fcm_not_initialized' };
+  }
+  if (!token) {
+    return { success: false, error: 'no_token' };
+  }
+  const stringified = {};
+  for (const [k, v] of Object.entries(data || {})) {
+    stringified[k] = v == null ? '' : String(v);
+  }
+  try {
+    const messaging = admin.messaging(firebaseApp);
+    const messageId = await messaging.send({
+      token,
+      data: stringified,
+      android: { priority: 'high', ttl: 60000 },
+    });
+    return { success: true, messageId };
+  } catch (err) {
+    console.warn('[FCM] sendDataToRadioToken failed:', err.message);
+    return { success: false, error: err.message };
+  }
+}
+
 export async function sendPageToTokens(tokens, pageId, message, sender, pagingChannelId, audioUrl = null) {
   const firebaseApp = initFcm();
   if (!firebaseApp) {
