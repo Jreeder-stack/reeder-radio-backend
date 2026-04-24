@@ -2294,6 +2294,33 @@ export class AIDispatcher {
         }
       }
 
+      // Task #538: Category C "be advised" / area-clear safety net.
+      // Any transmission that is plainly an area-clear / "check complete"
+      // / "be advised ..." note MUST result in a logged note on the unit's
+      // call (or a clear failure response). If the LLM picked SILENCE,
+      // DISREGARD, STATUS_CHANGE, UNKNOWN, etc. for one of these phrases
+      // we override and route to executeBeAdvisedNote so the system can
+      // never speak a bare "10-4" while silently dropping the note.
+      if (
+        (state === DISPATCHER_STATE.IDLE
+         || state === DISPATCHER_STATE.AWAITING_COMMAND)
+        && this._isOverridableForBeAdvisedSafetyNet(result.intent)
+        && this._isCategoryCAreaClearTranscript(transcript)
+      ) {
+        this.log('BE_ADVISED_SAFETY_NET_TRIGGERED', {
+          unitId: participantId,
+          transcript,
+          state,
+          llmIntent: result.intent,
+          llmResponse: result.response || null,
+        });
+        await this.executeBeAdvisedNote(participantId, transcript, transcript.trim(), {
+          source: 'safety_net',
+          llmIntent: result.intent,
+        });
+        return;
+      }
+
       // Task #527: while waiting on a sole-call yes/no, anything other than
       // CONFIRM/DENY drops to IDLE so we never act on the wrong call. We
       // log once and acknowledge.
@@ -5126,9 +5153,33 @@ export class AIDispatcher {
     }
   }
 
-  async executeBeAdvisedNote(participantId, transcript, rawContent) {
+  async executeBeAdvisedNote(participantId, transcript, rawContent, opts = {}) {
+    // Task #538: never silently drop a "be advised" / area-clear note.
+    // Every exit path that does NOT call _addCallNoteSerial successfully
+    // must (a) speak something OTHER than a bare "10-4", and (b) emit
+    // BE_ADVISED_NOTE_DROPPED with the LLM intent, rewrite confidence,
+    // resolved call id, and the reason it bailed.
+    const source = opts?.source || 'add_note_handler';
+    const llmIntent = opts?.llmIntent || null;
+    let rewriteConfidence = null;
+    let resolvedCallId = null;
+    const dropped = (reason, extra = {}) => {
+      this.log('BE_ADVISED_NOTE_DROPPED', {
+        unitId: participantId,
+        source,
+        llmIntent,
+        reason,
+        rewriteConfidence,
+        callId: resolvedCallId,
+        transcript,
+        rawContent,
+        ...extra,
+      });
+    };
+
     try {
       if (!cadService.isConfigured()) {
+        dropped('cad_not_configured');
         const resp = `${participantId}, CAD system not available.`;
         await this.speak(resp, participantId);
         this.addConversationExchange(participantId, transcript, resp);
@@ -5138,7 +5189,9 @@ export class AIDispatcher {
 
       const currentCall = await cadService.resolveUnitCurrentCall(participantId, { unitUuid: this._resolveUnitUuidForCallsign(participantId) });
       const callId = currentCall?.call_id || currentCall?.call_number || currentCall?.callNumber;
+      resolvedCallId = callId || null;
       if (!callId) {
+        dropped('no_active_call');
         const resp = `${participantId}, you're not assigned to a call.`;
         await this.speak(resp, participantId);
         this.addConversationExchange(participantId, transcript, resp);
@@ -5153,21 +5206,58 @@ export class AIDispatcher {
         this.log('BE_ADVISED_REWRITE_ERROR', { error: e.message });
         rewriteResult = { note: rawContent, confidence: 'medium', rewritten: false };
       }
+      rewriteConfidence = rewriteResult?.confidence || null;
 
       this.log('BE_ADVISED_REWRITE', { participantId, raw: rawContent, note: rewriteResult.note, confidence: rewriteResult.confidence });
 
-      if (rewriteResult.confidence === 'low' || !rewriteResult.note) {
-        const resp = `${participantId}, didn't catch that note — say again?`;
-        setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_BE_ADVISED_NOTE, null, {}, true);
+      // Task #538 Step 4: soften the rewrite-confidence guard. Category C
+      // area-clear / "be advised" reports are too operationally important
+      // to throw away. If the LLM rewrite returns low confidence or no
+      // note, fall back to the raw transcript verbatim instead of asking
+      // the unit to repeat (which previously dropped real notes).
+      let noteToWrite = (rewriteResult.note || '').trim();
+      if (!noteToWrite || rewriteResult.confidence === 'low') {
+        const fallback = (rawContent || '').trim() || (transcript || '').trim();
+        if (!fallback) {
+          // Truly nothing to write — surface as a failure, not a "10-4".
+          dropped('empty_transcript');
+          const resp = `${participantId}, didn't catch that note — say again?`;
+          setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_BE_ADVISED_NOTE, null, {}, true);
+          await this.speak(resp, participantId);
+          this.addConversationExchange(participantId, transcript, resp);
+          return;
+        }
+        this.log('BE_ADVISED_REWRITE_FALLBACK', {
+          unitId: participantId,
+          callId,
+          confidence: rewriteResult.confidence || null,
+          rawLength: fallback.length,
+          reason: !rewriteResult.note ? 'empty_rewrite' : 'low_confidence',
+        });
+        noteToWrite = fallback;
+      }
+
+      const noteText = `${participantId}: ${noteToWrite}`;
+      let noteResult;
+      try {
+        noteResult = await this._addCallNoteSerial(participantId, callId, noteText);
+      } catch (writeErr) {
+        dropped('add_call_note_threw', { error: writeErr.message });
+        await this._recordNoteFailure('be_advised', {
+          participantId, callId, noteLength: noteText.length,
+          noteResult: { success: false, error: writeErr.message, failureCategory: 'network' },
+        });
+        const reasonSpoken = this._noteFailureCategorySpoken('network');
+        const resp = `${participantId}, unable to add note — ${reasonSpoken}, try again.`;
         await this.speak(resp, participantId);
         this.addConversationExchange(participantId, transcript, resp);
+        setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
         return;
       }
 
-      const noteText = `${participantId}: ${rewriteResult.note}`;
-      const noteResult = await this._addCallNoteSerial(participantId, callId, noteText);
       if (noteResult?.success === false) {
         const category = noteResult.failureCategory || cadService.categorizeNoteFailure(noteResult) || 'unknown';
+        dropped('cad_write_failed', { category, statusCode: noteResult?.statusCode || null });
         await this._recordNoteFailure('be_advised', {
           participantId, callId, noteLength: noteText.length, noteResult,
         });
@@ -5179,7 +5269,7 @@ export class AIDispatcher {
         return;
       }
 
-      this.log('BE_ADVISED_NOTE_ADDED', { unitId: participantId, callId, note: rewriteResult.note });
+      this.log('BE_ADVISED_NOTE_ADDED', { unitId: participantId, callId, note: noteToWrite, source });
       this.logSpeechEvent(participantId, transcript, 'ADD_NOTE_BE_ADVISED', null);
       const ack = `${participantId}, 10-4.`;
       await this.speak(ack, participantId);
@@ -5187,11 +5277,80 @@ export class AIDispatcher {
       setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
     } catch (error) {
       this.log('BE_ADVISED_ERROR', { error: error.message });
+      dropped('handler_threw', { error: error.message });
       const resp = `${participantId}, unable to add note. System error.`;
       await this.speak(resp, participantId);
       this.addConversationExchange(participantId, transcript, resp);
       setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
     }
+  }
+
+  // Task #538: shared classifier used by the safety net and tests to detect
+  // Category C "be advised" / area-clear / "check complete" transmissions.
+  // Pure acknowledgments ("10-4", "copy", "roger") are explicitly excluded
+  // so this never turns an acknowledgment into a note attempt.
+  _isCategoryCAreaClearTranscript(transcript) {
+    const raw = String(transcript || '').toLowerCase().trim();
+    if (!raw) return false;
+    const t = raw.replace(/[.!?;:]/g, ' ').replace(/\s+/g, ' ').trim();
+    if (!t) return false;
+
+    // Pure-ack guard: just "10-4", "copy", "roger", and small combinations
+    // with NO other content must NOT trigger Category C routing.
+    const PURE_ACK = /^(10-?4|10\s*4|ten[-\s]four|copy|copy\s+that|roger|roger\s+that|affirmative|affirm|yes|yep|yeah|10-?4\s+copy|copy\s+10-?4|10-?4\s+roger|roger\s+10-?4)$/;
+    if (PURE_ACK.test(t)) return false;
+
+    const AREA_NOUN = '(?:first|second|third|fourth|fifth|sixth|top|main|ground|upper|lower|basement|attic)\\s+(?:floor|level)|inside\\s+perimeter|outside\\s+perimeter|perimeter|back\\s*yard|front\\s*yard|side\\s*yard|courtyard|driveway|interior|exterior|inside|outside|building|residence|premises|area|attic|garage|basement|warehouse|shed|barn|porch|stairwell|hallway|kitchen|bathroom|bedroom|living\\s+room|vehicle|car|truck|van|bus|trailer|room|apartment|unit|structure';
+
+    const CATEGORY_C_PATTERNS = [
+      // "<area> [is/are] (clear|secure)"
+      new RegExp(`\\b(?:the\\s+)?(?:${AREA_NOUN})\\s+(?:is\\s+|are\\s+)?(?:clear|secure)\\b`),
+      // "<area> check(s) (complete|completed|done)"
+      new RegExp(`\\b(?:the\\s+)?(?:${AREA_NOUN})\\s+check(?:s)?\\s+(?:complete|completed|done|good)\\b`),
+      // "checks complete" / "all checks complete" / "checks done"
+      /\b(?:all\s+)?check(?:s)?\s+(?:complete|completed|done)\b/,
+      // "<area> ... clear (also|too|as well)" — covers "perimeter clear
+      // also". Narrowed to require an area noun so "I'm clear too" or
+      // "we're clear as well" do NOT get hijacked into a note attempt.
+      new RegExp(`\\b(?:${AREA_NOUN})\\b[^.,;]*\\bclear\\s+(?:also|too|as\\s+well)\\b`),
+    ];
+
+    if (CATEGORY_C_PATTERNS.some(p => p.test(t))) return true;
+
+    // "be advised, ..." with substantive content after the trigger phrase.
+    // Strip a leading "I said" repeat hint and the trigger itself.
+    const BE_ADVISED_PREFIX = /\b(be\s+advised|advise\s+(?:the\s+)?call|for\s+the\s+record|let\s+it\s+be\s+known)\b/;
+    if (BE_ADVISED_PREFIX.test(t)) {
+      const afterTrigger = t
+        .replace(/^(?:i\s+said\s+|so\s+|uh\s+|um\s+|hey\s+|yeah\s+|yes\s+)+/, '')
+        .replace(BE_ADVISED_PREFIX, '')
+        .replace(/^[\s,.;:-]+/, '')
+        .trim();
+      if (afterTrigger.length >= 3) return true;
+    }
+
+    return false;
+  }
+
+  // Task #538: which LLM intents may be overridden by the Category C
+  // safety net. Anything that is a clear, deterministic answer to a
+  // dispatcher question (CONFIRM/DENY/PERSON_DETAILS/etc.) or a
+  // semantically-distinct command (CREATE_CALL/CLEAR_UNIT/DISPOSE_CALL/
+  // EVENT_ALL_CLEAR/LOG_EVENT_NOTE/ADD_NOTE/etc.) is preserved.
+  _isOverridableForBeAdvisedSafetyNet(intent) {
+    const OVERRIDABLE = new Set([
+      'SILENCE',
+      'DISREGARD',
+      'STATUS_CHANGE',
+      'STATUS_CHANGE_OTHER',
+      'UNKNOWN',
+      'GENERAL_INQUIRY',
+      'REPEAT',
+      'RADIO_CHECK',
+      'TIME_CHECK',
+      'WAKE_ONLY',
+    ]);
+    return OVERRIDABLE.has(intent);
   }
 
   async handleNoteContentInput(participantId, transcript, savedSlots) {

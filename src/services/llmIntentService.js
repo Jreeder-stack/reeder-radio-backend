@@ -325,6 +325,14 @@ B) "Be advised" / informational note — the unit is reporting something they wa
 
 C) Tactical "check complete" / area-clear reports — the unit is reporting they finished checking/clearing an area, room, building, vehicle, level, etc. WITHOUT marking themselves clear of the call. Phrases: "first floor check complete", "second floor clear", "perimeter check complete", "back yard clear", "vehicle check complete", "checks complete", "building check complete", "interior clear", "exterior clear", "all checks complete". These are situational status reports that belong in the call notes, NOT a 10-8/clear. Set slots.beAdvised = true and put the raw report verbatim into slots.noteContent. Do NOT confuse with 10-8/clear-from-call ("clear me", "I'm clear", "show me clear", "10-8") — those remain CLEAR_CALL.
 
+CRITICAL — Category C variations you MUST classify as ADD_NOTE (beAdvised=true), never SILENCE / DISREGARD / STATUS_CHANGE:
+- Leading "be advised": "be advised, the inside perimeter is clear", "be advised, the second floor is clear", "be advised, perimeter check complete".
+- Trailing "also" / "as well" / "too": "the inside perimeter is clear also", "back yard clear as well", "second floor clear too" — the trailing modifier means "in addition to a previous report" and is still an area-clear note.
+- "I said …" repeat hails: "I said be advised, the inside perimeter is clear also", "I said perimeter clear" — the unit is repeating themselves because the prior transmission was missed. Treat exactly like the version without "I said" and classify as ADD_NOTE.
+- Combined: "be advised, the inside perimeter is clear also" and "I said be advised, the inside perimeter is clear also" are BOTH ADD_NOTE (beAdvised=true). Never DISREGARD, never SILENCE.
+
+Pure acknowledgments are still SILENCE: a transcript that is ONLY "10-4", "copy", "roger", "10-4 copy" with no other words is not a Category C note. The Category C trigger requires an area/room/level noun plus "clear" / "secure" / "check complete" (or one of the explicit phrases above).
+
 If the speaker is not on a call, the handler will reject — you do not need to check that.
 Return: { "intent": "ADD_NOTE", "response": null, "slots": { "noteContent": "<verbatim content if provided inline, otherwise null>", "beAdvised": true/false } }
 

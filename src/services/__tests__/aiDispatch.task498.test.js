@@ -127,14 +127,21 @@ describe('Task #498: be-advised success path speaks 10-4 ack', () => {
     expect(said.toLowerCase()).toContain("not assigned to a call");
   });
 
-  it('does NOT speak 10-4 when the rewrite confidence is low', async () => {
+  it('low rewrite confidence falls back to raw verbatim and STILL writes the note (Task #538)', async () => {
+    // Task #538 softened the rewrite-confidence guard so a clearly-spoken
+    // Category C phrase is never silently dropped. Instead of asking the
+    // unit to repeat, the raw transcript is written verbatim (prefixed
+    // with the unit ID) and the standard "10-4" ack is spoken.
     llm.rewriteCallNote.mockResolvedValueOnce({ note: '', confidence: 'low', rewritten: false });
     const d = makeDispatcher();
     await d.executeBeAdvisedNote('INDIANA-1', 'mumble mumble', 'mumble mumble');
-    expect(cadService.addCallNote).not.toHaveBeenCalled();
+    expect(cadService.addCallNote).toHaveBeenCalledTimes(1);
+    const [, noteText] = cadService.addCallNote.mock.calls[0];
+    expect(String(noteText)).toContain('INDIANA-1:');
+    expect(String(noteText)).toContain('mumble mumble');
     const said = d.spoken.join(' ');
-    expect(said).not.toContain('10-4');
-    expect(said.toLowerCase()).toContain("didn't catch that note");
+    expect(said).toContain('10-4');
+    expect(said.toLowerCase()).not.toContain("didn't catch that note");
   });
 
   it('still calls addCallNote exactly once on success', async () => {
