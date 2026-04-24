@@ -243,7 +243,18 @@ export async function getCallDetails(callId) {
 }
 
 export async function updateCall(callId, updates) {
-  return cadRequest(`/api/radio/call/${callId}`, 'PATCH', updates);
+  const res = await cadRequest(`/api/radio/call/${callId}`, 'PATCH', updates);
+  if (res && res.success === false) {
+    // Task #527: surface failed CAD writes with the call id so dispatch logs
+    // make it obvious when a spoken call number wasn't normalized.
+    console.log('[CAD] CALL_WRITE_FAILED', JSON.stringify({
+      op: 'updateCall', callId, statusCode: res.statusCode || null,
+      failureType: res.failureType || null, error: res.error || null,
+      body: res.body || null,
+      responseBody: res.responseBody || null,
+    }));
+  }
+  return res;
 }
 
 export async function assignUnitToCall(unitId, callId) {
@@ -438,12 +449,22 @@ export async function disposeCall(callId, disposition, dispositionNotes = null) 
     ? String(dispositionNotes).trim()
     : String(disposition).trim();
   console.log(`[CAD] Disposing call ${callId}: ${disposition} | notes=${notes}`);
-  return cadRequest('/api/radio/dispose', 'POST', {
+  const res = await cadRequest('/api/radio/dispose', 'POST', {
     call_id: callId,
     disposition,
     dispositionNotes: notes,
     disposition_notes: notes
   });
+  if (res && res.success === false) {
+    // Task #527: log failed CAD writes for diagnosing wrong-call issues.
+    console.log('[CAD] CALL_WRITE_FAILED', JSON.stringify({
+      op: 'disposeCall', callId, statusCode: res.statusCode || null,
+      failureType: res.failureType || null, error: res.error || null,
+      body: res.body || null,
+      responseBody: res.responseBody || null,
+    }));
+  }
+  return res;
 }
 
 // SEQ-10: Cancel call. Bypass /api/radio/* (which only closes) and PUT
@@ -460,11 +481,21 @@ export async function cancelCallDirect(callId, disposition, dispositionNotes = n
     ? String(dispositionNotes).trim()
     : String(disposition).trim();
   console.log(`[CAD] Cancelling call ${callId}: ${disposition} | notes=${notes}`);
-  return cadRequest(`/api/calls/${encodeURIComponent(callId)}`, 'PUT', {
+  const res = await cadRequest(`/api/calls/${encodeURIComponent(callId)}`, 'PUT', {
     status: 'cancelled',
     disposition,
     dispositionNotes: notes
   });
+  if (res && res.success === false) {
+    // Task #527: log failed CAD writes for diagnosing wrong-call issues.
+    console.log('[CAD] CALL_WRITE_FAILED', JSON.stringify({
+      op: 'cancelCallDirect', callId, statusCode: res.statusCode || null,
+      failureType: res.failureType || null, error: res.error || null,
+      body: res.body || null,
+      responseBody: res.responseBody || null,
+    }));
+  }
+  return res;
 }
 
 // SEQ-11: Reopen a closed call. CAD has no /api/radio/reopen, so use the

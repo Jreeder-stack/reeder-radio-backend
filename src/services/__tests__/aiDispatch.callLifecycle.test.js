@@ -30,7 +30,14 @@ vi.mock('../cadService.js', () => {
     cancelCallDirect: vi.fn(async () => ({ success: true })),
     reopenCall: vi.fn(async () => ({ success: true })),
     getCallDetails: vi.fn(async (id) => ({ success: true, id, call_id: id })),
-    getActiveCalls: vi.fn(async () => ({ calls: [] })),
+    // Task #527: spoken-canonical resolution checks the active list. Default
+    // to a fixture containing the call numbers the existing tests use so we
+    // don't have to change every call site.
+    getActiveCalls: vi.fn(async () => ({ calls: [
+      { call_id: 'CALL-123', call_number: 'CALL-123' },
+      { call_id: 'CALL-9', call_number: 'CALL-9' },
+      { call_id: 'CALL-7', call_number: 'CALL-7' },
+    ] })),
     assignUnitToCall: vi.fn(async () => ({ success: true })),
   };
 });
@@ -128,14 +135,19 @@ describe('Task #512: close-call uses active-list fallback when per-unit endpoint
     expect(d.spoken.some(s => /no active call/i.test(s))).toBe(false);
   });
 
-  it('still says "no active call" only when the wrapper itself returns nothing', async () => {
+  // Task #527: when the speaker isn't assigned and there are 0 (or 2+)
+  // active calls, AI asks for the call number instead of saying
+  // "no active call to close".
+  it('asks "which call number?" when nothing resolves and active list is empty', async () => {
     cadService.resolveUnitCurrentCall.mockResolvedValueOnce({
       callNumber: null, has_active_call: false, source: 'none',
     });
+    cadService.getActiveCalls.mockResolvedValueOnce({ calls: [] });
     const d = makeDispatcher();
     await d.executeDisposeCall('INDIANA-1', 'report taken', null, 'report taken');
     expect(cadService.disposeCall).not.toHaveBeenCalled();
-    expect(d.spoken.some(s => /no active call to close/i.test(s))).toBe(true);
+    expect(d.spoken.some(s => /which call number to close/i.test(s))).toBe(true);
+    expect(d.spoken.some(s => /no active call to close/i.test(s))).toBe(false);
   });
 });
 

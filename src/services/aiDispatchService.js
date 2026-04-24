@@ -2283,6 +2283,25 @@ export class AIDispatcher {
         }
       }
 
+      // Task #527: while waiting on a sole-call yes/no, anything other than
+      // CONFIRM/DENY drops to IDLE so we never act on the wrong call. We
+      // log once and acknowledge.
+      if (
+        (state === DISPATCHER_STATE.AWAITING_SOLE_CALL_CLOSE_CONFIRM
+         || state === DISPATCHER_STATE.AWAITING_SOLE_CALL_CANCEL_CONFIRM
+         || state === DISPATCHER_STATE.AWAITING_SOLE_CALL_UPDATE_CONFIRM)
+        && result.intent !== 'CONFIRM' && result.intent !== 'DENY'
+      ) {
+        this.log('SOLE_CALL_CONFIRM_DROPPED', {
+          state, intent: result.intent, unitId: participantId, transcript,
+        });
+        setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+        const resp = `${participantId}, 10-4, disregard.`;
+        await this.speak(resp, participantId);
+        this.addConversationExchange(participantId, transcript, resp);
+        return;
+      }
+
       switch (result.intent) {
         case 'SILENCE': {
           if (state === DISPATCHER_STATE.AWAITING_COMMAND) {
@@ -2583,6 +2602,12 @@ export class AIDispatcher {
             await this.handleCancelConfirm(participantId, transcript, slots);
           } else if (state === DISPATCHER_STATE.AWAITING_CALL_UPDATE_CONFIRM) {
             await this.handleCallUpdateConfirm(participantId, transcript, slots);
+          } else if (state === DISPATCHER_STATE.AWAITING_SOLE_CALL_CLOSE_CONFIRM) {
+            await this.handleSoleCallCloseConfirm(participantId, transcript, slots);
+          } else if (state === DISPATCHER_STATE.AWAITING_SOLE_CALL_CANCEL_CONFIRM) {
+            await this.handleSoleCallCancelConfirm(participantId, transcript, slots);
+          } else if (state === DISPATCHER_STATE.AWAITING_SOLE_CALL_UPDATE_CONFIRM) {
+            await this.handleSoleCallUpdateConfirm(participantId, transcript, slots);
           } else if (state === DISPATCHER_STATE.AWAITING_STATUS_CHECK_RESPONSE) {
             await this.handleStatusCheckResponse(participantId, transcript, slots);
           } else {
@@ -2627,6 +2652,16 @@ export class AIDispatcher {
           } else if (state === DISPATCHER_STATE.AWAITING_CALL_UPDATE_CONFIRM) {
             setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
             const denyResp = `${participantId}, 10-4, disregard call update.`;
+            await this.speak(denyResp, participantId);
+            this.addConversationExchange(participantId, transcript, denyResp);
+          } else if (
+            state === DISPATCHER_STATE.AWAITING_SOLE_CALL_CLOSE_CONFIRM
+            || state === DISPATCHER_STATE.AWAITING_SOLE_CALL_CANCEL_CONFIRM
+            || state === DISPATCHER_STATE.AWAITING_SOLE_CALL_UPDATE_CONFIRM
+          ) {
+            this.log('SOLE_CALL_CONFIRM_DENIED', { state, unitId: participantId });
+            setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+            const denyResp = `${participantId}, 10-4, disregard.`;
             await this.speak(denyResp, participantId);
             this.addConversationExchange(participantId, transcript, denyResp);
           } else {
@@ -6559,14 +6594,19 @@ export class AIDispatcher {
     }
 
     let callNumber = savedSlots?.callNumber;
-    if (!callNumber) {
+    let callId = savedSlots?.callId || null;
+    if (!callNumber || !callId) {
       try {
         const currentCall = await cadService.resolveUnitCurrentCall(participantId, { unitUuid: this._resolveUnitUuidForCallsign(participantId) });
-        callNumber = currentCall?.call_id || currentCall?.call_number || currentCall?.callNumber;
+        // Track canonical callId and display callNumber separately so we
+        // never feed a UUID back through the spoken-resolution path.
+        callId = callId || currentCall?.call_id || null;
+        callNumber = callNumber || currentCall?.call_number || currentCall?.callNumber || null;
       } catch (e) { /* ignore */ }
     }
 
     setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_DISPOSE_CONFIRM, null, {
+      callId,
       callNumber,
       disposition
     }, true);
@@ -6584,7 +6624,13 @@ export class AIDispatcher {
       transcript,
       slots?.callNumber,
       slots?.disposition,
-      { rawNotes: slots?.dispositionNotes || null, preCanonical: slots?.dispositionCanonical || null }
+      {
+        rawNotes: slots?.dispositionNotes || null,
+        preCanonical: slots?.dispositionCanonical || null,
+        // Task #527: pass the pre-resolved canonical call_id explicitly so
+        // the resolver doesn't re-process a UUID through the spoken path.
+        preResolvedCallId: slots?.callId || null,
+      }
     );
   }
 
@@ -6600,19 +6646,59 @@ export class AIDispatcher {
     }
 
     try {
-      let callId = callNumber;
-      if (!callId) {
-        const currentCall = await cadService.resolveUnitCurrentCall(participantId, { unitUuid: this._resolveUnitUuidForCallsign(participantId) });
-        callId = currentCall?.call_id || currentCall?.call_number || currentCall?.callNumber;
+      // Task #527: route through shared resolver. Use the canonical UUID for
+      // the CAD write so we never pass a raw spoken string like "171".
+      // If a pre-resolved canonical call_id was passed by the upstream
+      // confirmation handler (handleDisposeConfirm / sole-call confirm),
+      // skip the resolver entirely — the id is already trusted.
+      let resolution;
+      if (opts?.preResolvedCallId) {
+        resolution = {
+          source: 'pre_resolved',
+          call: { call_id: opts.preResolvedCallId, call_number: callNumber || opts.preResolvedCallId },
+        };
+        this.log('CALL_RESOLVE', {
+          participantId, handler: 'close',
+          source: 'pre_resolved', resolvedCallId: opts.preResolvedCallId,
+        });
+      } else {
+        resolution = await this._resolveCallForAction({
+          participantId,
+          spokenCallNumber: callNumber,
+          handlerName: 'close',
+        });
       }
 
-      if (!callId) {
-        const resp = `${participantId}, no active call to close.`;
+      if (resolution.source === 'sole_active' && resolution.requiresConfirmation) {
+        const callDisplay = resolution.call.call_number || resolution.call.call_id;
+        const loc = resolution.call.location || resolution.call.address || '';
+        const where = loc ? ` at ${loc}` : '';
+        setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_SOLE_CALL_CLOSE_CONFIRM, null, {
+          callId: resolution.call.call_id,
+          callNumber: callDisplay,
+          disposition: disposition || null,
+          dispositionNotes: opts?.rawNotes || null,
+          dispositionCanonical: opts?.preCanonical || null,
+        }, true);
+        const resp = `${participantId}, only one call on the board, ${callDisplay}${where}. Close it?`;
         await this.speak(resp, participantId);
         this.addConversationExchange(participantId, transcript, resp);
+        return;
+      }
+
+      if (resolution.source === 'none') {
+        const resp = resolution.spokenNotFound
+          ? `${participantId}, can't find call ${callNumber}. Which call number to close?`
+          : `${participantId}, which call number to close?`;
+        await this.speak(resp, participantId);
+        this.addConversationExchange(participantId, transcript, resp);
+        // Drop to IDLE so the user's next utterance is parsed as a fresh
+        // close-call command (with a real call number), not a disposition.
         setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
         return;
       }
+
+      const callId = resolution.call.call_id;
 
       // R9: disposition + dispositionNotes are both required.
       // Task #482: prefer raw spoken phrase for notes (passed via opts.rawNotes
@@ -6674,36 +6760,59 @@ export class AIDispatcher {
   // is required (R9) — prompt for it if not spoken inline.
   async handleCancelCall(participantId, transcript, slots) {
     this.log('CANCEL_CALL', { participant: participantId, transcript, slots });
-    let callNumber = slots?.callNumber;
+    const spokenCallNumber = slots?.callNumber || null;
     const reason = slots?.reason;
 
-    // Fallback: if the speaker did not say a call number, default to their
-    // current assigned call (R1 — units are cancelling the call they're on).
-    if (!callNumber) {
-      try {
-        const currentCall = await cadService.resolveUnitCurrentCall(participantId, { unitUuid: this._resolveUnitUuidForCallsign(participantId) });
-        callNumber = currentCall?.call_number || currentCall?.call_id || currentCall?.callNumber || null;
-      } catch (_e) { /* ignore */ }
-    }
+    // Task #527: route through shared resolver. Resolves spoken numbers
+    // against the active list regardless of speaker assignment, and asks for
+    // a sole-call confirmation when the speaker isn't assigned but only one
+    // call is on the board.
+    const resolution = await this._resolveCallForAction({
+      participantId,
+      spokenCallNumber,
+      handlerName: 'cancel',
+    });
 
-    if (!callNumber) {
-      const resp = `${participantId}, which call number to cancel?`;
+    if (resolution.source === 'sole_active' && resolution.requiresConfirmation) {
+      const callDisplay = resolution.call.call_number || resolution.call.call_id;
+      const loc = resolution.call.location || resolution.call.address || '';
+      const where = loc ? ` at ${loc}` : '';
+      setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_SOLE_CALL_CANCEL_CONFIRM, null, {
+        callId: resolution.call.call_id,
+        callNumber: callDisplay,
+        reason: reason ? String(reason).trim() : null,
+      }, true);
+      const resp = `${participantId}, only one call on the board, ${callDisplay}${where}. Cancel it?`;
       await this.speak(resp, participantId);
       this.addConversationExchange(participantId, transcript, resp);
       return;
     }
 
+    if (resolution.source === 'none') {
+      const resp = resolution.spokenNotFound
+        ? `${participantId}, can't find call ${spokenCallNumber}. Which call number to cancel?`
+        : `${participantId}, which call number to cancel?`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+      return;
+    }
+
+    const callDisplay = resolution.call.call_number || resolution.call.call_id;
+    const callId = resolution.call.call_id;
+
     if (reason && String(reason).trim().length > 1) {
       setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_CANCEL_CONFIRM, null, {
-        callNumber,
+        callNumber: callDisplay,
+        callId,
         reason: String(reason).trim()
       }, true);
-      const resp = `${participantId}, confirm cancel call ${callNumber}, ${String(reason).trim()}?`;
+      const resp = `${participantId}, confirm cancel call ${callDisplay}, ${String(reason).trim()}?`;
       await this.speak(resp, participantId);
       this.addConversationExchange(participantId, transcript, resp);
     } else {
       setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_CANCEL_REASON, null, {
-        callNumber
+        callNumber: callDisplay,
+        callId,
       }, true);
       const resp = `${participantId}, go ahead with the reason for cancel.`;
       await this.speak(resp, participantId);
@@ -6728,6 +6837,7 @@ export class AIDispatcher {
     }
     setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_CANCEL_CONFIRM, null, {
       callNumber,
+      callId: savedSlots?.callId || slots?.callId || null,
       reason
     }, true);
     const resp = `${participantId}, confirm cancel call ${callNumber}, ${reason}?`;
@@ -6738,6 +6848,7 @@ export class AIDispatcher {
   async handleCancelConfirm(participantId, transcript, savedSlots) {
     this.log('CANCEL_CONFIRM', { participant: participantId, transcript, savedSlots });
     const callNumber = savedSlots?.callNumber;
+    const preResolvedCallId = savedSlots?.callId || null;
     const reason = savedSlots?.reason || 'CANCELLED';
 
     if (!cadService.isConfigured()) {
@@ -6755,8 +6866,9 @@ export class AIDispatcher {
     }
 
     try {
-      // Resolve spoken call number → canonical CAD callId for PUT /api/calls/:callId
-      const resolvedCallId = await this._resolveCallId(callNumber);
+      // Task #527: prefer the canonical UUID resolved at intake time; only
+      // re-resolve when we don't have one (legacy paths, regex flow, etc).
+      const resolvedCallId = preResolvedCallId || await this._resolveCallId(callNumber);
       // R10: wait for any in-flight status updates for this unit before
       // issuing the cancel.
       const result = await this._awaitStatusQueue(participantId,
@@ -6969,23 +7081,45 @@ export class AIDispatcher {
     }
 
     try {
-      let callId = slots?.callNumber;
-      if (!callId) {
-        const currentCall = await cadService.resolveUnitCurrentCall(participantId, { unitUuid: this._resolveUnitUuidForCallsign(participantId) });
-        callId = currentCall?.call_id || currentCall?.call_number || currentCall?.callNumber;
+      // Task #527: route through shared resolver so spoken call numbers
+      // (e.g. "171") get normalized to canonical UUIDs before any CAD write.
+      const spokenCallNumber = slots?.callNumber || null;
+      const resolution = await this._resolveCallForAction({
+        participantId,
+        spokenCallNumber,
+        handlerName: 'update',
+      });
+
+      const updates = {};
+      if (slots?.priority) updates.priority = slots.priority;
+      if (slots?.details) updates.notes = slots.details;
+
+      if (resolution.source === 'sole_active' && resolution.requiresConfirmation) {
+        const callDisplay = resolution.call.call_number || resolution.call.call_id;
+        const loc = resolution.call.location || resolution.call.address || '';
+        const where = loc ? ` at ${loc}` : '';
+        setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_SOLE_CALL_UPDATE_CONFIRM, null, {
+          callId: resolution.call.call_id,
+          callNumber: callDisplay,
+          updates: Object.keys(updates).length ? updates : null,
+        }, true);
+        const resp = `${participantId}, only one call on the board, ${callDisplay}${where}. Update it?`;
+        await this.speak(resp, participantId);
+        this.addConversationExchange(participantId, transcript, resp);
+        return;
       }
 
-      if (!callId) {
-        const resp = `${participantId}, no active call to update.`;
+      if (resolution.source === 'none') {
+        const resp = resolution.spokenNotFound
+          ? `${participantId}, can't find call ${spokenCallNumber}. Which call number to update?`
+          : `${participantId}, which call number to update?`;
         await this.speak(resp, participantId);
         this.addConversationExchange(participantId, transcript, resp);
         setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
         return;
       }
 
-      const updates = {};
-      if (slots?.priority) updates.priority = slots.priority;
-      if (slots?.details) updates.notes = slots.details;
+      const callId = resolution.call.call_id;
 
       if (Object.keys(updates).length === 0) {
         setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_CALL_UPDATE_DETAILS, null, {
@@ -7074,6 +7208,116 @@ export class AIDispatcher {
       this.addConversationExchange(participantId, transcript, resp);
       setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
     }
+  }
+
+  // Task #527: bridge sole-call confirmation into the existing close flow.
+  // On 10-4 we proceed with whatever disposition was already captured (or
+  // ask for one if not). On a deny, the CONFIRM dispatch table clears the
+  // state and we never write to CAD.
+  async handleSoleCallCloseConfirm(participantId, transcript, savedSlots) {
+    this.log('SOLE_CALL_CLOSE_CONFIRM', { participant: participantId, transcript, savedSlots });
+    const callId = savedSlots?.callId;
+    const callNumber = savedSlots?.callNumber;
+    const disposition = savedSlots?.disposition || null;
+    const dispositionNotes = savedSlots?.dispositionNotes || null;
+    const dispositionCanonical = savedSlots?.dispositionCanonical || null;
+    if (!callId) {
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+      const resp = `${participantId}, lost the call number, try again.`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+      return;
+    }
+    if (disposition) {
+      // We already have a disposition — go straight to dispose-confirm with
+      // the canonical UUID so the CAD write is correct.
+      setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_DISPOSE_CONFIRM, null, {
+        callId,
+        callNumber,
+        disposition,
+        dispositionNotes,
+        dispositionCanonical,
+      }, true);
+      const resp = `${participantId}, confirm close call ${callNumber}, ${disposition}?`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+      return;
+    }
+    // Need a disposition — bridge to the disposition prompt, carrying the
+    // resolved canonical id forward.
+    setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_DISPOSITION, null, {
+      callId,
+      callNumber,
+    }, true);
+    const resp = `${participantId}, go ahead with the disposition for call ${callNumber}.`;
+    await this.speak(resp, participantId);
+    this.addConversationExchange(participantId, transcript, resp);
+  }
+
+  async handleSoleCallCancelConfirm(participantId, transcript, savedSlots) {
+    this.log('SOLE_CALL_CANCEL_CONFIRM', { participant: participantId, transcript, savedSlots });
+    const callId = savedSlots?.callId;
+    const callNumber = savedSlots?.callNumber;
+    const reason = savedSlots?.reason || null;
+    if (!callId) {
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+      const resp = `${participantId}, lost the call number, try again.`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+      return;
+    }
+    if (reason && reason.length > 1) {
+      setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_CANCEL_CONFIRM, null, {
+        callNumber,
+        callId,
+        reason,
+      }, true);
+      const resp = `${participantId}, confirm cancel call ${callNumber}, ${reason}?`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+      return;
+    }
+    setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_CANCEL_REASON, null, {
+      callNumber,
+      callId,
+    }, true);
+    const resp = `${participantId}, go ahead with the reason for cancel.`;
+    await this.speak(resp, participantId);
+    this.addConversationExchange(participantId, transcript, resp);
+  }
+
+  async handleSoleCallUpdateConfirm(participantId, transcript, savedSlots) {
+    this.log('SOLE_CALL_UPDATE_CONFIRM', { participant: participantId, transcript, savedSlots });
+    const callId = savedSlots?.callId;
+    const callNumber = savedSlots?.callNumber;
+    const updates = savedSlots?.updates || null;
+    if (!callId) {
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+      const resp = `${participantId}, lost the call number, try again.`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+      return;
+    }
+    if (updates && Object.keys(updates).length > 0) {
+      setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_CALL_UPDATE_CONFIRM, null, {
+        callId,
+        updates,
+      }, true);
+      const updateDesc = [];
+      if (updates.priority) updateDesc.push(`priority to ${updates.priority}`);
+      if (updates.notes) updateDesc.push(`add info`);
+      const resp = `${participantId}, confirm update ${updateDesc.join(' and ') || 'the call'} on call ${callNumber}?`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+      return;
+    }
+    setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_CALL_UPDATE_DETAILS, null, {
+      callId,
+      callNumber,
+    }, true);
+    const resp = `${participantId}, what would you like to update on call ${callNumber}?`;
+    await this.speak(resp, participantId);
+    this.addConversationExchange(participantId, transcript, resp);
   }
 
   async handleCallUpdateDetailsInput(participantId, transcript, savedSlots) {
@@ -8610,6 +8854,124 @@ export class AIDispatcher {
   // before issuing PUT /api/calls/:callId. Tries getCallDetails first (cheap
   // path when input is already an id); falls back to scanning active calls
   // for a matching call_number; finally returns the input unchanged.
+  // Task #527: shared call resolver for close / cancel / update.
+  // Resolution order: (a) spoken canonical → (b) unit current → (c) sole
+  // active → (d) none. Always emits one CALL_RESOLVE log line. When the
+  // speaker named a call number that does NOT exist in the active list, we
+  // refuse to fall back to the unit-current path so we never act on the
+  // wrong call.
+  async _resolveCallForAction({ participantId, spokenCallNumber, handlerName }) {
+    const spoken = spokenCallNumber ? String(spokenCallNumber).trim() : null;
+    const emit = (extra) => {
+      try {
+        this.log('CALL_RESOLVE', {
+          handler: handlerName || null,
+          spokenCallNumber: spoken,
+          source: 'none',
+          resolvedCallId: null,
+          resolvedCallNumber: null,
+          candidateCount: 0,
+          ...extra,
+        });
+      } catch (_e) { /* logging never throws */ }
+    };
+
+    let activeListResult = null;
+    let activeCalls = [];
+    const fetchActiveCalls = async () => {
+      if (activeListResult !== null) return;
+      try {
+        activeListResult = await cadService.getActiveCalls();
+      } catch (_e) {
+        activeListResult = null;
+      }
+      activeCalls = Array.isArray(activeListResult?.calls) ? activeListResult.calls
+        : Array.isArray(activeListResult?.results) ? activeListResult.results
+        : Array.isArray(activeListResult) ? activeListResult
+        : [];
+    };
+
+    // (a) Spoken canonical
+    if (spoken) {
+      await fetchActiveCalls();
+      // First, accept exact call_id (UUID) or call_number matches — upstream
+      // callers may have already resolved a canonical id before invoking us.
+      let direct = null;
+      for (const c of activeCalls) {
+        const cid = c.call_id || c.id;
+        const cnum = c.call_number || c.callNumber;
+        if ((cid && String(cid) === spoken) || (cnum && String(cnum) === spoken)) {
+          direct = c; break;
+        }
+      }
+      // Otherwise try shorthand-by-digits resolution against call_number
+      if (!direct) direct = this.resolveShorthandCallNumber(spoken, activeCalls);
+      if (direct) {
+        const callId = direct.call_id || direct.id || direct.call_number;
+        const callNumber = direct.call_number || direct.callNumber || callId;
+        emit({
+          source: 'spoken_canonical',
+          resolvedCallId: callId,
+          resolvedCallNumber: callNumber,
+          candidateCount: activeCalls.length,
+        });
+        return { source: 'spoken_canonical', call: { ...direct, call_id: callId, call_number: callNumber }, candidateCount: activeCalls.length };
+      }
+      // No match against active list. We never trust a raw spoken value as
+      // a canonical id — upstream callers that already have a canonical
+      // id must pass it via opts.preResolvedCallId on the action handler
+      // (e.g. executeDisposeCall), bypassing this resolver entirely.
+      // Genuine spoken miss — refuse to silently fall back to
+      // unit_current/sole_active. Caller should ask the user to retry.
+      emit({ source: 'none', candidateCount: activeCalls.length, spokenNotFound: true });
+      return { source: 'none', candidateCount: activeCalls.length, spokenNotFound: true };
+    }
+
+    // (b) Unit current call
+    try {
+      const cc = await cadService.resolveUnitCurrentCall(participantId, {
+        unitUuid: this._resolveUnitUuidForCallsign(participantId),
+      });
+      const ccCallId = cc?.call_id || cc?.id || cc?.callId || cc?.call_number || cc?.callNumber || null;
+      const hasCall = (cc?.has_active_call !== false) && !!ccCallId;
+      if (hasCall) {
+        const callId = ccCallId;
+        const callNumber = cc.call_number || cc.callNumber || callId;
+        emit({
+          source: 'unit_current',
+          resolvedCallId: callId,
+          resolvedCallNumber: callNumber,
+          candidateCount: activeCalls.length,
+        });
+        return { source: 'unit_current', call: { ...cc, call_id: callId, call_number: callNumber }, candidateCount: activeCalls.length };
+      }
+    } catch (_e) { /* fall through */ }
+
+    // (c) Sole active call
+    await fetchActiveCalls();
+    if (activeCalls.length === 1) {
+      const sole = activeCalls[0];
+      const callId = sole.call_id || sole.id || sole.call_number;
+      const callNumber = sole.call_number || sole.callNumber || callId;
+      emit({
+        source: 'sole_active',
+        resolvedCallId: callId,
+        resolvedCallNumber: callNumber,
+        candidateCount: 1,
+      });
+      return {
+        source: 'sole_active',
+        call: { ...sole, call_id: callId, call_number: callNumber },
+        candidateCount: 1,
+        requiresConfirmation: true,
+      };
+    }
+
+    // (d) None
+    emit({ source: 'none', candidateCount: activeCalls.length });
+    return { source: 'none', candidateCount: activeCalls.length };
+  }
+
   async _resolveCallId(callNumberOrId) {
     if (!callNumberOrId) return null;
     const input = String(callNumberOrId).trim();
