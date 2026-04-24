@@ -22,6 +22,7 @@ import com.reedersystems.commandcomms.KeyAction
 import com.reedersystems.commandcomms.MainActivity
 import com.reedersystems.commandcomms.data.model.PttState
 import com.reedersystems.commandcomms.data.prefs.ServiceConnectionPrefs
+import com.reedersystems.commandcomms.data.prefs.SpeakerBoostPrefs
 import com.reedersystems.commandcomms.audio.radio.FloorControlEvent
 import com.reedersystems.commandcomms.audio.radio.RadioAudioEngine
 import com.reedersystems.commandcomms.audio.radio.RadioSignalingGatewayImpl
@@ -55,7 +56,7 @@ class BackgroundAudioService : Service() {
     private lateinit var audioManager: AudioManager
     private var previousAudioMode: Int = AudioManager.MODE_NORMAL
     private var previousSpeakerphoneOn: Boolean = false
-    private var savedVoiceCallVolume: Int = -1
+    private lateinit var speakerBoostPrefs: SpeakerBoostPrefs
 
     private var dynamicPttReceiver: BroadcastReceiver? = null
 
@@ -262,6 +263,7 @@ class BackgroundAudioService : Service() {
             "BackgroundAudioService: captured initial audio state only (mode=$previousAudioMode, speaker=$previousSpeakerphoneOn)"
         )
         servicePrefs = ServiceConnectionPrefs(applicationContext)
+        speakerBoostPrefs = SpeakerBoostPrefs(applicationContext)
 
         initRadioEngine()
         observeRadioSignalingEvents()
@@ -1586,18 +1588,22 @@ class BackgroundAudioService : Service() {
     /**
      * Lazy comms-route layer (paired with RadioAudioEngine.warmupRadioPlaybackPath
      * which runs once at engine init). Called only at PTT-down / RX_ENTER.
-     * Kept intentionally small: just flip AudioManager.mode, force the
-     * built-in speaker as the communication device, and bump STREAM_VOICE_CALL
-     * volume to max. The receive AudioTrack already plays on STREAM_VOICE_CALL
-     * (USAGE_VOICE_COMMUNICATION attributes), so the volume bump now applies
-     * to the stream actually being written to. Mode is left at MODE_NORMAL
-     * between radio sessions so paging tones (USAGE_ALARM on STREAM_ALARM)
-     * keep working.
+     * Kept intentionally small: just flip AudioManager.mode and force the
+     * built-in speaker (or wired accessory) as the communication device. The
+     * receive AudioTrack already plays on STREAM_VOICE_CALL
+     * (USAGE_VOICE_COMMUNICATION attributes), so the operator's
+     * STREAM_VOICE_CALL knob — including the digital encoder on a T320
+     * speaker mic, which emits standard volume key events against
+     * STREAM_VOICE_CALL — directly controls RX volume. We deliberately do
+     * NOT pin the stream to max here; previously doing so on every
+     * route-apply silently overwrote any change the operator made via the
+     * speaker-mic knob. Mode is left at MODE_NORMAL between radio sessions
+     * so paging tones (USAGE_ALARM on STREAM_ALARM) keep working.
      */
     private fun applyRadioAudioRoute() {
         // If a deferred release is pending (coalescing window between back-to-back
         // RX bursts in one logical session), cancel it so we keep the existing
-        // route, mode and volume in place — no churn.
+        // route and mode in place — no churn.
         val pending = pendingRouteReleaseJob
         if (pending != null) {
             pending.cancel()
@@ -1620,13 +1626,36 @@ class BackgroundAudioService : Service() {
         applyOutputDeviceSelection("apply")
         val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_VOICE_CALL)
         val currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_VOICE_CALL)
-        // Save once per session so release restores the operator's prior level.
-        savedVoiceCallVolume = currentVolume
-        if (currentVolume != maxVolume) {
-            audioManager.setStreamVolume(AudioManager.STREAM_VOICE_CALL, maxVolume, 0)
+        // First-run-only audible floor: if this device has never had the
+        // floor applied (fresh install / cleared data) and the voice-call
+        // stream is sitting below a reasonable audible level, nudge it up
+        // exactly once so the app isn't silent out of the box. Subsequent
+        // route-applies leave the stream alone, which means a knob change
+        // made by the operator (e.g. on a T320 speaker mic) is honored.
+        var floorAppliedThisCall = false
+        var nudgedVolume = currentVolume
+        if (!speakerBoostPrefs.voiceCallFloorApplied) {
+            val floorVolume = Math.ceil(
+                maxVolume * SpeakerBoostPrefs.VOICE_CALL_FIRST_RUN_FLOOR_FRACTION
+            ).toInt().coerceIn(0, maxVolume)
+            if (currentVolume < floorVolume) {
+                audioManager.setStreamVolume(
+                    AudioManager.STREAM_VOICE_CALL,
+                    floorVolume,
+                    0
+                )
+                nudgedVolume = floorVolume
+                floorAppliedThisCall = true
+            }
+            speakerBoostPrefs.voiceCallFloorApplied = true
         }
         verifyNoEarpiece("apply")
-        Log.d(TAG, "BackgroundAudioService: radio audio route applied (MODE_IN_COMMUNICATION) voiceCallVol=$currentVolume→$maxVolume")
+        Log.d(
+            TAG,
+            """{"event":"RADIO_ROUTE_APPLIED","mode":"IN_COMMUNICATION",""" +
+                """"voiceCallVol":$nudgedVolume,"voiceCallVolBefore":$currentVolume,""" +
+                """"voiceCallVolMax":$maxVolume,"firstRunFloorApplied":$floorAppliedThisCall}"""
+        )
     }
 
     /**
@@ -1677,11 +1706,11 @@ class BackgroundAudioService : Service() {
         if (!radioRouteActive) return
         radioRouteActive = false
         if (!::audioManager.isInitialized) return
-        if (savedVoiceCallVolume >= 0) {
-            audioManager.setStreamVolume(AudioManager.STREAM_VOICE_CALL, savedVoiceCallVolume, 0)
-            Log.d(TAG, "BackgroundAudioService: STREAM_VOICE_CALL volume restored to $savedVoiceCallVolume")
-            savedVoiceCallVolume = -1
-        }
+        // Intentionally do NOT save/restore STREAM_VOICE_CALL volume here:
+        // applyRadioAudioRoute no longer mutates it (other than the one-time
+        // first-run floor nudge), so a level the operator set during the
+        // session — including via a T320 speaker-mic volume knob — must
+        // persist after the route is released.
         // Restore AudioManager.mode to MODE_NORMAL so that paging tones
         // (USAGE_ALARM on STREAM_ALARM) which intentionally play outside
         // MODE_IN_COMMUNICATION work correctly between radio sessions.
@@ -1704,11 +1733,10 @@ class BackgroundAudioService : Service() {
         if (speakerStateRestored) return
         speakerStateRestored = true
         if (::audioManager.isInitialized) {
-            if (savedVoiceCallVolume >= 0) {
-                audioManager.setStreamVolume(AudioManager.STREAM_VOICE_CALL, savedVoiceCallVolume, 0)
-                Log.d(TAG, "BackgroundAudioService: STREAM_VOICE_CALL volume restored to $savedVoiceCallVolume (teardown path)")
-                savedVoiceCallVolume = -1
-            }
+            // STREAM_VOICE_CALL is no longer mutated by applyRadioAudioRoute
+            // (apart from the one-time first-run floor nudge), so there is
+            // nothing to restore here. The operator's chosen knob level
+            // persists across service teardown.
             // Service-shutdown teardown: hand the comms device back to the
             // OS, but if a wired accessory is currently attached, prefer it
             // so that any subsequent audio (paging tones, follow-up RX from
