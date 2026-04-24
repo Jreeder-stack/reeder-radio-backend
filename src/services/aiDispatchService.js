@@ -1998,9 +1998,20 @@ export class AIDispatcher {
 
       // Durable status-check ack: if a status check is still pending for this
       // unit (e.g. session was already released to IDLE by the per-prompt
-      // timeout), guarantee CAD sees the ack before normal handling runs.
-      try { await this._maybeAckPendingStatusCheck(participantId, transcript); } catch (e) {
+      // timeout), guarantee CAD sees the ack, the controller is cancelled,
+      // and the spoken confirmation is delivered before normal handling runs.
+      // Task #534: a true return means the ack is fully handled here — short
+      // circuit so the same utterance isn't also routed through
+      // handleStatusCheckResponse against an already-cleared session.
+      let durableAckHandled = false;
+      try {
+        durableAckHandled = await this._maybeAckPendingStatusCheck(participantId, transcript);
+      } catch (e) {
         this.log('STATUS_CHECK_DURABLE_ACK_ERROR', { error: e.message });
+      }
+      if (durableAckHandled) {
+        this._turnContextByUnit.delete(participantId);
+        return;
       }
 
       const sessionState = getUnitSessionState(participantId);
@@ -3067,8 +3078,16 @@ export class AIDispatcher {
 
   async processTranscriptWithRegex(transcript, participantId) {
     // Durable status-check ack: same guarantee as in the LLM path.
-    try { await this._maybeAckPendingStatusCheck(participantId, transcript); } catch (e) {
+    // Task #534: short-circuit when the ack was fully handled here.
+    let durableAckHandled = false;
+    try {
+      durableAckHandled = await this._maybeAckPendingStatusCheck(participantId, transcript);
+    } catch (e) {
       this.log('STATUS_CHECK_DURABLE_ACK_ERROR', { error: e.message });
+    }
+    if (durableAckHandled) {
+      this._turnContextByUnit.delete(participantId);
+      return;
     }
     // SEQ-10/11 regex fallback: cancel/reopen call by number. Run before
     // matchCommand so these short commands fire even when the LLM is down.
@@ -7693,6 +7712,23 @@ export class AIDispatcher {
       const stage = slots?.statusCheckHailStage;
       const isGoAhead = /\bgo\s*ahead\b/.test(normalized);
       if (stage === 'AWAITING_GO_AHEAD' && isGoAhead) {
+        // Task #534: defensive — drop any leftover pending entry for a
+        // different (already-completed) turn before interpreting the
+        // go-ahead, so a stale pending check can never trigger a durable
+        // ack against this fresh turn's later "10-4". A normal flow already
+        // clears it on its own ack; this only fires if cleanup was missed.
+        const stalePending = this._findPendingStatusCheckForUnit(participantId);
+        if (stalePending && stalePending.callId && stalePending.callId !== escalationActive.callId) {
+          this.log('STATUS_CHECK_GO_AHEAD_DROP_STALE_PENDING', {
+            participant: participantId,
+            stalePendingCallId: stalePending.callId,
+            currentCallId: escalationActive.callId,
+          });
+          // Delete from the map directly — _clearPendingStatusCheck would
+          // also reset the session state we just set in _performHail.
+          this._pendingStatusChecks.delete(this._pendingStatusCheckKey(participantId, stalePending.callId));
+          this._lastSpokenStatusCheck.delete(this._pendingStatusCheckKey(participantId, stalePending.callId));
+        }
         this.routineStatusCheckEscalation.onGoAhead(participantId, escalationActive.callId);
         return;
       }
@@ -7851,20 +7887,44 @@ export class AIDispatcher {
   }
 
   _isStatusCheckAckPhrase(transcript) {
-    const t = String(transcript || '').toLowerCase().trim();
-    if (!t) return false;
-    const okPhrases = ['10-4', '10/4', 'ten four', 'copy', 'roger', 'yes', 'affirmative', 'good', 'okay', 'ok', 'clear'];
-    return okPhrases.some(p => t.includes(p));
+    const raw = String(transcript || '').toLowerCase().replace(/[.,!?]/g, '').trim();
+    if (!raw) return false;
+    // Task #534: tightened — only treat clear, radio-convention ack phrases as
+    // a status-check ack. Removed ambient words ("yes", "good", "okay", "ok",
+    // "clear") that previously caused unrelated short utterances to be
+    // swallowed by the durable fast-path now that callers short-circuit on a
+    // true return. The phrase must either BE the entire utterance (after
+    // stripping a "central, " or "<unit>, " prefix) or appear as the leading
+    // content of a short (≤5 word) utterance.
+    const okPhrases = [
+      '10-4', '10/4', 'ten four', 'ten-four',
+      'copy', 'copy that', 'roger', 'roger that', 'affirmative',
+    ];
+    if (okPhrases.includes(raw)) return true;
+    const stripped = raw.replace(/^(?:central[,\s]+|[a-z0-9-]+[,\s]+)?/, '').trim();
+    if (okPhrases.includes(stripped)) return true;
+    const wordCount = raw.split(/\s+/).filter(Boolean).length;
+    if (wordCount <= 5) {
+      for (const p of okPhrases) {
+        if (raw.startsWith(`${p} `) || raw === p ||
+            stripped.startsWith(`${p} `) || stripped === p) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   /**
    * Durable status-check ack: if a status check is still pending for this unit
    * (even after the per-prompt session timeout fired), treat an ack-shaped
-   * inbound transcript as a response to the pending check and post it to CAD
-   * before any other handler runs. Returns true when an ack was posted and
-   * the pending entry was cleared, false otherwise. Callers do NOT short-
-   * circuit on the return value — normal routing continues either way; this
-   * helper just guarantees CAD sees the ack.
+   * inbound transcript as a response to the pending check, post it to CAD,
+   * cancel the routine status check escalation controller, clear pending
+   * state, and speak the spoken confirmation — all atomically — before any
+   * other handler runs. Returns true when the ack was handled here; callers
+   * MUST short-circuit on a true return so the same utterance is not also
+   * routed through handleStatusCheckResponse (which would double-speak or
+   * race with the now-cleared session state).
    */
   async _maybeAckPendingStatusCheck(participantId, transcript) {
     if (!participantId) return false;
@@ -7884,7 +7944,8 @@ export class AIDispatcher {
       this.log('STATUS_CHECK_DURABLE_ACK_NO_MATCH', { participant: participantId, transcript });
       return false;
     }
-    let resolvedCallId = pending.callId || null;
+    const originalPendingCallId = pending.callId || null;
+    let resolvedCallId = originalPendingCallId;
     if (!resolvedCallId) {
       try {
         resolvedCallId = await this._lookupCurrentCallId(participantId);
@@ -7916,7 +7977,57 @@ export class AIDispatcher {
         unitId: participantId, callId: resolvedCallId, response: '10-4', source: 'durable_ack', error: err.message,
       });
     }
-    this._clearPendingStatusCheck(participantId, resolvedCallId);
+
+    // Task #534: cancel the routine status check escalation controller BEFORE
+    // clearing the pending entry and BEFORE speaking. If we leave it active,
+    // its step timer (~30s) will re-hail the unit even though we've already
+    // acked, and any spoken reply queued here would land against the next
+    // turn's "go ahead" — the "stale ack drained on the next hail" symptom.
+    const escalationActive = this.routineStatusCheckEscalation.hasAnyForUnit(participantId);
+    if (escalationActive) {
+      this.routineStatusCheckEscalation.cancel(participantId, escalationActive.callId, 'acknowledged_durable');
+    }
+
+    // Clear pending + session state. This also returns the unit's session
+    // from AWAITING_STATUS_CHECK_RESPONSE → IDLE so the regular routing
+    // path won't re-enter handleStatusCheckResponse for the same utterance.
+    // Task #534: clear by BOTH the original pending key and the resolved
+    // callId key — when pending was stored with a null callId and we
+    // looked one up later, only clearing by resolvedCallId would leave the
+    // original null-keyed entry behind to trigger again on the next turn.
+    this._clearPendingStatusCheck(participantId, originalPendingCallId);
+    if (resolvedCallId && resolvedCallId !== originalPendingCallId) {
+      this._clearPendingStatusCheck(participantId, resolvedCallId);
+    }
+
+    // Task #534: speak the spoken confirmation atomically with the CAD ack
+    // and the pending-state cleanup. Bounded floor-busy retry — publishAudio
+    // will emit AI_ACK_DROPPED if the floor is still held past the retry
+    // budget; in that case we still do NOT replay it on a later turn,
+    // because pending state has already been cleared above.
+    const replyText = escalationActive
+      ? `10-4, ${this.formatMilitaryTime()}.`
+      : `${participantId}, 10-4.`;
+    try {
+      this.log('STATUS_CHECK_DURABLE_ACK_SPEAK', {
+        participant: participantId,
+        callId: resolvedCallId,
+        replyText,
+        escalationWasActive: !!escalationActive,
+        speakQueueDepthHint: this._speakQueue ? 'pending' : 'idle',
+      });
+      await this.speak(replyText, participantId, {
+        retryOnBusy: true,
+        retryWaitMs: 3000,
+        retryContext: `STATUS_CHECK_DURABLE_ACK:${participantId}:${resolvedCallId || 'none'}`,
+      });
+      this.addConversationExchange(participantId, transcript, replyText);
+    } catch (err) {
+      this.log('STATUS_CHECK_DURABLE_ACK_SPEAK_ERROR', {
+        participant: participantId, callId: resolvedCallId, error: err.message,
+      });
+    }
+
     return true;
   }
 
