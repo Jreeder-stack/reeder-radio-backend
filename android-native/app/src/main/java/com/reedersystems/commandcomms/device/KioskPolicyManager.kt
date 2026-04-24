@@ -108,6 +108,12 @@ class KioskPolicyManager(private val context: Context) {
             Log.w(TAG, "setKeyguardDisabled failed: ${e.message}")
         }
 
+        // Hide the system dialer / phone packages so the green call key,
+        // dial intents, and contacts shortcuts cannot launch a phone app
+        // out from under the kiosk. Safe no-op on devices that don't have
+        // these packages installed.
+        setPhoneAppsHidden(true)
+
         // Keep the screen safely on per app needs (we already use FLAG_KEEP_SCREEN_ON
         // in the activity for incoming-audio behavior; nothing extra here).
     }
@@ -132,6 +138,33 @@ class KioskPolicyManager(private val context: Context) {
             dpm.setKeyguardDisabled(adminComponent, false)
         } catch (e: SecurityException) {
             Log.w(TAG, "setKeyguardDisabled(false) failed: ${e.message}")
+        }
+        // Restore the dialer / phone packages we hid on enter so the device
+        // is left in a usable state when the admin disables kiosk.
+        setPhoneAppsHidden(false)
+    }
+
+    /**
+     * Hide or unhide the system dialer / phone packages. Called from
+     * [applyKioskPolicies] / [clearKioskPolicies] so the green call key,
+     * `ACTION_DIAL` intents, and contacts shortcuts can't launch the phone
+     * app while kiosk is active. Each package is independently looked up
+     * and skipped if not installed, so this is safe across OEMs.
+     */
+    private fun setPhoneAppsHidden(hidden: Boolean) {
+        if (!isDeviceOwner) return
+        val pm = context.packageManager
+        for (pkg in PHONE_PACKAGES) {
+            try {
+                pm.getApplicationInfo(pkg, 0)
+            } catch (_: PackageManager.NameNotFoundException) {
+                continue
+            }
+            try {
+                dpm.setApplicationHidden(adminComponent, pkg, hidden)
+            } catch (e: SecurityException) {
+                Log.w(TAG, "setApplicationHidden($pkg, $hidden) failed: ${e.message}")
+            }
         }
     }
 
@@ -210,5 +243,17 @@ class KioskPolicyManager(private val context: Context) {
 
     companion object {
         private const val TAG = "[KioskPolicy]"
+
+        /**
+         * Common dialer / phone packages we hide while kiosk is active.
+         * Each is looked up before being touched, so missing packages are
+         * silently skipped on devices that don't have them.
+         */
+        private val PHONE_PACKAGES = arrayOf(
+            "com.android.dialer",
+            "com.google.android.dialer",
+            "com.android.contacts",
+            "com.android.phone",
+        )
     }
 }

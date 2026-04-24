@@ -30,9 +30,18 @@
         <!-- Allow the device-policy helper to look up the system Settings app
              when toggling its hidden state during un-provisioning. -->
         <package android:name="com.android.settings" />
+        <!-- Common dialer packages we hide while kiosk is enabled so the green
+             call key / dial intents cannot launch the phone app. -->
+        <package android:name="com.android.dialer" />
+        <package android:name="com.google.android.dialer" />
+        <package android:name="com.android.contacts" />
+        <package android:name="com.android.phone" />
         <intent>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.HOME" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.DIAL" />
         </intent>
     </queries>
 

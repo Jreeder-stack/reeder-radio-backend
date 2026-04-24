@@ -401,6 +401,22 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    /**
+     * First-chance interception so kiosk mode can swallow the green call key
+     * before the framework dispatches it to the system dialer. Anything we
+     * do NOT swallow here falls through to the normal `onKeyDown` / `onKeyUp`
+     * path so PTT / emergency / D-pad handling is unaffected.
+     */
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (event.keyCode == KeyEvent.KEYCODE_CALL && app.kioskPrefs.kioskEnabled) {
+            if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+                Log.d(TAG, "Kiosk: swallowing KEYCODE_CALL to block dialer launch")
+            }
+            return true
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         if (handleKeyCaptureIfActive(keyCode)) return true
         if (isOurKey(keyCode)) return handleKeyDown(keyCode, event)
