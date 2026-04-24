@@ -491,3 +491,131 @@ describe('Task #509: per-call cancel ("extended traffic stop") suspends status c
     expect(d.logs.some(l => l.action === 'STATUS_CHECK_CANCEL_SENT' && l.details.success === false)).toBe(true);
   });
 });
+
+describe('"go ahead" never falls through to a "10-4" CAD ack (regression)', () => {
+  it('controller active, slot stage AWAITING_GO_AHEAD: speaks "Status check.", no CAD ack posted', async () => {
+    const d = makeDispatcher();
+    await d._onCadStatusCheckEvent(dueEvent('INDIANA-1', 'call-uuid-1'));
+    cadService.respondToStatusCheck.mockClear();
+    cm.setUnitSessionState('INDIANA-1', cm.DISPATCHER_STATE.AWAITING_STATUS_CHECK_RESPONSE, null, {
+      statusCheckCallId: 'call-uuid-1', statusCheckHailStage: 'AWAITING_GO_AHEAD',
+      statusCheckEscalationActive: true,
+    }, true);
+    await d.handleStatusCheckResponse('INDIANA-1', 'go ahead', {
+      statusCheckCallId: 'call-uuid-1', statusCheckHailStage: 'AWAITING_GO_AHEAD',
+    });
+    await Promise.resolve(); await Promise.resolve();
+    expect(d.spoken).toContain('Status check.');
+    expect(d.spoken.some(s => /^10-4/.test(s))).toBe(false);
+    expect(d.spoken.some(s => /^INDIANA-1, 10-4\.?$/.test(s))).toBe(false);
+    expect(cadService.respondToStatusCheck).not.toHaveBeenCalled();
+  });
+
+  it('controller active but slot stage missing: still advances via onGoAhead, no CAD ack posted', async () => {
+    const d = makeDispatcher();
+    await d._onCadStatusCheckEvent(dueEvent('INDIANA-1', 'call-uuid-1'));
+    cadService.respondToStatusCheck.mockClear();
+    // Simulate a state where the controller is active but slots lack
+    // statusCheckHailStage (e.g. another path overwrote slots, or the
+    // controller already advanced past AWAITING_GO_AHEAD on a previous turn).
+    cm.setUnitSessionState('INDIANA-1', cm.DISPATCHER_STATE.AWAITING_STATUS_CHECK_RESPONSE, null, {
+      statusCheckCallId: 'call-uuid-1',
+    }, true);
+    await d.handleStatusCheckResponse('INDIANA-1', 'go ahead', {
+      statusCheckCallId: 'call-uuid-1',
+    });
+    await Promise.resolve(); await Promise.resolve();
+    expect(d.logs.some(l => l.action === 'STATUS_CHECK_GO_AHEAD_ADVANCE_FALLBACK'
+      && l.details.escalationActive === true)).toBe(true);
+    expect(d.spoken).toContain('Status check.');
+    expect(d.spoken.some(s => /^10-4/.test(s))).toBe(false);
+    expect(d.spoken.some(s => /^INDIANA-1, 10-4\.?$/.test(s))).toBe(false);
+    expect(cadService.respondToStatusCheck).not.toHaveBeenCalled();
+  });
+
+  it('NO controller active and no slot stage: speaks "Status check.", re-arms session, no CAD ack posted', async () => {
+    const d = makeDispatcher();
+    // No controller started — simulate the legacy reprompt path or a
+    // controller that auto-cleared after step 4 with the session still in
+    // AWAITING_STATUS_CHECK_RESPONSE.
+    cm.setUnitSessionState('INDIANA-1', cm.DISPATCHER_STATE.AWAITING_STATUS_CHECK_RESPONSE, null, {
+      statusCheckCallId: 'call-uuid-1',
+      statusCheckUnitUuid: 'unit-uuid-INDIANA-1',
+    }, true);
+    await d.handleStatusCheckResponse('INDIANA-1', 'go ahead', {
+      statusCheckCallId: 'call-uuid-1',
+      statusCheckUnitUuid: 'unit-uuid-INDIANA-1',
+    });
+    await Promise.resolve(); await Promise.resolve();
+    expect(d.logs.some(l => l.action === 'STATUS_CHECK_GO_AHEAD_ADVANCE_FALLBACK'
+      && l.details.escalationActive === false)).toBe(true);
+    expect(d.spoken).toContain('Status check.');
+    expect(d.spoken.some(s => /^10-4/.test(s))).toBe(false);
+    expect(d.spoken.some(s => /^INDIANA-1, 10-4\.?$/.test(s))).toBe(false);
+    expect(cadService.respondToStatusCheck).not.toHaveBeenCalled();
+    // session re-armed in AWAITING_RESPONSE so the next utterance is the
+    // unit's actual status, not another "go ahead".
+    const sess = cm.getUnitSessionState('INDIANA-1');
+    expect(sess.state).toBe(cm.DISPATCHER_STATE.AWAITING_STATUS_CHECK_RESPONSE);
+    expect(sess.slots.statusCheckHailStage).toBe('AWAITING_RESPONSE');
+  });
+
+  it('"<unit>, go ahead" is treated the same as bare "go ahead"', async () => {
+    const d = makeDispatcher();
+    cm.setUnitSessionState('INDIANA-1', cm.DISPATCHER_STATE.AWAITING_STATUS_CHECK_RESPONSE, null, {
+      statusCheckCallId: 'call-uuid-1',
+    }, true);
+    await d.handleStatusCheckResponse('INDIANA-1', 'central, go ahead', {
+      statusCheckCallId: 'call-uuid-1',
+    });
+    await Promise.resolve(); await Promise.resolve();
+    expect(d.spoken).toContain('Status check.');
+    expect(cadService.respondToStatusCheck).not.toHaveBeenCalled();
+  });
+
+  it('cancel/snooze phrases still take priority over "go ahead" guard', async () => {
+    const d = makeDispatcher();
+    cm.setUnitSessionState('INDIANA-1', cm.DISPATCHER_STATE.AWAITING_STATUS_CHECK_RESPONSE, null, {
+      statusCheckCallId: 'call-uuid-1',
+    }, true);
+    // "go ahead" appears but so does the cancel phrase — cancel should win.
+    await d.handleStatusCheckResponse('INDIANA-1', 'go ahead and cancel status check', {
+      statusCheckCallId: 'call-uuid-1',
+    });
+    // Cancel branch routes to handleCancelStatusChecks which calls cancelStatusCheck.
+    expect(cadService.cancelStatusCheck).toHaveBeenCalled();
+    // Should NOT have spoken the "Status check." prompt from the go-ahead guard.
+    expect(d.spoken.includes('Status check.')).toBe(false);
+  });
+
+  it('mixed "10-4, go ahead" advances (no CAD ack) — guard locks semantics on combined phrases', async () => {
+    // Documents intended behavior: when both an ack token and "go ahead"
+    // appear, the guard wins and we treat the turn as a hail-advance, not
+    // as the final ack. This is the safer of the two options because
+    // false-acking the wrong turn corrupts CAD timing, whereas a
+    // missed-ack just means the unit will be prompted once more.
+    const d = makeDispatcher();
+    cm.setUnitSessionState('INDIANA-1', cm.DISPATCHER_STATE.AWAITING_STATUS_CHECK_RESPONSE, null, {
+      statusCheckCallId: 'call-uuid-1', statusCheckUnitUuid: 'unit-uuid-1',
+    }, true);
+    await d.handleStatusCheckResponse('INDIANA-1', '10-4, go ahead', {
+      statusCheckCallId: 'call-uuid-1', statusCheckUnitUuid: 'unit-uuid-1',
+    });
+    await Promise.resolve(); await Promise.resolve();
+    expect(d.spoken).toContain('Status check.');
+    expect(cadService.respondToStatusCheck).not.toHaveBeenCalled();
+    expect(d.logs.some(l => l.action === 'STATUS_CHECK_GO_AHEAD_ADVANCE_FALLBACK')).toBe(true);
+  });
+
+  it('plain "10-4" still acks normally (regression: guard does not over-match)', async () => {
+    const d = makeDispatcher();
+    cm.setUnitSessionState('INDIANA-1', cm.DISPATCHER_STATE.AWAITING_STATUS_CHECK_RESPONSE, null, {
+      statusCheckCallId: 'call-uuid-1', statusCheckUnitUuid: 'unit-uuid-1',
+    }, true);
+    await d.handleStatusCheckResponse('INDIANA-1', '10-4', {
+      statusCheckCallId: 'call-uuid-1', statusCheckUnitUuid: 'unit-uuid-1',
+    });
+    expect(cadService.respondToStatusCheck).toHaveBeenCalledWith('INDIANA-1', 'call-uuid-1', { response: '10-4' });
+    expect(d.spoken.some(s => /^INDIANA-1, 10-4\.?$/.test(s))).toBe(true);
+  });
+});

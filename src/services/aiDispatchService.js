@@ -7888,6 +7888,8 @@ export class AIDispatcher {
     const normalized = transcript.toLowerCase().trim();
     const escalationActive = this.routineStatusCheckEscalation.hasAnyForUnit(participantId);
 
+    const isGoAhead = /\bgo\s*ahead\b/.test(normalized);
+
     // Task #501: while a routine status check escalation is in progress, a
     // distress phrase from the same unit hands off to the existing backup
     // request flow. The escalation is cancelled so we don't keep paging.
@@ -7907,7 +7909,6 @@ export class AIDispatcher {
       // The first turn after the hail is the unit saying "go ahead"; advance
       // the controller to AWAITING_RESPONSE and speak "Status check.".
       const stage = slots?.statusCheckHailStage;
-      const isGoAhead = /\bgo\s*ahead\b/.test(normalized);
       if (stage === 'AWAITING_GO_AHEAD' && isGoAhead) {
         // Task #534: defensive — drop any leftover pending entry for a
         // different (already-completed) turn before interpreting the
@@ -7960,6 +7961,60 @@ export class AIDispatcher {
         }
       }
       await this.handleSnoozeStatusChecks(participantId, transcript, { durationMinutes: mins || 15 });
+      return;
+    }
+
+    // Universal "go ahead" guard: when the unit says "go ahead" while in
+    // AWAITING_STATUS_CHECK_RESPONSE, they are acknowledging our hail and
+    // waiting for the AI to prompt — they are NOT acking the status check
+    // itself. This guard fires regardless of whether the escalation
+    // controller is active and regardless of whether `statusCheckHailStage`
+    // is populated in the slots, because several paths can land us here
+    // without setting the stage:
+    //   - the legacy `_onStatusCheckPromptTimeout` reprompt re-asserts the
+    //     awaiting state without `statusCheckHailStage`, and at that moment
+    //     the controller is NOT active (it was just suppressed).
+    //   - a controller that auto-cleared after step 4 leaves the unit
+    //     session in AWAITING_STATUS_CHECK_RESPONSE with no controller.
+    //   - any external/test path setting state directly.
+    // Without this guard, those paths fall through to the bottom of this
+    // handler and incorrectly speak "10-4" to CAD — the bug reported as
+    // "still getting the 10-4 when saying go ahead". The escalation-gated
+    // branch above already handles the controller-active happy path
+    // (including stale-pending cleanup); this is the catch-all for
+    // everything else. Placed AFTER the cancel/snooze branches so those
+    // explicit commands always take priority over a generic "go ahead".
+    if (isGoAhead) {
+      this.log('STATUS_CHECK_GO_AHEAD_ADVANCE_FALLBACK', {
+        participant: participantId,
+        transcript,
+        escalationActive: !!escalationActive,
+        slotStage: slots?.statusCheckHailStage || null,
+      });
+      if (escalationActive) {
+        // Controller is active but the slot stage didn't match (e.g. the
+        // controller already advanced to AWAITING_RESPONSE on a previous
+        // turn). Re-arm via onGoAhead which will re-prompt "Status check.".
+        this.routineStatusCheckEscalation.onGoAhead(participantId, escalationActive.callId);
+      } else {
+        // No controller — speak the prompt directly and re-arm the
+        // session in AWAITING_RESPONSE so the unit's actual status
+        // utterance falls into the regular handling path on the next turn.
+        setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_STATUS_CHECK_RESPONSE, null, {
+          statusCheckId: slots?.statusCheckId || null,
+          statusCheckCallId: callId,
+          statusCheckUnitUuid: unitUuid,
+          statusCheckHailStage: 'AWAITING_RESPONSE',
+        }, true);
+        try {
+          await this.speak('Status check.', participantId, {
+            retryOnBusy: true,
+            retryContext: `STATUS_CHECK_PROMPT_NOCTRL:${participantId}`,
+          });
+        } catch (err) {
+          this.log('STATUS_CHECK_PROMPT_SPEAK_ERROR', { unitId: participantId, error: err.message });
+        }
+      }
       return;
     }
 
