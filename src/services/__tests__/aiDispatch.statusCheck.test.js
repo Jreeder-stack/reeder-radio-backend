@@ -357,12 +357,39 @@ describe('Task #490: ack round-trip resets CAD timer', () => {
     expect(d.logs.some(l => l.action === 'STATUS_CHECK_RESPONDED' && l.details.response === '10-4')).toBe(true);
   });
 
-  it('also normalizes "copy"/"roger"/"ten four" responses to response:"10-4" (no status field)', async () => {
-    const d = makeDispatcher();
-    await d.handleStatusCheckResponse('INDIANA-1', 'copy', {
-      statusCheckCallId: 'call-uuid-1', statusCheckUnitUuid: 'unit-uuid-1',
-    });
-    expect(cadService.respondToStatusCheck).toHaveBeenCalledWith('INDIANA-1', 'call-uuid-1', { response: '10-4' });
+  it('Task #559: bare "copy" / "roger" / "affirmative" do NOT ack a pending status check (re-prompt instead)', async () => {
+    // Task #559 changed the semantics: only an explicit welfare-positive
+    // phrase ("10-4", "ten four", "i'm okay", "all good", "code 4", …)
+    // satisfies a pending status check. Generic affirmations now classify
+    // as ambiguous and re-prompt rather than silently being recorded as
+    // 10-4 by CAD.
+    for (const phrase of ['copy', 'roger', 'affirmative', 'yes']) {
+      cadService.respondToStatusCheck.mockClear();
+      const d = makeDispatcher();
+      await d.handleStatusCheckResponse('INDIANA-1', phrase, {
+        statusCheckCallId: 'call-uuid-1', statusCheckUnitUuid: 'unit-uuid-1',
+      });
+      expect(cadService.respondToStatusCheck, `phrase=${phrase}`).not.toHaveBeenCalled();
+      expect(d.logs.some(l => l.action === 'STATUS_CHECK_RESPONSE_AMBIGUOUS'
+        && l.details.kind === 'generic_affirmation')).toBe(true);
+      expect(d.spoken.some(s => /status check, confirm 10-4/.test(s))).toBe(true);
+    }
+  });
+
+  it('Task #559: "ten four" / "i\'m okay" / "all good" / "code 4" all ack normally (welfare-positive)', async () => {
+    for (const phrase of ['ten four', "i'm okay", 'all good', 'code 4', 'i am good']) {
+      cadService.respondToStatusCheck.mockClear();
+      const d = makeDispatcher();
+      cm.setUnitSessionState('INDIANA-1', cm.DISPATCHER_STATE.AWAITING_STATUS_CHECK_RESPONSE, null, {
+        statusCheckCallId: 'call-uuid-1', statusCheckUnitUuid: 'unit-uuid-1',
+      }, true);
+      await d.handleStatusCheckResponse('INDIANA-1', phrase, {
+        statusCheckCallId: 'call-uuid-1', statusCheckUnitUuid: 'unit-uuid-1',
+      });
+      expect(cadService.respondToStatusCheck, `phrase=${phrase}`).toHaveBeenCalledWith(
+        'INDIANA-1', 'call-uuid-1', { response: '10-4' },
+      );
+    }
   });
 
   it('retries once on failure and logs STATUS_CHECK_RESPOND_FAILED (not RESPONDED) when both attempts fail', async () => {
@@ -617,5 +644,202 @@ describe('"go ahead" never falls through to a "10-4" CAD ack (regression)', () =
     });
     expect(cadService.respondToStatusCheck).toHaveBeenCalledWith('INDIANA-1', 'call-uuid-1', { response: '10-4' });
     expect(d.spoken.some(s => /^INDIANA-1, 10-4\.?$/.test(s))).toBe(true);
+  });
+});
+
+describe('Task #559: "no" response always classifies as deny (never as 10-4)', () => {
+  it('handleStatusCheckResponse on "no" / "negative" / "no, hold on" / "no go" / "no copy" classifies as deny + re-prompts', async () => {
+    for (const phrase of ['no', 'negative', 'no, hold on', 'no go', 'no copy']) {
+      cadService.respondToStatusCheck.mockClear();
+      const d = makeDispatcher();
+      cm.setUnitSessionState('INDIANA-1', cm.DISPATCHER_STATE.AWAITING_STATUS_CHECK_RESPONSE, null, {
+        statusCheckCallId: 'call-uuid-1', statusCheckUnitUuid: 'unit-uuid-1',
+      }, true);
+      await d.handleStatusCheckResponse('INDIANA-1', phrase, {
+        statusCheckCallId: 'call-uuid-1', statusCheckUnitUuid: 'unit-uuid-1',
+      });
+      expect(cadService.respondToStatusCheck, `phrase=${phrase}`).not.toHaveBeenCalled();
+      // Deny is its own structured event — the reviewer required deny
+      // not be silently folded into ambiguity.
+      const deny = d.logs.find(l => l.action === 'STATUS_CHECK_RESPONSE_DENIED');
+      expect(deny, `phrase=${phrase} should emit STATUS_CHECK_RESPONSE_DENIED`).toBeDefined();
+      expect(deny.details.matchedList).toBe('deny');
+      expect(deny.details.transcript).toBe(phrase);
+      expect(deny.details.matchedPhrase).toBeTruthy();
+      // The re-prompt is spoken so the unit can recover.
+      expect(d.spoken.some(s => /status check, confirm 10-4/.test(s))).toBe(true);
+      // The CLASSIFY log captures matchedList=deny too.
+      const cls = d.logs.find(l => l.action === 'STATUS_CHECK_RESPONSE_CLASSIFY');
+      expect(cls.details.matchedList).toBe('deny');
+      expect(cls.details.deny).toBeTruthy();
+      expect(cls.details.welfare).toBeNull();
+    }
+  });
+
+  it('overlap transcripts ("no, 10-4" / "no, copy" / "negative, affirmative") classify as deny — never reach CAD ack', async () => {
+    for (const phrase of ['no, 10-4', 'no 10-4', 'no, copy', 'negative, affirmative', 'no, all good']) {
+      cadService.respondToStatusCheck.mockClear();
+      const d = makeDispatcher();
+      cm.setUnitSessionState('INDIANA-1', cm.DISPATCHER_STATE.AWAITING_STATUS_CHECK_RESPONSE, null, {
+        statusCheckCallId: 'call-uuid-1', statusCheckUnitUuid: 'unit-uuid-1',
+      }, true);
+      await d.handleStatusCheckResponse('INDIANA-1', phrase, {
+        statusCheckCallId: 'call-uuid-1', statusCheckUnitUuid: 'unit-uuid-1',
+      });
+      expect(cadService.respondToStatusCheck, `phrase=${phrase}`).not.toHaveBeenCalled();
+      const deny = d.logs.find(l => l.action === 'STATUS_CHECK_RESPONSE_DENIED');
+      expect(deny, `overlap phrase=${phrase} should still classify as deny`).toBeDefined();
+      expect(deny.details.matchedList).toBe('deny');
+    }
+  });
+});
+
+describe('Task #559: durable ack path tightened to welfare-positive only', () => {
+  it('_maybeAckPendingStatusCheck does NOT ack on "copy" / "roger" / "go ahead" / "yes"', async () => {
+    for (const phrase of ['copy', 'roger', 'go ahead', 'yes', 'affirmative']) {
+      cadService.respondToStatusCheck.mockClear();
+      const d = makeDispatcher();
+      d._pendingStatusChecks.set(d._pendingStatusCheckKey('INDIANA-1', 'call-uuid-1'), {
+        unitId: 'INDIANA-1', callId: 'call-uuid-1', escalated: false, rePrompted: false, at: Date.now(),
+      });
+      cm.setUnitSessionState('INDIANA-1', cm.DISPATCHER_STATE.IDLE, null, {}, true);
+      const acked = await d._maybeAckPendingStatusCheck('INDIANA-1', phrase);
+      expect(acked, `phrase=${phrase}`).toBe(false);
+      expect(cadService.respondToStatusCheck, `phrase=${phrase}`).not.toHaveBeenCalled();
+    }
+  });
+
+  it('_maybeAckPendingStatusCheck still acks on welfare-positive ("10-4" / "i\'m okay" / "all good")', async () => {
+    for (const phrase of ['10-4', "i'm okay", 'all good', 'ten four', 'code 4']) {
+      cadService.respondToStatusCheck.mockClear();
+      const d = makeDispatcher();
+      d._pendingStatusChecks.set(d._pendingStatusCheckKey('INDIANA-1', 'call-uuid-1'), {
+        unitId: 'INDIANA-1', callId: 'call-uuid-1', escalated: false, rePrompted: false, at: Date.now(),
+      });
+      cm.setUnitSessionState('INDIANA-1', cm.DISPATCHER_STATE.IDLE, null, {}, true);
+      const acked = await d._maybeAckPendingStatusCheck('INDIANA-1', phrase);
+      expect(acked, `phrase=${phrase}`).toBe(true);
+      expect(cadService.respondToStatusCheck, `phrase=${phrase}`).toHaveBeenCalledWith(
+        'INDIANA-1', 'call-uuid-1', { response: '10-4' },
+      );
+    }
+  });
+
+  it('_maybeAckPendingStatusCheck does NOT ack on overlap "no, 10-4"', async () => {
+    const d = makeDispatcher();
+    d._pendingStatusChecks.set(d._pendingStatusCheckKey('INDIANA-1', 'call-uuid-1'), {
+      unitId: 'INDIANA-1', callId: 'call-uuid-1', escalated: false, rePrompted: false, at: Date.now(),
+    });
+    cm.setUnitSessionState('INDIANA-1', cm.DISPATCHER_STATE.IDLE, null, {}, true);
+    const acked = await d._maybeAckPendingStatusCheck('INDIANA-1', 'no, 10-4');
+    expect(acked).toBe(false);
+    expect(cadService.respondToStatusCheck).not.toHaveBeenCalled();
+  });
+});
+
+describe('Task #559: conversationHistory does not retain closed-out 10-4', () => {
+  it('after a successful ack the LLM history payload does not contain the "10-4" entry', async () => {
+    const d = makeDispatcher();
+    // Restore the real addConversationExchange so we can verify the LLM
+    // history shape that classifyIntent would receive.
+    delete d.addConversationExchange;
+    cm.setUnitSessionState('INDIANA-1', cm.DISPATCHER_STATE.AWAITING_STATUS_CHECK_RESPONSE, null, {
+      statusCheckCallId: 'call-uuid-1', statusCheckUnitUuid: 'unit-uuid-1',
+      conversationHistory: [
+        { unit: 'central indiana-1', dispatch: 'INDIANA-1, go ahead.' },
+      ],
+    }, true);
+    await d.handleStatusCheckResponse('INDIANA-1', '10-4', {
+      statusCheckCallId: 'call-uuid-1', statusCheckUnitUuid: 'unit-uuid-1',
+    });
+    // After ack the unit returns to IDLE, but conversationHistory must
+    // NOT contain the closed-out "INDIANA-1, 10-4." line.
+    const sess = cm.getUnitSessionState('INDIANA-1');
+    const hist = sess.slots?.conversationHistory || [];
+    expect(hist.every(h => !/10-?4/.test(h.dispatch || ''))).toBe(true);
+    expect(d.logs.some(l => l.action === 'STATUS_CHECK_HISTORY_PRUNED')).toBe(false);
+    // The pre-existing "go ahead" entry is preserved (it was not a status-
+    // check ack); only status-check entries are pruned.
+    expect(hist.some(h => /go ahead/i.test(h.dispatch || ''))).toBe(true);
+  });
+
+  it('_pruneStatusCheckHistory removes prior "<unit>, 10-4." entries from history', async () => {
+    const d = makeDispatcher();
+    cm.setUnitSessionState('INDIANA-1', cm.DISPATCHER_STATE.IDLE, null, {
+      conversationHistory: [
+        { unit: 'central indiana-1', dispatch: 'INDIANA-1, go ahead.' },
+        { unit: '10-4', dispatch: 'INDIANA-1, 10-4.' },
+        { unit: 'i need a 28', dispatch: 'INDIANA-1, send the plate.' },
+      ],
+    }, true);
+    d._pruneStatusCheckHistory('INDIANA-1');
+    const sess = cm.getUnitSessionState('INDIANA-1');
+    const hist = sess.slots?.conversationHistory || [];
+    expect(hist).toHaveLength(2);
+    expect(hist.every(h => !/^[a-z0-9-]+,\s*10-?4\.?$/i.test(h.dispatch || ''))).toBe(true);
+    expect(d.logs.some(l => l.action === 'STATUS_CHECK_HISTORY_PRUNED' && l.details.removed === 1)).toBe(true);
+  });
+
+  it('_pruneStatusCheckHistory removes "10-4, HH:MM." escalation-style ack lines too', async () => {
+    const d = makeDispatcher();
+    cm.setUnitSessionState('INDIANA-1', cm.DISPATCHER_STATE.IDLE, null, {
+      conversationHistory: [
+        { unit: 'central indiana-1', dispatch: 'INDIANA-1, central.' },
+        { unit: '10-4', dispatch: '10-4, 14:32.' },
+      ],
+    }, true);
+    d._pruneStatusCheckHistory('INDIANA-1');
+    const sess = cm.getUnitSessionState('INDIANA-1');
+    const hist = sess.slots?.conversationHistory || [];
+    expect(hist).toHaveLength(1);
+  });
+});
+
+describe('Task #559: handleStatusCheckResponse logs matched list / phrase', () => {
+  it('logs welfare match phrase when an explicit welfare reply lands', async () => {
+    const d = makeDispatcher();
+    cm.setUnitSessionState('INDIANA-1', cm.DISPATCHER_STATE.AWAITING_STATUS_CHECK_RESPONSE, null, {
+      statusCheckCallId: 'call-uuid-1', statusCheckUnitUuid: 'unit-uuid-1',
+    }, true);
+    await d.handleStatusCheckResponse('INDIANA-1', "i'm okay", {
+      statusCheckCallId: 'call-uuid-1', statusCheckUnitUuid: 'unit-uuid-1',
+    });
+    const cls = d.logs.find(l => l.action === 'STATUS_CHECK_RESPONSE_CLASSIFY');
+    expect(cls).toBeDefined();
+    expect(cls.details.welfare).toBe("i'm okay");
+    expect(cls.details.deny).toBeNull();
+    expect(cls.details.genericAffirmation).toBeNull();
+    expect(cls.details.matchedList).toBe('welfare_positive');
+    expect(cls.details.transcript).toBe("i'm okay");
+    expect(cls.details.sessionState).toBeTruthy();
+  });
+
+  it('logs generic_affirmation classification on bare "copy"', async () => {
+    const d = makeDispatcher();
+    await d.handleStatusCheckResponse('INDIANA-1', 'copy', {
+      statusCheckCallId: 'call-uuid-1', statusCheckUnitUuid: 'unit-uuid-1',
+    });
+    const cls = d.logs.find(l => l.action === 'STATUS_CHECK_RESPONSE_CLASSIFY');
+    expect(cls.details.welfare).toBeNull();
+    expect(cls.details.deny).toBeNull();
+    expect(cls.details.genericAffirmation).toBe('copy');
+    expect(cls.details.matchedList).toBe('generic_affirmation');
+    const amb = d.logs.find(l => l.action === 'STATUS_CHECK_RESPONSE_AMBIGUOUS');
+    expect(amb.details.kind).toBe('generic_affirmation');
+  });
+
+  it('durable-ack path emits STATUS_CHECK_DURABLE_ACK_NO_MATCH with matchedList=deny on "no"', async () => {
+    const d = makeDispatcher();
+    d._pendingStatusChecks.set(d._pendingStatusCheckKey('INDIANA-1', 'call-uuid-1'), {
+      unitId: 'INDIANA-1', callId: 'call-uuid-1', escalated: false, rePrompted: false, at: Date.now(),
+    });
+    cm.setUnitSessionState('INDIANA-1', cm.DISPATCHER_STATE.IDLE, null, {}, true);
+    const acked = await d._maybeAckPendingStatusCheck('INDIANA-1', 'no');
+    expect(acked).toBe(false);
+    const log = d.logs.find(l => l.action === 'STATUS_CHECK_DURABLE_ACK_NO_MATCH');
+    expect(log).toBeDefined();
+    expect(log.details.matchedList).toBe('deny');
+    expect(log.details.matchedPhrase).toBeTruthy();
+    expect(cadService.respondToStatusCheck).not.toHaveBeenCalled();
   });
 });

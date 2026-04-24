@@ -566,13 +566,45 @@ function matchZoneChange(transcript) {
   return null;
 }
 
+// Task #559: split the legacy SECURE_CONFIRM_PHRASES into three intents so
+// "go ahead" / "copy" / "roger" can never silently ack a status check as
+// "10-4". See `commandMatcher.matchWelfarePositive` /
+// `matchGenericAffirmation` / `matchFloorHandoff` for the typed matchers.
+//
+// WELFARE_POSITIVE: explicit "I'm OK" radio phrases. ONLY this set may
+// satisfy a pending status check (welfare ack).
+const WELFARE_POSITIVE_PHRASES = [
+  '10-4', '10/4', 'ten four', 'ten-four',
+  "i'm 10-4", "i'm 10/4", 'im 10-4', 'im 10/4', "i am 10-4", "i am 10/4",
+  "i'm okay", 'im okay', "i am okay",
+  "i'm ok", 'im ok', "i am ok",
+  "i'm fine", 'im fine', "i am fine",
+  "i'm good", 'im good', "i am good",
+  'all good', 'all clear', 'code 4', 'code four'
+];
+
+// GENERIC_AFFIRMATION: bare "yes" / "copy" / "roger". Counts as a positive
+// reply for prompts like "is your mic secure?", but NEVER as a status-check
+// welfare ack on its own.
+const GENERIC_AFFIRMATION_PHRASES = [
+  'yes', 'yeah', 'yep', 'affirmative', 'secure', 'copy', 'roger'
+];
+
+// FLOOR_HANDOFF: radio convention for "I'm listening, you talk". Never a
+// confirmation of anything. Used by hail flows to advance, never to ack.
+const FLOOR_HANDOFF_PHRASES = [
+  'go ahead', 'send it', 'send your traffic', 'send your message', 'go'
+];
+
+// Mic-secure / generic confirmation prompt response set. Excludes
+// FLOOR_HANDOFF_PHRASES — "go ahead" is not a confirmation.
 const SECURE_CONFIRM_PHRASES = [
-  'yes', 'yeah', 'yep', 'affirmative', 'secure', 'go ahead',
-  '10-4', '10/4', 'ten four', 'ten-four', 'copy', 'roger'
+  ...GENERIC_AFFIRMATION_PHRASES,
+  ...WELFARE_POSITIVE_PHRASES
 ];
 
 const SECURE_DENY_PHRASES = [
-  'no', 'negative', 'not secure', 'standby', 'hold'
+  'no', 'negative', 'no go', 'no copy', 'not secure', 'standby', 'hold'
 ];
 
 const EMERGENCY_OK_PHRASES = [
@@ -662,21 +694,82 @@ export function matchEmergencyResponse(transcript) {
   return null;
 }
 
+// Task #559: word-boundary aware phrase test. Multi-word phrases use plain
+// substring (the words themselves provide boundaries); single tokens like
+// "no" require a word boundary so "no" doesn't match "north" / "noise" /
+// "north bound" / a long callsign.
+function phraseMatches(text, phrase) {
+  if (!phrase) return false;
+  if (phrase.includes(' ')) return text.includes(phrase);
+  const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  // Boundary = start/end of string or whitespace. We don't use \b so that
+  // tokens with non-word chars like "10-4" / "10/4" still anchor correctly.
+  const re = new RegExp(`(?:^|\\s)${escaped}(?:$|\\s)`);
+  return re.test(text);
+}
+
 export function matchSecureConfirmation(transcript) {
   const normalized = normalizeText(transcript);
-  
-  for (const phrase of SECURE_CONFIRM_PHRASES) {
-    if (normalized.includes(phrase)) {
-      return { confirmed: true };
-    }
-  }
-  
+
+  // Task #559: deny FIRST. A transcript that contains both a deny and a
+  // confirm word ("no, copy" / "no 10-4" / "negative, affirmative") must
+  // be classified as deny — never silently as confirm.
   for (const phrase of SECURE_DENY_PHRASES) {
-    if (normalized.includes(phrase)) {
-      return { confirmed: false };
+    if (phraseMatches(normalized, phrase)) {
+      return { confirmed: false, matchedList: 'deny', matchedPhrase: phrase };
     }
   }
-  
+
+  for (const phrase of SECURE_CONFIRM_PHRASES) {
+    if (phraseMatches(normalized, phrase)) {
+      return { confirmed: true, matchedList: 'confirm', matchedPhrase: phrase };
+    }
+  }
+
+  return null;
+}
+
+// Task #559: typed welfare-ack matcher. ONLY explicit "I'm OK" radio phrases
+// satisfy this. A transcript with a deny word in it never matches. This is
+// the ONLY matcher whose true return is allowed to drive a CAD
+// status-check ack.
+export function matchWelfarePositive(transcript) {
+  const normalized = normalizeText(transcript);
+  for (const phrase of SECURE_DENY_PHRASES) {
+    if (phraseMatches(normalized, phrase)) return null;
+  }
+  for (const phrase of WELFARE_POSITIVE_PHRASES) {
+    if (phraseMatches(normalized, phrase)) {
+      return { welfare: true, matchedList: 'welfare_positive', matchedPhrase: phrase };
+    }
+  }
+  return null;
+}
+
+// Task #559: typed generic-affirmation matcher. "yes" / "copy" / "roger" /
+// "affirmative" — never enough on their own to ack a status check.
+export function matchGenericAffirmation(transcript) {
+  const normalized = normalizeText(transcript);
+  for (const phrase of SECURE_DENY_PHRASES) {
+    if (phraseMatches(normalized, phrase)) return null;
+  }
+  for (const phrase of GENERIC_AFFIRMATION_PHRASES) {
+    if (phraseMatches(normalized, phrase)) {
+      return { affirm: true, matchedList: 'generic_affirmation', matchedPhrase: phrase };
+    }
+  }
+  return null;
+}
+
+// Task #559: typed floor-handoff matcher. "go ahead" / "send it" / "go" — a
+// hand back of the radio floor, never a confirmation or ack.
+export function matchFloorHandoff(transcript) {
+  const normalized = normalizeText(transcript);
+  for (const phrase of FLOOR_HANDOFF_PHRASES) {
+    if (phraseMatches(normalized, phrase)) {
+      return { handoff: true, matchedList: 'floor_handoff', matchedPhrase: phrase };
+    }
+  }
   return null;
 }
 

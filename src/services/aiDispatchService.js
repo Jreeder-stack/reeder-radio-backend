@@ -1,5 +1,5 @@
 import { speechToText, textToSpeech, isConfigured as isAzureConfigured } from './azureSpeechService.js';
-import { matchCommand, resetDispatcherState, matchEmergencyResponse, matchSecureConfirmation, getUnitSessionState, setUnitSessionState, DISPATCHER_STATE, EMERGENCY_DISTRESS_PHRASES, ownsInFlight, clearPromptTimeout, setPromptTimeoutHandler } from './commandMatcher.js';
+import { matchCommand, resetDispatcherState, matchEmergencyResponse, matchSecureConfirmation, matchWelfarePositive, matchGenericAffirmation, matchFloorHandoff, getUnitSessionState, setUnitSessionState, DISPATCHER_STATE, EMERGENCY_DISTRESS_PHRASES, ownsInFlight, clearPromptTimeout, setPromptTimeoutHandler } from './commandMatcher.js';
 import { detectEmergencyBypass, parseWake, parseIdentify, WAKE_RESULT, IDENTIFY_RESULT, IDENTIFY_TIMEOUT_MS } from './wakeGate.js';
 import { RADIO_STATUS, extractActualStatusFromRejection } from './cadService.js';
 import { resolveDestination, KNOWN_PLACES, setLearnedPlaces } from './agencyKnowledge.js';
@@ -8467,6 +8467,116 @@ export class AIDispatcher {
       return;
     }
 
+    // Task #559: classify the response into one of three buckets so the
+    // CAD ack only ever fires on an unambiguous welfare-positive phrase
+    // and a deny is never silently folded into ambiguity.
+    //
+    //   1. DENY  — "no", "negative", "no go", "no copy", or any
+    //              transcript where a deny phrase is present (incl.
+    //              overlap noise like "no, 10-4" / "negative,
+    //              affirmative"). matchSecureConfirmation checks deny
+    //              first and returns { confirmed: false } here.
+    //   2. WELFARE — explicit "10-4" / "ten four" / "i'm okay" /
+    //              "all good" / "code 4" etc. matchWelfarePositive
+    //              short-circuits to null when a deny phrase is also
+    //              present, so DENY above wins overlap cases.
+    //   3. GENERIC — bare "copy" / "roger" / "yes" / "affirmative"
+    //              with no welfare or deny. Treated as ambiguous and
+    //              re-prompted.
+    //
+    // Anything else is "unrecognized" and also re-prompts.
+    const secureClassification = matchSecureConfirmation(transcript);
+    const denyMatch = (secureClassification && secureClassification.confirmed === false)
+      ? secureClassification
+      : null;
+    const welfare = denyMatch ? null : matchWelfarePositive(transcript);
+    const generic = (denyMatch || welfare) ? null : matchGenericAffirmation(transcript);
+    const sessionStateAtDecision = getUnitSessionState(participantId)?.state || null;
+    this.log('STATUS_CHECK_RESPONSE_CLASSIFY', {
+      participant: participantId,
+      transcript,
+      callId,
+      deny: denyMatch ? denyMatch.matchedPhrase : null,
+      welfare: welfare ? welfare.matchedPhrase : null,
+      genericAffirmation: generic ? generic.matchedPhrase : null,
+      matchedList: denyMatch
+        ? denyMatch.matchedList
+        : welfare
+          ? 'welfare_positive'
+          : generic
+            ? 'generic_affirmation'
+            : 'unrecognized',
+      escalationActive: !!escalationActive,
+      sessionState: sessionStateAtDecision,
+      pendingCallId: callId,
+      pendingUnitUuid: unitUuid,
+    });
+    if (denyMatch) {
+      // Deny branch: the unit explicitly said "no" / "negative" / etc.
+      // Never post a CAD 10-4 ack from this branch. Re-prompt the
+      // status check exactly once via the same awaiting-state path as
+      // an ambiguous reply, but log it as a DENIED event so the next
+      // regression is obvious from the log alone. The pending entry
+      // stays in place so a follow-up welfare-positive utterance can
+      // still close the check normally.
+      this.log('STATUS_CHECK_RESPONSE_DENIED', {
+        participant: participantId,
+        transcript,
+        callId,
+        matchedList: denyMatch.matchedList,
+        matchedPhrase: denyMatch.matchedPhrase,
+        sessionState: sessionStateAtDecision,
+        action: 're-prompt',
+      });
+      setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_STATUS_CHECK_RESPONSE, null, {
+        statusCheckId: slots?.statusCheckId || null,
+        statusCheckCallId: callId,
+        statusCheckUnitUuid: unitUuid,
+        statusCheckHailStage: slots?.statusCheckHailStage || 'AWAITING_RESPONSE',
+      }, true);
+      try {
+        await this.speak(`${participantId}, status check, confirm 10-4.`, participantId, {
+          retryOnBusy: true,
+          retryContext: `STATUS_CHECK_DENIED:${participantId}`,
+        });
+      } catch (err) {
+        this.log('STATUS_CHECK_DENIED_SPEAK_ERROR', { unit: participantId, error: err.message });
+      }
+      return;
+    }
+    if (!welfare) {
+      // Not an explicit welfare ack and not a deny. Re-prompt once
+      // (subject to the existing per-prompt timeout /
+      // RoutineStatusCheckEscalation cadence) so the unit hears
+      // "<unit>, status check, confirm 10-4." rather than being
+      // silently recorded as 10-4. The pending entry stays in place so
+      // the next welfare-positive utterance closes the check normally.
+      this.log('STATUS_CHECK_RESPONSE_AMBIGUOUS', {
+        participant: participantId,
+        transcript,
+        callId,
+        kind: generic ? 'generic_affirmation' : 'unrecognized',
+        matchedPhrase: generic ? generic.matchedPhrase : null,
+        sessionState: sessionStateAtDecision,
+        action: 're-prompt',
+      });
+      setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_STATUS_CHECK_RESPONSE, null, {
+        statusCheckId: slots?.statusCheckId || null,
+        statusCheckCallId: callId,
+        statusCheckUnitUuid: unitUuid,
+        statusCheckHailStage: slots?.statusCheckHailStage || 'AWAITING_RESPONSE',
+      }, true);
+      try {
+        await this.speak(`${participantId}, status check, confirm 10-4.`, participantId, {
+          retryOnBusy: true,
+          retryContext: `STATUS_CHECK_AMBIGUOUS:${participantId}`,
+        });
+      } catch (err) {
+        this.log('STATUS_CHECK_AMBIGUOUS_SPEAK_ERROR', { unit: participantId, error: err.message });
+      }
+      return;
+    }
+
     // Per CAD spec the ack body is { unit_id, call_id?, response, status? }.
     // `response` is the spoken text (free-form). We always send "10-4" as
     // the response since this handler is only entered when the unit is
@@ -8537,7 +8647,11 @@ export class AIDispatcher {
       ? `10-4, ${this.formatMilitaryTime()}.`
       : `${participantId}, 10-4.`;
     await this.speak(resp, participantId);
-    this.addConversationExchange(participantId, transcript, resp);
+    // Task #559: do NOT add the closed-out status-check ack to
+    // conversationHistory, and prune any prior status-check ack entries that
+    // may still be there from earlier turns. The LLM must never see a
+    // closed-out "10-4" as context in a later classification.
+    this._pruneStatusCheckHistory(participantId);
     setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
   }
 
@@ -8588,32 +8702,71 @@ export class AIDispatcher {
   }
 
   _isStatusCheckAckPhrase(transcript) {
-    const raw = String(transcript || '').toLowerCase().replace(/[.,!?]/g, '').trim();
-    if (!raw) return false;
-    // Task #534: tightened — only treat clear, radio-convention ack phrases as
-    // a status-check ack. Removed ambient words ("yes", "good", "okay", "ok",
-    // "clear") that previously caused unrelated short utterances to be
-    // swallowed by the durable fast-path now that callers short-circuit on a
-    // true return. The phrase must either BE the entire utterance (after
-    // stripping a "central, " or "<unit>, " prefix) or appear as the leading
-    // content of a short (≤5 word) utterance.
-    const okPhrases = [
-      '10-4', '10/4', 'ten four', 'ten-four',
-      'copy', 'copy that', 'roger', 'roger that', 'affirmative',
-    ];
-    if (okPhrases.includes(raw)) return true;
-    const stripped = raw.replace(/^(?:central[,\s]+|[a-z0-9-]+[,\s]+)?/, '').trim();
-    if (okPhrases.includes(stripped)) return true;
-    const wordCount = raw.split(/\s+/).filter(Boolean).length;
-    if (wordCount <= 5) {
-      for (const p of okPhrases) {
-        if (raw.startsWith(`${p} `) || raw === p ||
-            stripped.startsWith(`${p} `) || stripped === p) {
-          return true;
-        }
-      }
-    }
-    return false;
+    // Task #559: a status-check ack must be an unambiguous welfare-positive
+    // phrase ("10-4", "ten four", "i'm okay", "all good", "code 4", …).
+    // Generic affirmations ("copy", "roger", "affirmative", bare "yes") and
+    // floor-handoff ("go ahead", "send it") DO NOT ack a status check on
+    // their own — see commandMatcher.matchWelfarePositive /
+    // matchGenericAffirmation / matchFloorHandoff for the typed matchers.
+    // matchWelfarePositive also short-circuits on any deny phrase, so a
+    // transcript like "no, 10-4" never returns true here.
+    if (!transcript) return false;
+    const welfare = matchWelfarePositive(transcript);
+    if (!welfare) return false;
+    // Defensive: also reject when the transcript contains a floor-handoff —
+    // mixed "10-4, go ahead" should NOT be acked as a final welfare reply
+    // (matches the existing handleStatusCheckResponse "go ahead guard"
+    // semantic of preferring re-prompt over a wrong ack).
+    if (matchFloorHandoff(transcript)) return false;
+    return true;
+  }
+
+  /**
+   * Task #559: prune any conversationHistory entries that look like a
+   * closed-out status-check turn (a "<unit>, 10-4." or "10-4, HH:MM."
+   * dispatcher line). Called from every status-check terminal path —
+   * ack delivered, timeout fired, drop logged — so the LLM never sees
+   * a closed-out "10-4" as context in a later classification.
+   *
+   * INVARIANT: this method is intended ONLY for status-check terminal
+   * contexts (ack delivered / timeout fired / CAD acknowledged / CAD
+   * snoozed / CAD cancelled). It is safe to call from non-terminal
+   * contexts but is not designed to be a general-purpose history
+   * cleaner. The slot update below is intentionally a *merge* (passes
+   * `replace=false` to setUnitSessionState) so it cannot accidentally
+   * drop unrelated slot data such as `statusCheckCallId` /
+   * `statusCheckUnitUuid` if a future caller invokes it from a
+   * non-terminal path.
+   */
+  _pruneStatusCheckHistory(unitId) {
+    if (!unitId) return;
+    const session = getUnitSessionState(unitId);
+    const history = session?.slots?.conversationHistory || [];
+    if (!history.length) return;
+    const isStatusCheckExchange = (entry) => {
+      if (!entry || typeof entry !== 'object') return false;
+      if (entry.kind === 'status_check_ack') return true;
+      const dispatch = String(entry.dispatch || '').trim().toLowerCase();
+      if (!dispatch) return false;
+      // "<unit>, 10-4." or "10-4, HH:MM." — the two ack reply shapes used
+      // by handleStatusCheckResponse / _maybeAckPendingStatusCheck.
+      if (/^[a-z0-9-]+,\s*10-?4\.?$/.test(dispatch)) return true;
+      if (/^10-?4,\s*\d{1,2}:\d{2}.*\.?$/.test(dispatch)) return true;
+      return false;
+    };
+    const pruned = history.filter(e => !isStatusCheckExchange(e));
+    if (pruned.length === history.length) return;
+    // Merge (replace=false) so we only overwrite the conversationHistory
+    // slot — every other slot the caller had set (e.g. statusCheckCallId
+    // when a re-prompt path needs to remain pending) is preserved.
+    setUnitSessionState(unitId, session?.state || 'IDLE', null, {
+      conversationHistory: pruned
+    }, false);
+    this.log('STATUS_CHECK_HISTORY_PRUNED', {
+      unit: unitId,
+      removed: history.length - pruned.length,
+      remaining: pruned.length,
+    });
   }
 
   /**
@@ -8641,8 +8794,37 @@ export class AIDispatcher {
       pendingEscalated: !!pending.escalated,
       pendingRePrompted: !!pending.rePrompted,
     });
-    if (!this._isStatusCheckAckPhrase(transcript)) {
-      this.log('STATUS_CHECK_DURABLE_ACK_NO_MATCH', { participant: participantId, transcript });
+    // Task #559: classify the durable-ack candidate the same way the
+    // primary handler does (deny → welfare → generic → unrecognized) so
+    // a "no" reply after the awaiting-state has cleared is still
+    // recognized as a deny in the log, not as an opaque "no match".
+    const durableSecure = matchSecureConfirmation(transcript);
+    const durableDeny = (durableSecure && durableSecure.confirmed === false)
+      ? durableSecure
+      : null;
+    const durableWelfare = durableDeny ? null : matchWelfarePositive(transcript);
+    const durableHandoff = (durableDeny || durableWelfare) ? null : matchFloorHandoff(transcript);
+    const durableGeneric = (durableDeny || durableWelfare || durableHandoff)
+      ? null
+      : matchGenericAffirmation(transcript);
+    const durableMatchedList = durableDeny
+      ? durableDeny.matchedList
+      : durableWelfare
+        ? 'welfare_positive'
+        : durableHandoff
+          ? 'floor_handoff'
+          : durableGeneric
+            ? 'generic_affirmation'
+            : 'unrecognized';
+    if (!durableWelfare || matchFloorHandoff(transcript)) {
+      this.log('STATUS_CHECK_DURABLE_ACK_NO_MATCH', {
+        participant: participantId,
+        transcript,
+        matchedList: durableMatchedList,
+        matchedPhrase: (durableDeny || durableHandoff || durableGeneric)?.matchedPhrase || null,
+        pendingCallId: pending.callId,
+        pendingEscalated: !!pending.escalated,
+      });
       return false;
     }
     const originalPendingCallId = pending.callId || null;
@@ -8722,7 +8904,9 @@ export class AIDispatcher {
         retryWaitMs: 3000,
         retryContext: `STATUS_CHECK_DURABLE_ACK:${participantId}:${resolvedCallId || 'none'}`,
       });
-      this.addConversationExchange(participantId, transcript, replyText);
+      // Task #559: do NOT add the closed-out status-check ack to
+      // conversationHistory; prune any prior status-check entries.
+      this._pruneStatusCheckHistory(participantId);
     } catch (err) {
       this.log('STATUS_CHECK_DURABLE_ACK_SPEAK_ERROR', {
         participant: participantId, callId: resolvedCallId, error: err.message,
@@ -8803,6 +8987,12 @@ export class AIDispatcher {
     this.log('STATUS_CHECK_ESCALATED_ALERT', {
       unitId, callId, severity: 'high', source: 'prompt_timeout', prompt: promptKind,
     });
+    // Task #559: status-check turn ended (timeout fired) — prune any
+    // closed-out ack entry from history so a stale "10-4" can't influence
+    // a later classification. The pending entry is intentionally NOT
+    // cleared: durable ack should still work if the unit speaks shortly
+    // after.
+    this._pruneStatusCheckHistory(unitId);
     // Do not clear pending — durable ack should still work if the unit speaks
     // shortly after. Allow default reset to release the session to IDLE.
     return false;
@@ -8880,6 +9070,9 @@ export class AIDispatcher {
       this.log('STATUS_CHECK_PROMPT_SUPPRESSED', { reason: type, unitId, callId });
       this.routineStatusCheckEscalation.cancel(unitId, callId, `cad_${type}`);
       this._clearPendingStatusCheck(unitId, callId);
+      // Task #559: terminal CAD event — drop any closed-out 10-4 entry from
+      // the LLM history so the next classification doesn't see it.
+      this._pruneStatusCheckHistory(unitId);
       return;
     }
   }
