@@ -125,6 +125,112 @@ const STATE_TRAILING_PATTERN = new RegExp(
   'i'
 );
 
+const US_STATE_ABBR_SET = new Set(Object.values(STATE_ABBREVIATIONS));
+
+// Task #562: Detect whether a spoken/normalized address already names a US
+// state (full name or 2-letter abbreviation). Only inspects the trailing
+// 1-2 comma-separated tokens so a city named "Washington" or a street like
+// "1700 Washington Ave" doesn't false-positive. Also catches no-comma
+// trailing state names ("1700 Main St Pennsylvania").
+export function addressContainsUsState(address) {
+  if (!address || typeof address !== 'string') return false;
+  const trimmed = address.trim();
+  if (!trimmed) return false;
+  const tokens = trimmed.split(',').map(t => t.trim()).filter(Boolean);
+  const candidates = tokens.slice(-2);
+  for (const tok of candidates) {
+    const stateOnly = tok
+      .toLowerCase()
+      .replace(/\s+\d{5}(?:-\d{4})?$/, '')
+      .replace(/[.;]+$/, '')
+      .trim();
+    if (!stateOnly) continue;
+    if (STATE_ABBREVIATIONS[stateOnly]) return true;
+    if (/^[a-z]{2}$/i.test(stateOnly)
+        && US_STATE_ABBR_SET.has(stateOnly.toUpperCase())) {
+      return true;
+    }
+  }
+  // Trailing state name without a comma (e.g. "1700 Main St Pennsylvania").
+  if (STATE_TRAILING_PATTERN.test(' ' + trimmed)) return true;
+  return false;
+}
+
+// Task #562: Append a default state abbreviation when the address does not
+// already specify one. ~95% of this agency's addresses are in PA, so when
+// the unit doesn't say a state we tell the geocoder to look in PA instead
+// of letting it match a same-named street in another state. Addresses
+// that already include a state (full name or abbreviation) pass through
+// unchanged. Intersections ("5th & Main") and house-numbered streets
+// ("1700 Main St") are both supported.
+export function applyDefaultStateToAddress(address, defaultStateAbbr = 'PA') {
+  if (!address || typeof address !== 'string') return address;
+  const trimmed = address.trim().replace(/[,;\s]+$/, '');
+  if (!trimmed) return address;
+  if (addressContainsUsState(trimmed)) return trimmed;
+  return `${trimmed}, ${defaultStateAbbr}`;
+}
+
+// Task #562: Natural call-creation readback templates. The goal is for the
+// readback to sound like a real dispatcher reading back a call so the unit
+// can confirm naturally — not a robotic "10-4 or negative?" prompt. Keep
+// each template short (one sentence) and rotate them so the same call
+// twice in a row doesn't sound identical.
+const VERIFIED_CALL_READBACK_TEMPLATES = [
+  (unitId, nature, addr) => `${unitId}, copy ${nature} at ${addr}.`,
+  (unitId, nature, addr) => `${unitId}, ${nature} at ${addr}.`,
+  (unitId, nature, addr) => `${unitId}, showing ${nature} at ${addr}.`,
+];
+
+const UNVERIFIED_CALL_READBACK_TEMPLATES = [
+  (unitId, nature, addr) => `${unitId}, ${nature} at ${addr}. I couldn't verify ${addr}.`,
+  (unitId, nature, addr) => `${unitId}, copy ${nature} at ${addr}. I couldn't verify ${addr}, correct if needed.`,
+  (unitId, nature, addr) => `${unitId}, showing ${nature} at ${addr}. I couldn't verify ${addr}.`,
+];
+
+const CALL_REPROMPT_TEMPLATES = [
+  (unitId, _nature, _addr) => `${unitId}, did you copy?`,
+  (unitId, nature, addr) => `${unitId}, ${nature} at ${addr}?`,
+  (unitId, _nature, _addr) => `${unitId}, didn't catch that.`,
+];
+
+const PIVOT_VERIFIED_READBACK_TEMPLATES = [
+  (unitId, nature, addr, verb) => `${unitId}, no active ${nature} on file. ${verb} on a new ${nature} at ${addr}.`,
+  (unitId, nature, addr, verb) => `${unitId}, no ${nature} on file — ${verb.toLowerCase()} on a new one at ${addr}.`,
+];
+
+const PIVOT_UNVERIFIED_READBACK_TEMPLATES = [
+  (unitId, nature, addr, verb) => `${unitId}, no active ${nature} on file. ${verb} on a new ${nature} at ${addr}. I couldn't verify ${addr}.`,
+  (unitId, nature, addr, verb) => `${unitId}, no ${nature} on file — ${verb.toLowerCase()} on a new one at ${addr}. I couldn't verify ${addr}.`,
+];
+
+function _pickTemplate(templates) {
+  const idx = Math.floor(Math.random() * templates.length);
+  return templates[Math.max(0, Math.min(templates.length - 1, idx))];
+}
+
+export function buildCallConfirmReadback(unitId, nature, address, addressUnverified) {
+  const templates = addressUnverified
+    ? UNVERIFIED_CALL_READBACK_TEMPLATES
+    : VERIFIED_CALL_READBACK_TEMPLATES;
+  const t = _pickTemplate(templates);
+  return t(unitId, String(nature || '').toLowerCase(), address);
+}
+
+export function buildCallConfirmReprompt(unitId, nature, address) {
+  const t = _pickTemplate(CALL_REPROMPT_TEMPLATES);
+  return t(unitId, String(nature || '').toLowerCase(), address);
+}
+
+export function buildPivotConfirmReadback(unitId, nature, address, arrivalStatus, addressUnverified) {
+  const verb = arrivalStatus === 'en_route' ? 'Showing you en route' : 'Showing you on scene';
+  const templates = addressUnverified
+    ? PIVOT_UNVERIFIED_READBACK_TEMPLATES
+    : PIVOT_VERIFIED_READBACK_TEMPLATES;
+  const t = _pickTemplate(templates);
+  return t(unitId, String(nature || '').toLowerCase(), address, verb);
+}
+
 function abbreviateState(addr) {
   const commaIdx = addr.lastIndexOf(',');
   if (commaIdx !== -1) {
@@ -1490,14 +1596,33 @@ export class AIDispatcher {
       return result;
     }
 
+    // Task #562: ~95% of this agency's addresses are in Pennsylvania. When
+    // the unit doesn't say a state, default to PA before geocoding so the
+    // Nominatim query doesn't drift to a same-named street in another
+    // state. Only applied to call-creation; update flow leaves the input
+    // alone (out of scope).
+    let queryAddress = rawAddress;
+    let appliedStateDefault = false;
+    if (ctx === 'create') {
+      const withDefault = applyDefaultStateToAddress(rawAddress, 'PA');
+      if (withDefault && withDefault !== rawAddress.trim()) {
+        appliedStateDefault = true;
+      }
+      queryAddress = withDefault || rawAddress;
+    }
+
     let geo = null;
     try {
-      geo = await locationService.forwardGeocode(rawAddress);
+      geo = await locationService.forwardGeocode(queryAddress);
     } catch (e) {
       result.reason = 'error';
       this.log(ctx === 'update' ? 'GEOCODE_ERROR_UPDATE' : 'GEOCODE_ERROR_CREATE',
-        { participantId, address: rawAddress, error: e.message });
+        { participantId, address: rawAddress, queryAddress, error: e.message });
       return result;
+    }
+    if (appliedStateDefault) {
+      this.log('GEOCODE_DEFAULT_STATE_APPLIED',
+        { participantId, address: rawAddress, queryAddress, defaultState: 'PA' });
     }
 
     if (!geo) {
@@ -2955,9 +3080,10 @@ export class AIDispatcher {
               priority,
               arrivalStatus
             }, true);
-            const confirmResp = addressUnverified
-              ? `${participantId}, I couldn't verify ${finalAddress}, confirm to send as-is or correct it. ${matchedNature.toLowerCase()} at ${finalAddress}?`
-              : `${participantId}, confirm, ${matchedNature.toLowerCase()} at ${finalAddress}?`;
+            // Task #562: natural readback — sounds like a real dispatcher
+            // reading back the call, no "10-4 or negative?" coaching.
+            const confirmResp = buildCallConfirmReadback(
+              participantId, matchedNature, finalAddress, addressUnverified);
             await this.speak(confirmResp, participantId);
             this.addConversationExchange(participantId, transcript, confirmResp);
           } else if (nature && !address) {
@@ -4023,9 +4149,9 @@ export class AIDispatcher {
         priority: savedSlots?.priority || 'medium',
         arrivalStatus: savedSlots?.arrivalStatus || 'on_scene'
       }, true);
-      const confirmResp = addressUnverified
-        ? `${participantId}, I couldn't verify ${address}, confirm to send as-is or correct it. ${matchedNature.toLowerCase()} at ${address}?`
-        : `${participantId}, confirm, ${matchedNature.toLowerCase()} at ${address}?`;
+      // Task #562: natural call readback (no "10-4 or negative?" coaching).
+      const confirmResp = buildCallConfirmReadback(
+        participantId, matchedNature, address, addressUnverified);
       await this.speak(confirmResp, participantId);
     } else {
       setUnitSessionState(participantId, DISPATCHER_STATE.AWAITING_CALL_ADDRESS, null, {
@@ -4095,9 +4221,9 @@ export class AIDispatcher {
       priority: savedSlots?.priority || 'medium',
       arrivalStatus: savedSlots?.arrivalStatus || 'on_scene'
     }, true);
-    const confirmResp = addressUnverified
-      ? `${participantId}, I couldn't verify ${finalAddress}, confirm to send as-is or correct it. ${nature.toLowerCase()} at ${finalAddress}?`
-      : `${participantId}, confirm, ${nature.toLowerCase()} at ${finalAddress}?`;
+    // Task #562: natural call readback (no "10-4 or negative?" coaching).
+    const confirmResp = buildCallConfirmReadback(
+      participantId, nature, finalAddress, addressUnverified);
     await this.speak(confirmResp, participantId);
   }
 
@@ -4136,7 +4262,11 @@ export class AIDispatcher {
     }
 
     if (!isConfirmed) {
-      const askResp = `${participantId}, confirm call, 10-4 or negative?`;
+      // Task #562: natural re-prompt — don't coach the unit on which words
+      // to use ("10-4 or negative?"). Either ask if they copied or briefly
+      // re-read the call.
+      const askResp = buildCallConfirmReprompt(
+        participantId, slots?.nature, slots?.address);
       await this.speak(askResp, participantId);
       return;
     }
@@ -4963,11 +5093,9 @@ export class AIDispatcher {
         arrivalStatus,
       }, true);
 
-      const verbPhrase = arrivalStatus === 'en_route' ? 'show you en route' : 'show you on scene';
-      const natureLower = matchedNature.toLowerCase();
-      const confirmResp = addressUnverified
-        ? `${participantId}, no active ${natureLower} on file. I couldn't verify ${finalAddress}. Create new ${natureLower} at ${finalAddress} and ${verbPhrase}?`
-        : `${participantId}, no active ${natureLower} on file. Create new ${natureLower} at ${finalAddress} and ${verbPhrase}?`;
+      // Task #562: natural pivot readback (no "10-4 or negative?" coaching).
+      const confirmResp = buildPivotConfirmReadback(
+        participantId, matchedNature, finalAddress, arrivalStatus, addressUnverified);
       await this.speak(confirmResp, participantId);
       this.addConversationExchange(participantId, transcript, confirmResp);
       return true;

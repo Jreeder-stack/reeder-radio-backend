@@ -116,7 +116,12 @@ class LocationService {
     }
 
     try {
-      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&addressdetails=1&limit=1`;
+      // Task #562: bias the geocoder to US results so a stateless address
+      // can't accidentally resolve to a same-named street in another
+      // country. Combined with the PA-default applied upstream by the AI
+      // dispatcher, this keeps spoken addresses from drifting away from
+      // the agency's actual jurisdiction.
+      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&addressdetails=1&limit=1&countrycodes=us`;
       const response = await fetch(url, {
         headers: {
           'User-Agent': 'CommandComms-Dispatcher/1.0',
