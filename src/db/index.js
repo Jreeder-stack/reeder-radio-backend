@@ -883,6 +883,30 @@ export async function setAiDispatchChannel(channelName) {
   return setAiSetting('ai_dispatch_channel', channelName || '');
 }
 
+// Task #566: AI-initiated status checks kill switch. Returns { enabled, source }
+// where source is 'admin_setting' (a value is stored in ai_settings) or
+// 'env_default' (no admin row, falling back to AI_STATUS_CHECKS_ENABLED env var,
+// which itself defaults to false). CAD discontinued routine status checks for
+// this agency, so the default is OFF — fresh installs stay quiet without any
+// UI click.
+export async function getStatusChecksEnabledState() {
+  const value = await getAiSetting('ai_status_checks_enabled');
+  if (value === null || value === undefined) {
+    const envEnabled = String(process.env.AI_STATUS_CHECKS_ENABLED || '').toLowerCase() === 'true';
+    return { enabled: envEnabled, source: 'env_default' };
+  }
+  return { enabled: value === 'true', source: 'admin_setting' };
+}
+
+export async function isStatusChecksEnabled() {
+  const { enabled } = await getStatusChecksEnabledState();
+  return enabled;
+}
+
+export async function setStatusChecksEnabled(enabled) {
+  return setAiSetting('ai_status_checks_enabled', enabled ? 'true' : 'false');
+}
+
 export async function createChannelMessage(channel, sender, messageType, content = null, audioUrl = null, audioDuration = null, audioData = null) {
   const result = await pool.query(
     `INSERT INTO channel_messages (channel, sender, message_type, content, audio_url, audio_duration, audio_data)

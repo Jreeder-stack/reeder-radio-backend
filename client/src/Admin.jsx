@@ -20,6 +20,8 @@ export default function Admin({ user, onLogout }) {
   const [aiDispatchChannel, setAiDispatchChannel] = useState("");
   const [aiDispatchLoading, setAiDispatchLoading] = useState(false);
   const [aiDispatchPipeline, setAiDispatchPipeline] = useState(null);
+  const [aiStatusChecksEnabled, setAiStatusChecksEnabled] = useState(false);
+  const [aiStatusChecksLoading, setAiStatusChecksLoading] = useState(false);
 
   const [hourlyBroadcastEnabled, setHourlyBroadcastEnabled] = useState(true);
   const [hourlyBroadcastNextFireAt, setHourlyBroadcastNextFireAt] = useState(null);
@@ -352,6 +354,7 @@ export default function Admin({ user, onLogout }) {
       setAiDispatchEnabled(aiDispatchData.enabled);
       setAiDispatchChannel(aiDispatchData.channel || "");
       setAiDispatchPipeline(aiDispatchData.pipeline || null);
+      setAiStatusChecksEnabled(!!aiDispatchData.statusChecksEnabled);
       setScannerEnabled(scannerData.running || false);
       setScannerChannel(scannerData.channelName || "");
       setScannerUrl(scannerData.streamUrl || "");
@@ -595,6 +598,26 @@ export default function Admin({ user, onLogout }) {
       );
     } catch (err) {
       alert("Failed to update channel: " + err.message);
+    }
+  };
+
+  const toggleAiStatusChecks = async () => {
+    const next = !aiStatusChecksEnabled;
+    setAiStatusChecksLoading(true);
+    try {
+      const res = await fetch("/api/admin/ai-dispatch", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ statusChecksEnabled: next }),
+      });
+      if (!res.ok) throw new Error("Failed to toggle AI status checks");
+      const data = await res.json();
+      setAiStatusChecksEnabled(!!data.statusChecksEnabled);
+    } catch (err) {
+      alert("Failed to toggle AI status checks: " + err.message);
+    } finally {
+      setAiStatusChecksLoading(false);
     }
   };
 
@@ -1085,6 +1108,23 @@ export default function Admin({ user, onLogout }) {
                       <option key={c.id} value={c.name}>{c.name}</option>
                     ))}
                   </select>
+                </div>
+
+                <div className="admin-field" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
+                  <div style={{ flex: 1 }}>
+                    <label className="admin-field-label">AI Status Checks</label>
+                    <p className="admin-settings-card-desc" style={{ marginTop: 4 }}>
+                      When ON, the AI dispatcher initiates routine status checks on units that CAD flags as due. Leave OFF unless CAD has the routine status check feature enabled.
+                    </p>
+                  </div>
+                  <button
+                    onClick={toggleAiStatusChecks}
+                    disabled={aiStatusChecksLoading}
+                    className={`admin-toggle-btn ${aiStatusChecksEnabled ? "admin-toggle-btn-on" : "admin-toggle-btn-off"}`}
+                    style={{ opacity: aiStatusChecksLoading ? 0.6 : 1, cursor: aiStatusChecksLoading ? "not-allowed" : "pointer" }}
+                  >
+                    {aiStatusChecksLoading ? "..." : aiStatusChecksEnabled ? "ON" : "OFF"}
+                  </button>
                 </div>
 
                 {aiDispatchEnabled && aiDispatchChannel && (() => {

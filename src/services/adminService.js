@@ -71,3 +71,11 @@ export async function getAiDispatchEnabled() {
 export async function setAiDispatchEnabled(enabled) {
   return db.setAiDispatchEnabled(enabled);
 }
+
+export async function getStatusChecksEnabledState() {
+  return db.getStatusChecksEnabledState();
+}
+
+export async function setStatusChecksEnabled(enabled) {
+  return db.setStatusChecksEnabled(enabled);
+}

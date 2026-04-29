@@ -6,7 +6,7 @@ import { resolveDestination, KNOWN_PLACES, setLearnedPlaces } from './agencyKnow
 import * as dispatcherLearning from './dispatcherLearning.js';
 import { isConfigured as isLlmConfigured, classifyIntent, answerWithData, composeNatural, rewriteCallNote } from './llmIntentService.js';
 import { parsePersonDetails, parseDOB, extractNameFromTranscript } from './phoneticParser.js';
-import pool, { isAiDispatchEnabled, getAiDispatchChannel, createChannelMessage, getRecentAudioMessageBySender, getAllFcmTokensForUnit, createPage, getPagingChannelId } from '../db/index.js';
+import pool, { isAiDispatchEnabled, getAiDispatchChannel, createChannelMessage, getRecentAudioMessageBySender, getAllFcmTokensForUnit, createPage, getPagingChannelId, getStatusChecksEnabledState } from '../db/index.js';
 import { sendPageToList, sendPageToTokens } from './fcmService.js';
 import { isValidWav } from './wavValidator.js';
 import { audioRelayService } from './audioRelayService.js';
@@ -870,6 +870,11 @@ export class AIDispatcher {
     this._statusCheckPollingInterval = null;
     this._seenStatusCheckIds = new Set();
     this._pendingStatusChecks = new Map();
+    // Task #566: AI status checks kill switch. Default ON in the constructor
+    // so tests that exercise _onCadStatusCheckEvent / watchdog directly keep
+    // their existing behavior; the real boot path overrides this from the
+    // admin setting in start() before polling/watchdog are ever started.
+    this._statusChecksEnabled = true;
     // Per-(unit+call) timestamp of the last status-check prompt we actually
     // spoke, used to rate-limit duplicate prompts even when CAD fires a fresh
     // `due` or escalates within the minimum interval. Value:
@@ -1068,7 +1073,25 @@ export class AIDispatcher {
     this.log('STARTED_CONNECTED', { channel: channelName, roomKey: this.configuredChannel, numericId: this.numericChannelId, aliases: Array.from(this.channelAliases), mode: 'always-on' });
 
     this._startBoloPolling();
-    this._startStatusCheckPolling();
+    // Task #566: load the AI status checks toggle from the admin setting
+    // (falling back to AI_STATUS_CHECKS_ENABLED env, default false). When OFF
+    // we never start polling, the watchdog, or the WS event handler — even
+    // if CAD fires events they're suppressed at the handler edge below.
+    try {
+      const { enabled, source } = await getStatusChecksEnabledState();
+      this._statusChecksEnabled = enabled;
+      if (enabled) {
+        this.log('STATUS_CHECKS_ENABLED', { source });
+        this._startStatusCheckPolling();
+      } else {
+        this.log('STATUS_CHECKS_DISABLED', { source });
+      }
+    } catch (err) {
+      // Fall safe: if we can't read the setting, keep the current default
+      // (constructor sets enabled=true) but log the failure so it's visible.
+      this.log('STATUS_CHECKS_FLAG_LOAD_ERROR', { error: err.message });
+      this._startStatusCheckPolling();
+    }
     this._startHealthCheck();
 
     try {
@@ -9004,6 +9027,22 @@ export class AIDispatcher {
     // fall back to unitId only if the callsign is missing.
     const unitId = evt.unitNumber || evt.unitId;
     if (!unitId) return;
+    // Task #566: kill-switch edge guard. Drop every CAD status_check_* event
+    // (including any synthetic ones from the watchdog or /pending-checks
+    // poller) when the admin toggle is OFF — no prompt, no escalation, no
+    // all-units broadcast. Logged once per (unit,call) to avoid log spam.
+    if (this._statusChecksEnabled === false) {
+      const suppressKey = `${String(unitId).toUpperCase()}|${callId || ''}|${type || ''}`;
+      if (!this._statusCheckSuppressLog) this._statusCheckSuppressLog = new Set();
+      if (!this._statusCheckSuppressLog.has(suppressKey)) {
+        this._statusCheckSuppressLog.add(suppressKey);
+        if (this._statusCheckSuppressLog.size > 200) this._statusCheckSuppressLog.clear();
+        this.log('STATUS_CHECK_SUPPRESSED_FLAG_OFF', {
+          type, unitId, callId, source: evt.raw?.source || 'cad',
+        });
+      }
+      return;
+    }
     // Task #512: opportunistically cache callsign → CAD unit UUID from any CAD
     // status-check event so later close/cancel/update lookups can match
     // UUID-only assigned_units even before our own escalation runs.
@@ -9079,10 +9118,21 @@ export class AIDispatcher {
 
   _startStatusCheckPolling() {
     this._stopStatusCheckPolling();
+    // Task #566: kill switch — when status checks are disabled, never start
+    // the CAD WS client, /pending-checks polling, or the watchdog. Logged
+    // once so reconnects don't spam.
+    if (this._statusChecksEnabled === false) {
+      if (!this._statusCheckPollingDisabledLogged) {
+        this.log('STATUS_CHECK_POLLING_SKIPPED', { reason: 'status_checks_disabled' });
+        this._statusCheckPollingDisabledLogged = true;
+      }
+      return;
+    }
     if (!cadService.isConfigured()) {
       this.log('STATUS_CHECK_POLLING_SKIPPED', { reason: 'CAD not configured' });
       return;
     }
+    this._statusCheckPollingDisabledLogged = false;
     cadStatusCheckClient.start((evt) => {
       this._onCadStatusCheckEvent(evt).catch(err => {
         this.log('STATUS_CHECK_HANDLER_ERROR', { error: err.message });
@@ -9090,6 +9140,27 @@ export class AIDispatcher {
     });
     this.log('STATUS_CHECK_CLIENT_STARTED');
     this._startStatusCheckWatchdog();
+  }
+
+  // Task #566: applied by the admin route when the AI status checks toggle
+  // flips. Re-arms or tears down polling/watchdog/handler immediately without
+  // a backend restart and clears any in-flight pending checks / escalations
+  // when going ON → OFF so a check that was already prompting goes silent.
+  setStatusChecksEnabled(enabled) {
+    const next = !!enabled;
+    if (this._statusChecksEnabled === next) return;
+    this._statusChecksEnabled = next;
+    if (next) {
+      this._statusCheckPollingDisabledLogged = false;
+      this.log('STATUS_CHECKS_ENABLED', { source: 'admin_setting' });
+      if (this.isRunning && this.connected) {
+        this._startStatusCheckPolling();
+      }
+    } else {
+      this.log('STATUS_CHECKS_DISABLED', { source: 'admin_setting' });
+      this._stopStatusCheckPolling();
+      try { this.routineStatusCheckEscalation.clearAll(); } catch (_) { /* defensive */ }
+    }
   }
 
   _stopStatusCheckPolling() {
@@ -9107,6 +9178,12 @@ export class AIDispatcher {
   // (and no snooze), we synthesize a status_check_due so the AI prompts.
   _startStatusCheckWatchdog() {
     this._stopStatusCheckWatchdog();
+    // Task #566: respect the admin kill switch — never schedule the sweep
+    // when status checks are disabled.
+    if (this._statusChecksEnabled === false) {
+      this.log('STATUS_CHECK_WATCHDOG_SKIPPED', { reason: 'status_checks_disabled' });
+      return;
+    }
     const TICK_MS = 60 * 1000;
     this._statusCheckWatchdogFiredAt = this._statusCheckWatchdogFiredAt || new Map();
     this._statusCheckWatchdogTimer = setInterval(() => {
@@ -9129,6 +9206,9 @@ export class AIDispatcher {
   }
 
   async _runStatusCheckWatchdog() {
+    // Task #566: defense in depth — even if a stale timer fires, the kill
+    // switch wins and the sweep is a no-op.
+    if (this._statusChecksEnabled === false) return;
     if (!cadService.isConfigured()) return;
     if (!this._statusCheckWatchdogFiredAt) this._statusCheckWatchdogFiredAt = new Map();
     const WATCHDOG_THRESHOLD_MS = 22 * 60 * 1000; // 22 min — first cadence + small grace
@@ -9184,6 +9264,16 @@ export class AIDispatcher {
   }
 
   async handleSnoozeStatusChecks(participantId, transcript, slots) {
+    // Task #566: kill switch — when AI status checks are disabled, refuse the
+    // snooze with a clear spoken response instead of hitting CAD or erroring.
+    if (this._statusChecksEnabled === false) {
+      const resp = `${participantId}, status checks are not active.`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+      this.log('STATUS_CHECK_SNOOZE_SUPPRESSED_FLAG_OFF', { unitId: participantId });
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+      return;
+    }
     // Prefer the call_id of the currently-prompted status check (multi-call safety),
     // and fall back to the unit's current CAD assignment.
     const session = getUnitSessionState(participantId);
@@ -9230,6 +9320,16 @@ export class AIDispatcher {
   }
 
   async handleCancelStatusChecks(participantId, transcript, _slots) {
+    // Task #566: kill switch — when AI status checks are disabled, refuse the
+    // cancel with a clear spoken response instead of hitting CAD.
+    if (this._statusChecksEnabled === false) {
+      const resp = `${participantId}, status checks are not active.`;
+      await this.speak(resp, participantId);
+      this.addConversationExchange(participantId, transcript, resp);
+      this.log('STATUS_CHECK_CANCEL_SUPPRESSED_FLAG_OFF', { unitId: participantId });
+      setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
+      return;
+    }
     // Prefer the call_id of the currently-prompted status check (multi-call
     // safety), then fall back to the unit's current CAD assignment.
     // Slot data from LLM is at most a display call number and is unsafe

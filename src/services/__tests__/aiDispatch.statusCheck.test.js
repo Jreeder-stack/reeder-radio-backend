@@ -64,6 +64,7 @@ vi.mock('../../db/index.js', () => ({
   getAllFcmTokensForUnit: vi.fn(async () => [{ fcm_token: 'TOKEN-1', radio_id: 'R1' }]),
   getPagingChannelId: vi.fn(async () => 'PAGING-CH-1'),
   createPage: vi.fn(async () => ({ id: 42 })),
+  getStatusChecksEnabledState: vi.fn(async () => ({ enabled: true, source: 'admin_setting' })),
 }));
 
 vi.mock('../fcmService.js', () => ({
@@ -841,5 +842,69 @@ describe('Task #559: handleStatusCheckResponse logs matched list / phrase', () =
     expect(log.details.matchedList).toBe('deny');
     expect(log.details.matchedPhrase).toBeTruthy();
     expect(cadService.respondToStatusCheck).not.toHaveBeenCalled();
+  });
+});
+
+describe('Task #566: AI status checks kill switch', () => {
+  it('CAD status_check_due is suppressed when the toggle is OFF (no prompt, no escalation)', async () => {
+    const d = makeDispatcher();
+    d.setStatusChecksEnabled(false);
+    await d._onCadStatusCheckEvent(dueEvent('INDIANA-1', 'call-uuid-1', 'CALL-1'));
+    expect(d.spoken).toHaveLength(0);
+    expect(d.routineStatusCheckEscalation.has('INDIANA-1', 'call-uuid-1')).toBe(false);
+    const log = d.logs.find(l => l.action === 'STATUS_CHECK_SUPPRESSED_FLAG_OFF');
+    expect(log).toBeDefined();
+    expect(log.details.type).toBe('status_check_due');
+    expect(log.details.unitId).toBe('INDIANA-1');
+  });
+
+  it('snooze intent refuses with a spoken message when the toggle is OFF', async () => {
+    const d = makeDispatcher();
+    d.setStatusChecksEnabled(false);
+    await d.handleSnoozeStatusChecks('INDIANA-1', 'snooze status checks', {});
+    expect(d.spoken).toContain('INDIANA-1, status checks are not active.');
+    expect(cadService.snoozeStatusCheck).not.toHaveBeenCalled();
+    expect(d.logs.some(l => l.action === 'STATUS_CHECK_SNOOZE_SUPPRESSED_FLAG_OFF')).toBe(true);
+  });
+
+  it('cancel intent refuses with a spoken message when the toggle is OFF', async () => {
+    const d = makeDispatcher();
+    d.setStatusChecksEnabled(false);
+    await d.handleCancelStatusChecks('INDIANA-1', 'cancel status checks', {});
+    expect(d.spoken).toContain('INDIANA-1, status checks are not active.');
+    expect(cadService.cancelStatusCheck).not.toHaveBeenCalled();
+    expect(d.logs.some(l => l.action === 'STATUS_CHECK_CANCEL_SUPPRESSED_FLAG_OFF')).toBe(true);
+  });
+
+  it('flipping the toggle ON → OFF tears down polling and clears in-flight escalations', async () => {
+    const d = makeDispatcher();
+    await d._onCadStatusCheckEvent(dueEvent('INDIANA-1', 'call-uuid-1'));
+    expect(d.routineStatusCheckEscalation.has('INDIANA-1', 'call-uuid-1')).toBe(true);
+    const csc = await import('../cadStatusCheckClient.js');
+    csc.cadStatusCheckClient.stop.mockClear();
+    d.setStatusChecksEnabled(false);
+    expect(d.routineStatusCheckEscalation.has('INDIANA-1', 'call-uuid-1')).toBe(false);
+    expect(csc.cadStatusCheckClient.stop).toHaveBeenCalled();
+    expect(d.logs.some(l => l.action === 'STATUS_CHECKS_DISABLED' && l.details.source === 'admin_setting')).toBe(true);
+  });
+
+  it('flipping the toggle OFF → ON re-arms polling and accepts new CAD events', async () => {
+    const d = makeDispatcher();
+    d.setStatusChecksEnabled(false);
+    const csc = await import('../cadStatusCheckClient.js');
+    csc.cadStatusCheckClient.start.mockClear();
+    d.setStatusChecksEnabled(true);
+    expect(csc.cadStatusCheckClient.start).toHaveBeenCalled();
+    expect(d.logs.some(l => l.action === 'STATUS_CHECKS_ENABLED' && l.details.source === 'admin_setting')).toBe(true);
+    await d._onCadStatusCheckEvent(dueEvent('INDIANA-1', 'call-uuid-1'));
+    expect(d.spoken).toContain('INDIANA-1, central.');
+  });
+
+  it('watchdog sweep is a no-op when the toggle is OFF', async () => {
+    const d = makeDispatcher();
+    d.setStatusChecksEnabled(false);
+    cadService.getActiveCalls.mockClear();
+    await d._runStatusCheckWatchdog();
+    expect(cadService.getActiveCalls).not.toHaveBeenCalled();
   });
 });

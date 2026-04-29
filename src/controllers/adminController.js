@@ -313,7 +313,14 @@ export async function getAiDispatch(req, res) {
     const channel = await getAiDispatchChannel();
     const dispatcher = getDispatcher();
     const pipeline = dispatcher.getPipelineStatus();
-    success(res, { enabled, channel, pipeline });
+    const statusChecks = await adminService.getStatusChecksEnabledState();
+    success(res, {
+      enabled,
+      channel,
+      pipeline,
+      statusChecksEnabled: statusChecks.enabled,
+      statusChecksSource: statusChecks.source,
+    });
   } catch (err) {
     console.error('Get AI dispatch error:', err);
     error(res, 'Failed to get AI dispatch status', 500);
@@ -415,12 +422,18 @@ export function resetAudioTuning(req, res) {
 
 export async function setAiDispatch(req, res) {
   try {
-    const { enabled, channel } = req.body;
-    if (typeof enabled !== 'boolean') {
+    const { enabled, channel, statusChecksEnabled } = req.body;
+    if (enabled !== undefined && typeof enabled !== 'boolean') {
       return error(res, 'enabled must be a boolean', 400);
     }
-    
-    if (enabled) {
+    if (statusChecksEnabled !== undefined && typeof statusChecksEnabled !== 'boolean') {
+      return error(res, 'statusChecksEnabled must be a boolean', 400);
+    }
+    if (enabled === undefined && statusChecksEnabled === undefined) {
+      return error(res, 'enabled or statusChecksEnabled is required', 400);
+    }
+
+    if (enabled === true) {
       const targetChannel = channel !== undefined ? channel : await getAiDispatchChannel();
       if (!targetChannel) {
         return error(res, 'Dispatch channel is required to enable AI', 400);
@@ -433,7 +446,7 @@ export async function setAiDispatch(req, res) {
       startDispatcher(channelData?.name || targetChannel, roomKey).catch(err => {
         console.error('Failed to start AI dispatcher:', err.message);
       });
-    } else {
+    } else if (enabled === false) {
       await adminService.setAiDispatchEnabled(false);
       await setAiDispatchChannel('');
       stopDispatcher().catch(err => {
@@ -441,16 +454,46 @@ export async function setAiDispatch(req, res) {
       });
     }
 
+    // Task #566: AI status checks toggle. Independent of the AI Dispatch on/off
+    // toggle — admins can leave the dispatcher running while suppressing every
+    // AI-initiated status check (CAD WS handler, /pending-checks polling, and
+    // the watchdog). When flipped without restarting the backend the
+    // dispatcher tears down or re-arms polling and clears any in-flight state.
+    if (statusChecksEnabled !== undefined) {
+      await adminService.setStatusChecksEnabled(statusChecksEnabled);
+      try {
+        getDispatcher().setStatusChecksEnabled(statusChecksEnabled);
+      } catch (err) {
+        console.error('Failed to apply status checks toggle to dispatcher:', err.message);
+      }
+      await authService.logUserActivity(
+        req.session.user.id,
+        req.session.user.username,
+        'admin_toggle_ai_status_checks',
+        { statusChecksEnabled }
+      );
+    }
+
     const dispatchChannel = await getAiDispatchChannel();
 
-    await authService.logUserActivity(
-      req.session.user.id,
-      req.session.user.username,
-      'admin_toggle_ai_dispatch',
-      { enabled, channel: dispatchChannel }
-    );
+    if (enabled !== undefined) {
+      await authService.logUserActivity(
+        req.session.user.id,
+        req.session.user.username,
+        'admin_toggle_ai_dispatch',
+        { enabled, channel: dispatchChannel }
+      );
+    }
     const pipeline = getDispatcher().getPipelineStatus();
-    success(res, { enabled, channel: dispatchChannel, pipeline });
+    const dispatchEnabled = await adminService.getAiDispatchEnabled();
+    const statusChecks = await adminService.getStatusChecksEnabledState();
+    success(res, {
+      enabled: dispatchEnabled,
+      channel: dispatchChannel,
+      pipeline,
+      statusChecksEnabled: statusChecks.enabled,
+      statusChecksSource: statusChecks.source,
+    });
   } catch (err) {
     console.error('Set AI dispatch error:', err);
     error(res, 'Failed to set AI dispatch status', 500);
