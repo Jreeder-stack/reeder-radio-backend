@@ -8,7 +8,6 @@ import com.reedersystems.commandcomms.audio.radio.RadioStateManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
 /**
@@ -52,12 +51,13 @@ object RadioFlavorLed : RadioFlavorLedDriver {
         val appContext = context.applicationContext
         scope.launch {
             stateManager.state
-                .distinctUntilChanged()
                 .collect { state ->
                     val color = when (state) {
-                        RadioState.IDLE         -> COLOR_OFF
-                        RadioState.TRANSMITTING -> COLOR_RED
-                        RadioState.RECEIVING    -> COLOR_GREEN
+                        RadioState.IDLE             -> COLOR_OFF
+                        RadioState.REQUESTING_FLOOR -> COLOR_RED
+                        RadioState.TRANSMITTING     -> COLOR_RED
+                        RadioState.RECEIVING        -> COLOR_GREEN
+                        RadioState.CHANNEL_BUSY     -> COLOR_OFF
                     }
                     emitLed(appContext, color)
                 }
