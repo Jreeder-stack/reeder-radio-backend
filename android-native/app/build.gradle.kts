@@ -18,6 +18,30 @@ android {
         buildConfigField("String", "BASE_URL", "\"https://comms.reeder-systems.com\"")
     }
 
+    // Per-device build flavors.
+    //
+    // The audio transport, signaling, floor control, jitter buffer, Opus
+    // codec, and dispatch UI are shared across every flavor — only
+    // device-integration code (hardware key intents/keycodes, OLED status
+    // surface, indicator-LED routing, and the device_type the radio reports
+    // to the backend) differs per flavor. Both APKs install side-by-side
+    // because the SD7 build appends `.sd7` to the application ID.
+    flavorDimensions += "device"
+    productFlavors {
+        create("t320") {
+            dimension = "device"
+            // RADIO_DEVICE_TYPE is sent to the backend on signaling auth so
+            // dispatchers can distinguish radio types in the admin Devices tab.
+            buildConfigField("String", "RADIO_DEVICE_TYPE", "\"t320\"")
+        }
+        create("sd7") {
+            dimension = "device"
+            applicationIdSuffix = ".sd7"
+            versionNameSuffix = "-sd7"
+            buildConfigField("String", "RADIO_DEVICE_TYPE", "\"siyata_sd7\"")
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false

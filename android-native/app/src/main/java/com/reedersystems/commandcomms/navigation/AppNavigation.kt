@@ -20,7 +20,7 @@ import com.reedersystems.commandcomms.audio.BackgroundAudioService
 import com.reedersystems.commandcomms.ui.login.LoginScreen
 import com.reedersystems.commandcomms.ui.radio.DeviceRegistrationScreen
 import com.reedersystems.commandcomms.ui.radio.LockedScreen
-import com.reedersystems.commandcomms.ui.radio.RadioScreen
+import com.reedersystems.commandcomms.ui.radio.RadioFlavorScreen
 import com.reedersystems.commandcomms.ui.radio.UnassignedScreen
 import com.reedersystems.commandcomms.ui.settings.SettingsScreen
 import kotlinx.coroutines.Dispatchers
@@ -137,7 +137,7 @@ fun AppNavigation() {
             val assignedUnit = backStackEntry.arguments?.getString("assignedUnit")
             val isRadioDevice = app.radioTokenStore.getToken() != null
             val currentRadioId = app.radioTokenStore.getRadioId() ?: ""
-            RadioScreen(
+            RadioFlavorScreen(
                 onLocked = if (isRadioDevice) {
                     {
                         app.radioTokenStore.clearAssignedUnit()

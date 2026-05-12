@@ -50,6 +50,9 @@ private const val KEY_ACC = 231
 private const val KEY_STAR = 17
 private const val KEY_DPAD_UP = 19
 private const val KEY_DPAD_DOWN = 20
+// SD7 rotary-knob press. Not emitted by any T320 hardware path so adding
+// this constant is a non-T320-affecting extension.
+private const val KEY_DPAD_CENTER = 23
 private const val KEY_DPAD_LEFT = 21
 private const val KEY_DPAD_RIGHT = 22
 
@@ -406,7 +409,8 @@ class MainActivity : ComponentActivity() {
             keyCode == KEY_DPAD_UP ||
             keyCode == KEY_DPAD_DOWN ||
             keyCode == KEY_DPAD_LEFT ||
-            keyCode == KEY_DPAD_RIGHT
+            keyCode == KEY_DPAD_RIGHT ||
+            keyCode == KEY_DPAD_CENTER  // SD7 rotary-knob press; ignored on T320
         ) return true
         if (keyCode == KEY_ACC || keyCode == KEY_STAR) return true
         return false
@@ -532,6 +536,14 @@ class MainActivity : ComponentActivity() {
 
             keyCode == KEY_DPAD_RIGHT -> {
                 if (event?.repeatCount == 0) app.keyEventFlow.tryEmit(KeyAction.DpadRight)
+                return true
+            }
+
+            // SD7 rotary-knob press. Cycles unit status (see KeyAction.DpadCenter
+            // doc-comment). T320 hardware never emits this keycode so this arm
+            // is a no-op on the T320 build.
+            keyCode == KEY_DPAD_CENTER -> {
+                if (event?.repeatCount == 0) app.keyEventFlow.tryEmit(KeyAction.DpadCenter)
                 return true
             }
 

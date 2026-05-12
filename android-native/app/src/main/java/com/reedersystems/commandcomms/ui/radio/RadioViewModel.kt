@@ -565,6 +565,10 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                             is KeyAction.DpadLeft -> prevZone()
                             is KeyAction.DpadRight -> nextZone()
                             is KeyAction.AccToggle -> toggleScanning()
+                            // SD7 rotary-knob press → cycle unit status. T320
+                            // hardware never emits DpadCenter so this branch
+                            // only ever fires on the SD7 build.
+                            is KeyAction.DpadCenter -> cycleStatus()
                             else -> {}
                         }
                     }

@@ -127,6 +127,39 @@ class PttHardwareReceiver : BroadcastReceiver() {
                 BackgroundAudioService.ACTION_EMERGENCY_DOWN
             }
 
+            // ── Siyata SD7 firmware mappings (additive — do not modify the
+            // T320 entries above). The exact action strings must be confirmed
+            // on real SD7 hardware via logcat on first boot (see Step 2 of
+            // the SD7 task brief). The list below is a best-effort union of
+            // the conventions Siyata's PTT firmware is known to use; any
+            // unmatched broadcasts hit the `else` branch and are logged so
+            // we can tighten this list against ground truth. These mappings
+            // are only reachable when the SD7 manifest overlay
+            // (src/sd7/AndroidManifest.xml) registers the corresponding
+            // intent-filters, so the T320 build is unaffected at runtime
+            // even though the `when` arms are compiled in.
+            "com.siyata.sd7.PTT_DOWN",
+            "com.siyata.intent.action.PTT_DOWN",
+            "com.siyata.ptt.down",
+            "com.siyata.ptt.PTT_KEY_DOWN"                 -> BackgroundAudioService.ACTION_PTT_DOWN
+            "com.siyata.sd7.PTT_UP",
+            "com.siyata.intent.action.PTT_UP",
+            "com.siyata.ptt.up",
+            "com.siyata.ptt.PTT_KEY_UP"                   -> BackgroundAudioService.ACTION_PTT_UP
+
+            "com.siyata.sd7.SOS_DOWN",
+            "com.siyata.intent.action.SOS_DOWN",
+            "com.siyata.sos.down"                         -> BackgroundAudioService.ACTION_EMERGENCY_DOWN
+            "com.siyata.sd7.SOS_UP",
+            "com.siyata.intent.action.SOS_UP",
+            "com.siyata.sos.up"                           -> BackgroundAudioService.ACTION_EMERGENCY_UP
+            "com.siyata.sd7.SOS_LONGPRESS",
+            "com.siyata.intent.action.SOS_LONGPRESS",
+            "com.siyata.sos.longpress"                    -> {
+                Log.d(TAG, "PttHardwareReceiver: Siyata SOS longpress — firing emergency DOWN")
+                BackgroundAudioService.ACTION_EMERGENCY_DOWN
+            }
+
             else -> {
                 Log.w(TAG, "[RadioError] PttHardwareReceiver: unrecognised action=$action — ignoring (no mapping found)")
                 null

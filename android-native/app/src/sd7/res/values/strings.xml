@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Overrides the value in src/main/res so the SD7 APK shows up with a
+         distinct launcher label and notification title alongside the T320
+         build on the same device. -->
+    <string name="app_name">COMMAND COMMS SD7</string>
+</resources>

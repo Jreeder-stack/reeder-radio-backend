@@ -15,6 +15,7 @@ import android.os.Looper
 import android.util.Log
 import java.util.UUID
 import com.reedersystems.commandcomms.audio.ToneEngine
+import com.reedersystems.commandcomms.audio.led.RadioFlavorLed
 import com.reedersystems.commandcomms.audio.radio.RadioStateManager
 import com.reedersystems.commandcomms.data.api.ApiClient
 import com.reedersystems.commandcomms.data.prefs.KioskPrefs
@@ -137,6 +138,13 @@ class CommandCommsApp : Application() {
         toneEngine = ToneEngine(this)
 
         radioStateManager = RadioStateManager()
+
+        // Start the per-flavor radio status LED driver. T320 is a no-op
+        // (LED is driven by NotificationChannel lights); SD7 sends Siyata
+        // vendor broadcasts on every TX/RX/IDLE transition. The
+        // `RadioFlavorLed` object lives in flavor source sets — same FQN,
+        // same signature — so this call site stays flavor-agnostic.
+        radioStateManager?.let { RadioFlavorLed.start(this, it) }
 
         registerRemoteKioskReceiver()
         observeRemoteKioskEvents()

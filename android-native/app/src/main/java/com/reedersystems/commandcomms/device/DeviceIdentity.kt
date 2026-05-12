@@ -48,7 +48,11 @@ private fun tryReadSerial(): String? {
     }
 
     // SystemProperties fallback — works on most OEM PTT hardware without any permissions
-    val sysPropKeys = listOf("ro.serialno", "ro.boot.serialno", "ro.boot.serialnumber", "sys.serialnumber")
+    val sysPropKeys = listOf(
+        "ro.serialno", "ro.boot.serialno", "ro.boot.serialnumber", "sys.serialnumber",
+        // Siyata SD7-specific fallbacks — verified per-flavor on first boot
+        "ro.siyata.serial", "ro.siyata.serialno", "ro.product.serial"
+    )
     for (key in sysPropKeys) {
         val value = getSystemProperty(key)
         if (value != null) {
@@ -85,7 +89,11 @@ private fun tryReadImei(context: Context): String? {
     }
 
     // SystemProperties fallback — common on Qualcomm/MediaTek PTT radio hardware
-    val sysPropKeys = listOf("gsm.imei", "ril.IMEI", "ril.imei", "gsm.imei.sv", "persist.radio.imei")
+    val sysPropKeys = listOf(
+        "gsm.imei", "ril.IMEI", "ril.imei", "gsm.imei.sv", "persist.radio.imei",
+        // Siyata SD7-specific IMEI fallbacks
+        "ro.siyata.imei", "persist.siyata.imei"
+    )
     for (key in sysPropKeys) {
         val value = getSystemProperty(key)
         if (value != null && value.length >= 14) {

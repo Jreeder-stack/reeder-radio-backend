@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    SD7 flavor manifest overlay.
+
+    Adds Siyata SD7-specific PTT and SOS broadcast actions to the existing
+    PttHardwareReceiver from the main manifest. The Android manifest merger
+    combines these intent-filter children with the ones already declared in
+    `src/main/AndroidManifest.xml` so the receiver continues to honor every
+    Inrico T320 broadcast as well — only the SD7 build of the APK actually
+    receives the Siyata broadcasts because it carries the `.sd7` package
+    suffix.
+
+    NOTE: The exact Siyata SD7 broadcast action strings must be confirmed
+    on real hardware via logcat on the first SD7 boot (see Step 2 of the
+    task brief). The list below is a best-effort union of the conventions
+    Siyata's PTT firmware is known to use plus the same generic Android
+    actions that work across most rugged PTT handsets — wide enough that at
+    least one will match. Any that don't match are silently ignored by the
+    receiver's `else` branch (no harm) and the validation report records
+    which actions were actually observed so this list can be tightened.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <application>
+
+        <receiver
+            android:name=".audio.PttHardwareReceiver"
+            android:exported="true"
+            tools:node="merge">
+
+            <!-- Siyata SD7 — PTT button (side) -->
+            <intent-filter>
+                <action android:name="com.siyata.sd7.PTT_DOWN" />
+                <action android:name="com.siyata.sd7.PTT_UP" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="com.siyata.intent.action.PTT_DOWN" />
+                <action android:name="com.siyata.intent.action.PTT_UP" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="com.siyata.ptt.down" />
+                <action android:name="com.siyata.ptt.up" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="com.siyata.ptt.PTT_KEY_DOWN" />
+                <action android:name="com.siyata.ptt.PTT_KEY_UP" />
+            </intent-filter>
+
+            <!-- Siyata SD7 — SOS button (top) -->
+            <intent-filter android:priority="999">
+                <action android:name="com.siyata.sd7.SOS_DOWN" />
+                <action android:name="com.siyata.sd7.SOS_UP" />
+                <action android:name="com.siyata.sd7.SOS_LONGPRESS" />
+            </intent-filter>
+            <intent-filter android:priority="999">
+                <action android:name="com.siyata.intent.action.SOS_DOWN" />
+                <action android:name="com.siyata.intent.action.SOS_UP" />
+                <action android:name="com.siyata.intent.action.SOS_LONGPRESS" />
+            </intent-filter>
+            <intent-filter android:priority="999">
+                <action android:name="com.siyata.sos.down" />
+                <action android:name="com.siyata.sos.up" />
+                <action android:name="com.siyata.sos.longpress" />
+            </intent-filter>
+
+        </receiver>
+
+    </application>
+
+</manifest>

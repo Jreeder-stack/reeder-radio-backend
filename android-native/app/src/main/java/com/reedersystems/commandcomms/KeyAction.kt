@@ -9,6 +9,15 @@ sealed class KeyAction {
     object DpadDown : KeyAction()
     object DpadLeft : KeyAction()
     object DpadRight : KeyAction()
+    /**
+     * Center / select press. Used by the Siyata SD7 rotary-knob press
+     * (KEYCODE_DPAD_CENTER, 23). Wired to status-cycle in RadioViewModel so
+     * a knob press progresses the unit through the standard
+     * off_duty → on_duty → en_route → arrived → oos → off_duty rotation.
+     * The T320 build does not emit DPAD_CENTER through any hardware path,
+     * so adding the action here is safe (non-T320-affecting).
+     */
+    object DpadCenter : KeyAction()
     object AccToggle : KeyAction()
     object StarLongPress : KeyAction()
 }
