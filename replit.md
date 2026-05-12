@@ -12,6 +12,15 @@ This project is a Push-to-Talk (PTT) radio communication application for real-ti
 ### Client Architecture
 - **Dispatch Console:** A React/Vite web application, also available as an Electron desktop app for global PTT hotkeys.
 - **Radio Client (Field Units / T320):** A native Kotlin Android app utilizing custom UDP radio transport with Opus encoding and native PTT hardware key handling.
+- **Radio Client (Siyata SD7):** Same Kotlin codebase, built as a separate APK via the `sd7` Gradle product flavor (`applicationIdSuffix = ".sd7"`). Hardware integration differs from the T320: the SD7 firmware exposes its physical buttons as broadcast intents (Airbus PMR / Kodiak / `android.intent.action.*` namespaces), confirmed via on-device logcat capture. `KEYCODE_F11` (141) is treated as PTT on the T320 build only — on the SD7 build that exact keycode is the SOS button, gated by `BuildConfig.FLAVOR`. SD7 side-button volume keys use a 600 ms hold-timer in `MainActivity` to distinguish short-press (system volume) from long-press (top = scan toggle, bottom = toggle current channel on/off scan list). The SD7 OLED (`Sd7RadioStatusScreen`) renders `ZN:<zone>` / `CH:<channel>` on the top two lines, with a `✓` next to the channel name when it is on the scan list.
+
+  **SD7 button reference:**
+  - PTT (side big button) → transmit (broadcast `com.airbus.pmr.action.PTT_START` / `_STOP`)
+  - SOS (top button) → emergency (broadcast `android.intent.action.SOS_BUTTON` / `SOS.down` / `.up`, `com.kodiak.intent.action.KEYCODE_SOS`)
+  - Channel knob rotate left → previous channel; right → next (broadcast `android.intent.action.CHANNEL.prev` / `.next`, `com.airbus.pmr.action.GROUP_SELECT_PREVIOUS` / `_NEXT`)
+  - Channel knob press → cycle unit status (`KEYCODE_F8` aliased to `KeyAction.DpadCenter`)
+  - Top side button short → volume up; long-press (~600 ms) → scan on/off
+  - Bottom side button short → volume down; long-press (~600 ms) → add/remove current channel from scan list
 - **iOS Radio Client:** A native SwiftUI app (`ios-native/`) with login, signaling (Socket.IO), and an Opus-over-UDP audio path that mirrors the Android packet format. Audio is captured by AVAudioEngine at 16 kHz mono, encoded with libopus via the `swift-opus` SwiftPM package, sent through `Network.framework` (NWConnection UDP) to the audio relay, and on RX is sequence-buffered (`JitterBuffer`), Opus-decoded, and played through AVAudioEngine. Floor control wires `ptt:request`/`ptt:granted`/`tx:start`/`tx:stop`/`channel:busy`/`channel:idle`/`ptt:revoked` through `SignalingClient`.
 
 ### UI/UX Decisions

@@ -2,22 +2,24 @@
 <!--
     SD7 flavor manifest overlay.
 
-    Adds Siyata SD7-specific PTT and SOS broadcast actions to the existing
-    PttHardwareReceiver from the main manifest. The Android manifest merger
-    combines these intent-filter children with the ones already declared in
-    `src/main/AndroidManifest.xml` so the receiver continues to honor every
-    Inrico T320 broadcast as well — only the SD7 build of the APK actually
-    receives the Siyata broadcasts because it carries the `.sd7` package
-    suffix.
+    Adds the broadcast actions that the Siyata SD7 firmware actually emits
+    (confirmed via on-device logcat capture, May 2026) to the existing
+    PttHardwareReceiver from the main manifest. The Android manifest
+    merger combines these intent-filter children with the ones already
+    declared in `src/main/AndroidManifest.xml` so the receiver continues
+    to honor every Inrico T320 broadcast as well — only the SD7 build of
+    the APK actually receives the SD7-specific broadcasts because it
+    carries the `.sd7` package suffix.
 
-    NOTE: The exact Siyata SD7 broadcast action strings must be confirmed
-    on real hardware via logcat on the first SD7 boot (see Step 2 of the
-    task brief). The list below is a best-effort union of the conventions
-    Siyata's PTT firmware is known to use plus the same generic Android
-    actions that work across most rugged PTT handsets — wide enough that at
-    least one will match. Any that don't match are silently ignored by the
-    receiver's `else` branch (no harm) and the validation report records
-    which actions were actually observed so this list can be tightened.
+    The dead `com.siyata.*` PTT/SOS filters that previously lived here
+    have been removed: SD7 firmware never emits them. The button map is
+    now anchored to the broadcasts observed on real hardware:
+        - PTT (side big button)        : com.airbus.pmr.action.PTT_START / _STOP
+        - SOS (top button)             : android.intent.action.SOS_BUTTON,
+                                         android.intent.action.SOS.down / .up,
+                                         com.kodiak.intent.action.KEYCODE_SOS
+        - Channel knob rotate          : android.intent.action.CHANNEL.prev / .next,
+                                         com.airbus.pmr.action.GROUP_SELECT_PREVIOUS / _NEXT
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
@@ -29,39 +31,30 @@
             android:exported="true"
             tools:node="merge">
 
-            <!-- Siyata SD7 — PTT button (side) -->
+            <!-- Siyata SD7 — PTT (Airbus PMR firmware namespace, side big button) -->
             <intent-filter>
-                <action android:name="com.siyata.sd7.PTT_DOWN" />
-                <action android:name="com.siyata.sd7.PTT_UP" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="com.siyata.intent.action.PTT_DOWN" />
-                <action android:name="com.siyata.intent.action.PTT_UP" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="com.siyata.ptt.down" />
-                <action android:name="com.siyata.ptt.up" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="com.siyata.ptt.PTT_KEY_DOWN" />
-                <action android:name="com.siyata.ptt.PTT_KEY_UP" />
+                <action android:name="com.airbus.pmr.action.PTT_START" />
+                <action android:name="com.airbus.pmr.action.PTT_STOP" />
             </intent-filter>
 
-            <!-- Siyata SD7 — SOS button (top) -->
+            <!-- Siyata SD7 — SOS (top button). One-shot broadcast: the
+                 firmware does not emit a paired UP event we need to honor;
+                 the receiver synthesizes EMERGENCY_UP after EMERGENCY_DOWN. -->
             <intent-filter android:priority="999">
-                <action android:name="com.siyata.sd7.SOS_DOWN" />
-                <action android:name="com.siyata.sd7.SOS_UP" />
-                <action android:name="com.siyata.sd7.SOS_LONGPRESS" />
+                <action android:name="android.intent.action.SOS_BUTTON" />
+                <action android:name="android.intent.action.SOS.down" />
+                <action android:name="android.intent.action.SOS.up" />
+                <action android:name="com.kodiak.intent.action.KEYCODE_SOS" />
             </intent-filter>
-            <intent-filter android:priority="999">
-                <action android:name="com.siyata.intent.action.SOS_DOWN" />
-                <action android:name="com.siyata.intent.action.SOS_UP" />
-                <action android:name="com.siyata.intent.action.SOS_LONGPRESS" />
-            </intent-filter>
-            <intent-filter android:priority="999">
-                <action android:name="com.siyata.sos.down" />
-                <action android:name="com.siyata.sos.up" />
-                <action android:name="com.siyata.sos.longpress" />
+
+            <!-- Siyata SD7 — channel knob rotation. Routes through the
+                 existing DpadUp/DpadDown KeyAction path so the radio
+                 ViewModel cycles to the next/previous channel. -->
+            <intent-filter>
+                <action android:name="android.intent.action.CHANNEL.prev" />
+                <action android:name="android.intent.action.CHANNEL.next" />
+                <action android:name="com.airbus.pmr.action.GROUP_SELECT_PREVIOUS" />
+                <action android:name="com.airbus.pmr.action.GROUP_SELECT_NEXT" />
             </intent-filter>
 
         </receiver>

@@ -20,4 +20,17 @@ sealed class KeyAction {
     object DpadCenter : KeyAction()
     object AccToggle : KeyAction()
     object StarLongPress : KeyAction()
+
+    /**
+     * Toggle scan mode on/off. Emitted by the SD7 top side button on a
+     * long-press (~600 ms). Wired to RadioViewModel.toggleScanning().
+     */
+    object ScanToggle : KeyAction()
+
+    /**
+     * Toggle the *currently selected* channel in/out of the scan list.
+     * Emitted by the SD7 bottom side button on a long-press (~600 ms).
+     * Wired to RadioViewModel.toggleScanChannel(currentChannelId).
+     */
+    object ScanListToggleCurrent : KeyAction()
 }

@@ -5,6 +5,8 @@ import android.content.Context
 import android.content.Intent
 import android.os.PowerManager
 import android.util.Log
+import com.reedersystems.commandcomms.CommandCommsApp
+import com.reedersystems.commandcomms.KeyAction
 
 private const val TAG = "[PTT-DIAG]"
 
@@ -127,37 +129,42 @@ class PttHardwareReceiver : BroadcastReceiver() {
                 BackgroundAudioService.ACTION_EMERGENCY_DOWN
             }
 
-            // ── Siyata SD7 firmware mappings (additive — do not modify the
-            // T320 entries above). The exact action strings must be confirmed
-            // on real SD7 hardware via logcat on first boot (see Step 2 of
-            // the SD7 task brief). The list below is a best-effort union of
-            // the conventions Siyata's PTT firmware is known to use; any
-            // unmatched broadcasts hit the `else` branch and are logged so
-            // we can tighten this list against ground truth. These mappings
-            // are only reachable when the SD7 manifest overlay
-            // (src/sd7/AndroidManifest.xml) registers the corresponding
-            // intent-filters, so the T320 build is unaffected at runtime
-            // even though the `when` arms are compiled in.
-            "com.siyata.sd7.PTT_DOWN",
-            "com.siyata.intent.action.PTT_DOWN",
-            "com.siyata.ptt.down",
-            "com.siyata.ptt.PTT_KEY_DOWN"                 -> BackgroundAudioService.ACTION_PTT_DOWN
-            "com.siyata.sd7.PTT_UP",
-            "com.siyata.intent.action.PTT_UP",
-            "com.siyata.ptt.up",
-            "com.siyata.ptt.PTT_KEY_UP"                   -> BackgroundAudioService.ACTION_PTT_UP
+            // ── Siyata SD7 firmware mappings (confirmed via on-device
+            // logcat capture, May 2026). These mappings are only reachable
+            // when the SD7 manifest overlay (src/sd7/AndroidManifest.xml)
+            // registers the corresponding intent-filters, so the T320
+            // build is unaffected at runtime even though the `when` arms
+            // are compiled in. The previous best-effort `com.siyata.*`
+            // entries have been removed because the SD7 firmware never
+            // emits them — confirmed on real hardware.
 
-            "com.siyata.sd7.SOS_DOWN",
-            "com.siyata.intent.action.SOS_DOWN",
-            "com.siyata.sos.down"                         -> BackgroundAudioService.ACTION_EMERGENCY_DOWN
-            "com.siyata.sd7.SOS_UP",
-            "com.siyata.intent.action.SOS_UP",
-            "com.siyata.sos.up"                           -> BackgroundAudioService.ACTION_EMERGENCY_UP
-            "com.siyata.sd7.SOS_LONGPRESS",
-            "com.siyata.intent.action.SOS_LONGPRESS",
-            "com.siyata.sos.longpress"                    -> {
-                Log.d(TAG, "PttHardwareReceiver: Siyata SOS longpress — firing emergency DOWN")
+            // SD7 PTT (side big button) — Airbus PMR firmware namespace
+            "com.airbus.pmr.action.PTT_START"             -> BackgroundAudioService.ACTION_PTT_DOWN
+            "com.airbus.pmr.action.PTT_STOP"              -> BackgroundAudioService.ACTION_PTT_UP
+
+            // SD7 SOS (top button). The firmware emits one-shot SOS
+            // broadcasts without a paired UP we need to honor; we
+            // synthesize EMERGENCY_UP after EMERGENCY_DOWN below
+            // (same shape as android.intent.action.SOS.shortpress).
+            "android.intent.action.SOS_BUTTON",
+            "com.kodiak.intent.action.KEYCODE_SOS"        -> {
+                Log.d(TAG, "PttHardwareReceiver: SD7 SOS one-shot ($action) — firing emergency DOWN+UP sequence")
                 BackgroundAudioService.ACTION_EMERGENCY_DOWN
+            }
+
+            // SD7 channel knob rotation. Routed to the radio ViewModel
+            // through KeyAction.DpadDown / DpadUp (which call
+            // prevChannel() / nextChannel()) so no new VM wiring is
+            // required. Handled below — no service intent to send.
+            "android.intent.action.CHANNEL.prev",
+            "com.airbus.pmr.action.GROUP_SELECT_PREVIOUS" -> {
+                emitKeyAction(context, KeyAction.DpadDown, action)
+                null
+            }
+            "android.intent.action.CHANNEL.next",
+            "com.airbus.pmr.action.GROUP_SELECT_NEXT"     -> {
+                emitKeyAction(context, KeyAction.DpadUp, action)
+                null
             }
 
             else -> {
@@ -185,7 +192,10 @@ class PttHardwareReceiver : BroadcastReceiver() {
         wakeLock.acquire(WAKE_LOCK_TIMEOUT_MS)
         Log.d(TAG, "PttHardwareReceiver: WakeLock acquired (auto-releases in ${WAKE_LOCK_TIMEOUT_MS}ms)")
 
-        val isSosShortpress = action == "android.intent.action.SOS.shortpress"
+        val isSosShortpress =
+            action == "android.intent.action.SOS.shortpress" ||
+            action == "android.intent.action.SOS_BUTTON" ||
+            action == "com.kodiak.intent.action.KEYCODE_SOS"
 
         val serviceIntent = Intent(context, BackgroundAudioService::class.java).apply {
             this.action = pttAction
@@ -210,6 +220,21 @@ class PttHardwareReceiver : BroadcastReceiver() {
                 Log.e(TAG, "PttHardwareReceiver: SOS.shortpress EMERGENCY_UP failed — ${e::class.simpleName}: ${e.message}")
             }
         }
+    }
+
+    /**
+     * Emit a [KeyAction] onto the application's shared key-event flow so
+     * RadioViewModel can react. Used for SD7 channel-knob rotation
+     * broadcasts that are not service-level commands. Safe no-op if the
+     * Application has not finished initializing yet.
+     */
+    private fun emitKeyAction(context: Context, key: KeyAction, action: String) {
+        val app = context.applicationContext as? CommandCommsApp ?: run {
+            Log.w(TAG, "PttHardwareReceiver: cannot emit $key for $action — Application not ready")
+            return
+        }
+        val ok = app.keyEventFlow.tryEmit(key)
+        Log.d(TAG, "PttHardwareReceiver: emitted KeyAction=$key for action=$action accepted=$ok")
     }
 
     // ── DO NOT MODIFY — VERIFIED HARDWARE MAPPING ──────────────────────

@@ -569,6 +569,13 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                             // hardware never emits DpadCenter so this branch
                             // only ever fires on the SD7 build.
                             is KeyAction.DpadCenter -> cycleStatus()
+                            // SD7 top side button long-press → toggle scan.
+                            is KeyAction.ScanToggle -> toggleScanning()
+                            // SD7 bottom side button long-press → add/remove
+                            // the currently-selected channel from the scan list.
+                            is KeyAction.ScanListToggleCurrent -> {
+                                _uiState.value.currentChannel?.id?.let { toggleScanChannel(it) }
+                            }
                             else -> {}
                         }
                     }

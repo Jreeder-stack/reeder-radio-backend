@@ -13,6 +13,7 @@ import android.os.PowerManager
 import android.os.SystemClock
 import android.provider.Settings
 import android.util.Log
+import android.view.InputDevice
 import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -391,7 +392,13 @@ class MainActivity : ComponentActivity() {
 
     // ── DO NOT MODIFY — VERIFIED HARDWARE MAPPING ──────────────────────
     private fun isPttKey(keyCode: Int): Boolean {
-        if (keyCode == KEY_PTT_F11 || keyCode == KEY_PTT) return true
+        // KEY_PTT_F11 (141) was historically mapped to PTT for some Inrico
+        // T320 firmware variants. On the Siyata SD7 the *exact same*
+        // keycode is the SOS button (handled via the SOS broadcast path),
+        // so we must never treat F11 as PTT on the SD7 build — gate by
+        // BuildConfig.FLAVOR.
+        if (keyCode == KEY_PTT_F11 && BuildConfig.FLAVOR == "t320") return true
+        if (keyCode == KEY_PTT) return true
         if (app.pttKeyPrefs.volumeButtonPttEnabled && keyCode == KeyEvent.KEYCODE_VOLUME_UP) return true
         val custom = app.pttKeyPrefs.customKeyCode
         if (custom > 0 && keyCode == custom) return true
@@ -402,7 +409,47 @@ class MainActivity : ComponentActivity() {
         return keyCode == KEY_EMERGENCY || keyCode == KEY_TV_TELETEXT
     }
 
-    private fun isOurKey(keyCode: Int): Boolean {
+    /**
+     * SD7 rotary-knob press alias. Inrico T320 firmware emits
+     * KEYCODE_DPAD_CENTER (23) for the channel-knob press, but on the
+     * SD7 the same physical button surfaces as KEYCODE_F8 (141 is taken
+     * by SOS). Only treated as DpadCenter on the SD7 flavor so the
+     * T320 build's F8 behavior — if any — is unaffected.
+     */
+    private fun isSd7KnobPress(keyCode: Int): Boolean {
+        return BuildConfig.FLAVOR == "sd7" && keyCode == KeyEvent.KEYCODE_F8
+    }
+
+    /**
+     * SD7 side-button volume keys: short press = volume change (system
+     * default — we never consume the down event), long press (~600 ms)
+     * = scan toggle (top, VOLUME_UP) / scan-list toggle for current
+     * channel (bottom, VOLUME_DOWN). Long-press detection happens in
+     * [dispatchKeyEvent] off the event's own [KeyEvent.getDownTime] —
+     * no state tracking required.
+     *
+     * Only true on the SD7 flavor AND when the key event originates
+     * from an actual hardware input device that is **not** a typing
+     * keyboard (the SD7 side buttons surface as gpio-keys with
+     * [InputDevice.KEYBOARD_TYPE_NON_ALPHABETIC]; a paired BT keyboard
+     * or USB keyboard reports `KEYBOARD_TYPE_ALPHABETIC` and is
+     * deliberately excluded so dev rigs that plug a keyboard into an
+     * SD7 build keep normal volume behavior). Returns false when the
+     * event has no [InputDevice] attached at all (e.g., synthetic /
+     * injected events) so we never accidentally claim a non-hardware
+     * source. The T320 build never enters this path because of the
+     * flavor gate.
+     */
+    private fun isSd7SideVolumeKey(keyCode: Int, event: KeyEvent?): Boolean {
+        if (BuildConfig.FLAVOR != "sd7") return false
+        if (keyCode != KeyEvent.KEYCODE_VOLUME_UP && keyCode != KeyEvent.KEYCODE_VOLUME_DOWN) return false
+        val device = event?.device ?: return false
+        if (device.isVirtual) return false
+        if (device.keyboardType == InputDevice.KEYBOARD_TYPE_ALPHABETIC) return false
+        return true
+    }
+
+    private fun isOurKey(keyCode: Int, @Suppress("UNUSED_PARAMETER") event: KeyEvent? = null): Boolean {
         if (isPttKey(keyCode)) return true
         if (isEmergencyKey(keyCode)) return true
         if (
@@ -412,6 +459,12 @@ class MainActivity : ComponentActivity() {
             keyCode == KEY_DPAD_RIGHT ||
             keyCode == KEY_DPAD_CENTER  // SD7 rotary-knob press; ignored on T320
         ) return true
+        if (isSd7KnobPress(keyCode)) return true
+        // SD7 side-button volume keys are intentionally NOT included
+        // here. They are handled in dispatchKeyEvent so the short-press
+        // path stays uninterrupted by the activity's key-event routing
+        // (the system gets the key-down/key-up untouched, the same way
+        // it would on any other Android device).
         if (keyCode == KEY_ACC || keyCode == KEY_STAR) return true
         return false
     }
@@ -446,7 +499,7 @@ class MainActivity : ComponentActivity() {
             lastCapturedKeyCode = -1
             return true
         }
-        if (!isOurKey(nativeEvent.keyCode)) return false
+        if (!isOurKey(nativeEvent.keyCode, nativeEvent)) return false
 
         return when (event.type) {
             KeyEventType.KeyDown -> handleKeyDown(nativeEvent.keyCode, nativeEvent)
@@ -471,12 +524,43 @@ class MainActivity : ComponentActivity() {
             }
             return true
         }
+
+        // SD7 side-button volume long-press detection. We deliberately do
+        // NOT consume the key-down — short-press must fall through to the
+        // platform's normal volume handling untouched (correct stream,
+        // correct policy/UI). On key-up we measure the held duration off
+        // the event's own getDownTime/getEventTime; if it crossed the
+        // long-press threshold, we emit the scan KeyAction and consume
+        // the up so the system doesn't double-react on release. Short
+        // presses still call super and the platform owns volume entirely.
+        if (
+            event.action == KeyEvent.ACTION_UP &&
+            isSd7SideVolumeKey(event.keyCode, event)
+        ) {
+            val held = event.eventTime - event.downTime
+            if (held >= SD7_SIDE_LONGPRESS_MS) {
+                val keyAction = if (event.keyCode == KeyEvent.KEYCODE_VOLUME_UP) {
+                    KeyAction.ScanToggle
+                } else {
+                    KeyAction.ScanListToggleCurrent
+                }
+                val descriptor = event.device?.descriptor ?: "?"
+                Log.d(
+                    TAG,
+                    "SD7 side-button long-press (held=${held}ms code=${event.keyCode} " +
+                        "deviceId=${event.deviceId} desc=$descriptor) — emit $keyAction"
+                )
+                app.keyEventFlow.tryEmit(keyAction)
+                return true
+            }
+        }
+
         return super.dispatchKeyEvent(event)
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         if (handleKeyCaptureIfActive(keyCode)) return true
-        if (isOurKey(keyCode)) return handleKeyDown(keyCode, event)
+        if (isOurKey(keyCode, event)) return handleKeyDown(keyCode, event)
         return super.onKeyDown(keyCode, event)
     }
 
@@ -486,7 +570,7 @@ class MainActivity : ComponentActivity() {
             lastCapturedKeyCode = -1
             return true
         }
-        if (isOurKey(keyCode)) return handleKeyUp(keyCode, event)
+        if (isOurKey(keyCode, event)) return handleKeyUp(keyCode, event)
         return super.onKeyUp(keyCode, event)
     }
 
@@ -547,6 +631,14 @@ class MainActivity : ComponentActivity() {
                 return true
             }
 
+            // SD7 channel-knob press surfaces as KEYCODE_F8 on SD7
+            // firmware. Aliased to KeyAction.DpadCenter so the same
+            // status-cycle handler in RadioViewModel fires. SD7-only.
+            isSd7KnobPress(keyCode) -> {
+                if (event?.repeatCount == 0) app.keyEventFlow.tryEmit(KeyAction.DpadCenter)
+                return true
+            }
+
             keyCode == KEY_ACC -> {
                 if (event?.repeatCount == 0) {
                     app.keyEventFlow.tryEmit(KeyAction.AccToggle)
@@ -592,6 +684,8 @@ class MainActivity : ComponentActivity() {
         }
         return false
     }
+
+    private val SD7_SIDE_LONGPRESS_MS = 600L
 
     @Suppress("unused")
     private fun isDeviceInteractive(): Boolean {

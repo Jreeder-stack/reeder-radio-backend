@@ -88,6 +88,14 @@ fun Sd7RadioStatusScreen(
     val channelName = state.currentChannel?.name?.uppercase() ?: "NO CH"
     val unitId = state.unitId.ifBlank { "—" }
 
+    // Whether the currently-selected channel is on the scan list. A
+    // checkmark renders next to the channel name when true so the
+    // operator can tell at a glance whether long-pressing the bottom
+    // side button will add or remove it.
+    val currentOnScanList = state.currentChannel?.id?.let { id ->
+        state.scanChannels.firstOrNull { it.id == id }?.enabled == true
+    } ?: false
+
     val signalText = when (state.signalQuality) {
         SignalQuality.EXCELLENT -> "▮▮▮▮"
         SignalQuality.GOOD      -> "▮▮▮ "
@@ -100,9 +108,23 @@ fun Sd7RadioStatusScreen(
     Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
         Column(modifier = Modifier.fillMaxSize().padding(2.dp)) {
 
-            // Row 1: zone / channel — biggest font, top of screen.
+            // Row 1: ZN:<zone>  — top line. Single line, ellipsized.
             Text(
-                text = "$zoneName/$channelName",
+                text = "ZN:$zoneName",
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                fontFamily = FontFamily.Monospace,
+                fontSize = 12.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            // Row 2: CH:<channel> [✓ if on scan list]. The checkmark
+            // appears immediately after the channel name when the
+            // currently-selected channel is on the scan list.
+            Text(
+                text = if (currentOnScanList) "CH:$channelName ✓" else "CH:$channelName",
                 color = Color.White,
                 fontWeight = FontWeight.Bold,
                 fontFamily = FontFamily.Monospace,
