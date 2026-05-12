@@ -1,0 +1,153 @@
+--------- beginning of main
+2023-08-08 12:26:06.170   962-962   OMADM-DBG               dmclient                             I  I'm alive! Current release version
+2023-08-08 12:26:06.171   962-962   OMADM-DBG               dmclient                             D  Session counter [0]
+2023-08-08 12:26:06.172   962-962   OMADM-DBG               dmclient                             D  The [su_cancel] file is not exist
+2023-08-08 12:26:09.840  6081-6081  QCOMSysDaemon           pid-6081                             E  Can't find/open bootselect node: (No such file or directory)
+2023-08-08 12:26:09.840  6081-6081  QCOMSysDaemon           pid-6081                             I  Starting qcom system daemon
+2023-08-08 12:26:09.829  6081-6081  qcom-system-dae         pid-6081                             W  type=1400 audit(0.0:717): avc: denied { read write } for name="diag" dev="tmpfs" ino=12093 scontext=u:r:vendor_qcomsysd:s0 tcontext=u:object_r:diag_device:s0 tclass=chr_file permissive=0
+2023-08-08 12:26:09.840  6081-6081  Diag_Lib                pid-6081                             E   Diag_LSM_Init: Failed to open handle to diag driver, error = 13
+2023-08-08 12:26:09.841  6081-6081  QCOMSysDaemon           pid-6081                             E   Diag_LSM_Init failed : 0
+2023-08-08 12:26:12.509  2580-2877  WindowManager           system_server                        D  #33 interceptKeyTq keycode=134 interactive=false keyguardActive=false deviceId=3 policyFlags=2000000
+2023-08-08 12:26:12.510  2580-2877  WindowManager           system_server                        D  #33 event KeyEvent { action=ACTION_DOWN, keyCode=KEYCODE_F4, scanCode=62, metaState=0, flags=0x8, repeatCount=0, eventTime=884964, downTime=884964, deviceId=3, source=0x101 }
+2023-08-08 12:26:12.510  2580-2877  WindowManager           system_server                        D  KEYCODE_F4, deviceId: 3
+--------- beginning of system
+2023-08-08 12:26:12.511  2580-2877  WindowManager           system_server                        D  #33 broadcastOrderedIntent action: com.kodiak.intent.action.ACTION_BUTTON_PREVIOUS
+2023-08-08 12:26:12.512  2580-2877  ContextImpl             system_server                        W  Calling a method in the system process without a qualified user: android.app.ContextImpl.sendOrderedBroadcast:1102 com.android.server.policy.PhoneWindowManager.broadcastOrderedIntent:7492 com.android.server.policy.PhoneWindowManager.broadcastPTTIntent:7502 com.android.server.policy.PhoneWindowManager.interceptKeyBeforeQueueing:6518 com.android.server.wm.InputMonitor.interceptKeyBeforeQueueing:460 
+2023-08-08 12:26:12.513  2580-2877  ContextImpl             system_server                        W  Calling a method in the system process without a qualified user: android.app.ContextImpl.sendOrderedBroadcast:1102 com.android.server.policy.PhoneWindowManager.broadcastRotaryKnobIntent:7523 com.android.server.policy.PhoneWindowManager.interceptKeyBeforeQueueing:6521 com.android.server.wm.InputMonitor.interceptKeyBeforeQueueing:460 com.android.server.input.InputManagerService.interceptKeyBeforeQueueing:1842 
+2023-08-08 12:26:12.514  2580-2877  WindowManager           system_server                        D  broadcastGenericIntent action = com.airbus.pmr.action.GROUP_SELECT_PREVIOUS
+2023-08-08 12:26:12.514  2580-2877  ContextImpl             system_server                        W  Calling a method in the system process without a qualified user: android.app.ContextImpl.sendBroadcast:1005 com.android.server.policy.PhoneWindowManager.broadcastGenericIntent:7456 com.android.server.policy.PhoneWindowManager.interceptKeyBeforeQueueing:6527 com.android.server.wm.InputMonitor.interceptKeyBeforeQueueing:460 com.android.server.input.InputManagerService.interceptKeyBeforeQueueing:1842 
+2023-08-08 12:26:12.515  2580-2877  WindowManager           system_server                        D  broadcastGenericIntent action = android.intent.action.CHANNEL.prev
+2023-08-08 12:26:12.515  2580-2877  ContextImpl             system_server                        W  Calling a method in the system process without a qualified user: android.app.ContextImpl.sendBroadcast:1005 com.android.server.policy.PhoneWindowManager.broadcastGenericIntent:7456 com.android.server.policy.PhoneWindowManager.interceptKeyBeforeQueueing:6530 com.android.server.wm.InputMonitor.interceptKeyBeforeQueueing:460 com.android.server.input.InputManagerService.interceptKeyBeforeQueueing:1842 
+2023-08-08 12:26:12.515  2580-2877  ContextImpl             system_server                        W  Calling a method in the system process without a qualified user: android.app.ContextImpl.sendOrderedBroadcast:1102 com.android.server.policy.PhoneWindowManager.broadcastRotaryKnobIntent:7523 com.android.server.policy.PhoneWindowManager.interceptKeyBeforeQueueing:6534 com.android.server.wm.InputMonitor.interceptKeyBeforeQueueing:460 com.android.server.input.InputManagerService.interceptKeyBeforeQueueing:1842 
+2023-08-08 12:26:12.516  2580-2877  PowerManagerService     system_server                        I  Waking up from dozing (uid=1000 reason=android.policy:KEY)...
+2023-08-08 12:26:12.521  2580-2877  WindowManager           system_server                        D  #33 interceptKeyTq keycode=134 interactive=true keyguardActive=false deviceId=3 policyFlags=22000000
+2023-08-08 12:26:12.521  2580-2608  CompatibilityInfo       system_server                        D  mCompatibilityFlags - 0
+2023-08-08 12:26:12.521  2580-2608  CompatibilityInfo       system_server                        D  applicationDensity - 320
+2023-08-08 12:26:12.521  2580-2608  CompatibilityInfo       system_server                        D  applicationScale - 1.0
+2023-08-08 12:26:12.521  2580-2877  WindowManager           system_server                        D  #33 event KeyEvent { action=ACTION_UP, keyCode=KEYCODE_F4, scanCode=62, metaState=0, flags=0x8, repeatCount=0, eventTime=884965, downTime=884964, deviceId=3, source=0x101 }
+2023-08-08 12:26:12.521  2580-2877  WindowManager           system_server                        D  KEYCODE_F4, deviceId: 3
+2023-08-08 12:26:12.521  2580-2622  DisplayPowerController  system_server                        I  Blocking screen on until initial contents have been drawn.
+2023-08-08 12:26:12.525  3098-3098  RotaryReceiver          com.android.systemui                 D  onReceive: = com.siyata.intent.action.ROTARY_KNOB
+2023-08-08 12:26:12.526  2580-2580  UsageStatsService       system_server                        W  Event reported without a package name
+2023-08-08 12:26:12.526  3098-3098  RotaryReceiver          com.android.systemui                 D  getBooleanExtra fromPhysicalKeyboard  = false
+2023-08-08 12:26:12.526  3098-3098  RotaryReceiver          com.android.systemui                 D  onReceive: mVibrator = android.os.SystemVibrator@951903
+2023-08-08 12:26:12.539  2580-2612  KernelCpuProcReader     system_server                        W  File not exist: /proc/uid_cpupower/time_in_state
+2023-08-08 12:26:12.540  2580-2612  KernelCpuProcReader     system_server                        W  File not exist: /proc/uid_cpupower/concurrent_active_time
+2023-08-08 12:26:12.540  2580-2612  KernelCpuProcReader     system_server                        W  File not exist: /proc/uid_cpupower/concurrent_policy_time
+2023-08-08 12:26:12.563   698-698   QTI PowerHAL            android.hardware.power@1.0-service   E  Failed to acquire lock for hint_id: 1041.
+2023-08-08 12:26:12.564   698-698   QTI PowerHAL            android.hardware.power@1.0-service   I  Got set_interactive hint
+2023-08-08 12:26:12.564  2580-5742  CompatibilityInfo       system_server                        D  mCompatibilityFlags - 0
+2023-08-08 12:26:12.564  2580-5742  CompatibilityInfo       system_server                        D  applicationDensity - 320
+2023-08-08 12:26:12.564  2580-5742  CompatibilityInfo       system_server                        D  applicationScale - 1.0
+2023-08-08 12:26:12.565  2580-2620  DisplayManagerService   system_server                        I  Display device changed state: "Built-in Screen", ON
+2023-08-08 12:26:12.566  3801-3801  smallcd                 com.br.smallcd                       I  #3_smallcd - onReceive, keycode = 134 longPressBehavior = 0
+2023-08-08 12:26:12.567   725-725   SurfaceFlinger          surfaceflinger                       D  Set power mode=2, type=0 flinger=0x7016455000
+2023-08-08 12:26:12.572   694-816   SDM                     and...graphics.composer@2.1-service  I  DisplayBase::SetDisplayState: Set state = 1, display 0
+2023-08-08 12:26:12.572  3801-3801  smallcd                 com.br.smallcd                       I  Controller:onKeyEvent - ignore the key event when OLED light
+2023-08-08 12:26:12.574  2580-2612  KernelUidCpuTimeReader  system_server                        D  Removing uids 1037-1037
+2023-08-08 12:26:12.578  2580-2877  InputReader             system_server                        I  Reconfiguring input devices.  changes=0x00000004
+2023-08-08 12:26:12.581  3819-3819  NfcService              com.android.nfc                      E  screen state android.intent.action.USER_PRESENT
+2023-08-08 12:26:12.582  3801-3801  smallcd                 com.br.smallcd                       I  PowerManagerScreenStatusReceiver:onReceive - action=android.intent.action.USER_PRESENT
+2023-08-08 12:26:12.582  3858-3858  LibSecureUISvc          com.qualcomm.qti.services.secureui   E  svc_sock_send_message(suisvc): invalid remote socket suilst
+2023-08-08 12:26:12.583  3819-3819  NfcService              com.android.nfc                      E  screen state user present
+2023-08-08 12:26:12.583  3819-3819  libnfc_nci              com.android.nfc                      E  [ERROR:NativeMposManager.cpp(76)] nativeNfcMposManager_doGetEtsiReaederState: ETSI_READER not available. Returning
+2023-08-08 12:26:12.583  3819-3819  NfcService              com.android.nfc                      E  screen state 8
+2023-08-08 12:26:12.583  3819-3819  NfcService              com.android.nfc                      E  screen state mScreenState 1
+2023-08-08 12:26:12.583  3819-3819  libnfc_nci              com.android.nfc                      E  [ERROR:NativeNfcManager.cpp(6116)] nfcManager_doSetScreenOrPowerState: Enter
+2023-08-08 12:26:12.591   705-3966  NxpNciX                 vendor.nxp.hardware.nfc@1.1-service  D  len =   4 => 21060100
+2023-08-08 12:26:12.593   705-3965  NxpNciR                 vendor.nxp.hardware.nfc@1.1-service  D  len =   4 <= 41060100
+2023-08-08 12:26:12.596   705-3966  NxpNciX                 vendor.nxp.hardware.nfc@1.1-service  D  len =   4 => 2F150100
+2023-08-08 12:26:12.598   705-3965  NxpNciR                 vendor.nxp.hardware.nfc@1.1-service  D  len =   4 <= 4F150100
+2023-08-08 12:26:12.604   684-900   audio_hw_primary        android.hardware.audio@2.0-service   D  adev_set_parameters: enter: screen_state=on
+2023-08-08 12:26:12.604   684-900   audio_hw_extn           android.hardware.audio@2.0-service   D  audio_extn_set_anc_parameters: anc_enabled:0
+2023-08-08 12:26:12.604   684-900   audio_hw_spkr_prot      android.hardware.audio@2.0-service   D  audio_extn_fbsp_set_parameters: Speaker protection disabled
+2023-08-08 12:26:12.607   705-3966  NxpNciX                 vendor.nxp.hardware.nfc@1.1-service  D  len =  10 => 20020702320120380101
+2023-08-08 12:26:12.610   705-3965  NxpNciR                 vendor.nxp.hardware.nfc@1.1-service  D  len =   5 <= 4002020000
+2023-08-08 12:26:12.612   705-3966  NxpNciX                 vendor.nxp.hardware.nfc@1.1-service  D  len =   8 => 2103050280018101
+2023-08-08 12:26:12.615   705-3965  NxpNciR                 vendor.nxp.hardware.nfc@1.1-service  D  len =   4 <= 41030100
+2023-08-08 12:26:12.617  3819-3819  NfcService              com.android.nfc                      D  applyRouting - enter force = false mScreenState = 8
+2023-08-08 12:26:12.620  2580-2608  UsbDeviceManager        system_server                        I  onKeyguardStateChanged: isShowing:false secure:false user:0
+2023-08-08 12:26:12.620  2580-2608  UsbDeviceManager        system_server                        I  onKeyguardStateChanged: isDiagEnabled=:false isDebugEnabled:false
+2023-08-08 12:26:12.622   705-3966  NxpNciX                 vendor.nxp.hardware.nfc@1.1-service  D  len =   4 => 21060100
+2023-08-08 12:26:12.623   705-3965  NxpNciR                 vendor.nxp.hardware.nfc@1.1-service  D  len =   4 <= 41060100
+2023-08-08 12:26:12.628   705-3966  NxpNciX                 vendor.nxp.hardware.nfc@1.1-service  D  len =  13 => 20020A03320160380101500102
+2023-08-08 12:26:12.629  3098-3098  StatusBar               com.android.systemui                 D  disable<e i a s b h r c s > disable2<q i n >
+2023-08-08 12:26:12.633   705-3965  NxpNciR                 vendor.nxp.hardware.nfc@1.1-service  D  len =   5 <= 4002020000
+2023-08-08 12:26:12.636   705-3966  NxpNciX                 vendor.nxp.hardware.nfc@1.1-service  D  len =  28 => 2103190C000101010201030105018001810182018301850106017001
+2023-08-08 12:26:12.637   705-3965  NxpNciR                 vendor.nxp.hardware.nfc@1.1-service  D  len =   4 <= 41030100
+2023-08-08 12:26:12.651  2580-2877  InputReader             system_server                        I  Reconfiguring input devices.  changes=0x00000004
+2023-08-08 12:26:12.876   725-725   SurfaceFlinger          surfaceflinger                       D  Finished set power mode=2, type=0
+2023-08-08 12:26:12.877  2580-3049  SurfaceControl          system_server                        D  Excessive delay in setPowerMode()
+2023-08-08 12:26:12.891  3098-3098  StatusBar               com.android.systemui                 D  disable<e i a s b h r c s > disable2<q i n >
+2023-08-08 12:26:12.898  2580-2622  DisplayPowerController  system_server                        I  Unblocked screen on after 378 ms
+2023-08-08 12:26:12.900  2580-3049  LightsService           system_server                        V  setLight #0: color=#ff666666: brightnessMode=0
+2023-08-08 12:26:12.900  2580-2622  PowerManagerService     system_server                        W  Screen on took 393 ms
+2023-08-08 12:26:12.901  2580-2622  DreamManagerService     system_server                        I  Gently waking up from dream.
+2023-08-08 12:26:12.901  2580-2618  DreamManagerService     system_server                        I  Performing gentle wake from dream.
+2023-08-08 12:26:12.914  2580-2592  DreamManagerService     system_server                        I  Leaving dreamland.
+2023-08-08 12:26:12.914  2580-2618  DreamManagerService     system_server                        I  Performing gentle wake from dream.
+2023-08-08 12:26:12.914  2580-2618  DreamController         system_server                        I  Stopping dream: name=ComponentInfo{com.android.systemui/com.android.systemui.doze.DozeService}, isTest=false, canDoze=true, userId=0
+2023-08-08 12:26:12.915  2580-2580  AlarmManager            system_server                        W  Unrecognized alarm listener com.android.server.job.controllers.-$$Lambda$IdleController$IdlenessTracker$nTdS-lGBXcES5VWKcJFmQFgU7IU@41d1c9a
+2023-08-08 12:26:12.916   610-610   hwservicemanager        hwservicemanager                     W  getTransport: Cannot find entry vendor.qti.hardware.servicetracker@1.0::IServicetracker/default in either framework or device manifest.
+2023-08-08 12:26:12.917   610-610   hwservicemanager        hwservicemanager                     W  getTransport: Cannot find entry vendor.qti.hardware.servicetracker@1.0::IServicetracker/default in either framework or device manifest.
+2023-08-08 12:26:13.427   725-725   ConfigStore             surfaceflinger                       I  android::hardware::configstore::V1_0::ISurfaceFlingerConfigs::hasHDRDisplay retrieved: 0
+2023-08-08 12:26:13.428   725-725   ConfigStore             surfaceflinger                       I  android::hardware::configstore::V1_0::ISurfaceFlingerConfigs::hasHDRDisplay retrieved: 0
+2023-08-08 12:26:14.106  3801-3801  smallcd                 com.br.smallcd                       I  PowerManagerScreenStatusReceiver:onReceive - action=android.intent.action.SCREEN_ON
+2023-08-08 12:26:14.107  3801-3801  smallcd                 com.br.smallcd                       I  PowerManagerScreenStatusReceiver:onReceive - battery level=100
+2023-08-08 12:26:14.108  3801-3801  #3                      com.br.smallcd                       D  Date: Tue, 08 Aug Time: 04:21PM
+2023-08-08 12:26:14.108  3801-3801  smallcd                 com.br.smallcd                       I  _MainScreen:update - sepetorIndex=2
+2023-08-08 12:26:14.144  3819-3819  NfcService              com.android.nfc                      E  screen state android.intent.action.SCREEN_ON
+2023-08-08 12:26:14.145  3819-3819  NfcService              com.android.nfc                      E  screen state on
+2023-08-08 12:26:14.145  3819-3819  libnfc_nci              com.android.nfc                      E  [ERROR:NativeMposManager.cpp(76)] nativeNfcMposManager_doGetEtsiReaederState: ETSI_READER not available. Returning
+2023-08-08 12:26:14.145  3819-3819  NfcService              com.android.nfc                      E  screen state 8
+2023-08-08 12:26:14.145  3819-3819  NfcService              com.android.nfc                      E  screen state mScreenState 8
+2023-08-08 12:26:14.146  3819-3819  libnfc_nci              com.android.nfc                      E  [ERROR:NativeNfcManager.cpp(6116)] nfcManager_doSetScreenOrPowerState: Enter
+2023-08-08 12:26:14.146  3819-3819  NfcService              com.android.nfc                      D  applyRouting - enter force = false mScreenState = 8
+2023-08-08 12:26:14.146  3819-3819  NfcService              com.android.nfc                      D  Discovery configuration equal, not updating.
+2023-08-08 12:26:14.152  3256-3256  DPMJ                    .dataservices                        D  |SERVICE| DPM received action android.intent.action.SCREEN_ON
+2023-08-08 12:26:14.155  3858-3858  LibSecureUISvc          com.qualcomm.qti.services.secureui   E  svc_sock_send_message(suisvc): invalid remote socket suilst
+2023-08-08 12:26:14.165  5749-5821  BaseReceiver            io.shoonya.shoonyadpc                D  onReceive: android.intent.action.SCREEN_ON
+2023-08-08 12:26:14.166  5749-5821  ExternalEventsReceiver  io.shoonya.shoonyadpc                D  onReceiveIntent: android.intent.action.SCREEN_ON
+2023-08-08 12:26:14.173  5749-5821  ExternalEventsReceiver  io.shoonya.shoonyadpc                D  onReceiveIntent: reset to 1
+2023-08-08 12:26:14.175  5749-5804  PersistentLogger        io.shoonya.shoonyadpc                D  flush: called
+2023-08-08 12:26:14.201  3801-3801  smallcd                 com.br.smallcd                       I  TimeUpdateReceiver:onReceive - action=android.intent.action.TIME_TICK
+2023-08-08 12:26:14.201  3801-3801  smallcd                 com.br.smallcd                       I  TimeUpdateReceiver:updateDateTime - local=en_US
+2023-08-08 12:26:14.201  3801-3801  smallcd                 com.br.smallcd                       I  TimeUpdateReceiver:updateDateTime
+2023-08-08 12:26:14.204  3274-4620  PhoneInterfaceManager   com.android.phone                    D  [PhoneIntfMgr] isUserDataEnabled: subId=-1 phoneId=-1
+2023-08-08 12:26:14.204  3274-4620  PhoneInterfaceManager   com.android.phone                    E  [PhoneIntfMgr] isUserDataEnabled: no phone subId=-1 retVal=false
+2023-08-08 12:26:14.241  3801-3801  #3                      com.br.smallcd                       D  Date: Tue, 08 Aug Time: 04:26PM
+2023-08-08 12:26:14.243  3801-3801  smallcd                 com.br.smallcd                       I  _MainScreen:update - sepetorIndex=2
+2023-08-08 12:26:14.711  2580-5742  WificondControl         system_server                        D  Scan result ready event
+2023-08-08 12:26:14.718  2275-3053  LOWI-8.6.0.33           lowi-server                          I  [LOWI-Scan] lowi_close_record:Scan done in 854284ms, 6 APs in scan results
+2023-08-08 12:26:14.843  6089-6089  QCOMSysDaemon           pid-6089                             E  Can't find/open bootselect node: (No such file or directory)
+2023-08-08 12:26:14.843  6089-6089  QCOMSysDaemon           pid-6089                             I  Starting qcom system daemon
+2023-08-08 12:26:14.839  6089-6089  qcom-system-dae         pid-6089                             W  type=1400 audit(0.0:718): avc: denied { read write } for name="diag" dev="tmpfs" ino=12093 scontext=u:r:vendor_qcomsysd:s0 tcontext=u:object_r:diag_device:s0 tclass=chr_file permissive=0
+2023-08-08 12:26:14.844  6089-6089  Diag_Lib                pid-6089                             E   Diag_LSM_Init: Failed to open handle to diag driver, error = 13
+2023-08-08 12:26:14.844  6089-6089  QCOMSysDaemon           pid-6089                             E   Diag_LSM_Init failed : 0
+2023-08-08 12:26:14.899   725-725   ConfigStore             surfaceflinger                       I  android::hardware::configstore::V1_0::ISurfaceFlingerConfigs::hasHDRDisplay retrieved: 0
+2023-08-08 12:26:14.901   725-725   ConfigStore             surfaceflinger                       I  android::hardware::configstore::V1_0::ISurfaceFlingerConfigs::hasHDRDisplay retrieved: 0
+2023-08-08 12:26:15.841  2580-2877  WindowManager           system_server                        D  #33 interceptKeyTq keycode=135 interactive=true keyguardActive=false deviceId=3 policyFlags=22000000
+2023-08-08 12:26:15.841  2580-2877  WindowManager           system_server                        D  #33 event KeyEvent { action=ACTION_DOWN, keyCode=KEYCODE_F5, scanCode=63, metaState=0, flags=0x8, repeatCount=0, eventTime=888297, downTime=888297, deviceId=3, source=0x101 }
+2023-08-08 12:26:15.842  2580-2877  WindowManager           system_server                        D  KEYCODE_F5, deviceId: 3
+2023-08-08 12:26:15.842  2580-2877  WindowManager           system_server                        D  #33 broadcastOrderedIntent action: com.kodiak.intent.action.ACTION_BUTTON_NEXT
+2023-08-08 12:26:15.843  2580-2877  ContextImpl             system_server                        W  Calling a method in the system process without a qualified user: android.app.ContextImpl.sendOrderedBroadcast:1102 com.android.server.policy.PhoneWindowManager.broadcastOrderedIntent:7492 com.android.server.policy.PhoneWindowManager.broadcastPTTIntent:7502 com.android.server.policy.PhoneWindowManager.interceptKeyBeforeQueueing:6480 com.android.server.wm.InputMonitor.interceptKeyBeforeQueueing:460 
+2023-08-08 12:26:15.844  2580-2877  ContextImpl             system_server                        W  Calling a method in the system process without a qualified user: android.app.ContextImpl.sendOrderedBroadcast:1102 com.android.server.policy.PhoneWindowManager.broadcastRotaryKnobIntent:7523 com.android.server.policy.PhoneWindowManager.interceptKeyBeforeQueueing:6483 com.android.server.wm.InputMonitor.interceptKeyBeforeQueueing:460 com.android.server.input.InputManagerService.interceptKeyBeforeQueueing:1842 
+2023-08-08 12:26:15.845  2580-2877  WindowManager           system_server                        D  broadcastGenericIntent action = com.airbus.pmr.action.GROUP_SELECT_NEXT
+2023-08-08 12:26:15.845  2580-2877  ContextImpl             system_server                        W  Calling a method in the system process without a qualified user: android.app.ContextImpl.sendBroadcast:1005 com.android.server.policy.PhoneWindowManager.broadcastGenericIntent:7456 com.android.server.policy.PhoneWindowManager.interceptKeyBeforeQueueing:6489 com.android.server.wm.InputMonitor.interceptKeyBeforeQueueing:460 com.android.server.input.InputManagerService.interceptKeyBeforeQueueing:1842 
+2023-08-08 12:26:15.845  2580-2877  WindowManager           system_server                        D  broadcastGenericIntent action = android.intent.action.CHANNEL.next
+2023-08-08 12:26:15.846  2580-2877  ContextImpl             system_server                        W  Calling a method in the system process without a qualified user: android.app.ContextImpl.sendBroadcast:1005 com.android.server.policy.PhoneWindowManager.broadcastGenericIntent:7456 com.android.server.policy.PhoneWindowManager.interceptKeyBeforeQueueing:6492 com.android.server.wm.InputMonitor.interceptKeyBeforeQueueing:460 com.android.server.input.InputManagerService.interceptKeyBeforeQueueing:1842 
+2023-08-08 12:26:15.846  2580-2877  ContextImpl             system_server                        W  Calling a method in the system process without a qualified user: android.app.ContextImpl.sendOrderedBroadcast:1102 com.android.server.policy.PhoneWindowManager.broadcastRotaryKnobIntent:7523 com.android.server.policy.PhoneWindowManager.interceptKeyBeforeQueueing:6496 com.android.server.wm.InputMonitor.interceptKeyBeforeQueueing:460 com.android.server.input.InputManagerService.interceptKeyBeforeQueueing:1842 
+2023-08-08 12:26:15.847  2580-2877  WindowManager           system_server                        D  #33 interceptKeyTq keycode=135 interactive=true keyguardActive=false deviceId=3 policyFlags=22000000
+2023-08-08 12:26:15.847  2580-2877  WindowManager           system_server                        D  #33 event KeyEvent { action=ACTION_UP, keyCode=KEYCODE_F5, scanCode=63, metaState=0, flags=0x8, repeatCount=0, eventTime=888297, downTime=888297, deviceId=3, source=0x101 }
+2023-08-08 12:26:15.847  2580-2877  WindowManager           system_server                        D  KEYCODE_F5, deviceId: 3
+2023-08-08 12:26:15.850  2580-2608  CompatibilityInfo       system_server                        D  mCompatibilityFlags - 0
+2023-08-08 12:26:15.850  2580-2608  CompatibilityInfo       system_server                        D  applicationDensity - 320
+2023-08-08 12:26:15.850  2580-2608  CompatibilityInfo       system_server                        D  applicationScale - 1.0
+2023-08-08 12:26:15.854  3098-3098  RotaryReceiver          com.android.systemui                 D  onReceive: = com.siyata.intent.action.ROTARY_KNOB
+2023-08-08 12:26:15.855  3098-3098  RotaryReceiver          com.android.systemui                 D  getBooleanExtra fromPhysicalKeyboard  = false
+2023-08-08 12:26:15.855  3098-3098  RotaryReceiver          com.android.systemui                 D  onReceive: mVibrator = android.os.SystemVibrator@951903
+2023-08-08 12:26:15.861  2580-5742  CompatibilityInfo       system_server                        D  mCompatibilityFlags - 0
+2023-08-08 12:26:15.861  2580-5742  CompatibilityInfo       system_server                        D  applicationDensity - 320
+2023-08-08 12:26:15.861  2580-5742  CompatibilityInfo       system_server                        D  applicationScale - 1.0
+2023-08-08 12:26:15.864  3801-3801  smallcd                 com.br.smallcd                       I  #3_smallcd - onReceive, keycode = 135 longPressBehavior = 0
+2023-08-08 12:26:17.075   725-725   ConfigStore             surfaceflinger                       I  android::hardware::configstore::V1_0::ISurfaceFlingerConfigs::hasHDRDisplay retrieved: 0

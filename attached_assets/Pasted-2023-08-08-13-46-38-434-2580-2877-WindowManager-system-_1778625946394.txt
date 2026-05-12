@@ -1,0 +1,157 @@
+2023-08-08 13:46:38.434  2580-2877  WindowManager           system_server                        D  #33 interceptKeyTq keycode=141 interactive=false keyguardActive=false deviceId=4 policyFlags=2000000
+2023-08-08 13:46:38.434  2580-2877  WindowManager           system_server                        D  #33 event KeyEvent { action=ACTION_DOWN, keyCode=KEYCODE_F11, scanCode=87, metaState=0, flags=0x8, repeatCount=0, eventTime=3328330, downTime=3328330, deviceId=4, source=0x101 }
+2023-08-08 13:46:38.434  2580-2877  WindowManager           system_server                        D  KEYCODE_F11 (SOS)
+2023-08-08 13:46:38.435  2580-2609  WindowManager           system_server                        D  sending SOS down intent
+2023-08-08 13:46:38.435  2580-2877  PowerManagerService     system_server                        I  Waking up from dozing (uid=1000 reason=android.policy:KEY)...
+2023-08-08 13:46:38.435  2580-2609  WindowManager           system_server                        D  #33 broadcastOrderedIntent action: android.intent.action.SOS_BUTTON
+2023-08-08 13:46:38.436  2580-2609  ContextImpl             system_server                        W  Calling a method in the system process without a qualified user: android.app.ContextImpl.sendOrderedBroadcast:1102 com.android.server.policy.PhoneWindowManager.broadcastOrderedIntent:7492 com.android.server.policy.PhoneWindowManager.broadcastPTTIntent:7496 com.android.server.policy.PhoneWindowManager.access$5000:339 com.android.server.policy.PhoneWindowManager$16.run:6434 
+2023-08-08 13:46:38.436  2580-2609  WindowManager           system_server                        D  #33 broadcastOrderedIntent action: android.intent.action.SOS.down
+2023-08-08 13:46:38.437  2580-2609  ContextImpl             system_server                        W  Calling a method in the system process without a qualified user: android.app.ContextImpl.sendOrderedBroadcast:1102 com.android.server.policy.PhoneWindowManager.broadcastOrderedIntent:7492 com.android.server.policy.PhoneWindowManager.broadcastPTTIntent:7496 com.android.server.policy.PhoneWindowManager.access$5000:339 com.android.server.policy.PhoneWindowManager$16.run:6435 
+2023-08-08 13:46:38.437  2580-2609  WindowManager           system_server                        D  #33 broadcastOrderedIntent action: com.kodiak.intent.action.KEYCODE_SOS
+2023-08-08 13:46:38.437  2580-2609  ContextImpl             system_server                        W  Calling a method in the system process without a qualified user: android.app.ContextImpl.sendOrderedBroadcast:1102 com.android.server.policy.PhoneWindowManager.broadcastOrderedIntent:7492 com.android.server.policy.PhoneWindowManager.broadcastPTTIntent:7496 com.android.server.policy.PhoneWindowManager.access$5000:339 com.android.server.policy.PhoneWindowManager$16.run:6436 
+2023-08-08 13:46:38.440  2580-2608  CompatibilityInfo       system_server                        D  mCompatibilityFlags - 0
+2023-08-08 13:46:38.440  2580-2608  CompatibilityInfo       system_server                        D  applicationDensity - 320
+2023-08-08 13:46:38.440  2580-2608  CompatibilityInfo       system_server                        D  applicationScale - 1.0
+2023-08-08 13:46:38.441  2580-2622  DisplayPowerController  system_server                        I  Blocking screen on until initial contents have been drawn.
+2023-08-08 13:46:38.441  2580-2580  UsageStatsService       system_server                        W  Event reported without a package name
+2023-08-08 13:46:38.442  3801-3801  smallcd                 com.br.smallcd                       I  RotaryKnobEventReceiver:onReceive - SOS pressed and hasPreviousLongPressKnob=false
+2023-08-08 13:46:38.447   698-698   QTI PowerHAL            android.hardware.power@1.0-service   E  Failed to acquire lock for hint_id: 1041.
+2023-08-08 13:46:38.447   698-698   QTI PowerHAL            android.hardware.power@1.0-service   I  Got set_interactive hint
+2023-08-08 13:46:38.454  2580-2620  DisplayManagerService   system_server                        I  Display device changed state: "Built-in Screen", ON
+2023-08-08 13:46:38.454   725-725   SurfaceFlinger          surfaceflinger                       D  Set power mode=2, type=0 flinger=0x7016455000
+2023-08-08 13:46:38.455   694-6579  SDM                     and...graphics.composer@2.1-service  I  DisplayBase::SetDisplayState: Set state = 1, display 0
+2023-08-08 13:46:38.465  2580-2877  InputReader             system_server                        I  Reconfiguring input devices.  changes=0x00000004
+2023-08-08 13:46:38.482  7296-7296  QCOMSysDaemon           pid-7296                             E  Can't find/open bootselect node: (No such file or directory)
+2023-08-08 13:46:38.482  7296-7296  QCOMSysDaemon           pid-7296                             I  Starting qcom system daemon
+2023-08-08 13:46:38.483  7296-7296  Diag_Lib                pid-7296                             E   Diag_LSM_Init: Failed to open handle to diag driver, error = 13
+2023-08-08 13:46:38.483  7296-7296  QCOMSysDaemon           pid-7296                             E   Diag_LSM_Init failed : 0
+2023-08-08 13:46:38.467  7296-7296  qcom-system-dae         pid-7296                             W  type=1400 audit(0.0:1207): avc: denied { read write } for name="diag" dev="tmpfs" ino=12093 scontext=u:r:vendor_qcomsysd:s0 tcontext=u:object_r:diag_device:s0 tclass=chr_file permissive=0
+2023-08-08 13:46:38.495   684-684   audio_hw_primary        android.hardware.audio@2.0-service   D  adev_set_parameters: enter: screen_state=on
+2023-08-08 13:46:38.495   684-684   audio_hw_extn           android.hardware.audio@2.0-service   D  audio_extn_set_anc_parameters: anc_enabled:0
+2023-08-08 13:46:38.495   684-684   audio_hw_spkr_prot      android.hardware.audio@2.0-service   D  audio_extn_fbsp_set_parameters: Speaker protection disabled
+2023-08-08 13:46:38.497  3801-3801  smallcd                 com.br.smallcd                       I  PowerManagerScreenStatusReceiver:onReceive - action=android.intent.action.USER_PRESENT
+2023-08-08 13:46:38.497  3819-3819  NfcService              com.android.nfc                      E  screen state android.intent.action.USER_PRESENT
+2023-08-08 13:46:38.497  3858-3858  LibSecureUISvc          com.qualcomm.qti.services.secureui   E  svc_sock_send_message(suisvc): invalid remote socket suilst
+2023-08-08 13:46:38.499  3819-3819  NfcService              com.android.nfc                      E  screen state user present
+2023-08-08 13:46:38.499  3819-3819  libnfc_nci              com.android.nfc                      E  [ERROR:NativeMposManager.cpp(76)] nativeNfcMposManager_doGetEtsiReaederState: ETSI_READER not available. Returning
+2023-08-08 13:46:38.499  3819-3819  NfcService              com.android.nfc                      E  screen state 8
+2023-08-08 13:46:38.499  3819-3819  NfcService              com.android.nfc                      E  screen state mScreenState 1
+2023-08-08 13:46:38.499  3819-3819  libnfc_nci              com.android.nfc                      E  [ERROR:NativeNfcManager.cpp(6116)] nfcManager_doSetScreenOrPowerState: Enter
+2023-08-08 13:46:38.506   705-3966  NxpNciX                 vendor.nxp.hardware.nfc@1.1-service  D  len =   4 => 21060100
+2023-08-08 13:46:38.507   705-3965  NxpNciR                 vendor.nxp.hardware.nfc@1.1-service  D  len =   4 <= 41060100
+2023-08-08 13:46:38.510   705-3966  NxpNciX                 vendor.nxp.hardware.nfc@1.1-service  D  len =   4 => 2F150100
+2023-08-08 13:46:38.511   705-3965  NxpNciR                 vendor.nxp.hardware.nfc@1.1-service  D  len =   4 <= 4F150100
+2023-08-08 13:46:38.515   705-3966  NxpNciX                 vendor.nxp.hardware.nfc@1.1-service  D  len =  10 => 20020702320120380101
+2023-08-08 13:46:38.516   705-3965  NxpNciR                 vendor.nxp.hardware.nfc@1.1-service  D  len =   5 <= 4002020000
+2023-08-08 13:46:38.518   705-3966  NxpNciX                 vendor.nxp.hardware.nfc@1.1-service  D  len =   8 => 2103050280018101
+2023-08-08 13:46:38.518   705-3965  NxpNciR                 vendor.nxp.hardware.nfc@1.1-service  D  len =   4 <= 41030100
+2023-08-08 13:46:38.519  3819-3819  NfcService              com.android.nfc                      D  applyRouting - enter force = false mScreenState = 8
+2023-08-08 13:46:38.523   705-3966  NxpNciX                 vendor.nxp.hardware.nfc@1.1-service  D  len =   4 => 21060100
+2023-08-08 13:46:38.525   705-3965  NxpNciR                 vendor.nxp.hardware.nfc@1.1-service  D  len =   4 <= 41060100
+2023-08-08 13:46:38.525  2580-2608  UsbDeviceManager        system_server                        I  onKeyguardStateChanged: isShowing:false secure:false user:0
+2023-08-08 13:46:38.525  2580-2608  UsbDeviceManager        system_server                        I  onKeyguardStateChanged: isDiagEnabled=:false isDebugEnabled:false
+2023-08-08 13:46:38.528  3098-3098  StatusBar               com.android.systemui                 D  disable<e i a s b h r c s > disable2<q i n >
+2023-08-08 13:46:38.529   705-3966  NxpNciX                 vendor.nxp.hardware.nfc@1.1-service  D  len =  13 => 20020A03320160380101500102
+2023-08-08 13:46:38.535   705-3965  NxpNciR                 vendor.nxp.hardware.nfc@1.1-service  D  len =   5 <= 4002020000
+2023-08-08 13:46:38.537   705-3966  NxpNciX                 vendor.nxp.hardware.nfc@1.1-service  D  len =  28 => 2103190C000101010201030105018001810182018301850106017001
+2023-08-08 13:46:38.539   705-3965  NxpNciR                 vendor.nxp.hardware.nfc@1.1-service  D  len =   4 <= 41030100
+2023-08-08 13:46:38.589  2580-2590  system_server           system_server                        I  Background concurrent copying GC freed 98196(5MB) AllocSpace objects, 38(1140KB) LOS objects, 42% free, 7MB/13MB, paused 1.135ms total 146.580ms
+2023-08-08 13:46:38.623  2580-2877  WindowManager           system_server                        D  #33 interceptKeyTq keycode=141 interactive=true keyguardActive=false deviceId=4 policyFlags=22000000
+2023-08-08 13:46:38.623  2580-2877  WindowManager           system_server                        D  #33 event KeyEvent { action=ACTION_UP, keyCode=KEYCODE_F11, scanCode=87, metaState=0, flags=0x8, repeatCount=0, eventTime=3328520, downTime=3328330, deviceId=4, source=0x101 }
+2023-08-08 13:46:38.623  2580-2877  WindowManager           system_server                        D  KEYCODE_F11 (SOS)
+2023-08-08 13:46:38.624  2580-2609  WindowManager           system_server                        D  sending SOS up intent
+2023-08-08 13:46:38.624  2580-2609  WindowManager           system_server                        D  #33 broadcastOrderedIntent action: android.intent.action.SOS_BUTTON
+2023-08-08 13:46:38.624  2580-2609  ContextImpl             system_server                        W  Calling a method in the system process without a qualified user: android.app.ContextImpl.sendOrderedBroadcast:1102 com.android.server.policy.PhoneWindowManager.broadcastOrderedIntent:7492 com.android.server.policy.PhoneWindowManager.broadcastPTTIntent:7496 com.android.server.policy.PhoneWindowManager.access$5000:339 com.android.server.policy.PhoneWindowManager$17.run:6456 
+2023-08-08 13:46:38.625  2580-2609  WindowManager           system_server                        D  #33 broadcastOrderedIntent action: android.intent.action.SOS.up
+2023-08-08 13:46:38.625  2580-2609  ContextImpl             system_server                        W  Calling a method in the system process without a qualified user: android.app.ContextImpl.sendOrderedBroadcast:1102 com.android.server.policy.PhoneWindowManager.broadcastOrderedIntent:7492 com.android.server.policy.PhoneWindowManager.broadcastPTTIntent:7496 com.android.server.policy.PhoneWindowManager.access$5000:339 com.android.server.policy.PhoneWindowManager$17.run:6457 
+2023-08-08 13:46:38.625  2580-2609  WindowManager           system_server                        D  #33 broadcastOrderedIntent action: com.kodiak.intent.action.KEYCODE_SOS
+2023-08-08 13:46:38.625  2580-2609  ContextImpl             system_server                        W  Calling a method in the system process without a qualified user: android.app.ContextImpl.sendOrderedBroadcast:1102 com.android.server.policy.PhoneWindowManager.broadcastOrderedIntent:7492 com.android.server.policy.PhoneWindowManager.broadcastPTTIntent:7496 com.android.server.policy.PhoneWindowManager.access$5000:339 com.android.server.policy.PhoneWindowManager$17.run:6458 
+2023-08-08 13:46:38.757   725-725   SurfaceFlinger          surfaceflinger                       D  Finished set power mode=2, type=0
+2023-08-08 13:46:38.758  2580-3049  SurfaceControl          system_server                        D  Excessive delay in setPowerMode()
+2023-08-08 13:46:38.761  2580-2588  MediaPlayer             system_server                        V  resetDrmState:  mDrmInfo=null mDrmProvisioningThread=null mPrepareDrmInProgress=false mActiveDrmScheme=false
+2023-08-08 13:46:38.761  2580-2588  MediaPlayer             system_server                        V  cleanDrmObj: mDrmObj=null mDrmSessionId=null
+2023-08-08 13:46:38.762  2140-3311  NuPlayerDriver          mediaserver                          D  reset(0xe42c9960) at state 6
+2023-08-08 13:46:38.762  2140-3311  NuPlayerDriver          mediaserver                          V  updateMetrics(0xe42c9960) from reset at state 6
+2023-08-08 13:46:38.762  2140-3311  NuPlayer                mediaserver                          V  updateInternalTimers()
+2023-08-08 13:46:38.762  2140-3311  NuPlayer                mediaserver                          V  updatePlaybackTimer(snap)  time                    0 (updateInternalTimers)
+2023-08-08 13:46:38.762  2140-3311  NuPlayer                mediaserver                          V  updateRebufferingTimer(snap)  time                    0 (exiting 0)
+2023-08-08 13:46:38.762  2140-3311  NuPlayerDriver          mediaserver                          V  logMetrics(0xe42c9960) from reset at state 6
+2023-08-08 13:46:38.766  2140-3311  NuPlayerDriver          mediaserver                          D  notifyListener_l(0xe42c9960), (8, 0, 0, -1), loop setting(0, 0)
+2023-08-08 13:46:38.766  2140-6969  NuPlayer                mediaserver                          V  kWhatReset
+2023-08-08 13:46:38.766  2140-6969  NuPlayer                mediaserver                          V  updatePlaybackTimer(stop)  time                    0 (kWhatReset)
+2023-08-08 13:46:38.766  2140-6969  NuPlayer                mediaserver                          V  updateRebufferingTimer(stop)  time                    0 (exiting 1)
+2023-08-08 13:46:38.766  2140-6969  NuPlayer                mediaserver                          V  performDecoderFlush audio=2, video=2
+2023-08-08 13:46:38.766  2140-6969  NuPlayer                mediaserver                          V  [audio] flushDecoder needShutdown=1
+2023-08-08 13:46:38.766  2140-6969  NuPlayer                mediaserver                          V  postponing action mFlushingAudio=2, mFlushingVideo=0
+2023-08-08 13:46:38.767  2140-6969  NuPlayer                mediaserver                          V  kWhatMediaClockNotify
+2023-08-08 13:46:38.767  2140-6969  NuPlayerDriver          mediaserver                          D  notifyListener_l(0xe42c9960), (211, 0, 0, 20), loop setting(0, 0)
+2023-08-08 13:46:38.767  2140-6969  NuPlayer                mediaserver                          V  renderer audio flush completed.
+2023-08-08 13:46:38.768  2140-6969  NuPlayer                mediaserver                          V  decoder audio flush completed
+2023-08-08 13:46:38.768  2140-6969  NuPlayer                mediaserver                          V  initiating audio decoder shutdown
+2023-08-08 13:46:38.773  3098-3098  StatusBar               com.android.systemui                 D  disable<e i a s b h r c s > disable2<q i n >
+2023-08-08 13:46:38.783  2140-6969  NuPlayer                mediaserver                          V  audio shutdown completed
+2023-08-08 13:46:38.784  2140-6969  NuPlayer                mediaserver                          V  both audio and video are flushed now.
+2023-08-08 13:46:38.786  2140-6969  NuPlayer                mediaserver                          V  performReset
+2023-08-08 13:46:38.786  2140-6969  NuPlayer                mediaserver                          V  updatePlaybackTimer(stop)  time                    0 (performReset)
+2023-08-08 13:46:38.786  2140-6969  NuPlayer                mediaserver                          V  updateRebufferingTimer(stop)  time                    0 (exiting 1)
+2023-08-08 13:46:38.786  2140-6969  NuPlayerDriver          mediaserver                          D  notifyResetComplete(0xe42c9960)
+2023-08-08 13:46:38.786  2140-3311  NuPlayerDriver          mediaserver                          V  ~NuPlayerDriver(0xe42c9960)
+2023-08-08 13:46:38.786  2580-2622  DisplayPowerController  system_server                        I  Unblocked screen on after 346 ms
+2023-08-08 13:46:38.787  2140-3311  NuPlayerDriver          mediaserver                          V  updateMetrics(0xe42c9960) from destructor at state 0
+2023-08-08 13:46:38.787  2140-3311  NuPlayer                mediaserver                          V  updateInternalTimers()
+2023-08-08 13:46:38.787  2140-3311  NuPlayer                mediaserver                          V  updatePlaybackTimer(snap)  time                    0 (updateInternalTimers)
+2023-08-08 13:46:38.787  2140-3311  NuPlayer                mediaserver                          V  updateRebufferingTimer(snap)  time                    0 (exiting 0)
+2023-08-08 13:46:38.787  2140-3311  NuPlayerDriver          mediaserver                          V  logMetrics(0xe42c9960) from destructor at state 0
+2023-08-08 13:46:38.787  2140-3311  NuPlayerDriver          mediaserver                          V  nothing to record (only 3 fields)
+2023-08-08 13:46:38.787  2140-3311  AMessage                mediaserver                          W  failed to post message as target looper for handler 0 is gone.
+2023-08-08 13:46:38.788  2580-3049  LightsService           system_server                        V  setLight #0: color=#ff666666: brightnessMode=0
+2023-08-08 13:46:38.788  2580-2622  PowerManagerService     system_server                        W  Screen on took 354 ms
+2023-08-08 13:46:38.788  2580-2622  DreamManagerService     system_server                        I  Gently waking up from dream.
+2023-08-08 13:46:38.788  2580-2618  DreamManagerService     system_server                        I  Performing gentle wake from dream.
+2023-08-08 13:46:38.802  2580-3849  DreamManagerService     system_server                        I  Leaving dreamland.
+2023-08-08 13:46:38.802  2580-2618  DreamManagerService     system_server                        I  Performing gentle wake from dream.
+2023-08-08 13:46:38.802  2580-2618  DreamController         system_server                        I  Stopping dream: name=ComponentInfo{com.android.systemui/com.android.systemui.doze.DozeService}, isTest=false, canDoze=true, userId=0
+2023-08-08 13:46:38.803  2580-2580  AlarmManager            system_server                        W  Unrecognized alarm listener com.android.server.job.controllers.-$$Lambda$IdleController$IdlenessTracker$nTdS-lGBXcES5VWKcJFmQFgU7IU@41d1c9a
+2023-08-08 13:46:38.804   610-610   hwservicemanager        hwservicemanager                     W  getTransport: Cannot find entry vendor.qti.hardware.servicetracker@1.0::IServicetracker/default in either framework or device manifest.
+2023-08-08 13:46:38.855  2144-2236  storaged                storaged                             E  getDiskStats failed with result NOT_SUPPORTED and size 0
+2023-08-08 13:46:38.805   610-610   hwservicemanager        hwservicemanager                     W  getTransport: Cannot find entry vendor.qti.hardware.servicetracker@1.0::IServicetracker/default in either framework or device manifest.
+2023-08-08 13:46:39.326   725-725   ConfigStore             surfaceflinger                       I  android::hardware::configstore::V1_0::ISurfaceFlingerConfigs::hasHDRDisplay retrieved: 0
+2023-08-08 13:46:39.327   725-725   ConfigStore             surfaceflinger                       I  android::hardware::configstore::V1_0::ISurfaceFlingerConfigs::hasHDRDisplay retrieved: 0
+2023-08-08 13:46:39.568  3274-3274  QtiCarrierConfigHelper  com.android.phone                    D  WARNING, no carrier configs on phone Id: 0
+2023-08-08 13:46:39.572  3274-3646  PhoneInterfaceManager   com.android.phone                    D  [PhoneIntfMgr] isUserDataEnabled: subId=-1 phoneId=-1
+2023-08-08 13:46:39.572  3274-3646  PhoneInterfaceManager   com.android.phone                    E  [PhoneIntfMgr] isUserDataEnabled: no phone subId=-1 retVal=false
+2023-08-08 13:46:39.711   725-725   ConfigStore             surfaceflinger                       I  android::hardware::configstore::V1_0::ISurfaceFlingerConfigs::hasHDRDisplay retrieved: 0
+2023-08-08 13:46:39.712   725-725   ConfigStore             surfaceflinger                       I  android::hardware::configstore::V1_0::ISurfaceFlingerConfigs::hasHDRDisplay retrieved: 0
+2023-08-08 13:46:39.843  3801-3801  smallcd                 com.br.smallcd                       I  PowerManagerScreenStatusReceiver:onReceive - action=android.intent.action.SCREEN_ON
+2023-08-08 13:46:39.844  3801-3801  smallcd                 com.br.smallcd                       I  PowerManagerScreenStatusReceiver:onReceive - battery level=100
+2023-08-08 13:46:39.845  3801-3801  #3                      com.br.smallcd                       D  Date: Tue, 08 Aug Time: 05:43PM
+2023-08-08 13:46:39.845  3801-3801  smallcd                 com.br.smallcd                       I  _MainScreen:update - sepetorIndex=2
+2023-08-08 13:46:39.883  3819-3819  NfcService              com.android.nfc                      E  screen state android.intent.action.SCREEN_ON
+2023-08-08 13:46:39.884  3819-3819  NfcService              com.android.nfc                      E  screen state on
+2023-08-08 13:46:39.884  3819-3819  libnfc_nci              com.android.nfc                      E  [ERROR:NativeMposManager.cpp(76)] nativeNfcMposManager_doGetEtsiReaederState: ETSI_READER not available. Returning
+2023-08-08 13:46:39.884  3819-3819  NfcService              com.android.nfc                      E  screen state 8
+2023-08-08 13:46:39.884  3819-3819  NfcService              com.android.nfc                      E  screen state mScreenState 8
+2023-08-08 13:46:39.884  3819-3819  libnfc_nci              com.android.nfc                      E  [ERROR:NativeNfcManager.cpp(6116)] nfcManager_doSetScreenOrPowerState: Enter
+2023-08-08 13:46:39.884  3819-3819  NfcService              com.android.nfc                      D  applyRouting - enter force = false mScreenState = 8
+2023-08-08 13:46:39.885  3819-3819  NfcService              com.android.nfc                      D  Discovery configuration equal, not updating.
+2023-08-08 13:46:39.888  3256-3256  DPMJ                    .dataservices                        D  |SERVICE| DPM received action android.intent.action.SCREEN_ON
+2023-08-08 13:46:39.890  3858-3858  LibSecureUISvc          com.qualcomm.qti.services.secureui   E  svc_sock_send_message(suisvc): invalid remote socket suilst
+2023-08-08 13:46:39.898  5749-5821  BaseReceiver            io.shoonya.shoonyadpc                D  onReceive: android.intent.action.SCREEN_ON
+2023-08-08 13:46:39.899  5749-5821  ExternalEventsReceiver  io.shoonya.shoonyadpc                D  onReceiveIntent: android.intent.action.SCREEN_ON
+2023-08-08 13:46:39.906  5749-5821  ExternalEventsReceiver  io.shoonya.shoonyadpc                D  onReceiveIntent: reset to 1
+2023-08-08 13:46:39.906  5749-5804  PersistentLogger        io.shoonya.shoonyadpc                D  flush: called
+2023-08-08 13:46:39.928   725-725   ConfigStore             surfaceflinger                       I  android::hardware::configstore::V1_0::ISurfaceFlingerConfigs::hasHDRDisplay retrieved: 0
+2023-08-08 13:46:39.929   725-725   ConfigStore             surfaceflinger                       I  android::hardware::configstore::V1_0::ISurfaceFlingerConfigs::hasHDRDisplay retrieved: 0
+2023-08-08 13:46:39.936  3801-3801  smallcd                 com.br.smallcd                       I  TimeUpdateReceiver:onReceive - action=android.intent.action.TIME_TICK
+2023-08-08 13:46:39.936  3801-3801  smallcd                 com.br.smallcd                       I  TimeUpdateReceiver:updateDateTime - local=en_US
+2023-08-08 13:46:39.936  3801-3801  smallcd                 com.br.smallcd                       I  TimeUpdateReceiver:updateDateTime
+2023-08-08 13:46:39.939  3274-3646  PhoneInterfaceManager   com.android.phone                    D  [PhoneIntfMgr] isUserDataEnabled: subId=-1 phoneId=-1
+2023-08-08 13:46:39.939  3274-3646  PhoneInterfaceManager   com.android.phone                    E  [PhoneIntfMgr] isUserDataEnabled: no phone subId=-1 retVal=false
+2023-08-08 13:46:39.974  3801-3801  #3                      com.br.smallcd                       D  Date: Tue, 08 Aug Time: 05:46PM
+2023-08-08 13:46:39.975  3801-3801  smallcd                 com.br.smallcd                       I  _MainScreen:update - sepetorIndex=2
+2023-08-08 13:46:40.126  3274-3274  QtiCarrierConfigHelper  com.android.phone                    D  WARNING, no carrier configs on phone Id: 0
+2023-08-08 13:46:40.130  3274-3649  PhoneInterfaceManager   com.android.phone                    D  [PhoneIntfMgr] isUserDataEnabled: subId=-1 phoneId=-1
+2023-08-08 13:46:40.130  3274-3649  PhoneInterfaceManager   com.android.phone                    E  [PhoneIntfMgr] isUserDataEnabled: no phone subId=-1 retVal=false
+2023-08-08 13:46:40.188  3274-3274  QtiCarrierConfigHelper  com.android.phone                    D  WARNING, no carrier configs on phone Id: 0
+2023-08-08 13:46:40.193  3274-3649  PhoneInterfaceManager   com.android.phone                    D  [PhoneIntfMgr] isUserDataEnabled: subId=-1 phoneId=-1
+2023-08-08 13:46:40.193  3274-3649  PhoneInterfaceManager   com.android.phone                    E  [PhoneIntfMgr] isUserDataEnabled: no phone subId=-1 retVal=false

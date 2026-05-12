@@ -1,0 +1,173 @@
+--------- beginning of system
+2023-08-08 12:26:46.716  2580-2608  UsbDeviceManager        system_server                        I  onKeyguardStateChanged: isShowing:false secure:false user:0
+--------- beginning of main
+2023-08-08 12:26:46.716  2580-2608  UsbDeviceManager        system_server                        I  onKeyguardStateChanged: isDiagEnabled=:false isDebugEnabled:false
+2023-08-08 12:26:46.750  3098-3098  StatusBar               com.android.systemui                 D  disable<e i a s b h r c s > disable2<q i n >
+2023-08-08 12:26:46.755  3098-3098  StatusBar               com.android.systemui                 D  disable<e i a s b h r c s > disable2<q i n >
+2023-08-08 12:26:46.766   684-900   audio_hw_primary        android.hardware.audio@2.0-service   D  adev_set_parameters: enter: screen_state=off
+2023-08-08 12:26:46.766   684-900   audio_hw_extn           android.hardware.audio@2.0-service   D  audio_extn_set_anc_parameters: anc_enabled:0
+2023-08-08 12:26:46.766   684-900   audio_hw_spkr_prot      android.hardware.audio@2.0-service   D  audio_extn_fbsp_set_parameters: Speaker protection disabled
+2023-08-08 12:26:46.803  3098-3098  StatusBar               com.android.systemui                 D  disable<e i a s b h r c s > disable2<q i n >
+2023-08-08 12:26:46.869  3098-3098  StatusBar               com.android.systemui                 D  disable<e i a s b h r c s > disable2<q i n >
+2023-08-08 12:26:46.871  3098-3098  vol.Events              com.android.systemui                 I  writeEvent dismiss_dialog screen_off
+2023-08-08 12:26:46.907  3801-3801  smallcd                 com.br.smallcd                       I  PowerManagerScreenStatusReceiver:onReceive - action=android.intent.action.SCREEN_OFF
+2023-08-08 12:26:46.911  3274-3649  PhoneInterfaceManager   com.android.phone                    D  [PhoneIntfMgr] isUserDataEnabled: subId=-1 phoneId=-1
+2023-08-08 12:26:46.911  3274-3649  PhoneInterfaceManager   com.android.phone                    E  [PhoneIntfMgr] isUserDataEnabled: no phone subId=-1 retVal=false
+2023-08-08 12:26:46.954  3801-3801  #3                      com.br.smallcd                       D  Date: Tue, 08 Aug Time: 04:26PM
+2023-08-08 12:26:46.957  3801-3801  smallcd                 com.br.smallcd                       I  _MainScreen:update - sepetorIndex=2
+2023-08-08 12:26:47.027  2580-2580  SettingsProvider        system_server                        V  Notifying for 0: content://settings/global/oledscreen_status_indication
+2023-08-08 12:26:47.030  3819-3819  NfcService              com.android.nfc                      E  screen state android.intent.action.SCREEN_OFF
+2023-08-08 12:26:47.032  3819-3819  NfcService              com.android.nfc                      E  screen state OFF required
+2023-08-08 12:26:47.033  3819-3819  libnfc_nci              com.android.nfc                      E  [ERROR:NativeMposManager.cpp(76)] nativeNfcMposManager_doGetEtsiReaederState: ETSI_READER not available. Returning
+2023-08-08 12:26:47.034  3819-3819  NfcService              com.android.nfc                      E  screen state 1
+2023-08-08 12:26:47.034  3819-3819  NfcService              com.android.nfc                      E  screen state mScreenState 8
+2023-08-08 12:26:47.034  3819-3819  libnfc_nci              com.android.nfc                      E  [ERROR:NativeNfcManager.cpp(6116)] nfcManager_doSetScreenOrPowerState: Enter
+2023-08-08 12:26:47.044   705-3966  NxpNciX                 vendor.nxp.hardware.nfc@1.1-service  D  len =   4 => 21060100
+2023-08-08 12:26:47.047   705-3965  NxpNciR                 vendor.nxp.hardware.nfc@1.1-service  D  len =   4 <= 41060100
+2023-08-08 12:26:47.050   705-3966  NxpNciX                 vendor.nxp.hardware.nfc@1.1-service  D  len =   4 => 2F150101
+2023-08-08 12:26:47.055   705-3965  NxpNciR                 vendor.nxp.hardware.nfc@1.1-service  D  len =   4 <= 4F150100
+2023-08-08 12:26:47.055  3256-3256  DPMJ                    .dataservices                        D  |SERVICE| DPM received action android.intent.action.SCREEN_OFF
+2023-08-08 12:26:47.060   705-3966  NxpNciX                 vendor.nxp.hardware.nfc@1.1-service  D  len =  10 => 20020702320160380101
+2023-08-08 12:26:47.062   705-3965  NxpNciR                 vendor.nxp.hardware.nfc@1.1-service  D  len =   5 <= 4002020000
+2023-08-08 12:26:47.066  3858-3858  LibSecureUISvc          com.qualcomm.qti.services.secureui   E  svc_sock_send_message(suisvc): invalid remote socket suitch
+2023-08-08 12:26:47.066   705-3966  NxpNciX                 vendor.nxp.hardware.nfc@1.1-service  D  len =  14 => 21030B0580018101820183018501
+2023-08-08 12:26:47.066  3858-3858  LibSecureUISvc          com.qualcomm.qti.services.secureui   E  svc_sock_send_message(suisvc): invalid remote socket suilst
+2023-08-08 12:26:47.066   705-3965  NxpNciR                 vendor.nxp.hardware.nfc@1.1-service  D  len =   4 <= 41030100
+2023-08-08 12:26:47.067  3819-3819  NfcService              com.android.nfc                      D  applyRouting - enter force = false mScreenState = 1
+2023-08-08 12:26:47.070   705-3966  NxpNciX                 vendor.nxp.hardware.nfc@1.1-service  D  len =   4 => 21060100
+2023-08-08 12:26:47.071   705-3965  NxpNciR                 vendor.nxp.hardware.nfc@1.1-service  D  len =   4 <= 41060100
+2023-08-08 12:26:47.074   705-3966  NxpNciX                 vendor.nxp.hardware.nfc@1.1-service  D  len =  13 => 20020A03320120380101500100
+2023-08-08 12:26:47.080   705-3965  NxpNciR                 vendor.nxp.hardware.nfc@1.1-service  D  len =   5 <= 4002020000
+2023-08-08 12:26:47.083   705-3966  NxpNciX                 vendor.nxp.hardware.nfc@1.1-service  D  len =   8 => 2103050280018101
+2023-08-08 12:26:47.084   705-3965  NxpNciR                 vendor.nxp.hardware.nfc@1.1-service  D  len =   4 <= 41030100
+2023-08-08 12:26:47.087  5749-5821  BaseReceiver            io.shoonya.shoonyadpc                D  onReceive: android.intent.action.SCREEN_OFF
+2023-08-08 12:26:47.088  5749-5821  ExternalEventsReceiver  io.shoonya.shoonyadpc                D  onReceiveIntent: android.intent.action.SCREEN_OFF
+2023-08-08 12:26:47.100  5749-5821  ExternalEventsReceiver  io.shoonya.shoonyadpc                D  onReceiveIntent: reset to 1
+2023-08-08 12:26:47.101  5749-5804  PersistentLogger        io.shoonya.shoonyadpc                D  flush: called
+2023-08-08 12:26:47.260  2580-2590  system_server           system_server                        I  Background concurrent copying GC freed 85543(5MB) AllocSpace objects, 32(816KB) LOS objects, 42% free, 7MB/13MB, paused 1.554ms total 222.971ms
+2023-08-08 12:26:49.934  6116-6116  QCOMSysDaemon           pid-6116                             E  Can't find/open bootselect node: (No such file or directory)
+2023-08-08 12:26:49.935  6116-6116  QCOMSysDaemon           pid-6116                             I  Starting qcom system daemon
+2023-08-08 12:26:49.929  6116-6116  qcom-system-dae         pid-6116                             W  type=1400 audit(0.0:725): avc: denied { read write } for name="diag" dev="tmpfs" ino=12093 scontext=u:r:vendor_qcomsysd:s0 tcontext=u:object_r:diag_device:s0 tclass=chr_file permissive=0
+2023-08-08 12:26:49.935  6116-6116  Diag_Lib                pid-6116                             E   Diag_LSM_Init: Failed to open handle to diag driver, error = 13
+2023-08-08 12:26:49.935  6116-6116  QCOMSysDaemon           pid-6116                             E   Diag_LSM_Init failed : 0
+2023-08-08 12:26:50.682  3274-3274  QtiCarrierConfigHelper  com.android.phone                    D  WARNING, no carrier configs on phone Id: 0
+2023-08-08 12:26:50.696  3274-3649  PhoneInterfaceManager   com.android.phone                    D  [PhoneIntfMgr] isUserDataEnabled: subId=-1 phoneId=-1
+2023-08-08 12:26:50.696  3274-3649  PhoneInterfaceManager   com.android.phone                    E  [PhoneIntfMgr] isUserDataEnabled: no phone subId=-1 retVal=false
+2023-08-08 12:26:54.942  6123-6123  QCOMSysDaemon           pid-6123                             E  Can't find/open bootselect node: (No such file or directory)
+2023-08-08 12:26:54.942  6123-6123  QCOMSysDaemon           pid-6123                             I  Starting qcom system daemon
+2023-08-08 12:26:54.942  6123-6123  Diag_Lib                pid-6123                             E   Diag_LSM_Init: Failed to open handle to diag driver, error = 13
+2023-08-08 12:26:54.942  6123-6123  QCOMSysDaemon           pid-6123                             E   Diag_LSM_Init failed : 0
+2023-08-08 12:26:54.929  6123-6123  qcom-system-dae         pid-6123                             W  type=1400 audit(0.0:726): avc: denied { read write } for name="diag" dev="tmpfs" ino=12093 scontext=u:r:vendor_qcomsysd:s0 tcontext=u:object_r:diag_device:s0 tclass=chr_file permissive=0
+2023-08-08 12:26:47.034  2580-2580  SettingsProvider        system_server                        V  Notifying for 0: content://settings/global/oledscreen_status_indication
+2023-08-08 12:26:55.910  2144-2236  storaged                storaged                             E  getDiskStats failed with result NOT_SUPPORTED and size 0
+2023-08-08 12:26:58.564  2580-2877  WindowManager           system_server                        D  #33 interceptKeyTq keycode=138 interactive=false keyguardActive=false deviceId=3 policyFlags=2000000
+2023-08-08 12:26:58.565  2580-2877  WindowManager           system_server                        D  #33 event KeyEvent { action=ACTION_DOWN, keyCode=KEYCODE_F8, scanCode=66, metaState=0, flags=0x8, repeatCount=0, eventTime=931020, downTime=931020, deviceId=3, source=0x101 }
+2023-08-08 12:26:58.565  2580-2877  WindowManager           system_server                        D  KEYCODE_F8, is down? true
+2023-08-08 12:26:58.565  2580-2877  WindowManager           system_server                        D  #3 current Time Millis 1691512018565
+2023-08-08 12:26:58.566  2580-2877  PowerManagerService     system_server                        I  Waking up from dozing (uid=1000 reason=android.policy:KEY)...
+2023-08-08 12:26:58.569  2580-2580  UsageStatsService       system_server                        W  Event reported without a package name
+2023-08-08 12:26:58.573  2580-2622  DisplayPowerController  system_server                        I  Blocking screen on until initial contents have been drawn.
+2023-08-08 12:26:58.614   698-698   QTI PowerHAL            android.hardware.power@1.0-service   E  Failed to acquire lock for hint_id: 1041.
+2023-08-08 12:26:58.614   698-698   QTI PowerHAL            android.hardware.power@1.0-service   I  Got set_interactive hint
+2023-08-08 12:26:58.616   725-725   SurfaceFlinger          surfaceflinger                       D  Set power mode=2, type=0 flinger=0x7016455000
+2023-08-08 12:26:58.617  2580-2620  DisplayManagerService   system_server                        I  Display device changed state: "Built-in Screen", ON
+2023-08-08 12:26:58.617   694-694   SDM                     and...graphics.composer@2.1-service  I  DisplayBase::SetDisplayState: Set state = 1, display 0
+2023-08-08 12:26:58.629  3858-3858  LibSecureUISvc          com.qualcomm.qti.services.secureui   E  svc_sock_send_message(suisvc): invalid remote socket suilst
+2023-08-08 12:26:58.634  3819-3819  NfcService              com.android.nfc                      E  screen state android.intent.action.USER_PRESENT
+2023-08-08 12:26:58.634  3801-3801  smallcd                 com.br.smallcd                       I  PowerManagerScreenStatusReceiver:onReceive - action=android.intent.action.USER_PRESENT
+2023-08-08 12:26:58.637  3819-3819  NfcService              com.android.nfc                      E  screen state user present
+2023-08-08 12:26:58.637  3819-3819  libnfc_nci              com.android.nfc                      E  [ERROR:NativeMposManager.cpp(76)] nativeNfcMposManager_doGetEtsiReaederState: ETSI_READER not available. Returning
+2023-08-08 12:26:58.637  3819-3819  NfcService              com.android.nfc                      E  screen state 8
+2023-08-08 12:26:58.637  3819-3819  NfcService              com.android.nfc                      E  screen state mScreenState 1
+2023-08-08 12:26:58.638  3819-3819  libnfc_nci              com.android.nfc                      E  [ERROR:NativeNfcManager.cpp(6116)] nfcManager_doSetScreenOrPowerState: Enter
+2023-08-08 12:26:58.640  2580-2877  InputReader             system_server                        I  Reconfiguring input devices.  changes=0x00000004
+2023-08-08 12:26:58.649   705-3966  NxpNciX                 vendor.nxp.hardware.nfc@1.1-service  D  len =   4 => 21060100
+2023-08-08 12:26:58.651   705-3965  NxpNciR                 vendor.nxp.hardware.nfc@1.1-service  D  len =   4 <= 41060100
+2023-08-08 12:26:58.656   705-3966  NxpNciX                 vendor.nxp.hardware.nfc@1.1-service  D  len =   4 => 2F150100
+2023-08-08 12:26:58.656   705-3965  NxpNciR                 vendor.nxp.hardware.nfc@1.1-service  D  len =   4 <= 4F150100
+2023-08-08 12:26:58.662   705-3966  NxpNciX                 vendor.nxp.hardware.nfc@1.1-service  D  len =  10 => 20020702320120380101
+2023-08-08 12:26:58.662   705-3965  NxpNciR                 vendor.nxp.hardware.nfc@1.1-service  D  len =   5 <= 4002020000
+2023-08-08 12:26:58.665   684-900   audio_hw_primary        android.hardware.audio@2.0-service   D  adev_set_parameters: enter: screen_state=on
+2023-08-08 12:26:58.665   684-900   audio_hw_extn           android.hardware.audio@2.0-service   D  audio_extn_set_anc_parameters: anc_enabled:0
+2023-08-08 12:26:58.665   684-900   audio_hw_spkr_prot      android.hardware.audio@2.0-service   D  audio_extn_fbsp_set_parameters: Speaker protection disabled
+2023-08-08 12:26:58.667   705-3966  NxpNciX                 vendor.nxp.hardware.nfc@1.1-service  D  len =   8 => 2103050280018101
+2023-08-08 12:26:58.668   705-3965  NxpNciR                 vendor.nxp.hardware.nfc@1.1-service  D  len =   4 <= 41030100
+2023-08-08 12:26:58.671  3819-3819  NfcService              com.android.nfc                      D  applyRouting - enter force = false mScreenState = 8
+2023-08-08 12:26:58.675   705-3966  NxpNciX                 vendor.nxp.hardware.nfc@1.1-service  D  len =   4 => 21060100
+2023-08-08 12:26:58.675   705-3965  NxpNciR                 vendor.nxp.hardware.nfc@1.1-service  D  len =   4 <= 41060100
+2023-08-08 12:26:58.681   705-3966  NxpNciX                 vendor.nxp.hardware.nfc@1.1-service  D  len =  13 => 20020A03320160380101500102
+2023-08-08 12:26:58.687   705-3965  NxpNciR                 vendor.nxp.hardware.nfc@1.1-service  D  len =   5 <= 4002020000
+2023-08-08 12:26:58.689  2580-2608  UsbDeviceManager        system_server                        I  onKeyguardStateChanged: isShowing:false secure:false user:0
+2023-08-08 12:26:58.689  2580-2608  UsbDeviceManager        system_server                        I  onKeyguardStateChanged: isDiagEnabled=:false isDebugEnabled:false
+2023-08-08 12:26:58.690   705-3966  NxpNciX                 vendor.nxp.hardware.nfc@1.1-service  D  len =  28 => 2103190C000101010201030105018001810182018301850106017001
+2023-08-08 12:26:58.692   705-3965  NxpNciR                 vendor.nxp.hardware.nfc@1.1-service  D  len =   4 <= 41030100
+2023-08-08 12:26:58.695  3274-3274  QtiCarrierConfigHelper  com.android.phone                    D  WARNING, no carrier configs on phone Id: 0
+2023-08-08 12:26:58.702  3098-3098  StatusBar               com.android.systemui                 D  disable<e i a s b h r c s > disable2<q i n >
+2023-08-08 12:26:58.706  3274-3649  PhoneInterfaceManager   com.android.phone                    D  [PhoneIntfMgr] isUserDataEnabled: subId=-1 phoneId=-1
+2023-08-08 12:26:58.706  3274-3649  PhoneInterfaceManager   com.android.phone                    E  [PhoneIntfMgr] isUserDataEnabled: no phone subId=-1 retVal=false
+2023-08-08 12:26:58.723  2580-2877  WindowManager           system_server                        D  #33 interceptKeyTq keycode=138 interactive=true keyguardActive=false deviceId=3 policyFlags=22000000
+2023-08-08 12:26:58.723  2580-2877  WindowManager           system_server                        D  #33 event KeyEvent { action=ACTION_UP, keyCode=KEYCODE_F8, scanCode=66, metaState=0, flags=0x8, repeatCount=0, eventTime=931180, downTime=931020, deviceId=3, source=0x101 }
+2023-08-08 12:26:58.723  2580-2877  WindowManager           system_server                        D  KEYCODE_F8, is down? false
+2023-08-08 12:26:58.723  2580-2877  WindowManager           system_server                        D  #3 as SHORT PRESS.
+2023-08-08 12:26:58.723  2580-2877  ContextImpl             system_server                        W  Calling a method in the system process without a qualified user: android.app.ContextImpl.sendOrderedBroadcast:1102 com.android.server.policy.PhoneWindowManager.broadcastRotaryKnobIntent:7523 com.android.server.policy.PhoneWindowManager.interceptKeyBeforeQueueing:6663 com.android.server.wm.InputMonitor.interceptKeyBeforeQueueing:460 com.android.server.input.InputManagerService.interceptKeyBeforeQueueing:1842 
+2023-08-08 12:26:58.945   725-725   SurfaceFlinger          surfaceflinger                       D  Finished set power mode=2, type=0
+2023-08-08 12:26:58.945  2580-3049  SurfaceControl          system_server                        D  Excessive delay in setPowerMode()
+2023-08-08 12:26:58.965  3098-3098  StatusBar               com.android.systemui                 D  disable<e i a s b h r c s > disable2<q i n >
+2023-08-08 12:26:58.968  2580-2622  DisplayPowerController  system_server                        I  Unblocked screen on after 394 ms
+2023-08-08 12:26:58.970  2580-2622  PowerManagerService     system_server                        W  Screen on took 407 ms
+2023-08-08 12:26:58.970  2580-2622  DreamManagerService     system_server                        I  Gently waking up from dream.
+2023-08-08 12:26:58.970  2580-2618  DreamManagerService     system_server                        I  Performing gentle wake from dream.
+2023-08-08 12:26:58.970  2580-3049  LightsService           system_server                        V  setLight #0: color=#ff666666: brightnessMode=0
+2023-08-08 12:26:58.999  2580-5742  DreamManagerService     system_server                        I  Leaving dreamland.
+2023-08-08 12:26:58.999  2580-2618  DreamManagerService     system_server                        I  Performing gentle wake from dream.
+2023-08-08 12:26:58.999  2580-2618  DreamController         system_server                        I  Stopping dream: name=ComponentInfo{com.android.systemui/com.android.systemui.doze.DozeService}, isTest=false, canDoze=true, userId=0
+2023-08-08 12:26:59.001   610-610   hwservicemanager        hwservicemanager                     W  getTransport: Cannot find entry vendor.qti.hardware.servicetracker@1.0::IServicetracker/default in either framework or device manifest.
+2023-08-08 12:26:59.001   610-610   hwservicemanager        hwservicemanager                     W  getTransport: Cannot find entry vendor.qti.hardware.servicetracker@1.0::IServicetracker/default in either framework or device manifest.
+2023-08-08 12:26:59.002  2580-2580  AlarmManager            system_server                        W  Unrecognized alarm listener com.android.server.job.controllers.-$$Lambda$IdleController$IdlenessTracker$nTdS-lGBXcES5VWKcJFmQFgU7IU@41d1c9a
+2023-08-08 12:26:59.008  3801-3801  smallcd                 com.br.smallcd                       I  PowerManagerScreenStatusReceiver:onReceive - action=android.intent.action.SCREEN_ON
+2023-08-08 12:26:59.009  3801-3801  smallcd                 com.br.smallcd                       I  PowerManagerScreenStatusReceiver:onReceive - battery level=100
+2023-08-08 12:26:59.011  3801-3801  #3                      com.br.smallcd                       D  Date: Tue, 08 Aug Time: 04:26PM
+2023-08-08 12:26:59.012  3801-3801  smallcd                 com.br.smallcd                       I  _MainScreen:update - sepetorIndex=2
+2023-08-08 12:26:59.050  3819-3819  NfcService              com.android.nfc                      E  screen state android.intent.action.SCREEN_ON
+2023-08-08 12:26:59.054  3819-3819  NfcService              com.android.nfc                      E  screen state on
+2023-08-08 12:26:59.055  3819-3819  libnfc_nci              com.android.nfc                      E  [ERROR:NativeMposManager.cpp(76)] nativeNfcMposManager_doGetEtsiReaederState: ETSI_READER not available. Returning
+2023-08-08 12:26:59.055  3819-3819  NfcService              com.android.nfc                      E  screen state 8
+2023-08-08 12:26:59.055  3819-3819  NfcService              com.android.nfc                      E  screen state mScreenState 8
+2023-08-08 12:26:59.055  3819-3819  libnfc_nci              com.android.nfc                      E  [ERROR:NativeNfcManager.cpp(6116)] nfcManager_doSetScreenOrPowerState: Enter
+2023-08-08 12:26:59.055  3819-3819  NfcService              com.android.nfc                      D  applyRouting - enter force = false mScreenState = 8
+2023-08-08 12:26:59.056  3819-3819  NfcService              com.android.nfc                      D  Discovery configuration equal, not updating.
+2023-08-08 12:26:59.064  3256-3256  DPMJ                    .dataservices                        D  |SERVICE| DPM received action android.intent.action.SCREEN_ON
+2023-08-08 12:26:59.068  3858-3858  LibSecureUISvc          com.qualcomm.qti.services.secureui   E  svc_sock_send_message(suisvc): invalid remote socket suilst
+2023-08-08 12:26:59.084  5749-5821  BaseReceiver            io.shoonya.shoonyadpc                D  onReceive: android.intent.action.SCREEN_ON
+2023-08-08 12:26:59.085  5749-5821  ExternalEventsReceiver  io.shoonya.shoonyadpc                D  onReceiveIntent: android.intent.action.SCREEN_ON
+2023-08-08 12:26:59.091  5749-5821  ExternalEventsReceiver  io.shoonya.shoonyadpc                D  onReceiveIntent: reset to 1
+2023-08-08 12:26:59.093  5749-5804  PersistentLogger        io.shoonya.shoonyadpc                D  flush: called
+2023-08-08 12:26:59.093  2580-2593  CompatibilityInfo       system_server                        D  mCompatibilityFlags - 0
+2023-08-08 12:26:59.093  2580-2593  CompatibilityInfo       system_server                        D  applicationDensity - 320
+2023-08-08 12:26:59.093  2580-2593  CompatibilityInfo       system_server                        D  applicationScale - 1.0
+2023-08-08 12:26:59.096  3801-3801  smallcd                 com.br.smallcd                       I  #3_smallcd - onReceive, keycode = 138 longPressBehavior = 0
+2023-08-08 12:26:59.098  3801-3801  smallcd                 com.br.smallcd                       I  Controller:onKeyEvent - ignore the key event when OLED light
+2023-08-08 12:26:59.497   725-725   ConfigStore             surfaceflinger                       I  android::hardware::configstore::V1_0::ISurfaceFlingerConfigs::hasHDRDisplay retrieved: 0
+2023-08-08 12:26:59.499   725-725   ConfigStore             surfaceflinger                       I  android::hardware::configstore::V1_0::ISurfaceFlingerConfigs::hasHDRDisplay retrieved: 0
+2023-08-08 12:26:59.954  6129-6129  QCOMSysDaemon           pid-6129                             E  Can't find/open bootselect node: (No such file or directory)
+2023-08-08 12:26:59.954  6129-6129  QCOMSysDaemon           pid-6129                             I  Starting qcom system daemon
+2023-08-08 12:26:59.955  6129-6129  Diag_Lib                pid-6129                             E   Diag_LSM_Init: Failed to open handle to diag driver, error = 13
+2023-08-08 12:26:59.949  6129-6129  qcom-system-dae         pid-6129                             W  type=1400 audit(0.0:727): avc: denied { read write } for name="diag" dev="tmpfs" ino=12093 scontext=u:r:vendor_qcomsysd:s0 tcontext=u:object_r:diag_device:s0 tclass=chr_file permissive=0
+2023-08-08 12:26:59.955  6129-6129  QCOMSysDaemon           pid-6129                             E   Diag_LSM_Init failed : 0
+2023-08-08 12:27:00.027  3801-3801  smallcd                 com.br.smallcd                       I  TimeUpdateReceiver:onReceive - action=android.intent.action.TIME_TICK
+2023-08-08 12:27:00.027  3801-3801  smallcd                 com.br.smallcd                       I  TimeUpdateReceiver:updateDateTime - local=en_US
+2023-08-08 12:27:00.027  3801-3801  smallcd                 com.br.smallcd                       I  TimeUpdateReceiver:updateDateTime
+2023-08-08 12:27:00.034  3274-3649  PhoneInterfaceManager   com.android.phone                    D  [PhoneIntfMgr] isUserDataEnabled: subId=-1 phoneId=-1
+2023-08-08 12:27:00.034  3274-3649  PhoneInterfaceManager   com.android.phone                    E  [PhoneIntfMgr] isUserDataEnabled: no phone subId=-1 retVal=false
+2023-08-08 12:27:00.072  3801-3801  #3                      com.br.smallcd                       D  Date: Tue, 08 Aug Time: 04:27PM
+2023-08-08 12:27:00.073  3801-3801  smallcd                 com.br.smallcd                       I  _MainScreen:update - sepetorIndex=2
+2023-08-08 12:27:00.808  2580-2593  WificondControl         system_server                        D  Scan result ready event
+2023-08-08 12:27:00.810  2275-3053  LOWI-8.6.0.33           lowi-server                          I  [LOWI-Scan] lowi_close_record:Scan done in 900377ms, 6 APs in scan results
+2023-08-08 12:27:00.818  2580-3029  WificondScannerImpl     system_server                        D  Filtering out 3 scan results.
+2023-08-08 12:27:00.973   725-725   ConfigStore             surfaceflinger                       I  android::hardware::configstore::V1_0::ISurfaceFlingerConfigs::hasHDRDisplay retrieved: 0
+2023-08-08 12:27:03.147   725-725   ConfigStore             surfaceflinger                       I  android::hardware::configstore::V1_0::ISurfaceFlingerConfigs::hasHDRDisplay retrieved: 0
+2023-08-08 12:27:04.972  6135-6135  QCOMSysDaemon           pid-6135                             E  Can't find/open bootselect node: (No such file or directory)
+2023-08-08 12:27:04.972  6135-6135  QCOMSysDaemon           pid-6135                             I  Starting qcom system daemon
+2023-08-08 12:27:04.959  6135-6135  qcom-system-dae         pid-6135                             W  type=1400 audit(0.0:728): avc: denied { read write } for name="diag" dev="tmpfs" ino=12093 scontext=u:r:vendor_qcomsysd:s0 tcontext=u:object_r:diag_device:s0 tclass=chr_file permissive=0
+2023-08-08 12:27:04.973  6135-6135  Diag_Lib                pid-6135                             E   Diag_LSM_Init: Failed to open handle to diag driver, error = 13
+2023-08-08 12:27:04.973  6135-6135  QCOMSysDaemon           pid-6135                             E   Diag_LSM_Init failed : 0

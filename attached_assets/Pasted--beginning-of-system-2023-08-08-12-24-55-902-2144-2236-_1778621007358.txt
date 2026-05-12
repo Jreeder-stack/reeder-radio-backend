@@ -1,0 +1,23 @@
+--------- beginning of system
+2023-08-08 12:24:55.902  2144-2236  storaged                storaged                             E  getDiskStats failed with result NOT_SUPPORTED and size 0
+--------- beginning of main
+2023-08-08 12:24:59.674  6046-6046  QCOMSysDaemon           pid-6046                             E  Can't find/open bootselect node: (No such file or directory)
+2023-08-08 12:24:59.675  6046-6046  QCOMSysDaemon           pid-6046                             I  Starting qcom system daemon
+2023-08-08 12:24:59.669  6046-6046  qcom-system-dae         pid-6046                             W  type=1400 audit(0.0:703): avc: denied { read write } for name="diag" dev="tmpfs" ino=12093 scontext=u:r:vendor_qcomsysd:s0 tcontext=u:object_r:diag_device:s0 tclass=chr_file permissive=0
+2023-08-08 12:24:59.675  6046-6046  Diag_Lib                pid-6046                             E   Diag_LSM_Init: Failed to open handle to diag driver, error = 13
+2023-08-08 12:24:59.675  6046-6046  QCOMSysDaemon           pid-6046                             E   Diag_LSM_Init failed : 0
+2023-08-08 12:25:02.996  2580-2877  WindowManager           system_server                        D  #33 interceptKeyTq keycode=24 interactive=false keyguardActive=false deviceId=4 policyFlags=2000000
+2023-08-08 12:25:02.997  2580-2877  WindowManager           system_server                        D  #33 event KeyEvent { action=ACTION_DOWN, keyCode=KEYCODE_VOLUME_UP, scanCode=115, metaState=0, flags=0x8, repeatCount=0, eventTime=815452, downTime=815452, deviceId=4, source=0x101 }
+2023-08-08 12:25:02.997  2580-2877  WindowManager           system_server                        D  stopSosRingtone, mMediaPlayernull
+2023-08-08 12:25:03.010  2580-2877  MediaSessionService     system_server                        D  dispatchVolumeKeyEvent, pkg=android, pid=2580, uid=1000, asSystem=false, event=KeyEvent { action=ACTION_DOWN, keyCode=KEYCODE_VOLUME_UP, scanCode=115, metaState=0, flags=0x8, repeatCount=0, eventTime=815452, downTime=815452, deviceId=4, source=0x101 }
+2023-08-08 12:25:03.010  2580-2877  MediaSessionService     system_server                        D  Adjusting null by 1. flags=4608, suggestedStream=-2147483648, preferSuggestedStream=false
+2023-08-08 12:25:03.156  2580-2877  WindowManager           system_server                        D  #33 interceptKeyTq keycode=24 interactive=false keyguardActive=false deviceId=4 policyFlags=2000000
+2023-08-08 12:25:03.157  2580-2877  WindowManager           system_server                        D  #33 event KeyEvent { action=ACTION_UP, keyCode=KEYCODE_VOLUME_UP, scanCode=115, metaState=0, flags=0x8, repeatCount=0, eventTime=815612, downTime=815452, deviceId=4, source=0x101 }
+2023-08-08 12:25:03.157  2580-2877  WindowManager           system_server                        D  stopSosRingtone, mMediaPlayernull
+2023-08-08 12:25:03.157  2580-2877  MediaSessionService     system_server                        D  dispatchVolumeKeyEvent, pkg=android, pid=2580, uid=1000, asSystem=false, event=KeyEvent { action=ACTION_UP, keyCode=KEYCODE_VOLUME_UP, scanCode=115, metaState=0, flags=0x8, repeatCount=0, eventTime=815612, downTime=815452, deviceId=4, source=0x101 }
+2023-08-08 12:25:03.158  2580-2877  MediaSessionService     system_server                        D  Adjusting null by 0. flags=4608, suggestedStream=-2147483648, preferSuggestedStream=false
+2023-08-08 12:25:04.681  6048-6048  QCOMSysDaemon           pid-6048                             E  Can't find/open bootselect node: (No such file or directory)
+2023-08-08 12:25:04.681  6048-6048  QCOMSysDaemon           pid-6048                             I  Starting qcom system daemon
+2023-08-08 12:25:04.669  6048-6048  qcom-system-dae         pid-6048                             W  type=1400 audit(0.0:704): avc: denied { read write } for name="diag" dev="tmpfs" ino=12093 scontext=u:r:vendor_qcomsysd:s0 tcontext=u:object_r:diag_device:s0 tclass=chr_file permissive=0
+2023-08-08 12:25:04.682  6048-6048  Diag_Lib                pid-6048                             E   Diag_LSM_Init: Failed to open handle to diag driver, error = 13
+2023-08-08 12:25:04.682  6048-6048  QCOMSysDaemon           pid-6048                             E   Diag_LSM_Init failed : 0

@@ -1,0 +1,33 @@
+--------- beginning of main
+2023-08-08 12:24:09.559  6016-6016  qcom-system-dae         pid-6016                             W  type=1400 audit(0.0:693): avc: denied { read write } for name="diag" dev="tmpfs" ino=12093 scontext=u:r:vendor_qcomsysd:s0 tcontext=u:object_r:diag_device:s0 tclass=chr_file permissive=0
+2023-08-08 12:24:09.568  6016-6016  QCOMSysDaemon           pid-6016                             E  Can't find/open bootselect node: (No such file or directory)
+2023-08-08 12:24:09.568  6016-6016  QCOMSysDaemon           pid-6016                             I  Starting qcom system daemon
+2023-08-08 12:24:09.569  6016-6016  Diag_Lib                pid-6016                             E   Diag_LSM_Init: Failed to open handle to diag driver, error = 13
+2023-08-08 12:24:09.569  6016-6016  QCOMSysDaemon           pid-6016                             E   Diag_LSM_Init failed : 0
+2023-08-08 12:24:14.578  6021-6021  QCOMSysDaemon           qcom-system-daemon                   E  Can't find/open bootselect node: (No such file or directory)
+2023-08-08 12:24:14.578  6021-6021  QCOMSysDaemon           qcom-system-daemon                   I  Starting qcom system daemon
+2023-08-08 12:24:14.569  6021-6021  qcom-system-dae         qcom-system-daemon                   W  type=1400 audit(0.0:694): avc: denied { read write } for name="diag" dev="tmpfs" ino=12093 scontext=u:r:vendor_qcomsysd:s0 tcontext=u:object_r:diag_device:s0 tclass=chr_file permissive=0
+2023-08-08 12:24:14.578  6021-6021  Diag_Lib                qcom-system-daemon                   E   Diag_LSM_Init: Failed to open handle to diag driver, error = 13
+2023-08-08 12:24:14.578  6021-6021  QCOMSysDaemon           qcom-system-daemon                   E   Diag_LSM_Init failed : 0
+2023-08-08 12:24:19.575  6023-6023  QCOMSysDaemon           pid-6023                             E  Can't find/open bootselect node: (No such file or directory)
+2023-08-08 12:24:19.575  6023-6023  QCOMSysDaemon           pid-6023                             I  Starting qcom system daemon
+2023-08-08 12:24:19.569  6023-6023  qcom-system-dae         pid-6023                             W  type=1400 audit(0.0:695): avc: denied { read write } for name="diag" dev="tmpfs" ino=12093 scontext=u:r:vendor_qcomsysd:s0 tcontext=u:object_r:diag_device:s0 tclass=chr_file permissive=0
+2023-08-08 12:24:19.576  6023-6023  Diag_Lib                pid-6023                             E   Diag_LSM_Init: Failed to open handle to diag driver, error = 13
+2023-08-08 12:24:19.576  6023-6023  QCOMSysDaemon           pid-6023                             E   Diag_LSM_Init failed : 0
+2023-08-08 12:24:21.526  2580-2877  WindowManager           system_server                        D  #33 interceptKeyTq keycode=25 interactive=false keyguardActive=false deviceId=5 policyFlags=2000000
+2023-08-08 12:24:21.527  2580-2877  WindowManager           system_server                        D  #33 event KeyEvent { action=ACTION_DOWN, keyCode=KEYCODE_VOLUME_DOWN, scanCode=114, metaState=0, flags=0x8, repeatCount=0, eventTime=773982, downTime=773982, deviceId=5, source=0x101 }
+2023-08-08 12:24:21.528  2580-2877  WindowManager           system_server                        D  stopSosRingtone, mMediaPlayernull
+2023-08-08 12:24:21.546  2580-2877  MediaSessionService     system_server                        D  dispatchVolumeKeyEvent, pkg=android, pid=2580, uid=1000, asSystem=false, event=KeyEvent { action=ACTION_DOWN, keyCode=KEYCODE_VOLUME_DOWN, scanCode=114, metaState=0, flags=0x8, repeatCount=0, eventTime=773982, downTime=773982, deviceId=5, source=0x101 }
+2023-08-08 12:24:21.546  2580-2877  MediaSessionService     system_server                        D  Adjusting null by -1. flags=4608, suggestedStream=-2147483648, preferSuggestedStream=false
+2023-08-08 12:24:21.686  2580-2877  WindowManager           system_server                        D  #33 interceptKeyTq keycode=25 interactive=false keyguardActive=false deviceId=5 policyFlags=2000000
+2023-08-08 12:24:21.687  2580-2877  WindowManager           system_server                        D  #33 event KeyEvent { action=ACTION_UP, keyCode=KEYCODE_VOLUME_DOWN, scanCode=114, metaState=0, flags=0x8, repeatCount=0, eventTime=774142, downTime=773982, deviceId=5, source=0x101 }
+2023-08-08 12:24:21.687  2580-2877  WindowManager           system_server                        D  stopSosRingtone, mMediaPlayernull
+2023-08-08 12:24:21.687  2580-2877  MediaSessionService     system_server                        D  dispatchVolumeKeyEvent, pkg=android, pid=2580, uid=1000, asSystem=false, event=KeyEvent { action=ACTION_UP, keyCode=KEYCODE_VOLUME_DOWN, scanCode=114, metaState=0, flags=0x8, repeatCount=0, eventTime=774142, downTime=773982, deviceId=5, source=0x101 }
+2023-08-08 12:24:21.687  2580-2877  MediaSessionService     system_server                        D  Adjusting null by 0. flags=4608, suggestedStream=-2147483648, preferSuggestedStream=false
+2023-08-08 12:24:22.131  5749-5797  EsperShare...iderHelper io.shoonya.shoonyadpc                D  putValue: inserting:  dataKey=lastAliveTimestamp dataValue=1691511862126 dataGroup=com.shoonyaos.shoonyadpc.receivers.ShutdownReceiver
+2023-08-08 12:24:22.152  5749-5797  EsperShare...iderHelper io.shoonya.shoonyadpc                D  putValue: insertedUri:  content://io.esper.commons.datacache.provider/EsperSharedData/com.shoonyaos.shoonyadpc.receivers.ShutdownReceiver/lastAliveTimestamp/1
+2023-08-08 12:24:24.581  6025-6025  QCOMSysDaemon           pid-6025                             E  Can't find/open bootselect node: (No such file or directory)
+2023-08-08 12:24:24.581  6025-6025  QCOMSysDaemon           pid-6025                             I  Starting qcom system daemon
+2023-08-08 12:24:24.582  6025-6025  Diag_Lib                pid-6025                             E   Diag_LSM_Init: Failed to open handle to diag driver, error = 13
+2023-08-08 12:24:24.582  6025-6025  QCOMSysDaemon           pid-6025                             E   Diag_LSM_Init failed : 0
+2023-08-08 12:24:24.569  6025-6025  qcom-system-dae         pid-6025                             W  type=1400 audit(0.0:696): avc: denied { read write } for name="diag" dev="tmpfs" ino=12093 scontext=u:r:vendor_qcomsysd:s0 tcontext=u:object_r:diag_device:s0 tclass=chr_file permissive=0
