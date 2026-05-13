@@ -33,6 +33,37 @@ class ToneEngine(private val context: Context) {
 
     init {
         initBeepTrack()
+        initTalkPermitPlayer()
+    }
+
+    private fun initTalkPermitPlayer() {
+        synchronized(talkPermitLock) {
+            if (talkPermitPlayer != null) return
+            try {
+                val mp = MediaPlayer.create(
+                    context,
+                    R.raw.talk_permit,
+                    audioAttribs(),
+                    AudioManager.AUDIO_SESSION_ID_GENERATE
+                )
+                if (mp == null) {
+                    Log.w(TAG, "Persistent talk-permit MediaPlayer.create returned null; will retry on demand")
+                    return
+                }
+                mp.setOnErrorListener { errMp, what, extra ->
+                    Log.w(TAG, "Persistent talk-permit MediaPlayer error what=$what extra=$extra; releasing for lazy recreate")
+                    synchronized(talkPermitLock) {
+                        if (talkPermitPlayer === errMp) talkPermitPlayer = null
+                    }
+                    runCatching { errMp.release() }
+                    true
+                }
+                talkPermitPlayer = mp
+                Log.d(TAG, "Talk-permit MediaPlayer pre-prepared")
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to pre-prepare talk-permit MediaPlayer: ${e.message}")
+            }
+        }
     }
 
     private fun initBeepTrack() {
@@ -68,57 +99,53 @@ class ToneEngine(private val context: Context) {
         talkPermitJob = null
         synchronized(talkPermitLock) {
             talkPermitPlayer?.let { mp ->
-                runCatching { mp.stop() }
-                runCatching { mp.release() }
+                runCatching { if (mp.isPlaying) mp.pause() }
+                runCatching { mp.seekTo(0) }
             }
-            talkPermitPlayer = null
         }
     }
 
     suspend fun playTalkPermitToneAndAwait() {
-        var mp: MediaPlayer? = null
         try {
             val deferred = CompletableDeferred<Unit>()
-            mp = MediaPlayer.create(
-                context,
-                R.raw.talk_permit,
-                audioAttribs(),
-                AudioManager.AUDIO_SESSION_ID_GENERATE
-            )
+            var mp: MediaPlayer? = synchronized(talkPermitLock) { talkPermitPlayer }
             if (mp == null) {
-                Log.w(TAG, "MediaPlayer.create returned null, retrying once")
+                initTalkPermitPlayer()
+                mp = synchronized(talkPermitLock) { talkPermitPlayer }
+            }
+            if (mp == null) {
+                Log.w(TAG, "Talk-permit MediaPlayer unavailable, retrying once")
                 delay(50)
-                mp = MediaPlayer.create(
-                    context,
-                    R.raw.talk_permit,
-                    audioAttribs(),
-                    AudioManager.AUDIO_SESSION_ID_GENERATE
-                )
+                initTalkPermitPlayer()
+                mp = synchronized(talkPermitLock) { talkPermitPlayer }
             }
             if (mp != null) {
-                synchronized(talkPermitLock) { talkPermitPlayer = mp }
-                mp.setOnCompletionListener {
-                    synchronized(talkPermitLock) { talkPermitPlayer = null }
-                    it.release()
+                val player = mp
+                player.setOnCompletionListener {
+                    runCatching { it.seekTo(0) }
                     deferred.complete(Unit)
                 }
-                mp.start()
+                runCatching { if (player.isPlaying) player.pause() }
+                runCatching { player.seekTo(0) }
+                player.start()
                 try {
                     deferred.await()
                 } catch (e: CancellationException) {
-                    synchronized(talkPermitLock) { talkPermitPlayer = null }
-                    runCatching { mp.stop() }
-                    runCatching { mp.release() }
+                    runCatching { if (player.isPlaying) player.pause() }
+                    runCatching { player.seekTo(0) }
                     throw e
                 }
                 return
             }
-            Log.w(TAG, "MediaPlayer.create returned null after retry, using oscillator fallback")
+            Log.w(TAG, "Talk-permit MediaPlayer unavailable after retry, using oscillator fallback")
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            runCatching { mp?.release() }
             Log.w(TAG, "WAV playback failed, using oscillator fallback: ${e.message}")
+            synchronized(talkPermitLock) {
+                talkPermitPlayer?.let { runCatching { it.release() } }
+                talkPermitPlayer = null
+            }
         }
         playBeeps(800f, count = 3, durationMs = 40, gapMs = 30, volume = 0.5f)
     }
@@ -453,6 +480,13 @@ class ToneEngine(private val context: Context) {
         stopDeniedTone()
         stopTalkPermitTone()
         stopCountdownBeep()
+        synchronized(talkPermitLock) {
+            talkPermitPlayer?.let { mp ->
+                runCatching { if (mp.isPlaying) mp.stop() }
+                runCatching { mp.release() }
+            }
+            talkPermitPlayer = null
+        }
         synchronized(bonkLock) {
             bonkPlayer?.let { mp ->
                 runCatching { mp.stop() }
