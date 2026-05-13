@@ -67,6 +67,26 @@ The dispatch console is a PWA with responsive design, featuring auto-login, dark
 - **Clear Air:** Dispatcher-activated mode for emergency traffic, forcing units onto a channel.
 - **Live Scanner Feed:** Streams audio from HTTP sources into a channel as a virtual unit, applying VAD and integrating with floor control.
 
+## Audio Subscription / Auth Contract
+
+There are **two** independent transports the audio relay (`src/services/audioRelayService.js`, UDP/5100) accepts subscribers on, and they have **different** auth/registration paths. Confusing them caused the SD7 prod outage in Task #578.
+
+### 1. UDP transport (hardware radios — T320, SD7, iOS)
+- Audio packets travel UDP/5100 directly to `audioRelayService` (NOT through nginx — UDP can't be reverse-proxied via HTTP). **Inbound UDP/5100 must be open at the cloud firewall (Azure NSG, security group, etc.) for the device's public IP range.** If it isn't, the relay never sees the device's packets and dispatch will hear silence.
+- The subscriber's address/port for outbound forwards is learned in two places:
+  1. `signalingService._handleRadioJoinChannel` registers an initial address from the Socket.IO `radio:join` event's `udpAddress`/`udpPort` fields (or, only when meaningful, the socket peer address).
+  2. `audioRelayService._handlePacket` rebinds the subscriber to the actual `rinfo.address:rinfo.port` of every inbound UDP packet — this is the source of truth.
+- **Loopback-poisoning rule (Task #578):** when the backend sits behind a same-host reverse proxy (prod nginx → 127.0.0.1:3001), `socket.handshake.address` is `127.0.0.1`. The Android client filters its anyLocal `0.0.0.0` from `udpAddress` before sending, so the join handler must NOT fall back to the loopback peer address — doing so registers a black-hole subscriber and blocks the real address from being learned via UDP rinfo. The signaling handler now logs `[Signaling] SUBSCRIBER_DEFER_TO_UDP …` in that case and waits for the first inbound UDP packet to install the real public-NAT address.
+
+### 2. WebSocket transport (browsers, Electron desktop, CAD `radio-client.js`)
+- Endpoint: `wss://<host>/api/audio-ws?channelId=<id>&unitId=<id>&format=pcm|opus`.
+- `src/services/wsAudioBridge.js _authenticate()` accepts **three** credential methods, in order:
+  1. **Session cookie** (`connect.sid`) — web/Electron dispatch console (existing).
+  2. **Radio token** — `x-radio-token` header *or* `?radioToken=` query param. Same persistent token the device uses for `/api/radios/*` REST and Socket.IO signaling. Resolves to the radio's `assigned_unit_id` user, or a synthesized `radio_id` user if unassigned.
+  3. **CAD integration API key** — `x-radio-api-key` header *or* `?apiKey=` query param, paired with `?unitId=`. Same `CAD_INTEGRATION_KEY` the rest of the CAD-to-Radio integration uses.
+- Browser `WebSocket` cannot send custom headers, so the query-param forms exist for non-cookie methods. **Server logs redact `radioToken` / `apiKey` query values** (`<redacted:Nc>`) so credentials never land in `AUDIO_WS_UPGRADE_HIT` output. When integrating new clients, prefer the header form whenever the platform allows it, and never log raw audio-ws URLs from intermediaries (proxies, CDNs).
+- On success the bridge logs `AUDIO_WS_AUTHORIZED { authType, username, unitId }`. On failure it logs `AUDIO_WS_REJECTED { reason: 'unauthorized_session', authMethodsPresented: { cookie, radioToken, cadApiKey }, remoteAddress, xff }` so it's clear which credential the client tried (or didn't try) to present — repeated `AUDIO_WS_REJECTED` with `authMethodsPresented: { cookie: false, … }` is almost always a CAD/embedded client missing credentials, **not** an SD7 problem.
+
 ## FCM Push Notifications (Paging)
 
 Device paging uses Firebase Cloud Messaging via the Firebase Admin SDK. The

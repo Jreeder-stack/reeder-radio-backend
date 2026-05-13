@@ -8,6 +8,7 @@ import { canonicalChannelKey } from './channelKeyUtils.js';
 import { floorControlService } from './floorControlService.js';
 import { audioRelayService } from './audioRelayService.js';
 import { opusCodec } from './opusCodec.js';
+import { getRadioByToken } from '../db/index.js';
 let _signalingServiceRef = null;
 const AUDIO_DIAG = process.env.AUDIO_DIAG === 'true';
 
@@ -56,25 +57,49 @@ class WsAudioBridge {
     httpServer.on('upgrade', async (request, socket, head) => {
       const url = new URL(request.url, `http://${request.headers.host}`);
       if (url.pathname !== '/api/audio-ws') return;
+      // Redact credentials from log: query-param auth (radioToken, apiKey) is
+      // accepted on this endpoint, so never log the raw query string.
+      const safeQuery = {};
+      for (const [k, v] of url.searchParams) {
+        if (k === 'radioToken' || k === 'apiKey') {
+          safeQuery[k] = `<redacted:${String(v).length}c>`;
+        } else {
+          safeQuery[k] = v;
+        }
+      }
       console.log('AUDIO_WS_UPGRADE_HIT', {
         method: request.method,
         path: url.pathname,
-        query: url.search,
+        query: safeQuery,
         host: request.headers.host,
         upgrade: request.headers.upgrade,
         connection: request.headers.connection,
       });
 
-      const user = await this._authenticate(request);
-      if (!user) {
-        console.warn('AUDIO_WS_REJECTED', { reason: 'unauthorized_session' });
+      const authResult = await this._authenticate(request);
+      if (!authResult) {
+        // Auth failure breakdown helps separate "no creds at all" (likely a
+        // misconfigured CAD/radio client) from "creds present but invalid"
+        // (expired session, wrong token). Both are still 401 to the wire.
+        const url = new URL(request.url, `http://${request.headers.host}`);
+        const hadCookie = !!request.headers.cookie;
+        const hadRadioToken = !!(request.headers['x-radio-token'] || url.searchParams.get('radioToken'));
+        const hadApiKey = !!(request.headers['x-radio-api-key'] || url.searchParams.get('apiKey'));
+        console.warn('AUDIO_WS_REJECTED', {
+          reason: 'unauthorized_session',
+          authMethodsPresented: { cookie: hadCookie, radioToken: hadRadioToken, cadApiKey: hadApiKey },
+          remoteAddress: request.socket?.remoteAddress,
+          xff: request.headers['x-forwarded-for'] || null,
+        });
         socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
         socket.destroy();
         return;
       }
 
+      const user = authResult.user;
       this.wss.handleUpgrade(request, socket, head, (ws) => {
-        console.log('AUDIO_WS_ACCEPTED', {
+        console.log('AUDIO_WS_AUTHORIZED', {
+          authType: authResult.authType,
           username: user.username,
           unitId: user.unit_id || user.username,
         });
@@ -127,24 +152,110 @@ class WsAudioBridge {
     }, 5000);
   }
 
+  /**
+   * Audio-WS auth contract:
+   *   1. `connect.sid` cookie  → web/Electron dispatch session (existing path).
+   *   2. `x-radio-token` header OR `?radioToken=` query param → hardware radio
+   *      (T320/SD7/etc.) using the same persistent token they already use for
+   *      `/api/radios/*` REST + Socket.IO signaling. Resolves to the radio's
+   *      assigned user (`assigned_unit_id`).
+   *   3. `x-radio-api-key` header OR `?apiKey=` query param → CAD/embedded
+   *      `radio-client.js` integrations using the trusted CAD integration
+   *      key. The user identity is taken from the `?unitId=` query param,
+   *      which matches the channel/unit context the same client already
+   *      sends via signaling.
+   *
+   * Browser WebSocket clients can't easily attach custom headers, so we
+   * accept query-param equivalents for non-cookie methods.
+   *
+   * Returns `{ user, authType }` on success or `null` on failure.
+   */
   async _authenticate(request) {
+    const url = new URL(request.url, `http://${request.headers.host}`);
+
+    // --- Method 1: session cookie (web/Electron dispatch) ---
     try {
       const rawCookies = request.headers.cookie || '';
       const cookies = cookie.parse(rawCookies);
       let sid = cookies['connect.sid'];
-      if (!sid) return null;
-
-      if (sid.startsWith('s%3A')) sid = decodeURIComponent(sid);
-      if (sid.startsWith('s:')) {
-        sid = signature.unsign(sid.slice(2), config.sessionSecret);
-        if (sid === false) return null;
+      if (sid) {
+        if (sid.startsWith('s%3A')) sid = decodeURIComponent(sid);
+        if (sid.startsWith('s:')) {
+          sid = signature.unsign(sid.slice(2), config.sessionSecret);
+          if (sid === false) sid = null;
+        }
+        if (sid) {
+          const result = await pool.query('SELECT sess FROM session WHERE sid = $1', [sid]);
+          const sessionUser = result.rows[0]?.sess?.user;
+          if (sessionUser) {
+            return { user: sessionUser, authType: 'session' };
+          }
+        }
       }
-
-      const result = await pool.query('SELECT sess FROM session WHERE sid = $1', [sid]);
-      return result.rows[0]?.sess?.user || null;
-    } catch {
-      return null;
+    } catch (err) {
+      console.warn('[WsAudioBridge] session cookie auth threw:', err.message);
     }
+
+    // --- Method 2: radio token (hardware radio) ---
+    try {
+      const radioToken = request.headers['x-radio-token'] || url.searchParams.get('radioToken');
+      if (radioToken) {
+        const radio = await getRadioByToken(radioToken);
+        if (radio && !radio.is_locked) {
+          let user = null;
+          if (radio.assigned_unit_id) {
+            const userRow = await pool.query(
+              'SELECT id, username, unit_id, role, is_dispatcher FROM users WHERE id = $1',
+              [radio.assigned_unit_id]
+            );
+            user = userRow.rows[0] || null;
+          }
+          if (!user) {
+            // Unassigned radio — synthesize a minimal user object so the WS
+            // path can identify the device. Dispatch will not see audio for
+            // an unassigned radio (no unitId), but we still allow connect
+            // so the radio can subscribe and hear traffic during setup.
+            user = {
+              id: null,
+              username: radio.radio_id,
+              unit_id: radio.radio_id,
+              role: 'radio',
+              is_dispatcher: false,
+            };
+          }
+          return { user, authType: 'radioToken' };
+        }
+      }
+    } catch (err) {
+      console.warn('[WsAudioBridge] radio-token auth threw:', err.message);
+    }
+
+    // --- Method 3: CAD integration API key ---
+    try {
+      const apiKey = request.headers['x-radio-api-key'] || url.searchParams.get('apiKey');
+      if (apiKey && config.cadIntegrationKey && apiKey === config.cadIntegrationKey) {
+        const unitIdParam = (url.searchParams.get('unitId') || '').trim();
+        if (unitIdParam) {
+          const userRow = await pool.query(
+            'SELECT id, username, unit_id, role, is_dispatcher FROM users WHERE unit_id = $1 OR username = $1 LIMIT 1',
+            [unitIdParam]
+          );
+          const dbUser = userRow.rows[0];
+          const user = dbUser || {
+            id: null,
+            username: unitIdParam,
+            unit_id: unitIdParam,
+            role: 'cad',
+            is_dispatcher: false,
+          };
+          return { user, authType: 'cadApiKey' };
+        }
+      }
+    } catch (err) {
+      console.warn('[WsAudioBridge] cad-api-key auth threw:', err.message);
+    }
+
+    return null;
   }
 
   _onConnection(ws, request, user) {

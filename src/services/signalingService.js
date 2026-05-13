@@ -1905,14 +1905,47 @@ class SignalingService {
 
     const peerAddressRaw = socket.handshake?.address || '';
     const peerAddress = peerAddressRaw.startsWith('::ffff:') ? peerAddressRaw.slice(7) : peerAddressRaw;
-    const subscriberAddress = (udpAddress || peerAddress || '').trim();
+
+    // SD7 prod auth fix (Task #578): when nginx terminates the Socket.IO
+    // upgrade on the same host as the backend, `socket.handshake.address`
+    // is the loopback (127.0.0.1 / ::1). The Android client filters out
+    // its own anyLocal `udpAddress` (0.0.0.0/::) before sending the join,
+    // so `udpAddress` is typically absent. Falling back to peerAddress in
+    // that case poisons the audio relay's subscriber list with a loopback
+    // address (127.0.0.1:<localUdpPort>) that has nothing listening — the
+    // dispatch console's UDP forwards then go into a black hole and the
+    // device never hears anything. Worse, that bogus entry blocks the
+    // relay from learning the device's real public address from inbound
+    // UDP `_handlePacket` rinfo.
+    //
+    // The correct behavior is: only register a UDP subscriber from the
+    // signaling join when we have a meaningful, non-loopback,
+    // routable-from-the-relay address. Otherwise, defer subscriber
+    // registration to the first inbound UDP packet, where rinfo.address /
+    // rinfo.port reflect the device's real NAT'd endpoint (post-firewall,
+    // post-CGN). Hardware radios send UDP keepalives every 8s, so the
+    // first registration normally arrives within a few seconds of join.
+    const isLoopback = (a) => !a || a === '127.0.0.1' || a === '::1' || a.startsWith('127.');
+    const explicitUdpAddress = typeof udpAddress === 'string' ? udpAddress.trim() : '';
+    const explicitIsUsable = explicitUdpAddress && !isLoopback(explicitUdpAddress) && explicitUdpAddress !== '0.0.0.0' && explicitUdpAddress !== '::';
+    const peerIsUsable = peerAddress && !isLoopback(peerAddress);
+    const subscriberAddress = explicitIsUsable ? explicitUdpAddress : (peerIsUsable ? peerAddress : '');
     const subscriberPort = Number(udpPort);
+
     if (subscriberPort > 0 && subscriberAddress) {
       audioRelayService.removeSubscriber(channelId, socket.unitId);
       audioRelayService.addSubscriber(channelId, socket.unitId, subscriberAddress, subscriberPort);
-      console.log(`[Signaling] SUBSCRIBER_REGISTERED (replaced stale) unitId=${socket.unitId} channelId=${channelId} address=${subscriberAddress} port=${subscriberPort}`);
+      console.log(`[Signaling] SUBSCRIBER_REGISTERED unitId=${socket.unitId} channelId=${channelId} address=${subscriberAddress} port=${subscriberPort} source=${explicitIsUsable ? 'explicit' : 'peer'}`);
+    } else if (subscriberPort > 0 && peerAddress && isLoopback(peerAddress) && !explicitIsUsable) {
+      // Behind a same-host reverse proxy (typical prod nginx → 127.0.0.1).
+      // Remove any prior poisoned subscriber entry for this unit so the
+      // first inbound UDP packet can install the real address cleanly via
+      // audioRelayService._handlePacket → addSubscriber(rinfo.address, rinfo.port).
+      audioRelayService.removeSubscriber(channelId, socket.unitId);
+      console.log(`[Signaling] SUBSCRIBER_DEFER_TO_UDP unitId=${socket.unitId} channelId=${channelId} reason=loopback_peer peerAddress=${peerAddress} udpAddress=${udpAddress ?? 'missing'} udpPort=${udpPort} — relay will learn real address from first inbound UDP packet (verify UDP/${audioRelayService.port || 5100} inbound is open at the firewall)`);
     } else {
-      console.warn(`[Signaling] SUBSCRIBER_REGISTRATION_FAILED unitId=${socket.unitId} channelId=${channelId} udpPort=${udpPort ?? 'missing'} udpAddress=${udpAddress ?? 'missing'} peerAddress=${peerAddress || 'missing'}`);
+      audioRelayService.removeSubscriber(channelId, socket.unitId);
+      console.warn(`[Signaling] SUBSCRIBER_REGISTRATION_FAILED unitId=${socket.unitId} channelId=${channelId} udpPort=${udpPort ?? 'missing'} udpAddress=${udpAddress ?? 'missing'} peerAddress=${peerAddress || 'missing'} — relay will learn real address from first inbound UDP packet`);
     }
 
     const channelIndexNumeric = socket.lastAuthorizedRadioChannelNumeric;
