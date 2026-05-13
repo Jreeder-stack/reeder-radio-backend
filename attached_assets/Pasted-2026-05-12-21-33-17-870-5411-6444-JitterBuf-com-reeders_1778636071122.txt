@@ -1,0 +1,652 @@
+2026-05-12 21:33:17.870  5411-6444  [JitterBuf]             com.reedersystems.commandcomms.sd7   D  ENTER_IDLE depth=2 keptFrames=0 t=4439ms
+2026-05-12 21:33:18.058  1637-4710  BufferPoolAccessor2.0   mediaserver                          D  bufferpool2 0xe7582428 : 0(0 size) total buffers - 0(0 size) used buffers - 1/5 (recycle/alloc) - 1/2 (fetch/transfer)
+2026-05-12 21:33:18.059  1637-4710  BufferPoolAccessor2.0   mediaserver                          D  evictor expired: 1, evicted: 1
+2026-05-12 21:33:18.061  1676-2831  BufferPoolAccessor2.0   media.swcodec                        D  evictor expired: 1, evicted: 0
+2026-05-12 21:33:18.500  5411-6441  GooglePlayServicesUtil  com.reedersystems.commandcomms.sd7   W  com.reedersystems.commandcomms.sd7 requires the Google Play Store, but it is missing.
+2026-05-12 21:33:18.500  5411-6441  GoogleApiManager        com.reedersystems.commandcomms.sd7   W  The service for com.google.android.gms.common.internal.service.zap is not available: ConnectionResult{statusCode=SERVICE_INVALID, resolution=null, message=null}
+2026-05-12 21:33:18.541   667-739   audio_hw_primary        android.hardware.audio.service       D  out_standby: enter: stream (0xef444330) usecase(1: low-latency-playback)
+2026-05-12 21:33:18.688   667-739   audio_hw_primary        android.hardware.audio.service       D  disable_audio_route: reset and update mixer path: low-latency-playback
+2026-05-12 21:33:18.692   667-739   soundtrigger            android.hardware.audio.service       D  audio_extn_sound_trigger_update_stream_status: uc_info->id 1 of type 0 for Event 2, with Raise=0
+2026-05-12 21:33:18.693   667-739   hardware_info           android.hardware.audio.service       D  hw_info_append_hw_type : device_name = speaker
+2026-05-12 21:33:18.693   667-739   audio_hw_primary        android.hardware.audio.service       D  disable_snd_device: snd_device(2: speaker)
+2026-05-12 21:33:18.727   667-739   soundtrigger            android.hardware.audio.service       I  audio_extn_sound_trigger_update_device_status: device 0x2 of type 0 for Event 0, with Raise=0
+2026-05-12 21:33:18.751  5411-6444  [RadioEngine]           com.reedersystems.commandcomms.sd7   D  RX_DIAG rxTotal=0 rxNew=0 jbSize=0 jbDepth=2 jbPlaying=false channelIdx=169 winLossPct=0.0 winFec=0 winPlc=0 jitterMs=0.0 t=5320ms
+2026-05-12 21:33:19.061  1637-4710  BufferPoolAccessor2.0   mediaserver                          D  evictor expired: 1, evicted: 0
+2026-05-12 21:33:19.875  5411-6444  [JitterBuf]             com.reedersystems.commandcomms.sd7   D  ENTER_IDLE depth=2 keptFrames=0 t=6444ms
+2026-05-12 21:33:19.916  5411-6444  [UdpTransport]          com.reedersystems.commandcomms.sd7   D  {"event":"UDP_KEEPALIVE_SENT","dest":"comms.reeder-systems.com:5100","fast":false,"intervalMs":8000}
+2026-05-12 21:33:20.041  1563-1563  /system/ve.../bin/ipacm ipacm                                W  type=1400 audit(0.0:3818): avc: denied { write } for comm=6E65746C696E6B20736F636B6574 name="ipacm_log_file" dev="tmpfs" ino=22466 scontext=u:r:ipacm:s0 tcontext=u:object_r:ipacm_socket:s0 tclass=sock_file permissive=0
+2026-05-12 21:33:20.041  1563-1563  /system/ve.../bin/ipacm ipacm                                W  type=1400 audit(0.0:3819): avc: denied { write } for comm=6E65746C696E6B20736F636B6574 name="ipacm_log_file" dev="tmpfs" ino=22466 scontext=u:r:ipacm:s0 tcontext=u:object_r:ipacm_socket:s0 tclass=sock_file permissive=0
+2026-05-12 21:33:20.041  1563-1563  /system/ve.../bin/ipacm ipacm                                W  type=1400 audit(0.0:3820): avc: denied { write } for comm=6E65746C696E6B20736F636B6574 name="ipacm_log_file" dev="tmpfs" ino=22466 scontext=u:r:ipacm:s0 tcontext=u:object_r:ipacm_socket:s0 tclass=sock_file permissive=0
+2026-05-12 21:33:20.041  1563-1563  /system/ve.../bin/ipacm ipacm                                W  type=1400 audit(0.0:3821): avc: denied { write } for comm=6E65746C696E6B20736F636B6574 name="ipacm_log_file" dev="tmpfs" ino=22466 scontext=u:r:ipacm:s0 tcontext=u:object_r:ipacm_socket:s0 tclass=sock_file permissive=0
+2026-05-12 21:33:20.041  1563-1563  /system/ve.../bin/ipacm ipacm                                W  type=1400 audit(0.0:3822): avc: denied { write } for comm=6E65746C696E6B20736F636B6574 name="ipacm_log_file" dev="tmpfs" ino=22466 scontext=u:r:ipacm:s0 tcontext=u:object_r:ipacm_socket:s0 tclass=sock_file permissive=0
+2026-05-12 21:33:20.939  1974-2277  WindowManager           system_server                        D  #33 keycode: 228, event KeyEvent { action=ACTION_DOWN, keyCode=KEYCODE_12, scanCode=84, metaState=0, flags=0x8, repeatCount=0, eventTime=1260810, downTime=1260810, deviceId=3, source=0x101, displayId=-1 }
+2026-05-12 21:33:20.939  1974-2277  WindowManager           system_server                        D  ptt key delay: 100
+2026-05-12 21:33:20.943  5411-5411  ViewRootImpl            com.reedersystems.commandcomms.sd7   D  ptt key delay (ViewRootImpl): 100
+2026-05-12 21:33:21.041  1974-2166  WindowManager           system_server                        D  HandlePTTKeyEvent: sending PTT event. down = true
+2026-05-12 21:33:21.041  1974-2166  WindowManager           system_server                        D  #33 broadcastOrderedIntent action: com.airbus.pmr.action.PTT_START
+2026-05-12 21:33:21.042  1974-2166  ContextImpl             system_server                        W  Calling a method in the system process without a qualified user: android.app.ContextImpl.sendOrderedBroadcast:1306 com.android.server.policy.PhoneWindowManager.broadcastOrderedIntent:4747 com.android.server.policy.PhoneWindowManager.broadcastPTTIntent:4751 com.android.server.policy.PhoneWindowManager.HandlePTTKeyEventInternal:4636 com.android.server.policy.PhoneWindowManager.access$7200:272 
+2026-05-12 21:33:21.043  1974-2166  WindowManager           system_server                        D  #33 broadcastOrderedIntent action: android.intent.action.PTT
+2026-05-12 21:33:21.043  1974-2166  ContextImpl             system_server                        W  Calling a method in the system process without a qualified user: android.app.ContextImpl.sendOrderedBroadcast:1306 com.android.server.policy.PhoneWindowManager.broadcastOrderedIntent:4747 com.android.server.policy.PhoneWindowManager.broadcastPTTIntent:4751 com.android.server.policy.PhoneWindowManager.HandlePTTKeyEventInternal:4652 com.android.server.policy.PhoneWindowManager.access$7200:272 
+2026-05-12 21:33:21.044  1974-2188  CompatibilityInfo       system_server                        D  mCompatibilityFlags - 0
+2026-05-12 21:33:21.045  1974-2188  CompatibilityInfo       system_server                        D  applicationDensity - 320
+2026-05-12 21:33:21.045  1974-2188  CompatibilityInfo       system_server                        D  applicationScale - 1.0
+2026-05-12 21:33:21.047  3600-3600  smallcd                 com.br.smallcd                       I  PPT key pressed. RotaryKnobEventReceiver:onReceive - hasPreviousLongPressKnob=false, hasPreviourSosPress=false
+2026-05-12 21:33:21.048  1974-2166  WindowManager           system_server                        D  #33 broadcastOrderedIntent action: android.intent.action.PTT.down
+2026-05-12 21:33:21.049  1974-2166  ContextImpl             system_server                        W  Calling a method in the system process without a qualified user: android.app.ContextImpl.sendOrderedBroadcast:1306 com.android.server.policy.PhoneWindowManager.broadcastOrderedIntent:4747 com.android.server.policy.PhoneWindowManager.broadcastPTTIntent:4751 com.android.server.policy.PhoneWindowManager.HandlePTTKeyEventInternal:4653 com.android.server.policy.PhoneWindowManager.access$7200:272 
+2026-05-12 21:33:21.049  5411-5411  Activity                com.reedersystems.commandcomms.sd7   D  ptt key delay (Activity): 100
+2026-05-12 21:33:21.050  5411-5411  InputEventReceiver      com.reedersystems.commandcomms.sd7   W  Attempted to finish an input event that is not in progress.
+2026-05-12 21:33:21.051  1974-3593  CompatibilityInfo       system_server                        D  mCompatibilityFlags - 0
+2026-05-12 21:33:21.051  1974-3593  CompatibilityInfo       system_server                        D  applicationDensity - 320
+2026-05-12 21:33:21.051  1974-3593  CompatibilityInfo       system_server                        D  applicationScale - 1.0
+2026-05-12 21:33:21.053  1974-2166  WindowManager           system_server                        D  #33 broadcastOrderedIntent action: com.mcx.intent.action.CRITICAL_COMMUNICATION_CONTROL_KEY
+2026-05-12 21:33:21.053  1974-2166  ContextImpl             system_server                        W  Calling a method in the system process without a qualified user: android.app.ContextImpl.sendOrderedBroadcast:1306 com.android.server.policy.PhoneWindowManager.broadcastOrderedIntent:4747 com.android.server.policy.PhoneWindowManager.broadcastPTTIntent:4751 com.android.server.policy.PhoneWindowManager.HandlePTTKeyEventInternal:4659 com.android.server.policy.PhoneWindowManager.access$7200:272 
+2026-05-12 21:33:21.055  5411-5411  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   D  PttHardwareReceiver.onReceive action=com.airbus.pmr.action.PTT_START extras=Bundle[mParcelledData.dataSize=224] source=broadcast
+2026-05-12 21:33:21.055  5411-5411  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   D  PttHardwareReceiver: mapped action=com.airbus.pmr.action.PTT_START -> svcAction=com.reedersystems.commandcomms.SVC_PTT_DOWN
+2026-05-12 21:33:21.059  5411-5411  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   D  PttHardwareReceiver: WakeLock acquired (auto-releases in 5000ms)
+2026-05-12 21:33:21.068  5411-5411  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   D  {"event":"RADIO_PTT_DOWN","pttState":"IDLE","signaling":true,"channelKey":"DISPATCH__DISPATCH","channelId":"169"}
+2026-05-12 21:33:21.068  5411-5411  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   D  PTT_STATE IDLE -> CONNECTING channelKey=DISPATCH__DISPATCH
+2026-05-12 21:33:21.083  5411-5411  [ToneEvent]             com.reedersystems.commandcomms.sd7   D  {"tone":"talk-permit","trigger":"ptt_down","state":"CONNECTING","channelKey":"DISPATCH__DISPATCH","ts":1778636001083}
+2026-05-12 21:33:21.088   667-739   audio_hw_primary        android.hardware.audio.service       D  adev_set_mode: mode 3 , prev_mode 0 
+2026-05-12 21:33:21.089  5411-5411  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   D  {"event":"RADIO_ROUTE_DEVICE_SELECT","reason":"apply","output":"BUILTIN_SPEAKER","input":"NONE","accessoryPresent":false,"apiPath":"setCommunicationDevice"}
+2026-05-12 21:33:21.134   667-739   audio_hw_primary        android.hardware.audio.service       D  adev_create_audio_patch: enter: num sources 1, num_sinks 1, handle 1
+2026-05-12 21:33:21.134   667-739   audio_hw_primary        android.hardware.audio.service       D  adev_create_audio_patch: Playback patch from mix handle 13 to device 2
+2026-05-12 21:33:21.134   667-739   audio_hw_primary        android.hardware.audio.service       D  route_output_stream: enter: usecase(1: low-latency-playback) devices 2
+2026-05-12 21:33:21.171   667-739   audio_hw_primary        android.hardware.audio.service       D  adev_create_audio_patch: enter: num sources 1, num_sinks 1, handle 1
+2026-05-12 21:33:21.171   667-739   audio_hw_primary        android.hardware.audio.service       D  adev_create_audio_patch: Playback patch from mix handle 13 to device 2
+2026-05-12 21:33:21.171   667-739   audio_hw_primary        android.hardware.audio.service       D  route_output_stream: enter: usecase(1: low-latency-playback) devices 2
+2026-05-12 21:33:21.214  5411-5411  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   D  {"event":"RADIO_ROUTE_APPLIED","mode":"IN_COMMUNICATION","voiceCallVol":13,"voiceCallVolBefore":13,"voiceCallVolMax":15,"firstRunFloorApplied":false}
+2026-05-12 21:33:21.216  5411-5411  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   D  PttHardwareReceiver.onReceive action=android.intent.action.PTT extras=Bundle[mParcelledData.dataSize=224] source=broadcast
+2026-05-12 21:33:21.216  5411-5411  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   D  PTT broadcast pttKeyState=-1
+2026-05-12 21:33:21.222   667-739   audio_hw_primary        android.hardware.audio.service       D  adev_set_parameters: enter: BT_SCO=off
+2026-05-12 21:33:21.224  1974-2475  AS.AudioDeviceInventory system_server                        I  setPreferredDevicesForStrategySync, strategy: 15 devices: [AudioDeviceAttributes: role:output type:speaker addr:]
+2026-05-12 21:33:21.224  1974-3596  CompatibilityInfo       system_server                        D  mCompatibilityFlags - 0
+2026-05-12 21:33:21.224  1974-3596  CompatibilityInfo       system_server                        D  applicationDensity - 320
+2026-05-12 21:33:21.224  1974-3596  CompatibilityInfo       system_server                        D  applicationScale - 1.0
+2026-05-12 21:33:21.229  5411-5411  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   D  PttHardwareReceiver.onReceive action=android.intent.action.PTT extras=Bundle[mParcelledData.dataSize=224] source=broadcast
+2026-05-12 21:33:21.229  5411-5411  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   D  PTT broadcast pttKeyState=-1
+2026-05-12 21:33:21.233  5411-5411  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   D  PttHardwareReceiver.onReceive action=android.intent.action.PTT.down extras=Bundle[mParcelledData.dataSize=224] source=broadcast
+2026-05-12 21:33:21.233  5411-5411  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   D  PttHardwareReceiver: mapped action=android.intent.action.PTT.down -> svcAction=com.reedersystems.commandcomms.SVC_PTT_DOWN
+2026-05-12 21:33:21.234  3678-4103  MediaProvider           com.android.providers.media.module   W  Failed to fetch original file descriptor (Explain with AI)
+                                                                                                    java.io.FileNotFoundException: Input file descriptor is already original
+                                                                                                    	at com.android.providers.media.MediaProvider.getOriginalMediaFormatFileDescriptor(MediaProvider.java:5741)
+                                                                                                    	at com.android.providers.media.MediaProvider.openTypedAssetFileCommon(MediaProvider.java:7157)
+                                                                                                    	at com.android.providers.media.MediaProvider.openTypedAssetFile(MediaProvider.java:7138)
+                                                                                                    	at android.content.ContentProvider$Transport.openTypedAssetFile(ContentProvider.java:548)
+                                                                                                    	at android.content.ContentProviderNative.onTransact(ContentProviderNative.java:327)
+                                                                                                    	at android.os.Binder.execTransactInternal(Binder.java:1179)
+                                                                                                    	at android.os.Binder.execTransact(Binder.java:1143)
+2026-05-12 21:33:21.235  5411-5411  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   D  PttHardwareReceiver: WakeLock acquired (auto-releases in 5000ms)
+2026-05-12 21:33:21.236  1637-1637  NuPlayerDriver          mediaserver                          D  NuPlayerDriver(0xe7bc0f10) created, clientPid(5411)
+2026-05-12 21:33:21.240  5411-5411  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   D  {"event":"RADIO_PTT_DOWN","pttState":"CONNECTING","signaling":true,"channelKey":"DISPATCH__DISPATCH","channelId":"169"}
+2026-05-12 21:33:21.240  5411-5411  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   D  Radio PTT DOWN ignored: pttState=CONNECTING
+2026-05-12 21:33:21.242  1974-2252  CompatibilityInfo       system_server                        D  mCompatibilityFlags - 0
+2026-05-12 21:33:21.242  1974-2252  CompatibilityInfo       system_server                        D  applicationDensity - 320
+2026-05-12 21:33:21.242  1974-2252  CompatibilityInfo       system_server                        D  applicationScale - 1.0
+2026-05-12 21:33:21.244  1637-1637  ExtendedNuUtils         mediaserver                          I  printFileName fd(8) -> /data/app/~~QavyhJqSSZvrSwGvMASnWg==/com.reedersystems.commandcomms.sd7-qHWnukB2ZmBE_lf7gv7kGw==/base.apk
+2026-05-12 21:33:21.244  5411-5411  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   D  PttHardwareReceiver.onReceive action=android.intent.action.PTT.down extras=Bundle[mParcelledData.dataSize=224] source=broadcast
+2026-05-12 21:33:21.244  5411-5411  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   D  PttHardwareReceiver: mapped action=android.intent.action.PTT.down -> svcAction=com.reedersystems.commandcomms.SVC_PTT_DOWN
+2026-05-12 21:33:21.246  5411-5411  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   D  PttHardwareReceiver: WakeLock acquired (auto-releases in 5000ms)
+2026-05-12 21:33:21.251  5411-5411  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   D  {"event":"RADIO_PTT_DOWN","pttState":"CONNECTING","signaling":true,"channelKey":"DISPATCH__DISPATCH","channelId":"169"}
+2026-05-12 21:33:21.252  5411-5411  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   D  Radio PTT DOWN ignored: pttState=CONNECTING
+2026-05-12 21:33:21.301  2533-2533  Interrupti...teProvider com.android.systemui                 D  No bubble up: not allowed to bubble: 0|com.reedersystems.commandcomms.sd7|1001|null|10126
+2026-05-12 21:33:21.303  2533-2533  Interrupti...teProvider com.android.systemui                 D  No heads up: unimportant notification: 0|com.reedersystems.commandcomms.sd7|1001|null|10126
+2026-05-12 21:33:21.324  2533-2641  PeopleSpaceWidgetMgr    com.android.systemui                 D  Sbn doesn't contain valid PeopleTileKey: null/0/com.reedersystems.commandcomms.sd7
+2026-05-12 21:33:21.363   667-6875  audio_hw_primary        android.hardware.audio.service       D  adev_create_audio_patch: enter: num sources 1, num_sinks 1, handle 1
+2026-05-12 21:33:21.363   667-6875  audio_hw_primary        android.hardware.audio.service       D  adev_create_audio_patch: Playback patch from mix handle 13 to device 2
+2026-05-12 21:33:21.363   667-6875  audio_hw_primary        android.hardware.audio.service       D  route_output_stream: enter: usecase(1: low-latency-playback) devices 2
+2026-05-12 21:33:21.392  1637-7435  GenericSource           mediaserver                          D  FileSource remote
+2026-05-12 21:33:21.399  1625-1625  MMParserExtractor       media.extractor                      I  Created(0xb400007a31e3b3f0)
+2026-05-12 21:33:21.399  1625-1625  MM_OSAL                 media.extractor                      E  FileSource::FileSource
+2026-05-12 21:33:21.399  1625-1625  MM_OSAL                 media.extractor                      E  FileSource::FileSource m_bEveryThingOK 1
+2026-05-12 21:33:21.403  1625-7061  MediaBufferGroup        media.extractor                      D  creating MemoryDealer
+2026-05-12 21:33:21.418  1637-7434  GenericSource           mediaserver                          I  start
+2026-05-12 21:33:21.419  1637-7434  Utils                   mediaserver                          W  track of type 'audio/raw' does not publish channel mask, channel count 1
+2026-05-12 21:33:21.422  1637-7434  Utils                   mediaserver                          W  track of type 'audio/raw' does not publish channel mask, channel count 1
+2026-05-12 21:33:21.424   667-6875  audio_hw_primary        android.hardware.audio.service       D  adev_get_parameters:is_hw_dec_session_available
+2026-05-12 21:33:21.424   667-6875  soundtrigger            android.hardware.audio.service       D  audio_extn_sound_trigger_get_parameters input string<is_hw_dec_session_available=>
+2026-05-12 21:33:21.424   667-6875  soundtrigger            android.hardware.audio.service       D  extract_sm_handle input string <is_hw_dec_session_available=> param string <is_hw_dec_session_available=>
+2026-05-12 21:33:21.424   667-6875  audio_hw_extn           android.hardware.audio.service       D  audio_extn_get_parameters: returns 
+2026-05-12 21:33:21.424   702-6883  hash_map_utils          audioserver                          I  system/bt/osi/src/hash_map_utils.cc:81 hash_map_utils_dump_string_keys_string_values: key: 'is_hw_dec_session_available' value: 'audio/raw'
+2026-05-12 21:33:21.426  1637-7439  CCodec                  mediaserver                          D  allocate(c2.android.raw.decoder)
+2026-05-12 21:33:21.427  1676-3015  C2Store                 media.swcodec                        V  in init
+2026-05-12 21:33:21.427  1676-3015  C2Store                 media.swcodec                        V  loading dll
+2026-05-12 21:33:21.431  1637-7439  CCodec                  mediaserver                          I  Created component [c2.android.raw.decoder]
+2026-05-12 21:33:21.431  1637-7439  CCodecConfig            mediaserver                          D  read media type: audio/raw
+2026-05-12 21:33:21.434  1637-7439  ReflectedParamUpdater   mediaserver                          D  extent() != 1 for single value type: algo.buffers.max-count.values
+2026-05-12 21:33:21.434  1637-7439  ReflectedParamUpdater   mediaserver                          D  extent() != 1 for single value type: output.subscribed-indices.values
+2026-05-12 21:33:21.434  1637-7439  ReflectedParamUpdater   mediaserver                          D  extent() != 1 for single value type: input.buffers.allocator-ids.values
+2026-05-12 21:33:21.434  1637-7439  ReflectedParamUpdater   mediaserver                          D  extent() != 1 for single value type: output.buffers.allocator-ids.values
+2026-05-12 21:33:21.435  1637-7439  ReflectedParamUpdater   mediaserver                          D  extent() != 1 for single value type: algo.buffers.allocator-ids.values
+2026-05-12 21:33:21.435  1637-7439  ReflectedParamUpdater   mediaserver                          D  extent() != 1 for single value type: output.buffers.pool-ids.values
+2026-05-12 21:33:21.435  1637-7439  ReflectedParamUpdater   mediaserver                          D  extent() != 1 for single value type: algo.buffers.pool-ids.values
+2026-05-12 21:33:21.437  1637-7439  CCodecConfig            mediaserver                          I  query failed after returning 8 values (BAD_INDEX)
+2026-05-12 21:33:21.437  1637-7439  CCodecConfig            mediaserver                          D  c2 config diff is Dict {
+                                                                                                      c2::u32 coded.bitrate.value = 64000
+                                                                                                      c2::u32 input.buffers.max-size.value = 65536
+                                                                                                      c2::u32 input.delay.value = 0
+                                                                                                      string input.media-type.value = "audio/raw"
+                                                                                                      string output.media-type.value = "audio/raw"
+                                                                                                      c2::u32 raw.channel-count.value = 2
+                                                                                                      c2::u32 raw.pcm-encoding.value = 0
+                                                                                                      c2::u32 raw.sample-rate.value = 44100
+                                                                                                    }
+2026-05-12 21:33:21.438  1637-7439  CCodec                  mediaserver                          D  [c2.android.raw.decoder] buffers are bound to CCodec for this session
+2026-05-12 21:33:21.438  1637-7439  CCodecConfig            mediaserver                          D  no c2 equivalents for durationUs
+2026-05-12 21:33:21.439  1637-7439  CCodecConfig            mediaserver                          D  no c2 equivalents for language
+2026-05-12 21:33:21.439  1637-7439  CCodecConfig            mediaserver                          D  no c2 equivalents for bits-per-sample
+2026-05-12 21:33:21.439  1637-7439  CCodecConfig            mediaserver                          D  no c2 equivalents for channel-mask
+2026-05-12 21:33:21.439  1637-7439  CCodecConfig            mediaserver                          D  no c2 equivalents for file-format
+2026-05-12 21:33:21.439  1637-7439  CCodecConfig            mediaserver                          D  no c2 equivalents for flags
+2026-05-12 21:33:21.439  1637-7439  CCodecConfig            mediaserver                          D  config failed => CORRUPTED
+2026-05-12 21:33:21.440  1637-7439  CCodecConfig            mediaserver                          D  c2 config diff is   c2::u32 raw.channel-count.value = 1
+2026-05-12 21:33:21.441  1637-7439  Codec2Client            mediaserver                          W  query -- param skipped: index = 1107298332.
+2026-05-12 21:33:21.441  1637-7439  CCodec                  mediaserver                          D  client requested max input size 32768, which is smaller than what component recommended (65536); overriding with component recommendation.
+2026-05-12 21:33:21.441  1637-7439  CCodec                  mediaserver                          W  This behavior is subject to change. It is recommended that app developers double check whether the requested max input size is in reasonable range.
+2026-05-12 21:33:21.441  1637-7439  CCodec                  mediaserver                          D  setup formats input: AMessage(what = 0x00000000) = {
+                                                                                                      int32_t android._codec-pcm-encoding = 2
+                                                                                                      int32_t bitrate = 64000
+                                                                                                      int32_t channel-count = 1
+                                                                                                      int32_t max-input-size = 65536
+                                                                                                      string mime = "audio/raw"
+                                                                                                      int32_t pcm-encoding = 2
+                                                                                                      int32_t sample-rate = 44100
+                                                                                                    }
+2026-05-12 21:33:21.441  1637-7439  CCodec                  mediaserver                          D  setup formats output: AMessage(what = 0x00000000) = {
+                                                                                                      int32_t android._codec-pcm-encoding = 2
+                                                                                                      int32_t channel-count = 1
+                                                                                                      string mime = "audio/raw"
+                                                                                                      int32_t pcm-encoding = 2
+                                                                                                      int32_t sample-rate = 44100
+                                                                                                      int32_t channel-mask = 0
+                                                                                                      int32_t android._config-pcm-encoding = 2
+                                                                                                    }
+2026-05-12 21:33:21.441  1637-7439  CCodecConfig            mediaserver                          I  query failed after returning 8 values (BAD_INDEX)
+2026-05-12 21:33:21.443  1637-7439  MediaCodec              mediaserver                          I  MediaCodec will operate in async mode
+2026-05-12 21:33:21.443  1637-7438  MediaCodec              mediaserver                          D  keep callback message for reclaim
+2026-05-12 21:33:21.444  1637-7439  Codec2Client            mediaserver                          W  query -- param skipped: index = 1342179345.
+2026-05-12 21:33:21.444  1637-7439  Codec2Client            mediaserver                          W  query -- param skipped: index = 2415921170.
+2026-05-12 21:33:21.445  1637-7439  CCodecBufferChannel     mediaserver                          D  [c2.android.raw.decoder#967] Created input block pool with allocatorID 16 => poolID 53 - OK (0)
+2026-05-12 21:33:21.446  1637-7439  CCodecBufferChannel     mediaserver                          I  [c2.android.raw.decoder#967] Created output block pool with allocatorID 16 => poolID 65 - OK
+2026-05-12 21:33:21.446  1637-2555  BufferPoolAccessor2.0   mediaserver                          D  Destruction - bufferpool2 0xe7582428 cached: 0/0M, 0/0% in use; allocs: 5, 20% recycled; transfers: 2, 50% unfetched
+2026-05-12 21:33:21.447  1637-7439  CCodecBufferChannel     mediaserver                          D  [c2.android.raw.decoder#967] Configured output block pool ids 65 => OK
+2026-05-12 21:33:21.447  1637-7439  CCodecBufferChannel     mediaserver                          D  [c2.android.raw.decoder#967] start: updating output delay 0
+2026-05-12 21:33:21.453  1637-7439  CCodecBufferChannel     mediaserver                          I  pipelineRoom(3) is <= numClientBuffers(3). Not signalling any more buffers to client
+2026-05-12 21:33:21.453  1676-7440  SimpleC2Component       media.swcodec                        D  Using output block pool with poolID 65 => got 65 - 0
+2026-05-12 21:33:21.456  1637-7439  CCodecBufferChannel     mediaserver                          I  pipelineRoom(2) is <= numClientBuffers(2). Not signalling any more buffers to client
+2026-05-12 21:33:21.457  1637-7439  CCodecBufferChannel     mediaserver                          D  [c2.android.raw.decoder#967] buffers after EOS ignored (0 us)
+2026-05-12 21:33:21.457  1637-7439  CCodecBufferChannel     mediaserver                          D  [c2.android.raw.decoder#967] buffers after EOS ignored (0 us)
+2026-05-12 21:33:21.459  1637-7438  ExtendedNuUtils         mediaserver                          I  Overriding bit-width: with src value 16
+2026-05-12 21:33:21.459  1637-7438  ExtendedNuUtils         mediaserver                          I  Overriding durationUs: with 64 bit src value 270000
+2026-05-12 21:33:21.459  1637-7438  ExtendedNuUtils         mediaserver                          I  Both src and dst missing for channel-mask
+2026-05-12 21:33:21.465   667-6875  audio_hw_primary        android.hardware.audio.service       D  adev_get_parameters:vr_audio_mode_on
+2026-05-12 21:33:21.465   702-6883  hash_map_utils          audioserver                          I  system/bt/osi/src/hash_map_utils.cc:81 hash_map_utils_dump_string_keys_string_values: key: 'vr_audio_mode_on' value: ''
+2026-05-12 21:33:21.466   702-6883  AudioFlinger            audioserver                          D  Client defaulted notificationFrames to 11025 for frameCount 22050
+2026-05-12 21:33:21.468   702-6883  AF::TrackHandle         audioserver                          D  OpPlayAudio: track:101 usage:3 not muted
+2026-05-12 21:33:21.506   667-739   audio_hw_primary        android.hardware.audio.service       D  adev_create_audio_patch: enter: num sources 1, num_sinks 1, handle 1
+2026-05-12 21:33:21.506   667-739   audio_hw_primary        android.hardware.audio.service       D  adev_create_audio_patch: Playback patch from mix handle 13 to device 2
+2026-05-12 21:33:21.506   667-739   audio_hw_primary        android.hardware.audio.service       D  route_output_stream: enter: usecase(1: low-latency-playback) devices 2
+2026-05-12 21:33:21.511  1637-7437  AudioTrack              mediaserver                          D  stop(98): called with 11944 frames delivered
+2026-05-12 21:33:21.514   667-4712  audio_hw_primary        android.hardware.audio.service       D  start_output_stream: enter: stream(0xef444330)usecase(1: low-latency-playback) devices(0x2) is_haptic_usecase(0)
+2026-05-12 21:33:21.515   667-4712  audio_hw_primary        android.hardware.audio.service       D  select_devices for use case (low-latency-playback)
+2026-05-12 21:33:21.515   667-4712  msm8974_platform        android.hardware.audio.service       I  platform_check_and_set_codec_backend_cfg:becf: afe: bitwidth 16, samplerate 48000 channels 2, backend_idx 0 usecase = 1 device (speaker)
+2026-05-12 21:33:21.515   667-4712  msm8974_platform        android.hardware.audio.service       I  platform_check_and_set_codec_backend_cfg: new_snd_devices[0] is 2
+2026-05-12 21:33:21.515   667-4712  msm8974_platform        android.hardware.audio.service       I  platform_check_codec_backend_cfg:becf: afe: bitwidth 16, samplerate 48000 channels 2, backend_idx 0 usecase = 1 device (speaker)
+2026-05-12 21:33:21.523   667-4712  msm8974_platform        android.hardware.audio.service       D  platform_check_codec_backend_cfg:becf: updated afe: bitwidth 16, samplerate 48000 channels 2,backend_idx 0 usecase = 1 device (speaker)
+2026-05-12 21:33:21.523   667-4712  msm8974_platform        android.hardware.audio.service       I  platform_check_codec_backend_cfg:becf: afe: Codec selected backend: 0 updated bit width: 16 and sample rate: 48000
+2026-05-12 21:33:21.523   667-4712  audio_hw_primary        android.hardware.audio.service       D  check_usecases_codec_backend:becf: force routing 0
+2026-05-12 21:33:21.523   667-4712  audio_hw_primary        android.hardware.audio.service       D  check_usecases_codec_backend:becf: (85) check_usecases curr device: speaker, usecase device: backends match 0
+2026-05-12 21:33:21.523   667-4712  audio_hw_primary        android.hardware.audio.service       D  check_usecases_codec_backend:becf: check_usecases num.of Usecases to switch 0
+2026-05-12 21:33:21.523   667-4712  hardware_info           android.hardware.audio.service       D  hw_info_append_hw_type : device_name = speaker
+2026-05-12 21:33:21.523   667-4712  audio_hw_primary        android.hardware.audio.service       D  enable_snd_device: snd_device(2: speaker)
+2026-05-12 21:33:21.523   667-4712  msm8974_platform        android.hardware.audio.service       D  platform_get_island_cfg_on_device:island cfg status on snd_device = (speaker 0)
+2026-05-12 21:33:21.523   667-4712  soundtrigger            android.hardware.audio.service       I  audio_extn_sound_trigger_update_device_status: device 0x2 of type 0 for Event 1, with Raise=0
+2026-05-12 21:33:21.523   667-4712  audio_route             android.hardware.audio.service       D  Apply path: speaker
+2026-05-12 21:33:21.550   667-4712  audio_hw_primary        android.hardware.audio.service       D  audio_is_true_native_stream_active:napb: (0) (low-latency-playback)id (1) sr 48000 bw (16) device speaker
+2026-05-12 21:33:21.550   667-4712  soundtrigger            android.hardware.audio.service       D  audio_extn_sound_trigger_update_stream_status: uc_info->id 1 of type 0 for Event 3, with Raise=0
+2026-05-12 21:33:21.550   667-4712  audio_hw_utils          android.hardware.audio.service       D  audio_extn_utils_send_app_type_cfg: usecase->out_snd_device speaker
+2026-05-12 21:33:21.551   667-4712  audio_hw_utils          android.hardware.audio.service       I  send_app_type_cfg_for_device PLAYBACK app_type 69937, acdb_dev_id 10, sample_rate 48000, snd_device_be_idx 162
+2026-05-12 21:33:21.552  2833-4106  DPMJ                    .dataservices                        I  |REQ:RCVR| DPM creating socket
+2026-05-12 21:33:21.554   667-4712  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> send_audio_cal, acdb_id = 10, path = 0, app id = 0x11131, sample rate = 48000, use_case = 0,buffer_idx_w_path =0, afe_sample_rate = 48000, cal_mode = 1, offset_index = 0
+2026-05-12 21:33:21.554   667-4712  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> send_asm_topology
+2026-05-12 21:33:21.554   667-4712  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> ACDB_CMD_GET_AUDPROC_STREAM_TOPOLOGY_ID
+2026-05-12 21:33:21.555   667-4712  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> send_adm_topology
+2026-05-12 21:33:21.555   667-4712  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> ACDB_CMD_GET_AUDPROC_COMMON_TOPOLOGY_ID
+2026-05-12 21:33:21.555   667-4712  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> send_audtable
+2026-05-12 21:33:21.555   667-4712  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> ACDB_CMD_GET_AUDPROC_COMMON_TABLE_SIZE
+2026-05-12 21:33:21.555   667-4712  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> ACDB_CMD_GET_AUDPROC_COMMON_TABLE
+2026-05-12 21:33:21.555   667-4712  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> AUDIO_SET_AUDPROC_CAL cal_type[11] acdb_id[10] app_type[69937]
+2026-05-12 21:33:21.555   667-4712  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> send_audvoltable
+2026-05-12 21:33:21.555   667-4712  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> ACDB_CMD_GET_AUDPROC_GAIN_DEP_STEP_TABLE_SIZE
+2026-05-12 21:33:21.555   667-4712  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> ACDB_CMD_GET_AUDPROC_GAIN_DEP_STEP_TABLE, vol index 0
+2026-05-12 21:33:21.555   667-4712  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> AUDIO_SET_VOL_CAL cal type = 12
+2026-05-12 21:33:21.555   667-4712  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> ACDB_CMD_GET_AUDPROC_STREAM_TABLE_SIZE
+2026-05-12 21:33:21.555   667-4712  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> send_audstrmtable
+2026-05-12 21:33:21.555   667-4712  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> ACDB_CMD_GET_AUDPROC_STREAM_TABLE_V2
+2026-05-12 21:33:21.555   667-4712  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> audstrm_cal->cal_type.cal_data.cal_size = 16
+2026-05-12 21:33:21.555   667-4712  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> send_afe_topology
+2026-05-12 21:33:21.555   667-4712  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> ACDB_CMD_GET_AFE_TOPOLOGY_ID
+2026-05-12 21:33:21.555   667-4712  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> GET_AFE_TOPOLOGY_ID for adcd_id 10, Topology Id 112fc
+2026-05-12 21:33:21.555   667-4712  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> send_afe_cal
+2026-05-12 21:33:21.555   667-4712  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> ACDB_CMD_GET_AFE_COMMON_TABLE_SIZE
+2026-05-12 21:33:21.555   667-4712  android.ha...io.service android.hardware.audio.service       D  Failed to fetch the lookup information of the device 0000000A 
+2026-05-12 21:33:21.555   667-4712  ACDB-LOADER             android.hardware.audio.service       D  Error: ACDB_CMD_GET_AFE_COMMON_TABLE_SIZE Returned = -19
+2026-05-12 21:33:21.555   667-4712  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> ACDB_CMD_GET_AFE_COMMON_TABLE
+2026-05-12 21:33:21.555   667-4712  android.ha...io.service android.hardware.audio.service       D  Failed to fetch the lookup information of the device 0000000A 
+2026-05-12 21:33:21.555   667-4712  ACDB-LOADER             android.hardware.audio.service       D  Error: ACDB AFE returned = -19
+2026-05-12 21:33:21.555   667-4712  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> AUDIO_SET_AFE_CAL cal_type[16] acdb_id[10]
+2026-05-12 21:33:21.555   667-4712  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> send_hw_delay : acdb_id = 10 path = 0
+2026-05-12 21:33:21.555   667-4712  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> ACDB_AVSYNC_INFO: ACDB_CMD_GET_DEVICE_PROPERTY
+2026-05-12 21:33:21.555   667-4712  audio_hw_primary        android.hardware.audio.service       D  enable_audio_route: apply mixer and update path: low-latency-playback
+2026-05-12 21:33:21.555   667-4712  audio_route             android.hardware.audio.service       D  Apply path: low-latency-playback
+2026-05-12 21:33:21.560   667-4712  audio_hw_primary        android.hardware.audio.service       D  select_devices: done
+2026-05-12 21:33:21.560   667-4712  msm8974_platform        android.hardware.audio.service       D  platform_set_channel_map mixer_ctl_name:Playback Channel Map13
+2026-05-12 21:33:21.561   667-4712  msm8974_platform        android.hardware.audio.service       D  platform_set_channel_map: set mapping(1 2 0 0 0 0 0 0) for channel:2
+2026-05-12 21:33:21.564   667-4712  msm8974_platform        android.hardware.audio.service       E  platform_set_channel_map: Could not set ctl, error:-1 ch_count:2
+2026-05-12 21:33:21.622   667-4712  audio_hw_primary        android.hardware.audio.service       D  start_output_stream: exit
+2026-05-12 21:33:21.786  5411-5411  MediaPlayer             com.reedersystems.commandcomms.sd7   V  resetDrmState:  mDrmInfo=null mDrmProvisioningThread=null mPrepareDrmInProgress=false mActiveDrmScheme=false
+2026-05-12 21:33:21.787  5411-5411  MediaPlayer             com.reedersystems.commandcomms.sd7   V  cleanDrmObj: mDrmObj=null mDrmSessionId=null
+2026-05-12 21:33:21.787  1637-4031  NuPlayerDriver          mediaserver                          D  reset(0xe7bc0f10) at state 6
+2026-05-12 21:33:21.795  1637-7439  hw-BpHwBinder           mediaserver                          I  onLastStrongRef automatically unlinking death recipients
+2026-05-12 21:33:21.798  1676-3012  C2Store                 media.swcodec                        V  in ~ComponentModule
+2026-05-12 21:33:21.798  1676-3012  C2Store                 media.swcodec                        V  unloading dll
+2026-05-12 21:33:21.804  1676-3015  BufferPoolAccessor2.0   media.swcodec                        D  Destruction - bufferpool2 0xb400006fac71ae48 cached: 0/0M, 0/0% in use; allocs: 0, 0% recycled; transfers: 0, 0% unfetched
+2026-05-12 21:33:21.807  1637-7434  NuPlayerDriver          mediaserver                          D  notifyResetComplete(0xe7bc0f10)
+2026-05-12 21:33:21.808  1637-4031  AMessage                mediaserver                          W  failed to post message as target looper for handler 0 is gone.
+2026-05-12 21:33:21.811  5411-6444  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   D  {"event":"RADIO_READY_FOR_PTT","roomKey":"DISPATCH__DISPATCH","signaling":true}
+2026-05-12 21:33:21.817  5411-6444  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   D  {"event":"RADIO_ROUTE_DEVICE_SELECT","reason":"apply_already_active","output":"BUILTIN_SPEAKER","input":"NONE","accessoryPresent":false,"apiPath":"setCommunicationDevice"}
+2026-05-12 21:33:21.823  5411-6444  [RadioEngine]           com.reedersystems.commandcomms.sd7   D  PRE_CAPTURE_SESSION_START t=0ms
+2026-05-12 21:33:21.824  5411-6444  [AudioCapture]          com.reedersystems.commandcomms.sd7   D  TX_AUDIO_SOURCE_SELECTED source=VOICE_COMMUNICATION reason=cached_for_device device=QUALCOMM/toronto_sd7/API31
+2026-05-12 21:33:21.824  5411-6444  [AudioCapture]          com.reedersystems.commandcomms.sd7   D  PRE_CAPTURE_AUDIORECORD_INIT requestedRate=16000 source=VOICE_COMMUNICATION minBufSize=1280 allocBufSize=2560 frameMs=20 t=1ms
+2026-05-12 21:33:21.836   667-739   audio_hw_primary        android.hardware.audio.service       D  adev_open_input_stream: enter: sample_rate(16000) channel_mask(0x10) devices(0x80000080)        stream_handle(0xef3c6130) io_handle(158) source(7) format 1
+2026-05-12 21:33:21.836   667-739   audio_hw_utils          android.hardware.audio.service       W  audio_extn_utils_update_stream_input_app_type_cfg: App type could not be selected. Falling back to default
+2026-05-12 21:33:21.842   702-7443  AudioFlinger            audioserver                          I  AudioFlinger's thread 0xb4000071b6dd00a0 tid=7443 ready to run
+2026-05-12 21:33:21.842   667-739   audio_hw_primary        android.hardware.audio.service       D  in_standby: enter: stream (0xef3c6130) usecase(34: audio-record-voip)
+2026-05-12 21:33:21.850   667-6875  audio_hw_primary        android.hardware.audio.service       D  in_standby: enter: stream (0xef3c6130) usecase(34: audio-record-voip)
+2026-05-12 21:33:21.851   667-6875  EffectsFactory          android.hardware.audio.service       I  EffectCreate() create_effect
+2026-05-12 21:33:21.852   667-6875  EffectHAL               android.hardware.audio.service       W  Effect 0xefd623d0 command SET_CONFIG returned status: Invalid argument
+2026-05-12 21:33:21.853   667-6875  EffectsFactory          android.hardware.audio.service       I  EffectCreate() create_effect
+2026-05-12 21:33:21.854   667-6875  EffectHAL               android.hardware.audio.service       W  Effect 0xefd623d0 command SET_CONFIG returned status: Invalid argument
+2026-05-12 21:33:21.854   667-6875  EffectHAL               android.hardware.audio.service       W  Effect 0xefd62290 command SET_CONFIG returned status: Invalid argument
+2026-05-12 21:33:21.859  5411-6444  [AudioCapture]          com.reedersystems.commandcomms.sd7   D  PRE_CAPTURE_HAL_NEGOTIATED requestedRate=16000 actualRate=16000 actualChannels=1 needsStereoDownmix=false bufferSize=2560 monoFrameSamples=320 monoFrameBytes=640 t=35ms
+2026-05-12 21:33:21.877  5411-6441  GooglePlayServicesUtil  com.reedersystems.commandcomms.sd7   W  com.reedersystems.commandcomms.sd7 requires the Google Play Store, but it is missing.
+2026-05-12 21:33:21.877  5411-6441  GoogleApiManager        com.reedersystems.commandcomms.sd7   W  The service for com.google.android.gms.internal.location.zzda is not available: ConnectionResult{statusCode=SERVICE_INVALID, resolution=null, message=null}
+2026-05-12 21:33:21.879  5411-7046  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   W  {"event":"PTT_GPS_FIX_TIMEOUT","error":"com.google.android.gms.common.api.ApiException: 17: API: LocationServices.API is not available on this device. Connection failed with: ConnectionResult{statusCode=SERVICE_INVALID, resolution=null, message=null}"}
+2026-05-12 21:33:21.879  5411-7046  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   D  {"event":"PTT_GPS_FIX","status":"unavailable"}
+2026-05-12 21:33:21.879  5411-7046  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   D  emitPttPre DISPATCH__DISPATCH
+2026-05-12 21:33:21.881  5411-7046  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   D  Radio PTT: transmitPre sent for roomKey DISPATCH__DISPATCH
+2026-05-12 21:33:21.881  5411-7046  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   D  PTT_REQUEST_SENT channelId=DISPATCH__DISPATCH
+2026-05-12 21:33:21.882  5411-7046  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   D  RADIO_PTT_REQUEST_SENT channelId=DISPATCH__DISPATCH
+2026-05-12 21:33:21.882  5411-7046  [FloorCtrl]             com.reedersystems.commandcomms.sd7   D  requestFloor channelKey=DISPATCH__DISPATCH previousPending=false state=IDLE t=58ms
+2026-05-12 21:33:21.882  5411-7046  [RadioState]            com.reedersystems.commandcomms.sd7   D  State transition: IDLE -> REQUESTING_FLOOR reason=floor_request activeChannel=DISPATCH__DISPATCH txPipeline=false rxPipeline=true t=59ms
+2026-05-12 21:33:21.882  5411-7046  [RadioSigGW]            com.reedersystems.commandcomms.sd7   D  requestFloor channelKey=DISPATCH__DISPATCH signalingReady=AUTHENTICATED t=59ms
+2026-05-12 21:33:21.882  5411-7046  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   D  [FloorCtrl] SIGNALING_FLOOR_REQUEST channelKey=DISPATCH__DISPATCH unitId=INDIANA-1 sessionTokenPresent=true
+2026-05-12 21:33:21.882  5411-6944  [RadioLED-SD7]          com.reedersystems.commandcomms.sd7   D  Setting SD7 status LED → red
+2026-05-12 21:33:21.885  5411-5411  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   D  RadioState updated: REQUESTING_FLOOR
+2026-05-12 21:33:21.887  5411-7422  [JitterBuf]             com.reedersystems.commandcomms.sd7   D  ENTER_IDLE depth=2 keptFrames=0 t=63ms
+2026-05-12 21:33:21.892  5411-6444  [OpusCodec]             com.reedersystems.commandcomms.sd7   D  ENCODER_FRESH_CREATE rate=16000 frameSize=320 channels=1 bitrate=64000 attempt=0 warmup=passed t=69ms
+2026-05-12 21:33:21.893  5411-6444  [AudioDSP]              com.reedersystems.commandcomms.sd7   D  TX_DSP_COEFFICIENTS sampleRate=16000 hpCutoff=150.0 hpAlpha=0.9443719031288819 lpCutoff=3400.0 lpB0=0.22711707651421756 lpB1=0.4542341530284351 lpB2=0.22711707651421756 lpA1=-0.2766635335033555 lpA2=0.18513183956022572 compThreshold=-12.0 compRatio=3.0 compAttack=0.003 compRelease=0.15 micGain=2.0 gain=2.0 gateOpen=-42.0 gateClose=-46.0 expanderRatio=2.0 t=69ms
+2026-05-12 21:33:21.893  5411-6444  [AudioCapture]          com.reedersystems.commandcomms.sd7   D  TX_PREFERRED_DEVICE accepted=true deviceType=-1 accessoryPresent=false
+2026-05-12 21:33:21.899   667-739   audio_hw_primary        android.hardware.audio.service       D  adev_create_audio_patch: enter: num sources 1, num_sinks 1, handle 0
+2026-05-12 21:33:21.900   667-739   audio_hw_primary        android.hardware.audio.service       D  adev_create_audio_patch: Capture patch from device 80000080 to mix 158
+2026-05-12 21:33:21.900   667-739   audio_hw_primary        android.hardware.audio.service       D  adev_create_audio_patch: Added a new patch with handle 18
+2026-05-12 21:33:21.902  1974-2646  SoundTrigg...areLogging system_server                        I  setCaptureState[this=com.android.server.soundtrigger_middleware.SoundTriggerMiddlewareImpl@36cd374, client=null](true)
+2026-05-12 21:33:21.903   667-667   audio_hw_primary        android.hardware.audio.service       D  AEC enable 1
+2026-05-12 21:33:21.903   667-667   audio_hw_primary        android.hardware.audio.service       D  select_devices for use case (low-latency-playback)
+2026-05-12 21:33:21.903   667-667   audio_hw_primary        android.hardware.audio.service       D  select_devices: changing use case low-latency-playback output device from(2: speaker, acdb 10) to (25: voice-speaker-2, acdb 14)
+2026-05-12 21:33:21.903   667-667   audio_hw_primary        android.hardware.audio.service       D  disable_audio_route: reset and update mixer path: low-latency-playback
+2026-05-12 21:33:21.911  5411-6444  [AudioCapture]          com.reedersystems.commandcomms.sd7   D  AGC attached=false reason=unavailable t=87ms
+2026-05-12 21:33:21.919  5411-6444  [AudioCapture]          com.reedersystems.commandcomms.sd7   D  NoiseSuppressor attached=true enabled=true sessionId=721 t=95ms
+2026-05-12 21:33:21.919  5411-6444  [AudioCapture]          com.reedersystems.commandcomms.sd7   D  PRE_CAPTURE_STARTED sampleRate=16000 channelCount=1 frameMs=20 frameSizeSamples=320 maxBufferFrames=150 t=95ms
+2026-05-12 21:33:21.920  5411-6444  [RadioEngine]           com.reedersystems.commandcomms.sd7   D  Pre-capture started — buffering audio (sampleRate=16000 channels=1 buffer=2560) t=96ms
+2026-05-12 21:33:21.933  2533-2533  StatusBar               com.android.systemui                 D  disable<e i a s b h r c s > disable2<q i n >
+2026-05-12 21:33:21.952  5411-7445  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   D  [FloorCtrl] SIGNALING_FLOOR_GRANTED channelId=DISPATCH__DISPATCH senderUnitId=INDIANA-1
+2026-05-12 21:33:21.954  5411-7046  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   D  RADIO_PTT_GRANTED channelId=DISPATCH__DISPATCH senderUnitId=INDIANA-1
+2026-05-12 21:33:21.954  5411-7046  [FloorCtrl]             com.reedersystems.commandcomms.sd7   D  Floor GRANTED channelKey=DISPATCH__DISPATCH latencyMs=72 t=131ms
+2026-05-12 21:33:21.955  5411-7046  [RadioState]            com.reedersystems.commandcomms.sd7   D  State transition: REQUESTING_FLOOR -> TRANSMITTING reason=floor_granted activeChannel=DISPATCH__DISPATCH txPipeline=false rxPipeline=true t=131ms
+2026-05-12 21:33:21.955  5411-7422  [RadioLED-SD7]          com.reedersystems.commandcomms.sd7   D  Setting SD7 status LED → red
+2026-05-12 21:33:21.956  5411-5411  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   D  RadioState updated: TRANSMITTING
+2026-05-12 21:33:21.959  5411-7046  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   D  Floor GRANTED — promoting pre-capture to live TX
+2026-05-12 21:33:21.961  5411-7046  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   D  {"event":"RADIO_ROUTE_DEVICE_SELECT","reason":"apply_already_active","output":"BUILTIN_SPEAKER","input":"NONE","accessoryPresent":false,"apiPath":"setCommunicationDevice"}
+2026-05-12 21:33:22.015   667-667   soundtrigger            android.hardware.audio.service       D  audio_extn_sound_trigger_update_stream_status: uc_info->id 1 of type 0 for Event 2, with Raise=0
+2026-05-12 21:33:22.015   667-667   hardware_info           android.hardware.audio.service       D  hw_info_append_hw_type : device_name = speaker
+2026-05-12 21:33:22.015   667-667   audio_hw_primary        android.hardware.audio.service       D  disable_snd_device: snd_device(2: speaker)
+2026-05-12 21:33:22.039   667-667   soundtrigger            android.hardware.audio.service       I  audio_extn_sound_trigger_update_device_status: device 0x2 of type 0 for Event 0, with Raise=0
+2026-05-12 21:33:22.039   667-667   msm8974_platform        android.hardware.audio.service       I  platform_check_and_set_codec_backend_cfg:becf: afe: bitwidth 16, samplerate 48000 channels 2, backend_idx 0 usecase = 1 device (voice-speaker-2)
+2026-05-12 21:33:22.039   667-667   msm8974_platform        android.hardware.audio.service       I  platform_check_and_set_codec_backend_cfg: new_snd_devices[0] is 25
+2026-05-12 21:33:22.039   667-667   msm8974_platform        android.hardware.audio.service       I  platform_check_codec_backend_cfg:becf: afe: bitwidth 16, samplerate 48000 channels 2, backend_idx 0 usecase = 1 device (voice-speaker-2)
+2026-05-12 21:33:22.047   667-667   msm8974_platform        android.hardware.audio.service       D  platform_check_codec_backend_cfg:becf: updated afe: bitwidth 16, samplerate 48000 channels 2,backend_idx 0 usecase = 1 device (voice-speaker-2)
+2026-05-12 21:33:22.047   667-667   msm8974_platform        android.hardware.audio.service       I  platform_check_codec_backend_cfg:becf: afe: Codec selected backend: 0 updated bit width: 16 and sample rate: 48000
+2026-05-12 21:33:22.047   667-667   audio_hw_primary        android.hardware.audio.service       D  check_usecases_codec_backend:becf: force routing 0
+2026-05-12 21:33:22.047   667-667   audio_hw_primary        android.hardware.audio.service       D  check_usecases_codec_backend:becf: (85) check_usecases curr device: voice-speaker-2, usecase device:speaker backends match 0
+2026-05-12 21:33:22.047   667-667   audio_hw_primary        android.hardware.audio.service       D  check_usecases_codec_backend:becf: check_usecases num.of Usecases to switch 0
+2026-05-12 21:33:22.047   667-667   hardware_info           android.hardware.audio.service       D  hw_info_append_hw_type : device_name = voice-speaker-2
+2026-05-12 21:33:22.047   667-667   audio_hw_primary        android.hardware.audio.service       D  enable_snd_device: snd_device(25: voice-speaker-2)
+2026-05-12 21:33:22.047   667-667   msm8974_platform        android.hardware.audio.service       D  platform_get_island_cfg_on_device:island cfg status on snd_device = (voice-speaker-2 0)
+2026-05-12 21:33:22.047   667-667   soundtrigger            android.hardware.audio.service       I  audio_extn_sound_trigger_update_device_status: device 0x19 of type 0 for Event 1, with Raise=0
+2026-05-12 21:33:22.047   667-667   audio_route             android.hardware.audio.service       D  Apply path: voice-speaker-2
+2026-05-12 21:33:22.073   667-667   audio_hw_primary        android.hardware.audio.service       D  audio_is_true_native_stream_active:napb: (0) (low-latency-playback)id (1) sr 48000 bw (16) device voice-speaker-2
+2026-05-12 21:33:22.073   667-667   soundtrigger            android.hardware.audio.service       D  audio_extn_sound_trigger_update_stream_status: uc_info->id 1 of type 0 for Event 3, with Raise=0
+2026-05-12 21:33:22.073   667-667   audio_hw_utils          android.hardware.audio.service       D  audio_extn_utils_send_app_type_cfg: usecase->out_snd_device voice-speaker-2
+2026-05-12 21:33:22.074   667-667   audio_hw_utils          android.hardware.audio.service       I  send_app_type_cfg_for_device PLAYBACK app_type 69937, acdb_dev_id 14, sample_rate 48000, snd_device_be_idx 170
+2026-05-12 21:33:22.078   667-667   ACDB-LOADER             android.hardware.audio.service       D  ACDB -> send_audio_cal, acdb_id = 14, path = 0, app id = 0x11131, sample rate = 48000, use_case = 0,buffer_idx_w_path =0, afe_sample_rate = 48000, cal_mode = 1, offset_index = 0
+2026-05-12 21:33:22.078   667-667   ACDB-LOADER             android.hardware.audio.service       D  ACDB -> send_asm_topology
+2026-05-12 21:33:22.078   667-667   ACDB-LOADER             android.hardware.audio.service       D  ACDB -> ACDB_CMD_GET_AUDPROC_STREAM_TOPOLOGY_ID
+2026-05-12 21:33:22.078   667-667   ACDB-LOADER             android.hardware.audio.service       D  ACDB -> send_adm_topology
+2026-05-12 21:33:22.078   667-667   ACDB-LOADER             android.hardware.audio.service       D  ACDB -> ACDB_CMD_GET_AUDPROC_COMMON_TOPOLOGY_ID
+2026-05-12 21:33:22.078   667-667   ACDB-LOADER             android.hardware.audio.service       D  ACDB -> send_audtable
+2026-05-12 21:33:22.078   667-667   ACDB-LOADER             android.hardware.audio.service       D  ACDB -> ACDB_CMD_GET_AUDPROC_COMMON_TABLE_SIZE
+2026-05-12 21:33:22.078   667-667   ACDB-LOADER             android.hardware.audio.service       D  ACDB -> ACDB_CMD_GET_AUDPROC_COMMON_TABLE
+2026-05-12 21:33:22.078   667-667   ACDB-LOADER             android.hardware.audio.service       D  ACDB -> AUDIO_SET_AUDPROC_CAL cal_type[11] acdb_id[14] app_type[69937]
+2026-05-12 21:33:22.078   667-667   ACDB-LOADER             android.hardware.audio.service       D  ACDB -> send_audvoltable
+2026-05-12 21:33:22.078   667-667   ACDB-LOADER             android.hardware.audio.service       D  ACDB -> ACDB_CMD_GET_AUDPROC_GAIN_DEP_STEP_TABLE_SIZE
+2026-05-12 21:33:22.079   667-667   ACDB-LOADER             android.hardware.audio.service       D  ACDB -> ACDB_CMD_GET_AUDPROC_GAIN_DEP_STEP_TABLE, vol index 0
+2026-05-12 21:33:22.079   667-667   ACDB-LOADER             android.hardware.audio.service       D  ACDB -> AUDIO_SET_VOL_CAL cal type = 12
+2026-05-12 21:33:22.079   667-667   ACDB-LOADER             android.hardware.audio.service       D  ACDB -> ACDB_CMD_GET_AUDPROC_STREAM_TABLE_SIZE
+2026-05-12 21:33:22.079   667-667   ACDB-LOADER             android.hardware.audio.service       D  ACDB -> send_audstrmtable
+2026-05-12 21:33:22.079   667-667   ACDB-LOADER             android.hardware.audio.service       D  ACDB -> ACDB_CMD_GET_AUDPROC_STREAM_TABLE_V2
+2026-05-12 21:33:22.079   667-667   ACDB-LOADER             android.hardware.audio.service       D  ACDB -> audstrm_cal->cal_type.cal_data.cal_size = 16
+2026-05-12 21:33:22.079   667-667   ACDB-LOADER             android.hardware.audio.service       D  ACDB -> send_afe_topology
+2026-05-12 21:33:22.079   667-667   ACDB-LOADER             android.hardware.audio.service       D  ACDB -> ACDB_CMD_GET_AFE_TOPOLOGY_ID
+2026-05-12 21:33:22.079   667-667   ACDB-LOADER             android.hardware.audio.service       D  ACDB -> GET_AFE_TOPOLOGY_ID for adcd_id 14, Topology Id 1025e
+2026-05-12 21:33:22.079   667-667   ACDB-LOADER             android.hardware.audio.service       D  ACDB -> send_afe_cal
+2026-05-12 21:33:22.079   667-667   ACDB-LOADER             android.hardware.audio.service       D  ACDB -> ACDB_CMD_GET_AFE_COMMON_TABLE_SIZE
+2026-05-12 21:33:22.079   667-667   ACDB-LOADER             android.hardware.audio.service       D  ACDB -> ACDB_CMD_GET_AFE_COMMON_TABLE
+2026-05-12 21:33:22.079   667-667   ACDB-LOADER             android.hardware.audio.service       D  ACDB -> AUDIO_SET_AFE_CAL cal_type[16] acdb_id[14]
+2026-05-12 21:33:22.079   667-667   ACDB-LOADER             android.hardware.audio.service       D  ACDB -> send_hw_delay : acdb_id = 14 path = 0
+2026-05-12 21:33:22.079   667-667   ACDB-LOADER             android.hardware.audio.service       D  ACDB -> ACDB_AVSYNC_INFO: ACDB_CMD_GET_DEVICE_PROPERTY
+2026-05-12 21:33:22.079   667-667   audio_hw_primary        android.hardware.audio.service       D  enable_audio_route: apply mixer and update path: low-latency-playback
+2026-05-12 21:33:22.079   667-667   audio_route             android.hardware.audio.service       D  Apply path: low-latency-playback
+2026-05-12 21:33:22.132   667-667   audio_hw_primary        android.hardware.audio.service       D  select_devices: done
+2026-05-12 21:33:22.134   667-739   audio_hw_primary        android.hardware.audio.service       D  NS enable 1
+2026-05-12 21:33:22.137   667-7449  audio_hw_primary        android.hardware.audio.service       D  start_input_stream: enter: stream(0xef3c6130)usecase(34: audio-record-voip)
+2026-05-12 21:33:22.139   667-7449  audio_hw_primary        android.hardware.audio.service       D  select_devices for use case (audio-record-voip)
+2026-05-12 21:33:22.139   667-7449  msm8974_platform        android.hardware.audio.service       I  platform_check_and_set_capture_codec_backend_cfg:txbecf: afe: bitwidth 16, samplerate 16000, channel 1 format 1, backend_idx 8 usecase = 34 device (speaker-mic)
+2026-05-12 21:33:22.139   667-7449  msm8974_platform        android.hardware.audio.service       I  platform_check_capture_codec_backend_cfg:txbecf: afe: Codec selected backend: 8 current bit width: 16 and sample rate: 16000, channels 1 format 1
+2026-05-12 21:33:22.139   667-7449  msm8974_platform        android.hardware.audio.service       W  platform_check_capture_codec_backend_cfg:txbecf: afe: Use default bw and sr for voice/voip calls and for unprocessed/camera source
+2026-05-12 21:33:22.139   667-7449  msm8974_platform        android.hardware.audio.service       I  platform_check_capture_codec_backend_cfg:txbecf: afe: current backend bit_width 16 sample_rate 48000 channels 1, format 0
+2026-05-12 21:33:22.139   667-7449  msm8974_platform        android.hardware.audio.service       I  platform_check_capture_codec_backend_cfg:txbecf: afe: Codec backend needs to be updated. new bit width: 16 new sample rate: 48000 new channel: 1 new format: 1
+2026-05-12 21:33:22.139   667-7449  msm8974_platform        android.hardware.audio.service       I  platform_set_codec_backend_cfg:becf: afe: bitwidth 16, samplerate 48000 channels 1 format 1, backend_idx 8 device (speaker-mic)
+2026-05-12 21:33:22.139   667-7449  audio_hw_primary        android.hardware.audio.service       D  check_usecases_capture_codec_backend:becf: force routing 0
+2026-05-12 21:33:22.139   667-7449  hardware_info           android.hardware.audio.service       D  hw_info_append_hw_type : device_name = speaker-mic
+2026-05-12 21:33:22.139   667-7449  audio_hw_primary        android.hardware.audio.service       D  enable_snd_device: snd_device(141: speaker-mic)
+2026-05-12 21:33:22.139   667-7449  msm8974_platform        android.hardware.audio.service       D  platform_get_island_cfg_on_device:island cfg status on snd_device = (speaker-mic 0)
+2026-05-12 21:33:22.139   667-7449  soundtrigger            android.hardware.audio.service       D  audio HAL using same device 141 as ST
+2026-05-12 21:33:22.139   667-7449  soundtrigger            android.hardware.audio.service       I  audio_extn_sound_trigger_update_device_status: device 0x8d of type 1 for Event 1, with Raise=1
+2026-05-12 21:33:22.139   667-7449  sound_trigger_platform  android.hardware.audio.service       D  platform_stdev_check_and_update_concurrency: Received DEVICE event, event type 1
+2026-05-12 21:33:22.139   667-7449  sound_trigger_platform  android.hardware.audio.service       D  platform_stdev_check_and_update_concurrency: dedicated path 0, reset backend 1, tx 1, rx 0,concurrency session not allowed
+2026-05-12 21:33:22.139   667-7449  audio_route             android.hardware.audio.service       D  Apply path: speaker-mic
+2026-05-12 21:33:22.144   667-7449  sound_trigger_hw        android.hardware.audio.service       D  handle_audio_ec_ref_enabled: Enter
+2026-05-12 21:33:22.144   667-7449  sound_trigger_hw        android.hardware.audio.service       D  handle_audio_ec_ref_enabled: Exit audio ec ref=1
+2026-05-12 21:33:22.144   667-7449  soundtrigger            android.hardware.audio.service       D  audio_extn_sound_trigger_update_ec_ref_status: update audio echo ref status true
+2026-05-12 21:33:22.144   667-7449  audio_route             android.hardware.audio.service       D  Apply path: echo-reference-voip
+2026-05-12 21:33:22.151   667-7449  msm8974_platform        android.hardware.audio.service       D  platform_set_echo_reference: enabling echo-reference-voip
+2026-05-12 21:33:22.151   667-7449  msm8974_platform        android.hardware.audio.service       D  fluence nn disabled
+2026-05-12 21:33:22.151   667-7449  soundtrigger            android.hardware.audio.service       D  audio HAL using same device 141 as ST
+2026-05-12 21:33:22.151   667-7449  soundtrigger            android.hardware.audio.service       D  audio_extn_sound_trigger_update_stream_status: uc_info->id 34 of type 1 for Event 3, with Raise=1
+2026-05-12 21:33:22.151   667-7449  soundtrigger            android.hardware.audio.service       D  audio_extn_sound_trigger_update_stream_status: send event 13: usecase id 34, type 1
+2026-05-12 21:33:22.151   667-7449  sound_trigger_platform  android.hardware.audio.service       I  platform_stdev_check_and_update_concurrency: Received STREAM event, event type 13, usecase type 3
+2026-05-12 21:33:22.151   667-7449  sound_trigger_platform  android.hardware.audio.service       D  platform_stdev_check_and_update_concurrency: dedicated path 0, reset backend 1, tx 1, rx 0,concurrency session not allowed
+2026-05-12 21:33:22.151   667-7449  audio_hw_utils          android.hardware.audio.service       D  audio_extn_utils_send_app_type_cfg: usecase->in_snd_device speaker-mic
+2026-05-12 21:33:22.152   667-7449  audio_hw_utils          android.hardware.audio.service       I  send_app_type_cfg_for_device CAPTURE app_type 69946, acdb_dev_id 114, sample_rate 16000, snd_device_be_idx 169
+2026-05-12 21:33:22.156   667-7449  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> send_audio_cal, acdb_id = 114, path = 1, app id = 0x1113a, sample rate = 16000, use_case = 0,buffer_idx_w_path =1, afe_sample_rate = 48000, cal_mode = 1, offset_index = 0
+2026-05-12 21:33:22.156   667-7449  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> send_asm_topology
+2026-05-12 21:33:22.156   667-7449  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> ACDB_CMD_GET_AUDPROC_STREAM_TOPOLOGY_ID
+2026-05-12 21:33:22.156   667-7449  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> send_adm_topology
+2026-05-12 21:33:22.156   667-7449  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> ACDB_CMD_GET_AUDPROC_COMMON_TOPOLOGY_ID
+2026-05-12 21:33:22.157   667-7449  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> send_audtable
+2026-05-12 21:33:22.157   667-7449  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> ACDB_CMD_GET_AUDPROC_COMMON_TABLE_SIZE
+2026-05-12 21:33:22.157   667-7449  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> ACDB_CMD_GET_AUDPROC_COMMON_TABLE
+2026-05-12 21:33:22.157   667-7449  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> AUDIO_SET_AUDPROC_CAL cal_type[11] acdb_id[114] app_type[69946]
+2026-05-12 21:33:22.157   667-7449  ACDB-LOADER             android.hardware.audio.service       D  check_fnn_usecase_status: fnn usecase active 0
+2026-05-12 21:33:22.157   667-7449  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> ACDB_CMD_GET_PERSISTENT_AUDPROC_INSTANCE_COMMON_TABLE_SIZE
+2026-05-12 21:33:22.157   667-7449  android.ha...io.service android.hardware.audio.service       D  Invalid AV file. It doesnt contain LUT for tblid 00000028 
+2026-05-12 21:33:22.157   667-7449  android.ha...io.service android.hardware.audio.service       D  Failed to fetch the lookup information of the device 00000072 
+2026-05-12 21:33:22.157   667-7449  ACDB-LOADER             android.hardware.audio.service       D  Error: ACDB_CMD_GET_PERSISTENT_AUDPROC_INSTANCE_COMMON_TABLE_SIZE returned -20
+2026-05-12 21:33:22.157   667-7449  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> send_audproc_persist_table -20 
+2026-05-12 21:33:22.157   667-7449  ACDB-LOADER             android.hardware.audio.service       D  Error: Invalid Audproc persist size = -20
+2026-05-12 21:33:22.157   667-7449  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> ACDB_CMD_GET_AUDPROC_STREAM_TABLE_SIZE
+2026-05-12 21:33:22.157   667-7449  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> send_audstrmtable
+2026-05-12 21:33:22.157   667-7449  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> ACDB_CMD_GET_AUDPROC_STREAM_TABLE_V2
+2026-05-12 21:33:22.157   667-7449  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> audstrm_cal->cal_type.cal_data.cal_size = 16
+2026-05-12 21:33:22.157   667-7449  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> send_afe_topology
+2026-05-12 21:33:22.157   667-7449  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> ACDB_CMD_GET_AFE_TOPOLOGY_ID
+2026-05-12 21:33:22.157   667-7449  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> GET_AFE_TOPOLOGY_ID for adcd_id 114, Topology Id 112fb
+2026-05-12 21:33:22.157   667-7449  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> send_afe_cal
+2026-05-12 21:33:22.157   667-7449  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> ACDB_CMD_GET_AFE_COMMON_TABLE_SIZE
+2026-05-12 21:33:22.157   667-7449  android.ha...io.service android.hardware.audio.service       D  Failed to fetch the lookup information of the device 00000072 
+2026-05-12 21:33:22.157   667-7449  ACDB-LOADER             android.hardware.audio.service       D  Error: ACDB_CMD_GET_AFE_COMMON_TABLE_SIZE Returned = -19
+2026-05-12 21:33:22.157   667-7449  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> ACDB_CMD_GET_AFE_COMMON_TABLE
+2026-05-12 21:33:22.157   667-7449  android.ha...io.service android.hardware.audio.service       D  Failed to fetch the lookup information of the device 00000072 
+2026-05-12 21:33:22.157   667-7449  ACDB-LOADER             android.hardware.audio.service       D  Error: ACDB AFE returned = -19
+2026-05-12 21:33:22.157   667-7449  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> AUDIO_SET_AFE_CAL cal_type[17] acdb_id[114]
+2026-05-12 21:33:22.157   667-7449  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> send_hw_delay : acdb_id = 114 path = 1
+2026-05-12 21:33:22.157   667-7449  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> ACDB_AVSYNC_INFO: ACDB_CMD_GET_DEVICE_PROPERTY
+2026-05-12 21:33:22.157   667-7449  msm8974_platform        android.hardware.audio.service       D  fluence nn disabled
+2026-05-12 21:33:22.157   667-7449  audio_hw_primary        android.hardware.audio.service       D  enable_audio_route: apply mixer and update path: audio-record-voip
+2026-05-12 21:33:22.157   667-7449  audio_route             android.hardware.audio.service       D  Apply path: audio-record-voip
+2026-05-12 21:33:22.160   667-7449  audio_hw_primary        android.hardware.audio.service       D  select_devices: done
+2026-05-12 21:33:22.162  5411-7046  [RadioEngine]           com.reedersystems.commandcomms.sd7   D  PROMOTE_GATE preBufferReady=false waitedMs=200 t=339ms
+2026-05-12 21:33:22.163  5411-7046  [RadioEngine]           com.reedersystems.commandcomms.sd7   D  PRE_BUFFER_FLUSHED flushedFrames=0 discardedFrames=0 durationMs=0 — live TX active t=339ms
+2026-05-12 21:33:22.163  5411-7046  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   D  PTT_STATE CONNECTING -> TRANSMITTING channelKey=DISPATCH__DISPATCH
+2026-05-12 21:33:22.179  5411-7046  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   D  Sending PTT_TX_STARTED broadcast
+2026-05-12 21:33:22.181  5411-5411  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   D  PTT_TX_STARTED received — setting pttState = TRANSMITTING
+2026-05-12 21:33:22.226   667-7449  audio_hw_primary        android.hardware.audio.service       D  start_input_stream: exit
+2026-05-12 21:33:22.254  5411-6944  [AudioCapture]          com.reedersystems.commandcomms.sd7   D  PCM_FRAME frame=1 readRet=640 samples=320 min=0 max=0 rms=0.0 silent=true zeros=320 downmix=false source=VOICE_COMMUNICATION sampleRate=16000 channels=1 t=429ms
+2026-05-12 21:33:22.265  5411-6944  [AudioDSP]              com.reedersystems.commandcomms.sd7   D  DSP_FRAME frame=1 pre=[samples=320 min=0 max=0 rms=0.0 silent=true zeros=320] post=[samples=320 min=0 max=0 rms=0.0 silent=true zeros=320] gate=closed gateEnv=-115.0dB gateThreshold=-42.0dB micGain=2.0 t=439ms
+2026-05-12 21:33:22.274  5411-6944  [AudioCapture]          com.reedersystems.commandcomms.sd7   D  PCM_FRAME frame=2 readRet=640 samples=320 min=-20 max=13 rms=2.9 silent=true zeros=242 downmix=false source=VOICE_COMMUNICATION sampleRate=16000 channels=1 t=449ms
+2026-05-12 21:33:22.277  5411-6944  [AudioDSP]              com.reedersystems.commandcomms.sd7   D  DSP_FRAME frame=2 pre=[samples=320 min=-20 max=13 rms=2.9 silent=true zeros=242] post=[samples=320 min=0 max=0 rms=0.0 silent=true zeros=320] gate=closed gateEnv=-79.9dB gateThreshold=-42.0dB micGain=2.0 t=453ms
+2026-05-12 21:33:22.285  5411-7210  [OpusCodec]             com.reedersystems.commandcomms.sd7   D  ENCODE frame=1 pcmBytes=640 encodedBytes=160 seq=1 t=461ms
+2026-05-12 21:33:22.285  5411-7210  [RadioEngine]           com.reedersystems.commandcomms.sd7   D  LATENCY_FIRST_LIVE_TX_FRAME frame=1 latencyMs=366 t=462ms
+2026-05-12 21:33:22.289  5411-7046  [UdpTransport]          com.reedersystems.commandcomms.sd7   D  TX_PACKET seq=1537 payloadBytes=160 framedBytes=173 dest=comms.reeder-systems.com:5100 channelIdx=169 t=465ms
+2026-05-12 21:33:22.293  5411-6944  [AudioCapture]          com.reedersystems.commandcomms.sd7   D  PCM_FRAME frame=3 readRet=640 samples=320 min=-18 max=18 rms=7.3 silent=true zeros=14 downmix=false source=VOICE_COMMUNICATION sampleRate=16000 channels=1 t=469ms
+2026-05-12 21:33:22.296  5411-7210  [OpusCodec]             com.reedersystems.commandcomms.sd7   D  ENCODE frame=2 pcmBytes=640 encodedBytes=160 seq=2 t=473ms
+2026-05-12 21:33:22.298  5411-7046  [UdpTransport]          com.reedersystems.commandcomms.sd7   D  TX_PACKET seq=1538 payloadBytes=160 framedBytes=173 dest=comms.reeder-systems.com:5100 channelIdx=169 t=474ms
+2026-05-12 21:33:22.298  5411-6944  [AudioDSP]              com.reedersystems.commandcomms.sd7   D  DSP_FRAME frame=3 pre=[samples=320 min=-18 max=18 rms=7.3 silent=true zeros=14] post=[samples=320 min=-2 max=2 rms=0.2 silent=true zeros=316] gate=closed gateEnv=-66.6dB gateThreshold=-42.0dB micGain=2.0 t=473ms
+2026-05-12 21:33:22.305  5411-7210  [OpusCodec]             com.reedersystems.commandcomms.sd7   D  ENCODE frame=3 pcmBytes=640 encodedBytes=160 seq=3 t=482ms
+2026-05-12 21:33:22.308  5411-7046  [UdpTransport]          com.reedersystems.commandcomms.sd7   D  TX_PACKET seq=1539 payloadBytes=160 framedBytes=173 dest=comms.reeder-systems.com:5100 channelIdx=169 t=484ms
+2026-05-12 21:33:22.312  5411-6944  [AudioCapture]          com.reedersystems.commandcomms.sd7   D  PCM_FRAME frame=4 readRet=640 samples=320 min=-13 max=16 rms=4.9 silent=true zeros=24 downmix=false source=VOICE_COMMUNICATION sampleRate=16000 channels=1 t=488ms
+2026-05-12 21:33:22.322  5411-7210  [OpusCodec]             com.reedersystems.commandcomms.sd7   D  ENCODE frame=4 pcmBytes=640 encodedBytes=160 seq=4 t=498ms
+2026-05-12 21:33:22.328  5411-7447  [UdpTransport]          com.reedersystems.commandcomms.sd7   D  TX_PACKET seq=1540 payloadBytes=160 framedBytes=173 dest=comms.reeder-systems.com:5100 channelIdx=169 t=503ms
+2026-05-12 21:33:22.332  5411-6944  [AudioCapture]          com.reedersystems.commandcomms.sd7   D  PCM_FRAME frame=5 readRet=640 samples=320 min=-11 max=8 rms=3.0 silent=true zeros=24 downmix=false source=VOICE_COMMUNICATION sampleRate=16000 channels=1 t=508ms
+2026-05-12 21:33:22.338  5411-7210  [OpusCodec]             com.reedersystems.commandcomms.sd7   D  ENCODE frame=5 pcmBytes=640 encodedBytes=160 seq=5 t=515ms
+2026-05-12 21:33:22.340  5411-7447  [UdpTransport]          com.reedersystems.commandcomms.sd7   D  TX_PACKET seq=1541 payloadBytes=160 framedBytes=173 dest=comms.reeder-systems.com:5100 channelIdx=169 t=516ms
+2026-05-12 21:33:22.353  5411-6944  [AudioCapture]          com.reedersystems.commandcomms.sd7   D  PCM_FRAME frame=6 readRet=640 samples=320 min=-6 max=8 rms=2.7 silent=true zeros=31 downmix=false source=VOICE_COMMUNICATION sampleRate=16000 channels=1 t=529ms
+2026-05-12 21:33:22.359  5411-7210  [OpusCodec]             com.reedersystems.commandcomms.sd7   D  ENCODE_SUMMARY frames=6 totalFrames=6 totalPcmBytes=3840 totalEncodedBytes=960 t=536ms
+2026-05-12 21:33:22.360  5411-7447  [UdpTransport]          com.reedersystems.commandcomms.sd7   D  TX_SUMMARY packets=6 totalPkts=1543 totalBytes=266939 failures=0 dest=comms.reeder-systems.com:5100 t=537ms
+2026-05-12 21:33:22.372  5411-6944  [AudioCapture]          com.reedersystems.commandcomms.sd7   D  PCM_FRAME frame=7 readRet=640 samples=320 min=-9 max=8 rms=3.0 silent=true zeros=29 downmix=false source=VOICE_COMMUNICATION sampleRate=16000 channels=1 t=548ms
+2026-05-12 21:33:22.393  5411-6944  [AudioCapture]          com.reedersystems.commandcomms.sd7   D  PCM_FRAME frame=8 readRet=640 samples=320 min=-6 max=7 rms=2.6 silent=true zeros=31 downmix=false source=VOICE_COMMUNICATION sampleRate=16000 channels=1 t=570ms
+2026-05-12 21:33:22.398  2533-2533  Interrupti...teProvider com.android.systemui                 D  No bubble up: not allowed to bubble: 0|com.reedersystems.commandcomms.sd7|1001|null|10126
+2026-05-12 21:33:22.400  2533-2533  Interrupti...teProvider com.android.systemui                 D  No heads up: unimportant notification: 0|com.reedersystems.commandcomms.sd7|1001|null|10126
+2026-05-12 21:33:22.411  5411-6944  [AudioCapture]          com.reedersystems.commandcomms.sd7   D  PCM_FRAME frame=9 readRet=640 samples=320 min=-6 max=9 rms=3.0 silent=true zeros=22 downmix=false source=VOICE_COMMUNICATION sampleRate=16000 channels=1 t=588ms
+2026-05-12 21:33:22.418  2533-2641  PeopleSpaceWidgetMgr    com.android.systemui                 D  Sbn doesn't contain valid PeopleTileKey: null/0/com.reedersystems.commandcomms.sd7
+2026-05-12 21:33:22.432  5411-6944  [AudioCapture]          com.reedersystems.commandcomms.sd7   D  PCM_FRAME frame=10 readRet=640 samples=320 min=-8 max=7 rms=2.8 silent=true zeros=28 downmix=false source=VOICE_COMMUNICATION sampleRate=16000 channels=1 t=608ms
+2026-05-12 21:33:22.451  5411-6944  [AudioCapture]          com.reedersystems.commandcomms.sd7   D  PCM_SUMMARY frames=11 totalFrames=11 silentFrames=11 partials=0 zeros=0 t=628ms
+2026-05-12 21:33:22.914  5411-6944  [AudioDSP]              com.reedersystems.commandcomms.sd7   D  TX_GATE OPEN envelope=-30.5dB openThreshold=-42.0dB closeThreshold=-46.0dB frame=34 t=1090ms
+2026-05-12 21:33:23.073  5411-6944  [AudioDSP]              com.reedersystems.commandcomms.sd7   D  TX_GATE CLOSED envelope=-48.7dB openThreshold=-42.0dB closeThreshold=-46.0dB frame=42 t=1249ms
+2026-05-12 21:33:23.133  5411-6944  [AudioDSP]              com.reedersystems.commandcomms.sd7   D  TX_GATE OPEN envelope=-31.6dB openThreshold=-42.0dB closeThreshold=-46.0dB frame=45 t=1310ms
+2026-05-12 21:33:23.335  5411-6944  [AudioDSP]              com.reedersystems.commandcomms.sd7   D  TX_GATE CLOSED envelope=-47.1dB openThreshold=-42.0dB closeThreshold=-46.0dB frame=55 t=1511ms
+2026-05-12 21:33:23.368  5411-7210  [OpusCodec]             com.reedersystems.commandcomms.sd7   D  ENCODE_SUMMARY frames=50 totalFrames=56 totalPcmBytes=35840 totalEncodedBytes=8960 t=1544ms
+2026-05-12 21:33:23.370  5411-6444  [UdpTransport]          com.reedersystems.commandcomms.sd7   D  TX_SUMMARY packets=50 totalPkts=1593 totalBytes=275589 failures=0 dest=comms.reeder-systems.com:5100 t=1547ms
+2026-05-12 21:33:23.393  5411-6944  [AudioDSP]              com.reedersystems.commandcomms.sd7   D  TX_GATE OPEN envelope=-37.7dB openThreshold=-42.0dB closeThreshold=-46.0dB frame=58 t=1570ms
+2026-05-12 21:33:23.453  5411-6944  [AudioCapture]          com.reedersystems.commandcomms.sd7   D  PCM_SUMMARY frames=50 totalFrames=61 silentFrames=39 partials=0 zeros=0 t=1629ms
+2026-05-12 21:33:23.456  2533-2533  StatusBar               com.android.systemui                 D  disable<e i a s b h r c s > disable2<q i n >
+2026-05-12 21:33:23.612  5411-6944  [AudioDSP]              com.reedersystems.commandcomms.sd7   D  TX_GATE CLOSED envelope=-47.2dB openThreshold=-42.0dB closeThreshold=-46.0dB frame=69 t=1789ms
+2026-05-12 21:33:23.692  5411-6944  [AudioDSP]              com.reedersystems.commandcomms.sd7   D  TX_GATE OPEN envelope=-33.9dB openThreshold=-42.0dB closeThreshold=-46.0dB frame=73 t=1869ms
+2026-05-12 21:33:23.754  5411-7448  [RadioEngine]           com.reedersystems.commandcomms.sd7   D  RX_DIAG rxTotal=0 rxNew=0 jbSize=0 jbDepth=2 jbPlaying=false channelIdx=169 winLossPct=0.0 winFec=0 winPlc=0 jitterMs=0.0 t=1930ms
+2026-05-12 21:33:23.892  5411-6444  [JitterBuf]             com.reedersystems.commandcomms.sd7   D  ENTER_IDLE depth=2 keptFrames=0 t=2069ms
+2026-05-12 21:33:24.014  5411-6944  [AudioDSP]              com.reedersystems.commandcomms.sd7   D  TX_GATE CLOSED envelope=-50.7dB openThreshold=-42.0dB closeThreshold=-46.0dB frame=89 t=2190ms
+2026-05-12 21:33:24.194  5411-6944  [AudioDSP]              com.reedersystems.commandcomms.sd7   D  TX_GATE OPEN envelope=-39.6dB openThreshold=-42.0dB closeThreshold=-46.0dB frame=98 t=2370ms
+2026-05-12 21:33:24.371  5411-7210  [OpusCodec]             com.reedersystems.commandcomms.sd7   D  ENCODE_SUMMARY frames=50 totalFrames=106 totalPcmBytes=67840 totalEncodedBytes=16960 t=2548ms
+2026-05-12 21:33:24.373  5411-7046  [UdpTransport]          com.reedersystems.commandcomms.sd7   D  TX_SUMMARY packets=50 totalPkts=1643 totalBytes=284239 failures=0 dest=comms.reeder-systems.com:5100 t=2550ms
+2026-05-12 21:33:24.471  5411-6944  [AudioCapture]          com.reedersystems.commandcomms.sd7   D  PCM_SUMMARY frames=51 totalFrames=112 silentFrames=53 partials=0 zeros=0 t=2648ms
+2026-05-12 21:33:24.594  5411-6944  [AudioDSP]              com.reedersystems.commandcomms.sd7   D  TX_GATE CLOSED envelope=-48.9dB openThreshold=-42.0dB closeThreshold=-46.0dB frame=118 t=2770ms
+2026-05-12 21:33:24.693  5411-6944  [AudioDSP]              com.reedersystems.commandcomms.sd7   D  TX_GATE OPEN envelope=-35.1dB openThreshold=-42.0dB closeThreshold=-46.0dB frame=123 t=2869ms
+2026-05-12 21:33:24.781   667-667   audio_hw_primary        android.hardware.audio.service       D  out_standby: enter: stream (0xef444330) usecase(1: low-latency-playback)
+2026-05-12 21:33:24.899   667-667   audio_hw_primary        android.hardware.audio.service       D  disable_audio_route: reset and update mixer path: low-latency-playback
+2026-05-12 21:33:24.903   667-667   soundtrigger            android.hardware.audio.service       D  audio_extn_sound_trigger_update_stream_status: uc_info->id 1 of type 0 for Event 2, with Raise=0
+2026-05-12 21:33:24.903   667-667   hardware_info           android.hardware.audio.service       D  hw_info_append_hw_type : device_name = voice-speaker-2
+2026-05-12 21:33:24.903   667-667   audio_hw_primary        android.hardware.audio.service       D  disable_snd_device: snd_device(25: voice-speaker-2)
+2026-05-12 21:33:24.926   667-667   soundtrigger            android.hardware.audio.service       I  audio_extn_sound_trigger_update_device_status: device 0x19 of type 0 for Event 0, with Raise=0
+2026-05-12 21:33:25.032  5411-6944  [AudioDSP]              com.reedersystems.commandcomms.sd7   D  TX_GATE CLOSED envelope=-52.9dB openThreshold=-42.0dB closeThreshold=-46.0dB frame=140 t=3208ms
+2026-05-12 21:33:25.094  5411-6944  [AudioDSP]              com.reedersystems.commandcomms.sd7   D  TX_GATE OPEN envelope=-41.0dB openThreshold=-42.0dB closeThreshold=-46.0dB frame=143 t=3271ms
+2026-05-12 21:33:25.385  5411-7210  [OpusCodec]             com.reedersystems.commandcomms.sd7   D  ENCODE_SUMMARY frames=51 totalFrames=157 totalPcmBytes=100480 totalEncodedBytes=25120 t=3562ms
+2026-05-12 21:33:25.387  5411-7447  [UdpTransport]          com.reedersystems.commandcomms.sd7   D  TX_SUMMARY packets=51 totalPkts=1694 totalBytes=293062 failures=0 dest=comms.reeder-systems.com:5100 t=3564ms
+2026-05-12 21:33:25.472  5411-6944  [AudioCapture]          com.reedersystems.commandcomms.sd7   D  PCM_SUMMARY frames=50 totalFrames=162 silentFrames=63 partials=0 zeros=0 t=3649ms
+2026-05-12 21:33:25.536  5411-6944  [AudioDSP]              com.reedersystems.commandcomms.sd7   D  TX_GATE CLOSED envelope=-48.0dB openThreshold=-42.0dB closeThreshold=-46.0dB frame=165 t=3713ms
+2026-05-12 21:33:25.554  2833-4106  DPMJ                    .dataservices                        I  |REQ:RCVR| DPM creating socket
+2026-05-12 21:33:25.849  1974-2277  WindowManager           system_server                        D  #33 keycode: 228, event KeyEvent { action=ACTION_UP, keyCode=KEYCODE_12, scanCode=84, metaState=0, flags=0x8, repeatCount=0, eventTime=1265720, downTime=1260810, deviceId=3, source=0x101, displayId=-1 }
+2026-05-12 21:33:25.849  1974-2277  WindowManager           system_server                        D  HandlePTTKeyEvent: sending PTT event. down = false
+2026-05-12 21:33:25.849  1974-2277  WindowManager           system_server                        D  #33 broadcastOrderedIntent action: com.airbus.pmr.action.PTT_STOP
+2026-05-12 21:33:25.849  1974-2277  ContextImpl             system_server                        W  Calling a method in the system process without a qualified user: android.app.ContextImpl.sendOrderedBroadcast:1306 com.android.server.policy.PhoneWindowManager.broadcastOrderedIntent:4747 com.android.server.policy.PhoneWindowManager.broadcastPTTIntent:4751 com.android.server.policy.PhoneWindowManager.HandlePTTKeyEventInternal:4636 com.android.server.policy.PhoneWindowManager.HandlePTTKeyEvent:4620 
+2026-05-12 21:33:25.850  1974-2277  WindowManager           system_server                        D  #33 broadcastOrderedIntent action: android.intent.action.PTT.up
+2026-05-12 21:33:25.850  1974-2277  ContextImpl             system_server                        W  Calling a method in the system process without a qualified user: android.app.ContextImpl.sendOrderedBroadcast:1306 com.android.server.policy.PhoneWindowManager.broadcastOrderedIntent:4747 com.android.server.policy.PhoneWindowManager.broadcastPTTIntent:4751 com.android.server.policy.PhoneWindowManager.HandlePTTKeyEventInternal:4655 com.android.server.policy.PhoneWindowManager.HandlePTTKeyEvent:4620 
+2026-05-12 21:33:25.850  1974-2188  CompatibilityInfo       system_server                        D  mCompatibilityFlags - 0
+2026-05-12 21:33:25.850  1974-2188  CompatibilityInfo       system_server                        D  applicationDensity - 320
+2026-05-12 21:33:25.850  1974-2188  CompatibilityInfo       system_server                        D  applicationScale - 1.0
+2026-05-12 21:33:25.851  1974-2277  WindowManager           system_server                        D  #33 broadcastOrderedIntent action: com.mcx.intent.action.CRITICAL_COMMUNICATION_CONTROL_KEY
+2026-05-12 21:33:25.852  1974-2277  ContextImpl             system_server                        W  Calling a method in the system process without a qualified user: android.app.ContextImpl.sendOrderedBroadcast:1306 com.android.server.policy.PhoneWindowManager.broadcastOrderedIntent:4747 com.android.server.policy.PhoneWindowManager.broadcastPTTIntent:4751 com.android.server.policy.PhoneWindowManager.HandlePTTKeyEventInternal:4659 com.android.server.policy.PhoneWindowManager.HandlePTTKeyEvent:4620 
+2026-05-12 21:33:25.853  5411-5411  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   D  PttHardwareReceiver.onReceive action=com.airbus.pmr.action.PTT_STOP extras=Bundle[mParcelledData.dataSize=224] source=broadcast
+2026-05-12 21:33:25.853  5411-5411  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   D  PttHardwareReceiver: mapped action=com.airbus.pmr.action.PTT_STOP -> svcAction=com.reedersystems.commandcomms.SVC_PTT_UP
+2026-05-12 21:33:25.855  5411-5411  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   D  PttHardwareReceiver: WakeLock acquired (auto-releases in 5000ms)
+2026-05-12 21:33:25.859  5411-5411  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   D  {"event":"RADIO_PTT_UP","pttState":"TRANSMITTING","channelKey":"DISPATCH__DISPATCH"}
+2026-05-12 21:33:25.859  5411-5411  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   D  PTT_STATE TRANSMITTING -> CLEANING_UP channelKey=DISPATCH__DISPATCH
+2026-05-12 21:33:25.868  5411-5411  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   D  PttHardwareReceiver.onReceive action=android.intent.action.PTT.up extras=Bundle[mParcelledData.dataSize=224] source=broadcast
+2026-05-12 21:33:25.868  5411-5411  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   D  PttHardwareReceiver: mapped action=android.intent.action.PTT.up -> svcAction=com.reedersystems.commandcomms.SVC_PTT_UP
+2026-05-12 21:33:25.870  5411-5411  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   D  PttHardwareReceiver: WakeLock acquired (auto-releases in 5000ms)
+2026-05-12 21:33:25.873  5411-5411  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   D  {"event":"RADIO_PTT_UP_DEBOUNCED","deltaMs":14}
+2026-05-12 21:33:25.874  1974-2252  CompatibilityInfo       system_server                        D  mCompatibilityFlags - 0
+2026-05-12 21:33:25.874  1974-2252  CompatibilityInfo       system_server                        D  applicationDensity - 320
+2026-05-12 21:33:25.874  1974-2252  CompatibilityInfo       system_server                        D  applicationScale - 1.0
+2026-05-12 21:33:25.876  5411-5411  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   D  PttHardwareReceiver.onReceive action=android.intent.action.PTT.up extras=Bundle[mParcelledData.dataSize=224] source=broadcast
+2026-05-12 21:33:25.876  5411-5411  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   D  PttHardwareReceiver: mapped action=android.intent.action.PTT.up -> svcAction=com.reedersystems.commandcomms.SVC_PTT_UP
+2026-05-12 21:33:25.877  5411-7210  [RadioEngine]           com.reedersystems.commandcomms.sd7   D  ENCODE_THREAD_EXIT framesEncoded=182 t=4053ms
+2026-05-12 21:33:25.877  5411-5411  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   D  PttHardwareReceiver: WakeLock acquired (auto-releases in 5000ms)
+2026-05-12 21:33:25.877   702-702   AudioFling...fectHandle audioserver                          W  disconnect Effect handle 0xb400006fc6a77d70 disconnected after thread destruction
+2026-05-12 21:33:25.880  5411-5411  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   D  {"event":"RADIO_PTT_UP_DEBOUNCED","deltaMs":21}
+2026-05-12 21:33:25.894   667-667   audio_hw_primary        android.hardware.audio.service       D  in_standby: enter: stream (0xef3c6130) usecase(34: audio-record-voip)
+2026-05-12 21:33:25.901  5411-7447  [JitterBuf]             com.reedersystems.commandcomms.sd7   D  ENTER_IDLE depth=2 keptFrames=0 t=4077ms
+2026-05-12 21:33:25.946   667-667   audio_hw_primary        android.hardware.audio.service       D  disable_audio_route: reset and update mixer path: audio-record-voip
+2026-05-12 21:33:25.947   667-667   sound_trigger_hw        android.hardware.audio.service       D  handle_audio_ec_ref_enabled: Enter
+2026-05-12 21:33:25.947   667-667   sound_trigger_hw        android.hardware.audio.service       D  handle_audio_ec_ref_enabled: Exit audio ec ref=0
+2026-05-12 21:33:25.947   667-667   soundtrigger            android.hardware.audio.service       D  audio_extn_sound_trigger_update_ec_ref_status: update audio echo ref status false
+2026-05-12 21:33:25.952   667-667   soundtrigger            android.hardware.audio.service       D  audio HAL using same device 141 as ST
+2026-05-12 21:33:25.953   667-667   soundtrigger            android.hardware.audio.service       D  audio_extn_sound_trigger_update_stream_status: uc_info->id 34 of type 1 for Event 2, with Raise=1
+2026-05-12 21:33:25.953   667-667   soundtrigger            android.hardware.audio.service       D  audio_extn_sound_trigger_update_stream_status: send event 12: usecase id 34, type 1
+2026-05-12 21:33:25.953   667-667   sound_trigger_platform  android.hardware.audio.service       I  platform_stdev_check_and_update_concurrency: Received STREAM event, event type 12, usecase type 3
+2026-05-12 21:33:25.953   667-667   sound_trigger_platform  android.hardware.audio.service       D  platform_stdev_check_and_update_concurrency: dedicated path 0, reset backend 1, tx 1, rx 0,concurrency session not allowed
+2026-05-12 21:33:25.953   667-667   hardware_info           android.hardware.audio.service       D  hw_info_append_hw_type : device_name = speaker-mic
+2026-05-12 21:33:25.953   667-667   audio_hw_primary        android.hardware.audio.service       D  disable_snd_device: snd_device(141: speaker-mic)
+2026-05-12 21:33:25.954   667-667   soundtrigger            android.hardware.audio.service       D  audio HAL using same device 141 as ST
+2026-05-12 21:33:25.954   667-667   soundtrigger            android.hardware.audio.service       I  audio_extn_sound_trigger_update_device_status: device 0x8d of type 1 for Event 0, with Raise=1
+2026-05-12 21:33:25.954   667-667   sound_trigger_platform  android.hardware.audio.service       D  platform_stdev_check_and_update_concurrency: Received DEVICE event, event type 0
+2026-05-12 21:33:25.954   667-667   sound_trigger_platform  android.hardware.audio.service       D  platform_stdev_check_and_update_concurrency: dedicated path 0, reset backend 1, tx 0, rx 0,concurrency session allowed
+2026-05-12 21:33:25.960   667-1180  audio_hw_primary        android.hardware.audio.service       D  adev_release_audio_patch: Remove patch with handle 18
+2026-05-12 21:33:25.963  1974-3596  SoundTrigg...areLogging system_server                        I  setCaptureState[this=com.android.server.soundtrigger_middleware.SoundTriggerMiddlewareImpl@36cd374, client=null](false)
+2026-05-12 21:33:25.966   667-1180  audio_hw_primary        android.hardware.audio.service       D  AEC enable 0
+2026-05-12 21:33:25.967  5411-7210  [RadioState]            com.reedersystems.commandcomms.sd7   D  State transition: TRANSMITTING -> IDLE reason=tx_stopped activeChannel=DISPATCH__DISPATCH txPipeline=false rxPipeline=true t=4143ms
+2026-05-12 21:33:25.967  5411-7210  [RadioEngine]           com.reedersystems.commandcomms.sd7   D  {"event":"TX_STOPPED","cleanupMs":98,"lastSendGapMs":90,"durationMs":4144,"framesRead":182,"framesEncoded":182,"pktSent":182,"failures":0,"pcmFallback":0,"silentFrames":81,"stopReason":"ptt_release"}
+2026-05-12 21:33:25.967  5411-5411  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   D  RadioState updated: IDLE
+2026-05-12 21:33:25.969  5411-7210  [RadioEngine]           com.reedersystems.commandcomms.sd7   D  TX_SESSION_END duration=4144ms reqRate=16000 actRate=16000 ch=1 src=VOICE_COMMUNICATION framesRead=182 framesEncoded=182 pktSent=182 failures=0 encodeFailures=0 assertionFailures=0 pcmFallback=0 silentFrames=81 partials=0 zeros=0 probeRms=[] first10rms=[0.0,2.9,7.3,4.9,3.0,2.7,3.0,2.6,3.0,2.8] stop=ptt_release lastSendGapMs=90 t=4146ms
+2026-05-12 21:33:25.969  5411-7210  [FloorCtrl]             com.reedersystems.commandcomms.sd7   D  releaseFloor channelKey=DISPATCH__DISPATCH state=IDLE t=4146ms
+2026-05-12 21:33:25.970  5411-7210  [RadioSigGW]            com.reedersystems.commandcomms.sd7   D  releaseFloor channelKey=DISPATCH__DISPATCH t=4146ms
+2026-05-12 21:33:25.970  5411-7210  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   D  [FloorCtrl] SIGNALING_FLOOR_RELEASE channelKey=DISPATCH__DISPATCH unitId=INDIANA-1
+2026-05-12 21:33:25.970   667-1180  audio_hw_primary        android.hardware.audio.service       D  NS enable 0
+2026-05-12 21:33:25.971  5411-7210  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   D  {"event":"PTT_RELEASE_SENT","channelId":"DISPATCH__DISPATCH"}
+2026-05-12 21:33:25.971  5411-7210  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   D  Sending PTT_TX_ENDED broadcast
+2026-05-12 21:33:25.973  5411-7447  [RadioLED-SD7]          com.reedersystems.commandcomms.sd7   D  Setting SD7 status LED → off
+2026-05-12 21:33:25.977  1974-2252  SoundTrigg...areLogging system_server                        I  setCaptureState[this=com.android.server.soundtrigger_middleware.SoundTriggerMiddlewareImpl@36cd374, client=null](false)
+2026-05-12 21:33:25.977  5411-7210  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   D  Floor RELEASED
+2026-05-12 21:33:25.978  5411-5411  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   D  PTT_TX_ENDED received — setting pttState = IDLE
+2026-05-12 21:33:25.979   667-1180  audio_hw_primary        android.hardware.audio.service       D  adev_close_input_stream: enter:stream_handle(0xef3c6130)
+2026-05-12 21:33:25.980   667-1180  soundtrigger            android.hardware.audio.service       D  audio_extn_sound_trigger_check_ec_ref_enable: EC Reference is disabled
+2026-05-12 21:33:25.980   667-1180  sound_trigger_hw        android.hardware.audio.service       D  handle_audio_ec_ref_enabled: Enter
+2026-05-12 21:33:25.980   667-1180  sound_trigger_hw        android.hardware.audio.service       D  handle_audio_ec_ref_enabled: Exit audio ec ref=0
+2026-05-12 21:33:25.980   667-1180  soundtrigger            android.hardware.audio.service       D  audio_extn_sound_trigger_update_ec_ref_status: update audio echo ref status false
+2026-05-12 21:33:25.980   667-1180  audio_hw_primary        android.hardware.audio.service       D  in_standby: enter: stream (0xef3c6130) usecase(34: audio-record-voip)
+2026-05-12 21:33:26.007  5411-5426  OpenGLRenderer          com.reedersystems.commandcomms.sd7   I  Davey! duration=9223370770995ms; Flags=0, FrameTimelineVsyncId=30354, IntendedVsync=1265859541089, Vsync=1265859541089, InputEventId=1012742077, HandleInputStart=1265860471649, AnimationStart=1265860476076, PerformTraversalsStart=1265866252066, DrawStart=1265866528837, FrameDeadline=1265876207755, FrameInterval=1265860461962, FrameStartTime=16666666, SyncQueued=1265872971128, SyncStart=1265873055087, IssueDrawCommandsStart=1265873129410, SwapBuffers=1265873783264, FrameCompleted=9223372036854775807, DequeueBufferDuration=24115, QueueBufferDuration=929635, GpuCompleted=9223372036854775807, SwapBuffersCompleted=1265875066024, DisplayPresentTime=0, 
+2026-05-12 21:33:26.056  5411-7447  [ToneEvent]             com.reedersystems.commandcomms.sd7   D  {"tone":"end-of-tx","trigger":"ptt_up","state":"CLEANING_UP","signaling":true,"ts":1778636006056}
+2026-05-12 21:33:26.057  5411-7447  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   D  Radio PTT UP: end-of-TX tone for roomKey DISPATCH__DISPATCH
+2026-05-12 21:33:26.059  5411-7447  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   D  {"event":"RADIO_ROUTE_DEVICE_SELECT","reason":"release","output":"BUILTIN_SPEAKER","input":"NONE","accessoryPresent":false,"apiPath":"setCommunicationDevice"}
+2026-05-12 21:33:26.060  5411-7447  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   D  BackgroundAudioService: radio audio route released (mode=0)
+2026-05-12 21:33:26.060  5411-7447  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   D  PTT_STATE CLEANING_UP -> IDLE channelKey=DISPATCH__DISPATCH
+2026-05-12 21:33:26.061  5411-7447  [PTT-DIAG]              com.reedersystems.commandcomms.sd7   D  {"event":"PTT_CLEANUP_COMPLETE","state":"IDLE","cleanupMs":198}
+2026-05-12 21:33:26.061   667-1180  audio_hw_primary        android.hardware.audio.service       D  adev_set_mode: mode 0 , prev_mode 3 
+2026-05-12 21:33:26.078  2533-2533  Interrupti...teProvider com.android.systemui                 D  No bubble up: not allowed to bubble: 0|com.reedersystems.commandcomms.sd7|1001|null|10126
+2026-05-12 21:33:26.080  2533-2533  Interrupti...teProvider com.android.systemui                 D  No heads up: unimportant notification: 0|com.reedersystems.commandcomms.sd7|1001|null|10126
+2026-05-12 21:33:26.097  2533-2641  PeopleSpaceWidgetMgr    com.android.systemui                 D  Sbn doesn't contain valid PeopleTileKey: null/0/com.reedersystems.commandcomms.sd7
+2026-05-12 21:33:26.106   667-1180  audio_hw_primary        android.hardware.audio.service       D  adev_create_audio_patch: enter: num sources 1, num_sinks 1, handle 1
+2026-05-12 21:33:26.106   667-1180  audio_hw_primary        android.hardware.audio.service       D  adev_create_audio_patch: Playback patch from mix handle 13 to device 2
+2026-05-12 21:33:26.106   667-1180  audio_hw_primary        android.hardware.audio.service       D  route_output_stream: enter: usecase(1: low-latency-playback) devices 2
+2026-05-12 21:33:26.125   667-1180  audio_hw_primary        android.hardware.audio.service       D  adev_get_parameters:vr_audio_mode_on
+2026-05-12 21:33:26.126   702-7069  hash_map_utils          audioserver                          I  system/bt/osi/src/hash_map_utils.cc:81 hash_map_utils_dump_string_keys_string_values: key: 'vr_audio_mode_on' value: ''
+2026-05-12 21:33:26.130   702-7069  AF::TrackHandle         audioserver                          D  OpPlayAudio: track:103 usage:3 not muted
+2026-05-12 21:33:26.145   667-667   audio_hw_primary        android.hardware.audio.service       D  adev_set_parameters: enter: BT_SCO=off
+2026-05-12 21:33:26.146  1974-2475  AS.AudioDeviceInventory system_server                        I  setPreferredDevicesForStrategySync, strategy: 15 devices: [AudioDeviceAttributes: role:output type:speaker addr:]
+2026-05-12 21:33:26.170   667-1180  audio_hw_primary        android.hardware.audio.service       D  adev_create_audio_patch: enter: num sources 1, num_sinks 1, handle 1
+2026-05-12 21:33:26.170   667-1180  audio_hw_primary        android.hardware.audio.service       D  adev_create_audio_patch: Playback patch from mix handle 13 to device 2
+2026-05-12 21:33:26.170   667-1180  audio_hw_primary        android.hardware.audio.service       D  route_output_stream: enter: usecase(1: low-latency-playback) devices 2
+2026-05-12 21:33:26.176   667-4712  audio_hw_primary        android.hardware.audio.service       D  start_output_stream: enter: stream(0xef444330)usecase(1: low-latency-playback) devices(0x2) is_haptic_usecase(0)
+2026-05-12 21:33:26.176   667-4712  audio_hw_primary        android.hardware.audio.service       D  select_devices for use case (low-latency-playback)
+2026-05-12 21:33:26.176   667-4712  audio_hw_primary        android.hardware.audio.service       D  select_devices: changing use case low-latency-playback output device from(25: voice-speaker-2, acdb 14) to (2: speaker, acdb 10)
+2026-05-12 21:33:26.176   667-4712  msm8974_platform        android.hardware.audio.service       I  platform_check_and_set_codec_backend_cfg:becf: afe: bitwidth 16, samplerate 48000 channels 2, backend_idx 0 usecase = 1 device (speaker)
+2026-05-12 21:33:26.176   667-4712  msm8974_platform        android.hardware.audio.service       I  platform_check_and_set_codec_backend_cfg: new_snd_devices[0] is 2
+2026-05-12 21:33:26.176   667-4712  msm8974_platform        android.hardware.audio.service       I  platform_check_codec_backend_cfg:becf: afe: bitwidth 16, samplerate 48000 channels 2, backend_idx 0 usecase = 1 device (speaker)
+2026-05-12 21:33:26.180   667-4712  msm8974_platform        android.hardware.audio.service       D  platform_check_codec_backend_cfg:becf: updated afe: bitwidth 16, samplerate 48000 channels 2,backend_idx 0 usecase = 1 device (speaker)
+2026-05-12 21:33:26.180   667-4712  msm8974_platform        android.hardware.audio.service       I  platform_check_codec_backend_cfg:becf: afe: Codec selected backend: 0 updated bit width: 16 and sample rate: 48000
+2026-05-12 21:33:26.180   667-4712  audio_hw_primary        android.hardware.audio.service       D  check_usecases_codec_backend:becf: force routing 0
+2026-05-12 21:33:26.180   667-4712  audio_hw_primary        android.hardware.audio.service       D  check_usecases_codec_backend:becf: (85) check_usecases curr device: speaker, usecase device: backends match 0
+2026-05-12 21:33:26.180   667-4712  audio_hw_primary        android.hardware.audio.service       D  check_usecases_codec_backend:becf: check_usecases num.of Usecases to switch 0
+2026-05-12 21:33:26.180   667-4712  hardware_info           android.hardware.audio.service       D  hw_info_append_hw_type : device_name = speaker
+2026-05-12 21:33:26.180   667-4712  audio_hw_primary        android.hardware.audio.service       D  enable_snd_device: snd_device(2: speaker)
+2026-05-12 21:33:26.180   667-4712  msm8974_platform        android.hardware.audio.service       D  platform_get_island_cfg_on_device:island cfg status on snd_device = (speaker 0)
+2026-05-12 21:33:26.180   667-4712  soundtrigger            android.hardware.audio.service       I  audio_extn_sound_trigger_update_device_status: device 0x2 of type 0 for Event 1, with Raise=0
+2026-05-12 21:33:26.180   667-4712  audio_route             android.hardware.audio.service       D  Apply path: speaker
+2026-05-12 21:33:26.198   667-4712  audio_hw_primary        android.hardware.audio.service       D  audio_is_true_native_stream_active:napb: (0) (low-latency-playback)id (1) sr 48000 bw (16) device speaker
+2026-05-12 21:33:26.199   667-4712  soundtrigger            android.hardware.audio.service       D  audio_extn_sound_trigger_update_stream_status: uc_info->id 1 of type 0 for Event 3, with Raise=0
+2026-05-12 21:33:26.199   667-4712  audio_hw_utils          android.hardware.audio.service       D  audio_extn_utils_send_app_type_cfg: usecase->out_snd_device speaker
+2026-05-12 21:33:26.200   667-4712  audio_hw_utils          android.hardware.audio.service       I  send_app_type_cfg_for_device PLAYBACK app_type 69937, acdb_dev_id 10, sample_rate 48000, snd_device_be_idx 162
+2026-05-12 21:33:26.202   667-4712  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> send_audio_cal, acdb_id = 10, path = 0, app id = 0x11131, sample rate = 48000, use_case = 0,buffer_idx_w_path =0, afe_sample_rate = 48000, cal_mode = 1, offset_index = 0
+2026-05-12 21:33:26.202   667-4712  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> send_asm_topology
+2026-05-12 21:33:26.202   667-4712  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> ACDB_CMD_GET_AUDPROC_STREAM_TOPOLOGY_ID
+2026-05-12 21:33:26.202   667-4712  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> send_adm_topology
+2026-05-12 21:33:26.203   667-4712  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> ACDB_CMD_GET_AUDPROC_COMMON_TOPOLOGY_ID
+2026-05-12 21:33:26.203   667-4712  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> send_audtable
+2026-05-12 21:33:26.203   667-4712  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> ACDB_CMD_GET_AUDPROC_COMMON_TABLE_SIZE
+2026-05-12 21:33:26.203   667-4712  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> ACDB_CMD_GET_AUDPROC_COMMON_TABLE
+2026-05-12 21:33:26.203   667-4712  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> AUDIO_SET_AUDPROC_CAL cal_type[11] acdb_id[10] app_type[69937]
+2026-05-12 21:33:26.203   667-4712  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> send_audvoltable
+2026-05-12 21:33:26.203   667-4712  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> ACDB_CMD_GET_AUDPROC_GAIN_DEP_STEP_TABLE_SIZE
+2026-05-12 21:33:26.203   667-4712  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> ACDB_CMD_GET_AUDPROC_GAIN_DEP_STEP_TABLE, vol index 0
+2026-05-12 21:33:26.203   667-4712  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> AUDIO_SET_VOL_CAL cal type = 12
+2026-05-12 21:33:26.203   667-4712  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> ACDB_CMD_GET_AUDPROC_STREAM_TABLE_SIZE
+2026-05-12 21:33:26.203   667-4712  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> send_audstrmtable
+2026-05-12 21:33:26.203   667-4712  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> ACDB_CMD_GET_AUDPROC_STREAM_TABLE_V2
+2026-05-12 21:33:26.203   667-4712  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> audstrm_cal->cal_type.cal_data.cal_size = 16
+2026-05-12 21:33:26.203   667-4712  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> send_afe_topology
+2026-05-12 21:33:26.203   667-4712  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> ACDB_CMD_GET_AFE_TOPOLOGY_ID
+2026-05-12 21:33:26.203   667-4712  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> GET_AFE_TOPOLOGY_ID for adcd_id 10, Topology Id 112fc
+2026-05-12 21:33:26.203   667-4712  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> send_afe_cal
+2026-05-12 21:33:26.203   667-4712  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> ACDB_CMD_GET_AFE_COMMON_TABLE_SIZE
+2026-05-12 21:33:26.203   667-4712  android.ha...io.service android.hardware.audio.service       D  Failed to fetch the lookup information of the device 0000000A 
+2026-05-12 21:33:26.203   667-4712  ACDB-LOADER             android.hardware.audio.service       D  Error: ACDB_CMD_GET_AFE_COMMON_TABLE_SIZE Returned = -19
+2026-05-12 21:33:26.203   667-4712  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> ACDB_CMD_GET_AFE_COMMON_TABLE
+2026-05-12 21:33:26.203   667-4712  android.ha...io.service android.hardware.audio.service       D  Failed to fetch the lookup information of the device 0000000A 
+2026-05-12 21:33:26.203   667-4712  ACDB-LOADER             android.hardware.audio.service       D  Error: ACDB AFE returned = -19
+2026-05-12 21:33:26.203   667-4712  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> AUDIO_SET_AFE_CAL cal_type[16] acdb_id[10]
+2026-05-12 21:33:26.203   667-4712  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> send_hw_delay : acdb_id = 10 path = 0
+2026-05-12 21:33:26.203   667-4712  ACDB-LOADER             android.hardware.audio.service       D  ACDB -> ACDB_AVSYNC_INFO: ACDB_CMD_GET_DEVICE_PROPERTY
+2026-05-12 21:33:26.203   667-4712  audio_hw_primary        android.hardware.audio.service       D  enable_audio_route: apply mixer and update path: low-latency-playback
+2026-05-12 21:33:26.203   667-4712  audio_route             android.hardware.audio.service       D  Apply path: low-latency-playback
+2026-05-12 21:33:26.206   667-4712  audio_hw_primary        android.hardware.audio.service       D  select_devices: done
+2026-05-12 21:33:26.206   667-4712  msm8974_platform        android.hardware.audio.service       D  platform_set_channel_map mixer_ctl_name:Playback Channel Map13
+2026-05-12 21:33:26.207   667-4712  msm8974_platform        android.hardware.audio.service       D  platform_set_channel_map: set mapping(1 2 0 0 0 0 0 0) for channel:2
+2026-05-12 21:33:26.210   667-4712  msm8974_platform        android.hardware.audio.service       E  platform_set_channel_map: Could not set ctl, error:-1 ch_count:2
+2026-05-12 21:33:26.268   667-4712  audio_hw_primary        android.hardware.audio.service       D  start_output_stream: exit
+2026-05-12 21:33:26.317   667-1180  audio_hw_primary        android.hardware.audio.service       D  adev_create_audio_patch: enter: num sources 1, num_sinks 1, handle 1
+2026-05-12 21:33:26.317   667-1180  audio_hw_primary        android.hardware.audio.service       D  adev_create_audio_patch: Playback patch from mix handle 13 to device 2
+2026-05-12 21:33:26.317   667-1180  audio_hw_primary        android.hardware.audio.service       D  route_output_stream: enter: usecase(1: low-latency-playback) devices 2
+2026-05-12 21:33:26.319   667-1180  audio_hw_primary        android.hardware.audio.service       D  select_devices for use case (low-latency-playback)
+2026-05-12 21:33:26.447  1637-4710  BufferPoolAccessor2.0   mediaserver                          D  bufferpool2 0xe75817c8 : 0(0 size) total buffers - 0(0 size) used buffers - 1/5 (recycle/alloc) - 1/2 (fetch/transfer)
+2026-05-12 21:33:26.447  1637-4710  BufferPoolAccessor2.0   mediaserver                          D  evictor expired: 2, evicted: 1
+2026-05-12 21:33:26.450  1676-2831  BufferPoolAccessor2.0   media.swcodec                        D  evictor expired: 1, evicted: 0
+2026-05-12 21:33:26.456  1974-1986  system_server           system_server                        I  JIT allocated 53KB for compiled code of boolean android.media.IAudioService$Stub.onTransact(int, android.os.Parcel, android.os.Parcel, int)
