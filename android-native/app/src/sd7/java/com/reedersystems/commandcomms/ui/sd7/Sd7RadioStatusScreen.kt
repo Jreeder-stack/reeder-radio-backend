@@ -30,6 +30,17 @@ import com.reedersystems.commandcomms.data.model.PttState
 import com.reedersystems.commandcomms.ui.radio.RadioViewModel
 
 /**
+ * ENGINEER-ONLY DEBUG SURFACE on real SD7 hardware (Task #579 decision).
+ *
+ * The SD7's physical OLED is owned by the firmware app `com.br.smallcd`
+ * and cannot be painted from a third-party app — this Composable is
+ * therefore never visible to operators on a real SD7. It is kept so the
+ * SD7 build remains debuggable in the emulator and via `adb screencap`,
+ * and so QA has operational context when running the SD7 flavor on
+ * non-SD7 hardware. The real SD7 operator UX is audio + haptic + TTS;
+ * see `android-native/SD7_HEADLESS_UX.md` for the headless UX spec and
+ * the OLED SDK research outcome.
+ *
  * Minimal status UI sized for the Siyata SD7's 0.97" 128×64 monochrome OLED.
  *
  * Design rules for this surface:
