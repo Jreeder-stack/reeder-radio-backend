@@ -6,6 +6,24 @@ implementation tasks listed at the bottom.
 
 ---
 
+> **2026-05-13 correction (Task #586):** the §3.3 conclusion below — *"SDK is
+> vendor-only, ask Siyata"* — is **wrong**. On-device introspection found that
+> `android.app.SmallcdManager` is a public Android system service registered
+> as `smallcd` and exposing a complete OLED drawing API
+> (`init`/`getAppId`/`drawText`/`drawBitmap`/`fillRect`/`refresh`/`reverseDisplay`/
+> `covertMode`/...). The SD7 OLED **is** writable from a third-party app; no
+> NDA SDK is needed. The audio/haptic/TTS UX spec in §4 of this doc remains
+> valid as the cue layer, but it is no longer the *only* operator surface.
+> Calling `Sd7RadioStatusScreen` "functionally invisible" (§1, end of) is
+> also outdated — the new build task will replace it with an OLED renderer
+> as the primary operator surface, with the Compose screen retained as the
+> engineer-only debug surface (§5 decision still stands for the Compose
+> screen). See the full inventory, API contract, recommended OLED layout,
+> and follow-up task slate in
+> [`SD7_FIRMWARE_INVENTORY.md`](./SD7_FIRMWARE_INVENTORY.md).
+
+---
+
 ## 1. Hardware reality check
 
 The SD7 has **no Android-controlled main display**. The 0.97" 128×64
@@ -136,28 +154,40 @@ Public web sources for "Siyata SD7 SDK", "SD7 OLED display API",
   into our `PttHardwareReceiver`).
 - **No public OLED write SDK or sample code.**
 
-### 3.3 Decision: SDK is vendor-only
+### 3.3 Decision: ~~SDK is vendor-only~~ — **CORRECTED 2026-05-13: no SDK is needed**
 
-We do not have an OLED SDK. The only way to get one is to obtain it
-directly from Siyata (or Belfone, the ODM) under NDA.
+> The original conclusion below — that we need an NDA SDK from Siyata — was
+> wrong. See the top-of-file correction and
+> [`SD7_FIRMWARE_INVENTORY.md`](./SD7_FIRMWARE_INVENTORY.md) for the full
+> mapping of `android.app.SmallcdManager`. In short: the firmware exposes a
+> public framework system service named `smallcd` that any app can fetch via
+> `context.getSystemService("smallcd")` and use to drive the OLED with
+> `init/getAppId/drawText/drawBitmap/fillRect/refresh`. The Siyata-ticket
+> action item is therefore **withdrawn**; the OLED writer build task is
+> tracked as F1 in `SD7_FIRMWARE_INVENTORY.md` §8 instead. The status-LED
+> question (§2.2 of this doc) is still open and is now the only outstanding
+> Siyata ask — kept as F-LED in the inventory's slate.
 
-**Action item (not part of this code task — operations work):**
+~~We do not have an OLED SDK. The only way to get one is to obtain it
+directly from Siyata (or Belfone, the ODM) under NDA.~~
 
-- Open a partner-portal ticket with Siyata at <https://www.siyatamobile.com/contact-us/>
-  and the SD7 product page. Reference the device model (SD7), our
-  application ID (`com.reedersystems.commandcomms.sd7`), and ask
-  specifically for:
-  1. The SD7 OLED writing API (any of: vendor JAR/AAR, AIDL service,
-     ContentProvider, broadcast intent).
-  2. The status LED API (if a user-driveable LED exists at all).
-  3. The expected value space of `Settings.Global.oledscreen_status_indication`.
-- Track the ticket number in this file under §6 once filed.
+~~**Action item (not part of this code task — operations work):**~~
 
-**Proof-of-OLED test:** intentionally **not** built in this task because
+~~- Open a partner-portal ticket with Siyata at <https://www.siyatamobile.com/contact-us/>~~
+  ~~and the SD7 product page. Reference the device model (SD7), our~~
+  ~~application ID (`com.reedersystems.commandcomms.sd7`), and ask~~
+  ~~specifically for:~~
+  ~~1. The SD7 OLED writing API (any of: vendor JAR/AAR, AIDL service,~~
+     ~~ContentProvider, broadcast intent).~~
+  ~~2. The status LED API (if a user-driveable LED exists at all).~~
+  ~~3. The expected value space of `Settings.Global.oledscreen_status_indication`.~~
+~~- Track the ticket number in this file under §6 once filed.~~
+
+~~**Proof-of-OLED test:** intentionally **not** built in this task because
 without an SDK there is nothing to prove; the only test we could write
 right now ("does Compose paint to OLED?") has already been answered
 *no* by the smallcd ownership in logcat. A proof-of-OLED test app
-will land as the first follow-up *after* Siyata returns an SDK.
+will land as the first follow-up *after* Siyata returns an SDK.~~
 
 ---
 
