@@ -1,0 +1,694 @@
+Activity Resolver Table:
+  Full MIME Types:
+      application/vnd.wfa.wsc:
+        df68bc4 com.br.smallcd/.NfcActivity filter e276aad
+          Action: "android.nfc.action.NDEF_DISCOVERED"
+          Category: "android.intent.category.DEFAULT"
+          StaticType: "application/vnd.wfa.wsc"
+
+  Base MIME Types:
+      application:
+        df68bc4 com.br.smallcd/.NfcActivity filter e276aad
+          Action: "android.nfc.action.NDEF_DISCOVERED"
+          Category: "android.intent.category.DEFAULT"
+          StaticType: "application/vnd.wfa.wsc"
+
+  Non-Data Actions:
+      android.nfc.action.TECH_DISCOVERED:
+        df68bc4 com.br.smallcd/.NfcActivity filter 81751e2
+          Action: "android.nfc.action.TECH_DISCOVERED"
+          Category: "android.intent.category.DEFAULT"
+      android.nfc.action.TAG_DISCOVERED:
+        df68bc4 com.br.smallcd/.NfcActivity filter 3ace973
+          Action: "android.nfc.action.TAG_DISCOVERED"
+          Category: "android.intent.category.DEFAULT"
+      android.intent.action.MAIN:
+        8372656 com.br.smallcd/.PresentationActivity filter 9adb6d7
+          Action: "android.intent.action.MAIN"
+          Category: "android.intent.category.LAUNCHER"
+
+  MIME Typed Actions:
+      android.nfc.action.NDEF_DISCOVERED:
+        df68bc4 com.br.smallcd/.NfcActivity filter e276aad
+          Action: "android.nfc.action.NDEF_DISCOVERED"
+          Category: "android.intent.category.DEFAULT"
+          StaticType: "application/vnd.wfa.wsc"
+
+Receiver Resolver Table:
+  Non-Data Actions:
+      com.br.intent.action.SIM_NETWORK_LOCKED:
+        1b2a030 com.br.smallcd/.GenernalBroadcastReceiver filter 81e4548
+          Action: "com.br.intent.action.SIM_NETWORK_LOCKED"
+      com.airbus.pmr.action.PTT_START:
+        4766df4 com.br.smallcd/.RotaryKnobEventReceiver filter 7a31563
+          Action: "com.airbus.pmr.action.PTT_START"
+      android.intent.action.SIM_STATE_CHANGED:
+        1b2a030 com.br.smallcd/.GenernalBroadcastReceiver filter 8dcaa2e
+          Action: "android.intent.action.SIM_STATE_CHANGED"
+      com.br.intent.action.SMALLCD_EXT:
+        e867560 com.br.smallcd/.ExtEventHandler filter f436a19
+          Action: "com.br.intent.action.SMALLCD_EXT"
+      com.br.intent.action.EMERGENCY_SMS_MODE_INITIATED:
+        1b2a030 com.br.smallcd/.GenernalBroadcastReceiver filter 784265
+          Action: "com.br.intent.action.EMERGENCY_SMS_MODE_INITIATED"
+      android.intent.action.SOS.down:
+        4766df4 com.br.smallcd/.RotaryKnobEventReceiver filter 2fbf792
+          Action: "android.intent.action.SOS.down"
+      com.br.intent.action.VK7_IGNITION_EVENT:
+        1b2a030 com.br.smallcd/.GenernalBroadcastReceiver filter 1d98f5c
+          Action: "com.br.intent.action.VK7_IGNITION_EVENT"
+      com.br.intent.action.NFC_SETUP_WIFI_NETWORK:
+        1b2a030 com.br.smallcd/.GenernalBroadcastReceiver filter f62a9cf
+          Action: "com.br.intent.action.NFC_SETUP_WIFI_NETWORK"
+      com.abupdate.intent.INIT_COMPLETED:
+        1b2a030 com.br.smallcd/.GenernalBroadcastReceiver filter 37403c7
+          Action: "com.abupdate.intent.INIT_COMPLETED"
+      android.intent.action.BOOT_COMPLETED:
+        1b2a030 com.br.smallcd/.GenernalBroadcastReceiver filter afd04a9
+          Action: "android.intent.action.BOOT_COMPLETED"
+          mPriority=1000, mOrder=0, mHasStaticPartialTypes=false, mHasDynamicPartialTypes=false
+      com.br.intent.action.LAUNCH_ESPER_ONCE:
+        1b2a030 com.br.smallcd/.GenernalBroadcastReceiver filter b0a13eb
+          Action: "com.br.intent.action.LAUNCH_ESPER_ONCE"
+      com.br.intent.action.ROTARY_KNOB:
+        4766df4 com.br.smallcd/.RotaryKnobEventReceiver filter aa5591d
+          Action: "com.br.intent.action.ROTARY_KNOB"
+      com.br.intent.action.SIM_NETWORK_LOCK_CHANGED_READY:
+        1b2a030 com.br.smallcd/.GenernalBroadcastReceiver filter 583d106
+          Action: "com.br.intent.action.SIM_NETWORK_LOCK_CHANGED_READY"
+      com.br.intent.action.UPDATE_FEATURES:
+        1b2a030 com.br.smallcd/.GenernalBroadcastReceiver filter 68d3b3a
+          Action: "com.br.intent.action.UPDATE_FEATURES"
+      com.br.intent.action.ACTION_BR_ICC_NETWORK_DEPERSONALIZATION_RESULT:
+        1b2a030 com.br.smallcd/.GenernalBroadcastReceiver filter baf9fe1
+          Action: "com.br.intent.action.ACTION_BR_ICC_NETWORK_DEPERSONALIZATION_RESULT"
+
+Service Resolver Table:
+  Non-Data Actions:
+      android.accessibilityservice.AccessibilityService:
+        25dfade com.br.smallcd/.LocationAccessibilityService filter a27a4bf permission android.permission.BIND_ACCESSIBILITY_SERVICE
+          Action: "android.accessibilityservice.AccessibilityService"
+
+Domain verification status:
+
+Key Set Manager:
+  [com.br.smallcd]
+      Signing KeySets: 1
+
+Packages:
+  Package [com.br.smallcd] (290b871):
+    userId=1000
+    sharedUser=SharedUserSetting{320cf6d android.uid.system/1000}
+    pkg=Package{f79b7a2 com.br.smallcd}
+    codePath=/system/app/smallcd
+    resourcePath=/system/app/smallcd
+    legacyNativeLibraryDir=/system/app/smallcd/lib
+    extractNativeLibs=false
+    primaryCpuAbi=null
+    secondaryCpuAbi=null
+    cpuAbiOverride=null
+    versionCode=1 minSdk=31 targetSdk=28
+    minExtensionVersions=[]
+    versionName=1.0
+    usesNonSdkApi=true
+    splits=[base]
+    apkSigningVersion=3
+    applicationInfo=PackageImpl{f79b7a2 com.br.smallcd}
+    flags=[ SYSTEM HAS_CODE PERSISTENT ALLOW_CLEAR_USER_DATA ALLOW_BACKUP ]
+    privateFlags=[ PRIVATE_FLAG_ACTIVITIES_RESIZE_MODE_RESIZEABLE_VIA_SDK_VERSION PRIVATE_FLAG_REQUEST_LEGACY_EXTERNAL_STORAGE PRIVATE_FLAG_ALLOW_NATIVE_HEAP_POINTER_TAGGING ]
+    forceQueryable=false
+    dataDir=/data/user/0/com.br.smallcd
+    supportsScreens=[small, medium, large, xlarge, resizeable, anyDensity]
+    usesLibraries:
+      android.test.base
+      android.hidl.manager-V1.0-java
+      android.hidl.base-V1.0-java
+    usesLibraryFiles:
+      /system/framework/android.test.base.jar
+      /system/framework/android.hidl.manager-V1.0-java.jar
+      /system/framework/android.hidl.base-V1.0-java.jar
+    timeStamp=2009-01-01 00:00:00
+    firstInstallTime=2009-01-01 00:00:00
+    lastUpdateTime=2009-01-01 00:00:00
+    signatures=PackageSignatures{612bc33 version:3, signatures:[24b2030f], past signatures:[]}
+    installPermissionsFixed=false
+    pkgFlags=[ SYSTEM HAS_CODE PERSISTENT ALLOW_CLEAR_USER_DATA ALLOW_BACKUP ]
+    requested permissions:
+      android.permission.READ_CONTACTS
+      android.permission.WRITE_CONTACTS
+      android.permission.VIBRATE
+      android.permission.ACCESS_COARSE_LOCATION
+      android.permission.INTERNET
+      android.permission.SET_WALLPAPER
+      android.permission.WRITE_EXTERNAL_STORAGE
+      android.permission.SEND_SMS
+      android.permission.RECEIVE_SMS
+      android.permission.RECEIVE_MMS
+      android.permission.WRITE_SMS
+      android.permission.READ_SMS
+      android.permission.NFC
+      android.permission.TRANSMIT_IR
+      android.permission.READ_PHONE_STATE
+      android.permission.WAKE_LOCK
+      android.permission.FOREGROUND_SERVICE
+      android.permission.REQUEST_INSTALL_PACKAGES
+      android.permission.REQUEST_DELETE_PACKAGES
+      android.permission.RECEIVE_BOOT_COMPLETED
+      android.permission.READ_EXTERNAL_STORAGE
+      android.permission.WRITE_SECURE_SETTINGS
+      android.permission.WRITE_SETTINGS
+      android.permission.MODIFY_AUDIO_SETTINGS
+      android.permission.MEDIA_CONTENT_CONTROL
+      android.permission.MODIFY_PHONE_STATE
+      android.permission.DEVICE_POWER
+      android.permission.ACCESS_WIFI_STATE
+      android.permission.CHANGE_WIFI_STATE
+      android.permission.ACCESS_FINE_LOCATION
+      android.permission.BLUETOOTH
+      android.permission.BLUETOOTH_ADMIN
+      android.permission.NETWORK_SETTINGS
+      android.permission.ACCESS_NETWORK_STATE
+      android.permission.MANAGE_EXTERNAL_STORAGE
+      android.permission.LOCAL_MAC_ADDRESS
+      com.qualcomm.qti.permission.USE_EXT_TELEPHONY_SERVICE
+      android.permission.SHUTDOWN
+      android.permission.REBOOT
+      android.permission.SYSTEM_ALERT_WINDOW
+      android.permission.RECORD_AUDIO
+      android.permission.INJECT_EVENTS
+      android.permission.CAMERA
+      android.permission.ACCESS_BACKGROUND_LOCATION
+      android.permission.ACCESS_MEDIA_LOCATION
+      android.permission.BLUETOOTH_SCAN
+      android.permission.BLUETOOTH_CONNECT
+      android.permission.BLUETOOTH_ADVERTISE
+    install permissions:
+      android.permission.BIND_INCALL_SERVICE: granted=true
+      android.permission.WRITE_SETTINGS: granted=true
+      android.permission.CONFIGURE_WIFI_DISPLAY: granted=true
+      android.permission.CONFIGURE_DISPLAY_COLOR_MODE: granted=true
+      android.permission.RECOVERY: granted=true
+      android.permission.CONTROL_DISPLAY_COLOR_TRANSFORMS: granted=true
+      android.permission.BIND_ATTENTION_SERVICE: granted=true
+      android.permission.USE_CREDENTIALS: granted=true
+      android.permission.MODIFY_AUDIO_SETTINGS: granted=true
+      android.permission.MANAGE_EXTERNAL_STORAGE: granted=true
+      com.qualcomm.qti.smq.qcc.permission.QCCTRUI: granted=true
+      android.permission.ACCESS_CHECKIN_PROPERTIES: granted=true
+      android.permission.MODIFY_AUDIO_ROUTING: granted=true
+      android.permission.INSTALL_LOCATION_PROVIDER: granted=true
+      android.permission.USE_RESERVED_DISK: granted=true
+      android.permission.SYSTEM_ALERT_WINDOW: granted=true
+      android.permission.BROADCAST_PHONE_ACCOUNT_REGISTRATION: granted=true
+      android.permission.CONTROL_LOCATION_UPDATES: granted=true
+      android.permission.CLEAR_APP_USER_DATA: granted=true
+      com.qualcomm.qti.permission.USE_EXT_TELEPHONY_SERVICE: granted=true
+      android.permission.BROADCAST_CALLLOG_INFO: granted=true
+      android.permission.INSTALL_PACKAGES: granted=true
+      android.permission.SHUTDOWN: granted=true
+      android.permission.NFC: granted=true
+      android.permission.BIND_ROTATION_RESOLVER_SERVICE: granted=true
+      android.permission.NETWORK_SETTINGS: granted=true
+      android.permission.CALL_PRIVILEGED: granted=true
+      android.permission.MASTER_CLEAR: granted=true
+      android.permission.FOREGROUND_SERVICE: granted=true
+      android.permission.WRITE_SYNC_SETTINGS: granted=true
+      android.permission.MANAGE_DYNAMIC_SYSTEM: granted=true
+      android.permission.RECEIVE_BOOT_COMPLETED: granted=true
+      android.permission.MANAGE_ROLE_HOLDERS: granted=true
+      android.permission.PEERS_MAC_ADDRESS: granted=true
+      android.permission.DEVICE_POWER: granted=true
+      android.permission.OMADMACCESS: granted=true
+      android.permission.READ_PRINT_SERVICES: granted=true
+      android.permission.MANAGE_PROFILE_AND_DEVICE_OWNERS: granted=true
+      com.abupdate.permission.USE_AIDL: granted=true
+      android.permission.READ_PROFILE: granted=true
+      android.permission.BLUETOOTH: granted=true
+      android.permission.WRITE_MEDIA_STORAGE: granted=true
+      android.permission.WRITE_BLOCKED_NUMBERS: granted=true
+      com.qualcomm.permission.USE_QCRIL_MSG_TUNNEL: granted=true
+      android.permission.ACCESS_SURFACE_FLINGER: granted=true
+      android.permission.INTERNET: granted=true
+      android.permission.TRANSMIT_IR: granted=true
+      android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION: granted=true
+      android.permission.BLUETOOTH_ADMIN: granted=true
+      android.permission.CONTROL_VPN: granted=true
+      android.permission.UPDATE_DEVICE_STATS: granted=true
+      android.permission.MANAGE_FINGERPRINT: granted=true
+      android.permission.READ_PROJECTION_STATE: granted=true
+      android.permission.BIND_CONNECTION_SERVICE: granted=true
+      android.permission.ACCESS_INSTANT_APPS: granted=true
+      android.permission.ACCESS_CONTEXT_HUB: granted=true
+      android.permission.MANAGE_USB: granted=true
+      android.permission.INTERACT_ACROSS_USERS_FULL: granted=true
+      android.permission.STOP_APP_SWITCHES: granted=true
+      android.permission.BATTERY_STATS: granted=true
+      android.permission.PACKAGE_USAGE_STATS: granted=true
+      android.permission.MOUNT_UNMOUNT_FILESYSTEMS: granted=true
+      android.permission.TETHER_PRIVILEGED: granted=true
+      android.permission.WRITE_SECURE_SETTINGS: granted=true
+      com.qualcomm.qti.smq.feedback.providers.write: granted=true
+      android.permission.MANAGE_DEBUGGING: granted=true
+      android.permission.MOVE_PACKAGE: granted=true
+      android.permission.READ_BLOCKED_NUMBERS: granted=true
+      com.qualcomm.permission.wfd.QC_WFD: granted=true
+      android.permission.READ_SEARCH_INDEXABLES: granted=true
+      android.permission.READ_PRIVILEGED_PHONE_STATE: granted=true
+      android.permission.TRIGGER_TIME_ZONE_RULES_CHECK: granted=true
+      android.permission.ACCESS_DOWNLOAD_MANAGER: granted=true
+      android.permission.BLUETOOTH_PRIVILEGED: granted=true
+      android.permission.HARDWARE_TEST: granted=true
+      android.permission.USE_BIOMETRIC_INTERNAL: granted=true
+      android.permission.WRITE_SMS: granted=true
+      android.permission.INSTALL_DYNAMIC_SYSTEM: granted=true
+      android.permission.SUBSTITUTE_NOTIFICATION_APP_NAME: granted=true
+      android.intent.category.MASTER_CLEAR.permission.C2D_MESSAGE: granted=true
+      android.permission.BIND_JOB_SERVICE: granted=true
+      android.permission.CONFIRM_FULL_BACKUP: granted=true
+      android.permission.WRITE_APN_SETTINGS: granted=true
+      android.permission.CHANGE_WIFI_STATE: granted=true
+      android.permission.MANAGE_USERS: granted=true
+      android.permission.ACCESS_NETWORK_STATE: granted=true
+      android.permission.BACKUP: granted=true
+      android.permission.CHANGE_CONFIGURATION: granted=true
+      android.permission.USER_ACTIVITY: granted=true
+      android.permission.LOCAL_MAC_ADDRESS: granted=true
+      android.permission.READ_LOGS: granted=true
+      android.permission.COPY_PROTECTED_DATA: granted=true
+      android.permission.INTERACT_ACROSS_USERS: granted=true
+      android.permission.SET_WALLPAPER: granted=true
+      android.permission.SET_KEYBOARD_LAYOUT: granted=true
+      android.permission.BROADCAST_CLOSE_SYSTEM_DIALOGS: granted=true
+      android.permission.READ_DREAM_STATE: granted=true
+      com.qti.permission.RECEIVE_MSIM_VOICE_CAPABILITY_CHANGED: granted=true
+      android.permission.MANAGE_APP_OPS_RESTRICTIONS: granted=true
+      android.permission.MANAGE_USER_OEM_UNLOCK_STATE: granted=true
+      android.permission.REQUEST_NETWORK_SCORES: granted=true
+      android.permission.CONNECTIVITY_USE_RESTRICTED_NETWORKS: granted=true
+      android.permission.WRITE_USER_DICTIONARY: granted=true
+      android.permission.READ_DREAM_SUPPRESSION: granted=true
+      android.permission.READ_SYNC_STATS: granted=true
+      android.permission.REBOOT: granted=true
+      android.permission.SCHEDULE_EXACT_ALARM: granted=true
+      android.permission.REQUEST_DELETE_PACKAGES: granted=true
+      android.permission.OEM_UNLOCK_STATE: granted=true
+      android.permission.MANAGE_DEVICE_ADMINS: granted=true
+      android.permission.CHANGE_APP_IDLE_STATE: granted=true
+      android.permission.BIND_SETTINGS_SUGGESTIONS_SERVICE: granted=true
+      android.permission.TEST_BLACKLISTED_PASSWORD: granted=true
+      android.permission.MANAGE_NOTIFICATION_LISTENERS: granted=true
+      android.permission.SET_POINTER_SPEED: granted=true
+      android.permission.MANAGE_NOTIFICATIONS: granted=true
+      android.permission.SEND_SHOW_SUSPENDED_APP_DETAILS: granted=true
+      android.permission.READ_SYNC_SETTINGS: granted=true
+      android.permission.BIND_CELL_BROADCAST_SERVICE: granted=true
+      android.permission.LOADER_USAGE_STATS: granted=true
+      android.permission.OVERRIDE_WIFI_CONFIG: granted=true
+      android.permission.FORCE_STOP_PACKAGES: granted=true
+      android.permission.SUGGEST_MANUAL_TIME_AND_ZONE: granted=true
+      android.permission.HIDE_NON_SYSTEM_OVERLAY_WINDOWS: granted=true
+      android.permission.ACCESS_NOTIFICATIONS: granted=true
+      android.permission.HANDLE_CALL_INTENT: granted=true
+      android.permission.MEDIA_RESOURCE_OVERRIDE_PID: granted=true
+      android.permission.VIBRATE: granted=true
+      com.android.certinstaller.INSTALL_AS_USER: granted=true
+      android.permission.MANAGE_APP_HIBERNATION: granted=true
+      android.permission.HANDLE_CAR_MODE_CHANGES: granted=true
+      android.permission.READ_USER_DICTIONARY: granted=true
+      android.permission.MANAGE_SCOPED_ACCESS_DIRECTORY_PERMISSIONS: granted=true
+      android.permission.ACCESS_WIFI_STATE: granted=true
+      com.qualcomm.qti.qdma.permission.QDMA: granted=true
+      android.permission.USE_BIOMETRIC: granted=true
+      android.permission.MANAGE_APP_OPS_MODES: granted=true
+      android.permission.REQUEST_INSTALL_PACKAGES: granted=true
+      android.permission.MODIFY_PHONE_STATE: granted=true
+      android.permission.STATUS_BAR: granted=true
+      android.permission.QUERY_ALL_PACKAGES: granted=true
+      android.permission.READ_DEVICE_CONFIG: granted=true
+      android.permission.LOCATION_HARDWARE: granted=true
+      android.permission.UNLIMITED_TOASTS: granted=true
+      android.permission.WAKE_LOCK: granted=true
+      android.permission.INJECT_EVENTS: granted=true
+      android.permission.BIND_NETWORK_RECOMMENDATION_SERVICE: granted=true
+      android.permission.UPDATE_APP_OPS_STATS: granted=true
+      android.permission.READ_OEM_UNLOCK_STATE: granted=true
+      android.permission.MEDIA_CONTENT_CONTROL: granted=true
+      android.permission.DELETE_PACKAGES: granted=true
+    User 0: ceDataInode=686969 installed=true hidden=false suspended=false distractionFlags=0 stopped=false notLaunched=false enabled=0 instant=false virtual=false
+
+Queries:
+  system apps queryable: false
+  forceQueryable:
+    [android,com.android.localtransport,com.br.smallcd,com.android.location.fused,com.android.settings,com.br.brdclient,com.android.keychain,com.android.wallpaperbackup,com.android.providers.settings,com.dsi.ant.server,com.android.server.telecom,com.qualcomm.wfd.service,com.qti.snapdragon.qdcm_ff,com.android.dynsystem,com.abupdate.fota_demo_iot,com.quectel.modemconfigtool,com.android.inputdevices,com.qualcomm.qti.qdma,com.skyhookwireless.provider,com.verizon.dmclientupdate,com.qualcomm.qti.services.secureui]
+  queries via package name:
+    [android,com.android.localtransport,com.br.smallcd,com.android.location.fused,com.android.settings,com.br.brdclient,com.android.keychain,com.android.wallpaperbackup,com.android.providers.settings,com.dsi.ant.server,com.android.server.telecom,com.qualcomm.wfd.service,com.qti.snapdragon.qdcm_ff,com.android.dynsystem,com.abupdate.fota_demo_iot,com.quectel.modemconfigtool,com.android.inputdevices,com.qualcomm.qti.qdma,com.skyhookwireless.provider,com.verizon.dmclientupdate,com.qualcomm.qti.services.secureui]:
+      io.shoonya.shoonyadpc
+  queries via intent:
+  queryable via interaction:
+    User 0:
+      [android,com.android.localtransport,com.br.smallcd,com.android.location.fused,com.android.settings,com.br.brdclient,com.android.keychain,com.android.wallpaperbackup,com.android.providers.settings,com.dsi.ant.server,com.android.server.telecom,com.qualcomm.wfd.service,com.qti.snapdragon.qdcm_ff,com.android.dynsystem,com.abupdate.fota_demo_iot,com.quectel.modemconfigtool,com.android.inputdevices,com.qualcomm.qti.qdma,com.skyhookwireless.provider,com.verizon.dmclientupdate,com.qualcomm.qti.services.secureui]:
+        [vendor.qti.imsrcs,com.qti.dpmserviceapp,com.android.stk,com.android.phone,com.android.ons,com.qualcomm.qti.dynamicddsservice,com.qualcomm.qti.uceShimService,com.qti.qualcomm.deviceinfo,com.android.mms.service,com.qti.qualcomm.datastatusnotification,com.android.providers.telephony]
+        [com.android.bluetooth,com.qualcomm.qtil.btdsda]
+        com.android.nfc
+        [com.android.networkstack.permissionconfig,com.android.networkstack.tethering,com.android.cellbroadcastservice,com.android.networkstack]
+        [com.android.providers.blockednumber,com.android.providers.contacts,com.android.providers.userdictionary,com.android.calllogbackup]
+        com.android.cellbroadcastreceiver
+        [com.android.soundpicker,com.android.providers.downloads,com.android.mtp,com.android.providers.media,com.android.providers.downloads.ui]
+        com.android.providers.calendar
+        com.android.managedprovisioning
+        com.android.documentsui
+        com.android.traceur
+        com.android.externalstorage
+        com.android.packageinstaller
+        com.android.statementservice
+        io.shoonya.shoonyadpc
+        [com.qualcomm.qti.cne,vendor.qti.iwlan,vendor.qti.hardware.cacert.server]
+        com.qualcomm.qti.smq
+        com.android.imsserviceentitlement
+        org.chromium.webview_shell
+        com.android.inputmethod.latin
+        com.android.deskclock
+        [com.qti.phone,com.qti.xdivert,com.qualcomm.qcrilmsgtunnel,com.qualcomm.qti.telephonyservice]
+        com.qualcomm.location
+        com.qualcomm.location.XT
+        com.android.provision
+        com.android.systemui
+        org.codeaurora.ims
+        com.android.launcher3
+        com.android.mms
+        com.qualcomm.qti.qccauthmgr
+        com.qualcomm.qti.workloadclassifier
+        com.android.permissioncontroller
+        com.android.providers.media.module
+        android.ext.services
+        com.android.cellbroadcastreceiver.module
+        com.reedersystems.commandcomms.sd7
+      [vendor.qti.imsrcs,com.qti.dpmserviceapp,com.android.stk,com.android.phone,com.android.ons,com.qualcomm.qti.dynamicddsservice,com.qualcomm.qti.uceShimService,com.qti.qualcomm.deviceinfo,com.android.mms.service,com.qti.qualcomm.datastatusnotification,com.android.providers.telephony]:
+        [android,com.android.localtransport,com.br.smallcd,com.android.location.fused,com.android.settings,com.br.brdclient,com.android.keychain,com.android.wallpaperbackup,com.android.providers.settings,com.dsi.ant.server,com.android.server.telecom,com.qualcomm.wfd.service,com.qti.snapdragon.qdcm_ff,com.android.dynsystem,com.abupdate.fota_demo_iot,com.quectel.modemconfigtool,com.android.inputdevices,com.qualcomm.qti.qdma,com.skyhookwireless.provider,com.verizon.dmclientupdate,com.qualcomm.qti.services.secureui]
+      [com.android.bluetooth,com.qualcomm.qtil.btdsda]:
+        [android,com.android.localtransport,com.br.smallcd,com.android.location.fused,com.android.settings,com.br.brdclient,com.android.keychain,com.android.wallpaperbackup,com.android.providers.settings,com.dsi.ant.server,com.android.server.telecom,com.qualcomm.wfd.service,com.qti.snapdragon.qdcm_ff,com.android.dynsystem,com.abupdate.fota_demo_iot,com.quectel.modemconfigtool,com.android.inputdevices,com.qualcomm.qti.qdma,com.skyhookwireless.provider,com.verizon.dmclientupdate,com.qualcomm.qti.services.secureui]
+      [com.android.networkstack.permissionconfig,com.android.networkstack.tethering,com.android.cellbroadcastservice,com.android.networkstack]:
+        [android,com.android.localtransport,com.br.smallcd,com.android.location.fused,com.android.settings,com.br.brdclient,com.android.keychain,com.android.wallpaperbackup,com.android.providers.settings,com.dsi.ant.server,com.android.server.telecom,com.qualcomm.wfd.service,com.qti.snapdragon.qdcm_ff,com.android.dynsystem,com.abupdate.fota_demo_iot,com.quectel.modemconfigtool,com.android.inputdevices,com.qualcomm.qti.qdma,com.skyhookwireless.provider,com.verizon.dmclientupdate,com.qualcomm.qti.services.secureui]
+      [com.android.providers.blockednumber,com.android.providers.contacts,com.android.providers.userdictionary,com.android.calllogbackup]:
+        [android,com.android.localtransport,com.br.smallcd,com.android.location.fused,com.android.settings,com.br.brdclient,com.android.keychain,com.android.wallpaperbackup,com.android.providers.settings,com.dsi.ant.server,com.android.server.telecom,com.qualcomm.wfd.service,com.qti.snapdragon.qdcm_ff,com.android.dynsystem,com.abupdate.fota_demo_iot,com.quectel.modemconfigtool,com.android.inputdevices,com.qualcomm.qti.qdma,com.skyhookwireless.provider,com.verizon.dmclientupdate,com.qualcomm.qti.services.secureui]
+      [com.android.soundpicker,com.android.providers.downloads,com.android.mtp,com.android.providers.media,com.android.providers.downloads.ui]:
+        [android,com.android.localtransport,com.br.smallcd,com.android.location.fused,com.android.settings,com.br.brdclient,com.android.keychain,com.android.wallpaperbackup,com.android.providers.settings,com.dsi.ant.server,com.android.server.telecom,com.qualcomm.wfd.service,com.qti.snapdragon.qdcm_ff,com.android.dynsystem,com.abupdate.fota_demo_iot,com.quectel.modemconfigtool,com.android.inputdevices,com.qualcomm.qti.qdma,com.skyhookwireless.provider,com.verizon.dmclientupdate,com.qualcomm.qti.services.secureui]
+      com.android.providers.calendar:
+        [android,com.android.localtransport,com.br.smallcd,com.android.location.fused,com.android.settings,com.br.brdclient,com.android.keychain,com.android.wallpaperbackup,com.android.providers.settings,com.dsi.ant.server,com.android.server.telecom,com.qualcomm.wfd.service,com.qti.snapdragon.qdcm_ff,com.android.dynsystem,com.abupdate.fota_demo_iot,com.quectel.modemconfigtool,com.android.inputdevices,com.qualcomm.qti.qdma,com.skyhookwireless.provider,com.verizon.dmclientupdate,com.qualcomm.qti.services.secureui]
+      com.android.statementservice:
+        [android,com.android.localtransport,com.br.smallcd,com.android.location.fused,com.android.settings,com.br.brdclient,com.android.keychain,com.android.wallpaperbackup,com.android.providers.settings,com.dsi.ant.server,com.android.server.telecom,com.qualcomm.wfd.service,com.qti.snapdragon.qdcm_ff,com.android.dynsystem,com.abupdate.fota_demo_iot,com.quectel.modemconfigtool,com.android.inputdevices,com.qualcomm.qti.qdma,com.skyhookwireless.provider,com.verizon.dmclientupdate,com.qualcomm.qti.services.secureui]
+      io.shoonya.shoonyadpc:
+        [android,com.android.localtransport,com.br.smallcd,com.android.location.fused,com.android.settings,com.br.brdclient,com.android.keychain,com.android.wallpaperbackup,com.android.providers.settings,com.dsi.ant.server,com.android.server.telecom,com.qualcomm.wfd.service,com.qti.snapdragon.qdcm_ff,com.android.dynsystem,com.abupdate.fota_demo_iot,com.quectel.modemconfigtool,com.android.inputdevices,com.qualcomm.qti.qdma,com.skyhookwireless.provider,com.verizon.dmclientupdate,com.qualcomm.qti.services.secureui]
+      com.android.printspooler:
+        [android,com.android.localtransport,com.br.smallcd,com.android.location.fused,com.android.settings,com.br.brdclient,com.android.keychain,com.android.wallpaperbackup,com.android.providers.settings,com.dsi.ant.server,com.android.server.telecom,com.qualcomm.wfd.service,com.qti.snapdragon.qdcm_ff,com.android.dynsystem,com.abupdate.fota_demo_iot,com.quectel.modemconfigtool,com.android.inputdevices,com.qualcomm.qti.qdma,com.skyhookwireless.provider,com.verizon.dmclientupdate,com.qualcomm.qti.services.secureui]
+      com.android.imsserviceentitlement:
+        [android,com.android.localtransport,com.br.smallcd,com.android.location.fused,com.android.settings,com.br.brdclient,com.android.keychain,com.android.wallpaperbackup,com.android.providers.settings,com.dsi.ant.server,com.android.server.telecom,com.qualcomm.wfd.service,com.qti.snapdragon.qdcm_ff,com.android.dynsystem,com.abupdate.fota_demo_iot,com.quectel.modemconfigtool,com.android.inputdevices,com.qualcomm.qti.qdma,com.skyhookwireless.provider,com.verizon.dmclientupdate,com.qualcomm.qti.services.secureui]
+      com.android.inputmethod.latin:
+        [android,com.android.localtransport,com.br.smallcd,com.android.location.fused,com.android.settings,com.br.brdclient,com.android.keychain,com.android.wallpaperbackup,com.android.providers.settings,com.dsi.ant.server,com.android.server.telecom,com.qualcomm.wfd.service,com.qti.snapdragon.qdcm_ff,com.android.dynsystem,com.abupdate.fota_demo_iot,com.quectel.modemconfigtool,com.android.inputdevices,com.qualcomm.qti.qdma,com.skyhookwireless.provider,com.verizon.dmclientupdate,com.qualcomm.qti.services.secureui]
+      [com.qti.phone,com.qti.xdivert,com.qualcomm.qcrilmsgtunnel,com.qualcomm.qti.telephonyservice]:
+        [android,com.android.localtransport,com.br.smallcd,com.android.location.fused,com.android.settings,com.br.brdclient,com.android.keychain,com.android.wallpaperbackup,com.android.providers.settings,com.dsi.ant.server,com.android.server.telecom,com.qualcomm.wfd.service,com.qti.snapdragon.qdcm_ff,com.android.dynsystem,com.abupdate.fota_demo_iot,com.quectel.modemconfigtool,com.android.inputdevices,com.qualcomm.qti.qdma,com.skyhookwireless.provider,com.verizon.dmclientupdate,com.qualcomm.qti.services.secureui]
+      com.android.webview:
+        [android,com.android.localtransport,com.br.smallcd,com.android.location.fused,com.android.settings,com.br.brdclient,com.android.keychain,com.android.wallpaperbackup,com.android.providers.settings,com.dsi.ant.server,com.android.server.telecom,com.qualcomm.wfd.service,com.qti.snapdragon.qdcm_ff,com.android.dynsystem,com.abupdate.fota_demo_iot,com.quectel.modemconfigtool,com.android.inputdevices,com.qualcomm.qti.qdma,com.skyhookwireless.provider,com.verizon.dmclientupdate,com.qualcomm.qti.services.secureui]
+      com.android.systemui:
+        [android,com.android.localtransport,com.br.smallcd,com.android.location.fused,com.android.settings,com.br.brdclient,com.android.keychain,com.android.wallpaperbackup,com.android.providers.settings,com.dsi.ant.server,com.android.server.telecom,com.qualcomm.wfd.service,com.qti.snapdragon.qdcm_ff,com.android.dynsystem,com.abupdate.fota_demo_iot,com.quectel.modemconfigtool,com.android.inputdevices,com.qualcomm.qti.qdma,com.skyhookwireless.provider,com.verizon.dmclientupdate,com.qualcomm.qti.services.secureui]
+      com.qualcomm.qti.qccauthmgr:
+        [android,com.android.localtransport,com.br.smallcd,com.android.location.fused,com.android.settings,com.br.brdclient,com.android.keychain,com.android.wallpaperbackup,com.android.providers.settings,com.dsi.ant.server,com.android.server.telecom,com.qualcomm.wfd.service,com.qti.snapdragon.qdcm_ff,com.android.dynsystem,com.abupdate.fota_demo_iot,com.quectel.modemconfigtool,com.android.inputdevices,com.qualcomm.qti.qdma,com.skyhookwireless.provider,com.verizon.dmclientupdate,com.qualcomm.qti.services.secureui]
+      com.android.permissioncontroller:
+        [android,com.android.localtransport,com.br.smallcd,com.android.location.fused,com.android.settings,com.br.brdclient,com.android.keychain,com.android.wallpaperbackup,com.android.providers.settings,com.dsi.ant.server,com.android.server.telecom,com.qualcomm.wfd.service,com.qti.snapdragon.qdcm_ff,com.android.dynsystem,com.abupdate.fota_demo_iot,com.quectel.modemconfigtool,com.android.inputdevices,com.qualcomm.qti.qdma,com.skyhookwireless.provider,com.verizon.dmclientupdate,com.qualcomm.qti.services.secureui]
+      com.android.providers.media.module:
+        [android,com.android.localtransport,com.br.smallcd,com.android.location.fused,com.android.settings,com.br.brdclient,com.android.keychain,com.android.wallpaperbackup,com.android.providers.settings,com.dsi.ant.server,com.android.server.telecom,com.qualcomm.wfd.service,com.qti.snapdragon.qdcm_ff,com.android.dynsystem,com.abupdate.fota_demo_iot,com.quectel.modemconfigtool,com.android.inputdevices,com.qualcomm.qti.qdma,com.skyhookwireless.provider,com.verizon.dmclientupdate,com.qualcomm.qti.services.secureui]
+      android.ext.services:
+        [android,com.android.localtransport,com.br.smallcd,com.android.location.fused,com.android.settings,com.br.brdclient,com.android.keychain,com.android.wallpaperbackup,com.android.providers.settings,com.dsi.ant.server,com.android.server.telecom,com.qualcomm.wfd.service,com.qti.snapdragon.qdcm_ff,com.android.dynsystem,com.abupdate.fota_demo_iot,com.quectel.modemconfigtool,com.android.inputdevices,com.qualcomm.qti.qdma,com.skyhookwireless.provider,com.verizon.dmclientupdate,com.qualcomm.qti.services.secureui]
+  queryable via uses-library:
+
+Shared users:
+  SharedUser [android.uid.system] (320cf6d):
+    userId=1000
+    Packages
+      PackageSetting{59fe2e android/1000}
+      PackageSetting{17f99d5 com.android.localtransport/1000}
+      PackageSetting{290b871 com.br.smallcd/1000}
+      PackageSetting{2a6c4a2 com.android.location.fused/1000}
+      PackageSetting{552d5f0 com.android.settings/1000}
+      PackageSetting{56b4adf com.br.brdclient/1000}
+      PackageSetting{56c2877 com.android.keychain/1000}
+      PackageSetting{5b12439 com.android.wallpaperbackup/1000}
+      PackageSetting{697018f com.android.providers.settings/1000}
+      PackageSetting{6c661ef com.dsi.ant.server/1000}
+      PackageSetting{6ec0053 com.android.server.telecom/1000}
+      PackageSetting{6ffd83b com.qualcomm.wfd.service/1000}
+      PackageSetting{a0f737f com.qti.snapdragon.qdcm_ff/1000}
+      PackageSetting{a688c36 com.android.dynsystem/1000}
+      PackageSetting{a69c260 com.abupdate.fota_demo_iot/1000}
+      PackageSetting{ab6b6fb com.quectel.modemconfigtool/1000}
+      PackageSetting{bf765cb com.android.inputdevices/1000}
+      PackageSetting{cf252a5 com.qualcomm.qti.qdma/1000}
+      PackageSetting{dc6db77 com.skyhookwireless.provider/1000}
+      PackageSetting{e1490a1 com.verizon.dmclientupdate/1000}
+      PackageSetting{eff0af7 com.qualcomm.qti.services.secureui/1000}
+    install permissions:
+      android.permission.BIND_INCALL_SERVICE: granted=true
+      android.permission.WRITE_SETTINGS: granted=true
+      android.permission.CONFIGURE_WIFI_DISPLAY: granted=true
+      android.permission.CONFIGURE_DISPLAY_COLOR_MODE: granted=true
+      android.permission.RECOVERY: granted=true
+      android.permission.CONTROL_DISPLAY_COLOR_TRANSFORMS: granted=true
+      android.permission.BIND_ATTENTION_SERVICE: granted=true
+      android.permission.USE_CREDENTIALS: granted=true
+      android.permission.MODIFY_AUDIO_SETTINGS: granted=true
+      android.permission.MANAGE_EXTERNAL_STORAGE: granted=true
+      com.qualcomm.qti.smq.qcc.permission.QCCTRUI: granted=true
+      android.permission.ACCESS_CHECKIN_PROPERTIES: granted=true
+      android.permission.MODIFY_AUDIO_ROUTING: granted=true
+      android.permission.INSTALL_LOCATION_PROVIDER: granted=true
+      android.permission.USE_RESERVED_DISK: granted=true
+      android.permission.SYSTEM_ALERT_WINDOW: granted=true
+      android.permission.BROADCAST_PHONE_ACCOUNT_REGISTRATION: granted=true
+      android.permission.CONTROL_LOCATION_UPDATES: granted=true
+      android.permission.CLEAR_APP_USER_DATA: granted=true
+      com.qualcomm.qti.permission.USE_EXT_TELEPHONY_SERVICE: granted=true
+      android.permission.BROADCAST_CALLLOG_INFO: granted=true
+      android.permission.INSTALL_PACKAGES: granted=true
+      android.permission.SHUTDOWN: granted=true
+      android.permission.NFC: granted=true
+      android.permission.BIND_ROTATION_RESOLVER_SERVICE: granted=true
+      android.permission.NETWORK_SETTINGS: granted=true
+      android.permission.CALL_PRIVILEGED: granted=true
+      android.permission.MASTER_CLEAR: granted=true
+      android.permission.FOREGROUND_SERVICE: granted=true
+      android.permission.WRITE_SYNC_SETTINGS: granted=true
+      android.permission.MANAGE_DYNAMIC_SYSTEM: granted=true
+      android.permission.RECEIVE_BOOT_COMPLETED: granted=true
+      android.permission.MANAGE_ROLE_HOLDERS: granted=true
+      android.permission.PEERS_MAC_ADDRESS: granted=true
+      android.permission.DEVICE_POWER: granted=true
+      android.permission.OMADMACCESS: granted=true
+      android.permission.READ_PRINT_SERVICES: granted=true
+      android.permission.MANAGE_PROFILE_AND_DEVICE_OWNERS: granted=true
+      com.abupdate.permission.USE_AIDL: granted=true
+      android.permission.READ_PROFILE: granted=true
+      android.permission.BLUETOOTH: granted=true
+      android.permission.WRITE_MEDIA_STORAGE: granted=true
+      android.permission.WRITE_BLOCKED_NUMBERS: granted=true
+      com.qualcomm.permission.USE_QCRIL_MSG_TUNNEL: granted=true
+      android.permission.ACCESS_SURFACE_FLINGER: granted=true
+      android.permission.INTERNET: granted=true
+      android.permission.TRANSMIT_IR: granted=true
+      android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION: granted=true
+      android.permission.BLUETOOTH_ADMIN: granted=true
+      android.permission.CONTROL_VPN: granted=true
+      android.permission.UPDATE_DEVICE_STATS: granted=true
+      android.permission.MANAGE_FINGERPRINT: granted=true
+      android.permission.READ_PROJECTION_STATE: granted=true
+      android.permission.BIND_CONNECTION_SERVICE: granted=true
+      android.permission.ACCESS_INSTANT_APPS: granted=true
+      android.permission.ACCESS_CONTEXT_HUB: granted=true
+      android.permission.MANAGE_USB: granted=true
+      android.permission.INTERACT_ACROSS_USERS_FULL: granted=true
+      android.permission.STOP_APP_SWITCHES: granted=true
+      android.permission.BATTERY_STATS: granted=true
+      android.permission.PACKAGE_USAGE_STATS: granted=true
+      android.permission.MOUNT_UNMOUNT_FILESYSTEMS: granted=true
+      android.permission.TETHER_PRIVILEGED: granted=true
+      android.permission.WRITE_SECURE_SETTINGS: granted=true
+      com.qualcomm.qti.smq.feedback.providers.write: granted=true
+      android.permission.MANAGE_DEBUGGING: granted=true
+      android.permission.MOVE_PACKAGE: granted=true
+      android.permission.READ_BLOCKED_NUMBERS: granted=true
+      com.qualcomm.permission.wfd.QC_WFD: granted=true
+      android.permission.READ_SEARCH_INDEXABLES: granted=true
+      android.permission.READ_PRIVILEGED_PHONE_STATE: granted=true
+      android.permission.TRIGGER_TIME_ZONE_RULES_CHECK: granted=true
+      android.permission.ACCESS_DOWNLOAD_MANAGER: granted=true
+      android.permission.BLUETOOTH_PRIVILEGED: granted=true
+      android.permission.HARDWARE_TEST: granted=true
+      android.permission.USE_BIOMETRIC_INTERNAL: granted=true
+      android.permission.WRITE_SMS: granted=true
+      android.permission.INSTALL_DYNAMIC_SYSTEM: granted=true
+      android.permission.SUBSTITUTE_NOTIFICATION_APP_NAME: granted=true
+      android.intent.category.MASTER_CLEAR.permission.C2D_MESSAGE: granted=true
+      android.permission.BIND_JOB_SERVICE: granted=true
+      android.permission.CONFIRM_FULL_BACKUP: granted=true
+      android.permission.WRITE_APN_SETTINGS: granted=true
+      android.permission.CHANGE_WIFI_STATE: granted=true
+      android.permission.MANAGE_USERS: granted=true
+      android.permission.ACCESS_NETWORK_STATE: granted=true
+      android.permission.BACKUP: granted=true
+      android.permission.CHANGE_CONFIGURATION: granted=true
+      android.permission.USER_ACTIVITY: granted=true
+      android.permission.LOCAL_MAC_ADDRESS: granted=true
+      android.permission.READ_LOGS: granted=true
+      android.permission.COPY_PROTECTED_DATA: granted=true
+      android.permission.INTERACT_ACROSS_USERS: granted=true
+      android.permission.SET_WALLPAPER: granted=true
+      android.permission.SET_KEYBOARD_LAYOUT: granted=true
+      android.permission.BROADCAST_CLOSE_SYSTEM_DIALOGS: granted=true
+      android.permission.READ_DREAM_STATE: granted=true
+      com.qti.permission.RECEIVE_MSIM_VOICE_CAPABILITY_CHANGED: granted=true
+      android.permission.MANAGE_APP_OPS_RESTRICTIONS: granted=true
+      android.permission.MANAGE_USER_OEM_UNLOCK_STATE: granted=true
+      android.permission.REQUEST_NETWORK_SCORES: granted=true
+      android.permission.CONNECTIVITY_USE_RESTRICTED_NETWORKS: granted=true
+      android.permission.WRITE_USER_DICTIONARY: granted=true
+      android.permission.READ_DREAM_SUPPRESSION: granted=true
+      android.permission.READ_SYNC_STATS: granted=true
+      android.permission.REBOOT: granted=true
+      android.permission.SCHEDULE_EXACT_ALARM: granted=true
+      android.permission.REQUEST_DELETE_PACKAGES: granted=true
+      android.permission.OEM_UNLOCK_STATE: granted=true
+      android.permission.MANAGE_DEVICE_ADMINS: granted=true
+      android.permission.CHANGE_APP_IDLE_STATE: granted=true
+      android.permission.BIND_SETTINGS_SUGGESTIONS_SERVICE: granted=true
+      android.permission.TEST_BLACKLISTED_PASSWORD: granted=true
+      android.permission.MANAGE_NOTIFICATION_LISTENERS: granted=true
+      android.permission.SET_POINTER_SPEED: granted=true
+      android.permission.MANAGE_NOTIFICATIONS: granted=true
+      android.permission.SEND_SHOW_SUSPENDED_APP_DETAILS: granted=true
+      android.permission.READ_SYNC_SETTINGS: granted=true
+      android.permission.BIND_CELL_BROADCAST_SERVICE: granted=true
+      android.permission.LOADER_USAGE_STATS: granted=true
+      android.permission.OVERRIDE_WIFI_CONFIG: granted=true
+      android.permission.FORCE_STOP_PACKAGES: granted=true
+      android.permission.SUGGEST_MANUAL_TIME_AND_ZONE: granted=true
+      android.permission.HIDE_NON_SYSTEM_OVERLAY_WINDOWS: granted=true
+      android.permission.ACCESS_NOTIFICATIONS: granted=true
+      android.permission.HANDLE_CALL_INTENT: granted=true
+      android.permission.MEDIA_RESOURCE_OVERRIDE_PID: granted=true
+      android.permission.VIBRATE: granted=true
+      com.android.certinstaller.INSTALL_AS_USER: granted=true
+      android.permission.MANAGE_APP_HIBERNATION: granted=true
+      android.permission.HANDLE_CAR_MODE_CHANGES: granted=true
+      android.permission.READ_USER_DICTIONARY: granted=true
+      android.permission.MANAGE_SCOPED_ACCESS_DIRECTORY_PERMISSIONS: granted=true
+      android.permission.ACCESS_WIFI_STATE: granted=true
+      com.qualcomm.qti.qdma.permission.QDMA: granted=true
+      android.permission.USE_BIOMETRIC: granted=true
+      android.permission.MANAGE_APP_OPS_MODES: granted=true
+      android.permission.REQUEST_INSTALL_PACKAGES: granted=true
+      android.permission.MODIFY_PHONE_STATE: granted=true
+      android.permission.STATUS_BAR: granted=true
+      android.permission.QUERY_ALL_PACKAGES: granted=true
+      android.permission.READ_DEVICE_CONFIG: granted=true
+      android.permission.LOCATION_HARDWARE: granted=true
+      android.permission.UNLIMITED_TOASTS: granted=true
+      android.permission.WAKE_LOCK: granted=true
+      android.permission.INJECT_EVENTS: granted=true
+      android.permission.BIND_NETWORK_RECOMMENDATION_SERVICE: granted=true
+      android.permission.UPDATE_APP_OPS_STATS: granted=true
+      android.permission.READ_OEM_UNLOCK_STATE: granted=true
+      android.permission.MEDIA_CONTENT_CONTROL: granted=true
+      android.permission.DELETE_PACKAGES: granted=true
+    User 0: 
+      gids=[1065, 3002, 3003, 3001, 3007, 1007]
+      runtime permissions:
+        android.permission.READ_SMS: granted=true, flags=[ SYSTEM_FIXED|GRANTED_BY_DEFAULT|RESTRICTION_SYSTEM_EXEMPT|RESTRICTION_UPGRADE_EXEMPT]
+        android.permission.READ_CALL_LOG: granted=true, flags=[ SYSTEM_FIXED|GRANTED_BY_DEFAULT|RESTRICTION_SYSTEM_EXEMPT|RESTRICTION_UPGRADE_EXEMPT]
+        android.permission.ACCESS_FINE_LOCATION: granted=true, flags=[ SYSTEM_FIXED|GRANTED_BY_DEFAULT|RESTRICTION_SYSTEM_EXEMPT]
+        android.permission.RECEIVE_MMS: granted=true, flags=[ SYSTEM_FIXED|GRANTED_BY_DEFAULT|RESTRICTION_SYSTEM_EXEMPT|RESTRICTION_UPGRADE_EXEMPT]
+        android.permission.RECEIVE_SMS: granted=true, flags=[ SYSTEM_FIXED|GRANTED_BY_DEFAULT|RESTRICTION_SYSTEM_EXEMPT|RESTRICTION_UPGRADE_EXEMPT]
+        android.permission.BLUETOOTH_CONNECT: granted=true, flags=[ SYSTEM_FIXED|GRANTED_BY_DEFAULT|RESTRICTION_SYSTEM_EXEMPT]
+        android.permission.READ_EXTERNAL_STORAGE: granted=true, flags=[ SYSTEM_FIXED|GRANTED_BY_DEFAULT|RESTRICTION_SYSTEM_EXEMPT|RESTRICTION_UPGRADE_EXEMPT]
+        android.permission.ACCESS_COARSE_LOCATION: granted=true, flags=[ SYSTEM_FIXED|GRANTED_BY_DEFAULT|RESTRICTION_SYSTEM_EXEMPT]
+        android.permission.READ_PHONE_STATE: granted=true, flags=[ SYSTEM_FIXED|GRANTED_BY_DEFAULT|RESTRICTION_SYSTEM_EXEMPT]
+        android.permission.SEND_SMS: granted=true, flags=[ SYSTEM_FIXED|GRANTED_BY_DEFAULT|RESTRICTION_SYSTEM_EXEMPT|RESTRICTION_UPGRADE_EXEMPT]
+        android.permission.CALL_PHONE: granted=true, flags=[ SYSTEM_FIXED|GRANTED_BY_DEFAULT|USER_SENSITIVE_WHEN_GRANTED|USER_SENSITIVE_WHEN_DENIED|RESTRICTION_SYSTEM_EXEMPT]
+        android.permission.WRITE_CONTACTS: granted=true, flags=[ SYSTEM_FIXED|GRANTED_BY_DEFAULT|USER_SENSITIVE_WHEN_GRANTED|USER_SENSITIVE_WHEN_DENIED|RESTRICTION_SYSTEM_EXEMPT]
+        android.permission.CAMERA: granted=true, flags=[ SYSTEM_FIXED|GRANTED_BY_DEFAULT|USER_SENSITIVE_WHEN_GRANTED|USER_SENSITIVE_WHEN_DENIED|RESTRICTION_SYSTEM_EXEMPT]
+        android.permission.WRITE_CALL_LOG: granted=true, flags=[ SYSTEM_FIXED|GRANTED_BY_DEFAULT|RESTRICTION_SYSTEM_EXEMPT|RESTRICTION_UPGRADE_EXEMPT]
+        android.permission.BLUETOOTH_ADVERTISE: granted=true, flags=[ SYSTEM_FIXED|GRANTED_BY_DEFAULT|RESTRICTION_SYSTEM_EXEMPT]
+        android.permission.GET_ACCOUNTS: granted=true, flags=[ SYSTEM_FIXED|GRANTED_BY_DEFAULT]
+        android.permission.WRITE_EXTERNAL_STORAGE: granted=true, flags=[ SYSTEM_FIXED|GRANTED_BY_DEFAULT|RESTRICTION_SYSTEM_EXEMPT|RESTRICTION_UPGRADE_EXEMPT]
+        android.permission.RECORD_AUDIO: granted=true, flags=[ SYSTEM_FIXED|GRANTED_BY_DEFAULT|USER_SENSITIVE_WHEN_GRANTED|USER_SENSITIVE_WHEN_DENIED|RESTRICTION_SYSTEM_EXEMPT]
+        android.permission.READ_CONTACTS: granted=true, flags=[ SYSTEM_FIXED|GRANTED_BY_DEFAULT|USER_SENSITIVE_WHEN_GRANTED|USER_SENSITIVE_WHEN_DENIED|RESTRICTION_SYSTEM_EXEMPT]
+        android.permission.ACCESS_BACKGROUND_LOCATION: granted=true, flags=[ SYSTEM_FIXED|GRANTED_BY_DEFAULT|RESTRICTION_SYSTEM_EXEMPT|RESTRICTION_UPGRADE_EXEMPT]
+        android.permission.BLUETOOTH_SCAN: granted=true, flags=[ SYSTEM_FIXED|GRANTED_BY_DEFAULT|RESTRICTION_SYSTEM_EXEMPT]
+        android.permission.ACCESS_MEDIA_LOCATION: granted=true, flags=[ SYSTEM_FIXED|GRANTED_BY_DEFAULT|REVOKE_WHEN_REQUESTED|RESTRICTION_SYSTEM_EXEMPT]
+
+Package Changes:
+  Sequence number=27
+  User 0:
+    seq=0, package=com.android.permissioncontroller
+    seq=1, package=com.android.systemui
+    seq=3, package=com.android.cellbroadcastreceiver.module
+    seq=4, package=com.android.provision
+    seq=5, package=com.android.nfc
+    seq=8, package=com.android.traceur
+    seq=9, package=com.android.calendar
+    seq=10, package=com.android.camera2
+    seq=12, package=com.android.gallery3d
+    seq=13, package=com.android.inputmethod.latin
+    seq=15, package=com.android.stk
+    seq=16, package=com.android.statementservice
+    seq=25, package=com.android.settings
+    seq=26, package=com.reedersystems.commandcomms.sd7
+
+
+Dexopt state:
+  [com.br.smallcd]
+    path: /system/app/smallcd/smallcd.apk
+      arm64: [status=verify] [reason=first-boot]
+
+
+Compiler stats:
+  [com.br.smallcd]
+     smallcd.apk - 263
+Snapshot statistics
+   Unrecorded-hits: 1650  Cork-level: 0
+   Summary stats               TotBlds     TotUsed     TotCork     BigBlds    ShortLvd     TotTime     MaxTime
+          0:11         now           0           0           0           0           0           0           0
+          1:11        0:11           0           0           0           0           0           0           0
+          2:11        1:11           0           0           0           0           0           0           0
+          3:11        2:11           0           0           0           0           0           0           0
+          4:11        3:11           0           0           0           0           0           0           0
+          5:11        4:11           0           0           0           0           0           0           0
+          6:11        5:11           0           0           0           0           0           0           0
+          7:11        6:11           0           0           0           0           0           0           0
+          8:11        7:11           0           0           0           0           0           0           0
+          9:11        8:11           0           0           0           0           0           0           0
+   20585:02:23:10         now         412      240609           0           0          47          84           7
+
+   Build times                  <= 1ms      <= 2ms      <= 5ms     <= 10ms     <= 20ms     <= 50ms    <= 100ms     > 100ms
+          0:11         now           0           0           0           0           0           0           0           0
+          1:11        0:11           0           0           0           0           0           0           0           0
+          2:11        1:11           0           0           0           0           0           0           0           0
+          3:11        2:11           0           0           0           0           0           0           0           0
+          4:11        3:11           0           0           0           0           0           0           0           0
+          5:11        4:11           0           0           0           0           0           0           0           0
+          6:11        5:11           0           0           0           0           0           0           0           0
+          7:11        6:11           0           0           0           0           0           0           0           0
+          8:11        7:11           0           0           0           0           0           0           0           0
+          9:11        8:11           0           0           0           0           0           0           0           0
+   20585:02:23:10         now         408           2           0           2           0           0           0           0
+
+   Use counters                   <= 1        <= 2        <= 5       <= 10       <= 20       <= 50      <= 100       > 100
+          0:11         now           0           0           0           0           0           0           0           0
+          1:11        0:11           0           0           0           0           0           0           0           0
+          2:11        1:11           0           0           0           0           0           0           0           0
+          3:11        2:11           0           0           0           0           0           0           0           0
+          4:11        3:11           0           0           0           0           0           0           0           0
+          5:11        4:11           0           0           0           0           0           0           0           0
+          6:11        5:11           0           0           0           0           0           0           0           0
+          7:11        6:11           0           0           0           0           0           0           0           0
+          8:11        7:11           0           0           0           0           0           0           0           0
+          9:11        8:11           0           0           0           0           0           0           0           0
+   20585:02:23:10         now          18          12          16         165          40          32          27         101

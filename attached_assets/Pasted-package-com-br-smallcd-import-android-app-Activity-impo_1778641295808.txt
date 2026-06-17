@@ -1,0 +1,1593 @@
+package com.br.smallcd;
+
+import android.app.Activity;
+import android.app.AlarmManager;
+import android.app.PendingIntent;
+import android.app.PocManager;
+import android.app.SmallcdManager;
+import android.content.BroadcastReceiver;
+import android.content.ComponentName;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.pm.ActivityInfo;
+import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
+import android.graphics.Rect;
+import android.graphics.SurfaceTexture;
+import android.hardware.Camera;
+import android.media.AudioManager;
+import android.media.MediaPlayer;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
+import android.net.wifi.ScanResult;
+import android.net.wifi.WifiConfiguration;
+import android.net.wifi.WifiManager;
+import android.nfc.NfcAdapter;
+import android.os.Environment;
+import android.os.Handler;
+import android.os.Message;
+import android.os.PowerManager;
+import android.os.SystemClock;
+import android.os.SystemProperties;
+import android.os.UserHandle;
+import android.provider.Settings;
+import android.telephony.TelephonyManager;
+import android.text.TextUtils;
+import android.util.Log;
+import com.br.smallcd.factorymode.TestCaseManager;
+import com.br.smallcd.fota.FotaManager;
+import com.br.smallcd.statusbar.MobileSignalWrapper;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.lang.ref.WeakReference;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Stack;
+
+/* JADX INFO: loaded from: classes.dex */
+public class Controller {
+    public static int MAX_GOTO_MAIN_SCREEN_TIMEOUT = 15000;
+    private final Context mContext;
+    private Stack<_Display> mDisplays;
+    private EsperEventReceiver mEsperEventReceiver;
+    private boolean mIsScreenOff;
+    private boolean mIsSimlocked;
+    String mLastCapturedPicutreFile;
+    private MediaPlayer mMediaPlayer;
+    private PackageInstalledReceiver mPackageInstalledReceiver;
+    private PackageManager mPackageManager;
+    private PowerManager mPowerManager;
+    private PowerManagerScreenStatusReceiver mPowerManagerScreenStatusReceiver;
+    private Preferences mPreferences;
+    private final SmallcdManager mService;
+    private String mSiyataVerType;
+    private String mSlot1MccMnc;
+    private String mSlot2MccMnc;
+    private int mSmallcdServiceAppId;
+    private VolumeChangedReceiver mVolumeChangedReceiver;
+    private OtaNewVersionReceiver otaNewVersionReceiver;
+    private final String SMALL_LCD_DRIVER_FILE_PATH = "/dev/oled_display";
+    private int mScreenTimeoutLast = 30000;
+    private long mLastKeyEvetnTimestamp = 0;
+    private boolean mPauseGotoMainScreen = false;
+    private final Handler mGotoMainScreenHandler = new Handler();
+    private final Runnable mGotoMainScreenRunable = new Runnable() { // from class: com.br.smallcd.Controller.1
+        @Override // java.lang.Runnable
+        public void run() {
+            Log.d("#3 controller", "mGotoMainScreenRunable ");
+            if (Controller.this.mLastKeyEvetnTimestamp > 0) {
+                Controller.this.mLastKeyEvetnTimestamp = 0L;
+                Controller.this.backtoMainScreen();
+            }
+        }
+    };
+    private WifiConfiguration mSavedWCF = null;
+    private int mAutoEanbleWifiCount = -1;
+    public int mLastScreenIndication = 3;
+    private int launchEsperLauncherCount = 2;
+    boolean safeToCapture = true;
+    private boolean switch1 = true;
+    private ConfigFeatures mConfigFeatures = new ConfigFeatures(this);
+    private MobileSignalWrapper mMSW = new MobileSignalWrapper(this);
+    private CellularDataSwitcher mCDS = new CellularDataSwitcher(this);
+    private Handler mHandler = new PolicyHandler(this);
+
+    public boolean canDisplay(int i) {
+        return true;
+    }
+
+    public void test2() {
+    }
+
+    public Controller(Context context) {
+        this.mContext = context;
+        this.mPreferences = new Preferences(context);
+        this.mPowerManager = (PowerManager) context.getSystemService("power");
+        getSiyatVerType();
+        this.mSlot2MccMnc = "";
+        this.mSlot1MccMnc = "";
+        SmallcdManager smallcdManager = (SmallcdManager) context.getSystemService("smallcd");
+        this.mService = smallcdManager;
+        if (smallcdManager != null) {
+            smallcdManager.init(128, 64, "/dev/oled_display");
+            setWrapText(false);
+        }
+        this.mSmallcdServiceAppId = getAppId("com.br.smallcd");
+        this.mDisplays = new Stack<>();
+        this.mPowerManagerScreenStatusReceiver = new PowerManagerScreenStatusReceiver();
+        this.mIsScreenOff = false;
+        reverseDisplay(getPreferences().getBoolean("reverseDisplay", false));
+        createDisplay(0, true);
+        this.mVolumeChangedReceiver = new VolumeChangedReceiver();
+        this.otaNewVersionReceiver = new OtaNewVersionReceiver();
+        this.mPackageInstalledReceiver = new PackageInstalledReceiver();
+        this.mPackageManager = context.getPackageManager();
+        this.mEsperEventReceiver = new EsperEventReceiver();
+        LocationUtils.defaultOpenLocationService(context);
+        ExtEventHandler.checkPocManagerStatus(context);
+        Settings.Global.putInt(context.getContentResolver(), "siyata_covert_mode", 0);
+        init();
+    }
+
+    public Context getContext() {
+        return this.mContext;
+    }
+
+    public synchronized void onKeyEvent(int i) {
+        int size = this.mDisplays.size();
+        if (size <= 0) {
+            return;
+        }
+        if (ignoreKeyEvent(i)) {
+            LogUtil.i("Controller:onKeyEvent", "ignore the key event", new Object[0]);
+            return;
+        }
+        this.mGotoMainScreenHandler.removeCallbacks(this.mGotoMainScreenRunable);
+        if (!this.mPauseGotoMainScreen) {
+            this.mLastKeyEvetnTimestamp = System.currentTimeMillis();
+            this.mGotoMainScreenHandler.postDelayed(this.mGotoMainScreenRunable, MAX_GOTO_MAIN_SCREEN_TIMEOUT);
+        }
+        if (i == 4) {
+            if (size <= 1) {
+            } else {
+                destroyCurrentScreen();
+            }
+        } else if (i == 7) {
+            backtoMainScreen();
+        } else if (i == 5) {
+            createDisplay(7, true);
+        } else {
+            this.mDisplays.peek().onKeyEvent(i);
+        }
+    }
+
+    public void destroyCurrentScreen() {
+        this.mDisplays.pop().onDestroy();
+        _Display _displayPeek = this.mDisplays.peek();
+        _displayPeek.pause(false);
+        _displayPeek.update(true);
+    }
+
+    public void backtoMainScreen() {
+        Stack stack = new Stack();
+        int size = this.mDisplays.size();
+        if (size > 1) {
+            while (size > 1 && this.mDisplays.peek().getId() != 0) {
+                _Display _displayPop = this.mDisplays.pop();
+                if (_displayPop.isForceUserInteract()) {
+                    stack.push(_displayPop);
+                } else {
+                    _displayPop.onDestroy();
+                }
+                size--;
+            }
+            for (int size2 = stack.size(); size2 > 0; size2--) {
+                this.mDisplays.push((_Display) stack.pop());
+            }
+            _Display _displayPeek = this.mDisplays.peek();
+            _displayPeek.pause(false);
+            _displayPeek.update(true);
+            return;
+        }
+        refreshCurrentDisplay(true);
+    }
+
+    public _Display createDisplay(int i, boolean z) {
+        return createDisplay(i, null, null, z);
+    }
+
+    public _Display createDisplay(int i, Object obj, Object obj2, boolean z) {
+        _Display _displayPeek;
+        WifiManager.SoftApCallback _mainscreen = null;
+        if (!canDisplay(i)) {
+            return null;
+        }
+        switch (i) {
+            case 0:
+                _mainscreen = new _MainScreen(this);
+                break;
+            case 1:
+                _mainscreen = new _SettingMenu(this);
+                break;
+            case 2:
+                _mainscreen = new _SettingFlashlight(this);
+                break;
+            case 3:
+                _mainscreen = new _SettingNetwork(this);
+                break;
+            case 4:
+                _mainscreen = new _SettingLocation(this);
+                break;
+            case 5:
+                _mainscreen = new _SettingSystem(this);
+                break;
+            case 6:
+                _mainscreen = new _SettingAbout(this);
+                break;
+            case 7:
+                if (this.mDisplays.peek().getId() != i) {
+                    if (obj == null) {
+                        obj = -1;
+                    }
+                    _mainscreen = new _PowerOptions(this, ((Integer) obj).intValue());
+                }
+                break;
+            case 8:
+                _mainscreen = new _SettingNetworkCellular(this);
+                break;
+            case 9:
+                _mainscreen = new _SettingSystemDeviceName(this);
+                break;
+            case 10:
+                _mainscreen = new _SettingSystemDateTime(this);
+                break;
+            case 11:
+                _mainscreen = new _SettingSystemReverseDisplay(this);
+                break;
+            case 12:
+                _mainscreen = new _SettingSystemResetOptions(this);
+                break;
+            case 13:
+                _mainscreen = new _SettingSystemResetOptionsNetwork(this);
+                break;
+            case 14:
+                _mainscreen = new _SettingSystemResetOptionsAllData(this);
+                break;
+            case 15:
+                _mainscreen = new _Keyboard(this, obj == null ? (byte) 0 : ((Byte) obj).byteValue());
+                break;
+            case 16:
+                _mainscreen = new _SettingNetworkWifi(this);
+                break;
+            case 17:
+                _mainscreen = new _SettingNetworkBluetooth(this);
+                break;
+            case 18:
+                _mainscreen = new _SettingNetworkWifiAvailableNetworks(this);
+                break;
+            case 19:
+                _mainscreen = new _SettingNetworkWifiAvailableNetworksOperation(this, (WifiManager) obj, (ScanResult) obj2);
+                break;
+            case 20:
+                _mainscreen = new _SettingNetworkBtPairedDevices(this);
+                break;
+            case 21:
+                _mainscreen = new _SettingNetworkBtDiscoveryDevice(this);
+                break;
+            case 22:
+                _mainscreen = new _SettingNetworkBluetoothDeviceOperation(this, (String) obj);
+                break;
+            case 23:
+                _mainscreen = new _ShowDeviceName(this);
+                _mainscreen.setTimeout(0);
+                break;
+            case 24:
+                _mainscreen = new _ProcessingDialog(this, (String) obj, (_ProcessingDialogCallback) obj2);
+                break;
+            case 25:
+                if (this.mDisplays.peek().getId() != i) {
+                    removeDisplay(25);
+                    _mainscreen = new _SettingAudio(this, ((Integer) obj).intValue());
+                } else {
+                    this.mDisplays.peek().onMessage(1, obj, 0);
+                }
+                break;
+            case 26:
+                if (this.mDisplays.peek().getId() != i) {
+                    _mainscreen = new _BatteryNotification(this, ((Integer) obj).intValue());
+                }
+                break;
+            case 27:
+                _mainscreen = new _SettingsSupportMenu(this);
+                break;
+            case 28:
+                _mainscreen = new _SettingsSystemKeys(this);
+                break;
+            case 29:
+                _mainscreen = new _SettingsSystemSideKeys(this);
+                break;
+            case 30:
+                _mainscreen = new _SettingsSos(this);
+                break;
+            case 31:
+                _mainscreen = new _SettingsSosNumbers(this);
+                break;
+            case 32:
+                _mainscreen = new _SettingsTopKeysPreference(this);
+                break;
+            case 33:
+                _mainscreen = new _SettingsBottomKeysPreference(this);
+                break;
+            case 34:
+                _mainscreen = new _SettingNotifications(this);
+                break;
+            case 35:
+                _mainscreen = new _FactoryMode(this);
+                break;
+            case 36:
+                if (this.mDisplays.peek().getId() != i) {
+                    _mainscreen = new _FactoryTestCase(this, ((Integer) obj).intValue(), (String) obj2);
+                } else {
+                    this.mDisplays.peek().onMessage(0, Integer.valueOf(((Integer) obj).intValue()), (String) obj2);
+                }
+                break;
+            case 37:
+                _mainscreen = new _ExtSettingsMenu(this, (String) obj, ((Integer) obj2).intValue());
+                break;
+            case 38:
+                removeAllMsg(((Integer) obj2).intValue(), false);
+                _mainscreen = new _ExtDisplayMsg(this, (String) obj);
+                break;
+            case 39:
+                _mainscreen = new _ApiTest(this);
+                break;
+            case 40:
+                _mainscreen = new _FactoryManualMode(this);
+                break;
+            case 41:
+                _mainscreen = new _Toast(this, (String) obj, ((Integer) obj2).intValue());
+                break;
+            case 42:
+                _mainscreen = new _SettingSystemFota(this, obj, obj2, z);
+                break;
+            case 43:
+                _mainscreen = new _SettingNetworkNfc(this);
+                break;
+            case 44:
+                _mainscreen = new _SettingsLanguage(this);
+                break;
+            case 45:
+                _mainscreen = new _SettingSystemFotaNewVersion(this);
+                break;
+            case 46:
+                _mainscreen = new _SettingDiagMenu(this);
+                break;
+            case 47:
+                _mainscreen = new RobustMode(this);
+                break;
+            case 48:
+                if (this.mDisplays.peek().getId() != i) {
+                    _mainscreen = new _MessageNotifyCommon(this, (String) obj, ((Integer) obj2).intValue());
+                } else {
+                    this.mDisplays.peek().onMessage(1, obj, obj2);
+                }
+                break;
+            case 49:
+                _mainscreen = new ApnSimSelectDisplay(this);
+                break;
+            case 50:
+                _mainscreen = new ApnProtocol(this, obj, obj2);
+                break;
+            case 51:
+                _mainscreen = new ApnListDisplay(this, obj, obj2, true);
+                break;
+            case 52:
+                _mainscreen = new ApnEditor(this, obj, obj2, true);
+                break;
+            case 53:
+                _mainscreen = new ApnRadio(this, obj, obj2, true);
+                break;
+            case 54:
+                ConfirmDialgParams confirmDialgParams = (ConfirmDialgParams) obj;
+                if (confirmDialgParams != null) {
+                    _mainscreen = new _ConfirmDialog(this, confirmDialgParams.title, confirmDialgParams.desc, confirmDialgParams.cb);
+                }
+                break;
+            case 55:
+                ConfirmDialgParams confirmDialgParams2 = (ConfirmDialgParams) obj;
+                if (confirmDialgParams2 != null) {
+                    _mainscreen = new _ConfirmNonProgressDialog(this, confirmDialgParams2.title, confirmDialgParams2.desc, confirmDialgParams2.cb);
+                }
+                break;
+            case 56:
+                ConfirmDialgExParams confirmDialgExParams = (ConfirmDialgExParams) obj;
+                if (confirmDialgExParams != null) {
+                    _mainscreen = new _ConfirmNonProgressDialogEx(this, confirmDialgExParams.desc1, confirmDialgExParams.desc2, confirmDialgExParams.questYes, confirmDialgExParams.questNo, confirmDialgExParams.cb);
+                }
+                break;
+            case 57:
+                _mainscreen = new _SettingNetworkHotspot(this);
+                break;
+            case 58:
+                _mainscreen = new _SettingSystemPTTKeyDelay(this);
+                break;
+            case 59:
+                if (this.mDisplays.peek().getId() != i) {
+                    removeDisplay(59);
+                    _mainscreen = new _AdjustMainVolume(this);
+                } else {
+                    this.mDisplays.peek().onMessage(1, null, 0);
+                }
+                break;
+            case 60:
+                _mainscreen = new _SettingSystemVK7Setting(this);
+                break;
+            case 61:
+                _mainscreen = new _SettingCovertMode(this);
+                break;
+            case 62:
+                _mainscreen = new _SettingSystemPTTKeyDelayValues(this);
+                break;
+            case 63:
+                _mainscreen = new _SettingLock(this);
+                break;
+            case 64:
+                if (this.mDisplays.peek().getId() != i) {
+                    removeDisplay(64);
+                    _mainscreen = new _UnlockSIM(this, ((Integer) obj).intValue(), ((Integer) obj2).intValue());
+                }
+                break;
+            case 65:
+                _mainscreen = new _SettingSystemKnob(this);
+                break;
+        }
+        if (_mainscreen != null) {
+            _mainscreen.setId(i);
+            if (z) {
+                if (this.mDisplays.size() > 0 && (_displayPeek = this.mDisplays.peek()) != null) {
+                    if (_displayPeek.getId() == 42) {
+                        destroyCurrentScreen();
+                    } else {
+                        _displayPeek.pause(true);
+                    }
+                }
+                this.mDisplays.push((_Display) _mainscreen);
+                _mainscreen.pause(false);
+                _mainscreen.update(true);
+            }
+        }
+        return _mainscreen;
+    }
+
+    public int getCurrentDisplayId() {
+        return this.mDisplays.peek().getId();
+    }
+
+    public _Display getCurrentDisplay() {
+        if (this.mDisplays.size() <= 0) {
+            return null;
+        }
+        return this.mDisplays.get(r1.size() - 1);
+    }
+
+    public int sendMessageToDisplay(int i, int i2, Object obj, Object obj2) {
+        int size = this.mDisplays.size();
+        int iOnMessage = -1;
+        while (size > 0) {
+            size--;
+            _Display _display = this.mDisplays.get(size);
+            if (_display != null && _display.getId() == i) {
+                iOnMessage = _display.onMessage(i2, obj, obj2);
+            }
+        }
+        return iOnMessage;
+    }
+
+    public void refreshCurrentDisplay(boolean z) {
+        _Display currentDisplay = getCurrentDisplay();
+        if (currentDisplay != null) {
+            currentDisplay.update(z);
+        }
+    }
+
+    public void removeDisplay(int i) {
+        if (i == 0) {
+            return;
+        }
+        Iterator<_Display> it = this.mDisplays.iterator();
+        while (it.hasNext()) {
+            _Display next = it.next();
+            if (next != null && next.getId() == i) {
+                it.remove();
+                next.pause(true);
+                next.onDestroy();
+            }
+        }
+        _Display _displayPeek = this.mDisplays.peek();
+        if (_displayPeek != null) {
+            _displayPeek.pause(false);
+        }
+    }
+
+    public void removeDisplay(_Display _display) {
+        _Display _displayPeek;
+        if (_display == null) {
+            Log.d("#3 controller", "removeDisplay, d is null");
+            return;
+        }
+        boolean z = this.mDisplays.peek() == _display;
+        Iterator<_Display> it = this.mDisplays.iterator();
+        while (true) {
+            if (!it.hasNext()) {
+                break;
+            }
+            _Display next = it.next();
+            if (next != null && next.getId() != 0 && next == _display) {
+                it.remove();
+                next.pause(true);
+                next.onDestroy();
+                break;
+            }
+        }
+        if (!z || (_displayPeek = this.mDisplays.peek()) == null) {
+            return;
+        }
+        _displayPeek.pause(false);
+        _displayPeek.update(true);
+    }
+
+    public void removeAllMsg(int i, boolean z) {
+        Iterator<_Display> it = this.mDisplays.iterator();
+        while (it.hasNext()) {
+            _Display next = it.next();
+            if (next != null && next.getId() == 38) {
+                _ExtDisplayMsg _extdisplaymsg = (_ExtDisplayMsg) next;
+                if (_extdisplaymsg.getAppId() == i && (!_extdisplaymsg.haveMsgId() || z)) {
+                    it.remove();
+                    next.onDestroy();
+                }
+            }
+        }
+        _Display _displayPeek = this.mDisplays.peek();
+        if (_displayPeek != null) {
+            _displayPeek.pause(false);
+        }
+    }
+
+    public Preferences getPreferences() {
+        return this.mPreferences;
+    }
+
+    public void pauseGotoMainScreen(boolean z) {
+        this.mPauseGotoMainScreen = z;
+        this.mLastKeyEvetnTimestamp = 0L;
+    }
+
+    public void userActivity() {
+        PowerManager powerManager = this.mPowerManager;
+        if (powerManager != null) {
+            powerManager.userActivity(SystemClock.uptimeMillis(), false);
+        }
+    }
+
+    class PowerManagerScreenStatusReceiver {
+        private final BroadcastReceiver mReceiver;
+
+        public PowerManagerScreenStatusReceiver() {
+            BroadcastReceiver broadcastReceiver = new BroadcastReceiver() { // from class: com.br.smallcd.Controller.PowerManagerScreenStatusReceiver.1
+                @Override // android.content.BroadcastReceiver
+                public void onReceive(Context context, Intent intent) {
+                    String action = intent.getAction();
+                    LogUtil.i("PowerManagerScreenStatusReceiver:onReceive", "action=" + action, new Object[0]);
+                    if (action.equals("android.intent.action.SCREEN_ON")) {
+                        Controller.this.mIsScreenOff = false;
+                        int batteryLevel = Util.getBatteryLevel(context);
+                        LogUtil.i("PowerManagerScreenStatusReceiver:onReceive", "battery level=" + batteryLevel, new Object[0]);
+                        if (batteryLevel <= 20 && !Util.isNonInterruptDisplay((_Display) Controller.this.mDisplays.peek())) {
+                            Controller.this.createDisplay(26, 0, null, true);
+                        }
+                        if (Controller.this.getCurrentDisplay() != null) {
+                            Controller.this.getCurrentDisplay().pause(false);
+                            Controller.this.getCurrentDisplay().update(false);
+                            return;
+                        }
+                        return;
+                    }
+                    if (action.equals("android.intent.action.SCREEN_OFF")) {
+                        if (!TestCaseManager.getManager().isOnFactoryMode(Controller.this.mDisplays)) {
+                            int id = ((_Display) Controller.this.mDisplays.peek()).getId();
+                            if (id != 15 && id != 38 && id != 45 && id != 48) {
+                                Controller.this.backtoMainScreen();
+                            }
+                            if (Controller.this.getCurrentDisplay() != null) {
+                                Controller.this.getCurrentDisplay().pause(true);
+                            }
+                            int id2 = ((_Display) Controller.this.mDisplays.peek()).getId();
+                            if (id2 == 38 || id2 == 0) {
+                                Controller.this.setOledScreenIndication(id2 == 38 ? 2 : 1);
+                            }
+                            Controller.this.mIsScreenOff = true;
+                            return;
+                        }
+                        LogUtil.i("PowerManagerScreenStatusReceiver:onReceive", "keep the screen on when factory test", new Object[0]);
+                        Controller.this.userActivity();
+                        return;
+                    }
+                    if (action.equals("android.intent.action.USER_PRESENT")) {
+                        return;
+                    }
+                    action.equals("android.os.action.DEVICE_IDLE_MODE_CHANGED");
+                }
+            };
+            this.mReceiver = broadcastReceiver;
+            IntentFilter intentFilter = new IntentFilter();
+            intentFilter.addAction("android.intent.action.SCREEN_ON");
+            intentFilter.addAction("android.intent.action.SCREEN_OFF");
+            intentFilter.addAction("android.intent.action.USER_PRESENT");
+            intentFilter.addAction("android.os.action.DEVICE_IDLE_MODE_CHANGED");
+            Controller.this.mContext.registerReceiver(broadcastReceiver, intentFilter);
+        }
+    }
+
+    class VolumeChangedReceiver {
+        private final BroadcastReceiver mReceiver;
+
+        public VolumeChangedReceiver() {
+            BroadcastReceiver broadcastReceiver = new BroadcastReceiver() { // from class: com.br.smallcd.Controller.VolumeChangedReceiver.1
+                @Override // android.content.BroadcastReceiver
+                public void onReceive(Context context, Intent intent) {
+                    if (context != null && intent != null) {
+                        if (Util.isNonInterruptDisplay((_Display) Controller.this.mDisplays.peek())) {
+                            LogUtil.i("VolumeChangedReceiver:onReceive", "ignore the volume event", new Object[0]);
+                            return;
+                        }
+                        if (!TextUtils.isEmpty(SystemProperties.get("persist.sys.volume.stream", ""))) {
+                            LogUtil.i("VolumeChangedReceiver:onReceive", "ignore the volume event when audio menu display", new Object[0]);
+                            return;
+                        }
+                        if ("com.br.smallcd.ACTION_VOLUME_CHANGE".equals(intent.getAction())) {
+                            int intExtra = intent.getIntExtra("stream", 3);
+                            LogUtil.i("VolumeChangedReceiver:onReceive", "stream=" + intExtra, new Object[0]);
+                            if (Controller.this.getCovertModeStatus() <= 0) {
+                                Controller.this.createDisplay(59, Integer.valueOf(intExtra), null, true);
+                                return;
+                            } else {
+                                Log.d("#3 controller", "the devcie is in covert mode, skip volume screen");
+                                return;
+                            }
+                        }
+                        return;
+                    }
+                    LogUtil.e("AudioReceiver:onReceive", "this input context or the intent is null", new Object[0]);
+                }
+            };
+            this.mReceiver = broadcastReceiver;
+            IntentFilter intentFilter = new IntentFilter();
+            intentFilter.addAction("com.br.smallcd.ACTION_VOLUME_CHANGE");
+            Controller.this.mContext.registerReceiver(broadcastReceiver, intentFilter);
+        }
+    }
+
+    class OtaNewVersionReceiver {
+        private final BroadcastReceiver otaReceiver;
+
+        public OtaNewVersionReceiver() {
+            BroadcastReceiver broadcastReceiver = new BroadcastReceiver() { // from class: com.br.smallcd.Controller.OtaNewVersionReceiver.1
+                @Override // android.content.BroadcastReceiver
+                public void onReceive(Context context, Intent intent) {
+                    if (context == null || intent == null) {
+                        LogUtil.e("OtaNewVersionReceiver:onReceive", "this input context or the intent is null", new Object[0]);
+                        return;
+                    }
+                    String action = intent.getAction();
+                    LogUtil.i("OtaNewVersionReceiver:onReceive", "action=" + action, new Object[0]);
+                    if ("com.abupdate.fota_demo_iot.ACTION_NEW_VERSION".equals(action)) {
+                        _Display _display = (_Display) Controller.this.mDisplays.peek();
+                        if ((_display != null && _display.getId() == 45) || _display.getId() == 42) {
+                            LogUtil.i("OtaNewVersionReceiver:onReceive", "will not create multi fota version display", new Object[0]);
+                        } else {
+                            if (FotaManager.getManager().checkNewVersionAfterBootCompleted()) {
+                                return;
+                            }
+                            Controller.this.createDisplay(45, true);
+                        }
+                    }
+                }
+            };
+            this.otaReceiver = broadcastReceiver;
+            IntentFilter intentFilter = new IntentFilter();
+            intentFilter.addAction("com.abupdate.fota_demo_iot.ACTION_NEW_VERSION");
+            Controller.this.mContext.registerReceiver(broadcastReceiver, intentFilter);
+            LogUtil.i("OtaNewVersionReceiver", "register the ota new version receiver", new Object[0]);
+        }
+    }
+
+    private class PackageInstalledReceiver {
+        private final BroadcastReceiver mReceiver;
+
+        public PackageInstalledReceiver() {
+            BroadcastReceiver broadcastReceiver = new BroadcastReceiver() { // from class: com.br.smallcd.Controller.PackageInstalledReceiver.1
+                @Override // android.content.BroadcastReceiver
+                public void onReceive(Context context, Intent intent) {
+                    if (context == null || intent == null) {
+                        LogUtil.e("PackageInstalledReceiver", "Input context or intent is null", new Object[0]);
+                        return;
+                    }
+                    if ("android.intent.action.PACKAGE_REMOVED".equals(intent.getAction())) {
+                        String string = intent.getData().toString();
+                        Log.d("PackageInstalledReceiver", "Package removed: " + string);
+                        Controller.this.onAppRemoved(string.substring(8));
+                        return;
+                    }
+                    "android.intent.action.PACKAGE_ADDED".equals(intent.getAction());
+                }
+            };
+            this.mReceiver = broadcastReceiver;
+            IntentFilter intentFilter = new IntentFilter();
+            intentFilter.addAction("android.intent.action.PACKAGE_ADDED");
+            intentFilter.addAction("android.intent.action.PACKAGE_REMOVED");
+            intentFilter.addDataScheme("package");
+            Controller.this.mContext.registerReceiver(broadcastReceiver, intentFilter);
+        }
+    }
+
+    public void onAppRemoved(String str) {
+        Log.d("#3 controller", "handle app removed: " + str);
+        PocManager pocManager = (PocManager) this.mContext.getSystemService("poc");
+        if (pocManager == null) {
+            Log.d("#3 controller", "Error, can't find poc service!");
+            return;
+        }
+        int iSmallcdExtGetAppId = pocManager.smallcdExtGetAppId(str, false);
+        if (-1 == iSmallcdExtGetAppId) {
+            if (!isKodiakApp(str)) {
+                Log.d("#3 controller", str + " didn't register ext api.");
+                return;
+            }
+            iSmallcdExtGetAppId = ExtEventHandler.getDefaultAppId();
+        }
+        Log.d("#3 controller", "ext appid:" + iSmallcdExtGetAppId);
+        ExtEventHandler.updateSettingsMenuList(this, false, iSmallcdExtGetAppId, null);
+        Stack stack = new Stack();
+        int size = this.mDisplays.size();
+        if (size > 1) {
+            boolean z = false;
+            while (size > 1 && this.mDisplays.peek().getId() != 0) {
+                _Display _displayPop = this.mDisplays.pop();
+                if (_displayPop.getId() == 38 && ((_ExtDisplayMsg) _displayPop).getAppId() == iSmallcdExtGetAppId) {
+                    _displayPop.onDestroy();
+                    Log.d("#3 controller", "remove its ext messages.");
+                    z = true;
+                } else {
+                    stack.push(_displayPop);
+                }
+                size--;
+            }
+            for (int size2 = stack.size(); size2 > 0; size2--) {
+                this.mDisplays.push((_Display) stack.pop());
+            }
+            if (z) {
+                _Display _displayPeek = this.mDisplays.peek();
+                _displayPeek.pause(false);
+                _displayPeek.update(true);
+            }
+        }
+    }
+
+    boolean isKodiakApp(String str) {
+        return "com.kpn.pushtotalkapp com.waveisrael.ptt com.bell.ptt com.att.eptt com.kodiak.poc com.motorolasolutions.waveptt com.verizon.pushtotalkplus com.slacorp.eptt.android.lite com.motorolasolutions.waveoncloudptt com.motorolasolutions.waveoncloudEMEA com.tassta.flex com.goptt.ptt com.sprint.sdcplus com.telstrabusinessandenterprise.pushtotalk_02 com.slacorp.eptt.android com.slacorp.eptt.sd7 com.telstrabusinessandenterprise.modelptt_02 com.kpn.kpnptt com.motorolasolutions.sfrdefaultmcptt com.motorolasolutions.sfrmcptt ".indexOf(str) != -1;
+    }
+
+    public void onUserCancelEsperProvisionScreen() {
+        EsperEventReceiver esperEventReceiver = this.mEsperEventReceiver;
+        if (esperEventReceiver != null) {
+            esperEventReceiver.onUserCancelEsperProvisionScreen();
+        }
+    }
+
+    private class EsperEventReceiver {
+        private final BroadcastReceiver mReceiver;
+        private long mTimeMillisShowProvisionState = 0;
+
+        public void onUserCancelEsperProvisionScreen() {
+            this.mTimeMillisShowProvisionState = System.currentTimeMillis() + 30000;
+        }
+
+        public EsperEventReceiver() {
+            BroadcastReceiver broadcastReceiver = new BroadcastReceiver() { // from class: com.br.smallcd.Controller.EsperEventReceiver.1
+                /* JADX WARN: Removed duplicated region for block: B:33:0x0090  */
+                /* JADX WARN: Removed duplicated region for block: B:36:0x00a2  */
+                /* JADX WARN: Removed duplicated region for block: B:42:0x00cb  */
+                /* JADX WARN: Removed duplicated region for block: B:48:0x00e3  */
+                /* JADX WARN: Removed duplicated region for block: B:50:0x00e6  */
+                /* JADX WARN: Removed duplicated region for block: B:52:0x00f5  */
+                /* JADX WARN: Removed duplicated region for block: B:61:? A[RETURN, SYNTHETIC] */
+                @Override // android.content.BroadcastReceiver
+                /*
+                    Code decompiled incorrectly, please refer to instructions dump.
+                    To view partially-correct code enable 'Show inconsistent code' option in preferences
+                */
+                public void onReceive(android.content.Context r12, android.content.Intent r13) {
+                    /*
+                        Method dump skipped, instruction units count: 263
+                        To view this dump change 'Code comments level' option to 'DEBUG'
+                    */
+                    throw new UnsupportedOperationException("Method not decompiled: com.br.smallcd.Controller.EsperEventReceiver.AnonymousClass1.onReceive(android.content.Context, android.content.Intent):void");
+                }
+            };
+            this.mReceiver = broadcastReceiver;
+            if (Controller.isForPCBA()) {
+                return;
+            }
+            IntentFilter intentFilter = new IntentFilter();
+            intentFilter.addAction("esper.action.provisioning_state_changed");
+            Controller.this.mContext.registerReceiver(broadcastReceiver, intentFilter);
+        }
+    }
+
+    /* JADX WARN: Removed duplicated region for block: B:7:0x002c  */
+    /*
+        Code decompiled incorrectly, please refer to instructions dump.
+        To view partially-correct code enable 'Show inconsistent code' option in preferences
+    */
+    public boolean takeScreenshot() {
+        /*
+            r6 = this;
+            byte[] r0 = r6.getCanvas()
+            r1 = 0
+            if (r0 == 0) goto L2c
+            r2 = 16384(0x4000, float:2.2959E-41)
+            java.nio.ByteBuffer r2 = java.nio.ByteBuffer.allocate(r2)
+            r3 = 1024(0x400, float:1.435E-42)
+            byte[] r4 = r2.array()
+            r5 = 4
+            com.br.smallcd.Util.convert1BitTo2Bytes(r0, r5, r3, r4)
+            r0 = 128(0x80, float:1.8E-43)
+            r3 = 64
+            android.graphics.Bitmap$Config r4 = android.graphics.Bitmap.Config.RGB_565
+            android.graphics.Bitmap r0 = android.graphics.Bitmap.createBitmap(r0, r3, r4)
+            if (r0 == 0) goto L2c
+            r0.copyPixelsFromBuffer(r2)
+            r2 = 0
+            boolean r0 = com.br.smallcd.Util.storeBitmapToFile(r0, r2)
+            goto L2d
+        L2c:
+            r0 = r1
+        L2d:
+            java.lang.StringBuilder r2 = new java.lang.StringBuilder
+            r2.<init>()
+            java.lang.String r3 = "take screenshot"
+            r2.append(r3)
+            if (r0 == 0) goto L3c
+            java.lang.String r3 = "success."
+            goto L3e
+        L3c:
+            java.lang.String r3 = "failed!"
+        L3e:
+            r2.append(r3)
+            java.lang.String r2 = r2.toString()
+            java.lang.String r3 = "#3 controller"
+            android.util.Log.d(r3, r2)
+            if (r0 == 0) goto L81
+            android.media.MediaPlayer r2 = r6.mMediaPlayer     // Catch: java.lang.Exception -> L7d
+            if (r2 == 0) goto L60
+            boolean r2 = r2.isPlaying()     // Catch: java.lang.Exception -> L7d
+            if (r2 == 0) goto L5b
+            android.media.MediaPlayer r2 = r6.mMediaPlayer     // Catch: java.lang.Exception -> L7d
+            r2.stop()     // Catch: java.lang.Exception -> L7d
+        L5b:
+            android.media.MediaPlayer r2 = r6.mMediaPlayer     // Catch: java.lang.Exception -> L7d
+            r2.release()     // Catch: java.lang.Exception -> L7d
+        L60:
+            android.content.Context r2 = r6.getContext()     // Catch: java.lang.Exception -> L7d
+            r3 = 2131427332(0x7f0b0004, float:1.8476277E38)
+            android.media.MediaPlayer r2 = android.media.MediaPlayer.create(r2, r3)     // Catch: java.lang.Exception -> L7d
+            r6.mMediaPlayer = r2     // Catch: java.lang.Exception -> L7d
+            if (r2 == 0) goto L81
+            com.br.smallcd.Controller$2 r3 = new com.br.smallcd.Controller$2     // Catch: java.lang.Exception -> L7d
+            r3.<init>()     // Catch: java.lang.Exception -> L7d
+            r2.setOnCompletionListener(r3)     // Catch: java.lang.Exception -> L7d
+            android.media.MediaPlayer r2 = r6.mMediaPlayer     // Catch: java.lang.Exception -> L7d
+            r2.start()     // Catch: java.lang.Exception -> L7d
+            goto L81
+        L7d:
+            r2 = move-exception
+            r2.printStackTrace()
+        L81:
+            r2 = 41
+            if (r0 == 0) goto L89
+            r3 = 2131492988(0x7f0c007c, float:1.8609443E38)
+            goto L8c
+        L89:
+            r3 = 2131492987(0x7f0c007b, float:1.8609441E38)
+        L8c:
+            java.lang.String r3 = r6.getResString(r3)
+            java.lang.Integer r1 = java.lang.Integer.valueOf(r1)
+            r4 = 1
+            com.br.smallcd._Display r6 = r6.createDisplay(r2, r3, r1, r4)
+            com.br.smallcd._Toast r6 = (com.br.smallcd._Toast) r6
+            return r0
+        */
+        throw new UnsupportedOperationException("Method not decompiled: com.br.smallcd.Controller.takeScreenshot():boolean");
+    }
+
+    public void adjustVolume(boolean z) {
+        AudioManager audioManager = (AudioManager) getContext().getSystemService("audio");
+        try {
+            audioManager.disableSafeMediaVolume();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        audioManager.adjustStreamVolume(0, z ? 1 : -1, 5);
+    }
+
+    public boolean nfcWifiSetup(final WifiConfiguration wifiConfiguration) {
+        return (wifiConfiguration == null || createDisplay(56, new ConfirmDialgExParams(getResString(R.string.foundNetwork), wifiConfiguration.SSID, getResString(R.string.clickToConnect), getResString(R.string.clickToCancel), new _ConfirmDialogCallback() { // from class: com.br.smallcd.Controller.3
+            @Override // com.br.smallcd._ConfirmDialogCallback
+            public void onConfirmDialogResult(boolean z) {
+                Controller.this.onKeyEvent(4);
+                if (z) {
+                    Controller.this.mAutoEanbleWifiCount = 1;
+                    Controller.this._nfcWifiSetup_DoConnect(wifiConfiguration);
+                }
+            }
+        }), null, true) == null) ? false : true;
+    }
+
+    /* JADX INFO: Access modifiers changed from: private */
+    public boolean _nfcWifiSetup_DoConnect(WifiConfiguration wifiConfiguration) {
+        WifiManager wifiManager = (WifiManager) this.mContext.getApplicationContext().getSystemService("wifi");
+        int i = this.mAutoEanbleWifiCount - 1;
+        this.mAutoEanbleWifiCount = i;
+        if (i >= 0 && !wifiManager.isWifiEnabled()) {
+            wifiManager.setWifiEnabled(true);
+            if (wifiConfiguration != null) {
+                this.mSavedWCF = wifiConfiguration;
+            }
+            sendHandler1Msg(6, 1000);
+            return true;
+        }
+        if (wifiConfiguration == null) {
+            wifiConfiguration = this.mSavedWCF;
+        }
+        int iAddNetwork = wifiManager.addNetwork(wifiConfiguration);
+        Log.d("#3 controller", "_nfcWifiSetup_DoConnect networkId " + iAddNetwork);
+        int i2 = R.string.connectToNetworkFail;
+        if (iAddNetwork < 0) {
+            createDisplay(41, getResString(R.string.connectToNetworkFail), 2000, true);
+            return false;
+        }
+        wifiManager.disconnect();
+        boolean zEnableNetwork = wifiManager.enableNetwork(iAddNetwork, true);
+        wifiManager.reconnect();
+        if (zEnableNetwork) {
+            i2 = R.string.connectToNetworkSuccess;
+        }
+        createDisplay(41, getResString(i2), 2000, true);
+        return true;
+    }
+
+    public static boolean isForPCBA() {
+        String str = SystemProperties.get("ro.pcba", "");
+        Log.d("#33", "isPCBA " + str);
+        return str.equals("1");
+    }
+
+    public boolean isConnectedToNetwork() {
+        NetworkInfo activeNetworkInfo = ((ConnectivityManager) this.mContext.getSystemService("connectivity")).getActiveNetworkInfo();
+        return activeNetworkInfo != null && activeNetworkInfo.isConnectedOrConnecting();
+    }
+
+    int getAppId(String str) {
+        return this.mService.getAppId(str);
+    }
+
+    public byte[] getCanvas() {
+        return this.mService.getCanvas(this.mSmallcdServiceAppId);
+    }
+
+    public int fillRect(int i, int i2, int i3, int i4, int i5) {
+        return this.mService.fillRect(this.mSmallcdServiceAppId, i, i2, i3, i4, i5);
+    }
+
+    public int drawText(String str, int i, int i2, int i3, int i4, int i5, int i6, int i7) {
+        if (i < 0) {
+            return this.mService.drawText(this.mSmallcdServiceAppId, str, 0, i2, i3, i4, i5, i6, i7);
+        }
+        return this.mService.drawText(this.mSmallcdServiceAppId, str, i, i2, i3, i4, i5, i6, i7);
+    }
+
+    public int drawText2(String str, int i, int i2, int i3) {
+        return this.mService.drawText2(this.mSmallcdServiceAppId, str, i, i2, i3);
+    }
+
+    public int drawText3(String str, int i, int i2, int i3) {
+        return drawText(str, i, i2, 0, 1, 0, i3, i3);
+    }
+
+    public int[] getTextBounds(String str, int i) {
+        return this.mService.getTextBounds(str, i);
+    }
+
+    public int[] getTextBounds(String str, boolean z, int i) {
+        return this.mService.getUnifontTextBounds(str, z, i);
+    }
+
+    public int getTextWidth(String str, boolean z, int i) {
+        int[] unifontTextBounds = this.mService.getUnifontTextBounds(str, z, i);
+        int i2 = unifontTextBounds[2] - unifontTextBounds[0];
+        if (i2 > 0) {
+            return i2;
+        }
+        return 0;
+    }
+
+    public Rect getTextRect(String str, boolean z, int i) {
+        int[] unifontTextBounds = this.mService.getUnifontTextBounds(str, z, i);
+        return new Rect(unifontTextBounds[0], unifontTextBounds[1], unifontTextBounds[2], unifontTextBounds[3]);
+    }
+
+    public void setWrapText(boolean z) {
+        this.mService.setWrapText(z);
+    }
+
+    public int drawBitmap(int i, int i2, byte[] bArr, int i3, int i4) {
+        return this.mService.drawBitmap(this.mSmallcdServiceAppId, i, i2, bArr, i3, i4);
+    }
+
+    public int refresh(byte[] bArr, int i) {
+        return this.mService.refresh(this.mSmallcdServiceAppId, bArr, i);
+    }
+
+    public int reverseDisplay(boolean z) {
+        return this.mService.reverseDisplay(z);
+    }
+
+    int rebootDevice() {
+        return RebootOrShutdownDevice(false);
+    }
+
+    int poweroffDevice() {
+        return RebootOrShutdownDevice(true);
+    }
+
+    int RebootOrShutdownDevice(final boolean z) {
+        this.mHandler.post(new Runnable() { // from class: com.br.smallcd.Controller.4
+            @Override // java.lang.Runnable
+            public void run() {
+                Intent intent = new Intent(z ? "com.android.internal.intent.action.REQUEST_SHUTDOWN" : "android.intent.action.REBOOT");
+                intent.putExtra("android.intent.extra.KEY_CONFIRM", false);
+                intent.putExtra("android.intent.extra.REASON", "userrequested");
+                intent.setFlags(268435456);
+                Controller.this.mContext.startActivityAsUser(intent, UserHandle.CURRENT);
+            }
+        });
+        return 0;
+    }
+
+    void covertMode(int i) {
+        this.mService.covertMode(i);
+    }
+
+    int getCovertModeStatus() {
+        return this.mService.getCovertModeStatus();
+    }
+
+    private boolean ignoreKeyEvent(int i) {
+        _Display currentDisplay = getCurrentDisplay();
+        boolean z = currentDisplay != null && currentDisplay.getId() == 26;
+        if (!this.mIsScreenOff || (i != 6 && z)) {
+            return false;
+        }
+        this.mIsScreenOff = false;
+        return true;
+    }
+
+    String getResString(int i) {
+        if (i <= 0) {
+            return "";
+        }
+        try {
+            return getContext().getResources().getString(i);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "";
+        }
+    }
+
+    public void schedulePowerOffDevice(boolean z) {
+        Log.d("#3 controller", "#3 schedulePowerOffDevice");
+        Context context = getContext();
+        AlarmManager alarmManager = (AlarmManager) context.getSystemService("alarm");
+        Intent intent = new Intent(context, (Class<?>) GenernalBroadcastReceiver.class);
+        intent.setAction("com.br.intent.action.AUTO_POWER_OFF_DEVICE");
+        PendingIntent broadcast = PendingIntent.getBroadcast(context, 0, intent, 0);
+        alarmManager.cancel(broadcast);
+        if (z && getPreferences().getBoolean("vk7setting_auto_power_off", false)) {
+            alarmManager.set(2, SystemClock.elapsedRealtime() + ((long) (_SettingSystemVK7Setting.checkTimerRange(getPreferences().getInt("vk7setting_auto_power_off_timer", 90)) * 60 * 1000)), broadcast);
+        }
+    }
+
+    public void keepScreenAlwaysOn(boolean z) {
+        int i = Settings.System.getInt(getContext().getContentResolver(), "screen_off_timeout", 30000);
+        if (z) {
+            this.mScreenTimeoutLast = i;
+            if (i != Integer.MAX_VALUE) {
+                Settings.System.putInt(getContext().getContentResolver(), "screen_off_timeout", Integer.MAX_VALUE);
+                return;
+            }
+            return;
+        }
+        if (this.mScreenTimeoutLast == Integer.MAX_VALUE) {
+            this.mScreenTimeoutLast = 30000;
+        }
+        if (i != this.mScreenTimeoutLast) {
+            Settings.System.putInt(getContext().getContentResolver(), "screen_off_timeout", this.mScreenTimeoutLast);
+        }
+    }
+
+    public void onSimReady() {
+        TelephonyManager telephonyManager = (TelephonyManager) this.mContext.getSystemService("phone");
+        for (int i = 0; i < 2; i++) {
+            int simState = telephonyManager.getSimState(i);
+            int subIdForSlot = TelephonyManagerCompat.getSubIdForSlot(this.mContext, i);
+            if (simState == 5 && subIdForSlot != -1) {
+                String simSerialNumber = telephonyManager.getSimSerialNumber(subIdForSlot);
+                String subInfoMccmnc = TelephonyManagerCompat.getSubInfoMccmnc(this.mContext, i);
+                Log.d("onSimReady", "slot:" + i + ", mccmnc:" + subInfoMccmnc + ", iccid:" + simSerialNumber);
+                if (i == 0) {
+                    this.mSlot1MccMnc = subInfoMccmnc;
+                } else if (i == 1) {
+                    this.mSlot2MccMnc = subInfoMccmnc;
+                }
+                if (TextUtils.equals(subInfoMccmnc, "311580") || TextUtils.equals(subInfoMccmnc, "311588") || TextUtils.equals(subInfoMccmnc, "311589") || TextUtils.equals(subInfoMccmnc, "23820") || "732123;234104;23410;310840;27006;52505;29505;41677;72418;24007;26001;45400;52501;334020;71204;".contains(subInfoMccmnc)) {
+                    enableDataRoaming();
+                }
+                if ((TextUtils.equals(subInfoMccmnc, "20408") || TextUtils.equals(subInfoMccmnc, "20469")) && !getPreferences().getBoolean("otf_kpnsim_turn_off_nfc", false)) {
+                    getPreferences().putBoolean("otf_kpnsim_turn_off_nfc", true);
+                    enableNFC(false);
+                }
+            }
+        }
+    }
+
+    public void enableDataRoaming() {
+        if (TelephonyManagerCompat.isDataRoamingEnabled(this.mContext)) {
+            return;
+        }
+        Log.d("#3 controller", "enabling data roaming");
+        TelephonyManagerCompat.setDataRoamingEnabled(this.mContext, true);
+    }
+
+    public void enableNFC(boolean z) {
+        Log.d("#3 controller", "enableNFC: " + z);
+        NfcAdapter defaultAdapter = NfcAdapter.getDefaultAdapter(this.mContext);
+        if (defaultAdapter != null) {
+            try {
+                if (z) {
+                    defaultAdapter.enable();
+                } else {
+                    defaultAdapter.disable();
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public void fotaPreprocess(Context context) {
+        String str = SystemProperties.get("ro.fota.version", "unknown");
+        Log.d("fotaPreprocess", "current version:" + str + ", save version info:" + Settings.Global.putString(context.getContentResolver(), "fotaprepost_previous_fota_vesion", str));
+    }
+
+    public void fotaPostProcess(Context context) {
+        if (context == null) {
+            Log.d("fotaPostProcess", "context is null");
+            return;
+        }
+        String string = Settings.Global.getString(context.getContentResolver(), "fotaprepost_previous_fota_vesion");
+        Log.d("fotaPostProcess", "fota version=" + string);
+        if (string == null) {
+            Log.d("fotaPostProcess", "the saved fota version is null");
+            return;
+        }
+        if (_SettingSystemDeviceName.getSettingsGlobalDeviceName(context).equals("toronto_sd7")) {
+            _SettingSystemDeviceName.setSettingsGlobalDeviceName(context, "Siyata SD7");
+        }
+        if (getPreferences().getBoolean("otf_enabled_wifi_ble_scan_for_location", false)) {
+            return;
+        }
+        getPreferences().putBoolean("otf_enabled_wifi_ble_scan_for_location", true);
+        Settings.Global.putInt(this.mContext.getContentResolver(), "wifi_scan_always_enabled", 1);
+        Settings.Global.putInt(this.mContext.getContentResolver(), "ble_scan_always_enabled", 1);
+    }
+
+    private void init() {
+        if (-12345 == getPreferences().getInt("PTTKeyDelay", -12345)) {
+            getPreferences().putBoolean("EnablePTTKeyDelay", true);
+            _SettingSystemPTTKeyDelay.changeDelayValue(this, 100);
+        }
+        this.mConfigFeatures.readConfig(null);
+        _SettingSystemKnob.getKnobLongClickOpt(this, true);
+    }
+
+    public void setOledScreenIndication(int i) {
+        if (i < 0 || i >= 3) {
+            Log.d("#3 controller", "Error: invalid screen value!" + i);
+            return;
+        }
+        if (this.mLastScreenIndication != i) {
+            Log.d("#3 controller", "current screen: " + i);
+            this.mLastScreenIndication = i;
+            Settings.Global.putInt(this.mContext.getContentResolver(), "oledscreen_status_indication", i);
+            if (1 == this.mLastScreenIndication) {
+                sendHandler1Msg(8, getPreferences().getInt("mininum_main_screen_show", 5000));
+            }
+        }
+    }
+
+    public String getCurrentLauncherPackageName() {
+        PackageManager packageManager = this.mContext.getPackageManager();
+        Intent intent = new Intent("android.intent.action.MAIN");
+        intent.addCategory("android.intent.category.HOME");
+        String str = packageManager.resolveActivity(intent, 65536).activityInfo.packageName;
+        Log.e("#3 controller", "1 Current launcher Package Name:" + str);
+        return str;
+    }
+
+    public void checkEsperTemplateAvailable() {
+        if (!isPackageInstalled("io.shoonya.shoonyadpc")) {
+            Log.d("#3 controller", "Esper is not installed.");
+            return;
+        }
+        Log.d("#3 controller", "4 Starting Esper launcher to check whether a template is available.");
+        Intent intent = new Intent();
+        intent.setComponent(new ComponentName("io.shoonya.shoonyadpc", "com.shoonyaos.shoonyadpc.activities.Dashboard"));
+        intent.setFlags(268435456);
+        this.mContext.startActivity(intent);
+        int i = this.launchEsperLauncherCount;
+        this.launchEsperLauncherCount = i - 1;
+        if (i > 0) {
+            Log.d("#3 controller", "launchEsperLauncherCount: " + this.launchEsperLauncherCount);
+            scheduleAlarm(2, null, null, 120000);
+        }
+    }
+
+    /* JADX INFO: Access modifiers changed from: private */
+    public void setDefaultLauncher(String str) {
+        LogUtil.i("#3 controller", "setDefaultLauncher to " + str, new Object[0]);
+        Intent intent = new Intent("android.intent.action.MAIN");
+        intent.addCategory("android.intent.category.HOME");
+        List<ResolveInfo> listQueryIntentActivities = this.mContext.getPackageManager().queryIntentActivities(intent, 128);
+        if (listQueryIntentActivities == null) {
+            LogUtil.i("#3 controller", "setDefaultLauncher list is null.", new Object[0]);
+            return;
+        }
+        ComponentName[] componentNameArr = new ComponentName[listQueryIntentActivities.size()];
+        for (int i = 0; i < listQueryIntentActivities.size(); i++) {
+            ActivityInfo activityInfo = listQueryIntentActivities.get(i).activityInfo;
+            LogUtil.i("#3 controller", "info.name = " + activityInfo.name + " info.packageName = " + activityInfo.packageName, new Object[0]);
+            componentNameArr[i] = new ComponentName(activityInfo.packageName, activityInfo.name);
+        }
+        ComponentName componentName = null;
+        int i2 = 0;
+        while (true) {
+            if (i2 >= listQueryIntentActivities.size()) {
+                break;
+            }
+            ActivityInfo activityInfo2 = listQueryIntentActivities.get(i2).activityInfo;
+            if (str.equals(activityInfo2.packageName)) {
+                componentName = new ComponentName(activityInfo2.packageName, activityInfo2.name);
+                break;
+            }
+            i2++;
+        }
+        if (componentName == null) {
+            LogUtil.i("#3 controller", "setDefaultLauncher, newHome is null!", new Object[0]);
+            return;
+        }
+        IntentFilter intentFilter = new IntentFilter("android.intent.action.MAIN");
+        intentFilter.addCategory("android.intent.category.HOME");
+        intentFilter.addCategory("android.intent.category.DEFAULT");
+        this.mContext.getPackageManager().replacePreferredActivity(intentFilter, 1048576, componentNameArr, componentName);
+        Context context = getContext();
+        Intent intent2 = new Intent("android.intent.action.MAIN");
+        intent2.addCategory("android.intent.category.HOME");
+        intent2.setFlags(268435456);
+        context.startActivity(intent2);
+        LogUtil.i("#3 controller", "setDefaultLauncher, done", new Object[0]);
+    }
+
+    public void launchEsperLauncherOnce() {
+        if (getCurrentLauncherPackageName().equals("io.shoonya.shoonyadpc")) {
+            Log.d("#3 controller", "2 Esper launcher is the default launcher.");
+        } else {
+            checkEsperTemplateAvailable();
+        }
+    }
+
+    public void setLauncherAfterBootCompleted() {
+        String currentLauncherPackageName = getCurrentLauncherPackageName();
+        if (currentLauncherPackageName.equals("io.shoonya.shoonyadpc")) {
+            Log.d("#3 controller", "2 Esper launcher is the default launcher.");
+        } else if (!currentLauncherPackageName.equals("com.android.launcher3")) {
+            Log.d("#3 controller", "3.1 will try again after a few seconds later");
+            scheduleAlarm(1, null, null, 50000);
+        } else {
+            checkEsperTemplateAvailable();
+        }
+    }
+
+    public void onBootCompleted() {
+        printFirmwareInfo();
+        setLauncherAfterBootCompleted();
+        sendHandler1Msg(5, 20000);
+        FotaManager.getManager();
+        pauseGotoMainScreen(true);
+    }
+
+    private static class PolicyHandler extends Handler {
+        private final WeakReference<Controller> mCtrlRef;
+
+        PolicyHandler(Controller controller) {
+            this.mCtrlRef = new WeakReference<>(controller);
+        }
+
+        @Override // android.os.Handler
+        public void handleMessage(Message message) {
+            Controller controller = this.mCtrlRef.get();
+            if (controller == null) {
+            }
+            Log.d("#3 controller", "PolicyHandler handleMessage: " + message.what);
+            switch (message.what) {
+                case 3:
+                    controller.setHandler1MsgAskToChangeSettingCode();
+                    break;
+                case 4:
+                    controller.getCellularDataSwitcher().checkDataSlot(false, 0);
+                    break;
+                case 5:
+                    FotaManager.getManager().setFotaSDKReady(true);
+                    break;
+                case 6:
+                    controller._nfcWifiSetup_DoConnect(null);
+                    break;
+                case 7:
+                    new EsperDeviceId(null).getDeviceId(null);
+                    break;
+                case 8:
+                    if (controller.getCurrentDisplayId() == 0) {
+                        controller.sendCurrentScreenBroadcast(true);
+                    }
+                    break;
+            }
+        }
+    }
+
+    public void sendHandler1Msg(int i, int i2) {
+        this.mHandler.removeMessages(i);
+        this.mHandler.sendEmptyMessageDelayed(i, i2);
+    }
+
+    public Handler getHandler() {
+        return this.mHandler;
+    }
+
+    public void scheduleAlarm(int i, String str, String str2, int i2) {
+        Log.d("#3 controller", "#3 schedule alarm: " + i + " param1: " + str + " param2: " + str2 + " delay: " + i2);
+        Context context = getContext();
+        AlarmManager alarmManager = (AlarmManager) context.getSystemService("alarm");
+        Intent intent = new Intent(context, (Class<?>) GenernalBroadcastReceiver.class);
+        intent.setAction("com.br.intent.action.SCHEDULE_ALARM");
+        intent.putExtra("SOURCE", i);
+        intent.putExtra("PARAM1", str);
+        intent.putExtra("PARAM2", str2);
+        PendingIntent broadcast = PendingIntent.getBroadcast(context, 0, intent, 134217728);
+        alarmManager.cancel(broadcast);
+        alarmManager.set(2, SystemClock.elapsedRealtime() + ((long) i2), broadcast);
+    }
+
+    public void onScheduledAlarm(int i, String str, String str2) {
+        if (i != 1) {
+            if (i != 2) {
+                return;
+            }
+            launchEsperLauncherOnce();
+        } else {
+            Log.d("#3 controller", "3.2 set QuickStep3 as default launcher");
+            setDefaultLauncher("com.android.launcher3");
+            checkEsperTemplateAvailable();
+        }
+    }
+
+    public boolean getBooleanFeature(String str) {
+        Object obj = this.mConfigFeatures.get(str);
+        if (obj == null) {
+            return true;
+        }
+        return ((Boolean) obj).booleanValue();
+    }
+
+    public void updateFeatures() {
+        this.mConfigFeatures.readConfig(null);
+    }
+
+    public void accessMenuWithSettingPasscode(final int i, final Object obj, final Object obj2) {
+        _SettingLock.verifyingPasscode(this, new _KeyboardResult() { // from class: com.br.smallcd.Controller.5
+            @Override // com.br.smallcd._KeyboardResult
+            public void onKeyboardResult(String str) {
+                if (_SettingLock.verifyPasscode(this, str)) {
+                    Controller.this.createDisplay(i, obj, obj2, true);
+                } else {
+                    Controller controller = Controller.this;
+                    controller.createDisplay(41, controller.getResString(R.string.InvalidPasscode), 2000, true);
+                }
+            }
+        });
+    }
+
+    public void setHandler1MsgAskToChangeSettingCode() {
+        _ConfirmDialogCallback _confirmdialogcallback = new _ConfirmDialogCallback() { // from class: com.br.smallcd.Controller.6
+            @Override // com.br.smallcd._ConfirmDialogCallback
+            public void onConfirmDialogResult(boolean z) {
+                Controller.this.onKeyEvent(4);
+                if (z) {
+                    _SettingLock.changePassword(this, true);
+                    return;
+                }
+                String str = Controller.this.getResString(R.string.DefaultPasscodeHint) + " 000000";
+                _SettingLock.setPasscode(this, "000000");
+                Controller.this.createDisplay(41, str, 2000, true);
+            }
+        };
+        String passcode = _SettingLock.getPasscode(this);
+        if (passcode.equals("")) {
+            passcode = "000000";
+            _SettingLock.setPasscode(this, "000000");
+        }
+        createDisplay(56, new ConfirmDialgExParams(getResString(R.string.DefaultPasscodeHint), passcode, getResString(R.string.ClickToChange), getResString(R.string.clickToCancel), _confirmdialogcallback), null, true);
+    }
+
+    public void printFirmwareInfo() {
+        Log.d("#3 controller", SystemProperties.get("ro.fota.version", ""));
+        Log.d("#3 controller", SystemProperties.get("gsm.version.baseband", ""));
+    }
+
+    public void onSimNetworkLockChangedReady() {
+        if (this.mDisplays.peek().getId() == 64) {
+            onKeyEvent(4);
+        }
+    }
+
+    public void onIccNetworkDepersResult(int i) {
+        _Display currentDisplay = getCurrentDisplay();
+        if (currentDisplay == null || currentDisplay.getId() != 64) {
+            return;
+        }
+        ((_UnlockSIM) currentDisplay).onIccNetworkDepersResult(i);
+    }
+
+    public String getSiyatVerType() {
+        String str = SystemProperties.get("ro.siyata.ver.type", "");
+        this.mSiyataVerType = str;
+        return str;
+    }
+
+    public boolean isATTVersion() {
+        return this.mSiyataVerType.equals("AT");
+    }
+
+    public boolean isEfused() {
+        return SystemProperties.get("ro.boot.insecure", "").equals("false");
+    }
+
+    public boolean isSimLocked() {
+        this.mIsSimlocked = false;
+        PocManager pocManager = (PocManager) this.mContext.getSystemService("poc");
+        if (pocManager != null) {
+            String[] strArrSendAtCmdAndGetRsp2 = pocManager.sendAtCmdAndGetRsp2(0, "AT+QSIMLOCK=\"PN\"", "{B7F12C95-1D56-484F-B2C0-993E83F92580}");
+            Log.d("#3 controller", "query simlock status: results[0]: " + strArrSendAtCmdAndGetRsp2[0] + "results[1]: " + strArrSendAtCmdAndGetRsp2[1]);
+            if (strArrSendAtCmdAndGetRsp2[0] != null && strArrSendAtCmdAndGetRsp2[0].contains("+QSIMLOCK: 1")) {
+                this.mIsSimlocked = true;
+            }
+        }
+        return this.mIsSimlocked;
+    }
+
+    public static void camLed(boolean z) {
+        Util.writeFile("/sys/devices/platform/soc/3000000.pinctrl/gpiochip0/gpio/gpio1208/value", z ? 1 : 0);
+    }
+
+    public String getLastCapturedPictureFile() {
+        return this.mLastCapturedPicutreFile;
+    }
+
+    public boolean capturingPicture() {
+        Log.d("#3 controller", "capturingPicture");
+        if (!this.safeToCapture) {
+            return false;
+        }
+        this.safeToCapture = false;
+        Camera cameraOpen = Camera.open();
+        if (cameraOpen == null) {
+            this.safeToCapture = true;
+            return false;
+        }
+        try {
+            cameraOpen.setPreviewTexture(new SurfaceTexture(10));
+            Camera.Parameters parameters = cameraOpen.getParameters();
+            parameters.setRotation(180);
+            cameraOpen.setParameters(parameters);
+            cameraOpen.startPreview();
+            cameraOpen.takePicture(null, null, new Camera.PictureCallback() { // from class: com.br.smallcd.Controller.7
+                @Override // android.hardware.Camera.PictureCallback
+                public void onPictureTaken(byte[] bArr, Camera camera) {
+                    Log.d("#3 controller", "onPictureTaken");
+                    try {
+                        File file = new File(Environment.getExternalStorageDirectory() + "/mmitest");
+                        file.mkdirs();
+                        String str = new SimpleDateFormat("yyyyMMdd_hhmmss").format(new Date());
+                        Controller.this.mLastCapturedPicutreFile = file + "/" + str + ".jpg";
+                        FileOutputStream fileOutputStream = new FileOutputStream(Controller.this.mLastCapturedPicutreFile);
+                        fileOutputStream.write(bArr);
+                        fileOutputStream.close();
+                        camera.release();
+                        Log.d("#3 controller", "picture clicked - " + Controller.this.mLastCapturedPicutreFile);
+                        Controller.this.refreshCurrentDisplay(false);
+                    } catch (FileNotFoundException e) {
+                        Log.d("#3 controller", e.getMessage());
+                    } catch (IOException e2) {
+                        Log.d("#3 controller", e2.getMessage());
+                    }
+                }
+            });
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        this.safeToCapture = true;
+        return true;
+    }
+
+    private boolean isPackageInstalled(String str) {
+        try {
+            this.mPackageManager.getPackageInfo(str, 0);
+            return true;
+        } catch (PackageManager.NameNotFoundException unused) {
+            return false;
+        }
+    }
+
+    public CellularDataSwitcher getCellularDataSwitcher() {
+        return this.mCDS;
+    }
+
+    public MobileSignalWrapper getMobileSignalWrapper() {
+        return this.mMSW;
+    }
+
+    public void sendBroadcast(Intent intent) {
+        intent.setFlags(268435456);
+        intent.addFlags(32);
+        intent.addFlags(16777216);
+        this.mContext.sendBroadcast(intent, null);
+    }
+
+    public void sendCurrentScreenBroadcast(boolean z) {
+        Log.d("#3 controller", "send current screen bc: " + z);
+        Intent intent = new Intent();
+        intent.putExtra("EXTRA_CURRENT_SCREEN", z ? 1 : 0);
+        intent.setAction("com.mcx.intent.action.CURRENT_SCREEN_INFO");
+        sendBroadcast(intent);
+        intent.setAction("com.br.intent.action.CURRENT_SCREEN_INFO");
+        sendBroadcast(intent);
+    }
+
+    public void test1(Activity activity) {
+        Log.d("#3 controller", "test1");
+    }
+}

@@ -1,0 +1,85 @@
+
+C:\Users\Justin\Desktop\platform-tools-latest-windows\sd7-stuff>..\platform-tools\adb shell am broadcast -a com.br.intent.action.SMALLCD_EXT --es text "HELLO JUSTIN"
+Broadcasting: Intent { act=com.br.intent.action.SMALLCD_EXT flg=0x400000 pkg=JUSTIN (has extras) }
+
+Exception occurred while executing 'broadcast':
+java.lang.SecurityException: Permission Denial: not allowed to send broadcast com.br.intent.action.SMALLCD_EXT from pid=9651, uid=2000
+        at com.android.server.am.ActivityManagerService.broadcastIntentLocked(ActivityManagerService.java:13043)
+        at com.android.server.am.ActivityManagerService.broadcastIntentLocked(ActivityManagerService.java:12889)
+        at com.android.server.am.ActivityManagerService.broadcastIntentWithFeature(ActivityManagerService.java:13724)
+        at com.android.server.am.ActivityManagerShellCommand.runSendBroadcast(ActivityManagerShellCommand.java:765)
+        at com.android.server.am.ActivityManagerShellCommand.onCommand(ActivityManagerShellCommand.java:206)
+        at com.android.modules.utils.BasicShellCommandHandler.exec(BasicShellCommandHandler.java:97)
+        at android.os.ShellCommand.exec(ShellCommand.java:38)
+        at com.android.server.am.ActivityManagerService.onShellCommand(ActivityManagerService.java:8718)
+        at android.os.Binder.shellCommand(Binder.java:950)
+        at android.os.Binder.onTransact(Binder.java:834)
+        at android.app.IActivityManager$Stub.onTransact(IActivityManager.java:5106)
+        at com.android.server.am.ActivityManagerService.onTransact(ActivityManagerService.java:2522)
+        at android.os.Binder.execTransactInternal(Binder.java:1184)
+        at android.os.Binder.execTransact(Binder.java:1143)
+
+C:\Users\Justin\Desktop\platform-tools-latest-windows\sd7-stuff>..\platform-tools\adb root
+adbd cannot run as root in production builds
+
+C:\Users\Justin\Desktop\platform-tools-latest-windows\sd7-stuff>..\platform-tools\adb shell am broadcast -a com.br.intent.action.SMALLCD_EXT --es text "HELLO"
+Broadcasting: Intent { act=com.br.intent.action.SMALLCD_EXT flg=0x400000 (has extras) }
+
+Exception occurred while executing 'broadcast':
+java.lang.SecurityException: Permission Denial: not allowed to send broadcast com.br.intent.action.SMALLCD_EXT from pid=9670, uid=2000
+        at com.android.server.am.ActivityManagerService.broadcastIntentLocked(ActivityManagerService.java:13043)
+        at com.android.server.am.ActivityManagerService.broadcastIntentLocked(ActivityManagerService.java:12889)
+        at com.android.server.am.ActivityManagerService.broadcastIntentWithFeature(ActivityManagerService.java:13724)
+        at com.android.server.am.ActivityManagerShellCommand.runSendBroadcast(ActivityManagerShellCommand.java:765)
+        at com.android.server.am.ActivityManagerShellCommand.onCommand(ActivityManagerShellCommand.java:206)
+        at com.android.modules.utils.BasicShellCommandHandler.exec(BasicShellCommandHandler.java:97)
+        at android.os.ShellCommand.exec(ShellCommand.java:38)
+        at com.android.server.am.ActivityManagerService.onShellCommand(ActivityManagerService.java:8718)
+        at android.os.Binder.shellCommand(Binder.java:950)
+        at android.os.Binder.onTransact(Binder.java:834)
+        at android.app.IActivityManager$Stub.onTransact(IActivityManager.java:5106)
+        at com.android.server.am.ActivityManagerService.onTransact(ActivityManagerService.java:2522)
+        at android.os.Binder.execTransactInternal(Binder.java:1184)
+        at android.os.Binder.execTransact(Binder.java:1143)
+
+C:\Users\Justin\Desktop\platform-tools-latest-windows\sd7-stuff>adb devices -l                              # connected devices + transport info
+'adb' is not recognized as an internal or external command,
+operable program or batch file.
+
+C:\Users\Justin\Desktop\platform-tools-latest-windows\sd7-stuff>adb shell getprop                           # ALL system properties (model, build, radio fw, etc.)
+'adb' is not recognized as an internal or external command,
+operable program or batch file.
+
+C:\Users\Justin\Desktop\platform-tools-latest-windows\sd7-stuff>adb shell getprop ro.product.model
+'adb' is not recognized as an internal or external command,
+operable program or batch file.
+
+C:\Users\Justin\Desktop\platform-tools-latest-windows\sd7-stuff>adb shell getprop ro.build.fingerprint
+'adb' is not recognized as an internal or external command,
+operable program or batch file.
+
+C:\Users\Justin\Desktop\platform-tools-latest-windows\sd7-stuff>adb shell getprop ro.build.version.release
+'adb' is not recognized as an internal or external command,
+operable program or batch file.
+
+C:\Users\Justin\Desktop\platform-tools-latest-windows\sd7-stuff>adb shell getprop gsm.version.baseband      # radio/baseband firmware
+'adb' is not recognized as an internal or external command,
+operable program or batch file.
+
+C:\Users\Justin\Desktop\platform-tools-latest-windows\sd7-stuff>adb shell cat /proc/cpuinfo
+'adb' is not recognized as an internal or external command,
+operable program or batch file.
+
+C:\Users\Justin\Desktop\platform-tools-latest-windows\sd7-stuff>adb shell cat /proc/meminfo
+'adb' is not recognized as an internal or external command,
+operable program or batch file.
+
+C:\Users\Justin\Desktop\platform-tools-latest-windows\sd7-stuff>adb shell df -h
+'adb' is not recognized as an internal or external command,
+operable program or batch file.
+
+C:\Users\Justin\Desktop\platform-tools-latest-windows\sd7-stuff>adb shell uptime
+'adb' is not recognized as an internal or external command,
+operable program or batch file.
+
+C:\Users\Justin\Desktop\platform-tools-latest-windows\sd7-stuff>
