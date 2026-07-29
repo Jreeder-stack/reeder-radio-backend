@@ -1,5 +1,6 @@
 import { AzureOpenAI } from 'openai';
 import { classifyIntent as classifyPrimaryIntent } from './llmIntentService.base.js';
+import { scheduleDispatcherToolShadow } from './dispatcherToolPlanner.js';
 
 export * from './llmIntentService.base.js';
 
@@ -60,6 +61,11 @@ function getRecoveryClient() {
     });
   }
   return recoveryClient;
+}
+
+function returnWithToolShadow(result, context) {
+  scheduleDispatcherToolShadow({ ...context, existingResult: result });
+  return result;
 }
 
 function getMinConfidence() {
@@ -275,8 +281,11 @@ async function callRecoveryModel(transcript, unitId, currentState, currentSlots,
 }
 
 export async function classifyIntent(transcript, unitId, currentState = 'IDLE', currentSlots = {}, conversationHistory = []) {
+  const shadowContext = { transcript, unitId, currentState, currentSlots, conversationHistory };
   const primaryResult = await classifyPrimaryIntent(transcript, unitId, currentState, currentSlots, conversationHistory);
-  if (!shouldAttemptSemanticRecovery(primaryResult, currentState)) return primaryResult;
+  if (!shouldAttemptSemanticRecovery(primaryResult, currentState)) {
+    return returnWithToolShadow(primaryResult, shadowContext);
+  }
 
   console.log(`[LLM-Recovery] Attempting: unit=${unitId}, state=${currentState}, transcript="${transcript}"`);
 
@@ -285,13 +294,13 @@ export async function classifyIntent(transcript, unitId, currentState = 'IDLE', 
     const recovered = validateSemanticRecovery(candidate, unitId);
     if (!recovered) {
       console.log(`[LLM-Recovery] Rejected: unit=${unitId}, candidateIntent=${candidate?.intent || 'none'}, confidence=${candidate?.confidence ?? 'none'}`);
-      return primaryResult;
+      return returnWithToolShadow(primaryResult, shadowContext);
     }
 
     console.log(`[LLM-Recovery] Accepted: unit=${unitId}, intent=${recovered.intent}, confidence=${recovered.semanticRecovery?.confidence ?? 'n/a'}`);
-    return recovered;
+    return returnWithToolShadow(recovered, shadowContext);
   } catch (error) {
     console.warn(`[LLM-Recovery] Failed: unit=${unitId}, error=${error.message}`);
-    return primaryResult;
+    return returnWithToolShadow(primaryResult, shadowContext);
   }
 }
