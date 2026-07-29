@@ -1,4 +1,5 @@
 import { signalingService, SIGNALING_EVENTS } from './signalingService.js';
+import { installAuthenticatedWakeIdentity } from './authenticatedWakeIdentity.js';
 
 const AI_UNIT_ID = 'AI-Dispatcher';
 
@@ -19,6 +20,9 @@ class AIDispatcherSignaling {
     if (this.initialized) return;
     
     this.dispatcher = dispatcher;
+    installAuthenticatedWakeIdentity(dispatcher, {
+      log: (action, details) => this.log(action, details),
+    });
     this.initialized = true;
     
     this.log('INITIALIZED', { channels: Array.from(this.activeChannels) });
