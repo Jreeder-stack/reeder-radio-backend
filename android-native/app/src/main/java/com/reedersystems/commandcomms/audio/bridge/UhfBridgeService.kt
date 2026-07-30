@@ -39,9 +39,11 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.ArrayDeque
@@ -77,6 +79,7 @@ class UhfBridgeService : Service() {
     @Volatile private var remoteRxActive = false
     @Volatile private var channelJoined = false
     @Volatile private var signalingReady = false
+    @Volatile private var cleanupComplete = false
 
     private var engine: RadioAudioEngine? = null
     private var gateway: RadioSignalingGatewayImpl? = null
@@ -138,19 +141,21 @@ class UhfBridgeService : Service() {
             ACTION_RELOAD -> {
                 config = bridgePrefs.load()
                 engine?.audioPlayback?.softwareGain = config.outputGain
+                if (!bridgePrefs.enabled && !running) stopSelf()
             }
             ACTION_START, null -> {
                 bridgePrefs.enabled = true
                 if (!running) scope.launch { startBridge() }
             }
         }
-        return START_STICKY
+        return if (bridgePrefs.enabled) START_STICKY else START_NOT_STICKY
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     private suspend fun startBridge() {
         if (running) return
+        cleanupComplete = false
         running = true
         config = bridgePrefs.load().copy(enabled = true)
         UhfBridgeRuntime.set(
@@ -189,7 +194,10 @@ class UhfBridgeService : Service() {
             return
         }
 
-        applyWiredAudioRoute(wiredOutput)
+        if (!applyWiredAudioRoute(wiredOutput)) {
+            failBridge("Android could not route audio through the connected headset cable")
+            return
+        }
 
         val newEngine = RadioAudioEngine(applicationContext)
         val sharedState = app.radioStateManager
@@ -502,9 +510,9 @@ class UhfBridgeService : Service() {
 
     private fun enterRemoteReceive(senderUnitId: String) {
         if (remoteRxActive) return
+        remoteRxActive = true
         scope.launch {
             if (txActive || floorPending) stopRfTransmit("incoming PoC traffic")
-            remoteRxActive = true
             activationStartedMs = 0L
             synchronized(bridgeLock) {
                 preBuffer.clear()
@@ -646,24 +654,45 @@ class UhfBridgeService : Service() {
                 it.type == AudioDeviceInfo.TYPE_USB_DEVICE
         }
 
-    private fun applyWiredAudioRoute(output: AudioDeviceInfo) {
+    private fun applyWiredAudioRoute(output: AudioDeviceInfo): Boolean {
         audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            audioManager.setCommunicationDevice(output)
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val communicationOutput = audioManager.availableCommunicationDevices.firstOrNull {
+                it.id == output.id
+            } ?: audioManager.availableCommunicationDevices.firstOrNull {
+                it.type == output.type
+            }
+            if (communicationOutput == null) {
+                Log.e(TAG, "Wired output is not exposed as a communication device type=${output.type}")
+                false
+            } else {
+                val selected = audioManager.setCommunicationDevice(communicationOutput)
+                Log.d(TAG, "Wired bridge route selected outputType=${communicationOutput.type} success=$selected")
+                selected
+            }
         } else {
             @Suppress("DEPRECATION")
             audioManager.isSpeakerphoneOn = false
+            Log.d(TAG, "Wired bridge route selected using legacy speakerphone=false outputType=${output.type}")
+            true
         }
-        Log.d(TAG, "Wired bridge route selected outputType=${output.type}")
     }
 
-    private suspend fun stopBridge(restartNormalRadio: Boolean) {
-        if (!running && engine == null) return
+    private suspend fun stopBridge(
+        restartNormalRadio: Boolean,
+        preserveStatus: Boolean = false
+    ) {
+        if (cleanupComplete) {
+            if (restartNormalRadio) startNormalRadioService()
+            return
+        }
+        cleanupComplete = true
         running = false
         try {
             if (txActive || floorPending) stopRfTransmit("Bridge stopped")
         } catch (_: Exception) {
         }
+
         captureJob?.cancel()
         senderJob?.cancel()
         signalingJob?.cancel()
@@ -693,28 +722,30 @@ class UhfBridgeService : Service() {
         }
         audioManager.mode = AudioManager.MODE_NORMAL
 
-        UhfBridgeRuntime.reset()
-        updateNotification("Bridge off")
+        if (!preserveStatus) {
+            UhfBridgeRuntime.reset()
+            updateNotification("Bridge off")
+        }
         if (restartNormalRadio) startNormalRadioService()
     }
 
     private suspend fun failBridge(message: String) {
         Log.e(TAG, message)
-        UhfBridgeRuntime.set(
-            UhfBridgeStatus(
-                running = false,
-                direction = UhfBridgeDirection.ERROR,
-                inputDb = -90f,
-                wiredInput = findWiredInput() != null,
-                wiredOutput = findWiredOutput() != null,
-                signalingReady = signalingReady,
-                channelJoined = channelJoined,
-                message = message
-            )
+        val errorStatus = UhfBridgeStatus(
+            running = false,
+            direction = UhfBridgeDirection.ERROR,
+            inputDb = -90f,
+            wiredInput = findWiredInput() != null,
+            wiredOutput = findWiredOutput() != null,
+            signalingReady = signalingReady,
+            channelJoined = channelJoined,
+            message = message
         )
+        UhfBridgeRuntime.set(errorStatus)
         bridgePrefs.enabled = false
-        updateNotification("Bridge error")
-        stopBridge(restartNormalRadio = true)
+        updateNotification("Bridge error — $message")
+        stopBridge(restartNormalRadio = true, preserveStatus = true)
+        UhfBridgeRuntime.set(errorStatus)
         stopSelf()
     }
 
@@ -774,7 +805,13 @@ class UhfBridgeService : Service() {
     override fun onDestroy() {
         getSharedPreferences(UhfBridgePrefs.PREFS_NAME, Context.MODE_PRIVATE)
             .unregisterOnSharedPreferenceChangeListener(prefListener)
-        scope.launch { stopBridge(restartNormalRadio = !bridgePrefs.enabled) }
+        val preserveError = UhfBridgeRuntime.status.value.direction == UhfBridgeDirection.ERROR
+        runBlocking {
+            stopBridge(
+                restartNormalRadio = !bridgePrefs.enabled,
+                preserveStatus = preserveError
+            )
+        }
         if (::wakeLock.isInitialized && wakeLock.isHeld) wakeLock.release()
         scope.cancel()
         super.onDestroy()
