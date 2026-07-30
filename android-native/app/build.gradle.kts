@@ -23,8 +23,9 @@ android {
     // The audio transport, signaling, floor control, jitter buffer, Opus
     // codec, and dispatch UI are shared across every flavor — only
     // device-integration code and the device_type reported to the backend
-    // differ. The phone build appends `.phone` and the SD7 build appends
-    // `.sd7`, so all three APKs can be installed independently.
+    // differ. The phone flavor intentionally keeps the base application ID so
+    // it uses the existing Firebase configuration and replaces the standard
+    // handset build when installed on a phone or tablet.
     flavorDimensions += "device"
     productFlavors {
         create("t320") {
@@ -33,7 +34,6 @@ android {
         }
         create("phone") {
             dimension = "device"
-            applicationIdSuffix = ".phone"
             versionNameSuffix = "-phone"
             buildConfigField("String", "RADIO_DEVICE_TYPE", "\"android_phone_bridge\"")
         }
