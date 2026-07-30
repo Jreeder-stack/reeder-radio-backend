@@ -22,17 +22,20 @@ android {
     //
     // The audio transport, signaling, floor control, jitter buffer, Opus
     // codec, and dispatch UI are shared across every flavor — only
-    // device-integration code (hardware key intents/keycodes, OLED status
-    // surface, indicator-LED routing, and the device_type the radio reports
-    // to the backend) differs per flavor. Both APKs install side-by-side
-    // because the SD7 build appends `.sd7` to the application ID.
+    // device-integration code and the device_type reported to the backend
+    // differ. The phone build appends `.phone` and the SD7 build appends
+    // `.sd7`, so all three APKs can be installed independently.
     flavorDimensions += "device"
     productFlavors {
         create("t320") {
             dimension = "device"
-            // RADIO_DEVICE_TYPE is sent to the backend on signaling auth so
-            // dispatchers can distinguish radio types in the admin Devices tab.
             buildConfigField("String", "RADIO_DEVICE_TYPE", "\"t320\"")
+        }
+        create("phone") {
+            dimension = "device"
+            applicationIdSuffix = ".phone"
+            versionNameSuffix = "-phone"
+            buildConfigField("String", "RADIO_DEVICE_TYPE", "\"android_phone_bridge\"")
         }
         create("sd7") {
             dimension = "device"
