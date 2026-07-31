@@ -1,1 +1,88 @@
-placeholder
+name: Apply T320 Rapid PTT Fix
+
+on:
+  push:
+    branches:
+      - fix/t320-rapid-ptt-release
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/t320-rapid-ptt-release
+          fetch-depth: 0
+
+      - name: Patch rapid PTT state handling
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('android-native/app/src/main/java/com/reedersystems/commandcomms/audio/BackgroundAudioService.kt')
+          text = path.read_text()
+
+          old_down = '''        // Reset the PTT-up debounce window on every fresh press. The window is
+        // only meant to suppress duplicate releases within the same press
+        // cycle (mechanical bounce); a release that follows a new press must
+        // always be allowed through, even if it lands within PTT_UP_DEBOUNCE_MS
+        // of the previous release. Without this reset a quick tap after a
+        // prior release was being dropped, leaving the radio keyed open.
+        lastPttUpTimeMs = 0L
+'''
+          new_down = '''        // Do not reset the release debounce until this DOWN is accepted as a
+        // genuinely new press cycle. T320 firmware can emit duplicate/late DOWN
+        // broadcasts; resetting here lets a stale DOWN create an unmatched TX.
+'''
+          if old_down not in text:
+              raise SystemExit('Expected PTT DOWN debounce block not found')
+          text = text.replace(old_down, new_down, 1)
+
+          old_accept = '''        pttUpWhileConnecting = false
+        needsSignaling = signaling
+'''
+          new_accept = '''        // A new physical press cycle has now been accepted. Any following UP
+        // must be honored even when it arrives immediately after the prior UP.
+        lastPttUpTimeMs = 0L
+        pttUpWhileConnecting = false
+        needsSignaling = signaling
+'''
+          if old_accept not in text:
+              raise SystemExit('Expected accepted PTT DOWN block not found')
+          text = text.replace(old_accept, new_accept, 1)
+
+          old_up = '''        val now = SystemClock.elapsedRealtime()
+        if (!bypassDebounce && now - lastPttUpTimeMs < PTT_UP_DEBOUNCE_MS) {
+            Log.d(TAG, """{"event":"RADIO_PTT_UP_DEBOUNCED","deltaMs":${now - lastPttUpTimeMs}}""")
+            return
+        }
+        lastPttUpTimeMs = now
+'''
+          new_up = '''        val now = SystemClock.elapsedRealtime()
+        val releaseMustWin = pttState == PttState.TRANSMITTING || pttState == PttState.CONNECTING
+        // A release can never be discarded while TX is active or being granted.
+        // Debounce only duplicate UP events after the radio is already safe.
+        if (!bypassDebounce && !releaseMustWin && now - lastPttUpTimeMs < PTT_UP_DEBOUNCE_MS) {
+            Log.d(TAG, """{"event":"RADIO_PTT_UP_DEBOUNCED","deltaMs":${now - lastPttUpTimeMs},"pttState":"$pttState"}""")
+            return
+        }
+        lastPttUpTimeMs = now
+'''
+          if old_up not in text:
+              raise SystemExit('Expected PTT UP debounce block not found')
+          text = text.replace(old_up, new_up, 1)
+
+          path.write_text(text)
+          PY
+
+      - name: Commit fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add android-native/app/src/main/java/com/reedersystems/commandcomms/audio/BackgroundAudioService.kt
+          git commit -m "Ensure rapid T320 PTT releases always stop TX"
+          git push origin HEAD:fix/t320-rapid-ptt-release
