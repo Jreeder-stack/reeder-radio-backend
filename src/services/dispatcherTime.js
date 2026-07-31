@@ -39,7 +39,11 @@ function getDispatcherHourMinute(date = new Date()) {
 
 export function formatDispatcherTime(date = new Date()) {
   const { hour, minute } = getDispatcherHourMinute(date);
-  const hourText = hour < 10 ? `oh ${ONES[hour]}` : spokenNumber(hour);
+  const hourText = hour === 0
+    ? 'zero'
+    : hour < 10
+      ? `oh ${ONES[hour]}`
+      : spokenNumber(hour);
   const minuteText = minute === 0
     ? 'hundred'
     : minute < 10
