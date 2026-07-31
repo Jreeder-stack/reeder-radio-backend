@@ -7,6 +7,7 @@ import {
   isDispatcherV2Configured,
   shouldUseDispatcherV2,
 } from './dispatcherV2Planner.js';
+import { formatDispatcherTime } from './dispatcherTime.js';
 
 export * from './llmIntentService.legacy.js';
 
@@ -24,13 +25,23 @@ export async function classifyIntent(
   conversationHistory = []
 ) {
   if (shouldUseDispatcherV2(currentState)) {
-    return classifyIntentV2(
+    const result = await classifyIntentV2(
       transcript,
       unitId,
       currentState,
       currentSlots,
       conversationHistory
     );
+
+    // Time is operational data. Never allow the model to invent or estimate it.
+    if (result?.intent === 'TIME_CHECK') {
+      return {
+        ...result,
+        response: formatDispatcherTime(),
+      };
+    }
+
+    return result;
   }
 
   return classifyLegacyIntent(
