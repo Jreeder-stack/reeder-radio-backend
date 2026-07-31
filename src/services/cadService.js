@@ -1,3 +1,5 @@
+import { getRuntimeContext } from './runtimeContext.js';
+
 function getUnitId(user) {
   return user?.unit_id || user?.username || null;
 }
@@ -42,65 +44,72 @@ export function extractActualStatusFromRejection(cadResult) {
   return SPOKEN[code] || raw;
 }
 
+function getCadRuntimeConfig() {
+  const runtime = getRuntimeContext();
+  return {
+    runtime,
+    url: runtime.cadUrl || process.env.CAD_URL || '',
+    apiKey: runtime.cadApiKey || process.env.CAD_API_KEY || '',
+    dispatchCenterId: runtime.dispatchCenterId || process.env.CAD_DISPATCH_CENTER_ID || '',
+    agencyId: runtime.agencyId || process.env.CAD_AGENCY_ID || '',
+  };
+}
+
 async function cadRequest(endpoint, method = 'GET', body = null) {
-  const CAD_URL = process.env.CAD_URL;
-  const CAD_API_KEY = process.env.CAD_API_KEY;
-  
+  const { runtime, url: CAD_URL, apiKey: CAD_API_KEY, dispatchCenterId, agencyId } = getCadRuntimeConfig();
+
   if (!CAD_URL || !CAD_API_KEY) {
     console.warn('[CAD] Integration not configured - missing CAD_URL or CAD_API_KEY');
     return { success: false, error: 'CAD integration not configured', failureType: 'NOT_CONFIGURED', statusCode: null, responseBody: null };
   }
+  if (runtime.managed && !dispatchCenterId) {
+    console.error('[CAD] Managed dispatcher request blocked - no dispatch center configured', { runtimeId: runtime.runtimeId });
+    return { success: false, error: 'AI dispatcher dispatch center is not configured', failureType: 'DISPATCH_CENTER_REQUIRED', statusCode: null, responseBody: null };
+  }
 
-  const url = `${CAD_URL}${endpoint}`;
+  const base = String(CAD_URL).replace(/\/+$/, '');
+  const target = new URL(`${base}${endpoint}`);
+  if (dispatchCenterId && !target.searchParams.has('dispatch_center_id')) {
+    target.searchParams.set('dispatch_center_id', dispatchCenterId);
+  }
   const options = {
     method,
     headers: {
       'Content-Type': 'application/json',
-      'X-API-Key': CAD_API_KEY
+      'X-API-Key': CAD_API_KEY,
+      ...(dispatchCenterId ? { 'X-Dispatch-Center-Id': dispatchCenterId } : {}),
+      ...(agencyId ? { 'X-Agency-Id': agencyId } : {}),
     }
   };
 
   if (body && method !== 'GET') {
     options.body = JSON.stringify(body);
-    console.log(`[CAD] Outgoing ${method} ${endpoint} payload: ${options.body}`);
+    console.log(`[CAD:${runtime.runtimeId}] Outgoing ${method} ${endpoint} payload: ${options.body}`);
   }
 
   try {
-    const response = await fetch(url, options);
+    const response = await fetch(target, options);
 
-    if (response.status === 204) {
-      return { success: true, statusCode: 204 };
-    }
+    if (response.status === 204) return { success: true, statusCode: 204 };
 
     const contentType = response.headers.get('content-type') || '';
     if (!contentType.includes('json')) {
       const textBody = await response.text().catch(() => '(unable to read body)');
-      console.error(`[CAD] Non-JSON response from ${url} (status ${response.status}, content-type: ${contentType}), body: ${textBody}`);
+      console.error(`[CAD:${runtime.runtimeId}] Non-JSON response from ${target} (status ${response.status}, content-type: ${contentType}), body: ${textBody}`);
       return { success: false, error: `Non-JSON response (status ${response.status}, content-type: ${contentType})`, failureType: 'UNREACHABLE', statusCode: response.status, responseBody: textBody };
     }
 
     const data = await response.json();
-    
     if (!response.ok) {
-      console.error(`[CAD] API error: ${method} ${endpoint} status=${response.status}, response=${JSON.stringify(data)}`);
+      console.error(`[CAD:${runtime.runtimeId}] API error: ${method} ${endpoint} status=${response.status}, response=${JSON.stringify(data)}`);
       return { success: false, error: data.error || `HTTP ${response.status}`, failureType: 'API_REJECTION', statusCode: response.status, responseBody: data };
     }
-    
     if (data && data.success === false) {
-      console.warn(`[CAD] Application-level failure for ${method} ${endpoint}: status=${response.status}, body=${JSON.stringify(data)}`);
-      return {
-        ...data,
-        success: false,
-        error: data.error || 'Application-level failure',
-        failureType: data.failureType || 'API_REJECTION',
-        statusCode: response.status,
-        responseBody: data
-      };
+      return { ...data, success: false, error: data.error || 'Application-level failure', failureType: data.failureType || 'API_REJECTION', statusCode: response.status, responseBody: data };
     }
-    
     return data;
   } catch (error) {
-    console.error(`[CAD] Request failed for ${method} ${endpoint}:`, error.message);
+    console.error(`[CAD:${runtime.runtimeId}] Request failed for ${method} ${endpoint}:`, error.message);
     return { success: false, error: error.message, failureType: 'UNREACHABLE', statusCode: null, responseBody: null };
   }
 }
@@ -1035,7 +1044,8 @@ export async function cancelStatusCheck(unitId, callId, opts = {}) {
 }
 
 export function isConfigured() {
-  return !!(process.env.CAD_URL && process.env.CAD_API_KEY);
+  const { url, apiKey, runtime, dispatchCenterId } = getCadRuntimeConfig();
+  return !!(url && apiKey && (!runtime.managed || dispatchCenterId));
 }
 
 let cachedCallNatures = [];
@@ -1327,9 +1337,9 @@ export async function createCitation(type, populateFrom, user) {
 }
 
 export async function getMapUrl() {
-  const CAD_URL = process.env.CAD_URL;
+  const { url: CAD_URL } = getCadRuntimeConfig();
   if (!CAD_URL) return null;
-  return `${CAD_URL}/map`;
+  return `${String(CAD_URL).replace(/\/$/, '')}/map`;
 }
 
 export async function getUnitCurrentCall(user) {

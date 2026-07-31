@@ -1,5 +1,6 @@
 import { DISPATCHER_TZ } from '../utils/timezone.js';
 import { matchEventFromTranscript, isAllClearPhrase } from './eventNoteFormatter.js';
+import { createRuntimeScopedMap, getRuntimeId } from './runtimeContext.js';
 
 const DISPATCHER_STATE = {
   IDLE: 'IDLE',
@@ -57,14 +58,20 @@ const EMERGENCY_INTENTS = new Set([
 
 const PER_PROMPT_TIMEOUT_MS = parseInt(process.env.AI_PER_PROMPT_TIMEOUT_MS || '40000', 10);
 
-const unitSessions = new Map();
+const unitSessions = createRuntimeScopedMap();
 
 // Optional handler invoked when a per-prompt timeout fires. If it returns
 // (or resolves to) a truthy value, the default reset-to-IDLE is suppressed
 // so the handler can re-prompt or otherwise own the timeout.
-let promptTimeoutHandler = null;
+const promptTimeoutHandlers = new Map();
+const promptTimeoutHandler = (...args) => {
+  const handler = promptTimeoutHandlers.get(getRuntimeId()) || promptTimeoutHandlers.get('legacy');
+  return typeof handler === 'function' ? handler(...args) : undefined;
+};
 export function setPromptTimeoutHandler(fn) {
-  promptTimeoutHandler = (typeof fn === 'function') ? fn : null;
+  const runtimeId = getRuntimeId();
+  if (typeof fn === 'function') promptTimeoutHandlers.set(runtimeId, fn);
+  else promptTimeoutHandlers.delete(runtimeId);
 }
 
 const SESSION_TIMEOUT_MS = 300000;

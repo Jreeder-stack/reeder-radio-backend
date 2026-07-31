@@ -1,3 +1,5 @@
+import { createRuntimeScopedMap } from './runtimeContext.js';
+
 const DEFAULT_WINDOW_MS = 120000;
 
 function getWindowMs() {
@@ -19,7 +21,7 @@ const TYPE_QUALIFIERS = {
   UPDATE_CALL: ['priority', 'update', 'change', 'edit', 'call info', 'detail', 'details'],
 };
 
-const unitLogs = new Map();
+const unitLogs = createRuntimeScopedMap();
 
 const RETENTION_MULTIPLIER = 4;
 

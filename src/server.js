@@ -4,7 +4,7 @@ import { execSync } from 'child_process';
 import app from './app.js';
 import { config, validateEnv } from './config/env.js';
 import { initializeDatabase, isAiDispatchEnabled, getAiDispatchChannel, getAllChannels } from './db/index.js';
-import { startDispatcher, getDispatcher } from './services/aiDispatchService.js';
+import { aiDispatcherRuntimeManager } from './services/aiDispatcherRuntimeManager.js';
 import { isConfigured as isAzureConfigured } from './services/azureSpeechService.js';
 import { signalingService } from './services/signalingService.js';
 import { audioRelayService } from './services/audioRelayService.js';
@@ -97,32 +97,11 @@ async function start() {
   console.log('Recording tap wired to audio relay');
 
   try {
-    if (!isAzureConfigured()) {
-      console.log('AI Dispatcher: Azure Speech not configured, skipping auto-start');
-    } else {
-      const dispatcher = getDispatcher();
-      if (dispatcher.isRunning) {
-        console.log('AI Dispatcher: Already running, skipping auto-start');
-      } else {
-        const aiEnabled = await isAiDispatchEnabled();
-        if (aiEnabled) {
-          const dispatchChannel = await getAiDispatchChannel();
-          if (dispatchChannel) {
-            const allChannels = await getAllChannels();
-            const channelData = allChannels.find(ch => ch.room_key === dispatchChannel || ch.name === dispatchChannel);
-            const roomKey = channelData?.room_key || dispatchChannel;
-            console.log(`Auto-starting AI Dispatcher on channel: ${dispatchChannel} (room: ${roomKey})`);
-            await startDispatcher(dispatchChannel, roomKey);
-          } else {
-            console.log('AI Dispatcher: No dispatch channel configured, skipping auto-start');
-          }
-        } else {
-          console.log('AI Dispatcher: Disabled in settings, skipping auto-start');
-        }
-      }
-    }
+    const profiles = await aiDispatcherRuntimeManager.initialize();
+    const running = profiles.filter((profile) => profile.runtime?.state === 'connected' || profile.runtime?.state === 'starting').length;
+    console.log(`[STARTUP] AI dispatcher profiles initialized: ${profiles.length} configured, ${running} running`);
   } catch (err) {
-    console.error('AI Dispatcher auto-start failed:', err.message);
+    console.error('AI dispatcher profile initialization failed:', err.message);
   }
 
   try {
@@ -239,6 +218,11 @@ function setupGracefulShutdown(httpServer) {
     await withStepTimeout('hourly time broadcast scheduler', () => {
       console.log('[SHUTDOWN] Stopping hourly time broadcast scheduler...');
       hourlyTimeBroadcastScheduler.stop();
+    });
+
+    await withStepTimeout('AI dispatcher runtimes', async () => {
+      console.log('[SHUTDOWN] Stopping AI dispatcher runtimes...');
+      await aiDispatcherRuntimeManager.shutdown();
     });
 
     await withStepTimeout('signaling service', () => {

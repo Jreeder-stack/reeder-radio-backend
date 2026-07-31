@@ -16,11 +16,13 @@ import recordingLogsRouter from './recordingLogsRouter.js';
 import radiosRouter from './radiosRouter.js';
 import pagingRouter from './pagingRouter.js';
 import devicesRouter from './devicesRouter.js';
+import aiDispatcherProfilesRouter from './aiDispatcherProfilesRouter.js';
 
 export function setupRoutes(app) {
   app.use('/api/auth', authRouter);
   app.use('/api/admin', adminRouter);
   app.use('/api/admin/dispatch-center-assignments', dispatchCenterAssignmentsRouter);
+  app.use('/api/admin/ai-dispatchers', aiDispatcherProfilesRouter);
   app.use('/api/channels', channelsRouter);
   app.use('/api/zones', zonesRouter);
   app.use('/api/dispatch', dispatchRouter);
