@@ -1,0 +1,33 @@
+name: Apply T320 PTT origin validation
+
+on:
+  push:
+    branches:
+      - fix/t320-ptt-origin-validation
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/t320-ptt-origin-validation
+          fetch-depth: 0
+      - name: Apply patch
+        run: python scripts/apply_t320_ptt_origin_fix.py
+      - name: Verify changed files
+        run: |
+          git diff --check
+          grep -q 'IGNORED_FOREIGN_PTT_GRANT' android-native/app/src/main/java/com/reedersystems/commandcomms/signaling/SignalingClient.kt
+          grep -q 'requestId: data.requestId' src/services/signalingService.js
+      - name: Commit patched code
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "Validate T320 PTT grants by request and device"
+          git push origin HEAD:fix/t320-ptt-origin-validation
