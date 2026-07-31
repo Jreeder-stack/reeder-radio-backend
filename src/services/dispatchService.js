@@ -1,8 +1,48 @@
-import * as db from '../db/index.js';
-import { getActivatedRadioRoster } from './pagingRosterService.js';
+import pool, * as db from '../db/index.js';
+import { ensurePagingRosterSchema } from './pagingRosterService.js';
 
 export async function getAllUnits() {
-  return getActivatedRadioRoster();
+  await ensurePagingRosterSchema();
+
+  const result = await pool.query(`
+    SELECT
+      r.id,
+      r.id AS radio_pk,
+      r.radio_id,
+      r.is_active,
+      r.is_locked,
+      r.assigned_unit_id,
+      COALESCE(NULLIF(u.unit_id, ''), u.username, r.radio_id) AS unit_identity,
+      u.username,
+      CASE
+        WHEN r.last_seen > NOW() - INTERVAL '90 seconds' THEN p.channel
+        ELSE NULL
+      END AS channel,
+      CASE
+        WHEN r.last_seen > NOW() - INTERVAL '90 seconds' THEN
+          CASE
+            WHEN COALESCE(p.is_emergency, false) THEN 'emergency'
+            WHEN p.status = 'transmitting' THEN 'transmitting'
+            ELSE 'online'
+          END
+        ELSE 'offline'
+      END AS status,
+      r.last_seen AS last_seen,
+      CASE
+        WHEN r.last_seen > NOW() - INTERVAL '90 seconds' THEN COALESCE(p.is_emergency, false)
+        ELSE false
+      END AS is_emergency
+    FROM radios r
+    LEFT JOIN users u ON u.id = r.assigned_unit_id
+    LEFT JOIN units p ON p.unit_identity = COALESCE(NULLIF(u.unit_id, ''), u.username, r.radio_id)
+    WHERE r.is_active = true
+    ORDER BY
+      CASE WHEN r.last_seen > NOW() - INTERVAL '90 seconds' THEN 0 ELSE 1 END,
+      COALESCE(NULLIF(u.unit_id, ''), u.username, r.radio_id),
+      r.radio_id
+  `);
+
+  return result.rows;
 }
 
 export async function upsertUnit(identity, channel, status, location, isEmergency) {
