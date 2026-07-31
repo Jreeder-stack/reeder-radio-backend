@@ -1,0 +1,117 @@
+window.location.assign('/admin/dispatch-centers')}
+        style={{
+          position: 'fixed',
+          right: 20,
+          bottom: 20,"""
+button_replacement = """      <button
+        type="button"
+        onClick={() => window.location.assign('/admin/ai-dispatchers')}
+        style={{
+          position: 'fixed',
+          right: 20,
+          bottom: 72,
+          zIndex: 1000,
+          border: '1px solid var(--dispatch-accent)',
+          borderRadius: 10,
+          padding: '10px 14px',
+          background: 'var(--dispatch-panel)',
+          color: 'var(--dispatch-text)',
+          fontWeight: 700,
+          cursor: 'pointer',
+          boxShadow: '0 8px 24px rgba(0,0,0,.3)',
+        }}
+      >
+        AI Dispatcher Profiles
+      </button>
+      <button
+        type="button"
+        onClick={() => window.location.assign('/admin/dispatch-centers')}
+        style={{
+          position: 'fixed',
+          right: 20,
+          bottom: 20,"""
+if button_anchor not in main:
+    raise RuntimeError('client main.jsx: admin button anchor missing')
+main = main.replace(button_anchor, button_replacement, 1)
+route_anchor = """            <Route
+              path="/admin/dispatch-centers"
+              element={
+                <ProtectedRoute adminOnly>
+                  <DispatchCenterAssignments />
+                </ProtectedRoute>
+              }
+            />"""
+route_replacement = route_anchor + """
+            <Route
+              path="/admin/ai-dispatchers"
+              element={
+                <ProtectedRoute adminOnly>
+                  <AIDispatcherProfiles />
+                </ProtectedRoute>
+              }
+            />"""
+if route_anchor not in main:
+    raise RuntimeError('client main.jsx: route anchor missing')
+main = main.replace(route_anchor, route_replacement, 1)
+write(main_path, main)
+
+# Focused isolation tests.
+tests = r'''import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { createRuntimeScopedMap, runWithRuntime } from '../runtimeContext.js';
+import { buildWsUrl } from '../cadStatusCheckClient.js';
+
+vi.mock('../cadService.js', async (importOriginal) => {
+  const actual = await importOriginal();
+  return actual;
+});
+
+describe('multi AI dispatcher runtime isolation', () => {
+  beforeEach(() => { vi.restoreAllMocks(); });
+
+  it('isolates identical unit keys between dispatcher runtimes', async () => {
+    const map = createRuntimeScopedMap();
+    await runWithRuntime({ runtimeId: 'constable' }, async () => map.set('UNIT-1', { state: 'CONSTABLE' }));
+    await runWithRuntime({ runtimeId: 'security' }, async () => map.set('UNIT-1', { state: 'SECURITY' }));
+    expect(await runWithRuntime({ runtimeId: 'constable' }, async () => map.get('UNIT-1').state)).toBe('CONSTABLE');
+    expect(await runWithRuntime({ runtimeId: 'security' }, async () => map.get('UNIT-1').state)).toBe('SECURITY');
+  });
+
+  it('builds a center-scoped status-check websocket URL', () => {
+    const url = new URL(buildWsUrl({
+      cadUrl: 'https://cad.example.test',
+      cadApiKey: 'secret',
+      dispatchCenterId: 'center-security',
+      agencyId: 'agency-security',
+    }));
+    expect(url.protocol).toBe('wss:');
+    expect(url.searchParams.get('api_key')).toBe('secret');
+    expect(url.searchParams.get('dispatch_center_id')).toBe('center-security');
+    expect(url.searchParams.get('agency_id')).toBe('agency-security');
+  });
+
+  it('refuses to build an unscoped managed websocket', () => {
+    expect(buildWsUrl({ cadUrl: 'https://cad.example.test', cadApiKey: 'secret' })).toBeNull();
+  });
+});
+'''
+write('src/services/__tests__/multiAiRuntime.test.js', tests)
+
+# Static safety checks ensure the central isolation hooks were applied.
+checks = {
+    'src/services/aiDispatchService.js': [
+        'this.identity',
+        'this.cadStatusCheckClient.start',
+        'AUDIO_FRAME_CENTER_FILTERED',
+        'profileManaged',
+    ],
+    'src/services/cadService.js': ['X-Dispatch-Center-Id', 'runtime.managed'],
+    'src/services/cadStatusCheckClient.js': ['dispatch_center_id', 'export class CadStatusCheckClient'],
+    'src/services/aiDispatcherRuntimeManager.js': ['ai_dispatcher_profiles', 'isUnitAllowed', 'startProfile'],
+}
+for path, needles in checks.items():
+    text = read(path)
+    for needle in needles:
+        if needle not in text:
+            raise RuntimeError(f'{path}: missing required safety hook {needle!r}')
+
+print('[multi-ai] patch completed successfully')
