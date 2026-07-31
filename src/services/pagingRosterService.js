@@ -34,23 +34,25 @@ export async function getActivatedRadioRoster() {
   await ensurePagingRosterSchema();
   const result = await pool.query(`
     SELECT
+      r.id,
       r.id AS radio_pk,
       r.radio_id,
       r.is_active,
       r.is_locked,
-      r.last_seen AS radio_last_seen,
       r.assigned_unit_id,
-      u.unit_id,
+      COALESCE(NULLIF(u.unit_id, ''), u.username, r.radio_id) AS unit_identity,
       u.username,
       p.channel,
-      p.status AS presence_status,
-      p.last_seen AS presence_last_seen,
-      p.is_emergency
+      COALESCE(p.status, 'offline') AS status,
+      COALESCE(p.last_seen, r.last_seen) AS last_seen,
+      COALESCE(p.is_emergency, false) AS is_emergency
     FROM radios r
     LEFT JOIN users u ON u.id = r.assigned_unit_id
     LEFT JOIN units p ON p.unit_identity = COALESCE(NULLIF(u.unit_id, ''), u.username, r.radio_id)
     WHERE r.is_active = true
-    ORDER BY COALESCE(NULLIF(u.unit_id, ''), u.username, r.radio_id)
+    ORDER BY
+      CASE WHEN COALESCE(p.status, 'offline') = 'offline' THEN 1 ELSE 0 END,
+      COALESCE(NULLIF(u.unit_id, ''), u.username, r.radio_id)
   `);
   return result.rows;
 }
@@ -62,7 +64,6 @@ export async function getDispatcherPagingLists() {
     SELECT
       l.id,
       l.name,
-      'custom'::text AS kind,
       COALESCE(array_agg(m.radio_id) FILTER (WHERE m.radio_id IS NOT NULL), '{}') AS member_radio_ids
     FROM dispatcher_paging_lists l
     LEFT JOIN dispatcher_paging_list_members m ON m.list_id = l.id
@@ -74,7 +75,6 @@ export async function getDispatcherPagingLists() {
     SELECT
       pl.id,
       pl.label AS name,
-      'system'::text AS kind,
       pl.list_type,
       COALESCE(array_agg(DISTINCT r.id) FILTER (WHERE r.id IS NOT NULL), '{}') AS member_radio_ids
     FROM paging_lists pl
