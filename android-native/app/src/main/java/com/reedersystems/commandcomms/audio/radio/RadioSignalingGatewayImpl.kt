@@ -11,11 +11,13 @@ class RadioSignalingGatewayImpl(
 
     override fun requestFloor(channelKey: String) {
         Log.d(TAG, "requestFloor channelKey=$channelKey signalingReady=${signalingClient.connectionState.value} ${RadioDiagLog.elapsedTag()}")
+        PttGrantGuard.markRequested(channelKey)
         signalingClient.emitRadioPttRequest(channelKey)
     }
 
     override fun releaseFloor(channelKey: String) {
         Log.d(TAG, "releaseFloor channelKey=$channelKey ${RadioDiagLog.elapsedTag()}")
+        PttGrantGuard.clear("local_release")
         signalingClient.emitRadioPttRelease(channelKey)
     }
 
@@ -26,6 +28,7 @@ class RadioSignalingGatewayImpl(
 
     override fun leaveChannel(channelKey: String) {
         Log.d(TAG, "leaveChannel channelKey=$channelKey ${RadioDiagLog.elapsedTag()}")
+        PttGrantGuard.clear("channel_leave")
         signalingClient.emitRadioLeaveChannel(channelKey)
     }
 
