@@ -1,6 +1,9 @@
 import pool, * as db from '../db/index.js';
 import { ensurePagingRosterSchema } from './pagingRosterService.js';
 import { signalingService } from './signalingService.js';
+import { startRadioHeartbeatService } from './radioHeartbeatService.js';
+
+startRadioHeartbeatService();
 
 export async function getAllUnits() {
   await ensurePagingRosterSchema();
@@ -17,7 +20,7 @@ export async function getAllUnits() {
       u.username,
       p.channel AS last_known_channel,
       p.status AS last_known_status,
-      COALESCE(p.last_seen, r.last_seen) AS last_seen,
+      COALESCE(r.last_seen, p.last_seen) AS last_seen,
       COALESCE(p.is_emergency, false) AS last_known_emergency
     FROM radios r
     LEFT JOIN users u ON u.id = r.assigned_unit_id
@@ -28,14 +31,11 @@ export async function getAllUnits() {
       r.radio_id
   `);
 
-  // A radio is online only when its own authenticated signaling socket exists.
-  // Do not infer per-radio state from the shared callsign presence row because
-  // multiple physical radios can be assigned to the same unit identity.
   const liveRadios = new Map();
   const sockets = signalingService.io?.sockets?.sockets;
   if (sockets) {
     for (const [, socket] of sockets) {
-      if (!socket.isRadioDevice || !socket.radioId) continue;
+      if (!socket.connected || !socket.isRadioDevice || !socket.radioId) continue;
 
       const channels = socket.channels ? Array.from(socket.channels) : [];
       const channel = channels[0] || null;
@@ -63,9 +63,32 @@ export async function getAllUnits() {
     }
   }
 
+  const now = Date.now();
+  const heartbeatGraceMs = 110000;
+
   return result.rows
     .map((row) => {
       const live = liveRadios.get(String(row.radio_id));
+      const lastSeenMs = row.last_seen ? new Date(row.last_seen).getTime() : 0;
+      const heartbeatFresh = lastSeenMs > 0 && (now - lastSeenMs) <= heartbeatGraceMs;
+      const online = Boolean(live) || heartbeatFresh;
+
+      let status = 'offline';
+      let channel = null;
+      let isEmergency = false;
+
+      if (live) {
+        status = live.status;
+        channel = live.channel;
+        isEmergency = live.isEmergency;
+      } else if (heartbeatFresh) {
+        // The radio may be connected to another backend instance. Keep it
+        // online during the persisted heartbeat grace window, but do not copy
+        // shared callsign transmit/emergency state to every physical radio.
+        status = 'online';
+        channel = row.last_known_channel || null;
+      }
+
       return {
         id: row.id,
         radio_pk: row.radio_pk,
@@ -75,10 +98,10 @@ export async function getAllUnits() {
         assigned_unit_id: row.assigned_unit_id,
         unit_identity: row.unit_identity,
         username: row.username,
-        channel: live?.channel || null,
-        status: live?.status || 'offline',
+        channel,
+        status,
         last_seen: row.last_seen,
-        is_emergency: live?.isEmergency || false,
+        is_emergency: isEmergency,
       };
     })
     .sort((a, b) => {
