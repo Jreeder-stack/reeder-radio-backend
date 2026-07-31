@@ -1,6 +1,7 @@
 import express from 'express';
 import authRouter from './authRouter.js';
 import adminRouter from './adminRouter.js';
+import dispatchCenterAssignmentsRouter from './dispatchCenterAssignmentsRouter.js';
 import channelsRouter from './channelsRouter.js';
 import zonesRouter from './zonesRouter.js';
 import dispatchRouter from './dispatchRouter.js';
@@ -19,6 +20,7 @@ import devicesRouter from './devicesRouter.js';
 export function setupRoutes(app) {
   app.use('/api/auth', authRouter);
   app.use('/api/admin', adminRouter);
+  app.use('/api/admin/dispatch-center-assignments', dispatchCenterAssignmentsRouter);
   app.use('/api/channels', channelsRouter);
   app.use('/api/zones', zonesRouter);
   app.use('/api/dispatch', dispatchRouter);

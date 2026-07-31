@@ -16,6 +16,7 @@ import DispatcherMap from "./pages/DispatcherMap.jsx";
 import RadioApp from "./pages/RadioApp.jsx";
 import RecordingLogsPage from "./pages/RecordingLogsPage.jsx";
 import RadioManagement from "./pages/RadioManagement.jsx";
+import DispatchCenterAssignments from "./pages/DispatchCenterAssignments.jsx";
 import VmLogs from "./VmLogs.jsx";
 import { RadioDeckView } from "./components/MobileRadio/RadioDeckView.jsx";
 import { MobileLogin } from "./components/MobileRadio/MobileLogin.jsx";
@@ -165,7 +166,31 @@ function AdminWrapper() {
     logout();
   };
   
-  return <Admin user={user} onLogout={handleLogout} />;
+  return (
+    <>
+      <Admin user={user} onLogout={handleLogout} />
+      <button
+        type="button"
+        onClick={() => window.location.assign('/admin/dispatch-centers')}
+        style={{
+          position: 'fixed',
+          right: 20,
+          bottom: 20,
+          zIndex: 1000,
+          border: '1px solid var(--dispatch-accent)',
+          borderRadius: 10,
+          padding: '10px 14px',
+          background: 'var(--dispatch-panel)',
+          color: 'var(--dispatch-text)',
+          fontWeight: 700,
+          cursor: 'pointer',
+          boxShadow: '0 8px 24px rgba(0,0,0,.3)',
+        }}
+      >
+        Dispatch Center Assignments
+      </button>
+    </>
+  );
 }
 
 function RadioAppWrapper() {
@@ -260,6 +285,14 @@ function ConnectedRoutes() {
               element={
                 <ProtectedRoute adminOnly>
                   <AdminWrapper />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/dispatch-centers"
+              element={
+                <ProtectedRoute adminOnly>
+                  <DispatchCenterAssignments />
                 </ProtectedRoute>
               }
             />
