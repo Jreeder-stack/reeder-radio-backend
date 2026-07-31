@@ -1,7 +1,8 @@
 import * as db from '../db/index.js';
+import { getActivatedRadioRoster } from './pagingRosterService.js';
 
 export async function getAllUnits() {
-  return db.getAllUnitPresence();
+  return getActivatedRadioRoster();
 }
 
 export async function upsertUnit(identity, channel, status, location, isEmergency) {
@@ -14,9 +15,9 @@ export async function setUnitEmergency(unitId, active) {
   const unit = await db.setUnitEmergency(unitId, active);
   if (unit) {
     await db.logRadioEvent(
-      unit.unit_identity, 
-      unit.channel, 
-      active ? 'emergency_activated' : 'emergency_cleared', 
+      unit.unit_identity,
+      unit.channel,
+      active ? 'emergency_activated' : 'emergency_cleared',
       { active }
     );
   }
