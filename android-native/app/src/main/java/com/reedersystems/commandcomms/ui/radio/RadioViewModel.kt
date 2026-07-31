@@ -162,7 +162,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                     _uiState.update { it.copy(pttState = PttState.IDLE) }
                 }
 
-                // Emergency broadcasts — service owns signaling/PTT, ViewModel owns UI only
+                // Emergency broadcasts — service owns signaling, ViewModel owns UI only
                 BackgroundAudioService.ACTION_EMERGENCY_ACTIVATED -> {
                     Log.d(TAG, "EMERGENCY_ACTIVATED received — updating UI to active state")
                     _uiState.update {
@@ -882,17 +882,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         // surfaces — dispatchers + cross-channel units — are notified consistently.
         sendServiceIntent(BackgroundAudioService.ACTION_EMERGENCY_ACTIVATE)
         locationTracker.startTracking()
-        startEmergencyTx(channel.roomKey)
-    }
-
-    private fun startEmergencyTx(channelKey: String) {
-        if (_uiState.value.pttState != PttState.IDLE) return
-        Log.d(TAG, "EMERGENCY TX START roomKey=$channelKey (key-lock bypassed)")
-        _uiState.update { it.copy(pttState = PttState.TRANSMITTING) }
-        app.toneEngine.playTalkPermitTone()
-        pttStartJob = viewModelScope.launch {
-            sendServiceIntent(BackgroundAudioService.ACTION_PTT_DOWN)
-        }
+        Log.d(TAG, "EMERGENCY ACTIVE — automatic TX suppressed; PTT remains user-controlled")
     }
 
     private fun onEmergencyClear() {
