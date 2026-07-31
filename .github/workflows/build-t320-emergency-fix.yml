@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - agent/t320-emergency-no-auto-tx-apk
+  pull_request:
+    branches:
+      - main
 
 permissions:
   contents: read
