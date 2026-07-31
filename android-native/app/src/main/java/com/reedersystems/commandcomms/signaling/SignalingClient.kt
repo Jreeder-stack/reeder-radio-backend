@@ -488,7 +488,7 @@ class SignalingClient(var serverUrl: String, private var radioToken: String? = n
         val requestId = UUID.randomUUID().toString()
         pendingPttRequestId = requestId
         pendingPttChannelId = channelKey
-        Log.d(TAG, "[FloorCtrl] SIGNALING_FLOOR_REQUEST channelKey=$channelKey unitId=$unitId requestId=$requestId deviceId=${deviceId ?: \"none\"}")
+        Log.d(TAG, "[FloorCtrl] SIGNALING_FLOOR_REQUEST channelKey=$channelKey unitId=$unitId requestId=$requestId deviceId=${deviceId ?: "none"}")
         socket?.emit("ptt:request", JSONObject().apply {
             put("channelId", channelKey)
             put("unitId", unitId)
