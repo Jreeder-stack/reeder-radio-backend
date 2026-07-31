@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { sendTextMessage, sendAudioMessage, getMessages, transcribeMessage, getAudioFilePath } from '../services/messagesService.js';
-import { isValidWav, InvalidAudioBufferError } from '../services/wavValidator.js';
+import { isValidWav, InvalidAudioBufferError, prepareWavForPlayback } from '../services/wavValidator.js';
 import { getMessagesByDateRange, getAudioDataByFilename, getAudioMessageDiagnostics } from '../db/index.js';
 import { requireDispatcher } from '../middleware/auth.js';
 import archiver from 'archiver';
@@ -37,18 +37,9 @@ router.get('/export/audio', requireDispatcher, async (req, res) => {
       
       const audioData = await getAudioDataByFilename(filename);
       if (audioData) {
-        archive.append(audioData, { name: filename });
-        manifest.push({
-          file: filename,
-          sender: msg.sender,
-          timestamp: msg.created_at,
-          duration_ms: msg.audio_duration,
-          transcription: msg.transcription || null
-        });
-      } else {
-        const filepath = path.join(AUDIO_DIR, filename);
-        if (fs.existsSync(filepath)) {
-          archive.file(filepath, { name: filename });
+        const prepared = prepareAudioBuffer(audioData, filename);
+        if (prepared.buffer) {
+          archive.append(prepared.buffer, { name: filename });
           manifest.push({
             file: filename,
             sender: msg.sender,
@@ -56,6 +47,21 @@ router.get('/export/audio', requireDispatcher, async (req, res) => {
             duration_ms: msg.audio_duration,
             transcription: msg.transcription || null
           });
+        }
+      } else {
+        const filepath = path.join(AUDIO_DIR, filename);
+        if (fs.existsSync(filepath)) {
+          const prepared = prepareAudioBuffer(fs.readFileSync(filepath), filename);
+          if (prepared.buffer) {
+            archive.append(prepared.buffer, { name: filename });
+            manifest.push({
+              file: filename,
+              sender: msg.sender,
+              timestamp: msg.created_at,
+              duration_ms: msg.audio_duration,
+              transcription: msg.transcription || null
+            });
+          }
         }
       }
     }
@@ -70,16 +76,31 @@ router.get('/export/audio', requireDispatcher, async (req, res) => {
   }
 });
 
-function serveAudioBuffer(res, buf) {
+function prepareAudioBuffer(buf, filename) {
   if (!Buffer.isBuffer(buf) || buf.length === 0) {
     console.warn('[AudioRoute] Empty or missing audio data — returning 404');
-    res.setHeader('Content-Type', 'audio/wav');
-    return res.status(404).end();
+    return { status: 404, buffer: null };
   }
 
+  const prepared = prepareWavForPlayback(buf);
+  if (!prepared) {
+    console.warn(`[AudioRoute] Invalid or unsupported WAV data for "${filename}" (${buf.length} bytes) — returning 415`);
+    return { status: 415, buffer: null };
+  }
+
+  if (prepared.repairedLegacyHeader) {
+    console.warn(`[AudioRoute] Repaired legacy RecordingTap WAV header for "${filename}"`);
+  }
+
+  return { status: 200, buffer: prepared.buffer };
+}
+
+function serveAudioBuffer(res, buf, filename) {
+  const prepared = prepareAudioBuffer(buf, filename);
   res.setHeader('Content-Type', 'audio/wav');
-  res.setHeader('Content-Length', buf.length);
-  return res.send(buf);
+  if (!prepared.buffer) return res.status(prepared.status).end();
+  res.setHeader('Content-Length', prepared.buffer.length);
+  return res.send(prepared.buffer);
 }
 
 router.head('/audio/:filename', async (req, res) => {
@@ -91,9 +112,11 @@ router.head('/audio/:filename', async (req, res) => {
 
     const audioData = await getAudioDataByFilename(filename);
     if (audioData && audioData.length > 0) {
+      const prepared = prepareAudioBuffer(audioData, filename);
       res.setHeader('Content-Type', 'audio/wav');
-      res.setHeader('Content-Length', audioData.length);
-      return res.status(200).end();
+      if (!prepared.buffer) return res.status(prepared.status).end();
+      res.setHeader('Content-Length', prepared.buffer.length);
+      return res.status(prepared.status).end();
     }
 
     let decodedFilename;
@@ -103,18 +126,22 @@ router.head('/audio/:filename', async (req, res) => {
     if (isSafeDecoded) {
       const decoded = await getAudioDataByFilename(decodedFilename);
       if (decoded && decoded.length > 0) {
+        const prepared = prepareAudioBuffer(decoded, decodedFilename);
         res.setHeader('Content-Type', 'audio/wav');
-        res.setHeader('Content-Length', decoded.length);
-        return res.status(200).end();
+        if (!prepared.buffer) return res.status(prepared.status).end();
+        res.setHeader('Content-Length', prepared.buffer.length);
+        return res.status(prepared.status).end();
       }
     }
 
     const filepath = getAudioFilePath(filename) || (isSafeDecoded ? getAudioFilePath(decodedFilename) : null);
     if (filepath) {
-      const stat = fs.statSync(filepath);
+      const fileData = fs.readFileSync(filepath);
+      const prepared = prepareAudioBuffer(fileData, path.basename(filepath));
       res.setHeader('Content-Type', 'audio/wav');
-      res.setHeader('Content-Length', stat.size);
-      return res.status(200).end();
+      if (!prepared.buffer) return res.status(prepared.status).end();
+      res.setHeader('Content-Length', prepared.buffer.length);
+      return res.status(prepared.status).end();
     }
 
     return res.status(404).end();
@@ -134,7 +161,7 @@ router.get('/audio/:filename', async (req, res) => {
     
     const audioData = await getAudioDataByFilename(filename);
     if (audioData) {
-      return serveAudioBuffer(res, audioData);
+      return serveAudioBuffer(res, audioData, filename);
     }
 
     let decodedFilename;
@@ -151,21 +178,19 @@ router.get('/audio/:filename', async (req, res) => {
     if (isSafeDecoded) {
       const decodedAudioData = await getAudioDataByFilename(decodedFilename);
       if (decodedAudioData) {
-        return serveAudioBuffer(res, decodedAudioData);
+        return serveAudioBuffer(res, decodedAudioData, decodedFilename);
       }
     }
 
     const filepath = getAudioFilePath(filename);
     if (filepath) {
-      res.setHeader('Content-Type', 'audio/wav');
-      return res.sendFile(filepath);
+      return serveAudioBuffer(res, fs.readFileSync(filepath), filename);
     }
 
     if (isSafeDecoded) {
       const decodedFilepath = getAudioFilePath(decodedFilename);
       if (decodedFilepath) {
-        res.setHeader('Content-Type', 'audio/wav');
-        return res.sendFile(decodedFilepath);
+        return serveAudioBuffer(res, fs.readFileSync(decodedFilepath), decodedFilename);
       }
     }
 

@@ -3,6 +3,7 @@ import path from 'path';
 import { opusCodec, SAMPLE_RATE, CHANNELS } from './opusCodec.js';
 import { sendAudioMessage } from './messagesService.js';
 import { getAudioDataByFilename } from '../db/index.js';
+import { createPcmWavBuffer, isValidWav } from './wavValidator.js';
 
 const AUDIO_DIR = path.join(process.cwd(), 'uploads', 'audio');
 const TX_IDLE_TIMEOUT_MS = 2000;
@@ -128,7 +129,7 @@ function finalizeRecording(key) {
       return;
     }
 
-    const wavBuffer = createWavBuffer(pcmData, SAMPLE_RATE, CHANNELS);
+    const wavBuffer = createPcmWavBuffer(pcmData, SAMPLE_RATE, CHANNELS, 16);
 
     if (!validateWavBuffer(wavBuffer)) {
       console.warn(`[RecordingTap] Invalid WAV buffer for unit=${unitId} channel=${channelId} — skipping save`);
@@ -186,33 +187,6 @@ function handleClearAirEnd({ channelId, dispatcherId }) {
   }
 }
 
-function createWavBuffer(pcmData, sampleRate, numChannels) {
-  const bitsPerSample = 16;
-  const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
-  const blockAlign = numChannels * (bitsPerSample / 8);
-  const dataSize = pcmData.length;
-  const headerSize = 44;
-
-  const buffer = Buffer.alloc(headerSize + dataSize);
-
-  buffer.write('RIFF', 0);
-  buffer.writeUInt32LE(36 + dataSize, 4);
-  buffer.write('WAVE', 8);
-  buffer.write('fmt ', 12);
-  buffer.writeUInt32LE(16, 16);
-  buffer.writeUInt16LE(1, 20);
-  buffer.writeUInt16LE(numChannels, 22);
-  buffer.writeUInt32LE(sampleRate, 24);
-  buffer.writeUInt32LE(byteRate, 28);
-  buffer.writeUInt16LE(blockAlign, 30);
-  buffer.writeUInt16LE(bitsPerSample, 32);
-  buffer.write('data', 36);
-  buffer.writeUInt32LE(dataSize, 40);
-  pcmData.copy(buffer, 44);
-
-  return buffer;
-}
-
 const MIN_WAV_SIZE = 44 + 100;
 
 function validateWavBuffer(buffer) {
@@ -220,10 +194,8 @@ function validateWavBuffer(buffer) {
     console.warn(`[RecordingTap] WAV validation failed: buffer too small (${buffer?.length || 0} bytes)`);
     return false;
   }
-  const riff = buffer.toString('ascii', 0, 4);
-  const wave = buffer.toString('ascii', 8, 12);
-  if (riff !== 'RIFF' || wave !== 'WAVE') {
-    console.warn(`[RecordingTap] WAV validation failed: invalid magic bytes (got "${riff}"/"${wave}")`);
+  if (!isValidWav(buffer)) {
+    console.warn('[RecordingTap] WAV validation failed: malformed or internally inconsistent PCM header');
     return false;
   }
   return true;
