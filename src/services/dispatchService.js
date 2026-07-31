@@ -1,5 +1,6 @@
 import pool, * as db from '../db/index.js';
 import { ensurePagingRosterSchema } from './pagingRosterService.js';
+import { signalingService } from './signalingService.js';
 
 export async function getAllUnits() {
   await ensurePagingRosterSchema();
@@ -14,35 +15,79 @@ export async function getAllUnits() {
       r.assigned_unit_id,
       COALESCE(NULLIF(u.unit_id, ''), u.username, r.radio_id) AS unit_identity,
       u.username,
-      CASE
-        WHEN r.last_seen > NOW() - INTERVAL '90 seconds' THEN p.channel
-        ELSE NULL
-      END AS channel,
-      CASE
-        WHEN r.last_seen > NOW() - INTERVAL '90 seconds' THEN
-          CASE
-            WHEN COALESCE(p.is_emergency, false) THEN 'emergency'
-            WHEN p.status = 'transmitting' THEN 'transmitting'
-            ELSE 'online'
-          END
-        ELSE 'offline'
-      END AS status,
-      r.last_seen AS last_seen,
-      CASE
-        WHEN r.last_seen > NOW() - INTERVAL '90 seconds' THEN COALESCE(p.is_emergency, false)
-        ELSE false
-      END AS is_emergency
+      p.channel AS last_known_channel,
+      p.status AS last_known_status,
+      COALESCE(p.last_seen, r.last_seen) AS last_seen,
+      COALESCE(p.is_emergency, false) AS last_known_emergency
     FROM radios r
     LEFT JOIN users u ON u.id = r.assigned_unit_id
     LEFT JOIN units p ON p.unit_identity = COALESCE(NULLIF(u.unit_id, ''), u.username, r.radio_id)
     WHERE r.is_active = true
     ORDER BY
-      CASE WHEN r.last_seen > NOW() - INTERVAL '90 seconds' THEN 0 ELSE 1 END,
       COALESCE(NULLIF(u.unit_id, ''), u.username, r.radio_id),
       r.radio_id
   `);
 
-  return result.rows;
+  // A radio is online only when its own authenticated signaling socket exists.
+  // Do not infer per-radio state from the shared callsign presence row because
+  // multiple physical radios can be assigned to the same unit identity.
+  const liveRadios = new Map();
+  const sockets = signalingService.io?.sockets?.sockets;
+  if (sockets) {
+    for (const [, socket] of sockets) {
+      if (!socket.isRadioDevice || !socket.radioId) continue;
+
+      const channels = socket.channels ? Array.from(socket.channels) : [];
+      const channel = channels[0] || null;
+      let status = 'online';
+      let isEmergency = false;
+
+      if (channel) {
+        const transmission = signalingService.activeTransmissions?.get(channel);
+        if (transmission?.deviceId === socket.deviceId || transmission?.floorKey === socket.floorKey) {
+          status = 'transmitting';
+        }
+
+        const emergency = signalingService.emergencyStates?.get(channel);
+        if (emergency?.unitId === socket.unitId) {
+          status = 'emergency';
+          isEmergency = true;
+        }
+      }
+
+      liveRadios.set(String(socket.radioId), {
+        channel,
+        status,
+        isEmergency,
+      });
+    }
+  }
+
+  return result.rows
+    .map((row) => {
+      const live = liveRadios.get(String(row.radio_id));
+      return {
+        id: row.id,
+        radio_pk: row.radio_pk,
+        radio_id: row.radio_id,
+        is_active: row.is_active,
+        is_locked: row.is_locked,
+        assigned_unit_id: row.assigned_unit_id,
+        unit_identity: row.unit_identity,
+        username: row.username,
+        channel: live?.channel || null,
+        status: live?.status || 'offline',
+        last_seen: row.last_seen,
+        is_emergency: live?.isEmergency || false,
+      };
+    })
+    .sort((a, b) => {
+      const onlineOrder = (a.status === 'offline' ? 1 : 0) - (b.status === 'offline' ? 1 : 0);
+      if (onlineOrder !== 0) return onlineOrder;
+      const identityOrder = String(a.unit_identity).localeCompare(String(b.unit_identity));
+      if (identityOrder !== 0) return identityOrder;
+      return String(a.radio_id).localeCompare(String(b.radio_id));
+    });
 }
 
 export async function upsertUnit(identity, channel, status, location, isEmergency) {
