@@ -1,0 +1,1 @@
+Build request for the current main T320 APK containing the emergency no-auto-TX fix and the per-device PTT grant isolation fix.
