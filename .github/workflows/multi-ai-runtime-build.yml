@@ -7,6 +7,12 @@ on:
     paths:
       - scripts/multi-ai-parts/**
       - .github/workflows/multi-ai-runtime-build.yml
+  pull_request:
+    branches:
+      - main
+    paths:
+      - scripts/multi-ai-parts/**
+      - .github/workflows/multi-ai-runtime-build.yml
 
 permissions:
   contents: write
@@ -17,7 +23,7 @@ concurrency:
 
 jobs:
   build:
-    if: ${{ !contains(github.event.head_commit.message, '[multi-ai-runtime-applied]') }}
+    if: ${{ github.event_name == 'pull_request' || !contains(github.event.head_commit.message, '[multi-ai-runtime-applied]') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
