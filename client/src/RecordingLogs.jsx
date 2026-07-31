@@ -72,10 +72,12 @@ export default function RecordingLogs({ isMobile }) {
         fetchAbortRef.current = null;
       }
       if (audioRef.current) {
+        audioRef.current.onended = null;
+        audioRef.current.onerror = null;
+        audioRef.current.onplaying = null;
         audioRef.current.pause();
-        if (audioRef.current._blobUrl) {
-          URL.revokeObjectURL(audioRef.current._blobUrl);
-        }
+        audioRef.current.removeAttribute("src");
+        audioRef.current.load();
         audioRef.current = null;
       }
     };
@@ -182,20 +184,23 @@ export default function RecordingLogs({ isMobile }) {
   };
 
   const stopCurrent = () => {
+    fetchTokenRef.current += 1;
     if (fetchAbortRef.current) {
       fetchAbortRef.current.abort();
       fetchAbortRef.current = null;
     }
     if (audioRef.current) {
+      audioRef.current.onended = null;
+      audioRef.current.onerror = null;
+      audioRef.current.onplaying = null;
       audioRef.current.pause();
-      if (audioRef.current._blobUrl) {
-        URL.revokeObjectURL(audioRef.current._blobUrl);
-      }
+      audioRef.current.removeAttribute("src");
+      audioRef.current.load();
       audioRef.current = null;
     }
   };
 
-  const handlePlay = async (log) => {
+  const handlePlay = (log) => {
     if (!isAudioPlayable(log)) return;
 
     if (playingId === log.id) {
@@ -208,56 +213,127 @@ export default function RecordingLogs({ isMobile }) {
     setPlayingId(log.id);
 
     const token = ++fetchTokenRef.current;
+    const audioUrl = encodeURI(log.audio_url);
     const controller = new AbortController();
     fetchAbortRef.current = controller;
+    const audio = new Audio();
+    let failureReported = false;
+    let probeStatus = null;
+    let probeContentType = null;
 
-    let blobUrl = null;
-    try {
-      const response = await fetch(log.audio_url, {
-        credentials: "include",
-        signal: controller.signal,
-      });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const blob = await response.blob();
-
-      if (token !== fetchTokenRef.current) {
-        return;
-      }
-
-      blobUrl = URL.createObjectURL(blob);
-      const audio = new Audio(blobUrl);
-      audio._blobUrl = blobUrl;
-      audio.onended = () => {
-        URL.revokeObjectURL(blobUrl);
-        setPlayingId(null);
-      };
-      audio.onerror = () => {
-        URL.revokeObjectURL(blobUrl);
-        setPlayingId(null);
-        alert("Playback failed — audio may be unavailable.");
-      };
-
-      try {
-        await audio.play();
-      } catch (playErr) {
-        URL.revokeObjectURL(blobUrl);
-        setPlayingId(null);
-        alert("Playback failed — audio may be unavailable.");
-        return;
-      }
-
-      if (token !== fetchTokenRef.current) {
-        audio.pause();
-        URL.revokeObjectURL(blobUrl);
-        return;
-      }
-
-      audioRef.current = audio;
-    } catch (err) {
-      if (err && err.name === "AbortError") return;
-      if (blobUrl) URL.revokeObjectURL(blobUrl);
+    const failPlayback = (reason, error = null) => {
+      if (failureReported || token !== fetchTokenRef.current) return;
+      failureReported = true;
+      audio.onerror = null;
+      audio.onended = null;
+      audio.onplaying = null;
+      audio.pause();
+      audio.removeAttribute("src");
+      audio.load();
+      if (audioRef.current === audio) audioRef.current = null;
       setPlayingId(null);
-      alert("Playback failed — audio may be unavailable.");
+      console.error("[RecordingLogs] playback failed", {
+        recordingId: log.id,
+        audioUrl,
+        reason,
+        probeStatus,
+        probeContentType,
+        mediaErrorCode: audio.error?.code ?? null,
+        errorName: error?.name ?? null,
+        errorMessage: error?.message ?? null,
+      });
+
+      if (probeStatus === 404) {
+        alert("Playback failed — the recording audio was not found.");
+      } else if (probeStatus === 415 || probeStatus === 422) {
+        alert("Playback failed — the recording audio format is unavailable.");
+      } else if (error?.name === "NotAllowedError") {
+        alert("Playback was blocked by the browser. Press Play again.");
+      } else {
+        alert("Playback failed — audio may be unavailable.");
+      }
+    };
+
+    audio.preload = "auto";
+    audio.src = audioUrl;
+    audioRef.current = audio;
+
+    audio.onplaying = () => {
+      if (token !== fetchTokenRef.current) return;
+      console.info("[RecordingLogs] playback started", {
+        recordingId: log.id,
+        audioUrl,
+      });
+    };
+    audio.onended = () => {
+      if (token !== fetchTokenRef.current) return;
+      if (audioRef.current === audio) audioRef.current = null;
+      if (fetchAbortRef.current === controller) fetchAbortRef.current = null;
+      setPlayingId(null);
+      console.info("[RecordingLogs] playback completed", {
+        recordingId: log.id,
+        audioUrl,
+      });
+    };
+    audio.onerror = () => {
+      if (audio.error?.code === 1) return;
+      failPlayback("media-element-error");
+    };
+
+    console.info("[RecordingLogs] playback requested", {
+      recordingId: log.id,
+      sender: log.sender,
+      channel: log.channel,
+      audioUrl,
+      audioAvailable: log.audio_available,
+      audioDurationMs: log.audio_duration,
+    });
+
+    // Start playback immediately inside the button click. Waiting for a full
+    // fetch/blob conversion here causes browsers to discard the user gesture
+    // and reject play() under autoplay policy.
+    let playPromise;
+    try {
+      playPromise = audio.play();
+    } catch (error) {
+      failPlayback("play-threw", error);
+      return;
+    }
+
+    // Probe availability in parallel for useful HTTP diagnostics without
+    // delaying or replacing the browser's native media request.
+    fetch(audioUrl, {
+      method: "HEAD",
+      credentials: "include",
+      signal: controller.signal,
+    })
+      .then((response) => {
+        if (token !== fetchTokenRef.current) return;
+        probeStatus = response.status;
+        probeContentType = response.headers?.get?.("content-type") || null;
+        console.info("[RecordingLogs] audio probe completed", {
+          recordingId: log.id,
+          audioUrl,
+          status: probeStatus,
+          contentType: probeContentType,
+          contentLength: response.headers?.get?.("content-length") || null,
+        });
+      })
+      .catch((error) => {
+        if (error?.name === "AbortError" || token !== fetchTokenRef.current) return;
+        console.warn("[RecordingLogs] audio probe failed", {
+          recordingId: log.id,
+          audioUrl,
+          errorName: error?.name || null,
+          errorMessage: error?.message || String(error),
+        });
+      });
+
+    if (playPromise && typeof playPromise.catch === "function") {
+      playPromise.catch((error) => {
+        if (error?.name === "AbortError") return;
+        failPlayback("play-promise-rejected", error);
+      });
     }
   };
 
