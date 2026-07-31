@@ -3,10 +3,13 @@ package com.reedersystems.commandcomms.audio
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.os.Handler
+import android.os.Looper
 import android.os.PowerManager
 import android.util.Log
 import com.reedersystems.commandcomms.CommandCommsApp
 import com.reedersystems.commandcomms.KeyAction
+import java.util.concurrent.atomic.AtomicLong
 
 private const val TAG = "[PTT-DIAG]"
 
@@ -178,6 +181,15 @@ class PttHardwareReceiver : BroadcastReceiver() {
 
         Log.d(TAG, "PttHardwareReceiver: mapped action=$action -> svcAction=$pttAction")
 
+        // Every accepted DOWN starts a new physical press generation. The delayed
+        // release watchdog from an older press is therefore prevented from cutting
+        // off a genuinely new rapid press.
+        val pressGeneration = if (pttAction == BackgroundAudioService.ACTION_PTT_DOWN) {
+            pttPressGeneration.incrementAndGet()
+        } else {
+            pttPressGeneration.get()
+        }
+
         val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
         val wakeLock = pm.newWakeLock(
             PowerManager.PARTIAL_WAKE_LOCK,
@@ -207,6 +219,29 @@ class PttHardwareReceiver : BroadcastReceiver() {
             context.startForegroundService(serviceIntent)
         } catch (e: Exception) {
             Log.e(TAG, "PttHardwareReceiver: startForegroundService failed — ${e::class.simpleName}: ${e.message}")
+        }
+
+        // The service intentionally debounces duplicate UP broadcasts. On a very
+        // fast double press, T320 firmware can reorder/duplicate edges so the real
+        // release is mistaken for bounce and TX remains open. Send one guarded
+        // release watchdog after the debounce window. It is cancelled logically
+        // when another DOWN begins because the press generation changes.
+        if (pttAction == BackgroundAudioService.ACTION_PTT_UP) {
+            mainHandler.postDelayed({
+                if (pttPressGeneration.get() != pressGeneration) {
+                    Log.d(TAG, "PTT release watchdog cancelled by newer DOWN generation=$pressGeneration")
+                    return@postDelayed
+                }
+                val releaseIntent = Intent(context.applicationContext, BackgroundAudioService::class.java).apply {
+                    this.action = BackgroundAudioService.ACTION_PTT_UP
+                }
+                try {
+                    context.applicationContext.startForegroundService(releaseIntent)
+                    Log.w(TAG, "PTT release watchdog sent generation=$pressGeneration")
+                } catch (e: Exception) {
+                    Log.e(TAG, "PTT release watchdog failed — ${e::class.simpleName}: ${e.message}")
+                }
+            }, PTT_RELEASE_WATCHDOG_MS)
         }
 
         if (isSosShortpress) {
@@ -244,8 +279,11 @@ class PttHardwareReceiver : BroadcastReceiver() {
         const val ACTION_EMERGENCY_DOWN = "com.reedersystems.commandcomms.EMERGENCY_DOWN"
         const val ACTION_EMERGENCY_UP   = "com.reedersystems.commandcomms.EMERGENCY_UP"
 
-        private const val WAKE_LOCK_TAG       = "CommandComms:PttReceiver"
+        private const val WAKE_LOCK_TAG = "CommandComms:PttReceiver"
         private const val WAKE_LOCK_TIMEOUT_MS = 5_000L
+        private const val PTT_RELEASE_WATCHDOG_MS = 260L
+        private val pttPressGeneration = AtomicLong(0L)
+        private val mainHandler = Handler(Looper.getMainLooper())
     }
     // ── END DO NOT MODIFY — VERIFIED HARDWARE MAPPING ──────────────────
 }
