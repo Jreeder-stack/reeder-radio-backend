@@ -1,0 +1,6 @@
+
+# Repair the import path after converting singleton method references to the per-instance client.
+ai_path = 'src/services/aiDispatchService.js'
+ai = read(ai_path)
+ai = ai.replace("from './this.cadStatusCheckClient.js';", "from './cadStatusCheckClient.js';")
+write(ai_path, ai)
