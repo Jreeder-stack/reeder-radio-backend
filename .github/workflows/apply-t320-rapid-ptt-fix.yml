@@ -1,16 +1,16 @@
 name: Apply T320 Rapid PTT Fix
 
 on:
-  push:
+  pull_request:
     branches:
-      - fix/t320-rapid-ptt-release
+      - main
 
 permissions:
   contents: write
 
 jobs:
   patch:
-    if: github.actor != 'github-actions[bot]'
+    if: github.head_ref == 'fix/t320-rapid-ptt-release' && github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
