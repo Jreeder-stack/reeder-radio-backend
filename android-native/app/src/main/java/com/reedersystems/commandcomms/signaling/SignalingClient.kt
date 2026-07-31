@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import org.json.JSONObject
 import java.util.Timer
+import java.util.UUID
 import kotlin.concurrent.schedule
 
 private const val TAG = "[PTT-DIAG]"
@@ -32,6 +33,8 @@ class SignalingClient(var serverUrl: String, private var radioToken: String? = n
 
     private val pendingEmergencyEndKeys = mutableSetOf<String>()
     private var authRetryTimer: Timer? = null
+    @Volatile private var pendingPttRequestId: String? = null
+    @Volatile private var pendingPttChannelId: String? = null
 
     private var unitId: String = ""
     private var username: String = ""
@@ -126,6 +129,8 @@ class SignalingClient(var serverUrl: String, private var radioToken: String? = n
 
         s.on(Socket.EVENT_DISCONNECT) { _ ->
             Log.d(TAG, "Socket disconnected")
+            pendingPttRequestId = null
+            pendingPttChannelId = null
             _connectionState.value = ConnectionState.DISCONNECTED
         }
 
@@ -236,15 +241,31 @@ class SignalingClient(var serverUrl: String, private var radioToken: String? = n
             )
         }}
 
-        s.on("ptt:granted") { args -> parseAndEmit(args) { json ->
+        s.on("ptt:granted") { args ->
+            val json = args.firstOrNull() as? JSONObject ?: return@on
             val ch = json.optString("channelId")
-            val sender = json.optString("senderUnitId")
-            Log.d(TAG, "[FloorCtrl] SIGNALING_FLOOR_GRANTED channelId=$ch senderUnitId=$sender")
-            SignalingEvent.RadioPttGranted(
-                channelId = ch,
-                senderUnitId = sender
-            )
-        }}
+            val sender = json.optString("senderUnitId", json.optString("unitId"))
+            val requestId = json.optString("requestId")
+            val targetDeviceId = json.optString("targetDeviceId")
+            val expectedRequestId = pendingPttRequestId
+            val expectedChannelId = pendingPttChannelId
+            val ownDeviceId = deviceId
+
+            val valid = expectedRequestId != null &&
+                requestId == expectedRequestId &&
+                ch == expectedChannelId &&
+                (targetDeviceId.isBlank() || ownDeviceId == null || targetDeviceId == ownDeviceId)
+
+            if (!valid) {
+                Log.w(TAG, "[FloorCtrl] IGNORED_FOREIGN_PTT_GRANT channelId=$ch requestId=$requestId expectedRequestId=$expectedRequestId targetDeviceId=$targetDeviceId ownDeviceId=$ownDeviceId")
+                return@on
+            }
+
+            pendingPttRequestId = null
+            pendingPttChannelId = null
+            Log.d(TAG, "[FloorCtrl] SIGNALING_FLOOR_GRANTED channelId=$ch senderUnitId=$sender requestId=$requestId")
+            _events.tryEmit(SignalingEvent.RadioPttGranted(channelId = ch, senderUnitId = sender))
+        }
 
         s.on("ptt:denied") { args -> parseAndEmit(args) { json ->
             val ch = json.optString("channelId")
@@ -452,6 +473,8 @@ class SignalingClient(var serverUrl: String, private var radioToken: String? = n
     }
 
     fun emitRadioLeaveChannel(channelKey: String) {
+        pendingPttRequestId = null
+        pendingPttChannelId = null
         if (!isReady()) return
         Log.d(TAG, "emitRadioLeaveChannel $channelKey")
         socket?.emit("radio:leaveChannel", JSONObject().put("channelId", channelKey))
@@ -462,10 +485,15 @@ class SignalingClient(var serverUrl: String, private var radioToken: String? = n
             Log.w(TAG, "[RadioError] emitRadioPttRequest: not ready state=${_connectionState.value} channelKey=$channelKey")
             return
         }
-        Log.d(TAG, "[FloorCtrl] SIGNALING_FLOOR_REQUEST channelKey=$channelKey unitId=$unitId sessionTokenPresent=${socket?.connected() == true}")
+        val requestId = UUID.randomUUID().toString()
+        pendingPttRequestId = requestId
+        pendingPttChannelId = channelKey
+        Log.d(TAG, "[FloorCtrl] SIGNALING_FLOOR_REQUEST channelKey=$channelKey unitId=$unitId requestId=$requestId deviceId=${deviceId ?: \"none\"}")
         socket?.emit("ptt:request", JSONObject().apply {
             put("channelId", channelKey)
             put("unitId", unitId)
+            put("requestId", requestId)
+            deviceId?.let { put("deviceId", it) }
         })
     }
 
@@ -482,6 +510,8 @@ class SignalingClient(var serverUrl: String, private var radioToken: String? = n
     }
 
     fun emitRadioPttRelease(channelKey: String) {
+        pendingPttRequestId = null
+        pendingPttChannelId = null
         if (!isReady()) {
             Log.w(TAG, "[RadioError] emitRadioPttRelease: not ready state=${_connectionState.value} channelKey=$channelKey")
             return

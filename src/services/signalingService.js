@@ -839,7 +839,15 @@ class SignalingService {
       presence.status = 'transmitting';
     }
 
-    socket.emit('ptt:granted', { channelId, unitId: socket.unitId, timestamp: Date.now() });
+    socket.emit('ptt:granted', {
+      channelId,
+      unitId: socket.unitId,
+      senderUnitId: socket.unitId,
+      requestId: data.requestId || null,
+      targetDeviceId: socket.deviceId || null,
+      originSocketId: socket.id,
+      timestamp: Date.now(),
+    });
 
     this._emitToChannelExcludingDevice(channelId, RADIO_EVENTS.TX_START, {
       senderUnitId: socket.unitId,
