@@ -34,7 +34,8 @@ android {
         create("phone") {
             dimension = "device"
             applicationIdSuffix = ".bridge"
-            versionNameSuffix = "-phone-bridge"
+            versionCode = 3
+            versionNameSuffix = "-phone-bridge-v3"
             buildConfigField("String", "RADIO_DEVICE_TYPE", "\"android_phone_bridge\"")
         }
         create("sd7") {
