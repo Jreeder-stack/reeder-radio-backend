@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - agent/t320-emergency-no-auto-tx-apk
+      - build/t320-ptt-emergency-fixed-apk
   pull_request:
     branches:
       - main
@@ -44,7 +45,7 @@ jobs:
       - name: Upload T320 APK
         uses: actions/upload-artifact@v4
         with:
-          name: command-comms-t320-emergency-no-auto-tx
+          name: command-comms-t320-ptt-emergency-fixed
           path: android-native/app/build/outputs/apk/t320/debug/app-t320-debug.apk
           if-no-files-found: error
           retention-days: 14
