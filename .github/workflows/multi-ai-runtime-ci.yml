@@ -1,0 +1,56 @@
+name: Multi AI runtime validation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/services/aiDispatchService.js'
+      - 'src/services/aiDispatcherRuntimeManager.js'
+      - 'src/services/aiDispatcherSignaling.js'
+      - 'src/services/cadService.js'
+      - 'src/services/cadStatusCheckClient.js'
+      - 'src/services/commandMatcher.js'
+      - 'src/services/runtimeContext.js'
+      - 'src/services/unitActionLog.js'
+      - 'src/routes/aiDispatcherProfilesRouter.js'
+      - 'src/routes/index.js'
+      - 'src/controllers/adminController.js'
+      - 'src/server.js'
+      - 'client/src/pages/AIDispatcherProfiles.jsx'
+      - 'client/src/main.jsx'
+      - 'src/services/__tests__/multiAiRuntime.test.js'
+      - '.github/workflows/multi-ai-runtime-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Runtime syntax checks
+        run: |
+          node --check src/services/runtimeContext.js
+          node --check src/services/cadService.js
+          node --check src/services/cadStatusCheckClient.js
+          node --check src/services/aiDispatcherRuntimeManager.js
+          node --check src/services/aiDispatcherSignaling.js
+          node --check src/services/aiDispatchService.js
+          node --check src/services/commandMatcher.js
+          node --check src/services/unitActionLog.js
+          node --check src/routes/aiDispatcherProfilesRouter.js
+          node --check src/controllers/adminController.js
+          node --check src/routes/index.js
+          node --check src/server.js
+      - name: Multi-runtime and status-check tests
+        run: npx vitest run src/services/__tests__/multiAiRuntime.test.js src/services/__tests__/aiDispatch.statusCheck.test.js
+      - name: Production client build
+        run: npm run build
