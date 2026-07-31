@@ -1,0 +1,105 @@
+ion not configured - missing CAD_URL or CAD_API_KEY');
+    return { success: false, error: 'CAD integration not configured', failureType: 'NOT_CONFIGURED', statusCode: null, responseBody: null };
+  }
+  if (runtime.managed && !dispatchCenterId) {
+    console.error('[CAD] Managed dispatcher request blocked - no dispatch center configured', { runtimeId: runtime.runtimeId });
+    return { success: false, error: 'AI dispatcher dispatch center is not configured', failureType: 'DISPATCH_CENTER_REQUIRED', statusCode: null, responseBody: null };
+  }
+
+  const base = String(CAD_URL).replace(/\/+$/, '');
+  const target = new URL(`${base}${endpoint}`);
+  if (dispatchCenterId && !target.searchParams.has('dispatch_center_id')) {
+    target.searchParams.set('dispatch_center_id', dispatchCenterId);
+  }
+  const options = {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      'X-API-Key': CAD_API_KEY,
+      ...(dispatchCenterId ? { 'X-Dispatch-Center-Id': dispatchCenterId } : {}),
+      ...(agencyId ? { 'X-Agency-Id': agencyId } : {}),
+    }
+  };
+
+  if (body && method !== 'GET') {
+    options.body = JSON.stringify(body);
+    console.log(`[CAD:${runtime.runtimeId}] Outgoing ${method} ${endpoint} payload: ${options.body}`);
+  }
+
+  try {
+    const response = await fetch(target, options);
+
+    if (response.status === 204) return { success: true, statusCode: 204 };
+
+    const contentType = response.headers.get('content-type') || '';
+    if (!contentType.includes('json')) {
+      const textBody = await response.text().catch(() => '(unable to read body)');
+      console.error(`[CAD:${runtime.runtimeId}] Non-JSON response from ${target} (status ${response.status}, content-type: ${contentType}), body: ${textBody}`);
+      return { success: false, error: `Non-JSON response (status ${response.status}, content-type: ${contentType})`, failureType: 'UNREACHABLE', statusCode: response.status, responseBody: textBody };
+    }
+
+    const data = await response.json();
+    if (!response.ok) {
+      console.error(`[CAD:${runtime.runtimeId}] API error: ${method} ${endpoint} status=${response.status}, response=${JSON.stringify(data)}`);
+      return { success: false, error: data.error || `HTTP ${response.status}`, failureType: 'API_REJECTION', statusCode: response.status, responseBody: data };
+    }
+    if (data && data.success === false) {
+      return { ...data, success: false, error: data.error || 'Application-level failure', failureType: data.failureType || 'API_REJECTION', statusCode: response.status, responseBody: data };
+    }
+    return data;
+  } catch (error) {
+    console.error(`[CAD:${runtime.runtimeId}] Request failed for ${method} ${endpoint}:`, error.message);
+    return { success: false, error: error.message, failureType: 'UNREACHABLE', statusCode: null, responseBody: null };
+  }
+}
+
+export async function updateUnitStatus'''
+cad, count = cad_request_pattern.subn(cad_request_replacement, cad, count=1)
+if count != 1:
+    raise RuntimeError('cadService.js: failed to replace cadRequest')
+# Replace isConfigured regardless of its exact boolean formatting.
+cad, count = re.subn(
+    r"export function isConfigured\(\) \{.*?\n\}",
+    "export function isConfigured() {\n  const { url, apiKey, runtime, dispatchCenterId } = getCadRuntimeConfig();\n  return !!(url && apiKey && (!runtime.managed || dispatchCenterId));\n}",
+    cad,
+    count=1,
+    flags=re.S,
+)
+if count != 1:
+    raise RuntimeError('cadService.js: failed to replace isConfigured')
+# Map URL should use the active CAD URL when called from a profile.
+cad = cad.replace("  const CAD_URL = process.env.CAD_URL;\n  if (!CAD_URL) return null;\n  return `${CAD_URL}/map`;", "  const { url: CAD_URL } = getCadRuntimeConfig();\n  if (!CAD_URL) return null;\n  return `${String(CAD_URL).replace(/\\/$/, '')}/map`;")
+write(cad_path, cad)
+
+# Convert the status-check client from a global singleton into a configurable class.
+status_path = 'src/services/cadStatusCheckClient.js'
+status = read(status_path)
+status = status.replace('function buildWsUrl() {', 'export function buildWsUrl(config = {}) {')
+old_ws_body = """  const cadUrl = process.env.CAD_URL;\n  const apiKey = process.env.CAD_API_KEY;\n  if (!cadUrl || !apiKey) return null;\n  let base = cadUrl.replace(/^http:/i, 'ws:').replace(/^https:/i, 'wss:').replace(/\\/+$/, '');\n  return `${base}/ws?api_key=${encodeURIComponent(apiKey)}`;"""
+new_ws_body = """  const cadUrl = config.cadUrl || process.env.CAD_URL;\n  const apiKey = config.cadApiKey || process.env.CAD_API_KEY;\n  const dispatchCenterId = config.dispatchCenterId || process.env.CAD_DISPATCH_CENTER_ID;\n  const agencyId = config.agencyId || process.env.CAD_AGENCY_ID;\n  if (!cadUrl || !apiKey || !dispatchCenterId) return null;\n  let base = cadUrl.replace(/^http:/i, 'ws:').replace(/^https:/i, 'wss:').replace(/\\/+$/, '');\n  const params = new URLSearchParams({ api_key: apiKey, dispatch_center_id: dispatchCenterId });\n  if (agencyId) params.set('agency_id', agencyId);\n  return `${base}/ws?${params.toString()}`;"""
+if old_ws_body not in status:
+    raise RuntimeError('cadStatusCheckClient.js: buildWsUrl body not found')
+status = status.replace(old_ws_body, new_ws_body, 1)
+status = status.replace('class CadStatusCheckClient {\n  constructor() {', "export class CadStatusCheckClient {\n  constructor(config = {}) {\n    this.config = { ...config };")
+status = status.replace('buildWsUrl()?.replace(', 'buildWsUrl(this.config)?.replace(')
+status = status.replace('const url = buildWsUrl();', 'const url = buildWsUrl(this.config);')
+status = status.replace("const agencyFilter = process.env.CAD_AGENCY_ID;", "const agencyFilter = this.config.agencyId || process.env.CAD_AGENCY_ID;")
+status = status.replace("log('START', { url:", "log('START', { profileId: this.config.profileId || null, url:")
+status = status.replace("log('STOPPED');", "log('STOPPED', { profileId: this.config.profileId || null });")
+write(status_path, status)
+
+# Make the signaling adapter constructible per profile.
+sig_path = 'src/services/aiDispatcherSignaling.js'
+sig = read(sig_path)
+sig = sig.replace('class AIDispatcherSignaling {', 'export class AIDispatcherSignaling {', 1)
+sig = sig.replace('if (unitId === AI_UNIT_ID) {', 'if (unitId === AI_UNIT_ID || unitId === this.dispatcher?.identity) {')
+sig = sig.replace('if (unitId === AI_UNIT_ID) return;', 'if (unitId === AI_UNIT_ID || unitId === this.dispatcher?.identity) return;')
+write(sig_path, sig)
+
+# Make AIDispatcher instances runtime-aware without rewriting its command implementation.
+ai_path = 'src/services/aiDispatchService.js'
+ai = read(ai_path)
+ai = ai.replace("import { cadStatusCheckClient } from './cadStatusCheckClient.js';", "import * as cadStatusCheckModule from './cadStatusCheckClient.js';\nimport { bindRuntime, getRuntimeContext } from './runtimeContext.js';")
+ai = ai.replace('export class AIDispatcher {\n  constructor() {', '''export class AIDispatcher {
+  constructor(options = {}) {
+    this.runtimeContext = opt
