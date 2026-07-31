@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+
+    <application
+        android:icon="@drawable/ic_uhf_bridge"
+        android:label="Command Comms UHF Bridge"
+        tools:replace="android:icon,android:label">
+
+        <!-- Keep the shared activity class available for legacy intents, but
+             remove every launcher/HOME filter from the phone bridge build. -->
+        <activity android:name=".MainActivity">
+            <intent-filter tools:node="removeAll" />
+        </activity>
+
+        <activity
+            android:name=".ui.bridge.BridgeMainActivity"
+            android:exported="true"
+            android:label="Command Comms UHF Bridge"
+            android:theme="@style/Theme.CommandComms">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <service
+            android:name=".audio.bridge.UhfBridgeService"
+            android:exported="false"
+            android:foregroundServiceType="microphone|mediaPlayback" />
+    </application>
+
+</manifest>

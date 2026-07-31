@@ -1,5 +1,6 @@
 package com.reedersystems.commandcomms.navigation
 
+import android.content.Intent
 import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -14,7 +15,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import android.content.Intent
+import com.reedersystems.commandcomms.BuildConfig
 import com.reedersystems.commandcomms.CommandCommsApp
 import com.reedersystems.commandcomms.audio.BackgroundAudioService
 import com.reedersystems.commandcomms.ui.login.LoginScreen
@@ -42,12 +43,14 @@ object Routes {
 }
 
 private const val TAG = "[AppNav]"
+private const val PHONE_BRIDGE_DEVICE_TYPE = "android_phone_bridge"
 
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
     val context = LocalContext.current
     val app = context.applicationContext as CommandCommsApp
+    val isPhoneBridge = BuildConfig.RADIO_DEVICE_TYPE == PHONE_BRIDGE_DEVICE_TYPE
 
     var tokenValidated by remember { mutableStateOf(false) }
 
@@ -55,25 +58,32 @@ fun AppNavigation() {
     val radioId = app.radioTokenStore.getRadioId()
     val assignedUnitId = app.radioTokenStore.getAssignedUnitId()
 
-    val startDestination = remember {
-        val needsRegistration = radioToken == null || radioId.isNullOrBlank()
+    val startDestination = remember(isPhoneBridge, radioToken, radioId, assignedUnitId) {
+        if (isPhoneBridge) {
+            // A phone/tablet bridge is a normal authenticated Command Comms user,
+            // not a provisioned physical T320/SD7 radio. LoginScreen restores a
+            // valid cookie session automatically and navigates to the bridge UI.
+            Routes.LOGIN
+        } else {
+            val needsRegistration = radioToken == null || radioId.isNullOrBlank()
 
-        if (needsRegistration && radioToken != null) {
-            Log.w(TAG, "Token present but radioId missing/blank — clearing stale prefs")
-            app.radioTokenStore.clear()
-            app.apiClient.radioToken = null
-        }
+            if (needsRegistration && radioToken != null) {
+                Log.w(TAG, "Token present but radioId missing/blank — clearing stale prefs")
+                app.radioTokenStore.clear()
+                app.apiClient.radioToken = null
+            }
 
-        when {
-            needsRegistration -> Routes.DEVICE_REGISTRATION
-            assignedUnitId != null -> Routes.radio(assignedUnitId)
-            else -> Routes.unassigned(radioId!!)
+            when {
+                needsRegistration -> Routes.DEVICE_REGISTRATION
+                assignedUnitId != null -> Routes.radio(assignedUnitId)
+                else -> Routes.unassigned(radioId!!)
+            }
         }
     }
 
-    val needsRegistration = radioToken == null || radioId.isNullOrBlank()
+    val needsRegistration = !isPhoneBridge && (radioToken == null || radioId.isNullOrBlank())
 
-    if (!needsRegistration && !tokenValidated) {
+    if (!isPhoneBridge && !needsRegistration && !tokenValidated) {
         LaunchedEffect(Unit) {
             val localUnitBefore = app.radioTokenStore.getAssignedUnitId()
             val isValid = validateTokenWithServer(app)
@@ -135,7 +145,7 @@ fun AppNavigation() {
             })
         ) { backStackEntry ->
             val assignedUnit = backStackEntry.arguments?.getString("assignedUnit")
-            val isRadioDevice = app.radioTokenStore.getToken() != null
+            val isRadioDevice = !isPhoneBridge && app.radioTokenStore.getToken() != null
             val currentRadioId = app.radioTokenStore.getRadioId() ?: ""
             RadioFlavorScreen(
                 onLocked = if (isRadioDevice) {
@@ -178,11 +188,6 @@ fun AppNavigation() {
             val kioskEnabled by app.kioskPrefs.kioskEnabledFlow.collectAsState()
             val pinSet by app.kioskPrefs.pinSetFlow.collectAsState()
             val activity = (LocalContext.current as? android.app.Activity)
-            // "Active" means strictly: the OS reports we are currently in
-            // lock-task mode. We deliberately do NOT fall back to a prefs-only
-            // signal here — if startLockTask failed (e.g. the lock-task
-            // allowlist was rejected) we want the UI to report "not active"
-            // even though the admin toggled kiosk on.
             val isKioskActive = app.kioskPolicyManager.isInLockTaskMode
             SettingsScreen(
                 pttKeyPrefs = app.pttKeyPrefs,
