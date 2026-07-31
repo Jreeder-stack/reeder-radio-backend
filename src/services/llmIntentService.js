@@ -1,14 +1,14 @@
 import {
   classifyIntent as classifyLegacyIntent,
   isConfigured as isLegacyConfigured,
-} from './llmIntentService.base.js';
+} from './llmIntentService.legacy.js';
 import {
   classifyIntentV2,
   isDispatcherV2Configured,
   shouldUseDispatcherV2,
 } from './dispatcherV2Planner.js';
 
-export * from './llmIntentService.base.js';
+export * from './llmIntentService.legacy.js';
 
 export function isConfigured() {
   return shouldUseDispatcherV2('IDLE')
