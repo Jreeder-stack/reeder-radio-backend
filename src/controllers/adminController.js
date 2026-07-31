@@ -2,7 +2,8 @@ import { spawn } from 'child_process';
 import * as adminService from '../services/adminService.js';
 import * as authService from '../services/authService.js';
 import { success, error, created } from '../utils/response.js';
-import { startDispatcher, stopDispatcher, getDispatcher } from '../services/aiDispatchService.js';
+import { getDispatcher } from '../services/aiDispatchService.js';
+import { aiDispatcherRuntimeManager } from '../services/aiDispatcherRuntimeManager.js';
 import { 
   getAiDispatchChannel, 
   setAiDispatchChannel, 
@@ -308,23 +309,8 @@ export async function listLogs(req, res) {
 }
 
 export async function getAiDispatch(req, res) {
-  try {
-    const enabled = await adminService.getAiDispatchEnabled();
-    const channel = await getAiDispatchChannel();
-    const dispatcher = getDispatcher();
-    const pipeline = dispatcher.getPipelineStatus();
-    const statusChecks = await adminService.getStatusChecksEnabledState();
-    success(res, {
-      enabled,
-      channel,
-      pipeline,
-      statusChecksEnabled: statusChecks.enabled,
-      statusChecksSource: statusChecks.source,
-    });
-  } catch (err) {
-    console.error('Get AI dispatch error:', err);
-    error(res, 'Failed to get AI dispatch status', 500);
-  }
+  try { success(res, await aiDispatcherRuntimeManager.getLegacyStatus()); }
+  catch (err) { console.error('Get AI dispatch error:', err); error(res, err.message || 'Failed to get AI dispatch status', err.statusCode || 500); }
 }
 
 export async function getHourlyTimeBroadcast(req, res) {
@@ -422,81 +408,15 @@ export function resetAudioTuning(req, res) {
 
 export async function setAiDispatch(req, res) {
   try {
-    const { enabled, channel, statusChecksEnabled } = req.body;
-    if (enabled !== undefined && typeof enabled !== 'boolean') {
-      return error(res, 'enabled must be a boolean', 400);
-    }
-    if (statusChecksEnabled !== undefined && typeof statusChecksEnabled !== 'boolean') {
-      return error(res, 'statusChecksEnabled must be a boolean', 400);
-    }
-    if (enabled === undefined && statusChecksEnabled === undefined) {
-      return error(res, 'enabled or statusChecksEnabled is required', 400);
-    }
-
-    if (enabled === true) {
-      const targetChannel = channel !== undefined ? channel : await getAiDispatchChannel();
-      if (!targetChannel) {
-        return error(res, 'Dispatch channel is required to enable AI', 400);
-      }
-      const allChannels = await getAllChannels();
-      const channelData = allChannels.find(ch => ch.room_key === targetChannel || ch.name === targetChannel);
-      const roomKey = channelData?.room_key || targetChannel;
-      await setAiDispatchChannel(roomKey);
-      await adminService.setAiDispatchEnabled(true);
-      startDispatcher(channelData?.name || targetChannel, roomKey).catch(err => {
-        console.error('Failed to start AI dispatcher:', err.message);
-      });
-    } else if (enabled === false) {
-      await adminService.setAiDispatchEnabled(false);
-      await setAiDispatchChannel('');
-      stopDispatcher().catch(err => {
-        console.error('Failed to stop AI dispatcher:', err.message);
-      });
-    }
-
-    // Task #566: AI status checks toggle. Independent of the AI Dispatch on/off
-    // toggle — admins can leave the dispatcher running while suppressing every
-    // AI-initiated status check (CAD WS handler, /pending-checks polling, and
-    // the watchdog). When flipped without restarting the backend the
-    // dispatcher tears down or re-arms polling and clears any in-flight state.
-    if (statusChecksEnabled !== undefined) {
-      await adminService.setStatusChecksEnabled(statusChecksEnabled);
-      try {
-        getDispatcher().setStatusChecksEnabled(statusChecksEnabled);
-      } catch (err) {
-        console.error('Failed to apply status checks toggle to dispatcher:', err.message);
-      }
-      await authService.logUserActivity(
-        req.session.user.id,
-        req.session.user.username,
-        'admin_toggle_ai_status_checks',
-        { statusChecksEnabled }
-      );
-    }
-
-    const dispatchChannel = await getAiDispatchChannel();
-
-    if (enabled !== undefined) {
-      await authService.logUserActivity(
-        req.session.user.id,
-        req.session.user.username,
-        'admin_toggle_ai_dispatch',
-        { enabled, channel: dispatchChannel }
-      );
-    }
-    const pipeline = getDispatcher().getPipelineStatus();
-    const dispatchEnabled = await adminService.getAiDispatchEnabled();
-    const statusChecks = await adminService.getStatusChecksEnabledState();
-    success(res, {
-      enabled: dispatchEnabled,
-      channel: dispatchChannel,
-      pipeline,
-      statusChecksEnabled: statusChecks.enabled,
-      statusChecksSource: statusChecks.source,
-    });
+    const { enabled, channel, statusChecksEnabled } = req.body || {};
+    if (enabled !== undefined && typeof enabled !== 'boolean') return error(res, 'enabled must be a boolean', 400);
+    if (statusChecksEnabled !== undefined && typeof statusChecksEnabled !== 'boolean') return error(res, 'statusChecksEnabled must be a boolean', 400);
+    const result = await aiDispatcherRuntimeManager.applyLegacySettings({ enabled, channel, statusChecksEnabled });
+    await authService.logUserActivity(req.session.user.id, req.session.user.username, 'admin_update_primary_ai_dispatcher_profile', { enabled, channel, statusChecksEnabled });
+    success(res, result);
   } catch (err) {
     console.error('Set AI dispatch error:', err);
-    error(res, 'Failed to set AI dispatch status', 500);
+    error(res, err.message || 'Failed to set AI dispatch status', err.statusCode || 500);
   }
 }
 
@@ -724,10 +644,7 @@ export async function approveLearningCandidate(req, res) {
     });
     if (!result.ok) return error(res, result.reason || 'Failed to approve', 400);
     try {
-      const dispatcher = getDispatcher();
-      if (dispatcher && typeof dispatcher._refreshLearnedKnowledge === 'function') {
-        await dispatcher._refreshLearnedKnowledge();
-      }
+      await aiDispatcherRuntimeManager.refreshLearningKnowledge();
     } catch (_) {}
     success(res, { ok: true });
   } catch (err) {
@@ -768,10 +685,7 @@ export async function deleteLearningItem(req, res) {
     const result = await dispatcherLearning.deleteLearnedItem(id, { reviewedBy });
     if (!result.ok) return error(res, result.reason || 'Failed to delete', 404);
     try {
-      const dispatcher = getDispatcher();
-      if (dispatcher && typeof dispatcher._refreshLearnedKnowledge === 'function') {
-        await dispatcher._refreshLearnedKnowledge();
-      }
+      await aiDispatcherRuntimeManager.refreshLearningKnowledge();
     } catch (_) {}
     success(res, { ok: true });
   } catch (err) {

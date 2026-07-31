@@ -15,7 +15,8 @@ import { opusCodec, SAMPLE_RATE as OPUS_SAMPLE_RATE, FRAME_SIZE as OPUS_FRAME_SI
 import { floorControlService } from './floorControlService.js';
 import { formatSpokenTime24 } from './hourlyTimeBroadcastService.js';
 import * as cadService from './cadService.js';
-import { cadStatusCheckClient } from './cadStatusCheckClient.js';
+import * as cadStatusCheckModule from './cadStatusCheckClient.js';
+import { bindRuntime, getRuntimeContext } from './runtimeContext.js';
 import { recordAction, findMostRecentAction, removeAction, getActionsForUnit, DISREGARD_WINDOW_MS } from './unitActionLog.js';
 import { DISPATCHER_TZ, utcDateToLocalDate, localDateToUtcDate, formatLocalSpokenTime24, maybeUtcToLocalForSpeech } from '../utils/timezone.js';
 import locationService from './locationService.js';
@@ -836,7 +837,21 @@ function isCallPending(call) {
 }
 
 export class AIDispatcher {
-  constructor() {
+  constructor(options = {}) {
+    this.runtimeContext = options.runtimeContext || getRuntimeContext();
+    this.profileId = options.profileId || this.runtimeContext.profileId || null;
+    this.profileName = options.profileName || this.runtimeContext.profileName || null;
+    this.dispatchCenterId = options.dispatchCenterId || this.runtimeContext.dispatchCenterId || null;
+    this.agencyId = options.agencyId || this.runtimeContext.agencyId || null;
+    this.identity = options.identity || this.runtimeContext.identity || AI_IDENTITY;
+    this.profileManaged = options.profileManaged === true || this.runtimeContext.managed === true;
+    this.profileStatusChecksEnabled = options.statusChecksEnabled;
+    this.unitAccessGuard = typeof options.unitAccessGuard === 'function' ? options.unitAccessGuard : null;
+    this.cadStatusCheckClient = options.cadStatusCheckClient || (
+      this.profileManaged && cadStatusCheckModule.CadStatusCheckClient
+        ? new cadStatusCheckModule.CadStatusCheckClient(this.runtimeContext)
+        : cadStatusCheckModule.cadStatusCheckClient
+    );
     this.connected = false;
     this.channelName = null;
     this.isRunning = false;
@@ -901,7 +916,7 @@ export class AIDispatcher {
 
   log(action, details = {}) {
     const timestamp = new Date().toISOString();
-    console.log(`[AI-Dispatcher] ${timestamp} | ${action}`, JSON.stringify(details));
+    console.log(`[AI-Dispatcher:${this.profileId || 'legacy'}] ${timestamp} | ${action}`, JSON.stringify({ profileId: this.profileId, dispatchCenterId: this.dispatchCenterId, ...details }));
   }
 
   verboseLog(action, details = {}) {
@@ -1007,7 +1022,7 @@ export class AIDispatcher {
       llm: isLlmConfigured(),
     });
 
-    const enabled = await isAiDispatchEnabled();
+    const enabled = this.profileManaged ? true : await isAiDispatchEnabled();
     if (!enabled) {
       this.log('START_SKIPPED', { reason: 'AI Dispatch disabled in settings' });
       return;
@@ -1078,7 +1093,10 @@ export class AIDispatcher {
     // we never start polling, the watchdog, or the WS event handler — even
     // if CAD fires events they're suppressed at the handler edge below.
     try {
-      const { enabled, source } = await getStatusChecksEnabledState();
+      const statusSetting = this.profileStatusChecksEnabled == null
+        ? await getStatusChecksEnabledState()
+        : { enabled: !!this.profileStatusChecksEnabled, source: 'dispatcher_profile' };
+      const { enabled, source } = statusSetting;
       this._statusChecksEnabled = enabled;
       if (enabled) {
         this.log('STATUS_CHECKS_ENABLED', { source });
@@ -1095,7 +1113,7 @@ export class AIDispatcher {
     this._startHealthCheck();
 
     try {
-      const agencyId = dispatcherLearning.getDefaultAgencyId();
+      const agencyId = this._getAgencyId();
       this._agencyId = agencyId;
       const idx = await dispatcherLearning.refreshRuntimeIndex(agencyId);
       setLearnedPlaces(agencyId, idx.places);
@@ -1106,7 +1124,7 @@ export class AIDispatcher {
   }
 
   _getAgencyId() {
-    return this._agencyId || dispatcherLearning.getDefaultAgencyId();
+    return this._agencyId || this.agencyId || dispatcherLearning.getDefaultAgencyId();
   }
 
   _captureLearningCorrection(participantId, original, correction, transcript, sourceIntent) {
@@ -1178,7 +1196,7 @@ export class AIDispatcher {
   }
 
   _removeAllAudioListeners() {
-    audioRelayService.removeAllAudioListeners(AI_IDENTITY);
+    audioRelayService.removeAllAudioListeners(this.identity);
   }
 
   async leaveChannel() {
@@ -1327,7 +1345,7 @@ export class AIDispatcher {
           listenKeys.add(String(this.numericChannelId));
         }
         for (const key of listenKeys) {
-          audioRelayService.addAudioListener(key, AI_IDENTITY, this._audioListenerBound);
+          audioRelayService.addAudioListener(key, this.identity, this._audioListenerBound);
         }
       }
     }, HEALTH_CHECK_INTERVAL_MS);
@@ -1457,7 +1475,7 @@ export class AIDispatcher {
 
   isHumanParticipant(identity) {
     if (!identity) return false;
-    if (identity === AI_IDENTITY) return false;
+    if (identity === this.identity) return false;
     if (identity.startsWith('AI-')) return false;
     if (identity.startsWith('SIP-')) return false;
     if (identity.startsWith('sip_')) return false;
@@ -1768,7 +1786,7 @@ export class AIDispatcher {
       this._intentionalLeave = false;
     }
 
-    this._audioListenerBound = this._onAudioFrame.bind(this);
+    this._audioListenerBound = bindRuntime(this.runtimeContext, this._onAudioFrame.bind(this));
 
     const listenKeys = new Set();
     listenKeys.add(channelName);
@@ -1780,7 +1798,7 @@ export class AIDispatcher {
     }
 
     for (const key of listenKeys) {
-      audioRelayService.addAudioListener(key, AI_IDENTITY, this._audioListenerBound);
+      audioRelayService.addAudioListener(key, this.identity, this._audioListenerBound);
     }
 
     if (this.numericChannelId != null) {
@@ -1800,14 +1818,23 @@ export class AIDispatcher {
     this.verboseLog('OPUS_TRANSPORT_VERIFIED', { mode: 'server-side decode', note: 'AI dispatcher receives Opus from relay listeners and decodes server-side for STT' });
   }
 
-  _onAudioFrame(audioEvent) {
+  async _onAudioFrame(audioEvent) {
     const { channelId, unitId, opusPayload, sequence, codec } = audioEvent;
-    if (unitId === AI_IDENTITY) return;
+    if (unitId === this.identity) return;
     if (!this.isHumanParticipant(unitId)) {
       if (sequence === 0) {
         this.verboseLog('AUDIO_FRAME_NON_HUMAN', { unitId, channelId });
       }
       return;
+    }
+    if (this.unitAccessGuard) {
+      let allowed = false;
+      try { allowed = await this.unitAccessGuard(unitId, audioEvent); }
+      catch (error) { this.log('UNIT_ACCESS_GUARD_ERROR', { unitId, error: error.message }); }
+      if (!allowed) {
+        if (sequence === 0) this.log('AUDIO_FRAME_CENTER_FILTERED', { unitId, channelId, dispatchCenterId: this.dispatchCenterId });
+        return;
+      }
     }
 
     this._framesReceivedCount++;
@@ -8626,7 +8653,7 @@ export class AIDispatcher {
       // Tag this round-trip so the inbound acknowledged event from CAD is
       // suppressed. Pass both the radio callsign and the UUID so we match
       // whichever identifier CAD echoes back.
-      if (resolvedCallId) cadStatusCheckClient.markSelfResponded([participantId, unitUuid], resolvedCallId);
+      if (resolvedCallId) this.cadStatusCheckClient.markSelfResponded([participantId, unitUuid], resolvedCallId);
 
       let attempts = 0;
       let lastError = null;
@@ -8862,7 +8889,7 @@ export class AIDispatcher {
     try {
       if (cadService.isConfigured()) {
         if (resolvedCallId) {
-          cadStatusCheckClient.markSelfResponded([participantId, pending.unitUuid].filter(Boolean), resolvedCallId);
+          this.cadStatusCheckClient.markSelfResponded([participantId, pending.unitUuid].filter(Boolean), resolvedCallId);
         }
         const result = await cadService.respondToStatusCheck(participantId, resolvedCallId, { response: '10-4' });
         if (result && result.success !== false) {
@@ -9133,7 +9160,7 @@ export class AIDispatcher {
       return;
     }
     this._statusCheckPollingDisabledLogged = false;
-    cadStatusCheckClient.start((evt) => {
+    this.cadStatusCheckClient.start((evt) => {
       this._onCadStatusCheckEvent(evt).catch(err => {
         this.log('STATUS_CHECK_HANDLER_ERROR', { error: err.message });
       });
@@ -9164,7 +9191,7 @@ export class AIDispatcher {
   }
 
   _stopStatusCheckPolling() {
-    cadStatusCheckClient.stop();
+    this.cadStatusCheckClient.stop();
     this._pendingStatusChecks.clear();
     this._seenStatusCheckIds.clear();
     this._lastSpokenStatusCheck.clear();
@@ -9244,7 +9271,7 @@ export class AIDispatcher {
         if (now - lastFired < COOLDOWN_MS) continue;
         // Snooze guard: if cadStatusCheckClient knows this unit is snoozed, skip.
         try {
-          if (cadStatusCheckClient.isSnoozed && cadStatusCheckClient.isSnoozed(callsign, callId)) continue;
+          if (this.cadStatusCheckClient.isSnoozed && this.cadStatusCheckClient.isSnoozed(callsign, callId)) continue;
         } catch (_) { /* optional API */ }
         this._statusCheckWatchdogFiredAt.set(key, now);
         this.log('STATUS_CHECK_WATCHDOG_FIRED', { unitId: callsign, callId, callNumber, onSceneAgeMs: now - onSceneAt });
@@ -10819,7 +10846,7 @@ export class AIDispatcher {
           this._publishSequence = (this._publishSequence + 1) & 0xFFFF;
           audioRelayService.injectAudio(
             this.channelName,
-            AI_IDENTITY,
+            this.identity,
             this._publishSequence,
             opusFrames[i]
           );
@@ -10842,7 +10869,7 @@ export class AIDispatcher {
         }
         for (const silentFrame of silentOpusFrames) {
           this._publishSequence = (this._publishSequence + 1) & 0xFFFF;
-          audioRelayService.injectAudio(this.channelName, AI_IDENTITY, this._publishSequence, silentFrame);
+          audioRelayService.injectAudio(this.channelName, this.identity, this._publishSequence, silentFrame);
           silentFramesSent++;
           await new Promise(resolve => setTimeout(resolve, FRAME_MS));
         }
@@ -10889,10 +10916,10 @@ export class AIDispatcher {
     } finally {
       if (acquiredKey) {
         const releaseKey = this.channelName;
-        const released = floorControlService.releaseFloor(acquiredKey, AI_IDENTITY);
+        const released = floorControlService.releaseFloor(acquiredKey, this.identity);
         let fellBackToReleaseAll = false;
         if (!released) {
-          const releasedKeys = floorControlService.releaseAllForUnit(AI_IDENTITY);
+          const releasedKeys = floorControlService.releaseAllForUnit(this.identity);
           fellBackToReleaseAll = true;
           if (releaseSource === 'normal') releaseSource = 'finally';
           this.log('PUBLISH_FLOOR_KEY_DRIFT', {

@@ -1,4 +1,58 @@
-''); setNotice('');
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+
+const blank = { name: '', channelId: '', dispatchCenterId: '', agencyId: '', enabled: true, statusChecksEnabled: true };
+
+export default function AIDispatcherProfiles() {
+  const navigate = useNavigate();
+  const [profiles, setProfiles] = useState([]);
+  const [channels, setChannels] = useState([]);
+  const [centers, setCenters] = useState([]);
+  const [form, setForm] = useState(blank);
+  const [editingId, setEditingId] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState('');
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+
+  const selectedCenter = useMemo(() => centers.find((center) => String(center.id) === String(form.dispatchCenterId)), [centers, form.dispatchCenterId]);
+
+  async function request(url, options = {}) {
+    const response = await fetch(url, { credentials: 'include', headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }, ...options });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(body.error || `Request failed (${response.status})`);
+    return body;
+  }
+
+  async function load() {
+    setLoading(true); setError('');
+    try {
+      const [profileData, catalog] = await Promise.all([
+        request('/api/admin/ai-dispatchers'),
+        request('/api/admin/ai-dispatchers/catalog'),
+      ]);
+      setProfiles(profileData.profiles || []);
+      setChannels(catalog.channels || []);
+      setCenters(catalog.dispatchCenters || []);
+    } catch (err) { setError(err.message); }
+    finally { setLoading(false); }
+  }
+
+  useEffect(() => { load(); }, []);
+
+  function edit(profile) {
+    setEditingId(profile.id);
+    setForm({
+      name: profile.name || '', channelId: String(profile.channelId || ''), dispatchCenterId: profile.dispatchCenterId || '', agencyId: profile.agencyId || '',
+      enabled: !!profile.enabled, statusChecksEnabled: profile.statusChecksEnabled !== false,
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function reset() { setEditingId(null); setForm(blank); setError(''); }
+
+  async function save(event) {
+    event.preventDefault(); setBusy('save'); setError(''); setNotice('');
     try {
       const url = editingId ? `/api/admin/ai-dispatchers/${editingId}` : '/api/admin/ai-dispatchers';
       await request(url, { method: editingId ? 'PUT' : 'POST', body: JSON.stringify(form) });
@@ -52,13 +106,3 @@
     </div>
   </div>;
 }
-'''
-write('client/src/pages/AIDispatcherProfiles.jsx', ui)
-
-# Wire UI route and admin shortcut.
-main_path = 'client/src/main.jsx'
-main = read(main_path)
-main = main.replace('import DispatchCenterAssignments from "./pages/DispatchCenterAssignments.jsx";', 'import DispatchCenterAssignments from "./pages/DispatchCenterAssignments.jsx";\nimport AIDispatcherProfiles from "./pages/AIDispatcherProfiles.jsx";')
-button_anchor = """      <button
-        type="button"
-        onClick={() => 

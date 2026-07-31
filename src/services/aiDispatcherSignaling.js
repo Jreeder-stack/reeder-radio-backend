@@ -3,7 +3,7 @@ import { installAuthenticatedWakeIdentity } from './authenticatedWakeIdentity.js
 
 const AI_UNIT_ID = 'AI-Dispatcher';
 
-class AIDispatcherSignaling {
+export class AIDispatcherSignaling {
   constructor() {
     this.dispatcher = null;
     this.activeChannels = new Set();
@@ -59,7 +59,7 @@ class AIDispatcherSignaling {
       return;
     }
 
-    if (unitId === AI_UNIT_ID) {
+    if (unitId === AI_UNIT_ID || unitId === this.dispatcher?.identity) {
       return;
     }
 
@@ -80,7 +80,7 @@ class AIDispatcherSignaling {
   async handlePttEnd(channelId, unitId) {
     if (!this.dispatcher) return;
     if (!this._matchesChannel(channelId)) return;
-    if (unitId === AI_UNIT_ID) return;
+    if (unitId === AI_UNIT_ID || unitId === this.dispatcher?.identity) return;
 
     this.log('PTT_END_DETECTED', { channelId, unitId });
 

@@ -69,12 +69,16 @@ function log(action, details = {}) {
   console.log(`[CAD-StatusCheck] ${new Date().toISOString()} | ${action}`, JSON.stringify(details));
 }
 
-function buildWsUrl() {
-  const cadUrl = process.env.CAD_URL;
-  const apiKey = process.env.CAD_API_KEY;
-  if (!cadUrl || !apiKey) return null;
+export function buildWsUrl(config = {}) {
+  const cadUrl = config.cadUrl || process.env.CAD_URL;
+  const apiKey = config.cadApiKey || process.env.CAD_API_KEY;
+  const dispatchCenterId = config.dispatchCenterId || process.env.CAD_DISPATCH_CENTER_ID;
+  const agencyId = config.agencyId || process.env.CAD_AGENCY_ID;
+  if (!cadUrl || !apiKey || !dispatchCenterId) return null;
   let base = cadUrl.replace(/^http:/i, 'ws:').replace(/^https:/i, 'wss:').replace(/\/+$/, '');
-  return `${base}/ws?api_key=${encodeURIComponent(apiKey)}`;
+  const params = new URLSearchParams({ api_key: apiKey, dispatch_center_id: dispatchCenterId });
+  if (agencyId) params.set('agency_id', agencyId);
+  return `${base}/ws?${params.toString()}`;
 }
 
 /**
@@ -113,8 +117,9 @@ function eventKey(evt) {
   return `${type}|${assignmentId}|${unitId}|${callId}|${cycle}`;
 }
 
-class CadStatusCheckClient {
-  constructor() {
+export class CadStatusCheckClient {
+  constructor(config = {}) {
+    this.config = { ...config };
     this.ws = null;
     this.handler = null;
     this.running = false;
@@ -137,7 +142,7 @@ class CadStatusCheckClient {
     }
     this.handler = handler;
     this.running = true;
-    log('START', { url: buildWsUrl()?.replace(/api_key=[^&]+/, 'api_key=***') });
+    log('START', { profileId: this.config.profileId || null, url: buildWsUrl(this.config)?.replace(/api_key=[^&]+/, 'api_key=***') });
     this._connect();
     this._startPolling();
   }
@@ -154,7 +159,7 @@ class CadStatusCheckClient {
     }
     this._seenKeys.clear();
     this._selfRespondedCallIds.clear();
-    log('STOPPED');
+    log('STOPPED', { profileId: this.config.profileId || null });
   }
 
   /**
@@ -192,7 +197,7 @@ class CadStatusCheckClient {
   }
 
   _connect() {
-    const url = buildWsUrl();
+    const url = buildWsUrl(this.config);
     if (!url) {
       log('CONNECT_SKIPPED', { reason: 'no CAD URL/key' });
       return;
@@ -372,7 +377,7 @@ class CadStatusCheckClient {
     evt.event = type;
 
     // Optional tenant guard: drop events for other agencies if AGENCY_ID set.
-    const agencyFilter = process.env.CAD_AGENCY_ID;
+    const agencyFilter = this.config.agencyId || process.env.CAD_AGENCY_ID;
     if (agencyFilter && evt.agency_id && String(evt.agency_id) !== String(agencyFilter)) {
       log('AGENCY_FILTERED', { eventAgency: evt.agency_id, ourAgency: agencyFilter });
       return;
