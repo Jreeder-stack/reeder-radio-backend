@@ -62,3 +62,8 @@ Explicit officer-down, shots-fired, 10-33, emergency-traffic, and Signal 100 phr
 V2 currently replaces routine intent classification only for `IDLE` and `AWAITING_COMMAND`. Existing multi-step follow-up states and CAD executors remain in place so the new brain can be tested without changing radio transport or rewriting every CAD handler at once.
 
 The next migration step is to replace the legacy intent-to-handler switch with direct validated dispatcher tools, then remove unused scripted states after each replacement is covered by tests.
+
+## Conversational follow-up migration — phase 1
+
+When V2 is enabled, AI now remains in control while collecting a call nature, call location, call confirmation, or note content. Pending fields are supplied to the planner as conversation context, so officers may answer naturally, provide fields out of order, or correct an earlier field without restarting a rigid script. Emergency traffic and the actual CAD write/confirmation handlers remain deterministic.
+
