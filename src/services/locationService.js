@@ -156,6 +156,14 @@ class LocationService {
     }
   }
 
+  cacheForwardGeocodeAlias(address, result) {
+    if (!address || typeof address !== 'string' || !result) return;
+    this._forwardGeocodeCache.set(address.trim().toLowerCase(), {
+      result,
+      timestamp: Date.now(),
+    });
+  }
+
   async _searchCadLocation(query) {
     const runtime = getRuntimeContext();
     const cadUrl = String(runtime.cadUrl || process.env.CAD_URL || '').replace(/\/+$/, '');
