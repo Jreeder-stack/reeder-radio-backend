@@ -26,22 +26,26 @@ export function isNamedPlaceIntentCandidate(result) {
 export function buildCanonicalStreetAddress(location) {
   if (!location || typeof location !== 'object') return null;
 
+  const premise = clean(location.businessName || location.business_name || location.name);
   const houseNumber = clean(location.houseNumber || location.house_number);
-  const road = clean(location.road || location.address || location.streetAddress);
-  let street = road;
+  let road = clean(location.road || location.address || location.streetAddress);
 
   if (houseNumber && road) {
     const alreadyPrefixed = new RegExp(`^${escapeRegex(houseNumber)}\\b`, 'i').test(road);
-    street = alreadyPrefixed ? road : `${houseNumber} ${road}`;
+    road = alreadyPrefixed ? road : `${houseNumber} ${road}`;
   } else if (houseNumber && !road) {
-    street = houseNumber;
+    road = houseNumber;
   }
 
-  const city = clean(
-    location.city || location.municipality || location.town || location.village || location.township
+  if (premise && road && !road.toLowerCase().includes(premise.toLowerCase())) {
+    road = `${premise} — ${road}`;
+  }
+
+  const municipality = clean(
+    location.municipality || location.township || location.city || location.town || location.village
   );
-  const state = clean(location.stateCode || location.state || location.region);
-  const structured = [street, city, state].filter(Boolean).join(', ');
+  const state = premise ? '' : clean(location.stateCode || location.state || location.region);
+  const structured = [road, municipality, state].filter(Boolean).join(', ');
 
   if (looksLikeStreetAddress(structured)) return structured;
 
