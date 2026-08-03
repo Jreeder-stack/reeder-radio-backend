@@ -15,6 +15,7 @@ module.exports = {
       env: {
         NODE_ENV: "production",
         PORT: 3001,
+        AI_DISPATCHER_V2_ENABLED: "true",
       },
     },
   ],
