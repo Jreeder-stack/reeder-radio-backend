@@ -26,12 +26,16 @@ function normalizeAddressRecord(record, source) {
     county: record.county || null,
     state,
     postcode: record.zipCode || record.zip_code || record.postcode || null,
-    importance: source === 'MAI' ? 1 : 0.8,
+    importance: source === 'MAI' ? 1 : 0.85,
     addressType: source === 'MAI' ? 'master_address_index' : 'place',
     businessName,
     source,
     maiAddressId: record.id || record.addressId || null,
     googlePlaceId: record.place_id || record.placeId || null,
+    premiseNotes: record.premiseNotes || record.notes || null,
+    gateCode: record.gateCode || null,
+    keyHolderName: record.keyHolderName || null,
+    keyHolderPhone: record.keyHolderPhone || null,
   };
 }
 
@@ -99,56 +103,34 @@ class LocationService {
     }
   }
 
-  async _searchMai(query) {
+  async _searchCadLocation(query) {
     const runtime = getRuntimeContext();
     const cadUrl = String(runtime.cadUrl || process.env.CAD_URL || '').replace(/\/+$/, '');
     const apiKey = runtime.cadApiKey || process.env.CAD_API_KEY || '';
     if (!cadUrl || !apiKey) return null;
+
     try {
-      const url = new URL(`${cadUrl}/api/addresses/search`);
+      const url = new URL(`${cadUrl}/api/radio/locations/resolve`);
       url.searchParams.set('q', query);
-      if (runtime.dispatchCenterId) url.searchParams.set('dispatch_center_id', runtime.dispatchCenterId);
       const response = await fetch(url, {
         headers: {
           'X-API-Key': apiKey,
           ...(runtime.dispatchCenterId ? { 'X-Dispatch-Center-Id': runtime.dispatchCenterId } : {}),
           ...(runtime.agencyId ? { 'X-Agency-Id': runtime.agencyId } : {}),
         },
-        signal: AbortSignal.timeout(4000),
+        signal: AbortSignal.timeout(6500),
       });
+
       if (!response.ok) {
-        console.log(`[LocationService] MAI search HTTP error: ${response.status}`);
+        console.log(`[LocationService] CAD location resolver HTTP error: ${response.status}`);
         return null;
       }
-      const payload = await response.json();
-      const rows = Array.isArray(payload) ? payload : (payload.results || payload.addresses || []);
-      return normalizeAddressRecord(rows[0], 'MAI');
-    } catch (error) {
-      console.log(`[LocationService] MAI search error: ${error.message}`);
-      return null;
-    }
-  }
 
-  async _searchGoogle(query) {
-    const key = process.env.GOOGLE_MAPS_API_KEY || process.env.GOOGLE_PLACES_API_KEY || '';
-    if (!key) return null;
-    try {
-      const url = new URL('https://maps.googleapis.com/maps/api/place/textsearch/json');
-      url.searchParams.set('query', query);
-      url.searchParams.set('key', key);
-      const response = await fetch(url, { signal: AbortSignal.timeout(5000) });
-      if (!response.ok) return null;
       const payload = await response.json();
-      const place = payload?.results?.[0];
-      if (!place) return null;
-      return normalizeAddressRecord({
-        ...place,
-        address: place.formatted_address,
-        latitude: place.geometry?.location?.lat,
-        longitude: place.geometry?.location?.lng,
-      }, 'GOOGLE_PLACES');
+      if (!payload?.success || !payload?.location) return null;
+      return normalizeAddressRecord(payload.location, payload.source || 'CAD_RESOLVER');
     } catch (error) {
-      console.log(`[LocationService] Google Places error: ${error.message}`);
+      console.log(`[LocationService] CAD location resolver error: ${error.message}`);
       return null;
     }
   }
@@ -189,8 +171,7 @@ class LocationService {
     const cached = this._forwardGeocodeCache.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < FORWARD_GEOCODE_CACHE_TTL_MS) return cached.result;
     try {
-      const result = await this._searchMai(query)
-        || await this._searchGoogle(query)
+      const result = await this._searchCadLocation(query)
         || await this._searchNominatim(query);
       this._forwardGeocodeCache.set(cacheKey, { result, timestamp: Date.now() });
       return result;
