@@ -6,8 +6,6 @@ import { signalingService } from './signalingService.js';
 import { isConfigured as isAzureConfigured } from './azureSpeechService.js';
 import { bindRuntime, runWithRuntime } from './runtimeContext.js';
 
-const UNIT_CACHE_TTL_MS = 15000;
-
 function clean(value) {
   const text = String(value ?? '').trim();
   return text || null;
@@ -38,7 +36,6 @@ function publicProfile(row) {
 export class AIDispatcherRuntimeManager {
   constructor() {
     this.runtimes = new Map();
-    this.unitAccessCache = new Map();
     this.initialized = false;
     this._schemaPromise = null;
   }
@@ -74,6 +71,7 @@ export class AIDispatcherRuntimeManager {
       `);
       await pool.query('CREATE INDEX IF NOT EXISTS idx_ai_dispatcher_profiles_enabled ON ai_dispatcher_profiles(enabled)');
       await pool.query('CREATE INDEX IF NOT EXISTS idx_ai_dispatcher_profiles_center ON ai_dispatcher_profiles(dispatch_center_id)');
+      await pool.query('UPDATE ai_dispatcher_profiles SET agency_id = NULL WHERE agency_id IS NOT NULL');
       await this._migrateLegacyProfile();
     })().catch((error) => {
       this._schemaPromise = null;
@@ -209,12 +207,7 @@ export class AIDispatcherRuntimeManager {
     const center = centers.find((item) => String(item.id) === String(centerId));
     if (!center) throw Object.assign(new Error('Select a valid Command Link dispatch center'), { statusCode: 400 });
 
-    const agencies = Array.isArray(center.agencies) ? center.agencies : [];
-    let agencyId = clean(input.agencyId ?? input.agency_id ?? existing?.agency_id ?? center.defaultAgencyId);
-    if (agencyId && agencies.length && !agencies.some((agency) => String(agency.id) === String(agencyId))) {
-      throw Object.assign(new Error('Selected agency is not assigned to that dispatch center'), { statusCode: 400 });
-    }
-    if (!agencyId && agencies.length === 1) agencyId = String(agencies[0].id);
+    const agencyId = null;
 
     const name = clean(input.name ?? existing?.name) || `${center.name || center.code} AI Dispatcher`;
     const enabled = input.enabled === undefined ? !!existing?.enabled : !!input.enabled;
@@ -287,7 +280,7 @@ export class AIDispatcherRuntimeManager {
       profileName: profile.name,
       dispatchCenterId: profile.dispatch_center_id,
       dispatchCenterName: profile.dispatch_center_name,
-      agencyId: profile.agency_id,
+      agencyId: null,
       cadUrl: process.env.CAD_URL,
       cadApiKey: process.env.CAD_API_KEY,
       channelId: profile.channel_id,
@@ -296,26 +289,6 @@ export class AIDispatcherRuntimeManager {
       identity: profile.identity,
       managed: true,
     };
-  }
-
-  async isUnitAllowed(dispatchCenterId, unitId) {
-    if (!dispatchCenterId || !unitId) return false;
-    const normalizedUnit = String(unitId).trim().toUpperCase();
-    if (!normalizedUnit || normalizedUnit.startsWith('AI-')) return false;
-    const key = `${dispatchCenterId}|${normalizedUnit}`;
-    const cached = this.unitAccessCache.get(key);
-    if (cached && cached.expiresAt > Date.now()) return cached.allowed;
-    const result = await pool.query(`
-      SELECT 1 FROM users WHERE UPPER(unit_id)=UPPER($1) AND dispatch_center_id=$2
-      UNION ALL
-      SELECT 1 FROM radios WHERE UPPER(radio_id)=UPPER($1) AND dispatch_center_id=$2
-      UNION ALL
-      SELECT 1 FROM units WHERE UPPER(unit_identity)=UPPER($1) AND dispatch_center_id=$2
-      LIMIT 1
-    `, [normalizedUnit, dispatchCenterId]).catch(() => ({ rows: [] }));
-    const allowed = result.rows.length > 0;
-    this.unitAccessCache.set(key, { allowed, expiresAt: Date.now() + UNIT_CACHE_TTL_MS });
-    return allowed;
   }
 
   async startProfile(id) {
@@ -331,7 +304,6 @@ export class AIDispatcherRuntimeManager {
     const context = this._runtimeContext(profile);
     try {
       const runtime = await runWithRuntime(context, async () => {
-        const unitAccessGuard = (unitId) => this.isUnitAllowed(profile.dispatch_center_id, unitId);
         const dispatcher = new AIDispatcher({
           profileManaged: true,
           profileId: profile.id,
@@ -341,7 +313,6 @@ export class AIDispatcherRuntimeManager {
           identity: profile.identity,
           statusChecksEnabled: profile.status_checks_enabled,
           runtimeContext: context,
-          unitAccessGuard,
         });
         await dispatcher.start(profile.channel_name || profile.room_key, { roomKey: profile.room_key });
         if (!dispatcher.isRunning) throw new Error('Dispatcher did not enter running state');
@@ -353,7 +324,7 @@ export class AIDispatcherRuntimeManager {
         if (dispatcher.displayChannel) adapter.setActiveChannel(dispatcher.displayChannel);
 
         const subscriptions = [];
-        const allowed = async (data) => dispatcher.matchesChannel(data.channelId) && await unitAccessGuard(data.unitId);
+        const allowed = async (data) => dispatcher.matchesChannel(data.channelId);
         subscriptions.push(signalingService.onPttStart(bindRuntime(context, async (data) => {
           if (await allowed(data)) await adapter.handlePttStart(data.channelId, data.unitId, data.isEmergency);
         })));
