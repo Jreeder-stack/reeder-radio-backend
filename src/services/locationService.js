@@ -5,30 +5,83 @@ const GEOCODE_CACHE_TTL_MS = 5 * 60 * 1000;
 const FORWARD_GEOCODE_CACHE_TTL_MS = 10 * 60 * 1000;
 const GEOCODE_PRECISION = 4;
 
+function clean(value) {
+  return typeof value === 'string' ? value.trim().replace(/\s+/g, ' ') : '';
+}
+
+function normalized(value) {
+  return clean(value).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+function stripTrailingLocation(address, fields) {
+  const parts = clean(address).split(',').map(clean).filter(Boolean);
+  const tokens = fields.map(normalized).filter(Boolean);
+  while (parts.length > 1) {
+    const tail = normalized(parts[parts.length - 1]);
+    const tailWithoutZip = tail.replace(/\b\d{5}(?:\s*\d{4})?\b/g, '').trim();
+    if (!tokens.some((token) => tail === token || tailWithoutZip === token)) break;
+    parts.pop();
+  }
+  return parts.join(', ');
+}
+
+function cleanPremise(value) {
+  const premise = clean(value);
+  return premise.includes(',') ? premise.split(',')[0].trim() : premise;
+}
+
 function normalizeAddressRecord(record, source) {
   if (!record || typeof record !== 'object') return null;
   const lat = Number(record.latitude ?? record.lat);
   const lng = Number(record.longitude ?? record.lng ?? record.lon);
-  const address = record.address || record.streetAddress || record.formatted_address || null;
-  const city = record.city || record.municipality || record.town || record.village || null;
-  const state = record.state || null;
-  const businessName = record.businessName || record.business_name || record.name || null;
-  if (!address && !businessName) return null;
+  const rawAddress = record.address || record.streetAddress || record.formatted_address || null;
+  const postalCity = record.city || record.town || record.village || null;
+  const municipality = record.municipality || record.township || postalCity || null;
+  const rawState = record.state || null;
+  const postcode = record.zipCode || record.zip_code || record.postcode || null;
+  const businessName = cleanPremise(record.businessName || record.business_name || record.name || null);
+  if (!rawAddress && !businessName) return null;
+
+  let streetAddress = stripTrailingLocation(rawAddress || '', [
+    municipality,
+    postalCity,
+    rawState,
+    postcode,
+  ]);
+  const houseNumber = clean(record.houseNumber || record.house_number);
+  if (houseNumber && streetAddress && !new RegExp(`^${houseNumber}\\b`, 'i').test(streetAddress)) {
+    streetAddress = `${houseNumber} ${streetAddress}`;
+  }
+
+  const isNamedPremise = !!businessName && !!streetAddress;
+  const road = isNamedPremise
+    ? `${businessName} — ${streetAddress}`
+    : streetAddress || businessName;
+  const spokenMunicipality = municipality || postalCity;
+
   return {
-    displayName: [businessName, address, city, state].filter(Boolean).join(', '),
+    displayName: [road, spokenMunicipality, isNamedPremise ? null : rawState]
+      .filter(Boolean).join(', '),
     lat: Number.isFinite(lat) ? lat : null,
     lng: Number.isFinite(lng) ? lng : null,
-    houseNumber: record.houseNumber || record.house_number || null,
-    road: address,
-    city,
+    // A decorated named-premise road already contains the house number. Keep
+    // houseNumber null so the dispatcher verifier does not prepend it twice.
+    houseNumber: isNamedPremise ? null : houseNumber || null,
+    road,
+    city: spokenMunicipality,
+    postalCity,
     township: record.township || null,
-    municipality: record.municipality || city,
+    municipality: spokenMunicipality,
     county: record.county || null,
-    state,
-    postcode: record.zipCode || record.zip_code || record.postcode || null,
+    // Named premises are read back without a redundant state suffix. The
+    // original state remains available as postalState for mapping/debugging.
+    state: isNamedPremise ? null : rawState,
+    postalState: rawState,
+    postcode,
     importance: source === 'MAI' ? 1 : 0.85,
     addressType: source === 'MAI' ? 'master_address_index' : 'place',
-    businessName,
+    businessName: businessName || null,
+    streetAddress: streetAddress || null,
     source,
     maiAddressId: record.id || record.addressId || null,
     googlePlaceId: record.place_id || record.placeId || null,
@@ -154,7 +207,7 @@ class LocationService {
       road: a.road || a.pedestrian || a.neighbourhood || top.name || null,
       city: a.city || a.town || a.village || null,
       township: a.township || a.village || null,
-      municipality: a.city || a.town || a.village || a.municipality || null,
+      municipality: a.township || a.city || a.town || a.village || a.municipality || null,
       county: a.county || null,
       state: a.state || null,
       postcode: a.postcode || null,
