@@ -24,15 +24,15 @@ describe('named-place intent resolution', () => {
     expect(resolver.forwardGeocode).not.toHaveBeenCalled();
   });
 
-  it('converts Fayette County Fair into its canonical street address', async () => {
+  it('preserves the fair name and uses Dunbar Township without duplicate locality', async () => {
     const resolver = {
       forwardGeocode: vi.fn().mockResolvedValue({
         source: 'MAI',
-        businessName: 'Fayette County Fairgrounds',
-        houseNumber: '132',
-        road: 'Pechin Road',
-        city: 'Dunbar',
-        state: 'PA',
+        businessName: 'Fayette County Fair',
+        road: 'Fayette County Fair — 132 Pechin Road',
+        city: 'Dunbar Township',
+        municipality: 'Dunbar Township',
+        state: null,
         lat: 39.976,
         lng: -79.614,
       }),
@@ -53,15 +53,15 @@ describe('named-place intent resolution', () => {
       ...result,
       slots: {
         ...result.slots,
-        address: '132 Pechin Road, Dunbar, PA',
+        address: 'Fayette County Fair — 132 Pechin Road, Dunbar Township',
       },
     });
   });
 
-  it('uses a formatted resolver address when structured fields are unavailable', () => {
+  it('falls back to a formatted resolver address when structured fields are unavailable', () => {
     expect(buildCanonicalStreetAddress({
-      displayName: 'Fayette County Fairgrounds, 132 Pechin Road, Dunbar, PA 15431',
-    })).toBe('Fayette County Fairgrounds, 132 Pechin Road, Dunbar, PA 15431');
+      displayName: 'Fayette County Fair, 132 Pechin Road, Dunbar Township',
+    })).toBe('Fayette County Fair, 132 Pechin Road, Dunbar Township');
   });
 
   it('keeps the original named place when lookup fails', async () => {
