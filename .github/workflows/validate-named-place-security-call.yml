@@ -1,0 +1,37 @@
+name: Validate named-place security call fix
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/validate-named-place-security-call.yml
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Run focused validation
+        run: |
+          node --check src/services/locationService.js
+          node --check src/services/namedPlaceIntentResolver.js
+          npx vitest run src/services/__tests__/namedPlaceIntentResolver.test.js src/services/__tests__/aiDispatch.task542.test.js src/services/__tests__/dispatcherV2Conversation.test.js
+      - name: Record validation and clean up
+        run: |
+          rm .github/workflows/validate-named-place-security-call.yml
+          git config user.name "Command Link Automation"
+          git config user.email "automation@reeder-systems.com"
+          git add .github/workflows/validate-named-place-security-call.yml
+          git commit -m "Confirm named-place security call tests"
+          git push origin main
