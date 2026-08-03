@@ -1,7 +1,15 @@
+import { getPlannerToolCatalog } from './dispatcherToolRegistry.js';
 import { AzureOpenAI } from 'openai';
 
 const TRUE_VALUES = new Set(['1', 'true', 'yes', 'on', 'enabled']);
-const SUPPORTED_STATES = new Set(['IDLE', 'AWAITING_COMMAND']);
+const SUPPORTED_STATES = new Set([
+  'IDLE',
+  'AWAITING_COMMAND',
+  'AWAITING_CALL_NATURE',
+  'AWAITING_CALL_ADDRESS',
+  'AWAITING_CALL_CONFIRM',
+  'AWAITING_NOTE_CONTENT',
+]);
 const SUPPORTED_ACTIONS = new Set([
   'NO_ACTION',
   'CLARIFY',
@@ -18,6 +26,8 @@ const SUPPORTED_ACTIONS = new Set([
   'CLOSE_CALL',
   'REPEAT',
   'DISREGARD',
+  'CONFIRM',
+  'DENY',
 ]);
 
 const VALID_STATUSES = new Set([
@@ -157,16 +167,45 @@ export function validateDispatcherV2Plan(candidate, { minConfidence = getMinConf
   };
 }
 
+function mergePendingArguments(args, currentState = 'IDLE', currentSlots = {}) {
+  const pending = currentSlots && typeof currentSlots === 'object' && !Array.isArray(currentSlots)
+    ? currentSlots
+    : {};
+  const merged = { ...args };
+  const routineFields = [
+    'nature', 'address', 'priority', 'additionalUnits', 'noteContent',
+    'callNumber', 'disposition', 'callNature', 'callLocation', 'callCity',
+  ];
+  for (const field of routineFields) {
+    if ((merged[field] === undefined || merged[field] === null || merged[field] === '')
+        && pending[field] !== undefined && pending[field] !== null && pending[field] !== '') {
+      merged[field] = pending[field];
+    }
+  }
+
+  if (currentState === 'AWAITING_NOTE_CONTENT' && !merged.noteContent && merged.note) {
+    merged.noteContent = merged.note;
+  }
+  return merged;
+}
+
 function promptForMissingCallField(args) {
   if (!args.nature) return 'What is the call nature?';
   if (!args.address) return 'What is the location?';
   return null;
 }
 
-export function mapDispatcherV2PlanToLegacyResult(plan, unitId = 'Unit') {
+export function mapDispatcherV2PlanToLegacyResult(
+  plan,
+  unitId = 'Unit',
+  currentState = 'IDLE',
+  currentSlots = {}
+) {
   if (!plan) return { intent: 'UNKNOWN', response: `${unitId}, say again.` };
 
-  const args = plan.arguments || {};
+  const args = mergePendingArguments(
+    plan.arguments || {}, currentState, currentSlots
+  );
   const response = plan.spokenResponse || null;
 
   switch (plan.action) {
@@ -270,41 +309,55 @@ export function mapDispatcherV2PlanToLegacyResult(plan, unitId = 'Unit') {
       return { intent: 'REPEAT', response };
     case 'DISREGARD':
       return { intent: 'DISREGARD', response };
+    case 'CONFIRM':
+      return { intent: 'CONFIRM', response };
+    case 'DENY':
+      return { intent: 'DENY', response };
     default:
       return { intent: 'UNKNOWN', response: `${unitId}, say again.` };
   }
 }
 
-const SYSTEM_PROMPT = `You are the decision engine for a public-safety radio dispatcher.
+const SYSTEM_PROMPT = `You are the conversational decision engine for a public-safety radio dispatcher.
 
-Your job is to understand the field unit's requested outcome and select exactly one supported action. You are not a phrase matcher. Interpret ordinary speech naturally.
+Understand the field unit's requested outcome from ordinary speech, the current conversation state, pendingData already collected, and the recent radio exchange. Select exactly one supported action for this turn. Do not behave like a phone tree and do not ask for information that is already present in pendingData or recentConversation.
 
 Supported actions:
 - NO_ACTION: acknowledgment, unit-to-unit chatter, background speech, or anything not directed to dispatch
-- CLARIFY: the request is directed to dispatch but the intended action is genuinely unclear
+- CLARIFY: one genuinely necessary question when the request cannot safely be completed
 - RADIO_CHECK
 - TIME_CHECK
 - STATUS_CHANGE: arguments.status must be one of on_duty, available, en_route, on_scene, off_duty, out_of_service
 - CREATE_CALL: arguments may include nature, address, priority, additionalUnits
 - ASSIGN_CALL: attach the speaking unit to an existing call; identify it by callNumber or descriptors
-- ADD_NOTE: add a note to the speaking unit's current call; preserve the actual reported facts in arguments.noteContent
+- ADD_NOTE: arguments.noteContent contains the actual facts to add to the current or specified call
 - RUN_PLATE: arguments may include plate and state
-- MY_CALL: read the speaking unit's current assignment
-- CALL_DETAILS: requires arguments.callNumber; detailField may be address, nature, priority, status, units, notes, or all
-- CLEAR_UNIT: clear the speaking unit from its current call
-- CLOSE_CALL: close the entire call; arguments may include callNumber and disposition
-- REPEAT: repeat dispatch's last transmission
-- DISREGARD: cancel the speaking unit's current pending request or most recent action
+- MY_CALL
+- CALL_DETAILS
+- CLEAR_UNIT
+- CLOSE_CALL
+- REPEAT
+- DISREGARD
+- CONFIRM
+- DENY
 
-Rules:
-1. Never invent a plate, address, call number, disposition, status, unit, or incident nature.
-2. Do not claim an action succeeded. The server executes and verifies actions after your plan.
-3. Use CLARIFY only when a specific question will resolve the ambiguity. Ask one short question.
-4. Pure acknowledgments such as "10-4", "copy", and "roger" are NO_ACTION unless the conversation state says the unit is answering a dispatcher question.
-5. Do not plan emergency, officer-down, shots-fired, Signal 100, or emergency-traffic actions. Dedicated protected code handles those before this planner.
-6. Keep spokenResponse short and natural. It is optional; the executor may replace it after the real CAD result.
-7. Confidence below 0.82 should be CLARIFY or NO_ACTION, not a guessed write action.
-8. Return JSON only.
+Conversation rules:
+1. currentState and pendingData are authoritative conversation context. Merge the new radio reply with data already collected instead of restarting the workflow.
+2. In AWAITING_CALL_ADDRESS, interpret the reply as the missing or corrected location and return CREATE_CALL using the pending nature.
+3. In AWAITING_CALL_NATURE, interpret the reply as the missing or corrected call nature and return CREATE_CALL using the pending address.
+4. In AWAITING_CALL_CONFIRM, natural approvals such as "that's correct", "10-4", "affirmative", or "go ahead" are CONFIRM. Natural rejections are DENY. If the unit supplies a correction, return CREATE_CALL with the corrected field and all still-valid pending data.
+5. In AWAITING_NOTE_CONTENT, preserve the officer's reported facts in arguments.noteContent and return ADD_NOTE.
+6. A unit may provide fields out of order, correct an earlier field, or include several facts in one transmission. Use everything available.
+7. Never invent a plate, address, call number, disposition, status, unit, incident nature, or CAD result.
+8. Do not claim an action succeeded. The server executes and verifies actions after your plan.
+9. Ask only one short clarification question, and only when a required fact cannot be resolved from pendingData, recentConversation, CAD lookup, MAI/location lookup, or the current transcript.
+10. Pure acknowledgments such as "10-4", "copy", and "roger" are NO_ACTION unless the current state shows the unit is answering a dispatcher question.
+11. Do not plan emergency, officer-down, shots-fired, Signal 100, or emergency-traffic actions. Dedicated protected code handles those before this planner.
+12. Keep spokenResponse short and natural. It is optional; the executor may replace it after the real CAD result.
+13. Confidence below 0.82 should be CLARIFY or NO_ACTION, not a guessed write action.
+14. Return JSON only.
+
+The availableTools catalog describes the server-validated capabilities. It is reference material only; never invent a tool outside that catalog.
 
 JSON schema:
 {
@@ -337,7 +390,7 @@ async function callPlannerModel(context) {
     ],
     response_format: { type: 'json_object' },
     temperature: 0.1,
-    max_tokens: 260,
+    max_tokens: 420,
   });
 
   const timeoutMs = getTimeoutMs();
@@ -385,6 +438,7 @@ export async function classifyIntentV2(
         }))
       : [],
     transcript: cleanString(transcript, 700) || '',
+    availableTools: getPlannerToolCatalog(),
   };
 
   const startedAt = Date.now();
@@ -400,7 +454,9 @@ export async function classifyIntentV2(
       };
     }
 
-    const result = mapDispatcherV2PlanToLegacyResult(plan, unitId);
+    const result = mapDispatcherV2PlanToLegacyResult(
+      plan, unitId, currentState, currentSlots
+    );
     result.dispatcherV2 = {
       action: plan.action,
       confidence: plan.confidence,
