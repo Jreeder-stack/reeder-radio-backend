@@ -8,6 +8,7 @@ import {
   shouldUseDispatcherV2,
 } from './dispatcherV2Planner.js';
 import { formatDispatcherTime } from './dispatcherTime.js';
+import { resolveNamedPlaceIntent } from './namedPlaceIntentResolver.js';
 
 export * from './llmIntentService.legacy.js';
 
@@ -41,14 +42,15 @@ export async function classifyIntent(
       };
     }
 
-    return result;
+    return resolveNamedPlaceIntent(result);
   }
 
-  return classifyLegacyIntent(
+  const legacyResult = await classifyLegacyIntent(
     transcript,
     unitId,
     currentState,
     currentSlots,
     conversationHistory
   );
+  return resolveNamedPlaceIntent(legacyResult);
 }
