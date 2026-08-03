@@ -1,6 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
+# Redeploy trigger: conversational AI dispatcher + V2 production flag.
 APP_DIR="${APP_DIR:-$(cd "$(dirname "$0")/.." && pwd)}"
 DEPLOY_BRANCH="${DEPLOY_BRANCH:-main}"
 
