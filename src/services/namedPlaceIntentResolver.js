@@ -62,6 +62,13 @@ export async function resolveNamedPlaceIntent(result, resolver = locationService
     const canonicalAddress = buildCanonicalStreetAddress(location);
     if (!canonicalAddress) return result;
 
+    // CREATE_CALL performs a deterministic verification pass after intent
+    // classification. Reuse this successful MAI result under the formatted
+    // readback address so the second pass cannot lose the premise or township.
+    if (typeof resolver.cacheForwardGeocodeAlias === 'function') {
+      resolver.cacheForwardGeocodeAlias(canonicalAddress, location);
+    }
+
     return {
       ...result,
       slots: {
