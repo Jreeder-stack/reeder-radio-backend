@@ -2714,6 +2714,7 @@ export class AIDispatcher {
           }
           let statusUpdateFailed = false;
           let statusFailureType = null;
+          let statusExternalUnit = false;
           let priorStatus = null;
           let priorZone = null;
           if (result.cadStatus) {
@@ -2741,7 +2742,8 @@ export class AIDispatcher {
                 if (!cadResult || !cadResult.success) {
                   statusUpdateFailed = true;
                   statusFailureType = cadResult?.failureType || 'API_REJECTION';
-                  this.log('CAD_STATUS_UPDATE_FAILED', { unitId: participantId, status: result.cadStatus, failureType: statusFailureType, error: cadResult?.error, statusCode: cadResult?.statusCode, responseBody: cadResult?.responseBody });
+                  statusExternalUnit = cadResult?.responseBody?.error === 'external_unit_not_in_dispatch_center';
+                  this.log('CAD_STATUS_UPDATE_FAILED', { unitId: participantId, status: result.cadStatus, failureType: statusFailureType, externalUnit: statusExternalUnit, error: cadResult?.error, statusCode: cadResult?.statusCode, responseBody: cadResult?.responseBody });
                 }
                 this.log('CAD_STATUS_UPDATE', { unitId: participantId, status: result.cadStatus, success: cadResult?.success });
                 if (cadResult?.success) {
@@ -2759,7 +2761,9 @@ export class AIDispatcher {
           }
           setUnitSessionState(participantId, DISPATCHER_STATE.IDLE, null, {}, true);
           let statusResp;
-          if (statusUpdateFailed && statusFailureType === 'NOT_CONFIGURED') {
+          if (statusExternalUnit) {
+            statusResp = `${participantId}, 10-4. I can hear you, but I can't change your CAD status from this dispatch center.`;
+          } else if (statusUpdateFailed && statusFailureType === 'NOT_CONFIGURED') {
             statusResp = `${participantId}, 10-4. CAD is not available, update your status via the MDT.`;
           } else if (statusUpdateFailed && statusFailureType === 'UNREACHABLE') {
             statusResp = `${participantId}, 10-4. Unable to reach CAD, update your status via the MDT.`;

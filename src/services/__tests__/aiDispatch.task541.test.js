@@ -204,6 +204,34 @@ describe('Task #541: STATUS_CHANGE → available simple cascades available → o
     // Existing failure messaging is still spoken.
     expect(d.spoken.some(s => /CAD update did not go through|Unable to reach CAD/i.test(s))).toBe(true);
   });
+
+  it('acknowledges outside-center status traffic without sending the unit to the MDT', async () => {
+    const llm = await import('../llmIntentService.js');
+    llm.isConfigured.mockReturnValue(true);
+    llm.classifyIntent.mockResolvedValue({
+      intent: 'STATUS_CHANGE', cadStatus: 'available', slots: {}, response: null,
+    });
+    cadService.resolveUnitCurrentCall.mockResolvedValue({
+      callNumber: null, has_active_call: false, source: 'none',
+    });
+    cadService.updateUnitStatus.mockResolvedValueOnce({
+      success: false,
+      failureType: 'API_REJECTION',
+      error: 'external_unit_not_in_dispatch_center',
+      responseBody: {
+        error: 'external_unit_not_in_dispatch_center',
+        external_unit: true,
+      },
+    });
+
+    const d = makeDispatcher();
+    await d.processTranscriptWithLLM('10-8', 'INDIANA-1');
+
+    expect(d.spoken[0]).toBe("INDIANA-1, 10-4. I can hear you, but I can't change your CAD status from this dispatch center.");
+    expect(d.spoken[0]).not.toMatch(/MDT|did not go through/i);
+    expect(d.logs.some(l => l.event === 'CAD_STATUS_UPDATE_FAILED'
+      && l.payload.externalUnit === true)).toBe(true);
+  });
 });
 
 describe('Task #541: clear/available primary_last skips "Close the call?" hail', () => {
