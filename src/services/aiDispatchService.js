@@ -2322,33 +2322,9 @@ export class AIDispatcher {
         return;
       }
 
-      if (state === DISPATCHER_STATE.AWAITING_CALL_NATURE) {
-        this.log('CALL_NATURE_FAST_PATH', { participant: participantId, transcript });
-        this._turnContextByUnit.set(participantId, { transcript, intent: 'CALL_NATURE_INPUT' });
-        await this.handleCallNatureInput(participantId, transcript, slots);
-        return;
-      }
 
-      if (state === DISPATCHER_STATE.AWAITING_CALL_ADDRESS) {
-        this.log('CALL_ADDRESS_FAST_PATH', { participant: participantId, transcript });
-        this._turnContextByUnit.set(participantId, { transcript, intent: 'CALL_ADDRESS_INPUT' });
-        await this.handleCallAddressInput(participantId, transcript, slots);
-        return;
-      }
 
-      if (state === DISPATCHER_STATE.AWAITING_CALL_CONFIRM) {
-        this.log('CALL_CONFIRM_FAST_PATH', { participant: participantId, transcript });
-        this._turnContextByUnit.set(participantId, { transcript, intent: 'CALL_CONFIRM' });
-        await this.handleCallConfirm(participantId, transcript, slots);
-        return;
-      }
 
-      if (state === DISPATCHER_STATE.AWAITING_NOTE_CONTENT) {
-        this.log('NOTE_CONTENT_FAST_PATH', { participant: participantId, transcript });
-        this._turnContextByUnit.set(participantId, { transcript, intent: 'ADD_NOTE' });
-        await this.handleNoteContentInput(participantId, transcript, slots);
-        return;
-      }
 
       if (state === DISPATCHER_STATE.AWAITING_BE_ADVISED_NOTE) {
         this.log('BE_ADVISED_RETRY_FAST_PATH', { participant: participantId, transcript });
