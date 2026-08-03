@@ -28,7 +28,15 @@ jobs:
           cache: npm
 
       - name: Apply source changes
-        run: node tools/apply-ai-center-model-v2.mjs
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('tools/apply-ai-center-model-v2.mjs')
+          source = path.read_text()
+          source = source.replace(r'\\`', r'\`').replace(r'\\${', r'\${')
+          path.write_text(source)
+          PY
+          node tools/apply-ai-center-model-v2.mjs
 
       - name: Install dependencies
         run: npm ci
