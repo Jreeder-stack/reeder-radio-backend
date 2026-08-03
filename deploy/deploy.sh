@@ -37,7 +37,7 @@ cd ..
 
 echo "[6/6] Restarting application..."
 if pm2 describe command-comms &>/dev/null; then
-  pm2 restart deploy/ecosystem.config.cjs
+  pm2 restart deploy/ecosystem.config.cjs --update-env
 else
   pm2 start deploy/ecosystem.config.cjs
 fi
