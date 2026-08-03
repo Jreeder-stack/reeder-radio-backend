@@ -846,7 +846,6 @@ export class AIDispatcher {
     this.identity = options.identity || this.runtimeContext.identity || AI_IDENTITY;
     this.profileManaged = options.profileManaged === true || this.runtimeContext.managed === true;
     this.profileStatusChecksEnabled = options.statusChecksEnabled;
-    this.unitAccessGuard = typeof options.unitAccessGuard === 'function' ? options.unitAccessGuard : null;
     this.cadStatusCheckClient = options.cadStatusCheckClient || (
       this.profileManaged && cadStatusCheckModule.CadStatusCheckClient
         ? new cadStatusCheckModule.CadStatusCheckClient(this.runtimeContext)
