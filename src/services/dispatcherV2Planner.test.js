@@ -3,7 +3,9 @@ import { describe, expect, it } from 'vitest';
 import {
   containsProtectedEmergencyTraffic,
   mapDispatcherV2PlanToLegacyResult,
+  planContradictsLiveCad,
   resolveContextualToolArguments,
+  sanitizeCall,
   validateDispatcherV2Plan,
 } from './dispatcherV2Planner.js';
 
@@ -118,4 +120,49 @@ describe('AI Dispatcher V2 contextual tool planner', () => {
     expect(containsProtectedEmergencyTraffic('Central, officer down')).toBe(true);
     expect(containsProtectedEmergencyTraffic('Central, show me en route')).toBe(false);
   });
+
+  it('normalizes the radio API type field into the live call nature', () => {
+    expect(sanitizeCall({
+      call_id: 'uuid-1',
+      call_number: '2026-00123',
+      type: 'BUILDING CHECK',
+      location: 'FAYETTE COUNTY FAIR',
+      city: 'DUNBAR',
+      status: 'assigned',
+    })).toMatchObject({
+      callId: 'uuid-1',
+      callNumber: '2026-00123',
+      nature: 'BUILDING CHECK',
+      location: 'FAYETTE COUNTY FAIR',
+      city: 'DUNBAR',
+    });
+  });
+
+  it('resolves an unqualified call reference from the sole live CAD call after a restart', () => {
+    const args = resolveContextualToolArguments('assign_unit_to_call', {
+      unitId: '2301',
+    }, {
+      activeCalls: [{
+        callId: 'uuid-1',
+        callNumber: '2026-00123',
+        nature: 'BUILDING CHECK',
+        location: 'FAYETTE COUNTY FAIR',
+      }],
+      recentActions: [],
+      currentCall: null,
+    });
+
+    expect(args.callNumber).toBe('2026-00123');
+  });
+
+  it('rejects a model claim that there are no calls when live CAD has one', () => {
+    expect(planContradictsLiveCad({
+      kind: 'control',
+      action: 'CLARIFY',
+      clarificationQuestion: 'No active calls found.',
+    }, {
+      activeCalls: [{ callNumber: '2026-00123' }],
+    })).toBe(true);
+  });
+
 });
