@@ -11,13 +11,15 @@ import {
   validateShadowToolPlan,
 } from '../dispatcherToolPlanner.js';
 
-describe('dispatcher tool registry shadow safety', () => {
-  it('contains definitions only and no executable handlers', () => {
+describe('dispatcher tool registry safety', () => {
+  it('contains declarative definitions and no executable handlers', () => {
     const tools = listDispatcherTools();
     expect(tools.length).toBeGreaterThan(10);
     for (const tool of tools) {
-      expect(tool.shadowOnly).toBe(true);
+      expect(tool.shadowOnly).toBeUndefined();
       expect(tool.execute).toBeUndefined();
+      expect(tool.name).toBeTruthy();
+      expect(tool.risk).toBeTruthy();
     }
   });
 
@@ -37,6 +39,18 @@ describe('dispatcher tool registry shadow safety', () => {
   it('exposes high-impact confirmation metadata', () => {
     expect(getDispatcherTool('close_call').confirmationRequired).toBe(true);
     expect(getDispatcherTool('cancel_call').risk).toBe('high_impact_write');
+  });
+
+  it('allows contextual call references for another-unit assignments', () => {
+    const complete = validateDispatcherToolArguments('assign_unit_to_call', {
+      unitId: 'security 2',
+      callReference: 'last created',
+    });
+    expect(complete.valid).toBe(true);
+    expect(complete.arguments).toMatchObject({
+      unitId: 'SECURITY-2',
+      callReference: 'last_created',
+    });
   });
 });
 
@@ -65,7 +79,7 @@ describe('dispatcher tool planner shadow comparison', () => {
     });
   });
 
-  it('allows an incomplete tool only with a clarification question', () => {
+  it('allows an incomplete shadow tool only with a clarification question', () => {
     const plan = validateShadowToolPlan({
       tool: 'create_call',
       arguments: { nature: 'disturbance' },
@@ -81,7 +95,7 @@ describe('dispatcher tool planner shadow comparison', () => {
     expect(plan.executable).toBe(false);
   });
 
-  it('rejects unknown, low-confidence, and invalid plans', () => {
+  it('rejects unknown, low-confidence, and invalid shadow plans', () => {
     expect(validateShadowToolPlan({
       tool: 'delete_everything', arguments: {}, confidence: 0.99,
     }, { minConfidence: 0.70 })).toBeNull();
