@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <application
+        android:label="COMMAND COMMS"
+        tools:replace="android:label">
+
+        <!-- A normal handset app must not register itself as the Android HOME
+             launcher. Replace the shared radio/kiosk filter with LAUNCHER only. -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter tools:node="removeAll" />
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+    </application>
+
+</manifest>

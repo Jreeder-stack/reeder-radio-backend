@@ -23,8 +23,8 @@ android {
     // The audio transport, signaling, floor control, jitter buffer, Opus
     // codec, and dispatch UI are shared across every flavor — only
     // device-integration code and the device_type reported to the backend
-    // differ. The phone bridge uses its own package so it installs beside the
-    // T320 application and cannot be mistaken for or overwrite that build.
+    // differ. The regular phone build uses the existing Firebase package ID.
+    // The bridge and SD7 builds use separate package IDs so they can coexist.
     flavorDimensions += "device"
     productFlavors {
         create("t320") {
@@ -32,6 +32,14 @@ android {
             buildConfigField("String", "RADIO_DEVICE_TYPE", "\"t320\"")
         }
         create("phone") {
+            dimension = "device"
+            versionCode = 4
+            versionNameSuffix = "-phone-v4"
+            // Reuse the existing authenticated phone session flow. The phone
+            // source set renders the normal touch PTT UI, not the UHF bridge.
+            buildConfigField("String", "RADIO_DEVICE_TYPE", "\"android_phone_bridge\"")
+        }
+        create("bridge") {
             dimension = "device"
             applicationIdSuffix = ".bridge"
             versionCode = 3
@@ -44,6 +52,13 @@ android {
             versionNameSuffix = "-sd7"
             buildConfigField("String", "RADIO_DEVICE_TYPE", "\"siyata_sd7\"")
         }
+    }
+
+    // Preserve the existing bridge implementation under the new `bridge`
+    // flavor name. The new `phone` flavor gets a clean handset source set.
+    sourceSets {
+        getByName("bridge").setRoot("src/phone")
+        getByName("phone").setRoot("src/phoneClient")
     }
 
     buildTypes {
