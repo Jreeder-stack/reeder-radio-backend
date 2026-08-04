@@ -13,6 +13,35 @@ function normalized(value) {
   return clean(value).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 }
 
+function parseCanonicalAddress(value) {
+  const original = clean(value);
+  const parts = original.split(',').map(clean).filter(Boolean);
+  if (parts.length < 2) {
+    return { streetAddress: original, city: null, state: null, postcode: null };
+  }
+
+  let state = null;
+  let postcode = null;
+  const stateZip = parts[parts.length - 1].match(/^([A-Za-z]{2})(?:\s+(\d{5}(?:-\d{4})?))?$/);
+  if (stateZip) {
+    state = stateZip[1].toUpperCase();
+    postcode = stateZip[2] || null;
+    parts.pop();
+  }
+
+  if (parts.length < 2) {
+    return { streetAddress: original, city: null, state, postcode };
+  }
+
+  const city = parts.pop() || null;
+  return {
+    streetAddress: parts.join(', '),
+    city,
+    state,
+    postcode,
+  };
+}
+
 function stripTrailingLocation(address, fields) {
   const parts = clean(address).split(',').map(clean).filter(Boolean);
   const tokens = fields.map(normalized).filter(Boolean);
@@ -30,19 +59,24 @@ function cleanPremise(value) {
   return premise.includes(',') ? premise.split(',')[0].trim() : premise;
 }
 
-function normalizeAddressRecord(record, source) {
+export function normalizeAddressRecord(record, source) {
   if (!record || typeof record !== 'object') return null;
   const lat = Number(record.latitude ?? record.lat);
   const lng = Number(record.longitude ?? record.lng ?? record.lon);
   const rawAddress = record.address || record.streetAddress || record.formatted_address || null;
-  const postalCity = record.city || record.town || record.village || null;
+  const parsedAddress = parseCanonicalAddress(rawAddress || '');
+  const postalCity = record.city || record.town || record.village || parsedAddress.city || null;
   const municipality = record.municipality || record.township || postalCity || null;
-  const rawState = record.state || null;
-  const postcode = record.zipCode || record.zip_code || record.postcode || null;
-  const businessName = cleanPremise(record.businessName || record.business_name || record.name || null);
+  const rawState = record.state || parsedAddress.state || null;
+  const postcode = record.zipCode || record.zip_code || record.postcode || parsedAddress.postcode || null;
+  const normalizedSource = String(source || '').toUpperCase();
+  const explicitBusinessName = record.businessName
+    || record.business_name
+    || (normalizedSource === 'MAI' ? record.name : null);
+  const businessName = cleanPremise(explicitBusinessName);
   if (!rawAddress && !businessName) return null;
 
-  let streetAddress = stripTrailingLocation(rawAddress || '', [
+  let streetAddress = stripTrailingLocation(parsedAddress.streetAddress || rawAddress || '', [
     municipality,
     postalCity,
     rawState,
@@ -64,8 +98,6 @@ function normalizeAddressRecord(record, source) {
       .filter(Boolean).join(', '),
     lat: Number.isFinite(lat) ? lat : null,
     lng: Number.isFinite(lng) ? lng : null,
-    // A decorated named-premise road already contains the house number. Keep
-    // houseNumber null so the dispatcher verifier does not prepend it twice.
     houseNumber: isNamedPremise ? null : houseNumber || null,
     road,
     city: spokenMunicipality,
@@ -73,13 +105,11 @@ function normalizeAddressRecord(record, source) {
     township: record.township || null,
     municipality: spokenMunicipality,
     county: record.county || null,
-    // Named premises are read back without a redundant state suffix. The
-    // original state remains available as postalState for mapping/debugging.
     state: isNamedPremise ? null : rawState,
     postalState: rawState,
     postcode,
-    importance: source === 'MAI' ? 1 : 0.85,
-    addressType: source === 'MAI' ? 'master_address_index' : 'place',
+    importance: normalizedSource === 'MAI' ? 1 : 0.85,
+    addressType: normalizedSource === 'MAI' ? 'master_address_index' : 'place',
     businessName: businessName || null,
     streetAddress: streetAddress || null,
     source,
