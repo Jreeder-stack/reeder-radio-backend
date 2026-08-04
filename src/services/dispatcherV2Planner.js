@@ -177,7 +177,7 @@ function callDisplay(call) {
   return call?.call_number || call?.callNumber || callIdentifier(call);
 }
 
-function sanitizeCall(call) {
+export function sanitizeCall(call) {
   if (!call || typeof call !== 'object') return null;
   const identifier = callIdentifier(call);
   if (!identifier) return null;
@@ -185,7 +185,7 @@ function sanitizeCall(call) {
   return {
     callId: call.call_id || call.callId || call.id || identifier,
     callNumber: callDisplay(call),
-    nature: cleanString(call.nature || call.call_nature || call.callNature || '', 120) || null,
+    nature: cleanString(call.nature || call.type || call.call_nature || call.callNature || call.call_type || '', 120) || null,
     location: cleanString(call.location || call.address || call.call_location || '', 180) || null,
     city: cleanString(call.city || call.municipality || call.call_city || '', 100) || null,
     status: cleanString(call.status || call.call_status || '', 50) || null,
@@ -241,6 +241,26 @@ function findRecentCall(recentActions, { createdOnly = false } = {}) {
   return null;
 }
 
+function plannerResponseText(plan) {
+  return [plan?.spokenResponse, plan?.clarificationQuestion]
+    .filter(Boolean)
+    .join(' ')
+    .trim();
+}
+
+export function planClaimsNoActiveCalls(plan) {
+  const text = plannerResponseText(plan);
+  if (!text) return false;
+  return /\bno active calls?\b|\bno calls? (?:are )?(?:active|found|available)\b|\bthere (?:are|is) no active calls?\b/i.test(text);
+}
+
+export function planContradictsLiveCad(plan, operationalContext = {}) {
+  const activeCalls = Array.isArray(operationalContext.activeCalls)
+    ? operationalContext.activeCalls
+    : [];
+  return activeCalls.length > 0 && planClaimsNoActiveCalls(plan);
+}
+
 export function resolveContextualToolArguments(toolName, rawArguments, operationalContext = {}) {
   const args = cleanArguments(rawArguments);
   if (args.callNumber) return args;
@@ -273,6 +293,15 @@ export function resolveContextualToolArguments(toolName, rawArguments, operation
 
   if (!resolved && ['assign_unit_to_call', 'add_call_note', 'get_call_details', 'close_call', 'cancel_call'].includes(toolName)) {
     resolved = findRecentCall(recentActions);
+  }
+
+  // A deployment restart clears the in-memory recent-action cache. When the
+  // selected dispatch center has exactly one live call, a conversational
+  // reference such as "that call" is still unambiguous and must resolve from
+  // CAD rather than being reported as no active calls.
+  if (!resolved && activeCalls.length === 1
+      && ['assign_unit_to_call', 'add_call_note', 'get_call_details', 'close_call', 'cancel_call'].includes(toolName)) {
+    resolved = callIdentifier(activeCalls[0]);
   }
 
   if (resolved) args.callNumber = String(resolved);
@@ -560,7 +589,7 @@ const SYSTEM_PROMPT = `You are the reasoning and tool-planning layer for a publi
 You are NOT a phrase matcher and you are NOT limited to canned command wording. Infer the field unit's requested outcome from ordinary language, currentState, pendingData, recentConversation, recent successful actions, and live CAD calls. Choose one validated tool from availableTools, or a control decision when no tool should run.
 
 Core behavior:
-1. Use liveCadContext and recentActions before asking the unit for information. Never claim there are no active calls when activeCalls contains one.
+1. Use liveCadContext and recentActions before asking the unit for information. Never claim there are no active calls when activeCalls contains one. If activeCallsRead is false, the CAD read failed; say CAD call data is unavailable rather than claiming the list is empty.
 2. Resolve references conversationally. "That call", "the call we just made", or "add 2301 too" normally refers to the most recent successful CREATE_CALL/ASSIGN_CALL action. Set callReference to recent or last_created, or provide the resolved callNumber from context.
 3. Match descriptions such as "the building check" against active call nature and location. If exactly one call matches, use its callNumber.
 4. assign_unit_to_call arguments.unitId is the unit being added, not necessarily the speaking unit. Example: "add 2301 to that call" => tool assign_unit_to_call, unitId 2301, callReference recent.
@@ -604,7 +633,7 @@ function filterSlots(currentSlots) {
 }
 
 export async function buildDispatcherOperationalContext(unitId) {
-  const context = { currentCall: null, activeCalls: [], recentActions: [] };
+  const context = { currentCall: null, activeCalls: [], recentActions: [], activeCallsRead: false, activeCallsError: null };
 
   try {
     const { getActionsForUnit } = await import('./unitActionLog.js');
@@ -631,12 +660,24 @@ export async function buildDispatcherOperationalContext(unitId) {
     }
     if (activeResult.status === 'fulfilled') {
       const raw = activeResult.value;
-      const list = Array.isArray(raw?.calls) ? raw.calls
-        : Array.isArray(raw?.results) ? raw.results
-        : Array.isArray(raw?.data) ? raw.data
-        : Array.isArray(raw) ? raw
-        : [];
-      context.activeCalls = list.slice(0, 30).map(sanitizeCall).filter(Boolean);
+      if (raw?.success === false) {
+        context.activeCallsError = raw.error || raw.failureType || `CAD active-call read failed${raw.statusCode ? ` (${raw.statusCode})` : ''}`;
+        console.warn(`[AI-DISPATCH-V2] Active call read failed: ${context.activeCallsError}`);
+      } else if (raw == null) {
+        context.activeCallsError = 'CAD returned an empty active-call response';
+        console.warn(`[AI-DISPATCH-V2] Active call read failed: ${context.activeCallsError}`);
+      } else {
+        const list = Array.isArray(raw?.calls) ? raw.calls
+          : Array.isArray(raw?.results) ? raw.results
+          : Array.isArray(raw?.data) ? raw.data
+          : Array.isArray(raw) ? raw
+          : [];
+        context.activeCalls = list.slice(0, 30).map(sanitizeCall).filter(Boolean);
+        context.activeCallsRead = true;
+      }
+    } else {
+      context.activeCallsError = activeResult.reason?.message || 'CAD active-call request rejected';
+      console.warn(`[AI-DISPATCH-V2] Active call read failed: ${context.activeCallsError}`);
     }
   } catch (error) {
     console.warn(`[AI-DISPATCH-V2] Live CAD context unavailable: ${error.message}`);
@@ -712,8 +753,49 @@ export async function classifyIntentV2(
 
   const startedAt = Date.now();
   try {
-    const candidate = await callPlannerModel(context);
-    const plan = validateDispatcherV2Plan(candidate, { unitId, operationalContext });
+    let candidate = await callPlannerModel(context);
+    let plan = validateDispatcherV2Plan(candidate, { unitId, operationalContext });
+
+    // The model is not allowed to contradict retrieved CAD facts. Retry once
+    // with an explicit correction when it claims there are no calls despite a
+    // non-empty live list. If it repeats the contradiction, fail honestly
+    // instead of transmitting false CAD information.
+    if (planContradictsLiveCad(plan, operationalContext)) {
+      console.warn(`[AI-DISPATCH-V2] Planner contradicted live CAD; retrying: unit=${unitId}, activeCalls=${operationalContext.activeCalls.length}`);
+      candidate = await callPlannerModel({
+        ...context,
+        plannerCorrection: `The live CAD response contains ${operationalContext.activeCalls.length} active call(s). Re-plan using those calls and do not state that no active calls exist.`,
+      });
+      plan = validateDispatcherV2Plan(candidate, { unitId, operationalContext });
+    }
+
+    if (plan && planClaimsNoActiveCalls(plan) && operationalContext.activeCallsRead === false) {
+      console.warn(`[AI-DISPATCH-V2] Suppressed false empty-call claim after CAD read failure: unit=${unitId}, error=${operationalContext.activeCallsError || 'unknown'}`);
+      return {
+        intent: 'UNKNOWN',
+        response: `${unitId}, unable to read active calls from CAD right now. Use the MDT or repeat shortly.`,
+        dispatcherV2: {
+          mode: 'contextual_tool_planner',
+          cadReadFailed: true,
+          error: operationalContext.activeCallsError || 'active_call_read_failed',
+          latencyMs: Date.now() - startedAt,
+        },
+      };
+    }
+
+    if (planContradictsLiveCad(plan, operationalContext)) {
+      return {
+        intent: 'UNKNOWN',
+        response: `${unitId}, CAD has active calls, but I could not safely determine which call you meant. Say the call number or call nature.`,
+        dispatcherV2: {
+          mode: 'contextual_tool_planner',
+          contradictedLiveCad: true,
+          activeCallCount: operationalContext.activeCalls.length,
+          latencyMs: Date.now() - startedAt,
+        },
+      };
+    }
+
     if (!plan) {
       console.warn(`[AI-DISPATCH-V2] Rejected invalid or low-confidence plan: unit=${unitId}, tool=${candidate?.tool || 'none'}, decision=${candidate?.decision || candidate?.action || 'none'}, confidence=${candidate?.confidence ?? 'none'}`);
       return {
