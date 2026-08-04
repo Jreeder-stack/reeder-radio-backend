@@ -1,0 +1,29 @@
+name: Remove new CAD preflight build assets
+
+on:
+  push:
+    branches:
+      - agent/cad-readiness-preflight
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    if: ${{ !contains(github.event.head_commit.message, '[skip ci]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Restore generated directory exactly from main
+        run: |
+          git fetch origin main
+          rm -rf client/dist
+          git checkout origin/main -- client/dist
+          rm .github/workflows/cleanup-cad-preflight-new-dist.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "[skip ci] Restore generated assets from main"
+          git push
