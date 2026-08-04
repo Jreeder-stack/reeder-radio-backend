@@ -1,0 +1,56 @@
+name: PR apply live active call context repair
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  repair-and-validate:
+    if: ${{ !contains(github.event.pull_request.title, '[skip ci]') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Apply live CAD context repair
+        run: python .github/scripts/apply_live_call_context_fix.py
+
+      - run: npm ci
+
+      - name: Validate syntax
+        run: |
+          node --check src/services/dispatcherV2Planner.js
+          node --check src/services/dispatcherV2Planner.test.js
+
+      - name: Run contextual dispatcher regressions
+        run: >-
+          npx vitest run
+          src/services/dispatcherV2Planner.test.js
+          src/services/__tests__/dispatcherV2Conversation.test.js
+          src/services/__tests__/dispatcherToolPlanner.shadow.test.js
+          src/services/__tests__/aiDispatch.callResolve.test.js
+          src/services/__tests__/aiDispatch.task542.test.js
+          src/services/__tests__/namedPlaceIntentResolver.test.js
+
+      - name: Commit validated repair and remove temporary files
+        run: |
+          rm .github/workflows/apply-live-active-call-context-fix.yml
+          rm .github/workflows/pr-apply-live-active-call-context-fix.yml
+          rm .github/scripts/apply_live_call_context_fix.py
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/services/dispatcherV2Planner.js src/services/dispatcherV2Planner.test.js .github/workflows .github/scripts
+          git commit -m "Fix live active call context resolution [skip ci]"
+          git push origin HEAD:${{ github.head_ref }}
