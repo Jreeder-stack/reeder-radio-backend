@@ -1,3 +1,4 @@
+// Contextual CAD tool-planning regression coverage.
 import { describe, expect, it } from 'vitest';
 import {
   containsProtectedEmergencyTraffic,
