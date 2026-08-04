@@ -5,6 +5,7 @@ import { AIDispatcherSignaling } from './aiDispatcherSignaling.js';
 import { signalingService } from './signalingService.js';
 import { isConfigured as isAzureConfigured } from './azureSpeechService.js';
 import { bindRuntime, runWithRuntime } from './runtimeContext.js';
+import { CORE_AI_DISPATCHER_CAD_SCOPES, validateDispatcherCadIntegration } from './cadService.js';
 
 function clean(value) {
   const text = String(value ?? '').trim();
@@ -304,6 +305,26 @@ export class AIDispatcherRuntimeManager {
     const context = this._runtimeContext(profile);
     try {
       const runtime = await runWithRuntime(context, async () => {
+        const requiredCadScopes = [
+          ...CORE_AI_DISPATCHER_CAD_SCOPES,
+          ...(profile.status_checks_enabled !== false
+            ? ['status_check.read', 'status_check.write']
+            : []),
+        ];
+        const cadPreflight = await validateDispatcherCadIntegration({ requiredScopes: requiredCadScopes });
+        if (!cadPreflight.success) {
+          const error = new Error(`CAD readiness check failed at ${cadPreflight.stage || 'unknown'}: ${cadPreflight.error || 'unknown error'}`);
+          error.statusCode = cadPreflight.statusCode || 503;
+          error.cadPreflight = cadPreflight;
+          throw error;
+        }
+        this.log('CAD_PREFLIGHT_OK', {
+          id: profile.id,
+          dispatchCenterId: cadPreflight.dispatchCenterId,
+          activeCallCount: cadPreflight.activeCallCount,
+          scopes: cadPreflight.scopes,
+        });
+
         const dispatcher = new AIDispatcher({
           profileManaged: true,
           profileId: profile.id,
