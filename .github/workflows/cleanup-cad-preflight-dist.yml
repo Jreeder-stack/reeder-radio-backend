@@ -1,0 +1,28 @@
+name: Clean CAD preflight build artifacts
+
+on:
+  push:
+    branches:
+      - agent/cad-readiness-preflight
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    if: ${{ !contains(github.event.head_commit.message, '[skip ci]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Restore generated assets and remove workflow
+        run: |
+          git fetch origin main
+          git checkout origin/main -- client/dist
+          rm .github/workflows/cleanup-cad-preflight-dist.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "[skip ci] Remove generated build artifacts"
+          git push
