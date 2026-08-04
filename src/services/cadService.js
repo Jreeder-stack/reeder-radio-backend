@@ -251,9 +251,126 @@ export async function getUnitInfo(unitId) {
   }
 }
 
+const DEFAULT_CAD_READ_RETRIES = 3;
+const DEFAULT_CAD_READ_RETRY_DELAY_MS = 150;
+export const CORE_AI_DISPATCHER_CAD_SCOPES = Object.freeze([
+  'call.read',
+  'call.write',
+  'unit.read',
+  'unit.write',
+  'query.read',
+]);
+
+function getCadReadRetryDelayMs() {
+  const configured = Number.parseInt(process.env.CAD_READ_RETRY_DELAY_MS || '', 10);
+  if (Number.isFinite(configured) && configured >= 0 && configured <= 5000) return configured;
+  return DEFAULT_CAD_READ_RETRY_DELAY_MS;
+}
+
+function isRetryableCadReadFailure(result) {
+  if (!result || result.success !== false) return false;
+  if (result.failureType === 'UNREACHABLE') return true;
+  const statusCode = Number(result.statusCode);
+  return Number.isFinite(statusCode) && statusCode >= 500;
+}
+
+async function cadGetWithRetry(endpoint, attempts = DEFAULT_CAD_READ_RETRIES) {
+  const maxAttempts = Math.max(1, Number.parseInt(attempts, 10) || DEFAULT_CAD_READ_RETRIES);
+  let result = null;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    result = await cadRequest(endpoint, 'GET');
+    if (!isRetryableCadReadFailure(result) || attempt >= maxAttempts) return result;
+    const delayMs = getCadReadRetryDelayMs() * attempt;
+    if (delayMs > 0) await new Promise(resolve => setTimeout(resolve, delayMs));
+  }
+  return result;
+}
+
 export async function getActiveCalls(status = null) {
   const endpoint = status ? `/api/radio/calls?status=${status}` : '/api/radio/calls';
-  return cadRequest(endpoint, 'GET');
+  return cadGetWithRetry(endpoint);
+}
+
+export async function validateDispatcherCadIntegration({ requiredScopes = CORE_AI_DISPATCHER_CAD_SCOPES } = {}) {
+  const { runtime, dispatchCenterId } = getCadRuntimeConfig();
+  const expectedCenterId = String(dispatchCenterId || '').trim();
+
+  const integration = await cadGetWithRetry('/api/radio/integration-context');
+  if (!integration || integration.success === false) {
+    return {
+      success: false,
+      stage: 'integration_context',
+      error: integration?.error || 'Unable to read Command Link integration context',
+      failureType: integration?.failureType || 'CAD_PREFLIGHT_FAILED',
+      statusCode: integration?.statusCode ?? null,
+      responseBody: integration?.responseBody ?? null,
+    };
+  }
+
+  const actualCenterId = String(integration?.dispatchCenter?.id || '').trim();
+  if (runtime.managed && (!expectedCenterId || !actualCenterId || actualCenterId !== expectedCenterId)) {
+    return {
+      success: false,
+      stage: 'dispatch_center',
+      error: `Command Link dispatch center mismatch: expected ${expectedCenterId || 'none'}, received ${actualCenterId || 'none'}`,
+      failureType: 'DISPATCH_CENTER_MISMATCH',
+      statusCode: 409,
+      expectedDispatchCenterId: expectedCenterId || null,
+      actualDispatchCenterId: actualCenterId || null,
+    };
+  }
+
+  const scopes = Array.isArray(integration.scopes)
+    ? integration.scopes.map(scope => String(scope))
+    : [];
+  const requestedScopes = Array.from(new Set(
+    (Array.isArray(requiredScopes) ? requiredScopes : CORE_AI_DISPATCHER_CAD_SCOPES)
+      .map(scope => String(scope || '').trim())
+      .filter(Boolean)
+  ));
+  const missingScopes = scopes.includes('*')
+    ? []
+    : requestedScopes.filter(scope => !scopes.includes(scope));
+  if (missingScopes.length > 0) {
+    return {
+      success: false,
+      stage: 'scopes',
+      error: `Command Link API key is missing required scope${missingScopes.length === 1 ? '' : 's'}: ${missingScopes.join(', ')}`,
+      failureType: 'INSUFFICIENT_SCOPE',
+      statusCode: 403,
+      scopes,
+      missingScopes,
+    };
+  }
+
+  const activeCalls = await getActiveCalls();
+  if (!activeCalls || activeCalls.success === false) {
+    return {
+      success: false,
+      stage: 'active_calls',
+      error: activeCalls?.error || 'Unable to read active calls from Command Link',
+      failureType: activeCalls?.failureType || 'CAD_PREFLIGHT_FAILED',
+      statusCode: activeCalls?.statusCode ?? null,
+      responseBody: activeCalls?.responseBody ?? null,
+    };
+  }
+  if (!Array.isArray(activeCalls.calls)) {
+    return {
+      success: false,
+      stage: 'active_calls',
+      error: 'Command Link returned a malformed active-call response',
+      failureType: 'MALFORMED_RESPONSE',
+      statusCode: 502,
+    };
+  }
+
+  return {
+    success: true,
+    dispatchCenterId: actualCenterId || expectedCenterId || null,
+    dispatchCenterName: integration?.dispatchCenter?.name || null,
+    scopes,
+    activeCallCount: activeCalls.calls.length,
+  };
 }
 
 export async function getCallDetails(callId) {
