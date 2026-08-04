@@ -1,0 +1,53 @@
+name: Validate contextual AI dispatcher
+
+on:
+  push:
+    branches:
+      - agent/contextual-ai-dispatcher
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    if: ${{ !contains(github.event.head_commit.message, '[skip ci]') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Check changed JavaScript syntax
+        run: |
+          node --check src/services/dispatcherToolRegistry.js
+          node --check src/services/dispatcherV2Planner.js
+          node --check src/services/dispatcherV2Planner.test.js
+          node --check src/services/__tests__/dispatcherV2Conversation.test.js
+          node --check src/services/__tests__/dispatcherToolPlanner.shadow.test.js
+
+      - name: Run dispatcher regression tests
+        run: >-
+          npx vitest run
+          src/services/dispatcherV2Planner.test.js
+          src/services/__tests__/dispatcherV2Conversation.test.js
+          src/services/__tests__/dispatcherToolPlanner.shadow.test.js
+          src/services/__tests__/aiDispatch.task542.test.js
+          src/services/__tests__/namedPlaceIntentResolver.test.js
+
+      - name: Remove temporary validation workflow
+        if: success()
+        run: |
+          rm .github/workflows/validate-contextual-ai-dispatcher.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/workflows/validate-contextual-ai-dispatcher.yml
+          git commit -m "[skip ci] Remove contextual AI validation workflow"
+          git push
