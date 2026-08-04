@@ -1,0 +1,21 @@
+name: Validate MNI address fix
+
+on:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Syntax check
+        run: node --check src/services/locationService.js
+      - name: Address normalization regression tests
+        run: npx vitest run src/services/__tests__/locationServiceAddressNormalization.test.js src/services/__tests__/namedPlaceIntentResolver.test.js
+      - name: Production client build
+        run: npm run build
