@@ -7,10 +7,17 @@ const STATUS_VALUES = [
   'out_of_service',
 ];
 
+const CALL_REFERENCE_VALUES = [
+  'current',
+  'recent',
+  'last_created',
+  'sole_active',
+];
+
 const TOOL_DEFINITIONS = [
   {
     name: 'radio_check',
-    description: 'A field unit tests radio audio or asks how its transmission is being received.',
+    description: 'Confirm how a field unit radio transmission is being received.',
     risk: 'none',
     confirmationRequired: false,
     required: [],
@@ -18,7 +25,7 @@ const TOOL_DEFINITIONS = [
   },
   {
     name: 'time_check',
-    description: 'A field unit asks dispatch for the current time.',
+    description: 'Read the current dispatcher time from the server clock.',
     risk: 'none',
     confirmationRequired: false,
     required: [],
@@ -26,18 +33,22 @@ const TOOL_DEFINITIONS = [
   },
   {
     name: 'update_unit_status',
-    description: 'Change a unit status, such as available, en route, on scene, off duty, or out of service.',
+    description: 'Change the speaking unit or another identified unit status.',
     risk: 'routine_write',
     confirmationRequired: false,
     required: ['unitId', 'status'],
     properties: {
-      unitId: { type: 'string' },
+      unitId: { type: 'string', description: 'Target unit callsign.' },
       status: { type: 'string', enum: STATUS_VALUES },
+      callNumber: { type: 'string' },
+      callNature: { type: 'string' },
+      callLocation: { type: 'string' },
+      callCity: { type: 'string' },
     },
   },
   {
     name: 'create_call',
-    description: 'Create a new CAD call from a spoken incident nature and location.',
+    description: 'Create a CAD call from the incident nature and location. The executor verifies the address and asks for confirmation when required.',
     risk: 'routine_write',
     confirmationRequired: true,
     required: ['nature', 'address'],
@@ -50,24 +61,33 @@ const TOOL_DEFINITIONS = [
   },
   {
     name: 'assign_unit_to_call',
-    description: 'Assign a unit to an existing CAD call.',
+    description: 'Assign any identified unit to an active CAD call. Resolve conversational references using current CAD calls and recent successful actions.',
     risk: 'routine_write',
     confirmationRequired: false,
-    required: ['unitId', 'callNumber'],
+    required: ['unitId'],
+    anyOf: [['callNumber'], ['callReference'], ['callNature'], ['callLocation']],
     properties: {
-      unitId: { type: 'string' },
+      unitId: { type: 'string', description: 'Unit being added, which may differ from the speaking unit.' },
       callNumber: { type: 'string' },
+      callReference: { type: 'string', enum: CALL_REFERENCE_VALUES },
+      callNature: { type: 'string' },
+      callLocation: { type: 'string' },
+      callCity: { type: 'string' },
     },
   },
   {
     name: 'add_call_note',
-    description: 'Add a routine note or update to the unit current call or a specified call.',
+    description: 'Add a routine note to the current, recent, or specified call.',
     risk: 'routine_write',
     confirmationRequired: false,
     required: ['note'],
     properties: {
       note: { type: 'string' },
       callNumber: { type: 'string' },
+      callReference: { type: 'string', enum: CALL_REFERENCE_VALUES },
+      callNature: { type: 'string' },
+      callLocation: { type: 'string' },
+      beAdvised: { type: 'boolean' },
     },
   },
   {
@@ -99,15 +119,19 @@ const TOOL_DEFINITIONS = [
   },
   {
     name: 'query_pending_calls',
-    description: 'Read pending or unassigned CAD calls.',
+    description: 'Read active, pending, or unassigned CAD calls visible to this dispatcher.',
     risk: 'read_only',
     confirmationRequired: false,
     required: [],
-    properties: {},
+    properties: {
+      nature: { type: 'string' },
+      location: { type: 'string' },
+      status: { type: 'string' },
+    },
   },
   {
     name: 'get_unit_assignment',
-    description: 'Read the current call assignment for a unit.',
+    description: 'Read the current CAD call assignment for a unit.',
     risk: 'read_only',
     confirmationRequired: false,
     required: ['unitId'],
@@ -115,11 +139,18 @@ const TOOL_DEFINITIONS = [
   },
   {
     name: 'get_call_details',
-    description: 'Read details for a specified CAD call.',
+    description: 'Read details for a call identified by number, recent context, nature, or location.',
     risk: 'read_only',
     confirmationRequired: false,
-    required: ['callNumber'],
-    properties: { callNumber: { type: 'string' } },
+    required: [],
+    anyOf: [['callNumber'], ['callReference'], ['callNature'], ['callLocation']],
+    properties: {
+      callNumber: { type: 'string' },
+      callReference: { type: 'string', enum: CALL_REFERENCE_VALUES },
+      callNature: { type: 'string' },
+      callLocation: { type: 'string' },
+      detailField: { type: 'string' },
+    },
   },
   {
     name: 'clear_unit',
@@ -131,29 +162,37 @@ const TOOL_DEFINITIONS = [
   },
   {
     name: 'close_call',
-    description: 'Close a CAD call with a disposition after the required confirmation flow.',
+    description: 'Close a CAD call with a disposition after the guarded confirmation flow.',
     risk: 'high_impact_write',
     confirmationRequired: true,
-    required: ['callNumber', 'disposition'],
+    required: ['disposition'],
+    anyOf: [['callNumber'], ['callReference'], ['callNature'], ['callLocation']],
     properties: {
       callNumber: { type: 'string' },
+      callReference: { type: 'string', enum: CALL_REFERENCE_VALUES },
+      callNature: { type: 'string' },
+      callLocation: { type: 'string' },
       disposition: { type: 'string' },
     },
   },
   {
     name: 'cancel_call',
-    description: 'Cancel or void a CAD call.',
+    description: 'Cancel or void a CAD call after the guarded confirmation flow.',
     risk: 'high_impact_write',
     confirmationRequired: true,
-    required: ['callNumber'],
+    required: [],
+    anyOf: [['callNumber'], ['callReference'], ['callNature'], ['callLocation']],
     properties: {
       callNumber: { type: 'string' },
+      callReference: { type: 'string', enum: CALL_REFERENCE_VALUES },
+      callNature: { type: 'string' },
+      callLocation: { type: 'string' },
       reason: { type: 'string' },
     },
   },
   {
     name: 'request_backup',
-    description: 'Request routine additional units. Emergency or distress traffic must not use this shadow tool.',
+    description: 'Request routine additional units for the speaking or identified unit. Protected emergency traffic is handled outside this planner.',
     risk: 'routine_write',
     confirmationRequired: false,
     required: ['unitId'],
@@ -163,7 +202,7 @@ const TOOL_DEFINITIONS = [
       reason: { type: 'string' },
     },
   },
-].map(definition => Object.freeze({ ...definition, shadowOnly: true }));
+].map(definition => Object.freeze({ ...definition }));
 
 const TOOL_MAP = new Map(TOOL_DEFINITIONS.map(tool => [tool.name, tool]));
 
@@ -179,13 +218,14 @@ function cleanArguments(args = {}) {
   for (const [key, value] of Object.entries(args)) {
     if (value === null || value === undefined || value === '') continue;
     if (typeof value === 'string') cleaned[key] = cleanString(value);
-    else if (Array.isArray(value)) cleaned[key] = value.slice(0, 12).map(item => cleanString(item, 80));
+    else if (Array.isArray(value)) cleaned[key] = value.slice(0, 12).map(item => cleanString(item, 80)).filter(Boolean);
     else if (typeof value === 'number' || typeof value === 'boolean') cleaned[key] = value;
   }
   if (cleaned.unitId) cleaned.unitId = String(cleaned.unitId).toUpperCase().replace(/\s+/g, '-');
   if (cleaned.plate) cleaned.plate = String(cleaned.plate).toUpperCase().replace(/[^A-Z0-9]/g, '');
   if (cleaned.state) cleaned.state = String(cleaned.state).toUpperCase().replace(/[^A-Z]/g, '').slice(0, 2);
   if (cleaned.status) cleaned.status = String(cleaned.status).toLowerCase().replace(/[\s-]+/g, '_');
+  if (cleaned.callReference) cleaned.callReference = String(cleaned.callReference).toLowerCase().replace(/[\s-]+/g, '_');
   return cleaned;
 }
 
@@ -230,8 +270,16 @@ export function validateDispatcherToolArguments(toolName, args, missingFields = 
     }
   }
 
-  if (toolName === 'update_unit_status' && cleaned.status && !STATUS_VALUES.includes(cleaned.status)) {
-    return { valid: false, error: 'invalid_status', arguments: cleaned, missingFields: [...missing] };
+  for (const [field, schema] of Object.entries(tool.properties || {})) {
+    if (!schema?.enum || cleaned[field] === undefined) continue;
+    if (!schema.enum.includes(cleaned[field])) {
+      return {
+        valid: false,
+        error: `invalid_${field}`,
+        arguments: cleaned,
+        missingFields: [...missing],
+      };
+    }
   }
 
   return {
@@ -243,4 +291,4 @@ export function validateDispatcherToolArguments(toolName, args, missingFields = 
   };
 }
 
-export { STATUS_VALUES };
+export { STATUS_VALUES, CALL_REFERENCE_VALUES };

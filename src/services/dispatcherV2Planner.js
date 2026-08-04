@@ -1,42 +1,66 @@
-import { getPlannerToolCatalog } from './dispatcherToolRegistry.js';
+import {
+  getDispatcherTool,
+  getPlannerToolCatalog,
+  validateDispatcherToolArguments,
+} from './dispatcherToolRegistry.js';
 import { AzureOpenAI } from 'openai';
 
 const TRUE_VALUES = new Set(['1', 'true', 'yes', 'on', 'enabled']);
-const SUPPORTED_STATES = new Set([
+const ROUTINE_AI_STATES = new Set([
   'IDLE',
   'AWAITING_COMMAND',
   'AWAITING_CALL_NATURE',
   'AWAITING_CALL_ADDRESS',
   'AWAITING_CALL_CONFIRM',
   'AWAITING_NOTE_CONTENT',
+  'AWAITING_CALL_FOLLOWUP',
+  'AWAITING_CALL_DISAMBIG',
 ]);
-const SUPPORTED_ACTIONS = new Set([
+const CONTROL_ACTIONS = new Set([
   'NO_ACTION',
   'CLARIFY',
-  'RADIO_CHECK',
-  'TIME_CHECK',
-  'STATUS_CHANGE',
-  'CREATE_CALL',
-  'ASSIGN_CALL',
-  'ADD_NOTE',
-  'RUN_PLATE',
-  'MY_CALL',
-  'CALL_DETAILS',
-  'CLEAR_UNIT',
-  'CLOSE_CALL',
   'REPEAT',
   'DISREGARD',
   'CONFIRM',
   'DENY',
 ]);
-
-const VALID_STATUSES = new Set([
-  'on_duty',
-  'available',
-  'en_route',
-  'on_scene',
-  'off_duty',
-  'out_of_service',
+const LEGACY_ACTION_TOOL_MAP = new Map([
+  ['RADIO_CHECK', 'radio_check'],
+  ['TIME_CHECK', 'time_check'],
+  ['STATUS_CHANGE', 'update_unit_status'],
+  ['STATUS_CHANGE_OTHER', 'update_unit_status'],
+  ['CREATE_CALL', 'create_call'],
+  ['ASSIGN_CALL', 'assign_unit_to_call'],
+  ['ASSIGN_OTHER_UNIT', 'assign_unit_to_call'],
+  ['ADD_NOTE', 'add_call_note'],
+  ['RUN_PLATE', 'run_plate'],
+  ['PERSON_CHECK_DETAILS', 'run_person'],
+  ['PERSON_CHECK_DL', 'run_person'],
+  ['PERSON_CHECK_SSN', 'run_person'],
+  ['QUERY_CALLS', 'query_pending_calls'],
+  ['MY_CALL', 'get_unit_assignment'],
+  ['CALL_DETAILS', 'get_call_details'],
+  ['CLEAR_UNIT', 'clear_unit'],
+  ['CLOSE_CALL', 'close_call'],
+  ['DISPOSE_CALL', 'close_call'],
+  ['CANCEL_CALL', 'cancel_call'],
+  ['REQUEST_BACKUP', 'request_backup'],
+]);
+const SPEAKER_SENTINEL = '__SPEAKER__';
+const SPEAKER_DEFAULT_TOOLS = new Set([
+  'update_unit_status',
+  'assign_unit_to_call',
+  'get_unit_assignment',
+  'clear_unit',
+  'request_backup',
+]);
+const CONTEXTUAL_MISSING_ALLOWED = new Set([
+  'create_call',
+  'assign_unit_to_call',
+  'run_person',
+  'get_call_details',
+  'close_call',
+  'cancel_call',
 ]);
 
 const STATE_ABBREVIATIONS = new Map([
@@ -57,7 +81,7 @@ const STATE_ABBREVIATIONS = new Map([
 
 const PROTECTED_EMERGENCY_RX = /\b(officer\s+down|shots?\s+fired|10[-\s/]?33|ten\s+thirty[-\s]?three|emergency\s+traffic|signal\s+100)\b/i;
 const DEFAULT_MIN_CONFIDENCE = 0.82;
-const DEFAULT_TIMEOUT_MS = 4500;
+const DEFAULT_TIMEOUT_MS = 5500;
 
 let client = null;
 
@@ -65,6 +89,10 @@ function cleanString(value, maxLength = 300) {
   if (typeof value !== 'string') return null;
   const cleaned = value.trim().replace(/\s+/g, ' ');
   return cleaned ? cleaned.slice(0, maxLength) : null;
+}
+
+function normalizeUnit(value) {
+  return String(value || '').trim().toUpperCase().replace(/\s+/g, '-');
 }
 
 function cleanArguments(value) {
@@ -75,7 +103,7 @@ function cleanArguments(value) {
     if (typeof rawValue === 'string') cleaned[key] = cleanString(rawValue);
     else if (Array.isArray(rawValue)) {
       cleaned[key] = rawValue
-        .slice(0, 10)
+        .slice(0, 12)
         .map(item => cleanString(item, 80))
         .filter(Boolean);
     } else if (typeof rawValue === 'number' || typeof rawValue === 'boolean') {
@@ -90,8 +118,10 @@ function cleanArguments(value) {
     cleaned.state = STATE_ABBREVIATIONS.get(stateText) || (stateText.length === 2 ? stateText : null);
     if (!cleaned.state) delete cleaned.state;
   }
-  if (cleaned.targetUnit) cleaned.targetUnit = String(cleaned.targetUnit).toUpperCase().replace(/\s+/g, '-');
+  if (cleaned.unitId) cleaned.unitId = normalizeUnit(cleaned.unitId);
+  if (cleaned.targetUnit) cleaned.targetUnit = normalizeUnit(cleaned.targetUnit);
   if (cleaned.callNumber) cleaned.callNumber = String(cleaned.callNumber).trim();
+  if (cleaned.callReference) cleaned.callReference = String(cleaned.callReference).toLowerCase().replace(/[\s-]+/g, '_');
   return cleaned;
 }
 
@@ -132,38 +162,210 @@ export function isDispatcherV2Configured() {
 }
 
 export function shouldUseDispatcherV2(currentState = 'IDLE') {
-  return isDispatcherV2Enabled() && SUPPORTED_STATES.has(String(currentState || '').toUpperCase());
+  return isDispatcherV2Enabled() && ROUTINE_AI_STATES.has(String(currentState || '').toUpperCase());
 }
 
 export function containsProtectedEmergencyTraffic(transcript) {
   return PROTECTED_EMERGENCY_RX.test(String(transcript || ''));
 }
 
-export function validateDispatcherV2Plan(candidate, { minConfidence = getMinConfidence() } = {}) {
+function callIdentifier(call) {
+  return call?.call_number || call?.callNumber || call?.call_id || call?.callId || call?.id || null;
+}
+
+function callDisplay(call) {
+  return call?.call_number || call?.callNumber || callIdentifier(call);
+}
+
+function sanitizeCall(call) {
+  if (!call || typeof call !== 'object') return null;
+  const identifier = callIdentifier(call);
+  if (!identifier) return null;
+  const assignedUnits = call.assigned_units || call.assignedUnits || call.units || [];
+  return {
+    callId: call.call_id || call.callId || call.id || identifier,
+    callNumber: callDisplay(call),
+    nature: cleanString(call.nature || call.call_nature || call.callNature || '', 120) || null,
+    location: cleanString(call.location || call.address || call.call_location || '', 180) || null,
+    city: cleanString(call.city || call.municipality || call.call_city || '', 100) || null,
+    status: cleanString(call.status || call.call_status || '', 50) || null,
+    assignedUnits: Array.isArray(assignedUnits)
+      ? assignedUnits.slice(0, 20).map(unit => cleanString(String(unit), 60)).filter(Boolean)
+      : [],
+  };
+}
+
+function sanitizeRecentAction(action) {
+  if (!action || typeof action !== 'object') return null;
+  const data = action.data && typeof action.data === 'object' ? action.data : {};
+  return {
+    type: cleanString(action.type || '', 60) || null,
+    summary: cleanString(action.summary || '', 180) || null,
+    ageSeconds: Number.isFinite(action.timestamp)
+      ? Math.max(0, Math.round((Date.now() - action.timestamp) / 1000))
+      : null,
+    callId: data.callId || data.priorCallId || null,
+    callNumber: data.callNumber || data.callDisplay || data.priorCallDisplay || null,
+    nature: cleanString(data.nature || '', 120) || null,
+    location: cleanString(data.address || data.location || '', 180) || null,
+    targetUnit: cleanString(data.targetUnit || '', 60) || null,
+  };
+}
+
+function normalizeSearch(value) {
+  return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+function findCallByDescriptor(activeCalls, args) {
+  const natureNeedle = normalizeSearch(args.callNature);
+  const locationNeedle = normalizeSearch(args.callLocation || args.callCity);
+  if (!natureNeedle && !locationNeedle) return null;
+  const matches = activeCalls.filter(call => {
+    const nature = normalizeSearch(call.nature);
+    const location = normalizeSearch(`${call.location || ''} ${call.city || ''}`);
+    const natureMatches = !natureNeedle || (nature && (nature.includes(natureNeedle) || natureNeedle.includes(nature)));
+    const locationMatches = !locationNeedle || (location && (location.includes(locationNeedle) || locationNeedle.includes(location)));
+    return natureMatches && locationMatches;
+  });
+  return matches.length === 1 ? matches[0] : null;
+}
+
+function findRecentCall(recentActions, { createdOnly = false } = {}) {
+  for (let index = recentActions.length - 1; index >= 0; index -= 1) {
+    const action = recentActions[index];
+    if (createdOnly && action.type !== 'CREATE_CALL') continue;
+    if (!createdOnly && !['CREATE_CALL', 'ASSIGN_CALL', 'ASSIGN_OTHER_UNIT', 'UPDATE_CALL'].includes(action.type)) continue;
+    const identifier = action.callNumber || action.callId;
+    if (identifier) return identifier;
+  }
+  return null;
+}
+
+export function resolveContextualToolArguments(toolName, rawArguments, operationalContext = {}) {
+  const args = cleanArguments(rawArguments);
+  if (args.callNumber) return args;
+
+  const activeCalls = Array.isArray(operationalContext.activeCalls) ? operationalContext.activeCalls : [];
+  const recentActions = Array.isArray(operationalContext.recentActions) ? operationalContext.recentActions : [];
+  let resolved = null;
+
+  switch (args.callReference) {
+    case 'current':
+      resolved = callIdentifier(operationalContext.currentCall);
+      break;
+    case 'last_created':
+      resolved = findRecentCall(recentActions, { createdOnly: true });
+      break;
+    case 'recent':
+      resolved = findRecentCall(recentActions);
+      break;
+    case 'sole_active':
+      if (activeCalls.length === 1) resolved = callIdentifier(activeCalls[0]);
+      break;
+    default:
+      break;
+  }
+
+  if (!resolved) {
+    const descriptorMatch = findCallByDescriptor(activeCalls, args);
+    resolved = callIdentifier(descriptorMatch);
+  }
+
+  if (!resolved && ['assign_unit_to_call', 'add_call_note', 'get_call_details', 'close_call', 'cancel_call'].includes(toolName)) {
+    resolved = findRecentCall(recentActions);
+  }
+
+  if (resolved) args.callNumber = String(resolved);
+  return args;
+}
+
+function defaultClarification(toolName, missingFields = []) {
+  if (toolName === 'create_call') {
+    if (missingFields.includes('nature')) return 'What is the call nature?';
+    if (missingFields.includes('address')) return 'What is the location?';
+  }
+  if (toolName === 'assign_unit_to_call') {
+    if (missingFields.includes('unitId')) return 'Which unit should I add?';
+    return 'Which call should I add the unit to?';
+  }
+  if (toolName === 'run_person') return 'What person information do you have?';
+  if (toolName === 'get_call_details') return 'Which call?';
+  if (toolName === 'close_call') {
+    if (missingFields.includes('disposition')) return 'What is the disposition?';
+    return 'Which call should I close?';
+  }
+  if (toolName === 'cancel_call') return 'Which call should I cancel?';
+  return 'What information is missing?';
+}
+
+export function validateDispatcherV2Plan(
+  candidate,
+  {
+    unitId = null,
+    minConfidence = getMinConfidence(),
+    operationalContext = {},
+  } = {}
+) {
   if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) return null;
 
-  const action = String(candidate.action || '').trim().toUpperCase();
+  const rawAction = String(candidate.action || candidate.decision || '').trim().toUpperCase();
   const confidence = Number(candidate.confidence);
-  if (!SUPPORTED_ACTIONS.has(action)) return null;
   if (!Number.isFinite(confidence) || confidence < minConfidence || confidence > 1) return null;
 
-  const args = cleanArguments(candidate.arguments);
   const spokenResponse = cleanString(candidate.spokenResponse, 220);
   const clarificationQuestion = cleanString(candidate.clarificationQuestion, 180);
   const reason = cleanString(candidate.reason, 220);
 
-  if (action === 'STATUS_CHANGE' && !VALID_STATUSES.has(args.status)) return null;
-  if (action === 'CLARIFY' && !clarificationQuestion && !spokenResponse) return null;
-  if (action === 'ADD_NOTE' && !args.noteContent) return null;
-  if (action === 'CALL_DETAILS' && !args.callNumber) return null;
+  if (CONTROL_ACTIONS.has(rawAction)) {
+    if (rawAction === 'CLARIFY' && !clarificationQuestion && !spokenResponse) return null;
+    return {
+      kind: 'control',
+      action: rawAction,
+      confidence,
+      arguments: cleanArguments(candidate.arguments),
+      spokenResponse,
+      clarificationQuestion,
+      reason,
+    };
+  }
+
+  const candidateTool = cleanString(candidate.tool, 80);
+  const toolName = candidateTool ? candidateTool.toLowerCase() : (LEGACY_ACTION_TOOL_MAP.get(rawAction) || null);
+  const tool = getDispatcherTool(toolName);
+  if (!tool) return null;
+
+  const suppliedArgs = cleanArguments(candidate.arguments);
+  if (!suppliedArgs.note && suppliedArgs.noteContent) suppliedArgs.note = suppliedArgs.noteContent;
+  if (!suppliedArgs.unitId && suppliedArgs.targetUnit) suppliedArgs.unitId = suppliedArgs.targetUnit;
+  if (!suppliedArgs.unitId && rawAction === 'ASSIGN_OTHER_UNIT' && candidate.targetUnit) {
+    suppliedArgs.unitId = candidate.targetUnit;
+  }
+  if (!suppliedArgs.unitId && SPEAKER_DEFAULT_TOOLS.has(toolName)) {
+    suppliedArgs.unitId = unitId || SPEAKER_SENTINEL;
+  }
+  if (!suppliedArgs.callReference && suppliedArgs.useMyCall === true) suppliedArgs.callReference = 'current';
+
+  const contextualArgs = resolveContextualToolArguments(toolName, suppliedArgs, operationalContext);
+  const validation = validateDispatcherToolArguments(toolName, contextualArgs, candidate.missingFields);
+  const needsClarification = candidate.needsClarification === true || !validation.valid;
+  const question = clarificationQuestion || (needsClarification ? defaultClarification(toolName, validation.missingFields) : null);
+
+  if (!validation.valid && !CONTEXTUAL_MISSING_ALLOWED.has(toolName)) return null;
+  if (needsClarification && !question) return null;
 
   return {
-    action,
+    kind: 'tool',
+    action: 'USE_TOOL',
+    tool: toolName,
     confidence,
-    arguments: args,
+    arguments: validation.arguments,
+    missingFields: validation.missingFields,
+    needsClarification,
     spokenResponse,
-    clarificationQuestion,
+    clarificationQuestion: question,
     reason,
+    risk: tool.risk,
+    confirmationRequired: tool.confirmationRequired,
   };
 }
 
@@ -173,8 +375,8 @@ function mergePendingArguments(args, currentState = 'IDLE', currentSlots = {}) {
     : {};
   const merged = { ...args };
   const routineFields = [
-    'nature', 'address', 'priority', 'additionalUnits', 'noteContent',
-    'callNumber', 'disposition', 'callNature', 'callLocation', 'callCity',
+    'nature', 'address', 'priority', 'additionalUnits', 'note', 'noteContent',
+    'callNumber', 'callReference', 'disposition', 'callNature', 'callLocation', 'callCity',
   ];
   for (const field of routineFields) {
     if ((merged[field] === undefined || merged[field] === null || merged[field] === '')
@@ -183,16 +385,15 @@ function mergePendingArguments(args, currentState = 'IDLE', currentSlots = {}) {
     }
   }
 
-  if (currentState === 'AWAITING_NOTE_CONTENT' && !merged.noteContent && merged.note) {
-    merged.noteContent = merged.note;
+  if (currentState === 'AWAITING_NOTE_CONTENT' && !merged.note && merged.noteContent) {
+    merged.note = merged.noteContent;
   }
   return merged;
 }
 
-function promptForMissingCallField(args) {
-  if (!args.nature) return 'What is the call nature?';
-  if (!args.address) return 'What is the location?';
-  return null;
+function resolveMappedUnit(value, speakerUnitId) {
+  if (!value || value === SPEAKER_SENTINEL) return normalizeUnit(speakerUnitId);
+  return normalizeUnit(value);
 }
 
 export function mapDispatcherV2PlanToLegacyResult(
@@ -203,38 +404,57 @@ export function mapDispatcherV2PlanToLegacyResult(
 ) {
   if (!plan) return { intent: 'UNKNOWN', response: `${unitId}, say again.` };
 
-  const args = mergePendingArguments(
-    plan.arguments || {}, currentState, currentSlots
-  );
-  const response = plan.spokenResponse || null;
+  if (plan.kind === 'control' || CONTROL_ACTIONS.has(plan.action)) {
+    switch (plan.action) {
+      case 'NO_ACTION': return { intent: 'SILENCE' };
+      case 'CLARIFY': return { intent: 'UNKNOWN', response: plan.clarificationQuestion || plan.spokenResponse || `${unitId}, say again.` };
+      case 'REPEAT': return { intent: 'REPEAT', response: plan.spokenResponse || null };
+      case 'DISREGARD': return { intent: 'DISREGARD', response: plan.spokenResponse || null };
+      case 'CONFIRM': return { intent: 'CONFIRM', response: plan.spokenResponse || null };
+      case 'DENY': return { intent: 'DENY', response: plan.spokenResponse || null };
+      default: return { intent: 'UNKNOWN', response: `${unitId}, say again.` };
+    }
+  }
 
-  switch (plan.action) {
-    case 'NO_ACTION':
-      return { intent: 'SILENCE' };
-    case 'CLARIFY':
-      return { intent: 'UNKNOWN', response: plan.clarificationQuestion || response || `${unitId}, say again.` };
-    case 'RADIO_CHECK':
+  const args = mergePendingArguments(plan.arguments || {}, currentState, currentSlots);
+  const response = plan.spokenResponse || null;
+  const speaker = normalizeUnit(unitId);
+
+  if (plan.needsClarification && plan.tool !== 'create_call') {
+    return {
+      intent: 'UNKNOWN',
+      response: plan.clarificationQuestion || `${unitId}, say again.`,
+      dispatcherTool: { tool: plan.tool, missingFields: plan.missingFields || [] },
+    };
+  }
+
+  switch (plan.tool) {
+    case 'radio_check':
       return { intent: 'RADIO_CHECK', response: response || 'Loud and clear.' };
-    case 'TIME_CHECK':
+    case 'time_check':
       return { intent: 'TIME_CHECK', response };
-    case 'STATUS_CHANGE':
+    case 'update_unit_status': {
+      const targetUnit = resolveMappedUnit(args.unitId, speaker);
+      const isOther = targetUnit !== speaker;
       return {
-        intent: 'STATUS_CHANGE',
+        intent: isOther ? 'STATUS_CHANGE_OTHER' : 'STATUS_CHANGE',
         cadStatus: args.status,
         response,
         slots: {
+          ...(isOther ? { targetUnit } : {}),
           ...(args.callNumber ? { callNumber: args.callNumber } : {}),
           ...(args.callNature ? { callNature: args.callNature } : {}),
           ...(args.callLocation ? { callLocation: args.callLocation } : {}),
           ...(args.callCity ? { callCity: args.callCity } : {}),
         },
       };
-    case 'CREATE_CALL': {
-      const missingPrompt = promptForMissingCallField(args);
-      if (missingPrompt) {
+    }
+    case 'create_call': {
+      if (!args.nature || !args.address) {
+        const prompt = !args.nature ? 'What is the call nature?' : 'What is the location?';
         return {
           intent: 'CREATE_CALL_PROMPT',
-          response: plan.clarificationQuestion || response || missingPrompt,
+          response: plan.clarificationQuestion || response || prompt,
           slots: {
             ...(args.nature ? { nature: args.nature } : {}),
             ...(args.address ? { address: args.address } : {}),
@@ -254,27 +474,33 @@ export function mapDispatcherV2PlanToLegacyResult(
         },
       };
     }
-    case 'ASSIGN_CALL':
+    case 'assign_unit_to_call': {
+      const targetUnit = resolveMappedUnit(args.unitId, speaker);
+      const isOther = targetUnit !== speaker;
       return {
-        intent: 'ASSIGN_CALL',
+        intent: isOther ? 'ASSIGN_OTHER_UNIT' : 'ASSIGN_CALL',
         response,
         slots: {
+          ...(isOther ? { targetUnit } : {}),
           ...(args.callNumber ? { callNumber: args.callNumber } : {}),
+          ...(args.callReference === 'current' ? { useMyCall: true } : {}),
           ...(args.callNature ? { callNature: args.callNature } : {}),
           ...(args.callLocation ? { callLocation: args.callLocation } : {}),
           ...(args.callCity ? { callCity: args.callCity } : {}),
         },
       };
-    case 'ADD_NOTE':
+    }
+    case 'add_call_note':
       return {
         intent: 'ADD_NOTE',
         response,
         slots: {
-          noteContent: args.noteContent,
+          noteContent: args.note || args.noteContent,
           beAdvised: args.beAdvised === true,
+          ...(args.callNumber ? { callNumber: args.callNumber } : {}),
         },
       };
-    case 'RUN_PLATE':
+    case 'run_plate':
       return {
         intent: 'RUN_PLATE',
         response,
@@ -283,9 +509,17 @@ export function mapDispatcherV2PlanToLegacyResult(
           ...(args.state ? { state: args.state } : {}),
         },
       };
-    case 'MY_CALL':
-      return { intent: 'MY_CALL', response };
-    case 'CALL_DETAILS':
+    case 'run_person': {
+      const personIntent = args.ssn ? 'PERSON_CHECK_SSN'
+        : args.driverLicense ? 'PERSON_CHECK_DL'
+        : 'PERSON_CHECK_DETAILS';
+      return { intent: personIntent, response, slots: { ...args } };
+    }
+    case 'query_pending_calls':
+      return { intent: 'QUERY_CALLS', response, slots: { ...args } };
+    case 'get_unit_assignment':
+      return { intent: 'MY_CALL', response, slots: { unitId: resolveMappedUnit(args.unitId, speaker) } };
+    case 'get_call_details':
       return {
         intent: 'CALL_DETAILS',
         response,
@@ -294,9 +528,9 @@ export function mapDispatcherV2PlanToLegacyResult(
           detailField: args.detailField || 'all',
         },
       };
-    case 'CLEAR_UNIT':
-      return { intent: 'CLEAR_UNIT', response };
-    case 'CLOSE_CALL':
+    case 'clear_unit':
+      return { intent: 'CLEAR_UNIT', response, slots: { unitId: resolveMappedUnit(args.unitId, speaker) } };
+    case 'close_call':
       return {
         intent: 'DISPOSE_CALL',
         response,
@@ -305,67 +539,58 @@ export function mapDispatcherV2PlanToLegacyResult(
           ...(args.disposition ? { disposition: args.disposition } : {}),
         },
       };
-    case 'REPEAT':
-      return { intent: 'REPEAT', response };
-    case 'DISREGARD':
-      return { intent: 'DISREGARD', response };
-    case 'CONFIRM':
-      return { intent: 'CONFIRM', response };
-    case 'DENY':
-      return { intent: 'DENY', response };
+    case 'cancel_call':
+      return {
+        intent: 'CANCEL_CALL',
+        response,
+        slots: {
+          ...(args.callNumber ? { callNumber: args.callNumber } : {}),
+          ...(args.reason ? { reason: args.reason } : {}),
+        },
+      };
+    case 'request_backup':
+      return { intent: 'REQUEST_BACKUP', response, slots: { ...args, unitId: resolveMappedUnit(args.unitId, speaker) } };
     default:
       return { intent: 'UNKNOWN', response: `${unitId}, say again.` };
   }
 }
 
-const SYSTEM_PROMPT = `You are the conversational decision engine for a public-safety radio dispatcher.
+const SYSTEM_PROMPT = `You are the reasoning and tool-planning layer for a public-safety radio dispatcher.
 
-Understand the field unit's requested outcome from ordinary speech, the current conversation state, pendingData already collected, and the recent radio exchange. Select exactly one supported action for this turn. Do not behave like a phone tree and do not ask for information that is already present in pendingData or recentConversation.
+You are NOT a phrase matcher and you are NOT limited to canned command wording. Infer the field unit's requested outcome from ordinary language, currentState, pendingData, recentConversation, recent successful actions, and live CAD calls. Choose one validated tool from availableTools, or a control decision when no tool should run.
 
-Supported actions:
-- NO_ACTION: acknowledgment, unit-to-unit chatter, background speech, or anything not directed to dispatch
-- CLARIFY: one genuinely necessary question when the request cannot safely be completed
-- RADIO_CHECK
-- TIME_CHECK
-- STATUS_CHANGE: arguments.status must be one of on_duty, available, en_route, on_scene, off_duty, out_of_service
-- CREATE_CALL: arguments may include nature, address, priority, additionalUnits
-- ASSIGN_CALL: attach the speaking unit to an existing call; identify it by callNumber or descriptors
-- ADD_NOTE: arguments.noteContent contains the actual facts to add to the current or specified call
-- RUN_PLATE: arguments may include plate and state
-- MY_CALL
-- CALL_DETAILS
-- CLEAR_UNIT
-- CLOSE_CALL
-- REPEAT
-- DISREGARD
-- CONFIRM
-- DENY
+Core behavior:
+1. Use liveCadContext and recentActions before asking the unit for information. Never claim there are no active calls when activeCalls contains one.
+2. Resolve references conversationally. "That call", "the call we just made", or "add 2301 too" normally refers to the most recent successful CREATE_CALL/ASSIGN_CALL action. Set callReference to recent or last_created, or provide the resolved callNumber from context.
+3. Match descriptions such as "the building check" against active call nature and location. If exactly one call matches, use its callNumber.
+4. assign_unit_to_call arguments.unitId is the unit being added, not necessarily the speaking unit. Example: "add 2301 to that call" => tool assign_unit_to_call, unitId 2301, callReference recent.
+5. For the speaking unit, use the supplied unitId from context. Never invent a callsign, call number, address, status, disposition, plate, or person identifier.
+6. currentState and pendingData are authoritative multi-turn context. Merge new information with fields already collected.
+7. In AWAITING_CALL_ADDRESS, use create_call with the pending nature and newly supplied address. In AWAITING_CALL_NATURE, use create_call with the pending address and newly supplied nature.
+8. In AWAITING_CALL_CONFIRM, approvals are CONFIRM and rejections are DENY. A correction should use create_call with corrected fields and retained valid pending data.
+9. Protected emergency traffic is handled outside this planner. Do not plan officer-down, shots-fired, Signal 100, or emergency-traffic actions.
+10. The executor performs authorization, validation, confirmation, and CAD writes. Do not say an action succeeded before execution.
+11. Ask one short clarification only when live context cannot safely identify a required target.
+12. Return JSON only.
 
-Conversation rules:
-1. currentState and pendingData are authoritative conversation context. Merge the new radio reply with data already collected instead of restarting the workflow.
-2. In AWAITING_CALL_ADDRESS, interpret the reply as the missing or corrected location and return CREATE_CALL using the pending nature.
-3. In AWAITING_CALL_NATURE, interpret the reply as the missing or corrected call nature and return CREATE_CALL using the pending address.
-4. In AWAITING_CALL_CONFIRM, natural approvals such as "that's correct", "10-4", "affirmative", or "go ahead" are CONFIRM. Natural rejections are DENY. If the unit supplies a correction, return CREATE_CALL with the corrected field and all still-valid pending data.
-5. In AWAITING_NOTE_CONTENT, preserve the officer's reported facts in arguments.noteContent and return ADD_NOTE.
-6. A unit may provide fields out of order, correct an earlier field, or include several facts in one transmission. Use everything available.
-7. Never invent a plate, address, call number, disposition, status, unit, incident nature, or CAD result.
-8. Do not claim an action succeeded. The server executes and verifies actions after your plan.
-9. Ask only one short clarification question, and only when a required fact cannot be resolved from pendingData, recentConversation, CAD lookup, MAI/location lookup, or the current transcript.
-10. Pure acknowledgments such as "10-4", "copy", and "roger" are NO_ACTION unless the current state shows the unit is answering a dispatcher question.
-11. Do not plan emergency, officer-down, shots-fired, Signal 100, or emergency-traffic actions. Dedicated protected code handles those before this planner.
-12. Keep spokenResponse short and natural. It is optional; the executor may replace it after the real CAD result.
-13. Confidence below 0.82 should be CLARIFY or NO_ACTION, not a guessed write action.
-14. Return JSON only.
-
-The availableTools catalog describes the server-validated capabilities. It is reference material only; never invent a tool outside that catalog.
-
-JSON schema:
+Output schema for a tool:
 {
-  "action": "SUPPORTED_ACTION",
+  "decision": "USE_TOOL",
+  "tool": "exact availableTools name",
   "confidence": 0.0,
   "arguments": {},
-  "spokenResponse": "short response or null",
-  "clarificationQuestion": "one short question or null",
+  "spokenResponse": null,
+  "clarificationQuestion": null,
+  "reason": "brief internal reason"
+}
+
+Output schema for control:
+{
+  "decision": "NO_ACTION | CLARIFY | REPEAT | DISREGARD | CONFIRM | DENY",
+  "confidence": 0.0,
+  "arguments": {},
+  "spokenResponse": null,
+  "clarificationQuestion": null,
   "reason": "brief internal reason"
 }`;
 
@@ -374,8 +599,50 @@ function filterSlots(currentSlots) {
   return Object.fromEntries(
     Object.entries(currentSlots)
       .filter(([key]) => !['lastSpokenText', 'conversationHistory', 'lastSearchResult'].includes(key))
-      .slice(0, 20)
+      .slice(0, 24)
   );
+}
+
+export async function buildDispatcherOperationalContext(unitId) {
+  const context = { currentCall: null, activeCalls: [], recentActions: [] };
+
+  try {
+    const { getActionsForUnit } = await import('./unitActionLog.js');
+    context.recentActions = getActionsForUnit(unitId)
+      .slice(-8)
+      .map(sanitizeRecentAction)
+      .filter(Boolean);
+  } catch (error) {
+    console.warn(`[AI-DISPATCH-V2] Recent action context unavailable: ${error.message}`);
+  }
+
+  try {
+    const cadService = await import('./cadService.js');
+    if (typeof cadService.isConfigured === 'function' && !cadService.isConfigured()) return context;
+
+    const [currentResult, activeResult] = await Promise.allSettled([
+      cadService.resolveUnitCurrentCall(unitId),
+      cadService.getActiveCalls(),
+    ]);
+
+    if (currentResult.status === 'fulfilled') {
+      const currentValue = currentResult.value?.call || currentResult.value?.data || currentResult.value;
+      context.currentCall = sanitizeCall(currentValue);
+    }
+    if (activeResult.status === 'fulfilled') {
+      const raw = activeResult.value;
+      const list = Array.isArray(raw?.calls) ? raw.calls
+        : Array.isArray(raw?.results) ? raw.results
+        : Array.isArray(raw?.data) ? raw.data
+        : Array.isArray(raw) ? raw
+        : [];
+      context.activeCalls = list.slice(0, 30).map(sanitizeCall).filter(Boolean);
+    }
+  } catch (error) {
+    console.warn(`[AI-DISPATCH-V2] Live CAD context unavailable: ${error.message}`);
+  }
+
+  return context;
 }
 
 async function callPlannerModel(context) {
@@ -389,8 +656,8 @@ async function callPlannerModel(context) {
       { role: 'user', content: JSON.stringify(context) },
     ],
     response_format: { type: 'json_object' },
-    temperature: 0.1,
-    max_tokens: 420,
+    temperature: 0.05,
+    max_tokens: 520,
   });
 
   const timeoutMs = getTimeoutMs();
@@ -427,26 +694,28 @@ export async function classifyIntentV2(
     };
   }
 
+  const operationalContext = await buildDispatcherOperationalContext(unitId);
   const context = {
     unitId,
     currentState,
     pendingData: filterSlots(currentSlots),
     recentConversation: Array.isArray(conversationHistory)
-      ? conversationHistory.slice(-3).map(item => ({
+      ? conversationHistory.slice(-5).map(item => ({
           unit: cleanString(item?.unit, 220) || '',
           dispatch: cleanString(item?.dispatch, 220) || '',
         }))
       : [],
     transcript: cleanString(transcript, 700) || '',
+    liveCadContext: operationalContext,
     availableTools: getPlannerToolCatalog(),
   };
 
   const startedAt = Date.now();
   try {
     const candidate = await callPlannerModel(context);
-    const plan = validateDispatcherV2Plan(candidate);
+    const plan = validateDispatcherV2Plan(candidate, { unitId, operationalContext });
     if (!plan) {
-      console.warn(`[AI-DISPATCH-V2] Rejected invalid or low-confidence plan: unit=${unitId}, action=${candidate?.action || 'none'}, confidence=${candidate?.confidence ?? 'none'}`);
+      console.warn(`[AI-DISPATCH-V2] Rejected invalid or low-confidence plan: unit=${unitId}, tool=${candidate?.tool || 'none'}, decision=${candidate?.decision || candidate?.action || 'none'}, confidence=${candidate?.confidence ?? 'none'}`);
       return {
         intent: 'UNKNOWN',
         response: `${unitId}, say again.`,
@@ -454,16 +723,18 @@ export async function classifyIntentV2(
       };
     }
 
-    const result = mapDispatcherV2PlanToLegacyResult(
-      plan, unitId, currentState, currentSlots
-    );
+    const result = mapDispatcherV2PlanToLegacyResult(plan, unitId, currentState, currentSlots);
     result.dispatcherV2 = {
+      mode: 'contextual_tool_planner',
+      tool: plan.tool || null,
       action: plan.action,
       confidence: plan.confidence,
       reason: plan.reason,
+      activeCallCount: operationalContext.activeCalls.length,
+      recentActionCount: operationalContext.recentActions.length,
       latencyMs: Date.now() - startedAt,
     };
-    console.log(`[AI-DISPATCH-V2] unit=${unitId} action=${plan.action} confidence=${plan.confidence} latencyMs=${result.dispatcherV2.latencyMs}`);
+    console.log(`[AI-DISPATCH-V2] unit=${unitId} tool=${plan.tool || plan.action} confidence=${plan.confidence} activeCalls=${operationalContext.activeCalls.length} latencyMs=${result.dispatcherV2.latencyMs}`);
     return result;
   } catch (error) {
     console.error(`[AI-DISPATCH-V2] Planner failed: unit=${unitId}, error=${error.message}`);
