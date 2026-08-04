@@ -1,4 +1,4 @@
-name: Android Phone Bridge Build
+name: Android Phone and Bridge Build
 
 on:
   push:
@@ -10,9 +10,22 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-phone-apk:
+  build-android-apks:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: phone
+            task: assemblePhoneDebug
+            artifact: command-comms-phone-debug
+            output: android-native/app/build/outputs/apk/phone/debug/*.apk
+          - label: bridge
+            task: assembleBridgeDebug
+            artifact: command-comms-phone-bridge-debug
+            output: android-native/app/build/outputs/apk/bridge/debug/*.apk
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -28,13 +41,13 @@ jobs:
         with:
           gradle-version: '8.6'
 
-      - name: Build phone debug APK
-        run: gradle -p android-native :app:assemblePhoneDebug --stacktrace
+      - name: Build ${{ matrix.label }} debug APK
+        run: gradle -p android-native :app:${{ matrix.task }} --stacktrace
 
-      - name: Upload phone APK
+      - name: Upload ${{ matrix.label }} APK
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: command-comms-phone-bridge-debug
-          path: android-native/app/build/outputs/apk/phone/debug/*.apk
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.output }}
           if-no-files-found: error
