@@ -7,7 +7,7 @@
     "node": "20.x"
   },
   "scripts": {
-    "start": "node src/server.js",
+    "start": "node --import dotenv/config --import ./src/services/strictCenterIsolationBootstrap.js src/server.js",
     "start:old": "node server.js",
     "build": "cd client && npm install && npm run build",
     "test": "vitest run",
