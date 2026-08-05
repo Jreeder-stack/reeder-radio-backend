@@ -1,37 +1,14 @@
 import { AIDispatcher } from './aiDispatchService.js';
 import { AIDispatcherSignaling } from './aiDispatcherSignaling.js';
 import { getStatusCheck } from './cadService.js';
+import {
+  normalizeCenterUnitId,
+  restrictManagedAliases,
+  unitAppearsInCenter,
+} from './strictCenterPolicy.js';
 
 let installed = false;
 const guardState = new WeakMap();
-
-export function normalizeCenterUnitId(value) {
-  return String(value || '').trim().toUpperCase().replace(/\s+/g, '-');
-}
-
-export function unitAppearsInCenter(units, unitId) {
-  const normalized = normalizeCenterUnitId(unitId);
-  if (!normalized || !Array.isArray(units)) return false;
-  return units.some((candidate) => normalizeCenterUnitId(
-    candidate?.unit_id
-      || candidate?.unit_number
-      || candidate?.unitNumber
-      || candidate?.callsign
-      || candidate?.call_sign,
-  ) === normalized);
-}
-
-export function restrictManagedAliases(aliases, canonicalRoomKey, numericChannelId) {
-  const canonical = String(canonicalRoomKey || '').trim();
-  const numeric = numericChannelId == null ? '' : String(numericChannelId);
-  for (const alias of [...aliases]) {
-    const value = String(alias);
-    if (value !== canonical && value !== numeric) aliases.delete(alias);
-  }
-  if (canonical) aliases.add(canonical);
-  if (numeric) aliases.add(numeric);
-  return aliases;
-}
 
 async function checkUnitInCurrentDispatchCenter(unitId) {
   const normalized = normalizeCenterUnitId(unitId);
@@ -51,11 +28,10 @@ async function checkUnitInCurrentDispatchCenter(unitId) {
     return { allowed: false, reason: 'malformed_unit_response' };
   }
 
+  const allowed = unitAppearsInCenter(result.units, normalized);
   return {
-    allowed: unitAppearsInCenter(result.units, normalized),
-    reason: unitAppearsInCenter(result.units, normalized)
-      ? 'unit_in_dispatch_center'
-      : 'unit_not_in_dispatch_center',
+    allowed,
+    reason: allowed ? 'unit_in_dispatch_center' : 'unit_not_in_dispatch_center',
     unitId: normalized,
   };
 }
