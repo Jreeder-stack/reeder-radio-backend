@@ -5,7 +5,7 @@ module.exports = {
     {
       name: "command-comms",
       script: "src/server.js",
-      node_args: "--import ./src/services/strictCenterIsolationBootstrap.js",
+      node_args: "--import dotenv/config --import ./src/services/strictCenterIsolationBootstrap.js",
       cwd: path.resolve(__dirname, ".."),
       instances: 1,
       autorestart: true,
