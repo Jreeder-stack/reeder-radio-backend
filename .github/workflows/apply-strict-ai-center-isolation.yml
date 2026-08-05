@@ -1,21 +1,21 @@
 name: Apply strict AI center isolation
 
 on:
-  push:
+  pull_request:
     branches:
-      - agent/strict-ai-center-isolation
+      - main
 
 permissions:
   contents: write
 
 jobs:
   patch-test-commit:
-    if: ${{ !contains(github.event.head_commit.message, '[skip ci]') }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
@@ -375,9 +375,10 @@ describe('strict AI dispatch-center isolation', () => {
       - name: Commit validated source
         shell: bash
         run: |
+          rm -f .strict-ai-center-isolation-trigger
           rm .github/workflows/apply-strict-ai-center-isolation.yml
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/services/aiDispatchService.js src/services/aiDispatcherRuntimeManager.js src/services/cadService.js src/services/__tests__/strictCenterIsolation.test.js .github/workflows/apply-strict-ai-center-isolation.yml
+          git add -A
           git commit -m "[skip ci] Enforce strict AI dispatch-center isolation"
           git push
