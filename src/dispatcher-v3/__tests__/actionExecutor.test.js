@@ -3,7 +3,13 @@ import { V3ActionExecutor } from '../actionExecutor.js';
 import { createDefaultV3ActionHandlers } from '../defaultActionHandlers.js';
 import { V3_ACTIONS } from '../actionContracts.js';
 
-const runtime = Object.freeze({ runtimeId: 'r1', scopes: ['unit.read', 'unit.write', 'call.read', 'call.write'] });
+const runtime = Object.freeze({
+  runtimeId: 'r1',
+  channelId: 'OPS1',
+  dispatchCenterId: 'center-1',
+  agencyId: 'agency-1',
+  scopes: ['unit.read', 'unit.write', 'call.read', 'call.write'],
+});
 
 function makeIdentityService() {
   return {
@@ -70,9 +76,67 @@ describe('default V3 handlers', () => {
     expect(gateway.request).not.toHaveBeenCalled();
   });
 
-  it('does not fake backup or emergency behavior', async () => {
+  it('executes a dedicated backup request and records a CAD note when a call exists', async () => {
+    const gateway = { request: vi.fn(async () => ({ success: true })) };
+    const operationalAlertService = {
+      requestBackup: vi.fn(() => ({ requested: true, backup: { unitId: 'INDIANA-1' } })),
+    };
+    const handlers = createDefaultV3ActionHandlers({
+      gateway,
+      unitIdentityService: makeIdentityService(),
+      operationalAlertService,
+    });
+
+    const result = await handlers[V3_ACTIONS.REQUEST_BACKUP]({
+      input: { unitId: 'uuid-1', callId: 'call-1', location: '100 Main St', reason: 'fight', priority: 'urgent' },
+      runtimeContext: runtime,
+      correlationId: 'backup-1',
+    });
+
+    expect(result.requested).toBe(true);
+    expect(operationalAlertService.requestBackup).toHaveBeenCalledWith(expect.objectContaining({
+      runtimeContext: runtime,
+      correlationId: 'backup-1',
+      callId: 'call-1',
+      location: '100 Main St',
+      reason: 'fight',
+      priority: 'urgent',
+    }));
+    expect(gateway.request).toHaveBeenCalledWith('/api/radio/note', expect.objectContaining({
+      method: 'POST', correlationId: 'backup-1',
+    }));
+    expect(result.cadNote.recorded).toBe(true);
+  });
+
+  it('activates native emergency even if recording the CAD note fails', async () => {
+    const gateway = { request: vi.fn(async () => { throw Object.assign(new Error('CAD down'), { code: 'CAD_UNAVAILABLE' }); }) };
+    const operationalAlertService = {
+      declareEmergency: vi.fn(() => ({ activated: true, emergency: { unitId: 'INDIANA-1' } })),
+    };
+    const handlers = createDefaultV3ActionHandlers({
+      gateway,
+      unitIdentityService: makeIdentityService(),
+      operationalAlertService,
+    });
+
+    const result = await handlers[V3_ACTIONS.DECLARE_EMERGENCY]({
+      input: { unitId: 'uuid-1', callId: 'call-1', location: '100 Main St', reason: 'officer needs assistance' },
+      runtimeContext: runtime,
+      correlationId: 'emerg-1',
+    });
+
+    expect(result.activated).toBe(true);
+    expect(operationalAlertService.declareEmergency).toHaveBeenCalled();
+    expect(result.cadNote.recorded).toBe(false);
+    expect(result.cadNote.error.code).toBe('CAD_UNAVAILABLE');
+  });
+
+  it('fails closed when Command Comms operational alerts are unavailable', async () => {
     const handlers = createDefaultV3ActionHandlers({ gateway: { request: vi.fn() }, unitIdentityService: makeIdentityService() });
-    await expect(handlers[V3_ACTIONS.REQUEST_BACKUP]({})).rejects.toMatchObject({ code: 'INVALID_ACTION', statusCode: 501 });
-    await expect(handlers[V3_ACTIONS.DECLARE_EMERGENCY]({})).rejects.toMatchObject({ code: 'INVALID_ACTION', statusCode: 501 });
+    await expect(handlers[V3_ACTIONS.REQUEST_BACKUP]({
+      input: { unitId: 'uuid-1', callId: null, location: null, reason: null, priority: 'urgent' },
+      runtimeContext: runtime,
+      correlationId: 'c3',
+    })).rejects.toMatchObject({ code: 'CAD_UNAVAILABLE', statusCode: 503 });
   });
 });
