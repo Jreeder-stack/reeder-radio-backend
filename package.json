@@ -11,6 +11,7 @@
     "start:old": "node server.js",
     "build": "cd client && npm install && npm run build",
     "test": "vitest run",
+    "test:v3": "vitest run src/dispatcher-v3/__tests__",
     "test:watch": "vitest"
   },
   "dependencies": {
@@ -18,8 +19,7 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@tailwindcss/postcss": "^4.1.17",
-    "@tailwindcss/vite": "^4.1.17",
-    "@vitejs/plugin-legacy": "^7.2.1",
+    "@tailwindcss/vite": "^7.2.1",
     "@vitest/coverage-v8": "^4.1.4",
     "archiver": "^7.0.1",
     "autoprefixer": "^10.4.22",
