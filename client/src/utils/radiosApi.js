@@ -51,3 +51,37 @@ export async function kioskRelockRadio(radioId) {
 export async function getRadioUsers() {
   return fetchRadios('/users');
 }
+
+export async function getT320OtaReleases() {
+  return fetchRadios('/ota/releases');
+}
+
+export async function uploadT320OtaRelease(file, { versionCode, versionName, notes = '' }) {
+  const params = new URLSearchParams({
+    versionCode: String(versionCode),
+    versionName: String(versionName),
+  });
+  if (notes) params.set('notes', notes);
+  const response = await fetch(`/api/radios/ota/releases?${params.toString()}`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/vnd.android.package-archive' },
+    body: file,
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({ error: 'APK upload failed' }));
+    throw new Error(err.error || 'APK upload failed');
+  }
+  return response.json();
+}
+
+export async function pushT320OtaRelease(releaseId, radioIds = null) {
+  return fetchRadios(`/ota/releases/${releaseId}/push`, {
+    method: 'POST',
+    body: JSON.stringify(radioIds ? { radioIds } : {}),
+  });
+}
+
+export async function getT320OtaReleaseStatus(releaseId) {
+  return fetchRadios(`/ota/releases/${releaseId}/status`);
+}
