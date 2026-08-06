@@ -42,8 +42,8 @@ import java.util.concurrent.atomic.AtomicBoolean
  * downloads the authenticated APK, verifies SHA-256/package/version, and uses
  * PackageInstaller for an unattended in-place update on Device Owner radios.
  *
- * Safety: no download/install starts while the radio is transmitting,
- * receiving, channel-busy, in emergency traffic, or clear-air mode.
+ * Safety: no download/install starts while the radio is requesting the floor,
+ * transmitting, receiving, channel-busy, in emergency traffic, or clear-air mode.
  */
 class T320OtaService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -106,7 +106,10 @@ class T320OtaService : Service() {
         if (clearAirActive) return true
         if (synchronized(emergencyUnits) { emergencyUnits.isNotEmpty() }) return true
         return when (app.radioStateManager?.currentState) {
-            RadioState.TRANSMITTING, RadioState.RECEIVING, RadioState.CHANNEL_BUSY -> true
+            RadioState.REQUESTING_FLOOR,
+            RadioState.TRANSMITTING,
+            RadioState.RECEIVING,
+            RadioState.CHANNEL_BUSY -> true
             else -> false
         }
     }
