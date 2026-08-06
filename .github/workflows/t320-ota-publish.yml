@@ -1,0 +1,99 @@
+name: Build and Push T320 OTA
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_code:
+        description: Android versionCode (must increase every release)
+        required: true
+        type: number
+      version_name:
+        description: Display version, for example 1.0.12
+        required: true
+        type: string
+      notes:
+        description: Optional release notes
+        required: false
+        type: string
+      push_to_radios:
+        description: Upload and queue this build to all registered radios
+        required: true
+        default: true
+        type: boolean
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle 8.6
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.6'
+
+      - name: Stamp requested T320 version
+        env:
+          VERSION_CODE: ${{ inputs.version_code }}
+          VERSION_NAME: ${{ inputs.version_name }}
+        run: |
+          python3 - <<'PY'
+          import os, re, pathlib
+          p = pathlib.Path('android-native/app/build.gradle.kts')
+          text = p.read_text()
+          vc = os.environ['VERSION_CODE']
+          vn = os.environ['VERSION_NAME']
+          text = re.sub(r'versionCode\s*=\s*\d+', f'versionCode = {vc}', text, count=1)
+          text = re.sub(r'versionName\s*=\s*"[^"]+"', f'versionName = "{vn}"', text, count=1)
+          p.write_text(text)
+          PY
+
+      - name: Build T320 debug APK
+        run: gradle -p android-native :app:assembleT320Debug --stacktrace
+
+      - name: Find APK
+        id: apk
+        shell: bash
+        run: |
+          APK=$(find android-native/app/build/outputs/apk/t320/debug -name '*.apk' -type f | head -n 1)
+          test -n "$APK"
+          echo "path=$APK" >> "$GITHUB_OUTPUT"
+          sha256sum "$APK"
+
+      - name: Keep build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: command-comms-t320-${{ inputs.version_name }}
+          path: ${{ steps.apk.outputs.path }}
+          if-no-files-found: error
+
+      - name: Publish and push OTA
+        if: ${{ inputs.push_to_radios }}
+        env:
+          OTA_BASE_URL: ${{ secrets.OTA_BASE_URL }}
+          OTA_PUBLISH_TOKEN: ${{ secrets.OTA_PUBLISH_TOKEN }}
+          VERSION_CODE: ${{ inputs.version_code }}
+          VERSION_NAME: ${{ inputs.version_name }}
+          NOTES: ${{ inputs.notes }}
+          APK_PATH: ${{ steps.apk.outputs.path }}
+        run: |
+          test -n "$OTA_BASE_URL" || (echo 'Missing OTA_BASE_URL secret' && exit 1)
+          test -n "$OTA_PUBLISH_TOKEN" || (echo 'Missing OTA_PUBLISH_TOKEN secret' && exit 1)
+          curl --fail-with-body --show-error --silent \
+            -X POST \
+            -H "X-OTA-Publish-Token: $OTA_PUBLISH_TOKEN" \
+            -H "Content-Type: application/vnd.android.package-archive" \
+            --data-binary "@$APK_PATH" \
+            --get \
+            --data-urlencode "versionCode=$VERSION_CODE" \
+            --data-urlencode "versionName=$VERSION_NAME" \
+            --data-urlencode "notes=$NOTES" \
+            "$OTA_BASE_URL/api/radios/ota-ci/publish-and-push"
