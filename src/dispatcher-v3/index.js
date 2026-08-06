@@ -29,6 +29,11 @@ export {
 } from './correlation.js';
 
 export {
+  V3DiagnosticsJournal,
+  recordV3Diagnostic,
+} from './diagnostics.js';
+
+export {
   CommandLinkGateway,
   createCommandLinkGateway,
 } from './cadGateway.js';
