@@ -29,6 +29,11 @@ export {
 } from './correlation.js';
 
 export {
+  CommandLinkGateway,
+  createCommandLinkGateway,
+} from './cadGateway.js';
+
+export {
   DISPATCHER_RUNTIME,
   getConfiguredDispatcherRuntime,
   isDispatcherV3Selected,
