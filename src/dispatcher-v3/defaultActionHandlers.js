@@ -1,11 +1,11 @@
 import { DispatcherV3Error, V3_ERROR_CODES } from './errors.js';
 import { V3_ACTIONS } from './actionContracts.js';
 
-export function createDefaultV3ActionHandlers({ gateway, unitIdentityService, now = () => new Date() } = {}) {
+export function createDefaultV3ActionHandlers({ gateway, unitIdentityService, operationalAlertService = null, now = () => new Date() } = {}) {
   if (!gateway) throw new TypeError('gateway is required');
   if (!unitIdentityService) throw new TypeError('unitIdentityService is required');
 
-  const resolveSafeCallsign = async (unitId, correlationId) => {
+  const resolveSafeIdentity = async (unitId, correlationId) => {
     const byId = await unitIdentityService.resolve(unitId, { correlationId });
     const byCallsign = await unitIdentityService.resolve(byId.callsign, { correlationId });
     if (byCallsign.unitId !== byId.unitId) {
@@ -15,7 +15,43 @@ export function createDefaultV3ActionHandlers({ gateway, unitIdentityService, no
         { statusCode: 409, details: { unitId: byId.unitId, callsign: byId.callsign } },
       );
     }
-    return byId.callsign;
+    return byId;
+  };
+
+  const resolveSafeCallsign = async (unitId, correlationId) => (
+    await resolveSafeIdentity(unitId, correlationId)
+  ).callsign;
+
+  const requireOperationalAlerts = () => {
+    if (!operationalAlertService) {
+      throw new DispatcherV3Error(
+        V3_ERROR_CODES.CAD_UNAVAILABLE,
+        'Command Comms operational alert service is not available',
+        { statusCode: 503, retryable: true },
+      );
+    }
+    return operationalAlertService;
+  };
+
+  const recordOperationalNote = async ({ callId, note, correlationId }) => {
+    if (!callId) return { recorded: false, skipped: true };
+    try {
+      await gateway.request('/api/radio/note', {
+        method: 'POST',
+        correlationId,
+        body: { call_id: callId, note },
+      });
+      return { recorded: true, skipped: false };
+    } catch (error) {
+      return {
+        recorded: false,
+        skipped: false,
+        error: {
+          code: error?.code || V3_ERROR_CODES.CAD_REJECTED,
+          message: error?.message || 'Failed to record operational alert note',
+        },
+      };
+    }
   };
 
   return {
@@ -96,17 +132,43 @@ export function createDefaultV3ActionHandlers({ gateway, unitIdentityService, no
       return { unit, timestamp: response.timestamp || null };
     },
 
-    [V3_ACTIONS.REQUEST_BACKUP]: unsupported('REQUEST_BACKUP'),
-    [V3_ACTIONS.DECLARE_EMERGENCY]: unsupported('DECLARE_EMERGENCY'),
-  };
-}
+    [V3_ACTIONS.REQUEST_BACKUP]: async ({ input, runtimeContext, correlationId }) => {
+      const identity = await resolveSafeIdentity(input.unitId, correlationId);
+      const alerts = requireOperationalAlerts();
+      const alertResult = alerts.requestBackup({
+        identity,
+        runtimeContext,
+        correlationId,
+        callId: input.callId,
+        location: input.location,
+        reason: input.reason,
+        priority: input.priority || 'urgent',
+      });
+      const note = await recordOperationalNote({
+        callId: input.callId,
+        correlationId,
+        note: `BACKUP REQUESTED by ${identity.callsign}${input.location ? ` at ${input.location}` : ''}${input.reason ? ` — ${input.reason}` : ''}`,
+      });
+      return { ...alertResult, cadNote: note };
+    },
 
-function unsupported(action) {
-  return async () => {
-    throw new DispatcherV3Error(
-      V3_ERROR_CODES.INVALID_ACTION,
-      `${action} requires a dedicated Command Link/Command Comms integration handler before it can execute`,
-      { statusCode: 501, details: { action, implemented: false } },
-    );
+    [V3_ACTIONS.DECLARE_EMERGENCY]: async ({ input, runtimeContext, correlationId }) => {
+      const identity = await resolveSafeIdentity(input.unitId, correlationId);
+      const alerts = requireOperationalAlerts();
+      const emergencyResult = alerts.declareEmergency({
+        identity,
+        runtimeContext,
+        correlationId,
+        callId: input.callId,
+        location: input.location,
+        reason: input.reason,
+      });
+      const note = await recordOperationalNote({
+        callId: input.callId,
+        correlationId,
+        note: `EMERGENCY ACTIVATED by ${identity.callsign}${input.location ? ` at ${input.location}` : ''}${input.reason ? ` — ${input.reason}` : ''}`,
+      });
+      return { ...emergencyResult, cadNote: note };
+    },
   };
 }
