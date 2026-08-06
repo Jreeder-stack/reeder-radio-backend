@@ -5,6 +5,7 @@
     <!-- Phone-only readiness capabilities. Notification-policy access is a
          special user-granted setting used by the emergency/page channels. -->
     <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
 
     <application
         android:label="COMMAND COMMS"
@@ -27,7 +28,8 @@
         <service
             android:name=".audio.PhoneAudioRouteService"
             android:exported="false"
-            android:stopWithTask="false" />
+            android:stopWithTask="false"
+            android:foregroundServiceType="connectedDevice" />
 
     </application>
 
