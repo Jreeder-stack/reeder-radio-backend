@@ -33,6 +33,8 @@ export {
   createCommandLinkGateway,
 } from './cadGateway.js';
 
+export { UnitIdentityService } from './unitIdentity.js';
+
 export {
   DISPATCHER_RUNTIME,
   getConfiguredDispatcherRuntime,
