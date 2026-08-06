@@ -40,6 +40,14 @@ jobs:
         with:
           gradle-version: '8.6'
 
+      - name: Restore stable T320 signing key
+        env:
+          T320_KEYSTORE_BASE64: ${{ secrets.T320_KEYSTORE_BASE64 }}
+        run: |
+          test -n "$T320_KEYSTORE_BASE64" || (echo 'Missing T320_KEYSTORE_BASE64 secret' && exit 1)
+          echo "$T320_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/t320-ota.jks"
+          test -s "$RUNNER_TEMP/t320-ota.jks"
+
       - name: Stamp requested T320 version
         env:
           VERSION_CODE: ${{ inputs.version_code }}
@@ -56,14 +64,23 @@ jobs:
           p.write_text(text)
           PY
 
-      - name: Build T320 debug APK
-        run: gradle -p android-native :app:assembleT320Debug --stacktrace
+      - name: Build signed T320 release APK
+        env:
+          T320_KEYSTORE_PATH: ${{ runner.temp }}/t320-ota.jks
+          T320_KEYSTORE_PASSWORD: ${{ secrets.T320_KEYSTORE_PASSWORD }}
+          T320_KEY_ALIAS: ${{ secrets.T320_KEY_ALIAS }}
+          T320_KEY_PASSWORD: ${{ secrets.T320_KEY_PASSWORD }}
+        run: |
+          test -n "$T320_KEYSTORE_PASSWORD" || (echo 'Missing T320_KEYSTORE_PASSWORD secret' && exit 1)
+          test -n "$T320_KEY_ALIAS" || (echo 'Missing T320_KEY_ALIAS secret' && exit 1)
+          test -n "$T320_KEY_PASSWORD" || (echo 'Missing T320_KEY_PASSWORD secret' && exit 1)
+          gradle -p android-native :app:assembleT320Release --stacktrace
 
       - name: Find APK
         id: apk
         shell: bash
         run: |
-          APK=$(find android-native/app/build/outputs/apk/t320/debug -name '*.apk' -type f | head -n 1)
+          APK=$(find android-native/app/build/outputs/apk/t320/release -name '*.apk' -type f | head -n 1)
           test -n "$APK"
           echo "path=$APK" >> "$GITHUB_OUTPUT"
           sha256sum "$APK"
