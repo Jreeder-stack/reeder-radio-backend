@@ -3,6 +3,7 @@ name: Android Phone and Bridge Build
 on:
   push:
     branches:
+      - main
       - feature/android-uhf-vox-bridge
   pull_request:
     branches:
