@@ -27,6 +27,7 @@ class PhoneAudioRouteService : Service() {
 
     private lateinit var audioManager: AudioManager
     private var callback: AudioDeviceCallback? = null
+    private var communicationListener: AudioManager.OnCommunicationDeviceChangedListener? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -34,6 +35,7 @@ class PhoneAudioRouteService : Service() {
         createChannel()
         startForeground(NOTIFICATION_ID, notification())
         registerDeviceCallback()
+        registerCommunicationRouteListener()
         applyPreferredPhoneRoute("service_start")
     }
 
@@ -47,6 +49,12 @@ class PhoneAudioRouteService : Service() {
             try { audioManager.unregisterAudioDeviceCallback(it) } catch (_: Exception) {}
         }
         callback = null
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            communicationListener?.let {
+                try { audioManager.removeOnCommunicationDeviceChangedListener(it) } catch (_: Exception) {}
+            }
+        }
+        communicationListener = null
         super.onDestroy()
     }
 
@@ -65,6 +73,19 @@ class PhoneAudioRouteService : Service() {
         }.also { audioManager.registerAudioDeviceCallback(it, null) }
     }
 
+    private fun registerCommunicationRouteListener() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || communicationListener != null) return
+        communicationListener = AudioManager.OnCommunicationDeviceChangedListener { device ->
+            val preferred = preferredCommunicationDevice()
+            if (preferred != null && preferred.id != device?.id) {
+                Log.d(TAG, "PHONE_ROUTE external_change=${device?.let(::deviceName) ?: "none"} preferred=${deviceName(preferred)} — reasserting")
+                applyPreferredPhoneRoute("communication_device_changed")
+            }
+        }.also {
+            audioManager.addOnCommunicationDeviceChangedListener(mainExecutor, it)
+        }
+    }
+
     /**
      * Phone routing priority:
      *  1. Bluetooth communication headset/device
@@ -77,14 +98,7 @@ class PhoneAudioRouteService : Service() {
      */
     private fun applyPreferredPhoneRoute(reason: String) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val devices = audioManager.availableCommunicationDevices
-            val target = devices.firstOrNull { it.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO }
-                ?: devices.firstOrNull {
-                    it.type == AudioDeviceInfo.TYPE_WIRED_HEADSET ||
-                        it.type == AudioDeviceInfo.TYPE_USB_HEADSET ||
-                        it.type == AudioDeviceInfo.TYPE_USB_DEVICE
-                }
-                ?: devices.firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
+            val target = preferredCommunicationDevice()
 
             if (target != null && audioManager.communicationDevice?.id != target.id) {
                 val ok = audioManager.setCommunicationDevice(target)
@@ -119,6 +133,18 @@ class PhoneAudioRouteService : Service() {
         @Suppress("DEPRECATION")
         audioManager.isSpeakerphoneOn = !wired
         Log.d(TAG, "PHONE_ROUTE reason=$reason target=${if (wired) "WIRED" else "SPEAKER"} legacy=true")
+    }
+
+    private fun preferredCommunicationDevice(): AudioDeviceInfo? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return null
+        val devices = audioManager.availableCommunicationDevices
+        return devices.firstOrNull { it.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO }
+            ?: devices.firstOrNull {
+                it.type == AudioDeviceInfo.TYPE_WIRED_HEADSET ||
+                    it.type == AudioDeviceInfo.TYPE_USB_HEADSET ||
+                    it.type == AudioDeviceInfo.TYPE_USB_DEVICE
+            }
+            ?: devices.firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
     }
 
     private fun deviceName(device: AudioDeviceInfo): String = when (device.type) {
