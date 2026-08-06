@@ -2,6 +2,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Phone-only readiness capabilities. Notification-policy access is a
+         special user-granted setting used by the emergency/page channels. -->
+    <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+
     <application
         android:label="COMMAND COMMS"
         tools:replace="android:label">
@@ -17,6 +22,14 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Phone flavor only. Keeps Bluetooth/wired/USB communication routing
+             stable while the shared radio engine is active or the UI is closed. -->
+        <service
+            android:name=".audio.PhoneAudioRouteService"
+            android:exported="false"
+            android:stopWithTask="false"
+            android:foregroundServiceType="connectedDevice" />
 
     </application>
 
