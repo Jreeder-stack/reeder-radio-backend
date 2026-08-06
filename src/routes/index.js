@@ -13,6 +13,8 @@ import pttRouter from './pttRoutes.js';
 import radioConfigRouter from './radioConfigRouter.js';
 import recordingLogsRouter from './recordingLogsRouter.js';
 import radiosRouter from './radiosRouter.js';
+import radioOtaRouter from './radioOtaRouter.js';
+import radioOtaPublishRouter from './radioOtaPublishRouter.js';
 import pagingRouter from './pagingRouter.js';
 import devicesRouter from './devicesRouter.js';
 import aiDispatcherProfilesRouter from './aiDispatcherProfilesRouter.js';
@@ -32,6 +34,8 @@ export function setupRoutes(app) {
   app.use('/api/ptt', pttRouter);
   app.use('/api/radio', radioConfigRouter);
   app.use('/api/recording-logs', recordingLogsRouter);
+  app.use('/api/radios/ota-ci', radioOtaPublishRouter);
+  app.use('/api/radios/ota', radioOtaRouter);
   app.use('/api/radios', radiosRouter);
   app.use('/api/paging-tone', pagingRouter);
   app.use('/api/devices', devicesRouter);

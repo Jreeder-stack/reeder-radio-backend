@@ -1,0 +1,48 @@
+name: Validate T320 OTA
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'android-native/**'
+      - 'src/routes/radioOtaRouter.js'
+      - 'src/routes/radioOtaPublishRouter.js'
+      - 'src/routes/index.js'
+      - 'src/services/radioOtaService.js'
+      - 'client/src/utils/radiosApi.js'
+      - '.github/workflows/t320-ota-*.yml'
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Check OTA server syntax
+        run: |
+          node --check src/services/radioOtaService.js
+          node --check src/routes/radioOtaRouter.js
+          node --check src/routes/radioOtaPublishRouter.js
+          node --check src/routes/index.js
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle 8.6
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.6'
+
+      - name: Compile T320 APK
+        run: gradle -p android-native :app:assembleT320Debug --stacktrace
