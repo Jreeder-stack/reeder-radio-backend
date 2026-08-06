@@ -1,9 +1,11 @@
 package com.reedersystems.commandcomms.audio
 
+import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.media.AudioDeviceCallback
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
@@ -11,6 +13,7 @@ import android.os.Build
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 
 /**
  * Phone-flavor-only audio route guard.
@@ -34,8 +37,15 @@ class PhoneAudioRouteService : Service() {
         audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
         createChannel()
         startForeground(NOTIFICATION_ID, notification())
-        registerDeviceCallback()
-        registerCommunicationRouteListener()
+
+        // A previously-authenticated phone can enter the radio UI while Android's
+        // first-run Bluetooth permission dialog is still open. AudioManager can
+        // throw SecurityException while enumerating communication devices in that
+        // window. Never let optional route discovery crash the whole radio app.
+        runCatching { registerDeviceCallback() }
+            .onFailure { Log.w(TAG, "Audio device callback unavailable: ${it.message}") }
+        runCatching { registerCommunicationRouteListener() }
+            .onFailure { Log.w(TAG, "Communication route listener unavailable: ${it.message}") }
         applyPreferredPhoneRoute("service_start")
     }
 
@@ -88,7 +98,7 @@ class PhoneAudioRouteService : Service() {
 
     /**
      * Phone routing priority:
-     *  1. Bluetooth communication headset/device
+     *  1. Bluetooth communication headset/device (when permission is granted)
      *  2. Wired/USB headset
      *  3. Built-in loudspeaker
      *
@@ -97,54 +107,75 @@ class PhoneAudioRouteService : Service() {
      * one. This intentionally does not run on dedicated radio flavors.
      */
     private fun applyPreferredPhoneRoute(reason: String) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val target = preferredCommunicationDevice()
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                val target = preferredCommunicationDevice()
 
-            if (target != null && audioManager.communicationDevice?.id != target.id) {
-                val ok = audioManager.setCommunicationDevice(target)
-                Log.d(TAG, "PHONE_ROUTE reason=$reason target=${deviceName(target)} applied=$ok")
-            } else {
-                Log.d(TAG, "PHONE_ROUTE reason=$reason target=${target?.let(::deviceName) ?: "none"} unchanged=true")
-            }
-            return
-        }
-
-        @Suppress("DEPRECATION")
-        val bluetoothAvailable = audioManager.isBluetoothScoAvailableOffCall
-        @Suppress("DEPRECATION")
-        if (bluetoothAvailable) {
-            try {
-                audioManager.startBluetoothSco()
-                audioManager.isBluetoothScoOn = true
-                audioManager.isSpeakerphoneOn = false
-                Log.d(TAG, "PHONE_ROUTE reason=$reason target=BLUETOOTH_SCO legacy=true")
+                if (target != null && audioManager.communicationDevice?.id != target.id) {
+                    val ok = audioManager.setCommunicationDevice(target)
+                    Log.d(TAG, "PHONE_ROUTE reason=$reason target=${deviceName(target)} applied=$ok")
+                } else {
+                    Log.d(TAG, "PHONE_ROUTE reason=$reason target=${target?.let(::deviceName) ?: "none"} unchanged=true")
+                }
                 return
-            } catch (e: Exception) {
-                Log.w(TAG, "PHONE_ROUTE legacy Bluetooth failed: ${e.message}")
             }
-        }
 
-        val wired = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS).any {
-            it.type == AudioDeviceInfo.TYPE_WIRED_HEADSET ||
-                it.type == AudioDeviceInfo.TYPE_WIRED_HEADPHONES ||
-                it.type == AudioDeviceInfo.TYPE_USB_HEADSET ||
-                it.type == AudioDeviceInfo.TYPE_USB_DEVICE
+            @Suppress("DEPRECATION")
+            val bluetoothAvailable = audioManager.isBluetoothScoAvailableOffCall
+            @Suppress("DEPRECATION")
+            if (bluetoothAvailable) {
+                try {
+                    audioManager.startBluetoothSco()
+                    audioManager.isBluetoothScoOn = true
+                    audioManager.isSpeakerphoneOn = false
+                    Log.d(TAG, "PHONE_ROUTE reason=$reason target=BLUETOOTH_SCO legacy=true")
+                    return
+                } catch (e: Exception) {
+                    Log.w(TAG, "PHONE_ROUTE legacy Bluetooth failed: ${e.message}")
+                }
+            }
+
+            val wired = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS).any {
+                it.type == AudioDeviceInfo.TYPE_WIRED_HEADSET ||
+                    it.type == AudioDeviceInfo.TYPE_WIRED_HEADPHONES ||
+                    it.type == AudioDeviceInfo.TYPE_USB_HEADSET ||
+                    it.type == AudioDeviceInfo.TYPE_USB_DEVICE
+            }
+            @Suppress("DEPRECATION")
+            audioManager.isSpeakerphoneOn = !wired
+            Log.d(TAG, "PHONE_ROUTE reason=$reason target=${if (wired) "WIRED" else "SPEAKER"} legacy=true")
+        } catch (e: SecurityException) {
+            Log.w(TAG, "PHONE_ROUTE permission not ready reason=$reason: ${e.message}")
+        } catch (e: Exception) {
+            Log.w(TAG, "PHONE_ROUTE failed safely reason=$reason: ${e.message}")
         }
-        @Suppress("DEPRECATION")
-        audioManager.isSpeakerphoneOn = !wired
-        Log.d(TAG, "PHONE_ROUTE reason=$reason target=${if (wired) "WIRED" else "SPEAKER"} legacy=true")
     }
 
     private fun preferredCommunicationDevice(): AudioDeviceInfo? {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return null
-        val devices = audioManager.availableCommunicationDevices
-        return devices.firstOrNull { it.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO }
-            ?: devices.firstOrNull {
-                it.type == AudioDeviceInfo.TYPE_WIRED_HEADSET ||
-                    it.type == AudioDeviceInfo.TYPE_USB_HEADSET ||
-                    it.type == AudioDeviceInfo.TYPE_USB_DEVICE
-            }
-            ?: devices.firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
+
+        // Android 12+ protects Bluetooth device details with BLUETOOTH_CONNECT.
+        // The phone app requests it on first run, but route selection must remain
+        // safe before the user answers that dialog.
+        val bluetoothGranted = Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+            ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
+
+        val devices = try {
+            audioManager.availableCommunicationDevices
+        } catch (e: SecurityException) {
+            Log.w(TAG, "Communication devices unavailable until permission is granted: ${e.message}")
+            return null
+        }
+
+        if (bluetoothGranted) {
+            devices.firstOrNull { it.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO }?.let { return it }
+        }
+
+        return devices.firstOrNull {
+            it.type == AudioDeviceInfo.TYPE_WIRED_HEADSET ||
+                it.type == AudioDeviceInfo.TYPE_USB_HEADSET ||
+                it.type == AudioDeviceInfo.TYPE_USB_DEVICE
+        } ?: devices.firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
     }
 
     private fun deviceName(device: AudioDeviceInfo): String = when (device.type) {
