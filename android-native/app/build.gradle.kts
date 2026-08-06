@@ -25,7 +25,7 @@ android {
     val t320KeystorePassword = System.getenv("T320_KEYSTORE_PASSWORD")
     val t320KeyAlias = System.getenv("T320_KEY_ALIAS")
     val t320KeyPassword = System.getenv("T320_KEY_PASSWORD")
-    if (!t320KeystorePath.isNullOrBlank() &&
+    val t320SigningConfig = if (!t320KeystorePath.isNullOrBlank() &&
         !t320KeystorePassword.isNullOrBlank() &&
         !t320KeyAlias.isNullOrBlank() &&
         !t320KeyPassword.isNullOrBlank()
@@ -36,7 +36,7 @@ android {
             keyAlias = t320KeyAlias
             keyPassword = t320KeyPassword
         }
-    }
+    } else null
 
     // Per-device build flavors.
     //
@@ -50,7 +50,7 @@ android {
         create("t320") {
             dimension = "device"
             buildConfigField("String", "RADIO_DEVICE_TYPE", "\"t320\"")
-            signingConfigs.findByName("t320Ota")?.let { signingConfig = it }
+            if (t320SigningConfig != null) signingConfig = t320SigningConfig
         }
         create("phone") {
             dimension = "device"
