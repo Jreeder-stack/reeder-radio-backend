@@ -5,8 +5,8 @@ import androidx.compose.runtime.Composable
 /**
  * Regular Android phone/tablet flavor.
  *
- * Uses the normal touch-friendly Command Comms PTT screen without the T320,
- * SD7, kiosk-radio, or UHF bridge presentation layers.
+ * Uses the dedicated touch-first handset UI that mirrors the mobile browser
+ * radio deck instead of the hardware-radio/T320 presentation.
  */
 @Composable
 fun RadioFlavorScreen(
@@ -16,7 +16,7 @@ fun RadioFlavorScreen(
     onSettings: (() -> Unit)?,
     assignedFromUnit: String?
 ) {
-    RadioScreen(
+    PhoneRadioScreen(
         onLocked = onLocked,
         onUnassigned = onUnassigned,
         onReassigned = onReassigned,
