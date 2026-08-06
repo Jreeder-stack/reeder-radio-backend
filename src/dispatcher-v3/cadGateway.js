@@ -21,6 +21,26 @@ export class CommandLinkGateway {
     }
   }
 
+  async get(path, options = {}) {
+    const response = await this.request(path, { ...options, method: 'GET' });
+    return response.data;
+  }
+
+  async post(path, body, options = {}) {
+    const response = await this.request(path, { ...options, method: 'POST', body });
+    return response.data;
+  }
+
+  async patch(path, body, options = {}) {
+    const response = await this.request(path, { ...options, method: 'PATCH', body });
+    return response.data;
+  }
+
+  async requestData(path, options = {}) {
+    const response = await this.request(path, options);
+    return response.data;
+  }
+
   async request(path, options = {}) {
     const method = String(options.method || 'GET').toUpperCase();
     const correlationId = ensureV3CorrelationId(options.correlationId, this.context.runtimeId);
@@ -85,22 +105,13 @@ export class CommandLinkGateway {
 
     let response;
     try {
-      response = await this.fetchImpl(url, {
-        method,
-        headers,
-        body,
-        signal: controller.signal,
-      });
+      response = await this.fetchImpl(url, { method, headers, body, signal: controller.signal });
     } catch (error) {
       const timedOut = error?.name === 'AbortError';
       throw new DispatcherV3Error(
         V3_ERROR_CODES.CAD_UNAVAILABLE,
         timedOut ? 'Command Link request timed out' : 'Command Link request failed',
-        {
-          retryable: true,
-          cause: error,
-          details: { correlationId, attempt, timedOut, method, url: redactUrl(url) },
-        },
+        { retryable: true, cause: error, details: { correlationId, attempt, timedOut, method, url: redactUrl(url) } },
       );
     } finally {
       clearTimeout(timer);
@@ -108,7 +119,6 @@ export class CommandLinkGateway {
 
     const payload = await parseResponseBody(response);
     const responseCorrelationId = response.headers?.get?.('x-correlation-id') || correlationId;
-
     if (!response.ok) {
       throw new DispatcherV3Error(
         V3_ERROR_CODES.CAD_REJECTED,
@@ -116,42 +126,22 @@ export class CommandLinkGateway {
         {
           statusCode: response.status,
           retryable: response.status >= 500,
-          details: {
-            correlationId: responseCorrelationId,
-            method,
-            path: new URL(url).pathname,
-            cadError: payload?.error || payload?.code || null,
-            payload,
-          },
+          details: { correlationId: responseCorrelationId, method, path: new URL(url).pathname, cadError: payload?.error || payload?.code || null, body: payload, payload },
         },
       );
     }
-
     if (payload === null || typeof payload !== 'object' || Array.isArray(payload)) {
       throw new DispatcherV3Error(
         V3_ERROR_CODES.CAD_REJECTED,
         'Command Link returned an invalid JSON response',
-        {
-          statusCode: response.status,
-          retryable: false,
-          details: { correlationId: responseCorrelationId, method, path: new URL(url).pathname },
-        },
+        { statusCode: response.status, retryable: false, details: { correlationId: responseCorrelationId, method, path: new URL(url).pathname } },
       );
     }
-
-    return Object.freeze({
-      success: true,
-      statusCode: response.status,
-      correlationId: responseCorrelationId,
-      data: payload,
-    });
+    return Object.freeze({ success: true, statusCode: response.status, correlationId: responseCorrelationId, data: payload });
   }
 
   _shouldRetry(error, method, attempt, attempts) {
-    return SAFE_RETRY_METHODS.has(method)
-      && attempt < attempts
-      && error instanceof DispatcherV3Error
-      && error.retryable === true;
+    return SAFE_RETRY_METHODS.has(method) && attempt < attempts && error instanceof DispatcherV3Error && error.retryable === true;
   }
 }
 
@@ -162,11 +152,7 @@ export function createCommandLinkGateway(context, options = {}) {
 async function parseResponseBody(response) {
   const text = await response.text();
   if (!text) return {};
-  try {
-    return JSON.parse(text);
-  } catch {
-    return null;
-  }
+  try { return JSON.parse(text); } catch { return null; }
 }
 
 function extractErrorMessage(payload, status) {
