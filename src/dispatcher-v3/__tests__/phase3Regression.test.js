@@ -91,20 +91,19 @@ describe('AI Dispatcher V3 phase 3 regression matrix', () => {
     expect(handler).not.toHaveBeenCalled();
   });
 
-  it('propagates CAD failures without reporting action success', async () => {
+  it('propagates handler failures without reporting action success', async () => {
     const executor = new V3ActionExecutor({
       runtimeContext: runtime(),
       handlers: {
         RADIO_CHECK: async () => {
-          const error = new Error('CAD unavailable');
-          error.code = 'network';
-          throw error;
+          throw new Error('upstream unavailable');
         },
       },
     });
     const result = await executor.execute({ action: 'RADIO_CHECK', input: {} });
     expect(result.success).toBe(false);
     expect(result.data).toBeUndefined();
+    expect(result.error.code).toBe('INTERNAL_ERROR');
   });
 
   it('keeps diagnostic traces separated by runtime and correlation ID', async () => {
@@ -122,8 +121,9 @@ describe('AI Dispatcher V3 phase 3 regression matrix', () => {
   });
 
   it('refuses a malformed successful unit-resolution response', async () => {
-    const gateway = { request: vi.fn(async () => ({ success: true, unit: { callsign: 'INDIANA-1' } })) };
-    const service = new UnitIdentityService({ gateway, runtimeContext: runtime() });
+    const context = runtime();
+    const gateway = { get: vi.fn(async () => ({ success: true, unit: { unit_number: 'INDIANA-1' } })) };
+    const service = new UnitIdentityService({ gateway, context });
     await expect(service.resolve('INDIANA-1', { correlationId: 'identity-bad' }))
       .rejects.toMatchObject({ code: 'CAD_REJECTED' });
   });
