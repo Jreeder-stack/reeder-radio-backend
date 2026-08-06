@@ -43,6 +43,9 @@ export {
   validateV3ActionRequest,
 } from './actionContracts.js';
 
+export { V3ActionExecutor } from './actionExecutor.js';
+export { createDefaultV3ActionHandlers } from './defaultActionHandlers.js';
+
 export {
   DISPATCHER_RUNTIME,
   getConfiguredDispatcherRuntime,
