@@ -56,15 +56,13 @@ export class V3OperationalAlertService {
     const presence = this.signaling.unitPresence?.get(identity.callsign);
     if (presence) presence.status = 'emergency';
 
+    // V3 deliberately uses channel-scoped signaling only. The legacy
+    // emergency callback/APNs path fans out globally and is therefore not
+    // safe for a multi-dispatch-center runtime.
     this.signaling._emitToChannelDispatchers?.(channelId, 'emergency:start', emergencyData);
     this.signaling._emitToChannelDispatchers?.(channelId, 'emergency:force_connect', {
       ...emergencyData,
       priority: 'emergency',
-    });
-    this.signaling._emitCallback?.('emergencyStart', emergencyData);
-    this.signaling._emitToDispatchers?.('emergency:alert', {
-      ...emergencyData,
-      message: `EMERGENCY: Unit ${identity.callsign} activated emergency on ${channelId}`,
     });
 
     const unitSocket = this.signaling._findSocketByUnitId?.(identity.callsign);
@@ -77,6 +75,7 @@ export class V3OperationalAlertService {
     return Object.freeze({
       activated: true,
       emergency: emergencyData,
+      delivery: Object.freeze({ channelScoped: true, globalPushSuppressed: true }),
     });
   }
 
@@ -115,11 +114,11 @@ export class V3OperationalAlertService {
 
     this.signaling._emitToChannelDispatchers?.(channelId, 'backup:request', alert);
     this.signaling._emitToChannelAll?.(channelId, 'backup:request', alert);
-    this.signaling._emitToDispatchers?.('backup:alert', {
-      ...alert,
-      message: `BACKUP REQUEST: Unit ${identity.callsign}${location ? ` at ${location}` : ''}`,
-    });
 
-    return Object.freeze({ requested: true, backup: alert });
+    return Object.freeze({
+      requested: true,
+      backup: alert,
+      delivery: Object.freeze({ channelScoped: true }),
+    });
   }
 }
