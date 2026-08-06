@@ -18,6 +18,26 @@ android {
         buildConfigField("String", "BASE_URL", "\"https://comms.reeder-systems.com\"")
     }
 
+    // OTA releases must always use the same signing key. The config is opt-in
+    // so local/debug builds keep working without secrets; CI supplies these
+    // environment variables only for the T320 release workflow.
+    val t320KeystorePath = System.getenv("T320_KEYSTORE_PATH")
+    val t320KeystorePassword = System.getenv("T320_KEYSTORE_PASSWORD")
+    val t320KeyAlias = System.getenv("T320_KEY_ALIAS")
+    val t320KeyPassword = System.getenv("T320_KEY_PASSWORD")
+    if (!t320KeystorePath.isNullOrBlank() &&
+        !t320KeystorePassword.isNullOrBlank() &&
+        !t320KeyAlias.isNullOrBlank() &&
+        !t320KeyPassword.isNullOrBlank()
+    ) {
+        signingConfigs.create("t320Ota") {
+            storeFile = file(t320KeystorePath)
+            storePassword = t320KeystorePassword
+            keyAlias = t320KeyAlias
+            keyPassword = t320KeyPassword
+        }
+    }
+
     // Per-device build flavors.
     //
     // The audio transport, signaling, floor control, jitter buffer, Opus
@@ -30,6 +50,7 @@ android {
         create("t320") {
             dimension = "device"
             buildConfigField("String", "RADIO_DEVICE_TYPE", "\"t320\"")
+            signingConfigs.findByName("t320Ota")?.let { signingConfig = it }
         }
         create("phone") {
             dimension = "device"
