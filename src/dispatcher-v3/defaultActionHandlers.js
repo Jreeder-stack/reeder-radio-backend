@@ -83,7 +83,17 @@ export function createDefaultV3ActionHandlers({ gateway, unitIdentityService, no
 
     [V3_ACTIONS.STATUS_CHECK]: async ({ input, correlationId }) => {
       const callsign = await resolveSafeCallsign(input.unitId, correlationId);
-      return gateway.request(`/api/radio/status-check?unit_id=${encodeURIComponent(callsign)}`, { correlationId });
+      const response = await gateway.request('/api/radio/status-check', { correlationId });
+      const units = Array.isArray(response?.units) ? response.units : [];
+      const unit = units.find((candidate) => String(candidate?.unit_id || '').toUpperCase() === callsign.toUpperCase());
+      if (!unit) {
+        throw new DispatcherV3Error(
+          V3_ERROR_CODES.UNIT_NOT_FOUND,
+          `Unit ${callsign} was not present in the selected dispatch center status catalog`,
+          { statusCode: 404, details: { unitId: input.unitId, callsign } },
+        );
+      }
+      return { unit, timestamp: response.timestamp || null };
     },
 
     [V3_ACTIONS.REQUEST_BACKUP]: unsupported('REQUEST_BACKUP'),
