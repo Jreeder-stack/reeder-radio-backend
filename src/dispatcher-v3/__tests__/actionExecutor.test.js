@@ -1,0 +1,78 @@
+import { describe, expect, it, vi } from 'vitest';
+import { V3ActionExecutor } from '../actionExecutor.js';
+import { createDefaultV3ActionHandlers } from '../defaultActionHandlers.js';
+import { V3_ACTIONS } from '../actionContracts.js';
+
+const runtime = Object.freeze({ runtimeId: 'r1', scopes: ['unit.read', 'unit.write', 'call.read', 'call.write'] });
+
+function makeIdentityService() {
+  return {
+    resolve: vi.fn(async (ref) => ({
+      unitId: ref === 'INDIANA-1' ? 'uuid-1' : ref,
+      callsign: 'INDIANA-1',
+      agencyId: 'agency-1',
+      dispatchCenterId: 'center-1',
+    })),
+  };
+}
+
+describe('V3ActionExecutor', () => {
+  it('validates before invoking a handler', async () => {
+    const handler = vi.fn();
+    const executor = new V3ActionExecutor({ runtimeContext: runtime, handlers: { SET_UNIT_STATUS: handler } });
+    const result = await executor.execute({ action: 'SET_UNIT_STATUS', input: { unitId: 'uuid-1', status: 'responding' } });
+    expect(result.success).toBe(false);
+    expect(result.error.code).toBe('INVALID_ACTION_INPUT');
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  it('preserves correlation IDs and normalizes success', async () => {
+    const executor = new V3ActionExecutor({ runtimeContext: runtime, handlers: { RADIO_CHECK: async () => ({ ok: true }) } });
+    const result = await executor.execute({ action: 'RADIO_CHECK', input: {} }, { correlationId: 'corr-1' });
+    expect(result).toMatchObject({ success: true, action: 'RADIO_CHECK', correlationId: 'corr-1', data: { ok: true } });
+  });
+
+  it('returns typed failure when a handler is missing', async () => {
+    const executor = new V3ActionExecutor({ runtimeContext: runtime });
+    const result = await executor.execute({ action: 'RADIO_CHECK', input: {} });
+    expect(result.success).toBe(false);
+    expect(result.error.code).toBe('INVALID_ACTION');
+    expect(result.error.statusCode).toBe(501);
+  });
+});
+
+describe('default V3 handlers', () => {
+  it('uses a resolved callsign only after UUID/callsign identity agrees', async () => {
+    const gateway = { request: vi.fn(async () => ({ success: true })) };
+    const identities = makeIdentityService();
+    const handlers = createDefaultV3ActionHandlers({ gateway, unitIdentityService: identities });
+    const result = await handlers[V3_ACTIONS.SET_UNIT_STATUS]({ input: { unitId: 'uuid-1', status: 'en_route', note: null }, correlationId: 'c1' });
+    expect(result.success).toBe(true);
+    expect(identities.resolve).toHaveBeenNthCalledWith(1, 'uuid-1', { correlationId: 'c1' });
+    expect(identities.resolve).toHaveBeenNthCalledWith(2, 'INDIANA-1', { correlationId: 'c1' });
+    expect(gateway.request).toHaveBeenCalledWith('/api/radio/status', expect.objectContaining({
+      method: 'POST',
+      correlationId: 'c1',
+      body: expect.objectContaining({ unit_id: 'INDIANA-1', status: 'en_route' }),
+    }));
+  });
+
+  it('refuses callsign execution if the second resolution maps elsewhere', async () => {
+    const gateway = { request: vi.fn() };
+    const identities = {
+      resolve: vi.fn()
+        .mockResolvedValueOnce({ unitId: 'uuid-1', callsign: 'INDIANA-1' })
+        .mockResolvedValueOnce({ unitId: 'uuid-2', callsign: 'INDIANA-1' }),
+    };
+    const handlers = createDefaultV3ActionHandlers({ gateway, unitIdentityService: identities });
+    await expect(handlers[V3_ACTIONS.SET_UNIT_STATUS]({ input: { unitId: 'uuid-1', status: 'en_route' }, correlationId: 'c2' }))
+      .rejects.toMatchObject({ code: 'UNIT_AMBIGUOUS', statusCode: 409 });
+    expect(gateway.request).not.toHaveBeenCalled();
+  });
+
+  it('does not fake backup or emergency behavior', async () => {
+    const handlers = createDefaultV3ActionHandlers({ gateway: { request: vi.fn() }, unitIdentityService: makeIdentityService() });
+    await expect(handlers[V3_ACTIONS.REQUEST_BACKUP]({})).rejects.toMatchObject({ code: 'INVALID_ACTION', statusCode: 501 });
+    await expect(handlers[V3_ACTIONS.DECLARE_EMERGENCY]({})).rejects.toMatchObject({ code: 'INVALID_ACTION', statusCode: 501 });
+  });
+});
