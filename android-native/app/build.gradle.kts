@@ -33,10 +33,10 @@ android {
         }
         create("phone") {
             dimension = "device"
-            versionCode = 4
-            versionNameSuffix = "-phone-v4"
+            versionCode = 5
+            versionNameSuffix = "-phone-v5"
             // Reuse the existing authenticated phone session flow. The phone
-            // source set renders the normal touch PTT UI, not the UHF bridge.
+            // source set renders the dedicated touch-first handset UI.
             buildConfigField("String", "RADIO_DEVICE_TYPE", "\"android_phone_bridge\"")
         }
         create("bridge") {
@@ -55,7 +55,7 @@ android {
     }
 
     // Preserve the existing bridge implementation under the new `bridge`
-    // flavor name. The new `phone` flavor gets a clean handset source set.
+    // flavor name. The normal `phone` flavor is isolated in phoneClient.
     sourceSets {
         getByName("bridge").setRoot("src/phone")
         getByName("phone").setRoot("src/phoneClient")
@@ -78,6 +78,7 @@ android {
 
     kotlinOptions {
         jvmTarget = "17"
+        freeCompilerArgs += "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api"
     }
 
     buildFeatures {
