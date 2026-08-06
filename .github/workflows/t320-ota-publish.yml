@@ -87,13 +87,18 @@ jobs:
         run: |
           test -n "$OTA_BASE_URL" || (echo 'Missing OTA_BASE_URL secret' && exit 1)
           test -n "$OTA_PUBLISH_TOKEN" || (echo 'Missing OTA_PUBLISH_TOKEN secret' && exit 1)
+          QUERY=$(python3 - <<'PY'
+          import os, urllib.parse
+          print(urllib.parse.urlencode({
+              'versionCode': os.environ['VERSION_CODE'],
+              'versionName': os.environ['VERSION_NAME'],
+              'notes': os.environ.get('NOTES', ''),
+          }))
+          PY
+          )
           curl --fail-with-body --show-error --silent \
             -X POST \
             -H "X-OTA-Publish-Token: $OTA_PUBLISH_TOKEN" \
             -H "Content-Type: application/vnd.android.package-archive" \
             --data-binary "@$APK_PATH" \
-            --get \
-            --data-urlencode "versionCode=$VERSION_CODE" \
-            --data-urlencode "versionName=$VERSION_NAME" \
-            --data-urlencode "notes=$NOTES" \
-            "$OTA_BASE_URL/api/radios/ota-ci/publish-and-push"
+            "$OTA_BASE_URL/api/radios/ota-ci/publish-and-push?$QUERY"
