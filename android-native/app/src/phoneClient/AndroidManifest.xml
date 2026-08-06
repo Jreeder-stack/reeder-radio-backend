@@ -23,6 +23,22 @@
             </intent-filter>
         </activity>
 
+        <!-- Some Samsung/OEM Android builds report that full-screen intent
+             permission is unavailable but do not expose the Settings activity
+             for MANAGE_APP_USE_FULL_SCREEN_INTENTS. Without a local fallback,
+             MainActivity's first-run readiness flow crashes after permissions. -->
+        <activity
+            android:name=".FullScreenIntentSettingsFallbackActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:noHistory="true">
+            <intent-filter>
+                <action android:name="android.settings.MANAGE_APP_USE_FULL_SCREEN_INTENTS" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="package" />
+            </intent-filter>
+        </activity>
+
         <!-- Phone flavor only. Keeps Bluetooth/wired/USB communication routing
              stable while the shared radio engine is active or the UI is closed. -->
         <service
