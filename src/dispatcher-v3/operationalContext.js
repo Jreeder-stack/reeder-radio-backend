@@ -12,9 +12,10 @@ export class V3OperationalContextService {
 
   async snapshot({ speakerCallsign, correlationId } = {}) {
     const identity = await this.unitIdentityService.resolve(speakerCallsign, { correlationId });
-    const [currentCall, activeCalls] = await Promise.all([
+    const [currentCall, activeCalls, units] = await Promise.all([
       this._getCurrentCall(identity.callsign, correlationId),
       this._getActiveCalls(correlationId),
+      this._getUnits(correlationId),
     ]);
 
     return Object.freeze({
@@ -26,6 +27,7 @@ export class V3OperationalContextService {
       }),
       currentCall: currentCall ? Object.freeze(sanitizeCall(currentCall)) : null,
       activeCalls: Object.freeze(activeCalls.map((call) => Object.freeze(sanitizeCall(call)))),
+      units: Object.freeze(units.map((unit) => Object.freeze(sanitizeUnit(unit)))),
     });
   }
 
@@ -85,6 +87,12 @@ export class V3OperationalContextService {
     }).filter((call) => Boolean(getCallId(call)));
   }
 
+  async _getUnits(correlationId) {
+    const response = await this.gateway.get('/api/radio/status-check', { correlationId });
+    const units = Array.isArray(response?.units) ? response.units : [];
+    return units.filter((unit) => clean(unit?.unit_id || unit?.unitId || unit?.callsign));
+  }
+
   async _getCurrentCall(callsign, correlationId) {
     try {
       const response = await this.gateway.get(`/api/radio/unit/${encodeURIComponent(callsign)}/call`, { correlationId });
@@ -108,6 +116,7 @@ export function sanitizeV3OperationalContext(context) {
     } : null,
     currentCall: context.currentCall ? sanitizeCall(context.currentCall) : null,
     activeCalls: Array.isArray(context.activeCalls) ? context.activeCalls.slice(0, 20).map(sanitizeCall) : [],
+    units: Array.isArray(context.units) ? context.units.slice(0, 100).map(sanitizeUnit) : [],
   };
 }
 
@@ -145,6 +154,16 @@ function sanitizeCall(call) {
     municipality: clean(call?.municipality || call?.city),
     status: clean(call?.status),
     priority: clean(call?.priority),
+  };
+}
+
+function sanitizeUnit(unit) {
+  return {
+    callsign: clean(unit?.callsign || unit?.unit_id || unit?.unitId || unit?.unit_number || unit?.unitNumber),
+    name: clean(unit?.name),
+    status: clean(unit?.status),
+    zone: clean(unit?.zone),
+    agency: clean(unit?.agency),
   };
 }
 
