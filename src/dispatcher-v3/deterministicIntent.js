@@ -44,17 +44,9 @@ export function planDeterministicV3Intent({ transcript, speakerCallsign } = {}) 
   if (STATUS_CHECK_RX.test(text)) return plan(V3_ACTIONS.STATUS_CHECK, { unitRef: speakerCallsign }, 'deterministic_status_check');
   if (BACKUP_RX.test(text)) return plan(V3_ACTIONS.REQUEST_BACKUP, { unitRef: speakerCallsign, reason: text, priority: 'urgent' }, 'deterministic_backup');
 
-  // Zone changes are not a unit-status mutation. Until V3 has a dedicated
-  // radio-side zone contract, fail closed instead of allowing the LLM to
-  // guess a CAD status such as AVAILABLE.
   if (ZONE_CHANGE_RX.test(text)) {
-    return Object.freeze({
-      action: 'CLARIFY',
-      input: Object.freeze({ requestedZoneChange: text }),
-      confidence: 1,
-      clarification: 'I cannot change radio zones yet. Repeat another request.',
-      reason: 'zone_change_not_yet_supported',
-    });
+    const zone = extractZone(text);
+    if (zone) return plan(V3_ACTIONS.CHANGE_UNIT_ZONE, { unitRef: speakerCallsign, zone }, 'deterministic_zone_change');
   }
 
   for (const [status, rx] of STATUS_PATTERNS) {
@@ -62,6 +54,13 @@ export function planDeterministicV3Intent({ transcript, speakerCallsign } = {}) 
   }
 
   return null;
+}
+
+function extractZone(text) {
+  const match = String(text || '').match(/\bzone\s+(?:to\s+)?([a-z0-9-]+)\b/i);
+  if (!match?.[1]) return null;
+  const raw = match[1].trim();
+  return /^\d+$/.test(raw) ? `ZONE ${raw}` : raw.toUpperCase();
 }
 
 function plan(action, input, reason) {
