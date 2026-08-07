@@ -22,6 +22,8 @@ const MIN_EXECUTION_CONFIDENCE = 0.7;
 const FLOOR_WAIT_MS = 3000;
 const FLOOR_RETRY_MS = 100;
 const FLOOR_REARM_MS = 1800;
+const NUMBER_WORD_RX = /\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty)\b/i;
+const HAIL_COMMAND_RX = /\b(status|show|mark|put|set|create|start|close|clear|assign|add|note|check|time|backup|emergency|responding|en\s+route|on\s+scene|available|out\s+of\s+service|off\s+duty|on\s+duty|copy|radio\s+check)\b/i;
 
 export class V3LiveDispatcher {
   constructor({
@@ -124,6 +126,22 @@ export class V3LiveDispatcher {
       return false;
     }
     transmission.transcript = gate.transcript || transmission.transcript;
+
+    if (gate.reason === 'wake_word') {
+      const hail = normalizeV3RadioHail(transmission.transcript);
+      if (hail) {
+        this.conversationGate.expectFollowUp(unitId, {
+          kind: 'radio_hail',
+          callsign: hail,
+          correlationId: transmission.correlationId,
+        });
+        this._remember({ transcript: transmission.transcript, action: 'RADIO_HAIL', input: { callsign: hail }, clarification: `${hail}, go ahead.`, success: true });
+        this._diag('radio_hail_acknowledged', transmission.correlationId, true, { unitId, callsign: hail });
+        await this._speak(`${hail}, go ahead.`, transmission.correlationId);
+        return true;
+      }
+    }
+
     if (this._processing.has(unitId)) {
       this._diag('transmission_ignored_busy', transmission.correlationId, false, { unitId, transcript: transmission.transcript });
       return false;
@@ -243,6 +261,19 @@ export class V3LiveDispatcher {
   _diag(phase, correlationId, success = null, details = {}) {
     this.diagnostics.record({ phase, correlationId, runtimeId: this.context.runtimeId, dispatchCenterId: this.context.dispatchCenterId, channelId: this.context.channelId, success, details });
   }
+}
+
+export function normalizeV3RadioHail(value) {
+  const text = String(value || '')
+    .trim()
+    .replace(/^[,.:;\-\s]+|[,.:;\-\s]+$/g, '')
+    .replace(/\s+/g, ' ');
+  if (!text || text.length > 48) return null;
+  if (HAIL_COMMAND_RX.test(text)) return null;
+  if (/^10\s*[-/]?\s*\d+$/i.test(text)) return null;
+  if (!/^[a-z0-9'’.-]+(?:\s+[a-z0-9'’.-]+){0,3}$/i.test(text)) return null;
+  if (!/\d/.test(text) && !NUMBER_WORD_RX.test(text)) return null;
+  return text.replace(/\s*-\s*/g, '-');
 }
 
 function sleep(ms) {

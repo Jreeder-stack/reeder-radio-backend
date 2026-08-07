@@ -4,6 +4,7 @@ import { V3IntentPlanner } from '../intentPlanner.js';
 import { materializeV3Plan } from '../planMaterializer.js';
 import { composeV3Response } from '../responseComposer.js';
 import { CommandLinkGateway } from '../cadGateway.js';
+import { normalizeV3RadioHail } from '../liveRuntime.js';
 
 const runtimeContext = Object.freeze({
   runtimeId: 'runtime-4',
@@ -33,6 +34,14 @@ describe('Dispatcher V3 phase 4 pipeline', () => {
     expect(result).toMatchObject({ correlationId: 'corr-4', transcript: 'heard 8', audioBytes: 8 });
     expect(transcribe).toHaveBeenCalledTimes(1);
     expect(codec.releaseSenderDecoder).toHaveBeenCalledWith('INDIANA-1');
+  });
+
+  it('recognizes a plain radio hail without sending it to the action planner', () => {
+    expect(normalizeV3RadioHail('Indiana-1')).toBe('Indiana-1');
+    expect(normalizeV3RadioHail('Indiana 1')).toBe('Indiana 1');
+    expect(normalizeV3RadioHail('Indiana one')).toBe('Indiana one');
+    expect(normalizeV3RadioHail('show Indiana 1 en route')).toBeNull();
+    expect(normalizeV3RadioHail('10-33')).toBeNull();
   });
 
   it('bypasses the LLM for protected emergency traffic', async () => {
