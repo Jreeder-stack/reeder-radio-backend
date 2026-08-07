@@ -120,15 +120,7 @@ export class CommandLinkGateway {
     const payload = await parseResponseBody(response);
     const responseCorrelationId = response.headers?.get?.('x-correlation-id') || correlationId;
     if (!response.ok) {
-      throw new DispatcherV3Error(
-        V3_ERROR_CODES.CAD_REJECTED,
-        extractErrorMessage(payload, response.status),
-        {
-          statusCode: response.status,
-          retryable: response.status >= 500,
-          details: { correlationId: responseCorrelationId, method, path: new URL(url).pathname, cadError: payload?.error || payload?.code || null, body: payload, payload },
-        },
-      );
+      throw cadRejectedError({ payload, response, responseCorrelationId, method, url });
     }
     if (payload === null || typeof payload !== 'object' || Array.isArray(payload)) {
       throw new DispatcherV3Error(
@@ -137,6 +129,15 @@ export class CommandLinkGateway {
         { statusCode: response.status, retryable: false, details: { correlationId: responseCorrelationId, method, path: new URL(url).pathname } },
       );
     }
+
+    // Command Link has several legacy endpoints that report an operational
+    // rejection as HTTP 200 with { success: false }. Never let that shape cross
+    // the V3 boundary as a successful action or the dispatcher can speak a
+    // false "10-4" even though CAD rejected the mutation.
+    if (payload.success === false) {
+      throw cadRejectedError({ payload, response, responseCorrelationId, method, url });
+    }
+
     return Object.freeze({ success: true, statusCode: response.status, correlationId: responseCorrelationId, data: payload });
   }
 
@@ -147,6 +148,27 @@ export class CommandLinkGateway {
 
 export function createCommandLinkGateway(context, options = {}) {
   return new CommandLinkGateway(context, options);
+}
+
+function cadRejectedError({ payload, response, responseCorrelationId, method, url }) {
+  const statusCode = Number(response?.status) || 502;
+  return new DispatcherV3Error(
+    V3_ERROR_CODES.CAD_REJECTED,
+    extractErrorMessage(payload, statusCode),
+    {
+      statusCode,
+      retryable: statusCode >= 500,
+      details: {
+        correlationId: responseCorrelationId,
+        method,
+        path: new URL(url).pathname,
+        cadError: payload?.error || payload?.code || null,
+        cadCode: payload?.code || null,
+        body: payload,
+        payload,
+      },
+    },
+  );
 }
 
 async function parseResponseBody(response) {
