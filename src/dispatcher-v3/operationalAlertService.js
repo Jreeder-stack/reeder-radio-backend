@@ -1,7 +1,7 @@
 import { DispatcherV3Error, V3_ERROR_CODES } from './errors.js';
 
-function canonicalChannel(channelId) {
-  return String(channelId || '').trim();
+function runtimeChannel(runtimeContext) {
+  return String(runtimeContext?.roomKey || runtimeContext?.channelId || '').trim();
 }
 
 export class V3OperationalAlertService {
@@ -12,7 +12,7 @@ export class V3OperationalAlertService {
   }
 
   declareEmergency({ identity, runtimeContext, correlationId, callId = null, location = null, reason = null } = {}) {
-    const channelId = canonicalChannel(runtimeContext?.channelId);
+    const channelId = runtimeChannel(runtimeContext);
     const dispatchCenterId = String(runtimeContext?.dispatchCenterId || '').trim();
     if (!identity?.unitId || !identity?.callsign) {
       throw new DispatcherV3Error(V3_ERROR_CODES.INVALID_ACTION_INPUT, 'Resolved unit identity is required for emergency activation');
@@ -56,7 +56,7 @@ export class V3OperationalAlertService {
   }
 
   requestBackup({ identity, runtimeContext, correlationId, callId = null, location = null, reason = null, priority = 'urgent' } = {}) {
-    const channelId = canonicalChannel(runtimeContext?.channelId);
+    const channelId = runtimeChannel(runtimeContext);
     const dispatchCenterId = String(runtimeContext?.dispatchCenterId || '').trim();
     if (!identity?.unitId || !identity?.callsign) {
       throw new DispatcherV3Error(V3_ERROR_CODES.INVALID_ACTION_INPUT, 'Resolved unit identity is required for backup request');
@@ -82,8 +82,6 @@ export class V3OperationalAlertService {
       source: 'ai_dispatcher_v3',
     });
 
-    // _emitToChannelAll includes dispatch consoles and units in this one channel,
-    // so emitting a separate dispatcher event would duplicate the request.
     this.signaling._emitToChannelAll?.(channelId, 'backup:request', alert);
 
     return Object.freeze({ requested: true, backup: alert, delivery: Object.freeze({ channelScoped: true }) });
