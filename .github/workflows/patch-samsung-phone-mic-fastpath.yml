@@ -1,0 +1,45 @@
+name: Patch Samsung phone mic fast path
+
+on:
+  push:
+    branches:
+      - fix/samsung-phone-voice-performance-fastpath
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/samsung-phone-voice-performance-fastpath
+          fetch-depth: 0
+
+      - name: Apply Samsung phone mic fast path
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path('android-native/app/src/main/java/com/reedersystems/commandcomms/audio/radio/RadioAudioEngine.kt')
+          s = p.read_text()
+
+          anchor = '''        if (BuildConfig.RADIO_DEVICE_TYPE == "android_phone") {\n            if (cachedSourceKey == deviceKey && cachedSourceValue != null) {\n'''
+          replacement = '''        if (BuildConfig.RADIO_DEVICE_TYPE == "android_phone") {\n            val manufacturer = Build.MANUFACTURER?.uppercase() ?: ""\n            val model = Build.MODEL?.uppercase() ?: ""\n\n            // Verified on the Samsung SM-S156V from live logcat: normal MIC,\n            // UNPROCESSED and forced built-in device routing produced near-zero\n            // PCM, while VOICE_PERFORMANCE at 48 kHz on Android's default input\n            // route produced usable speech. Skip first-PTT calibration on this\n            // exact model so PTT starts immediately. Keep auto-calibration for\n            // every other Android phone model.\n            if (manufacturer == "SAMSUNG" && model == "SM-S156V" && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {\n                val src = MediaRecorder.AudioSource.VOICE_PERFORMANCE\n                val name = "VOICE_PERFORMANCE"\n                cachedSourceKey = deviceKey\n                cachedSourceValue = src\n                cachedSourceName = name\n                txSessionStats.audioSource = name\n                Log.d("[AudioCapture]", "PHONE_TX_AUDIO_SOURCE_SELECTED source=$name reason=verified_model_fast_path device=$deviceKey")\n                return src\n            }\n\n            if (cachedSourceKey == deviceKey && cachedSourceValue != null) {\n'''
+          if anchor not in s:
+              raise SystemExit('phone selectAudioSource anchor not found')
+          s = s.replace(anchor, replacement, 1)
+
+          p.write_text(s)
+          PY
+
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add android-native/app/src/main/java/com/reedersystems/commandcomms/audio/radio/RadioAudioEngine.kt
+          git diff --cached --check
+          git commit -m "Use verified Voice Performance fast path on SM-S156V"
+          git push origin HEAD:fix/samsung-phone-voice-performance-fastpath
