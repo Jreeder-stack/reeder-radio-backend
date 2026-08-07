@@ -20,48 +20,30 @@ jobs:
         shell: python
         run: |
           from pathlib import Path
+          import re
           p = Path('src/services/signalingService.js')
           s = p.read_text()
 
-          old_pre = '''  _handlePttPre(socket, data) {
+          pre_pattern = r"  _handlePttPre\(socket, data\) \{\n(?:.|\n)*?\n  \}\n\n  _handlePttStart"
+          pre_replacement = """  _handlePttPre(socket, data) {
             const channelId = canonicalChannelKey(data.channelId);
             if (!socket.unitId) return;
-            socket.to(`channel:${channelId}`).emit('ptt:pre', {
-              unitId: socket.unitId,
-              channelId,
-            });
-          }'''
-          new_pre = '''  _handlePttPre(socket, data) {
-            const channelId = canonicalChannelKey(data.channelId);
-            if (!socket.unitId) return;
-            // Do not make another handset/radio logged in as this same unit react
-            // to the user's own pre-key event.
+            // A second handset/radio signed in as the same unit must not react
+            // to this unit's own pre-key event.
             this._emitToChannelExcludingUnit(channelId, 'ptt:pre', {
               unitId: socket.unitId,
               channelId,
             }, socket.unitId);
-          }'''
+          }
 
-          old_emit = '''  /**
-           * Like _emitToChannelExcludingUnit but skips only the originating device's
-           * sockets. This lets multiple devices on the same unitId (e.g. a T320 radio
-           * and an external CAD client) coexist: the device that initiated the PTT is
-           * skipped, while sibling devices on the same unitId still receive the event
-           * and can enter RX.
-           */
-          _emitToChannelExcludingDevice(channelId, event, data, excludeDeviceId) {
-            if (!this.io) return;
-            const room = `channel:${channelId}`;
-            this.io.sockets.sockets.forEach((s) => {
-              if (!s.rooms || !s.rooms.has(room)) return;
-              if (excludeDeviceId && s.deviceId === excludeDeviceId) return;
-              s.emit(event, data);
-            });
-          }'''
-          new_emit = '''  /**
+          _handlePttStart"""
+          s, n1 = re.subn(pre_pattern, pre_replacement, s, count=1)
+
+          emit_pattern = r"  /\*\*\n   \* Like _emitToChannelExcludingUnit(?:.|\n)*?\n  _emitToChannelExcludingDevice\(channelId, event, data, excludeDeviceId\) \{(?:.|\n)*?\n  \}\n\n  _emitChannelFloorTakenToRoom"
+          emit_replacement = """  /**
            * Emit radio TX state to other units while isolating every endpoint owned by
            * the transmitting unit. A user may be signed into both a phone and T320;
-           * their sibling device must not enter RX/busy state from their own PTT.
+           * sibling endpoints must not enter RX/busy state from their own PTT.
            */
           _emitToChannelExcludingDevice(channelId, event, data, excludeDeviceId) {
             if (!this.io) return;
@@ -73,22 +55,13 @@ jobs:
               if (originUnitId && s.unitId === originUnitId) return;
               s.emit(event, data);
             });
-          }'''
+          }
 
-          old_floor = '''  _emitChannelFloorTakenToRoomExcludingDevice(channelId, data, excludeDeviceId) {
-            if (!this.io) return;
-            const room = `channel:${channelId}`;
-            this.io.sockets.sockets.forEach((s) => {
-              if (!s.rooms || !s.rooms.has(room)) return;
-              if (excludeDeviceId && s.deviceId === excludeDeviceId) return;
-              if (s.isRadioDevice) {
-                s.emit(RADIO_EVENTS.CHANNEL_FLOOR_TAKEN, data);
-              } else {
-                s.emit(RADIO_EVENTS.CHANNEL_BUSY, data);
-              }
-            });
-          }'''
-          new_floor = '''  _emitChannelFloorTakenToRoomExcludingDevice(channelId, data, excludeDeviceId) {
+          _emitChannelFloorTakenToRoom"""
+          s, n2 = re.subn(emit_pattern, emit_replacement, s, count=1)
+
+          floor_pattern = r"  _emitChannelFloorTakenToRoomExcludingDevice\(channelId, data, excludeDeviceId\) \{(?:.|\n)*?\n  \}\n\n  _findSocketByUnitId"
+          floor_replacement = """  _emitChannelFloorTakenToRoomExcludingDevice(channelId, data, excludeDeviceId) {
             if (!this.io) return;
             const room = `channel:${channelId}`;
             const originUnitId = data?.heldBy || data?.unitId || data?.senderUnitId || null;
@@ -102,12 +75,13 @@ jobs:
                 s.emit(RADIO_EVENTS.CHANNEL_BUSY, data);
               }
             });
-          }'''
+          }
 
-          for old, new, label in [(old_pre,new_pre,'ptt-pre'),(old_emit,new_emit,'tx-events'),(old_floor,new_floor,'floor')]:
-              if old not in s:
-                  raise SystemExit(f'Expected {label} block not found; refusing unsafe patch')
-              s = s.replace(old, new, 1)
+          _findSocketByUnitId"""
+          s, n3 = re.subn(floor_pattern, floor_replacement, s, count=1)
+
+          if (n1, n2, n3) != (1, 1, 1):
+              raise SystemExit(f'Unsafe patch refused: pttPre={n1} txHelper={n2} floorHelper={n3}')
           p.write_text(s)
       - name: Commit patch
         run: |
