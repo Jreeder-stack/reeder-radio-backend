@@ -12,6 +12,7 @@ import android.media.audiofx.AutomaticGainControl
 import android.media.audiofx.NoiseSuppressor
 import android.os.Build
 import android.util.Log
+import com.reedersystems.commandcomms.BuildConfig
 import com.reedersystems.commandcomms.data.prefs.SpeakerBoostPrefs
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
@@ -421,6 +422,33 @@ class RadioAudioEngine(private val context: Context) {
 
     private fun selectAudioSource(): Int? {
         val deviceKey = "${Build.MANUFACTURER}/${Build.MODEL}/API${Build.VERSION.SDK_INT}"
+
+        if (BuildConfig.RADIO_DEVICE_TYPE == "android_phone") {
+            // Phone flavor stays on the normal media/A2DP route. The actual TX
+            // engine is here, so never select VOICE_COMMUNICATION on phones;
+            // that source is tied to HFP/SCO on many Android devices and can
+            // produce silence after the call-style route is intentionally cleared.
+            val candidates = mutableListOf(
+                Pair(MediaRecorder.AudioSource.MIC, "MIC"),
+                Pair(MediaRecorder.AudioSource.VOICE_RECOGNITION, "VOICE_RECOGNITION")
+            )
+            if (Build.VERSION.SDK_INT >= 24) {
+                candidates.add(Pair(MediaRecorder.AudioSource.UNPROCESSED, "UNPROCESSED"))
+            }
+
+            Log.d("[AudioCapture]", "PHONE_TX_AUDIO_SOURCE_PROBE_BEGIN device=$deviceKey candidates=${candidates.map { it.second }}")
+            val results = candidates.map { (source, name) -> probeAudioSource(source, name) }
+            val best = results.filter { it.accepted }.maxByOrNull { it.avgRms }
+                ?: results.filter { it.reason == "rms_too_low" }.maxByOrNull { it.avgRms }
+            if (best != null) {
+                Log.d("[AudioCapture]", "PHONE_TX_AUDIO_SOURCE_SELECTED source=${best.sourceName} avgRms=${String.format("%.1f", best.avgRms)} reason=phone_media_route device=$deviceKey")
+                txSessionStats.audioSource = best.sourceName
+                return best.source
+            }
+            Log.e("[AudioCapture]", "PHONE_TX_AUDIO_SOURCE_ALL_REJECTED device=$deviceKey")
+            txSessionStats.audioSource = "NONE"
+            return null
+        }
 
         // When a wired accessory mic is attached, vendor VOIP processing on
         // the T320 is bound to the built-in mic and produces wrong/silent

@@ -166,10 +166,14 @@ class CommandCommsFirebaseService : FirebaseMessagingService() {
             Log.w(TAG, "Failed to start PageAlertActivity directly: ${e.message}")
         }
 
-        if (app.apiClient.radioToken != null) {
+        // Dedicated radios authenticate with radioToken. The native phone
+        // authenticates with the normal user session, so radioToken is expected
+        // to be null there. Either authenticated path must receive the audible page.
+        if (app.apiClient.radioToken != null || app.sessionPrefs.hasSession) {
+            Log.d(TAG, "[PAGE-TONE] authenticated endpoint — playing paging tone radioToken=${app.apiClient.radioToken != null} userSession=${app.sessionPrefs.hasSession}")
             playPagingTone(app)
         } else {
-            Log.w(TAG, "[BUILD-TONE-A-V2] Skipping tone: radioToken is null (radio not authenticated)")
+            Log.w(TAG, "[PAGE-TONE] Skipping tone: endpoint has neither radio token nor user session")
         }
 
         sendBroadcast(Intent(ACTION_PAGE_RECEIVED).apply {
