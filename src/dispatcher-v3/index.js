@@ -57,9 +57,3 @@ export { V3ConversationGate } from './conversationGate.js';
 export { materializeV3Plan } from './planMaterializer.js';
 export { composeV3Response } from './responseComposer.js';
 export { V3LiveDispatcher } from './liveRuntime.js';
-
-export {
-  DISPATCHER_RUNTIME,
-  getConfiguredDispatcherRuntime,
-  isDispatcherV3Selected,
-} from './runtimeSelector.js';
