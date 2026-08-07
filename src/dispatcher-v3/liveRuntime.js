@@ -2,6 +2,7 @@ import { audioRelayService } from '../services/audioRelayService.js';
 import { signalingService } from '../services/signalingService.js';
 import { speechToText, textToSpeech } from '../services/azureSpeechService.js';
 import { opusCodec } from '../services/opusCodec.js';
+import { floorControlService, AI_FLOOR_IDENTITY } from '../services/floorControlService.js';
 import { buildV3RuntimeContext } from './runtimeContract.js';
 import { CommandLinkGateway } from './cadGateway.js';
 import { UnitIdentityService } from './unitIdentity.js';
@@ -18,9 +19,24 @@ import { createV3CorrelationId } from './correlation.js';
 
 const TX_FRAME_MS = 20;
 const MIN_EXECUTION_CONFIDENCE = 0.7;
+const FLOOR_WAIT_MS = 3000;
+const FLOOR_RETRY_MS = 100;
+const FLOOR_REARM_MS = 1800;
 
 export class V3LiveDispatcher {
-  constructor({ runtimeContext, scopes = [], diagnostics = null, planner = null, transcribe = speechToText, synthesize = textToSpeech, conversationGate = null } = {}) {
+  constructor({
+    runtimeContext,
+    scopes = [],
+    diagnostics = null,
+    planner = null,
+    transcribe = speechToText,
+    synthesize = textToSpeech,
+    conversationGate = null,
+    audioRelay = audioRelayService,
+    codec = opusCodec,
+    floorControl = floorControlService,
+    signaling = signalingService,
+  } = {}) {
     this.context = buildV3RuntimeContext({ ...runtimeContext, scopes });
     this.runtimeContext = this.context;
     this.identity = this.context.identity;
@@ -33,13 +49,17 @@ export class V3LiveDispatcher {
     this._recentContext = [];
     this._processing = new Set();
 
+    this.audioRelay = audioRelay;
+    this.codec = codec;
+    this.floorControl = floorControl;
+    this.signaling = signaling;
     this.diagnostics = diagnostics || new V3DiagnosticsJournal();
     this.gateway = new CommandLinkGateway(this.context);
     this.unitIdentityService = new UnitIdentityService({ gateway: this.gateway, context: this.context });
-    this.operationalAlertService = new V3OperationalAlertService({ signalingService });
+    this.operationalAlertService = new V3OperationalAlertService({ signalingService: this.signaling });
     this.handlers = createDefaultV3ActionHandlers({ gateway: this.gateway, unitIdentityService: this.unitIdentityService, operationalAlertService: this.operationalAlertService });
     this.executor = new V3ActionExecutor({ runtimeContext: this.context, handlers: this.handlers, diagnostics: this.diagnostics });
-    this.speech = new V3SpeechPipeline({ runtimeContext: this.context, transcribe, codec: opusCodec, diagnostics: this.diagnostics });
+    this.speech = new V3SpeechPipeline({ runtimeContext: this.context, transcribe, codec: this.codec, diagnostics: this.diagnostics });
     this.planner = planner || new V3IntentPlanner({ diagnostics: this.diagnostics });
     this.conversationGate = conversationGate || new V3ConversationGate();
     this.synthesize = synthesize;
@@ -48,9 +68,9 @@ export class V3LiveDispatcher {
 
   async start() {
     if (this.isRunning) return true;
-    audioRelayService.addAudioListener(this.context.roomKey, this.identity, this._audioListener);
+    this.audioRelay.addAudioListener(this.context.roomKey, this.identity, this._audioListener);
     if (String(this.context.channelId) !== String(this.context.roomKey)) {
-      audioRelayService.addAudioListener(this.context.channelId, this.identity, this._audioListener);
+      this.audioRelay.addAudioListener(this.context.channelId, this.identity, this._audioListener);
     }
     this.isRunning = true;
     this.connected = true;
@@ -59,7 +79,8 @@ export class V3LiveDispatcher {
   }
 
   async stop() {
-    audioRelayService.removeAllAudioListeners(this.identity);
+    this.audioRelay.removeAllAudioListeners(this.identity);
+    this.floorControl.releaseAllForUnit?.(AI_FLOOR_IDENTITY);
     this.speech.clear();
     this.conversationGate.clearAll();
     this._processing.clear();
@@ -118,8 +139,8 @@ export class V3LiveDispatcher {
 
   async handleEmergencyStart(channelId, unitId) {
     if (!this.isRunning || !this.matchesChannel(channelId) || unitId === this.identity) return false;
-    // The signaling layer already activated hardware-button emergency state before
-    // invoking this callback. Do not activate it a second time or duplicate alerts.
+    // Native signaling has already activated a hardware-button emergency before
+    // this callback runs. V3 observes it but never creates a duplicate alert.
     this._diag('hardware_emergency_observed', createV3CorrelationId(this.context.runtimeId), true, { unitId, channelId });
     return true;
   }
@@ -160,17 +181,58 @@ export class V3LiveDispatcher {
   }
 
   async _speak(text, correlationId) {
-    const recent = audioRelayService.hasRecentInbound(this.context.roomKey, 350, [this.identity]);
-    if (recent) await sleep(250);
-    const started = Date.now();
-    const pcm = await this.synthesize(text);
-    const opusFrames = opusCodec.encodePcmToOpus(pcm);
-    this._diag('tts_ready', correlationId, true, { text, frames: opusFrames.length, latencyMs: Date.now() - started });
-    for (const frame of opusFrames) {
-      audioRelayService.injectAudio(this.context.roomKey, this.identity, this._sequence++, frame);
-      await sleep(TX_FRAME_MS);
+    const channel = this.context.roomKey;
+    const acquired = await this._acquireFloor(channel, correlationId);
+    if (!acquired) {
+      this._diag('speech_skipped_channel_busy', correlationId, false, { text, channel });
+      return false;
     }
-    this._diag('speech_transmitted', correlationId, true, { text, frames: opusFrames.length });
+
+    let framesSent = 0;
+    let lastRearmAt = Date.now();
+    try {
+      const started = Date.now();
+      const pcm = await this.synthesize(text);
+      const opusFrames = this.codec.encodePcmToOpus(pcm);
+      this._diag('tts_ready', correlationId, true, { text, frames: opusFrames.length, latencyMs: Date.now() - started });
+
+      for (const frame of opusFrames) {
+        if (Date.now() - lastRearmAt >= FLOOR_REARM_MS) {
+          const rearm = this.floorControl.requestFloor(channel, AI_FLOOR_IDENTITY);
+          if (!rearm?.granted) {
+            throw new Error(`AI dispatcher lost radio floor to ${rearm?.heldBy || 'another unit'}`);
+          }
+          lastRearmAt = Date.now();
+        }
+        this.audioRelay.injectAudio(channel, this.identity, this._sequence++, frame);
+        framesSent += 1;
+        await sleep(TX_FRAME_MS);
+      }
+      this._diag('speech_transmitted', correlationId, true, { text, frames: framesSent });
+      return true;
+    } catch (error) {
+      this._diag('speech_transmit_failed', correlationId, false, { text, framesSent, message: error.message });
+      return false;
+    } finally {
+      const released = this.floorControl.releaseFloor(channel, AI_FLOOR_IDENTITY);
+      if (!released) this.floorControl.releaseAllForUnit?.(AI_FLOOR_IDENTITY);
+    }
+  }
+
+  async _acquireFloor(channel, correlationId) {
+    const deadline = Date.now() + FLOOR_WAIT_MS;
+    while (Date.now() <= deadline) {
+      const recent = this.audioRelay.hasRecentInbound?.(channel, 350, [this.identity]);
+      if (!recent) {
+        const grant = this.floorControl.requestFloor(channel, AI_FLOOR_IDENTITY);
+        if (grant?.granted) {
+          this._diag('speech_floor_acquired', correlationId, true, { channel });
+          return true;
+        }
+      }
+      await sleep(FLOOR_RETRY_MS);
+    }
+    return false;
   }
 
   _remember(item) {
