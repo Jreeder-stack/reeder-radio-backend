@@ -23,12 +23,7 @@ export class V3IntentPlanner {
     if (!text) return Object.freeze({ action: 'NO_ACTION', input: {}, confidence: 1, reason: 'empty_transcript' });
 
     if (EMERGENCY_RX.test(text)) {
-      return Object.freeze({
-        action: V3_ACTIONS.DECLARE_EMERGENCY,
-        input: Object.freeze({ unitRef: speakerCallsign, reason: text }),
-        confidence: 1,
-        reason: 'protected_emergency_phrase',
-      });
+      return Object.freeze({ action: V3_ACTIONS.DECLARE_EMERGENCY, input: Object.freeze({ unitRef: speakerCallsign, reason: text }), confidence: 1, reason: 'protected_emergency_phrase' });
     }
 
     const client = this.client || getDefaultClient();
@@ -49,15 +44,28 @@ export class V3IntentPlanner {
       }, { signal: controller.signal });
       const raw = response?.choices?.[0]?.message?.content || '{}';
       const plan = normalizePlan(JSON.parse(raw));
-      this.diagnostics?.record?.({ stage: 'intent_planned', runtimeContext, correlationId, success: true, latencyMs: Date.now() - started, details: { transcript: text, plan } });
+      this._diag('intent_planned', runtimeContext, correlationId, true, Date.now() - started, { transcript: text, plan });
       return plan;
     } catch (error) {
       const timeout = error?.name === 'AbortError';
-      this.diagnostics?.record?.({ stage: 'intent_failed', runtimeContext, correlationId, success: false, latencyMs: Date.now() - started, details: { transcript: text, message: error.message, timeout } });
+      this._diag('intent_failed', runtimeContext, correlationId, false, Date.now() - started, { transcript: text, message: error.message, timeout });
       throw new DispatcherV3Error(V3_ERROR_CODES.CAD_UNAVAILABLE, timeout ? 'Dispatcher V3 intent planning timed out' : 'Dispatcher V3 intent planning failed', { statusCode: 503, retryable: true, cause: error });
     } finally {
       clearTimeout(timer);
     }
+  }
+
+  _diag(phase, runtimeContext, correlationId, success, latencyMs, details) {
+    this.diagnostics?.record?.({
+      phase,
+      correlationId,
+      runtimeId: runtimeContext?.runtimeId || null,
+      dispatchCenterId: runtimeContext?.dispatchCenterId || null,
+      channelId: runtimeContext?.channelId || null,
+      success,
+      latencyMs,
+      details,
+    });
   }
 }
 
@@ -95,7 +103,7 @@ function normalizePlan(raw = {}) {
 }
 
 function systemPrompt() {
-  return `You are the intent planner for a public-safety radio dispatcher. Return JSON only. Never claim an action succeeded; execution happens elsewhere.\n\nAllowed operational actions: ${listV3Actions().join(', ')}. Control actions: NO_ACTION, CLARIFY.\nCanonical unit statuses: ${V3_UNIT_STATUSES.join(', ')}.\n\nReturn: {"action":"...","confidence":0-1,"input":{},"clarification":null,"reason":"short"}.\nUse spoken callsigns only in temporary fields named unitRef or unitRefs. Never invent UUIDs, call IDs, locations, dispositions, or facts. If required information is missing, use CLARIFY and ask one short radio question. Default unitRef to the speaker when the command concerns the speaker.\nMappings: SET_UNIT_STATUS input={unitRef,status,note?}; GET_CURRENT_CALL={unitRef}; CREATE_CALL={type,location,city?,municipality?,priority?,description?,unitRefs?}; ADD_CALL_NOTE={callId,note,unitRef?}; ASSIGN_UNIT={callId,unitRef}; CLEAR_UNIT={callId,unitRef,disposition?}; CLOSE_CALL={callId,disposition,unitRefs?,note?}; STATUS_CHECK={unitRef}; REQUEST_BACKUP={unitRef,callId?,location?,priority?,reason?}; DECLARE_EMERGENCY={unitRef,callId?,location?,reason?}; RADIO_CHECK/TIME_CHECK may use {unitRef?}. Do not output prose outside JSON.`;
+  return `You are the intent planner for a public-safety radio dispatcher. Return JSON only. Never claim an action succeeded; execution happens elsewhere.\n\nAllowed operational actions: ${listV3Actions().join(', ')}. Control actions: NO_ACTION, CLARIFY.\nCanonical unit statuses: ${V3_UNIT_STATUSES.join(', ')}.\n\nReturn: {"action":"...","confidence":0-1,"input":{},"clarification":null,"reason":"short"}.\nUse spoken callsigns only in temporary fields named unitRef or unitRefs. Never invent UUIDs, call IDs, locations, dispositions, or facts. If required information is missing, use CLARIFY and ask one short radio question. Default unitRef to the speaker when the command concerns the speaker. When recentContext shows a CLARIFY turn, treat the new transcript as the answer to that pending question and combine it with the prior input instead of restarting the request.\nMappings: SET_UNIT_STATUS input={unitRef,status,note?}; GET_CURRENT_CALL={unitRef}; CREATE_CALL={type,location,city?,municipality?,priority?,description?,unitRefs?}; ADD_CALL_NOTE={callId,note,unitRef?}; ASSIGN_UNIT={callId,unitRef}; CLEAR_UNIT={callId,unitRef,disposition?}; CLOSE_CALL={callId,disposition,unitRefs?,note?}; STATUS_CHECK={unitRef}; REQUEST_BACKUP={unitRef,callId?,location?,priority?,reason?}; DECLARE_EMERGENCY={unitRef,callId?,location?,reason?}; RADIO_CHECK/TIME_CHECK may use {unitRef?}. Do not output prose outside JSON.`;
 }
 
 function sanitizeRecent(items) {
@@ -103,8 +111,22 @@ function sanitizeRecent(items) {
   return items.slice(-6).map((item) => ({
     transcript: clean(item?.transcript, 240),
     action: clean(item?.action, 40),
+    input: sanitizeInput(item?.input),
+    clarification: clean(item?.clarification, 180),
     success: item?.success === true,
   }));
+}
+
+function sanitizeInput(input) {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) return {};
+  const result = {};
+  for (const [key, value] of Object.entries(input)) {
+    if (value === null || value === undefined) continue;
+    if (typeof value === 'string') result[key] = clean(value, 180);
+    else if (Array.isArray(value)) result[key] = value.slice(0, 8).map((item) => clean(item, 80)).filter(Boolean);
+    else if (typeof value === 'number' || typeof value === 'boolean') result[key] = value;
+  }
+  return result;
 }
 
 function clean(value, max = 300) {
