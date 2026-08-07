@@ -18,6 +18,11 @@ const CONTEXTUAL_CALL_ACTIONS = new Set([
   V3_ACTIONS.ADD_CALL_NOTE,
 ]);
 
+const CURRENT_CALL_FIRST_ACTIONS = new Set([
+  V3_ACTIONS.CLEAR_UNIT,
+  V3_ACTIONS.ADD_CALL_NOTE,
+]);
+
 export async function materializeV3Plan(plan, {
   speakerCallsign,
   unitIdentityService,
@@ -43,6 +48,7 @@ export async function materializeV3Plan(plan, {
     input.callId = await operationalContextService.resolveCallId({
       callRef: input.callRef || null,
       operationalContext,
+      preferCurrentCall: CURRENT_CALL_FIRST_ACTIONS.has(plan.action),
       correlationId,
     });
     delete input.callRef;
