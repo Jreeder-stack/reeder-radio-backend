@@ -20,6 +20,31 @@ describe('Dispatcher V3 deterministic routine commands', () => {
     expect(result).toMatchObject({ action, confidence: 1, input: expectedInput });
   });
 
+  it.each([
+    'INDIANA-1, radio check',
+    'Indiana 1 radio check',
+    'Indiana one, radio check',
+    'Indiana won radio check',
+  ])('strips the authenticated speaker callsign before parsing: %s', (transcript) => {
+    expect(planDeterministicV3Intent({ transcript, speakerCallsign })).toMatchObject({
+      action: 'RADIO_CHECK',
+      confidence: 1,
+      input: {},
+    });
+  });
+
+  it('strips the self callsign for other routine commands too', () => {
+    expect(planDeterministicV3Intent({ transcript: 'Indiana one, show me en route', speakerCallsign })).toMatchObject({
+      action: 'SET_UNIT_STATUS',
+      input: { unitRef: speakerCallsign, status: 'en_route' },
+      confidence: 1,
+    });
+  });
+
+  it('does not strip another unit callsign', () => {
+    expect(planDeterministicV3Intent({ transcript: 'Indiana 2 radio check', speakerCallsign })).toBeNull();
+  });
+
   it('makes an obvious backup request deterministic and urgent', () => {
     expect(planDeterministicV3Intent({ transcript: 'I need backup', speakerCallsign })).toMatchObject({
       action: 'REQUEST_BACKUP',
@@ -44,7 +69,7 @@ describe('Dispatcher V3 deterministic routine commands', () => {
     const planner = new V3IntentPlanner({ client: { chat: { completions: { create } } } });
 
     const plan = await planner.plan({
-      transcript: 'show me available',
+      transcript: 'INDIANA-1, show me available',
       speakerCallsign,
       runtimeContext: { runtimeId: 'runtime-1', dispatchCenterId: 'center-1', channelId: 1, roomKey: 'OPS1' },
       correlationId: 'corr-routine-1',
