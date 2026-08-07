@@ -12,6 +12,14 @@ describe('V3ConversationGate', () => {
     expect(gate.shouldProcess({ unitId: 'INDIANA-1', transcript: 'Central, show me en route' })).toMatchObject({ allowed: true, reason: 'wake_word', transcript: 'show me en route' });
   });
 
+  it('does not trigger when a wake word is only mentioned later in unit traffic', () => {
+    const gate = new V3ConversationGate({ wakeWords: ['central'] });
+    expect(gate.shouldProcess({ unitId: 'INDIANA-1', transcript: 'Indiana 2 tell central I am clear' })).toMatchObject({
+      allowed: false,
+      reason: 'not_addressed',
+    });
+  });
+
   it('uses the signaling identity for a correctly transcribed hail', () => {
     const gate = new V3ConversationGate({ wakeWords: ['central'] });
     expect(gate.shouldProcess({ unitId: 'INDIANA-1', transcript: 'Central, Indiana-1' })).toMatchObject({
@@ -71,6 +79,27 @@ describe('V3ConversationGate', () => {
     expect(gate.shouldProcess({ unitId: 'INDIANA-1', transcript: 'Fayette County Fair' })).toMatchObject({ allowed: true, reason: 'follow_up' });
     now += 31000;
     expect(gate.shouldProcess({ unitId: 'INDIANA-1', transcript: 'another location' })).toMatchObject({ allowed: false, reason: 'not_addressed' });
+  });
+
+  it('cancels a radio-hail follow-up when the unit addresses another callsign', () => {
+    const gate = new V3ConversationGate({ wakeWords: ['central'] });
+    gate.expectFollowUp('INDIANA-1', { kind: 'radio_hail', callsign: 'INDIANA-1' });
+
+    expect(gate.shouldProcess({ unitId: 'INDIANA-1', transcript: 'Indiana-2, what is your location?' })).toMatchObject({
+      allowed: false,
+      reason: 'unit_to_unit',
+    });
+
+    expect(gate.shouldProcess({ unitId: 'INDIANA-1', transcript: 'show me en route' })).toMatchObject({
+      allowed: false,
+      reason: 'not_addressed',
+    });
+  });
+
+  it('does not hijack a bare hail to another same-family unit', () => {
+    const gate = new V3ConversationGate({ wakeWords: ['central'] });
+    gate.expectFollowUp('INDIANA-1', { kind: 'radio_hail', callsign: 'INDIANA-1' });
+    expect(gate.shouldProcess({ unitId: 'INDIANA-1', transcript: 'Indiana 2' })).toMatchObject({ allowed: false, reason: 'unit_to_unit' });
   });
 
   it('always passes protected emergency traffic', () => {
