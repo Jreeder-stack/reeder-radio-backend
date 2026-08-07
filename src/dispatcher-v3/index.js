@@ -34,6 +34,7 @@ export {
 } from './cadGateway.js';
 
 export { UnitIdentityService } from './unitIdentity.js';
+export { V3OperationalAlertService } from './operationalAlertService.js';
 
 export {
   V3_ACTIONS,
@@ -42,6 +43,9 @@ export {
   listV3Actions,
   validateV3ActionRequest,
 } from './actionContracts.js';
+
+export { V3ActionExecutor } from './actionExecutor.js';
+export { createDefaultV3ActionHandlers } from './defaultActionHandlers.js';
 
 export {
   DISPATCHER_RUNTIME,
