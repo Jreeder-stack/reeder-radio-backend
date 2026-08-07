@@ -12,6 +12,58 @@ describe('V3ConversationGate', () => {
     expect(gate.shouldProcess({ unitId: 'INDIANA-1', transcript: 'Central, show me en route' })).toMatchObject({ allowed: true, reason: 'wake_word', transcript: 'show me en route' });
   });
 
+  it('uses the signaling identity for a correctly transcribed hail', () => {
+    const gate = new V3ConversationGate({ wakeWords: ['central'] });
+    expect(gate.shouldProcess({ unitId: 'INDIANA-1', transcript: 'Central, Indiana-1' })).toMatchObject({
+      allowed: true,
+      reason: 'wake_word',
+      transcript: 'INDIANA-1',
+      hailSource: 'signaling_identity',
+    });
+  });
+
+  it('still recognizes a hail when STT drops the unit number', () => {
+    const gate = new V3ConversationGate({ wakeWords: ['central'] });
+    expect(gate.shouldProcess({ unitId: 'INDIANA-1', transcript: 'Central, Indiana' })).toMatchObject({
+      allowed: true,
+      reason: 'wake_word',
+      transcript: 'INDIANA-1',
+      hailSource: 'signaling_identity',
+      heardTranscript: 'Indiana',
+    });
+  });
+
+  it('normalizes common spoken-number STT variants against the signaling identity', () => {
+    const gate = new V3ConversationGate({ wakeWords: ['central'] });
+    for (const transcript of ['Central, Indiana one', 'Central Indiana won', 'Central, Indiana 1']) {
+      expect(gate.shouldProcess({ unitId: 'INDIANA-1', transcript })).toMatchObject({
+        allowed: true,
+        reason: 'wake_word',
+        transcript: 'INDIANA-1',
+        hailSource: 'signaling_identity',
+      });
+    }
+  });
+
+  it('treats a wake-word-only transmission as a hail from the known transmitting unit', () => {
+    const gate = new V3ConversationGate({ wakeWords: ['central'] });
+    expect(gate.shouldProcess({ unitId: 'INDIANA-1', transcript: 'Central' })).toMatchObject({
+      allowed: true,
+      reason: 'wake_word',
+      transcript: 'INDIANA-1',
+      hailSource: 'signaling_identity',
+    });
+  });
+
+  it('does not mistake an actual command for a hail', () => {
+    const gate = new V3ConversationGate({ wakeWords: ['central'] });
+    expect(gate.shouldProcess({ unitId: 'INDIANA-1', transcript: 'Central, can you show me en route' })).toMatchObject({
+      allowed: true,
+      reason: 'wake_word',
+      transcript: 'can you show me en route',
+    });
+  });
+
   it('accepts a timed follow-up without another wake word', () => {
     let now = 1000;
     const gate = new V3ConversationGate({ wakeWords: ['central'], pendingMs: 30000, now: () => now });
