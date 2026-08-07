@@ -7,6 +7,7 @@ import com.google.gson.Gson
 import com.reedersystems.commandcomms.BuildConfig
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import okhttp3.Cookie
 import okhttp3.CookieJar
@@ -75,6 +76,16 @@ class ApiClient private constructor(context: Context) {
     fun saveFcmToken(token: String) {
         fcmPrefs.edit().putString(FCM_TOKEN_KEY, token).apply()
         Log.d(TAG, "FCM token persisted to SharedPreferences")
+
+        // Phone builds do not have a dedicated radio token. If Firebase rotates
+        // the token while the session is already authenticated, push the new
+        // token immediately instead of waiting for the next signaling reconnect.
+        if (BuildConfig.RADIO_DEVICE_TYPE == "android_phone") {
+            CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+                registerPhonePresence()
+                registerFcmTokenNow(token)
+            }
+        }
     }
 
     fun getPersistedFcmToken(): String? = fcmPrefs.getString(FCM_TOKEN_KEY, null)
