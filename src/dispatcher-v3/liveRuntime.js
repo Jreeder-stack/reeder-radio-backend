@@ -11,14 +11,16 @@ import { V3ActionExecutor } from './actionExecutor.js';
 import { V3DiagnosticsJournal } from './diagnostics.js';
 import { V3SpeechPipeline } from './speechPipeline.js';
 import { V3IntentPlanner } from './intentPlanner.js';
+import { V3ConversationGate } from './conversationGate.js';
 import { materializeV3Plan } from './planMaterializer.js';
 import { composeV3Response } from './responseComposer.js';
 import { createV3CorrelationId } from './correlation.js';
 
 const TX_FRAME_MS = 20;
+const MIN_EXECUTION_CONFIDENCE = 0.7;
 
 export class V3LiveDispatcher {
-  constructor({ runtimeContext, scopes = [], diagnostics = null, planner = null, transcribe = speechToText, synthesize = textToSpeech } = {}) {
+  constructor({ runtimeContext, scopes = [], diagnostics = null, planner = null, transcribe = speechToText, synthesize = textToSpeech, conversationGate = null } = {}) {
     this.context = buildV3RuntimeContext({ ...runtimeContext, scopes });
     this.runtimeContext = this.context;
     this.identity = this.context.identity;
@@ -39,6 +41,7 @@ export class V3LiveDispatcher {
     this.executor = new V3ActionExecutor({ runtimeContext: this.context, handlers: this.handlers, diagnostics: this.diagnostics });
     this.speech = new V3SpeechPipeline({ runtimeContext: this.context, transcribe, codec: opusCodec, diagnostics: this.diagnostics });
     this.planner = planner || new V3IntentPlanner({ diagnostics: this.diagnostics });
+    this.conversationGate = conversationGate || new V3ConversationGate();
     this.synthesize = synthesize;
     this._audioListener = (frame) => this.speech.pushFrame(frame);
   }
@@ -58,6 +61,7 @@ export class V3LiveDispatcher {
   async stop() {
     audioRelayService.removeAllAudioListeners(this.identity);
     this.speech.clear();
+    this.conversationGate.clearAll();
     this._processing.clear();
     this.isRunning = false;
     this.connected = false;
@@ -93,6 +97,12 @@ export class V3LiveDispatcher {
     if (!this.isRunning || !this.matchesChannel(channelId) || unitId === this.identity) return false;
     const transmission = await this.speech.endTransmission({ unitId });
     if (!transmission?.transcript) return false;
+    const gate = this.conversationGate.shouldProcess({ unitId, transcript: transmission.transcript });
+    if (!gate.allowed) {
+      this._diag('transmission_ignored', transmission.correlationId, true, { unitId, reason: gate.reason, transcript: transmission.transcript });
+      return false;
+    }
+    transmission.transcript = gate.transcript || transmission.transcript;
     if (this._processing.has(unitId)) {
       this._diag('transmission_ignored_busy', transmission.correlationId, false, { unitId, transcript: transmission.transcript });
       return false;
@@ -108,16 +118,10 @@ export class V3LiveDispatcher {
 
   async handleEmergencyStart(channelId, unitId) {
     if (!this.isRunning || !this.matchesChannel(channelId) || unitId === this.identity) return false;
-    const correlationId = createV3CorrelationId(this.context.runtimeId);
-    try {
-      const identity = await this.unitIdentityService.resolve(unitId, { correlationId });
-      const result = await this.executor.execute({ action: 'DECLARE_EMERGENCY', input: { unitId: identity.unitId, reason: 'radio emergency button activation' } }, { correlationId });
-      this._diag('hardware_emergency_processed', correlationId, result.success, { unitId, error: result.error || null });
-      return result.success;
-    } catch (error) {
-      this._diag('hardware_emergency_failed', correlationId, false, { unitId, message: error.message });
-      return false;
-    }
+    // The signaling layer already activated hardware-button emergency state before
+    // invoking this callback. Do not activate it a second time or duplicate alerts.
+    this._diag('hardware_emergency_observed', createV3CorrelationId(this.context.runtimeId), true, { unitId, channelId });
+    return true;
   }
 
   async handleEmergencyEnd(channelId, unitId) {
@@ -131,19 +135,27 @@ export class V3LiveDispatcher {
     let result = null;
     try {
       plan = await this.planner.plan({ transcript, speakerCallsign, runtimeContext: this.context, correlationId, recentContext: this._recentContext });
+      if (plan.action !== 'NO_ACTION' && plan.action !== 'CLARIFY' && plan.confidence < MIN_EXECUTION_CONFIDENCE) {
+        plan = { action: 'CLARIFY', input: plan.input || {}, confidence: plan.confidence, clarification: 'Repeat your request.', reason: 'low_confidence' };
+      }
       if (plan.action !== 'NO_ACTION' && plan.action !== 'CLARIFY') {
-        const materialized = await materializeV3Plan(plan, { speakerCallsign, unitIdentityService: this.unitIdentityService, correlationId });
-        plan = materialized;
+        plan = await materializeV3Plan(plan, { speakerCallsign, unitIdentityService: this.unitIdentityService, correlationId });
         result = await this.executor.execute({ action: plan.action, input: plan.input }, { correlationId });
       }
     } catch (error) {
       result = { success: false, error: { code: error.code || 'CAD_UNAVAILABLE', message: error.message } };
-      plan = plan || { action: 'NO_ACTION', input: {} };
+      plan = { action: 'CLARIFY', input: {}, confidence: 0, clarification: 'Dispatcher is unable to process that request. Repeat shortly.', reason: 'processing_failure' };
       this._diag('transcript_processing_failed', correlationId, false, { speakerCallsign, message: error.message, code: error.code || null });
     }
 
+    if (plan.action === 'CLARIFY') {
+      this.conversationGate.expectFollowUp(speakerCallsign, { clarification: plan.clarification, input: plan.input || {}, correlationId });
+    } else {
+      this.conversationGate.clear(speakerCallsign);
+    }
+
     const responseText = composeV3Response({ plan, result, speakerCallsign });
-    this._remember({ transcript, action: plan.action, success: result ? result.success === true : plan.action !== 'NO_ACTION' });
+    this._remember({ transcript, action: plan.action, input: plan.input || {}, clarification: plan.clarification || null, success: result ? result.success === true : plan.action !== 'NO_ACTION' });
     if (responseText) await this._speak(responseText, correlationId);
   }
 
@@ -167,15 +179,7 @@ export class V3LiveDispatcher {
   }
 
   _diag(phase, correlationId, success = null, details = {}) {
-    this.diagnostics.record({
-      phase,
-      correlationId,
-      runtimeId: this.context.runtimeId,
-      dispatchCenterId: this.context.dispatchCenterId,
-      channelId: this.context.channelId,
-      success,
-      details,
-    });
+    this.diagnostics.record({ phase, correlationId, runtimeId: this.context.runtimeId, dispatchCenterId: this.context.dispatchCenterId, channelId: this.context.channelId, success, details });
   }
 }
 
