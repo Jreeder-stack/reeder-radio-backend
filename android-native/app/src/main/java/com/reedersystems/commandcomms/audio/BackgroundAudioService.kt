@@ -699,6 +699,7 @@ class BackgroundAudioService : Service() {
         engine.udpTransport.channelIndex = servicePrefs.channelId
         engine.stateManager.activeChannelKey = servicePrefs.channelRoomKey
         engine.udpTransport.unitId = servicePrefs.unitId ?: app.sessionPrefs.unitId ?: ""
+        engine.udpTransport.deviceId = if (com.reedersystems.commandcomms.BuildConfig.RADIO_DEVICE_TYPE == "android_phone") app.signalingClient.deviceId.orEmpty() else ""
 
         engine.udpTransport.onSocketRecreated = {
             Log.d(TAG, """{"event":"UDP_SOCKET_RECREATED_CALLBACK","newPort":${engine.udpTransport.localPort}}""")

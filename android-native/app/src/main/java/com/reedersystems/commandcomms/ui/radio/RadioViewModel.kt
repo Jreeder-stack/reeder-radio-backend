@@ -135,7 +135,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                 BackgroundAudioService.ACTION_PTT_TX_FAILED -> {
                     Log.d(TAG, "PTT_TX_FAILED received — resetting to IDLE")
                     val s = _uiState.value
-                    if (s.pttState == PttState.TRANSMITTING) {
+                    if (s.pttState == PttState.TRANSMITTING || s.pttState == PttState.CONNECTING) {
                         // Real failure: ViewModel believes TX is active. Play error tone,
                         // clean up server signaling, then reset. If pttState is already IDLE
                         // (race-condition cancellation path), no error tone and no duplicate
@@ -642,9 +642,14 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
         Log.d(TAG, "onPttDown roomKey=${channel.roomKey}")
-        app.signalingRepository.transmitPre(channel.roomKey)
-        _uiState.update { it.copy(pttState = PttState.TRANSMITTING) }
-        app.toneEngine.playTalkPermitTone()
+        if (com.reedersystems.commandcomms.BuildConfig.RADIO_DEVICE_TYPE == "android_phone") {
+            _uiState.update { it.copy(pttState = PttState.CONNECTING) }
+        } else {
+            // Preserve existing handheld behavior for T320/other radio flavors.
+            app.signalingRepository.transmitPre(channel.roomKey)
+            _uiState.update { it.copy(pttState = PttState.TRANSMITTING) }
+            app.toneEngine.playTalkPermitTone()
+        }
         pttStartJob = viewModelScope.launch {
             sendServiceIntent(BackgroundAudioService.ACTION_PTT_DOWN)
         }

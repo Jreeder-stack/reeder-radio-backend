@@ -200,7 +200,7 @@ class SignalingService {
         }
         if (socket.isRadioClient && socket.channels) {
           for (const ch of socket.channels) {
-            const refreshed = audioRelayService.refreshSubscriber(ch, socket.unitId);
+            const refreshed = audioRelayService.refreshSubscriber(ch, socket.deviceId || socket.unitId);
             if (refreshed) {
               if (!socket._lastRefreshLogMs || Date.now() - socket._lastRefreshLogMs > 60000) {
                 socket._lastRefreshLogMs = Date.now();
@@ -502,6 +502,26 @@ class SignalingService {
       validatedUnitId = sessionUser.unit_id || sessionUser.username || unitId;
       validatedUsername = sessionUser.username || username;
       validatedIsDispatcher = sessionUser.role === 'admin' || sessionUser.role === 'dispatcher' || false;
+    } else {
+      // Native Socket.IO may not carry the REST cookie. Resolve the claimed login
+      // to the canonical database unit so sibling phone/T320 endpoints group together.
+      try {
+        const userResult = await pool.query(
+          `SELECT id, username, unit_id, role FROM users
+           WHERE username = $1 OR unit_id = $1 OR username = $2 OR unit_id = $2
+           LIMIT 1`,
+          [username, unitId]
+        );
+        if (userResult.rows.length > 0) {
+          const canonicalUser = userResult.rows[0];
+          validatedUnitId = canonicalUser.unit_id || canonicalUser.username || unitId;
+          validatedUsername = canonicalUser.username || username;
+          validatedIsDispatcher = canonicalUser.role === 'admin' || canonicalUser.role === 'dispatcher' || false;
+          sessionUser = canonicalUser;
+        }
+      } catch (identityErr) {
+        console.warn('[Signaling] Canonical native identity lookup failed:', identityErr.message);
+      }
     }
 
     socket.unitId = validatedUnitId;
@@ -1602,7 +1622,7 @@ _findSocketByUnitId(unitId) {
       });
 
       socket.leave(`channel:${channelId}`);
-      audioRelayService.removeSubscriber(channelId, socket.unitId);
+      audioRelayService.removeSubscriber(channelId, socket.deviceId || socket.unitId);
     }
     if (socket.channels) socket.channels.clear();
 
@@ -1649,13 +1669,9 @@ _findSocketByUnitId(unitId) {
 
     // Per-channel guarded sweep instead of unconditional removal: handles
     // subscriptions in channels this socket never joined (e.g. stale state).
-    const subscribedChannels = audioRelayService.getChannelsForSubscriber(socket.unitId);
+    const subscribedChannels = audioRelayService.getChannelsForSubscriber(socket.deviceId || socket.unitId);
     for (const channelId of subscribedChannels) {
-      if (this._isUnitStillInChannel(socket.unitId, channelId, socket)) {
-        console.log(`[Signaling] Skipping audio relay removal for ${socket.unitId} on ${channelId}: another device for the same unit is still present`);
-        continue;
-      }
-      audioRelayService.removeSubscriber(channelId, socket.unitId);
+      audioRelayService.removeSubscriber(channelId, socket.deviceId || socket.unitId);
     }
   }
 
@@ -1945,18 +1961,18 @@ _findSocketByUnitId(unitId) {
     const subscriberPort = Number(udpPort);
 
     if (subscriberPort > 0 && subscriberAddress) {
-      audioRelayService.removeSubscriber(channelId, socket.unitId);
-      audioRelayService.addSubscriber(channelId, socket.unitId, subscriberAddress, subscriberPort);
+      audioRelayService.removeSubscriber(channelId, socket.deviceId || socket.unitId);
+      audioRelayService.addSubscriber(channelId, socket.unitId, subscriberAddress, subscriberPort, socket.deviceId || null, socket.isRadioDevice ? 'radio' : (socket.deviceType || 'native'));
       console.log(`[Signaling] SUBSCRIBER_REGISTERED unitId=${socket.unitId} channelId=${channelId} address=${subscriberAddress} port=${subscriberPort} source=${explicitIsUsable ? 'explicit' : 'peer'}`);
     } else if (subscriberPort > 0 && peerAddress && isLoopback(peerAddress) && !explicitIsUsable) {
       // Behind a same-host reverse proxy (typical prod nginx → 127.0.0.1).
       // Remove any prior poisoned subscriber entry for this unit so the
       // first inbound UDP packet can install the real address cleanly via
       // audioRelayService._handlePacket → addSubscriber(rinfo.address, rinfo.port).
-      audioRelayService.removeSubscriber(channelId, socket.unitId);
+      audioRelayService.removeSubscriber(channelId, socket.deviceId || socket.unitId);
       console.log(`[Signaling] SUBSCRIBER_DEFER_TO_UDP unitId=${socket.unitId} channelId=${channelId} reason=loopback_peer peerAddress=${peerAddress} udpAddress=${udpAddress ?? 'missing'} udpPort=${udpPort} — relay will learn real address from first inbound UDP packet (verify UDP/${audioRelayService.port || 5100} inbound is open at the firewall)`);
     } else {
-      audioRelayService.removeSubscriber(channelId, socket.unitId);
+      audioRelayService.removeSubscriber(channelId, socket.deviceId || socket.unitId);
       console.warn(`[Signaling] SUBSCRIBER_REGISTRATION_FAILED unitId=${socket.unitId} channelId=${channelId} udpPort=${udpPort ?? 'missing'} udpAddress=${udpAddress ?? 'missing'} peerAddress=${peerAddress || 'missing'} — relay will learn real address from first inbound UDP packet`);
     }
 
@@ -2009,7 +2025,7 @@ _findSocketByUnitId(unitId) {
       presence.channels = Array.from(socket.channels || []);
     }
 
-    audioRelayService.removeSubscriber(channelId, socket.unitId);
+    audioRelayService.removeSubscriber(channelId, socket.deviceId || socket.unitId);
 
     const leaveTransmission = this.activeTransmissions.get(channelId);
     if (leaveTransmission && leaveTransmission.unitId === socket.unitId) {
@@ -2112,6 +2128,9 @@ _findSocketByUnitId(unitId) {
       socket.emit(RADIO_EVENTS.PTT_GRANTED, {
         channelId,
         senderUnitId: socket.unitId,
+        requestId: data.requestId || null,
+        targetDeviceId: socket.deviceId || null,
+        originSocketId: socket.id,
         timestamp: Date.now(),
       });
       console.log(`[Signaling] PTT_GRANTED unitId=${socket.unitId} channelId=${channelId}`);
@@ -2272,7 +2291,7 @@ _findSocketByUnitId(unitId) {
 
     for (const ch of socket.channels || []) {
       if (ch === channelId) {
-        const refreshed = audioRelayService.refreshSubscriber(ch, socket.unitId);
+        const refreshed = audioRelayService.refreshSubscriber(ch, socket.deviceId || socket.unitId);
         console.log(`[Signaling] TX_START_SUBSCRIBER_REFRESH unitId=${socket.unitId} channelId=${ch} refreshed=${refreshed}`);
       }
     }

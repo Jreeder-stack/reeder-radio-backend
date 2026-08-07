@@ -128,42 +128,91 @@ class AudioRelayService {
     }
   }
 
-  addSubscriber(channelId, unitId, address, port) {
+  addSubscriber(channelId, unitId, address, port, deviceId = null, deviceType = null) {
     const key = canonicalChannelKey(channelId);
     if (!this.subscribers.has(key)) this.subscribers.set(key, new Map());
-    const existingSub = this.subscribers.get(key).get(unitId);
-    if (existingSub && (existingSub.address !== address || existingSub.port !== port)) {
-      console.log(`[AudioRelay] SUBSCRIBER_NAT_CHANGE unitId=${unitId} channelId=${key} oldAddr=${existingSub.address}:${existingSub.port} newAddr=${address}:${port}`);
+    const subs = this.subscribers.get(key);
+    let subscriberKey = deviceId || null;
+
+    if (!subscriberKey) {
+      for (const [candidateKey, candidate] of subs) {
+        if (candidate.unitId === unitId && candidate.address === address && candidate.port === port) {
+          subscriberKey = candidateKey;
+          break;
+        }
+      }
     }
-    this.subscribers.get(key).set(unitId, { address, port, lastSeen: Date.now() });
-    if (!existingSub) {
-      console.log(`[AudioRelay] SUBSCRIBER_ADDED unitId=${unitId} channelId=${key} addr=${address}:${port}`);
+
+    // V1 radios do not carry deviceId. If signaling already registered exactly one
+    // non-phone endpoint for this unit, bind/update that entry (including NAT changes).
+    if (!subscriberKey) {
+      const candidates = [...subs.entries()].filter(([, candidate]) =>
+        candidate.unitId === unitId && candidate.deviceId && candidate.deviceType !== 'android_phone'
+      );
+      if (candidates.length === 1) subscriberKey = candidates[0][0];
     }
+
+    if (!subscriberKey) subscriberKey = `legacy:${unitId}:${address}:${port}`;
+    const existingSub = subs.get(subscriberKey);
+    subs.set(subscriberKey, {
+      unitId,
+      deviceId: deviceId || existingSub?.deviceId || null,
+      deviceType: deviceType || existingSub?.deviceType || null,
+      address,
+      port,
+      lastSeen: Date.now(),
+    });
   }
 
-  refreshSubscriber(channelId, unitId) {
-    const key = canonicalChannelKey(channelId);
-    const subs = this.subscribers.get(key);
-    if (!subs) {
-      console.log(`[AudioRelay] SUBSCRIBER_REFRESH_NO_CHANNEL unitId=${unitId} channelId=${key} subscriberChannels=[${[...this.subscribers.keys()].join(',')}]`);
-      return false;
-    }
-    const sub = subs.get(unitId);
-    if (sub) {
-      sub.lastSeen = Date.now();
+  refreshSubscriber(channelId, identifier) {
+    const subs = this.subscribers.get(canonicalChannelKey(channelId));
+    if (!subs) return false;
+    const exact = subs.get(identifier);
+    if (exact) {
+      exact.lastSeen = Date.now();
       return true;
     }
-    console.log(`[AudioRelay] SUBSCRIBER_REFRESH_NOT_FOUND unitId=${unitId} channelId=${key} channelSubscribers=[${[...subs.keys()].join(',')}]`);
-    return false;
+    let refreshed = false;
+    for (const sub of subs.values()) {
+      if (sub.unitId === identifier) {
+        sub.lastSeen = Date.now();
+        refreshed = true;
+      }
+    }
+    return refreshed;
   }
 
-  removeSubscriber(channelId, unitId) {
+  removeSubscriber(channelId, identifier) {
     const key = canonicalChannelKey(channelId);
     const subs = this.subscribers.get(key);
     if (!subs) return;
-    subs.delete(unitId);
-    console.log(`[AudioRelay] SUBSCRIBER_REMOVED unitId=${unitId} channelId=${key}`);
+    if (!subs.delete(identifier)) {
+      for (const [subKey, sub] of [...subs]) {
+        if (sub.unitId === identifier) subs.delete(subKey);
+      }
+    }
     if (subs.size === 0) this.subscribers.delete(key);
+  }
+
+  getChannelsForSubscriber(identifier) {
+    const channels = [];
+    for (const [channelId, subs] of this.subscribers) {
+      if (subs.has(identifier) || [...subs.values()].some((sub) => sub.unitId === identifier)) {
+        channels.push(channelId);
+      }
+    }
+    return channels;
+  }
+
+  removeAllSubscriptions(identifier) {
+    for (const [channelId, subs] of this.subscribers) {
+      if (!subs.delete(identifier)) {
+        for (const [subKey, sub] of [...subs]) {
+          if (sub.unitId === identifier) subs.delete(subKey);
+        }
+      }
+      if (subs.size === 0) this.subscribers.delete(channelId);
+    }
   }
 
   setSignalingService(signalingService) {
@@ -364,14 +413,18 @@ class AudioRelayService {
     if (udpSubs) {
       let udpSendCount = 0;
       let udpSendErrors = 0;
-      for (const [subUnitId, subInfo] of udpSubs) {
-        if (subUnitId === senderUnitId) continue;
+      const sentEndpoints = new Set();
+      for (const [subKey, subInfo] of udpSubs) {
+        if ((subInfo.unitId || subKey) === senderUnitId) continue;
+        const endpointKey = `${subInfo.address}:${subInfo.port}`;
+        if (sentEndpoints.has(endpointKey)) continue;
+        sentEndpoints.add(endpointKey);
         try {
           this.socket.send(rxPayload, 0, rxPayload.length, subInfo.port, subInfo.address);
           udpSendCount++;
         } catch (err) {
           udpSendErrors++;
-          console.error(`[AudioRelay] Send error to ${subUnitId}:`, err.message);
+          console.error(`[AudioRelay] Send error to ${subKey}:`, err.message);
         }
       }
       if (AUDIO_DIAG && sequence % 100 === 0) {
@@ -900,11 +953,12 @@ class AudioRelayService {
     for (const [channelId, subs] of this.subscribers) {
       let activeCount = 0;
       let staleWarningCount = 0;
-      for (const [unitId, sub] of subs) {
+      for (const [subscriberKey, sub] of subs) {
+        const unitId = sub.unitId || subscriberKey;
         if (now - sub.lastSeen > SUBSCRIBER_TIMEOUT_MS) {
           const staleMs = now - sub.lastSeen;
-          subs.delete(unitId);
-          console.log(`[AudioRelay] SUBSCRIBER_STALE_REMOVED unitId=${unitId} channelId=${channelId} staleMs=${staleMs}`);
+          subs.delete(subscriberKey);
+          console.log(`[AudioRelay] SUBSCRIBER_STALE_REMOVED key=${subscriberKey} unitId=${unitId} channelId=${channelId} staleMs=${staleMs}`);
           if (this._signalingService) {
             try {
               this._signalingService.notifyUnitPotentiallyDisconnected(unitId, channelId);
@@ -939,7 +993,7 @@ class AudioRelayService {
 
     const parsed = this._parsePacket(msg, 0);
     if (!parsed) return;
-    const { channelId: channelIdNumeric, sequence, opusPayload, flags, timestampMs, senderUnitId } = parsed;
+    const { channelId: channelIdNumeric, sequence, opusPayload, flags, timestampMs, senderUnitId, senderDeviceId } = parsed;
 
     if (!senderUnitId) return;
 
@@ -955,7 +1009,7 @@ class AudioRelayService {
       console.log(`[AudioRelay] PACKET_RECEIVED numericId=${channelIdNumeric} resolvedKey=${channelKey} sender=${senderUnitId} seq=${sequence} from=${rinfo.address}:${rinfo.port}`);
     }
 
-    this.addSubscriber(channelKey, senderUnitId, rinfo.address, rinfo.port);
+    this.addSubscriber(channelKey, senderUnitId, rinfo.address, rinfo.port, senderDeviceId || null);
 
     if (!opusPayload || opusPayload.length === 0) {
       console.log(`[Signaling] KEEPALIVE_OK unitId=${senderUnitId} channelKey=${channelKey} addr=${rinfo.address}:${rinfo.port}`);
@@ -1047,7 +1101,7 @@ class AudioRelayService {
     if (msg.length < startOffset + RADIO_HEADER_FIXED_LEN) return null;
     let offset = startOffset;
     const version = msg.readUInt8(offset); offset += VERSION_LEN;
-    if (version !== PACKET_VERSION) return null;
+    if (version !== 1 && version !== 2) return null;
     const flags = msg.readUInt8(offset); offset += FLAGS_LEN;
     const channelId = msg.readUInt16BE(offset); offset += CHANNEL_ID_LEN;
     const sequence = msg.readUInt16BE(offset); offset += SEQUENCE_LEN;
@@ -1056,10 +1110,18 @@ class AudioRelayService {
     if (msg.length < offset + senderLen + PAYLOAD_LEN_LEN) return null;
     const senderUnitId = msg.subarray(offset, offset + senderLen).toString('utf8');
     offset += senderLen;
+    let senderDeviceId = null;
+    if (version === 2) {
+      if (msg.length < offset + 1 + PAYLOAD_LEN_LEN) return null;
+      const deviceLen = msg.readUInt8(offset); offset += 1;
+      if (msg.length < offset + deviceLen + PAYLOAD_LEN_LEN) return null;
+      senderDeviceId = deviceLen > 0 ? msg.subarray(offset, offset + deviceLen).toString('utf8') : null;
+      offset += deviceLen;
+    }
     const payloadLength = msg.readUInt16BE(offset); offset += PAYLOAD_LEN_LEN;
-    if (payloadLength < 0 || msg.length < offset + payloadLength) return null;
+    if (msg.length < offset + payloadLength) return null;
     const opusPayload = payloadLength > 0 ? msg.subarray(offset, offset + payloadLength) : Buffer.alloc(0);
-    return { channelId, sequence, timestampMs, flags, senderUnitId, opusPayload };
+    return { channelId, sequence, timestampMs, flags, senderUnitId, senderDeviceId, opusPayload };
   }
 }
 
