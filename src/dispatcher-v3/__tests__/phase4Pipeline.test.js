@@ -56,7 +56,7 @@ describe('Dispatcher V3 phase 4 pipeline', () => {
     const planner = new V3IntentPlanner({ client: null });
     for (const transcript of ['radio check', 'can you give me a radio check?', 'how do you copy me?', 'do you copy me']) {
       const plan = await planner.plan({ transcript, speakerCallsign: 'INDIANA-1', runtimeContext, correlationId: 'radio-check-1' });
-      expect(plan).toMatchObject({ action: 'RADIO_CHECK', input: {}, confidence: 1, reason: 'protected_radio_check_phrase' });
+      expect(plan).toMatchObject({ action: 'RADIO_CHECK', input: {}, confidence: 1, reason: 'deterministic_radio_check' });
       const unitIdentityService = { resolve: vi.fn(async () => { throw new Error('radio check must not resolve CAD identity'); }) };
       const materialized = await materializeV3Plan(plan, { speakerCallsign: 'INDIANA-1', unitIdentityService, correlationId: 'radio-check-1' });
       expect(materialized.input).toEqual({});
