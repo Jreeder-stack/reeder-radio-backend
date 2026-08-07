@@ -5,6 +5,7 @@ import { DispatcherV3Error, V3_ERROR_CODES } from './errors.js';
 const DEFAULT_TIMEOUT_MS = 6500;
 const CONTROL_ACTIONS = new Set(['NO_ACTION', 'CLARIFY']);
 const EMERGENCY_RX = /\b(officer\s+down|shots?\s+fired|10[-\s/]?33|ten\s+thirty[-\s]?three|emergency\s+traffic|signal\s+100|declare\s+an?\s+emergency)\b/i;
+const RADIO_CHECK_RX = /^(?:can\s+you\s+)?(?:give\s+me\s+(?:a\s+)?)?(?:radio\s+check|how\s+do\s+you\s+(?:copy|read)(?:\s+me)?|do\s+you\s+copy(?:\s+me)?|copy\s+me)\s*[?.!]*$/i;
 let defaultClient = null;
 
 export function isV3PlannerConfigured() {
@@ -24,6 +25,13 @@ export class V3IntentPlanner {
 
     if (EMERGENCY_RX.test(text)) {
       return Object.freeze({ action: V3_ACTIONS.DECLARE_EMERGENCY, input: Object.freeze({ unitRef: speakerCallsign, reason: text }), confidence: 1, reason: 'protected_emergency_phrase' });
+    }
+
+    // Radio checks are transport-level protocol, not a CAD/LLM task. Keeping this
+    // deterministic prevents an Azure planning outage from breaking a basic
+    // "radio check" exchange and avoids unnecessary unit/CAD resolution.
+    if (RADIO_CHECK_RX.test(text)) {
+      return Object.freeze({ action: V3_ACTIONS.RADIO_CHECK, input: Object.freeze({}), confidence: 1, reason: 'protected_radio_check_phrase' });
     }
 
     const client = this.client || getDefaultClient();
