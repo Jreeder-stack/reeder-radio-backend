@@ -2,6 +2,7 @@ import { V3_ACTIONS } from './actionContracts.js';
 
 const ROUTINE_ACK_ACTIONS = new Set([
   V3_ACTIONS.SET_UNIT_STATUS,
+  V3_ACTIONS.CHANGE_UNIT_ZONE,
   V3_ACTIONS.CREATE_CALL,
   V3_ACTIONS.ADD_CALL_NOTE,
   V3_ACTIONS.ASSIGN_UNIT,
@@ -27,14 +28,13 @@ export function composeV3Response({ plan, result, speakerCallsign, now = new Dat
     const code = result?.error?.code;
     if (code === 'UNIT_AMBIGUOUS') return `${unit}, I have more than one matching unit. Repeat the callsign.`;
     if (code === 'UNIT_NOT_FOUND') return `${unit}, I couldn't locate that unit in this dispatch center.`;
+    if (code === 'CALL_AMBIGUOUS') return `${unit}, which call?`;
     if (code === 'UNAUTHORIZED') return `${unit}, unable. That action isn't authorized.`;
     if (code === 'CAD_UNAVAILABLE') return `${unit}, CAD is unavailable. Try again.`;
     if (code === 'CALL_NOT_FOUND') return `${unit}, I couldn't locate that call.`;
     return `${unit}, unable to complete that request.`;
   }
 
-  // Successful routine mutations get the same concise radio acknowledgement.
-  // Spell it for TTS so it is spoken as "ten-four", never as a number.
   if (plan?.action === 'MULTI_ACTION' || ROUTINE_ACK_ACTIONS.has(plan?.action)) {
     return `Ten-four, ${formatMilitaryTimeForSpeech(now)}.`;
   }
