@@ -5,6 +5,7 @@ export const V3_ACTIONS = Object.freeze({
   RADIO_CHECK: 'RADIO_CHECK',
   TIME_CHECK: 'TIME_CHECK',
   SET_UNIT_STATUS: 'SET_UNIT_STATUS',
+  CHANGE_UNIT_ZONE: 'CHANGE_UNIT_ZONE',
   GET_CURRENT_CALL: 'GET_CURRENT_CALL',
   CREATE_CALL: 'CREATE_CALL',
   ADD_CALL_NOTE: 'ADD_CALL_NOTE',
@@ -43,6 +44,10 @@ const ACTION_DEFINITIONS = Object.freeze({
     unitId: requiredString(input.unitId, 'unitId'),
     status: requiredEnum(input.status, 'status', V3_UNIT_STATUSES),
     note: optionalString(input.note),
+  })),
+  [V3_ACTIONS.CHANGE_UNIT_ZONE]: define(['unit.write'], (input) => ({
+    unitId: requiredString(input.unitId, 'unitId'),
+    zone: requiredString(input.zone, 'zone'),
   })),
   [V3_ACTIONS.GET_CURRENT_CALL]: define(['call.read'], (input) => ({
     unitId: requiredString(input.unitId, 'unitId'),
