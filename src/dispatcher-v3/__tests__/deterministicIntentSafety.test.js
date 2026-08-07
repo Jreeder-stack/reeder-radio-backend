@@ -16,16 +16,16 @@ describe('Dispatcher V3 deterministic intent safety', () => {
   });
 
   it.each([
-    'change me to zone 2',
-    'switch me to zone 2',
-    'change zone to north',
-    'put me on zone 3',
-  ])('does not misclassify zone-change requests as a unit status: %s', (transcript) => {
-    const plan = planDeterministicV3Intent({ transcript, speakerCallsign: 'INDIANA-1' });
-    expect(plan).toMatchObject({
-      action: 'CLARIFY',
+    ['change me to zone 2', 'ZONE 2'],
+    ['switch me to zone 2', 'ZONE 2'],
+    ['change zone to north', 'NORTH'],
+    ['put me on zone 3', 'ZONE 3'],
+  ])('routes zone-change requests to the zone capability: %s', (transcript, zone) => {
+    expect(planDeterministicV3Intent({ transcript, speakerCallsign: 'INDIANA-1' })).toMatchObject({
+      action: 'CHANGE_UNIT_ZONE',
+      input: { unitRef: 'INDIANA-1', zone },
       confidence: 1,
-      reason: 'zone_change_not_yet_supported',
+      reason: 'deterministic_zone_change',
     });
   });
 });
