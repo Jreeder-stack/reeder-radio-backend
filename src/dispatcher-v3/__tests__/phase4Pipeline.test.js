@@ -1,0 +1,71 @@
+import { describe, expect, it, vi } from 'vitest';
+import { V3SpeechPipeline } from '../speechPipeline.js';
+import { V3IntentPlanner } from '../intentPlanner.js';
+import { materializeV3Plan } from '../planMaterializer.js';
+import { composeV3Response } from '../responseComposer.js';
+import { CommandLinkGateway } from '../cadGateway.js';
+
+const runtimeContext = Object.freeze({
+  runtimeId: 'runtime-4',
+  profileId: 'profile-4',
+  dispatchCenterId: 'center-4',
+  channelId: 12,
+  channelName: 'OPS 1',
+  roomKey: 'Zone1__OPS1',
+  identity: 'AI-DISPATCHER:V3',
+  cadUrl: 'https://cad.example.test',
+  cadApiKey: 'secret',
+  scopes: ['unit.read', 'unit.write', 'call.read', 'call.write'],
+});
+
+describe('Dispatcher V3 phase 4 pipeline', () => {
+  it('buffers a PTT transmission and sends PCM to STT', async () => {
+    const transcribe = vi.fn(async (pcm) => `heard ${pcm.length}`);
+    const codec = {
+      decodeOpusToPcm: vi.fn(() => Buffer.from([1, 0, 2, 0])),
+      releaseSenderDecoder: vi.fn(),
+    };
+    const pipeline = new V3SpeechPipeline({ runtimeContext, transcribe, codec });
+    pipeline.startTransmission({ unitId: 'INDIANA-1', channelId: 12, correlationId: 'corr-4' });
+    pipeline.pushFrame({ unitId: 'INDIANA-1', opusPayload: Buffer.from([9, 9]), codec: 'opus' });
+    pipeline.pushFrame({ unitId: 'INDIANA-1', opusPayload: Buffer.from([8, 8]), codec: 'opus' });
+    const result = await pipeline.endTransmission({ unitId: 'INDIANA-1' });
+    expect(result).toMatchObject({ correlationId: 'corr-4', transcript: 'heard 8', audioBytes: 8 });
+    expect(transcribe).toHaveBeenCalledTimes(1);
+    expect(codec.releaseSenderDecoder).toHaveBeenCalledWith('INDIANA-1');
+  });
+
+  it('bypasses the LLM for protected emergency traffic', async () => {
+    const planner = new V3IntentPlanner({ client: null });
+    const plan = await planner.plan({ transcript: 'Central, Indiana 1, 10-33 emergency traffic', speakerCallsign: 'INDIANA-1', runtimeContext, correlationId: 'emerg-1' });
+    expect(plan.action).toBe('DECLARE_EMERGENCY');
+    expect(plan.input.unitRef).toBe('INDIANA-1');
+    expect(plan.confidence).toBe(1);
+  });
+
+  it('materializes spoken unit references into immutable UUIDs before execution', async () => {
+    const unitIdentityService = {
+      resolve: vi.fn(async (ref) => ({ unitId: ref === 'INDIANA-2' ? 'uuid-2' : 'uuid-1', callsign: ref })),
+    };
+    const plan = await materializeV3Plan({ action: 'SET_UNIT_STATUS', input: { unitRef: 'INDIANA-2', status: 'en_route' } }, { speakerCallsign: 'INDIANA-1', unitIdentityService, correlationId: 'corr-5' });
+    expect(plan.input).toEqual({ unitId: 'uuid-2', status: 'en_route' });
+  });
+
+  it('does not falsely promise that backup is en route', () => {
+    const text = composeV3Response({ plan: { action: 'REQUEST_BACKUP', input: {} }, result: { success: true, data: { requested: true } }, speakerCallsign: 'INDIANA-1' });
+    expect(text).toBe('INDIANA-1, backup request sent.');
+    expect(text.toLowerCase()).not.toContain('en route');
+  });
+
+  it('unwraps Command Link payloads through gateway helpers', async () => {
+    const fetchImpl = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      headers: new Headers(),
+      text: async () => JSON.stringify({ success: true, unit: { id: 'uuid-1' } }),
+    }));
+    const gateway = new CommandLinkGateway(runtimeContext, { fetchImpl, maxSafeRetries: 0 });
+    const body = await gateway.get('/api/radio/unit/resolve-v3', { query: { unit_ref: 'INDIANA-1' }, correlationId: 'corr-6' });
+    expect(body.unit.id).toBe('uuid-1');
+  });
+});

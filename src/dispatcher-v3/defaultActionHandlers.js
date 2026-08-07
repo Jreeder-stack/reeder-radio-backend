@@ -18,17 +18,10 @@ export function createDefaultV3ActionHandlers({ gateway, unitIdentityService, op
     return byId;
   };
 
-  const resolveSafeCallsign = async (unitId, correlationId) => (
-    await resolveSafeIdentity(unitId, correlationId)
-  ).callsign;
-
+  const resolveSafeCallsign = async (unitId, correlationId) => (await resolveSafeIdentity(unitId, correlationId)).callsign;
   const requireOperationalAlerts = () => {
     if (!operationalAlertService) {
-      throw new DispatcherV3Error(
-        V3_ERROR_CODES.CAD_UNAVAILABLE,
-        'Command Comms operational alert service is not available',
-        { statusCode: 503, retryable: true },
-      );
+      throw new DispatcherV3Error(V3_ERROR_CODES.CAD_UNAVAILABLE, 'Command Comms operational alert service is not available', { statusCode: 503, retryable: true });
     }
     return operationalAlertService;
   };
@@ -36,21 +29,10 @@ export function createDefaultV3ActionHandlers({ gateway, unitIdentityService, op
   const recordOperationalNote = async ({ callId, note, correlationId }) => {
     if (!callId) return { recorded: false, skipped: true };
     try {
-      await gateway.request('/api/radio/note', {
-        method: 'POST',
-        correlationId,
-        body: { call_id: callId, note },
-      });
+      await gateway.post('/api/radio/note', { call_id: callId, note }, { correlationId });
       return { recorded: true, skipped: false };
     } catch (error) {
-      return {
-        recorded: false,
-        skipped: false,
-        error: {
-          code: error?.code || V3_ERROR_CODES.CAD_REJECTED,
-          message: error?.message || 'Failed to record operational alert note',
-        },
-      };
+      return { recorded: false, skipped: false, error: { code: error?.code || V3_ERROR_CODES.CAD_REJECTED, message: error?.message || 'Failed to record operational alert note' } };
     }
   };
 
@@ -60,114 +42,71 @@ export function createDefaultV3ActionHandlers({ gateway, unitIdentityService, op
 
     [V3_ACTIONS.SET_UNIT_STATUS]: async ({ input, correlationId }) => {
       const callsign = await resolveSafeCallsign(input.unitId, correlationId);
-      return gateway.request('/api/radio/status', {
-        method: 'POST', correlationId,
-        body: { unit_id: callsign, status: input.status, note: input.note || undefined },
-      });
+      return gateway.post('/api/radio/status', { unit_id: callsign, status: input.status, note: input.note || undefined }, { correlationId });
     },
 
     [V3_ACTIONS.GET_CURRENT_CALL]: async ({ input, correlationId }) => {
       const callsign = await resolveSafeCallsign(input.unitId, correlationId);
-      return gateway.request(`/api/radio/unit/${encodeURIComponent(callsign)}/call`, { correlationId });
+      return gateway.get(`/api/radio/unit/${encodeURIComponent(callsign)}/call`, { correlationId });
     },
 
     [V3_ACTIONS.CREATE_CALL]: async ({ input, correlationId }) => {
       const callsigns = [];
       for (const unitId of input.unitIds) callsigns.push(await resolveSafeCallsign(unitId, correlationId));
-      return gateway.request('/api/radio/call', {
-        method: 'POST', correlationId,
-        body: {
-          type: input.type,
-          location: input.location,
-          city: input.city || undefined,
-          municipality: input.municipality || undefined,
-          priority: input.priority || undefined,
-          description: input.description || undefined,
-          caller_name: input.callerName || undefined,
-          caller_phone: input.callerPhone || undefined,
-          zone: input.zone || undefined,
-          units: callsigns,
-        },
-      });
+      return gateway.post('/api/radio/call', {
+        type: input.type,
+        location: input.location,
+        city: input.city || undefined,
+        municipality: input.municipality || undefined,
+        priority: input.priority || undefined,
+        description: input.description || undefined,
+        caller_name: input.callerName || undefined,
+        caller_phone: input.callerPhone || undefined,
+        zone: input.zone || undefined,
+        units: callsigns,
+      }, { correlationId });
     },
 
-    [V3_ACTIONS.ADD_CALL_NOTE]: async ({ input, correlationId }) => gateway.request('/api/radio/note', {
-      method: 'POST', correlationId,
-      body: { call_id: input.callId, note: input.note, unit_id: input.unitId || undefined },
-    }),
+    [V3_ACTIONS.ADD_CALL_NOTE]: async ({ input, correlationId }) => gateway.post('/api/radio/note', {
+      call_id: input.callId, note: input.note, unit_id: input.unitId || undefined,
+    }, { correlationId }),
 
     [V3_ACTIONS.ASSIGN_UNIT]: async ({ input, correlationId }) => {
       const callsign = await resolveSafeCallsign(input.unitId, correlationId);
-      return gateway.request('/api/radio/assign', {
-        method: 'POST', correlationId,
-        body: { call_id: input.callId, unit_id: callsign },
-      });
+      return gateway.post('/api/radio/assign', { call_id: input.callId, unit_id: callsign }, { correlationId });
     },
 
     [V3_ACTIONS.CLEAR_UNIT]: async ({ input, correlationId }) => {
       const callsign = await resolveSafeCallsign(input.unitId, correlationId);
-      return gateway.request('/api/radio/clear', {
-        method: 'POST', correlationId,
-        body: { call_id: input.callId, unit_id: callsign, disposition: input.disposition || undefined },
-      });
+      return gateway.post('/api/radio/clear', { call_id: input.callId, unit_id: callsign, disposition: input.disposition || undefined }, { correlationId });
     },
 
-    [V3_ACTIONS.CLOSE_CALL]: async ({ input, correlationId }) => gateway.request('/api/radio/dispose', {
-      method: 'POST', correlationId,
-      body: { call_id: input.callId, disposition: input.disposition, unit_ids: input.unitIds, note: input.note || undefined },
-    }),
+    [V3_ACTIONS.CLOSE_CALL]: async ({ input, correlationId }) => gateway.post('/api/radio/dispose', {
+      call_id: input.callId, disposition: input.disposition, unit_ids: input.unitIds, note: input.note || undefined,
+    }, { correlationId }),
 
     [V3_ACTIONS.STATUS_CHECK]: async ({ input, correlationId }) => {
       const callsign = await resolveSafeCallsign(input.unitId, correlationId);
-      const response = await gateway.request('/api/radio/status-check', { correlationId });
+      const response = await gateway.get('/api/radio/status-check', { correlationId });
       const units = Array.isArray(response?.units) ? response.units : [];
       const unit = units.find((candidate) => String(candidate?.unit_id || '').toUpperCase() === callsign.toUpperCase());
       if (!unit) {
-        throw new DispatcherV3Error(
-          V3_ERROR_CODES.UNIT_NOT_FOUND,
-          `Unit ${callsign} was not present in the selected dispatch center status catalog`,
-          { statusCode: 404, details: { unitId: input.unitId, callsign } },
-        );
+        throw new DispatcherV3Error(V3_ERROR_CODES.UNIT_NOT_FOUND, `Unit ${callsign} was not present in the selected dispatch center status catalog`, { statusCode: 404, details: { unitId: input.unitId, callsign } });
       }
       return { unit, timestamp: response.timestamp || null };
     },
 
     [V3_ACTIONS.REQUEST_BACKUP]: async ({ input, runtimeContext, correlationId }) => {
       const identity = await resolveSafeIdentity(input.unitId, correlationId);
-      const alerts = requireOperationalAlerts();
-      const alertResult = alerts.requestBackup({
-        identity,
-        runtimeContext,
-        correlationId,
-        callId: input.callId,
-        location: input.location,
-        reason: input.reason,
-        priority: input.priority || 'urgent',
-      });
-      const note = await recordOperationalNote({
-        callId: input.callId,
-        correlationId,
-        note: `BACKUP REQUESTED by ${identity.callsign}${input.location ? ` at ${input.location}` : ''}${input.reason ? ` — ${input.reason}` : ''}`,
-      });
+      const alertResult = requireOperationalAlerts().requestBackup({ identity, runtimeContext, correlationId, callId: input.callId, location: input.location, reason: input.reason, priority: input.priority || 'urgent' });
+      const note = await recordOperationalNote({ callId: input.callId, correlationId, note: `BACKUP REQUESTED by ${identity.callsign}${input.location ? ` at ${input.location}` : ''}${input.reason ? ` — ${input.reason}` : ''}` });
       return { ...alertResult, cadNote: note };
     },
 
     [V3_ACTIONS.DECLARE_EMERGENCY]: async ({ input, runtimeContext, correlationId }) => {
       const identity = await resolveSafeIdentity(input.unitId, correlationId);
-      const alerts = requireOperationalAlerts();
-      const emergencyResult = alerts.declareEmergency({
-        identity,
-        runtimeContext,
-        correlationId,
-        callId: input.callId,
-        location: input.location,
-        reason: input.reason,
-      });
-      const note = await recordOperationalNote({
-        callId: input.callId,
-        correlationId,
-        note: `EMERGENCY ACTIVATED by ${identity.callsign}${input.location ? ` at ${input.location}` : ''}${input.reason ? ` — ${input.reason}` : ''}`,
-      });
+      const emergencyResult = requireOperationalAlerts().declareEmergency({ identity, runtimeContext, correlationId, callId: input.callId, location: input.location, reason: input.reason });
+      const note = await recordOperationalNote({ callId: input.callId, correlationId, note: `EMERGENCY ACTIVATED by ${identity.callsign}${input.location ? ` at ${input.location}` : ''}${input.reason ? ` — ${input.reason}` : ''}` });
       return { ...emergencyResult, cadNote: note };
     },
   };

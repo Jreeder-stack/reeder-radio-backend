@@ -22,6 +22,14 @@ function makeIdentityService() {
   };
 }
 
+function makeGateway() {
+  return {
+    get: vi.fn(async () => ({ success: true })),
+    post: vi.fn(async () => ({ success: true })),
+    patch: vi.fn(async () => ({ success: true })),
+  };
+}
+
 describe('V3ActionExecutor', () => {
   it('validates before invoking a handler', async () => {
     const handler = vi.fn();
@@ -49,22 +57,18 @@ describe('V3ActionExecutor', () => {
 
 describe('default V3 handlers', () => {
   it('uses a resolved callsign only after UUID/callsign identity agrees', async () => {
-    const gateway = { request: vi.fn(async () => ({ success: true })) };
+    const gateway = makeGateway();
     const identities = makeIdentityService();
     const handlers = createDefaultV3ActionHandlers({ gateway, unitIdentityService: identities });
     const result = await handlers[V3_ACTIONS.SET_UNIT_STATUS]({ input: { unitId: 'uuid-1', status: 'en_route', note: null }, correlationId: 'c1' });
     expect(result.success).toBe(true);
     expect(identities.resolve).toHaveBeenNthCalledWith(1, 'uuid-1', { correlationId: 'c1' });
     expect(identities.resolve).toHaveBeenNthCalledWith(2, 'INDIANA-1', { correlationId: 'c1' });
-    expect(gateway.request).toHaveBeenCalledWith('/api/radio/status', expect.objectContaining({
-      method: 'POST',
-      correlationId: 'c1',
-      body: expect.objectContaining({ unit_id: 'INDIANA-1', status: 'en_route' }),
-    }));
+    expect(gateway.post).toHaveBeenCalledWith('/api/radio/status', expect.objectContaining({ unit_id: 'INDIANA-1', status: 'en_route' }), { correlationId: 'c1' });
   });
 
   it('refuses callsign execution if the second resolution maps elsewhere', async () => {
-    const gateway = { request: vi.fn() };
+    const gateway = makeGateway();
     const identities = {
       resolve: vi.fn()
         .mockResolvedValueOnce({ unitId: 'uuid-1', callsign: 'INDIANA-1' })
@@ -73,58 +77,34 @@ describe('default V3 handlers', () => {
     const handlers = createDefaultV3ActionHandlers({ gateway, unitIdentityService: identities });
     await expect(handlers[V3_ACTIONS.SET_UNIT_STATUS]({ input: { unitId: 'uuid-1', status: 'en_route' }, correlationId: 'c2' }))
       .rejects.toMatchObject({ code: 'UNIT_AMBIGUOUS', statusCode: 409 });
-    expect(gateway.request).not.toHaveBeenCalled();
+    expect(gateway.post).not.toHaveBeenCalled();
   });
 
   it('executes a dedicated backup request and records a CAD note when a call exists', async () => {
-    const gateway = { request: vi.fn(async () => ({ success: true })) };
-    const operationalAlertService = {
-      requestBackup: vi.fn(() => ({ requested: true, backup: { unitId: 'INDIANA-1' } })),
-    };
-    const handlers = createDefaultV3ActionHandlers({
-      gateway,
-      unitIdentityService: makeIdentityService(),
-      operationalAlertService,
-    });
-
+    const gateway = makeGateway();
+    const operationalAlertService = { requestBackup: vi.fn(() => ({ requested: true, backup: { unitId: 'INDIANA-1' } })) };
+    const handlers = createDefaultV3ActionHandlers({ gateway, unitIdentityService: makeIdentityService(), operationalAlertService });
     const result = await handlers[V3_ACTIONS.REQUEST_BACKUP]({
       input: { unitId: 'uuid-1', callId: 'call-1', location: '100 Main St', reason: 'fight', priority: 'urgent' },
       runtimeContext: runtime,
       correlationId: 'backup-1',
     });
-
     expect(result.requested).toBe(true);
-    expect(operationalAlertService.requestBackup).toHaveBeenCalledWith(expect.objectContaining({
-      runtimeContext: runtime,
-      correlationId: 'backup-1',
-      callId: 'call-1',
-      location: '100 Main St',
-      reason: 'fight',
-      priority: 'urgent',
-    }));
-    expect(gateway.request).toHaveBeenCalledWith('/api/radio/note', expect.objectContaining({
-      method: 'POST', correlationId: 'backup-1',
-    }));
+    expect(operationalAlertService.requestBackup).toHaveBeenCalledWith(expect.objectContaining({ runtimeContext: runtime, correlationId: 'backup-1', callId: 'call-1', location: '100 Main St', reason: 'fight', priority: 'urgent' }));
+    expect(gateway.post).toHaveBeenCalledWith('/api/radio/note', expect.any(Object), { correlationId: 'backup-1' });
     expect(result.cadNote.recorded).toBe(true);
   });
 
   it('activates native emergency even if recording the CAD note fails', async () => {
-    const gateway = { request: vi.fn(async () => { throw Object.assign(new Error('CAD down'), { code: 'CAD_UNAVAILABLE' }); }) };
-    const operationalAlertService = {
-      declareEmergency: vi.fn(() => ({ activated: true, emergency: { unitId: 'INDIANA-1' } })),
-    };
-    const handlers = createDefaultV3ActionHandlers({
-      gateway,
-      unitIdentityService: makeIdentityService(),
-      operationalAlertService,
-    });
-
+    const gateway = makeGateway();
+    gateway.post.mockRejectedValue(Object.assign(new Error('CAD down'), { code: 'CAD_UNAVAILABLE' }));
+    const operationalAlertService = { declareEmergency: vi.fn(() => ({ activated: true, emergency: { unitId: 'INDIANA-1' } })) };
+    const handlers = createDefaultV3ActionHandlers({ gateway, unitIdentityService: makeIdentityService(), operationalAlertService });
     const result = await handlers[V3_ACTIONS.DECLARE_EMERGENCY]({
       input: { unitId: 'uuid-1', callId: 'call-1', location: '100 Main St', reason: 'officer needs assistance' },
       runtimeContext: runtime,
       correlationId: 'emerg-1',
     });
-
     expect(result.activated).toBe(true);
     expect(operationalAlertService.declareEmergency).toHaveBeenCalled();
     expect(result.cadNote.recorded).toBe(false);
@@ -132,7 +112,7 @@ describe('default V3 handlers', () => {
   });
 
   it('fails closed when Command Comms operational alerts are unavailable', async () => {
-    const handlers = createDefaultV3ActionHandlers({ gateway: { request: vi.fn() }, unitIdentityService: makeIdentityService() });
+    const handlers = createDefaultV3ActionHandlers({ gateway: makeGateway(), unitIdentityService: makeIdentityService() });
     await expect(handlers[V3_ACTIONS.REQUEST_BACKUP]({
       input: { unitId: 'uuid-1', callId: null, location: null, reason: null, priority: 'urgent' },
       runtimeContext: runtime,
