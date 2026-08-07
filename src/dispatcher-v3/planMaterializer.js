@@ -3,6 +3,7 @@ import { DispatcherV3Error, V3_ERROR_CODES } from './errors.js';
 
 const SINGLE_UNIT_ACTIONS = new Set([
   V3_ACTIONS.SET_UNIT_STATUS,
+  V3_ACTIONS.CHANGE_UNIT_ZONE,
   V3_ACTIONS.GET_CURRENT_CALL,
   V3_ACTIONS.ASSIGN_UNIT,
   V3_ACTIONS.CLEAR_UNIT,
@@ -11,7 +12,19 @@ const SINGLE_UNIT_ACTIONS = new Set([
   V3_ACTIONS.DECLARE_EMERGENCY,
 ]);
 
-export async function materializeV3Plan(plan, { speakerCallsign, unitIdentityService, correlationId } = {}) {
+const CONTEXTUAL_CALL_ACTIONS = new Set([
+  V3_ACTIONS.ASSIGN_UNIT,
+  V3_ACTIONS.CLEAR_UNIT,
+  V3_ACTIONS.ADD_CALL_NOTE,
+]);
+
+export async function materializeV3Plan(plan, {
+  speakerCallsign,
+  unitIdentityService,
+  operationalContextService = null,
+  operationalContext = null,
+  correlationId,
+} = {}) {
   if (!plan || typeof plan !== 'object') throw new DispatcherV3Error(V3_ERROR_CODES.INVALID_ACTION_INPUT, 'Planner result is required');
   if (plan.action === 'NO_ACTION' || plan.action === 'CLARIFY') return plan;
   if (!unitIdentityService) throw new TypeError('unitIdentityService is required');
@@ -21,6 +34,18 @@ export async function materializeV3Plan(plan, { speakerCallsign, unitIdentitySer
     const identity = await unitIdentityService.resolve(input.unitRef || speakerCallsign, { correlationId });
     input.unitId = identity.unitId;
     delete input.unitRef;
+  }
+
+  if (CONTEXTUAL_CALL_ACTIONS.has(plan.action) && !input.callId) {
+    if (!operationalContextService) {
+      throw new DispatcherV3Error(V3_ERROR_CODES.INVALID_ACTION_INPUT, 'Operational context service is required to resolve an implicit call');
+    }
+    input.callId = await operationalContextService.resolveCallId({
+      callRef: input.callRef || null,
+      operationalContext,
+      correlationId,
+    });
+    delete input.callRef;
   }
 
   if (plan.action === V3_ACTIONS.CREATE_CALL) {
@@ -46,6 +71,7 @@ export async function materializeV3Plan(plan, { speakerCallsign, unitIdentitySer
     delete input.unitRef;
   }
 
+  delete input.callRef;
   return Object.freeze({ ...plan, input: Object.freeze(input) });
 }
 
