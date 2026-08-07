@@ -6,6 +6,7 @@ import android.media.AudioFormat
 import android.media.AudioTrack
 import android.media.audiofx.LoudnessEnhancer
 import android.util.Log
+import com.reedersystems.commandcomms.BuildConfig
 import com.reedersystems.commandcomms.data.prefs.SpeakerBoostPrefs
 import kotlinx.coroutines.*
 
@@ -263,14 +264,16 @@ class AudioPlayback(
         val audioFormat = AudioFormat.ENCODING_PCM_16BIT
         val minBufferSize = AudioTrack.getMinBufferSize(SAMPLE_RATE, channelConfig, audioFormat)
         val bufferSize = maxOf(minBufferSize, OpusCodec.DECODER_FRAME_SIZE * 2 * 4)
+        val playbackUsage = if (BuildConfig.RADIO_DEVICE_TYPE == "android_phone")
+            AudioAttributes.USAGE_MEDIA else AudioAttributes.USAGE_VOICE_COMMUNICATION
 
-        Log.d(TAG, "AUDIOTRACK_INIT rate=$SAMPLE_RATE channelConfig=MONO format=PCM_16BIT minBufSize=$minBufferSize allocBufSize=$bufferSize perfMode=LOW_LATENCY ${RadioDiagLog.elapsedTag()}")
+        Log.d(TAG, "AUDIOTRACK_INIT rate=$SAMPLE_RATE channelConfig=MONO format=PCM_16BIT minBufSize=$minBufferSize allocBufSize=$bufferSize perfMode=LOW_LATENCY usage=$playbackUsage ${RadioDiagLog.elapsedTag()}")
 
         val track = try {
             AudioTrack.Builder()
                 .setAudioAttributes(
                     AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
+                        .setUsage(playbackUsage)
                         .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
                         .build()
                 )
