@@ -16,6 +16,7 @@ private const val RECEIVE_BUFFER_SIZE = 4096
 private const val RECEIVE_TIMEOUT_MS = 100
 private const val RADIO_HEADER_FIXED_LEN = 1 + 1 + 2 + 2 + 4 + 1 + 2
 private const val PACKET_VERSION: Byte = 1
+private const val PACKET_VERSION_DEVICE: Byte = 2
 private const val FLAG_FEC_HINT = 0x01
 private const val KEEPALIVE_INTERVAL_MS = 8_000L
 private const val KEEPALIVE_FAST_INTERVAL_MS = 3_000L
@@ -65,6 +66,7 @@ class UdpAudioTransport(
     var channelId: String = ""
     var channelIndex: Int = 0
     var unitId: String = ""
+    var deviceId: String = ""
     var onPacketReceived: ((packet: OpusRadioPacket) -> Unit)? = null
     var onSocketRecreated: (() -> Unit)? = null
     val localPort: Int?
@@ -287,14 +289,16 @@ class UdpAudioTransport(
         val seq = sequenceNumber++
         val senderBytes = unitId.toByteArray(Charsets.UTF_8)
         val senderLen = senderBytes.size.coerceAtMost(255)
-        val channelNumeric = channelIndex
+        val deviceBytes = deviceId.toByteArray(Charsets.UTF_8)
+        val deviceLen = deviceBytes.size.coerceAtMost(255)
+        val useDeviceVersion = deviceLen > 0
         val timestampMs = (System.currentTimeMillis() and 0xFFFFFFFFL).toInt()
-        val frame = ByteArray(RADIO_HEADER_FIXED_LEN + senderLen + audioData.size)
+        val frame = ByteArray(RADIO_HEADER_FIXED_LEN + senderLen + (if (useDeviceVersion) 1 + deviceLen else 0) + audioData.size)
         var offset = 0
-        frame[offset++] = PACKET_VERSION
+        frame[offset++] = if (useDeviceVersion) PACKET_VERSION_DEVICE else PACKET_VERSION
         frame[offset++] = FLAG_FEC_HINT.toByte()
-        frame[offset++] = ((channelNumeric shr 8) and 0xFF).toByte()
-        frame[offset++] = (channelNumeric and 0xFF).toByte()
+        frame[offset++] = ((channelIndex shr 8) and 0xFF).toByte()
+        frame[offset++] = (channelIndex and 0xFF).toByte()
         frame[offset++] = ((seq shr 8) and 0xFF).toByte()
         frame[offset++] = (seq and 0xFF).toByte()
         frame[offset++] = ((timestampMs shr 24) and 0xFF).toByte()
@@ -304,6 +308,11 @@ class UdpAudioTransport(
         frame[offset++] = senderLen.toByte()
         System.arraycopy(senderBytes, 0, frame, offset, senderLen)
         offset += senderLen
+        if (useDeviceVersion) {
+            frame[offset++] = deviceLen.toByte()
+            System.arraycopy(deviceBytes, 0, frame, offset, deviceLen)
+            offset += deviceLen
+        }
         frame[offset++] = ((audioData.size shr 8) and 0xFF).toByte()
         frame[offset++] = (audioData.size and 0xFF).toByte()
         System.arraycopy(audioData, 0, frame, offset, audioData.size)
