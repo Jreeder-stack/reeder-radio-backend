@@ -393,11 +393,30 @@ class RadioAudioEngine(private val context: Context) {
      * clear the preferred device so the OS uses the default for the chosen
      * audio source. Safe to call repeatedly.
      */
+    private fun findBuiltInMic(): AudioDeviceInfo? {
+        return try {
+            audioManager.getDevices(AudioManager.GET_DEVICES_INPUTS)
+                .firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_MIC }
+        } catch (e: Exception) {
+            Log.w(TAG, "findBuiltInMic failed: ${e.message}")
+            null
+        }
+    }
+
     private fun applyPreferredCaptureDeviceTo(record: AudioRecord) {
-        val wired = findWiredInputDevice()
+        val phoneFlavor = BuildConfig.RADIO_DEVICE_TYPE == "android_phone"
+        val preferred = if (phoneFlavor) findBuiltInMic() else findWiredInputDevice()
         try {
-            val ok = record.setPreferredDevice(wired)
-            Log.d("[AudioCapture]", "TX_PREFERRED_DEVICE accepted=$ok deviceType=${wired?.type ?: -1} accessoryPresent=${wired != null}")
+            val ok = record.setPreferredDevice(preferred)
+            Log.d(
+                "[AudioCapture]",
+                "TX_PREFERRED_DEVICE accepted=$ok deviceType=${preferred?.type ?: -1} " +
+                    "deviceName=${preferred?.productName ?: "none"} phoneFlavor=$phoneFlavor " +
+                    "accessoryPresent=${if (phoneFlavor) false else preferred != null}"
+            )
+            if (phoneFlavor && preferred == null) {
+                Log.w("[AudioCapture]", "PHONE_BUILTIN_MIC_NOT_FOUND — Android will use default MIC route")
+            }
         } catch (e: Exception) {
             Log.w("[AudioCapture]", "TX_PREFERRED_DEVICE_FAILED ${e.message}")
         }
@@ -425,17 +444,16 @@ class RadioAudioEngine(private val context: Context) {
         val deviceKey = "${Build.MANUFACTURER}/${Build.MODEL}/API${Build.VERSION.SDK_INT}"
 
         if (BuildConfig.RADIO_DEVICE_TYPE == "android_phone") {
-            // Keep phone PTT immediate and bypass the Samsung/MediaTek processed
-            // MIC path. UNPROCESSED is the cleanest handset input on Android N+
-            // and avoids vendor AGC/noise processing that produced near-zero PCM.
-            val source = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N)
-                MediaRecorder.AudioSource.UNPROCESSED else MediaRecorder.AudioSource.MIC
-            val name = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) "UNPROCESSED" else "MIC"
+            // Samsung/MediaTek SM-S156V returns near-zero PCM on AUDIO_SOURCE_UNPROCESSED
+            // (vendor HAL reports no recording solution / missing UL gain handler). Use the
+            // normal handset MIC path and explicitly pin AudioRecord to TYPE_BUILTIN_MIC.
+            val source = MediaRecorder.AudioSource.MIC
+            val name = "MIC"
             txSessionStats.audioSource = name
             cachedSourceKey = deviceKey
             cachedSourceValue = source
             cachedSourceName = name
-            Log.d("[AudioCapture]", "PHONE_TX_AUDIO_SOURCE_SELECTED source=$name reason=raw_phone_capture device=$deviceKey")
+            Log.d("[AudioCapture]", "PHONE_TX_AUDIO_SOURCE_SELECTED source=$name reason=deterministic_builtin_mic device=$deviceKey")
             return source
         }
 
@@ -621,13 +639,28 @@ class RadioAudioEngine(private val context: Context) {
             Log.d("[AudioCapture]", "PRE_CAPTURE_AUDIORECORD_INIT requestedRate=$requestedMicRate source=${txSessionStats.audioSource} minBufSize=$minBufferSize allocBufSize=$bufferSize frameMs=$CAPTURE_INTERVAL_MS ${RadioDiagLog.elapsedTag()}")
 
             val record = try {
-                AudioRecord(
-                    audioSource,
-                    requestedMicRate,
-                    AudioFormat.CHANNEL_IN_MONO,
-                    AudioFormat.ENCODING_PCM_16BIT,
-                    bufferSize
-                )
+                if (BuildConfig.RADIO_DEVICE_TYPE == "android_phone" && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    AudioRecord.Builder()
+                        .setAudioSource(MediaRecorder.AudioSource.MIC)
+                        .setAudioFormat(
+                            AudioFormat.Builder()
+                                .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                                .setSampleRate(requestedMicRate)
+                                .setChannelMask(AudioFormat.CHANNEL_IN_MONO)
+                                .build()
+                        )
+                        .setBufferSizeInBytes(bufferSize)
+                        .build()
+                        .also { Log.d("[AudioCapture]", "PHONE_AUDIORECORD_BUILDER source=MIC rate=$requestedMicRate channel=MONO buffer=$bufferSize") }
+                } else {
+                    AudioRecord(
+                        audioSource,
+                        requestedMicRate,
+                        AudioFormat.CHANNEL_IN_MONO,
+                        AudioFormat.ENCODING_PCM_16BIT,
+                        bufferSize
+                    )
+                }
             } catch (e: Exception) {
                 Log.e("[RadioError]", "AudioRecord constructor threw: ${e::class.simpleName}: ${e.message} source=${txSessionStats.audioSource} rate=$requestedMicRate method=startPreCapture", e)
                 txSessionStats.stopReason = "audiorecord_constructor_exception"
