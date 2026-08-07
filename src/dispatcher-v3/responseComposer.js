@@ -1,14 +1,12 @@
 import { V3_ACTIONS } from './actionContracts.js';
 
-const TIMESTAMPED_ACTIONS = new Set([
+const ROUTINE_ACK_ACTIONS = new Set([
   V3_ACTIONS.SET_UNIT_STATUS,
-  V3_ACTIONS.GET_CURRENT_CALL,
   V3_ACTIONS.CREATE_CALL,
   V3_ACTIONS.ADD_CALL_NOTE,
   V3_ACTIONS.ASSIGN_UNIT,
   V3_ACTIONS.CLEAR_UNIT,
   V3_ACTIONS.CLOSE_CALL,
-  V3_ACTIONS.STATUS_CHECK,
   V3_ACTIONS.REQUEST_BACKUP,
 ]);
 
@@ -18,12 +16,7 @@ const SMALL_NUMBER_WORDS = Object.freeze([
   'seventeen', 'eighteen', 'nineteen',
 ]);
 
-const TENS_WORDS = Object.freeze({
-  20: 'twenty',
-  30: 'thirty',
-  40: 'forty',
-  50: 'fifty',
-});
+const TENS_WORDS = Object.freeze({ 20: 'twenty', 30: 'thirty', 40: 'forty', 50: 'fifty' });
 
 export function composeV3Response({ plan, result, speakerCallsign, now = new Date() } = {}) {
   const unit = clean(speakerCallsign) || 'unit';
@@ -40,60 +33,27 @@ export function composeV3Response({ plan, result, speakerCallsign, now = new Dat
     return `${unit}, unable to complete that request.`;
   }
 
-  const data = result.data || {};
-  let response;
-  switch (plan.action) {
-    case V3_ACTIONS.RADIO_CHECK:
-      response = `${unit}, loud and clear.`;
-      break;
-    case V3_ACTIONS.TIME_CHECK:
-      response = `${unit}, ${formatMilitaryTimeForSpeech(data.timestamp || now)}.`;
-      break;
-    case V3_ACTIONS.SET_UNIT_STATUS:
-      response = `${unit}, showing ${statusForSpeech(plan.input?.status)}.`;
-      break;
-    case V3_ACTIONS.GET_CURRENT_CALL:
-      response = currentCallResponse(unit, data);
-      break;
-    case V3_ACTIONS.CREATE_CALL:
-      // Keep routine air traffic concise. The CAD keeps the generated call number,
-      // but the dispatcher does not read it back unless a future explicit lookup asks for it.
-      response = `${unit}, call created.`;
-      break;
-    case V3_ACTIONS.ADD_CALL_NOTE:
-      response = `${unit}, note added.`;
-      break;
-    case V3_ACTIONS.ASSIGN_UNIT:
-      response = `${unit}, assignment updated.`;
-      break;
-    case V3_ACTIONS.CLEAR_UNIT:
-      response = `${unit}, clear.`;
-      break;
-    case V3_ACTIONS.CLOSE_CALL:
-      response = `${unit}, call closed.`;
-      break;
-    case V3_ACTIONS.STATUS_CHECK:
-      response = statusCheckResponse(unit, data);
-      break;
-    case V3_ACTIONS.REQUEST_BACKUP:
-      response = `${unit}, backup request sent.`;
-      break;
-    case V3_ACTIONS.DECLARE_EMERGENCY:
-      response = `${unit}, emergency activated.`;
-      break;
-    default:
-      response = `${unit}, copy.`;
-      break;
+  // Successful routine mutations get the same concise radio acknowledgement.
+  // Spell it for TTS so it is spoken as "ten-four", never as a number.
+  if (plan?.action === 'MULTI_ACTION' || ROUTINE_ACK_ACTIONS.has(plan?.action)) {
+    return `Ten-four, ${formatMilitaryTimeForSpeech(now)}.`;
   }
 
-  return TIMESTAMPED_ACTIONS.has(plan.action) ? appendMilitaryTime(response, now) : response;
-}
-
-function appendMilitaryTime(value, now) {
-  const text = clean(value);
-  if (!text) return text;
-  const withoutPeriod = text.replace(/\.+$/, '');
-  return `${withoutPeriod}, ${formatMilitaryTimeForSpeech(now)}.`;
+  const data = result.data || {};
+  switch (plan.action) {
+    case V3_ACTIONS.RADIO_CHECK:
+      return `${unit}, loud and clear.`;
+    case V3_ACTIONS.TIME_CHECK:
+      return `${unit}, ${formatMilitaryTimeForSpeech(data.timestamp || now)}.`;
+    case V3_ACTIONS.GET_CURRENT_CALL:
+      return currentCallResponse(unit, data);
+    case V3_ACTIONS.STATUS_CHECK:
+      return statusCheckResponse(unit, data);
+    case V3_ACTIONS.DECLARE_EMERGENCY:
+      return `${unit}, emergency activated.`;
+    default:
+      return `${unit}, copy.`;
+  }
 }
 
 function currentCallResponse(unit, data) {
@@ -137,7 +97,6 @@ export function formatMilitaryTimeForSpeech(value) {
     if (hour === 0) return 'zero hundred hours';
     return `${militaryHourWords(hour)} hundred hours`;
   }
-
   return `${militaryHourWords(hour)} ${militaryMinuteWords(minute)} hours`;
 }
 
