@@ -497,6 +497,26 @@ class RadioAudioEngine(private val context: Context) {
         val deviceKey = "${Build.MANUFACTURER}/${Build.MODEL}/API${Build.VERSION.SDK_INT}"
 
         if (BuildConfig.RADIO_DEVICE_TYPE == "android_phone") {
+            val manufacturer = Build.MANUFACTURER?.uppercase() ?: ""
+            val model = Build.MODEL?.uppercase() ?: ""
+
+            // Verified on the Samsung SM-S156V from live logcat: normal MIC,
+            // UNPROCESSED and forced built-in device routing produced near-zero
+            // PCM, while VOICE_PERFORMANCE at 48 kHz on Android's default input
+            // route produced usable speech. Skip first-PTT calibration on this
+            // exact model so PTT starts immediately. Keep auto-calibration for
+            // every other Android phone model.
+            if (manufacturer == "SAMSUNG" && model == "SM-S156V" && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val src = MediaRecorder.AudioSource.VOICE_PERFORMANCE
+                val name = "VOICE_PERFORMANCE"
+                cachedSourceKey = deviceKey
+                cachedSourceValue = src
+                cachedSourceName = name
+                txSessionStats.audioSource = name
+                Log.d("[AudioCapture]", "PHONE_TX_AUDIO_SOURCE_SELECTED source=$name reason=verified_model_fast_path device=$deviceKey")
+                return src
+            }
+
             if (cachedSourceKey == deviceKey && cachedSourceValue != null) {
                 val src = cachedSourceValue!!
                 val name = cachedSourceName ?: "UNKNOWN"
