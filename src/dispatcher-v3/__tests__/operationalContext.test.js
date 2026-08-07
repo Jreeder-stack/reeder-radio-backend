@@ -2,10 +2,14 @@ import { describe, expect, it, vi } from 'vitest';
 import { V3OperationalContextService } from '../operationalContext.js';
 import { materializeV3Plan } from '../planMaterializer.js';
 
-function makeService(calls) {
+function makeService(calls, units = [
+  { unit_id: 'INDIANA-1', status: 'available', zone: 'ZONE 1' },
+  { unit_id: 'INDIANA-2', status: 'off_duty', zone: 'ZONE 1' },
+]) {
   const gateway = {
     get: vi.fn(async (path) => {
       if (path === '/api/radio/calls') return { success: true, calls };
+      if (path === '/api/radio/status-check') return { success: true, units };
       if (path.includes('/call')) return { success: true, call: null };
       throw new Error(`unexpected GET ${path}`);
     }),
@@ -21,6 +25,16 @@ function makeService(calls) {
 }
 
 describe('Dispatcher V3 operational context', () => {
+  it('includes the center-scoped unit roster and current statuses', async () => {
+    const { service } = makeService([]);
+    const snapshot = await service.snapshot({ speakerCallsign: 'INDIANA-1', correlationId: 'corr-roster' });
+
+    expect(snapshot.units).toEqual([
+      { callsign: 'INDIANA-1', name: null, status: 'available', zone: 'ZONE 1', agency: null },
+      { callsign: 'INDIANA-2', name: null, status: 'off_duty', zone: 'ZONE 1', agency: null },
+    ]);
+  });
+
   it('resolves an implicit call when exactly one active call exists', async () => {
     const { service } = makeService([
       { id: 'call-1', call_number: '2026-000123', nature: 'ALARM', location: 'WALMART', status: 'assigned' },
