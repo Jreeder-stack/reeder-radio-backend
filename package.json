@@ -7,7 +7,7 @@
     "node": "20.x"
   },
   "scripts": {
-    "start": "node --import dotenv/config --import ./src/services/strictCenterIsolationBootstrap.js src/server.js",
+    "start": "node --import dotenv/config src/server.js",
     "start:old": "node server.js",
     "build": "cd client && npm install && npm run build",
     "test": "vitest run",
@@ -47,11 +47,11 @@
     "react-router-dom": "^7.10.1",
     "sharp": "^0.34.5",
     "socket.io": "^4.8.3",
-    "tailwind-merge": "^3.4.0",
+    "tailwind-merge": "^3.3.0",
     "tailwindcss": "^4.1.17",
     "vite-plugin-circular-dependency": "^0.5.0",
     "vitest": "^4.1.4",
-    "ws": "^8.20.0",
+    "ws": "^8.18.3",
     "zustand": "^5.0.9"
   },
   "devDependencies": {
