@@ -7,6 +7,7 @@ import { initializeDatabase, isAiDispatchEnabled, getAiDispatchChannel, getAllCh
 import { aiDispatcherRuntimeManager } from './services/aiDispatcherRuntimeManager.js';
 import { isConfigured as isAzureConfigured } from './services/azureSpeechService.js';
 import { signalingService } from './services/signalingService.js';
+import { installFloorIdentityHardening } from './services/signalingFloorIdentityHardening.js';
 import { audioRelayService } from './services/audioRelayService.js';
 import { setupRecordingTap } from './services/recordingTapService.js';
 import { wsAudioBridge } from './services/wsAudioBridge.js';
@@ -68,6 +69,7 @@ async function start() {
   await audioRelayService.start(audioRelayPort);
   console.log(`Audio relay service started on UDP port ${audioRelayPort}`);
 
+  installFloorIdentityHardening(signalingService);
   signalingService.initialize(httpServer);
   audioRelayService.setSignalingService(signalingService);
   console.log('Signaling service initialized');
