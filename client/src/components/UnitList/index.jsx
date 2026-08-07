@@ -218,11 +218,11 @@ export default function UnitList() {
                   <div className="flex items-center justify-between mt-1.5 gap-2">
                     <div className="min-w-0">
                       <div className="text-[11px] text-dispatch-secondary truncate">{unit.channel || (isOffline ? 'Offline' : 'No channel')}</div>
-                      <div className="text-[10px] text-dispatch-tertiary">Radio {unit.radio_id}{unit.is_locked ? ' • LOCKED' : ''}</div>
+                      <div className="text-[10px] text-dispatch-tertiary">{unit.device_type === 'android_phone' ? 'Android Phone' : 'Radio'} {unit.radio_id}{unit.is_locked ? ' • LOCKED' : ''}</div>
                     </div>
                     <div className="flex items-center gap-1">
                       {!isOffline && <button onClick={() => handleToggleTracking(unit.unit_identity)} className={`text-[10px] px-1.5 py-0.5 rounded ${tracking ? 'bg-green-600/30 text-green-400' : 'bg-dispatch-border text-dispatch-secondary'}`}><LocationIcon tracking={tracking} /></button>}
-                      <button onClick={() => setPageTarget({ type: 'unit', id: unit.unit_identity, label: unit.unit_identity })} className="text-[10px] px-1.5 py-0.5 rounded bg-amber-600 text-white">PAGE</button>
+                      <button onClick={() => setPageTarget({ type: 'units', id: 'selected', radioIds: [radioPk], label: `${unit.unit_identity} — ${unit.device_type === 'android_phone' ? 'Android Phone' : `Radio ${unit.radio_id}`}` })} className="text-[10px] px-1.5 py-0.5 rounded bg-amber-600 text-white">PAGE</button>
                       <span className="text-[10px] px-1.5 py-0.5 rounded bg-dispatch-border text-dispatch-secondary">{isOffline ? 'OFFLINE' : (unit.status || 'ONLINE').toUpperCase()}</span>
                     </div>
                   </div>
