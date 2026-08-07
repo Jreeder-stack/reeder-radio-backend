@@ -1,8 +1,10 @@
 import pool from '../db/index.js';
 import { aiDispatcherRuntimeManager } from './aiDispatcherRuntimeManager.js';
 import { signalingService } from './signalingService.js';
+import { isConfigured as isAzureSpeechConfigured } from './azureSpeechService.js';
 import { CORE_AI_DISPATCHER_CAD_SCOPES, validateDispatcherCadIntegration } from './cadService.js';
 import { getConfiguredDispatcherRuntime, DISPATCHER_RUNTIME } from '../dispatcher-v3/runtimeSelector.js';
+import { isV3PlannerConfigured } from '../dispatcher-v3/intentPlanner.js';
 import { V3LiveDispatcher } from '../dispatcher-v3/liveRuntime.js';
 
 let installed = false;
@@ -23,6 +25,8 @@ export function installAiDispatcherV3Runtime() {
     if (!profile.dispatch_center_id || !profile.channel_id || !profile.room_key) {
       throw Object.assign(new Error('Profile requires a dispatch center and radio channel'), { statusCode: 400 });
     }
+    if (!isAzureSpeechConfigured()) throw Object.assign(new Error('Azure Speech is not configured for AI Dispatcher V3'), { statusCode: 503 });
+    if (!isV3PlannerConfigured()) throw Object.assign(new Error('Azure OpenAI is not configured for AI Dispatcher V3'), { statusCode: 503 });
 
     try {
       const requiredCadScopes = [
