@@ -12,6 +12,7 @@ import unitRouter from './unitRouter.js';
 import pttRouter from './pttRoutes.js';
 import radioConfigRouter from './radioConfigRouter.js';
 import recordingLogsRouter from './recordingLogsRouter.js';
+import phoneRadioEndpointRouter from './phoneRadioEndpointRouter.js';
 import radiosRouter from './radiosRouter.js';
 import pagingRouter from './pagingRouter.js';
 import devicesRouter from './devicesRouter.js';
@@ -32,6 +33,9 @@ export function setupRoutes(app) {
   app.use('/api/ptt', pttRouter);
   app.use('/api/radio', radioConfigRouter);
   app.use('/api/recording-logs', recordingLogsRouter);
+  // Must run before the legacy radios router so authenticated Android phones
+  // register/update their own endpoint instead of overwriting a user's T320 FCM token.
+  app.use('/api/radios', phoneRadioEndpointRouter);
   app.use('/api/radios', radiosRouter);
   app.use('/api/paging-tone', pagingRouter);
   app.use('/api/devices', devicesRouter);
