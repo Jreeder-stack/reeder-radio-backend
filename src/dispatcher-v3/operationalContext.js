@@ -29,8 +29,13 @@ export class V3OperationalContextService {
     });
   }
 
-  async resolveCallId({ callId = null, callRef = null, operationalContext = null, correlationId } = {}) {
+  async resolveCallId({ callId = null, callRef = null, operationalContext = null, preferCurrentCall = false, correlationId } = {}) {
     if (clean(callId)) return clean(callId);
+
+    const ref = normalize(callRef);
+    if (!ref && preferCurrentCall && operationalContext?.currentCall?.id) {
+      return clean(operationalContext.currentCall.id);
+    }
 
     const calls = Array.isArray(operationalContext?.activeCalls)
       ? operationalContext.activeCalls
@@ -40,7 +45,6 @@ export class V3OperationalContextService {
       throw new DispatcherV3Error(V3_ERROR_CODES.CALL_NOT_FOUND, 'There are no active calls in the selected dispatch center', { statusCode: 404 });
     }
 
-    const ref = normalize(callRef);
     if (!ref) {
       if (calls.length === 1) return getCallId(calls[0]);
       throw new DispatcherV3Error(
