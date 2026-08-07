@@ -2,6 +2,7 @@ import { AzureOpenAI } from 'openai';
 import { V3_ACTIONS, V3_UNIT_STATUSES, listV3Actions } from './actionContracts.js';
 import { DispatcherV3Error, V3_ERROR_CODES } from './errors.js';
 import { planDeterministicV3Intent } from './deterministicIntent.js';
+import { sanitizeV3OperationalContext } from './operationalContext.js';
 
 const DEFAULT_TIMEOUT_MS = 6500;
 const CONTROL_ACTIONS = new Set(['NO_ACTION', 'CLARIFY']);
@@ -20,7 +21,7 @@ export class V3IntentPlanner {
     this.diagnostics = diagnostics;
   }
 
-  async plan({ transcript, speakerCallsign, runtimeContext, correlationId, recentContext = [] } = {}) {
+  async plan({ transcript, speakerCallsign, runtimeContext, correlationId, recentContext = [], operationalContext = null } = {}) {
     const text = String(transcript || '').trim();
     if (!text) return Object.freeze({ action: 'NO_ACTION', input: {}, confidence: 1, reason: 'empty_transcript' });
 
@@ -47,7 +48,14 @@ export class V3IntentPlanner {
         response_format: { type: 'json_object' },
         messages: [
           { role: 'system', content: systemPrompt() },
-          { role: 'user', content: JSON.stringify({ transcript: text, speakerCallsign, dispatchCenterId: runtimeContext?.dispatchCenterId, channel: runtimeContext?.roomKey, recentContext: sanitizeRecent(recentContext) }) },
+          { role: 'user', content: JSON.stringify({
+            transcript: text,
+            speakerCallsign,
+            dispatchCenterId: runtimeContext?.dispatchCenterId,
+            channel: runtimeContext?.roomKey,
+            operationalContext: sanitizeV3OperationalContext(operationalContext),
+            recentContext: sanitizeRecent(recentContext),
+          }) },
         ],
       }, { signal: controller.signal });
       const raw = response?.choices?.[0]?.message?.content || '{}';
@@ -119,7 +127,7 @@ function normalizeConfidence(value) {
 }
 
 function systemPrompt() {
-  return `You are the intent planner for a public-safety radio dispatcher. Return JSON only. Never claim an action succeeded; execution happens elsewhere.\n\nAllowed operational actions: ${listV3Actions().join(', ')}. Control actions: NO_ACTION, CLARIFY.\nCanonical unit statuses: ${V3_UNIT_STATUSES.join(', ')}.\n\nFor ONE requested operation return {"action":"...","confidence":0-1,"input":{},"clarification":null,"reason":"short"}.\nFor MULTIPLE requested operations in the same transmission return {"actions":[{"action":"...","input":{}},{"action":"...","input":{}}],"confidence":0-1,"reason":"short"}. Preserve the user's requested order and include every explicitly requested operation, up to ${MAX_PLAN_ACTIONS}. Example: "create a building check at 100 Main and show me en route" must return CREATE_CALL first and SET_UNIT_STATUS second.\nUse spoken callsigns only in temporary fields named unitRef or unitRefs. Never invent UUIDs, call IDs, locations, dispositions, or facts. If required information is missing, use CLARIFY and ask one short radio question instead of emitting a partial multi-action plan. Default unitRef to the speaker when the command concerns the speaker. For CREATE_CALL requested by the speaker, include the speaker in unitRefs unless the user clearly says not to assign themselves. When recentContext shows a CLARIFY turn, treat the new transcript as the answer to that pending question and combine it with the prior input instead of restarting the request.\nMappings: SET_UNIT_STATUS input={unitRef,status,note?}; GET_CURRENT_CALL={unitRef}; CREATE_CALL={type,location,city?,municipality?,priority?,description?,unitRefs?}; ADD_CALL_NOTE={callId,note,unitRef?}; ASSIGN_UNIT={callId,unitRef}; CLEAR_UNIT={callId,unitRef,disposition?}; CLOSE_CALL={callId,disposition,unitRefs?,note?}; STATUS_CHECK={unitRef}; REQUEST_BACKUP={unitRef,callId?,location?,priority?,reason?}; DECLARE_EMERGENCY={unitRef,callId?,location?,reason?}; RADIO_CHECK/TIME_CHECK may use {unitRef?}. Do not output prose outside JSON.`;
+  return `You are the intent planner for a public-safety radio dispatcher. Return JSON only. Never claim an action succeeded; execution happens elsewhere.\n\nAllowed operational actions: ${listV3Actions().join(', ')}. Control actions: NO_ACTION, CLARIFY.\nCanonical unit statuses: ${V3_UNIT_STATUSES.join(', ')}.\n\nAct like an experienced human dispatcher. Understand natural phrasing instead of requiring scripts. Use the supplied operationalContext to resolve obvious references. If exactly one active call can safely satisfy phrases such as "the call", "that call", "attach me", "put me on it", or another implicit call reference, do NOT ask for a call number; emit the requested action and allow execution to resolve that single active call. If more than one materially plausible call exists, use CLARIFY with one short question. Never guess across dispatch centers or ambiguous units.\n\nFor ONE requested operation return {"action":"...","confidence":0-1,"input":{},"clarification":null,"reason":"short"}.\nFor MULTIPLE requested operations in the same transmission return {"actions":[{"action":"...","input":{}},{"action":"...","input":{}}],"confidence":0-1,"reason":"short"}. Preserve the user's requested order and include every explicitly requested operation, up to ${MAX_PLAN_ACTIONS}. Example: "create a building check at 100 Main and show me en route" must return CREATE_CALL first and SET_UNIT_STATUS second.\nUse spoken callsigns only in temporary fields named unitRef or unitRefs. Never invent UUIDs, call IDs, locations, dispositions, zones, or facts. Default unitRef to the speaker when the command concerns the speaker. For CREATE_CALL requested by the speaker, include the speaker in unitRefs unless the user clearly says not to assign themselves. When recentContext shows a CLARIFY turn, treat the new transcript as the answer to that pending question and combine it with the prior input instead of restarting the request.\nWhen a call is referred to naturally but no UUID is spoken, use callRef for the user's words (for example "Walmart alarm", "Smith's call", "that alarm"). If the reference is purely implicit and operationalContext makes the target unique, callRef may be omitted. Do not CLARIFY merely because callId is absent.\nMappings: SET_UNIT_STATUS input={unitRef,status,note?}; CHANGE_UNIT_ZONE={unitRef,zone}; GET_CURRENT_CALL={unitRef}; CREATE_CALL={type,location,city?,municipality?,priority?,description?,unitRefs?}; ADD_CALL_NOTE={callId?,callRef?,note,unitRef?}; ASSIGN_UNIT={callId?,callRef?,unitRef}; CLEAR_UNIT={callId?,callRef?,unitRef,disposition?}; CLOSE_CALL={callId,disposition,unitRefs?,note?}; STATUS_CHECK={unitRef}; REQUEST_BACKUP={unitRef,callId?,location?,priority?,reason?}; DECLARE_EMERGENCY={unitRef,callId?,location?,reason?}; RADIO_CHECK/TIME_CHECK may use {unitRef?}. Do not output prose outside JSON.`;
 }
 
 function sanitizeRecent(items) {
