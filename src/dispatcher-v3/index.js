@@ -9,7 +9,24 @@ export {
   normalizeV3RuntimeContext,
   validateV3RuntimeContext,
   buildV3RuntimeContext,
+  assertV3ContextMatches,
+  hasV3Scope,
+  requireV3Scopes,
+  normalizeScopes,
 } from './runtimeContract.js';
+
+export {
+  runWithV3Runtime,
+  bindV3Runtime,
+  getV3RuntimeContext,
+  assertCurrentV3Runtime,
+} from './runtimeStore.js';
+
+export {
+  createV3CorrelationId,
+  ensureV3CorrelationId,
+  childV3CorrelationId,
+} from './correlation.js';
 
 export {
   DISPATCHER_RUNTIME,
