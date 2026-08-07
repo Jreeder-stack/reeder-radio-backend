@@ -112,6 +112,8 @@ class RadioAudioEngine(private val context: Context) {
         const val TX_STALL_THRESHOLD_MS = 1000L
         private const val PROBE_SILENCE_RMS_THRESHOLD = 2.0
         private const val PROBE_FRAME_COUNT = 10
+        private const val PHONE_PROBE_FRAME_COUNT = 8
+        private const val PHONE_PROBE_MIN_RMS = 100.0
         private const val PROBE_RATE = DEFAULT_MIC_SAMPLE_RATE
 
         @Volatile
@@ -360,6 +362,57 @@ class RadioAudioEngine(private val context: Context) {
         }
     }
 
+    private fun probePhoneAudioSource(source: Int, sourceName: String): SourceProbeResult {
+        val rate = PHONE_MIC_SAMPLE_RATE
+        try {
+            val minBuf = AudioRecord.getMinBufferSize(rate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
+            if (minBuf <= 0) return SourceProbeResult(source, sourceName, 0.0, 0, 0, false, "bad_buffer")
+            val frameBytes = (rate * CAPTURE_INTERVAL_MS.toInt() / 1000) * 2
+            val record = AudioRecord.Builder()
+                .setAudioSource(source)
+                .setAudioFormat(
+                    AudioFormat.Builder()
+                        .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                        .setSampleRate(rate)
+                        .setChannelMask(AudioFormat.CHANNEL_IN_MONO)
+                        .build()
+                )
+                .setBufferSizeInBytes(maxOf(minBuf, frameBytes * 4))
+                .build()
+            try {
+                if (record.state != AudioRecord.STATE_INITIALIZED) return SourceProbeResult(source, sourceName, 0.0, 0, 0, false, "not_initialized")
+                record.startRecording()
+                val buf = ByteArray(frameBytes)
+                var sum = 0.0
+                var minSample = Int.MAX_VALUE
+                var maxSample = Int.MIN_VALUE
+                var valid = 0
+                repeat(PHONE_PROBE_FRAME_COUNT) { i ->
+                    val n = record.read(buf, 0, buf.size)
+                    if (n > 0) {
+                        val stats = RadioDiagLog.pcmStats(buf, n)
+                        sum += stats.rms
+                        minSample = minOf(minSample, stats.min)
+                        maxSample = maxOf(maxSample, stats.max)
+                        valid++
+                        Log.d("[PhoneMicTest]", "SOURCE_FRAME source=$sourceName frame=$i $stats")
+                    }
+                }
+                if (valid == 0) return SourceProbeResult(source, sourceName, 0.0, 0, 0, false, "no_frames")
+                val avg = sum / valid
+                val accepted = avg >= PHONE_PROBE_MIN_RMS
+                Log.d("[PhoneMicTest]", "SOURCE_RESULT source=$sourceName avgRms=${String.format("%.1f", avg)} min=$minSample max=$maxSample frames=$valid accepted=$accepted")
+                return SourceProbeResult(source, sourceName, avg, minSample, maxSample, accepted, if (accepted) "usable" else "low_rms")
+            } finally {
+                runCatching { record.stop() }
+                runCatching { record.release() }
+            }
+        } catch (e: Exception) {
+            Log.w("[PhoneMicTest]", "SOURCE_RESULT source=$sourceName error=${e::class.simpleName}:${e.message}")
+            return SourceProbeResult(source, sourceName, 0.0, 0, 0, false, "exception")
+        }
+    }
+
     private fun isKnownGoodDevice(): Boolean {
         val model = Build.MODEL?.uppercase() ?: ""
         val manufacturer = Build.MANUFACTURER?.uppercase() ?: ""
@@ -405,18 +458,18 @@ class RadioAudioEngine(private val context: Context) {
 
     private fun applyPreferredCaptureDeviceTo(record: AudioRecord) {
         val phoneFlavor = BuildConfig.RADIO_DEVICE_TYPE == "android_phone"
-        val preferred = if (phoneFlavor) findBuiltInMic() else findWiredInputDevice()
+        if (phoneFlavor) {
+            Log.d("[AudioCapture]", "PHONE_CAPTURE_ROUTE_DEFAULT reason=no_forced_input_device")
+            return
+        }
+        val preferred = findWiredInputDevice()
         try {
             val ok = record.setPreferredDevice(preferred)
             Log.d(
                 "[AudioCapture]",
                 "TX_PREFERRED_DEVICE accepted=$ok deviceType=${preferred?.type ?: -1} " +
-                    "deviceName=${preferred?.productName ?: "none"} phoneFlavor=$phoneFlavor " +
-                    "accessoryPresent=${if (phoneFlavor) false else preferred != null}"
+                    "deviceName=${preferred?.productName ?: "none"} phoneFlavor=false accessoryPresent=${preferred != null}"
             )
-            if (phoneFlavor && preferred == null) {
-                Log.w("[AudioCapture]", "PHONE_BUILTIN_MIC_NOT_FOUND — Android will use default MIC route")
-            }
         } catch (e: Exception) {
             Log.w("[AudioCapture]", "TX_PREFERRED_DEVICE_FAILED ${e.message}")
         }
@@ -444,17 +497,49 @@ class RadioAudioEngine(private val context: Context) {
         val deviceKey = "${Build.MANUFACTURER}/${Build.MODEL}/API${Build.VERSION.SDK_INT}"
 
         if (BuildConfig.RADIO_DEVICE_TYPE == "android_phone") {
-            // Samsung/MediaTek SM-S156V returns near-zero PCM on AUDIO_SOURCE_UNPROCESSED
-            // (vendor HAL reports no recording solution / missing UL gain handler). Use the
-            // normal handset MIC path and explicitly pin AudioRecord to TYPE_BUILTIN_MIC.
-            val source = MediaRecorder.AudioSource.MIC
-            val name = "MIC"
-            txSessionStats.audioSource = name
+            if (cachedSourceKey == deviceKey && cachedSourceValue != null) {
+                val src = cachedSourceValue!!
+                val name = cachedSourceName ?: "UNKNOWN"
+                txSessionStats.audioSource = name
+                Log.d("[AudioCapture]", "PHONE_TX_AUDIO_SOURCE_SELECTED source=$name reason=phone_mic_test_cached device=$deviceKey")
+                return src
+            }
+
+            data class PhoneCandidate(val source: Int, val name: String)
+            val candidates = mutableListOf(
+                PhoneCandidate(MediaRecorder.AudioSource.MIC, "MIC_DEFAULT"),
+                PhoneCandidate(MediaRecorder.AudioSource.VOICE_RECOGNITION, "VOICE_RECOGNITION"),
+                PhoneCandidate(MediaRecorder.AudioSource.CAMCORDER, "CAMCORDER")
+            )
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                candidates.add(PhoneCandidate(MediaRecorder.AudioSource.VOICE_PERFORMANCE, "VOICE_PERFORMANCE"))
+            }
+
+            val inputs = runCatching {
+                audioManager.getDevices(AudioManager.GET_DEVICES_INPUTS).joinToString(" | ") { d ->
+                    "id=${d.id},type=${d.type},name=${d.productName},address=${d.address}"
+                }
+            }.getOrDefault("unavailable")
+            Log.d("[PhoneMicTest]", "BEGIN device=$deviceKey rate=$PHONE_MIC_SAMPLE_RATE inputs=[$inputs] candidates=${candidates.map { it.name }}")
+
+            val results = candidates.map { probePhoneAudioSource(it.source, it.name) }
+            txSessionStats.probeResults.clear()
+            results.forEach { txSessionStats.probeResults[it.sourceName] = it.avgRms }
+            val winner = results.filter { it.reason != "exception" && it.reason != "not_initialized" && it.reason != "no_frames" }
+                .maxByOrNull { it.avgRms } ?: results.maxByOrNull { it.avgRms }
+            if (winner == null) {
+                Log.e("[PhoneMicTest]", "FAILED no microphone source could be opened")
+                txSessionStats.audioSource = "NONE"
+                return null
+            }
+
             cachedSourceKey = deviceKey
-            cachedSourceValue = source
-            cachedSourceName = name
-            Log.d("[AudioCapture]", "PHONE_TX_AUDIO_SOURCE_SELECTED source=$name reason=deterministic_builtin_mic device=$deviceKey")
-            return source
+            cachedSourceValue = winner.source
+            cachedSourceName = winner.sourceName
+            txSessionStats.audioSource = winner.sourceName
+            Log.d("[PhoneMicTest]", "WINNER source=${winner.sourceName} avgRms=${String.format("%.1f", winner.avgRms)} min=${winner.minSample} max=${winner.maxSample} accepted=${winner.accepted} all=${results.associate { it.sourceName to String.format("%.1f", it.avgRms) }}")
+            Log.d("[AudioCapture]", "PHONE_TX_AUDIO_SOURCE_SELECTED source=${winner.sourceName} reason=phone_mic_test_winner device=$deviceKey")
+            return winner.source
         }
 
         // When a wired accessory mic is attached, vendor VOIP processing on
@@ -641,7 +726,7 @@ class RadioAudioEngine(private val context: Context) {
             val record = try {
                 if (BuildConfig.RADIO_DEVICE_TYPE == "android_phone" && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                     AudioRecord.Builder()
-                        .setAudioSource(MediaRecorder.AudioSource.MIC)
+                        .setAudioSource(audioSource)
                         .setAudioFormat(
                             AudioFormat.Builder()
                                 .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
@@ -651,7 +736,7 @@ class RadioAudioEngine(private val context: Context) {
                         )
                         .setBufferSizeInBytes(bufferSize)
                         .build()
-                        .also { Log.d("[AudioCapture]", "PHONE_AUDIORECORD_BUILDER source=MIC rate=$requestedMicRate channel=MONO buffer=$bufferSize") }
+                        .also { Log.d("[AudioCapture]", "PHONE_AUDIORECORD_BUILDER source=${txSessionStats.audioSource} sourceId=$audioSource rate=$requestedMicRate channel=MONO buffer=$bufferSize route=DEFAULT") }
                 } else {
                     AudioRecord(
                         audioSource,
