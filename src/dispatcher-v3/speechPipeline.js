@@ -24,7 +24,7 @@ export class V3SpeechPipeline {
     }
     const id = ensureV3CorrelationId(correlationId, this.runtimeContext.runtimeId);
     this.sessions.set(unit, { unitId: unit, correlationId: id, chunks: [], bytes: 0, startedAt: Date.now(), dropped: false });
-    this.diagnostics?.record?.({ stage: 'ptt_started', runtimeContext: this.runtimeContext, correlationId: id, details: { unitId: unit } });
+    this._diag('ptt_started', id, true, { unitId: unit });
     return id;
   }
 
@@ -36,7 +36,7 @@ export class V3SpeechPipeline {
     try {
       pcm = codec === 'pcm' ? Buffer.from(opusPayload) : this.codec.decodeOpusToPcm(opusPayload, unit);
     } catch (error) {
-      this.diagnostics?.record?.({ stage: 'audio_decode_failed', runtimeContext: this.runtimeContext, correlationId: session.correlationId, success: false, details: { unitId: unit, message: error.message } });
+      this._diag('audio_decode_failed', session.correlationId, false, { unitId: unit, message: error.message });
       return false;
     }
     if (session.bytes + pcm.length > this.maxPcmBytes) {
@@ -56,20 +56,16 @@ export class V3SpeechPipeline {
     this.codec.releaseSenderDecoder?.(unit);
     const pcm = Buffer.concat(session.chunks);
     if (pcm.length === 0) {
-      this.diagnostics?.record?.({ stage: 'ptt_empty', runtimeContext: this.runtimeContext, correlationId: session.correlationId, success: false, details: { unitId: unit } });
+      this._diag('ptt_empty', session.correlationId, false, { unitId: unit });
       return { unitId: unit, correlationId: session.correlationId, transcript: '', audioBytes: 0 };
     }
     const started = Date.now();
     try {
       const transcript = String(await this.transcribe(pcm) || '').trim();
-      this.diagnostics?.record?.({
-        stage: 'stt_completed', runtimeContext: this.runtimeContext, correlationId: session.correlationId,
-        success: true, latencyMs: Date.now() - started,
-        details: { unitId: unit, transcript, audioBytes: pcm.length, truncated: session.dropped },
-      });
+      this._diag('stt_completed', session.correlationId, true, { unitId: unit, transcript, audioBytes: pcm.length, truncated: session.dropped }, Date.now() - started);
       return { unitId: unit, correlationId: session.correlationId, transcript, audioBytes: pcm.length, truncated: session.dropped };
     } catch (error) {
-      this.diagnostics?.record?.({ stage: 'stt_failed', runtimeContext: this.runtimeContext, correlationId: session.correlationId, success: false, latencyMs: Date.now() - started, details: { unitId: unit, message: error.message } });
+      this._diag('stt_failed', session.correlationId, false, { unitId: unit, message: error.message }, Date.now() - started);
       throw error;
     }
   }
@@ -83,6 +79,19 @@ export class V3SpeechPipeline {
   clear() {
     for (const unitId of this.sessions.keys()) this.codec.releaseSenderDecoder?.(unitId);
     this.sessions.clear();
+  }
+
+  _diag(phase, correlationId, success, details, latencyMs = null) {
+    this.diagnostics?.record?.({
+      phase,
+      correlationId,
+      runtimeId: this.runtimeContext.runtimeId,
+      dispatchCenterId: this.runtimeContext.dispatchCenterId,
+      channelId: this.runtimeContext.channelId,
+      success,
+      latencyMs,
+      details,
+    });
   }
 }
 
