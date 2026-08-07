@@ -38,6 +38,24 @@ describe('Dispatcher V3 operational context', () => {
     await expect(service.resolveCallId()).rejects.toMatchObject({ code: 'CALL_AMBIGUOUS' });
   });
 
+  it('prefers the transmitting unit current call when the action is current-call scoped', async () => {
+    const { service } = makeService([
+      { id: 'call-1', nature: 'ALARM', location: 'WALMART', status: 'assigned' },
+      { id: 'call-2', nature: 'DOMESTIC', location: 'MAIN ST', status: 'assigned' },
+    ]);
+
+    await expect(service.resolveCallId({
+      preferCurrentCall: true,
+      operationalContext: {
+        currentCall: { id: 'call-2' },
+        activeCalls: [
+          { id: 'call-1', nature: 'ALARM', location: 'WALMART' },
+          { id: 'call-2', nature: 'DOMESTIC', location: 'MAIN ST' },
+        ],
+      },
+    })).resolves.toBe('call-2');
+  });
+
   it('resolves a natural call reference by nature or location', async () => {
     const { service } = makeService([
       { id: 'call-1', nature: 'ALARM', location: 'WALMART', status: 'assigned' },
