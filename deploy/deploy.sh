@@ -1,7 +1,6 @@
 #!/bin/bash
 set -euo pipefail
 
-# Redeploy trigger: conversational AI dispatcher + V2 production flag.
 APP_DIR="${APP_DIR:-$(cd "$(dirname "$0")/.." && pwd)}"
 DEPLOY_BRANCH="${DEPLOY_BRANCH:-main}"
 
@@ -21,8 +20,6 @@ if [ ! -f "$APP_DIR/package.json" ]; then
   echo "ERROR: APP_DIR ($APP_DIR) does not look like the project root. Aborting."
   exit 1
 fi
-# Best-effort chown to self — skip silently if not permitted (normal case:
-# git pull already ran as this user so the files are owned correctly).
 chown -R "$(whoami):$(whoami)" "$APP_DIR" 2>/dev/null || echo "(chown skipped — files already correctly owned, no action needed)"
 
 echo "[3/6] Installing backend dependencies..."
@@ -37,10 +34,16 @@ npm run build
 cd ..
 
 echo "[6/6] Restarting application..."
-if pm2 describe command-comms &>/dev/null; then
-  pm2 restart deploy/ecosystem.config.cjs --update-env
+# PM2 can retain stale metadata for a deleted/missing process. A successful
+# `pm2 describe` therefore does not guarantee `pm2 restart` will work. Try the
+# normal restart first, then recover by deleting the stale entry and starting
+# cleanly from the ecosystem file.
+if pm2 restart deploy/ecosystem.config.cjs --update-env; then
+  echo "PM2 restart succeeded."
 else
-  pm2 start deploy/ecosystem.config.cjs
+  echo "PM2 restart failed; clearing stale process metadata and starting cleanly..."
+  pm2 delete command-comms 2>/dev/null || true
+  pm2 start deploy/ecosystem.config.cjs --update-env
 fi
 pm2 save
 
