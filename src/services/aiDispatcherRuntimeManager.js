@@ -1,11 +1,16 @@
 import crypto from 'crypto';
-import pool, { getAiDispatchChannel, getAllChannels, isAiDispatchEnabled, getStatusChecksEnabledState } from '../db/index.js';
-import { AIDispatcher } from './aiDispatchService.js';
-import { AIDispatcherSignaling } from './aiDispatcherSignaling.js';
+import pool, {
+  getAiDispatchChannel,
+  getAllChannels,
+  isAiDispatchEnabled,
+  getStatusChecksEnabledState,
+} from '../db/index.js';
 import { signalingService } from './signalingService.js';
 import { isConfigured as isAzureConfigured } from './azureSpeechService.js';
-import { bindRuntime, runWithRuntime } from './runtimeContext.js';
 import { CORE_AI_DISPATCHER_CAD_SCOPES, validateDispatcherCadIntegration } from './cadService.js';
+import { V3LiveDispatcher } from '../dispatcher-v3/liveRuntime.js';
+import { isV3PlannerConfigured } from '../dispatcher-v3/intentPlanner.js';
+import { setActiveDispatcherCompatibility } from './aiDispatchService.js';
 
 function clean(value) {
   const text = String(value ?? '').trim();
@@ -73,7 +78,7 @@ export class AIDispatcherRuntimeManager {
       await pool.query('CREATE INDEX IF NOT EXISTS idx_ai_dispatcher_profiles_enabled ON ai_dispatcher_profiles(enabled)');
       await pool.query('CREATE INDEX IF NOT EXISTS idx_ai_dispatcher_profiles_center ON ai_dispatcher_profiles(dispatch_center_id)');
       await pool.query('UPDATE ai_dispatcher_profiles SET agency_id = NULL WHERE agency_id IS NOT NULL');
-      await this._migrateLegacyProfile();
+      await this._migrateSingleProfileSettings();
     })().catch((error) => {
       this._schemaPromise = null;
       throw error;
@@ -81,7 +86,10 @@ export class AIDispatcherRuntimeManager {
     return this._schemaPromise;
   }
 
-  async _migrateLegacyProfile() {
+  // One-time compatibility migration from the original global AI settings into
+  // the profile model. This migrates configuration only; it does not load the
+  // removed legacy dispatcher runtime.
+  async _migrateSingleProfileSettings() {
     const count = await pool.query('SELECT COUNT(*)::int AS count FROM ai_dispatcher_profiles');
     if ((count.rows[0]?.count || 0) > 0) return;
 
@@ -94,7 +102,11 @@ export class AIDispatcherRuntimeManager {
     let center = null;
     const envCenter = clean(process.env.CAD_DISPATCH_CENTER_ID);
     if (envCenter) {
-      center = { id: envCenter, name: process.env.CAD_DISPATCH_CENTER_NAME || null, code: process.env.CAD_DISPATCH_CENTER_CODE || null };
+      center = {
+        id: envCenter,
+        name: process.env.CAD_DISPATCH_CENTER_NAME || null,
+        code: process.env.CAD_DISPATCH_CENTER_CODE || null,
+      };
     } else {
       const centers = await pool.query(`
         SELECT dispatch_center_id AS id,
@@ -130,12 +142,16 @@ export class AIDispatcherRuntimeManager {
       center?.id || null,
       center?.name || null,
       center?.code || null,
-      clean(process.env.CAD_AGENCY_ID),
+      null,
       `AI-DISPATCHER:${id.slice(0, 8).toUpperCase()}`,
       statusSetting.enabled !== false,
       complete ? null : 'Select a radio channel and Command Link dispatch center before enabling this profile.',
     ]);
-    this.log('LEGACY_PROFILE_MIGRATED', { enabled: enabled && complete, channel: channel?.room_key, dispatchCenterId: center?.id || null });
+    this.log('PROFILE_SETTINGS_MIGRATED', {
+      enabled: enabled && complete,
+      channel: channel?.room_key,
+      dispatchCenterId: center?.id || null,
+    });
   }
 
   async initialize() {
@@ -153,6 +169,7 @@ export class AIDispatcherRuntimeManager {
     const ids = [...this.runtimes.keys()];
     await Promise.allSettled(ids.map((id) => this.stopProfile(id, { persist: false })));
     this.initialized = false;
+    setActiveDispatcherCompatibility(null);
   }
 
   async _listRows() {
@@ -185,10 +202,16 @@ export class AIDispatcherRuntimeManager {
   async fetchCadCenters() {
     const cadUrl = clean(process.env.CAD_URL)?.replace(/\/+$/, '');
     const apiKey = clean(process.env.CAD_API_KEY);
-    if (!cadUrl || !apiKey) throw Object.assign(new Error('CAD integration is not configured'), { statusCode: 503 });
-    const response = await fetch(`${cadUrl}/api/radio/dispatch-centers`, { headers: { 'X-API-Key': apiKey, Accept: 'application/json' } });
+    if (!cadUrl || !apiKey) {
+      throw Object.assign(new Error('CAD integration is not configured'), { statusCode: 503 });
+    }
+    const response = await fetch(`${cadUrl}/api/radio/dispatch-centers`, {
+      headers: { 'X-API-Key': apiKey, Accept: 'application/json' },
+    });
     const body = await response.json().catch(() => ({}));
-    if (!response.ok) throw Object.assign(new Error(body.error || `CAD returned HTTP ${response.status}`), { statusCode: response.status });
+    if (!response.ok) {
+      throw Object.assign(new Error(body.error || `CAD returned HTTP ${response.status}`), { statusCode: response.status });
+    }
     return Array.isArray(body.dispatchCenters) ? body.dispatchCenters : [];
   }
 
@@ -200,15 +223,17 @@ export class AIDispatcherRuntimeManager {
   async _normalizeInput(input, existing = null) {
     const channels = await getAllChannels();
     const requestedChannel = input.channelId ?? input.channel_id ?? input.channel ?? existing?.channel_id ?? existing?.room_key;
-    const channel = channels.find((item) => String(item.id) === String(requestedChannel) || item.room_key === requestedChannel || item.name === requestedChannel);
+    const channel = channels.find((item) => (
+      String(item.id) === String(requestedChannel)
+      || item.room_key === requestedChannel
+      || item.name === requestedChannel
+    ));
     if (!channel) throw Object.assign(new Error('Select a valid enabled radio channel'), { statusCode: 400 });
 
     const centers = await this.fetchCadCenters();
     const centerId = clean(input.dispatchCenterId ?? input.dispatch_center_id ?? existing?.dispatch_center_id);
     const center = centers.find((item) => String(item.id) === String(centerId));
     if (!center) throw Object.assign(new Error('Select a valid Command Link dispatch center'), { statusCode: 400 });
-
-    const agencyId = null;
 
     const name = clean(input.name ?? existing?.name) || `${center.name || center.code} AI Dispatcher`;
     const enabled = input.enabled === undefined ? !!existing?.enabled : !!input.enabled;
@@ -225,7 +250,7 @@ export class AIDispatcherRuntimeManager {
       dispatchCenterId: String(center.id),
       dispatchCenterName: center.name || null,
       dispatchCenterCode: center.code || null,
-      agencyId,
+      agencyId: null,
       statusChecksEnabled,
     };
   }
@@ -242,9 +267,20 @@ export class AIDispatcherRuntimeManager {
         agency_id, identity, status_checks_enabled, last_error, updated_at
       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,NULL,NOW())
       RETURNING *
-    `, [id, normalized.name, normalized.enabled, normalized.channelId, normalized.channelName, normalized.roomKey,
-      normalized.dispatchCenterId, normalized.dispatchCenterName, normalized.dispatchCenterCode,
-      normalized.agencyId, identity, normalized.statusChecksEnabled]);
+    `, [
+      id,
+      normalized.name,
+      normalized.enabled,
+      normalized.channelId,
+      normalized.channelName,
+      normalized.roomKey,
+      normalized.dispatchCenterId,
+      normalized.dispatchCenterName,
+      normalized.dispatchCenterCode,
+      null,
+      identity,
+      normalized.statusChecksEnabled,
+    ]);
     if (normalized.enabled) await this.startProfile(id);
     return publicProfile(result.rows[0]);
   }
@@ -258,11 +294,20 @@ export class AIDispatcherRuntimeManager {
       UPDATE ai_dispatcher_profiles SET
         name=$2, enabled=$3, channel_id=$4, channel_name=$5, room_key=$6,
         dispatch_center_id=$7, dispatch_center_name=$8, dispatch_center_code=$9,
-        agency_id=$10, status_checks_enabled=$11, last_error=NULL, updated_at=NOW()
+        agency_id=NULL, status_checks_enabled=$10, last_error=NULL, updated_at=NOW()
       WHERE id=$1 RETURNING *
-    `, [id, normalized.name, normalized.enabled, normalized.channelId, normalized.channelName, normalized.roomKey,
-      normalized.dispatchCenterId, normalized.dispatchCenterName, normalized.dispatchCenterCode,
-      normalized.agencyId, normalized.statusChecksEnabled]);
+    `, [
+      id,
+      normalized.name,
+      normalized.enabled,
+      normalized.channelId,
+      normalized.channelName,
+      normalized.roomKey,
+      normalized.dispatchCenterId,
+      normalized.dispatchCenterName,
+      normalized.dispatchCenterCode,
+      normalized.statusChecksEnabled,
+    ]);
     if (normalized.enabled) await this.startProfile(id);
     return publicProfile(result.rows[0]);
   }
@@ -295,81 +340,92 @@ export class AIDispatcherRuntimeManager {
   async startProfile(id) {
     await this.ensureSchema();
     if (this.runtimes.has(id)) return this.runtimes.get(id);
+
     const profile = await this.getProfileRow(id);
     if (!profile) throw Object.assign(new Error('AI dispatcher profile not found'), { statusCode: 404 });
     if (!profile.dispatch_center_id || !profile.channel_id || !profile.room_key) {
       throw Object.assign(new Error('Profile requires a dispatch center and radio channel'), { statusCode: 400 });
     }
-    if (!isAzureConfigured()) throw Object.assign(new Error('Azure Speech is not configured'), { statusCode: 503 });
+    if (!isAzureConfigured()) {
+      throw Object.assign(new Error('Azure Speech is not configured'), { statusCode: 503 });
+    }
+    if (!isV3PlannerConfigured()) {
+      throw Object.assign(new Error('Azure OpenAI is not configured for AI Dispatcher V3'), { statusCode: 503 });
+    }
 
-    const context = this._runtimeContext(profile);
     try {
-      const runtime = await runWithRuntime(context, async () => {
-        const requiredCadScopes = [
-          ...CORE_AI_DISPATCHER_CAD_SCOPES,
-          ...(profile.status_checks_enabled !== false
-            ? ['status_check.read', 'status_check.write']
-            : []),
-        ];
-        const cadPreflight = await validateDispatcherCadIntegration({ requiredScopes: requiredCadScopes });
-        if (!cadPreflight.success) {
-          const error = new Error(`CAD readiness check failed at ${cadPreflight.stage || 'unknown'}: ${cadPreflight.error || 'unknown error'}`);
-          error.statusCode = cadPreflight.statusCode || 503;
-          error.cadPreflight = cadPreflight;
-          throw error;
-        }
-        this.log('CAD_PREFLIGHT_OK', {
-          id: profile.id,
-          dispatchCenterId: cadPreflight.dispatchCenterId,
-          activeCallCount: cadPreflight.activeCallCount,
-          scopes: cadPreflight.scopes,
-        });
+      const requiredCadScopes = [
+        ...CORE_AI_DISPATCHER_CAD_SCOPES,
+        ...(profile.status_checks_enabled !== false ? ['status_check.read', 'status_check.write'] : []),
+      ];
+      const cadPreflight = await validateDispatcherCadIntegration({ requiredScopes: requiredCadScopes });
+      if (!cadPreflight.success) {
+        const error = new Error(`CAD readiness check failed at ${cadPreflight.stage || 'unknown'}: ${cadPreflight.error || 'unknown error'}`);
+        error.statusCode = cadPreflight.statusCode || 503;
+        error.cadPreflight = cadPreflight;
+        throw error;
+      }
 
-        const dispatcher = new AIDispatcher({
-          profileManaged: true,
-          profileId: profile.id,
-          profileName: profile.name,
-          dispatchCenterId: profile.dispatch_center_id,
-          agencyId: profile.agency_id,
-          identity: profile.identity,
-          statusChecksEnabled: profile.status_checks_enabled,
-          runtimeContext: context,
-        });
-        await dispatcher.start(profile.channel_name || profile.room_key, { roomKey: profile.room_key });
-        if (!dispatcher.isRunning) throw new Error('Dispatcher did not enter running state');
-
-        const adapter = new AIDispatcherSignaling();
-        adapter.initialize(dispatcher);
-        for (const alias of dispatcher.channelAliases) adapter.setActiveChannel(alias);
-        if (dispatcher.configuredChannel) adapter.setActiveChannel(dispatcher.configuredChannel);
-        if (dispatcher.displayChannel) adapter.setActiveChannel(dispatcher.displayChannel);
-
-        const subscriptions = [];
-        const allowed = async (data) => dispatcher.matchesChannel(data.channelId);
-        subscriptions.push(signalingService.onPttStart(bindRuntime(context, async (data) => {
-          if (await allowed(data)) await adapter.handlePttStart(data.channelId, data.unitId, data.isEmergency);
-        })));
-        subscriptions.push(signalingService.onPttEnd(bindRuntime(context, async (data) => {
-          if (await allowed(data)) await adapter.handlePttEnd(data.channelId, data.unitId, data.gracePeriodMs);
-        })));
-        subscriptions.push(signalingService.onEmergencyStart(bindRuntime(context, async (data) => {
-          if (await allowed(data)) await adapter.handleEmergencyStart(data.channelId, data.unitId);
-        })));
-        subscriptions.push(signalingService.onEmergencyEnd(bindRuntime(context, async (data) => {
-          if (await allowed(data)) await adapter.handleEmergencyEnd(data.channelId, data.unitId);
-        })));
-
-        return { profile, context, dispatcher, adapter, subscriptions, startedAt: new Date().toISOString() };
+      const context = this._runtimeContext(profile);
+      const dispatcher = new V3LiveDispatcher({
+        runtimeContext: context,
+        scopes: cadPreflight.scopes || requiredCadScopes,
       });
+      await dispatcher.start();
+      if (!dispatcher.isRunning) throw new Error('Dispatcher V3 did not enter running state');
+
+      const subscriptions = [];
+      const allowed = (data) => dispatcher.matchesChannel(data.channelId);
+      subscriptions.push(signalingService.onPttStart(async (data) => {
+        if (allowed(data)) await dispatcher.handlePttStart(data.channelId, data.unitId, data.isEmergency);
+      }));
+      subscriptions.push(signalingService.onPttEnd(async (data) => {
+        if (allowed(data)) await dispatcher.handlePttEnd(data.channelId, data.unitId, data.gracePeriodMs);
+      }));
+      subscriptions.push(signalingService.onEmergencyStart(async (data) => {
+        if (allowed(data)) await dispatcher.handleEmergencyStart(data.channelId, data.unitId);
+      }));
+      subscriptions.push(signalingService.onEmergencyEnd(async (data) => {
+        if (allowed(data)) await dispatcher.handleEmergencyEnd(data.channelId, data.unitId);
+      }));
+
+      const runtime = {
+        kind: 'v3',
+        profile,
+        context: dispatcher.context,
+        dispatcher,
+        subscriptions,
+        startedAt: new Date().toISOString(),
+      };
       this.runtimes.set(id, runtime);
-      await pool.query('UPDATE ai_dispatcher_profiles SET enabled=TRUE,last_started_at=NOW(),last_error=NULL,updated_at=NOW() WHERE id=$1', [id]);
-      this.log('PROFILE_STARTED', { id, name: profile.name, center: profile.dispatch_center_id, channel: profile.room_key, identity: profile.identity });
+      if (!this._getCompatibilityRuntime()) setActiveDispatcherCompatibility(dispatcher);
+      else if (this.runtimes.size === 1) setActiveDispatcherCompatibility(dispatcher);
+
+      await pool.query(
+        'UPDATE ai_dispatcher_profiles SET enabled=TRUE,last_started_at=NOW(),last_error=NULL,updated_at=NOW() WHERE id=$1',
+        [id],
+      );
+      this.log('PROFILE_STARTED_V3', {
+        id,
+        name: profile.name,
+        center: profile.dispatch_center_id,
+        channel: profile.room_key,
+        identity: profile.identity,
+        scopes: cadPreflight.scopes || requiredCadScopes,
+      });
       return runtime;
     } catch (error) {
-      await pool.query('UPDATE ai_dispatcher_profiles SET last_error=$2,updated_at=NOW() WHERE id=$1', [id, error.message]).catch(() => {});
-      this.log('PROFILE_START_FAILED', { id, error: error.message });
+      await pool.query(
+        'UPDATE ai_dispatcher_profiles SET last_error=$2,updated_at=NOW() WHERE id=$1',
+        [id, error.message],
+      ).catch(() => {});
+      this.log('PROFILE_START_V3_FAILED', { id, error: error.message });
       throw error;
     }
+  }
+
+  _getCompatibilityRuntime() {
+    return [...this.runtimes.values()][0] || null;
   }
 
   async stopProfile(id, { persist = true } = {}) {
@@ -378,12 +434,24 @@ export class AIDispatcherRuntimeManager {
       for (const unsubscribe of runtime.subscriptions || []) {
         try { unsubscribe(); } catch (_) {}
       }
-      await runWithRuntime(runtime.context, () => runtime.dispatcher.stop());
+      await runtime.dispatcher.stop();
       this.runtimes.delete(id);
-      this.log('PROFILE_STOPPED', { id });
+      const replacement = this._getCompatibilityRuntime();
+      setActiveDispatcherCompatibility(replacement?.dispatcher || null);
+      this.log('PROFILE_STOPPED_V3', { id });
     }
-    if (persist) await pool.query('UPDATE ai_dispatcher_profiles SET enabled=FALSE,last_stopped_at=NOW(),updated_at=NOW() WHERE id=$1', [id]);
-    else await pool.query('UPDATE ai_dispatcher_profiles SET last_stopped_at=NOW(),updated_at=NOW() WHERE id=$1', [id]).catch(() => {});
+
+    if (persist) {
+      await pool.query(
+        'UPDATE ai_dispatcher_profiles SET enabled=FALSE,last_stopped_at=NOW(),updated_at=NOW() WHERE id=$1',
+        [id],
+      );
+    } else {
+      await pool.query(
+        'UPDATE ai_dispatcher_profiles SET last_stopped_at=NOW(),updated_at=NOW() WHERE id=$1',
+        [id],
+      ).catch(() => {});
+    }
     return true;
   }
 
@@ -392,6 +460,8 @@ export class AIDispatcherRuntimeManager {
     return this.startProfile(id);
   }
 
+  // API compatibility for the existing admin screen. These names refer to the
+  // original single-profile settings endpoint, but now report/update V3 only.
   async getLegacyStatus() {
     const profiles = await this.listProfilesWithStatus();
     const primary = profiles[0] || null;
@@ -400,15 +470,23 @@ export class AIDispatcherRuntimeManager {
       channel: primary.roomKey,
       pipeline: primary.runtime?.pipeline || null,
       statusChecksEnabled: primary.statusChecksEnabled,
-      statusChecksSource: 'dispatcher_profile',
+      statusChecksSource: 'dispatcher_profile_v3',
       profileId: primary.id,
       profileCount: profiles.length,
-    } : { enabled: false, channel: null, pipeline: null, statusChecksEnabled: true, statusChecksSource: 'dispatcher_profile', profileId: null, profileCount: 0 };
+    } : {
+      enabled: false,
+      channel: null,
+      pipeline: null,
+      statusChecksEnabled: true,
+      statusChecksSource: 'dispatcher_profile_v3',
+      profileId: null,
+      profileCount: 0,
+    };
   }
 
   async applyLegacySettings({ enabled, channel, statusChecksEnabled }) {
     const rows = await this._listRows();
-    let primary = rows[0];
+    const primary = rows[0];
     if (!primary) throw Object.assign(new Error('Create an AI dispatcher profile first'), { statusCode: 400 });
     const updates = {};
     if (enabled !== undefined) updates.enabled = enabled;
@@ -418,8 +496,11 @@ export class AIDispatcherRuntimeManager {
     return this.getLegacyStatus();
   }
 
+  // Retained only so the existing admin endpoint does not break. V3 no longer
+  // loads the old learned-command knowledge cache.
   async refreshLearningKnowledge() {
-    await Promise.allSettled([...this.runtimes.values()].map((runtime) => runWithRuntime(runtime.context, () => runtime.dispatcher._refreshLearnedKnowledge?.())));
+    this.log('LEARNING_REFRESH_IGNORED_V3', { reason: 'legacy learning engine removed' });
+    return true;
   }
 }
 
