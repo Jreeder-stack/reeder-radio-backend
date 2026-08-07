@@ -52,6 +52,19 @@ describe('Dispatcher V3 phase 4 pipeline', () => {
     expect(plan.confidence).toBe(1);
   });
 
+  it('bypasses the LLM and CAD for routine radio checks', async () => {
+    const planner = new V3IntentPlanner({ client: null });
+    for (const transcript of ['radio check', 'can you give me a radio check?', 'how do you copy me?', 'do you copy me']) {
+      const plan = await planner.plan({ transcript, speakerCallsign: 'INDIANA-1', runtimeContext, correlationId: 'radio-check-1' });
+      expect(plan).toMatchObject({ action: 'RADIO_CHECK', input: {}, confidence: 1, reason: 'protected_radio_check_phrase' });
+      const unitIdentityService = { resolve: vi.fn(async () => { throw new Error('radio check must not resolve CAD identity'); }) };
+      const materialized = await materializeV3Plan(plan, { speakerCallsign: 'INDIANA-1', unitIdentityService, correlationId: 'radio-check-1' });
+      expect(materialized.input).toEqual({});
+      expect(unitIdentityService.resolve).not.toHaveBeenCalled();
+      expect(composeV3Response({ plan: materialized, result: { success: true, data: { acknowledged: true } }, speakerCallsign: 'INDIANA-1' })).toBe('INDIANA-1, loud and clear.');
+    }
+  });
+
   it('materializes spoken unit references into immutable UUIDs before execution', async () => {
     const unitIdentityService = {
       resolve: vi.fn(async (ref) => ({ unitId: ref === 'INDIANA-2' ? 'uuid-2' : 'uuid-1', callsign: ref })),
