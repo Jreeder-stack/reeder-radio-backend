@@ -1,5 +1,6 @@
 import { DispatcherV3Error, V3_ERROR_CODES } from './errors.js';
 import { V3_ACTIONS } from './actionContracts.js';
+import { createResolvedCallHandler } from './createCallHandler.js';
 
 export function createDefaultV3ActionHandlers({ gateway, unitIdentityService, operationalAlertService = null, now = () => new Date() } = {}) {
   if (!gateway) throw new TypeError('gateway is required');
@@ -36,6 +37,8 @@ export function createDefaultV3ActionHandlers({ gateway, unitIdentityService, op
     }
   };
 
+  const createCall = createResolvedCallHandler({ gateway, resolveSafeCallsign });
+
   return {
     [V3_ACTIONS.RADIO_CHECK]: async ({ input }) => ({ unitId: input.unitId || null, acknowledged: true }),
     [V3_ACTIONS.TIME_CHECK]: async ({ input }) => ({ unitId: input.unitId || null, timestamp: now().toISOString() }),
@@ -69,22 +72,7 @@ export function createDefaultV3ActionHandlers({ gateway, unitIdentityService, op
       return gateway.get(`/api/radio/unit/${encodeURIComponent(callsign)}/call`, { correlationId });
     },
 
-    [V3_ACTIONS.CREATE_CALL]: async ({ input, correlationId }) => {
-      const callsigns = [];
-      for (const unitId of input.unitIds) callsigns.push(await resolveSafeCallsign(unitId, correlationId));
-      return gateway.post('/api/radio/call', {
-        type: input.type,
-        location: input.location,
-        city: input.city || undefined,
-        municipality: input.municipality || undefined,
-        priority: input.priority || undefined,
-        description: input.description || undefined,
-        caller_name: input.callerName || undefined,
-        caller_phone: input.callerPhone || undefined,
-        zone: input.zone || undefined,
-        units: callsigns,
-      }, { correlationId });
-    },
+    [V3_ACTIONS.CREATE_CALL]: createCall,
 
     [V3_ACTIONS.ADD_CALL_NOTE]: async ({ input, correlationId }) => gateway.post('/api/radio/note', {
       call_id: input.callId, note: input.note, unit_id: input.unitId || undefined,
