@@ -5,6 +5,7 @@ const TIME_CHECK_RX = /^(?:time\s+check|what(?:'s|\s+is)\s+the\s+time|what\s+tim
 const CURRENT_CALL_RX = /^(?:what(?:'s|\s+is)\s+(?:my|our)\s+(?:current\s+)?call|what\s+call\s+am\s+i\s+on|give\s+me\s+(?:my|our)\s+(?:current\s+)?call|current\s+call)\s*[?.!]*$/i;
 const STATUS_CHECK_RX = /^(?:what(?:'s|\s+is)\s+my\s+status|what\s+status\s+do\s+you\s+have\s+me|status\s+check|check\s+my\s+status)\s*[?.!]*$/i;
 const BACKUP_RX = /^(?:send\s+(?:me\s+)?backup|send\s+(?:me\s+)?another\s+unit|i\s+need\s+backup|need\s+backup|i\s+need\s+another\s+unit|need\s+another\s+unit|requesting\s+backup|start\s+(?:me\s+)?backup)\s*[?.!]*$/i;
+const ZONE_CHANGE_RX = /^(?:(?:change|switch|move|put)\s+(?:me\s+)?(?:to|on)?\s*zone\s+[a-z0-9-]+|(?:change|switch|move)\s+zone\s+(?:to\s+)?[a-z0-9-]+)\s*[?.!]*$/i;
 
 const NUMBER_WORDS = Object.freeze({
   zero: '0', oh: '0', one: '1', won: '1', two: '2', too: '2', three: '3', four: '4', for: '4',
@@ -20,7 +21,8 @@ const STATUS_PATTERNS = Object.freeze([
   ['out_of_service', /^(?:show|mark|put|set)?\s*(?:me\s+)?(?:out\s+of\s+service|oos)\s*[?.!]*$/i],
   ['not_available', /^(?:show|mark|put|set)?\s*(?:me\s+)?(?:not\s+available|unavailable)\s*[?.!]*$/i],
   ['on_scene', /^(?:show|mark|put|set)?\s*(?:me\s+)?(?:on\s+scene|on\s+location|arrived|10[-\s/]?97|ten\s+ninety[-\s]?seven)\s*[?.!]*$/i],
-  ['en_route', /^(?:show|mark|put|set)?\s*(?:me\s+)?(?:en\s+route|responding|10[-\s/]?76|ten\s+seventy[-\s]?six)\s*[?.!]*$/i],
+  ['en_route', /^(?:(?:show|mark|put|set)\s+)?(?:me\s+)?(?:en\s+route|responding)(?:\s+to\s+(?:the\s+)?(?:call(?:\s+on\s+my\s+screen)?|current\s+call|my\s+current\s+call))?\s*[?.!]*$/i],
+  ['en_route', /^(?:go\s+)?(?:me\s+)?en\s+route\s+to\s+(?:the\s+)?(?:call(?:\s+on\s+my\s+screen)?|current\s+call|my\s+current\s+call)\s*[?.!]*$/i],
   ['available', /^(?:show|mark|put|set)?\s*(?:me\s+)?(?:available|clear\s+and\s+available|back\s+in\s+service|10[-\s/]?8|ten\s+eight)\s*[?.!]*$/i],
   ['on_duty', /^(?:show|mark|put|set)?\s*(?:me\s+)?(?:on\s+duty|in\s+service)\s*[?.!]*$/i],
   ['off_duty', /^(?:show|mark|put|set)?\s*(?:me\s+)?(?:off\s+duty|end\s+of\s+tour)\s*[?.!]*$/i],
@@ -41,6 +43,19 @@ export function planDeterministicV3Intent({ transcript, speakerCallsign } = {}) 
   if (CURRENT_CALL_RX.test(text)) return plan(V3_ACTIONS.GET_CURRENT_CALL, { unitRef: speakerCallsign }, 'deterministic_current_call');
   if (STATUS_CHECK_RX.test(text)) return plan(V3_ACTIONS.STATUS_CHECK, { unitRef: speakerCallsign }, 'deterministic_status_check');
   if (BACKUP_RX.test(text)) return plan(V3_ACTIONS.REQUEST_BACKUP, { unitRef: speakerCallsign, reason: text, priority: 'urgent' }, 'deterministic_backup');
+
+  // Zone changes are not a unit-status mutation. Until V3 has a dedicated
+  // radio-side zone contract, fail closed instead of allowing the LLM to
+  // guess a CAD status such as AVAILABLE.
+  if (ZONE_CHANGE_RX.test(text)) {
+    return Object.freeze({
+      action: 'CLARIFY',
+      input: Object.freeze({ requestedZoneChange: text }),
+      confidence: 1,
+      clarification: 'I cannot change radio zones yet. Repeat another request.',
+      reason: 'zone_change_not_yet_supported',
+    });
+  }
 
   for (const [status, rx] of STATUS_PATTERNS) {
     if (rx.test(text)) return plan(V3_ACTIONS.SET_UNIT_STATUS, { unitRef: speakerCallsign, status }, `deterministic_status_${status}`);

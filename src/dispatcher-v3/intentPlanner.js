@@ -5,6 +5,7 @@ import { planDeterministicV3Intent } from './deterministicIntent.js';
 
 const DEFAULT_TIMEOUT_MS = 6500;
 const CONTROL_ACTIONS = new Set(['NO_ACTION', 'CLARIFY']);
+const MAX_PLAN_ACTIONS = 4;
 const EMERGENCY_RX = /\b(officer\s+down|shots?\s+fired|10[-\s/]?33|ten\s+thirty[-\s]?three|emergency\s+traffic|signal\s+100|declare\s+an?\s+emergency)\b/i;
 let defaultClient = null;
 
@@ -27,9 +28,6 @@ export class V3IntentPlanner {
       return Object.freeze({ action: V3_ACTIONS.DECLARE_EMERGENCY, input: Object.freeze({ unitRef: speakerCallsign, reason: text }), confidence: 1, reason: 'protected_emergency_phrase' });
     }
 
-    // Routine radio protocol and common self-service CAD actions are parsed
-    // locally first. Azure OpenAI is the fallback for genuinely ambiguous or
-    // multi-field language, not a dependency for obvious commands.
     const deterministic = planDeterministicV3Intent({ transcript: text, speakerCallsign });
     if (deterministic) {
       this._diag('intent_planned_deterministic', runtimeContext, correlationId, true, 0, { transcript: text, plan: deterministic });
@@ -66,65 +64,67 @@ export class V3IntentPlanner {
   }
 
   _diag(phase, runtimeContext, correlationId, success, latencyMs, details) {
-    this.diagnostics?.record?.({
-      phase,
-      correlationId,
-      runtimeId: runtimeContext?.runtimeId || null,
-      dispatchCenterId: runtimeContext?.dispatchCenterId || null,
-      channelId: runtimeContext?.channelId || null,
-      success,
-      latencyMs,
-      details,
-    });
+    this.diagnostics?.record?.({ phase, correlationId, runtimeId: runtimeContext?.runtimeId || null, dispatchCenterId: runtimeContext?.dispatchCenterId || null, channelId: runtimeContext?.channelId || null, success, latencyMs, details });
   }
 }
 
 function getDefaultClient() {
   if (!isV3PlannerConfigured()) return null;
   if (!defaultClient) {
-    defaultClient = new AzureOpenAI({
-      apiKey: process.env.AZURE_OPENAI_API_KEY,
-      endpoint: process.env.AZURE_OPENAI_ENDPOINT,
-      deployment: process.env.AZURE_OPENAI_DEPLOYMENT,
-      apiVersion: '2024-08-01-preview',
-    });
+    defaultClient = new AzureOpenAI({ apiKey: process.env.AZURE_OPENAI_API_KEY, endpoint: process.env.AZURE_OPENAI_ENDPOINT, deployment: process.env.AZURE_OPENAI_DEPLOYMENT, apiVersion: '2024-08-01-preview' });
   }
   return defaultClient;
 }
 
 function normalizePlan(raw = {}) {
+  if (Array.isArray(raw.actions) && raw.actions.length > 0) {
+    if (raw.actions.length > MAX_PLAN_ACTIONS) throw new DispatcherV3Error(V3_ERROR_CODES.INVALID_ACTION_INPUT, `Planner returned more than ${MAX_PLAN_ACTIONS} actions`);
+    const actions = raw.actions.map((item) => normalizeOperationalAction(item));
+    const confidence = normalizeConfidence(raw.confidence);
+    return Object.freeze({
+      action: 'MULTI_ACTION',
+      actions: Object.freeze(actions),
+      input: Object.freeze({}),
+      confidence,
+      clarification: null,
+      reason: clean(raw.reason, 200),
+    });
+  }
+
   const action = String(raw.action || 'NO_ACTION').trim().toUpperCase();
   if (!CONTROL_ACTIONS.has(action) && !listV3Actions().includes(action)) {
     throw new DispatcherV3Error(V3_ERROR_CODES.INVALID_ACTION, `Planner returned unsupported action ${action}`);
   }
-  const confidence = Number(raw.confidence);
-  const input = raw.input && typeof raw.input === 'object' && !Array.isArray(raw.input) ? raw.input : {};
+  const input = normalizeInputObject(raw.input);
   const clarification = clean(raw.clarification, 180);
   if (action === 'CLARIFY' && !clarification) {
     throw new DispatcherV3Error(V3_ERROR_CODES.INVALID_ACTION_INPUT, 'Planner clarification is missing text');
   }
-  return Object.freeze({
-    action,
-    input: Object.freeze({ ...input }),
-    confidence: Number.isFinite(confidence) ? Math.max(0, Math.min(1, confidence)) : 0,
-    clarification,
-    reason: clean(raw.reason, 200),
-  });
+  return Object.freeze({ action, input: Object.freeze(input), confidence: normalizeConfidence(raw.confidence), clarification, reason: clean(raw.reason, 200) });
+}
+
+function normalizeOperationalAction(raw = {}) {
+  const action = String(raw.action || '').trim().toUpperCase();
+  if (!listV3Actions().includes(action)) throw new DispatcherV3Error(V3_ERROR_CODES.INVALID_ACTION, `Planner returned unsupported multi-action ${action}`);
+  return Object.freeze({ action, input: Object.freeze(normalizeInputObject(raw.input)) });
+}
+
+function normalizeInputObject(input) {
+  return input && typeof input === 'object' && !Array.isArray(input) ? { ...input } : {};
+}
+
+function normalizeConfidence(value) {
+  const confidence = Number(value);
+  return Number.isFinite(confidence) ? Math.max(0, Math.min(1, confidence)) : 0;
 }
 
 function systemPrompt() {
-  return `You are the intent planner for a public-safety radio dispatcher. Return JSON only. Never claim an action succeeded; execution happens elsewhere.\n\nAllowed operational actions: ${listV3Actions().join(', ')}. Control actions: NO_ACTION, CLARIFY.\nCanonical unit statuses: ${V3_UNIT_STATUSES.join(', ')}.\n\nReturn: {"action":"...","confidence":0-1,"input":{},"clarification":null,"reason":"short"}.\nUse spoken callsigns only in temporary fields named unitRef or unitRefs. Never invent UUIDs, call IDs, locations, dispositions, or facts. If required information is missing, use CLARIFY and ask one short radio question. Default unitRef to the speaker when the command concerns the speaker. When recentContext shows a CLARIFY turn, treat the new transcript as the answer to that pending question and combine it with the prior input instead of restarting the request.\nMappings: SET_UNIT_STATUS input={unitRef,status,note?}; GET_CURRENT_CALL={unitRef}; CREATE_CALL={type,location,city?,municipality?,priority?,description?,unitRefs?}; ADD_CALL_NOTE={callId,note,unitRef?}; ASSIGN_UNIT={callId,unitRef}; CLEAR_UNIT={callId,unitRef,disposition?}; CLOSE_CALL={callId,disposition,unitRefs?,note?}; STATUS_CHECK={unitRef}; REQUEST_BACKUP={unitRef,callId?,location?,priority?,reason?}; DECLARE_EMERGENCY={unitRef,callId?,location?,reason?}; RADIO_CHECK/TIME_CHECK may use {unitRef?}. Do not output prose outside JSON.`;
+  return `You are the intent planner for a public-safety radio dispatcher. Return JSON only. Never claim an action succeeded; execution happens elsewhere.\n\nAllowed operational actions: ${listV3Actions().join(', ')}. Control actions: NO_ACTION, CLARIFY.\nCanonical unit statuses: ${V3_UNIT_STATUSES.join(', ')}.\n\nFor ONE requested operation return {"action":"...","confidence":0-1,"input":{},"clarification":null,"reason":"short"}.\nFor MULTIPLE requested operations in the same transmission return {"actions":[{"action":"...","input":{}},{"action":"...","input":{}}],"confidence":0-1,"reason":"short"}. Preserve the user's requested order and include every explicitly requested operation, up to ${MAX_PLAN_ACTIONS}. Example: "create a building check at 100 Main and show me en route" must return CREATE_CALL first and SET_UNIT_STATUS second.\nUse spoken callsigns only in temporary fields named unitRef or unitRefs. Never invent UUIDs, call IDs, locations, dispositions, or facts. If required information is missing, use CLARIFY and ask one short radio question instead of emitting a partial multi-action plan. Default unitRef to the speaker when the command concerns the speaker. For CREATE_CALL requested by the speaker, include the speaker in unitRefs unless the user clearly says not to assign themselves. When recentContext shows a CLARIFY turn, treat the new transcript as the answer to that pending question and combine it with the prior input instead of restarting the request.\nMappings: SET_UNIT_STATUS input={unitRef,status,note?}; GET_CURRENT_CALL={unitRef}; CREATE_CALL={type,location,city?,municipality?,priority?,description?,unitRefs?}; ADD_CALL_NOTE={callId,note,unitRef?}; ASSIGN_UNIT={callId,unitRef}; CLEAR_UNIT={callId,unitRef,disposition?}; CLOSE_CALL={callId,disposition,unitRefs?,note?}; STATUS_CHECK={unitRef}; REQUEST_BACKUP={unitRef,callId?,location?,priority?,reason?}; DECLARE_EMERGENCY={unitRef,callId?,location?,reason?}; RADIO_CHECK/TIME_CHECK may use {unitRef?}. Do not output prose outside JSON.`;
 }
 
 function sanitizeRecent(items) {
   if (!Array.isArray(items)) return [];
-  return items.slice(-6).map((item) => ({
-    transcript: clean(item?.transcript, 240),
-    action: clean(item?.action, 40),
-    input: sanitizeInput(item?.input),
-    clarification: clean(item?.clarification, 180),
-    success: item?.success === true,
-  }));
+  return items.slice(-6).map((item) => ({ transcript: clean(item?.transcript, 240), action: clean(item?.action, 40), input: sanitizeInput(item?.input), clarification: clean(item?.clarification, 180), success: item?.success === true }));
 }
 
 function sanitizeInput(input) {
