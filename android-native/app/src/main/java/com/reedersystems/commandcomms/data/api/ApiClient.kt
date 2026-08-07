@@ -35,6 +35,19 @@ class ApiClient private constructor(context: Context) {
     private val fcmPrefs: SharedPreferences =
         context.getSharedPreferences(FCM_PREFS, Context.MODE_PRIVATE)
 
+    private val devicePrefs: SharedPreferences =
+        context.getSharedPreferences(DEVICE_PREFS, Context.MODE_PRIVATE)
+
+    private val deviceIdentityInterceptor = Interceptor { chain ->
+        val deviceId = devicePrefs.getString(DEVICE_ID_KEY, null)
+        val builder = chain.request().newBuilder()
+            .header("x-command-device-type", BuildConfig.RADIO_DEVICE_TYPE)
+        if (!deviceId.isNullOrBlank()) {
+            builder.header("x-command-device-id", deviceId)
+        }
+        chain.proceed(builder.build())
+    }
+
     private val radioTokenInterceptor = Interceptor { chain ->
         val token = radioToken
         if (token != null) {
@@ -49,6 +62,7 @@ class ApiClient private constructor(context: Context) {
 
     val httpClient: OkHttpClient = OkHttpClient.Builder()
         .cookieJar(cookieJar)
+        .addInterceptor(deviceIdentityInterceptor)
         .addInterceptor(radioTokenInterceptor)
         .callTimeout(20, TimeUnit.SECONDS)
         .connectTimeout(15, TimeUnit.SECONDS)
@@ -65,7 +79,21 @@ class ApiClient private constructor(context: Context) {
 
     fun getPersistedFcmToken(): String? = fcmPrefs.getString(FCM_TOKEN_KEY, null)
 
+    /**
+     * Re-register push delivery after signaling authentication. Android-phone
+     * builds are session-authenticated first-class radio endpoints, so they
+     * must register presence even when Firebase has not issued a new token in
+     * this process. Dedicated radios continue using their radio token path.
+     */
     fun registerPersistedFcmToken(scope: CoroutineScope) {
+        if (BuildConfig.RADIO_DEVICE_TYPE == "android_phone") {
+            scope.launch(Dispatchers.IO) {
+                registerPhonePresence()
+                getPersistedFcmToken()?.let { registerFcmTokenNow(it) }
+            }
+            return
+        }
+
         val token = getPersistedFcmToken() ?: run {
             Log.d(TAG, "registerPersistedFcmToken: no persisted FCM token found, skipping")
             return
@@ -75,24 +103,46 @@ class ApiClient private constructor(context: Context) {
             return
         }
         scope.launch(Dispatchers.IO) {
-            try {
-                val body = JSONObject().apply { put("fcmToken", token) }
-                    .toString()
-                    .toRequestBody("application/json".toMediaType())
-                val request = Request.Builder()
-                    .url("$baseUrl/api/radios/fcm-token")
-                    .post(body)
-                    .build()
-                httpClient.newCall(request).execute().use { response ->
-                    if (response.isSuccessful) {
-                        Log.d(TAG, "Persisted FCM token registered successfully after auth")
-                    } else {
-                        Log.w(TAG, "FCM token re-registration failed: ${response.code}")
-                    }
+            registerFcmTokenNow(token)
+        }
+    }
+
+    private fun registerPhonePresence() {
+        try {
+            val request = Request.Builder()
+                .url("$baseUrl/api/radios/phone-presence")
+                .post("{}".toRequestBody("application/json".toMediaType()))
+                .build()
+            httpClient.newCall(request).execute().use { response ->
+                if (response.isSuccessful) {
+                    Log.d(TAG, "Android phone radio endpoint presence registered")
+                } else {
+                    Log.w(TAG, "Android phone presence registration failed: ${response.code}")
                 }
-            } catch (e: Exception) {
-                Log.w(TAG, "FCM token re-registration error: ${e.message}")
             }
+        } catch (e: Exception) {
+            Log.w(TAG, "Android phone presence registration error: ${e.message}")
+        }
+    }
+
+    private fun registerFcmTokenNow(token: String) {
+        try {
+            val body = JSONObject().apply { put("fcmToken", token) }
+                .toString()
+                .toRequestBody("application/json".toMediaType())
+            val request = Request.Builder()
+                .url("$baseUrl/api/radios/fcm-token")
+                .post(body)
+                .build()
+            httpClient.newCall(request).execute().use { response ->
+                if (response.isSuccessful) {
+                    Log.d(TAG, "Persisted FCM token registered successfully after auth")
+                } else {
+                    Log.w(TAG, "FCM token re-registration failed: ${response.code}")
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "FCM token re-registration error: ${e.message}")
         }
     }
 
@@ -100,6 +150,8 @@ class ApiClient private constructor(context: Context) {
         private const val COOKIE_PREFS = "commandcomms_cookies"
         private const val FCM_PREFS = "commandcomms_fcm"
         private const val FCM_TOKEN_KEY = "fcm_token"
+        private const val DEVICE_PREFS = "commandcomms_device"
+        private const val DEVICE_ID_KEY = "device_id"
 
         @Volatile
         private var instance: ApiClient? = null
