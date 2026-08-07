@@ -11,6 +11,7 @@ import { CORE_AI_DISPATCHER_CAD_SCOPES, validateDispatcherCadIntegration } from 
 import { V3LiveDispatcher } from '../dispatcher-v3/liveRuntime.js';
 import { isV3PlannerConfigured } from '../dispatcher-v3/intentPlanner.js';
 import { setActiveDispatcherCompatibility } from './aiDispatchService.js';
+import { runWithRuntime } from './runtimeContext.js';
 
 function clean(value) {
   const text = String(value ?? '').trim();
@@ -358,7 +359,10 @@ export class AIDispatcherRuntimeManager {
         ...CORE_AI_DISPATCHER_CAD_SCOPES,
         ...(profile.status_checks_enabled !== false ? ['status_check.read', 'status_check.write'] : []),
       ];
-      const cadPreflight = await validateDispatcherCadIntegration({ requiredScopes: requiredCadScopes });
+      const context = this._runtimeContext(profile);
+      const cadPreflight = await runWithRuntime(context, () =>
+        validateDispatcherCadIntegration({ requiredScopes: requiredCadScopes }),
+      );
       if (!cadPreflight.success) {
         const error = new Error(`CAD readiness check failed at ${cadPreflight.stage || 'unknown'}: ${cadPreflight.error || 'unknown error'}`);
         error.statusCode = cadPreflight.statusCode || 503;
@@ -366,7 +370,6 @@ export class AIDispatcherRuntimeManager {
         throw error;
       }
 
-      const context = this._runtimeContext(profile);
       const dispatcher = new V3LiveDispatcher({
         runtimeContext: context,
         scopes: cadPreflight.scopes || requiredCadScopes,
