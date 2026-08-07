@@ -1,35 +1,24 @@
 package com.reedersystems.commandcomms.signaling
 
-import com.reedersystems.commandcomms.audio.radio.PttGrantGuard
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.filter
 
 class SignalingRepository(private val client: SignalingClient) {
 
     val connectionState: StateFlow<ConnectionState> = client.connectionState
 
     /**
-     * Only pass a floor grant to the radio audio service when this physical
-     * device recently issued the matching floor request. This prevents a CAD
-     * console or sibling radio using the same callsign from keying this radio.
+     * SignalingClient validates device-targeted floor grants exactly once before
+     * publishing them. Do not apply a second destructive grant guard here: this
+     * flow has multiple collectors (UI, background audio, app-level observers),
+     * and consuming a one-shot guard in a per-collector filter can cause the
+     * first collector to steal a valid grant from the radio engine.
      */
-    val events: Flow<SignalingEvent> = client.events.filter { event ->
-        when (event) {
-            is SignalingEvent.RadioPttGranted ->
-                PttGrantGuard.consumeGrant(event.channelId)
-            is SignalingEvent.RadioPttDenied -> {
-                PttGrantGuard.clear("floor_denied")
-                true
-            }
-            else -> true
-        }
-    }
+    val events: Flow<SignalingEvent> = client.events
 
     fun connect(unitId: String, username: String) = client.connect(unitId, username)
 
     fun disconnect() {
-        PttGrantGuard.clear("signaling_disconnect")
         client.disconnect()
     }
 

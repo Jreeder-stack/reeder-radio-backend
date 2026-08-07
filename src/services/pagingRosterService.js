@@ -40,6 +40,13 @@ export async function getActivatedRadioRoster() {
       r.is_active,
       r.is_locked,
       r.assigned_unit_id,
+      r.device_uuid,
+      COALESCE(d.device_type,
+        CASE WHEN r.serial_number LIKE 'ANDROID-PHONE:%' THEN 'android_phone' ELSE 'radio' END
+      ) AS device_type,
+      COALESCE(d.device_label,
+        CASE WHEN r.serial_number LIKE 'ANDROID-PHONE:%' THEN 'Android Phone' ELSE NULL END
+      ) AS device_label,
       COALESCE(NULLIF(u.unit_id, ''), u.username, r.radio_id) AS unit_identity,
       u.username,
       p.channel,
@@ -48,11 +55,13 @@ export async function getActivatedRadioRoster() {
       COALESCE(p.is_emergency, false) AS is_emergency
     FROM radios r
     LEFT JOIN users u ON u.id = r.assigned_unit_id
+    LEFT JOIN devices d ON d.id = r.device_uuid
     LEFT JOIN units p ON p.unit_identity = COALESCE(NULLIF(u.unit_id, ''), u.username, r.radio_id)
     WHERE r.is_active = true
     ORDER BY
       CASE WHEN COALESCE(p.status, 'offline') = 'offline' THEN 1 ELSE 0 END,
-      COALESCE(NULLIF(u.unit_id, ''), u.username, r.radio_id)
+      COALESCE(NULLIF(u.unit_id, ''), u.username, r.radio_id),
+      r.id
   `);
   return result.rows;
 }
