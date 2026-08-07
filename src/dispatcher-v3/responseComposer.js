@@ -12,6 +12,19 @@ const TIMESTAMPED_ACTIONS = new Set([
   V3_ACTIONS.REQUEST_BACKUP,
 ]);
 
+const SMALL_NUMBER_WORDS = Object.freeze([
+  'zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine',
+  'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen',
+  'seventeen', 'eighteen', 'nineteen',
+]);
+
+const TENS_WORDS = Object.freeze({
+  20: 'twenty',
+  30: 'thirty',
+  40: 'forty',
+  50: 'fifty',
+});
+
 export function composeV3Response({ plan, result, speakerCallsign, now = new Date() } = {}) {
   const unit = clean(speakerCallsign) || 'unit';
   if (plan?.action === 'NO_ACTION') return null;
@@ -34,7 +47,7 @@ export function composeV3Response({ plan, result, speakerCallsign, now = new Dat
       response = `${unit}, loud and clear.`;
       break;
     case V3_ACTIONS.TIME_CHECK:
-      response = `${unit}, ${formatMilitaryTime(data.timestamp || now)}.`;
+      response = `${unit}, ${formatMilitaryTimeForSpeech(data.timestamp || now)}.`;
       break;
     case V3_ACTIONS.SET_UNIT_STATUS:
       response = `${unit}, showing ${statusForSpeech(plan.input?.status)}.`;
@@ -78,7 +91,7 @@ function appendMilitaryTime(value, now) {
   const text = clean(value);
   if (!text) return text;
   const withoutPeriod = text.replace(/\.+$/, '');
-  return `${withoutPeriod}, ${formatMilitaryTime(now)}.`;
+  return `${withoutPeriod}, ${formatMilitaryTimeForSpeech(now)}.`;
 }
 
 function currentCallResponse(unit, data) {
@@ -103,16 +116,44 @@ function statusForSpeech(value) {
   return clean(value)?.replace(/_/g, ' ') || 'updated';
 }
 
-function formatMilitaryTime(value) {
+export function formatMilitaryTimeForSpeech(value) {
   const date = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(date.getTime())) return 'time unavailable';
-  const formatted = new Intl.DateTimeFormat('en-GB', {
+
+  const parts = new Intl.DateTimeFormat('en-GB', {
     timeZone: process.env.TZ || 'America/New_York',
     hour: '2-digit',
     minute: '2-digit',
     hourCycle: 'h23',
-  }).format(date);
-  return `${formatted.replace(':', '')} hours`;
+  }).formatToParts(date);
+
+  const hour = Number(parts.find((part) => part.type === 'hour')?.value);
+  const minute = Number(parts.find((part) => part.type === 'minute')?.value);
+  if (!Number.isInteger(hour) || !Number.isInteger(minute)) return 'time unavailable';
+
+  if (minute === 0) {
+    if (hour === 0) return 'zero hundred hours';
+    return `${militaryHourWords(hour)} hundred hours`;
+  }
+
+  return `${militaryHourWords(hour)} ${militaryMinuteWords(minute)} hours`;
+}
+
+function militaryHourWords(hour) {
+  if (hour < 10) return `zero ${SMALL_NUMBER_WORDS[hour]}`;
+  return numberWordsUnderSixty(hour);
+}
+
+function militaryMinuteWords(minute) {
+  if (minute < 10) return `zero ${SMALL_NUMBER_WORDS[minute]}`;
+  return numberWordsUnderSixty(minute);
+}
+
+function numberWordsUnderSixty(value) {
+  if (value < 20) return SMALL_NUMBER_WORDS[value];
+  const tens = Math.floor(value / 10) * 10;
+  const ones = value % 10;
+  return ones ? `${TENS_WORDS[tens]}-${SMALL_NUMBER_WORDS[ones]}` : TENS_WORDS[tens];
 }
 
 function clean(value) {
